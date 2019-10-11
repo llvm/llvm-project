@@ -106,7 +106,7 @@ define void @test_vsel32ogt(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, half* 
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s4, s6
+; CHECK-NEXT:    vcmp.f16 s4, s6
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselgt.f16 s0, s0, s2
@@ -130,7 +130,7 @@ define void @test_vsel32oge(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, half* 
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s4, s6
+; CHECK-NEXT:    vcmp.f16 s4, s6
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselge.f16 s0, s0, s2
@@ -178,7 +178,7 @@ define void @test_vsel32ugt(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, half* 
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s6, s4
+; CHECK-NEXT:    vcmp.f16 s6, s4
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselge.f16 s0, s2, s0
@@ -202,7 +202,7 @@ define void @test_vsel32uge(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, half* 
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s6, s4
+; CHECK-NEXT:    vcmp.f16 s6, s4
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselgt.f16 s0, s2, s0
@@ -226,7 +226,7 @@ define void @test_vsel32olt(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, half* 
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s6, s4
+; CHECK-NEXT:    vcmp.f16 s6, s4
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselgt.f16 s0, s0, s2
@@ -250,7 +250,7 @@ define void @test_vsel32ult(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, half* 
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s4, s6
+; CHECK-NEXT:    vcmp.f16 s4, s6
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselge.f16 s0, s2, s0
@@ -274,7 +274,7 @@ define void @test_vsel32ole(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, half* 
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s6, s4
+; CHECK-NEXT:    vcmp.f16 s6, s4
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselge.f16 s0, s0, s2
@@ -298,7 +298,7 @@ define void @test_vsel32ule(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, half* 
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s4, s6
+; CHECK-NEXT:    vcmp.f16 s4, s6
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselgt.f16 s0, s2, s0
@@ -322,7 +322,7 @@ define void @test_vsel32ord(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, half* 
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s4, s6
+; CHECK-NEXT:    vcmp.f16 s4, s6
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselvs.f16 s0, s2, s0
@@ -370,7 +370,7 @@ define void @test_vsel32uno(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, half* 
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s4, s6
+; CHECK-NEXT:    vcmp.f16 s4, s6
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselvs.f16 s0, s0, s2
@@ -395,7 +395,7 @@ define void @test_vsel32ogt_nnan(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, h
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s4, s6
+; CHECK-NEXT:    vcmp.f16 s4, s6
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselgt.f16 s0, s0, s2
@@ -419,7 +419,7 @@ define void @test_vsel32oge_nnan(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, h
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s4, s6
+; CHECK-NEXT:    vcmp.f16 s4, s6
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselge.f16 s0, s0, s2
@@ -467,7 +467,7 @@ define void @test_vsel32ugt_nnan(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, h
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s4, s6
+; CHECK-NEXT:    vcmp.f16 s4, s6
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselgt.f16 s0, s0, s2
@@ -491,7 +491,7 @@ define void @test_vsel32uge_nnan(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, h
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s4, s6
+; CHECK-NEXT:    vcmp.f16 s4, s6
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselge.f16 s0, s0, s2
@@ -515,7 +515,7 @@ define void @test_vsel32olt_nnan(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, h
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s6, s4
+; CHECK-NEXT:    vcmp.f16 s6, s4
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselgt.f16 s0, s0, s2
@@ -539,7 +539,7 @@ define void @test_vsel32ult_nnan(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, h
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s6, s4
+; CHECK-NEXT:    vcmp.f16 s6, s4
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselgt.f16 s0, s0, s2
@@ -563,7 +563,7 @@ define void @test_vsel32ole_nnan(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, h
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s6, s4
+; CHECK-NEXT:    vcmp.f16 s6, s4
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselge.f16 s0, s0, s2
@@ -587,7 +587,7 @@ define void @test_vsel32ule_nnan(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, h
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s6, s4
+; CHECK-NEXT:    vcmp.f16 s6, s4
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselge.f16 s0, s0, s2
@@ -611,7 +611,7 @@ define void @test_vsel32ord_nnan(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, h
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s4, s6
+; CHECK-NEXT:    vcmp.f16 s4, s6
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselvs.f16 s0, s2, s0
@@ -659,7 +659,7 @@ define void @test_vsel32uno_nnan(half* %lhs_ptr, half* %rhs_ptr, half* %a_ptr, h
 ; CHECK-NEXT:    vldr.16 s4, [r0]
 ; CHECK-NEXT:    vldr.16 s6, [r1]
 ; CHECK-NEXT:    movw r0, :lower16:varhalf
-; CHECK-NEXT:    vcmpe.f16 s4, s6
+; CHECK-NEXT:    vcmp.f16 s4, s6
 ; CHECK-NEXT:    movt r0, :upper16:varhalf
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NEXT:    vselvs.f16 s0, s0, s2

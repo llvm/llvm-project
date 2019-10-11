@@ -78,7 +78,7 @@ namespace {
 
 class PPCAsmPrinter : public AsmPrinter {
 protected:
-  MapVector<MCSymbol *, MCSymbol *> TOC;
+  MapVector<const MCSymbol *, MCSymbol *> TOC;
   const PPCSubtarget *Subtarget;
   StackMaps SM;
 
@@ -89,7 +89,7 @@ public:
 
   StringRef getPassName() const override { return "PowerPC Assembly Printer"; }
 
-  MCSymbol *lookUpOrCreateTOCEntry(MCSymbol *Sym);
+  MCSymbol *lookUpOrCreateTOCEntry(const MCSymbol *Sym);
 
   bool doInitialization(Module &M) override {
     if (!TOC.empty())
@@ -338,7 +338,7 @@ bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
 /// lookUpOrCreateTOCEntry -- Given a symbol, look up whether a TOC entry
 /// exists for it.  If not, create one.  Then return a symbol that references
 /// the TOC entry.
-MCSymbol *PPCAsmPrinter::lookUpOrCreateTOCEntry(MCSymbol *Sym) {
+MCSymbol *PPCAsmPrinter::lookUpOrCreateTOCEntry(const MCSymbol *Sym) {
   MCSymbol *&TOCEntry = TOC[Sym];
   if (!TOCEntry)
     TOCEntry = createTempSymbol("C");
@@ -512,6 +512,22 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
                  .addExpr(SymVar));
 }
 
+/// Map the machine operand to its corresponding MCSymbol.
+static MCSymbol *getMCSymbolForTOCPseudoMO(const MachineOperand &MO, AsmPrinter &AP) {
+  switch(MO.getType()) {
+  case MachineOperand::MO_GlobalAddress:
+    return AP.getSymbol(MO.getGlobal());
+  case MachineOperand::MO_ConstantPoolIndex:
+    return AP.GetCPISymbol(MO.getIndex());
+  case MachineOperand::MO_JumpTableIndex:
+    return AP.GetJTISymbol(MO.getIndex());
+  case MachineOperand::MO_BlockAddress:
+    return AP.GetBlockAddressSymbol(MO.getBlockAddress());
+  default:
+    llvm_unreachable("Unexpected operand type to get symbol.");
+  }
+}
+
 /// EmitInstruction -- Print out a single PowerPC MI in Darwin syntax to
 /// the current output stream.
 ///
@@ -668,16 +684,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
            "Unexpected operand type for LWZtoc pseudo.");
 
     // Map the operand to its corresponding MCSymbol.
-    MCSymbol *MOSymbol = nullptr;
-    if (MO.isGlobal())
-      MOSymbol = getSymbol(MO.getGlobal());
-    else if (MO.isCPI())
-      MOSymbol = GetCPISymbol(MO.getIndex());
-    else if (MO.isJTI())
-      MOSymbol = GetJTISymbol(MO.getIndex());
-    else if (MO.isBlockAddress())
-      MOSymbol = GetBlockAddressSymbol(MO.getBlockAddress());
-
+    const MCSymbol *const MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
     const bool IsAIX = TM.getTargetTriple().isOSAIX();
 
     // Create a reference to the GOT entry for the symbol. The GOT entry will be
@@ -726,24 +733,18 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     // Transform %x3 = LDtoc @min1, %x2
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
 
-    // Change the opcode to LD, and the global address operand to be a
-    // reference to the TOC entry we will synthesize later.
+    // Change the opcode to LD.
     TmpInst.setOpcode(PPC::LD);
+
     const MachineOperand &MO = MI->getOperand(1);
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
+           "Invalid operand!");
 
-    // Map symbol -> label of TOC entry
-    assert(MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress());
-    MCSymbol *MOSymbol = nullptr;
-    if (MO.isGlobal())
-      MOSymbol = getSymbol(MO.getGlobal());
-    else if (MO.isCPI())
-      MOSymbol = GetCPISymbol(MO.getIndex());
-    else if (MO.isJTI())
-      MOSymbol = GetJTISymbol(MO.getIndex());
-    else if (MO.isBlockAddress())
-      MOSymbol = GetBlockAddressSymbol(MO.getBlockAddress());
-
-    MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(MOSymbol);
+    // Map the machine operand to its corresponding MCSymbol, then map the
+    // global address operand to be a reference to the TOC entry we will
+    // synthesize later.
+    MCSymbol *TOCEntry =
+        lookUpOrCreateTOCEntry(getMCSymbolForTOCPseudoMO(MO, *this));
 
     const MCExpr *Exp =
       MCSymbolRefExpr::create(TOCEntry, MCSymbolRefExpr::VK_PPC_TOC,
@@ -757,32 +758,22 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     // Transform %xd = ADDIStocHA8 %x2, @sym
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
 
-    // Change the opcode to ADDIS8.  If the global address is external, has
-    // common linkage, is a non-local function address, or is a jump table
-    // address, then generate a TOC entry and reference that.  Otherwise
-    // reference the symbol directly.
+    // Change the opcode to ADDIS8. If the global address is the address of
+    // an external symbol, is a jump table address, is a block address, or is a
+    // constant pool index with large code model enabled, then generate a TOC
+    // entry and reference that. Otherwise, reference the symbol directly.
     TmpInst.setOpcode(PPC::ADDIS8);
+
     const MachineOperand &MO = MI->getOperand(2);
-    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() ||
-            MO.isBlockAddress()) &&
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
            "Invalid operand for ADDIStocHA8!");
-    MCSymbol *MOSymbol = nullptr;
-    bool GlobalToc = false;
 
-    if (MO.isGlobal()) {
-      const GlobalValue *GV = MO.getGlobal();
-      MOSymbol = getSymbol(GV);
-      GlobalToc = Subtarget->isGVIndirectSymbol(GV);
-    } else if (MO.isCPI()) {
-      MOSymbol = GetCPISymbol(MO.getIndex());
-    } else if (MO.isJTI()) {
-      MOSymbol = GetJTISymbol(MO.getIndex());
-    } else if (MO.isBlockAddress()) {
-      MOSymbol = GetBlockAddressSymbol(MO.getBlockAddress());
-    }
+    const MCSymbol *MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
 
+    const bool GlobalToc =
+	MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal());
     if (GlobalToc || MO.isJTI() || MO.isBlockAddress() ||
-        TM.getCodeModel() == CodeModel::Large)
+	(MO.isCPI() && TM.getCodeModel() == CodeModel::Large))
       MOSymbol = lookUpOrCreateTOCEntry(MOSymbol);
 
     const MCExpr *Exp =
@@ -803,36 +794,26 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     // Transform %xd = LDtocL @sym, %xs
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
 
-    // Change the opcode to LD.  If the global address is external, has
-    // common linkage, or is a jump table address, then reference the
-    // associated TOC entry.  Otherwise reference the symbol directly.
+    // Change the opcode to LD. If the global address is the address of
+    // an external symbol, is a jump table address, is a block address, or is
+    // a constant pool index with large code model enabled, then generate a
+    // TOC entry and reference that. Otherwise, reference the symbol directly.
     TmpInst.setOpcode(PPC::LD);
+
     const MachineOperand &MO = MI->getOperand(1);
     assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() ||
             MO.isBlockAddress()) &&
            "Invalid operand for LDtocL!");
-    MCSymbol *MOSymbol = nullptr;
 
-    if (MO.isJTI())
-      MOSymbol = lookUpOrCreateTOCEntry(GetJTISymbol(MO.getIndex()));
-    else if (MO.isBlockAddress()) {
-      MOSymbol = GetBlockAddressSymbol(MO.getBlockAddress());
+    LLVM_DEBUG(assert(
+        (!MO.isGlobal() || Subtarget->isGVIndirectSymbol(MO.getGlobal())) &&
+        "LDtocL used on symbol that could be accessed directly is "
+        "invalid. Must match ADDIStocHA8."));
+
+    const MCSymbol *MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
+
+    if (!MO.isCPI() || TM.getCodeModel() == CodeModel::Large)
       MOSymbol = lookUpOrCreateTOCEntry(MOSymbol);
-    }
-    else if (MO.isCPI()) {
-      MOSymbol = GetCPISymbol(MO.getIndex());
-      if (TM.getCodeModel() == CodeModel::Large)
-        MOSymbol = lookUpOrCreateTOCEntry(MOSymbol);
-    }
-    else if (MO.isGlobal()) {
-      const GlobalValue *GV = MO.getGlobal();
-      MOSymbol = getSymbol(GV);
-      LLVM_DEBUG(
-          assert((Subtarget->isGVIndirectSymbol(GV)) &&
-                 "LDtocL used on symbol that could be accessed directly is "
-                 "invalid. Must match ADDIStocHA8."));
-      MOSymbol = lookUpOrCreateTOCEntry(MOSymbol);
-    }
 
     const MCExpr *Exp =
       MCSymbolRefExpr::create(MOSymbol, MCSymbolRefExpr::VK_PPC_TOC_LO,
@@ -845,26 +826,21 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     // Transform %xd = ADDItocL %xs, @sym
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
 
-    // Change the opcode to ADDI8.  If the global address is external, then
-    // generate a TOC entry and reference that.  Otherwise reference the
+    // Change the opcode to ADDI8. If the global address is external, then
+    // generate a TOC entry and reference that. Otherwise, reference the
     // symbol directly.
     TmpInst.setOpcode(PPC::ADDI8);
-    const MachineOperand &MO = MI->getOperand(2);
-    assert((MO.isGlobal() || MO.isCPI()) && "Invalid operand for ADDItocL");
-    MCSymbol *MOSymbol = nullptr;
 
-    if (MO.isGlobal()) {
-      const GlobalValue *GV = MO.getGlobal();
-      LLVM_DEBUG(assert(!(Subtarget->isGVIndirectSymbol(GV)) &&
-                        "Interposable definitions must use indirect access."));
-      MOSymbol = getSymbol(GV);
-    } else if (MO.isCPI()) {
-      MOSymbol = GetCPISymbol(MO.getIndex());
-    }
+    const MachineOperand &MO = MI->getOperand(2);
+    assert((MO.isGlobal() || MO.isCPI()) && "Invalid operand for ADDItocL.");
+
+    LLVM_DEBUG(
+        assert(!(MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal())) &&
+               "Interposable definitions must use indirect access."));
 
     const MCExpr *Exp =
-      MCSymbolRefExpr::create(MOSymbol, MCSymbolRefExpr::VK_PPC_TOC_LO,
-                              OutContext);
+        MCSymbolRefExpr::create(getMCSymbolForTOCPseudoMO(MO, *this),
+                                MCSymbolRefExpr::VK_PPC_TOC_LO, OutContext);
     TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
@@ -1400,15 +1376,16 @@ bool PPCLinuxAsmPrinter::doFinalization(Module &M) {
               ".got2", ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
     OutStreamer->SwitchSection(Section);
 
-    for (MapVector<MCSymbol*, MCSymbol*>::iterator I = TOC.begin(),
-         E = TOC.end(); I != E; ++I) {
-      OutStreamer->EmitLabel(I->second);
-      MCSymbol *S = I->first;
+    for (const auto &TOCMapPair: TOC) {
+      const MCSymbol *const TOCEntryTarget = TOCMapPair.first;
+      MCSymbol *const TOCEntryLabel = TOCMapPair.second;
+
+      OutStreamer->EmitLabel(TOCEntryLabel);
       if (isPPC64) {
-        TS.emitTCEntry(*S);
+        TS.emitTCEntry(*TOCEntryTarget);
       } else {
         OutStreamer->EmitValueToAlignment(4);
-        OutStreamer->EmitSymbolValue(S, 4);
+        OutStreamer->EmitSymbolValue(TOCEntryTarget, 4);
       }
     }
   }

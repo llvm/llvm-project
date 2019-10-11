@@ -113,7 +113,7 @@ struct LTOCodeGenerator {
     ShouldRestoreGlobalsLinkage = Value;
   }
 
-  void addMustPreserveSymbol(StringRef Sym) { MustPreserveSymbols[Sym] = 1; }
+  void addMustPreserveSymbol(StringRef Sym) { MustPreserveSymbols.insert(Sym); }
 
   /// Pass options to the driver and optimization passes.
   ///

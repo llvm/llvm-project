@@ -563,8 +563,6 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(CubinF);
   }
 
-  AddOpenMPLinkerScript(getToolChain(), C, Output, Inputs, Args, CmdArgs, JA);
-
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("nvlink"));
   C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));

@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -75,4 +76,3 @@ int main(int, char**)
 
     return 0;
 }
-

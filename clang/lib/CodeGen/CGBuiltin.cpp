@@ -2048,11 +2048,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     Value *AlignmentValue = EmitScalarExpr(E->getArg(1));
     ConstantInt *AlignmentCI = cast<ConstantInt>(AlignmentValue);
-    unsigned Alignment = (unsigned)AlignmentCI->getZExtValue();
+    if (AlignmentCI->getValue().ugt(llvm::Value::MaximumAlignment))
+      AlignmentCI = ConstantInt::get(AlignmentCI->getType(),
+                                     llvm::Value::MaximumAlignment);
 
     EmitAlignmentAssumption(PtrValue, Ptr,
                             /*The expr loc is sufficient.*/ SourceLocation(),
-                            Alignment, OffsetValue);
+                            AlignmentCI, OffsetValue);
     return RValue::get(PtrValue);
   }
   case Builtin::BI__assume:
@@ -4242,6 +4244,9 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_be:
     return CGF->EmitAArch64BuiltinExpr(BuiltinID, E, Arch);
+  case llvm::Triple::bpfeb:
+  case llvm::Triple::bpfel:
+    return CGF->EmitBPFBuiltinExpr(BuiltinID, E);
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     return CGF->EmitX86BuiltinExpr(BuiltinID, E);
@@ -9300,6 +9305,37 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 }
 
+Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
+                                           const CallExpr *E) {
+  assert(BuiltinID == BPF::BI__builtin_preserve_field_info &&
+         "unexpected ARM builtin");
+
+  const Expr *Arg = E->getArg(0);
+  bool IsBitField = Arg->IgnoreParens()->getObjectKind() == OK_BitField;
+
+  if (!getDebugInfo()) {
+    CGM.Error(E->getExprLoc(), "using builtin_preserve_field_info() without -g");
+    return IsBitField ? EmitLValue(Arg).getBitFieldPointer()
+                      : EmitLValue(Arg).getPointer();
+  }
+
+  // Enable underlying preserve_*_access_index() generation.
+  bool OldIsInPreservedAIRegion = IsInPreservedAIRegion;
+  IsInPreservedAIRegion = true;
+  Value *FieldAddr = IsBitField ? EmitLValue(Arg).getBitFieldPointer()
+                                : EmitLValue(Arg).getPointer();
+  IsInPreservedAIRegion = OldIsInPreservedAIRegion;
+
+  ConstantInt *C = cast<ConstantInt>(EmitScalarExpr(E->getArg(1)));
+  Value *InfoKind = ConstantInt::get(Int64Ty, C->getSExtValue());
+
+  // Built the IR for the preserve_field_info intrinsic.
+  llvm::Function *FnGetFieldInfo = llvm::Intrinsic::getDeclaration(
+      &CGM.getModule(), llvm::Intrinsic::bpf_preserve_field_info,
+      {FieldAddr->getType()});
+  return Builder.CreateCall(FnGetFieldInfo, {FieldAddr, InfoKind});
+}
+
 llvm::Value *CodeGenFunction::
 BuildVector(ArrayRef<llvm::Value*> Ops) {
   assert((Ops.size() & (Ops.size() - 1)) == 0 &&
@@ -14031,6 +14067,12 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(Intrinsic::maximum,
                                      ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {LHS, RHS});
+  }
+  case WebAssembly::BI__builtin_wasm_swizzle_v8x16: {
+    Value *Src = EmitScalarExpr(E->getArg(0));
+    Value *Indices = EmitScalarExpr(E->getArg(1));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_swizzle);
+    return Builder.CreateCall(Callee, {Src, Indices});
   }
   case WebAssembly::BI__builtin_wasm_extract_lane_s_i8x16:
   case WebAssembly::BI__builtin_wasm_extract_lane_u_i8x16:

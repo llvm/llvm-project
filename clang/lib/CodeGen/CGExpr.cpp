@@ -3990,9 +3990,19 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
     const CGBitFieldInfo &Info = RL.getBitFieldInfo(field);
     Address Addr = base.getAddress();
     unsigned Idx = RL.getLLVMFieldNo(field);
-    if (Idx != 0)
-      // For structs, we GEP to the field that the record layout suggests.
-      Addr = Builder.CreateStructGEP(Addr, Idx, field->getName());
+    if (!IsInPreservedAIRegion) {
+      if (Idx != 0)
+        // For structs, we GEP to the field that the record layout suggests.
+        Addr = Builder.CreateStructGEP(Addr, Idx, field->getName());
+    } else {
+      const RecordDecl *rec = field->getParent();
+      llvm::DIType *DbgInfo = getDebugInfo()->getOrCreateRecordType(
+          getContext().getRecordType(rec), rec->getLocation());
+      Addr = Builder.CreatePreserveStructAccessIndex(Addr, Idx,
+          getDebugInfoFIndex(rec, field->getFieldIndex()),
+          DbgInfo);
+    }
+
     // Get the access type.
     llvm::Type *FieldIntTy =
       llvm::Type::getIntNTy(getLLVMContext(), Info.StorageSize);

@@ -25,6 +25,8 @@ void test(void) {
   int a10 = sizeof(arr3) / sizeof(char);
   int a11 = sizeof(arr2) / (sizeof(unsigned));
   int a12 = sizeof(arr) / (sizeof(short));
+  int a13 = sizeof(arr3) / sizeof(p);
+  int a14 = sizeof(arr3) / sizeof(int);
 
   int arr4[10][12];
   int b1 = sizeof(arr4) / sizeof(arr2[12]);

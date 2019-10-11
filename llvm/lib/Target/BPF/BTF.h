@@ -17,7 +17,7 @@
 ///
 /// The binary layout for .BTF.ext section:
 ///   struct ExtHeader
-///   FuncInfo, LineInfo, OffsetReloc and ExternReloc subsections
+///   FuncInfo, LineInfo, FieldReloc and ExternReloc subsections
 /// The FuncInfo subsection is defined as below:
 ///   BTFFuncInfo Size
 ///   struct SecFuncInfo for ELF section #1
@@ -32,19 +32,12 @@
 ///   struct SecLineInfo for ELF section #2
 ///   A number of struct BPFLineInfo for ELF section #2
 ///   ...
-/// The OffsetReloc subsection is defined as below:
-///   BPFOffsetReloc Size
-///   struct SecOffsetReloc for ELF section #1
-///   A number of struct BPFOffsetReloc for ELF section #1
-///   struct SecOffsetReloc for ELF section #2
-///   A number of struct BPFOffsetReloc for ELF section #2
-///   ...
-/// The ExternReloc subsection is defined as below:
-///   BPFExternReloc Size
-///   struct SecExternReloc for ELF section #1
-///   A number of struct BPFExternReloc for ELF section #1
-///   struct SecExternReloc for ELF section #2
-///   A number of struct BPFExternReloc for ELF section #2
+/// The FieldReloc subsection is defined as below:
+///   BPFFieldReloc Size
+///   struct SecFieldReloc for ELF section #1
+///   A number of struct BPFFieldReloc for ELF section #1
+///   struct SecFieldReloc for ELF section #2
+///   A number of struct BPFFieldReloc for ELF section #2
 ///   ...
 ///
 /// The section formats are also defined at
@@ -63,7 +56,7 @@ enum : uint32_t { MAGIC = 0xeB9F, VERSION = 1 };
 /// Sizes in bytes of various things in the BTF format.
 enum {
   HeaderSize = 24,
-  ExtHeaderSize = 40,
+  ExtHeaderSize = 32,
   CommonTypeSize = 12,
   BTFArraySize = 12,
   BTFEnumSize = 8,
@@ -72,12 +65,10 @@ enum {
   BTFDataSecVarSize = 12,
   SecFuncInfoSize = 8,
   SecLineInfoSize = 8,
-  SecOffsetRelocSize = 8,
-  SecExternRelocSize = 8,
+  SecFieldRelocSize = 8,
   BPFFuncInfoSize = 8,
   BPFLineInfoSize = 16,
-  BPFOffsetRelocSize = 12,
-  BPFExternRelocSize = 8,
+  BPFFieldRelocSize = 16,
 };
 
 /// The .BTF section header definition.
@@ -213,10 +204,8 @@ struct ExtHeader {
   uint32_t FuncInfoLen;    ///< Length of func info section
   uint32_t LineInfoOff;    ///< Offset of line info section
   uint32_t LineInfoLen;    ///< Length of line info section
-  uint32_t OffsetRelocOff; ///< Offset of offset reloc section
-  uint32_t OffsetRelocLen; ///< Length of offset reloc section
-  uint32_t ExternRelocOff; ///< Offset of extern reloc section
-  uint32_t ExternRelocLen; ///< Length of extern reloc section
+  uint32_t FieldRelocOff; ///< Offset of offset reloc section
+  uint32_t FieldRelocLen; ///< Length of offset reloc section
 };
 
 /// Specifying one function info.
@@ -247,28 +236,17 @@ struct SecLineInfo {
 };
 
 /// Specifying one offset relocation.
-struct BPFOffsetReloc {
+struct BPFFieldReloc {
   uint32_t InsnOffset;    ///< Byte offset in this section
   uint32_t TypeID;        ///< TypeID for the relocation
   uint32_t OffsetNameOff; ///< The string to traverse types
+  uint32_t RelocKind;     ///< What to patch the instruction
 };
 
 /// Specifying offset relocation's in one section.
-struct SecOffsetReloc {
+struct SecFieldReloc {
   uint32_t SecNameOff;     ///< Section name index in the .BTF string table
-  uint32_t NumOffsetReloc; ///< Number of offset reloc's in this section
-};
-
-/// Specifying one offset relocation.
-struct BPFExternReloc {
-  uint32_t InsnOffset;    ///< Byte offset in this section
-  uint32_t ExternNameOff; ///< The string for external variable
-};
-
-/// Specifying extern relocation's in one section.
-struct SecExternReloc {
-  uint32_t SecNameOff;     ///< Section name index in the .BTF string table
-  uint32_t NumExternReloc; ///< Number of extern reloc's in this section
+  uint32_t NumFieldReloc; ///< Number of offset reloc's in this section
 };
 
 } // End namespace BTF.

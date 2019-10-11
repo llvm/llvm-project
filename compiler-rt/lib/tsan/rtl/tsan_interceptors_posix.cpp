@@ -114,6 +114,7 @@ const int PTHREAD_MUTEX_RECURSIVE_NP = 2;
 const int EPOLL_CTL_ADD = 1;
 #endif
 const int SIGILL = 4;
+const int SIGTRAP = 5;
 const int SIGABRT = 6;
 const int SIGFPE = 8;
 const int SIGSEGV = 11;
@@ -1962,10 +1963,10 @@ void ProcessPendingSignals(ThreadState *thr) {
 }  // namespace __tsan
 
 static bool is_sync_signal(ThreadSignalContext *sctx, int sig) {
-  return sig == SIGSEGV || sig == SIGBUS || sig == SIGILL ||
-      sig == SIGABRT || sig == SIGFPE || sig == SIGPIPE || sig == SIGSYS ||
-      // If we are sending signal to ourselves, we must process it now.
-      (sctx && sig == sctx->int_signal_send);
+  return sig == SIGSEGV || sig == SIGBUS || sig == SIGILL || sig == SIGTRAP ||
+         sig == SIGABRT || sig == SIGFPE || sig == SIGPIPE || sig == SIGSYS ||
+         // If we are sending signal to ourselves, we must process it now.
+         (sctx && sig == sctx->int_signal_send);
 }
 
 void ALWAYS_INLINE rtl_generic_sighandler(bool sigact, int sig,

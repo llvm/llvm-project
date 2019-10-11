@@ -174,13 +174,13 @@ define i32 @fcmplt(float %a, float %b) #0 {
 ; CHECK-SOFTFP:         vmov s2, r0
 ; CHECK-SOFTFP-NEXT:    mov r0, #0
 ; CHECK-SOFTFP-NEXT:    vmov s0, r1
-; CHECK-SOFTFP-NEXT:    vcmpe.f32 s2, s0
+; CHECK-SOFTFP-NEXT:    vcmp.f32 s2, s0
 ; CHECK-SOFTFP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-SOFTFP-NEXT:    movmi r0, #1
 ; CHECK-SOFTFP-NEXT:    mov pc, lr
 ;
 ; CHECK-HARDFP-SP-LABEL: fcmplt:
-; CHECK-HARDFP-SP:         vcmpe.f32 s0, s1
+; CHECK-HARDFP-SP:         vcmp.f32 s0, s1
 ; CHECK-HARDFP-SP-NEXT:    mov r0, #0
 ; CHECK-HARDFP-SP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-HARDFP-SP-NEXT:    movmi r0, #1
@@ -205,13 +205,13 @@ define i32 @fcmple(float %a, float %b) #0 {
 ; CHECK-SOFTFP:         vmov s2, r0
 ; CHECK-SOFTFP-NEXT:    mov r0, #0
 ; CHECK-SOFTFP-NEXT:    vmov s0, r1
-; CHECK-SOFTFP-NEXT:    vcmpe.f32 s2, s0
+; CHECK-SOFTFP-NEXT:    vcmp.f32 s2, s0
 ; CHECK-SOFTFP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-SOFTFP-NEXT:    movls r0, #1
 ; CHECK-SOFTFP-NEXT:    mov pc, lr
 ;
 ; CHECK-HARDFP-SP-LABEL: fcmple:
-; CHECK-HARDFP-SP:         vcmpe.f32 s0, s1
+; CHECK-HARDFP-SP:         vcmp.f32 s0, s1
 ; CHECK-HARDFP-SP-NEXT:    mov r0, #0
 ; CHECK-HARDFP-SP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-HARDFP-SP-NEXT:    movls r0, #1
@@ -236,13 +236,13 @@ define i32 @fcmpge(float %a, float %b) #0 {
 ; CHECK-SOFTFP:         vmov s2, r0
 ; CHECK-SOFTFP-NEXT:    mov r0, #0
 ; CHECK-SOFTFP-NEXT:    vmov s0, r1
-; CHECK-SOFTFP-NEXT:    vcmpe.f32 s2, s0
+; CHECK-SOFTFP-NEXT:    vcmp.f32 s2, s0
 ; CHECK-SOFTFP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-SOFTFP-NEXT:    movge r0, #1
 ; CHECK-SOFTFP-NEXT:    mov pc, lr
 ;
 ; CHECK-HARDFP-SP-LABEL: fcmpge:
-; CHECK-HARDFP-SP:         vcmpe.f32 s0, s1
+; CHECK-HARDFP-SP:         vcmp.f32 s0, s1
 ; CHECK-HARDFP-SP-NEXT:    mov r0, #0
 ; CHECK-HARDFP-SP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-HARDFP-SP-NEXT:    movge r0, #1
@@ -267,13 +267,13 @@ define i32 @fcmpgt(float %a, float %b) #0 {
 ; CHECK-SOFTFP:         vmov s2, r0
 ; CHECK-SOFTFP-NEXT:    mov r0, #0
 ; CHECK-SOFTFP-NEXT:    vmov s0, r1
-; CHECK-SOFTFP-NEXT:    vcmpe.f32 s2, s0
+; CHECK-SOFTFP-NEXT:    vcmp.f32 s2, s0
 ; CHECK-SOFTFP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-SOFTFP-NEXT:    movgt r0, #1
 ; CHECK-SOFTFP-NEXT:    mov pc, lr
 ;
 ; CHECK-HARDFP-SP-LABEL: fcmpgt:
-; CHECK-HARDFP-SP:         vcmpe.f32 s0, s1
+; CHECK-HARDFP-SP:         vcmp.f32 s0, s1
 ; CHECK-HARDFP-SP-NEXT:    mov r0, #0
 ; CHECK-HARDFP-SP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-HARDFP-SP-NEXT:    movgt r0, #1
@@ -298,13 +298,13 @@ define i32 @fcmpun(float %a, float %b) #0 {
 ; CHECK-SOFTFP:         vmov s2, r0
 ; CHECK-SOFTFP-NEXT:    mov r0, #0
 ; CHECK-SOFTFP-NEXT:    vmov s0, r1
-; CHECK-SOFTFP-NEXT:    vcmpe.f32 s2, s0
+; CHECK-SOFTFP-NEXT:    vcmp.f32 s2, s0
 ; CHECK-SOFTFP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-SOFTFP-NEXT:    movvs r0, #1
 ; CHECK-SOFTFP-NEXT:    mov pc, lr
 ;
 ; CHECK-HARDFP-SP-LABEL: fcmpun:
-; CHECK-HARDFP-SP:         vcmpe.f32 s0, s1
+; CHECK-HARDFP-SP:         vcmp.f32 s0, s1
 ; CHECK-HARDFP-SP-NEXT:    mov r0, #0
 ; CHECK-HARDFP-SP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-HARDFP-SP-NEXT:    movvs r0, #1
@@ -503,13 +503,13 @@ define i32 @dcmplt(double %a, double %b) #0 {
 ; CHECK-SOFTFP:         vmov d16, r2, r3
 ; CHECK-SOFTFP-NEXT:    vmov d17, r0, r1
 ; CHECK-SOFTFP-NEXT:    mov r0, #0
-; CHECK-SOFTFP-NEXT:    vcmpe.f64 d17, d16
+; CHECK-SOFTFP-NEXT:    vcmp.f64 d17, d16
 ; CHECK-SOFTFP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-SOFTFP-NEXT:    movmi r0, #1
 ; CHECK-SOFTFP-NEXT:    mov pc, lr
 ;
 ; CHECK-HARDFP-DP-LABEL: dcmplt:
-; CHECK-HARDFP-DP:         vcmpe.f64 d0, d1
+; CHECK-HARDFP-DP:         vcmp.f64 d0, d1
 ; CHECK-HARDFP-DP-NEXT:    mov r0, #0
 ; CHECK-HARDFP-DP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-HARDFP-DP-NEXT:    movmi r0, #1
@@ -545,13 +545,13 @@ define i32 @dcmple(double %a, double %b) #0 {
 ; CHECK-SOFTFP:         vmov d16, r2, r3
 ; CHECK-SOFTFP-NEXT:    vmov d17, r0, r1
 ; CHECK-SOFTFP-NEXT:    mov r0, #0
-; CHECK-SOFTFP-NEXT:    vcmpe.f64 d17, d16
+; CHECK-SOFTFP-NEXT:    vcmp.f64 d17, d16
 ; CHECK-SOFTFP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-SOFTFP-NEXT:    movls r0, #1
 ; CHECK-SOFTFP-NEXT:    mov pc, lr
 ;
 ; CHECK-HARDFP-DP-LABEL: dcmple:
-; CHECK-HARDFP-DP:         vcmpe.f64 d0, d1
+; CHECK-HARDFP-DP:         vcmp.f64 d0, d1
 ; CHECK-HARDFP-DP-NEXT:    mov r0, #0
 ; CHECK-HARDFP-DP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-HARDFP-DP-NEXT:    movls r0, #1
@@ -587,13 +587,13 @@ define i32 @dcmpge(double %a, double %b) #0 {
 ; CHECK-SOFTFP:         vmov d16, r2, r3
 ; CHECK-SOFTFP-NEXT:    vmov d17, r0, r1
 ; CHECK-SOFTFP-NEXT:    mov r0, #0
-; CHECK-SOFTFP-NEXT:    vcmpe.f64 d17, d16
+; CHECK-SOFTFP-NEXT:    vcmp.f64 d17, d16
 ; CHECK-SOFTFP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-SOFTFP-NEXT:    movge r0, #1
 ; CHECK-SOFTFP-NEXT:    mov pc, lr
 ;
 ; CHECK-HARDFP-DP-LABEL: dcmpge:
-; CHECK-HARDFP-DP:         vcmpe.f64 d0, d1
+; CHECK-HARDFP-DP:         vcmp.f64 d0, d1
 ; CHECK-HARDFP-DP-NEXT:    mov r0, #0
 ; CHECK-HARDFP-DP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-HARDFP-DP-NEXT:    movge r0, #1
@@ -629,13 +629,13 @@ define i32 @dcmpgt(double %a, double %b) #0 {
 ; CHECK-SOFTFP:         vmov d16, r2, r3
 ; CHECK-SOFTFP-NEXT:    vmov d17, r0, r1
 ; CHECK-SOFTFP-NEXT:    mov r0, #0
-; CHECK-SOFTFP-NEXT:    vcmpe.f64 d17, d16
+; CHECK-SOFTFP-NEXT:    vcmp.f64 d17, d16
 ; CHECK-SOFTFP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-SOFTFP-NEXT:    movgt r0, #1
 ; CHECK-SOFTFP-NEXT:    mov pc, lr
 ;
 ; CHECK-HARDFP-DP-LABEL: dcmpgt:
-; CHECK-HARDFP-DP:         vcmpe.f64 d0, d1
+; CHECK-HARDFP-DP:         vcmp.f64 d0, d1
 ; CHECK-HARDFP-DP-NEXT:    mov r0, #0
 ; CHECK-HARDFP-DP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-HARDFP-DP-NEXT:    movgt r0, #1
@@ -671,13 +671,13 @@ define i32 @dcmpun(double %a, double %b) #0 {
 ; CHECK-SOFTFP:         vmov d16, r2, r3
 ; CHECK-SOFTFP-NEXT:    vmov d17, r0, r1
 ; CHECK-SOFTFP-NEXT:    mov r0, #0
-; CHECK-SOFTFP-NEXT:    vcmpe.f64 d17, d16
+; CHECK-SOFTFP-NEXT:    vcmp.f64 d17, d16
 ; CHECK-SOFTFP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-SOFTFP-NEXT:    movvs r0, #1
 ; CHECK-SOFTFP-NEXT:    mov pc, lr
 ;
 ; CHECK-HARDFP-DP-LABEL: dcmpun:
-; CHECK-HARDFP-DP:         vcmpe.f64 d0, d1
+; CHECK-HARDFP-DP:         vcmp.f64 d0, d1
 ; CHECK-HARDFP-DP-NEXT:    mov r0, #0
 ; CHECK-HARDFP-DP-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-HARDFP-DP-NEXT:    movvs r0, #1

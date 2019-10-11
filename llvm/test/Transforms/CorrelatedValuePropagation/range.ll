@@ -745,10 +745,9 @@ target93:
 define i1 @test17_i1(i1 %a) {
 ; CHECK-LABEL: @test17_i1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A:%.*]], true
 ; CHECK-NEXT:    br label [[DISPATCH:%.*]]
 ; CHECK:       dispatch:
-; CHECK-NEXT:    br i1 [[A]], label [[TRUE:%.*]], label [[DISPATCH]]
+; CHECK-NEXT:    br i1 [[A:%.*]], label [[TRUE:%.*]], label [[DISPATCH]]
 ; CHECK:       true:
 ; CHECK-NEXT:    ret i1 true
 ;

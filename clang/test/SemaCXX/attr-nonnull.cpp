@@ -77,10 +77,11 @@ constexpr int i3 = f3(&c, 0); //expected-error {{constant expression}} expected-
 constexpr int i32 = f3(0, &c);
 
 __attribute__((nonnull(4))) __attribute__((nonnull)) //expected-error {{out of bounds}}
-constexpr int f4(const int*, const int*) {
+constexpr int f4(const int*, const int*, int) {
   return 0;
 }
-constexpr int i4 = f4(&c, 0); //expected-error {{constant expression}} expected-note {{null passed}}
-constexpr int i42 = f4(0, &c); //expected-error {{constant expression}} expected-note {{null passed}}
+constexpr int i4 = f4(&c, 0, 0); //expected-error {{constant expression}} expected-note {{null passed}}
+constexpr int i42 = f4(0, &c, 1); //expected-error {{constant expression}} expected-note {{null passed}}
+constexpr int i43 = f4(&c, &c, 0);
 
 }

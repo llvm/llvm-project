@@ -137,65 +137,6 @@ if (APPLE AND LLVM_USE_SANITIZER)
   endif()
 endif()
 
-function(cxx_link_system_libraries target)
-  target_add_link_flags_if_supported(${target} PRIVATE "-nodefaultlibs")
-  target_add_compile_flags_if_supported(${target} PRIVATE "/Zl")
-  target_add_link_flags_if_supported(${target} PRIVATE "/nodefaultlib")
-
-  if (LIBCXX_HAS_SYSTEM_LIB)
-    target_link_libraries(${target} PUBLIC System)
-  endif()
-
-  if (LIBCXX_HAS_PTHREAD_LIB)
-    target_link_libraries(${target} PUBLIC pthread)
-  endif()
-
-  if (LIBCXX_HAS_C_LIB)
-    target_link_libraries(${target} PUBLIC c)
-  endif()
-
-  if (LIBCXX_HAS_M_LIB)
-    target_link_libraries(${target} PUBLIC m)
-  endif()
-
-  if (LIBCXX_HAS_RT_LIB)
-    target_link_libraries(${target} PUBLIC rt)
-  endif()
-
-  if (LIBCXX_USE_COMPILER_RT)
-    find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY)
-    if (LIBCXX_BUILTINS_LIBRARY)
-      target_link_libraries(${target} PUBLIC "${LIBCXX_BUILTINS_LIBRARY}")
-    endif()
-  elseif (LIBCXX_HAS_GCC_S_LIB)
-    target_link_libraries(${target} PUBLIC gcc_s)
-  endif()
-
-  if (LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB)
-    target_link_libraries(${target} PUBLIC atomic)
-  endif()
-
-  if (MINGW)
-    target_link_libraries(${target} PUBLIC "${MINGW_LIBRARIES}")
-  endif()
-
-  if (LIBCXX_TARGETING_MSVC)
-    if (LIBCXX_DEBUG_BUILD)
-      set(LIB_SUFFIX "d")
-    else()
-      set(LIB_SUFFIX "")
-    endif()
-
-    target_link_libraries(${target} PUBLIC ucrt${LIB_SUFFIX}) # Universal C runtime
-    target_link_libraries(${target} PUBLIC vcruntime${LIB_SUFFIX}) # C++ runtime
-    target_link_libraries(${target} PUBLIC msvcrt${LIB_SUFFIX}) # C runtime startup files
-    target_link_libraries(${target} PUBLIC msvcprt${LIB_SUFFIX}) # C++ standard library. Required for exception_ptr internals.
-    # Required for standards-complaint wide character formatting functions
-    # (e.g. `printfw`/`scanfw`)
-    target_link_libraries(${target} PUBLIC iso_stdio_wide_specifiers)
-  endif()
-endfunction()
-
 if (LIBCXX_ENABLE_PARALLEL_ALGORITHMS AND NOT TARGET pstl::ParallelSTL)
   message(FATAL_ERROR "Could not find ParallelSTL")
 endif()
@@ -219,7 +160,6 @@ if (LIBCXX_ENABLE_SHARED)
   if(COMMAND llvm_setup_rpath)
     llvm_setup_rpath(cxx_shared)
   endif()
-  cxx_link_system_libraries(cxx_shared)
   target_link_libraries(cxx_shared PRIVATE ${LIBCXX_LIBRARIES})
   set_target_properties(cxx_shared
     PROPERTIES
@@ -237,12 +177,10 @@ if (LIBCXX_ENABLE_SHARED)
   if (LIBCXXABI_USE_LLVM_UNWINDER)
     if (NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY AND (TARGET unwind_shared OR HAVE_LIBUNWIND))
       target_link_libraries(cxx_shared PUBLIC unwind_shared)
-      list(APPEND LIBCXX_INTERFACE_LIBRARIES unwind_shared) # For the linker script
     elseif (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY AND (TARGET unwind_static OR HAVE_LIBUNWIND))
       # libunwind is already included in libc++abi
     else()
-      target_link_libraries(cxx_shared PRIVATE unwind)
-      list(APPEND LIBCXX_INTERFACE_LIBRARIES unwind) # For the linker script
+      target_link_libraries(cxx_shared PUBLIC unwind)
     endif()
   endif()
 
@@ -255,7 +193,6 @@ if (LIBCXX_ENABLE_SHARED)
     endif()
   else()
     target_link_libraries(cxx_shared PUBLIC "${LIBCXX_CXX_SHARED_ABI_LIBRARY}")
-    list(APPEND LIBCXX_INTERFACE_LIBRARIES "${LIBCXX_CXX_SHARED_ABI_LIBRARY}") # For the linker script
   endif()
 
   # Maybe re-export symbols from libc++abi
@@ -282,31 +219,10 @@ if (LIBCXX_ENABLE_SHARED)
     endif()
   endif()
 
-  # Generate a linker script in place of a libc++.so symlink. Rerun this command
-  # after cxx builds.
+  # Generate a linker script in place of a libc++.so symlink.
   if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
-    # Get the name of the ABI library and handle the case where CXXABI_LIBNAME
-    # is a target name and not a library. Ex cxxabi_shared.
-    set(LIBCXX_INTERFACE_LIBRARY_NAMES)
-    foreach(lib ${LIBCXX_INTERFACE_LIBRARIES})
-      # FIXME: Handle cxxabi_static and unwind_static.
-      if (TARGET ${lib} OR
-          (${lib} MATCHES "cxxabi(_static|_shared)?" AND HAVE_LIBCXXABI) OR
-          (${lib} MATCHES "unwind(_static|_shared)?" AND HAVE_LIBUNWIND))
-        list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "$<TARGET_PROPERTY:${lib},OUTPUT_NAME>")
-      else()
-        list(APPEND LIBCXX_INTERFACE_LIBRARY_NAMES "${lib}")
-      endif()
-    endforeach()
-    add_custom_command(TARGET cxx_shared POST_BUILD
-      COMMAND
-        ${PYTHON_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/gen_link_script.py
-      ARGS
-        --input "$<TARGET_SONAME_FILE:cxx_shared>"
-        --output "$<TARGET_LINKER_FILE:cxx_shared>"
-        ${LIBCXX_INTERFACE_LIBRARY_NAMES}
-      WORKING_DIRECTORY ${LIBCXX_BUILD_DIR}
-    )
+      include(DefineLinkerScript)
+      define_linker_script(cxx_shared)
   endif()
 
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")
@@ -322,7 +238,6 @@ endif()
 # Build the static library.
 if (LIBCXX_ENABLE_STATIC)
   add_library(cxx_static STATIC ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
-  cxx_link_system_libraries(cxx_static)
   target_link_libraries(cxx_static PRIVATE ${LIBCXX_LIBRARIES})
   set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
   set_target_properties(cxx_static
@@ -385,9 +300,9 @@ if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
     )
   add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
   if (LIBCXX_ENABLE_SHARED)
-    target_link_libraries(cxx_experimental cxx_shared)
+    target_link_libraries(cxx_experimental PRIVATE cxx_shared)
   else()
-    target_link_libraries(cxx_experimental cxx_static)
+    target_link_libraries(cxx_experimental PRIVATE cxx_static)
   endif()
 
   set_target_properties(cxx_experimental

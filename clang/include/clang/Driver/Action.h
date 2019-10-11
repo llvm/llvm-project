@@ -65,15 +65,17 @@ public:
     BackendJobClass,
     AssembleJobClass,
     LinkJobClass,
+    IfsMergeJobClass,
     LipoJobClass,
     DsymutilJobClass,
     VerifyDebugInfoJobClass,
     VerifyPCHJobClass,
     OffloadBundlingJobClass,
     OffloadUnbundlingJobClass,
+    OffloadWrapperJobClass,
 
     JobClassFirst = PreprocessJobClass,
-    JobClassLast = OffloadUnbundlingJobClass
+    JobClassLast = OffloadWrapperJobClass
   };
 
   // The offloading kind determines if this action is binded to a particular
@@ -485,6 +487,17 @@ public:
   }
 };
 
+class IfsMergeJobAction : public JobAction {
+  void anchor() override;
+
+public:
+  IfsMergeJobAction(ActionList &Inputs, types::ID Type);
+
+  static bool classof(const Action *A) {
+    return A->getKind() == IfsMergeJobClass;
+  }
+};
+
 class LinkJobAction : public JobAction {
   void anchor() override;
 
@@ -610,6 +623,17 @@ public:
 
   static bool classof(const Action *A) {
     return A->getKind() == OffloadUnbundlingJobClass;
+  }
+};
+
+class OffloadWrapperJobAction : public JobAction {
+  void anchor() override;
+
+public:
+  OffloadWrapperJobAction(ActionList &Inputs, types::ID Type);
+
+  static bool classof(const Action *A) {
+    return A->getKind() == OffloadWrapperJobClass;
   }
 };
 

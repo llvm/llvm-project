@@ -463,6 +463,9 @@ main:
     # CHECK: f64x2.convert_i64x2_u # encoding: [0xfd,0xb2,0x01]
     f64x2.convert_i64x2_u
 
+    # CHECK: v8x16.swizzle # encoding: [0xfd,0xc0,0x01]
+    v8x16.swizzle
+
     # CHECK: v8x16.load_splat 48 # encoding: [0xfd,0xc2,0x01,0x00,0x30]
     v8x16.load_splat 48
 

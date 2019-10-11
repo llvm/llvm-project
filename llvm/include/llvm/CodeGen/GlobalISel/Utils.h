@@ -119,14 +119,16 @@ struct ValueAndVReg {
   unsigned VReg;
 };
 /// If \p VReg is defined by a statically evaluable chain of
-/// instructions rooted on a G_CONSTANT (\p LookThroughInstrs == true)
-/// and that constant fits in int64_t, returns its value as well as
-/// the virtual register defined by this G_CONSTANT.
-/// When \p LookThroughInstrs == false, this function behaves like
+/// instructions rooted on a G_F/CONSTANT (\p LookThroughInstrs == true)
+/// and that constant fits in int64_t, returns its value as well as the
+/// virtual register defined by this G_F/CONSTANT.
+/// When \p LookThroughInstrs == false this function behaves like
 /// getConstantVRegVal.
+/// When \p HandleFConstants == false the function bails on G_FCONSTANTs.
 Optional<ValueAndVReg>
 getConstantVRegValWithLookThrough(unsigned VReg, const MachineRegisterInfo &MRI,
-                                  bool LookThroughInstrs = true);
+                                  bool LookThroughInstrs = true,
+                                  bool HandleFConstants = true);
 const ConstantFP* getConstantFPVRegVal(unsigned VReg,
                                        const MachineRegisterInfo &MRI);
 

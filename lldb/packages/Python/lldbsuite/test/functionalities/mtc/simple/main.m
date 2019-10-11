@@ -1,8 +1,14 @@
 #import <Foundation/Foundation.h>
+#if __has_include(<AppKit/AppKit.h>)
 #import <AppKit/AppKit.h>
+#define XXView NSView
+#else
+#import <UIKit/UIKit.h>
+#define XXView UIView
+#endif
 
 int main() {
-  NSView *view = [[NSView alloc] init];
+  XXView *view = [[XXView alloc] init];
   dispatch_group_t g = dispatch_group_create();
   dispatch_group_enter(g);
   [NSThread detachNewThreadWithBlock:^{

@@ -1,5 +1,5 @@
 // RUN: %clangxx -std=c++11 -fsanitize=pointer-overflow %s -o %t
-// RUN: %run %t 2>&1 | FileCheck %s
+// RUN: %run %t 2>&1 | FileCheck %s --implicit-check-not="error:"
 
 int main(int argc, char *argv[]) {
   char c;
@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
   // CHECK: unsigned-index-expression.cpp:[[@LINE+1]]:16: runtime error: subtraction of unsigned offset from 0x{{.*}} overflowed to 0x{{.*}}
   char *q1 = p - neg_1;
 
-  // CHECK: unsigned-index-expression.cpp:[[@LINE+2]]:16: runtime error: pointer index expression with base 0x{{0*}} overflowed to 0x{{.*}}
+  // CHECK: unsigned-index-expression.cpp:[[@LINE+2]]:16: runtime error: applying non-zero offset {{.*}} to null pointer
   char *n = nullptr;
   char *q2 = n - 1ULL;
 

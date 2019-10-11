@@ -611,7 +611,9 @@ int main(int argc, char **argv) {
       OutputFilename = "-";
 
     std::error_code EC;
-    Out.reset(new ToolOutputFile(OutputFilename, EC, sys::fs::OF_None));
+    sys::fs::OpenFlags Flags = OutputAssembly ? sys::fs::OF_Text
+                                              : sys::fs::OF_None;
+    Out.reset(new ToolOutputFile(OutputFilename, EC, Flags));
     if (EC) {
       errs() << EC.message() << '\n';
       return 1;

@@ -775,6 +775,13 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
       return nullptr;
   }
 
+  // C++2a [dcl.struct.bind]p1:
+  //   A cv that includes volatile is deprecated
+  if ((DS.getTypeQualifiers() & DeclSpec::TQ_volatile) &&
+      getLangOpts().CPlusPlus2a)
+    Diag(DS.getVolatileSpecLoc(),
+         diag::warn_deprecated_volatile_structured_binding);
+
   TypeSourceInfo *TInfo = GetTypeForDeclarator(D, S);
   QualType R = TInfo->getType();
 

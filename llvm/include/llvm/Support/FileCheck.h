@@ -30,6 +30,7 @@ struct FileCheckRequest {
   std::vector<std::string> GlobalDefines;
   bool AllowEmptyInput = false;
   bool MatchFullLines = false;
+  bool IgnoreCase = false;
   bool EnableVarScope = false;
   bool AllowDeprecatedDagOverlap = false;
   bool Verbose = false;

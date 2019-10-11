@@ -60,7 +60,9 @@ void llvm::SplitString(StringRef Source,
 void llvm::printEscapedString(StringRef Name, raw_ostream &Out) {
   for (unsigned i = 0, e = Name.size(); i != e; ++i) {
     unsigned char C = Name[i];
-    if (isPrint(C) && C != '\\' && C != '"')
+    if (C == '\\')
+      Out << '\\' << C;
+    else if (isPrint(C) && C != '"')
       Out << C;
     else
       Out << '\\' << hexdigit(C >> 4) << hexdigit(C & 0x0F);

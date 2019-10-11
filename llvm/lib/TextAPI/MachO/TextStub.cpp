@@ -147,6 +147,58 @@ Each undefineds section is defined as following:
   objc-ivars: []       # Optional: List of Objective C Instance Variables
   weak-ref-symbols: [] # Optional: List of weak defined symbols
 */
+
+/*
+
+ YAML Format specification.
+
+--- !tapi-tbd
+tbd-version: 4                              # The tbd version for format
+targets: [ armv7-ios, x86_64-maccatalyst ]  # The list of applicable tapi supported target triples
+uuids:                                      # Optional: List of target and UUID pairs.
+  - target: armv7-ios
+    value: ...
+  - target: x86_64-maccatalyst
+    value: ...
+flags: []                        # Optional:
+install-name: /u/l/libfoo.dylib  #
+current-version: 1.2.3           # Optional: defaults to 1.0
+compatibility-version: 1.0       # Optional: defaults to 1.0
+swift-abi-version: 0             # Optional: defaults to 0
+parent-umbrella:                 # Optional:
+allowable-clients:
+  - targets: [ armv7-ios ]       # Optional:
+    clients: [ clientA ]
+exports:                         # List of export sections
+...
+re-exports:                      # List of reexport sections
+...
+undefineds:                      # List of undefineds sections
+...
+
+Each export and reexport  section is defined as following:
+
+- targets: [ arm64-macos ]                        # The list of target triples associated with symbols
+  symbols: [ _symA ]                              # Optional: List of symbols
+  objc-classes: []                                # Optional: List of Objective-C classes
+  objc-eh-types: []                               # Optional: List of Objective-C classes
+                                                  #           with EH
+  objc-ivars: []                                  # Optional: List of Objective C Instance
+                                                  #           Variables
+  weak-symbols: []                                # Optional: List of weak defined symbols
+  thread-local-symbols: []                        # Optional: List of thread local symbols
+- targets: [ arm64-macos, x86_64-maccatalyst ]    # Optional: Targets for applicable additional symbols
+  symbols: [ _symB ]                              # Optional: List of symbols
+
+Each undefineds section is defined as following:
+- targets: [ arm64-macos ]    # The list of target triples associated with symbols
+  symbols: [ _symC ]          # Optional: List of symbols
+  objc-classes: []            # Optional: List of Objective-C classes
+  objc-eh-types: []           # Optional: List of Objective-C classes
+                              #           with EH
+  objc-ivars: []              # Optional: List of Objective C Instance Variables
+  weak-symbols: []            # Optional: List of weak defined symbols
+*/
 // clang-format on
 
 using namespace llvm;
@@ -175,6 +227,38 @@ struct UndefinedSection {
   std::vector<FlowStringRef> WeakRefSymbols;
 };
 
+// Sections for direct target mapping in TBDv4
+struct SymbolSection {
+  TargetList Targets;
+  std::vector<FlowStringRef> Symbols;
+  std::vector<FlowStringRef> Classes;
+  std::vector<FlowStringRef> ClassEHs;
+  std::vector<FlowStringRef> Ivars;
+  std::vector<FlowStringRef> WeakSymbols;
+  std::vector<FlowStringRef> TlvSymbols;
+};
+
+struct MetadataSection {
+  enum Option { Clients, Libraries };
+  std::vector<Target> Targets;
+  std::vector<FlowStringRef> Values;
+};
+
+struct UmbrellaSection {
+  std::vector<Target> Targets;
+  std::string Umbrella;
+};
+
+// UUID's for TBDv4 are mapped to target not arch
+struct UUIDv4 {
+  Target TargetID;
+  std::string Value;
+
+  UUIDv4() = default;
+  UUIDv4(const Target &TargetID, const std::string &Value)
+      : TargetID(TargetID), Value(Value) {}
+};
+
 // clang-format off
 enum TBDFlags : unsigned {
   None                         = 0U,
@@ -189,6 +273,12 @@ enum TBDFlags : unsigned {
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(Architecture)
 LLVM_YAML_IS_SEQUENCE_VECTOR(ExportSection)
 LLVM_YAML_IS_SEQUENCE_VECTOR(UndefinedSection)
+// Specific to TBDv4
+LLVM_YAML_IS_SEQUENCE_VECTOR(SymbolSection)
+LLVM_YAML_IS_SEQUENCE_VECTOR(MetadataSection)
+LLVM_YAML_IS_SEQUENCE_VECTOR(UmbrellaSection)
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(Target)
+LLVM_YAML_IS_SEQUENCE_VECTOR(UUIDv4)
 
 namespace llvm {
 namespace yaml {
@@ -231,6 +321,49 @@ template <> struct MappingTraits<UndefinedSection> {
   }
 };
 
+template <> struct MappingTraits<SymbolSection> {
+  static void mapping(IO &IO, SymbolSection &Section) {
+    IO.mapRequired("targets", Section.Targets);
+    IO.mapOptional("symbols", Section.Symbols);
+    IO.mapOptional("objc-classes", Section.Classes);
+    IO.mapOptional("objc-eh-types", Section.ClassEHs);
+    IO.mapOptional("objc-ivars", Section.Ivars);
+    IO.mapOptional("weak-symbols", Section.WeakSymbols);
+    IO.mapOptional("thread-local-symbols", Section.TlvSymbols);
+  }
+};
+
+template <> struct MappingTraits<UmbrellaSection> {
+  static void mapping(IO &IO, UmbrellaSection &Section) {
+    IO.mapRequired("targets", Section.Targets);
+    IO.mapRequired("umbrella", Section.Umbrella);
+  }
+};
+
+template <> struct MappingTraits<UUIDv4> {
+  static void mapping(IO &IO, UUIDv4 &UUID) {
+    IO.mapRequired("target", UUID.TargetID);
+    IO.mapRequired("value", UUID.Value);
+  }
+};
+
+template <>
+struct MappingContextTraits<MetadataSection, MetadataSection::Option> {
+  static void mapping(IO &IO, MetadataSection &Section,
+                      MetadataSection::Option &OptionKind) {
+    IO.mapRequired("targets", Section.Targets);
+    switch (OptionKind) {
+    case MetadataSection::Option::Clients:
+      IO.mapRequired("clients", Section.Values);
+      return;
+    case MetadataSection::Option::Libraries:
+      IO.mapRequired("libraries", Section.Values);
+      return;
+    }
+    llvm_unreachable("unexpected option for metadata");
+  }
+};
+
 template <> struct ScalarBitSetTraits<TBDFlags> {
   static void bitset(IO &IO, TBDFlags &Flags) {
     IO.bitSetCase(Flags, "flat_namespace", TBDFlags::FlatNamespace);
@@ -238,6 +371,60 @@ template <> struct ScalarBitSetTraits<TBDFlags> {
                   TBDFlags::NotApplicationExtensionSafe);
     IO.bitSetCase(Flags, "installapi", TBDFlags::InstallAPI);
   }
+};
+
+template <> struct ScalarTraits<Target> {
+  static void output(const Target &Value, void *, raw_ostream &OS) {
+    OS << Value.Arch << "-";
+    switch (Value.Platform) {
+    default:
+      OS << "unknown";
+      break;
+    case PlatformKind::macOS:
+      OS << "macos";
+      break;
+    case PlatformKind::iOS:
+      OS << "ios";
+      break;
+    case PlatformKind::tvOS:
+      OS << "tvos";
+      break;
+    case PlatformKind::watchOS:
+      OS << "watchos";
+      break;
+    case PlatformKind::bridgeOS:
+      OS << "bridgeos";
+      break;
+    case PlatformKind::macCatalyst:
+      OS << "maccatalyst";
+      break;
+    case PlatformKind::iOSSimulator:
+      OS << "ios-simulator";
+      break;
+    case PlatformKind::tvOSSimulator:
+      OS << "tvos-simulator";
+      break;
+    case PlatformKind::watchOSSimulator:
+      OS << "watchos-simulator";
+      break;
+    }
+  }
+
+  static StringRef input(StringRef Scalar, void *, Target &Value) {
+    auto Result = Target::create(Scalar);
+    if (!Result)
+      return toString(Result.takeError());
+
+    Value = *Result;
+    if (Value.Arch == AK_unknown)
+      return "unknown architecture";
+    if (Value.Platform == PlatformKind::unknown)
+      return "unknown platform";
+
+    return {};
+  }
+
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template <> struct MappingTraits<const InterfaceFile *> {
@@ -555,70 +742,335 @@ template <> struct MappingTraits<const InterfaceFile *> {
     std::vector<UndefinedSection> Undefineds;
   };
 
+  static void setFileTypeForInput(TextAPIContext *Ctx, IO &IO) {
+    if (IO.mapTag("!tapi-tbd", false))
+      Ctx->FileKind = FileType::TBD_V4;
+    else if (IO.mapTag("!tapi-tbd-v3", false))
+      Ctx->FileKind = FileType::TBD_V3;
+    else if (IO.mapTag("!tapi-tbd-v2", false))
+      Ctx->FileKind = FileType::TBD_V2;
+    else if (IO.mapTag("!tapi-tbd-v1", false) ||
+             IO.mapTag("tag:yaml.org,2002:map", false))
+      Ctx->FileKind = FileType::TBD_V1;
+    else {
+      Ctx->FileKind = FileType::Invalid;
+      return;
+    }
+  }
+
   static void mapping(IO &IO, const InterfaceFile *&File) {
     auto *Ctx = reinterpret_cast<TextAPIContext *>(IO.getContext());
     assert((!Ctx || !IO.outputting() ||
             (Ctx && Ctx->FileKind != FileType::Invalid)) &&
            "File type is not set in YAML context");
-    MappingNormalization<NormalizedTBD, const InterfaceFile *> Keys(IO, File);
 
-    // prope file type when reading.
     if (!IO.outputting()) {
-      if (IO.mapTag("!tapi-tbd-v3", false))
-        Ctx->FileKind = FileType::TBD_V3;
-      else if (IO.mapTag("!tapi-tbd-v2", false))
-        Ctx->FileKind = FileType::TBD_V2;
-      else if (IO.mapTag("!tapi-tbd-v1", false) ||
-               IO.mapTag("tag:yaml.org,2002:map", false))
-        Ctx->FileKind = FileType::TBD_V1;
-      else {
+      setFileTypeForInput(Ctx, IO);
+      switch (Ctx->FileKind) {
+      default:
+        break;
+      case FileType::TBD_V4:
+        mapKeysToValuesV4(IO, File);
+        return;
+      case FileType::Invalid:
         IO.setError("unsupported file type");
         return;
       }
-    }
-
-    // Set file type when writing.
-    if (IO.outputting()) {
+    } else {
+      // Set file type when writing.
       switch (Ctx->FileKind) {
       default:
         llvm_unreachable("unexpected file type");
-      case FileType::TBD_V1:
-        // Don't write the tag into the .tbd file for TBD v1.
+      case FileType::TBD_V4:
+        mapKeysToValuesV4(IO, File);
+        return;
+      case FileType::TBD_V3:
+        IO.mapTag("!tapi-tbd-v3", true);
         break;
       case FileType::TBD_V2:
         IO.mapTag("!tapi-tbd-v2", true);
         break;
-      case FileType::TBD_V3:
-        IO.mapTag("!tapi-tbd-v3", true);
+      case FileType::TBD_V1:
+        // Don't write the tag into the .tbd file for TBD v1
         break;
       }
     }
+    mapKeysToValues(Ctx->FileKind, IO, File);
+  }
 
+  using SectionList = std::vector<SymbolSection>;
+  struct NormalizedTBD_V4 {
+    explicit NormalizedTBD_V4(IO &IO) {}
+    NormalizedTBD_V4(IO &IO, const InterfaceFile *&File) {
+      auto Ctx = reinterpret_cast<TextAPIContext *>(IO.getContext());
+      assert(Ctx);
+      TBDVersion = Ctx->FileKind >> 1;
+      Targets.insert(Targets.begin(), File->targets().begin(),
+                     File->targets().end());
+      for (const auto &IT : File->uuids())
+        UUIDs.emplace_back(IT.first, IT.second);
+      InstallName = File->getInstallName();
+      CurrentVersion = File->getCurrentVersion();
+      CompatibilityVersion = File->getCompatibilityVersion();
+      SwiftABIVersion = File->getSwiftABIVersion();
+
+      Flags = TBDFlags::None;
+      if (!File->isApplicationExtensionSafe())
+        Flags |= TBDFlags::NotApplicationExtensionSafe;
+
+      if (!File->isTwoLevelNamespace())
+        Flags |= TBDFlags::FlatNamespace;
+
+      if (File->isInstallAPI())
+        Flags |= TBDFlags::InstallAPI;
+
+      {
+        std::map<std::string, TargetList> valueToTargetList;
+        for (const auto &it : File->umbrellas())
+          valueToTargetList[it.second].emplace_back(it.first);
+
+        for (const auto &it : valueToTargetList) {
+          UmbrellaSection CurrentSection;
+          CurrentSection.Targets.insert(CurrentSection.Targets.begin(),
+                                        it.second.begin(), it.second.end());
+          CurrentSection.Umbrella = it.first;
+          ParentUmbrellas.emplace_back(std::move(CurrentSection));
+        }
+      }
+
+      assignTargetsToLibrary(File->allowableClients(), AllowableClients);
+      assignTargetsToLibrary(File->reexportedLibraries(), ReexportedLibraries);
+
+      auto handleSymbols =
+          [](SectionList &CurrentSections,
+             InterfaceFile::const_filtered_symbol_range Symbols,
+             std::function<bool(const Symbol *)> Pred) {
+            std::set<TargetList> TargetSet;
+            std::map<const Symbol *, TargetList> SymbolToTargetList;
+            for (const auto *Symbol : Symbols) {
+              if (!Pred(Symbol))
+                continue;
+              TargetList Targets(Symbol->targets());
+              SymbolToTargetList[Symbol] = Targets;
+              TargetSet.emplace(std::move(Targets));
+            }
+            for (const auto &TargetIDs : TargetSet) {
+              SymbolSection CurrentSection;
+              CurrentSection.Targets.insert(CurrentSection.Targets.begin(),
+                                            TargetIDs.begin(), TargetIDs.end());
+
+              for (const auto &IT : SymbolToTargetList) {
+                if (IT.second != TargetIDs)
+                  continue;
+
+                const auto *Symbol = IT.first;
+                switch (Symbol->getKind()) {
+                case SymbolKind::GlobalSymbol:
+                  if (Symbol->isWeakDefined())
+                    CurrentSection.WeakSymbols.emplace_back(Symbol->getName());
+                  else if (Symbol->isThreadLocalValue())
+                    CurrentSection.TlvSymbols.emplace_back(Symbol->getName());
+                  else
+                    CurrentSection.Symbols.emplace_back(Symbol->getName());
+                  break;
+                case SymbolKind::ObjectiveCClass:
+                  CurrentSection.Classes.emplace_back(Symbol->getName());
+                  break;
+                case SymbolKind::ObjectiveCClassEHType:
+                  CurrentSection.ClassEHs.emplace_back(Symbol->getName());
+                  break;
+                case SymbolKind::ObjectiveCInstanceVariable:
+                  CurrentSection.Ivars.emplace_back(Symbol->getName());
+                  break;
+                }
+              }
+              sort(CurrentSection.Symbols);
+              sort(CurrentSection.Classes);
+              sort(CurrentSection.ClassEHs);
+              sort(CurrentSection.Ivars);
+              sort(CurrentSection.WeakSymbols);
+              sort(CurrentSection.TlvSymbols);
+              CurrentSections.emplace_back(std::move(CurrentSection));
+            }
+          };
+
+      handleSymbols(Exports, File->exports(), [](const Symbol *Symbol) {
+        return !Symbol->isReexported();
+      });
+      handleSymbols(Reexports, File->exports(), [](const Symbol *Symbol) {
+        return Symbol->isReexported();
+      });
+      handleSymbols(Undefineds, File->undefineds(),
+                    [](const Symbol *Symbol) { return true; });
+    }
+
+    const InterfaceFile *denormalize(IO &IO) {
+      auto Ctx = reinterpret_cast<TextAPIContext *>(IO.getContext());
+      assert(Ctx);
+
+      auto *File = new InterfaceFile;
+      File->setPath(Ctx->Path);
+      File->setFileType(Ctx->FileKind);
+      for (auto &id : UUIDs)
+        File->addUUID(id.TargetID, id.Value);
+      File->addTargets(Targets);
+      File->setInstallName(InstallName);
+      File->setCurrentVersion(CurrentVersion);
+      File->setCompatibilityVersion(CompatibilityVersion);
+      File->setSwiftABIVersion(SwiftABIVersion);
+      for (const auto &CurrentSection : ParentUmbrellas)
+        for (const auto &target : CurrentSection.Targets)
+          File->addParentUmbrella(target, CurrentSection.Umbrella);
+      File->setTwoLevelNamespace(!(Flags & TBDFlags::FlatNamespace));
+      File->setApplicationExtensionSafe(
+          !(Flags & TBDFlags::NotApplicationExtensionSafe));
+      File->setInstallAPI(Flags & TBDFlags::InstallAPI);
+
+      for (const auto &CurrentSection : AllowableClients) {
+        for (const auto &lib : CurrentSection.Values)
+          for (const auto &Target : CurrentSection.Targets)
+            File->addAllowableClient(lib, Target);
+      }
+
+      for (const auto &CurrentSection : ReexportedLibraries) {
+        for (const auto &Lib : CurrentSection.Values)
+          for (const auto &Target : CurrentSection.Targets)
+            File->addReexportedLibrary(Lib, Target);
+      }
+
+      auto handleSymbols = [File](const SectionList &CurrentSections,
+                                  SymbolFlags Flag = SymbolFlags::None) {
+        for (const auto &CurrentSection : CurrentSections) {
+          for (auto &sym : CurrentSection.Symbols)
+            File->addSymbol(SymbolKind::GlobalSymbol, sym,
+                            CurrentSection.Targets, Flag);
+
+          for (auto &sym : CurrentSection.Classes)
+            File->addSymbol(SymbolKind::ObjectiveCClass, sym,
+                            CurrentSection.Targets);
+
+          for (auto &sym : CurrentSection.ClassEHs)
+            File->addSymbol(SymbolKind::ObjectiveCClassEHType, sym,
+                            CurrentSection.Targets);
+
+          for (auto &sym : CurrentSection.Ivars)
+            File->addSymbol(SymbolKind::ObjectiveCInstanceVariable, sym,
+                            CurrentSection.Targets);
+
+          for (auto &sym : CurrentSection.WeakSymbols)
+            File->addSymbol(SymbolKind::GlobalSymbol, sym,
+                            CurrentSection.Targets);
+          for (auto &sym : CurrentSection.TlvSymbols)
+            File->addSymbol(SymbolKind::GlobalSymbol, sym,
+                            CurrentSection.Targets,
+                            SymbolFlags::ThreadLocalValue);
+        }
+      };
+
+      handleSymbols(Exports);
+      handleSymbols(Reexports, SymbolFlags::Rexported);
+      handleSymbols(Undefineds, SymbolFlags::Undefined);
+
+      return File;
+    }
+
+    unsigned TBDVersion;
+    std::vector<UUIDv4> UUIDs;
+    TargetList Targets;
+    StringRef InstallName;
+    PackedVersion CurrentVersion;
+    PackedVersion CompatibilityVersion;
+    SwiftVersion SwiftABIVersion{0};
+    std::vector<MetadataSection> AllowableClients;
+    std::vector<MetadataSection> ReexportedLibraries;
+    TBDFlags Flags{TBDFlags::None};
+    std::vector<UmbrellaSection> ParentUmbrellas;
+    SectionList Exports;
+    SectionList Reexports;
+    SectionList Undefineds;
+
+  private:
+    void assignTargetsToLibrary(const std::vector<InterfaceFileRef> &Libraries,
+                                std::vector<MetadataSection> &Section) {
+      std::set<TargetList> targetSet;
+      std::map<const InterfaceFileRef *, TargetList> valueToTargetList;
+      for (const auto &library : Libraries) {
+        TargetList targets(library.targets());
+        valueToTargetList[&library] = targets;
+        targetSet.emplace(std::move(targets));
+      }
+
+      for (const auto &targets : targetSet) {
+        MetadataSection CurrentSection;
+        CurrentSection.Targets.insert(CurrentSection.Targets.begin(),
+                                      targets.begin(), targets.end());
+
+        for (const auto &it : valueToTargetList) {
+          if (it.second != targets)
+            continue;
+
+          CurrentSection.Values.emplace_back(it.first->getInstallName());
+        }
+        llvm::sort(CurrentSection.Values);
+        Section.emplace_back(std::move(CurrentSection));
+      }
+    }
+  };
+
+  static void mapKeysToValues(FileType FileKind, IO &IO,
+                              const InterfaceFile *&File) {
+    MappingNormalization<NormalizedTBD, const InterfaceFile *> Keys(IO, File);
     IO.mapRequired("archs", Keys->Architectures);
-    if (Ctx->FileKind != FileType::TBD_V1)
+    if (FileKind != FileType::TBD_V1)
       IO.mapOptional("uuids", Keys->UUIDs);
     IO.mapRequired("platform", Keys->Platforms);
-    if (Ctx->FileKind != FileType::TBD_V1)
+    if (FileKind != FileType::TBD_V1)
       IO.mapOptional("flags", Keys->Flags, TBDFlags::None);
     IO.mapRequired("install-name", Keys->InstallName);
     IO.mapOptional("current-version", Keys->CurrentVersion,
                    PackedVersion(1, 0, 0));
     IO.mapOptional("compatibility-version", Keys->CompatibilityVersion,
                    PackedVersion(1, 0, 0));
-    if (Ctx->FileKind != FileType::TBD_V3)
+    if (FileKind != FileType::TBD_V3)
       IO.mapOptional("swift-version", Keys->SwiftABIVersion, SwiftVersion(0));
     else
       IO.mapOptional("swift-abi-version", Keys->SwiftABIVersion,
                      SwiftVersion(0));
     IO.mapOptional("objc-constraint", Keys->ObjCConstraint,
-                   (Ctx->FileKind == FileType::TBD_V1)
+                   (FileKind == FileType::TBD_V1)
                        ? ObjCConstraintType::None
                        : ObjCConstraintType::Retain_Release);
-    if (Ctx->FileKind != FileType::TBD_V1)
+    if (FileKind != FileType::TBD_V1)
       IO.mapOptional("parent-umbrella", Keys->ParentUmbrella, StringRef());
     IO.mapOptional("exports", Keys->Exports);
-    if (Ctx->FileKind != FileType::TBD_V1)
+    if (FileKind != FileType::TBD_V1)
       IO.mapOptional("undefineds", Keys->Undefineds);
+  }
+
+  static void mapKeysToValuesV4(IO &IO, const InterfaceFile *&File) {
+    MappingNormalization<NormalizedTBD_V4, const InterfaceFile *> Keys(IO,
+                                                                       File);
+    IO.mapTag("!tapi-tbd", true);
+    IO.mapRequired("tbd-version", Keys->TBDVersion);
+    IO.mapRequired("targets", Keys->Targets);
+    IO.mapOptional("uuids", Keys->UUIDs);
+    IO.mapOptional("flags", Keys->Flags, TBDFlags::None);
+    IO.mapRequired("install-name", Keys->InstallName);
+    IO.mapOptional("current-version", Keys->CurrentVersion,
+                   PackedVersion(1, 0, 0));
+    IO.mapOptional("compatibility-version", Keys->CompatibilityVersion,
+                   PackedVersion(1, 0, 0));
+    IO.mapOptional("swift-abi-version", Keys->SwiftABIVersion, SwiftVersion(0));
+    IO.mapOptional("parent-umbrella", Keys->ParentUmbrellas);
+    auto OptionKind = MetadataSection::Option::Clients;
+    IO.mapOptionalWithContext("allowable-clients", Keys->AllowableClients,
+                              OptionKind);
+    OptionKind = MetadataSection::Option::Libraries;
+    IO.mapOptionalWithContext("reexported-libraries", Keys->ReexportedLibraries,
+                              OptionKind);
+    IO.mapOptional("exports", Keys->Exports);
+    IO.mapOptional("reexports", Keys->Reexports);
+    IO.mapOptional("undefineds", Keys->Undefineds);
   }
 };
 

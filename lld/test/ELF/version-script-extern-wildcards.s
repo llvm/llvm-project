@@ -6,8 +6,7 @@
 # RUN: ld.lld --version-script %t.script -shared %t.o -o %t.so
 # RUN: llvm-readobj -V --dyn-syms %t.so | FileCheck %s
 
-# CHECK:  Version symbols {
-# CHECK:   Symbols [
+# CHECK:  Version symbols [
 # CHECK:    Name: _Z3bari
 # CHECK:    Name: _Z3fooi@@FOO
 # CHECK:    Name: _Z3zedi@@BAR

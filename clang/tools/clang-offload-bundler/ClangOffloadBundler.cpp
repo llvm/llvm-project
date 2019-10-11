@@ -71,6 +71,8 @@ static cl::opt<std::string>
                        "Current supported types are:\n"
                        "  i   - cpp-output\n"
                        "  ii  - c++-cpp-output\n"
+                       "  cui - cuda/hip-output\n"
+                       "  d   - dependency\n"
                        "  ll  - llvm\n"
                        "  bc  - llvm-bc\n"
                        "  s   - assembler\n"
@@ -628,6 +630,12 @@ static FileHandler *CreateFileHandler(MemoryBuffer &FirstInput) {
     return new TextFileHandler(/*Comment=*/"//");
   if (FilesType == "ii")
     return new TextFileHandler(/*Comment=*/"//");
+  if (FilesType == "cui")
+    return new TextFileHandler(/*Comment=*/"//");
+  // TODO: `.d` should be eventually removed once `-M` and its variants are
+  // handled properly in offload compilation.
+  if (FilesType == "d")
+    return new TextFileHandler(/*Comment=*/"#");
   if (FilesType == "ll")
     return new TextFileHandler(/*Comment=*/";");
   if (FilesType == "bc")

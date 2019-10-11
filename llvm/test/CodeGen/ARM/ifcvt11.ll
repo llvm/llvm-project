@@ -17,7 +17,7 @@ bb.nph:                                           ; preds = %entry
   br label %bb
 
 bb:                                               ; preds = %bb4, %bb.nph
-; CHECK: vcmpe.f64
+; CHECK: vcmp.f64
 ; CHECK: vmrs APSR_nzcv, fpscr
   %r.19 = phi i32 [ 0, %bb.nph ], [ %r.0, %bb4 ]
   %n.08 = phi i32 [ 0, %bb.nph ], [ %10, %bb4 ]
@@ -30,9 +30,9 @@ bb:                                               ; preds = %bb4, %bb.nph
 
 bb1:                                              ; preds = %bb
 ; CHECK-NOT: it
-; CHECK-NOT: vcmpemi
+; CHECK-NOT: vcmpmi
 ; CHECK-NOT: vmrsmi
-; CHECK: vcmpe.f64
+; CHECK: vcmp.f64
 ; CHECK: vmrs APSR_nzcv, fpscr
   %scevgep12 = getelementptr %struct.xyz_t, %struct.xyz_t* %p, i32 %n.08, i32 2
   %6 = load double, double* %scevgep12, align 4

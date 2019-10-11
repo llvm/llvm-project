@@ -30,6 +30,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/TypeSize.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -437,23 +438,33 @@ public:
 
   /// Returns the number of bits necessary to hold the specified type.
   ///
+  /// If Ty is a scalable vector type, the scalable property will be set and
+  /// the runtime size will be a positive integer multiple of the base size.
+  ///
   /// For example, returns 36 for i36 and 80 for x86_fp80. The type passed must
   /// have a size (Type::isSized() must return true).
-  uint64_t getTypeSizeInBits(Type *Ty) const;
+  TypeSize getTypeSizeInBits(Type *Ty) const;
 
   /// Returns the maximum number of bytes that may be overwritten by
   /// storing the specified type.
   ///
+  /// If Ty is a scalable vector type, the scalable property will be set and
+  /// the runtime size will be a positive integer multiple of the base size.
+  ///
   /// For example, returns 5 for i36 and 10 for x86_fp80.
-  uint64_t getTypeStoreSize(Type *Ty) const {
-    return (getTypeSizeInBits(Ty) + 7) / 8;
+  TypeSize getTypeStoreSize(Type *Ty) const {
+    auto BaseSize = getTypeSizeInBits(Ty);
+    return { (BaseSize.getKnownMinSize() + 7) / 8, BaseSize.isScalable() };
   }
 
   /// Returns the maximum number of bits that may be overwritten by
   /// storing the specified type; always a multiple of 8.
   ///
+  /// If Ty is a scalable vector type, the scalable property will be set and
+  /// the runtime size will be a positive integer multiple of the base size.
+  ///
   /// For example, returns 40 for i36 and 80 for x86_fp80.
-  uint64_t getTypeStoreSizeInBits(Type *Ty) const {
+  TypeSize getTypeStoreSizeInBits(Type *Ty) const {
     return 8 * getTypeStoreSize(Ty);
   }
 
@@ -468,9 +479,12 @@ public:
   /// Returns the offset in bytes between successive objects of the
   /// specified type, including alignment padding.
   ///
+  /// If Ty is a scalable vector type, the scalable property will be set and
+  /// the runtime size will be a positive integer multiple of the base size.
+  ///
   /// This is the amount that alloca reserves for this type. For example,
   /// returns 12 or 16 for x86_fp80, depending on alignment.
-  uint64_t getTypeAllocSize(Type *Ty) const {
+  TypeSize getTypeAllocSize(Type *Ty) const {
     // Round up to the next alignment boundary.
     return alignTo(getTypeStoreSize(Ty), getABITypeAlignment(Ty));
   }
@@ -478,9 +492,12 @@ public:
   /// Returns the offset in bits between successive objects of the
   /// specified type, including alignment padding; always a multiple of 8.
   ///
+  /// If Ty is a scalable vector type, the scalable property will be set and
+  /// the runtime size will be a positive integer multiple of the base size.
+  ///
   /// This is the amount that alloca reserves for this type. For example,
   /// returns 96 or 128 for x86_fp80, depending on alignment.
-  uint64_t getTypeAllocSizeInBits(Type *Ty) const {
+  TypeSize getTypeAllocSizeInBits(Type *Ty) const {
     return 8 * getTypeAllocSize(Ty);
   }
 
@@ -598,13 +615,13 @@ private:
 
 // The implementation of this method is provided inline as it is particularly
 // well suited to constant folding when called on a specific Type subclass.
-inline uint64_t DataLayout::getTypeSizeInBits(Type *Ty) const {
+inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
   assert(Ty->isSized() && "Cannot getTypeInfo() on a type that is unsized!");
   switch (Ty->getTypeID()) {
   case Type::LabelTyID:
-    return getPointerSizeInBits(0);
+    return TypeSize::Fixed(getPointerSizeInBits(0));
   case Type::PointerTyID:
-    return getPointerSizeInBits(Ty->getPointerAddressSpace());
+    return TypeSize::Fixed(getPointerSizeInBits(Ty->getPointerAddressSpace()));
   case Type::ArrayTyID: {
     ArrayType *ATy = cast<ArrayType>(Ty);
     return ATy->getNumElements() *
@@ -612,26 +629,30 @@ inline uint64_t DataLayout::getTypeSizeInBits(Type *Ty) const {
   }
   case Type::StructTyID:
     // Get the layout annotation... which is lazily created on demand.
-    return getStructLayout(cast<StructType>(Ty))->getSizeInBits();
+    return TypeSize::Fixed(
+                        getStructLayout(cast<StructType>(Ty))->getSizeInBits());
   case Type::IntegerTyID:
-    return Ty->getIntegerBitWidth();
+    return TypeSize::Fixed(Ty->getIntegerBitWidth());
   case Type::HalfTyID:
-    return 16;
+    return TypeSize::Fixed(16);
   case Type::FloatTyID:
-    return 32;
+    return TypeSize::Fixed(32);
   case Type::DoubleTyID:
   case Type::X86_MMXTyID:
-    return 64;
+    return TypeSize::Fixed(64);
   case Type::PPC_FP128TyID:
   case Type::FP128TyID:
-    return 128;
+    return TypeSize::Fixed(128);
   // In memory objects this is always aligned to a higher boundary, but
   // only 80 bits contain information.
   case Type::X86_FP80TyID:
-    return 80;
+    return TypeSize::Fixed(80);
   case Type::VectorTyID: {
     VectorType *VTy = cast<VectorType>(Ty);
-    return VTy->getNumElements() * getTypeSizeInBits(VTy->getElementType());
+    auto EltCnt = VTy->getElementCount();
+    uint64_t MinBits = EltCnt.Min *
+                        getTypeSizeInBits(VTy->getElementType()).getFixedSize();
+    return TypeSize(MinBits, EltCnt.Scalable);
   }
   default:
     llvm_unreachable("DataLayout::getTypeSizeInBits(): Unsupported type");

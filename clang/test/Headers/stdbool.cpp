@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=gnu++98 -E -dM %s | FileCheck --check-prefix=CHECK-GNU-COMPAT-98 %s
-// RUN: %clang_cc1 -std=gnu++11 -E -dM %s | FileCheck --check-prefix=CHECK-GNU-COMPAT-11 %s
-// RUN: %clang_cc1 -std=c++98 -E -dM %s | FileCheck --check-prefix=CHECK-CONFORMING %s
-// RUN: %clang_cc1 -fsyntax-only -std=gnu++98 -verify -Weverything %s
+// RUN: %clang_cc1 -fgnuc-version=4.2.1 -std=gnu++98 -E -dM %s | FileCheck --check-prefix=CHECK-GNU-COMPAT-98 %s
+// RUN: %clang_cc1 -fgnuc-version=4.2.1 -std=gnu++11 -E -dM %s | FileCheck --check-prefix=CHECK-GNU-COMPAT-11 %s
+// RUN: %clang_cc1 -fgnuc-version=4.2.1 -std=c++98 -E -dM %s | FileCheck --check-prefix=CHECK-CONFORMING %s
+// RUN: %clang_cc1 -fgnuc-version=4.2.1 -fsyntax-only -std=gnu++98 -verify -Weverything %s
 #include <stdbool.h>
 #define zzz
 

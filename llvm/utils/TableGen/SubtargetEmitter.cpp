@@ -1057,6 +1057,7 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
         LLVM_DEBUG(dbgs() << ProcModel.ModelName
                           << " does not have resources for class " << SC.Name
                           << '\n');
+        SCDesc.NumMicroOps = MCSchedClassDesc::InvalidNumMicroOps;
       }
     }
     // Sum resources across all operand writes.

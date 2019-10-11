@@ -216,11 +216,33 @@ Optional<int64_t> llvm::getConstantVRegVal(unsigned VReg,
 }
 
 Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
-    unsigned VReg, const MachineRegisterInfo &MRI, bool LookThroughInstrs) {
+    unsigned VReg, const MachineRegisterInfo &MRI, bool LookThroughInstrs,
+    bool HandleFConstant) {
   SmallVector<std::pair<unsigned, unsigned>, 4> SeenOpcodes;
   MachineInstr *MI;
-  while ((MI = MRI.getVRegDef(VReg)) &&
-         MI->getOpcode() != TargetOpcode::G_CONSTANT && LookThroughInstrs) {
+  auto IsConstantOpcode = [HandleFConstant](unsigned Opcode) {
+    return Opcode == TargetOpcode::G_CONSTANT ||
+           (HandleFConstant && Opcode == TargetOpcode::G_FCONSTANT);
+  };
+  auto GetImmediateValue = [HandleFConstant,
+                            &MRI](const MachineInstr &MI) -> Optional<APInt> {
+    const MachineOperand &CstVal = MI.getOperand(1);
+    if (!CstVal.isImm() && !CstVal.isCImm() &&
+        (!HandleFConstant || !CstVal.isFPImm()))
+      return None;
+    if (!CstVal.isFPImm()) {
+      unsigned BitWidth =
+          MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+      APInt Val = CstVal.isImm() ? APInt(BitWidth, CstVal.getImm())
+                                 : CstVal.getCImm()->getValue();
+      assert(Val.getBitWidth() == BitWidth &&
+             "Value bitwidth doesn't match definition type");
+      return Val;
+    }
+    return CstVal.getFPImm()->getValueAPF().bitcastToAPInt();
+  };
+  while ((MI = MRI.getVRegDef(VReg)) && !IsConstantOpcode(MI->getOpcode()) &&
+         LookThroughInstrs) {
     switch (MI->getOpcode()) {
     case TargetOpcode::G_TRUNC:
     case TargetOpcode::G_SEXT:
@@ -242,16 +264,13 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
       return None;
     }
   }
-  if (!MI || MI->getOpcode() != TargetOpcode::G_CONSTANT ||
-      (!MI->getOperand(1).isImm() && !MI->getOperand(1).isCImm()))
+  if (!MI || !IsConstantOpcode(MI->getOpcode()))
     return None;
 
-  const MachineOperand &CstVal = MI->getOperand(1);
-  unsigned BitWidth = MRI.getType(MI->getOperand(0).getReg()).getSizeInBits();
-  APInt Val = CstVal.isImm() ? APInt(BitWidth, CstVal.getImm())
-                             : CstVal.getCImm()->getValue();
-  assert(Val.getBitWidth() == BitWidth &&
-         "Value bitwidth doesn't match definition type");
+  Optional<APInt> MaybeVal = GetImmediateValue(*MI);
+  if (!MaybeVal)
+    return None;
+  APInt &Val = *MaybeVal;
   while (!SeenOpcodes.empty()) {
     std::pair<unsigned, unsigned> OpcodeAndSize = SeenOpcodes.pop_back_val();
     switch (OpcodeAndSize.first) {

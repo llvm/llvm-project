@@ -3801,6 +3801,16 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
   QualType ExprTy = E->getType();
   assert(!ExprTy->isReferenceType());
 
+  bool IsUnevaluatedOperand =
+      (ExprKind == UETT_SizeOf || ExprKind == UETT_AlignOf ||
+       ExprKind == UETT_PreferredAlignOf);
+  if (IsUnevaluatedOperand) {
+    ExprResult Result = CheckUnevaluatedOperand(E);
+    if (Result.isInvalid())
+      return true;
+    E = Result.get();
+  }
+
   if (ExprKind == UETT_VecStep)
     return CheckVecStepTraitOperandType(*this, ExprTy, E->getExprLoc(),
                                         E->getSourceRange());
@@ -3838,9 +3848,8 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(Expr *E,
 
   // The operand for sizeof and alignof is in an unevaluated expression context,
   // so side effects could result in unintended consequences.
-  if ((ExprKind == UETT_SizeOf || ExprKind == UETT_AlignOf ||
-       ExprKind == UETT_PreferredAlignOf) &&
-      !inTemplateInstantiation() && E->HasSideEffects(Context, false))
+  if (IsUnevaluatedOperand && !inTemplateInstantiation() &&
+      E->HasSideEffects(Context, false))
     Diag(E->getExprLoc(), diag::warn_side_effects_unevaluated_context);
 
   if (CheckObjCTraitOperandConstraints(*this, ExprTy, E->getExprLoc(),
@@ -3939,8 +3948,6 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
 }
 
 static bool CheckAlignOfExpr(Sema &S, Expr *E, UnaryExprOrTypeTrait ExprKind) {
-  E = E->IgnoreParens();
-
   // Cannot know anything else if the expression is dependent.
   if (E->isTypeDependent())
     return false;
@@ -3952,9 +3959,10 @@ static bool CheckAlignOfExpr(Sema &S, Expr *E, UnaryExprOrTypeTrait ExprKind) {
   }
 
   ValueDecl *D = nullptr;
-  if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
+  Expr *Inner = E->IgnoreParens();
+  if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Inner)) {
     D = DRE->getDecl();
-  } else if (MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
+  } else if (MemberExpr *ME = dyn_cast<MemberExpr>(Inner)) {
     D = ME->getMemberDecl();
   }
 
@@ -9197,6 +9205,7 @@ static void DiagnoseDivisionSizeofPointerOrArray(Sema &S, Expr *LHS, Expr *RHS,
     QualType ArrayElemTy = ArrayTy->getElementType();
     if (ArrayElemTy != S.Context.getBaseElementType(ArrayTy) ||
         ArrayElemTy->isDependentType() || RHSTy->isDependentType() ||
+        ArrayElemTy->isCharType() ||
         S.Context.getTypeSize(ArrayElemTy) == S.Context.getTypeSize(RHSTy))
       return;
     S.Diag(Loc, diag::warn_division_sizeof_array)
@@ -11937,6 +11946,21 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
 
   CheckForNullPointerDereference(*this, LHSExpr);
 
+  if (getLangOpts().CPlusPlus2a && LHSType.isVolatileQualified()) {
+    if (CompoundType.isNull()) {
+      // C++2a [expr.ass]p5:
+      //   A simple-assignment whose left operand is of a volatile-qualified
+      //   type is deprecated unless the assignment is either a discarded-value
+      //   expression or an unevaluated operand
+      ExprEvalContexts.back().VolatileAssignmentLHSs.push_back(LHSExpr);
+    } else {
+      // C++2a [expr.ass]p6:
+      //   [Compound-assignment] expressions are deprecated if E1 has
+      //   volatile-qualified type
+      Diag(Loc, diag::warn_deprecated_compound_assign_volatile) << LHSType;
+    }
+  }
+
   // C99 6.5.16p3: The type of an assignment expression is the type of the
   // left operand unless the left operand has qualified type, in which case
   // it is the unqualified version of the type of the left operand.
@@ -12125,6 +12149,12 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
   // Now make sure the operand is a modifiable lvalue.
   if (CheckForModifiableLvalue(Op, OpLoc, S))
     return QualType();
+  if (S.getLangOpts().CPlusPlus2a && ResType.isVolatileQualified()) {
+    // C++2a [expr.pre.inc]p1, [expr.post.inc]p1:
+    //   An operand with volatile-qualified type is deprecated
+    S.Diag(OpLoc, diag::warn_deprecated_increment_decrement_volatile)
+        << IsInc << ResType;
+  }
   // In C++, a prefix increment is the same type as the operand. Otherwise
   // (in C or with postfix), the increment is the unqualified type of the
   // operand.
@@ -13479,10 +13509,6 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       // C99 does not support '~' for complex conjugation.
       Diag(OpLoc, diag::ext_integer_complement_complex)
           << resultType << Input.get()->getSourceRange();
-    else if (Input.get()->isKnownToHaveBooleanValue())
-      Diag(OpLoc, diag::warn_bitwise_negation_bool)
-          << Input.get()->getSourceRange()
-          << FixItHint::CreateReplacement(OpLoc, "!");
     else if (resultType->hasIntegerRepresentation())
       break;
     else if (resultType->isExtVectorType() && Context.getLangOpts().OpenCL) {
@@ -14017,10 +14043,11 @@ void Sema::ActOnBlockStart(SourceLocation CaretLoc, Scope *CurScope) {
   BlockDecl *Block = BlockDecl::Create(Context, CurContext, CaretLoc);
 
   if (LangOpts.CPlusPlus) {
+    MangleNumberingContext *MCtx;
     Decl *ManglingContextDecl;
-    if (MangleNumberingContext *MCtx =
-            getCurrentMangleNumberContext(Block->getDeclContext(),
-                                          ManglingContextDecl)) {
+    std::tie(MCtx, ManglingContextDecl) =
+        getCurrentMangleNumberContext(Block->getDeclContext());
+    if (MCtx) {
       unsigned ManglingNumber = MCtx->getManglingNumber(Block);
       Block->setBlockMangling(ManglingNumber, ManglingContextDecl);
     }
@@ -15064,6 +15091,26 @@ void Sema::WarnOnPendingNoDerefs(ExpressionEvaluationContextRecord &Rec) {
   Rec.PossibleDerefs.clear();
 }
 
+/// Check whether E, which is either a discarded-value expression or an
+/// unevaluated operand, is a simple-assignment to a volatlie-qualified lvalue,
+/// and if so, remove it from the list of volatile-qualified assignments that
+/// we are going to warn are deprecated.
+void Sema::CheckUnusedVolatileAssignment(Expr *E) {
+  if (!E->getType().isVolatileQualified() || !getLangOpts().CPlusPlus2a)
+    return;
+
+  // Note: ignoring parens here is not justified by the standard rules, but
+  // ignoring parentheses seems like a more reasonable approach, and this only
+  // drives a deprecation warning so doesn't affect conformance.
+  if (auto *BO = dyn_cast<BinaryOperator>(E->IgnoreParenImpCasts())) {
+    if (BO->getOpcode() == BO_Assign) {
+      auto &LHSs = ExprEvalContexts.back().VolatileAssignmentLHSs;
+      LHSs.erase(std::remove(LHSs.begin(), LHSs.end(), BO->getLHS()),
+                 LHSs.end());
+    }
+  }
+}
+
 void Sema::PopExpressionEvaluationContext() {
   ExpressionEvaluationContextRecord& Rec = ExprEvalContexts.back();
   unsigned NumTypos = Rec.NumTypos;
@@ -15097,6 +15144,13 @@ void Sema::PopExpressionEvaluationContext() {
   }
 
   WarnOnPendingNoDerefs(Rec);
+
+  // Warn on any volatile-qualified simple-assignments that are not discarded-
+  // value expressions nor unevaluated operands (those cases get removed from
+  // this list by CheckUnusedVolatileAssignment).
+  for (auto *BO : Rec.VolatileAssignmentLHSs)
+    Diag(BO->getBeginLoc(), diag::warn_deprecated_simple_assign_volatile)
+        << BO->getType();
 
   // When are coming out of an unevaluated context, clear out any
   // temporaries that we may have created as part of the evaluation of

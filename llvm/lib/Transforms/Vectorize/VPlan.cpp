@@ -283,6 +283,12 @@ iplist<VPRecipeBase>::iterator VPRecipeBase::eraseFromParent() {
   return getParent()->getRecipeList().erase(getIterator());
 }
 
+void VPRecipeBase::moveAfter(VPRecipeBase *InsertPos) {
+  InsertPos->getParent()->getRecipeList().splice(
+      std::next(InsertPos->getIterator()), getParent()->getRecipeList(),
+      getIterator());
+}
+
 void VPInstruction::generateInstruction(VPTransformState &State,
                                         unsigned Part) {
   IRBuilder<> &Builder = State.Builder;
@@ -736,7 +742,7 @@ void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
       auto NewIGIter = Old2New.find(IG);
       if (NewIGIter == Old2New.end())
         Old2New[IG] = new InterleaveGroup<VPInstruction>(
-            IG->getFactor(), IG->isReverse(), IG->getAlignment());
+            IG->getFactor(), IG->isReverse(), Align(IG->getAlignment()));
 
       if (Inst == IG->getInsertPos())
         Old2New[IG]->setInsertPos(VPInst);
@@ -744,7 +750,8 @@ void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
       InterleaveGroupMap[VPInst] = Old2New[IG];
       InterleaveGroupMap[VPInst]->insertMember(
           VPInst, IG->getIndex(Inst),
-          IG->isReverse() ? (-1) * int(IG->getFactor()) : IG->getFactor());
+          Align(IG->isReverse() ? (-1) * int(IG->getFactor())
+                                : IG->getFactor()));
     }
   } else if (VPRegionBlock *Region = dyn_cast<VPRegionBlock>(Block))
     visitRegion(Region, Old2New, IAI);

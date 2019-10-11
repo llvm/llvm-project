@@ -113,7 +113,12 @@ struct XCOFFStringTable {
 };
 
 struct XCOFFCsectAuxEnt32 {
-  support::ubig32_t SectionLen;
+  support::ubig32_t
+      SectionOrLength; // If the symbol type is XTY_SD or XTY_CM, the csect
+                       // length.
+                       // If the symbol type is XTY_LD, the symbol table
+                       // index of the containing csect.
+                       // If the symbol type is XTY_ER, 0.
   support::ubig32_t ParameterHashIndex;
   support::ubig16_t TypeChkSectNum;
   uint8_t SymbolAlignmentAndType;

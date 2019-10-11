@@ -186,22 +186,21 @@ define i32 @rot16_demandedbits(i32 %x, i32 %y) nounwind {
 ; X32-NEXT:    shrl $11, %ecx
 ; X32-NEXT:    shll $5, %eax
 ; X32-NEXT:    orl %ecx, %eax
-; X32-NEXT:    andl $65536, %eax # imm = 0x10000
+; X32-NEXT:    movzwl %ax, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: rot16_demandedbits:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movl %edi, %ecx
-; X64-NEXT:    shrl $11, %ecx
-; X64-NEXT:    shll $5, %eax
-; X64-NEXT:    orl %ecx, %eax
-; X64-NEXT:    andl $65536, %eax # imm = 0x10000
+; X64-NEXT:    shrl $11, %eax
+; X64-NEXT:    shll $5, %edi
+; X64-NEXT:    orl %eax, %edi
+; X64-NEXT:    movzwl %di, %eax
 ; X64-NEXT:    retq
 	%t0 = lshr i32 %x, 11
 	%t1 = shl i32 %x, 5
 	%t2 = or i32 %t0, %t1
-	%t3 = and i32 %t2, 65536
+	%t3 = and i32 %t2, 65535
 	ret i32 %t3
 }
 

@@ -103,13 +103,13 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   case R_HEX_LO16:
     return R_ABS;
   case R_HEX_B9_PCREL:
-  case R_HEX_B9_PCREL_X:
   case R_HEX_B13_PCREL:
   case R_HEX_B15_PCREL:
-  case R_HEX_B15_PCREL_X:
   case R_HEX_6_PCREL_X:
   case R_HEX_32_PCREL:
     return R_PC;
+  case R_HEX_B9_PCREL_X:
+  case R_HEX_B15_PCREL_X:
   case R_HEX_B22_PCREL:
   case R_HEX_PLT_B22_PCREL:
   case R_HEX_B22_PCREL_X:

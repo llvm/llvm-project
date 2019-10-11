@@ -835,20 +835,36 @@ void MachineFunction::addCodeViewHeapAllocSite(MachineInstr *I,
   CodeViewHeapAllocSites.push_back(std::make_tuple(BeginLabel, EndLabel, DI));
 }
 
-void MachineFunction::updateCallSiteInfo(const MachineInstr *Old,
-                                         const MachineInstr *New) {
-  if (!Target.Options.EnableDebugEntryValues || Old == New)
-    return;
+void MachineFunction::moveCallSiteInfo(const MachineInstr *Old,
+                                       const MachineInstr *New) {
+  assert(New->isCall() && "Call site info refers only to call instructions!");
 
-  assert(Old->isCall() && (!New || New->isCall()) &&
-         "Call site info referes only to call instructions!");
-  CallSiteInfoMap::iterator CSIt = CallSitesInfo.find(Old);
+  CallSiteInfoMap::iterator CSIt = getCallSiteInfo(Old);
   if (CSIt == CallSitesInfo.end())
     return;
+
   CallSiteInfo CSInfo = std::move(CSIt->second);
   CallSitesInfo.erase(CSIt);
-  if (New)
-    CallSitesInfo[New] = CSInfo;
+  CallSitesInfo[New] = CSInfo;
+}
+
+void MachineFunction::eraseCallSiteInfo(const MachineInstr *MI) {
+  CallSiteInfoMap::iterator CSIt = getCallSiteInfo(MI);
+  if (CSIt == CallSitesInfo.end())
+    return;
+  CallSitesInfo.erase(CSIt);
+}
+
+void MachineFunction::copyCallSiteInfo(const MachineInstr *Old,
+                                       const MachineInstr *New) {
+  assert(New->isCall() && "Call site info refers only to call instructions!");
+
+  CallSiteInfoMap::iterator CSIt = getCallSiteInfo(Old);
+  if (CSIt == CallSitesInfo.end())
+    return;
+
+  CallSiteInfo CSInfo = CSIt->second;
+  CallSitesInfo[New] = CSInfo;
 }
 
 /// \}

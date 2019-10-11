@@ -2330,6 +2330,11 @@ define amdgpu_kernel void @idot8_acc8_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_and_b32_e32 v13, v13, v3
 ; GFX10-DL-NEXT:    v_and_b32_e32 v14, v14, v3
 ; GFX10-DL-NEXT:    v_ashrrev_i16_e64 v5, 12, v5
+; GFX10-DL-NEXT:    v_lshlrev_b16_e64 v9, 12, s8
+; GFX10-DL-NEXT:    v_lshlrev_b16_e64 v10, 12, s0
+; GFX10-DL-NEXT:    v_ashrrev_i16_e64 v7, 12, v7
+; GFX10-DL-NEXT:    v_mul_lo_u16_e64 v3, v3, v4
+; GFX10-DL-NEXT:    v_ashrrev_i16_e64 v6, 12, v6
 ; GFX10-DL-NEXT:    v_ashrrev_i16_e64 v8, 12, v8
 ; GFX10-DL-NEXT:    v_lshlrev_b16_e64 v26, 12, s6
 ; GFX10-DL-NEXT:    v_and_b32_e32 v7, v22, v3

@@ -304,10 +304,10 @@ body:             |
 ...
 
 # GCN-LABEL: {{^}}name: image_clause{{$}}
-# GCN:      early-clobber %4:vreg_128, early-clobber %3:vreg_128, early-clobber %5:vreg_128 = BUNDLE %0, undef %2:sreg_128, %1, implicit $exec {
-# GCN-NEXT:   %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-# GCN-NEXT:   %4:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-# GCN-NEXT:   %5:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN:      early-clobber %4:vreg_128, early-clobber %3:vreg_128, early-clobber %5:vreg_128 = BUNDLE %0, undef %2:sgpr_128, %1, implicit $exec {
+# GCN-NEXT:   %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT:   %4:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT:   %5:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 # GCN-NEXT: }
 # GCN-NEXT: IMAGE_STORE_V4_V2 %3, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 
@@ -317,7 +317,7 @@ tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: sreg_256 }
-  - { id: 2, class: sreg_128 }
+  - { id: 2, class: sgpr_128 }
   - { id: 3, class: vreg_128 }
   - { id: 4, class: vreg_128 }
   - { id: 5, class: vreg_128 }
@@ -325,9 +325,9 @@ body:             |
   bb.0:
     %0 = IMPLICIT_DEF
     %1 = IMPLICIT_DEF
-    %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    %4:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-    %5:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sreg_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %4:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %5:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2 %0, %1, undef %2:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     IMAGE_STORE_V4_V2 %3, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     IMAGE_STORE_V4_V2 %4, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     IMAGE_STORE_V4_V2 %5, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, 0, implicit $exec
@@ -346,7 +346,7 @@ tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_64 }
   - { id: 1, class: sreg_256 }
-  - { id: 2, class: sreg_128 }
+  - { id: 2, class: sgpr_128 }
   - { id: 3, class: vreg_128 }
   - { id: 4, class: vreg_128 }
   - { id: 5, class: vgpr_32 }

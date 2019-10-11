@@ -113,6 +113,45 @@ static inline bool isCanonicalPredicate(CmpInst::Predicate Pred) {
   }
 }
 
+/// Given an exploded icmp instruction, return true if the comparison only
+/// checks the sign bit. If it only checks the sign bit, set TrueIfSigned if the
+/// result of the comparison is true when the input value is signed.
+inline bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
+                           bool &TrueIfSigned) {
+  switch (Pred) {
+  case ICmpInst::ICMP_SLT: // True if LHS s< 0
+    TrueIfSigned = true;
+    return RHS.isNullValue();
+  case ICmpInst::ICMP_SLE: // True if LHS s<= -1
+    TrueIfSigned = true;
+    return RHS.isAllOnesValue();
+  case ICmpInst::ICMP_SGT: // True if LHS s> -1
+    TrueIfSigned = false;
+    return RHS.isAllOnesValue();
+  case ICmpInst::ICMP_SGE: // True if LHS s>= 0
+    TrueIfSigned = false;
+    return RHS.isNullValue();
+  case ICmpInst::ICMP_UGT:
+    // True if LHS u> RHS and RHS == sign-bit-mask - 1
+    TrueIfSigned = true;
+    return RHS.isMaxSignedValue();
+  case ICmpInst::ICMP_UGE:
+    // True if LHS u>= RHS and RHS == sign-bit-mask (2^7, 2^15, 2^31, etc)
+    TrueIfSigned = true;
+    return RHS.isMinSignedValue();
+  case ICmpInst::ICMP_ULT:
+    // True if LHS u< RHS and RHS == sign-bit-mask (2^7, 2^15, 2^31, etc)
+    TrueIfSigned = false;
+    return RHS.isMinSignedValue();
+  case ICmpInst::ICMP_ULE:
+    // True if LHS u<= RHS and RHS == sign-bit-mask - 1
+    TrueIfSigned = false;
+    return RHS.isMaxSignedValue();
+  default:
+    return false;
+  }
+}
+
 llvm::Optional<std::pair<CmpInst::Predicate, Constant *>>
 getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred, Constant *C);
 

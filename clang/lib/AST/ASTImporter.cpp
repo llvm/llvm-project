@@ -1836,71 +1836,10 @@ Error ASTNodeImporter::ImportDefinition(
 
     struct CXXRecordDecl::DefinitionData &ToData = ToCXX->data();
     struct CXXRecordDecl::DefinitionData &FromData = FromCXX->data();
-    ToData.UserDeclaredConstructor = FromData.UserDeclaredConstructor;
-    ToData.UserDeclaredSpecialMembers = FromData.UserDeclaredSpecialMembers;
-    ToData.Aggregate = FromData.Aggregate;
-    ToData.PlainOldData = FromData.PlainOldData;
-    ToData.Empty = FromData.Empty;
-    ToData.Polymorphic = FromData.Polymorphic;
-    ToData.Abstract = FromData.Abstract;
-    ToData.IsStandardLayout = FromData.IsStandardLayout;
-    ToData.IsCXX11StandardLayout = FromData.IsCXX11StandardLayout;
-    ToData.HasBasesWithFields = FromData.HasBasesWithFields;
-    ToData.HasBasesWithNonStaticDataMembers =
-        FromData.HasBasesWithNonStaticDataMembers;
-    ToData.HasPrivateFields = FromData.HasPrivateFields;
-    ToData.HasProtectedFields = FromData.HasProtectedFields;
-    ToData.HasPublicFields = FromData.HasPublicFields;
-    ToData.HasMutableFields = FromData.HasMutableFields;
-    ToData.HasVariantMembers = FromData.HasVariantMembers;
-    ToData.HasOnlyCMembers = FromData.HasOnlyCMembers;
-    ToData.HasInClassInitializer = FromData.HasInClassInitializer;
-    ToData.HasUninitializedReferenceMember
-      = FromData.HasUninitializedReferenceMember;
-    ToData.HasUninitializedFields = FromData.HasUninitializedFields;
-    ToData.HasInheritedConstructor = FromData.HasInheritedConstructor;
-    ToData.HasInheritedAssignment = FromData.HasInheritedAssignment;
-    ToData.NeedOverloadResolutionForCopyConstructor
-      = FromData.NeedOverloadResolutionForCopyConstructor;
-    ToData.NeedOverloadResolutionForMoveConstructor
-      = FromData.NeedOverloadResolutionForMoveConstructor;
-    ToData.NeedOverloadResolutionForMoveAssignment
-      = FromData.NeedOverloadResolutionForMoveAssignment;
-    ToData.NeedOverloadResolutionForDestructor
-      = FromData.NeedOverloadResolutionForDestructor;
-    ToData.DefaultedCopyConstructorIsDeleted
-      = FromData.DefaultedCopyConstructorIsDeleted;
-    ToData.DefaultedMoveConstructorIsDeleted
-      = FromData.DefaultedMoveConstructorIsDeleted;
-    ToData.DefaultedMoveAssignmentIsDeleted
-      = FromData.DefaultedMoveAssignmentIsDeleted;
-    ToData.DefaultedDestructorIsDeleted = FromData.DefaultedDestructorIsDeleted;
-    ToData.HasTrivialSpecialMembers = FromData.HasTrivialSpecialMembers;
-    ToData.HasIrrelevantDestructor = FromData.HasIrrelevantDestructor;
-    ToData.HasConstexprNonCopyMoveConstructor
-      = FromData.HasConstexprNonCopyMoveConstructor;
-    ToData.HasDefaultedDefaultConstructor
-      = FromData.HasDefaultedDefaultConstructor;
-    ToData.DefaultedDefaultConstructorIsConstexpr
-      = FromData.DefaultedDefaultConstructorIsConstexpr;
-    ToData.HasConstexprDefaultConstructor
-      = FromData.HasConstexprDefaultConstructor;
-    ToData.HasNonLiteralTypeFieldsOrBases
-      = FromData.HasNonLiteralTypeFieldsOrBases;
-    // ComputedVisibleConversions not imported.
-    ToData.UserProvidedDefaultConstructor
-      = FromData.UserProvidedDefaultConstructor;
-    ToData.DeclaredSpecialMembers = FromData.DeclaredSpecialMembers;
-    ToData.ImplicitCopyConstructorCanHaveConstParamForVBase
-      = FromData.ImplicitCopyConstructorCanHaveConstParamForVBase;
-    ToData.ImplicitCopyConstructorCanHaveConstParamForNonVBase
-      = FromData.ImplicitCopyConstructorCanHaveConstParamForNonVBase;
-    ToData.ImplicitCopyAssignmentHasConstParam
-      = FromData.ImplicitCopyAssignmentHasConstParam;
-    ToData.HasDeclaredCopyConstructorWithConstParam
-      = FromData.HasDeclaredCopyConstructorWithConstParam;
-    ToData.HasDeclaredCopyAssignmentWithConstParam
-      = FromData.HasDeclaredCopyAssignmentWithConstParam;
+
+    #define FIELD(Name, Width, Merge) \
+    ToData.Name = FromData.Name;
+    #include "clang/AST/CXXRecordDeclDefinitionBits.def"
 
     // Copy over the data stored in RecordDeclBits
     ToCXX->setArgPassingRestrictions(FromCXX->getArgPassingRestrictions());

@@ -15,9 +15,11 @@ namespace lldb {
 
 class LLDB_API SBFile {
   friend class SBDebugger;
+  friend class SBCommandReturnObject;
 
 public:
   SBFile();
+  SBFile(FileSP file_sp);
   SBFile(FILE *file, bool transfer_ownership);
   SBFile(int fd, const char *mode, bool transfer_ownership);
   ~SBFile();
@@ -33,7 +35,6 @@ public:
 
 private:
   FileSP m_opaque_sp;
-  SBFile(FileSP file_sp);
 };
 
 } // namespace lldb

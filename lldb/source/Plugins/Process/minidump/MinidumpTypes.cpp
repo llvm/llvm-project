@@ -87,29 +87,3 @@ MinidumpMemoryDescriptor64::ParseMemory64List(llvm::ArrayRef<uint8_t> &data) {
           *mem_ranges_count),
       *base_rva);
 }
-
-std::vector<const MinidumpMemoryInfo *>
-MinidumpMemoryInfo::ParseMemoryInfoList(llvm::ArrayRef<uint8_t> &data) {
-  const MinidumpMemoryInfoListHeader *header;
-  Status error = consumeObject(data, header);
-  if (error.Fail() ||
-      header->size_of_header < sizeof(MinidumpMemoryInfoListHeader) ||
-      header->size_of_entry < sizeof(MinidumpMemoryInfo))
-    return {};
-
-  data = data.drop_front(header->size_of_header -
-                         sizeof(MinidumpMemoryInfoListHeader));
-
-  if (header->size_of_entry * header->num_of_entries > data.size())
-    return {};
-
-  std::vector<const MinidumpMemoryInfo *> result;
-  result.reserve(header->num_of_entries);
-
-  for (uint64_t i = 0; i < header->num_of_entries; ++i) {
-    result.push_back(reinterpret_cast<const MinidumpMemoryInfo *>(
-        data.data() + i * header->size_of_entry));
-  }
-
-  return result;
-}

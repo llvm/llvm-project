@@ -276,9 +276,9 @@ STATISTIC(NumBoxedLoopsOptimized, "Number of boxed loops optimized");
 
 #define THREE_STATISTICS(VARNAME, DESC)                                        \
   static Statistic VARNAME[3] = {                                              \
-      {DEBUG_TYPE, #VARNAME "0", DESC " (original)", {0}, {false}},            \
-      {DEBUG_TYPE, #VARNAME "1", DESC " (after scheduler)", {0}, {false}},     \
-      {DEBUG_TYPE, #VARNAME "2", DESC " (after optimizer)", {0}, {false}}}
+      {DEBUG_TYPE, #VARNAME "0", DESC " (original)"},                          \
+      {DEBUG_TYPE, #VARNAME "1", DESC " (after scheduler)"},                   \
+      {DEBUG_TYPE, #VARNAME "2", DESC " (after optimizer)"}}
 
 THREE_STATISTICS(NumBands, "Number of bands");
 THREE_STATISTICS(NumBandMembers, "Number of band members");

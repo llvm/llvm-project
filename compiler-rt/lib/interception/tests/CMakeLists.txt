@@ -32,7 +32,10 @@ else()
 endif()
 if(MSVC)
   list(APPEND INTERCEPTION_TEST_CFLAGS_COMMON -gcodeview)
-  list(APPEND INTERCEPTION_TEST_LINK_FLAGS_COMMON -Wl,-largeaddressaware)
+  list(APPEND INTERCEPTION_TEST_LINK_FLAGS_COMMON
+    -Wl,-largeaddressaware
+    -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames
+    )
 endif()
 list(APPEND INTERCEPTION_TEST_LINK_FLAGS_COMMON -g)
 

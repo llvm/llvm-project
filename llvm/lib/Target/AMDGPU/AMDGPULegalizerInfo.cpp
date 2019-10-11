@@ -64,6 +64,14 @@ static LegalityPredicate isSmallOddVector(unsigned TypeIdx) {
   };
 }
 
+static LegalityPredicate isWideVec16(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    const LLT Ty = Query.Types[TypeIdx];
+    const LLT EltTy = Ty.getScalarType();
+    return EltTy.getSizeInBits() == 16 && Ty.getNumElements() > 2;
+  };
+}
+
 static LegalizeMutation oneMoreElement(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
@@ -424,11 +432,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0);
 
   // TODO: Split s1->s64 during regbankselect for VALU.
-  getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
+  auto &IToFP = getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
     .legalFor({{S32, S32}, {S64, S32}, {S16, S32}, {S32, S1}, {S16, S1}, {S64, S1}})
     .lowerFor({{S32, S64}})
-    .customFor({{S64, S64}})
-    .scalarize(0);
+    .customFor({{S64, S64}});
+  if (ST.has16BitInsts())
+    IToFP.legalFor({{S16, S16}});
+  IToFP.clampScalar(1, S32, S64)
+       .scalarize(0);
 
   auto &FPToI = getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
     .legalFor({{S32, S32}, {S32, S64}, {S32, S16}});
@@ -942,7 +953,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalForCartesianProduct(AllS32Vectors, {S32})
     .legalForCartesianProduct(AllS64Vectors, {S64})
     .clampNumElements(0, V16S32, V32S32)
-    .clampNumElements(0, V2S64, V16S64);
+    .clampNumElements(0, V2S64, V16S64)
+    .fewerElementsIf(isWideVec16(0), changeTo(0, V2S16));
 
   if (ST.hasScalarPackInsts())
     BuildVector.legalFor({V2S16, S32});

@@ -172,7 +172,7 @@ class SimpleProgressBar:
     A simple progress bar which doesn't need any terminal support.
 
     This prints out a progress bar like:
-      'Header: 0 .. 10.. 20.. ...'
+      'Header:  0.. 10.. 20.. ...'
     """
 
     def __init__(self, header):
@@ -191,7 +191,7 @@ class SimpleProgressBar:
         for i in range(self.atIndex, next):
             idx = i % 5
             if idx == 0:
-                sys.stdout.write('%-2d' % (i*2))
+                sys.stdout.write('%2d' % (i*2))
             elif idx == 1:
                 pass # Skip second char
             elif idx < 4:

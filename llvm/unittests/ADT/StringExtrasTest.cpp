@@ -109,7 +109,7 @@ TEST(StringExtrasTest, printEscapedString) {
   std::string str;
   raw_string_ostream OS(str);
   printEscapedString("ABCdef123&<>\\\"'\t", OS);
-  EXPECT_EQ("ABCdef123&<>\\5C\\22'\\09", OS.str());
+  EXPECT_EQ("ABCdef123&<>\\\\\\22'\\09", OS.str());
 }
 
 TEST(StringExtrasTest, printHTMLEscaped) {

@@ -4493,7 +4493,7 @@ static void __kmp_initialize_team(kmp_team_t *team, int new_nproc,
   KF_TRACE(10, ("__kmp_initialize_team: exit: team=%p\n", team));
 }
 
-#if KMP_OS_LINUX && KMP_AFFINITY_SUPPORTED
+#if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
 /* Sets full mask for thread and returns old mask, no changes to structures. */
 static void
 __kmp_set_thread_affinity_mask_full_tmp(kmp_affin_mask_t *old_mask) {
@@ -5041,7 +5041,7 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
       __kmp_partition_places(team);
 #endif
     } else { // team->t.t_nproc < new_nproc
-#if KMP_OS_LINUX && KMP_AFFINITY_SUPPORTED
+#if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
       kmp_affin_mask_t *old_mask;
       if (KMP_AFFINITY_CAPABLE()) {
         KMP_CPU_ALLOC(old_mask);
@@ -5090,7 +5090,7 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
           __kmp_reinitialize_team(team, new_icvs, NULL);
         }
 
-#if KMP_OS_LINUX && KMP_AFFINITY_SUPPORTED
+#if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
         /* Temporarily set full mask for master thread before creation of
            workers. The reason is that workers inherit the affinity from master,
            so if a lot of workers are created on the single core quickly, they
@@ -5125,7 +5125,7 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
           }
         }
 
-#if KMP_OS_LINUX && KMP_AFFINITY_SUPPORTED
+#if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
         if (KMP_AFFINITY_CAPABLE()) {
           /* Restore initial master thread's affinity mask */
           __kmp_set_system_affinity(old_mask, TRUE);

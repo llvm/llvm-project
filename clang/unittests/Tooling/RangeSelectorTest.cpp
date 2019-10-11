@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Refactoring/RangeSelector.h"
+#include "clang/Tooling/Transformer/RangeSelector.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Tooling/FixIt.h"

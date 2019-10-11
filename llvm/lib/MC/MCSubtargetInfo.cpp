@@ -315,3 +315,28 @@ void MCSubtargetInfo::initInstrItins(InstrItineraryData &InstrItins) const {
   InstrItins = InstrItineraryData(getSchedModel(), Stages, OperandCycles,
                                   ForwardingPaths);
 }
+
+Optional<unsigned> MCSubtargetInfo::getCacheSize(unsigned Level) const {
+  return Optional<unsigned>();
+}
+
+Optional<unsigned>
+MCSubtargetInfo::getCacheAssociativity(unsigned Level) const {
+  return Optional<unsigned>();
+}
+
+Optional<unsigned> MCSubtargetInfo::getCacheLineSize(unsigned Level) const {
+  return Optional<unsigned>();
+}
+
+unsigned MCSubtargetInfo::getPrefetchDistance() const {
+  return 0;
+}
+
+unsigned MCSubtargetInfo::getMaxPrefetchIterationsAhead() const {
+  return UINT_MAX;
+}
+
+unsigned MCSubtargetInfo::getMinPrefetchStride() const {
+  return 1;
+}

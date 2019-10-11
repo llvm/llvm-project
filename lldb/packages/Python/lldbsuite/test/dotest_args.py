@@ -61,7 +61,9 @@ def create_parser():
         '-f',
         metavar='filterspec',
         action='append',
-        help='Specify a filter, which consists of the test class name, a dot, followed by the test method, to only admit such test into the test suite')  # FIXME: Example?
+        help=('Specify a filter, which looks like "TestModule.TestClass.test_name".  '+
+            'You may also use shortened filters, such as '+
+            '"TestModule.TestClass", "TestClass.test_name", or just "test_name".'))
     group.add_argument(
         '-p',
         metavar='pattern',
@@ -148,10 +150,15 @@ def create_parser():
         default='lldb-test-build.noindex',
         help='The root build directory for the tests. It will be removed before running.')
     group.add_argument(
-        '--module-cache-dir',
-        dest='module_cache_dir',
+        '--lldb-module-cache-dir',
+        dest='lldb_module_cache_dir',
         metavar='The clang module cache directory used by LLDB',
-        help='The clang module cache directory used by LLDB. This is not the one used by the makefiles. Defaults to <test build directory>/module-cache-lldb.')
+        help='The clang module cache directory used by LLDB. Defaults to <test build directory>/module-cache-lldb.')
+    group.add_argument(
+        '--clang-module-cache-dir',
+        dest='clang_module_cache_dir',
+        metavar='The clang module cache directory used by Clang',
+        help='The clang module cache directory used in the Make files by Clang while building tests. Defaults to <test build directory>/module-cache-clang.')
 
     # Configuration options
     group = parser.add_argument_group('Remote platform options')

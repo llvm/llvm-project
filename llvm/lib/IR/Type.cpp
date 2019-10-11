@@ -26,6 +26,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/TypeSize.h"
 #include <cassert>
 #include <utility>
 
@@ -111,18 +112,22 @@ bool Type::isEmptyTy() const {
   return false;
 }
 
-unsigned Type::getPrimitiveSizeInBits() const {
+TypeSize Type::getPrimitiveSizeInBits() const {
   switch (getTypeID()) {
-  case Type::HalfTyID: return 16;
-  case Type::FloatTyID: return 32;
-  case Type::DoubleTyID: return 64;
-  case Type::X86_FP80TyID: return 80;
-  case Type::FP128TyID: return 128;
-  case Type::PPC_FP128TyID: return 128;
-  case Type::X86_MMXTyID: return 64;
-  case Type::IntegerTyID: return cast<IntegerType>(this)->getBitWidth();
-  case Type::VectorTyID:  return cast<VectorType>(this)->getBitWidth();
-  default: return 0;
+  case Type::HalfTyID: return TypeSize::Fixed(16);
+  case Type::FloatTyID: return TypeSize::Fixed(32);
+  case Type::DoubleTyID: return TypeSize::Fixed(64);
+  case Type::X86_FP80TyID: return TypeSize::Fixed(80);
+  case Type::FP128TyID: return TypeSize::Fixed(128);
+  case Type::PPC_FP128TyID: return TypeSize::Fixed(128);
+  case Type::X86_MMXTyID: return TypeSize::Fixed(64);
+  case Type::IntegerTyID:
+    return TypeSize::Fixed(cast<IntegerType>(this)->getBitWidth());
+  case Type::VectorTyID: {
+    const VectorType *VTy = cast<VectorType>(this);
+    return TypeSize(VTy->getBitWidth(), VTy->isScalable());
+  }
+  default: return TypeSize::Fixed(0);
   }
 }
 

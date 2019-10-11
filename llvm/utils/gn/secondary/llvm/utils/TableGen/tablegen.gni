@@ -66,6 +66,8 @@ template("tablegen") {
 
     args = [
              rebase_path(tblgen_executable, root_build_dir),
+             "--write-if-changed",
+
              "-I",
              rebase_path("//llvm/include", root_build_dir),
 

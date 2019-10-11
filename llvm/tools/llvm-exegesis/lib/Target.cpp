@@ -17,7 +17,7 @@ ExegesisTarget::~ExegesisTarget() {} // anchor.
 
 static ExegesisTarget *FirstTarget = nullptr;
 
-const ExegesisTarget *ExegesisTarget::lookup(llvm::Triple TT) {
+const ExegesisTarget *ExegesisTarget::lookup(Triple TT) {
   for (const ExegesisTarget *T = FirstTarget; T != nullptr; T = T->Next) {
     if (T->matchesArch(TT.getArch()))
       return T;
@@ -36,17 +36,17 @@ void ExegesisTarget::registerTarget(ExegesisTarget *Target) {
   FirstTarget = Target;
 }
 
-std::unique_ptr<SnippetGenerator>
-ExegesisTarget::createSnippetGenerator(InstructionBenchmark::ModeE Mode,
-                                       const LLVMState &State) const {
+std::unique_ptr<SnippetGenerator> ExegesisTarget::createSnippetGenerator(
+    InstructionBenchmark::ModeE Mode, const LLVMState &State,
+    const SnippetGenerator::Options &Opts) const {
   switch (Mode) {
   case InstructionBenchmark::Unknown:
     return nullptr;
   case InstructionBenchmark::Latency:
-    return createLatencySnippetGenerator(State);
+    return createLatencySnippetGenerator(State, Opts);
   case InstructionBenchmark::Uops:
   case InstructionBenchmark::InverseThroughput:
-    return createUopsSnippetGenerator(State);
+    return createUopsSnippetGenerator(State, Opts);
   }
   return nullptr;
 }
@@ -66,14 +66,14 @@ ExegesisTarget::createBenchmarkRunner(InstructionBenchmark::ModeE Mode,
   return nullptr;
 }
 
-std::unique_ptr<SnippetGenerator>
-ExegesisTarget::createLatencySnippetGenerator(const LLVMState &State) const {
-  return std::make_unique<LatencySnippetGenerator>(State);
+std::unique_ptr<SnippetGenerator> ExegesisTarget::createLatencySnippetGenerator(
+    const LLVMState &State, const SnippetGenerator::Options &Opts) const {
+  return std::make_unique<LatencySnippetGenerator>(State, Opts);
 }
 
-std::unique_ptr<SnippetGenerator>
-ExegesisTarget::createUopsSnippetGenerator(const LLVMState &State) const {
-  return std::make_unique<UopsSnippetGenerator>(State);
+std::unique_ptr<SnippetGenerator> ExegesisTarget::createUopsSnippetGenerator(
+    const LLVMState &State, const SnippetGenerator::Options &Opts) const {
+  return std::make_unique<UopsSnippetGenerator>(State, Opts);
 }
 
 std::unique_ptr<BenchmarkRunner> ExegesisTarget::createLatencyBenchmarkRunner(
@@ -86,23 +86,23 @@ ExegesisTarget::createUopsBenchmarkRunner(const LLVMState &State) const {
   return std::make_unique<UopsBenchmarkRunner>(State);
 }
 
-void ExegesisTarget::randomizeMCOperand(
-    const Instruction &Instr, const Variable &Var,
-    llvm::MCOperand &AssignedValue,
-    const llvm::BitVector &ForbiddenRegs) const {
+void ExegesisTarget::randomizeMCOperand(const Instruction &Instr,
+                                        const Variable &Var,
+                                        MCOperand &AssignedValue,
+                                        const BitVector &ForbiddenRegs) const {
   const Operand &Op = Instr.getPrimaryOperand(Var);
   switch (Op.getExplicitOperandInfo().OperandType) {
-  case llvm::MCOI::OperandType::OPERAND_IMMEDIATE:
+  case MCOI::OperandType::OPERAND_IMMEDIATE:
     // FIXME: explore immediate values too.
-    AssignedValue = llvm::MCOperand::createImm(1);
+    AssignedValue = MCOperand::createImm(1);
     break;
-  case llvm::MCOI::OperandType::OPERAND_REGISTER: {
+  case MCOI::OperandType::OPERAND_REGISTER: {
     assert(Op.isReg());
     auto AllowedRegs = Op.getRegisterAliasing().sourceBits();
     assert(AllowedRegs.size() == ForbiddenRegs.size());
     for (auto I : ForbiddenRegs.set_bits())
       AllowedRegs.reset(I);
-    AssignedValue = llvm::MCOperand::createReg(randomBit(AllowedRegs));
+    AssignedValue = MCOperand::createReg(randomBit(AllowedRegs));
     break;
   }
   default:
@@ -115,8 +115,7 @@ static_assert(std::is_pod<PfmCountersInfo>::value,
 const PfmCountersInfo PfmCountersInfo::Default = {nullptr, nullptr, nullptr,
                                                   0u};
 
-const PfmCountersInfo &
-ExegesisTarget::getPfmCounters(llvm::StringRef CpuName) const {
+const PfmCountersInfo &ExegesisTarget::getPfmCounters(StringRef CpuName) const {
   assert(std::is_sorted(
              CpuPfmCounters.begin(), CpuPfmCounters.end(),
              [](const CpuAndPfmCounters &LHS, const CpuAndPfmCounters &RHS) {
@@ -127,8 +126,7 @@ ExegesisTarget::getPfmCounters(llvm::StringRef CpuName) const {
   // Find entry
   auto Found =
       std::lower_bound(CpuPfmCounters.begin(), CpuPfmCounters.end(), CpuName);
-  if (Found == CpuPfmCounters.end() ||
-      llvm::StringRef(Found->CpuName) != CpuName) {
+  if (Found == CpuPfmCounters.end() || StringRef(Found->CpuName) != CpuName) {
     // Use the default.
     if (CpuPfmCounters.begin() != CpuPfmCounters.end() &&
         CpuPfmCounters.begin()->CpuName[0] == '\0') {
@@ -149,13 +147,12 @@ public:
   ExegesisDefaultTarget() : ExegesisTarget({}) {}
 
 private:
-  std::vector<llvm::MCInst> setRegTo(const llvm::MCSubtargetInfo &STI,
-                                     unsigned Reg,
-                                     const llvm::APInt &Value) const override {
+  std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
+                               const APInt &Value) const override {
     llvm_unreachable("Not yet implemented");
   }
 
-  bool matchesArch(llvm::Triple::ArchType Arch) const override {
+  bool matchesArch(Triple::ArchType Arch) const override {
     llvm_unreachable("never called");
     return false;
   }

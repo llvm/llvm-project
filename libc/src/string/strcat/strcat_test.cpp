@@ -13,7 +13,7 @@
 
 TEST(StrCatTest, EmptyDest) {
   std::string abc = "abc";
-  char *dest = new char[4];
+  char dest[4];
 
   dest[0] = '\0';
 
@@ -21,13 +21,11 @@ TEST(StrCatTest, EmptyDest) {
   ASSERT_EQ(dest, result);
   ASSERT_EQ(std::string(dest), abc);
   ASSERT_EQ(std::string(dest).size(), abc.size());
-
-  delete[] dest;
 }
 
 TEST(StrCatTest, NonEmptyDest) {
   std::string abc = "abc";
-  char *dest = new char[4];
+  char dest[7];
 
   dest[0] = 'x';
   dest[1] = 'y';
@@ -38,6 +36,4 @@ TEST(StrCatTest, NonEmptyDest) {
   ASSERT_EQ(dest, result);
   ASSERT_EQ(std::string(dest), std::string("xyz") + abc);
   ASSERT_EQ(std::string(dest).size(), abc.size() + 3);
-
-  delete[] dest;
 }

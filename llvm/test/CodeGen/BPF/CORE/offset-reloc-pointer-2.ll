@@ -31,12 +31,13 @@ entry:
 ; CHECK:              .ascii  ".text"                 # string offset=26
 ; CHECK:              .ascii  "1:1"                   # string offset=32
 
-; CHECK:              .long   12                      # OffsetReloc
-; CHECK-NEXT:         .long   26                      # Offset reloc section string offset=26
+; CHECK:              .long   16                      # FieldReloc
+; CHECK-NEXT:         .long   26                      # Field reloc section string offset=26
 ; CHECK-NEXT:         .long   1
 ; CHECK-NEXT:         .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:         .long   [[TID1]]
 ; CHECK-NEXT:         .long   32
+; CHECK-NEXT:         .long   0
 
 declare dso_local i32 @get_value(i32*) local_unnamed_addr #1
 

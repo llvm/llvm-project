@@ -18,8 +18,8 @@
 name: func0
 body: |
   bb.0:
-    S_NOP 0, implicit-def undef %0.sub0 : sreg_128
-    S_NOP 0, implicit-def %0.sub3 : sreg_128
+    S_NOP 0, implicit-def undef %0.sub0 : sgpr_128
+    S_NOP 0, implicit-def %0.sub3 : sgpr_128
 
     ; Clobber registers
     S_NOP 0, implicit-def dead $sgpr0, implicit-def dead $sgpr1, implicit-def dead $sgpr2, implicit-def dead $sgpr3, implicit-def dead $sgpr4, implicit-def dead $sgpr5, implicit-def dead $sgpr6, implicit-def dead $sgpr7, implicit-def dead $sgpr8, implicit-def dead $sgpr9, implicit-def dead $sgpr10, implicit-def dead $sgpr11
@@ -49,7 +49,7 @@ tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2
-    undef %0.sub0 : sreg_128 = COPY $sgpr0
+    undef %0.sub0 : sgpr_128 = COPY $sgpr0
     %0.sub2 = COPY $sgpr2
 
     S_NOP 0, implicit-def dead $sgpr0, implicit-def dead $sgpr1
@@ -75,8 +75,8 @@ tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1, %bb.2
-    S_NOP 0, implicit-def undef %0.sub0 : sreg_128
-    S_NOP 0, implicit-def %0.sub3 : sreg_128
+    S_NOP 0, implicit-def undef %0.sub0 : sgpr_128
+    S_NOP 0, implicit-def %0.sub3 : sgpr_128
 
     S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc
     S_BRANCH %bb.2

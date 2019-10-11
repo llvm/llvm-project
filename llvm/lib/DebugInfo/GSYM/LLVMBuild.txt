@@ -18,4 +18,4 @@
 type = Library
 name = DebugInfoGSYM
 parent = DebugInfo
-required_libraries = Support
+required_libraries = MC Support

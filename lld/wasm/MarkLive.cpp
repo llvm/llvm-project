@@ -31,38 +31,52 @@
 using namespace llvm;
 using namespace llvm::wasm;
 
-void lld::wasm::markLive() {
-  if (!config->gcSections)
+namespace lld {
+namespace wasm {
+
+namespace {
+
+class MarkLive {
+public:
+  void run();
+
+private:
+  void enqueue(Symbol *sym);
+  void markSymbol(Symbol *sym);
+  void mark();
+
+  // A list of chunks to visit.
+  SmallVector<InputChunk *, 256> queue;
+};
+
+} // namespace
+
+void MarkLive::enqueue(Symbol *sym) {
+  if (!sym || sym->isLive())
     return;
+  LLVM_DEBUG(dbgs() << "markLive: " << sym->getName() << "\n");
+  sym->markLive();
+  if (InputChunk *chunk = sym->getChunk())
+    queue.push_back(chunk);
 
-  LLVM_DEBUG(dbgs() << "markLive\n");
-  SmallVector<InputChunk *, 256> q;
-
-  std::function<void(Symbol*)> enqueue = [&](Symbol *sym) {
-    if (!sym || sym->isLive())
-      return;
-    LLVM_DEBUG(dbgs() << "markLive: " << sym->getName() << "\n");
-    sym->markLive();
-    if (InputChunk *chunk = sym->getChunk())
-      q.push_back(chunk);
-
-    // The ctor functions are all referenced by the synthetic callCtors
-    // function.  However, this function does not contain relocations so we
-    // have to manually mark the ctors as live if callCtors itself is live.
-    if (sym == WasmSym::callCtors) {
-      if (config->isPic)
-        enqueue(WasmSym::applyRelocs);
-      for (const ObjFile *obj : symtab->objectFiles) {
-        const WasmLinkingData &l = obj->getWasmObj()->linkingData();
-        for (const WasmInitFunc &f : l.InitFunctions) {
-          auto* initSym = obj->getFunctionSymbol(f.Symbol);
-          if (!initSym->isDiscarded())
-            enqueue(initSym);
-        }
+  // The ctor functions are all referenced by the synthetic callCtors
+  // function.  However, this function does not contain relocations so we
+  // have to manually mark the ctors as live if callCtors itself is live.
+  if (sym == WasmSym::callCtors) {
+    if (config->isPic)
+      enqueue(WasmSym::applyRelocs);
+    for (const ObjFile *obj : symtab->objectFiles) {
+      const WasmLinkingData &l = obj->getWasmObj()->linkingData();
+      for (const WasmInitFunc &f : l.InitFunctions) {
+        auto* initSym = obj->getFunctionSymbol(f.Symbol);
+        if (!initSym->isDiscarded())
+          enqueue(initSym);
       }
     }
-  };
+  }
+}
 
+void MarkLive::run() {
   // Add GC root symbols.
   if (!config->entry.empty())
     enqueue(symtab->find(config->entry));
@@ -87,9 +101,13 @@ void lld::wasm::markLive() {
   if (config->sharedMemory && !config->shared)
     enqueue(WasmSym::initMemory);
 
+  mark();
+}
+
+void MarkLive::mark() {
   // Follow relocations to mark all reachable chunks.
-  while (!q.empty()) {
-    InputChunk *c = q.pop_back_val();
+  while (!queue.empty()) {
+    InputChunk *c = queue.pop_back_val();
 
     for (const WasmRelocation reloc : c->getRelocations()) {
       if (reloc.Type == R_WASM_TYPE_INDEX_LEB)
@@ -113,6 +131,16 @@ void lld::wasm::markLive() {
       enqueue(sym);
     }
   }
+}
+
+void markLive() {
+  if (!config->gcSections)
+    return;
+
+  LLVM_DEBUG(dbgs() << "markLive\n");
+
+  MarkLive marker;
+  marker.run();
 
   // Report garbage-collected sections.
   if (config->printGcSections) {
@@ -138,3 +166,6 @@ void lld::wasm::markLive() {
         message("removing unused section " + toString(g));
   }
 }
+
+} // namespace wasm
+} // namespace lld

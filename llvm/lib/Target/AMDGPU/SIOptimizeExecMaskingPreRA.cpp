@@ -250,15 +250,16 @@ static unsigned optimizeVcndVcmpPair(MachineBasicBlock &MBB,
       Op1->getImm() != 0 || Op2->getImm() != 1)
     return AMDGPU::NoRegister;
 
-  LLVM_DEBUG(dbgs() << "Folding sequence:\n\t" << *Sel << '\t'
-                    << *Cmp << '\t' << *And);
+  LLVM_DEBUG(dbgs() << "Folding sequence:\n\t" << *Sel << '\t' << *Cmp << '\t'
+                    << *And);
 
   Register CCReg = CC->getReg();
   LIS->RemoveMachineInstrFromMaps(*And);
-  MachineInstr *Andn2 = BuildMI(MBB, *And, And->getDebugLoc(),
-                                TII->get(Andn2Opc), And->getOperand(0).getReg())
-                            .addReg(ExecReg)
-                            .addReg(CCReg, 0, CC->getSubReg());
+  MachineInstr *Andn2 =
+      BuildMI(MBB, *And, And->getDebugLoc(), TII->get(Andn2Opc),
+              And->getOperand(0).getReg())
+          .addReg(ExecReg)
+          .addReg(CCReg, getUndefRegState(CC->isUndef()), CC->getSubReg());
   And->eraseFromParent();
   LIS->InsertMachineInstrInMaps(*Andn2);
 

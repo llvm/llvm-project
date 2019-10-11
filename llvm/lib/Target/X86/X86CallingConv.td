@@ -433,6 +433,7 @@ defm X86_SysV64_RegCall :
 def RetCC_X86_32 : CallingConv<[
   // If FastCC, use RetCC_X86_32_Fast.
   CCIfCC<"CallingConv::Fast", CCDelegateTo<RetCC_X86_32_Fast>>,
+  CCIfCC<"CallingConv::Tail", CCDelegateTo<RetCC_X86_32_Fast>>,
   // If HiPE, use RetCC_X86_32_HiPE.
   CCIfCC<"CallingConv::HiPE", CCDelegateTo<RetCC_X86_32_HiPE>>,
   CCIfCC<"CallingConv::X86_VectorCall", CCDelegateTo<RetCC_X86_32_VectorCall>>,
@@ -1000,6 +1001,7 @@ def CC_X86_32 : CallingConv<[
   CCIfCC<"CallingConv::X86_VectorCall", CCDelegateTo<CC_X86_Win32_VectorCall>>,
   CCIfCC<"CallingConv::X86_ThisCall", CCDelegateTo<CC_X86_32_ThisCall>>,
   CCIfCC<"CallingConv::Fast", CCDelegateTo<CC_X86_32_FastCC>>,
+  CCIfCC<"CallingConv::Tail", CCDelegateTo<CC_X86_32_FastCC>>,
   CCIfCC<"CallingConv::GHC", CCDelegateTo<CC_X86_32_GHC>>,
   CCIfCC<"CallingConv::HiPE", CCDelegateTo<CC_X86_32_HiPE>>,
   CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<CC_X86_32_RegCall>>,

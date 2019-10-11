@@ -22,16 +22,27 @@
 
 #define DEBUG_TYPE "lld"
 
-using namespace lld;
-using namespace lld::wasm;
-
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::wasm;
 
-std::unique_ptr<llvm::TarWriter> lld::wasm::tar;
+namespace lld {
 
-Optional<MemoryBufferRef> lld::wasm::readFile(StringRef path) {
+// Returns a string in the format of "foo.o" or "foo.a(bar.o)".
+std::string toString(const wasm::InputFile *file) {
+  if (!file)
+    return "<internal>";
+
+  if (file->archiveName.empty())
+    return file->getName();
+
+  return (file->archiveName + "(" + file->getName() + ")").str();
+}
+
+namespace wasm {
+std::unique_ptr<llvm::TarWriter> tar;
+
+Optional<MemoryBufferRef> readFile(StringRef path) {
   log("Loading: " + path);
 
   auto mbOrErr = MemoryBuffer::getFile(path);
@@ -48,7 +59,7 @@ Optional<MemoryBufferRef> lld::wasm::readFile(StringRef path) {
   return mbref;
 }
 
-InputFile *lld::wasm::createObjectFile(MemoryBufferRef mb,
+InputFile *createObjectFile(MemoryBufferRef mb,
                                        StringRef archiveName) {
   file_magic magic = identify_magic(mb.getBuffer());
   if (magic == file_magic::wasm_object) {
@@ -542,13 +553,5 @@ void BitcodeFile::parse() {
     symbols.push_back(createBitcodeSymbol(keptComdats, objSym, *this));
 }
 
-// Returns a string in the format of "foo.o" or "foo.a(bar.o)".
-std::string lld::toString(const wasm::InputFile *file) {
-  if (!file)
-    return "<internal>";
-
-  if (file->archiveName.empty())
-    return file->getName();
-
-  return (file->archiveName + "(" + file->getName() + ")").str();
-}
+} // namespace wasm
+} // namespace lld

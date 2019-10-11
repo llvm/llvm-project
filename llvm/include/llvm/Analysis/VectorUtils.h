@@ -381,13 +381,12 @@ APInt possiblyDemandedEltsInMask(Value *Mask);
 /// the interleaved store group doesn't allow gaps.
 template <typename InstTy> class InterleaveGroup {
 public:
-  InterleaveGroup(uint32_t Factor, bool Reverse, uint32_t Align)
-      : Factor(Factor), Reverse(Reverse), Align(Align), InsertPos(nullptr) {}
+  InterleaveGroup(uint32_t Factor, bool Reverse, Align Alignment)
+      : Factor(Factor), Reverse(Reverse), Alignment(Alignment),
+        InsertPos(nullptr) {}
 
-  InterleaveGroup(InstTy *Instr, int32_t Stride, uint32_t Align)
-      : Align(Align), InsertPos(Instr) {
-    assert(Align && "The alignment should be non-zero");
-
+  InterleaveGroup(InstTy *Instr, int32_t Stride, Align Alignment)
+      : Alignment(Alignment), InsertPos(Instr) {
     Factor = std::abs(Stride);
     assert(Factor > 1 && "Invalid interleave factor");
 
@@ -397,7 +396,7 @@ public:
 
   bool isReverse() const { return Reverse; }
   uint32_t getFactor() const { return Factor; }
-  uint32_t getAlignment() const { return Align; }
+  uint32_t getAlignment() const { return Alignment.value(); }
   uint32_t getNumMembers() const { return Members.size(); }
 
   /// Try to insert a new member \p Instr with index \p Index and
@@ -405,9 +404,7 @@ public:
   /// negative if it is the new leader.
   ///
   /// \returns false if the instruction doesn't belong to the group.
-  bool insertMember(InstTy *Instr, int32_t Index, uint32_t NewAlign) {
-    assert(NewAlign && "The new member's alignment should be non-zero");
-
+  bool insertMember(InstTy *Instr, int32_t Index, Align NewAlign) {
     // Make sure the key fits in an int32_t.
     Optional<int32_t> MaybeKey = checkedAdd(Index, SmallestKey);
     if (!MaybeKey)
@@ -439,7 +436,7 @@ public:
     }
 
     // It's always safe to select the minimum alignment.
-    Align = std::min(Align, NewAlign);
+    Alignment = std::min(Alignment, NewAlign);
     Members[Key] = Instr;
     return true;
   }
@@ -498,7 +495,7 @@ public:
 private:
   uint32_t Factor; // Interleave Factor.
   bool Reverse;
-  uint32_t Align;
+  Align Alignment;
   DenseMap<int32_t, InstTy *> Members;
   int32_t SmallestKey = 0;
   int32_t LargestKey = 0;
@@ -615,8 +612,8 @@ private:
   struct StrideDescriptor {
     StrideDescriptor() = default;
     StrideDescriptor(int64_t Stride, const SCEV *Scev, uint64_t Size,
-                     unsigned Align)
-        : Stride(Stride), Scev(Scev), Size(Size), Align(Align) {}
+                     Align Alignment)
+        : Stride(Stride), Scev(Scev), Size(Size), Alignment(Alignment) {}
 
     // The access's stride. It is negative for a reverse access.
     int64_t Stride = 0;
@@ -628,7 +625,7 @@ private:
     uint64_t Size = 0;
 
     // The alignment of this access.
-    unsigned Align = 0;
+    Align Alignment;
   };
 
   /// A type for holding instructions and their stride descriptors.
@@ -639,11 +636,11 @@ private:
   ///
   /// \returns the newly created interleave group.
   InterleaveGroup<Instruction> *
-  createInterleaveGroup(Instruction *Instr, int Stride, unsigned Align) {
+  createInterleaveGroup(Instruction *Instr, int Stride, Align Alignment) {
     assert(!InterleaveGroupMap.count(Instr) &&
            "Already in an interleaved access group");
     InterleaveGroupMap[Instr] =
-        new InterleaveGroup<Instruction>(Instr, Stride, Align);
+        new InterleaveGroup<Instruction>(Instr, Stride, Alignment);
     InterleaveGroups.insert(InterleaveGroupMap[Instr]);
     return InterleaveGroupMap[Instr];
   }

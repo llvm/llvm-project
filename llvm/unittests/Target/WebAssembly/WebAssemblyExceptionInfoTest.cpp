@@ -132,7 +132,7 @@ body: |
   bb.7:
   ; predecessors: %bb.5, %bb.1
     liveins: $value_stack
-    RETURN_VOID implicit-def $arguments
+    RETURN implicit-def $arguments
 
   bb.8 (landing-pad):
   ; predecessors: %bb.4
@@ -307,7 +307,7 @@ body: |
   bb.9:
   ; predecessors: %bb.0, %bb.7
     liveins: $value_stack
-    RETURN_VOID implicit-def $arguments
+    RETURN implicit-def $arguments
 
   bb.10 (landing-pad):
   ; predecessors: %bb.4

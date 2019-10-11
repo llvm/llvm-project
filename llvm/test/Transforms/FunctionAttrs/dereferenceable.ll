@@ -1,4 +1,4 @@
-; RUN: opt -attributor -attributor-manifest-internal --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=1 -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR
+; RUN: opt -attributor -attributor-manifest-internal --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=2 -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR
 
 
 declare void @deref_phi_user(i32* %a);
@@ -7,7 +7,7 @@ declare void @deref_phi_user(i32* %a);
 ; take mininimum of return values
 ;
 define i32* @test1(i32* dereferenceable(4) %0, double* dereferenceable(8) %1, i1 zeroext %2) local_unnamed_addr {
-; ATTRIBUTOR: define nonnull dereferenceable(4) i32* @test1(i32* nonnull dereferenceable(4) "no-capture-maybe-returned" %0, double* nonnull dereferenceable(8) "no-capture-maybe-returned" %1, i1 zeroext %2)
+; ATTRIBUTOR: define nonnull dereferenceable(4) i32* @test1(i32* nonnull readnone dereferenceable(4) "no-capture-maybe-returned" %0, double* nonnull readnone dereferenceable(8) "no-capture-maybe-returned" %1, i1 zeroext %2)
   %4 = bitcast double* %1 to i32*
   %5 = select i1 %2, i32* %0, i32* %4
   ret i32* %5
@@ -15,7 +15,7 @@ define i32* @test1(i32* dereferenceable(4) %0, double* dereferenceable(8) %1, i1
 
 ; TEST 2
 define i32* @test2(i32* dereferenceable_or_null(4) %0, double* dereferenceable(8) %1, i1 zeroext %2) local_unnamed_addr {
-; ATTRIBUTOR: define dereferenceable_or_null(4) i32* @test2(i32* dereferenceable_or_null(4) "no-capture-maybe-returned" %0, double* nonnull dereferenceable(8) "no-capture-maybe-returned" %1, i1 zeroext %2)
+; ATTRIBUTOR: define dereferenceable_or_null(4) i32* @test2(i32* readnone dereferenceable_or_null(4) "no-capture-maybe-returned" %0, double* nonnull readnone dereferenceable(8) "no-capture-maybe-returned" %1, i1 zeroext %2)
   %4 = bitcast double* %1 to i32*
   %5 = select i1 %2, i32* %0, i32* %4
   ret i32* %5
@@ -24,20 +24,20 @@ define i32* @test2(i32* dereferenceable_or_null(4) %0, double* dereferenceable(8
 ; TEST 3
 ; GEP inbounds
 define i32* @test3_1(i32* dereferenceable(8) %0) local_unnamed_addr {
-; ATTRIBUTOR: define nonnull dereferenceable(4) i32* @test3_1(i32* nonnull dereferenceable(8) "no-capture-maybe-returned" %0)
+; ATTRIBUTOR: define nonnull dereferenceable(4) i32* @test3_1(i32* nonnull readnone dereferenceable(8) "no-capture-maybe-returned" %0)
   %ret = getelementptr inbounds i32, i32* %0, i64 1
   ret i32* %ret
 }
 
 define i32* @test3_2(i32* dereferenceable_or_null(32) %0) local_unnamed_addr {
 ; FIXME: Argument should be mark dereferenceable because of GEP `inbounds`.
-; ATTRIBUTOR: define nonnull dereferenceable(16) i32* @test3_2(i32* dereferenceable_or_null(32) "no-capture-maybe-returned" %0)
+; ATTRIBUTOR: define nonnull dereferenceable(16) i32* @test3_2(i32* readnone dereferenceable_or_null(32) "no-capture-maybe-returned" %0)
   %ret = getelementptr inbounds i32, i32* %0, i64 4
   ret i32* %ret
 }
 
 define i32* @test3_3(i32* dereferenceable(8) %0, i32* dereferenceable(16) %1, i1 %2) local_unnamed_addr {
-; ATTRIBUTOR: define nonnull dereferenceable(4) i32* @test3_3(i32* nonnull dereferenceable(8) "no-capture-maybe-returned" %0, i32* nonnull dereferenceable(16) "no-capture-maybe-returned" %1, i1 %2) local_unnamed_addr
+; ATTRIBUTOR: define nonnull dereferenceable(4) i32* @test3_3(i32* nonnull readnone dereferenceable(8) "no-capture-maybe-returned" %0, i32* nonnull readnone dereferenceable(16) "no-capture-maybe-returned" %1, i1 %2) local_unnamed_addr
   %ret1 = getelementptr inbounds i32, i32* %0, i64 1
   %ret2 = getelementptr inbounds i32, i32* %1, i64 2
   %ret = select i1 %2, i32* %ret1, i32* %ret2
@@ -48,7 +48,7 @@ define i32* @test3_3(i32* dereferenceable(8) %0, i32* dereferenceable(16) %1, i1
 ; Better than known in IR.
 
 define dereferenceable(4) i32* @test4(i32* dereferenceable(8) %0) local_unnamed_addr {
-; ATTRIBUTOR: define nonnull dereferenceable(8) i32* @test4(i32* nonnull returned dereferenceable(8) "no-capture-maybe-returned" %0)
+; ATTRIBUTOR: define nonnull dereferenceable(8) i32* @test4(i32* nonnull readnone returned dereferenceable(8) "no-capture-maybe-returned" %0)
   ret i32* %0
 }
 
@@ -110,4 +110,95 @@ for.inc:                                          ; preds = %for.body
 
 for.end:                                          ; preds = %for.cond.cleanup
   ret void
+}
+
+; TEST 7
+; share known infomation in must-be-executed-context
+declare i32* @unkown_ptr() willreturn nounwind
+declare i32 @unkown_f(i32*) willreturn nounwind
+define i32* @f7_0(i32* %ptr) {
+; ATTRIBUTOR: define nonnull dereferenceable(8) i32* @f7_0(i32* nonnull returned dereferenceable(8) %ptr)
+  %T = tail call i32 @unkown_f(i32* dereferenceable(8) %ptr)
+  ret i32* %ptr
+}	
+
+; ATTRIBUTOR: define void @f7_1(i32* nonnull dereferenceable(4) %ptr, i1 %c) 
+define void @f7_1(i32* %ptr, i1 %c) {
+
+; ATTRIBUTOR:   %A = tail call i32 @unkown_f(i32* nonnull dereferenceable(4) %ptr) 
+  %A = tail call i32 @unkown_f(i32* %ptr)
+
+  %ptr.0 = load i32, i32* %ptr
+  ; deref 4 hold
+
+; FIXME: this should be %B = tail call i32 @unkown_f(i32* nonnull dereferenceable(4) %ptr) 
+; ATTRIBUTOR:   %B = tail call i32 @unkown_f(i32* nonnull dereferenceable(4) %ptr) 
+  %B = tail call i32 @unkown_f(i32* dereferenceable(1) %ptr)
+
+  br i1%c, label %if.true, label %if.false
+if.true:
+; ATTRIBUTOR:   %C = tail call i32 @unkown_f(i32* nonnull dereferenceable(8) %ptr) 
+  %C = tail call i32 @unkown_f(i32* %ptr)
+
+; ATTRIBUTOR:   %D = tail call i32 @unkown_f(i32* nonnull dereferenceable(8) %ptr) 
+  %D = tail call i32 @unkown_f(i32* dereferenceable(8) %ptr)
+
+; FIXME: This should be tail call i32 @unkown_f(i32* nonnull dereferenceable(8) %ptr) 
+;        Making must-be-executed-context backward exploration will fix this.
+; ATTRIBUTOR:   %E = tail call i32 @unkown_f(i32* nonnull dereferenceable(4) %ptr) 
+  %E = tail call i32 @unkown_f(i32* %ptr)
+
+  ret void
+
+if.false:
+  ret void
+}
+
+; ATTRIBUTOR: define void @f7_2(i1 %c) 
+define void @f7_2(i1 %c) {
+
+  %ptr =  tail call i32* @unkown_ptr()
+
+; ATTRIBUTOR:   %A = tail call i32 @unkown_f(i32* nonnull dereferenceable(4) %ptr) 
+  %A = tail call i32 @unkown_f(i32* %ptr)
+
+  %arg_a.0 = load i32, i32* %ptr
+  ; deref 4 hold
+
+; ATTRIBUTOR:   %B = tail call i32 @unkown_f(i32* nonnull dereferenceable(4) %ptr)
+  %B = tail call i32 @unkown_f(i32* dereferenceable(1) %ptr)
+
+  br i1%c, label %if.true, label %if.false
+if.true:
+
+; ATTRIBUTOR:   %C = tail call i32 @unkown_f(i32* nonnull dereferenceable(8) %ptr) 
+  %C = tail call i32 @unkown_f(i32* %ptr)
+
+; ATTRIBUTOR:   %D = tail call i32 @unkown_f(i32* nonnull dereferenceable(8) %ptr) 
+  %D = tail call i32 @unkown_f(i32* dereferenceable(8) %ptr)
+
+  %E = tail call i32 @unkown_f(i32* %ptr)
+; FIXME: This should be @unkown_f(i32* nonnull dereferenceable(8) %ptr) 
+;        Making must-be-executed-context backward exploration will fix this.
+; ATTRIBUTOR:   %E = tail call i32 @unkown_f(i32* nonnull dereferenceable(4) %ptr)
+
+  ret void
+
+if.false:
+  ret void
+}
+
+define i32* @f7_3() {
+; ATTRIBUTOR: define nonnull dereferenceable(4) i32* @f7_3()
+  %ptr = tail call i32* @unkown_ptr()
+  store i32 10, i32* %ptr, align 16
+  ret i32* %ptr
+}
+
+define i32* @test_for_minus_index(i32* %p) {
+; FIXME: This should be define nonnull dereferenceable(8) i32* @test_for_minus_index(i32* nonnull %p)
+; ATTRIBUTOR: define nonnull dereferenceable(8) i32* @test_for_minus_index(i32* writeonly "no-capture-maybe-returned" %p)
+  %q = getelementptr inbounds i32, i32* %p, i32 -2
+  store i32 1, i32* %q
+  ret i32* %q
 }

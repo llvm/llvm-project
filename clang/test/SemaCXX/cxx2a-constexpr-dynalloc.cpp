@@ -166,3 +166,13 @@ constexpr bool construct_after_lifetime() {
   return true;
 }
 static_assert(construct_after_lifetime()); // expected-error {{}} expected-note {{in call}}
+
+constexpr bool construct_after_lifetime_2() {
+  struct A { struct B {} b; };
+  A a;
+  a.~A();
+  std::construct_at<A::B>(&a.b); // expected-note {{in call}}
+  // expected-note@#new {{construction of subobject of object outside its lifetime is not allowed in a constant expression}}
+  return true;
+}
+static_assert(construct_after_lifetime_2()); // expected-error {{}} expected-note {{in call}}

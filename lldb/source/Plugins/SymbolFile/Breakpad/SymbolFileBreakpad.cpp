@@ -340,8 +340,8 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
       return;
     }
     symbols.try_emplace(
-        address, /*symID*/ 0, Mangled(name, /*is_mangled*/ false),
-        eSymbolTypeCode, /*is_global*/ true, /*is_debug*/ false,
+        address, /*symID*/ 0, Mangled(name), eSymbolTypeCode,
+        /*is_global*/ true, /*is_debug*/ false,
         /*is_trampoline*/ false, /*is_artificial*/ false,
         AddressRange(section_sp, address - section_sp->GetFileAddress(),
                      size.getValueOr(0)),

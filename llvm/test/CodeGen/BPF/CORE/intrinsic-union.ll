@@ -27,12 +27,13 @@ entry:
 ; CHECK:       exit
 
 ; CHECK:      .section        .BTF.ext,"",@progbits
-; CHECK:      .long   12                      # OffsetReloc
-; CHECK-NEXT: .long   20                      # Offset reloc section string offset=20
+; CHECK:      .long   16                      # FieldReloc
+; CHECK-NEXT: .long   20                      # Field reloc section string offset=20
 ; CHECK-NEXT: .long   1
 ; CHECK-NEXT: .long   [[RELOC]]
 ; CHECK-NEXT: .long   2
 ; CHECK-NEXT: .long   26
+; CHECK-NEXT: .long   0
 
 declare dso_local i32 @get_value(i8*) local_unnamed_addr #1
 

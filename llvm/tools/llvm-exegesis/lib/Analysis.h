@@ -36,8 +36,7 @@ namespace exegesis {
 // A helper class to analyze benchmark results for a target.
 class Analysis {
 public:
-  Analysis(const llvm::Target &Target,
-           std::unique_ptr<llvm::MCInstrInfo> InstrInfo,
+  Analysis(const Target &Target, std::unique_ptr<MCInstrInfo> InstrInfo,
            const InstructionBenchmarkClustering &Clustering,
            double AnalysisInconsistencyEpsilon,
            bool AnalysisDisplayUnstableOpcodes);
@@ -47,7 +46,7 @@ public:
   // Find potential errors in the scheduling information given measurements.
   struct PrintSchedClassInconsistencies {};
 
-  template <typename Pass> llvm::Error run(llvm::raw_ostream &OS) const;
+  template <typename Pass> Error run(raw_ostream &OS) const;
 
 private:
   using ClusterId = InstructionBenchmarkClustering::ClusterId;
@@ -69,8 +68,7 @@ private:
 
     // Returns true if the cluster representative measurements match that of SC.
     bool
-    measurementsMatch(const llvm::MCSubtargetInfo &STI,
-                      const ResolvedSchedClass &SC,
+    measurementsMatch(const MCSubtargetInfo &STI, const ResolvedSchedClass &SC,
                       const InstructionBenchmarkClustering &Clustering,
                       const double AnalysisInconsistencyEpsilonSquared_) const;
 
@@ -81,14 +79,20 @@ private:
     SchedClassClusterCentroid Centroid;
   };
 
-  void printInstructionRowCsv(size_t PointId, llvm::raw_ostream &OS) const;
+  void printInstructionRowCsv(size_t PointId, raw_ostream &OS) const;
+
+  void printClusterRawHtml(const InstructionBenchmarkClustering::ClusterId &Id,
+                           StringRef display_name, llvm::raw_ostream &OS) const;
+
+  void printPointHtml(const InstructionBenchmark &Point,
+                      llvm::raw_ostream &OS) const;
 
   void
   printSchedClassClustersHtml(const std::vector<SchedClassCluster> &Clusters,
                               const ResolvedSchedClass &SC,
-                              llvm::raw_ostream &OS) const;
+                              raw_ostream &OS) const;
   void printSchedClassDescHtml(const ResolvedSchedClass &SC,
-                               llvm::raw_ostream &OS) const;
+                               raw_ostream &OS) const;
 
   // A pair of (Sched Class, indices of points that belong to the sched
   // class).
@@ -103,18 +107,18 @@ private:
   std::vector<ResolvedSchedClassAndPoints> makePointsPerSchedClass() const;
 
   template <typename EscapeTag, EscapeTag Tag>
-  void writeSnippet(llvm::raw_ostream &OS, llvm::ArrayRef<uint8_t> Bytes,
+  void writeSnippet(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
                     const char *Separator) const;
 
   const InstructionBenchmarkClustering &Clustering_;
-  llvm::MCObjectFileInfo ObjectFileInfo_;
-  std::unique_ptr<llvm::MCContext> Context_;
-  std::unique_ptr<llvm::MCSubtargetInfo> SubtargetInfo_;
-  std::unique_ptr<llvm::MCInstrInfo> InstrInfo_;
-  std::unique_ptr<llvm::MCRegisterInfo> RegInfo_;
-  std::unique_ptr<llvm::MCAsmInfo> AsmInfo_;
-  std::unique_ptr<llvm::MCInstPrinter> InstPrinter_;
-  std::unique_ptr<llvm::MCDisassembler> Disasm_;
+  MCObjectFileInfo ObjectFileInfo_;
+  std::unique_ptr<MCContext> Context_;
+  std::unique_ptr<MCSubtargetInfo> SubtargetInfo_;
+  std::unique_ptr<MCInstrInfo> InstrInfo_;
+  std::unique_ptr<MCRegisterInfo> RegInfo_;
+  std::unique_ptr<MCAsmInfo> AsmInfo_;
+  std::unique_ptr<MCInstPrinter> InstPrinter_;
+  std::unique_ptr<MCDisassembler> Disasm_;
   const double AnalysisInconsistencyEpsilonSquared_;
   const bool AnalysisDisplayUnstableOpcodes_;
 };

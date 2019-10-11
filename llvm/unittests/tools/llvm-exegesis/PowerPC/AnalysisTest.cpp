@@ -28,10 +28,9 @@ protected:
   AnalysisTest() {
     const std::string TT = "powerpc64le-unknown-linux";
     std::string error;
-    const llvm::Target *const TheTarget =
-        llvm::TargetRegistry::lookupTarget(TT, error);
+    const Target *const TheTarget = TargetRegistry::lookupTarget(TT, error);
     if (!TheTarget) {
-      llvm::errs() << error << "\n";
+      errs() << error << "\n";
       return;
     }
     STI.reset(TheTarget->createMCSubtargetInfo(TT, "pwr9", ""));
@@ -63,7 +62,7 @@ protected:
   }
 
 protected:
-  std::unique_ptr<const llvm::MCSubtargetInfo> STI;
+  std::unique_ptr<const MCSubtargetInfo> STI;
   uint16_t ALUIdx = 0;
   uint16_t ALUEIdx = 0;
   uint16_t ALUOIdx = 0;

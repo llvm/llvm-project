@@ -34,7 +34,8 @@ using namespace lldb;
 // BreakpointResolver:
 const char *BreakpointResolver::g_ty_to_name[] = {"FileAndLine", "Address",
                                                   "SymbolName",  "SourceRegex",
-                                                  "Exception",   "Unknown"};
+                                                  "Python",   "Exception",
+                                                  "Unknown"};
 
 const char *BreakpointResolver::g_option_names[static_cast<uint32_t>(
     BreakpointResolver::OptionNames::LastOptionName)] = {

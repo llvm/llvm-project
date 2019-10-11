@@ -38,6 +38,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TemplateInstCallback.h"
+#include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -383,8 +384,6 @@ Sema::~Sema() {
   // Detach from the PP callback handler which outlives Sema since it's owned
   // by the preprocessor.
   SemaPPCallbackHandler->reset();
-
-  assert(DelayedTypos.empty() && "Uncorrected typos!");
 }
 
 void Sema::warnStackExhausted(SourceLocation Loc) {
@@ -934,6 +933,15 @@ void Sema::ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind) {
   assert(LateParsedInstantiations.empty() &&
          "end of TU template instantiation should not create more "
          "late-parsed templates");
+
+  // Report diagnostics for uncorrected delayed typos. Ideally all of them
+  // should have been corrected by that time, but it is very hard to cover all
+  // cases in practice.
+  for (const auto &Typo : DelayedTypos) {
+    // We pass an empty TypoCorrection to indicate no correction was performed.
+    Typo.second.DiagHandler(TypoCorrection());
+  }
+  DelayedTypos.clear();
 }
 
 /// ActOnEndOfTranslationUnit - This is called at the very end of the

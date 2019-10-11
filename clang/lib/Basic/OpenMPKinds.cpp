@@ -651,6 +651,16 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
       break;
     }
     break;
+  case OMPD_master_taskloop:
+    switch (CKind) {
+#define OPENMP_MASTER_TASKLOOP_CLAUSE(Name)                                    \
+  case OMPC_##Name:                                                            \
+    return true;
+#include "clang/Basic/OpenMPKinds.def"
+    default:
+      break;
+    }
+    break;
   case OMPD_critical:
     switch (CKind) {
 #define OPENMP_CRITICAL_CLAUSE(Name)                                           \
@@ -872,7 +882,8 @@ bool clang::isOpenMPLoopDirective(OpenMPDirectiveKind DKind) {
   return DKind == OMPD_simd || DKind == OMPD_for || DKind == OMPD_for_simd ||
          DKind == OMPD_parallel_for || DKind == OMPD_parallel_for_simd ||
          DKind == OMPD_taskloop || DKind == OMPD_taskloop_simd ||
-         DKind == OMPD_distribute || DKind == OMPD_target_parallel_for ||
+         DKind == OMPD_master_taskloop || DKind == OMPD_distribute ||
+         DKind == OMPD_target_parallel_for ||
          DKind == OMPD_distribute_parallel_for ||
          DKind == OMPD_distribute_parallel_for_simd ||
          DKind == OMPD_distribute_simd ||
@@ -903,7 +914,8 @@ bool clang::isOpenMPWorksharingDirective(OpenMPDirectiveKind DKind) {
 }
 
 bool clang::isOpenMPTaskLoopDirective(OpenMPDirectiveKind DKind) {
-  return DKind == OMPD_taskloop || DKind == OMPD_taskloop_simd;
+  return DKind == OMPD_taskloop || DKind == OMPD_taskloop_simd ||
+         DKind == OMPD_master_taskloop;
 }
 
 bool clang::isOpenMPParallelDirective(OpenMPDirectiveKind DKind) {
@@ -1053,6 +1065,7 @@ void clang::getOpenMPCaptureRegions(
     break;
   case OMPD_taskloop:
   case OMPD_taskloop_simd:
+  case OMPD_master_taskloop:
     CaptureRegions.push_back(OMPD_taskloop);
     break;
   case OMPD_target_teams_distribute_parallel_for:

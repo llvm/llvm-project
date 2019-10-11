@@ -356,8 +356,7 @@ lldb::SearchDepth CommandCompletions::SourceFileCompleter::GetDepth() {
 Searcher::CallbackReturn
 CommandCompletions::SourceFileCompleter::SearchCallback(SearchFilter &filter,
                                                         SymbolContext &context,
-                                                        Address *addr,
-                                                        bool complete) {
+                                                        Address *addr) {
   if (context.comp_unit != nullptr) {
     if (m_include_support_files) {
       FileSpecList supporting_files = context.comp_unit->GetSupportFiles();
@@ -443,8 +442,7 @@ lldb::SearchDepth CommandCompletions::SymbolCompleter::GetDepth() {
 }
 
 Searcher::CallbackReturn CommandCompletions::SymbolCompleter::SearchCallback(
-    SearchFilter &filter, SymbolContext &context, Address *addr,
-    bool complete) {
+    SearchFilter &filter, SymbolContext &context, Address *addr) {
   if (context.module_sp) {
     SymbolContextList sc_list;
     const bool include_symbols = true;
@@ -491,8 +489,7 @@ lldb::SearchDepth CommandCompletions::ModuleCompleter::GetDepth() {
 }
 
 Searcher::CallbackReturn CommandCompletions::ModuleCompleter::SearchCallback(
-    SearchFilter &filter, SymbolContext &context, Address *addr,
-    bool complete) {
+    SearchFilter &filter, SymbolContext &context, Address *addr) {
   if (context.module_sp) {
     const char *cur_file_name =
         context.module_sp->GetFileSpec().GetFilename().GetCString();

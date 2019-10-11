@@ -118,36 +118,59 @@ public:
   }
 };
 
-/// StringMapEntry - This is used to represent one value that is inserted into
-/// a StringMap.  It contains the Value itself and the key: the string length
-/// and data.
+/// StringMapEntryStorage - Holds the value in a StringMapEntry.
+///
+/// Factored out into a separate base class to make it easier to specialize.
+/// This is primarily intended to support StringSet, which doesn't need a value
+/// stored at all.
 template<typename ValueTy>
-class StringMapEntry : public StringMapEntryBase {
+class StringMapEntryStorage : public StringMapEntryBase {
 public:
   ValueTy second;
 
-  explicit StringMapEntry(size_t strLen)
+  explicit StringMapEntryStorage(size_t strLen)
     : StringMapEntryBase(strLen), second() {}
   template <typename... InitTy>
-  StringMapEntry(size_t strLen, InitTy &&... InitVals)
+  StringMapEntryStorage(size_t strLen, InitTy &&... InitVals)
       : StringMapEntryBase(strLen), second(std::forward<InitTy>(InitVals)...) {}
-  StringMapEntry(StringMapEntry &E) = delete;
-
-  StringRef getKey() const {
-    return StringRef(getKeyData(), getKeyLength());
-  }
+  StringMapEntryStorage(StringMapEntryStorage &E) = delete;
 
   const ValueTy &getValue() const { return second; }
   ValueTy &getValue() { return second; }
 
   void setValue(const ValueTy &V) { second = V; }
+};
+
+template<>
+class StringMapEntryStorage<NoneType> : public StringMapEntryBase {
+public:
+  explicit StringMapEntryStorage(size_t strLen, NoneType none = None)
+    : StringMapEntryBase(strLen) {}
+  StringMapEntryStorage(StringMapEntryStorage &E) = delete;
+
+  NoneType getValue() const { return None; }
+};
+
+/// StringMapEntry - This is used to represent one value that is inserted into
+/// a StringMap.  It contains the Value itself and the key: the string length
+/// and data.
+template<typename ValueTy>
+class StringMapEntry final : public StringMapEntryStorage<ValueTy> {
+public:
+  using StringMapEntryStorage<ValueTy>::StringMapEntryStorage;
+
+  StringRef getKey() const {
+    return StringRef(getKeyData(), this->getKeyLength());
+  }
 
   /// getKeyData - Return the start of the string data that is the key for this
   /// value.  The string data is always stored immediately after the
   /// StringMapEntry object.
   const char *getKeyData() const {return reinterpret_cast<const char*>(this+1);}
 
-  StringRef first() const { return StringRef(getKeyData(), getKeyLength()); }
+  StringRef first() const {
+    return StringRef(getKeyData(), this->getKeyLength());
+  }
 
   /// Create a StringMapEntry for the specified key construct the value using
   /// \p InitiVals.
@@ -199,7 +222,7 @@ public:
   template<typename AllocatorTy>
   void Destroy(AllocatorTy &Allocator) {
     // Free memory referenced by the item.
-    size_t AllocSize = sizeof(StringMapEntry) + getKeyLength() + 1;
+    size_t AllocSize = sizeof(StringMapEntry) + this->getKeyLength() + 1;
     this->~StringMapEntry();
     Allocator.Deallocate(static_cast<void *>(this), AllocSize);
   }

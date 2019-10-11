@@ -195,7 +195,7 @@ class BTFStringTable {
   /// A mapping from string table offset to the index
   /// of the Table. It is used to avoid putting
   /// duplicated strings in the table.
-  std::unordered_map<uint32_t, uint32_t> OffsetToIdMap;
+  std::map<uint32_t, uint32_t> OffsetToIdMap;
   /// A vector of strings to represent the string table.
   std::vector<std::string> Table;
 
@@ -224,16 +224,11 @@ struct BTFLineInfo {
 };
 
 /// Represent one offset relocation.
-struct BTFOffsetReloc {
+struct BTFFieldReloc {
   const MCSymbol *Label;  ///< MCSymbol identifying insn for the reloc
   uint32_t TypeID;        ///< Type ID
   uint32_t OffsetNameOff; ///< The string to traverse types
-};
-
-/// Represent one extern relocation.
-struct BTFExternReloc {
-  const MCSymbol *Label;  ///< MCSymbol identifying insn for the reloc
-  uint32_t ExternNameOff; ///< The extern variable name
+  uint32_t RelocKind;     ///< What to patch the instruction
 };
 
 /// Collect and emit BTF information.
@@ -249,12 +244,11 @@ class BTFDebug : public DebugHandlerBase {
   std::unordered_map<const DIType *, uint32_t> DIToIdMap;
   std::map<uint32_t, std::vector<BTFFuncInfo>> FuncInfoTable;
   std::map<uint32_t, std::vector<BTFLineInfo>> LineInfoTable;
-  std::map<uint32_t, std::vector<BTFOffsetReloc>> OffsetRelocTable;
-  std::map<uint32_t, std::vector<BTFExternReloc>> ExternRelocTable;
+  std::map<uint32_t, std::vector<BTFFieldReloc>> FieldRelocTable;
   StringMap<std::vector<std::string>> FileContent;
   std::map<std::string, std::unique_ptr<BTFKindDataSec>> DataSecEntries;
   std::vector<BTFTypeStruct *> StructTypes;
-  std::map<std::string, int64_t> AccessOffsets;
+  std::map<std::string, uint32_t> PatchImms;
   std::map<StringRef, std::pair<bool, std::vector<BTFTypeDerived *>>>
       FixupDerivedTypes;
 
@@ -300,7 +294,7 @@ class BTFDebug : public DebugHandlerBase {
   void processGlobals(bool ProcessingMapDef);
 
   /// Generate one offset relocation record.
-  void generateOffsetReloc(const MachineInstr *MI, const MCSymbol *ORSym,
+  void generateFieldReloc(const MachineInstr *MI, const MCSymbol *ORSym,
                            DIType *RootTy, StringRef AccessPattern);
 
   /// Populating unprocessed struct type.

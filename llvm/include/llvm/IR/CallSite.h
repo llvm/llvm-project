@@ -854,6 +854,15 @@ public:
     return CI.ParameterEncoding[0];
   }
 
+  /// Return the use of the callee value in the underlying instruction. Only
+  /// valid for callback calls!
+  const Use &getCalleeUseForCallback() const {
+    int CalleeArgIdx = getCallArgOperandNoForCallee();
+    assert(CalleeArgIdx >= 0 &&
+           unsigned(CalleeArgIdx) < getInstruction()->getNumOperands());
+    return getInstruction()->getOperandUse(CalleeArgIdx);
+  }
+
   /// Return the pointer to function that is being called.
   Value *getCalledValue() const {
     if (isDirectCall())

@@ -3,18 +3,22 @@ Testing
 
 The LLDB test suite consists of three different kinds of test:
 
-* Python scripts located under ``lldb/packages/Python/lldbsuite``.
-  These are written using python's unittest2 testing framework.
-
-* Unit tests, located under ``lldb/unittests``.   These are written in C++,
+* Unit test. These are located under ``lldb/unittests`` and are written in C++
   using googletest.
+* Integration tests that test the debugger through the SB API. These are
+  located under ``lldb/packages/Python/lldbsuite`` and are written in Python
+  using ``dotest`` (LLDB's custom testing framework on top of unittest2).
+* Integration tests that test the debugger through the command line. These are
+  locarted under `lldb/tests/Shell` and are written in a shell-style format
+  using FileCheck to verify its output.
 
-* LIT tests, located under ``lldb/lit``.  These use the LLVM Integrated Tester.
+All three test suites use the `LLVM Integrated Tester
+<https://llvm.org/docs/CommandGuide/lit.html>`_ (lit) as their test driver. The
+test suites can be run as a whole or separately.
 
-Many of the tests are accompanied by a C (C++, ObjC, etc.) source file. Each test
-first compiles the source file and then uses LLDB to debug the resulting executable.
-
-The tests verify both the LLDB command line interface and the scripting API.
+Many of the tests are accompanied by a C (C++, ObjC, etc.) source file. Each
+test first compiles the source file and then uses LLDB to debug the resulting
+executable.
 
 .. contents::
    :local:
@@ -54,23 +58,69 @@ built with a custom version of clang, do:
 Note that multiple ``-A`` and ``-C`` flags can be specified to
 ``LLDB_TEST_USER_ARGS``.
 
+Running a Single Test Suite
+---------------------------
 
-Running a Specific Test or Set of Tests: Python
------------------------------------------------
+Each test suite can be run separately, similar to running the whole test suite
+with ``check-lldb``.
+
+* Use ``check-lldb-unit`` to run just the unit tests.
+* Use ``check-lldb-api`` to run just the SB API tests.
+* Use ``check-lldb-shell`` to run just the shell tests.
+
+You can run specific subdirectories by appending the directory name to the
+target. For example, to run all the tests in ``ObjectFile``, you can use the
+target ``check-lldb-shell-objectfile``. However, because the unit tests and API
+tests don't actually live under ``lldb/test``, this convenience is only
+available for the shell tests.
+
+Running a Single Test
+---------------------
+
+The recommended way to run a single test is by invoking the lit driver with a
+filter. This ensures that the test is run with the same configuration as when
+run as part of a test suite.
+
+::
+
+   > ./bin/llvm-lit -sv lldb/test --filter <test>
+
+
+Because lit automatically scans a directory for tests, it's also possible to
+pass a subdirectory to run a specific subset of the tests.
+
+::
+
+   > ./bin/llvm-lit -sv tools/lldb/test/Shell/Commands/CommandScriptImmediateOutput
+
+
+For the SB API tests it is possible to forward arguments to ``dotest.py`` by
+passing ``--param`` to lit and setting a value for ``dotest-args``.
+
+::
+
+   > ./bin/llvm-lit -sv tools/lldb/test --param dotest-args='-C gcc'
+
+
+Below is an overview of running individual test in the unit and API test suites
+without going through the lit driver.
+
+Running a Specific Test or Set of Tests: API Tests
+--------------------------------------------------
 
 In addition to running all the LLDB test suites with the ``check-lldb`` CMake
 target above, it is possible to run individual LLDB tests. If you have a CMake
 build you can use the ``lldb-dotest`` binary, which is a wrapper around
-``dotest.py`` that passes all the arguments configured by CMake. Alternatively,
-you can use ``dotest.py`` directly, if you want to run a test one-off with a
-different configuration.
+``dotest.py`` that passes all the arguments configured by CMake.
 
+Alternatively, you can use ``dotest.py`` directly, if you want to run a test
+one-off with a different configuration.
 
 For example, to run the test cases defined in TestInferiorCrashing.py, run:
 
 ::
 
-   > lldb-dotest -p TestInferiorCrashing.py
+   > ./bin/lldb-dotest -p TestInferiorCrashing.py
 
 ::
 
@@ -83,7 +133,7 @@ off),  all tests in that directory will be executed:
 
 ::
 
-   > lldb-dotest functionalities/data-formatter
+   > ./bin/lldb-dotest functionalities/data-formatter
 
 ::
 
@@ -113,32 +163,6 @@ To run a specific test, pass a filter, for example:
 ::
 
    > ./tools/lldb/unittests/Host/HostTests --gtest_filter=SocketTest.DomainListenConnectAccept
-
-
-Running a Specific Test or Set of Tests: LIT
---------------------------------------------
-
-LIT automatically scans a directory for tests.   To run a subset of the LIT tests, pass it a
-subdirectory, for example:
-
-::
-
-   > ./bin/llvm-lit -sv tools/lldb/lit/Commands/CommandScriptImmediateOutput
-
-
-LIT can also filter based on test name.
-
-::
-
-   > ./bin/llvm-lit -sv tools/lldb/lit --filter CommandScriptImmediateOutput
-
-
-It is also possible to forward arguments to dotest.py by passing ``--param`` to
-lit and setting a value for ``dotest-args``.
-
-::
-
-   > ./bin/llvm-lit -sv tools/lldb/lit --param dotest-args='-C gcc'
 
 
 Running the Test Suite Remotely

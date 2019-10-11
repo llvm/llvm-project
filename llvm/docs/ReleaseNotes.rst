@@ -53,6 +53,20 @@ Non-comprehensive list of changes in this release
 
    Makes programs 10x faster by doing Special New Thing.
 
+* As per :ref:`LLVM Language Reference Manual <i_getelementptr>`,
+  ``getelementptr inbounds`` can not change the null status of a pointer,
+  meaning it can not produce non-null pointer given null base pointer, and
+  likewise given non-null base pointer it can not produce null pointer; if it
+  does, the result is a :ref:`poison value <poisonvalues>`.
+  Since `r369789 <https://reviews.llvm.org/rL369789>`_
+  (`D66608 <https://reviews.llvm.org/D66608>`_ ``[InstCombine] icmp eq/ne (gep
+  inbounds P, Idx..), null -> icmp eq/ne P, null``) LLVM uses that for
+  transformations. If the original source violates these requirements this
+  may result in code being miscompiled. If you are using Clang front-end,
+  Undefined Behaviour Sanitizer ``-fsanitize=pointer-overflow`` check
+  will now catch such cases.
+
+
 Changes to the LLVM IR
 ----------------------
 

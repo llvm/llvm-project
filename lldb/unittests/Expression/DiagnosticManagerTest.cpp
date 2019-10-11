@@ -39,17 +39,19 @@ TEST(DiagnosticManagerTest, AddDiagnostic) {
   DiagnosticManager mgr;
   EXPECT_EQ(0U, mgr.Diagnostics().size());
 
-  Diagnostic *diag = new Diagnostic(
-      "foo bar has happened", DiagnosticSeverity::eDiagnosticSeverityError,
-      DiagnosticOrigin::eDiagnosticOriginLLDB, custom_diag_id);
-  mgr.AddDiagnostic(diag);
+  std::string msg = "foo bar has happened";
+  DiagnosticSeverity severity = DiagnosticSeverity::eDiagnosticSeverityError;
+  DiagnosticOrigin origin = DiagnosticOrigin::eDiagnosticOriginLLDB;
+  auto diag =
+      std::make_unique<Diagnostic>(msg, severity, origin, custom_diag_id);
+  mgr.AddDiagnostic(std::move(diag));
   EXPECT_EQ(1U, mgr.Diagnostics().size());
-  Diagnostic *got = mgr.Diagnostics().front();
-  EXPECT_EQ(diag->getKind(), got->getKind());
-  EXPECT_EQ(diag->GetMessage(), got->GetMessage());
-  EXPECT_EQ(diag->GetSeverity(), got->GetSeverity());
-  EXPECT_EQ(diag->GetCompilerID(), got->GetCompilerID());
-  EXPECT_EQ(diag->HasFixIts(), got->HasFixIts());
+  const Diagnostic *got = mgr.Diagnostics().front().get();
+  EXPECT_EQ(DiagnosticOrigin::eDiagnosticOriginLLDB, got->getKind());
+  EXPECT_EQ(msg, got->GetMessage());
+  EXPECT_EQ(severity, got->GetSeverity());
+  EXPECT_EQ(custom_diag_id, got->GetCompilerID());
+  EXPECT_EQ(false, got->HasFixIts());
 }
 
 TEST(DiagnosticManagerTest, HasFixits) {
@@ -57,16 +59,16 @@ TEST(DiagnosticManagerTest, HasFixits) {
   // By default we shouldn't have any fixits.
   EXPECT_FALSE(mgr.HasFixIts());
   // Adding a diag without fixits shouldn't make HasFixIts return true.
-  mgr.AddDiagnostic(new FixItDiag("no fixit", false));
+  mgr.AddDiagnostic(std::make_unique<FixItDiag>("no fixit", false));
   EXPECT_FALSE(mgr.HasFixIts());
   // Adding a diag with fixits will mark the manager as containing fixits.
-  mgr.AddDiagnostic(new FixItDiag("fixit", true));
+  mgr.AddDiagnostic(std::make_unique<FixItDiag>("fixit", true));
   EXPECT_TRUE(mgr.HasFixIts());
   // Adding another diag without fixit shouldn't make it return false.
-  mgr.AddDiagnostic(new FixItDiag("no fixit", false));
+  mgr.AddDiagnostic(std::make_unique<FixItDiag>("no fixit", false));
   EXPECT_TRUE(mgr.HasFixIts());
   // Adding a diag with fixits. The manager should still return true.
-  mgr.AddDiagnostic(new FixItDiag("fixit", true));
+  mgr.AddDiagnostic(std::make_unique<FixItDiag>("fixit", true));
   EXPECT_TRUE(mgr.HasFixIts());
 }
 
@@ -77,7 +79,8 @@ TEST(DiagnosticManagerTest, GetStringNoDiags) {
 
 TEST(DiagnosticManagerTest, GetStringBasic) {
   DiagnosticManager mgr;
-  mgr.AddDiagnostic(new TextDiag("abc", eDiagnosticSeverityError));
+  mgr.AddDiagnostic(
+      std::make_unique<TextDiag>("abc", eDiagnosticSeverityError));
   EXPECT_EQ("error: abc\n", mgr.GetString());
 }
 
@@ -85,15 +88,18 @@ TEST(DiagnosticManagerTest, GetStringMultiline) {
   DiagnosticManager mgr;
 
   // Multiline diagnostics should only get one severity label.
-  mgr.AddDiagnostic(new TextDiag("b\nc", eDiagnosticSeverityError));
+  mgr.AddDiagnostic(
+      std::make_unique<TextDiag>("b\nc", eDiagnosticSeverityError));
   EXPECT_EQ("error: b\nc\n", mgr.GetString());
 }
 
 TEST(DiagnosticManagerTest, GetStringMultipleDiags) {
   DiagnosticManager mgr;
-  mgr.AddDiagnostic(new TextDiag("abc", eDiagnosticSeverityError));
+  mgr.AddDiagnostic(
+      std::make_unique<TextDiag>("abc", eDiagnosticSeverityError));
   EXPECT_EQ("error: abc\n", mgr.GetString());
-  mgr.AddDiagnostic(new TextDiag("def", eDiagnosticSeverityError));
+  mgr.AddDiagnostic(
+      std::make_unique<TextDiag>("def", eDiagnosticSeverityError));
   EXPECT_EQ("error: abc\nerror: def\n", mgr.GetString());
 }
 
@@ -101,10 +107,13 @@ TEST(DiagnosticManagerTest, GetStringSeverityLabels) {
   DiagnosticManager mgr;
 
   // Different severities should cause different labels.
-  mgr.AddDiagnostic(new TextDiag("foo", eDiagnosticSeverityError));
-  mgr.AddDiagnostic(new TextDiag("bar", eDiagnosticSeverityWarning));
+  mgr.AddDiagnostic(
+      std::make_unique<TextDiag>("foo", eDiagnosticSeverityError));
+  mgr.AddDiagnostic(
+      std::make_unique<TextDiag>("bar", eDiagnosticSeverityWarning));
   // Remarks have no labels.
-  mgr.AddDiagnostic(new TextDiag("baz", eDiagnosticSeverityRemark));
+  mgr.AddDiagnostic(
+      std::make_unique<TextDiag>("baz", eDiagnosticSeverityRemark));
   EXPECT_EQ("error: foo\nwarning: bar\nbaz\n", mgr.GetString());
 }
 
@@ -112,9 +121,12 @@ TEST(DiagnosticManagerTest, GetStringPreserveOrder) {
   DiagnosticManager mgr;
 
   // Make sure we preserve the diagnostic order and do not sort them in any way.
-  mgr.AddDiagnostic(new TextDiag("baz", eDiagnosticSeverityRemark));
-  mgr.AddDiagnostic(new TextDiag("bar", eDiagnosticSeverityWarning));
-  mgr.AddDiagnostic(new TextDiag("foo", eDiagnosticSeverityError));
+  mgr.AddDiagnostic(
+      std::make_unique<TextDiag>("baz", eDiagnosticSeverityRemark));
+  mgr.AddDiagnostic(
+      std::make_unique<TextDiag>("bar", eDiagnosticSeverityWarning));
+  mgr.AddDiagnostic(
+      std::make_unique<TextDiag>("foo", eDiagnosticSeverityError));
   EXPECT_EQ("baz\nwarning: bar\nerror: foo\n", mgr.GetString());
 }
 
@@ -129,8 +141,10 @@ TEST(DiagnosticManagerTest, AppendMessageNoDiag) {
 TEST(DiagnosticManagerTest, AppendMessageAttachToLastDiag) {
   DiagnosticManager mgr;
 
-  mgr.AddDiagnostic(new TextDiag("foo", eDiagnosticSeverityError));
-  mgr.AddDiagnostic(new TextDiag("bar", eDiagnosticSeverityError));
+  mgr.AddDiagnostic(
+      std::make_unique<TextDiag>("foo", eDiagnosticSeverityError));
+  mgr.AddDiagnostic(
+      std::make_unique<TextDiag>("bar", eDiagnosticSeverityError));
   // This should append to 'bar' and not to 'foo'.
   mgr.AppendMessageToDiagnostic("message text");
 
@@ -140,10 +154,12 @@ TEST(DiagnosticManagerTest, AppendMessageAttachToLastDiag) {
 TEST(DiagnosticManagerTest, AppendMessageSubsequentDiags) {
   DiagnosticManager mgr;
 
-  mgr.AddDiagnostic(new TextDiag("bar", eDiagnosticSeverityError));
+  mgr.AddDiagnostic(
+      std::make_unique<TextDiag>("bar", eDiagnosticSeverityError));
   mgr.AppendMessageToDiagnostic("message text");
   // Pushing another diag after the message should work fine.
-  mgr.AddDiagnostic(new TextDiag("foo", eDiagnosticSeverityError));
+  mgr.AddDiagnostic(
+      std::make_unique<TextDiag>("foo", eDiagnosticSeverityError));
 
   EXPECT_EQ("error: bar\nmessage text\nerror: foo\n", mgr.GetString());
 }

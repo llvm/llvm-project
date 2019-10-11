@@ -165,21 +165,27 @@ public:
     void
     SkipLLDBInitFiles (bool b);
 
+    %feature("autodoc", "DEPRECATED, use SetInputFile");
     void
     SetInputFileHandle (FILE *f, bool transfer_ownership);
 
+    %feature("autodoc", "DEPRECATED, use SetOutputFile");
     void
     SetOutputFileHandle (FILE *f, bool transfer_ownership);
 
+    %feature("autodoc", "DEPRECATED, use SetErrorFile");
     void
     SetErrorFileHandle (FILE *f, bool transfer_ownership);
 
+    %feature("autodoc", "DEPRECATED, use GetInputFile");
     FILE *
     GetInputFileHandle ();
 
+    %feature("autodoc", "DEPRECATED, use GetOutputFile");
     FILE *
     GetOutputFileHandle ();
 
+    %feature("autodoc", "DEPRECATED, use GetErrorFile");
     FILE *
     GetErrorFileHandle ();
 
@@ -191,6 +197,15 @@ public:
 
     SBError
     SetErrorFile (SBFile file);
+
+    SBError
+    SetInputFile (FileSP file);
+
+    SBError
+    SetOutputFile (FileSP file);
+
+    SBError
+    SetErrorFile (FileSP file);
 
     SBFile
     GetInputFile ();

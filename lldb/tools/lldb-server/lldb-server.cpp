@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
@@ -48,6 +49,7 @@ static void terminate_debugger() { g_debugger_lifetime->Terminate(); }
 
 // main
 int main(int argc, char *argv[]) {
+  llvm::InitLLVM IL(argc, argv);
   llvm::StringRef ToolName = argv[0];
   llvm::sys::PrintStackTraceOnErrorSignal(ToolName);
   llvm::PrettyStackTraceProgram X(argc, argv);

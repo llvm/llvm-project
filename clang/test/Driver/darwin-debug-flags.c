@@ -7,7 +7,7 @@
 
 // CHECK: distinct !DICompileUnit(
 // CHECK-SAME:                flags:
-// CHECK-SAME:                -I path\5C with\5C \5C\5Cspaces
+// CHECK-SAME:                -I path\\ with\\ \\\\spaces
 // CHECK-SAME:                -g -Os
 // CHECK-SAME:                -mmacosx-version-min=10.5.0
 

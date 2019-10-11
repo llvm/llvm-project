@@ -436,12 +436,12 @@ body: |
     ; SI: [[FPEXT8:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC8]](s16)
     ; SI: [[FMA2:%[0-9]+]]:_(s32) = G_FMA [[FPEXT6]], [[FPEXT7]], [[FPEXT8]]
     ; SI: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMA2]](s32)
-    ; SI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
-    ; SI: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC1]](s16)
-    ; SI: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC2]](s16)
-    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32)
-    ; SI: [[TRUNC9:%[0-9]+]]:_(<3 x s16>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
-    ; SI: S_NOP 0, implicit [[TRUNC9]](<3 x s16>)
+    ; SI: [[DEF6:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16)
+    ; SI: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FPTRUNC2]](s16), [[DEF6]](s16)
+    ; SI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; SI: [[EXTRACT3:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
+    ; SI: S_NOP 0, implicit [[EXTRACT3]](<3 x s16>)
     ; VI-LABEL: name: test_fma_v3s16
     ; VI: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; VI: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
@@ -483,12 +483,12 @@ body: |
     ; VI: [[FMA:%[0-9]+]]:_(s16) = G_FMA [[TRUNC]], [[TRUNC3]], [[TRUNC6]]
     ; VI: [[FMA1:%[0-9]+]]:_(s16) = G_FMA [[TRUNC1]], [[TRUNC4]], [[TRUNC7]]
     ; VI: [[FMA2:%[0-9]+]]:_(s16) = G_FMA [[TRUNC2]], [[TRUNC5]], [[TRUNC8]]
-    ; VI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FMA]](s16)
-    ; VI: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FMA1]](s16)
-    ; VI: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FMA2]](s16)
-    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32)
-    ; VI: [[TRUNC9:%[0-9]+]]:_(<3 x s16>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
-    ; VI: S_NOP 0, implicit [[TRUNC9]](<3 x s16>)
+    ; VI: [[DEF6:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FMA]](s16), [[FMA1]](s16)
+    ; VI: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FMA2]](s16), [[DEF6]](s16)
+    ; VI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; VI: [[EXTRACT3:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
+    ; VI: S_NOP 0, implicit [[EXTRACT3]](<3 x s16>)
     ; GFX9-LABEL: name: test_fma_v3s16
     ; GFX9: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX9: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
@@ -592,8 +592,10 @@ body: |
     ; SI: [[FPEXT11:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC11]](s16)
     ; SI: [[FMA3:%[0-9]+]]:_(s32) = G_FMA [[FPEXT9]], [[FPEXT10]], [[FPEXT11]]
     ; SI: [[FPTRUNC3:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMA3]](s32)
-    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16), [[FPTRUNC2]](s16), [[FPTRUNC3]](s16)
-    ; SI: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<4 x s16>)
+    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16)
+    ; SI: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FPTRUNC2]](s16), [[FPTRUNC3]](s16)
+    ; SI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; SI: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     ; VI-LABEL: name: test_fma_v4s16
     ; VI: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
     ; VI: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr2_vgpr3
@@ -630,8 +632,10 @@ body: |
     ; VI: [[FMA1:%[0-9]+]]:_(s16) = G_FMA [[TRUNC1]], [[TRUNC5]], [[TRUNC9]]
     ; VI: [[FMA2:%[0-9]+]]:_(s16) = G_FMA [[TRUNC2]], [[TRUNC6]], [[TRUNC10]]
     ; VI: [[FMA3:%[0-9]+]]:_(s16) = G_FMA [[TRUNC3]], [[TRUNC7]], [[TRUNC11]]
-    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[FMA]](s16), [[FMA1]](s16), [[FMA2]](s16), [[FMA3]](s16)
-    ; VI: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<4 x s16>)
+    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FMA]](s16), [[FMA1]](s16)
+    ; VI: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FMA2]](s16), [[FMA3]](s16)
+    ; VI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; VI: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     ; GFX9-LABEL: name: test_fma_v4s16
     ; GFX9: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
     ; GFX9: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr2_vgpr3

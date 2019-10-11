@@ -242,6 +242,7 @@ def OMPCancellationPointDirective : DStmt<OMPExecutableDirective>;
 def OMPCancelDirective : DStmt<OMPExecutableDirective>;
 def OMPTaskLoopDirective : DStmt<OMPLoopDirective>;
 def OMPTaskLoopSimdDirective : DStmt<OMPLoopDirective>;
+def OMPMasterTaskLoopDirective : DStmt<OMPLoopDirective>;
 def OMPDistributeDirective : DStmt<OMPLoopDirective>;
 def OMPDistributeParallelForDirective : DStmt<OMPLoopDirective>;
 def OMPDistributeParallelForSimdDirective : DStmt<OMPLoopDirective>;

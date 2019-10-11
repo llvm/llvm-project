@@ -13,19 +13,17 @@
 
 TEST(StrCpyTest, EmptyDest) {
   std::string abc = "abc";
-  char *dest = new char[4];
+  char dest[4];
 
   char *result = __llvm_libc::strcpy(dest, abc.c_str());
   ASSERT_EQ(dest, result);
   ASSERT_EQ(std::string(dest), abc);
   ASSERT_EQ(std::string(dest).size(), abc.size());
-
-  delete[] dest;
 }
 
 TEST(StrCpyTest, OffsetDest) {
   std::string abc = "abc";
-  char *dest = new char[7];
+  char dest[7];
 
   dest[0] = 'x';
   dest[1] = 'y';
@@ -35,6 +33,4 @@ TEST(StrCpyTest, OffsetDest) {
   ASSERT_EQ(dest + 3, result);
   ASSERT_EQ(std::string(dest), std::string("xyz") + abc);
   ASSERT_EQ(std::string(dest).size(), abc.size() + 3);
-
-  delete[] dest;
 }

@@ -52,7 +52,7 @@ PerfEvent::PerfEvent(PerfEvent &&Other)
   Other.Attr = nullptr;
 }
 
-PerfEvent::PerfEvent(llvm::StringRef PfmEventString)
+PerfEvent::PerfEvent(StringRef PfmEventString)
     : EventString(PfmEventString.str()), Attr(nullptr) {
 #ifdef HAVE_LIBPFM
   char *Fstr = nullptr;
@@ -67,8 +67,8 @@ PerfEvent::PerfEvent(llvm::StringRef PfmEventString)
     // We don't know beforehand which counters are available (e.g. 6 uops ports
     // on Sandybridge but 8 on Haswell) so we report the missing counter without
     // crashing.
-    llvm::errs() << pfm_strerror(Result) << " - cannot create event "
-                 << EventString << "\n";
+    errs() << pfm_strerror(Result) << " - cannot create event " << EventString
+           << "\n";
   }
   if (Fstr) {
     FullQualifiedEventString = Fstr;
@@ -77,13 +77,13 @@ PerfEvent::PerfEvent(llvm::StringRef PfmEventString)
 #endif
 }
 
-llvm::StringRef PerfEvent::name() const { return EventString; }
+StringRef PerfEvent::name() const { return EventString; }
 
 bool PerfEvent::valid() const { return !FullQualifiedEventString.empty(); }
 
 const perf_event_attr *PerfEvent::attribute() const { return Attr; }
 
-llvm::StringRef PerfEvent::getPfmEventString() const {
+StringRef PerfEvent::getPfmEventString() const {
   return FullQualifiedEventString;
 }
 
@@ -97,9 +97,9 @@ Counter::Counter(const PerfEvent &Event) {
   perf_event_attr AttrCopy = *Event.attribute();
   FileDescriptor = perf_event_open(&AttrCopy, Pid, Cpu, GroupFd, Flags);
   if (FileDescriptor == -1) {
-    llvm::errs() << "Unable to open event, make sure your kernel allows user "
-                    "space perf monitoring.\nYou may want to try:\n$ sudo sh "
-                    "-c 'echo -1 > /proc/sys/kernel/perf_event_paranoid'\n";
+    errs() << "Unable to open event, make sure your kernel allows user "
+              "space perf monitoring.\nYou may want to try:\n$ sudo sh "
+              "-c 'echo -1 > /proc/sys/kernel/perf_event_paranoid'\n";
   }
   assert(FileDescriptor != -1 && "Unable to open event");
 }
@@ -115,7 +115,7 @@ int64_t Counter::read() const {
   ssize_t ReadSize = ::read(FileDescriptor, &Count, sizeof(Count));
   if (ReadSize != sizeof(Count)) {
     Count = -1;
-    llvm::errs() << "Failed to read event counter\n";
+    errs() << "Failed to read event counter\n";
   }
   return Count;
 }

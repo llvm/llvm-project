@@ -214,3 +214,12 @@ HELP: --enable-auto-import
 RUN: ld.lld -### -m i386pep foo.o -delayload user32.dll --delayload shell32.dll | FileCheck -check-prefix DELAYLOAD %s
 RUN: ld.lld -### -m i386pep foo.o -delayload=user32.dll --delayload=shell32.dll | FileCheck -check-prefix DELAYLOAD %s
 DELAYLOAD: -delayload:user32.dll -delayload:shell32.dll
+
+RUN: not ld.lld -m i386pep -entry 2>&1 | FileCheck -check-prefix MISSING_ARG %s
+MISSING_ARG: error: -entry: missing argument
+
+RUN: not ld.lld -m i386pep --foo 2>&1 | FileCheck -check-prefix UNKNOWN_ARG %s
+UNKNOWN_ARG: error: unknown argument: --foo
+
+RUN: not ld.lld -m i386pep 2>&1 | FileCheck -check-prefix NO_INPUT_FILES %s
+NO_INPUT_FILES: error: no input files

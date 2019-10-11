@@ -10261,6 +10261,16 @@ ASTContext::getManglingNumberContext(const DeclContext *DC) {
   return *MCtx;
 }
 
+MangleNumberingContext &
+ASTContext::getManglingNumberContext(NeedExtraManglingDecl_t, const Decl *D) {
+  assert(LangOpts.CPlusPlus); // We don't need mangling numbers for plain C.
+  std::unique_ptr<MangleNumberingContext> &MCtx =
+      ExtraMangleNumberingContexts[D];
+  if (!MCtx)
+    MCtx = createMangleNumberingContext();
+  return *MCtx;
+}
+
 std::unique_ptr<MangleNumberingContext>
 ASTContext::createMangleNumberingContext() const {
   return ABI->createMangleNumberingContext();

@@ -36,7 +36,8 @@
 
 SRCDIR := $(shell dirname $(firstword $(MAKEFILE_LIST)))
 BUILDDIR := $(shell pwd)
-THIS_FILE_DIR := $(shell dirname $(lastword $(MAKEFILE_LIST)))
+MAKEFILE_RULES := $(lastword $(MAKEFILE_LIST))
+THIS_FILE_DIR := $(shell dirname $(MAKEFILE_RULES))
 LLDB_BASE_DIR := $(THIS_FILE_DIR)/../../../../../
 
 #----------------------------------------------------------------------
@@ -170,15 +171,8 @@ endif
 #   o cxx_compiler
 #   o cxx_linker
 #----------------------------------------------------------------------
-CC ?= clang
-ifeq "$(CC)" "cc"
-	ifneq "$(shell which clang)" ""
-		CC = clang
-	else ifneq "$(shell which clang-3.5)" ""
-		CC = clang-3.5
-	else ifneq "$(shell which gcc)" ""
-		CC = gcc
-	endif
+ifeq "$(CC)" ""
+$(error "C compiler is not specified. Please run tests through lldb-dotest or lit")
 endif
 
 #----------------------------------------------------------------------
@@ -310,14 +304,6 @@ endif
 
 ifeq "$(MAKE_DWO)" "YES"
 	CFLAGS += -gsplit-dwarf
-endif
-
-# Use a shared module cache when building in the default test build directory.
-CLANG_MODULE_CACHE_DIR := $(shell echo "$(BUILDDIR)" | sed $(QUOTE)s/lldb-test-build.noindex.*/lldb-test-build.noindex\/module-cache-clang/$(QUOTE))
-
-ifeq "$(findstring lldb-test-build.noindex, $(BUILDDIR))" ""
-CLANG_MODULE_CACHE_DIR := $(BUILDDIR)/module-cache
-$(warning failed to set the shared clang module cache dir)
 endif
 
 MODULE_BASE_FLAGS := -fmodules -gmodules -fmodules-cache-path=$(CLANG_MODULE_CACHE_DIR)
@@ -608,6 +594,9 @@ ifneq "$(DYLIB_NAME)" ""
 ifeq "$(DYLIB_ONLY)" ""
 $(EXE) : $(OBJECTS) $(ARCHIVE_NAME) $(DYLIB_FILENAME)
 	$(LD) $(OBJECTS) $(ARCHIVE_NAME) -L. -l$(DYLIB_NAME) $(LDFLAGS) -o "$(EXE)"
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$(EXE)"
+endif
 else
 EXE = $(DYLIB_FILENAME)
 endif
@@ -764,29 +753,10 @@ endif
 dsym:	$(DSYM)
 all:	$(EXE) $(DSYM)
 clean::
-	$(RM) -rf $(OBJECTS) $(PREREQS) $(PREREQS:.d=.d.tmp) $(DWOS) $(ARCHIVE_NAME) $(ARCHIVE_OBJECTS) $(CLANG_MODULE_CACHE_DIR)
-ifneq "$(DYLIB_NAME)" ""
-	$(RM) -r $(DYLIB_FILENAME).dSYM
-	$(RM) $(DYLIB_OBJECTS) $(DYLIB_PREREQS) $(DYLIB_PREREQS:.d=.d.tmp) $(DYLIB_DWOS) $(DYLIB_FILENAME) $(DYLIB_FILENAME).debug
-endif
-ifneq "$(FRAMEWORK)" ""
-	$(RM) -rf $(FRAMEWORK).framework
-endif
-ifneq "$(PCH_OUTPUT)" ""
-	$(RM) $(PCH_OUTPUT)
-endif
-ifneq "$(DSYM)" ""
-	$(RM) -r "$(DSYM)"
-endif
-ifeq "$(OS)" "Windows_NT"
-# http://llvm.org/pr24589
-	IF EXIST "$(EXE)" del "$(EXE)"
-	$(RM) $(wildcard *.manifest *.pdb *.ilk)
-ifneq "$(DYLIB_NAME)" ""
-	$(RM) $(DYLIB_NAME).lib $(DYLIB_NAME).exp
-endif
+ifeq "$(findstring lldb-test-build.noindex, $(BUILDDIR))" ""
+	$(error Trying to invoke the clean rule, but not using the default build tree layout)
 else
-	$(RM) "$(EXE)"
+	$(RM) -r $(wildcard $(BUILDDIR)/*)
 endif
 
 #----------------------------------------------------------------------

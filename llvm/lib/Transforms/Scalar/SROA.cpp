@@ -959,14 +959,16 @@ private:
       std::tie(UsedI, I) = Uses.pop_back_val();
 
       if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
-        Size = std::max(Size, DL.getTypeStoreSize(LI->getType()));
+        Size = std::max(Size,
+                        DL.getTypeStoreSize(LI->getType()).getFixedSize());
         continue;
       }
       if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
         Value *Op = SI->getOperand(0);
         if (Op == UsedI)
           return SI;
-        Size = std::max(Size, DL.getTypeStoreSize(Op->getType()));
+        Size = std::max(Size,
+                        DL.getTypeStoreSize(Op->getType()).getFixedSize());
         continue;
       }
 

@@ -45,3 +45,4 @@
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       addq	%rdi, %rsi
 # CHECK-NEXT: 1.     1     1.0    0.0    0.0       addq	(%rsp), %rsi
 # CHECK-NEXT: 2.     1     2.0    2.0    2.0       addq	%rdx, %r8
+# CHECK-NEXT:        1     1.3    1.0    0.7       <total>

@@ -29,8 +29,7 @@ BreakpointResolverScripted::BreakpointResolverScripted(
     Breakpoint *bkpt, 
     const llvm::StringRef class_name,
     lldb::SearchDepth depth,
-    StructuredDataImpl *args_data,
-    ScriptInterpreter &script_interp)
+    StructuredDataImpl *args_data)
     : BreakpointResolver(bkpt, BreakpointResolver::PythonResolver),
       m_class_name(class_name), m_depth(depth), m_args_ptr(args_data) {
   CreateImplementationIfNeeded();
@@ -68,45 +67,25 @@ BreakpointResolverScripted::CreateFromStructuredData(
   llvm::StringRef class_name;
   bool success;
   
-  if (!bkpt)
-    return nullptr;
-
   success = options_dict.GetValueForKeyAsString(
       GetKey(OptionNames::PythonClassName), class_name);
   if (!success) {
     error.SetErrorString("BRFL::CFSD: Couldn't find class name entry.");
     return nullptr;
   }
-  lldb::SearchDepth depth;
-  int depth_as_int;
-  success = options_dict.GetValueForKeyAsInteger(
-      GetKey(OptionNames::SearchDepth), depth_as_int);
-  if (!success) {
-    error.SetErrorString("BRFL::CFSD: Couldn't find class name entry.");
-    return nullptr;
-  }
-  if (depth_as_int >= (int) OptionNames::LastOptionName) {
-    error.SetErrorString("BRFL::CFSD: Invalid value for search depth.");
-    return nullptr;
-  }
-  depth = (lldb::SearchDepth) depth_as_int;
+  // The Python function will actually provide the search depth, this is a
+  // placeholder.
+  lldb::SearchDepth depth = lldb::eSearchDepthTarget;
   
   StructuredDataImpl *args_data_impl = new StructuredDataImpl();
-  StructuredData::Dictionary *args_dict = new StructuredData::Dictionary();
+  StructuredData::Dictionary *args_dict = nullptr;
   success = options_dict.GetValueForKeyAsDictionary(
     GetKey(OptionNames::ScriptArgs), args_dict);
   if (success) {
-    // FIXME: The resolver needs a copy of the ARGS dict that it can own,
-    // so I need to make a copy constructor for the Dictionary so I can pass
-    // that to it here.  For now the args are empty.
-    //StructuredData::Dictionary *dict_copy = new StructuredData::Dictionary(args_dict);
-    
+      args_data_impl->SetObjectSP(args_dict->shared_from_this());
   }
-  ScriptInterpreter *script_interp = bkpt->GetTarget()
-                                         .GetDebugger()
-                                         .GetScriptInterpreter();
-  return new BreakpointResolverScripted(bkpt, class_name, depth, args_data_impl,
-                                      *script_interp);
+  return new BreakpointResolverScripted(bkpt, class_name, depth, 
+                                        args_data_impl);
 }
 
 StructuredData::ObjectSP
@@ -116,6 +95,10 @@ BreakpointResolverScripted::SerializeToStructuredData() {
 
   options_dict_sp->AddStringItem(GetKey(OptionNames::PythonClassName),
                                    m_class_name);
+  if (m_args_ptr->IsValid())
+      options_dict_sp->AddItem(GetKey(OptionNames::ScriptArgs),
+          m_args_ptr->GetObjectSP());
+
   return WrapOptionsDict(options_dict_sp);
 }
 
@@ -123,10 +106,8 @@ ScriptInterpreter *BreakpointResolverScripted::GetScriptInterpreter() {
   return m_breakpoint->GetTarget().GetDebugger().GetScriptInterpreter();
 }
 
-Searcher::CallbackReturn
-BreakpointResolverScripted::SearchCallback(SearchFilter &filter,
-                                          SymbolContext &context, Address *addr,
-                                          bool containing) {
+Searcher::CallbackReturn BreakpointResolverScripted::SearchCallback(
+    SearchFilter &filter, SymbolContext &context, Address *addr) {
   assert(m_breakpoint != nullptr);
   bool should_continue = true;
   if (!m_implementation_sp)
@@ -173,11 +154,10 @@ void BreakpointResolverScripted::Dump(Stream *s) const {}
 
 lldb::BreakpointResolverSP
 BreakpointResolverScripted::CopyForBreakpoint(Breakpoint &breakpoint) {
-  ScriptInterpreter *script_interp = GetScriptInterpreter();
   // FIXME: Have to make a copy of the arguments from the m_args_ptr and then
   // pass that to the new resolver.
   lldb::BreakpointResolverSP ret_sp(
-      new BreakpointResolverScripted(&breakpoint, m_class_name, 
-                                   m_depth, nullptr, *script_interp));
+      new BreakpointResolverScripted(&breakpoint, m_class_name, m_depth, 
+                                     nullptr));
   return ret_sp;
 }

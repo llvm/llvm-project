@@ -539,7 +539,7 @@ LLVMDIBuilderCreateSubroutineType(LLVMDIBuilderRef Builder,
  * @param Builder         The DIBuilder.
  * @param ParentMacroFile Macro parent (could be NULL).
  * @param Line            Source line number where the macro is defined.
- * @param MacroType       DW_MACINFO_define or DW_MACINFO_undef.
+ * @param RecordType      DW_MACINFO_define or DW_MACINFO_undef.
  * @param Name            Macro name.
  * @param NameLen         Macro name length.
  * @param Value           Macro value.

@@ -2914,10 +2914,26 @@ bool AsmParser::parseEscapedString(std::string &Data) {
     }
 
     // Recognize escaped characters. Note that this escape semantics currently
-    // loosely follows Darwin 'as'. Notably, it doesn't support hex escapes.
+    // loosely follows Darwin 'as'.
     ++i;
     if (i == e)
       return TokError("unexpected backslash at end of string");
+
+    // Recognize hex sequences similarly to GNU 'as'.
+    if (Str[i] == 'x' || Str[i] == 'X') {
+      size_t length = Str.size();
+      if (i + 1 >= length || !isHexDigit(Str[i + 1]))
+        return TokError("invalid hexadecimal escape sequence");
+
+      // Consume hex characters. GNU 'as' reads all hexadecimal characters and
+      // then truncates to the lower 16 bits. Seems reasonable.
+      unsigned Value = 0;
+      while (i + 1 < length && isHexDigit(Str[i + 1]))
+        Value = Value * 16 + hexDigitValue(Str[++i]);
+
+      Data += (unsigned char)(Value & 0xFF);
+      continue;
+    }
 
     // Recognize octal sequences.
     if ((unsigned)(Str[i] - '0') <= 7) {

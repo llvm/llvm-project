@@ -367,7 +367,8 @@ void CodeEmitterGen::emitInstructionBaseValues(
     if (const RecordVal *RV = R->getValue("EncodingInfos")) {
       if (auto *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
         EncodingInfoByHwMode EBM(DI->getDef(), HWM);
-        EncodingDef = EBM.get(HwMode);
+        if (EBM.hasMode(HwMode))
+          EncodingDef = EBM.get(HwMode);
       }
     }
     BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");

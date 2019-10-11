@@ -140,7 +140,7 @@ public:
   /// \param[in] call_decl_ptr
   ///     Optional calling location declaration information that
   ///     describes from where this inlined function was called.
-  InlineFunctionInfo(const char *name, const char *mangled,
+  InlineFunctionInfo(const char *name, llvm::StringRef mangled,
                      const Declaration *decl_ptr,
                      const Declaration *call_decl_ptr);
 

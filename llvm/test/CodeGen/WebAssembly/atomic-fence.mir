@@ -39,7 +39,7 @@ body: |
     COMPILER_FENCE implicit-def $arguments
     %2:i32 = ADD_I32 %0:i32, %0:i32, implicit-def $arguments
     CALL_VOID @foo, %2:i32, %1:i32, implicit-def $arguments
-    RETURN_VOID implicit-def $arguments
+    RETURN implicit-def $arguments
 ...
 
 ---
@@ -63,6 +63,5 @@ body: |
     ATOMIC_FENCE 0, implicit-def $arguments
     %2:i32 = ADD_I32 %0:i32, %0:i32, implicit-def $arguments
     CALL_VOID @foo, %2:i32, %1:i32, implicit-def $arguments
-    RETURN_VOID implicit-def $arguments
+    RETURN implicit-def $arguments
 ...
-

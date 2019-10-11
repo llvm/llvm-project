@@ -907,7 +907,7 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI) {
   unsigned BaseSubReg = AddrReg->getSubReg();
   unsigned BaseRegFlags = 0;
   if (CI.BaseOff) {
-    Register ImmReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+    Register ImmReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(*MBB, CI.Paired, DL, TII->get(AMDGPU::S_MOV_B32), ImmReg)
         .addImm(CI.BaseOff);
 
@@ -1000,7 +1000,7 @@ SILoadStoreOptimizer::mergeWrite2Pair(CombineInfo &CI) {
   unsigned BaseSubReg = AddrReg->getSubReg();
   unsigned BaseRegFlags = 0;
   if (CI.BaseOff) {
-    Register ImmReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+    Register ImmReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(*MBB, CI.Paired, DL, TII->get(AMDGPU::S_MOV_B32), ImmReg)
         .addImm(CI.BaseOff);
 
@@ -1268,7 +1268,7 @@ SILoadStoreOptimizer::getTargetRegisterClass(const CombineInfo &CI) {
     case 2:
       return &AMDGPU::SReg_64_XEXECRegClass;
     case 4:
-      return &AMDGPU::SReg_128RegClass;
+      return &AMDGPU::SGPR_128RegClass;
     case 8:
       return &AMDGPU::SReg_256RegClass;
     case 16:

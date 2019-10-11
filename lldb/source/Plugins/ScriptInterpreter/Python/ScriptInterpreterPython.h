@@ -48,8 +48,7 @@ public:
 
 protected:
   static void ComputePythonDirForApple(llvm::SmallVectorImpl<char> &path);
-  static void ComputePythonDirForPosix(llvm::SmallVectorImpl<char> &path);
-  static void ComputePythonDirForWindows(llvm::SmallVectorImpl<char> &path);
+  static void ComputePythonDir(llvm::SmallVectorImpl<char> &path);
 };
 } // namespace lldb_private
 

@@ -14,9 +14,6 @@
 ; RUN: ld.lld %t.o -o %t-out -save-temps --export-dynamic --noinhibit-exec
 ; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=STATIC
 
-; RUN: ld.lld %t.o -o %t-out -save-temps -r --export-dynamic
-; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=STATIC
-
 
 ;; PIC source.
 
@@ -28,9 +25,6 @@
 
 ; RUN: ld.lld %t.pic.o -o %t-out -save-temps --export-dynamic --noinhibit-exec
 ; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=STATIC
-
-; RUN: ld.lld %t.pic.o -o %t-out -save-temps -r --export-dynamic
-; RUN: llvm-readobj -r %t-out.lto.o | FileCheck %s --check-prefix=PIC
 
 
 ;; Explicit flag.

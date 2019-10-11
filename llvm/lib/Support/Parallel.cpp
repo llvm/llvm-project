@@ -32,34 +32,6 @@ public:
   static Executor *getDefaultExecutor();
 };
 
-#if defined(_MSC_VER)
-/// An Executor that runs tasks via ConcRT.
-class ConcRTExecutor : public Executor {
-  struct Taskish {
-    Taskish(std::function<void()> Task) : Task(Task) {}
-
-    std::function<void()> Task;
-
-    static void run(void *P) {
-      Taskish *Self = static_cast<Taskish *>(P);
-      Self->Task();
-      concurrency::Free(Self);
-    }
-  };
-
-public:
-  virtual void add(std::function<void()> F) {
-    Concurrency::CurrentScheduler::ScheduleTask(
-        Taskish::run, new (concurrency::Alloc(sizeof(Taskish))) Taskish(F));
-  }
-};
-
-Executor *Executor::getDefaultExecutor() {
-  static ConcRTExecutor exec;
-  return &exec;
-}
-
-#else
 /// An implementation of an Executor that runs closures on a thread pool
 ///   in filo order.
 class ThreadPoolExecutor : public Executor {
@@ -117,8 +89,7 @@ Executor *Executor::getDefaultExecutor() {
   static ThreadPoolExecutor exec;
   return &exec;
 }
-#endif
-}
+} // namespace
 
 static std::atomic<int> TaskGroupInstances;
 

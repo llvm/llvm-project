@@ -82,6 +82,7 @@ syn keyword llvmKeyword
       \ externally_initialized
       \ extern_weak
       \ fastcc
+      \ tailcc
       \ filter
       \ from
       \ gc

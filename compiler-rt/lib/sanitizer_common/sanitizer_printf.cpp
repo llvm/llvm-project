@@ -229,8 +229,6 @@ void SetPrintfAndReportCallback(void (*callback)(const char *)) {
 // Can be overriden in frontend.
 #if SANITIZER_GO && defined(TSAN_EXTERNAL_HOOKS)
 // Implementation must be defined in frontend.
-// TODO(morehouse): Remove OnPrint after migrating Go to __sanitizer_on_print.
-extern "C" void OnPrint(const char *str);
 extern "C" void __sanitizer_on_print(const char *str);
 #else
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_on_print, const char *str) {
@@ -239,10 +237,6 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_on_print, const char *str) {
 #endif
 
 static void CallPrintfAndReportCallback(const char *str) {
-#if SANITIZER_GO && defined(TSAN_EXTERNAL_HOOKS)
-  // TODO(morehouse): Remove OnPrint after migrating Go to __sanitizer_on_print.
-  OnPrint(str);
-#endif
   __sanitizer_on_print(str);
   if (PrintfAndReportCallback)
     PrintfAndReportCallback(str);

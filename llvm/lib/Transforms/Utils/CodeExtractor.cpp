@@ -305,52 +305,79 @@ static BasicBlock *getCommonExitBlock(const SetVector<BasicBlock *> &Blocks) {
   return CommonExitBlock;
 }
 
+CodeExtractorAnalysisCache::CodeExtractorAnalysisCache(Function &F) {
+  for (BasicBlock &BB : F) {
+    for (Instruction &II : BB.instructionsWithoutDebug())
+      if (auto *AI = dyn_cast<AllocaInst>(&II))
+        Allocas.push_back(AI);
+
+    findSideEffectInfoForBlock(BB);
+  }
+}
+
+void CodeExtractorAnalysisCache::findSideEffectInfoForBlock(BasicBlock &BB) {
+  for (Instruction &II : BB.instructionsWithoutDebug()) {
+    unsigned Opcode = II.getOpcode();
+    Value *MemAddr = nullptr;
+    switch (Opcode) {
+    case Instruction::Store:
+    case Instruction::Load: {
+      if (Opcode == Instruction::Store) {
+        StoreInst *SI = cast<StoreInst>(&II);
+        MemAddr = SI->getPointerOperand();
+      } else {
+        LoadInst *LI = cast<LoadInst>(&II);
+        MemAddr = LI->getPointerOperand();
+      }
+      // Global variable can not be aliased with locals.
+      if (dyn_cast<Constant>(MemAddr))
+        break;
+      Value *Base = MemAddr->stripInBoundsConstantOffsets();
+      if (!isa<AllocaInst>(Base)) {
+        SideEffectingBlocks.insert(&BB);
+        return;
+      }
+      BaseMemAddrs[&BB].insert(Base);
+      break;
+    }
+    default: {
+      IntrinsicInst *IntrInst = dyn_cast<IntrinsicInst>(&II);
+      if (IntrInst) {
+        if (IntrInst->isLifetimeStartOrEnd())
+          break;
+        SideEffectingBlocks.insert(&BB);
+        return;
+      }
+      // Treat all the other cases conservatively if it has side effects.
+      if (II.mayHaveSideEffects()) {
+        SideEffectingBlocks.insert(&BB);
+        return;
+      }
+    }
+    }
+  }
+}
+
+bool CodeExtractorAnalysisCache::doesBlockContainClobberOfAddr(
+    BasicBlock &BB, AllocaInst *Addr) const {
+  if (SideEffectingBlocks.count(&BB))
+    return true;
+  auto It = BaseMemAddrs.find(&BB);
+  if (It != BaseMemAddrs.end())
+    return It->second.count(Addr);
+  return false;
+}
+
 bool CodeExtractor::isLegalToShrinkwrapLifetimeMarkers(
-    Instruction *Addr) const {
+    const CodeExtractorAnalysisCache &CEAC, Instruction *Addr) const {
   AllocaInst *AI = cast<AllocaInst>(Addr->stripInBoundsConstantOffsets());
   Function *Func = (*Blocks.begin())->getParent();
   for (BasicBlock &BB : *Func) {
     if (Blocks.count(&BB))
       continue;
-    for (Instruction &II : BB) {
-      if (isa<DbgInfoIntrinsic>(II))
-        continue;
-
-      unsigned Opcode = II.getOpcode();
-      Value *MemAddr = nullptr;
-      switch (Opcode) {
-      case Instruction::Store:
-      case Instruction::Load: {
-        if (Opcode == Instruction::Store) {
-          StoreInst *SI = cast<StoreInst>(&II);
-          MemAddr = SI->getPointerOperand();
-        } else {
-          LoadInst *LI = cast<LoadInst>(&II);
-          MemAddr = LI->getPointerOperand();
-        }
-        // Global variable can not be aliased with locals.
-        if (dyn_cast<Constant>(MemAddr))
-          break;
-        Value *Base = MemAddr->stripInBoundsConstantOffsets();
-        if (!isa<AllocaInst>(Base) || Base == AI)
-          return false;
-        break;
-      }
-      default: {
-        IntrinsicInst *IntrInst = dyn_cast<IntrinsicInst>(&II);
-        if (IntrInst) {
-          if (IntrInst->isLifetimeStartOrEnd())
-            break;
-          return false;
-        }
-        // Treat all the other cases conservatively if it has side effects.
-        if (II.mayHaveSideEffects())
-          return false;
-      }
-      }
-    }
+    if (CEAC.doesBlockContainClobberOfAddr(BB, AI))
+      return false;
   }
-
   return true;
 }
 
@@ -413,7 +440,8 @@ CodeExtractor::findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock) {
 // outline region. If there are not other untracked uses of the address, return
 // the pair of markers if found; otherwise return a pair of nullptr.
 CodeExtractor::LifetimeMarkerInfo
-CodeExtractor::getLifetimeMarkers(Instruction *Addr,
+CodeExtractor::getLifetimeMarkers(const CodeExtractorAnalysisCache &CEAC,
+                                  Instruction *Addr,
                                   BasicBlock *ExitBlock) const {
   LifetimeMarkerInfo Info;
 
@@ -445,7 +473,7 @@ CodeExtractor::getLifetimeMarkers(Instruction *Addr,
   Info.HoistLifeEnd = !definedInRegion(Blocks, Info.LifeEnd);
   // Do legality check.
   if ((Info.SinkLifeStart || Info.HoistLifeEnd) &&
-      !isLegalToShrinkwrapLifetimeMarkers(Addr))
+      !isLegalToShrinkwrapLifetimeMarkers(CEAC, Addr))
     return {};
 
   // Check to see if we have a place to do hoisting, if not, bail.
@@ -455,7 +483,8 @@ CodeExtractor::getLifetimeMarkers(Instruction *Addr,
   return Info;
 }
 
-void CodeExtractor::findAllocas(ValueSet &SinkCands, ValueSet &HoistCands,
+void CodeExtractor::findAllocas(const CodeExtractorAnalysisCache &CEAC,
+                                ValueSet &SinkCands, ValueSet &HoistCands,
                                 BasicBlock *&ExitBlock) const {
   Function *Func = (*Blocks.begin())->getParent();
   ExitBlock = getCommonExitBlock(Blocks);
@@ -476,60 +505,64 @@ void CodeExtractor::findAllocas(ValueSet &SinkCands, ValueSet &HoistCands,
     return true;
   };
 
-  for (BasicBlock &BB : *Func) {
-    if (Blocks.count(&BB))
+  // Look up allocas in the original function in CodeExtractorAnalysisCache, as
+  // this is much faster than walking all the instructions.
+  for (AllocaInst *AI : CEAC.getAllocas()) {
+    BasicBlock *BB = AI->getParent();
+    if (Blocks.count(BB))
       continue;
-    for (Instruction &II : BB) {
-      auto *AI = dyn_cast<AllocaInst>(&II);
-      if (!AI)
-        continue;
 
-      LifetimeMarkerInfo MarkerInfo = getLifetimeMarkers(AI, ExitBlock);
-      bool Moved = moveOrIgnoreLifetimeMarkers(MarkerInfo);
-      if (Moved) {
-        LLVM_DEBUG(dbgs() << "Sinking alloca: " << *AI << "\n");
-        SinkCands.insert(AI);
-        continue;
-      }
+    // As a prior call to extractCodeRegion() may have shrinkwrapped the alloca,
+    // check whether it is actually still in the original function.
+    Function *AIFunc = BB->getParent();
+    if (AIFunc != Func)
+      continue;
 
-      // Follow any bitcasts.
-      SmallVector<Instruction *, 2> Bitcasts;
-      SmallVector<LifetimeMarkerInfo, 2> BitcastLifetimeInfo;
-      for (User *U : AI->users()) {
-        if (U->stripInBoundsConstantOffsets() == AI) {
-          Instruction *Bitcast = cast<Instruction>(U);
-          LifetimeMarkerInfo LMI = getLifetimeMarkers(Bitcast, ExitBlock);
-          if (LMI.LifeStart) {
-            Bitcasts.push_back(Bitcast);
-            BitcastLifetimeInfo.push_back(LMI);
-            continue;
-          }
-        }
-
-        // Found unknown use of AI.
-        if (!definedInRegion(Blocks, U)) {
-          Bitcasts.clear();
-          break;
-        }
-      }
-
-      // Either no bitcasts reference the alloca or there are unknown uses.
-      if (Bitcasts.empty())
-        continue;
-
-      LLVM_DEBUG(dbgs() << "Sinking alloca (via bitcast): " << *AI << "\n");
+    LifetimeMarkerInfo MarkerInfo = getLifetimeMarkers(CEAC, AI, ExitBlock);
+    bool Moved = moveOrIgnoreLifetimeMarkers(MarkerInfo);
+    if (Moved) {
+      LLVM_DEBUG(dbgs() << "Sinking alloca: " << *AI << "\n");
       SinkCands.insert(AI);
-      for (unsigned I = 0, E = Bitcasts.size(); I != E; ++I) {
-        Instruction *BitcastAddr = Bitcasts[I];
-        const LifetimeMarkerInfo &LMI = BitcastLifetimeInfo[I];
-        assert(LMI.LifeStart &&
-               "Unsafe to sink bitcast without lifetime markers");
-        moveOrIgnoreLifetimeMarkers(LMI);
-        if (!definedInRegion(Blocks, BitcastAddr)) {
-          LLVM_DEBUG(dbgs() << "Sinking bitcast-of-alloca: " << *BitcastAddr
-                            << "\n");
-          SinkCands.insert(BitcastAddr);
+      continue;
+    }
+
+    // Follow any bitcasts.
+    SmallVector<Instruction *, 2> Bitcasts;
+    SmallVector<LifetimeMarkerInfo, 2> BitcastLifetimeInfo;
+    for (User *U : AI->users()) {
+      if (U->stripInBoundsConstantOffsets() == AI) {
+        Instruction *Bitcast = cast<Instruction>(U);
+        LifetimeMarkerInfo LMI = getLifetimeMarkers(CEAC, Bitcast, ExitBlock);
+        if (LMI.LifeStart) {
+          Bitcasts.push_back(Bitcast);
+          BitcastLifetimeInfo.push_back(LMI);
+          continue;
         }
+      }
+
+      // Found unknown use of AI.
+      if (!definedInRegion(Blocks, U)) {
+        Bitcasts.clear();
+        break;
+      }
+    }
+
+    // Either no bitcasts reference the alloca or there are unknown uses.
+    if (Bitcasts.empty())
+      continue;
+
+    LLVM_DEBUG(dbgs() << "Sinking alloca (via bitcast): " << *AI << "\n");
+    SinkCands.insert(AI);
+    for (unsigned I = 0, E = Bitcasts.size(); I != E; ++I) {
+      Instruction *BitcastAddr = Bitcasts[I];
+      const LifetimeMarkerInfo &LMI = BitcastLifetimeInfo[I];
+      assert(LMI.LifeStart &&
+             "Unsafe to sink bitcast without lifetime markers");
+      moveOrIgnoreLifetimeMarkers(LMI);
+      if (!definedInRegion(Blocks, BitcastAddr)) {
+        LLVM_DEBUG(dbgs() << "Sinking bitcast-of-alloca: " << *BitcastAddr
+                          << "\n");
+        SinkCands.insert(BitcastAddr);
       }
     }
   }
@@ -1349,7 +1382,8 @@ void CodeExtractor::calculateNewCallTerminatorWeights(
       MDBuilder(TI->getContext()).createBranchWeights(BranchWeights));
 }
 
-Function *CodeExtractor::extractCodeRegion() {
+Function *
+CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
   if (!isEligible())
     return nullptr;
 
@@ -1435,7 +1469,7 @@ Function *CodeExtractor::extractCodeRegion() {
 
   ValueSet inputs, outputs, SinkingCands, HoistingCands;
   BasicBlock *CommonExit = nullptr;
-  findAllocas(SinkingCands, HoistingCands, CommonExit);
+  findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
   assert(HoistingCands.empty() || CommonExit);
 
   // Find inputs to, outputs from the code region.

@@ -7,7 +7,7 @@ static_library("utils") {
     "//clang/lib/ASTMatchers",
     "//clang/lib/Basic",
     "//clang/lib/Lex",
-    "//clang/lib/Tooling/Refactoring",
+    "//clang/lib/Tooling/Transformer",
     "//llvm/lib/Support",
   ]
   sources = [

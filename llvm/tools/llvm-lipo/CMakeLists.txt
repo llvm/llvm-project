@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Object
   Option
   Support
+  TextAPI
 )
 
 set(LLVM_TARGET_DEFINITIONS LipoOpts.td)

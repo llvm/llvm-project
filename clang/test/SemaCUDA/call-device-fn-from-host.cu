@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 %s --std=c++11 -triple x86_64-unknown-linux -emit-llvm -o - \
 // RUN:   -verify -verify-ignore-unexpected=note
+// RUN: %clang_cc1 %s --std=c++11 -triple x86_64-unknown-linux -emit-llvm -o - \
+// RUN:   -verify -verify-ignore-unexpected=note -fopenmp
 
 // Note: This test won't work with -fsyntax-only, because some of these errors
 // are emitted during codegen.

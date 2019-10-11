@@ -44,7 +44,7 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr) {
                                                    *RCU, *PRF);
   auto Execute =
       std::make_unique<ExecuteStage>(*HWS, Opts.EnableBottleneckAnalysis);
-  auto Retire = std::make_unique<RetireStage>(*RCU, *PRF);
+  auto Retire = std::make_unique<RetireStage>(*RCU, *PRF, *LSU);
 
   // Pass the ownership of all the hardware units to this Context.
   addHardwareUnit(std::move(RCU));

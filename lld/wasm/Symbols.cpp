@@ -21,9 +21,45 @@
 
 using namespace llvm;
 using namespace llvm::wasm;
-using namespace lld;
-using namespace lld::wasm;
 
+namespace lld {
+std::string toString(const wasm::Symbol &sym) {
+  return maybeDemangleSymbol(sym.getName());
+}
+
+std::string maybeDemangleSymbol(StringRef name) {
+  if (wasm::config->demangle)
+    return demangleItanium(name);
+  return name;
+}
+
+std::string toString(wasm::Symbol::Kind kind) {
+  switch (kind) {
+  case wasm::Symbol::DefinedFunctionKind:
+    return "DefinedFunction";
+  case wasm::Symbol::DefinedDataKind:
+    return "DefinedData";
+  case wasm::Symbol::DefinedGlobalKind:
+    return "DefinedGlobal";
+  case wasm::Symbol::DefinedEventKind:
+    return "DefinedEvent";
+  case wasm::Symbol::UndefinedFunctionKind:
+    return "UndefinedFunction";
+  case wasm::Symbol::UndefinedDataKind:
+    return "UndefinedData";
+  case wasm::Symbol::UndefinedGlobalKind:
+    return "UndefinedGlobal";
+  case wasm::Symbol::LazyKind:
+    return "LazyKind";
+  case wasm::Symbol::SectionKind:
+    return "SectionKind";
+  case wasm::Symbol::OutputSectionKind:
+    return "OutputSectionKind";
+  }
+  llvm_unreachable("invalid symbol kind");
+}
+
+namespace wasm {
 DefinedFunction *WasmSym::callCtors;
 DefinedFunction *WasmSym::initMemory;
 DefinedFunction *WasmSym::applyRelocs;
@@ -298,49 +334,12 @@ const OutputSectionSymbol *SectionSymbol::getOutputSectionSymbol() const {
 
 void LazySymbol::fetch() { cast<ArchiveFile>(file)->addMember(&archiveSymbol); }
 
-std::string lld::toString(const wasm::Symbol &sym) {
-  return lld::maybeDemangleSymbol(sym.getName());
-}
-
-std::string lld::maybeDemangleSymbol(StringRef name) {
-  if (config->demangle)
-    return demangleItanium(name);
-  return name;
-}
-
-std::string lld::toString(wasm::Symbol::Kind kind) {
-  switch (kind) {
-  case wasm::Symbol::DefinedFunctionKind:
-    return "DefinedFunction";
-  case wasm::Symbol::DefinedDataKind:
-    return "DefinedData";
-  case wasm::Symbol::DefinedGlobalKind:
-    return "DefinedGlobal";
-  case wasm::Symbol::DefinedEventKind:
-    return "DefinedEvent";
-  case wasm::Symbol::UndefinedFunctionKind:
-    return "UndefinedFunction";
-  case wasm::Symbol::UndefinedDataKind:
-    return "UndefinedData";
-  case wasm::Symbol::UndefinedGlobalKind:
-    return "UndefinedGlobal";
-  case wasm::Symbol::LazyKind:
-    return "LazyKind";
-  case wasm::Symbol::SectionKind:
-    return "SectionKind";
-  case wasm::Symbol::OutputSectionKind:
-    return "OutputSectionKind";
-  }
-  llvm_unreachable("invalid symbol kind");
-}
-
-
-void lld::wasm::printTraceSymbolUndefined(StringRef name, const InputFile* file) {
+void printTraceSymbolUndefined(StringRef name, const InputFile* file) {
   message(toString(file) + ": reference to " + name);
 }
 
 // Print out a log message for --trace-symbol.
-void lld::wasm::printTraceSymbol(Symbol *sym) {
+void printTraceSymbol(Symbol *sym) {
   // Undefined symbols are traced via printTraceSymbolUndefined
   if (sym->isUndefined())
     return;
@@ -354,5 +353,8 @@ void lld::wasm::printTraceSymbol(Symbol *sym) {
   message(toString(sym->getFile()) + s + sym->getName());
 }
 
-const char *lld::wasm::defaultModule = "env";
-const char *lld::wasm::functionTableName = "__indirect_function_table";
+const char *defaultModule = "env";
+const char *functionTableName = "__indirect_function_table";
+
+} // namespace wasm
+} // namespace lld

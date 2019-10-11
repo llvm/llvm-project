@@ -472,6 +472,17 @@ StringRef llvm::dwarf::RangeListEncodingString(unsigned Encoding) {
   }
 }
 
+StringRef llvm::dwarf::LocListEncodingString(unsigned Encoding) {
+  switch (Encoding) {
+  default:
+    return StringRef();
+#define HANDLE_DW_LLE(ID, NAME)                                                \
+  case DW_LLE_##NAME:                                                          \
+    return "DW_LLE_" #NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  }
+}
+
 StringRef llvm::dwarf::CallFrameString(unsigned Encoding,
     Triple::ArchType Arch) {
   assert(Arch != llvm::Triple::ArchType::UnknownArch);

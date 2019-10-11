@@ -39,3 +39,12 @@ TEST5:
 # CHECK: .byte 0
 TEST6:
         .string "B", "C"
+
+# CHECK: TEST7:
+# CHECK: .ascii "dk"
+#  0xFACE & 0xFF == 0xCE == 0o316
+#  0x0FE  & 0xFF == 0xFE == 0o376
+# CHECK: .ascii "\316\376"
+TEST7:
+        .ascii "\x64\Xa6B"
+        .ascii "\xface\x0Fe"

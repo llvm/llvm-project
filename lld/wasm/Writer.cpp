@@ -39,9 +39,9 @@
 
 using namespace llvm;
 using namespace llvm::wasm;
-using namespace lld;
-using namespace lld::wasm;
 
+namespace lld {
+namespace wasm {
 static constexpr int stackAlignment = 16;
 
 namespace {
@@ -1088,4 +1088,7 @@ void Writer::createHeader() {
   fileSize += header.size();
 }
 
-void lld::wasm::writeResult() { Writer().run(); }
+void writeResult() { Writer().run(); }
+
+} // namespace wasm
+} // namespace lld

@@ -1540,6 +1540,11 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
         if (CheckAArch64BuiltinFunctionCall(BuiltinID, TheCall))
           return ExprError();
         break;
+      case llvm::Triple::bpfeb:
+      case llvm::Triple::bpfel:
+        if (CheckBPFBuiltinFunctionCall(BuiltinID, TheCall))
+          return ExprError();
+        break;
       case llvm::Triple::hexagon:
         if (CheckHexagonBuiltinFunctionCall(BuiltinID, TheCall))
           return ExprError();
@@ -1938,6 +1943,40 @@ bool Sema::CheckAArch64BuiltinFunctionCall(unsigned BuiltinID,
   }
 
   return SemaBuiltinConstantArgRange(TheCall, i, l, u + l);
+}
+
+bool Sema::CheckBPFBuiltinFunctionCall(unsigned BuiltinID,
+                                       CallExpr *TheCall) {
+  assert(BuiltinID == BPF::BI__builtin_preserve_field_info &&
+         "unexpected ARM builtin");
+
+  if (checkArgCount(*this, TheCall, 2))
+    return true;
+
+  // The first argument needs to be a record field access.
+  // If it is an array element access, we delay decision
+  // to BPF backend to check whether the access is a
+  // field access or not.
+  Expr *Arg = TheCall->getArg(0);
+  if (Arg->getType()->getAsPlaceholderType() ||
+      (Arg->IgnoreParens()->getObjectKind() != OK_BitField &&
+       !dyn_cast<MemberExpr>(Arg->IgnoreParens()) &&
+       !dyn_cast<ArraySubscriptExpr>(Arg->IgnoreParens()))) {
+    Diag(Arg->getBeginLoc(), diag::err_preserve_field_info_not_field)
+        << 1 << Arg->getSourceRange();
+    return true;
+  }
+
+  // The second argument needs to be a constant int
+  llvm::APSInt Value;
+  if (!TheCall->getArg(1)->isIntegerConstantExpr(Value, Context)) {
+    Diag(Arg->getBeginLoc(), diag::err_preserve_field_info_not_const)
+        << 2 << Arg->getSourceRange();
+    return true;
+  }
+
+  TheCall->setType(Context.UnsignedIntTy);
+  return false;
 }
 
 bool Sema::CheckHexagonBuiltinCpu(unsigned BuiltinID, CallExpr *TheCall) {
@@ -6024,6 +6063,12 @@ bool Sema::SemaBuiltinAssumeAligned(CallExpr *TheCall) {
     if (!Result.isPowerOf2())
       return Diag(TheCall->getBeginLoc(), diag::err_alignment_not_power_of_two)
              << Arg->getSourceRange();
+
+    // Alignment calculations can wrap around if it's greater than 2**29.
+    unsigned MaximumAlignment = 536870912;
+    if (Result > MaximumAlignment)
+      Diag(TheCall->getBeginLoc(), diag::warn_assume_aligned_too_great)
+          << Arg->getSourceRange() << MaximumAlignment;
   }
 
   if (NumArgs > 2) {
@@ -11895,6 +11940,13 @@ static void AnalyzeImplicitConversions(Sema &S, Expr *OrigE, SourceLocation CC,
 
   if (E->isTypeDependent() || E->isValueDependent())
     return;
+
+  if (const auto *UO = dyn_cast<UnaryOperator>(E))
+    if (UO->getOpcode() == UO_Not &&
+        UO->getSubExpr()->isKnownToHaveBooleanValue())
+      S.Diag(UO->getBeginLoc(), diag::warn_bitwise_negation_bool)
+          << OrigE->getSourceRange() << T->isBooleanType()
+          << FixItHint::CreateReplacement(UO->getBeginLoc(), "!");
 
   // For conditional operators, we analyze the arguments as if they
   // were being fed directly into the output.

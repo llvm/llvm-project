@@ -157,6 +157,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     1.0    1.0    0.0       movb	(%rcx), %bpl
 # CHECK-NEXT: 2.     1     2.0    2.0    0.0       movb	(%rdx), %sil
 # CHECK-NEXT: 3.     1     7.0    0.0    0.0       movb	%dil, (%rbx)
+# CHECK-NEXT:        1     2.8    1.0    0.0       <total>
 
 # CHECK:      [1] Code Region
 
@@ -272,6 +273,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     1.0    1.0    0.0       movw	(%rcx), %bp
 # CHECK-NEXT: 2.     1     2.0    2.0    0.0       movw	(%rdx), %si
 # CHECK-NEXT: 3.     1     7.0    0.0    0.0       movw	%di, (%rbx)
+# CHECK-NEXT:        1     2.8    1.0    0.0       <total>
 
 # CHECK:      [2] Code Region
 
@@ -387,6 +389,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     1.0    1.0    0.0       movl	(%rcx), %ebp
 # CHECK-NEXT: 2.     1     2.0    2.0    0.0       movl	(%rdx), %esi
 # CHECK-NEXT: 3.     1     7.0    0.0    0.0       movl	%edi, (%rbx)
+# CHECK-NEXT:        1     2.8    1.0    0.0       <total>
 
 # CHECK:      [3] Code Region
 
@@ -502,17 +505,18 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     1.0    1.0    0.0       movq	(%rcx), %rbp
 # CHECK-NEXT: 2.     1     2.0    2.0    0.0       movq	(%rdx), %rsi
 # CHECK-NEXT: 3.     1     7.0    0.0    0.0       movq	%rdi, (%rbx)
+# CHECK-NEXT:        1     2.8    1.0    0.0       <total>
 
 # CHECK:      [4] Code Region
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      400
-# CHECK-NEXT: Total Cycles:      593
+# CHECK-NEXT: Total Cycles:      554
 # CHECK-NEXT: Total uOps:        400
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.67
-# CHECK-NEXT: IPC:               0.67
+# CHECK-NEXT: uOps Per Cycle:    0.72
+# CHECK-NEXT: IPC:               0.72
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Instruction Info:
@@ -532,24 +536,24 @@ movaps %xmm3, (%rbx)
 # CHECK:      Dynamic Dispatch Stall Cycles:
 # CHECK-NEXT: RAT     - Register unavailable:                      0
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
-# CHECK-NEXT: SCHEDQ  - Scheduler full:                            187  (31.5%)
+# CHECK-NEXT: SCHEDQ  - Scheduler full:                            55  (9.9%)
 # CHECK-NEXT: LQ      - Load queue full:                           0
-# CHECK-NEXT: SQ      - Store queue full:                          342  (57.7%)
+# CHECK-NEXT: SQ      - Store queue full:                          437  (78.9%)
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
-# CHECK-NEXT:  0,              403  (68.0%)
-# CHECK-NEXT:  1,              90  (15.2%)
-# CHECK-NEXT:  2,              2  (0.3%)
-# CHECK-NEXT:  3,              86  (14.5%)
-# CHECK-NEXT:  4,              12  (2.0%)
+# CHECK-NEXT:  0,              365  (65.9%)
+# CHECK-NEXT:  1,              88  (15.9%)
+# CHECK-NEXT:  2,              3  (0.5%)
+# CHECK-NEXT:  3,              86  (15.5%)
+# CHECK-NEXT:  4,              12  (2.2%)
 
 # CHECK:      Schedulers - number of cycles where we saw N micro opcodes issued:
 # CHECK-NEXT: [# issued], [# cycles]
-# CHECK-NEXT:  0,          292  (49.2%)
-# CHECK-NEXT:  1,          202  (34.1%)
-# CHECK-NEXT:  2,          99  (16.7%)
+# CHECK-NEXT:  0,          253  (45.7%)
+# CHECK-NEXT:  1,          202  (36.5%)
+# CHECK-NEXT:  2,          99  (17.9%)
 
 # CHECK:      Scheduler's queue usage:
 # CHECK-NEXT: [1] Resource name.
@@ -595,8 +599,8 @@ movaps %xmm3, (%rbx)
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     3.00    -      -      -      -     1.00   movd	%mm0, (%rax)
-# CHECK-NEXT: 0.36   2.64    -      -      -      -      -      -      -      -      -     3.00    -      -      -     1.00    -      -      -      -     3.00    -      -     movd	(%rcx), %mm1
-# CHECK-NEXT: 2.64   0.36    -      -      -      -      -      -      -      -     3.00    -      -      -     1.00    -      -      -      -     3.00    -      -      -     movd	(%rdx), %mm2
+# CHECK-NEXT: 1.53   1.47    -      -      -      -      -      -      -      -      -     3.00    -      -      -     1.00    -      -      -      -     3.00    -      -     movd	(%rcx), %mm1
+# CHECK-NEXT: 1.47   1.53    -      -      -      -      -      -      -      -     3.00    -      -      -     1.00    -      -      -      -     3.00    -      -      -     movd	(%rdx), %mm2
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     3.00    -      -      -      -      -     1.00   movd	%mm3, (%rbx)
 
 # CHECK:      Timeline view:
@@ -619,6 +623,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     1.0    1.0    0.0       movd	(%rcx), %mm1
 # CHECK-NEXT: 2.     1     2.0    2.0    0.0       movd	(%rdx), %mm2
 # CHECK-NEXT: 3.     1     7.0    0.0    0.0       movd	%mm3, (%rbx)
+# CHECK-NEXT:        1     2.8    1.0    0.0       <total>
 
 # CHECK:      [5] Code Region
 
@@ -734,3 +739,4 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     1.0    1.0    0.0       movaps	(%rcx), %xmm1
 # CHECK-NEXT: 2.     1     2.0    2.0    0.0       movaps	(%rdx), %xmm2
 # CHECK-NEXT: 3.     1     7.0    0.0    0.0       movaps	%xmm3, (%rbx)
+# CHECK-NEXT:        1     2.8    1.0    0.0       <total>

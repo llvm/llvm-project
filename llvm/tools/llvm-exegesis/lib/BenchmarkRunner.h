@@ -65,8 +65,7 @@ public:
   class FunctionExecutor {
   public:
     virtual ~FunctionExecutor();
-    virtual llvm::Expected<int64_t>
-    runAndMeasure(const char *Counters) const = 0;
+    virtual Expected<int64_t> runAndMeasure(const char *Counters) const = 0;
   };
 
 protected:
@@ -74,12 +73,11 @@ protected:
   const InstructionBenchmark::ModeE Mode;
 
 private:
-  virtual llvm::Expected<std::vector<BenchmarkMeasure>>
+  virtual Expected<std::vector<BenchmarkMeasure>>
   runMeasurements(const FunctionExecutor &Executor) const = 0;
 
-  llvm::Expected<std::string>
-  writeObjectFile(const BenchmarkCode &Configuration,
-                  const FillFunction &Fill) const;
+  Expected<std::string> writeObjectFile(const BenchmarkCode &Configuration,
+                                        const FillFunction &Fill) const;
 
   const std::unique_ptr<ScratchSpace> Scratch;
 };

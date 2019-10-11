@@ -338,10 +338,6 @@ public:
   ConstantRange addWithNoWrap(const ConstantRange &Other, unsigned NoWrapKind,
                               PreferredRangeType RangeType = Smallest) const;
 
-  /// Return a new range representing the possible values resulting from a
-  /// known NSW addition of a value in this range and \p Other constant.
-  ConstantRange addWithNoSignedWrap(const APInt &Other) const;
-
   /// Return a new range representing the possible values resulting
   /// from a subtraction of a value in this range and a value in \p Other.
   ConstantRange sub(const ConstantRange &Other) const;

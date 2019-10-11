@@ -45,7 +45,9 @@ TEST(ScudoSecondaryTest, SecondaryBasic) {
     L->deallocate(V.back());
     V.pop_back();
   }
-  L->printStats();
+  scudo::ScopedString Str(1024);
+  L->getStats(&Str);
+  Str.output();
 }
 
 // This exercises a variety of combinations of size and alignment for the
@@ -76,7 +78,9 @@ TEST(ScudoSecondaryTest, SecondaryCombinations) {
       }
     }
   }
-  L->printStats();
+  scudo::ScopedString Str(1024);
+  L->getStats(&Str);
+  Str.output();
 }
 
 TEST(ScudoSecondaryTest, SecondaryIterate) {
@@ -97,7 +101,9 @@ TEST(ScudoSecondaryTest, SecondaryIterate) {
     L->deallocate(V.back());
     V.pop_back();
   }
-  L->printStats();
+  scudo::ScopedString Str(1024);
+  L->getStats(&Str);
+  Str.output();
 }
 
 static std::mutex Mutex;
@@ -133,5 +139,7 @@ TEST(ScudoSecondaryTest, SecondaryThreadsRace) {
   }
   for (auto &T : Threads)
     T.join();
-  L->printStats();
+  scudo::ScopedString Str(1024);
+  L->getStats(&Str);
+  Str.output();
 }

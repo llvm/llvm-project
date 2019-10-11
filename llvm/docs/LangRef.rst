@@ -299,7 +299,7 @@ added in the future:
     allows the target to use whatever tricks it wants to produce fast
     code for the target, without having to conform to an externally
     specified ABI (Application Binary Interface). `Tail calls can only
-    be optimized when this, the GHC or the HiPE convention is
+    be optimized when this, the tailcc, the GHC or the HiPE convention is
     used. <CodeGenerator.html#id80>`_ This calling convention does not
     support varargs and requires the prototype of all callees to exactly
     match the prototype of the function definition.
@@ -436,6 +436,14 @@ added in the future:
     - On X86-64 RCX and R8 are available for additional integer returns, and
       XMM2 and XMM3 are available for additional FP/vector returns.
     - On iOS platforms, we use AAPCS-VFP calling convention.
+"``tailcc``" - Tail callable calling convention
+    This calling convention ensures that calls in tail position will always be
+    tail call optimized. This calling convention is equivalent to fastcc,
+    except for an additional guarantee that tail calls will be produced
+    whenever possible. `Tail calls can only be optimized when this, the fastcc,
+    the GHC or the HiPE convention is used. <CodeGenerator.html#id80>`_ This
+    calling convention does not support varargs and requires the prototype of
+    all callees to exactly match the prototype of the function definition.
 "``cc <n>``" - Numbered convention
     Any calling convention may be specified by number, allowing
     target-specific calling conventions to be used. Target specific
@@ -6256,6 +6264,13 @@ enum is the smallest type which can represent all of its values::
     !0 = !{i32 1, !"short_wchar", i32 1}
     !1 = !{i32 1, !"short_enum", i32 0}
 
+LTO Post-Link Module Flags Metadata
+-----------------------------------
+
+Some optimisations are only when the entire LTO unit is present in the current
+module. This is represented by the ``LTOPostLink`` module flags metadata, which
+will be created with a value of ``1`` when LTO linking occurs.
+
 Automatic Linker Flags Named Metadata
 =====================================
 
@@ -10232,11 +10247,12 @@ This instruction requires several arguments:
    Tail call optimization for calls marked ``tail`` is guaranteed to occur if
    the following conditions are met:
 
-   -  Caller and callee both have the calling convention ``fastcc``.
+   -  Caller and callee both have the calling convention ``fastcc`` or ``tailcc``.
    -  The call is in tail position (ret immediately follows call and ret
       uses value of call or is void).
-   -  Option ``-tailcallopt`` is enabled, or
-      ``llvm::GuaranteedTailCallOpt`` is ``true``.
+   -  Option ``-tailcallopt`` is enabled,
+      ``llvm::GuaranteedTailCallOpt`` is ``true``, or the calling convention
+      is ``tailcc``
    -  `Platform-specific constraints are
       met. <CodeGenerator.html#tailcallopt>`_
 
@@ -16799,6 +16815,8 @@ Overview:
 
 The ``llvm.type.test`` intrinsic tests whether the given pointer is associated
 with the given type identifier.
+
+.. _type.checked.load:
 
 '``llvm.type.checked.load``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

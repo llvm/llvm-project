@@ -380,9 +380,6 @@ if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
     if (APPLE)
       message(FATAL_ERROR "LIBCXX_ENABLE_ABI_LINKER_SCRIPT cannot be used on APPLE targets")
     endif()
-    if (NOT PYTHONINTERP_FOUND)
-      message(FATAL_ERROR "LIBCXX_ENABLE_ABI_LINKER_SCRIPT requires python but it was not found.")
-    endif()
     if (NOT LIBCXX_ENABLE_SHARED)
       message(FATAL_ERROR "LIBCXX_ENABLE_ABI_LINKER_SCRIPT is only available for shared library builds.")
     endif()
@@ -447,12 +444,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBCXX_LIBRARY_DIR})
 # LIBCXX_COMPILE_FLAGS: Compile only flags.
 # LIBCXX_LINK_FLAGS: Linker only flags.
 # LIBCXX_LIBRARIES: libraries libc++ is linked to.
-# LIBCXX_INTERFACE_LIBRARIES: Libraries that must be linked when using libc++
-#                             These libraries are exposed in the linker script.
 set(LIBCXX_COMPILE_FLAGS "")
 set(LIBCXX_LINK_FLAGS "")
 set(LIBCXX_LIBRARIES "")
-set(LIBCXX_INTERFACE_LIBRARIES "")
 
 # Include macros for adding and removing libc++ flags.
 include(HandleLibcxxFlags)
@@ -731,6 +725,66 @@ if (LIBCXX_STANDALONE_BUILD AND SANITIZER_FLAGS)
   add_flags(${SANITIZER_FLAGS})
 endif()
 
+# Link system libraries =======================================================
+function(cxx_link_system_libraries target)
+  target_add_link_flags_if_supported(${target} PRIVATE "-nodefaultlibs")
+  target_add_compile_flags_if_supported(${target} PRIVATE "/Zl")
+  target_add_link_flags_if_supported(${target} PRIVATE "/nodefaultlib")
+
+  if (LIBCXX_HAS_SYSTEM_LIB)
+    target_link_libraries(${target} PRIVATE System)
+  endif()
+
+  if (LIBCXX_HAS_PTHREAD_LIB)
+    target_link_libraries(${target} PRIVATE pthread)
+  endif()
+
+  if (LIBCXX_HAS_C_LIB)
+    target_link_libraries(${target} PRIVATE c)
+  endif()
+
+  if (LIBCXX_HAS_M_LIB)
+    target_link_libraries(${target} PRIVATE m)
+  endif()
+
+  if (LIBCXX_HAS_RT_LIB)
+    target_link_libraries(${target} PRIVATE rt)
+  endif()
+
+  if (LIBCXX_USE_COMPILER_RT)
+    find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY)
+    if (LIBCXX_BUILTINS_LIBRARY)
+      target_link_libraries(${target} PRIVATE "${LIBCXX_BUILTINS_LIBRARY}")
+    endif()
+  elseif (LIBCXX_HAS_GCC_S_LIB)
+    target_link_libraries(${target} PRIVATE gcc_s)
+  endif()
+
+  if (LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB)
+    target_link_libraries(${target} PRIVATE atomic)
+  endif()
+
+  if (MINGW)
+    target_link_libraries(${target} PRIVATE "${MINGW_LIBRARIES}")
+  endif()
+
+  if (LIBCXX_TARGETING_MSVC)
+    if (LIBCXX_DEBUG_BUILD)
+      set(LIB_SUFFIX "d")
+    else()
+      set(LIB_SUFFIX "")
+    endif()
+
+    target_link_libraries(${target} PRIVATE ucrt${LIB_SUFFIX}) # Universal C runtime
+    target_link_libraries(${target} PRIVATE vcruntime${LIB_SUFFIX}) # C++ runtime
+    target_link_libraries(${target} PRIVATE msvcrt${LIB_SUFFIX}) # C runtime startup files
+    target_link_libraries(${target} PRIVATE msvcprt${LIB_SUFFIX}) # C++ standard library. Required for exception_ptr internals.
+    # Required for standards-complaint wide character formatting functions
+    # (e.g. `printfw`/`scanfw`)
+    target_link_libraries(${target} PRIVATE iso_stdio_wide_specifiers)
+  endif()
+endfunction()
+
 # Windows-related flags =======================================================
 function(cxx_add_windows_flags target)
   if(WIN32 AND NOT MINGW)
@@ -840,6 +894,7 @@ function(cxx_add_common_build_flags target)
   cxx_add_exception_flags(${target})
   cxx_add_rtti_flags(${target})
   cxx_add_module_flags(${target})
+  cxx_link_system_libraries(${target})
 endfunction()
 
 #===============================================================================

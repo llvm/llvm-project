@@ -9438,7 +9438,7 @@ bool RISCVABIInfo::detectFPCCEligibleStruct(QualType Ty, llvm::Type *&Field1Ty,
       Ty, CharUnits::Zero(), Field1Ty, Field1Off, Field2Ty, Field2Off);
   // Not really a candidate if we have a single int but no float.
   if (Field1Ty && !Field2Ty && !Field1Ty->isFloatingPointTy())
-    return IsCandidate = false;
+    return false;
   if (!IsCandidate)
     return false;
   if (Field1Ty && Field1Ty->isFloatingPointTy())

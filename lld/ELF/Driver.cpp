@@ -334,6 +334,8 @@ static void checkOptions() {
       error("-r and --icf may not be used together");
     if (config->pie)
       error("-r and -pie may not be used together");
+    if (config->exportDynamic)
+      error("-r and --export-dynamic may not be used together");
   }
 
   if (config->executeOnly) {
@@ -1913,9 +1915,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Replace common symbols with regular symbols.
   replaceCommonSymbols();
 
-  // Do size optimizations: garbage collection, merging of SHF_MERGE sections
-  // and identical code folding.
+  // Split SHF_MERGE and .eh_frame sections into pieces in preparation for garbage collection.
   splitSections<ELFT>();
+
+  // Garbage collection and removal of shared symbols from unused shared objects.
   markLive<ELFT>();
   demoteSharedSymbols();
 

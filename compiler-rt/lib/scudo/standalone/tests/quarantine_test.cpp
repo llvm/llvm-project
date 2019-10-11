@@ -213,7 +213,9 @@ TEST(ScudoQuarantineTest, GlobalQuarantine) {
   Quarantine.drainAndRecycle(&Cache, Cb);
   EXPECT_EQ(Cache.getSize(), 0UL);
 
-  Quarantine.printStats();
+  scudo::ScopedString Str(1024);
+  Quarantine.getStats(&Str);
+  Str.output();
 }
 
 void *populateQuarantine(void *Param) {
@@ -236,5 +238,7 @@ TEST(ScudoQuarantineTest, ThreadedGlobalQuarantine) {
   for (scudo::uptr I = 0; I < NumberOfThreads; I++)
     pthread_join(T[I], 0);
 
-  Quarantine.printStats();
+  scudo::ScopedString Str(1024);
+  Quarantine.getStats(&Str);
+  Str.output();
 }

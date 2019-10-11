@@ -294,8 +294,7 @@ public:
 
     Value *AlignmentValue = CGF.EmitScalarExpr(AVAttr->getAlignment());
     llvm::ConstantInt *AlignmentCI = cast<llvm::ConstantInt>(AlignmentValue);
-    CGF.EmitAlignmentAssumption(V, E, AVAttr->getLocation(),
-                                AlignmentCI->getZExtValue());
+    CGF.EmitAlignmentAssumption(V, E, AVAttr->getLocation(), AlignmentCI);
   }
 
   /// EmitLoadOfLValue - Given an expression with complex type that represents a
@@ -4540,7 +4539,7 @@ struct GEPOffsetAndOverflow {
   llvm::Value *OffsetOverflows;
 };
 
-/// Evaluate given GEPVal, which must be an inbounds GEP,
+/// Evaluate given GEPVal, which is either an inbounds GEP, or a constant,
 /// and compute the total offset it applies from it's base pointer BasePtr.
 /// Returns offset in bytes and a boolean flag whether an overflow happened
 /// during evaluation.
@@ -4548,10 +4547,28 @@ static GEPOffsetAndOverflow EmitGEPOffsetInBytes(Value *BasePtr, Value *GEPVal,
                                                  llvm::LLVMContext &VMContext,
                                                  CodeGenModule &CGM,
                                                  CGBuilderTy Builder) {
+  const auto &DL = CGM.getDataLayout();
+
+  // The total (signed) byte offset for the GEP.
+  llvm::Value *TotalOffset = nullptr;
+
+  // Was the GEP already reduced to a constant?
+  if (isa<llvm::Constant>(GEPVal)) {
+    // Compute the offset by casting both pointers to integers and subtracting:
+    // GEPVal = BasePtr + ptr(Offset) <--> Offset = int(GEPVal) - int(BasePtr)
+    Value *BasePtr_int =
+        Builder.CreatePtrToInt(BasePtr, DL.getIntPtrType(BasePtr->getType()));
+    Value *GEPVal_int =
+        Builder.CreatePtrToInt(GEPVal, DL.getIntPtrType(GEPVal->getType()));
+    TotalOffset = Builder.CreateSub(GEPVal_int, BasePtr_int);
+    return {TotalOffset, /*OffsetOverflows=*/Builder.getFalse()};
+  }
+
   auto *GEP = cast<llvm::GEPOperator>(GEPVal);
+  assert(GEP->getPointerOperand() == BasePtr &&
+         "BasePtr must be the the base of the GEP.");
   assert(GEP->isInBounds() && "Expected inbounds GEP");
 
-  const auto &DL = CGM.getDataLayout();
   auto *IntPtrTy = DL.getIntPtrType(GEP->getPointerOperandType());
 
   // Grab references to the signed add/mul overflow intrinsics for intptr_t.
@@ -4561,8 +4578,6 @@ static GEPOffsetAndOverflow EmitGEPOffsetInBytes(Value *BasePtr, Value *GEPVal,
   auto *SMulIntrinsic =
       CGM.getIntrinsic(llvm::Intrinsic::smul_with_overflow, IntPtrTy);
 
-  // The total (signed) byte offset for the GEP.
-  llvm::Value *TotalOffset = nullptr;
   // The offset overflow flag - true if the total offset overflows.
   llvm::Value *OffsetOverflows = Builder.getFalse();
 
@@ -4633,69 +4648,102 @@ CodeGenFunction::EmitCheckedInBoundsGEP(Value *Ptr, ArrayRef<Value *> IdxList,
   if (!SanOpts.has(SanitizerKind::PointerOverflow))
     return GEPVal;
 
-  // If the GEP has already been reduced to a constant, leave it be.
-  if (isa<llvm::Constant>(GEPVal))
+  llvm::Type *PtrTy = Ptr->getType();
+
+  // Perform nullptr-and-offset check unless the nullptr is defined.
+  bool PerformNullCheck = !NullPointerIsDefined(
+      Builder.GetInsertBlock()->getParent(), PtrTy->getPointerAddressSpace());
+  // Check for overflows unless the GEP got constant-folded,
+  // and only in the default address space
+  bool PerformOverflowCheck =
+      !isa<llvm::Constant>(GEPVal) && PtrTy->getPointerAddressSpace() == 0;
+
+  if (!(PerformNullCheck || PerformOverflowCheck))
     return GEPVal;
 
-  // Only check for overflows in the default address space.
-  if (GEPVal->getType()->getPointerAddressSpace())
-    return GEPVal;
+  const auto &DL = CGM.getDataLayout();
 
   SanitizerScope SanScope(this);
+  llvm::Type *IntPtrTy = DL.getIntPtrType(PtrTy);
 
   GEPOffsetAndOverflow EvaluatedGEP =
       EmitGEPOffsetInBytes(Ptr, GEPVal, getLLVMContext(), CGM, Builder);
 
-  auto *GEP = cast<llvm::GEPOperator>(GEPVal);
-
-  const auto &DL = CGM.getDataLayout();
-  auto *IntPtrTy = DL.getIntPtrType(GEP->getPointerOperandType());
+  assert((!isa<llvm::Constant>(EvaluatedGEP.TotalOffset) ||
+          EvaluatedGEP.OffsetOverflows == Builder.getFalse()) &&
+         "If the offset got constant-folded, we don't expect that there was an "
+         "overflow.");
 
   auto *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
 
-  // Common case: if the total offset is zero, don't emit a check.
-  if (EvaluatedGEP.TotalOffset == Zero)
+  // Common case: if the total offset is zero, and we are using C++ semantics,
+  // where nullptr+0 is defined, don't emit a check.
+  if (EvaluatedGEP.TotalOffset == Zero && CGM.getLangOpts().CPlusPlus)
     return GEPVal;
 
   // Now that we've computed the total offset, add it to the base pointer (with
   // wrapping semantics).
-  auto *IntPtr = Builder.CreatePtrToInt(GEP->getPointerOperand(), IntPtrTy);
+  auto *IntPtr = Builder.CreatePtrToInt(Ptr, IntPtrTy);
   auto *ComputedGEP = Builder.CreateAdd(IntPtr, EvaluatedGEP.TotalOffset);
 
-  llvm::SmallVector<std::pair<llvm::Value *, SanitizerMask>, 1> Checks;
+  llvm::SmallVector<std::pair<llvm::Value *, SanitizerMask>, 2> Checks;
 
-  // The GEP is valid if:
-  // 1) The total offset doesn't overflow, and
-  // 2) The sign of the difference between the computed address and the base
-  // pointer matches the sign of the total offset.
-  llvm::Value *ValidGEP;
-  auto *NoOffsetOverflow = Builder.CreateNot(EvaluatedGEP.OffsetOverflows);
-  if (SignedIndices) {
-    // GEP is computed as `unsigned base + signed offset`, therefore:
-    // * If offset was positive, then the computed pointer can not be
-    //   [unsigned] less than the base pointer, unless it overflowed.
-    // * If offset was negative, then the computed pointer can not be
-    //   [unsigned] greater than the bas pointere, unless it overflowed.
-    auto *PosOrZeroValid = Builder.CreateICmpUGE(ComputedGEP, IntPtr);
-    auto *PosOrZeroOffset =
-        Builder.CreateICmpSGE(EvaluatedGEP.TotalOffset, Zero);
-    llvm::Value *NegValid = Builder.CreateICmpULT(ComputedGEP, IntPtr);
-    ValidGEP = Builder.CreateSelect(PosOrZeroOffset, PosOrZeroValid, NegValid);
-  } else if (!IsSubtraction) {
-    // GEP is computed as `unsigned base + unsigned offset`,  therefore the
-    // computed pointer can not be [unsigned] less than base pointer,
-    // unless there was an overflow.
-    // Equivalent to `@llvm.uadd.with.overflow(%base, %offset)`.
-    ValidGEP = Builder.CreateICmpUGE(ComputedGEP, IntPtr);
-  } else {
-    // GEP is computed as `unsigned base - unsigned offset`, therefore the
-    // computed pointer can not be [unsigned] greater than base pointer,
-    // unless there was an overflow.
-    // Equivalent to `@llvm.usub.with.overflow(%base, sub(0, %offset))`.
-    ValidGEP = Builder.CreateICmpULE(ComputedGEP, IntPtr);
+  if (PerformNullCheck) {
+    // In C++, if the base pointer evaluates to a null pointer value,
+    // the only valid  pointer this inbounds GEP can produce is also
+    // a null pointer, so the offset must also evaluate to zero.
+    // Likewise, if we have non-zero base pointer, we can not get null pointer
+    // as a result, so the offset can not be -intptr_t(BasePtr).
+    // In other words, both pointers are either null, or both are non-null,
+    // or the behaviour is undefined.
+    //
+    // C, however, is more strict in this regard, and gives more
+    // optimization opportunities: in C, additionally, nullptr+0 is undefined.
+    // So both the input to the 'gep inbounds' AND the output must not be null.
+    auto *BaseIsNotNullptr = Builder.CreateIsNotNull(Ptr);
+    auto *ResultIsNotNullptr = Builder.CreateIsNotNull(ComputedGEP);
+    auto *Valid =
+        CGM.getLangOpts().CPlusPlus
+            ? Builder.CreateICmpEQ(BaseIsNotNullptr, ResultIsNotNullptr)
+            : Builder.CreateAnd(BaseIsNotNullptr, ResultIsNotNullptr);
+    Checks.emplace_back(Valid, SanitizerKind::PointerOverflow);
   }
-  ValidGEP = Builder.CreateAnd(ValidGEP, NoOffsetOverflow);
-  Checks.emplace_back(ValidGEP, SanitizerKind::PointerOverflow);
+
+  if (PerformOverflowCheck) {
+    // The GEP is valid if:
+    // 1) The total offset doesn't overflow, and
+    // 2) The sign of the difference between the computed address and the base
+    // pointer matches the sign of the total offset.
+    llvm::Value *ValidGEP;
+    auto *NoOffsetOverflow = Builder.CreateNot(EvaluatedGEP.OffsetOverflows);
+    if (SignedIndices) {
+      // GEP is computed as `unsigned base + signed offset`, therefore:
+      // * If offset was positive, then the computed pointer can not be
+      //   [unsigned] less than the base pointer, unless it overflowed.
+      // * If offset was negative, then the computed pointer can not be
+      //   [unsigned] greater than the bas pointere, unless it overflowed.
+      auto *PosOrZeroValid = Builder.CreateICmpUGE(ComputedGEP, IntPtr);
+      auto *PosOrZeroOffset =
+          Builder.CreateICmpSGE(EvaluatedGEP.TotalOffset, Zero);
+      llvm::Value *NegValid = Builder.CreateICmpULT(ComputedGEP, IntPtr);
+      ValidGEP =
+          Builder.CreateSelect(PosOrZeroOffset, PosOrZeroValid, NegValid);
+    } else if (!IsSubtraction) {
+      // GEP is computed as `unsigned base + unsigned offset`,  therefore the
+      // computed pointer can not be [unsigned] less than base pointer,
+      // unless there was an overflow.
+      // Equivalent to `@llvm.uadd.with.overflow(%base, %offset)`.
+      ValidGEP = Builder.CreateICmpUGE(ComputedGEP, IntPtr);
+    } else {
+      // GEP is computed as `unsigned base - unsigned offset`, therefore the
+      // computed pointer can not be [unsigned] greater than base pointer,
+      // unless there was an overflow.
+      // Equivalent to `@llvm.usub.with.overflow(%base, sub(0, %offset))`.
+      ValidGEP = Builder.CreateICmpULE(ComputedGEP, IntPtr);
+    }
+    ValidGEP = Builder.CreateAnd(ValidGEP, NoOffsetOverflow);
+    Checks.emplace_back(ValidGEP, SanitizerKind::PointerOverflow);
+  }
 
   assert(!Checks.empty() && "Should have produced some checks.");
 

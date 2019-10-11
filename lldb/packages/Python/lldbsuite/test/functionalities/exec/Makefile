@@ -1,11 +1,9 @@
 CXX_SOURCES := main.cpp
 
-all: a.out secondprog
+all: secondprog
 
 include Makefile.rules
 
-secondprog:
-	$(MAKE) VPATH=$(VPATH) -f $(SRCDIR)/secondprog.mk
-
-clean::
-	$(MAKE) -f $(SRCDIR)/secondprog.mk clean
+secondprog: secondprog.cpp
+	$(MAKE) -f $(MAKEFILE_RULES) \
+		CXX_SOURCES=secondprog.cpp EXE=secondprog

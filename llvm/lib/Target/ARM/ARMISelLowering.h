@@ -818,7 +818,7 @@ class VectorType;
     SDValue getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                       SDValue &ARMcc, SelectionDAG &DAG, const SDLoc &dl) const;
     SDValue getVFPCmp(SDValue LHS, SDValue RHS, SelectionDAG &DAG,
-                      const SDLoc &dl, bool InvalidOnQNaN) const;
+                      const SDLoc &dl) const;
     SDValue duplicateCmp(SDValue Cmp, SelectionDAG &DAG) const;
 
     SDValue OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const;

@@ -21,22 +21,16 @@
 // CHECK-NEXT:   0000: 00666F6F 00742E73 6F007665 7200      |.foo.t.so.ver.|
 // CHECK-NEXT: )
 
-// CHECK:      Version symbols {
-// CHECK-NEXT:   Section Name:
-// CHECK-NEXT:   Address:
-// CHECK-NEXT:   Offset:
-// CHECK-NEXT:   Link:
-// CHECK-NEXT:   Symbols [
-// CHECK-NEXT:     Symbol {
-// CHECK-NEXT:       Version: 0
-// CHECK-NEXT:       Name:
-// CHECK-NEXT:     }
-// CHECK-NEXT:     Symbol {
-// CHECK-NEXT:       Version: 2
-// CHECK-NEXT:       Name: foo@ver
-// CHECK-NEXT:     }
-// CHECK-NEXT:   ]
-// CHECK-NEXT: }
+// CHECK:      Version symbols [
+// CHECK-NEXT:  Symbol {
+// CHECK-NEXT:    Version: 0
+// CHECK-NEXT:    Name:
+// CHECK-NEXT:  }
+// CHECK-NEXT:  Symbol {
+// CHECK-NEXT:    Version: 2
+// CHECK-NEXT:    Name: foo@ver
+// CHECK-NEXT:  }
+// CHECK-NEXT: ]
 
 
 .global foo@ver

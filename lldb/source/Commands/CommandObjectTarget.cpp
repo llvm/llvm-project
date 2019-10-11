@@ -3445,6 +3445,25 @@ protected:
         result.GetOutputStream().Printf("\n");
       }
 
+      UnwindPlanSP of_unwind_sp =
+          func_unwinders_sp->GetObjectFileUnwindPlan(*target);
+      if (of_unwind_sp) {
+        result.GetOutputStream().Printf("object file UnwindPlan:\n");
+        of_unwind_sp->Dump(result.GetOutputStream(), thread.get(),
+                           LLDB_INVALID_ADDRESS);
+        result.GetOutputStream().Printf("\n");
+      }
+
+      UnwindPlanSP of_unwind_augmented_sp =
+          func_unwinders_sp->GetObjectFileAugmentedUnwindPlan(*target,
+                                                              *thread);
+      if (of_unwind_augmented_sp) {
+        result.GetOutputStream().Printf("object file augmented UnwindPlan:\n");
+        of_unwind_augmented_sp->Dump(result.GetOutputStream(), thread.get(),
+                                     LLDB_INVALID_ADDRESS);
+        result.GetOutputStream().Printf("\n");
+      }
+
       UnwindPlanSP ehframe_sp =
           func_unwinders_sp->GetEHFrameUnwindPlan(*target);
       if (ehframe_sp) {

@@ -279,7 +279,7 @@ public:
   /// Print the profile for \p FName on stream \p OS.
   void dumpFunctionProfile(StringRef FName, raw_ostream &OS = dbgs());
 
-  virtual void collectFuncsToUse(const Module &M) {}
+  virtual void collectFuncsFrom(const Module &M) {}
 
   /// Print all the profiles on stream \p OS.
   void dump(raw_ostream &OS = dbgs());
@@ -424,7 +424,7 @@ protected:
   bool at_eof() const { return Data >= End; }
 
   /// Read the next function profile instance.
-  std::error_code readFuncProfile();
+  std::error_code readFuncProfile(const uint8_t *Start);
 
   /// Read the contents of the given profile instance.
   std::error_code readProfile(FunctionSamples &FProfile);
@@ -526,7 +526,17 @@ private:
   virtual std::error_code verifySPMagic(uint64_t Magic) override;
   virtual std::error_code readOneSection(const uint8_t *Start, uint64_t Size,
                                          SecType Type) override;
-  std::error_code readProfileSymbolList(uint64_t Size);
+  std::error_code readProfileSymbolList();
+  std::error_code readFuncOffsetTable();
+  std::error_code readFuncProfiles();
+
+  /// The table mapping from function name to the offset of its FunctionSample
+  /// towards file start.
+  DenseMap<StringRef, uint64_t> FuncOffsetTable;
+  /// The set containing the functions to use when compiling a module.
+  DenseSet<StringRef> FuncsToUse;
+  /// Use all functions from the input profile.
+  bool UseAllFuncs = true;
 
 public:
   SampleProfileReaderExtBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
@@ -539,6 +549,9 @@ public:
   virtual std::unique_ptr<ProfileSymbolList> getProfileSymbolList() override {
     return std::move(ProfSymList);
   };
+
+  /// Collect functions with definitions in Module \p M.
+  void collectFuncsFrom(const Module &M) override;
 };
 
 class SampleProfileReaderCompactBinary : public SampleProfileReaderBinary {
@@ -571,7 +584,7 @@ public:
   std::error_code read() override;
 
   /// Collect functions to be used when compiling Module \p M.
-  void collectFuncsToUse(const Module &M) override;
+  void collectFuncsFrom(const Module &M) override;
 };
 
 using InlineCallStack = SmallVector<FunctionSamples *, 10>;

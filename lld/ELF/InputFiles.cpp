@@ -483,7 +483,8 @@ StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
   return signature;
 }
 
-template <class ELFT> bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec) {
+template <class ELFT>
+bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec, StringRef name) {
   // On a regular link we don't merge sections if -O0 (default is -O1). This
   // sometimes makes the linker significantly faster, although the output will
   // be bigger.
@@ -515,14 +516,16 @@ template <class ELFT> bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec) {
   if (entSize == 0)
     return false;
   if (sec.sh_size % entSize)
-    fatal(toString(this) +
-          ": SHF_MERGE section size must be a multiple of sh_entsize");
+    fatal(toString(this) + ":(" + name + "): SHF_MERGE section size (" +
+          Twine(sec.sh_size) + ") must be a multiple of sh_entsize (" +
+          Twine(entSize) + ")");
 
   uint64_t flags = sec.sh_flags;
   if (!(flags & SHF_MERGE))
     return false;
   if (flags & SHF_WRITE)
-    fatal(toString(this) + ": writable SHF_MERGE section is not supported");
+    fatal(toString(this) + ":(" + name +
+          "): writable SHF_MERGE section is not supported");
 
   return true;
 }
@@ -1033,7 +1036,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &sec) {
   if (name == ".eh_frame" && !config->relocatable)
     return make<EhInputSection>(*this, sec, name);
 
-  if (shouldMerge(sec))
+  if (shouldMerge(sec, name))
     return make<MergeInputSection>(*this, sec, name);
   return make<InputSection>(*this, sec, name);
 }

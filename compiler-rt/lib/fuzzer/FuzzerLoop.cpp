@@ -273,9 +273,9 @@ void Fuzzer::InterruptCallback() {
 NO_SANITIZE_MEMORY
 void Fuzzer::AlarmCallback() {
   assert(Options.UnitTimeoutSec > 0);
-  // In Windows Alarm callback is executed by a different thread.
+  // In Windows and Fuchsia, Alarm callback is executed by a different thread.
   // NetBSD's current behavior needs this change too.
-#if !LIBFUZZER_WINDOWS && !LIBFUZZER_NETBSD
+#if !LIBFUZZER_WINDOWS && !LIBFUZZER_NETBSD && !LIBFUZZER_FUCHSIA
   if (!InFuzzingThread())
     return;
 #endif

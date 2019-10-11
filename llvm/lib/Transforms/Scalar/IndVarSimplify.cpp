@@ -1839,8 +1839,8 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
     auto CmpRHSRange = SE->getSignedRange(SE->getSCEV(CmpRHS));
     auto CmpConstrainedLHSRange =
             ConstantRange::makeAllowedICmpRegion(P, CmpRHSRange);
-    auto NarrowDefRange =
-            CmpConstrainedLHSRange.addWithNoSignedWrap(*NarrowDefRHS);
+    auto NarrowDefRange = CmpConstrainedLHSRange.addWithNoWrap(
+        *NarrowDefRHS, OverflowingBinaryOperator::NoSignedWrap);
 
     updatePostIncRangeInfo(NarrowDef, NarrowUser, NarrowDefRange);
   };

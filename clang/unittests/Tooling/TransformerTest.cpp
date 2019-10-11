@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Refactoring/Transformer.h"
+#include "clang/Tooling/Transformer/Transformer.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Tooling/Refactoring/RangeSelector.h"
+#include "clang/Tooling/Transformer/RangeSelector.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"

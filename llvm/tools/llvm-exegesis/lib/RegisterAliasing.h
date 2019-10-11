@@ -25,83 +25,90 @@ namespace llvm {
 namespace exegesis {
 
 // Returns the registers that are aliased by the ones set in SourceBits.
-llvm::BitVector getAliasedBits(const llvm::MCRegisterInfo &RegInfo,
-                               const llvm::BitVector &SourceBits);
+BitVector getAliasedBits(const MCRegisterInfo &RegInfo,
+                         const BitVector &SourceBits);
 
 // Keeps track of a mapping from one register (or a register class) to its
 // aliased registers.
 //
 // e.g.
-// RegisterAliasingTracker Tracker(RegInfo, llvm::X86::EAX);
-// Tracker.sourceBits() == { llvm::X86::EAX }
-// Tracker.aliasedBits() == { llvm::X86::AL, llvm::X86::AH, llvm::X86::AX,
-//                            llvm::X86::EAX,llvm::X86::HAX, llvm::X86::RAX }
-// Tracker.getOrigin(llvm::X86::AL) == llvm::X86::EAX;
-// Tracker.getOrigin(llvm::X86::BX) == -1;
+// RegisterAliasingTracker Tracker(RegInfo, X86::EAX);
+// Tracker.sourceBits() == { X86::EAX }
+// Tracker.aliasedBits() == { X86::AL, X86::AH, X86::AX,
+//                            X86::EAX,X86::HAX, X86::RAX }
+// Tracker.getOrigin(X86::AL) == X86::EAX;
+// Tracker.getOrigin(X86::BX) == -1;
 struct RegisterAliasingTracker {
   // Construct a tracker from an MCRegisterClass.
-  RegisterAliasingTracker(const llvm::MCRegisterInfo &RegInfo,
-                          const llvm::BitVector &ReservedReg,
-                          const llvm::MCRegisterClass &RegClass);
+  RegisterAliasingTracker(const MCRegisterInfo &RegInfo,
+                          const BitVector &ReservedReg,
+                          const MCRegisterClass &RegClass);
 
   // Construct a tracker from an MCPhysReg.
-  RegisterAliasingTracker(const llvm::MCRegisterInfo &RegInfo,
-                          const llvm::MCPhysReg Register);
+  RegisterAliasingTracker(const MCRegisterInfo &RegInfo,
+                          const MCPhysReg Register);
 
-  const llvm::BitVector &sourceBits() const { return SourceBits; }
+  const BitVector &sourceBits() const { return SourceBits; }
 
   // Retrieves all the touched registers as a BitVector.
-  const llvm::BitVector &aliasedBits() const { return AliasedBits; }
+  const BitVector &aliasedBits() const { return AliasedBits; }
 
   // Returns the origin of this register or -1.
-  int getOrigin(llvm::MCPhysReg Aliased) const {
+  int getOrigin(MCPhysReg Aliased) const {
     if (!AliasedBits[Aliased])
       return -1;
     return Origins[Aliased];
   }
 
 private:
-  RegisterAliasingTracker(const llvm::MCRegisterInfo &RegInfo);
+  RegisterAliasingTracker(const MCRegisterInfo &RegInfo);
   RegisterAliasingTracker(const RegisterAliasingTracker &) = delete;
 
-  void FillOriginAndAliasedBits(const llvm::MCRegisterInfo &RegInfo,
-                                const llvm::BitVector &OriginalBits);
+  void FillOriginAndAliasedBits(const MCRegisterInfo &RegInfo,
+                                const BitVector &OriginalBits);
 
-  llvm::BitVector SourceBits;
-  llvm::BitVector AliasedBits;
-  llvm::PackedVector<size_t, 10> Origins; // Max 1024 physical registers.
+  BitVector SourceBits;
+  BitVector AliasedBits;
+  PackedVector<size_t, 10> Origins; // Max 1024 physical registers.
 };
 
 // A cache of existing trackers.
 struct RegisterAliasingTrackerCache {
   // RegInfo must outlive the cache.
-  RegisterAliasingTrackerCache(const llvm::MCRegisterInfo &RegInfo,
-                               const llvm::BitVector &ReservedReg);
+  RegisterAliasingTrackerCache(const MCRegisterInfo &RegInfo,
+                               const BitVector &ReservedReg);
 
   // Convenient function to retrieve a BitVector of the right size.
-  const llvm::BitVector &emptyRegisters() const { return EmptyRegisters; }
+  const BitVector &emptyRegisters() const { return EmptyRegisters; }
 
   // Convenient function to retrieve the registers the function body can't use.
-  const llvm::BitVector &reservedRegisters() const { return ReservedReg; }
+  const BitVector &reservedRegisters() const { return ReservedReg; }
 
   // Convenient function to retrieve the underlying MCRegInfo.
-  const llvm::MCRegisterInfo &regInfo() const { return RegInfo; }
+  const MCRegisterInfo &regInfo() const { return RegInfo; }
 
   // Retrieves the RegisterAliasingTracker for this particular register.
-  const RegisterAliasingTracker &getRegister(llvm::MCPhysReg Reg) const;
+  const RegisterAliasingTracker &getRegister(MCPhysReg Reg) const;
 
   // Retrieves the RegisterAliasingTracker for this particular register class.
   const RegisterAliasingTracker &getRegisterClass(unsigned RegClassIndex) const;
 
 private:
-  const llvm::MCRegisterInfo &RegInfo;
-  const llvm::BitVector ReservedReg;
-  const llvm::BitVector EmptyRegisters;
+  const MCRegisterInfo &RegInfo;
+  const BitVector ReservedReg;
+  const BitVector EmptyRegisters;
   mutable std::unordered_map<unsigned, std::unique_ptr<RegisterAliasingTracker>>
       Registers;
   mutable std::unordered_map<unsigned, std::unique_ptr<RegisterAliasingTracker>>
       RegisterClasses;
 };
+
+// `a = a & ~b`, optimized for few bit sets in B and no allocation.
+inline void remove(BitVector &A, const BitVector &B) {
+  assert(A.size() == B.size());
+  for (auto I : B.set_bits())
+    A.reset(I);
+}
 
 } // namespace exegesis
 } // namespace llvm

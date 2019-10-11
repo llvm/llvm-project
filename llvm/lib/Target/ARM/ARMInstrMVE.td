@@ -1524,8 +1524,8 @@ let Predicates = [HasMVEInt] in {
 }
 
 class MVE_VQADDSUB<string iname, string suffix, bit U, bit subtract,
-                   bits<2> size, list<dag> pattern=[]>
-  : MVE_int<iname, suffix, size, pattern> {
+                   bits<2> size, ValueType vt>
+  : MVE_int<iname, suffix, size, []> {
 
   let Inst{28} = U;
   let Inst{25-23} = 0b110;
@@ -1535,26 +1535,48 @@ class MVE_VQADDSUB<string iname, string suffix, bit U, bit subtract,
   let Inst{8} = 0b0;
   let Inst{4} = 0b1;
   let Inst{0} = 0b0;
+
+  ValueType VT = vt;
 }
 
-class MVE_VQADD<string suffix, bit U, bits<2> size, list<dag> pattern=[]>
-  : MVE_VQADDSUB<"vqadd", suffix, U, 0b0, size, pattern>;
-class MVE_VQSUB<string suffix, bit U, bits<2> size, list<dag> pattern=[]>
-  : MVE_VQADDSUB<"vqsub", suffix, U, 0b1, size, pattern>;
+class MVE_VQADD<string suffix, bit U, bits<2> size, ValueType VT>
+  : MVE_VQADDSUB<"vqadd", suffix, U, 0b0, size, VT>;
+class MVE_VQSUB<string suffix, bit U, bits<2> size, ValueType VT>
+  : MVE_VQADDSUB<"vqsub", suffix, U, 0b1, size, VT>;
 
-def MVE_VQADDs8  : MVE_VQADD<"s8",  0b0, 0b00>;
-def MVE_VQADDs16 : MVE_VQADD<"s16", 0b0, 0b01>;
-def MVE_VQADDs32 : MVE_VQADD<"s32", 0b0, 0b10>;
-def MVE_VQADDu8  : MVE_VQADD<"u8",  0b1, 0b00>;
-def MVE_VQADDu16 : MVE_VQADD<"u16", 0b1, 0b01>;
-def MVE_VQADDu32 : MVE_VQADD<"u32", 0b1, 0b10>;
+def MVE_VQADDs8  : MVE_VQADD<"s8",  0b0, 0b00, v16i8>;
+def MVE_VQADDs16 : MVE_VQADD<"s16", 0b0, 0b01, v8i16>;
+def MVE_VQADDs32 : MVE_VQADD<"s32", 0b0, 0b10, v4i32>;
+def MVE_VQADDu8  : MVE_VQADD<"u8",  0b1, 0b00, v16i8>;
+def MVE_VQADDu16 : MVE_VQADD<"u16", 0b1, 0b01, v8i16>;
+def MVE_VQADDu32 : MVE_VQADD<"u32", 0b1, 0b10, v4i32>;
 
-def MVE_VQSUBs8  : MVE_VQSUB<"s8",  0b0, 0b00>;
-def MVE_VQSUBs16 : MVE_VQSUB<"s16", 0b0, 0b01>;
-def MVE_VQSUBs32 : MVE_VQSUB<"s32", 0b0, 0b10>;
-def MVE_VQSUBu8  : MVE_VQSUB<"u8",  0b1, 0b00>;
-def MVE_VQSUBu16 : MVE_VQSUB<"u16", 0b1, 0b01>;
-def MVE_VQSUBu32 : MVE_VQSUB<"u32", 0b1, 0b10>;
+def MVE_VQSUBs8  : MVE_VQSUB<"s8",  0b0, 0b00, v16i8>;
+def MVE_VQSUBs16 : MVE_VQSUB<"s16", 0b0, 0b01, v8i16>;
+def MVE_VQSUBs32 : MVE_VQSUB<"s32", 0b0, 0b10, v4i32>;
+def MVE_VQSUBu8  : MVE_VQSUB<"u8",  0b1, 0b00, v16i8>;
+def MVE_VQSUBu16 : MVE_VQSUB<"u16", 0b1, 0b01, v8i16>;
+def MVE_VQSUBu32 : MVE_VQSUB<"u32", 0b1, 0b10, v4i32>;
+
+let Predicates = [HasMVEInt] in {
+  foreach instr = [MVE_VQADDu8, MVE_VQADDu16, MVE_VQADDu32] in
+    foreach VT = [instr.VT] in
+      def : Pat<(VT (uaddsat (VT MQPR:$Qm), (VT MQPR:$Qn))),
+                (VT (instr (VT MQPR:$Qm), (VT MQPR:$Qn)))>;
+  foreach instr = [MVE_VQADDs8, MVE_VQADDs16, MVE_VQADDs32] in
+    foreach VT = [instr.VT] in
+      def : Pat<(VT (saddsat (VT MQPR:$Qm), (VT MQPR:$Qn))),
+                (VT (instr (VT MQPR:$Qm), (VT MQPR:$Qn)))>;
+  foreach instr = [MVE_VQSUBu8, MVE_VQSUBu16, MVE_VQSUBu32] in
+    foreach VT = [instr.VT] in
+      def : Pat<(VT (usubsat (VT MQPR:$Qm), (VT MQPR:$Qn))),
+                (VT (instr (VT MQPR:$Qm), (VT MQPR:$Qn)))>;
+  foreach instr = [MVE_VQSUBs8, MVE_VQSUBs16, MVE_VQSUBs32] in
+    foreach VT = [instr.VT] in
+      def : Pat<(VT (ssubsat (VT MQPR:$Qm), (VT MQPR:$Qn))),
+                (VT (instr (VT MQPR:$Qm), (VT MQPR:$Qn)))>;
+}
+
 
 class MVE_VABD_int<string suffix, bit U, bits<2> size, list<dag> pattern=[]>
   : MVE_int<"vabd", suffix, size, pattern> {

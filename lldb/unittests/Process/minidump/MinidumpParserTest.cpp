@@ -338,6 +338,7 @@ void check_region(MinidumpParser &parser, lldb::addr_t addr, lldb::addr_t start,
                   MemoryRegionInfo::OptionalBool exec,
                   MemoryRegionInfo::OptionalBool mapped,
                   ConstString name = ConstString()) {
+  SCOPED_TRACE(addr);
   auto range_info = parser.GetMemoryRegionInfo(addr);
   EXPECT_EQ(start, range_info.GetRange().GetRangeBase());
   EXPECT_EQ(end, range_info.GetRange().GetRangeEnd());

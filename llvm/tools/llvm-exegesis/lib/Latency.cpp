@@ -84,7 +84,7 @@ static void appendCodeTemplates(const LLVMState &State,
                                 const Instruction &Instr,
                                 const BitVector &ForbiddenRegisters,
                                 ExecutionMode ExecutionModeBit,
-                                llvm::StringRef ExecutionClassDescription,
+                                StringRef ExecutionClassDescription,
                                 std::vector<CodeTemplate> &CodeTemplates) {
   assert(isEnumValue(ExecutionModeBit) && "Bit must be a power of two");
   switch (ExecutionModeBit) {
@@ -151,7 +151,7 @@ static void appendCodeTemplates(const LLVMState &State,
 
 LatencySnippetGenerator::~LatencySnippetGenerator() = default;
 
-llvm::Expected<std::vector<CodeTemplate>>
+Expected<std::vector<CodeTemplate>>
 LatencySnippetGenerator::generateCodeTemplates(
     const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
   std::vector<CodeTemplate> Results;
@@ -179,8 +179,7 @@ LatencyBenchmarkRunner::LatencyBenchmarkRunner(const LLVMState &State,
 
 LatencyBenchmarkRunner::~LatencyBenchmarkRunner() = default;
 
-llvm::Expected<std::vector<BenchmarkMeasure>>
-LatencyBenchmarkRunner::runMeasurements(
+Expected<std::vector<BenchmarkMeasure>> LatencyBenchmarkRunner::runMeasurements(
     const FunctionExecutor &Executor) const {
   // Cycle measurements include some overhead from the kernel. Repeat the
   // measure several times and take the minimum value.
@@ -188,7 +187,7 @@ LatencyBenchmarkRunner::runMeasurements(
   int64_t MinValue = std::numeric_limits<int64_t>::max();
   const char *CounterName = State.getPfmCounters().CycleCounter;
   if (!CounterName)
-    llvm::report_fatal_error("sched model does not define a cycle counter");
+    report_fatal_error("sched model does not define a cycle counter");
   for (size_t I = 0; I < NumMeasurements; ++I) {
     auto ExpectedCounterValue = Executor.runAndMeasure(CounterName);
     if (!ExpectedCounterValue)

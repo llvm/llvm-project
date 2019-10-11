@@ -62,6 +62,8 @@ STATISTIC(NumSDivs,     "Number of sdiv converted to udiv");
 STATISTIC(NumUDivs,     "Number of udivs whose width was decreased");
 STATISTIC(NumAShrs,     "Number of ashr converted to lshr");
 STATISTIC(NumSRems,     "Number of srem converted to urem");
+STATISTIC(NumSExt,      "Number of sext converted to zext");
+STATISTIC(NumAnd,       "Number of ands removed");
 STATISTIC(NumOverflows, "Number of overflow checks removed");
 STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
@@ -637,6 +639,27 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   return true;
 }
 
+static bool processSExt(SExtInst *SDI, LazyValueInfo *LVI) {
+  if (SDI->getType()->isVectorTy())
+    return false;
+
+  Value *Base = SDI->getOperand(0);
+
+  Constant *Zero = ConstantInt::get(Base->getType(), 0);
+  if (LVI->getPredicateAt(ICmpInst::ICMP_SGE, Base, Zero, SDI) !=
+      LazyValueInfo::True)
+    return false;
+
+  ++NumSExt;
+  auto *ZExt =
+      CastInst::CreateZExtOrBitCast(Base, SDI->getType(), SDI->getName(), SDI);
+  ZExt->setDebugLoc(SDI->getDebugLoc());
+  SDI->replaceAllUsesWith(ZExt);
+  SDI->eraseFromParent();
+
+  return true;
+}
+
 static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   using OBO = OverflowingBinaryOperator;
 
@@ -677,6 +700,29 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
 
   return Changed;
 }
+
+static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
+  if (BinOp->getType()->isVectorTy())
+    return false;
+
+  // Pattern match (and lhs, C) where C includes a superset of bits which might
+  // be set in lhs.  This is a common truncation idiom created by instcombine.
+  BasicBlock *BB = BinOp->getParent();
+  Value *LHS = BinOp->getOperand(0);
+  ConstantInt *RHS = dyn_cast<ConstantInt>(BinOp->getOperand(1));
+  if (!RHS || !RHS->getValue().isMask())
+    return false;
+
+  ConstantRange LRange = LVI->getConstantRange(LHS, BB, BinOp);
+  if (!LRange.getUnsignedMax().ule(RHS->getValue()))
+    return false;
+
+  BinOp->replaceAllUsesWith(LHS);
+  BinOp->eraseFromParent();
+  NumAnd++;
+  return true;
+}
+
 
 static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
   if (Constant *C = LVI->getConstant(V, At->getParent(), At))
@@ -745,9 +791,15 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
       case Instruction::AShr:
         BBChanged |= processAShr(cast<BinaryOperator>(II), LVI);
         break;
+      case Instruction::SExt:
+        BBChanged |= processSExt(cast<SExtInst>(II), LVI);
+        break;
       case Instruction::Add:
       case Instruction::Sub:
         BBChanged |= processBinOp(cast<BinaryOperator>(II), LVI);
+        break;
+      case Instruction::And:
+        BBChanged |= processAnd(cast<BinaryOperator>(II), LVI);
         break;
       }
     }

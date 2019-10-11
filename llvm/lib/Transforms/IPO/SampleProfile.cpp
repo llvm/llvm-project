@@ -1682,7 +1682,7 @@ bool SampleProfileLoader::doInitialization(Module &M) {
     return false;
   }
   Reader = std::move(ReaderOrErr.get());
-  Reader->collectFuncsToUse(M);
+  Reader->collectFuncsFrom(M);
   ProfileIsValid = (Reader->read() == sampleprof_error::success);
   PSL = Reader->getProfileSymbolList();
 

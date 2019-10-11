@@ -47,7 +47,12 @@ class BreakpointSerialization(TestBase):
         self.build()
         self.setup_targets_and_cleanup()
         self.do_check_names()
-
+        
+    def test_scripted_extra_args(self):
+        self.build()
+        self.setup_targets_and_cleanup()
+        self.do_check_extra_args()
+        
     def setup_targets_and_cleanup(self):
         def cleanup ():
             self.RemoveTempFile(self.bkpts_file_path)
@@ -289,3 +294,85 @@ class BreakpointSerialization(TestBase):
         error = self.copy_target.BreakpointsCreateFromFile(self.bkpts_file_spec, names_list, copy_bps)
         self.assertTrue(error.Success(), "Failed reading breakpoints from file: %s"%(error.GetCString()))
         self.assertTrue(copy_bps.GetSize() == 1, "Found the matching breakpoint.")
+
+    def do_check_extra_args(self):
+
+        import side_effect
+        interp = self.dbg.GetCommandInterpreter()
+        error = lldb.SBError()
+
+        script_name = os.path.join(self.getSourceDir(), "resolver.py")
+
+        command = "command script import " + script_name
+        result = lldb.SBCommandReturnObject()
+        interp.HandleCommand(command, result)
+        self.assertTrue(result.Succeeded(), "com scr imp failed: %s"%(result.GetError()))
+
+        # First make sure a scripted breakpoint with no args works:
+        bkpt = self.orig_target.BreakpointCreateFromScript("resolver.Resolver", lldb.SBStructuredData(),
+                                                           lldb.SBFileSpecList(), lldb.SBFileSpecList())
+        self.assertTrue(bkpt.IsValid(), "Bkpt is valid")
+        write_bps = lldb.SBBreakpointList(self.orig_target)
+
+        error = self.orig_target.BreakpointsWriteToFile(self.bkpts_file_spec, write_bps)
+        self.assertTrue(error.Success(), "Failed writing breakpoints: %s"%(error.GetCString()))
+
+        side_effect.g_extra_args = None
+        copy_bps = lldb.SBBreakpointList(self.copy_target)
+        error = self.copy_target.BreakpointsCreateFromFile(self.bkpts_file_spec, copy_bps)
+        self.assertTrue(error.Success(), "Failed reading breakpoints: %s"%(error.GetCString()))
+
+        self.assertEqual(copy_bps.GetSize(), 1, "Got one breakpoint from file.")
+        no_keys = lldb.SBStringList()
+        side_effect.g_extra_args.GetKeys(no_keys)
+        self.assertEqual(no_keys.GetSize(), 0, "Should have no keys")
+
+        self.orig_target.DeleteAllBreakpoints()
+        self.copy_target.DeleteAllBreakpoints()
+
+        # Now try one with extra args:
+        
+        extra_args = lldb.SBStructuredData()
+        stream = lldb.SBStream()
+        stream.Print('{"first_arg" : "first_value", "second_arg" : "second_value"}')
+        extra_args.SetFromJSON(stream)
+        self.assertTrue(extra_args.IsValid(), "SBStructuredData is valid.")
+        
+        bkpt = self.orig_target.BreakpointCreateFromScript("resolver.Resolver",
+                                                           extra_args, lldb.SBFileSpecList(), lldb.SBFileSpecList())
+        self.assertTrue(bkpt.IsValid(), "Bkpt is valid")
+        write_bps = lldb.SBBreakpointList(self.orig_target)
+
+        error = self.orig_target.BreakpointsWriteToFile(self.bkpts_file_spec, write_bps)
+        self.assertTrue(error.Success(), "Failed writing breakpoints: %s"%(error.GetCString()))
+
+        orig_extra_args = side_effect.g_extra_args
+        self.assertTrue(orig_extra_args.IsValid(), "Extra args originally valid")
+
+        orig_keys = lldb.SBStringList()
+        orig_extra_args.GetKeys(orig_keys)
+        self.assertEqual(2, orig_keys.GetSize(), "Should have two keys")
+
+        side_effect.g_extra_args = None
+
+        copy_bps = lldb.SBBreakpointList(self.copy_target)
+        error = self.copy_target.BreakpointsCreateFromFile(self.bkpts_file_spec, copy_bps)
+        self.assertTrue(error.Success(), "Failed reading breakpoints: %s"%(error.GetCString()))
+
+        self.assertEqual(copy_bps.GetSize(), 1, "Got one breakpoint from file.")
+
+        copy_extra_args = side_effect.g_extra_args
+        copy_keys = lldb.SBStringList()
+        copy_extra_args.GetKeys(copy_keys)
+        self.assertEqual(2, copy_keys.GetSize(), "Copy should have two keys")
+
+        for idx in range(0, orig_keys.GetSize()):
+            key = orig_keys.GetStringAtIndex(idx)
+            copy_value = copy_extra_args.GetValueForKey(key).GetStringValue(100)
+
+            if key == "first_arg":
+                self.assertEqual(copy_value, "first_value")
+            elif key == "second_arg":
+                self.assertEqual(copy_value, "second_value")
+            else:
+                self.Fail("Unknown key: %s"%(key))

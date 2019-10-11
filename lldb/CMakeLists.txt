@@ -37,6 +37,16 @@ if (WIN32)
 endif()
 
 if (NOT LLDB_DISABLE_PYTHON)
+  execute_process(
+    COMMAND ${PYTHON_EXECUTABLE}
+        -c "import distutils.sysconfig; print(distutils.sysconfig.get_python_lib(False, False, ''))"
+    OUTPUT_VARIABLE LLDB_PYTHON_DEFAULT_RELATIVE_PATH
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+  file(TO_CMAKE_PATH ${LLDB_PYTHON_DEFAULT_RELATIVE_PATH} LLDB_PYTHON_DEFAULT_RELATIVE_PATH)
+  set(LLDB_PYTHON_RELATIVE_PATH ${LLDB_PYTHON_DEFAULT_RELATIVE_PATH}
+    CACHE STRING "Path where Python modules are installed, relative to install prefix")
+
   add_subdirectory(scripts)
 endif ()
 
@@ -99,40 +109,47 @@ if(LLDB_INCLUDE_TESTS)
     message(FATAL_ERROR "LLDB test compilers not specified. Tests will not run.")
   endif()
 
-  set(LLDB_TEST_DEPS lldb)
+  add_custom_target(lldb-test-deps)
+  set_target_properties(lldb-test-deps PROPERTIES FOLDER "lldb misc")
+  add_lldb_test_dependency(lldb)
+
+  # lldb-test is an hard dependency for the testsuite.
+  add_lldb_test_dependency(lldb-test)
 
   # darwin-debug is an hard dependency for the testsuite.
   if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-    list(APPEND LLDB_TEST_DEPS darwin-debug)
+    add_lldb_test_dependency(darwin-debug)
   endif()
 
-  # lldb-test is an hard dependency for the testsuite.
-  list(APPEND LLDB_TEST_DEPS lldb-test)
-
   if(TARGET lldb-server)
-    list(APPEND LLDB_TEST_DEPS lldb-server)
+    add_lldb_test_dependency(lldb-server)
   endif()
 
   if(TARGET lldb-vscode)
-    list(APPEND LLDB_TEST_DEPS lldb-vscode)
+    add_lldb_test_dependency(lldb-vscode)
   endif()
 
   if(TARGET lldb-instr)
-    list(APPEND LLDB_TEST_DEPS lldb-instr)
+    add_lldb_test_dependency(lldb-instr)
   endif()
 
   if(NOT LLDB_BUILT_STANDALONE)
-    list(APPEND LLDB_TEST_DEPS yaml2obj)
+    add_lldb_test_dependency(yaml2obj)
+    add_lldb_test_dependency(dsymutil)
   endif()
 
   if(TARGET liblldb)
-    list(APPEND LLDB_TEST_DEPS liblldb)
+    add_lldb_test_dependency(liblldb)
+  endif()
+
+  if(TARGET lldb-framework)
+    add_lldb_test_dependency(lldb-framework)
   endif()
 
   # Add dependencies if we test with the in-tree clang.
   # This works with standalone builds as they import the clang target.
   if(TARGET clang)
-    list(APPEND LLDB_TEST_DEPS clang)
+    add_lldb_test_dependency(clang)
     if(APPLE)
       # If we build clang, we should build libcxx.
       # FIXME: Standalone builds should import the cxx target as well.
@@ -161,76 +178,85 @@ if(LLDB_INCLUDE_TESTS)
               "via `LLDB_INCLUDE_TESTS=OFF`.")
           endif()
         endif()
-        list(APPEND LLDB_TEST_DEPS cxx)
+        add_lldb_test_dependency(cxx)
       endif()
     endif()
   endif()
 
-  if(TARGET dsymutil)
-    list(APPEND LLDB_TEST_DEPS dsymutil)
-  endif()
-
-  if(TARGET lldb-framework)
-    list(APPEND LLDB_TEST_DEPS lldb-framework)
-  endif()
-
-  add_custom_target(lldb-test-deps)
-  add_dependencies(lldb-test-deps ${LLDB_TEST_DEPS})
-  set_target_properties(lldb-test-deps PROPERTIES FOLDER "lldb misc")
-
   add_subdirectory(test)
   add_subdirectory(unittests)
-  add_subdirectory(lit)
   add_subdirectory(utils/lit-cpuid)
   add_subdirectory(utils/lldb-dotest)
 endif()
 
 if (NOT LLDB_DISABLE_PYTHON)
-    if(NOT LLDB_BUILD_FRAMEWORK)
-      set(use_python_wrapper_from_src_dir -m)
+  if(NOT LLDB_BUILD_FRAMEWORK)
+    set(use_python_wrapper_from_src_dir -m)
+  endif()
+  if(LLDB_USE_SYSTEM_SIX)
+    set(use_six_py_from_system --useSystemSix)
+  endif()
+  get_target_property(lldb_scripts_dir swig_wrapper BINARY_DIR)
+  get_target_property(liblldb_build_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
+
+  if(LLDB_BUILD_FRAMEWORK)
+    set(lldb_python_build_path "${liblldb_build_dir}/LLDB.framework/Resources/Python/lldb")
+  else()
+    set(lldb_python_build_path "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_PYTHON_RELATIVE_PATH}/lldb")
+  endif()
+  get_filename_component(lldb_python_build_path ${lldb_python_build_path} ABSOLUTE)
+
+  # Add a Post-Build Event to copy over Python files and create the symlink
+  # to liblldb.so for the Python API(hardlink on Windows).
+  add_custom_target(finish_swig ALL
+    COMMAND
+      ${PYTHON_EXECUTABLE} ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
+        --srcRoot=${LLDB_SOURCE_DIR}
+        --targetDir=${liblldb_build_dir}
+        --cfgBldDir=${lldb_scripts_dir}
+        --prefix=${CMAKE_BINARY_DIR}
+        --cmakeBuildConfiguration=${CMAKE_CFG_INTDIR}
+        --lldbLibDir=lib${LLVM_LIBDIR_SUFFIX}
+        --lldbPythonPath=${lldb_python_build_path}
+        ${use_python_wrapper_from_src_dir}
+        ${use_six_py_from_system}
+    VERBATIM
+    DEPENDS ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
+    DEPENDS ${lldb_scripts_dir}/lldb.py
+    COMMENT "Python script sym-linking LLDB Python API")
+
+  add_dependencies(finish_swig swig_wrapper liblldb lldb-argdumper)
+  set_target_properties(finish_swig swig_wrapper PROPERTIES FOLDER "lldb misc")
+
+  # Ensure we do the python post-build step when building lldb.
+  add_dependencies(lldb finish_swig)
+
+  if(NOT LLDB_BUILD_FRAMEWORK)
+    # Install the LLDB python module
+    add_custom_target(lldb-python-scripts)
+    add_dependencies(lldb-python-scripts finish_swig)
+    install(DIRECTORY ${CMAKE_BINARY_DIR}/${LLDB_PYTHON_RELATIVE_PATH}/
+            DESTINATION ${LLDB_PYTHON_RELATIVE_PATH}
+            COMPONENT lldb-python-scripts)
+    if (NOT LLVM_ENABLE_IDE)
+      add_llvm_install_targets(install-lldb-python-scripts
+                               COMPONENT lldb-python-scripts
+                               DEPENDS lldb-python-scripts)
     endif()
-    if(LLDB_USE_SYSTEM_SIX)
-      set(use_six_py_from_system --useSystemSix)
-    endif()
-    get_target_property(lldb_scripts_dir swig_wrapper BINARY_DIR)
-    get_target_property(liblldb_build_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
+  endif()
 
-    # Add a Post-Build Event to copy over Python files and create the symlink
-    # to liblldb.so for the Python API(hardlink on Windows).
-    add_custom_target(finish_swig ALL
-        COMMAND
-           ${PYTHON_EXECUTABLE} ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
-               --srcRoot=${LLDB_SOURCE_DIR}
-               --targetDir=${liblldb_build_dir}
-               --cfgBldDir=${lldb_scripts_dir}
-               --prefix=${CMAKE_BINARY_DIR}
-               --cmakeBuildConfiguration=${CMAKE_CFG_INTDIR}
-               --lldbLibDir=lib${LLVM_LIBDIR_SUFFIX}
-               ${use_python_wrapper_from_src_dir}
-               ${use_six_py_from_system}
-        VERBATIM
-        DEPENDS ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
-        DEPENDS ${lldb_scripts_dir}/lldb.py
-        COMMENT "Python script sym-linking LLDB Python API")
-
-    add_dependencies(finish_swig swig_wrapper liblldb lldb-argdumper)
-    set_target_properties(finish_swig swig_wrapper PROPERTIES FOLDER "lldb misc")
-
-    # Ensure we do the python post-build step when building lldb.
-    add_dependencies(lldb finish_swig)
-
-    # Add a Post-Build Event to copy the custom Python DLL to the lldb binaries dir so that Windows can find it when launching
-    # lldb.exe or any other executables that were linked with liblldb.
-    if (WIN32 AND NOT "${PYTHON_DLL}" STREQUAL "")
-        # When using the Visual Studio CMake generator the lldb binaries end up in Release/bin, Debug/bin etc.
-        file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin" LLDB_BIN_DIR)
-        file(TO_NATIVE_PATH "${PYTHON_DLL}" PYTHON_DLL_NATIVE_PATH)
-        add_custom_command(
-            TARGET finish_swig
-            POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_DLL_NATIVE_PATH} ${LLDB_BIN_DIR} VERBATIM
-            COMMENT "Copying Python DLL to LLDB binaries directory.")
-    endif ()
+  # Add a Post-Build Event to copy the custom Python DLL to the lldb binaries dir so that Windows can find it when launching
+  # lldb.exe or any other executables that were linked with liblldb.
+  if (WIN32 AND NOT "${PYTHON_DLL}" STREQUAL "")
+    # When using the Visual Studio CMake generator the lldb binaries end up in Release/bin, Debug/bin etc.
+    file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin" LLDB_BIN_DIR)
+    file(TO_NATIVE_PATH "${PYTHON_DLL}" PYTHON_DLL_NATIVE_PATH)
+    add_custom_command(
+      TARGET finish_swig
+      POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_DLL_NATIVE_PATH} ${LLDB_BIN_DIR} VERBATIM
+      COMMENT "Copying Python DLL to LLDB binaries directory.")
+  endif ()
 endif ()
 
 if(LLDB_BUILT_STANDALONE AND NOT LLVM_ENABLE_IDE)

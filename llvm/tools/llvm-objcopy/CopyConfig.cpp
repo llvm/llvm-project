@@ -14,10 +14,10 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Errc.h"
-#include "llvm/Support/JamCRC.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/StringSaver.h"
 #include <memory>
@@ -461,12 +461,8 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
     if (!DebugOrErr)
       return createFileError(Config.AddGnuDebugLink, DebugOrErr.getError());
     auto Debug = std::move(*DebugOrErr);
-    JamCRC CRC;
-    CRC.update(
-        ArrayRef<char>(Debug->getBuffer().data(), Debug->getBuffer().size()));
-    // The CRC32 value needs to be complemented because the JamCRC doesn't
-    // finalize the CRC32 value.
-    Config.GnuDebugLinkCRC32 = ~CRC.getCRC();
+    Config.GnuDebugLinkCRC32 =
+        llvm::crc32(arrayRefFromStringRef(Debug->getBuffer()));
   }
   Config.BuildIdLinkDir = InputArgs.getLastArgValue(OBJCOPY_build_id_link_dir);
   if (InputArgs.hasArg(OBJCOPY_build_id_link_input))

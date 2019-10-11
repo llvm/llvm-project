@@ -168,6 +168,9 @@ private:
     return It == Cache.end() ? nullptr : It->getValue();
   }
 
+  llvm::ErrorOr<const CachedFileSystemEntry *>
+  getOrCreateFileSystemEntry(const StringRef Filename);
+
   DependencyScanningFilesystemSharedCache &SharedCache;
   /// The local cache is used by the worker thread to cache file system queries
   /// locally instead of querying the global cache every time.

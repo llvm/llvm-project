@@ -174,10 +174,12 @@ class LitConfig(object):
                                                kind, message))
 
     def note(self, message):
-        self._write_message('note', message)
+        if not self.quiet:
+            self._write_message('note', message)
 
     def warning(self, message):
-        self._write_message('warning', message)
+        if not self.quiet:
+            self._write_message('warning', message)
         self.numWarnings += 1
 
     def error(self, message):

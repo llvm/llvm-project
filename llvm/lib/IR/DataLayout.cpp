@@ -29,6 +29,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/TypeSize.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -745,7 +746,10 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
     llvm_unreachable("Bad type for getAlignment!!!");
   }
 
-  return getAlignmentInfo(AlignType, getTypeSizeInBits(Ty), abi_or_pref, Ty);
+  // If we're dealing with a scalable vector, we just need the known minimum
+  // size for determining alignment. If not, we'll get the exact size.
+  return getAlignmentInfo(AlignType, getTypeSizeInBits(Ty).getKnownMinSize(),
+                          abi_or_pref, Ty);
 }
 
 unsigned DataLayout::getABITypeAlignment(Type *Ty) const {

@@ -59,9 +59,9 @@ public:
   unsigned getNumberOfRegisters(bool Vector);
   unsigned getRegisterBitWidth(bool Vector) const;
 
-  unsigned getCacheLineSize() { return 256; }
-  unsigned getPrefetchDistance() { return 2000; }
-  unsigned getMinPrefetchStride() { return 2048; }
+  unsigned getCacheLineSize() const override { return 256; }
+  unsigned getPrefetchDistance() const override { return 2000; }
+  unsigned getMinPrefetchStride() const override { return 2048; }
 
   bool hasDivRemOp(Type *DataType, bool IsSigned);
   bool prefersVectorizedAddressing() { return false; }

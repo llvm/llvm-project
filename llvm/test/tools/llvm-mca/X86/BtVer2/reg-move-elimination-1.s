@@ -98,3 +98,4 @@ vaddps %xmm1, %xmm1, %xmm2
 # CHECK-NEXT: 0.     3     0.0    0.0    2.7       vxorps	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     3     0.0    0.0    2.7       vmovaps	%xmm0, %xmm1
 # CHECK-NEXT: 2.     3     1.0    1.0    0.0       vaddps	%xmm1, %xmm1, %xmm2
+# CHECK-NEXT:        3     0.3    0.3    1.8       <total>

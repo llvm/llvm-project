@@ -7,6 +7,14 @@
 // RUN:   | FileCheck --check-prefix=CHECK-DEF %s
 // CHECK-DEF: "-mfloat-abi" "hard"
 //
+// Default on FreeBSD
+// RUN: %clang -c %s -### -o %t.o 2>&1 \
+// RUN:     -target mips-freebsd12 \
+// RUN:   | FileCheck --check-prefix=DEF-FREEBSD %s
+// DEF-FREEBSD: "-target-feature" "+soft-float"
+// DEF-FREEBSD: "-msoft-float"
+// DEF-FREEBSD: "-mfloat-abi" "soft"
+//
 // -mhard-float
 // RUN: %clang -c %s -### -o %t.o 2>&1 \
 // RUN:     -target mips-linux-gnu -mhard-float \

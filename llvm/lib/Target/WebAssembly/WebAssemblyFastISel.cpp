@@ -1302,51 +1302,33 @@ bool WebAssemblyFastISel::selectRet(const Instruction *I) {
 
   if (Ret->getNumOperands() == 0) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-            TII.get(WebAssembly::RETURN_VOID));
+            TII.get(WebAssembly::RETURN));
     return true;
   }
+
+  // TODO: support multiple return in FastISel
+  if (Ret->getNumOperands() > 1)
+    return false;
 
   Value *RV = Ret->getOperand(0);
   if (!Subtarget->hasSIMD128() && RV->getType()->isVectorTy())
     return false;
 
-  unsigned Opc;
   switch (getSimpleType(RV->getType())) {
   case MVT::i1:
   case MVT::i8:
   case MVT::i16:
   case MVT::i32:
-    Opc = WebAssembly::RETURN_I32;
-    break;
   case MVT::i64:
-    Opc = WebAssembly::RETURN_I64;
-    break;
   case MVT::f32:
-    Opc = WebAssembly::RETURN_F32;
-    break;
   case MVT::f64:
-    Opc = WebAssembly::RETURN_F64;
-    break;
   case MVT::v16i8:
-    Opc = WebAssembly::RETURN_v16i8;
-    break;
   case MVT::v8i16:
-    Opc = WebAssembly::RETURN_v8i16;
-    break;
   case MVT::v4i32:
-    Opc = WebAssembly::RETURN_v4i32;
-    break;
   case MVT::v2i64:
-    Opc = WebAssembly::RETURN_v2i64;
-    break;
   case MVT::v4f32:
-    Opc = WebAssembly::RETURN_v4f32;
-    break;
   case MVT::v2f64:
-    Opc = WebAssembly::RETURN_v2f64;
-    break;
   case MVT::exnref:
-    Opc = WebAssembly::RETURN_EXNREF;
     break;
   default:
     return false;
@@ -1363,7 +1345,9 @@ bool WebAssemblyFastISel::selectRet(const Instruction *I) {
   if (Reg == 0)
     return false;
 
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc)).addReg(Reg);
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+          TII.get(WebAssembly::RETURN))
+      .addReg(Reg);
   return true;
 }
 

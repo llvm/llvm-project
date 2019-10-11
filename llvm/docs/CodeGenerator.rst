@@ -2068,12 +2068,12 @@ supported on x86/x86-64, PowerPC, and WebAssembly. It is performed on x86/x86-64
 and PowerPC if:
 
 * Caller and callee have the calling convention ``fastcc``, ``cc 10`` (GHC
-  calling convention) or ``cc 11`` (HiPE calling convention).
+  calling convention), ``cc 11`` (HiPE calling convention), or ``tailcc``.
 
 * The call is a tail call - in tail position (ret immediately follows call and
   ret uses value of call or is void).
 
-* Option ``-tailcallopt`` is enabled.
+* Option ``-tailcallopt`` is enabled or the calling convention is ``tailcc``.
 
 * Platform-specific constraints are met.
 

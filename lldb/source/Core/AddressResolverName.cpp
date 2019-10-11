@@ -67,8 +67,7 @@ AddressResolverName::~AddressResolverName() = default;
 
 Searcher::CallbackReturn
 AddressResolverName::SearchCallback(SearchFilter &filter,
-                                    SymbolContext &context, Address *addr,
-                                    bool containing) {
+                                    SymbolContext &context, Address *addr) {
   SymbolContextList func_list;
   SymbolContextList sym_list;
 

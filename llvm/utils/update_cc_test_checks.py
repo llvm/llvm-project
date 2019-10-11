@@ -50,18 +50,32 @@ def get_line2spell_and_mangled(args, clang_args):
         '-test-print-mangle', f.name])
     if sys.version_info[0] > 2:
       output = output.decode()
-
-  RE = re.compile(r'^FunctionDecl=(\w+):(\d+):\d+ \(Definition\) \[mangled=([^]]+)\]')
+  DeclRE = re.compile(r'^FunctionDecl=(\w+):(\d+):\d+ \(Definition\)')
+  MangleRE = re.compile(r'.*\[mangled=([^]]+)\]')
+  MatchedDecl = False
   for line in output.splitlines():
-    m = RE.match(line)
-    if not m: continue
-    spell, line, mangled = m.groups()
+    # Get the function source name, line number and mangled name.  Sometimes
+    # c-index-test outputs the mangled name on a separate line (this can happen
+    # with block comments in front of functions).  Keep scanning until we see
+    # the mangled name.
+    decl_m = DeclRE.match(line)
+    mangle_m = MangleRE.match(line)
+
+    if decl_m:
+      MatchedDecl = True
+      spell, lineno = decl_m.groups()
+    if MatchedDecl and mangle_m:
+      mangled = mangle_m.group(1)
+      MatchedDecl = False
+    else:
+      continue
+
     if mangled == '_' + spell:
       # HACK for MacOS (where the mangled name includes an _ for C but the IR won't):
       mangled = spell
     # Note -test-print-mangle does not print file names so if #include is used,
     # the line number may come from an included file.
-    ret[int(line)-1] = (spell, mangled)
+    ret[int(lineno)-1] = (spell, mangled)
   if args.verbose:
     for line, func_name in sorted(ret.items()):
       print('line {}: found function {}'.format(line+1, func_name), file=sys.stderr)
@@ -80,6 +94,8 @@ def config():
                       help='Space-separated extra args to clang, e.g. --clang-args=-v')
   parser.add_argument('--c-index-test',
                       help='"c-index-test" executable, defaults to $llvm_bin/c-index-test')
+  parser.add_argument('--opt',
+                      help='"opt" executable, defaults to $llvm_bin/opt')
   parser.add_argument(
       '--functions', nargs='+', help='A list of function name regexes. '
       'If specified, update CHECK lines for functions matching at least one regex')
@@ -100,6 +116,18 @@ def config():
   if not distutils.spawn.find_executable(args.clang):
     print('Please specify --llvm-bin or --clang', file=sys.stderr)
     sys.exit(1)
+
+  if args.opt is None:
+    if args.llvm_bin is None:
+      args.opt = 'opt'
+    else:
+      args.opt = os.path.join(args.llvm_bin, 'opt')
+  if not distutils.spawn.find_executable(args.opt):
+    # Many uses of this tool will not need an opt binary, because it's only
+    # needed for updating a test that runs clang | opt | FileCheck. So we
+    # defer this error message until we find that opt is actually needed.
+    args.opt = None
+
   if args.c_index_test is None:
     if args.llvm_bin is None:
       args.c_index_test = 'c-index-test'
@@ -112,10 +140,23 @@ def config():
   return args
 
 
-def get_function_body(args, filename, clang_args, prefixes, triple_in_cmd, func_dict):
+def get_function_body(args, filename, clang_args, extra_commands, prefixes, triple_in_cmd, func_dict):
   # TODO Clean up duplication of asm/common build_function_body_dictionary
   # Invoke external tool and extract function bodies.
   raw_tool_output = common.invoke_tool(args.clang, clang_args, filename)
+  for extra_command in extra_commands:
+    extra_args = shlex.split(extra_command)
+    with tempfile.NamedTemporaryFile() as f:
+      f.write(raw_tool_output.encode())
+      f.flush()
+      if extra_args[0] == 'opt':
+        if args.opt is None:
+          print(filename, 'needs to run opt. '
+                'Please specify --llvm-bin or --opt', file=sys.stderr)
+          sys.exit(1)
+        extra_args[0] = args.opt
+      raw_tool_output = common.invoke_tool(extra_args[0],
+                                           extra_args[1:], f.name)
   if '-emit-llvm' in clang_args:
     common.build_function_body_dictionary(
             common.OPT_FUNCTION_RE, common.scrub_body, [],
@@ -164,7 +205,7 @@ def main():
     run_list = []
     line2spell_and_mangled_list = collections.defaultdict(list)
     for l in run_lines:
-      commands = [cmd.strip() for cmd in l.split('|', 1)]
+      commands = [cmd.strip() for cmd in l.split('|')]
 
       triple_in_cmd = None
       m = common.TRIPLE_ARG_RE.search(commands[0])
@@ -179,6 +220,11 @@ def main():
       clang_args[0:1] = SUBST[clang_args[0]]
       clang_args = [filename if i == '%s' else i for i in clang_args] + args.clang_args
 
+      # Permit piping the output through opt
+      if not (len(commands) == 2 or
+              (len(commands) == 3 and commands[1].startswith('opt'))):
+        print('WARNING: Skipping non-clang RUN line: ' + l, file=sys.stderr)
+
       # Extract -check-prefix in FileCheck args
       filecheck_cmd = commands[-1]
       common.verify_filecheck_prefixes(filecheck_cmd)
@@ -189,7 +235,7 @@ def main():
                                for item in m.group(1).split(',')]
       if not check_prefixes:
         check_prefixes = ['CHECK']
-      run_list.append((check_prefixes, clang_args, triple_in_cmd))
+      run_list.append((check_prefixes, clang_args, commands[1:-1], triple_in_cmd))
 
     # Strip CHECK lines which are in `prefix_set`, update test file.
     prefix_set = set([prefix for p in run_list for prefix in p[0]])
@@ -209,12 +255,12 @@ def main():
       prefixes = p[0]
       for prefix in prefixes:
         func_dict.update({prefix: dict()})
-    for prefixes, clang_args, triple_in_cmd in run_list:
+    for prefixes, clang_args, extra_commands, triple_in_cmd in run_list:
       if args.verbose:
         print('Extracted clang cmd: clang {}'.format(clang_args), file=sys.stderr)
         print('Extracted FileCheck prefixes: {}'.format(prefixes), file=sys.stderr)
 
-      get_function_body(args, filename, clang_args, prefixes, triple_in_cmd, func_dict)
+      get_function_body(args, filename, clang_args, extra_commands, prefixes, triple_in_cmd, func_dict)
 
       # Invoke c-index-test to get mapping from start lines to mangled names.
       # Forward all clang args for now.
@@ -240,7 +286,7 @@ def main():
             if added:
               output_lines.append('//')
             added.add(mangled)
-            common.add_ir_checks(output_lines, '//', run_list, func_dict, mangled)
+            common.add_ir_checks(output_lines, '//', run_list, func_dict, mangled, False)
       output_lines.append(line.rstrip('\n'))
 
     # Update the test file.

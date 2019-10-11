@@ -49,21 +49,7 @@ public:
   /// Default constructor.
   ///
   /// Initialize with both mangled and demangled names empty.
-  Mangled();
-
-  /// Construct with name.
-  ///
-  /// Constructor with an optional string and a boolean indicating if it is
-  /// the mangled version.
-  ///
-  /// \param[in] name
-  ///     The already const name to copy into this object.
-  ///
-  /// \param[in] is_mangled
-  ///     If \b true then \a name is a mangled name, if \b false then
-  ///     \a name is demangled.
-  Mangled(ConstString name, bool is_mangled);
-  Mangled(llvm::StringRef name, bool is_mangled);
+  Mangled() = default;
 
   /// Construct with name.
   ///
@@ -75,12 +61,6 @@ public:
   explicit Mangled(ConstString name);
 
   explicit Mangled(llvm::StringRef name);
-
-  /// Destructor
-  ///
-  /// Releases its ref counts on the mangled and demangled strings that live
-  /// in the global string pool.
-  ~Mangled();
 
   /// Convert to pointer operator.
   ///

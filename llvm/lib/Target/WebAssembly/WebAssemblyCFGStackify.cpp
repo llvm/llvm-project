@@ -526,38 +526,48 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
       AfterSet.insert(&MI);
   }
 
+  // If Header unwinds to MBB (= Header contains 'invoke'), the try block should
+  // contain the call within it. So the call should go after the TRY. The
+  // exception is when the header's terminator is a rethrow instruction, in
+  // which case that instruction, not a call instruction before it, is gonna
+  // throw.
+  MachineInstr *ThrowingCall = nullptr;
+  if (MBB.isPredecessor(Header)) {
+    auto TermPos = Header->getFirstTerminator();
+    if (TermPos == Header->end() ||
+        TermPos->getOpcode() != WebAssembly::RETHROW) {
+      for (auto &MI : reverse(*Header)) {
+        if (MI.isCall()) {
+          AfterSet.insert(&MI);
+          ThrowingCall = &MI;
+          // Possibly throwing calls are usually wrapped by EH_LABEL
+          // instructions. We don't want to split them and the call.
+          if (MI.getIterator() != Header->begin() &&
+              std::prev(MI.getIterator())->isEHLabel()) {
+            AfterSet.insert(&*std::prev(MI.getIterator()));
+            ThrowingCall = &*std::prev(MI.getIterator());
+          }
+          break;
+        }
+      }
+    }
+  }
+
   // Local expression tree should go after the TRY.
-  for (auto I = Header->getFirstTerminator(), E = Header->begin(); I != E;
-       --I) {
+  // For BLOCK placement, we start the search from the previous instruction of a
+  // BB's terminator, but in TRY's case, we should start from the previous
+  // instruction of a call that can throw, or a EH_LABEL that precedes the call,
+  // because the return values of the call's previous instructions can be
+  // stackified and consumed by the throwing call.
+  auto SearchStartPt = ThrowingCall ? MachineBasicBlock::iterator(ThrowingCall)
+                                    : Header->getFirstTerminator();
+  for (auto I = SearchStartPt, E = Header->begin(); I != E; --I) {
     if (std::prev(I)->isDebugInstr() || std::prev(I)->isPosition())
       continue;
     if (WebAssembly::isChild(*std::prev(I), MFI))
       AfterSet.insert(&*std::prev(I));
     else
       break;
-  }
-
-  // If Header unwinds to MBB (= Header contains 'invoke'), the try block should
-  // contain the call within it. So the call should go after the TRY. The
-  // exception is when the header's terminator is a rethrow instruction, in
-  // which case that instruction, not a call instruction before it, is gonna
-  // throw.
-  if (MBB.isPredecessor(Header)) {
-    auto TermPos = Header->getFirstTerminator();
-    if (TermPos == Header->end() ||
-        TermPos->getOpcode() != WebAssembly::RETHROW) {
-      for (const auto &MI : reverse(*Header)) {
-        if (MI.isCall()) {
-          AfterSet.insert(&MI);
-          // Possibly throwing calls are usually wrapped by EH_LABEL
-          // instructions. We don't want to split them and the call.
-          if (MI.getIterator() != Header->begin() &&
-              std::prev(MI.getIterator())->isEHLabel())
-            AfterSet.insert(&*std::prev(MI.getIterator()));
-          break;
-        }
-      }
-    }
   }
 
   // Add the TRY.
@@ -848,7 +858,7 @@ bool WebAssemblyCFGStackify::fixUnwindMismatches(MachineFunction &MF) {
   SmallVector<const MachineBasicBlock *, 8> EHPadStack;
   // Range of intructions to be wrapped in a new nested try/catch
   using TryRange = std::pair<MachineInstr *, MachineInstr *>;
-  // In original CFG, <unwind destionation BB, a vector of try ranges>
+  // In original CFG, <unwind destination BB, a vector of try ranges>
   DenseMap<MachineBasicBlock *, SmallVector<TryRange, 4>> UnwindDestToTryRanges;
   // In new CFG, <destination to branch to, a vector of try ranges>
   DenseMap<MachineBasicBlock *, SmallVector<TryRange, 4>> BrDestToTryRanges;
@@ -985,7 +995,7 @@ bool WebAssemblyCFGStackify::fixUnwindMismatches(MachineFunction &MF) {
   // ...
   // cont:
   for (auto &P : UnwindDestToTryRanges) {
-    NumUnwindMismatches++;
+    NumUnwindMismatches += P.second.size();
 
     // This means the destination is the appendix BB, which was separately
     // handled above.
@@ -1217,11 +1227,11 @@ getDepth(const SmallVectorImpl<const MachineBasicBlock *> &Stack,
 /// checks for such cases and fixes up the signatures.
 void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
   const auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
-  assert(MFI.getResults().size() <= 1);
 
   if (MFI.getResults().empty())
     return;
 
+  // TODO: Generalize from value types to function types for multivalue
   WebAssembly::ExprType RetType;
   switch (MFI.getResults().front().SimpleTy) {
   case MVT::i32:
@@ -1256,10 +1266,14 @@ void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
       if (MI.isPosition() || MI.isDebugInstr())
         continue;
       if (MI.getOpcode() == WebAssembly::END_BLOCK) {
+        if (MFI.getResults().size() > 1)
+          report_fatal_error("Multivalue block signatures not implemented yet");
         EndToBegin[&MI]->getOperand(0).setImm(int32_t(RetType));
         continue;
       }
       if (MI.getOpcode() == WebAssembly::END_LOOP) {
+        if (MFI.getResults().size() > 1)
+          report_fatal_error("Multivalue loop signatures not implemented yet");
         EndToBegin[&MI]->getOperand(0).setImm(int32_t(RetType));
         continue;
       }
@@ -1300,7 +1314,9 @@ void WebAssemblyCFGStackify::placeMarkers(MachineFunction &MF) {
     }
   }
   // Fix mismatches in unwind destinations induced by linearizing the code.
-  fixUnwindMismatches(MF);
+  if (MCAI->getExceptionHandlingType() == ExceptionHandling::Wasm &&
+      MF.getFunction().hasPersonalityFn())
+    fixUnwindMismatches(MF);
 }
 
 void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {

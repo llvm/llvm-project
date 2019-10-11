@@ -9,7 +9,7 @@
 // RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -emit-llvm -main-file-name abspath.cpp ../test/f1.c -o - | FileCheck -check-prefix=RELPATH %s
 
 // RELPATH: @__llvm_coverage_mapping = {{.*}}"\01
-// RELPATH: {{[/\\]}}{{.*}}{{[/\\][^/\\]*}}test{{[/\\][^/\\]*}}f1.c
+// RELPATH: {{[/\\].*(/|\\\\)test(/|\\\\)f1}}.c
 // RELPATH: "
 
 void f1() {}

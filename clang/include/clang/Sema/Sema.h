@@ -57,6 +57,7 @@
 #include <deque>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace llvm {
@@ -1045,13 +1046,6 @@ public:
     /// suffice, e.g., in a default function argument.
     Decl *ManglingContextDecl;
 
-    /// The context information used to mangle lambda expressions
-    /// and block literals within this context.
-    ///
-    /// This mangling information is allocated lazily, since most contexts
-    /// do not have lambda expressions or block literals.
-    std::unique_ptr<MangleNumberingContext> MangleNumbering;
-
     /// If we are processing a decltype type, a set of call expressions
     /// for which we have deferred checking the completeness of the return type.
     SmallVector<CallExpr *, 8> DelayedDecltypeCalls;
@@ -1061,6 +1055,11 @@ public:
     SmallVector<CXXBindTemporaryExpr *, 8> DelayedDecltypeBinds;
 
     llvm::SmallPtrSet<const Expr *, 8> PossibleDerefs;
+
+    /// Expressions appearing as the LHS of a volatile assignment in this
+    /// context. We produce a warning for these when popping the context if
+    /// they are not discarded-value expressions nor unevaluated operands.
+    SmallVector<Expr*, 2> VolatileAssignmentLHSs;
 
     /// \brief Describes whether we are in an expression constext which we have
     /// to handle differently.
@@ -1075,12 +1074,7 @@ public:
                                       ExpressionKind ExprContext)
         : Context(Context), ParentCleanup(ParentCleanup),
           NumCleanupObjects(NumCleanupObjects), NumTypos(0),
-          ManglingContextDecl(ManglingContextDecl), MangleNumbering(),
-          ExprContext(ExprContext) {}
-
-    /// Retrieve the mangling numbering context, used to consistently
-    /// number constructs like lambdas for mangling.
-    MangleNumberingContext &getMangleNumberingContext(ASTContext &Ctx);
+          ManglingContextDecl(ManglingContextDecl), ExprContext(ExprContext) {}
 
     bool isUnevaluated() const {
       return Context == ExpressionEvaluationContext::Unevaluated ||
@@ -1099,15 +1093,12 @@ public:
   void WarnOnPendingNoDerefs(ExpressionEvaluationContextRecord &Rec);
 
   /// Compute the mangling number context for a lambda expression or
-  /// block literal.
+  /// block literal. Also return the extra mangling decl if any.
   ///
   /// \param DC - The DeclContext containing the lambda expression or
   /// block literal.
-  /// \param[out] ManglingContextDecl - Returns the ManglingContextDecl
-  /// associated with the context, if relevant.
-  MangleNumberingContext *getCurrentMangleNumberContext(
-    const DeclContext *DC,
-    Decl *&ManglingContextDecl);
+  std::tuple<MangleNumberingContext *, Decl *>
+  getCurrentMangleNumberContext(const DeclContext *DC);
 
 
   /// SpecialMemberOverloadResult - The overloading result for a special member
@@ -3458,6 +3449,19 @@ public:
                                                     bool DiagnoseMissing);
   bool isKnownName(StringRef name);
 
+  /// Status of the function emission on the CUDA/HIP/OpenMP host/device attrs.
+  enum class FunctionEmissionStatus {
+    Emitted,
+    CUDADiscarded,     // Discarded due to CUDA/HIP hostness
+    OMPDiscarded,      // Discarded due to OpenMP hostness
+    TemplateDiscarded, // Discarded due to uninstantiated templates
+    Unknown,
+  };
+  FunctionEmissionStatus getEmissionStatus(FunctionDecl *Decl);
+
+  // Whether the callee should be ignored in CUDA/HIP/OpenMP host/device check.
+  bool shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee);
+
   void ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
                                ArrayRef<Expr *> Args, ADLResult &Functions);
 
@@ -4247,6 +4251,9 @@ public:
 
   ExprResult TransformToPotentiallyEvaluated(Expr *E);
   ExprResult HandleExprEvaluationContextForTypeof(Expr *E);
+
+  ExprResult CheckUnevaluatedOperand(Expr *E);
+  void CheckUnusedVolatileAssignment(Expr *E);
 
   ExprResult ActOnConstantExpression(ExprResult Res);
 
@@ -9110,15 +9117,15 @@ public:
         OMPDeclareVariantAttr::CtxSetUnknown;
     OMPDeclareVariantAttr::CtxSelectorType Ctx =
         OMPDeclareVariantAttr::CtxUnknown;
-    StringRef ImplVendor;
+    MutableArrayRef<StringRef> ImplVendors;
     ExprResult CtxScore;
     explicit OpenMPDeclareVariantCtsSelectorData() = default;
     explicit OpenMPDeclareVariantCtsSelectorData(
         OMPDeclareVariantAttr::CtxSelectorSetType CtxSet,
-        OMPDeclareVariantAttr::CtxSelectorType Ctx, StringRef ImplVendor,
-        ExprResult CtxScore)
-        : CtxSet(CtxSet), Ctx(Ctx), ImplVendor(ImplVendor), CtxScore(CtxScore) {
-    }
+        OMPDeclareVariantAttr::CtxSelectorType Ctx,
+        MutableArrayRef<StringRef> ImplVendors, ExprResult CtxScore)
+        : CtxSet(CtxSet), Ctx(Ctx), ImplVendors(ImplVendors),
+          CtxScore(CtxScore) {}
   };
 
   /// Checks if the variant/multiversion functions are compatible.
@@ -9128,7 +9135,7 @@ public:
       const PartialDiagnosticAt &NoteCausedDiagIDAt,
       const PartialDiagnosticAt &NoSupportDiagIDAt,
       const PartialDiagnosticAt &DiffDiagIDAt, bool TemplatesSupported,
-      bool ConstexprSupported);
+      bool ConstexprSupported, bool CLinkageMayDiffer);
 
   /// Function tries to capture lambda's captured variables in the OpenMP region
   /// before the original lambda is captured.
@@ -9456,6 +9463,11 @@ public:
   /// Called on well-formed '\#pragma omp taskloop simd' after parsing of
   /// the associated statement.
   StmtResult ActOnOpenMPTaskLoopSimdDirective(
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
+  /// Called on well-formed '\#pragma omp master taskloop' after parsing of the
+  /// associated statement.
+  StmtResult ActOnOpenMPMasterTaskLoopDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
   /// Called on well-formed '\#pragma omp distribute' after parsing
@@ -11056,6 +11068,7 @@ private:
   bool CheckARMBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
 
   bool CheckAArch64BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
+  bool CheckBPFBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckHexagonBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckHexagonBuiltinCpu(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckHexagonBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall);

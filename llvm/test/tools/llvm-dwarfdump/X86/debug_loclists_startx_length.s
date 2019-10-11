@@ -7,7 +7,7 @@
 
 # CHECK:         .debug_loclists contents:
 # CHECK-NEXT:    0x00000000: locations list header: length = 0x0000000e, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
-# CHECK-NEXT:    0x00000000:
+# CHECK-NEXT:    0x0000000c:
 # CHECK-NEXT:    Addr idx 1 (w/ length 16): DW_OP_reg5 RDI
 
 .section .debug_loclists,"",@progbits

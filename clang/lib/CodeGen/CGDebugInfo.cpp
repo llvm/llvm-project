@@ -3706,8 +3706,7 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
                                           const FunctionDecl *CalleeDecl) {
   auto &CGOpts = CGM.getCodeGenOpts();
   if (!CGOpts.EnableDebugEntryValues || !CGM.getLangOpts().Optimize ||
-      !CallOrInvoke ||
-      CGM.getCodeGenOpts().getDebugInfo() < codegenoptions::LimitedDebugInfo)
+      !CallOrInvoke)
     return;
 
   auto *Func = CallOrInvoke->getCalledFunction();

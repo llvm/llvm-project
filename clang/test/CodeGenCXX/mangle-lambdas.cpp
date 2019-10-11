@@ -178,18 +178,24 @@ void use_func_template() {
 }
 
 namespace std {
-  struct type_info;
+  struct type_info {
+    bool before(const type_info &) const noexcept;
+  };
 }
 namespace PR12123 {
   struct A { virtual ~A(); } g;
+  struct C { virtual ~C(); } k;
   struct B {
     void f(const std::type_info& x = typeid([]()->A& { return g; }()));
     void h();
+    void j(bool cond = typeid([]() -> A & { return g; }()).before(typeid([]() -> C & { return k; }())));
   };
-  void B::h() { f(); }
+  void B::h() { f(); j(); }
 }
 
 // CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %"struct.PR12123::A"* @_ZZN7PR121231B1fERKSt9type_infoEd_NKUlvE_clEv
+// CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %"struct.PR12123::A"* @_ZZN7PR121231B1jEbEd_NKUlvE_clEv
+// CHECK-LABEL: define linkonce_odr dereferenceable({{[0-9]+}}) %"struct.PR12123::C"* @_ZZN7PR121231B1jEbEd_NKUlvE0_clEv
 
 // CHECK-LABEL: define {{.*}} @_Z{{[0-9]*}}testVarargsLambdaNumberingv(
 inline int testVarargsLambdaNumbering() {

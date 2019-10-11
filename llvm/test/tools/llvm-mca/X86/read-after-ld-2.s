@@ -244,12 +244,16 @@ cmp     %edi, %edx
 
 # BDWELL-NEXT:  2.     10    1.0    0.4    5.7       addq	$32, %r8
 # BDWELL-NEXT:  3.     10    1.0    0.0    5.3       cmpl	%edi, %edx
+# BDWELL-NEXT:         10    1.0    0.2    3.9       <total>
 
 # HASWELL-NEXT: 2.     10    1.0    0.4    6.7       addq	$32, %r8
 # HASWELL-NEXT: 3.     10    1.0    0.0    6.3       cmpl	%edi, %edx
+# HASWELL-NEXT:        10    1.0    0.2    4.6       <total>
 
 # SKYLAKE-NEXT: 2.     10    1.0    0.1    7.0       addq	$32, %r8
 # SKYLAKE-NEXT: 3.     10    2.0    0.0    6.0       cmpl	%edi, %edx
+# SKYLAKE-NEXT:        10    1.5    0.1    4.6       <total>
 
 # ZNVER1-NEXT:  2.     10    1.0    0.1    7.0       addq	$32, %r8
 # ZNVER1-NEXT:  3.     10    2.0    0.0    6.0       cmpl	%edi, %edx
+# ZNVER1-NEXT:         10    1.3    0.1    4.6       <total>

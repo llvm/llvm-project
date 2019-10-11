@@ -62,13 +62,13 @@ public:
     return m_err_stream;
   }
 
-  void SetImmediateOutputFile(FILE *fh, bool transfer_fh_ownership = false) {
-    lldb::StreamSP stream_sp(new StreamFile(fh, transfer_fh_ownership));
+  void SetImmediateOutputFile(lldb::FileSP file_sp) {
+    lldb::StreamSP stream_sp(new StreamFile(file_sp));
     m_out_stream.SetStreamAtIndex(eImmediateStreamIndex, stream_sp);
   }
 
-  void SetImmediateErrorFile(FILE *fh, bool transfer_fh_ownership = false) {
-    lldb::StreamSP stream_sp(new StreamFile(fh, transfer_fh_ownership));
+  void SetImmediateErrorFile(lldb::FileSP file_sp) {
+    lldb::StreamSP stream_sp(new StreamFile(file_sp));
     m_err_stream.SetStreamAtIndex(eImmediateStreamIndex, stream_sp);
   }
 

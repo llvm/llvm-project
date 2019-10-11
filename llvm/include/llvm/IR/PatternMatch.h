@@ -643,11 +643,11 @@ struct bind_const_intval_ty {
 };
 
 /// Match a specified integer value or vector of all elements of that
-// value.
+/// value.
 struct specific_intval {
-  uint64_t Val;
+  APInt Val;
 
-  specific_intval(uint64_t V) : Val(V) {}
+  specific_intval(APInt V) : Val(std::move(V)) {}
 
   template <typename ITy> bool match(ITy *V) {
     const auto *CI = dyn_cast<ConstantInt>(V);
@@ -655,13 +655,19 @@ struct specific_intval {
       if (const auto *C = dyn_cast<Constant>(V))
         CI = dyn_cast_or_null<ConstantInt>(C->getSplatValue());
 
-    return CI && CI->getValue() == Val;
+    return CI && APInt::isSameValue(CI->getValue(), Val);
   }
 };
 
 /// Match a specific integer value or vector with all elements equal to
 /// the value.
-inline specific_intval m_SpecificInt(uint64_t V) { return specific_intval(V); }
+inline specific_intval m_SpecificInt(APInt V) {
+  return specific_intval(std::move(V));
+}
+
+inline specific_intval m_SpecificInt(uint64_t V) {
+  return m_SpecificInt(APInt(64, V));
+}
 
 /// Match a ConstantInt and bind to its value.  This does not match
 /// ConstantInts wider than 64-bits.

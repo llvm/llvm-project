@@ -609,8 +609,7 @@ lldb::BreakpointSP Target::CreateScriptedBreakpoint(
     extra_args_impl->SetObjectSP(extra_args_sp);
 
   BreakpointResolverSP resolver_sp(new BreakpointResolverScripted(
-      nullptr, class_name, depth, extra_args_impl,
-      *GetDebugger().GetScriptInterpreter()));
+      nullptr, class_name, depth, extra_args_impl));
   return CreateBreakpoint(filter_sp, resolver_sp, internal, false, true);
 }
 

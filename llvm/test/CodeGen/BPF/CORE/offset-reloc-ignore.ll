@@ -21,7 +21,7 @@ entry:
 ; CHECK:             r1 += 16
 ; CHECK:             call get_value
 ; CHECK:             .section        .BTF.ext,"",@progbits
-; CHECK-NOT:         .long   12                      # OffsetReloc
+; CHECK-NOT:         .long   16                      # FieldReloc
 
 declare dso_local i32 @get_value(i32*) local_unnamed_addr #1
 

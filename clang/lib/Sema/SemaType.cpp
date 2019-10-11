@@ -2475,6 +2475,11 @@ bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
     checkNonTrivialCUnion(T, Loc, NTCUC_FunctionReturn,
                           NTCUK_Destruct|NTCUK_Copy);
 
+  // C++2a [dcl.fct]p12:
+  //   A volatile-qualified return type is deprecated
+  if (T.isVolatileQualified() && getLangOpts().CPlusPlus2a)
+    Diag(Loc, diag::warn_deprecated_volatile_return) << T;
+
   return false;
 }
 
@@ -2554,6 +2559,11 @@ QualType Sema::BuildFunctionType(QualType T,
         FixItHint::CreateInsertion(Loc, "*");
       Invalid = true;
     }
+
+    // C++2a [dcl.fct]p4:
+    //   A parameter with volatile-qualified type is deprecated
+    if (ParamType.isVolatileQualified() && getLangOpts().CPlusPlus2a)
+      Diag(Loc, diag::warn_deprecated_volatile_param) << ParamType;
 
     ParamTypes[Idx] = ParamType;
   }
@@ -4685,6 +4695,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           S.Diag(DeclType.Loc, diag::err_func_returning_qualified_void) << T;
         } else
           diagnoseRedundantReturnTypeQualifiers(S, T, D, chunkIndex);
+
+        // C++2a [dcl.fct]p12:
+        //   A volatile-qualified return type is deprecated
+        if (T.isVolatileQualified() && S.getLangOpts().CPlusPlus2a)
+          S.Diag(DeclType.Loc, diag::warn_deprecated_volatile_return) << T;
       }
 
       // Objective-C ARC ownership qualifiers are ignored on the function
@@ -5167,6 +5182,13 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   if (D.getDeclSpec().getConstexprSpecifier() == CSK_constexpr &&
       T->isObjectType())
     T.addConst();
+
+  // C++2a [dcl.fct]p4:
+  //   A parameter with volatile-qualified type is deprecated
+  if (T.isVolatileQualified() && S.getLangOpts().CPlusPlus2a &&
+      (D.getContext() == DeclaratorContext::PrototypeContext ||
+       D.getContext() == DeclaratorContext::LambdaExprParameterContext))
+    S.Diag(D.getIdentifierLoc(), diag::warn_deprecated_volatile_param) << T;
 
   // If there was an ellipsis in the declarator, the declaration declares a
   // parameter pack whose type may be a pack expansion type.

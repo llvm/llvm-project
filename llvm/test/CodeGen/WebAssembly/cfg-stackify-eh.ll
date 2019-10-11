@@ -1,6 +1,8 @@
+; REQUIRES: asserts
 ; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling | FileCheck %s
 ; RUN: llc < %s -O0 -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -verify-machineinstrs -exception-model=wasm -mattr=+exception-handling | FileCheck %s --check-prefix=NOOPT
 ; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling -wasm-disable-ehpad-sort | FileCheck %s --check-prefix=NOSORT
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling -wasm-disable-ehpad-sort -stats 2>&1 | FileCheck %s --check-prefix=NOSORT-STAT
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -664,11 +666,81 @@ if.end:                                           ; preds = %cont, %catch.start,
   ret void
 }
 
+%class.Object = type { i8 }
+
+; Intrinsics like memcpy, memmove, and memset don't throw and are lowered into
+; calls to external symbols (not global addresses) in instruction selection,
+; which will be eventually lowered to library function calls.
+; Because this test runs with -wasm-disable-ehpad-sort, these library calls in
+; invoke.cont BB fall within try~end_try, but they shouldn't cause crashes or
+; unwinding destination mismatches in CFGStackify.
+
+; NOSORT-LABEL: test10
+; NOSORT: try
+; NOSORT:   call  foo
+; NOSORT:   i32.call {{.*}} memcpy
+; NOSORT:   i32.call {{.*}} memmove
+; NOSORT:   i32.call {{.*}} memset
+; NOSORT:   return
+; NOSORT: catch
+; NOSORT:   rethrow
+; NOSORT: end_try
+define void @test10(i8* %a, i8* %b) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  %o = alloca %class.Object, align 1
+  invoke void @foo()
+          to label %invoke.cont unwind label %ehcleanup
+
+invoke.cont:                                      ; preds = %entry
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a, i8* %b, i32 100, i1 false)
+  call void @llvm.memmove.p0i8.p0i8.i32(i8* %a, i8* %b, i32 100, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* %a, i8 0, i32 100, i1 false)
+  %call = call %class.Object* @_ZN6ObjectD2Ev(%class.Object* %o) #1
+  ret void
+
+ehcleanup:                                        ; preds = %entry
+  %0 = cleanuppad within none []
+  %call2 = call %class.Object* @_ZN6ObjectD2Ev(%class.Object* %o) #1 [ "funclet"(token %0) ]
+  cleanupret from %0 unwind to caller
+}
+
+; Tests if 'try' marker is placed correctly. In this test, 'try' should be
+; placed before the call to 'nothrow_i32' and not between the call to
+; 'nothrow_i32' and 'fun', because the return value of 'nothrow_i32' is
+; stackified and pushed onto the stack to be consumed by the call to 'fun'.
+
+; CHECK-LABEL: test11
+; CHECK: try
+; CHECK: i32.call  $push{{.*}}=, nothrow_i32
+; CHECK: call      fun, $pop{{.*}}
+define void @test11() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  %call = call i32 @nothrow_i32()
+  invoke void @fun(i32 %call)
+          to label %invoke.cont unwind label %terminate
+
+invoke.cont:                                      ; preds = %entry
+  ret void
+
+terminate:                                        ; preds = %entry
+  %0 = cleanuppad within none []
+  %1 = tail call i8* @llvm.wasm.get.exception(token %0)
+  call void @__clang_call_terminate(i8* %1) [ "funclet"(token %0) ]
+  unreachable
+}
+
+; Check if the unwind destination mismatch stats are correct
+; NOSORT-STAT: 11 wasm-cfg-stackify    - Number of EH pad unwind mismatches found
+
 declare void @foo()
 declare void @bar()
 declare i32 @baz()
+declare void @fun(i32)
 ; Function Attrs: nounwind
 declare void @nothrow(i32) #0
+declare i32 @nothrow_i32() #0
+; Function Attrs: nounwind
+declare %class.Object* @_ZN6ObjectD2Ev(%class.Object* returned) #0
 declare i32 @__gxx_wasm_personality_v0(...)
 declare i8* @llvm.wasm.get.exception(token)
 declare i32 @llvm.wasm.get.ehselector(token)
@@ -678,5 +750,11 @@ declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
 declare void @__clang_call_terminate(i8*)
 declare void @_ZSt9terminatev()
+; Function Attrs: nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i32, i1 immarg) #0
+; Function Attrs: nounwind
+declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1 immarg) #0
+; Function Attrs: nounwind
+declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg) #0
 
 attributes #0 = { nounwind }

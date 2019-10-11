@@ -63,3 +63,4 @@
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     3     1.0    1.0    0.0       ldm	r2!, {r3, r4, r5, r6, r12, lr}
 # CHECK-NEXT: 1.     3     18.3   0.3    0.0       stm	r0!, {r3, r4, r5, r6, r12, lr}
+# CHECK-NEXT:        3     9.7    0.7    0.0       <total>

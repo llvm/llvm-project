@@ -30,7 +30,9 @@ enum UnwindOpcodes {
   UOP_SetFPReg,
   UOP_SaveNonVol,
   UOP_SaveNonVolBig,
-  UOP_SaveXMM128 = 8,
+  UOP_Epilog,
+  UOP_SpareCode,
+  UOP_SaveXMM128,
   UOP_SaveXMM128Big,
   UOP_PushMachFrame,
   // The following set of unwind opcodes is for ARM64.  They are documented at

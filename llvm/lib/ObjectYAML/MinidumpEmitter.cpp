@@ -158,6 +158,14 @@ static Directory layout(BlobAllocator &File, Stream &S) {
   Result.Location.RVA = File.tell();
   Optional<size_t> DataEnd;
   switch (S.Kind) {
+  case Stream::StreamKind::MemoryInfoList: {
+    MemoryInfoListStream &InfoList = cast<MemoryInfoListStream>(S);
+    File.allocateNewObject<minidump::MemoryInfoListHeader>(
+        sizeof(minidump::MemoryInfoListHeader), sizeof(minidump::MemoryInfo),
+        InfoList.Infos.size());
+    File.allocateArray(makeArrayRef(InfoList.Infos));
+    break;
+  }
   case Stream::StreamKind::MemoryList:
     DataEnd = layout(File, cast<MemoryListStream>(S));
     break;

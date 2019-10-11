@@ -178,7 +178,9 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     if (OldIdx != -1) {
       assert(OldIdx == NumOperands);
       assert(isOfRegClass(CombOldVGPR, AMDGPU::VGPR_32RegClass, *MRI));
-      DPPInst.addReg(CombOldVGPR.Reg, 0, CombOldVGPR.SubReg);
+      auto *Def = getVRegSubRegDef(CombOldVGPR, *MRI);
+      DPPInst.addReg(CombOldVGPR.Reg, Def ? 0 : RegState::Undef,
+                     CombOldVGPR.SubReg);
       ++NumOperands;
     } else {
       // TODO: this discards MAC/FMA instructions for now, let's add it later
@@ -194,6 +196,10 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
                                           AMDGPU::OpName::src0_modifiers));
       assert(0LL == (Mod0->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG)));
       DPPInst.addImm(Mod0->getImm());
+      ++NumOperands;
+    } else if (AMDGPU::getNamedOperandIdx(DPPOp,
+                   AMDGPU::OpName::src0_modifiers) != -1) {
+      DPPInst.addImm(0);
       ++NumOperands;
     }
     auto *Src0 = TII->getNamedOperand(MovMI, AMDGPU::OpName::src0);
@@ -213,6 +219,10 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
                                           AMDGPU::OpName::src1_modifiers));
       assert(0LL == (Mod1->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG)));
       DPPInst.addImm(Mod1->getImm());
+      ++NumOperands;
+    } else if (AMDGPU::getNamedOperandIdx(DPPOp,
+                   AMDGPU::OpName::src1_modifiers) != -1) {
+      DPPInst.addImm(0);
       ++NumOperands;
     }
     if (auto *Src1 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src1)) {

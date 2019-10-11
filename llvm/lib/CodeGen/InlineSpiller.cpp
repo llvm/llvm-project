@@ -867,7 +867,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
     --NumSpills;
   LIS.ReplaceMachineInstrInMaps(*MI, *FoldMI);
   if (MI->isCall())
-    MI->getMF()->updateCallSiteInfo(MI, FoldMI);
+    MI->getMF()->moveCallSiteInfo(MI, FoldMI);
   MI->eraseFromParent();
 
   // Insert any new instructions other than FoldMI into the LIS maps.

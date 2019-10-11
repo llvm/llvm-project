@@ -44,11 +44,15 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefRecursive(
   // First, do a cache lookup. Without this cache, certain CFG structures
   // (like a series of if statements) take exponential time to visit.
   auto Cached = CachedPreviousDef.find(BB);
-  if (Cached != CachedPreviousDef.end()) {
+  if (Cached != CachedPreviousDef.end())
     return Cached->second;
-  }
 
-  if (BasicBlock *Pred = BB->getSinglePredecessor()) {
+  // If this method is called from an unreachable block, return LoE.
+  if (!MSSA->DT->isReachableFromEntry(BB))
+    return MSSA->getLiveOnEntryDef();
+
+  if (BasicBlock *Pred = BB->getUniquePredecessor()) {
+    VisitedBlocks.insert(BB);
     // Single predecessor case, just recurse, we can only have one definition.
     MemoryAccess *Result = getPreviousDefFromEnd(Pred, CachedPreviousDef);
     CachedPreviousDef.insert({BB, Result});
@@ -92,9 +96,15 @@ MemoryAccess *MemorySSAUpdater::getPreviousDefRecursive(
     // See if we can avoid the phi by simplifying it.
     auto *Result = tryRemoveTrivialPhi(Phi, PhiOps);
     // If we couldn't simplify, we may have to create a phi
-    if (Result == Phi && UniqueIncomingAccess && SingleAccess)
+    if (Result == Phi && UniqueIncomingAccess && SingleAccess) {
+      // A concrete Phi only exists if we created an empty one to break a cycle.
+      if (Phi) {
+        assert(Phi->operands().empty() && "Expected empty Phi");
+        Phi->replaceAllUsesWith(SingleAccess);
+        removeMemoryAccess(Phi);
+      }
       Result = SingleAccess;
-    else if (Result == Phi && !(UniqueIncomingAccess && SingleAccess)) {
+    } else if (Result == Phi && !(UniqueIncomingAccess && SingleAccess)) {
       if (!Phi)
         Phi = MSSA->createMemoryPhi(BB);
 
@@ -233,6 +243,7 @@ MemoryAccess *MemorySSAUpdater::tryRemoveTrivialPhi(MemoryPhi *Phi,
 void MemorySSAUpdater::insertUse(MemoryUse *MU, bool RenameUses) {
   InsertedPHIs.clear();
   MU->setDefiningAccess(getPreviousDef(MU));
+
   // In cases without unreachable blocks, because uses do not create new
   // may-defs, there are only two cases:
   // 1. There was a def already below us, and therefore, we should not have
@@ -1159,25 +1170,32 @@ void MemorySSAUpdater::moveAllAccesses(BasicBlock *From, BasicBlock *To,
   if (!Accs)
     return;
 
+  assert(Start->getParent() == To && "Incorrect Start instruction");
   MemoryAccess *FirstInNew = nullptr;
   for (Instruction &I : make_range(Start->getIterator(), To->end()))
     if ((FirstInNew = MSSA->getMemoryAccess(&I)))
       break;
-  if (!FirstInNew)
-    return;
+  if (FirstInNew) {
+    auto *MUD = cast<MemoryUseOrDef>(FirstInNew);
+    do {
+      auto NextIt = ++MUD->getIterator();
+      MemoryUseOrDef *NextMUD = (!Accs || NextIt == Accs->end())
+                                    ? nullptr
+                                    : cast<MemoryUseOrDef>(&*NextIt);
+      MSSA->moveTo(MUD, To, MemorySSA::End);
+      // Moving MUD from Accs in the moveTo above, may delete Accs, so we need
+      // to retrieve it again.
+      Accs = MSSA->getWritableBlockAccesses(From);
+      MUD = NextMUD;
+    } while (MUD);
+  }
 
-  auto *MUD = cast<MemoryUseOrDef>(FirstInNew);
-  do {
-    auto NextIt = ++MUD->getIterator();
-    MemoryUseOrDef *NextMUD = (!Accs || NextIt == Accs->end())
-                                  ? nullptr
-                                  : cast<MemoryUseOrDef>(&*NextIt);
-    MSSA->moveTo(MUD, To, MemorySSA::End);
-    // Moving MUD from Accs in the moveTo above, may delete Accs, so we need to
-    // retrieve it again.
-    Accs = MSSA->getWritableBlockAccesses(From);
-    MUD = NextMUD;
-  } while (MUD);
+  // If all accesses were moved and only a trivial Phi remains, we try to remove
+  // that Phi. This is needed when From is going to be deleted.
+  auto *Defs = MSSA->getWritableBlockDefs(From);
+  if (Defs && !Defs->empty())
+    if (auto *Phi = dyn_cast<MemoryPhi>(&*Defs->begin()))
+      tryRemoveTrivialPhi(Phi);
 }
 
 void MemorySSAUpdater::moveAllAfterSpliceBlocks(BasicBlock *From,
@@ -1193,7 +1211,7 @@ void MemorySSAUpdater::moveAllAfterSpliceBlocks(BasicBlock *From,
 
 void MemorySSAUpdater::moveAllAfterMergeBlocks(BasicBlock *From, BasicBlock *To,
                                                Instruction *Start) {
-  assert(From->getSinglePredecessor() == To &&
+  assert(From->getUniquePredecessor() == To &&
          "From block is expected to have a single predecessor (To).");
   moveAllAccesses(From, To, Start);
   for (BasicBlock *Succ : successors(From))

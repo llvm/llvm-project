@@ -46,7 +46,9 @@ template <typename Primary> static void testPrimary() {
   }
   Cache.destroy(nullptr);
   Allocator->releaseToOS();
-  Allocator->printStats();
+  scudo::ScopedString Str(1024);
+  Allocator->getStats(&Str);
+  Str.output();
 }
 
 TEST(ScudoPrimaryTest, BasicPrimary) {
@@ -86,7 +88,9 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
   }
   Cache.destroy(nullptr);
   Allocator.releaseToOS();
-  Allocator.printStats();
+  scudo::ScopedString Str(1024);
+  Allocator.getStats(&Str);
+  Str.output();
   EXPECT_EQ(AllocationFailed, true);
   Allocator.unmapTestOnly();
 }
@@ -125,7 +129,9 @@ template <typename Primary> static void testIteratePrimary() {
   }
   Cache.destroy(nullptr);
   Allocator->releaseToOS();
-  Allocator->printStats();
+  scudo::ScopedString Str(1024);
+  Allocator->getStats(&Str);
+  Str.output();
 }
 
 TEST(ScudoPrimaryTest, PrimaryIterate) {
@@ -180,7 +186,9 @@ template <typename Primary> static void testPrimaryThreaded() {
   for (auto &T : Threads)
     T.join();
   Allocator->releaseToOS();
-  Allocator->printStats();
+  scudo::ScopedString Str(1024);
+  Allocator->getStats(&Str);
+  Str.output();
 }
 
 TEST(ScudoPrimaryTest, PrimaryThreaded) {
@@ -203,8 +211,7 @@ template <typename Primary> static void testReleaseToOS() {
   Cache.init(nullptr, Allocator.get());
   const scudo::uptr Size = scudo::getPageSizeCached() * 2;
   EXPECT_TRUE(Primary::canAllocate(Size));
-  const scudo::uptr ClassId =
-      Primary::SizeClassMap::getClassIdBySize(Size);
+  const scudo::uptr ClassId = Primary::SizeClassMap::getClassIdBySize(Size);
   void *P = Cache.allocate(ClassId);
   EXPECT_NE(P, nullptr);
   Cache.deallocate(ClassId, P);

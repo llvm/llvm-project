@@ -250,8 +250,7 @@ void BreakpointResolverName::AddNameLookup(ConstString name,
 
 Searcher::CallbackReturn
 BreakpointResolverName::SearchCallback(SearchFilter &filter,
-                                       SymbolContext &context, Address *addr,
-                                       bool containing) {
+                                       SymbolContext &context, Address *addr) {
   SymbolContextList func_list;
   // SymbolContextList sym_list;
 

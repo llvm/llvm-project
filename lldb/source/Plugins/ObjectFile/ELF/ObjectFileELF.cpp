@@ -36,7 +36,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Support/ARMBuildAttributes.h"
-#include "llvm/Support/JamCRC.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MipsABIFlags.h"
@@ -398,10 +398,8 @@ bool ObjectFileELF::MagicBytesMatch(DataBufferSP &data_sp,
 }
 
 static uint32_t calc_crc32(uint32_t init, const DataExtractor &data) {
-  llvm::JamCRC crc(~init);
-  crc.update(llvm::makeArrayRef(
-      reinterpret_cast<const char *>(data.GetDataStart()), data.GetByteSize()));
-  return ~crc.getCRC();
+  return llvm::crc32(
+      init, llvm::makeArrayRef(data.GetDataStart(), data.GetByteSize()));
 }
 
 uint32_t ObjectFileELF::CalculateELFNotesSegmentsCRC32(
@@ -2211,8 +2209,6 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     bool is_global = symbol.getBinding() == STB_GLOBAL;
     uint32_t flags = symbol.st_other << 8 | symbol.st_info | additional_flags;
-    bool is_mangled = (symbol_name[0] == '_' && symbol_name[1] == 'Z');
-
     llvm::StringRef symbol_ref(symbol_name);
 
     // Symbol names may contain @VERSION suffixes. Find those and strip them
@@ -2220,7 +2216,7 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     size_t version_pos = symbol_ref.find('@');
     bool has_suffix = version_pos != llvm::StringRef::npos;
     llvm::StringRef symbol_bare = symbol_ref.substr(0, version_pos);
-    Mangled mangled(ConstString(symbol_bare), is_mangled);
+    Mangled mangled(symbol_bare);
 
     // Now append the suffix back to mangled and unmangled names. Only do it if
     // the demangling was successful (string is not empty).
@@ -2451,14 +2447,11 @@ static unsigned ParsePLTRelocations(
       break;
 
     const char *symbol_name = strtab_data.PeekCStr(symbol.st_name);
-    bool is_mangled =
-        symbol_name ? (symbol_name[0] == '_' && symbol_name[1] == 'Z') : false;
     uint64_t plt_index = plt_offset + i * plt_entsize;
 
     Symbol jump_symbol(
         i + start_id,          // Symbol table index
         symbol_name,           // symbol name.
-        is_mangled,            // is the symbol name mangled?
         eSymbolTypeTrampoline, // Type of this symbol
         false,                 // Is this globally visible?
         false,                 // Is this symbol debug info?
@@ -2778,6 +2771,50 @@ Symtab *ObjectFileELF::GetSymtab() {
     if (m_symtab_up == nullptr)
       m_symtab_up.reset(new Symtab(this));
 
+    // In the event that there's no symbol entry for the entry point we'll
+    // artifically create one. We delegate to the symtab object the figuring
+    // out of the proper size, this will usually make it span til the next
+    // symbol it finds in the section. This means that if there are missing
+    // symbols the entry point might span beyond its function definition.
+    // We're fine with this as it doesn't make it worse than not having a
+    // symbol entry at all.
+    if (CalculateType() == eTypeExecutable) {
+      ArchSpec arch = GetArchitecture();
+      auto entry_point_addr = GetEntryPointAddress();
+      bool is_valid_entry_point =
+          entry_point_addr.IsValid() && entry_point_addr.IsSectionOffset();
+      addr_t entry_point_file_addr = entry_point_addr.GetFileAddress();
+      if (is_valid_entry_point && !m_symtab_up->FindSymbolContainingFileAddress(
+                                      entry_point_file_addr)) {
+        uint64_t symbol_id = m_symtab_up->GetNumSymbols();
+        Symbol symbol(symbol_id,
+                      GetNextSyntheticSymbolName().GetCString(), // Symbol name.
+                      eSymbolTypeCode, // Type of this symbol.
+                      true,            // Is this globally visible?
+                      false,           // Is this symbol debug info?
+                      false,           // Is this symbol a trampoline?
+                      true,            // Is this symbol artificial?
+                      entry_point_addr.GetSection(), // Section where this
+                                                     // symbol is defined.
+                      0,     // Offset in section or symbol value.
+                      0,     // Size.
+                      false, // Size is valid.
+                      false, // Contains linker annotations?
+                      0);    // Symbol flags.
+        m_symtab_up->AddSymbol(symbol);
+        // When the entry point is arm thumb we need to explicitly set its
+        // class address to reflect that. This is important because expression
+        // evaluation relies on correctly setting a breakpoint at this
+        // address.
+        if (arch.GetMachine() == llvm::Triple::arm &&
+            (entry_point_file_addr & 1))
+          m_address_class_map[entry_point_file_addr ^ 1] =
+              AddressClass::eCodeAlternateISA;
+        else
+          m_address_class_map[entry_point_file_addr] = AddressClass::eCode;
+      }
+    }
+
     m_symtab_up->CalculateSymbolSizes();
   }
 
@@ -2856,7 +2893,6 @@ void ObjectFileELF::ParseUnwindSymbols(Symtab *symbol_table,
         Symbol eh_symbol(
             symbol_id,       // Symbol table index.
             symbol_name,     // Symbol name.
-            false,           // Is the symbol name mangled?
             eSymbolTypeCode, // Type of this symbol.
             true,            // Is this globally visible?
             false,           // Is this symbol debug info?

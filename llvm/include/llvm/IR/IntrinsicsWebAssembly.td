@@ -89,6 +89,10 @@ def int_wasm_atomic_notify:
 // SIMD intrinsics
 //===----------------------------------------------------------------------===//
 
+def int_wasm_swizzle :
+  Intrinsic<[llvm_v16i8_ty],
+            [llvm_v16i8_ty, llvm_v16i8_ty],
+            [IntrNoMem, IntrSpeculatable]>;
 def int_wasm_sub_saturate_signed :
   Intrinsic<[llvm_anyvector_ty],
             [LLVMMatchType<0>, LLVMMatchType<0>],

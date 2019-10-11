@@ -2853,6 +2853,10 @@ def err_alignment_dependent_typedef_name : Error<
 
 def err_attribute_aligned_too_great : Error<
   "requested alignment must be %0 bytes or smaller">;
+def warn_assume_aligned_too_great
+    : Warning<"requested alignment must be %0 bytes or smaller; maximum "
+              "alignment assumed">,
+      InGroup<DiagGroup<"builtin-assume-aligned-alignment">>;
 def warn_redeclaration_without_attribute_prev_attribute_ignored : Warning<
   "%q0 redeclared without %1 attribute: previous %1 ignored">,
   InGroup<MicrosoftInconsistentDllImport>;
@@ -6638,7 +6642,8 @@ def note_member_declared_here : Note<
 def note_member_first_declared_here : Note<
   "member %0 first declared here">;
 def warn_bitwise_negation_bool : Warning<
-  "bitwise negation of a boolean expression; did you mean logical negation?">,
+  "bitwise negation of a boolean expression%select{;| always evaluates to 'true';}0 "
+  "did you mean logical negation?">,
   InGroup<DiagGroup<"bool-operation">>;
 def err_decrement_bool : Error<"cannot decrement expression of type bool">;
 def warn_increment_bool : Warning<
@@ -6649,6 +6654,26 @@ def ext_increment_bool : ExtWarn<
   DefaultError, InGroup<IncrementBool>;
 def err_increment_decrement_enum : Error<
   "cannot %select{decrement|increment}0 expression of enum type %1">;
+
+def warn_deprecated_increment_decrement_volatile : Warning<
+  "%select{decrement|increment}0 of object of volatile-qualified type %1 "
+  "is deprecated">, InGroup<DeprecatedVolatile>;
+def warn_deprecated_simple_assign_volatile : Warning<
+  "use of result of assignment to object of volatile-qualified type %0 "
+  "is deprecated">, InGroup<DeprecatedVolatile>;
+def warn_deprecated_compound_assign_volatile : Warning<
+  "compound assignment to object of volatile-qualified type %0 is deprecated">,
+  InGroup<DeprecatedVolatile>;
+def warn_deprecated_volatile_return : Warning<
+  "volatile-qualified return type %0 is deprecated">,
+  InGroup<DeprecatedVolatile>;
+def warn_deprecated_volatile_param : Warning<
+  "volatile-qualified parameter type %0 is deprecated">,
+  InGroup<DeprecatedVolatile>;
+def warn_deprecated_volatile_structured_binding : Warning<
+  "volatile qualifier in structured binding declaration is deprecated">,
+  InGroup<DeprecatedVolatile>;
+
 def err_catch_incomplete_ptr : Error<
   "cannot catch pointer to incomplete type %0">;
 def err_catch_incomplete_ref : Error<
@@ -9952,6 +9977,11 @@ def warn_noderef_to_dereferenceable_pointer : Warning<
 def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
+
+def err_preserve_field_info_not_field : Error<
+  "__builtin_preserve_field_info argument %0 not a field access">;
+def err_preserve_field_info_not_const: Error<
+  "__builtin_preserve_field_info argument %0 not a constant">;
 
 def err_bit_cast_non_trivially_copyable : Error<
   "__builtin_bit_cast %select{source|destination}0 type must be trivially copyable">;

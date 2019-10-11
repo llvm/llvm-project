@@ -2858,6 +2858,14 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
   CurFn = nullptr;
 }
 
+// Usable locations are valid with non-zero line numbers. A line number of zero
+// corresponds to optimized code that doesn't have a distinct source location.
+// In this case, we try to use the previous or next source location depending on
+// the context.
+static bool isUsableDebugLoc(DebugLoc DL) {
+  return DL && DL.getLine() != 0;
+}
+
 void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
   DebugHandlerBase::beginInstruction(MI);
 
@@ -2869,19 +2877,21 @@ void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
   // If the first instruction of a new MBB has no location, find the first
   // instruction with a location and use that.
   DebugLoc DL = MI->getDebugLoc();
-  if (!DL && MI->getParent() != PrevInstBB) {
+  if (!isUsableDebugLoc(DL) && MI->getParent() != PrevInstBB) {
     for (const auto &NextMI : *MI->getParent()) {
       if (NextMI.isDebugInstr())
         continue;
       DL = NextMI.getDebugLoc();
-      if (DL)
+      if (isUsableDebugLoc(DL))
         break;
     }
+    // FIXME: Handle the case where the BB has no valid locations. This would
+    // probably require doing a real dataflow analysis.
   }
   PrevInstBB = MI->getParent();
 
   // If we still don't have a debug location, don't record a location.
-  if (!DL)
+  if (!isUsableDebugLoc(DL))
     return;
 
   maybeRecordLocation(DL, Asm->MF);

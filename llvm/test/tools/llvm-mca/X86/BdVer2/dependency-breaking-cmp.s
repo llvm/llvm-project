@@ -84,3 +84,4 @@ cmovae %ebx, %eax
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     3     1.3    1.3    1.0       cmpl	%eax, %eax
 # CHECK-NEXT: 1.     3     3.7    0.3    0.0       cmovael	%ebx, %eax
+# CHECK-NEXT:        3     2.5    0.8    0.5       <total>

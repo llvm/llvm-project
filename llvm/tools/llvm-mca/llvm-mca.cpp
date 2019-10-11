@@ -238,7 +238,7 @@ ErrorOr<std::unique_ptr<ToolOutputFile>> getOutputStream() {
     OutputFilename = "-";
   std::error_code EC;
   auto Out =
-      std::make_unique<ToolOutputFile>(OutputFilename, EC, sys::fs::OF_None);
+      std::make_unique<ToolOutputFile>(OutputFilename, EC, sys::fs::OF_Text);
   if (!EC)
     return std::move(Out);
   return EC;

@@ -36,7 +36,7 @@ public:
   // instructions.
   void EmitInstruction(const MCInst &Instruction,
                        const MCSubtargetInfo &STI) override {
-    Result->Instructions.push_back(Instruction);
+    Result->Key.Instructions.push_back(Instruction);
   }
 
   // Implementation of the AsmCommentConsumer.
@@ -65,7 +65,7 @@ public:
       const StringRef HexValue = Parts[1].trim();
       RegVal.Value = APInt(
           /* each hex digit is 4 bits */ HexValue.size() * 4, HexValue, 16);
-      Result->RegisterInitialValues.push_back(std::move(RegVal));
+      Result->Key.RegisterInitialValues.push_back(std::move(RegVal));
       return;
     }
     if (CommentText.consume_front("LIVEIN")) {

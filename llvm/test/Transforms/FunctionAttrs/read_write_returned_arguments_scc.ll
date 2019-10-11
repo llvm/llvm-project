@@ -70,7 +70,7 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 ; CHECK: Function Attrs: nofree nosync nounwind
-; CHECK-NEXT: define internal i32* @internal_ret1_rrw(i32* %r0, i32* returned %r1, i32* %w0)
+; CHECK-NEXT: define internal i32* @internal_ret1_rrw(i32* nonnull dereferenceable(4) %r0, i32* returned %r1, i32* %w0)
 define internal i32* @internal_ret1_rrw(i32* %r0, i32* %r1, i32* %w0) {
 entry:
   %0 = load i32, i32* %r0, align 4
@@ -102,7 +102,7 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind
-; CHECK-NEXT: define i32* @external_sink_ret2_nrw(i32* readnone %n0, i32* nocapture readonly %r0, i32* returned "no-capture-maybe-returned" %w0)
+; CHECK-NEXT: define i32* @external_sink_ret2_nrw(i32* readnone %n0, i32* nocapture readonly %r0, i32* returned writeonly "no-capture-maybe-returned" %w0)
 define i32* @external_sink_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
 entry:
   %tobool = icmp ne i32* %n0, null
@@ -121,7 +121,7 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 ; CHECK: Function Attrs: nofree nosync nounwind
-; CHECK-NEXT: define internal i32* @internal_ret1_rw(i32* %r0, i32* returned %w0)
+; CHECK-NEXT: define internal i32* @internal_ret1_rw(i32* nonnull dereferenceable(4) %r0, i32* returned %w0)
 define internal i32* @internal_ret1_rw(i32* %r0, i32* %w0) {
 entry:
   %0 = load i32, i32* %r0, align 4

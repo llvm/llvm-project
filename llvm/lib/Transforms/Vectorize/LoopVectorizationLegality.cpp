@@ -409,7 +409,8 @@ int LoopVectorizationLegality::isConsecutivePtr(Value *Ptr) {
   const ValueToValueMap &Strides =
       getSymbolicStrides() ? *getSymbolicStrides() : ValueToValueMap();
 
-  int Stride = getPtrStride(PSE, Ptr, TheLoop, Strides, true, false);
+  bool CanAddPredicate = !TheLoop->getHeader()->getParent()->hasOptSize();
+  int Stride = getPtrStride(PSE, Ptr, TheLoop, Strides, CanAddPredicate, false);
   if (Stride == 1 || Stride == -1)
     return Stride;
   return 0;

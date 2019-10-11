@@ -528,6 +528,8 @@ TEST_F(ExpandAutoTypeTest, Test) {
   // replace array types
   EXPECT_EQ(apply(R"cpp(au^to x = "test")cpp"),
             R"cpp(const char * x = "test")cpp");
+
+  EXPECT_UNAVAILABLE("dec^ltype(au^to) x = 10;");
 }
 
 TWEAK_TEST(ExtractFunction);

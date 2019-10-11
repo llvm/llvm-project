@@ -70,3 +70,4 @@ lmg	%r6, %r15, 48(%r15)
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     3     9.7    0.3    0.0       stmg	%r6, %r15, 48(%r15)
 # CHECK-NEXT: 1.     3     9.0    0.3    0.0       lmg	%r6, %r15, 48(%r15)
+# CHECK-NEXT:        3     9.3    0.3    0.0       <total>
