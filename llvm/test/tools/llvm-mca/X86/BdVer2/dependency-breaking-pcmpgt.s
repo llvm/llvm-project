@@ -100,3 +100,4 @@ vpcmpgtq %xmm3, %xmm3, %xmm0
 # CHECK-NEXT: 1.     3     0.0    0.0    1.3       vpcmpgtw	%xmm1, %xmm1, %xmm2
 # CHECK-NEXT: 2.     3     0.0    0.0    1.3       vpcmpgtd	%xmm2, %xmm2, %xmm3
 # CHECK-NEXT: 3.     3     1.0    1.0    0.0       vpcmpgtq	%xmm3, %xmm3, %xmm0
+# CHECK-NEXT:        3     0.3    0.3    1.0       <total>

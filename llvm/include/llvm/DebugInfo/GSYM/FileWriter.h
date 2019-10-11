@@ -109,6 +109,10 @@ public:
   ///         file position.
   uint64_t tell();
 
+  llvm::raw_pwrite_stream &get_stream() {
+    return OS;
+  }
+
 private:
   FileWriter(const FileWriter &rhs) = delete;
   void operator=(const FileWriter &rhs) = delete;

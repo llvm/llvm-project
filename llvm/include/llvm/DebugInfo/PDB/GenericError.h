@@ -20,7 +20,7 @@ enum class pdb_error_code {
   dia_sdk_not_present,
   dia_failed_loading,
   signature_out_of_date,
-  external_cmdline_ref,
+  no_matching_pch,
   unspecified,
 };
 } // namespace pdb

@@ -75,7 +75,9 @@ TEST(ArrayRefTest, AllocatorCopy) {
   EXPECT_NE(makeArrayRef(Array3Src).data(), Array3Copy.data());
 }
 
-TEST(ArrayRefTest, SizeTSizedOperations) {
+// This test is pure UB given the ArrayRef<> implementation.
+// You are not allowed to produce non-null pointers given null base pointer.
+TEST(ArrayRefTest, DISABLED_SizeTSizedOperations) {
   ArrayRef<char> AR(nullptr, std::numeric_limits<ptrdiff_t>::max());
 
   // Check that drop_back accepts size_t-sized numbers.

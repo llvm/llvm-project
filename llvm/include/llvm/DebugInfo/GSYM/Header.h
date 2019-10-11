@@ -22,6 +22,7 @@ namespace gsym {
 class FileWriter;
 
 constexpr uint32_t GSYM_MAGIC = 0x4753594d; // 'GSYM'
+constexpr uint32_t GSYM_CIGAM = 0x4d595347; // 'MYSG'
 constexpr uint32_t GSYM_VERSION = 1;
 constexpr size_t GSYM_MAX_UUID_SIZE = 20;
 
@@ -84,16 +85,20 @@ struct Header {
   /// be set to zero.
   uint8_t UUID[GSYM_MAX_UUID_SIZE];
 
-  /// Check if a header is valid.
+  /// Check if a header is valid and return an error if anything is wrong.
   ///
-  /// \returns True if the header is valid and if the version is supported.
-  bool isValid() const {
-    if (Magic != GSYM_MAGIC)
-      return false;
-    if (Version != GSYM_VERSION)
-      return false;
-    return true;
-  }
+  /// This function can be used prior to encoding a header to ensure it is
+  /// valid, or after decoding a header to ensure it is valid and supported.
+  ///
+  /// Check a correctly byte swapped header for errors:
+  ///   - check magic value
+  ///   - check that version number is supported
+  ///   - check that the address offset size is supported
+  ///   - check that the UUID size is valid
+  ///
+  /// \returns An error if anything is wrong in the header, or Error::success()
+  /// if there are no errors.
+  llvm::Error checkForError() const;
 
   /// Decode an object from a binary data stream.
   ///

@@ -104,3 +104,4 @@ movdqu %xmm5, %xmm0
 # CHECK-NEXT: 4.     3     7.7    0.0    0.0       movupd	%xmm3, %xmm4
 # CHECK-NEXT: 5.     3     8.3    0.0    0.0       movdqa	%xmm4, %xmm5
 # CHECK-NEXT: 6.     3     9.0    0.0    0.0       movdqu	%xmm5, %xmm0
+# CHECK-NEXT:        3     7.0    0.0    0.0       <total>

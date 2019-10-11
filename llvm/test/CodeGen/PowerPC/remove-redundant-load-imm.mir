@@ -346,3 +346,25 @@ body:             |
     BLR8 implicit $lr8, implicit $rm
 
 ...
+---
+name:            overwrite_reg_before_killed
+alignment:       16
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $x1
+
+    ; CHECK-LABEL: name: overwrite_reg_before_killed
+    ; CHECK: liveins: $x1
+    ; CHECK: renamable $x3 = LI8 0
+    ; CHECK: STD renamable $x3, 16, $x1
+    ; CHECK: STD killed renamable $x3, 8, $x1
+    ; CHECK: BLR8 implicit $lr8, implicit $rm
+    renamable $x3 = LI8 0
+    STD renamable $x3, 16, $x1
+    renamable $x3 = LI8 0
+    STD killed renamable $x3, 8, $x1
+    BLR8 implicit $lr8, implicit $rm
+
+...

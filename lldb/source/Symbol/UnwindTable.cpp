@@ -13,6 +13,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ArmUnwindInfo.h"
+#include "lldb/Symbol/CallFrameInfo.h"
 #include "lldb/Symbol/CompactUnwindInfo.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/FuncUnwinders.h"
@@ -29,7 +30,8 @@ using namespace lldb_private;
 
 UnwindTable::UnwindTable(Module &module)
     : m_module(module), m_unwinds(), m_initialized(false), m_mutex(),
-      m_eh_frame_up(), m_compact_unwind_up(), m_arm_unwind_up() {}
+      m_object_file_unwind_up(), m_eh_frame_up(), m_compact_unwind_up(),
+      m_arm_unwind_up() {}
 
 // We can't do some of this initialization when the ObjectFile is running its
 // ctor; delay doing it until needed for something.
@@ -46,6 +48,8 @@ void UnwindTable::Initialize() {
   ObjectFile *object_file = m_module.GetObjectFile();
   if (!object_file)
     return;
+
+  m_object_file_unwind_up = object_file->CreateCallFrameInfo();
 
   SectionList *sl = m_module.GetSectionList();
   if (!sl)
@@ -83,7 +87,12 @@ llvm::Optional<AddressRange> UnwindTable::GetAddressRange(const Address &addr,
                                                           SymbolContext &sc) {
   AddressRange range;
 
-  // First check the symbol context
+  // First check the unwind info from the object file plugin
+  if (m_object_file_unwind_up &&
+      m_object_file_unwind_up->GetAddressRange(addr, range))
+    return range;
+
+  // Check the symbol context
   if (sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol, 0,
                          false, range) &&
       range.GetBaseAddress().IsValid())
@@ -160,6 +169,11 @@ void UnwindTable::Dump(Stream &s) {
              pos->first);
   }
   s.EOL();
+}
+
+lldb_private::CallFrameInfo *UnwindTable::GetObjectFileUnwindInfo() {
+  Initialize();
+  return m_object_file_unwind_up.get();
 }
 
 DWARFCallFrameInfo *UnwindTable::GetEHFrameInfo() {

@@ -70,3 +70,4 @@ vld1.32	{d16, d17}, [r1]!
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     5     3.0    0.2    1.6       add	r1, r1, r12
 # CHECK-NEXT: 1.     5     4.0    0.0    0.0       vld1.32	{d16, d17}, [r1]!
+# CHECK-NEXT:        5     3.5    0.1    0.8       <total>

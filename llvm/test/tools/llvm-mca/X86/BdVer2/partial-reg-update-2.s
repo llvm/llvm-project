@@ -46,3 +46,4 @@ add    %ecx, %ebx
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       imulq	%rax, %rbx
 # CHECK-NEXT: 1.     1     6.0    0.0    0.0       lzcntw	%ax, %bx
 # CHECK-NEXT: 2.     1     8.0    0.0    0.0       addl	%ecx, %ebx
+# CHECK-NEXT:        1     5.0    0.3    0.0       <total>

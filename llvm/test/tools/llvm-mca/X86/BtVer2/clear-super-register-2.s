@@ -121,3 +121,4 @@ vandps %xmm4, %xmm1, %xmm0
 # CHECK-NEXT: 15.    2     21.0   21.0   13.5      vaddps	%ymm3, %ymm1, %ymm4
 # CHECK-NEXT: 16.    2     22.0   22.0   12.5      vaddps	%ymm3, %ymm1, %ymm4
 # CHECK-NEXT: 17.    2     24.0   0.0    11.5      vandps	%xmm4, %xmm1, %xmm0
+# CHECK-NEXT:        2     17.5   9.9    21.6      <total>

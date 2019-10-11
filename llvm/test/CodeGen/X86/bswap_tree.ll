@@ -79,30 +79,15 @@ define i32 @test3(i32 %x) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    andl $16711680, %ecx # imm = 0xFF0000
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    andl $-16777216, %edx # imm = 0xFF000000
-; CHECK-NEXT:    shll $8, %ecx
-; CHECK-NEXT:    shrl $8, %edx
-; CHECK-NEXT:    orl %ecx, %edx
 ; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    shrl $16, %eax
-; CHECK-NEXT:    orl %edx, %eax
+; CHECK-NEXT:    roll $16, %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: test3:
 ; CHECK64:       # %bb.0:
 ; CHECK64-NEXT:    movl %edi, %eax
-; CHECK64-NEXT:    andl $16711680, %eax # imm = 0xFF0000
-; CHECK64-NEXT:    movl %edi, %ecx
-; CHECK64-NEXT:    andl $-16777216, %ecx # imm = 0xFF000000
-; CHECK64-NEXT:    shll $8, %eax
-; CHECK64-NEXT:    shrl $8, %ecx
-; CHECK64-NEXT:    addl %ecx, %eax
-; CHECK64-NEXT:    bswapl %edi
-; CHECK64-NEXT:    shrl $16, %edi
-; CHECK64-NEXT:    orl %edi, %eax
+; CHECK64-NEXT:    bswapl %eax
+; CHECK64-NEXT:    roll $16, %eax
 ; CHECK64-NEXT:    retq
   %byte2 = and i32 %x, 16711680   ; 0x00ff0000
   %byte3 = and i32 %x, 4278190080 ; 0xff000000

@@ -14,6 +14,7 @@
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/ExecutionEngine/JITLink/MachO_arm64.h"
 #include "llvm/ExecutionEngine/JITLink/MachO_x86_64.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
@@ -64,6 +65,8 @@ void jitLink_MachO(std::unique_ptr<JITLinkContext> Ctx) {
     });
 
     switch (Header.cputype) {
+    case MachO::CPU_TYPE_ARM64:
+      return jitLink_MachO_arm64(std::move(Ctx));
     case MachO::CPU_TYPE_X86_64:
       return jitLink_MachO_x86_64(std::move(Ctx));
     }

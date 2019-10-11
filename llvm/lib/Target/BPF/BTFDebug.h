@@ -231,12 +231,6 @@ struct BTFFieldReloc {
   uint32_t RelocKind;     ///< What to patch the instruction
 };
 
-/// Represent one extern relocation.
-struct BTFExternReloc {
-  const MCSymbol *Label;  ///< MCSymbol identifying insn for the reloc
-  uint32_t ExternNameOff; ///< The extern variable name
-};
-
 /// Collect and emit BTF information.
 class BTFDebug : public DebugHandlerBase {
   MCStreamer &OS;
@@ -251,7 +245,6 @@ class BTFDebug : public DebugHandlerBase {
   std::map<uint32_t, std::vector<BTFFuncInfo>> FuncInfoTable;
   std::map<uint32_t, std::vector<BTFLineInfo>> LineInfoTable;
   std::map<uint32_t, std::vector<BTFFieldReloc>> FieldRelocTable;
-  std::map<uint32_t, std::vector<BTFExternReloc>> ExternRelocTable;
   StringMap<std::vector<std::string>> FileContent;
   std::map<std::string, std::unique_ptr<BTFKindDataSec>> DataSecEntries;
   std::vector<BTFTypeStruct *> StructTypes;

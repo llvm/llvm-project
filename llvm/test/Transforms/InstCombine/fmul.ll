@@ -994,7 +994,7 @@ define double @fmul_negated_constant_expression(double %x) {
 
 define float @negate_if_true(float %x, i1 %cond) {
 ; CHECK-LABEL: @negate_if_true(
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub float -0.000000e+00, [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND:%.*]], float [[TMP1]], float [[X]]
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
@@ -1005,7 +1005,7 @@ define float @negate_if_true(float %x, i1 %cond) {
 
 define float @negate_if_false(float %x, i1 %cond) {
 ; CHECK-LABEL: @negate_if_false(
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg arcp float [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub arcp float -0.000000e+00, [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select arcp i1 [[COND:%.*]], float [[X]], float [[TMP1]]
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
@@ -1017,7 +1017,7 @@ define float @negate_if_false(float %x, i1 %cond) {
 define <2 x double> @negate_if_true_commute(<2 x double> %px, i1 %cond) {
 ; CHECK-LABEL: @negate_if_true_commute(
 ; CHECK-NEXT:    [[X:%.*]] = fdiv <2 x double> <double 4.200000e+01, double 4.200000e+01>, [[PX:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg ninf <2 x double> [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub ninf <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[X]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select ninf i1 [[COND:%.*]], <2 x double> [[TMP1]], <2 x double> [[X]]
 ; CHECK-NEXT:    ret <2 x double> [[TMP2]]
 ;
@@ -1030,7 +1030,7 @@ define <2 x double> @negate_if_true_commute(<2 x double> %px, i1 %cond) {
 define <2 x double> @negate_if_false_commute(<2 x double> %px, <2 x i1> %cond) {
 ; CHECK-LABEL: @negate_if_false_commute(
 ; CHECK-NEXT:    [[X:%.*]] = fdiv <2 x double> <double 4.200000e+01, double 5.100000e+00>, [[PX:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x double> [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[X]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[COND:%.*]], <2 x double> [[X]], <2 x double> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x double> [[TMP2]]
 ;

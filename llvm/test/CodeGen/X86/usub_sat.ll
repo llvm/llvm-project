@@ -97,27 +97,21 @@ define i8 @func8(i8 %x, i8 %y) nounwind {
 define i4 @func3(i4 %x, i4 %y) nounwind {
 ; X86-LABEL: func3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    shlb $4, %cl
-; X86-NEXT:    shlb $4, %al
-; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    cmpb %cl, %dl
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    cmoval %edx, %eax
 ; X86-NEXT:    subb %cl, %al
-; X86-NEXT:    movzbl %al, %eax
-; X86-NEXT:    cmovbl %edx, %eax
-; X86-NEXT:    shrb $4, %al
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: func3:
 ; X64:       # %bb.0:
-; X64-NEXT:    shlb $4, %sil
-; X64-NEXT:    shlb $4, %dil
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    subb %sil, %dil
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    cmovbl %ecx, %eax
-; X64-NEXT:    shrb $4, %al
+; X64-NEXT:    cmpb %sil, %dil
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    cmoval %edi, %eax
+; X64-NEXT:    subb %sil, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %tmp = call i4 @llvm.usub.sat.i4(i4 %x, i4 %y)

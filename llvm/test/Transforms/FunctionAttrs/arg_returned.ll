@@ -830,6 +830,11 @@ define i32* @use_const() #0 {
   ; CHECK: ret i32* bitcast (i8* @G to i32*)
   ret i32* %c
 }
+define i32* @dont_use_const() #0 {
+  %c = musttail call i32* @ret_const()
+  ; CHECK: ret i32* %c
+  ret i32* %c
+}
 
 attributes #0 = { noinline nounwind uwtable }
 

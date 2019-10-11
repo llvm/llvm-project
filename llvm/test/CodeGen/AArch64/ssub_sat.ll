@@ -39,14 +39,13 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 define i16 @func16(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: func16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w0, #16
-; CHECK-NEXT:    subs w10, w8, w1, lsl #16
-; CHECK-NEXT:    mov w9, #2147483647
-; CHECK-NEXT:    cmp w10, #0 // =0
-; CHECK-NEXT:    cinv w9, w9, ge
-; CHECK-NEXT:    subs w8, w8, w1, lsl #16
-; CHECK-NEXT:    csel w8, w9, w8, vs
-; CHECK-NEXT:    asr w0, w8, #16
+; CHECK-NEXT:    sub w8, w0, w1
+; CHECK-NEXT:    mov w9, #32767
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    csel w8, w8, w9, lt
+; CHECK-NEXT:    cmn w8, #8, lsl #12 // =32768
+; CHECK-NEXT:    mov w9, #-32768
+; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.ssub.sat.i16(i16 %x, i16 %y);
   ret i16 %tmp;
@@ -55,14 +54,13 @@ define i16 @func16(i16 %x, i16 %y) nounwind {
 define i8 @func8(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: func8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w0, #24
-; CHECK-NEXT:    subs w10, w8, w1, lsl #24
-; CHECK-NEXT:    mov w9, #2147483647
-; CHECK-NEXT:    cmp w10, #0 // =0
-; CHECK-NEXT:    cinv w9, w9, ge
-; CHECK-NEXT:    subs w8, w8, w1, lsl #24
-; CHECK-NEXT:    csel w8, w9, w8, vs
-; CHECK-NEXT:    asr w0, w8, #24
+; CHECK-NEXT:    sub w8, w0, w1
+; CHECK-NEXT:    mov w9, #127
+; CHECK-NEXT:    cmp w8, #127 // =127
+; CHECK-NEXT:    csel w8, w8, w9, lt
+; CHECK-NEXT:    cmn w8, #128 // =128
+; CHECK-NEXT:    mov w9, #-128
+; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret
   %tmp = call i8 @llvm.ssub.sat.i8(i8 %x, i8 %y);
   ret i8 %tmp;
@@ -71,14 +69,13 @@ define i8 @func8(i8 %x, i8 %y) nounwind {
 define i4 @func3(i4 %x, i4 %y) nounwind {
 ; CHECK-LABEL: func3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w0, #28
-; CHECK-NEXT:    subs w10, w8, w1, lsl #28
-; CHECK-NEXT:    mov w9, #2147483647
-; CHECK-NEXT:    cmp w10, #0 // =0
-; CHECK-NEXT:    cinv w9, w9, ge
-; CHECK-NEXT:    subs w8, w8, w1, lsl #28
-; CHECK-NEXT:    csel w8, w9, w8, vs
-; CHECK-NEXT:    asr w0, w8, #28
+; CHECK-NEXT:    sub w8, w0, w1
+; CHECK-NEXT:    mov w9, #7
+; CHECK-NEXT:    cmp w8, #7 // =7
+; CHECK-NEXT:    csel w8, w8, w9, lt
+; CHECK-NEXT:    cmn w8, #8 // =8
+; CHECK-NEXT:    mov w9, #-8
+; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret
   %tmp = call i4 @llvm.ssub.sat.i4(i4 %x, i4 %y);
   ret i4 %tmp;

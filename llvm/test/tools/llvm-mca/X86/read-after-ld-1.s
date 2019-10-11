@@ -138,10 +138,25 @@ vaddps  (%rax), %xmm1, %xmm1
 # ALL-NEXT:       0.     1     1.0    1.0    0.0       vdivps	%xmm0, %xmm1, %xmm1
 
 # BARCELONA-NEXT: 1.     1     9.0    0.0    0.0       vaddps	(%rax), %xmm1, %xmm1
+# BARCELONA-NEXT:        1     5.0    0.5    0.0       <total>
+
 # BDVER2-NEXT:    1.     1     5.0    0.0    0.0       vaddps	(%rax), %xmm1, %xmm1
+# BDVER2-NEXT:           1     3.0    0.5    0.0       <total>
+
 # BDWELL-NEXT:    1.     1     7.0    0.0    0.0       vaddps	(%rax), %xmm1, %xmm1
+# BDWELL-NEXT:           1     4.0    0.5    0.0       <total>
+
 # BTVER2-NEXT:    1.     1     15.0   0.0    0.0       vaddps	(%rax), %xmm1, %xmm1
+# BTVER2-NEXT:           1     8.0    0.5    0.0       <total>
+
 # HASWELL-NEXT:   1.     1     8.0    0.0    0.0       vaddps	(%rax), %xmm1, %xmm1
+# HASWELL-NEXT:          1     4.5    0.5    0.0       <total>
+
 # SANDY-NEXT:     1.     1     9.0    0.0    0.0       vaddps	(%rax), %xmm1, %xmm1
+# SANDY-NEXT:            1     5.0    0.5    0.0       <total>
+
 # SKYLAKE-NEXT:   1.     1     6.0    0.0    0.0       vaddps	(%rax), %xmm1, %xmm1
+# SKYLAKE-NEXT:          1     3.5    0.5    0.0       <total>
+
 # ZNVER1-NEXT:    1.     1     8.0    0.0    0.0       vaddps	(%rax), %xmm1, %xmm1
+# ZNVER1-NEXT:           1     4.5    0.5    0.0       <total>

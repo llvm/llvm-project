@@ -87,3 +87,4 @@
 # CHECK-NEXT: 3.     2     8.5    0.0    6.0       vaddps	%xmm4, %xmm18, %xmm6
 # CHECK-NEXT: 4.     2     11.0   0.0    3.5       vmulps	%xmm6, %xmm19, %xmm4
 # CHECK-NEXT: 5.     2     16.0   0.0    2.0       vaddps	%xmm4, %xmm20, %xmm0
+# CHECK-NEXT:        2     8.3    0.3    5.0       <total>

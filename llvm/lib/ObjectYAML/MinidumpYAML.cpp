@@ -69,6 +69,8 @@ Stream::~Stream() = default;
 
 Stream::StreamKind Stream::getKind(StreamType Type) {
   switch (Type) {
+  case StreamType::MemoryInfoList:
+    return StreamKind::MemoryInfoList;
   case StreamType::MemoryList:
     return StreamKind::MemoryList;
   case StreamType::ModuleList:
@@ -93,6 +95,8 @@ Stream::StreamKind Stream::getKind(StreamType Type) {
 std::unique_ptr<Stream> Stream::create(StreamType Type) {
   StreamKind Kind = getKind(Type);
   switch (Kind) {
+  case StreamKind::MemoryInfoList:
+    return std::make_unique<MemoryInfoListStream>();
   case StreamKind::MemoryList:
     return std::make_unique<MemoryListStream>();
   case StreamKind::ModuleList:
@@ -107,6 +111,25 @@ std::unique_ptr<Stream> Stream::create(StreamType Type) {
     return std::make_unique<ThreadListStream>();
   }
   llvm_unreachable("Unhandled stream kind!");
+}
+
+void yaml::ScalarBitSetTraits<MemoryProtection>::bitset(
+    IO &IO, MemoryProtection &Protect) {
+#define HANDLE_MDMP_PROTECT(CODE, NAME, NATIVENAME)                            \
+  IO.bitSetCase(Protect, #NATIVENAME, MemoryProtection::NAME);
+#include "llvm/BinaryFormat/MinidumpConstants.def"
+}
+
+void yaml::ScalarBitSetTraits<MemoryState>::bitset(IO &IO, MemoryState &State) {
+#define HANDLE_MDMP_MEMSTATE(CODE, NAME, NATIVENAME)                           \
+  IO.bitSetCase(State, #NATIVENAME, MemoryState::NAME);
+#include "llvm/BinaryFormat/MinidumpConstants.def"
+}
+
+void yaml::ScalarBitSetTraits<MemoryType>::bitset(IO &IO, MemoryType &Type) {
+#define HANDLE_MDMP_MEMTYPE(CODE, NAME, NATIVENAME)                            \
+  IO.bitSetCase(Type, #NATIVENAME, MemoryType::NAME);
+#include "llvm/BinaryFormat/MinidumpConstants.def"
 }
 
 void yaml::ScalarEnumerationTraits<ProcessorArchitecture>::enumeration(
@@ -215,6 +238,20 @@ void yaml::MappingTraits<CPUInfo::X86Info>::mapping(IO &IO,
   mapOptionalHex(IO, "AMD Extended Features", Info.AMDExtendedFeatures, 0);
 }
 
+void yaml::MappingTraits<MemoryInfo>::mapping(IO &IO, MemoryInfo &Info) {
+  mapRequiredHex(IO, "Base Address", Info.BaseAddress);
+  mapOptionalHex(IO, "Allocation Base", Info.AllocationBase, Info.BaseAddress);
+  mapRequiredAs<MemoryProtection>(IO, "Allocation Protect",
+                                  Info.AllocationProtect);
+  mapOptionalHex(IO, "Reserved0", Info.Reserved0, 0);
+  mapRequiredHex(IO, "Region Size", Info.RegionSize);
+  mapRequiredAs<MemoryState>(IO, "State", Info.State);
+  mapOptionalAs<MemoryProtection>(IO, "Protect", Info.Protect,
+                                  Info.AllocationProtect);
+  mapRequiredAs<MemoryType>(IO, "Type", Info.Type);
+  mapOptionalHex(IO, "Reserved1", Info.Reserved1, 0);
+}
+
 void yaml::MappingTraits<VSFixedFileInfo>::mapping(IO &IO,
                                                    VSFixedFileInfo &Info) {
   mapOptionalHex(IO, "Signature", Info.Signature, 0);
@@ -262,6 +299,10 @@ void yaml::MappingTraits<MemoryListStream::entry_type>::mapping(
     IO &IO, MemoryListStream::entry_type &Range) {
   MappingContextTraits<MemoryDescriptor, yaml::BinaryRef>::mapping(
       IO, Range.Entry, Range.Content);
+}
+
+static void streamMapping(yaml::IO &IO, MemoryInfoListStream &Stream) {
+  IO.mapRequired("Memory Ranges", Stream.Infos);
 }
 
 static void streamMapping(yaml::IO &IO, MemoryListStream &Stream) {
@@ -336,6 +377,9 @@ void yaml::MappingTraits<std::unique_ptr<Stream>>::mapping(
   if (!IO.outputting())
     S = MinidumpYAML::Stream::create(Type);
   switch (S->Kind) {
+  case MinidumpYAML::Stream::StreamKind::MemoryInfoList:
+    streamMapping(IO, llvm::cast<MemoryInfoListStream>(*S));
+    break;
   case MinidumpYAML::Stream::StreamKind::MemoryList:
     streamMapping(IO, llvm::cast<MemoryListStream>(*S));
     break;
@@ -362,6 +406,7 @@ StringRef yaml::MappingTraits<std::unique_ptr<Stream>>::validate(
   switch (S->Kind) {
   case MinidumpYAML::Stream::StreamKind::RawContent:
     return streamValidate(cast<RawContentStream>(*S));
+  case MinidumpYAML::Stream::StreamKind::MemoryInfoList:
   case MinidumpYAML::Stream::StreamKind::MemoryList:
   case MinidumpYAML::Stream::StreamKind::ModuleList:
   case MinidumpYAML::Stream::StreamKind::SystemInfo:
@@ -384,6 +429,12 @@ Expected<std::unique_ptr<Stream>>
 Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
   StreamKind Kind = getKind(StreamDesc.Type);
   switch (Kind) {
+  case StreamKind::MemoryInfoList: {
+    if (auto ExpectedList = File.getMemoryInfoList())
+      return std::make_unique<MemoryInfoListStream>(*ExpectedList);
+    else
+      return ExpectedList.takeError();
+  }
   case StreamKind::MemoryList: {
     auto ExpectedList = File.getMemoryList();
     if (!ExpectedList)

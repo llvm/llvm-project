@@ -656,6 +656,9 @@ public:
   /// \return
   virtual std::vector<LoadableData> GetLoadableData(Target &target);
 
+  /// Creates a plugin-specific call frame info
+  virtual std::unique_ptr<CallFrameInfo> CreateCallFrameInfo();
+
 protected:
   // Member variables.
   FileSpec m_file;

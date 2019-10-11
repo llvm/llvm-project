@@ -124,3 +124,4 @@ vmovdqu %xmm5, %xmm0
 # CHECK-NEXT: 4.     3     0.0    0.0    0.0       vmovupd	%xmm3, %xmm4
 # CHECK-NEXT: 5.     3     0.0    0.0    0.0       vmovdqa	%xmm4, %xmm5
 # CHECK-NEXT: 6.     3     0.0    0.0    0.0       vmovdqu	%xmm5, %xmm0
+# CHECK-NEXT:        3     0.0    0.0    0.0       <total>

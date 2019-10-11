@@ -23,10 +23,8 @@ public:
 
     MAX_FIELD_RELOC_KIND,
   };
-  /// The attribute attached to globals representing a member offset
+  /// The attribute attached to globals representing a field access
   static const std::string AmaAttr;
-  /// The section name to identify a patchable external global
-  static const std::string PatchableExtSecName;
 };
 
 } // namespace llvm

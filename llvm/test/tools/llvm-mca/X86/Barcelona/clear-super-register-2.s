@@ -66,6 +66,7 @@ addps  %xmm0, %xmm0
 # CHECK-NEXT: 0.     3     14.7   8.0    0.0       sqrtss	%xmm0, %xmm0
 # CHECK-NEXT: 1.     3     1.0    1.0    21.3      movss	(%eax), %xmm0
 # CHECK-NEXT: 2.     3     7.0    0.3    18.0      addps	%xmm0, %xmm0
+# CHECK-NEXT:        3     7.6    3.1    13.1      <total>
 
 # CHECK:      [1] Code Region
 
@@ -116,3 +117,4 @@ addps  %xmm0, %xmm0
 # CHECK-NEXT: 0.     3     21.7   15.0   0.0       sqrtsd	%xmm0, %xmm0
 # CHECK-NEXT: 1.     3     1.0    1.0    35.3      movsd	(%eax), %xmm0
 # CHECK-NEXT: 2.     3     7.0    0.3    32.0      addps	%xmm0, %xmm0
+# CHECK-NEXT:        3     9.9    5.4    22.4      <total>

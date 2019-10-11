@@ -78,3 +78,4 @@ addps %xmm1, %xmm1
 # CHECK-NEXT: 0.     3     0.0    0.0    3.3       xorps	%xmm0, %xmm0
 # CHECK-NEXT: 1.     3     1.3    1.3    1.3       movaps	%xmm0, %xmm1
 # CHECK-NEXT: 2.     3     2.0    0.0    0.0       addps	%xmm1, %xmm1
+# CHECK-NEXT:        3     1.1    0.4    1.6       <total>
