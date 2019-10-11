@@ -81,6 +81,8 @@ MARCH_ARG_RE = re.compile(r'-march[= ]([^ ]+)')
 SCRUB_LEADING_WHITESPACE_RE = re.compile(r'^(\s+)')
 SCRUB_WHITESPACE_RE = re.compile(r'(?!^(|  \w))[ \t]+', flags=re.M)
 SCRUB_TRAILING_WHITESPACE_RE = re.compile(r'[ \t]+$', flags=re.M)
+SCRUB_TRAILING_WHITESPACE_TEST_RE = SCRUB_TRAILING_WHITESPACE_RE
+SCRUB_TRAILING_WHITESPACE_AND_ATTRIBUTES_RE = re.compile(r'([ \t]|(#[0-9]+))+$', flags=re.M)
 SCRUB_KILL_COMMENT_RE = re.compile(r'^ *#+ +kill:.*\n')
 SCRUB_LOOP_COMMENT_RE = re.compile(
     r'# =>This Inner Loop Header:.*|# in Loop:.*', flags=re.M)
@@ -125,7 +127,7 @@ def scrub_body(body):
   # Expand the tabs used for indentation.
   body = string.expandtabs(body, 2)
   # Strip trailing whitespace.
-  body = SCRUB_TRAILING_WHITESPACE_RE.sub(r'', body)
+  body = SCRUB_TRAILING_WHITESPACE_TEST_RE.sub(r'', body)
   return body
 
 def do_scrub(body, scrubber, scrubber_args, extra):

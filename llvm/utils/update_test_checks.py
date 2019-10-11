@@ -64,6 +64,8 @@ def main():
                       help='Do not scrub IR names')
   parser.add_argument('--function-signature', action='store_true',
                       help='Keep function signature information around for the check line')
+  parser.add_argument('--scrub-attributes', action='store_true',
+                      help='Remove attribute annotations (#0) from the end of check line')
   parser.add_argument('tests', nargs='+')
   args = common.parse_commandline_args(parser)
 
@@ -98,6 +100,13 @@ def main():
         continue
 
     run_lines = common.find_run_lines(test, input_lines)
+
+    # If requested we scrub trailing attribute annotations, e.g., '#0', together with whitespaces
+    if args.scrub_attributes:
+      common.SCRUB_TRAILING_WHITESPACE_TEST_RE = common.SCRUB_TRAILING_WHITESPACE_AND_ATTRIBUTES_RE
+    else:
+      common.SCRUB_TRAILING_WHITESPACE_TEST_RE = common.SCRUB_TRAILING_WHITESPACE_RE
+
     prefix_list = []
     for l in run_lines:
       if '|' not in l:
