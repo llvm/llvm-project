@@ -31,7 +31,9 @@ function(define_linker_script target)
   set(link_libraries)
   if (interface_libs)
     foreach(lib IN LISTS interface_libs)
-      if (TARGET "${lib}")
+      if (TARGET "${lib}" OR
+          (${lib} MATCHES "cxxabi(_static|_shared)?" AND HAVE_LIBCXXABI) OR
+          (${lib} MATCHES "unwind(_static|_shared)?" AND HAVE_LIBUNWIND))
         list(APPEND link_libraries "${CMAKE_LINK_LIBRARY_FLAG}$<TARGET_PROPERTY:${lib},OUTPUT_NAME>")
       else()
         list(APPEND link_libraries "${CMAKE_LINK_LIBRARY_FLAG}${lib}")
