@@ -3426,8 +3426,8 @@ bool MipsAsmParser::expandLoadDoubleImmToGPR(MCInst &Inst, SMLoc IDLoc,
 
   getStreamer().SwitchSection(ReadOnlySection);
   getStreamer().EmitLabel(Sym, IDLoc);
-  getStreamer().EmitIntValue(HiImmOp64, 4);
-  getStreamer().EmitIntValue(LoImmOp64, 4);
+  getStreamer().EmitValueToAlignment(8);
+  getStreamer().EmitIntValue(ImmOp64, 8);
   getStreamer().SwitchSection(CS);
 
   if (emitPartialAddress(TOut, IDLoc, Sym))
@@ -3510,8 +3510,8 @@ bool MipsAsmParser::expandLoadDoubleImmToFPR(MCInst &Inst, bool Is64FPU,
 
   getStreamer().SwitchSection(ReadOnlySection);
   getStreamer().EmitLabel(Sym, IDLoc);
-  getStreamer().EmitIntValue(HiImmOp64, 4);
-  getStreamer().EmitIntValue(LoImmOp64, 4);
+  getStreamer().EmitValueToAlignment(8);
+  getStreamer().EmitIntValue(ImmOp64, 8);
   getStreamer().SwitchSection(CS);
 
   if (emitPartialAddress(TOut, IDLoc, Sym))
