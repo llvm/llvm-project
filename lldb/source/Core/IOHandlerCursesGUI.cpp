@@ -3240,7 +3240,7 @@ public:
         {'h', "Show help dialog"},
         {'n', "Step over (source line)"},
         {'N', "Step over (single instruction)"},
-        {'o', "Step out"},
+        {'f', "Step out (finish)"},
         {'s', "Step in (source line)"},
         {'S', "Step in (single instruction)"},
         {',', "Page up"},
@@ -3818,8 +3818,8 @@ public:
       }
       return eKeyHandled;
 
-    case 'o':
-      // 'o' == step out
+    case 'f':
+      // 'f' == step out (finish)
       {
         ExecutionContext exe_ctx =
             m_debugger.GetCommandInterpreter().GetExecutionContext();
