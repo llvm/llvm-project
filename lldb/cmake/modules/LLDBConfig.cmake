@@ -1,3 +1,4 @@
+include(CheckIncludeFileCXX)
 include(CheckCXXSymbolExists)
 include(CheckTypeSize)
 
@@ -94,10 +95,14 @@ else()
   find_package(LibEdit REQUIRED)
 
   # Check if we libedit capable of handling wide characters (built with
-  # '--enable-widec').
+  # '--enable-widec'), and have the <codecvt> standard library we use to
+  # process them.
   set(CMAKE_REQUIRED_LIBRARIES ${libedit_LIBRARIES})
   set(CMAKE_REQUIRED_INCLUDES ${libedit_INCLUDE_DIRS})
-  check_symbol_exists(el_winsertstr histedit.h LLDB_EDITLINE_USE_WCHAR)
+  check_symbol_exists(el_winsertstr histedit.h HAVE_WIDEC_LIBEDIT)
+  if (HAVE_WIDEC_LIBEDIT)
+    check_include_file_cxx(codecvt LLDB_EDITLINE_USE_WCHAR)
+  endif()
   set(CMAKE_EXTRA_INCLUDE_FILES histedit.h)
   check_type_size(el_rfunc_t LLDB_EL_RFUNC_T_SIZE)
   if (LLDB_EL_RFUNC_T_SIZE STREQUAL "")
