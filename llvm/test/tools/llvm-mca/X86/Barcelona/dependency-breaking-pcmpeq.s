@@ -105,3 +105,4 @@ pcmpeqw %xmm0, %xmm0
 # CHECK-NEXT: 4.     3     3.7    0.0    12.0      pcmpeqd	%xmm0, %xmm0
 # CHECK-NEXT: 5.     3     4.3    0.0    11.0      pcmpeqq	%xmm0, %xmm0
 # CHECK-NEXT: 6.     3     5.0    0.0    10.0      pcmpeqw	%xmm0, %xmm0
+# CHECK-NEXT:        3     7.1    0.1    6.6       <total>

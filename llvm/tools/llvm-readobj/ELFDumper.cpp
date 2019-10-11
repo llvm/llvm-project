@@ -3968,9 +3968,21 @@ void GNUStyle<ELFT>::printHashHistogram(const ELFFile<ELFT> *Obj) {
     // Go over all buckets and and note chain lengths of each bucket (total
     // unique chain lengths).
     for (size_t B = 0; B < NBucket; B++) {
-      for (size_t C = Buckets[B]; C > 0 && C < NChain; C = Chains[C])
+      std::vector<bool> Visited(NChain);
+      for (size_t C = Buckets[B]; C < NChain; C = Chains[C]) {
+        if (C == ELF::STN_UNDEF)
+          break;
+        if (Visited[C]) {
+          reportWarning(
+              createError(".hash section is invalid: bucket " + Twine(C) +
+                          ": a cycle was detected in the linked chain"),
+              this->FileName);
+          break;
+        }
+        Visited[C] = true;
         if (MaxChain <= ++ChainLen[B])
           MaxChain++;
+      }
       TotalSyms += ChainLen[B];
     }
 

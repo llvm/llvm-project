@@ -861,8 +861,8 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
     SelectionDAG &DAG) const {
-  assert(Subtarget->hasMultivalue() ||
-         Outs.size() <= 1 && "MVP WebAssembly can only return up to one value");
+  assert((Subtarget->hasMultivalue() || Outs.size() <= 1) &&
+         "MVP WebAssembly can only return up to one value");
   if (!callingConvSupported(CallConv))
     fail(DL, DAG, "WebAssembly doesn't support non-C calling conventions");
 

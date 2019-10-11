@@ -1915,9 +1915,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilder<> &B) {
   IRBuilder<>::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(FastMathFlags::getFast());
 
-  Function *ArgFn = Arg->getCalledFunction();
-  Intrinsic::ID ArgID =
-      ArgFn ? ArgFn->getIntrinsicID() : Intrinsic::not_intrinsic;
+  Intrinsic::ID ArgID = Arg->getIntrinsicID();
   LibFunc ArgLb = NotLibFunc;
   TLI->getLibFunc(Arg, ArgLb);
 

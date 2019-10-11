@@ -97,8 +97,18 @@ define double @log_exp2_not_fast(double %x) {
   ret double %log
 }
 
+define double @pr43617(double %d, i32 %i, double (i32)* %f) {
+entry:
+  %sub = fsub double -0.000000e+00, %d
+  %icall = tail call fast double %f(i32 %i)
+  %log = tail call fast double @llvm.log.f64(double %icall)
+  %mul = fmul double %log, %sub
+  ret double %mul
+}
+
 declare double @log(double) #0
 declare float @logf(float) #0
+declare double @llvm.log.f64(double) #0
 declare <2 x float> @llvm.log.v2f32(<2 x float>)
 declare float @log2f(float) #0
 declare <2 x double> @llvm.log2.v2f64(<2 x double>)

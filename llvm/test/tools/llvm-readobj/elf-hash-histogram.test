@@ -1,27 +1,70 @@
-RUN: llvm-readelf --elf-hash-histogram %p/Inputs/gnuhash.so.elf-ppc64 \
-RUN:   | FileCheck %s -check-prefix PPC64GNU
-RUN: llvm-readelf --elf-hash-histogram %p/Inputs/gnuhash.so.elf-x86_64 \
-RUN:   | FileCheck %s -check-prefix X86GNU
-RUN: llvm-readelf --elf-hash-histogram %p/Inputs/got-plt.exe.elf-mipsel \
-RUN:   | FileCheck %s -check-prefix SYSV
+# RUN: llvm-readelf --elf-hash-histogram %p/Inputs/gnuhash.so.elf-ppc64 \
+# RUN:   | FileCheck %s -check-prefix PPC64GNU
+# RUN: llvm-readelf --elf-hash-histogram %p/Inputs/gnuhash.so.elf-x86_64 \
+# RUN:   | FileCheck %s -check-prefix X86GNU
+# RUN: llvm-readelf --elf-hash-histogram %p/Inputs/got-plt.exe.elf-mipsel \
+# RUN:   | FileCheck %s -check-prefix SYSV
 
-PPC64GNU: Histogram for `.gnu.hash' bucket list length (total of 3 buckets)
-PPC64GNU-NEXT:  Length  Number     % of total  Coverage
-PPC64GNU-NEXT:       0  1          ( 33.3%)       0.0%
-PPC64GNU-NEXT:       1  1          ( 33.3%)      25.0%
-PPC64GNU-NEXT:       2  0          (  0.0%)      25.0%
-PPC64GNU-NEXT:       3  1          ( 33.3%)     100.0%
+# PPC64GNU: Histogram for `.gnu.hash' bucket list length (total of 3 buckets)
+# PPC64GNU-NEXT:  Length  Number     % of total  Coverage
+# PPC64GNU-NEXT:       0  1          ( 33.3%)       0.0%
+# PPC64GNU-NEXT:       1  1          ( 33.3%)      25.0%
+# PPC64GNU-NEXT:       2  0          (  0.0%)      25.0%
+# PPC64GNU-NEXT:       3  1          ( 33.3%)     100.0%
 
-X86GNU: Histogram for `.gnu.hash' bucket list length (total of 3 buckets)
-X86GNU-NEXT:  Length  Number     % of total  Coverage
-X86GNU-NEXT:       0  1          ( 33.3%)       0.0%
-X86GNU-NEXT:       1  1          ( 33.3%)      25.0%
-X86GNU-NEXT:       2  0          (  0.0%)      25.0%
-X86GNU-NEXT:       3  1          ( 33.3%)     100.0%
+# X86GNU: Histogram for `.gnu.hash' bucket list length (total of 3 buckets)
+# X86GNU-NEXT:  Length  Number     % of total  Coverage
+# X86GNU-NEXT:       0  1          ( 33.3%)       0.0%
+# X86GNU-NEXT:       1  1          ( 33.3%)      25.0%
+# X86GNU-NEXT:       2  0          (  0.0%)      25.0%
+# X86GNU-NEXT:       3  1          ( 33.3%)     100.0%
 
-SYSV: Histogram for bucket list length (total of 3 buckets)
-SYSV-NEXT:  Length  Number     % of total  Coverage
-SYSV-NEXT:       0  0          (  0.0%)       0.0%
-SYSV-NEXT:       1  0          (  0.0%)       0.0%
-SYSV-NEXT:       2  2          ( 66.7%)      57.1%
-SYSV-NEXT:       3  1          ( 33.3%)     100.0%
+# SYSV: Histogram for bucket list length (total of 3 buckets)
+# SYSV-NEXT:  Length  Number     % of total  Coverage
+# SYSV-NEXT:       0  0          (  0.0%)       0.0%
+# SYSV-NEXT:       1  0          (  0.0%)       0.0%
+# SYSV-NEXT:       2  2          ( 66.7%)      57.1%
+# SYSV-NEXT:       3  1          ( 33.3%)     100.0%
+
+## Show that we report a warning for a hash table which contains an entry of
+## the bucket array pointing to a cycle.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readelf --elf-hash-histogram 2>&1 %t.o | FileCheck -DFILE=%t.o %s --check-prefix BROKEN
+
+# BROKEN:       warning: '[[FILE]]': .hash section is invalid: bucket 1: a cycle was detected in the linked chain
+# BROKEN:       Histogram for bucket list length (total of 1 buckets)
+# BROKEN-NEXT:  Length  Number     % of total  Coverage
+# BROKEN-NEXT:       0  0          (  0.0%)       0.0%
+# BROKEN-NEXT:       1  1          (100.0%)     100.0%
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+  - Name:   .hash
+    Type:   SHT_HASH
+    Link:   .dynsym
+    Bucket: [ 1 ]
+    Chain:  [ 0, 1 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Entries:
+## llvm-readelf will read the hash table from the file offset
+## p_offset + (p_vaddr - DT_HASH) = p_offset + (0 - 0) = p_offset,
+## which is the start of PT_LOAD, i.e. the file offset of .hash.
+      - Tag:   DT_HASH
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0
+DynamicSymbols:
+  - Name: foo
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Sections:
+      - Section: .hash
+      - Section: .dynamic

@@ -120,6 +120,7 @@ vaddps  %ymm1, %ymm1, %ymm0
 # CHECK-NEXT: 0.     3     2.0    2.0    0.0       vaddps	%ymm0, %ymm0, %ymm1
 # CHECK-NEXT: 1.     3     3.0    3.0    1.7       vxorps	%ymm1, %ymm1, %ymm1
 # CHECK-NEXT: 2.     3     4.3    0.0    0.3       vblendps	$2, %ymm1, %ymm2, %ymm3
+# CHECK-NEXT:        3     3.1    1.7    0.7       <total>
 
 # CHECK:      [1] Code Region - ZERO-IDIOM-2
 
@@ -205,6 +206,7 @@ vaddps  %ymm1, %ymm1, %ymm0
 # CHECK-NEXT: 0.     3     2.0    2.0    0.0       vaddpd	%ymm0, %ymm0, %ymm1
 # CHECK-NEXT: 1.     3     3.0    3.0    1.7       vxorpd	%ymm1, %ymm1, %ymm1
 # CHECK-NEXT: 2.     3     4.3    0.0    0.3       vblendpd	$2, %ymm1, %ymm2, %ymm3
+# CHECK-NEXT:        3     3.1    1.7    0.7       <total>
 
 # CHECK:      [2] Code Region - ZERO-IDIOM-3
 
@@ -284,6 +286,7 @@ vaddps  %ymm1, %ymm1, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     3     2.0    2.0    0.0       vaddps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: 1.     3     2.0    2.0    3.0       vandnps	%ymm2, %ymm2, %ymm3
+# CHECK-NEXT:        3     2.0    2.0    1.5       <total>
 
 # CHECK:      [3] Code Region - ZERO-IDIOM-4
 
@@ -363,6 +366,7 @@ vaddps  %ymm1, %ymm1, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     3     2.0    2.0    0.0       vaddps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: 1.     3     2.0    2.0    3.0       vandnps	%ymm2, %ymm2, %ymm3
+# CHECK-NEXT:        3     2.0    2.0    1.5       <total>
 
 # CHECK:      [4] Code Region - ZERO-IDIOM-5
 
@@ -442,3 +446,4 @@ vaddps  %ymm1, %ymm1, %ymm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     3     7.0    0.3    0.0       vperm2f128	$136, %ymm0, %ymm0, %ymm1
 # CHECK-NEXT: 1.     3     9.0    0.0    0.0       vaddps	%ymm1, %ymm1, %ymm0
+# CHECK-NEXT:        3     8.0    0.2    0.0       <total>

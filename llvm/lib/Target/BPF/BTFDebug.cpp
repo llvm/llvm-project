@@ -752,9 +752,10 @@ void BTFDebug::emitBTFSection() {
 }
 
 void BTFDebug::emitBTFExtSection() {
-  // Do not emit section if empty FuncInfoTable and LineInfoTable.
+  // Do not emit section if empty FuncInfoTable and LineInfoTable
+  // and FieldRelocTable.
   if (!FuncInfoTable.size() && !LineInfoTable.size() &&
-      !FieldRelocTable.size() && !ExternRelocTable.size())
+      !FieldRelocTable.size())
     return;
 
   MCContext &Ctx = OS.getContext();
@@ -766,8 +767,8 @@ void BTFDebug::emitBTFExtSection() {
 
   // Account for FuncInfo/LineInfo record size as well.
   uint32_t FuncLen = 4, LineLen = 4;
-  // Do not account for optional FieldReloc/ExternReloc.
-  uint32_t FieldRelocLen = 0, ExternRelocLen = 0;
+  // Do not account for optional FieldReloc.
+  uint32_t FieldRelocLen = 0;
   for (const auto &FuncSec : FuncInfoTable) {
     FuncLen += BTF::SecFuncInfoSize;
     FuncLen += FuncSec.second.size() * BTF::BPFFuncInfoSize;
@@ -780,15 +781,9 @@ void BTFDebug::emitBTFExtSection() {
     FieldRelocLen += BTF::SecFieldRelocSize;
     FieldRelocLen += FieldRelocSec.second.size() * BTF::BPFFieldRelocSize;
   }
-  for (const auto &ExternRelocSec : ExternRelocTable) {
-    ExternRelocLen += BTF::SecExternRelocSize;
-    ExternRelocLen += ExternRelocSec.second.size() * BTF::BPFExternRelocSize;
-  }
 
   if (FieldRelocLen)
     FieldRelocLen += 4;
-  if (ExternRelocLen)
-    ExternRelocLen += 4;
 
   OS.EmitIntValue(0, 4);
   OS.EmitIntValue(FuncLen, 4);
@@ -796,8 +791,6 @@ void BTFDebug::emitBTFExtSection() {
   OS.EmitIntValue(LineLen, 4);
   OS.EmitIntValue(FuncLen + LineLen, 4);
   OS.EmitIntValue(FieldRelocLen, 4);
-  OS.EmitIntValue(FuncLen + LineLen + FieldRelocLen, 4);
-  OS.EmitIntValue(ExternRelocLen, 4);
 
   // Emit func_info table.
   OS.AddComment("FuncInfo");
@@ -845,22 +838,6 @@ void BTFDebug::emitBTFExtSection() {
         OS.EmitIntValue(FieldRelocInfo.TypeID, 4);
         OS.EmitIntValue(FieldRelocInfo.OffsetNameOff, 4);
         OS.EmitIntValue(FieldRelocInfo.RelocKind, 4);
-      }
-    }
-  }
-
-  // Emit extern reloc table.
-  if (ExternRelocLen) {
-    OS.AddComment("ExternReloc");
-    OS.EmitIntValue(BTF::BPFExternRelocSize, 4);
-    for (const auto &ExternRelocSec : ExternRelocTable) {
-      OS.AddComment("Extern reloc section string offset=" +
-                    std::to_string(ExternRelocSec.first));
-      OS.EmitIntValue(ExternRelocSec.first, 4);
-      OS.EmitIntValue(ExternRelocSec.second.size(), 4);
-      for (const auto &ExternRelocInfo : ExternRelocSec.second) {
-        Asm->EmitLabelReference(ExternRelocInfo.Label, 4);
-        OS.EmitIntValue(ExternRelocInfo.ExternNameOff, 4);
       }
     }
   }
@@ -1019,15 +996,6 @@ void BTFDebug::processLDimm64(const MachineInstr *MI) {
       MDNode *MDN = GVar->getMetadata(LLVMContext::MD_preserve_access_index);
       DIType *Ty = dyn_cast<DIType>(MDN);
       generateFieldReloc(MI, ORSym, Ty, GVar->getName());
-    } else if (GVar && !GVar->hasInitializer() && GVar->hasExternalLinkage() &&
-               GVar->getSection() == BPFCoreSharedInfo::PatchableExtSecName) {
-      MCSymbol *ORSym = OS.getContext().createTempSymbol();
-      OS.EmitLabel(ORSym);
-
-      BTFExternReloc ExternReloc;
-      ExternReloc.Label = ORSym;
-      ExternReloc.ExternNameOff = addString(GVar->getName());
-      ExternRelocTable[SecNameOff].push_back(ExternReloc);
     }
   }
 }
@@ -1164,20 +1132,6 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
         OutMI.setOpcode(BPF::MOV_ri);
         OutMI.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
         OutMI.addOperand(MCOperand::createImm(Imm));
-        return true;
-      } else if (GVar && !GVar->hasInitializer() &&
-                 GVar->hasExternalLinkage() &&
-                 GVar->getSection() == BPFCoreSharedInfo::PatchableExtSecName) {
-        const IntegerType *IntTy = dyn_cast<IntegerType>(GVar->getValueType());
-        assert(IntTy);
-        // For patchable externals, emit "LD_imm64, ri, 0" if the external
-        // variable is 64bit width, emit "mov ri, 0" otherwise.
-        if (IntTy->getBitWidth() == 64)
-          OutMI.setOpcode(BPF::LD_imm64);
-        else
-          OutMI.setOpcode(BPF::MOV_ri);
-        OutMI.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
-        OutMI.addOperand(MCOperand::createImm(0));
         return true;
       }
     }

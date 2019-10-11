@@ -80,3 +80,4 @@ vpinsrb $1, %eax, %xmm0, %xmm0
 # CHECK-NEXT: 0.     3     1.0    1.0    3.3       addl	%eax, %eax
 # CHECK-NEXT: 1.     3     7.0    0.0    0.0       vpinsrb	$0, %eax, %xmm0, %xmm0
 # CHECK-NEXT: 2.     3     7.0    0.0    0.0       vpinsrb	$1, %eax, %xmm0, %xmm0
+# CHECK-NEXT:        3     5.0    0.3    1.1       <total>

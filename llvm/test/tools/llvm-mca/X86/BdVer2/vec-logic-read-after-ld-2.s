@@ -41,3 +41,4 @@ vandps (%rdi), %ymm1, %ymm2
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       vaddps	%ymm0, %ymm0, %ymm1
 # CHECK-NEXT: 1.     1     1.0    0.0    0.0       vandps	(%rdi), %ymm1, %ymm2
+# CHECK-NEXT:        1     1.0    0.5    0.0       <total>

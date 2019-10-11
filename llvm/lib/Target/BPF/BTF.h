@@ -39,13 +39,6 @@
 ///   struct SecFieldReloc for ELF section #2
 ///   A number of struct BPFFieldReloc for ELF section #2
 ///   ...
-/// The ExternReloc subsection is defined as below:
-///   BPFExternReloc Size
-///   struct SecExternReloc for ELF section #1
-///   A number of struct BPFExternReloc for ELF section #1
-///   struct SecExternReloc for ELF section #2
-///   A number of struct BPFExternReloc for ELF section #2
-///   ...
 ///
 /// The section formats are also defined at
 ///    https://github.com/torvalds/linux/blob/master/include/uapi/linux/btf.h
@@ -63,7 +56,7 @@ enum : uint32_t { MAGIC = 0xeB9F, VERSION = 1 };
 /// Sizes in bytes of various things in the BTF format.
 enum {
   HeaderSize = 24,
-  ExtHeaderSize = 40,
+  ExtHeaderSize = 32,
   CommonTypeSize = 12,
   BTFArraySize = 12,
   BTFEnumSize = 8,
@@ -73,11 +66,9 @@ enum {
   SecFuncInfoSize = 8,
   SecLineInfoSize = 8,
   SecFieldRelocSize = 8,
-  SecExternRelocSize = 8,
   BPFFuncInfoSize = 8,
   BPFLineInfoSize = 16,
   BPFFieldRelocSize = 16,
-  BPFExternRelocSize = 8,
 };
 
 /// The .BTF section header definition.
@@ -215,8 +206,6 @@ struct ExtHeader {
   uint32_t LineInfoLen;    ///< Length of line info section
   uint32_t FieldRelocOff; ///< Offset of offset reloc section
   uint32_t FieldRelocLen; ///< Length of offset reloc section
-  uint32_t ExternRelocOff; ///< Offset of extern reloc section
-  uint32_t ExternRelocLen; ///< Length of extern reloc section
 };
 
 /// Specifying one function info.
@@ -258,18 +247,6 @@ struct BPFFieldReloc {
 struct SecFieldReloc {
   uint32_t SecNameOff;     ///< Section name index in the .BTF string table
   uint32_t NumFieldReloc; ///< Number of offset reloc's in this section
-};
-
-/// Specifying one offset relocation.
-struct BPFExternReloc {
-  uint32_t InsnOffset;    ///< Byte offset in this section
-  uint32_t ExternNameOff; ///< The string for external variable
-};
-
-/// Specifying extern relocation's in one section.
-struct SecExternReloc {
-  uint32_t SecNameOff;     ///< Section name index in the .BTF string table
-  uint32_t NumExternReloc; ///< Number of extern reloc's in this section
 };
 
 } // End namespace BTF.

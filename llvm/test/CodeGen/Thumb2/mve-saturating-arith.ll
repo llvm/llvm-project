@@ -4,21 +4,7 @@
 define arm_aapcs_vfpcc <16 x i8> @sadd_int8_t(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECK-LABEL: sadd_int8_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    vadd.i8 q2, q0, q1
-; CHECK-NEXT:    vmov.i8 q3, #0x80
-; CHECK-NEXT:    vcmp.s8 lt, q2, zr
-; CHECK-NEXT:    vmov.i8 q4, #0x7f
-; CHECK-NEXT:    vpsel q3, q4, q3
-; CHECK-NEXT:    vcmp.s8 gt, q0, q2
-; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vcmp.s8 lt, q1, zr
-; CHECK-NEXT:    vmrs r1, p0
-; CHECK-NEXT:    eors r0, r1
-; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vpsel q0, q3, q2
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vqadd.s8 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> %src1, <16 x i8> %src2)
@@ -28,21 +14,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @sadd_int16_t(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-LABEL: sadd_int16_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    vadd.i16 q2, q0, q1
-; CHECK-NEXT:    vmov.i16 q3, #0x8000
-; CHECK-NEXT:    vcmp.s16 lt, q2, zr
-; CHECK-NEXT:    vmvn.i16 q4, #0x8000
-; CHECK-NEXT:    vpsel q3, q4, q3
-; CHECK-NEXT:    vcmp.s16 gt, q0, q2
-; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vcmp.s16 lt, q1, zr
-; CHECK-NEXT:    vmrs r1, p0
-; CHECK-NEXT:    eors r0, r1
-; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vpsel q0, q3, q2
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vqadd.s16 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> %src1, <8 x i16> %src2)
@@ -52,21 +24,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @sadd_int32_t(<4 x i32> %src1, <4 x i32> %src2) {
 ; CHECK-LABEL: sadd_int32_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    vadd.i32 q2, q0, q1
-; CHECK-NEXT:    vmov.i32 q3, #0x80000000
-; CHECK-NEXT:    vcmp.s32 lt, q2, zr
-; CHECK-NEXT:    vmvn.i32 q4, #0x80000000
-; CHECK-NEXT:    vpsel q3, q4, q3
-; CHECK-NEXT:    vcmp.s32 gt, q0, q2
-; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vcmp.s32 lt, q1, zr
-; CHECK-NEXT:    vmrs r1, p0
-; CHECK-NEXT:    eors r0, r1
-; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vpsel q0, q3, q2
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vqadd.s32 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %src1, <4 x i32> %src2)
@@ -156,9 +114,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @uadd_int8_t(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECK-LABEL: uadd_int8_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmvn q2, q1
-; CHECK-NEXT:    vmin.u8 q0, q0, q2
-; CHECK-NEXT:    vadd.i8 q0, q0, q1
+; CHECK-NEXT:    vqadd.u8 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = call <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8> %src1, <16 x i8> %src2)
@@ -168,9 +124,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @uadd_int16_t(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-LABEL: uadd_int16_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmvn q2, q1
-; CHECK-NEXT:    vmin.u16 q0, q0, q2
-; CHECK-NEXT:    vadd.i16 q0, q0, q1
+; CHECK-NEXT:    vqadd.u16 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> %src1, <8 x i16> %src2)
@@ -180,9 +134,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @uadd_int32_t(<4 x i32> %src1, <4 x i32> %src2) {
 ; CHECK-LABEL: uadd_int32_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmvn q2, q1
-; CHECK-NEXT:    vmin.u32 q0, q0, q2
-; CHECK-NEXT:    vadd.i32 q0, q0, q1
+; CHECK-NEXT:    vqadd.u32 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = call <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32> %src1, <4 x i32> %src2)
@@ -239,21 +191,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @ssub_int8_t(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECK-LABEL: ssub_int8_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    vsub.i8 q2, q0, q1
-; CHECK-NEXT:    vmov.i8 q3, #0x80
-; CHECK-NEXT:    vcmp.s8 lt, q2, zr
-; CHECK-NEXT:    vmov.i8 q4, #0x7f
-; CHECK-NEXT:    vpsel q3, q4, q3
-; CHECK-NEXT:    vcmp.s8 gt, q0, q2
-; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vcmp.s8 gt, q1, zr
-; CHECK-NEXT:    vmrs r1, p0
-; CHECK-NEXT:    eors r0, r1
-; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vpsel q0, q3, q2
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vqsub.s8 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = call <16 x i8> @llvm.ssub.sat.v16i8(<16 x i8> %src1, <16 x i8> %src2)
@@ -263,21 +201,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @ssub_int16_t(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-LABEL: ssub_int16_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    vsub.i16 q2, q0, q1
-; CHECK-NEXT:    vmov.i16 q3, #0x8000
-; CHECK-NEXT:    vcmp.s16 lt, q2, zr
-; CHECK-NEXT:    vmvn.i16 q4, #0x8000
-; CHECK-NEXT:    vpsel q3, q4, q3
-; CHECK-NEXT:    vcmp.s16 gt, q0, q2
-; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vcmp.s16 gt, q1, zr
-; CHECK-NEXT:    vmrs r1, p0
-; CHECK-NEXT:    eors r0, r1
-; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vpsel q0, q3, q2
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vqsub.s16 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = call <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16> %src1, <8 x i16> %src2)
@@ -287,21 +211,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @ssub_int32_t(<4 x i32> %src1, <4 x i32> %src2) {
 ; CHECK-LABEL: ssub_int32_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    vsub.i32 q2, q0, q1
-; CHECK-NEXT:    vmov.i32 q3, #0x80000000
-; CHECK-NEXT:    vcmp.s32 lt, q2, zr
-; CHECK-NEXT:    vmvn.i32 q4, #0x80000000
-; CHECK-NEXT:    vpsel q3, q4, q3
-; CHECK-NEXT:    vcmp.s32 gt, q0, q2
-; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vcmp.s32 gt, q1, zr
-; CHECK-NEXT:    vmrs r1, p0
-; CHECK-NEXT:    eors r0, r1
-; CHECK-NEXT:    vmsr p0, r0
-; CHECK-NEXT:    vpsel q0, q3, q2
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vqsub.s32 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> %src1, <4 x i32> %src2)
@@ -406,8 +316,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @usub_int8_t(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECK-LABEL: usub_int8_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmax.u8 q0, q0, q1
-; CHECK-NEXT:    vsub.i8 q0, q0, q1
+; CHECK-NEXT:    vqsub.u8 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = call <16 x i8> @llvm.usub.sat.v16i8(<16 x i8> %src1, <16 x i8> %src2)
@@ -417,8 +326,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @usub_int16_t(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-LABEL: usub_int16_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmax.u16 q0, q0, q1
-; CHECK-NEXT:    vsub.i16 q0, q0, q1
+; CHECK-NEXT:    vqsub.u16 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = call <8 x i16> @llvm.usub.sat.v8i16(<8 x i16> %src1, <8 x i16> %src2)
@@ -428,8 +336,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @usub_int32_t(<4 x i32> %src1, <4 x i32> %src2) {
 ; CHECK-LABEL: usub_int32_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmax.u32 q0, q0, q1
-; CHECK-NEXT:    vsub.i32 q0, q0, q1
+; CHECK-NEXT:    vqsub.u32 q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = call <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> %src1, <4 x i32> %src2)

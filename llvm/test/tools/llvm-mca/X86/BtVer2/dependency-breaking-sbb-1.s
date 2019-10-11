@@ -76,3 +76,4 @@ sbb %eax, %eax
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     3     2.0    0.3    0.0       sbbl	%edx, %edx
 # CHECK-NEXT: 1.     3     3.0    0.0    0.0       sbbl	%eax, %eax
+# CHECK-NEXT:        3     2.5    0.2    0.0       <total>

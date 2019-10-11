@@ -87,7 +87,7 @@
 #
 # RUN: not %{lit} --num-shards 0 --run-shard 2 %{inputs}/discovery >%t.out 2>%t.err
 # RUN: FileCheck --check-prefix=CHECK-SHARD-ERR < %t.err %s
-# CHECK-SHARD-ERR: error: --num-shards must be positive
+# CHECK-SHARD-ERR: error: argument --num-shards: requires positive integer, but found '0'
 #
 # RUN: not %{lit} --num-shards 3 --run-shard 4 %{inputs}/discovery >%t.out 2>%t.err
 # RUN: FileCheck --check-prefix=CHECK-SHARD-ERR2 < %t.err %s

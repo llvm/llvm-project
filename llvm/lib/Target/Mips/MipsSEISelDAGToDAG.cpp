@@ -129,9 +129,9 @@ void MipsSEDAGToDAGISel::emitMCountABI(MachineInstr &MI, MachineBasicBlock &MBB,
   MachineInstrBuilder MIB(MF, &MI);
   if (!Subtarget->isABI_O32()) { // N32, N64
     // Save current return address.
-    BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(Mips::OR))
+    BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(Mips::OR64))
         .addDef(Mips::AT_64)
-        .addUse(Mips::RA_64)
+        .addUse(Mips::RA_64, RegState::Undef)
         .addUse(Mips::ZERO_64);
     // Stops instruction above from being removed later on.
     MIB.addUse(Mips::AT_64, RegState::Implicit);
@@ -139,7 +139,7 @@ void MipsSEDAGToDAGISel::emitMCountABI(MachineInstr &MI, MachineBasicBlock &MBB,
     // Save current return address.
     BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(Mips::OR))
         .addDef(Mips::AT)
-        .addUse(Mips::RA)
+        .addUse(Mips::RA, RegState::Undef)
         .addUse(Mips::ZERO);
     // _mcount pops 2 words from stack.
     BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(Mips::ADDiu))

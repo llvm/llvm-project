@@ -99,6 +99,7 @@ imul %ecx, %ecx
 # CHECK-NEXT: 2.     2     6.5    0.0    7.0       addl	%ecx, %ecx
 # CHECK-NEXT: 3.     2     6.5    0.0    4.0       imull	%ecx, %ecx
 # CHECK-NEXT: 4.     2     9.5    0.0    2.0       imull	%ecx, %ecx
+# CHECK-NEXT:        2     6.5    0.1    4.0       <total>
 
 # CHECK:      [1] Code Region
 
@@ -182,3 +183,4 @@ imul %ecx, %ecx
 # CHECK-NEXT: 2.     2     17.0   0.0    4.0       addl	%ecx, %ecx
 # CHECK-NEXT: 3.     2     17.0   0.0    1.0       imull	%ecx, %ecx
 # CHECK-NEXT: 4.     2     20.0   0.0    0.0       imull	%ecx, %ecx
+# CHECK-NEXT:        2     15.4   0.1    1.8       <total>

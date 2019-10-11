@@ -57,7 +57,7 @@ namespace {
 /// This class is also used to look up statistic values from applications that
 /// use LLVM.
 class StatisticInfo {
-  std::vector<Statistic*> Stats;
+  std::vector<TrackingStatistic *> Stats;
 
   friend void llvm::PrintStatistics();
   friend void llvm::PrintStatistics(raw_ostream &OS);
@@ -66,14 +66,12 @@ class StatisticInfo {
   /// Sort statistics by debugtype,name,description.
   void sort();
 public:
-  using const_iterator = std::vector<Statistic *>::const_iterator;
+  using const_iterator = std::vector<TrackingStatistic *>::const_iterator;
 
   StatisticInfo();
   ~StatisticInfo();
 
-  void addStatistic(Statistic *S) {
-    Stats.push_back(S);
-  }
+  void addStatistic(TrackingStatistic *S) { Stats.push_back(S); }
 
   const_iterator begin() const { return Stats.begin(); }
   const_iterator end() const { return Stats.end(); }
@@ -90,7 +88,7 @@ static ManagedStatic<sys::SmartMutex<true> > StatLock;
 
 /// RegisterStatistic - The first time a statistic is bumped, this method is
 /// called.
-void Statistic::RegisterStatistic() {
+void TrackingStatistic::RegisterStatistic() {
   // If stats are enabled, inform StatInfo that this statistic should be
   // printed.
   // llvm_shutdown calls destructors while holding the ManagedStatic mutex.
@@ -135,15 +133,16 @@ bool llvm::AreStatisticsEnabled() {
 }
 
 void StatisticInfo::sort() {
-  llvm::stable_sort(Stats, [](const Statistic *LHS, const Statistic *RHS) {
-    if (int Cmp = std::strcmp(LHS->getDebugType(), RHS->getDebugType()))
-      return Cmp < 0;
+  llvm::stable_sort(
+      Stats, [](const TrackingStatistic *LHS, const TrackingStatistic *RHS) {
+        if (int Cmp = std::strcmp(LHS->getDebugType(), RHS->getDebugType()))
+          return Cmp < 0;
 
-    if (int Cmp = std::strcmp(LHS->getName(), RHS->getName()))
-      return Cmp < 0;
+        if (int Cmp = std::strcmp(LHS->getName(), RHS->getName()))
+          return Cmp < 0;
 
-    return std::strcmp(LHS->getDesc(), RHS->getDesc()) < 0;
-  });
+        return std::strcmp(LHS->getDesc(), RHS->getDesc()) < 0;
+      });
 }
 
 void StatisticInfo::reset() {
@@ -207,7 +206,7 @@ void llvm::PrintStatisticsJSON(raw_ostream &OS) {
   // Print all of the statistics.
   OS << "{\n";
   const char *delim = "";
-  for (const Statistic *Stat : Stats.Stats) {
+  for (const TrackingStatistic *Stat : Stats.Stats) {
     OS << delim;
     assert(yaml::needsQuotes(Stat->getDebugType()) == yaml::QuotingType::None &&
            "Statistic group/type name is simple.");

@@ -150,3 +150,4 @@
 # CHECK-NEXT: 30.    1     30.0   25.0   0.0       vaddps	%ymm3, %ymm0, %ymm4
 # CHECK-NEXT: 31.    1     31.0   27.0   0.0       vaddps	%ymm3, %ymm0, %ymm5
 # CHECK-NEXT: 32.    1     24.0   24.0   0.0       vaddps	%ymm3, %ymm0, %ymm6
+# CHECK-NEXT:        1     15.8   14.0   12.4      <total>

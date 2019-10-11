@@ -61,3 +61,4 @@ bsf   %rax, %rcx
 # CHECK-NEXT: 1.     2     5.5    1.5    0.0       lzcntl	%ecx, %eax
 # CHECK-NEXT: 2.     2     8.5    0.0    0.0       andq	%rcx, %rax
 # CHECK-NEXT: 3.     2     9.5    0.0    0.0       bsfq	%rax, %rcx
+# CHECK-NEXT:        2     7.0    0.5    0.0       <total>

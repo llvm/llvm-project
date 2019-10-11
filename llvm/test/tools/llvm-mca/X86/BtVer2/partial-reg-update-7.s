@@ -102,3 +102,4 @@ cmpl $1025, %eax
 # CHECK-NEXT: 2.     5     6.2    0.0    0.8       shll	$2, %eax
 # CHECK-NEXT: 3.     5     6.8    0.0    0.0       imull	%ecx, %eax
 # CHECK-NEXT: 4.     5     9.2    0.0    0.0       cmpl	$1025, %eax
+# CHECK-NEXT:        5     7.0    0.1    0.3       <total>

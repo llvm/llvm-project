@@ -87,3 +87,4 @@ imul %ecx, %ecx
 # CHECK-NEXT: 2.     2     17.0   0.0    4.0       addl	%ecx, %ecx
 # CHECK-NEXT: 3.     2     18.0   0.0    1.0       imull	%ecx, %ecx
 # CHECK-NEXT: 4.     2     20.0   0.0    0.0       imull	%ecx, %ecx
+# CHECK-NEXT:        2     15.8   0.1    1.8       <total>

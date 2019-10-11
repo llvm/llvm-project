@@ -121,15 +121,13 @@ define dso_local i32 @bpf_prog(%struct.sk_buff*) local_unnamed_addr #0 !dbg !15 
 ; CHECK-NEXT:        .short  60319                   # 0xeb9f
 ; CHECK-NEXT:        .byte   1
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .long   40
+; CHECK-NEXT:        .long   32
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   20
 ; CHECK-NEXT:        .long   20
 ; CHECK-NEXT:        .long   76
 ; CHECK-NEXT:        .long   96
 ; CHECK-NEXT:        .long   28
-; CHECK-NEXT:        .long   124
-; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   8                       # FuncInfo
 
 ; CHECK:             .long   16                      # FieldReloc

@@ -1023,7 +1023,6 @@ define i1 @smul_and_cmp(i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:    [[MUL:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0
 ; CHECK-NEXT:    br label [[CONT3:%.*]]
 ; CHECK:       cont3:
-; CHECK-NEXT:    [[CMP5:%.*]] = and i1 true, true
 ; CHECK-NEXT:    br label [[OUT]]
 ; CHECK:       out:
 ; CHECK-NEXT:    ret i1 true

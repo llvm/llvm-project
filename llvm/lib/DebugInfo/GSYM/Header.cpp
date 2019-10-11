@@ -38,14 +38,14 @@ raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const Header &H) {
 }
 
 /// Check the header and detect any errors.
-static llvm::Error getHeaderError(const Header &H) {
-  if (H.Magic != GSYM_MAGIC)
+llvm::Error Header::checkForError() const {
+  if (Magic != GSYM_MAGIC)
     return createStringError(std::errc::invalid_argument,
-                             "invalid GSYM magic 0x%8.8x", H.Magic);
-  if (H.Version != GSYM_VERSION)
+                             "invalid GSYM magic 0x%8.8x", Magic);
+  if (Version != GSYM_VERSION)
     return createStringError(std::errc::invalid_argument,
-                             "unsupported GSYM version %u", H.Version);
-  switch (H.AddrOffSize) {
+                             "unsupported GSYM version %u", Version);
+  switch (AddrOffSize) {
     case 1: break;
     case 2: break;
     case 4: break;
@@ -53,11 +53,11 @@ static llvm::Error getHeaderError(const Header &H) {
     default:
         return createStringError(std::errc::invalid_argument,
                                  "invalid address offset size %u",
-                                 H.AddrOffSize);
+                                 AddrOffSize);
   }
-  if (H.UUIDSize > GSYM_MAX_UUID_SIZE)
+  if (UUIDSize > GSYM_MAX_UUID_SIZE)
     return createStringError(std::errc::invalid_argument,
-                             "invalid UUID size %u", H.UUIDSize);
+                             "invalid UUID size %u", UUIDSize);
   return Error::success();
 }
 
@@ -77,16 +77,14 @@ llvm::Expected<Header> Header::decode(DataExtractor &Data) {
   H.StrtabOffset = Data.getU32(&Offset);
   H.StrtabSize = Data.getU32(&Offset);
   Data.getU8(&Offset, H.UUID, GSYM_MAX_UUID_SIZE);
-  llvm::Error Err = getHeaderError(H);
-  if (Err)
+  if (llvm::Error Err = H.checkForError())
     return std::move(Err);
   return H;
 }
 
 llvm::Error Header::encode(FileWriter &O) const {
   // Users must verify the Header is valid prior to calling this funtion.
-  llvm::Error Err = getHeaderError(*this);
-  if (Err)
+  if (llvm::Error Err = checkForError())
     return Err;
   O.writeU32(Magic);
   O.writeU16(Version);

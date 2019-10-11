@@ -93,8 +93,6 @@
 
 namespace llvm {
 const std::string BPFCoreSharedInfo::AmaAttr = "btf_ama";
-const std::string BPFCoreSharedInfo::PatchableExtSecName =
-    ".BPF.patchable_externs";
 } // namespace llvm
 
 using namespace llvm;

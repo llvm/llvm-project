@@ -42,3 +42,4 @@ vhaddps (%rdi), %ymm1, %ymm2
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       vshufps	$0, %xmm0, %xmm1, %xmm1
 # CHECK-NEXT: 1.     1     1.0    1.0    0.0       vhaddps	(%rdi), %ymm1, %ymm2
+# CHECK-NEXT:        1     1.0    1.0    0.0       <total>

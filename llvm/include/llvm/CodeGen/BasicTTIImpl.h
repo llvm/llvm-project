@@ -523,8 +523,13 @@ public:
 
   virtual Optional<unsigned>
   getCacheAssociativity(TargetTransformInfo::CacheLevel Level) const {
-    return Optional<unsigned>(
-      getST()->getCacheAssociativity(static_cast<unsigned>(Level)));
+    Optional<unsigned> TargetResult =
+        getST()->getCacheAssociativity(static_cast<unsigned>(Level));
+
+    if (TargetResult)
+      return TargetResult;
+
+    return BaseT::getCacheAssociativity(Level);
   }
 
   virtual unsigned getCacheLineSize() const {

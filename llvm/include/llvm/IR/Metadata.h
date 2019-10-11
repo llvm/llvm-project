@@ -601,7 +601,7 @@ dyn_extract_or_null(Y &&MD) {
 /// These are used to efficiently contain a byte sequence for metadata.
 /// MDString is always unnamed.
 class MDString : public Metadata {
-  friend class StringMapEntry<MDString>;
+  friend class StringMapEntryStorage<MDString>;
 
   StringMapEntry<MDString> *Entry = nullptr;
 

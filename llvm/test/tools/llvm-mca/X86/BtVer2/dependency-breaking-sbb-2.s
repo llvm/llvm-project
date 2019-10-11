@@ -84,3 +84,4 @@ sbb %eax, %eax
 # CHECK-NEXT: 0.     3     2.3    1.0    0.0       imull	%edx, %eax
 # CHECK-NEXT: 1.     3     1.3    1.0    2.7       addl	%edx, %edx
 # CHECK-NEXT: 2.     3     1.7    0.0    2.7       sbbl	%eax, %eax
+# CHECK-NEXT:        3     1.8    0.7    1.8       <total>

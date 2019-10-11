@@ -178,7 +178,9 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     if (OldIdx != -1) {
       assert(OldIdx == NumOperands);
       assert(isOfRegClass(CombOldVGPR, AMDGPU::VGPR_32RegClass, *MRI));
-      DPPInst.addReg(CombOldVGPR.Reg, 0, CombOldVGPR.SubReg);
+      auto *Def = getVRegSubRegDef(CombOldVGPR, *MRI);
+      DPPInst.addReg(CombOldVGPR.Reg, Def ? 0 : RegState::Undef,
+                     CombOldVGPR.SubReg);
       ++NumOperands;
     } else {
       // TODO: this discards MAC/FMA instructions for now, let's add it later

@@ -45,3 +45,4 @@ add  %ecx, %ebx
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       imulw	%ax, %cx
 # CHECK-NEXT: 1.     1     4.0    0.0    0.0       addb	%al, %cl
 # CHECK-NEXT: 2.     1     5.0    0.0    0.0       addl	%ecx, %ebx
+# CHECK-NEXT:        1     3.3    0.3    0.0       <total>

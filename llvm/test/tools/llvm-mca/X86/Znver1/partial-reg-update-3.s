@@ -88,3 +88,4 @@ xor %bx, %dx
 # CHECK-NEXT: 0.     6     7.0    0.2    0.0       addw	%cx, %dx
 # CHECK-NEXT: 1.     6     7.7    0.0    0.0       movw	%ax, %dx
 # CHECK-NEXT: 2.     6     8.5    0.0    0.0       xorw	%bx, %dx
+# CHECK-NEXT:        6     7.7    0.1    0.0       <total>

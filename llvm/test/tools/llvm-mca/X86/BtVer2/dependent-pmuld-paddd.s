@@ -99,3 +99,4 @@ vpaddd %xmm0, %xmm0, %xmm3
 # CHECK-NEXT: 0.     10    8.0    0.1    0.0       vpmuldq	%xmm0, %xmm0, %xmm1
 # CHECK-NEXT: 1.     10    9.5    0.0    0.0       vpaddd	%xmm1, %xmm1, %xmm0
 # CHECK-NEXT: 2.     10    10.0   0.0    0.0       vpaddd	%xmm0, %xmm0, %xmm3
+# CHECK-NEXT:        10    9.2    0.0    0.0       <total>
