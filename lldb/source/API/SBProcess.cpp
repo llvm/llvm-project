@@ -1180,6 +1180,9 @@ bool SBProcess::IsInstrumentationRuntimePresent(
   if (!process_sp)
     return false;
 
+  std::lock_guard<std::recursive_mutex> guard(
+      process_sp->GetTarget().GetAPIMutex());
+
   InstrumentationRuntimeSP runtime_sp =
       process_sp->GetInstrumentationRuntime(type);
 
