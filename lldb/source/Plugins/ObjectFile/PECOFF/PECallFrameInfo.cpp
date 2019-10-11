@@ -425,6 +425,7 @@ int32_t EHProgramRange::GetCFAFrameOffset() const {
     case EHInstruction::Type::PUSH_REGISTER:
     case EHInstruction::Type::ALLOCATE:
       result += it->frame_offset;
+      break;
     default:
       break;
     }
