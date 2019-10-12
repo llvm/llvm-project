@@ -3,6 +3,8 @@ import os.path
 import threading
 import socket
 import lldb
+import binascii
+import traceback
 from lldbsuite.support import seven
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbtest_config
@@ -160,8 +162,36 @@ class MockGDBServerResponder:
             return self.QListThreadsInStopReply()
         if packet.startswith("qMemoryRegionInfo:"):
             return self.qMemoryRegionInfo()
+        if packet == "qQueryGDBServer":
+            return self.qQueryGDBServer()
+        if packet == "qHostInfo":
+            return self.qHostInfo()
+        if packet == "qGetWorkingDir":
+            return self.qGetWorkingDir()
+        if packet == "qsProcessInfo":
+            return self.qsProcessInfo()
+        if packet.startswith("qfProcessInfo"):
+            return self.qfProcessInfo(packet)
 
         return self.other(packet)
+
+    def qsProcessInfo(self):
+        return "E04"
+
+    def qfProcessInfo(self, packet):
+        if "all_users:1" in packet:
+            return "pid:10;ppid:1;uid:1;gid:1;euid:1;egid:1;name:" + binascii.hexlify("/a/test_process") + ";"
+        else:
+            return "E04"
+
+    def qGetWorkingDir(self):
+        return "2f"
+
+    def qHostInfo(self):
+        return "ptrsize:8;endian:little;"
+
+    def qQueryGDBServer(self):
+        return "E04"
 
     def interrupt(self):
         raise self.UnexpectedPacketException()
@@ -171,7 +201,7 @@ class MockGDBServerResponder:
 
     def vCont(self, packet):
         raise self.UnexpectedPacketException()
-    
+
     def readRegisters(self):
         return "00000000" * self.registerCount
 
@@ -315,6 +345,8 @@ class MockGDBServer:
                     break
                 self._receive(data)
             except Exception as e:
+                print("An exception happened when receiving the response from the gdb server. Closing the client...")
+                traceback.print_exc()
                 self._client.close()
                 break
 
@@ -424,7 +456,6 @@ class MockGDBServer:
 
     class InvalidPacketException(Exception):
         pass
-
 
 class GDBRemoteTestBase(TestBase):
     """
