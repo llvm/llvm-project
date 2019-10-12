@@ -178,6 +178,8 @@ namespace DeprecatedVolatile {
     n /= 2; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
     n %= 42; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
 
+    (void)__is_trivially_assignable(volatile int&, int); // no warning
+
 #if __cplusplus >= 201703L
     struct X { int a, b; };
     volatile auto [x, y] = X{1, 2}; // cxx20-warning {{volatile qualifier in structured binding declaration is deprecated}}

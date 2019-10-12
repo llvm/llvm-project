@@ -65,3 +65,12 @@ int test6() {
 // CHECK: call void @llvm.assume(i1 [[MASKCOND6]])
 }
 
+// CHECK-LABEL: @pr43638
+int pr43638(int *a) {
+  a = __builtin_assume_aligned(a, 4294967296);
+return a[0];
+// CHECK: [[PTRINT7:%.+]] = ptrtoint
+// CHECK: [[MASKEDPTR7:%.+]] = and i64 [[PTRINT7]], 536870911
+// CHECK: [[MASKCOND7:%.+]] = icmp eq i64 [[MASKEDPTR7]], 0
+// CHECK: call void @llvm.assume(i1 [[MASKCOND7]])
+}

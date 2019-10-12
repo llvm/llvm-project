@@ -1503,8 +1503,7 @@ public:
                              bool isKindOf) const;
 
   QualType getObjCTypeParamType(const ObjCTypeParamDecl *Decl,
-                                ArrayRef<ObjCProtocolDecl *> protocols,
-                                QualType Canonical = QualType()) const;
+                                ArrayRef<ObjCProtocolDecl *> protocols) const;
 
   bool ObjCObjectAdoptsQTypeProtocols(QualType QT, ObjCInterfaceDecl *Decl);
 

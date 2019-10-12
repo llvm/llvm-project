@@ -27,6 +27,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Capacity.h"
@@ -45,6 +46,16 @@
 #include <utility>
 
 using namespace clang;
+
+#define DEBUG_TYPE "file-search"
+
+ALWAYS_ENABLED_STATISTIC(NumIncluded, "Number of attempted #includes.");
+ALWAYS_ENABLED_STATISTIC(
+    NumMultiIncludeFileOptzn,
+    "Number of #includes skipped due to the multi-include optimization.");
+ALWAYS_ENABLED_STATISTIC(NumFrameworkLookups, "Number of framework lookups.");
+ALWAYS_ENABLED_STATISTIC(NumSubFrameworkLookups,
+                         "Number of subframework lookups.");
 
 const IdentifierInfo *
 HeaderFileInfo::getControllingMacro(ExternalPreprocessorSource *External) {
@@ -76,8 +87,8 @@ HeaderSearch::HeaderSearch(std::shared_ptr<HeaderSearchOptions> HSOpts,
       ModMap(SourceMgr, Diags, LangOpts, Target, *this) {}
 
 void HeaderSearch::PrintStats() {
-  fprintf(stderr, "\n*** HeaderSearch Stats:\n");
-  fprintf(stderr, "%d files tracked.\n", (int)FileInfo.size());
+  llvm::errs() << "\n*** HeaderSearch Stats:\n"
+               << FileInfo.size() << " files tracked.\n";
   unsigned NumOnceOnlyFiles = 0, MaxNumIncludes = 0, NumSingleIncludedFiles = 0;
   for (unsigned i = 0, e = FileInfo.size(); i != e; ++i) {
     NumOnceOnlyFiles += FileInfo[i].isImport;
@@ -85,16 +96,16 @@ void HeaderSearch::PrintStats() {
       MaxNumIncludes = FileInfo[i].NumIncludes;
     NumSingleIncludedFiles += FileInfo[i].NumIncludes == 1;
   }
-  fprintf(stderr, "  %d #import/#pragma once files.\n", NumOnceOnlyFiles);
-  fprintf(stderr, "  %d included exactly once.\n", NumSingleIncludedFiles);
-  fprintf(stderr, "  %d max times a file is included.\n", MaxNumIncludes);
+  llvm::errs() << "  " << NumOnceOnlyFiles << " #import/#pragma once files.\n"
+               << "  " << NumSingleIncludedFiles << " included exactly once.\n"
+               << "  " << MaxNumIncludes << " max times a file is included.\n";
 
-  fprintf(stderr, "  %d #include/#include_next/#import.\n", NumIncluded);
-  fprintf(stderr, "    %d #includes skipped due to"
-          " the multi-include optimization.\n", NumMultiIncludeFileOptzn);
+  llvm::errs() << "  " << NumIncluded << " #include/#include_next/#import.\n"
+               << "    " << NumMultiIncludeFileOptzn
+               << " #includes skipped due to the multi-include optimization.\n";
 
-  fprintf(stderr, "%d framework lookups.\n", NumFrameworkLookups);
-  fprintf(stderr, "%d subframework lookups.\n", NumSubFrameworkLookups);
+  llvm::errs() << NumFrameworkLookups << " framework lookups.\n"
+               << NumSubFrameworkLookups << " subframework lookups.\n";
 }
 
 /// CreateHeaderMap - This method returns a HeaderMap for the specified
@@ -511,7 +522,7 @@ Optional<FileEntryRef> DirectoryLookup::DoFrameworkLookup(
 
   // If the cache entry was unresolved, populate it now.
   if (!CacheEntry.Directory) {
-    HS.IncrementFrameworkLookupCount();
+    ++NumFrameworkLookups;
 
     // If the framework dir doesn't exist, we fail.
     auto Dir = FileMgr.getDirectory(FrameworkName);

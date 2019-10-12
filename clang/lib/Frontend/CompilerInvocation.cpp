@@ -758,6 +758,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.CodeViewGHash = Args.hasArg(OPT_gcodeview_ghash);
   Opts.MacroDebugInfo = Args.hasArg(OPT_debug_info_macro);
   Opts.WholeProgramVTables = Args.hasArg(OPT_fwhole_program_vtables);
+  Opts.VirtualFunctionElimination =
+      Args.hasArg(OPT_fvirtual_function_elimination);
   Opts.LTOVisibilityPublicStd = Args.hasArg(OPT_flto_visibility_public_std);
   Opts.SplitDwarfFile = Args.getLastArgValue(OPT_split_dwarf_file);
   Opts.SplitDwarfOutput = Args.getLastArgValue(OPT_split_dwarf_output);
@@ -1744,10 +1746,10 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       Opts.ProgramAction = frontend::GenerateHeaderModule; break;
     case OPT_emit_pch:
       Opts.ProgramAction = frontend::GeneratePCH; break;
-    case OPT_emit_iterface_stubs: {
+    case OPT_emit_interface_stubs: {
       StringRef ArgStr =
-          Args.hasArg(OPT_iterface_stub_version_EQ)
-              ? Args.getLastArgValue(OPT_iterface_stub_version_EQ)
+          Args.hasArg(OPT_interface_stub_version_EQ)
+              ? Args.getLastArgValue(OPT_interface_stub_version_EQ)
               : "experimental-ifs-v1";
       if (ArgStr == "experimental-yaml-elf-v1" ||
           ArgStr == "experimental-tapi-elf-v1") {

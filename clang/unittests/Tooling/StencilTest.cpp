@@ -357,39 +357,6 @@ TEST_F(StencilTest, RunOp) {
   testExpr(Id, "3;", cat(run(SimpleFn)), "Bound");
 }
 
-TEST(StencilEqualityTest, Equality) {
-  auto Lhs = cat("foo", dPrint("dprint_id"));
-  auto Rhs = cat("foo", dPrint("dprint_id"));
-  EXPECT_EQ(Lhs, Rhs);
-}
-
-TEST(StencilEqualityTest, InEqualityDifferentOrdering) {
-  auto Lhs = cat("foo", dPrint("node"));
-  auto Rhs = cat(dPrint("node"), "foo");
-  EXPECT_NE(Lhs, Rhs);
-}
-
-TEST(StencilEqualityTest, InEqualityDifferentSizes) {
-  auto Lhs = cat("foo", dPrint("node"), "bar", "baz");
-  auto Rhs = cat("foo", dPrint("node"), "bar");
-  EXPECT_NE(Lhs, Rhs);
-}
-
-// node is opaque and therefore cannot be examined for equality.
-TEST(StencilEqualityTest, InEqualitySelection) {
-  auto S1 = cat(node("node"));
-  auto S2 = cat(node("node"));
-  EXPECT_NE(S1, S2);
-}
-
-// `run` is opaque.
-TEST(StencilEqualityTest, InEqualityRun) {
-  auto F = [](const MatchResult &R) { return "foo"; };
-  auto S1 = cat(run(F));
-  auto S2 = cat(run(F));
-  EXPECT_NE(S1, S2);
-}
-
 TEST(StencilToStringTest, RawTextOp) {
   auto S = cat("foo bar baz");
   StringRef Expected = R"("foo bar baz")";
@@ -426,6 +393,11 @@ TEST(StencilToStringTest, AddressOfOp) {
   EXPECT_EQ(S.toString(), Expected);
 }
 
+TEST(StencilToStringTest, SelectionOp) {
+  auto S1 = cat(node("node1"));
+  EXPECT_EQ(S1.toString(), "selection(...)");
+}
+
 TEST(StencilToStringTest, AccessOp) {
   auto S = cat(access("Id", text("memberData")));
   StringRef Expected = R"repr(access("Id", "memberData"))repr";
@@ -443,6 +415,12 @@ TEST(StencilToStringTest, IfBoundOp) {
   StringRef Expected =
       R"repr(ifBound("Id", "trueText", access("exprId", "memberData")))repr";
   EXPECT_EQ(S.toString(), Expected);
+}
+
+TEST(StencilToStringTest, RunOp) {
+  auto F1 = [](const MatchResult &R) { return "foo"; };
+  auto S1 = cat(run(F1));
+  EXPECT_EQ(S1.toString(), "run(...)");
 }
 
 TEST(StencilToStringTest, MultipleOp) {

@@ -846,7 +846,7 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
               TemplateArgStringStorage.save(TemplateMangling.str());
         }
       } else {
-        Out << Found->second; // Outputs a StringRef.
+        Out << Found->second << '@'; // Outputs a StringRef.
       }
     } else {
       Out << Found->second; // Outputs a back reference (an int).
