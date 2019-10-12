@@ -4374,13 +4374,10 @@ static CompilerType ValueDeclToType(swift::ValueDecl *decl,
     case swift::DeclKind::TypeAlias: {
       swift::TypeAliasDecl *alias_decl =
           swift::cast<swift::TypeAliasDecl>(decl);
-      if (alias_decl->hasInterfaceType()) {
-        swift::Type swift_type = swift::TypeAliasType::get(
-            alias_decl, swift::Type(), swift::SubstitutionMap(),
-            alias_decl->getUnderlyingType());
-        return {swift_type.getPointer()};
-      }
-      break;
+      swift::Type swift_type = swift::TypeAliasType::get(
+          alias_decl, swift::Type(), swift::SubstitutionMap(),
+          alias_decl->getUnderlyingType());
+      return {swift_type.getPointer()};
     }
 
     case swift::DeclKind::Enum:
@@ -4389,11 +4386,9 @@ static CompilerType ValueDeclToType(swift::ValueDecl *decl,
     case swift::DeclKind::Class: {
       swift::NominalTypeDecl *nominal_decl =
           swift::cast<swift::NominalTypeDecl>(decl);
-      if (nominal_decl->hasInterfaceType()) {
-        swift::Type swift_type = nominal_decl->getDeclaredType();
-        return {swift_type.getPointer()};
-      }
-    } break;
+      swift::Type swift_type = nominal_decl->getDeclaredType();
+      return {swift_type.getPointer()};
+    }
 
     default:
       break;
@@ -4436,24 +4431,20 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
     case swift::DeclKind::TypeAlias: {
       swift::TypeAliasDecl *alias_decl =
           swift::cast<swift::TypeAliasDecl>(decl);
-      if (alias_decl->hasInterfaceType()) {
-        swift::Type swift_type = swift::TypeAliasType::get(
-            alias_decl, swift::Type(), swift::SubstitutionMap(),
-            alias_decl->getUnderlyingType());
-        return CompilerType(swift_type.getPointer());
-      }
-    } break;
+      swift::Type swift_type = swift::TypeAliasType::get(
+          alias_decl, swift::Type(), swift::SubstitutionMap(),
+          alias_decl->getUnderlyingType());
+      return CompilerType(swift_type.getPointer());
+    }
     case swift::DeclKind::Enum:
     case swift::DeclKind::Struct:
     case swift::DeclKind::Class:
     case swift::DeclKind::Protocol: {
       swift::NominalTypeDecl *nominal_decl =
           swift::cast<swift::NominalTypeDecl>(decl);
-      if (nominal_decl->hasInterfaceType()) {
-        swift::Type swift_type = nominal_decl->getDeclaredType();
-        return CompilerType(swift_type.getPointer());
-      }
-    } break;
+      swift::Type swift_type = nominal_decl->getDeclaredType();
+      return CompilerType(swift_type.getPointer());
+    }
 
     case swift::DeclKind::Func:
     case swift::DeclKind::Var:
@@ -4556,16 +4547,9 @@ size_t SwiftASTContext::FindTypes(const char *name,
         [this](swift::Decl *decl) -> CompilerType {
           if (swift::ValueDecl *value_decl =
                   swift::dyn_cast_or_null<swift::ValueDecl>(decl)) {
-            if (value_decl->hasInterfaceType()) {
-              swift::Type swift_type = value_decl->getInterfaceType();
-              swift::MetatypeType *meta_type =
-                  swift_type->getAs<swift::MetatypeType>();
-              swift::ASTContext *ast = GetASTContext();
-              if (meta_type)
-                return {meta_type->getInstanceType().getPointer()};
-              else
-                return {swift_type.getPointer()};
-            }
+            swift::Type swift_type = value_decl->getInterfaceType();
+            if (swift_type)
+              return {swift_type->getMetatypeInstanceType()};
           }
           return CompilerType();
         });
