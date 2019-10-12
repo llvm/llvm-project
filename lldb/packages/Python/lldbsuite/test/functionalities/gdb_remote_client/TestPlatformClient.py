@@ -14,19 +14,15 @@ class TestPlatformClient(GDBRemoteTestBase):
         class MyResponder(MockGDBServerResponder):
             def qfProcessInfo(self, packet):
                 if "all_users:1" in packet:
-                    return "pid:10;ppid:1;uid:1;gid:1;euid:1;egid:1;name:" + binascii.hexlify("/a/test_process").decode() + ";"
+                    return "pid:10;ppid:1;uid:1;gid:1;euid:1;egid:1;name:" + binascii.hexlify("/a/test_process".encode()).decode() + ";"
                 else:
                     return "E04"
 
         self.server.responder = MyResponder()
 
-        self.runCmd("log enable gdb-remote all")
         self.runCmd("platform select remote-linux")
 
         try:
-            url = "connect://localhost:%d" % self.server.port
-
-            # self.gdb.GetSelectedPlatform().ConnectRemote(lldb.SBPlatformConnectOptions(url))
             self.runCmd("platform connect connect://localhost:%d" %
                         self.server.port)
             self.assertTrue(self.dbg.GetSelectedPlatform().IsConnected())
