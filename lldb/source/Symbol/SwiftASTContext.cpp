@@ -3419,6 +3419,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   }
 
   // The order here matters due to fallback behaviors:
+  //
   // 1. Create and install the memory buffer serialized module loader.
   std::unique_ptr<swift::ModuleLoader> memory_buffer_loader_ap(
       swift::MemoryBufferSerializedModuleLoader::create(
@@ -3432,11 +3433,14 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
 
   // 2. Create and install the module interface loader.
   //
-  // TODO: It may be nice to reverse the order between MIL and SML in
-  //       LLDB, since binary swift modules likely contain private
-  //       types that the module interfaces are missing. On the
-  //       other hand if we need to go looking for a module on disk,
-  //       something is already screwed up in the debug info.
+  // The ordering of 2-4 is the same as the Swift compiler's 1-3,
+  // where unintuitively the serialized module loader comes before the
+  // module interface loader. The reason for this is that the module
+  // interface loader is actually 2-in-1 and secretly attempts to load
+  // the serialized module first, and falls back to the serialized
+  // module loader, if it is not usable. Contrary to the proper
+  // serialized module loader it does this without emitting a
+  // diagnostic in the failure case.
   std::unique_ptr<swift::ModuleLoader> module_interface_loader_ap;
   if (loading_mode != swift::ModuleLoadingMode::OnlySerialized) {
     std::unique_ptr<swift::ModuleLoader> module_interface_loader_ap(
