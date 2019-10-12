@@ -117,6 +117,8 @@ if (LIBUNWIND_ENABLE_SHARED)
   target_link_libraries(unwind_shared PRIVATE ${LIBUNWIND_LIBRARIES})
   set_target_properties(unwind_shared
                         PROPERTIES
+                          CXX_EXTENSIONS
+                            OFF
                           CXX_STANDARD
                             11
                           CXX_STANDARD_REQUIRED
@@ -143,6 +145,8 @@ if (LIBUNWIND_ENABLE_STATIC)
   target_link_libraries(unwind_static PRIVATE ${LIBUNWIND_LIBRARIES})
   set_target_properties(unwind_static
                         PROPERTIES
+                          CXX_EXTENSIONS
+                            OFF
                           CXX_STANDARD
                             11
                           CXX_STANDARD_REQUIRED

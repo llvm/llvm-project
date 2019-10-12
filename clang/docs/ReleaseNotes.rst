@@ -244,6 +244,9 @@ libclang
 Static Analyzer
 ---------------
 
+- The Clang analyzer checker ``DeadStores`` gets a new option called
+  ``WarnForDeadNestedAssignments`` to detect nested dead assignments
+  (enabled by default).
 - ...
 
 .. _release-notes-ubsan:

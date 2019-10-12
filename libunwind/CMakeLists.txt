@@ -291,12 +291,12 @@ endif()
 add_cxx_compile_flags_if_supported(-fstrict-aliasing)
 add_cxx_compile_flags_if_supported(-EHsc)
 
-add_c_compile_flags_if_supported(-funwind-tables)
+add_compile_flags_if_supported(-funwind-tables)
 add_cxx_compile_flags_if_supported(-fno-exceptions)
 add_cxx_compile_flags_if_supported(-fno-rtti)
 
 # Ensure that we don't depend on C++ standard library.
-if (LIBCXXABI_HAS_NOSTDINCXX_FLAG)
+if (LIBUNWIND_HAS_NOSTDINCXX_FLAG)
   list(APPEND LIBUNWIND_COMPILE_FLAGS -nostdinc++)
   # Remove -stdlib flags to prevent them from causing an unused flag warning.
   string(REPLACE "-stdlib=libc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")

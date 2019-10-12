@@ -321,7 +321,7 @@ void types::getCompilationPhases(const clang::driver::Driver &Driver,
                   [](phases::ID Phase) { return Phase <= phases::Precompile; });
 
   // Treat Interface Stubs like its own compilation mode.
-  else if (DAL.getLastArg(options::OPT_emit_iterface_stubs)) {
+  else if (DAL.getLastArg(options::OPT_emit_interface_stubs)) {
     llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> IfsModePhaseList;
     llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> &PL = PhaseList;
     phases::ID LastPhase = phases::IfsMerge;

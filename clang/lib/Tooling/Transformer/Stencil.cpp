@@ -31,14 +31,6 @@ using llvm::Error;
 using llvm::Expected;
 using llvm::StringError;
 
-// A down_cast function to safely down cast a StencilPartInterface to a subclass
-// D. Returns nullptr if P is not an instance of D.
-template <typename D> const D *down_cast(const StencilPartInterface *P) {
-  if (P == nullptr || D::typeId() != P->typeId())
-    return nullptr;
-  return static_cast<const D *>(P);
-}
-
 static llvm::Expected<DynTypedNode>
 getNode(const ast_matchers::BoundNodes &Nodes, StringRef Id) {
   auto &NodesMap = Nodes.getMap();
@@ -100,35 +92,6 @@ struct IfBoundData {
   StencilPart FalsePart;
 };
 
-bool isEqualData(const RawTextData &A, const RawTextData &B) {
-  return A.Text == B.Text;
-}
-
-bool isEqualData(const DebugPrintNodeData &A, const DebugPrintNodeData &B) {
-  return A.Id == B.Id;
-}
-
-bool isEqualData(const UnaryOperationData &A, const UnaryOperationData &B) {
-  return A.Op == B.Op && A.Id == B.Id;
-}
-
-// Equality is not (yet) defined for \c RangeSelector.
-bool isEqualData(const SelectorData &, const SelectorData &) { return false; }
-
-bool isEqualData(const AccessData &A, const AccessData &B) {
-  return A.BaseId == B.BaseId && A.Member == B.Member;
-}
-
-bool isEqualData(const IfBoundData &A, const IfBoundData &B) {
-  return A.Id == B.Id && A.TruePart == B.TruePart && A.FalsePart == B.FalsePart;
-}
-
-// Equality is not defined over MatchConsumers, which are opaque.
-bool isEqualData(const MatchConsumer<std::string> &A,
-                 const MatchConsumer<std::string> &B) {
-  return false;
-}
-
 std::string toStringData(const RawTextData &Data) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
@@ -159,7 +122,7 @@ std::string toStringData(const UnaryOperationData &Data) {
   return (OpName + "(\"" + Data.Id + "\")").str();
 }
 
-std::string toStringData(const SelectorData &) { return "SelectorData()"; }
+std::string toStringData(const SelectorData &) { return "selection(...)"; }
 
 std::string toStringData(const AccessData &Data) {
   return (llvm::Twine("access(\"") + Data.BaseId + "\", " +
@@ -174,7 +137,7 @@ std::string toStringData(const IfBoundData &Data) {
 }
 
 std::string toStringData(const MatchConsumer<std::string> &) {
-  return "MatchConsumer<std::string>()";
+  return "run(...)";
 }
 
 // The `evalData()` overloads evaluate the given stencil data to a string, given
@@ -275,26 +238,11 @@ class StencilPartImpl : public StencilPartInterface {
 
 public:
   template <typename... Ps>
-  explicit StencilPartImpl(Ps &&... Args)
-      : StencilPartInterface(StencilPartImpl::typeId()),
-        Data(std::forward<Ps>(Args)...) {}
-
-  // Generates a unique identifier for this class (specifically, one per
-  // instantiation of the template).
-  static const void* typeId() {
-    static bool b;
-    return &b;
-  }
+  explicit StencilPartImpl(Ps &&... Args) : Data(std::forward<Ps>(Args)...) {}
 
   Error eval(const MatchFinder::MatchResult &Match,
              std::string *Result) const override {
     return evalData(Data, Match, Result);
-  }
-
-  bool isEqual(const StencilPartInterface &Other) const override {
-    if (const auto *OtherPtr = down_cast<StencilPartImpl>(&Other))
-      return isEqualData(Data, OtherPtr->Data);
-    return false;
   }
 
   std::string toString() const override { return toStringData(Data); }

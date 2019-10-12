@@ -232,10 +232,6 @@ class FileManager : public RefCountedBase<FileManager> {
   ///
   unsigned NextFileUID;
 
-  // Statistics.
-  unsigned NumDirLookups, NumFileLookups;
-  unsigned NumDirCacheMisses, NumFileCacheMisses;
-
   // Caching.
   std::unique_ptr<FileSystemStatCache> StatCache;
 

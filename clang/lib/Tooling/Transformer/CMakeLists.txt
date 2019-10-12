@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS Support)
 
 add_clang_library(clangTransformer
   RangeSelector.cpp
+  RewriteRule.cpp
   SourceCode.cpp
   SourceCodeBuilders.cpp
   Stencil.cpp
