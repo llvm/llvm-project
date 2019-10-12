@@ -920,7 +920,7 @@ bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
   swift::Type result_type;
   for (size_t i = 0; i < num_results; i++) {
     swift::VarDecl *the_decl = m_result_info[i].tmp_var_decl;
-    if (the_decl->hasType()) {
+    if (the_decl->hasInterfaceType()) {
       swift::Type its_type = the_decl->getType();
       if (result_type.isNull()) {
         result_type = its_type;
@@ -988,7 +988,7 @@ bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
       if (swift::Decl *element_decl = element.dyn_cast<swift::Decl *>()) {
         if (swift::VarDecl *var_decl =
                 llvm::dyn_cast<swift::VarDecl>(element_decl)) {
-          if (var_decl->hasType()) {
+          if (var_decl->hasInterfaceType()) {
             swift::Identifier error_var_name =
                 ast_context.getIdentifier(GetErrorName());
             if (error_var_name != var_decl->getName())
@@ -1106,7 +1106,6 @@ bool SwiftASTManipulator::AddExternalVariables(
     swift::VarDecl *redirected_var_decl = new (ast_context)
         swift::VarDecl(is_static, introducer, is_capture_list, loc, name,
                        &m_source_file);
-    redirected_var_decl->setType(var_type);
     redirected_var_decl->setInterfaceType(var_type);
 
     swift::TopLevelCodeDecl *top_level_code =
@@ -1211,7 +1210,6 @@ bool SwiftASTManipulator::AddExternalVariables(
       swift::VarDecl *redirected_var_decl = new (ast_context) swift::VarDecl(
           is_static, introducer, is_capture_list, loc, name,
           containing_function);
-      redirected_var_decl->setType(var_type);
       auto interface_type = var_type;
       if (interface_type->hasArchetype())
         interface_type = interface_type->mapTypeOutOfContext();
