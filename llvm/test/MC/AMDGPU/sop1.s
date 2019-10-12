@@ -1,6 +1,7 @@
 // RUN: not llvm-mc -arch=amdgcn -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=SICI %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s 2>&1 | FileCheck --check-prefix=GCN --check-prefix=VI --check-prefix=GFX89 %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck --check-prefix=GCN --check-prefix=GFX89 --check-prefix=GFX9 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s 2>&1 | FileCheck --check-prefix=GCN --check-prefix=GFX10 %s
 
 // RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck --check-prefix=NOSICI --check-prefix=NOSICIVI %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s 2>&1 | FileCheck --check-prefix=NOVI --check-prefix=NOSICIVI --check-prefix=NOGFX89 %s
@@ -33,6 +34,10 @@ s_mov_b32 s0, 0xfe5163ab
 s_mov_b64 s[2:3], s[4:5]
 // SICI: s_mov_b64 s[2:3], s[4:5] ; encoding: [0x04,0x04,0x82,0xbe]
 // GFX89: s_mov_b64 s[2:3], s[4:5] ; encoding: [0x04,0x01,0x82,0xbe]
+
+s_mov_b64 null, s[4:5]
+// GFX10: s_mov_b64 null, s[4:5] ; encoding: [0x04,0x04,0xfd,0xbe]
+// NOSICIVI: error: not a valid operand.
 
 s_mov_b64 s[2:3], 0xffffffffffffffff
 // SICI: s_mov_b64 s[2:3], -1 ; encoding: [0xc1,0x04,0x82,0xbe]

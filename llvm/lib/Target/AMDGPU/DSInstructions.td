@@ -81,6 +81,17 @@ class DS_Real <DS_Pseudo ds> :
 
 // DS Pseudo instructions
 
+class DS_0A1D_NORET<string opName, RegisterClass rc = VGPR_32>
+: DS_Pseudo<opName,
+  (outs),
+  (ins rc:$data0, offset:$offset, gds:$gds),
+  "$data0$offset$gds"> {
+
+  let has_addr = 0;
+  let has_data1 = 0;
+  let has_vdst = 0;
+}
+
 class DS_1A1D_NORET<string opName, RegisterClass rc = VGPR_32>
 : DS_Pseudo<opName,
   (outs),
@@ -394,11 +405,12 @@ def DS_WRITE_B8_D16_HI  : DS_1A1D_NORET<"ds_write_b8_d16_hi">;
 def DS_WRITE_B16_D16_HI : DS_1A1D_NORET<"ds_write_b16_d16_hi">;
 }
 
+} // End has_m0_read = 0
+
 let SubtargetPredicate = HasDSAddTid in {
-def DS_WRITE_ADDTID_B32 : DS_1A1D_NORET<"ds_write_addtid_b32">;
+def DS_WRITE_ADDTID_B32 : DS_0A1D_NORET<"ds_write_addtid_b32">;
 }
 
-} // End has_m0_read = 0
 } // End mayLoad = 0
 
 defm DS_MSKOR_B32     : DS_1A2D_NORET_mc<"ds_mskor_b32">;
@@ -543,12 +555,13 @@ def DS_READ_I8_D16_HI  : DS_1A_RET_Tied<"ds_read_i8_d16_hi">;
 def DS_READ_U16_D16    : DS_1A_RET_Tied<"ds_read_u16_d16">;
 def DS_READ_U16_D16_HI : DS_1A_RET_Tied<"ds_read_u16_d16_hi">;
 }
+} // End has_m0_read = 0
 
 let SubtargetPredicate = HasDSAddTid in {
-def DS_READ_ADDTID_B32 : DS_1A_RET<"ds_read_addtid_b32">;
+def DS_READ_ADDTID_B32 : DS_0A_RET<"ds_read_addtid_b32">;
 }
-} // End has_m0_read = 0
-}
+
+} // End mayStore = 0
 
 def DS_CONSUME       : DS_0A_RET<"ds_consume">;
 def DS_APPEND        : DS_0A_RET<"ds_append">;

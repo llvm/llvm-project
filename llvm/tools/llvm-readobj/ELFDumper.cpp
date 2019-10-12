@@ -5607,15 +5607,9 @@ void LLVMStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
 template <class ELFT>
 void LLVMStyle<ELFT>::printVersionSymbolSection(const ELFFile<ELFT> *Obj,
                                                 const Elf_Shdr *Sec) {
-  DictScope SS(W, "Version symbols");
+  ListScope SS(W, "Version symbols");
   if (!Sec)
     return;
-
-  StringRef SecName = unwrapOrError(this->FileName, Obj->getSectionName(Sec));
-  W.printNumber("Section Name", SecName, Sec->sh_name);
-  W.printHex("Address", Sec->sh_addr);
-  W.printHex("Offset", Sec->sh_offset);
-  W.printNumber("Link", Sec->sh_link);
 
   const uint8_t *VersymBuf =
       reinterpret_cast<const uint8_t *>(Obj->base() + Sec->sh_offset);
@@ -5623,7 +5617,6 @@ void LLVMStyle<ELFT>::printVersionSymbolSection(const ELFFile<ELFT> *Obj,
   StringRef StrTable = Dumper->getDynamicStringTable();
 
   // Same number of entries in the dynamic symbol table (DT_SYMTAB).
-  ListScope Syms(W, "Symbols");
   for (const Elf_Sym &Sym : Dumper->dynamic_symbols()) {
     DictScope S(W, "Symbol");
     const Elf_Versym *Versym = reinterpret_cast<const Elf_Versym *>(VersymBuf);

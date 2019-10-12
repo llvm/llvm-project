@@ -1,12 +1,13 @@
 // RUN: not llvm-mc -arch=amdgcn -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=SICI %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=SICI %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=VI9 --check-prefix=VI %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=VI9 --check-prefix=GFX9 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=VI9 --check-prefix=GFX9 %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck --check-prefix=GCN --check-prefix=GFX10 %s
 
 // RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck -check-prefix=NOSICIVI %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefix=NOSICIVI -check-prefix=NOSI %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=fiji %s 2>&1 | FileCheck -check-prefix=NOSICIVI -check-prefix=NOVI %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck --check-prefix=NOGFX9 %s
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -318,6 +319,11 @@ s_getreg_b32 s2, hwreg(1 + reg, -1 + offset, 1 + width)
 s_endpgm_ordered_ps_done
 // GFX9:     s_endpgm_ordered_ps_done ; encoding: [0x00,0x00,0x9e,0xbf]
 // NOSICIVI: error: instruction not supported on this GPU
+
+s_call_b64 null, 12609
+// GFX10: s_call_b64 null, 12609 ; encoding: [0x41,0x31,0x7d,0xbb]
+// NOSICIVI: error: not a valid operand.
+// NOGFX9: error: not a valid operand.
 
 s_call_b64 s[12:13], 12609
 // GFX9:     s_call_b64 s[12:13], 12609 ; encoding: [0x41,0x31,0x8c,0xba]

@@ -224,3 +224,67 @@ efficiently to minimize the sizes of the underlying bitsets.
     }
 
 .. _GlobalLayoutBuilder: https://github.com/llvm/llvm-project/blob/master/llvm/include/llvm/Transforms/IPO/LowerTypeTests.h
+
+``!vcall_visibility`` Metadata
+==============================
+
+In order to allow removing unused function pointers from vtables, we need to
+know whether every virtual call which could use it is known to the compiler, or
+whether another translation unit could introduce more calls through the vtable.
+This is not the same as the linkage of the vtable, because call sites could be
+using a pointer of a more widely-visible base class. For example, consider this
+code:
+
+.. code-block:: c++
+
+  __attribute__((visibility("default")))
+  struct A {
+    virtual void f();
+  };
+
+  __attribute__((visibility("hidden")))
+  struct B : A {
+    virtual void f();
+  };
+
+With LTO, we know that all code which can see the declaration of ``B`` is
+visible to us. However, a pointer to a ``B`` could be cast to ``A*`` and passed
+to another linkage unit, which could then call ``f`` on it. This call would
+load from the vtable for ``B`` (using the object pointer), and then call
+``B::f``. This means we can't remove the function pointer from ``B``'s vtable,
+or the implementation of ``B::f``. However, if we can see all code which knows
+about any dynamic base class (which would be the case if ``B`` only inherited
+from classes with hidden visibility), then this optimisation would be valid.
+
+This concept is represented in IR by the ``!vcall_visibility`` metadata
+attached to vtable objects, with the following values:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 90
+
+   * - Value
+     - Behavior
+
+   * - 0 (or omitted)
+     - **Public**
+           Virtual function calls using this vtable could be made from external
+           code.
+
+   * - 1
+     - **Linkage Unit**
+           All virtual function calls which might use this vtable are in the
+           current LTO unit, meaning they will be in the current module once
+           LTO linking has been performed.
+
+   * - 2
+     - **Translation Unit**
+           All virtual function calls which might use this vtable are in the
+           current module.
+
+In addition, all function pointer loads from a vtable marked with the
+``!vcall_visibility`` metadata (with a non-zero value) must be done using the
+:ref:`llvm.type.checked.load <type.checked.load>` intrinsic, so that virtual
+calls sites can be correlated with the vtables which they might load from.
+Other parts of the vtable (RTTI, offset-to-top, ...) can still be accessed with
+normal loads.

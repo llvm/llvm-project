@@ -647,33 +647,22 @@ define void @vselect_allzeros_LHS_multiple_use_setcc(<4 x i32> %x, <4 x i32> %y,
 ; This test case previously crashed after r363802, r363850, and r363856 due
 ; any_extend_vector_inreg not being handled by the X86 backend.
 define i64 @vselect_any_extend_vector_inreg_crash(<8 x i8>* %x) {
-; SSE2-LABEL: vselect_any_extend_vector_inreg_crash:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pcmpeqb {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
-; SSE2-NEXT:    psrad $24, %xmm0
-; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    andl $32768, %eax # imm = 0x8000
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: vselect_any_extend_vector_inreg_crash:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE41-NEXT:    pcmpeqb {{.*}}(%rip), %xmm0
-; SSE41-NEXT:    pmovsxbq %xmm0, %xmm0
-; SSE41-NEXT:    movq %xmm0, %rax
-; SSE41-NEXT:    andl $32768, %eax # imm = 0x8000
-; SSE41-NEXT:    retq
+; SSE-LABEL: vselect_any_extend_vector_inreg_crash:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    pcmpeqb {{.*}}(%rip), %xmm0
+; SSE-NEXT:    movq %xmm0, %rax
+; SSE-NEXT:    andl $1, %eax
+; SSE-NEXT:    shlq $15, %rax
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: vselect_any_extend_vector_inreg_crash:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vpcmpeqb {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpmovsxbq %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    andl $32768, %eax # imm = 0x8000
+; AVX-NEXT:    andl $1, %eax
+; AVX-NEXT:    shlq $15, %rax
 ; AVX-NEXT:    retq
 0:
   %1 = load <8 x i8>, <8 x i8>* %x

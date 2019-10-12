@@ -158,6 +158,9 @@ MaxBruteForceIterations("scalar-evolution-max-iterations", cl::ReallyHidden,
 static cl::opt<bool> VerifySCEV(
     "verify-scev", cl::Hidden,
     cl::desc("Verify ScalarEvolution's backedge taken counts (slow)"));
+static cl::opt<bool> VerifySCEVStrict(
+    "verify-scev-strict", cl::Hidden,
+    cl::desc("Enable stricter verification with -verify-scev is passed"));
 static cl::opt<bool>
     VerifySCEVMap("verify-scev-maps", cl::Hidden,
                   cl::desc("Verify no dangling value in ScalarEvolution's "
@@ -11922,14 +11925,14 @@ void ScalarEvolution::verify() const {
              SE.getTypeSizeInBits(NewBECount->getType()))
       CurBECount = SE2.getZeroExtendExpr(CurBECount, NewBECount->getType());
 
-    auto *ConstantDelta =
-        dyn_cast<SCEVConstant>(SE2.getMinusSCEV(CurBECount, NewBECount));
+    const SCEV *Delta = SE2.getMinusSCEV(CurBECount, NewBECount);
 
-    if (ConstantDelta && ConstantDelta->getAPInt() != 0) {
-      dbgs() << "Trip Count Changed!\n";
+    // Unless VerifySCEVStrict is set, we only compare constant deltas.
+    if ((VerifySCEVStrict || isa<SCEVConstant>(Delta)) && !Delta->isZero()) {
+      dbgs() << "Trip Count for " << *L << " Changed!\n";
       dbgs() << "Old: " << *CurBECount << "\n";
       dbgs() << "New: " << *NewBECount << "\n";
-      dbgs() << "Delta: " << *ConstantDelta << "\n";
+      dbgs() << "Delta: " << *Delta << "\n";
       std::abort();
     }
   }

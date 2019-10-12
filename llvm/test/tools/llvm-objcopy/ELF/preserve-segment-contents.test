@@ -13,13 +13,13 @@
 # RUN: llvm-objcopy %t.base %t.stripped --regex -R blob.*
 # Show that the removal leaves the bytes as zeroes, as desired, for all our
 # test cases.
-# RUN: od -t x1 -j 0x2000 -N 24 %t.stripped | FileCheck %s --check-prefix=CHECK1 -DPATTERN="00 00 00 00"
-# RUN: od -t x1 -j 0x2100 -N 12 %t.stripped | FileCheck %s --check-prefix=CHECK2 -DPATTERN="00 00 00 00"
-# RUN: od -t x1 -j 0x2200 -N 4  %t.stripped | FileCheck %s --check-prefix=CHECK3 -DPATTERN="00 00 00 00"
-# RUN: od -t x1 -j 0x2300 -N 12 %t.stripped | FileCheck %s --check-prefix=CHECK4 -DPATTERN="00 00 00 00"
-# RUN: od -t x1 -j 0x3000 -N 68 %t.stripped | FileCheck %s --check-prefix=CHECK5 -DPATTERN="00 00 00 00"
-# RUN: od -t x1 -j 0x4000 -N 60 %t.stripped | FileCheck %s --check-prefix=CHECK6 -DPATTERN="00 00 00 00"
-# RUN: od -t x1 -j 0x5000 -N 60 %t.stripped | FileCheck %s --check-prefix=CHECK7 -DPATTERN="00 00 00 00"
+# RUN: od -t x1 -j 0x2000 -N 24 %t.stripped | FileCheck %s --ignore-case --check-prefix=CHECK1 -DPATTERN="00 00 00 00"
+# RUN: od -t x1 -j 0x2100 -N 12 %t.stripped | FileCheck %s --ignore-case --check-prefix=CHECK2 -DPATTERN="00 00 00 00"
+# RUN: od -t x1 -j 0x2200 -N 4  %t.stripped | FileCheck %s --ignore-case --check-prefix=CHECK3 -DPATTERN="00 00 00 00"
+# RUN: od -t x1 -j 0x2300 -N 12 %t.stripped | FileCheck %s --ignore-case --check-prefix=CHECK4 -DPATTERN="00 00 00 00"
+# RUN: od -t x1 -j 0x3000 -N 68 %t.stripped | FileCheck %s --ignore-case --check-prefix=CHECK5 -DPATTERN="00 00 00 00"
+# RUN: od -t x1 -j 0x4000 -N 60 %t.stripped | FileCheck %s --ignore-case --check-prefix=CHECK6 -DPATTERN="00 00 00 00"
+# RUN: od -t x1 -j 0x5000 -N 60 %t.stripped | FileCheck %s --ignore-case --check-prefix=CHECK7 -DPATTERN="00 00 00 00"
 
 # RUN: cp %t.stripped %t.in
 # RUN: echo "with open('%/t.in', 'rb+') as input:"                                 > %t.py
@@ -32,13 +32,13 @@
 # RUN: echo "    input.write(bytearray.fromhex('DEADBEEF'))"                      >> %t.py
 # RUN: %python %t.py
 # RUN: llvm-objcopy %t.in %t.out
-# RUN: od -t x1 -j 0x2000 -N 24 %t.out | FileCheck %s --check-prefix=CHECK1 -DPATTERN="de ad be ef"
-# RUN: od -t x1 -j 0x2100 -N 12 %t.out | FileCheck %s --check-prefix=CHECK2 -DPATTERN="de ad be ef"
-# RUN: od -t x1 -j 0x2200 -N 4  %t.out | FileCheck %s --check-prefix=CHECK3 -DPATTERN="de ad be ef"
-# RUN: od -t x1 -j 0x2300 -N 12 %t.out | FileCheck %s --check-prefix=CHECK4 -DPATTERN="de ad be ef"
-# RUN: od -t x1 -j 0x3000 -N 68 %t.out | FileCheck %s --check-prefix=CHECK5 -DPATTERN="de ad be ef"
-# RUN: od -t x1 -j 0x4000 -N 60 %t.out | FileCheck %s --check-prefix=CHECK6 -DPATTERN="de ad be ef"
-# RUN: od -t x1 -j 0x5000 -N 60 %t.out | FileCheck %s --check-prefix=CHECK7 -DPATTERN="de ad be ef"
+# RUN: od -t x1 -j 0x2000 -N 24 %t.out | FileCheck %s --ignore-case --check-prefix=CHECK1 -DPATTERN="de ad be ef"
+# RUN: od -t x1 -j 0x2100 -N 12 %t.out | FileCheck %s --ignore-case --check-prefix=CHECK2 -DPATTERN="de ad be ef"
+# RUN: od -t x1 -j 0x2200 -N 4  %t.out | FileCheck %s --ignore-case --check-prefix=CHECK3 -DPATTERN="de ad be ef"
+# RUN: od -t x1 -j 0x2300 -N 12 %t.out | FileCheck %s --ignore-case --check-prefix=CHECK4 -DPATTERN="de ad be ef"
+# RUN: od -t x1 -j 0x3000 -N 68 %t.out | FileCheck %s --ignore-case --check-prefix=CHECK5 -DPATTERN="de ad be ef"
+# RUN: od -t x1 -j 0x4000 -N 60 %t.out | FileCheck %s --ignore-case --check-prefix=CHECK6 -DPATTERN="de ad be ef"
+# RUN: od -t x1 -j 0x5000 -N 60 %t.out | FileCheck %s --ignore-case --check-prefix=CHECK7 -DPATTERN="de ad be ef"
 
 # CHECK1:      [[PATTERN]] 11 22 33 44 [[PATTERN]] [[PATTERN]]
 # CHECK1-NEXT: 55 66 77 88 [[PATTERN]]

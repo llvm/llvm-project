@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include <cstdint>
@@ -42,6 +43,7 @@ public:
     /// Dump this list on OS.
     void dump(raw_ostream &OS, uint64_t BaseAddress, bool IsLittleEndian,
               unsigned AddressSize, const MCRegisterInfo *MRI, DWARFUnit *U,
+              DIDumpOptions DumpOpts,
               unsigned Indent) const;
   };
 
@@ -58,7 +60,7 @@ private:
 
 public:
   /// Print the location lists found within the debug_loc section.
-  void dump(raw_ostream &OS, const MCRegisterInfo *RegInfo,
+  void dump(raw_ostream &OS, const MCRegisterInfo *RegInfo, DIDumpOptions DumpOpts,
             Optional<uint64_t> Offset) const;
 
   /// Parse the debug_loc section accessible via the 'data' parameter using the
@@ -76,9 +78,13 @@ class DWARFDebugLoclists {
 public:
   struct Entry {
     uint8_t Kind;
+    uint64_t Offset;
     uint64_t Value0;
     uint64_t Value1;
     SmallVector<uint8_t, 4> Loc;
+    void dump(raw_ostream &OS, uint64_t &BaseAddr, bool IsLittleEndian,
+              unsigned AddressSize, const MCRegisterInfo *MRI, DWARFUnit *U,
+              DIDumpOptions DumpOpts, unsigned Indent, size_t MaxEncodingStringLength) const;
   };
 
   struct LocationList {
@@ -86,7 +92,7 @@ public:
     SmallVector<Entry, 2> Entries;
     void dump(raw_ostream &OS, uint64_t BaseAddr, bool IsLittleEndian,
               unsigned AddressSize, const MCRegisterInfo *RegInfo,
-              DWARFUnit *U, unsigned Indent) const;
+              DWARFUnit *U, DIDumpOptions DumpOpts, unsigned Indent) const;
   };
 
 private:
@@ -101,7 +107,7 @@ private:
 public:
   void parse(DataExtractor data, uint64_t Offset, uint64_t EndOffset, uint16_t Version);
   void dump(raw_ostream &OS, uint64_t BaseAddr, const MCRegisterInfo *RegInfo,
-            Optional<uint64_t> Offset) const;
+            DIDumpOptions DumpOpts, Optional<uint64_t> Offset) const;
 
   /// Return the location list at the given offset or nullptr.
   LocationList const *getLocationListAtOffset(uint64_t Offset) const;

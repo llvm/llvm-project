@@ -512,9 +512,11 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
                  .addExpr(SymVar));
 }
 
-/// Map the machine operand to its corresponding MCSymbol.
-static MCSymbol *getMCSymbolForTOCPseudoMO(const MachineOperand &MO, AsmPrinter &AP) {
-  switch(MO.getType()) {
+/// Map a machine operand for a TOC pseudo-machine instruction to its
+/// corresponding MCSymbol.
+static MCSymbol *getMCSymbolForTOCPseudoMO(const MachineOperand &MO,
+                                           AsmPrinter &AP) {
+  switch (MO.getType()) {
   case MachineOperand::MO_GlobalAddress:
     return AP.getSymbol(MO.getGlobal());
   case MachineOperand::MO_ConstantPoolIndex:
@@ -771,9 +773,9 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     const MCSymbol *MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
 
     const bool GlobalToc =
-	MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal());
+        MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal());
     if (GlobalToc || MO.isJTI() || MO.isBlockAddress() ||
-	(MO.isCPI() && TM.getCodeModel() == CodeModel::Large))
+        (MO.isCPI() && TM.getCodeModel() == CodeModel::Large))
       MOSymbol = lookUpOrCreateTOCEntry(MOSymbol);
 
     const MCExpr *Exp =
@@ -834,9 +836,9 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     const MachineOperand &MO = MI->getOperand(2);
     assert((MO.isGlobal() || MO.isCPI()) && "Invalid operand for ADDItocL.");
 
-    LLVM_DEBUG(
-        assert(!(MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal())) &&
-               "Interposable definitions must use indirect access."));
+    LLVM_DEBUG(assert(
+        !(MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal())) &&
+        "Interposable definitions must use indirect access."));
 
     const MCExpr *Exp =
         MCSymbolRefExpr::create(getMCSymbolForTOCPseudoMO(MO, *this),
@@ -1376,7 +1378,7 @@ bool PPCLinuxAsmPrinter::doFinalization(Module &M) {
               ".got2", ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
     OutStreamer->SwitchSection(Section);
 
-    for (const auto &TOCMapPair: TOC) {
+    for (const auto &TOCMapPair : TOC) {
       const MCSymbol *const TOCEntryTarget = TOCMapPair.first;
       MCSymbol *const TOCEntryLabel = TOCMapPair.second;
 

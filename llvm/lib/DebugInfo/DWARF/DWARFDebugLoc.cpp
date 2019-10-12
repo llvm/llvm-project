@@ -9,6 +9,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/Bitcode/BitcodeAnalyzer.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
@@ -39,6 +40,7 @@ void DWARFDebugLoc::LocationList::dump(raw_ostream &OS, uint64_t BaseAddress,
                                        bool IsLittleEndian,
                                        unsigned AddressSize,
                                        const MCRegisterInfo *MRI, DWARFUnit *U,
+                                       DIDumpOptions DumpOpts,
                                        unsigned Indent) const {
   for (const Entry &E : Entries) {
     OS << '\n';
@@ -62,12 +64,12 @@ DWARFDebugLoc::getLocationListAtOffset(uint64_t Offset) const {
   return nullptr;
 }
 
-void DWARFDebugLoc::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
+void DWARFDebugLoc::dump(raw_ostream &OS, const MCRegisterInfo *MRI, DIDumpOptions DumpOpts,
                          Optional<uint64_t> Offset) const {
   auto DumpLocationList = [&](const LocationList &L) {
     OS << format("0x%8.8" PRIx64 ": ", L.Offset);
-    L.dump(OS, 0, IsLittleEndian, AddressSize, MRI, nullptr, 12);
-    OS << "\n\n";
+    L.dump(OS, 0, IsLittleEndian, AddressSize, MRI, nullptr, DumpOpts, 12);
+    OS << "\n";
   };
 
   if (Offset) {
@@ -78,6 +80,8 @@ void DWARFDebugLoc::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
 
   for (const LocationList &L : Locations) {
     DumpLocationList(L);
+    if (&L != &Locations.back())
+      OS << '\n';
   }
 }
 
@@ -86,6 +90,7 @@ DWARFDebugLoc::parseOneLocationList(const DWARFDataExtractor &Data,
                                     uint64_t *Offset) {
   LocationList LL;
   LL.Offset = *Offset;
+  AddressSize = Data.getAddressSize();
   DataExtractor::Cursor C(*Offset);
 
   // 2.6.2 Location Lists
@@ -146,7 +151,11 @@ DWARFDebugLoclists::parseOneLocationList(const DataExtractor &Data,
   while (auto Kind = Data.getU8(C)) {
     Entry E;
     E.Kind = Kind;
+    E.Offset = C.tell() - 1;
     switch (Kind) {
+    case dwarf::DW_LLE_base_addressx:
+      E.Value0 = Data.getULEB128(C);
+      break;
     case dwarf::DW_LLE_startx_length:
       E.Value0 = Data.getULEB128(C);
       // Pre-DWARF 5 has different interpretation of the length field. We have
@@ -173,7 +182,8 @@ DWARFDebugLoclists::parseOneLocationList(const DataExtractor &Data,
                                "LLE of kind %x not supported", (int)Kind);
     }
 
-    if (Kind != dwarf::DW_LLE_base_address) {
+    if (Kind != dwarf::DW_LLE_base_address &&
+        Kind != dwarf::DW_LLE_base_addressx) {
       unsigned Bytes = Version >= 5 ? Data.getULEB128(C) : Data.getU16(C);
       // A single location description describing the location of the object...
       Data.getU8(C, E.Loc, Bytes);
@@ -183,6 +193,10 @@ DWARFDebugLoclists::parseOneLocationList(const DataExtractor &Data,
   }
   if (Error Err = C.takeError())
     return std::move(Err);
+  Entry E;
+  E.Kind = dwarf::DW_LLE_end_of_list;
+  E.Offset = C.tell() - 1;
+  LL.Entries.push_back(E);
   *Offset = C.tell();
   return LL;
 }
@@ -210,51 +224,106 @@ DWARFDebugLoclists::getLocationListAtOffset(uint64_t Offset) const {
   return nullptr;
 }
 
+void DWARFDebugLoclists::Entry::dump(raw_ostream &OS, uint64_t &BaseAddr,
+                                     bool IsLittleEndian, unsigned AddressSize,
+                                     const MCRegisterInfo *MRI, DWARFUnit *U,
+                                     DIDumpOptions DumpOpts, unsigned Indent,
+                                     size_t MaxEncodingStringLength) const {
+  if (DumpOpts.Verbose) {
+    OS << "\n";
+    OS.indent(Indent);
+    auto EncodingString = dwarf::LocListEncodingString(Kind);
+    // Unsupported encodings should have been reported during parsing.
+    assert(!EncodingString.empty() && "Unknown loclist entry encoding");
+    OS << format("%s%*c", EncodingString.data(),
+                 MaxEncodingStringLength - EncodingString.size() + 1, '(');
+    switch (Kind) {
+    case dwarf::DW_LLE_startx_length:
+    case dwarf::DW_LLE_start_length:
+    case dwarf::DW_LLE_offset_pair:
+      OS << format("0x%*.*" PRIx64 ", 0x%*.*" PRIx64, AddressSize * 2,
+                 AddressSize * 2, Value0, AddressSize * 2, AddressSize * 2,
+                 Value1);
+      break;
+    case dwarf::DW_LLE_base_addressx:
+    case dwarf::DW_LLE_base_address:
+      OS << format("0x%*.*" PRIx64, AddressSize * 2, AddressSize * 2,
+                   Value0);
+      break;
+    case dwarf::DW_LLE_end_of_list:
+      break;
+    }
+    OS << ')';
+  }
+  auto PrintPrefix = [&] {
+    OS << "\n";
+    OS.indent(Indent);
+    if (DumpOpts.Verbose)
+      OS << format("%*s", MaxEncodingStringLength, (const char *)"=> ");
+  };
+  switch (Kind) {
+  case dwarf::DW_LLE_startx_length:
+    PrintPrefix();
+    OS << "Addr idx " << Value0 << " (w/ length " << Value1 << "): ";
+    break;
+  case dwarf::DW_LLE_start_length:
+    PrintPrefix();
+    DWARFAddressRange(Value0, Value0 + Value1)
+        .dump(OS, AddressSize, DumpOpts);
+    OS << ": ";
+    break;
+  case dwarf::DW_LLE_offset_pair:
+    PrintPrefix();
+    DWARFAddressRange(BaseAddr + Value0, BaseAddr + Value1)
+        .dump(OS, AddressSize, DumpOpts);
+    OS << ": ";
+    break;
+  case dwarf::DW_LLE_base_addressx:
+    if (!DumpOpts.Verbose)
+      return;
+    break;
+  case dwarf::DW_LLE_end_of_list:
+    if (!DumpOpts.Verbose)
+      return;
+    break;
+  case dwarf::DW_LLE_base_address:
+    BaseAddr = Value0;
+    if (!DumpOpts.Verbose)
+      return;
+    break;
+  default:
+    llvm_unreachable("unreachable locations list kind");
+  }
+
+  dumpExpression(OS, Loc, IsLittleEndian, AddressSize, MRI, U);
+}
 void DWARFDebugLoclists::LocationList::dump(raw_ostream &OS, uint64_t BaseAddr,
                                             bool IsLittleEndian,
                                             unsigned AddressSize,
                                             const MCRegisterInfo *MRI,
                                             DWARFUnit *U,
+                                            DIDumpOptions DumpOpts, 
                                             unsigned Indent) const {
-  for (const Entry &E : Entries) {
-    switch (E.Kind) {
-    case dwarf::DW_LLE_startx_length:
-      OS << '\n';
-      OS.indent(Indent);
-      OS << "Addr idx " << E.Value0 << " (w/ length " << E.Value1 << "): ";
-      break;
-    case dwarf::DW_LLE_start_length:
-      OS << '\n';
-      OS.indent(Indent);
-      OS << format("[0x%*.*" PRIx64 ", 0x%*.*" PRIx64 "): ", AddressSize * 2,
-                   AddressSize * 2, E.Value0, AddressSize * 2, AddressSize * 2,
-                   E.Value0 + E.Value1);
-      break;
-    case dwarf::DW_LLE_offset_pair:
-      OS << '\n';
-      OS.indent(Indent);
-      OS << format("[0x%*.*" PRIx64 ", 0x%*.*" PRIx64 "): ", AddressSize * 2,
-                   AddressSize * 2, BaseAddr + E.Value0, AddressSize * 2,
-                   AddressSize * 2, BaseAddr + E.Value1);
-      break;
-    case dwarf::DW_LLE_base_address:
-      BaseAddr = E.Value0;
-      break;
-    default:
-      llvm_unreachable("unreachable locations list kind");
-    }
+  size_t MaxEncodingStringLength = 0;
+  if (DumpOpts.Verbose)
+    for (const auto &Entry : Entries)
+      MaxEncodingStringLength =
+          std::max(MaxEncodingStringLength,
+                   dwarf::LocListEncodingString(Entry.Kind).size());
 
-    dumpExpression(OS, E.Loc, IsLittleEndian, AddressSize, MRI, U);
-  }
+  for (const Entry &E : Entries)
+    E.dump(OS, BaseAddr, IsLittleEndian, AddressSize, MRI, U, DumpOpts, Indent,
+           MaxEncodingStringLength);
 }
 
 void DWARFDebugLoclists::dump(raw_ostream &OS, uint64_t BaseAddr,
-                              const MCRegisterInfo *MRI,
+                              const MCRegisterInfo *MRI, DIDumpOptions DumpOpts, 
                               Optional<uint64_t> Offset) const {
   auto DumpLocationList = [&](const LocationList &L) {
     OS << format("0x%8.8" PRIx64 ": ", L.Offset);
-    L.dump(OS, BaseAddr, IsLittleEndian, AddressSize, MRI, nullptr, /*Indent=*/12);
-    OS << "\n\n";
+    L.dump(OS, BaseAddr, IsLittleEndian, AddressSize, MRI, nullptr, DumpOpts,
+           /*Indent=*/12);
+    OS << "\n";
   };
 
   if (Offset) {
@@ -265,5 +334,7 @@ void DWARFDebugLoclists::dump(raw_ostream &OS, uint64_t BaseAddr,
 
   for (const LocationList &L : Locations) {
     DumpLocationList(L);
+    if (&L != &Locations.back())
+      OS << '\n';
   }
 }

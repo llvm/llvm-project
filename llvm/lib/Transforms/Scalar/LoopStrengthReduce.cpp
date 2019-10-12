@@ -1386,7 +1386,9 @@ void Cost::RateFormula(const Formula &F,
 
   // Treat every new register that exceeds TTI.getNumberOfRegisters() - 1 as
   // additional instruction (at least fill).
-  unsigned TTIRegNum = TTI->getNumberOfRegisters(false) - 1;
+  // TODO: Need distinguish register class?
+  unsigned TTIRegNum = TTI->getNumberOfRegisters(
+                       TTI->getRegisterClassForType(false, F.getType())) - 1;
   if (C.NumRegs > TTIRegNum) {
     // Cost already exceeded TTIRegNum, then only newly added register can add
     // new instructions.

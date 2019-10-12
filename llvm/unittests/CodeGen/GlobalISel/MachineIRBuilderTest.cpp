@@ -74,6 +74,7 @@ TEST_F(GISelMITest, TestBuildConstantFConstantDeath) {
 #endif
 
 TEST_F(GISelMITest, DstOpSrcOp) {
+  setUp();
   if (!TM)
     return;
 
@@ -99,6 +100,7 @@ TEST_F(GISelMITest, DstOpSrcOp) {
 }
 
 TEST_F(GISelMITest, BuildUnmerge) {
+  setUp();
   if (!TM)
     return;
 
@@ -119,6 +121,7 @@ TEST_F(GISelMITest, BuildUnmerge) {
 }
 
 TEST_F(GISelMITest, TestBuildFPInsts) {
+  setUp();
   if (!TM)
     return;
 
@@ -154,6 +157,7 @@ TEST_F(GISelMITest, TestBuildFPInsts) {
 }
 
 TEST_F(GISelMITest, BuildIntrinsic) {
+  setUp();
   if (!TM)
     return;
 
@@ -182,6 +186,7 @@ TEST_F(GISelMITest, BuildIntrinsic) {
 }
 
 TEST_F(GISelMITest, BuildXor) {
+  setUp();
   if (!TM)
     return;
 
@@ -210,6 +215,7 @@ TEST_F(GISelMITest, BuildXor) {
 }
 
 TEST_F(GISelMITest, BuildBitCounts) {
+  setUp();
   if (!TM)
     return;
 
@@ -237,6 +243,7 @@ TEST_F(GISelMITest, BuildBitCounts) {
 }
 
 TEST_F(GISelMITest, BuildCasts) {
+  setUp();
   if (!TM)
     return;
 
@@ -261,6 +268,7 @@ TEST_F(GISelMITest, BuildCasts) {
 }
 
 TEST_F(GISelMITest, BuildMinMax) {
+  setUp();
   if (!TM)
     return;
 
@@ -286,6 +294,7 @@ TEST_F(GISelMITest, BuildMinMax) {
 }
 
 TEST_F(GISelMITest, BuildAtomicRMW) {
+  setUp();
   if (!TM)
     return;
 
@@ -310,6 +319,45 @@ TEST_F(GISelMITest, BuildAtomicRMW) {
   ; CHECK: [[PTR:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
   ; CHECK: [[FADD:%[0-9]+]]:_(s64) = G_ATOMICRMW_FADD [[PTR]]:_(p0), [[COPY0]]:_ :: (load store unordered 8)
   ; CHECK: [[FSUB:%[0-9]+]]:_(s64) = G_ATOMICRMW_FSUB [[PTR]]:_(p0), [[COPY0]]:_ :: (load store unordered 8)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(GISelMITest, BuildMerge) {
+  setUp();
+  if (!TM)
+    return;
+
+  LLT S32 = LLT::scalar(32);
+  Register RegC0 = B.buildConstant(S32, 0)->getOperand(0).getReg();
+  Register RegC1 = B.buildConstant(S32, 1)->getOperand(0).getReg();
+  Register RegC2 = B.buildConstant(S32, 2)->getOperand(0).getReg();
+  Register RegC3 = B.buildConstant(S32, 3)->getOperand(0).getReg();
+
+  // Merging plain constants as one big blob of bit should produce a
+  // G_MERGE_VALUES.
+  B.buildMerge(LLT::scalar(128), {RegC0, RegC1, RegC2, RegC3});
+  // Merging plain constants to a vector should produce a G_BUILD_VECTOR.
+  LLT V2x32 = LLT::vector(2, 32);
+  Register RegC0C1 =
+      B.buildMerge(V2x32, {RegC0, RegC1})->getOperand(0).getReg();
+  Register RegC2C3 =
+      B.buildMerge(V2x32, {RegC2, RegC3})->getOperand(0).getReg();
+  // Merging vector constants to a vector should produce a G_CONCAT_VECTORS.
+  B.buildMerge(LLT::vector(4, 32), {RegC0C1, RegC2C3});
+  // Merging vector constants to a plain type is not allowed.
+  // Nothing else to test.
+
+  auto CheckStr = R"(
+  ; CHECK: [[C0:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+  ; CHECK: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
+  ; CHECK: {{%[0-9]+}}:_(s128) = G_MERGE_VALUES [[C0]]:_(s32), [[C1]]:_(s32), [[C2]]:_(s32), [[C3]]:_(s32)
+  ; CHECK: [[LOW2x32:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C0]]:_(s32), [[C1]]:_(s32)
+  ; CHECK: [[HIGH2x32:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C2]]:_(s32), [[C3]]:_(s32)
+  ; CHECK: {{%[0-9]+}}:_(<4 x s32>) = G_CONCAT_VECTORS [[LOW2x32]]:_(<2 x s32>), [[HIGH2x32]]:_(<2 x s32>)
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;

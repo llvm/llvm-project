@@ -97,8 +97,10 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
       uint64_t BaseAddr = 0;
       if (Optional<object::SectionedAddress> BA = U->getBaseAddress())
         BaseAddr = BA->Address;
+      auto LLDumpOpts = DumpOpts;
+      LLDumpOpts.Verbose = false;
       ExpectedLL->dump(OS, BaseAddr, Ctx.isLittleEndian(), Obj.getAddressSize(),
-                       MRI, U, Indent);
+                       MRI, U, LLDumpOpts, Indent);
     } else {
       OS << '\n';
       OS.indent(Indent);

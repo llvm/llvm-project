@@ -8614,6 +8614,15 @@ SDValue DAGCombiner::foldVSelectOfConstants(SDNode *N) {
     return DAG.getNode(ISD::ADD, DL, VT, ExtendedCond, N2);
   }
 
+  // select Cond, Pow2C, 0 --> (zext Cond) << log2(Pow2C)
+  APInt Pow2C;
+  if (ISD::isConstantSplatVector(N1.getNode(), Pow2C) && Pow2C.isPowerOf2() &&
+      isNullOrNullSplat(N2)) {
+    SDValue ZextCond = DAG.getZExtOrTrunc(Cond, DL, VT);
+    SDValue ShAmtC = DAG.getConstant(Pow2C.exactLogBase2(), DL, VT);
+    return DAG.getNode(ISD::SHL, DL, VT, ZextCond, ShAmtC);
+  }
+
   // The general case for select-of-constants:
   // vselect <N x i1> Cond, C1, C2 --> xor (and (sext Cond), (C1^C2)), C2
   // ...but that only makes sense if a vselect is slower than 2 logic ops, so

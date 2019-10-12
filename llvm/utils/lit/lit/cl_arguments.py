@@ -152,6 +152,7 @@ def parse_args():
             default=False)
     selection_group.add_argument("--filter",
             metavar="REGEX",
+            type=_case_insensitive_regex,
             help="Only run tests with paths matching the given regular expression",
             default=os.environ.get("LIT_FILTER"))
     selection_group.add_argument("--num-shards",
@@ -201,14 +202,22 @@ def parse_args():
     return opts
 
 def _positive_int(arg):
+    desc = "requires positive integer, but found '{}'"
     try:
         n = int(arg)
     except ValueError:
-        raise _arg_error('positive integer', arg)
+        raise _error(desc, arg)
     if n <= 0:
-        raise _arg_error('positive integer', arg)
+        raise _error(desc, arg)
     return n
 
-def _arg_error(desc, arg):
-    msg = "requires %s, but found '%s'" % (desc, arg)
+def _case_insensitive_regex(arg):
+    import re
+    try:
+        return re.compile(arg, re.IGNORECASE)
+    except re.error as reason:
+        raise _error("invalid regular expression: '{}', {}", arg, reason)
+
+def _error(desc, *args):
+    msg = desc.format(*args)
     return argparse.ArgumentTypeError(msg)

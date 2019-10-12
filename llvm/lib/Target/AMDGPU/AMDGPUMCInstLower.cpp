@@ -211,6 +211,10 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     lowerOperand(MO, MCOp);
     OutMI.addOperand(MCOp);
   }
+
+  int FIIdx = AMDGPU::getNamedOperandIdx(MCOpcode, AMDGPU::OpName::fi);
+  if (FIIdx >= (int)OutMI.getNumOperands())
+    OutMI.addOperand(MCOperand::createImm(0));
 }
 
 bool AMDGPUAsmPrinter::lowerOperand(const MachineOperand &MO,

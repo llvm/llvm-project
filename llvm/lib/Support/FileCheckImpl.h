@@ -428,6 +428,9 @@ class FileCheckPattern {
   /// line to the one with this CHECK.
   Optional<size_t> LineNumber;
 
+  /// Ignore case while matching if set to true.
+  bool IgnoreCase = false;
+
 public:
   FileCheckPattern(Check::FileCheckType Ty, FileCheckPatternContext *Context,
                    Optional<size_t> Line = None)
