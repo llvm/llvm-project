@@ -227,9 +227,11 @@ void assembleToStream(const ExegesisTarget &ET,
   ET.addTargetSpecificPasses(PM);
   TPC->printAndVerify("After ExegesisTarget::addTargetSpecificPasses");
   // Adding the following passes:
+  // - postrapseudos: expands pseudo return instructions used on some targets.
   // - machineverifier: checks that the MachineFunction is well formed.
   // - prologepilog: saves and restore callee saved registers.
-  for (const char *PassName : {"machineverifier", "prologepilog"})
+  for (const char *PassName :
+       {"postrapseudos", "machineverifier", "prologepilog"})
     if (addPass(PM, PassName, *TPC))
       report_fatal_error("Unable to add a mandatory pass");
   TPC->setInitialized();

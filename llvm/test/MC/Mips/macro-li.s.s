@@ -45,12 +45,10 @@ li.s	$4, 12345678910123456789.12345678910
 # ALL:   ori     $4, $4, 21674               # encoding: [0xaa,0x54,0x84,0x34]
 
 li.s	$f4, 0
-# ALL:   addiu   $1, $zero, 0                # encoding: [0x00,0x00,0x01,0x24]
-# ALL:   mtc1    $1, $f4                     # encoding: [0x00,0x20,0x81,0x44]
+# ALL:   mtc1    $zero, $f4                  # encoding: [0x00,0x20,0x80,0x44]
 
 li.s	$f4, 0.0
-# ALL:   addiu   $1, $zero, 0                # encoding: [0x00,0x00,0x01,0x24]
-# ALL:   mtc1    $1, $f4                     # encoding: [0x00,0x20,0x81,0x44]
+# ALL:   mtc1    $zero, $f4                  # encoding: [0x00,0x20,0x80,0x44]
 
 li.s	$f4, 1.12345
 # ALL:	.section	.rodata,"a",@progbits

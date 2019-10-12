@@ -780,6 +780,21 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                 [llvm_anyvector_ty],
                 [IntrNoMem]>;
 
+  class AdvSIMD_SVE_DOT_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 LLVMSubdivide4VectorType<0>,
+                 LLVMSubdivide4VectorType<0>],
+                [IntrNoMem]>;
+
+  class AdvSIMD_SVE_DOT_Indexed_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 LLVMSubdivide4VectorType<0>,
+                 LLVMSubdivide4VectorType<0>,
+                 llvm_i32_ty],
+                [IntrNoMem]>;
+
   // This class of intrinsics are not intended to be useful within LLVM IR but
   // are instead here to support some of the more regid parts of the ACLE.
   class Builtin_SVCVT<string name, LLVMType OUT, LLVMType IN>
@@ -798,6 +813,12 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
 
 def int_aarch64_sve_abs : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_neg : AdvSIMD_Merged1VectorArg_Intrinsic;
+
+def int_aarch64_sve_sdot      : AdvSIMD_SVE_DOT_Intrinsic;
+def int_aarch64_sve_sdot_lane : AdvSIMD_SVE_DOT_Indexed_Intrinsic;
+
+def int_aarch64_sve_udot      : AdvSIMD_SVE_DOT_Intrinsic;
+def int_aarch64_sve_udot_lane : AdvSIMD_SVE_DOT_Indexed_Intrinsic;
 
 //
 // Counting bits

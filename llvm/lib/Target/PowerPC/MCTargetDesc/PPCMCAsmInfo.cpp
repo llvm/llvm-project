@@ -86,4 +86,5 @@ void PPCXCOFFMCAsmInfo::anchor() {}
 PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
   assert(!IsLittleEndian && "Little-endian XCOFF not supported.");
   CodePointerSize = CalleeSaveStackSlotSize = Is64Bit ? 8 : 4;
+  ZeroDirective = "\t.space\t";
 }

@@ -7,8 +7,8 @@
 # Show that the debug section in a segment was removed, to match GNU.
 # First validate that the offset in use is correct.
 # RUN: llvm-objcopy %t %t4
-# RUN: od -t x1 -N 4 -j 120 %t4 | FileCheck %s --check-prefix=COPY-BYTES
-# RUN: od -t x1 -N 4 -j 120 %t2 | FileCheck %s --check-prefix=STRIP-BYTES
+# RUN: od -t x1 -N 4 -j 120 %t4 | FileCheck %s --ignore-case --check-prefix=COPY-BYTES
+# RUN: od -t x1 -N 4 -j 120 %t2 | FileCheck %s --ignore-case --check-prefix=STRIP-BYTES
 
 !ELF
 FileHeader:

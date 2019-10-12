@@ -35,10 +35,10 @@ ds_read_u16_d16 v5, v1
 ds_read_u16_d16_hi v5, v1
 // GFX6-8: error: instruction not supported on this GPU
 
-ds_write_addtid_b32 v5, v1
+ds_write_addtid_b32 v5
 // GFX6-8: error: instruction not supported on this GPU
 
-ds_read_addtid_b32 v5, v1
+ds_read_addtid_b32 v5
 // GFX6-8: error: instruction not supported on this GPU
 
 // GFX8+.

@@ -719,6 +719,62 @@ buffer_atomic_add v5, off, s[8:11], 0.15915494 offset:4095 glc
 // NOSICI: error: invalid operand for instruction
 // VI:   buffer_atomic_add v5, off, s[8:11], 0.15915494 offset:4095 glc ; encoding: [0xff,0x4f,0x08,0xe1,0x00,0x05,0x02,0xf8]
 
+buffer_atomic_fcmpswap v[0:1], off, s[0:3], s0 offset:4095
+// SICI: buffer_atomic_fcmpswap v[0:1], off, s[0:3], s0 offset:4095 ; encoding: [0xff,0x0f,0xf8,0xe0,0x00,0x00,0x00,0x00]
+// NOVI: error: not a valid operand.
+
+buffer_atomic_fcmpswap v[0:1], v[0:1], s[0:3], s0 addr64 offset:4095
+// SICI: buffer_atomic_fcmpswap v[0:1], v[0:1], s[0:3], s0 addr64 offset:4095 ; encoding: [0xff,0x8f,0xf8,0xe0,0x00,0x00,0x00,0x00]
+// NOVI: error: not a valid operand.
+
+buffer_atomic_fcmpswap_x2 v[0:3], off, s[0:3], s0 offset:4095
+// SICI: buffer_atomic_fcmpswap_x2 v[0:3], off, s[0:3], s0 offset:4095 ; encoding: [0xff,0x0f,0x78,0xe1,0x00,0x00,0x00,0x00]
+// NOVI: error: not a valid operand.
+
+buffer_atomic_fcmpswap_x2 v[0:3], v0, s[0:3], s0 idxen offset:4095
+// SICI: buffer_atomic_fcmpswap_x2 v[0:3], v0, s[0:3], s0 idxen offset:4095 ; encoding: [0xff,0x2f,0x78,0xe1,0x00,0x00,0x00,0x00]
+// NOVI: error: not a valid operand.
+
+buffer_atomic_fmax v1, off, s[0:3], s0 offset:4095
+// SICI: buffer_atomic_fmax v1, off, s[0:3], s0 offset:4095 ; encoding: [0xff,0x0f,0x00,0xe1,0x00,0x01,0x00,0x00]
+// NOVI: error: not a valid operand.
+
+buffer_atomic_fmax v0, off, s[0:3], s0 offset:7
+// SICI: buffer_atomic_fmax v0, off, s[0:3], s0 offset:7 ; encoding: [0x07,0x00,0x00,0xe1,0x00,0x00,0x00,0x00]
+// NOVI: error: not a valid operand.
+
+buffer_atomic_fmax v0, off, s[0:3], s0 offset:4095 glc
+// SICI: buffer_atomic_fmax v0, off, s[0:3], s0 offset:4095 glc ; encoding: [0xff,0x4f,0x00,0xe1,0x00,0x00,0x00,0x00]
+// NOVI: error: not a valid operand.
+
+buffer_atomic_fmax_x2 v[5:6], off, s[0:3], s0 offset:4095
+// SICI: buffer_atomic_fmax_x2 v[5:6], off, s[0:3], s0 offset:4095 ; encoding: [0xff,0x0f,0x80,0xe1,0x00,0x05,0x00,0x00]
+// NOVI: error: not a valid operand.
+
+buffer_atomic_fmax_x2 v[0:1], v0, s[0:3], s0 idxen offset:4095
+// SICI: buffer_atomic_fmax_x2 v[0:1], v0, s[0:3], s0 idxen offset:4095 ; encoding: [0xff,0x2f,0x80,0xe1,0x00,0x00,0x00,0x00]
+// NOVI: error: not a valid operand.
+
+buffer_atomic_fmin v0, v[0:1], s[0:3], s0 addr64 offset:4095
+// SICI: buffer_atomic_fmin v0, v[0:1], s[0:3], s0 addr64 offset:4095 ; encoding: [0xff,0x8f,0xfc,0xe0,0x00,0x00,0x00,0x00]
+// NOVI: error: not a valid operand.
+
+buffer_atomic_fmin v0, off, s[0:3], s0
+// SICI: buffer_atomic_fmin v0, off, s[0:3], s0 ; encoding: [0x00,0x00,0xfc,0xe0,0x00,0x00,0x00,0x00]
+// NOVI: error: instruction not supported on this GPU
+
+buffer_atomic_fmin v0, off, s[0:3], s0 offset:0
+// SICI: buffer_atomic_fmin v0, off, s[0:3], s0 ; encoding: [0x00,0x00,0xfc,0xe0,0x00,0x00,0x00,0x00]
+// NOVI: error: not a valid operand.
+
+buffer_atomic_fmin_x2 v[0:1], off, s[0:3], s0 offset:4095 slc
+// SICI: buffer_atomic_fmin_x2 v[0:1], off, s[0:3], s0 offset:4095 slc ; encoding: [0xff,0x0f,0x7c,0xe1,0x00,0x00,0x40,0x00]
+// NOVI: error: not a valid operand.
+
+buffer_atomic_fmin_x2 v[0:1], v0, s[0:3], s0 idxen offset:4095
+// SICI: buffer_atomic_fmin_x2 v[0:1], v0, s[0:3], s0 idxen offset:4095 ; encoding: [0xff,0x2f,0x7c,0xe1,0x00,0x00,0x00,0x00]
+// NOVI: error: not a valid operand.
+
 //===----------------------------------------------------------------------===//
 // Lds support
 //===----------------------------------------------------------------------===//

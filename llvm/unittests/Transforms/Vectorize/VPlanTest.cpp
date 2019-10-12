@@ -59,5 +59,31 @@ TEST(VPInstructionTest, eraseFromParent) {
   EXPECT_TRUE(VPBB1.empty());
 }
 
+TEST(VPInstructionTest, moveAfter) {
+  VPInstruction *I1 = new VPInstruction(0, {});
+  VPInstruction *I2 = new VPInstruction(1, {});
+  VPInstruction *I3 = new VPInstruction(2, {});
+
+  VPBasicBlock VPBB1;
+  VPBB1.appendRecipe(I1);
+  VPBB1.appendRecipe(I2);
+  VPBB1.appendRecipe(I3);
+
+  I1->moveAfter(I2);
+
+  CHECK_ITERATOR(VPBB1, I2, I1, I3);
+
+  VPInstruction *I4 = new VPInstruction(4, {});
+  VPInstruction *I5 = new VPInstruction(5, {});
+  VPBasicBlock VPBB2;
+  VPBB2.appendRecipe(I4);
+  VPBB2.appendRecipe(I5);
+
+  I3->moveAfter(I4);
+
+  CHECK_ITERATOR(VPBB1, I2, I1);
+  CHECK_ITERATOR(VPBB2, I4, I3, I5);
+}
+
 } // namespace
 } // namespace llvm

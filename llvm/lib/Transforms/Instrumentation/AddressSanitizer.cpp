@@ -2439,11 +2439,10 @@ bool ModuleAddressSanitizer::instrumentModule(Module &M) {
       /*InitArgs=*/{}, VersionCheckName);
 
   bool CtorComdat = true;
-  bool Changed = false;
   // TODO(glider): temporarily disabled globals instrumentation for KASan.
   if (ClGlobals) {
     IRBuilder<> IRB(AsanCtorFunction->getEntryBlock().getTerminator());
-    Changed |= InstrumentGlobals(IRB, M, &CtorComdat);
+    InstrumentGlobals(IRB, M, &CtorComdat);
   }
 
   const uint64_t Priority = GetCtorAndDtorPriority(TargetTriple);
@@ -2464,7 +2463,7 @@ bool ModuleAddressSanitizer::instrumentModule(Module &M) {
       appendToGlobalDtors(M, AsanDtorFunction, Priority);
   }
 
-  return Changed;
+  return true;
 }
 
 void AddressSanitizer::initializeCallbacks(Module &M) {

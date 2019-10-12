@@ -48,6 +48,10 @@ static cl::opt<bool> NoCanonicalizeWhiteSpace(
     "strict-whitespace",
     cl::desc("Do not treat all horizontal whitespace as equivalent"));
 
+static cl::opt<bool> IgnoreCase(
+    "ignore-case",
+    cl::desc("Use case-insensitive matching"));
+
 static cl::list<std::string> ImplicitCheckNot(
     "implicit-check-not",
     cl::desc("Add an implicit negative check with this pattern to every\n"
@@ -555,6 +559,7 @@ int main(int argc, char **argv) {
   Req.VerboseVerbose = VerboseVerbose;
   Req.NoCanonicalizeWhiteSpace = NoCanonicalizeWhiteSpace;
   Req.MatchFullLines = MatchFullLines;
+  Req.IgnoreCase = IgnoreCase;
 
   if (VerboseVerbose)
     Req.Verbose = true;

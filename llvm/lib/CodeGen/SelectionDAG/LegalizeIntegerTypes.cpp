@@ -642,78 +642,48 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Overflow(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSAT(SDNode *N) {
-  // If the promoted type is legal, we can convert this to:
-  //   1. ANY_EXTEND iN to iM
-  //   2. SHL by M-N
-  //   3. [US][ADD|SUB]SAT
-  //   4. L/ASHR by M-N
-  // Else it is more efficient to convert this to a min and a max
-  // operation in the higher precision arithmetic.
+  // For promoting iN -> iM, this can be expanded by
+  // 1. ANY_EXTEND iN to iM
+  // 2. SHL by M-N
+  // 3. [US][ADD|SUB]SAT
+  // 4. L/ASHR by M-N
   SDLoc dl(N);
   SDValue Op1 = N->getOperand(0);
   SDValue Op2 = N->getOperand(1);
   unsigned OldBits = Op1.getScalarValueSizeInBits();
 
   unsigned Opcode = N->getOpcode();
+  unsigned ShiftOp;
+  switch (Opcode) {
+  case ISD::SADDSAT:
+  case ISD::SSUBSAT:
+    ShiftOp = ISD::SRA;
+    break;
+  case ISD::UADDSAT:
+  case ISD::USUBSAT:
+    ShiftOp = ISD::SRL;
+    break;
+  default:
+    llvm_unreachable("Expected opcode to be signed or unsigned saturation "
+                     "addition or subtraction");
+  }
 
   SDValue Op1Promoted = GetPromotedInteger(Op1);
   SDValue Op2Promoted = GetPromotedInteger(Op2);
+
   EVT PromotedType = Op1Promoted.getValueType();
   unsigned NewBits = PromotedType.getScalarSizeInBits();
+  unsigned SHLAmount = NewBits - OldBits;
+  EVT SHVT = TLI.getShiftAmountTy(PromotedType, DAG.getDataLayout());
+  SDValue ShiftAmount = DAG.getConstant(SHLAmount, dl, SHVT);
+  Op1Promoted =
+      DAG.getNode(ISD::SHL, dl, PromotedType, Op1Promoted, ShiftAmount);
+  Op2Promoted =
+      DAG.getNode(ISD::SHL, dl, PromotedType, Op2Promoted, ShiftAmount);
 
-  if (TLI.isOperationLegalOrCustom(Opcode, PromotedType)) {
-    unsigned ShiftOp;
-    switch (Opcode) {
-    case ISD::SADDSAT:
-    case ISD::SSUBSAT:
-      ShiftOp = ISD::SRA;
-      break;
-    case ISD::UADDSAT:
-    case ISD::USUBSAT:
-      ShiftOp = ISD::SRL;
-      break;
-    default:
-      llvm_unreachable("Expected opcode to be signed or unsigned saturation "
-                       "addition or subtraction");
-    }
-
-    unsigned SHLAmount = NewBits - OldBits;
-    EVT SHVT = TLI.getShiftAmountTy(PromotedType, DAG.getDataLayout());
-    SDValue ShiftAmount = DAG.getConstant(SHLAmount, dl, SHVT);
-    Op1Promoted =
-        DAG.getNode(ISD::SHL, dl, PromotedType, Op1Promoted, ShiftAmount);
-    Op2Promoted =
-        DAG.getNode(ISD::SHL, dl, PromotedType, Op2Promoted, ShiftAmount);
-
-    SDValue Result =
-        DAG.getNode(Opcode, dl, PromotedType, Op1Promoted, Op2Promoted);
-    return DAG.getNode(ShiftOp, dl, PromotedType, Result, ShiftAmount);
-  } else {
-    if (Opcode == ISD::USUBSAT) {
-      SDValue Max =
-          DAG.getNode(ISD::UMAX, dl, PromotedType, Op1Promoted, Op2Promoted);
-      return DAG.getNode(ISD::SUB, dl, PromotedType, Max, Op2Promoted);
-    }
-
-    if (Opcode == ISD::UADDSAT) {
-      APInt MaxVal = APInt::getAllOnesValue(OldBits).zext(NewBits);
-      SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
-      SDValue Add =
-          DAG.getNode(ISD::ADD, dl, PromotedType, Op1Promoted, Op2Promoted);
-      return DAG.getNode(ISD::UMIN, dl, PromotedType, Add, SatMax);
-    }
-
-    unsigned AddOp = Opcode == ISD::SADDSAT ? ISD::ADD : ISD::SUB;
-    APInt MinVal = APInt::getSignedMinValue(OldBits).sext(NewBits);
-    APInt MaxVal = APInt::getSignedMaxValue(OldBits).sext(NewBits);
-    SDValue SatMin = DAG.getConstant(MinVal, dl, PromotedType);
-    SDValue SatMax = DAG.getConstant(MaxVal, dl, PromotedType);
-    SDValue Result =
-        DAG.getNode(AddOp, dl, PromotedType, Op1Promoted, Op2Promoted);
-    Result = DAG.getNode(ISD::SMIN, dl, PromotedType, Result, SatMax);
-    Result = DAG.getNode(ISD::SMAX, dl, PromotedType, Result, SatMin);
-    return Result;
-  }
+  SDValue Result =
+      DAG.getNode(Opcode, dl, PromotedType, Op1Promoted, Op2Promoted);
+  return DAG.getNode(ShiftOp, dl, PromotedType, Result, ShiftAmount);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_MULFIX(SDNode *N) {

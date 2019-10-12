@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy -O binary %t %t2
-# RUN: od -t x1 %t2 | FileCheck %s
+# RUN: od -t x1 %t2 | FileCheck %s --ignore-case
 
 !ELF
 FileHeader:

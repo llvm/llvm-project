@@ -3322,11 +3322,9 @@ bool MipsAsmParser::expandLoadSingleImmToGPR(MCInst &Inst, SMLoc IDLoc,
   unsigned FirstReg = Inst.getOperand(0).getReg();
   uint64_t ImmOp64 = Inst.getOperand(1).getImm();
 
-  ImmOp64 = convertIntToDoubleImm(ImmOp64);
+  uint32_t ImmOp32 = covertDoubleImmToSingleImm(convertIntToDoubleImm(ImmOp64));
 
-  uint32_t ImmOp32 = covertDoubleImmToSingleImm(ImmOp64);
-
-  return loadImmediate(ImmOp32, FirstReg, Mips::NoRegister, true, true, IDLoc,
+  return loadImmediate(ImmOp32, FirstReg, Mips::NoRegister, true, false, IDLoc,
                        Out, STI);
 }
 
@@ -3345,13 +3343,16 @@ bool MipsAsmParser::expandLoadSingleImmToFPR(MCInst &Inst, SMLoc IDLoc,
 
   uint32_t ImmOp32 = covertDoubleImmToSingleImm(ImmOp64);
 
-  unsigned TmpReg = getATReg(IDLoc);
-  if (!TmpReg)
-    return true;
+  unsigned TmpReg = Mips::ZERO;
+  if (ImmOp32 != 0) {
+    TmpReg = getATReg(IDLoc);
+    if (!TmpReg)
+      return true;
+  }
 
   if (Lo_32(ImmOp64) == 0) {
-    if (loadImmediate(ImmOp32, TmpReg, Mips::NoRegister, true, true, IDLoc, Out,
-                      STI))
+    if (TmpReg != Mips::ZERO && loadImmediate(ImmOp32, TmpReg, Mips::NoRegister,
+                                              true, false, IDLoc, Out, STI))
       return true;
     TOut.emitRR(Mips::MTC1, FirstReg, TmpReg, IDLoc, STI);
     return false;
@@ -3394,24 +3395,17 @@ bool MipsAsmParser::expandLoadDoubleImmToGPR(MCInst &Inst, SMLoc IDLoc,
 
   ImmOp64 = convertIntToDoubleImm(ImmOp64);
 
-  uint32_t LoImmOp64 = Lo_32(ImmOp64);
-  uint32_t HiImmOp64 = Hi_32(ImmOp64);
-
-  unsigned TmpReg = getATReg(IDLoc);
-  if (!TmpReg)
-    return true;
-
-  if (LoImmOp64 == 0) {
-    if (isABI_N32() || isABI_N64()) {
-      if (loadImmediate(HiImmOp64, FirstReg, Mips::NoRegister, false, true,
+  if (Lo_32(ImmOp64) == 0) {
+    if (isGP64bit()) {
+      if (loadImmediate(ImmOp64, FirstReg, Mips::NoRegister, false, false,
                         IDLoc, Out, STI))
         return true;
     } else {
-      if (loadImmediate(HiImmOp64, FirstReg, Mips::NoRegister, true, true,
+      if (loadImmediate(Hi_32(ImmOp64), FirstReg, Mips::NoRegister, true, false,
                         IDLoc, Out, STI))
         return true;
 
-      if (loadImmediate(0, nextReg(FirstReg), Mips::NoRegister, true, true,
+      if (loadImmediate(0, nextReg(FirstReg), Mips::NoRegister, true, false,
                         IDLoc, Out, STI))
         return true;
     }
@@ -3430,21 +3424,21 @@ bool MipsAsmParser::expandLoadDoubleImmToGPR(MCInst &Inst, SMLoc IDLoc,
 
   getStreamer().SwitchSection(ReadOnlySection);
   getStreamer().EmitLabel(Sym, IDLoc);
-  getStreamer().EmitIntValue(HiImmOp64, 4);
-  getStreamer().EmitIntValue(LoImmOp64, 4);
+  getStreamer().EmitValueToAlignment(8);
+  getStreamer().EmitIntValue(ImmOp64, 8);
   getStreamer().SwitchSection(CS);
+
+  unsigned TmpReg = getATReg(IDLoc);
+  if (!TmpReg)
+    return true;
 
   if (emitPartialAddress(TOut, IDLoc, Sym))
     return true;
 
-  if (isABI_N64())
-    TOut.emitRRX(Mips::DADDiu, TmpReg, TmpReg, MCOperand::createExpr(LoExpr),
-                 IDLoc, STI);
-  else
-    TOut.emitRRX(Mips::ADDiu, TmpReg, TmpReg, MCOperand::createExpr(LoExpr),
-                 IDLoc, STI);
+  TOut.emitRRX(isABI_N64() ? Mips::DADDiu : Mips::ADDiu, TmpReg, TmpReg,
+               MCOperand::createExpr(LoExpr), IDLoc, STI);
 
-  if (isABI_N32() || isABI_N64())
+  if (isGP64bit())
     TOut.emitRRI(Mips::LD, FirstReg, TmpReg, 0, IDLoc, STI);
   else {
     TOut.emitRRI(Mips::LW, FirstReg, TmpReg, 0, IDLoc, STI);
@@ -3466,23 +3460,30 @@ bool MipsAsmParser::expandLoadDoubleImmToFPR(MCInst &Inst, bool Is64FPU,
 
   ImmOp64 = convertIntToDoubleImm(ImmOp64);
 
-  uint32_t LoImmOp64 = Lo_32(ImmOp64);
-  uint32_t HiImmOp64 = Hi_32(ImmOp64);
-
-  unsigned TmpReg = getATReg(IDLoc);
-  if (!TmpReg)
-    return true;
-
-  if ((LoImmOp64 == 0) &&
-      !((HiImmOp64 & 0xffff0000) && (HiImmOp64 & 0x0000ffff))) {
-    // FIXME: In the case where the constant is zero, we can load the
-    // register directly from the zero register.
-    if (loadImmediate(HiImmOp64, TmpReg, Mips::NoRegister, true, true, IDLoc,
-                      Out, STI))
+  unsigned TmpReg = Mips::ZERO;
+  if (ImmOp64 != 0) {
+    TmpReg = getATReg(IDLoc);
+    if (!TmpReg)
       return true;
-    if (isABI_N32() || isABI_N64())
+  }
+
+  if ((Lo_32(ImmOp64) == 0) &&
+      !((Hi_32(ImmOp64) & 0xffff0000) && (Hi_32(ImmOp64) & 0x0000ffff))) {
+    if (isGP64bit()) {
+      if (TmpReg != Mips::ZERO &&
+          loadImmediate(ImmOp64, TmpReg, Mips::NoRegister, false, false, IDLoc,
+                        Out, STI))
+        return true;
       TOut.emitRR(Mips::DMTC1, FirstReg, TmpReg, IDLoc, STI);
-    else if (hasMips32r2()) {
+      return false;
+    }
+
+    if (TmpReg != Mips::ZERO &&
+        loadImmediate(Hi_32(ImmOp64), TmpReg, Mips::NoRegister, true, false,
+                      IDLoc, Out, STI))
+      return true;
+
+    if (hasMips32r2()) {
       TOut.emitRR(Mips::MTC1, FirstReg, Mips::ZERO, IDLoc, STI);
       TOut.emitRRR(Mips::MTHC1_D32, FirstReg, FirstReg, TmpReg, IDLoc, STI);
     } else {
@@ -3506,8 +3507,8 @@ bool MipsAsmParser::expandLoadDoubleImmToFPR(MCInst &Inst, bool Is64FPU,
 
   getStreamer().SwitchSection(ReadOnlySection);
   getStreamer().EmitLabel(Sym, IDLoc);
-  getStreamer().EmitIntValue(HiImmOp64, 4);
-  getStreamer().EmitIntValue(LoImmOp64, 4);
+  getStreamer().EmitValueToAlignment(8);
+  getStreamer().EmitIntValue(ImmOp64, 8);
   getStreamer().SwitchSection(CS);
 
   if (emitPartialAddress(TOut, IDLoc, Sym))

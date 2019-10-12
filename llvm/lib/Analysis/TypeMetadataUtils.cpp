@@ -127,3 +127,35 @@ void llvm::findDevirtualizableCallsForTypeCheckedLoad(
     findCallsAtConstantOffset(DevirtCalls, &HasNonCallUses, LoadedPtr,
                               Offset->getZExtValue(), CI, DT);
 }
+
+Constant *llvm::getPointerAtOffset(Constant *I, uint64_t Offset, Module &M) {
+  if (I->getType()->isPointerTy()) {
+    if (Offset == 0)
+      return I;
+    return nullptr;
+  }
+
+  const DataLayout &DL = M.getDataLayout();
+
+  if (auto *C = dyn_cast<ConstantStruct>(I)) {
+    const StructLayout *SL = DL.getStructLayout(C->getType());
+    if (Offset >= SL->getSizeInBytes())
+      return nullptr;
+
+    unsigned Op = SL->getElementContainingOffset(Offset);
+    return getPointerAtOffset(cast<Constant>(I->getOperand(Op)),
+                              Offset - SL->getElementOffset(Op), M);
+  }
+  if (auto *C = dyn_cast<ConstantArray>(I)) {
+    ArrayType *VTableTy = C->getType();
+    uint64_t ElemSize = DL.getTypeAllocSize(VTableTy->getElementType());
+
+    unsigned Op = Offset / ElemSize;
+    if (Op >= C->getNumOperands())
+      return nullptr;
+
+    return getPointerAtOffset(cast<Constant>(I->getOperand(Op)),
+                              Offset % ElemSize, M);
+  }
+  return nullptr;
+}

@@ -40,7 +40,8 @@ public:
       : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl()),
         TLI(ST->getTargetLowering()) {}
 
-  unsigned getNumberOfRegisters(bool Vector) {
+  unsigned getNumberOfRegisters(unsigned ClassID) const {
+    bool Vector = (ClassID == 1);
     if (Vector) {
       return 0;
     }

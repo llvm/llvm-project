@@ -93,8 +93,6 @@ class LLVMConfig(object):
                         'ASAN_OPTIONS', 'detect_leaks=1', append_path=True)
             if re.match(r'^x86_64.*-linux', target_triple):
                 features.add('x86_64-linux')
-            if re.match(r'.*-windows-msvc$', target_triple):
-                features.add('target-windows')
             if re.match(r'^i.86.*', target_triple):
                 features.add('target-x86')
             elif re.match(r'^x86_64.*', target_triple):

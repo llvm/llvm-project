@@ -1010,17 +1010,34 @@ def BUFFER_STORE_LDS_DWORD : MUBUF_Pseudo_Store_Lds <"buffer_store_lds_dword">;
 let SubtargetPredicate = isGFX6 in { // isn't on CI & VI
 /*
 defm BUFFER_ATOMIC_RSUB        : MUBUF_Pseudo_Atomics <"buffer_atomic_rsub">;
-defm BUFFER_ATOMIC_FCMPSWAP    : MUBUF_Pseudo_Atomics <"buffer_atomic_fcmpswap">;
-defm BUFFER_ATOMIC_FMIN        : MUBUF_Pseudo_Atomics <"buffer_atomic_fmin">;
-defm BUFFER_ATOMIC_FMAX        : MUBUF_Pseudo_Atomics <"buffer_atomic_fmax">;
 defm BUFFER_ATOMIC_RSUB_X2     : MUBUF_Pseudo_Atomics <"buffer_atomic_rsub_x2">;
-defm BUFFER_ATOMIC_FCMPSWAP_X2 : MUBUF_Pseudo_Atomics <"buffer_atomic_fcmpswap_x2">;
-defm BUFFER_ATOMIC_FMIN_X2     : MUBUF_Pseudo_Atomics <"buffer_atomic_fmin_x2">;
-defm BUFFER_ATOMIC_FMAX_X2     : MUBUF_Pseudo_Atomics <"buffer_atomic_fmax_x2">;
 */
 
 def BUFFER_WBINVL1_SC : MUBUF_Invalidate <"buffer_wbinvl1_sc",
                                           int_amdgcn_buffer_wbinvl1_sc>;
+}
+
+let SubtargetPredicate = isGFX6GFX7GFX10 in {
+
+defm BUFFER_ATOMIC_FCMPSWAP : MUBUF_Pseudo_Atomics <
+  "buffer_atomic_fcmpswap", VReg_64, v2f32, null_frag
+>;
+defm BUFFER_ATOMIC_FMIN : MUBUF_Pseudo_Atomics <
+  "buffer_atomic_fmin", VGPR_32, f32, null_frag
+>;
+defm BUFFER_ATOMIC_FMAX : MUBUF_Pseudo_Atomics <
+  "buffer_atomic_fmax", VGPR_32, f32, null_frag
+>;
+defm BUFFER_ATOMIC_FCMPSWAP_X2 : MUBUF_Pseudo_Atomics <
+  "buffer_atomic_fcmpswap_x2", VReg_128, v2f64, null_frag
+>;
+defm BUFFER_ATOMIC_FMIN_X2 : MUBUF_Pseudo_Atomics <
+  "buffer_atomic_fmin_x2", VReg_64, f64, null_frag
+>;
+defm BUFFER_ATOMIC_FMAX_X2 : MUBUF_Pseudo_Atomics <
+  "buffer_atomic_fmax_x2", VReg_64, f64, null_frag
+>;
+
 }
 
 let SubtargetPredicate = HasD16LoadStore in {
@@ -2025,10 +2042,9 @@ defm BUFFER_ATOMIC_OR          : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x03a>;
 defm BUFFER_ATOMIC_XOR         : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x03b>;
 defm BUFFER_ATOMIC_INC         : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x03c>;
 defm BUFFER_ATOMIC_DEC         : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x03d>;
-// FIXME-GFX6-GFX7-GFX10: Add following instructions:
-//defm BUFFER_ATOMIC_FCMPSWAP    : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x03e>;
-//defm BUFFER_ATOMIC_FMIN        : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x03f>;
-//defm BUFFER_ATOMIC_FMAX        : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x040>;
+defm BUFFER_ATOMIC_FCMPSWAP    : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x03e>;
+defm BUFFER_ATOMIC_FMIN        : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x03f>;
+defm BUFFER_ATOMIC_FMAX        : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x040>;
 defm BUFFER_ATOMIC_SWAP_X2     : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x050>;
 defm BUFFER_ATOMIC_CMPSWAP_X2  : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x051>;
 defm BUFFER_ATOMIC_ADD_X2      : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x052>;
@@ -2043,10 +2059,9 @@ defm BUFFER_ATOMIC_XOR_X2      : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x05b>;
 defm BUFFER_ATOMIC_INC_X2      : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x05c>;
 defm BUFFER_ATOMIC_DEC_X2      : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x05d>;
 // FIXME-GFX7: Need to handle hazard for BUFFER_ATOMIC_FCMPSWAP_X2 on GFX7.
-// FIXME-GFX6-GFX7-GFX10: Add following instructions:
-//defm BUFFER_ATOMIC_FCMPSWAP_X2 : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x05e>;
-//defm BUFFER_ATOMIC_FMIN_X2     : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x05f>;
-//defm BUFFER_ATOMIC_FMAX_X2     : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x060>;
+defm BUFFER_ATOMIC_FCMPSWAP_X2 : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x05e>;
+defm BUFFER_ATOMIC_FMIN_X2     : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x05f>;
+defm BUFFER_ATOMIC_FMAX_X2     : MUBUF_Real_Atomics_gfx6_gfx7_gfx10<0x060>;
 
 defm BUFFER_WBINVL1_SC        : MUBUF_Real_gfx6<0x070>;
 defm BUFFER_WBINVL1_VOL       : MUBUF_Real_gfx7<0x070>;

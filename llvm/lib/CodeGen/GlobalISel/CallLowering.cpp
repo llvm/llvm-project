@@ -198,14 +198,12 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
       unsigned NumParts = TLI->getNumRegistersForCallingConv(
           F.getContext(), F.getCallingConv(), CurVT);
       if (NumParts > 1) {
-        if (CurVT.isVector())
-          return false;
         // For now only handle exact splits.
         if (NewVT.getSizeInBits() * NumParts != CurVT.getSizeInBits())
           return false;
       }
 
-      // For incoming arguments (return values), we could have values in
+      // For incoming arguments (physregs to vregs), we could have values in
       // physregs (or memlocs) which we want to extract and copy to vregs.
       // During this, we might have to deal with the LLT being split across
       // multiple regs, so we have to record this information for later.
@@ -221,7 +219,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
             return false;
         } else {
           // We're handling an incoming arg which is split over multiple regs.
-          // E.g. returning an s128 on AArch64.
+          // E.g. passing an s128 on AArch64.
           ISD::ArgFlagsTy OrigFlags = Args[i].Flags[0];
           Args[i].OrigRegs.push_back(Args[i].Regs[0]);
           Args[i].Regs.clear();

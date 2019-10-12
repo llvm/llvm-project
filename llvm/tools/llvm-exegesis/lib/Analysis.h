@@ -81,6 +81,12 @@ private:
 
   void printInstructionRowCsv(size_t PointId, raw_ostream &OS) const;
 
+  void printClusterRawHtml(const InstructionBenchmarkClustering::ClusterId &Id,
+                           StringRef display_name, llvm::raw_ostream &OS) const;
+
+  void printPointHtml(const InstructionBenchmark &Point,
+                      llvm::raw_ostream &OS) const;
+
   void
   printSchedClassClustersHtml(const std::vector<SchedClassCluster> &Clusters,
                               const ResolvedSchedClass &SC,

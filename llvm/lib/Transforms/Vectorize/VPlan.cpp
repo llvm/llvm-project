@@ -283,6 +283,12 @@ iplist<VPRecipeBase>::iterator VPRecipeBase::eraseFromParent() {
   return getParent()->getRecipeList().erase(getIterator());
 }
 
+void VPRecipeBase::moveAfter(VPRecipeBase *InsertPos) {
+  InsertPos->getParent()->getRecipeList().splice(
+      std::next(InsertPos->getIterator()), getParent()->getRecipeList(),
+      getIterator());
+}
+
 void VPInstruction::generateInstruction(VPTransformState &State,
                                         unsigned Part) {
   IRBuilder<> &Builder = State.Builder;

@@ -144,6 +144,7 @@ group("test") {
     "//llvm/tools/llvm-config",
     "//llvm/tools/llvm-dis",
     "//llvm/tools/llvm-dwarfdump",
+    "//llvm/tools/llvm-ifs",
     "//llvm/tools/llvm-lto",
     "//llvm/tools/llvm-lto2",
     "//llvm/tools/llvm-modextract",

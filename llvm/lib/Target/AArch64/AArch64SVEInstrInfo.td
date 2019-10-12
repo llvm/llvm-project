@@ -82,11 +82,11 @@ let Predicates = [HasSVE] in {
   defm SDIVR_ZPmZ : sve_int_bin_pred_arit_2_div<0b110, "sdivr">;
   defm UDIVR_ZPmZ : sve_int_bin_pred_arit_2_div<0b111, "udivr">;
 
-  defm SDOT_ZZZ : sve_intx_dot<0b0, "sdot">;
-  defm UDOT_ZZZ : sve_intx_dot<0b1, "udot">;
+  defm SDOT_ZZZ : sve_intx_dot<0b0, "sdot", int_aarch64_sve_sdot>;
+  defm UDOT_ZZZ : sve_intx_dot<0b1, "udot", int_aarch64_sve_udot>;
 
-  defm SDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b0, "sdot">;
-  defm UDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b1, "udot">;
+  defm SDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b0, "sdot", int_aarch64_sve_sdot_lane>;
+  defm UDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b1, "udot", int_aarch64_sve_udot_lane>;
 
   defm SXTB_ZPmZ : sve_int_un_pred_arit_0_h<0b000, "sxtb">;
   defm UXTB_ZPmZ : sve_int_un_pred_arit_0_h<0b001, "uxtb">;

@@ -46,6 +46,7 @@ if (llvm_targets_to_build == "host") {
 llvm_build_AArch64 = false
 llvm_build_ARM = false
 llvm_build_BPF = false
+llvm_build_Mips = false
 llvm_build_PowerPC = false
 llvm_build_WebAssembly = false
 llvm_build_X86 = false
@@ -56,6 +57,8 @@ foreach(target, llvm_targets_to_build) {
     llvm_build_ARM = true
   } else if (target == "BPF") {
     llvm_build_BPF = true
+  } else if (target == "Mips") {
+    llvm_build_Mips = true
   } else if (target == "PowerPC") {
     llvm_build_PowerPC = true
   } else if (target == "WebAssembly") {
@@ -63,17 +66,16 @@ foreach(target, llvm_targets_to_build) {
   } else if (target == "X86") {
     llvm_build_X86 = true
   } else if (target == "AMDGPU" || target == "AVR" || target == "Hexagon" ||
-             target == "Lanai" || target == "Mips" || target == "NVPTX" ||
-             target == "RISCV" || target == "Sparc" || target == "SystemZ") {
+             target == "Lanai" || target == "NVPTX" || target == "RISCV" ||
+             target == "Sparc" || target == "SystemZ") {
     # Nothing to do.
   } else {
     all_targets_string = ""
     foreach(target, llvm_all_targets) {
       all_targets_string += "$0x0a    " + target
     }
-    assert(false,
-           "Unknown target '$target' in llvm_targets_to_build. " +
-               "Known targets:" + all_targets_string)
+    assert(false, "Unknown target '$target' in llvm_targets_to_build. " +
+                      "Known targets:" + all_targets_string)
   }
 }
 

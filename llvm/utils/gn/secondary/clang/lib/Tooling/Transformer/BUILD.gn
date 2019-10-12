@@ -12,6 +12,7 @@ static_library("Transformer") {
   ]
   sources = [
     "RangeSelector.cpp",
+    "RewriteRule.cpp",
     "SourceCode.cpp",
     "SourceCodeBuilders.cpp",
     "Stencil.cpp",

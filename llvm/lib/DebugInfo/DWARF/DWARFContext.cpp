@@ -305,7 +305,7 @@ static void dumpLoclistsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
     DWARFDebugLoclists Loclists;
     uint64_t EndOffset = Header.length() + Header.getHeaderOffset();
     Loclists.parse(LocData, Offset, EndOffset, Header.getVersion());
-    Loclists.dump(OS, 0, MRI, DumpOffset);
+    Loclists.dump(OS, 0, MRI, DumpOpts, DumpOffset);
     Offset = EndOffset;
   }
 }
@@ -382,7 +382,7 @@ void DWARFContext::dump(
 
   if (const auto *Off = shouldDump(Explicit, ".debug_loc", DIDT_ID_DebugLoc,
                                    DObj->getLocSection().Data)) {
-    getDebugLoc()->dump(OS, getRegisterInfo(), *Off);
+    getDebugLoc()->dump(OS, getRegisterInfo(), DumpOpts, *Off);
   }
   if (const auto *Off =
           shouldDump(Explicit, ".debug_loclists", DIDT_ID_DebugLoclists,
@@ -394,7 +394,7 @@ void DWARFContext::dump(
   if (const auto *Off =
           shouldDump(ExplicitDWO, ".debug_loc.dwo", DIDT_ID_DebugLoc,
                      DObj->getLocDWOSection().Data)) {
-    getDebugLocDWO()->dump(OS, 0, getRegisterInfo(), *Off);
+    getDebugLocDWO()->dump(OS, 0, getRegisterInfo(), DumpOpts, *Off);
   }
 
   if (const auto *Off = shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,

@@ -85,7 +85,8 @@ public:
 
   bool enableInterleavedAccessVectorization() { return true; }
 
-  unsigned getNumberOfRegisters(bool Vector) {
+  unsigned getNumberOfRegisters(unsigned ClassID) const {
+    bool Vector = (ClassID == 1);
     if (Vector) {
       if (ST->hasNEON())
         return 32;

@@ -36239,10 +36239,15 @@ static SDValue combineReductionToHorizontal(SDNode *ExtElt, SelectionDAG &DAG,
 
   SDLoc DL(ExtElt);
 
-  if (VecVT == MVT::v8i8) {
+  // vXi8 reduction - sub 128-bit vector.
+  if (VecVT == MVT::v4i8 || VecVT == MVT::v8i8) {
+    // Pad with zero.
+    if (VecVT == MVT::v4i8)
+      Rdx = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, Rdx,
+                        DAG.getConstant(0, DL, VecVT));
     // Pad with undef.
     Rdx = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, Rdx,
-                      DAG.getUNDEF(VecVT));
+                      DAG.getUNDEF(MVT::v8i8));
     Rdx = DAG.getNode(X86ISD::PSADBW, DL, MVT::v2i64, Rdx,
                       DAG.getConstant(0, DL, MVT::v16i8));
     Rdx = DAG.getBitcast(MVT::v16i8, Rdx);
@@ -39864,9 +39869,12 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
   // vXi16 truncate instructions are only available with AVX512BW.
   // For 256-bit or smaller vectors, we require VLX.
   // FIXME: We could widen truncates to 512 to remove the VLX restriction.
+  // If the result type is 256-bits or larger and we have disable 512-bit
+  // registers, we should go ahead and use the pack instructions if possible.
   bool PreferAVX512 = ((Subtarget.hasAVX512() && InSVT == MVT::i32) ||
                        (Subtarget.hasBWI() && InSVT == MVT::i16)) &&
-                      (Subtarget.hasVLX() || InVT.getSizeInBits() > 256);
+                      (Subtarget.hasVLX() || InVT.getSizeInBits() > 256) &&
+                      !(!Subtarget.useAVX512Regs() && VT.getSizeInBits() >= 256);
 
   if (VT.isVector() && isPowerOf2_32(VT.getVectorNumElements()) &&
       !PreferAVX512 &&
@@ -40327,11 +40335,11 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                             TargetLowering::DAGCombinerInfo &DCI,
                             const X86Subtarget &Subtarget) {
   StoreSDNode *St = cast<StoreSDNode>(N);
-  EVT VT = St->getValue().getValueType();
   EVT StVT = St->getMemoryVT();
   SDLoc dl(St);
   unsigned Alignment = St->getAlignment();
-  SDValue StoredVal = St->getOperand(1);
+  SDValue StoredVal = St->getValue();
+  EVT VT = StoredVal.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // Convert a store of vXi1 into a store of iX and a bitcast.
@@ -40448,17 +40456,15 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                              MVT::v16i8, St->getMemOperand());
   }
 
-  // Try to fold a vpmovuswb 256->128 into a truncating store.
-  // FIXME: Generalize this to other types.
-  // FIXME: Do the same for signed saturation.
-  if (!St->isTruncatingStore() && VT == MVT::v16i8 &&
-      St->getValue().getOpcode() == X86ISD::VTRUNCUS &&
-      St->getValue().getOperand(0).getValueType() == MVT::v16i16 &&
-      TLI.isTruncStoreLegal(MVT::v16i16, MVT::v16i8) &&
-      St->getValue().hasOneUse()) {
-    return EmitTruncSStore(false /* Unsigned saturation */, St->getChain(),
-                           dl, St->getValue().getOperand(0), St->getBasePtr(),
-                           MVT::v16i8, St->getMemOperand(), DAG);
+  // Try to fold a VTRUNCUS or VTRUNCS into a truncating store.
+  if (!St->isTruncatingStore() && StoredVal.hasOneUse() &&
+      (StoredVal.getOpcode() == X86ISD::VTRUNCUS ||
+       StoredVal.getOpcode() == X86ISD::VTRUNCS) &&
+      TLI.isTruncStoreLegal(StoredVal.getOperand(0).getValueType(), VT)) {
+    bool IsSigned = StoredVal.getOpcode() == X86ISD::VTRUNCS;
+    return EmitTruncSStore(IsSigned, St->getChain(),
+                           dl, StoredVal.getOperand(0), St->getBasePtr(),
+                           VT, St->getMemOperand(), DAG);
   }
 
   // Optimize trunc store (of multiple scalars) to shuffle and store.
@@ -41254,9 +41260,13 @@ static SDValue combineVTRUNC(SDNode *N, SelectionDAG &DAG) {
 /// In this case we go though all bitcasts.
 /// This also recognizes splat of a negated value and returns the splat of that
 /// value.
-static SDValue isFNEG(SelectionDAG &DAG, SDNode *N) {
+static SDValue isFNEG(SelectionDAG &DAG, SDNode *N, unsigned Depth = 0) {
   if (N->getOpcode() == ISD::FNEG)
     return N->getOperand(0);
+
+  // Don't recurse exponentially.
+  if (Depth > SelectionDAG::MaxRecursionDepth)
+    return SDValue();
 
   unsigned ScalarSize = N->getValueType(0).getScalarSizeInBits();
 
@@ -41271,7 +41281,7 @@ static SDValue isFNEG(SelectionDAG &DAG, SDNode *N) {
     // of this is VECTOR_SHUFFLE(-VEC1, UNDEF).  The mask can be anything here.
     if (!SVOp->getOperand(1).isUndef())
       return SDValue();
-    if (SDValue NegOp0 = isFNEG(DAG, SVOp->getOperand(0).getNode()))
+    if (SDValue NegOp0 = isFNEG(DAG, SVOp->getOperand(0).getNode(), Depth + 1))
       if (NegOp0.getValueType() == VT) // FIXME: Can we do better?
         return DAG.getVectorShuffle(VT, SDLoc(SVOp), NegOp0, DAG.getUNDEF(VT),
                                     SVOp->getMask());
@@ -41285,7 +41295,7 @@ static SDValue isFNEG(SelectionDAG &DAG, SDNode *N) {
     SDValue InsVal = Op.getOperand(1);
     if (!InsVector.isUndef())
       return SDValue();
-    if (SDValue NegInsVal = isFNEG(DAG, InsVal.getNode()))
+    if (SDValue NegInsVal = isFNEG(DAG, InsVal.getNode(), Depth + 1))
       if (NegInsVal.getValueType() == VT.getVectorElementType()) // FIXME
         return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(Op), VT, InsVector,
                            NegInsVal, Op.getOperand(2));
@@ -41429,7 +41439,7 @@ char X86TargetLowering::isNegatibleForFree(SDValue Op, SelectionDAG &DAG,
                                            bool ForCodeSize,
                                            unsigned Depth) const {
   // fneg patterns are removable even if they have multiple uses.
-  if (isFNEG(DAG, Op.getNode()))
+  if (isFNEG(DAG, Op.getNode(), Depth))
     return 2;
 
   // Don't recurse exponentially.
@@ -41472,7 +41482,7 @@ SDValue X86TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
                                                 bool ForCodeSize,
                                                 unsigned Depth) const {
   // fneg patterns are removable even if they have multiple uses.
-  if (SDValue Arg = isFNEG(DAG, Op.getNode()))
+  if (SDValue Arg = isFNEG(DAG, Op.getNode(), Depth))
     return DAG.getBitcast(Op.getValueType(), Arg);
 
   EVT VT = Op.getValueType();

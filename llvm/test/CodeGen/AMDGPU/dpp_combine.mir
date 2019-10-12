@@ -1,20 +1,20 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s -check-prefix=GCN
 
 ---
 # old is undefined: only combine when masks are fully enabled and
 # bound_ctrl:0 is set, otherwise the result of DPP VALU op can be undefined.
-# CHECK-LABEL: name: old_is_undef
-# CHECK: %2:vgpr_32 = IMPLICIT_DEF
+# GCN-LABEL: name: old_is_undef
+# GCN: %2:vgpr_32 = IMPLICIT_DEF
 # VOP2:
-# CHECK: %4:vgpr_32 = V_ADD_U32_dpp %2, %0, %1, 1, 15, 15, 1, implicit $exec
-# CHECK: %6:vgpr_32 = V_ADD_U32_e32 %5, %1, implicit $exec
-# CHECK: %8:vgpr_32 = V_ADD_U32_e32 %7, %1, implicit $exec
-# CHECK: %10:vgpr_32 = V_ADD_U32_e32 %9, %1, implicit $exec
+# GCN: %4:vgpr_32 = V_ADD_U32_dpp %2, %0, %1, 1, 15, 15, 1, implicit $exec
+# GCN: %6:vgpr_32 = V_ADD_U32_e32 %5, %1, implicit $exec
+# GCN: %8:vgpr_32 = V_ADD_U32_e32 %7, %1, implicit $exec
+# GCN: %10:vgpr_32 = V_ADD_U32_e32 %9, %1, implicit $exec
 # VOP1:
-# CHECK: %12:vgpr_32 = V_NOT_B32_dpp %2, %0, 1, 15, 15, 1, implicit $exec
-# CHECK: %14:vgpr_32 = V_NOT_B32_e32 %13, implicit $exec
-# CHECK: %16:vgpr_32 = V_NOT_B32_e32 %15, implicit $exec
-# CHECK: %18:vgpr_32 = V_NOT_B32_e32 %17, implicit $exec
+# GCN: %12:vgpr_32 = V_NOT_B32_dpp %2, %0, 1, 15, 15, 1, implicit $exec
+# GCN: %14:vgpr_32 = V_NOT_B32_e32 %13, implicit $exec
+# GCN: %16:vgpr_32 = V_NOT_B32_e32 %15, implicit $exec
+# GCN: %18:vgpr_32 = V_NOT_B32_e32 %17, implicit $exec
 name: old_is_undef
 tracksRegLiveness: true
 body: |
@@ -53,21 +53,21 @@ body: |
 
 # old is zero cases:
 
-# CHECK-LABEL: name: old_is_0
+# GCN-LABEL: name: old_is_0
 
 # VOP2:
 # case 1: old is zero, masks are fully enabled, bound_ctrl:0 is on:
 # the DPP mov result would be either zero ({src lane disabled}|{src lane is
 # out of range}) or active src lane result - can combine with old = undef.
 # undef is preffered as it makes life easier for the regalloc.
-# CHECK: [[U1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-# CHECK: %4:vgpr_32 = V_ADD_U32_dpp [[U1]], %0, %1, 1, 15, 15, 1, implicit $exec
+# GCN: [[U1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+# GCN: %4:vgpr_32 = V_ADD_U32_dpp [[U1]], %0, %1, 1, 15, 15, 1, implicit $exec
 
 # case 2: old is zero, masks are fully enabled, bound_ctrl:0 is off:
 # as the DPP mov old is zero this case is no different from case 1 - combine it
 # setting bound_ctrl0 on for the combined DPP VALU op to make old undefined
-# CHECK: [[U2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-# CHECK: %6:vgpr_32 = V_ADD_U32_dpp [[U2]], %0, %1, 1, 15, 15, 1, implicit $exec
+# GCN: [[U2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+# GCN: %6:vgpr_32 = V_ADD_U32_dpp [[U2]], %0, %1, 1, 15, 15, 1, implicit $exec
 
 # case 3: masks are partialy disabled, bound_ctrl:0 is on:
 # the DPP mov result would be either zero ({src lane disabled}|{src lane is
@@ -77,7 +77,7 @@ body: |
 # with identity value.
 # Special case: the bound_ctrl for the combined DPP VALU op isn't important
 # here but let's make it off to keep the combiner's logic simpler.
-# CHECK: %8:vgpr_32 = V_ADD_U32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
+# GCN: %8:vgpr_32 = V_ADD_U32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
 
 # case 4: masks are partialy disabled, bound_ctrl:0 is off:
 # the DPP mov result would be either zero ({src lane disabled}|{src lane is
@@ -85,19 +85,19 @@ body: |
 # active src lane result - can combine with old = src1 of the VALU op.
 # The VALU op should have the same masks as DPP mov as they select
 # lanes with identity value
-# CHECK: %10:vgpr_32 = V_ADD_U32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
+# GCN: %10:vgpr_32 = V_ADD_U32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
 
 # VOP1:
 # see case 1
-# CHECK: [[U3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-# CHECK: %12:vgpr_32 = V_NOT_B32_dpp [[U3]], %0, 1, 15, 15, 1, implicit $exec
+# GCN: [[U3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+# GCN: %12:vgpr_32 = V_NOT_B32_dpp [[U3]], %0, 1, 15, 15, 1, implicit $exec
 # see case 2
-# CHECK: [[U4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-# CHECK: %14:vgpr_32 = V_NOT_B32_dpp [[U4]], %0, 1, 15, 15, 1, implicit $exec
+# GCN: [[U4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+# GCN: %14:vgpr_32 = V_NOT_B32_dpp [[U4]], %0, 1, 15, 15, 1, implicit $exec
 # case 3 and 4 not appliable as there is no way to specify unchanged result
 # for the unary VALU op
-# CHECK: %16:vgpr_32 = V_NOT_B32_e32 %15, implicit $exec
-# CHECK: %18:vgpr_32 = V_NOT_B32_e32 %17, implicit $exec
+# GCN: %16:vgpr_32 = V_NOT_B32_e32 %15, implicit $exec
+# GCN: %18:vgpr_32 = V_NOT_B32_e32 %17, implicit $exec
 
 name: old_is_0
 tracksRegLiveness: true
@@ -143,11 +143,11 @@ body: |
 # The DPP VALU op should have the same masks (and bctrl) as DPP mov as they
 # select lanes with identity value
 
-# CHECK-LABEL: name: nonzero_old_is_identity_masks_enabled_bctl_off
-# CHECK: %4:vgpr_32 = V_MUL_U32_U24_dpp %1, %0, %1, 1, 15, 15, 0, implicit $exec
-# CHECK: %7:vgpr_32 = V_AND_B32_dpp %1, %0, %1, 1, 15, 15, 0, implicit $exec
-# CHECK: %10:vgpr_32 = V_MAX_I32_dpp %1, %0, %1, 1, 15, 15, 0, implicit $exec
-# CHECK: %13:vgpr_32 = V_MIN_I32_dpp %1, %0, %1, 1, 15, 15, 0, implicit $exec
+# GCN-LABEL: name: nonzero_old_is_identity_masks_enabled_bctl_off
+# GCN: %4:vgpr_32 = V_MUL_U32_U24_dpp %1, %0, %1, 1, 15, 15, 0, implicit $exec
+# GCN: %7:vgpr_32 = V_AND_B32_dpp %1, %0, %1, 1, 15, 15, 0, implicit $exec
+# GCN: %10:vgpr_32 = V_MAX_I32_dpp %1, %0, %1, 1, 15, 15, 0, implicit $exec
+# GCN: %13:vgpr_32 = V_MIN_I32_dpp %1, %0, %1, 1, 15, 15, 0, implicit $exec
 
 name: nonzero_old_is_identity_masks_enabled_bctl_off
 tracksRegLiveness: true
@@ -181,11 +181,11 @@ body: |
 # The DPP VALU op should have the same masks (and bctrl) as DPP mov as they
 # select lanes with identity value
 
-# CHECK-LABEL: name: nonzero_old_is_identity_masks_partially_disabled_bctl_off
-# CHECK: %4:vgpr_32 = V_MUL_U32_U24_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
-# CHECK: %7:vgpr_32 = V_AND_B32_dpp %1, %0, %1, 1, 15, 14, 0, implicit $exec
-# CHECK: %10:vgpr_32 = V_MAX_I32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
-# CHECK: %13:vgpr_32 = V_MIN_I32_dpp %1, %0, %1, 1, 15, 14, 0, implicit $exec
+# GCN-LABEL: name: nonzero_old_is_identity_masks_partially_disabled_bctl_off
+# GCN: %4:vgpr_32 = V_MUL_U32_U24_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
+# GCN: %7:vgpr_32 = V_AND_B32_dpp %1, %0, %1, 1, 15, 14, 0, implicit $exec
+# GCN: %10:vgpr_32 = V_MAX_I32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
+# GCN: %13:vgpr_32 = V_MIN_I32_dpp %1, %0, %1, 1, 15, 14, 0, implicit $exec
 
 name: nonzero_old_is_identity_masks_partially_disabled_bctl_off
 tracksRegLiveness: true
@@ -219,11 +219,11 @@ body: |
 #   3. DPP mov's old value if the mov's dest VGPR write is disabled by masks
 # can't combine
 
-# CHECK-LABEL: name: nonzero_old_is_identity_masks_partially_disabled_bctl0
-# CHECK: %4:vgpr_32 = V_MUL_U32_U24_e32 %3, %1, implicit $exec
-# CHECK: %7:vgpr_32 = V_AND_B32_e32 %6, %1, implicit $exec
-# CHECK: %10:vgpr_32 = V_MAX_I32_e32 %9, %1, implicit $exec
-# CHECK: %13:vgpr_32 = V_MIN_I32_e32 %12, %1, implicit $exec
+# GCN-LABEL: name: nonzero_old_is_identity_masks_partially_disabled_bctl0
+# GCN: %4:vgpr_32 = V_MUL_U32_U24_e32 %3, %1, implicit $exec
+# GCN: %7:vgpr_32 = V_AND_B32_e32 %6, %1, implicit $exec
+# GCN: %10:vgpr_32 = V_MAX_I32_e32 %9, %1, implicit $exec
+# GCN: %13:vgpr_32 = V_MIN_I32_e32 %12, %1, implicit $exec
 
 name: nonzero_old_is_identity_masks_partially_disabled_bctl0
 tracksRegLiveness: true
@@ -251,13 +251,13 @@ body: |
 ...
 
 # when the DPP source isn't a src0 operand the operation should be commuted if possible
-# CHECK-LABEL: name: dpp_commute
-# CHECK: %4:vgpr_32 = V_MUL_U32_U24_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
-# CHECK: %7:vgpr_32 = V_AND_B32_dpp %1, %0, %1, 1, 15, 14, 0, implicit $exec
-# CHECK: %10:vgpr_32 = V_MAX_I32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
-# CHECK: %13:vgpr_32 = V_MIN_I32_dpp %1, %0, %1, 1, 15, 14, 0, implicit $exec
-# CHECK: %16:vgpr_32 = V_SUBREV_I32_dpp %1, %0, %1, 1, 14, 15, 0, implicit-def $vcc, implicit $exec
-# CHECK: %19:vgpr_32 = V_ADD_I32_e32 5, %18, implicit-def $vcc, implicit $exec
+# GCN-LABEL: name: dpp_commute
+# GCN: %4:vgpr_32 = V_MUL_U32_U24_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
+# GCN: %7:vgpr_32 = V_AND_B32_dpp %1, %0, %1, 1, 15, 14, 0, implicit $exec
+# GCN: %10:vgpr_32 = V_MAX_I32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
+# GCN: %13:vgpr_32 = V_MIN_I32_dpp %1, %0, %1, 1, 15, 14, 0, implicit $exec
+# GCN: %16:vgpr_32 = V_SUBREV_I32_dpp %1, %0, %1, 1, 14, 15, 0, implicit-def $vcc, implicit $exec
+# GCN: %19:vgpr_32 = V_ADD_I32_e32 5, %18, implicit-def $vcc, implicit $exec
 name: dpp_commute
 tracksRegLiveness: true
 body:             |
@@ -294,12 +294,12 @@ body:             |
 ...
 
 # check for floating point modifiers
-# CHECK-LABEL: name: add_f32_e64
-# CHECK: %3:vgpr_32 = V_MOV_B32_dpp undef %2, %1, 1, 15, 15, 1, implicit $exec
-# CHECK: %4:vgpr_32 = V_ADD_F32_e64 0, %3, 0, %0, 0, 1, implicit $exec
-# CHECK: %6:vgpr_32 = V_ADD_F32_dpp %2, 0, %1, 0, %0, 1, 15, 15, 1, implicit $exec
-# CHECK: %8:vgpr_32 = V_ADD_F32_dpp %2, 1, %1, 2, %0, 1, 15, 15, 1, implicit $exec
-# CHECK: %10:vgpr_32 = V_ADD_F32_e64 4, %9, 8, %0, 0, 0, implicit $exec
+# GCN-LABEL: name: add_f32_e64
+# GCN: %3:vgpr_32 = V_MOV_B32_dpp undef %2, %1, 1, 15, 15, 1, implicit $exec
+# GCN: %4:vgpr_32 = V_ADD_F32_e64 0, %3, 0, %0, 0, 1, implicit $exec
+# GCN: %6:vgpr_32 = V_ADD_F32_dpp %2, 0, %1, 0, %0, 1, 15, 15, 1, implicit $exec
+# GCN: %8:vgpr_32 = V_ADD_F32_dpp %2, 1, %1, 2, %0, 1, 15, 15, 1, implicit $exec
+# GCN: %10:vgpr_32 = V_ADD_F32_e64 4, %9, 8, %0, 0, 0, implicit $exec
 
 name: add_f32_e64
 tracksRegLiveness: true
@@ -329,9 +329,9 @@ body:             |
 ...
 
 # check for e64 modifiers
-# CHECK-LABEL: name: add_u32_e64
-# CHECK: %4:vgpr_32 = V_ADD_U32_dpp %2, %0, %1, 1, 15, 15, 1, implicit $exec
-# CHECK: %6:vgpr_32 = V_ADD_U32_e64 %5, %1, 1, implicit $exec
+# GCN-LABEL: name: add_u32_e64
+# GCN: %4:vgpr_32 = V_ADD_U32_dpp %2, %0, %1, 1, 15, 15, 1, implicit $exec
+# GCN: %6:vgpr_32 = V_ADD_U32_e64 %5, %1, 1, implicit $exec
 
 name: add_u32_e64
 tracksRegLiveness: true
@@ -353,12 +353,12 @@ body:             |
 ...
 
 # tests on sequences of dpp consumers
-# CHECK-LABEL: name: dpp_seq
-# CHECK: %4:vgpr_32 = V_ADD_I32_dpp %1, %0, %1, 1, 14, 15, 0, implicit-def $vcc, implicit $exec
-# CHECK: %5:vgpr_32 = V_SUBREV_I32_dpp %1, %0, %1, 1, 14, 15, 0, implicit-def $vcc, implicit $exec
-# CHECK: %6:vgpr_32 = V_OR_B32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
+# GCN-LABEL: name: dpp_seq
+# GCN: %4:vgpr_32 = V_ADD_I32_dpp %1, %0, %1, 1, 14, 15, 0, implicit-def $vcc, implicit $exec
+# GCN: %5:vgpr_32 = V_SUBREV_I32_dpp %1, %0, %1, 1, 14, 15, 0, implicit-def $vcc, implicit $exec
+# GCN: %6:vgpr_32 = V_OR_B32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
 # broken sequence:
-# CHECK: %7:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 14, 15, 0, implicit $exec
+# GCN: %7:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 14, 15, 0, implicit $exec
 
 name: dpp_seq
 tracksRegLiveness: true
@@ -381,10 +381,10 @@ body: |
 ...
 
 # tests on sequences of dpp consumers followed by control flow
-# CHECK-LABEL: name: dpp_seq_cf
-# CHECK: %4:vgpr_32 = V_ADD_I32_dpp %1, %0, %1, 1, 14, 15, 0, implicit-def $vcc, implicit $exec
-# CHECK: %5:vgpr_32 = V_SUBREV_I32_dpp %1, %0, %1, 1, 14, 15, 0, implicit-def $vcc, implicit $exec
-# CHECK: %6:vgpr_32 = V_OR_B32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
+# GCN-LABEL: name: dpp_seq_cf
+# GCN: %4:vgpr_32 = V_ADD_I32_dpp %1, %0, %1, 1, 14, 15, 0, implicit-def $vcc, implicit $exec
+# GCN: %5:vgpr_32 = V_SUBREV_I32_dpp %1, %0, %1, 1, 14, 15, 0, implicit-def $vcc, implicit $exec
+# GCN: %6:vgpr_32 = V_OR_B32_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec
 
 name: dpp_seq_cf
 tracksRegLiveness: true
@@ -413,8 +413,8 @@ body: |
 ...
 
 # old reg def is in diff BB - cannot combine
-# CHECK-LABEL: name: old_in_diff_bb
-# CHECK: %3:vgpr_32 = V_MOV_B32_dpp %2, %1, 1, 1, 1, 0, implicit $exec
+# GCN-LABEL: name: old_in_diff_bb
+# GCN: %3:vgpr_32 = V_MOV_B32_dpp %2, %1, 1, 1, 1, 0, implicit $exec
 
 name: old_in_diff_bb
 tracksRegLiveness: true
@@ -434,8 +434,8 @@ body: |
 ...
 
 # old reg def is in diff BB but bound_ctrl:0 - can combine
-# CHECK-LABEL: name: old_in_diff_bb_bctrl_zero
-# CHECK: %4:vgpr_32 = V_ADD_U32_dpp {{%[0-9]}}, %0, %1, 1, 15, 15, 1, implicit $exec
+# GCN-LABEL: name: old_in_diff_bb_bctrl_zero
+# GCN: %4:vgpr_32 = V_ADD_U32_dpp {{%[0-9]}}, %0, %1, 1, 15, 15, 1, implicit $exec
 
 name: old_in_diff_bb_bctrl_zero
 tracksRegLiveness: true
@@ -455,8 +455,8 @@ body: |
 ...
 
 # EXEC mask changed between def and use - cannot combine
-# CHECK-LABEL: name: exec_changed
-# CHECK: %3:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 15, 15, 1, implicit $exec
+# GCN-LABEL: name: exec_changed
+# GCN: %3:vgpr_32 = V_MOV_B32_dpp %2, %0, 1, 15, 15, 1, implicit $exec
 
 name: exec_changed
 tracksRegLiveness: true
@@ -475,8 +475,8 @@ body: |
 
 # test if $old definition is correctly tracked through subreg manipulation pseudos
 
-# CHECK-LABEL: name: mul_old_subreg
-# CHECK: %7:vgpr_32 = V_MUL_I32_I24_dpp %0.sub1, %1, %0.sub1, 1, 1, 1, 0, implicit $exec
+# GCN-LABEL: name: mul_old_subreg
+# GCN: %7:vgpr_32 = V_MUL_I32_I24_dpp %0.sub1, %1, %0.sub1, 1, 1, 1, 0, implicit $exec
 
 name:            mul_old_subreg
 tracksRegLiveness: true
@@ -494,8 +494,8 @@ body: |
     %7:vgpr_32 = V_MUL_I32_I24_e32 %6, %0.sub1, implicit $exec
 ...
 
-# CHECK-LABEL: name: add_old_subreg
-# CHECK: %5:vgpr_32 = V_ADD_U32_dpp %0.sub1, %1, %0.sub1, 1, 1, 1, 0, implicit $exec
+# GCN-LABEL: name: add_old_subreg
+# GCN: %5:vgpr_32 = V_ADD_U32_dpp %0.sub1, %1, %0.sub1, 1, 1, 1, 0, implicit $exec
 
 name:            add_old_subreg
 tracksRegLiveness: true
@@ -511,8 +511,8 @@ body: |
     %5:vgpr_32 = V_ADD_U32_e32 %4, %0.sub1, implicit $exec
 ...
 
-# CHECK-LABEL: name: add_old_subreg_undef
-# CHECK: %5:vgpr_32 = V_ADD_U32_dpp undef %3.sub1, %1, %0.sub1, 1, 15, 15, 1, implicit $exec
+# GCN-LABEL: name: add_old_subreg_undef
+# GCN: %5:vgpr_32 = V_ADD_U32_dpp undef %3.sub1, %1, %0.sub1, 1, 15, 15, 1, implicit $exec
 
 name:            add_old_subreg_undef
 tracksRegLiveness: true
@@ -529,8 +529,8 @@ body: |
 ...
 
 # Test instruction which does not have modifiers in VOP1 form but does in DPP form.
-# CHECK-LABEL: name: dpp_vop1
-# CHECK: %3:vgpr_32 = V_CEIL_F32_dpp %0, 0, undef %2:vgpr_32, 1, 15, 15, 1, implicit $exec
+# GCN-LABEL: name: dpp_vop1
+# GCN: %3:vgpr_32 = V_CEIL_F32_dpp %0, 0, undef %2:vgpr_32, 1, 15, 15, 1, implicit $exec
 name: dpp_vop1
 tracksRegLiveness: true
 body: |
@@ -541,8 +541,8 @@ body: |
 ...
 
 # Test instruction which does not have modifiers in VOP2 form but does in DPP form.
-# CHECK-LABEL: name: dpp_min
-# CHECK: %3:vgpr_32 = V_MIN_F32_dpp %0, 0, undef %2:vgpr_32, 0, undef %4:vgpr_32, 1, 15, 15, 1, implicit $exec
+# GCN-LABEL: name: dpp_min
+# GCN: %3:vgpr_32 = V_MIN_F32_dpp %0, 0, undef %2:vgpr_32, 0, undef %4:vgpr_32, 1, 15, 15, 1, implicit $exec
 name: dpp_min
 tracksRegLiveness: true
 body: |
@@ -553,8 +553,8 @@ body: |
 ...
 
 # Test an undef old operand
-# CHECK-LABEL: name: dpp_undef_old
-# CHECK: %3:vgpr_32 = V_CEIL_F32_dpp undef %1:vgpr_32, 0, undef %2:vgpr_32, 1, 15, 15, 1, implicit $exec
+# GCN-LABEL: name: dpp_undef_old
+# GCN: %3:vgpr_32 = V_CEIL_F32_dpp undef %1:vgpr_32, 0, undef %2:vgpr_32, 1, 15, 15, 1, implicit $exec
 name: dpp_undef_old
 tracksRegLiveness: true
 body: |
