@@ -78,7 +78,7 @@ clang_Driver_getExternalActionsForCommand_v0(int ArgC, const char **ArgV,
   TheDriver.setCheckInputsExist(false);
   std::unique_ptr<driver::Compilation> C(
       TheDriver.BuildCompilation(llvm::makeArrayRef(ArgV, ArgC)));
-  if (!C) {
+  if (!C || Diags->hasErrorOccurred()) {
     if (OutDiags)
       *OutDiags = DiagConsumer.getDiagnosticSet();
     return nullptr;
