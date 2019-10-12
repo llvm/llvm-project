@@ -4413,8 +4413,8 @@ Value *ScalarExprEmitter::VisitAsTypeExpr(AsTypeExpr *E) {
     return Src;
   }
 
-  return Src = createCastsForTypeOfSameSize(Builder, CGF.CGM.getDataLayout(),
-                                            Src, DstTy, "astype");
+  return createCastsForTypeOfSameSize(Builder, CGF.CGM.getDataLayout(),
+                                      Src, DstTy, "astype");
 }
 
 Value *ScalarExprEmitter::VisitAtomicExpr(AtomicExpr *E) {
