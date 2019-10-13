@@ -168,6 +168,8 @@ define void @test9_helper(i8* %a, i8* %b) {
 
 declare void @test10_helper_1(i8* %a)
 define void @test10_helper_2(i8* noalias %a) {
+; CHECK:   tail call void @test10_helper_1(i8* %a)
+  tail call void @test10_helper_1(i8* %a)
   ret void
 }
 define void @test10(i8* noalias %a) {

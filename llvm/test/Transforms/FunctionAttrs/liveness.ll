@@ -1,4 +1,4 @@
-; RUN: opt -attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=3 -S < %s | FileCheck %s
+; RUN: opt -attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=5 -S < %s | FileCheck %s
 
 declare void @no_return_call() nofree noreturn nounwind readnone
 
@@ -39,8 +39,7 @@ define i32 @volatile_load(i32*) norecurse nounwind uwtable {
   ret i32 %2
 }
 
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readonly uwtable willreturn
-; CHECK-NEXT: define internal i32 @internal_load(i32* nocapture nonnull readonly dereferenceable(4) %0)
+; CHECK-NOT: internal_load
 define internal i32 @internal_load(i32*) norecurse nounwind uwtable {
   %2 = load i32, i32* %0, align 4
   ret i32 %2
@@ -52,7 +51,6 @@ define internal i32 @internal_load(i32*) norecurse nounwind uwtable {
 define i32 @first_block_no_return(i32 %a, i32* nonnull %ptr1, i32* %ptr2) #0 {
 entry:
   call i32 @internal_load(i32* %ptr1)
-  ; CHECK: call i32 @internal_load(i32* nocapture nonnull readonly %ptr1)
   call void @no_return_call()
   ; CHECK: call void @no_return_call()
   ; CHECK-NEXT: unreachable
@@ -714,5 +712,38 @@ lp2:
   %0 = landingpad { i8*, i32 } catch i8* null
   br label %live_with_dead_entry
 live_with_dead_entry:
+  ret void
+}
+
+; CHECK: define internal void @useless_arg_sink(i32* nocapture readnone %a)
+define internal void @useless_arg_sink(i32* %a) {
+  ret void
+}
+
+; CHECK: define internal void @useless_arg_almost_sink(i32* nocapture readnone %a)
+define internal void @useless_arg_almost_sink(i32* %a) {
+; CHECK: call void @useless_arg_sink(i32* undef)
+  call void @useless_arg_sink(i32* %a)
+  ret void
+}
+
+; Check we do not annotate the function interface of this weak function.
+; CHECK: define weak_odr void @useless_arg_ext(i32* %a)
+define weak_odr void @useless_arg_ext(i32* %a) {
+; CHECK: call void @useless_arg_almost_sink(i32* undef)
+  call void @useless_arg_almost_sink(i32* %a)
+  ret void
+}
+
+; CHECK: define internal void @useless_arg_ext_int(i32* %a)
+define internal void @useless_arg_ext_int(i32* %a) {
+; CHECK: call void @useless_arg_ext(i32* %a)
+  call void @useless_arg_ext(i32* %a)
+  ret void
+}
+
+define void @useless_arg_ext_int_ext(i32* %a) {
+; CHECK: call void @useless_arg_ext_int(i32* %a)
+  call void @useless_arg_ext_int(i32* %a)
   ret void
 }
