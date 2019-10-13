@@ -126,7 +126,7 @@ bool BlockInCriticalSectionChecker::isLockFunction(const CallEvent &Call) const 
 
 bool BlockInCriticalSectionChecker::isUnlockFunction(const CallEvent &Call) const {
   if (const auto *Dtor = dyn_cast<CXXDestructorCall>(&Call)) {
-    const auto *DRecordDecl = dyn_cast<CXXRecordDecl>(Dtor->getDecl()->getParent());
+    const auto *DRecordDecl = cast<CXXRecordDecl>(Dtor->getDecl()->getParent());
     auto IdentifierInfo = DRecordDecl->getIdentifier();
     if (IdentifierInfo == IILockGuard || IdentifierInfo == IIUniqueLock)
       return true;
