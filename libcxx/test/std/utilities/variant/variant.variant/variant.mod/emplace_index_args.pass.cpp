@@ -145,7 +145,7 @@ void test_basic() {
     assert(&std::get<3>(v) == &z);
     assert(&ref4 == &std::get<3>(v));
     // emplace with multiple args
-    auto& ref5 = v.emplace<5>(3, 'a');
+    auto& ref5 = v.emplace<5>(3u, 'a');
     static_assert(std::is_same_v<std::string&, decltype(ref5)>, "");
     assert(std::get<5>(v) == "aaa");
     assert(&ref5 == &std::get<5>(v));
