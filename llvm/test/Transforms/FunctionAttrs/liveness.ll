@@ -177,7 +177,7 @@ cond.true:                                        ; preds = %entry
   %call = invoke i32 @foo_noreturn() to label %continue
             unwind label %cleanup
   ; CHECK:      %call = invoke i32 @foo_noreturn()
-  ; CHECK-NEXT:         to label %continue.dead unwind label %cleanup
+  ; CHECK-NEXT:         to label %continue unwind label %cleanup
 
 cond.false:                                       ; preds = %entry
   call void @normal_call()
@@ -189,7 +189,7 @@ cond.end:                                         ; preds = %cond.false, %contin
   ret i32 %cond
 
 continue:
-  ; CHECK:      continue.dead:
+  ; CHECK:      continue:
   ; CHECK-NEXT: unreachable
   br label %cond.end
 

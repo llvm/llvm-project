@@ -5462,21 +5462,23 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<unsigned> VFs) {
         Invariant[ClassID] += Usage;
     }
 
-    LLVM_DEBUG(dbgs() << "LV(REG): VF = " << VFs[i] << '\n');
-    LLVM_DEBUG(dbgs() << "LV(REG): Found max usage: "
-                      << MaxUsages[i].size() << " item\n");
-    for (const auto& pair : MaxUsages[i]) {
-      LLVM_DEBUG(dbgs() << "LV(REG): RegisterClass: "
-                        << TTI.getRegisterClassName(pair.first)
-                        << ", " << pair.second << " registers \n");
-    }
-    LLVM_DEBUG(dbgs() << "LV(REG): Found invariant usage: "
-                      << Invariant.size() << " item\n");
-    for (const auto& pair : Invariant) {
-      LLVM_DEBUG(dbgs() << "LV(REG): RegisterClass: "
-                        << TTI.getRegisterClassName(pair.first)
-                        << ", " << pair.second << " registers \n");
-    }
+    LLVM_DEBUG({
+      dbgs() << "LV(REG): VF = " << VFs[i] << '\n';
+      dbgs() << "LV(REG): Found max usage: " << MaxUsages[i].size()
+             << " item\n";
+      for (const auto &pair : MaxUsages[i]) {
+        dbgs() << "LV(REG): RegisterClass: "
+               << TTI.getRegisterClassName(pair.first) << ", " << pair.second
+               << " registers\n";
+      }
+      dbgs() << "LV(REG): Found invariant usage: " << Invariant.size()
+             << " item\n";
+      for (const auto &pair : Invariant) {
+        dbgs() << "LV(REG): RegisterClass: "
+               << TTI.getRegisterClassName(pair.first) << ", " << pair.second
+               << " registers\n";
+      }
+    });
 
     RU.LoopInvariantRegs = Invariant;
     RU.MaxLocalUsers = MaxUsages[i];

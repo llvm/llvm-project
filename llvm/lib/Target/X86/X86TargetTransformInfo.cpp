@@ -2488,7 +2488,7 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
   // We use the Intel Architecture Code Analyzer(IACA) to measure the throughput
   // and make it as the cost.
 
-  static const CostTblEntry SSE42CostTblPairWise[] = {
+  static const CostTblEntry SSE2CostTblPairWise[] = {
     { ISD::FADD,  MVT::v2f64,   2 },
     { ISD::FADD,  MVT::v4f32,   4 },
     { ISD::ADD,   MVT::v2i64,   2 },      // The data reported by the IACA tool is "1.6".
@@ -2497,23 +2497,23 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
     { ISD::ADD,   MVT::v2i16,   3 }, // FIXME: chosen to be less than v4i16
     { ISD::ADD,   MVT::v4i16,   4 }, // FIXME: chosen to be less than v8i16
     { ISD::ADD,   MVT::v8i16,   5 },
+    { ISD::ADD,   MVT::v2i8,    2 },
+    { ISD::ADD,   MVT::v4i8,    2 },
+    { ISD::ADD,   MVT::v8i8,    2 },
+    { ISD::ADD,   MVT::v16i8,   3 },
   };
 
   static const CostTblEntry AVX1CostTblPairWise[] = {
-    { ISD::FADD,  MVT::v4f32,   4 },
     { ISD::FADD,  MVT::v4f64,   5 },
     { ISD::FADD,  MVT::v8f32,   7 },
     { ISD::ADD,   MVT::v2i64,   1 },      // The data reported by the IACA tool is "1.5".
-    { ISD::ADD,   MVT::v2i32,   2 }, // FIXME: chosen to be less than v4i32
-    { ISD::ADD,   MVT::v4i32,   3 },      // The data reported by the IACA tool is "3.5".
     { ISD::ADD,   MVT::v4i64,   5 },      // The data reported by the IACA tool is "4.8".
-    { ISD::ADD,   MVT::v2i16,   3 }, // FIXME: chosen to be less than v4i16
-    { ISD::ADD,   MVT::v4i16,   4 }, // FIXME: chosen to be less than v8i16
-    { ISD::ADD,   MVT::v8i16,   5 },
     { ISD::ADD,   MVT::v8i32,   5 },
+    { ISD::ADD,   MVT::v16i16,  6 },
+    { ISD::ADD,   MVT::v32i8,   4 },
   };
 
-  static const CostTblEntry SSE42CostTblNoPairWise[] = {
+  static const CostTblEntry SSE2CostTblNoPairWise[] = {
     { ISD::FADD,  MVT::v2f64,   2 },
     { ISD::FADD,  MVT::v4f32,   4 },
     { ISD::ADD,   MVT::v2i64,   2 },      // The data reported by the IACA tool is "1.6".
@@ -2522,20 +2522,21 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
     { ISD::ADD,   MVT::v2i16,   2 },      // The data reported by the IACA tool is "4.3".
     { ISD::ADD,   MVT::v4i16,   3 },      // The data reported by the IACA tool is "4.3".
     { ISD::ADD,   MVT::v8i16,   4 },      // The data reported by the IACA tool is "4.3".
+    { ISD::ADD,   MVT::v2i8,    2 },
+    { ISD::ADD,   MVT::v4i8,    2 },
+    { ISD::ADD,   MVT::v8i8,    2 },
+    { ISD::ADD,   MVT::v16i8,   3 },
   };
 
   static const CostTblEntry AVX1CostTblNoPairWise[] = {
-    { ISD::FADD,  MVT::v4f32,   3 },
     { ISD::FADD,  MVT::v4f64,   3 },
+    { ISD::FADD,  MVT::v4f32,   3 },
     { ISD::FADD,  MVT::v8f32,   4 },
     { ISD::ADD,   MVT::v2i64,   1 },      // The data reported by the IACA tool is "1.5".
-    { ISD::ADD,   MVT::v2i32,   2 }, // FIXME: chosen to be less than v4i32
-    { ISD::ADD,   MVT::v4i32,   3 },      // The data reported by the IACA tool is "2.8".
     { ISD::ADD,   MVT::v4i64,   3 },
-    { ISD::ADD,   MVT::v2i16,   2 },      // The data reported by the IACA tool is "4.3".
-    { ISD::ADD,   MVT::v4i16,   3 },      // The data reported by the IACA tool is "4.3".
-    { ISD::ADD,   MVT::v8i16,   4 },
     { ISD::ADD,   MVT::v8i32,   5 },
+    { ISD::ADD,   MVT::v16i16,  5 },
+    { ISD::ADD,   MVT::v32i8,   4 },
   };
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -2552,16 +2553,16 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
         if (const auto *Entry = CostTableLookup(AVX1CostTblPairWise, ISD, MTy))
           return Entry->Cost;
 
-      if (ST->hasSSE42())
-        if (const auto *Entry = CostTableLookup(SSE42CostTblPairWise, ISD, MTy))
+      if (ST->hasSSE2())
+        if (const auto *Entry = CostTableLookup(SSE2CostTblPairWise, ISD, MTy))
           return Entry->Cost;
     } else {
       if (ST->hasAVX())
         if (const auto *Entry = CostTableLookup(AVX1CostTblNoPairWise, ISD, MTy))
           return Entry->Cost;
 
-      if (ST->hasSSE42())
-        if (const auto *Entry = CostTableLookup(SSE42CostTblNoPairWise, ISD, MTy))
+      if (ST->hasSSE2())
+        if (const auto *Entry = CostTableLookup(SSE2CostTblNoPairWise, ISD, MTy))
           return Entry->Cost;
     }
   }
@@ -2575,16 +2576,16 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
       if (const auto *Entry = CostTableLookup(AVX1CostTblPairWise, ISD, MTy))
         return LT.first * Entry->Cost;
 
-    if (ST->hasSSE42())
-      if (const auto *Entry = CostTableLookup(SSE42CostTblPairWise, ISD, MTy))
+    if (ST->hasSSE2())
+      if (const auto *Entry = CostTableLookup(SSE2CostTblPairWise, ISD, MTy))
         return LT.first * Entry->Cost;
   } else {
     if (ST->hasAVX())
       if (const auto *Entry = CostTableLookup(AVX1CostTblNoPairWise, ISD, MTy))
         return LT.first * Entry->Cost;
 
-    if (ST->hasSSE42())
-      if (const auto *Entry = CostTableLookup(SSE42CostTblNoPairWise, ISD, MTy))
+    if (ST->hasSSE2())
+      if (const auto *Entry = CostTableLookup(SSE2CostTblNoPairWise, ISD, MTy))
         return LT.first * Entry->Cost;
   }
 

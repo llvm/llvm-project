@@ -37,6 +37,7 @@ static_library("bugprone") {
     "MisplacedWideningCastCheck.cpp",
     "MoveForwardingReferenceCheck.cpp",
     "MultipleStatementMacroCheck.cpp",
+    "NotNullTerminatedResultCheck.cpp",
     "ParentVirtualCallCheck.cpp",
     "PosixReturnCheck.cpp",
     "SizeofContainerCheck.cpp",
