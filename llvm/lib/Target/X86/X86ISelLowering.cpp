@@ -5189,10 +5189,8 @@ static bool isUndefOrZero(int Val) {
 /// Return true if every element in Mask, beginning from position Pos and ending
 /// in Pos+Size is the undef sentinel value.
 static bool isUndefInRange(ArrayRef<int> Mask, unsigned Pos, unsigned Size) {
-  for (unsigned i = Pos, e = Pos + Size; i != e; ++i)
-    if (Mask[i] != SM_SentinelUndef)
-      return false;
-  return true;
+  return llvm::all_of(Mask.slice(Pos, Size),
+                      [](int M) { return M == SM_SentinelUndef; });
 }
 
 /// Return true if the mask creates a vector whose lower half is undefined.
@@ -5215,10 +5213,7 @@ static bool isInRange(int Val, int Low, int Hi) {
 /// Return true if the value of any element in Mask falls within the specified
 /// range (L, H].
 static bool isAnyInRange(ArrayRef<int> Mask, int Low, int Hi) {
-  for (int M : Mask)
-    if (isInRange(M, Low, Hi))
-      return true;
-  return false;
+  return llvm::any_of(Mask, [Low, Hi](int M) { return isInRange(M, Low, Hi); });
 }
 
 /// Return true if Val is undef or if its value falls within the
@@ -5229,12 +5224,9 @@ static bool isUndefOrInRange(int Val, int Low, int Hi) {
 
 /// Return true if every element in Mask is undef or if its value
 /// falls within the specified range (L, H].
-static bool isUndefOrInRange(ArrayRef<int> Mask,
-                             int Low, int Hi) {
-  for (int M : Mask)
-    if (!isUndefOrInRange(M, Low, Hi))
-      return false;
-  return true;
+static bool isUndefOrInRange(ArrayRef<int> Mask, int Low, int Hi) {
+  return llvm::all_of(
+      Mask, [Low, Hi](int M) { return isUndefOrInRange(M, Low, Hi); });
 }
 
 /// Return true if Val is undef, zero or if its value falls within the
@@ -5246,10 +5238,8 @@ static bool isUndefOrZeroOrInRange(int Val, int Low, int Hi) {
 /// Return true if every element in Mask is undef, zero or if its value
 /// falls within the specified range (L, H].
 static bool isUndefOrZeroOrInRange(ArrayRef<int> Mask, int Low, int Hi) {
-  for (int M : Mask)
-    if (!isUndefOrZeroOrInRange(M, Low, Hi))
-      return false;
-  return true;
+  return llvm::all_of(
+      Mask, [Low, Hi](int M) { return isUndefOrZeroOrInRange(M, Low, Hi); });
 }
 
 /// Return true if every element in Mask, beginning
@@ -5267,8 +5257,9 @@ static bool isSequentialOrUndefInRange(ArrayRef<int> Mask, unsigned Pos,
 /// from position Pos and ending in Pos+Size, falls within the specified
 /// sequential range (Low, Low+Size], or is undef or is zero.
 static bool isSequentialOrUndefOrZeroInRange(ArrayRef<int> Mask, unsigned Pos,
-                                             unsigned Size, int Low) {
-  for (unsigned i = Pos, e = Pos + Size; i != e; ++i, ++Low)
+                                             unsigned Size, int Low,
+                                             int Step = 1) {
+  for (unsigned i = Pos, e = Pos + Size; i != e; ++i, Low += Step)
     if (!isUndefOrZero(Mask[i]) && Mask[i] != Low)
       return false;
   return true;
@@ -5278,10 +5269,8 @@ static bool isSequentialOrUndefOrZeroInRange(ArrayRef<int> Mask, unsigned Pos,
 /// from position Pos and ending in Pos+Size is undef or is zero.
 static bool isUndefOrZeroInRange(ArrayRef<int> Mask, unsigned Pos,
                                  unsigned Size) {
-  for (unsigned i = Pos, e = Pos + Size; i != e; ++i)
-    if (!isUndefOrZero(Mask[i]))
-      return false;
-  return true;
+  return llvm::all_of(Mask.slice(Pos, Size),
+                      [](int M) { return isUndefOrZero(M); });
 }
 
 /// Helper function to test whether a shuffle mask could be
@@ -6931,11 +6920,11 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
         !getTargetShuffleInputs(N1, SrcInputs1, SrcMask1, DAG, Depth + 1,
                                 ResolveZero))
       return false;
-    int MaskSize = std::max(SrcMask0.size(), SrcMask1.size());
+    size_t MaskSize = std::max(SrcMask0.size(), SrcMask1.size());
     SmallVector<int, 64> Mask0, Mask1;
     scaleShuffleMask<int>(MaskSize / SrcMask0.size(), SrcMask0, Mask0);
     scaleShuffleMask<int>(MaskSize / SrcMask1.size(), SrcMask1, Mask1);
-    for (int i = 0; i != MaskSize; ++i) {
+    for (size_t i = 0; i != MaskSize; ++i) {
       if (Mask0[i] == SM_SentinelUndef && Mask1[i] == SM_SentinelUndef)
         Mask.push_back(SM_SentinelUndef);
       else if (Mask0[i] == SM_SentinelZero && Mask1[i] == SM_SentinelZero)
@@ -6943,14 +6932,12 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
       else if (Mask1[i] == SM_SentinelZero)
         Mask.push_back(Mask0[i]);
       else if (Mask0[i] == SM_SentinelZero)
-        Mask.push_back(Mask1[i] + (MaskSize * SrcInputs0.size()));
+        Mask.push_back(Mask1[i] + (int)(MaskSize * SrcInputs0.size()));
       else
         return false;
     }
-    for (SDValue &Op : SrcInputs0)
-      Ops.push_back(Op);
-    for (SDValue &Op : SrcInputs1)
-      Ops.push_back(Op);
+    Ops.append(SrcInputs0.begin(), SrcInputs0.end());
+    Ops.append(SrcInputs1.begin(), SrcInputs1.end());
     return true;
   }
   case ISD::INSERT_SUBVECTOR: {
@@ -34270,17 +34257,17 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     if (Src.getOpcode() == X86ISD::KSHIFTR) {
       if (!DemandedElts.intersects(APInt::getLowBitsSet(NumElts, ShiftAmt))) {
         unsigned C1 = Src.getConstantOperandVal(1);
-        unsigned Opc = X86ISD::KSHIFTL;
+        unsigned NewOpc = X86ISD::KSHIFTL;
         int Diff = ShiftAmt - C1;
         if (Diff < 0) {
           Diff = -Diff;
-          Opc = X86ISD::KSHIFTR;
+          NewOpc = X86ISD::KSHIFTR;
         }
 
         SDLoc dl(Op);
         SDValue NewSA = TLO.DAG.getTargetConstant(Diff, dl, MVT::i8);
         return TLO.CombineTo(
-            Op, TLO.DAG.getNode(Opc, dl, VT, Src.getOperand(0), NewSA));
+            Op, TLO.DAG.getNode(NewOpc, dl, VT, Src.getOperand(0), NewSA));
       }
     }
 
@@ -34309,17 +34296,17 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     if (Src.getOpcode() == X86ISD::KSHIFTL) {
       if (!DemandedElts.intersects(APInt::getHighBitsSet(NumElts, ShiftAmt))) {
         unsigned C1 = Src.getConstantOperandVal(1);
-        unsigned Opc = X86ISD::KSHIFTR;
+        unsigned NewOpc = X86ISD::KSHIFTR;
         int Diff = ShiftAmt - C1;
         if (Diff < 0) {
           Diff = -Diff;
-          Opc = X86ISD::KSHIFTL;
+          NewOpc = X86ISD::KSHIFTL;
         }
 
         SDLoc dl(Op);
         SDValue NewSA = TLO.DAG.getTargetConstant(Diff, dl, MVT::i8);
         return TLO.CombineTo(
-            Op, TLO.DAG.getNode(Opc, dl, VT, Src.getOperand(0), NewSA));
+            Op, TLO.DAG.getNode(NewOpc, dl, VT, Src.getOperand(0), NewSA));
       }
     }
 
@@ -36241,13 +36228,24 @@ static SDValue combineReductionToHorizontal(SDNode *ExtElt, SelectionDAG &DAG,
 
   // vXi8 reduction - sub 128-bit vector.
   if (VecVT == MVT::v4i8 || VecVT == MVT::v8i8) {
-    // Pad with zero.
-    if (VecVT == MVT::v4i8)
-      Rdx = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, Rdx,
-                        DAG.getConstant(0, DL, VecVT));
-    // Pad with undef.
-    Rdx = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, Rdx,
-                      DAG.getUNDEF(MVT::v8i8));
+    if (VecVT == MVT::v4i8) {
+      // Pad with zero.
+      if (Subtarget.hasSSE41()) {
+        Rdx = DAG.getBitcast(MVT::i32, Rdx);
+        Rdx = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v4i32,
+                          DAG.getConstant(0, DL, MVT::v4i32), Rdx,
+                          DAG.getIntPtrConstant(0, DL));
+        Rdx = DAG.getBitcast(MVT::v16i8, Rdx);
+      } else {
+        Rdx = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8, Rdx,
+                          DAG.getConstant(0, DL, VecVT));
+      }
+    }
+    if (Rdx.getValueType() == MVT::v8i8) {
+      // Pad with undef.
+      Rdx = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i8, Rdx,
+                        DAG.getUNDEF(MVT::v8i8));
+    }
     Rdx = DAG.getNode(X86ISD::PSADBW, DL, MVT::v2i64, Rdx,
                       DAG.getConstant(0, DL, MVT::v16i8));
     Rdx = DAG.getBitcast(MVT::v16i8, Rdx);
@@ -37011,6 +37009,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // subl   %esi, $edi
   // cmovsl %eax, %edi
   if (N->getOpcode() == ISD::SELECT && Cond.getOpcode() == ISD::SETCC &&
+      Cond.hasOneUse() &&
       DAG.isEqualTo(LHS, Cond.getOperand(0)) &&
       DAG.isEqualTo(RHS, Cond.getOperand(1))) {
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
@@ -39873,6 +39872,7 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
   // registers, we should go ahead and use the pack instructions if possible.
   bool PreferAVX512 = ((Subtarget.hasAVX512() && InSVT == MVT::i32) ||
                        (Subtarget.hasBWI() && InSVT == MVT::i16)) &&
+                      (InVT.getSizeInBits() > 128) &&
                       (Subtarget.hasVLX() || InVT.getSizeInBits() > 256) &&
                       !(!Subtarget.useAVX512Regs() && VT.getSizeInBits() >= 256);
 

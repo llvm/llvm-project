@@ -125,12 +125,6 @@ static cl::opt<bool> ManifestInternal(
     cl::desc("Manifest Attributor internal string attributes."),
     cl::init(false));
 
-static cl::opt<bool> VerifyAttributor(
-    "attributor-verify", cl::Hidden,
-    cl::desc("Verify the Attributor deduction and "
-             "manifestation of attributes -- may issue false-positive errors"),
-    cl::init(false));
-
 static cl::opt<unsigned> DepRecInterval(
     "attributor-dependence-recompute-interval", cl::Hidden,
     cl::desc("Number of iterations until dependences are recomputed."),
@@ -2145,8 +2139,6 @@ struct AAIsDeadImpl : public AAIsDead {
       BasicBlock *BB = I->getParent();
       Instruction *SplitPos = I->getNextNode();
       // TODO: mark stuff before unreachable instructions as dead.
-      if (isa_and_nonnull<UnreachableInst>(SplitPos))
-        continue;
 
       if (auto *II = dyn_cast<InvokeInst>(I)) {
         // If we keep the invoke the split position is at the beginning of the
@@ -2189,14 +2181,22 @@ struct AAIsDeadImpl : public AAIsDead {
           //       also manifest.
           assert(!NormalDestBB->isLandingPad() &&
                  "Expected the normal destination not to be a landingpad!");
-          BasicBlock *SplitBB =
-              SplitBlockPredecessors(NormalDestBB, {BB}, ".dead");
-          // The split block is live even if it contains only an unreachable
-          // instruction at the end.
-          assumeLive(A, *SplitBB);
-          SplitPos = SplitBB->getTerminator();
+          if (NormalDestBB->getUniquePredecessor() == BB) {
+            assumeLive(A, *NormalDestBB);
+          } else {
+            BasicBlock *SplitBB =
+                SplitBlockPredecessors(NormalDestBB, {BB}, ".dead");
+            // The split block is live even if it contains only an unreachable
+            // instruction at the end.
+            assumeLive(A, *SplitBB);
+            SplitPos = SplitBB->getTerminator();
+            HasChanged = ChangeStatus::CHANGED;
+          }
         }
       }
+
+      if (isa_and_nonnull<UnreachableInst>(SplitPos))
+        continue;
 
       BB = SplitPos->getParent();
       SplitBlock(BB, SplitPos);
@@ -3569,8 +3569,16 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
 
       auto *UserI = U->getUser();
 
-      if (isa<LoadInst>(UserI) || isa<StoreInst>(UserI))
+      if (isa<LoadInst>(UserI))
         continue;
+      if (auto *SI = dyn_cast<StoreInst>(UserI)) {
+        if (SI->getValueOperand() == U->get()) {
+          LLVM_DEBUG(dbgs() << "[H2S] escaping store to memory: " << *UserI << "\n");
+          return false;
+        }
+        // A store into the malloc'ed memory is fine.
+        continue;
+      }
 
       // NOTE: Right now, if a function that has malloc pointer as an argument
       // frees memory, we assume that the malloc pointer is freed.
@@ -3620,30 +3628,36 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
   };
 
   auto MallocCallocCheck = [&](Instruction &I) {
-    if (isMallocLikeFn(&I, TLI)) {
-      if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(0)))
-        if (!Size->getValue().sle(MaxHeapToStackSize))
-          return true;
-    } else if (isCallocLikeFn(&I, TLI)) {
-      bool Overflow = false;
-      if (auto *Num = dyn_cast<ConstantInt>(I.getOperand(0)))
-        if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(1)))
-          if (!(Size->getValue().umul_ov(Num->getValue(), Overflow))
-                   .sle(MaxHeapToStackSize))
-            if (!Overflow)
-              return true;
-    } else {
+    if (BadMallocCalls.count(&I))
+      return true;
+
+    bool IsMalloc = isMallocLikeFn(&I, TLI);
+    bool IsCalloc = !IsMalloc && isCallocLikeFn(&I, TLI);
+    if (!IsMalloc && !IsCalloc) {
       BadMallocCalls.insert(&I);
       return true;
     }
 
-    if (BadMallocCalls.count(&I))
-      return true;
+    if (IsMalloc) {
+      if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(0)))
+        if (Size->getValue().sle(MaxHeapToStackSize))
+          if (UsesCheck(I)) {
+            MallocCalls.insert(&I);
+            return true;
+          }
+    } else if (IsCalloc) {
+      bool Overflow = false;
+      if (auto *Num = dyn_cast<ConstantInt>(I.getOperand(0)))
+        if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(1)))
+          if ((Size->getValue().umul_ov(Num->getValue(), Overflow))
+                   .sle(MaxHeapToStackSize))
+            if (!Overflow && UsesCheck(I)) {
+              MallocCalls.insert(&I);
+              return true;
+            }
+    }
 
-    if (UsesCheck(I))
-      MallocCalls.insert(&I);
-    else
-      BadMallocCalls.insert(&I);
+    BadMallocCalls.insert(&I);
     return true;
   };
 
@@ -3667,7 +3681,6 @@ struct AAHeapToStackFunction final : public AAHeapToStackImpl {
     BUILD_STAT_NAME(MallocCalls, Function) += MallocCalls.size();
   }
 };
-} // namespace
 
 /// -------------------- Memory Behavior Attributes ----------------------------
 /// Includes read-none, read-only, and write-only.
@@ -3940,6 +3953,7 @@ struct AAMemoryBehaviorCallSite final : AAMemoryBehaviorImpl {
       STATS_DECLTRACK_CS_ATTR(writeonly)
   }
 };
+} // namespace
 
 ChangeStatus AAMemoryBehaviorFunction::updateImpl(Attributor &A) {
 
@@ -4153,19 +4167,26 @@ bool Attributor::checkForAllCallSites(
     return false;
   }
 
-  if (RequireAllCallSites && !AssociatedFunction->hasLocalLinkage()) {
+  return checkForAllCallSites(Pred, *AssociatedFunction, RequireAllCallSites,
+                              &QueryingAA);
+}
+
+bool Attributor::checkForAllCallSites(
+    const function_ref<bool(AbstractCallSite)> &Pred, const Function &Fn,
+    bool RequireAllCallSites, const AbstractAttribute *QueryingAA) {
+  if (RequireAllCallSites && !Fn.hasLocalLinkage()) {
     LLVM_DEBUG(
         dbgs()
-        << "[Attributor] Function " << AssociatedFunction->getName()
+        << "[Attributor] Function " << Fn.getName()
         << " has no internal linkage, hence not all call sites are known\n");
     return false;
   }
 
-  for (const Use &U : AssociatedFunction->uses()) {
+  for (const Use &U : Fn.uses()) {
     AbstractCallSite ACS(&U);
     if (!ACS) {
       LLVM_DEBUG(dbgs() << "[Attributor] Function "
-                        << AssociatedFunction->getName()
+                        << Fn.getName()
                         << " has non call site use " << *U.get() << " in "
                         << *U.getUser() << "\n");
       return false;
@@ -4174,15 +4195,16 @@ bool Attributor::checkForAllCallSites(
     Instruction *I = ACS.getInstruction();
     Function *Caller = I->getFunction();
 
-    const auto &LivenessAA =
-        getAAFor<AAIsDead>(QueryingAA, IRPosition::function(*Caller),
+    const auto *LivenessAA =
+        lookupAAFor<AAIsDead>(IRPosition::function(*Caller), QueryingAA,
                            /* TrackDependence */ false);
 
     // Skip dead calls.
-    if (LivenessAA.isAssumedDead(I)) {
+    if (LivenessAA && LivenessAA->isAssumedDead(I)) {
       // We actually used liveness information so we have to record a
       // dependence.
-      recordDependence(LivenessAA, QueryingAA);
+      if (QueryingAA)
+        recordDependence(*LivenessAA, *QueryingAA);
       continue;
     }
 
@@ -4193,7 +4215,7 @@ bool Attributor::checkForAllCallSites(
         continue;
       LLVM_DEBUG(dbgs() << "[Attributor] User " << EffectiveUse->getUser()
                         << " is an invalid use of "
-                        << AssociatedFunction->getName() << "\n");
+                        << Fn.getName() << "\n");
       return false;
     }
 
@@ -4412,8 +4434,6 @@ ChangeStatus Attributor::run(Module &M) {
 
   size_t NumFinalAAs = AllAbstractAttributes.size();
 
-  bool FinishedAtFixpoint = Worklist.empty();
-
   // Reset abstract arguments not settled in a sound fixpoint by now. This
   // happens when we stopped the fixpoint iteration early. Note that only the
   // ones marked as "changed" *and* the ones transitively depending on them
@@ -4478,24 +4498,6 @@ ChangeStatus Attributor::run(Module &M) {
   LLVM_DEBUG(dbgs() << "\n[Attributor] Manifested " << NumManifested
                     << " arguments while " << NumAtFixpoint
                     << " were in a valid fixpoint state\n");
-
-  // If verification is requested, we finished this run at a fixpoint, and the
-  // IR was changed, we re-run the whole fixpoint analysis, starting at
-  // re-initialization of the arguments. This re-run should not result in an IR
-  // change. Though, the (virtual) state of attributes at the end of the re-run
-  // might be more optimistic than the known state or the IR state if the better
-  // state cannot be manifested.
-  if (VerifyAttributor && FinishedAtFixpoint &&
-      ManifestChange == ChangeStatus::CHANGED) {
-    VerifyAttributor = false;
-    ChangeStatus VerifyStatus = run(M);
-    if (VerifyStatus != ChangeStatus::UNCHANGED)
-      llvm_unreachable(
-          "Attributor verification failed, re-run did result in an IR change "
-          "even after a fixpoint was reached in the original run. (False "
-          "positives possible!)");
-    VerifyAttributor = true;
-  }
 
   NumAttributesManifested += NumManifested;
   NumAttributesValidFixpoint += NumAtFixpoint;
@@ -4846,11 +4848,6 @@ static bool runAttributorOnModule(Module &M, AnalysisGetter &AG) {
       NumFnWithExactDefinition++;
     else
       NumFnWithoutExactDefinition++;
-
-    // For now we ignore naked and optnone functions.
-    if (F.hasFnAttribute(Attribute::Naked) ||
-        F.hasFnAttribute(Attribute::OptimizeNone))
-      continue;
 
     // We look at internal functions only on-demand but if any use is not a
     // direct call, we have to do it eagerly.

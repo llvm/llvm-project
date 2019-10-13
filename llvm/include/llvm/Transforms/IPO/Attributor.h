@@ -899,6 +899,15 @@ struct Attributor {
   const DataLayout &getDataLayout() const { return InfoCache.DL; }
 
 private:
+  /// Check \p Pred on all call sites of \p Fn.
+  ///
+  /// This method will evaluate \p Pred on call sites and return
+  /// true if \p Pred holds in every call sites. However, this is only possible
+  /// all call sites are known, hence the function has internal linkage.
+  bool checkForAllCallSites(const function_ref<bool(AbstractCallSite)> &Pred,
+                            const Function &Fn, bool RequireAllCallSites,
+                            const AbstractAttribute *QueryingAA);
+
   /// The private version of getAAFor that allows to omit a querying abstract
   /// attribute. See also the public getAAFor method.
   template <typename AAType>
@@ -913,15 +922,23 @@ private:
     // Use the static create method.
     auto &AA = AAType::createForPosition(IRP, *this);
     registerAA(AA);
-    AA.initialize(*this);
+
+    // For now we ignore naked and optnone functions.
+    bool Invalidate = Whitelist && !Whitelist->count(&AAType::ID);
+    if (const Function *Fn = IRP.getAnchorScope())
+      Invalidate |= Fn->hasFnAttribute(Attribute::Naked) ||
+                    Fn->hasFnAttribute(Attribute::OptimizeNone);
 
     // Bootstrap the new attribute with an initial update to propagate
     // information, e.g., function -> call site. If it is not on a given
     // whitelist we will not perform updates at all.
-    if (Whitelist && !Whitelist->count(&AAType::ID))
+    if (Invalidate) {
       AA.getState().indicatePessimisticFixpoint();
-    else
-      AA.update(*this);
+      return AA;
+    }
+
+    AA.initialize(*this);
+    AA.update(*this);
 
     if (TrackDependence && AA.getState().isValidState())
       QueryMap[&AA].insert(const_cast<AbstractAttribute *>(QueryingAA));
