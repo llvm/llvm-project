@@ -1065,7 +1065,7 @@ public:
   }
 };
 
-class SimpleShadowMem /*: public ShadowMemoryType*/ {
+class SimpleShadowMem {
 private:
   CilkSanImpl_t &CilkSanImpl;
   // The shadow memory involves three dictionaries to separately handle reads,
@@ -1095,15 +1095,18 @@ public:
     //           << reinterpret_cast<void*>(addr) << ", " << mem_size
     //           << ", func node " << (void*)f->Sbag->get_node() << "\n";
     if (is_read)
-      Reads.set(addr, mem_size, MemoryAccess_t(f->getSbagForAccess(), acc_id));
+      Reads.set(addr, mem_size, MemoryAccess_t(f->getSbagForAccess(), acc_id,
+                                               MAType_t::RW));
     else
-      Writes.set(addr, mem_size, MemoryAccess_t(f->getSbagForAccess(), acc_id));
+      Writes.set(addr, mem_size, MemoryAccess_t(f->getSbagForAccess(), acc_id,
+                                                MAType_t::RW));
   }
 
   template<typename QITy, bool prev_read, bool is_read>
   __attribute__((always_inline))
-  void check_race(QITy &QI, const csi_id_t acc_id, uintptr_t addr,
-                  size_t mem_size, bool on_stack, FrameData_t *f) const {
+  void check_race(QITy &QI, const csi_id_t acc_id, MAType_t type,
+                  uintptr_t addr, size_t mem_size, bool on_stack,
+                  FrameData_t *f) const {
     // std::cerr << "check_race " << (prev_read ? "vs. read " : "vs. write ")
     //           << std::hex << addr << std::dec << ", " << mem_size << "\n";
     while (!QI.isEnd()) {
@@ -1135,18 +1138,20 @@ public:
           if (prev_read)
             CilkSanImpl.report_race(
                 PrevAccess->getLoc(),
-                AccessLoc_t(acc_id, CilkSanImpl.get_current_call_stack()),
+                AccessLoc_t(acc_id, type, CilkSanImpl.get_current_call_stack()),
                 AllocAccess, AccAddr, RW_RACE);
           else {
             if (is_read)
               CilkSanImpl.report_race(
                   PrevAccess->getLoc(),
-                  AccessLoc_t(acc_id, CilkSanImpl.get_current_call_stack()),
+                  AccessLoc_t(acc_id, type,
+                              CilkSanImpl.get_current_call_stack()),
                   AllocAccess, AccAddr, WR_RACE);
             else
               CilkSanImpl.report_race(
                   PrevAccess->getLoc(),
-                  AccessLoc_t(acc_id, CilkSanImpl.get_current_call_stack()),
+                  AccessLoc_t(acc_id, type,
+                              CilkSanImpl.get_current_call_stack()),
                   AllocAccess, AccAddr, WW_RACE);
           }
         }
@@ -1162,24 +1167,26 @@ public:
     using QITy = SimpleDictionary<ReadMAAllocator>::Query_iterator;
     QITy QI = Reads.getQueryIterator(addr, mem_size);
     // The second argument does not matter here.
-    check_race<QITy, true, false>(QI, acc_id, addr, mem_size, on_stack, f);
+    check_race<QITy, true, false>(QI, acc_id, MAType_t::RW, addr, mem_size,
+                                  on_stack, f);
   }
 
   template<bool is_read>
   __attribute__((always_inline))
-  void check_race_with_prev_write(const csi_id_t acc_id, uintptr_t addr,
-                                  size_t mem_size, bool on_stack,
-                                  FrameData_t *f) const {
+  void check_race_with_prev_write(const csi_id_t acc_id, MAType_t type,
+                                  uintptr_t addr, size_t mem_size,
+                                  bool on_stack, FrameData_t *f) const {
     using QITy = SimpleDictionary<WriteMAAllocator>::Query_iterator;
     QITy QI = Writes.getQueryIterator(addr, mem_size);
     // check_race(QI, false, is_read, acc_id, addr, mem_size, on_stack, f,
     //            call_stack);
-    check_race<QITy, false, is_read>(QI, acc_id, addr, mem_size, on_stack, f);
+    check_race<QITy, false, is_read>(QI, acc_id, type, addr, mem_size, on_stack,
+                                     f);
   }
 
   template <typename UITy, bool with_read>
   __attribute__((always_inline))
-  void update(UITy &UI, const csi_id_t acc_id, uintptr_t addr,
+  void update(UITy &UI, const csi_id_t acc_id, MAType_t type, uintptr_t addr,
               size_t mem_size, bool on_stack, FrameData_t *f) {
     // std::cerr << "update " << (with_read ? "read " : "write ")
     //           << reinterpret_cast<void*>(addr) << ", " << mem_size << "\n";
@@ -1190,7 +1197,7 @@ public:
         // std::cerr << "update::insert: " << reinterpret_cast<void*>(UI.getAddress())
         //           << ", call_stack " << (void*)(call_stack.getTail()) << "\n";
         // This is the first access to this location.
-        UI.insert(MemoryAccess_t(f->getSbagForAccess(), acc_id));
+        UI.insert(MemoryAccess_t(f->getSbagForAccess(), acc_id, type));
       } else {
         auto Func = PrevAccess->getFunc();
         cilksan_assert(Func);
@@ -1207,7 +1214,7 @@ public:
             (on_stack && lastRSet->get_rsp() >= AccAddr)) {
           // std::cerr << "update::insert: " << reinterpret_cast<void*>(UI.getAddress())
           //           << ", call_stack " << (void*)(call_stack.getTail()) << "\n";
-          UI.insert(MemoryAccess_t(f->getSbagForAccess(), acc_id));
+          UI.insert(MemoryAccess_t(f->getSbagForAccess(), acc_id, type));
         } else
           UI.next();
       }
@@ -1219,20 +1226,21 @@ public:
                         bool on_stack, FrameData_t *f) {
     using UITy = SimpleDictionary<ReadMAAllocator>::Update_iterator;
     UITy UI = Reads.getUpdateIterator(addr, mem_size);
-    update<UITy, true>(UI, acc_id, addr, mem_size, on_stack, f);
+    update<UITy, true>(UI, acc_id, MAType_t::RW, addr, mem_size, on_stack, f);
   }
 
   __attribute__((always_inline))
-  void update_with_write(const csi_id_t acc_id, uintptr_t addr, size_t mem_size,
-                         bool on_stack, FrameData_t *f) {
+  void update_with_write(const csi_id_t acc_id, MAType_t type, uintptr_t addr,
+                         size_t mem_size, bool on_stack, FrameData_t *f) {
     using UITy = SimpleDictionary<WriteMAAllocator>::Update_iterator;
     UITy UI =  Writes.getUpdateIterator(addr, mem_size);
-    update<UITy, false>(UI, acc_id, addr, mem_size, on_stack, f);
+    update<UITy, false>(UI, acc_id, type, addr, mem_size, on_stack, f);
   }
 
   __attribute__((always_inline))
-  void check_and_update_write(const csi_id_t acc_id, uintptr_t addr,
-                              size_t mem_size, bool on_stack, FrameData_t *f) {
+  void check_and_update_write(const csi_id_t acc_id, MAType_t type,
+                              uintptr_t addr, size_t mem_size, bool on_stack,
+                              FrameData_t *f) {
     // std::cerr << "check_and_update_write "
     //           << reinterpret_cast<void*>(addr) << ", " << mem_size << "\n";
     SimpleDictionary<WriteMAAllocator>::Update_iterator UI =
@@ -1245,7 +1253,7 @@ public:
         // std::cerr << "CAUW::insert: " << reinterpret_cast<void*>(UI.getAddress())
         //           << ", call_stack " << (void*)(call_stack.getTail()) << "\n";
         // This is the first access to this location.
-        UI.insert(MemoryAccess_t(f->getSbagForAccess(), acc_id));
+        UI.insert(MemoryAccess_t(f->getSbagForAccess(), acc_id, type));
       } else {
         auto Func = PrevAccess->getFunc();
         cilksan_assert(Func);
@@ -1270,7 +1278,7 @@ public:
           // Report the race
           CilkSanImpl.report_race(
               PrevAccess->getLoc(),
-              AccessLoc_t(acc_id, CilkSanImpl.get_current_call_stack()),
+              AccessLoc_t(acc_id, type, CilkSanImpl.get_current_call_stack()),
               AllocAccess, AccAddr, WW_RACE);
         }
 
@@ -1286,7 +1294,7 @@ public:
             (on_stack && LCA->get_rsp() >= AccAddr)) {
           // std::cerr << "CAUW::insert: " << reinterpret_cast<void*>(UI.getAddress())
           //           << ", call_stack " << (void*)(call_stack.getTail()) << "\n";
-          UI.insert(MemoryAccess_t(f->getSbagForAccess(), acc_id));
+          UI.insert(MemoryAccess_t(f->getSbagForAccess(), acc_id, type));
         } else
           UI.next();
       }
@@ -1302,7 +1310,14 @@ public:
   void record_alloc(size_t start, size_t size, FrameData_t *f,
                     csi_id_t alloca_id) {
     Allocs.set(start, size, MemoryAccess_t(f->getSbagForAccess(),
-                                           alloca_id));
+                                           alloca_id, MAType_t::ALLOC));
+  }
+
+  void record_free(size_t start, size_t size, FrameData_t *f,
+                   csi_id_t free_id, MAType_t type) {
+    Allocs.clear(start, size);
+    Writes.set(start, size, MemoryAccess_t(f->getSbagForAccess(),
+                                           free_id, type));
   }
 
   __attribute__((always_inline))
@@ -1343,6 +1358,11 @@ void Shadow_Memory::record_alloc(size_t start, size_t size, FrameData_t *f,
   shadow_mem->record_alloc(start, size, f, alloca_id);
 }
 
+void Shadow_Memory::record_free(size_t start, size_t size, FrameData_t *f,
+                                csi_id_t free_id, MAType_t type) {
+  shadow_mem->record_free(start, size, f, free_id, type);
+}
+
 __attribute__((always_inline))
 void Shadow_Memory::clear_alloc(size_t start, size_t size) {
   shadow_mem->clear_alloc(start, size);
@@ -1357,18 +1377,18 @@ void Shadow_Memory::check_race_with_prev_read(const csi_id_t acc_id,
 
 template<bool is_read>
 void Shadow_Memory::check_race_with_prev_write(const csi_id_t acc_id,
-                                               uintptr_t addr,
+                                               MAType_t type, uintptr_t addr,
                                                size_t mem_size, bool on_stack,
                                                FrameData_t *f) const {
-  shadow_mem->check_race_with_prev_write<is_read>(acc_id, addr, mem_size,
+  shadow_mem->check_race_with_prev_write<is_read>(acc_id, type, addr, mem_size,
                                                   on_stack, f);
 }
 
 __attribute__((always_inline))
-void Shadow_Memory::update_with_write(const csi_id_t acc_id,
+void Shadow_Memory::update_with_write(const csi_id_t acc_id, MAType_t type,
                                       uintptr_t addr, size_t mem_size,
                                       bool on_stack, FrameData_t *f) {
-  shadow_mem->update_with_write(acc_id, addr, mem_size, on_stack, f);
+  shadow_mem->update_with_write(acc_id, type, addr, mem_size, on_stack, f);
 }
 
 __attribute__((always_inline))
@@ -1379,10 +1399,10 @@ void Shadow_Memory::update_with_read(const csi_id_t acc_id, uintptr_t addr,
 }
 
 __attribute__((always_inline))
-void Shadow_Memory::check_and_update_write(const csi_id_t acc_id,
+void Shadow_Memory::check_and_update_write(const csi_id_t acc_id, MAType_t type,
                                            uintptr_t addr, size_t mem_size,
                                            bool on_stack, FrameData_t *f) {
-  shadow_mem->check_and_update_write(acc_id, addr, mem_size, on_stack, f);
+  shadow_mem->check_and_update_write(acc_id, type, addr, mem_size, on_stack, f);
 }
 
 void Shadow_Memory::destruct() {

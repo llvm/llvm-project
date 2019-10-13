@@ -624,25 +624,56 @@ CilkSanImpl_t::record_mem_helper(const csi_id_t acc_id, uintptr_t addr,
         if (!write_in_shadow)
           shadow_memory.update_with_read(acc_id, addr, mem_size, on_stack, f);
         else
-          check_races_and_update<is_read>(acc_id, addr, mem_size, on_stack, f,
-                                          shadow_memory);
+          check_races_and_update<is_read>(acc_id, MAType_t::RW, addr, mem_size,
+                                          on_stack, f, shadow_memory);
       } else {
         shadow_memory.insert_access<is_read>(acc_id, addr, mem_size, f);
-        shadow_memory.check_race_with_prev_write<true>(acc_id, addr, mem_size,
-                                                       on_stack, f);
+        shadow_memory.check_race_with_prev_write<true>(
+            acc_id, MAType_t::RW, addr, mem_size, on_stack, f);
       }
     } else {
       if (read_in_shadow && write_in_shadow) {
-        check_races_and_update<is_read>(acc_id, addr, mem_size, on_stack, f,
-                                        shadow_memory);
+        check_races_and_update<is_read>(acc_id, MAType_t::RW, addr, mem_size,
+                                        on_stack, f, shadow_memory);
       } else if (read_in_shadow) {
         shadow_memory.insert_access<is_read>(acc_id, addr, mem_size, f);
         shadow_memory.check_race_with_prev_read(acc_id, addr, mem_size,
                                                 on_stack, f);
       } else {
-        shadow_memory.check_and_update_write(acc_id, addr, mem_size,
-                                             on_stack, f);
+        shadow_memory.check_and_update_write(acc_id, MAType_t::RW, addr,
+                                             mem_size, on_stack, f);
       }
+    }
+  }
+}
+
+void
+CilkSanImpl_t::record_free(uintptr_t addr, size_t mem_size, csi_id_t acc_id,
+                           MAType_t type) {
+  FrameData_t *f = frame_stack.head();
+  bool write_in_shadow = shadow_memory.does_access_exists<false>(addr,
+                                                                 mem_size);
+  bool read_in_shadow = shadow_memory.does_access_exists<true>(addr, mem_size);
+
+  // guaranteed safe if:
+  //  1. it's a write, there are no other reads or writes
+  //  2. it's a read, there are at most only reads
+  if (!write_in_shadow && !read_in_shadow)
+    shadow_memory.record_free(addr, mem_size, f, acc_id, type);
+  else {
+    // we know this access can potentially lead to a race, so we check
+    // check_races_and_update assumes both r/w are already present
+    // but that's not true so there's a lot of casework
+    if (read_in_shadow && write_in_shadow) {
+      check_races_and_update<false>(acc_id, type, addr, mem_size, false, f,
+                                    shadow_memory);
+    } else if (read_in_shadow) {
+      shadow_memory.record_free(addr, mem_size, f, acc_id, type);
+      shadow_memory.check_race_with_prev_read(acc_id, addr, mem_size,
+                                              false, f);
+    } else {
+      shadow_memory.check_and_update_write(acc_id, type, addr, mem_size,
+                                           false, f);
     }
   }
 }
@@ -658,15 +689,15 @@ void check_races_and_update_with_read(const csi_id_t acc_id,
   shadow_memory.update_with_read(acc_id, addr, mem_size, on_stack, f);
   // shadow_memory.check_race_with_prev_write(true, acc_id, addr,
   //                                          mem_size, on_stack, f, call_stack);
-  shadow_memory.check_race_with_prev_write<true>(acc_id, addr, mem_size,
-                                                 on_stack, f);
+  shadow_memory.check_race_with_prev_write<true>(acc_id, MAType_t::RW, addr,
+                                                 mem_size, on_stack, f);
 }
 
 // Check races on memory represented by this mem list with this write access.
 // Also, update the writers list.  Very similar to
 // check_races_and_update_with_read function above.
 __attribute__((always_inline))
-void check_races_and_update_with_write(const csi_id_t acc_id,
+void check_races_and_update_with_write(const csi_id_t acc_id, MAType_t type,
                                        uintptr_t addr,
                                        size_t mem_size, bool on_stack,
                                        FrameData_t *f,
@@ -676,7 +707,8 @@ void check_races_and_update_with_write(const csi_id_t acc_id,
   //                                          call_stack);
   // shadow_memory.update_with_write(acc_id, inst_addr, addr, mem_size, on_stack,
   //                                 f, call_stack);
-  shadow_memory.check_and_update_write(acc_id, addr, mem_size, on_stack, f);
+  shadow_memory.check_and_update_write(acc_id, type, addr, mem_size, on_stack,
+                                       f);
   shadow_memory.check_race_with_prev_read(acc_id, addr, mem_size, on_stack, f);
 }
 
@@ -697,14 +729,14 @@ void check_races_and_update_with_write(const csi_id_t acc_id,
 //               create PBag lazily, the curr_top_pbag may be NULL.
 template<bool is_read>
 __attribute__((always_inline)) void
-check_races_and_update(/*bool is_read,*/ const csi_id_t acc_id,
+check_races_and_update(const csi_id_t acc_id, MAType_t type,
                        uintptr_t addr, size_t mem_size, bool on_stack,
                        FrameData_t *f, Shadow_Memory &shadow_memory) {
   if (is_read)
     check_races_and_update_with_read(acc_id, addr, mem_size, on_stack, f,
                                      shadow_memory);
   else
-    check_races_and_update_with_write(acc_id, addr, mem_size, on_stack, f,
+    check_races_and_update_with_write(acc_id, type, addr, mem_size, on_stack, f,
                                       shadow_memory);
 }
 
@@ -712,7 +744,8 @@ void CilkSanImpl_t::do_read(const csi_id_t load_id,
                             uintptr_t addr, size_t mem_size) {
   cilksan_assert(CILKSAN_INITIALIZED);
   DBG_TRACE(DEBUG_MEMORY, "record read %lu: %lu bytes at addr %p and rip %p.\n",
-            load_id, mem_size, addr, load_pc[load_id]);
+            load_id, mem_size, addr,
+            (load_id != UNKNOWN_CSI_ID) ? load_pc[load_id] : NULL);
   ++num_reads_checked;
 
   bool on_stack = is_on_stack(addr);

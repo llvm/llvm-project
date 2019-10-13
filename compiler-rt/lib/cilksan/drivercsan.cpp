@@ -48,6 +48,7 @@ extern uintptr_t *load_pc;
 extern uintptr_t *store_pc;
 extern uintptr_t *alloca_pc;
 extern uintptr_t *allocfn_pc;
+extern uintptr_t *free_pc;
 static csi_id_t total_call = 0;
 static csi_id_t total_spawn = 0;
 static csi_id_t total_loop = 0;
@@ -55,6 +56,7 @@ static csi_id_t total_load = 0;
 static csi_id_t total_store = 0;
 static csi_id_t total_alloca = 0;
 static csi_id_t total_allocfn = 0;
+static csi_id_t total_free = 0;
 
 static bool TOOL_INITIALIZED = false;
 
@@ -198,6 +200,10 @@ static void csan_destroy(void) {
     free(allocfn_pc);
     allocfn_pc = nullptr;
   }
+  if (free_pc) {
+    free(free_pc);
+    free_pc = nullptr;
+  }
 }
 
 CilkSanImpl_t::~CilkSanImpl_t() {
@@ -280,6 +286,8 @@ void __csan_unit_init(const char * const file_name,
     grow_pc_table(alloca_pc, total_alloca, counts.num_alloca);
   if (counts.num_allocfn)
     grow_pc_table(allocfn_pc, total_allocfn, counts.num_allocfn);
+  if (counts.num_free)
+    grow_pc_table(free_pc, total_free, counts.num_free);
 }
 
 // invoked whenever a function enters; no need for this
@@ -730,6 +738,8 @@ void __csi_after_alloca(const csi_id_t alloca_id, const void *addr,
   if (__builtin_expect(!alloca_pc[alloca_id], false))
     alloca_pc[alloca_id] = CALLERPC;
 
+  DBG_TRACE(DEBUG_CALLBACK, "__csi_after_alloca(%ld)\n", alloca_id);
+
   // Record the alloca and clear the allocated portion of the shadow memory.
   CilkSanImpl.record_alloc((size_t) addr, size, 2 * alloca_id);
   CilkSanImpl.clear_shadow_memory((size_t)addr, size);
@@ -748,6 +758,10 @@ void __csan_after_allocfn(const csi_id_t allocfn_id, const void *addr,
 
   CheckingRAII nocheck;
 
+  DBG_TRACE(DEBUG_CALLBACK,
+            "__csan_after_allocfn(%ld, %s, addr = %p, size = %ld, oldaddr = %p)\n",
+            allocfn_id, __csan_get_allocfn_str(prop), addr, size, oldaddr);
+
   // std::cerr << "Called memory function " << __csan_get_allocfn_str(prop) << "\n";
 
   // TODO: Use alignment information
@@ -755,19 +769,58 @@ void __csan_after_allocfn(const csi_id_t allocfn_id, const void *addr,
   if (__builtin_expect(!allocfn_pc[allocfn_id], false))
     allocfn_pc[allocfn_id] = CALLERPC;
 
+  size_t new_size = size * num;
+
   // If this allocation function operated on an old address -- e.g., a realloc
   // -- then update the memory at the old address as if it was freed.
   if (oldaddr) {
     auto iter = malloc_sizes.find((uintptr_t)oldaddr);
-    if (iter != malloc_sizes.end()) {
-      CilkSanImpl.do_write(UNKNOWN_CSI_ID, (uintptr_t)oldaddr, iter->second);
-      malloc_sizes.erase(iter);
+    if (oldaddr != addr) {
+      if (new_size > 0) {
+        // Record the new allocation.
+        CilkSanImpl.record_alloc((size_t)addr, new_size, 2 * allocfn_id + 1);
+        CilkSanImpl.clear_shadow_memory((size_t)addr, new_size);
+        malloc_sizes.insert({(uintptr_t)addr, new_size});
+      }
+
+      if (iter != malloc_sizes.end()) {
+        // Take note of the freeing of the old memory.
+        CilkSanImpl.record_free((uintptr_t)oldaddr, iter->second, allocfn_id,
+                                MAType_t::REALLOC);
+        malloc_sizes.erase(iter);
+      }
+    } else {
+      // We're simply adjusting the allocation at the same place.
+      if (iter != malloc_sizes.end()) {
+        size_t old_size = iter->second;
+        if (old_size < new_size) {
+          CilkSanImpl.clear_shadow_memory((size_t)addr + old_size,
+                                          new_size - old_size);
+        } else if (old_size > new_size) {
+          // Take note of the effective free of the old space.
+          CilkSanImpl.record_free((uintptr_t)oldaddr + new_size,
+                                  old_size - new_size, allocfn_id,
+                                  MAType_t::REALLOC);
+        }
+        CilkSanImpl.record_alloc((size_t)addr, new_size, 2 * allocfn_id + 1);
+        malloc_sizes.erase(iter);
+      }
+      malloc_sizes.insert({(uintptr_t)addr, new_size});
     }
+    return;
   }
+
+  // For many memory allocation functions, including malloc and realloc, if the
+  // requested size is 0, the behavior is implementation defined.  The function
+  // might return nullptr, or return a non-null pointer that won't be used to
+  // access memory.  We simply don't record an allocation of zero size.
+  if (0 == size)
+    return;
+
   // Record the new allocation.
-  malloc_sizes.insert({(uintptr_t)addr, size * num});
-  CilkSanImpl.record_alloc((size_t)addr, size * num, 2 * allocfn_id + 1);
-  CilkSanImpl.clear_shadow_memory((size_t)addr, size * num);
+  malloc_sizes.insert({(uintptr_t)addr, new_size});
+  CilkSanImpl.record_alloc((size_t)addr, new_size, 2 * allocfn_id + 1);
+  CilkSanImpl.clear_shadow_memory((size_t)addr, new_size);
 }
 
 // __csan_after_free is called after any call to free or delete.
@@ -782,6 +835,9 @@ void __csan_after_free(const csi_id_t free_id, const void *ptr,
 
   // std::cerr << "Called memory function " << __csan_get_free_str(prop) << "\n";
 
+  if (__builtin_expect(!free_pc[free_id], false))
+    free_pc[free_id] = CALLERPC;
+
   auto iter = malloc_sizes.find((uintptr_t)ptr);
   if (iter != malloc_sizes.end()) {
     // cilksan_clear_shadow_memory((size_t)ptr, iter->second);
@@ -789,7 +845,8 @@ void __csan_after_free(const csi_id_t free_id, const void *ptr,
     // Treat a free as a write to all freed addresses.  This way the tool will
     // report a race if an operation tries to access a location that was freed
     // in parallel.
-    CilkSanImpl.do_write(UNKNOWN_CSI_ID, (uintptr_t)ptr, iter->second);
+    CilkSanImpl.record_free((uintptr_t)ptr, iter->second, free_id,
+                            MAType_t::FREE);
     malloc_sizes.erase(iter);
   }
 }

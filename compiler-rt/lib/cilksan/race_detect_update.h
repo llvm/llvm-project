@@ -8,7 +8,7 @@
 // Check races on memory represented by this mem list with this read access.
 // Once done checking, update the mem list with this new read access.
 __attribute__((always_inline))
-void check_races_and_update_with_read(const csi_id_t acc_id,
+void check_races_and_update_with_read(const csi_id_t acc_id, MAType_t type,
                                       uintptr_t addr,
                                       size_t mem_size, bool on_stack,
                                       FrameData_t *f,
@@ -18,7 +18,7 @@ void check_races_and_update_with_read(const csi_id_t acc_id,
 // Also, update the writers list.  Very similar to
 // check_races_and_update_with_read function above.
 __attribute__((always_inline))
-void check_races_and_update_with_write(const csi_id_t acc_id,
+void check_races_and_update_with_write(const csi_id_t acc_id, MAType_t type,
                                        uintptr_t addr,
                                        size_t mem_size, bool on_stack,
                                        FrameData_t *f,
@@ -41,7 +41,7 @@ void check_races_and_update_with_write(const csi_id_t acc_id,
 //               create PBag lazily, the curr_top_pbag may be NULL.
 template<bool is_read>
 __attribute__((always_inline)) void
-check_races_and_update(const csi_id_t acc_id,
+check_races_and_update(const csi_id_t acc_id, MAType_t type,
                        uintptr_t addr, size_t mem_size, bool on_stack,
                        FrameData_t *f, Shadow_Memory &shadow_memory);
 

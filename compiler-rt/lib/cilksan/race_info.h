@@ -12,6 +12,8 @@ enum AccContextType_t { USER = 1, UPDATE = 2, REDUCE = 3 };
 // W stands for write, R stands for read
 enum RaceType_t { RW_RACE = 1, WW_RACE = 2, WR_RACE = 3 };
 
+enum MAType_t : uint8_t { RW = 0, ALLOC, FREE, REALLOC, UNKNOWN = 255 };
+
 // Class for representing a frame on the call stack.
 enum CallType_t : uint8_t { CALL, SPAWN, LOOP };
 class CallID_t {
@@ -255,25 +257,31 @@ class AccessLoc_t {
   // CSI ID of the access.
   csi_id_t acc_loc;
 
+  // TODO: Combine type with acc_loc, if this is a performance issue.
+  MAType_t type;
+
   // Call stack for the access.
   call_stack_t call_stack;
   // int64_t ref_count;
 
 public:
-  AccessLoc_t() : acc_loc(UNKNOWN_CSI_ID), call_stack()// , ref_count(1)
+  AccessLoc_t() : acc_loc(UNKNOWN_CSI_ID), type(MAType_t::UNKNOWN), call_stack()
+                  // , ref_count(1)
   {}
 
-  AccessLoc_t(csi_id_t _acc_loc, const call_stack_t &_call_stack)
-      : acc_loc(_acc_loc), call_stack(_call_stack)// , ref_count(1)
+  AccessLoc_t(csi_id_t _acc_loc, MAType_t _type,
+              const call_stack_t &_call_stack)
+      : acc_loc(_acc_loc), type(_type), call_stack(_call_stack)// , ref_count(1)
         // call_stack(_call_stack.size()-1)
   {}
 
   AccessLoc_t(const AccessLoc_t &copy)
-      : acc_loc(copy.acc_loc), call_stack(copy.call_stack)// , ref_count(1)
+      : acc_loc(copy.acc_loc), type(copy.type), call_stack(copy.call_stack)
+        // , ref_count(1)
   {}
 
   AccessLoc_t(AccessLoc_t &&move)
-      : acc_loc(move.acc_loc)// , ref_count(1)
+      : acc_loc(move.acc_loc), type(move.type)// , ref_count(1)
   {
     call_stack.overwrite(move.call_stack);
   }
@@ -282,6 +290,10 @@ public:
 
   inline csi_id_t getID() const {
     return acc_loc;
+  }
+
+  inline MAType_t getType() const {
+    return type;
   }
 
   inline const call_stack_node_t *getCallStack() const {
@@ -304,12 +316,14 @@ public:
 
   inline AccessLoc_t& operator=(const AccessLoc_t &copy) {
     acc_loc = copy.acc_loc;
+    type = copy.type;
     call_stack = copy.call_stack;
     return *this;
   }
 
   inline AccessLoc_t& operator=(AccessLoc_t &&move) {
     acc_loc = move.acc_loc;
+    type = move.type;
     call_stack = std::move(move.call_stack);
     return *this;
   }
@@ -335,7 +349,7 @@ public:
   }
 
   inline bool operator==(const AccessLoc_t &that) const {
-    if (acc_loc != that.acc_loc)
+    if (acc_loc != that.acc_loc || type != that.type)
       return false;
 #if CHECK_EQUIVALENT_STACKS
     call_stack_node_t *this_node = call_stack.tail;
@@ -352,27 +366,14 @@ public:
     return true;
   }
 
-  // Unsafe method!  Only use this if you know what you're doing.
-  inline void overwrite(const AccessLoc_t &copy) {
-    acc_loc = copy.acc_loc;
-    call_stack.overwrite(copy.call_stack);
-  }
-
-  // Unsafe method!  Only use this if you know what you're doing.
-  inline void clear() {
-    call_stack.tail = nullptr;
-  }
-
-  // bool hasValidLoc() const {
-  //   return nullptr != call_stack.tail;
-  // }
-
   inline bool operator!=(const AccessLoc_t &that) const {
     return !(*this == that);
   }
 
+  // Used for tie-breaking in data structures
   inline bool operator<(const AccessLoc_t &that) const {
-    return acc_loc < that.acc_loc;
+    return (acc_loc < that.acc_loc) || ((acc_loc == that.acc_loc) &&
+                                        (type < that.type));
   }
 
   inline friend

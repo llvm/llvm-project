@@ -147,8 +147,9 @@ public:
   void do_read(const csi_id_t load_id, uintptr_t addr, size_t len);
   void do_write(const csi_id_t store_id, uintptr_t addr, size_t len);
   void clear_shadow_memory(size_t start, size_t end);
-  void record_alloc(size_t start, size_t end, csi_id_t alloca_id);
-  void clear_alloc(size_t start, size_t end);
+  void record_alloc(size_t start, size_t size, csi_id_t alloca_id);
+  void record_free(size_t start, size_t size, csi_id_t acc_id, MAType_t type);
+  void clear_alloc(size_t start, size_t size);
 
   const call_stack_t &get_current_call_stack() const {
     return call_stack;

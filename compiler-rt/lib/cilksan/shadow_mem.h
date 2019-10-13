@@ -89,6 +89,9 @@ public:
   void record_alloc(size_t start, size_t size, FrameData_t *f,
                     csi_id_t alloca_id);
 
+  void record_free(size_t start, size_t size, FrameData_t *f,
+                   csi_id_t free_id, MAType_t type);
+
   void clear_alloc(size_t start, size_t size);
 
   __attribute__((always_inline))
@@ -98,21 +101,22 @@ public:
 
   template<bool is_read>
   __attribute__((always_inline))
-  void check_race_with_prev_write(const csi_id_t acc_id, uintptr_t addr,
-                                  size_t mem_size, bool on_stack,
-                                  FrameData_t *f) const;
+  void check_race_with_prev_write(const csi_id_t acc_id, MAType_t type,
+                                  uintptr_t addr, size_t mem_size,
+                                  bool on_stack, FrameData_t *f) const;
 
   __attribute__((always_inline))
-  void update_with_write(const csi_id_t acc_id, uintptr_t addr, size_t mem_size,
-                         bool on_stack, FrameData_t *f);
+  void update_with_write(const csi_id_t acc_id, MAType_t type, uintptr_t addr,
+                         size_t mem_size, bool on_stack, FrameData_t *f);
 
   __attribute__((always_inline))
   void update_with_read(const csi_id_t acc_id, uintptr_t addr, size_t mem_size,
                         bool on_stack, FrameData_t *f);
 
   __attribute__((always_inline))
-  void check_and_update_write(const csi_id_t acc_id, uintptr_t addr,
-                              size_t mem_size, bool on_stack, FrameData_t *f);
+  void check_and_update_write(const csi_id_t acc_id, MAType_t type,
+                              uintptr_t addr, size_t mem_size, bool on_stack,
+                              FrameData_t *f);
 
   void destruct();
 };

@@ -46,6 +46,7 @@ uintptr_t *load_pc = nullptr;
 uintptr_t *store_pc = nullptr;
 uintptr_t *alloca_pc = nullptr;
 uintptr_t *allocfn_pc = nullptr;
+uintptr_t *free_pc = nullptr;
 
 class ProcMapping_t {
 public:
@@ -166,6 +167,8 @@ get_info_on_mem_access(uint64_t inst_addr
 typedef enum {
   LOAD_ACC,
   STORE_ACC,
+  FREE_ACC,
+  REALLOC_ACC,
 } ACC_TYPE;
 
 // Helper function to get string describing a variable location from a
@@ -259,10 +262,16 @@ get_info_on_mem_access(const csi_id_t acc_id, ACC_TYPE type) {
 
   switch (type) {
   case LOAD_ACC:
-    convert << "   Read at ";
+    convert << "->    Read ";
     break;
   case STORE_ACC:
-    convert << "  Write at ";
+    convert << "->   Write ";
+    break;
+  case FREE_ACC:
+    convert << "->    Free ";
+    break;
+  case REALLOC_ACC:
+    convert << "-> Realloc ";
     break;
   }
 
@@ -274,6 +283,12 @@ get_info_on_mem_access(const csi_id_t acc_id, ACC_TYPE type) {
       break;
     case STORE_ACC:
       convert << "0x" << std::hex << store_pc[acc_id];
+      break;
+    case FREE_ACC:
+      convert << "0x" << std::hex << free_pc[acc_id];
+      break;
+    case REALLOC_ACC:
+      convert << "0x" << std::hex << allocfn_pc[acc_id];
       break;
     }
   }
@@ -288,6 +303,12 @@ get_info_on_mem_access(const csi_id_t acc_id, ACC_TYPE type) {
     case STORE_ACC:
       src_loc = __csan_get_store_source_loc(acc_id);
       break;
+    case FREE_ACC:
+      src_loc = __csan_get_free_source_loc(acc_id);
+      break;
+    case REALLOC_ACC:
+      src_loc = __csan_get_allocfn_source_loc(acc_id);
+      break;
     }
   }
   // if (!src_loc)
@@ -301,7 +322,11 @@ get_info_on_mem_access(const csi_id_t acc_id, ACC_TYPE type) {
 
   convert << get_src_info_str(src_loc);
 
-  convert << std::endl << "        to variable ";
+  // TODO: Track objects modified by free's and realloc's.
+  if (type == FREE_ACC || type == REALLOC_ACC)
+    return convert.str();
+
+  convert << std::endl << "          to variable ";
 
   // Get object information
   const obj_source_loc_t *obj_src_loc = nullptr;
@@ -418,26 +443,65 @@ void RaceInfo_t::print(const AccessLoc_t &first_inst,
   // std::string second_acc_info = get_info_on_mem_access(race.second_inst);
 
   std::string first_acc_info, second_acc_info;
+  ACC_TYPE first_acc_type, second_acc_type;
   switch(type) {
   case RW_RACE:
-    first_acc_info =
-      get_info_on_mem_access(first_inst.getID(), LOAD_ACC);
-    second_acc_info =
-      get_info_on_mem_access(second_inst.getID(), STORE_ACC);
+    first_acc_type = LOAD_ACC;
+    switch (second_inst.getType()) {
+    case MAType_t::FREE:
+      second_acc_type = FREE_ACC;
+      break;
+    case MAType_t::REALLOC:
+      second_acc_type = REALLOC_ACC;
+      break;
+    default:
+      second_acc_type = STORE_ACC;
+      break;
+    }
     break;
   case WW_RACE:
-    first_acc_info =
-      get_info_on_mem_access(first_inst.getID(), STORE_ACC);
-    second_acc_info =
-      get_info_on_mem_access(second_inst.getID(), STORE_ACC);
+    switch (first_inst.getType()) {
+    case MAType_t::FREE:
+      first_acc_type = FREE_ACC;
+      break;
+    case MAType_t::REALLOC:
+      first_acc_type = REALLOC_ACC;
+      break;
+    default:
+      first_acc_type = STORE_ACC;
+      break;
+    }
+    switch (second_inst.getType()) {
+    case MAType_t::FREE:
+      second_acc_type = FREE_ACC;
+      break;
+    case MAType_t::REALLOC:
+      second_acc_type = REALLOC_ACC;
+      break;
+    default:
+      second_acc_type = STORE_ACC;
+      break;
+    }
     break;
   case WR_RACE:
-    first_acc_info =
-      get_info_on_mem_access(first_inst.getID(), STORE_ACC);
-    second_acc_info =
-      get_info_on_mem_access(second_inst.getID(), LOAD_ACC);
+    switch (first_inst.getType()) {
+    case MAType_t::FREE:
+      first_acc_type = FREE_ACC;
+      break;
+    case MAType_t::REALLOC:
+      first_acc_type = REALLOC_ACC;
+      break;
+    default:
+      first_acc_type = STORE_ACC;
+      break;
+    }
+    second_acc_type = LOAD_ACC;
     break;
   }
+  first_acc_info =
+      get_info_on_mem_access(first_inst.getID(), first_acc_type);
+  second_acc_info =
+      get_info_on_mem_access(second_inst.getID(), second_acc_type);
 
   // Extract the two call stacks
   int first_call_stack_size = first_inst.getCallStackSize();

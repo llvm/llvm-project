@@ -14,16 +14,19 @@
 
 class MemoryAccess_t {
   static constexpr unsigned VERSION_SHIFT = 48;
-  static constexpr csi_id_t ID_MASK = ((1UL << VERSION_SHIFT) - 1);
+  static constexpr unsigned TYPE_SHIFT = 44;
+  static constexpr csi_id_t ID_MASK = ((1UL << TYPE_SHIFT) - 1);
+  static constexpr csi_id_t TYPE_MASK = ((1UL << VERSION_SHIFT) - 1) & ~ID_MASK;
   static constexpr csi_id_t UNKNOWN_CSI_ACC_ID = UNKNOWN_CSI_ID & ID_MASK;
 public:
   DisjointSet_t<SPBagInterface *> *func = nullptr;
-  // AccessLoc_t loc;
   csi_id_t ver_acc_id = UNKNOWN_CSI_ACC_ID;
 
   MemoryAccess_t() {}
-  MemoryAccess_t(DisjointSet_t<SPBagInterface *> *func, csi_id_t acc_id)
-      : func(func), ver_acc_id((acc_id & ID_MASK))
+  MemoryAccess_t(DisjointSet_t<SPBagInterface *> *func, csi_id_t acc_id,
+                 MAType_t type)
+      : func(func), ver_acc_id((acc_id & ID_MASK) |
+                               (static_cast<csi_id_t>(type) << TYPE_SHIFT))
   {
     if (func) {
       func->inc_ref_count();
@@ -33,32 +36,22 @@ public:
   }
 
   MemoryAccess_t(const MemoryAccess_t &copy)
-      : func(copy.func),
-        // loc(copy.loc)
-        ver_acc_id(copy.ver_acc_id) {
+      : func(copy.func), ver_acc_id(copy.ver_acc_id) {
     if (func)
       func->inc_ref_count();
-    // if (loc)
-    //   loc->inc_ref_count();
   }
 
   MemoryAccess_t(const MemoryAccess_t &&move)
-      : func(move.func),
-        // loc(std::move(move.loc))
-        ver_acc_id(move.ver_acc_id) {}
+      : func(move.func), ver_acc_id(move.ver_acc_id) {}
 
   ~MemoryAccess_t() {
     if (func) {
       func->dec_ref_count();
       func = nullptr;
     }
-    // if (loc)
-    //   loc->dec_ref_count();
   }
 
   bool isValid() const {
-    // if (nullptr == func)
-    //   assert(nullptr == loc.getCallStack());
     return (nullptr != func);
   }
 
@@ -66,25 +59,22 @@ public:
     if (func)
       func->dec_ref_count();
     func = nullptr;
-    // loc.invalidate();
     ver_acc_id = UNKNOWN_CSI_ACC_ID;
-    // loc.dec_ref_count();
-    // if (loc)
-    //   loc->dec_ref_count();
-    // loc = nullptr;
   }
 
   DisjointSet_t<SPBagInterface *> *getFunc() const {
     return func;
   }
 
-  // const AccessLoc_t &getLoc() const {
-  //   return loc;
-  // }
   csi_id_t getAccID() const {
     if ((ver_acc_id & ID_MASK) == UNKNOWN_CSI_ACC_ID)
       return UNKNOWN_CSI_ID;
     return (ver_acc_id & ID_MASK);
+  }
+  MAType_t getAccType() const {
+    if ((ver_acc_id & ID_MASK) == UNKNOWN_CSI_ACC_ID)
+      return MAType_t::UNKNOWN;
+    return static_cast<MAType_t>((ver_acc_id & TYPE_MASK) >> TYPE_SHIFT);
   }
   uint16_t getVersion() const {
     return static_cast<uint16_t>(ver_acc_id >> VERSION_SHIFT);
@@ -92,7 +82,8 @@ public:
   AccessLoc_t getLoc() const {
     if (!isValid())
       return AccessLoc_t();
-    return AccessLoc_t(getAccID(), *func->get_node()->get_call_stack());
+    return AccessLoc_t(getAccID(), getAccType(),
+                       *func->get_node()->get_call_stack());
   }
 
   MemoryAccess_t &operator=(const MemoryAccess_t &copy) {
@@ -103,91 +94,50 @@ public:
         func->dec_ref_count();
       func = copy.func;
     }
-    // loc = copy.loc;
     ver_acc_id = copy.ver_acc_id;
 
-    // if (loc != copy.loc) {
-    //   if (copy.loc)
-    //     copy.loc->inc_ref_count();
-    //   if (loc)
-    //     loc->dec_ref_count();
-    //   loc = copy.loc;
-    // }
     return *this;
   }
 
   MemoryAccess_t &operator=(MemoryAccess_t &&move) {
     if (func)
       func->dec_ref_count();
-    // if (loc)
-    //   loc->dec_ref_count();
     func = move.func;
-    // loc = std::move(move.loc);
     ver_acc_id = move.ver_acc_id;
     return *this;
   }
 
   void inc_ref_counts(int64_t count) {
     assert(func);
-    // assert(loc);
     func->inc_ref_count(count);
-    // loc.inc_ref_count(count);
-
-    // loc->inc_ref_count(count);
   }
 
   void dec_ref_counts(int64_t count) {
     if (!func->dec_ref_count(count))
       func = nullptr;
-    // loc.dec_ref_count(count);
-
-    // if (!loc->dec_ref_count(count))
-    //   loc = nullptr;
   }
 
   void inherit(const MemoryAccess_t &copy) {
     if (func)
       func->dec_ref_count();
     func = copy.func;
-    // loc.dec_ref_count();
-
-    // if (loc)
-    //   loc->dec_ref_count();
     ver_acc_id = copy.ver_acc_id;
-    // loc = copy.loc;
   }
-
-  // // Unsafe method!  Only use this if you know what you're doing.
-  // void overwrite(const MemoryAccess_t &copy) {
-  //   func = copy.func;
-  //   loc.overwrite(copy.loc);
-  // }
-
-  // // Unsafe method!  Only use this if you know what you're doing.
-  // void clear() {
-  //   func = nullptr;
-  //   loc.clear();
-  // }
-
-  // bool sameAccessLocPtr(const MemoryAccess_t &that) const {
-  //   return loc.getCallStack() == that.loc.getCallStack();
-  // }
 
   // TODO: Get rid of PC from these comparisons
   bool operator==(const MemoryAccess_t &that) const {
-    return (func == that.func); // && (loc == that.loc);
+    return (func == that.func);
   }
 
   bool operator!=(const MemoryAccess_t &that) const {
-    // return (func != that.func) || (loc != that.loc);
     return !(*this == that);
   }
 
   inline friend
   std::ostream& operator<<(std::ostream &os, const MemoryAccess_t &acc) {
-    os << "function " << acc.func->get_node()->get_func_id() <<
-      // ", " << acc.loc;
-      ", acc id " << acc.getAccID() << ", version " << acc.getVersion();
+    os << "function " << acc.func->get_node()->get_func_id()
+       << ", acc id " << acc.getAccID() << ", type " << acc.getAccType()
+       << ", version " << acc.getVersion();
     return os;
   }
 
