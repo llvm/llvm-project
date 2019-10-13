@@ -316,8 +316,15 @@ static bool checkInstructionForRace(const Instruction *I,
       }
 
     // We can assume allocation functions are safe.
-    if (AssumeSafeMalloc && isAllocationFn(I, TLI))
+    if (AssumeSafeMalloc && isAllocationFn(I, TLI)) {
+      // Check if this is a realloc, because we have to handle those specially.
+      const CallBase *Call = cast<CallBase>(I);
+      LibFunc F;
+      bool FoundLibFunc = TLI->getLibFunc(*Call->getCalledFunction(), F);
+      if (FoundLibFunc && ((F == LibFunc_realloc || F == LibFunc_reallocf)))
+        return true;
       return false;
+    }
 
     // If this call occurs in a termination block of the program, ignore it.
     if (IgnoreTerminationCalls &&
@@ -406,6 +413,23 @@ static void GetGeneralAccesses(
         match(Call, m_Intrinsic<Intrinsic::invariant_start>()))
       CallMask = clearMod(CallMask);
     // TODO: See if we need to exclude additional intrinsics.
+
+    if (isAllocationFn(Call, TLI)) {
+      // Handle realloc as a special case.
+      LibFunc F;
+      bool FoundLibFunc = TLI->getLibFunc(*Call->getCalledFunction(), F);
+      if (FoundLibFunc && ((F == LibFunc_realloc || F == LibFunc_reallocf))) {
+        // TODO: Try to get the size of the object being copied from.
+        AccI.push_back(GeneralAccess(I, MemoryLocation::getForArgument(
+                                         Call, 0, TLI), 0,
+                                     AA->getArgModRefInfo(Call, 0)));
+        // If we assume malloc is safe, don't worry about opaque accesses by
+        // realloc.
+        if (!AssumeSafeMalloc)
+          AccI.push_back(GeneralAccess(I, None, CallMask));
+        return;
+      }
+    }
 
     for (auto IdxArgPair : enumerate(Call->args())) {
       int ArgIdx = IdxArgPair.index();
