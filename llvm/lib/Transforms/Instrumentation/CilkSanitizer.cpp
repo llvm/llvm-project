@@ -177,7 +177,8 @@ struct CilkSanitizerImpl : public CSIImpl {
         SmallPtrSetImpl<Instruction *> &AllocationFnCalls,
         SmallPtrSetImpl<Instruction *> &FreeCalls,
         DenseMap<Value *, unsigned> &SyncRegNums,
-        DenseMap<BasicBlock *, unsigned> &SRCounters);
+        DenseMap<BasicBlock *, unsigned> &SRCounters, const DataLayout &DL,
+        const TargetLibraryInfo *TLI);
 
   private:
     void getDetachesForInstruction(Instruction *I);
@@ -211,7 +212,8 @@ struct CilkSanitizerImpl : public CSIImpl {
         SmallPtrSetImpl<Instruction *> &AllocationFnCalls,
         SmallPtrSetImpl<Instruction *> &FreeCalls,
         DenseMap<Value *, unsigned> &SyncRegNums,
-        DenseMap<BasicBlock *, unsigned> &SRCounters);
+        DenseMap<BasicBlock *, unsigned> &SRCounters, const DataLayout &DL,
+        const TargetLibraryInfo *TLI);
     bool PerformDelayedInstrumentation();
 
   private:
@@ -1170,6 +1172,28 @@ static bool PossibleRaceByCapture(Value *Addr, const DataLayout &DL,
 //   return false;
 // }
 
+static bool unknownObjectUses(Value *Addr, const DataLayout &DL, LoopInfo *LI,
+                              const TargetLibraryInfo *TLI) {
+  // Perform normal pointer-capture analysis.
+  if (PointerMayBeCaptured(Addr, true, false))
+    return true;
+
+  // Check for detached uses of the underlying base objects.
+  SmallVector<Value *, 1> BaseObjs;
+  GetUnderlyingObjects(Addr, BaseObjs, DL, LI, 0);
+
+  // If we could not determine the base objects, conservatively return true.
+  if (BaseObjs.empty())
+    return true;
+
+  // If the base object is not an allocation function, return true.
+  for (const Value *BaseObj : BaseObjs)
+    if (!isAllocationFn(BaseObj, TLI))
+      return true;
+
+  return false;
+}
+
 void CilkSanitizerImpl::chooseInstructionsToInstrument(
     SmallVectorImpl<Instruction *> &Local, SmallVectorImpl<Instruction *> &All,
     const TaskInfo &TI, LoopInfo &LI) {
@@ -1320,7 +1344,8 @@ bool CilkSanitizerImpl::SimpleInstrumentor::InstrumentAncillaryInstructions(
     SmallPtrSetImpl<Instruction *> &AllocationFnCalls,
     SmallPtrSetImpl<Instruction *> &FreeCalls,
     DenseMap<Value *, unsigned> &SyncRegNums,
-    DenseMap<BasicBlock *, unsigned> &SRCounters) {
+    DenseMap<BasicBlock *, unsigned> &SRCounters, const DataLayout &DL,
+    const TargetLibraryInfo *TLI) {
   bool Result = false;
   SmallPtrSet<SyncInst *, 4> Syncs;
   SmallPtrSet<Loop *, 4> Loops;
@@ -1331,11 +1356,13 @@ bool CilkSanitizerImpl::SimpleInstrumentor::InstrumentAncillaryInstructions(
     // The simple instrumentor just instruments everyting
     CilkSanImpl.instrumentAlloca(I);
     getDetachesForInstruction(I);
+    Result = true;
   }
   for (Instruction *I : AllocationFnCalls) {
     // The simple instrumentor just instruments everyting
     CilkSanImpl.instrumentAllocationFn(I, DT);
     getDetachesForInstruction(I);
+    Result = true;
   }
   for (Instruction *I : FreeCalls) {
     // The first argument of the free call is the pointer.
@@ -1346,18 +1373,21 @@ bool CilkSanitizerImpl::SimpleInstrumentor::InstrumentAncillaryInstructions(
       if (AllocationFnCalls.count(PtrI)) {
         CilkSanImpl.instrumentFree(I);
         getDetachesForInstruction(I);
+        Result = true;
         continue;
       }
     }
     // The simple instrumentor just instruments everyting
     CilkSanImpl.instrumentFree(I);
     getDetachesForInstruction(I);
+    Result = true;
   }
 
   // Instrument detaches
   for (DetachInst *DI : Detaches) {
     CilkSanImpl.instrumentDetach(DI, SyncRegNums[DI->getSyncRegion()],
                                  SRCounters[DI->getDetached()], DT, TI, LI);
+    Result = true;
     // Get syncs associated with this detach
     for (SyncInst *SI : CilkSanImpl.DetachToSync[DI])
       Syncs.insert(SI);
@@ -2087,7 +2117,8 @@ bool CilkSanitizerImpl::Instrumentor::InstrumentAncillaryInstructions(
     SmallPtrSetImpl<Instruction *> &AllocationFnCalls,
     SmallPtrSetImpl<Instruction *> &FreeCalls,
     DenseMap<Value *, unsigned> &SyncRegNums,
-    DenseMap<BasicBlock *, unsigned> &SRCounters) {
+    DenseMap<BasicBlock *, unsigned> &SRCounters, const DataLayout &DL,
+    const TargetLibraryInfo *TLI) {
   bool Result = false;
   SmallPtrSet<SyncInst *, 4> Syncs;
   SmallPtrSet<Loop *, 4> Loops;
@@ -2099,6 +2130,7 @@ bool CilkSanitizerImpl::Instrumentor::InstrumentAncillaryInstructions(
         PointerMayBeCaptured(I, true, false)) {
       CilkSanImpl.instrumentAlloca(I);
       getDetachesForInstruction(I);
+      Result = true;
     }
   }
   for (Instruction *I : AllocationFnCalls) {
@@ -2106,6 +2138,7 @@ bool CilkSanitizerImpl::Instrumentor::InstrumentAncillaryInstructions(
         PointerMayBeCaptured(I, true, false)) {
       CilkSanImpl.instrumentAllocationFn(I, DT);
       getDetachesForInstruction(I);
+      Result = true;
     }
   }
   for (Instruction *I : FreeCalls) {
@@ -2117,13 +2150,14 @@ bool CilkSanitizerImpl::Instrumentor::InstrumentAncillaryInstructions(
       if (AllocationFnCalls.count(PtrI)) {
         CilkSanImpl.instrumentFree(I);
         getDetachesForInstruction(I);
+        Result = true;
         continue;
       }
     }
-    if (RI.ObjectInvolvedInRace(Ptr) ||
-        PointerMayBeCaptured(Ptr, true, false)) {
+    if (RI.ObjectInvolvedInRace(Ptr) || unknownObjectUses(Ptr, DL, &LI, TLI)) {
       CilkSanImpl.instrumentFree(I);
       getDetachesForInstruction(I);
+      Result = true;
     }
   }
 
@@ -2131,6 +2165,7 @@ bool CilkSanitizerImpl::Instrumentor::InstrumentAncillaryInstructions(
   for (DetachInst *DI : Detaches) {
     CilkSanImpl.instrumentDetach(DI, SyncRegNums[DI->getSyncRegion()],
                                  SRCounters[DI->getDetached()], DT, TI, LI);
+    Result = true;
     // Get syncs associated with this detach
     for (SyncInst *SI : CilkSanImpl.DetachToSync[DI])
       Syncs.insert(SI);
@@ -2281,7 +2316,7 @@ bool CilkSanitizerImpl::instrumentFunctionUsingRI(Function &F) {
     // calls, free calls, detaches, and syncs.
     Result |= FuncI.InstrumentAncillaryInstructions(Allocas, AllocationFnCalls,
                                                     FreeCalls, SyncRegNums,
-                                                    SRCounters);
+                                                    SRCounters, DL, TLI);
   } else {
     Instrumentor FuncI(*this, RI, TI, LI, DT);
     // Insert suppression flags for each function argument.
@@ -2301,7 +2336,7 @@ bool CilkSanitizerImpl::instrumentFunctionUsingRI(Function &F) {
     // calls, free calls, detaches, and syncs.
     Result |= FuncI.InstrumentAncillaryInstructions(Allocas, AllocationFnCalls,
                                                     FreeCalls, SyncRegNums,
-                                                    SRCounters);
+                                                    SRCounters, DL, TLI);
 
     // Once we have handled ancillary instructions, we've done the necessary
     // analysis on this function.  We now perform delayed instrumentation, which
