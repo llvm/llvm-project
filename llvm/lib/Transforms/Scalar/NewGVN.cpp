@@ -89,6 +89,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -122,6 +123,7 @@
 using namespace llvm;
 using namespace llvm::GVNExpression;
 using namespace llvm::VNCoercion;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "newgvn"
 
@@ -2464,9 +2466,9 @@ Value *NewGVN::findConditionEquivalence(Value *Cond) const {
 // Process the outgoing edges of a block for reachability.
 void NewGVN::processOutgoingEdges(Instruction *TI, BasicBlock *B) {
   // Evaluate reachability of terminator instruction.
-  BranchInst *BR;
-  if ((BR = dyn_cast<BranchInst>(TI)) && BR->isConditional()) {
-    Value *Cond = BR->getCondition();
+  Value *Cond;
+  BasicBlock *TrueSucc, *FalseSucc;
+  if (match(TI, m_Br(m_Value(Cond), TrueSucc, FalseSucc))) {
     Value *CondEvaluated = findConditionEquivalence(Cond);
     if (!CondEvaluated) {
       if (auto *I = dyn_cast<Instruction>(Cond)) {
@@ -2479,8 +2481,6 @@ void NewGVN::processOutgoingEdges(Instruction *TI, BasicBlock *B) {
       }
     }
     ConstantInt *CI;
-    BasicBlock *TrueSucc = BR->getSuccessor(0);
-    BasicBlock *FalseSucc = BR->getSuccessor(1);
     if (CondEvaluated && (CI = dyn_cast<ConstantInt>(CondEvaluated))) {
       if (CI->isOne()) {
         LLVM_DEBUG(dbgs() << "Condition for Terminator " << *TI

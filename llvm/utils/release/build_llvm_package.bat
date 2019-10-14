@@ -78,6 +78,8 @@ ninja check || ninja check || ninja check || exit /b
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b
 ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit /b
+ninja check-clang-tools || ninja check-clang-tools || ninja check-clang || exit /b
+ninja check-clangd || ninja check-clangd || ninja check-clang || exit /b
 cd..
 
 mkdir build32
@@ -90,6 +92,8 @@ ninja check || ninja check || ninja check || exit /b
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b
 ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit /b
+ninja check-clang-tools || ninja check-clang-tools || ninja check-clang || exit /b
+ninja check-clangd || ninja check-clangd || ninja check-clang || exit /b
 ninja package || exit /b
 cd ..
 
@@ -118,6 +122,8 @@ ninja check || ninja check || ninja check || exit /b
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b
 ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit /b
+ninja check-clang-tools || ninja check-clang-tools || ninja check-clang || exit /b
+ninja check-clangd || ninja check-clangd || ninja check-clang || exit /b
 cd..
 
 mkdir build64
@@ -130,5 +136,7 @@ ninja check || ninja check || ninja check || exit /b
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b
 ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit /b
+ninja check-clang-tools || ninja check-clang-tools || ninja check-clang || exit /b
+ninja check-clangd || ninja check-clangd || ninja check-clang || exit /b
 ninja package || exit /b
 cd ..

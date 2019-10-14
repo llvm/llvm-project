@@ -21,6 +21,28 @@ using namespace llvm;
 
 namespace {
 
+TEST(AlignmentTest, AlignOfConstant) {
+  EXPECT_EQ(Align::Of<uint8_t>(), Align(alignof(uint8_t)));
+  EXPECT_EQ(Align::Of<uint16_t>(), Align(alignof(uint16_t)));
+  EXPECT_EQ(Align::Of<uint32_t>(), Align(alignof(uint32_t)));
+  EXPECT_EQ(Align::Of<uint64_t>(), Align(alignof(uint64_t)));
+}
+
+TEST(AlignmentTest, AlignConstant) {
+  EXPECT_EQ(Align::Constant<1>(), Align(1));
+  EXPECT_EQ(Align::Constant<2>(), Align(2));
+  EXPECT_EQ(Align::Constant<4>(), Align(4));
+  EXPECT_EQ(Align::Constant<8>(), Align(8));
+  EXPECT_EQ(Align::Constant<16>(), Align(16));
+  EXPECT_EQ(Align::Constant<32>(), Align(32));
+  EXPECT_EQ(Align::Constant<64>(), Align(64));
+}
+
+TEST(AlignmentTest, AlignConstexprConstant) {
+  constexpr Align kConstantAlign = Align::Of<uint64_t>();
+  EXPECT_EQ(Align(8), kConstantAlign);
+}
+
 std::vector<uint64_t> getValidAlignments() {
   std::vector<uint64_t> Out;
   for (size_t Shift = 0; Shift < 64; ++Shift)

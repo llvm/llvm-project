@@ -574,10 +574,10 @@ public:
   /// modes that operate across loop iterations.
   bool shouldFavorBackedgeIndex(const Loop *L) const;
 
-  /// Return true if the target supports masked load.
-  bool isLegalMaskedStore(Type *DataType) const;
   /// Return true if the target supports masked store.
-  bool isLegalMaskedLoad(Type *DataType) const;
+  bool isLegalMaskedStore(Type *DataType, MaybeAlign Alignment) const;
+  /// Return true if the target supports masked load.
+  bool isLegalMaskedLoad(Type *DataType, MaybeAlign Alignment) const;
 
   /// Return true if the target supports nontemporal store.
   bool isLegalNTStore(Type *DataType, Align Alignment) const;
@@ -1209,8 +1209,8 @@ public:
                           TargetLibraryInfo *LibInfo) = 0;
   virtual bool shouldFavorPostInc() const = 0;
   virtual bool shouldFavorBackedgeIndex(const Loop *L) const = 0;
-  virtual bool isLegalMaskedStore(Type *DataType) = 0;
-  virtual bool isLegalMaskedLoad(Type *DataType) = 0;
+  virtual bool isLegalMaskedStore(Type *DataType, MaybeAlign Alignment) = 0;
+  virtual bool isLegalMaskedLoad(Type *DataType, MaybeAlign Alignment) = 0;
   virtual bool isLegalNTStore(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalNTLoad(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalMaskedScatter(Type *DataType) = 0;
@@ -1496,11 +1496,11 @@ public:
   bool shouldFavorBackedgeIndex(const Loop *L) const override {
     return Impl.shouldFavorBackedgeIndex(L);
   }
-  bool isLegalMaskedStore(Type *DataType) override {
-    return Impl.isLegalMaskedStore(DataType);
+  bool isLegalMaskedStore(Type *DataType, MaybeAlign Alignment) override {
+    return Impl.isLegalMaskedStore(DataType, Alignment);
   }
-  bool isLegalMaskedLoad(Type *DataType) override {
-    return Impl.isLegalMaskedLoad(DataType);
+  bool isLegalMaskedLoad(Type *DataType, MaybeAlign Alignment) override {
+    return Impl.isLegalMaskedLoad(DataType, Alignment);
   }
   bool isLegalNTStore(Type *DataType, Align Alignment) override {
     return Impl.isLegalNTStore(DataType, Alignment);

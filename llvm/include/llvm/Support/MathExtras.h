@@ -560,6 +560,16 @@ inline unsigned countPopulation(T Value) {
   return detail::PopulationCounter<T, sizeof(T)>::count(Value);
 }
 
+/// Compile time Log2.
+/// Valid only for positive powers of two.
+template <size_t kValue> constexpr inline size_t CTLog2() {
+  static_assert(kValue > 0 && llvm::isPowerOf2_64(kValue),
+                "Value is not a valid power of 2");
+  return 1 + CTLog2<kValue / 2>();
+}
+
+template <> constexpr inline size_t CTLog2<1>() { return 0; }
+
 /// Return the log base 2 of the specified value.
 inline double Log2(double Value) {
 #if defined(__ANDROID_API__) && __ANDROID_API__ < 18

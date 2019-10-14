@@ -53,14 +53,25 @@ private:
   friend unsigned encode(struct MaybeAlign A);
   friend struct MaybeAlign decodeMaybeAlign(unsigned Value);
 
+  /// A trivial type to allow construction of constexpr Align.
+  /// This is currently needed to workaround a bug in GCC 5.3 which prevents
+  /// definition of constexpr assign operators.
+  /// https://stackoverflow.com/questions/46756288/explicitly-defaulted-function-cannot-be-declared-as-constexpr-because-the-implic
+  /// FIXME: Remove this, make all assign operators constexpr and introduce user
+  /// defined literals when we don't have to support GCC 5.3 anymore.
+  /// https://llvm.org/docs/GettingStarted.html#getting-a-modern-host-c-toolchain
+  struct LogValue {
+    uint8_t Log;
+  };
+
 public:
   /// Default is byte-aligned.
   constexpr Align() = default;
   /// Do not perform checks in case of copy/move construct/assign, because the
   /// checks have been performed when building `Other`.
-  Align(const Align &Other) = default;
+  constexpr Align(const Align &Other) = default;
+  constexpr Align(Align &&Other) = default;
   Align &operator=(const Align &Other) = default;
-  Align(Align &&Other) = default;
   Align &operator=(Align &&Other) = default;
 
   explicit Align(uint64_t Value) {
@@ -80,6 +91,20 @@ public:
   /// would be better than
   /// `if (A > Align(1))`
   constexpr static const Align None() { return Align(); }
+
+  /// Allow constructions of constexpr Align.
+  template <size_t kValue> constexpr static LogValue Constant() {
+    return LogValue{static_cast<uint8_t>(CTLog2<kValue>())};
+  }
+
+  /// Allow constructions of constexpr Align from types.
+  /// Compile time equivalent to Align(alignof(T)).
+  template <typename T> constexpr static LogValue Of() {
+    return Constant<std::alignment_of<T>::value>();
+  }
+
+  /// Constexpr constructor from LogValue type.
+  constexpr Align(LogValue CA) : ShiftValue(CA.Log) {}
 };
 
 /// Treats the value 0 as a 1, so Align is always at least 1.

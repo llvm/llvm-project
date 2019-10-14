@@ -2417,8 +2417,9 @@ int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
   unsigned NumElem = SrcVTy->getVectorNumElements();
   VectorType *MaskTy =
       VectorType::get(Type::getInt8Ty(SrcVTy->getContext()), NumElem);
-  if ((IsLoad && !isLegalMaskedLoad(SrcVTy)) ||
-      (IsStore && !isLegalMaskedStore(SrcVTy)) || !isPowerOf2_32(NumElem)) {
+  if ((IsLoad && !isLegalMaskedLoad(SrcVTy, MaybeAlign(Alignment))) ||
+      (IsStore && !isLegalMaskedStore(SrcVTy, MaybeAlign(Alignment))) ||
+      !isPowerOf2_32(NumElem)) {
     // Scalarization
     int MaskSplitCost = getScalarizationOverhead(MaskTy, false, true);
     int ScalarCompareCost = getCmpSelInstrCost(
@@ -3213,7 +3214,7 @@ bool X86TTIImpl::canMacroFuseCmp() {
   return ST->hasMacroFusion() || ST->hasBranchFusion();
 }
 
-bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy) {
+bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, MaybeAlign Alignment) {
   if (!ST->hasAVX())
     return false;
 
@@ -3236,8 +3237,8 @@ bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy) {
          ((IntWidth == 8 || IntWidth == 16) && ST->hasBWI());
 }
 
-bool X86TTIImpl::isLegalMaskedStore(Type *DataType) {
-  return isLegalMaskedLoad(DataType);
+bool X86TTIImpl::isLegalMaskedStore(Type *DataType, MaybeAlign Alignment) {
+  return isLegalMaskedLoad(DataType, Alignment);
 }
 
 bool X86TTIImpl::isLegalNTLoad(Type *DataType, Align Alignment) {

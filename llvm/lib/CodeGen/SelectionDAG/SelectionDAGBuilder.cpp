@@ -6388,29 +6388,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DAG.setRoot(Res);
     return;
   }
-  case Intrinsic::objectsize: {
-    // If we don't know by now, we're never going to know.
-    ConstantInt *CI = dyn_cast<ConstantInt>(I.getArgOperand(1));
-
-    assert(CI && "Non-constant type in __builtin_object_size?");
-
-    SDValue Arg = getValue(I.getCalledValue());
-    EVT Ty = Arg.getValueType();
-
-    if (CI->isZero())
-      Res = DAG.getConstant(-1ULL, sdl, Ty);
-    else
-      Res = DAG.getConstant(0, sdl, Ty);
-
-    setValue(&I, Res);
-    return;
-  }
+  case Intrinsic::objectsize:
+    llvm_unreachable("llvm.objectsize.* should have been lowered already");
 
   case Intrinsic::is_constant:
-    // If this wasn't constant-folded away by now, then it's not a
-    // constant.
-    setValue(&I, DAG.getConstant(0, sdl, MVT::i1));
-    return;
+    llvm_unreachable("llvm.is.constant.* should have been lowered already");
 
   case Intrinsic::annotation:
   case Intrinsic::ptr_annotation:

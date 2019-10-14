@@ -100,11 +100,11 @@ define float @matching_scalar_smallest_deref_addrspace(<4 x float> addrspace(4)*
   ret float %r
 }
 
-; TODO: Is a null pointer inbounds in any address space?
+; A null pointer can't be assumed inbounds in a non-default address space.
 
 define float @matching_scalar_smallest_deref_or_null_addrspace(<4 x float> addrspace(4)* dereferenceable_or_null(1) %p) {
 ; CHECK-LABEL: @matching_scalar_smallest_deref_or_null_addrspace(
-; CHECK-NEXT:    [[BC:%.*]] = getelementptr inbounds <4 x float>, <4 x float> addrspace(4)* [[P:%.*]], i64 0, i64 0
+; CHECK-NEXT:    [[BC:%.*]] = getelementptr <4 x float>, <4 x float> addrspace(4)* [[P:%.*]], i64 0, i64 0
 ; CHECK-NEXT:    [[R:%.*]] = load float, float addrspace(4)* [[BC]], align 16
 ; CHECK-NEXT:    ret float [[R]]
 ;

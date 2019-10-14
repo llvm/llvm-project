@@ -3,6 +3,7 @@ executable("clang-format") {
   deps = [
     "//clang/lib/Basic",
     "//clang/lib/Format",
+    "//clang/lib/Frontend",
     "//clang/lib/Rewrite",
     "//clang/lib/Tooling/Core",
     "//llvm/lib/Support",

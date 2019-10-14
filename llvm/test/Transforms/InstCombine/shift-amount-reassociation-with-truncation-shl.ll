@@ -181,15 +181,17 @@ define i16 @n11(i32 %x, i16 %y) {
 ; CHECK-NEXT:    [[T1:%.*]] = zext i16 [[T0]] to i32
 ; CHECK-NEXT:    [[T2:%.*]] = shl i32 [[X:%.*]], [[T1]]
 ; CHECK-NEXT:    [[T3:%.*]] = trunc i32 [[T2]] to i16
-; CHECK-NEXT:    ret i16 [[T3]]
+; CHECK-NEXT:    [[T4:%.*]] = add i16 [[Y]], -31
+; CHECK-NEXT:    [[T5:%.*]] = shl i16 [[T3]], [[T4]]
+; CHECK-NEXT:    ret i16 [[T5]]
 ;
   %t0 = sub i16 30, %y
   %t1 = zext i16 %t0 to i32
   %t2 = shl i32 %x, %t1
   %t3 = trunc i32 %t2 to i16
-  %t4 = add i16 %y, -24
+  %t4 = add i16 %y, -31
   %t5 = shl i16 %t3, %t4
-  ret i16 %t3
+  ret i16 %t5
 }
 
 ; Bit width mismatch of shit amount

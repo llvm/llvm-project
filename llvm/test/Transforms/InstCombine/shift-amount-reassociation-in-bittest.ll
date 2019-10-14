@@ -671,6 +671,14 @@ define <2 x i1> @n38_overshift(<2 x i32> %x, <2 x i32> %y) {
 ; As usual, don't crash given constantexpr's :/
 @f.a = internal global i16 0
 define i1 @constantexpr() {
+; CHECK-LABEL: @constantexpr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* @f.a, align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i16 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], shl (i16 1, i16 zext (i1 icmp ne (i16 ptrtoint (i16* @f.a to i16), i16 1) to i16))
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i16 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
+;
 entry:
   %0 = load i16, i16* @f.a
   %shr = ashr i16 %0, 1

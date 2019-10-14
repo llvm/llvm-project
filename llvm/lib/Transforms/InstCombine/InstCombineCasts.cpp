@@ -2344,8 +2344,16 @@ Instruction *InstCombiner::visitBitCast(BitCastInst &CI) {
       // If the source pointer is dereferenceable, then assume it points to an
       // allocated object and apply "inbounds" to the GEP.
       bool CanBeNull;
-      if (Src->getPointerDereferenceableBytes(DL, CanBeNull))
-        GEP->setIsInBounds();
+      if (Src->getPointerDereferenceableBytes(DL, CanBeNull)) {
+        // In a non-default address space (not 0), a null pointer can not be
+        // assumed inbounds, so ignore that case (dereferenceable_or_null).
+        // The reason is that 'null' is not treated differently in these address
+        // spaces, and we consequently ignore the 'gep inbounds' special case
+        // for 'null' which allows 'inbounds' on 'null' if the indices are
+        // zeros.
+        if (SrcPTy->getAddressSpace() == 0 || !CanBeNull)
+          GEP->setIsInBounds();
+      }
       return GEP;
     }
   }

@@ -593,8 +593,9 @@ struct AAComposeTwoGenericDeduction
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    return F<AAType, G<AAType, Base, StateType>, StateType>::updateImpl(A) |
-           G<AAType, Base, StateType>::updateImpl(A);
+    ChangeStatus ChangedF = F<AAType, G<AAType, Base, StateType>, StateType>::updateImpl(A);
+    ChangeStatus ChangedG = G<AAType, Base, StateType>::updateImpl(A);
+    return ChangedF | ChangedG;
   }
 };
 
@@ -1535,11 +1536,16 @@ struct AANoFreeCallSite final : AANoFreeImpl {
 static int64_t getKnownNonNullAndDerefBytesForUse(
     Attributor &A, AbstractAttribute &QueryingAA, Value &AssociatedValue,
     const Use *U, const Instruction *I, bool &IsNonNull, bool &TrackUse) {
-  // TODO: Add GEP support
   TrackUse = false;
 
+  const Value *UseV = U->get();
+  if (!UseV->getType()->isPointerTy())
+    return 0;
+
+  Type *PtrTy = UseV->getType();
   const Function *F = I->getFunction();
-  bool NullPointerIsDefined = F ? F->nullPointerIsDefined() : true;
+  bool NullPointerIsDefined =
+      F ? llvm::NullPointerIsDefined(F, PtrTy->getPointerAddressSpace()) : true;
   const DataLayout &DL = A.getInfoCache().getDL();
   if (ImmutableCallSite ICS = ImmutableCallSite(I)) {
     if (ICS.isBundleOperand(U))
@@ -1559,25 +1565,39 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
 
   int64_t Offset;
   if (const Value *Base = getBasePointerOfAccessPointerOperand(I, Offset, DL)) {
-    if (Base == &AssociatedValue) {
+    if (Base == &AssociatedValue && getPointerOperand(I) == UseV) {
       int64_t DerefBytes =
-          Offset +
-          (int64_t)DL.getTypeStoreSize(
-              getPointerOperand(I)->getType()->getPointerElementType());
+          Offset + (int64_t)DL.getTypeStoreSize(PtrTy->getPointerElementType());
 
       IsNonNull |= !NullPointerIsDefined;
       return DerefBytes;
     }
   }
+  if (const Value *Base =
+          GetPointerBaseWithConstantOffset(UseV, Offset, DL,
+                                           /*AllowNonInbounds*/ false)) {
+    auto &DerefAA =
+        A.getAAFor<AADereferenceable>(QueryingAA, IRPosition::value(*Base));
+    IsNonNull |= (!NullPointerIsDefined && DerefAA.isKnownNonNull());
+    IsNonNull |= (!NullPointerIsDefined && (Offset != 0));
+    int64_t DerefBytes = DerefAA.getKnownDereferenceableBytes();
+    return std::max(int64_t(0), DerefBytes - Offset);
+  }
 
   return 0;
 }
+
 struct AANonNullImpl : AANonNull {
-  AANonNullImpl(const IRPosition &IRP) : AANonNull(IRP) {}
+  AANonNullImpl(const IRPosition &IRP)
+      : AANonNull(IRP),
+        NullIsDefined(NullPointerIsDefined(
+            getAnchorScope(),
+            getAssociatedValue().getType()->getPointerAddressSpace())) {}
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    if (hasAttr({Attribute::NonNull, Attribute::Dereferenceable}))
+    if (!NullIsDefined &&
+        hasAttr({Attribute::NonNull, Attribute::Dereferenceable}))
       indicateOptimisticFixpoint();
     else
       AANonNull::initialize(A);
@@ -1597,6 +1617,10 @@ struct AANonNullImpl : AANonNull {
   const std::string getAsStr() const override {
     return getAssumed() ? "nonnull" : "may-null";
   }
+
+  /// Flag to determine if the underlying value can be null and still allow
+  /// valid accesses.
+  const bool NullIsDefined;
 };
 
 /// NonNull attribute for a floating value.
@@ -1629,6 +1653,12 @@ struct AANonNullFloating
     if (isKnownNonNull())
       return Change;
 
+    if (!NullIsDefined) {
+      const auto &DerefAA = A.getAAFor<AADereferenceable>(*this, getIRPosition());
+      if (DerefAA.getAssumedDereferenceableBytes())
+        return Change;
+    }
+
     const DataLayout &DL = A.getDataLayout();
 
     auto VisitValueCB = [&](Value &V, AAAlign::StateType &T,
@@ -1636,7 +1666,7 @@ struct AANonNullFloating
       const auto &AA = A.getAAFor<AANonNull>(*this, IRPosition::value(V));
       if (!Stripped && this == &AA) {
         if (!isKnownNonZero(&V, DL, 0, /* TODO: AC */ nullptr,
-                            /* TODO: CtxI */ nullptr,
+                            /* CtxI */ getCtxI(),
                             /* TODO: DT */ nullptr))
           T.indicatePessimisticFixpoint();
       } else {
@@ -2539,7 +2569,7 @@ struct AADereferenceableFloating
       // for overflows of the dereferenceable bytes.
       int64_t OffsetSExt = Offset.getSExtValue();
       if (OffsetSExt < 0)
-        Offset = 0;
+        OffsetSExt = 0;
 
       T.takeAssumedDerefBytesMinimum(
           std::max(int64_t(0), DerefBytes - OffsetSExt));
@@ -2829,6 +2859,14 @@ struct AAAlignCallSiteReturned final : AAAlignImpl {
 struct AANoReturnImpl : public AANoReturn {
   AANoReturnImpl(const IRPosition &IRP) : AANoReturn(IRP) {}
 
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AANoReturn::initialize(A);
+    Function *F = getAssociatedFunction();
+    if (!F || F->hasFnAttribute(Attribute::WillReturn))
+      indicatePessimisticFixpoint();
+  }
+
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr() const override {
     return getAssumed() ? "noreturn" : "may-return";
@@ -2836,6 +2874,9 @@ struct AANoReturnImpl : public AANoReturn {
 
   /// See AbstractAttribute::updateImpl(Attributor &A).
   virtual ChangeStatus updateImpl(Attributor &A) override {
+    const auto &WillReturnAA = A.getAAFor<AAWillReturn>(*this, getIRPosition());
+    if (WillReturnAA.isKnownWillReturn())
+      return indicatePessimisticFixpoint();
     auto CheckForNoReturn = [](Instruction &) { return false; };
     if (!A.checkForAllInstructions(CheckForNoReturn, *this,
                                    {(unsigned)Instruction::Ret}))
@@ -2854,14 +2895,6 @@ struct AANoReturnFunction final : AANoReturnImpl {
 /// NoReturn attribute deduction for a call sites.
 struct AANoReturnCallSite final : AANoReturnImpl {
   AANoReturnCallSite(const IRPosition &IRP) : AANoReturnImpl(IRP) {}
-
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override {
-    AANoReturnImpl::initialize(A);
-    Function *F = getAssociatedFunction();
-    if (!F)
-      indicatePessimisticFixpoint();
-  }
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
@@ -3823,16 +3856,22 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
   void initialize(Attributor &A) override {
     AAMemoryBehaviorFloating::initialize(A);
 
-    // TODO: From readattrs.ll: "inalloca parameters are always
-    //                           considered written"
-    if (hasAttr({Attribute::InAlloca}))
-      removeAssumedBits(NO_WRITES);
-
     // Initialize the use vector with all direct uses of the associated value.
     Argument *Arg = getAssociatedArgument();
     if (!Arg || !Arg->getParent()->hasExactDefinition())
       indicatePessimisticFixpoint();
   }
+
+  ChangeStatus manifest(Attributor &A) override {
+    // TODO: From readattrs.ll: "inalloca parameters are always
+    //                           considered written"
+    if (hasAttr({Attribute::InAlloca})) {
+      removeKnownBits(NO_WRITES);
+      removeAssumedBits(NO_WRITES);
+    }
+    return AAMemoryBehaviorFloating::manifest(A);
+  }
+
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -4002,10 +4041,13 @@ ChangeStatus AAMemoryBehaviorFloating::updateImpl(Attributor &A) {
 
   // Make sure the value is not captured (except through "return"), if
   // it is, any information derived would be irrelevant anyway as we cannot
-  // check the potential aliases introduced by the capture.
+  // check the potential aliases introduced by the capture. However, no need
+  // to fall back to anythign less optimistic than the function state.
   const auto &ArgNoCaptureAA = A.getAAFor<AANoCapture>(*this, IRP);
-  if (!ArgNoCaptureAA.isAssumedNoCaptureMaybeReturned())
-    return indicatePessimisticFixpoint();
+  if (!ArgNoCaptureAA.isAssumedNoCaptureMaybeReturned()) {
+    S.intersectAssumedBits(FnMemAA.getAssumed());
+    return ChangeStatus::CHANGED;
+  }
 
   // The current assumed state used to determine a change.
   auto AssumedState = S.getAssumed();

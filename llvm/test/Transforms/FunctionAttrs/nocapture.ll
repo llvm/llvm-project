@@ -11,14 +11,16 @@ define i32* @c1(i32* %q) {
 	ret i32* %q
 }
 
-; EITHER: define void @c2(i32* %q)
+; FNATTR: define void @c2(i32* %q)
+; ATTRIBUTOR: define void @c2(i32* writeonly %q)
 ; It would also be acceptable to mark %q as readnone. Update @c3 too.
 define void @c2(i32* %q) {
 	store i32* %q, i32** @g
 	ret void
 }
 
-; EITHER: define void @c3(i32* %q)
+; FNATTR: define void @c3(i32* %q)
+; ATTRIBUTOR: define void @c3(i32* writeonly %q)
 define void @c3(i32* %q) {
 	call void @c2(i32* %q)
 	ret void
@@ -39,7 +41,8 @@ l1:
 
 @lookup_table = global [2 x i1] [ i1 0, i1 1 ]
 
-; EITHER: define i1 @c5(i32* %q, i32 %bitno)
+; FNATTR: define i1 @c5(i32* %q, i32 %bitno)
+; ATTRIBUTOR: define i1 @c5(i32* readonly %q, i32 %bitno)
 define i1 @c5(i32* %q, i32 %bitno) {
 	%tmp = ptrtoint i32* %q to i32
 	%tmp2 = lshr i32 %tmp, %bitno
@@ -52,8 +55,7 @@ define i1 @c5(i32* %q, i32 %bitno) {
 
 declare void @throw_if_bit_set(i8*, i8) readonly
 
-; FNATTR: define i1 @c6(i8* readonly %q, i8 %bit)
-; ATTRIBUTOR: define i1 @c6(i8* %q, i8 %bit)
+; EITHER: define i1 @c6(i8* readonly %q, i8 %bit)
 define i1 @c6(i8* %q, i8 %bit) personality i32 (...)* @__gxx_personality_v0 {
 	invoke void @throw_if_bit_set(i8* %q, i8 %bit)
 		to label %ret0 unwind label %ret1
@@ -75,8 +77,7 @@ define i1* @lookup_bit(i32* %q, i32 %bitno) readnone nounwind {
 	ret i1* %lookup
 }
 
-; FNATTR: define i1 @c7(i32* readonly %q, i32 %bitno)
-; ATTRIBUTOR: define i1 @c7(i32* %q, i32 %bitno)
+; EITHER: define i1 @c7(i32* readonly %q, i32 %bitno)
 define i1 @c7(i32* %q, i32 %bitno) {
 	%ptr = call i1* @lookup_bit(i32* %q, i32 %bitno)
 	%val = load i1, i1* %ptr
@@ -271,7 +272,8 @@ entry:
 }
 
 @g3 = global i8* null
-; EITHER: define void @captureStrip(i8* %p)
+; FNATTR: define void @captureStrip(i8* %p)
+; ATTRIBUTOR: define void @captureStrip(i8* writeonly %p)
 define void @captureStrip(i8* %p) {
   %b = call i8* @llvm.strip.invariant.group.p0i8(i8* %p)
   store i8* %b, i8** @g3
@@ -323,8 +325,8 @@ define i1 @captureDereferenceableOrNullICmp(i32* dereferenceable_or_null(4) %x) 
 declare void @unknown(i8*)
 define void @test_callsite() {
 entry:
-; We know that 'null' in AS 0 does not alias anything and cannot be captured
-; CHECK: call void @unknown(i8* noalias nocapture null)
+; We know that 'null' in AS 0 does not alias anything and cannot be captured. Though the latter is not qurried -> derived atm.
+; ATTRIBUTOR: call void @unknown(i8* noalias null)
   call void @unknown(i8* null)
   ret void
 }

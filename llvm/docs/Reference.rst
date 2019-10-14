@@ -14,7 +14,6 @@ LLVM and API reference documentation.
    BlockFrequencyTerminology
    BranchWeightMetadata
    Bugpoint
-   CFIVerify
    CommandGuide/index
    Coroutines
    DependenceGraphs/index
@@ -129,15 +128,19 @@ LLVM IR
 :doc:`GlobalISel`
   This describes the prototype instruction selection replacement, GlobalISel.
 
-=======
-Testing
-=======
+=====================
+Testing and Debugging
+=====================
 
 :doc:`LLVM Testing Infrastructure Guide <TestingGuide>`
    A reference manual for using the LLVM testing infrastructure.
 
 :doc:`TestSuiteGuide`
   Describes how to compile and run the test-suite benchmarks.
+
+
+:doc:`GwpAsan`
+  A sampled heap memory error detection toolkit designed for production use.
 
 ====
 XRay
@@ -184,15 +187,9 @@ Additional Topics
 :doc:`ScudoHardenedAllocator`
   A library that implements a security-hardened `malloc()`.
 
-:doc:`GwpAsan`
-  A sampled heap memory error detection toolkit designed for production use.
-
 :doc:`Dependence Graphs <DependenceGraphs/index>`
   A description of the design of the various dependence graphs such as
   the DDG (Data Dependence Graph).
-
-:doc:`CFIVerify`
-  A description of the verification tool for Control Flow Integrity.
 
 :doc:`SpeculativeLoadHardening`
   A description of the Speculative Load Hardening mitigation for Spectre v1.

@@ -1,4 +1,4 @@
-; RUN: opt -functionattrs -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=2 -S < %s | FileCheck %s
+; RUN: opt -functionattrs -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=3 -S < %s | FileCheck %s
 ;
 ; Test cases specifically designed for the "no-return" function attribute.
 ; We use FIXME's to indicate problems and missing attributes.
@@ -122,6 +122,18 @@ cond.false:                                       ; preds = %entry
 cond.end:                                         ; preds = %cond.false, %cond.true
   %cond = phi i32 [ %call, %cond.true ], [ %call1, %cond.false ]
   ret i32 %cond
+}
+
+
+; TEST 6: willreturn means *not* no-return
+; CHECK:      Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK-NEXT: define i32 @endless_loop_but_willreturn
+define i32 @endless_loop_but_willreturn(i32 %a) willreturn {
+entry:
+  br label %while.body
+
+while.body:                                       ; preds = %entry, %while.body
+  br label %while.body
 }
 
 attributes #0 = { noinline nounwind uwtable }

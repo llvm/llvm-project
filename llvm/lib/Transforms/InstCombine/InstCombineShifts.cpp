@@ -161,6 +161,12 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
   Value *Masked = OuterShift->getOperand(0);
   Value *ShiftShAmt = OuterShift->getOperand(1);
 
+  Type *NarrowestTy = OuterShift->getType();
+  Type *WidestTy = Masked->getType();
+  // The mask must be computed in a type twice as wide to ensure
+  // that no bits are lost if the sum-of-shifts is wider than the base type.
+  Type *ExtendedTy = WidestTy->getExtendedType();
+
   Value *MaskShAmt;
 
   // ((1 << MaskShAmt) - 1)
@@ -175,6 +181,7 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
 
   Value *X;
   Constant *NewMask;
+
   if (match(Masked, m_c_And(m_CombineOr(MaskA, MaskB), m_Value(X)))) {
     // Can we simplify (MaskShAmt+ShiftShAmt) ?
     auto *SumOfShAmts = dyn_cast_or_null<Constant>(SimplifyAddInst(
@@ -184,26 +191,19 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
     // In this pattern SumOfShAmts correlates with the number of low bits
     // that shall remain in the root value (OuterShift).
 
-    Type *Ty = X->getType();
-
-    // The mask must be computed in a type twice as wide to ensure
-    // that no bits are lost if the sum-of-shifts is wider than the base type.
-    Type *ExtendedTy = Ty->getExtendedType();
     // An extend of an undef value becomes zero because the high bits are never
     // completely unknown. Replace the the `undef` shift amounts with final
     // shift bitwidth to ensure that the value remains undef when creating the
     // subsequent shift op.
     SumOfShAmts = replaceUndefsWith(
-        SumOfShAmts,
-        ConstantInt::get(SumOfShAmts->getType()->getScalarType(),
-                         ExtendedTy->getScalarType()->getScalarSizeInBits()));
+        SumOfShAmts, ConstantInt::get(SumOfShAmts->getType()->getScalarType(),
+                                      ExtendedTy->getScalarSizeInBits()));
     auto *ExtendedSumOfShAmts = ConstantExpr::getZExt(SumOfShAmts, ExtendedTy);
     // And compute the mask as usual: ~(-1 << (SumOfShAmts))
     auto *ExtendedAllOnes = ConstantExpr::getAllOnesValue(ExtendedTy);
     auto *ExtendedInvertedMask =
         ConstantExpr::getShl(ExtendedAllOnes, ExtendedSumOfShAmts);
-    auto *ExtendedMask = ConstantExpr::getNot(ExtendedInvertedMask);
-    NewMask = ConstantExpr::getTrunc(ExtendedMask, Ty);
+    NewMask = ConstantExpr::getNot(ExtendedInvertedMask);
   } else if (match(Masked, m_c_And(m_CombineOr(MaskC, MaskD), m_Value(X))) ||
              match(Masked, m_Shr(m_Shl(m_Value(X), m_Value(MaskShAmt)),
                                  m_Deferred(MaskShAmt)))) {
@@ -215,31 +215,28 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
     // In this pattern ShAmtsDiff correlates with the number of high bits that
     // shall be unset in the root value (OuterShift).
 
-    Type *Ty = X->getType();
-    unsigned BitWidth = Ty->getScalarSizeInBits();
-
-    // The mask must be computed in a type twice as wide to ensure
-    // that no bits are lost if the sum-of-shifts is wider than the base type.
-    Type *ExtendedTy = Ty->getExtendedType();
     // An extend of an undef value becomes zero because the high bits are never
     // completely unknown. Replace the the `undef` shift amounts with negated
-    // shift bitwidth to ensure that the value remains undef when creating the
-    // subsequent shift op.
+    // bitwidth of innermost shift to ensure that the value remains undef when
+    // creating the subsequent shift op.
+    unsigned WidestTyBitWidth = WidestTy->getScalarSizeInBits();
     ShAmtsDiff = replaceUndefsWith(
-        ShAmtsDiff,
-        ConstantInt::get(ShAmtsDiff->getType()->getScalarType(), -BitWidth));
+        ShAmtsDiff, ConstantInt::get(ShAmtsDiff->getType()->getScalarType(),
+                                     -WidestTyBitWidth));
     auto *ExtendedNumHighBitsToClear = ConstantExpr::getZExt(
-        ConstantExpr::getSub(ConstantInt::get(ShAmtsDiff->getType(), BitWidth,
+        ConstantExpr::getSub(ConstantInt::get(ShAmtsDiff->getType(),
+                                              WidestTyBitWidth,
                                               /*isSigned=*/false),
                              ShAmtsDiff),
         ExtendedTy);
     // And compute the mask as usual: (-1 l>> (NumHighBitsToClear))
     auto *ExtendedAllOnes = ConstantExpr::getAllOnesValue(ExtendedTy);
-    auto *ExtendedMask =
+    NewMask =
         ConstantExpr::getLShr(ExtendedAllOnes, ExtendedNumHighBitsToClear);
-    NewMask = ConstantExpr::getTrunc(ExtendedMask, Ty);
   } else
     return nullptr; // Don't know anything about this pattern.
+
+  NewMask = ConstantExpr::getTrunc(NewMask, NarrowestTy);
 
   // Does this mask has any unset bits? If not then we can just not apply it.
   bool NeedMask = !match(NewMask, m_AllOnes());
@@ -257,6 +254,7 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
   // No 'NUW'/'NSW'! We no longer know that we won't shift-out non-0 bits.
   auto *NewShift =
       BinaryOperator::Create(OuterShift->getOpcode(), X, ShiftShAmt);
+
   if (!NeedMask)
     return NewShift;
 

@@ -198,7 +198,7 @@ bb4:                                              ; preds = %bb1
 
 bb6:                                              ; preds = %bb1
 ; FIXME: missing nonnull. It should be @f2(i32* nonnull %arg)
-; ATTRIBUTOR: %tmp7 = tail call nonnull i32* @f2(i32* %arg)
+; ATTRIBUTOR: %tmp7 = tail call nonnull i32* @f2(i32* readonly %arg)
   %tmp7 = tail call i32* @f2(i32* %arg)
   ret i32* %tmp7
 
@@ -209,7 +209,7 @@ bb9:                                              ; preds = %bb4, %bb
 
 define internal i32* @f2(i32* %arg) {
 ; FIXME: missing nonnull. It should be nonnull @f2(i32* nonnull %arg) 
-; ATTRIBUTOR: define internal nonnull i32* @f2(i32* %arg)
+; ATTRIBUTOR: define internal nonnull i32* @f2(i32* readonly %arg)
 bb:
 
 ; FIXME: missing nonnull. It should be @f1(i32* nonnull readonly %arg) 
@@ -521,6 +521,13 @@ define i32* @gep1_no_null_opt(i32* %p) #0 {
 define i32 addrspace(3)* @gep2(i32 addrspace(3)* %p) {
   %q = getelementptr inbounds i32, i32 addrspace(3)* %p, i32 1
   ret i32 addrspace(3)* %q
+}
+
+; FNATTR:     define i32 addrspace(3)* @as(i32 addrspace(3)* readnone returned dereferenceable(4) %p)
+; FIXME: We should propagate dereferenceable here but *not* nonnull
+; ATTRIBUTOR: define dereferenceable_or_null(4) i32 addrspace(3)* @as(i32 addrspace(3)* readnone returned dereferenceable(4) dereferenceable_or_null(4) %p)
+define i32 addrspace(3)* @as(i32 addrspace(3)* dereferenceable(4) %p) {
+  ret i32 addrspace(3)* %p
 }
 
 ; BOTH: define internal nonnull i32* @g2()
