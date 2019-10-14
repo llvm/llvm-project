@@ -72,9 +72,6 @@ public:
 
     lldb::LanguageType GetLanguage() const { return m_language_type; }
 
-    void SetHasSourceSize(bool e) { m_has_source_size = e; }
-
-    bool HasSourceSize() const { return m_has_source_size; }
   private:
     /// The used output stream.
     Stream *m_stream = nullptr;
@@ -102,7 +99,6 @@ public:
     /// For example, printing the a string containing only a quote (") char
     /// with eLanguageTypeC would escape the quote character.
     lldb::LanguageType m_language_type = lldb::eLanguageTypeUnknown;
-    bool m_has_source_size = false;
   };
 
   class ReadStringAndDumpToStreamOptions : public DumpToStreamOptions {
@@ -141,15 +137,9 @@ public:
 
     bool GetIsTruncated() const { return m_is_truncated; }
 
-    void SetHasSourceSize(bool e) { m_has_source_size = e; }
-
-    bool HasSourceSize() const { return m_has_source_size; }
-
-   
   private:
     DataExtractor m_data;
     bool m_is_truncated = false;
-    bool m_has_source_size = false;
   };
 
   // I can't use a std::unique_ptr for this because the Deleter is a template
