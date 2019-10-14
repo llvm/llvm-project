@@ -462,7 +462,14 @@ TEST(LocateSymbol, All) {
     if (!T.ranges("def").empty())
       WantDef = T.range("def");
 
-    auto AST = TestTU::withCode(T.code()).build();
+    TestTU TU;
+    TU.Code = T.code();
+
+    // FIXME: Auto-completion in a template requires disabling delayed template
+    // parsing.
+    TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
+
+    auto AST = TU.build();
     auto Results = locateSymbolAt(AST, T.point());
 
     if (!WantDecl) {

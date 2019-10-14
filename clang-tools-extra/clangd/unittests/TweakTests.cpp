@@ -481,6 +481,7 @@ TEST_F(ExpandMacroTest, Test) {
 
 TWEAK_TEST(ExpandAutoType);
 TEST_F(ExpandAutoTypeTest, Test) {
+
   Header = R"cpp(
     namespace ns {
       struct Class {
@@ -507,9 +508,6 @@ TEST_F(ExpandAutoTypeTest, Test) {
   // check that namespaces are shortened
   EXPECT_EQ(apply("namespace ns { void f() { ^auto C = Class(); } }"),
             "namespace ns { void f() { Class C = Class(); } }");
-  // unknown types in a template should not be replaced
-  EXPECT_THAT(apply("template <typename T> void x() { ^auto y = T::z(); }"),
-              StartsWith("fail: Could not deduce type for 'auto' type"));
   // undefined functions should not be replaced
   EXPECT_THAT(apply("au^to x = doesnt_exist();"),
               StartsWith("fail: Could not deduce type for 'auto' type"));
@@ -530,6 +528,13 @@ TEST_F(ExpandAutoTypeTest, Test) {
             R"cpp(const char * x = "test")cpp");
 
   EXPECT_UNAVAILABLE("dec^ltype(au^to) x = 10;");
+
+  // FIXME: Auto-completion in a template requires disabling delayed template
+  // parsing.
+  ExtraArgs.push_back("-fno-delayed-template-parsing");
+  // unknown types in a template should not be replaced
+  EXPECT_THAT(apply("template <typename T> void x() { ^auto y = T::z(); }"),
+              StartsWith("fail: Could not deduce type for 'auto' type"));
 }
 
 TWEAK_TEST(ExtractFunction);

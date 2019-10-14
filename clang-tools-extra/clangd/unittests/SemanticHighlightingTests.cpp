@@ -99,7 +99,13 @@ void checkHighlightings(llvm::StringRef Code,
                                               /*FileContent*/ llvm::StringRef>>
                             AdditionalFiles = {}) {
   Annotations Test(Code);
-  auto TU = TestTU::withCode(Test.code());
+  TestTU TU;
+  TU.Code = Test.code();
+
+  // FIXME: Auto-completion in a template requires disabling delayed template
+  // parsing.
+  TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
+
   for (auto File : AdditionalFiles)
     TU.AdditionalFiles.insert({File.first, File.second});
   auto AST = TU.build();

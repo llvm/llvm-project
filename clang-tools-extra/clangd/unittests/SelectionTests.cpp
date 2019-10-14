@@ -289,7 +289,15 @@ TEST(SelectionTest, CommonAncestor) {
   };
   for (const Case &C : Cases) {
     Annotations Test(C.Code);
-    auto AST = TestTU::withCode(Test.code()).build();
+
+    TestTU TU;
+    TU.Code = Test.code();
+
+    // FIXME: Auto-completion in a template requires disabling delayed template
+    // parsing.
+    TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
+
+    auto AST = TU.build();
     auto T = makeSelectionTree(C.Code, AST);
     EXPECT_EQ("TranslationUnitDecl", nodeKind(&T.root())) << C.Code;
 

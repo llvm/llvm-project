@@ -55,6 +55,9 @@ protected:
   // testcases.
   std::string Header;
 
+  // Extra flags passed to the compilation in apply().
+  std::vector<const char *> ExtraArgs;
+
   // Context in which snippets of code should be placed to run tweaks.
   CodeContext Context = File;
 
