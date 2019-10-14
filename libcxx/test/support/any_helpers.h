@@ -414,10 +414,10 @@ struct large_tracked_t {
       : arg_types(&makeArgumentID<std::initializer_list<int>, Args...>()) {}
 
   TypeID const* arg_types;
-  int dummy[10];
+  int dummy[sizeof(std::any) / sizeof(int) + 1];
 };
 
-static_assert(!IsSmallObject<large_tracked_t>::value, "must be small");
+static_assert(!IsSmallObject<large_tracked_t>::value, "must not be small");
 
 
 template <class Type, class ...Args>
