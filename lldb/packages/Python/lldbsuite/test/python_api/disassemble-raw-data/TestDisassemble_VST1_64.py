@@ -4,6 +4,8 @@ Use lldb Python API to disassemble raw machine code bytes
 
 from __future__ import print_function
 
+from io import StringIO
+import sys
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -15,9 +17,6 @@ class Disassemble_VST1_64(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipTestIfFn(
-        lambda: True,
-        "llvm.org/pr24575: all tests get ERRORs in dotest.py after this")
     @add_test_categories(['pyapi'])
     @no_debug_info_test
     @skipIf(triple='^mips')
@@ -33,19 +32,38 @@ class Disassemble_VST1_64(TestBase):
                                0x24, 0xf0, 0x0f, 0x04,
                                0xa5, 0x46])
 
+        assembly = """
+        push   {r4, r5, r6, r7, lr}
+        add    r7, sp, #0xc
+        push.w {r8, r10, r11}
+        sub.w  r4, sp, #0x40
+        bic    r4, r4, #0xf
+        mov    sp, r4
+        """
+        def split(s):
+            return [x.strip() for x in s.strip().splitlines()]
+
         insts = target.GetInstructions(lldb.SBAddress(), raw_bytes)
+
+        if sys.version_info.major >= 3:
+            sio = StringIO()
+            insts.Print(sio)
+            self.assertEqual(split(assembly), split(sio.getvalue()))
+
+        self.assertEqual(insts.GetSize(), len(split(assembly)))
+
+        if sys.version_info.major >= 3:
+            for i,asm in enumerate(split(assembly)):
+                inst = insts.GetInstructionAtIndex(i)
+                sio = StringIO()
+                inst.Print(sio)
+                self.assertEqual(asm, sio.getvalue().strip())
 
         if self.TraceOn():
             print()
             for i in insts:
                 print("Disassembled%s" % str(i))
 
-        # Remove the following return statement when the radar is fixed.
-        return
-
-        # rdar://problem/11034702
-        # VST1 (multiple single elements) encoding?
-        # The disassembler should not crash!
         raw_bytes = bytearray([0x04, 0xf9, 0xed, 0x82])
 
         insts = target.GetInstructions(lldb.SBAddress(), raw_bytes)

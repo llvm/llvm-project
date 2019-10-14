@@ -57,7 +57,10 @@ public:
     CanSetBreakpoint ();
 
     void
-    Print (FILE *out);
+    Print (lldb::SBFile out);
+
+    void
+    Print (lldb::FileSP BORROWED);
 
     bool
     GetDescription (lldb::SBStream &description);
