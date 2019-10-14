@@ -3856,6 +3856,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (isa<AnalyzeJobAction>(JA))
     RenderAnalyzerOptions(Args, CmdArgs, Triple, Input);
 
+  if (isa<AnalyzeJobAction>(JA) ||
+      (isa<PreprocessJobAction>(JA) && Args.hasArg(options::OPT__analyze)))
+    CmdArgs.push_back("-setup-static-analyzer");
+
   // Enable compatilibily mode to avoid analyzer-config related errors.
   // Since we can't access frontend flags through hasArg, let's manually iterate
   // through them.
