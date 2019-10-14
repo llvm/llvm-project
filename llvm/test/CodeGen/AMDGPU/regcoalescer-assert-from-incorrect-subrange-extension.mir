@@ -62,7 +62,7 @@ body:             |
     %12:sgpr_32 = COPY killed $sgpr0
     %64:vgpr_32 = V_ADD_I32_e32 killed %12, killed %13, implicit-def dead $vcc, implicit $exec
     %17:sreg_32_xm0 = S_MOV_B32 0
-    %18:vgpr_32 = TBUFFER_LOAD_FORMAT_X_IDXEN killed %64, undef %20:sreg_128, 0, 28, 116, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from constant-pool, align 1, addrspace 4)
+    %18:vgpr_32 = TBUFFER_LOAD_FORMAT_X_IDXEN killed %64, undef %20:sgpr_128, 0, 28, 116, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from constant-pool, align 1, addrspace 4)
     dead %65:vgpr_32 = V_BFE_U32 killed %18, 28, 1, implicit $exec
     S_CBRANCH_SCC0 %bb.2, implicit undef $scc
   
@@ -75,11 +75,11 @@ body:             |
   bb.2:
     successors: %bb.3(0x80000000)
   
-    undef %32.sub0:sreg_128 = COPY %17
-    %32.sub1:sreg_128 = COPY %17
-    %32.sub2:sreg_128 = COPY %17
-    %32.sub3:sreg_128 = COPY killed %17
-    %30:sreg_128 = COPY killed %32
+    undef %32.sub0:sgpr_128 = COPY %17
+    %32.sub1:sgpr_128 = COPY %17
+    %32.sub2:sgpr_128 = COPY %17
+    %32.sub3:sgpr_128 = COPY killed %17
+    %30:sgpr_128 = COPY killed %32
     %71:vreg_128 = COPY killed %30
     %90:vreg_128 = COPY killed %71
   
@@ -87,7 +87,7 @@ body:             |
     successors: %bb.5(0x40000000), %bb.4(0x40000000)
   
     %70:vreg_128 = COPY killed %90
-    %33:sreg_128 = S_BUFFER_LOAD_DWORDX4_IMM undef %34:sreg_128, 16, 0, 0 :: (dereferenceable invariant load 16)
+    %33:sgpr_128 = S_BUFFER_LOAD_DWORDX4_IMM undef %34:sgpr_128, 16, 0, 0 :: (dereferenceable invariant load 16)
     %2:vgpr_32 = V_ADD_F32_e64 0, target-flags(amdgpu-rel32-lo) 0, 0, killed %33.sub3, 0, 0, implicit $exec
     S_CBRANCH_SCC1 %bb.5, implicit undef $scc
     S_BRANCH %bb.4

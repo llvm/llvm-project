@@ -118,34 +118,34 @@ body:             |
     successors: %bb.15(0x40000000), %bb.16(0x40000000)
   
     %6:sreg_32_xm0 = S_MOV_B32 0
-    undef %7.sub2:sreg_128 = COPY %6
+    undef %7.sub2:sgpr_128 = COPY %6
     S_CBRANCH_SCC0 %bb.16, implicit undef $scc
   
   bb.15:
     successors: %bb.17(0x80000000)
   
-    undef %8.sub0:sreg_128 = COPY killed %6
-    %5:sreg_128 = COPY killed %7
-    %34:sreg_128 = COPY killed %5
-    %35:sreg_128 = COPY killed %8
+    undef %8.sub0:sgpr_128 = COPY killed %6
+    %5:sgpr_128 = COPY killed %7
+    %34:sgpr_128 = COPY killed %5
+    %35:sgpr_128 = COPY killed %8
     S_BRANCH %bb.17
   
   bb.16:
     successors: %bb.17(0x80000000)
   
-    undef %18.sub0:sreg_128 = COPY %6
-    %18.sub1:sreg_128 = COPY %6
-    %18.sub2:sreg_128 = COPY killed %6
-    %16:sreg_128 = COPY killed %18
-    %15:sreg_128 = COPY killed %7
-    %34:sreg_128 = COPY killed %15
-    %35:sreg_128 = COPY killed %16
+    undef %18.sub0:sgpr_128 = COPY %6
+    %18.sub1:sgpr_128 = COPY %6
+    %18.sub2:sgpr_128 = COPY killed %6
+    %16:sgpr_128 = COPY killed %18
+    %15:sgpr_128 = COPY killed %7
+    %34:sgpr_128 = COPY killed %15
+    %35:sgpr_128 = COPY killed %16
   
   bb.17:
     successors: %bb.18(0x40000000), %bb.22(0x40000000)
   
-    %2:sreg_128 = COPY killed %35
-    %1:sreg_128 = COPY killed %34
+    %2:sgpr_128 = COPY killed %35
+    %1:sgpr_128 = COPY killed %34
     %24:sreg_32_xm0 = S_ADD_I32 killed %1.sub2, target-flags(amdgpu-gotprel32-hi) 1, implicit-def dead $scc
     S_CMP_LT_I32 killed %24, 8, implicit-def $scc
     %30:vreg_128 = COPY %2

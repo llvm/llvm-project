@@ -83,7 +83,7 @@ body:             |
     %39.sub5:sreg_256 = COPY %38
     %39.sub6:sreg_256 = COPY %38
     %39.sub7:sreg_256 = COPY %38
-    dead %40:vgpr_32 = IMAGE_SAMPLE_LZ_V1_V4 undef %41:vreg_128, killed %39, undef %42:sreg_128, 1, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load 4 from constant-pool, addrspace 4)
+    dead %40:vgpr_32 = IMAGE_SAMPLE_LZ_V1_V4 undef %41:vreg_128, killed %39, undef %42:sgpr_128, 1, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load 4 from constant-pool, addrspace 4)
     S_BRANCH %bb.5
   
   bb.4:
