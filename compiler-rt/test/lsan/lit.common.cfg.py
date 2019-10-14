@@ -79,3 +79,8 @@ if re.search('mthumb', config.target_cflags) is not None:
   config.unsupported = True
 
 config.suffixes = ['.c', '.cpp', '.mm']
+
+# Apple-Clang: Disable LSan
+if config.host_os == 'Darwin':
+  lit_config.note('Disabling LSan tests on Darwin')
+  config.unsupported = True
