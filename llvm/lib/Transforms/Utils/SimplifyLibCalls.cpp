@@ -48,7 +48,6 @@ static cl::opt<bool>
                          cl::desc("Enable unsafe double to float "
                                   "shrinking for math lib calls"));
 
-
 //===----------------------------------------------------------------------===//
 // Helper Functions
 //===----------------------------------------------------------------------===//
@@ -1916,11 +1915,9 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilder<> &B) {
   IRBuilder<>::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(FastMathFlags::getFast());
 
-  Function *ArgFn = Arg->getCalledFunction();
-  StringRef ArgNm = ArgFn->getName();
-  Intrinsic::ID ArgID = ArgFn->getIntrinsicID();
+  Intrinsic::ID ArgID = Arg->getIntrinsicID();
   LibFunc ArgLb = NotLibFunc;
-  TLI->getLibFunc(ArgNm, ArgLb);
+  TLI->getLibFunc(Arg, ArgLb);
 
   // log(pow(x,y)) -> y*log(x)
   if (ArgLb == PowLb || ArgID == Intrinsic::pow) {
@@ -1935,15 +1932,15 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilder<> &B) {
     substituteInParent(Arg, MulY);
     return MulY;
   }
+
   // log(exp{,2,10}(y)) -> y*log({e,2,10})
   // TODO: There is no exp10() intrinsic yet.
-  else if (ArgLb == ExpLb || ArgLb == Exp2Lb || ArgLb == Exp10Lb ||
+  if (ArgLb == ExpLb || ArgLb == Exp2Lb || ArgLb == Exp10Lb ||
            ArgID == Intrinsic::exp || ArgID == Intrinsic::exp2) {
     Constant *Eul;
     if (ArgLb == ExpLb || ArgID == Intrinsic::exp)
-      // FIXME: The Euler number should be M_E, but it's place of definition
-      // is not quite standard.
-      Eul = ConstantFP::get(Log->getType(), 2.7182818284590452354);
+      // FIXME: Add more precise value of e for long double.
+      Eul = ConstantFP::get(Log->getType(), numbers::e);
     else if (ArgLb == Exp2Lb || ArgID == Intrinsic::exp2)
       Eul = ConstantFP::get(Log->getType(), 2.0);
     else

@@ -78,3 +78,4 @@ vhaddps  %xmm3, %xmm3, %xmm4
 # CHECK-NEXT: 0.     3     1.0    1.0    4.7       vmulps	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT: 1.     3     2.7    0.0    2.3       vhaddps	%xmm2, %xmm2, %xmm3
 # CHECK-NEXT: 2.     3     6.0    0.0    0.0       vhaddps	%xmm3, %xmm3, %xmm4
+# CHECK-NEXT:        3     3.2    0.3    2.3       <total>

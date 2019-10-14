@@ -22,10 +22,10 @@
 using namespace llvm;
 using namespace llvm::wasm;
 
-using namespace lld;
-using namespace lld::wasm;
+namespace lld {
+namespace wasm {
 
-OutStruct lld::wasm::out;
+OutStruct out;
 
 namespace {
 
@@ -567,3 +567,6 @@ void RelocSection::writeBody() {
   writeUleb128(bodyOutputStream, count, "reloc count");
   sec->writeRelocations(bodyOutputStream);
 }
+
+} // namespace wasm
+} // namespace lld

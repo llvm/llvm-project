@@ -16,7 +16,6 @@ LLVM and API reference documentation.
    Bugpoint
    CFIVerify
    CommandGuide/index
-   CompilerWriterInfo
    Coroutines
    DependenceGraphs/index
    ExceptionHandling
@@ -33,7 +32,6 @@ LLVM and API reference documentation.
    LangRef
    LibFuzzer
    MarkedUpDisassembly
-   MemorySSA
    MIRLangRef
    OptBisect
    ORCv2
@@ -42,7 +40,6 @@ LLVM and API reference documentation.
    SegmentedStacks
    StackMaps
    SpeculativeLoadHardening
-   SupportLibrary
    Statepoints
    SystemLibrary
    TestingGuide
@@ -59,6 +56,9 @@ API Reference
 `Doxygen generated documentation <http://llvm.org/doxygen/>`_
   (`classes <http://llvm.org/doxygen/inherits.html>`_)
 
+:doc:`HowToUseAttributes`
+  Answers some questions about the new Attributes infrastructure.
+
 `Documentation for Go bindings <http://godoc.org/llvm.org/llvm/bindings/go/llvm>`_
 
 :doc:`ORCv2`
@@ -67,96 +67,6 @@ API Reference
 
 LLVM Reference
 --------------
-
-:doc:`LLVM Language Reference Manual <LangRef>`
-  Defines the LLVM intermediate representation and the assembly form of the
-  different nodes.
-
-:doc:`FaultMaps`
-  LLVM support for folding control flow into faulting machine instructions.
-
-:doc:`InAlloca`
-  Description of the ``inalloca`` argument attribute.
-
-:doc:`Machine IR (MIR) Format Reference Manual <MIRLangRef>`
-   A reference manual for the MIR serialization format, which is used to test
-   LLVM's code generation passes.
-
-:doc:`GlobalISel`
-  This describes the prototype instruction selection replacement, GlobalISel.
-
-:doc:`Atomics`
-  Information about LLVM's concurrency model.
-
-:doc:`ExceptionHandling`
-   This document describes the design and implementation of exception handling
-   in LLVM.
-
-:doc:`CompilerWriterInfo`
-  A list of helpful links for compiler writers.
-
-:doc:`BitCodeFormat`
-   This describes the file format and encoding used for LLVM "bc" files.
-
-:doc:`Extensions`
-  LLVM-specific extensions to tools and formats LLVM seeks compatibility with.
-
-:doc:`HowToSetUpLLVMStyleRTTI`
-  How to make ``isa<>``, ``dyn_cast<>``, etc. available for clients of your
-  class hierarchy.
-
-:doc:`BlockFrequencyTerminology`
-   Provides information about terminology used in the ``BlockFrequencyInfo``
-   analysis pass.
-
-:doc:`BranchWeightMetadata`
-   Provides information about Branch Prediction Information.
-
-:doc:`MemorySSA`
-   Information about the MemorySSA utility in LLVM, as well as how to use it.
-
-:doc:`Support Library <SupportLibrary>`
-   This document describes the LLVM Support Library (``lib/Support``) and
-   how to keep LLVM source code portable
-
-:doc:`GetElementPtr`
-  Answers to some very frequent questions about LLVM's most frequently
-  misunderstood instruction.
-
-:doc:`ScudoHardenedAllocator`
-  A library that implements a security-hardened `malloc()`.
-
-:doc:`GwpAsan`
-  A sampled heap memory error detection toolkit designed for production use.
-
-:doc:`Dependence Graphs <DependenceGraphs/index>`
-  A description of the design of the various dependence graphs such as
-  the DDG (Data Dependence Graph).
-
-:doc:`CFIVerify`
-  A description of the verification tool for Control Flow Integrity.
-
-:doc:`SpeculativeLoadHardening`
-  A description of the Speculative Load Hardening mitigation for Spectre v1.
-
-:doc:`SegmentedStacks`
-   This document describes segmented stacks and how they are used in LLVM.
-
-:doc:`MarkedUpDisassembly`
-   This document describes the optional rich disassembly output syntax.
-
-:doc:`HowToUseAttributes`
-  Answers some questions about the new Attributes infrastructure.
-
-:doc:`StackMaps`
-  LLVM support for mapping instruction addresses to the location of
-  values and allowing code to be patched.
-
-:doc:`Coroutines`
-  LLVM support for coroutines.
-
-:doc:`YamlIO`
-   A reference guide for using LLVM's YAML I/O library.
 
 ======================
 Command Line Utilities
@@ -198,6 +108,27 @@ LibFuzzer
 :doc:`FuzzingLLVM`
   Information on writing and using Fuzzers to find bugs in LLVM.
 
+========
+LLVM IR
+========
+
+:doc:`LLVM Language Reference Manual <LangRef>`
+  Defines the LLVM intermediate representation and the assembly form of the
+  different nodes.
+
+:doc:`InAlloca`
+  Description of the ``inalloca`` argument attribute.
+
+:doc:`BitCodeFormat`
+   This describes the file format and encoding used for LLVM "bc" files.
+
+:doc:`Machine IR (MIR) Format Reference Manual <MIRLangRef>`
+   A reference manual for the MIR serialization format, which is used to test
+   LLVM's code generation passes.
+
+:doc:`GlobalISel`
+  This describes the prototype instruction selection replacement, GlobalISel.
+
 =======
 Testing
 =======
@@ -217,3 +148,67 @@ XRay
 
 :doc:`XRayExample`
   An example of how to debug an application with XRay.
+
+=================
+Additional Topics
+=================
+
+:doc:`FaultMaps`
+  LLVM support for folding control flow into faulting machine instructions.
+
+:doc:`Atomics`
+  Information about LLVM's concurrency model.
+
+:doc:`ExceptionHandling`
+   This document describes the design and implementation of exception handling
+   in LLVM.
+
+:doc:`Extensions`
+  LLVM-specific extensions to tools and formats LLVM seeks compatibility with.
+
+:doc:`HowToSetUpLLVMStyleRTTI`
+  How to make ``isa<>``, ``dyn_cast<>``, etc. available for clients of your
+  class hierarchy.
+
+:doc:`BlockFrequencyTerminology`
+   Provides information about terminology used in the ``BlockFrequencyInfo``
+   analysis pass.
+
+:doc:`BranchWeightMetadata`
+   Provides information about Branch Prediction Information.
+
+:doc:`GetElementPtr`
+  Answers to some very frequent questions about LLVM's most frequently
+  misunderstood instruction.
+
+:doc:`ScudoHardenedAllocator`
+  A library that implements a security-hardened `malloc()`.
+
+:doc:`GwpAsan`
+  A sampled heap memory error detection toolkit designed for production use.
+
+:doc:`Dependence Graphs <DependenceGraphs/index>`
+  A description of the design of the various dependence graphs such as
+  the DDG (Data Dependence Graph).
+
+:doc:`CFIVerify`
+  A description of the verification tool for Control Flow Integrity.
+
+:doc:`SpeculativeLoadHardening`
+  A description of the Speculative Load Hardening mitigation for Spectre v1.
+
+:doc:`SegmentedStacks`
+   This document describes segmented stacks and how they are used in LLVM.
+
+:doc:`MarkedUpDisassembly`
+   This document describes the optional rich disassembly output syntax.
+
+:doc:`StackMaps`
+  LLVM support for mapping instruction addresses to the location of
+  values and allowing code to be patched.
+
+:doc:`Coroutines`
+  LLVM support for coroutines.
+
+:doc:`YamlIO`
+   A reference guide for using LLVM's YAML I/O library.

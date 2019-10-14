@@ -18,9 +18,10 @@
 
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemStatCache.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Config/llvm-config.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/Statistic.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -35,6 +36,14 @@
 
 using namespace clang;
 
+#define DEBUG_TYPE "file-search"
+
+ALWAYS_ENABLED_STATISTIC(NumDirLookups, "Number of directory lookups.");
+ALWAYS_ENABLED_STATISTIC(NumFileLookups, "Number of file lookups.");
+ALWAYS_ENABLED_STATISTIC(NumDirCacheMisses,
+                         "Number of directory cache misses.");
+ALWAYS_ENABLED_STATISTIC(NumFileCacheMisses, "Number of file cache misses.");
+
 //===----------------------------------------------------------------------===//
 // Common logic.
 //===----------------------------------------------------------------------===//
@@ -43,9 +52,6 @@ FileManager::FileManager(const FileSystemOptions &FSO,
                          IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
     : FS(std::move(FS)), FileSystemOpts(FSO), SeenDirEntries(64),
       SeenFileEntries(64), NextFileUID(0) {
-  NumDirLookups = NumFileLookups = 0;
-  NumDirCacheMisses = NumFileCacheMisses = 0;
-
   // If the caller doesn't provide a virtual file system, just grab the real
   // file system.
   if (!this->FS)

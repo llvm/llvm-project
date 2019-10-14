@@ -802,6 +802,17 @@ namespace llvm {
     /// and some i16 instructions are slow.
     bool IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const override;
 
+    /// Return 1 if we can compute the negated form of the specified expression
+    /// for the same cost as the expression itself, or 2 if we can compute the
+    /// negated form more cheaply than the expression itself. Else return 0.
+    char isNegatibleForFree(SDValue Op, SelectionDAG &DAG, bool LegalOperations,
+                            bool ForCodeSize, unsigned Depth) const override;
+
+    /// If isNegatibleForFree returns true, return the newly negated expression.
+    SDValue getNegatedExpression(SDValue Op, SelectionDAG &DAG,
+                                 bool LegalOperations, bool ForCodeSize,
+                                 unsigned Depth) const override;
+
     MachineBasicBlock *
     EmitInstrWithCustomInserter(MachineInstr &MI,
                                 MachineBasicBlock *MBB) const override;
@@ -1661,24 +1672,24 @@ namespace llvm {
   /// mask. This is the reverse process to canWidenShuffleElements, but can
   /// always succeed.
   template <typename T>
-  void scaleShuffleMask(int Scale, ArrayRef<T> Mask,
+  void scaleShuffleMask(size_t Scale, ArrayRef<T> Mask,
                         SmallVectorImpl<T> &ScaledMask) {
     assert(0 < Scale && "Unexpected scaling factor");
     size_t NumElts = Mask.size();
     ScaledMask.assign(NumElts * Scale, -1);
 
-    for (int i = 0; i != (int)NumElts; ++i) {
+    for (size_t i = 0; i != NumElts; ++i) {
       int M = Mask[i];
 
       // Repeat sentinel values in every mask element.
       if (M < 0) {
-        for (int s = 0; s != Scale; ++s)
+        for (size_t s = 0; s != Scale; ++s)
           ScaledMask[(Scale * i) + s] = M;
         continue;
       }
 
       // Scale mask element and increment across each mask element.
-      for (int s = 0; s != Scale; ++s)
+      for (size_t s = 0; s != Scale; ++s)
         ScaledMask[(Scale * i) + s] = (Scale * M) + s;
     }
   }

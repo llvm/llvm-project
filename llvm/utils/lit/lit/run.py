@@ -5,18 +5,6 @@ import lit.Test
 import lit.util
 import lit.worker
 
-class _Display(object):
-    def __init__(self, display, provider, maxFailures):
-        self.display = display
-        self.provider = provider
-        self.maxFailures = maxFailures or object()
-        self.failedCount = 0
-    def update(self, test):
-        self.display.update(test)
-        self.failedCount += (test.result.code == lit.Test.FAIL)
-        if self.failedCount == self.maxFailures:
-            self.provider.cancel()
-
 # No-operation semaphore for supporting `None` for parallelism_groups.
 #   lit_config.parallelism_groups['my_group'] = None
 class NopSemaphore(object):
@@ -93,20 +81,19 @@ class Run(object):
         finally:
             pool.join()
 
-    def execute_tests(self, display, workers, max_time=None):
+    def execute_tests(self, progress_callback, workers, max_time):
         """
-        execute_tests(display, workers, [max_time])
+        execute_tests(progress_callback, workers, max_time)
 
         Execute the tests in the run using up to the specified number of
-        parallel tasks, and inform the display of each individual result. The
+        parallel tasks, and inform the caller of each individual result. The
         provided tests should be a subset of the tests available in this run
         object.
 
+        The progress_callback will be invoked for each completed test.
+
         If max_time is non-None, it should be a time in seconds after which to
         stop executing tests.
-
-        The display object will have its update method called for each completed
-        test.
 
         Upon completion, each test in the run will have its result
         computed. Tests which were not actually executed (for any reason) will
@@ -116,9 +103,7 @@ class Run(object):
         if not self.tests:
             return
 
-        # Save the display object on the runner so that we can update it from
-        # our task completion callback.
-        self.display = display
+        self.progress_callback = progress_callback
 
         self.failure_count = 0
         self.hit_max_failures = False
@@ -156,7 +141,7 @@ class Run(object):
         assert self.tests[test_index].file_path == test_with_result.file_path, \
                 "parent and child disagree on test path"
         self.tests[test_index] = test_with_result
-        self.display.update(test_with_result)
+        self.progress_callback(test_with_result)
 
         # If we've finished all the tests or too many tests have failed, notify
         # the main thread that we've stopped testing.

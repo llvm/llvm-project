@@ -123,6 +123,7 @@ private:
 /// file. This is to be called after an object file is finished
 /// processing.
 void MachODebugMapParser::resetParserState() {
+  CommonSymbols.clear();
   CurrentObjectAddresses.clear();
   CurrentDebugMapObject = nullptr;
 }
@@ -144,7 +145,6 @@ void MachODebugMapParser::addCommonSymbols() {
       continue;
     }
   }
-  CommonSymbols.clear();
 }
 
 /// Create a new DebugMapObject. This function resets the state of the

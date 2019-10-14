@@ -58,21 +58,27 @@ PowerPC
 IBM - Official manuals and docs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* `Power Instruction Set Architecture, Versions 2.03 through 2.06 (authentication required, free sign-up) <https://www.power.org/technology-introduction/standards-specifications>`_
+* `Power Instruction Set Architecture, Version 3.0B <https://openpowerfoundation.org/?resource_lib=power-isa-version-3-0>`_
 
-* `PowerPC Compiler Writer's Guide <http://www.ibm.com/chips/techlib/techlib.nsf/techdocs/852569B20050FF7785256996007558C6>`_
+* `POWER9 Processor User's Manual <https://openpowerfoundation.org/?resource_lib=power9-processor-users-manual>`_
 
-* `Intro to PowerPC Architecture <http://www.ibm.com/developerworks/linux/library/l-powarch/>`_
+* `Power Instruction Set Architecture, Version 2.07B <https://openpowerfoundation.org/?resource_lib=ibm-power-isa-version-2-07-b>`_
 
-* `PowerPC Processor Manuals (embedded) <http://www.ibm.com/chips/techlib/techlib.nsf/products/PowerPC>`_
+* `POWER8 Processor User's Manual <https://openpowerfoundation.org/?resource_lib=power8-processor-users-manual>`_
 
-* `Various IBM specifications and white papers <https://www.power.org/documentation/?document_company=105&document_category=all&publish_year=all&grid_order=DESC&grid_sort=title>`_
+* `Power Instruction Set Architecture, Versions 2.03 through 2.06 (Internet Archive) <https://web.archive.org/web/20121124005736/https://www.power.org/technology-introduction/standards-specifications>`_
+
+* `IBM AIX 7.2 POWER Assembly Reference <https://www.ibm.com/support/knowledgecenter/en/ssw_aix_72/assembler/alangref_kickoff.html>`_
 
 * `IBM AIX/5L for POWER Assembly Reference <http://publibn.boulder.ibm.com/doc_link/en_US/a_doc_lib/aixassem/alangref/alangreftfrm.htm>`_
 
 Other documents, collections, notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* `PowerPC Compiler Writer's Guide <http://www.ibm.com/chips/techlib/techlib.nsf/techdocs/852569B20050FF7785256996007558C6>`_
+* `Intro to PowerPC Architecture <http://www.ibm.com/developerworks/linux/library/l-powarch/>`_
+* `PowerPC Processor Manuals (embedded) <http://www.ibm.com/chips/techlib/techlib.nsf/products/PowerPC>`_
+* `Various IBM specifications and white papers <https://www.power.org/documentation/?document_company=105&document_category=all&publish_year=all&grid_order=DESC&grid_sort=title>`_
 * `PowerPC ABI documents <http://penguinppc.org/dev/#library>`_
 * `PowerPC64 alignment of long doubles (from GCC) <http://gcc.gnu.org/ml/gcc-patches/2003-09/msg00997.html>`_
 * `Long branch stubs for powerpc64-linux (from binutils) <http://sources.redhat.com/ml/binutils/2002-04/msg00573.html>`_
@@ -133,6 +139,9 @@ Linux
 -----
 
 * `Linux extensions to gabi <https://github.com/hjl-tools/linux-abi/wiki/Linux-Extensions-to-gABI>`_
+* `64-Bit ELF V2 ABI Specification: Power Architecture <https://openpowerfoundation.org/?resource_lib=64-bit-elf-v2-abi-specification-power-architecture>`_
+
+* `OpenPOWER ELFv2 Errata: ELFv2 ABI Version 1.4 <https://openpowerfoundation.org/?resource_lib=openpower-elfv2-errata-elfv2-abi-version-1-4>`_
 * `PowerPC 64-bit ELF ABI Supplement <http://www.linuxbase.org/spec/ELF/ppc64/>`_
 * `Procedure Call Standard for the AArch64 Architecture <http://infocenter.arm.com/help/topic/com.arm.doc.ihi0055a/IHI0055A_aapcs64.pdf>`_
 * `Procedure Call Standard for the ARM Architecture <https://developer.arm.com/docs/ihi0042/latest>`_

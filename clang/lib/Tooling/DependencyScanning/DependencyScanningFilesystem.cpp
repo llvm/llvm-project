@@ -122,14 +122,12 @@ DependencyScanningFilesystemSharedCache::get(StringRef Key) {
   return It.first->getValue();
 }
 
-llvm::ErrorOr<llvm::vfs::Status>
-DependencyScanningWorkerFilesystem::status(const Twine &Path) {
-  SmallString<256> OwnedFilename;
-  StringRef Filename = Path.toStringRef(OwnedFilename);
-
-  // Check the local cache first.
-  if (const CachedFileSystemEntry *Entry = getCachedEntry(Filename))
-    return Entry->getStatus();
+llvm::ErrorOr<const CachedFileSystemEntry *>
+DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
+    const StringRef Filename) {
+  if (const CachedFileSystemEntry *Entry = getCachedEntry(Filename)) {
+    return Entry;
+  }
 
   // FIXME: Handle PCM/PCH files.
   // FIXME: Handle module map files.
@@ -160,7 +158,18 @@ DependencyScanningWorkerFilesystem::status(const Twine &Path) {
 
   // Store the result in the local cache.
   setCachedEntry(Filename, Result);
-  return Result->getStatus();
+  return Result;
+}
+
+llvm::ErrorOr<llvm::vfs::Status>
+DependencyScanningWorkerFilesystem::status(const Twine &Path) {
+  SmallString<256> OwnedFilename;
+  StringRef Filename = Path.toStringRef(OwnedFilename);
+  const llvm::ErrorOr<const CachedFileSystemEntry *> Result =
+      getOrCreateFileSystemEntry(Filename);
+  if (!Result)
+    return Result.getError();
+  return (*Result)->getStatus();
 }
 
 namespace {
@@ -217,30 +226,9 @@ DependencyScanningWorkerFilesystem::openFileForRead(const Twine &Path) {
   SmallString<256> OwnedFilename;
   StringRef Filename = Path.toStringRef(OwnedFilename);
 
-  // Check the local cache first.
-  if (const CachedFileSystemEntry *Entry = getCachedEntry(Filename))
-    return createFile(Entry, PPSkipMappings);
-
-  // FIXME: Handle PCM/PCH files.
-  // FIXME: Handle module map files.
-
-  bool KeepOriginalSource = IgnoredFiles.count(Filename);
-  DependencyScanningFilesystemSharedCache::SharedFileSystemEntry
-      &SharedCacheEntry = SharedCache.get(Filename);
-  const CachedFileSystemEntry *Result;
-  {
-    std::unique_lock<std::mutex> LockGuard(SharedCacheEntry.ValueLock);
-    CachedFileSystemEntry &CacheEntry = SharedCacheEntry.Value;
-
-    if (!CacheEntry.isValid()) {
-      CacheEntry = CachedFileSystemEntry::createFileEntry(
-          Filename, getUnderlyingFS(), !KeepOriginalSource);
-    }
-
-    Result = &CacheEntry;
-  }
-
-  // Store the result in the local cache.
-  setCachedEntry(Filename, Result);
-  return createFile(Result, PPSkipMappings);
+  const llvm::ErrorOr<const CachedFileSystemEntry *> Result =
+      getOrCreateFileSystemEntry(Filename);
+  if (!Result)
+    return Result.getError();
+  return createFile(Result.get(), PPSkipMappings);
 }

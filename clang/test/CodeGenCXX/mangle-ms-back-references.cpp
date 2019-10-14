@@ -66,3 +66,20 @@ namespace foo {
 void foo() { }
 // CHECK: "?foo@0@YAXXZ"
 }
+
+class T01;
+class T02;
+class T03;
+class T04;
+class T05;
+class T06;
+class T07;
+class T08;
+class T09;
+class T10;
+class T11;
+template <typename T>
+class H;
+
+void ManyParams(T01 &, T02 &, T03 &, T04 &, T05 &, T06 &, T07 &, T08 &, T09 &, T10 &, H<T11> &, H<T11> &) {}
+// CHECK: "?ManyParams@@YAXAAVT01@@AAVT02@@AAVT03@@AAVT04@@AAVT05@@AAVT06@@AAVT07@@AAVT08@@AAVT09@@AAVT10@@AAV?$H@VT11@@@@AAV?$H@VT11@@@@@Z"

@@ -103,9 +103,9 @@ opt::InputArgList MinGWOptTable::parse(ArrayRef<const char *> argv) {
   opt::InputArgList args = this->ParseArgs(vec, missingIndex, missingCount);
 
   if (missingCount)
-    fatal(StringRef(args.getArgString(missingIndex)) + ": missing argument");
+    error(StringRef(args.getArgString(missingIndex)) + ": missing argument");
   for (auto *arg : args.filtered(OPT_UNKNOWN))
-    fatal("unknown argument: " + arg->getAsString(args));
+    error("unknown argument: " + arg->getAsString(args));
   return args;
 }
 
@@ -125,24 +125,48 @@ searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
     for (StringRef dir : searchPaths)
       if (Optional<std::string> s = findFile(dir, name.substr(1)))
         return *s;
-    fatal("unable to find library -l" + name);
+    error("unable to find library -l" + name);
+    return "";
   }
 
   for (StringRef dir : searchPaths) {
-    if (!bStatic)
+    if (!bStatic) {
       if (Optional<std::string> s = findFile(dir, "lib" + name + ".dll.a"))
         return *s;
+      if (Optional<std::string> s = findFile(dir, name + ".dll.a"))
+        return *s;
+    }
     if (Optional<std::string> s = findFile(dir, "lib" + name + ".a"))
       return *s;
+    if (!bStatic) {
+      if (Optional<std::string> s = findFile(dir, name + ".lib"))
+        return *s;
+      if (Optional<std::string> s = findFile(dir, "lib" + name + ".dll")) {
+        error("lld doesn't support linking directly against " + *s +
+              ", use an import library");
+        return "";
+      }
+      if (Optional<std::string> s = findFile(dir, name + ".dll")) {
+        error("lld doesn't support linking directly against " + *s +
+              ", use an import library");
+        return "";
+      }
+    }
   }
-  fatal("unable to find library -l" + name);
+  error("unable to find library -l" + name);
+  return "";
 }
 
 // Convert Unix-ish command line arguments to Windows-ish ones and
 // then call coff::link.
 bool mingw::link(ArrayRef<const char *> argsArr, raw_ostream &diag) {
+  enableColors(diag.has_colors());
+
   MinGWOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
+
+  if (errorCount())
+    return false;
 
   if (args.hasArg(OPT_help)) {
     printHelp(argsArr[0]);
@@ -164,8 +188,10 @@ bool mingw::link(ArrayRef<const char *> argsArr, raw_ostream &diag) {
   if (args.hasArg(OPT_version))
     return true;
 
-  if (!args.hasArg(OPT_INPUT) && !args.hasArg(OPT_l))
-    fatal("no input files");
+  if (!args.hasArg(OPT_INPUT) && !args.hasArg(OPT_l)) {
+    error("no input files");
+    return false;
+  }
 
   std::vector<std::string> linkArgs;
   auto add = [&](const Twine &s) { linkArgs.push_back(s.str()); };
@@ -271,7 +297,7 @@ bool mingw::link(ArrayRef<const char *> argsArr, raw_ostream &diag) {
     else if (s == "safe" || s == "none")
       add("-opt:noicf");
     else
-      fatal("unknown parameter: --icf=" + s);
+      error("unknown parameter: --icf=" + s);
   } else {
     add("-opt:noicf");
   }
@@ -287,7 +313,7 @@ bool mingw::link(ArrayRef<const char *> argsArr, raw_ostream &diag) {
     else if (s == "arm64pe")
       add("-machine:arm64");
     else
-      fatal("unknown parameter: -m" + s);
+      error("unknown parameter: -m" + s);
   }
 
   for (auto *a : args.filtered(OPT_mllvm))
@@ -341,6 +367,9 @@ bool mingw::link(ArrayRef<const char *> argsArr, raw_ostream &diag) {
       break;
     }
   }
+
+  if (errorCount())
+    return false;
 
   if (args.hasArg(OPT_verbose) || args.hasArg(OPT__HASH_HASH_HASH))
     outs() << llvm::join(linkArgs, " ") << "\n";

@@ -257,12 +257,12 @@ body: |
     ; SI: [[FPEXT2:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC2]](s16)
     ; SI: [[FSQRT2:%[0-9]+]]:_(s32) = G_FSQRT [[FPEXT2]]
     ; SI: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[FSQRT2]](s32)
-    ; SI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
-    ; SI: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC1]](s16)
-    ; SI: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC2]](s16)
-    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32)
-    ; SI: [[TRUNC3:%[0-9]+]]:_(<3 x s16>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
-    ; SI: S_NOP 0, implicit [[TRUNC3]](<3 x s16>)
+    ; SI: [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16)
+    ; SI: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FPTRUNC2]](s16), [[DEF2]](s16)
+    ; SI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; SI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
+    ; SI: S_NOP 0, implicit [[EXTRACT1]](<3 x s16>)
     ; VI-LABEL: name: test_fsqrt_v3s16
     ; VI: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; VI: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
@@ -280,12 +280,12 @@ body: |
     ; VI: [[FSQRT:%[0-9]+]]:_(s16) = G_FSQRT [[TRUNC]]
     ; VI: [[FSQRT1:%[0-9]+]]:_(s16) = G_FSQRT [[TRUNC1]]
     ; VI: [[FSQRT2:%[0-9]+]]:_(s16) = G_FSQRT [[TRUNC2]]
-    ; VI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FSQRT]](s16)
-    ; VI: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FSQRT1]](s16)
-    ; VI: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FSQRT2]](s16)
-    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32)
-    ; VI: [[TRUNC3:%[0-9]+]]:_(<3 x s16>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
-    ; VI: S_NOP 0, implicit [[TRUNC3]](<3 x s16>)
+    ; VI: [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FSQRT]](s16), [[FSQRT1]](s16)
+    ; VI: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FSQRT2]](s16), [[DEF2]](s16)
+    ; VI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; VI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
+    ; VI: S_NOP 0, implicit [[EXTRACT1]](<3 x s16>)
     ; GFX9-LABEL: name: test_fsqrt_v3s16
     ; GFX9: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX9: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
@@ -303,12 +303,12 @@ body: |
     ; GFX9: [[FSQRT:%[0-9]+]]:_(s16) = G_FSQRT [[TRUNC]]
     ; GFX9: [[FSQRT1:%[0-9]+]]:_(s16) = G_FSQRT [[TRUNC1]]
     ; GFX9: [[FSQRT2:%[0-9]+]]:_(s16) = G_FSQRT [[TRUNC2]]
-    ; GFX9: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FSQRT]](s16)
-    ; GFX9: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FSQRT1]](s16)
-    ; GFX9: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FSQRT2]](s16)
-    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32)
-    ; GFX9: [[TRUNC3:%[0-9]+]]:_(<3 x s16>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
-    ; GFX9: S_NOP 0, implicit [[TRUNC3]](<3 x s16>)
+    ; GFX9: [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FSQRT]](s16), [[FSQRT1]](s16)
+    ; GFX9: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FSQRT2]](s16), [[DEF2]](s16)
+    ; GFX9: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
+    ; GFX9: S_NOP 0, implicit [[EXTRACT1]](<3 x s16>)
     %0:_(<3 x s16>) = G_IMPLICIT_DEF
     %1:_(<3 x s16>) = G_FSQRT %0
     S_NOP 0, implicit %1
@@ -344,8 +344,10 @@ body: |
     ; SI: [[FPEXT3:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC3]](s16)
     ; SI: [[FSQRT3:%[0-9]+]]:_(s32) = G_FSQRT [[FPEXT3]]
     ; SI: [[FPTRUNC3:%[0-9]+]]:_(s16) = G_FPTRUNC [[FSQRT3]](s32)
-    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16), [[FPTRUNC2]](s16), [[FPTRUNC3]](s16)
-    ; SI: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<4 x s16>)
+    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16)
+    ; SI: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FPTRUNC2]](s16), [[FPTRUNC3]](s16)
+    ; SI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; SI: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     ; VI-LABEL: name: test_fsqrt_v4s16
     ; VI: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
     ; VI: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
@@ -362,8 +364,10 @@ body: |
     ; VI: [[FSQRT1:%[0-9]+]]:_(s16) = G_FSQRT [[TRUNC1]]
     ; VI: [[FSQRT2:%[0-9]+]]:_(s16) = G_FSQRT [[TRUNC2]]
     ; VI: [[FSQRT3:%[0-9]+]]:_(s16) = G_FSQRT [[TRUNC3]]
-    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[FSQRT]](s16), [[FSQRT1]](s16), [[FSQRT2]](s16), [[FSQRT3]](s16)
-    ; VI: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<4 x s16>)
+    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FSQRT]](s16), [[FSQRT1]](s16)
+    ; VI: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FSQRT2]](s16), [[FSQRT3]](s16)
+    ; VI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; VI: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     ; GFX9-LABEL: name: test_fsqrt_v4s16
     ; GFX9: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
     ; GFX9: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
@@ -380,8 +384,10 @@ body: |
     ; GFX9: [[FSQRT1:%[0-9]+]]:_(s16) = G_FSQRT [[TRUNC1]]
     ; GFX9: [[FSQRT2:%[0-9]+]]:_(s16) = G_FSQRT [[TRUNC2]]
     ; GFX9: [[FSQRT3:%[0-9]+]]:_(s16) = G_FSQRT [[TRUNC3]]
-    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[FSQRT]](s16), [[FSQRT1]](s16), [[FSQRT2]](s16), [[FSQRT3]](s16)
-    ; GFX9: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<4 x s16>)
+    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FSQRT]](s16), [[FSQRT1]](s16)
+    ; GFX9: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FSQRT2]](s16), [[FSQRT3]](s16)
+    ; GFX9: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; GFX9: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
     %1:_(<4 x s16>) = G_FSQRT %0
     $vgpr0_vgpr1 = COPY %1

@@ -69,8 +69,8 @@ public:
         Entry.addInstruction(Inst);
 
       // Set up the loop basic block.
-      Entry.MBB->addSuccessor(Loop.MBB, llvm::BranchProbability::getOne());
-      Loop.MBB->addSuccessor(Loop.MBB, llvm::BranchProbability::getOne());
+      Entry.MBB->addSuccessor(Loop.MBB, BranchProbability::getOne());
+      Loop.MBB->addSuccessor(Loop.MBB, BranchProbability::getOne());
       // The live ins are: the loop counter, the registers that were setup by
       // the entry block, and entry block live ins.
       Loop.MBB->addLiveIn(LoopCounter);
@@ -83,7 +83,7 @@ public:
                                      State.getInstrInfo());
 
       // Set up the exit basic block.
-      Loop.MBB->addSuccessor(Exit.MBB, llvm::BranchProbability::getZero());
+      Loop.MBB->addSuccessor(Exit.MBB, BranchProbability::getZero());
       Exit.addReturn();
     };
   }

@@ -754,6 +754,12 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
 #endif
 }
 
+bool SignalContext::IsTrueFaultingAddress() const {
+  auto si = static_cast<const siginfo_t *>(siginfo);
+  // "Real" SIGSEGV codes (e.g., SEGV_MAPERR, SEGV_MAPERR) are non-zero.
+  return si->si_signo == SIGSEGV && si->si_code != 0;
+}
+
 static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
   ucontext_t *ucontext = (ucontext_t*)context;
 # if defined(__aarch64__)

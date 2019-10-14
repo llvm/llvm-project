@@ -690,10 +690,8 @@ define <32 x i8> @usat_trunc_db_1024(<32 x i32> %i) {
 define void @usat_trunc_db_1024_mem(<32 x i32> %i, <32 x i8>* %p) {
 ; ALL-LABEL: usat_trunc_db_1024_mem:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vpmovusdb %zmm0, %xmm0
-; ALL-NEXT:    vpmovusdb %zmm1, %xmm1
-; ALL-NEXT:    vmovdqu %xmm1, 16(%rdi)
-; ALL-NEXT:    vmovdqu %xmm0, (%rdi)
+; ALL-NEXT:    vpmovusdb %zmm1, 16(%rdi)
+; ALL-NEXT:    vpmovusdb %zmm0, (%rdi)
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
   %x3 = icmp ult <32 x i32> %i, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
@@ -957,12 +955,10 @@ define void @smax_usat_trunc_db_1024_mem(<32 x i32> %i, <32 x i8>* %p) {
 ; ALL-LABEL: smax_usat_trunc_db_1024_mem:
 ; ALL:       ## %bb.0:
 ; ALL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; ALL-NEXT:    vpmaxsd %zmm2, %zmm1, %zmm1
 ; ALL-NEXT:    vpmaxsd %zmm2, %zmm0, %zmm0
-; ALL-NEXT:    vpmovusdb %zmm0, %xmm0
-; ALL-NEXT:    vpmovusdb %zmm1, %xmm1
-; ALL-NEXT:    vmovdqu %xmm1, 16(%rdi)
-; ALL-NEXT:    vmovdqu %xmm0, (%rdi)
+; ALL-NEXT:    vpmaxsd %zmm2, %zmm1, %zmm1
+; ALL-NEXT:    vpmovusdb %zmm1, 16(%rdi)
+; ALL-NEXT:    vpmovusdb %zmm0, (%rdi)
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
   %x1 = icmp sgt <32 x i32> %i, <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
@@ -1044,3 +1040,21 @@ define void @negative_test2_smax_usat_trunc_wb_256_mem(<16 x i16> %i, <16 x i8>*
   store <16 x i8> %x6, <16 x i8>* %res, align 1
   ret void
 }
+
+define void @ssat_trunc_db_1024_mem(<32 x i32> %i, <32 x i8>* %p) {
+; ALL-LABEL: ssat_trunc_db_1024_mem:
+; ALL:       ## %bb.0:
+; ALL-NEXT:    vpmovsdb %zmm1, 16(%rdi)
+; ALL-NEXT:    vpmovsdb %zmm0, (%rdi)
+; ALL-NEXT:    vzeroupper
+; ALL-NEXT:    retq
+  %x1 = icmp sgt <32 x i32> %i, <i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32
+-128, i32 -128>
+  %x2 = select <32 x i1> %x1, <32 x i32> %i, <32 x i32> <i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128, i32 -128>
+  %x3 = icmp slt <32 x i32> %x2, <i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127>
+  %x5 = select <32 x i1> %x3, <32 x i32> %x2, <32 x i32> <i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127>
+  %x6 = trunc <32 x i32> %x5 to <32 x i8>
+  store <32 x i8>%x6, <32 x i8>* %p, align 1
+  ret void
+}
+

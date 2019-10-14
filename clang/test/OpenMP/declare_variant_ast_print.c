@@ -11,7 +11,7 @@ int foo(void);
 #pragma omp declare variant(foo) match(implementation={vendor(llvm)})
 #pragma omp declare variant(foo) match(implementation={vendor(llvm), xxx})
 #pragma omp declare variant(foo) match(implementation={vendor(unknown)})
-#pragma omp declare variant(foo) match(implementation={vendor(score(5): ibm, xxx)})
+#pragma omp declare variant(foo) match(implementation={vendor(score(5): ibm, xxx, ibm)})
 int bar(void);
 
 // CHECK:      int foo();

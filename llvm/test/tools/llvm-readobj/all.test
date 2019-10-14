@@ -11,7 +11,7 @@
 # LLVM-ALL: Relocations [
 # LLVM-ALL: Symbols [
 # LLVM-ALL: ProgramHeaders [
-# LLVM-ALL: Version symbols {
+# LLVM-ALL: Version symbols [
 # LLVM-ALL: SHT_GNU_verdef {
 # LLVM-ALL: SHT_GNU_verneed {
 # LLVM-ALL: Addrsig [

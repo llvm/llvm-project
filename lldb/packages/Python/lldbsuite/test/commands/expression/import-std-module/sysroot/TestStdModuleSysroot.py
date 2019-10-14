@@ -11,6 +11,10 @@ class ImportStdModule(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    # We only emulate a fake libc++ in this test and don't use the real libc++,
+    # but we still add the libc++ category so that this test is only run in
+    # test configurations where libc++ is actually supposed to be tested.
+    @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     def test(self):
         self.build()
@@ -27,4 +31,6 @@ class ImportStdModule(TestBase):
 
         # Call our custom function in our sysroot std module.
         # If this gives us the correct result, then we used the sysroot.
-        self.expect("expr std::myabs(-42)", substrs=['(int) $0 = 42'])
+        # We rely on the default argument of -123 to make sure we actually have the C++ module.
+        # (We don't have default arguments in the debug information).
+        self.expect("expr std::myabs()", substrs=['(int) $0 = 123'])

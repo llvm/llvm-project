@@ -27,7 +27,7 @@ public:
   using SnippetGenerator::SnippetGenerator;
   ~LatencySnippetGenerator() override;
 
-  llvm::Expected<std::vector<CodeTemplate>>
+  Expected<std::vector<CodeTemplate>>
   generateCodeTemplates(const Instruction &Instr,
                         const BitVector &ForbiddenRegisters) const override;
 };
@@ -39,7 +39,7 @@ public:
   ~LatencyBenchmarkRunner() override;
 
 private:
-  llvm::Expected<std::vector<BenchmarkMeasure>>
+  Expected<std::vector<BenchmarkMeasure>>
   runMeasurements(const FunctionExecutor &Executor) const override;
 };
 } // namespace exegesis

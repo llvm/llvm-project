@@ -790,7 +790,7 @@ RenderScriptRuntime::CreateInstance(Process *process,
 // symbol.
 Searcher::CallbackReturn
 RSBreakpointResolver::SearchCallback(SearchFilter &filter,
-                                     SymbolContext &context, Address *, bool) {
+                                     SymbolContext &context, Address *) {
   ModuleSP module = context.module_sp;
 
   if (!module || !IsRenderScriptScriptModule(module))
@@ -820,7 +820,7 @@ RSBreakpointResolver::SearchCallback(SearchFilter &filter,
 Searcher::CallbackReturn
 RSReduceBreakpointResolver::SearchCallback(lldb_private::SearchFilter &filter,
                                            lldb_private::SymbolContext &context,
-                                           Address *, bool) {
+                                           Address *) {
   // We need to have access to the list of reductions currently parsed, as
   // reduce names don't actually exist as symbols in a module. They are only
   // identifiable by parsing the .rs.info packet, or finding the expand symbol.
@@ -880,8 +880,7 @@ RSReduceBreakpointResolver::SearchCallback(lldb_private::SearchFilter &filter,
 }
 
 Searcher::CallbackReturn RSScriptGroupBreakpointResolver::SearchCallback(
-    SearchFilter &filter, SymbolContext &context, Address *addr,
-    bool containing) {
+    SearchFilter &filter, SymbolContext &context, Address *addr) {
 
   if (!m_breakpoint)
     return eCallbackReturnContinue;

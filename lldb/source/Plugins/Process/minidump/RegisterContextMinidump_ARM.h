@@ -38,6 +38,12 @@ public:
     // Do nothing... registers are always valid...
   }
 
+  // Used for unit testing.
+  static size_t GetRegisterCountStatic();
+  // Used for unit testing.
+  static const lldb_private::RegisterInfo *
+  GetRegisterInfoAtIndexStatic(size_t reg, bool apple);
+
   size_t GetRegisterCount() override;
 
   const lldb_private::RegisterInfo *GetRegisterInfoAtIndex(size_t reg) override;

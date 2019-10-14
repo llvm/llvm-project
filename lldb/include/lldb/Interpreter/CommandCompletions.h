@@ -103,7 +103,7 @@ public:
     ~Completer() override;
 
     CallbackReturn SearchCallback(SearchFilter &filter, SymbolContext &context,
-                                  Address *addr, bool complete) override = 0;
+                                  Address *addr) override = 0;
 
     lldb::SearchDepth GetDepth() override = 0;
 
@@ -127,8 +127,7 @@ public:
 
     Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
                                             SymbolContext &context,
-                                            Address *addr,
-                                            bool complete) override;
+                                            Address *addr) override;
 
     void DoCompletion(SearchFilter *filter) override;
 
@@ -151,8 +150,7 @@ public:
 
     Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
                                             SymbolContext &context,
-                                            Address *addr,
-                                            bool complete) override;
+                                            Address *addr) override;
 
     void DoCompletion(SearchFilter *filter) override;
 
@@ -173,8 +171,7 @@ public:
 
     Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
                                             SymbolContext &context,
-                                            Address *addr,
-                                            bool complete) override;
+                                            Address *addr) override;
 
     void DoCompletion(SearchFilter *filter) override;
 

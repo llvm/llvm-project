@@ -514,6 +514,8 @@ private:
   /// need to be consistently numbered for the mangler).
   llvm::DenseMap<const DeclContext *, std::unique_ptr<MangleNumberingContext>>
       MangleNumberingContexts;
+  llvm::DenseMap<const Decl *, std::unique_ptr<MangleNumberingContext>>
+      ExtraMangleNumberingContexts;
 
   /// Side-table of mangling numbers for declarations which rarely
   /// need them (like static local vars).
@@ -1501,8 +1503,7 @@ public:
                              bool isKindOf) const;
 
   QualType getObjCTypeParamType(const ObjCTypeParamDecl *Decl,
-                                ArrayRef<ObjCProtocolDecl *> protocols,
-                                QualType Canonical = QualType()) const;
+                                ArrayRef<ObjCProtocolDecl *> protocols) const;
 
   bool ObjCObjectAdoptsQTypeProtocols(QualType QT, ObjCInterfaceDecl *Decl);
 
@@ -2812,6 +2813,9 @@ public:
   /// Retrieve the context for computing mangling numbers in the given
   /// DeclContext.
   MangleNumberingContext &getManglingNumberContext(const DeclContext *DC);
+  enum NeedExtraManglingDecl_t { NeedExtraManglingDecl };
+  MangleNumberingContext &getManglingNumberContext(NeedExtraManglingDecl_t,
+                                                   const Decl *D);
 
   std::unique_ptr<MangleNumberingContext> createMangleNumberingContext() const;
 

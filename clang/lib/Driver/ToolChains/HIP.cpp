@@ -48,6 +48,20 @@ static void addBCLib(const Driver &D, const ArgList &Args,
   D.Diag(diag::err_drv_no_such_file) << BCName;
 }
 
+static const char *getOutputFileName(Compilation &C, StringRef Base,
+                                     const char *Postfix,
+                                     const char *Extension) {
+  const char *OutputFileName;
+  if (C.getDriver().isSaveTempsEnabled()) {
+    OutputFileName =
+        C.getArgs().MakeArgString(Base.str() + Postfix + "." + Extension);
+  } else {
+    std::string TmpName =
+        C.getDriver().GetTemporaryPath(Base.str() + Postfix, Extension);
+    OutputFileName = C.addTempFile(C.getArgs().MakeArgString(TmpName));
+  }
+  return OutputFileName;
+}
 } // namespace
 
 const char *AMDGCN::Linker::constructLLVMLinkCommand(
@@ -61,10 +75,7 @@ const char *AMDGCN::Linker::constructLLVMLinkCommand(
 
   // Add an intermediate output file.
   CmdArgs.push_back("-o");
-  std::string TmpName =
-      C.getDriver().GetTemporaryPath(OutputFilePrefix.str() + "-linked", "bc");
-  const char *OutputFileName =
-      C.addTempFile(C.getArgs().MakeArgString(TmpName));
+  auto OutputFileName = getOutputFileName(C, OutputFilePrefix, "-linked", "bc");
   CmdArgs.push_back(OutputFileName);
   SmallString<128> ExecPath(C.getDriver().Dir);
   llvm::sys::path::append(ExecPath, "llvm-link");
@@ -109,10 +120,8 @@ const char *AMDGCN::Linker::constructOptCommand(
   }
 
   OptArgs.push_back("-o");
-  std::string TmpFileName = C.getDriver().GetTemporaryPath(
-      OutputFilePrefix.str() + "-optimized", "bc");
-  const char *OutputFileName =
-      C.addTempFile(C.getArgs().MakeArgString(TmpFileName));
+  auto OutputFileName =
+      getOutputFileName(C, OutputFilePrefix, "-optimized", "bc");
   OptArgs.push_back(OutputFileName);
   SmallString<128> OptPath(C.getDriver().Dir);
   llvm::sys::path::append(OptPath, "opt");
@@ -124,11 +133,13 @@ const char *AMDGCN::Linker::constructOptCommand(
 const char *AMDGCN::Linker::constructLlcCommand(
     Compilation &C, const JobAction &JA, const InputInfoList &Inputs,
     const llvm::opt::ArgList &Args, llvm::StringRef SubArchName,
-    llvm::StringRef OutputFilePrefix, const char *InputFileName) const {
+    llvm::StringRef OutputFilePrefix, const char *InputFileName,
+    bool OutputIsAsm) const {
   // Construct llc command.
-  ArgStringList LlcArgs{InputFileName, "-mtriple=amdgcn-amd-amdhsa",
-                        "-filetype=obj",
-                        Args.MakeArgString("-mcpu=" + SubArchName)};
+  ArgStringList LlcArgs{
+      InputFileName, "-mtriple=amdgcn-amd-amdhsa",
+      Args.MakeArgString(Twine("-filetype=") + (OutputIsAsm ? "asm" : "obj")),
+      Args.MakeArgString("-mcpu=" + SubArchName)};
 
   // Extract all the -m options
   std::vector<llvm::StringRef> Features;
@@ -151,10 +162,8 @@ const char *AMDGCN::Linker::constructLlcCommand(
 
   // Add output filename
   LlcArgs.push_back("-o");
-  std::string LlcOutputFileName =
-      C.getDriver().GetTemporaryPath(OutputFilePrefix, "o");
-  const char *LlcOutputFile =
-      C.addTempFile(C.getArgs().MakeArgString(LlcOutputFileName));
+  auto LlcOutputFile =
+      getOutputFileName(C, OutputFilePrefix, "", OutputIsAsm ? "s" : "o");
   LlcArgs.push_back(LlcOutputFile);
   SmallString<128> LlcPath(C.getDriver().Dir);
   llvm::sys::path::append(LlcPath, "llc");
@@ -230,14 +239,18 @@ void AMDGCN::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   assert(StringRef(SubArchName).startswith("gfx") && "Unsupported sub arch");
 
   // Prefix for temporary file name.
-  std::string Prefix =
-      llvm::sys::path::stem(Inputs[0].getFilename()).str() + "-" + SubArchName;
+  std::string Prefix = llvm::sys::path::stem(Inputs[0].getFilename()).str();
+  if (!C.getDriver().isSaveTempsEnabled())
+    Prefix += "-" + SubArchName;
 
   // Each command outputs different files.
   const char *LLVMLinkCommand =
       constructLLVMLinkCommand(C, JA, Inputs, Args, SubArchName, Prefix);
   const char *OptCommand = constructOptCommand(C, JA, Inputs, Args, SubArchName,
                                                Prefix, LLVMLinkCommand);
+  if (C.getDriver().isSaveTempsEnabled())
+    constructLlcCommand(C, JA, Inputs, Args, SubArchName, Prefix, OptCommand,
+                        /*OutputIsAsm=*/true);
   const char *LlcCommand =
       constructLlcCommand(C, JA, Inputs, Args, SubArchName, Prefix, OptCommand);
   constructLldCommand(C, JA, Inputs, Output, Args, LlcCommand);

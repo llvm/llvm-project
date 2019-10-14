@@ -533,8 +533,10 @@ define  i32* @g1() {
   ret i32* %c
 }
 
+declare void @use_i32_ptr(i32*) readnone nounwind
 ; ATTRIBUTOR: define internal void @called_by_weak(i32* nocapture nonnull readnone %a)
 define internal void @called_by_weak(i32* %a) {
+  call void @use_i32_ptr(i32* %a)
   ret void
 }
 
@@ -545,6 +547,30 @@ define weak_odr void @weak_caller(i32* nonnull %a) {
   ret void
 }
 
+; Expect nonnull
+; ATTRIBUTOR: define internal void @control(i32* nocapture nonnull readnone align 16 dereferenceable(8) %a)
+define internal void @control(i32* dereferenceable(4) %a) {
+  call void @use_i32_ptr(i32* %a)
+  ret void
+}
+; Avoid nonnull as we do not touch naked functions
+; ATTRIBUTOR: define internal void @naked(i32* dereferenceable(4) %a)
+define internal void @naked(i32* dereferenceable(4) %a) naked {
+  call void @use_i32_ptr(i32* %a)
+  ret void
+}
+; Avoid nonnull as we do not touch optnone
+; ATTRIBUTOR: define internal void @optnone(i32* dereferenceable(4) %a)
+define internal void @optnone(i32* dereferenceable(4) %a) optnone noinline {
+  call void @use_i32_ptr(i32* %a)
+  ret void
+}
+define void @make_live(i32* nonnull dereferenceable(8) %a) {
+  call void @naked(i32* nonnull dereferenceable(8) align 16 %a)
+  call void @control(i32* nonnull dereferenceable(8) align 16 %a)
+  call void @optnone(i32* nonnull dereferenceable(8) align 16 %a)
+  ret void
+}
 
 attributes #0 = { "null-pointer-is-valid"="true" }
 attributes #1 = { nounwind willreturn}

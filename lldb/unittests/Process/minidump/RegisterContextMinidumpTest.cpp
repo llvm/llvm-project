@@ -10,7 +10,9 @@
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_32.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_64.h"
+#include "Plugins/Process/minidump/RegisterContextMinidump_ARM.h"
 #include "lldb/Utility/DataBuffer.h"
+#include "llvm/ADT/StringRef.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
@@ -142,4 +144,58 @@ TEST(RegisterContextMinidump, ConvertMinidumpContext_x86_64) {
   EXPECT_EQ(Context.ss, reg64(*Buf, Info[lldb_ss_x86_64]));
   EXPECT_EQ(Context.ds, reg64(*Buf, Info[lldb_ds_x86_64]));
   EXPECT_EQ(Context.es, reg64(*Buf, Info[lldb_es_x86_64]));
+}
+
+static void TestARMRegInfo(const lldb_private::RegisterInfo *info) {
+  // Make sure we have valid register numbers for eRegisterKindEHFrame and
+  // eRegisterKindDWARF for GPR registers r0-r15 so that we can unwind
+  // correctly when using this information.
+  llvm::StringRef name(info->name);
+  llvm::StringRef alt_name(info->alt_name);
+  if (name.startswith("r") || alt_name.startswith("r")) {
+    EXPECT_NE(info->kinds[lldb::eRegisterKindEHFrame], LLDB_INVALID_REGNUM);
+    EXPECT_NE(info->kinds[lldb::eRegisterKindDWARF], LLDB_INVALID_REGNUM);
+  }
+  // Verify generic register are set correctly
+  if (name == "r0") {
+    EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
+              (uint32_t)LLDB_REGNUM_GENERIC_ARG1);
+  } else if (name == "r1") {
+    EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
+              (uint32_t)LLDB_REGNUM_GENERIC_ARG2);
+  } else if (name == "r2") {
+    EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
+              (uint32_t)LLDB_REGNUM_GENERIC_ARG3);
+  } else if (name == "r3") {
+    EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
+              (uint32_t)LLDB_REGNUM_GENERIC_ARG4);
+  } else if (name == "sp") {
+    EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
+              (uint32_t)LLDB_REGNUM_GENERIC_SP);
+  } else if (name == "fp") {
+    EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
+              (uint32_t)LLDB_REGNUM_GENERIC_FP);
+  } else if (name == "lr") {
+    EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
+              (uint32_t)LLDB_REGNUM_GENERIC_RA);
+  } else if (name == "pc") {
+    EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
+              (uint32_t)LLDB_REGNUM_GENERIC_PC);
+  } else if (name == "cpsr") {
+    EXPECT_EQ(info->kinds[lldb::eRegisterKindGeneric],
+              (uint32_t)LLDB_REGNUM_GENERIC_FLAGS);
+  }
+}
+
+TEST(RegisterContextMinidump, CheckRegisterContextMinidump_ARM) {
+  size_t num_regs = RegisterContextMinidump_ARM::GetRegisterCountStatic();
+  const lldb_private::RegisterInfo *reg_info;
+  for (size_t reg=0; reg<num_regs; ++reg) {
+    reg_info = RegisterContextMinidump_ARM::GetRegisterInfoAtIndexStatic(reg,
+                                                                         true);
+    TestARMRegInfo(reg_info);
+    reg_info = RegisterContextMinidump_ARM::GetRegisterInfoAtIndexStatic(reg,
+                                                                         false);
+    TestARMRegInfo(reg_info);
+  }
 }

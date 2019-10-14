@@ -55,7 +55,7 @@
 // RUN:          -fopenmp-targets=nvptx64-nvidia-cuda %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-CUBIN-NVLINK %s
 
-// CHK-CUBIN-NVLINK: clang{{.*}}" "-o" "[[PTX:.*\.s]]"
+// CHK-CUBIN-NVLINK: clang{{.*}}" {{.*}}"-fopenmp-is-device" {{.*}}"-o" "[[PTX:.*\.s]]"
 // CHK-CUBIN-NVLINK-NEXT: ptxas{{.*}}" "--output-file" "[[CUBIN:.*\.cubin]]" {{.*}}"[[PTX]]"
 // CHK-CUBIN-NVLINK-NEXT: nvlink{{.*}}" {{.*}}"[[CUBIN]]"
 

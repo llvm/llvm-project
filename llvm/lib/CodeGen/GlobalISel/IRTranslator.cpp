@@ -335,7 +335,7 @@ bool IRTranslator::translateFNeg(const User &U, MachineIRBuilder &MIRBuilder) {
 
 bool IRTranslator::translateCompare(const User &U,
                                     MachineIRBuilder &MIRBuilder) {
-  const CmpInst *CI = dyn_cast<CmpInst>(&U);
+  auto *CI = dyn_cast<CmpInst>(&U);
   Register Op0 = getOrCreateVReg(*U.getOperand(0));
   Register Op1 = getOrCreateVReg(*U.getOperand(1));
   Register Res = getOrCreateVReg(U);
@@ -346,11 +346,12 @@ bool IRTranslator::translateCompare(const User &U,
     MIRBuilder.buildICmp(Pred, Res, Op0, Op1);
   else if (Pred == CmpInst::FCMP_FALSE)
     MIRBuilder.buildCopy(
-        Res, getOrCreateVReg(*Constant::getNullValue(CI->getType())));
+        Res, getOrCreateVReg(*Constant::getNullValue(U.getType())));
   else if (Pred == CmpInst::FCMP_TRUE)
     MIRBuilder.buildCopy(
-        Res, getOrCreateVReg(*Constant::getAllOnesValue(CI->getType())));
+        Res, getOrCreateVReg(*Constant::getAllOnesValue(U.getType())));
   else {
+    assert(CI && "Instruction should be CmpInst");
     MIRBuilder.buildInstr(TargetOpcode::G_FCMP, {Res}, {Pred, Op0, Op1},
                           MachineInstr::copyFlagsFromInstruction(*CI));
   }

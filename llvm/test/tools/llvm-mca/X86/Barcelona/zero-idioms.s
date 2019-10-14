@@ -240,3 +240,4 @@ pxor   %xmm2, %xmm2
 # CHECK-NEXT: 32.    1     3.0    0.0    25.0      xorpd	%xmm1, %xmm1
 # CHECK-NEXT: 33.    1     28.0   0.0    0.0       pxor	%mm2, %mm2
 # CHECK-NEXT: 34.    1     3.0    0.0    26.0      pxor	%xmm2, %xmm2
+# CHECK-NEXT:        1     6.7    0.2    10.3      <total>

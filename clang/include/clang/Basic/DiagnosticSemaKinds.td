@@ -2853,6 +2853,10 @@ def err_alignment_dependent_typedef_name : Error<
 
 def err_attribute_aligned_too_great : Error<
   "requested alignment must be %0 bytes or smaller">;
+def warn_assume_aligned_too_great
+    : Warning<"requested alignment must be %0 bytes or smaller; maximum "
+              "alignment assumed">,
+      InGroup<DiagGroup<"builtin-assume-aligned-alignment">>;
 def warn_redeclaration_without_attribute_prev_attribute_ignored : Warning<
   "%q0 redeclared without %1 attribute: previous %1 ignored">,
   InGroup<MicrosoftInconsistentDllImport>;

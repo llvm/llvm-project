@@ -82,9 +82,11 @@ std::string TweakTest::apply(llvm::StringRef MarkedCode) const {
   std::string WrappedCode = wrap(Context, MarkedCode);
   Annotations Input(WrappedCode);
   auto Selection = rangeOrPoint(Input);
+
   TestTU TU;
   TU.HeaderCode = Header;
   TU.Code = Input.code();
+  TU.ExtraArgs = ExtraArgs;
   ParsedAST AST = TU.build();
   Tweak::Selection S(AST, Selection.first, Selection.second);
 

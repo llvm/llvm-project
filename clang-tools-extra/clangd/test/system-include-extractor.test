@@ -1,5 +1,8 @@
 # RUN: rm -rf %t.dir && mkdir -p %t.dir
 
+# The mock driver below is a shell script:
+# REQUIRES: shell
+
 # Generate a mock-driver that will print %temp_dir%/my/dir and
 # %temp_dir%/my/dir2 as include search paths.
 # RUN: echo '#!/bin/bash' >> %t.dir/my_driver.sh

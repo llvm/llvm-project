@@ -94,6 +94,12 @@ public:
 
   SBError SetErrorFile(SBFile file);
 
+  SBError SetInputFile(FileSP file);
+
+  SBError SetOutputFile(FileSP file);
+
+  SBError SetErrorFile(FileSP file);
+
   SBFile GetInputFile();
 
   SBFile GetOutputFile();

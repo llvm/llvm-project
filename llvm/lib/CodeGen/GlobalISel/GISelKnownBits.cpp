@@ -33,19 +33,19 @@ GISelKnownBits::GISelKnownBits(MachineFunction &MF)
     : MF(MF), MRI(MF.getRegInfo()), TL(*MF.getSubtarget().getTargetLowering()),
       DL(MF.getFunction().getParent()->getDataLayout()) {}
 
-unsigned GISelKnownBits::inferAlignmentForFrameIdx(int FrameIdx, int Offset,
-                                                   const MachineFunction &MF) {
+Align GISelKnownBits::inferAlignmentForFrameIdx(int FrameIdx, int Offset,
+                                                const MachineFunction &MF) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MinAlign(Offset, MFI.getObjectAlignment(FrameIdx));
+  return commonAlignment(Align(MFI.getObjectAlignment(FrameIdx)), Offset);
   // TODO: How to handle cases with Base + Offset?
 }
 
-unsigned GISelKnownBits::inferPtrAlignment(const MachineInstr &MI) {
+MaybeAlign GISelKnownBits::inferPtrAlignment(const MachineInstr &MI) {
   if (MI.getOpcode() == TargetOpcode::G_FRAME_INDEX) {
     int FrameIdx = MI.getOperand(1).getIndex();
     return inferAlignmentForFrameIdx(FrameIdx, 0, *MI.getMF());
   }
-  return 0;
+  return None;
 }
 
 void GISelKnownBits::computeKnownBitsForFrameIndex(Register R, KnownBits &Known,
@@ -56,10 +56,10 @@ void GISelKnownBits::computeKnownBitsForFrameIndex(Register R, KnownBits &Known,
 }
 
 void GISelKnownBits::computeKnownBitsForAlignment(KnownBits &Known,
-                                                  unsigned Align) {
-  if (Align)
+                                                  MaybeAlign Alignment) {
+  if (Alignment)
     // The low bits are known zero if the pointer is aligned.
-    Known.Zero.setLowBits(Log2_32(Align));
+    Known.Zero.setLowBits(Log2(Alignment));
 }
 
 KnownBits GISelKnownBits::getKnownBits(MachineInstr &MI) {

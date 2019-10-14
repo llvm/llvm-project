@@ -135,7 +135,7 @@ private:
 static std::vector<std::vector<DefinedImportData *>>
 binImports(const std::vector<DefinedImportData *> &imports) {
   // Group DLL-imported symbols by DLL name because that's how
-  // symbols are layed out in the import descriptor table.
+  // symbols are laid out in the import descriptor table.
   auto less = [](const std::string &a, const std::string &b) {
     return config->dllOrder[a] < config->dllOrder[b];
   };

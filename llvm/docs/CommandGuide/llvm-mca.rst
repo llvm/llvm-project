@@ -523,6 +523,7 @@ Below is the timeline view for a subset of the dot-product example located in
   0.     3     1.0    1.0    3.3       vmulps	%xmm0, %xmm1, %xmm2
   1.     3     3.3    0.7    1.0       vhaddps	%xmm2, %xmm2, %xmm3
   2.     3     5.7    0.0    0.0       vhaddps	%xmm3, %xmm3, %xmm4
+         3     3.3    0.5    1.4       <total>
 
 The timeline view is interesting because it shows instruction state changes
 during execution.  It also gives an idea of how the tool processes instructions
@@ -574,7 +575,8 @@ and therefore consuming physical registers).
 
 Table *Average Wait times* helps diagnose performance issues that are caused by
 the presence of long latency instructions and potentially long data dependencies
-which may limit the ILP.  Note that :program:`llvm-mca`, by default, assumes at
+which may limit the ILP. Last row, ``<total>``, shows a global average over all
+instructions measured. Note that :program:`llvm-mca`, by default, assumes at
 least 1cy between the dispatch event and the issue event.
 
 When the performance is limited by data dependencies and/or long latency

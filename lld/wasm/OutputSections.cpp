@@ -20,9 +20,17 @@
 
 using namespace llvm;
 using namespace llvm::wasm;
-using namespace lld;
-using namespace lld::wasm;
 
+namespace lld {
+
+// Returns a string, e.g. "FUNCTION(.text)".
+std::string toString(const wasm::OutputSection &sec) {
+  if (!sec.name.empty())
+    return (sec.getSectionName() + "(" + sec.name + ")").str();
+  return sec.getSectionName();
+}
+
+namespace wasm {
 static StringRef sectionTypeToString(uint32_t sectionType) {
   switch (sectionType) {
   case WASM_SEC_CUSTOM:
@@ -56,13 +64,6 @@ static StringRef sectionTypeToString(uint32_t sectionType) {
   default:
     fatal("invalid section type");
   }
-}
-
-// Returns a string, e.g. "FUNCTION(.text)".
-std::string lld::toString(const OutputSection &sec) {
-  if (!sec.name.empty())
-    return (sec.getSectionName() + "(" + sec.name + ")").str();
-  return sec.getSectionName();
 }
 
 StringRef OutputSection::getSectionName() const {
@@ -248,3 +249,6 @@ void CustomSection::writeRelocations(raw_ostream &os) const {
   for (const InputSection *s : inputSections)
     s->writeRelocations(os);
 }
+
+} // namespace wasm
+} // namespace lld

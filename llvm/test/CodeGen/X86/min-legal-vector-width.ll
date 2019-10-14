@@ -1079,3 +1079,40 @@ define void @vselect_split_v16i16_setcc(<16 x i16> %s, <16 x i16> %t, <16 x i32>
   store <16 x i32> %b, <16 x i32>* %r
   ret void
 }
+
+define <16 x i8> @trunc_packus_v16i32_v16i8(<16 x i32>* %p) "min-legal-vector-width"="256" {
+; CHECK-LABEL: trunc_packus_v16i32_v16i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
+; CHECK-NEXT:    vpackusdw 32(%rdi), %ymm0, %ymm0
+; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; CHECK-NEXT:    vpmovuswb %ymm0, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %a = load <16 x i32>, <16 x i32>* %p
+  %b = icmp slt <16 x i32> %a, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
+  %c = select <16 x i1> %b, <16 x i32> %a, <16 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
+  %d = icmp sgt <16 x i32> %c, zeroinitializer
+  %e = select <16 x i1> %d, <16 x i32> %c, <16 x i32> zeroinitializer
+  %f = trunc <16 x i32> %e to <16 x i8>
+  ret <16 x i8> %f
+}
+
+define void @trunc_packus_v16i32_v16i8_store(<16 x i32>* %p, <16 x i8>* %q) "min-legal-vector-width"="256" {
+; CHECK-LABEL: trunc_packus_v16i32_v16i8_store:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
+; CHECK-NEXT:    vpackusdw 32(%rdi), %ymm0, %ymm0
+; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; CHECK-NEXT:    vpmovuswb %ymm0, (%rsi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %a = load <16 x i32>, <16 x i32>* %p
+  %b = icmp slt <16 x i32> %a, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
+  %c = select <16 x i1> %b, <16 x i32> %a, <16 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
+  %d = icmp sgt <16 x i32> %c, zeroinitializer
+  %e = select <16 x i1> %d, <16 x i32> %c, <16 x i32> zeroinitializer
+  %f = trunc <16 x i32> %e to <16 x i8>
+  store <16 x i8> %f, <16 x i8>* %q
+  ret void
+}

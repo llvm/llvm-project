@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Views/TimelineView.h"
+#include <numeric>
 
 namespace llvm {
 namespace mca {
@@ -132,25 +133,38 @@ void TimelineView::printWaitTimeEntry(formatted_raw_ostream &OS,
                                       const WaitTimeEntry &Entry,
                                       unsigned SourceIndex,
                                       unsigned Executions) const {
-  OS << SourceIndex << '.';
+  bool PrintingTotals = SourceIndex == Source.size();
+  unsigned CumulativeExecutions = PrintingTotals ? Timeline.size() : Executions;
+
+  if (!PrintingTotals)
+    OS << SourceIndex << '.';
+
   OS.PadToColumn(7);
 
   double AverageTime1, AverageTime2, AverageTime3;
-  AverageTime1 = (double)Entry.CyclesSpentInSchedulerQueue / Executions;
-  AverageTime2 = (double)Entry.CyclesSpentInSQWhileReady / Executions;
-  AverageTime3 = (double)Entry.CyclesSpentAfterWBAndBeforeRetire / Executions;
+  AverageTime1 =
+      (double)Entry.CyclesSpentInSchedulerQueue / CumulativeExecutions;
+  AverageTime2 = (double)Entry.CyclesSpentInSQWhileReady / CumulativeExecutions;
+  AverageTime3 =
+      (double)Entry.CyclesSpentAfterWBAndBeforeRetire / CumulativeExecutions;
 
   OS << Executions;
   OS.PadToColumn(13);
-  int BufferSize = UsedBuffer[SourceIndex].second;
-  tryChangeColor(OS, Entry.CyclesSpentInSchedulerQueue, Executions, BufferSize);
+
+  int BufferSize = PrintingTotals ? 0 : UsedBuffer[SourceIndex].second;
+  if (!PrintingTotals)
+    tryChangeColor(OS, Entry.CyclesSpentInSchedulerQueue, CumulativeExecutions,
+                   BufferSize);
   OS << format("%.1f", floor((AverageTime1 * 10) + 0.5) / 10);
   OS.PadToColumn(20);
-  tryChangeColor(OS, Entry.CyclesSpentInSQWhileReady, Executions, BufferSize);
+  if (!PrintingTotals)
+    tryChangeColor(OS, Entry.CyclesSpentInSQWhileReady, CumulativeExecutions,
+                   BufferSize);
   OS << format("%.1f", floor((AverageTime2 * 10) + 0.5) / 10);
   OS.PadToColumn(27);
-  tryChangeColor(OS, Entry.CyclesSpentAfterWBAndBeforeRetire, Executions,
-                 STI.getSchedModel().MicroOpBufferSize);
+  if (!PrintingTotals)
+    tryChangeColor(OS, Entry.CyclesSpentAfterWBAndBeforeRetire,
+                   CumulativeExecutions, STI.getSchedModel().MicroOpBufferSize);
   OS << format("%.1f", floor((AverageTime3 * 10) + 0.5) / 10);
 
   if (OS.has_colors())
@@ -189,6 +203,24 @@ void TimelineView::printAverageWaitTimes(raw_ostream &OS) const {
     Instruction = "";
 
     ++IID;
+  }
+
+  // If the timeline contains more than one instruction,
+  // let's also print global averages.
+  if (Source.size() != 1) {
+    WaitTimeEntry TotalWaitTime = std::accumulate(
+        WaitTime.begin(), WaitTime.end(), WaitTimeEntry{0, 0, 0},
+        [](const WaitTimeEntry &A, const WaitTimeEntry &B) {
+          return WaitTimeEntry{
+              A.CyclesSpentInSchedulerQueue + B.CyclesSpentInSchedulerQueue,
+              A.CyclesSpentInSQWhileReady + B.CyclesSpentInSQWhileReady,
+              A.CyclesSpentAfterWBAndBeforeRetire +
+                  B.CyclesSpentAfterWBAndBeforeRetire};
+        });
+    printWaitTimeEntry(FOS, TotalWaitTime, IID, Executions);
+    FOS << "   "
+        << "<total>" << '\n';
+    InstrStream.flush();
   }
 }
 

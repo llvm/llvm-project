@@ -54,7 +54,7 @@ protected:
   }
 
 protected:
-  const llvm::MCSubtargetInfo &STI;
+  const MCSubtargetInfo &STI;
   uint16_t P0Idx = 0;
   uint16_t P1Idx = 0;
   uint16_t P5Idx = 0;

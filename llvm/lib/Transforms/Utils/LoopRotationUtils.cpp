@@ -615,8 +615,13 @@ bool LoopRotate::simplifyLoopLatch(Loop *L) {
   LLVM_DEBUG(dbgs() << "Folding loop latch " << Latch->getName() << " into "
                     << LastExit->getName() << "\n");
 
+  Instruction *FirstLatchInst = &*Latch->begin();
+  // If there's nothing to move, mark the starting instruction as the last
+  // instruction in the block.
+  if (FirstLatchInst == Jmp)
+    FirstLatchInst = BI;
+
   // Hoist the instructions from Latch into LastExit.
-  Instruction *FirstLatchInst = &*(Latch->begin());
   LastExit->getInstList().splice(BI->getIterator(), Latch->getInstList(),
                                  Latch->begin(), Jmp->getIterator());
 

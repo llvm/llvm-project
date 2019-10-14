@@ -276,6 +276,10 @@ public:
     return NumCycles == 1;
   }
 
+  unsigned extraSizeToPredicateInstructions(const MachineFunction &MF,
+                                            unsigned NumInsts) const override;
+  unsigned predictBranchSizeForIfCvt(MachineInstr &MI) const override;
+
   bool isProfitableToUnpredicate(MachineBasicBlock &TMBB,
                                  MachineBasicBlock &FMBB) const override;
 

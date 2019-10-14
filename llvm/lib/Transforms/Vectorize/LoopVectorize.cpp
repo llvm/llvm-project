@@ -355,6 +355,29 @@ static Constant *getSignedIntOrFpConstant(Type *Ty, int64_t C) {
                            : ConstantFP::get(Ty, C);
 }
 
+/// Returns "best known" trip count for the specified loop \p L as defined by
+/// the following procedure:
+///   1) Returns exact trip count if it is known.
+///   2) Returns expected trip count according to profile data if any.
+///   3) Returns upper bound estimate if it is known.
+///   4) Returns None if all of the above failed.
+static Optional<unsigned> getSmallBestKnownTC(ScalarEvolution &SE, Loop *L) {
+  // Check if exact trip count is known.
+  if (unsigned ExpectedTC = SE.getSmallConstantTripCount(L))
+    return ExpectedTC;
+
+  // Check if there is an expected trip count available from profile data.
+  if (LoopVectorizeWithBlockFrequency)
+    if (auto EstimatedTC = getLoopEstimatedTripCount(L))
+      return EstimatedTC;
+
+  // Check if upper bound estimate is known.
+  if (unsigned ExpectedTC = SE.getSmallConstantMaxTripCount(L))
+    return ExpectedTC;
+
+  return None;
+}
+
 namespace llvm {
 
 /// InnerLoopVectorizer vectorizes loops which contain only one basic
@@ -983,10 +1006,11 @@ public:
   /// of a loop.
   struct RegisterUsage {
     /// Holds the number of loop invariant values that are used in the loop.
-    unsigned LoopInvariantRegs;
-
+    /// The key is ClassID of target-provided register class.
+    SmallMapVector<unsigned, unsigned, 4> LoopInvariantRegs;
     /// Holds the maximum number of concurrent live intervals in the loop.
-    unsigned MaxLocalUsers;
+    /// The key is ClassID of target-provided register class.
+    SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers;
   };
 
   /// \return Returns information about the register usages of the loop for the
@@ -4962,9 +4986,14 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(unsigned ConstTripCount) {
 
     // Select the largest VF which doesn't require more registers than existing
     // ones.
-    unsigned TargetNumRegisters = TTI.getNumberOfRegisters(true);
     for (int i = RUs.size() - 1; i >= 0; --i) {
-      if (RUs[i].MaxLocalUsers <= TargetNumRegisters) {
+      bool Selected = true;
+      for (auto& pair : RUs[i].MaxLocalUsers) {
+        unsigned TargetNumRegisters = TTI.getNumberOfRegisters(pair.first);
+        if (pair.second > TargetNumRegisters)
+          Selected = false;
+      }
+      if (Selected) {
         MaxVF = VFs[i];
         break;
       }
@@ -5115,22 +5144,12 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(unsigned VF,
   if (TC > 1 && TC < TinyTripCountInterleaveThreshold)
     return 1;
 
-  unsigned TargetNumRegisters = TTI.getNumberOfRegisters(VF > 1);
-  LLVM_DEBUG(dbgs() << "LV: The target has " << TargetNumRegisters
-                    << " registers\n");
-
-  if (VF == 1) {
-    if (ForceTargetNumScalarRegs.getNumOccurrences() > 0)
-      TargetNumRegisters = ForceTargetNumScalarRegs;
-  } else {
-    if (ForceTargetNumVectorRegs.getNumOccurrences() > 0)
-      TargetNumRegisters = ForceTargetNumVectorRegs;
-  }
-
   RegisterUsage R = calculateRegisterUsage({VF})[0];
   // We divide by these constants so assume that we have at least one
   // instruction that uses at least one register.
-  R.MaxLocalUsers = std::max(R.MaxLocalUsers, 1U);
+  for (auto& pair : R.MaxLocalUsers) {
+    pair.second = std::max(pair.second, 1U);
+  }
 
   // We calculate the interleave count using the following formula.
   // Subtract the number of loop invariants from the number of available
@@ -5143,13 +5162,35 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(unsigned VF,
   // We also want power of two interleave counts to ensure that the induction
   // variable of the vector loop wraps to zero, when tail is folded by masking;
   // this currently happens when OptForSize, in which case IC is set to 1 above.
-  unsigned IC = PowerOf2Floor((TargetNumRegisters - R.LoopInvariantRegs) /
-                              R.MaxLocalUsers);
+  unsigned IC = UINT_MAX;
 
-  // Don't count the induction variable as interleaved.
-  if (EnableIndVarRegisterHeur)
-    IC = PowerOf2Floor((TargetNumRegisters - R.LoopInvariantRegs - 1) /
-                       std::max(1U, (R.MaxLocalUsers - 1)));
+  for (auto& pair : R.MaxLocalUsers) {
+    unsigned TargetNumRegisters = TTI.getNumberOfRegisters(pair.first);
+    LLVM_DEBUG(dbgs() << "LV: The target has " << TargetNumRegisters
+                      << " registers of "
+                      << TTI.getRegisterClassName(pair.first) << " register class\n");
+    if (VF == 1) {
+      if (ForceTargetNumScalarRegs.getNumOccurrences() > 0)
+        TargetNumRegisters = ForceTargetNumScalarRegs;
+    } else {
+      if (ForceTargetNumVectorRegs.getNumOccurrences() > 0)
+        TargetNumRegisters = ForceTargetNumVectorRegs;
+    }
+    unsigned MaxLocalUsers = pair.second;
+    unsigned LoopInvariantRegs = 0;
+    if (R.LoopInvariantRegs.find(pair.first) != R.LoopInvariantRegs.end())
+      LoopInvariantRegs = R.LoopInvariantRegs[pair.first];
+
+    unsigned TmpIC = PowerOf2Floor((TargetNumRegisters - LoopInvariantRegs) / MaxLocalUsers);
+    // Don't count the induction variable as interleaved.
+    if (EnableIndVarRegisterHeur) {
+      TmpIC =
+          PowerOf2Floor((TargetNumRegisters - LoopInvariantRegs - 1) /
+                        std::max(1U, (MaxLocalUsers - 1)));
+    }
+
+    IC = std::min(IC, TmpIC);
+  }
 
   // Clamp the interleave ranges to reasonable counts.
   unsigned MaxInterleaveCount = TTI.getMaxInterleaveFactor(VF);
@@ -5331,7 +5372,7 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<unsigned> VFs) {
   const DataLayout &DL = TheFunction->getParent()->getDataLayout();
 
   SmallVector<RegisterUsage, 8> RUs(VFs.size());
-  SmallVector<unsigned, 8> MaxUsages(VFs.size(), 0);
+  SmallVector<SmallMapVector<unsigned, unsigned, 4>, 8> MaxUsages(VFs.size());
 
   LLVM_DEBUG(dbgs() << "LV(REG): Calculating max register usage:\n");
 
@@ -5361,21 +5402,45 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<unsigned> VFs) {
 
     // For each VF find the maximum usage of registers.
     for (unsigned j = 0, e = VFs.size(); j < e; ++j) {
-      if (VFs[j] == 1) {
-        MaxUsages[j] = std::max(MaxUsages[j], OpenIntervals.size());
-        continue;
-      }
-      collectUniformsAndScalars(VFs[j]);
       // Count the number of live intervals.
-      unsigned RegUsage = 0;
-      for (auto Inst : OpenIntervals) {
-        // Skip ignored values for VF > 1.
-        if (VecValuesToIgnore.find(Inst) != VecValuesToIgnore.end() ||
-            isScalarAfterVectorization(Inst, VFs[j]))
-          continue;
-        RegUsage += GetRegUsage(Inst->getType(), VFs[j]);
+      SmallMapVector<unsigned, unsigned, 4> RegUsage;
+
+      if (VFs[j] == 1) {
+        for (auto Inst : OpenIntervals) {
+          unsigned ClassID = TTI.getRegisterClassForType(false, Inst->getType());
+          if (RegUsage.find(ClassID) == RegUsage.end())
+            RegUsage[ClassID] = 1;
+          else
+            RegUsage[ClassID] += 1;
+        }
+      } else {
+        collectUniformsAndScalars(VFs[j]);
+        for (auto Inst : OpenIntervals) {
+          // Skip ignored values for VF > 1.
+          if (VecValuesToIgnore.find(Inst) != VecValuesToIgnore.end())
+            continue;
+          if (isScalarAfterVectorization(Inst, VFs[j])) {
+            unsigned ClassID = TTI.getRegisterClassForType(false, Inst->getType());
+            if (RegUsage.find(ClassID) == RegUsage.end())
+              RegUsage[ClassID] = 1;
+            else
+              RegUsage[ClassID] += 1;
+          } else {
+            unsigned ClassID = TTI.getRegisterClassForType(true, Inst->getType());
+            if (RegUsage.find(ClassID) == RegUsage.end())
+              RegUsage[ClassID] = GetRegUsage(Inst->getType(), VFs[j]);
+            else
+              RegUsage[ClassID] += GetRegUsage(Inst->getType(), VFs[j]);
+          }
+        }
       }
-      MaxUsages[j] = std::max(MaxUsages[j], RegUsage);
+    
+      for (auto& pair : RegUsage) {
+        if (MaxUsages[j].find(pair.first) != MaxUsages[j].end())
+          MaxUsages[j][pair.first] = std::max(MaxUsages[j][pair.first], pair.second);
+        else
+          MaxUsages[j][pair.first] = pair.second;
+      }
     }
 
     LLVM_DEBUG(dbgs() << "LV(REG): At #" << i << " Interval # "
@@ -5386,18 +5451,34 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<unsigned> VFs) {
   }
 
   for (unsigned i = 0, e = VFs.size(); i < e; ++i) {
-    unsigned Invariant = 0;
-    if (VFs[i] == 1)
-      Invariant = LoopInvariants.size();
-    else {
-      for (auto Inst : LoopInvariants)
-        Invariant += GetRegUsage(Inst->getType(), VFs[i]);
+    SmallMapVector<unsigned, unsigned, 4> Invariant;
+  
+    for (auto Inst : LoopInvariants) {
+      unsigned Usage = VFs[i] == 1 ? 1 : GetRegUsage(Inst->getType(), VFs[i]);
+      unsigned ClassID = TTI.getRegisterClassForType(VFs[i] > 1, Inst->getType());
+      if (Invariant.find(ClassID) == Invariant.end())
+        Invariant[ClassID] = Usage;
+      else
+        Invariant[ClassID] += Usage;
     }
 
-    LLVM_DEBUG(dbgs() << "LV(REG): VF = " << VFs[i] << '\n');
-    LLVM_DEBUG(dbgs() << "LV(REG): Found max usage: " << MaxUsages[i] << '\n');
-    LLVM_DEBUG(dbgs() << "LV(REG): Found invariant usage: " << Invariant
-                      << '\n');
+    LLVM_DEBUG({
+      dbgs() << "LV(REG): VF = " << VFs[i] << '\n';
+      dbgs() << "LV(REG): Found max usage: " << MaxUsages[i].size()
+             << " item\n";
+      for (const auto &pair : MaxUsages[i]) {
+        dbgs() << "LV(REG): RegisterClass: "
+               << TTI.getRegisterClassName(pair.first) << ", " << pair.second
+               << " registers\n";
+      }
+      dbgs() << "LV(REG): Found invariant usage: " << Invariant.size()
+             << " item\n";
+      for (const auto &pair : Invariant) {
+        dbgs() << "LV(REG): RegisterClass: "
+               << TTI.getRegisterClassName(pair.first) << ", " << pair.second
+               << " registers\n";
+      }
+    });
 
     RU.LoopInvariantRegs = Invariant;
     RU.MaxLocalUsers = MaxUsages[i];
@@ -7483,36 +7564,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                         ORE, BFI, PSI, Hints);
 
   assert(L->empty() && "Inner loop expected.");
+
   // Check the loop for a trip count threshold: vectorize loops with a tiny trip
   // count by optimizing for size, to minimize overheads.
-  // Prefer constant trip counts over profile data, over upper bound estimate.
-  unsigned ExpectedTC = 0;
-  bool HasExpectedTC = false;
-  if (const SCEVConstant *ConstExits =
-      dyn_cast<SCEVConstant>(SE->getBackedgeTakenCount(L))) {
-    const APInt &ExitsCount = ConstExits->getAPInt();
-    // We are interested in small values for ExpectedTC. Skip over those that
-    // can't fit an unsigned.
-    if (ExitsCount.ult(std::numeric_limits<unsigned>::max())) {
-      ExpectedTC = static_cast<unsigned>(ExitsCount.getZExtValue()) + 1;
-      HasExpectedTC = true;
-    }
-  }
-  // ExpectedTC may be large because it's bound by a variable. Check
-  // profiling information to validate we should vectorize.
-  if (!HasExpectedTC && LoopVectorizeWithBlockFrequency) {
-    auto EstimatedTC = getLoopEstimatedTripCount(L);
-    if (EstimatedTC) {
-      ExpectedTC = *EstimatedTC;
-      HasExpectedTC = true;
-    }
-  }
-  if (!HasExpectedTC) {
-    ExpectedTC = SE->getSmallConstantMaxTripCount(L);
-    HasExpectedTC = (ExpectedTC > 0);
-  }
-
-  if (HasExpectedTC && ExpectedTC < TinyTripCountVectorThreshold) {
+  auto ExpectedTC = getSmallBestKnownTC(*SE, L);
+  if (ExpectedTC && *ExpectedTC < TinyTripCountVectorThreshold) {
     LLVM_DEBUG(dbgs() << "LV: Found a loop with a very small trip count. "
                       << "This loop is worth vectorizing only if no scalar "
                       << "iteration overheads are incurred.");
@@ -7762,7 +7818,8 @@ bool LoopVectorizePass::runImpl(
   // The second condition is necessary because, even if the target has no
   // vector registers, loop vectorization may still enable scalar
   // interleaving.
-  if (!TTI->getNumberOfRegisters(true) && TTI->getMaxInterleaveFactor(1) < 2)
+  if (!TTI->getNumberOfRegisters(TTI->getRegisterClassForType(true)) &&
+      TTI->getMaxInterleaveFactor(1) < 2)
     return false;
 
   bool Changed = false;

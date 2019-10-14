@@ -1849,6 +1849,12 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
 #endif
 }
 
+bool SignalContext::IsTrueFaultingAddress() const {
+  auto si = static_cast<const siginfo_t *>(siginfo);
+  // SIGSEGV signals without a true fault address have si_code set to 128.
+  return si->si_signo == SIGSEGV && si->si_code != 128;
+}
+
 void SignalContext::DumpAllRegisters(void *context) {
   // FIXME: Implement this.
 }

@@ -42,7 +42,7 @@ class MiniDumpUUIDTestCase(TestBase):
     def test_zero_uuid_modules(self):
         """
             Test multiple modules having a MINIDUMP_MODULE.CvRecord that is valid,
-            but contains a PDB70 value whose age is zero and whose UUID values are 
+            but contains a PDB70 value whose age is zero and whose UUID values are
             all zero. Prior to a fix all such modules would be duplicated to the
             first one since the UUIDs claimed to be valid and all zeroes. Now we
             ensure that the UUID is not valid for each module and that we have
@@ -56,7 +56,7 @@ class MiniDumpUUIDTestCase(TestBase):
     def test_uuid_modules_no_age(self):
         """
             Test multiple modules having a MINIDUMP_MODULE.CvRecord that is valid,
-            and contains a PDB70 value whose age is zero and whose UUID values are 
+            and contains a PDB70 value whose age is zero and whose UUID values are
             valid. Ensure we decode the UUID and don't include the age field in the UUID.
         """
         modules = self.get_minidump_modules("linux-arm-uuids-no-age.yaml")
@@ -68,7 +68,7 @@ class MiniDumpUUIDTestCase(TestBase):
     def test_uuid_modules_no_age_apple(self):
         """
             Test multiple modules having a MINIDUMP_MODULE.CvRecord that is valid,
-            and contains a PDB70 value whose age is zero and whose UUID values are 
+            and contains a PDB70 value whose age is zero and whose UUID values are
             valid. Ensure we decode the UUID and don't include the age field in the UUID.
             Also ensure that the first uint32_t is byte swapped, along with the next
             two uint16_t values. Breakpad incorrectly byte swaps these values when it
@@ -83,7 +83,7 @@ class MiniDumpUUIDTestCase(TestBase):
     def test_uuid_modules_with_age(self):
         """
             Test multiple modules having a MINIDUMP_MODULE.CvRecord that is valid,
-            and contains a PDB70 value whose age is valid and whose UUID values are 
+            and contains a PDB70 value whose age is valid and whose UUID values are
             valid. Ensure we decode the UUID and include the age field in the UUID.
         """
         modules = self.get_minidump_modules("linux-arm-uuids-with-age.yaml")
@@ -121,13 +121,31 @@ class MiniDumpUUIDTestCase(TestBase):
         self.verify_module(modules[0], "/not/exist/a", None)
         self.verify_module(modules[1], "/not/exist/b", None)
 
+    def test_uuid_modules_elf_build_id_same(self):
+        """
+            Test multiple modules having a MINIDUMP_MODULE.CvRecord that is
+            valid, and contains a ELF build ID whose value is the same. There
+            is an assert in the PlaceholderObjectFile that was firing when we
+            encountered this which was crashing the process that was checking
+            if PlaceholderObjectFile.m_base was the same as the address this
+            fake module was being loaded at. We need to ensure we don't crash
+            in such cases and that we add both modules even though they have
+            the same UUID.
+        """
+        modules = self.get_minidump_modules("linux-arm-same-uuids.yaml")
+        self.assertEqual(2, len(modules))
+        self.verify_module(modules[0], "/file/does/not/exist/a",
+                           '11223344-1122-3344-1122-334411223344-11223344')
+        self.verify_module(modules[1], "/file/does/not/exist/b",
+                           '11223344-1122-3344-1122-334411223344-11223344')
+
     @expectedFailureAll(oslist=["windows"])
     def test_partial_uuid_match(self):
         """
             Breakpad has been known to create minidump files using CvRecord in each
             module whose signature is set to PDB70 where the UUID only contains the
-            first 16 bytes of a 20 byte ELF build ID. Code was added to 
-            ProcessMinidump.cpp to deal with this and allows partial UUID matching. 
+            first 16 bytes of a 20 byte ELF build ID. Code was added to
+            ProcessMinidump.cpp to deal with this and allows partial UUID matching.
 
             This test verifies that if we have a minidump with a 16 byte UUID, that
             we are able to associate a symbol file with a 20 byte UUID only if the
@@ -141,16 +159,16 @@ class MiniDumpUUIDTestCase(TestBase):
         self.dbg.HandleCommand(cmd)
         modules = self.get_minidump_modules("linux-arm-partial-uuids-match.yaml")
         self.assertEqual(1, len(modules))
-        self.verify_module(modules[0], so_path, 
+        self.verify_module(modules[0], so_path,
                            "7295E17C-6668-9E05-CBB5-DEE5003865D5-5267C116")
 
     def test_partial_uuid_mismatch(self):
         """
             Breakpad has been known to create minidump files using CvRecord in each
             module whose signature is set to PDB70 where the UUID only contains the
-            first 16 bytes of a 20 byte ELF build ID. Code was added to 
-            ProcessMinidump.cpp to deal with this and allows partial UUID matching. 
-            
+            first 16 bytes of a 20 byte ELF build ID. Code was added to
+            ProcessMinidump.cpp to deal with this and allows partial UUID matching.
+
             This test verifies that if we have a minidump with a 16 byte UUID, that
             we are not able to associate a symbol file with a 20 byte UUID only if
             any of the first 16 bytes do not match. In this case we will see the UUID
@@ -163,7 +181,7 @@ class MiniDumpUUIDTestCase(TestBase):
         modules = self.get_minidump_modules("linux-arm-partial-uuids-mismatch.yaml")
         self.assertEqual(1, len(modules))
         self.verify_module(modules[0],
-                           "/invalid/path/on/current/system/libuuidmismatch.so", 
+                           "/invalid/path/on/current/system/libuuidmismatch.so",
                            "7295E17C-6668-9E05-CBB5-DEE5003865D5")
 
     def test_relative_module_name(self):

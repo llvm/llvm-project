@@ -2,7 +2,7 @@
 import subprocess
 import sys
 
-dotest_path = '@LLDB_SOURCE_DIR@/test/dotest.py'
+dotest_path = '@LLDB_SOURCE_DIR@/test/API/dotest.py'
 build_dir = '@LLDB_TEST_BUILD_DIRECTORY@'
 dotest_args_str = '@LLDB_DOTEST_ARGS@'
 

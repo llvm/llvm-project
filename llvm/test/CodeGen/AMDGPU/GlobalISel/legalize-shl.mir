@@ -596,21 +596,24 @@ body: |
     ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C1]]
     ; SI: [[COPY3:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
     ; SI: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY3]], [[AND]](s32)
+    ; SI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[SHL]](s32)
     ; SI: [[COPY4:%[0-9]+]]:_(s32) = COPY [[LSHR2]](s32)
     ; SI: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C1]]
     ; SI: [[COPY5:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
     ; SI: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY5]], [[AND1]](s32)
+    ; SI: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[SHL1]](s32)
     ; SI: [[COPY6:%[0-9]+]]:_(s32) = COPY [[BITCAST3]](s32)
     ; SI: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY6]], [[C1]]
     ; SI: [[COPY7:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
     ; SI: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[COPY7]], [[AND2]](s32)
-    ; SI: [[COPY8:%[0-9]+]]:_(s32) = COPY [[SHL]](s32)
-    ; SI: [[COPY9:%[0-9]+]]:_(s32) = COPY [[SHL1]](s32)
-    ; SI: [[COPY10:%[0-9]+]]:_(s32) = COPY [[SHL2]](s32)
-    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32)
-    ; SI: [[TRUNC:%[0-9]+]]:_(<3 x s16>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
-    ; SI: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; SI: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[TRUNC]](<3 x s16>), 0
+    ; SI: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[SHL2]](s32)
+    ; SI: [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; SI: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF2]](s16)
+    ; SI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; SI: [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
+    ; SI: [[DEF3:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; SI: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF3]], [[EXTRACT2]](<3 x s16>), 0
     ; SI: $vgpr0_vgpr1 = COPY [[INSERT2]](<4 x s16>)
     ; VI-LABEL: name: test_shl_v3s16_v3s16
     ; VI: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
@@ -641,13 +644,13 @@ body: |
     ; VI: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC]], [[TRUNC3]](s16)
     ; VI: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[TRUNC1]], [[TRUNC4]](s16)
     ; VI: [[SHL2:%[0-9]+]]:_(s16) = G_SHL [[TRUNC2]], [[TRUNC5]](s16)
-    ; VI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SHL]](s16)
-    ; VI: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[SHL1]](s16)
-    ; VI: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[SHL2]](s16)
-    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32)
-    ; VI: [[TRUNC6:%[0-9]+]]:_(<3 x s16>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
-    ; VI: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; VI: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[TRUNC6]](<3 x s16>), 0
+    ; VI: [[DEF2:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[SHL]](s16), [[SHL1]](s16)
+    ; VI: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[SHL2]](s16), [[DEF2]](s16)
+    ; VI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; VI: [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
+    ; VI: [[DEF3:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; VI: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF3]], [[EXTRACT2]](<3 x s16>), 0
     ; VI: $vgpr0_vgpr1 = COPY [[INSERT2]](<4 x s16>)
     ; GFX9-LABEL: name: test_shl_v3s16_v3s16
     ; GFX9: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
@@ -732,8 +735,10 @@ body: |
     ; SI: [[COPY9:%[0-9]+]]:_(s32) = COPY [[LSHR1]](s32)
     ; SI: [[SHL3:%[0-9]+]]:_(s32) = G_SHL [[COPY9]], [[AND3]](s32)
     ; SI: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[SHL3]](s32)
-    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16), [[TRUNC2]](s16), [[TRUNC3]](s16)
-    ; SI: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<4 x s16>)
+    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; SI: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[TRUNC3]](s16)
+    ; SI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; SI: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     ; VI-LABEL: name: test_shl_v4s16_v4s16
     ; VI: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
     ; VI: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr2_vgpr3
@@ -760,8 +765,10 @@ body: |
     ; VI: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[TRUNC1]], [[TRUNC5]](s16)
     ; VI: [[SHL2:%[0-9]+]]:_(s16) = G_SHL [[TRUNC2]], [[TRUNC6]](s16)
     ; VI: [[SHL3:%[0-9]+]]:_(s16) = G_SHL [[TRUNC3]], [[TRUNC7]](s16)
-    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[SHL]](s16), [[SHL1]](s16), [[SHL2]](s16), [[SHL3]](s16)
-    ; VI: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<4 x s16>)
+    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[SHL]](s16), [[SHL1]](s16)
+    ; VI: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[SHL2]](s16), [[SHL3]](s16)
+    ; VI: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR1]](<2 x s16>)
+    ; VI: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     ; GFX9-LABEL: name: test_shl_v4s16_v4s16
     ; GFX9: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
     ; GFX9: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr2_vgpr3

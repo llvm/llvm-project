@@ -42,7 +42,7 @@ void check()
     ASSERT_SAME_TYPE(Expected, typename std::underlying_type<T>::type);
 #if TEST_STD_VER > 11
     ASSERT_SAME_TYPE(Expected, typename std::underlying_type_t<T>);
-#endif  
+#endif
 }
 
 enum E { V = INT_MIN };
@@ -79,7 +79,9 @@ int main(int, char**)
 //  SFINAE-able underlying_type
 #if TEST_STD_VER > 17
     static_assert( has_type_member<E>::value, "");
+#ifdef TEST_UNSIGNED_UNDERLYING_TYPE
     static_assert( has_type_member<F>::value, "");
+#endif // TEST_UNSIGNED_UNDERLYING_TYPE
     static_assert( has_type_member<G>::value, "");
 
     static_assert(!has_type_member<void>::value, "");

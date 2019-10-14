@@ -46,20 +46,20 @@ namespace exegesis {
 // Note that in this case, P016 does not contribute any cycles, so it would
 // be removed by this function.
 // FIXME: Move this to MCSubtargetInfo and use it in llvm-mca.
-static llvm::SmallVector<llvm::MCWriteProcResEntry, 8>
-getNonRedundantWriteProcRes(const llvm::MCSchedClassDesc &SCDesc,
-                            const llvm::MCSubtargetInfo &STI) {
-  llvm::SmallVector<llvm::MCWriteProcResEntry, 8> Result;
+static SmallVector<MCWriteProcResEntry, 8>
+getNonRedundantWriteProcRes(const MCSchedClassDesc &SCDesc,
+                            const MCSubtargetInfo &STI) {
+  SmallVector<MCWriteProcResEntry, 8> Result;
   const auto &SM = STI.getSchedModel();
   const unsigned NumProcRes = SM.getNumProcResourceKinds();
 
   // This assumes that the ProcResDescs are sorted in topological order, which
   // is guaranteed by the tablegen backend.
-  llvm::SmallVector<float, 32> ProcResUnitUsage(NumProcRes);
+  SmallVector<float, 32> ProcResUnitUsage(NumProcRes);
   for (const auto *WPR = STI.getWriteProcResBegin(&SCDesc),
                   *const WPREnd = STI.getWriteProcResEnd(&SCDesc);
        WPR != WPREnd; ++WPR) {
-    const llvm::MCProcResourceDesc *const ProcResDesc =
+    const MCProcResourceDesc *const ProcResDesc =
         SM.getProcResource(WPR->ProcResourceIdx);
     if (ProcResDesc->SubUnitsIdxBegin == nullptr) {
       // This is a ProcResUnit.
@@ -123,11 +123,11 @@ getNonRedundantWriteProcRes(const llvm::MCSchedClassDesc &SCDesc,
 //     RemainingPressure = 0.0
 // We stop as there is no remaining budget to distribute.
 static void distributePressure(float RemainingPressure,
-                               llvm::SmallVector<uint16_t, 32> Subunits,
-                               llvm::SmallVector<float, 32> &DensePressure) {
+                               SmallVector<uint16_t, 32> Subunits,
+                               SmallVector<float, 32> &DensePressure) {
   // Find the number of subunits with minimal pressure (they are at the
   // front).
-  llvm::sort(Subunits, [&DensePressure](const uint16_t A, const uint16_t B) {
+  sort(Subunits, [&DensePressure](const uint16_t A, const uint16_t B) {
     return DensePressure[A] < DensePressure[B];
   });
   const auto getPressureForSubunit = [&DensePressure,
@@ -171,27 +171,26 @@ static void distributePressure(float RemainingPressure,
   }
 }
 
-std::vector<std::pair<uint16_t, float>> computeIdealizedProcResPressure(
-    const llvm::MCSchedModel &SM,
-    llvm::SmallVector<llvm::MCWriteProcResEntry, 8> WPRS) {
+std::vector<std::pair<uint16_t, float>>
+computeIdealizedProcResPressure(const MCSchedModel &SM,
+                                SmallVector<MCWriteProcResEntry, 8> WPRS) {
   // DensePressure[I] is the port pressure for Proc Resource I.
-  llvm::SmallVector<float, 32> DensePressure(SM.getNumProcResourceKinds());
-  llvm::sort(WPRS, [](const llvm::MCWriteProcResEntry &A,
-                      const llvm::MCWriteProcResEntry &B) {
+  SmallVector<float, 32> DensePressure(SM.getNumProcResourceKinds());
+  sort(WPRS, [](const MCWriteProcResEntry &A, const MCWriteProcResEntry &B) {
     return A.ProcResourceIdx < B.ProcResourceIdx;
   });
-  for (const llvm::MCWriteProcResEntry &WPR : WPRS) {
+  for (const MCWriteProcResEntry &WPR : WPRS) {
     // Get units for the entry.
-    const llvm::MCProcResourceDesc *const ProcResDesc =
+    const MCProcResourceDesc *const ProcResDesc =
         SM.getProcResource(WPR.ProcResourceIdx);
     if (ProcResDesc->SubUnitsIdxBegin == nullptr) {
       // This is a ProcResUnit.
       DensePressure[WPR.ProcResourceIdx] += WPR.Cycles;
     } else {
       // This is a ProcResGroup.
-      llvm::SmallVector<uint16_t, 32> Subunits(ProcResDesc->SubUnitsIdxBegin,
-                                               ProcResDesc->SubUnitsIdxBegin +
-                                                   ProcResDesc->NumUnits);
+      SmallVector<uint16_t, 32> Subunits(ProcResDesc->SubUnitsIdxBegin,
+                                         ProcResDesc->SubUnitsIdxBegin +
+                                             ProcResDesc->NumUnits);
       distributePressure(WPR.Cycles, Subunits, DensePressure);
     }
   }
@@ -204,7 +203,7 @@ std::vector<std::pair<uint16_t, float>> computeIdealizedProcResPressure(
   return Pressure;
 }
 
-ResolvedSchedClass::ResolvedSchedClass(const llvm::MCSubtargetInfo &STI,
+ResolvedSchedClass::ResolvedSchedClass(const MCSubtargetInfo &STI,
                                        unsigned ResolvedSchedClassId,
                                        bool WasVariant)
     : SchedClassId(ResolvedSchedClassId),
@@ -217,9 +216,9 @@ ResolvedSchedClass::ResolvedSchedClass(const llvm::MCSubtargetInfo &STI,
          "ResolvedSchedClass should never be variant");
 }
 
-static unsigned ResolveVariantSchedClassId(const llvm::MCSubtargetInfo &STI,
+static unsigned ResolveVariantSchedClassId(const MCSubtargetInfo &STI,
                                            unsigned SchedClassId,
-                                           const llvm::MCInst &MCI) {
+                                           const MCInst &MCI) {
   const auto &SM = STI.getSchedModel();
   while (SchedClassId && SM.getSchedClassDesc(SchedClassId)->isVariant())
     SchedClassId =
@@ -228,9 +227,9 @@ static unsigned ResolveVariantSchedClassId(const llvm::MCSubtargetInfo &STI,
 }
 
 std::pair<unsigned /*SchedClassId*/, bool /*WasVariant*/>
-ResolvedSchedClass::resolveSchedClassId(
-    const llvm::MCSubtargetInfo &SubtargetInfo,
-    const llvm::MCInstrInfo &InstrInfo, const llvm::MCInst &MCI) {
+ResolvedSchedClass::resolveSchedClassId(const MCSubtargetInfo &SubtargetInfo,
+                                        const MCInstrInfo &InstrInfo,
+                                        const MCInst &MCI) {
   unsigned SchedClassId = InstrInfo.get(MCI.getOpcode()).getSchedClass();
   const bool WasVariant = SchedClassId && SubtargetInfo.getSchedModel()
                                               .getSchedClassDesc(SchedClassId)
@@ -240,11 +239,11 @@ ResolvedSchedClass::resolveSchedClassId(
 }
 
 // Returns a ProxResIdx by id or name.
-static unsigned findProcResIdx(const llvm::MCSubtargetInfo &STI,
-                               const llvm::StringRef NameOrId) {
+static unsigned findProcResIdx(const MCSubtargetInfo &STI,
+                               const StringRef NameOrId) {
   // Interpret the key as an ProcResIdx.
   unsigned ProcResIdx = 0;
-  if (llvm::to_integer(NameOrId, ProcResIdx, 10))
+  if (to_integer(NameOrId, ProcResIdx, 10))
     return ProcResIdx;
   // Interpret the key as a ProcRes name.
   const auto &SchedModel = STI.getSchedModel();
@@ -256,7 +255,7 @@ static unsigned findProcResIdx(const llvm::MCSubtargetInfo &STI,
 }
 
 std::vector<BenchmarkMeasure> ResolvedSchedClass::getAsPoint(
-    InstructionBenchmark::ModeE Mode, const llvm::MCSubtargetInfo &STI,
+    InstructionBenchmark::ModeE Mode, const MCSubtargetInfo &STI,
     ArrayRef<PerInstructionStats> Representative) const {
   const size_t NumMeasurements = Representative.size();
 
@@ -270,13 +269,13 @@ std::vector<BenchmarkMeasure> ResolvedSchedClass::getAsPoint(
     LatencyMeasure.PerInstructionValue = 0.0;
 
     for (unsigned I = 0; I < SCDesc->NumWriteLatencyEntries; ++I) {
-      const llvm::MCWriteLatencyEntry *const WLE =
+      const MCWriteLatencyEntry *const WLE =
           STI.getWriteLatencyEntry(SCDesc, I);
       LatencyMeasure.PerInstructionValue =
           std::max<double>(LatencyMeasure.PerInstructionValue, WLE->Cycles);
     }
   } else if (Mode == InstructionBenchmark::Uops) {
-    for (const auto &I : llvm::zip(SchedClassPoint, Representative)) {
+    for (const auto &I : zip(SchedClassPoint, Representative)) {
       BenchmarkMeasure &Measure = std::get<0>(I);
       const PerInstructionStats &Stats = std::get<1>(I);
 
@@ -296,9 +295,9 @@ std::vector<BenchmarkMeasure> ResolvedSchedClass::getAsPoint(
       } else if (Key == "NumMicroOps") {
         Measure.PerInstructionValue = SCDesc->NumMicroOps;
       } else {
-        llvm::errs() << "expected `key` to be either a ProcResIdx or a ProcRes "
-                        "name, got "
-                     << Key << "\n";
+        errs() << "expected `key` to be either a ProcResIdx or a ProcRes "
+                  "name, got "
+               << Key << "\n";
         return {};
       }
     }

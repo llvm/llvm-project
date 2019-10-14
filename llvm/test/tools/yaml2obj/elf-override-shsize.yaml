@@ -74,7 +74,7 @@ Sections:
 # RUN: yaml2obj --docnum=3 %s -o %t3
 # RUN: od -t x1 -v %t2 > %t.txt
 # RUN: od -t x1 -v %t3 >> %t.txt
-# RUN: FileCheck %s --input-file=%t.txt --check-prefix=CASE2
+# RUN: FileCheck %s --input-file=%t.txt --ignore-case --check-prefix=CASE2
 
 # CASE2: [[OFFSET:.*]] fe fe fe fe fe fe fe fe
 # CASE2: [[FILESIZE:.*]]{{$}}
@@ -136,7 +136,7 @@ Sections:
 ## bytes written is equal to Size in this case.
 
 # RUN: yaml2obj --docnum=5 %s -o %t5
-# RUN: od -t x1 -v %t5 | FileCheck %s --check-prefix=CASE5
+# RUN: od -t x1 -v %t5 | FileCheck %s --ignore-case --check-prefix=CASE5
 
 # CASE5: aa aa 00 00 bb bb
 

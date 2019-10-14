@@ -72,10 +72,16 @@ public:
   TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
                                                     bool IsZeroCmp) const;
   bool enableInterleavedAccessVectorization();
-  unsigned getNumberOfRegisters(bool Vector);
+
+  enum PPCRegisterClass {
+    GPRRC, FPRRC, VRRC, VSXRC
+  };
+  unsigned getNumberOfRegisters(unsigned ClassID) const;
+  unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const;
+  const char* getRegisterClassName(unsigned ClassID) const;
   unsigned getRegisterBitWidth(bool Vector) const;
-  unsigned getCacheLineSize();
-  unsigned getPrefetchDistance();
+  unsigned getCacheLineSize() const override;
+  unsigned getPrefetchDistance() const override;
   unsigned getMaxInterleaveFactor(unsigned VF);
   int vectorCostAdjustment(int Cost, unsigned Opcode, Type *Ty1, Type *Ty2);
   int getArithmeticInstrCost(

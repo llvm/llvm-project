@@ -23,5 +23,5 @@ add_clang_library(clangTidyUtils
   clangBasic
   clangLex
   clangTidy
-  clangToolingRefactoring
+  clangTransformer
   )

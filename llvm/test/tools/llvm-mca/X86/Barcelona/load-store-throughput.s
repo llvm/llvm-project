@@ -138,6 +138,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     1.0    1.0    0.0       movb	(%rcx), %bpl
 # CHECK-NEXT: 2.     1     2.0    2.0    0.0       movb	(%rdx), %sil
 # CHECK-NEXT: 3.     1     7.0    0.0    0.0       movb	%dil, (%rbx)
+# CHECK-NEXT:        1     2.8    1.0    0.0       <total>
 
 # CHECK:      [1] Code Region
 
@@ -234,6 +235,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     1.0    1.0    0.0       movw	(%rcx), %bp
 # CHECK-NEXT: 2.     1     2.0    2.0    0.0       movw	(%rdx), %si
 # CHECK-NEXT: 3.     1     7.0    0.0    0.0       movw	%di, (%rbx)
+# CHECK-NEXT:        1     2.8    1.0    0.0       <total>
 
 # CHECK:      [2] Code Region
 
@@ -330,6 +332,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     1.0    1.0    0.0       movl	(%rcx), %ebp
 # CHECK-NEXT: 2.     1     2.0    2.0    0.0       movl	(%rdx), %esi
 # CHECK-NEXT: 3.     1     7.0    0.0    0.0       movl	%edi, (%rbx)
+# CHECK-NEXT:        1     2.8    1.0    0.0       <total>
 
 # CHECK:      [3] Code Region
 
@@ -426,6 +429,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     1.0    1.0    0.0       movq	(%rcx), %rbp
 # CHECK-NEXT: 2.     1     2.0    2.0    0.0       movq	(%rdx), %rsi
 # CHECK-NEXT: 3.     1     7.0    0.0    0.0       movq	%rdi, (%rbx)
+# CHECK-NEXT:        1     2.8    1.0    0.0       <total>
 
 # CHECK:      [4] Code Region
 
@@ -522,6 +526,7 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     1.0    1.0    0.0       movd	(%rcx), %mm1
 # CHECK-NEXT: 2.     1     2.0    2.0    0.0       movd	(%rdx), %mm2
 # CHECK-NEXT: 3.     1     7.0    0.0    0.0       movd	%mm3, (%rbx)
+# CHECK-NEXT:        1     2.8    1.0    0.0       <total>
 
 # CHECK:      [5] Code Region
 
@@ -619,3 +624,4 @@ movaps %xmm3, (%rbx)
 # CHECK-NEXT: 1.     1     1.0    1.0    0.0       movaps	(%rcx), %xmm1
 # CHECK-NEXT: 2.     1     2.0    2.0    0.0       movaps	(%rdx), %xmm2
 # CHECK-NEXT: 3.     1     8.0    0.0    0.0       movaps	%xmm3, (%rbx)
+# CHECK-NEXT:        1     3.0    1.0    0.0       <total>

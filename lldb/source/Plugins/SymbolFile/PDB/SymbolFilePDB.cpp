@@ -1422,7 +1422,6 @@ void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
     symtab.AddSymbol(
         Symbol(pub_symbol->getSymIndexId(),   // symID
                pub_symbol->getName().c_str(), // name
-               true,                          // name_is_mangled
                pub_symbol->isCode() ? eSymbolTypeCode : eSymbolTypeData, // type
                true,      // external
                false,     // is_debug

@@ -259,7 +259,7 @@ private:
   InputSectionBase *createInputSection(const Elf_Shdr &sec);
   StringRef getSectionName(const Elf_Shdr &sec);
 
-  bool shouldMerge(const Elf_Shdr &sec);
+  bool shouldMerge(const Elf_Shdr &sec, StringRef name);
 
   // Each ELF symbol contains a section index which the symbol belongs to.
   // However, because the number of bits dedicated for that is limited, a

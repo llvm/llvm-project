@@ -12,10 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define AMDGPU_LOG2E_F     1.44269504088896340735992468100189214f
-#define AMDGPU_LN2_F       0.693147180559945309417232121458176568f
-#define AMDGPU_LN10_F      2.30258509299404568401799145468436421f
-
 #include "AMDGPUISelLowering.h"
 #include "AMDGPU.h"
 #include "AMDGPUCallLowering.h"
@@ -37,6 +33,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/MathExtras.h"
 using namespace llvm;
 
 #include "AMDGPUGenCallingConv.inc"
@@ -1135,9 +1132,9 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::FROUND: return LowerFROUND(Op, DAG);
   case ISD::FFLOOR: return LowerFFLOOR(Op, DAG);
   case ISD::FLOG:
-    return LowerFLOG(Op, DAG, 1 / AMDGPU_LOG2E_F);
+    return LowerFLOG(Op, DAG, 1.0F / numbers::log2ef);
   case ISD::FLOG10:
-    return LowerFLOG(Op, DAG, AMDGPU_LN2_F / AMDGPU_LN10_F);
+    return LowerFLOG(Op, DAG, numbers::ln2f / numbers::ln10f);
   case ISD::FEXP:
     return lowerFEXP(Op, DAG);
   case ISD::SINT_TO_FP: return LowerSINT_TO_FP(Op, DAG);
@@ -2285,30 +2282,13 @@ SDValue AMDGPUTargetLowering::LowerFLOG(SDValue Op, SelectionDAG &DAG,
   return DAG.getNode(ISD::FMUL, SL, VT, Log2Operand, Log2BaseInvertedOperand);
 }
 
-// Return M_LOG2E of appropriate type
-static SDValue getLog2EVal(SelectionDAG &DAG, const SDLoc &SL, EVT VT) {
-  switch (VT.getScalarType().getSimpleVT().SimpleTy) {
-  case MVT::f32:
-    return DAG.getConstantFP(1.44269504088896340735992468100189214f, SL, VT);
-  case MVT::f16:
-    return DAG.getConstantFP(
-      APFloat(APFloat::IEEEhalf(), "1.44269504088896340735992468100189214"),
-      SL, VT);
-  case MVT::f64:
-    return DAG.getConstantFP(
-      APFloat(APFloat::IEEEdouble(), "0x1.71547652b82fep+0"), SL, VT);
-  default:
-    llvm_unreachable("unsupported fp type");
-  }
-}
-
 // exp2(M_LOG2E_F * f);
 SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
 
-  const SDValue K = getLog2EVal(DAG, SL, VT);
+  const SDValue K = DAG.getConstantFP(numbers::log2e, SL, VT);
   SDValue Mul = DAG.getNode(ISD::FMUL, SL, VT, Src, K, Op->getFlags());
   return DAG.getNode(ISD::FEXP2, SL, VT, Mul, Op->getFlags());
 }
@@ -2844,54 +2824,6 @@ bool AMDGPUTargetLowering::shouldCombineMemoryType(EVT VT) const {
 
   if (Size == 3 || (Size > 4 && (Size % 4 != 0)))
     return false;
-
-  return true;
-}
-
-// Find a load or store from corresponding pattern root.
-// Roots may be build_vector, bitconvert or their combinations.
-static MemSDNode* findMemSDNode(SDNode *N) {
-  N = AMDGPUTargetLowering::stripBitcast(SDValue(N,0)).getNode();
-  if (MemSDNode *MN = dyn_cast<MemSDNode>(N))
-    return MN;
-  assert(isa<BuildVectorSDNode>(N));
-  for (SDValue V : N->op_values())
-    if (MemSDNode *MN =
-          dyn_cast<MemSDNode>(AMDGPUTargetLowering::stripBitcast(V)))
-      return MN;
-  llvm_unreachable("cannot find MemSDNode in the pattern!");
-}
-
-bool AMDGPUTargetLowering::SelectFlatOffset(bool IsSigned,
-                                            SelectionDAG &DAG,
-                                            SDNode *N,
-                                            SDValue Addr,
-                                            SDValue &VAddr,
-                                            SDValue &Offset,
-                                            SDValue &SLC) const {
-  const GCNSubtarget &ST =
-        DAG.getMachineFunction().getSubtarget<GCNSubtarget>();
-  int64_t OffsetVal = 0;
-
-  if (ST.hasFlatInstOffsets() &&
-      (!ST.hasFlatSegmentOffsetBug() ||
-       findMemSDNode(N)->getAddressSpace() != AMDGPUAS::FLAT_ADDRESS) &&
-      DAG.isBaseWithConstantOffset(Addr)) {
-    SDValue N0 = Addr.getOperand(0);
-    SDValue N1 = Addr.getOperand(1);
-    int64_t COffsetVal = cast<ConstantSDNode>(N1)->getSExtValue();
-
-    const SIInstrInfo *TII = ST.getInstrInfo();
-    if (TII->isLegalFLATOffset(COffsetVal, findMemSDNode(N)->getAddressSpace(),
-                               IsSigned)) {
-      Addr = N0;
-      OffsetVal = COffsetVal;
-    }
-  }
-
-  VAddr = Addr;
-  Offset = DAG.getTargetConstant(OffsetVal, SDLoc(), MVT::i16);
-  SLC = DAG.getTargetConstant(0, SDLoc(), MVT::i1);
 
   return true;
 }

@@ -886,6 +886,14 @@ public:
 
   void Dump(Stream &s);
 
+  /// Dump clang AST types from the symbol file.
+  ///
+  /// \param[in] s
+  ///       A stream to send the dumped AST node(s) to
+  /// \param[in] symbol_name
+  ///       The name of the symbol to dump, if it is empty dump all the symbols
+  void DumpFromSymbolFile(Stream &s, llvm::StringRef symbol_name);
+
   void DumpValue(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
                  Stream *s, lldb::Format format, const DataExtractor &data,
                  lldb::offset_t data_offset, size_t data_byte_size,

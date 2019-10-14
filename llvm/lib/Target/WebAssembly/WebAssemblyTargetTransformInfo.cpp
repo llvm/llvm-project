@@ -25,10 +25,11 @@ WebAssemblyTTIImpl::getPopcntSupport(unsigned TyWidth) const {
   return TargetTransformInfo::PSK_FastHardware;
 }
 
-unsigned WebAssemblyTTIImpl::getNumberOfRegisters(bool Vector) {
-  unsigned Result = BaseT::getNumberOfRegisters(Vector);
+unsigned WebAssemblyTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
+  unsigned Result = BaseT::getNumberOfRegisters(ClassID);
 
   // For SIMD, use at least 16 registers, as a rough guess.
+  bool Vector = (ClassID == 1);
   if (Vector)
     Result = std::max(Result, 16u);
 

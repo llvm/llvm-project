@@ -76,6 +76,11 @@ public:
 
   lldb::UnwindPlanSP GetAssemblyUnwindPlan(Target &target, Thread &thread);
 
+  lldb::UnwindPlanSP GetObjectFileUnwindPlan(Target &target);
+
+  lldb::UnwindPlanSP GetObjectFileAugmentedUnwindPlan(Target &target,
+                                                      Thread &thread);
+
   lldb::UnwindPlanSP GetEHFrameUnwindPlan(Target &target);
 
   lldb::UnwindPlanSP GetEHFrameAugmentedUnwindPlan(Target &target,
@@ -113,10 +118,12 @@ private:
   std::recursive_mutex m_mutex;
 
   lldb::UnwindPlanSP m_unwind_plan_assembly_sp;
+  lldb::UnwindPlanSP m_unwind_plan_object_file_sp;
   lldb::UnwindPlanSP m_unwind_plan_eh_frame_sp;
   lldb::UnwindPlanSP m_unwind_plan_debug_frame_sp;
 
   // augmented by assembly inspection so it's valid everywhere
+  lldb::UnwindPlanSP m_unwind_plan_object_file_augmented_sp;
   lldb::UnwindPlanSP m_unwind_plan_eh_frame_augmented_sp;
   lldb::UnwindPlanSP m_unwind_plan_debug_frame_augmented_sp;
 
@@ -130,7 +137,9 @@ private:
   // Fetching the UnwindPlans can be expensive - if we've already attempted to
   // get one & failed, don't try again.
   bool m_tried_unwind_plan_assembly : 1, m_tried_unwind_plan_eh_frame : 1,
+      m_tried_unwind_plan_object_file : 1,
       m_tried_unwind_plan_debug_frame : 1,
+      m_tried_unwind_plan_object_file_augmented : 1,
       m_tried_unwind_plan_eh_frame_augmented : 1,
       m_tried_unwind_plan_debug_frame_augmented : 1,
       m_tried_unwind_plan_compact_unwind : 1,

@@ -121,3 +121,4 @@ vsqrtps     %ymm0, %ymm2
 # CHECK-NEXT: 5.     2     3.5    3.5    12.0      vsqrtps	%xmm0, %xmm2
 # CHECK-NEXT: 6.     2     19.5   19.5   0.0       vaddps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: 7.     2     7.5    7.5    8.0       vsqrtps	%ymm0, %ymm2
+# CHECK-NEXT:        2     7.9    7.9    6.1       <total>

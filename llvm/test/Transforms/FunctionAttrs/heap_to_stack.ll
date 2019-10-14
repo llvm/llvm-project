@@ -215,59 +215,45 @@ define void @test11() {
 
 ; TEST 12
 define i32 @irreducible_cfg(i32 %0) {
-  %2 = alloca i32, align 4
-  %3 = alloca i32*, align 8
-  %4 = alloca i32, align 4
-  store i32 %0, i32* %2, align 4
-  %5 = call noalias i8* @malloc(i64 4) #2
   ; CHECK: alloca i8, i64 4
-  ; CHECK-NEXT: %6 = bitcast
-  %6 = bitcast i8* %5 to i32*
-  store i32* %6, i32** %3, align 8
-  %7 = load i32*, i32** %3, align 8
-  store i32 10, i32* %7, align 4
-  %8 = load i32, i32* %2, align 4
-  %9 = icmp eq i32 %8, 1
-  br i1 %9, label %10, label %13
+  ; CHECK-NEXT: %3 = bitcast
+  %2 = call noalias i8* @malloc(i64 4)
+  %3 = bitcast i8* %2 to i32*
+  store i32 10, i32* %3, align 4
+  %4 = icmp eq i32 %0, 1
+  br i1 %4, label %5, label %7
 
-10:                                               ; preds = %1
-  %11 = load i32, i32* %2, align 4
-  %12 = add nsw i32 %11, 5
-  store i32 %12, i32* %2, align 4
-  br label %20
+5:                                                ; preds = %1
+  %6 = add nsw i32 %0, 5
+  br label %13
 
-13:                                               ; preds = %1
-  store i32 1, i32* %2, align 4
-  br label %14
+7:                                                ; preds = %1
+  br label %8
 
-14:                                               ; preds = %20, %13
-  %15 = load i32*, i32** %3, align 8
-  %16 = load i32, i32* %15, align 4
-  %17 = add nsw i32 %16, -1
-  store i32 %17, i32* %15, align 4
-  %18 = icmp ne i32 %16, 0
-  br i1 %18, label %19, label %23
+8:                                                ; preds = %13, %7
+  %.0 = phi i32 [ %14, %13 ], [ 1, %7 ]
+  %9 = load i32, i32* %3, align 4
+  %10 = add nsw i32 %9, -1
+  store i32 %10, i32* %3, align 4
+  %11 = icmp ne i32 %9, 0
+  br i1 %11, label %12, label %15
 
-19:                                               ; preds = %14
-  br label %20
+12:                                               ; preds = %8
+  br label %13
 
-20:                                               ; preds = %19, %10
-  %21 = load i32, i32* %2, align 4
-  %22 = add nsw i32 %21, 1
-  store i32 %22, i32* %2, align 4
-  br label %14
+13:                                               ; preds = %12, %5
+  %.1 = phi i32 [ %6, %5 ], [ %.0, %12 ]
+  %14 = add nsw i32 %.1, 1
+  br label %8
 
-23:                                               ; preds = %14
-  %24 = load i32*, i32** %3, align 8
-  %25 = load i32, i32* %24, align 4
-  store i32 %25, i32* %4, align 4
-  %26 = load i32*, i32** %3, align 8
-  %27 = bitcast i32* %26 to i8*
-  call void @free(i8* %27) #2
-  %28 = load i32*, i32** %3, align 8
-  %29 = load i32, i32* %28, align 4
-  ret i32 %29
+15:                                               ; preds = %8
+  %16 = load i32, i32* %3, align 4
+  %17 = bitcast i32* %3 to i8*
+  call void @free(i8* %17)
+  %18 = load i32, i32* %3, align 4
+  ret i32 %18
 }
+
 
 define i32 @malloc_in_loop(i32 %0) {
   %2 = alloca i32, align 4
@@ -286,7 +272,7 @@ define i32 @malloc_in_loop(i32 %0) {
   %9 = call noalias i8* @malloc(i64 4)
   ; CHECK: alloca i8, i64 4
   %10 = bitcast i8* %9 to i32*
-  store i32* %10, i32** %3, align 8
+  store i32 1, i32* %10, align 8
   br label %4
 
 11:                                               ; preds = %4
@@ -314,5 +300,39 @@ define void @test14() {
   tail call void @no_sync_func(i8* %1)
   tail call void @free(i8* %1)
   ; CHECK: tail call void @free(i8* noalias %1)
+  ret void
+}
+
+define void @test15(i64 %S) {
+  ; CHECK: %1 = tail call noalias i8* @malloc(i64 %S)
+  %1 = tail call noalias i8* @malloc(i64 %S)
+  ; CHECK-NEXT: @no_sync_func(i8* noalias %1)
+  tail call void @no_sync_func(i8* %1)
+  ; CHECK-NEXT: @free(i8* noalias %1)
+  tail call void @free(i8* %1)
+  ret void
+}
+
+define void @test16a(i8 %v, i8** %P) {
+  ; CHECK: %1 = alloca
+  %1 = tail call noalias i8* @malloc(i64 4)
+  ; CHECK-NEXT: store i8 %v, i8* %1
+  store i8 %v, i8* %1
+  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture %1)
+  tail call void @no_sync_func(i8* %1)
+  ; CHECK-NOT: @free(i8* %1)
+  tail call void @free(i8* %1)
+  ret void
+}
+
+define void @test16b(i8 %v, i8** %P) {
+  ; CHECK: %1 = tail call noalias i8* @malloc(i64 4)
+  %1 = tail call noalias i8* @malloc(i64 4)
+  ; CHECK-NEXT: store i8* %1, i8** %P
+  store i8* %1, i8** %P
+  ; CHECK-NEXT: @no_sync_func(i8* %1)
+  tail call void @no_sync_func(i8* %1)
+  ; CHECK-NEXT: @free(i8* %1)
+  tail call void @free(i8* %1)
   ret void
 }

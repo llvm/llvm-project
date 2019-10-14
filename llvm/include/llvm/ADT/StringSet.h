@@ -24,8 +24,8 @@ namespace llvm {
 
   /// StringSet - A wrapper for StringMap that provides set-like functionality.
   template <class AllocatorTy = MallocAllocator>
-  class StringSet : public StringMap<char, AllocatorTy> {
-    using base = StringMap<char, AllocatorTy>;
+  class StringSet : public StringMap<NoneType, AllocatorTy> {
+    using base = StringMap<NoneType, AllocatorTy>;
 
   public:
     StringSet() = default;
@@ -37,13 +37,13 @@ namespace llvm {
 
     std::pair<typename base::iterator, bool> insert(StringRef Key) {
       assert(!Key.empty());
-      return base::insert(std::make_pair(Key, '\0'));
+      return base::insert(std::make_pair(Key, None));
     }
 
     template <typename InputIt>
     void insert(const InputIt &Begin, const InputIt &End) {
       for (auto It = Begin; It != End; ++It)
-        base::insert(std::make_pair(*It, '\0'));
+        base::insert(std::make_pair(*It, None));
     }
 
     template <typename ValueTy>

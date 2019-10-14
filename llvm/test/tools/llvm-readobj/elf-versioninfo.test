@@ -77,38 +77,32 @@ DynamicSymbols:
     Binding:         STB_GLOBAL
 ...
 
-# LLVM:      Version symbols {
-# LLVM-NEXT:   Section Name: .gnu.version
-# LLVM-NEXT:   Address: 0x0
-# LLVM-NEXT:   Offset: 0x40
-# LLVM-NEXT:   Link: 7
-# LLVM-NEXT:   Symbols [
-# LLVM-NEXT:     Symbol {
-# LLVM-NEXT:       Version: 0
-# LLVM-NEXT:       Name:
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Symbol {
-# LLVM-NEXT:       Version: 2
-# LLVM-NEXT:       Name: sym1@@VERSION1
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Symbol {
-# LLVM-NEXT:       Version: 3
-# LLVM-NEXT:       Name: sym2@@VERSION2
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Symbol {
-# LLVM-NEXT:       Version: 4
-# LLVM-NEXT:       Name: sym3@v1
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Symbol {
-# LLVM-NEXT:       Version: 5
-# LLVM-NEXT:       Name: sym4@v2
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Symbol {
-# LLVM-NEXT:       Version: 6
-# LLVM-NEXT:       Name: sym5@v3
-# LLVM-NEXT:     }
-# LLVM-NEXT:   ]
-# LLVM-NEXT: }
+# LLVM:      Version symbols [
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Version: 0
+# LLVM-NEXT:     Name:
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Version: 2
+# LLVM-NEXT:     Name: sym1@@VERSION1
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Version: 3
+# LLVM-NEXT:     Name: sym2@@VERSION2
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Version: 4
+# LLVM-NEXT:     Name: sym3@v1
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Version: 5
+# LLVM-NEXT:     Name: sym4@v2
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Version: 6
+# LLVM-NEXT:     Name: sym5@v3
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
 # LLVM-NEXT: SHT_GNU_verdef {
 # LLVM-NEXT:   Definition {
 # LLVM-NEXT:     Version: 1

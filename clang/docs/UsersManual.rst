@@ -701,6 +701,13 @@ Other Options
 -------------
 Clang options that don't fit neatly into other categories.
 
+.. option:: -fgnuc-version=
+
+  This flag controls the value of ``__GNUC__`` and related macros. This flag
+  does not enable or disable any GCC extensions implemented in Clang. Setting
+  the version to zero causes Clang to leave ``__GNUC__`` and other
+  GNU-namespaced macros, such as ``__GXX_WEAK__``, undefined.
+
 .. option:: -MV
 
   When emitting a dependency file, use formatting conventions appropriate

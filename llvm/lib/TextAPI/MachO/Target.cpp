@@ -17,6 +17,36 @@
 namespace llvm {
 namespace MachO {
 
+Expected<Target> Target::create(StringRef TargetValue) {
+  auto Result = TargetValue.split('-');
+  auto ArchitectureStr = Result.first;
+  auto Architecture = getArchitectureFromName(ArchitectureStr);
+  auto PlatformStr = Result.second;
+  PlatformKind Platform;
+  Platform = StringSwitch<PlatformKind>(PlatformStr)
+                 .Case("macos", PlatformKind::macOS)
+                 .Case("ios", PlatformKind::iOS)
+                 .Case("tvos", PlatformKind::tvOS)
+                 .Case("watchos", PlatformKind::watchOS)
+                 .Case("bridgeos", PlatformKind::bridgeOS)
+                 .Case("maccatalyst", PlatformKind::macCatalyst)
+                 .Case("ios-simulator", PlatformKind::iOSSimulator)
+                 .Case("tvos-simulator", PlatformKind::tvOSSimulator)
+                 .Case("watchos-simulator", PlatformKind::watchOSSimulator)
+                 .Default(PlatformKind::unknown);
+
+  if (Platform == PlatformKind::unknown) {
+    if (PlatformStr.startswith("<") && PlatformStr.endswith(">")) {
+      PlatformStr = PlatformStr.drop_front().drop_back();
+      unsigned long long RawValue;
+      if (!PlatformStr.getAsInteger(10, RawValue))
+        Platform = (PlatformKind)RawValue;
+    }
+  }
+
+  return Target{Architecture, Platform};
+}
+
 Target::operator std::string() const {
   return (getArchitectureName(Arch) + " (" + getPlatformName(Platform) + ")")
       .str();

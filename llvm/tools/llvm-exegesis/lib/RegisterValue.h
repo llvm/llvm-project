@@ -24,9 +24,9 @@ namespace exegesis {
 
 // A simple object storing the value for a particular register.
 struct RegisterValue {
-  static RegisterValue zero(unsigned Reg) { return {Reg, llvm::APInt()}; }
+  static RegisterValue zero(unsigned Reg) { return {Reg, APInt()}; }
   unsigned Register;
-  llvm::APInt Value;
+  APInt Value;
 };
 
 enum class PredefinedValues {
@@ -43,8 +43,8 @@ enum class PredefinedValues {
   ONE_PLUS_ULP,   // The value just after 1.0
 };
 
-llvm::APInt bitcastFloatValue(const llvm::fltSemantics &FltSemantics,
-                              PredefinedValues Value);
+APInt bitcastFloatValue(const fltSemantics &FltSemantics,
+                        PredefinedValues Value);
 
 } // namespace exegesis
 } // namespace llvm

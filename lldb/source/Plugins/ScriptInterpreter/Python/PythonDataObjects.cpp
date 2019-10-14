@@ -1028,22 +1028,23 @@ bool PythonFile::Check(PyObject *py_obj) {
   // first-class object type anymore.  `PyFile_FromFd` is just a thin wrapper
   // over `io.open()`, which returns some object derived from `io.IOBase`. As a
   // result, the only way to detect a file in Python 3 is to check whether it
-  // inherits from `io.IOBase`.  Since it is possible for non-files to also
-  // inherit from `io.IOBase`, we additionally verify that it has the `fileno`
-  // attribute, which should guarantee that it is backed by the file system.
-  PythonObject io_module(PyRefType::Owned, PyImport_ImportModule("io"));
-  PythonDictionary io_dict(PyRefType::Borrowed,
-                           PyModule_GetDict(io_module.get()));
-  PythonObject io_base_class = io_dict.GetItemForKey(PythonString("IOBase"));
-
-  PythonObject object_type(PyRefType::Owned, PyObject_Type(py_obj));
-
-  if (1 != PyObject_IsSubclass(object_type.get(), io_base_class.get()))
+  // inherits from `io.IOBase`.
+  auto io_module = PythonModule::Import("io");
+  if (!io_module) {
+    llvm::consumeError(io_module.takeError());
     return false;
-  if (!object_type.HasAttribute("fileno"))
+  }
+  auto iobase = io_module.get().Get("IOBase");
+  if (!iobase) {
+    llvm::consumeError(iobase.takeError());
     return false;
-
-  return true;
+  }
+  int r = PyObject_IsInstance(py_obj, iobase.get().get());
+  if (r < 0) {
+    llvm::consumeError(exception()); // clear the exception and log it.
+    return false;
+  }
+  return !!r;
 #endif
 }
 
@@ -1095,6 +1096,20 @@ FileUP PythonFile::GetUnderlyingFile() const {
     return nullptr;
   return file;
 }
+
+namespace {
+class GIL {
+public:
+  GIL() {
+    m_state = PyGILState_Ensure();
+    assert(!PyErr_Occurred());
+  }
+  ~GIL() { PyGILState_Release(m_state); }
+
+protected:
+  PyGILState_STATE m_state;
+};
+} // namespace
 
 const char *PythonException::toCString() const {
   if (!m_repr_bytes)
@@ -1149,5 +1164,377 @@ std::error_code PythonException::convertToErrorCode() const {
 }
 
 char PythonException::ID = 0;
+
+llvm::Expected<uint32_t> GetOptionsForPyObject(const PythonObject &obj) {
+  uint32_t options = 0;
+#if PY_MAJOR_VERSION >= 3
+  auto readable = As<bool>(obj.CallMethod("readable"));
+  if (!readable)
+    return readable.takeError();
+  auto writable = As<bool>(obj.CallMethod("writable"));
+  if (!writable)
+    return writable.takeError();
+  if (readable.get())
+    options |= File::eOpenOptionRead;
+  if (writable.get())
+    options |= File::eOpenOptionWrite;
+#else
+  PythonString py_mode = obj.GetAttributeValue("mode").AsType<PythonString>();
+  options = File::GetOptionsFromMode(py_mode.GetString());
+#endif
+  return options;
+}
+
+// Base class template for python files.   All it knows how to do
+// is hold a reference to the python object and close or flush it
+// when the File is closed.
+namespace {
+template <typename Base> class OwnedPythonFile : public Base {
+public:
+  template <typename... Args>
+  OwnedPythonFile(const PythonFile &file, bool borrowed, Args... args)
+      : Base(args...), m_py_obj(file), m_borrowed(borrowed) {
+    assert(m_py_obj);
+  }
+
+  ~OwnedPythonFile() override {
+    assert(m_py_obj);
+    GIL takeGIL;
+    Close();
+    m_py_obj.Reset();
+  }
+
+  bool IsPythonSideValid() const {
+    GIL takeGIL;
+    auto closed = As<bool>(m_py_obj.GetAttribute("closed"));
+    if (!closed) {
+      llvm::consumeError(closed.takeError());
+      return false;
+    }
+    return !closed.get();
+  }
+
+  bool IsValid() const override {
+    return IsPythonSideValid() && Base::IsValid();
+  }
+
+  Status Close() override {
+    assert(m_py_obj);
+    Status py_error, base_error;
+    GIL takeGIL;
+    if (!m_borrowed) {
+      auto r = m_py_obj.CallMethod("close");
+      if (!r)
+        py_error = Status(r.takeError());
+    }
+    base_error = Base::Close();
+    if (py_error.Fail())
+      return py_error;
+    return base_error;
+  };
+
+protected:
+  PythonFile m_py_obj;
+  bool m_borrowed;
+};
+} // namespace
+
+// A SimplePythonFile is a OwnedPythonFile that just does all I/O as
+// a NativeFile
+namespace {
+class SimplePythonFile : public OwnedPythonFile<NativeFile> {
+public:
+  SimplePythonFile(const PythonFile &file, bool borrowed, int fd,
+                   uint32_t options)
+      : OwnedPythonFile(file, borrowed, fd, options, false) {}
+};
+} // namespace
+
+#if PY_MAJOR_VERSION >= 3
+
+namespace {
+class PythonBuffer {
+public:
+  PythonBuffer &operator=(const PythonBuffer &) = delete;
+  PythonBuffer(const PythonBuffer &) = delete;
+
+  static Expected<PythonBuffer> Create(PythonObject &obj,
+                                       int flags = PyBUF_SIMPLE) {
+    Py_buffer py_buffer = {};
+    PyObject_GetBuffer(obj.get(), &py_buffer, flags);
+    if (!py_buffer.obj)
+      return llvm::make_error<PythonException>();
+    return PythonBuffer(py_buffer);
+  }
+
+  PythonBuffer(PythonBuffer &&other) {
+    m_buffer = other.m_buffer;
+    other.m_buffer.obj = nullptr;
+  }
+
+  ~PythonBuffer() {
+    if (m_buffer.obj)
+      PyBuffer_Release(&m_buffer);
+  }
+
+  Py_buffer &get() { return m_buffer; }
+
+private:
+  // takes ownership of the buffer.
+  PythonBuffer(const Py_buffer &py_buffer) : m_buffer(py_buffer) {}
+  Py_buffer m_buffer;
+};
+} // namespace
+
+// Shared methods between TextPythonFile and BinaryPythonFile
+namespace {
+class PythonIOFile : public OwnedPythonFile<File> {
+public:
+  PythonIOFile(const PythonFile &file, bool borrowed)
+      : OwnedPythonFile(file, borrowed) {}
+
+  ~PythonIOFile() override { Close(); }
+
+  bool IsValid() const override { return IsPythonSideValid(); }
+
+  Status Close() override {
+    assert(m_py_obj);
+    GIL takeGIL;
+    if (m_borrowed)
+      return Flush();
+    auto r = m_py_obj.CallMethod("close");
+    if (!r)
+      return Status(r.takeError());
+    return Status();
+  }
+
+  Status Flush() override {
+    GIL takeGIL;
+    auto r = m_py_obj.CallMethod("flush");
+    if (!r)
+      return Status(r.takeError());
+    return Status();
+  }
+
+};
+} // namespace
+
+namespace {
+class BinaryPythonFile : public PythonIOFile {
+protected:
+  int m_descriptor;
+
+public:
+  BinaryPythonFile(int fd, const PythonFile &file, bool borrowed)
+      : PythonIOFile(file, borrowed),
+        m_descriptor(File::DescriptorIsValid(fd) ? fd
+                                                 : File::kInvalidDescriptor) {}
+
+  int GetDescriptor() const override { return m_descriptor; }
+
+  Status Write(const void *buf, size_t &num_bytes) override {
+    GIL takeGIL;
+    PyObject *pybuffer_p = PyMemoryView_FromMemory(
+        const_cast<char *>((const char *)buf), num_bytes, PyBUF_READ);
+    if (!pybuffer_p)
+      return Status(llvm::make_error<PythonException>());
+    auto pybuffer = Take<PythonObject>(pybuffer_p);
+    num_bytes = 0;
+    auto bytes_written = As<long long>(m_py_obj.CallMethod("write", pybuffer));
+    if (!bytes_written)
+      return Status(bytes_written.takeError());
+    if (bytes_written.get() < 0)
+      return Status(".write() method returned a negative number!");
+    static_assert(sizeof(long long) >= sizeof(size_t), "overflow");
+    num_bytes = bytes_written.get();
+    return Status();
+  }
+
+  Status Read(void *buf, size_t &num_bytes) override {
+    GIL takeGIL;
+    static_assert(sizeof(long long) >= sizeof(size_t), "overflow");
+    auto pybuffer_obj =
+        m_py_obj.CallMethod("read", (unsigned long long)num_bytes);
+    if (!pybuffer_obj)
+      return Status(pybuffer_obj.takeError());
+    num_bytes = 0;
+    if (pybuffer_obj.get().IsNone()) {
+      // EOF
+      num_bytes = 0;
+      return Status();
+    }
+    auto pybuffer = PythonBuffer::Create(pybuffer_obj.get());
+    if (!pybuffer)
+      return Status(pybuffer.takeError());
+    memcpy(buf, pybuffer.get().get().buf, pybuffer.get().get().len);
+    num_bytes = pybuffer.get().get().len;
+    return Status();
+  }
+};
+} // namespace
+
+namespace {
+class TextPythonFile : public PythonIOFile {
+protected:
+  int m_descriptor;
+
+public:
+  TextPythonFile(int fd, const PythonFile &file, bool borrowed)
+      : PythonIOFile(file, borrowed),
+        m_descriptor(File::DescriptorIsValid(fd) ? fd
+                                                 : File::kInvalidDescriptor) {}
+
+  int GetDescriptor() const override { return m_descriptor; }
+
+  Status Write(const void *buf, size_t &num_bytes) override {
+    GIL takeGIL;
+    auto pystring =
+        PythonString::FromUTF8(llvm::StringRef((const char *)buf, num_bytes));
+    if (!pystring)
+      return Status(pystring.takeError());
+    num_bytes = 0;
+    auto bytes_written =
+        As<long long>(m_py_obj.CallMethod("write", pystring.get()));
+    if (!bytes_written)
+      return Status(bytes_written.takeError());
+    if (bytes_written.get() < 0)
+      return Status(".write() method returned a negative number!");
+    static_assert(sizeof(long long) >= sizeof(size_t), "overflow");
+    num_bytes = bytes_written.get();
+    return Status();
+  }
+
+  Status Read(void *buf, size_t &num_bytes) override {
+    GIL takeGIL;
+    size_t num_chars = num_bytes / 6;
+    size_t orig_num_bytes = num_bytes;
+    num_bytes = 0;
+    if (orig_num_bytes < 6) {
+      return Status("can't read less than 6 bytes from a utf8 text stream");
+    }
+    auto pystring = As<PythonString>(
+        m_py_obj.CallMethod("read", (unsigned long long)num_chars));
+    if (!pystring)
+      return Status(pystring.takeError());
+    if (pystring.get().IsNone()) {
+      // EOF
+      return Status();
+    }
+    auto stringref = pystring.get().AsUTF8();
+    if (!stringref)
+      return Status(stringref.takeError());
+    num_bytes = stringref.get().size();
+    memcpy(buf, stringref.get().begin(), num_bytes);
+    return Status();
+  }
+};
+} // namespace
+
+#endif
+
+llvm::Expected<FileSP> PythonFile::ConvertToFile(bool borrowed) {
+  if (!IsValid())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "invalid PythonFile");
+
+  int fd = PyObject_AsFileDescriptor(m_py_obj);
+  if (fd < 0) {
+    PyErr_Clear();
+    return ConvertToFileForcingUseOfScriptingIOMethods(borrowed);
+  }
+  auto options = GetOptionsForPyObject(*this);
+  if (!options)
+    return options.takeError();
+
+  // LLDB and python will not share I/O buffers.  We should probably
+  // flush the python buffers now.
+  auto r = CallMethod("flush");
+  if (!r)
+    return r.takeError();
+
+  FileSP file_sp;
+  if (borrowed) {
+    // In this case we we don't need to retain the python
+    // object at all.
+    file_sp = std::make_shared<NativeFile>(fd, options.get(), false);
+  } else {
+    file_sp = std::static_pointer_cast<File>(
+        std::make_shared<SimplePythonFile>(*this, borrowed, fd, options.get()));
+  }
+  if (!file_sp->IsValid())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "invalid File");
+
+  return file_sp;
+}
+
+llvm::Expected<FileSP>
+PythonFile::ConvertToFileForcingUseOfScriptingIOMethods(bool borrowed) {
+
+  assert(!PyErr_Occurred());
+
+  if (!IsValid())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "invalid PythonFile");
+
+#if PY_MAJOR_VERSION < 3
+
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "not supported on python 2");
+
+#else
+
+  int fd = PyObject_AsFileDescriptor(m_py_obj);
+  if (fd < 0) {
+    PyErr_Clear();
+    fd = File::kInvalidDescriptor;
+  }
+
+  auto io_module = PythonModule::Import("io");
+  if (!io_module)
+    return io_module.takeError();
+  auto textIOBase = io_module.get().Get("TextIOBase");
+  if (!textIOBase)
+    return textIOBase.takeError();
+  auto rawIOBase = io_module.get().Get("RawIOBase");
+  if (!rawIOBase)
+    return rawIOBase.takeError();
+  auto bufferedIOBase = io_module.get().Get("BufferedIOBase");
+  if (!bufferedIOBase)
+    return bufferedIOBase.takeError();
+
+  FileSP file_sp;
+
+  auto isTextIO = IsInstance(textIOBase.get());
+  if (!isTextIO)
+    return isTextIO.takeError();
+  if (isTextIO.get())
+    file_sp = std::static_pointer_cast<File>(
+        std::make_shared<TextPythonFile>(fd, *this, borrowed));
+
+  auto isRawIO = IsInstance(rawIOBase.get());
+  if (!isRawIO)
+    return isRawIO.takeError();
+  auto isBufferedIO = IsInstance(bufferedIOBase.get());
+  if (!isBufferedIO)
+    return isBufferedIO.takeError();
+
+  if (isRawIO.get() || isBufferedIO.get()) {
+    file_sp = std::static_pointer_cast<File>(
+        std::make_shared<BinaryPythonFile>(fd, *this, borrowed));
+  }
+
+  if (!file_sp)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "python file is neither text nor binary");
+
+  if (!file_sp->IsValid())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "invalid File");
+
+  return file_sp;
+
+#endif
+}
 
 #endif

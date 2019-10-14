@@ -77,3 +77,4 @@ lzcnt 2(%rsp), %cx
 # CHECK-NEXT: 0.     3     7.3    0.3    0.0       imull	%edx, %ecx
 # CHECK-NEXT: 1.     3     2.3    2.3    1.7       lzcntw	(%rsp), %cx
 # CHECK-NEXT: 2.     3     2.7    2.7    1.0       lzcntw	2(%rsp), %cx
+# CHECK-NEXT:        3     4.1    1.8    0.9       <total>

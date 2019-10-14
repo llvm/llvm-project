@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "GISelMITest.h"
 #include "llvm/CodeGen/GlobalISel/ConstantFoldingMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -29,140 +30,29 @@ using namespace MIPatternMatch;
 
 namespace {
 
-void initLLVM() {
-  InitializeAllTargets();
-  InitializeAllTargetMCs();
-  InitializeAllAsmPrinters();
-  InitializeAllAsmParsers();
-
-  PassRegistry *Registry = PassRegistry::getPassRegistry();
-  initializeCore(*Registry);
-  initializeCodeGen(*Registry);
-}
-
-/// Create a TargetMachine. As we lack a dedicated always available target for
-/// unittests, we go for "AArch64".
-std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
-  Triple TargetTriple("aarch64--");
-  std::string Error;
-  const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
-  if (!T)
-    return nullptr;
-
-  TargetOptions Options;
-  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine*>(
-      T->createTargetMachine("AArch64", "", "", Options, None, None,
-                             CodeGenOpt::Aggressive)));
-}
-
-std::unique_ptr<Module> parseMIR(LLVMContext &Context,
-                                 std::unique_ptr<MIRParser> &MIR,
-                                 const TargetMachine &TM, StringRef MIRCode,
-                                 const char *FuncName, MachineModuleInfo &MMI) {
-  SMDiagnostic Diagnostic;
-  std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
-  MIR = createMIRParser(std::move(MBuffer), Context);
-  if (!MIR)
-    return nullptr;
-
-  std::unique_ptr<Module> M = MIR->parseIRModule();
-  if (!M)
-    return nullptr;
-
-  M->setDataLayout(TM.createDataLayout());
-
-  if (MIR->parseMachineFunctions(*M, MMI))
-    return nullptr;
-
-  return M;
-}
-
-std::pair<std::unique_ptr<Module>, std::unique_ptr<MachineModuleInfo>>
-createDummyModule(LLVMContext &Context, const LLVMTargetMachine &TM,
-                  StringRef MIRFunc) {
-  SmallString<512> S;
-  StringRef MIRString = (Twine(R"MIR(
----
-...
-name: func
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-body: |
-  bb.1:
-    %0(s64) = COPY $x0
-    %1(s64) = COPY $x1
-    %2(s64) = COPY $x2
-)MIR") + Twine(MIRFunc) + Twine("...\n"))
-                            .toNullTerminatedStringRef(S);
-  std::unique_ptr<MIRParser> MIR;
-  auto MMI = std::make_unique<MachineModuleInfo>(&TM);
-  std::unique_ptr<Module> M =
-      parseMIR(Context, MIR, TM, MIRString, "func", *MMI);
-  return make_pair(std::move(M), std::move(MMI));
-}
-
-static MachineFunction *getMFFromMMI(const Module *M,
-                                     const MachineModuleInfo *MMI) {
-  Function *F = M->getFunction("func");
-  auto *MF = MMI->getMachineFunction(*F);
-  return MF;
-}
-
-static void collectCopies(SmallVectorImpl<Register> &Copies,
-                          MachineFunction *MF) {
-  for (auto &MBB : *MF)
-    for (MachineInstr &MI : MBB) {
-      if (MI.getOpcode() == TargetOpcode::COPY)
-        Copies.push_back(MI.getOperand(0).getReg());
-    }
-}
-
-TEST(PatternMatchInstr, MatchIntConstant) {
-  LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+TEST_F(GISelMITest, MatchIntConstant) {
+  setUp();
   if (!TM)
     return;
-  auto ModuleMMIPair = createDummyModule(Context, *TM, "");
-  MachineFunction *MF =
-      getMFFromMMI(ModuleMMIPair.first.get(), ModuleMMIPair.second.get());
-  SmallVector<Register, 4> Copies;
-  collectCopies(Copies, MF);
-  MachineBasicBlock *EntryMBB = &*MF->begin();
-  MachineIRBuilder B(*MF);
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  B.setInsertPt(*EntryMBB, EntryMBB->end());
   auto MIBCst = B.buildConstant(LLT::scalar(64), 42);
   int64_t Cst;
-  bool match = mi_match(MIBCst->getOperand(0).getReg(), MRI, m_ICst(Cst));
+  bool match = mi_match(MIBCst->getOperand(0).getReg(), *MRI, m_ICst(Cst));
   EXPECT_TRUE(match);
   EXPECT_EQ(Cst, 42);
 }
 
-TEST(PatternMatchInstr, MatchBinaryOp) {
-  LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+TEST_F(GISelMITest, MatchBinaryOp) {
+  setUp();
   if (!TM)
     return;
-  auto ModuleMMIPair = createDummyModule(Context, *TM, "");
-  MachineFunction *MF =
-      getMFFromMMI(ModuleMMIPair.first.get(), ModuleMMIPair.second.get());
-  SmallVector<Register, 4> Copies;
-  collectCopies(Copies, MF);
-  MachineBasicBlock *EntryMBB = &*MF->begin();
-  MachineIRBuilder B(*MF);
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  B.setInsertPt(*EntryMBB, EntryMBB->end());
   LLT s64 = LLT::scalar(64);
   auto MIBAdd = B.buildAdd(s64, Copies[0], Copies[1]);
   // Test case for no bind.
   bool match =
-      mi_match(MIBAdd->getOperand(0).getReg(), MRI, m_GAdd(m_Reg(), m_Reg()));
+      mi_match(MIBAdd->getOperand(0).getReg(), *MRI, m_GAdd(m_Reg(), m_Reg()));
   EXPECT_TRUE(match);
   Register Src0, Src1, Src2;
-  match = mi_match(MIBAdd->getOperand(0).getReg(), MRI,
+  match = mi_match(MIBAdd->getOperand(0).getReg(), *MRI,
                    m_GAdd(m_Reg(Src0), m_Reg(Src1)));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, Copies[0]);
@@ -172,14 +62,14 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
   auto MIBMul = B.buildMul(s64, MIBAdd, Copies[2]);
 
   // Try to match MUL.
-  match = mi_match(MIBMul->getOperand(0).getReg(), MRI,
+  match = mi_match(MIBMul->getOperand(0).getReg(), *MRI,
                    m_GMul(m_Reg(Src0), m_Reg(Src1)));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, MIBAdd->getOperand(0).getReg());
   EXPECT_EQ(Src1, Copies[2]);
 
   // Try to match MUL(ADD)
-  match = mi_match(MIBMul->getOperand(0).getReg(), MRI,
+  match = mi_match(MIBMul->getOperand(0).getReg(), *MRI,
                    m_GMul(m_GAdd(m_Reg(Src0), m_Reg(Src1)), m_Reg(Src2)));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, Copies[0]);
@@ -191,7 +81,7 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
   // Try to match MUL(Cst, Reg) on src of MUL(Reg, Cst) to validate
   // commutativity.
   int64_t Cst;
-  match = mi_match(MIBMul2->getOperand(0).getReg(), MRI,
+  match = mi_match(MIBMul2->getOperand(0).getReg(), *MRI,
                    m_GMul(m_ICst(Cst), m_Reg(Src0)));
   EXPECT_TRUE(match);
   EXPECT_EQ(Cst, 42);
@@ -199,14 +89,14 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
 
   // Make sure commutative doesn't work with something like SUB.
   auto MIBSub = B.buildSub(s64, Copies[0], B.buildConstant(s64, 42));
-  match = mi_match(MIBSub->getOperand(0).getReg(), MRI,
+  match = mi_match(MIBSub->getOperand(0).getReg(), *MRI,
                    m_GSub(m_ICst(Cst), m_Reg(Src0)));
   EXPECT_FALSE(match);
 
   auto MIBFMul = B.buildInstr(TargetOpcode::G_FMUL, {s64},
                               {Copies[0], B.buildConstant(s64, 42)});
   // Match and test commutativity for FMUL.
-  match = mi_match(MIBFMul->getOperand(0).getReg(), MRI,
+  match = mi_match(MIBFMul->getOperand(0).getReg(), *MRI,
                    m_GFMul(m_ICst(Cst), m_Reg(Src0)));
   EXPECT_TRUE(match);
   EXPECT_EQ(Cst, 42);
@@ -215,7 +105,7 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
   // FSUB
   auto MIBFSub = B.buildInstr(TargetOpcode::G_FSUB, {s64},
                               {Copies[0], B.buildConstant(s64, 42)});
-  match = mi_match(MIBFSub->getOperand(0).getReg(), MRI,
+  match = mi_match(MIBFSub->getOperand(0).getReg(), *MRI,
                    m_GFSub(m_Reg(Src0), m_Reg()));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, Copies[0]);
@@ -223,7 +113,7 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
   // Build AND %0, %1
   auto MIBAnd = B.buildAnd(s64, Copies[0], Copies[1]);
   // Try to match AND.
-  match = mi_match(MIBAnd->getOperand(0).getReg(), MRI,
+  match = mi_match(MIBAnd->getOperand(0).getReg(), *MRI,
                    m_GAnd(m_Reg(Src0), m_Reg(Src1)));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, Copies[0]);
@@ -232,72 +122,17 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
   // Build OR %0, %1
   auto MIBOr = B.buildOr(s64, Copies[0], Copies[1]);
   // Try to match OR.
-  match = mi_match(MIBOr->getOperand(0).getReg(), MRI,
+  match = mi_match(MIBOr->getOperand(0).getReg(), *MRI,
                    m_GOr(m_Reg(Src0), m_Reg(Src1)));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, Copies[0]);
   EXPECT_EQ(Src1, Copies[1]);
-
-  // Try to use the FoldableInstructionsBuilder to build binary ops.
-  ConstantFoldingMIRBuilder CFB(B.getState());
-  LLT s32 = LLT::scalar(32);
-  auto MIBCAdd =
-      CFB.buildAdd(s32, CFB.buildConstant(s32, 0), CFB.buildConstant(s32, 1));
-  // This should be a constant now.
-  match = mi_match(MIBCAdd->getOperand(0).getReg(), MRI, m_ICst(Cst));
-  EXPECT_TRUE(match);
-  EXPECT_EQ(Cst, 1);
-  auto MIBCAdd1 =
-      CFB.buildInstr(TargetOpcode::G_ADD, {s32},
-                     {CFB.buildConstant(s32, 0), CFB.buildConstant(s32, 1)});
-  // This should be a constant now.
-  match = mi_match(MIBCAdd1->getOperand(0).getReg(), MRI, m_ICst(Cst));
-  EXPECT_TRUE(match);
-  EXPECT_EQ(Cst, 1);
-
-  // Try one of the other constructors of MachineIRBuilder to make sure it's
-  // compatible.
-  ConstantFoldingMIRBuilder CFB1(*MF);
-  CFB1.setInsertPt(*EntryMBB, EntryMBB->end());
-  auto MIBCSub =
-      CFB1.buildInstr(TargetOpcode::G_SUB, {s32},
-                      {CFB1.buildConstant(s32, 1), CFB1.buildConstant(s32, 1)});
-  // This should be a constant now.
-  match = mi_match(MIBCSub->getOperand(0).getReg(), MRI, m_ICst(Cst));
-  EXPECT_TRUE(match);
-  EXPECT_EQ(Cst, 0);
-
-  auto MIBCSext1 =
-      CFB1.buildInstr(TargetOpcode::G_SEXT_INREG, {s32},
-                      {CFB1.buildConstant(s32, 0x01), uint64_t(8)});
-  // This should be a constant now.
-  match = mi_match(MIBCSext1->getOperand(0).getReg(), MRI, m_ICst(Cst));
-  EXPECT_TRUE(match);
-  EXPECT_EQ(1, Cst);
-
-  auto MIBCSext2 =
-      CFB1.buildInstr(TargetOpcode::G_SEXT_INREG, {s32},
-                      {CFB1.buildConstant(s32, 0x80), uint64_t(8)});
-  // This should be a constant now.
-  match = mi_match(MIBCSext2->getOperand(0).getReg(), MRI, m_ICst(Cst));
-  EXPECT_TRUE(match);
-  EXPECT_EQ(-0x80, Cst);
 }
 
-TEST(PatternMatchInstr, MatchFPUnaryOp) {
-  LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+TEST_F(GISelMITest, MatchFPUnaryOp) {
+  setUp();
   if (!TM)
     return;
-  auto ModuleMMIPair = createDummyModule(Context, *TM, "");
-  MachineFunction *MF =
-      getMFFromMMI(ModuleMMIPair.first.get(), ModuleMMIPair.second.get());
-  SmallVector<Register, 4> Copies;
-  collectCopies(Copies, MF);
-  MachineBasicBlock *EntryMBB = &*MF->begin();
-  MachineIRBuilder B(*MF);
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  B.setInsertPt(*EntryMBB, EntryMBB->end());
 
   // Truncate s64 to s32.
   LLT s32 = LLT::scalar(32);
@@ -305,23 +140,24 @@ TEST(PatternMatchInstr, MatchFPUnaryOp) {
 
   // Match G_FABS.
   auto MIBFabs = B.buildInstr(TargetOpcode::G_FABS, {s32}, {Copy0s32});
-  bool match = mi_match(MIBFabs->getOperand(0).getReg(), MRI, m_GFabs(m_Reg()));
+  bool match =
+      mi_match(MIBFabs->getOperand(0).getReg(), *MRI, m_GFabs(m_Reg()));
   EXPECT_TRUE(match);
 
   Register Src;
   auto MIBFNeg = B.buildInstr(TargetOpcode::G_FNEG, {s32}, {Copy0s32});
-  match = mi_match(MIBFNeg->getOperand(0).getReg(), MRI, m_GFNeg(m_Reg(Src)));
+  match = mi_match(MIBFNeg->getOperand(0).getReg(), *MRI, m_GFNeg(m_Reg(Src)));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src, Copy0s32->getOperand(0).getReg());
 
-  match = mi_match(MIBFabs->getOperand(0).getReg(), MRI, m_GFabs(m_Reg(Src)));
+  match = mi_match(MIBFabs->getOperand(0).getReg(), *MRI, m_GFabs(m_Reg(Src)));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src, Copy0s32->getOperand(0).getReg());
 
   // Build and match FConstant.
   auto MIBFCst = B.buildFConstant(s32, .5);
   const ConstantFP *TmpFP{};
-  match = mi_match(MIBFCst->getOperand(0).getReg(), MRI, m_GFCst(TmpFP));
+  match = mi_match(MIBFCst->getOperand(0).getReg(), *MRI, m_GFCst(TmpFP));
   EXPECT_TRUE(match);
   EXPECT_TRUE(TmpFP);
   APFloat APF((float).5);
@@ -332,7 +168,7 @@ TEST(PatternMatchInstr, MatchFPUnaryOp) {
   LLT s64 = LLT::scalar(64);
   auto MIBFCst64 = B.buildFConstant(s64, .5);
   const ConstantFP *TmpFP64{};
-  match = mi_match(MIBFCst64->getOperand(0).getReg(), MRI, m_GFCst(TmpFP64));
+  match = mi_match(MIBFCst64->getOperand(0).getReg(), *MRI, m_GFCst(TmpFP64));
   EXPECT_TRUE(match);
   EXPECT_TRUE(TmpFP64);
   APFloat APF64(.5);
@@ -344,7 +180,7 @@ TEST(PatternMatchInstr, MatchFPUnaryOp) {
   LLT s16 = LLT::scalar(16);
   auto MIBFCst16 = B.buildFConstant(s16, .5);
   const ConstantFP *TmpFP16{};
-  match = mi_match(MIBFCst16->getOperand(0).getReg(), MRI, m_GFCst(TmpFP16));
+  match = mi_match(MIBFCst16->getOperand(0).getReg(), *MRI, m_GFCst(TmpFP16));
   EXPECT_TRUE(match);
   EXPECT_TRUE(TmpFP16);
   bool Ignored;
@@ -355,20 +191,11 @@ TEST(PatternMatchInstr, MatchFPUnaryOp) {
   EXPECT_NE(TmpFP16, TmpFP);
 }
 
-TEST(PatternMatchInstr, MatchExtendsTrunc) {
-  LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+TEST_F(GISelMITest, MatchExtendsTrunc) {
+  setUp();
   if (!TM)
     return;
-  auto ModuleMMIPair = createDummyModule(Context, *TM, "");
-  MachineFunction *MF =
-      getMFFromMMI(ModuleMMIPair.first.get(), ModuleMMIPair.second.get());
-  SmallVector<Register, 4> Copies;
-  collectCopies(Copies, MF);
-  MachineBasicBlock *EntryMBB = &*MF->begin();
-  MachineIRBuilder B(*MF);
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  B.setInsertPt(*EntryMBB, EntryMBB->end());
+
   LLT s64 = LLT::scalar(64);
   LLT s32 = LLT::scalar(32);
 
@@ -378,72 +205,62 @@ TEST(PatternMatchInstr, MatchExtendsTrunc) {
   auto MIBSExt = B.buildSExt(s64, MIBTrunc);
   Register Src0;
   bool match =
-      mi_match(MIBTrunc->getOperand(0).getReg(), MRI, m_GTrunc(m_Reg(Src0)));
+      mi_match(MIBTrunc->getOperand(0).getReg(), *MRI, m_GTrunc(m_Reg(Src0)));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, Copies[0]);
   match =
-      mi_match(MIBAExt->getOperand(0).getReg(), MRI, m_GAnyExt(m_Reg(Src0)));
+      mi_match(MIBAExt->getOperand(0).getReg(), *MRI, m_GAnyExt(m_Reg(Src0)));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, MIBTrunc->getOperand(0).getReg());
 
-  match = mi_match(MIBSExt->getOperand(0).getReg(), MRI, m_GSExt(m_Reg(Src0)));
+  match = mi_match(MIBSExt->getOperand(0).getReg(), *MRI, m_GSExt(m_Reg(Src0)));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, MIBTrunc->getOperand(0).getReg());
 
-  match = mi_match(MIBZExt->getOperand(0).getReg(), MRI, m_GZExt(m_Reg(Src0)));
+  match = mi_match(MIBZExt->getOperand(0).getReg(), *MRI, m_GZExt(m_Reg(Src0)));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, MIBTrunc->getOperand(0).getReg());
 
   // Match ext(trunc src)
-  match = mi_match(MIBAExt->getOperand(0).getReg(), MRI,
+  match = mi_match(MIBAExt->getOperand(0).getReg(), *MRI,
                    m_GAnyExt(m_GTrunc(m_Reg(Src0))));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, Copies[0]);
 
-  match = mi_match(MIBSExt->getOperand(0).getReg(), MRI,
+  match = mi_match(MIBSExt->getOperand(0).getReg(), *MRI,
                    m_GSExt(m_GTrunc(m_Reg(Src0))));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, Copies[0]);
 
-  match = mi_match(MIBZExt->getOperand(0).getReg(), MRI,
+  match = mi_match(MIBZExt->getOperand(0).getReg(), *MRI,
                    m_GZExt(m_GTrunc(m_Reg(Src0))));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, Copies[0]);
 }
 
-TEST(PatternMatchInstr, MatchSpecificType) {
-  LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+TEST_F(GISelMITest, MatchSpecificType) {
+  setUp();
   if (!TM)
     return;
-  auto ModuleMMIPair = createDummyModule(Context, *TM, "");
-  MachineFunction *MF =
-      getMFFromMMI(ModuleMMIPair.first.get(), ModuleMMIPair.second.get());
-  SmallVector<Register, 4> Copies;
-  collectCopies(Copies, MF);
-  MachineBasicBlock *EntryMBB = &*MF->begin();
-  MachineIRBuilder B(*MF);
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  B.setInsertPt(*EntryMBB, EntryMBB->end());
 
   // Try to match a 64bit add.
   LLT s64 = LLT::scalar(64);
   LLT s32 = LLT::scalar(32);
   auto MIBAdd = B.buildAdd(s64, Copies[0], Copies[1]);
-  EXPECT_FALSE(mi_match(MIBAdd->getOperand(0).getReg(), MRI,
+  EXPECT_FALSE(mi_match(MIBAdd->getOperand(0).getReg(), *MRI,
                         m_GAdd(m_SpecificType(s32), m_Reg())));
-  EXPECT_TRUE(mi_match(MIBAdd->getOperand(0).getReg(), MRI,
+  EXPECT_TRUE(mi_match(MIBAdd->getOperand(0).getReg(), *MRI,
                        m_GAdd(m_SpecificType(s64), m_Reg())));
 
   // Try to match the destination type of a bitcast.
   LLT v2s32 = LLT::vector(2, 32);
   auto MIBCast = B.buildCast(v2s32, Copies[0]);
   EXPECT_TRUE(
-      mi_match(MIBCast->getOperand(0).getReg(), MRI, m_GBitcast(m_Reg())));
+      mi_match(MIBCast->getOperand(0).getReg(), *MRI, m_GBitcast(m_Reg())));
   EXPECT_TRUE(
-      mi_match(MIBCast->getOperand(0).getReg(), MRI, m_SpecificType(v2s32)));
+      mi_match(MIBCast->getOperand(0).getReg(), *MRI, m_SpecificType(v2s32)));
   EXPECT_TRUE(
-      mi_match(MIBCast->getOperand(1).getReg(), MRI, m_SpecificType(s64)));
+      mi_match(MIBCast->getOperand(1).getReg(), *MRI, m_SpecificType(s64)));
 
   // Build a PTRToInt and INTTOPTR and match and test them.
   LLT PtrTy = LLT::pointer(0, 64);
@@ -452,43 +269,34 @@ TEST(PatternMatchInstr, MatchSpecificType) {
   Register Src0;
 
   // match the ptrtoint(inttoptr reg)
-  bool match = mi_match(MIBPtrToInt->getOperand(0).getReg(), MRI,
+  bool match = mi_match(MIBPtrToInt->getOperand(0).getReg(), *MRI,
                         m_GPtrToInt(m_GIntToPtr(m_Reg(Src0))));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, Copies[0]);
 }
 
-TEST(PatternMatchInstr, MatchCombinators) {
-  LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+TEST_F(GISelMITest, MatchCombinators) {
+  setUp();
   if (!TM)
     return;
-  auto ModuleMMIPair = createDummyModule(Context, *TM, "");
-  MachineFunction *MF =
-      getMFFromMMI(ModuleMMIPair.first.get(), ModuleMMIPair.second.get());
-  SmallVector<Register, 4> Copies;
-  collectCopies(Copies, MF);
-  MachineBasicBlock *EntryMBB = &*MF->begin();
-  MachineIRBuilder B(*MF);
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  B.setInsertPt(*EntryMBB, EntryMBB->end());
+
   LLT s64 = LLT::scalar(64);
   LLT s32 = LLT::scalar(32);
   auto MIBAdd = B.buildAdd(s64, Copies[0], Copies[1]);
   Register Src0, Src1;
   bool match =
-      mi_match(MIBAdd->getOperand(0).getReg(), MRI,
+      mi_match(MIBAdd->getOperand(0).getReg(), *MRI,
                m_all_of(m_SpecificType(s64), m_GAdd(m_Reg(Src0), m_Reg(Src1))));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, Copies[0]);
   EXPECT_EQ(Src1, Copies[1]);
   // Check for s32 (which should fail).
   match =
-      mi_match(MIBAdd->getOperand(0).getReg(), MRI,
+      mi_match(MIBAdd->getOperand(0).getReg(), *MRI,
                m_all_of(m_SpecificType(s32), m_GAdd(m_Reg(Src0), m_Reg(Src1))));
   EXPECT_FALSE(match);
   match =
-      mi_match(MIBAdd->getOperand(0).getReg(), MRI,
+      mi_match(MIBAdd->getOperand(0).getReg(), *MRI,
                m_any_of(m_SpecificType(s32), m_GAdd(m_Reg(Src0), m_Reg(Src1))));
   EXPECT_TRUE(match);
   EXPECT_EQ(Src0, Copies[0]);
@@ -496,33 +304,24 @@ TEST(PatternMatchInstr, MatchCombinators) {
 
   // Match a case where none of the predicates hold true.
   match = mi_match(
-      MIBAdd->getOperand(0).getReg(), MRI,
+      MIBAdd->getOperand(0).getReg(), *MRI,
       m_any_of(m_SpecificType(LLT::scalar(16)), m_GSub(m_Reg(), m_Reg())));
   EXPECT_FALSE(match);
 }
 
-TEST(PatternMatchInstr, MatchMiscellaneous) {
-  LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+TEST_F(GISelMITest, MatchMiscellaneous) {
+  setUp();
   if (!TM)
     return;
-  auto ModuleMMIPair = createDummyModule(Context, *TM, "");
-  MachineFunction *MF =
-      getMFFromMMI(ModuleMMIPair.first.get(), ModuleMMIPair.second.get());
-  SmallVector<Register, 4> Copies;
-  collectCopies(Copies, MF);
-  MachineBasicBlock *EntryMBB = &*MF->begin();
-  MachineIRBuilder B(*MF);
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  B.setInsertPt(*EntryMBB, EntryMBB->end());
+
   LLT s64 = LLT::scalar(64);
   auto MIBAdd = B.buildAdd(s64, Copies[0], Copies[1]);
   // Make multiple uses of this add.
   B.buildCast(LLT::pointer(0, 32), MIBAdd);
   B.buildCast(LLT::pointer(1, 32), MIBAdd);
-  bool match = mi_match(MIBAdd.getReg(0), MRI, m_GAdd(m_Reg(), m_Reg()));
+  bool match = mi_match(MIBAdd.getReg(0), *MRI, m_GAdd(m_Reg(), m_Reg()));
   EXPECT_TRUE(match);
-  match = mi_match(MIBAdd.getReg(0), MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg())));
+  match = mi_match(MIBAdd.getReg(0), *MRI, m_OneUse(m_GAdd(m_Reg(), m_Reg())));
   EXPECT_FALSE(match);
 }
 } // namespace

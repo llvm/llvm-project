@@ -146,7 +146,7 @@ body: |
     ; GCN: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr1
     ; GCN: [[COPY2:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr2
     ; GCN: [[COPY3:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr3
-    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GCN: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[REG_SEQUENCE]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr1
@@ -192,7 +192,7 @@ body: |
     ; GCN-LABEL: name: test_concat_vectors_s_v8s16_s_v4s16_s_v4s16
     ; GCN: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
     ; GCN: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr2_sgpr3
-    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3
+    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3
     ; GCN: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[REG_SEQUENCE]]
     %0:sgpr(<4 x s16>) = COPY $sgpr0_sgpr1
     %1:sgpr(<4 x s16>) = COPY $sgpr2_sgpr3
@@ -350,8 +350,8 @@ body: |
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7
 
     ; GCN-LABEL: name: test_concat_vectors_s_v12s16_s_v8s16_s_v8s16
-    ; GCN: [[COPY:%[0-9]+]]:sreg_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN: [[COPY1:%[0-9]+]]:sreg_128 = COPY $sgpr4_sgpr5_sgpr6_sgpr7
+    ; GCN: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: [[COPY1:%[0-9]+]]:sgpr_128 = COPY $sgpr4_sgpr5_sgpr6_sgpr7
     ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_256 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1_sub2_sub3, [[COPY1]], %subreg.sub4_sub5_sub6_sub7
     ; GCN: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = COPY [[REG_SEQUENCE]]
     %0:sgpr(<8 x s16>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
@@ -461,7 +461,7 @@ body: |
     ; GCN-LABEL: name: test_concat_vectors_s_v4s32_s_v2s32_s_v2s32
     ; GCN: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
     ; GCN: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr2_sgpr3
-    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3
+    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3
     ; GCN: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[REG_SEQUENCE]]
     %0:sgpr(<2 x s32>) = COPY $sgpr0_sgpr1
     %1:sgpr(<2 x s32>) = COPY $sgpr2_sgpr3
@@ -524,8 +524,8 @@ body: |
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7
 
     ; GCN-LABEL: name: test_concat_vectors_s_v8s32_s_v4s32_s_v4s32
-    ; GCN: [[COPY:%[0-9]+]]:sreg_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN: [[COPY1:%[0-9]+]]:sreg_128 = COPY $sgpr4_sgpr5_sgpr6_sgpr7
+    ; GCN: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: [[COPY1:%[0-9]+]]:sgpr_128 = COPY $sgpr4_sgpr5_sgpr6_sgpr7
     ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_256 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1_sub2_sub3, [[COPY1]], %subreg.sub4_sub5_sub6_sub7
     ; GCN: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = COPY [[REG_SEQUENCE]]
     %0:sgpr(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
@@ -596,8 +596,8 @@ body: |
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7
 
     ; GCN-LABEL: name: test_concat_vectors_s_v4s64_s_v2s64_s_v2s64
-    ; GCN: [[COPY:%[0-9]+]]:sreg_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN: [[COPY1:%[0-9]+]]:sreg_128 = COPY $sgpr4_sgpr5_sgpr6_sgpr7
+    ; GCN: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: [[COPY1:%[0-9]+]]:sgpr_128 = COPY $sgpr4_sgpr5_sgpr6_sgpr7
     ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_256 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1_sub2_sub3, [[COPY1]], %subreg.sub4_sub5_sub6_sub7
     ; GCN: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = COPY [[REG_SEQUENCE]]
     %0:sgpr(<2 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
@@ -656,10 +656,10 @@ body: |
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr12_sgpr13_sgpr14_sgpr15
 
     ; GCN-LABEL: name: test_concat_vectors_s_v8s64_s_v2s64_s_v2s64_s_v2s64_s_v2s64
-    ; GCN: [[COPY:%[0-9]+]]:sreg_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN: [[COPY1:%[0-9]+]]:sreg_128 = COPY $sgpr4_sgpr5_sgpr6_sgpr7
-    ; GCN: [[COPY2:%[0-9]+]]:sreg_128 = COPY $sgpr8_sgpr9_sgpr10_sgpr11
-    ; GCN: [[COPY3:%[0-9]+]]:sreg_128 = COPY $sgpr12_sgpr13_sgpr14_sgpr15
+    ; GCN: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: [[COPY1:%[0-9]+]]:sgpr_128 = COPY $sgpr4_sgpr5_sgpr6_sgpr7
+    ; GCN: [[COPY2:%[0-9]+]]:sgpr_128 = COPY $sgpr8_sgpr9_sgpr10_sgpr11
+    ; GCN: [[COPY3:%[0-9]+]]:sgpr_128 = COPY $sgpr12_sgpr13_sgpr14_sgpr15
     ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_512 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1_sub2_sub3, [[COPY1]], %subreg.sub4_sub5_sub6_sub7, [[COPY2]], %subreg.sub8_sub9_sub10_sub11, [[COPY3]], %subreg.sub12_sub13_sub14_sub15
     ; GCN: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY [[REG_SEQUENCE]]
     %0:sgpr(<2 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
@@ -680,8 +680,8 @@ body: |
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7
 
     ; GCN-LABEL: name: test_concat_vectors_s_v4p1_s_v2p1_s_v2p1
-    ; GCN: [[COPY:%[0-9]+]]:sreg_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; GCN: [[COPY1:%[0-9]+]]:sreg_128 = COPY $sgpr4_sgpr5_sgpr6_sgpr7
+    ; GCN: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: [[COPY1:%[0-9]+]]:sgpr_128 = COPY $sgpr4_sgpr5_sgpr6_sgpr7
     ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_256 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1_sub2_sub3, [[COPY1]], %subreg.sub4_sub5_sub6_sub7
     ; GCN: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = COPY [[REG_SEQUENCE]]
     %0:sgpr(<2 x p1>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
@@ -702,7 +702,7 @@ body: |
     ; GCN-LABEL: name: test_concat_vectors_s_v4p3_s_v2p3_s_v2p3
     ; GCN: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
     ; GCN: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr2_sgpr3
-    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3
+    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3
     ; GCN: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[REG_SEQUENCE]]
     %0:sgpr(<2 x p3>) = COPY $sgpr0_sgpr1
     %1:sgpr(<2 x p3>) = COPY $sgpr2_sgpr3

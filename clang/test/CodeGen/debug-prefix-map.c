@@ -16,7 +16,7 @@ void test_rewrite_includes() {
   vprintf("string", argp);
 }
 
-// CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "/UNLIKELY_PATH/empty{{/|\\5C}}<stdin>"
+// CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "/UNLIKELY_PATH/empty{{/|\\\\}}<stdin>"
 // CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "/UNLIKELY_PATH/empty{{[/\\]}}{{.*}}",
 // On POSIX systems "Dir" should actually be empty, but on Windows we
 // can't recognize "/UNLIKELY_PATH" as being an absolute path.

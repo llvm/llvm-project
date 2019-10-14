@@ -125,19 +125,6 @@ get_demangled_name_without_arguments(ConstString mangled,
 
 #pragma mark Mangled
 
-// Constructor with an optional string and a boolean indicating if it is the
-// mangled version.
-Mangled::Mangled(ConstString s, bool mangled)
-    : m_mangled(), m_demangled() {
-  if (s)
-    SetValue(s, mangled);
-}
-
-Mangled::Mangled(llvm::StringRef name, bool is_mangled) {
-  if (!name.empty())
-    SetValue(ConstString(name), is_mangled);
-}
-
 Mangled::Mangled(ConstString s) : m_mangled(), m_demangled() {
   if (s)
     SetValue(s);
@@ -147,9 +134,6 @@ Mangled::Mangled(llvm::StringRef name) {
   if (!name.empty())
     SetValue(ConstString(name));
 }
-
-// Destructor
-Mangled::~Mangled() {}
 
 // Convert to pointer operator. This allows code to check any Mangled objects
 // to see if they contain anything valid using code such as:

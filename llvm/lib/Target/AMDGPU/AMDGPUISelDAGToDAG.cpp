@@ -209,14 +209,13 @@ private:
   bool SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc, SDValue &Soffset,
                          SDValue &Offset) const;
 
+  template <bool IsSigned>
+  bool SelectFlatOffset(SDNode *N, SDValue Addr, SDValue &VAddr,
+                        SDValue &Offset, SDValue &SLC) const;
   bool SelectFlatAtomic(SDNode *N, SDValue Addr, SDValue &VAddr,
                         SDValue &Offset, SDValue &SLC) const;
   bool SelectFlatAtomicSigned(SDNode *N, SDValue Addr, SDValue &VAddr,
                               SDValue &Offset, SDValue &SLC) const;
-
-  template <bool IsSigned>
-  bool SelectFlatOffset(SDNode *N, SDValue Addr, SDValue &VAddr,
-                        SDValue &Offset, SDValue &SLC) const;
 
   bool SelectSMRDOffset(SDValue ByteOffsetNode, SDValue &Offset,
                         bool &Imm) const;
@@ -643,7 +642,7 @@ static unsigned selectSGPRVectorRegClassID(unsigned NumVectorElts) {
   case 3:
     return AMDGPU::SGPR_96RegClassID;
   case 4:
-    return AMDGPU::SReg_128RegClassID;
+    return AMDGPU::SGPR_128RegClassID;
   case 5:
     return AMDGPU::SGPR_160RegClassID;
   case 8:
@@ -783,7 +782,7 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     SDValue RC, SubReg0, SubReg1;
     SDLoc DL(N);
     if (N->getValueType(0) == MVT::i128) {
-      RC = CurDAG->getTargetConstant(AMDGPU::SReg_128RegClassID, DL, MVT::i32);
+      RC = CurDAG->getTargetConstant(AMDGPU::SGPR_128RegClassID, DL, MVT::i32);
       SubReg0 = CurDAG->getTargetConstant(AMDGPU::sub0_sub1, DL, MVT::i32);
       SubReg1 = CurDAG->getTargetConstant(AMDGPU::sub2_sub3, DL, MVT::i32);
     } else if (N->getValueType(0) == MVT::i64) {
@@ -1606,14 +1605,48 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc,
   return SelectMUBUFOffset(Addr, SRsrc, Soffset, Offset, GLC, SLC, TFE, DLC, SWZ);
 }
 
+// Find a load or store from corresponding pattern root.
+// Roots may be build_vector, bitconvert or their combinations.
+static MemSDNode* findMemSDNode(SDNode *N) {
+  N = AMDGPUTargetLowering::stripBitcast(SDValue(N,0)).getNode();
+  if (MemSDNode *MN = dyn_cast<MemSDNode>(N))
+    return MN;
+  assert(isa<BuildVectorSDNode>(N));
+  for (SDValue V : N->op_values())
+    if (MemSDNode *MN =
+          dyn_cast<MemSDNode>(AMDGPUTargetLowering::stripBitcast(V)))
+      return MN;
+  llvm_unreachable("cannot find MemSDNode in the pattern!");
+}
+
 template <bool IsSigned>
 bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDNode *N,
                                           SDValue Addr,
                                           SDValue &VAddr,
                                           SDValue &Offset,
                                           SDValue &SLC) const {
-  return static_cast<const SITargetLowering*>(getTargetLowering())->
-    SelectFlatOffset(IsSigned, *CurDAG, N, Addr, VAddr, Offset, SLC);
+  int64_t OffsetVal = 0;
+
+  if (Subtarget->hasFlatInstOffsets() &&
+      (!Subtarget->hasFlatSegmentOffsetBug() ||
+       findMemSDNode(N)->getAddressSpace() != AMDGPUAS::FLAT_ADDRESS) &&
+      CurDAG->isBaseWithConstantOffset(Addr)) {
+    SDValue N0 = Addr.getOperand(0);
+    SDValue N1 = Addr.getOperand(1);
+    int64_t COffsetVal = cast<ConstantSDNode>(N1)->getSExtValue();
+
+    const SIInstrInfo *TII = Subtarget->getInstrInfo();
+    if (TII->isLegalFLATOffset(COffsetVal, findMemSDNode(N)->getAddressSpace(),
+                               IsSigned)) {
+      Addr = N0;
+      OffsetVal = COffsetVal;
+    }
+  }
+
+  VAddr = Addr;
+  Offset = CurDAG->getTargetConstant(OffsetVal, SDLoc(), MVT::i16);
+  SLC = CurDAG->getTargetConstant(0, SDLoc(), MVT::i1);
+  return true;
 }
 
 bool AMDGPUDAGToDAGISel::SelectFlatAtomic(SDNode *N,
@@ -1625,10 +1658,10 @@ bool AMDGPUDAGToDAGISel::SelectFlatAtomic(SDNode *N,
 }
 
 bool AMDGPUDAGToDAGISel::SelectFlatAtomicSigned(SDNode *N,
-                                          SDValue Addr,
-                                          SDValue &VAddr,
-                                          SDValue &Offset,
-                                          SDValue &SLC) const {
+                                                SDValue Addr,
+                                                SDValue &VAddr,
+                                                SDValue &Offset,
+                                                SDValue &SLC) const {
   return SelectFlatOffset<true>(N, Addr, VAddr, Offset, SLC);
 }
 

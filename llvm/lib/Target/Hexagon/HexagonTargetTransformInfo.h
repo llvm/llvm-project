@@ -68,8 +68,8 @@ public:
   bool shouldFavorPostInc() const;
 
   // L1 cache prefetch.
-  unsigned getPrefetchDistance() const;
-  unsigned getCacheLineSize() const;
+  unsigned getPrefetchDistance() const override;
+  unsigned getCacheLineSize() const override;
 
   /// @}
 

@@ -33,7 +33,7 @@ FileLineResolver::~FileLineResolver() {}
 
 Searcher::CallbackReturn
 FileLineResolver::SearchCallback(SearchFilter &filter, SymbolContext &context,
-                                 Address *addr, bool containing) {
+                                 Address *addr) {
   CompileUnit *cu = context.comp_unit;
 
   if (m_inlines ||

@@ -71,6 +71,11 @@ and from the command line.
  The :option:`--strict-whitespace` argument disables this behavior. End-of-line
  sequences are canonicalized to UNIX-style ``\n`` in all modes.
 
+.. option:: --ignore-case
+
+  By default, FileCheck uses case-sensitive matching. This option causes
+  FileCheck to use case-insensitive matching.
+
 .. option:: --implicit-check-not check-pattern
 
   Adds implicit negative checks for the specified patterns between positive

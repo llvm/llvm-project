@@ -31,7 +31,7 @@ clang_target_link_libraries(ClangTidyTests
   clangSerialization
   clangTooling
   clangToolingCore
-  clangToolingRefactoring
+  clangTransformer
   )
 target_link_libraries(ClangTidyTests
   PRIVATE

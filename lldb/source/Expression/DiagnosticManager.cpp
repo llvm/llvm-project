@@ -47,7 +47,7 @@ static const char *StringForSeverity(DiagnosticSeverity severity) {
 std::string DiagnosticManager::GetString(char separator) {
   std::string ret;
 
-  for (const Diagnostic *diagnostic : Diagnostics()) {
+  for (const auto &diagnostic : Diagnostics()) {
     ret.append(StringForSeverity(diagnostic->GetSeverity()));
     ret.append(diagnostic->GetMessage());
     ret.push_back(separator);

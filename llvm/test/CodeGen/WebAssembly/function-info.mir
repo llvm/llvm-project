@@ -8,5 +8,5 @@ liveins:
   - { reg: '$arguments' }
 body: |
   bb.0:
-    RETURN_VOID implicit-def dead $arguments
+    RETURN implicit-def dead $arguments
 ...

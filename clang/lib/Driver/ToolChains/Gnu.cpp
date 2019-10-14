@@ -499,7 +499,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         P = ToolChain.GetFilePath(crtbegin);
       }
       CmdArgs.push_back(Args.MakeArgString(P));
-	  }
+    }
 
     // Add crtfastmath.o if available and fast math is enabled.
     ToolChain.AddFastMathRuntimeIfAvailable(Args, CmdArgs);
@@ -622,9 +622,6 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtn.o")));
     }
   }
-
-  // Add OpenMP offloading linker script args if required.
-  AddOpenMPLinkerScript(getToolChain(), C, Output, Inputs, Args, CmdArgs, JA);
 
   // Add HIP offloading linker script args if required.
   AddHIPLinkerScript(getToolChain(), C, Output, Inputs, Args, CmdArgs, JA,
@@ -823,7 +820,8 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
       A->render(Args, CmdArgs);
     } else if (mips::shouldUseFPXX(
                    Args, getToolChain().getTriple(), CPUName, ABIName,
-                   mips::getMipsFloatABI(getToolChain().getDriver(), Args)))
+                   mips::getMipsFloatABI(getToolChain().getDriver(), Args,
+                                         getToolChain().getTriple())))
       CmdArgs.push_back("-mfpxx");
 
     // Pass on -mmips16 or -mno-mips16. However, the assembler equivalent of

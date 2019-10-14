@@ -6,30 +6,24 @@
 # RUN: ld.lld --hash-style=sysv --version-script %t.script -shared -soname shared %t.o -o %t.so
 # RUN: llvm-readobj -V --dyn-syms %t.so | FileCheck --check-prefix=DSO %s
 
-# DSO:        Version symbols {
-# DSO-NEXT:   Section Name: .gnu.version
-# DSO-NEXT:   Address: 0x228
-# DSO-NEXT:   Offset: 0x228
-# DSO-NEXT:   Link: 1
-# DSO-NEXT:   Symbols [
-# DSO-NEXT:     Symbol {
-# DSO-NEXT:       Version: 0
-# DSO-NEXT:       Name:
-# DSO-NEXT:     }
-# DSO-NEXT:     Symbol {
-# DSO-NEXT:       Version: 2
-# DSO-NEXT:       Name: a@@LIBSAMPLE_1.0
-# DSO-NEXT:     }
-# DSO-NEXT:     Symbol {
-# DSO-NEXT:       Version: 3
-# DSO-NEXT:       Name: b@@LIBSAMPLE_2.0
-# DSO-NEXT:     }
-# DSO-NEXT:     Symbol {
-# DSO-NEXT:       Version: 4
-# DSO-NEXT:       Name: c@@LIBSAMPLE_3.0
-# DSO-NEXT:     }
-# DSO-NEXT:   ]
-# DSO-NEXT: }
+# DSO:       Version symbols [
+# DSO-NEXT:   Symbol {
+# DSO-NEXT:     Version: 0
+# DSO-NEXT:     Name:
+# DSO-NEXT:   }
+# DSO-NEXT:   Symbol {
+# DSO-NEXT:     Version: 2
+# DSO-NEXT:     Name: a@@LIBSAMPLE_1.0
+# DSO-NEXT:   }
+# DSO-NEXT:   Symbol {
+# DSO-NEXT:     Version: 3
+# DSO-NEXT:     Name: b@@LIBSAMPLE_2.0
+# DSO-NEXT:   }
+# DSO-NEXT:   Symbol {
+# DSO-NEXT:     Version: 4
+# DSO-NEXT:     Name: c@@LIBSAMPLE_3.0
+# DSO-NEXT:   }
+# DSO-NEXT: ]
 # DSO-NEXT: SHT_GNU_verdef {
 # DSO-NEXT:   Definition {
 # DSO-NEXT:     Version: 1
@@ -68,30 +62,24 @@
 # RUN: ld.lld --hash-style=sysv %tmain.o %t.so -o %tout
 # RUN: llvm-readobj -V %tout | FileCheck --check-prefix=MAIN %s
 
-# MAIN:      Version symbols {
-# MAIN-NEXT:   Section Name: .gnu.version
-# MAIN-NEXT:   Address: 0x200260
-# MAIN-NEXT:   Offset: 0x260
-# MAIN-NEXT:   Link: 1
-# MAIN-NEXT:   Symbols [
-# MAIN-NEXT:     Symbol {
-# MAIN-NEXT:       Version: 0
-# MAIN-NEXT:       Name:
-# MAIN-NEXT:     }
-# MAIN-NEXT:     Symbol {
-# MAIN-NEXT:       Version: 2
-# MAIN-NEXT:       Name: a@LIBSAMPLE_1.0
-# MAIN-NEXT:     }
-# MAIN-NEXT:     Symbol {
-# MAIN-NEXT:       Version: 3
-# MAIN-NEXT:       Name: b@LIBSAMPLE_2.0
-# MAIN-NEXT:     }
-# MAIN-NEXT:     Symbol {
-# MAIN-NEXT:       Version: 4
-# MAIN-NEXT:       Name: c@LIBSAMPLE_3.0
-# MAIN-NEXT:     }
-# MAIN-NEXT:   ]
-# MAIN-NEXT: }
+# MAIN:      Version symbols [
+# MAIN-NEXT:   Symbol {
+# MAIN-NEXT:     Version: 0
+# MAIN-NEXT:     Name:
+# MAIN-NEXT:   }
+# MAIN-NEXT:   Symbol {
+# MAIN-NEXT:     Version: 2
+# MAIN-NEXT:     Name: a@LIBSAMPLE_1.0
+# MAIN-NEXT:   }
+# MAIN-NEXT:   Symbol {
+# MAIN-NEXT:     Version: 3
+# MAIN-NEXT:     Name: b@LIBSAMPLE_2.0
+# MAIN-NEXT:   }
+# MAIN-NEXT:   Symbol {
+# MAIN-NEXT:     Version: 4
+# MAIN-NEXT:     Name: c@LIBSAMPLE_3.0
+# MAIN-NEXT:   }
+# MAIN-NEXT: ]
 # MAIN-NEXT: SHT_GNU_verdef {
 # MAIN-NEXT: }
 

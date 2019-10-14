@@ -272,13 +272,12 @@ static bool isInInlineFunction(const DeclContext *DC) {
   return false;
 }
 
-MangleNumberingContext *
+std::tuple<MangleNumberingContext *, Decl *>
 Sema::getCurrentMangleNumberContext(const DeclContext *DC,
-                                    Decl *&ManglingContextDecl,
                                     bool SkpNoODRChk, bool *Forced) {
   // Compute the context for allocating mangling numbers in the current
   // expression, if the ABI requires them.
-  ManglingContextDecl = ExprEvalContexts.back().ManglingContextDecl;
+  Decl *ManglingContextDecl = ExprEvalContexts.back().ManglingContextDecl;
 
   enum ContextKind {
     Normal,
@@ -331,22 +330,18 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC,
       // Set forced if it don't need to follow ODR originally.
       if (SkpNoODRChk && Forced)
         *Forced = !NeedODR;
-      ManglingContextDecl = nullptr;
       while (auto *CD = dyn_cast<CapturedDecl>(DC))
         DC = CD->getParent();
-      return &Context.getManglingNumberContext(DC);
+      return std::make_tuple(&Context.getManglingNumberContext(DC), nullptr);
     }
 
-    ManglingContextDecl = nullptr;
-    return nullptr;
+    return std::make_tuple(nullptr, nullptr);
   }
 
   case StaticDataMember:
     //  -- the initializers of nonspecialized static members of template classes
-    if (!SkpNoODRChk && !IsInNonspecializedTemplate) {
-      ManglingContextDecl = nullptr;
-      return nullptr;
-    }
+    if (!SkpNoODRChk && !IsInNonspecializedTemplate)
+      return std::make_tuple(nullptr, nullptr);
     // Set forced if it don't need to follow ODR originally.
     if (SkpNoODRChk && Forced)
       *Forced = !IsInNonspecializedTemplate;
@@ -361,19 +356,13 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC,
     //  -- the initializers of inline variables
   case VariableTemplate:
     //  -- the initializers of templated variables
-    return &ExprEvalContexts.back().getMangleNumberingContext(Context);
+    return std::make_tuple(
+        &Context.getManglingNumberContext(ASTContext::NeedExtraManglingDecl,
+                                          ManglingContextDecl),
+        ManglingContextDecl);
   }
 
   llvm_unreachable("unexpected context");
-}
-
-MangleNumberingContext &
-Sema::ExpressionEvaluationContextRecord::getMangleNumberingContext(
-    ASTContext &Ctx) {
-  assert(ManglingContextDecl && "Need to have a context declaration");
-  if (!MangleNumbering)
-    MangleNumbering = Ctx.createMangleNumberingContext();
-  return *MangleNumbering;
 }
 
 CXXMethodDecl *Sema::startLambdaDefinition(
@@ -448,11 +437,13 @@ CXXMethodDecl *Sema::startLambdaDefinition(
   if (Mangling) {
     Class->setLambdaMangling(Mangling->first, Mangling->second);
   } else {
+    MangleNumberingContext *MCtx;
     Decl *ManglingContextDecl;
     bool Forced = false;
-    if (MangleNumberingContext *MCtx = getCurrentMangleNumberContext(
-            Class->getDeclContext(), ManglingContextDecl,
-            getLangOpts().CUDAForceLambdaODR, &Forced)) {
+    std::tie(MCtx, ManglingContextDecl) =
+        getCurrentMangleNumberContext(Class->getDeclContext(),
+            getLangOpts().CUDAForceLambdaODR, &Forced);
+    if (MCtx) {
       unsigned ManglingNumber = MCtx->getManglingNumber(Method);
       Class->setLambdaMangling(ManglingNumber, ManglingContextDecl, Forced);
       if (MCtx->hasDeviceMangleNumberingContext()) {

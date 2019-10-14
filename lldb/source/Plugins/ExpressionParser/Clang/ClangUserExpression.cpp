@@ -444,6 +444,8 @@ static CppModuleConfiguration LogConfigError(const std::string &msg) {
 
 CppModuleConfiguration GetModuleConfig(lldb::LanguageType language,
                                        ExecutionContext &exe_ctx) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
   // Don't do anything if this is not a C++ module configuration.
   if (!SupportsCxxModuleImport(language))
     return LogConfigError("Language doesn't support C++ modules");
@@ -483,6 +485,15 @@ CppModuleConfiguration GetModuleConfig(lldb::LanguageType language,
       }
     }
   });
+
+  LLDB_LOG(log, "[C++ module config] Found {0} support files to analyze",
+           files.GetSize());
+  if (log && log->GetVerbose()) {
+    for (const FileSpec &f : files)
+      LLDB_LOGV(log, "[C++ module config] Analyzing support file: {0}",
+                f.GetPath());
+  }
+
   // Try to create a configuration from the files. If there is no valid
   // configuration possible with the files, this just returns an invalid
   // configuration.

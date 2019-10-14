@@ -43,13 +43,11 @@ entry:
 ; CHECK-NEXT:        .short  60319                   # 0xeb9f
 ; CHECK-NEXT:        .byte   1
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .long   40
+; CHECK-NEXT:        .long   32
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   20
 ; CHECK-NEXT:        .long   20
 ; CHECK-NEXT:        .long   28
-; CHECK-NEXT:        .long   48
-; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   48
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   8                       # FuncInfo

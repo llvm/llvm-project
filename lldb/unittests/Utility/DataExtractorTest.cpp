@@ -49,6 +49,51 @@ TEST(DataExtractorTest, PeekData) {
   EXPECT_EQ(nullptr, E.PeekData(4, 1));
 }
 
+TEST(DataExtractorTest, GetCStr) {
+  uint8_t buffer[] = {'X', 'f', 'o', 'o', '\0'};
+  DataExtractor E(buffer, sizeof buffer, lldb::eByteOrderLittle, 4);
+
+  lldb::offset_t offset = 1;
+  EXPECT_STREQ("foo", E.GetCStr(&offset));
+  EXPECT_EQ(5U, offset);
+}
+
+TEST(DataExtractorTest, GetCStrEmpty) {
+  uint8_t buffer[] = {'X', '\0'};
+  DataExtractor E(buffer, sizeof buffer, lldb::eByteOrderLittle, 4);
+
+  lldb::offset_t offset = 1;
+  EXPECT_STREQ("", E.GetCStr(&offset));
+  EXPECT_EQ(2U, offset);
+}
+
+TEST(DataExtractorTest, GetCStrUnterminated) {
+  uint8_t buffer[] = {'X', 'f', 'o', 'o'};
+  DataExtractor E(buffer, sizeof buffer, lldb::eByteOrderLittle, 4);
+
+  lldb::offset_t offset = 1;
+  EXPECT_EQ(nullptr, E.GetCStr(&offset));
+  EXPECT_EQ(1U, offset);
+}
+
+TEST(DataExtractorTest, GetCStrAtEnd) {
+  uint8_t buffer[] = {'X'};
+  DataExtractor E(buffer, sizeof buffer, lldb::eByteOrderLittle, 4);
+
+  lldb::offset_t offset = 1;
+  EXPECT_EQ(nullptr, E.GetCStr(&offset));
+  EXPECT_EQ(1U, offset);
+}
+
+TEST(DataExtractorTest, GetCStrAtNullOffset) {
+  uint8_t buffer[] = {'f', 'o', 'o', '\0'};
+  DataExtractor E(buffer, sizeof buffer, lldb::eByteOrderLittle, 4);
+
+  lldb::offset_t offset = 0;
+  EXPECT_STREQ("foo", E.GetCStr(&offset));
+  EXPECT_EQ(4U, offset);
+}
+
 TEST(DataExtractorTest, GetMaxU64) {
   uint8_t buffer[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
   DataExtractor LE(buffer, sizeof(buffer), lldb::eByteOrderLittle,

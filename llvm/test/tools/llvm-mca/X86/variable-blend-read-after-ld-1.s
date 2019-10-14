@@ -149,10 +149,25 @@ vblendvps %xmm1, (%rdi), %xmm2, %xmm3
 # ALL-NEXT:     0.     1     1.0    1.0    0.0       vaddps	%xmm0, %xmm0, %xmm1
 
 # BDVER2-NEXT:  1.     1     1.0    0.0    0.0       vblendvps	%xmm1, (%rdi), %xmm2, %xmm3
+# BDVER2-NEXT:         1     1.0    0.5    0.0       <total>
+
 # BDWELL-NEXT:  1.     1     1.0    0.0    0.0       vblendvps	%xmm1, (%rdi), %xmm2, %xmm3
+# BDWELL-NEXT:         1     1.0    0.5    0.0       <total>
+
 # BTVER2-NEXT:  1.     1     1.0    1.0    0.0       vblendvps	%xmm1, (%rdi), %xmm2, %xmm3
+# BTVER2-NEXT:         1     1.0    1.0    0.0       <total>
+
 # HASWELL-NEXT: 1.     1     1.0    0.0    0.0       vblendvps	%xmm1, (%rdi), %xmm2, %xmm3
+# HASWELL-NEXT:        1     1.0    0.5    0.0       <total>
+
 # IVY-NEXT:     1.     1     1.0    0.0    0.0       vblendvps	%xmm1, (%rdi), %xmm2, %xmm3
+# IVY-NEXT:            1     1.0    0.5    0.0       <total>
+
 # SANDY-NEXT:   1.     1     1.0    0.0    0.0       vblendvps	%xmm1, (%rdi), %xmm2, %xmm3
+# SANDY-NEXT:          1     1.0    0.5    0.0       <total>
+
 # SKYLAKE-NEXT: 1.     1     1.0    0.0    0.0       vblendvps	%xmm1, (%rdi), %xmm2, %xmm3
+# SKYLAKE-NEXT:        1     1.0    0.5    0.0       <total>
+
 # ZNVER1-NEXT:  1.     1     1.0    0.0    0.0       vblendvps	%xmm1, (%rdi), %xmm2, %xmm3
+# ZNVER1-NEXT:         1     1.0    0.5    0.0       <total>

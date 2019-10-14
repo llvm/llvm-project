@@ -1,12 +1,12 @@
 # RUN: yaml2obj %s > %t
 # RUN: llvm-objcopy --strip-sections %t %t2
 # RUN: llvm-readobj --file-headers --program-headers %t2 | FileCheck %s
-# RUN: od -t x1 -j 4096 -N 12 %t2 | FileCheck %s --check-prefix=DATA
+# RUN: od -t x1 -j 4096 -N 12 %t2 | FileCheck %s --ignore-case --check-prefix=DATA
 
 ## Sanity check the DATA-NOT line by showing that "fe ed fa ce" appears
 ## if --strip-sections is not specified.
 # RUN: llvm-objcopy %t %t3
-# RUN: od -t x1 -j 4096 -N 12 %t3 | FileCheck %s --check-prefix=VALIDATE
+# RUN: od -t x1 -j 4096 -N 12 %t3 | FileCheck %s --ignore-case --check-prefix=VALIDATE
 
 ## Check that llvm-strip --strip-sections is equivalent to
 ## llvm-objcopy --strip-sections. 

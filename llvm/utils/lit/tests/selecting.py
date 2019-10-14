@@ -1,16 +1,12 @@
 # RUN: %{lit} %{inputs}/discovery | FileCheck --check-prefix=CHECK-BASIC %s
 # CHECK-BASIC: Testing: 5 tests
 
-# Check that regex-filtering works
+# Check that regex-filtering works, is case-insensitive, and can be configured via env var.
 #
 # RUN: %{lit} --filter 'o[a-z]e' %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER %s
+# RUN: %{lit} --filter 'O[A-Z]E' %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER %s
+# RUN: env LIT_FILTER='o[a-z]e' %{lit} %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER %s
 # CHECK-FILTER: Testing: 2 of 5 tests
-
-# Check that regex-filtering based on environment variables work.
-#
-# RUN: env LIT_FILTER='o[a-z]e' %{lit} %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER-ENV %s
-# CHECK-FILTER-ENV: Testing: 2 of 5 tests
-
 
 # Check that maximum counts work
 #
@@ -87,7 +83,7 @@
 #
 # RUN: not %{lit} --num-shards 0 --run-shard 2 %{inputs}/discovery >%t.out 2>%t.err
 # RUN: FileCheck --check-prefix=CHECK-SHARD-ERR < %t.err %s
-# CHECK-SHARD-ERR: error: --num-shards must be positive
+# CHECK-SHARD-ERR: error: argument --num-shards: requires positive integer, but found '0'
 #
 # RUN: not %{lit} --num-shards 3 --run-shard 4 %{inputs}/discovery >%t.out 2>%t.err
 # RUN: FileCheck --check-prefix=CHECK-SHARD-ERR2 < %t.err %s

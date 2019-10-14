@@ -100,3 +100,4 @@ vmulps %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     5     20.2   0.2    0.0       vaddps	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     5     25.2   0.0    0.0       vmulps	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT:        5     22.7   0.1    0.0       <total>

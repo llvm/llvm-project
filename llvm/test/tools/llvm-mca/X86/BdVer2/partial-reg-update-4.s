@@ -92,3 +92,4 @@ add %cx, %bx
 # CHECK-NEXT: 0.     3     6.7    0.7    0.0       imulw	%ax, %bx
 # CHECK-NEXT: 1.     3     9.7    0.0    0.0       lzcntw	%ax, %bx
 # CHECK-NEXT: 2.     3     11.7   0.0    0.0       addw	%cx, %bx
+# CHECK-NEXT:        3     9.3    0.2    0.0       <total>

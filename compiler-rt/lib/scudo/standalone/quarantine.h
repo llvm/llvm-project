@@ -130,7 +130,7 @@ public:
     subFromSize(ExtractedSize);
   }
 
-  void printStats() const {
+  void getStats(ScopedString *Str) const {
     uptr BatchCount = 0;
     uptr TotalOverheadBytes = 0;
     uptr TotalBytes = 0;
@@ -152,11 +152,11 @@ public:
         (TotalQuarantinedBytes == 0)
             ? 0
             : TotalOverheadBytes * 100 / TotalQuarantinedBytes;
-    Printf("Global quarantine stats: batches: %zu; bytes: %zu (user: %zu); "
-           "chunks: %zu (capacity: %zu); %zu%% chunks used; %zu%% memory "
-           "overhead\n",
-           BatchCount, TotalBytes, TotalQuarantinedBytes, TotalQuarantineChunks,
-           QuarantineChunksCapacity, ChunksUsagePercent, MemoryOverheadPercent);
+    Str->append(
+        "Stats: Quarantine: batches: %zu; bytes: %zu (user: %zu); chunks: %zu "
+        "(capacity: %zu); %zu%% chunks used; %zu%% memory overhead\n",
+        BatchCount, TotalBytes, TotalQuarantinedBytes, TotalQuarantineChunks,
+        QuarantineChunksCapacity, ChunksUsagePercent, MemoryOverheadPercent);
   }
 
 private:
@@ -218,11 +218,11 @@ public:
     recycle(0, Cb);
   }
 
-  void printStats() const {
+  void getStats(ScopedString *Str) const {
     // It assumes that the world is stopped, just as the allocator's printStats.
-    Printf("Quarantine limits: global: %zuM; thread local: %zuK\n",
-           getMaxSize() >> 20, getCacheSize() >> 10);
-    Cache.printStats();
+    Cache.getStats(Str);
+    Str->append("Quarantine limits: global: %zuK; thread local: %zuK\n",
+                getMaxSize() >> 10, getCacheSize() >> 10);
   }
 
 private:

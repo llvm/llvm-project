@@ -117,8 +117,6 @@ namespace {
 
           if (!AfterBBI->modifiesRegister(Reg, TRI))
             continue;
-          assert(DeadOrKillToUnset &&
-                 "Shouldn't overwrite a register before it is killed");
           // Finish scanning because Reg is overwritten by a non-load
           // instruction.
           if (AfterBBI->getOpcode() != Opc)
@@ -134,12 +132,15 @@ namespace {
           // It loads same immediate value to the same Reg, which is redundant.
           // We would unset kill flag in previous Reg usage to extend live range
           // of Reg first, then remove the redundancy.
-          LLVM_DEBUG(dbgs() << " Unset dead/kill flag of " << *DeadOrKillToUnset
-                            << " from " << *DeadOrKillToUnset->getParent());
-          if (DeadOrKillToUnset->isDef())
-            DeadOrKillToUnset->setIsDead(false);
-          else
-            DeadOrKillToUnset->setIsKill(false);
+          if (DeadOrKillToUnset) {
+            LLVM_DEBUG(dbgs()
+                       << " Unset dead/kill flag of " << *DeadOrKillToUnset
+                       << " from " << *DeadOrKillToUnset->getParent());
+            if (DeadOrKillToUnset->isDef())
+              DeadOrKillToUnset->setIsDead(false);
+            else
+              DeadOrKillToUnset->setIsKill(false);
+          }
           DeadOrKillToUnset =
               AfterBBI->findRegisterDefOperand(Reg, true, true, TRI);
           if (DeadOrKillToUnset)

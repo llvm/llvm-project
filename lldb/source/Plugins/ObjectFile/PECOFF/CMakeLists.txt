@@ -7,6 +7,7 @@ endif()
 
 add_lldb_library(lldbPluginObjectFilePECOFF PLUGIN
   ObjectFilePECOFF.cpp
+  PECallFrameInfo.cpp
   WindowsMiniDump.cpp
 
   LINK_LIBS

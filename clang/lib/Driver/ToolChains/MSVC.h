@@ -98,12 +98,14 @@ public:
     Lib,
   };
   std::string getSubDirectoryPath(SubDirectoryType Type,
+                                  llvm::StringRef SubdirParent,
                                   llvm::Triple::ArchType TargetArch) const;
 
   // Convenience overload.
   // Uses the current target arch.
-  std::string getSubDirectoryPath(SubDirectoryType Type) const {
-    return getSubDirectoryPath(Type, getArch());
+  std::string getSubDirectoryPath(SubDirectoryType Type,
+                                  llvm::StringRef SubdirParent = "") const {
+    return getSubDirectoryPath(Type, SubdirParent, getArch());
   }
 
   enum class ToolsetLayout {

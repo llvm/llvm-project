@@ -106,3 +106,4 @@ pcmpgtw %xmm0, %xmm0
 # CHECK-NEXT: 4.     3     0.0    0.0    16.7      pcmpgtd	%xmm0, %xmm0
 # CHECK-NEXT: 5.     3     0.0    0.0    16.3      pcmpgtq	%xmm0, %xmm0
 # CHECK-NEXT: 6.     3     0.0    0.0    16.0      pcmpgtw	%xmm0, %xmm0
+# CHECK-NEXT:        3     4.9    0.0    9.4       <total>

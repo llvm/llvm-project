@@ -53,7 +53,7 @@ GENERAL OPTIONS
 
  Show the :program:`lit` help message.
 
-.. option:: -j N, --threads=N
+.. option:: -j N, --workers=N
 
  Run ``N`` tests in parallel.  By default, this is automatically chosen to
  match the number of detected available CPUs.

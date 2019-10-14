@@ -190,6 +190,7 @@ private:
 protected:
   explicit BasicTTIImplBase(const TargetMachine *TM, const DataLayout &DL)
       : BaseT(DL) {}
+  virtual ~BasicTTIImplBase() = default;
 
   using TargetTransformInfoImplBase::DL;
 
@@ -514,12 +515,43 @@ public:
     return BaseT::getInstructionLatency(I);
   }
 
+  virtual Optional<unsigned>
+  getCacheSize(TargetTransformInfo::CacheLevel Level) const {
+    return Optional<unsigned>(
+      getST()->getCacheSize(static_cast<unsigned>(Level)));
+  }
+
+  virtual Optional<unsigned>
+  getCacheAssociativity(TargetTransformInfo::CacheLevel Level) const {
+    Optional<unsigned> TargetResult =
+        getST()->getCacheAssociativity(static_cast<unsigned>(Level));
+
+    if (TargetResult)
+      return TargetResult;
+
+    return BaseT::getCacheAssociativity(Level);
+  }
+
+  virtual unsigned getCacheLineSize() const {
+    return getST()->getCacheLineSize();
+  }
+
+  virtual unsigned getPrefetchDistance() const {
+    return getST()->getPrefetchDistance();
+  }
+
+  virtual unsigned getMinPrefetchStride() const {
+    return getST()->getMinPrefetchStride();
+  }
+
+  virtual unsigned getMaxPrefetchIterationsAhead() const {
+    return getST()->getMaxPrefetchIterationsAhead();
+  }
+
   /// @}
 
   /// \name Vector TTI Implementations
   /// @{
-
-  unsigned getNumberOfRegisters(bool Vector) { return Vector ? 0 : 1; }
 
   unsigned getRegisterBitWidth(bool Vector) const { return 32; }
 

@@ -372,6 +372,69 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject*>($input));
 }
 
+
+%typemap(in) lldb::FileSP {
+  using namespace lldb_private;
+  PythonFile py_file(PyRefType::Borrowed, $input);
+  if (!py_file) {
+    PyErr_SetString(PyExc_TypeError, "not a file");
+    return nullptr;
+  }
+  auto sp = unwrapOrSetPythonException(py_file.ConvertToFile());
+  if (!sp)
+    return nullptr;
+  $1 = sp;
+}
+
+%typemap(in) lldb::FileSP FORCE_IO_METHODS {
+  using namespace lldb_private;
+  PythonFile py_file(PyRefType::Borrowed, $input);
+  if (!py_file) {
+    PyErr_SetString(PyExc_TypeError, "not a file");
+    return nullptr;
+  }
+  auto sp = unwrapOrSetPythonException(py_file.ConvertToFileForcingUseOfScriptingIOMethods());
+  if (!sp)
+    return nullptr;
+  $1 = sp;
+}
+
+%typemap(in) lldb::FileSP BORROWED {
+ using namespace lldb_private;
+  PythonFile py_file(PyRefType::Borrowed, $input);
+  if (!py_file) {
+    PyErr_SetString(PyExc_TypeError, "not a file");
+    return nullptr;
+  }
+  auto sp = unwrapOrSetPythonException(py_file.ConvertToFile(/*borrowed=*/true));
+  if (!sp)
+    return nullptr;
+  $1 = sp;
+}
+
+%typemap(in) lldb::FileSP BORROWED_FORCE_IO_METHODS {
+  using namespace lldb_private;
+  PythonFile py_file(PyRefType::Borrowed, $input);
+  if (!py_file) {
+    PyErr_SetString(PyExc_TypeError, "not a file");
+    return nullptr;
+  }
+  auto sp = unwrapOrSetPythonException(py_file.ConvertToFileForcingUseOfScriptingIOMethods(/*borrowed=*/true));
+  if (!sp)
+    return nullptr;
+  $1 = sp;
+}
+
+%typecheck(SWIG_TYPECHECK_POINTER) lldb::FileSP {
+  if (lldb_private::PythonFile::Check($input)) {
+    $1 = 1;
+  } else {
+    PyErr_Clear();
+    $1 = 0;
+  }
+}
+
+
 // FIXME both of these paths wind up calling fdopen() with no provision for ever calling
 // fclose() on the result.  SB interfaces that use FILE* should be deprecated for scripting
 // use and this typemap should eventually be removed.
@@ -381,19 +444,19 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
       $1 = nullptr;
    else if (!lldb_private::PythonFile::Check($input)) {
       int fd = PyObject_AsFileDescriptor($input);
+      if (fd < 0 || PyErr_Occurred())
+        return nullptr;
       PythonObject py_input(PyRefType::Borrowed, $input);
       PythonString py_mode = py_input.GetAttributeValue("mode").AsType<PythonString>();
-
-      if (-1 != fd && py_mode.IsValid()) {
-         FILE *f;
-         if ((f = fdopen(fd, py_mode.GetString().str().c_str())))
-            $1 = f;
-         else
-            PyErr_SetString(PyExc_TypeError, strerror(errno));
-      } else {
-         PyErr_SetString(PyExc_TypeError,"not a file-like object");
-         return nullptr;
-      }
+      if (!py_mode.IsValid() || PyErr_Occurred())
+        return nullptr;
+        FILE *f;
+        if ((f = fdopen(fd, py_mode.GetString().str().c_str())))
+          $1 = f;
+        else {
+          PyErr_SetString(PyExc_TypeError, strerror(errno));
+          return nullptr;
+        }
    }
    else
    {

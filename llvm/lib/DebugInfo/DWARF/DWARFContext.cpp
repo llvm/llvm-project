@@ -290,20 +290,24 @@ static void dumpLoclistsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
                                 const MCRegisterInfo *MRI,
                                 Optional<uint64_t> DumpOffset) {
   uint64_t Offset = 0;
-  DWARFDebugLoclists Loclists;
 
-  DWARFListTableHeader Header(".debug_loclists", "locations");
-  if (Error E = Header.extract(Data, &Offset)) {
-    WithColor::error() << toString(std::move(E)) << '\n';
-    return;
+  while (Data.isValidOffset(Offset)) {
+    DWARFListTableHeader Header(".debug_loclists", "locations");
+    if (Error E = Header.extract(Data, &Offset)) {
+      WithColor::error() << toString(std::move(E)) << '\n';
+      return;
+    }
+
+    Header.dump(OS, DumpOpts);
+    DataExtractor LocData(Data.getData(),
+                          Data.isLittleEndian(), Header.getAddrSize());
+
+    DWARFDebugLoclists Loclists;
+    uint64_t EndOffset = Header.length() + Header.getHeaderOffset();
+    Loclists.parse(LocData, Offset, EndOffset, Header.getVersion());
+    Loclists.dump(OS, 0, MRI, DumpOpts, DumpOffset);
+    Offset = EndOffset;
   }
-
-  Header.dump(OS, DumpOpts);
-  DataExtractor LocData(Data.getData().drop_front(Offset),
-                        Data.isLittleEndian(), Header.getAddrSize());
-
-  Loclists.parse(LocData, Header.getVersion());
-  Loclists.dump(OS, 0, MRI, DumpOffset);
 }
 
 void DWARFContext::dump(
@@ -378,7 +382,7 @@ void DWARFContext::dump(
 
   if (const auto *Off = shouldDump(Explicit, ".debug_loc", DIDT_ID_DebugLoc,
                                    DObj->getLocSection().Data)) {
-    getDebugLoc()->dump(OS, getRegisterInfo(), *Off);
+    getDebugLoc()->dump(OS, getRegisterInfo(), DumpOpts, *Off);
   }
   if (const auto *Off =
           shouldDump(Explicit, ".debug_loclists", DIDT_ID_DebugLoclists,
@@ -390,7 +394,7 @@ void DWARFContext::dump(
   if (const auto *Off =
           shouldDump(ExplicitDWO, ".debug_loc.dwo", DIDT_ID_DebugLoc,
                      DObj->getLocDWOSection().Data)) {
-    getDebugLocDWO()->dump(OS, 0, getRegisterInfo(), *Off);
+    getDebugLocDWO()->dump(OS, 0, getRegisterInfo(), DumpOpts, *Off);
   }
 
   if (const auto *Off = shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,
@@ -733,7 +737,7 @@ const DWARFDebugLoclists *DWARFContext::getDebugLocDWO() {
   // Use version 4. DWO does not support the DWARF v5 .debug_loclists yet and
   // that means we are parsing the new style .debug_loc (pre-standatized version
   // of the .debug_loclists).
-  LocDWO->parse(LocData, 4 /* Version */);
+  LocDWO->parse(LocData, 0, LocData.getData().size(), 4 /* Version */);
   return LocDWO.get();
 }
 

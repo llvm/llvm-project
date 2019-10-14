@@ -606,14 +606,14 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
       auto MBB = MI->getParent();
       MachineInstr &BoundaryMI = *getFirstNonPrologue(MBB, TII);
       MachineBasicBlock::reverse_iterator B(BoundaryMI);
-      // Check if B should actually be a bondary. If not set the previous
+      // Check if B should actually be a boundary. If not set the previous
       // instruction as the boundary instead.
       if (!TII->isBasicBlockPrologue(*B))
         B++;
 
       auto R = std::next(MI->getReverseIterator());
       const unsigned Threshold = 50;
-      // Search until B or Threashold for a place to insert the initialization.
+      // Search until B or Threshold for a place to insert the initialization.
       for (unsigned I = 0; R != B && I < Threshold; ++R, ++I)
         if (R->readsRegister(Reg, TRI) || R->definesRegister(Reg, TRI) ||
             TII->isSchedulingBoundary(*R, MBB, *MBB->getParent()))

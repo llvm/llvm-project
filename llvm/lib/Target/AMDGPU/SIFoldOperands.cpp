@@ -581,13 +581,17 @@ void SIFoldOperands::foldOperand(
 
   if (FoldingImmLike && UseMI->isCopy()) {
     Register DestReg = UseMI->getOperand(0).getReg();
-    const TargetRegisterClass *DestRC = Register::isVirtualRegister(DestReg)
-                                            ? MRI->getRegClass(DestReg)
-                                            : TRI->getPhysRegClass(DestReg);
+
+    // Don't fold into a copy to a physical register. Doing so would interfere
+    // with the register coalescer's logic which would avoid redundant
+    // initalizations.
+    if (DestReg.isPhysical())
+      return;
+
+    const TargetRegisterClass *DestRC =  MRI->getRegClass(DestReg);
 
     Register SrcReg = UseMI->getOperand(1).getReg();
-    if (Register::isVirtualRegister(DestReg) &&
-        Register::isVirtualRegister(SrcReg)) {
+    if (SrcReg.isVirtual()) { // XXX - This can be an assert?
       const TargetRegisterClass * SrcRC = MRI->getRegClass(SrcReg);
       if (TRI->isSGPRClass(SrcRC) && TRI->hasVectorRegisters(DestRC)) {
         MachineRegisterInfo::use_iterator NextUse;

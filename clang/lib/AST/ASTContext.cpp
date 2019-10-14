@@ -72,7 +72,6 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -82,7 +81,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -828,18 +826,6 @@ static bool isAddrSpaceMapManglingEnabled(const TargetInfo &TI,
   llvm_unreachable("getAddressSpaceMapMangling() doesn't cover anything.");
 }
 
-static std::vector<std::string>
-getRealPaths(llvm::vfs::FileSystem &VFS, llvm::ArrayRef<std::string> Paths) {
-  std::vector<std::string> Result;
-  llvm::SmallString<128> Buffer;
-  for (const auto &File : Paths) {
-    if (std::error_code EC = VFS.getRealPath(File, Buffer))
-      llvm::report_fatal_error("can't open file '" + File + "': " + EC.message());
-    Result.push_back(Buffer.str());
-  }
-  return Result;
-}
-
 ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
                        IdentifierTable &idents, SelectorTable &sels,
                        Builtin::Context &builtins)
@@ -847,10 +833,7 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       TemplateSpecializationTypes(this_()),
       DependentTemplateSpecializationTypes(this_()),
       SubstTemplateTemplateParmPacks(this_()), SourceMgr(SM), LangOpts(LOpts),
-      SanitizerBL(new SanitizerBlacklist(
-          getRealPaths(SM.getFileManager().getVirtualFileSystem(),
-                       LangOpts.SanitizerBlacklistFiles),
-          SM)),
+      SanitizerBL(new SanitizerBlacklist(LangOpts.SanitizerBlacklistFiles, SM)),
       XRayFilter(new XRayFunctionFilter(LangOpts.XRayAlwaysInstrumentFiles,
                                         LangOpts.XRayNeverInstrumentFiles,
                                         LangOpts.XRayAttrListFiles, SM)),
@@ -4732,8 +4715,7 @@ ASTContext::applyObjCProtocolQualifiers(QualType type,
 
 QualType
 ASTContext::getObjCTypeParamType(const ObjCTypeParamDecl *Decl,
-                           ArrayRef<ObjCProtocolDecl *> protocols,
-                           QualType Canonical) const {
+                                 ArrayRef<ObjCProtocolDecl *> protocols) const {
   // Look in the folding set for an existing type.
   llvm::FoldingSetNodeID ID;
   ObjCTypeParamType::Profile(ID, Decl, protocols);
@@ -4742,16 +4724,14 @@ ASTContext::getObjCTypeParamType(const ObjCTypeParamDecl *Decl,
       ObjCTypeParamTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(TypeParam, 0);
 
-  if (Canonical.isNull()) {
-    // We canonicalize to the underlying type.
-    Canonical = getCanonicalType(Decl->getUnderlyingType());
-    if (!protocols.empty()) {
-      // Apply the protocol qualifers.
-      bool hasError;
-      Canonical = getCanonicalType(applyObjCProtocolQualifiers(
-          Canonical, protocols, hasError, true /*allowOnPointerType*/));
-      assert(!hasError && "Error when apply protocol qualifier to bound type");
-    }
+  // We canonicalize to the underlying type.
+  QualType Canonical = getCanonicalType(Decl->getUnderlyingType());
+  if (!protocols.empty()) {
+    // Apply the protocol qualifers.
+    bool hasError;
+    Canonical = getCanonicalType(applyObjCProtocolQualifiers(
+        Canonical, protocols, hasError, true /*allowOnPointerType*/));
+    assert(!hasError && "Error when apply protocol qualifier to bound type");
   }
 
   unsigned size = sizeof(ObjCTypeParamType);
@@ -10274,6 +10254,16 @@ MangleNumberingContext &
 ASTContext::getManglingNumberContext(const DeclContext *DC) {
   assert(LangOpts.CPlusPlus);  // We don't need mangling numbers for plain C.
   std::unique_ptr<MangleNumberingContext> &MCtx = MangleNumberingContexts[DC];
+  if (!MCtx)
+    MCtx = createMangleNumberingContext();
+  return *MCtx;
+}
+
+MangleNumberingContext &
+ASTContext::getManglingNumberContext(NeedExtraManglingDecl_t, const Decl *D) {
+  assert(LangOpts.CPlusPlus); // We don't need mangling numbers for plain C.
+  std::unique_ptr<MangleNumberingContext> &MCtx =
+      ExtraMangleNumberingContexts[D];
   if (!MCtx)
     MCtx = createMangleNumberingContext();
   return *MCtx;

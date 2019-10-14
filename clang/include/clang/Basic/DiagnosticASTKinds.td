@@ -126,7 +126,8 @@ def note_constexpr_lifetime_ended : Note<
   "%plural{8:storage duration|:lifetime}0 has ended">;
 def note_constexpr_access_uninit : Note<
   "%select{read of|read of|assignment to|increment of|decrement of|"
-  "member call on|dynamic_cast of|typeid applied to|<ERRPR>|destruction of}0 "
+  "member call on|dynamic_cast of|typeid applied to|"
+  "construction of subobject of|destruction of}0 "
   "%select{object outside its lifetime|uninitialized object}1 "
   "is not allowed in a constant expression">;
 def note_constexpr_use_uninit_reference : Note<

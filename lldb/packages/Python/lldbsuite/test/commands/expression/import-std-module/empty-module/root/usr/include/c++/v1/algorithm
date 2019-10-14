@@ -1,0 +1,22 @@
+// This is only defined when building, but LLDB is missing this flag when loading the standard
+// library module so the actual contents of the module are missing.
+#ifdef ENABLE_STD_CONTENT
+
+#include "libc_header.h"
+
+namespace std {
+  inline namespace __1 {
+    // Pretend to be a std::vector template we need to instantiate
+    // in LLDB.
+    template<typename T>
+    struct vector { T i; int size() { return 2; } };
+  }
+}
+#else
+// Unused typedef we can use to check that we actually loaded
+// an empty module. Will be missing if LLDB somehow can get the
+// ENABLE_STD_CONTENT define right and break this test silently
+// (as with the define the module isn't empty anymore and this
+// test always succeeds).
+typedef int MissingContent;
+#endif // ENABLE_STD_CONTENT

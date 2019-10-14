@@ -8,7 +8,7 @@ CFLAGS_EXTRAS := -target $(TRIPLE)
 
 all: libfoo.dylib a.out
 
-libfoo.dylib: foo.c \
+libfoo.dylib: foo.c
 	$(MAKE) -f $(MAKEFILE_RULES) \
 		DYLIB_ONLY=YES DYLIB_NAME=foo DYLIB_C_SOURCES=foo.c
 

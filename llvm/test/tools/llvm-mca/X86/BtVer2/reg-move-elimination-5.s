@@ -109,3 +109,4 @@ mov %rdx, %rax
 # CHECK-NEXT: 2.     3     0.0    0.0    0.0       movq	%rbx, %rcx
 # CHECK-NEXT: 3.     3     0.0    0.0    0.0       movq	%rcx, %rdx
 # CHECK-NEXT: 4.     3     0.0    0.0    0.0       movq	%rdx, %rax
+# CHECK-NEXT:        3     0.0    0.0    0.0       <total>

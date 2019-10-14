@@ -53,34 +53,28 @@
 # DSO-NEXT:      Section: .text
 # DSO-NEXT:    }
 # DSO-NEXT:  ]
-# DSO-NEXT:  Version symbols {
-# DSO-NEXT:    Section Name: .gnu.version
-# DSO-NEXT:    Address: 0x240
-# DSO-NEXT:    Offset: 0x240
-# DSO-NEXT:    Link: 1
-# DSO-NEXT:    Symbols [
-# DSO-NEXT:      Symbol {
-# DSO-NEXT:        Version: 0
-# DSO-NEXT:        Name:
-# DSO-NEXT:      }
-# DSO-NEXT:      Symbol {
-# DSO-NEXT:        Version: 2
-# DSO-NEXT:        Name: a@@V1
-# DSO-NEXT:      }
-# DSO-NEXT:      Symbol {
-# DSO-NEXT:        Version: 3
-# DSO-NEXT:        Name: b@@V2
-# DSO-NEXT:      }
-# DSO-NEXT:      Symbol {
-# DSO-NEXT:        Version: 2
-# DSO-NEXT:        Name: b@V1
-# DSO-NEXT:      }
-# DSO-NEXT:      Symbol {
-# DSO-NEXT:        Version: 3
-# DSO-NEXT:        Name: c@@V2
-# DSO-NEXT:      }
-# DSO-NEXT:    ]
-# DSO-NEXT:  }
+# DSO-NEXT:  Version symbols [
+# DSO-NEXT:    Symbol {
+# DSO-NEXT:      Version: 0
+# DSO-NEXT:      Name:
+# DSO-NEXT:    }
+# DSO-NEXT:    Symbol {
+# DSO-NEXT:      Version: 2
+# DSO-NEXT:      Name: a@@V1
+# DSO-NEXT:    }
+# DSO-NEXT:    Symbol {
+# DSO-NEXT:      Version: 3
+# DSO-NEXT:      Name: b@@V2
+# DSO-NEXT:    }
+# DSO-NEXT:    Symbol {
+# DSO-NEXT:      Version: 2
+# DSO-NEXT:      Name: b@V1
+# DSO-NEXT:    }
+# DSO-NEXT:    Symbol {
+# DSO-NEXT:      Version: 3
+# DSO-NEXT:      Name: c@@V2
+# DSO-NEXT:    }
+# DSO-NEXT:  ]
 # DSO-NEXT:  SHT_GNU_verdef {
 # DSO-NEXT:    Definition {
 # DSO-NEXT:      Version: 1
@@ -148,30 +142,24 @@
 # EXE-NEXT:      Section: Undefined
 # EXE-NEXT:    }
 # EXE-NEXT:  ]
-# EXE-NEXT:  Version symbols {
-# EXE-NEXT:    Section Name: .gnu.version
-# EXE-NEXT:    Address: 0x200260
-# EXE-NEXT:    Offset: 0x260
-# EXE-NEXT:    Link: 1
-# EXE-NEXT:    Symbols [
-# EXE-NEXT:      Symbol {
-# EXE-NEXT:        Version: 0
-# EXE-NEXT:        Name:
-# EXE-NEXT:      }
-# EXE-NEXT:      Symbol {
-# EXE-NEXT:        Version: 2
-# EXE-NEXT:        Name: a@V1
-# EXE-NEXT:      }
-# EXE-NEXT:      Symbol {
-# EXE-NEXT:        Version: 3
-# EXE-NEXT:        Name: b@V2
-# EXE-NEXT:      }
-# EXE-NEXT:      Symbol {
-# EXE-NEXT:        Version: 3
-# EXE-NEXT:        Name: c@V2
-# EXE-NEXT:      }
-# EXE-NEXT:    ]
-# EXE-NEXT:  }
+# EXE-NEXT:  Version symbols [
+# EXE-NEXT:    Symbol {
+# EXE-NEXT:      Version: 0
+# EXE-NEXT:      Name:
+# EXE-NEXT:    }
+# EXE-NEXT:    Symbol {
+# EXE-NEXT:      Version: 2
+# EXE-NEXT:      Name: a@V1
+# EXE-NEXT:    }
+# EXE-NEXT:    Symbol {
+# EXE-NEXT:      Version: 3
+# EXE-NEXT:      Name: b@V2
+# EXE-NEXT:    }
+# EXE-NEXT:    Symbol {
+# EXE-NEXT:      Version: 3
+# EXE-NEXT:      Name: c@V2
+# EXE-NEXT:    }
+# EXE-NEXT:  ]
 # EXE-NEXT:  SHT_GNU_verdef {
 # EXE-NEXT:  }
 # EXE-NEXT:  SHT_GNU_verneed {

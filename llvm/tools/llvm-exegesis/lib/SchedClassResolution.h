@@ -31,29 +31,27 @@ namespace exegesis {
 // Computes the idealized ProcRes Unit pressure. This is the expected
 // distribution if the CPU scheduler can distribute the load as evenly as
 // possible.
-std::vector<std::pair<uint16_t, float>> computeIdealizedProcResPressure(
-    const llvm::MCSchedModel &SM,
-    llvm::SmallVector<llvm::MCWriteProcResEntry, 8> WPRS);
+std::vector<std::pair<uint16_t, float>>
+computeIdealizedProcResPressure(const MCSchedModel &SM,
+                                SmallVector<MCWriteProcResEntry, 8> WPRS);
 
-// An llvm::MCSchedClassDesc augmented with some additional data.
+// An MCSchedClassDesc augmented with some additional data.
 struct ResolvedSchedClass {
-  ResolvedSchedClass(const llvm::MCSubtargetInfo &STI,
-                     unsigned ResolvedSchedClassId, bool WasVariant);
+  ResolvedSchedClass(const MCSubtargetInfo &STI, unsigned ResolvedSchedClassId,
+                     bool WasVariant);
 
   static std::pair<unsigned /*SchedClassId*/, bool /*WasVariant*/>
-  resolveSchedClassId(const llvm::MCSubtargetInfo &SubtargetInfo,
-                      const llvm::MCInstrInfo &InstrInfo,
-                      const llvm::MCInst &MCI);
+  resolveSchedClassId(const MCSubtargetInfo &SubtargetInfo,
+                      const MCInstrInfo &InstrInfo, const MCInst &MCI);
 
   std::vector<BenchmarkMeasure>
-  getAsPoint(InstructionBenchmark::ModeE Mode, const llvm::MCSubtargetInfo &STI,
+  getAsPoint(InstructionBenchmark::ModeE Mode, const MCSubtargetInfo &STI,
              ArrayRef<PerInstructionStats> Representative) const;
 
   const unsigned SchedClassId;
-  const llvm::MCSchedClassDesc *const SCDesc;
+  const MCSchedClassDesc *const SCDesc;
   const bool WasVariant; // Whether the original class was variant.
-  const llvm::SmallVector<llvm::MCWriteProcResEntry, 8>
-      NonRedundantWriteProcRes;
+  const SmallVector<MCWriteProcResEntry, 8> NonRedundantWriteProcRes;
   const std::vector<std::pair<uint16_t, float>> IdealizedProcResPressure;
 };
 

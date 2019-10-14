@@ -63,12 +63,13 @@ public:
   void computeKnownBitsForFrameIndex(Register R, KnownBits &Known,
                                      const APInt &DemandedElts,
                                      unsigned Depth = 0);
-  static unsigned inferAlignmentForFrameIdx(int FrameIdx, int Offset,
-                                            const MachineFunction &MF);
-  static void computeKnownBitsForAlignment(KnownBits &Known, unsigned Align);
+  static Align inferAlignmentForFrameIdx(int FrameIdx, int Offset,
+                                         const MachineFunction &MF);
+  static void computeKnownBitsForAlignment(KnownBits &Known,
+                                           MaybeAlign Alignment);
 
   // Try to infer alignment for MI.
-  static unsigned inferPtrAlignment(const MachineInstr &MI);
+  static MaybeAlign inferPtrAlignment(const MachineInstr &MI);
 
   // Observer API. No-op for non-caching implementation.
   void erasingInstr(MachineInstr &MI) override{};

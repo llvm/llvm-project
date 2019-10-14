@@ -72,3 +72,4 @@ pinsrw $1, %eax, %xmm0
 # CHECK-NEXT: 0.     3     1.0    0.7    2.7       addl	%eax, %eax
 # CHECK-NEXT: 1.     3     4.3    0.0    0.0       pinsrw	$0, %eax, %xmm0
 # CHECK-NEXT: 2.     3     5.7    0.0    0.0       pinsrw	$1, %eax, %xmm0
+# CHECK-NEXT:        3     3.7    0.2    0.9       <total>

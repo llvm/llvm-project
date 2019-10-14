@@ -81,13 +81,24 @@ ProcessSP ProcessWindows::CreateInstance(lldb::TargetSP target_sp,
   return ProcessSP(new ProcessWindows(target_sp, listener_sp));
 }
 
-void ProcessWindows::Initialize() {
-  static llvm::once_flag g_once_flag;
+static bool ShouldUseLLDBServer() {
+  llvm::StringRef use_lldb_server = ::getenv("LLDB_USE_LLDB_SERVER");
+  return use_lldb_server.equals_lower("on") ||
+         use_lldb_server.equals_lower("yes") ||
+         use_lldb_server.equals_lower("1") ||
+         use_lldb_server.equals_lower("true");
+}
 
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance);
-  });
+void ProcessWindows::Initialize() {
+  if (!ShouldUseLLDBServer()) {
+    static llvm::once_flag g_once_flag;
+
+    llvm::call_once(g_once_flag, []() {
+      PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                    GetPluginDescriptionStatic(),
+                                    CreateInstance);
+    });
+  }
 }
 
 void ProcessWindows::Terminate() {}

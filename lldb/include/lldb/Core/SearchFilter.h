@@ -52,8 +52,8 @@ public:
   virtual ~Searcher();
 
   virtual CallbackReturn SearchCallback(SearchFilter &filter,
-                                        SymbolContext &context, Address *addr,
-                                        bool complete) = 0;
+                                        SymbolContext &context,
+                                        Address *addr) = 0;
 
   virtual lldb::SearchDepth GetDepth() = 0;
 

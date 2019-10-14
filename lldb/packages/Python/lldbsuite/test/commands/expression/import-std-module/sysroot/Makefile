@@ -3,7 +3,7 @@
 # system headers.
 NO_TEST_COMMON_H := 1
 
-CXXFLAGS_EXTRAS = -I $(SRCDIR)/root/usr/include/c++/include/ -I $(SRCDIR)/root/usr/include/ -nostdinc -nostdinc++
+CXXFLAGS_EXTRAS = -I $(SRCDIR)/root/usr/include/c++/v1/ -I $(SRCDIR)/root/usr/include/ -nostdinc -nostdinc++
 CXX_SOURCES := main.cpp
 
 include Makefile.rules

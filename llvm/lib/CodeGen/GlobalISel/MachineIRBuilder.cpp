@@ -1063,8 +1063,11 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
            "input operands do not cover output register");
     if (SrcOps.size() == 1)
       return buildCast(DstOps[0], SrcOps[0]);
-    if (DstOps[0].getLLTTy(*getMRI()).isVector())
-      return buildInstr(TargetOpcode::G_CONCAT_VECTORS, DstOps, SrcOps);
+    if (DstOps[0].getLLTTy(*getMRI()).isVector()) {
+      if (SrcOps[0].getLLTTy(*getMRI()).isVector())
+        return buildInstr(TargetOpcode::G_CONCAT_VECTORS, DstOps, SrcOps);
+      return buildInstr(TargetOpcode::G_BUILD_VECTOR, DstOps, SrcOps);
+    }
     break;
   }
   case TargetOpcode::G_EXTRACT_VECTOR_ELT: {

@@ -8973,6 +8973,39 @@ void ClangASTContext::Dump(Stream &s) {
   tu->dump(s.AsRawOstream());
 }
 
+void ClangASTContext::DumpFromSymbolFile(Stream &s,
+                                         llvm::StringRef symbol_name) {
+  SymbolFile *symfile = GetSymbolFile();
+
+  if (!symfile)
+    return;
+
+  lldb_private::TypeList type_list;
+  symfile->GetTypes(nullptr, eTypeClassAny, type_list);
+  size_t ntypes = type_list.GetSize();
+
+  for (size_t i = 0; i < ntypes; ++i) {
+    TypeSP type = type_list.GetTypeAtIndex(i);
+
+    if (!symbol_name.empty())
+      if (symbol_name.compare(type->GetName().GetStringRef()) != 0)
+        continue;
+
+    s << type->GetName().AsCString() << "\n";
+
+    if (clang::TagDecl *tag_decl =
+                 GetAsTagDecl(type->GetFullCompilerType()))
+      tag_decl->dump(s.AsRawOstream());
+    else if (clang::TypedefNameDecl *typedef_decl =
+                 GetAsTypedefDecl(type->GetFullCompilerType()))
+      typedef_decl->dump(s.AsRawOstream());
+    else {
+      GetCanonicalQualType(type->GetFullCompilerType().GetOpaqueQualType())
+          .dump(s.AsRawOstream());
+    }
+  }
+}
+
 void ClangASTContext::DumpValue(
     lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, Stream *s,
     lldb::Format format, const DataExtractor &data,

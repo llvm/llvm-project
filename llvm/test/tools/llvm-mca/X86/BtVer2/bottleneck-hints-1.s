@@ -99,3 +99,4 @@ add %edx, %eax
 # CHECK-NEXT: 1.     1     2.0    0.0    0.0       addl	%ebx, %ecx
 # CHECK-NEXT: 2.     1     2.0    0.0    0.0       addl	%ecx, %edx
 # CHECK-NEXT: 3.     1     3.0    0.0    0.0       addl	%edx, %eax
+# CHECK-NEXT:        1     2.0    0.3    0.0       <total>

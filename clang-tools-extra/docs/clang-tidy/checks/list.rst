@@ -60,6 +60,7 @@ Clang-Tidy Checks
    bugprone-misplaced-widening-cast
    bugprone-move-forwarding-reference
    bugprone-multiple-statement-macro
+   bugprone-not-null-terminated-result
    bugprone-parent-virtual-call
    bugprone-posix-return
    bugprone-sizeof-container

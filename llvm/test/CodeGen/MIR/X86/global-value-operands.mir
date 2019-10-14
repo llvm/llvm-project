@@ -103,7 +103,7 @@ body: |
 name:            test2
 body: |
   bb.0.entry:
-    ; CHECK: , @"\01Hello@$%09 \5C World,",
+    ; CHECK: , @"\01Hello@$%09 \\ World,",
     $rax = MOV64rm $rip, 1, _, @"\01Hello@$%09 \\ World,", _
     $eax = MOV32rm killed $rax, 1, _, 0, _
     RETQ $eax

@@ -24,7 +24,7 @@ define void @t0_caller(i32* %a) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to i8*
 ; CHECK-NEXT:    store i32 42, i32* [[B]], align 32
 ; CHECK-NEXT:    store i32* [[B]], i32** [[C]], align 64
-; CHECK-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t0_callback_broker(i32* null, i32* nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, i64, i32**)* @t0_callback_callee to void (i32*, i32*, ...)*), i32* [[A:%.*]], i64 99, i32** nonnull align 64 dereferenceable(8) [[C]])
+; CHECK-NEXT:    call void (i32*, i32*, void (i32*, i32*, ...)*, ...) @t0_callback_broker(i32* noalias null, i32* nonnull align 128 dereferenceable(4) [[PTR]], void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, i64, i32**)* @t0_callback_callee to void (i32*, i32*, ...)*), i32* [[A:%.*]], i64 99, i32** nonnull align 64 dereferenceable(8) [[C]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

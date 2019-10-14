@@ -49,3 +49,4 @@ addq  %rcx, %rdx
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       imulq	%rax, %rcx
 # CHECK-NEXT: 1.     1     5.0    0.0    0.0       addl	%edx, %ecx
 # CHECK-NEXT: 2.     1     6.0    0.0    0.0       addq	%rcx, %rdx
+# CHECK-NEXT:        1     4.0    0.3    0.0       <total>

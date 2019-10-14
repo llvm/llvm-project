@@ -27,8 +27,10 @@ function(lldb_tablegen)
   endif()
 endfunction(lldb_tablegen)
 
-function(add_lldb_test_dependency name)
-  add_dependencies(lldb-test-deps ${name})
+function(add_lldb_test_dependency)
+  foreach(dependency ${ARGN})
+    add_dependencies(lldb-test-deps ${dependency})
+  endforeach()
 endfunction(add_lldb_test_dependency)
 
 function(add_lldb_library name)
