@@ -365,7 +365,53 @@ constexpr auto no = MemoryRegionInfo::eNo;
 constexpr auto unknown = MemoryRegionInfo::eDontKnow;
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfo) {
-  SetUpData("fizzbuzz_wow64.dmp");
+  ASSERT_THAT_ERROR(SetUpFromYaml(R"(
+--- !minidump
+Streams:
+  - Type:            MemoryInfoList
+    Memory Ranges:
+      - Base Address:    0x0000000000000000
+        Allocation Protect: [  ]
+        Region Size:     0x0000000000010000
+        State:           [ MEM_FREE ]
+        Protect:         [ PAGE_NO_ACCESS ]
+        Type:            [  ]
+      - Base Address:    0x0000000000010000
+        Allocation Protect: [ PAGE_READ_WRITE ]
+        Region Size:     0x0000000000010000
+        State:           [ MEM_COMMIT ]
+        Type:            [ MEM_MAPPED ]
+      - Base Address:    0x0000000000020000
+        Allocation Protect: [ PAGE_READ_WRITE ]
+        Region Size:     0x0000000000010000
+        State:           [ MEM_COMMIT ]
+        Type:            [ MEM_MAPPED ]
+      - Base Address:    0x0000000000030000
+        Allocation Protect: [ PAGE_READ_WRITE ]
+        Region Size:     0x0000000000001000
+        State:           [ MEM_COMMIT ]
+        Type:            [ MEM_MAPPED ]
+      - Base Address:    0x0000000000040000
+        Allocation Protect: [ PAGE_EXECUTE_WRITE_COPY ]
+        Region Size:     0x0000000000001000
+        State:           [ MEM_COMMIT ]
+        Protect:         [ PAGE_READ_ONLY ]
+        Type:            [ MEM_IMAGE ]
+      - Base Address:    0x000000007FFE0000
+        Allocation Protect: [ PAGE_READ_ONLY ]
+        Region Size:     0x0000000000001000
+        State:           [ MEM_COMMIT ]
+        Type:            [ MEM_PRIVATE ]
+      - Base Address:    0x000000007FFE1000
+        Allocation Base: 0x000000007FFE0000
+        Allocation Protect: [ PAGE_READ_ONLY ]
+        Region Size:     0x000000000000F000
+        State:           [ MEM_RESERVE ]
+        Protect:         [ PAGE_NO_ACCESS ]
+        Type:            [ MEM_PRIVATE ]
+...
+)"),
+                    llvm::Succeeded());
 
   check_region(*parser, 0x00000000, 0x00010000, no, no, no, no);
   check_region(*parser, 0x00010000, 0x00020000, yes, yes, no, yes);
