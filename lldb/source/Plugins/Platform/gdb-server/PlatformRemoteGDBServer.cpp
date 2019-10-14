@@ -629,7 +629,8 @@ Status PlatformRemoteGDBServer::SetFilePermissions(const FileSpec &file_spec,
 }
 
 lldb::user_id_t PlatformRemoteGDBServer::OpenFile(const FileSpec &file_spec,
-                                                  uint32_t flags, uint32_t mode,
+                                                  File::OpenOptions flags,
+                                                  uint32_t mode,
                                                   Status &error) {
   return m_gdb_client.OpenFile(file_spec, flags, mode, error);
 }

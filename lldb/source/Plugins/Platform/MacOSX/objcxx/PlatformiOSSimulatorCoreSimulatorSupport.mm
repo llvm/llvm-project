@@ -429,7 +429,7 @@ static Status HandleFileAction(ProcessLaunchInfo &launch_info,
         int created_fd =
             open(file_spec.GetPath().c_str(), oflag, S_IRUSR | S_IWUSR);
         if (created_fd >= 0) {
-          uint32_t file_options = 0;
+          auto file_options = File::OpenOptions(0);
           if ((oflag & O_RDWR) || (oflag & O_RDONLY))
             file_options |= File::eOpenOptionRead;
           if ((oflag & O_RDWR) || (oflag & O_RDONLY))

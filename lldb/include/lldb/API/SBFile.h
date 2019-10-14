@@ -16,6 +16,7 @@ namespace lldb {
 class LLDB_API SBFile {
   friend class SBDebugger;
   friend class SBCommandReturnObject;
+  friend class SBProcess;
 
 public:
   SBFile();

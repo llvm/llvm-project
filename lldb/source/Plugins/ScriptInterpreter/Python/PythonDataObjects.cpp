@@ -1090,8 +1090,12 @@ FileUP PythonFile::GetUnderlyingFile() const {
   // File object knows about that.
   PythonString py_mode = GetAttributeValue("mode").AsType<PythonString>();
   auto options = File::GetOptionsFromMode(py_mode.GetString());
-  auto file = std::unique_ptr<File>(
-      new NativeFile(PyObject_AsFileDescriptor(m_py_obj), options, false));
+  if (!options) {
+    llvm::consumeError(options.takeError());
+    return nullptr;
+  }
+  auto file = std::unique_ptr<File>(new NativeFile(
+      PyObject_AsFileDescriptor(m_py_obj), options.get(), false));
   if (!file->IsValid())
     return nullptr;
   return file;
@@ -1165,9 +1169,10 @@ std::error_code PythonException::convertToErrorCode() const {
 
 char PythonException::ID = 0;
 
-llvm::Expected<uint32_t> GetOptionsForPyObject(const PythonObject &obj) {
-  uint32_t options = 0;
+llvm::Expected<File::OpenOptions>
+GetOptionsForPyObject(const PythonObject &obj) {
 #if PY_MAJOR_VERSION >= 3
+  auto options = File::OpenOptions(0);
   auto readable = As<bool>(obj.CallMethod("readable"));
   if (!readable)
     return readable.takeError();
@@ -1178,11 +1183,11 @@ llvm::Expected<uint32_t> GetOptionsForPyObject(const PythonObject &obj) {
     options |= File::eOpenOptionRead;
   if (writable.get())
     options |= File::eOpenOptionWrite;
+  return options;
 #else
   PythonString py_mode = obj.GetAttributeValue("mode").AsType<PythonString>();
-  options = File::GetOptionsFromMode(py_mode.GetString());
+  return File::GetOptionsFromMode(py_mode.GetString());
 #endif
-  return options;
 }
 
 // Base class template for python files.   All it knows how to do
@@ -1245,7 +1250,7 @@ namespace {
 class SimplePythonFile : public OwnedPythonFile<NativeFile> {
 public:
   SimplePythonFile(const PythonFile &file, bool borrowed, int fd,
-                   uint32_t options)
+                   File::OpenOptions options)
       : OwnedPythonFile(file, borrowed, fd, options, false) {}
 };
 } // namespace

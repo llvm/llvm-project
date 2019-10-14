@@ -46,7 +46,8 @@ StreamFile::StreamFile(const char *path) : Stream() {
   }
 }
 
-StreamFile::StreamFile(const char *path, uint32_t options, uint32_t permissions)
+StreamFile::StreamFile(const char *path, File::OpenOptions options,
+                       uint32_t permissions)
     : Stream() {
   auto file = FileSystem::Instance().Open(FileSpec(path), options, permissions);
   if (file)
