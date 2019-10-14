@@ -407,7 +407,7 @@ void test_move_assignment_different_index() {
   }
   {
     using V = std::variant<int, MoveAssign, unsigned>;
-    V v1(std::in_place_type<unsigned>, 43);
+    V v1(std::in_place_type<unsigned>, 43u);
     V v2(std::in_place_type<MoveAssign>, 42);
     MoveAssign::reset();
     V &vref = (v1 = std::move(v2));
