@@ -75,3 +75,9 @@ if config.host_os not in ['Linux', 'Darwin', 'NetBSD', 'FreeBSD']:
 
 if not config.parallelism_group:
   config.parallelism_group = 'shadow-memory'
+
+# Disable LSan sanitizer_common tests
+# because AppleClang doesn't support LSan.
+if config.tool_name == 'lsan' and config.host_os == 'Darwin':
+  lit_config.note('LSan sanitizer_common tests disabled')
+  config.unsupported = True
