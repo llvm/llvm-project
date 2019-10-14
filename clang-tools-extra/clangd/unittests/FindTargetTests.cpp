@@ -226,18 +226,26 @@ TEST_F(TargetDeclTest, Types) {
   EXPECT_DECLS("TypedefTypeLoc", {"typedef S X", Rel::Alias},
                {"struct S", Rel::Underlying});
 
+  // FIXME: Auto-completion in a template requires disabling delayed template
+  // parsing.
+  Flags = {"-fno-delayed-template-parsing"};
   Code = R"cpp(
     template<class T>
     void foo() { [[T]] x; }
   )cpp";
   // FIXME: We don't do a good job printing TemplateTypeParmDecls, apparently!
   EXPECT_DECLS("TemplateTypeParmTypeLoc", "");
+  Flags.clear();
 
+  // FIXME: Auto-completion in a template requires disabling delayed template
+  // parsing.
+  Flags = {"-fno-delayed-template-parsing"};
   Code = R"cpp(
     template<template<typename> class T>
     void foo() { [[T<int>]] x; }
   )cpp";
   EXPECT_DECLS("TemplateSpecializationTypeLoc", "template <typename> class T");
+  Flags.clear();
 
   Code = R"cpp(
     struct S{};
@@ -394,6 +402,10 @@ TEST_F(TargetDeclTest, Lambda) {
 }
 
 TEST_F(TargetDeclTest, OverloadExpr) {
+  // FIXME: Auto-completion in a template requires disabling delayed template
+  // parsing.
+  Flags = {"-fno-delayed-template-parsing"};
+
   Code = R"cpp(
     void func(int*);
     void func(char*);
@@ -508,6 +520,10 @@ protected:
   AllRefs annotateReferencesInFoo(llvm::StringRef Code) {
     TestTU TU;
     TU.Code = Code;
+
+    // FIXME: Auto-completion in a template requires disabling delayed template
+    // parsing.
+    TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
 
     auto AST = TU.build();
 

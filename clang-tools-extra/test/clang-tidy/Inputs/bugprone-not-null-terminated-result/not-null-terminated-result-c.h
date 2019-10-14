@@ -13,7 +13,7 @@
 
 #pragma clang system_header
 
-typedef unsigned int size_t;
+typedef __typeof__(sizeof(int)) size_t;
 typedef int errno_t;
 
 size_t strlen(const char *str);
