@@ -264,7 +264,7 @@ void SBInstruction::Print(FILE *outp) {
 
 void SBInstruction::Print(SBFile out) {
   LLDB_RECORD_METHOD(void, SBInstruction, Print, (SBFile), out);
-  Print(out.GetFile());
+  Print(out.m_opaque_sp);
 }
 
 void SBInstruction::Print(FileSP out_sp) {

@@ -14,6 +14,8 @@
 namespace lldb {
 
 class LLDB_API SBFile {
+  friend class SBInstruction;
+  friend class SBInstructionList;
   friend class SBDebugger;
   friend class SBCommandReturnObject;
   friend class SBProcess;

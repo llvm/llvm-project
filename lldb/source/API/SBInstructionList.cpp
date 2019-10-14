@@ -130,7 +130,7 @@ void SBInstructionList::Print(SBFile out) {
   LLDB_RECORD_METHOD(void, SBInstructionList, Print, (SBFile), out);
   if (!out.IsValid())
     return;
-  StreamFile stream(out.GetFile());
+  StreamFile stream(out.m_opaque_sp);
   GetDescription(stream);
 }
 
