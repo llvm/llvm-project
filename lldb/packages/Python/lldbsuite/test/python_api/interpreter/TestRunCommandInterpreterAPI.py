@@ -30,7 +30,7 @@ class CommandRunInterpreterLegacyAPICase(TestBase):
         self.dbg.SetErrorFileHandle (self.devnull, False)
 
     @add_test_categories(['pyapi'])
-    def test_run_session_with_error_and_quit(self):
+    def test_run_session_with_error_and_quit_legacy(self):
         """Run non-existing and quit command returns appropriate values"""
 
         n_errors, quit_requested, has_crashed = self.dbg.RunCommandInterpreter(
