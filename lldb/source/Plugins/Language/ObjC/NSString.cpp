@@ -171,7 +171,6 @@ bool lldb_private::formatters::NSStringSummaryProvider(
       options.SetStream(&stream);
       options.SetQuote('"');
       options.SetSourceSize(explicit_length);
-      options.SetHasSourceSize(has_explicit_length);
       options.SetNeedsZeroTermination(false);
       options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                  TypeSummaryCapping::eTypeSummaryUncapped);
@@ -184,7 +183,6 @@ bool lldb_private::formatters::NSStringSummaryProvider(
       options.SetProcessSP(process_sp);
       options.SetStream(&stream);
       options.SetSourceSize(explicit_length);
-      options.SetHasSourceSize(has_explicit_length);
       options.SetNeedsZeroTermination(false);
       options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                  TypeSummaryCapping::eTypeSummaryUncapped);
@@ -202,7 +200,6 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     options.SetStream(&stream);
     options.SetQuote('"');
     options.SetSourceSize(explicit_length);
-    options.SetHasSourceSize(has_explicit_length);
     options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                TypeSummaryCapping::eTypeSummaryUncapped);
     options.SetLanguage(summary_options.GetLanguage());
@@ -225,7 +222,6 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     options.SetStream(&stream);
     options.SetQuote('"');
     options.SetSourceSize(explicit_length);
-    options.SetHasSourceSize(has_explicit_length);
     options.SetNeedsZeroTermination(!has_explicit_length);
     options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                TypeSummaryCapping::eTypeSummaryUncapped);
@@ -246,7 +242,6 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     options.SetStream(&stream);
     options.SetQuote('"');
     options.SetSourceSize(explicit_length);
-    options.SetHasSourceSize(has_explicit_length);
     options.SetNeedsZeroTermination(!has_explicit_length);
     options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                TypeSummaryCapping::eTypeSummaryUncapped);
@@ -269,7 +264,6 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     options.SetProcessSP(process_sp);
     options.SetStream(&stream);
     options.SetSourceSize(explicit_length);
-    options.SetHasSourceSize(has_explicit_length);
     options.SetNeedsZeroTermination(!has_explicit_length);
     options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                TypeSummaryCapping::eTypeSummaryUncapped);
@@ -293,7 +287,6 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     options.SetProcessSP(process_sp);
     options.SetStream(&stream);
     options.SetSourceSize(explicit_length);
-    options.SetHasSourceSize(has_explicit_length);
     options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                TypeSummaryCapping::eTypeSummaryUncapped);
     options.SetLanguage(summary_options.GetLanguage());
