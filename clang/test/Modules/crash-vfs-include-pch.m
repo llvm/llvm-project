@@ -8,8 +8,8 @@
 // RUN:     -fmodules-cache-path=%t/cache -O0 \
 // RUN:     -isystem %S/Inputs/System/usr/include
 
-// RUN: not env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
-// RUN: %clang %s -E -include-pch %t/out/pch-used.h.pch -fmodules -nostdlibinc \
+// RUN: env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
+// RUN: not %clang %s -E -include-pch %t/out/pch-used.h.pch -fmodules -nostdlibinc \
 // RUN:     -fimplicit-module-maps -fmodules-cache-path=%t/cache -O0 \
 // RUN:     -Xclang -fno-validate-pch -isystem %S/Inputs/System/usr/include \
 // RUN:     -o %t/output.E 2>&1 | FileCheck %s

@@ -5,8 +5,8 @@
 // RUN: echo '// Foo.h' > %t/i/Foo.framework/Headers/Foo.h
 // RUN: %hmaptool write %S/../Preprocessor/Inputs/headermap-rel/foo.hmap.json %t/i/foo.hmap
 
-// RUN: not env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
-// RUN: %clang -fsyntax-only -fmodules -fmodules-cache-path=%t/m %s \
+// RUN: env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
+// RUN: not %clang -fsyntax-only -fmodules -fmodules-cache-path=%t/m %s \
 // RUN:     -I %t/i/foo.hmap -F %t/i 2>&1 | FileCheck %s
 
 // RUN: FileCheck --check-prefix=CHECKSH %s -input-file %t/crash-vfs-*.sh

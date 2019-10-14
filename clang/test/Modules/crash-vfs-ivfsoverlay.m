@@ -6,9 +6,9 @@
 // RUN: sed -e "s@INPUT_DIR@%/t@g" -e "s@OUT_DIR@%/t/example@g" \
 // RUN:   %S/../VFS/Inputs/vfsoverlay2.yaml > %t/srcvfs.yaml
 
-// RUN: not env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
+// RUN: env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
 // RUN:         ASAN_OPTIONS=detect_leaks=0 \
-// RUN: %clang -fsyntax-only -nostdinc %s \
+// RUN: not %clang -fsyntax-only -nostdinc %s \
 // RUN:     -I %S/Inputs/crash-recovery/usr/include \
 // RUN:     -ivfsoverlay %t/srcvfs.yaml \
 // RUN:     -fmodules -fmodules-cache-path=%t/m/ 2>&1 | FileCheck %s
