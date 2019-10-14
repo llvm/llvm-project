@@ -841,26 +841,25 @@ define amdgpu_kernel void @idot4_acc32_vecMul(<4 x i8> addrspace(1)* %src1,
 ; GFX10-DL:       ; %bb.0: ; %entry
 ; GFX10-DL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
 ; GFX10-DL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
-; GFX10-DL-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-DL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-DL-NEXT:    s_load_dword s2, s[4:5], 0x0
 ; GFX10-DL-NEXT:    s_load_dword s3, s[6:7], 0x0
 ; GFX10-DL-NEXT:    s_load_dword s4, s[0:1], 0x0
 ; GFX10-DL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-DL-NEXT:    v_and_b32_sdwa v1, s2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
-; GFX10-DL-NEXT:    v_and_b32_sdwa v0, s3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
+; GFX10-DL-NEXT:    v_lshrrev_b16_e64 v0, 8, s2
+; GFX10-DL-NEXT:    v_lshrrev_b16_e64 v1, 8, s3
 ; GFX10-DL-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX10-DL-NEXT:    s_sext_i32_i8 s5, s2
 ; GFX10-DL-NEXT:    s_sext_i32_i8 s6, s3
-; GFX10-DL-NEXT:    v_bfe_i32 v1, v1, 0, 8
 ; GFX10-DL-NEXT:    v_bfe_i32 v0, v0, 0, 8
+; GFX10-DL-NEXT:    v_bfe_i32 v1, v1, 0, 8
 ; GFX10-DL-NEXT:    s_bfe_i32 s4, s2, 0x80010
 ; GFX10-DL-NEXT:    s_ashr_i32 s2, s2, 24
 ; GFX10-DL-NEXT:    v_mad_i32_i24 v2, s5, s6, v2
 ; GFX10-DL-NEXT:    s_bfe_i32 s5, s3, 0x80010
 ; GFX10-DL-NEXT:    s_ashr_i32 s3, s3, 24
-; GFX10-DL-NEXT:    v_mad_i32_i24 v0, v1, v0, v2
+; GFX10-DL-NEXT:    v_mad_i32_i24 v0, v0, v1, v2
 ; GFX10-DL-NEXT:    v_mad_i32_i24 v0, s4, s5, v0
 ; GFX10-DL-NEXT:    v_mad_i32_i24 v2, s2, s3, v0
 ; GFX10-DL-NEXT:    v_mov_b32_e32 v0, s0
@@ -1057,22 +1056,22 @@ define amdgpu_kernel void @idot4_acc16_vecMul(<4 x i8> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    s_bfe_i32 s4, s0, 0x80000
 ; GFX10-DL-NEXT:    s_bfe_i32 s3, s1, 0x80000
 ; GFX10-DL-NEXT:    s_lshr_b32 s2, s0, 16
-; GFX10-DL-NEXT:    v_and_b32_sdwa v4, sext(s0), v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
+; GFX10-DL-NEXT:    v_ashrrev_i16_e64 v4, 8, s0
 ; GFX10-DL-NEXT:    s_lshr_b32 s5, s1, 16
-; GFX10-DL-NEXT:    v_and_b32_sdwa v5, sext(s1), v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
+; GFX10-DL-NEXT:    v_ashrrev_i16_e64 v5, 8, s1
 ; GFX10-DL-NEXT:    v_and_b32_e32 v6, s3, v3
 ; GFX10-DL-NEXT:    v_and_b32_e32 v7, s4, v3
 ; GFX10-DL-NEXT:    s_bfe_i32 s0, s2, 0x80000
 ; GFX10-DL-NEXT:    s_bfe_i32 s1, s5, 0x80000
 ; GFX10-DL-NEXT:    v_lshl_or_b32 v5, v5, 16, v6
 ; GFX10-DL-NEXT:    v_lshl_or_b32 v4, v4, 16, v7
-; GFX10-DL-NEXT:    v_and_b32_sdwa v6, sext(s2), v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
-; GFX10-DL-NEXT:    v_and_b32_sdwa v7, sext(s5), v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
+; GFX10-DL-NEXT:    v_ashrrev_i16_e64 v6, 8, s2
 ; GFX10-DL-NEXT:    v_and_b32_e32 v8, s1, v3
 ; GFX10-DL-NEXT:    v_and_b32_e32 v3, s0, v3
+; GFX10-DL-NEXT:    v_ashrrev_i16_e64 v7, 8, s5
 ; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v4, v4, v5
-; GFX10-DL-NEXT:    v_lshl_or_b32 v5, v7, 16, v8
 ; GFX10-DL-NEXT:    v_lshl_or_b32 v3, v6, 16, v3
+; GFX10-DL-NEXT:    v_lshl_or_b32 v5, v7, 16, v8
 ; GFX10-DL-NEXT:    v_pk_mul_lo_u16 v3, v3, v5
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DL-NEXT:    v_add_nc_u32_e32 v2, v4, v2
