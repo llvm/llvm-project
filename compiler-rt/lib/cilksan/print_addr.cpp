@@ -46,6 +46,7 @@ uintptr_t *load_pc = nullptr;
 uintptr_t *store_pc = nullptr;
 uintptr_t *alloca_pc = nullptr;
 uintptr_t *allocfn_pc = nullptr;
+allocfn_prop_t *allocfn_prop = nullptr;
 uintptr_t *free_pc = nullptr;
 
 class ProcMapping_t {
@@ -156,7 +157,7 @@ get_info_on_mem_access(uint64_t inst_addr
   // racedetector_assert(bag);
 
   get_info_on_inst_addr(inst_addr, &line_no, &file);
-  convert << std::hex << "0x" << inst_addr << std::dec
+  convert << std::hex << inst_addr << std::dec
           << ": (" << file << ":" << std::dec << line_no << ")";
   // XXX: Let's not do this for now; maybe come back later
   //   // convert << "\t called at " << bag->get_call_context();
@@ -174,7 +175,7 @@ typedef enum {
 // Helper function to get string describing a variable location from a
 // obj_source_loc_t.
 static std::string
-get_obj_info_str(const obj_source_loc_t *obj_src_loc) {
+get_obj_info_str(const obj_source_loc_t *obj_src_loc, const Decorator &d) {
   if (!obj_src_loc)
     return "<no information on variable>";
 
@@ -183,10 +184,12 @@ get_obj_info_str(const obj_source_loc_t *obj_src_loc) {
   //                  obj_src_loc->type :
   //                  "<no variable type>");
   std::string variable(obj_src_loc->name ?
-                       obj_src_loc->name :
+                       (std::string(d.Variable()) + obj_src_loc->name +
+                        std::string(d.Default())) :
                        "<no variable name>");
   std::string filename(obj_src_loc->filename ?
-                       obj_src_loc->filename :
+                       (std::string(d.Filename()) + obj_src_loc->filename +
+                        std::string(d.Default())) :
                        "<no filename>");
   int32_t line_no = obj_src_loc->line_number;
 
@@ -194,8 +197,10 @@ get_obj_info_str(const obj_source_loc_t *obj_src_loc) {
   //   convert << type << " ";
 
   convert << variable
-          << " (declared at " << filename
-          << ":" << std::dec << line_no << ")";
+          << " (declared at " << filename;
+  if (line_no >= 0)
+    convert << d.Filename() << ":" << std::dec << line_no << d.Default();
+  convert << ")";
 
   return convert.str();
 }
@@ -203,28 +208,35 @@ get_obj_info_str(const obj_source_loc_t *obj_src_loc) {
 // Helper function to get string describing source location from a
 // csan_source_loc_t.
 static std::string
-get_src_info_str(const csan_source_loc_t *src_loc) {
+get_src_info_str(const csan_source_loc_t *src_loc, const Decorator &d) {
   if (!src_loc)
     return "<no information on source location>";
 
   std::ostringstream convert;
   std::string file(src_loc->filename ?
-                   src_loc->filename :
+                   (std::string(d.Filename()) + src_loc->filename +
+                    std::string(d.Default())) :
                    "<no filename>");
   std::string funcname(src_loc->name ?
-                       src_loc->name :
+                       (std::string(d.Function()) + src_loc->name +
+                        std::string(d.Default())) :
                        "<no function name>");
   int32_t line_no = src_loc->line_number;
   int32_t col_no = src_loc->column_number;
 
   convert << " " << funcname;
-  convert << " " << file
-          << ":" << std::dec << line_no
-          << ":" << std::dec << col_no;
+  convert << " " << file;
+  if (line_no >= 0 && col_no >= 0) {
+    convert << d.Filename();
+    convert << ":" << std::dec << line_no;
+    convert << ":" << std::dec << col_no;
+    convert << d.Default();
+  }
   return convert.str();
 }
 
-static std::string get_info_on_alloca(const csi_id_t alloca_id) {
+static std::string get_info_on_alloca(const csi_id_t alloca_id,
+                                      const Decorator &d) {
   std::ostringstream convert;
 
   // Get source and object information.
@@ -232,65 +244,80 @@ static std::string get_info_on_alloca(const csi_id_t alloca_id) {
   const obj_source_loc_t *obj_src_loc = nullptr;
   // Even alloca_id's are stack allocations
   if (alloca_id % 2) {
-    convert << " Heap object ";
+    convert << d.RaceLoc() << " Heap object " << d.Default();
     src_loc = __csan_get_allocfn_source_loc(alloca_id / 2);
     obj_src_loc = __csan_get_allocfn_obj_source_loc(alloca_id / 2);
   } else {
-    convert << "Stack object ";
+    convert << d.RaceLoc() << "Stack object " << d.Default();
     src_loc = __csan_get_alloca_source_loc(alloca_id / 2);
     obj_src_loc = __csan_get_alloca_obj_source_loc(alloca_id / 2);
   }
 
-  convert << get_obj_info_str(obj_src_loc);
+  convert << get_obj_info_str(obj_src_loc, d) << std::endl;
 
-  convert << std::endl << "      from ";
-  // Get PC for this access.
-  if (alloca_id % 2)
-    convert << "0x" << std::hex << allocfn_pc[alloca_id / 2];
-  else
-    convert << "0x" << std::hex << alloca_pc[alloca_id / 2];
+  uintptr_t pc = (alloca_id % 2) ? allocfn_pc[alloca_id / 2] :
+                     alloca_pc[alloca_id / 2];
 
-  if (alloca_id % 2)
-    convert << get_src_info_str(src_loc);
+  convert << d.RaceLoc();
+  if (alloca_id % 2) {
+    convert << "      Call "
+            << d.InstAddress() << std::hex << pc << d.Default();
+    if (allocfn_prop[alloca_id / 2].allocfn_ty != uint8_t(-1))
+      convert << " to " << d.Function()
+              << __csan_get_allocfn_str(allocfn_prop[alloca_id / 2])
+              << d.Default();
+  } else {
+    convert << "     Alloc "
+            << d.InstAddress() << std::hex << pc << d.Default();
+  }
+
+  if (alloca_id % 2) {
+    convert << " in" << get_src_info_str(src_loc, d);
+  }
 
   return convert.str();
 }
 
 static std::string
-get_info_on_mem_access(const csi_id_t acc_id, ACC_TYPE type) {
+get_info_on_mem_access(const csi_id_t acc_id, ACC_TYPE type, uint8_t endpoint,
+                       const Decorator &d) {
   std::ostringstream convert;
 
+  convert << d.Bold() << d.RaceLoc();
   switch (type) {
   case LOAD_ACC:
-    convert << "->    Read ";
+    convert << "   Read ";
     break;
   case STORE_ACC:
-    convert << "->   Write ";
+    convert << "  Write ";
     break;
   case FREE_ACC:
-    convert << "->    Free ";
+    convert << "   Free ";
     break;
   case REALLOC_ACC:
-    convert << "-> Realloc ";
+    convert << "Realloc ";
     break;
   }
+  convert << d.Default();
 
   // Get PC for this access.
   if (UNKNOWN_CSI_ID != acc_id) {
+    convert << d.InstAddress();
     switch (type) {
     case LOAD_ACC:
-      convert << "0x" << std::hex << load_pc[acc_id];
+      convert << std::hex << load_pc[acc_id];
       break;
     case STORE_ACC:
-      convert << "0x" << std::hex << store_pc[acc_id];
+      convert << std::hex << store_pc[acc_id];
       break;
     case FREE_ACC:
-      convert << "0x" << std::hex << free_pc[acc_id];
+      convert << std::hex << free_pc[acc_id];
       break;
     case REALLOC_ACC:
-      convert << "0x" << std::hex << allocfn_pc[acc_id];
+      convert << std::hex << allocfn_pc[acc_id];
       break;
     }
+    convert << d.Default();
   }
 
   // Get source information.
@@ -320,13 +347,7 @@ get_info_on_mem_access(const csi_id_t acc_id, ACC_TYPE type) {
   // else
   //   std::cerr << " is valid\n";
 
-  convert << get_src_info_str(src_loc);
-
-  // TODO: Track objects modified by free's and realloc's.
-  if (type == FREE_ACC || type == REALLOC_ACC)
-    return convert.str();
-
-  convert << std::endl << "          to variable ";
+  convert << get_src_info_str(src_loc, d);
 
   // Get object information
   const obj_source_loc_t *obj_src_loc = nullptr;
@@ -338,27 +359,36 @@ get_info_on_mem_access(const csi_id_t acc_id, ACC_TYPE type) {
     case STORE_ACC:
       obj_src_loc = __csan_get_store_obj_source_loc(acc_id);
       break;
+    // TODO: Track objects modified by free's and realloc's.
+    default:
+      break;
     }
   }
+  if (obj_src_loc) {
+    convert << std::endl << (endpoint == 0 ? "| " : "||")
+            << "       `-to variable ";
 
-  convert << get_obj_info_str(obj_src_loc);
+    convert << get_obj_info_str(obj_src_loc, d);
+  }
 
   return convert.str();
 }
 
-static std::string get_info_on_call(const CallID_t &call) {
+static std::string get_info_on_call(const CallID_t &call, const Decorator &d) {
   std::ostringstream convert;
+  convert << d.RaceLoc();
   switch (call.getType()) {
   case CALL:
-    convert << "   Call ";
+    convert << "  Call ";
     break;
   case SPAWN:
-    convert << "  Spawn ";
+    convert << " Spawn ";
     break;
   case LOOP:
-    convert << " Parfor ";
+    convert << "Parfor ";
     break;
   }
+  convert << d.Default();
 
   if (call.isUnknownID()) {
     convert << "<no information on source location>";
@@ -377,7 +407,7 @@ static std::string get_info_on_call(const CallID_t &call) {
     pc = loop_pc[call.getID()];
     break;
   }
-  convert << "0x" << std::hex << pc;
+  convert << d.InstAddress() << std::hex << pc << d.Default();
 
   const csan_source_loc_t *src_loc = nullptr;
   switch (call.getType()) {
@@ -392,22 +422,23 @@ static std::string get_info_on_call(const CallID_t &call) {
     break;
   }
 
-  convert << get_src_info_str(src_loc);
+  convert << get_src_info_str(src_loc, d);
 
   return convert.str();
 }
 
 int get_call_stack_divergence_pt(
-    const std::unique_ptr<CallID_t[]> &first_call_stack,
+    const std::unique_ptr<std::pair<CallID_t, uintptr_t>[]> &first_call_stack,
     int first_call_stack_size,
-    const std::unique_ptr<CallID_t[]> &second_call_stack,
+    const std::unique_ptr<std::pair<CallID_t, uintptr_t>[]> &second_call_stack,
     int second_call_stack_size) {
   int i;
   int end =
     (first_call_stack_size < second_call_stack_size) ?
     first_call_stack_size : second_call_stack_size;
   for (i = 0; i < end; ++i)
-    if (first_call_stack[i] != second_call_stack[i])
+    // if (first_call_stack[i].first != second_call_stack[i].first)
+    if (first_call_stack[i].second != second_call_stack[i].second)
       // TODO: For Loop entries in the call stack, use versioning to distinguish
       // different iterations of the loop.
       break;
@@ -416,28 +447,38 @@ int get_call_stack_divergence_pt(
 
 // extern void print_current_function_info();
 
-static std::unique_ptr<CallID_t[]>
+static std::unique_ptr<std::pair<CallID_t, uintptr_t>[]>
 get_call_stack(const AccessLoc_t &instrAddr) {
   int stack_size = instrAddr.getCallStackSize();
-  std::unique_ptr<CallID_t[]> call_stack(new CallID_t[stack_size]);
+  std::unique_ptr<std::pair<CallID_t, uintptr_t>[]>
+      call_stack(new std::pair<CallID_t, uintptr_t>[stack_size]);
   {
     const call_stack_node_t *call_stack_node = instrAddr.getCallStack();
     for (int i = stack_size - 1;
          i >= 0;
          --i, call_stack_node = call_stack_node->getPrev()) {
-      call_stack[i] = call_stack_node->getCallID();
+      call_stack[i].first = call_stack_node->getCallID();
+      call_stack[i].second = reinterpret_cast<uintptr_t>(call_stack_node);
     }
   }
   return call_stack;
 }
 
+bool CilkSanImpl_t::ColorizeReports() {
+  char *e = getenv("CILKSAN_COLOR_REPORT");
+  if (e && 0 == strcmp(e, "0"))
+    return false;
+  return isatty(STDERR_FILENO) != 0;
+}
+
 // static void print_race_info(const RaceInfo_t& race) {
 void RaceInfo_t::print(const AccessLoc_t &first_inst,
                        const AccessLoc_t &second_inst,
-                       const AccessLoc_t &alloc_inst) const {
-  std::cerr << "Race detected at address "
+                       const AccessLoc_t &alloc_inst,
+                       const Decorator &d) const {
+  std::cerr << d.Bold() << d.Error() << "Race detected at address "
     // << (is_on_stack(race.addr) ? "stack address " : "address ")
-            << std::hex << "0x" << addr << std::dec << std::endl;
+            << std::hex << addr << d.Default() << std::dec << std::endl;
 
   // std::string first_acc_info = get_info_on_mem_access(race.first_inst);
   // std::string second_acc_info = get_info_on_mem_access(race.second_inst);
@@ -499,9 +540,9 @@ void RaceInfo_t::print(const AccessLoc_t &first_inst,
     break;
   }
   first_acc_info =
-      get_info_on_mem_access(first_inst.getID(), first_acc_type);
+      get_info_on_mem_access(first_inst.getID(), first_acc_type, 0, d);
   second_acc_info =
-      get_info_on_mem_access(second_inst.getID(), second_acc_type);
+      get_info_on_mem_access(second_inst.getID(), second_acc_type, 1, d);
 
   // Extract the two call stacks
   int first_call_stack_size = first_inst.getCallStackSize();
@@ -517,62 +558,34 @@ void RaceInfo_t::print(const AccessLoc_t &first_inst,
       second_call_stack_size);
 
   // Print the two accesses involved in the race
-  switch(type) {
-  case RW_RACE:
-    std::cerr << first_acc_info << std::endl;
-    for (int i = first_call_stack_size - 1;
-         i >= divergence; --i)
-      std::cerr << "   " << get_info_on_call(first_call_stack[i])
-                << std::endl;
-    std::cerr << second_acc_info << std::endl;
-    for (int i = second_call_stack_size - 1;
-         i >= divergence; --i)
-      std::cerr << "   " << get_info_on_call(second_call_stack[i])
-                << std::endl;
-    break;
+  std::cerr << "*  " << first_acc_info << std::endl;
+  for (int i = first_call_stack_size - 1;
+       i >= divergence; --i)
+    std::cerr << "+   " << get_info_on_call(first_call_stack[i].first, d)
+              << std::endl;
+  std::cerr << "|* " << second_acc_info << std::endl;
+  for (int i = second_call_stack_size - 1;
+       i >= divergence; --i)
+    std::cerr << "|+  " << get_info_on_call(second_call_stack[i].first, d)
+              << std::endl;
 
-  case WW_RACE:
-    std::cerr << first_acc_info << std::endl;
-    for (int i = first_call_stack_size - 1;
-         i >= divergence; --i)
-      std::cerr << "   " << get_info_on_call(first_call_stack[i])
-                << std::endl;
-    std::cerr << second_acc_info << std::endl;
-    for (int i = second_call_stack_size - 1;
-         i >= divergence; --i)
-      std::cerr << "   " << get_info_on_call(second_call_stack[i])
-                << std::endl;
-    break;
-
-  case WR_RACE:
-    std::cerr << first_acc_info << std::endl;
-    for (int i = first_call_stack_size - 1;
-         i >= divergence; --i)
-      std::cerr << "   " << get_info_on_call(first_call_stack[i])
-                << std::endl;
-    std::cerr << second_acc_info << std::endl;
-    for (int i = second_call_stack_size - 1;
-         i >= divergence; --i)
-      std::cerr << "   " << get_info_on_call(second_call_stack[i])
-                << std::endl;
-    break;
-  }
-
+  // Print the common calling context
   if (divergence > 0) {
-    std::cerr << "  Common calling context" << std::endl;
+    std::cerr << "\\| Common calling context" << std::endl;
     for (int i = divergence - 1; i >= 0; --i)
-      std::cerr << "   " << get_info_on_call(first_call_stack[i])
+      std::cerr << " +  " << get_info_on_call(first_call_stack[i].first, d)
                 << std::endl;
   }
 
+  // Print the allocation
   if (alloc_inst.isValid()) {
-    std::cerr << "  Allocation context" << std::endl;
+    std::cerr << "   Allocation context" << std::endl;
     const csi_id_t alloca_id = alloc_inst.getID();
-    std::cerr << "   " << get_info_on_alloca(alloca_id) << std::endl;
+    std::cerr << "    " << get_info_on_alloca(alloca_id, d) << std::endl;
 
     auto alloc_call_stack = get_call_stack(alloc_inst);
     for (int i = alloc_inst.getCallStackSize() - 1; i >= 0; --i)
-      std::cerr << "   " << get_info_on_call(alloc_call_stack[i])
+      std::cerr << "    " << get_info_on_call(alloc_call_stack[i].first, d)
                 << std::endl;
   }
 
@@ -606,7 +619,7 @@ void CilkSanImpl_t::report_race(
     duplicated_races++;
   } else {
     // have to get the info before user program exits
-    race.print(first_inst, second_inst, alloc_inst);
+    race.print(first_inst, second_inst, alloc_inst, Decorator(color_report));
     races_found.insert(std::make_pair(key, race));
   }
 }
@@ -622,7 +635,7 @@ void report_viewread_race(uint64_t first_inst, uint64_t second_inst,
                           uint64_t addr) {
   // For now, just print the viewread race
   std::cerr << "Race detected at address "
-            << std::hex << "0x" << addr << std::dec << std::endl;
+            << std::hex << addr << std::dec << std::endl;
   std::string first_acc_info = get_info_on_mem_access(first_inst);
   std::string second_acc_info = get_info_on_mem_access(second_inst);
   std::cerr << "  read access at " << first_acc_info << std::endl;
@@ -655,7 +668,7 @@ void print_addr(FILE *f, void *a) {
       unsigned long off = ai-(*proc_maps)[i].low;
       const char *path = (*proc_maps)[i].path.c_str();
       DBG_TRACE(DEBUG_BACKTRACE,
-		"%p is offset 0x%lx in %s\n", a, off, path);
+		"%p is offset %lx in %s\n", a, off, path);
       bool is_so = strcmp(".so", path+strlen(path)-3) == 0;
       char *command;
       if (is_so) {

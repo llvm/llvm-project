@@ -400,6 +400,39 @@ public:
   }
 };
 
+// TODO: Replace this class copied from
+// sanitizer_common/sanitizer_report_decorator.h with the sanitizer header file
+// itself.
+class Decorator {
+  // FIXME: This is not portable. It assumes the special strings are printed to
+  // stdout, which is not the case on Windows (see SetConsoleTextAttribute()).
+ public:
+  Decorator(bool color_report) : ansi_(color_report) {}
+  const char *Bold() const { return ansi_ ? "\033[1m" : ""; }
+  const char *Default() const { return ansi_ ? "\033[0m"  : ""; }
+  const char *Warning() const { return Red(); }
+  const char *Error() const { return Red(); }
+  const char *MemoryByte() const { return Magenta(); }
+
+  const char *RaceLoc() const { return Magenta(); }
+  const char *InstAddress() const { return Yellow(); }
+  const char *Function() const { return Blue(); }
+  const char *Variable() const { return Cyan(); }
+  const char *Filename() const { return Green(); }
+
+protected:
+  const char *Black()   const { return ansi_ ? "\033[30m" : ""; }
+  const char *Red()     const { return ansi_ ? "\033[31m" : ""; }
+  const char *Green()   const { return ansi_ ? "\033[32m" : ""; }
+  const char *Yellow()  const { return ansi_ ? "\033[33m" : ""; }
+  const char *Blue()    const { return ansi_ ? "\033[34m" : ""; }
+  const char *Magenta() const { return ansi_ ? "\033[35m" : ""; }
+  const char *Cyan()    const { return ansi_ ? "\033[36m" : ""; }
+  const char *White()   const { return ansi_ ? "\033[37m" : ""; }
+ private:
+  const bool ansi_;
+};
+
 // Class representing a single race.
 class RaceInfo_t {
   // const AccessLoc_t first_inst;  // instruction addr of the first access
@@ -441,7 +474,7 @@ public:
   }
 
   inline void print(const AccessLoc_t &first, const AccessLoc_t &second,
-                    const AccessLoc_t &alloc) const;
+                    const AccessLoc_t &alloc, const Decorator &d) const;
 };
 
 #endif  // __RACE_INFO_H__

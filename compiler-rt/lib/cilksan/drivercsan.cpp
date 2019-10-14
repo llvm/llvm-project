@@ -48,6 +48,7 @@ extern uintptr_t *load_pc;
 extern uintptr_t *store_pc;
 extern uintptr_t *alloca_pc;
 extern uintptr_t *allocfn_pc;
+extern allocfn_prop_t *allocfn_prop;
 extern uintptr_t *free_pc;
 static csi_id_t total_call = 0;
 static csi_id_t total_spawn = 0;
@@ -200,6 +201,10 @@ static void csan_destroy(void) {
     free(allocfn_pc);
     allocfn_pc = nullptr;
   }
+  if (allocfn_prop) {
+    free(allocfn_prop);
+    allocfn_prop = nullptr;
+  }
   if (free_pc) {
     free(free_pc);
     free_pc = nullptr;
@@ -222,7 +227,7 @@ static void init_internal() {
   char *e = getenv("CILK_NWORKERS");
   if (!e || 0 != strcmp(e, "1")) {
     // fprintf(err_io, "Setting CILK_NWORKERS to be 1\n");
-    if( setenv("CILK_NWORKERS", "1", 1) ) {
+    if (setenv("CILK_NWORKERS", "1", 1)) {
       fprintf(err_io, "Error setting CILK_NWORKERS to be 1\n");
       exit(1);
     }
@@ -234,7 +239,7 @@ static void init_internal() {
   e = getenv("CILK_FORCE_REDUCE");
   if (!e || 0 != strcmp(e, "1")) {
     // fprintf(err_io, "Setting CILK_FORCE_REDUCE to be 1\n");
-    if( setenv("CILK_FORCE_REDUCE", "1", 1) ) {
+    if (setenv("CILK_FORCE_REDUCE", "1", 1)) {
       fprintf(err_io, "Error setting CILK_FORCE_REDUCE to be 1\n");
       exit(1);
     }
@@ -284,8 +289,14 @@ void __csan_unit_init(const char * const file_name,
     grow_pc_table(store_pc, total_store, counts.num_store);
   if (counts.num_alloca)
     grow_pc_table(alloca_pc, total_alloca, counts.num_alloca);
-  if (counts.num_allocfn)
+  if (counts.num_allocfn) {
+    csi_id_t new_cap = total_allocfn + counts.num_allocfn;
+    allocfn_prop = (allocfn_prop_t *)realloc(allocfn_prop,
+                                             new_cap * sizeof(allocfn_prop_t));
+    for (csi_id_t i = total_allocfn; i < new_cap; ++i)
+      allocfn_prop[i].allocfn_ty = uint8_t(-1);
     grow_pc_table(allocfn_pc, total_allocfn, counts.num_allocfn);
+  }
   if (counts.num_free)
     grow_pc_table(free_pc, total_free, counts.num_free);
 }
@@ -768,6 +779,9 @@ void __csan_after_allocfn(const csi_id_t allocfn_id, const void *addr,
   // Record the PC for this allocation-function call
   if (__builtin_expect(!allocfn_pc[allocfn_id], false))
     allocfn_pc[allocfn_id] = CALLERPC;
+  if (__builtin_expect(allocfn_prop[allocfn_id].allocfn_ty == uint8_t(-1),
+                       false))
+    allocfn_prop[allocfn_id] = prop;
 
   size_t new_size = size * num;
 

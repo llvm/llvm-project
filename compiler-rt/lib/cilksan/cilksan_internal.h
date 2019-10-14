@@ -24,7 +24,7 @@
 // Top-level class implementing the tool.
 class CilkSanImpl_t {
 public:
-  CilkSanImpl_t() {}
+  CilkSanImpl_t() : color_report(ColorizeReports()) {}
   ~CilkSanImpl_t();
 
   MALineAllocator &getMALineAllocator(unsigned Idx) {
@@ -183,6 +183,7 @@ private:
                                 bool on_stack);
   // inline void print_current_function_info();
   inline void print_stats();
+  static bool ColorizeReports();
 
   // ANGE: Each function that causes a Disjoint set to be created has a
   // unique ID (i.e., Cilk function and spawned C function).
@@ -222,6 +223,7 @@ private:
   RaceMap_t races_found;
   // The number of duplicated races found
   uint32_t duplicated_races = 0;
+  const bool color_report;
 
   // Basic statistics
   uint64_t num_reads_checked = 0;
