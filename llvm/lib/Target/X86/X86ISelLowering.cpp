@@ -6812,7 +6812,7 @@ static bool getTargetShuffleAndZeroables(SDValue N, SmallVectorImpl<int> &Mask,
 static bool getTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Inputs,
                                    SmallVectorImpl<int> &Mask,
                                    SelectionDAG &DAG, unsigned Depth,
-                                   bool ResolveZero);
+                                   bool ResolveKnownElts);
 
 // Attempt to decode ops that could be represented as a shuffle mask.
 // The decoded shuffle mask may contain a different number of elements to the
@@ -6821,7 +6821,7 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
                                SmallVectorImpl<int> &Mask,
                                SmallVectorImpl<SDValue> &Ops,
                                SelectionDAG &DAG, unsigned Depth,
-                               bool ResolveZero) {
+                               bool ResolveKnownElts) {
   Mask.clear();
   Ops.clear();
 
@@ -6916,9 +6916,9 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     SmallVector<int, 64> SrcMask0, SrcMask1;
     SmallVector<SDValue, 2> SrcInputs0, SrcInputs1;
     if (!getTargetShuffleInputs(N0, SrcInputs0, SrcMask0, DAG, Depth + 1,
-                                ResolveZero) ||
+                                ResolveKnownElts) ||
         !getTargetShuffleInputs(N1, SrcInputs1, SrcMask1, DAG, Depth + 1,
-                                ResolveZero))
+                                ResolveKnownElts))
       return false;
     size_t MaskSize = std::max(SrcMask0.size(), SrcMask1.size());
     SmallVector<int, 64> Mask0, Mask1;
@@ -6966,7 +6966,7 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     SmallVector<int, 64> SubMask;
     SmallVector<SDValue, 2> SubInputs;
     if (!getTargetShuffleInputs(peekThroughOneUseBitcasts(Sub), SubInputs,
-                                SubMask, DAG, Depth + 1, ResolveZero))
+                                SubMask, DAG, Depth + 1, ResolveKnownElts))
       return false;
     if (SubMask.size() != NumSubElts) {
       assert(((SubMask.size() % NumSubElts) == 0 ||
@@ -7248,41 +7248,53 @@ static void resolveTargetShuffleInputsAndMask(SmallVectorImpl<SDValue> &Inputs,
 static bool getTargetShuffleInputs(SDValue Op, const APInt &DemandedElts,
                                    SmallVectorImpl<SDValue> &Inputs,
                                    SmallVectorImpl<int> &Mask,
+                                   APInt &KnownUndef, APInt &KnownZero,
                                    SelectionDAG &DAG, unsigned Depth,
-                                   bool ResolveZero) {
+                                   bool ResolveKnownElts) {
   EVT VT = Op.getValueType();
   if (!VT.isSimple() || !VT.isVector())
     return false;
 
-  APInt KnownUndef, KnownZero;
   if (getTargetShuffleAndZeroables(Op, Mask, Inputs, KnownUndef, KnownZero)) {
     for (int i = 0, e = Mask.size(); i != e; ++i) {
       int &M = Mask[i];
-      if (M < 0)
+      if (M < 0 || !ResolveKnownElts)
         continue;
       if (KnownUndef[i])
         M = SM_SentinelUndef;
-      else if (ResolveZero && KnownZero[i])
+      else if (KnownZero[i])
         M = SM_SentinelZero;
     }
     return true;
   }
-  return getFauxShuffleMask(Op, DemandedElts, Mask, Inputs, DAG, Depth,
-                            ResolveZero);
+  if (getFauxShuffleMask(Op, DemandedElts, Mask, Inputs, DAG, Depth,
+                         ResolveKnownElts)) {
+    KnownUndef = KnownZero = APInt::getNullValue(Mask.size());
+    for (int i = 0, e = Mask.size(); i != e; ++i) {
+      int M = Mask[i];
+      if (SM_SentinelUndef == M)
+        KnownUndef.setBit(i);
+      if (SM_SentinelZero == M)
+        KnownZero.setBit(i);
+    }
+    return true;
+  }
+  return false;
 }
 
 static bool getTargetShuffleInputs(SDValue Op, SmallVectorImpl<SDValue> &Inputs,
                                    SmallVectorImpl<int> &Mask,
                                    SelectionDAG &DAG, unsigned Depth = 0,
-                                   bool ResolveZero = true) {
+                                   bool ResolveKnownElts = true) {
   EVT VT = Op.getValueType();
   if (!VT.isSimple() || !VT.isVector())
     return false;
 
+  APInt KnownUndef, KnownZero;
   unsigned NumElts = Op.getValueType().getVectorNumElements();
   APInt DemandedElts = APInt::getAllOnesValue(NumElts);
-  return getTargetShuffleInputs(Op, DemandedElts, Inputs, Mask, DAG, Depth,
-                                ResolveZero);
+  return getTargetShuffleInputs(Op, DemandedElts, Inputs, Mask, KnownUndef,
+                                KnownZero, DAG, Depth, ResolveKnownElts);
 }
 
 /// Returns the scalar element that will make up the ith
@@ -20067,6 +20079,13 @@ static SDValue EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
   case X86ISD::XOR:
   case X86ISD::AND:
     return SDValue(Op.getNode(), 1);
+  case ISD::SSUBO:
+  case ISD::USUBO: {
+    // /USUBO/SSUBO will become a X86ISD::SUB and we can use its Z flag.
+    SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
+    return DAG.getNode(X86ISD::SUB, dl, VTs, Op->getOperand(0),
+                       Op->getOperand(1)).getValue(1);
+  }
   default:
   default_case:
     break;
@@ -34572,10 +34591,11 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   }
 
   // Get target/faux shuffle mask.
+  APInt OpUndef, OpZero;
   SmallVector<int, 64> OpMask;
   SmallVector<SDValue, 2> OpInputs;
-  if (!getTargetShuffleInputs(Op, DemandedElts, OpInputs, OpMask, TLO.DAG,
-                              Depth, false))
+  if (!getTargetShuffleInputs(Op, DemandedElts, OpInputs, OpMask, OpUndef,
+                              OpZero, TLO.DAG, Depth, false))
     return false;
 
   // Shuffle inputs must be the same size as the result.
@@ -34586,19 +34606,14 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       }))
     return false;
 
-  // Clear known elts that might have been set above.
-  KnownZero.clearAllBits();
-  KnownUndef.clearAllBits();
+  KnownZero = OpZero;
+  KnownUndef = OpUndef;
 
   // Check if shuffle mask can be simplified to undef/zero/identity.
   int NumSrcs = OpInputs.size();
-  for (int i = 0; i != NumElts; ++i) {
-    int &M = OpMask[i];
+  for (int i = 0; i != NumElts; ++i)
     if (!DemandedElts[i])
-      M = SM_SentinelUndef;
-    else if (0 <= M && OpInputs[M / NumElts].isUndef())
-      M = SM_SentinelUndef;
-  }
+      OpMask[i] = SM_SentinelUndef;
 
   if (isUndefInRange(OpMask, 0, NumElts)) {
     KnownUndef.setAllBits();
@@ -34628,19 +34643,11 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
           SrcElts.setBit(M);
       }
 
+    // TODO - Propagate input undef/zero elts.
     APInt SrcUndef, SrcZero;
     if (SimplifyDemandedVectorElts(OpInputs[Src], SrcElts, SrcUndef, SrcZero,
                                    TLO, Depth + 1))
       return true;
-  }
-
-  // Extract known zero/undef elements.
-  // TODO - Propagate input undef/zero elts.
-  for (int i = 0; i != NumElts; ++i) {
-    if (OpMask[i] == SM_SentinelUndef)
-      KnownUndef.setBit(i);
-    if (OpMask[i] == SM_SentinelZero)
-      KnownZero.setBit(i);
   }
 
   return false;
@@ -34952,9 +34959,11 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
   }
   }
 
+  APInt ShuffleUndef, ShuffleZero;
   SmallVector<int, 16> ShuffleMask;
   SmallVector<SDValue, 2> ShuffleOps;
-  if (getTargetShuffleInputs(Op, ShuffleOps, ShuffleMask, DAG, Depth)) {
+  if (getTargetShuffleInputs(Op, DemandedElts, ShuffleOps, ShuffleMask,
+                             ShuffleUndef, ShuffleZero, DAG, Depth, false)) {
     // If all the demanded elts are from one operand and are inline,
     // then we can use the operand directly.
     int NumOps = ShuffleOps.size();
@@ -34963,15 +34972,17 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
           return VT.getSizeInBits() == V.getValueSizeInBits();
         })) {
 
+      if (DemandedElts.isSubsetOf(ShuffleUndef))
+        return DAG.getUNDEF(VT);
+      if (DemandedElts.isSubsetOf(ShuffleUndef | ShuffleZero))
+        return getZeroVector(VT.getSimpleVT(), Subtarget, DAG, SDLoc(Op));
+
       // Bitmask that indicates which ops have only been accessed 'inline'.
       APInt IdentityOp = APInt::getAllOnesValue(NumOps);
-      bool AllUndef = true;
-
       for (int i = 0; i != NumElts; ++i) {
         int M = ShuffleMask[i];
-        if (SM_SentinelUndef == M || !DemandedElts[i])
+        if (!DemandedElts[i] || ShuffleUndef[i])
           continue;
-        AllUndef = false;
         int Op = M / NumElts;
         int Index = M % NumElts;
         if (M < 0 || Index != i) {
@@ -34982,16 +34993,11 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
         if (IdentityOp == 0)
           break;
       }
-
-      if (AllUndef)
-        return DAG.getUNDEF(VT);
-
       assert((IdentityOp == 0 || IdentityOp.countPopulation() == 1) &&
              "Multiple identity shuffles detected");
 
-      for (int i = 0; i != NumOps; ++i)
-        if (IdentityOp[i])
-          return DAG.getBitcast(VT, ShuffleOps[i]);
+      if (IdentityOp != 0)
+        return DAG.getBitcast(VT, ShuffleOps[IdentityOp.countTrailingZeros()]);
     }
   }
 
@@ -39714,26 +39720,6 @@ static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(X86ISD::PCMPGT, SDLoc(N), VT, Shift.getOperand(0), Ones);
 }
 
-/// Check if truncation with saturation form type \p SrcVT to \p DstVT
-/// is valid for the given \p Subtarget.
-static bool isSATValidOnAVX512Subtarget(EVT SrcVT, EVT DstVT,
-                                        const X86Subtarget &Subtarget) {
-  if (!Subtarget.hasAVX512())
-    return false;
-
-  // FIXME: Scalar type may be supported if we move it to vector register.
-  if (!SrcVT.isVector())
-    return false;
-
-  EVT SrcElVT = SrcVT.getScalarType();
-  EVT DstElVT = DstVT.getScalarType();
-  if (DstElVT != MVT::i8 && DstElVT != MVT::i16 && DstElVT != MVT::i32)
-    return false;
-  if (SrcVT.is512BitVector() || Subtarget.hasVLX())
-    return SrcElVT.getSizeInBits() >= 32 || Subtarget.hasBWI();
-  return false;
-}
-
 /// Detect patterns of truncation with unsigned saturation:
 ///
 /// 1. (truncate (umin (x, unsigned_max_of_dest_type)) to dest_type).
@@ -39834,20 +39820,12 @@ static SDValue detectSSatPattern(SDValue In, EVT VT, bool MatchPackUS = false) {
 static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
                                       SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
-  if (!Subtarget.hasSSE2())
+  if (!Subtarget.hasSSE2() || !VT.isVector())
     return SDValue();
 
-  EVT SVT = VT.getScalarType();
+  EVT SVT = VT.getVectorElementType();
   EVT InVT = In.getValueType();
-  EVT InSVT = InVT.getScalarType();
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (TLI.isTypeLegal(InVT) && TLI.isTypeLegal(VT) &&
-      isSATValidOnAVX512Subtarget(InVT, VT, Subtarget)) {
-    if (auto SSatVal = detectSSatPattern(In, VT))
-      return DAG.getNode(X86ISD::VTRUNCS, DL, VT, SSatVal);
-    if (auto USatVal = detectUSatPattern(In, VT, DAG, DL))
-      return DAG.getNode(X86ISD::VTRUNCUS, DL, VT, USatVal);
-  }
+  EVT InSVT = InVT.getVectorElementType();
 
   // If we're clamping a signed 32-bit vector to 0-255 and the 32-bit vector is
   // split across two registers. We can use a packusdw+perm to clamp to 0-65535
@@ -39876,16 +39854,15 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
                       (Subtarget.hasVLX() || InVT.getSizeInBits() > 256) &&
                       !(!Subtarget.useAVX512Regs() && VT.getSizeInBits() >= 256);
 
-  if (VT.isVector() && isPowerOf2_32(VT.getVectorNumElements()) &&
-      !PreferAVX512 &&
+  if (isPowerOf2_32(VT.getVectorNumElements()) && !PreferAVX512 &&
+      VT.getSizeInBits() >= 64 &&
       (SVT == MVT::i8 || SVT == MVT::i16) &&
       (InSVT == MVT::i16 || InSVT == MVT::i32)) {
     if (auto USatVal = detectSSatPattern(In, VT, true)) {
       // vXi32 -> vXi8 must be performed as PACKUSWB(PACKSSDW,PACKSSDW).
       // Only do this when the result is at least 64 bits or we'll leaving
       // dangling PACKSSDW nodes.
-      if (SVT == MVT::i8 && InSVT == MVT::i32 &&
-          VT.getVectorNumElements() >= 8) {
+      if (SVT == MVT::i8 && InSVT == MVT::i32) {
         EVT MidVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16,
                                      VT.getVectorNumElements());
         SDValue Mid = truncateVectorWithPACK(X86ISD::PACKSS, MidVT, USatVal, DL,
@@ -39903,6 +39880,42 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
       return truncateVectorWithPACK(X86ISD::PACKSS, VT, SSatVal, DL, DAG,
                                     Subtarget);
   }
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (TLI.isTypeLegal(InVT) && InVT.isVector() && SVT != MVT::i1 &&
+      Subtarget.hasAVX512() && (InSVT != MVT::i16 || Subtarget.hasBWI())) {
+    unsigned TruncOpc;
+    SDValue SatVal;
+    if (auto SSatVal = detectSSatPattern(In, VT)) {
+      SatVal = SSatVal;
+      TruncOpc = X86ISD::VTRUNCS;
+    } else if (auto USatVal = detectUSatPattern(In, VT, DAG, DL)) {
+      SatVal = USatVal;
+      TruncOpc = X86ISD::VTRUNCUS;
+    }
+    if (SatVal) {
+      unsigned ResElts = VT.getVectorNumElements();
+      // If the input type is less than 512 bits and we don't have VLX, we need
+      // to widen to 512 bits.
+      if (!Subtarget.hasVLX() && !InVT.is512BitVector()) {
+        unsigned NumConcats = 512 / InVT.getSizeInBits();
+        ResElts *= NumConcats;
+        SmallVector<SDValue, 4> ConcatOps(NumConcats, DAG.getUNDEF(InVT));
+        ConcatOps[0] = SatVal;
+        InVT = EVT::getVectorVT(*DAG.getContext(), InSVT,
+                                NumConcats * InVT.getVectorNumElements());
+        SatVal = DAG.getNode(ISD::CONCAT_VECTORS, DL, InVT, ConcatOps);
+      }
+      // Widen the result if its narrower than 128 bits.
+      if (ResElts * SVT.getSizeInBits() < 128)
+        ResElts = 128 / SVT.getSizeInBits();
+      EVT TruncVT = EVT::getVectorVT(*DAG.getContext(), SVT, ResElts);
+      SDValue Res = DAG.getNode(TruncOpc, DL, TruncVT, SatVal);
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
+                         DAG.getIntPtrConstant(0, DL));
+    }
+  }
+
   return SDValue();
 }
 

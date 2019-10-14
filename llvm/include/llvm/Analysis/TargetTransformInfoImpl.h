@@ -243,9 +243,9 @@ public:
 
   bool shouldFavorBackedgeIndex(const Loop *L) const { return false; }
 
-  bool isLegalMaskedStore(Type *DataType) { return false; }
+  bool isLegalMaskedStore(Type *DataType, MaybeAlign Alignment) { return false; }
 
-  bool isLegalMaskedLoad(Type *DataType) { return false; }
+  bool isLegalMaskedLoad(Type *DataType, MaybeAlign Alignment) { return false; }
 
   bool isLegalNTStore(Type *DataType, Align Alignment) {
     // By default, assume nontemporal memory stores are available for stores

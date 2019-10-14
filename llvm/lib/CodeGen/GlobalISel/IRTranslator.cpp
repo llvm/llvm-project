@@ -335,7 +335,7 @@ bool IRTranslator::translateFNeg(const User &U, MachineIRBuilder &MIRBuilder) {
 
 bool IRTranslator::translateCompare(const User &U,
                                     MachineIRBuilder &MIRBuilder) {
-  const CmpInst *CI = dyn_cast<CmpInst>(&U);
+  auto *CI = dyn_cast<CmpInst>(&U);
   Register Op0 = getOrCreateVReg(*U.getOperand(0));
   Register Op1 = getOrCreateVReg(*U.getOperand(1));
   Register Res = getOrCreateVReg(U);
@@ -346,11 +346,12 @@ bool IRTranslator::translateCompare(const User &U,
     MIRBuilder.buildICmp(Pred, Res, Op0, Op1);
   else if (Pred == CmpInst::FCMP_FALSE)
     MIRBuilder.buildCopy(
-        Res, getOrCreateVReg(*Constant::getNullValue(CI->getType())));
+        Res, getOrCreateVReg(*Constant::getNullValue(U.getType())));
   else if (Pred == CmpInst::FCMP_TRUE)
     MIRBuilder.buildCopy(
-        Res, getOrCreateVReg(*Constant::getAllOnesValue(CI->getType())));
+        Res, getOrCreateVReg(*Constant::getAllOnesValue(U.getType())));
   else {
+    assert(CI && "Instruction should be CmpInst");
     MIRBuilder.buildInstr(TargetOpcode::G_FCMP, {Res}, {Pred, Op0, Op1},
                           MachineInstr::copyFlagsFromInstruction(*CI));
   }
@@ -1436,18 +1437,12 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     MIRBuilder.buildConstant(Reg, TypeID);
     return true;
   }
-  case Intrinsic::objectsize: {
-    // If we don't know by now, we're never going to know.
-    const ConstantInt *Min = cast<ConstantInt>(CI.getArgOperand(1));
+  case Intrinsic::objectsize:
+    llvm_unreachable("llvm.objectsize.* should have been lowered already");
 
-    MIRBuilder.buildConstant(getOrCreateVReg(CI), Min->isZero() ? -1ULL : 0);
-    return true;
-  }
   case Intrinsic::is_constant:
-    // If this wasn't constant-folded away by now, then it's not a
-    // constant.
-    MIRBuilder.buildConstant(getOrCreateVReg(CI), 0);
-    return true;
+    llvm_unreachable("llvm.is.constant.* should have been lowered already");
+
   case Intrinsic::stackguard:
     getStackGuard(getOrCreateVReg(CI), MIRBuilder);
     return true;

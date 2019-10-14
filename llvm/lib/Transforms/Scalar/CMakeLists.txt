@@ -44,6 +44,7 @@ add_llvm_library(LLVMScalarOpts
   LoopUnswitch.cpp
   LoopVersioningLICM.cpp
   LowerAtomic.cpp
+  LowerConstantIntrinsics.cpp
   LowerExpectIntrinsic.cpp
   LowerGuardIntrinsic.cpp
   LowerWidenableCondition.cpp

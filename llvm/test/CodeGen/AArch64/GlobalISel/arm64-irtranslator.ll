@@ -1183,23 +1183,6 @@ define void @test_memset(i8* %dst, i8 %val, i64 %size) {
   ret void
 }
 
-declare i64 @llvm.objectsize.i64(i8*, i1)
-declare i32 @llvm.objectsize.i32(i8*, i1)
-define void @test_objectsize(i8* %addr0, i8* %addr1) {
-; CHECK-LABEL: name: test_objectsize
-; CHECK: [[ADDR0:%[0-9]+]]:_(p0) = COPY $x0
-; CHECK: [[ADDR1:%[0-9]+]]:_(p0) = COPY $x1
-; CHECK: {{%[0-9]+}}:_(s64) = G_CONSTANT i64 -1
-; CHECK: {{%[0-9]+}}:_(s64) = G_CONSTANT i64 0
-; CHECK: {{%[0-9]+}}:_(s32) = G_CONSTANT i32 -1
-; CHECK: {{%[0-9]+}}:_(s32) = G_CONSTANT i32 0
-  %size64.0 = call i64 @llvm.objectsize.i64(i8* %addr0, i1 0)
-  %size64.intmin = call i64 @llvm.objectsize.i64(i8* %addr0, i1 1)
-  %size32.0 = call i32 @llvm.objectsize.i32(i8* %addr0, i1 0)
-  %size32.intmin = call i32 @llvm.objectsize.i32(i8* %addr0, i1 1)
-  ret void
-}
-
 define void @test_large_const(i128* %addr) {
 ; CHECK-LABEL: name: test_large_const
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = COPY $x0

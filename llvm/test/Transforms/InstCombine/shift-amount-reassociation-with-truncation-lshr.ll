@@ -166,7 +166,9 @@ define i16 @t9_lshr(i32 %x, i16 %y) {
 ; CHECK-NEXT:    [[T1:%.*]] = zext i16 [[T0]] to i32
 ; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[X:%.*]], [[T1]]
 ; CHECK-NEXT:    [[T3:%.*]] = trunc i32 [[T2]] to i16
-; CHECK-NEXT:    ret i16 [[T3]]
+; CHECK-NEXT:    [[T4:%.*]] = add i16 [[Y]], -2
+; CHECK-NEXT:    [[T5:%.*]] = lshr i16 [[T3]], [[T4]]
+; CHECK-NEXT:    ret i16 [[T5]]
 ;
   %t0 = sub i16 32, %y
   %t1 = zext i16 %t0 to i32
@@ -174,5 +176,25 @@ define i16 @t9_lshr(i32 %x, i16 %y) {
   %t3 = trunc i32 %t2 to i16
   %t4 = add i16 %y, -2
   %t5 = lshr i16 %t3, %t4
-  ret i16 %t3
+  ret i16 %t5
+}
+
+; If we have different right-shifts, in general, we can't do anything with it.
+define i16 @n10_ashr_lshr(i32 %x, i16 %y) {
+; CHECK-LABEL: @n10_ashr_lshr(
+; CHECK-NEXT:    [[T0:%.*]] = sub i16 32, [[Y:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = zext i16 [[T0]] to i32
+; CHECK-NEXT:    [[T2:%.*]] = ashr i32 [[X:%.*]], [[T1]]
+; CHECK-NEXT:    [[T3:%.*]] = trunc i32 [[T2]] to i16
+; CHECK-NEXT:    [[T4:%.*]] = add i16 [[Y]], -1
+; CHECK-NEXT:    [[T5:%.*]] = lshr i16 [[T3]], [[T4]]
+; CHECK-NEXT:    ret i16 [[T5]]
+;
+  %t0 = sub i16 32, %y
+  %t1 = zext i16 %t0 to i32
+  %t2 = ashr i32 %x, %t1
+  %t3 = trunc i32 %t2 to i16
+  %t4 = add i16 %y, -1
+  %t5 = lshr i16 %t3, %t4
+  ret i16 %t5
 }

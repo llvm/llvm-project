@@ -655,6 +655,7 @@ void PassManagerBuilder::populateModulePassManager(
   MPM.add(createGlobalsAAWrapperPass());
 
   MPM.add(createFloat2IntPass());
+  MPM.add(createLowerConstantIntrinsicsPass());
 
   addExtensionsToPM(EP_VectorizerStart, MPM);
 

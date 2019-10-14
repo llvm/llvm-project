@@ -1,4 +1,4 @@
-; RUN: opt -attributor -attributor-manifest-internal --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=2 -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR
+; RUN: opt -attributor -attributor-manifest-internal --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=2 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
 
 
 declare void @deref_phi_user(i32* %a);
@@ -61,7 +61,7 @@ entry:
 for.cond:                                         ; preds = %for.inc, %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
   %a.addr.0 = phi i32* [ %a, %entry ], [ %incdec.ptr, %for.inc ]
-; CHECK: call void @deref_phi_user(i32* dereferenceable(4000) %a.addr.0)
+; ATTRIBUTOR: call void @deref_phi_user(i32* nonnull dereferenceable(4000) %a.addr.0)
   call void @deref_phi_user(i32* %a.addr.0)
   %tmp = load i32, i32* %a.addr.0, align 4
   %cmp = icmp slt i32 %i.0, %tmp
@@ -91,7 +91,7 @@ entry:
 for.cond:                                         ; preds = %for.inc, %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
   %a.addr.0 = phi i32* [ %a, %entry ], [ %incdec.ptr, %for.inc ]
-; CHECK: call void @deref_phi_user(i32* %a.addr.0)
+; ATTRIBUTOR: call void @deref_phi_user(i32* nonnull %a.addr.0)
   call void @deref_phi_user(i32* %a.addr.0)
   %tmp = load i32, i32* %a.addr.0, align 4
   %cmp = icmp slt i32 %i.0, %tmp
