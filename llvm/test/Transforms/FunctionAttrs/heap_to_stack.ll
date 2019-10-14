@@ -8,7 +8,7 @@ declare void @func_throws(...)
 
 declare void @sync_func(i8* %p)
 
-declare void @sync_will_return(i8* %p) willreturn
+declare void @sync_will_return(i8* %p) willreturn nounwind
 
 declare void @no_sync_func(i8* nocapture %p) nofree nosync willreturn
 
@@ -202,11 +202,11 @@ define i32 @test_lifetime() {
 }
 
 ; TEST 11 
-; FIXME: should be ok
 
 define void @test11() {
   %1 = tail call noalias i8* @malloc(i64 4)
-  ; CHECK: @malloc(i64 4)
+  ; CHECK: test11
+  ; CHECK-NEXT: alloc
   ; CHECK-NEXT: @sync_will_return(i8* %1)
   tail call void @sync_will_return(i8* %1)
   tail call void @free(i8* %1)
@@ -330,9 +330,29 @@ define void @test16b(i8 %v, i8** %P) {
   %1 = tail call noalias i8* @malloc(i64 4)
   ; CHECK-NEXT: store i8* %1, i8** %P
   store i8* %1, i8** %P
-  ; CHECK-NEXT: @no_sync_func(i8* %1)
+  ; CHECK-NEXT: @no_sync_func(i8* nocapture %1)
   tail call void @no_sync_func(i8* %1)
   ; CHECK-NEXT: @free(i8* %1)
   tail call void @free(i8* %1)
+  ret void
+}
+
+define void @test16c(i8 %v, i8** %P) {
+  ; CHECK: %1 = alloca
+  %1 = tail call noalias i8* @malloc(i64 4)
+  ; CHECK-NEXT: store i8* %1, i8** %P
+  store i8* %1, i8** %P
+  ; CHECK-NEXT: @no_sync_func(i8* nocapture %1)
+  tail call void @no_sync_func(i8* %1) nounwind
+  ; CHECK-NOT: @free
+  tail call void @free(i8* %1)
+  ret void
+}
+
+define void @test16d(i8 %v, i8** %P) {
+  ; CHECK: %1 = tail call noalias i8* @malloc(i64 4)
+  %1 = tail call noalias i8* @malloc(i64 4)
+  ; CHECK-NEXT: store i8* %1, i8** %P
+  store i8* %1, i8** %P
   ret void
 }

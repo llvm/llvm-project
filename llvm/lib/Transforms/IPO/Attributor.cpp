@@ -728,12 +728,10 @@ struct AAFromMustBeExecutedContext : public Base {
 
     SetVector<const Use *> NextUses;
 
+    auto EIt = Explorer.begin(CtxI), EEnd = Explorer.end(CtxI);
     for (const Use *U : Uses) {
       if (const Instruction *UserI = dyn_cast<Instruction>(U->getUser())) {
-        auto EIt = Explorer.begin(CtxI), EEnd = Explorer.end(CtxI);
-        bool Found = EIt.count(UserI);
-        while (!Found && ++EIt != EEnd)
-          Found = EIt.getCurrentInst() == UserI;
+        bool Found = Explorer.findInContextOf(UserI, EIt, EEnd);
         if (Found && Base::followUse(A, U, UserI))
           for (const Use &Us : UserI->uses())
             NextUses.insert(&Us);
@@ -3634,7 +3632,21 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
   const Function *F = getAssociatedFunction();
   const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
 
+  MustBeExecutedContextExplorer &Explorer =
+      A.getInfoCache().getMustBeExecutedContextExplorer();
+
+  auto FreeCheck = [&](Instruction &I) {
+    const auto &Frees = FreesForMalloc.lookup(&I);
+    if (Frees.size() != 1)
+      return false;
+    Instruction *UniqueFree = *Frees.begin();
+    return Explorer.findInContextOf(UniqueFree, I.getNextNode());
+  };
+
   auto UsesCheck = [&](Instruction &I) {
+    bool ValidUsesOnly = true;
+    bool MustUse = true;
+
     SmallPtrSet<const Use *, 8> Visited;
     SmallVector<const Use *, 8> Worklist;
 
@@ -3652,10 +3664,12 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
         continue;
       if (auto *SI = dyn_cast<StoreInst>(UserI)) {
         if (SI->getValueOperand() == U->get()) {
-          LLVM_DEBUG(dbgs() << "[H2S] escaping store to memory: " << *UserI << "\n");
-          return false;
+          LLVM_DEBUG(dbgs()
+                     << "[H2S] escaping store to memory: " << *UserI << "\n");
+          ValidUsesOnly = false;
+        } else {
+          // A store into the malloc'ed memory is fine.
         }
-        // A store into the malloc'ed memory is fine.
         continue;
       }
 
@@ -3673,8 +3687,14 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
 
         // Record malloc.
         if (isFreeCall(UserI, TLI)) {
-          FreesForMalloc[&I].insert(
-              cast<Instruction>(const_cast<User *>(UserI)));
+          if (MustUse) {
+            FreesForMalloc[&I].insert(
+                cast<Instruction>(const_cast<User *>(UserI)));
+          } else {
+            LLVM_DEBUG(dbgs() << "[H2S] free potentially on different mallocs: "
+                              << *UserI << "\n");
+            ValidUsesOnly = false;
+          }
           continue;
         }
 
@@ -3688,22 +3708,25 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
 
         if (!NoCaptureAA.isAssumedNoCapture() || !NoFreeAA.isAssumedNoFree()) {
           LLVM_DEBUG(dbgs() << "[H2S] Bad user: " << *UserI << "\n");
-          return false;
+          ValidUsesOnly = false;
         }
         continue;
       }
 
-      if (isa<GetElementPtrInst>(UserI) || isa<BitCastInst>(UserI)) {
+      if (isa<GetElementPtrInst>(UserI) || isa<BitCastInst>(UserI) ||
+          isa<PHINode>(UserI) || isa<SelectInst>(UserI)) {
+        MustUse &= !(isa<PHINode>(UserI) || isa<SelectInst>(UserI));
         for (Use &U : UserI->uses())
           Worklist.push_back(&U);
         continue;
       }
 
-      // Unknown user.
+      // Unknown user for which we can not track uses further (in a way that
+      // makes sense).
       LLVM_DEBUG(dbgs() << "[H2S] Unknown user: " << *UserI << "\n");
-      return false;
+      ValidUsesOnly = false;
     }
-    return true;
+    return ValidUsesOnly;
   };
 
   auto MallocCallocCheck = [&](Instruction &I) {
@@ -3720,7 +3743,7 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
     if (IsMalloc) {
       if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(0)))
         if (Size->getValue().sle(MaxHeapToStackSize))
-          if (UsesCheck(I)) {
+          if (UsesCheck(I) || FreeCheck(I)) {
             MallocCalls.insert(&I);
             return true;
           }
@@ -3730,7 +3753,7 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
         if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(1)))
           if ((Size->getValue().umul_ov(Num->getValue(), Overflow))
                    .sle(MaxHeapToStackSize))
-            if (!Overflow && UsesCheck(I)) {
+            if (!Overflow && (UsesCheck(I) || FreeCheck(I))) {
               MallocCalls.insert(&I);
               return true;
             }
@@ -3756,8 +3779,10 @@ struct AAHeapToStackFunction final : public AAHeapToStackImpl {
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECL(MallocCalls, Function,
-               "Number of MallocCalls converted to allocas");
-    BUILD_STAT_NAME(MallocCalls, Function) += MallocCalls.size();
+               "Number of malloc calls converted to allocas");
+    for (auto *C : MallocCalls)
+      if (!BadMallocCalls.count(C))
+        ++BUILD_STAT_NAME(MallocCalls, Function);
   }
 };
 
