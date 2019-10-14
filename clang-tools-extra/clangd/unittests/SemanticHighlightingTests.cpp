@@ -51,6 +51,9 @@ std::vector<HighlightingToken> getExpectedTokens(Annotations &Test) {
       {HighlightingKind::StaticField, "StaticField"},
       {HighlightingKind::Method, "Method"},
       {HighlightingKind::StaticMethod, "StaticMethod"},
+      {HighlightingKind::Typedef, "Typedef"},
+      {HighlightingKind::DependentType, "DependentType"},
+      {HighlightingKind::DependentName, "DependentName"},
       {HighlightingKind::TemplateParameter, "TemplateParameter"},
       {HighlightingKind::Primitive, "Primitive"},
       {HighlightingKind::Macro, "Macro"}};
@@ -181,7 +184,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       }
       template<typename $TemplateParameter[[T]]>
       struct $Class[[C]] : $Namespace[[abc]]::$Class[[A]]<$TemplateParameter[[T]]> {
-        typename $TemplateParameter[[T]]::A* $Field[[D]];
+        typename $TemplateParameter[[T]]::$DependentType[[A]]* $Field[[D]];
       };
       $Namespace[[abc]]::$Class[[A]]<$Primitive[[int]]> $Variable[[AA]];
       typedef $Namespace[[abc]]::$Class[[A]]<$Primitive[[int]]> $Class[[AAA]];
@@ -528,6 +531,58 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         $Primitive[[void]] $Method[[func]](
           $Typedef[[Pointer]], $Typedef[[LVReference]], $Typedef[[RVReference]],
           $Typedef[[Array]], $Typedef[[MemberPointer]]);
+      };
+    )cpp",
+      R"cpp(
+      template <class $TemplateParameter[[T]]>
+      $Primitive[[void]] $Function[[phase1]]($TemplateParameter[[T]]);
+      template <class $TemplateParameter[[T]]>
+      $Primitive[[void]] $Function[[foo]]($TemplateParameter[[T]] $Parameter[[P]]) {
+        $Function[[phase1]]($Parameter[[P]]);
+        $DependentName[[phase2]]($Parameter[[P]]);
+      }
+    )cpp",
+      R"cpp(
+      class $Class[[A]] {
+        template <class $TemplateParameter[[T]]>
+        $Primitive[[void]] $Method[[bar]]($TemplateParameter[[T]]);
+      };
+
+      template <class $TemplateParameter[[U]]>
+      $Primitive[[void]] $Function[[foo]]($TemplateParameter[[U]] $Parameter[[P]]) {
+        $Class[[A]]().$Method[[bar]]($Parameter[[P]]);
+      }
+    )cpp",
+      R"cpp(
+      struct $Class[[A]] {
+        template <class $TemplateParameter[[T]]>
+        static $Primitive[[void]] $StaticMethod[[foo]]($TemplateParameter[[T]]);
+      };
+
+      template <class $TemplateParameter[[T]]>
+      struct $Class[[B]] {
+        $Primitive[[void]] $Method[[bar]]() {
+          $Class[[A]]::$StaticMethod[[foo]]($TemplateParameter[[T]]());
+        }
+      };
+    )cpp",
+      R"cpp(
+      template <class $TemplateParameter[[T]]>
+      $Primitive[[void]] $Function[[foo]](typename $TemplateParameter[[T]]::$DependentType[[Type]]
+                                            = $TemplateParameter[[T]]::$DependentName[[val]]);
+    )cpp",
+      R"cpp(
+      template <class $TemplateParameter[[T]]>
+      $Primitive[[void]] $Function[[foo]]($TemplateParameter[[T]] $Parameter[[P]]) {
+        $Parameter[[P]].$DependentName[[Field]];
+      }
+    )cpp",
+      R"cpp(
+      template <class $TemplateParameter[[T]]>
+      class $Class[[A]] {
+        $Primitive[[int]] $Method[[foo]]() {
+          return $TemplateParameter[[T]]::$DependentName[[Field]];
+        }
       };
     )cpp"};
   for (const auto &TestCase : TestCases) {
