@@ -10,8 +10,8 @@
 // RUN: mkdir -p %t/i %t/m %t %t/sysroot
 // RUN: cp -R %S/Inputs/crash-recovery/usr %t/i/
 
-// RUN: not env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
-// RUN: %clang -fsyntax-only %s -I %/t/i -isysroot %/t/sysroot/ \
+// RUN: env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
+// RUN: not %clang -fsyntax-only %s -I %/t/i -isysroot %/t/sysroot/ \
 // RUN:     -fmodules -fmodules-cache-path=%t/m/ 2>&1 | FileCheck %s
 
 // RUN: FileCheck --check-prefix=CHECKSRC %s -input-file %t/crash-vfs-*.m

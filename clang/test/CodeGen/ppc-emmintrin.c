@@ -231,7 +231,9 @@ test_bs() {
 // CHECK-NEXT: br i1 [[REG147]], label %[[REG148:[0-9a-zA-Z_%.]+]], label %[[REG149:[0-9a-zA-Z_%.]+]]
 // CHECK: [[REG148]]:
 
-// CHECK-LE-NEXT: br i1 false, label %[[REG150:[0-9a-zA-Z_%.]+]], label %[[REG151:[0-9a-zA-Z_%.]+]]
+// CHECK-LE-NEXT: load
+// CHECK-LE-NEXT: call i1 @llvm.is.constant
+// CHECK-LE-NEXT: br i1 %[[REG1896a:[0-9a-zA-Z_%.]+]], label %[[REG150:[0-9a-zA-Z_%.]+]], label %[[REG151:[0-9a-zA-Z_%.]+]]
 // CHECK-LE: [[REG150]]:
 // CHECK-LE: [[REG152:[0-9a-zA-Z_%.]+]] = load <2 x i64>, <2 x i64>* [[REG143]], align 16
 // CHECK-LE-NEXT: [[REG153:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG152]] to <16 x i8>
@@ -2326,7 +2328,9 @@ test_sll() {
 // CHECK-NEXT: br i1 [[REG1559]], label %[[REG1560:[0-9a-zA-Z_%.]+]], label %[[REG1557:[0-9a-zA-Z_%.]+]]
 
 // CHECK: [[REG1560]]:
-// CHECK-NEXT: br i1 false, label %[[REG1561:[0-9a-zA-Z_%.]+]], label %[[REG1562:[0-9a-zA-Z_%.]+]]
+// CHECK-NEXT: load
+// CHECK-NEXT: call i1 @llvm.is.constant
+// CHECK-NEXT: br i1 %[[REG1561a:[0-9a-zA-Z_%.]+]], label %[[REG1561:[0-9a-zA-Z_%.]+]], label %[[REG1562:[0-9a-zA-Z_%.]+]]
 
 // CHECK: [[REG1561]]:
 // CHECK-NEXT: [[REG1563:[0-9a-zA-Z_%.]+]] = load i32, i32* [[REG1552]], align 4
@@ -2369,7 +2373,9 @@ test_sll() {
 // CHECK-NEXT: br i1 [[REG1587]], label %[[REG1588:[0-9a-zA-Z_%.]+]], label %[[REG1585:[0-9a-zA-Z_%.]+]]
 
 // CHECK: [[REG1588]]:
-// CHECK-NEXT: br i1 false, label %[[REG1589:[0-9a-zA-Z_%.]+]], label %[[REG1590:[0-9a-zA-Z_%.]+]]
+// CHECK-NEXT: load
+// CHECK-NEXT: call i1 @llvm.is.constant
+// CHECK-NEXT: br i1 %{{[0-9a-zA-Z_%.]+}}, label %[[REG1589:[0-9a-zA-Z_%.]+]], label %[[REG1590:[0-9a-zA-Z_%.]+]]
 
 // CHECK: [[REG1589]]:
 // CHECK-NEXT: [[REG1591:[0-9a-zA-Z_%.]+]] = load i32, i32* [[REG1580]], align 4
@@ -2416,7 +2422,9 @@ test_sll() {
 // CHECK-NEXT: br i1 [[REG1617]], label %[[REG1618:[0-9a-zA-Z_%.]+]], label %[[REG1615:[0-9a-zA-Z_%.]+]]
 
 // CHECK: [[REG1618]]:
-// CHECK-NEXT: br i1 false, label %[[REG1619:[0-9a-zA-Z_%.]+]], label %[[REG1620:[0-9a-zA-Z_%.]+]]
+// CHECK-NEXT: load
+// CHECK-NEXT: call i1 @llvm.is.constant
+// CHECK-NEXT: br i1 %{{[0-9a-zA-Z_%.]+}}, label %[[REG1619:[0-9a-zA-Z_%.]+]], label %[[REG1620:[0-9a-zA-Z_%.]+]]
 
 // CHECK: [[REG1619]]:
 // CHECK-NEXT: [[REG1621:[0-9a-zA-Z_%.]+]] = load i32, i32* [[REG1610]], align 4
@@ -2563,7 +2571,9 @@ test_sra() {
 // CHECK-NEXT: br i1 [[REG1712]], label %[[REG1713:[0-9a-zA-Z_%.]+]], label %[[REG1714:[0-9a-zA-Z_%.]+]]
 
 // CHECK: [[REG1713]]:
-// CHECK-NEXT: br i1 false, label %[[REG1715:[0-9a-zA-Z_%.]+]], label %[[REG1716:[0-9a-zA-Z_%.]+]]
+// CHECK-NEXT: load
+// CHECK-NEXT: call i1 @llvm.is.constant
+// CHECK-NEXT: br i1 %[[REG1715a:[0-9a-zA-Z_%.]+]], label %[[REG1715:[0-9a-zA-Z_%.]+]], label %[[REG1716:[0-9a-zA-Z_%.]+]]
 
 // CHECK: [[REG1715]]:
 // CHECK-NEXT: [[REG1717:[0-9a-zA-Z_%.]+]] = load i32, i32* [[REG1709]], align 4
@@ -2601,7 +2611,9 @@ test_sra() {
 // CHECK-NEXT: br i1 [[REG1737]], label %[[REG1738:[0-9a-zA-Z_%.]+]], label %[[REG1739:[0-9a-zA-Z_%.]+]]
 
 // CHECK: [[REG1738]]:
-// CHECK-NEXT: br i1 false, label %[[REG1740:[0-9a-zA-Z_%.]+]], label %[[REG1741:[0-9a-zA-Z_%.]+]]
+// CHECK-NEXT: load
+// CHECK-NEXT: call i1 @llvm.is.constant
+// CHECK-NEXT: br i1 %[[REG1738:[0-9a-zA-Z_%.]+]], label %[[REG1740:[0-9a-zA-Z_%.]+]], label %[[REG1741:[0-9a-zA-Z_%.]+]]
 
 // CHECK: [[REG1740]]:
 // CHECK-NEXT: [[REG1742:[0-9a-zA-Z_%.]+]] = load i32, i32* [[REG1734]], align 4
@@ -2741,7 +2753,9 @@ test_srl() {
 // CHECK-NEXT: [[REG1837:[0-9a-zA-Z_%.]+]] = icmp slt i32 [[REG1836]], 16
 // CHECK-NEXT: br i1 [[REG1837]], label %[[REG1838:[0-9a-zA-Z_%.]+]], label %[[REG1839:[0-9a-zA-Z_%.]+]]
 // CHECK: [[REG1838]]:
-// CHECK-NEXT: br i1 false, label %[[REG1840:[0-9a-zA-Z_%.]+]], label %[[REG1841:[0-9a-zA-Z_%.]+]]
+// CHECK-NEXT: load
+// CHECK-NEXT: call i1 @llvm.is.constant
+// CHECK-NEXT: br i1 %[[REG1838a:[0-9a-zA-Z_%.]+]], label %[[REG1840:[0-9a-zA-Z_%.]+]], label %[[REG1841:[0-9a-zA-Z_%.]+]]
 // CHECK: [[REG1840]]:
 // CHECK-NEXT: [[REG1842:[0-9a-zA-Z_%.]+]] = load i32, i32* [[REG1834]], align 4
 // CHECK-NEXT: [[REG1843:[0-9a-zA-Z_%.]+]] = trunc i32 [[REG1842]] to i8
@@ -2775,7 +2789,9 @@ test_srl() {
 // CHECK-NEXT: br i1 [[REG1862]], label %[[REG1863:[0-9a-zA-Z_%.]+]], label %[[REG1864:[0-9a-zA-Z_%.]+]]
 
 // CHECK: [[REG1863]]:
-// CHECK-NEXT: br i1 false, label %[[REG1865:[0-9a-zA-Z_%.]+]], label %[[REG1866:[0-9a-zA-Z_%.]+]]
+// CHECK-NEXT: load
+// CHECK-NEXT: call i1 @llvm.is.constant
+// CHECK-NEXT: br i1 %[[REG1865a:[0-9a-zA-Z_%.]+]], label %[[REG1865:[0-9a-zA-Z_%.]+]], label %[[REG1866:[0-9a-zA-Z_%.]+]]
 
 // CHECK: [[REG1865]]:
 // CHECK-NEXT: [[REG1867:[0-9a-zA-Z_%.]+]] = load i32, i32* [[REG1859]], align 4
@@ -2826,7 +2842,9 @@ test_srl() {
 // CHECK-NEXT: br i1 [[REG1893]], label %[[REG1894:[0-9a-zA-Z_%.]+]], label %[[REG1895:[0-9a-zA-Z_%.]+]]
 
 // CHECK: [[REG1894]]:
-// CHECK-NEXT: br i1 false, label %[[REG1896:[0-9a-zA-Z_%.]+]], label %[[REG1897:[0-9a-zA-Z_%.]+]]
+// CHECK-NEXT: load
+// CHECK-NEXT: call i1 @llvm.is.constant
+// CHECK-NEXT: br i1 %[[REG1896a:[0-9a-zA-Z_%.]+]], label %[[REG1896:[0-9a-zA-Z_%.]+]], label %[[REG1897:[0-9a-zA-Z_%.]+]]
 
 // CHECK: [[REG1896]]:
 // CHECK-NEXT: [[REG1898:[0-9a-zA-Z_%.]+]] = load i32, i32* [[REG1890]], align 4

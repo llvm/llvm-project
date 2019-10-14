@@ -2101,10 +2101,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BI__builtin_constant_p: {
     llvm::Type *ResultType = ConvertType(E->getType());
-    if (CGM.getCodeGenOpts().OptimizationLevel == 0)
-      // At -O0, we don't perform inlining, so we don't need to delay the
-      // processing.
-      return RValue::get(ConstantInt::get(ResultType, 0));
 
     const Expr *Arg = E->getArg(0);
     QualType ArgType = Arg->getType();
