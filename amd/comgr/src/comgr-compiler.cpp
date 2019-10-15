@@ -883,6 +883,10 @@ amd_comgr_status_t AMDGPUCompiler::compileToBitcode() {
   Args.push_back("-c");
   Args.push_back("-emit-llvm");
 
+#if _WIN32
+  Args.push_back("-fshort-wchar");
+#endif
+
   return processFiles(AMD_COMGR_DATA_KIND_BC, ".bc");
 }
 
