@@ -32,7 +32,9 @@ class GdbRemoteTestCaseBase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    _TIMEOUT_SECONDS = 120
+    _TIMEOUT_SECONDS = 120 * (1 if ('ASAN_OPTIONS' in os.environ) else 10)
+    _READ_TIMEOUT    =   5 * (1 if ('ASAN_OPTIONS' in os.environ) else 10)
+    _WAIT_TIMEOUT    =   3 * (1 if ('ASAN_OPTIONS' in os.environ) else 10)
 
     _GDBREMOTE_KILL_PACKET = "$k#6b"
 
@@ -202,7 +204,7 @@ class GdbRemoteTestCaseBase(TestBase):
 
         return (named_pipe_path, named_pipe, named_pipe_fd)
 
-    def get_stub_port_from_named_socket(self, read_timeout_seconds=5):
+    def get_stub_port_from_named_socket(self, read_timeout_seconds):
         # Wait for something to read with a max timeout.
         (ready_readers, _, _) = select.select(
             [self.named_pipe_fd], [], [], read_timeout_seconds)
@@ -406,7 +408,7 @@ class GdbRemoteTestCaseBase(TestBase):
         # If we're receiving the stub's listening port from the named pipe, do
         # that here.
         if self.named_pipe:
-            self.port = self.get_stub_port_from_named_socket()
+            self.port = self.get_stub_port_from_named_socket(self._READ_TIMEOUT)
 
         return server
 
@@ -622,7 +624,10 @@ class GdbRemoteTestCaseBase(TestBase):
                     written_byte_count:]
         self.assertEqual(len(request_bytes_remaining), 0)
 
-    def do_handshake(self, stub_socket, timeout_seconds=5):
+    def do_handshake(self, stub_socket, timeout_seconds=None):
+        if not timeout_seconds:
+            timeout_seconds = self._WAIT_TIMEOUT
+
         # Write the ack.
         self.expect_socket_send(stub_socket, "+", timeout_seconds)
 
@@ -880,7 +885,9 @@ class GdbRemoteTestCaseBase(TestBase):
             thread_ids.extend(new_thread_infos)
         return thread_ids
 
-    def wait_for_thread_count(self, thread_count, timeout_seconds=3):
+    def wait_for_thread_count(self, thread_count, timeout_seconds=None):
+        if not timeout_seconds:
+            timeout_seconds = self._WAIT_TIMEOUT
         start_time = time.time()
         timeout_time = start_time + timeout_seconds
 
