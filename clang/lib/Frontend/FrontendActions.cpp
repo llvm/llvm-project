@@ -417,6 +417,10 @@ private:
       return "DefiningSynthesizedFunction";
     case CodeSynthesisContext::Memoization:
       return "Memoization";
+    case CodeSynthesisContext::ConstraintsCheck:
+      return "ConstraintsCheck";
+    case CodeSynthesisContext::ConstraintSubstitution:
+      return "ConstraintSubstitution";
     }
     return "";
   }

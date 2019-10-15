@@ -141,6 +141,8 @@ class JSONNodeDumper
       JOS.attribute(Key, Value);
   }
 
+  void writeIncludeStack(PresumedLoc Loc, bool JustFirst = false);
+
   // Writes the attributes of a SourceLocation object without.
   void writeBareSourceLocation(SourceLocation Loc, bool IsSpelling);
 

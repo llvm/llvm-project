@@ -30,6 +30,7 @@ using ::TestUsingShadowDeclType;
 
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "offset": 204,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 12,
 // CHECK-NEXT:   "col": 18,
@@ -37,10 +38,12 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "offset": 187,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "offset": 204,
 // CHECK-NEXT:    "col": 18,
 // CHECK-NEXT:    "tokLen": 19
 // CHECK-NEXT:   }
@@ -78,6 +81,7 @@ using ::TestUsingShadowDeclType;
 
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "offset": 239,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 13,
 // CHECK-NEXT:   "col": 15,
@@ -85,10 +89,12 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "offset": 225,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "offset": 239,
 // CHECK-NEXT:    "col": 15,
 // CHECK-NEXT:    "tokLen": 19
 // CHECK-NEXT:   }
@@ -127,6 +133,7 @@ using ::TestUsingShadowDeclType;
 
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "offset": 319,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 16,
 // CHECK-NEXT:   "col": 22,
@@ -134,10 +141,12 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "offset": 298,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "offset": 319,
 // CHECK-NEXT:    "col": 22,
 // CHECK-NEXT:    "tokLen": 22
 // CHECK-NEXT:   }
@@ -233,6 +242,7 @@ using ::TestUsingShadowDeclType;
 
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "offset": 366,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 18,
 // CHECK-NEXT:   "col": 20,
@@ -240,10 +250,12 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "offset": 347,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "offset": 397,
 // CHECK-NEXT:    "col": 51,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -307,6 +319,7 @@ using ::TestUsingShadowDeclType;
 
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "offset": 416,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 19,
 // CHECK-NEXT:   "col": 17,
@@ -314,10 +327,12 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "offset": 400,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "offset": 416,
 // CHECK-NEXT:    "col": 17,
 // CHECK-NEXT:    "tokLen": 25
 // CHECK-NEXT:   }
@@ -362,6 +377,7 @@ using ::TestUsingShadowDeclType;
 
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "offset": 456,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 21,
 // CHECK-NEXT:   "col": 13,
@@ -369,10 +385,12 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "offset": 444,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "offset": 490,
 // CHECK-NEXT:    "col": 47,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -428,8 +446,46 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
 
+
+// CHECK:  "kind": "TypedefDecl",
+// CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "offset": 506,
+// CHECK-NEXT:   "file": "{{.*}}",
+// CHECK-NEXT:   "line": 23,
+// CHECK-NEXT:   "col": 13,
+// CHECK-NEXT:   "tokLen": 23
+// CHECK-NEXT:  },
+// CHECK-NEXT:  "range": {
+// CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "offset": 494,
+// CHECK-NEXT:    "col": 1,
+// CHECK-NEXT:    "tokLen": 7
+// CHECK-NEXT:   },
+// CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "offset": 506,
+// CHECK-NEXT:    "col": 13,
+// CHECK-NEXT:    "tokLen": 23
+// CHECK-NEXT:   }
+// CHECK-NEXT:  },
+// CHECK-NEXT:  "name": "TestUsingShadowDeclType",
+// CHECK-NEXT:  "type": {
+// CHECK-NEXT:   "qualType": "int"
+// CHECK-NEXT:  },
+// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "BuiltinType",
+// CHECK-NEXT:    "type": {
+// CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    }
+// CHECK-NEXT:   }
+// CHECK-NEXT:  ]
+// CHECK-NEXT: }
+
+
 // CHECK:  "kind": "NamespaceDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "offset": 541,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 24,
 // CHECK-NEXT:   "col": 11,
@@ -437,10 +493,12 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "offset": 531,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 9
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "offset": 609,
 // CHECK-NEXT:    "line": 26,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -452,16 +510,19 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "UsingDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "offset": 584,
 // CHECK-NEXT:     "line": 25,
 // CHECK-NEXT:     "col": 9,
 // CHECK-NEXT:     "tokLen": 23
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 576,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 584,
 // CHECK-NEXT:      "col": 9,
 // CHECK-NEXT:      "tokLen": 23
 // CHECK-NEXT:     }
@@ -472,15 +533,18 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "UsingShadowDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "offset": 584,
 // CHECK-NEXT:     "col": 9,
 // CHECK-NEXT:     "tokLen": 23
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 584,
 // CHECK-NEXT:      "col": 9,
 // CHECK-NEXT:      "tokLen": 23
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 584,
 // CHECK-NEXT:      "col": 9,
 // CHECK-NEXT:      "tokLen": 23
 // CHECK-NEXT:     }

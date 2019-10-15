@@ -192,6 +192,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::NoInitExprClass:
   case Expr::DesignatedInitUpdateExprClass:
   case Expr::SourceLocExprClass:
+  case Expr::ConceptSpecializationExprClass:
     return Cl::CL_PRValue;
 
   case Expr::ConstantExprClass:

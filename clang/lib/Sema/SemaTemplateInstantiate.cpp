@@ -198,12 +198,14 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case ExplicitTemplateArgumentSubstitution:
   case DeducedTemplateArgumentSubstitution:
   case PriorTemplateArgumentSubstitution:
+  case ConstraintsCheck:
     return true;
 
   case DefaultTemplateArgumentChecking:
   case DeclaringSpecialMember:
   case DefiningSynthesizedFunction:
   case ExceptionSpecEvaluation:
+  case ConstraintSubstitution:
     return false;
 
   // This function should never be called when Kind's value is Memoization.
@@ -357,6 +359,24 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::DefaultTemplateArgumentChecking,
           PointOfInstantiation, InstantiationRange, Param, Template,
           TemplateArgs) {}
+
+Sema::InstantiatingTemplate::InstantiatingTemplate(
+    Sema &SemaRef, SourceLocation PointOfInstantiation,
+    ConstraintsCheck, TemplateDecl *Template,
+    ArrayRef<TemplateArgument> TemplateArgs, SourceRange InstantiationRange)
+    : InstantiatingTemplate(
+          SemaRef, CodeSynthesisContext::ConstraintsCheck,
+          PointOfInstantiation, InstantiationRange, Template, nullptr,
+          TemplateArgs) {}
+
+Sema::InstantiatingTemplate::InstantiatingTemplate(
+    Sema &SemaRef, SourceLocation PointOfInstantiation,
+    ConstraintSubstitution, TemplateDecl *Template,
+    sema::TemplateDeductionInfo &DeductionInfo, SourceRange InstantiationRange)
+    : InstantiatingTemplate(
+          SemaRef, CodeSynthesisContext::ConstraintSubstitution,
+          PointOfInstantiation, InstantiationRange, Template, nullptr,
+          {}, &DeductionInfo) {}
 
 void Sema::pushCodeSynthesisContext(CodeSynthesisContext Ctx) {
   Ctx.SavedInNonInstantiationSFINAEContext = InNonInstantiationSFINAEContext;
@@ -664,6 +684,30 @@ void Sema::PrintInstantiationStack() {
 
     case CodeSynthesisContext::Memoization:
       break;
+    
+    case CodeSynthesisContext::ConstraintsCheck:
+      if (auto *CD = dyn_cast<ConceptDecl>(Active->Entity)) {
+        SmallVector<char, 128> TemplateArgsStr;
+        llvm::raw_svector_ostream OS(TemplateArgsStr);
+        CD->printName(OS);
+        printTemplateArgumentList(OS, Active->template_arguments(),
+                                  getPrintingPolicy());
+        Diags.Report(Active->PointOfInstantiation,
+                     diag::note_concept_specialization_here)
+          << OS.str()
+          << Active->InstantiationRange;
+        break;
+      }
+      // TODO: Concepts - implement this for constrained templates and partial
+      // specializations.
+      llvm_unreachable("only concept constraints are supported right now");
+      break;
+      
+    case CodeSynthesisContext::ConstraintSubstitution:
+      Diags.Report(Active->PointOfInstantiation,
+                   diag::note_constraint_substitution_here)
+          << Active->InstantiationRange;
+      break;
     }
   }
 }
@@ -687,6 +731,7 @@ Optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
       LLVM_FALLTHROUGH;
     case CodeSynthesisContext::DefaultFunctionArgumentInstantiation:
     case CodeSynthesisContext::ExceptionSpecInstantiation:
+    case CodeSynthesisContext::ConstraintsCheck:
       // This is a template instantiation, so there is no SFINAE.
       return None;
 
@@ -700,8 +745,10 @@ Optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
 
     case CodeSynthesisContext::ExplicitTemplateArgumentSubstitution:
     case CodeSynthesisContext::DeducedTemplateArgumentSubstitution:
-      // We're either substitution explicitly-specified template arguments
-      // or deduced template arguments, so SFINAE applies.
+    case CodeSynthesisContext::ConstraintSubstitution:
+      // We're either substituting explicitly-specified template arguments
+      // or deduced template arguments or a constraint expression, so SFINAE
+      // applies.
       assert(Active->DeductionInfo && "Missing deduction info pointer");
       return Active->DeductionInfo;
 
