@@ -273,8 +273,12 @@ void GlobalSection::writeBody() {
     global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
     if (auto *d = dyn_cast<DefinedData>(sym))
       global.InitExpr.Value.Int32 = d->getVirtualAddress();
-    else if (auto *f = cast<FunctionSymbol>(sym))
+    else if (auto *f = dyn_cast<FunctionSymbol>(sym))
       global.InitExpr.Value.Int32 = f->getTableIndex();
+    else {
+      assert(isa<UndefinedData>(sym));
+      global.InitExpr.Value.Int32 = 0;
+    }
     writeGlobal(os, global);
   }
   for (const DefinedData *sym : dataAddressGlobals) {

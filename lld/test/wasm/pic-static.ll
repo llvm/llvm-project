@@ -12,6 +12,7 @@ declare i32 @ret32(float)
 declare i32 @missing_function(float)
 @global_float = global float 1.0
 @hidden_float = hidden global float 2.0
+@missing_float = extern_weak global float
 
 @ret32_ptr = global i32 (float)* @ret32, align 4
 
@@ -25,6 +26,10 @@ define i32 (float)* @getaddr_missing_function() {
 
 define i32 ()* @getaddr_hidden() {
   ret i32 ()* @hidden_func;
+}
+
+define float* @getaddr_missing_float() {
+  ret float* @missing_float
 }
 
 define hidden i32 @hidden_func() {
@@ -83,8 +88,16 @@ entry:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1
 
-; GOT.mem.global_float
+; GOT.mem.missing_float
 ; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:         Type:            I32
+; CHECK-NEXT:         Mutable:         false
+; CHECK-NEXT:         InitExpr:
+; CHECK-NEXT:           Opcode:          I32_CONST
+; CHECK-NEXT:           Value:           0
+
+; GOT.mem.global_float
+; CHECK-NEXT:       - Index:           5
 ; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
@@ -92,7 +105,7 @@ entry:
 ; CHECK-NEXT:           Value:           1024
 
 ; GOT.mem.ret32_ptr
-; CHECK-NEXT:       - Index:           5
+; CHECK-NEXT:       - Index:           6
 ; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
@@ -100,7 +113,7 @@ entry:
 ; CHECK-NEXT:           Value:           1032
 
 ; __memory_base
-; CHECK-NEXT:       - Index:           6
+; CHECK-NEXT:       - Index:           7
 ; CHECK-NEXT:         Type:            I32
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
