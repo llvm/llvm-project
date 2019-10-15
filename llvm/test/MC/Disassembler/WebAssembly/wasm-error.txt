@@ -2,8 +2,11 @@
 
 # CHECK: .text
 
-# CHECK: block invalid_type
+# CHECK: block unknown_type
 0x02 0x00
+
+# CHECK: block invalid_type
+0x02 0xff 0x42
 
 # CHECK: br 16 # Invalid depth argument!
 0x0C 0x10

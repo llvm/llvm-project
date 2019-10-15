@@ -1639,8 +1639,11 @@ const Expression *NewGVN::performSymbolicCallEvaluation(Instruction *I) const {
   if (AA->doesNotAccessMemory(CI)) {
     return createCallExpression(CI, TOPClass->getMemoryLeader());
   } else if (AA->onlyReadsMemory(CI)) {
-    MemoryAccess *DefiningAccess = MSSAWalker->getClobberingMemoryAccess(CI);
-    return createCallExpression(CI, DefiningAccess);
+    if (auto *MA = MSSA->getMemoryAccess(CI)) {
+      auto *DefiningAccess = MSSAWalker->getClobberingMemoryAccess(MA);
+      return createCallExpression(CI, DefiningAccess);
+    } else // MSSA determined that CI does not access memory.
+      return createCallExpression(CI, TOPClass->getMemoryLeader());
   }
   return nullptr;
 }

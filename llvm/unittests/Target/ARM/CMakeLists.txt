@@ -1,13 +1,15 @@
 include_directories(
-  ${CMAKE_SOURCE_DIR}/lib/Target/ARM
-  ${CMAKE_BINARY_DIR}/lib/Target/ARM
+  ${LLVM_MAIN_SRC_DIR}/lib/Target/ARM
+  ${LLVM_BINARY_DIR}/lib/Target/ARM
   )
 
 set(LLVM_LINK_COMPONENTS
   ARMCodeGen
   ARMDesc
   ARMInfo
+  CodeGen
   MC
+  SelectionDAG
   Support
   Target
 )

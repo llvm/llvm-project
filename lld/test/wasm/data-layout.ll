@@ -54,12 +54,6 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1040
 ; CHECK-NEXT:         Content:         '0100000000000000000000000000000003000000000000000004000034040000'
-; CHECK-NEXT:       - SectionOffset:   58
-; CHECK-NEXT:         InitFlags:       0
-; CHECK-NEXT:         Offset:
-; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           1072
-; CHECK-NEXT:         Content:         '0000000000000000'
 ; CHECK-NEXT:    - Type:            CUSTOM
 
 

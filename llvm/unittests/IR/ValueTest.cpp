@@ -61,7 +61,7 @@ TEST(GlobalTest, CreateAddressSpace) {
                          1);
 
   EXPECT_TRUE(Value::MaximumAlignment == 536870912U);
-  Dummy0->setAlignment(536870912U);
+  Dummy0->setAlignment(Align(536870912));
   EXPECT_EQ(Dummy0->getAlignment(), 536870912U);
 
   // Make sure the address space isn't dropped when returning this.
@@ -90,6 +90,7 @@ TEST(GlobalTest, CreateAddressSpace) {
 
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
+
 TEST(GlobalTest, AlignDeath) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("TestModule", Ctx));
@@ -99,9 +100,7 @@ TEST(GlobalTest, AlignDeath) {
                          Constant::getAllOnesValue(Int32Ty), "var", nullptr,
                          GlobalVariable::NotThreadLocal, 1);
 
-  EXPECT_DEATH(Var->setAlignment(536870913U),
-               "Alignment is neither 0 nor a power of 2");
-  EXPECT_DEATH(Var->setAlignment(1073741824U),
+  EXPECT_DEATH(Var->setAlignment(Align(1073741824U)),
                "Alignment is greater than MaximumAlignment");
 }
 #endif

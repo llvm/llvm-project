@@ -68,7 +68,8 @@ GlobalVariable *llvm::createPrivateGlobalForString(Module &M, StringRef Str,
                          GlobalValue::PrivateLinkage, StrConst, NamePrefix);
   if (AllowMerging)
     GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  GV->setAlignment(1);  // Strings may not be merged w/o setting align 1.
+  GV->setAlignment(Align::None()); // Strings may not be merged w/o setting
+                                   // alignment explicitly.
   return GV;
 }
 

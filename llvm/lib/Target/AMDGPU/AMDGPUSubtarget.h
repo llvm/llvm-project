@@ -196,8 +196,8 @@ public:
     return LocalMemorySize;
   }
 
-  unsigned getAlignmentForImplicitArgPtr() const {
-    return isAmdHsaOS() ? 8 : 4;
+  Align getAlignmentForImplicitArgPtr() const {
+    return isAmdHsaOS() ? Align(8) : Align(4);
   }
 
   /// Returns the offset in bytes from the start of the input buffer
@@ -238,10 +238,8 @@ public:
       return 16;
     return AMDGPU::getIntegerAttribute(F, "amdgpu-implicitarg-num-bytes", 0);
   }
-  uint64_t getExplicitKernArgSize(const Function &F,
-                                  unsigned &MaxAlign) const;
-  unsigned getKernArgSegmentSize(const Function &F,
-                                 unsigned &MaxAlign) const;
+  uint64_t getExplicitKernArgSize(const Function &F, Align &MaxAlign) const;
+  unsigned getKernArgSegmentSize(const Function &F, Align &MaxAlign) const;
 
   virtual ~AMDGPUSubtarget() {}
 };

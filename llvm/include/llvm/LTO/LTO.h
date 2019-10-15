@@ -309,7 +309,7 @@ private:
     RegularLTOState(unsigned ParallelCodeGenParallelismLevel, Config &Conf);
     struct CommonResolution {
       uint64_t Size = 0;
-      unsigned Align = 0;
+      MaybeAlign Align;
       /// Record if at least one instance of the common was marked as prevailing
       bool Prevailing = false;
     };

@@ -5519,8 +5519,9 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
           Expr, Offset, RegAndSize.second);
         if (!FragmentExpr)
           continue;
+        assert(!IsDbgDeclare && "DbgDeclare operand is not in memory?");
         FuncInfo.ArgDbgValues.push_back(
-          BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), IsDbgDeclare,
+          BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), false,
                   RegAndSize.first, Variable, *FragmentExpr));
         Offset += RegAndSize.second;
       }
@@ -5554,8 +5555,10 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   assert(Variable->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
   IsIndirect = (Op->isReg()) ? IsIndirect : true;
+  if (IsIndirect)
+    Expr = DIExpression::append(Expr, {dwarf::DW_OP_deref});
   FuncInfo.ArgDbgValues.push_back(
-      BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), IsIndirect,
+      BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), false,
               *Op, Variable, Expr));
 
   return true;

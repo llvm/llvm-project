@@ -27,9 +27,20 @@ MCXCOFFStreamer::MCXCOFFStreamer(MCContext &Context,
     : MCObjectStreamer(Context, std::move(MAB), std::move(OW),
                        std::move(Emitter)) {}
 
-bool MCXCOFFStreamer::EmitSymbolAttribute(MCSymbol *Symbol,
+bool MCXCOFFStreamer::EmitSymbolAttribute(MCSymbol *Sym,
                                           MCSymbolAttr Attribute) {
-  report_fatal_error("Symbol attributes not implemented for XCOFF.");
+  auto *Symbol = cast<MCSymbolXCOFF>(Sym);
+  getAssembler().registerSymbol(*Symbol);
+
+  switch (Attribute) {
+  case MCSA_Global:
+    Symbol->setStorageClass(XCOFF::C_EXT);
+    Symbol->setExternal(true);
+    break;
+  default:
+    report_fatal_error("Not implemented yet.");
+  }
+  return true;
 }
 
 void MCXCOFFStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -57,8 +68,18 @@ void MCXCOFFStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
 }
 
 void MCXCOFFStreamer::EmitInstToData(const MCInst &Inst,
-                                     const MCSubtargetInfo &) {
-  report_fatal_error("Instruction emission not implemented for XCOFF.");
+                                     const MCSubtargetInfo &STI) {
+  MCAssembler &Assembler = getAssembler();
+  SmallVector<MCFixup, 4> Fixups;
+  SmallString<256> Code;
+  raw_svector_ostream VecOS(Code);
+  Assembler.getEmitter().encodeInstruction(Inst, VecOS, Fixups, STI);
+
+  // TODO: Handle Fixups later
+
+  MCDataFragment *DF = getOrCreateDataFragment(&STI);
+  DF->setHasInstructions(STI);
+  DF->getContents().append(Code.begin(), Code.end());
 }
 
 MCStreamer *llvm::createXCOFFStreamer(MCContext &Context,

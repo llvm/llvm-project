@@ -2140,25 +2140,22 @@ static void unswitchNontrivialInvariants(
     // the branch in the split block.
     buildPartialUnswitchConditionalBranch(*SplitBB, Invariants, Direction,
                                           *ClonedPH, *LoopPH);
+    DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
+
     if (MSSAU) {
+      DT.applyUpdates(DTUpdates);
+      DTUpdates.clear();
+
       // Perform MSSA cloning updates.
       for (auto &VMap : VMaps)
         MSSAU->updateForClonedLoop(LBRPO, ExitBlocks, *VMap,
                                    /*IgnoreIncomingWithNoClones=*/true);
       MSSAU->updateExitBlocksForClonedLoop(ExitBlocks, VMaps, DT);
     }
-    DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
   }
 
   // Apply the updates accumulated above to get an up-to-date dominator tree.
   DT.applyUpdates(DTUpdates);
-  if (!FullUnswitch && MSSAU) {
-    // Update MSSA for partial unswitch, after DT update.
-    SmallVector<CFGUpdate, 1> Updates;
-    Updates.push_back(
-        {cfg::UpdateKind::Insert, SplitBB, ClonedPHs.begin()->second});
-    MSSAU->applyInsertUpdates(Updates, DT);
-  }
 
   // Now that we have an accurate dominator tree, first delete the dead cloned
   // blocks so that we can accurately build any cloned loops. It is important to

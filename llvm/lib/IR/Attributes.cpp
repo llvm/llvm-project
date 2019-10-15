@@ -142,17 +142,14 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   return Attribute(PA);
 }
 
-Attribute Attribute::getWithAlignment(LLVMContext &Context, uint64_t Align) {
-  assert(isPowerOf2_32(Align) && "Alignment must be a power of two.");
-  assert(Align <= 0x40000000 && "Alignment too large.");
-  return get(Context, Alignment, Align);
+Attribute Attribute::getWithAlignment(LLVMContext &Context, Align A) {
+  assert(A <= 0x40000000 && "Alignment too large.");
+  return get(Context, Alignment, A.value());
 }
 
-Attribute Attribute::getWithStackAlignment(LLVMContext &Context,
-                                           uint64_t Align) {
-  assert(isPowerOf2_32(Align) && "Alignment must be a power of two.");
-  assert(Align <= 0x100 && "Alignment too large.");
-  return get(Context, StackAlignment, Align);
+Attribute Attribute::getWithStackAlignment(LLVMContext &Context, Align A) {
+  assert(A <= 0x100 && "Alignment too large.");
+  return get(Context, StackAlignment, A.value());
 }
 
 Attribute Attribute::getWithDereferenceableBytes(LLVMContext &Context,
@@ -782,10 +779,10 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C, const AttrBuilder &B) {
       Attr = Attribute::getWithByValType(C, B.getByValType());
       break;
     case Attribute::Alignment:
-      Attr = Attribute::getWithAlignment(C, B.getAlignment());
+      Attr = Attribute::getWithAlignment(C, Align(B.getAlignment()));
       break;
     case Attribute::StackAlignment:
-      Attr = Attribute::getWithStackAlignment(C, B.getStackAlignment());
+      Attr = Attribute::getWithStackAlignment(C, Align(B.getStackAlignment()));
       break;
     case Attribute::Dereferenceable:
       Attr = Attribute::getWithDereferenceableBytes(

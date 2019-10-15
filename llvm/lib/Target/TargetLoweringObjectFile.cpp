@@ -253,6 +253,7 @@ MCSection *TargetLoweringObjectFile::SectionForGlobal(
     auto Attrs = GVar->getAttributes();
     if ((Attrs.hasAttribute("bss-section") && Kind.isBSS()) ||
         (Attrs.hasAttribute("data-section") && Kind.isData()) ||
+        (Attrs.hasAttribute("relro-section") && Kind.isReadOnlyWithRel()) ||
         (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly()))  {
        return getExplicitSectionGlobal(GO, Kind, TM);
     }

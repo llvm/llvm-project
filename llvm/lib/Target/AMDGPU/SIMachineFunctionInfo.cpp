@@ -501,7 +501,7 @@ void yaml::SIMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
 bool SIMachineFunctionInfo::initializeBaseYamlFields(
   const yaml::SIMachineFunctionInfo &YamlMFI) {
   ExplicitKernArgSize = YamlMFI.ExplicitKernArgSize;
-  MaxKernArgAlign = YamlMFI.MaxKernArgAlign;
+  MaxKernArgAlign = assumeAligned(YamlMFI.MaxKernArgAlign);
   LDSSize = YamlMFI.LDSSize;
   HighBitsOf32BitAddress = YamlMFI.HighBitsOf32BitAddress;
   IsEntryFunction = YamlMFI.IsEntryFunction;

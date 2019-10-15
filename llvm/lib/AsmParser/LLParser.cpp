@@ -140,7 +140,7 @@ bool LLParser::ValidateEndOfModule() {
       // If the alignment was parsed as an attribute, move to the alignment
       // field.
       if (FnAttrs.hasAlignmentAttr()) {
-        Fn->setAlignment(FnAttrs.getAlignment());
+        Fn->setAlignment(MaybeAlign(FnAttrs.getAlignment()));
         FnAttrs.removeAttribute(Attribute::Alignment);
       }
 
@@ -1124,7 +1124,7 @@ bool LLParser::ParseGlobal(const std::string &Name, LocTy NameLoc,
     } else if (Lex.getKind() == lltok::kw_align) {
       unsigned Alignment;
       if (ParseOptionalAlignment(Alignment)) return true;
-      GV->setAlignment(Alignment);
+      GV->setAlignment(MaybeAlign(Alignment));
     } else if (Lex.getKind() == lltok::MetadataVar) {
       if (ParseGlobalObjectMetadataAttachment(*GV))
         return true;
@@ -5487,7 +5487,7 @@ bool LLParser::ParseFunctionHeader(Function *&Fn, bool isDefine) {
   Fn->setCallingConv(CC);
   Fn->setAttributes(PAL);
   Fn->setUnnamedAddr(UnnamedAddr);
-  Fn->setAlignment(Alignment);
+  Fn->setAlignment(MaybeAlign(Alignment));
   Fn->setSection(Section);
   Fn->setPartition(Partition);
   Fn->setComdat(C);

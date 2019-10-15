@@ -107,9 +107,13 @@ MachineIRBuilder::buildIndirectDbgValue(Register Reg, const MDNode *Variable,
   assert(
       cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(getDL()) &&
       "Expected inlined-at fields to agree");
+  // DBG_VALUE insts now carry IR-level indirection in their DIExpression
+  // rather than encoding it in the instruction itself.
+  const DIExpression *DIExpr = cast<DIExpression>(Expr);
+  DIExpr = DIExpression::append(DIExpr, {dwarf::DW_OP_deref});
   return insertInstr(BuildMI(getMF(), getDL(),
                              getTII().get(TargetOpcode::DBG_VALUE),
-                             /*IsIndirect*/ true, Reg, Variable, Expr));
+                             /*IsIndirect*/ false, Reg, Variable, DIExpr));
 }
 
 MachineInstrBuilder MachineIRBuilder::buildFIDbgValue(int FI,
@@ -120,11 +124,15 @@ MachineInstrBuilder MachineIRBuilder::buildFIDbgValue(int FI,
   assert(
       cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(getDL()) &&
       "Expected inlined-at fields to agree");
+  // DBG_VALUE insts now carry IR-level indirection in their DIExpression
+  // rather than encoding it in the instruction itself.
+  const DIExpression *DIExpr = cast<DIExpression>(Expr);
+  DIExpr = DIExpression::append(DIExpr, {dwarf::DW_OP_deref});
   return buildInstr(TargetOpcode::DBG_VALUE)
       .addFrameIndex(FI)
-      .addImm(0)
+      .addReg(0)
       .addMetadata(Variable)
-      .addMetadata(Expr);
+      .addMetadata(DIExpr);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
@@ -148,7 +156,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstDbgValue(const Constant &C,
     MIB.addReg(0U);
   }
 
-  return MIB.addImm(0).addMetadata(Variable).addMetadata(Expr);
+  return MIB.addReg(0).addMetadata(Variable).addMetadata(Expr);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildDbgLabel(const MDNode *Label) {

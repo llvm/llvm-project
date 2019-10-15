@@ -492,28 +492,28 @@ bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
 }
 
 uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
-                                                 unsigned &MaxAlign) const {
+                                                 Align &MaxAlign) const {
   assert(F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
          F.getCallingConv() == CallingConv::SPIR_KERNEL);
 
   const DataLayout &DL = F.getParent()->getDataLayout();
   uint64_t ExplicitArgBytes = 0;
-  MaxAlign = 1;
+  MaxAlign = Align::None();
 
   for (const Argument &Arg : F.args()) {
     Type *ArgTy = Arg.getType();
 
-    unsigned Align = DL.getABITypeAlignment(ArgTy);
+    const Align Alignment(DL.getABITypeAlignment(ArgTy));
     uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
-    ExplicitArgBytes = alignTo(ExplicitArgBytes, Align) + AllocSize;
-    MaxAlign = std::max(MaxAlign, Align);
+    ExplicitArgBytes = alignTo(ExplicitArgBytes, Alignment) + AllocSize;
+    MaxAlign = std::max(MaxAlign, Alignment);
   }
 
   return ExplicitArgBytes;
 }
 
 unsigned AMDGPUSubtarget::getKernArgSegmentSize(const Function &F,
-                                                unsigned &MaxAlign) const {
+                                                Align &MaxAlign) const {
   uint64_t ExplicitArgBytes = getExplicitKernArgSize(F, MaxAlign);
 
   unsigned ExplicitOffset = getExplicitKernelArgOffset(F);
@@ -521,7 +521,7 @@ unsigned AMDGPUSubtarget::getKernArgSegmentSize(const Function &F,
   uint64_t TotalSize = ExplicitOffset + ExplicitArgBytes;
   unsigned ImplicitBytes = getImplicitArgNumBytes(F);
   if (ImplicitBytes != 0) {
-    unsigned Alignment = getAlignmentForImplicitArgPtr();
+    const Align Alignment = getAlignmentForImplicitArgPtr();
     TotalSize = alignTo(ExplicitArgBytes, Alignment) + ImplicitBytes;
   }
 

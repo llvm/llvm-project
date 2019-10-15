@@ -122,16 +122,22 @@ enum TOF {
 namespace llvm {
 namespace WebAssembly {
 
-/// This is used to indicate block signatures.
-enum class ExprType : unsigned {
+/// Used as immediate MachineOperands for block signatures
+enum class BlockType : unsigned {
+  Invalid = 0x00,
   Void = 0x40,
-  I32 = 0x7F,
-  I64 = 0x7E,
-  F32 = 0x7D,
-  F64 = 0x7C,
-  V128 = 0x7B,
-  Exnref = 0x68,
-  Invalid = 0x00
+  I32 = unsigned(wasm::ValType::I32),
+  I64 = unsigned(wasm::ValType::I64),
+  F32 = unsigned(wasm::ValType::F32),
+  F64 = unsigned(wasm::ValType::F64),
+  V128 = unsigned(wasm::ValType::V128),
+  Exnref = unsigned(wasm::ValType::EXNREF),
+  // Multivalue blocks (and other non-void blocks) are only emitted when the
+  // blocks will never be exited and are at the ends of functions (see
+  // WebAssemblyCFGStackify::fixEndsAtEndOfFunction). They also are never made
+  // to pop values off the stack, so the exact multivalue signature can always
+  // be inferred from the return type of the parent function in MCInstLower.
+  Multivalue = 0xffff,
 };
 
 /// Instruction opcodes emitted via means other than CodeGen.

@@ -40,6 +40,7 @@ static_library("Sema") {
     "SemaCast.cpp",
     "SemaChecking.cpp",
     "SemaCodeComplete.cpp",
+    "SemaConcept.cpp",
     "SemaConsumer.cpp",
     "SemaCoroutine.cpp",
     "SemaDecl.cpp",

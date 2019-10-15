@@ -250,9 +250,7 @@ protected:
 
 class DataCountSection : public SyntheticSection {
 public:
-  DataCountSection(uint32_t numSegments)
-      : SyntheticSection(llvm::wasm::WASM_SEC_DATACOUNT),
-        numSegments(numSegments) {}
+  DataCountSection(ArrayRef<OutputSegment *> segments);
   bool isNeeded() const override;
   void writeBody() override;
 

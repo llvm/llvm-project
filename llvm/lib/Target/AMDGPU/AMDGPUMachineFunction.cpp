@@ -17,7 +17,6 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF) :
   MachineFunctionInfo(),
   LocalMemoryObjects(),
   ExplicitKernArgSize(0),
-  MaxKernArgAlign(0),
   LDSSize(0),
   IsEntryFunction(AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv())),
   NoSignedZerosFPMath(MF.getTarget().Options.NoSignedZerosFPMath),

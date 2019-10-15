@@ -75,16 +75,16 @@ private:
   SmallVectorImpl<char> &Buffer;
   std::vector<std::string> &Comments;
 
+public:
   /// Only verbose textual output needs comments.  This will be set to
   /// true for that case, and false otherwise.  If false, comments passed in to
   /// the emit methods will be ignored.
-  bool GenerateComments;
+  const bool GenerateComments;
 
-public:
   BufferByteStreamer(SmallVectorImpl<char> &Buffer,
-                     std::vector<std::string> &Comments,
-                     bool GenerateComments)
-  : Buffer(Buffer), Comments(Comments), GenerateComments(GenerateComments) {}
+                     std::vector<std::string> &Comments, bool GenerateComments)
+      : Buffer(Buffer), Comments(Comments), GenerateComments(GenerateComments) {
+  }
   void EmitInt8(uint8_t Byte, const Twine &Comment) override {
     Buffer.push_back(Byte);
     if (GenerateComments)

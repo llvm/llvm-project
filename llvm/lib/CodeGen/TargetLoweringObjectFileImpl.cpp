@@ -568,6 +568,8 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
       SectionName = Attrs.getAttribute("bss-section").getValueAsString();
     } else if (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly()) {
       SectionName = Attrs.getAttribute("rodata-section").getValueAsString();
+    } else if (Attrs.hasAttribute("relro-section") && Kind.isReadOnlyWithRel()) {
+      SectionName = Attrs.getAttribute("relro-section").getValueAsString();
     } else if (Attrs.hasAttribute("data-section") && Kind.isData()) {
       SectionName = Attrs.getAttribute("data-section").getValueAsString();
     }

@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Use.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
@@ -631,7 +632,7 @@ public:
   ///
   /// Returns an alignment which is either specified explicitly, e.g. via
   /// align attribute of a function argument, or guaranteed by DataLayout.
-  unsigned getPointerAlignment(const DataLayout &DL) const;
+  MaybeAlign getPointerAlignment(const DataLayout &DL) const;
 
   /// Translate PHI node to its predecessor from the given basic block.
   ///

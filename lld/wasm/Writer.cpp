@@ -669,6 +669,13 @@ void Writer::createOutputSegments() {
         s = make<OutputSegment>(name);
         if (config->sharedMemory || name == ".tdata")
           s->initFlags = WASM_SEGMENT_IS_PASSIVE;
+        // Exported memories are guaranteed to be zero-initialized, so no need
+        // to emit data segments for bss sections.
+        // TODO: consider initializing bss sections with memory.fill
+        // instructions when memory is imported and bulk-memory is available.
+        if (!config->importMemory && !config->relocatable &&
+            name.startswith(".bss"))
+          s->isBss = true;
         segments.push_back(s);
       }
       s->addInputSegment(segment);
@@ -961,7 +968,7 @@ void Writer::createSyntheticSections() {
   out.exportSec = make<ExportSection>();
   out.startSec = make<StartSection>(segments.size());
   out.elemSec = make<ElemSection>();
-  out.dataCountSec = make<DataCountSection>(segments.size());
+  out.dataCountSec = make<DataCountSection>(segments);
   out.linkingSec = make<LinkingSection>(initFunctions, segments);
   out.nameSec = make<NameSection>();
   out.producersSec = make<ProducersSection>();

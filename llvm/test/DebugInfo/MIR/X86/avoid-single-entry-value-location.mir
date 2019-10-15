@@ -61,7 +61,7 @@ body:             |
     DBG_VALUE $edi, $noreg, !16, !DIExpression(), debug-location !18
     DBG_VALUE $edi, $noreg, !17, !DIExpression(), debug-location !18
     $edi = KILL renamable $edi, implicit killed $rdi, debug-location !18
-    DBG_VALUE $rdi, $noreg, !16, !DIExpression(DW_OP_entry_value, 1), debug-location !18
+    DBG_VALUE $rdi, $noreg, !16, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !18
     TAILJMPd64 @fn2, csr_64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp, implicit killed $edi, debug-location !18
 
 ...

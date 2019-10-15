@@ -822,16 +822,16 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
   std::vector<Constant *> GlobalInits;
   const DataLayout &DL = M.getDataLayout();
   DenseMap<GlobalTypeMember *, uint64_t> GlobalLayout;
-  uint64_t MaxAlign = 0;
+  Align MaxAlign;
   uint64_t CurOffset = 0;
   uint64_t DesiredPadding = 0;
   for (GlobalTypeMember *G : Globals) {
     auto *GV = cast<GlobalVariable>(G->getGlobal());
-    uint64_t Align = GV->getAlignment();
-    if (Align == 0)
-      Align = DL.getABITypeAlignment(GV->getValueType());
-    MaxAlign = std::max(MaxAlign, Align);
-    uint64_t GVOffset = alignTo(CurOffset + DesiredPadding, Align);
+    MaybeAlign Alignment(GV->getAlignment());
+    if (!Alignment)
+      Alignment = Align(DL.getABITypeAlignment(GV->getValueType()));
+    MaxAlign = std::max(MaxAlign, *Alignment);
+    uint64_t GVOffset = alignTo(CurOffset + DesiredPadding, *Alignment);
     GlobalLayout[G] = GVOffset;
     if (GVOffset != 0) {
       uint64_t Padding = GVOffset - CurOffset;
@@ -1363,7 +1363,7 @@ void LowerTypeTestsModule::createJumpTable(
                          cast<Function>(Functions[I]->getGlobal()));
 
   // Align the whole table by entry size.
-  F->setAlignment(getJumpTableEntrySize());
+  F->setAlignment(Align(getJumpTableEntrySize()));
   // Skip prologue.
   // Disabled on win32 due to https://llvm.org/bugs/show_bug.cgi?id=28641#c3.
   // Luckily, this function does not get any prologue even without the

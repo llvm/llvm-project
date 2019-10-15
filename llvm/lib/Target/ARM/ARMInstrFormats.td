@@ -408,7 +408,7 @@ class InstTemplate<AddrMode am, int sz, IndexMode im,
   // mnemonic (when not in an IT block) or preclude it (when in an IT block).
   bit thumbArithFlagSetting = 0;
 
-  bit invalidForTailPredication = 0;
+  bit validForTailPredication = 0;
 
   // If this is a pseudo instruction, mark it isCodeGenOnly.
   let isCodeGenOnly = !eq(!cast<string>(f), "Pseudo");
@@ -421,7 +421,7 @@ class InstTemplate<AddrMode am, int sz, IndexMode im,
   let TSFlags{14}    = canXformTo16Bit;
   let TSFlags{18-15} = D.Value;
   let TSFlags{19}    = thumbArithFlagSetting;
-  let TSFlags{20}    = invalidForTailPredication;
+  let TSFlags{20}    = validForTailPredication;
 
   let Constraints = cstr;
   let Itinerary = itin;

@@ -1516,10 +1516,11 @@ void DevirtModule::rebuildGlobal(VTableBits &B) {
 
   // Align the before byte array to the global's minimum alignment so that we
   // don't break any alignment requirements on the global.
-  unsigned Align = B.GV->getAlignment();
-  if (Align == 0)
-    Align = M.getDataLayout().getABITypeAlignment(B.GV->getValueType());
-  B.Before.Bytes.resize(alignTo(B.Before.Bytes.size(), Align));
+  MaybeAlign Alignment(B.GV->getAlignment());
+  if (!Alignment)
+    Alignment =
+        Align(M.getDataLayout().getABITypeAlignment(B.GV->getValueType()));
+  B.Before.Bytes.resize(alignTo(B.Before.Bytes.size(), Alignment));
 
   // Before was stored in reverse order; flip it now.
   for (size_t I = 0, Size = B.Before.Bytes.size(); I != Size / 2; ++I)
@@ -1536,7 +1537,7 @@ void DevirtModule::rebuildGlobal(VTableBits &B) {
                          GlobalVariable::PrivateLinkage, NewInit, "", B.GV);
   NewGV->setSection(B.GV->getSection());
   NewGV->setComdat(B.GV->getComdat());
-  NewGV->setAlignment(B.GV->getAlignment());
+  NewGV->setAlignment(MaybeAlign(B.GV->getAlignment()));
 
   // Copy the original vtable's metadata to the anonymous global, adjusting
   // offsets as required.

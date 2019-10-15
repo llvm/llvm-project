@@ -32,6 +32,7 @@ public:
   }
 
   StringRef name;
+  bool isBss = false;
   uint32_t index = 0;
   uint32_t initFlags = 0;
   uint32_t sectionOffset = 0;

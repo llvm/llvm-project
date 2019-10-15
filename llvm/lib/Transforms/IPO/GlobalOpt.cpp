@@ -497,8 +497,8 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
       // had 256 byte alignment for example, something might depend on that:
       // propagate info to each field.
       uint64_t FieldOffset = Layout.getElementOffset(i);
-      unsigned NewAlign = (unsigned)MinAlign(StartAlignment, FieldOffset);
-      if (NewAlign > DL.getABITypeAlignment(STy->getElementType(i)))
+      Align NewAlign(MinAlign(StartAlignment, FieldOffset));
+      if (NewAlign > Align(DL.getABITypeAlignment(STy->getElementType(i))))
         NGV->setAlignment(NewAlign);
 
       // Copy over the debug info for the variable.
@@ -513,7 +513,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
     NewGlobals.reserve(NumElements);
     auto ElTy = STy->getElementType();
     uint64_t EltSize = DL.getTypeAllocSize(ElTy);
-    unsigned EltAlign = DL.getABITypeAlignment(ElTy);
+    Align EltAlign(DL.getABITypeAlignment(ElTy));
     uint64_t FragmentSizeInBits = DL.getTypeAllocSizeInBits(ElTy);
     for (unsigned i = 0, e = NumElements; i != e; ++i) {
       Constant *In = Init->getAggregateElement(i);
@@ -532,7 +532,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
       // Calculate the known alignment of the field.  If the original aggregate
       // had 256 byte alignment for example, something might depend on that:
       // propagate info to each field.
-      unsigned NewAlign = (unsigned)MinAlign(StartAlignment, EltSize*i);
+      Align NewAlign(MinAlign(StartAlignment, EltSize * i));
       if (NewAlign > EltAlign)
         NGV->setAlignment(NewAlign);
       transferSRADebugInfo(GV, NGV, FragmentSizeInBits * i, FragmentSizeInBits,
