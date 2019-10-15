@@ -838,7 +838,8 @@ SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
           .Case(".debug_ranges", eSectionTypeDWARFDebugRanges)
           .Case(".debug_str", eSectionTypeDWARFDebugStr)
           .Case(".debug_types", eSectionTypeDWARFDebugTypes)
-          .Case(".eh_frame", eSectionTypeEHFrame)
+          // .eh_frame can be truncated to 8 chars.
+          .Cases(".eh_frame", ".eh_fram", eSectionTypeEHFrame)
           .Case(".gosymtab", eSectionTypeGoSymtab)
           .Default(eSectionTypeInvalid);
   if (section_type != eSectionTypeInvalid)
