@@ -88,9 +88,10 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
     return static_cast<const OMPGrainsizeClause *>(C);
   case OMPC_num_tasks:
     return static_cast<const OMPNumTasksClause *>(C);
+  case OMPC_final:
+    return static_cast<const OMPFinalClause *>(C);
   case OMPC_default:
   case OMPC_proc_bind:
-  case OMPC_final:
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_allocator:
@@ -246,6 +247,12 @@ OMPClause::child_range OMPNumTasksClause::used_children() {
   if (Stmt **C = getAddrOfExprAsWritten(getPreInitStmt()))
     return child_range(C, C + 1);
   return child_range(&NumTasks, &NumTasks + 1);
+}
+
+OMPClause::child_range OMPFinalClause::used_children() {
+  if (Stmt **C = getAddrOfExprAsWritten(getPreInitStmt()))
+    return child_range(C, C + 1);
+  return child_range(&Condition, &Condition + 1);
 }
 
 OMPOrderedClause *OMPOrderedClause::Create(const ASTContext &C, Expr *Num,

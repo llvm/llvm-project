@@ -12501,6 +12501,7 @@ void OMPClauseReader::VisitOMPIfClause(OMPIfClause *C) {
 }
 
 void OMPClauseReader::VisitOMPFinalClause(OMPFinalClause *C) {
+  VisitOMPClauseWithPreInit(C);
   C->setCondition(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
 }
