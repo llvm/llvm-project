@@ -3035,8 +3035,7 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
           swift::VarDecl(is_static, introducer, is_capture_list, swift::SourceLoc(),
                          ast_context->GetIdentifier(name.GetCString()),
                          module_decl);
-      var_decl->setType(GetSwiftType(ast_context->GetErrorType()));
-      var_decl->setInterfaceType(var_decl->getType());
+      var_decl->setInterfaceType(GetSwiftType(ast_context->GetErrorType()));
       var_decl->setDebuggerVar(true);
 
       persistent_state->RegisterSwiftPersistentDecl(var_decl);
