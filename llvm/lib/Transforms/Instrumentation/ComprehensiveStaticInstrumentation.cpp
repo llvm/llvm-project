@@ -396,8 +396,7 @@ uint64_t FrontEndDataTable::add(const Function &F) {
   if (F.getSubprogram())
     add(ID, F.getSubprogram());
   else
-    add(ID, -1, -1, F.getName(), F.getParent()->getName(),
-        F.getName());
+    add(ID, -1, -1, F.getParent()->getName(), "", F.getName());
   return ID;
 }
 
@@ -413,8 +412,13 @@ uint64_t FrontEndDataTable::add(const Instruction &I,
   if (auto DL = I.getDebugLoc())
     add(ID, DL, RealName);
   else {
-    add(ID, -1, -1, I.getFunction()->getName(), I.getModule()->getName(),
-        I.getName());
+    if (const DISubprogram *Subprog = I.getFunction()->getSubprogram())
+      add(ID, (int32_t)Subprog->getLine(), -1, Subprog->getFilename(),
+          Subprog->getDirectory(),
+          RealName == "" ? Subprog->getName() : RealName);
+    else
+      add(ID, -1, -1, I.getModule()->getName(), "",
+          RealName == "" ? I.getFunction()->getName() : RealName);
   }
   return ID;
 }
