@@ -66,7 +66,7 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 }
 
 BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
-  const TargetFrameLowering *TFI = getFrameLowering(MF);
+  const RISCVFrameLowering *TFI = getFrameLowering(MF);
   BitVector Reserved(getNumRegs());
 
   // Mark any registers requested to be reserved as such
@@ -82,6 +82,10 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, RISCV::X4); // tp
   if (TFI->hasFP(MF))
     markSuperRegs(Reserved, RISCV::X8); // fp
+  // Reserve the base register if we need to realign the stack and allocate
+  // variable-sized objects at runtime.
+  if (TFI->hasBP(MF))
+    markSuperRegs(Reserved, RISCVABI::getBPReg()); // bp
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
