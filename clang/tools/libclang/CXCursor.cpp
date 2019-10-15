@@ -674,6 +674,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::OMPMasterTaskLoopDirectiveClass:
     K = CXCursor_OMPMasterTaskLoopDirective;
     break;
+  case Stmt::OMPParallelMasterTaskLoopDirectiveClass:
+    K = CXCursor_OMPParallelMasterTaskLoopDirective;
+    break;
   case Stmt::OMPDistributeDirectiveClass:
     K = CXCursor_OMPDistributeDirective;
     break;

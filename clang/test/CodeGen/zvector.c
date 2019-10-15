@@ -108,7 +108,7 @@ void test_pos(void) {
 // CHECK:   [[SUB3:%.*]] = sub <2 x i64> zeroinitializer, [[TMP3]]
 // CHECK:   store volatile <2 x i64> [[SUB3]], <2 x i64>* @sl, align 8
 // CHECK:   [[TMP4:%.*]] = load volatile <2 x double>, <2 x double>* @fd2, align 8
-// CHECK:   [[SUB4:%.*]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, [[TMP4]]
+// CHECK:   [[SUB4:%.*]] = fneg <2 x double> [[TMP4]]
 // CHECK:   store volatile <2 x double> [[SUB4]], <2 x double>* @fd, align 8
 // CHECK:   ret void
 void test_neg(void) {

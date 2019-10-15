@@ -86,6 +86,7 @@
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
 // TCHECK-NOT: @{{.+}} = weak constant [[ENTTY]]
 
 // Check if offloading descriptor is created.
@@ -341,6 +342,13 @@ int foo(int n) {
     d.Y += 1;
   }
 
+  const int nn = 0;
+  #pragma omp target teams shared(nn)
+  #pragma omp parallel firstprivate(nn)
+  (void)nn;
+  #pragma omp target teams firstprivate(nn)
+  #pragma omp parallel shared(nn)
+  (void)nn;
   return a;
 }
 
@@ -480,6 +488,19 @@ int foo(int n) {
 //
 // CHECK:       define internal {{.*}}void [[OMP_OUTLINED4]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i[[SZ]] %{{.+}}, [10 x float]* {{.+}}, i[[SZ]] %{{.+}}, float* {{.+}}, [5 x [10 x double]]* {{.+}}, i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, double* {{.+}}, [[TT]]* {{.+}})
 // To reduce complexity, we're only going as far as validating the signature of the outlined parallel function.
+
+// CHECK: define {{.*}}void @__omp_offloading_{{.*}}foo{{.*}}_l346(i[[SZ]] %{{.+}})
+// CHECK: define internal void {{@.+}}(i32* {{.+}}, i32* {{.+}}, i[[SZ]] %{{.+}})
+// CHECK: define {{.*}}void @__omp_offloading_{{.*}}foo{{.*}}_l349(i[[SZ]] %{{.+}})
+// CHECK: define internal void {{@.+}}(i32* {{.+}}, i32* {{.+}}, i32* dereferenceable{{.+}})
+
+void bazzzz(int n, int f[n]) {
+// CHECK: define internal void @__omp_offloading_{{.+}}bazzzz{{.+}}_l501(i[[SZ]] %{{[^,]+}})
+// CHECK: [[VLA:%.+]] = load i[[SZ]], i[[SZ]]* %
+// CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* @{{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]])* @{{.+}} to void (i32*, i32*, ...)*), i[[SZ]] [[VLA]])
+#pragma omp target teams private(f)
+  ;
+}
 
 template<typename tx>
 tx ftemplate(int n) {
@@ -846,21 +867,4 @@ int bar(int n){
 // CHECK:       define internal {{.*}}void [[OMP_OUTLINED7]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, [10 x i32]* {{.+}})
 // To reduce complexity, we're only going as far as validating the signature of the outlined parallel function.
 
-void foo1() {
-  const int n = 0;
-  #pragma omp target teams shared(n)
-  #pragma omp parallel firstprivate(n)
-  (void)n;
-}
-void foo() {
-  const int n = 0;
-  #pragma omp target teams firstprivate(n)
-  #pragma omp parallel shared(n)
-  (void)n;
-}
-
-// define {{.*}}void @__omp_offloading_{{.*}}foo1{{.*}}_l841(i[[SZ]] %{{.+}})
-// define internal void {{@.+}}(i32* {{.+}}, i32* {{.+}}, i[[SZ]] %{{.+}})
-// define {{.*}}void @__omp_offloading_{{.*}}foo1{{.*}}_l847(i[[SZ]] %{{.+}})
-// define internal void {{@.+}}(i32* {{.+}}, i32* {{.+}}, i32* dereferenceable{{.+}})
 #endif

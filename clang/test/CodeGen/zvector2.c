@@ -24,7 +24,7 @@ void test_neg (void)
 {
 // CHECK-LABEL: test_neg
 // CHECK: [[VAL:%[^ ]+]] = load volatile <4 x float>, <4 x float>* @ff2
-// CHECK: %{{.*}} = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[VAL]]
+// CHECK: %{{.*}} = fneg <4 x float> [[VAL]]
   ff = -ff2;
 }
 
