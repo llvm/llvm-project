@@ -157,7 +157,7 @@ std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex) {
       if (fileLine)
         locations.push_back({sym, *fileLine});
       else if (sym)
-        locations.push_back({sym});
+        locations.push_back({sym, {"", 0}});
     }
   }
 
