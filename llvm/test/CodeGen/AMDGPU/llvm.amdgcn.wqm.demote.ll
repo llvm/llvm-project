@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,GCN-64 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,GCN-64 %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,GCN-64,PRE-GFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,GCN-64,PRE-GFX10 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GCN-32 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GCN-64 %s
 
@@ -204,7 +204,8 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 ; GCN-64-NEXT: s_andn2_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], [[ORIG]], exec
 ; GCN: ; %.continue0.preheader
 ; GCN: ; %.continue0
-; GCN: v_cndmask_b32_e64 [[DST:v[0-9]+]], [[SRC:v[0-9]+]], 0, [[LIVE]]
+; PRE-GFX10: v_cndmask_b32_e64 [[DST:v[0-9]+]], [[SRC:v[0-9]+]], 0, [[LIVE]]
+; GFX10: v_cndmask_b32_e64 [[DST:v[0-9]+]], [[SRC:s[0-9]+]], 0, [[LIVE]]
 ; GCN: ; %.demote1
 ; GCN-32: s_andn2_b32 [[LIVE]], [[LIVE]], exec
 ; GCN-64: s_andn2_b64 [[LIVE]], [[LIVE]], exec

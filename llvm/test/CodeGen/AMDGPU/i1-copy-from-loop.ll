@@ -16,8 +16,9 @@
 ; SI: [[FOR_END_LABEL]]
 ; SI:      s_or_b64 exec, exec, [[EXIT_MASK]]
 ; SI:      s_and_saveexec_b64 {{s\[[0-9]+:[0-9]+\]}}, [[I1_VALUE]]
-; SI:      s_cbranch_execz [[EXIT:BB0_[0-9]+]]
-; SI: [[EXIT]]
+; SI: [[EXP:BB0_[0-9]+]]:   ; %if
+; SI:      exp
+; SI: [[EXIT:BB0_[0-9]+]]
 ; SI-NEXT: s_endpgm
 
 define amdgpu_ps void @i1_copy_from_loop(<4 x i32> inreg %rsrc, i32 %tid) {
