@@ -29,6 +29,8 @@ set(LLDB_TEST_ARCH
 option(LLDB_TEST_SWIFT "Use in-tree swift when testing lldb" On)
 
 if(LLDB_TEST_SWIFT)
+  set(LLDB_SWIFTC ${LLVM_RUNTIME_OUTPUT_INTDIR}/swiftc CACHE STRING "Path to swift compiler")
+  set(LLDB_SWIFT_LIBS ${LLVM_LIBRARY_OUTPUT_INTDIR}/swift CACHE STRING "Path to swift libraries")
   set(SWIFT_TEST_ARGS
     --swift-compiler ${LLDB_SWIFTC}
     --swift-library ${LLDB_SWIFT_LIBS}
