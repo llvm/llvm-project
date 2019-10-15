@@ -271,9 +271,8 @@ static std::string get_info_on_alloca(const csi_id_t alloca_id,
             << d.InstAddress() << std::hex << pc << d.Default();
   }
 
-  if (alloca_id % 2) {
+  if (src_loc)
     convert << " in" << get_src_info_str(src_loc, d);
-  }
 
   return convert.str();
 }
