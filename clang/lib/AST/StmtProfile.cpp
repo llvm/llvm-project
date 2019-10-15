@@ -740,10 +740,12 @@ void OMPClauseProfiler::VisitOMPPriorityClause(const OMPPriorityClause *C) {
     Profiler->VisitStmt(C->getPriority());
 }
 void OMPClauseProfiler::VisitOMPGrainsizeClause(const OMPGrainsizeClause *C) {
+  VistOMPClauseWithPreInit(C);
   if (C->getGrainsize())
     Profiler->VisitStmt(C->getGrainsize());
 }
 void OMPClauseProfiler::VisitOMPNumTasksClause(const OMPNumTasksClause *C) {
+  VistOMPClauseWithPreInit(C);
   if (C->getNumTasks())
     Profiler->VisitStmt(C->getNumTasks());
 }
@@ -920,6 +922,11 @@ void StmtProfiler::VisitOMPTaskLoopSimdDirective(
 
 void StmtProfiler::VisitOMPMasterTaskLoopDirective(
     const OMPMasterTaskLoopDirective *S) {
+  VisitOMPLoopDirective(S);
+}
+
+void StmtProfiler::VisitOMPParallelMasterTaskLoopDirective(
+    const OMPParallelMasterTaskLoopDirective *S) {
   VisitOMPLoopDirective(S);
 }
 

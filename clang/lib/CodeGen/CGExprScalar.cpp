@@ -2576,14 +2576,16 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
 
 Value *ScalarExprEmitter::VisitUnaryMinus(const UnaryOperator *E) {
   TestAndClearIgnoreResultAssign();
+  Value *Op = Visit(E->getSubExpr());
+
+  // Generate a unary FNeg for FP ops.
+  if (Op->getType()->isFPOrFPVectorTy())
+    return Builder.CreateFNeg(Op, "fneg");
+
   // Emit unary minus with EmitSub so we handle overflow cases etc.
   BinOpInfo BinOp;
-  BinOp.RHS = Visit(E->getSubExpr());
-
-  if (BinOp.RHS->getType()->isFPOrFPVectorTy())
-    BinOp.LHS = llvm::ConstantFP::getZeroValueForNegation(BinOp.RHS->getType());
-  else
-    BinOp.LHS = llvm::Constant::getNullValue(BinOp.RHS->getType());
+  BinOp.RHS = Op;
+  BinOp.LHS = llvm::Constant::getNullValue(BinOp.RHS->getType());
   BinOp.Ty = E->getType();
   BinOp.Opcode = BO_Sub;
   // FIXME: once UnaryOperator carries FPFeatures, copy it here.

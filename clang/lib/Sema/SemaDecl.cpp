@@ -845,18 +845,18 @@ static ParsedType buildNestedType(Sema &S, CXXScopeSpec &SS,
   return S.CreateParsedType(T, Builder.getTypeSourceInfo(Context, T));
 }
 
-Sema::NameClassification
-Sema::ClassifyName(Scope *S, CXXScopeSpec &SS, IdentifierInfo *&Name,
-                   SourceLocation NameLoc, const Token &NextToken,
-                   bool IsAddressOfOperand, CorrectionCandidateCallback *CCC) {
+Sema::NameClassification Sema::ClassifyName(Scope *S, CXXScopeSpec &SS,
+                                            IdentifierInfo *&Name,
+                                            SourceLocation NameLoc,
+                                            const Token &NextToken,
+                                            CorrectionCandidateCallback *CCC) {
   DeclarationNameInfo NameInfo(Name, NameLoc);
   ObjCMethodDecl *CurMethod = getCurMethodDecl();
 
-  if (NextToken.is(tok::coloncolon)) {
-    NestedNameSpecInfo IdInfo(Name, NameLoc, NextToken.getLocation());
-    BuildCXXNestedNameSpecifier(S, IdInfo, false, SS, nullptr, false);
-  } else if (getLangOpts().CPlusPlus && SS.isSet() &&
-             isCurrentClassName(*Name, S, &SS)) {
+  assert(NextToken.isNot(tok::coloncolon) &&
+         "parse nested name specifiers before calling ClassifyName");
+  if (getLangOpts().CPlusPlus && SS.isSet() &&
+      isCurrentClassName(*Name, S, &SS)) {
     // Per [class.qual]p2, this names the constructors of SS, not the
     // injected-class-name. We don't have a classification for that.
     // There's not much point caching this result, since the parser
@@ -880,9 +880,15 @@ Sema::ClassifyName(Scope *S, CXXScopeSpec &SS, IdentifierInfo *&Name,
   // FIXME: This lookup really, really needs to be folded in to the normal
   // unqualified lookup mechanism.
   if (!SS.isSet() && CurMethod && !isResultTypeOrTemplate(Result, NextToken)) {
-    ExprResult E = LookupInObjCMethod(Result, S, Name, true);
-    if (E.get() || E.isInvalid())
-      return E;
+    DeclResult Ivar = LookupIvarInObjCMethod(Result, S, Name);
+    if (Ivar.isInvalid())
+      return NameClassification::Error();
+    if (Ivar.isUsable())
+      return NameClassification::NonType(cast<NamedDecl>(Ivar.get()));
+
+    // We defer builtin creation until after ivar lookup inside ObjC methods.
+    if (Result.empty())
+      LookupBuiltin(Result);
   }
 
   bool SecondTry = false;
@@ -897,7 +903,7 @@ Corrected:
       // In C++, this is an ADL-only call.
       // FIXME: Reference?
       if (getLangOpts().CPlusPlus)
-        return BuildDeclarationNameExpr(SS, Result, /*ADL=*/true);
+        return NameClassification::UndeclaredNonType();
 
       // C90 6.3.2.2:
       //   If the expression that precedes the parenthesized argument list in a
@@ -911,11 +917,8 @@ Corrected:
       //   appeared.
       //
       // We also allow this in C99 as an extension.
-      if (NamedDecl *D = ImplicitlyDefineFunction(NameLoc, *Name, S)) {
-        Result.addDecl(D);
-        Result.resolveKind();
-        return BuildDeclarationNameExpr(SS, Result, /*ADL=*/false);
-      }
+      if (NamedDecl *D = ImplicitlyDefineFunction(NameLoc, *Name, S))
+        return NameClassification::NonType(D);
     }
 
     if (getLangOpts().CPlusPlus2a && !SS.isSet() && NextToken.is(tok::less)) {
@@ -990,9 +993,12 @@ Corrected:
         // reference the ivar.
         // FIXME: This is a gross hack.
         if (ObjCIvarDecl *Ivar = Result.getAsSingle<ObjCIvarDecl>()) {
-          Result.clear();
-          ExprResult E(LookupInObjCMethod(Result, S, Ivar->getIdentifier()));
-          return E;
+          DeclResult R =
+              LookupIvarInObjCMethod(Result, S, Ivar->getIdentifier());
+          if (R.isInvalid())
+            return NameClassification::Error();
+          if (R.isUsable())
+            return NameClassification::NonType(Ivar);
         }
 
         goto Corrected;
@@ -1018,9 +1024,7 @@ Corrected:
     // perform some heroics to see if we actually have a
     // template-argument-list, which would indicate a missing 'template'
     // keyword here.
-    return ActOnDependentIdExpression(SS, /*TemplateKWLoc=*/SourceLocation(),
-                                      NameInfo, IsAddressOfOperand,
-                                      /*TemplateArgs=*/nullptr);
+    return NameClassification::DependentNonType();
   }
 
   case LookupResult::Found:
@@ -1167,9 +1171,57 @@ Corrected:
     return ParsedType::make(T);
   }
 
+  // FIXME: This is context-dependent. We need to defer building the member
+  // expression until the classification is consumed.
   if (FirstDecl->isCXXClassMember())
-    return BuildPossibleImplicitMemberExpr(SS, SourceLocation(), Result,
-                                           nullptr, S);
+    return NameClassification::ContextIndependentExpr(
+        BuildPossibleImplicitMemberExpr(SS, SourceLocation(), Result, nullptr,
+                                        S));
+
+  // If we already know which single declaration is referenced, just annotate
+  // that declaration directly.
+  bool ADL = UseArgumentDependentLookup(SS, Result, NextToken.is(tok::l_paren));
+  if (Result.isSingleResult() && !ADL)
+    return NameClassification::NonType(Result.getRepresentativeDecl());
+
+  // Build an UnresolvedLookupExpr. Note that this doesn't depend on the
+  // context in which we performed classification, so it's safe to do now.
+  return NameClassification::ContextIndependentExpr(
+      BuildDeclarationNameExpr(SS, Result, ADL));
+}
+
+ExprResult
+Sema::ActOnNameClassifiedAsUndeclaredNonType(IdentifierInfo *Name,
+                                             SourceLocation NameLoc) {
+  assert(getLangOpts().CPlusPlus && "ADL-only call in C?");
+  CXXScopeSpec SS;
+  LookupResult Result(*this, Name, NameLoc, LookupOrdinaryName);
+  return BuildDeclarationNameExpr(SS, Result, /*ADL=*/true);
+}
+
+ExprResult
+Sema::ActOnNameClassifiedAsDependentNonType(const CXXScopeSpec &SS,
+                                            IdentifierInfo *Name,
+                                            SourceLocation NameLoc,
+                                            bool IsAddressOfOperand) {
+  DeclarationNameInfo NameInfo(Name, NameLoc);
+  return ActOnDependentIdExpression(SS, /*TemplateKWLoc=*/SourceLocation(),
+                                    NameInfo, IsAddressOfOperand,
+                                    /*TemplateArgs=*/nullptr);
+}
+
+ExprResult Sema::ActOnNameClassifiedAsNonType(Scope *S, const CXXScopeSpec &SS,
+                                              NamedDecl *Found,
+                                              SourceLocation NameLoc,
+                                              const Token &NextToken) {
+  if (getCurMethodDecl() && SS.isEmpty())
+    if (auto *Ivar = dyn_cast<ObjCIvarDecl>(Found->getUnderlyingDecl()))
+      return BuildIvarRefExpr(S, NameLoc, Ivar);
+
+  // Reconstruct the lookup result.
+  LookupResult Result(*this, Found->getDeclName(), NameLoc, LookupOrdinaryName);
+  Result.addDecl(Found);
+  Result.resolveKind();
 
   bool ADL = UseArgumentDependentLookup(SS, Result, NextToken.is(tok::l_paren));
   return BuildDeclarationNameExpr(SS, Result, ADL);

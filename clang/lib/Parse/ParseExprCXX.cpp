@@ -555,27 +555,66 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
   return false;
 }
 
-ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS, bool isAddressOfOperand,
+ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS,
+                                           bool isAddressOfOperand,
                                            Token &Replacement) {
-  SourceLocation TemplateKWLoc;
-  UnqualifiedId Name;
-  if (ParseUnqualifiedId(SS,
-                         /*EnteringContext=*/false,
-                         /*AllowDestructorName=*/false,
-                         /*AllowConstructorName=*/false,
-                         /*AllowDeductionGuide=*/false,
-                         /*ObjectType=*/nullptr, &TemplateKWLoc, Name))
-    return ExprError();
+  ExprResult E;
 
-  // This is only the direct operand of an & operator if it is not
-  // followed by a postfix-expression suffix.
-  if (isAddressOfOperand && isPostfixExpressionSuffixStart())
-    isAddressOfOperand = false;
+  // We may have already annotated this id-expression.
+  switch (Tok.getKind()) {
+  case tok::annot_non_type: {
+    NamedDecl *ND = getNonTypeAnnotation(Tok);
+    SourceLocation Loc = ConsumeAnnotationToken();
+    E = Actions.ActOnNameClassifiedAsNonType(getCurScope(), SS, ND, Loc, Tok);
+    break;
+  }
 
-  ExprResult E = Actions.ActOnIdExpression(
-      getCurScope(), SS, TemplateKWLoc, Name, Tok.is(tok::l_paren),
-      isAddressOfOperand, /*CCC=*/nullptr, /*IsInlineAsmIdentifier=*/false,
-      &Replacement);
+  case tok::annot_non_type_dependent: {
+    IdentifierInfo *II = getIdentifierAnnotation(Tok);
+    SourceLocation Loc = ConsumeAnnotationToken();
+
+    // This is only the direct operand of an & operator if it is not
+    // followed by a postfix-expression suffix.
+    if (isAddressOfOperand && isPostfixExpressionSuffixStart())
+      isAddressOfOperand = false;
+
+    E = Actions.ActOnNameClassifiedAsDependentNonType(SS, II, Loc,
+                                                      isAddressOfOperand);
+    break;
+  }
+
+  case tok::annot_non_type_undeclared: {
+    assert(SS.isEmpty() &&
+           "undeclared non-type annotation should be unqualified");
+    IdentifierInfo *II = getIdentifierAnnotation(Tok);
+    SourceLocation Loc = ConsumeAnnotationToken();
+    E = Actions.ActOnNameClassifiedAsUndeclaredNonType(II, Loc);
+    break;
+  }
+
+  default:
+    SourceLocation TemplateKWLoc;
+    UnqualifiedId Name;
+    if (ParseUnqualifiedId(SS,
+                           /*EnteringContext=*/false,
+                           /*AllowDestructorName=*/false,
+                           /*AllowConstructorName=*/false,
+                           /*AllowDeductionGuide=*/false,
+                           /*ObjectType=*/nullptr, &TemplateKWLoc, Name))
+      return ExprError();
+
+    // This is only the direct operand of an & operator if it is not
+    // followed by a postfix-expression suffix.
+    if (isAddressOfOperand && isPostfixExpressionSuffixStart())
+      isAddressOfOperand = false;
+
+    E = Actions.ActOnIdExpression(
+        getCurScope(), SS, TemplateKWLoc, Name, Tok.is(tok::l_paren),
+        isAddressOfOperand, /*CCC=*/nullptr, /*IsInlineAsmIdentifier=*/false,
+        &Replacement);
+    break;
+  }
+
   if (!E.isInvalid() && !E.isUnset() && Tok.is(tok::less))
     checkPotentialAngleBracket(E);
   return E;

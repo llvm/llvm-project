@@ -840,12 +840,22 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
     return Actions.ActOnCXXNullPtrLiteral(ConsumeToken());
 
   case tok::annot_primary_expr:
-    assert(Res.get() == nullptr && "Stray primary-expression annotation?");
     Res = getExprAnnotation(Tok);
     ConsumeAnnotationToken();
     if (!Res.isInvalid() && Tok.is(tok::less))
       checkPotentialAngleBracket(Res);
     break;
+
+  case tok::annot_non_type:
+  case tok::annot_non_type_dependent:
+  case tok::annot_non_type_undeclared: {
+    CXXScopeSpec SS;
+    Token Replacement;
+    Res = tryParseCXXIdExpression(SS, isAddressOfOperand, Replacement);
+    assert(!Res.isUnset() &&
+           "should not perform typo correction on annotation token");
+    break;
+  }
 
   case tok::kw___super:
   case tok::kw_decltype:

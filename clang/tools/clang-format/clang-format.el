@@ -2,6 +2,7 @@
 
 ;; Keywords: tools, c
 ;; Package-Requires: ((cl-lib "0.3"))
+;; SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 ;;; Commentary:
 

@@ -1,0 +1,7 @@
+[
+{
+  "directory": "DIR",
+  "command": "clang --analyze DIR/static-analyzer.c",
+  "file": "DIR/static-analyzer.c"
+}
+]

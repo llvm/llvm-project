@@ -181,6 +181,9 @@ public:
   ExcludedPreprocessorDirectiveSkipMapping
       *ExcludedConditionalDirectiveSkipMappings = nullptr;
 
+  /// Set up preprocessor for RunAnalysis action.
+  bool SetUpStaticAnalyzer = false;
+
 public:
   PreprocessorOptions() : PrecompiledPreambleBytes(0, false) {}
 
