@@ -184,6 +184,7 @@ private:
   // inline void print_current_function_info();
   inline void print_stats();
   static bool ColorizeReports();
+  static bool PauseOnRace();
 
   // ANGE: Each function that causes a Disjoint set to be created has a
   // unique ID (i.e., Cilk function and spawned C function).

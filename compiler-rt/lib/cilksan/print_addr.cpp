@@ -10,6 +10,7 @@
 #include <malloc.h>
 #include <inttypes.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "csan.h"
 #include "cilksan_internal.h"
@@ -465,9 +466,20 @@ get_call_stack(const AccessLoc_t &instrAddr) {
 
 bool CilkSanImpl_t::ColorizeReports() {
   char *e = getenv("CILKSAN_COLOR_REPORT");
-  if (e && 0 == strcmp(e, "0"))
-    return false;
+  if (e) {
+    if (0 == strcmp(e, "0"))
+      return false;
+    else if (0 == strcmp(e, "1"))
+      return true;
+  }
   return isatty(STDERR_FILENO) != 0;
+}
+
+bool CilkSanImpl_t::PauseOnRace() {
+  char *e = getenv("CILKSAN_DEBUGGER");
+  if (e && 0 == strcmp(e, "1"))
+    return true;
+  return false;
 }
 
 // static void print_race_info(const RaceInfo_t& race) {
@@ -620,6 +632,10 @@ void CilkSanImpl_t::report_race(
     // have to get the info before user program exits
     race.print(first_inst, second_inst, alloc_inst, Decorator(color_report));
     races_found.insert(std::make_pair(key, race));
+    if (PauseOnRace())
+      // Raise a SIGTRAP to let the user examine the state of the program at
+      // this point within the debugger.
+      raise(SIGTRAP);
   }
 }
 
