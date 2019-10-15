@@ -195,6 +195,10 @@ public:
   /// Whether to validate system input files when a module is loaded.
   unsigned ModulesValidateSystemHeaders : 1;
 
+  // Whether the content of input files should be hashed and used to
+  // validate consistency.
+  unsigned ValidateASTInputFilesContent : 1;
+
   /// Whether the module includes debug information (-gmodules).
   unsigned UseDebugInfo : 1;
 
@@ -208,7 +212,8 @@ public:
         UseBuiltinIncludes(true), UseStandardSystemIncludes(true),
         UseStandardCXXIncludes(true), UseLibcxx(false), Verbose(false),
         ModulesValidateOncePerBuildSession(false),
-        ModulesValidateSystemHeaders(false), UseDebugInfo(false),
+        ModulesValidateSystemHeaders(false),
+        ValidateASTInputFilesContent(false), UseDebugInfo(false),
         ModulesValidateDiagnosticOptions(true), ModulesHashContent(false) {}
 
   /// AddPath - Add the \p Path path to the specified \p Group list.

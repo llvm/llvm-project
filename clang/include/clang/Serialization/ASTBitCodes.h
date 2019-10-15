@@ -366,7 +366,10 @@ namespace serialization {
     /// inside the control block.
     enum InputFileRecordTypes {
       /// An input file.
-      INPUT_FILE = 1
+      INPUT_FILE = 1,
+
+      /// The input file content hash
+      INPUT_FILE_HASH
     };
 
     /// Record types that occur within the AST block itself.

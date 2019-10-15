@@ -1247,6 +1247,12 @@ void ASTReader::Error(unsigned DiagID, StringRef Arg1, StringRef Arg2,
     Diag(DiagID) << Arg1 << Arg2 << Arg3;
 }
 
+void ASTReader::Error(unsigned DiagID, StringRef Arg1, StringRef Arg2,
+                      unsigned Select) const {
+  if (!Diags.isDiagnosticInFlight())
+    Diag(DiagID) << Arg1 << Arg2 << Select;
+}
+
 void ASTReader::Error(llvm::Error &&Err) const {
   Error(toString(std::move(Err)));
 }
@@ -2241,6 +2247,24 @@ ASTReader::readInputFileInfo(ModuleFile &F, unsigned ID) {
   R.TopLevelModuleMap = static_cast<bool>(Record[5]);
   R.Filename = Blob;
   ResolveImportedPath(F, R.Filename);
+
+  Expected<llvm::BitstreamEntry> MaybeEntry = Cursor.advance();
+  if (!MaybeEntry) // FIXME this drops errors on the floor.
+    consumeError(MaybeEntry.takeError());
+  llvm::BitstreamEntry Entry = MaybeEntry.get();
+  assert(Entry.Kind == llvm::BitstreamEntry::Record &&
+         "expected record type for input file hash");
+
+  Record.clear();
+  if (Expected<unsigned> Maybe = Cursor.readRecord(Entry.ID, Record))
+    assert(static_cast<InputFileRecordTypes>(Maybe.get()) == INPUT_FILE_HASH &&
+           "invalid record type for input file hash");
+  else {
+    // FIXME this drops errors on the floor.
+    consumeError(Maybe.takeError());
+  }
+  R.ContentHash = (static_cast<uint64_t>(Record[1]) << 32) |
+                  static_cast<uint64_t>(Record[0]);
   return R;
 }
 
@@ -2271,6 +2295,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   bool Overridden = FI.Overridden;
   bool Transient = FI.Transient;
   StringRef Filename = FI.Filename;
+  uint64_t StoredContentHash = FI.ContentHash;
 
   const FileEntry *File = nullptr;
   if (auto FE = FileMgr.getFile(Filename, /*OpenFile=*/false))
@@ -2330,14 +2355,46 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
                             StoredSize, StoredTime);
   }
 
-  bool IsOutOfDate = false;
+  enum ModificationType {
+    Size,
+    ModTime,
+    Content,
+    None,
+  };
+  auto HasInputFileChanged = [&]() {
+    if (StoredSize != File->getSize())
+      return ModificationType::Size;
+    if (!DisableValidation && StoredTime &&
+        StoredTime != File->getModificationTime()) {
+      // In case the modification time changes but not the content,
+      // accept the cached file as legit.
+      if (ValidateASTInputFilesContent &&
+          StoredContentHash != static_cast<uint64_t>(llvm::hash_code(-1))) {
+        auto MemBuffOrError = FileMgr.getBufferForFile(File);
+        if (!MemBuffOrError) {
+          if (!Complain)
+            return ModificationType::ModTime;
+          std::string ErrorStr = "could not get buffer for file '";
+          ErrorStr += File->getName();
+          ErrorStr += "'";
+          Error(ErrorStr);
+          return ModificationType::ModTime;
+        }
 
+        auto ContentHash = hash_value(MemBuffOrError.get()->getBuffer());
+        if (StoredContentHash == static_cast<uint64_t>(ContentHash))
+          return ModificationType::None;
+        return ModificationType::Content;
+      }
+      return ModificationType::ModTime;
+    }
+    return ModificationType::None;
+  };
+
+  bool IsOutOfDate = false;
+  auto FileChange = HasInputFileChanged();
   // For an overridden file, there is nothing to validate.
-  if (!Overridden && //
-      (StoredSize != File->getSize() ||
-       (StoredTime && StoredTime != File->getModificationTime() &&
-        !DisableValidation)
-       )) {
+  if (!Overridden && FileChange != ModificationType::None) {
     if (Complain) {
       // Build a list of the PCH imports that got us here (in reverse).
       SmallVector<ModuleFile *, 4> ImportStack(1, &F);
@@ -2346,13 +2403,17 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
 
       // The top-level PCH is stale.
       StringRef TopLevelPCHName(ImportStack.back()->FileName);
-      unsigned DiagnosticKind = moduleKindForDiagnostic(ImportStack.back()->Kind);
+      unsigned DiagnosticKind =
+          moduleKindForDiagnostic(ImportStack.back()->Kind);
       if (DiagnosticKind == 0)
-        Error(diag::err_fe_pch_file_modified, Filename, TopLevelPCHName);
+        Error(diag::err_fe_pch_file_modified, Filename, TopLevelPCHName,
+              (unsigned)FileChange);
       else if (DiagnosticKind == 1)
-        Error(diag::err_fe_module_file_modified, Filename, TopLevelPCHName);
+        Error(diag::err_fe_module_file_modified, Filename, TopLevelPCHName,
+              (unsigned)FileChange);
       else
-        Error(diag::err_fe_ast_file_modified, Filename, TopLevelPCHName);
+        Error(diag::err_fe_ast_file_modified, Filename, TopLevelPCHName,
+              (unsigned)FileChange);
 
       // Print the import stack.
       if (ImportStack.size() > 1 && !Diags.isDiagnosticInFlight()) {
@@ -5203,6 +5264,8 @@ bool ASTReader::readASTFileControlBlock(
           consumeError(MaybeRecordType.takeError());
         }
         switch ((InputFileRecordTypes)MaybeRecordType.get()) {
+        case INPUT_FILE_HASH:
+          break;
         case INPUT_FILE:
           bool Overridden = static_cast<bool>(Record[3]);
           std::string Filename = Blob;
@@ -12164,7 +12227,7 @@ ASTReader::ASTReader(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
                      StringRef isysroot, bool DisableValidation,
                      bool AllowASTWithCompilerErrors,
                      bool AllowConfigurationMismatch, bool ValidateSystemInputs,
-                     bool UseGlobalIndex,
+                     bool ValidateASTInputFilesContent, bool UseGlobalIndex,
                      std::unique_ptr<llvm::Timer> ReadTimer)
     : Listener(DisableValidation
                    ? cast<ASTReaderListener>(new SimpleASTReaderListener(PP))
@@ -12178,6 +12241,7 @@ ASTReader::ASTReader(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
       AllowASTWithCompilerErrors(AllowASTWithCompilerErrors),
       AllowConfigurationMismatch(AllowConfigurationMismatch),
       ValidateSystemInputs(ValidateSystemInputs),
+      ValidateASTInputFilesContent(ValidateASTInputFilesContent),
       UseGlobalIndex(UseGlobalIndex), CurrSwitchCaseStmts(&SwitchCaseStmts) {
   SourceMgr.setExternalSLocEntrySource(this);
 
