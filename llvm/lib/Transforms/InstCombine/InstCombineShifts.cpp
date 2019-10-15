@@ -926,6 +926,12 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
     // (X * C2) << C1 --> X * (C2 << C1)
     if (match(Op0, m_Mul(m_Value(X), m_Constant(C2))))
       return BinaryOperator::CreateMul(X, ConstantExpr::getShl(C2, C1));
+
+    // shl (zext i1 X), C1 --> select (X, 1 << C1, 0)
+    if (match(Op0, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
+      auto *NewC = ConstantExpr::getShl(ConstantInt::get(Ty, 1), C1);
+      return SelectInst::Create(X, NewC, ConstantInt::getNullValue(Ty));
+    }
   }
 
   // (1 << (C - x)) -> ((1 << C) >> x) if C is bitwidth - 1

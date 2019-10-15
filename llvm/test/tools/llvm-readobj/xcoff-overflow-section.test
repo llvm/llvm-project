@@ -1,0 +1,47 @@
+# RUN: llvm-readobj --sections %p/Inputs/xcoff-reloc-overflow.o | \
+# RUN: FileCheck --check-prefix=SECOVERFLOW %s
+# SECOVERFLOW:      File: {{.*}}xcoff-reloc-overflow.o
+# SECOVERFLOW-NEXT: Format: aixcoff-rs6000
+# SECOVERFLOW-NEXT: Arch: powerpc
+# SECOVERFLOW-NEXT: AddressSize: 32bit
+# SECOVERFLOW-NEXT: Sections [
+# SECOVERFLOW-NEXT:   Section {
+# SECOVERFLOW-NEXT:     Index: 1
+# SECOVERFLOW-NEXT:     Name: .text
+# SECOVERFLOW-NEXT:     PhysicalAddress: 0x0
+# SECOVERFLOW-NEXT:     VirtualAddress: 0x0
+# SECOVERFLOW-NEXT:     Size: 0x38
+# SECOVERFLOW-NEXT:     RawDataOffset: 0x8C
+# SECOVERFLOW-NEXT:     RelocationPointer: 0x0
+# SECOVERFLOW-NEXT:     LineNumberPointer: 0x0
+# SECOVERFLOW-NEXT:     NumberOfRelocations: 0
+# SECOVERFLOW-NEXT:     NumberOfLineNumbers: 0
+# SECOVERFLOW-NEXT:     Type: STYP_TEXT (0x20)
+# SECOVERFLOW-NEXT:   }
+# SECOVERFLOW-NEXT:   Section {
+# SECOVERFLOW-NEXT:     Index: 2
+# SECOVERFLOW-NEXT:     Name: .data
+# SECOVERFLOW-NEXT:     PhysicalAddress: 0x38
+# SECOVERFLOW-NEXT:     VirtualAddress: 0x38
+# SECOVERFLOW-NEXT:     Size: 0x1C
+# SECOVERFLOW-NEXT:     RawDataOffset: 0xC4
+# SECOVERFLOW-NEXT:     RelocationPointer: 0xE0
+# SECOVERFLOW-NEXT:     LineNumberPointer: 0x0
+# SECOVERFLOW-NEXT:     NumberOfRelocations: 65535
+# SECOVERFLOW-NEXT:     NumberOfLineNumbers: 65535
+# SECOVERFLOW-NEXT:     Type: STYP_DATA (0x40)
+# SECOVERFLOW-NEXT:   }
+# SECOVERFLOW-NEXT:   Section {
+# SECOVERFLOW-NEXT:     Index: 3
+# SECOVERFLOW-NEXT:     Name: .ovrflo
+# SECOVERFLOW-NEXT:     NumberOfRelocations: 3
+# SECOVERFLOW-NEXT:     NumberOfLineNumbers: 3
+# SECOVERFLOW-NEXT:     Size: 0x0
+# SECOVERFLOW-NEXT:     RawDataOffset: 0x0
+# SECOVERFLOW-NEXT:     RelocationPointer: 0xE0
+# SECOVERFLOW-NEXT:     LineNumberPointer: 0x0
+# SECOVERFLOW-NEXT:     IndexOfSectionOverflowed: 2
+# SECOVERFLOW-NEXT:     IndexOfSectionOverflowed: 2
+# SECOVERFLOW-NEXT:     Type: STYP_OVRFLO (0x8000)
+# SECOVERFLOW-NEXT:   }
+# SECOVERFLOW-NEXT: ]

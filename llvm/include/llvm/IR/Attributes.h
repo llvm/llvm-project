@@ -95,8 +95,8 @@ public:
 
   /// Return a uniquified Attribute object that has the specific
   /// alignment set.
-  static Attribute getWithAlignment(LLVMContext &Context, uint64_t Align);
-  static Attribute getWithStackAlignment(LLVMContext &Context, uint64_t Align);
+  static Attribute getWithAlignment(LLVMContext &Context, Align Alignment);
+  static Attribute getWithStackAlignment(LLVMContext &Context, Align Alignment);
   static Attribute getWithDereferenceableBytes(LLVMContext &Context,
                                               uint64_t Bytes);
   static Attribute getWithDereferenceableOrNullBytes(LLVMContext &Context,

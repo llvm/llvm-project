@@ -62,6 +62,8 @@ public:
   static mode_t ConvertOpenOptionsForPOSIXOpen(OpenOptions open_options);
   static llvm::Expected<OpenOptions> GetOptionsFromMode(llvm::StringRef mode);
   static bool DescriptorIsValid(int descriptor) { return descriptor >= 0; };
+  static llvm::Expected<const char *>
+  GetStreamOpenModeFromOptions(OpenOptions options);
 
   File()
       : IOObject(eFDTypeFile), m_is_interactive(eLazyBoolCalculate),
@@ -317,6 +319,25 @@ public:
   ///     format string \a format.
   virtual size_t PrintfVarArg(const char *format, va_list args);
 
+  /// Return the OpenOptions for this file.
+  ///
+  /// Some options like eOpenOptionDontFollowSymlinks only make
+  /// sense when a file is being opened (or not at all)
+  /// and may not be preserved for this method.  But any valid
+  /// File should return either or both of eOpenOptionRead and
+  /// eOpenOptionWrite here.
+  ///
+  /// \return
+  ///    OpenOptions flags for this file, or an error.
+  virtual llvm::Expected<OpenOptions> GetOptions() const;
+
+  llvm::Expected<const char *> GetOpenMode() const {
+    auto opts = GetOptions();
+    if (!opts)
+      return opts.takeError();
+    return GetStreamOpenModeFromOptions(opts.get());
+  }
+
   /// Get the permissions for a this file.
   ///
   /// \return
@@ -351,6 +372,10 @@ public:
   operator bool() const { return IsValid(); };
 
   bool operator!() const { return !IsValid(); };
+
+  static char ID;
+  virtual bool isA(const void *classID) const { return classID == &ID; }
+  static bool classof(const File *file) { return file->isA(&ID); }
 
 protected:
   LazyBool m_is_interactive;
@@ -399,6 +424,13 @@ public:
   Status Flush() override;
   Status Sync() override;
   size_t PrintfVarArg(const char *format, va_list args) override;
+  llvm::Expected<OpenOptions> GetOptions() const override;
+
+  static char ID;
+  virtual bool isA(const void *classID) const override {
+    return classID == &ID || File::isA(classID);
+  }
+  static bool classof(const File *file) { return file->isA(&ID); }
 
 protected:
   bool DescriptorIsValid() const {

@@ -24,16 +24,15 @@
 ; OBJ-NEXT: AddressSize: 32bit
 ; OBJ-NEXT: FileHeader {
 ; OBJ-NEXT:   Magic: 0x1DF
-; OBJ-NEXT:   NumberOfSections: 1
+; OBJ-NEXT:   NumberOfSections: 2
 ; OBJ-NEXT:   TimeStamp:
-; OBJ-NEXT:   SymbolTableOffset: 0x3C
-; OBJ-NEXT:   SymbolTableEntries: 6
+; OBJ-NEXT:   SymbolTableOffset: 0x64
+; OBJ-NEXT:   SymbolTableEntries: 8
 ; OBJ-NEXT:   OptionalHeaderSize: 0x0
 ; OBJ-NEXT:   Flags: 0x0
 ; OBJ-NEXT: }
 ; OBJ-NEXT: Sections [
-; OBJ-NEXT:   Section {
-; OBJ-NEXT:     Index: 1
+; OBJ:        Section {{[{][[:space:]] *}}Index: 2
 ; OBJ-NEXT:     Name: .bss
 ; OBJ-NEXT:     PhysicalAddress: 0x0
 ; OBJ-NEXT:     VirtualAddress: 0x0
@@ -52,9 +51,7 @@
 ; SYMS-NEXT: Arch: powerpc
 ; SYMS-NEXT: AddressSize: 32bit
 ; SYMS-NEXT: Symbols [
-; SYMS-NEXT:   Symbol {
-; SYMS-NEXT:     Index: [[#Index:]]
-; SYMS-NEXT:     Name: a
+; SYMS:        Symbol {{[{][[:space:]] *}}Index: [[#Index:]]{{[[:space:]] *}}Name: a
 ; SYMS-NEXT:     Value (RelocatableAddress): 0x0
 ; SYMS-NEXT:     Section: .bss
 ; SYMS-NEXT:     Type: 0x0

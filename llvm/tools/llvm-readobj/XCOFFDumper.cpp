@@ -43,6 +43,8 @@ public:
 
 private:
   template <typename T> void printSectionHeaders(ArrayRef<T> Sections);
+  template <typename T> void printGenericSectionHeader(T &Sec) const;
+  template <typename T> void printOverflowSectionHeader(T &Sec) const;
   void printFileAuxEnt(const XCOFFFileAuxEnt *AuxEntPtr);
   void printCsectAuxEnt32(const XCOFFCsectAuxEnt32 *AuxEntPtr);
   void printSectAuxEntForStat(const XCOFFSectAuxEntForStat *AuxEntPtr);
@@ -50,6 +52,10 @@ private:
 
   // Least significant 3 bits are reserved.
   static constexpr unsigned SectionFlagsReservedMask = 0x7;
+
+  // The low order 16 bits of section flags denotes the section type.
+  static constexpr unsigned SectionFlagsTypeMask = 0xffffu;
+
   const XCOFFObjectFile &Obj;
 };
 } // anonymous namespace
@@ -397,6 +403,39 @@ static const EnumEntry<XCOFF::SectionTypeFlags> SectionTypeFlagsNames[] = {
 };
 
 template <typename T>
+void XCOFFDumper::printOverflowSectionHeader(T &Sec) const {
+  if (Obj.is64Bit()) {
+    reportWarning(make_error<StringError>("An 64-bit XCOFF object file may not "
+                                          "contain an overflow section header.",
+                                          object_error::parse_failed),
+                  Obj.getFileName());
+  }
+
+  W.printString("Name", Sec.getName());
+  W.printNumber("NumberOfRelocations", Sec.PhysicalAddress);
+  W.printNumber("NumberOfLineNumbers", Sec.VirtualAddress);
+  W.printHex("Size", Sec.SectionSize);
+  W.printHex("RawDataOffset", Sec.FileOffsetToRawData);
+  W.printHex("RelocationPointer", Sec.FileOffsetToRelocationInfo);
+  W.printHex("LineNumberPointer", Sec.FileOffsetToLineNumberInfo);
+  W.printNumber("IndexOfSectionOverflowed", Sec.NumberOfRelocations);
+  W.printNumber("IndexOfSectionOverflowed", Sec.NumberOfLineNumbers);
+}
+
+template <typename T>
+void XCOFFDumper::printGenericSectionHeader(T &Sec) const {
+  W.printString("Name", Sec.getName());
+  W.printHex("PhysicalAddress", Sec.PhysicalAddress);
+  W.printHex("VirtualAddress", Sec.VirtualAddress);
+  W.printHex("Size", Sec.SectionSize);
+  W.printHex("RawDataOffset", Sec.FileOffsetToRawData);
+  W.printHex("RelocationPointer", Sec.FileOffsetToRelocationInfo);
+  W.printHex("LineNumberPointer", Sec.FileOffsetToLineNumberInfo);
+  W.printNumber("NumberOfRelocations", Sec.NumberOfRelocations);
+  W.printNumber("NumberOfLineNumbers", Sec.NumberOfLineNumbers);
+}
+
+template <typename T>
 void XCOFFDumper::printSectionHeaders(ArrayRef<T> Sections) {
   ListScope Group(W, "Sections");
 
@@ -405,27 +444,28 @@ void XCOFFDumper::printSectionHeaders(ArrayRef<T> Sections) {
     DictScope SecDS(W, "Section");
 
     W.printNumber("Index", Index++);
-    W.printString("Name", Sec.getName());
 
-    W.printHex("PhysicalAddress", Sec.PhysicalAddress);
-    W.printHex("VirtualAddress", Sec.VirtualAddress);
-    W.printHex("Size", Sec.SectionSize);
-    W.printHex("RawDataOffset", Sec.FileOffsetToRawData);
-    W.printHex("RelocationPointer", Sec.FileOffsetToRelocationInfo);
-    W.printHex("LineNumberPointer", Sec.FileOffsetToLineNumberInfo);
-
-    // TODO Need to add overflow handling when NumberOfX == _OVERFLOW_MARKER
-    // in 32-bit object files.
-    W.printNumber("NumberOfRelocations", Sec.NumberOfRelocations);
-    W.printNumber("NumberOfLineNumbers", Sec.NumberOfLineNumbers);
-
-    // The most significant 16-bits represent the DWARF section subtype. For
-    // now we just dump the section type flags.
-    uint16_t Flags = Sec.Flags & 0xffffu;
-    if (Flags & SectionFlagsReservedMask)
-      W.printHex("Flags", "Reserved", Flags);
+    uint16_t SectionType = Sec.Flags & SectionFlagsTypeMask;
+    switch (SectionType) {
+    case XCOFF::STYP_OVRFLO:
+      printOverflowSectionHeader(Sec);
+      break;
+    case XCOFF::STYP_LOADER:
+    case XCOFF::STYP_EXCEPT:
+    case XCOFF::STYP_TYPCHK:
+      // TODO The interpretation of loader, exception and type check section
+      // headers are different from that of generic section headers. We will
+      // implement them later. We interpret them as generic section headers for
+      // now.
+    default:
+      printGenericSectionHeader(Sec);
+      break;
+    }
+    // For now we just dump the section type portion of the flags.
+    if (SectionType & SectionFlagsReservedMask)
+      W.printHex("Flags", "Reserved", SectionType);
     else
-      W.printEnum("Type", Flags, makeArrayRef(SectionTypeFlagsNames));
+      W.printEnum("Type", SectionType, makeArrayRef(SectionTypeFlagsNames));
   }
 
   if (opts::SectionRelocations)

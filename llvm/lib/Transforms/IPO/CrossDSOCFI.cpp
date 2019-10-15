@@ -108,7 +108,7 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
   // Take over the existing function. The frontend emits a weak stub so that the
   // linker knows about the symbol; this pass replaces the function body.
   F->deleteBody();
-  F->setAlignment(4096);
+  F->setAlignment(Align(4096));
 
   Triple T(M.getTargetTriple());
   if (T.isARM() || T.isThumb())

@@ -92,6 +92,11 @@ def ATOMIC_FENCE : SPseudoInstSI<
   let maybeAtomic = 1;
 }
 
+def VOP_I64_I64_DPP : VOPProfile <[i64, i64, untyped, untyped]> {
+  let HasExt = 1;
+  let HasExtDPP = 1;
+}
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
 
 // For use in patterns
@@ -106,6 +111,11 @@ def V_CNDMASK_B64_PSEUDO : VOP3Common <(outs VReg_64:$vdst),
 // SIFoldOperands pass to enable folding of inline immediates.
 def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
                                       (ins VSrc_b64:$src0)>;
+
+// 64-bit vector move with dpp. Expanded post-RA.
+def V_MOV_B64_DPP_PSEUDO : VOP_DPP_Pseudo <"v_mov_b64_dpp", VOP_I64_I64_DPP> {
+  let Size = 16; // Requires two 8-byte v_mov_b32_dpp to complete.
+}
 
 // Pseudoinstruction for @llvm.amdgcn.wqm. It is turned into a copy after the
 // WQM pass processes it.
@@ -1853,6 +1863,22 @@ def : GCNPat <
 def : GCNPat <
   (v4f16 (scalar_to_vector f16:$src0)),
   (INSERT_SUBREG (IMPLICIT_DEF), $src0, sub0)
+>;
+
+def : GCNPat <
+  (i64 (int_amdgcn_mov_dpp i64:$src, timm:$dpp_ctrl, timm:$row_mask, timm:$bank_mask,
+                           timm:$bound_ctrl)),
+  (V_MOV_B64_DPP_PSEUDO $src, $src, (as_i32imm $dpp_ctrl),
+                        (as_i32imm $row_mask), (as_i32imm $bank_mask),
+                        (as_i1imm $bound_ctrl))
+>;
+
+def : GCNPat <
+  (i64 (int_amdgcn_update_dpp i64:$old, i64:$src, timm:$dpp_ctrl, timm:$row_mask,
+                              timm:$bank_mask, timm:$bound_ctrl)),
+  (V_MOV_B64_DPP_PSEUDO $old, $src, (as_i32imm $dpp_ctrl),
+                        (as_i32imm $row_mask), (as_i32imm $bank_mask),
+                        (as_i1imm $bound_ctrl))
 >;
 
 //===----------------------------------------------------------------------===//

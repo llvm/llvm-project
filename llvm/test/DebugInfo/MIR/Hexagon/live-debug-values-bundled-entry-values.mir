@@ -98,7 +98,7 @@ body:             |
 # CHECK-NEXT: $r29 = S2_allocframe $r29, 0
 # CHECK-NEXT: J2_call @clobber
 # CHECK-NEXT: }
-# CHECK-NEXT: DBG_VALUE $r0, $noreg, !16, !DIExpression(DW_OP_entry_value, 1)
+# CHECK-NEXT: DBG_VALUE $r0, $noreg, !16, !DIExpression(DW_OP_LLVM_entry_value, 1)
 
 ---
 name:            bar
@@ -136,4 +136,4 @@ body:             |
 # CHECK-NEXT: $r29 = S2_allocframe $r29, 0
 # CHECK-NEXT: J2_call @clobber
 # CHECK-NEXT: }
-# CHECK-NEXT: DBG_VALUE $r0, $noreg, !22, !DIExpression(DW_OP_entry_value, 1)
+# CHECK-NEXT: DBG_VALUE $r0, $noreg, !22, !DIExpression(DW_OP_LLVM_entry_value, 1)

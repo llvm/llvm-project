@@ -25,6 +25,25 @@
 // Expected<> is considered deprecated and should not be
 // used in new code.  If you need to use it, fix it first.
 //
+//
+// TODOs for this file
+//
+// * Make all methods safe for exceptions.
+//
+// * Eliminate method signatures that must translate exceptions into
+//   empty objects or NULLs.   Almost everything here should return
+//   Expected<>.   It should be acceptable for certain operations that
+//   can never fail to assert instead, such as the creation of
+//   PythonString from a string literal.
+//
+// * Elimintate Reset(), and make all non-default constructors private.
+//   Python objects should be created with Retain<> or Take<>, and they
+//   should be assigned with operator=
+//
+// * Eliminate default constructors, make python objects always
+//   nonnull, and use optionals where necessary.
+//
+
 
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONDATAOBJECTS_H
@@ -170,20 +189,15 @@ public:
     rhs.m_py_obj = nullptr;
   }
 
-  virtual ~PythonObject() { Reset(); }
+  ~PythonObject() { Reset(); }
 
   void Reset() {
-    // Avoid calling the virtual method since it's not necessary
-    // to actually validate the type of the PyObject if we're
-    // just setting to null.
     if (m_py_obj && Py_IsInitialized())
       Py_DECREF(m_py_obj);
     m_py_obj = nullptr;
   }
 
   void Reset(const PythonObject &rhs) {
-    // Avoid calling the virtual method if it's not necessary
-    // to actually validate the type of the PyObject.
     if (!rhs.IsValid())
       Reset();
     else
@@ -196,9 +210,7 @@ public:
   // PyRefType doesn't make sense, and the copy constructor should be used.
   void Reset(PyRefType type, const PythonObject &ref) = delete;
 
-  // FIXME We shouldn't have virtual anything.  PythonObject should be a
-  // strictly pass-by-value type.
-  virtual void Reset(PyRefType type, PyObject *py_obj) {
+  void Reset(PyRefType type, PyObject *py_obj) {
     if (py_obj == m_py_obj)
       return;
 
@@ -376,21 +388,37 @@ llvm::Expected<long long> As<long long>(llvm::Expected<PythonObject> &&obj);
 
 } // namespace python
 
-class PythonBytes : public PythonObject {
+template <class T> class TypedPythonObject : public PythonObject {
 public:
-  PythonBytes();
+  // override to perform implicit type conversions on Reset
+  // This can be eliminated once we drop python 2 support.
+  static void Convert(PyRefType &type, PyObject *&py_obj) {}
+
+  using PythonObject::Reset;
+
+  void Reset(PyRefType type, PyObject *py_obj) {
+    Reset();
+    if (!py_obj)
+      return;
+    T::Convert(type, py_obj);
+    if (T::Check(py_obj))
+      PythonObject::Reset(type, py_obj);
+    else if (type == PyRefType::Owned)
+      Py_DECREF(py_obj);
+  }
+
+  TypedPythonObject(PyRefType type, PyObject *py_obj) { Reset(type, py_obj); }
+
+  TypedPythonObject() {}
+};
+
+class PythonBytes : public TypedPythonObject<PythonBytes> {
+public:
+  using TypedPythonObject::TypedPythonObject;
   explicit PythonBytes(llvm::ArrayRef<uint8_t> bytes);
   PythonBytes(const uint8_t *bytes, size_t length);
-  PythonBytes(PyRefType type, PyObject *o);
-
-  ~PythonBytes() override;
 
   static bool Check(PyObject *py_obj);
-
-  // Bring in the no-argument base class version
-  using PythonObject::Reset;
-
-  void Reset(PyRefType type, PyObject *py_obj) override;
 
   llvm::ArrayRef<uint8_t> GetBytes() const;
 
@@ -401,22 +429,14 @@ public:
   StructuredData::StringSP CreateStructuredString() const;
 };
 
-class PythonByteArray : public PythonObject {
+class PythonByteArray : public TypedPythonObject<PythonByteArray> {
 public:
-  PythonByteArray();
+  using TypedPythonObject::TypedPythonObject;
   explicit PythonByteArray(llvm::ArrayRef<uint8_t> bytes);
   PythonByteArray(const uint8_t *bytes, size_t length);
-  PythonByteArray(PyRefType type, PyObject *o);
   PythonByteArray(const PythonBytes &object);
 
-  ~PythonByteArray() override;
-
   static bool Check(PyObject *py_obj);
-
-  // Bring in the no-argument base class version
-  using PythonObject::Reset;
-
-  void Reset(PyRefType type, PyObject *py_obj) override;
 
   llvm::ArrayRef<uint8_t> GetBytes() const;
 
@@ -427,22 +447,17 @@ public:
   StructuredData::StringSP CreateStructuredString() const;
 };
 
-class PythonString : public PythonObject {
+class PythonString : public TypedPythonObject<PythonString> {
 public:
+  using TypedPythonObject::TypedPythonObject;
   static llvm::Expected<PythonString> FromUTF8(llvm::StringRef string);
 
-  PythonString();
-  explicit PythonString(llvm::StringRef string); // safe, null on error
-  PythonString(PyRefType type, PyObject *o);
+  PythonString() : TypedPythonObject() {} // MSVC requires this for some reason
 
-  ~PythonString() override;
+  explicit PythonString(llvm::StringRef string); // safe, null on error
 
   static bool Check(PyObject *py_obj);
-
-  // Bring in the no-argument base class version
-  using PythonObject::Reset;
-
-  void Reset(PyRefType type, PyObject *py_obj) override;
+  static void Convert(PyRefType &type, PyObject *&py_obj);
 
   llvm::StringRef GetString() const; // safe, empty string on error
 
@@ -455,20 +470,16 @@ public:
   StructuredData::StringSP CreateStructuredString() const;
 };
 
-class PythonInteger : public PythonObject {
+class PythonInteger : public TypedPythonObject<PythonInteger> {
 public:
-  PythonInteger();
-  explicit PythonInteger(int64_t value);
-  PythonInteger(PyRefType type, PyObject *o);
+  using TypedPythonObject::TypedPythonObject;
 
-  ~PythonInteger() override;
+  PythonInteger() : TypedPythonObject() {} // MSVC requires this for some reason
+
+  explicit PythonInteger(int64_t value);
 
   static bool Check(PyObject *py_obj);
-
-  // Bring in the no-argument base class version
-  using PythonObject::Reset;
-
-  void Reset(PyRefType type, PyObject *py_obj) override;
+  static void Convert(PyRefType &type, PyObject *&py_obj);
 
   int64_t GetInteger() const;
 
@@ -477,20 +488,13 @@ public:
   StructuredData::IntegerSP CreateStructuredInteger() const;
 };
 
-class PythonBoolean : public PythonObject {
+class PythonBoolean : public TypedPythonObject<PythonBoolean> {
 public:
-  PythonBoolean() = default;
-  explicit PythonBoolean(bool value);
-  PythonBoolean(PyRefType type, PyObject *o);
+  using TypedPythonObject::TypedPythonObject;
 
-  ~PythonBoolean() override = default;
+  explicit PythonBoolean(bool value);
 
   static bool Check(PyObject *py_obj);
-
-  // Bring in the no-argument base class version
-  using PythonObject::Reset;
-
-  void Reset(PyRefType type, PyObject *py_obj) override;
 
   bool GetValue() const;
 
@@ -499,21 +503,16 @@ public:
   StructuredData::BooleanSP CreateStructuredBoolean() const;
 };
 
-class PythonList : public PythonObject {
+class PythonList : public TypedPythonObject<PythonList> {
 public:
-  PythonList() {}
+  using TypedPythonObject::TypedPythonObject;
+
+  PythonList() : TypedPythonObject() {} // MSVC requires this for some reason
+
   explicit PythonList(PyInitialValue value);
   explicit PythonList(int list_size);
-  PythonList(PyRefType type, PyObject *o);
-
-  ~PythonList() override;
 
   static bool Check(PyObject *py_obj);
-
-  // Bring in the no-argument base class version
-  using PythonObject::Reset;
-
-  void Reset(PyRefType type, PyObject *py_obj) override;
 
   uint32_t GetSize() const;
 
@@ -526,23 +525,16 @@ public:
   StructuredData::ArraySP CreateStructuredArray() const;
 };
 
-class PythonTuple : public PythonObject {
+class PythonTuple : public TypedPythonObject<PythonTuple> {
 public:
-  PythonTuple() {}
+  using TypedPythonObject::TypedPythonObject;
+
   explicit PythonTuple(PyInitialValue value);
   explicit PythonTuple(int tuple_size);
-  PythonTuple(PyRefType type, PyObject *o);
   PythonTuple(std::initializer_list<PythonObject> objects);
   PythonTuple(std::initializer_list<PyObject *> objects);
 
-  ~PythonTuple() override;
-
   static bool Check(PyObject *py_obj);
-
-  // Bring in the no-argument base class version
-  using PythonObject::Reset;
-
-  void Reset(PyRefType type, PyObject *py_obj) override;
 
   uint32_t GetSize() const;
 
@@ -553,20 +545,15 @@ public:
   StructuredData::ArraySP CreateStructuredArray() const;
 };
 
-class PythonDictionary : public PythonObject {
+class PythonDictionary : public TypedPythonObject<PythonDictionary> {
 public:
-  PythonDictionary() {}
-  explicit PythonDictionary(PyInitialValue value);
-  PythonDictionary(PyRefType type, PyObject *o);
+  using TypedPythonObject::TypedPythonObject;
 
-  ~PythonDictionary() override;
+  PythonDictionary() : TypedPythonObject() {} // MSVC requires this for some reason
+
+  explicit PythonDictionary(PyInitialValue value);
 
   static bool Check(PyObject *py_obj);
-
-  // Bring in the no-argument base class version
-  using PythonObject::Reset;
-
-  void Reset(PyRefType type, PyObject *py_obj) override;
 
   uint32_t GetSize() const;
 
@@ -578,12 +565,9 @@ public:
   StructuredData::DictionarySP CreateStructuredDictionary() const;
 };
 
-class PythonModule : public PythonObject {
+class PythonModule : public TypedPythonObject<PythonModule> {
 public:
-  PythonModule();
-  PythonModule(PyRefType type, PyObject *o);
-
-  ~PythonModule() override;
+  using TypedPythonObject::TypedPythonObject;
 
   static bool Check(PyObject *py_obj);
 
@@ -608,16 +592,13 @@ public:
 
   llvm::Expected<PythonObject> Get(const char *name);
 
-  // Bring in the no-argument base class version
-  using PythonObject::Reset;
-
-  void Reset(PyRefType type, PyObject *py_obj) override;
-
   PythonDictionary GetDictionary() const;
 };
 
-class PythonCallable : public PythonObject {
+class PythonCallable : public TypedPythonObject<PythonCallable> {
 public:
+  using TypedPythonObject::TypedPythonObject;
+
   struct ArgInfo {
     size_t count;
     bool is_bound_method : 1;
@@ -625,20 +606,10 @@ public:
     bool has_kwargs : 1;
   };
 
-  PythonCallable();
-  PythonCallable(PyRefType type, PyObject *o);
-
-  ~PythonCallable() override;
-
   static bool Check(PyObject *py_obj);
 
-  // Bring in the no-argument base class version
-  using PythonObject::Reset;
-
-  void Reset(PyRefType type, PyObject *py_obj) override;
-
   ArgInfo GetNumArguments() const;
-  
+
   // If the callable is a Py_Class, then find the number of arguments
   // of the __init__ method.
   ArgInfo GetNumInitArguments() const;
@@ -655,20 +626,28 @@ public:
   }
 };
 
-class PythonFile : public PythonObject {
+class PythonFile : public TypedPythonObject<PythonFile> {
 public:
-  PythonFile();
-  PythonFile(File &file, const char *mode);
-  PythonFile(PyRefType type, PyObject *o);
+  using TypedPythonObject::TypedPythonObject;
 
-  ~PythonFile() override;
+  PythonFile() : TypedPythonObject() {} // MSVC requires this for some reason
 
   static bool Check(PyObject *py_obj);
 
-  using PythonObject::Reset;
+  static llvm::Expected<PythonFile> FromFile(File &file,
+                                             const char *mode = nullptr);
 
-  void Reset(PyRefType type, PyObject *py_obj) override;
-  void Reset(File &file, const char *mode);
+  // FIXME delete this after FILE* typemaps are deleted
+  // and ScriptInterpreterPython is fixed
+  PythonFile(File &file, const char *mode = nullptr) {
+    auto f = FromFile(file, mode);
+    if (f)
+      *this = std::move(f.get());
+    else {
+      Reset();
+      llvm::consumeError(f.takeError());
+    }
+  }
 
   lldb::FileUP GetUnderlyingFile() const;
 

@@ -27,21 +27,24 @@
 
 using namespace llvm;
 
-static bool isAligned(const Value *Base, const APInt &Offset, unsigned Align,
+static MaybeAlign getBaseAlign(const Value *Base, const DataLayout &DL) {
+  if (const MaybeAlign PA = Base->getPointerAlignment(DL))
+    return *PA;
+  Type *const Ty = Base->getType()->getPointerElementType();
+  if (!Ty->isSized())
+    return None;
+  return Align(DL.getABITypeAlignment(Ty));
+}
+
+static bool isAligned(const Value *Base, const APInt &Offset, Align Alignment,
                       const DataLayout &DL) {
-  APInt BaseAlign(Offset.getBitWidth(), Base->getPointerAlignment(DL));
-
-  if (!BaseAlign) {
-    Type *Ty = Base->getType()->getPointerElementType();
-    if (!Ty->isSized())
-      return false;
-    BaseAlign = DL.getABITypeAlignment(Ty);
+  if (MaybeAlign BA = getBaseAlign(Base, DL)) {
+    const APInt APBaseAlign(Offset.getBitWidth(), BA->value());
+    const APInt APAlign(Offset.getBitWidth(), Alignment.value());
+    assert(APAlign.isPowerOf2() && "must be a power of 2!");
+    return APBaseAlign.uge(APAlign) && !(Offset & (APAlign - 1));
   }
-
-  APInt Alignment(Offset.getBitWidth(), Align);
-
-  assert(Alignment.isPowerOf2() && "must be a power of 2!");
-  return BaseAlign.uge(Alignment) && !(Offset & (Alignment-1));
+  return false;
 }
 
 /// Test if V is always a pointer to allocated and suitably aligned memory for
@@ -73,7 +76,7 @@ static bool isDereferenceableAndAlignedPointer(
       Type *Ty = V->getType();
       assert(Ty->isSized() && "must be sized");
       APInt Offset(DL.getTypeStoreSizeInBits(Ty), 0);
-      return isAligned(V, Offset, Align, DL);
+      return isAligned(V, Offset, llvm::Align(Align), DL);
     }
 
   // For GEPs, determine if the indexing lands within the allocated object.

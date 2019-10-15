@@ -393,9 +393,8 @@ namespace ARMII {
     // in an IT block).
     ThumbArithFlagSetting = 1 << 19,
 
-    // Whether an instruction should be excluded from an MVE tail-predicated
-    // loop.
-    InvalidForTailPredication = 1 << 20,
+    // Whether an instruction can be included in an MVE tail-predicated loop.
+    ValidForTailPredication = 1 << 20,
 
     //===------------------------------------------------------------------===//
     // Code domain.

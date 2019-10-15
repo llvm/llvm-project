@@ -517,8 +517,8 @@ int main(int argc, char **argv) {
     break;
   }
   if (disassemble)
-    Res = Disassembler::disassemble(*TheTarget, TripleName, *STI, *Str,
-                                    *Buffer, SrcMgr, Out->os());
+    Res = Disassembler::disassemble(*TheTarget, TripleName, *STI, *Str, *Buffer,
+                                    SrcMgr, Ctx, Out->os());
 
   // Keep output if no errors.
   if (Res == 0) {

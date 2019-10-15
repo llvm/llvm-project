@@ -64,7 +64,8 @@ public:
   }
 
   /// FIXME: Remove this setter once the migration to MaybeAlign is over.
-  void setAlignment(unsigned Align);
+  LLVM_ATTRIBUTE_DEPRECATED(void setAlignment(unsigned Align),
+                            "Please use `void setAlignment(MaybeAlign Align)`");
   void setAlignment(MaybeAlign Align);
 
   unsigned getGlobalObjectSubClassData() const {

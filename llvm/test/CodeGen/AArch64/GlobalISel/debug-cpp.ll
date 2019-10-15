@@ -18,7 +18,7 @@ target triple = "aarch64-unknown-linux-gnu"
 %struct.NTCopy = type { i32 }
 
 ; CHECK-LABEL: name: _Z3foo6NTCopy
-; CHECK: DBG_VALUE %{{[0-9]+}}(p0), 0, !23, !DIExpression(), debug-location !24
+; CHECK: DBG_VALUE %{{[0-9]+}}(p0), $noreg, !23, !DIExpression(DW_OP_deref), debug-location !24
 ; Function Attrs: noinline nounwind optnone
 define dso_local i32 @_Z3foo6NTCopy(%struct.NTCopy* %o) #0 !dbg !7 {
 entry:

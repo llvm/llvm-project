@@ -39,7 +39,7 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-LABEL: {{^}}name: ps_shader
 ; CHECK: machineFunctionInfo:
 ; CHECK-NEXT: explicitKernArgSize: 0
-; CHECK-NEXT: maxKernArgAlign: 0
+; CHECK-NEXT: maxKernArgAlign: 1
 ; CHECK-NEXT: ldsSize: 0
 ; CHECK-NEXT: isEntryFunction: true
 ; CHECK-NEXT: noSignedZerosFPMath: false
@@ -64,7 +64,7 @@ define amdgpu_ps void @ps_shader(i32 %arg0, i32 inreg %arg1) {
 ; CHECK-LABEL: {{^}}name: function
 ; CHECK: machineFunctionInfo:
 ; CHECK-NEXT: explicitKernArgSize: 0
-; CHECK-NEXT: maxKernArgAlign: 0
+; CHECK-NEXT: maxKernArgAlign: 1
 ; CHECK-NEXT: ldsSize: 0
 ; CHECK-NEXT: isEntryFunction: false
 ; CHECK-NEXT: noSignedZerosFPMath: false
@@ -89,7 +89,7 @@ define void @function() {
 ; CHECK-LABEL: {{^}}name: function_nsz
 ; CHECK: machineFunctionInfo:
 ; CHECK-NEXT: explicitKernArgSize: 0
-; CHECK-NEXT: maxKernArgAlign: 0
+; CHECK-NEXT: maxKernArgAlign: 1
 ; CHECK-NEXT: ldsSize: 0
 ; CHECK-NEXT: isEntryFunction: false
 ; CHECK-NEXT: noSignedZerosFPMath: true

@@ -82,7 +82,7 @@ public:
   void writeTo(uint8_t *buf) override;
   uint32_t getNumRelocations() const override;
   void writeRelocations(raw_ostream &os) const override;
-  bool isNeeded() const override { return segments.size() > 0; }
+  bool isNeeded() const override;
   void finalizeContents() override;
 
 protected:

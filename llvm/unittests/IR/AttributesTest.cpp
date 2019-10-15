@@ -70,8 +70,8 @@ TEST(Attributes, AddAttributes) {
 TEST(Attributes, RemoveAlign) {
   LLVMContext C;
 
-  Attribute AlignAttr = Attribute::getWithAlignment(C, 8);
-  Attribute StackAlignAttr = Attribute::getWithStackAlignment(C, 32);
+  Attribute AlignAttr = Attribute::getWithAlignment(C, Align(8));
+  Attribute StackAlignAttr = Attribute::getWithStackAlignment(C, Align(32));
   AttrBuilder B_align_readonly;
   B_align_readonly.addAttribute(AlignAttr);
   B_align_readonly.addAttribute(Attribute::ReadOnly);
@@ -141,9 +141,9 @@ TEST(Attributes, AddMatchingAlignAttr) {
   LLVMContext C;
   AttributeList AL;
   AL = AL.addAttribute(C, AttributeList::FirstArgIndex,
-                       Attribute::getWithAlignment(C, 8));
+                       Attribute::getWithAlignment(C, Align(8)));
   AL = AL.addAttribute(C, AttributeList::FirstArgIndex + 1,
-                       Attribute::getWithAlignment(C, 32));
+                       Attribute::getWithAlignment(C, Align(32)));
   EXPECT_EQ(8U, AL.getParamAlignment(0));
   EXPECT_EQ(32U, AL.getParamAlignment(1));
 
