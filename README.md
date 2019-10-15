@@ -1,6 +1,8 @@
 # Disclaimer
 
 The [llvm-monorepo-root](https://github.com/apple/llvm-monorepo-root),
+[llvm-project-v4](https://github.com/apple/llvm-project-v4),
+[llvm-project-v4-split](https://github.com/apple/llvm-project-v4-split),
 [llvm-project-v3](https://github.com/apple/llvm-project-v3),
 [llvm-project-v3-split](https://github.com/apple/llvm-project-v3-split),
 [llvm-project-v2](https://github.com/apple/llvm-project-v2), and
