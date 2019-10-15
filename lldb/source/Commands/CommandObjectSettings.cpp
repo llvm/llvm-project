@@ -375,12 +375,11 @@ protected:
     FileSpec file_spec(m_options.m_filename);
     FileSystem::Instance().Resolve(file_spec);
     std::string path(file_spec.GetPath());
-    uint32_t options = File::OpenOptions::eOpenOptionWrite |
-                       File::OpenOptions::eOpenOptionCanCreate;
+    auto options = File::eOpenOptionWrite | File::eOpenOptionCanCreate;
     if (m_options.m_append)
-      options |= File::OpenOptions::eOpenOptionAppend;
+      options |= File::eOpenOptionAppend;
     else
-      options |= File::OpenOptions::eOpenOptionTruncate;
+      options |= File::eOpenOptionTruncate;
 
     StreamFile out_file(path.c_str(), options,
                         lldb::eFilePermissionsFileDefault);

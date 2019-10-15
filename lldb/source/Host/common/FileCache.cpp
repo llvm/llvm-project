@@ -23,8 +23,9 @@ FileCache &FileCache::GetInstance() {
   return *m_instance;
 }
 
-lldb::user_id_t FileCache::OpenFile(const FileSpec &file_spec, uint32_t flags,
-                                    uint32_t mode, Status &error) {
+lldb::user_id_t FileCache::OpenFile(const FileSpec &file_spec,
+                                    File::OpenOptions flags, uint32_t mode,
+                                    Status &error) {
   if (!file_spec) {
     error.SetErrorString("empty path");
     return UINT64_MAX;

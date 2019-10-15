@@ -144,61 +144,13 @@ static ArchSpec GetELFProcessCPUType(llvm::StringRef exe_path) {
   }
 }
 
-static bool GetProcessAndStatInfo(::pid_t pid,
-                                  ProcessInstanceInfo &process_info,
-                                  ProcessState &State, ::pid_t &tracerpid) {
-  tracerpid = 0;
-  process_info.Clear();
-
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-
-  // We can't use getProcFile here because proc/[pid]/exe is a symbolic link.
-  llvm::SmallString<64> ProcExe;
-  (llvm::Twine("/proc/") + llvm::Twine(pid) + "/exe").toVector(ProcExe);
-  std::string ExePath(PATH_MAX, '\0');
-
-  ssize_t len = readlink(ProcExe.c_str(), &ExePath[0], PATH_MAX);
-  if (len <= 0) {
-    LLDB_LOG(log, "failed to read link exe link for {0}: {1}", pid,
-             Status(errno, eErrorTypePOSIX));
-    return false;
-  }
-  ExePath.resize(len);
-
-  // If the binary has been deleted, the link name has " (deleted)" appended.
-  // Remove if there.
-  llvm::StringRef PathRef = ExePath;
-  PathRef.consume_back(" (deleted)");
-
-  process_info.SetArchitecture(GetELFProcessCPUType(PathRef));
-
-  // Get the process environment.
-  auto BufferOrError = getProcFile(pid, "environ");
+static void GetProcessArgs(::pid_t pid, ProcessInstanceInfo &process_info) {
+  auto BufferOrError = getProcFile(pid, "cmdline");
   if (!BufferOrError)
-    return false;
-  std::unique_ptr<llvm::MemoryBuffer> Environ = std::move(*BufferOrError);
-
-  // Get the command line used to start the process.
-  BufferOrError = getProcFile(pid, "cmdline");
-  if (!BufferOrError)
-    return false;
+    return;
   std::unique_ptr<llvm::MemoryBuffer> Cmdline = std::move(*BufferOrError);
 
-  // Get User and Group IDs and get tracer pid.
-  if (!GetStatusInfo(pid, process_info, State, tracerpid))
-    return false;
-
-  process_info.SetProcessID(pid);
-  process_info.GetExecutableFile().SetFile(PathRef, FileSpec::Style::native);
-
-  llvm::StringRef Rest = Environ->getBuffer();
-  while (!Rest.empty()) {
-    llvm::StringRef Var;
-    std::tie(Var, Rest) = Rest.split('\0');
-    process_info.GetEnvironment().insert(Var);
-  }
-
-  llvm::StringRef Arg0;
+  llvm::StringRef Arg0, Rest;
   std::tie(Arg0, Rest) = Cmdline->getBuffer().split('\0');
   process_info.SetArg0(Arg0);
   while (!Rest.empty()) {
@@ -206,6 +158,65 @@ static bool GetProcessAndStatInfo(::pid_t pid,
     std::tie(Arg, Rest) = Rest.split('\0');
     process_info.GetArguments().AppendArgument(Arg);
   }
+}
+
+static void GetExePathAndArch(::pid_t pid, ProcessInstanceInfo &process_info) {
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+  std::string ExePath(PATH_MAX, '\0');
+
+  // We can't use getProcFile here because proc/[pid]/exe is a symbolic link.
+  llvm::SmallString<64> ProcExe;
+  (llvm::Twine("/proc/") + llvm::Twine(pid) + "/exe").toVector(ProcExe);
+
+  ssize_t len = readlink(ProcExe.c_str(), &ExePath[0], PATH_MAX);
+  if (len > 0) {
+    ExePath.resize(len);
+  } else {
+    LLDB_LOG(log, "failed to read link exe link for {0}: {1}", pid,
+             Status(errno, eErrorTypePOSIX));
+    ExePath.resize(0);
+  }
+  // If the binary has been deleted, the link name has " (deleted)" appended.
+  // Remove if there.
+  llvm::StringRef PathRef = ExePath;
+  PathRef.consume_back(" (deleted)");
+
+  if (!PathRef.empty()) {
+    process_info.GetExecutableFile().SetFile(PathRef, FileSpec::Style::native);
+    process_info.SetArchitecture(GetELFProcessCPUType(PathRef));
+  }
+}
+
+static void GetProcessEnviron(::pid_t pid, ProcessInstanceInfo &process_info) {
+  // Get the process environment.
+  auto BufferOrError = getProcFile(pid, "environ");
+  if (!BufferOrError)
+    return;
+
+  std::unique_ptr<llvm::MemoryBuffer> Environ = std::move(*BufferOrError);
+  llvm::StringRef Rest = Environ->getBuffer();
+  while (!Rest.empty()) {
+    llvm::StringRef Var;
+    std::tie(Var, Rest) = Rest.split('\0');
+    process_info.GetEnvironment().insert(Var);
+  }
+}
+
+static bool GetProcessAndStatInfo(::pid_t pid,
+                                  ProcessInstanceInfo &process_info,
+                                  ProcessState &State, ::pid_t &tracerpid) {
+  tracerpid = 0;
+  process_info.Clear();
+
+  process_info.SetProcessID(pid);
+
+  GetExePathAndArch(pid, process_info);
+  GetProcessArgs(pid, process_info);
+  GetProcessEnviron(pid, process_info);
+
+  // Get User and Group IDs and get tracer pid.
+  if (!GetStatusInfo(pid, process_info, State, tracerpid))
+    return false;
 
   return true;
 }

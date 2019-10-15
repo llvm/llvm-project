@@ -415,7 +415,8 @@ static mode_t GetOpenMode(uint32_t permissions) {
   return mode;
 }
 
-Expected<FileUP> FileSystem::Open(const FileSpec &file_spec, uint32_t options,
+Expected<FileUP> FileSystem::Open(const FileSpec &file_spec,
+                                  File::OpenOptions options,
                                   uint32_t permissions, bool should_close_fd) {
   if (m_collector)
     m_collector->addFile(file_spec.GetPath());

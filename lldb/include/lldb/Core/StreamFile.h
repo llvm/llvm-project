@@ -30,7 +30,7 @@ public:
 
   StreamFile(const char *path);
 
-  StreamFile(const char *path, uint32_t options,
+  StreamFile(const char *path, File::OpenOptions options,
              uint32_t permissions = lldb::eFilePermissionsFileDefault);
 
   StreamFile(FILE *fh, bool transfer_ownership);

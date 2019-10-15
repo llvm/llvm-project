@@ -46,6 +46,10 @@ public:
 
   void Print(FILE *out);
 
+  void Print(SBFile out);
+
+  void Print(FileSP out);
+
   bool GetDescription(lldb::SBStream &description);
 
   bool DumpEmulationForAllInstructions(const char *triple);
@@ -56,6 +60,8 @@ protected:
   friend class SBTarget;
 
   void SetDisassembler(const lldb::DisassemblerSP &opaque_sp);
+  bool GetDescription(lldb_private::Stream &description);
+
 
 private:
   lldb::DisassemblerSP m_opaque_sp;
