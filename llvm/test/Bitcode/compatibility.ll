@@ -882,6 +882,27 @@ exit:
   ret void
 }
 
+define void @fastmathflags_vector_phi(i1 %cond, <4 x float> %f1, <4 x float> %f2, <2 x double> %d1, <2 x double> %d2, <8 x half> %h1, <8 x half> %h2) {
+entry:
+  br i1 %cond, label %L1, label %L2
+L1:
+  br label %exit
+L2:
+  br label %exit
+exit:
+  %p.nnan = phi nnan <4 x float> [ %f1, %L1 ], [ %f2, %L2 ]
+  ; CHECK: %p.nnan = phi nnan <4 x float> [ %f1, %L1 ], [ %f2, %L2 ]
+  %p.ninf = phi ninf <2 x double> [ %d1, %L1 ], [ %d2, %L2 ]
+  ; CHECK: %p.ninf = phi ninf <2 x double> [ %d1, %L1 ], [ %d2, %L2 ]
+  %p.contract = phi contract <8 x half> [ %h1, %L1 ], [ %h2, %L2 ]
+  ; CHECK: %p.contract = phi contract <8 x half> [ %h1, %L1 ], [ %h2, %L2 ]
+  %p.nsz.reassoc = phi reassoc nsz <4 x float> [ %f1, %L1 ], [ %f2, %L2 ]
+  ; CHECK: %p.nsz.reassoc = phi reassoc nsz <4 x float> [ %f1, %L1 ], [ %f2, %L2 ]
+  %p.fast = phi fast <8 x half> [ %h2, %L1 ], [ %h1, %L2 ]
+  ; CHECK: %p.fast = phi fast <8 x half> [ %h2, %L1 ], [ %h1, %L2 ]
+  ret void
+}
+
 ; Check various fast math flags and floating-point types on calls.
 
 declare float @fmf1()

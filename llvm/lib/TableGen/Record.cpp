@@ -438,7 +438,7 @@ Init *BitsInit::resolveReferences(Resolver &R) const {
         CachedBitVarRef = CurBitVar->getBitVar();
         CachedBitVarResolved = CachedBitVarRef->resolveReferences(R);
       }
-
+      assert(CachedBitVarResolved && "Unresolved bitvar reference");
       NewBit = CachedBitVarResolved->getBit(CurBitVar->getBitNum());
     } else {
       // getBit(0) implicitly converts int and bits<1> values to bit.

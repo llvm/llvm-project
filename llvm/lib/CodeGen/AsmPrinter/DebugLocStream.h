@@ -48,7 +48,7 @@ private:
   SmallVector<List, 4> Lists;
   SmallVector<Entry, 32> Entries;
   SmallString<256> DWARFBytes;
-  SmallVector<std::string, 32> Comments;
+  std::vector<std::string> Comments;
 
   /// Only verbose textual output needs comments.  This will be set to
   /// true for that case, and false otherwise.

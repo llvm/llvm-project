@@ -56,6 +56,10 @@ class RegSeq<int n, string prefix> {
                             []);
 }
 
+class THREADMASK_INFO<bit sync> {
+  list<bit> ret = !if(sync, [0,1], [0]);
+}
+
 //-----------------------------------
 // Synchronization and shuffle functions
 //-----------------------------------
@@ -129,120 +133,63 @@ def INT_BARRIER_SYNC_CNT_II : NVPTXInst<(outs), (ins i32imm:$id, i32imm:$cnt),
                  [(int_nvvm_barrier_sync_cnt imm:$id, imm:$cnt)]>,
         Requires<[hasPTX60, hasSM30]>;
 
-
-// shfl.{up,down,bfly,idx}.b32
-multiclass SHFL<NVPTXRegClass regclass, string mode, Intrinsic IntOp> {
-  // The last two parameters to shfl can be regs or imms.  ptxas is smart
-  // enough to inline constant registers, so strictly speaking we don't need to
-  // handle immediates here.  But it's easy enough, and it makes our ptx more
-  // readable.
-  def reg : NVPTXInst<
-      (outs regclass:$dst),
-      (ins regclass:$src, Int32Regs:$offset, Int32Regs:$mask),
-      !strconcat("shfl.", mode, ".b32 $dst, $src, $offset, $mask;"),
-      [(set regclass:$dst, (IntOp regclass:$src, Int32Regs:$offset, Int32Regs:$mask))]>;
-
-  def imm1 : NVPTXInst<
-      (outs regclass:$dst),
-      (ins regclass:$src, i32imm:$offset, Int32Regs:$mask),
-      !strconcat("shfl.", mode, ".b32 $dst, $src, $offset, $mask;"),
-      [(set regclass:$dst, (IntOp regclass:$src, imm:$offset, Int32Regs:$mask))]>;
-
-  def imm2 : NVPTXInst<
-      (outs regclass:$dst),
-      (ins regclass:$src, Int32Regs:$offset, i32imm:$mask),
-      !strconcat("shfl.", mode, ".b32 $dst, $src, $offset, $mask;"),
-      [(set regclass:$dst, (IntOp regclass:$src, Int32Regs:$offset, imm:$mask))]>;
-
-  def imm3 : NVPTXInst<
-      (outs regclass:$dst),
-      (ins regclass:$src, i32imm:$offset, i32imm:$mask),
-      !strconcat("shfl.", mode, ".b32 $dst, $src, $offset, $mask;"),
-      [(set regclass:$dst, (IntOp regclass:$src, imm:$offset, imm:$mask))]>;
+class SHFL_INSTR<bit sync, string mode, string reg, bit return_pred,
+                 bit offset_imm, bit mask_imm, bit threadmask_imm>
+      : NVPTXInst<(outs), (ins), "?", []> {
+  NVPTXRegClass rc = !cond(
+    !eq(reg, "i32"): Int32Regs,
+    !eq(reg, "f32"): Float32Regs);
+  string IntrName = "int_nvvm_shfl_"
+                    # !if(sync, "sync_", "")
+                    # mode
+                    # "_" # reg
+                    # !if(return_pred, "p", "");
+  Intrinsic Intr = !cast<Intrinsic>(IntrName);
+  let InOperandList = !con(
+    !if(sync,
+        !dag(ins, !if(threadmask_imm, [i32imm], [Int32Regs]), ["threadmask"]),
+        (ins)),
+    (ins rc:$src),
+    !dag(ins, !if(offset_imm, [i32imm], [Int32Regs]), ["offset"]),
+    !dag(ins, !if(mask_imm, [i32imm], [Int32Regs]), ["mask"])
+    );
+  let OutOperandList = !if(return_pred, (outs rc:$dst, Int1Regs:$pred), (outs rc:$dst));
+  let AsmString = "shfl."
+     # !if(sync, "sync.", "")
+     # mode # ".b32\t"
+     # "$dst"
+     # !if(return_pred, "|$pred", "") # ", "
+     # "$src, $offset, $mask"
+     # !if(sync, ", $threadmask", "")
+     # ";"
+     ;
+  let Pattern = [!con(
+      !foreach(tmp, OutOperandList,
+             !subst(outs, set,
+             !subst(i32imm, imm, tmp))),
+      (set !foreach(tmp, InOperandList,
+             !subst(ins, Intr,
+             !subst(i32imm, imm, tmp))))
+  )];
 }
 
-defm INT_SHFL_DOWN_I32 : SHFL<Int32Regs, "down", int_nvvm_shfl_down_i32>;
-defm INT_SHFL_DOWN_F32 : SHFL<Float32Regs, "down", int_nvvm_shfl_down_f32>;
-defm INT_SHFL_UP_I32 : SHFL<Int32Regs, "up", int_nvvm_shfl_up_i32>;
-defm INT_SHFL_UP_F32 : SHFL<Float32Regs, "up", int_nvvm_shfl_up_f32>;
-defm INT_SHFL_BFLY_I32 : SHFL<Int32Regs, "bfly", int_nvvm_shfl_bfly_i32>;
-defm INT_SHFL_BFLY_F32 : SHFL<Float32Regs, "bfly", int_nvvm_shfl_bfly_f32>;
-defm INT_SHFL_IDX_I32 : SHFL<Int32Regs, "idx", int_nvvm_shfl_idx_i32>;
-defm INT_SHFL_IDX_F32 : SHFL<Float32Regs, "idx", int_nvvm_shfl_idx_f32>;
-
-multiclass SHFL_SYNC<NVPTXRegClass regclass, string mode, Intrinsic IntOp> {
-  // Threadmask and the last two parameters to shfl.sync can be regs or imms.
-  // ptxas is smart enough to inline constant registers, so strictly speaking we
-  // don't need to handle immediates here.  But it's easy enough, and it makes
-  // our ptx more readable.
-  def rrr : NVPTXInst<
-      (outs regclass:$dst),
-      (ins Int32Regs:$threadmask, regclass:$src, Int32Regs:$offset, Int32Regs:$mask),
-      !strconcat("shfl.sync.", mode, ".b32 $dst, $src, $offset, $mask, $threadmask;"),
-      [(set regclass:$dst, (IntOp Int32Regs:$threadmask, regclass:$src,
-                            Int32Regs:$offset, Int32Regs:$mask))]>;
-
-  def rri : NVPTXInst<
-      (outs regclass:$dst),
-      (ins Int32Regs:$threadmask, regclass:$src, Int32Regs:$offset, i32imm:$mask),
-      !strconcat("shfl.sync.", mode, ".b32 $dst, $src, $offset, $mask, $threadmask;"),
-      [(set regclass:$dst, (IntOp Int32Regs:$threadmask, regclass:$src,
-                            Int32Regs:$offset, imm:$mask))]>;
-
-  def rir : NVPTXInst<
-      (outs regclass:$dst),
-      (ins Int32Regs:$threadmask, regclass:$src, i32imm:$offset, Int32Regs:$mask),
-      !strconcat("shfl.sync.", mode, ".b32 $dst, $src, $offset, $mask, $threadmask;"),
-      [(set regclass:$dst, (IntOp Int32Regs:$threadmask, regclass:$src,
-                            imm:$offset, Int32Regs:$mask))]>;
-
-  def rii : NVPTXInst<
-      (outs regclass:$dst),
-      (ins Int32Regs:$threadmask, regclass:$src, i32imm:$offset, i32imm:$mask),
-      !strconcat("shfl.sync.", mode, ".b32 $dst, $src, $offset, $mask, $threadmask;"),
-      [(set regclass:$dst, (IntOp Int32Regs:$threadmask, regclass:$src,
-                            imm:$offset, imm:$mask))]>;
-
-  def irr : NVPTXInst<
-      (outs regclass:$dst),
-      (ins i32imm:$threadmask, regclass:$src, Int32Regs:$offset, Int32Regs:$mask),
-      !strconcat("shfl.sync.", mode, ".b32 $dst, $src, $offset, $mask, $threadmask;"),
-      [(set regclass:$dst, (IntOp imm:$threadmask, regclass:$src,
-                            Int32Regs:$offset, Int32Regs:$mask))]>;
-
-  def iri : NVPTXInst<
-      (outs regclass:$dst),
-      (ins i32imm:$threadmask, regclass:$src, Int32Regs:$offset, i32imm:$mask),
-      !strconcat("shfl.sync.", mode, ".b32 $dst, $src, $offset, $mask, $threadmask;"),
-      [(set regclass:$dst, (IntOp imm:$threadmask, regclass:$src,
-                            Int32Regs:$offset, imm:$mask))]>;
-
-  def iir : NVPTXInst<
-      (outs regclass:$dst),
-      (ins i32imm:$threadmask, regclass:$src, i32imm:$offset, Int32Regs:$mask),
-      !strconcat("shfl.sync.", mode, ".b32 $dst, $src, $offset, $mask, $threadmask;"),
-      [(set regclass:$dst, (IntOp imm:$threadmask, regclass:$src,
-                            imm:$offset, Int32Regs:$mask))]>;
-
-  def iii : NVPTXInst<
-      (outs regclass:$dst),
-      (ins i32imm:$threadmask, regclass:$src, i32imm:$offset, i32imm:$mask),
-      !strconcat("shfl.sync.", mode, ".b32 $dst, $src, $offset, $mask, $threadmask;"),
-      [(set regclass:$dst, (IntOp imm:$threadmask, regclass:$src,
-                            imm:$offset, imm:$mask))]>;
+foreach sync = [0, 1] in {
+  foreach mode = ["up", "down", "bfly", "idx"] in {
+    foreach regclass = ["i32", "f32"] in {
+      foreach return_pred = [0, 1] in {
+        foreach offset_imm = [0, 1] in {
+          foreach mask_imm = [0, 1] in {
+            foreach threadmask_imm = THREADMASK_INFO<sync>.ret in {
+              def : SHFL_INSTR<sync, mode, regclass, return_pred,
+                               offset_imm, mask_imm, threadmask_imm>,
+                    Requires<!if(sync, [hasSM30], [hasSM30, hasSHFL])>;
+            }
+          }
+        }
+      }
+    }
+  }
 }
-
-// On sm_70 these don't have to be convergent, so we may eventually want to
-// implement non-convergent variant of this intrinsic.
-defm INT_SHFL_SYNC_DOWN_I32 : SHFL_SYNC<Int32Regs, "down", int_nvvm_shfl_sync_down_i32>;
-defm INT_SHFL_SYNC_DOWN_F32 : SHFL_SYNC<Float32Regs, "down", int_nvvm_shfl_sync_down_f32>;
-defm INT_SHFL_SYNC_UP_I32 : SHFL_SYNC<Int32Regs, "up", int_nvvm_shfl_sync_up_i32>;
-defm INT_SHFL_SYNC_UP_F32 : SHFL_SYNC<Float32Regs, "up", int_nvvm_shfl_sync_up_f32>;
-defm INT_SHFL_SYNC_BFLY_I32 : SHFL_SYNC<Int32Regs, "bfly", int_nvvm_shfl_sync_bfly_i32>;
-defm INT_SHFL_SYNC_BFLY_F32 : SHFL_SYNC<Float32Regs, "bfly", int_nvvm_shfl_sync_bfly_f32>;
-defm INT_SHFL_SYNC_IDX_I32 : SHFL_SYNC<Int32Regs, "idx", int_nvvm_shfl_sync_idx_i32>;
-defm INT_SHFL_SYNC_IDX_F32 : SHFL_SYNC<Float32Regs, "idx", int_nvvm_shfl_sync_idx_f32>;
-
 
 // vote.{all,any,uni,ballot}
 multiclass VOTE<NVPTXRegClass regclass, string mode, Intrinsic IntOp> {

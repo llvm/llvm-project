@@ -1,7 +1,7 @@
 ## Show that llvm-size emits an error if passed in a non-existent file.
 
 # RUN: not llvm-size %t.blah 2>&1 | FileCheck %s -DFILE=%t.blah --check-prefix=ENOENT
-# ENOENT: {{.*}}llvm-size{{.*}}: [[FILE]] {{[Nn]}}o such file or directory
+# ENOENT: {{.*}}llvm-size{{.*}}: error: '[[FILE]]': {{[Nn]}}o such file or directory
 
 ## Show that llvm-size reads a.out if not passed any file.
 

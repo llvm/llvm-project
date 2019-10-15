@@ -693,7 +693,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT: 38.00  21.00   -     50.00  204.00 129.50 142.50 120.00  -     31.00  55.00  67.50  67.50  12.00
+# CHECK-NEXT: 38.00  21.00   -     49.00  203.00 127.50 140.50 120.00  -     31.00  55.00  66.50  66.50  12.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
@@ -767,17 +767,17 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -     1.00    -      -      -      -      -      -     minsd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -     movapd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     movapd	%xmm0, (%rax)
-# CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50   1.00    -      -      -      -      -      -     movapd	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     movapd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -     movd	%eax, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     movd	(%rax), %xmm2
 # CHECK-NEXT: 1.00    -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     movd	%xmm0, %ecx
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     movd	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     movdqa	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     movdqa	%xmm0, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     movdqa	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     movdqa	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     movdqu	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     movdqu	%xmm0, (%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     movdqu	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     movdqu	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     movdq2q	%xmm0, %mm2
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     movhpd	%xmm0, (%rax)
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50   1.00    -      -      -      -      -      -     movhpd	(%rax), %xmm2
@@ -799,7 +799,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50   1.00    -      -      -      -      -      -     movsd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -     movupd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -     movupd	%xmm0, (%rax)
-# CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50   1.00    -      -      -      -      -      -     movupd	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     movupd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -     2.00    -     1.00    -      -      -      -      -      -      -     mulpd	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -     2.00    -     1.00   1.00    -      -      -      -      -      -     mulpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -     2.00    -     1.00    -      -      -      -      -      -      -     mulsd	%xmm0, %xmm2

@@ -1159,7 +1159,9 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out) {
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX8-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX8-NEXT:    v_readfirstlane_b32 s3, v2
-; GFX8-NEXT:    v_mad_u64_u32 v[0:1], s[2:3], v0, 5, s[2:3]
+; GFX8-NEXT:    v_mov_b32_e32 v1, s2
+; GFX8-NEXT:    v_mov_b32_e32 v2, s3
+; GFX8-NEXT:    v_mad_u64_u32 v[0:1], s[2:3], v0, 5, v[1:2]
 ; GFX8-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s2, -1
 ; GFX8-NEXT:    s_nop 2
@@ -1191,7 +1193,9 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out) {
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX9-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX9-NEXT:    v_readfirstlane_b32 s3, v2
-; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[2:3], v0, 5, s[2:3]
+; GFX9-NEXT:    v_mov_b32_e32 v1, s2
+; GFX9-NEXT:    v_mov_b32_e32 v2, s3
+; GFX9-NEXT:    v_mad_u64_u32 v[0:1], s[2:3], v0, 5, v[1:2]
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s2, -1
 ; GFX9-NEXT:    s_nop 2

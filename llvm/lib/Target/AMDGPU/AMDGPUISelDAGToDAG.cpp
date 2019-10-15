@@ -714,12 +714,17 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     return;   // Already selected.
   }
 
-  if (isa<AtomicSDNode>(N) ||
+  // isa<MemSDNode> almost works but is slightly too permissive for some DS
+  // intrinsics.
+  if (Opc == ISD::LOAD || Opc == ISD::STORE || isa<AtomicSDNode>(N) ||
       (Opc == AMDGPUISD::ATOMIC_INC || Opc == AMDGPUISD::ATOMIC_DEC ||
        Opc == ISD::ATOMIC_LOAD_FADD ||
        Opc == AMDGPUISD::ATOMIC_LOAD_FMIN ||
-       Opc == AMDGPUISD::ATOMIC_LOAD_FMAX))
+       Opc == AMDGPUISD::ATOMIC_LOAD_FMAX)) {
     N = glueCopyToM0LDSInit(N);
+    SelectCode(N);
+    return;
+  }
 
   switch (Opc) {
   default:
@@ -816,14 +821,6 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     ReplaceNode(N, buildSMovImm64(DL, Imm, N->getValueType(0)));
     return;
   }
-  case ISD::LOAD:
-  case ISD::STORE:
-  case ISD::ATOMIC_LOAD:
-  case ISD::ATOMIC_STORE: {
-    N = glueCopyToM0LDSInit(N);
-    break;
-  }
-
   case AMDGPUISD::BFE_I32:
   case AMDGPUISD::BFE_U32: {
     // There is a scalar version available, but unlike the vector version which

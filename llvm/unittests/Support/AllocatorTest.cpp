@@ -145,8 +145,8 @@ public:
   void *Allocate(size_t Size, size_t /*Alignment*/) {
     // Allocate space for the alignment, the slab, and a void* that goes right
     // before the slab.
-    size_t Alignment = 4096;
-    void *MemBase = safe_malloc(Size + Alignment - 1 + sizeof(void*));
+    Align Alignment(4096);
+    void *MemBase = safe_malloc(Size + Alignment.value() - 1 + sizeof(void *));
 
     // Find the slab start.
     void *Slab = (void *)alignAddr((char*)MemBase + sizeof(void *), Alignment);

@@ -143,11 +143,16 @@ def hasPTX31 : Predicate<"Subtarget->getPTXVersion() >= 31">;
 def hasPTX60 : Predicate<"Subtarget->getPTXVersion() >= 60">;
 def hasPTX61 : Predicate<"Subtarget->getPTXVersion() >= 61">;
 def hasPTX63 : Predicate<"Subtarget->getPTXVersion() >= 63">;
+def hasPTX64 : Predicate<"Subtarget->getPTXVersion() >= 64">;
 
 def hasSM30 : Predicate<"Subtarget->getSmVersion() >= 30">;
 def hasSM70 : Predicate<"Subtarget->getSmVersion() >= 70">;
 def hasSM72 : Predicate<"Subtarget->getSmVersion() >= 72">;
 def hasSM75 : Predicate<"Subtarget->getSmVersion() >= 75">;
+
+// non-sync shfl instructions are not available on sm_70+ in PTX6.4+
+def hasSHFL : Predicate<"!(Subtarget->getSmVersion() >= 70" 
+                          "&& Subtarget->getPTXVersion() >= 64)">;
 
 def useShortPtr : Predicate<"useShortPointers()">;
 def useFP16Math: Predicate<"Subtarget->allowFP16Math()">;

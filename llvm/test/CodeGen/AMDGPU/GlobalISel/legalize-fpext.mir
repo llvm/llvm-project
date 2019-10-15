@@ -31,9 +31,9 @@ body: |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; CHECK: %4:_(s32) = nnan G_FPEXT [[TRUNC]](s16)
-    ; CHECK: %5:_(s32) = nnan G_FPEXT [[TRUNC1]](s16)
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR %4(s32), %5(s32)
+    ; CHECK: [[FPEXT:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC]](s16)
+    ; CHECK: [[FPEXT1:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC1]](s16)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FPEXT]](s32), [[FPEXT1]](s32)
     ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s32>) = nnan G_FPEXT %0
@@ -53,9 +53,9 @@ body: |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; CHECK: %4:_(s32) = nnan G_FPEXT [[TRUNC]](s16)
-    ; CHECK: %5:_(s32) = nnan G_FPEXT [[TRUNC1]](s16)
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR %4(s32), %5(s32)
+    ; CHECK: [[FPEXT:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC]](s16)
+    ; CHECK: [[FPEXT1:%[0-9]+]]:_(s32) = nnan G_FPEXT [[TRUNC1]](s16)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FPEXT]](s32), [[FPEXT1]](s32)
     ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s32>) = nnan G_FPEXT %0

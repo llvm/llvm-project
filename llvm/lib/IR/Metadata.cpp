@@ -1497,24 +1497,6 @@ void GlobalObject::addTypeMetadata(unsigned Offset, Metadata *TypeID) {
                      TypeID}));
 }
 
-void GlobalObject::addVCallVisibilityMetadata(VCallVisibility Visibility) {
-  addMetadata(LLVMContext::MD_vcall_visibility,
-              *MDNode::get(getContext(),
-                           {ConstantAsMetadata::get(ConstantInt::get(
-                               Type::getInt64Ty(getContext()), Visibility))}));
-}
-
-GlobalObject::VCallVisibility GlobalObject::getVCallVisibility() const {
-  if (MDNode *MD = getMetadata(LLVMContext::MD_vcall_visibility)) {
-    uint64_t Val = cast<ConstantInt>(
-                       cast<ConstantAsMetadata>(MD->getOperand(0))->getValue())
-                       ->getZExtValue();
-    assert(Val <= 2 && "unknown vcall visibility!");
-    return (VCallVisibility)Val;
-  }
-  return VCallVisibility::VCallVisibilityPublic;
-}
-
 void Function::setSubprogram(DISubprogram *SP) {
   setMetadata(LLVMContext::MD_dbg, SP);
 }

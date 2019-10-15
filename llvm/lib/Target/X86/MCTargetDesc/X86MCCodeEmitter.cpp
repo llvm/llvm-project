@@ -862,6 +862,9 @@ void X86MCCodeEmitter::EmitVEXOpcodePrefix(uint64_t TSFlags, unsigned &CurByte,
     VEX_B = ~(BaseRegEnc >> 3) & 1;
     unsigned IndexRegEnc = getX86RegEncoding(MI, MemOperand+X86::AddrIndexReg);
     VEX_X = ~(IndexRegEnc >> 3) & 1;
+    if (!HasVEX_4V) // Only needed with VSIB which don't use VVVV.
+      EVEX_V2 = ~(IndexRegEnc >> 4) & 1;
+
     break;
   }
   case X86II::MRMSrcReg: {

@@ -2140,6 +2140,13 @@ static void unswitchNontrivialInvariants(
     // the branch in the split block.
     buildPartialUnswitchConditionalBranch(*SplitBB, Invariants, Direction,
                                           *ClonedPH, *LoopPH);
+    if (MSSAU) {
+      // Perform MSSA cloning updates.
+      for (auto &VMap : VMaps)
+        MSSAU->updateForClonedLoop(LBRPO, ExitBlocks, *VMap,
+                                   /*IgnoreIncomingWithNoClones=*/true);
+      MSSAU->updateExitBlocksForClonedLoop(ExitBlocks, VMaps, DT);
+    }
     DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
   }
 

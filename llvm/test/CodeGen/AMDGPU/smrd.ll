@@ -573,7 +573,6 @@ main_body:
 ;
 ; TODO: we should keep the loop counter in an SGPR
 ;
-; GCN: v_readfirstlane_b32
 ; GCN: s_buffer_load_dword
 define amdgpu_ps float @smrd_uniform_loop(<4 x i32> inreg %desc, i32 %bound) #0 {
 main_body:

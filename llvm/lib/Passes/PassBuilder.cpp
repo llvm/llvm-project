@@ -471,8 +471,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   if ((Phase != ThinLTOPhase::PreLink || !PGOOpt ||
        PGOOpt->Action != PGOOptions::SampleUse) &&
       PTO.LoopUnrolling)
-    LPM2.addPass(
-        LoopFullUnrollPass(Level, false, PTO.ForgetAllSCEVInLoopUnroll));
+    LPM2.addPass(LoopFullUnrollPass(Level, /*OnlyWhenForced=*/false,
+                                    PTO.ForgetAllSCEVInLoopUnroll));
 
   for (auto &C : LoopOptimizerEndEPCallbacks)
     C(LPM2, Level);
@@ -953,13 +953,13 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   // combiner for cleanup here so that the unrolling and LICM can be pipelined
   // across the loop nests.
   // We do UnrollAndJam in a separate LPM to ensure it happens before unroll
-  if (EnableUnrollAndJam) {
+  if (EnableUnrollAndJam && PTO.LoopUnrolling) {
     OptimizePM.addPass(
         createFunctionToLoopPassAdaptor(LoopUnrollAndJamPass(Level)));
   }
-  if (PTO.LoopUnrolling)
-    OptimizePM.addPass(LoopUnrollPass(
-        LoopUnrollOptions(Level, false, PTO.ForgetAllSCEVInLoopUnroll)));
+  OptimizePM.addPass(LoopUnrollPass(
+      LoopUnrollOptions(Level, /*OnlyWhenForced=*/!PTO.LoopUnrolling,
+                        PTO.ForgetAllSCEVInLoopUnroll)));
   OptimizePM.addPass(WarnMissedTransformationsPass());
   OptimizePM.addPass(InstCombinePass());
   OptimizePM.addPass(RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());

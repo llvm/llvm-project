@@ -10,44 +10,10 @@
 # CHECK: S_ADD_U32
 # CHECK: S_ADDC_U32
 # CHECK: DS_READ2_B32
---- |
-  define amdgpu_kernel void @scc_def_and_use_no_dependency(i32 addrspace(3)* %ptr.0) nounwind {
-    %ptr.4 = getelementptr i32, i32 addrspace(3)* %ptr.0, i32 1
-    %ptr.64 = getelementptr i32, i32 addrspace(3)* %ptr.0, i32 16
-    ret void
-  }
-
-  define amdgpu_kernel void @scc_def_and_use_dependency(i32 addrspace(3)* %ptr.0) nounwind {
-    %ptr.4 = getelementptr i32, i32 addrspace(3)* %ptr.0, i32 1
-    %ptr.64 = getelementptr i32, i32 addrspace(3)* %ptr.0, i32 16
-    ret void
-  }
-...
 ---
 name:            scc_def_and_use_no_dependency
-alignment:       1
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-tracksRegLiveness: false
-liveins:
-  - { reg: '$vgpr0' }
-  - { reg: '$sgpr0' }
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    0
-  adjustsStack:    false
-  hasCalls:        false
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
+machineFunctionInfo:
+  isEntryFunction: true
 body:             |
   bb.0:
     liveins: $vgpr0, $sgpr0
@@ -56,12 +22,12 @@ body:             |
     %10:sgpr_32 = COPY $sgpr0
 
     $m0 = S_MOV_B32 -1
-    %2:vgpr_32 = DS_READ_B32 %1, 0, 0, implicit $m0, implicit $exec :: (load 4 from %ir.ptr.0)
+    %2:vgpr_32 = DS_READ_B32 %1, 0, 0, implicit $m0, implicit $exec :: (load 4)
 
     %11:sgpr_32 = S_ADD_U32 %10, 4, implicit-def $scc
     %12:sgpr_32 = S_ADDC_U32 %10, 0, implicit-def dead $scc, implicit $scc
 
-    %3:vgpr_32 = DS_READ_B32 %1, 64, 0, implicit $m0, implicit $exec :: (load 4 from %ir.ptr.64)
+    %3:vgpr_32 = DS_READ_B32 %1, 64, 0, implicit $m0, implicit $exec :: (load 4)
     S_ENDPGM 0
 
 ...
@@ -72,29 +38,9 @@ body:             |
 # CHECK: S_ADDC_U32
 ---
 name:            scc_def_and_use_dependency
-alignment:       1
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-tracksRegLiveness: false
-liveins:
-  - { reg: '$vgpr0' }
-  - { reg: '$sgpr0' }
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    0
-  adjustsStack:    false
-  hasCalls:        false
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
+machineFunctionInfo:
+  isEntryFunction: true
+
 body:             |
   bb.0:
     liveins: $vgpr0, $sgpr0
@@ -103,14 +49,14 @@ body:             |
     %10:sgpr_32 = COPY $sgpr0
 
     $m0 = S_MOV_B32 -1
-    %2:vgpr_32 = DS_READ_B32 %1, 0, 0, implicit $m0, implicit $exec :: (load 4 from %ir.ptr.0)
+    %2:vgpr_32 = DS_READ_B32 %1, 0, 0, implicit $m0, implicit $exec :: (load 4)
     %20:sgpr_32 = V_READFIRSTLANE_B32 %2, implicit $exec
 
     %21:sgpr_32 = S_ADD_U32 %20, 4, implicit-def $scc
     ; The S_ADDC_U32 depends on the first DS_READ_B32 only via SCC
     %11:sgpr_32 = S_ADDC_U32 %10, 0, implicit-def dead $scc, implicit $scc
 
-    %3:vgpr_32 = DS_READ_B32 %1, 64, 0, implicit $m0, implicit $exec :: (load 4 from %ir.ptr.64)
+    %3:vgpr_32 = DS_READ_B32 %1, 64, 0, implicit $m0, implicit $exec :: (load 4)
     S_ENDPGM 0
 
 ...

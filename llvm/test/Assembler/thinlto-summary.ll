@@ -37,7 +37,7 @@
 
 ; Functions with various flag combinations (notEligibleToImport, Live,
 ; combinations of optional function flags).
-^15 = gv: (guid: 14, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 1, live: 1, dsoLocal: 0), insts: 1)))
+^15 = gv: (guid: 14, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 1, live: 1, dsoLocal: 0), insts: 1, funcFlags: (noInline: 1))))
 ^16 = gv: (guid: 15, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1, funcFlags: (readNone: 1, noRecurse: 1))))
 ; This one also tests backwards reference in calls.
 ^17 = gv: (guid: 16, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 1, funcFlags: (readOnly: 1, returnDoesNotAlias: 1), calls: ((callee: ^15)))))
@@ -80,7 +80,7 @@
 ; CHECK: ^12 = gv: (guid: 11, summaries: (variable: (module: ^0, flags: (linkage: appending, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), varFlags: (readonly: 0, writeonly: 0), refs: (^4))))
 ; CHECK: ^13 = gv: (guid: 12, summaries: (variable: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), varFlags: (readonly: 1, writeonly: 0))))
 ; CHECK: ^14 = gv: (guid: 13, summaries: (variable: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), varFlags: (readonly: 0, writeonly: 0))))
-; CHECK: ^15 = gv: (guid: 14, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 1, live: 1, dsoLocal: 0, canAutoHide: 0), insts: 1)))
+; CHECK: ^15 = gv: (guid: 14, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 1, live: 1, dsoLocal: 0, canAutoHide: 0), insts: 1, funcFlags: (readNone: 0, readOnly: 0, noRecurse: 0, returnDoesNotAlias: 0, noInline: 1))))
 ; CHECK: ^16 = gv: (guid: 15, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1, funcFlags: (readNone: 1, readOnly: 0, noRecurse: 1, returnDoesNotAlias: 0, noInline: 0))))
 ; CHECK: ^17 = gv: (guid: 16, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1, funcFlags: (readNone: 0, readOnly: 1, noRecurse: 0, returnDoesNotAlias: 1, noInline: 0), calls: ((callee: ^15)))))
 ; CHECK: ^18 = gv: (guid: 17, summaries: (alias: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), aliasee: ^14)))

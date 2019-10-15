@@ -16,12 +16,41 @@
 
 using namespace llvm;
 
+struct TypesAndMemOps {
+  LLT ValTy;
+  LLT PtrTy;
+  unsigned MemSize;
+  bool MustBeNaturallyAligned;
+};
+
+static bool
+CheckTy0Ty1MemSizeAlign(const LegalityQuery &Query,
+                        std::initializer_list<TypesAndMemOps> SupportedValues) {
+  for (auto &Val : SupportedValues) {
+    if (Val.ValTy != Query.Types[0])
+      continue;
+    if (Val.PtrTy != Query.Types[1])
+      continue;
+    if (Val.MemSize != Query.MMODescrs[0].SizeInBits)
+      continue;
+    if (Val.MustBeNaturallyAligned &&
+        Query.MMODescrs[0].SizeInBits % Query.MMODescrs[0].AlignInBits != 0)
+      continue;
+    return true;
+  }
+  return false;
+}
+
 MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   using namespace TargetOpcode;
 
   const LLT s1 = LLT::scalar(1);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
+  const LLT v16s8 = LLT::vector(16, 8);
+  const LLT v8s16 = LLT::vector(8, 16);
+  const LLT v4s32 = LLT::vector(4, 32);
+  const LLT v2s64 = LLT::vector(2, 64);
   const LLT p0 = LLT::pointer(0, 32);
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL})
@@ -36,11 +65,21 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
       .maxScalar(0, s32);
 
   getActionDefinitionsBuilder({G_LOAD, G_STORE})
-      .legalForTypesWithMemDesc({{s32, p0, 8, 8},
-                                 {s32, p0, 16, 8},
-                                 {s32, p0, 32, 8},
-                                 {s64, p0, 64, 8},
-                                 {p0, p0, 32, 8}})
+      .legalIf([=, &ST](const LegalityQuery &Query) {
+        if (CheckTy0Ty1MemSizeAlign(Query, {{s32, p0, 8, ST.hasMips32r6()},
+                                            {s32, p0, 16, ST.hasMips32r6()},
+                                            {s32, p0, 32, ST.hasMips32r6()},
+                                            {p0, p0, 32, ST.hasMips32r6()},
+                                            {s64, p0, 64, ST.hasMips32r6()}}))
+          return true;
+        if (ST.hasMSA() &&
+            CheckTy0Ty1MemSizeAlign(Query, {{v16s8, p0, 128, false},
+                                            {v8s16, p0, 128, false},
+                                            {v4s32, p0, 128, false},
+                                            {v2s64, p0, 128, false}}))
+          return true;
+        return false;
+      })
       .minScalar(0, s32);
 
   getActionDefinitionsBuilder(G_IMPLICIT_DEF)

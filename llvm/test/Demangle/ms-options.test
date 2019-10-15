@@ -1,0 +1,14 @@
+; RUN: llvm-undname < %s | FileCheck %s
+; RUN: llvm-undname --no-calling-convention < %s | FileCheck %s --check-prefix=CHECK-NO-CALLING-CONV
+; RUN: llvm-undname --no-return-type < %s | FileCheck %s --check-prefix=CHECK-NO-RETURN
+; RUN: llvm-undname --no-access-specifier < %s | FileCheck %s --check-prefix=CHECK-NO-ACCESS
+; RUN: llvm-undname --no-member-type < %s | FileCheck %s --check-prefix=CHECK-NO-MEMBER-TYPE
+; RUN: llvm-undname --no-calling-convention --no-return-type --no-access-specifier --no-member-type < %s | FileCheck %s --check-prefix=CHECK-NO-ALL
+
+?func@MyClass@@UEAAHHH@Z
+; CHECK: public: virtual int __cdecl MyClass::func(int, int)
+; CHECK-NO-CALLING-CONV: public: virtual int MyClass::func(int, int)
+; CHECK-NO-RETURN: public: virtual __cdecl MyClass::func(int, int)
+; CHECK-NO-ACCESS: {{^}}virtual int __cdecl MyClass::func(int, int)
+; CHECK-NO-MEMBER-TYPE: public: int __cdecl MyClass::func(int, int)
+; CHECK-NO-ALL: {{^}}MyClass::func(int, int)

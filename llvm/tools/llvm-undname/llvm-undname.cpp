@@ -31,6 +31,18 @@ using namespace llvm;
 cl::opt<bool> DumpBackReferences("backrefs", cl::Optional,
                                  cl::desc("dump backreferences"), cl::Hidden,
                                  cl::init(false));
+cl::opt<bool> NoAccessSpecifier("no-access-specifier", cl::Optional,
+                                cl::desc("skip access specifiers"), cl::Hidden,
+                                cl::init(false));
+cl::opt<bool> NoCallingConvention("no-calling-convention", cl::Optional,
+                                  cl::desc("skip calling convention"),
+                                  cl::Hidden, cl::init(false));
+cl::opt<bool> NoReturnType("no-return-type", cl::Optional,
+                           cl::desc("skip return types"), cl::Hidden,
+                           cl::init(false));
+cl::opt<bool> NoMemberType("no-member-type", cl::Optional,
+                           cl::desc("skip member types"), cl::Hidden,
+                           cl::init(false));
 cl::opt<std::string> RawFile("raw-file", cl::Optional,
                              cl::desc("for fuzzer data"), cl::Hidden);
 cl::list<std::string> Symbols(cl::Positional, cl::desc("<input symbols>"),
@@ -41,6 +53,14 @@ static bool msDemangle(const std::string &S) {
   MSDemangleFlags Flags = MSDF_None;
   if (DumpBackReferences)
     Flags = MSDemangleFlags(Flags | MSDF_DumpBackrefs);
+  if (NoAccessSpecifier)
+    Flags = MSDemangleFlags(Flags | MSDF_NoAccessSpecifier);
+  if (NoCallingConvention)
+    Flags = MSDemangleFlags(Flags | MSDF_NoCallingConvention);
+  if (NoReturnType)
+    Flags = MSDemangleFlags(Flags | MSDF_NoReturnType);
+  if (NoMemberType)
+    Flags = MSDemangleFlags(Flags | MSDF_NoMemberType);
 
   char *ResultBuf =
       microsoftDemangle(S.c_str(), nullptr, nullptr, &Status, Flags);

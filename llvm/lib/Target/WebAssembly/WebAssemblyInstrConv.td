@@ -171,6 +171,23 @@ defm I64_TRUNC_U_F64 : I<(outs I64:$dst), (ins F64:$src), (outs), (ins),
                          0xb1>;
 } // hasSideEffects = 1
 
+def : Pat<(int_wasm_trunc_signed F32:$src),
+          (I32_TRUNC_S_F32 F32:$src)>;
+def : Pat<(int_wasm_trunc_unsigned F32:$src),
+          (I32_TRUNC_U_F32 F32:$src)>;
+def : Pat<(int_wasm_trunc_signed F64:$src),
+          (I32_TRUNC_S_F64 F64:$src)>;
+def : Pat<(int_wasm_trunc_unsigned F64:$src),
+          (I32_TRUNC_U_F64 F64:$src)>;
+def : Pat<(int_wasm_trunc_signed F32:$src),
+          (I64_TRUNC_S_F32 F32:$src)>;
+def : Pat<(int_wasm_trunc_unsigned F32:$src),
+          (I64_TRUNC_U_F32 F32:$src)>;
+def : Pat<(int_wasm_trunc_signed F64:$src),
+          (I64_TRUNC_S_F64 F64:$src)>;
+def : Pat<(int_wasm_trunc_unsigned F64:$src),
+          (I64_TRUNC_U_F64 F64:$src)>;
+
 defm F32_CONVERT_S_I32 : I<(outs F32:$dst), (ins I32:$src), (outs), (ins),
                            [(set F32:$dst, (sint_to_fp I32:$src))],
                            "f32.convert_i32_s\t$dst, $src", "f32.convert_i32_s",

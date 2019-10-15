@@ -5,11 +5,12 @@ define i32 @atomic_nand_i32_lds(i32 addrspace(3)* %ptr) nounwind {
 ; GCN-LABEL: atomic_nand_i32_lds:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    ds_read_b32 v2, v0
+; GCN-NEXT:    ds_read_b32 v1, v0
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0
 ; GCN-NEXT:  BB0_1: ; %atomicrmw.start
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v2, v1
 ; GCN-NEXT:    v_not_b32_e32 v1, v2
 ; GCN-NEXT:    v_or_b32_e32 v1, -5, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -17,7 +18,6 @@ define i32 @atomic_nand_i32_lds(i32 addrspace(3)* %ptr) nounwind {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1_vol
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
-; GCN-NEXT:    v_mov_b32_e32 v2, v1
 ; GCN-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; GCN-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_execnz BB0_1
@@ -33,11 +33,12 @@ define i32 @atomic_nand_i32_global(i32 addrspace(1)* %ptr) nounwind {
 ; GCN-LABEL: atomic_nand_i32_global:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    global_load_dword v3, v[0:1], off
+; GCN-NEXT:    global_load_dword v2, v[0:1], off
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0
 ; GCN-NEXT:  BB1_1: ; %atomicrmw.start
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v3, v2
 ; GCN-NEXT:    v_not_b32_e32 v2, v3
 ; GCN-NEXT:    v_or_b32_e32 v2, -5, v2
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -45,7 +46,6 @@ define i32 @atomic_nand_i32_global(i32 addrspace(1)* %ptr) nounwind {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    buffer_wbinvl1_vol
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN-NEXT:    v_mov_b32_e32 v3, v2
 ; GCN-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; GCN-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_execnz BB1_1
@@ -61,11 +61,12 @@ define i32 @atomic_nand_i32_flat(i32* %ptr) nounwind {
 ; GCN-LABEL: atomic_nand_i32_flat:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    flat_load_dword v3, v[0:1]
+; GCN-NEXT:    flat_load_dword v2, v[0:1]
 ; GCN-NEXT:    s_mov_b64 s[4:5], 0
 ; GCN-NEXT:  BB2_1: ; %atomicrmw.start
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v3, v2
 ; GCN-NEXT:    v_not_b32_e32 v2, v3
 ; GCN-NEXT:    v_or_b32_e32 v2, -5, v2
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -74,7 +75,6 @@ define i32 @atomic_nand_i32_flat(i32* %ptr) nounwind {
 ; GCN-NEXT:    buffer_wbinvl1_vol
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GCN-NEXT:    v_mov_b32_e32 v3, v2
 ; GCN-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; GCN-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_execnz BB2_1
