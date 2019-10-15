@@ -45,8 +45,8 @@ public:
                                          bool ForSimm) const;
   StackOffset resolveFrameOffsetReference(const MachineFunction &MF,
                                           int ObjectOffset, bool isFixed,
-                                          unsigned &FrameReg, bool PreferFP,
-                                          bool ForSimm) const;
+                                          bool isSVE, unsigned &FrameReg,
+                                          bool PreferFP, bool ForSimm) const;
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  const std::vector<CalleeSavedInfo> &CSI,
@@ -101,6 +101,7 @@ public:
 private:
   bool shouldCombineCSRLocalStackBump(MachineFunction &MF,
                                       unsigned StackBumpBytes) const;
+  int64_t determineSVEStackSize(MachineFrameInfo &MF, unsigned &MaxAlign) const;
 };
 
 } // End llvm namespace

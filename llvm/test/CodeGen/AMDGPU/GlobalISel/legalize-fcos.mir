@@ -523,23 +523,23 @@ body: |
     ; SI-LABEL: name: test_fcos_s32_flags
     ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3FC45F3060000000
-    ; SI: %3:_(s32) = nnan G_FMUL [[COPY]], [[C]]
-    ; SI: %4:_(s32) = nnan G_INTRINSIC intrinsic(@llvm.amdgcn.fract), %3(s32)
-    ; SI: %1:_(s32) = nnan G_INTRINSIC intrinsic(@llvm.amdgcn.cos), %4(s32)
-    ; SI: $vgpr0 = COPY %1(s32)
+    ; SI: [[FMUL:%[0-9]+]]:_(s32) = nnan G_FMUL [[COPY]], [[C]]
+    ; SI: [[INT:%[0-9]+]]:_(s32) = nnan G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[FMUL]](s32)
+    ; SI: [[INT1:%[0-9]+]]:_(s32) = nnan G_INTRINSIC intrinsic(@llvm.amdgcn.cos), [[INT]](s32)
+    ; SI: $vgpr0 = COPY [[INT1]](s32)
     ; VI-LABEL: name: test_fcos_s32_flags
     ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3FC45F3060000000
-    ; VI: %3:_(s32) = nnan G_FMUL [[COPY]], [[C]]
-    ; VI: %4:_(s32) = nnan G_INTRINSIC intrinsic(@llvm.amdgcn.fract), %3(s32)
-    ; VI: %1:_(s32) = nnan G_INTRINSIC intrinsic(@llvm.amdgcn.cos), %4(s32)
-    ; VI: $vgpr0 = COPY %1(s32)
+    ; VI: [[FMUL:%[0-9]+]]:_(s32) = nnan G_FMUL [[COPY]], [[C]]
+    ; VI: [[INT:%[0-9]+]]:_(s32) = nnan G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[FMUL]](s32)
+    ; VI: [[INT1:%[0-9]+]]:_(s32) = nnan G_INTRINSIC intrinsic(@llvm.amdgcn.cos), [[INT]](s32)
+    ; VI: $vgpr0 = COPY [[INT1]](s32)
     ; GFX9-LABEL: name: test_fcos_s32_flags
     ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3FC45F3060000000
-    ; GFX9: %3:_(s32) = nnan G_FMUL [[COPY]], [[C]]
-    ; GFX9: %1:_(s32) = nnan G_INTRINSIC intrinsic(@llvm.amdgcn.cos), %3(s32)
-    ; GFX9: $vgpr0 = COPY %1(s32)
+    ; GFX9: [[FMUL:%[0-9]+]]:_(s32) = nnan G_FMUL [[COPY]], [[C]]
+    ; GFX9: [[INT:%[0-9]+]]:_(s32) = nnan G_INTRINSIC intrinsic(@llvm.amdgcn.cos), [[FMUL]](s32)
+    ; GFX9: $vgpr0 = COPY [[INT]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = nnan G_FCOS %0
     $vgpr0 = COPY %1

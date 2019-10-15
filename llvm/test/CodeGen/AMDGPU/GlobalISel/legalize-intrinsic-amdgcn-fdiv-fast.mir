@@ -36,17 +36,17 @@ body: |
     ; CHECK-LABEL: name: test_amdgcn_fdiv_fast_propagate_flags
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: %3:_(s32) = nsz G_FABS [[COPY1]]
+    ; CHECK: [[FABS:%[0-9]+]]:_(s32) = nsz G_FABS [[COPY1]]
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1870659584
     ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 796917760
     ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1065353216
-    ; CHECK: %7:_(s1) = nsz G_FCMP floatpred(ogt), %3(s32), [[C]]
-    ; CHECK: %8:_(s32) = nsz G_SELECT %7(s1), [[C1]], [[C2]]
-    ; CHECK: %9:_(s32) = nsz G_FMUL [[COPY1]], %8
-    ; CHECK: %10:_(s32) = nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), %9(s32)
-    ; CHECK: %11:_(s32) = nsz G_FMUL [[COPY]], %10
-    ; CHECK: %2:_(s32) = nsz G_FMUL %8, %11
-    ; CHECK: $vgpr0 = COPY %2(s32)
+    ; CHECK: [[FCMP:%[0-9]+]]:_(s1) = nsz G_FCMP floatpred(ogt), [[FABS]](s32), [[C]]
+    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = nsz G_SELECT [[FCMP]](s1), [[C1]], [[C2]]
+    ; CHECK: [[FMUL:%[0-9]+]]:_(s32) = nsz G_FMUL [[COPY1]], [[SELECT]]
+    ; CHECK: [[INT:%[0-9]+]]:_(s32) = nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FMUL]](s32)
+    ; CHECK: [[FMUL1:%[0-9]+]]:_(s32) = nsz G_FMUL [[COPY]], [[INT]]
+    ; CHECK: [[FMUL2:%[0-9]+]]:_(s32) = nsz G_FMUL [[SELECT]], [[FMUL1]]
+    ; CHECK: $vgpr0 = COPY [[FMUL2]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = nsz G_INTRINSIC intrinsic(@llvm.amdgcn.fdiv.fast), %0, %1

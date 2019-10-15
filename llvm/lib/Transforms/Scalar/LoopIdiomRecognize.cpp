@@ -2080,6 +2080,10 @@ bool LoopIdiomRecognize::recognizeBCmpLoopSCEV(uint64_t BCmpTyBytes,
 
   LLVM_DEBUG(dbgs() << "SCEV expressions for loads are acceptable.\n");
 
+  // bcmp / memcmp take length argument as size_t, so let's conservatively
+  // assume that the iteration count should be not wider than that.
+  Type *CmpFuncSizeTy = DL->getIntPtrType(SE->getContext());
+
   // For how many iterations is loop guaranteed not to exit via LoopLatch?
   // This is one less than the maximal number of comparisons,and is:  n + -1
   const SCEV *LoopExitCount =
@@ -2089,6 +2093,8 @@ bool LoopIdiomRecognize::recognizeBCmpLoopSCEV(uint64_t BCmpTyBytes,
   // Exit count, similarly, must be loop-invant that dominates the loop header.
   if (LoopExitCount == SE->getCouldNotCompute() ||
       !LoopExitCount->getType()->isIntOrPtrTy() ||
+      LoopExitCount->getType()->getScalarSizeInBits() >
+          CmpFuncSizeTy->getScalarSizeInBits() ||
       !SE->isAvailableAtLoopEntry(LoopExitCount, CurLoop)) {
     LLVM_DEBUG(dbgs() << "Unsupported SCEV expression for loop latch exit.\n");
     return false;

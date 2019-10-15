@@ -198,7 +198,7 @@ public:
     if (auto EC = readBytes(Bytes, NumElements * sizeof(T)))
       return EC;
 
-    assert(alignmentAdjustment(Bytes.data(), alignof(T)) == 0 &&
+    assert(isAddrAligned(Align::Of<T>(), Bytes.data()) &&
            "Reading at invalid alignment!");
 
     Array = ArrayRef<T>(reinterpret_cast<const T *>(Bytes.data()), NumElements);

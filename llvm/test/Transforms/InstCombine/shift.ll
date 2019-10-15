@@ -1179,6 +1179,39 @@ define <2 x i65> @test_63(<2 x i64> %t) {
   ret <2 x i65> %b
 }
 
+define i32 @test_shl_zext_bool(i1 %t) {
+; CHECK-LABEL: @test_shl_zext_bool(
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[T:%.*]] to i32
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[EXT]], 2
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %ext = zext i1 %t to i32
+  %shl = shl i32 %ext, 2
+  ret i32 %shl
+}
+
+define <2 x i32> @test_shl_zext_bool_splat(<2 x i1> %t) {
+; CHECK-LABEL: @test_shl_zext_bool_splat(
+; CHECK-NEXT:    [[EXT:%.*]] = zext <2 x i1> [[T:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw <2 x i32> [[EXT]], <i32 3, i32 3>
+; CHECK-NEXT:    ret <2 x i32> [[SHL]]
+;
+  %ext = zext <2 x i1> %t to <2 x i32>
+  %shl = shl <2 x i32> %ext, <i32 3, i32 3>
+  ret <2 x i32> %shl
+}
+
+define <2 x i32> @test_shl_zext_bool_vec(<2 x i1> %t) {
+; CHECK-LABEL: @test_shl_zext_bool_vec(
+; CHECK-NEXT:    [[EXT:%.*]] = zext <2 x i1> [[T:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[EXT]], <i32 2, i32 3>
+; CHECK-NEXT:    ret <2 x i32> [[SHL]]
+;
+  %ext = zext <2 x i1> %t to <2 x i32>
+  %shl = shl <2 x i32> %ext, <i32 2, i32 3>
+  ret <2 x i32> %shl
+}
+
 define i64 @shl_zext(i32 %t) {
 ; CHECK-LABEL: @shl_zext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[T:%.*]], 8

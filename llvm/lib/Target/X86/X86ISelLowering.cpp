@@ -33450,9 +33450,7 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
 
     // Share broadcast with the longest vector and extract low subvector (free).
     for (SDNode *User : Src->uses())
-      if (User != N.getNode() &&
-          (User->getOpcode() == X86ISD::VBROADCAST ||
-           User->getOpcode() == X86ISD::VBROADCAST_LOAD) &&
+      if (User != N.getNode() && User->getOpcode() == X86ISD::VBROADCAST &&
           User->getValueSizeInBits(0) > VT.getSizeInBits()) {
         return extractSubVector(SDValue(User, 0), 0, DAG, DL,
                                 VT.getSizeInBits());

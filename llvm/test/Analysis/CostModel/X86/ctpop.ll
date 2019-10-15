@@ -16,7 +16,7 @@ declare  i8 @llvm.ctpop.i8(i8)
 
 define i64 @var_ctpop_i64(i64 %a) {
 ; NOPOPCNT-LABEL: 'var_ctpop_i64'
-; NOPOPCNT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctpop = call i64 @llvm.ctpop.i64(i64 %a)
+; NOPOPCNT-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %ctpop = call i64 @llvm.ctpop.i64(i64 %a)
 ; NOPOPCNT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %ctpop
 ;
 ; POPCNT-LABEL: 'var_ctpop_i64'
@@ -29,7 +29,7 @@ define i64 @var_ctpop_i64(i64 %a) {
 
 define i32 @var_ctpop_i32(i32 %a) {
 ; NOPOPCNT-LABEL: 'var_ctpop_i32'
-; NOPOPCNT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctpop = call i32 @llvm.ctpop.i32(i32 %a)
+; NOPOPCNT-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %ctpop = call i32 @llvm.ctpop.i32(i32 %a)
 ; NOPOPCNT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %ctpop
 ;
 ; POPCNT-LABEL: 'var_ctpop_i32'
@@ -42,7 +42,7 @@ define i32 @var_ctpop_i32(i32 %a) {
 
 define i16 @var_ctpop_i16(i16 %a) {
 ; NOPOPCNT-LABEL: 'var_ctpop_i16'
-; NOPOPCNT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctpop = call i16 @llvm.ctpop.i16(i16 %a)
+; NOPOPCNT-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %ctpop = call i16 @llvm.ctpop.i16(i16 %a)
 ; NOPOPCNT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %ctpop
 ;
 ; POPCNT-LABEL: 'var_ctpop_i16'
@@ -55,7 +55,7 @@ define i16 @var_ctpop_i16(i16 %a) {
 
 define i8 @var_ctpop_i8(i8 %a) {
 ; NOPOPCNT-LABEL: 'var_ctpop_i8'
-; NOPOPCNT-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctpop = call i8 @llvm.ctpop.i8(i8 %a)
+; NOPOPCNT-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %ctpop = call i8 @llvm.ctpop.i8(i8 %a)
 ; NOPOPCNT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i8 %ctpop
 ;
 ; POPCNT-LABEL: 'var_ctpop_i8'

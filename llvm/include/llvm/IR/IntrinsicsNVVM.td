@@ -276,6 +276,26 @@ class NVVM_MMA_SUPPORTED<list<WMMA_REGS> frags, string layout_a, string layout_b
   );
 }
 
+class SHFL_INFO<bit sync, string mode, string type, bit return_pred> {
+  string Suffix = !if(sync, "sync_", "")
+                  # mode # "_"
+                  # type
+                  # !if(return_pred, "p", "");
+
+  string Name = "int_nvvm_shfl_" # Suffix;
+  string Builtin = "__nvvm_shfl_" # Suffix;
+  string IntrName = "llvm.nvvm.shfl." # !subst("_",".", Suffix);
+  list<int> withGccBuiltin = !if(return_pred, [], [1]);
+  list<int> withoutGccBuiltin = !if(return_pred, [1], []);
+  LLVMType OpType = !cond(
+    !eq(type,"i32"): llvm_i32_ty,
+    !eq(type,"f32"): llvm_float_ty);
+  list<LLVMType> RetTy = !if(return_pred, [OpType, llvm_i1_ty], [OpType]);
+  list<LLVMType> ArgsTy = !if(sync,
+    [llvm_i32_ty, OpType, llvm_i32_ty, llvm_i32_ty],
+    [OpType, llvm_i32_ty, llvm_i32_ty]);
+}
+
 let TargetPrefix = "nvvm" in {
   def int_nvvm_prmt : GCCBuiltin<"__nvvm_prmt">,
       Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
@@ -3955,90 +3975,27 @@ def int_nvvm_read_ptx_sreg_warpsize : PTXReadSRegIntrinsic_r32<"warpsize">;
 //
 // SHUFFLE
 //
-
-// shfl.down.b32 dest, val, offset, mask_and_clamp
-def int_nvvm_shfl_down_i32 :
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.shfl.down.i32">,
-  GCCBuiltin<"__nvvm_shfl_down_i32">;
-def int_nvvm_shfl_down_f32 :
-  Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.shfl.down.f32">,
-  GCCBuiltin<"__nvvm_shfl_down_f32">;
-
-// shfl.up.b32 dest, val, offset, mask_and_clamp
-def int_nvvm_shfl_up_i32 :
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.shfl.up.i32">,
-  GCCBuiltin<"__nvvm_shfl_up_i32">;
-def int_nvvm_shfl_up_f32 :
-  Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.shfl.up.f32">,
-  GCCBuiltin<"__nvvm_shfl_up_f32">;
-
-// shfl.bfly.b32 dest, val, offset, mask_and_clamp
-def int_nvvm_shfl_bfly_i32 :
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.shfl.bfly.i32">,
-  GCCBuiltin<"__nvvm_shfl_bfly_i32">;
-def int_nvvm_shfl_bfly_f32 :
-  Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.shfl.bfly.f32">,
-  GCCBuiltin<"__nvvm_shfl_bfly_f32">;
-
-// shfl.idx.b32 dest, val, lane, mask_and_clamp
-def int_nvvm_shfl_idx_i32 :
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.shfl.idx.i32">,
-  GCCBuiltin<"__nvvm_shfl_idx_i32">;
-def int_nvvm_shfl_idx_f32 :
-  Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.shfl.idx.f32">,
-  GCCBuiltin<"__nvvm_shfl_idx_f32">;
-
-// Synchronizing shfl variants available in CUDA-9.
-// On sm_70 these don't have to be convergent, so we may eventually want to
-// implement non-convergent variant of this intrinsic.
-
-// shfl.sync.down.b32 dest, threadmask, val, offset , mask_and_clamp
-def int_nvvm_shfl_sync_down_i32 :
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.shfl.sync.down.i32">,
-  GCCBuiltin<"__nvvm_shfl_sync_down_i32">;
-def int_nvvm_shfl_sync_down_f32 :
-  Intrinsic<[llvm_float_ty], [llvm_i32_ty, llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.shfl.sync.down.f32">,
-  GCCBuiltin<"__nvvm_shfl_sync_down_f32">;
-
-// shfl.sync.up.b32 dest, threadmask, val, offset, mask_and_clamp
-def int_nvvm_shfl_sync_up_i32 :
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.shfl.sync.up.i32">,
-  GCCBuiltin<"__nvvm_shfl_sync_up_i32">;
-def int_nvvm_shfl_sync_up_f32 :
-  Intrinsic<[llvm_float_ty], [llvm_i32_ty, llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.shfl.sync.up.f32">,
-  GCCBuiltin<"__nvvm_shfl_sync_up_f32">;
-
-// shfl.sync.bfly.b32 dest, threadmask, val, offset, mask_and_clamp
-def int_nvvm_shfl_sync_bfly_i32 :
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.shfl.sync.bfly.i32">,
-  GCCBuiltin<"__nvvm_shfl_sync_bfly_i32">;
-def int_nvvm_shfl_sync_bfly_f32 :
-  Intrinsic<[llvm_float_ty], [llvm_i32_ty, llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.shfl.sync.bfly.f32">,
-  GCCBuiltin<"__nvvm_shfl_sync_bfly_f32">;
-
-// shfl.sync.idx.b32 dest, threadmask, val, lane, mask_and_clamp
-def int_nvvm_shfl_sync_idx_i32 :
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.shfl.sync.idx.i32">,
-  GCCBuiltin<"__nvvm_shfl_sync_idx_i32">;
-def int_nvvm_shfl_sync_idx_f32 :
-  Intrinsic<[llvm_float_ty], [llvm_i32_ty, llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, IntrConvergent], "llvm.nvvm.shfl.sync.idx.f32">,
-  GCCBuiltin<"__nvvm_shfl_sync_idx_f32">;
+// Generate intrinsics for all variants of shfl instruction.
+foreach sync = [0, 1] in {
+  foreach mode = ["up", "down", "bfly", "idx"] in {
+    foreach type = ["i32", "f32"] in {
+      foreach return_pred = [0, 1] in {
+        foreach i = [SHFL_INFO<sync, mode, type, return_pred>] in {
+          foreach _ = i.withGccBuiltin in {
+            def i.Name : GCCBuiltin<i.Builtin>,
+                         Intrinsic<i.RetTy, i.ArgsTy,
+                                   [IntrInaccessibleMemOnly, IntrConvergent],
+                                   i.IntrName>;
+          }
+          foreach _ = i.withoutGccBuiltin in {
+            def i.Name : Intrinsic<i.RetTy, i.ArgsTy,
+                         [IntrInaccessibleMemOnly, IntrConvergent], i.IntrName>;
+          }
+        }
+      }
+    }
+  }
+}
 
 //
 // VOTE

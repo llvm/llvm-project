@@ -154,6 +154,11 @@ inline bool isAligned(MaybeAlign Lhs, uint64_t SizeInBytes) {
   return SizeInBytes % (*Lhs).value() == 0;
 }
 
+/// Checks that Addr is a multiple of the alignment.
+inline bool isAddrAligned(Align Lhs, const void *Addr) {
+  return isAligned(Lhs, reinterpret_cast<uintptr_t>(Addr));
+}
+
 /// Returns a multiple of A needed to store `Size` bytes.
 inline uint64_t alignTo(uint64_t Size, Align A) {
   return (Size + A.value() - 1) / A.value() * A.value();
@@ -165,10 +170,23 @@ inline uint64_t alignTo(uint64_t Size, MaybeAlign A) {
   return A ? alignTo(Size, A.getValue()) : Size;
 }
 
+/// Aligns `Addr` to `Alignment` bytes, rounding up.
+inline uintptr_t alignAddr(const void *Addr, Align Alignment) {
+  uintptr_t ArithAddr = reinterpret_cast<uintptr_t>(Addr);
+  assert(ArithAddr + Alignment.value() - 1 >= ArithAddr && "Overflow");
+  return alignTo(ArithAddr, Alignment);
+}
+
 /// Returns the offset to the next integer (mod 2**64) that is greater than
 /// or equal to \p Value and is a multiple of \p Align.
 inline uint64_t offsetToAlignment(uint64_t Value, Align Alignment) {
   return alignTo(Value, Alignment) - Value;
+}
+
+/// Returns the necessary adjustment for aligning `Addr` to `Alignment`
+/// bytes, rounding up.
+inline uint64_t offsetToAlignedAddr(const void *Addr, Align Alignment) {
+  return offsetToAlignment(reinterpret_cast<uintptr_t>(Addr), Alignment);
 }
 
 /// Returns the log2 of the alignment.

@@ -75,20 +75,47 @@ define void @ctlz_4i64() #0 {
 }
 
 define void @ctlz_4i32() #0 {
-; CHECK-LABEL: @ctlz_4i32(
-; CHECK-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 4
-; CHECK-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[CTLZ0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD0]], i1 false)
-; CHECK-NEXT:    [[CTLZ1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD1]], i1 false)
-; CHECK-NEXT:    [[CTLZ2:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD2]], i1 false)
-; CHECK-NEXT:    [[CTLZ3:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD3]], i1 false)
-; CHECK-NEXT:    store i32 [[CTLZ0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 4
-; CHECK-NEXT:    store i32 [[CTLZ1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 4
-; CHECK-NEXT:    store i32 [[CTLZ2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 4
-; CHECK-NEXT:    store i32 [[CTLZ3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 4
-; CHECK-NEXT:    ret void
+; SSE2-LABEL: @ctlz_4i32(
+; SSE2-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 4
+; SSE2-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 4
+; SSE2-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 4
+; SSE2-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 4
+; SSE2-NEXT:    [[CTLZ0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD0]], i1 false)
+; SSE2-NEXT:    [[CTLZ1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD1]], i1 false)
+; SSE2-NEXT:    [[CTLZ2:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD2]], i1 false)
+; SSE2-NEXT:    [[CTLZ3:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD3]], i1 false)
+; SSE2-NEXT:    store i32 [[CTLZ0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 4
+; SSE2-NEXT:    store i32 [[CTLZ1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 4
+; SSE2-NEXT:    store i32 [[CTLZ2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 4
+; SSE2-NEXT:    store i32 [[CTLZ3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 4
+; SSE2-NEXT:    ret void
+;
+; SSE42-LABEL: @ctlz_4i32(
+; SSE42-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 4
+; SSE42-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP1]], i1 false)
+; SSE42-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 4
+; SSE42-NEXT:    ret void
+;
+; AVX1-LABEL: @ctlz_4i32(
+; AVX1-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 4
+; AVX1-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP1]], i1 false)
+; AVX1-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 4
+; AVX1-NEXT:    ret void
+;
+; AVX2-LABEL: @ctlz_4i32(
+; AVX2-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 4
+; AVX2-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 4
+; AVX2-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 4
+; AVX2-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 4
+; AVX2-NEXT:    [[CTLZ0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD0]], i1 false)
+; AVX2-NEXT:    [[CTLZ1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD1]], i1 false)
+; AVX2-NEXT:    [[CTLZ2:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD2]], i1 false)
+; AVX2-NEXT:    [[CTLZ3:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD3]], i1 false)
+; AVX2-NEXT:    store i32 [[CTLZ0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 4
+; AVX2-NEXT:    store i32 [[CTLZ1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 4
+; AVX2-NEXT:    store i32 [[CTLZ2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 4
+; AVX2-NEXT:    store i32 [[CTLZ3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 4
+; AVX2-NEXT:    ret void
 ;
   %ld0 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 4
   %ld1 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 4
@@ -106,65 +133,47 @@ define void @ctlz_4i32() #0 {
 }
 
 define void @ctlz_8i32() #0 {
-; SSE-LABEL: @ctlz_8i32(
-; SSE-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 2
-; SSE-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 2
-; SSE-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 2
-; SSE-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 2
-; SSE-NEXT:    [[LD4:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4), align 2
-; SSE-NEXT:    [[LD5:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 5), align 2
-; SSE-NEXT:    [[LD6:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 6), align 2
-; SSE-NEXT:    [[LD7:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 7), align 2
-; SSE-NEXT:    [[CTLZ0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD0]], i1 false)
-; SSE-NEXT:    [[CTLZ1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD1]], i1 false)
-; SSE-NEXT:    [[CTLZ2:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD2]], i1 false)
-; SSE-NEXT:    [[CTLZ3:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD3]], i1 false)
-; SSE-NEXT:    [[CTLZ4:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD4]], i1 false)
-; SSE-NEXT:    [[CTLZ5:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD5]], i1 false)
-; SSE-NEXT:    [[CTLZ6:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD6]], i1 false)
-; SSE-NEXT:    [[CTLZ7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD7]], i1 false)
-; SSE-NEXT:    store i32 [[CTLZ0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 2
-; SSE-NEXT:    store i32 [[CTLZ1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 2
-; SSE-NEXT:    store i32 [[CTLZ2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 2
-; SSE-NEXT:    store i32 [[CTLZ3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 2
-; SSE-NEXT:    store i32 [[CTLZ4]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 4), align 2
-; SSE-NEXT:    store i32 [[CTLZ5]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 5), align 2
-; SSE-NEXT:    store i32 [[CTLZ6]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 6), align 2
-; SSE-NEXT:    store i32 [[CTLZ7]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 7), align 2
-; SSE-NEXT:    ret void
+; SSE2-LABEL: @ctlz_8i32(
+; SSE2-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 2
+; SSE2-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 2
+; SSE2-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 2
+; SSE2-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 2
+; SSE2-NEXT:    [[LD4:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4), align 2
+; SSE2-NEXT:    [[LD5:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 5), align 2
+; SSE2-NEXT:    [[LD6:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 6), align 2
+; SSE2-NEXT:    [[LD7:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 7), align 2
+; SSE2-NEXT:    [[CTLZ0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD0]], i1 false)
+; SSE2-NEXT:    [[CTLZ1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD1]], i1 false)
+; SSE2-NEXT:    [[CTLZ2:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD2]], i1 false)
+; SSE2-NEXT:    [[CTLZ3:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD3]], i1 false)
+; SSE2-NEXT:    [[CTLZ4:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD4]], i1 false)
+; SSE2-NEXT:    [[CTLZ5:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD5]], i1 false)
+; SSE2-NEXT:    [[CTLZ6:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD6]], i1 false)
+; SSE2-NEXT:    [[CTLZ7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD7]], i1 false)
+; SSE2-NEXT:    store i32 [[CTLZ0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 2
+; SSE2-NEXT:    store i32 [[CTLZ1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 2
+; SSE2-NEXT:    store i32 [[CTLZ2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 2
+; SSE2-NEXT:    store i32 [[CTLZ3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 2
+; SSE2-NEXT:    store i32 [[CTLZ4]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 4), align 2
+; SSE2-NEXT:    store i32 [[CTLZ5]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 5), align 2
+; SSE2-NEXT:    store i32 [[CTLZ6]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 6), align 2
+; SSE2-NEXT:    store i32 [[CTLZ7]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 7), align 2
+; SSE2-NEXT:    ret void
 ;
-; AVX1-LABEL: @ctlz_8i32(
-; AVX1-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 2
-; AVX1-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 2
-; AVX1-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 2
-; AVX1-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 2
-; AVX1-NEXT:    [[LD4:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4), align 2
-; AVX1-NEXT:    [[LD5:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 5), align 2
-; AVX1-NEXT:    [[LD6:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 6), align 2
-; AVX1-NEXT:    [[LD7:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 7), align 2
-; AVX1-NEXT:    [[CTLZ0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD0]], i1 false)
-; AVX1-NEXT:    [[CTLZ1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD1]], i1 false)
-; AVX1-NEXT:    [[CTLZ2:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD2]], i1 false)
-; AVX1-NEXT:    [[CTLZ3:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD3]], i1 false)
-; AVX1-NEXT:    [[CTLZ4:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD4]], i1 false)
-; AVX1-NEXT:    [[CTLZ5:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD5]], i1 false)
-; AVX1-NEXT:    [[CTLZ6:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD6]], i1 false)
-; AVX1-NEXT:    [[CTLZ7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD7]], i1 false)
-; AVX1-NEXT:    store i32 [[CTLZ0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 2
-; AVX1-NEXT:    store i32 [[CTLZ1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 2
-; AVX1-NEXT:    store i32 [[CTLZ2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 2
-; AVX1-NEXT:    store i32 [[CTLZ3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 2
-; AVX1-NEXT:    store i32 [[CTLZ4]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 4), align 2
-; AVX1-NEXT:    store i32 [[CTLZ5]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 5), align 2
-; AVX1-NEXT:    store i32 [[CTLZ6]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 6), align 2
-; AVX1-NEXT:    store i32 [[CTLZ7]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 7), align 2
-; AVX1-NEXT:    ret void
+; SSE42-LABEL: @ctlz_8i32(
+; SSE42-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 2
+; SSE42-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4) to <4 x i32>*), align 2
+; SSE42-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP1]], i1 false)
+; SSE42-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP2]], i1 false)
+; SSE42-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 2
+; SSE42-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 4) to <4 x i32>*), align 2
+; SSE42-NEXT:    ret void
 ;
-; AVX2-LABEL: @ctlz_8i32(
-; AVX2-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([8 x i32]* @src32 to <8 x i32>*), align 2
-; AVX2-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> [[TMP1]], i1 false)
-; AVX2-NEXT:    store <8 x i32> [[TMP2]], <8 x i32>* bitcast ([8 x i32]* @dst32 to <8 x i32>*), align 2
-; AVX2-NEXT:    ret void
+; AVX-LABEL: @ctlz_8i32(
+; AVX-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([8 x i32]* @src32 to <8 x i32>*), align 2
+; AVX-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> [[TMP1]], i1 false)
+; AVX-NEXT:    store <8 x i32> [[TMP2]], <8 x i32>* bitcast ([8 x i32]* @dst32 to <8 x i32>*), align 2
+; AVX-NEXT:    ret void
 ;
   %ld0 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 2
   %ld1 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 2
@@ -516,20 +525,47 @@ define void @ctlz_undef_4i64() #0 {
 }
 
 define void @ctlz_undef_4i32() #0 {
-; CHECK-LABEL: @ctlz_undef_4i32(
-; CHECK-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 4
-; CHECK-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[CTLZ0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD0]], i1 true)
-; CHECK-NEXT:    [[CTLZ1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD1]], i1 true)
-; CHECK-NEXT:    [[CTLZ2:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD2]], i1 true)
-; CHECK-NEXT:    [[CTLZ3:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD3]], i1 true)
-; CHECK-NEXT:    store i32 [[CTLZ0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 4
-; CHECK-NEXT:    store i32 [[CTLZ1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 4
-; CHECK-NEXT:    store i32 [[CTLZ2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 4
-; CHECK-NEXT:    store i32 [[CTLZ3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 4
-; CHECK-NEXT:    ret void
+; SSE2-LABEL: @ctlz_undef_4i32(
+; SSE2-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 4
+; SSE2-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 4
+; SSE2-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 4
+; SSE2-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 4
+; SSE2-NEXT:    [[CTLZ0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD0]], i1 true)
+; SSE2-NEXT:    [[CTLZ1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD1]], i1 true)
+; SSE2-NEXT:    [[CTLZ2:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD2]], i1 true)
+; SSE2-NEXT:    [[CTLZ3:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD3]], i1 true)
+; SSE2-NEXT:    store i32 [[CTLZ0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 4
+; SSE2-NEXT:    store i32 [[CTLZ1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 4
+; SSE2-NEXT:    store i32 [[CTLZ2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 4
+; SSE2-NEXT:    store i32 [[CTLZ3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 4
+; SSE2-NEXT:    ret void
+;
+; SSE42-LABEL: @ctlz_undef_4i32(
+; SSE42-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 4
+; SSE42-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP1]], i1 true)
+; SSE42-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 4
+; SSE42-NEXT:    ret void
+;
+; AVX1-LABEL: @ctlz_undef_4i32(
+; AVX1-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 4
+; AVX1-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP1]], i1 true)
+; AVX1-NEXT:    store <4 x i32> [[TMP2]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 4
+; AVX1-NEXT:    ret void
+;
+; AVX2-LABEL: @ctlz_undef_4i32(
+; AVX2-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 4
+; AVX2-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 4
+; AVX2-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 4
+; AVX2-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 4
+; AVX2-NEXT:    [[CTLZ0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD0]], i1 true)
+; AVX2-NEXT:    [[CTLZ1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD1]], i1 true)
+; AVX2-NEXT:    [[CTLZ2:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD2]], i1 true)
+; AVX2-NEXT:    [[CTLZ3:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD3]], i1 true)
+; AVX2-NEXT:    store i32 [[CTLZ0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 4
+; AVX2-NEXT:    store i32 [[CTLZ1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 4
+; AVX2-NEXT:    store i32 [[CTLZ2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 4
+; AVX2-NEXT:    store i32 [[CTLZ3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 4
+; AVX2-NEXT:    ret void
 ;
   %ld0 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 4
   %ld1 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 4
@@ -547,65 +583,47 @@ define void @ctlz_undef_4i32() #0 {
 }
 
 define void @ctlz_undef_8i32() #0 {
-; SSE-LABEL: @ctlz_undef_8i32(
-; SSE-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 2
-; SSE-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 2
-; SSE-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 2
-; SSE-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 2
-; SSE-NEXT:    [[LD4:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4), align 2
-; SSE-NEXT:    [[LD5:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 5), align 2
-; SSE-NEXT:    [[LD6:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 6), align 2
-; SSE-NEXT:    [[LD7:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 7), align 2
-; SSE-NEXT:    [[CTLZ0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD0]], i1 true)
-; SSE-NEXT:    [[CTLZ1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD1]], i1 true)
-; SSE-NEXT:    [[CTLZ2:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD2]], i1 true)
-; SSE-NEXT:    [[CTLZ3:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD3]], i1 true)
-; SSE-NEXT:    [[CTLZ4:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD4]], i1 true)
-; SSE-NEXT:    [[CTLZ5:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD5]], i1 true)
-; SSE-NEXT:    [[CTLZ6:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD6]], i1 true)
-; SSE-NEXT:    [[CTLZ7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD7]], i1 true)
-; SSE-NEXT:    store i32 [[CTLZ0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 2
-; SSE-NEXT:    store i32 [[CTLZ1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 2
-; SSE-NEXT:    store i32 [[CTLZ2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 2
-; SSE-NEXT:    store i32 [[CTLZ3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 2
-; SSE-NEXT:    store i32 [[CTLZ4]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 4), align 2
-; SSE-NEXT:    store i32 [[CTLZ5]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 5), align 2
-; SSE-NEXT:    store i32 [[CTLZ6]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 6), align 2
-; SSE-NEXT:    store i32 [[CTLZ7]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 7), align 2
-; SSE-NEXT:    ret void
+; SSE2-LABEL: @ctlz_undef_8i32(
+; SSE2-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 2
+; SSE2-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 2
+; SSE2-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 2
+; SSE2-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 2
+; SSE2-NEXT:    [[LD4:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4), align 2
+; SSE2-NEXT:    [[LD5:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 5), align 2
+; SSE2-NEXT:    [[LD6:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 6), align 2
+; SSE2-NEXT:    [[LD7:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 7), align 2
+; SSE2-NEXT:    [[CTLZ0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD0]], i1 true)
+; SSE2-NEXT:    [[CTLZ1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD1]], i1 true)
+; SSE2-NEXT:    [[CTLZ2:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD2]], i1 true)
+; SSE2-NEXT:    [[CTLZ3:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD3]], i1 true)
+; SSE2-NEXT:    [[CTLZ4:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD4]], i1 true)
+; SSE2-NEXT:    [[CTLZ5:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD5]], i1 true)
+; SSE2-NEXT:    [[CTLZ6:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD6]], i1 true)
+; SSE2-NEXT:    [[CTLZ7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD7]], i1 true)
+; SSE2-NEXT:    store i32 [[CTLZ0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 2
+; SSE2-NEXT:    store i32 [[CTLZ1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 2
+; SSE2-NEXT:    store i32 [[CTLZ2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 2
+; SSE2-NEXT:    store i32 [[CTLZ3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 2
+; SSE2-NEXT:    store i32 [[CTLZ4]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 4), align 2
+; SSE2-NEXT:    store i32 [[CTLZ5]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 5), align 2
+; SSE2-NEXT:    store i32 [[CTLZ6]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 6), align 2
+; SSE2-NEXT:    store i32 [[CTLZ7]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 7), align 2
+; SSE2-NEXT:    ret void
 ;
-; AVX1-LABEL: @ctlz_undef_8i32(
-; AVX1-NEXT:    [[LD0:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 2
-; AVX1-NEXT:    [[LD1:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 2
-; AVX1-NEXT:    [[LD2:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 2), align 2
-; AVX1-NEXT:    [[LD3:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 3), align 2
-; AVX1-NEXT:    [[LD4:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4), align 2
-; AVX1-NEXT:    [[LD5:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 5), align 2
-; AVX1-NEXT:    [[LD6:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 6), align 2
-; AVX1-NEXT:    [[LD7:%.*]] = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 7), align 2
-; AVX1-NEXT:    [[CTLZ0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD0]], i1 true)
-; AVX1-NEXT:    [[CTLZ1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD1]], i1 true)
-; AVX1-NEXT:    [[CTLZ2:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD2]], i1 true)
-; AVX1-NEXT:    [[CTLZ3:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD3]], i1 true)
-; AVX1-NEXT:    [[CTLZ4:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD4]], i1 true)
-; AVX1-NEXT:    [[CTLZ5:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD5]], i1 true)
-; AVX1-NEXT:    [[CTLZ6:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD6]], i1 true)
-; AVX1-NEXT:    [[CTLZ7:%.*]] = call i32 @llvm.ctlz.i32(i32 [[LD7]], i1 true)
-; AVX1-NEXT:    store i32 [[CTLZ0]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 0), align 2
-; AVX1-NEXT:    store i32 [[CTLZ1]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 1), align 2
-; AVX1-NEXT:    store i32 [[CTLZ2]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 2), align 2
-; AVX1-NEXT:    store i32 [[CTLZ3]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 3), align 2
-; AVX1-NEXT:    store i32 [[CTLZ4]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 4), align 2
-; AVX1-NEXT:    store i32 [[CTLZ5]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 5), align 2
-; AVX1-NEXT:    store i32 [[CTLZ6]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 6), align 2
-; AVX1-NEXT:    store i32 [[CTLZ7]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 7), align 2
-; AVX1-NEXT:    ret void
+; SSE42-LABEL: @ctlz_undef_8i32(
+; SSE42-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([8 x i32]* @src32 to <4 x i32>*), align 2
+; SSE42-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 4) to <4 x i32>*), align 2
+; SSE42-NEXT:    [[TMP3:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP1]], i1 true)
+; SSE42-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[TMP2]], i1 true)
+; SSE42-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* bitcast ([8 x i32]* @dst32 to <4 x i32>*), align 2
+; SSE42-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* bitcast (i32* getelementptr inbounds ([8 x i32], [8 x i32]* @dst32, i32 0, i64 4) to <4 x i32>*), align 2
+; SSE42-NEXT:    ret void
 ;
-; AVX2-LABEL: @ctlz_undef_8i32(
-; AVX2-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([8 x i32]* @src32 to <8 x i32>*), align 2
-; AVX2-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> [[TMP1]], i1 true)
-; AVX2-NEXT:    store <8 x i32> [[TMP2]], <8 x i32>* bitcast ([8 x i32]* @dst32 to <8 x i32>*), align 2
-; AVX2-NEXT:    ret void
+; AVX-LABEL: @ctlz_undef_8i32(
+; AVX-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([8 x i32]* @src32 to <8 x i32>*), align 2
+; AVX-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> [[TMP1]], i1 true)
+; AVX-NEXT:    store <8 x i32> [[TMP2]], <8 x i32>* bitcast ([8 x i32]* @dst32 to <8 x i32>*), align 2
+; AVX-NEXT:    ret void
 ;
   %ld0 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 0), align 2
   %ld1 = load i32, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @src32, i32 0, i64 1), align 2

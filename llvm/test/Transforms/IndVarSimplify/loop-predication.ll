@@ -781,6 +781,81 @@ exit:
   ret i32 %result
 }
 
+; If we have a dominating exit (exit1) which can't be itself rewritten, we
+; can't rewrite a later exit (exit2).  Doing so would cause the loop to exit
+; from the exit2 when it should have exited from exit1.
+; FIXME: This currently demonstrates a miscompile.
+define i32 @neg_dominating_exit(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @neg_dominating_exit(
+; CHECK-NEXT:  loop.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[N:%.*]], 1
+; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[LENGTH:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP2]], i32 [[LENGTH]], i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[LENGTH]], [[UMIN]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED2:%.*]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED2]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH]]
+; CHECK-NEXT:    br i1 [[WITHIN_BOUNDS]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK:       deopt:
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC]], [[LOOP]] ]
+; CHECK-NEXT:    call void @prevent_merging()
+; CHECK-NEXT:    ret i32 [[RESULT]]
+; CHECK:       guarded:
+; CHECK-NEXT:    br i1 [[TMP3]], label [[GUARDED2]], label [[DEOPT2:%.*]], !prof !0
+; CHECK:       deopt2:
+; CHECK-NEXT:    call void @prevent_merging()
+; CHECK-NEXT:    ret i32 -1
+; CHECK:       guarded2:
+; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
+; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY:%.*]], i64 [[I_I64]]
+; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
+; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RESULT2:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED2]] ]
+; CHECK-NEXT:    ret i32 [[RESULT2]]
+;
+loop.preheader:                                   ; preds = %entry
+  br label %loop
+
+loop:                                             ; preds = %guarded, %loop.preheader
+  %loop.acc = phi i32 [ %loop.acc.next, %guarded2 ], [ 0, %loop.preheader ]
+  %i = phi i32 [ %i.next, %guarded2 ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  br i1 %within.bounds, label %guarded, label %deopt, !prof !0
+
+deopt:                                            ; preds = %loop
+  %result = phi i32 [ %loop.acc, %loop ]
+  call void @prevent_merging()
+  ret i32 %result
+
+guarded:                                          ; preds = %loop
+  %within.bounds2 = icmp ult i32 %i, %length
+  br i1 %within.bounds2, label %guarded2, label %deopt2, !prof !0
+
+deopt2:                                            ; preds = %loop
+  call void @prevent_merging()
+  ret i32 -1
+
+guarded2:                                          ; preds = %loop
+  %i.i64 = zext i32 %i to i64
+  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
+  %array.i = load i32, i32* %array.i.ptr, align 4
+  %loop.acc.next = add i32 %loop.acc, %array.i
+  %i.next = add nuw i32 %i, 1
+  %continue = icmp ult i32 %i.next, %n
+  br i1 %continue, label %loop, label %exit
+
+exit:                                             ; preds = %guarded, %entry
+  %result2 = phi i32 [ %loop.acc.next, %guarded2 ]
+  ret i32 %result2
+}
 
 
 declare i32 @llvm.experimental.deoptimize.i32(...)

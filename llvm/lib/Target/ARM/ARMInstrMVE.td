@@ -3501,6 +3501,18 @@ defm MVE_VQMOVNu32  : MVE_VxMOVxN_halves<"vqmovn",  "u32", 0b1, 0b1, 0b01>;
 defm MVE_VQMOVUNs16 : MVE_VxMOVxN_halves<"vqmovun", "s16", 0b0, 0b0, 0b00>;
 defm MVE_VQMOVUNs32 : MVE_VxMOVxN_halves<"vqmovun", "s32", 0b0, 0b0, 0b01>;
 
+def MVEvmovn       : SDNode<"ARMISD::VMOVN", SDTARMVEXT>;
+let Predicates = [HasMVEInt] in {
+  def : Pat<(v8i16 (MVEvmovn (v8i16 MQPR:$Qd_src), (v8i16 MQPR:$Qm), (i32 0))),
+            (v8i16 (MVE_VMOVNi32bh (v8i16 MQPR:$Qd_src), (v8i16 MQPR:$Qm)))>;
+  def : Pat<(v8i16 (MVEvmovn (v8i16 MQPR:$Qd_src), (v8i16 MQPR:$Qm), (i32 1))),
+            (v8i16 (MVE_VMOVNi32th (v8i16 MQPR:$Qd_src), (v8i16 MQPR:$Qm)))>;
+  def : Pat<(v16i8 (MVEvmovn (v16i8 MQPR:$Qd_src), (v16i8 MQPR:$Qm), (i32 0))),
+            (v16i8 (MVE_VMOVNi16bh (v16i8 MQPR:$Qd_src), (v16i8 MQPR:$Qm)))>;
+  def : Pat<(v16i8 (MVEvmovn (v16i8 MQPR:$Qd_src), (v16i8 MQPR:$Qm), (i32 1))),
+            (v16i8 (MVE_VMOVNi16th (v16i8 MQPR:$Qd_src), (v16i8 MQPR:$Qm)))>;
+}
+
 class MVE_VCVT_ff<string iname, string suffix, bit op, bit T,
                   list<dag> pattern=[]>
   : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd), (ins MQPR:$Qd_src, MQPR:$Qm),

@@ -42,9 +42,9 @@ body:             |
     ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s32)
     ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
-    ; CHECK: %5:_(s64) = nuw G_ADD [[MUL]], [[C1]]
+    ; CHECK: [[ADD:%[0-9]+]]:_(s64) = nuw G_ADD [[MUL]], [[C1]]
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
-    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND %5, [[C2]]
+    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
     ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $sp
     ; CHECK: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p0)
     ; CHECK: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[PTRTOINT]], [[AND]]
@@ -88,9 +88,9 @@ body:             |
     ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s32)
     ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
-    ; CHECK: %5:_(s64) = nuw G_ADD [[MUL]], [[C1]]
+    ; CHECK: [[ADD:%[0-9]+]]:_(s64) = nuw G_ADD [[MUL]], [[C1]]
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
-    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND %5, [[C2]]
+    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
     ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $sp
     ; CHECK: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p0)
     ; CHECK: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[PTRTOINT]], [[AND]]
@@ -136,9 +136,9 @@ body:             |
     ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s32)
     ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
-    ; CHECK: %5:_(s64) = nuw G_ADD [[MUL]], [[C1]]
+    ; CHECK: [[ADD:%[0-9]+]]:_(s64) = nuw G_ADD [[MUL]], [[C1]]
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
-    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND %5, [[C2]]
+    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
     ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $sp
     ; CHECK: [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY1]](p0)
     ; CHECK: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[PTRTOINT]], [[AND]]

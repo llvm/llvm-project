@@ -667,25 +667,6 @@ constexpr inline uint64_t MinAlign(uint64_t A, uint64_t B) {
   return (A | B) & (1 + ~(A | B));
 }
 
-/// Aligns \c Addr to \c Alignment bytes, rounding up.
-///
-/// Alignment should be a power of two.  This method rounds up, so
-/// alignAddr(7, 4) == 8 and alignAddr(8, 4) == 8.
-inline uintptr_t alignAddr(const void *Addr, size_t Alignment) {
-  assert(Alignment && isPowerOf2_64((uint64_t)Alignment) &&
-         "Alignment is not a power of two!");
-
-  assert((uintptr_t)Addr + Alignment - 1 >= (uintptr_t)Addr);
-
-  return (((uintptr_t)Addr + Alignment - 1) & ~(uintptr_t)(Alignment - 1));
-}
-
-/// Returns the necessary adjustment for aligning \c Ptr to \c Alignment
-/// bytes, rounding up.
-inline size_t alignmentAdjustment(const void *Ptr, size_t Alignment) {
-  return alignAddr(Ptr, Alignment) - (uintptr_t)Ptr;
-}
-
 /// Returns the next power of two (in 64-bits) that is strictly greater than A.
 /// Returns zero on overflow.
 inline uint64_t NextPowerOf2(uint64_t A) {

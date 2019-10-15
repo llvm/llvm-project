@@ -365,7 +365,7 @@ def executeBuiltinDiff(cmd, cmd_shenv):
     """executeBuiltinDiff - Compare files line by line."""
     args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
     try:
-        opts, args = getopt.gnu_getopt(args, "wbur", ["strip-trailing-cr"])
+        opts, args = getopt.gnu_getopt(args, "wbuU:r", ["strip-trailing-cr"])
     except getopt.GetoptError as err:
         raise InternalShellError(cmd, "Unsupported: 'diff':  %s" % str(err))
 
@@ -373,6 +373,7 @@ def executeBuiltinDiff(cmd, cmd_shenv):
     ignore_all_space = False
     ignore_space_change = False
     unified_diff = False
+    num_context_lines = 3
     recursive_diff = False
     strip_trailing_cr = False
     for o, a in opts:
@@ -382,6 +383,16 @@ def executeBuiltinDiff(cmd, cmd_shenv):
             ignore_space_change = True
         elif o == "-u":
             unified_diff = True
+        elif o.startswith("-U"):
+            unified_diff = True
+            try:
+                num_context_lines = int(a)
+                if num_context_lines < 0:
+                    raise ValueException
+            except:
+                raise InternalShellError(cmd,
+                                         "Error: invalid '-U' argument: {}\n"
+                                         .format(a))
         elif o == "-r":
             recursive_diff = True
         elif o == "--strip-trailing-cr":
@@ -433,12 +444,16 @@ def executeBuiltinDiff(cmd, cmd_shenv):
         exitCode = 0
         if hasattr(difflib, 'diff_bytes'):
             # python 3.5 or newer
-            diffs = difflib.diff_bytes(difflib.unified_diff, filelines[0], filelines[1], filepaths[0].encode(), filepaths[1].encode())
+            diffs = difflib.diff_bytes(difflib.unified_diff, filelines[0],
+                                       filelines[1], filepaths[0].encode(),
+                                       filepaths[1].encode(),
+                                       n = num_context_lines)
             diffs = [diff.decode() for diff in diffs]
         else:
             # python 2.7
             func = difflib.unified_diff if unified_diff else difflib.context_diff
-            diffs = func(filelines[0], filelines[1], filepaths[0], filepaths[1])
+            diffs = func(filelines[0], filelines[1], filepaths[0], filepaths[1],
+                         n = num_context_lines)
 
         for diff in diffs:
             stdout.write(diff)
@@ -471,7 +486,8 @@ def executeBuiltinDiff(cmd, cmd_shenv):
             filelines[idx]= [f(line) for line in lines]
 
         func = difflib.unified_diff if unified_diff else difflib.context_diff
-        for diff in func(filelines[0], filelines[1], filepaths[0], filepaths[1]):
+        for diff in func(filelines[0], filelines[1], filepaths[0], filepaths[1],
+                         n = num_context_lines):
             stdout.write(diff)
             exitCode = 1
         return exitCode

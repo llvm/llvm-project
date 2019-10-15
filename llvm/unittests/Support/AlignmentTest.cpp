@@ -90,6 +90,11 @@ TEST(AlignmentTest, AlignTo) {
     uint64_t alignment;
     uint64_t offset;
     uint64_t rounded;
+    const void *forgedAddr() const {
+      //  A value of any integral or enumeration type can be converted to a
+      //  pointer type.
+      return reinterpret_cast<const void *>(offset);
+    }
   } kTests[] = {
       // MaybeAlign
       {0, 0, 0},
@@ -116,6 +121,7 @@ TEST(AlignmentTest, AlignTo) {
     // Test Align
     if (A) {
       EXPECT_EQ(alignTo(T.offset, A.getValue()), T.rounded);
+      EXPECT_EQ(alignAddr(T.forgedAddr(), A.getValue()), T.rounded);
     }
   }
 }
@@ -174,13 +180,17 @@ TEST(AlignmentTest, Encode_Decode) {
   EXPECT_EQ(Expected, Actual);
 }
 
-TEST(AlignmentTest, isAligned) {
+TEST(AlignmentTest, isAligned_isAddrAligned) {
   struct {
     uint64_t alignment;
     uint64_t offset;
     bool isAligned;
+    const void *forgedAddr() const {
+      //  A value of any integral or enumeration type can be converted to a
+      //  pointer type.
+      return reinterpret_cast<const void *>(offset);
+    }
   } kTests[] = {
-      // MaybeAlign / Align
       {1, 0, true},  {1, 1, true},  {1, 5, true},  {2, 0, true},
       {2, 1, false}, {2, 2, true},  {2, 7, false}, {2, 16, true},
       {4, 0, true},  {4, 1, false}, {4, 4, true},  {4, 6, false},
@@ -192,7 +202,29 @@ TEST(AlignmentTest, isAligned) {
     // Test Align
     if (A) {
       EXPECT_EQ(isAligned(A.getValue(), T.offset), T.isAligned);
+      EXPECT_EQ(isAddrAligned(A.getValue(), T.forgedAddr()), T.isAligned);
     }
+  }
+}
+
+TEST(AlignmentTest, offsetToAlignment) {
+  struct {
+    uint64_t alignment;
+    uint64_t offset;
+    uint64_t alignedOffset;
+    const void *forgedAddr() const {
+      //  A value of any integral or enumeration type can be converted to a
+      //  pointer type.
+      return reinterpret_cast<const void *>(offset);
+    }
+  } kTests[] = {
+      {1, 0, 0}, {1, 1, 0},  {1, 5, 0}, {2, 0, 0}, {2, 1, 1}, {2, 2, 0},
+      {2, 7, 1}, {2, 16, 0}, {4, 0, 0}, {4, 1, 3}, {4, 4, 0}, {4, 6, 2},
+  };
+  for (const auto &T : kTests) {
+    const Align A(T.alignment);
+    EXPECT_EQ(offsetToAlignment(T.offset, A), T.alignedOffset);
+    EXPECT_EQ(offsetToAlignedAddr(T.forgedAddr(), A), T.alignedOffset);
   }
 }
 
@@ -347,6 +379,12 @@ TEST(AlignmentDeathTest, CompareAlignToUndefMaybeAlign) {
     EXPECT_DEATH((void)(Align(Value) > MaybeAlign(0)), ".* should be defined");
     EXPECT_DEATH((void)(Align(Value) < MaybeAlign(0)), ".* should be defined");
   }
+}
+
+TEST(AlignmentDeathTest, AlignAddr) {
+  const void *const unaligned_high_ptr =
+      reinterpret_cast<const void *>(std::numeric_limits<uintptr_t>::max() - 1);
+  EXPECT_DEATH(alignAddr(unaligned_high_ptr, Align(16)), "Overflow");
 }
 
 #endif // NDEBUG

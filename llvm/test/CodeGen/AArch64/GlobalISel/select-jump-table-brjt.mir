@@ -57,7 +57,7 @@ body:             |
   ; CHECK:   successors: %bb.4(0x40000000), %bb.1(0x40000000)
   ; CHECK:   liveins: $w0
   ; CHECK:   [[COPY:%[0-9]+]]:gpr32common = COPY $w0
-  ; CHECK:   [[MOVi32imm:%[0-9]+]]:gpr32 = COPY $wzr
+  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32 = COPY $wzr
   ; CHECK:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 4, 0, implicit-def $nzcv
   ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[SUBSWri]], %subreg.sub_32
   ; CHECK:   [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[SUBREG_TO_REG]], 0, 31
@@ -65,7 +65,7 @@ body:             |
   ; CHECK:   Bcc 8, %bb.4, implicit $nzcv
   ; CHECK: bb.1.entry:
   ; CHECK:   successors: %bb.3(0x2aaaaaab), %bb.4(0x2aaaaaab), %bb.2(0x2aaaaaab)
-  ; CHECK:   [[MOVi32imm1:%[0-9]+]]:gpr32 = COPY $wzr
+  ; CHECK:   [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
   ; CHECK:   [[MOVaddrJT:%[0-9]+]]:gpr64 = MOVaddrJT target-flags(aarch64-page) %jump-table.0, target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0
   ; CHECK:   early-clobber %18:gpr64, early-clobber %19:gpr64sp = JumpTableDest32 [[MOVaddrJT]], [[UBFMXri]], %jump-table.0
   ; CHECK:   BR %18
@@ -75,10 +75,10 @@ body:             |
   ; CHECK:   B %bb.4
   ; CHECK: bb.3.sw.bb1:
   ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   [[MOVi32imm2:%[0-9]+]]:gpr32 = MOVi32imm 3
-  ; CHECK:   [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[MOVi32imm2]], $wzr
+  ; CHECK:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 3
+  ; CHECK:   [[MADDWrrr:%[0-9]+]]:gpr32 = MADDWrrr [[COPY]], [[MOVi32imm]], $wzr
   ; CHECK: bb.4.return:
-  ; CHECK:   [[PHI:%[0-9]+]]:gpr32 = PHI [[MADDWrrr]], %bb.3, [[ADDWri]], %bb.2, [[MOVi32imm]], %bb.0, [[MOVi32imm1]], %bb.1
+  ; CHECK:   [[PHI:%[0-9]+]]:gpr32 = PHI [[MADDWrrr]], %bb.3, [[ADDWri]], %bb.2, [[COPY1]], %bb.0, [[COPY2]], %bb.1
   ; CHECK:   $w0 = COPY [[PHI]]
   ; CHECK:   RET_ReallyLR implicit $w0
   bb.1.entry:
