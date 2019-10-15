@@ -3445,14 +3445,14 @@ The section names can be specified as:
 
 .. code-block:: c++
 
-  #pragma clang section bss="myBSS" data="myData" rodata="myRodata" text="myText"
+  #pragma clang section bss="myBSS" data="myData" rodata="myRodata" relro="myRelro" text="myText"
 
 The section names can be reverted back to default name by supplying an empty
 string to the section kind, for example:
 
 .. code-block:: c++
 
-  #pragma clang section bss="" data="" text="" rodata=""
+  #pragma clang section bss="" data="" text="" rodata="" relro=""
 
 The ``#pragma clang section`` directive obeys the following rules:
 

@@ -9768,6 +9768,7 @@ public:
   bool VisitCXXNoexceptExpr(const CXXNoexceptExpr *E);
   bool VisitSizeOfPackExpr(const SizeOfPackExpr *E);
   bool VisitSourceLocExpr(const SourceLocExpr *E);
+  bool VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E);
   // FIXME: Missing: array subscript of vector, member of vector
 };
 
@@ -12250,6 +12251,12 @@ bool IntExprEvaluator::VisitCXXNoexceptExpr(const CXXNoexceptExpr *E) {
   return Success(E->getValue(), E);
 }
 
+bool IntExprEvaluator::VisitConceptSpecializationExpr(
+       const ConceptSpecializationExpr *E) {
+  return Success(E->isSatisfied(), E);
+}
+
+
 bool FixedPointExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
   switch (E->getOpcode()) {
     default:
@@ -13923,6 +13930,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::CXXBoolLiteralExprClass:
   case Expr::CXXScalarValueInitExprClass:
   case Expr::TypeTraitExprClass:
+  case Expr::ConceptSpecializationExprClass:
   case Expr::ArrayTypeTraitExprClass:
   case Expr::ExpressionTraitExprClass:
   case Expr::CXXNoexceptExprClass:

@@ -976,9 +976,9 @@ def err_pragma_misplaced_in_decl : Error<"this pragma cannot appear in %0 declar
 
 // '#pragma clang section' related errors
 def err_pragma_expected_clang_section_name : Error<
-  "expected one of [bss|data|rodata|text] section kind in '#pragma %0'">;
+  "expected one of [bss|data|rodata|text|relro] section kind in '#pragma %0'">;
 def err_pragma_clang_section_expected_equal : Error<
-  "expected '=' following '#pragma clang section %select{invalid|bss|data|rodata|text}0'">;
+  "expected '=' following '#pragma clang section %select{invalid|bss|data|rodata|text|relro}0'">;
 def warn_pragma_expected_section_name : Warning<
   "expected a string literal for the section name in '#pragma %0' - ignored">,
   InGroup<IgnoredPragmas>;

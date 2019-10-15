@@ -228,18 +228,16 @@ ExprResult Parser::ParseCaseExpression(SourceLocation CaseLoc) {
 /// Parse a constraint-expression.
 ///
 /// \verbatim
-///       constraint-expression: [Concepts TS temp.constr.decl p1]
+///       constraint-expression: C++2a[temp.constr.decl]p1
 ///         logical-or-expression
 /// \endverbatim
 ExprResult Parser::ParseConstraintExpression() {
-  // FIXME: this may erroneously consume a function-body as the braced
-  // initializer list of a compound literal
-  //
-  // FIXME: this may erroneously consume a parenthesized rvalue reference
-  // declarator as a parenthesized address-of-label expression
+  EnterExpressionEvaluationContext ConstantEvaluated(
+      Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   ExprResult LHS(ParseCastExpression(/*isUnaryExpression=*/false));
   ExprResult Res(ParseRHSOfBinaryExpression(LHS, prec::LogicalOr));
-
+  if (Res.isUsable() && !Actions.CheckConstraintExpression(Res.get()))
+    return ExprError();
   return Res;
 }
 

@@ -45,12 +45,8 @@
 // CHECK-DAG: [[TT:%.+]] = type { i64, i8 }
 // CHECK-DAG: [[S1:%.+]] = type { double }
 // CHECK-DAG: [[ENTTY:%.+]] = type { i8*, i8*, i[[SZ:32|64]], i32, i32 }
-// CHECK-DAG: [[DEVTY:%.+]] = type { i8*, i8*, [[ENTTY]]*, [[ENTTY]]* }
-// CHECK-DAG: [[DSCTY:%.+]] = type { i32, [[DEVTY]]*, [[ENTTY]]*, [[ENTTY]]* }
 
 // TCHECK: [[ENTTY:%.+]] = type { i8*, i8*, i{{32|64}}, i32, i32 }
-
-// CHECK-DAG: $[[REGFN:\.omp_offloading\..+]] = comdat
 
 // We have 8 target regions, but only 6 that actually will generate offloading
 // code and have mapped arguments, and only 4 have all-constant map sizes.
@@ -89,16 +85,8 @@
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]
 // TCHECK-NOT: @{{.+}} = weak constant [[ENTTY]]
 
-// Check if offloading descriptor is created.
-// CHECK: [[ENTBEGIN:@.+]] = external hidden constant [[ENTTY]]
-// CHECK: [[ENTEND:@.+]] = external hidden constant [[ENTTY]]
-// CHECK: [[DEVBEGIN:@.+]] = extern_weak constant i8
-// CHECK: [[DEVEND:@.+]] = extern_weak constant i8
-// CHECK: [[IMAGES:@.+]] = internal unnamed_addr constant [1 x [[DEVTY]]] [{{.+}} { i8* [[DEVBEGIN]], i8* [[DEVEND]], [[ENTTY]]* [[ENTBEGIN]], [[ENTTY]]* [[ENTEND]] }], comdat($[[REGFN]])
-// CHECK: [[DESC:@.+]] = internal constant [[DSCTY]] { i32 1, [[DEVTY]]* getelementptr inbounds ([1 x [[DEVTY]]], [1 x [[DEVTY]]]* [[IMAGES]], i32 0, i32 0), [[ENTTY]]* [[ENTBEGIN]], [[ENTTY]]* [[ENTEND]] }, comdat($[[REGFN]])
-
 // Check target registration is registered as a Ctor.
-// CHECK: appending global [2 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* @.omp_offloading.requires_reg, i8* null }, { i32, void ()*, i8* } { i32 0, void ()* @[[REGFN]], i8* bitcast (void ()* @[[REGFN]] to i8*) }]
+// CHECK: appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* @.omp_offloading.requires_reg, i8* null }]
 
 
 template<typename tx, typename ty>
@@ -489,13 +477,13 @@ int foo(int n) {
 // CHECK:       define internal {{.*}}void [[OMP_OUTLINED4]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i[[SZ]] %{{.+}}, [10 x float]* {{.+}}, i[[SZ]] %{{.+}}, float* {{.+}}, [5 x [10 x double]]* {{.+}}, i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, double* {{.+}}, [[TT]]* {{.+}})
 // To reduce complexity, we're only going as far as validating the signature of the outlined parallel function.
 
-// CHECK: define {{.*}}void @__omp_offloading_{{.*}}foo{{.*}}_l346(i[[SZ]] %{{.+}})
+// CHECK: define {{.*}}void @__omp_offloading_{{.*}}foo{{.*}}_l334(i[[SZ]] %{{.+}})
 // CHECK: define internal void {{@.+}}(i32* {{.+}}, i32* {{.+}}, i[[SZ]] %{{.+}})
-// CHECK: define {{.*}}void @__omp_offloading_{{.*}}foo{{.*}}_l349(i[[SZ]] %{{.+}})
+// CHECK: define {{.*}}void @__omp_offloading_{{.*}}foo{{.*}}_l337(i[[SZ]] %{{.+}})
 // CHECK: define internal void {{@.+}}(i32* {{.+}}, i32* {{.+}}, i32* dereferenceable{{.+}})
 
 void bazzzz(int n, int f[n]) {
-// CHECK: define internal void @__omp_offloading_{{.+}}bazzzz{{.+}}_l501(i[[SZ]] %{{[^,]+}})
+// CHECK: define internal void @__omp_offloading_{{.+}}bazzzz{{.+}}_l489(i[[SZ]] %{{[^,]+}})
 // CHECK: [[VLA:%.+]] = load i[[SZ]], i[[SZ]]* %
 // CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_teams(%struct.ident_t* @{{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i[[SZ]])* @{{.+}} to void (i32*, i32*, ...)*), i[[SZ]] [[VLA]])
 #pragma omp target teams private(f)

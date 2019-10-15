@@ -180,12 +180,30 @@ void JSONNodeDumper::Visit(const GenericSelectionExpr::ConstAssociation &A) {
   attributeOnlyIfTrue("selected", A.isSelected());
 }
 
+void JSONNodeDumper::writeIncludeStack(PresumedLoc Loc, bool JustFirst) {
+  if (Loc.isInvalid())
+    return;
+
+  JOS.attributeBegin("includedFrom");
+  JOS.objectBegin();
+
+  if (!JustFirst) {
+    // Walk the stack recursively, then print out the presumed location.
+    writeIncludeStack(SM.getPresumedLoc(Loc.getIncludeLoc()));
+  }
+
+  JOS.attribute("file", Loc.getFilename());
+  JOS.objectEnd();
+  JOS.attributeEnd();
+}
+
 void JSONNodeDumper::writeBareSourceLocation(SourceLocation Loc,
                                              bool IsSpelling) {
   PresumedLoc Presumed = SM.getPresumedLoc(Loc);
   unsigned ActualLine = IsSpelling ? SM.getSpellingLineNumber(Loc)
                                    : SM.getExpansionLineNumber(Loc);
   if (Presumed.isValid()) {
+    JOS.attribute("offset", SM.getDecomposedLoc(Loc).second);
     if (LastLocFilename != Presumed.getFilename()) {
       JOS.attribute("file", Presumed.getFilename());
       JOS.attribute("line", ActualLine);
@@ -202,6 +220,12 @@ void JSONNodeDumper::writeBareSourceLocation(SourceLocation Loc,
     LastLocFilename = Presumed.getFilename();
     LastLocPresumedLine = PresumedLine;
     LastLocLine = ActualLine;
+
+    // Orthogonal to the file, line, and column de-duplication is whether the
+    // given location was a result of an include. If so, print where the
+    // include location came from.
+    writeIncludeStack(SM.getPresumedLoc(Presumed.getIncludeLoc()),
+                      /*JustFirst*/ true);
   }
 }
 

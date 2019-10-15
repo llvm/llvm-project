@@ -12662,6 +12662,11 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
           Context, PragmaClangRodataSection.SectionName,
           PragmaClangRodataSection.PragmaLocation,
           AttributeCommonInfo::AS_Pragma));
+    if (PragmaClangRelroSection.Valid)
+      VD->addAttr(PragmaClangRelroSectionAttr::CreateImplicit(
+          Context, PragmaClangRelroSection.SectionName,
+          PragmaClangRelroSection.PragmaLocation,
+          AttributeCommonInfo::AS_Pragma));
   }
 
   if (auto *DD = dyn_cast<DecompositionDecl>(ThisDecl)) {
