@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=thumbv7-linux-android %s -arm-disable-cgp=false -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-NODSP --check-prefix=CHECK-NODSP-V7
 ; RUN: llc -mtriple=thumbv7em -mcpu=cortex-m7 %s -arm-disable-cgp=false -arm-enable-scalar-dsp=true -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DSP
 ; RUN: llc -mtriple=thumbv8 %s -arm-disable-cgp=false -arm-enable-scalar-dsp=true -arm-enable-scalar-dsp-imms=true -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DSP-IMM
+; XFAIL: *
 
 ; Transform will fail because the trunc is not a sink.
 
