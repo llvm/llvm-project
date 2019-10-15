@@ -200,7 +200,7 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
     specs.Append(module_spec);
     break;
   case MachineArm64:
-    spec.SetTriple("aarch64-unknown-windows");
+    spec.SetTriple("aarch64-pc-windows");
     specs.Append(module_spec);
     break;
   default:
