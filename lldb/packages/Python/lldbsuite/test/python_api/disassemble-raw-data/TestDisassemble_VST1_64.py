@@ -19,11 +19,11 @@ class Disassemble_VST1_64(TestBase):
 
     @add_test_categories(['pyapi'])
     @no_debug_info_test
-    @skipIf(triple='^mips')
+    @skipIfLLVMTargetMissing("ARM")
     def test_disassemble_invalid_vst_1_64_raw_data(self):
         """Test disassembling invalid vst1.64 raw bytes with the API."""
         # Create a target from the debugger.
-        target = self.dbg.CreateTargetWithFileAndTargetTriple("", "thumbv7")
+        target = self.dbg.CreateTargetWithFileAndTargetTriple("", "thumbv7-apple-macosx")
         self.assertTrue(target, VALID_TARGET)
 
         raw_bytes = bytearray([0xf0, 0xb5, 0x03, 0xaf,
@@ -45,6 +45,11 @@ class Disassemble_VST1_64(TestBase):
 
         insts = target.GetInstructions(lldb.SBAddress(), raw_bytes)
 
+        if self.TraceOn():
+            print()
+            for i in insts:
+                print("Disassembled %s" % str(i))
+
         if sys.version_info.major >= 3:
             sio = StringIO()
             insts.Print(sio)
@@ -58,11 +63,6 @@ class Disassemble_VST1_64(TestBase):
                 sio = StringIO()
                 inst.Print(sio)
                 self.assertEqual(asm, sio.getvalue().strip())
-
-        if self.TraceOn():
-            print()
-            for i in insts:
-                print("Disassembled%s" % str(i))
 
         raw_bytes = bytearray([0x04, 0xf9, 0xed, 0x82])
 
