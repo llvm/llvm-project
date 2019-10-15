@@ -60,9 +60,9 @@ int main(int argc, char **argv) {
   static int a;
 // CHECK: static int a;
 #pragma omp taskgroup task_reduction(+: d)
-#pragma omp parallel master taskloop if(parallel: a) default(none) shared(a, argc) final(b) priority(5) num_tasks(argc) reduction(*: g)
+#pragma omp parallel master taskloop if(parallel: a) default(none) shared(a, b, argc) final(b) priority(5) num_tasks(argc) reduction(*: g)
   // CHECK-NEXT: #pragma omp taskgroup task_reduction(+: d)
-  // CHECK-NEXT: #pragma omp parallel master taskloop if(parallel: a) default(none) shared(a,argc) final(b) priority(5) num_tasks(argc) reduction(*: g)
+  // CHECK-NEXT: #pragma omp parallel master taskloop if(parallel: a) default(none) shared(a,b,argc) final(b) priority(5) num_tasks(argc) reduction(*: g)
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
