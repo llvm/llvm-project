@@ -39,7 +39,8 @@ using namespace lldb;
 using namespace lldb_private;
 using llvm::Expected;
 
-static Expected<const char *> GetStreamOpenModeFromOptions(uint32_t options) {
+Expected<const char *>
+File::GetStreamOpenModeFromOptions(File::OpenOptions options) {
   if (options & File::eOpenOptionAppend) {
     if (options & File::eOpenOptionRead) {
       if (options & File::eOpenOptionCanCreateNewOnly)
@@ -226,6 +227,12 @@ size_t File::PrintfVarArg(const char *format, va_list args) {
   return result;
 }
 
+Expected<File::OpenOptions> File::GetOptions() const {
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "GetOptions() not implemented for this File class");
+}
+
 uint32_t File::GetPermissions(Status &error) const {
   int fd = GetDescriptor();
   if (!DescriptorIsValid(fd)) {
@@ -240,6 +247,8 @@ uint32_t File::GetPermissions(Status &error) const {
   error.Clear();
   return file_stats.st_mode & (S_IRWXU | S_IRWXG | S_IRWXO);
 }
+
+Expected<File::OpenOptions> NativeFile::GetOptions() const { return m_options; }
 
 int NativeFile::GetDescriptor() const {
   if (DescriptorIsValid())
@@ -758,3 +767,6 @@ mode_t File::ConvertOpenOptionsForPOSIXOpen(OpenOptions open_options) {
 
   return mode;
 }
+
+char File::ID = 0;
+char NativeFile::ID = 0;

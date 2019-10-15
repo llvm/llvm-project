@@ -638,7 +638,7 @@ public:
   void Reset(PyRefType type, PyObject *py_obj) override;
 
   ArgInfo GetNumArguments() const;
-  
+
   // If the callable is a Py_Class, then find the number of arguments
   // of the __init__ method.
   ArgInfo GetNumInitArguments() const;
@@ -658,7 +658,6 @@ public:
 class PythonFile : public PythonObject {
 public:
   PythonFile();
-  PythonFile(File &file, const char *mode);
   PythonFile(PyRefType type, PyObject *o);
 
   ~PythonFile() override;
@@ -668,7 +667,21 @@ public:
   using PythonObject::Reset;
 
   void Reset(PyRefType type, PyObject *py_obj) override;
-  void Reset(File &file, const char *mode);
+
+  static llvm::Expected<PythonFile> FromFile(File &file,
+                                             const char *mode = nullptr);
+
+  // FIXME delete this after FILE* typemaps are deleted
+  // and ScriptInterpreterPython is fixed
+  PythonFile(File &file, const char *mode = nullptr) {
+    auto f = FromFile(file, mode);
+    if (f)
+      *this = std::move(f.get());
+    else {
+      Reset();
+      llvm::consumeError(f.takeError());
+    }
+  }
 
   lldb::FileUP GetUnderlyingFile() const;
 
