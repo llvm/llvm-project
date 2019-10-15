@@ -1,12 +1,10 @@
-//===------- interface.h - NVPTX OpenMP interface definitions ---- CUDA -*-===//
+//===------- interface.h - OpenMP interface definitions ---------- CUDA -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file contains debug macros to be used in the application.
 //
 //  This file contains all the definitions that are relevant to
 //  the interface. The first section contains the interface as
@@ -18,8 +16,11 @@
 #ifndef _INTERFACES_H_
 #define _INTERFACES_H_
 
-#include "option.h"
-#include "target_impl.h"
+#include <stdint.h>
+
+#ifdef __CUDACC__
+#include "nvptx/src/nvptx_interface.h"
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // OpenMP interface

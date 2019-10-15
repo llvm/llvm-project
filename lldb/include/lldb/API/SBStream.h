@@ -39,6 +39,10 @@ public:
 
   void RedirectToFile(const char *path, bool append);
 
+  void RedirectToFile(lldb::SBFile file);
+
+  void RedirectToFile(lldb::FileSP file);
+
   void RedirectToFileHandle(FILE *fh, bool transfer_fh_ownership);
 
   void RedirectToFileDescriptor(int fd, bool transfer_fh_ownership);

@@ -892,3 +892,30 @@ class FileHandleTestCase(lldbtest.TestBase):
             sbf = self.debugger.GetInputFile()
             if sys.version_info.major >= 3:
                 self.assertEqual(sbf.GetFile().fileno(), 0)
+
+
+    @add_test_categories(['pyapi'])
+    def test_sbstream(self):
+
+        with open(self.out_filename, 'w') as f:
+            stream = lldb.SBStream()
+            stream.RedirectToFile(f)
+            stream.Print("zork")
+        with open(self.out_filename, 'r') as f:
+            self.assertEqual(f.read().strip(), "zork")
+
+        with open(self.out_filename, 'w') as f:
+            stream = lldb.SBStream()
+            stream.RedirectToFileHandle(f, True)
+            stream.Print("Yendor")
+        with open(self.out_filename, 'r') as f:
+            self.assertEqual(f.read().strip(), "Yendor")
+
+        stream = lldb.SBStream()
+        f = open(self.out_filename,  'w')
+        stream.RedirectToFile(lldb.SBFile.Create(f, borrow=False))
+        stream.Print("Frobozz")
+        stream = None
+        self.assertTrue(f.closed)
+        with open(self.out_filename, 'r') as f:
+            self.assertEqual(f.read().strip(), "Frobozz")
