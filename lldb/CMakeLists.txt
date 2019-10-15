@@ -235,7 +235,7 @@ if (NOT LLDB_DISABLE_PYTHON)
     # Install the LLDB python module
     add_custom_target(lldb-python-scripts)
     add_dependencies(lldb-python-scripts finish_swig)
-    install(DIRECTORY ${CMAKE_BINARY_DIR}/${LLDB_PYTHON_RELATIVE_PATH}/
+    install(DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_PYTHON_RELATIVE_PATH}/
             DESTINATION ${LLDB_PYTHON_RELATIVE_PATH}
             COMPONENT lldb-python-scripts)
     if (NOT LLVM_ENABLE_IDE)

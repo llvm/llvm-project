@@ -114,6 +114,9 @@ external add_early_cse
 external add_lower_expect_intrinsic
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
   = "llvm_add_lower_expect_intrinsic"
+external add_lower_constant_intrinsics
+  : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
+  = "llvm_add_lower_constant_intrinsics"
 external add_type_based_alias_analysis
   : [< Llvm.PassManager.any ] Llvm.PassManager.t -> unit
   = "llvm_add_type_based_alias_analysis"

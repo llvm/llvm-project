@@ -99,7 +99,7 @@ bb3:
 
 ; GCN-LABEL: {{^}}uniform_conditional_min_long_forward_vcnd_branch:
 ; GCN: s_load_dword [[CND:s[0-9]+]]
-; GCN-DAG: v_mov_b32_e32 [[V_CND:v[0-9]+]], [[CND]]
+
 ; GCN-DAG: v_cmp_eq_f32_e64 [[UNMASKED:s\[[0-9]+:[0-9]+\]]], [[CND]], 0
 ; GCN-DAG: s_and_b64 vcc, exec, [[UNMASKED]]
 ; GCN: s_cbranch_vccz [[LONGBB:BB[0-9]+_[0-9]+]]
@@ -117,6 +117,7 @@ bb3:
 ; GCN: v_nop_e64
 
 ; GCN: [[ENDBB]]:
+; GCN: v_mov_b32_e32 [[V_CND:v[0-9]+]], [[CND]]
 ; GCN: buffer_store_dword [[V_CND]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(float addrspace(1)* %arg, float %cnd) #0 {

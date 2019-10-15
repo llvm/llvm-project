@@ -1539,3 +1539,29 @@ define i8 @test90(i1 %cond, i8 %w, i8 %x, i8 %y, i8 %z) {
   ret i8 %c
 }
 
+define i32 @test_shl_zext_bool(i1 %t) {
+; CHECK-LABEL: @test_shl_zext_bool(
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T:%.*]], i32 4, i32 0
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %r = select i1 %t, i32 4, i32 0
+  ret i32 %r
+}
+
+define <2 x i32> @test_shl_zext_bool_splat(<2 x i1> %t) {
+; CHECK-LABEL: @test_shl_zext_bool_splat(
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T:%.*]], <2 x i32> <i32 8, i32 8>, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %r = select <2 x i1> %t, <2 x i32> <i32 8, i32 8>, <2 x i32> zeroinitializer
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @test_shl_zext_bool_vec(<2 x i1> %t) {
+; CHECK-LABEL: @test_shl_zext_bool_vec(
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T:%.*]], <2 x i32> <i32 4, i32 8>, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %r = select <2 x i1> %t, <2 x i32> <i32 4, i32 8>, <2 x i32> zeroinitializer
+  ret <2 x i32> %r
+}

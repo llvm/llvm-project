@@ -37,8 +37,9 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using llvm::Expected;
 
-static const char *GetStreamOpenModeFromOptions(uint32_t options) {
+static Expected<const char *> GetStreamOpenModeFromOptions(uint32_t options) {
   if (options & File::eOpenOptionAppend) {
     if (options & File::eOpenOptionRead) {
       if (options & File::eOpenOptionCanCreateNewOnly)
@@ -65,23 +66,31 @@ static const char *GetStreamOpenModeFromOptions(uint32_t options) {
   } else if (options & File::eOpenOptionWrite) {
     return "w";
   }
-  return nullptr;
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "invalid options, cannot convert to mode string");
 }
 
-uint32_t File::GetOptionsFromMode(llvm::StringRef mode) {
-  return llvm::StringSwitch<uint32_t>(mode)
-      .Cases("r", "rb", eOpenOptionRead)
-      .Cases("w", "wb", eOpenOptionWrite)
-      .Cases("a", "ab",
-             eOpenOptionWrite | eOpenOptionAppend | eOpenOptionCanCreate)
-      .Cases("r+", "rb+", "r+b", eOpenOptionRead | eOpenOptionWrite)
-      .Cases("w+", "wb+", "w+b",
-             eOpenOptionRead | eOpenOptionWrite | eOpenOptionCanCreate |
-                 eOpenOptionTruncate)
-      .Cases("a+", "ab+", "a+b",
-             eOpenOptionRead | eOpenOptionWrite | eOpenOptionAppend |
-                 eOpenOptionCanCreate)
-      .Default(0);
+Expected<File::OpenOptions> File::GetOptionsFromMode(llvm::StringRef mode) {
+  OpenOptions opts =
+      llvm::StringSwitch<OpenOptions>(mode)
+          .Cases("r", "rb", eOpenOptionRead)
+          .Cases("w", "wb", eOpenOptionWrite)
+          .Cases("a", "ab",
+                 eOpenOptionWrite | eOpenOptionAppend | eOpenOptionCanCreate)
+          .Cases("r+", "rb+", "r+b", eOpenOptionRead | eOpenOptionWrite)
+          .Cases("w+", "wb+", "w+b",
+                 eOpenOptionRead | eOpenOptionWrite | eOpenOptionCanCreate |
+                     eOpenOptionTruncate)
+          .Cases("a+", "ab+", "a+b",
+                 eOpenOptionRead | eOpenOptionWrite | eOpenOptionAppend |
+                     eOpenOptionCanCreate)
+          .Default(OpenOptions());
+  if (opts)
+    return opts;
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "invalid mode, cannot convert to File::OpenOptions");
 }
 
 int File::kInvalidDescriptor = -1;
@@ -257,8 +266,10 @@ IOObject::WaitableHandle NativeFile::GetWaitableHandle() {
 FILE *NativeFile::GetStream() {
   if (!StreamIsValid()) {
     if (DescriptorIsValid()) {
-      const char *mode = GetStreamOpenModeFromOptions(m_options);
-      if (mode) {
+      auto mode = GetStreamOpenModeFromOptions(m_options);
+      if (!mode)
+        llvm::consumeError(mode.takeError());
+      else {
         if (!m_own_descriptor) {
 // We must duplicate the file descriptor if we don't own it because when you
 // call fdopen, the stream will own the fd
@@ -270,8 +281,8 @@ FILE *NativeFile::GetStream() {
           m_own_descriptor = true;
         }
 
-        m_stream =
-            llvm::sys::RetryAfterSignal(nullptr, ::fdopen, m_descriptor, mode);
+        m_stream = llvm::sys::RetryAfterSignal(nullptr, ::fdopen, m_descriptor,
+                                               mode.get());
 
         // If we got a stream, then we own the stream and should no longer own
         // the descriptor because fclose() will close it for us
@@ -303,7 +314,7 @@ Status NativeFile::Close() {
   }
   m_descriptor = kInvalidDescriptor;
   m_stream = kInvalidStream;
-  m_options = 0;
+  m_options = OpenOptions(0);
   m_own_stream = false;
   m_own_descriptor = false;
   m_is_interactive = eLazyBoolCalculate;
@@ -315,7 +326,7 @@ FILE *NativeFile::TakeStreamAndClear() {
   FILE *stream = GetStream();
   m_stream = NULL;
   m_descriptor = kInvalidDescriptor;
-  m_options = 0;
+  m_options = OpenOptions();
   m_own_stream = false;
   m_own_descriptor = false;
   m_is_interactive = m_supports_colors = m_is_real_terminal =
@@ -724,7 +735,7 @@ size_t NativeFile::PrintfVarArg(const char *format, va_list args) {
   }
 }
 
-mode_t File::ConvertOpenOptionsForPOSIXOpen(uint32_t open_options) {
+mode_t File::ConvertOpenOptionsForPOSIXOpen(OpenOptions open_options) {
   mode_t mode = 0;
   if (open_options & eOpenOptionRead && open_options & eOpenOptionWrite)
     mode |= O_RDWR;
@@ -747,4 +758,3 @@ mode_t File::ConvertOpenOptionsForPOSIXOpen(uint32_t open_options) {
 
   return mode;
 }
-

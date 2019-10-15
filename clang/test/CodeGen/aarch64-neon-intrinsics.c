@@ -666,7 +666,7 @@ float64x2_t test_vfmaq_f64(float64x2_t v1, float64x2_t v2, float64x2_t v3) {
 }
 
 // CHECK-LABEL: @test_vfms_f32(
-// CHECK:   [[SUB_I:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %v2
+// CHECK:   [[SUB_I:%.*]] = fneg <2 x float> %v2
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x float> %v1 to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x float> [[SUB_I]] to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x float> %v3 to <8 x i8>
@@ -677,7 +677,7 @@ float32x2_t test_vfms_f32(float32x2_t v1, float32x2_t v2, float32x2_t v3) {
 }
 
 // CHECK-LABEL: @test_vfmsq_f32(
-// CHECK:   [[SUB_I:%.*]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %v2
+// CHECK:   [[SUB_I:%.*]] = fneg <4 x float> %v2
 // CHECK:   [[TMP0:%.*]] = bitcast <4 x float> %v1 to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <4 x float> [[SUB_I]] to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <4 x float> %v3 to <16 x i8>
@@ -688,7 +688,7 @@ float32x4_t test_vfmsq_f32(float32x4_t v1, float32x4_t v2, float32x4_t v3) {
 }
 
 // CHECK-LABEL: @test_vfmsq_f64(
-// CHECK:   [[SUB_I:%.*]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %v2
+// CHECK:   [[SUB_I:%.*]] = fneg <2 x double> %v2
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %v1 to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x double> [[SUB_I]] to <16 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <2 x double> %v3 to <16 x i8>
@@ -17844,7 +17844,7 @@ float64x1_t test_vfma_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
 }
 
 // CHECK-LABEL: @test_vfms_f64(
-// CHECK:   [[SUB_I:%.*]] = fsub <1 x double> <double -0.000000e+00>, %b
+// CHECK:   [[SUB_I:%.*]] = fneg <1 x double> %b
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x double> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <1 x double> [[SUB_I]] to <8 x i8>
 // CHECK:   [[TMP2:%.*]] = bitcast <1 x double> %c to <8 x i8>
@@ -17915,7 +17915,7 @@ float64x1_t test_vabs_f64(float64x1_t a) {
 }
 
 // CHECK-LABEL: @test_vneg_f64(
-// CHECK:   [[SUB_I:%.*]] = fsub <1 x double> <double -0.000000e+00>, %a
+// CHECK:   [[SUB_I:%.*]] = fneg <1 x double> %a
 // CHECK:   ret <1 x double> [[SUB_I]]
 float64x1_t test_vneg_f64(float64x1_t a) {
   return vneg_f64(a);

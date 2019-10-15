@@ -64,7 +64,7 @@ public:
   int Open(const char *path, int flags, int mode);
 
   llvm::Expected<std::unique_ptr<File>>
-  Open(const FileSpec &file_spec, uint32_t options,
+  Open(const FileSpec &file_spec, File::OpenOptions options,
        uint32_t permissions = lldb::eFilePermissionsFileDefault,
        bool should_close_fd = true);
 

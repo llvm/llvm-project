@@ -1610,12 +1610,13 @@ StackOffset AArch64FrameLowering::resolveFrameIndexReference(
   const auto &MFI = MF.getFrameInfo();
   int ObjectOffset = MFI.getObjectOffset(FI);
   bool isFixed = MFI.isFixedObjectIndex(FI);
-  return resolveFrameOffsetReference(MF, ObjectOffset, isFixed, FrameReg,
+  bool isSVE = MFI.getStackID(FI) == TargetStackID::SVEVector;
+  return resolveFrameOffsetReference(MF, ObjectOffset, isFixed, isSVE, FrameReg,
                                      PreferFP, ForSimm);
 }
 
 StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
-    const MachineFunction &MF, int ObjectOffset, bool isFixed,
+    const MachineFunction &MF, int ObjectOffset, bool isFixed, bool isSVE,
     unsigned &FrameReg, bool PreferFP, bool ForSimm) const {
   const auto &MFI = MF.getFrameInfo();
   const auto *RegInfo = static_cast<const AArch64RegisterInfo *>(
@@ -1629,16 +1630,17 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
       !isFixed && ObjectOffset >= -((int)AFI->getCalleeSavedStackSize());
 
   const StackOffset &SVEStackSize = getSVEStackSize(MF);
-  if (SVEStackSize)
-    llvm_unreachable("Accessing frame indices in presence of SVE "
-                     "not yet supported");
 
   // Use frame pointer to reference fixed objects. Use it for locals if
   // there are VLAs or a dynamically realigned SP (and thus the SP isn't
   // reliable as a base). Make sure useFPForScavengingIndex() does the
   // right thing for the emergency spill slot.
   bool UseFP = false;
-  if (AFI->hasStackFrame()) {
+  if (AFI->hasStackFrame() && !isSVE) {
+    // We shouldn't prefer using the FP when there is an SVE area
+    // in between the FP and the non-SVE locals/spills.
+    PreferFP &= !SVEStackSize;
+
     // Note: Keeping the following as multiple 'if' statements rather than
     // merging to a single expression for readability.
     //
@@ -1666,8 +1668,10 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
         bool CanUseBP = RegInfo->hasBasePointer(MF);
         if (FPOffsetFits && CanUseBP) // Both are ok. Pick the best.
           UseFP = PreferFP;
-        else if (!CanUseBP) // Can't use BP. Forced to use FP.
+        else if (!CanUseBP) { // Can't use BP. Forced to use FP.
+          assert(!SVEStackSize && "Expected BP to be available");
           UseFP = true;
+        }
         // else we can use BP and FP, but the offset from FP won't fit.
         // That will make us scavenge registers which we can probably avoid by
         // using BP. If it won't fit for BP either, we'll scavenge anyway.
@@ -1697,9 +1701,36 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
          "In the presence of dynamic stack pointer realignment, "
          "non-argument/CSR objects cannot be accessed through the frame pointer");
 
+  if (isSVE) {
+    int64_t OffsetToSVEArea =
+        MFI.getStackSize() - AFI->getCalleeSavedStackSize();
+    StackOffset FPOffset = {ObjectOffset, MVT::nxv1i8};
+    StackOffset SPOffset = SVEStackSize +
+                           StackOffset(ObjectOffset, MVT::nxv1i8) +
+                           StackOffset(OffsetToSVEArea, MVT::i8);
+    // Always use the FP for SVE spills if available and beneficial.
+    if (hasFP(MF) &&
+        (SPOffset.getBytes() ||
+         FPOffset.getScalableBytes() < SPOffset.getScalableBytes() ||
+         RegInfo->needsStackRealignment(MF))) {
+      FrameReg = RegInfo->getFrameRegister(MF);
+      return FPOffset;
+    }
+
+    FrameReg = RegInfo->hasBasePointer(MF) ? RegInfo->getBaseRegister()
+                                           : (unsigned)AArch64::SP;
+    return SPOffset;
+  }
+
+  StackOffset ScalableOffset = {};
+  if (UseFP && !(isFixed || isCSR))
+    ScalableOffset = -SVEStackSize;
+  if (!UseFP && (isFixed || isCSR))
+    ScalableOffset = SVEStackSize;
+
   if (UseFP) {
     FrameReg = RegInfo->getFrameRegister(MF);
-    return StackOffset(FPOffset, MVT::i8);
+    return StackOffset(FPOffset, MVT::i8) + ScalableOffset;
   }
 
   // Use the base pointer if we have one.
@@ -1716,7 +1747,7 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
       Offset -= AFI->getLocalStackSize();
   }
 
-  return StackOffset(Offset, MVT::i8);
+  return StackOffset(Offset, MVT::i8) + ScalableOffset;
 }
 
 static unsigned getPrologueDeath(MachineFunction &MF, unsigned Reg) {
@@ -2213,24 +2244,20 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
              << ' ' << printReg(Reg, RegInfo);
              dbgs() << "\n";);
 
-  bool HasSVEStackObjects = [&MFI]() {
-    for (int I = MFI.getObjectIndexBegin(); I != 0; ++I)
-      if (MFI.getStackID(I) == TargetStackID::SVEVector &&
-          MFI.getObjectOffset(I) < 0)
-        return true;
-    // Note: We don't take allocatable stack objects into
-    // account yet, because allocation for those is not yet
-    // implemented.
-    return false;
-  }();
-
   // If any callee-saved registers are used, the frame cannot be eliminated.
-  bool CanEliminateFrame = (SavedRegs.count() == 0) && !HasSVEStackObjects;
+  unsigned MaxAlign = getStackAlignment();
+  int64_t SVEStackSize =
+      alignTo(determineSVEStackSize(MFI, MaxAlign), MaxAlign);
+  assert(MaxAlign <= 16 && "Cannot align scalable vectors more than 16 bytes");
+  bool CanEliminateFrame = (SavedRegs.count() == 0) && !SVEStackSize;
 
   // The CSR spill slots have not been allocated yet, so estimateStackSize
   // won't include them.
   unsigned EstimatedStackSizeLimit = estimateRSStackSizeLimit(MF);
-  bool BigStack = (EstimatedStackSize + CSStackSize) > EstimatedStackSizeLimit;
+
+  // Conservatively always assume BigStack when there are SVE spills.
+  bool BigStack = SVEStackSize ||
+                  (EstimatedStackSize + CSStackSize) > EstimatedStackSizeLimit;
   if (BigStack || !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF))
     AFI->setHasStackFrame(true);
 
@@ -2286,6 +2313,23 @@ bool AArch64FrameLowering::enableStackSlotScavenging(
   return AFI->hasCalleeSaveStackFreeSpace();
 }
 
+int64_t AArch64FrameLowering::determineSVEStackSize(MachineFrameInfo &MFI,
+                                                    unsigned &MaxAlign) const {
+  // Process all fixed stack objects.
+  int64_t Offset = 0;
+  for (int I = MFI.getObjectIndexBegin(); I != 0; ++I)
+    if (MFI.getStackID(I) == TargetStackID::SVEVector) {
+      int64_t FixedOffset = -MFI.getObjectOffset(I);
+      if (FixedOffset > Offset)
+        Offset = FixedOffset;
+    }
+
+  // Note: We don't take allocatable stack objects into
+  // account yet, because allocation for those is not yet
+  // implemented.
+  return Offset;
+}
+
 void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
     MachineFunction &MF, RegScavenger *RS) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -2293,22 +2337,11 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
   assert(getStackGrowthDirection() == TargetFrameLowering::StackGrowsDown &&
          "Upwards growing stack unsupported");
 
-  // Process all fixed stack SVE objects.
-  int64_t Offset = 0;
-  for (int I = MFI.getObjectIndexBegin(); I != 0; ++I) {
-    unsigned StackID = MFI.getStackID(I);
-    if (StackID == TargetStackID::SVEVector) {
-      int64_t FixedOffset = -MFI.getObjectOffset(I);
-      if (FixedOffset > Offset)
-        Offset = FixedOffset;
-    }
-  }
-
   unsigned MaxAlign = getStackAlignment();
-  uint64_t SVEStackSize = alignTo(Offset, MaxAlign);
+  int64_t SVEStackSize = determineSVEStackSize(MFI, MaxAlign);
 
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  AFI->setStackSizeSVE(SVEStackSize);
+  AFI->setStackSizeSVE(alignTo(SVEStackSize, MaxAlign));
   assert(MaxAlign <= 16 && "Cannot align scalable vectors more than 16 bytes");
 
   // If this function isn't doing Win64-style C++ EH, we don't need to do

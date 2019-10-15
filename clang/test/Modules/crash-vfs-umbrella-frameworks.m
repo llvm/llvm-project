@@ -9,8 +9,8 @@
 // RUN: mkdir -p %t/i/Frameworks/A.framework/Frameworks
 // RUN: ln -s ../../B.framework %t/i/Frameworks/A.framework/Frameworks/B.framework
 
-// RUN: not env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
-// RUN: %clang -nostdinc -fsyntax-only %s \
+// RUN: env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
+// RUN: not %clang -nostdinc -fsyntax-only %s \
 // RUN:     -F %/t/i/Frameworks -fmodules \
 // RUN:     -fmodules-cache-path=%t/m/ 2>&1 | FileCheck %s
 

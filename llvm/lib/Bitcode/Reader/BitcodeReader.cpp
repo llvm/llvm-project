@@ -4641,7 +4641,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       // There is an optional final record for fast-math-flags if this phi has a
       // floating-point type.
       size_t NumArgs = (Record.size() - 1) / 2;
-      if ((Record.size() - 1) % 2 == 1 && !Ty->isFloatingPointTy())
+      if ((Record.size() - 1) % 2 == 1 && !Ty->isFPOrFPVectorTy())
         return error("Invalid record");
 
       PHINode *PN = PHINode::Create(Ty, NumArgs);

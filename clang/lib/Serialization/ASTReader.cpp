@@ -12934,11 +12934,13 @@ void OMPClauseReader::VisitOMPPriorityClause(OMPPriorityClause *C) {
 }
 
 void OMPClauseReader::VisitOMPGrainsizeClause(OMPGrainsizeClause *C) {
+  VisitOMPClauseWithPreInit(C);
   C->setGrainsize(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
 }
 
 void OMPClauseReader::VisitOMPNumTasksClause(OMPNumTasksClause *C) {
+  VisitOMPClauseWithPreInit(C);
   C->setNumTasks(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
 }

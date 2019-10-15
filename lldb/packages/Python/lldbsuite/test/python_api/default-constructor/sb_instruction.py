@@ -9,7 +9,10 @@ def fuzz_obj(obj):
     obj.GetAddress()
     obj.GetByteSize()
     obj.DoesBranch()
-    obj.Print(None)
+    try:
+        obj.Print(None)
+    except Exception:
+        pass
     obj.GetDescription(lldb.SBStream())
     obj.EmulateWithFrame(lldb.SBFrame(), 0)
     obj.DumpEmulation("armv7")

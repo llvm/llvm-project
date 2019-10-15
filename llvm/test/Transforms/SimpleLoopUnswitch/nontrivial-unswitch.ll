@@ -1,4 +1,5 @@
 ; RUN: opt -passes='loop(unswitch<nontrivial>),verify<loops>' -S < %s | FileCheck %s
+; RUN: opt -passes='loop-mssa(unswitch<nontrivial>),verify<loops>' -S < %s | FileCheck %s
 ; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -S < %s | FileCheck %s
 ; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s | FileCheck %s
 

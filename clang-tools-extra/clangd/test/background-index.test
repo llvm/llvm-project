@@ -1,5 +1,5 @@
 # We need to splice paths into file:// URIs for this test.
-# UNSUPPORTED: win32
+# UNSUPPORTED: windows-msvc
 
 # Use a copy of inputs, as we'll mutate it (as will the background index).
 # RUN: rm -rf %t

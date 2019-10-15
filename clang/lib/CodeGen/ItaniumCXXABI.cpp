@@ -644,6 +644,8 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
     VTableOffset = Builder.CreateTrunc(VTableOffset, CGF.Int32Ty);
     VTableOffset = Builder.CreateZExt(VTableOffset, CGM.PtrDiffTy);
   }
+  // Compute the address of the virtual function pointer.
+  llvm::Value *VFPAddr = Builder.CreateGEP(VTable, VTableOffset);
 
   // Check the address of the function pointer if CFI on member function
   // pointers is enabled.
@@ -651,81 +653,44 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
   llvm::Constant *CheckTypeDesc;
   bool ShouldEmitCFICheck = CGF.SanOpts.has(SanitizerKind::CFIMFCall) &&
                             CGM.HasHiddenLTOVisibility(RD);
-  bool ShouldEmitVFEInfo = CGM.getCodeGenOpts().VirtualFunctionElimination &&
-                           CGM.HasHiddenLTOVisibility(RD);
-  llvm::Value *VirtualFn = nullptr;
-
-  {
+  if (ShouldEmitCFICheck) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
-    llvm::Value *TypeId = nullptr;
-    llvm::Value *CheckResult = nullptr;
 
-    if (ShouldEmitCFICheck || ShouldEmitVFEInfo) {
-      // If doing CFI or VFE, we will need the metadata node to check against.
-      llvm::Metadata *MD =
-          CGM.CreateMetadataIdentifierForVirtualMemPtrType(QualType(MPT, 0));
-      TypeId = llvm::MetadataAsValue::get(CGF.getLLVMContext(), MD);
-    }
+    CheckSourceLocation = CGF.EmitCheckSourceLocation(E->getBeginLoc());
+    CheckTypeDesc = CGF.EmitCheckTypeDescriptor(QualType(MPT, 0));
+    llvm::Constant *StaticData[] = {
+        llvm::ConstantInt::get(CGF.Int8Ty, CodeGenFunction::CFITCK_VMFCall),
+        CheckSourceLocation,
+        CheckTypeDesc,
+    };
 
-    llvm::Value *VFPAddr = Builder.CreateGEP(VTable, VTableOffset);
+    llvm::Metadata *MD =
+        CGM.CreateMetadataIdentifierForVirtualMemPtrType(QualType(MPT, 0));
+    llvm::Value *TypeId = llvm::MetadataAsValue::get(CGF.getLLVMContext(), MD);
 
-    if (ShouldEmitVFEInfo) {
-      // If doing VFE, load from the vtable with a type.checked.load intrinsic
-      // call. Note that we use the GEP to calculate the address to load from
-      // and pass 0 as the offset to the intrinsic. This is because every
-      // vtable slot of the correct type is marked with matching metadata, and
-      // we know that the load must be from one of these slots.
-      llvm::Value *CheckedLoad = Builder.CreateCall(
-          CGM.getIntrinsic(llvm::Intrinsic::type_checked_load),
-          {VFPAddr, llvm::ConstantInt::get(CGM.Int32Ty, 0), TypeId});
-      CheckResult = Builder.CreateExtractValue(CheckedLoad, 1);
-      VirtualFn = Builder.CreateExtractValue(CheckedLoad, 0);
-      VirtualFn = Builder.CreateBitCast(VirtualFn, FTy->getPointerTo(),
-                                        "memptr.virtualfn");
+    llvm::Value *TypeTest = Builder.CreateCall(
+        CGM.getIntrinsic(llvm::Intrinsic::type_test), {VFPAddr, TypeId});
+
+    if (CGM.getCodeGenOpts().SanitizeTrap.has(SanitizerKind::CFIMFCall)) {
+      CGF.EmitTrapCheck(TypeTest);
     } else {
-      // When not doing VFE, emit a normal load, as it allows more
-      // optimisations than type.checked.load.
-      if (ShouldEmitCFICheck) {
-        CheckResult = Builder.CreateCall(
-            CGM.getIntrinsic(llvm::Intrinsic::type_test),
-            {Builder.CreateBitCast(VFPAddr, CGF.Int8PtrTy), TypeId});
-      }
-      VFPAddr =
-          Builder.CreateBitCast(VFPAddr, FTy->getPointerTo()->getPointerTo());
-      VirtualFn = Builder.CreateAlignedLoad(VFPAddr, CGF.getPointerAlign(),
-                                            "memptr.virtualfn");
+      llvm::Value *AllVtables = llvm::MetadataAsValue::get(
+          CGM.getLLVMContext(),
+          llvm::MDString::get(CGM.getLLVMContext(), "all-vtables"));
+      llvm::Value *ValidVtable = Builder.CreateCall(
+          CGM.getIntrinsic(llvm::Intrinsic::type_test), {VTable, AllVtables});
+      CGF.EmitCheck(std::make_pair(TypeTest, SanitizerKind::CFIMFCall),
+                    SanitizerHandler::CFICheckFail, StaticData,
+                    {VTable, ValidVtable});
     }
-    assert(VirtualFn && "Virtual fuction pointer not created!");
-    assert((!ShouldEmitCFICheck || !ShouldEmitVFEInfo || CheckResult) &&
-           "Check result required but not created!");
 
-    if (ShouldEmitCFICheck) {
-      // If doing CFI, emit the check.
-      CheckSourceLocation = CGF.EmitCheckSourceLocation(E->getBeginLoc());
-      CheckTypeDesc = CGF.EmitCheckTypeDescriptor(QualType(MPT, 0));
-      llvm::Constant *StaticData[] = {
-          llvm::ConstantInt::get(CGF.Int8Ty, CodeGenFunction::CFITCK_VMFCall),
-          CheckSourceLocation,
-          CheckTypeDesc,
-      };
+    FnVirtual = Builder.GetInsertBlock();
+  }
 
-      if (CGM.getCodeGenOpts().SanitizeTrap.has(SanitizerKind::CFIMFCall)) {
-        CGF.EmitTrapCheck(CheckResult);
-      } else {
-        llvm::Value *AllVtables = llvm::MetadataAsValue::get(
-            CGM.getLLVMContext(),
-            llvm::MDString::get(CGM.getLLVMContext(), "all-vtables"));
-        llvm::Value *ValidVtable = Builder.CreateCall(
-            CGM.getIntrinsic(llvm::Intrinsic::type_test), {VTable, AllVtables});
-        CGF.EmitCheck(std::make_pair(CheckResult, SanitizerKind::CFIMFCall),
-                      SanitizerHandler::CFICheckFail, StaticData,
-                      {VTable, ValidVtable});
-      }
-
-      FnVirtual = Builder.GetInsertBlock();
-    }
-  } // End of sanitizer scope
-
+  // Load the virtual function to call.
+  VFPAddr = Builder.CreateBitCast(VFPAddr, FTy->getPointerTo()->getPointerTo());
+  llvm::Value *VirtualFn = Builder.CreateAlignedLoad(
+      VFPAddr, CGF.getPointerAlign(), "memptr.virtualfn");
   CGF.EmitBranch(FnEnd);
 
   // In the non-virtual path, the function pointer is actually a
@@ -1669,7 +1634,7 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
     EmitFundamentalRTTIDescriptors(RD);
 
   if (!VTable->isDeclarationForLinker())
-    CGM.EmitVTableTypeMetadata(RD, VTable, VTLayout);
+    CGM.EmitVTableTypeMetadata(VTable, VTLayout);
 }
 
 bool ItaniumCXXABI::isVirtualOffsetNeededForVTableField(

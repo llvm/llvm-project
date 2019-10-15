@@ -116,7 +116,8 @@ llvm::Optional<unsigned> X86TTIImpl::getCacheAssociativity(
   llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
 }
 
-unsigned X86TTIImpl::getNumberOfRegisters(bool Vector) {
+unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
+  bool Vector = (ClassID == 1);
   if (Vector && !ST->hasSSE1())
     return 0;
 
@@ -2102,8 +2103,26 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::FSQRT,      MVT::f32,    28 }, // Pentium III from http://www.agner.org/
     { ISD::FSQRT,      MVT::v4f32,  56 }, // Pentium III from http://www.agner.org/
   };
+  static const CostTblEntry LZCNT64CostTbl[] = { // 64-bit targets
+    { ISD::CTLZ,       MVT::i64,     1 },
+  };
+  static const CostTblEntry LZCNT32CostTbl[] = { // 32 or 64-bit targets
+    { ISD::CTLZ,       MVT::i32,     1 },
+    { ISD::CTLZ,       MVT::i16,     1 },
+    { ISD::CTLZ,       MVT::i8,      1 },
+  };
+  static const CostTblEntry POPCNT64CostTbl[] = { // 64-bit targets
+    { ISD::CTPOP,      MVT::i64,     1 },
+  };
+  static const CostTblEntry POPCNT32CostTbl[] = { // 32 or 64-bit targets
+    { ISD::CTPOP,      MVT::i32,     1 },
+    { ISD::CTPOP,      MVT::i16,     1 },
+    { ISD::CTPOP,      MVT::i8,      1 },
+  };
   static const CostTblEntry X64CostTbl[] = { // 64-bit targets
     { ISD::BITREVERSE, MVT::i64,    14 },
+    { ISD::CTLZ,       MVT::i64,     4 }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTPOP,      MVT::i64,    10 },
     { ISD::SADDO,      MVT::i64,     1 },
     { ISD::UADDO,      MVT::i64,     1 },
   };
@@ -2111,6 +2130,12 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::BITREVERSE, MVT::i32,    14 },
     { ISD::BITREVERSE, MVT::i16,    14 },
     { ISD::BITREVERSE, MVT::i8,     11 },
+    { ISD::CTLZ,       MVT::i32,     4 }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTLZ,       MVT::i16,     4 }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTLZ,       MVT::i8,      4 }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTPOP,      MVT::i32,     8 },
+    { ISD::CTPOP,      MVT::i16,     9 },
+    { ISD::CTPOP,      MVT::i8,      7 },
     { ISD::SADDO,      MVT::i32,     1 },
     { ISD::SADDO,      MVT::i16,     1 },
     { ISD::SADDO,      MVT::i8,      1 },
@@ -2221,6 +2246,26 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     if (ST->hasSSE1())
       if (const auto *Entry = CostTableLookup(SSE1CostTbl, ISD, MTy))
         return LT.first * Entry->Cost;
+
+    if (ST->hasLZCNT()) {
+      if (ST->is64Bit())
+        if (const auto *Entry = CostTableLookup(LZCNT64CostTbl, ISD, MTy))
+          return LT.first * Entry->Cost;
+
+      if (const auto *Entry = CostTableLookup(LZCNT32CostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+    }
+
+    if (ST->hasPOPCNT()) {
+      if (ST->is64Bit())
+        if (const auto *Entry = CostTableLookup(POPCNT64CostTbl, ISD, MTy))
+          return LT.first * Entry->Cost;
+
+      if (const auto *Entry = CostTableLookup(POPCNT32CostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+    }
+
+    // TODO - add BMI (TZCNT) scalar handling
 
     if (ST->is64Bit())
       if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, MTy))
@@ -2416,8 +2461,9 @@ int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
   unsigned NumElem = SrcVTy->getVectorNumElements();
   VectorType *MaskTy =
       VectorType::get(Type::getInt8Ty(SrcVTy->getContext()), NumElem);
-  if ((IsLoad && !isLegalMaskedLoad(SrcVTy)) ||
-      (IsStore && !isLegalMaskedStore(SrcVTy)) || !isPowerOf2_32(NumElem)) {
+  if ((IsLoad && !isLegalMaskedLoad(SrcVTy, MaybeAlign(Alignment))) ||
+      (IsStore && !isLegalMaskedStore(SrcVTy, MaybeAlign(Alignment))) ||
+      !isPowerOf2_32(NumElem)) {
     // Scalarization
     int MaskSplitCost = getScalarizationOverhead(MaskTy, false, true);
     int ScalarCompareCost = getCmpSelInstrCost(
@@ -2487,7 +2533,7 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
   // We use the Intel Architecture Code Analyzer(IACA) to measure the throughput
   // and make it as the cost.
 
-  static const CostTblEntry SSE42CostTblPairWise[] = {
+  static const CostTblEntry SSE2CostTblPairWise[] = {
     { ISD::FADD,  MVT::v2f64,   2 },
     { ISD::FADD,  MVT::v4f32,   4 },
     { ISD::ADD,   MVT::v2i64,   2 },      // The data reported by the IACA tool is "1.6".
@@ -2496,23 +2542,23 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
     { ISD::ADD,   MVT::v2i16,   3 }, // FIXME: chosen to be less than v4i16
     { ISD::ADD,   MVT::v4i16,   4 }, // FIXME: chosen to be less than v8i16
     { ISD::ADD,   MVT::v8i16,   5 },
+    { ISD::ADD,   MVT::v2i8,    2 },
+    { ISD::ADD,   MVT::v4i8,    2 },
+    { ISD::ADD,   MVT::v8i8,    2 },
+    { ISD::ADD,   MVT::v16i8,   3 },
   };
 
   static const CostTblEntry AVX1CostTblPairWise[] = {
-    { ISD::FADD,  MVT::v4f32,   4 },
     { ISD::FADD,  MVT::v4f64,   5 },
     { ISD::FADD,  MVT::v8f32,   7 },
     { ISD::ADD,   MVT::v2i64,   1 },      // The data reported by the IACA tool is "1.5".
-    { ISD::ADD,   MVT::v2i32,   2 }, // FIXME: chosen to be less than v4i32
-    { ISD::ADD,   MVT::v4i32,   3 },      // The data reported by the IACA tool is "3.5".
     { ISD::ADD,   MVT::v4i64,   5 },      // The data reported by the IACA tool is "4.8".
-    { ISD::ADD,   MVT::v2i16,   3 }, // FIXME: chosen to be less than v4i16
-    { ISD::ADD,   MVT::v4i16,   4 }, // FIXME: chosen to be less than v8i16
-    { ISD::ADD,   MVT::v8i16,   5 },
     { ISD::ADD,   MVT::v8i32,   5 },
+    { ISD::ADD,   MVT::v16i16,  6 },
+    { ISD::ADD,   MVT::v32i8,   4 },
   };
 
-  static const CostTblEntry SSE42CostTblNoPairWise[] = {
+  static const CostTblEntry SSE2CostTblNoPairWise[] = {
     { ISD::FADD,  MVT::v2f64,   2 },
     { ISD::FADD,  MVT::v4f32,   4 },
     { ISD::ADD,   MVT::v2i64,   2 },      // The data reported by the IACA tool is "1.6".
@@ -2521,20 +2567,21 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
     { ISD::ADD,   MVT::v2i16,   2 },      // The data reported by the IACA tool is "4.3".
     { ISD::ADD,   MVT::v4i16,   3 },      // The data reported by the IACA tool is "4.3".
     { ISD::ADD,   MVT::v8i16,   4 },      // The data reported by the IACA tool is "4.3".
+    { ISD::ADD,   MVT::v2i8,    2 },
+    { ISD::ADD,   MVT::v4i8,    2 },
+    { ISD::ADD,   MVT::v8i8,    2 },
+    { ISD::ADD,   MVT::v16i8,   3 },
   };
 
   static const CostTblEntry AVX1CostTblNoPairWise[] = {
-    { ISD::FADD,  MVT::v4f32,   3 },
     { ISD::FADD,  MVT::v4f64,   3 },
+    { ISD::FADD,  MVT::v4f32,   3 },
     { ISD::FADD,  MVT::v8f32,   4 },
     { ISD::ADD,   MVT::v2i64,   1 },      // The data reported by the IACA tool is "1.5".
-    { ISD::ADD,   MVT::v2i32,   2 }, // FIXME: chosen to be less than v4i32
-    { ISD::ADD,   MVT::v4i32,   3 },      // The data reported by the IACA tool is "2.8".
     { ISD::ADD,   MVT::v4i64,   3 },
-    { ISD::ADD,   MVT::v2i16,   2 },      // The data reported by the IACA tool is "4.3".
-    { ISD::ADD,   MVT::v4i16,   3 },      // The data reported by the IACA tool is "4.3".
-    { ISD::ADD,   MVT::v8i16,   4 },
     { ISD::ADD,   MVT::v8i32,   5 },
+    { ISD::ADD,   MVT::v16i16,  5 },
+    { ISD::ADD,   MVT::v32i8,   4 },
   };
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -2551,16 +2598,16 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
         if (const auto *Entry = CostTableLookup(AVX1CostTblPairWise, ISD, MTy))
           return Entry->Cost;
 
-      if (ST->hasSSE42())
-        if (const auto *Entry = CostTableLookup(SSE42CostTblPairWise, ISD, MTy))
+      if (ST->hasSSE2())
+        if (const auto *Entry = CostTableLookup(SSE2CostTblPairWise, ISD, MTy))
           return Entry->Cost;
     } else {
       if (ST->hasAVX())
         if (const auto *Entry = CostTableLookup(AVX1CostTblNoPairWise, ISD, MTy))
           return Entry->Cost;
 
-      if (ST->hasSSE42())
-        if (const auto *Entry = CostTableLookup(SSE42CostTblNoPairWise, ISD, MTy))
+      if (ST->hasSSE2())
+        if (const auto *Entry = CostTableLookup(SSE2CostTblNoPairWise, ISD, MTy))
           return Entry->Cost;
     }
   }
@@ -2574,16 +2621,16 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
       if (const auto *Entry = CostTableLookup(AVX1CostTblPairWise, ISD, MTy))
         return LT.first * Entry->Cost;
 
-    if (ST->hasSSE42())
-      if (const auto *Entry = CostTableLookup(SSE42CostTblPairWise, ISD, MTy))
+    if (ST->hasSSE2())
+      if (const auto *Entry = CostTableLookup(SSE2CostTblPairWise, ISD, MTy))
         return LT.first * Entry->Cost;
   } else {
     if (ST->hasAVX())
       if (const auto *Entry = CostTableLookup(AVX1CostTblNoPairWise, ISD, MTy))
         return LT.first * Entry->Cost;
 
-    if (ST->hasSSE42())
-      if (const auto *Entry = CostTableLookup(SSE42CostTblNoPairWise, ISD, MTy))
+    if (ST->hasSSE2())
+      if (const auto *Entry = CostTableLookup(SSE2CostTblNoPairWise, ISD, MTy))
         return LT.first * Entry->Cost;
   }
 
@@ -3211,7 +3258,7 @@ bool X86TTIImpl::canMacroFuseCmp() {
   return ST->hasMacroFusion() || ST->hasBranchFusion();
 }
 
-bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy) {
+bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, MaybeAlign Alignment) {
   if (!ST->hasAVX())
     return false;
 
@@ -3234,8 +3281,8 @@ bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy) {
          ((IntWidth == 8 || IntWidth == 16) && ST->hasBWI());
 }
 
-bool X86TTIImpl::isLegalMaskedStore(Type *DataType) {
-  return isLegalMaskedLoad(DataType);
+bool X86TTIImpl::isLegalMaskedStore(Type *DataType, MaybeAlign Alignment) {
+  return isLegalMaskedLoad(DataType, Alignment);
 }
 
 bool X86TTIImpl::isLegalNTLoad(Type *DataType, Align Alignment) {

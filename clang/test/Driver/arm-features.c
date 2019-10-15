@@ -79,3 +79,18 @@
 // RUN: %clang -target arm-arm-none-eabi -mcpu=cortex-m23+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NOCRYPTO5 %s
 // CHECK-NOCRYPTO5: warning: ignoring extension 'crypto' because the {{.*}} architecture does not support it
 // CHECK-NOCRYPTO5-NOT: "-target-feature" "+crypto"{{.*}} "-target-feature" "+sha2" "-target-feature" "+aes"
+//
+// Check +crypto does not affect -march=armv7a -mfpu=crypto-neon-fp-armv8, but it does warn that +crypto has no effect
+// RUN: %clang -target arm-none-none-eabi -fno-integrated-as -march=armv7a -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefixes=CHECK-WARNONLY,ALL %s
+// RUN: %clang -target arm-none-none-eabi -fno-integrated-as -march=armv7a+aes -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefixes=CHECK-WARNONLY,ALL,CHECK-HASAES %s
+// RUN: %clang -target arm-none-none-eabi -fno-integrated-as -march=armv7a+sha2 -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefixes=CHECK-WARNONLY,ALL,CHECK-HASSHA %s
+// RUN: %clang -target arm-none-none-eabi -fno-integrated-as -march=armv7a+sha2+aes -mfpu=crypto-neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefixes=CHECK-WARNONLY,ALL,CHECK-HASSHA,CHECK-HASAES %s
+// RUN: %clang -target arm-none-none-eabi -fno-integrated-as -march=armv7a+aes -mfpu=neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefixes=ALL,CHECK-HASAES %s
+// RUN: %clang -target arm-none-none-eabi -fno-integrated-as -march=armv7a+sha2 -mfpu=neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefixes=ALL,CHECK-HASSHA %s
+// RUN: %clang -target arm-none-none-eabi -fno-integrated-as -march=armv7a+sha2+aes -mfpu=neon-fp-armv8 -### -c %s 2>&1 | FileCheck -check-prefixes=ALL,CHECK-HASSHA,CHECK-HASAES %s
+// CHECK-WARNONLY: warning: ignoring extension 'crypto' because the 'armv7-a' architecture does not support it
+// ALL:     "-target-feature"
+// CHECK-WARNONLY-NOT: "-target-feature" "-crypto"
+// CHECK-HASSHA-SAME:  "-target-feature" "+sha2"
+// CHECK-HASAES-SAME:  "-target-feature" "+aes"
+//

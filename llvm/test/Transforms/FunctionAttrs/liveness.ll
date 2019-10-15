@@ -1,4 +1,4 @@
-; RUN: opt -attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=2 -S < %s | FileCheck %s
+; RUN: opt -attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=3 -S < %s | FileCheck %s
 
 declare void @no_return_call() nofree noreturn nounwind readnone
 
@@ -177,7 +177,7 @@ cond.true:                                        ; preds = %entry
   %call = invoke i32 @foo_noreturn() to label %continue
             unwind label %cleanup
   ; CHECK:      %call = invoke i32 @foo_noreturn()
-  ; CHECK-NEXT:         to label %continue.dead unwind label %cleanup
+  ; CHECK-NEXT:         to label %continue unwind label %cleanup
 
 cond.false:                                       ; preds = %entry
   call void @normal_call()
@@ -189,7 +189,7 @@ cond.end:                                         ; preds = %cond.false, %contin
   ret i32 %cond
 
 continue:
-  ; CHECK:      continue.dead:
+  ; CHECK:      continue:
   ; CHECK-NEXT: unreachable
   br label %cond.end
 

@@ -59,7 +59,7 @@ define amdgpu_kernel void @multiple_use_fadd_fmac_f32(float addrspace(1)* %out, 
 ; GCN-LABEL: {{^}}multiple_use_fadd_fmad_f32:
 ; GCN-DAG:   v_add_f32_e64 [[MUL2:v[0-9]+]], |[[X:s[0-9]+]]|, |s{{[0-9]+}}|
 ; SIVI-DAG:  v_mad_f32 [[MAD:v[0-9]+]], |[[X]]|, 2.0, v{{[0-9]+}}
-; GFX10-DAG: v_fma_f32 [[MAD:v[0-9]+]], 2.0, |[[X]]|, v{{[0-9]+}}
+; GFX10-DAG: v_fma_f32 [[MAD:v[0-9]+]], |[[X]]|, 2.0, s{{[0-9]+}}
 ; GCN-DAG:   buffer_store_dword [[MUL2]]
 ; GCN-DAG:   buffer_store_dword [[MAD]]
 ; GCN:       s_endpgm

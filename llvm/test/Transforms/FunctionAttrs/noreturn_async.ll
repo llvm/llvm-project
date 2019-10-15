@@ -1,4 +1,4 @@
-; RUN: opt -functionattrs -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=2 -S < %s | FileCheck %s
+; RUN: opt -functionattrs -attributor -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=3 -S < %s | FileCheck %s
 ;
 ; This file is the same as noreturn_sync.ll but with a personality which
 ; indicates that the exception handler *can* catch asynchronous exceptions. As
@@ -42,12 +42,12 @@ entry:
   %retval = alloca i32, align 4
   %__exception_code = alloca i32, align 4
 ; CHECK: invoke void @"?overflow@@YAXXZ"()
-; CHECK:          to label %invoke.cont.dead unwind label %catch.dispatch
+; CHECK:          to label %invoke.cont unwind label %catch.dispatch
   invoke void @"?overflow@@YAXXZ"()
           to label %invoke.cont unwind label %catch.dispatch
 
 invoke.cont:                                      ; preds = %entry
-; CHECK:      invoke.cont.dead:
+; CHECK:      invoke.cont:
 ; CHECK-NEXT: unreachable
   br label %invoke.cont1
 
@@ -101,12 +101,12 @@ entry:
   %retval = alloca i32, align 4
   %__exception_code = alloca i32, align 4
 ; CHECK: invoke void @"?overflow@@YAXXZ_may_throw"() 
-; CHECK:          to label %invoke.cont.dead unwind label %catch.dispatch
+; CHECK:          to label %invoke.cont unwind label %catch.dispatch
   invoke void @"?overflow@@YAXXZ_may_throw"() 
           to label %invoke.cont unwind label %catch.dispatch
 
 invoke.cont:                                      ; preds = %entry
-; CHECK:      invoke.cont.dead:
+; CHECK:      invoke.cont:
 ; CHECK-NEXT: unreachable
   br label %invoke.cont1
 

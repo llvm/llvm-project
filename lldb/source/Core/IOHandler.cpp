@@ -70,6 +70,10 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using llvm::None;
+using llvm::Optional;
+using llvm::StringRef;
+
 
 IOHandler::IOHandler(Debugger &debugger, IOHandler::Type type)
     : IOHandler(debugger, type,
@@ -306,94 +310,119 @@ void IOHandlerEditline::Deactivate() {
   m_delegate.IOHandlerDeactivated(*this);
 }
 
+// Split out a line from the buffer, if there is a full one to get.
+static Optional<std::string> SplitLine(std::string &line_buffer) {
+  size_t pos = line_buffer.find('\n');
+  if (pos == std::string::npos)
+    return None;
+  std::string line = StringRef(line_buffer.c_str(), pos).rtrim("\n\r");
+  line_buffer = line_buffer.substr(pos + 1);
+  return line;
+}
+
+// If the final line of the file ends without a end-of-line, return
+// it as a line anyway.
+static Optional<std::string> SplitLineEOF(std::string &line_buffer) {
+  if (llvm::all_of(line_buffer, isspace))
+    return None;
+  std::string line = std::move(line_buffer);
+  line_buffer.clear();
+  return line;
+}
+
 bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
 #ifndef LLDB_DISABLE_LIBEDIT
   if (m_editline_up) {
     bool b = m_editline_up->GetLine(line, interrupted);
-    if (m_data_recorder)
+    if (b && m_data_recorder)
       m_data_recorder->Record(line, true);
     return b;
-  } else {
-#endif
-    line.clear();
-
-    FILE *in = GetInputFILE();
-    if (in) {
-      if (GetIsInteractive()) {
-        const char *prompt = nullptr;
-
-        if (m_multi_line && m_curr_line_idx > 0)
-          prompt = GetContinuationPrompt();
-
-        if (prompt == nullptr)
-          prompt = GetPrompt();
-
-        if (prompt && prompt[0]) {
-          if (m_output_sp) {
-            m_output_sp->Printf("%s", prompt);
-            m_output_sp->Flush();
-          }
-        }
-      }
-      char buffer[256];
-      bool done = false;
-      bool got_line = false;
-      m_editing = true;
-      while (!done) {
-#ifdef _WIN32
-        // ReadFile on Windows is supposed to set ERROR_OPERATION_ABORTED
-        // according to the docs on MSDN. However, this has evidently been a
-        // known bug since Windows 8. Therefore, we can't detect if a signal
-        // interrupted in the fgets. So pressing ctrl-c causes the repl to end
-        // and the process to exit. A temporary workaround is just to attempt to
-        // fgets twice until this bug is fixed.
-        if (fgets(buffer, sizeof(buffer), in) == nullptr &&
-            fgets(buffer, sizeof(buffer), in) == nullptr) {
-          // this is the equivalent of EINTR for Windows
-          if (GetLastError() == ERROR_OPERATION_ABORTED)
-            continue;
-#else
-      if (fgets(buffer, sizeof(buffer), in) == nullptr) {
-#endif
-          const int saved_errno = errno;
-          if (feof(in))
-            done = true;
-          else if (ferror(in)) {
-            if (saved_errno != EINTR)
-              done = true;
-          }
-        } else {
-          got_line = true;
-          size_t buffer_len = strlen(buffer);
-          assert(buffer[buffer_len] == '\0');
-          char last_char = buffer[buffer_len - 1];
-          if (last_char == '\r' || last_char == '\n') {
-            done = true;
-            // Strip trailing newlines
-            while (last_char == '\r' || last_char == '\n') {
-              --buffer_len;
-              if (buffer_len == 0)
-                break;
-              last_char = buffer[buffer_len - 1];
-            }
-          }
-          line.append(buffer, buffer_len);
-        }
-      }
-      m_editing = false;
-      if (m_data_recorder && got_line)
-        m_data_recorder->Record(line, true);
-      // We might have gotten a newline on a line by itself make sure to return
-      // true in this case.
-      return got_line;
-    } else {
-      // No more input file, we are done...
-      SetIsDone(true);
-    }
-    return false;
-#ifndef LLDB_DISABLE_LIBEDIT
   }
 #endif
+
+  line.clear();
+
+  if (GetIsInteractive()) {
+    const char *prompt = nullptr;
+
+    if (m_multi_line && m_curr_line_idx > 0)
+      prompt = GetContinuationPrompt();
+
+    if (prompt == nullptr)
+      prompt = GetPrompt();
+
+    if (prompt && prompt[0]) {
+      if (m_output_sp) {
+        m_output_sp->Printf("%s", prompt);
+        m_output_sp->Flush();
+      }
+    }
+  }
+
+  Optional<std::string> got_line = SplitLine(m_line_buffer);
+
+  if (!got_line && !m_input_sp) {
+    // No more input file, we are done...
+    SetIsDone(true);
+    return false;
+  }
+
+  FILE *in = GetInputFILE();
+  char buffer[256];
+
+  if (!got_line && !in && m_input_sp) {
+    // there is no FILE*, fall back on just reading bytes from the stream.
+    while (!got_line) {
+      size_t bytes_read = sizeof(buffer);
+      Status error = m_input_sp->Read((void *)buffer, bytes_read);
+      if (error.Success() && !bytes_read) {
+        got_line = SplitLineEOF(m_line_buffer);
+        break;
+      }
+      if (error.Fail())
+        break;
+      m_line_buffer += StringRef(buffer, bytes_read);
+      got_line = SplitLine(m_line_buffer);
+    }
+  }
+
+  if (!got_line && in) {
+    m_editing = true;
+    while (!got_line) {
+      char *r = fgets(buffer, sizeof(buffer), in);
+#ifdef _WIN32
+      // ReadFile on Windows is supposed to set ERROR_OPERATION_ABORTED
+      // according to the docs on MSDN. However, this has evidently been a
+      // known bug since Windows 8. Therefore, we can't detect if a signal
+      // interrupted in the fgets. So pressing ctrl-c causes the repl to end
+      // and the process to exit. A temporary workaround is just to attempt to
+      // fgets twice until this bug is fixed.
+      if (r == nullptr)
+        r = fgets(buffer, sizeof(buffer), in);
+      // this is the equivalent of EINTR for Windows
+      if (r == nullptr && GetLastError() == ERROR_OPERATION_ABORTED)
+        continue;
+#endif
+      if (r == nullptr) {
+        if (ferror(in) && errno == EINTR)
+          continue;
+        if (feof(in))
+          got_line = SplitLineEOF(m_line_buffer);
+        break;
+      }
+      m_line_buffer += buffer;
+      got_line = SplitLine(m_line_buffer);
+    }
+    m_editing = false;
+  }
+
+  if (got_line) {
+    line = got_line.getValue();
+    if (m_data_recorder)
+      m_data_recorder->Record(line, true);
+  }
+
+  return (bool)got_line;
 }
 
 #ifndef LLDB_DISABLE_LIBEDIT

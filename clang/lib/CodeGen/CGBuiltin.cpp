@@ -2101,10 +2101,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BI__builtin_constant_p: {
     llvm::Type *ResultType = ConvertType(E->getType());
-    if (CGM.getCodeGenOpts().OptimizationLevel == 0)
-      // At -O0, we don't perform inlining, so we don't need to delay the
-      // processing.
-      return RValue::get(ConstantInt::get(ResultType, 0));
 
     const Expr *Arg = E->getArg(0);
     QualType ArgType = Arg->getType();
@@ -14023,6 +14019,26 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *Count = EmitScalarExpr(E->getArg(1));
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_atomic_notify);
     return Builder.CreateCall(Callee, {Addr, Count});
+  }
+  case WebAssembly::BI__builtin_wasm_trunc_s_i32_f32:
+  case WebAssembly::BI__builtin_wasm_trunc_s_i32_f64:
+  case WebAssembly::BI__builtin_wasm_trunc_s_i64_f32:
+  case WebAssembly::BI__builtin_wasm_trunc_s_i64_f64: {
+    Value *Src = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ResT = ConvertType(E->getType());
+    Function *Callee =
+        CGM.getIntrinsic(Intrinsic::wasm_trunc_signed, {ResT, Src->getType()});
+    return Builder.CreateCall(Callee, {Src});
+  }
+  case WebAssembly::BI__builtin_wasm_trunc_u_i32_f32:
+  case WebAssembly::BI__builtin_wasm_trunc_u_i32_f64:
+  case WebAssembly::BI__builtin_wasm_trunc_u_i64_f32:
+  case WebAssembly::BI__builtin_wasm_trunc_u_i64_f64: {
+    Value *Src = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ResT = ConvertType(E->getType());
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_trunc_unsigned,
+                                        {ResT, Src->getType()});
+    return Builder.CreateCall(Callee, {Src});
   }
   case WebAssembly::BI__builtin_wasm_trunc_saturate_s_i32_f32:
   case WebAssembly::BI__builtin_wasm_trunc_saturate_s_i32_f64:

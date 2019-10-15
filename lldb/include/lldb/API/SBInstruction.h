@@ -55,6 +55,10 @@ public:
 
   void Print(FILE *out);
 
+  void Print(SBFile out);
+
+  void Print(FileSP out);
+
   bool GetDescription(lldb::SBStream &description);
 
   bool EmulateWithFrame(lldb::SBFrame &frame, uint32_t evaluate_options);

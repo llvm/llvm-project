@@ -773,8 +773,7 @@ protected:
     std::string path = outfile_spec.GetPath();
     if (outfile_spec) {
 
-      uint32_t open_options =
-          File::eOpenOptionWrite | File::eOpenOptionCanCreate;
+      auto open_options = File::eOpenOptionWrite | File::eOpenOptionCanCreate;
       const bool append = m_outfile_options.GetAppend().GetCurrentValue();
       if (append)
         open_options |= File::eOpenOptionAppend;

@@ -31,7 +31,12 @@ SBFile::SBFile(int fd, const char *mode, bool transfer_owndership) {
   LLDB_RECORD_DUMMY(void, SBFile, (int, const char *, bool), fd, mode,
                     transfer_owndership);
   auto options = File::GetOptionsFromMode(mode);
-  m_opaque_sp = std::make_shared<NativeFile>(fd, options, transfer_owndership);
+  if (!options) {
+    llvm::consumeError(options.takeError());
+    return;
+  }
+  m_opaque_sp =
+      std::make_shared<NativeFile>(fd, options.get(), transfer_owndership);
 }
 
 SBError SBFile::Read(uint8_t *buf, size_t num_bytes, size_t *bytes_read) {

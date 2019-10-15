@@ -121,7 +121,7 @@ def parse_args():
             dest="maxIndividualTestTime",
             help="Maximum time to spend running a single test (in seconds). "
                  "0 means no time limit. [Default: 0]",
-            type=int,
+            type=_non_negative_int,
             default=None)
     execution_group.add_argument("--max-failures",
             dest="maxFailures",
@@ -152,6 +152,7 @@ def parse_args():
             default=False)
     selection_group.add_argument("--filter",
             metavar="REGEX",
+            type=_case_insensitive_regex,
             help="Only run tests with paths matching the given regular expression",
             default=os.environ.get("LIT_FILTER"))
     selection_group.add_argument("--num-shards",
@@ -201,14 +202,28 @@ def parse_args():
     return opts
 
 def _positive_int(arg):
-    try:
-        n = int(arg)
-    except ValueError:
-        raise _arg_error('positive integer', arg)
-    if n <= 0:
-        raise _arg_error('positive integer', arg)
-    return n
+    return _int(arg, 'positive', lambda i: i > 0)
 
-def _arg_error(desc, arg):
-    msg = "requires %s, but found '%s'" % (desc, arg)
+def _non_negative_int(arg):
+    return _int(arg, 'non-negative', lambda i: i >= 0)
+
+def _int(arg, kind, pred):
+    desc = "requires {} integer, but found '{}'"
+    try:
+        i = int(arg)
+    except ValueError:
+        raise _error(desc, kind, arg)
+    if not pred(i):
+        raise _error(desc, kind, arg)
+    return i
+
+def _case_insensitive_regex(arg):
+    import re
+    try:
+        return re.compile(arg, re.IGNORECASE)
+    except re.error as reason:
+        raise _error("invalid regular expression: '{}', {}", arg, reason)
+
+def _error(desc, *args):
+    msg = desc.format(*args)
     return argparse.ArgumentTypeError(msg)

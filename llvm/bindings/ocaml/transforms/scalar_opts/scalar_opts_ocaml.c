@@ -237,6 +237,12 @@ CAMLprim value llvm_add_lower_expect_intrinsic(LLVMPassManagerRef PM) {
 }
 
 /* [<Llvm.PassManager.any] Llvm.PassManager.t -> unit */
+CAMLprim value llvm_add_lower_constant_intrinsics(LLVMPassManagerRef PM) {
+  LLVMAddLowerConstantIntrinsicsPass(PM);
+  return Val_unit;
+}
+
+/* [<Llvm.PassManager.any] Llvm.PassManager.t -> unit */
 CAMLprim value llvm_add_type_based_alias_analysis(LLVMPassManagerRef PM) {
   LLVMAddTypeBasedAliasAnalysisPass(PM);
   return Val_unit;

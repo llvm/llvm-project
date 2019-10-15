@@ -1220,7 +1220,7 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
   LLDB_LOGF(log, "[PutFile] Using block by block transfer....\n");
 
-  uint32_t source_open_options =
+  auto source_open_options =
       File::eOpenOptionRead | File::eOpenOptionCloseOnExec;
   namespace fs = llvm::sys::fs;
   if (fs::is_symlink_file(source.GetPath()))

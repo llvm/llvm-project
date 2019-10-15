@@ -198,7 +198,7 @@ bb4:                                              ; preds = %bb1
 
 bb6:                                              ; preds = %bb1
 ; FIXME: missing nonnull. It should be @f2(i32* nonnull %arg)
-; ATTRIBUTOR: %tmp7 = tail call nonnull i32* @f2(i32* %arg)
+; ATTRIBUTOR: %tmp7 = tail call nonnull i32* @f2(i32* readonly %arg)
   %tmp7 = tail call i32* @f2(i32* %arg)
   ret i32* %tmp7
 
@@ -209,7 +209,7 @@ bb9:                                              ; preds = %bb4, %bb
 
 define internal i32* @f2(i32* %arg) {
 ; FIXME: missing nonnull. It should be nonnull @f2(i32* nonnull %arg) 
-; ATTRIBUTOR: define internal nonnull i32* @f2(i32* %arg)
+; ATTRIBUTOR: define internal nonnull i32* @f2(i32* readonly %arg)
 bb:
 
 ; FIXME: missing nonnull. It should be @f1(i32* nonnull readonly %arg) 
@@ -523,6 +523,13 @@ define i32 addrspace(3)* @gep2(i32 addrspace(3)* %p) {
   ret i32 addrspace(3)* %q
 }
 
+; FNATTR:     define i32 addrspace(3)* @as(i32 addrspace(3)* readnone returned dereferenceable(4) %p)
+; FIXME: We should propagate dereferenceable here but *not* nonnull
+; ATTRIBUTOR: define dereferenceable_or_null(4) i32 addrspace(3)* @as(i32 addrspace(3)* readnone returned dereferenceable(4) dereferenceable_or_null(4) %p)
+define i32 addrspace(3)* @as(i32 addrspace(3)* dereferenceable(4) %p) {
+  ret i32 addrspace(3)* %p
+}
+
 ; BOTH: define internal nonnull i32* @g2()
 define internal i32* @g2() {
   ret i32* inttoptr (i64 4 to i32*)
@@ -533,8 +540,10 @@ define  i32* @g1() {
   ret i32* %c
 }
 
+declare void @use_i32_ptr(i32*) readnone nounwind
 ; ATTRIBUTOR: define internal void @called_by_weak(i32* nocapture nonnull readnone %a)
 define internal void @called_by_weak(i32* %a) {
+  call void @use_i32_ptr(i32* %a)
   ret void
 }
 
@@ -545,6 +554,30 @@ define weak_odr void @weak_caller(i32* nonnull %a) {
   ret void
 }
 
+; Expect nonnull
+; ATTRIBUTOR: define internal void @control(i32* nocapture nonnull readnone align 16 dereferenceable(8) %a)
+define internal void @control(i32* dereferenceable(4) %a) {
+  call void @use_i32_ptr(i32* %a)
+  ret void
+}
+; Avoid nonnull as we do not touch naked functions
+; ATTRIBUTOR: define internal void @naked(i32* dereferenceable(4) %a)
+define internal void @naked(i32* dereferenceable(4) %a) naked {
+  call void @use_i32_ptr(i32* %a)
+  ret void
+}
+; Avoid nonnull as we do not touch optnone
+; ATTRIBUTOR: define internal void @optnone(i32* dereferenceable(4) %a)
+define internal void @optnone(i32* dereferenceable(4) %a) optnone noinline {
+  call void @use_i32_ptr(i32* %a)
+  ret void
+}
+define void @make_live(i32* nonnull dereferenceable(8) %a) {
+  call void @naked(i32* nonnull dereferenceable(8) align 16 %a)
+  call void @control(i32* nonnull dereferenceable(8) align 16 %a)
+  call void @optnone(i32* nonnull dereferenceable(8) align 16 %a)
+  ret void
+}
 
 attributes #0 = { "null-pointer-is-valid"="true" }
 attributes #1 = { nounwind willreturn}

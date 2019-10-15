@@ -84,7 +84,7 @@ define float @cosf_unary_negated_arg_FMF(float %x) {
 define double @sin_negated_arg(double %x) {
 ; ANY-LABEL: @sin_negated_arg(
 ; ANY-NEXT:    [[TMP1:%.*]] = call double @sin(double [[X:%.*]])
-; ANY-NEXT:    [[TMP2:%.*]] = fsub double -0.000000e+00, [[TMP1]]
+; ANY-NEXT:    [[TMP2:%.*]] = fneg double [[TMP1]]
 ; ANY-NEXT:    ret double [[TMP2]]
 ;
   %neg = fsub double -0.0, %x
@@ -95,7 +95,7 @@ define double @sin_negated_arg(double %x) {
 define double @sin_unary_negated_arg(double %x) {
 ; ANY-LABEL: @sin_unary_negated_arg(
 ; ANY-NEXT:    [[TMP1:%.*]] = call double @sin(double [[X:%.*]])
-; ANY-NEXT:    [[TMP2:%.*]] = fsub double -0.000000e+00, [[TMP1]]
+; ANY-NEXT:    [[TMP2:%.*]] = fneg double [[TMP1]]
 ; ANY-NEXT:    ret double [[TMP2]]
 ;
   %neg = fneg double %x
@@ -106,7 +106,7 @@ define double @sin_unary_negated_arg(double %x) {
 define float @sinf_negated_arg(float %x) {
 ; ANY-LABEL: @sinf_negated_arg(
 ; ANY-NEXT:    [[TMP1:%.*]] = call float @sinf(float [[X:%.*]])
-; ANY-NEXT:    [[TMP2:%.*]] = fsub float -0.000000e+00, [[TMP1]]
+; ANY-NEXT:    [[TMP2:%.*]] = fneg float [[TMP1]]
 ; ANY-NEXT:    ret float [[TMP2]]
 ;
   %neg = fsub float -0.0, %x
@@ -117,7 +117,7 @@ define float @sinf_negated_arg(float %x) {
 define float @sinf_unary_negated_arg(float %x) {
 ; ANY-LABEL: @sinf_unary_negated_arg(
 ; ANY-NEXT:    [[TMP1:%.*]] = call float @sinf(float [[X:%.*]])
-; ANY-NEXT:    [[TMP2:%.*]] = fsub float -0.000000e+00, [[TMP1]]
+; ANY-NEXT:    [[TMP2:%.*]] = fneg float [[TMP1]]
 ; ANY-NEXT:    ret float [[TMP2]]
 ;
   %neg = fneg float %x
@@ -128,7 +128,7 @@ define float @sinf_unary_negated_arg(float %x) {
 define float @sinf_negated_arg_FMF(float %x) {
 ; ANY-LABEL: @sinf_negated_arg_FMF(
 ; ANY-NEXT:    [[TMP1:%.*]] = call nnan afn float @sinf(float [[X:%.*]])
-; ANY-NEXT:    [[TMP2:%.*]] = fsub nnan afn float -0.000000e+00, [[TMP1]]
+; ANY-NEXT:    [[TMP2:%.*]] = fneg nnan afn float [[TMP1]]
 ; ANY-NEXT:    ret float [[TMP2]]
 ;
   %neg = fsub ninf float -0.0, %x
@@ -139,7 +139,7 @@ define float @sinf_negated_arg_FMF(float %x) {
 define float @sinf_unary_negated_arg_FMF(float %x) {
 ; ANY-LABEL: @sinf_unary_negated_arg_FMF(
 ; ANY-NEXT:    [[TMP1:%.*]] = call nnan afn float @sinf(float [[X:%.*]])
-; ANY-NEXT:    [[TMP2:%.*]] = fsub nnan afn float -0.000000e+00, [[TMP1]]
+; ANY-NEXT:    [[TMP2:%.*]] = fneg nnan afn float [[TMP1]]
 ; ANY-NEXT:    ret float [[TMP2]]
 ;
   %neg = fneg ninf float %x
@@ -227,7 +227,7 @@ define double @unary_neg_sin_negated_arg(double %x) {
 define double @tan_negated_arg(double %x) {
 ; ANY-LABEL: @tan_negated_arg(
 ; ANY-NEXT:    [[TMP1:%.*]] = call double @tan(double [[X:%.*]])
-; ANY-NEXT:    [[TMP2:%.*]] = fsub double -0.000000e+00, [[TMP1]]
+; ANY-NEXT:    [[TMP2:%.*]] = fneg double [[TMP1]]
 ; ANY-NEXT:    ret double [[TMP2]]
 ;
   %neg = fsub double -0.0, %x
@@ -238,7 +238,7 @@ define double @tan_negated_arg(double %x) {
 define double @tan_unary_negated_arg(double %x) {
 ; ANY-LABEL: @tan_unary_negated_arg(
 ; ANY-NEXT:    [[TMP1:%.*]] = call double @tan(double [[X:%.*]])
-; ANY-NEXT:    [[TMP2:%.*]] = fsub double -0.000000e+00, [[TMP1]]
+; ANY-NEXT:    [[TMP2:%.*]] = fneg double [[TMP1]]
 ; ANY-NEXT:    ret double [[TMP2]]
 ;
   %neg = fneg double %x
@@ -251,7 +251,7 @@ define double @tan_unary_negated_arg(double %x) {
 define fp128 @tanl_negated_arg(fp128 %x) {
 ; ANY-LABEL: @tanl_negated_arg(
 ; ANY-NEXT:    [[TMP1:%.*]] = call fp128 @tanl(fp128 [[X:%.*]])
-; ANY-NEXT:    [[TMP2:%.*]] = fsub fp128 0xL00000000000000008000000000000000, [[TMP1]]
+; ANY-NEXT:    [[TMP2:%.*]] = fneg fp128 [[TMP1]]
 ; ANY-NEXT:    ret fp128 [[TMP2]]
 ;
   %neg = fsub fp128 0xL00000000000000008000000000000000, %x
@@ -262,7 +262,7 @@ define fp128 @tanl_negated_arg(fp128 %x) {
 define fp128 @tanl_unary_negated_arg(fp128 %x) {
 ; ANY-LABEL: @tanl_unary_negated_arg(
 ; ANY-NEXT:    [[TMP1:%.*]] = call fp128 @tanl(fp128 [[X:%.*]])
-; ANY-NEXT:    [[TMP2:%.*]] = fsub fp128 0xL00000000000000008000000000000000, [[TMP1]]
+; ANY-NEXT:    [[TMP2:%.*]] = fneg fp128 [[TMP1]]
 ; ANY-NEXT:    ret fp128 [[TMP2]]
 ;
   %neg = fneg fp128 %x

@@ -21,7 +21,7 @@ define amdgpu_ps float @main(float %arg0, float %arg1) #0 {
 ; SI-NEXT:    v_and_b32_e32 v0, 1, v0
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; SI-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v0
+; SI-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, s0, v0
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: main:
@@ -42,7 +42,7 @@ define amdgpu_ps float @main(float %arg0, float %arg1) #0 {
 ; VI-NEXT:    v_and_b32_e32 v0, 1, v0
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; VI-NEXT:    v_cvt_pkrtz_f16_f32 v0, v0, v0
+; VI-NEXT:    v_cvt_pkrtz_f16_f32 v0, s0, v0
 ; VI-NEXT:    ; return to shader part epilog
 bb:
   %tmp = fptosi float %arg0 to i32

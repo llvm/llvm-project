@@ -88,6 +88,87 @@ define <vscale x 2 x i64> @neg_i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %pg,
   ret <vscale x 2 x i64> %out
 }
 
+; SDOT
+
+define <vscale x 4 x i32> @sdot_i32(<vscale x 4 x i32> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: sdot_i32:
+; CHECK: sdot z0.s, z1.b, z2.b
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sdot.nxv4i32(<vscale x 4 x i32> %a,
+                                                                <vscale x 16 x i8> %b,
+                                                                <vscale x 16 x i8> %c)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @sdot_i64(<vscale x 2 x i64> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) {
+; CHECK-LABEL: sdot_i64:
+; CHECK: sdot z0.d, z1.h, z2.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sdot.nxv2i64(<vscale x 2 x i64> %a,
+                                                                <vscale x 8 x i16> %b,
+                                                                <vscale x 8 x i16> %c)
+  ret <vscale x 2 x i64> %out
+}
+
+; SDOT (Indexed)
+
+define <vscale x 4 x i32> @sdot_lane_i32(<vscale x 4 x i32> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: sdot_lane_i32:
+; CHECK: sdot z0.s, z1.b, z2.b[2]
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.sdot.lane.nxv4i32(<vscale x 4 x i32> %a,
+                                                                     <vscale x 16 x i8> %b,
+                                                                     <vscale x 16 x i8> %c,
+                                                                     i32 2)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @sdot_lane_i64(<vscale x 2 x i64> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) {
+; CHECK-LABEL: sdot_lane_i64:
+; CHECK: sdot z0.d, z1.h, z2.h[1]
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.sdot.lane.nxv2i64(<vscale x 2 x i64> %a,
+                                                                     <vscale x 8 x i16> %b,
+                                                                     <vscale x 8 x i16> %c,
+                                                                     i32 1)
+  ret <vscale x 2 x i64> %out
+}
+
+; UDOT
+
+define <vscale x 4 x i32> @udot_i32(<vscale x 4 x i32> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: udot_i32:
+; CHECK: udot z0.s, z1.b, z2.b
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.udot.nxv4i32(<vscale x 4 x i32> %a,
+                                                                <vscale x 16 x i8> %b,
+                                                                <vscale x 16 x i8> %c)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @udot_i64(<vscale x 2 x i64> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) {
+; CHECK-LABEL: udot_i64:
+; CHECK: udot z0.d, z1.h, z2.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.udot.nxv2i64(<vscale x 2 x i64> %a,
+                                                                <vscale x 8 x i16> %b,
+                                                                <vscale x 8 x i16> %c)
+  ret <vscale x 2 x i64> %out
+}
+
+; UDOT (Indexed)
+
+define <vscale x 4 x i32> @udot_lane_i32(<vscale x 4 x i32> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: udot_lane_i32:
+; CHECK: udot z0.s, z1.b, z2.b[2]
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.udot.lane.nxv4i32(<vscale x 4 x i32> %a,
+                                                                     <vscale x 16 x i8> %b,
+                                                                     <vscale x 16 x i8> %c,
+                                                                     i32 2)
+  ret <vscale x 4 x i32> %out
+}
+
 declare <vscale x 16 x i8> @llvm.aarch64.sve.abs.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, <vscale x 16 x i8>)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.abs.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, <vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.abs.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x i32>)
@@ -97,3 +178,15 @@ declare <vscale x 16 x i8> @llvm.aarch64.sve.neg.nxv16i8(<vscale x 16 x i8>, <vs
 declare <vscale x 8 x i16> @llvm.aarch64.sve.neg.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, <vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.neg.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x i32>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.neg.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>, <vscale x 2 x i64>)
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.sdot.nxv4i32(<vscale x 4 x i32>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.sdot.nxv2i64(<vscale x 2 x i64>, <vscale x 8 x i16>, <vscale x 8 x i16>)
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.sdot.lane.nxv4i32(<vscale x 4 x i32>, <vscale x 16 x i8>, <vscale x 16 x i8>, i32)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.sdot.lane.nxv2i64(<vscale x 2 x i64>, <vscale x 8 x i16>, <vscale x 8 x i16>, i32)
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.udot.nxv4i32(<vscale x 4 x i32>, <vscale x 16 x i8>, <vscale x 16 x i8>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.udot.nxv2i64(<vscale x 2 x i64>, <vscale x 8 x i16>, <vscale x 8 x i16>)
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.udot.lane.nxv4i32(<vscale x 4 x i32>, <vscale x 16 x i8>, <vscale x 16 x i8>, i32)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.udot.lane.nxv2i64(<vscale x 2 x i64>, <vscale x 8 x i16>, <vscale x 8 x i16>, i32)

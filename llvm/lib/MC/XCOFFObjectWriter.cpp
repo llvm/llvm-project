@@ -218,7 +218,7 @@ void XCOFFObjectWriter::executePostLayoutBinding(
   DenseMap<const MCSectionXCOFF *, ControlSection *> WrapperMap;
 
   for (const auto &S : Asm) {
-    const MCSectionXCOFF *MCSec = dyn_cast<const MCSectionXCOFF>(&S);
+    const auto *MCSec = cast<const MCSectionXCOFF>(&S);
     assert(WrapperMap.find(MCSec) == WrapperMap.end() &&
            "Cannot add a csect twice.");
 

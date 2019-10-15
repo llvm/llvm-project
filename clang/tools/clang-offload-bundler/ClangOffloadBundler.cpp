@@ -468,6 +468,8 @@ public:
     // Find llvm-objcopy in order to create the bundle binary.
     ErrorOr<std::string> Objcopy = sys::findProgramByName(
         "llvm-objcopy", sys::path::parent_path(BundlerExecutable));
+    if (!Objcopy)
+      Objcopy = sys::findProgramByName("llvm-objcopy");
     if (!Objcopy) {
       errs() << "error: unable to find 'llvm-objcopy' in path.\n";
       return true;

@@ -506,7 +506,7 @@ public:
       return make_error<CoverageMapError>(coveragemap_error::malformed);
     // Each coverage map has an alignment of 8, so we need to adjust alignment
     // before reading the next map.
-    Buf += alignmentAdjustment(Buf, 8);
+    Buf += offsetToAlignedAddr(Buf, Align(8));
 
     auto CFR = reinterpret_cast<const FuncRecordType *>(FunBuf);
     while ((const char *)CFR < FunEnd) {
@@ -648,7 +648,7 @@ loadTestingFormat(StringRef Data) {
   // Skip the padding bytes because coverage map data has an alignment of 8.
   if (CoverageMapping.empty())
     return make_error<CoverageMapError>(coveragemap_error::truncated);
-  size_t Pad = alignmentAdjustment(CoverageMapping.data(), 8);
+  size_t Pad = offsetToAlignedAddr(CoverageMapping.data(), Align(8));
   if (CoverageMapping.size() < Pad)
     return make_error<CoverageMapError>(coveragemap_error::malformed);
   CoverageMapping = CoverageMapping.substr(Pad);

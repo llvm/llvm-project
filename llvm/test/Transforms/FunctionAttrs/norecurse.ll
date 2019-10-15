@@ -1,6 +1,6 @@
 ; RUN: opt < %s -basicaa -functionattrs -rpo-functionattrs -S | FileCheck %s --check-prefixes=CHECK,BOTH
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes='cgscc(function-attrs),rpo-functionattrs' -S | FileCheck %s --check-prefixes=CHECK,BOTH
-; RUN: opt -passes=attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=2 -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR,BOTH
+; RUN: opt -passes=attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=4 -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR,BOTH
 
 ; CHECK: Function Attrs
 ; CHECK-SAME: norecurse nounwind readnone

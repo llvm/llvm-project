@@ -149,6 +149,86 @@
 
 # CHECK: PASS: shtest-shell :: diff-r.txt
 
+# CHECK: FAIL: shtest-shell :: diff-unified-error-0.txt
+# CHECK: *** TEST 'shtest-shell :: diff-unified-error-0.txt' FAILED ***
+# CHECK: $ "diff" "-U" "30.1" "{{[^"]*}}" "{{[^"]*}}"
+# CHECK: # command stderr:
+# CHECK: Error: invalid '-U' argument: 30.1
+# CHECK: error: command failed with exit status: 127
+# CHECK: ***
+
+# CHECK: FAIL: shtest-shell :: diff-unified-error-1.txt
+# CHECK: *** TEST 'shtest-shell :: diff-unified-error-1.txt' FAILED ***
+# CHECK: $ "diff" "-U-1" "{{[^"]*}}" "{{[^"]*}}"
+# CHECK: # command stderr:
+# CHECK: Error: invalid '-U' argument: -1
+# CHECK: error: command failed with exit status: 127
+# CHECK: ***
+
+
+# CHECK: FAIL: shtest-shell :: diff-unified.txt
+
+# CHECK: *** TEST 'shtest-shell :: diff-unified.txt' FAILED ***
+
+# CHECK: $ "diff" "-u" "{{[^"]*}}.foo" "{{[^"]*}}.bar"
+# CHECK: # command output:
+# CHECK: @@ {{.*}} @@
+# CHECK-NEXT: 3
+# CHECK-NEXT: 4
+# CHECK-NEXT: 5
+# CHECK-NEXT: -6 foo
+# CHECK-NEXT: +6 bar
+# CHECK-NEXT: 7
+# CHECK-NEXT: 8
+# CHECK-NEXT: 9
+# CHECK-EMPTY:
+# CHECK-NEXT: error: command failed with exit status: 1
+# CHECK-NEXT: $ "true"
+
+# CHECK: $ "diff" "-U" "2" "{{[^"]*}}.foo" "{{[^"]*}}.bar"
+# CHECK: # command output:
+# CHECK: @@ {{.*}} @@
+# CHECK-NEXT: 4
+# CHECK-NEXT: 5
+# CHECK-NEXT: -6 foo
+# CHECK-NEXT: +6 bar
+# CHECK-NEXT: 7
+# CHECK-NEXT: 8
+# CHECK-EMPTY:
+# CHECK-NEXT: error: command failed with exit status: 1
+# CHECK-NEXT: $ "true"
+
+# CHECK: $ "diff" "-U4" "{{[^"]*}}.foo" "{{[^"]*}}.bar"
+# CHECK: # command output:
+# CHECK: @@ {{.*}} @@
+# CHECK-NEXT: 2
+# CHECK-NEXT: 3
+# CHECK-NEXT: 4
+# CHECK-NEXT: 5
+# CHECK-NEXT: -6 foo
+# CHECK-NEXT: +6 bar
+# CHECK-NEXT: 7
+# CHECK-NEXT: 8
+# CHECK-NEXT: 9
+# CHECK-NEXT: 10
+# CHECK-EMPTY:
+# CHECK-NEXT: error: command failed with exit status: 1
+# CHECK-NEXT: $ "true"
+
+# CHECK: $ "diff" "-U0" "{{[^"]*}}.foo" "{{[^"]*}}.bar"
+# CHECK: # command output:
+# CHECK: @@ {{.*}} @@
+# CHECK-NEXT: -6 foo
+# CHECK-NEXT: +6 bar
+# CHECK-EMPTY:
+# CHECK-NEXT: error: command failed with exit status: 1
+# CHECK-NEXT: $ "true"
+
+# CHECK: $ "false"
+
+# CHECK: ***
+
+
 # CHECK: FAIL: shtest-shell :: error-0.txt
 # CHECK: *** TEST 'shtest-shell :: error-0.txt' FAILED ***
 # CHECK: $ "not-a-real-command"
@@ -228,4 +308,4 @@
 # CHECK: PASS: shtest-shell :: sequencing-0.txt
 # CHECK: XFAIL: shtest-shell :: sequencing-1.txt
 # CHECK: PASS: shtest-shell :: valid-shell.txt
-# CHECK: Failing Tests (27)
+# CHECK: Failing Tests (30)

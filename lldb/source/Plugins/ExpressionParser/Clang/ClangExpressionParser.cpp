@@ -515,6 +515,9 @@ ClangExpressionParser::ClangExpressionParser(
     lang_opts.DoubleSquareBracketAttributes = true;
     lang_opts.CPlusPlus11 = true;
 
+    // The Darwin libc expects this macro to be set.
+    lang_opts.GNUCVersion = 40201;
+
     SetupModuleHeaderPaths(m_compiler.get(), m_include_directories,
                            target_sp);
   }

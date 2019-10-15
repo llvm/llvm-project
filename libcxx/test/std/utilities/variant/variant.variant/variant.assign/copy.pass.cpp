@@ -453,7 +453,7 @@ void test_copy_assignment_different_index() {
   {
     using V = std::variant<int, CopyAssign, unsigned>;
     CopyAssign::reset();
-    V v1(std::in_place_type<unsigned>, 43);
+    V v1(std::in_place_type<unsigned>, 43u);
     V v2(std::in_place_type<CopyAssign>, 42);
     assert(CopyAssign::copy_construct == 0);
     assert(CopyAssign::move_construct == 0);
@@ -547,7 +547,7 @@ void test_copy_assignment_different_index() {
     struct {
       constexpr Result<int> operator()() const {
         using V = std::variant<int, TCopyAssign, unsigned>;
-        V v(std::in_place_type<unsigned>, 43);
+        V v(std::in_place_type<unsigned>, 43u);
         V v2(std::in_place_type<TCopyAssign>, 42);
         v = v2;
         return {v.index(), std::get<1>(v).value};

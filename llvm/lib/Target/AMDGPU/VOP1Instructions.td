@@ -441,7 +441,7 @@ let SubtargetPredicate = isGFX10Plus in {
 // Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
 
-class VOP1_DPP<bits<8> op, VOP1_Pseudo ps, VOPProfile p = ps.Pfl, bit isDPP16 = 0> :
+class VOP1_DPP<bits<8> op, VOP1_DPP_Pseudo ps, VOPProfile p = ps.Pfl, bit isDPP16 = 0> :
     VOP_DPP<ps.OpName, p, isDPP16> {
   let hasSideEffects = ps.hasSideEffects;
   let Defs = ps.Defs;
@@ -455,8 +455,9 @@ class VOP1_DPP<bits<8> op, VOP1_Pseudo ps, VOPProfile p = ps.Pfl, bit isDPP16 = 
   let Inst{31-25} = 0x3f;
 }
 
-class VOP1_DPP16<bits<8> op, VOP1_Pseudo ps, VOPProfile p = ps.Pfl> :
-    VOP1_DPP<op, ps, p, 1> {
+class VOP1_DPP16<bits<8> op, VOP1_DPP_Pseudo ps, VOPProfile p = ps.Pfl> :
+    VOP1_DPP<op, ps, p, 1>,
+    SIMCInstr <ps.PseudoInstr, SIEncodingFamily.GFX10> {
   let AssemblerPredicate = !if(p.HasExt, HasDPP16, DisableInst);
   let SubtargetPredicate = HasDPP16;
 }
@@ -507,7 +508,7 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
   }
   multiclass VOP1_Real_dpp_gfx10<bits<9> op> {
     foreach _ = BoolToList<!cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExtDPP>.ret in
-    def _dpp_gfx10 : VOP1_DPP16<op{7-0}, !cast<VOP1_Pseudo>(NAME#"_e32")> {
+    def _dpp_gfx10 : VOP1_DPP16<op{7-0}, !cast<VOP1_DPP_Pseudo>(NAME#"_dpp")> {
       let DecoderNamespace = "SDWA10";
     }
   }
@@ -840,7 +841,7 @@ def V_MOVRELD_B32_V4 : V_MOVRELD_B32_pseudo<VReg_128>;
 def V_MOVRELD_B32_V8 : V_MOVRELD_B32_pseudo<VReg_256>;
 def V_MOVRELD_B32_V16 : V_MOVRELD_B32_pseudo<VReg_512>;
 
-let OtherPredicates = [isGFX8GFX9] in {
+let OtherPredicates = [isGFX8Plus] in {
 
 def : GCNPat <
   (i32 (int_amdgcn_mov_dpp i32:$src, timm:$dpp_ctrl, timm:$row_mask, timm:$bank_mask,
@@ -858,7 +859,7 @@ def : GCNPat <
                        (as_i1imm $bound_ctrl))
 >;
 
-} // End OtherPredicates = [isGFX8GFX9]
+} // End OtherPredicates = [isGFX8Plus]
 
 let OtherPredicates = [isGFX8Plus] in {
 def : GCNPat<
@@ -915,21 +916,5 @@ let OtherPredicates = [isGFX10Plus] in {
 def : GCNPat <
   (i32 (int_amdgcn_mov_dpp8 i32:$src, timm:$dpp8)),
   (V_MOV_B32_dpp8_gfx10 $src, $src, (as_i32imm $dpp8), (i32 DPP8Mode.FI_0))
->;
-
-def : GCNPat <
-  (i32 (int_amdgcn_mov_dpp i32:$src, timm:$dpp_ctrl, timm:$row_mask, timm:$bank_mask,
-                      timm:$bound_ctrl)),
-  (V_MOV_B32_dpp_gfx10 $src, $src, (as_i32imm $dpp_ctrl),
-                       (as_i32imm $row_mask), (as_i32imm $bank_mask),
-                       (as_i1imm $bound_ctrl), (i32 0))
->;
-
-def : GCNPat <
-  (i32 (int_amdgcn_update_dpp i32:$old, i32:$src, timm:$dpp_ctrl, timm:$row_mask,
-                              timm:$bank_mask, timm:$bound_ctrl)),
-  (V_MOV_B32_dpp_gfx10 $old, $src, (as_i32imm $dpp_ctrl),
-                       (as_i32imm $row_mask), (as_i32imm $bank_mask),
-                       (as_i1imm $bound_ctrl), (i32 0))
 >;
 } // End OtherPredicates = [isGFX10Plus]

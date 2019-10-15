@@ -2176,8 +2176,7 @@ uint32_t GDBRemoteCommunicationClient::FindProcesses(
       if (match_info.GetProcessInfo().EffectiveGroupIDIsValid())
         packet.Printf("egid:%u;",
                       match_info.GetProcessInfo().GetEffectiveGroupID());
-      if (match_info.GetProcessInfo().EffectiveGroupIDIsValid())
-        packet.Printf("all_users:%u;", match_info.GetMatchAllUsers() ? 1 : 0);
+      packet.Printf("all_users:%u;", match_info.GetMatchAllUsers() ? 1 : 0);
       if (match_info.GetProcessInfo().GetArchitecture().IsValid()) {
         const ArchSpec &match_arch =
             match_info.GetProcessInfo().GetArchitecture();
@@ -2896,7 +2895,7 @@ static uint64_t ParseHostIOPacketResponse(StringExtractorGDBRemote &response,
 }
 lldb::user_id_t
 GDBRemoteCommunicationClient::OpenFile(const lldb_private::FileSpec &file_spec,
-                                       uint32_t flags, mode_t mode,
+                                       File::OpenOptions flags, mode_t mode,
                                        Status &error) {
   std::string path(file_spec.GetPath(false));
   lldb_private::StreamString stream;

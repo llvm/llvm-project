@@ -658,14 +658,14 @@ let Constraints = "$vdst = $src2",
       isCommutable = 1,
       IsDOT = 1 in {
   let SubtargetPredicate = HasDot5Insts in
-    defm V_DOT2C_F32_F16 : VOP2Inst_e32<"v_dot2c_f32_f16", VOP_DOT_ACC_F32_V2F16>;
+    defm V_DOT2C_F32_F16 : VOP2Inst<"v_dot2c_f32_f16", VOP_DOT_ACC_F32_V2F16>;
   let SubtargetPredicate = HasDot6Insts in
-    defm V_DOT4C_I32_I8  : VOP2Inst_e32<"v_dot4c_i32_i8",  VOP_DOT_ACC_I32_I32>;
+    defm V_DOT4C_I32_I8  : VOP2Inst<"v_dot4c_i32_i8",  VOP_DOT_ACC_I32_I32>;
 
   let SubtargetPredicate = HasDot4Insts in
-    defm V_DOT2C_I32_I16 : VOP2Inst_e32<"v_dot2c_i32_i16", VOP_DOT_ACC_I32_I32>;
+    defm V_DOT2C_I32_I16 : VOP2Inst<"v_dot2c_i32_i16", VOP_DOT_ACC_I32_I32>;
   let SubtargetPredicate = HasDot3Insts in
-    defm V_DOT8C_I32_I4  : VOP2Inst_e32<"v_dot8c_i32_i4",  VOP_DOT_ACC_I32_I32>;
+    defm V_DOT8C_I32_I4  : VOP2Inst<"v_dot8c_i32_i4",  VOP_DOT_ACC_I32_I32>;
 }
 
 let AddedComplexity = 30 in {
@@ -800,7 +800,7 @@ def : GCNPat<
 // Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
 
-class VOP2_DPP<bits<6> op, VOP2_Pseudo ps,
+class VOP2_DPP<bits<6> op, VOP2_DPP_Pseudo ps,
                string opName = ps.OpName, VOPProfile p = ps.Pfl,
                bit IsDPP16 = 0> :
     VOP_DPP<opName, p, IsDPP16> {
@@ -818,12 +818,17 @@ class VOP2_DPP<bits<6> op, VOP2_Pseudo ps,
   let Inst{31}    = 0x0;
 }
 
-class VOP2_DPP16<bits<6> op, VOP2_Pseudo ps,
+class Base_VOP2_DPP16<bits<6> op, VOP2_DPP_Pseudo ps,
                  string opName = ps.OpName, VOPProfile p = ps.Pfl> :
     VOP2_DPP<op, ps, opName, p, 1> {
   let AssemblerPredicate = !if(p.HasExt, HasDPP16, DisableInst);
   let SubtargetPredicate = HasDPP16;
 }
+
+class VOP2_DPP16<bits<6> op, VOP2_DPP_Pseudo ps,
+                 string opName = ps.OpName, VOPProfile p = ps.Pfl> :
+    Base_VOP2_DPP16<op, ps, opName, p>,
+    SIMCInstr <ps.PseudoInstr, SIEncodingFamily.GFX10>;
 
 class VOP2_DPP8<bits<6> op, VOP2_Pseudo ps,
                 string opName = ps.OpName, VOPProfile p = ps.Pfl> :
@@ -885,7 +890,7 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
   }
   multiclass VOP2_Real_dpp_gfx10<bits<6> op> {
     foreach _ = BoolToList<!cast<VOP2_Pseudo>(NAME#"_e32").Pfl.HasExtDPP>.ret in
-    def _dpp_gfx10 : VOP2_DPP16<op, !cast<VOP2_Pseudo>(NAME#"_e32")> {
+    def _dpp_gfx10 : VOP2_DPP16<op, !cast<VOP2_DPP_Pseudo>(NAME#"_dpp")> {
       let DecoderNamespace = "SDWA10";
     }
   }
@@ -929,7 +934,7 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
     multiclass VOP2_Real_dpp_gfx10_with_name<bits<6> op, string opName,
                                              string asmName> {
       foreach _ = BoolToList<!cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExtDPP>.ret in
-      def _dpp_gfx10 : VOP2_DPP16<op, !cast<VOP2_Pseudo>(opName#"_e32")> {
+      def _dpp_gfx10 : VOP2_DPP16<op, !cast<VOP2_DPP_Pseudo>(opName#"_dpp")> {
         VOP2_Pseudo ps = !cast<VOP2_Pseudo>(opName#"_e32");
         let AsmString = asmName # ps.Pfl.AsmDPP16;
       }
@@ -969,7 +974,7 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
       }
     foreach _ = BoolToList<!cast<VOP2_Pseudo>(opName#"_e32").Pfl.HasExtDPP>.ret in
     def _dpp_gfx10 :
-      VOP2_DPP16<op, !cast<VOP2_Pseudo>(opName#"_e32"), asmName> {
+      VOP2_DPP16<op, !cast<VOP2_DPP_Pseudo>(opName#"_dpp"), asmName> {
         string AsmDPP = !cast<VOP2_Pseudo>(opName#"_e32").Pfl.AsmDPP16;
         let AsmString = asmName # !subst(", vcc", "", AsmDPP);
         let DecoderNamespace = "SDWA10";
@@ -992,7 +997,7 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
           let DecoderNamespace = "SDWA10";
         }
       def _dpp_w32_gfx10 :
-        VOP2_DPP16<op, !cast<VOP2_Pseudo>(opName#"_e32"), asmName> {
+        Base_VOP2_DPP16<op, !cast<VOP2_DPP_Pseudo>(opName#"_dpp"), asmName> {
           string AsmDPP = !cast<VOP2_Pseudo>(opName#"_e32").Pfl.AsmDPP16;
           let AsmString = asmName # !subst("vcc", "vcc_lo", AsmDPP);
           let isAsmParserOnly = 1;
@@ -1015,7 +1020,7 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
           let DecoderNamespace = "SDWA10";
         }
       def _dpp_w64_gfx10 :
-        VOP2_DPP16<op, !cast<VOP2_Pseudo>(opName#"_e32"), asmName> {
+        Base_VOP2_DPP16<op, !cast<VOP2_DPP_Pseudo>(opName#"_dpp"), asmName> {
           string AsmDPP = !cast<VOP2_Pseudo>(opName#"_e32").Pfl.AsmDPP16;
           let AsmString = asmName # AsmDPP;
           let isAsmParserOnly = 1;
@@ -1513,7 +1518,7 @@ defm V_XNOR_B32 : VOP2_Real_e32e64_vi <0x3d>;
 } // End SubtargetPredicate = HasDLInsts
 
 multiclass VOP2_Real_DOT_ACC_gfx9<bits<6> op> : VOP2_Real_e32_vi<op> {
-  def _dpp : VOP2_DPP<op, !cast<VOP2_Pseudo>(NAME#"_e32")>;
+  def _dpp_vi : VOP2_DPP<op, !cast<VOP2_DPP_Pseudo>(NAME#"_dpp")>;
 }
 
 multiclass VOP2_Real_DOT_ACC_gfx10<bits<6> op> :

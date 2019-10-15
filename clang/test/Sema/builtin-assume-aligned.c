@@ -59,6 +59,6 @@ void *test_no_fn_proto() __attribute__((assume_aligned())); // expected-error {{
 void *test_no_fn_proto() __attribute__((assume_aligned(32, 45, 37))); // expected-error {{'assume_aligned' attribute takes no more than 2 arguments}}
 
 int pr43638(int *a) {
-  a = __builtin_assume_aligned(a, 4294967296); // expected-warning {{requested alignment must be 536870912 bytes or smaller; maximum alignment assumed}}
+  a = __builtin_assume_aligned(a, 1073741824); // expected-warning {{requested alignment must be 536870912 bytes or smaller; maximum alignment assumed}}
 return a[0];
 }

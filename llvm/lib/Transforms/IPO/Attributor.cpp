@@ -125,12 +125,6 @@ static cl::opt<bool> ManifestInternal(
     cl::desc("Manifest Attributor internal string attributes."),
     cl::init(false));
 
-static cl::opt<bool> VerifyAttributor(
-    "attributor-verify", cl::Hidden,
-    cl::desc("Verify the Attributor deduction and "
-             "manifestation of attributes -- may issue false-positive errors"),
-    cl::init(false));
-
 static cl::opt<unsigned> DepRecInterval(
     "attributor-dependence-recompute-interval", cl::Hidden,
     cl::desc("Number of iterations until dependences are recomputed."),
@@ -599,8 +593,9 @@ struct AAComposeTwoGenericDeduction
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    return F<AAType, G<AAType, Base, StateType>, StateType>::updateImpl(A) |
-           G<AAType, Base, StateType>::updateImpl(A);
+    ChangeStatus ChangedF = F<AAType, G<AAType, Base, StateType>, StateType>::updateImpl(A);
+    ChangeStatus ChangedG = G<AAType, Base, StateType>::updateImpl(A);
+    return ChangedF | ChangedG;
   }
 };
 
@@ -1541,11 +1536,16 @@ struct AANoFreeCallSite final : AANoFreeImpl {
 static int64_t getKnownNonNullAndDerefBytesForUse(
     Attributor &A, AbstractAttribute &QueryingAA, Value &AssociatedValue,
     const Use *U, const Instruction *I, bool &IsNonNull, bool &TrackUse) {
-  // TODO: Add GEP support
   TrackUse = false;
 
+  const Value *UseV = U->get();
+  if (!UseV->getType()->isPointerTy())
+    return 0;
+
+  Type *PtrTy = UseV->getType();
   const Function *F = I->getFunction();
-  bool NullPointerIsDefined = F ? F->nullPointerIsDefined() : true;
+  bool NullPointerIsDefined =
+      F ? llvm::NullPointerIsDefined(F, PtrTy->getPointerAddressSpace()) : true;
   const DataLayout &DL = A.getInfoCache().getDL();
   if (ImmutableCallSite ICS = ImmutableCallSite(I)) {
     if (ICS.isBundleOperand(U))
@@ -1565,25 +1565,39 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
 
   int64_t Offset;
   if (const Value *Base = getBasePointerOfAccessPointerOperand(I, Offset, DL)) {
-    if (Base == &AssociatedValue) {
+    if (Base == &AssociatedValue && getPointerOperand(I) == UseV) {
       int64_t DerefBytes =
-          Offset +
-          (int64_t)DL.getTypeStoreSize(
-              getPointerOperand(I)->getType()->getPointerElementType());
+          Offset + (int64_t)DL.getTypeStoreSize(PtrTy->getPointerElementType());
 
       IsNonNull |= !NullPointerIsDefined;
       return DerefBytes;
     }
   }
+  if (const Value *Base =
+          GetPointerBaseWithConstantOffset(UseV, Offset, DL,
+                                           /*AllowNonInbounds*/ false)) {
+    auto &DerefAA =
+        A.getAAFor<AADereferenceable>(QueryingAA, IRPosition::value(*Base));
+    IsNonNull |= (!NullPointerIsDefined && DerefAA.isKnownNonNull());
+    IsNonNull |= (!NullPointerIsDefined && (Offset != 0));
+    int64_t DerefBytes = DerefAA.getKnownDereferenceableBytes();
+    return std::max(int64_t(0), DerefBytes - Offset);
+  }
 
   return 0;
 }
+
 struct AANonNullImpl : AANonNull {
-  AANonNullImpl(const IRPosition &IRP) : AANonNull(IRP) {}
+  AANonNullImpl(const IRPosition &IRP)
+      : AANonNull(IRP),
+        NullIsDefined(NullPointerIsDefined(
+            getAnchorScope(),
+            getAssociatedValue().getType()->getPointerAddressSpace())) {}
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    if (hasAttr({Attribute::NonNull, Attribute::Dereferenceable}))
+    if (!NullIsDefined &&
+        hasAttr({Attribute::NonNull, Attribute::Dereferenceable}))
       indicateOptimisticFixpoint();
     else
       AANonNull::initialize(A);
@@ -1603,6 +1617,10 @@ struct AANonNullImpl : AANonNull {
   const std::string getAsStr() const override {
     return getAssumed() ? "nonnull" : "may-null";
   }
+
+  /// Flag to determine if the underlying value can be null and still allow
+  /// valid accesses.
+  const bool NullIsDefined;
 };
 
 /// NonNull attribute for a floating value.
@@ -1635,6 +1653,12 @@ struct AANonNullFloating
     if (isKnownNonNull())
       return Change;
 
+    if (!NullIsDefined) {
+      const auto &DerefAA = A.getAAFor<AADereferenceable>(*this, getIRPosition());
+      if (DerefAA.getAssumedDereferenceableBytes())
+        return Change;
+    }
+
     const DataLayout &DL = A.getDataLayout();
 
     auto VisitValueCB = [&](Value &V, AAAlign::StateType &T,
@@ -1642,7 +1666,7 @@ struct AANonNullFloating
       const auto &AA = A.getAAFor<AANonNull>(*this, IRPosition::value(V));
       if (!Stripped && this == &AA) {
         if (!isKnownNonZero(&V, DL, 0, /* TODO: AC */ nullptr,
-                            /* TODO: CtxI */ nullptr,
+                            /* CtxI */ getCtxI(),
                             /* TODO: DT */ nullptr))
           T.indicatePessimisticFixpoint();
       } else {
@@ -2145,8 +2169,6 @@ struct AAIsDeadImpl : public AAIsDead {
       BasicBlock *BB = I->getParent();
       Instruction *SplitPos = I->getNextNode();
       // TODO: mark stuff before unreachable instructions as dead.
-      if (isa_and_nonnull<UnreachableInst>(SplitPos))
-        continue;
 
       if (auto *II = dyn_cast<InvokeInst>(I)) {
         // If we keep the invoke the split position is at the beginning of the
@@ -2189,14 +2211,22 @@ struct AAIsDeadImpl : public AAIsDead {
           //       also manifest.
           assert(!NormalDestBB->isLandingPad() &&
                  "Expected the normal destination not to be a landingpad!");
-          BasicBlock *SplitBB =
-              SplitBlockPredecessors(NormalDestBB, {BB}, ".dead");
-          // The split block is live even if it contains only an unreachable
-          // instruction at the end.
-          assumeLive(A, *SplitBB);
-          SplitPos = SplitBB->getTerminator();
+          if (NormalDestBB->getUniquePredecessor() == BB) {
+            assumeLive(A, *NormalDestBB);
+          } else {
+            BasicBlock *SplitBB =
+                SplitBlockPredecessors(NormalDestBB, {BB}, ".dead");
+            // The split block is live even if it contains only an unreachable
+            // instruction at the end.
+            assumeLive(A, *SplitBB);
+            SplitPos = SplitBB->getTerminator();
+            HasChanged = ChangeStatus::CHANGED;
+          }
         }
       }
+
+      if (isa_and_nonnull<UnreachableInst>(SplitPos))
+        continue;
 
       BB = SplitPos->getParent();
       SplitBlock(BB, SplitPos);
@@ -2539,7 +2569,7 @@ struct AADereferenceableFloating
       // for overflows of the dereferenceable bytes.
       int64_t OffsetSExt = Offset.getSExtValue();
       if (OffsetSExt < 0)
-        Offset = 0;
+        OffsetSExt = 0;
 
       T.takeAssumedDerefBytesMinimum(
           std::max(int64_t(0), DerefBytes - OffsetSExt));
@@ -2829,6 +2859,14 @@ struct AAAlignCallSiteReturned final : AAAlignImpl {
 struct AANoReturnImpl : public AANoReturn {
   AANoReturnImpl(const IRPosition &IRP) : AANoReturn(IRP) {}
 
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AANoReturn::initialize(A);
+    Function *F = getAssociatedFunction();
+    if (!F || F->hasFnAttribute(Attribute::WillReturn))
+      indicatePessimisticFixpoint();
+  }
+
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr() const override {
     return getAssumed() ? "noreturn" : "may-return";
@@ -2836,6 +2874,9 @@ struct AANoReturnImpl : public AANoReturn {
 
   /// See AbstractAttribute::updateImpl(Attributor &A).
   virtual ChangeStatus updateImpl(Attributor &A) override {
+    const auto &WillReturnAA = A.getAAFor<AAWillReturn>(*this, getIRPosition());
+    if (WillReturnAA.isKnownWillReturn())
+      return indicatePessimisticFixpoint();
     auto CheckForNoReturn = [](Instruction &) { return false; };
     if (!A.checkForAllInstructions(CheckForNoReturn, *this,
                                    {(unsigned)Instruction::Ret}))
@@ -2854,14 +2895,6 @@ struct AANoReturnFunction final : AANoReturnImpl {
 /// NoReturn attribute deduction for a call sites.
 struct AANoReturnCallSite final : AANoReturnImpl {
   AANoReturnCallSite(const IRPosition &IRP) : AANoReturnImpl(IRP) {}
-
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override {
-    AANoReturnImpl::initialize(A);
-    Function *F = getAssociatedFunction();
-    if (!F)
-      indicatePessimisticFixpoint();
-  }
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
@@ -3569,8 +3602,16 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
 
       auto *UserI = U->getUser();
 
-      if (isa<LoadInst>(UserI) || isa<StoreInst>(UserI))
+      if (isa<LoadInst>(UserI))
         continue;
+      if (auto *SI = dyn_cast<StoreInst>(UserI)) {
+        if (SI->getValueOperand() == U->get()) {
+          LLVM_DEBUG(dbgs() << "[H2S] escaping store to memory: " << *UserI << "\n");
+          return false;
+        }
+        // A store into the malloc'ed memory is fine.
+        continue;
+      }
 
       // NOTE: Right now, if a function that has malloc pointer as an argument
       // frees memory, we assume that the malloc pointer is freed.
@@ -3620,30 +3661,36 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
   };
 
   auto MallocCallocCheck = [&](Instruction &I) {
-    if (isMallocLikeFn(&I, TLI)) {
-      if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(0)))
-        if (!Size->getValue().sle(MaxHeapToStackSize))
-          return true;
-    } else if (isCallocLikeFn(&I, TLI)) {
-      bool Overflow = false;
-      if (auto *Num = dyn_cast<ConstantInt>(I.getOperand(0)))
-        if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(1)))
-          if (!(Size->getValue().umul_ov(Num->getValue(), Overflow))
-                   .sle(MaxHeapToStackSize))
-            if (!Overflow)
-              return true;
-    } else {
+    if (BadMallocCalls.count(&I))
+      return true;
+
+    bool IsMalloc = isMallocLikeFn(&I, TLI);
+    bool IsCalloc = !IsMalloc && isCallocLikeFn(&I, TLI);
+    if (!IsMalloc && !IsCalloc) {
       BadMallocCalls.insert(&I);
       return true;
     }
 
-    if (BadMallocCalls.count(&I))
-      return true;
+    if (IsMalloc) {
+      if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(0)))
+        if (Size->getValue().sle(MaxHeapToStackSize))
+          if (UsesCheck(I)) {
+            MallocCalls.insert(&I);
+            return true;
+          }
+    } else if (IsCalloc) {
+      bool Overflow = false;
+      if (auto *Num = dyn_cast<ConstantInt>(I.getOperand(0)))
+        if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(1)))
+          if ((Size->getValue().umul_ov(Num->getValue(), Overflow))
+                   .sle(MaxHeapToStackSize))
+            if (!Overflow && UsesCheck(I)) {
+              MallocCalls.insert(&I);
+              return true;
+            }
+    }
 
-    if (UsesCheck(I))
-      MallocCalls.insert(&I);
-    else
-      BadMallocCalls.insert(&I);
+    BadMallocCalls.insert(&I);
     return true;
   };
 
@@ -3667,7 +3714,6 @@ struct AAHeapToStackFunction final : public AAHeapToStackImpl {
     BUILD_STAT_NAME(MallocCalls, Function) += MallocCalls.size();
   }
 };
-} // namespace
 
 /// -------------------- Memory Behavior Attributes ----------------------------
 /// Includes read-none, read-only, and write-only.
@@ -3810,16 +3856,22 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
   void initialize(Attributor &A) override {
     AAMemoryBehaviorFloating::initialize(A);
 
-    // TODO: From readattrs.ll: "inalloca parameters are always
-    //                           considered written"
-    if (hasAttr({Attribute::InAlloca}))
-      removeAssumedBits(NO_WRITES);
-
     // Initialize the use vector with all direct uses of the associated value.
     Argument *Arg = getAssociatedArgument();
     if (!Arg || !Arg->getParent()->hasExactDefinition())
       indicatePessimisticFixpoint();
   }
+
+  ChangeStatus manifest(Attributor &A) override {
+    // TODO: From readattrs.ll: "inalloca parameters are always
+    //                           considered written"
+    if (hasAttr({Attribute::InAlloca})) {
+      removeKnownBits(NO_WRITES);
+      removeAssumedBits(NO_WRITES);
+    }
+    return AAMemoryBehaviorFloating::manifest(A);
+  }
+
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -3940,6 +3992,7 @@ struct AAMemoryBehaviorCallSite final : AAMemoryBehaviorImpl {
       STATS_DECLTRACK_CS_ATTR(writeonly)
   }
 };
+} // namespace
 
 ChangeStatus AAMemoryBehaviorFunction::updateImpl(Attributor &A) {
 
@@ -3988,10 +4041,13 @@ ChangeStatus AAMemoryBehaviorFloating::updateImpl(Attributor &A) {
 
   // Make sure the value is not captured (except through "return"), if
   // it is, any information derived would be irrelevant anyway as we cannot
-  // check the potential aliases introduced by the capture.
+  // check the potential aliases introduced by the capture. However, no need
+  // to fall back to anythign less optimistic than the function state.
   const auto &ArgNoCaptureAA = A.getAAFor<AANoCapture>(*this, IRP);
-  if (!ArgNoCaptureAA.isAssumedNoCaptureMaybeReturned())
-    return indicatePessimisticFixpoint();
+  if (!ArgNoCaptureAA.isAssumedNoCaptureMaybeReturned()) {
+    S.intersectAssumedBits(FnMemAA.getAssumed());
+    return ChangeStatus::CHANGED;
+  }
 
   // The current assumed state used to determine a change.
   auto AssumedState = S.getAssumed();
@@ -4153,19 +4209,26 @@ bool Attributor::checkForAllCallSites(
     return false;
   }
 
-  if (RequireAllCallSites && !AssociatedFunction->hasLocalLinkage()) {
+  return checkForAllCallSites(Pred, *AssociatedFunction, RequireAllCallSites,
+                              &QueryingAA);
+}
+
+bool Attributor::checkForAllCallSites(
+    const function_ref<bool(AbstractCallSite)> &Pred, const Function &Fn,
+    bool RequireAllCallSites, const AbstractAttribute *QueryingAA) {
+  if (RequireAllCallSites && !Fn.hasLocalLinkage()) {
     LLVM_DEBUG(
         dbgs()
-        << "[Attributor] Function " << AssociatedFunction->getName()
+        << "[Attributor] Function " << Fn.getName()
         << " has no internal linkage, hence not all call sites are known\n");
     return false;
   }
 
-  for (const Use &U : AssociatedFunction->uses()) {
+  for (const Use &U : Fn.uses()) {
     AbstractCallSite ACS(&U);
     if (!ACS) {
       LLVM_DEBUG(dbgs() << "[Attributor] Function "
-                        << AssociatedFunction->getName()
+                        << Fn.getName()
                         << " has non call site use " << *U.get() << " in "
                         << *U.getUser() << "\n");
       return false;
@@ -4174,15 +4237,16 @@ bool Attributor::checkForAllCallSites(
     Instruction *I = ACS.getInstruction();
     Function *Caller = I->getFunction();
 
-    const auto &LivenessAA =
-        getAAFor<AAIsDead>(QueryingAA, IRPosition::function(*Caller),
+    const auto *LivenessAA =
+        lookupAAFor<AAIsDead>(IRPosition::function(*Caller), QueryingAA,
                            /* TrackDependence */ false);
 
     // Skip dead calls.
-    if (LivenessAA.isAssumedDead(I)) {
+    if (LivenessAA && LivenessAA->isAssumedDead(I)) {
       // We actually used liveness information so we have to record a
       // dependence.
-      recordDependence(LivenessAA, QueryingAA);
+      if (QueryingAA)
+        recordDependence(*LivenessAA, *QueryingAA);
       continue;
     }
 
@@ -4193,7 +4257,7 @@ bool Attributor::checkForAllCallSites(
         continue;
       LLVM_DEBUG(dbgs() << "[Attributor] User " << EffectiveUse->getUser()
                         << " is an invalid use of "
-                        << AssociatedFunction->getName() << "\n");
+                        << Fn.getName() << "\n");
       return false;
     }
 
@@ -4412,8 +4476,6 @@ ChangeStatus Attributor::run(Module &M) {
 
   size_t NumFinalAAs = AllAbstractAttributes.size();
 
-  bool FinishedAtFixpoint = Worklist.empty();
-
   // Reset abstract arguments not settled in a sound fixpoint by now. This
   // happens when we stopped the fixpoint iteration early. Note that only the
   // ones marked as "changed" *and* the ones transitively depending on them
@@ -4478,24 +4540,6 @@ ChangeStatus Attributor::run(Module &M) {
   LLVM_DEBUG(dbgs() << "\n[Attributor] Manifested " << NumManifested
                     << " arguments while " << NumAtFixpoint
                     << " were in a valid fixpoint state\n");
-
-  // If verification is requested, we finished this run at a fixpoint, and the
-  // IR was changed, we re-run the whole fixpoint analysis, starting at
-  // re-initialization of the arguments. This re-run should not result in an IR
-  // change. Though, the (virtual) state of attributes at the end of the re-run
-  // might be more optimistic than the known state or the IR state if the better
-  // state cannot be manifested.
-  if (VerifyAttributor && FinishedAtFixpoint &&
-      ManifestChange == ChangeStatus::CHANGED) {
-    VerifyAttributor = false;
-    ChangeStatus VerifyStatus = run(M);
-    if (VerifyStatus != ChangeStatus::UNCHANGED)
-      llvm_unreachable(
-          "Attributor verification failed, re-run did result in an IR change "
-          "even after a fixpoint was reached in the original run. (False "
-          "positives possible!)");
-    VerifyAttributor = true;
-  }
 
   NumAttributesManifested += NumManifested;
   NumAttributesValidFixpoint += NumAtFixpoint;
@@ -4846,11 +4890,6 @@ static bool runAttributorOnModule(Module &M, AnalysisGetter &AG) {
       NumFnWithExactDefinition++;
     else
       NumFnWithoutExactDefinition++;
-
-    // For now we ignore naked and optnone functions.
-    if (F.hasFnAttribute(Attribute::Naked) ||
-        F.hasFnAttribute(Attribute::OptimizeNone))
-      continue;
 
     // We look at internal functions only on-demand but if any use is not a
     // direct call, we have to do it eagerly.

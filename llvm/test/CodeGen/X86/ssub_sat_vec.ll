@@ -408,30 +408,28 @@ define void @v12i16(<12 x i16>* %px, <12 x i16>* %py, <12 x i16>* %pz) nounwind 
 define void @v1i8(<1 x i8>* %px, <1 x i8>* %py, <1 x i8>* %pz) nounwind {
 ; SSE-LABEL: v1i8:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movb (%rdi), %cl
-; SSE-NEXT:    movb (%rsi), %dil
+; SSE-NEXT:    movb (%rdi), %al
+; SSE-NEXT:    movb (%rsi), %cl
 ; SSE-NEXT:    xorl %esi, %esi
-; SSE-NEXT:    movl %ecx, %eax
-; SSE-NEXT:    subb %dil, %al
+; SSE-NEXT:    cmpb %cl, %al
 ; SSE-NEXT:    setns %sil
 ; SSE-NEXT:    addl $127, %esi
-; SSE-NEXT:    subb %dil, %cl
-; SSE-NEXT:    movzbl %cl, %eax
+; SSE-NEXT:    subb %cl, %al
+; SSE-NEXT:    movzbl %al, %eax
 ; SSE-NEXT:    cmovol %esi, %eax
 ; SSE-NEXT:    movb %al, (%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v1i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movb (%rdi), %cl
-; AVX-NEXT:    movb (%rsi), %dil
+; AVX-NEXT:    movb (%rdi), %al
+; AVX-NEXT:    movb (%rsi), %cl
 ; AVX-NEXT:    xorl %esi, %esi
-; AVX-NEXT:    movl %ecx, %eax
-; AVX-NEXT:    subb %dil, %al
+; AVX-NEXT:    cmpb %cl, %al
 ; AVX-NEXT:    setns %sil
 ; AVX-NEXT:    addl $127, %esi
-; AVX-NEXT:    subb %dil, %cl
-; AVX-NEXT:    movzbl %cl, %eax
+; AVX-NEXT:    subb %cl, %al
+; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    cmovol %esi, %eax
 ; AVX-NEXT:    movb %al, (%rdx)
 ; AVX-NEXT:    retq
@@ -448,8 +446,7 @@ define void @v1i16(<1 x i16>* %px, <1 x i16>* %py, <1 x i16>* %pz) nounwind {
 ; SSE-NEXT:    movzwl (%rdi), %eax
 ; SSE-NEXT:    movzwl (%rsi), %ecx
 ; SSE-NEXT:    xorl %esi, %esi
-; SSE-NEXT:    movl %eax, %edi
-; SSE-NEXT:    subw %cx, %di
+; SSE-NEXT:    cmpw %cx, %ax
 ; SSE-NEXT:    setns %sil
 ; SSE-NEXT:    addl $32767, %esi # imm = 0x7FFF
 ; SSE-NEXT:    subw %cx, %ax
@@ -462,8 +459,7 @@ define void @v1i16(<1 x i16>* %px, <1 x i16>* %py, <1 x i16>* %pz) nounwind {
 ; AVX-NEXT:    movzwl (%rdi), %eax
 ; AVX-NEXT:    movzwl (%rsi), %ecx
 ; AVX-NEXT:    xorl %esi, %esi
-; AVX-NEXT:    movl %eax, %edi
-; AVX-NEXT:    subw %cx, %di
+; AVX-NEXT:    cmpw %cx, %ax
 ; AVX-NEXT:    setns %sil
 ; AVX-NEXT:    addl $32767, %esi # imm = 0x7FFF
 ; AVX-NEXT:    subw %cx, %ax

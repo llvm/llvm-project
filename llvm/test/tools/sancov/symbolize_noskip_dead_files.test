@@ -2,28 +2,33 @@ REQUIRES: x86_64-linux
 RUN: sancov -symbolize -skip-dead-files=0 -strip_path_prefix="llvm/" %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s
 
 CHECK: {
-CHECK-NEXT:  "covered-points" : ["4e132b", "4e1472", "4e1520", "4e1553", "4e1586"],
-CHECK-NEXT:  "binary-hash" : "BB3CDD5045AED83906F6ADCC1C4DAF7E2596A6B5",
-CHECK-NEXT:  "point-symbol-info" : {
-CHECK-NEXT:    "test/tools/sancov/Inputs/foo.cpp" : {
-CHECK-NEXT:      "foo()" : {
-CHECK-NEXT:        "4e178c" : "5:0"
-CHECK-NEXT:     }
-CHECK-NEXT:   },
-CHECK-NEXT:   "test/tools/sancov/Inputs/test.cpp" : {
-CHECK-NEXT:     "bar(std::string)" : {
-CHECK-NEXT:       "4e132b" : "12:0"
+CHECK-NEXT:  "covered-points": [
+CHECK-NEXT:    "4e132b",
+CHECK-NEXT:    "4e1472",
+CHECK-NEXT:    "4e1520",
+CHECK-NEXT:    "4e1553",
+CHECK-NEXT:    "4e1586"
+CHECK-NEXT:  ],
+CHECK-NEXT:  "binary-hash": "BB3CDD5045AED83906F6ADCC1C4DAF7E2596A6B5",
+CHECK-NEXT:  "point-symbol-info": {
+CHECK-NEXT:    "test/tools/sancov/Inputs/foo.cpp": {
+CHECK-NEXT:      "foo()": {
+CHECK-NEXT:        "4e178c": "5:0"
+CHECK-NEXT:      }
+CHECK-NEXT:    },
+CHECK-NEXT:    "test/tools/sancov/Inputs/test.cpp": {
+CHECK-NEXT:      "bar(std::string)": {
+CHECK-NEXT:        "4e132b": "12:0"
 CHECK-NEXT:      },
-CHECK-NEXT:      "main" : {
-CHECK-NEXT:        "4e1472" : "14:0",
-CHECK-NEXT:        "4e14c2" : "16:9",
-CHECK-NEXT:        "4e1520" : "17:5",
-CHECK-NEXT:        "4e1553" : "17:5",
-CHECK-NEXT:        "4e1586" : "17:5",
-CHECK-NEXT:        "4e1635" : "19:1",
-CHECK-NEXT:        "4e1690" : "17:5"
+CHECK-NEXT:      "main": {
+CHECK-NEXT:        "4e1472": "14:0",
+CHECK-NEXT:        "4e14c2": "16:9",
+CHECK-NEXT:        "4e1520": "17:5",
+CHECK-NEXT:        "4e1553": "17:5",
+CHECK-NEXT:        "4e1586": "17:5",
+CHECK-NEXT:        "4e1635": "19:1",
+CHECK-NEXT:        "4e1690": "17:5"
 CHECK-NEXT:      }
 CHECK-NEXT:    }
 CHECK-NEXT:  }
 CHECK-NEXT:}
-

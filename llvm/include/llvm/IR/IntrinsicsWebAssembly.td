@@ -24,6 +24,17 @@ def int_wasm_memory_grow : Intrinsic<[llvm_anyint_ty],
                                      []>;
 
 //===----------------------------------------------------------------------===//
+// Trapping float-to-int conversions
+//===----------------------------------------------------------------------===//
+
+def int_wasm_trunc_signed : Intrinsic<[llvm_anyint_ty],
+                                      [llvm_anyfloat_ty],
+                                      [IntrNoMem]>;
+def int_wasm_trunc_unsigned : Intrinsic<[llvm_anyint_ty],
+                                        [llvm_anyfloat_ty],
+                                        [IntrNoMem]>;
+
+//===----------------------------------------------------------------------===//
 // Saturating float-to-int conversions
 //===----------------------------------------------------------------------===//
 

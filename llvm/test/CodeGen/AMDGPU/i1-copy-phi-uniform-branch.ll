@@ -7,7 +7,6 @@
 ; GCN:      s_cbranch_scc1  [[PREEXIT:BB[0-9_]+]]
 
 ; GCN: ; %blocka
-; GCN:      s_xor_b64       s[{{[0-9:]+}}], exec, -1
 ; GCN:      s_cmp_eq_u32    s1, 0
 ; GCN:      s_cbranch_scc1  [[EXIT:BB[0-9_]+]]
 

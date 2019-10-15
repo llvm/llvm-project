@@ -44,20 +44,12 @@
 ; GCN:      s_cbranch_execz    [[FLOW2]]
 
 ; GCN: [[INNER_LOOP:BB[0-9]+_[0-9]+]]: ; %LOOP{{$}}
-; GCN:      s_or_b64            [[BREAK_OUTER]], [[BREAK_OUTER]], exec
-; GCN:      s_or_b64            [[BREAK_INNER]], [[BREAK_INNER]], exec
 ; GCN:      s_and_saveexec_b64  [[SAVE_EXEC]], vcc
 
 ; FIXME: duplicate comparison
 ; GCN: ; %ENDIF
 ; GCN-DAG:  v_cmp_eq_u32_e32    vcc,
 ; GCN-DAG:  v_cmp_ne_u32_e64    [[TMP51NEG:s\[[0-9]+:[0-9]+\]]],
-; GCN-DAG:  s_andn2_b64         [[BREAK_OUTER]], [[BREAK_OUTER]], exec
-; GCN-DAG:  s_andn2_b64         [[BREAK_INNER]], [[BREAK_INNER]], exec
-; GCN-DAG:  s_and_b64           [[TMP_EQ:s\[[0-9]+:[0-9]+\]]], vcc, exec
-; GCN-DAG:  s_and_b64           [[TMP_NE:s\[[0-9]+:[0-9]+\]]], [[TMP51NEG]], exec
-; GCN-DAG:  s_or_b64            [[BREAK_OUTER]], [[BREAK_OUTER]], [[TMP_EQ]]
-; GCN-DAG:  s_or_b64            [[BREAK_INNER]], [[BREAK_INNER]], [[TMP_NE]]
 
 ; GCN: [[IF_BLOCK]]: ; %IF
 ; GCN-NEXT: s_endpgm
@@ -90,39 +82,47 @@ ENDIF:                                            ; preds = %LOOP
 ; OPT: llvm.amdgcn.end.cf
 
 ; GCN-LABEL: {{^}}multi_if_break_loop:
-; GCN:      s_mov_b64          [[LEFT:s\[[0-9]+:[0-9]+\]]], 0{{$}}
+; GCN:      s_mov_b64          [[BROKEN_THREADS_MASK:s\[[0-9]+:[0-9]+\]]], 0{{$}}
 
-; GCN: ; %Flow4
-; GCN:      s_and_b64          [[BREAK:s\[[0-9]+:[0-9]+\]]], exec, [[BREAK]]
-; GCN:      s_or_b64           [[LEFT]], [[BREAK]], [[OLD_LEFT:s\[[0-9]+:[0-9]+\]]]
-; GCN:      s_andn2_b64        exec, exec, [[LEFT]]
-; GCN-NEXT: s_cbranch_execz
+; GCN: [[LOOP:BB[0-9]+_[0-9]+]]: ; %Flow4
+; GCN:      s_and_b64          [[BROKEN_THREADS_MASK]], exec, [[BROKEN_THREADS_MASK]]
+; GCN:      s_or_b64           [[BROKEN_THREADS_MASK]], [[BROKEN_THREADS_MASK]], [[SAVED:s\[[0-9]+:[0-9]+\]]]
+; GCN:      s_andn2_b64        exec, exec, [[BROKEN_THREADS_MASK]]
+; GCN-NEXT: s_cbranch_execz [[LOOP_EXIT:BB[0-9]+_[0-9]+]]
 
-; GCN: [[LOOP:BB[0-9]+_[0-9]+]]: ; %bb1{{$}}
-; GCN:      s_mov_b64          [[OLD_LEFT]], [[LEFT]]
+; GCN: ; %bb1{{$}}
+; GCN:      buffer_load_dword  [[LOAD0:v[0-9]+]],
+; GCN:      s_mov_b64          [[SAVED]], [[BROKEN_THREADS_MASK]]
 
 ; GCN: ; %LeafBlock1
-; GCN:      s_mov_b64
-; GCN:      s_mov_b64          [[BREAK]], -1{{$}}
+; GCN:      v_cmp_eq_u32_e32 vcc, 1, [[LOAD0]]
+; GCN:      s_and_b64 vcc, exec, vcc
+; GCN:      s_cbranch_vccz [[FLOW:BB[0-9]+_[0-9]+]]
 
 ; GCN: ; %case1
 ; GCN:      buffer_load_dword  [[LOAD2:v[0-9]+]],
 ; GCN:      v_cmp_ge_i32_e32   vcc, {{v[0-9]+}}, [[LOAD2]]
-; GCN:      s_orn2_b64         [[BREAK]], vcc, exec
+; GCN:      s_orn2_b64 [[BROKEN_THREADS_MASK]], vcc, exec
+; GCN:  BB1_{{[0-9]+}}:
+; GCN:      s_mov_b64 [[FALSE_MASK:s\[[0-9]+:[0-9]+\]]], 0
+; GCN:      s_and_b64 vcc, exec, [[FALSE_MASK]]
+; GCN:      s_cbranch_vccz [[LOOP]]
 
-; GCN: ; %Flow3
-; GCN:      s_branch           [[FLOW:BB[0-9]+_[0-9]+]]
-
-; GCN:      s_mov_b64          [[BREAK]], -1{{$}}
-
-; GCN: [[FLOW]]: ; %Flow
+; GCN: ; %LeafBlock
+; GCN:     v_cmp_eq_u32_e32 vcc, 0, [[LOAD0]]
+; GCN:     s_and_b64 vcc, exec, vcc
+; GCN:     s_cbranch_vccz [[LOOP]]
 
 ; GCN: ; %case0
 ; GCN:      buffer_load_dword  [[LOAD1:v[0-9]+]],
-; GCN-DAG:  s_andn2_b64        [[BREAK]], [[BREAK]], exec
 ; GCN-DAG:  v_cmp_ge_i32_e32   vcc, {{v[0-9]+}}, [[LOAD1]]
-; GCN-DAG:  s_and_b64          [[TMP:s\[[0-9]+:[0-9]+\]]], vcc, exec
-; GCN:      s_or_b64           [[BREAK]], [[BREAK]], [[TMP]]
+; GCN:      s_andn2_b64 [[BROKEN_THREADS_MASK]], [[BROKEN_THREADS_MASK]], exec
+; GCN:      s_and_b64 [[TMP_MASK:s\[[0-9]+:[0-9]+\]]], vcc, exec
+; GCN:      s_or_b64 [[BROKEN_THREADS_MASK]], [[BROKEN_THREADS_MASK]], [[TMP_MASK]]
+; GCN:      s_branch [[LOOP]]
+
+; GCN: [[LOOP_EXIT]]: ; %Flow6
+; GCN: 	s_or_b64 exec, exec, [[BROKEN_THREADS_MASK]]
 
 define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 bb:

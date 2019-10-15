@@ -514,26 +514,6 @@ exit:
   ret void
 }
 
-; This was crashing when trying to delay instruction removal/deletion.
-
-declare i64 @llvm.objectsize.i64.p0i8(i8*, i1 immarg, i1 immarg, i1 immarg) #0
-
-define hidden fastcc void @crash() {
-; CHECK-LABEL: @crash(
-; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 undef, i64 undef)
-; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
-; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
-; CHECK-NEXT:    [[T2:%.*]] = select i1 undef, i1 undef, i1 [[OV]]
-; CHECK-NEXT:    unreachable
-;
-  %t0 = add i64 undef, undef
-  %t1 = icmp ult i64 %t0, undef
-  %t2 = select i1 undef, i1 undef, i1 %t1
-  %t3 = call i64 @llvm.objectsize.i64.p0i8(i8* nonnull undef, i1 false, i1 false, i1 false)
-  %t4 = icmp ugt i64 %t3, 7
-  unreachable
-}
-
 ; Check that every instruction inserted by -codegenprepare has a debug location.
 ; DEBUG: CheckModuleDebugify: PASS
 

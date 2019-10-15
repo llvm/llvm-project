@@ -213,28 +213,14 @@ set(LIBUNWIND_CXX_FLAGS "")
 set(LIBUNWIND_COMPILE_FLAGS "")
 set(LIBUNWIND_LINK_FLAGS "")
 
+# Include macros for adding and removing libunwind flags.
+include(HandleLibunwindFlags)
+
+#===============================================================================
+# Setup Compiler Flags
+#===============================================================================
+
 # Get required flags.
-macro(unwind_append_if list condition var)
-  if (${condition})
-    list(APPEND ${list} ${var})
-  endif()
-endmacro()
-
-macro(add_target_flags)
-  foreach(value ${ARGN})
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${value}")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${value}")
-    list(APPEND LIBUNWIND_COMPILE_FLAGS ${value})
-    list(APPEND LIBUNWIND_LINK_FLAGS ${value})
-  endforeach()
-endmacro()
-
-macro(add_target_flags_if condition)
-  if (${condition})
-    add_target_flags(${ARGN})
-  endif()
-endmacro()
-
 add_target_flags_if(LIBUNWIND_BUILD_32_BITS "-m32")
 
 if(LIBUNWIND_TARGET_TRIPLE)
@@ -264,83 +250,86 @@ if (LIBUNWIND_USE_COMPILER_RT AND NOT LIBUNWIND_HAS_NODEFAULTLIBS_FLAG)
   list(APPEND LIBUNWIND_LINK_FLAGS "-rtlib=compiler-rt")
 endif()
 
-#===============================================================================
-# Setup Compiler Flags
-#===============================================================================
-
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WERROR_FLAG -Werror=return-type)
+add_compile_flags_if_supported(-Werror=return-type)
 
 # Get warning flags
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_W_FLAG -W)
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WALL_FLAG -Wall)
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WCHAR_SUBSCRIPTS_FLAG -Wchar-subscripts)
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WCONVERSION_FLAG -Wconversion)
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WMISMATCHED_TAGS_FLAG -Wmismatched-tags)
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WMISSING_BRACES_FLAG -Wmissing-braces)
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WNEWLINE_EOF_FLAG -Wnewline-eof)
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WNO_UNUSED_FUNCTION_FLAG -Wno-unused-function)
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WSHADOW_FLAG -Wshadow)
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WSHORTEN_64_TO_32_FLAG -Wshorten-64-to-32)
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WSIGN_COMPARE_FLAG -Wsign-compare)
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WSIGN_CONVERSION_FLAG -Wsign-conversion)
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WSTRICT_ALIASING_FLAG -Wstrict-aliasing=2)
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WSTRICT_OVERFLOW_FLAG -Wstrict-overflow=4)
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WUNUSED_PARAMETER_FLAG -Wunused-parameter)
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WUNUSED_VARIABLE_FLAG -Wunused-variable)
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WWRITE_STRINGS_FLAG -Wwrite-strings)
-unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WUNDEF_FLAG -Wundef)
+add_compile_flags_if_supported(-W)
+add_compile_flags_if_supported(-Wall)
+add_compile_flags_if_supported(-Wchar-subscripts)
+add_compile_flags_if_supported(-Wconversion)
+add_compile_flags_if_supported(-Wmismatched-tags)
+add_compile_flags_if_supported(-Wmissing-braces)
+add_compile_flags_if_supported(-Wnewline-eof)
+add_compile_flags_if_supported(-Wno-unused-function)
+add_compile_flags_if_supported(-Wshadow)
+add_compile_flags_if_supported(-Wshorten-64-to-32)
+add_compile_flags_if_supported(-Wsign-compare)
+add_compile_flags_if_supported(-Wsign-conversion)
+add_compile_flags_if_supported(-Wstrict-aliasing=2)
+add_compile_flags_if_supported(-Wstrict-overflow=4)
+add_compile_flags_if_supported(-Wunused-parameter)
+add_compile_flags_if_supported(-Wunused-variable)
+add_compile_flags_if_supported(-Wwrite-strings)
+add_compile_flags_if_supported(-Wundef)
 
 if (LIBUNWIND_ENABLE_WERROR)
-  unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WERROR_FLAG -Werror)
-  unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WX_FLAG -WX)
+  add_compile_flags_if_supported(-Werror)
+  add_compile_flags_if_supported(-WX)
 else()
-  unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_WNO_ERROR_FLAG -Wno-error)
-  unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_NO_WX_FLAG -WX-)
+  add_compile_flags_if_supported(-Wno-error)
+  add_compile_flags_if_supported(-WX-)
 endif()
 
 if (LIBUNWIND_ENABLE_PEDANTIC)
-  unwind_append_if(LIBUNWIND_COMPILE_FLAGS LIBUNWIND_HAS_PEDANTIC_FLAG -pedantic)
+  add_compile_flags_if_supported(-pedantic)
 endif()
 
 # Get feature flags.
 # Exceptions
 # Catches C++ exceptions only and tells the compiler to assume that extern C
 # functions never throw a C++ exception.
-unwind_append_if(LIBUNWIND_CXX_FLAGS LIBUNWIND_HAS_FSTRICT_ALIASING_FLAG -fstrict-aliasing)
-unwind_append_if(LIBUNWIND_CXX_FLAGS LIBUNWIND_HAS_EHSC_FLAG -EHsc)
+add_cxx_compile_flags_if_supported(-fstrict-aliasing)
+add_cxx_compile_flags_if_supported(-EHsc)
 
-unwind_append_if(LIBUNWIND_C_FLAGS LIBUNWIND_HAS_FUNWIND_TABLES -funwind-tables)
+add_compile_flags_if_supported(-funwind-tables)
+add_cxx_compile_flags_if_supported(-fno-exceptions)
+add_cxx_compile_flags_if_supported(-fno-rtti)
 
 # Ensure that we don't depend on C++ standard library.
-unwind_append_if(LIBUNWIND_CXX_FLAGS LIBUNWIND_HAS_NOSTDINCXX_FLAG -nostdinc++)
+if (LIBUNWIND_HAS_NOSTDINCXX_FLAG)
+  list(APPEND LIBUNWIND_COMPILE_FLAGS -nostdinc++)
+  # Remove -stdlib flags to prevent them from causing an unused flag warning.
+  string(REPLACE "-stdlib=libc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REPLACE "-stdlib=libstdc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+endif()
 
 # Assert
 string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 if (LIBUNWIND_ENABLE_ASSERTIONS)
   # MSVC doesn't like _DEBUG on release builds. See PR 4379.
   if (NOT MSVC)
-    list(APPEND LIBUNWIND_COMPILE_FLAGS -D_DEBUG)
+    add_compile_flags(-D_DEBUG)
   endif()
 
   # On Release builds cmake automatically defines NDEBUG, so we
   # explicitly undefine it:
   if (uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
-    list(APPEND LIBUNWIND_COMPILE_FLAGS -UNDEBUG)
+    add_compile_flags(-UNDEBUG)
   endif()
 else()
   if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
-    list(APPEND LIBUNWIND_COMPILE_FLAGS -DNDEBUG)
+    add_compile_flags(-DNDEBUG)
   endif()
 endif()
 
 # Cross-unwinding
 if (NOT LIBUNWIND_ENABLE_CROSS_UNWINDING)
-  list(APPEND LIBUNWIND_COMPILE_FLAGS -D_LIBUNWIND_IS_NATIVE_ONLY)
+  add_compile_flags(-D_LIBUNWIND_IS_NATIVE_ONLY)
 endif()
 
 # Threading-support
 if (NOT LIBUNWIND_ENABLE_THREADS)
-  list(APPEND LIBUNWIND_COMPILE_FLAGS -D_LIBUNWIND_HAS_NO_THREADS)
+  add_compile_flags(-D_LIBUNWIND_HAS_NO_THREADS)
 endif()
 
 # ARM WMMX register support
@@ -349,7 +338,7 @@ if (LIBUNWIND_ENABLE_ARM_WMMX)
   # define this macro for any supported target at present. Therefore, here we
   # provide the option to explicitly enable support for WMMX registers in the
   # unwinder.
-  list(APPEND LIBUNWIND_COMPILE_FLAGS -D__ARM_WMMX)
+  add_compile_flags(-D__ARM_WMMX)
 endif()
 
 # This is the _ONLY_ place where add_definitions is called.

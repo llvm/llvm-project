@@ -197,6 +197,7 @@ class VectorType;
       VTRN,         // transpose
       VTBL1,        // 1-register shuffle with mask
       VTBL2,        // 2-register shuffle with mask
+      VMOVN,        // MVE vmovn
 
       // Vector multiply long:
       VMULLs,       // ...signed

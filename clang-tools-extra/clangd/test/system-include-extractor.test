@@ -1,5 +1,8 @@
 # RUN: rm -rf %t.dir && mkdir -p %t.dir
 
+# The mock driver below is a shell script:
+# REQUIRES: shell
+
 # Generate a mock-driver that will print %temp_dir%/my/dir and
 # %temp_dir%/my/dir2 as include search paths.
 # RUN: echo '#!/bin/bash' >> %t.dir/my_driver.sh
@@ -24,7 +27,7 @@
 # RUN: sed -e "s|INPUT_DIR|%/t.dir|g" %s > %t.test.1
 # On Windows, we need the URI in didOpen to look like "uri":"file:///C:/..."
 # (with the extra slash in the front), so we add it here.
-# RUN: sed -e "s|file://\([A-Z]\):/|file:///\1:/|g" %t.test.1 > %t.test
+# RUN: sed -E -e "s|file://([A-Z]):/|file:///\1:/|g" %t.test.1 > %t.test
 
 # Bless the mock driver we've just created so that clangd can execute it.
 # RUN: clangd -lit-test -query-driver="**.test,**.sh" < %t.test | FileCheck -strict-whitespace %t.test

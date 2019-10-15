@@ -1,12 +1,10 @@
 ; Test that ASan runs with the new pass manager
-; RUN: %clang_cc1 -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=address %s | FileCheck %s --check-prefixes=CHECK,LTO,THINLTO
-; RUN: %clang_cc1 -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=address -flto %s | FileCheck %s --check-prefixes=CHECK,LTO
-; RUN: %clang_cc1 -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=address -flto=thin %s | FileCheck %s --check-prefixes=CHECK,THINLTO
-; RUN: %clang_cc1 -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=address %s | FileCheck %s --check-prefixes=CHECK,LTO,THINLTO
-; RUN: %clang_cc1 -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=address -flto %s | FileCheck %s --check-prefixes=CHECK,LTO
-; RUN: %clang_cc1 -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=address -flto=thin %s | FileCheck %s --check-prefixes=CHECK,THINLTO
-
-target triple = "x86_64-unknown-unknown"
+; RUN: %clang_cc1 -triple x86_64-unknown-unknown -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=address %s | FileCheck %s --check-prefixes=CHECK,LTO,THINLTO
+; RUN: %clang_cc1 -triple x86_64-unknown-unknown -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=address -flto %s | FileCheck %s --check-prefixes=CHECK,LTO
+; RUN: %clang_cc1 -triple x86_64-unknown-unknown -S -emit-llvm -o - -fexperimental-new-pass-manager -fsanitize=address -flto=thin %s | FileCheck %s --check-prefixes=CHECK,THINLTO
+; RUN: %clang_cc1 -triple x86_64-unknown-unknown -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=address %s | FileCheck %s --check-prefixes=CHECK,LTO,THINLTO
+; RUN: %clang_cc1 -triple x86_64-unknown-unknown -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=address -flto %s | FileCheck %s --check-prefixes=CHECK,LTO
+; RUN: %clang_cc1 -triple x86_64-unknown-unknown -S -emit-llvm -o - -O1 -fexperimental-new-pass-manager -fsanitize=address -flto=thin %s | FileCheck %s --check-prefixes=CHECK,THINLTO
 
 ; DAG-CHECK: @llvm.global_ctors = {{.*}}@asan.module_ctor
 

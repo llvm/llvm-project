@@ -243,9 +243,9 @@ public:
 
   bool shouldFavorBackedgeIndex(const Loop *L) const { return false; }
 
-  bool isLegalMaskedStore(Type *DataType) { return false; }
+  bool isLegalMaskedStore(Type *DataType, MaybeAlign Alignment) { return false; }
 
-  bool isLegalMaskedLoad(Type *DataType) { return false; }
+  bool isLegalMaskedLoad(Type *DataType, MaybeAlign Alignment) { return false; }
 
   bool isLegalNTStore(Type *DataType, Align Alignment) {
     // By default, assume nontemporal memory stores are available for stores
@@ -354,7 +354,20 @@ public:
     return TTI::TCC_Free;
   }
 
-  unsigned getNumberOfRegisters(bool Vector) { return 8; }
+  unsigned getNumberOfRegisters(unsigned ClassID) const { return 8; }
+
+  unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const {
+    return Vector ? 1 : 0;
+  };
+
+  const char* getRegisterClassName(unsigned ClassID) const {
+    switch (ClassID) {
+      default:
+        return "Generic::Unknown Register Class";
+      case 0: return "Generic::ScalarRC";
+      case 1: return "Generic::VectorRC";
+    }
+  }
 
   unsigned getRegisterBitWidth(bool Vector) const { return 32; }
 

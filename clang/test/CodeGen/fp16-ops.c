@@ -37,9 +37,9 @@ void foo(void) {
   // NATIVE-HALF: fcmp une half
   test = (!h1);
   // CHECK: [[F16TOF32]]
-  // CHECK: fsub float
+  // CHECK: fneg float
   // NOTNATIVE: [[F32TOF16]]
-  // NATIVE-HALF: fsub half
+  // NATIVE-HALF: fneg half
   h1 = -h1;
   // CHECK: [[F16TOF32]]
   // CHECK: [[F32TOF16]]

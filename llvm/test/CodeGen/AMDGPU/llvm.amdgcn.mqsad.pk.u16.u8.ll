@@ -4,7 +4,7 @@
 declare i64 @llvm.amdgcn.mqsad.pk.u16.u8(i64, i32, i64) #0
 
 ; GCN-LABEL: {{^}}v_mqsad_pk_u16_u8:
-; GCN: v_mqsad_pk_u16_u8 v[0:1], v[4:5], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}]
+; GCN: v_mqsad_pk_u16_u8 v[0:1], v[4:5], s{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
 ; GCN-DAG: v_mov_b32_e32 v5, v1
 ; GCN-DAG: v_mov_b32_e32 v4, v0
 define amdgpu_kernel void @v_mqsad_pk_u16_u8(i64 addrspace(1)* %out, i64 %src) {

@@ -1286,21 +1286,21 @@ int64x2_t test_vnegq_s64(int64x2_t a) {
 }
 
 // CHECK-LABEL: @test_vneg_f32(
-// CHECK:   [[SUB_I:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %a
+// CHECK:   [[SUB_I:%.*]] = fneg <2 x float> %a
 // CHECK:   ret <2 x float> [[SUB_I]]
 float32x2_t test_vneg_f32(float32x2_t a) {
   return vneg_f32(a);
 }
 
 // CHECK-LABEL: @test_vnegq_f32(
-// CHECK:   [[SUB_I:%.*]] = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %a
+// CHECK:   [[SUB_I:%.*]] = fneg <4 x float> %a
 // CHECK:   ret <4 x float> [[SUB_I]]
 float32x4_t test_vnegq_f32(float32x4_t a) {
   return vnegq_f32(a);
 }
 
 // CHECK-LABEL: @test_vnegq_f64(
-// CHECK:   [[SUB_I:%.*]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %a
+// CHECK:   [[SUB_I:%.*]] = fneg <2 x double> %a
 // CHECK:   ret <2 x double> [[SUB_I]]
 float64x2_t test_vnegq_f64(float64x2_t a) {
   return vnegq_f64(a);

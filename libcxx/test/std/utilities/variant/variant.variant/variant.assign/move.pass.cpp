@@ -407,7 +407,7 @@ void test_move_assignment_different_index() {
   }
   {
     using V = std::variant<int, MoveAssign, unsigned>;
-    V v1(std::in_place_type<unsigned>, 43);
+    V v1(std::in_place_type<unsigned>, 43u);
     V v2(std::in_place_type<MoveAssign>, 42);
     MoveAssign::reset();
     V &vref = (v1 = std::move(v2));
@@ -462,7 +462,7 @@ void test_move_assignment_different_index() {
     struct {
       constexpr Result<long> operator()() const {
         using V = std::variant<int, TMoveAssign, unsigned>;
-        V v(std::in_place_type<unsigned>, 43);
+        V v(std::in_place_type<unsigned>, 43u);
         V v2(std::in_place_type<TMoveAssign>, 42);
         v = std::move(v2);
         return {v.index(), std::get<1>(v).value};

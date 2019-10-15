@@ -50,8 +50,6 @@ void findDevirtualizableCallsForTypeCheckedLoad(
     SmallVectorImpl<Instruction *> &LoadedPtrs,
     SmallVectorImpl<Instruction *> &Preds, bool &HasNonCallUses,
     const CallInst *CI, DominatorTree &DT);
-
-Constant *getPointerAtOffset(Constant *I, uint64_t Offset, Module &M);
 }
 
 #endif

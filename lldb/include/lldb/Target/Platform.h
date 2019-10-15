@@ -18,6 +18,7 @@
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/UserSettingsController.h"
+#include "lldb/Host/File.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
@@ -505,8 +506,9 @@ public:
   virtual Status SetFilePermissions(const FileSpec &file_spec,
                                     uint32_t file_permissions);
 
-  virtual lldb::user_id_t OpenFile(const FileSpec &file_spec, uint32_t flags,
-                                   uint32_t mode, Status &error) {
+  virtual lldb::user_id_t OpenFile(const FileSpec &file_spec,
+                                   File::OpenOptions flags, uint32_t mode,
+                                   Status &error) {
     return UINT64_MAX;
   }
 

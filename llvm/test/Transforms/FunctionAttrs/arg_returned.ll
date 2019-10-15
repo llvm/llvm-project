@@ -370,11 +370,11 @@ define i32* @calls_unknown_fn(i32* %r) #0 {
 ;
 ; Verify the maybe-redefined function is not annotated:
 ;
-; CHECK: Function Attrs: noinline nounwind uwtable
-; CHECK: define linkonce_odr i32* @maybe_redefined_fn(i32* %r)
+; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
+; ATTRIBUTOR: define linkonce_odr i32* @maybe_redefined_fn(i32* %r)
 ;
-; CHECK: Function Attrs: noinline nounwind uwtable
-; CHECK: define i32* @calls_maybe_redefined_fn(i32* returned %r)
+; ATTRIBUTOR: Function Attrs: noinline nounwind uwtable
+; ATTRIBUTOR: define i32* @calls_maybe_redefined_fn(i32* returned %r)
 ;
 ; BOTH: Function Attrs: noinline nounwind uwtable
 ; BOTH-NEXT: define linkonce_odr i32* @maybe_redefined_fn(i32* %r)
@@ -808,12 +808,12 @@ define i32 @exact(i32* %a) {
   %c3 = call i32* @non_exact_3(i32* %a)
 ; We can use the information of the weak function non_exact_3 because it was
 ; given to us and not derived (the alignment of the returned argument).
-; CHECK:  %c4 = load i32, i32* %c3, align 32
+; ATTRIBUTOR:  %c4 = load i32, i32* %c3, align 32
   %c4 = load i32, i32* %c3
 ; FIXME: %c2 and %c3 should be replaced but not %c0 or %c1!
-; CHECK:  %add1 = add i32 %c0, %c1
-; CHECK:  %add2 = add i32 %add1, %c2
-; CHECK:  %add3 = add i32 %add2, %c3
+; ATTRIBUTOR:  %add1 = add i32 %c0, %c1
+; ATTRIBUTOR:  %add2 = add i32 %add1, %c2
+; ATTRIBUTOR:  %add3 = add i32 %add2, %c4
   %add1 = add i32 %c0, %c1
   %add2 = add i32 %add1, %c2
   %add3 = add i32 %add2, %c4
@@ -827,12 +827,12 @@ define i32* @ret_const() #0 {
 }
 define i32* @use_const() #0 {
   %c = call i32* @ret_const()
-  ; CHECK: ret i32* bitcast (i8* @G to i32*)
+  ; ATTRIBUTOR: ret i32* bitcast (i8* @G to i32*)
   ret i32* %c
 }
 define i32* @dont_use_const() #0 {
   %c = musttail call i32* @ret_const()
-  ; CHECK: ret i32* %c
+  ; ATTRIBUTOR: ret i32* %c
   ret i32* %c
 }
 

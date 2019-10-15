@@ -18,8 +18,8 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr(s32) = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr(s32) = COPY $s1
     ; CHECK: [[COPY2:%[0-9]+]]:fpr(s32) = COPY $s2
-    ; CHECK: %3:fpr(s32) = nnan ninf nsz arcp contract afn reassoc G_FMA [[COPY]], [[COPY1]], [[COPY2]]
-    ; CHECK: $s0 = COPY %3(s32)
+    ; CHECK: [[FMA:%[0-9]+]]:fpr(s32) = nnan ninf nsz arcp contract afn reassoc G_FMA [[COPY]], [[COPY1]], [[COPY2]]
+    ; CHECK: $s0 = COPY [[FMA]](s32)
     ; CHECK: RET_ReallyLR implicit $s0
     %0:_(s32) = COPY $s0
     %1:_(s32) = COPY $s1
@@ -44,8 +44,8 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr(s64) = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr(s64) = COPY $d1
     ; CHECK: [[COPY2:%[0-9]+]]:fpr(s64) = COPY $d2
-    ; CHECK: %3:fpr(s64) = nnan ninf nsz arcp contract afn reassoc G_FMA [[COPY]], [[COPY1]], [[COPY2]]
-    ; CHECK: $d0 = COPY %3(s64)
+    ; CHECK: [[FMA:%[0-9]+]]:fpr(s64) = nnan ninf nsz arcp contract afn reassoc G_FMA [[COPY]], [[COPY1]], [[COPY2]]
+    ; CHECK: $d0 = COPY [[FMA]](s64)
     ; CHECK: RET_ReallyLR implicit $d0
     %0:_(s64) = COPY $d0
     %1:_(s64) = COPY $d1

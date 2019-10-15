@@ -1,19 +1,15 @@
 ## Show that llvm-size reports an error when passed an input file in an
 ## unknown format.
 
-## FIXME: The error messages tested here are not consistently formatted, and the
-##        second one doesn't even return with a non-zero exit code.
-##        See https://bugs.llvm.org/show_bug.cgi?id=42970.
-
 # RUN: not llvm-size %s 2>&1 | FileCheck %s -DFILE=%s --check-prefix=UNRECOGNIZED
-# UNRECOGNIZED: {{.*}}llvm-size{{(.*)}}: [[FILE]] The file was not recognized as a valid object file
+# UNRECOGNIZED: {{.*}}llvm-size{{(.*)}}: error: '[[FILE]]': The file was not recognized as a valid object file
 
 ## Show that llvm-size reports an error when passed an input file in an
 ## unsupported format.
 
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-size %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=NOTSUPPORTED
-# NOTSUPPORTED: {{.*}}llvm-size{{(.*)}}: [[FILE]]: Unrecognized file type.
+# RUN: not llvm-size %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=NOTSUPPORTED
+# NOTSUPPORTED: {{.*}}llvm-size{{(.*)}}: error: '[[FILE]]': unsupported file type
 
 --- !minidump
 Streams:

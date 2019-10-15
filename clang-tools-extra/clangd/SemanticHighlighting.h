@@ -37,6 +37,8 @@ enum class HighlightingKind {
   Enum,
   EnumConstant,
   Typedef,
+  DependentType,
+  DependentName,
   Namespace,
   TemplateParameter,
   Primitive,

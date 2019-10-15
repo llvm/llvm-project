@@ -9,13 +9,8 @@ See lit.pod for more information.
 from __future__ import absolute_import
 import os
 import platform
-import random
-import re
 import sys
 import time
-import tempfile
-import shutil
-from xml.sax.saxutils import quoteattr
 
 import lit.cl_arguments
 import lit.discovery
@@ -33,6 +28,7 @@ def main(builtinParameters = {}):
     # the buildbot level.
     lit_tmp = None
     if 'LIT_PRESERVES_TMP' not in os.environ:
+        import tempfile
         lit_tmp = tempfile.mkdtemp(prefix="lit_tmp_")
         os.environ.update({
                 'TMPDIR': lit_tmp,
@@ -49,6 +45,7 @@ def main(builtinParameters = {}):
     finally:
         if lit_tmp:
             try:
+                import shutil
                 shutil.rmtree(lit_tmp)
             except:
                 # FIXME: Re-try after timeout on Windows.
@@ -91,8 +88,7 @@ def main_with_tmp(builtinParameters):
         echo_all_commands = opts.echoAllCommands)
 
     # Perform test discovery.
-    run = lit.run.Run(litConfig,
-                      lit.discovery.find_tests_for_inputs(litConfig, opts.test_paths))
+    tests = lit.discovery.find_tests_for_inputs(litConfig, opts.test_paths)
 
     # After test discovery the configuration might have changed
     # the maxIndividualTestTime. If we explicitly set this on the
@@ -108,23 +104,23 @@ def main_with_tmp(builtinParameters):
             litConfig.maxIndividualTestTime = opts.maxIndividualTestTime
 
     if opts.showSuites or opts.showTests:
-        print_suites_or_tests(run, opts)
+        print_suites_or_tests(tests, opts)
         return
 
     # Select and order the tests.
-    numTotalTests = len(run.tests)
+    numTotalTests = len(tests)
 
     if opts.filter:
-        filter_tests(run, opts)
+        tests = [t for t in tests if opts.filter.search(t.getFullName())]
 
-    order_tests(run, opts)
+    order_tests(tests, opts)
 
     # Then optionally restrict our attention to a shard of the tests.
     if (opts.numShards is not None) or (opts.runShard is not None):
-        num_tests = len(run.tests)
+        num_tests = len(tests)
         # Note: user views tests and shard numbers counting from 1.
         test_ixs = range(opts.runShard - 1, num_tests, opts.numShards)
-        run.tests = [run.tests[i] for i in test_ixs]
+        tests = [tests[i] for i in test_ixs]
         # Generate a preview of the first few test indices in the shard
         # to accompany the arithmetic expression, for clarity.
         preview_len = 3
@@ -133,45 +129,29 @@ def main_with_tmp(builtinParameters):
             ix_preview += ", ..."
         litConfig.note('Selecting shard %d/%d = size %d/%d = tests #(%d*k)+%d = [%s]' %
                        (opts.runShard, opts.numShards,
-                        len(run.tests), num_tests,
+                        len(tests), num_tests,
                         opts.numShards, opts.runShard, ix_preview))
 
     # Finally limit the number of tests, if desired.
     if opts.maxTests is not None:
-        run.tests = run.tests[:opts.maxTests]
+        tests = tests[:opts.maxTests]
 
     # Don't create more workers than tests.
-    opts.numWorkers = min(len(run.tests), opts.numWorkers)
+    opts.numWorkers = min(len(tests), opts.numWorkers)
 
-    increase_process_limit(litConfig, opts)
-
-    display = lit.display.create_display(opts, len(run.tests),
-                                         numTotalTests, opts.numWorkers)
-    def progress_callback(test):
-        display.update(test)
-        if opts.incremental:
-            update_incremental_cache(test)
-
-    startTime = time.time()
-    try:
-        run.execute_tests(progress_callback, opts.numWorkers, opts.maxTime)
-    except KeyboardInterrupt:
-        sys.exit(2)
-    testing_time = time.time() - startTime
-
-    display.finish()
+    testing_time = run_tests(tests, litConfig, opts, numTotalTests)
 
     if not opts.quiet:
         print('Testing Time: %.2fs' % (testing_time,))
 
     # Write out the test data, if requested.
     if opts.output_path is not None:
-        write_test_results(run, litConfig, testing_time, opts.output_path)
+        write_test_results(tests, litConfig, testing_time, opts.output_path)
 
     # List test results organized by kind.
     hasFailures = False
     byCode = {}
-    for test in run.tests:
+    for test in tests:
         if test.result.code not in byCode:
             byCode[test.result.code] = []
         byCode[test.result.code].append(test)
@@ -198,10 +178,10 @@ def main_with_tmp(builtinParameters):
             print('    %s' % test.getFullName())
         sys.stdout.write('\n')
 
-    if opts.timeTests and run.tests:
+    if opts.timeTests and tests:
         # Order by time.
         test_times = [(test.getFullName(), test.result.elapsed)
-                      for test in run.tests]
+                      for test in tests]
         lit.util.printHistogram(test_times, title='Tests')
 
     for name,code in (('Expected Passes    ', lit.Test.PASS),
@@ -219,7 +199,7 @@ def main_with_tmp(builtinParameters):
             print('  %s: %d' % (name,N))
 
     if opts.xunit_output_file:
-        write_test_results_xunit(run, opts)
+        write_test_results_xunit(tests, opts)
 
     # If we encountered any additional errors, exit abnormally.
     if litConfig.numErrors:
@@ -232,7 +212,6 @@ def main_with_tmp(builtinParameters):
 
     if hasFailures:
         sys.exit(1)
-    sys.exit(0)
 
 
 def create_user_parameters(builtinParameters, opts):
@@ -245,10 +224,10 @@ def create_user_parameters(builtinParameters, opts):
         userParams[name] = val
     return userParams
 
-def print_suites_or_tests(run, opts):
+def print_suites_or_tests(tests, opts):
     # Aggregate the tests by suite.
     suitesAndTests = {}
-    for result_test in run.tests:
+    for result_test in tests:
         if result_test.suite not in suitesAndTests:
             suitesAndTests[result_test.suite] = []
         suitesAndTests[result_test.suite].append(result_test)
@@ -274,25 +253,14 @@ def print_suites_or_tests(run, opts):
             for test in ts_tests:
                 print('  %s' % (test.getFullName(),))
 
-    # Exit.
-    sys.exit(0)
-
-def filter_tests(run, opts):
-    try:
-        rex = re.compile(opts.filter)
-    except:
-        parser.error("invalid regular expression for --filter: %r" % (
-                opts.filter))
-    run.tests = [result_test for result_test in run.tests
-                    if rex.search(result_test.getFullName())]
-
-def order_tests(run, opts):
+def order_tests(tests, opts):
     if opts.shuffle:
-        random.shuffle(run.tests)
+        import random
+        random.shuffle(tests)
     elif opts.incremental:
-        run.tests.sort(key = by_mtime, reverse = True)
+        tests.sort(key=by_mtime, reverse=True)
     else:
-        run.tests.sort(key = lambda t: (not t.isEarlyTest(), t.getFullName()))
+        tests.sort(key=lambda t: (not t.isEarlyTest(), t.getFullName()))
 
 def by_mtime(test):
     fname = test.getFilePath()
@@ -330,7 +298,29 @@ def increase_process_limit(litConfig, opts):
     except:
         pass
 
-def write_test_results(run, lit_config, testing_time, output_path):
+def run_tests(tests, litConfig, opts, numTotalTests):
+    increase_process_limit(litConfig, opts)
+
+    run = lit.run.Run(litConfig, tests)
+
+    display = lit.display.create_display(opts, len(tests), numTotalTests,
+                                         opts.numWorkers)
+    def progress_callback(test):
+        display.update(test)
+        if opts.incremental:
+            update_incremental_cache(test)
+
+    startTime = time.time()
+    try:
+        run.execute_tests(progress_callback, opts.numWorkers, opts.maxTime)
+    except KeyboardInterrupt:
+        sys.exit(2)
+    testing_time = time.time() - startTime
+
+    display.finish()
+    return testing_time
+
+def write_test_results(tests, lit_config, testing_time, output_path):
     try:
         import json
     except ImportError:
@@ -346,7 +336,7 @@ def write_test_results(run, lit_config, testing_time, output_path):
 
     # Encode the tests.
     data['tests'] = tests_data = []
-    for test in run.tests:
+    for test in tests:
         test_data = {
             'name' : test.getFullName(),
             'code' : test.result.code.name,
@@ -388,10 +378,11 @@ def write_test_results(run, lit_config, testing_time, output_path):
     finally:
         f.close()
 
-def write_test_results_xunit(run, opts):
+def write_test_results_xunit(tests, opts):
+    from xml.sax.saxutils import quoteattr
     # Collect the tests, indexed by test suite
     by_suite = {}
-    for result_test in run.tests:
+    for result_test in tests:
         suite = result_test.suite.config.name
         if suite not in by_suite:
             by_suite[suite] = {

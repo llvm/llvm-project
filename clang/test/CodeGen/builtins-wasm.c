@@ -85,6 +85,54 @@ unsigned int atomic_notify(int *addr, unsigned int count) {
   // WEBASSEMBLY64: call i32 @llvm.wasm.atomic.notify(i32* %{{.*}}, i32 %{{.*}})
 }
 
+int trunc_s_i32_f32(float f) {
+  return __builtin_wasm_trunc_s_i32_f32(f);
+  // WEBASSEMBLY: call i32 @llvm.wasm.trunc.signed.i32.f32(float %f)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+int trunc_u_i32_f32(float f) {
+  return __builtin_wasm_trunc_u_i32_f32(f);
+  // WEBASSEMBLY: call i32 @llvm.wasm.trunc.unsigned.i32.f32(float %f)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+int trunc_s_i32_f64(double f) {
+  return __builtin_wasm_trunc_s_i32_f64(f);
+  // WEBASSEMBLY: call i32 @llvm.wasm.trunc.signed.i32.f64(double %f)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+int trunc_u_i32_f64(double f) {
+  return __builtin_wasm_trunc_u_i32_f64(f);
+  // WEBASSEMBLY: call i32 @llvm.wasm.trunc.unsigned.i32.f64(double %f)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+long long trunc_s_i64_f32(float f) {
+  return __builtin_wasm_trunc_s_i64_f32(f);
+  // WEBASSEMBLY: call i64 @llvm.wasm.trunc.signed.i64.f32(float %f)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+long long trunc_u_i64_f32(float f) {
+  return __builtin_wasm_trunc_u_i64_f32(f);
+  // WEBASSEMBLY: call i64 @llvm.wasm.trunc.unsigned.i64.f32(float %f)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+long long trunc_s_i64_f64(double f) {
+  return __builtin_wasm_trunc_s_i64_f64(f);
+  // WEBASSEMBLY: call i64 @llvm.wasm.trunc.signed.i64.f64(double %f)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+long long trunc_u_i64_f64(double f) {
+  return __builtin_wasm_trunc_u_i64_f64(f);
+  // WEBASSEMBLY: call i64 @llvm.wasm.trunc.unsigned.i64.f64(double %f)
+  // WEBASSEMBLY-NEXT: ret
+}
+
 int trunc_saturate_s_i32_f32(float f) {
   return __builtin_wasm_trunc_saturate_s_i32_f32(f);
   // WEBASSEMBLY: call i32 @llvm.wasm.trunc.saturate.signed.i32.f32(float %f)

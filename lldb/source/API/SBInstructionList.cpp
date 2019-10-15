@@ -11,8 +11,10 @@
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBFile.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/StreamFile.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Utility/Stream.h"
 
@@ -118,21 +120,41 @@ void SBInstructionList::SetDisassembler(const lldb::DisassemblerSP &opaque_sp) {
 
 void SBInstructionList::Print(FILE *out) {
   LLDB_RECORD_METHOD(void, SBInstructionList, Print, (FILE *), out);
-
   if (out == nullptr)
     return;
+  StreamFile stream(out, false);
+  GetDescription(stream);
 }
 
-bool SBInstructionList::GetDescription(lldb::SBStream &description) {
+void SBInstructionList::Print(SBFile out) {
+  LLDB_RECORD_METHOD(void, SBInstructionList, Print, (SBFile), out);
+  if (!out.IsValid())
+    return;
+  StreamFile stream(out.m_opaque_sp);
+  GetDescription(stream);
+}
+
+void SBInstructionList::Print(FileSP out_sp) {
+  LLDB_RECORD_METHOD(void, SBInstructionList, Print, (FileSP), out_sp);
+  if (!out_sp || !out_sp->IsValid())
+    return;
+  StreamFile stream(out_sp);
+  GetDescription(stream);
+}
+
+bool SBInstructionList::GetDescription(lldb::SBStream &stream) {
   LLDB_RECORD_METHOD(bool, SBInstructionList, GetDescription,
-                     (lldb::SBStream &), description);
+                     (lldb::SBStream &), stream);
+  return GetDescription(stream.ref());
+}
+
+bool SBInstructionList::GetDescription(Stream &sref) {
 
   if (m_opaque_sp) {
     size_t num_instructions = GetSize();
     if (num_instructions) {
       // Call the ref() to make sure a stream is created if one deesn't exist
       // already inside description...
-      Stream &sref = description.ref();
       const uint32_t max_opcode_byte_size =
           m_opaque_sp->GetInstructionList().GetMaxOpcocdeByteSize();
       FormatEntity::Entry format;
@@ -200,6 +222,8 @@ void RegisterMethods<SBInstructionList>(Registry &R) {
   LLDB_REGISTER_METHOD(void, SBInstructionList, AppendInstruction,
                        (lldb::SBInstruction));
   LLDB_REGISTER_METHOD(void, SBInstructionList, Print, (FILE *));
+  LLDB_REGISTER_METHOD(void, SBInstructionList, Print, (SBFile));
+  LLDB_REGISTER_METHOD(void, SBInstructionList, Print, (FileSP));
   LLDB_REGISTER_METHOD(bool, SBInstructionList, GetDescription,
                        (lldb::SBStream &));
   LLDB_REGISTER_METHOD(bool, SBInstructionList,

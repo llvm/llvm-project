@@ -57,6 +57,7 @@ static_library("Scalar") {
     "LowerAtomic.cpp",
     "LowerExpectIntrinsic.cpp",
     "LowerGuardIntrinsic.cpp",
+    "LowerConstantIntrinsics.cpp",
     "LowerWidenableCondition.cpp",
     "MakeGuardsExplicit.cpp",
     "MemCpyOptimizer.cpp",

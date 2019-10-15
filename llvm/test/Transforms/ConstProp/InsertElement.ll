@@ -38,7 +38,7 @@ define <4 x i64> @insertelement_undef() {
 
 define i64 @extract_undef_index_from_zero_vec() {
 ; CHECK-LABEL: @extract_undef_index_from_zero_vec(
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    ret i64 undef
 ;
   %E = extractelement <2 x i64> zeroinitializer, i64 undef
   ret i64 %E

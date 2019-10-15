@@ -97,7 +97,10 @@ public:
     GetAsyncProfileData(char *dst, size_t dst_len) const;
 
     void
-    ReportEventState (const lldb::SBEvent &event, FILE *out) const;
+    ReportEventState (const lldb::SBEvent &event, SBFile out) const;
+
+    void
+    ReportEventState (const lldb::SBEvent &event, FileSP BORROWED) const;
 
     void
     AppendEventStateReport (const lldb::SBEvent &event, lldb::SBCommandReturnObject &result);

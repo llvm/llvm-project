@@ -12,7 +12,10 @@ def fuzz_obj(obj):
     obj.GetSTDOUT(6)
     obj.GetSTDERR(6)
     event = lldb.SBEvent()
-    obj.ReportEventState(event, None)
+    try:
+        obj.ReportEventState(event, None)
+    except Exception:
+        pass
     obj.AppendEventStateReport(event, lldb.SBCommandReturnObject())
     error = lldb.SBError()
     obj.RemoteAttachToProcessWithID(123, error)
