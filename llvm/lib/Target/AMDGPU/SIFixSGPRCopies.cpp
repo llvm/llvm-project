@@ -697,7 +697,9 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
 void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
   unsigned numVGPRUses = 0;
   SetVector<const MachineInstr *> worklist;
+  SmallSet<const MachineInstr *, 4> Visited;
   worklist.insert(&MI);
+  Visited.insert(&MI);
   while (!worklist.empty()) {
     const MachineInstr *Instr = worklist.pop_back_val();
     unsigned Reg = Instr->getOperand(0).getReg();
@@ -709,7 +711,9 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
           !TRI->isSGPRReg(*MRI, UseMI->getOperand(0).getReg())) {
           numVGPRUses++;
         }
-        worklist.insert(UseMI);
+        if (Visited.insert(UseMI).second)
+          worklist.insert(UseMI);
+
         continue;
       }
 

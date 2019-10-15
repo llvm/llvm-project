@@ -60,3 +60,53 @@ body:               |
 
   bb.8:
 ...
+
+# Avoid infinite loop in SIInstrInfo::legalizeGenericOperand when checking for ImpDef.
+# GCN-LABEL: name: legalize-operand-search-each-def-once
+# GCN-NOT: sreg_64 PHI
+---
+name: legalize-operand-search-each-def-once
+tracksRegLiveness: true
+body:               |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr0_sgpr1
+
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    S_CBRANCH_VCCZ %bb.2, implicit undef $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    %1:vreg_64 = IMPLICIT_DEF
+    S_BRANCH %bb.2
+
+  bb.2:
+    %2:sgpr_64 = PHI %0, %bb.0, %1, %bb.1
+    $sgpr0_sgpr1 = COPY %0
+...
+
+# A REG_SEQUENCE that uses registers defined by both a PHI and a COPY could
+# result in an endless search.
+# GCN-LABEL: name: process-phi-search-each-use-once
+# GCN-NOT: sreg_32 PHI
+---
+name: process-phi-search-each-use-once
+tracksRegLiveness: true
+body:               |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr3
+
+    %0:vgpr_32 = COPY $vgpr3
+    S_CBRANCH_VCCZ %bb.2, implicit undef $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    %1:sgpr_32 = IMPLICIT_DEF
+    S_BRANCH %bb.2
+
+  bb.2:
+    %2:sgpr_32 = PHI %0, %bb.0, %1, %bb.1
+    %3:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %0, %subreg.sub1
+    $vgpr3 = COPY %3.sub0
+...
