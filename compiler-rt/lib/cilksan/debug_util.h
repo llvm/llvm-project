@@ -36,9 +36,9 @@ static int debug_level = 0;
 
 #if CILKSAN_DEBUG
 #define WHEN_CILKSAN_DEBUG(stmt) do { stmt; } while(0)
-#define cilksan_assert(c) \
-    do { if (!(c)) { die("%s:%d assertion failure: %s\n", \
-                        __FILE__, __LINE__, #c);} } while (0)
+#define cilksan_assert(c)                                               \
+  do { if (!(c)) { die("%s:%d assertion failure: %s\n",                 \
+                       __FILE__, __LINE__, #c);} } while (0)
 #else
 #define WHEN_CILKSAN_DEBUG(stmt)
 #define cilksan_assert(c)

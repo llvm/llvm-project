@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <strings.h>
+#include <signal.h>
 #include "debug_util.h"
 
 /*
@@ -34,13 +35,14 @@ __attribute__((noreturn))
 void die(const char *fmt, ...) {
   std::va_list l;
   std::fprintf(stderr, "=================================================\n");
-  std::fprintf(stderr, "racedetector: fatal error\n");
+  std::fprintf(stderr, "Cilksan: fatal error\n");
 
   va_start(l, fmt);
   std::vfprintf(stderr, fmt, l);
   std::fprintf(stderr, "=================================================\n");
   fflush(stderr);
   va_end(l);
+  raise(SIGTRAP);
   std::exit(1);
 }
 
