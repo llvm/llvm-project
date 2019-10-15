@@ -231,11 +231,12 @@ void addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
 
   if (Stmt->isBlockStmt())
     findReferencesInBlock(References, Stmt, Stmt->getBasicBlock());
-  else {
-    assert(Stmt->isRegionStmt() &&
-           "Stmt was neither block nor region statement");
+  else if (Stmt->isRegionStmt()) {
     for (BasicBlock *BB : Stmt->getRegion()->blocks())
       findReferencesInBlock(References, Stmt, BB);
+  } else {
+    assert(Stmt->isCopyStmt());
+    // Copy Stmts have no instructions that we need to consider.
   }
 
   for (auto &Access : *Stmt) {
