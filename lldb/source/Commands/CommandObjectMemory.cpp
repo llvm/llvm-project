@@ -1730,15 +1730,12 @@ protected:
               section_name = section_sp->GetName();
             }
           }
-          result.AppendMessageWithFormat(
-              "[0x%16.16" PRIx64 "-0x%16.16" PRIx64 ") %c%c%c%s%s%s%s\n",
+          result.AppendMessageWithFormatv(
+              "[{0:x16}-{1:x16}) {2:r}{3:w}{4:x}{5}{6}{7}{8}\n",
               range_info.GetRange().GetRangeBase(),
-              range_info.GetRange().GetRangeEnd(),
-              range_info.GetReadable() ? 'r' : '-',
-              range_info.GetWritable() ? 'w' : '-',
-              range_info.GetExecutable() ? 'x' : '-', name ? " " : "",
-              name.AsCString(""), section_name ? " " : "",
-              section_name.AsCString(""));
+              range_info.GetRange().GetRangeEnd(), range_info.GetReadable(),
+              range_info.GetWritable(), range_info.GetExecutable(),
+              name ? " " : "", name, section_name ? " " : "", section_name);
           m_prev_end_addr = range_info.GetRange().GetRangeEnd();
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
