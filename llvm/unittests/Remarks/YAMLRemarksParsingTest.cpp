@@ -82,11 +82,13 @@ void parseExpectErrorMeta(StringRef Buf, const char *Error, CmpType Cmp,
 
   // Use a case insensitive comparision due to case differences in error strings
   // for different OSs.
-  if (Cmp == CmpType::Equal)
+  if (Cmp == CmpType::Equal) {
     EXPECT_EQ(StringRef(Stream.str()).lower(), StringRef(Error).lower());
+  }
 
-  if (Cmp == CmpType::Contains)
+  if (Cmp == CmpType::Contains) {
     EXPECT_TRUE(StringRef(Stream.str()).contains(StringRef(Error)));
+  }
 }
 
 TEST(YAMLRemarks, ParsingEmpty) {
