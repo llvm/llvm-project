@@ -39,6 +39,7 @@ if(LLDB_TEST_SWIFT)
     --inferior-env "LD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}\\\""
     --inferior-env "SIMCTL_CHILD_DYLD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}\\\""
   )
+endif()
 # END - Swift Mods
 
 # Users can override LLDB_TEST_USER_ARGS to specify arbitrary arguments to pass to the script
