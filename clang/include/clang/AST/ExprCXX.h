@@ -57,7 +57,6 @@ class IdentifierInfo;
 class LambdaCapture;
 class NonTypeTemplateParmDecl;
 class TemplateParameterList;
-class Sema;
 
 //===--------------------------------------------------------------------===//
 // C++ Expressions.

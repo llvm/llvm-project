@@ -16,7 +16,7 @@
 #include "gtest/gtest.h"
 
 using namespace clang;
-using namespace tooling;
+using namespace transformer;
 using namespace ast_matchers;
 
 namespace {
@@ -27,15 +27,6 @@ using ::testing::AllOf;
 using ::testing::Eq;
 using ::testing::HasSubstr;
 using MatchResult = MatchFinder::MatchResult;
-using stencil::access;
-using stencil::addressOf;
-using stencil::cat;
-using stencil::deref;
-using stencil::dPrint;
-using stencil::expression;
-using stencil::ifBound;
-using stencil::run;
-using stencil::text;
 
 // Create a valid translation-unit from a statement.
 static std::string wrapSnippet(StringRef StatementCode) {
@@ -64,7 +55,7 @@ struct TestMatch {
 // `StatementCode` may contain other statements not described by `Matcher`.
 static llvm::Optional<TestMatch> matchStmt(StringRef StatementCode,
                                            StatementMatcher Matcher) {
-  auto AstUnit = buildASTFromCode(wrapSnippet(StatementCode));
+  auto AstUnit = tooling::buildASTFromCode(wrapSnippet(StatementCode));
   if (AstUnit == nullptr) {
     ADD_FAILURE() << "AST construction failed";
     return llvm::None;

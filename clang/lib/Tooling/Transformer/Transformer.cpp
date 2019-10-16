@@ -21,7 +21,7 @@ using namespace tooling;
 using ast_matchers::MatchFinder;
 
 void Transformer::registerMatchers(MatchFinder *MatchFinder) {
-  for (auto &Matcher : tooling::detail::buildMatchers(Rule))
+  for (auto &Matcher : transformer::detail::buildMatchers(Rule))
     MatchFinder->addDynamicMatcher(Matcher, this);
 }
 
@@ -29,8 +29,9 @@ void Transformer::run(const MatchFinder::MatchResult &Result) {
   if (Result.Context->getDiagnostics().hasErrorOccurred())
     return;
 
-  RewriteRule::Case Case = tooling::detail::findSelectedCase(Result, Rule);
-  auto Transformations = tooling::detail::translateEdits(Result, Case.Edits);
+  transformer::RewriteRule::Case Case =
+      transformer::detail::findSelectedCase(Result, Rule);
+  auto Transformations = transformer::detail::translateEdits(Result, Case.Edits);
   if (!Transformations) {
     Consumer(Transformations.takeError());
     return;
@@ -38,7 +39,7 @@ void Transformer::run(const MatchFinder::MatchResult &Result) {
 
   if (Transformations->empty()) {
     // No rewrite applied (but no error encountered either).
-    tooling::detail::getRuleMatchLoc(Result).print(
+    transformer::detail::getRuleMatchLoc(Result).print(
         llvm::errs() << "note: skipping match at loc ", *Result.SourceManager);
     llvm::errs() << "\n";
     return;
@@ -58,10 +59,10 @@ void Transformer::run(const MatchFinder::MatchResult &Result) {
   for (const auto &I : Case.AddedIncludes) {
     auto &Header = I.first;
     switch (I.second) {
-    case IncludeFormat::Quoted:
+    case transformer::IncludeFormat::Quoted:
       AC.addHeader(Header);
       break;
-    case IncludeFormat::Angled:
+    case transformer::IncludeFormat::Angled:
       AC.addHeader((llvm::Twine("<") + Header + ">").str());
       break;
     }

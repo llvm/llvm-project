@@ -20,7 +20,7 @@
 #include <vector>
 
 using namespace clang;
-using namespace tooling;
+using namespace transformer;
 
 using ast_matchers::MatchFinder;
 using ast_type_traits::ASTNodeKind;
@@ -104,7 +104,7 @@ static SourceLocation findOpenParen(const CallExpr &E, const SourceManager &SM,
   return findPreviousTokenKind(EndLoc, SM, LangOpts, tok::TokenKind::l_paren);
 }
 
-RangeSelector tooling::before(RangeSelector Selector) {
+RangeSelector transformer::before(RangeSelector Selector) {
   return [Selector](const MatchResult &Result) -> Expected<CharSourceRange> {
     Expected<CharSourceRange> SelectedRange = Selector(Result);
     if (!SelectedRange)
@@ -113,7 +113,7 @@ RangeSelector tooling::before(RangeSelector Selector) {
   };
 }
 
-RangeSelector tooling::after(RangeSelector Selector) {
+RangeSelector transformer::after(RangeSelector Selector) {
   return [Selector](const MatchResult &Result) -> Expected<CharSourceRange> {
     Expected<CharSourceRange> SelectedRange = Selector(Result);
     if (!SelectedRange)
@@ -126,27 +126,29 @@ RangeSelector tooling::after(RangeSelector Selector) {
   };
 }
 
-RangeSelector tooling::node(std::string ID) {
+RangeSelector transformer::node(std::string ID) {
   return [ID](const MatchResult &Result) -> Expected<CharSourceRange> {
     Expected<DynTypedNode> Node = getNode(Result.Nodes, ID);
     if (!Node)
       return Node.takeError();
     return Node->get<Stmt>() != nullptr && Node->get<Expr>() == nullptr
-               ? getExtendedRange(*Node, tok::TokenKind::semi, *Result.Context)
+               ? tooling::getExtendedRange(*Node, tok::TokenKind::semi,
+                                           *Result.Context)
                : CharSourceRange::getTokenRange(Node->getSourceRange());
   };
 }
 
-RangeSelector tooling::statement(std::string ID) {
+RangeSelector transformer::statement(std::string ID) {
   return [ID](const MatchResult &Result) -> Expected<CharSourceRange> {
     Expected<DynTypedNode> Node = getNode(Result.Nodes, ID);
     if (!Node)
       return Node.takeError();
-    return getExtendedRange(*Node, tok::TokenKind::semi, *Result.Context);
+    return tooling::getExtendedRange(*Node, tok::TokenKind::semi,
+                                     *Result.Context);
   };
 }
 
-RangeSelector tooling::range(RangeSelector Begin, RangeSelector End) {
+RangeSelector transformer::range(RangeSelector Begin, RangeSelector End) {
   return [Begin, End](const MatchResult &Result) -> Expected<CharSourceRange> {
     Expected<CharSourceRange> BeginRange = Begin(Result);
     if (!BeginRange)
@@ -165,11 +167,11 @@ RangeSelector tooling::range(RangeSelector Begin, RangeSelector End) {
   };
 }
 
-RangeSelector tooling::range(std::string BeginID, std::string EndID) {
-  return tooling::range(node(std::move(BeginID)), node(std::move(EndID)));
+RangeSelector transformer::range(std::string BeginID, std::string EndID) {
+  return transformer::range(node(std::move(BeginID)), node(std::move(EndID)));
 }
 
-RangeSelector tooling::member(std::string ID) {
+RangeSelector transformer::member(std::string ID) {
   return [ID](const MatchResult &Result) -> Expected<CharSourceRange> {
     Expected<DynTypedNode> Node = getNode(Result.Nodes, ID);
     if (!Node)
@@ -181,7 +183,7 @@ RangeSelector tooling::member(std::string ID) {
   };
 }
 
-RangeSelector tooling::name(std::string ID) {
+RangeSelector transformer::name(std::string ID) {
   return [ID](const MatchResult &Result) -> Expected<CharSourceRange> {
     Expected<DynTypedNode> N = getNode(Result.Nodes, ID);
     if (!N)
@@ -197,7 +199,7 @@ RangeSelector tooling::name(std::string ID) {
       // `foo<int>` for which this range will be too short.  Doing so will
       // require subcasing `NamedDecl`, because it doesn't provide virtual
       // access to the \c DeclarationNameInfo.
-      if (getText(R, *Result.Context) != D->getName())
+      if (tooling::getText(R, *Result.Context) != D->getName())
         return CharSourceRange();
       return R;
     }
@@ -256,7 +258,7 @@ CharSourceRange getStatementsRange(const MatchResult &,
 }
 } // namespace
 
-RangeSelector tooling::statements(std::string ID) {
+RangeSelector transformer::statements(std::string ID) {
   return RelativeSelector<CompoundStmt, getStatementsRange>(std::move(ID));
 }
 
@@ -271,7 +273,7 @@ CharSourceRange getCallArgumentsRange(const MatchResult &Result,
 }
 } // namespace
 
-RangeSelector tooling::callArgs(std::string ID) {
+RangeSelector transformer::callArgs(std::string ID) {
   return RelativeSelector<CallExpr, getCallArgumentsRange>(std::move(ID));
 }
 
@@ -285,24 +287,24 @@ CharSourceRange getElementsRange(const MatchResult &,
 }
 } // namespace
 
-RangeSelector tooling::initListElements(std::string ID) {
+RangeSelector transformer::initListElements(std::string ID) {
   return RelativeSelector<InitListExpr, getElementsRange>(std::move(ID));
 }
 
 namespace {
 // Returns the range of the else branch, including the `else` keyword.
 CharSourceRange getElseRange(const MatchResult &Result, const IfStmt &S) {
-  return maybeExtendRange(
+  return tooling::maybeExtendRange(
       CharSourceRange::getTokenRange(S.getElseLoc(), S.getEndLoc()),
       tok::TokenKind::semi, *Result.Context);
 }
 } // namespace
 
-RangeSelector tooling::elseBranch(std::string ID) {
+RangeSelector transformer::elseBranch(std::string ID) {
   return RelativeSelector<IfStmt, getElseRange>(std::move(ID));
 }
 
-RangeSelector tooling::expansion(RangeSelector S) {
+RangeSelector transformer::expansion(RangeSelector S) {
   return [S](const MatchResult &Result) -> Expected<CharSourceRange> {
     Expected<CharSourceRange> SRange = S(Result);
     if (!SRange)

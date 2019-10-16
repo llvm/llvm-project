@@ -9,15 +9,15 @@
 #include "clang/Tooling/Transformer/RangeSelector.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/ASTUnit.h"
-#include "clang/Tooling/FixIt.h"
 #include "clang/Tooling/Tooling.h"
+#include "clang/Tooling/Transformer/SourceCode.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
-using namespace tooling;
+using namespace transformer;
 using namespace ast_matchers;
 
 namespace {
@@ -40,7 +40,7 @@ struct TestMatch {
 };
 
 template <typename M> TestMatch matchCode(StringRef Code, M Matcher) {
-  auto ASTUnit = buildASTFromCode(Code);
+  auto ASTUnit = tooling::buildASTFromCode(Code);
   assert(ASTUnit != nullptr && "AST construction failed");
 
   ASTContext &Context = ASTUnit->getASTContext();
@@ -59,7 +59,7 @@ Expected<StringRef> select(RangeSelector Selector, const TestMatch &Match) {
   Expected<CharSourceRange> Range = Selector(Match.Result);
   if (!Range)
     return Range.takeError();
-  return fixit::internal::getText(*Range, *Match.Result.Context);
+  return tooling::getText(*Range, *Match.Result.Context);
 }
 
 // Applies \p Selector to a trivial match with only a single bound node with id
