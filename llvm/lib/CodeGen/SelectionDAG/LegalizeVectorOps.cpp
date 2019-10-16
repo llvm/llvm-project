@@ -307,23 +307,27 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     return TranslateLegalizeResults(Op, Result);
 
   TargetLowering::LegalizeAction Action = TargetLowering::Legal;
+  EVT ValVT;
   switch (Op.getOpcode()) {
   default:
     return TranslateLegalizeResults(Op, Result);
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                   \
   case ISD::STRICT_##DAGN:
 #include "llvm/IR/ConstrainedOps.def"
-    Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
+    ValVT = Node->getValueType(0);
+    if (Op.getOpcode() == ISD::STRICT_SINT_TO_FP ||
+        Op.getOpcode() == ISD::STRICT_UINT_TO_FP)
+      ValVT = Node->getOperand(1).getValueType();
+    Action = TLI.getOperationAction(Node->getOpcode(), ValVT);
     // If we're asked to expand a strict vector floating-point operation,
     // by default we're going to simply unroll it.  That is usually the
     // best approach, except in the case where the resulting strict (scalar)
     // operations would themselves use the fallback mutation to non-strict.
     // In that specific case, just do the fallback on the vector op.
     if (Action == TargetLowering::Expand && !TLI.isStrictFPEnabled() &&
-        TLI.getStrictFPOperationAction(Node->getOpcode(),
-                                   Node->getValueType(0))
-        == TargetLowering::Legal) {
-      EVT EltVT = Node->getValueType(0).getVectorElementType();
+        TLI.getStrictFPOperationAction(Node->getOpcode(), ValVT) ==
+            TargetLowering::Legal) {
+      EVT EltVT = ValVT.getVectorElementType();
       if (TLI.getOperationAction(Node->getOpcode(), EltVT)
           == TargetLowering::Expand &&
           TLI.getStrictFPOperationAction(Node->getOpcode(), EltVT)
@@ -1153,18 +1157,29 @@ SDValue VectorLegalizer::ExpandFP_TO_UINT(SDValue Op) {
 }
 
 SDValue VectorLegalizer::ExpandUINT_TO_FLOAT(SDValue Op) {
-  EVT VT = Op.getOperand(0).getValueType();
+  bool IsStrict = Op.getNode()->isStrictFPOpcode();
+  unsigned OpNo = IsStrict ? 1 : 0;
+  SDValue Src = Op.getOperand(OpNo);
+  EVT VT = Src.getValueType();
   SDLoc DL(Op);
 
   // Attempt to expand using TargetLowering.
   SDValue Result;
-  if (TLI.expandUINT_TO_FP(Op.getNode(), Result, DAG))
+  SDValue Chain;
+  if (TLI.expandUINT_TO_FP(Op.getNode(), Result, Chain, DAG)) {
+    if (IsStrict)
+      // Relink the chain
+      DAG.ReplaceAllUsesOfValueWith(Op.getValue(1), Chain);
     return Result;
+  }
 
   // Make sure that the SINT_TO_FP and SRL instructions are available.
-  if (TLI.getOperationAction(ISD::SINT_TO_FP, VT) == TargetLowering::Expand ||
-      TLI.getOperationAction(ISD::SRL,        VT) == TargetLowering::Expand)
-    return DAG.UnrollVectorOp(Op.getNode());
+  if (((!IsStrict && TLI.getOperationAction(ISD::SINT_TO_FP, VT) ==
+                         TargetLowering::Expand) ||
+       (IsStrict && TLI.getOperationAction(ISD::STRICT_SINT_TO_FP, VT) ==
+                        TargetLowering::Expand)) ||
+      TLI.getOperationAction(ISD::SRL, VT) == TargetLowering::Expand)
+    return IsStrict ? SDValue() : DAG.UnrollVectorOp(Op.getNode());
 
   unsigned BW = VT.getScalarSizeInBits();
   assert((BW == 64 || BW == 32) &&
@@ -1182,8 +1197,31 @@ SDValue VectorLegalizer::ExpandUINT_TO_FLOAT(SDValue Op) {
   SDValue TWOHW = DAG.getConstantFP(1ULL << (BW / 2), DL, Op.getValueType());
 
   // Clear upper part of LO, lower HI
-  SDValue HI = DAG.getNode(ISD::SRL, DL, VT, Op.getOperand(0), HalfWord);
-  SDValue LO = DAG.getNode(ISD::AND, DL, VT, Op.getOperand(0), HalfWordMask);
+  SDValue HI = DAG.getNode(ISD::SRL, DL, VT, Src, HalfWord);
+  SDValue LO = DAG.getNode(ISD::AND, DL, VT, Src, HalfWordMask);
+
+  if (IsStrict) {
+    // Convert hi and lo to floats
+    // Convert the hi part back to the upper values
+    // TODO: Can any fast-math-flags be set on these nodes?
+    SDValue fHI =
+        DAG.getNode(ISD::STRICT_SINT_TO_FP, DL, {Op.getValueType(), MVT::Other},
+                    {Op.getOperand(0), HI});
+    fHI = DAG.getNode(ISD::STRICT_FMUL, DL, {Op.getValueType(), MVT::Other},
+                      {SDValue(fHI.getNode(), 1), fHI, TWOHW});
+    SDValue fLO =
+        DAG.getNode(ISD::STRICT_SINT_TO_FP, DL, {Op.getValueType(), MVT::Other},
+                    {SDValue(fHI.getNode(), 1), LO});
+
+    // Add the two halves
+    SDValue Result =
+        DAG.getNode(ISD::STRICT_FADD, DL, {Op.getValueType(), MVT::Other},
+                    {SDValue(fLO.getNode(), 1), fHI, fLO});
+
+    // Relink the chain
+    DAG.ReplaceAllUsesOfValueWith(Op.getValue(1), SDValue(Result.getNode(), 1));
+    return Result;
+  }
 
   // Convert hi and lo to floats
   // Convert the hi part back to the upper values
@@ -1318,7 +1356,12 @@ SDValue VectorLegalizer::ExpandFixedPointMul(SDValue Op) {
 }
 
 SDValue VectorLegalizer::ExpandStrictFPOp(SDValue Op) {
-  EVT VT = Op.getValueType();
+  if (Op.getOpcode() == ISD::STRICT_UINT_TO_FP) {
+    if (SDValue Res = ExpandUINT_TO_FLOAT(Op))
+      return Res;
+  }
+
+  EVT VT = Op.getValue(0).getValueType();
   EVT EltVT = VT.getVectorElementType();
   unsigned NumElems = VT.getVectorNumElements();
   unsigned NumOpers = Op.getNumOperands();

@@ -373,6 +373,28 @@ entry:
   ret i64 %result
 }
 
+; Verify that sitofp(42) isn't simplified when the rounding mode is unknown.
+; CHECK-LABEL: @f30
+; CHECK: call double @llvm.experimental.constrained.sitofp
+define double @f30() #0 {
+entry:
+  %result = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 42,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+; Verify that uitofp(42) isn't simplified when the rounding mode is unknown.
+; CHECK-LABEL: @f31
+; CHECK: call double @llvm.experimental.constrained.uitofp
+define double @f31() #0 {
+entry:
+  %result = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 42,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
 attributes #0 = { strictfp }
 
 @llvm.fp.env = thread_local global i8 zeroinitializer, section "llvm.metadata"
@@ -405,3 +427,5 @@ declare i32 @llvm.experimental.constrained.lround.i32.f64(double, metadata)
 declare i32 @llvm.experimental.constrained.lround.i32.f32(float, metadata)
 declare i64 @llvm.experimental.constrained.llround.i64.f64(double, metadata)
 declare i64 @llvm.experimental.constrained.llround.i64.f32(float, metadata)
+declare double @llvm.experimental.constrained.sitofp.f64.i32(i32, metadata, metadata)
+declare double @llvm.experimental.constrained.uitofp.f64.i32(i32, metadata, metadata)
