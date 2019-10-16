@@ -55,16 +55,8 @@ option(LLDB_USE_SYSTEM_DEBUGSERVER "Use the system's debugserver for testing (Da
 
 # BEGIN SWIFT MOD
 option(LLDB_ENABLE_SWIFT_SUPPORT "Enable swift support" ON)
-# END SWIFT MOD
-
-# BEGIN SWIFT CODE
 option(LLDB_ALLOW_STATIC_BINDINGS "Enable using static/baked language bindings if swig is not present." OFF)
 option(LLDB_ENABLE_WERROR "Fail and stop if a warning is triggered." ${LLVM_ENABLE_WERROR})
-
-if(swift IN_LIST LLVM_EXTERNAL_PROJECTS)
-  set(LLDB_SWIFTC ${LLVM_RUNTIME_OUTPUT_INTDIR}/swiftc CACHE STRING "Path to swift compiler")
-  set(LLDB_SWIFT_LIBS ${LLVM_LIBRARY_OUTPUT_INTDIR}/swift CACHE STRING "Path to swift libraries")
-endif()
 # END SWIFT CODE
 
 if(LLDB_BUILD_FRAMEWORK)

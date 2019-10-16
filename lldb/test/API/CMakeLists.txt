@@ -25,6 +25,22 @@ set(LLDB_TEST_ARCH
   ${LLDB_DEFAULT_TEST_ARCH}
   CACHE STRING "Specify the architecture to run LLDB tests as (x86|x64).  Determines whether tests are compiled with -m32 or -m64")
 
+
+# BEGIN - Swift Mods
+option(LLDB_TEST_SWIFT "Use in-tree swift when testing lldb" On)
+
+if(LLDB_TEST_SWIFT)
+  set(LLDB_SWIFTC ${SWIFT_BINARY_DIR}/bin/swiftc CACHE STRING "Path to swift compiler")
+  set(LLDB_SWIFT_LIBS ${SWIFT_LIBRARY_DIR}/swift CACHE STRING "Path to swift libraries")
+  set(SWIFT_TEST_ARGS
+    --swift-compiler ${LLDB_SWIFTC}
+    --swift-library ${LLDB_SWIFT_LIBS}
+    --inferior-env "DYLD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}\\\""
+    --inferior-env "LD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}\\\""
+    --inferior-env "SIMCTL_CHILD_DYLD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}\\\""
+  )
+# END - Swift Mods
+
 # Users can override LLDB_TEST_USER_ARGS to specify arbitrary arguments to pass to the script
 set(LLDB_TEST_USER_ARGS
   ""
@@ -49,6 +65,7 @@ list(APPEND LLDB_TEST_COMMON_ARGS
   --dsymutil ${LLDB_TEST_DSYMUTIL}
   --filecheck ${LLDB_TEST_FILECHECK}
   -C ${LLDB_TEST_C_COMPILER}
+  ${SWIFT_TEST_ARGS}
   )
 
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
