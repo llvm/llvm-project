@@ -17,7 +17,7 @@
 using namespace llvm;
 
 void VPlanHCFGTransforms::VPInstructionsToVPRecipes(
-    VPlanPtr &Plan,
+    Loop *OrigLoop, VPlanPtr &Plan,
     LoopVectorizationLegality::InductionList *Inductions,
     SmallPtrSetImpl<Instruction *> &DeadInstructions) {
 
@@ -64,6 +64,8 @@ void VPlanHCFGTransforms::VPInstructionsToVPRecipes(
           NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi);
         } else
           NewRecipe = new VPWidenPHIRecipe(Phi);
+      } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
+        NewRecipe = new VPWidenGEPRecipe(GEP, OrigLoop);
       } else {
         // If the last recipe is a VPWidenRecipe, add Inst to it instead of
         // creating a new recipe.
