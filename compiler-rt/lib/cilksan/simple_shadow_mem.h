@@ -37,9 +37,9 @@ private:
   static constexpr unsigned LG_TABLE_SIZE = 48 - LG_PAGE_SIZE - LG_LINE_SIZE;
 
   // Bytes per line.
-  static constexpr uintptr_t LINE_SIZE = (1 << LG_LINE_SIZE);
+  static constexpr uintptr_t LINE_SIZE = (1UL << LG_LINE_SIZE);
   // Low-order bit of address identifying the page.
-  static constexpr uintptr_t PAGE_OFF = (1 << (LG_PAGE_SIZE + LG_LINE_SIZE));
+  static constexpr uintptr_t PAGE_OFF = (1UL << (LG_PAGE_SIZE + LG_LINE_SIZE));
 
   // Mask to identify the byte within a line.
   static constexpr uintptr_t BYTE_MASK = (LINE_SIZE - 1);
