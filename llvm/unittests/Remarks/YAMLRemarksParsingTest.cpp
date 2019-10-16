@@ -720,14 +720,13 @@ TEST(YAMLRemarks, ParsingBadMeta) {
                                  "\0\0\0\0\0\0\0\0"
                                  "/path/",
                                  30),
-                       "'/path/': No such file or directory",
-                       CmpType::Contains);
+                       "'/path/'", CmpType::Contains);
 
   parseExpectErrorMeta(StringRef("REMARKS\0"
                                  "\0\0\0\0\0\0\0\0"
                                  "\0\0\0\0\0\0\0\0"
                                  "/path/",
                                  30),
-                       "'/baddir/path/': No such file or directory",
-                       CmpType::Contains, StringRef("/baddir/"));
+                       "'/baddir/path/'", CmpType::Contains,
+                       StringRef("/baddir/"));
 }
