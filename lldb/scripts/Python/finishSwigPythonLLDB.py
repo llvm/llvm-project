@@ -75,56 +75,6 @@ strMsgCopySixPy = "Copying six.py from '%s' to '%s'"
 strErrMsgCopySixPyFailed = "Unable to copy '%s' to '%s'"
 
 
-def is_debug_interpreter():
-    return hasattr(sys, 'gettotalrefcount')
-
-#++---------------------------------------------------------------------------
-# Details:  Copy files needed by lldb/macosx/heap.py to build libheap.dylib.
-# Args:     vDictArgs               - (R) Program input parameters.
-#           vstrFrameworkPythonDir  - (R) Python framework directory.
-# Returns:  Bool - True = function success, False = failure.
-#           Str - Error description on task failure.
-# Throws:   None.
-#--
-
-
-def macosx_copy_file_for_heap(vDictArgs, vstrFrameworkPythonDir):
-    dbg = utilsDebug.CDebugFnVerbose(
-        "Python script macosx_copy_file_for_heap()")
-    bOk = True
-    strMsg = ""
-
-    eOSType = utilsOsType.determine_os_type()
-    if eOSType != utilsOsType.EnumOsType.Darwin:
-        return (bOk, strMsg)
-
-    strHeapDir = os.path.join(vstrFrameworkPythonDir, "macosx", "heap")
-    strHeapDir = os.path.normcase(strHeapDir)
-    if os.path.exists(strHeapDir) and os.path.isdir(strHeapDir):
-        return (bOk, strMsg)
-
-    os.makedirs(strHeapDir)
-
-    strRoot = os.path.normpath(vDictArgs["--srcRoot"])
-    strSrc = os.path.join(
-        strRoot,
-        "examples",
-        "darwin",
-        "heap_find",
-        "heap",
-        "heap_find.cpp")
-    shutil.copy(strSrc, strHeapDir)
-    strSrc = os.path.join(
-        strRoot,
-        "examples",
-        "darwin",
-        "heap_find",
-        "heap",
-        "Makefile")
-    shutil.copy(strSrc, strHeapDir)
-
-    return (bOk, strMsg)
-
 #++---------------------------------------------------------------------------
 # Details:  Create Python packages and Python __init__ files.
 # Args:     vDictArgs               - (R) Program input parameters.
@@ -355,30 +305,6 @@ def get_framework_python_dir(vDictArgs):
     strWkDir = os.path.normpath(vDictArgs["--lldbPythonPath"])
     return (bOk, strWkDir, strErrMsg)
 
-#++---------------------------------------------------------------------------
-# Details:  Retrieve the liblldb directory path, if it exists and is valid.
-# Args:     vDictArgs               - (R) Program input parameters.
-# Returns:  Bool - True = function success, False = failure.
-#           Str - liblldb directory path.
-#           strErrMsg - Error description on task failure.
-# Throws:   None.
-#--
-
-
-def get_liblldb_dir(vDictArgs):
-    dbg = utilsDebug.CDebugFnVerbose("Python script get_liblldb_dir()")
-    bOk = True
-    strErrMsg = ""
-
-    strLldbLibDir = ""
-    bHaveLldbLibDir = "--lldbLibDir" in vDictArgs
-    if bHaveLldbLibDir:
-        strLldbLibDir = vDictArgs["--lldbLibDir"]
-    if (bHaveLldbLibDir == False) or (strLldbLibDir.__len__() == 0):
-        strLldbLibDir = "lib"
-
-    return (bOk, strLldbLibDir, strErrMsg)
-
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
@@ -431,29 +357,6 @@ def main(vDictArgs):
 
     bOk, strFrameworkPythonDir, strMsg = get_framework_python_dir(vDictArgs)
 
-    if bOk:
-        bOk, strCfgBldDir, strMsg = get_config_build_dir(
-            vDictArgs, strFrameworkPythonDir)
-    if bOk and bDbg:
-        print((strMsgPyFileLocatedHere % strFrameworkPythonDir))
-        print((strMsgConfigBuildDir % strCfgBldDir))
-
-    if bOk:
-        bOk, strLldbLibDir, strMsg = get_liblldb_dir(vDictArgs)
-
-    if bOk:
-        bOk, strMsg = find_or_create_python_dir(
-            vDictArgs, strFrameworkPythonDir)
-
-    bUseSystemSix = "--useSystemSix" in vDictArgs
-
-    if not bUseSystemSix and bOk:
-        bOk, strMsg = copy_six(vDictArgs, strFrameworkPythonDir)
-
-    if bOk:
-        bOk, strMsg = copy_lldbpy_file_to_lldb_pkg_dir(vDictArgs,
-                                                       strFrameworkPythonDir,
-                                                       strCfgBldDir)
     strRoot = os.path.normpath(vDictArgs["--srcRoot"])
     if bOk:
         # lldb
@@ -547,10 +450,6 @@ def main(vDictArgs):
                 "diagnose_nsstring.py")]
         bOk, strMsg = create_py_pkg(
             vDictArgs, strFrameworkPythonDir, "/diagnose", listPkgFiles)
-
-    if bOk:
-        bOk, strMsg = macosx_copy_file_for_heap(
-            vDictArgs, strFrameworkPythonDir)
 
     if bOk:
         return (0, strMsg)

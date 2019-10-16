@@ -42,6 +42,11 @@
 #define CPU_TYPE_ARM64 (CPU_TYPE_ARM | CPU_ARCH_ABI64)
 #endif
 
+#ifndef CPU_TYPE_ARM64_32
+#define CPU_ARCH_ABI64_32 0x02000000
+#define (CPU_TYPE_ARM | CPU_ARCH_ABI64_32)
+#endif
+
 #include <TargetConditionals.h> // for TARGET_OS_TV, TARGET_OS_WATCH
 
 using namespace lldb_private;
@@ -257,7 +262,9 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
       arch_32.SetArchitecture(eArchTypeMachO, cputype & ~(CPU_ARCH_MASK),
                               cpusubtype32);
 
-      if (cputype == CPU_TYPE_ARM || cputype == CPU_TYPE_ARM64) {
+      if (cputype == CPU_TYPE_ARM || 
+          cputype == CPU_TYPE_ARM64 || 
+          cputype == CPU_TYPE_ARM64_32) {
 // When running on a watch or tv, report the host os correctly
 #if defined(TARGET_OS_TV) && TARGET_OS_TV == 1
         arch_32.GetTriple().setOS(llvm::Triple::TvOS);
@@ -265,6 +272,9 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
 #elif defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1
         arch_32.GetTriple().setOS(llvm::Triple::BridgeOS);
         arch_64.GetTriple().setOS(llvm::Triple::BridgeOS);
+#elif defined(TARGET_OS_WATCHOS) && TARGET_OS_WATCHOS == 1
+        arch_32.GetTriple().setOS(llvm::Triple::WatchOS);
+        arch_64.GetTriple().setOS(llvm::Triple::WatchOS);
 #else
         arch_32.GetTriple().setOS(llvm::Triple::IOS);
         arch_64.GetTriple().setOS(llvm::Triple::IOS);

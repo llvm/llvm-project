@@ -471,6 +471,12 @@ static bool GetMacOSXProcessCPUType(ProcessInstanceInfo &process_info) {
         break;
 #endif
 
+#if defined(CPU_TYPE_ARM64_32) && defined(CPU_SUBTYPE_ARM64_32_ALL)
+      case CPU_TYPE_ARM64_32:
+        sub = CPU_SUBTYPE_ARM64_32_ALL;
+        break;
+#endif
+
       case CPU_TYPE_ARM: {
         // Note that we fetched the cpu type from the PROCESS but we can't get a
         // cpusubtype of the

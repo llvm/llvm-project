@@ -57,6 +57,7 @@ static const lldb_private::RegisterInfo *
 GetRegisterInfoPtr(const lldb_private::ArchSpec &target_arch) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_32:
     return g_register_infos_arm64_le;
   default:
     assert(false && "Unhandled target architecture.");
@@ -68,6 +69,7 @@ static uint32_t
 GetRegisterInfoCount(const lldb_private::ArchSpec &target_arch) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_32:
     return static_cast<uint32_t>(sizeof(g_register_infos_arm64_le) /
                                  sizeof(g_register_infos_arm64_le[0]));
   default:

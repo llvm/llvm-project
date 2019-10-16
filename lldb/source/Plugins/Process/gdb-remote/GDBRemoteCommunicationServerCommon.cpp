@@ -231,6 +231,7 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
 
 #else
   if (host_arch.GetMachine() == llvm::Triple::aarch64 ||
+      host_arch.GetMachine() == llvm::Triple::aarch64_32 ||
       host_arch.GetMachine() == llvm::Triple::aarch64_be ||
       host_arch.GetMachine() == llvm::Triple::arm ||
       host_arch.GetMachine() == llvm::Triple::armeb || host_arch.IsMIPS())
@@ -1185,6 +1186,15 @@ void GDBRemoteCommunicationServerCommon::CreateProcessInfoResponse(
       proc_info.GetEffectiveUserID(), proc_info.GetEffectiveGroupID());
   response.PutCString("name:");
   response.PutStringAsRawHex8(proc_info.GetExecutableFile().GetCString());
+
+  response.PutChar(';');
+  response.PutCString("args:");
+  response.PutStringAsRawHex8(proc_info.GetArg0());
+  for (auto &arg : proc_info.GetArguments()) {
+    response.PutChar('-');
+    response.PutStringAsRawHex8(arg.ref());
+  }
+
   response.PutChar(';');
   const ArchSpec &proc_arch = proc_info.GetArchitecture();
   if (proc_arch.IsValid()) {
@@ -1234,6 +1244,7 @@ void GDBRemoteCommunicationServerCommon::
       case llvm::Triple::arm:
       case llvm::Triple::thumb:
       case llvm::Triple::aarch64:
+      case llvm::Triple::aarch64_32:
         ostype = "ios";
         break;
       default:

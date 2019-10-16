@@ -1816,6 +1816,7 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
   size_t trap_opcode_size = 0;
 
   switch (arch.GetMachine()) {
+  case llvm::Triple::aarch64_32:
   case llvm::Triple::aarch64: {
     static const uint8_t g_aarch64_opcode[] = {0x00, 0x00, 0x20, 0xd4};
     trap_opcode = g_aarch64_opcode;

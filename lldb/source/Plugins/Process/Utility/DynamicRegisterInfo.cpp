@@ -536,6 +536,7 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
   if (!generic_regs_specified) {
     switch (arch.GetMachine()) {
     case llvm::Triple::aarch64:
+    case llvm::Triple::aarch64_32:
     case llvm::Triple::aarch64_be:
       for (auto &reg : m_regs) {
         if (strcmp(reg.name, "pc") == 0)
