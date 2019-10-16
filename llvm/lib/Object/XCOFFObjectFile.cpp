@@ -17,10 +17,7 @@
 namespace llvm {
 namespace object {
 
-enum {
-  FUNCTION_SYM = 0x20,
-  SYM_TYPE_MASK = 0x07
-};
+enum { FUNCTION_SYM = 0x20, SYM_TYPE_MASK = 0x07, RELOC_OVERFLOW = 65535 };
 
 // Checks that [Ptr, Ptr + Size) bytes fall inside the memory buffer
 // 'M'. Returns a pointer to the underlying object on success.
@@ -47,6 +44,20 @@ static StringRef generateXCOFFFixedNameStringRef(const char *Name) {
       static_cast<const char *>(memchr(Name, '\0', XCOFF::NameSize));
   return NulCharPtr ? StringRef(Name, NulCharPtr - Name)
                     : StringRef(Name, XCOFF::NameSize);
+}
+
+bool XCOFFRelocation32::isRelocationSigned() const {
+  return Info & XR_SIGN_INDICATOR_MASK;
+}
+
+bool XCOFFRelocation32::isFixupIndicated() const {
+  return Info & XR_FIXUP_INDICATOR_MASK;
+}
+
+uint8_t XCOFFRelocation32::getRelocatedLength() const {
+  // The relocation encodes the bit length being relocated minus 1. Add back
+  // the 1 to get the actual length being relocated.
+  return (Info & XR_BIASED_LENGTH_MASK) + 1;
 }
 
 void XCOFFObjectFile::checkSectionAddress(uintptr_t Addr,
@@ -494,6 +505,19 @@ uint32_t XCOFFObjectFile::getSymbolIndex(uintptr_t SymbolEntPtr) const {
          XCOFF::SymbolTableEntrySize;
 }
 
+Expected<StringRef>
+XCOFFObjectFile::getSymbolNameByIndex(uint32_t Index) const {
+  if (is64Bit())
+    report_fatal_error("64-bit symbol table support not implemented yet.");
+
+  if (Index >= getLogicalNumberOfSymbolTableEntries32())
+    return errorCodeToError(object_error::invalid_symbol_index);
+
+  DataRefImpl SymDRI;
+  SymDRI.p = reinterpret_cast<uintptr_t>(getPointerToSymbolTable() + Index);
+  return getSymbolName(SymDRI);
+}
+
 uint16_t XCOFFObjectFile::getFlags() const {
   return is64Bit() ? fileHeader64()->Flags : fileHeader32()->Flags;
 }
@@ -527,6 +551,46 @@ ArrayRef<XCOFFSectionHeader32> XCOFFObjectFile::sections32() const {
   const XCOFFSectionHeader32 *TablePtr = sectionHeaderTable32();
   return ArrayRef<XCOFFSectionHeader32>(TablePtr,
                                         TablePtr + getNumberOfSections());
+}
+
+// In an XCOFF32 file, when the field value is 65535, then an STYP_OVRFLO
+// section header contains the actual count of relocation entries in the s_paddr
+// field. STYP_OVRFLO headers contain the section index of their corresponding
+// sections as their raw "NumberOfRelocations" field value.
+Expected<uint32_t> XCOFFObjectFile::getLogicalNumberOfRelocationEntries(
+    const XCOFFSectionHeader32 &Sec) const {
+
+  uint16_t SectionIndex = &Sec - sectionHeaderTable32() + 1;
+
+  if (Sec.NumberOfRelocations < RELOC_OVERFLOW)
+    return Sec.NumberOfRelocations;
+  for (const auto &Sec : sections32()) {
+    if (Sec.Flags == XCOFF::STYP_OVRFLO &&
+        Sec.NumberOfRelocations == SectionIndex)
+      return Sec.PhysicalAddress;
+  }
+  return errorCodeToError(object_error::parse_failed);
+}
+
+Expected<ArrayRef<XCOFFRelocation32>>
+XCOFFObjectFile::relocations(const XCOFFSectionHeader32 &Sec) const {
+  uintptr_t RelocAddr = getWithOffset(reinterpret_cast<uintptr_t>(FileHeader),
+                                      Sec.FileOffsetToRelocationInfo);
+  auto NumRelocEntriesOrErr = getLogicalNumberOfRelocationEntries(Sec);
+  if (Error E = NumRelocEntriesOrErr.takeError())
+    return std::move(E);
+
+  uint32_t NumRelocEntries = NumRelocEntriesOrErr.get();
+
+  auto RelocationOrErr =
+      getObject<XCOFFRelocation32>(Data, reinterpret_cast<void *>(RelocAddr),
+                                   NumRelocEntries * sizeof(XCOFFRelocation32));
+  if (Error E = RelocationOrErr.takeError())
+    return std::move(E);
+
+  const XCOFFRelocation32 *StartReloc = RelocationOrErr.get();
+
+  return ArrayRef<XCOFFRelocation32>(StartReloc, StartReloc + NumRelocEntries);
 }
 
 Expected<XCOFFStringTable>

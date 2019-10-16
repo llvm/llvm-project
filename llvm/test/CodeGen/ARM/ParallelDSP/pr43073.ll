@@ -15,14 +15,14 @@
 ; CHECK: [[ADDR_B_PLUS_2:%[^ ]+]] = getelementptr inbounds i16, i16* %b, i32 2
 ; CHECK: [[CAST_ADDR_B_PLUS_2:%[^ ]+]] = bitcast i16* [[ADDR_B_PLUS_2]] to i32*
 ; CHECK: [[B_PLUS_2:%[^ ]+]] = load i32, i32* [[CAST_ADDR_B_PLUS_2]], align 2
+; CHECK: [[ACC:%[^ ]+]] = call i32 @llvm.arm.smladx(i32 [[IN_MINUS_3]], i32 [[B_PLUS_2]], i32 [[ADD0]])
 ; CHECK: [[ADDR_IN_MINUS_5:%[^ ]+]] = getelementptr inbounds i16, i16* %in, i32 -5
 ; CHECK: [[CAST_ADDR_IN_MINUS_5:%[^ ]+]] = bitcast i16* [[ADDR_IN_MINUS_5]] to i32*
 ; CHECK: [[IN_MINUS_5:%[^ ]+]] = load i32, i32* [[CAST_ADDR_IN_MINUS_5]], align 2
 ; CHECK: [[ADDR_B_PLUS_4:%[^ ]+]] = getelementptr inbounds i16, i16* %b, i32 4
 ; CHECK: [[CAST_ADDR_B_PLUS_4:%[^ ]+]] = bitcast i16* [[ADDR_B_PLUS_4]] to i32*
 ; CHECK: [[B_PLUS_4:%[^ ]+]] = load i32, i32* [[CAST_ADDR_B_PLUS_4]], align 2
-; CHECK: [[ACC:%[^ ]+]] = call i32 @llvm.arm.smladx(i32 [[IN_MINUS_5]], i32 [[B_PLUS_4]], i32 [[ADD0]])
-; CHECK: [[RES:%[^ ]+]] = call i32 @llvm.arm.smladx(i32 [[IN_MINUS_3]], i32 [[B_PLUS_2]], i32 [[ACC]])
+; CHECK: [[RES:%[^ ]+]] = call i32 @llvm.arm.smladx(i32 [[IN_MINUS_5]], i32 [[B_PLUS_4]], i32 [[ACC]])
 ; CHECK: ret i32 [[RES]]
 define i32 @first_mul_invalid(i16* nocapture readonly %in, i16* nocapture readonly %b) {
 entry:
@@ -88,14 +88,14 @@ entry:
 ; CHECK: [[ADDR_B_PLUS_2:%[^ ]+]] = getelementptr inbounds i16, i16* %b, i32 2
 ; CHECK: [[CAST_ADDR_B_PLUS_2:%[^ ]+]] = bitcast i16* [[ADDR_B_PLUS_2]] to i32*
 ; CHECK: [[B_PLUS_2:%[^ ]+]] = load i32, i32* [[CAST_ADDR_B_PLUS_2]], align 2
+; CHECK: [[ACC:%[^ ]+]] = call i32 @llvm.arm.smladx(i32 [[IN_MINUS_3]], i32 [[B_PLUS_2]], i32 [[MUL0]])
 ; CHECK: [[ADDR_IN_MINUS_5:%[^ ]+]] = getelementptr inbounds i16, i16* %in, i32 -5
 ; CHECK: [[CAST_ADDR_IN_MINUS_5:%[^ ]+]] = bitcast i16* [[ADDR_IN_MINUS_5]] to i32*
 ; CHECK: [[IN_MINUS_5:%[^ ]+]] = load i32, i32* [[CAST_ADDR_IN_MINUS_5]], align 2
 ; CHECK: [[ADDR_B_PLUS_4:%[^ ]+]] = getelementptr inbounds i16, i16* %b, i32 4
 ; CHECK: [[CAST_ADDR_B_PLUS_4:%[^ ]+]] = bitcast i16* [[ADDR_B_PLUS_4]] to i32*
 ; CHECK: [[B_PLUS_4:%[^ ]+]] = load i32, i32* [[CAST_ADDR_B_PLUS_4]], align 2
-; CHECK: [[ACC:%[^ ]+]] = call i32 @llvm.arm.smladx(i32 [[IN_MINUS_5]], i32 [[B_PLUS_4]], i32 [[MUL0]])
-; CHECK: [[RES:%[^ ]+]] = call i32 @llvm.arm.smladx(i32 [[IN_MINUS_3]], i32 [[B_PLUS_2]], i32 [[ACC]])
+; CHECK: [[RES:%[^ ]+]] = call i32 @llvm.arm.smladx(i32 [[IN_MINUS_5]], i32 [[B_PLUS_4]], i32 [[ACC]])
 ; CHECK: ret i32 [[RES]]
 define i32 @with_no_acc_input(i16* nocapture readonly %in, i16* nocapture readonly %b) {
 entry:
@@ -157,14 +157,14 @@ entry:
 ; CHECK: [[ADDR_B_PLUS_2:%[^ ]+]] = getelementptr inbounds i16, i16* %b, i32 2
 ; CHECK: [[CAST_ADDR_B_PLUS_2:%[^ ]+]] = bitcast i16* [[ADDR_B_PLUS_2]] to i32*
 ; CHECK: [[B_PLUS_2:%[^ ]+]] = load i32, i32* [[CAST_ADDR_B_PLUS_2]], align 2
+; CHECK: [[ACC:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[IN_MINUS_3]], i32 [[B_PLUS_2]], i64 [[ADD0]])
 ; CHECK: [[ADDR_IN_MINUS_5:%[^ ]+]] = getelementptr inbounds i16, i16* %in, i32 -5
 ; CHECK: [[CAST_ADDR_IN_MINUS_5:%[^ ]+]] = bitcast i16* [[ADDR_IN_MINUS_5]] to i32*
 ; CHECK: [[IN_MINUS_5:%[^ ]+]] = load i32, i32* [[CAST_ADDR_IN_MINUS_5]], align 2
 ; CHECK: [[ADDR_B_PLUS_4:%[^ ]+]] = getelementptr inbounds i16, i16* %b, i32 4
 ; CHECK: [[CAST_ADDR_B_PLUS_4:%[^ ]+]] = bitcast i16* [[ADDR_B_PLUS_4]] to i32*
 ; CHECK: [[B_PLUS_4:%[^ ]+]] = load i32, i32* [[CAST_ADDR_B_PLUS_4]], align 2
-; CHECK: [[ACC:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[IN_MINUS_5]], i32 [[B_PLUS_4]], i64 [[ADD0]])
-; CHECK: [[RES:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[IN_MINUS_3]], i32 [[B_PLUS_2]], i64 [[ACC]])
+; CHECK: [[RES:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[IN_MINUS_5]], i32 [[B_PLUS_4]], i64 [[ACC]])
 ; CHECK: ret i64 [[RES]]
 define i64 @with_64bit_acc(i16* nocapture readonly %in, i16* nocapture readonly %b) {
 entry:
@@ -238,13 +238,13 @@ entry:
 ; CHECK: [[Y_1:%[^ ]+]] = load i16, i16* [[ADDR_Y_MINUS_1]], align 2
 ; CHECK: [[SEXT_Y_1:%[^ ]+]] = sext i16 [[Y_1]] to i32
 ; CHECK: [[UNPAIRED:%[^ ]+]] = mul nsw i32 [[SEXT_Y_1]], [[SEXT_X_1]]
+; CHECK: [[SEXT:%[^ ]+]] = sext i32 [[UNPAIRED]] to i64
+; CHECK: [[ACC:%[^ ]+]] = add i64 [[SEXT]], [[ADD_1]]
 ; CHECK: [[ADDR_X_PLUS_2:%[^ ]+]] = bitcast i16* [[X_PLUS_2]] to i32*
 ; CHECK: [[X_2:%[^ ]+]] = load i32, i32* [[ADDR_X_PLUS_2]], align 2
 ; CHECK: [[Y_MINUS_3:%[^ ]+]] = getelementptr inbounds i16, i16* %py.8757.unr, i32 -3
 ; CHECK: [[ADDR_Y_MINUS_3:%[^ ]+]] = bitcast i16* [[Y_MINUS_3]] to i32*
 ; CHECK: [[Y_3:%[^ ]+]] = load i32, i32* [[ADDR_Y_MINUS_3]], align 2
-; CHECK: [[SEXT:%[^ ]+]] = sext i32 [[UNPAIRED]] to i64
-; CHECK: [[ACC:%[^ ]+]] = add i64 [[SEXT]], [[ADD_1]]
 ; CHECK: [[RES:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[Y_3]], i32 [[X_2]], i64 [[ACC]])
 ; CHECK: ret i64 [[RES]]
 define i64 @with_64bit_add_acc(i16* nocapture readonly %px.10756.unr, i16* nocapture readonly %py.8757.unr, i32 %acc) {

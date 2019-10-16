@@ -7,12 +7,12 @@
 ; CHECK: [[LD_A:%[^ ]+]] = load i32, i32* [[CAST_A]]
 ; CHECK: [[CAST_B:%[^ ]+]] = bitcast i16* %b to i32*
 ; CHECK: [[LD_B:%[^ ]+]] = load i32, i32* [[CAST_B]]
+; CHECK: [[ACC:%[^ ]+]] = call i32 @llvm.arm.smlad(i32 [[LD_A]], i32 [[LD_B]], i32 %acc)
 ; CHECK: [[CAST_A_1:%[^ ]+]] = bitcast i16* [[ADDR_A_1]] to i32*
 ; CHECK: [[LD_A_1:%[^ ]+]] = load i32, i32* [[CAST_A_1]]
 ; CHECK: [[CAST_B_1:%[^ ]+]] = bitcast i16* [[ADDR_B_1]] to i32*
 ; CHECK: [[LD_B_1:%[^ ]+]] = load i32, i32* [[CAST_B_1]]
-; CHECK: [[ACC:%[^ ]+]] = call i32 @llvm.arm.smlad(i32 [[LD_A_1]], i32 [[LD_B_1]], i32 %acc)
-; CHECK: [[RES:%[^ ]+]] = call i32 @llvm.arm.smlad(i32 [[LD_A]], i32 [[LD_B]], i32 [[ACC]])
+; CHECK: [[RES:%[^ ]+]] = call i32 @llvm.arm.smlad(i32 [[LD_A_1]], i32 [[LD_B_1]], i32 [[ACC]])
 ; CHECK: ret i32 [[RES]]
 define i32 @overlap_1(i16* %a, i16* %b, i32 %acc) {
 entry:
@@ -51,12 +51,12 @@ entry:
 ; CHECK: [[LD_A:%[^ ]+]] = load i32, i32* [[CAST_A]]
 ; CHECK: [[CAST_B:%[^ ]+]] = bitcast i16* %b to i32*
 ; CHECK: [[LD_B:%[^ ]+]] = load i32, i32* [[CAST_B]]
+; CHECK: [[ACC:%[^ ]+]] = call i64 @llvm.arm.smlald(i32 [[LD_A]], i32 [[LD_B]], i64 %acc)
 ; CHECK: [[CAST_A_1:%[^ ]+]] = bitcast i16* [[ADDR_A_1]] to i32*
 ; CHECK: [[LD_A_1:%[^ ]+]] = load i32, i32* [[CAST_A_1]]
 ; CHECK: [[CAST_B_1:%[^ ]+]] = bitcast i16* [[ADDR_B_1]] to i32*
 ; CHECK: [[LD_B_1:%[^ ]+]] = load i32, i32* [[CAST_B_1]]
-; CHECK: [[ACC:%[^ ]+]] = call i64 @llvm.arm.smlald(i32 [[LD_A_1]], i32 [[LD_B_1]], i64 %acc)
-; CHECK: [[RES:%[^ ]+]] = call i64 @llvm.arm.smlald(i32 [[LD_A]], i32 [[LD_B]], i64 [[ACC]])
+; CHECK: [[RES:%[^ ]+]] = call i64 @llvm.arm.smlald(i32 [[LD_A_1]], i32 [[LD_B_1]], i64 [[ACC]])
 ; CHECK: ret i64 [[RES]]
 define i64 @overlap_64_1(i16* %a, i16* %b, i64 %acc) {
 entry:
@@ -133,13 +133,14 @@ entry:
 ; CHECK: [[LD_A:%[^ ]+]] = load i32, i32* [[CAST_A]]
 ; CHECK: [[CAST_B:%[^ ]+]] = bitcast i16* %b to i32*
 ; CHECK: [[LD_B:%[^ ]+]] = load i32, i32* [[CAST_B]]
+; CHECK: [[SMLAD:%[^ ]+]] = call i32 @llvm.arm.smlad(i32 [[LD_A]], i32 [[LD_B]], i32 %acc)
 ; CHECK: [[CAST_B_1:%[^ ]+]] = bitcast i16* [[GEP_B]] to i32*
 ; CHECK: [[LD_B_1:%[^ ]+]] = load i32, i32* [[CAST_B_1]]
 ; CHECK: [[GEP_A:%[^ ]+]] = getelementptr i16, i16* %a, i32 2
 ; CHECK: [[CAST_A_2:%[^ ]+]] = bitcast i16* [[GEP_A]] to i32*
 ; CHECK: [[LD_A_2:%[^ ]+]] = load i32, i32* [[CAST_A_2]]
-; CHECK: [[SMLAD:%[^ ]+]] = call i32 @llvm.arm.smlad(i32 [[LD_A_2]], i32 [[LD_B_1]], i32 %acc)
-; CHECK: call i32 @llvm.arm.smlad(i32 [[LD_A]], i32 [[LD_B]], i32 [[SMLAD]])
+; CHECK: [[RES:%[^ ]+]] = call i32 @llvm.arm.smlad(i32 [[LD_A_2]], i32 [[LD_B_1]], i32 [[SMLAD]])
+; CHECK: ret i32 [[RES]]
 define i32 @overlap_3(i16* %a, i16* %b, i32 %acc) {
 entry:
   %addr.a.1 = getelementptr i16, i16* %a, i32 1
@@ -178,13 +179,14 @@ entry:
 ; CHECK: [[LD_A:%[^ ]+]] = load i32, i32* [[CAST_A]]
 ; CHECK: [[CAST_B:%[^ ]+]] = bitcast i16* %b to i32*
 ; CHECK: [[LD_B:%[^ ]+]] = load i32, i32* [[CAST_B]]
+; CHECK: [[SMLAD:%[^ ]+]] = call i32 @llvm.arm.smlad(i32 [[LD_A]], i32 [[LD_B]], i32 %acc)
 ; CHECK: [[CAST_B_1:%[^ ]+]] = bitcast i16* [[GEP_B]] to i32*
 ; CHECK: [[LD_B_1:%[^ ]+]] = load i32, i32* [[CAST_B_1]]
 ; CHECK: [[GEP_A:%[^ ]+]] = getelementptr i16, i16* %a, i32 2
 ; CHECK: [[CAST_A_2:%[^ ]+]] = bitcast i16* [[GEP_A]] to i32*
 ; CHECK: [[LD_A_2:%[^ ]+]] = load i32, i32* [[CAST_A_2]]
-; CHECK: [[SMLAD:%[^ ]+]] = call i32 @llvm.arm.smladx(i32 [[LD_A_2]], i32 [[LD_B_1]], i32 %acc)
-; CHECK: call i32 @llvm.arm.smlad(i32 [[LD_A]], i32 [[LD_B]], i32 [[SMLAD]])
+; CHECK: [[RES:%[^ ]+]] = call i32 @llvm.arm.smladx(i32 [[LD_A_2]], i32 [[LD_B_1]], i32 [[SMLAD]])
+; CHECK: ret i32 [[RES]]
 define i32 @overlap_4(i16* %a, i16* %b, i32 %acc) {
 entry:
   %addr.a.1 = getelementptr i16, i16* %a, i32 1

@@ -399,6 +399,9 @@ void DwarfStreamer::emitLocationsForUnit(
   MS->SwitchSection(MC->getObjectFileInfo()->getDwarfLocSection());
 
   unsigned AddressSize = Unit.getOrigUnit().getAddressByteSize();
+  uint64_t BaseAddressMarker = (AddressSize == 8)
+                                   ? std::numeric_limits<uint64_t>::max()
+                                   : std::numeric_limits<uint32_t>::max();
   const DWARFSection &InputSec = Dwarf.getDWARFObj().getLocSection();
   DataExtractor Data(InputSec.Data, Dwarf.isLittleEndian(), AddressSize);
   DWARFUnit &OrigUnit = Unit.getOrigUnit();
@@ -418,11 +421,20 @@ void DwarfStreamer::emitLocationsForUnit(
       uint64_t Low = Data.getUnsigned(&Offset, AddressSize);
       uint64_t High = Data.getUnsigned(&Offset, AddressSize);
       LocSectionSize += 2 * AddressSize;
+      // End of list entry.
       if (Low == 0 && High == 0) {
         Asm->OutStreamer->EmitIntValue(0, AddressSize);
         Asm->OutStreamer->EmitIntValue(0, AddressSize);
         break;
       }
+      // Base address selection entry.
+      if (Low == BaseAddressMarker) {
+        Asm->OutStreamer->EmitIntValue(BaseAddressMarker, AddressSize);
+        Asm->OutStreamer->EmitIntValue(High + Attr.second, AddressSize);
+        LocPcOffset = 0;
+        continue;
+      }
+      // Location list entry.
       Asm->OutStreamer->EmitIntValue(Low + LocPcOffset, AddressSize);
       Asm->OutStreamer->EmitIntValue(High + LocPcOffset, AddressSize);
       uint64_t Length = Data.getU16(&Offset);

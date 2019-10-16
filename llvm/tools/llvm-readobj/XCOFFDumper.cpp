@@ -56,6 +56,7 @@ private:
   // The low order 16 bits of section flags denotes the section type.
   static constexpr unsigned SectionFlagsTypeMask = 0xffffu;
 
+  void printRelocations(ArrayRef<XCOFFSectionHeader32> Sections);
   const XCOFFObjectFile &Obj;
 };
 } // anonymous namespace
@@ -115,7 +116,58 @@ void XCOFFDumper::printSectionHeaders() {
 }
 
 void XCOFFDumper::printRelocations() {
-  llvm_unreachable("Unimplemented functionality for XCOFFDumper");
+  if (Obj.is64Bit())
+    llvm_unreachable("64-bit relocation output not implemented!");
+  else
+    printRelocations(Obj.sections32());
+}
+
+static const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
+#define ECase(X)                                                               \
+  { #X, XCOFF::X }
+    ECase(R_POS),    ECase(R_RL),     ECase(R_RLA),    ECase(R_NEG),
+    ECase(R_REL),    ECase(R_TOC),    ECase(R_TRL),    ECase(R_TRLA),
+    ECase(R_GL),     ECase(R_TCL),    ECase(R_REF),    ECase(R_BA),
+    ECase(R_BR),     ECase(R_RBA),    ECase(R_RBR),    ECase(R_TLS),
+    ECase(R_TLS_IE), ECase(R_TLS_LD), ECase(R_TLS_LE), ECase(R_TLSM),
+    ECase(R_TLSML),  ECase(R_TOCU),   ECase(R_TOCL)
+#undef ECase
+};
+
+void XCOFFDumper::printRelocations(ArrayRef<XCOFFSectionHeader32> Sections) {
+  if (!opts::ExpandRelocs)
+    report_fatal_error("Unexpanded relocation output not implemented.");
+
+  ListScope LS(W, "Relocations");
+  uint16_t Index = 0;
+  for (const auto &Sec : Sections) {
+    ++Index;
+    // Only the .text, .data, .tdata, and STYP_DWARF sections have relocation.
+    if (Sec.Flags != XCOFF::STYP_TEXT && Sec.Flags != XCOFF::STYP_DATA &&
+        Sec.Flags != XCOFF::STYP_TDATA && Sec.Flags != XCOFF::STYP_DWARF)
+      continue;
+    auto Relocations = unwrapOrError(Obj.getFileName(), Obj.relocations(Sec));
+    if (Relocations.empty())
+      continue;
+
+    W.startLine() << "Section (index: " << Index << ") " << Sec.getName()
+                  << " {\n";
+    for (auto Reloc : Relocations) {
+      StringRef SymbolName = unwrapOrError(
+          Obj.getFileName(), Obj.getSymbolNameByIndex(Reloc.SymbolIndex));
+
+      DictScope RelocScope(W, "Relocation");
+      W.printHex("Virtual Address", Reloc.VirtualAddress);
+      W.printNumber("Symbol", SymbolName, Reloc.SymbolIndex);
+      W.printString("IsSigned", Reloc.isRelocationSigned() ? "Yes" : "No");
+      W.printNumber("FixupBitValue", Reloc.isFixupIndicated() ? 1 : 0);
+      W.printNumber("Length", Reloc.getRelocatedLength());
+      W.printEnum("Type", (uint8_t)Reloc.Type,
+                  makeArrayRef(RelocationTypeNameclass));
+    }
+    W.unindent();
+    W.startLine() << "}\n";
+  }
 }
 
 static const EnumEntry<XCOFF::CFileStringType> FileStringType[] = {

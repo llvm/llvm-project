@@ -24,7 +24,6 @@ body {
     color: black;
     padding: 0;
     border: 1px solid #aaa;
-
     margin: 0px 80px 0px 80px;
     min-width: 740px;
 }
@@ -50,6 +49,7 @@ div.bodywrapper {
 div.body {
     margin: 0;
     padding: 0.5em 20px 20px 20px;
+    max-width: 1000px;
 }
 
 div.related {

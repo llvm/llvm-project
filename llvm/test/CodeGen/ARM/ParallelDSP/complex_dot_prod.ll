@@ -1,21 +1,51 @@
-; RUN: llc -mtriple=thumbv7em -mcpu=cortex-m4 -O3 %s -o - | FileCheck %s
+; RUN: llc -mtriple=thumbv7em -mcpu=cortex-m4 -O3 %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LLC
+; RUN: opt -S -mtriple=armv7-a -arm-parallel-dsp -dce %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-OPT
 
 ; TODO: Think we should be able to use smlsdx/smlsldx here.
 
 ; CHECK-LABEL: complex_dot_prod
 
-; CHECK: smulbb
-; CHECK: smultt
-; CHECK: smlalbb
-; CHECK: smultt
-; CHECK: smlalbb
-; CHECK: smultt
-; CHECK: smlalbb
-; CHECK: smultt
-; CHECK: smlaldx
-; CHECK: smlaldx
-; CHECK: smlaldx
-; CHECK: pop.w	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
+; CHECK-LLC: smlaldx
+; CHECK-LLC: smulbb
+; CHECK-LLC: smultt
+; CHECK-LLC: smlaldx
+; CHECK-LLC: smlalbb
+; CHECK-LLC: smultt
+; CHECK-LLC: smlalbb
+; CHECK-LLC: smultt
+; CHECK-LLC: smlaldx
+; CHECK-LLC: smlalbb
+; CHECK-LLC: smultt
+; CHECK-LLC: smlaldx
+; CHECK-LCC: pop.w {r4, r5, r6, r7, r8, r9, r10, pc}
+
+; CHECK-OPT: [[ADDR_A:%[^ ]+]] = bitcast i16* %pSrcA to i32*
+; CHECK-OPT: [[A:%[^ ]+]] = load i32, i32* [[ADDR_A]], align 2
+; CHECK-OPT: [[ADDR_A_2:%[^ ]+]] = getelementptr inbounds i16, i16* %pSrcA, i32 2
+; CHECK-OPT: [[ADDR_B:%[^ ]+]] = bitcast i16* %pSrcB to i32*
+; CHECK-OPT: [[B:%[^ ]+]] = load i32, i32* [[ADDR_B]], align 2
+; CHECK-OPT: [[ACC0:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[A]], i32 [[B]], i64 0)
+; CHECK-OPT: [[ADDR_B_2:%[^ ]+]] = getelementptr inbounds i16, i16* %pSrcB, i32 2
+; CHECK-OPT: [[CAST_ADDR_A_2:%[^ ]+]] = bitcast i16* [[ADDR_A_2]] to i32*
+; CHECK-OPT: [[A_2:%[^ ]+]] = load i32, i32* [[CAST_ADDR_A_2]], align 2
+; CHECK-OPT: [[ADDR_A_4:%[^ ]+]] = getelementptr inbounds i16, i16* %pSrcA, i32 4
+; CHECK-OPT: [[CAST_ADDR_B_2:%[^ ]+]] = bitcast i16* [[ADDR_B_2]] to i32*
+; CHECK-OPT: [[B_2:%[^ ]+]] = load i32, i32* [[CAST_ADDR_B_2]], align 2
+; CHECK-OPT: [[ACC1:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[A_2]], i32 [[B_2]], i64 [[ACC0]])
+; CHECK-OPT: [[ADDR_B_4:%[^ ]+]] = getelementptr inbounds i16, i16* %pSrcB, i32 4
+; CHECK-OPT: [[CAST_ADDR_A_4:%[^ ]+]] = bitcast i16* [[ADDR_A_4]] to i32*
+; CHECK-OPT: [[A_4:%[^ ]+]] = load i32, i32* [[CAST_ADDR_A_4]], align 2
+; CHECK-OPT: [[ADDR_A_6:%[^ ]+]] = getelementptr inbounds i16, i16* %pSrcA, i32 6
+; CHECK-OPT: [[CAST_ADDR_B_4:%[^ ]+]] = bitcast i16* [[ADDR_B_4]] to i32*
+; CHECK-OPT: [[B_4:%[^ ]+]] = load i32, i32* [[CAST_ADDR_B_4]], align 2
+; CHECK-OPT: [[ACC2:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[A_4]], i32 [[B_4]], i64 [[ACC1]])
+; CHECK-OPT: [[ADDR_B_6:%[^ ]+]] = getelementptr inbounds i16, i16* %pSrcB, i32 6
+; CHECK-OPT: [[CAST_ADDR_A_6:%[^ ]+]] = bitcast i16* [[ADDR_A_6]] to i32*
+; CHECK-OPT: [[A_6:%[^ ]+]] = load i32, i32* [[CAST_ADDR_A_6]], align 2
+; CHECK-OPT: [[CAST_ADDR_B_6:%[^ ]+]] = bitcast i16* [[ADDR_B_6]] to i32*
+; CHECK-OPT: [[B_6:%[^ ]+]] = load i32, i32* [[CAST_ADDR_B_6]], align 2
+; CHECK-OPT: call i64 @llvm.arm.smlaldx(i32 [[A_6]], i32 [[B_6]], i64 [[ACC2]])
+
 define dso_local arm_aapcscc void @complex_dot_prod(i16* nocapture readonly %pSrcA, i16* nocapture readonly %pSrcB, i32* nocapture %realResult, i32* nocapture %imagResult) {
 entry:
   %incdec.ptr = getelementptr inbounds i16, i16* %pSrcA, i32 1
@@ -107,7 +137,7 @@ entry:
   %conv85 = sext i32 %mul84 to i64
   %sub86 = sub nsw i64 %add76, %conv85
   %mul89 = mul nsw i32 %conv73, %conv82
-  %conv90 = sext i32 %mul89 to i64  
+  %conv90 = sext i32 %mul89 to i64
   %add81 = add nsw i64 %add67, %conv90
   %add91 = add nsw i64 %add81, %conv80
   %16 = lshr i64 %sub86, 6
