@@ -63,7 +63,12 @@ bool parseExpectError(const char (&Buf)[N], const char *Error) {
   return StringRef(Stream.str()).contains(Error);
 }
 
-void parseExpectErrorMeta(StringRef Buf, const char *Error,
+enum class CmpType {
+  Equal,
+  Contains
+};
+
+void parseExpectErrorMeta(StringRef Buf, const char *Error, CmpType Cmp,
                           Optional<StringRef> ExternalFilePrependPath = None) {
   std::string ErrorStr;
   raw_string_ostream Stream(ErrorStr);
@@ -77,7 +82,11 @@ void parseExpectErrorMeta(StringRef Buf, const char *Error,
 
   // Use a case insensitive comparision due to case differences in error strings
   // for different OSs.
-  EXPECT_EQ(StringRef(Stream.str()).lower(), StringRef(Error).lower());
+  if (Cmp == CmpType::Equal)
+    EXPECT_EQ(StringRef(Stream.str()).lower(), StringRef(Error).lower());
+
+  if (Cmp == CmpType::Contains)
+    EXPECT_TRUE(StringRef(Stream.str()).contains(StringRef(Error)));
 }
 
 TEST(YAMLRemarks, ParsingEmpty) {
@@ -684,32 +693,35 @@ TEST(YAMLRemarks, ParsingGoodMeta) {
 
 TEST(YAMLRemarks, ParsingBadMeta) {
   parseExpectErrorMeta(StringRef("REMARKSS", 9),
-                       "Expecting \\0 after magic number.");
+                       "Expecting \\0 after magic number.", CmpType::Equal);
 
-  parseExpectErrorMeta(StringRef("REMARKS\0", 8), "Expecting version number.");
+  parseExpectErrorMeta(StringRef("REMARKS\0", 8), "Expecting version number.",
+                       CmpType::Equal);
 
   parseExpectErrorMeta(StringRef("REMARKS\0"
                                  "\x09\0\0\0\0\0\0\0",
                                  16),
-                       "Mismatching remark version. Got 9, expected 0.");
+                       "Mismatching remark version. Got 9, expected 0.",
+                       CmpType::Equal);
 
   parseExpectErrorMeta(StringRef("REMARKS\0"
                                  "\0\0\0\0\0\0\0\0",
                                  16),
-                       "Expecting string table size.");
+                       "Expecting string table size.", CmpType::Equal);
 
   parseExpectErrorMeta(StringRef("REMARKS\0"
                                  "\0\0\0\0\0\0\0\0"
                                  "\x01\0\0\0\0\0\0\0",
                                  24),
-                       "Expecting string table.");
+                       "Expecting string table.", CmpType::Equal);
 
   parseExpectErrorMeta(StringRef("REMARKS\0"
                                  "\0\0\0\0\0\0\0\0"
                                  "\0\0\0\0\0\0\0\0"
                                  "/path/",
                                  30),
-                       "'/path/': No such file or directory");
+                       "'/path/': No such file or directory",
+                       CmpType::Contains);
 
   parseExpectErrorMeta(StringRef("REMARKS\0"
                                  "\0\0\0\0\0\0\0\0"
@@ -717,5 +729,5 @@ TEST(YAMLRemarks, ParsingBadMeta) {
                                  "/path/",
                                  30),
                        "'/baddir/path/': No such file or directory",
-                       StringRef("/baddir/"));
+                       CmpType::Contains, StringRef("/baddir/"));
 }
