@@ -989,6 +989,16 @@ std::error_code InMemoryFileSystem::isLocal(const Twine &Path, bool &Result) {
 // RedirectingFileSystem implementation
 //===-----------------------------------------------------------------------===/
 
+RedirectingFileSystem::RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> FS)
+    : ExternalFS(std::move(FS)) {
+  if (ExternalFS)
+    if (auto ExternalWorkingDirectory =
+            ExternalFS->getCurrentWorkingDirectory()) {
+      WorkingDirectory = *ExternalWorkingDirectory;
+      ExternalFSValidWD = true;
+    }
+}
+
 // FIXME: reuse implementation common with OverlayFSDirIterImpl as these
 // iterators are conceptually similar.
 class llvm::vfs::VFSFromYamlDirIterImpl
@@ -1035,12 +1045,27 @@ public:
 
 llvm::ErrorOr<std::string>
 RedirectingFileSystem::getCurrentWorkingDirectory() const {
-  return ExternalFS->getCurrentWorkingDirectory();
+  return WorkingDirectory;
 }
 
 std::error_code
 RedirectingFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
-  return ExternalFS->setCurrentWorkingDirectory(Path);
+  // Don't change the working directory if the path doesn't exist.
+  if (!exists(Path))
+    return errc::no_such_file_or_directory;
+
+  // Always change the external FS but ignore its result.
+  if (ExternalFS) {
+    auto EC = ExternalFS->setCurrentWorkingDirectory(Path);
+    ExternalFSValidWD = !static_cast<bool>(EC);
+  }
+
+  SmallString<128> AbsolutePath;
+  Path.toVector(AbsolutePath);
+  if (std::error_code EC = makeAbsolute(AbsolutePath))
+    return EC;
+  WorkingDirectory = AbsolutePath.str();
+  return {};
 }
 
 std::error_code RedirectingFileSystem::isLocal(const Twine &Path,
@@ -1053,7 +1078,7 @@ directory_iterator RedirectingFileSystem::dir_begin(const Twine &Dir,
   ErrorOr<RedirectingFileSystem::Entry *> E = lookupPath(Dir);
   if (!E) {
     EC = E.getError();
-    if (IsFallthrough && EC == errc::no_such_file_or_directory)
+    if (shouldUseExternalFS() && EC == errc::no_such_file_or_directory)
       return ExternalFS->dir_begin(Dir, EC);
     return {};
   }
@@ -1071,7 +1096,7 @@ directory_iterator RedirectingFileSystem::dir_begin(const Twine &Dir,
   auto *D = cast<RedirectingFileSystem::RedirectingDirectoryEntry>(*E);
   return directory_iterator(std::make_shared<VFSFromYamlDirIterImpl>(
       Dir, D->contents_begin(), D->contents_end(),
-      /*IterateExternalFS=*/IsFallthrough, *ExternalFS, EC));
+      /*IterateExternalFS=*/shouldUseExternalFS(), *ExternalFS, EC));
 }
 
 void RedirectingFileSystem::setExternalContentsPrefixDir(StringRef PrefixDir) {
@@ -1572,7 +1597,7 @@ RedirectingFileSystem::create(std::unique_ptr<MemoryBuffer> Buffer,
   RedirectingFileSystemParser P(Stream);
 
   std::unique_ptr<RedirectingFileSystem> FS(
-      new RedirectingFileSystem(std::move(ExternalFS)));
+      new RedirectingFileSystem(ExternalFS));
 
   if (!YAMLFilePath.empty()) {
     // Use the YAML path from -ivfsoverlay to compute the dir to be prefixed
@@ -1701,7 +1726,7 @@ ErrorOr<Status> RedirectingFileSystem::status(const Twine &Path,
 ErrorOr<Status> RedirectingFileSystem::status(const Twine &Path) {
   ErrorOr<RedirectingFileSystem::Entry *> Result = lookupPath(Path);
   if (!Result) {
-    if (IsFallthrough &&
+    if (shouldUseExternalFS() &&
         Result.getError() == llvm::errc::no_such_file_or_directory) {
       return ExternalFS->status(Path);
     }
@@ -1739,7 +1764,7 @@ ErrorOr<std::unique_ptr<File>>
 RedirectingFileSystem::openFileForRead(const Twine &Path) {
   ErrorOr<RedirectingFileSystem::Entry *> E = lookupPath(Path);
   if (!E) {
-    if (IsFallthrough &&
+    if (shouldUseExternalFS() &
         E.getError() == llvm::errc::no_such_file_or_directory) {
       return ExternalFS->openFileForRead(Path);
     }
@@ -1770,7 +1795,7 @@ RedirectingFileSystem::getRealPath(const Twine &Path,
                                    SmallVectorImpl<char> &Output) const {
   ErrorOr<RedirectingFileSystem::Entry *> Result = lookupPath(Path);
   if (!Result) {
-    if (IsFallthrough &&
+    if (shouldUseExternalFS() &&
         Result.getError() == llvm::errc::no_such_file_or_directory) {
       return ExternalFS->getRealPath(Path, Output);
     }
@@ -1783,8 +1808,8 @@ RedirectingFileSystem::getRealPath(const Twine &Path,
   }
   // Even if there is a directory entry, fall back to ExternalFS if allowed,
   // because directories don't have a single external contents path.
-  return IsFallthrough ? ExternalFS->getRealPath(Path, Output)
-                       : llvm::errc::invalid_argument;
+  return shouldUseExternalFS() ? ExternalFS->getRealPath(Path, Output)
+                               : llvm::errc::invalid_argument;
 }
 
 IntrusiveRefCntPtr<FileSystem>

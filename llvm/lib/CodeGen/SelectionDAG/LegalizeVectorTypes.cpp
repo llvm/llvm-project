@@ -2639,7 +2639,11 @@ SDValue DAGTypeLegalizer::SplitVecOp_VSETCC(SDNode *N) {
   LoRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Lo0, Lo1, N->getOperand(2));
   HiRes = DAG.getNode(ISD::SETCC, DL, PartResVT, Hi0, Hi1, N->getOperand(2));
   SDValue Con = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideResVT, LoRes, HiRes);
-  return PromoteTargetBoolean(Con, N->getValueType(0));
+
+  EVT OpVT = N->getOperand(0).getValueType();
+  ISD::NodeType ExtendCode =
+      TargetLowering::getExtendForContent(TLI.getBooleanContents(OpVT));
+  return DAG.getNode(ExtendCode, DL, N->getValueType(0), Con);
 }
 
 
@@ -4570,7 +4574,10 @@ SDValue DAGTypeLegalizer::WidenVecOp_SETCC(SDNode *N) {
       ISD::EXTRACT_SUBVECTOR, dl, ResVT, WideSETCC,
       DAG.getConstant(0, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
 
-  return PromoteTargetBoolean(CC, VT);
+  EVT OpVT = N->getOperand(0).getValueType();
+  ISD::NodeType ExtendCode =
+      TargetLowering::getExtendForContent(TLI.getBooleanContents(OpVT));
+  return DAG.getNode(ExtendCode, dl, VT, CC);
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {

@@ -19,6 +19,7 @@ source_set("tweaks") {
     "ExtractFunction.cpp",
     "ExtractVariable.cpp",
     "RawStringLiteral.cpp",
+    "RemoveUsingNamespace.cpp",
     "SwapIfBranches.cpp",
   ]
 }
