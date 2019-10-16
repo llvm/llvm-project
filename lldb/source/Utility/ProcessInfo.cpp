@@ -227,13 +227,11 @@ void ProcessInstanceInfo::DumpAsTableRow(Stream &s, UserIDResolver &resolver,
     }
 
     if (verbose || show_args) {
+      s.PutCString(m_arg0);
       const uint32_t argc = m_arguments.GetArgumentCount();
-      if (argc > 0) {
-        for (uint32_t i = 0; i < argc; i++) {
-          if (i > 0)
-            s.PutChar(' ');
-          s.PutCString(m_arguments.GetArgumentAtIndex(i));
-        }
+      for (uint32_t i = 0; i < argc; i++) {
+        s.PutChar(' ');
+        s.PutCString(m_arguments.GetArgumentAtIndex(i));
       }
     } else {
       s.PutCString(GetName());

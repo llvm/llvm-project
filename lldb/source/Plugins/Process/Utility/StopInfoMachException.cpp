@@ -416,6 +416,7 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
       }
       break;
 
+    case llvm::Triple::aarch64_32:
     case llvm::Triple::aarch64: {
       if (exc_code == 1 && exc_sub_code == 0) // EXC_ARM_BREAKPOINT
       {

@@ -44,7 +44,7 @@ class RegisterCommandsTestCase(TestBase):
             self.runCmd("register read xmm0")
             self.runCmd("register read ymm15")  # may be available
             self.runCmd("register read bnd0")  # may be available
-        elif self.getArchitecture() in ['arm', 'armv7', 'armv7k', 'arm64']:
+        elif self.getArchitecture() in ['arm', 'armv7', 'armv7k', 'arm64', 'arm64e', 'arm64_32']:
             self.runCmd("register read s0")
             self.runCmd("register read q15")  # may be available
 
@@ -89,7 +89,7 @@ class RegisterCommandsTestCase(TestBase):
         if self.getArchitecture() in ['amd64', 'i386', 'x86_64']:
             gpr = "eax"
             vector = "xmm0"
-        elif self.getArchitecture() in ['arm64', 'aarch64']:
+        elif self.getArchitecture() in ['arm64', 'aarch64', 'arm64e', 'arm64_32']:
             gpr = "w0"
             vector = "v0"
         elif self.getArchitecture() in ['arm', 'armv7', 'armv7k']:
@@ -335,7 +335,7 @@ class RegisterCommandsTestCase(TestBase):
                     ("xmm15",
                      "{0x01 0x02 0x03 0x00 0x00 0x00 0x00 0x00 0x09 0x0a 0x2f 0x2f 0x2f 0x2f 0x0e 0x0f}",
                      False))
-        elif self.getArchitecture() in ['arm64', 'aarch64']:
+        elif self.getArchitecture() in ['arm64', 'aarch64', 'arm64e', 'arm64_32']:
             reg_list = [
                 # reg      value
                 # must-have

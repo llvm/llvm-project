@@ -213,7 +213,8 @@ bool CompactUnwindInfo::GetUnwindPlan(Target &target, Address addr,
         return CreateUnwindPlan_x86_64(target, function_info, unwind_plan,
                                        addr);
       }
-      if (arch.GetTriple().getArch() == llvm::Triple::aarch64) {
+      if (arch.GetTriple().getArch() == llvm::Triple::aarch64 ||
+          arch.GetTriple().getArch() == llvm::Triple::aarch64_32) {
         return CreateUnwindPlan_arm64(target, function_info, unwind_plan, addr);
       }
       if (arch.GetTriple().getArch() == llvm::Triple::x86) {

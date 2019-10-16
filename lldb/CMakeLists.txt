@@ -208,6 +208,7 @@ if (NOT LLDB_DISABLE_PYTHON)
   # Add a Post-Build Event to copy over Python files and create the symlink
   # to liblldb.so for the Python API(hardlink on Windows).
   add_custom_target(finish_swig ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${lldb_python_build_path}
     COMMAND
       ${PYTHON_EXECUTABLE} ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
         --srcRoot=${LLDB_SOURCE_DIR}
@@ -223,6 +224,28 @@ if (NOT LLDB_DISABLE_PYTHON)
     DEPENDS ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
     DEPENDS ${lldb_scripts_dir}/lldb.py
     COMMENT "Python script sym-linking LLDB Python API")
+
+  if(NOT LLDB_USE_SYSTEM_SIX)
+    add_custom_command(TARGET finish_swig POST_BUILD VERBATIM
+      COMMAND ${CMAKE_COMMAND} -E copy
+        "${LLDB_SOURCE_DIR}/third_party/Python/module/six/six.py"
+        "${lldb_python_build_path}/../six.py")
+  endif()
+
+  add_custom_command(TARGET finish_swig POST_BUILD VERBATIM
+    COMMAND ${CMAKE_COMMAND} -E copy
+      "${lldb_scripts_dir}/lldb.py"
+      "${lldb_python_build_path}/__init__.py")
+
+  if(APPLE)
+    SET(lldb_python_heap_dir "${lldb_python_build_path}/macosx/heap")
+    add_custom_command(TARGET finish_swig POST_BUILD VERBATIM
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${lldb_python_heap_dir}
+      COMMAND ${CMAKE_COMMAND} -E copy
+        "${LLDB_SOURCE_DIR}/examples/darwin/heap_find/heap/heap_find.cpp"
+        "${LLDB_SOURCE_DIR}/examples/darwin/heap_find/heap/Makefile"
+        ${lldb_python_heap_dir})
+  endif()
 
   function(create_relative_symlink target dest_file output_dir output_name)
     get_filename_component(dest_file ${dest_file} ABSOLUTE)
