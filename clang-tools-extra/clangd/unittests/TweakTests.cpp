@@ -69,7 +69,8 @@ TEST_F(SwapIfBranchesTest, Test) {
   EXPECT_EQ(apply("^if (true) {return 100;} else {continue;}"),
             "if (true) {continue;} else {return 100;}");
   EXPECT_EQ(apply("^if () {return 100;} else {continue;}"),
-            "if () {continue;} else {return 100;}") << "broken condition";
+            "if () {continue;} else {return 100;}")
+      << "broken condition";
   EXPECT_AVAILABLE("^i^f^^(^t^r^u^e^) { return 100; } ^e^l^s^e^ { continue; }");
   EXPECT_UNAVAILABLE("if (true) {^return ^100;^ } else { ^continue^;^ }");
   // Available in subexpressions of the condition;
@@ -100,7 +101,7 @@ TEST_F(RawStringLiteralTest, Test) {
   EXPECT_UNAVAILABLE(R"cpp(R"(multi )" ^"token " u8"str\ning")cpp"); // nonascii
   EXPECT_UNAVAILABLE(R"cpp(^R^"^(^multi )" "token " "str\ning")cpp"); // raw
   EXPECT_UNAVAILABLE(R"cpp(^"token\n" __FILE__)cpp"); // chunk is macro
-  EXPECT_UNAVAILABLE(R"cpp(^"a\r\n";)cpp"); // forbidden escape char
+  EXPECT_UNAVAILABLE(R"cpp(^"a\r\n";)cpp");           // forbidden escape char
 
   const char *Input = R"cpp(R"(multi
 token)" "\nst^ring\n" "literal")cpp";
@@ -286,11 +287,11 @@ TEST_F(ExtractVariableTest, Test) {
                  void f(int a) {
                    int y = PLUS([[1+a]]);
                  })cpp",
-          /*FIXME: It should be extracted like this.
-           R"cpp(#define PLUS(x) x++
-                 void f(int a) {
-                   auto dummy = 1+a; int y = PLUS(dummy);
-                 })cpp"},*/
+           /*FIXME: It should be extracted like this.
+            R"cpp(#define PLUS(x) x++
+                  void f(int a) {
+                    auto dummy = 1+a; int y = PLUS(dummy);
+                  })cpp"},*/
            R"cpp(#define PLUS(x) x++
                  void f(int a) {
                    auto dummy = PLUS(1+a); int y = dummy;
@@ -301,13 +302,13 @@ TEST_F(ExtractVariableTest, Test) {
                    if(1)
                     LOOP(5 + [[3]])
                  })cpp",
-          /*FIXME: It should be extracted like this. SelectionTree needs to be
-            * fixed for macros.
-           R"cpp(#define LOOP(x) while (1) {a = x;}
-               void f(int a) {
-                 auto dummy = 3; if(1)
-                  LOOP(5 + dummy)
-               })cpp"},*/
+           /*FIXME: It should be extracted like this. SelectionTree needs to be
+             * fixed for macros.
+            R"cpp(#define LOOP(x) while (1) {a = x;}
+                void f(int a) {
+                  auto dummy = 3; if(1)
+                   LOOP(5 + dummy)
+                })cpp"},*/
            R"cpp(#define LOOP(x) while (1) {a = x;}
                  void f(int a) {
                    auto dummy = LOOP(5 + 3); if(1)
@@ -403,8 +404,8 @@ TEST_F(ExtractVariableTest, Test) {
                  void f() {
                    auto dummy = S(2) + S(3) + S(4); S x = S(1) + dummy + S(5);
                  })cpp"},
-           // Don't try to analyze across macro boundaries
-           // FIXME: it'd be nice to do this someday (in a safe way)
+          // Don't try to analyze across macro boundaries
+          // FIXME: it'd be nice to do this someday (in a safe way)
           {R"cpp(#define ECHO(X) X
                  void f() {
                    int x = 1 + [[ECHO(2 + 3) + 4]] + 5;
@@ -519,7 +520,7 @@ TEST_F(ExpandAutoTypeTest, Test) {
               StartsWith("fail: Could not expand type of lambda expression"));
   // inline namespaces
   EXPECT_EQ(apply("au^to x = inl_ns::Visible();"),
-              "Visible x = inl_ns::Visible();");
+            "Visible x = inl_ns::Visible();");
   // local class
   EXPECT_EQ(apply("namespace x { void y() { struct S{}; ^auto z = S(); } }"),
             "namespace x { void y() { struct S{}; S z = S(); } }");
@@ -663,6 +664,222 @@ TEST_F(ExtractFunctionTest, ControlFlow) {
   EXPECT_THAT(apply(" for(;;) { [[while(1) break; break;]] }"),
               StartsWith("fail"));
 }
+
+TWEAK_TEST(RemoveUsingNamespace);
+TEST_F(RemoveUsingNamespaceTest, All) {
+  std::pair<llvm::StringRef /*Input*/, llvm::StringRef /*Expected*/> Cases[] = {
+      {// Remove all occurrences of ns. Qualify only unqualified.
+       R"cpp(
+      namespace ns1 { struct vector {}; }
+      namespace ns2 { struct map {}; }
+      using namespace n^s1;
+      using namespace ns2;
+      using namespace ns1;
+      int main() {
+        ns1::vector v1;
+        vector v2;
+        map m1;
+      }
+    )cpp",
+       R"cpp(
+      namespace ns1 { struct vector {}; }
+      namespace ns2 { struct map {}; }
+      
+      using namespace ns2;
+      
+      int main() {
+        ns1::vector v1;
+        ns1::vector v2;
+        map m1;
+      }
+    )cpp"},
+      {// Ident to be qualified is a macro arg.
+       R"cpp(
+      #define DECLARE(x, y) x y
+      namespace ns { struct vector {}; }
+      using namespace n^s;
+      int main() {
+        DECLARE(ns::vector, v1);
+        DECLARE(vector, v2);
+      }
+    )cpp",
+       R"cpp(
+      #define DECLARE(x, y) x y
+      namespace ns { struct vector {}; }
+      
+      int main() {
+        DECLARE(ns::vector, v1);
+        DECLARE(ns::vector, v2);
+      }
+    )cpp"},
+      {// Nested namespace: Fully qualify ident from inner ns.
+       R"cpp(
+      namespace aa { namespace bb { struct map {}; }}
+      using namespace aa::b^b;
+      int main() {
+        map m;
+      }
+    )cpp",
+       R"cpp(
+      namespace aa { namespace bb { struct map {}; }}
+      
+      int main() {
+        aa::bb::map m;
+      }
+    )cpp"},
+      {// Nested namespace: Fully qualify ident from inner ns.
+       R"cpp(
+      namespace aa { namespace bb { struct map {}; }}
+      using namespace a^a;
+      int main() {
+        bb::map m;
+      }
+    )cpp",
+       R"cpp(
+      namespace aa { namespace bb { struct map {}; }}
+      
+      int main() {
+        aa::bb::map m;
+      }
+    )cpp"},
+      {// Typedef.
+       R"cpp(
+      namespace aa { namespace bb { struct map {}; }}
+      using namespace a^a;
+      typedef bb::map map;
+      int main() { map M; }
+    )cpp",
+       R"cpp(
+      namespace aa { namespace bb { struct map {}; }}
+      
+      typedef aa::bb::map map;
+      int main() { map M; }
+    )cpp"},
+      {// FIXME: Nested namespaces: Not aware of using ns decl of outer ns.
+       R"cpp(
+      namespace aa { namespace bb { struct map {}; }}
+      using name[[space aa::b]]b;
+      using namespace aa;
+      int main() {
+        map m;
+      }
+    )cpp",
+       R"cpp(
+      namespace aa { namespace bb { struct map {}; }}
+      
+      using namespace aa;
+      int main() {
+        aa::bb::map m;
+      }
+    )cpp"},
+      {// Does not qualify ident from inner namespace.
+       R"cpp(
+      namespace aa { namespace bb { struct map {}; }}
+      using namespace aa::bb;
+      using namespace a^a;
+      int main() {
+        map m;
+      }
+    )cpp",
+       R"cpp(
+      namespace aa { namespace bb { struct map {}; }}
+      using namespace aa::bb;
+      
+      int main() {
+        map m;
+      }
+    )cpp"},
+      {// Available only for top level namespace decl.
+       R"cpp(
+        namespace aa {
+          namespace bb { struct map {}; }
+          using namespace b^b;
+        }
+        int main() { aa::map m; }
+    )cpp",
+       "unavailable"},
+      {// FIXME: Unavailable for namespaces containing using-namespace decl.
+       R"cpp(
+      namespace aa {
+        namespace bb { struct map {}; }
+        using namespace bb;
+      }
+      using namespace a^a;
+      int main() {
+        map m;
+      }
+    )cpp",
+       "unavailable"},
+      {R"cpp(
+      namespace a::b { struct Foo {}; }
+      using namespace a;
+      using namespace a::[[b]];
+      using namespace b;
+      int main() { Foo F;}
+    )cpp",
+       R"cpp(
+      namespace a::b { struct Foo {}; }
+      using namespace a;
+      
+      
+      int main() { a::b::Foo F;}
+    )cpp"},
+      {R"cpp(
+      namespace a::b { struct Foo {}; }
+      using namespace a;
+      using namespace a::b;
+      using namespace [[b]];
+      int main() { Foo F;}
+    )cpp",
+       R"cpp(
+      namespace a::b { struct Foo {}; }
+      using namespace a;
+      
+      
+      int main() { b::Foo F;}
+    )cpp"},
+      {// Enumerators.
+       R"cpp(
+      namespace tokens {
+      enum Token {
+        comma, identifier, numeric
+      };
+      }
+      using namespace tok^ens;
+      int main() {
+        auto x = comma;
+      }
+    )cpp",
+       R"cpp(
+      namespace tokens {
+      enum Token {
+        comma, identifier, numeric
+      };
+      }
+      
+      int main() {
+        auto x = tokens::comma;
+      }
+    )cpp"},
+      {// inline namespaces.
+       R"cpp(
+      namespace std { inline namespace ns1 { inline namespace ns2 { struct vector {}; }}}
+      using namespace st^d;
+      int main() {
+        vector V;
+      }
+    )cpp",
+       R"cpp(
+      namespace std { inline namespace ns1 { inline namespace ns2 { struct vector {}; }}}
+      
+      int main() {
+        std::vector V;
+      }
+    )cpp"}};
+  for (auto C : Cases)
+    EXPECT_EQ(C.second, apply(C.first)) << C.first;
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
