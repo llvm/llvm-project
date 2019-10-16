@@ -88,12 +88,6 @@ if(LLDB_INCLUDE_TESTS)
 endif()
 
 if (NOT LLDB_DISABLE_PYTHON)
-  if(NOT LLDB_BUILD_FRAMEWORK)
-    set(use_python_wrapper_from_src_dir -m)
-  endif()
-  if(LLDB_USE_SYSTEM_SIX)
-    set(use_six_py_from_system --useSystemSix)
-  endif()
   get_target_property(lldb_scripts_dir swig_wrapper BINARY_DIR)
   get_target_property(liblldb_build_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
 
@@ -105,21 +99,8 @@ if (NOT LLDB_DISABLE_PYTHON)
 
   # Add a Post-Build Event to copy over Python files and create the symlink
   # to liblldb.so for the Python API(hardlink on Windows).
-  add_custom_target(finish_swig ALL
+  add_custom_target(finish_swig ALL VERBATIM
     COMMAND ${CMAKE_COMMAND} -E make_directory ${lldb_python_build_path}
-    COMMAND
-      ${PYTHON_EXECUTABLE} ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
-        --srcRoot=${LLDB_SOURCE_DIR}
-        --targetDir=${liblldb_build_dir}
-        --cfgBldDir=${lldb_scripts_dir}
-        --prefix=${CMAKE_BINARY_DIR}
-        --cmakeBuildConfiguration=${CMAKE_CFG_INTDIR}
-        --lldbLibDir=lib${LLVM_LIBDIR_SUFFIX}
-        --lldbPythonPath=${lldb_python_build_path}
-        ${use_python_wrapper_from_src_dir}
-        ${use_six_py_from_system}
-    VERBATIM
-    DEPENDS ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
     DEPENDS ${lldb_scripts_dir}/lldb.py
     COMMENT "Python script sym-linking LLDB Python API")
 
@@ -143,6 +124,49 @@ if (NOT LLDB_DISABLE_PYTHON)
         "${LLDB_SOURCE_DIR}/examples/darwin/heap_find/heap/heap_find.cpp"
         "${LLDB_SOURCE_DIR}/examples/darwin/heap_find/heap/Makefile"
         ${lldb_python_heap_dir})
+  endif()
+
+  function(create_python_package target pkg_dir)
+    cmake_parse_arguments(ARG "" "" "FILES" ${ARGN})
+    if(ARG_FILES)
+      set(copy_cmd COMMAND ${CMAKE_COMMAND} -E copy ${ARG_FILES} ${pkg_dir})
+    endif()
+    add_custom_command(TARGET ${target} POST_BUILD VERBATIM
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${pkg_dir}
+      ${copy_cmd}
+      COMMAND ${PYTHON_EXECUTABLE} "${LLDB_SOURCE_DIR}/scripts/Python/createPythonInit.py"
+        ${pkg_dir} ${ARG_FILES}
+      WORKING_DIRECTORY ${lldb_python_build_path})
+  endfunction()
+
+  add_custom_command(TARGET finish_swig POST_BUILD VERBATIM
+    COMMAND ${CMAKE_COMMAND} -E copy
+      "${LLDB_SOURCE_DIR}/source/Interpreter/embedded_interpreter.py" ${lldb_python_build_path})
+
+  create_python_package(finish_swig "formatters/cpp"
+    FILES "${LLDB_SOURCE_DIR}/examples/synthetic/gnu_libstdcpp.py"
+          "${LLDB_SOURCE_DIR}/examples/synthetic/libcxx.py")
+  # Make an empty __init__.py in lldb/runtime as this is required for
+  # Python to recognize lldb.runtime as a valid package (and hence,
+  # lldb.runtime.objc as a valid contained package)
+  create_python_package(finish_swig "runtime")
+  # Having these files copied here ensure that lldb/formatters is a
+  # valid package itself
+  create_python_package(finish_swig "formatters"
+    FILES "${LLDB_SOURCE_DIR}/examples/summaries/cocoa/cache.py"
+          "${LLDB_SOURCE_DIR}/examples/summaries/synth.py"
+          "${LLDB_SOURCE_DIR}/examples/summaries/cocoa/metrics.py"
+          "${LLDB_SOURCE_DIR}/examples/summaries/cocoa/attrib_fromdict.py"
+          "${LLDB_SOURCE_DIR}/examples/summaries/cocoa/Logger.py")
+  create_python_package(finish_swig "utils"
+    FILES "${LLDB_SOURCE_DIR}/examples/python/symbolication.py")
+  if(APPLE)
+    create_python_package(finish_swig "macosx"
+      FILES "${LLDB_SOURCE_DIR}/examples/python/crashlog.py"
+            "${LLDB_SOURCE_DIR}/examples/darwin/heap_find/heap.py")
+    create_python_package(finish_swig "diagnose"
+      FILES "${LLDB_SOURCE_DIR}/examples/python/diagnose_unwind.py"
+            "${LLDB_SOURCE_DIR}/examples/python/diagnose_nsstring.py")
   endif()
 
   function(create_relative_symlink target dest_file output_dir output_name)
