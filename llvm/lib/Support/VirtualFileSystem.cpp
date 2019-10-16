@@ -1762,7 +1762,7 @@ ErrorOr<std::unique_ptr<File>>
 RedirectingFileSystem::openFileForRead(const Twine &Path) {
   ErrorOr<RedirectingFileSystem::Entry *> E = lookupPath(Path);
   if (!E) {
-    if (shouldUseExternalFS() &
+    if (shouldUseExternalFS() &&
         E.getError() == llvm::errc::no_such_file_or_directory) {
       return ExternalFS->openFileForRead(Path);
     }
