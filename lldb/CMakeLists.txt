@@ -204,7 +204,6 @@ if (NOT LLDB_DISABLE_PYTHON)
   else()
     set(lldb_python_build_path "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_PYTHON_RELATIVE_PATH}/lldb")
   endif()
-  get_filename_component(lldb_python_build_path ${lldb_python_build_path} ABSOLUTE)
 
   # Add a Post-Build Event to copy over Python files and create the symlink
   # to liblldb.so for the Python API(hardlink on Windows).
@@ -224,6 +223,43 @@ if (NOT LLDB_DISABLE_PYTHON)
     DEPENDS ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
     DEPENDS ${lldb_scripts_dir}/lldb.py
     COMMENT "Python script sym-linking LLDB Python API")
+
+  function(create_relative_symlink target dest_file output_dir output_name)
+    get_filename_component(dest_file ${dest_file} ABSOLUTE)
+    get_filename_component(output_dir ${output_dir} ABSOLUTE)
+    file(RELATIVE_PATH rel_dest_file ${output_dir} ${dest_file})
+    if(CMAKE_HOST_UNIX)
+      set(LLVM_LINK_OR_COPY create_symlink)
+    else()
+      set(LLVM_LINK_OR_COPY copy)
+    endif()
+    add_custom_command(TARGET ${target} POST_BUILD VERBATIM
+      COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} ${rel_dest_file} ${output_name}
+      WORKING_DIRECTORY ${output_dir})
+  endfunction()
+
+  if(LLDB_BUILD_FRAMEWORK)
+    set(LIBLLDB_SYMLINK_DEST "${liblldb_build_dir}/LLDB.framework/LLDB")
+  else()
+    set(LIBLLDB_SYMLINK_DEST "${LLVM_SHLIB_OUTPUT_INTDIR}/liblldb${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  endif()
+  if(WIN32)
+    if(CMAKE_BUILD_TYPE STREQUAL Debug)
+      set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb_d.pyd")
+    else()
+      set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb.pyd")
+    endif()
+  else()
+    set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb.so")
+  endif()
+  create_relative_symlink(finish_swig ${LIBLLDB_SYMLINK_DEST}
+                          ${lldb_python_build_path} ${LIBLLDB_SYMLINK_OUTPUT_FILE})
+
+  if(NOT LLDB_BUILD_FRAMEWORK)
+    set(LLDB_ARGDUMPER_FILENAME "lldb-argdumper${CMAKE_EXECUTABLE_SUFFIX}")
+    create_relative_symlink(finish_swig "${LLVM_RUNTIME_OUTPUT_INTDIR}/${LLDB_ARGDUMPER_FILENAME}"
+                            ${lldb_python_build_path} ${LLDB_ARGDUMPER_FILENAME})
+  endif()
 
   add_dependencies(finish_swig swig_wrapper liblldb lldb-argdumper)
   set_target_properties(finish_swig swig_wrapper PROPERTIES FOLDER "lldb misc")

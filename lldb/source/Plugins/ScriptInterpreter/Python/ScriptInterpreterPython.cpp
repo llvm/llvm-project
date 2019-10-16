@@ -370,7 +370,7 @@ void ScriptInterpreterPython::Terminate() {}
 
 ScriptInterpreterPythonImpl::Locker::Locker(
     ScriptInterpreterPythonImpl *py_interpreter, uint16_t on_entry,
-    uint16_t on_leave, FILE *in, FILE *out, FILE *err)
+    uint16_t on_leave, FileSP in, FileSP out, FileSP err)
     : ScriptInterpreterLocker(),
       m_teardown_session((on_leave & TearDownSession) == TearDownSession),
       m_python_interpreter(py_interpreter) {
@@ -400,8 +400,8 @@ bool ScriptInterpreterPythonImpl::Locker::DoAcquireLock() {
 }
 
 bool ScriptInterpreterPythonImpl::Locker::DoInitSession(uint16_t on_entry_flags,
-                                                        FILE *in, FILE *out,
-                                                        FILE *err) {
+                                                        FileSP in, FileSP out,
+                                                        FileSP err) {
   if (!m_python_interpreter)
     return false;
   return m_python_interpreter->EnterSession(on_entry_flags, in, out, err);
@@ -636,28 +636,31 @@ void ScriptInterpreterPythonImpl::LeaveSession() {
   m_session_is_active = false;
 }
 
-bool ScriptInterpreterPythonImpl::SetStdHandle(File &file, const char *py_name,
-                                               PythonFile &save_file,
+bool ScriptInterpreterPythonImpl::SetStdHandle(FileSP file_sp,
+                                               const char *py_name,
+                                               PythonObject &save_file,
                                                const char *mode) {
-  if (file.IsValid()) {
-    // Flush the file before giving it to python to avoid interleaved output.
-    file.Flush();
-
-    PythonDictionary &sys_module_dict = GetSysModuleDictionary();
-
-    save_file = sys_module_dict.GetItemForKey(PythonString(py_name))
-                    .AsType<PythonFile>();
-
-    PythonFile new_file(file, mode);
-    sys_module_dict.SetItemForKey(PythonString(py_name), new_file);
-    return true;
-  } else
+  if (!file_sp || !*file_sp) {
     save_file.Reset();
-  return false;
+    return false;
+  }
+  File &file = *file_sp;
+
+  // Flush the file before giving it to python to avoid interleaved output.
+  file.Flush();
+
+  PythonDictionary &sys_module_dict = GetSysModuleDictionary();
+
+  save_file = sys_module_dict.GetItemForKey(PythonString(py_name));
+
+  PythonFile new_file(file, mode);
+  sys_module_dict.SetItemForKey(PythonString(py_name), new_file);
+  return true;
 }
 
 bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
-                                               FILE *in, FILE *out, FILE *err) {
+                                               FileSP in_sp, FileSP out_sp,
+                                               FileSP err_sp) {
   // If we have already entered the session, without having officially 'left'
   // it, then there is no need to 'enter' it again.
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT));
@@ -706,33 +709,29 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
 
   PythonDictionary &sys_module_dict = GetSysModuleDictionary();
   if (sys_module_dict.IsValid()) {
-    NativeFile in_file(in, false);
-    NativeFile out_file(out, false);
-    NativeFile err_file(err, false);
-
-    lldb::FileSP in_sp;
-    lldb::StreamFileSP out_sp;
-    lldb::StreamFileSP err_sp;
-    if (!in_file.IsValid() || !out_file.IsValid() || !err_file.IsValid())
-      m_debugger.AdoptTopIOHandlerFilesIfInvalid(in_sp, out_sp, err_sp);
+    lldb::FileSP top_in_sp;
+    lldb::StreamFileSP top_out_sp, top_err_sp;
+    if (!in_sp || !out_sp || !err_sp || !*in_sp || !*out_sp || !*err_sp)
+      m_debugger.AdoptTopIOHandlerFilesIfInvalid(top_in_sp, top_out_sp,
+                                                 top_err_sp);
 
     if (on_entry_flags & Locker::NoSTDIN) {
       m_saved_stdin.Reset();
     } else {
-      if (!SetStdHandle(in_file, "stdin", m_saved_stdin, "r")) {
-        if (in_sp)
-          SetStdHandle(*in_sp, "stdin", m_saved_stdin, "r");
+      if (!SetStdHandle(in_sp, "stdin", m_saved_stdin, "r")) {
+        if (top_in_sp)
+          SetStdHandle(top_in_sp, "stdin", m_saved_stdin, "r");
       }
     }
 
-    if (!SetStdHandle(out_file, "stdout", m_saved_stdout, "w")) {
-      if (out_sp)
-        SetStdHandle(out_sp->GetFile(), "stdout", m_saved_stdout, "w");
+    if (!SetStdHandle(out_sp, "stdout", m_saved_stdout, "w")) {
+      if (top_out_sp)
+        SetStdHandle(top_out_sp->GetFileSP(), "stdout", m_saved_stdout, "w");
     }
 
-    if (!SetStdHandle(err_file, "stderr", m_saved_stderr, "w")) {
-      if (err_sp)
-        SetStdHandle(err_sp->GetFile(), "stderr", m_saved_stderr, "w");
+    if (!SetStdHandle(err_sp, "stderr", m_saved_stderr, "w")) {
+      if (top_err_sp)
+        SetStdHandle(top_err_sp->GetFileSP(), "stderr", m_saved_stderr, "w");
     }
   }
 
@@ -909,9 +908,6 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
       error_file_sp = output_file_sp = std::make_shared<StreamFile>(std::move(nullout.get()));
     }
 
-    FILE *in_file = input_file_sp->GetStream();
-    FILE *out_file = output_file_sp->GetFile().GetStream();
-    FILE *err_file = error_file_sp->GetFile().GetStream();
     bool success = false;
     {
       // WARNING!  It's imperative that this RAII scope be as tight as
@@ -927,8 +923,8 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
           Locker::AcquireLock | Locker::InitSession |
               (options.GetSetLLDBGlobals() ? Locker::InitGlobals : 0) |
               ((result && result->GetInteractive()) ? 0 : Locker::NoSTDIN),
-          Locker::FreeAcquiredLock | Locker::TearDownSession, in_file, out_file,
-          err_file);
+          Locker::FreeAcquiredLock | Locker::TearDownSession, input_file_sp,
+          output_file_sp->GetFileSP(), error_file_sp->GetFileSP());
 
       // Find the correct script interpreter dictionary in the main module.
       PythonDictionary &session_dict = GetSessionDictionary();
@@ -955,9 +951,8 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
       }
 
       // Flush our output and error file handles
-      ::fflush(out_file);
-      if (out_file != err_file)
-        ::fflush(err_file);
+      output_file_sp->Flush();
+      error_file_sp->Flush();
     }
 
     if (join_read_thread) {

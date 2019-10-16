@@ -445,9 +445,8 @@ class FileHandleTestCase(lldbtest.TestBase):
             self.assertTrue(re.search(r'error:.*lolwut', errors))
             self.assertTrue(re.search(r'zork', errors))
 
-    #FIXME This shouldn't fail for python2 either.
+
     @add_test_categories(['pyapi'])
-    @skipIf(py_version=['<', (3,)])
     def test_replace_stdout(self):
         f = io.StringIO()
         with replace_stdout(f):
@@ -458,7 +457,6 @@ class FileHandleTestCase(lldbtest.TestBase):
 
 
     @add_test_categories(['pyapi'])
-    @expectedFailureAll() #FIXME bug in ScriptInterpreterPython
     def test_replace_stdout_with_nonfile(self):
         debugger = self.debugger
         f = io.StringIO()

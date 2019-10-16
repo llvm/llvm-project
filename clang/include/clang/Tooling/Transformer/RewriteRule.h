@@ -29,9 +29,8 @@
 #include <utility>
 
 namespace clang {
-namespace tooling {
+namespace transformer {
 using TextGenerator = MatchConsumer<std::string>;
-
 /// Wraps a string as a TextGenerator.
 inline TextGenerator text(std::string M) {
   return [M](const ast_matchers::MatchFinder::MatchResult &)
@@ -281,6 +280,24 @@ struct Transformation {
 Expected<SmallVector<Transformation, 1>>
 translateEdits(const ast_matchers::MatchFinder::MatchResult &Result,
                llvm::ArrayRef<ASTEdit> Edits);
+} // namespace detail
+} // namespace transformer
+
+namespace tooling {
+// DEPRECATED: These are temporary aliases supporting client migration to the
+// `transformer` namespace.
+using transformer::addInclude;
+using transformer::applyFirst;
+using transformer::change;
+using transformer::insertAfter;
+using transformer::insertBefore;
+using transformer::makeRule;
+using transformer::remove;
+using transformer::text;
+using transformer::RewriteRule;
+using transformer::IncludeFormat;
+namespace detail {
+using namespace transformer::detail;
 } // namespace detail
 } // namespace tooling
 } // namespace clang
