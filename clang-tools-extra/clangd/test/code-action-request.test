@@ -32,7 +32,7 @@
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "arguments": [
 # CHECK-NEXT:        {
-# CHECK-NEXT:          "file": "file:///clangd-test/main.cpp",
+# CHECK-NEXT:          "file": "file://{{.*}}/clangd-test/main.cpp",
 # CHECK-NEXT:          "selection": {
 # CHECK-NEXT:            "end": {
 # CHECK-NEXT:              "character": 4,
@@ -51,7 +51,7 @@
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 ---
-{"jsonrpc":"2.0","id":4,"method":"workspace/executeCommand","params":{"command":"clangd.applyTweak","arguments":[{"file":"file:///clangd-test/main.cpp","selection":{"end":{"character":4,"line":0},"start":{"character":0,"line":0}},"tweakID":"ExpandAutoType"}]}}
+{"jsonrpc":"2.0","id":4,"method":"workspace/executeCommand","params":{"command":"clangd.applyTweak","arguments":[{"file":"test:///main.cpp","selection":{"end":{"character":4,"line":0},"start":{"character":0,"line":0}},"tweakID":"ExpandAutoType"}]}}
 #      CHECK:    "newText": "int",
 # CHECK-NEXT:    "range": {
 # CHECK-NEXT:      "end": {

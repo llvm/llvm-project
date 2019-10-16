@@ -1,6 +1,8 @@
 ; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: wasm-ld -no-gc-sections --no-entry -o %t.wasm %t.o
-; RUN: obj2yaml %t.wasm | FileCheck %s
+; RUN: obj2yaml %t.wasm | FileCheck %s --check-prefixes=CHECK,NO-BSS
+; RUN: wasm-ld -no-gc-sections --no-entry --import-memory -o %t.bss.wasm %t.o
+; RUN: obj2yaml %t.bss.wasm | FileCheck %s --check-prefixes=CHECK,BSS
 ; RUN: wasm-ld -no-gc-sections --no-entry -o %t_reloc.o %t.o --relocatable
 ; RUN: obj2yaml %t_reloc.o | FileCheck -check-prefix RELOC %s
 
@@ -32,12 +34,13 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:          Opcode:          I32_CONST
 ; CHECK-NEXT:          Value:           1032
 ; CHECK-NEXT:        Content:         '07000000'
-; CHECK-NEXT:      - SectionOffset:   37
-; CHECK-NEXT:        InitFlags:       0
-; CHECK-NEXT:        Offset:
-; CHECK-NEXT:          Opcode:          I32_CONST
-; CHECK-NEXT:          Value:           1036
-; CHECK-NEXT:        Content:         '00000000'
+; BSS-NEXT:        - SectionOffset:   37
+; BSS-NEXT:          InitFlags:       0
+; BSS-NEXT:          Offset:
+; BSS-NEXT:            Opcode:          I32_CONST
+; BSS-NEXT:            Value:           1036
+; BSS-NEXT:          Content:         '00000000'
+; NO-BSS-NOT:      - SectionOffset:
 
 ; RELOC-LABEL: SegmentInfo:
 ; RELOC-NEXT:    - Index:           0

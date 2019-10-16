@@ -1,7 +1,21 @@
 ; RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=asm %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj %s -o - | llvm-dwarfdump - --name=a | FileCheck --check-prefix=OBJFILE %s
+; REQUIRES: object-emission
+;
 ; Ensure that we generate an indirect location for the variable length array a.
-; CHECK: ##DEBUG_VALUE: vla:a <- [DW_OP_deref] [{{\$r[a-z]+}}+0]
+;
+; CHECK: ##DEBUG_VALUE: vla:a <- [DW_OP_deref] {{\$r[a-z]+}}
 ; CHECK: DW_OP_breg{{[0-9]}}
+;
+; Ensure there's only one level of indirection in the vla location -- it should
+; be a memory location. Base register can be any allocatable one; variables are
+; filtered by --name arg to llvm-dwarfdump.
+;
+; OBJFILE: DW_TAG_variable
+; OBJFILE: DW_AT_location
+; OBJFILE-NEXT: ): DW_OP_breg{{[0-9]+}} R{{[0-9A-Z]+}}+0)
+; OBJFILE: DW_AT_name ("a")
+;
 ; rdar://problem/13658587
 ;
 ; generated from:
@@ -33,7 +47,7 @@ entry:
   %2 = call i8* @llvm.stacksave(), !dbg !17
   store i8* %2, i8** %saved_stack, !dbg !17
   %vla = alloca i32, i64 %1, align 16, !dbg !17
-  call void @llvm.dbg.declare(metadata i32* %vla, metadata !18, metadata !DIExpression(DW_OP_deref)), !dbg !17
+  call void @llvm.dbg.declare(metadata i32* %vla, metadata !18, metadata !DIExpression()), !dbg !17
   %arrayidx = getelementptr inbounds i32, i32* %vla, i64 0, !dbg !22
   store i32 42, i32* %arrayidx, align 4, !dbg !22
   %3 = load i32, i32* %n.addr, align 4, !dbg !23

@@ -41,7 +41,7 @@ using EntryIndex = DbgValueHistoryMap::EntryIndex;
 static Register isDescribedByReg(const MachineInstr &MI) {
   assert(MI.isDebugValue());
   assert(MI.getNumOperands() == 4);
-  // If the location of variable is an entry value (DW_OP_entry_value)
+  // If the location of variable is an entry value (DW_OP_LLVM_entry_value)
   // do not consider it as a register location.
   if (MI.getDebugExpression()->isEntryValue())
     return 0;

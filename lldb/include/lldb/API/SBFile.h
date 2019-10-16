@@ -14,8 +14,11 @@
 namespace lldb {
 
 class LLDB_API SBFile {
+  friend class SBInstruction;
+  friend class SBInstructionList;
   friend class SBDebugger;
   friend class SBCommandReturnObject;
+  friend class SBProcess;
 
 public:
   SBFile();
@@ -32,6 +35,8 @@ public:
 
   operator bool() const;
   bool operator!() const;
+
+  FileSP GetFile() const;
 
 private:
   FileSP m_opaque_sp;

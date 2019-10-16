@@ -29,6 +29,13 @@ public:
                                    std::unique_ptr<MemoryBuffer> ObjBuffer)
       : Layer(Layer), MR(std::move(MR)), ObjBuffer(std::move(ObjBuffer)) {}
 
+  ~ObjectLinkingLayerJITLinkContext() {
+    // If there is an object buffer return function then use it to
+    // return ownership of the buffer.
+    if (Layer.ReturnObjectBuffer)
+      Layer.ReturnObjectBuffer(std::move(ObjBuffer));
+  }
+
   JITLinkMemoryManager &getMemoryManager() override { return Layer.MemMgr; }
 
   MemoryBufferRef getObjectBuffer() const override {

@@ -218,12 +218,13 @@ MetadataStreamerV2::getHSACodeProps(const MachineFunction &MF,
   assert(F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
          F.getCallingConv() == CallingConv::SPIR_KERNEL);
 
-  unsigned MaxKernArgAlign;
+  Align MaxKernArgAlign;
   HSACodeProps.mKernargSegmentSize = STM.getKernArgSegmentSize(F,
                                                                MaxKernArgAlign);
   HSACodeProps.mGroupSegmentFixedSize = ProgramInfo.LDSSize;
   HSACodeProps.mPrivateSegmentFixedSize = ProgramInfo.ScratchSize;
-  HSACodeProps.mKernargSegmentAlign = std::max(MaxKernArgAlign, 4u);
+  HSACodeProps.mKernargSegmentAlign =
+      std::max(MaxKernArgAlign, Align(4)).value();
   HSACodeProps.mWavefrontSize = STM.getWavefrontSize();
   HSACodeProps.mNumSGPRs = ProgramInfo.NumSGPR;
   HSACodeProps.mNumVGPRs = ProgramInfo.NumVGPR;
@@ -883,7 +884,7 @@ MetadataStreamerV3::getHSAKernelProps(const MachineFunction &MF,
 
   auto Kern = HSAMetadataDoc->getMapNode();
 
-  unsigned MaxKernArgAlign;
+  Align MaxKernArgAlign;
   Kern[".kernarg_segment_size"] = Kern.getDocument()->getNode(
       STM.getKernArgSegmentSize(F, MaxKernArgAlign));
   Kern[".group_segment_fixed_size"] =
@@ -891,7 +892,7 @@ MetadataStreamerV3::getHSAKernelProps(const MachineFunction &MF,
   Kern[".private_segment_fixed_size"] =
       Kern.getDocument()->getNode(ProgramInfo.ScratchSize);
   Kern[".kernarg_segment_align"] =
-      Kern.getDocument()->getNode(std::max(uint32_t(4), MaxKernArgAlign));
+      Kern.getDocument()->getNode(std::max(Align(4), MaxKernArgAlign).value());
   Kern[".wavefront_size"] =
       Kern.getDocument()->getNode(STM.getWavefrontSize());
   Kern[".sgpr_count"] = Kern.getDocument()->getNode(ProgramInfo.NumSGPR);

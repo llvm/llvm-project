@@ -3019,6 +3019,25 @@ public:
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
+  ExprResult RebuildConceptSpecializationExpr(NestedNameSpecifierLoc NNS,
+      SourceLocation TemplateKWLoc, SourceLocation ConceptNameLoc,
+      NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
+      TemplateArgumentListInfo *TALI) {
+    CXXScopeSpec SS;
+    SS.Adopt(NNS);
+    ExprResult Result = getSema().CheckConceptTemplateId(SS, TemplateKWLoc,
+                                                         ConceptNameLoc,
+                                                         FoundDecl,
+                                                         NamedConcept, TALI);
+    if (Result.isInvalid())
+      return ExprError();
+    return Result;
+  }
+
+    /// \brief Build a new Objective-C boxed expression.
+  ///
+  /// By default, performs semantic analysis to build the new expression.
+  /// Subclasses may override this routine to provide different behavior.
   ExprResult RebuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
     return getSema().BuildObjCBoxedExpr(SR, ValueExpr);
   }
@@ -8258,6 +8277,17 @@ StmtResult TreeTransform<Derived>::TransformOMPMasterTaskLoopDirective(
 }
 
 template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPParallelMasterTaskLoopDirective(
+    OMPParallelMasterTaskLoopDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().StartOpenMPDSABlock(
+      OMPD_parallel_master_taskloop, DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPDistributeDirective(
     OMPDistributeDirective *D) {
   DeclarationNameInfo DirName;
@@ -11002,6 +11032,23 @@ TreeTransform<Derived>::TransformTypeTraitExpr(TypeTraitExpr *E) {
   return getDerived().RebuildTypeTrait(E->getTrait(), E->getBeginLoc(), Args,
                                        E->getEndLoc());
 }
+
+template<typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformConceptSpecializationExpr(
+                                                 ConceptSpecializationExpr *E) {
+  const ASTTemplateArgumentListInfo *Old = E->getTemplateArgsAsWritten();
+  TemplateArgumentListInfo TransArgs(Old->LAngleLoc, Old->RAngleLoc);
+  if (getDerived().TransformTemplateArguments(Old->getTemplateArgs(),
+                                              Old->NumTemplateArgs, TransArgs))
+    return ExprError();
+
+  return getDerived().RebuildConceptSpecializationExpr(
+      E->getNestedNameSpecifierLoc(), E->getTemplateKWLoc(),
+      E->getConceptNameLoc(), E->getFoundDecl(), E->getNamedConcept(),
+      &TransArgs);
+}
+
 
 template<typename Derived>
 ExprResult

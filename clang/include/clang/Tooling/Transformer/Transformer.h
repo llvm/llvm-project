@@ -30,7 +30,7 @@ public:
   /// because of macros, but doesn't fail.  Note that clients are responsible
   /// for handling the case that independent \c AtomicChanges conflict with each
   /// other.
-  Transformer(RewriteRule Rule, ChangeConsumer Consumer)
+  Transformer(transformer::RewriteRule Rule, ChangeConsumer Consumer)
       : Rule(std::move(Rule)), Consumer(std::move(Consumer)) {}
 
   /// N.B. Passes `this` pointer to `MatchFinder`.  So, this object should not
@@ -42,7 +42,7 @@ public:
   void run(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  RewriteRule Rule;
+  transformer::RewriteRule Rule;
   /// Receives each successful rewrites as an \c AtomicChange.
   ChangeConsumer Consumer;
 };

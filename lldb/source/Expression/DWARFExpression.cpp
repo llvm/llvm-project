@@ -636,6 +636,11 @@ bool DWARFExpression::LocationListContainsAddress(
       if (lo_pc == 0 && hi_pc == 0)
         break;
 
+      if ((m_data.GetAddressByteSize() == 4 && (lo_pc == UINT32_MAX)) ||
+          (m_data.GetAddressByteSize() == 8 && (lo_pc == UINT64_MAX))) {
+        loclist_base_addr = hi_pc + m_loclist_slide;
+        continue;
+      }
       lo_pc += loclist_base_addr - m_loclist_slide;
       hi_pc += loclist_base_addr - m_loclist_slide;
 
@@ -670,6 +675,12 @@ bool DWARFExpression::GetLocation(addr_t base_addr, addr_t pc,
 
       if (lo_pc == 0 && hi_pc == 0)
         break;
+
+      if ((m_data.GetAddressByteSize() == 4 && (lo_pc == UINT32_MAX)) ||
+          (m_data.GetAddressByteSize() == 8 && (lo_pc == UINT64_MAX))) {
+        curr_base_addr = hi_pc + m_loclist_slide;
+        continue;
+      }
 
       lo_pc += curr_base_addr - m_loclist_slide;
       hi_pc += curr_base_addr - m_loclist_slide;
@@ -967,6 +978,13 @@ bool DWARFExpression::Evaluate(ExecutionContext *exe_ctx,
         if (lo_pc == 0 && hi_pc == 0)
           break;
 
+        if ((m_data.GetAddressByteSize() == 4 &&
+             (lo_pc == UINT32_MAX)) ||
+            (m_data.GetAddressByteSize() == 8 &&
+             (lo_pc == UINT64_MAX))) {
+          curr_loclist_base_load_addr = hi_pc + m_loclist_slide;
+          continue;
+        }
         lo_pc += curr_loclist_base_load_addr - m_loclist_slide;
         hi_pc += curr_loclist_base_load_addr - m_loclist_slide;
 

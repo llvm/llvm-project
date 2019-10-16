@@ -163,6 +163,9 @@ def CoawaitExpr : DStmt<CoroutineSuspendExpr>;
 def DependentCoawaitExpr : DStmt<Expr>;
 def CoyieldExpr : DStmt<CoroutineSuspendExpr>;
 
+// C++2a Concepts expressions
+def ConceptSpecializationExpr : DStmt<Expr>;
+
 // Obj-C Expressions.
 def ObjCStringLiteral : DStmt<Expr>;
 def ObjCBoxedExpr : DStmt<Expr>;
@@ -243,6 +246,7 @@ def OMPCancelDirective : DStmt<OMPExecutableDirective>;
 def OMPTaskLoopDirective : DStmt<OMPLoopDirective>;
 def OMPTaskLoopSimdDirective : DStmt<OMPLoopDirective>;
 def OMPMasterTaskLoopDirective : DStmt<OMPLoopDirective>;
+def OMPParallelMasterTaskLoopDirective : DStmt<OMPLoopDirective>;
 def OMPDistributeDirective : DStmt<OMPLoopDirective>;
 def OMPDistributeParallelForDirective : DStmt<OMPLoopDirective>;
 def OMPDistributeParallelForSimdDirective : DStmt<OMPLoopDirective>;

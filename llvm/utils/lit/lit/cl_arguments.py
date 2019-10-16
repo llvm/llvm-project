@@ -121,7 +121,7 @@ def parse_args():
             dest="maxIndividualTestTime",
             help="Maximum time to spend running a single test (in seconds). "
                  "0 means no time limit. [Default: 0]",
-            type=int,
+            type=_non_negative_int,
             default=None)
     execution_group.add_argument("--max-failures",
             dest="maxFailures",
@@ -202,14 +202,20 @@ def parse_args():
     return opts
 
 def _positive_int(arg):
-    desc = "requires positive integer, but found '{}'"
+    return _int(arg, 'positive', lambda i: i > 0)
+
+def _non_negative_int(arg):
+    return _int(arg, 'non-negative', lambda i: i >= 0)
+
+def _int(arg, kind, pred):
+    desc = "requires {} integer, but found '{}'"
     try:
-        n = int(arg)
+        i = int(arg)
     except ValueError:
-        raise _error(desc, arg)
-    if n <= 0:
-        raise _error(desc, arg)
-    return n
+        raise _error(desc, kind, arg)
+    if not pred(i):
+        raise _error(desc, kind, arg)
+    return i
 
 def _case_insensitive_regex(arg):
     import re

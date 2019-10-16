@@ -846,6 +846,8 @@ def preamble_bytes_EQ : Joined<["-"], "preamble-bytes=">,
            "covering the first N bytes of the main file">;
 def detailed_preprocessing_record : Flag<["-"], "detailed-preprocessing-record">,
   HelpText<"include a detailed record of preprocessing actions">;
+def setup_static_analyzer : Flag<["-"], "setup-static-analyzer">,
+  HelpText<"Set up preprocessor for static analyzer (done automatically when static analyzer is run).">;
 
 //===----------------------------------------------------------------------===//
 // OpenCL Options

@@ -4344,7 +4344,9 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
   if ((HandOpcode == ISD::BITCAST || HandOpcode == ISD::SCALAR_TO_VECTOR) &&
        Level <= AfterLegalizeTypes) {
     // Input types must be integer and the same.
-    if (XVT.isInteger() && XVT == Y.getValueType()) {
+    if (XVT.isInteger() && XVT == Y.getValueType() &&
+        !(VT.isVector() && TLI.isTypeLegal(VT) &&
+          !XVT.isVector() && !TLI.isTypeLegal(XVT))) {
       SDValue Logic = DAG.getNode(LogicOpcode, DL, XVT, X, Y);
       return DAG.getNode(HandOpcode, DL, VT, Logic);
     }
@@ -8173,6 +8175,43 @@ static SDValue combineMinNumMaxNum(const SDLoc &DL, EVT VT, SDValue LHS,
   }
 }
 
+/// If a (v)select has a condition value that is a sign-bit test, try to smear
+/// the condition operand sign-bit across the value width and use it as a mask.
+static SDValue foldSelectOfConstantsUsingSra(SDNode *N, SelectionDAG &DAG) {
+  SDValue Cond = N->getOperand(0);
+  SDValue C1 = N->getOperand(1);
+  SDValue C2 = N->getOperand(2);
+  assert(isConstantOrConstantVector(C1) && isConstantOrConstantVector(C2) &&
+         "Expected select-of-constants");
+
+  EVT VT = N->getValueType(0);
+  if (Cond.getOpcode() != ISD::SETCC || !Cond.hasOneUse() ||
+      VT != Cond.getOperand(0).getValueType())
+    return SDValue();
+
+  // The inverted-condition + commuted-select variants of these patterns are
+  // canonicalized to these forms in IR.
+  SDValue X = Cond.getOperand(0);
+  SDValue CondC = Cond.getOperand(1);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+  if (CC == ISD::SETGT && isAllOnesOrAllOnesSplat(CondC) &&
+      isAllOnesOrAllOnesSplat(C2)) {
+    // i32 X > -1 ? C1 : -1 --> (X >>s 31) | C1
+    SDLoc DL(N);
+    SDValue ShAmtC = DAG.getConstant(X.getScalarValueSizeInBits() - 1, DL, VT);
+    SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, X, ShAmtC);
+    return DAG.getNode(ISD::OR, DL, VT, Sra, C1);
+  }
+  if (CC == ISD::SETLT && isNullOrNullSplat(CondC) && isNullOrNullSplat(C2)) {
+    // i8 X < 0 ? C1 : 0 --> (X >>s 7) & C1
+    SDLoc DL(N);
+    SDValue ShAmtC = DAG.getConstant(X.getScalarValueSizeInBits() - 1, DL, VT);
+    SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, X, ShAmtC);
+    return DAG.getNode(ISD::AND, DL, VT, Sra, C1);
+  }
+  return SDValue();
+}
+
 SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
   SDValue Cond = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -8248,6 +8287,9 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
         SDValue ShAmtC = DAG.getConstant(C1Val.exactLogBase2(), DL, VT);
         return DAG.getNode(ISD::SHL, DL, VT, Cond, ShAmtC);
       }
+
+      if (SDValue V = foldSelectOfConstantsUsingSra(N, DAG))
+        return V;
     }
 
     return SDValue();
@@ -8622,6 +8664,9 @@ SDValue DAGCombiner::foldVSelectOfConstants(SDNode *N) {
     SDValue ShAmtC = DAG.getConstant(Pow2C.exactLogBase2(), DL, VT);
     return DAG.getNode(ISD::SHL, DL, VT, ZextCond, ShAmtC);
   }
+
+  if (SDValue V = foldSelectOfConstantsUsingSra(N, DAG))
+    return V;
 
   // The general case for select-of-constants:
   // vselect <N x i1> Cond, C1, C2 --> xor (and (sext Cond), (C1^C2)), C2

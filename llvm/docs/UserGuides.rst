@@ -19,6 +19,7 @@ intermediate LLVM representation.
    Benchmarking
    BigEndianNEON
    BuildingADistribution
+   CFIVerify
    CMake
    CMakePrimer
    CodeGenerator
@@ -74,6 +75,9 @@ Clang
 
 :doc:`CoverageMappingFormat`
   This describes the format and encoding used for LLVM’s code coverage mapping.
+
+:doc:`CFIVerify`
+  A description of the verification tool for Control Flow Integrity.
 
 LLVM Builds and Distributions
 -----------------------------

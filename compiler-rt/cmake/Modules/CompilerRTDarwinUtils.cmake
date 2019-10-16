@@ -41,6 +41,41 @@ function(find_darwin_sdk_dir var sdk_name)
   set(DARWIN_${sdk_name}_CACHED_SYSROOT ${var_internal} CACHE STRING "Darwin SDK path for SDK ${sdk_name}." FORCE)
 endfunction()
 
+function(find_darwin_sdk_version var sdk_name)
+  # We deliberately don't cache the result here because
+  # CMake's caching causes too many problems.
+  set(result_process 1)
+  if(NOT DARWIN_PREFER_PUBLIC_SDK)
+    # Let's first try the internal SDK, otherwise use the public SDK.
+    execute_process(
+      COMMAND xcodebuild -version -sdk ${sdk_name}.internal SDKVersion
+      RESULT_VARIABLE result_process
+      OUTPUT_VARIABLE var_internal
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_FILE /dev/null
+    )
+  endif()
+  if((NOT ${result_process} EQUAL 0) OR "" STREQUAL "${var_internal}")
+    execute_process(
+      COMMAND xcodebuild -version -sdk ${sdk_name} SDKVersion
+      RESULT_VARIABLE result_process
+      OUTPUT_VARIABLE var_internal
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_FILE /dev/null
+    )
+  endif()
+  if(NOT result_process EQUAL 0)
+    message(FATAL_ERROR
+      "Failed to determine SDK version for \"${sdk_name}\" SDK")
+  endif()
+  # Check reported version looks sane.
+  if (NOT "${var_internal}" MATCHES "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$")
+    message(FATAL_ERROR
+      "Reported SDK version \"${var_internal}\" does not look like a version")
+  endif()
+  set(${var} ${var_internal} PARENT_SCOPE)
+endfunction()
+
 # There isn't a clear mapping of what architectures are supported with a given
 # target platform, but ld's version output does list the architectures it can
 # link for.
@@ -77,11 +112,22 @@ function(darwin_test_archs os valid_archs)
     message(STATUS "Finding valid architectures for ${os}...")
     set(SIMPLE_C ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/src.c)
     file(WRITE ${SIMPLE_C} "#include <stdio.h>\nint main() { printf(__FILE__); return 0; }\n")
-  
+
     set(os_linker_flags)
     foreach(flag ${DARWIN_${os}_LINK_FLAGS})
       set(os_linker_flags "${os_linker_flags} ${flag}")
     endforeach()
+
+    # Disable building for i386 for macOS SDK >= 10.15. The SDK doesn't support
+    # linking for i386 and the corresponding OS doesn't allow running macOS i386
+    # binaries.
+    if ("${os}" STREQUAL "osx")
+      find_darwin_sdk_version(macosx_sdk_version "macosx")
+      if ("${macosx_sdk_version}" VERSION_GREATER 10.15 OR "${macosx_sdk_version}" VERSION_EQUAL 10.15)
+        message(STATUS "Disabling i386 slice for ${valid_archs}")
+        list(REMOVE_ITEM archs "i386")
+      endif()
+    endif()
   endif()
 
   # The simple program will build for x86_64h on the simulator because it is 

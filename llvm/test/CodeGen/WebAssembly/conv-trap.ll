@@ -165,3 +165,83 @@ define i64 @i64_trunc_u_f64(double %x) {
   %a = fptoui double %x to i64
   ret i64 %a
 }
+
+; CHECK-LABEL: llvm_wasm_trunc_signed_i32_f32:
+; CHECK-NEXT: .functype llvm_wasm_trunc_signed_i32_f32 (f32) -> (i32)
+; CHECK-NEXT: i32.trunc_f32_s $push[[L0:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[L0]]{{$}}
+declare i32 @llvm.wasm.trunc.signed.i32.f32(float)
+define i32 @llvm_wasm_trunc_signed_i32_f32(float %f) {
+  %a = call i32 @llvm.wasm.trunc.signed.i32.f32(float %f)
+  ret i32 %a
+}
+
+; CHECK-LABEL: llvm_wasm_trunc_unsigned_i32_f32:
+; CHECK-NEXT: .functype llvm_wasm_trunc_unsigned_i32_f32 (f32) -> (i32)
+; CHECK-NEXT: i32.trunc_f32_u $push[[L0:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[L0]]{{$}}
+declare i32 @llvm.wasm.trunc.unsigned.i32.f32(float)
+define i32 @llvm_wasm_trunc_unsigned_i32_f32(float %f) {
+  %a = call i32 @llvm.wasm.trunc.unsigned.i32.f32(float %f)
+  ret i32 %a
+}
+
+; CHECK-LABEL: llvm_wasm_trunc_signed_i32_f64:
+; CHECK-NEXT: .functype llvm_wasm_trunc_signed_i32_f64 (f64) -> (i32)
+; CHECK-NEXT: i32.trunc_f64_s $push[[L0:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[L0]]{{$}}
+declare i32 @llvm.wasm.trunc.signed.i32.f64(double)
+define i32 @llvm_wasm_trunc_signed_i32_f64(double %f) {
+  %a = call i32 @llvm.wasm.trunc.signed.i32.f64(double %f)
+  ret i32 %a
+}
+
+; CHECK-LABEL: llvm_wasm_trunc_unsigned_i32_f64:
+; CHECK-NEXT: .functype llvm_wasm_trunc_unsigned_i32_f64 (f64) -> (i32)
+; CHECK-NEXT: i32.trunc_f64_u $push[[L0:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[L0]]{{$}}
+declare i32 @llvm.wasm.trunc.unsigned.i32.f64(double)
+define i32 @llvm_wasm_trunc_unsigned_i32_f64(double %f) {
+  %a = call i32 @llvm.wasm.trunc.unsigned.i32.f64(double %f)
+  ret i32 %a
+}
+
+; CHECK-LABEL: llvm_wasm_trunc_signed_i64_f32:
+; CHECK-NEXT: .functype llvm_wasm_trunc_signed_i64_f32 (f32) -> (i64)
+; CHECK-NEXT: i64.trunc_f32_s $push[[L0:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[L0]]{{$}}
+declare i64 @llvm.wasm.trunc.signed.i64.f32(float)
+define i64 @llvm_wasm_trunc_signed_i64_f32(float %f) {
+  %a = call i64 @llvm.wasm.trunc.signed.i64.f32(float %f)
+  ret i64 %a
+}
+
+; CHECK-LABEL: llvm_wasm_trunc_unsigned_i64_f32:
+; CHECK-NEXT: .functype llvm_wasm_trunc_unsigned_i64_f32 (f32) -> (i64)
+; CHECK-NEXT: i64.trunc_f32_u $push[[L0:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[L0]]{{$}}
+declare i64 @llvm.wasm.trunc.unsigned.i64.f32(float)
+define i64 @llvm_wasm_trunc_unsigned_i64_f32(float %f) {
+  %a = call i64 @llvm.wasm.trunc.unsigned.i64.f32(float %f)
+  ret i64 %a
+}
+
+; CHECK-LABEL: llvm_wasm_trunc_signed_i64_f64:
+; CHECK-NEXT: .functype llvm_wasm_trunc_signed_i64_f64 (f64) -> (i64)
+; CHECK-NEXT: i64.trunc_f64_s $push[[L0:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[L0]]{{$}}
+declare i64 @llvm.wasm.trunc.signed.i64.f64(double)
+define i64 @llvm_wasm_trunc_signed_i64_f64(double %f) {
+  %a = call i64 @llvm.wasm.trunc.signed.i64.f64(double %f)
+  ret i64 %a
+}
+
+; CHECK-LABEL: llvm_wasm_trunc_unsigned_i64_f64:
+; CHECK-NEXT: .functype llvm_wasm_trunc_unsigned_i64_f64 (f64) -> (i64)
+; CHECK-NEXT: i64.trunc_f64_u $push[[L0:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: return $pop[[L0]]{{$}}
+declare i64 @llvm.wasm.trunc.unsigned.i64.f64(double)
+define i64 @llvm_wasm_trunc_unsigned_i64_f64(double %f) {
+  %a = call i64 @llvm.wasm.trunc.unsigned.i64.f64(double %f)
+  ret i64 %a
+}

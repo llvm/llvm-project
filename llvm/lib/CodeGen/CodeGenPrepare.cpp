@@ -1822,7 +1822,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
           GV->getPointerAlignment(*DL) < PrefAlign &&
           DL->getTypeAllocSize(GV->getValueType()) >=
               MinSize + Offset2)
-        GV->setAlignment(PrefAlign);
+        GV->setAlignment(MaybeAlign(PrefAlign));
     }
     // If this is a memcpy (or similar) then we may be able to improve the
     // alignment
@@ -1868,24 +1868,10 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
       });
       return true;
     }
-    case Intrinsic::objectsize: {
-      // Lower all uses of llvm.objectsize.*
-      Value *RetVal =
-          lowerObjectSizeCall(II, *DL, TLInfo, /*MustSucceed=*/true);
-
-      resetIteratorIfInvalidatedWhileCalling(BB, [&]() {
-        replaceAndRecursivelySimplify(CI, RetVal, TLInfo, nullptr);
-      });
-      return true;
-    }
-    case Intrinsic::is_constant: {
-      // If is_constant hasn't folded away yet, lower it to false now.
-      Constant *RetVal = ConstantInt::get(II->getType(), 0);
-      resetIteratorIfInvalidatedWhileCalling(BB, [&]() {
-        replaceAndRecursivelySimplify(CI, RetVal, TLInfo, nullptr);
-      });
-      return true;
-    }
+    case Intrinsic::objectsize:
+      llvm_unreachable("llvm.objectsize.* should have been lowered already");
+    case Intrinsic::is_constant:
+      llvm_unreachable("llvm.is.constant.* should have been lowered already");
     case Intrinsic::aarch64_stlxr:
     case Intrinsic::aarch64_stxr: {
       ZExtInst *ExtVal = dyn_cast<ZExtInst>(CI->getArgOperand(0));

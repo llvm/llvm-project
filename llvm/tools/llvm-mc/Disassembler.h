@@ -22,17 +22,15 @@ class MemoryBuffer;
 class Target;
 class raw_ostream;
 class SourceMgr;
+class MCContext;
 class MCSubtargetInfo;
 class MCStreamer;
 
 class Disassembler {
 public:
-  static int disassemble(const Target &T,
-                         const std::string &Triple,
-                         MCSubtargetInfo &STI,
-                         MCStreamer &Streamer,
-                         MemoryBuffer &Buffer,
-                         SourceMgr &SM,
+  static int disassemble(const Target &T, const std::string &Triple,
+                         MCSubtargetInfo &STI, MCStreamer &Streamer,
+                         MemoryBuffer &Buffer, SourceMgr &SM, MCContext &Ctx,
                          raw_ostream &Out);
 };
 

@@ -453,7 +453,7 @@ public:
   ///
   /// For example, returns 5 for i36 and 10 for x86_fp80.
   TypeSize getTypeStoreSize(Type *Ty) const {
-    auto BaseSize = getTypeSizeInBits(Ty);
+    TypeSize BaseSize = getTypeSizeInBits(Ty);
     return { (BaseSize.getKnownMinSize() + 7) / 8, BaseSize.isScalable() };
   }
 

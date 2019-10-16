@@ -627,6 +627,12 @@ namespace assignment_op {
 }
 
 namespace switch_stmt {
+  constexpr bool no_such_case(int n) {
+    switch (n) { case 1: return false; }
+    return true;
+  }
+  static_assert(no_such_case(0), "");
+
   constexpr int f(char k) {
     bool b = false;
     int z = 6;

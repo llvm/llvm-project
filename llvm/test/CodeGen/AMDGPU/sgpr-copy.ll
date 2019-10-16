@@ -3,7 +3,8 @@
 
 ; CHECK-LABEL: {{^}}phi1:
 ; CHECK: s_buffer_load_dword [[DST:s[0-9]]], {{s\[[0-9]+:[0-9]+\]}}, 0x0
-; CHECK: v_mov_b32_e32 v{{[0-9]}}, [[DST]]
+; CHECK: ; %bb.1: ; %ELSE
+; CHECK: s_xor_b32 s{{[0-9]}}, [[DST]]
 define amdgpu_ps void @phi1(<4 x i32> addrspace(4)* inreg %arg, <4 x i32> addrspace(4)* inreg %arg1, <8 x i32> addrspace(4)* inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19) #0 {
 main_body:
   %tmp = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %arg, i32 0

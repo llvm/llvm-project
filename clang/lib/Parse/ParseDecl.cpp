@@ -2929,28 +2929,29 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
       IdentifierInfo *Name = AfterScope.getIdentifierInfo();
       Sema::NameClassification Classification = Actions.ClassifyName(
           getCurScope(), SS, Name, AfterScope.getLocation(), Next,
-          /*IsAddressOfOperand=*/false, /*CCC=*/nullptr);
+          /*CCC=*/nullptr);
       switch (Classification.getKind()) {
       case Sema::NC_Error:
         SkipMalformedDecl();
         return true;
 
       case Sema::NC_Keyword:
-      case Sema::NC_NestedNameSpecifier:
-        llvm_unreachable("typo correction and nested name specifiers not "
-                         "possible here");
+        llvm_unreachable("typo correction is not possible here");
 
       case Sema::NC_Type:
       case Sema::NC_TypeTemplate:
+      case Sema::NC_UndeclaredNonType:
+      case Sema::NC_UndeclaredTemplate:
         // Not a previously-declared non-type entity.
         MightBeDeclarator = false;
         break;
 
       case Sema::NC_Unknown:
-      case Sema::NC_Expression:
+      case Sema::NC_NonType:
+      case Sema::NC_DependentNonType:
+      case Sema::NC_ContextIndependentExpr:
       case Sema::NC_VarTemplate:
       case Sema::NC_FunctionTemplate:
-      case Sema::NC_UndeclaredTemplate:
         // Might be a redeclaration of a prior entity.
         break;
       }

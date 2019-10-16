@@ -50,7 +50,7 @@ class ExprCommandCallFunctionTestCase(TestBase):
         # skip this part of the test.
         triple = self.dbg.GetSelectedPlatform().GetTriple()
         do_cstr_test = True
-        if triple == "arm64-apple-ios" or triple == "arm64-apple-tvos" or triple == "armv7k-apple-watchos" or triple == "arm64-apple-bridgeos":
+        if triple in ["arm64-apple-ios", "arm64e-apple-ios", "arm64-apple-tvos", "armv7k-apple-watchos", "arm64-apple-bridgeos", "arm64_32-apple-watchos"]:
             do_cstr_test = False
         if do_cstr_test:
             self.expect("print str.c_str()",

@@ -17,14 +17,22 @@
 # CHECK: Variable: {{.*}}, name = "x0", type = "int", location = DW_OP_reg0 RAX,
 # CHECK: Variable: {{.*}}, name = "x1", type = "int", location = ,
 # CHECK: Variable: {{.*}}, name = "x2", type = "int", location = ,
+# CHECK: Variable: {{.*}}, name = "x3", type = "int", location = DW_OP_reg1 RDX,
 
         .type   f,@function
 f:                                      # @f
 .Lfunc_begin0:
-        movl    %edi, %eax
+        nop
 .Ltmp0:
-        retq
+        nop
 .Ltmp1:
+        nop
+.Ltmp2:
+        nop
+.Ltmp3:
+        nop
+.Ltmp4:
+        nop
 .Lfunc_end0:
         .size   f, .Lfunc_end0-f
 
@@ -35,12 +43,6 @@ f:                                      # @f
         .asciz  "f"
 .Linfo_string4:
         .asciz  "int"
-.Lx0:
-        .asciz  "x0"
-.Lx1:
-        .asciz  "x1"
-.Lx2:
-        .asciz  "x2"
 
         .section        .debug_loc,"",@progbits
 .Ldebug_loc0:
@@ -54,6 +56,17 @@ f:                                      # @f
         .byte   80                      # super-register DW_OP_reg0
         .quad   0
         .quad   0
+
+.Ldebug_loc3:
+        .quad   -1                      # Select base address
+        .quad   .Ltmp1
+        .quad   .Ltmp1-.Ltmp1
+        .quad   .Ltmp2-.Ltmp1
+        .short  1                       # Loc expr size
+        .byte   81                      # super-register DW_OP_reg1
+        .quad   0
+        .quad   0
+
 .Ldebug_loc2:
         .quad   .Lfunc_begin0-.Lfunc_begin0
         .quad   .Lfunc_end0-.Lfunc_begin0
@@ -88,7 +101,7 @@ f:                                      # @f
         .byte   2                       # DW_AT_location
         .byte   23                      # DW_FORM_sec_offset
         .byte   3                       # DW_AT_name
-        .byte   14                      # DW_FORM_strp
+        .byte   8                       # DW_FORM_string
         .byte   73                      # DW_AT_type
         .byte   19                      # DW_FORM_ref4
         .byte   0                       # EOM(1)
@@ -123,15 +136,19 @@ f:                                      # @f
         .long   .Lint                   # DW_AT_type
         .byte   3                       # Abbrev [3] DW_TAG_formal_parameter
         .long   .Ldebug_loc0            # DW_AT_location
-        .long   .Lx0                    # DW_AT_name
+        .asciz  "x0"                    # DW_AT_name
         .long   .Lint-.Lcu_begin0       # DW_AT_type
         .byte   3                       # Abbrev [3] DW_TAG_formal_parameter
         .long   0xdeadbeef              # DW_AT_location
-        .long   .Lx1                    # DW_AT_name
+        .asciz  "x1"                    # DW_AT_name
         .long   .Lint-.Lcu_begin0       # DW_AT_type
         .byte   3                       # Abbrev [3] DW_TAG_formal_parameter
         .long   .Ldebug_loc2            # DW_AT_location
-        .long   .Lx2                    # DW_AT_name
+        .asciz  "x2"                    # DW_AT_name
+        .long   .Lint-.Lcu_begin0       # DW_AT_type
+        .byte   3                       # Abbrev [3] DW_TAG_formal_parameter
+        .long   .Ldebug_loc3            # DW_AT_location
+        .asciz  "x3"                    # DW_AT_name
         .long   .Lint-.Lcu_begin0       # DW_AT_type
         .byte   0                       # End Of Children Mark
 .Lint:

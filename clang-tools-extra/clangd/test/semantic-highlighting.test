@@ -41,6 +41,12 @@
 # CHECK-NEXT:            "entity.name.type.typedef.cpp"
 # CHECK-NEXT:          ],
 # CHECK-NEXT:          [
+# CHECK-NEXT:            "entity.name.type.dependent.cpp"
+# CHECK-NEXT:          ],
+# CHECK-NEXT:          [
+# CHECK-NEXT:            "entity.name.other.dependent.cpp"
+# CHECK-NEXT:          ],
+# CHECK-NEXT:          [
 # CHECK-NEXT:            "entity.name.namespace.cpp"
 # CHECK-NEXT:          ],
 # CHECK-NEXT:          [
@@ -61,7 +67,7 @@
 # CHECK-NEXT:    "lines": [
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "line": 0,
-# CHECK-NEXT:        "tokens": "AAAAAAADAA4AAAAEAAEAAA=="
+# CHECK-NEXT:        "tokens": "AAAAAAADABAAAAAEAAEAAA=="
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "textDocument": {
@@ -76,11 +82,11 @@
 # CHECK-NEXT:    "lines": [
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "line": 0,
-# CHECK-NEXT:        "tokens": "AAAAAAADAA4AAAAEAAEAAA=="
+# CHECK-NEXT:        "tokens": "AAAAAAADABAAAAAEAAEAAA=="
 # CHECK-NEXT:      }
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "line": 1,
-# CHECK-NEXT:        "tokens": "AAAAAAADAA4AAAAEAAEAAA=="
+# CHECK-NEXT:        "tokens": "AAAAAAADABAAAAAEAAEAAA=="
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "textDocument": {
@@ -95,7 +101,7 @@
 # CHECK-NEXT:    "lines": [
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "line": 1,
-# CHECK-NEXT:        "tokens": "AAAAAAADAA4AAAAEAAEAAA=="
+# CHECK-NEXT:        "tokens": "AAAAAAADABAAAAAEAAEAAA=="
 # CHECK-NEXT:      }
 # CHECK-NEXT:   ],
 # CHECK-NEXT:    "textDocument": {

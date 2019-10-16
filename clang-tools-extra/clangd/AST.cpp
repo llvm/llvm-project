@@ -115,6 +115,18 @@ static NestedNameSpecifier *getQualifier(const NamedDecl &ND) {
   return nullptr;
 }
 
+std::string printUsingNamespaceName(const ASTContext &Ctx,
+                                    const UsingDirectiveDecl &D) {
+  PrintingPolicy PP(Ctx.getLangOpts());
+  std::string Name;
+  llvm::raw_string_ostream Out(Name);
+
+  if (auto *Qual = D.getQualifier())
+    Qual->print(Out, PP);
+  D.getNominatedNamespaceAsWritten()->printName(Out);
+  return Out.str();
+}
+
 std::string printName(const ASTContext &Ctx, const NamedDecl &ND) {
   std::string Name;
   llvm::raw_string_ostream Out(Name);

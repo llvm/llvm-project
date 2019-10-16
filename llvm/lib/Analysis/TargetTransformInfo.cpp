@@ -288,12 +288,14 @@ bool TargetTransformInfo::shouldFavorBackedgeIndex(const Loop *L) const {
   return TTIImpl->shouldFavorBackedgeIndex(L);
 }
 
-bool TargetTransformInfo::isLegalMaskedStore(Type *DataType) const {
-  return TTIImpl->isLegalMaskedStore(DataType);
+bool TargetTransformInfo::isLegalMaskedStore(Type *DataType,
+                                             MaybeAlign Alignment) const {
+  return TTIImpl->isLegalMaskedStore(DataType, Alignment);
 }
 
-bool TargetTransformInfo::isLegalMaskedLoad(Type *DataType) const {
-  return TTIImpl->isLegalMaskedLoad(DataType);
+bool TargetTransformInfo::isLegalMaskedLoad(Type *DataType,
+                                            MaybeAlign Alignment) const {
+  return TTIImpl->isLegalMaskedLoad(DataType, Alignment);
 }
 
 bool TargetTransformInfo::isLegalNTStore(Type *DataType,

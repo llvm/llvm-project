@@ -42,6 +42,12 @@ std::string printQualifiedName(const NamedDecl &ND);
 /// Returns the first enclosing namespace scope starting from \p DC.
 std::string printNamespaceScope(const DeclContext &DC);
 
+/// Returns the name of the namespace inside the 'using namespace' directive, as
+/// written in the code. E.g., passing 'using namespace ::std' will result in
+/// '::std'.
+std::string printUsingNamespaceName(const ASTContext &Ctx,
+                                    const UsingDirectiveDecl &D);
+
 /// Prints unqualified name of the decl for the purpose of displaying it to the
 /// user. Anonymous decls return names of the form "(anonymous {kind})", e.g.
 /// "(anonymous struct)" or "(anonymous namespace)".

@@ -8,8 +8,8 @@
 ;
 ; CHECK-LABEL: {{^}}main:
 ; CHECK: ; %LOOP49
-; CHECK: v_cmp_ne_u32_e32 vcc,
-; CHECK: s_cbranch_vccnz
+; CHECK: s_cmp_lg_u32 s{{[0-9]+}}, 0
+; CHECK: s_cbranch_scc1
 ; CHECK: ; %ENDIF53
 define amdgpu_vs float @main(i32 %in) {
 main_body:

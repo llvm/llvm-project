@@ -1216,7 +1216,7 @@ void DwarfCompileUnit::addComplexAddress(const DbgVariable &DV, DIE &Die,
 
   if (DIExpr->isEntryValue()) {
     DwarfExpr.setEntryValueFlag();
-    DwarfExpr.addEntryValueExpression(Cursor);
+    DwarfExpr.beginEntryValueExpression(Cursor);
   }
 
   const TargetRegisterInfo &TRI = *Asm->MF->getSubtarget().getRegisterInfo();

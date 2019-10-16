@@ -108,26 +108,27 @@ static std::vector<std::string> getSymbolLocations(BitcodeFile *file) {
   return {res};
 }
 
-static std::pair<StringRef, uint32_t> getFileLineDwarf(const SectionChunk *c,
-                                                       uint32_t addr) {
+static Optional<std::pair<StringRef, uint32_t>>
+getFileLineDwarf(const SectionChunk *c, uint32_t addr) {
   if (!config->symbolizer)
     config->symbolizer = make<symbolize::LLVMSymbolizer>();
   Expected<DILineInfo> expectedLineInfo = config->symbolizer->symbolizeCode(
       *c->file->getCOFFObj(), {addr, c->getSectionNumber() - 1});
   if (!expectedLineInfo)
-    return {"", 0};
+    return None;
   const DILineInfo &lineInfo = *expectedLineInfo;
   if (lineInfo.FileName == DILineInfo::BadString)
-    return {"", 0};
-  return {saver.save(lineInfo.FileName), lineInfo.Line};
+    return None;
+  return std::make_pair(saver.save(lineInfo.FileName), lineInfo.Line);
 }
 
-static std::pair<StringRef, uint32_t> getFileLine(const SectionChunk *c,
-                                                  uint32_t addr) {
+static Optional<std::pair<StringRef, uint32_t>>
+getFileLine(const SectionChunk *c, uint32_t addr) {
   // MinGW can optionally use codeview, even if the default is dwarf.
-  std::pair<StringRef, uint32_t> fileLine = getFileLineCodeView(c, addr);
+  Optional<std::pair<StringRef, uint32_t>> fileLine =
+      getFileLineCodeView(c, addr);
   // If codeview didn't yield any result, check dwarf in MinGW mode.
-  if (fileLine.first.empty() && config->mingw)
+  if (!fileLine && config->mingw)
     fileLine = getFileLineDwarf(c, addr);
   return fileLine;
 }
@@ -150,11 +151,13 @@ std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex) {
     for (const coff_relocation &r : sc->getRelocs()) {
       if (r.SymbolTableIndex != symIndex)
         continue;
-      std::pair<StringRef, uint32_t> fileLine =
+      Optional<std::pair<StringRef, uint32_t>> fileLine =
           getFileLine(sc, r.VirtualAddress);
       Symbol *sym = getSymbol(sc, r.VirtualAddress);
-      if (!fileLine.first.empty() || sym)
-        locations.push_back({sym, fileLine});
+      if (fileLine)
+        locations.push_back({sym, *fileLine});
+      else if (sym)
+        locations.push_back({sym, {"", 0}});
     }
   }
 

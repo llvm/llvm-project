@@ -43,6 +43,8 @@ public:
 
 private:
   template <typename T> void printSectionHeaders(ArrayRef<T> Sections);
+  template <typename T> void printGenericSectionHeader(T &Sec) const;
+  template <typename T> void printOverflowSectionHeader(T &Sec) const;
   void printFileAuxEnt(const XCOFFFileAuxEnt *AuxEntPtr);
   void printCsectAuxEnt32(const XCOFFCsectAuxEnt32 *AuxEntPtr);
   void printSectAuxEntForStat(const XCOFFSectAuxEntForStat *AuxEntPtr);
@@ -50,6 +52,11 @@ private:
 
   // Least significant 3 bits are reserved.
   static constexpr unsigned SectionFlagsReservedMask = 0x7;
+
+  // The low order 16 bits of section flags denotes the section type.
+  static constexpr unsigned SectionFlagsTypeMask = 0xffffu;
+
+  void printRelocations(ArrayRef<XCOFFSectionHeader32> Sections);
   const XCOFFObjectFile &Obj;
 };
 } // anonymous namespace
@@ -109,7 +116,58 @@ void XCOFFDumper::printSectionHeaders() {
 }
 
 void XCOFFDumper::printRelocations() {
-  llvm_unreachable("Unimplemented functionality for XCOFFDumper");
+  if (Obj.is64Bit())
+    llvm_unreachable("64-bit relocation output not implemented!");
+  else
+    printRelocations(Obj.sections32());
+}
+
+static const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
+#define ECase(X)                                                               \
+  { #X, XCOFF::X }
+    ECase(R_POS),    ECase(R_RL),     ECase(R_RLA),    ECase(R_NEG),
+    ECase(R_REL),    ECase(R_TOC),    ECase(R_TRL),    ECase(R_TRLA),
+    ECase(R_GL),     ECase(R_TCL),    ECase(R_REF),    ECase(R_BA),
+    ECase(R_BR),     ECase(R_RBA),    ECase(R_RBR),    ECase(R_TLS),
+    ECase(R_TLS_IE), ECase(R_TLS_LD), ECase(R_TLS_LE), ECase(R_TLSM),
+    ECase(R_TLSML),  ECase(R_TOCU),   ECase(R_TOCL)
+#undef ECase
+};
+
+void XCOFFDumper::printRelocations(ArrayRef<XCOFFSectionHeader32> Sections) {
+  if (!opts::ExpandRelocs)
+    report_fatal_error("Unexpanded relocation output not implemented.");
+
+  ListScope LS(W, "Relocations");
+  uint16_t Index = 0;
+  for (const auto &Sec : Sections) {
+    ++Index;
+    // Only the .text, .data, .tdata, and STYP_DWARF sections have relocation.
+    if (Sec.Flags != XCOFF::STYP_TEXT && Sec.Flags != XCOFF::STYP_DATA &&
+        Sec.Flags != XCOFF::STYP_TDATA && Sec.Flags != XCOFF::STYP_DWARF)
+      continue;
+    auto Relocations = unwrapOrError(Obj.getFileName(), Obj.relocations(Sec));
+    if (Relocations.empty())
+      continue;
+
+    W.startLine() << "Section (index: " << Index << ") " << Sec.getName()
+                  << " {\n";
+    for (auto Reloc : Relocations) {
+      StringRef SymbolName = unwrapOrError(
+          Obj.getFileName(), Obj.getSymbolNameByIndex(Reloc.SymbolIndex));
+
+      DictScope RelocScope(W, "Relocation");
+      W.printHex("Virtual Address", Reloc.VirtualAddress);
+      W.printNumber("Symbol", SymbolName, Reloc.SymbolIndex);
+      W.printString("IsSigned", Reloc.isRelocationSigned() ? "Yes" : "No");
+      W.printNumber("FixupBitValue", Reloc.isFixupIndicated() ? 1 : 0);
+      W.printNumber("Length", Reloc.getRelocatedLength());
+      W.printEnum("Type", (uint8_t)Reloc.Type,
+                  makeArrayRef(RelocationTypeNameclass));
+    }
+    W.unindent();
+    W.startLine() << "}\n";
+  }
 }
 
 static const EnumEntry<XCOFF::CFileStringType> FileStringType[] = {
@@ -397,6 +455,39 @@ static const EnumEntry<XCOFF::SectionTypeFlags> SectionTypeFlagsNames[] = {
 };
 
 template <typename T>
+void XCOFFDumper::printOverflowSectionHeader(T &Sec) const {
+  if (Obj.is64Bit()) {
+    reportWarning(make_error<StringError>("An 64-bit XCOFF object file may not "
+                                          "contain an overflow section header.",
+                                          object_error::parse_failed),
+                  Obj.getFileName());
+  }
+
+  W.printString("Name", Sec.getName());
+  W.printNumber("NumberOfRelocations", Sec.PhysicalAddress);
+  W.printNumber("NumberOfLineNumbers", Sec.VirtualAddress);
+  W.printHex("Size", Sec.SectionSize);
+  W.printHex("RawDataOffset", Sec.FileOffsetToRawData);
+  W.printHex("RelocationPointer", Sec.FileOffsetToRelocationInfo);
+  W.printHex("LineNumberPointer", Sec.FileOffsetToLineNumberInfo);
+  W.printNumber("IndexOfSectionOverflowed", Sec.NumberOfRelocations);
+  W.printNumber("IndexOfSectionOverflowed", Sec.NumberOfLineNumbers);
+}
+
+template <typename T>
+void XCOFFDumper::printGenericSectionHeader(T &Sec) const {
+  W.printString("Name", Sec.getName());
+  W.printHex("PhysicalAddress", Sec.PhysicalAddress);
+  W.printHex("VirtualAddress", Sec.VirtualAddress);
+  W.printHex("Size", Sec.SectionSize);
+  W.printHex("RawDataOffset", Sec.FileOffsetToRawData);
+  W.printHex("RelocationPointer", Sec.FileOffsetToRelocationInfo);
+  W.printHex("LineNumberPointer", Sec.FileOffsetToLineNumberInfo);
+  W.printNumber("NumberOfRelocations", Sec.NumberOfRelocations);
+  W.printNumber("NumberOfLineNumbers", Sec.NumberOfLineNumbers);
+}
+
+template <typename T>
 void XCOFFDumper::printSectionHeaders(ArrayRef<T> Sections) {
   ListScope Group(W, "Sections");
 
@@ -405,27 +496,28 @@ void XCOFFDumper::printSectionHeaders(ArrayRef<T> Sections) {
     DictScope SecDS(W, "Section");
 
     W.printNumber("Index", Index++);
-    W.printString("Name", Sec.getName());
 
-    W.printHex("PhysicalAddress", Sec.PhysicalAddress);
-    W.printHex("VirtualAddress", Sec.VirtualAddress);
-    W.printHex("Size", Sec.SectionSize);
-    W.printHex("RawDataOffset", Sec.FileOffsetToRawData);
-    W.printHex("RelocationPointer", Sec.FileOffsetToRelocationInfo);
-    W.printHex("LineNumberPointer", Sec.FileOffsetToLineNumberInfo);
-
-    // TODO Need to add overflow handling when NumberOfX == _OVERFLOW_MARKER
-    // in 32-bit object files.
-    W.printNumber("NumberOfRelocations", Sec.NumberOfRelocations);
-    W.printNumber("NumberOfLineNumbers", Sec.NumberOfLineNumbers);
-
-    // The most significant 16-bits represent the DWARF section subtype. For
-    // now we just dump the section type flags.
-    uint16_t Flags = Sec.Flags & 0xffffu;
-    if (Flags & SectionFlagsReservedMask)
-      W.printHex("Flags", "Reserved", Flags);
+    uint16_t SectionType = Sec.Flags & SectionFlagsTypeMask;
+    switch (SectionType) {
+    case XCOFF::STYP_OVRFLO:
+      printOverflowSectionHeader(Sec);
+      break;
+    case XCOFF::STYP_LOADER:
+    case XCOFF::STYP_EXCEPT:
+    case XCOFF::STYP_TYPCHK:
+      // TODO The interpretation of loader, exception and type check section
+      // headers are different from that of generic section headers. We will
+      // implement them later. We interpret them as generic section headers for
+      // now.
+    default:
+      printGenericSectionHeader(Sec);
+      break;
+    }
+    // For now we just dump the section type portion of the flags.
+    if (SectionType & SectionFlagsReservedMask)
+      W.printHex("Flags", "Reserved", SectionType);
     else
-      W.printEnum("Type", Flags, makeArrayRef(SectionTypeFlagsNames));
+      W.printEnum("Type", SectionType, makeArrayRef(SectionTypeFlagsNames));
   }
 
   if (opts::SectionRelocations)

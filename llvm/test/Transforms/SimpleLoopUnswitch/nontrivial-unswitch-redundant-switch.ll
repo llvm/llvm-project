@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes='unswitch<nontrivial>' -disable-output -S < %s
+; RUN: opt -passes='loop-mssa(unswitch<nontrivial>)' -disable-output -S < %s
 ; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -disable-output -S < %s
 
 ; This loop shouldn't trigger asserts in SimpleLoopUnswitch.

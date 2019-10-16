@@ -234,7 +234,8 @@ void DynamicLoaderMacOSXDYLD::DoInitialImageFetch() {
       ReadDYLDInfoFromMemoryAndSetNotificationCallback(0x7fff5fc00000ull);
     } else if (exe_arch.GetMachine() == llvm::Triple::arm ||
                exe_arch.GetMachine() == llvm::Triple::thumb ||
-               exe_arch.GetMachine() == llvm::Triple::aarch64) {
+               exe_arch.GetMachine() == llvm::Triple::aarch64 ||
+               exe_arch.GetMachine() == llvm::Triple::aarch64_32) {
       ReadDYLDInfoFromMemoryAndSetNotificationCallback(0x2fe00000);
     } else {
       ReadDYLDInfoFromMemoryAndSetNotificationCallback(0x8fe00000);

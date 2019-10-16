@@ -53,14 +53,25 @@ private:
   friend unsigned encode(struct MaybeAlign A);
   friend struct MaybeAlign decodeMaybeAlign(unsigned Value);
 
+  /// A trivial type to allow construction of constexpr Align.
+  /// This is currently needed to workaround a bug in GCC 5.3 which prevents
+  /// definition of constexpr assign operators.
+  /// https://stackoverflow.com/questions/46756288/explicitly-defaulted-function-cannot-be-declared-as-constexpr-because-the-implic
+  /// FIXME: Remove this, make all assign operators constexpr and introduce user
+  /// defined literals when we don't have to support GCC 5.3 anymore.
+  /// https://llvm.org/docs/GettingStarted.html#getting-a-modern-host-c-toolchain
+  struct LogValue {
+    uint8_t Log;
+  };
+
 public:
   /// Default is byte-aligned.
   constexpr Align() = default;
   /// Do not perform checks in case of copy/move construct/assign, because the
   /// checks have been performed when building `Other`.
-  Align(const Align &Other) = default;
+  constexpr Align(const Align &Other) = default;
+  constexpr Align(Align &&Other) = default;
   Align &operator=(const Align &Other) = default;
-  Align(Align &&Other) = default;
   Align &operator=(Align &&Other) = default;
 
   explicit Align(uint64_t Value) {
@@ -80,6 +91,20 @@ public:
   /// would be better than
   /// `if (A > Align(1))`
   constexpr static const Align None() { return Align(); }
+
+  /// Allow constructions of constexpr Align.
+  template <size_t kValue> constexpr static LogValue Constant() {
+    return LogValue{static_cast<uint8_t>(CTLog2<kValue>())};
+  }
+
+  /// Allow constructions of constexpr Align from types.
+  /// Compile time equivalent to Align(alignof(T)).
+  template <typename T> constexpr static LogValue Of() {
+    return Constant<std::alignment_of<T>::value>();
+  }
+
+  /// Constexpr constructor from LogValue type.
+  constexpr Align(LogValue CA) : ShiftValue(CA.Log) {}
 };
 
 /// Treats the value 0 as a 1, so Align is always at least 1.
@@ -129,9 +154,24 @@ inline bool isAligned(MaybeAlign Lhs, uint64_t SizeInBytes) {
   return SizeInBytes % (*Lhs).value() == 0;
 }
 
+/// Checks that Addr is a multiple of the alignment.
+inline bool isAddrAligned(Align Lhs, const void *Addr) {
+  return isAligned(Lhs, reinterpret_cast<uintptr_t>(Addr));
+}
+
 /// Returns a multiple of A needed to store `Size` bytes.
 inline uint64_t alignTo(uint64_t Size, Align A) {
-  return (Size + A.value() - 1) / A.value() * A.value();
+  const uint64_t value = A.value();
+  // The following line is equivalent to `(Size + value - 1) / value * value`.
+
+  // The division followed by a multiplication can be thought of as a right
+  // shift followed by a left shift which zeros out the extra bits produced in
+  // the bump; `~(value - 1)` is a mask where all those bits being zeroed out
+  // are just zero.
+
+  // Most compilers can generate this code but the pattern may be missed when
+  // multiple functions gets inlined.
+  return (Size + value - 1) & ~(value - 1);
 }
 
 /// Returns a multiple of A needed to store `Size` bytes.
@@ -140,10 +180,23 @@ inline uint64_t alignTo(uint64_t Size, MaybeAlign A) {
   return A ? alignTo(Size, A.getValue()) : Size;
 }
 
+/// Aligns `Addr` to `Alignment` bytes, rounding up.
+inline uintptr_t alignAddr(const void *Addr, Align Alignment) {
+  uintptr_t ArithAddr = reinterpret_cast<uintptr_t>(Addr);
+  assert(ArithAddr + Alignment.value() - 1 >= ArithAddr && "Overflow");
+  return alignTo(ArithAddr, Alignment);
+}
+
 /// Returns the offset to the next integer (mod 2**64) that is greater than
 /// or equal to \p Value and is a multiple of \p Align.
 inline uint64_t offsetToAlignment(uint64_t Value, Align Alignment) {
   return alignTo(Value, Alignment) - Value;
+}
+
+/// Returns the necessary adjustment for aligning `Addr` to `Alignment`
+/// bytes, rounding up.
+inline uint64_t offsetToAlignedAddr(const void *Addr, Align Alignment) {
+  return offsetToAlignment(reinterpret_cast<uintptr_t>(Addr), Alignment);
 }
 
 /// Returns the log2 of the alignment.

@@ -9,7 +9,10 @@ def fuzz_obj(obj):
     obj.GetSize()
     obj.GetInstructionAtIndex(0xffffffff)
     obj.AppendInstruction(lldb.SBInstruction())
-    obj.Print(None)
+    try:
+        obj.Print(None)
+    except Exception:
+        pass
     obj.GetDescription(lldb.SBStream())
     obj.DumpEmulationForAllInstructions("armv7")
     obj.Clear()

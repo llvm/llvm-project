@@ -232,7 +232,7 @@ TEST(TrailingObjects, Realignment) {
   EXPECT_EQ(C->getTrailingObjects<char>(), reinterpret_cast<char *>(C + 1));
   EXPECT_EQ(C->getTrailingObjects<long>(),
             reinterpret_cast<long *>(llvm::alignAddr(
-                reinterpret_cast<char *>(C + 1) + 1, alignof(long))));
+                reinterpret_cast<char *>(C + 1) + 1, Align::Of<long>())));
 }
 }
 

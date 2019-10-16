@@ -382,7 +382,10 @@ namespace serialization {
     /// inside the control block.
     enum InputFileRecordTypes {
       /// An input file.
-      INPUT_FILE = 1
+      INPUT_FILE = 1,
+
+      /// The input file content hash
+      INPUT_FILE_HASH
     };
 
     /// Record types that occur within the AST block itself.
@@ -1912,6 +1915,7 @@ namespace serialization {
       EXPR_FUNCTION_PARM_PACK,    // FunctionParmPackExpr
       EXPR_MATERIALIZE_TEMPORARY, // MaterializeTemporaryExpr
       EXPR_CXX_FOLD,              // CXXFoldExpr
+      EXPR_CONCEPT_SPECIALIZATION,// ConceptSpecializationExpr
 
       // CUDA
       EXPR_CUDA_KERNEL_CALL,       // CUDAKernelCallExpr
@@ -1962,6 +1966,7 @@ namespace serialization {
       STMT_OMP_TASKLOOP_DIRECTIVE,
       STMT_OMP_TASKLOOP_SIMD_DIRECTIVE,
       STMT_OMP_MASTER_TASKLOOP_DIRECTIVE,
+      STMT_OMP_PARALLEL_MASTER_TASKLOOP_DIRECTIVE,
       STMT_OMP_DISTRIBUTE_DIRECTIVE,
       STMT_OMP_TARGET_UPDATE_DIRECTIVE,
       STMT_OMP_DISTRIBUTE_PARALLEL_FOR_DIRECTIVE,

@@ -149,7 +149,8 @@ EmulateInstructionARM64::CreateInstance(const ArchSpec &arch,
                                         InstructionType inst_type) {
   if (EmulateInstructionARM64::SupportsEmulatingInstructionsOfTypeStatic(
           inst_type)) {
-    if (arch.GetTriple().getArch() == llvm::Triple::aarch64) {
+    if (arch.GetTriple().getArch() == llvm::Triple::aarch64 ||
+        arch.GetTriple().getArch() == llvm::Triple::aarch64_32) {
       return new EmulateInstructionARM64(arch);
     }
   }

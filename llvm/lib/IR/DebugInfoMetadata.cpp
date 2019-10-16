@@ -843,7 +843,7 @@ unsigned DIExpression::ExprOperand::getSize() const {
   case dwarf::DW_OP_deref_size:
   case dwarf::DW_OP_plus_uconst:
   case dwarf::DW_OP_LLVM_tag_offset:
-  case dwarf::DW_OP_entry_value:
+  case dwarf::DW_OP_LLVM_entry_value:
   case dwarf::DW_OP_regx:
     return 2;
   default:
@@ -890,10 +890,12 @@ bool DIExpression::isValid() const {
         return false;
       break;
     }
-    case dwarf::DW_OP_entry_value: {
-      // An entry value operator must appear at the begin and the size
-      // of following expression should be 1, because we support only
-      // entry values of a simple register location.
+    case dwarf::DW_OP_LLVM_entry_value: {
+      // An entry value operator must appear at the beginning and the number of
+      // operations it cover can currently only be 1, because we support only
+      // entry values of a simple register location. One reason for this is that
+      // we currently can't calculate the size of the resulting DWARF block for
+      // other expressions.
       return I->get() == expr_op_begin()->get() && I->getArg(0) == 1 &&
              getNumElements() == 2;
     }
@@ -1050,7 +1052,7 @@ DIExpression *DIExpression::prependOpcodes(const DIExpression *Expr,
   assert(Expr && "Can't prepend ops to this expression");
 
   if (EntryValue) {
-    Ops.push_back(dwarf::DW_OP_entry_value);
+    Ops.push_back(dwarf::DW_OP_LLVM_entry_value);
     // Add size info needed for entry value expression.
     // Add plus one for target register operand.
     Ops.push_back(Expr->getNumElements() + 1);

@@ -315,7 +315,7 @@ uint64_t test_vcvtph_u64_f16 (float16_t a) {
 }
 
 // CHECK-LABEL: test_vnegh_f16
-// CHECK: [[NEG:%.*]] = fsub half 0xH8000, %a
+// CHECK: [[NEG:%.*]] = fneg half %a
 // CHECK: ret half [[NEG]]
 float16_t test_vnegh_f16(float16_t a) {
   return vnegh_f16(a);

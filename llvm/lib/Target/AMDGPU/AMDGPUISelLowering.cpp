@@ -4165,7 +4165,7 @@ uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
   const AMDGPUSubtarget &ST =
       AMDGPUSubtarget::get(getTargetMachine(), MF.getFunction());
   unsigned ExplicitArgOffset = ST.getExplicitKernelArgOffset(MF.getFunction());
-  unsigned Alignment = ST.getAlignmentForImplicitArgPtr();
+  const Align Alignment = ST.getAlignmentForImplicitArgPtr();
   uint64_t ArgOffset = alignTo(MFI->getExplicitKernArgSize(), Alignment) +
                        ExplicitArgOffset;
   switch (Param) {

@@ -22,6 +22,7 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -211,13 +212,11 @@ public:
 
   /// Allocate space at the specified alignment.
   LLVM_ATTRIBUTE_RETURNS_NONNULL LLVM_ATTRIBUTE_RETURNS_NOALIAS void *
-  Allocate(size_t Size, size_t Alignment) {
-    assert(Alignment > 0 && "0-byte alignnment is not allowed. Use 1 instead.");
-
+  Allocate(size_t Size, Align Alignment) {
     // Keep track of how many bytes we've allocated.
     BytesAllocated += Size;
 
-    size_t Adjustment = alignmentAdjustment(CurPtr, Alignment);
+    size_t Adjustment = offsetToAlignedAddr(CurPtr, Alignment);
     assert(Adjustment + Size >= Size && "Adjustment + Size must not overflow");
 
     size_t SizeToAllocate = Size;
@@ -240,7 +239,7 @@ public:
     }
 
     // If Size is really big, allocate a separate slab for it.
-    size_t PaddedSize = SizeToAllocate + Alignment - 1;
+    size_t PaddedSize = SizeToAllocate + Alignment.value() - 1;
     if (PaddedSize > SizeThreshold) {
       void *NewSlab = Allocator.Allocate(PaddedSize, 0);
       // We own the new slab and don't want anyone reading anyting other than
@@ -266,6 +265,12 @@ public:
     __msan_allocated_memory(AlignedPtr, Size);
     __asan_unpoison_memory_region(AlignedPtr, Size);
     return AlignedPtr;
+  }
+
+  inline LLVM_ATTRIBUTE_RETURNS_NONNULL LLVM_ATTRIBUTE_RETURNS_NOALIAS void *
+  Allocate(size_t Size, size_t Alignment) {
+    assert(Alignment > 0 && "0-byte alignnment is not allowed. Use 1 instead.");
+    return Allocate(Size, Align(Alignment));
   }
 
   // Pull in base class overloads.
@@ -461,7 +466,7 @@ public:
   /// all memory allocated so far.
   void DestroyAll() {
     auto DestroyElements = [](char *Begin, char *End) {
-      assert(Begin == (char *)alignAddr(Begin, alignof(T)));
+      assert(Begin == (char *)alignAddr(Begin, Align::Of<T>()));
       for (char *Ptr = Begin; Ptr + sizeof(T) <= End; Ptr += sizeof(T))
         reinterpret_cast<T *>(Ptr)->~T();
     };
@@ -470,7 +475,7 @@ public:
          ++I) {
       size_t AllocatedSlabSize = BumpPtrAllocator::computeSlabSize(
           std::distance(Allocator.Slabs.begin(), I));
-      char *Begin = (char *)alignAddr(*I, alignof(T));
+      char *Begin = (char *)alignAddr(*I, Align::Of<T>());
       char *End = *I == Allocator.Slabs.back() ? Allocator.CurPtr
                                                : (char *)*I + AllocatedSlabSize;
 
@@ -480,7 +485,8 @@ public:
     for (auto &PtrAndSize : Allocator.CustomSizedSlabs) {
       void *Ptr = PtrAndSize.first;
       size_t Size = PtrAndSize.second;
-      DestroyElements((char *)alignAddr(Ptr, alignof(T)), (char *)Ptr + Size);
+      DestroyElements((char *)alignAddr(Ptr, Align::Of<T>()),
+                      (char *)Ptr + Size);
     }
 
     Allocator.Reset();

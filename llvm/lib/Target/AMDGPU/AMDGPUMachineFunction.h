@@ -23,7 +23,7 @@ class AMDGPUMachineFunction : public MachineFunctionInfo {
 
 protected:
   uint64_t ExplicitKernArgSize; // Cache for this.
-  unsigned MaxKernArgAlign; // Cache for this.
+  Align MaxKernArgAlign;        // Cache for this.
 
   /// Number of bytes in the LDS that are being used.
   unsigned LDSSize;
@@ -47,9 +47,7 @@ public:
     return ExplicitKernArgSize;
   }
 
-  unsigned getMaxKernArgAlign() const {
-    return MaxKernArgAlign;
-  }
+  unsigned getMaxKernArgAlign() const { return MaxKernArgAlign.value(); }
 
   unsigned getLDSSize() const {
     return LDSSize;

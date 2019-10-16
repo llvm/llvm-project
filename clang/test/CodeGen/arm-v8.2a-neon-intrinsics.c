@@ -264,14 +264,14 @@ uint16x8_t test_vcvtpq_u16_f16 (float16x8_t a) {
 
 // FIXME: Fix the zero constant when fp16 non-storage-only type becomes available.
 // CHECK-LABEL: test_vneg_f16
-// CHECK:  [[NEG:%.*]] = fsub <4 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %a
+// CHECK:  [[NEG:%.*]] = fneg <4 x half> %a
 // CHECK:  ret <4 x half> [[NEG]]
 float16x4_t test_vneg_f16(float16x4_t a) {
   return vneg_f16(a);
 }
 
 // CHECK-LABEL: test_vnegq_f16
-// CHECK:  [[NEG:%.*]] = fsub <8 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %a
+// CHECK:  [[NEG:%.*]] = fneg <8 x half> %a
 // CHECK:  ret <8 x half> [[NEG]]
 float16x8_t test_vnegq_f16(float16x8_t a) {
   return vnegq_f16(a);
@@ -757,7 +757,7 @@ float16x8_t test_vfmaq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
 }
 
 // CHECK-LABEL: test_vfms_f16
-// CHECK:  [[SUB:%.*]] = fsub <4 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %b
+// CHECK:  [[SUB:%.*]] = fneg <4 x half> %b
 // CHECK:  [[ADD:%.*]] = call <4 x half> @llvm.fma.v4f16(<4 x half> [[SUB]], <4 x half> %c, <4 x half> %a)
 // CHECK:  ret <4 x half> [[ADD]]
 float16x4_t test_vfms_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
@@ -765,7 +765,7 @@ float16x4_t test_vfms_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
 }
 
 // CHECK-LABEL: test_vfmsq_f16
-// CHECK:  [[SUB:%.*]] = fsub <8 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, %b
+// CHECK:  [[SUB:%.*]] = fneg <8 x half> %b
 // CHECK:  [[ADD:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[SUB]], <8 x half> %c, <8 x half> %a)
 // CHECK:  ret <8 x half> [[ADD]]
 float16x8_t test_vfmsq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {

@@ -779,11 +779,11 @@ bool CombinerHelper::optimizeMemset(MachineInstr &MI, Register Dst, Register Val
     Type *IRTy = getTypeForLLT(MemOps[0], C);
     unsigned NewAlign = (unsigned)DL.getABITypeAlignment(IRTy);
     if (NewAlign > Align) {
+      Align = NewAlign;
       unsigned FI = FIDef->getOperand(1).getIndex();
       // Give the stack frame object a larger alignment if needed.
-      if (MFI.getObjectAlignment(FI) < NewAlign)
-        MFI.setObjectAlignment(FI, NewAlign);
-      Align = NewAlign;
+      if (MFI.getObjectAlignment(FI) < Align)
+        MFI.setObjectAlignment(FI, Align);
     }
   }
 
@@ -907,11 +907,11 @@ bool CombinerHelper::optimizeMemcpy(MachineInstr &MI, Register Dst,
         NewAlign /= 2;
 
     if (NewAlign > Alignment) {
+      Alignment = NewAlign;
       unsigned FI = FIDef->getOperand(1).getIndex();
       // Give the stack frame object a larger alignment if needed.
-      if (MFI.getObjectAlignment(FI) < NewAlign)
-        MFI.setObjectAlignment(FI, NewAlign);
-      Alignment = NewAlign;
+      if (MFI.getObjectAlignment(FI) < Alignment)
+        MFI.setObjectAlignment(FI, Alignment);
     }
   }
 
@@ -1014,11 +1014,11 @@ bool CombinerHelper::optimizeMemmove(MachineInstr &MI, Register Dst,
         NewAlign /= 2;
 
     if (NewAlign > Alignment) {
+      Alignment = NewAlign;
       unsigned FI = FIDef->getOperand(1).getIndex();
       // Give the stack frame object a larger alignment if needed.
-      if (MFI.getObjectAlignment(FI) < NewAlign)
-        MFI.setObjectAlignment(FI, NewAlign);
-      Alignment = NewAlign;
+      if (MFI.getObjectAlignment(FI) < Alignment)
+        MFI.setObjectAlignment(FI, Alignment);
     }
   }
 

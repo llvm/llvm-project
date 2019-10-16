@@ -140,7 +140,7 @@
 #define TEST_THROW_SPEC(...) throw(__VA_ARGS__)
 #endif
 
-// Sniff out to see if the underling C library has C11 features
+// Sniff out to see if the underlying C library has C11 features
 // Note that at this time (July 2018), MacOS X and iOS do NOT.
 // This is cribbed from __config; but lives here as well because we can't assume libc++
 #if __ISO_C_VISIBLE >= 2011 || TEST_STD_VER >= 11

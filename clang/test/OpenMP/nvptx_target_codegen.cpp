@@ -577,6 +577,8 @@ int baz(int f, double &a) {
   // CHECK: alloca i32,
   // CHECK: [[LOCAL_F_PTR:%.+]] = alloca i32,
   // CHECK: [[ZERO_ADDR:%.+]] = alloca i32,
+  // CHECK: [[BND_ZERO_ADDR:%.+]] = alloca i32,
+  // CHECK: store i32 0, i32* [[BND_ZERO_ADDR]]
   // CHECK: store i32 0, i32* [[ZERO_ADDR]]
   // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* [[UNKNOWN]]
   // CHECK: [[PAR_LEVEL:%.+]] = call i16 @__kmpc_parallel_level(%struct.ident_t* [[UNKNOWN]], i32 [[GTID]])
@@ -609,7 +611,7 @@ int baz(int f, double &a) {
   // CHECK: br i1
 
   // CHECK: call void @__kmpc_serialized_parallel(%struct.ident_t* [[UNKNOWN]], i32 [[GTID]])
-  // CHECK: call void [[OUTLINED:@.+]](i32* [[ZERO_ADDR]], i32* [[ZERO_ADDR]], i32* [[F_PTR]], double* %{{.+}})
+  // CHECK: call void [[OUTLINED:@.+]](i32* [[ZERO_ADDR]], i32* [[BND_ZERO_ADDR]], i32* [[F_PTR]], double* %{{.+}})
   // CHECK: call void @__kmpc_end_serialized_parallel(%struct.ident_t* [[UNKNOWN]], i32 [[GTID]])
   // CHECK: br label
 

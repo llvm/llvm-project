@@ -221,7 +221,7 @@ float64x2_t test_vfmaq_n_f64(float64x2_t a, float64x2_t b, float64_t c) {
 }
 
 // CHECK-LABEL: define <2 x double> @test_vfmsq_n_f64(<2 x double> %a, <2 x double> %b, double %c) #1 {
-// CHECK:   [[SUB_I:%.*]] = fsub <2 x double> <double -0.000000e+00, double -0.000000e+00>, %b
+// CHECK:   [[SUB_I:%.*]] = fneg <2 x double> %b
 // CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x double> undef, double %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x double> [[VECINIT_I]], double %c, i32 1
 // CHECK:   [[TMP6:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[SUB_I]], <2 x double> [[VECINIT1_I]], <2 x double> %a) #3

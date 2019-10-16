@@ -5519,8 +5519,9 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
           Expr, Offset, RegAndSize.second);
         if (!FragmentExpr)
           continue;
+        assert(!IsDbgDeclare && "DbgDeclare operand is not in memory?");
         FuncInfo.ArgDbgValues.push_back(
-          BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), IsDbgDeclare,
+          BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), false,
                   RegAndSize.first, Variable, *FragmentExpr));
         Offset += RegAndSize.second;
       }
@@ -5554,8 +5555,10 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
   assert(Variable->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
   IsIndirect = (Op->isReg()) ? IsIndirect : true;
+  if (IsIndirect)
+    Expr = DIExpression::append(Expr, {dwarf::DW_OP_deref});
   FuncInfo.ArgDbgValues.push_back(
-      BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), IsIndirect,
+      BuildMI(MF, DL, TII->get(TargetOpcode::DBG_VALUE), false,
               *Op, Variable, Expr));
 
   return true;
@@ -6388,29 +6391,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DAG.setRoot(Res);
     return;
   }
-  case Intrinsic::objectsize: {
-    // If we don't know by now, we're never going to know.
-    ConstantInt *CI = dyn_cast<ConstantInt>(I.getArgOperand(1));
-
-    assert(CI && "Non-constant type in __builtin_object_size?");
-
-    SDValue Arg = getValue(I.getCalledValue());
-    EVT Ty = Arg.getValueType();
-
-    if (CI->isZero())
-      Res = DAG.getConstant(-1ULL, sdl, Ty);
-    else
-      Res = DAG.getConstant(0, sdl, Ty);
-
-    setValue(&I, Res);
-    return;
-  }
+  case Intrinsic::objectsize:
+    llvm_unreachable("llvm.objectsize.* should have been lowered already");
 
   case Intrinsic::is_constant:
-    // If this wasn't constant-folded away by now, then it's not a
-    // constant.
-    setValue(&I, DAG.getConstant(0, sdl, MVT::i1));
-    return;
+    llvm_unreachable("llvm.is.constant.* should have been lowered already");
 
   case Intrinsic::annotation:
   case Intrinsic::ptr_annotation:

@@ -10,6 +10,9 @@
 # RUN: llvm-readobj --file-header %p/Inputs/xcoff-basic-neg-sym-count.o | \
 # RUN: FileCheck --check-prefix=NEGSYMCOUNT %s
 
+# RUN: llvm-readobj --relocs --expand-relocs %p/Inputs/xcoff-basic.o | \
+# RUN: FileCheck --check-prefix=RELOCSEXP %s
+
 # FILEHEADER:     File: {{.*}}xcoff-basic.o
 # FILEHEADER-NEXT: Format: aixcoff-rs6000
 # FILEHEADER-NEXT: Arch: powerpc
@@ -81,3 +84,77 @@
 # xcoff-basic-neg-sym-count.o was stripped using the 'strip' utility, and
 # manually edited to have a negative symbol table entry count.
 
+# RELOCSEXP: File: {{.*}}xcoff-basic.o
+# RELOCSEXP-NEXT: Format: aixcoff-rs6000
+# RELOCSEXP-NEXT: Arch: powerpc
+# RELOCSEXP-NEXT: AddressSize: 32bit
+# RELOCSEXP-NEXT: Relocations [
+# RELOCSEXP-NEXT:  Section (index: 1) .text {
+# RELOCSEXP-NEXT:    Relocation {
+# RELOCSEXP-NEXT:      Virtual Address: 0x2
+# RELOCSEXP-NEXT:      Symbol: a (85)
+# RELOCSEXP-NEXT:      IsSigned: Yes
+# RELOCSEXP-NEXT:      FixupBitValue: 0
+# RELOCSEXP-NEXT:      Length: 16
+# RELOCSEXP-NEXT:      Type: R_TOC (0x3)
+# RELOCSEXP-NEXT:    }
+
+# RELOCSEXP:           Virtual Address: 0x90
+# RELOCSEXP-NEXT:      Symbol: .__tls_get_addr (118)
+# RELOCSEXP-NEXT:      IsSigned: Yes
+# RELOCSEXP-NEXT:      FixupBitValue: 0
+# RELOCSEXP-NEXT:      Length: 26
+# RELOCSEXP-NEXT:      Type: R_RBA (0x18)
+# RELOCSEXP-NEXT:    }
+# RELOCSEXP-NEXT:  }
+# RELOCSEXP-NEXT:  Section (index: 2) .data {
+# RELOCSEXP-NEXT:    Relocation {
+# RELOCSEXP-NEXT:      Virtual Address: 0x100
+# RELOCSEXP-NEXT:      Symbol: A (78)
+# RELOCSEXP-NEXT:      IsSigned: No
+# RELOCSEXP-NEXT:      FixupBitValue: 0
+# RELOCSEXP-NEXT:      Length: 32
+# RELOCSEXP-NEXT:      Type: R_POS (0x0)
+# RELOCSEXP-NEXT:    }
+
+# RELOCSEXP:           Virtual Address: 0x110
+# RELOCSEXP-NEXT:      Symbol: J (96)
+# RELOCSEXP-NEXT:      IsSigned: No
+# RELOCSEXP-NEXT:      FixupBitValue: 0
+# RELOCSEXP-NEXT:      Length: 32
+# RELOCSEXP-NEXT:      Type: R_POS (0x0)
+# RELOCSEXP-NEXT:    }
+
+# RELOCSEXP:          Virtual Address: 0x114
+# RELOCSEXP-NEXT:     Symbol: j (100)
+# RELOCSEXP-NEXT:     IsSigned: No
+# RELOCSEXP-NEXT:     FixupBitValue: 0
+# RELOCSEXP-NEXT:     Length: 32
+# RELOCSEXP-NEXT:     Type: R_TLS (0x20)
+# RELOCSEXP-NEXT:    }
+
+# RELOCSEXP:          Virtual Address: 0x124
+# RELOCSEXP-NEXT:     Symbol: d (111)
+# RELOCSEXP-NEXT:     IsSigned: No
+# RELOCSEXP-NEXT:     FixupBitValue: 0
+# RELOCSEXP-NEXT:     Length: 32
+# RELOCSEXP-NEXT:     Type: R_TLSM (0x24)
+# RELOCSEXP-NEXT:    }
+
+# RELOCSEXP:           Virtual Address: 0x128
+# RELOCSEXP-NEXT:      Symbol: (76)
+# RELOCSEXP-NEXT:      IsSigned: No
+# RELOCSEXP-NEXT:      FixupBitValue: 0
+# RELOCSEXP-NEXT:      Length: 32
+# RELOCSEXP-NEXT:      Type: R_POS (0x0)
+# RELOCSEXP-NEXT:    }
+
+# RELOCSEXP:           Virtual Address: 0x154
+# RELOCSEXP-NEXT:      Symbol: TOC (72)
+# RELOCSEXP-NEXT:      IsSigned: No
+# RELOCSEXP-NEXT:      FixupBitValue: 0
+# RELOCSEXP-NEXT:      Length: 32
+# RELOCSEXP-NEXT:      Type: R_POS (0x0)
+# RELOCSEXP-NEXT:    }
+# RELOCSEXP-NEXT:  }
+# RELOCSEXP-NEXT:]

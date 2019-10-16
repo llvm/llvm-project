@@ -3027,6 +3027,14 @@ provides options for vectorization, interleaving, predication, unrolling and
 distribution. Loop hints can be specified before any loop and will be ignored if
 the optimization is not safe to apply.
 
+There are loop hints that control transformations (e.g. vectorization, loop
+unrolling) and there are loop hints that set transformation options (e.g.
+``vectorize_width``, ``unroll_count``).  Pragmas setting transformation options
+imply the transformation is enabled, as if it was enabled via the corresponding
+transformation pragma (e.g. ``vectorize(enable)``). If the transformation is
+disabled  (e.g. ``vectorize(disable)``), that takes precedence over
+transformations option pragmas implying that transformation.
+
 Vectorization, Interleaving, and Predication
 --------------------------------------------
 
@@ -3437,14 +3445,14 @@ The section names can be specified as:
 
 .. code-block:: c++
 
-  #pragma clang section bss="myBSS" data="myData" rodata="myRodata" text="myText"
+  #pragma clang section bss="myBSS" data="myData" rodata="myRodata" relro="myRelro" text="myText"
 
 The section names can be reverted back to default name by supplying an empty
 string to the section kind, for example:
 
 .. code-block:: c++
 
-  #pragma clang section bss="" data="" text="" rodata=""
+  #pragma clang section bss="" data="" text="" rodata="" relro=""
 
 The ``#pragma clang section`` directive obeys the following rules:
 

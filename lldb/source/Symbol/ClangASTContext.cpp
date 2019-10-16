@@ -578,6 +578,7 @@ lldb::TypeSystemSP ClangASTContext::CreateInstance(lldb::LanguageType language,
           fixed_arch.GetTriple().getOS() == llvm::Triple::UnknownOS) {
         if (fixed_arch.GetTriple().getArch() == llvm::Triple::arm ||
             fixed_arch.GetTriple().getArch() == llvm::Triple::aarch64 ||
+            fixed_arch.GetTriple().getArch() == llvm::Triple::aarch64_32 ||
             fixed_arch.GetTriple().getArch() == llvm::Triple::thumb) {
           fixed_arch.GetTriple().setOS(llvm::Triple::IOS);
         } else {

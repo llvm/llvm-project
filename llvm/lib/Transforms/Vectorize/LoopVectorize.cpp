@@ -1190,14 +1190,16 @@ public:
 
   /// Returns true if the target machine supports masked store operation
   /// for the given \p DataType and kind of access to \p Ptr.
-  bool isLegalMaskedStore(Type *DataType, Value *Ptr) {
-    return Legal->isConsecutivePtr(Ptr) && TTI.isLegalMaskedStore(DataType);
+  bool isLegalMaskedStore(Type *DataType, Value *Ptr, unsigned Alignment) {
+    return Legal->isConsecutivePtr(Ptr) &&
+           TTI.isLegalMaskedStore(DataType, MaybeAlign(Alignment));
   }
 
   /// Returns true if the target machine supports masked load operation
   /// for the given \p DataType and kind of access to \p Ptr.
-  bool isLegalMaskedLoad(Type *DataType, Value *Ptr) {
-    return Legal->isConsecutivePtr(Ptr) && TTI.isLegalMaskedLoad(DataType);
+  bool isLegalMaskedLoad(Type *DataType, Value *Ptr, unsigned Alignment) {
+    return Legal->isConsecutivePtr(Ptr) &&
+           TTI.isLegalMaskedLoad(DataType, MaybeAlign(Alignment));
   }
 
   /// Returns true if the target machine supports masked scatter operation
@@ -4551,6 +4553,7 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I, unsigne
       return false;
     auto *Ptr = getLoadStorePointerOperand(I);
     auto *Ty = getMemInstValueType(I);
+    unsigned Alignment = getLoadStoreAlignment(I);
     // We have already decided how to vectorize this instruction, get that
     // result.
     if (VF > 1) {
@@ -4560,8 +4563,8 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I, unsigne
       return WideningDecision == CM_Scalarize;
     }
     return isa<LoadInst>(I) ?
-        !(isLegalMaskedLoad(Ty, Ptr)  || isLegalMaskedGather(Ty))
-      : !(isLegalMaskedStore(Ty, Ptr) || isLegalMaskedScatter(Ty));
+        !(isLegalMaskedLoad(Ty, Ptr, Alignment) || isLegalMaskedGather(Ty))
+      : !(isLegalMaskedStore(Ty, Ptr, Alignment) || isLegalMaskedScatter(Ty));
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
@@ -4604,8 +4607,9 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(Instruction *I,
          "Masked interleave-groups for predicated accesses are not enabled.");
 
   auto *Ty = getMemInstValueType(I);
-  return isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty)
-                          : TTI.isLegalMaskedStore(Ty);
+  unsigned Alignment = getLoadStoreAlignment(I);
+  return isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty, MaybeAlign(Alignment))
+                          : TTI.isLegalMaskedStore(Ty, MaybeAlign(Alignment));
 }
 
 bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(Instruction *I,

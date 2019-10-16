@@ -227,7 +227,7 @@ define amdgpu_kernel void @udiv_i16(i16 addrspace(1)* %out, i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = fdiv fast float 1.000000e+00, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast float [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.trunc.f32(float [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = fsub fast float -0.000000e+00, [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fneg fast float [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP8]], float [[TMP4]], float [[TMP3]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = fptoui float [[TMP7]] to i32
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast float @llvm.fabs.f32(float [[TMP9]])
@@ -254,7 +254,7 @@ define amdgpu_kernel void @urem_i16(i16 addrspace(1)* %out, i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = fdiv fast float 1.000000e+00, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast float [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.trunc.f32(float [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = fsub fast float -0.000000e+00, [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fneg fast float [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP8]], float [[TMP4]], float [[TMP3]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = fptoui float [[TMP7]] to i32
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast float @llvm.fabs.f32(float [[TMP9]])
@@ -286,7 +286,7 @@ define amdgpu_kernel void @sdiv_i16(i16 addrspace(1)* %out, i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = fdiv fast float 1.000000e+00, [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.trunc.f32(float [[TMP9]])
-; CHECK-NEXT:    [[TMP11:%.*]] = fsub fast float -0.000000e+00, [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fneg fast float [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP11]], float [[TMP7]], float [[TMP6]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = fptosi float [[TMP10]] to i32
 ; CHECK-NEXT:    [[TMP14:%.*]] = call fast float @llvm.fabs.f32(float [[TMP12]])
@@ -317,7 +317,7 @@ define amdgpu_kernel void @srem_i16(i16 addrspace(1)* %out, i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = fdiv fast float 1.000000e+00, [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.trunc.f32(float [[TMP9]])
-; CHECK-NEXT:    [[TMP11:%.*]] = fsub fast float -0.000000e+00, [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fneg fast float [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP11]], float [[TMP7]], float [[TMP6]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = fptosi float [[TMP10]] to i32
 ; CHECK-NEXT:    [[TMP14:%.*]] = call fast float @llvm.fabs.f32(float [[TMP12]])
@@ -347,7 +347,7 @@ define amdgpu_kernel void @udiv_i8(i8 addrspace(1)* %out, i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = fdiv fast float 1.000000e+00, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast float [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.trunc.f32(float [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = fsub fast float -0.000000e+00, [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fneg fast float [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP8]], float [[TMP4]], float [[TMP3]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = fptoui float [[TMP7]] to i32
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast float @llvm.fabs.f32(float [[TMP9]])
@@ -374,7 +374,7 @@ define amdgpu_kernel void @urem_i8(i8 addrspace(1)* %out, i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = fdiv fast float 1.000000e+00, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast float [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.trunc.f32(float [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = fsub fast float -0.000000e+00, [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fneg fast float [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP8]], float [[TMP4]], float [[TMP3]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = fptoui float [[TMP7]] to i32
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast float @llvm.fabs.f32(float [[TMP9]])
@@ -406,7 +406,7 @@ define amdgpu_kernel void @sdiv_i8(i8 addrspace(1)* %out, i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = fdiv fast float 1.000000e+00, [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.trunc.f32(float [[TMP9]])
-; CHECK-NEXT:    [[TMP11:%.*]] = fsub fast float -0.000000e+00, [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fneg fast float [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP11]], float [[TMP7]], float [[TMP6]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = fptosi float [[TMP10]] to i32
 ; CHECK-NEXT:    [[TMP14:%.*]] = call fast float @llvm.fabs.f32(float [[TMP12]])
@@ -437,7 +437,7 @@ define amdgpu_kernel void @srem_i8(i8 addrspace(1)* %out, i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = fdiv fast float 1.000000e+00, [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.trunc.f32(float [[TMP9]])
-; CHECK-NEXT:    [[TMP11:%.*]] = fsub fast float -0.000000e+00, [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fneg fast float [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP11]], float [[TMP7]], float [[TMP6]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = fptosi float [[TMP10]] to i32
 ; CHECK-NEXT:    [[TMP14:%.*]] = call fast float @llvm.fabs.f32(float [[TMP12]])
@@ -1265,7 +1265,7 @@ define amdgpu_kernel void @udiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv fast float 1.000000e+00, [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast float [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.trunc.f32(float [[TMP8]])
-; CHECK-NEXT:    [[TMP10:%.*]] = fsub fast float -0.000000e+00, [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fneg fast float [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP10]], float [[TMP6]], float [[TMP5]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = fptoui float [[TMP9]] to i32
 ; CHECK-NEXT:    [[TMP13:%.*]] = call fast float @llvm.fabs.f32(float [[TMP11]])
@@ -1285,7 +1285,7 @@ define amdgpu_kernel void @udiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP27:%.*]] = fdiv fast float 1.000000e+00, [[TMP26]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = fmul fast float [[TMP25]], [[TMP27]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = call fast float @llvm.trunc.f32(float [[TMP28]])
-; CHECK-NEXT:    [[TMP30:%.*]] = fsub fast float -0.000000e+00, [[TMP29]]
+; CHECK-NEXT:    [[TMP30:%.*]] = fneg fast float [[TMP29]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP30]], float [[TMP26]], float [[TMP25]])
 ; CHECK-NEXT:    [[TMP32:%.*]] = fptoui float [[TMP29]] to i32
 ; CHECK-NEXT:    [[TMP33:%.*]] = call fast float @llvm.fabs.f32(float [[TMP31]])
@@ -1305,7 +1305,7 @@ define amdgpu_kernel void @udiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP47:%.*]] = fdiv fast float 1.000000e+00, [[TMP46]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = fmul fast float [[TMP45]], [[TMP47]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = call fast float @llvm.trunc.f32(float [[TMP48]])
-; CHECK-NEXT:    [[TMP50:%.*]] = fsub fast float -0.000000e+00, [[TMP49]]
+; CHECK-NEXT:    [[TMP50:%.*]] = fneg fast float [[TMP49]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP50]], float [[TMP46]], float [[TMP45]])
 ; CHECK-NEXT:    [[TMP52:%.*]] = fptoui float [[TMP49]] to i32
 ; CHECK-NEXT:    [[TMP53:%.*]] = call fast float @llvm.fabs.f32(float [[TMP51]])
@@ -1325,7 +1325,7 @@ define amdgpu_kernel void @udiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP67:%.*]] = fdiv fast float 1.000000e+00, [[TMP66]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = fmul fast float [[TMP65]], [[TMP67]]
 ; CHECK-NEXT:    [[TMP69:%.*]] = call fast float @llvm.trunc.f32(float [[TMP68]])
-; CHECK-NEXT:    [[TMP70:%.*]] = fsub fast float -0.000000e+00, [[TMP69]]
+; CHECK-NEXT:    [[TMP70:%.*]] = fneg fast float [[TMP69]]
 ; CHECK-NEXT:    [[TMP71:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP70]], float [[TMP66]], float [[TMP65]])
 ; CHECK-NEXT:    [[TMP72:%.*]] = fptoui float [[TMP69]] to i32
 ; CHECK-NEXT:    [[TMP73:%.*]] = call fast float @llvm.fabs.f32(float [[TMP71]])
@@ -1355,7 +1355,7 @@ define amdgpu_kernel void @urem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv fast float 1.000000e+00, [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast float [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.trunc.f32(float [[TMP8]])
-; CHECK-NEXT:    [[TMP10:%.*]] = fsub fast float -0.000000e+00, [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fneg fast float [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP10]], float [[TMP6]], float [[TMP5]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = fptoui float [[TMP9]] to i32
 ; CHECK-NEXT:    [[TMP13:%.*]] = call fast float @llvm.fabs.f32(float [[TMP11]])
@@ -1377,7 +1377,7 @@ define amdgpu_kernel void @urem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP29:%.*]] = fdiv fast float 1.000000e+00, [[TMP28]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = fmul fast float [[TMP27]], [[TMP29]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = call fast float @llvm.trunc.f32(float [[TMP30]])
-; CHECK-NEXT:    [[TMP32:%.*]] = fsub fast float -0.000000e+00, [[TMP31]]
+; CHECK-NEXT:    [[TMP32:%.*]] = fneg fast float [[TMP31]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP32]], float [[TMP28]], float [[TMP27]])
 ; CHECK-NEXT:    [[TMP34:%.*]] = fptoui float [[TMP31]] to i32
 ; CHECK-NEXT:    [[TMP35:%.*]] = call fast float @llvm.fabs.f32(float [[TMP33]])
@@ -1399,7 +1399,7 @@ define amdgpu_kernel void @urem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP51:%.*]] = fdiv fast float 1.000000e+00, [[TMP50]]
 ; CHECK-NEXT:    [[TMP52:%.*]] = fmul fast float [[TMP49]], [[TMP51]]
 ; CHECK-NEXT:    [[TMP53:%.*]] = call fast float @llvm.trunc.f32(float [[TMP52]])
-; CHECK-NEXT:    [[TMP54:%.*]] = fsub fast float -0.000000e+00, [[TMP53]]
+; CHECK-NEXT:    [[TMP54:%.*]] = fneg fast float [[TMP53]]
 ; CHECK-NEXT:    [[TMP55:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP54]], float [[TMP50]], float [[TMP49]])
 ; CHECK-NEXT:    [[TMP56:%.*]] = fptoui float [[TMP53]] to i32
 ; CHECK-NEXT:    [[TMP57:%.*]] = call fast float @llvm.fabs.f32(float [[TMP55]])
@@ -1421,7 +1421,7 @@ define amdgpu_kernel void @urem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP73:%.*]] = fdiv fast float 1.000000e+00, [[TMP72]]
 ; CHECK-NEXT:    [[TMP74:%.*]] = fmul fast float [[TMP71]], [[TMP73]]
 ; CHECK-NEXT:    [[TMP75:%.*]] = call fast float @llvm.trunc.f32(float [[TMP74]])
-; CHECK-NEXT:    [[TMP76:%.*]] = fsub fast float -0.000000e+00, [[TMP75]]
+; CHECK-NEXT:    [[TMP76:%.*]] = fneg fast float [[TMP75]]
 ; CHECK-NEXT:    [[TMP77:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP76]], float [[TMP72]], float [[TMP71]])
 ; CHECK-NEXT:    [[TMP78:%.*]] = fptoui float [[TMP75]] to i32
 ; CHECK-NEXT:    [[TMP79:%.*]] = call fast float @llvm.fabs.f32(float [[TMP77]])
@@ -1456,7 +1456,7 @@ define amdgpu_kernel void @sdiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP10:%.*]] = fdiv fast float 1.000000e+00, [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast float [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.trunc.f32(float [[TMP11]])
-; CHECK-NEXT:    [[TMP13:%.*]] = fsub fast float -0.000000e+00, [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fneg fast float [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP13]], float [[TMP9]], float [[TMP8]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = fptosi float [[TMP12]] to i32
 ; CHECK-NEXT:    [[TMP16:%.*]] = call fast float @llvm.fabs.f32(float [[TMP14]])
@@ -1480,7 +1480,7 @@ define amdgpu_kernel void @sdiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP34:%.*]] = fdiv fast float 1.000000e+00, [[TMP33]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = fmul fast float [[TMP32]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = call fast float @llvm.trunc.f32(float [[TMP35]])
-; CHECK-NEXT:    [[TMP37:%.*]] = fsub fast float -0.000000e+00, [[TMP36]]
+; CHECK-NEXT:    [[TMP37:%.*]] = fneg fast float [[TMP36]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP37]], float [[TMP33]], float [[TMP32]])
 ; CHECK-NEXT:    [[TMP39:%.*]] = fptosi float [[TMP36]] to i32
 ; CHECK-NEXT:    [[TMP40:%.*]] = call fast float @llvm.fabs.f32(float [[TMP38]])
@@ -1504,7 +1504,7 @@ define amdgpu_kernel void @sdiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP58:%.*]] = fdiv fast float 1.000000e+00, [[TMP57]]
 ; CHECK-NEXT:    [[TMP59:%.*]] = fmul fast float [[TMP56]], [[TMP58]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = call fast float @llvm.trunc.f32(float [[TMP59]])
-; CHECK-NEXT:    [[TMP61:%.*]] = fsub fast float -0.000000e+00, [[TMP60]]
+; CHECK-NEXT:    [[TMP61:%.*]] = fneg fast float [[TMP60]]
 ; CHECK-NEXT:    [[TMP62:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP61]], float [[TMP57]], float [[TMP56]])
 ; CHECK-NEXT:    [[TMP63:%.*]] = fptosi float [[TMP60]] to i32
 ; CHECK-NEXT:    [[TMP64:%.*]] = call fast float @llvm.fabs.f32(float [[TMP62]])
@@ -1528,7 +1528,7 @@ define amdgpu_kernel void @sdiv_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP82:%.*]] = fdiv fast float 1.000000e+00, [[TMP81]]
 ; CHECK-NEXT:    [[TMP83:%.*]] = fmul fast float [[TMP80]], [[TMP82]]
 ; CHECK-NEXT:    [[TMP84:%.*]] = call fast float @llvm.trunc.f32(float [[TMP83]])
-; CHECK-NEXT:    [[TMP85:%.*]] = fsub fast float -0.000000e+00, [[TMP84]]
+; CHECK-NEXT:    [[TMP85:%.*]] = fneg fast float [[TMP84]]
 ; CHECK-NEXT:    [[TMP86:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP85]], float [[TMP81]], float [[TMP80]])
 ; CHECK-NEXT:    [[TMP87:%.*]] = fptosi float [[TMP84]] to i32
 ; CHECK-NEXT:    [[TMP88:%.*]] = call fast float @llvm.fabs.f32(float [[TMP86]])
@@ -1562,7 +1562,7 @@ define amdgpu_kernel void @srem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP10:%.*]] = fdiv fast float 1.000000e+00, [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast float [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.trunc.f32(float [[TMP11]])
-; CHECK-NEXT:    [[TMP13:%.*]] = fsub fast float -0.000000e+00, [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fneg fast float [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP13]], float [[TMP9]], float [[TMP8]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = fptosi float [[TMP12]] to i32
 ; CHECK-NEXT:    [[TMP16:%.*]] = call fast float @llvm.fabs.f32(float [[TMP14]])
@@ -1588,7 +1588,7 @@ define amdgpu_kernel void @srem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP36:%.*]] = fdiv fast float 1.000000e+00, [[TMP35]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = fmul fast float [[TMP34]], [[TMP36]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = call fast float @llvm.trunc.f32(float [[TMP37]])
-; CHECK-NEXT:    [[TMP39:%.*]] = fsub fast float -0.000000e+00, [[TMP38]]
+; CHECK-NEXT:    [[TMP39:%.*]] = fneg fast float [[TMP38]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP39]], float [[TMP35]], float [[TMP34]])
 ; CHECK-NEXT:    [[TMP41:%.*]] = fptosi float [[TMP38]] to i32
 ; CHECK-NEXT:    [[TMP42:%.*]] = call fast float @llvm.fabs.f32(float [[TMP40]])
@@ -1614,7 +1614,7 @@ define amdgpu_kernel void @srem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP62:%.*]] = fdiv fast float 1.000000e+00, [[TMP61]]
 ; CHECK-NEXT:    [[TMP63:%.*]] = fmul fast float [[TMP60]], [[TMP62]]
 ; CHECK-NEXT:    [[TMP64:%.*]] = call fast float @llvm.trunc.f32(float [[TMP63]])
-; CHECK-NEXT:    [[TMP65:%.*]] = fsub fast float -0.000000e+00, [[TMP64]]
+; CHECK-NEXT:    [[TMP65:%.*]] = fneg fast float [[TMP64]]
 ; CHECK-NEXT:    [[TMP66:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP65]], float [[TMP61]], float [[TMP60]])
 ; CHECK-NEXT:    [[TMP67:%.*]] = fptosi float [[TMP64]] to i32
 ; CHECK-NEXT:    [[TMP68:%.*]] = call fast float @llvm.fabs.f32(float [[TMP66]])
@@ -1640,7 +1640,7 @@ define amdgpu_kernel void @srem_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %x
 ; CHECK-NEXT:    [[TMP88:%.*]] = fdiv fast float 1.000000e+00, [[TMP87]]
 ; CHECK-NEXT:    [[TMP89:%.*]] = fmul fast float [[TMP86]], [[TMP88]]
 ; CHECK-NEXT:    [[TMP90:%.*]] = call fast float @llvm.trunc.f32(float [[TMP89]])
-; CHECK-NEXT:    [[TMP91:%.*]] = fsub fast float -0.000000e+00, [[TMP90]]
+; CHECK-NEXT:    [[TMP91:%.*]] = fneg fast float [[TMP90]]
 ; CHECK-NEXT:    [[TMP92:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP91]], float [[TMP87]], float [[TMP86]])
 ; CHECK-NEXT:    [[TMP93:%.*]] = fptosi float [[TMP90]] to i32
 ; CHECK-NEXT:    [[TMP94:%.*]] = call fast float @llvm.fabs.f32(float [[TMP92]])
@@ -1671,7 +1671,7 @@ define amdgpu_kernel void @udiv_i3(i3 addrspace(1)* %out, i3 %x, i3 %y) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = fdiv fast float 1.000000e+00, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast float [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.trunc.f32(float [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = fsub fast float -0.000000e+00, [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fneg fast float [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP8]], float [[TMP4]], float [[TMP3]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = fptoui float [[TMP7]] to i32
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast float @llvm.fabs.f32(float [[TMP9]])
@@ -1698,7 +1698,7 @@ define amdgpu_kernel void @urem_i3(i3 addrspace(1)* %out, i3 %x, i3 %y) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = fdiv fast float 1.000000e+00, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast float [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.trunc.f32(float [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = fsub fast float -0.000000e+00, [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fneg fast float [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP8]], float [[TMP4]], float [[TMP3]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = fptoui float [[TMP7]] to i32
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast float @llvm.fabs.f32(float [[TMP9]])
@@ -1730,7 +1730,7 @@ define amdgpu_kernel void @sdiv_i3(i3 addrspace(1)* %out, i3 %x, i3 %y) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = fdiv fast float 1.000000e+00, [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.trunc.f32(float [[TMP9]])
-; CHECK-NEXT:    [[TMP11:%.*]] = fsub fast float -0.000000e+00, [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fneg fast float [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP11]], float [[TMP7]], float [[TMP6]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = fptosi float [[TMP10]] to i32
 ; CHECK-NEXT:    [[TMP14:%.*]] = call fast float @llvm.fabs.f32(float [[TMP12]])
@@ -1761,7 +1761,7 @@ define amdgpu_kernel void @srem_i3(i3 addrspace(1)* %out, i3 %x, i3 %y) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = fdiv fast float 1.000000e+00, [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.trunc.f32(float [[TMP9]])
-; CHECK-NEXT:    [[TMP11:%.*]] = fsub fast float -0.000000e+00, [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fneg fast float [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP11]], float [[TMP7]], float [[TMP6]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = fptosi float [[TMP10]] to i32
 ; CHECK-NEXT:    [[TMP14:%.*]] = call fast float @llvm.fabs.f32(float [[TMP12]])
@@ -1793,7 +1793,7 @@ define amdgpu_kernel void @udiv_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv fast float 1.000000e+00, [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast float [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.trunc.f32(float [[TMP8]])
-; CHECK-NEXT:    [[TMP10:%.*]] = fsub fast float -0.000000e+00, [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fneg fast float [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP10]], float [[TMP6]], float [[TMP5]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = fptoui float [[TMP9]] to i32
 ; CHECK-NEXT:    [[TMP13:%.*]] = call fast float @llvm.fabs.f32(float [[TMP11]])
@@ -1813,7 +1813,7 @@ define amdgpu_kernel void @udiv_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; CHECK-NEXT:    [[TMP27:%.*]] = fdiv fast float 1.000000e+00, [[TMP26]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = fmul fast float [[TMP25]], [[TMP27]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = call fast float @llvm.trunc.f32(float [[TMP28]])
-; CHECK-NEXT:    [[TMP30:%.*]] = fsub fast float -0.000000e+00, [[TMP29]]
+; CHECK-NEXT:    [[TMP30:%.*]] = fneg fast float [[TMP29]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP30]], float [[TMP26]], float [[TMP25]])
 ; CHECK-NEXT:    [[TMP32:%.*]] = fptoui float [[TMP29]] to i32
 ; CHECK-NEXT:    [[TMP33:%.*]] = call fast float @llvm.fabs.f32(float [[TMP31]])
@@ -1833,7 +1833,7 @@ define amdgpu_kernel void @udiv_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; CHECK-NEXT:    [[TMP47:%.*]] = fdiv fast float 1.000000e+00, [[TMP46]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = fmul fast float [[TMP45]], [[TMP47]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = call fast float @llvm.trunc.f32(float [[TMP48]])
-; CHECK-NEXT:    [[TMP50:%.*]] = fsub fast float -0.000000e+00, [[TMP49]]
+; CHECK-NEXT:    [[TMP50:%.*]] = fneg fast float [[TMP49]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP50]], float [[TMP46]], float [[TMP45]])
 ; CHECK-NEXT:    [[TMP52:%.*]] = fptoui float [[TMP49]] to i32
 ; CHECK-NEXT:    [[TMP53:%.*]] = call fast float @llvm.fabs.f32(float [[TMP51]])
@@ -1863,7 +1863,7 @@ define amdgpu_kernel void @urem_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv fast float 1.000000e+00, [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast float [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.trunc.f32(float [[TMP8]])
-; CHECK-NEXT:    [[TMP10:%.*]] = fsub fast float -0.000000e+00, [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fneg fast float [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP10]], float [[TMP6]], float [[TMP5]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = fptoui float [[TMP9]] to i32
 ; CHECK-NEXT:    [[TMP13:%.*]] = call fast float @llvm.fabs.f32(float [[TMP11]])
@@ -1885,7 +1885,7 @@ define amdgpu_kernel void @urem_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; CHECK-NEXT:    [[TMP29:%.*]] = fdiv fast float 1.000000e+00, [[TMP28]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = fmul fast float [[TMP27]], [[TMP29]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = call fast float @llvm.trunc.f32(float [[TMP30]])
-; CHECK-NEXT:    [[TMP32:%.*]] = fsub fast float -0.000000e+00, [[TMP31]]
+; CHECK-NEXT:    [[TMP32:%.*]] = fneg fast float [[TMP31]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP32]], float [[TMP28]], float [[TMP27]])
 ; CHECK-NEXT:    [[TMP34:%.*]] = fptoui float [[TMP31]] to i32
 ; CHECK-NEXT:    [[TMP35:%.*]] = call fast float @llvm.fabs.f32(float [[TMP33]])
@@ -1907,7 +1907,7 @@ define amdgpu_kernel void @urem_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; CHECK-NEXT:    [[TMP51:%.*]] = fdiv fast float 1.000000e+00, [[TMP50]]
 ; CHECK-NEXT:    [[TMP52:%.*]] = fmul fast float [[TMP49]], [[TMP51]]
 ; CHECK-NEXT:    [[TMP53:%.*]] = call fast float @llvm.trunc.f32(float [[TMP52]])
-; CHECK-NEXT:    [[TMP54:%.*]] = fsub fast float -0.000000e+00, [[TMP53]]
+; CHECK-NEXT:    [[TMP54:%.*]] = fneg fast float [[TMP53]]
 ; CHECK-NEXT:    [[TMP55:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP54]], float [[TMP50]], float [[TMP49]])
 ; CHECK-NEXT:    [[TMP56:%.*]] = fptoui float [[TMP53]] to i32
 ; CHECK-NEXT:    [[TMP57:%.*]] = call fast float @llvm.fabs.f32(float [[TMP55]])
@@ -1942,7 +1942,7 @@ define amdgpu_kernel void @sdiv_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; CHECK-NEXT:    [[TMP10:%.*]] = fdiv fast float 1.000000e+00, [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast float [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.trunc.f32(float [[TMP11]])
-; CHECK-NEXT:    [[TMP13:%.*]] = fsub fast float -0.000000e+00, [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fneg fast float [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP13]], float [[TMP9]], float [[TMP8]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = fptosi float [[TMP12]] to i32
 ; CHECK-NEXT:    [[TMP16:%.*]] = call fast float @llvm.fabs.f32(float [[TMP14]])
@@ -1966,7 +1966,7 @@ define amdgpu_kernel void @sdiv_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; CHECK-NEXT:    [[TMP34:%.*]] = fdiv fast float 1.000000e+00, [[TMP33]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = fmul fast float [[TMP32]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = call fast float @llvm.trunc.f32(float [[TMP35]])
-; CHECK-NEXT:    [[TMP37:%.*]] = fsub fast float -0.000000e+00, [[TMP36]]
+; CHECK-NEXT:    [[TMP37:%.*]] = fneg fast float [[TMP36]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP37]], float [[TMP33]], float [[TMP32]])
 ; CHECK-NEXT:    [[TMP39:%.*]] = fptosi float [[TMP36]] to i32
 ; CHECK-NEXT:    [[TMP40:%.*]] = call fast float @llvm.fabs.f32(float [[TMP38]])
@@ -1990,7 +1990,7 @@ define amdgpu_kernel void @sdiv_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; CHECK-NEXT:    [[TMP58:%.*]] = fdiv fast float 1.000000e+00, [[TMP57]]
 ; CHECK-NEXT:    [[TMP59:%.*]] = fmul fast float [[TMP56]], [[TMP58]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = call fast float @llvm.trunc.f32(float [[TMP59]])
-; CHECK-NEXT:    [[TMP61:%.*]] = fsub fast float -0.000000e+00, [[TMP60]]
+; CHECK-NEXT:    [[TMP61:%.*]] = fneg fast float [[TMP60]]
 ; CHECK-NEXT:    [[TMP62:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP61]], float [[TMP57]], float [[TMP56]])
 ; CHECK-NEXT:    [[TMP63:%.*]] = fptosi float [[TMP60]] to i32
 ; CHECK-NEXT:    [[TMP64:%.*]] = call fast float @llvm.fabs.f32(float [[TMP62]])
@@ -2024,7 +2024,7 @@ define amdgpu_kernel void @srem_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; CHECK-NEXT:    [[TMP10:%.*]] = fdiv fast float 1.000000e+00, [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast float [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.trunc.f32(float [[TMP11]])
-; CHECK-NEXT:    [[TMP13:%.*]] = fsub fast float -0.000000e+00, [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fneg fast float [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP13]], float [[TMP9]], float [[TMP8]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = fptosi float [[TMP12]] to i32
 ; CHECK-NEXT:    [[TMP16:%.*]] = call fast float @llvm.fabs.f32(float [[TMP14]])
@@ -2050,7 +2050,7 @@ define amdgpu_kernel void @srem_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; CHECK-NEXT:    [[TMP36:%.*]] = fdiv fast float 1.000000e+00, [[TMP35]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = fmul fast float [[TMP34]], [[TMP36]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = call fast float @llvm.trunc.f32(float [[TMP37]])
-; CHECK-NEXT:    [[TMP39:%.*]] = fsub fast float -0.000000e+00, [[TMP38]]
+; CHECK-NEXT:    [[TMP39:%.*]] = fneg fast float [[TMP38]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP39]], float [[TMP35]], float [[TMP34]])
 ; CHECK-NEXT:    [[TMP41:%.*]] = fptosi float [[TMP38]] to i32
 ; CHECK-NEXT:    [[TMP42:%.*]] = call fast float @llvm.fabs.f32(float [[TMP40]])
@@ -2076,7 +2076,7 @@ define amdgpu_kernel void @srem_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %x
 ; CHECK-NEXT:    [[TMP62:%.*]] = fdiv fast float 1.000000e+00, [[TMP61]]
 ; CHECK-NEXT:    [[TMP63:%.*]] = fmul fast float [[TMP60]], [[TMP62]]
 ; CHECK-NEXT:    [[TMP64:%.*]] = call fast float @llvm.trunc.f32(float [[TMP63]])
-; CHECK-NEXT:    [[TMP65:%.*]] = fsub fast float -0.000000e+00, [[TMP64]]
+; CHECK-NEXT:    [[TMP65:%.*]] = fneg fast float [[TMP64]]
 ; CHECK-NEXT:    [[TMP66:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP65]], float [[TMP61]], float [[TMP60]])
 ; CHECK-NEXT:    [[TMP67:%.*]] = fptosi float [[TMP64]] to i32
 ; CHECK-NEXT:    [[TMP68:%.*]] = call fast float @llvm.fabs.f32(float [[TMP66]])
@@ -2109,7 +2109,7 @@ define amdgpu_kernel void @udiv_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv fast float 1.000000e+00, [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast float [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.trunc.f32(float [[TMP8]])
-; CHECK-NEXT:    [[TMP10:%.*]] = fsub fast float -0.000000e+00, [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fneg fast float [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP10]], float [[TMP6]], float [[TMP5]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = fptoui float [[TMP9]] to i32
 ; CHECK-NEXT:    [[TMP13:%.*]] = call fast float @llvm.fabs.f32(float [[TMP11]])
@@ -2129,7 +2129,7 @@ define amdgpu_kernel void @udiv_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; CHECK-NEXT:    [[TMP27:%.*]] = fdiv fast float 1.000000e+00, [[TMP26]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = fmul fast float [[TMP25]], [[TMP27]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = call fast float @llvm.trunc.f32(float [[TMP28]])
-; CHECK-NEXT:    [[TMP30:%.*]] = fsub fast float -0.000000e+00, [[TMP29]]
+; CHECK-NEXT:    [[TMP30:%.*]] = fneg fast float [[TMP29]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP30]], float [[TMP26]], float [[TMP25]])
 ; CHECK-NEXT:    [[TMP32:%.*]] = fptoui float [[TMP29]] to i32
 ; CHECK-NEXT:    [[TMP33:%.*]] = call fast float @llvm.fabs.f32(float [[TMP31]])
@@ -2149,7 +2149,7 @@ define amdgpu_kernel void @udiv_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; CHECK-NEXT:    [[TMP47:%.*]] = fdiv fast float 1.000000e+00, [[TMP46]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = fmul fast float [[TMP45]], [[TMP47]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = call fast float @llvm.trunc.f32(float [[TMP48]])
-; CHECK-NEXT:    [[TMP50:%.*]] = fsub fast float -0.000000e+00, [[TMP49]]
+; CHECK-NEXT:    [[TMP50:%.*]] = fneg fast float [[TMP49]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP50]], float [[TMP46]], float [[TMP45]])
 ; CHECK-NEXT:    [[TMP52:%.*]] = fptoui float [[TMP49]] to i32
 ; CHECK-NEXT:    [[TMP53:%.*]] = call fast float @llvm.fabs.f32(float [[TMP51]])
@@ -2179,7 +2179,7 @@ define amdgpu_kernel void @urem_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv fast float 1.000000e+00, [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast float [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.trunc.f32(float [[TMP8]])
-; CHECK-NEXT:    [[TMP10:%.*]] = fsub fast float -0.000000e+00, [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fneg fast float [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP10]], float [[TMP6]], float [[TMP5]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = fptoui float [[TMP9]] to i32
 ; CHECK-NEXT:    [[TMP13:%.*]] = call fast float @llvm.fabs.f32(float [[TMP11]])
@@ -2201,7 +2201,7 @@ define amdgpu_kernel void @urem_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; CHECK-NEXT:    [[TMP29:%.*]] = fdiv fast float 1.000000e+00, [[TMP28]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = fmul fast float [[TMP27]], [[TMP29]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = call fast float @llvm.trunc.f32(float [[TMP30]])
-; CHECK-NEXT:    [[TMP32:%.*]] = fsub fast float -0.000000e+00, [[TMP31]]
+; CHECK-NEXT:    [[TMP32:%.*]] = fneg fast float [[TMP31]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP32]], float [[TMP28]], float [[TMP27]])
 ; CHECK-NEXT:    [[TMP34:%.*]] = fptoui float [[TMP31]] to i32
 ; CHECK-NEXT:    [[TMP35:%.*]] = call fast float @llvm.fabs.f32(float [[TMP33]])
@@ -2223,7 +2223,7 @@ define amdgpu_kernel void @urem_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; CHECK-NEXT:    [[TMP51:%.*]] = fdiv fast float 1.000000e+00, [[TMP50]]
 ; CHECK-NEXT:    [[TMP52:%.*]] = fmul fast float [[TMP49]], [[TMP51]]
 ; CHECK-NEXT:    [[TMP53:%.*]] = call fast float @llvm.trunc.f32(float [[TMP52]])
-; CHECK-NEXT:    [[TMP54:%.*]] = fsub fast float -0.000000e+00, [[TMP53]]
+; CHECK-NEXT:    [[TMP54:%.*]] = fneg fast float [[TMP53]]
 ; CHECK-NEXT:    [[TMP55:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP54]], float [[TMP50]], float [[TMP49]])
 ; CHECK-NEXT:    [[TMP56:%.*]] = fptoui float [[TMP53]] to i32
 ; CHECK-NEXT:    [[TMP57:%.*]] = call fast float @llvm.fabs.f32(float [[TMP55]])
@@ -2258,7 +2258,7 @@ define amdgpu_kernel void @sdiv_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; CHECK-NEXT:    [[TMP10:%.*]] = fdiv fast float 1.000000e+00, [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast float [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.trunc.f32(float [[TMP11]])
-; CHECK-NEXT:    [[TMP13:%.*]] = fsub fast float -0.000000e+00, [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fneg fast float [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP13]], float [[TMP9]], float [[TMP8]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = fptosi float [[TMP12]] to i32
 ; CHECK-NEXT:    [[TMP16:%.*]] = call fast float @llvm.fabs.f32(float [[TMP14]])
@@ -2282,7 +2282,7 @@ define amdgpu_kernel void @sdiv_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; CHECK-NEXT:    [[TMP34:%.*]] = fdiv fast float 1.000000e+00, [[TMP33]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = fmul fast float [[TMP32]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = call fast float @llvm.trunc.f32(float [[TMP35]])
-; CHECK-NEXT:    [[TMP37:%.*]] = fsub fast float -0.000000e+00, [[TMP36]]
+; CHECK-NEXT:    [[TMP37:%.*]] = fneg fast float [[TMP36]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP37]], float [[TMP33]], float [[TMP32]])
 ; CHECK-NEXT:    [[TMP39:%.*]] = fptosi float [[TMP36]] to i32
 ; CHECK-NEXT:    [[TMP40:%.*]] = call fast float @llvm.fabs.f32(float [[TMP38]])
@@ -2306,7 +2306,7 @@ define amdgpu_kernel void @sdiv_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; CHECK-NEXT:    [[TMP58:%.*]] = fdiv fast float 1.000000e+00, [[TMP57]]
 ; CHECK-NEXT:    [[TMP59:%.*]] = fmul fast float [[TMP56]], [[TMP58]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = call fast float @llvm.trunc.f32(float [[TMP59]])
-; CHECK-NEXT:    [[TMP61:%.*]] = fsub fast float -0.000000e+00, [[TMP60]]
+; CHECK-NEXT:    [[TMP61:%.*]] = fneg fast float [[TMP60]]
 ; CHECK-NEXT:    [[TMP62:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP61]], float [[TMP57]], float [[TMP56]])
 ; CHECK-NEXT:    [[TMP63:%.*]] = fptosi float [[TMP60]] to i32
 ; CHECK-NEXT:    [[TMP64:%.*]] = call fast float @llvm.fabs.f32(float [[TMP62]])
@@ -2340,7 +2340,7 @@ define amdgpu_kernel void @srem_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; CHECK-NEXT:    [[TMP10:%.*]] = fdiv fast float 1.000000e+00, [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast float [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.trunc.f32(float [[TMP11]])
-; CHECK-NEXT:    [[TMP13:%.*]] = fsub fast float -0.000000e+00, [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fneg fast float [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP13]], float [[TMP9]], float [[TMP8]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = fptosi float [[TMP12]] to i32
 ; CHECK-NEXT:    [[TMP16:%.*]] = call fast float @llvm.fabs.f32(float [[TMP14]])
@@ -2366,7 +2366,7 @@ define amdgpu_kernel void @srem_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; CHECK-NEXT:    [[TMP36:%.*]] = fdiv fast float 1.000000e+00, [[TMP35]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = fmul fast float [[TMP34]], [[TMP36]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = call fast float @llvm.trunc.f32(float [[TMP37]])
-; CHECK-NEXT:    [[TMP39:%.*]] = fsub fast float -0.000000e+00, [[TMP38]]
+; CHECK-NEXT:    [[TMP39:%.*]] = fneg fast float [[TMP38]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP39]], float [[TMP35]], float [[TMP34]])
 ; CHECK-NEXT:    [[TMP41:%.*]] = fptosi float [[TMP38]] to i32
 ; CHECK-NEXT:    [[TMP42:%.*]] = call fast float @llvm.fabs.f32(float [[TMP40]])
@@ -2392,7 +2392,7 @@ define amdgpu_kernel void @srem_v3i15(<3 x i15> addrspace(1)* %out, <3 x i15> %x
 ; CHECK-NEXT:    [[TMP62:%.*]] = fdiv fast float 1.000000e+00, [[TMP61]]
 ; CHECK-NEXT:    [[TMP63:%.*]] = fmul fast float [[TMP60]], [[TMP62]]
 ; CHECK-NEXT:    [[TMP64:%.*]] = call fast float @llvm.trunc.f32(float [[TMP63]])
-; CHECK-NEXT:    [[TMP65:%.*]] = fsub fast float -0.000000e+00, [[TMP64]]
+; CHECK-NEXT:    [[TMP65:%.*]] = fneg fast float [[TMP64]]
 ; CHECK-NEXT:    [[TMP66:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP65]], float [[TMP61]], float [[TMP60]])
 ; CHECK-NEXT:    [[TMP67:%.*]] = fptosi float [[TMP64]] to i32
 ; CHECK-NEXT:    [[TMP68:%.*]] = call fast float @llvm.fabs.f32(float [[TMP66]])

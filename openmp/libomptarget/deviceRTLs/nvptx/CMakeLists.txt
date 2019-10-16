@@ -35,6 +35,10 @@ if(CUDA_HOST_COMPILER MATCHES clang)
   set(CUDA_HOST_COMPILER "${LIBOMPTARGET_NVPTX_ALTERNATE_GCC_HOST_COMPILER}" CACHE FILEPATH "" FORCE)
 endif()
 
+get_filename_component(devicertl_base_directory
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  DIRECTORY)
+
 if(LIBOMPTARGET_DEP_CUDA_FOUND)
   libomptarget_say("Building CUDA offloading device RTL.")
 
@@ -83,7 +87,7 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
   # yet supported by the CUDA toolchain on the device.
   set(BUILD_SHARED_LIBS OFF)
   set(CUDA_SEPARABLE_COMPILATION ON)
-
+  list(APPEND CUDA_NVCC_FLAGS -I${devicertl_base_directory})
   cuda_add_library(omptarget-nvptx STATIC ${cuda_src_files} ${omp_data_objects}
       OPTIONS ${CUDA_ARCH} ${CUDA_DEBUG})
 
@@ -117,7 +121,8 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
     libomptarget_say("Building CUDA LLVM bitcode offloading device RTL.")
 
     # Set flags for LLVM Bitcode compilation.
-    set(bc_flags ${LIBOMPTARGET_NVPTX_SELECTED_CUDA_COMPILER_FLAGS})
+    set(bc_flags ${LIBOMPTARGET_NVPTX_SELECTED_CUDA_COMPILER_FLAGS}
+                 -I${devicertl_base_directory})
     if(${LIBOMPTARGET_NVPTX_DEBUG})
       set(bc_flags ${bc_flags} -DOMPTARGET_NVPTX_DEBUG=-1)
     else()

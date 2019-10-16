@@ -1128,6 +1128,12 @@ struct IntegerState : public AbstractState {
     return *this;
   }
 
+  /// Remove the bits in \p BitsEncoding from the "known bits".
+  IntegerState &removeKnownBits(base_t BitsEncoding) {
+    Known = (Known & ~BitsEncoding);
+    return *this;
+  }
+
   /// Keep only "assumed bits" also set in \p BitsEncoding but all known ones.
   IntegerState &intersectAssumedBits(base_t BitsEncoding) {
     // Make sure we never loose any "known bits".

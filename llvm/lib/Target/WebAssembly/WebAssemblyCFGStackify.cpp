@@ -315,12 +315,12 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
   //   br_on_exn 0, $__cpp_exception
   //   rethrow
   // end_block
-  WebAssembly::ExprType ReturnType = WebAssembly::ExprType::Void;
+  WebAssembly::BlockType ReturnType = WebAssembly::BlockType::Void;
   if (IsBrOnExn) {
     const char *TagName = BrOnExn->getOperand(1).getSymbolName();
     if (std::strcmp(TagName, "__cpp_exception") != 0)
       llvm_unreachable("Only C++ exception is supported");
-    ReturnType = WebAssembly::ExprType::I32;
+    ReturnType = WebAssembly::BlockType::I32;
   }
 
   auto InsertPos = getLatestInsertPos(Header, BeforeSet, AfterSet);
@@ -406,7 +406,7 @@ void WebAssemblyCFGStackify::placeLoopMarker(MachineBasicBlock &MBB) {
   auto InsertPos = getEarliestInsertPos(&MBB, BeforeSet, AfterSet);
   MachineInstr *Begin = BuildMI(MBB, InsertPos, MBB.findDebugLoc(InsertPos),
                                 TII.get(WebAssembly::LOOP))
-                            .addImm(int64_t(WebAssembly::ExprType::Void));
+                            .addImm(int64_t(WebAssembly::BlockType::Void));
 
   // Decide where in Header to put the END_LOOP.
   BeforeSet.clear();
@@ -575,7 +575,7 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   MachineInstr *Begin =
       BuildMI(*Header, InsertPos, Header->findDebugLoc(InsertPos),
               TII.get(WebAssembly::TRY))
-          .addImm(int64_t(WebAssembly::ExprType::Void));
+          .addImm(int64_t(WebAssembly::BlockType::Void));
 
   // Decide where in Header to put the END_TRY.
   BeforeSet.clear();
@@ -1129,7 +1129,7 @@ bool WebAssemblyCFGStackify::fixUnwindMismatches(MachineFunction &MF) {
       MachineInstr *NestedTry =
           BuildMI(*MBB, *RangeBegin, RangeBegin->getDebugLoc(),
                   TII.get(WebAssembly::TRY))
-              .addImm(int64_t(WebAssembly::ExprType::Void));
+              .addImm(int64_t(WebAssembly::BlockType::Void));
 
       // Create the nested EH pad and fill instructions in.
       MachineBasicBlock *NestedEHPad = MF.CreateMachineBasicBlock();
@@ -1231,54 +1231,28 @@ void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
   if (MFI.getResults().empty())
     return;
 
-  // TODO: Generalize from value types to function types for multivalue
-  WebAssembly::ExprType RetType;
-  switch (MFI.getResults().front().SimpleTy) {
-  case MVT::i32:
-    RetType = WebAssembly::ExprType::I32;
-    break;
-  case MVT::i64:
-    RetType = WebAssembly::ExprType::I64;
-    break;
-  case MVT::f32:
-    RetType = WebAssembly::ExprType::F32;
-    break;
-  case MVT::f64:
-    RetType = WebAssembly::ExprType::F64;
-    break;
-  case MVT::v16i8:
-  case MVT::v8i16:
-  case MVT::v4i32:
-  case MVT::v2i64:
-  case MVT::v4f32:
-  case MVT::v2f64:
-    RetType = WebAssembly::ExprType::V128;
-    break;
-  case MVT::exnref:
-    RetType = WebAssembly::ExprType::Exnref;
-    break;
-  default:
-    llvm_unreachable("unexpected return type");
-  }
+  // MCInstLower will add the proper types to multivalue signatures based on the
+  // function return type
+  WebAssembly::BlockType RetType =
+      MFI.getResults().size() > 1
+          ? WebAssembly::BlockType::Multivalue
+          : WebAssembly::BlockType(
+                WebAssembly::toValType(MFI.getResults().front()));
 
   for (MachineBasicBlock &MBB : reverse(MF)) {
     for (MachineInstr &MI : reverse(MBB)) {
       if (MI.isPosition() || MI.isDebugInstr())
         continue;
-      if (MI.getOpcode() == WebAssembly::END_BLOCK) {
-        if (MFI.getResults().size() > 1)
-          report_fatal_error("Multivalue block signatures not implemented yet");
+      switch (MI.getOpcode()) {
+      case WebAssembly::END_BLOCK:
+      case WebAssembly::END_LOOP:
+      case WebAssembly::END_TRY:
         EndToBegin[&MI]->getOperand(0).setImm(int32_t(RetType));
         continue;
+      default:
+        // Something other than an `end`. We're done.
+        return;
       }
-      if (MI.getOpcode() == WebAssembly::END_LOOP) {
-        if (MFI.getResults().size() > 1)
-          report_fatal_error("Multivalue loop signatures not implemented yet");
-        EndToBegin[&MI]->getOperand(0).setImm(int32_t(RetType));
-        continue;
-      }
-      // Something other than an `end`. We're done.
-      return;
     }
   }
 }

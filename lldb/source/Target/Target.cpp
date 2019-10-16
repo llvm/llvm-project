@@ -996,10 +996,9 @@ Status Target::SerializeBreakpointsToFile(const FileSpec &file,
   }
 
   StreamFile out_file(path.c_str(),
-                      File::OpenOptions::eOpenOptionTruncate |
-                          File::OpenOptions::eOpenOptionWrite |
-                          File::OpenOptions::eOpenOptionCanCreate |
-                          File::OpenOptions::eOpenOptionCloseOnExec,
+                      File::eOpenOptionTruncate | File::eOpenOptionWrite |
+                          File::eOpenOptionCanCreate |
+                          File::eOpenOptionCloseOnExec,
                       lldb::eFilePermissionsFileDefault);
   if (!out_file.GetFile().IsValid()) {
     error.SetErrorStringWithFormat("Unable to open output file: %s.",

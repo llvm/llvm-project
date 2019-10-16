@@ -42,15 +42,15 @@ body:             |
   ; CHECK:   G_BRCOND [[ICMP]](s1), %bb.2
   ; CHECK: bb.1.if.then:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   %5:_(s32) = nsw G_ADD [[COPY1]], [[COPY]]
-  ; CHECK:   %6:_(s32) = nsw G_ADD %5, [[COPY1]]
+  ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = nsw G_ADD [[COPY1]], [[COPY]]
+  ; CHECK:   [[ADD1:%[0-9]+]]:_(s32) = nsw G_ADD [[ADD]], [[COPY1]]
   ; CHECK:   G_BR %bb.3
   ; CHECK: bb.2.if.end:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   %7:_(s32) = nsw G_MUL [[COPY1]], [[COPY1]]
-  ; CHECK:   %8:_(s32) = nuw nsw G_ADD %7, [[C1]]
+  ; CHECK:   [[MUL:%[0-9]+]]:_(s32) = nsw G_MUL [[COPY1]], [[COPY1]]
+  ; CHECK:   [[ADD2:%[0-9]+]]:_(s32) = nuw nsw G_ADD [[MUL]], [[C1]]
   ; CHECK: bb.3.return:
-  ; CHECK:   [[PHI:%[0-9]+]]:_(s32) = G_PHI %6(s32), %bb.1, %8(s32), %bb.2
+  ; CHECK:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[ADD1]](s32), %bb.1, [[ADD2]](s32), %bb.2
   ; CHECK:   $w0 = COPY [[PHI]](s32)
   ; CHECK:   RET_ReallyLR implicit $w0
   bb.1.entry:

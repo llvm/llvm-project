@@ -105,10 +105,10 @@ entry:
 ; CHECK: [[LD_A:%[^ ]+]] = load i32, i32* [[CAST_A]]
 ; CHECK: [[CAST_B:%[^ ]+]] = bitcast i16* %b to i32*
 ; CHECK: [[LD_B:%[^ ]+]] = load i32, i32* [[CAST_B]]
+; CHECK: [[X:%[^ ]+]] = call i32 @llvm.arm.smladx(i32 [[LD_A]], i32 [[LD_B]], i32 %acc
 ; CHECK: [[GEP:%[^ ]+]] = getelementptr i16, i16* %a, i32 2
 ; CHECK: [[CAST_A_2:%[^ ]+]] = bitcast i16* [[GEP]] to i32*
 ; CHECK: [[LD_A_2:%[^ ]+]] = load i32, i32* [[CAST_A_2]]
-; CHECK: [[X:%[^ ]+]] = call i32 @llvm.arm.smladx(i32 [[LD_A]], i32 [[LD_B]], i32 %acc
 ; CHECK: call i32 @llvm.arm.smlad(i32 [[LD_A_2]], i32 [[LD_B]], i32 [[X]])
 define i32 @exchange_multi_use_1(i16* %a, i16* %b, i32 %acc) {
 entry:
@@ -144,10 +144,10 @@ entry:
 ; CHECK: [[LD_A:%[^ ]+]] = load i32, i32* [[CAST_A]]
 ; CHECK: [[CAST_B:%[^ ]+]] = bitcast i16* %b to i32*
 ; CHECK: [[LD_B:%[^ ]+]] = load i32, i32* [[CAST_B]]
+; CHECK: [[X:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[LD_A]], i32 [[LD_B]], i64 %acc
 ; CHECK: [[GEP:%[^ ]+]] = getelementptr i16, i16* %a, i32 2
 ; CHECK: [[CAST_A_2:%[^ ]+]] = bitcast i16* [[GEP]] to i32*
 ; CHECK: [[LD_A_2:%[^ ]+]] = load i32, i32* [[CAST_A_2]]
-; CHECK: [[X:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[LD_A]], i32 [[LD_B]], i64 %acc
 ; CHECK: call i64 @llvm.arm.smlald(i32 [[LD_A_2]], i32 [[LD_B]], i64 [[X]])
 define i64 @exchange_multi_use_64_1(i16* %a, i16* %b, i64 %acc) {
 entry:
@@ -184,10 +184,10 @@ entry:
 ; CHECK: [[LD_A:%[^ ]+]] = load i32, i32* [[CAST_A]]
 ; CHECK: [[CAST_B:%[^ ]+]] = bitcast i16* %b to i32*
 ; CHECK: [[LD_B:%[^ ]+]] = load i32, i32* [[CAST_B]]
+; CHECK: [[X:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[LD_A]], i32 [[LD_B]], i64 %acc
 ; CHECK: [[GEP:%[^ ]+]] = getelementptr i16, i16* %a, i32 2
 ; CHECK: [[CAST_A_2:%[^ ]+]] = bitcast i16* [[GEP]] to i32*
 ; CHECK: [[LD_A_2:%[^ ]+]] = load i32, i32* [[CAST_A_2]]
-; CHECK: [[X:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[LD_A]], i32 [[LD_B]], i64 %acc
 ; CHECK: call i64 @llvm.arm.smlald(i32 [[LD_A_2]], i32 [[LD_B]], i64 [[X]])
 define i64 @exchange_multi_use_64_2(i16* %a, i16* %b, i64 %acc) {
 entry:
@@ -225,10 +225,10 @@ entry:
 ; CHECK: [[LD_A:%[^ ]+]] = load i32, i32* [[CAST_A]]
 ; CHECK: [[CAST_B:%[^ ]+]] = bitcast i16* %b to i32*
 ; CHECK: [[LD_B:%[^ ]+]] = load i32, i32* [[CAST_B]]
+; CHECK: [[X:%[^ ]+]] = call i32 @llvm.arm.smlad(i32 [[LD_A]], i32 [[LD_B]], i32 %acc
 ; CHECK: [[GEP:%[^ ]+]] = getelementptr i16, i16* %a, i32 2
 ; CHECK: [[CAST_A_2:%[^ ]+]] = bitcast i16* [[GEP]] to i32*
 ; CHECK: [[LD_A_2:%[^ ]+]] = load i32, i32* [[CAST_A_2]]
-; CHECK: [[X:%[^ ]+]] = call i32 @llvm.arm.smlad(i32 [[LD_A]], i32 [[LD_B]], i32 %acc
 ; CHECK: call i32 @llvm.arm.smladx(i32 [[LD_B]], i32 [[LD_A_2]], i32 [[X]])
 define i32 @exchange_multi_use_2(i16* %a, i16* %b, i32 %acc) {
 entry:
@@ -306,8 +306,8 @@ entry:
 ; CHECK: [[GEP:%[^ ]+]] = getelementptr i16, i16* %a, i32 2
 ; CHECK: [[CAST_A_2:%[^ ]+]] = bitcast i16* [[GEP]] to i32*
 ; CHECK: [[LD_A_2:%[^ ]+]] = load i32, i32* [[CAST_A_2]]
-; CHECK: [[ACC:%[^ ]+]] = call i64 @llvm.arm.smlald(i32 [[LD_A]], i32 [[LD_B]], i64 0)
-; CHECK: [[X:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[LD_B]], i32 [[LD_A_2]], i64 [[ACC]])
+; CHECK: [[ACC:%[^ ]+]] = call i64 @llvm.arm.smlaldx(i32 [[LD_B]], i32 [[LD_A_2]], i64 0)
+; CHECK: [[X:%[^ ]+]] = call i64 @llvm.arm.smlald(i32 [[LD_A]], i32 [[LD_B]], i64 [[ACC]])
 define i64 @exchange_multi_use_64_3(i16* %a, i16* %b, i64 %acc) {
 entry:
   %addr.a.1 = getelementptr i16, i16* %a, i32 1

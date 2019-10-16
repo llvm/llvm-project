@@ -1280,16 +1280,8 @@ public:
   /// optimization.
   bool HasHiddenLTOVisibility(const CXXRecordDecl *RD);
 
-  /// Returns the vcall visibility of the given type. This is the scope in which
-  /// a virtual function call could be made which ends up being dispatched to a
-  /// member function of this class. This scope can be wider than the visibility
-  /// of the class itself when the class has a more-visible dynamic base class.
-  llvm::GlobalObject::VCallVisibility
-  GetVCallVisibilityLevel(const CXXRecordDecl *RD);
-
   /// Emit type metadata for the given vtable using the given layout.
-  void EmitVTableTypeMetadata(const CXXRecordDecl *RD,
-                              llvm::GlobalVariable *VTable,
+  void EmitVTableTypeMetadata(llvm::GlobalVariable *VTable,
                               const VTableLayout &VTLayout);
 
   /// Generate a cross-DSO type identifier for MD.
@@ -1354,6 +1346,11 @@ public:
   /// \param T is the LLVM type of the null pointer.
   /// \param QT is the clang QualType of the null pointer.
   llvm::Constant *getNullPointer(llvm::PointerType *T, QualType QT);
+
+  /// Set section attributes requested by "#pragma clang section"
+  ///  \param D is the declaration to read semantic attributes from.
+  ///  \param GO is the global object to set section attributes.
+  void setPragmaSectionAttributes(const Decl *D, llvm::GlobalObject *GO);
 
 private:
   llvm::Constant *GetOrCreateLLVMFunction(

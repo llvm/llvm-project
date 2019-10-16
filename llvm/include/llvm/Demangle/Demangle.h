@@ -32,7 +32,14 @@ char *itaniumDemangle(const char *mangled_name, char *buf, size_t *n,
                       int *status);
 
 
-enum MSDemangleFlags { MSDF_None = 0, MSDF_DumpBackrefs = 1 << 0 };
+enum MSDemangleFlags {
+  MSDF_None = 0,
+  MSDF_DumpBackrefs = 1 << 0,
+  MSDF_NoAccessSpecifier = 1 << 1,
+  MSDF_NoCallingConvention = 1 << 2,
+  MSDF_NoReturnType = 1 << 3,
+  MSDF_NoMemberType = 1 << 4,
+};
 char *microsoftDemangle(const char *mangled_name, char *buf, size_t *n,
                         int *status, MSDemangleFlags Flags = MSDF_None);
 

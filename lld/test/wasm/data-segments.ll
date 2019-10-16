@@ -44,13 +44,6 @@ target triple = "wasm32-unknown-unknown"
 ; ACTIVE-NEXT:          Opcode:          I32_CONST
 ; ACTIVE-NEXT:          Value:           1040
 ; ACTIVE-NEXT:        Content:         68656C6C6F00676F6F646279650000002A000000
-; ACTIVE-NEXT:      - SectionOffset:   53
-; ACTIVE-NEXT:        InitFlags:       0
-; ACTIVE-NEXT:        Offset:
-; ACTIVE-NEXT:          Opcode:          I32_CONST
-; ACTIVE-NEXT:          Value:           1060
-; ACTIVE-NEXT:        Content:         '0000000000
-; ACTIVE-SAME:                           0000000000'
 ; ACTIVE-NEXT:  - Type:            CUSTOM
 ; ACTIVE-NEXT:    Name:            name
 ; ACTIVE-NEXT:    FunctionNames:
@@ -78,10 +71,6 @@ target triple = "wasm32-unknown-unknown"
 ; PASSIVE-NEXT:      - SectionOffset:   18
 ; PASSIVE-NEXT:        InitFlags:       1
 ; PASSIVE-NEXT:        Content:         68656C6C6F00676F6F646279650000002A000000
-; PASSIVE-NEXT:      - SectionOffset:   41
-; PASSIVE-NEXT:        InitFlags:       1
-; PASSIVE-NEXT:        Content:         '0000000000
-; PASSIVE-SAME:                           0000000000'
 ; PASSIVE-NEXT:  - Type:            CUSTOM
 ; PASSIVE-NEXT:    Name:            name
 ; PASSIVE-NEXT:    FunctionNames:

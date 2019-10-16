@@ -22,7 +22,7 @@
 #include <string>
 
 using namespace clang;
-using namespace tooling;
+using namespace transformer;
 
 using ast_matchers::MatchFinder;
 using ast_type_traits::DynTypedNode;
@@ -171,13 +171,13 @@ Error evalData(const UnaryOperationData &Data,
   llvm::Optional<std::string> Source;
   switch (Data.Op) {
   case UnaryNodeOperator::Parens:
-    Source = buildParens(*E, *Match.Context);
+    Source = tooling::buildParens(*E, *Match.Context);
     break;
   case UnaryNodeOperator::Deref:
-    Source = buildDereference(*E, *Match.Context);
+    Source = tooling::buildDereference(*E, *Match.Context);
     break;
   case UnaryNodeOperator::Address:
-    Source = buildAddressOf(*E, *Match.Context);
+    Source = tooling::buildAddressOf(*E, *Match.Context);
     break;
   }
   if (!Source)
@@ -193,7 +193,7 @@ Error evalData(const SelectorData &Data, const MatchFinder::MatchResult &Match,
   auto Range = Data.Selector(Match);
   if (!Range)
     return Range.takeError();
-  *Result += getText(*Range, *Match.Context);
+  *Result += tooling::getText(*Range, *Match.Context);
   return Error::success();
 }
 
@@ -204,9 +204,10 @@ Error evalData(const AccessData &Data, const MatchFinder::MatchResult &Match,
     return llvm::make_error<StringError>(errc::invalid_argument,
                                          "Id not bound: " + Data.BaseId);
   if (!E->isImplicitCXXThis()) {
-    if (llvm::Optional<std::string> S = E->getType()->isAnyPointerType()
-                                            ? buildArrow(*E, *Match.Context)
-                                            : buildDot(*E, *Match.Context))
+    if (llvm::Optional<std::string> S =
+            E->getType()->isAnyPointerType()
+                ? tooling::buildArrow(*E, *Match.Context)
+                : tooling::buildDot(*E, *Match.Context))
       *Result += *S;
     else
       return llvm::make_error<StringError>(
@@ -250,11 +251,11 @@ public:
 } // namespace
 
 StencilPart Stencil::wrap(StringRef Text) {
-  return stencil::text(Text);
+  return transformer::text(Text);
 }
 
 StencilPart Stencil::wrap(RangeSelector Selector) {
-  return stencil::selection(std::move(Selector));
+  return transformer::selection(std::move(Selector));
 }
 
 void Stencil::append(Stencil OtherStencil) {
@@ -271,46 +272,46 @@ Stencil::eval(const MatchFinder::MatchResult &Match) const {
   return Result;
 }
 
-StencilPart stencil::text(StringRef Text) {
+StencilPart transformer::text(StringRef Text) {
   return StencilPart(std::make_shared<StencilPartImpl<RawTextData>>(Text));
 }
 
-StencilPart stencil::selection(RangeSelector Selector) {
+StencilPart transformer::selection(RangeSelector Selector) {
   return StencilPart(
       std::make_shared<StencilPartImpl<SelectorData>>(std::move(Selector)));
 }
 
-StencilPart stencil::dPrint(StringRef Id) {
+StencilPart transformer::dPrint(StringRef Id) {
   return StencilPart(std::make_shared<StencilPartImpl<DebugPrintNodeData>>(Id));
 }
 
-StencilPart stencil::expression(llvm::StringRef Id) {
+StencilPart transformer::expression(llvm::StringRef Id) {
   return StencilPart(std::make_shared<StencilPartImpl<UnaryOperationData>>(
       UnaryNodeOperator::Parens, Id));
 }
 
-StencilPart stencil::deref(llvm::StringRef ExprId) {
+StencilPart transformer::deref(llvm::StringRef ExprId) {
   return StencilPart(std::make_shared<StencilPartImpl<UnaryOperationData>>(
       UnaryNodeOperator::Deref, ExprId));
 }
 
-StencilPart stencil::addressOf(llvm::StringRef ExprId) {
+StencilPart transformer::addressOf(llvm::StringRef ExprId) {
   return StencilPart(std::make_shared<StencilPartImpl<UnaryOperationData>>(
       UnaryNodeOperator::Address, ExprId));
 }
 
-StencilPart stencil::access(StringRef BaseId, StencilPart Member) {
+StencilPart transformer::access(StringRef BaseId, StencilPart Member) {
   return StencilPart(
       std::make_shared<StencilPartImpl<AccessData>>(BaseId, std::move(Member)));
 }
 
-StencilPart stencil::ifBound(StringRef Id, StencilPart TruePart,
+StencilPart transformer::ifBound(StringRef Id, StencilPart TruePart,
                              StencilPart FalsePart) {
   return StencilPart(std::make_shared<StencilPartImpl<IfBoundData>>(
       Id, std::move(TruePart), std::move(FalsePart)));
 }
 
-StencilPart stencil::run(MatchConsumer<std::string> Fn) {
+StencilPart transformer::run(MatchConsumer<std::string> Fn) {
   return StencilPart(
       std::make_shared<StencilPartImpl<MatchConsumer<std::string>>>(
           std::move(Fn)));

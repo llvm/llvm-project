@@ -112,6 +112,7 @@ void PrimaryExpressions(int a) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "offset": 120,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 3,
 // CHECK-NEXT:   "col": 6,
@@ -119,10 +120,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "offset": 115,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "offset": 147,
 // CHECK-NEXT:    "line": 5,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -138,11 +141,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 132,
 // CHECK-NEXT:      "line": 3,
 // CHECK-NEXT:      "col": 18,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 147,
 // CHECK-NEXT:      "line": 5,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
@@ -154,11 +159,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 137,
 // CHECK-NEXT:        "line": 4,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 143,
 // CHECK-NEXT:        "col": 9,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -174,10 +181,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "BinaryOperator",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 137,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 140,
 // CHECK-NEXT:          "col": 6,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -193,10 +202,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "IntegerLiteral",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 137,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 137,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -212,10 +223,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "IntegerLiteral",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 140,
 // CHECK-NEXT:            "col": 6,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 140,
 // CHECK-NEXT:            "col": 6,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -233,10 +246,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "IntegerLiteral",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 143,
 // CHECK-NEXT:          "col": 9,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 143,
 // CHECK-NEXT:          "col": 9,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -257,16 +272,19 @@ void PrimaryExpressions(int a) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "offset": 157,
 // CHECK-NEXT:   "line": 7,
 // CHECK-NEXT:   "col": 6,
 // CHECK-NEXT:   "tokLen": 10
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "offset": 152,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "offset": 200,
 // CHECK-NEXT:    "line": 10,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -281,16 +299,19 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "offset": 172,
 // CHECK-NEXT:     "line": 7,
 // CHECK-NEXT:     "col": 21,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 168,
 // CHECK-NEXT:      "col": 17,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 172,
 // CHECK-NEXT:      "col": 21,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -306,10 +327,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 175,
 // CHECK-NEXT:      "col": 24,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 200,
 // CHECK-NEXT:      "line": 10,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
@@ -321,11 +344,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 180,
 // CHECK-NEXT:        "line": 8,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 184,
 // CHECK-NEXT:        "col": 7,
 // CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
@@ -341,10 +366,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "DeclRefExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 180,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 180,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -367,10 +394,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "IntegerLiteral",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 184,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 184,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
@@ -388,11 +417,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "CompoundAssignOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 191,
 // CHECK-NEXT:        "line": 9,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 196,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -414,10 +445,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "DeclRefExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 191,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 191,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -440,10 +473,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 196,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 196,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -459,10 +494,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 196,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 196,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -492,16 +529,19 @@ void PrimaryExpressions(int a) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "offset": 210,
 // CHECK-NEXT:   "line": 12,
 // CHECK-NEXT:   "col": 6,
 // CHECK-NEXT:   "tokLen": 12
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "offset": 205,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "offset": 258,
 // CHECK-NEXT:    "line": 15,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -516,16 +556,19 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "offset": 227,
 // CHECK-NEXT:     "line": 12,
 // CHECK-NEXT:     "col": 23,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 223,
 // CHECK-NEXT:      "col": 19,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 227,
 // CHECK-NEXT:      "col": 23,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -541,10 +584,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 230,
 // CHECK-NEXT:      "col": 26,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 258,
 // CHECK-NEXT:      "line": 15,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
@@ -556,11 +601,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ConditionalOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 235,
 // CHECK-NEXT:        "line": 13,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 243,
 // CHECK-NEXT:        "col": 11,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -575,10 +622,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 235,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 235,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -594,10 +643,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 235,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 235,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -622,10 +673,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "IntegerLiteral",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 239,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 239,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -641,10 +694,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "IntegerLiteral",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 243,
 // CHECK-NEXT:          "col": 11,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 243,
 // CHECK-NEXT:          "col": 11,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -662,11 +717,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryConditionalOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 249,
 // CHECK-NEXT:        "line": 14,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 254,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -681,10 +738,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 249,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 249,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -700,10 +759,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 249,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 249,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -728,10 +789,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "OpaqueValueExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 249,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 249,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -746,10 +809,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "ImplicitCastExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 249,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 249,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -765,10 +830,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "kind": "DeclRefExpr",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "offset": 249,
 // CHECK-NEXT:              "col": 3,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "offset": 249,
 // CHECK-NEXT:              "col": 3,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
@@ -795,10 +862,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "OpaqueValueExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 249,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 249,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -813,10 +882,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "ImplicitCastExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 249,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 249,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -832,10 +903,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "kind": "DeclRefExpr",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "offset": 249,
 // CHECK-NEXT:              "col": 3,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "offset": 249,
 // CHECK-NEXT:              "col": 3,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
@@ -862,10 +935,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "IntegerLiteral",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 254,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 254,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -886,16 +961,19 @@ void PrimaryExpressions(int a) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "offset": 268,
 // CHECK-NEXT:   "line": 17,
 // CHECK-NEXT:   "col": 6,
 // CHECK-NEXT:   "tokLen": 15
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "offset": 263,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "offset": 686,
 // CHECK-NEXT:    "line": 49,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -910,16 +988,19 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "offset": 288,
 // CHECK-NEXT:     "line": 17,
 // CHECK-NEXT:     "col": 26,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 284,
 // CHECK-NEXT:      "col": 22,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 288,
 // CHECK-NEXT:      "col": 26,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -934,15 +1015,18 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "offset": 295,
 // CHECK-NEXT:     "col": 33,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 291,
 // CHECK-NEXT:      "col": 29,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 295,
 // CHECK-NEXT:      "col": 33,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -958,10 +1042,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 298,
 // CHECK-NEXT:      "col": 36,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 686,
 // CHECK-NEXT:      "line": 49,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
@@ -973,11 +1059,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 327,
 // CHECK-NEXT:        "line": 19,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 332,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -993,10 +1081,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 327,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 327,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1012,10 +1102,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 327,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 327,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1040,10 +1132,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 332,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 332,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1059,10 +1153,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 332,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 332,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1089,11 +1185,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 338,
 // CHECK-NEXT:        "line": 20,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 343,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -1109,10 +1207,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 338,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 338,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1128,10 +1228,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 338,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 338,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1156,10 +1258,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 343,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 343,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1175,10 +1279,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 343,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 343,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1205,11 +1311,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 375,
 // CHECK-NEXT:        "line": 23,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 379,
 // CHECK-NEXT:        "col": 7,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -1225,10 +1333,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 375,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 375,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1244,10 +1354,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 375,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 375,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1272,10 +1384,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 379,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 379,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1291,10 +1405,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 379,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 379,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1321,11 +1437,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 385,
 // CHECK-NEXT:        "line": 24,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 389,
 // CHECK-NEXT:        "col": 7,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -1341,10 +1459,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 385,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 385,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1360,10 +1480,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 385,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 385,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1388,10 +1510,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 389,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 389,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1407,10 +1531,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 389,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 389,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1437,11 +1563,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 395,
 // CHECK-NEXT:        "line": 25,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 399,
 // CHECK-NEXT:        "col": 7,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -1457,10 +1585,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 395,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 395,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1476,10 +1606,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 395,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 395,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1504,10 +1636,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 399,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 399,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1523,10 +1657,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 399,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 399,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1553,11 +1689,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 432,
 // CHECK-NEXT:        "line": 28,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 437,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -1573,10 +1711,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 432,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 432,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1592,10 +1732,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 432,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 432,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1620,10 +1762,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 437,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 437,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1639,10 +1783,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 437,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 437,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1669,11 +1815,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 443,
 // CHECK-NEXT:        "line": 29,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 448,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -1689,10 +1837,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 443,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 443,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1708,10 +1858,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 443,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 443,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1736,10 +1888,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 448,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 448,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1755,10 +1909,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 448,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 448,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1785,11 +1941,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 483,
 // CHECK-NEXT:        "line": 32,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 487,
 // CHECK-NEXT:        "col": 7,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -1805,10 +1963,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 483,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 483,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1824,10 +1984,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 483,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 483,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1852,10 +2014,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 487,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 487,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1871,10 +2035,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 487,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 487,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1901,11 +2067,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 493,
 // CHECK-NEXT:        "line": 33,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 497,
 // CHECK-NEXT:        "col": 7,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -1921,10 +2089,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 493,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 493,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1940,10 +2110,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 493,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 493,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1968,10 +2140,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 497,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 497,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1987,10 +2161,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 497,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 497,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -2017,11 +2193,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 503,
 // CHECK-NEXT:        "line": 34,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 508,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -2037,10 +2215,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 503,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 503,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -2056,10 +2236,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 503,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 503,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -2084,10 +2266,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 508,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 508,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -2103,10 +2287,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 508,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 508,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -2133,11 +2319,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 514,
 // CHECK-NEXT:        "line": 35,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 519,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -2153,10 +2341,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 514,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 514,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -2172,10 +2362,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 514,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 514,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -2200,10 +2392,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 519,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 519,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -2219,10 +2413,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 519,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 519,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -2249,11 +2445,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 556,
 // CHECK-NEXT:        "line": 38,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 561,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -2269,10 +2467,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 556,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 556,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -2288,10 +2488,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 556,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 556,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -2316,10 +2518,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 561,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 561,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -2335,10 +2539,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 561,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 561,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -2365,11 +2571,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 567,
 // CHECK-NEXT:        "line": 39,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 572,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -2385,10 +2593,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 567,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 567,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -2404,10 +2614,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 567,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 567,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -2432,10 +2644,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 572,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 572,
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -2451,10 +2665,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 572,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 572,
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -2481,11 +2697,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 605,
 // CHECK-NEXT:        "line": 42,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 609,
 // CHECK-NEXT:        "col": 7,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -2501,10 +2719,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 605,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 605,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -2520,10 +2740,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 605,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 605,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -2548,10 +2770,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 609,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 609,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -2567,10 +2791,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 609,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 609,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -2597,11 +2823,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 615,
 // CHECK-NEXT:        "line": 43,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 619,
 // CHECK-NEXT:        "col": 7,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -2617,10 +2845,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 615,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 615,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -2636,10 +2866,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 615,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 615,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -2664,10 +2896,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 619,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 619,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -2683,10 +2917,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 619,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 619,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -2713,11 +2949,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 658,
 // CHECK-NEXT:        "line": 46,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 662,
 // CHECK-NEXT:        "col": 7,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -2733,10 +2971,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 658,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 658,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -2752,10 +2992,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 658,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 658,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -2780,10 +3022,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 662,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 662,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -2799,10 +3043,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 662,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 662,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -2829,11 +3075,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 668,
 // CHECK-NEXT:        "line": 47,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 672,
 // CHECK-NEXT:        "col": 7,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -2849,10 +3097,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 668,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 668,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -2868,10 +3118,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 668,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 668,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -2896,10 +3148,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 672,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 672,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -2915,10 +3169,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 672,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 672,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -2945,11 +3201,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 678,
 // CHECK-NEXT:        "line": 48,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 682,
 // CHECK-NEXT:        "col": 7,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -2965,10 +3223,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 678,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 678,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -2984,10 +3244,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 678,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 678,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -3012,10 +3274,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 682,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 682,
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -3031,10 +3295,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 682,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 682,
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -3064,16 +3330,19 @@ void PrimaryExpressions(int a) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "offset": 696,
 // CHECK-NEXT:   "line": 51,
 // CHECK-NEXT:   "col": 6,
 // CHECK-NEXT:   "tokLen": 14
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "offset": 691,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "offset": 894,
 // CHECK-NEXT:    "line": 66,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -3089,16 +3358,19 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "offset": 715,
 // CHECK-NEXT:     "line": 51,
 // CHECK-NEXT:     "col": 25,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 711,
 // CHECK-NEXT:      "col": 21,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 715,
 // CHECK-NEXT:      "col": 25,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -3113,15 +3385,18 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "offset": 723,
 // CHECK-NEXT:     "col": 33,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 718,
 // CHECK-NEXT:      "col": 28,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 723,
 // CHECK-NEXT:      "col": 33,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -3137,10 +3412,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 726,
 // CHECK-NEXT:      "col": 36,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 894,
 // CHECK-NEXT:      "line": 66,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
@@ -3152,11 +3429,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "CStyleCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 752,
 // CHECK-NEXT:        "line": 53,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 759,
 // CHECK-NEXT:        "col": 10,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -3172,10 +3451,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 759,
 // CHECK-NEXT:          "col": 10,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 759,
 // CHECK-NEXT:          "col": 10,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -3192,10 +3473,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 759,
 // CHECK-NEXT:            "col": 10,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 759,
 // CHECK-NEXT:            "col": 10,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -3222,11 +3505,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "UnaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 812,
 // CHECK-NEXT:        "line": 57,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 813,
 // CHECK-NEXT:        "col": 4,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -3243,10 +3528,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 813,
 // CHECK-NEXT:          "col": 4,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 813,
 // CHECK-NEXT:          "col": 4,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -3262,10 +3549,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 813,
 // CHECK-NEXT:            "col": 4,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 813,
 // CHECK-NEXT:            "col": 4,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -3292,11 +3581,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "UnaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 819,
 // CHECK-NEXT:        "line": 58,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 820,
 // CHECK-NEXT:        "col": 4,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -3314,10 +3605,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 820,
 // CHECK-NEXT:          "col": 4,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 820,
 // CHECK-NEXT:          "col": 4,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -3333,10 +3626,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 820,
 // CHECK-NEXT:            "col": 4,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 820,
 // CHECK-NEXT:            "col": 4,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -3363,11 +3658,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "UnaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 826,
 // CHECK-NEXT:        "line": 59,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 827,
 // CHECK-NEXT:        "col": 4,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -3385,10 +3682,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "DeclRefExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 827,
 // CHECK-NEXT:          "col": 4,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 827,
 // CHECK-NEXT:          "col": 4,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -3413,11 +3712,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 833,
 // CHECK-NEXT:        "line": 60,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 834,
 // CHECK-NEXT:        "col": 4,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -3433,10 +3734,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "UnaryOperator",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 833,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 834,
 // CHECK-NEXT:          "col": 4,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -3454,10 +3757,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "ImplicitCastExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 834,
 // CHECK-NEXT:            "col": 4,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 834,
 // CHECK-NEXT:            "col": 4,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -3473,10 +3778,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "kind": "DeclRefExpr",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "offset": 834,
 // CHECK-NEXT:              "col": 4,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "offset": 834,
 // CHECK-NEXT:              "col": 4,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
@@ -3505,11 +3812,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "UnaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 840,
 // CHECK-NEXT:        "line": 61,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 841,
 // CHECK-NEXT:        "col": 4,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -3527,10 +3836,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 841,
 // CHECK-NEXT:          "col": 4,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 841,
 // CHECK-NEXT:          "col": 4,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -3546,10 +3857,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 841,
 // CHECK-NEXT:            "col": 4,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 841,
 // CHECK-NEXT:            "col": 4,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -3576,11 +3889,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "UnaryExprOrTypeTraitExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 849,
 // CHECK-NEXT:        "line": 63,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 856,
 // CHECK-NEXT:        "col": 10,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -3596,10 +3911,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "DeclRefExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 856,
 // CHECK-NEXT:          "col": 10,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 856,
 // CHECK-NEXT:          "col": 10,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -3625,11 +3942,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "UnaryExprOrTypeTraitExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 862,
 // CHECK-NEXT:        "line": 64,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 872,
 // CHECK-NEXT:        "col": 13,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -3648,11 +3967,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "UnaryExprOrTypeTraitExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 878,
 // CHECK-NEXT:        "line": 65,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 890,
 // CHECK-NEXT:        "col": 15,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -3674,16 +3995,19 @@ void PrimaryExpressions(int a) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "offset": 932,
 // CHECK-NEXT:   "line": 72,
 // CHECK-NEXT:   "col": 6,
 // CHECK-NEXT:   "tokLen": 16
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "offset": 927,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "offset": 1136,
 // CHECK-NEXT:    "line": 83,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -3698,16 +4022,19 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "offset": 954,
 // CHECK-NEXT:     "line": 72,
 // CHECK-NEXT:     "col": 28,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 949,
 // CHECK-NEXT:      "col": 23,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 954,
 // CHECK-NEXT:      "col": 28,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -3722,15 +4049,18 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "offset": 966,
 // CHECK-NEXT:     "col": 40,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 957,
 // CHECK-NEXT:      "col": 31,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 966,
 // CHECK-NEXT:      "col": 40,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -3746,15 +4076,18 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "offset": 979,
 // CHECK-NEXT:     "col": 53,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 969,
 // CHECK-NEXT:      "col": 43,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 979,
 // CHECK-NEXT:      "col": 53,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -3770,10 +4103,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 982,
 // CHECK-NEXT:      "col": 56,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 1136,
 // CHECK-NEXT:      "line": 83,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
@@ -3785,11 +4120,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 987,
 // CHECK-NEXT:        "line": 73,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 990,
 // CHECK-NEXT:        "col": 6,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -3805,10 +4142,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ArraySubscriptExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 987,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 990,
 // CHECK-NEXT:          "col": 6,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -3823,10 +4162,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "ImplicitCastExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 987,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 987,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -3842,10 +4183,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "kind": "DeclRefExpr",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "offset": 987,
 // CHECK-NEXT:              "col": 3,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "offset": 987,
 // CHECK-NEXT:              "col": 3,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
@@ -3870,10 +4213,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "IntegerLiteral",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 989,
 // CHECK-NEXT:            "col": 5,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 989,
 // CHECK-NEXT:            "col": 5,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -3893,11 +4238,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "CallExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 996,
 // CHECK-NEXT:        "line": 74,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 14
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1016,
 // CHECK-NEXT:        "col": 23,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -3912,10 +4259,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 996,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 14
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 996,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 14
 // CHECK-NEXT:         }
@@ -3931,10 +4280,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 996,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 14
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 996,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 14
 // CHECK-NEXT:           }
@@ -3959,10 +4310,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 1011,
 // CHECK-NEXT:          "col": 18,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 1012,
 // CHECK-NEXT:          "col": 19,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -3978,10 +4331,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "UnaryOperator",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 1011,
 // CHECK-NEXT:            "col": 18,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 1012,
 // CHECK-NEXT:            "col": 19,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -3999,10 +4354,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "kind": "ImplicitCastExpr",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "offset": 1012,
 // CHECK-NEXT:              "col": 19,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "offset": 1012,
 // CHECK-NEXT:              "col": 19,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
@@ -4018,10 +4375,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:              "kind": "DeclRefExpr",
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
+// CHECK-NEXT:                "offset": 1012,
 // CHECK-NEXT:                "col": 19,
 // CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
+// CHECK-NEXT:                "offset": 1012,
 // CHECK-NEXT:                "col": 19,
 // CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
@@ -4050,10 +4409,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 1015,
 // CHECK-NEXT:          "col": 22,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 1015,
 // CHECK-NEXT:          "col": 22,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -4069,10 +4430,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 1015,
 // CHECK-NEXT:            "col": 22,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 1015,
 // CHECK-NEXT:            "col": 22,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -4099,11 +4462,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1024,
 // CHECK-NEXT:        "line": 76,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1026,
 // CHECK-NEXT:        "col": 5,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -4119,10 +4484,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "MemberExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 1024,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 1026,
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -4140,10 +4507,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 1024,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 1024,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -4172,11 +4541,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1032,
 // CHECK-NEXT:        "line": 77,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1035,
 // CHECK-NEXT:        "col": 6,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -4192,10 +4563,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "MemberExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 1032,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 1035,
 // CHECK-NEXT:          "col": 6,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -4213,10 +4586,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "ImplicitCastExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 1032,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 1032,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -4232,10 +4607,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "kind": "DeclRefExpr",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "offset": 1032,
 // CHECK-NEXT:              "col": 3,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "offset": 1032,
 // CHECK-NEXT:              "col": 3,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
@@ -4264,11 +4641,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1092,
 // CHECK-NEXT:        "line": 81,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1114,
 // CHECK-NEXT:        "col": 25,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -4284,10 +4663,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "CompoundLiteralExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 1092,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 1114,
 // CHECK-NEXT:          "col": 25,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -4302,10 +4683,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "InitListExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 1101,
 // CHECK-NEXT:            "col": 12,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 1114,
 // CHECK-NEXT:            "col": 25,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -4320,10 +4703,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "kind": "IntegerLiteral",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "offset": 1102,
 // CHECK-NEXT:              "col": 13,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "offset": 1102,
 // CHECK-NEXT:              "col": 13,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
@@ -4339,10 +4724,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "kind": "IntegerLiteral",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "offset": 1105,
 // CHECK-NEXT:              "col": 16,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "offset": 1105,
 // CHECK-NEXT:              "col": 16,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
@@ -4358,10 +4745,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "kind": "IntegerLiteral",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "offset": 1108,
 // CHECK-NEXT:              "col": 19,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "offset": 1108,
 // CHECK-NEXT:              "col": 19,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
@@ -4377,10 +4766,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "kind": "IntegerLiteral",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "offset": 1111,
 // CHECK-NEXT:              "col": 22,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "offset": 1111,
 // CHECK-NEXT:              "col": 22,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
@@ -4402,11 +4793,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1120,
 // CHECK-NEXT:        "line": 82,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1132,
 // CHECK-NEXT:        "col": 15,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -4423,10 +4816,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "CompoundLiteralExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 1120,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 1132,
 // CHECK-NEXT:          "col": 15,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -4442,10 +4837,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "InitListExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 1130,
 // CHECK-NEXT:            "col": 13,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 1132,
 // CHECK-NEXT:            "col": 15,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -4461,10 +4858,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "kind": "IntegerLiteral",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "offset": 1131,
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "offset": 1131,
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
@@ -4489,16 +4888,19 @@ void PrimaryExpressions(int a) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "offset": 1165,
 // CHECK-NEXT:   "line": 87,
 // CHECK-NEXT:   "col": 6,
 // CHECK-NEXT:   "tokLen": 18
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "offset": 1160,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "offset": 1360,
 // CHECK-NEXT:    "line": 107,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -4513,16 +4915,19 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "offset": 1188,
 // CHECK-NEXT:     "line": 87,
 // CHECK-NEXT:     "col": 29,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 1184,
 // CHECK-NEXT:      "col": 25,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 1188,
 // CHECK-NEXT:      "col": 29,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -4538,10 +4943,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "offset": 1191,
 // CHECK-NEXT:      "col": 32,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "offset": 1360,
 // CHECK-NEXT:      "line": 107,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
@@ -4553,11 +4960,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1196,
 // CHECK-NEXT:        "line": 88,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1196,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -4573,10 +4982,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "DeclRefExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 1196,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 1196,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -4601,11 +5012,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "CharacterLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1202,
 // CHECK-NEXT:        "line": 89,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1202,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
@@ -4621,11 +5034,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "CharacterLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1210,
 // CHECK-NEXT:        "line": 90,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1210,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
@@ -4641,11 +5056,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1219,
 // CHECK-NEXT:        "line": 91,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1219,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
@@ -4661,10 +5078,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "StringLiteral",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 1219,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 1219,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         }
@@ -4682,11 +5101,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1227,
 // CHECK-NEXT:        "line": 92,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1227,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
@@ -4702,10 +5123,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "StringLiteral",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 1227,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 1227,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         }
@@ -4723,11 +5146,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1236,
 // CHECK-NEXT:        "line": 93,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1236,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       }
@@ -4743,10 +5168,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "StringLiteral",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 1236,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 5
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 1236,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 5
 // CHECK-NEXT:         }
@@ -4764,11 +5191,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1246,
 // CHECK-NEXT:        "line": 94,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1246,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
@@ -4784,10 +5213,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "StringLiteral",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 1246,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 1246,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         }
@@ -4805,11 +5236,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1255,
 // CHECK-NEXT:        "line": 95,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1255,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
@@ -4825,10 +5258,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "StringLiteral",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 1255,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 1255,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         }
@@ -4846,11 +5281,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "IntegerLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1266,
 // CHECK-NEXT:        "line": 97,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1266,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -4866,11 +5303,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "IntegerLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1272,
 // CHECK-NEXT:        "line": 98,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1272,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
@@ -4886,11 +5325,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "IntegerLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1279,
 // CHECK-NEXT:        "line": 99,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1279,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
@@ -4906,11 +5347,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "FloatingLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1287,
 // CHECK-NEXT:        "line": 100,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1287,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
@@ -4926,11 +5369,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "FloatingLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1295,
 // CHECK-NEXT:        "line": 101,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1295,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
@@ -4946,11 +5391,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "FloatingLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1304,
 // CHECK-NEXT:        "line": 102,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 26
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1304,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 26
 // CHECK-NEXT:       }
@@ -4966,11 +5413,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "FloatingLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1335,
 // CHECK-NEXT:        "line": 103,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1335,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
@@ -4986,11 +5435,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "DeclRefExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1344,
 // CHECK-NEXT:        "line": 104,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1344,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
@@ -5013,11 +5464,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1354,
 // CHECK-NEXT:        "line": 106,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1356,
 // CHECK-NEXT:        "col": 5,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -5033,10 +5486,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "kind": "ParenExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 1354,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 1356,
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -5051,10 +5506,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 1355,
 // CHECK-NEXT:            "col": 4,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 1355,
 // CHECK-NEXT:            "col": 4,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }

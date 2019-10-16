@@ -688,7 +688,8 @@ static void createUniversalBinary(SmallVectorImpl<Slice> &Slices,
     return sys::fs::can_execute(S.getBinary()->getFileName());
   });
   const uint64_t OutputFileSize =
-      FatArchList.back().offset + FatArchList.back().size;
+      static_cast<uint64_t>(FatArchList.back().offset) +
+      FatArchList.back().size;
   Expected<std::unique_ptr<FileOutputBuffer>> OutFileOrError =
       FileOutputBuffer::create(OutputFileName, OutputFileSize,
                                IsExecutable ? FileOutputBuffer::F_executable

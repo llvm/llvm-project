@@ -72,10 +72,10 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   BasicBlock &EntryBlock = *F.begin();
   IRBuilder<> Builder(&*EntryBlock.begin());
 
-  const unsigned KernArgBaseAlign = 16; // FIXME: Increase if necessary
+  const Align KernArgBaseAlign(16); // FIXME: Increase if necessary
   const uint64_t BaseOffset = ST.getExplicitKernelArgOffset(F);
 
-  unsigned MaxAlign;
+  Align MaxAlign;
   // FIXME: Alignment is broken broken with explicit arg offset.;
   const uint64_t TotalKernArgSize = ST.getKernArgSegmentSize(F, MaxAlign);
   if (TotalKernArgSize == 0)
@@ -94,12 +94,12 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
 
   for (Argument &Arg : F.args()) {
     Type *ArgTy = Arg.getType();
-    unsigned Align = DL.getABITypeAlignment(ArgTy);
+    unsigned ABITypeAlign = DL.getABITypeAlignment(ArgTy);
     unsigned Size = DL.getTypeSizeInBits(ArgTy);
     unsigned AllocSize = DL.getTypeAllocSize(ArgTy);
 
-    uint64_t EltOffset = alignTo(ExplicitArgOffset, Align) + BaseOffset;
-    ExplicitArgOffset = alignTo(ExplicitArgOffset, Align) + AllocSize;
+    uint64_t EltOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + BaseOffset;
+    ExplicitArgOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + AllocSize;
 
     if (Arg.use_empty())
       continue;
@@ -128,8 +128,8 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
 
     int64_t AlignDownOffset = alignDown(EltOffset, 4);
     int64_t OffsetDiff = EltOffset - AlignDownOffset;
-    unsigned AdjustedAlign = MinAlign(DoShiftOpt ? AlignDownOffset : EltOffset,
-                                      KernArgBaseAlign);
+    Align AdjustedAlign = commonAlignment(
+        KernArgBaseAlign, DoShiftOpt ? AlignDownOffset : EltOffset);
 
     Value *ArgPtr;
     Type *AdjustedArgTy;
@@ -160,7 +160,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
     ArgPtr = Builder.CreateBitCast(ArgPtr, AdjustedArgTy->getPointerTo(AS),
                                    ArgPtr->getName() + ".cast");
     LoadInst *Load =
-        Builder.CreateAlignedLoad(AdjustedArgTy, ArgPtr, AdjustedAlign);
+        Builder.CreateAlignedLoad(AdjustedArgTy, ArgPtr, AdjustedAlign.value());
     Load->setMetadata(LLVMContext::MD_invariant_load, MDNode::get(Ctx, {}));
 
     MDBuilder MDB(Ctx);
@@ -220,8 +220,8 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   }
 
   KernArgSegment->addAttribute(
-    AttributeList::ReturnIndex,
-    Attribute::getWithAlignment(Ctx, std::max(KernArgBaseAlign, MaxAlign)));
+      AttributeList::ReturnIndex,
+      Attribute::getWithAlignment(Ctx, std::max(KernArgBaseAlign, MaxAlign)));
 
   return true;
 }

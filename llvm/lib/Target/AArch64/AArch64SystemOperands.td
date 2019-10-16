@@ -612,6 +612,7 @@ def : ROSysReg<"ISR_EL1",            0b11, 0b000, 0b1100, 0b0001, 0b000>;
 def : ROSysReg<"CNTPCT_EL0",         0b11, 0b011, 0b1110, 0b0000, 0b001>;
 def : ROSysReg<"CNTVCT_EL0",         0b11, 0b011, 0b1110, 0b0000, 0b010>;
 def : ROSysReg<"ID_MMFR4_EL1",       0b11, 0b000, 0b0000, 0b0010, 0b110>;
+def : ROSysReg<"ID_MMFR5_EL1",       0b11, 0b000, 0b0000, 0b0011, 0b110>;
 
 // Trace registers
 //                                 Op0    Op1     CRn     CRm    Op2

@@ -496,6 +496,7 @@ struct DevirtModule {
   void buildTypeIdentifierMap(
       std::vector<VTableBits> &Bits,
       DenseMap<Metadata *, std::set<TypeMemberInfo>> &TypeIdMap);
+  Constant *getPointerAtOffset(Constant *I, uint64_t Offset);
   bool
   tryFindVirtualCallTargets(std::vector<VirtualCallTarget> &TargetsForSlot,
                             const std::set<TypeMemberInfo> &TypeMemberInfos,
@@ -812,6 +813,38 @@ void DevirtModule::buildTypeIdentifierMap(
   }
 }
 
+Constant *DevirtModule::getPointerAtOffset(Constant *I, uint64_t Offset) {
+  if (I->getType()->isPointerTy()) {
+    if (Offset == 0)
+      return I;
+    return nullptr;
+  }
+
+  const DataLayout &DL = M.getDataLayout();
+
+  if (auto *C = dyn_cast<ConstantStruct>(I)) {
+    const StructLayout *SL = DL.getStructLayout(C->getType());
+    if (Offset >= SL->getSizeInBytes())
+      return nullptr;
+
+    unsigned Op = SL->getElementContainingOffset(Offset);
+    return getPointerAtOffset(cast<Constant>(I->getOperand(Op)),
+                              Offset - SL->getElementOffset(Op));
+  }
+  if (auto *C = dyn_cast<ConstantArray>(I)) {
+    ArrayType *VTableTy = C->getType();
+    uint64_t ElemSize = DL.getTypeAllocSize(VTableTy->getElementType());
+
+    unsigned Op = Offset / ElemSize;
+    if (Op >= C->getNumOperands())
+      return nullptr;
+
+    return getPointerAtOffset(cast<Constant>(I->getOperand(Op)),
+                              Offset % ElemSize);
+  }
+  return nullptr;
+}
+
 bool DevirtModule::tryFindVirtualCallTargets(
     std::vector<VirtualCallTarget> &TargetsForSlot,
     const std::set<TypeMemberInfo> &TypeMemberInfos, uint64_t ByteOffset) {
@@ -820,7 +853,7 @@ bool DevirtModule::tryFindVirtualCallTargets(
       return false;
 
     Constant *Ptr = getPointerAtOffset(TM.Bits->GV->getInitializer(),
-                                       TM.Offset + ByteOffset, M);
+                                       TM.Offset + ByteOffset);
     if (!Ptr)
       return false;
 
@@ -1483,10 +1516,11 @@ void DevirtModule::rebuildGlobal(VTableBits &B) {
 
   // Align the before byte array to the global's minimum alignment so that we
   // don't break any alignment requirements on the global.
-  unsigned Align = B.GV->getAlignment();
-  if (Align == 0)
-    Align = M.getDataLayout().getABITypeAlignment(B.GV->getValueType());
-  B.Before.Bytes.resize(alignTo(B.Before.Bytes.size(), Align));
+  MaybeAlign Alignment(B.GV->getAlignment());
+  if (!Alignment)
+    Alignment =
+        Align(M.getDataLayout().getABITypeAlignment(B.GV->getValueType()));
+  B.Before.Bytes.resize(alignTo(B.Before.Bytes.size(), Alignment));
 
   // Before was stored in reverse order; flip it now.
   for (size_t I = 0, Size = B.Before.Bytes.size(); I != Size / 2; ++I)
@@ -1503,7 +1537,7 @@ void DevirtModule::rebuildGlobal(VTableBits &B) {
                          GlobalVariable::PrivateLinkage, NewInit, "", B.GV);
   NewGV->setSection(B.GV->getSection());
   NewGV->setComdat(B.GV->getComdat());
-  NewGV->setAlignment(B.GV->getAlignment());
+  NewGV->setAlignment(MaybeAlign(B.GV->getAlignment()));
 
   // Copy the original vtable's metadata to the anonymous global, adjusting
   // offsets as required.
@@ -1907,12 +1941,6 @@ bool DevirtModule::run() {
   if (DidVirtualConstProp)
     for (VTableBits &B : Bits)
       rebuildGlobal(B);
-
-  // We have lowered or deleted the type checked load intrinsics, so we no
-  // longer have enough information to reason about the liveness of virtual
-  // function pointers in GlobalDCE.
-  for (GlobalVariable &GV : M.globals())
-    GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
 
   return true;
 }

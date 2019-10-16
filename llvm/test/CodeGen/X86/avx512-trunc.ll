@@ -713,11 +713,16 @@ define <16 x i16> @usat_trunc_dw_512(<16 x i32> %i) {
 }
 
 define <8 x i8> @usat_trunc_wb_128(<8 x i16> %i) {
-; ALL-LABEL: usat_trunc_wb_128:
-; ALL:       ## %bb.0:
-; ALL-NEXT:    vpminuw {{.*}}(%rip), %xmm0, %xmm0
-; ALL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
-; ALL-NEXT:    retq
+; KNL-LABEL: usat_trunc_wb_128:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vpminuw {{.*}}(%rip), %xmm0, %xmm0
+; KNL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: usat_trunc_wb_128:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovuswb %xmm0, %xmm0
+; SKX-NEXT:    retq
   %x3 = icmp ult <8 x i16> %i, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %x5 = select <8 x i1> %x3, <8 x i16> %i, <8 x i16> <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %x6 = trunc <8 x i16> %x5 to <8 x i8>
@@ -740,9 +745,8 @@ define <16 x i16> @usat_trunc_qw_1024(<16 x i64> %i) {
 define <16 x i8> @usat_trunc_db_256(<8 x i32> %x) {
 ; KNL-LABEL: usat_trunc_db_256:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [255,255,255,255,255,255,255,255]
-; KNL-NEXT:    vpminud %ymm1, %ymm0, %ymm0
-; KNL-NEXT:    vpmovdb %zmm0, %xmm0
+; KNL-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
+; KNL-NEXT:    vpmovusdb %zmm0, %xmm0
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;

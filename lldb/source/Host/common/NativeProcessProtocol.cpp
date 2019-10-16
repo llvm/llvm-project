@@ -527,6 +527,7 @@ NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
 
   switch (GetArchitecture().GetMachine()) {
   case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_32:
     return llvm::makeArrayRef(g_aarch64_opcode);
 
   case llvm::Triple::x86:
@@ -563,6 +564,7 @@ size_t NativeProcessProtocol::GetSoftwareBreakpointPCOffset() {
 
   case llvm::Triple::arm:
   case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_32:
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
   case llvm::Triple::mips:

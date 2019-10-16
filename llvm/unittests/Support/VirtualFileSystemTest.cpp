@@ -41,7 +41,9 @@ struct DummyFile : public vfs::File {
 class DummyFileSystem : public vfs::FileSystem {
   int FSID;   // used to produce UniqueIDs
   int FileID; // used to produce UniqueIDs
+  std::string WorkingDirectory;
   std::map<std::string, vfs::Status> FilesAndDirs;
+  typedef std::map<std::string, vfs::Status>::const_iterator const_iterator;
 
   static int getNextFSID() {
     static int Count = 0;
@@ -52,8 +54,7 @@ public:
   DummyFileSystem() : FSID(getNextFSID()), FileID(0) {}
 
   ErrorOr<vfs::Status> status(const Twine &Path) override {
-    std::map<std::string, vfs::Status>::iterator I =
-        FilesAndDirs.find(Path.str());
+    auto I = findEntry(Path);
     if (I == FilesAndDirs.end())
       return make_error_code(llvm::errc::no_such_file_or_directory);
     return I->second;
@@ -66,15 +67,16 @@ public:
     return S.getError();
   }
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override {
-    return std::string();
+    return WorkingDirectory;
   }
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override {
+    WorkingDirectory = Path.str();
     return std::error_code();
   }
   // Map any symlink to "/symlink".
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) const override {
-    auto I = FilesAndDirs.find(Path.str());
+    auto I = findEntry(Path);
     if (I == FilesAndDirs.end())
       return make_error_code(llvm::errc::no_such_file_or_directory);
     if (I->second.isSymlink()) {
@@ -136,6 +138,15 @@ public:
     FilesAndDirs[Path] = Status;
   }
 
+  const_iterator findEntry(const Twine &Path) const {
+    SmallString<128> P;
+    Path.toVector(P);
+    std::error_code EC = makeAbsolute(P);
+    assert(!EC);
+    (void)EC;
+    return FilesAndDirs.find(P.str());
+  }
+
   void addRegularFile(StringRef Path, sys::fs::perms Perms = sys::fs::all_all) {
     vfs::Status S(Path, UniqueID(FSID, FileID++),
                   std::chrono::system_clock::now(), 0, 0, 1024,
@@ -155,6 +166,12 @@ public:
                   std::chrono::system_clock::now(), 0, 0, 0,
                   sys::fs::file_type::symlink_file, sys::fs::all_all);
     addEntry(Path, S);
+  }
+};
+
+class ErrorDummyFileSystem : public DummyFileSystem {
+  std::error_code setCurrentWorkingDirectory(const Twine &Path) override {
+    return llvm::errc::no_such_file_or_directory;
   }
 };
 
@@ -1993,4 +2010,155 @@ TEST_F(VFSFromYAMLTest, GetRealPath) {
   // Try a non-existing file.
   EXPECT_EQ(FS->getRealPath("/non_existing", RealPath),
             errc::no_such_file_or_directory);
+}
+
+TEST_F(VFSFromYAMLTest, WorkingDirectory) {
+  IntrusiveRefCntPtr<DummyFileSystem> Lower(new DummyFileSystem());
+  Lower->addDirectory("//root/");
+  Lower->addDirectory("//root/foo");
+  Lower->addRegularFile("//root/foo/a");
+  Lower->addRegularFile("//root/foo/b");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
+      "{ 'use-external-names': false,\n"
+      "  'roots': [\n"
+      "{\n"
+      "  'type': 'directory',\n"
+      "  'name': '//root/bar',\n"
+      "  'contents': [ {\n"
+      "                  'type': 'file',\n"
+      "                  'name': 'a',\n"
+      "                  'external-contents': '//root/foo/a'\n"
+      "                }\n"
+      "              ]\n"
+      "}\n"
+      "]\n"
+      "}",
+      Lower);
+  ASSERT_TRUE(FS.get() != nullptr);
+  std::error_code EC = FS->setCurrentWorkingDirectory("//root/bar");
+  ASSERT_FALSE(EC);
+
+  llvm::ErrorOr<std::string> WorkingDir = FS->getCurrentWorkingDirectory();
+  ASSERT_TRUE(WorkingDir);
+  EXPECT_EQ(*WorkingDir, "//root/bar");
+
+  llvm::ErrorOr<vfs::Status> Status = FS->status("./a");
+  ASSERT_FALSE(Status.getError());
+  EXPECT_TRUE(Status->isStatusKnown());
+  EXPECT_FALSE(Status->isDirectory());
+  EXPECT_TRUE(Status->isRegularFile());
+  EXPECT_FALSE(Status->isSymlink());
+  EXPECT_FALSE(Status->isOther());
+  EXPECT_TRUE(Status->exists());
+
+  EC = FS->setCurrentWorkingDirectory("bogus");
+  ASSERT_TRUE(EC);
+  WorkingDir = FS->getCurrentWorkingDirectory();
+  ASSERT_TRUE(WorkingDir);
+  EXPECT_EQ(*WorkingDir, "//root/bar");
+
+  EC = FS->setCurrentWorkingDirectory("//root/");
+  ASSERT_FALSE(EC);
+  WorkingDir = FS->getCurrentWorkingDirectory();
+  ASSERT_TRUE(WorkingDir);
+  EXPECT_EQ(*WorkingDir, "//root/");
+
+  EC = FS->setCurrentWorkingDirectory("bar");
+  ASSERT_FALSE(EC);
+  WorkingDir = FS->getCurrentWorkingDirectory();
+  ASSERT_TRUE(WorkingDir);
+  EXPECT_EQ(*WorkingDir, "//root/bar");
+}
+
+TEST_F(VFSFromYAMLTest, WorkingDirectoryFallthrough) {
+  IntrusiveRefCntPtr<DummyFileSystem> Lower(new DummyFileSystem());
+  Lower->addDirectory("//root/");
+  Lower->addDirectory("//root/foo");
+  Lower->addRegularFile("//root/foo/a");
+  Lower->addRegularFile("//root/foo/b");
+  Lower->addRegularFile("//root/c");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
+      "{ 'use-external-names': false,\n"
+      "  'roots': [\n"
+      "{\n"
+      "  'type': 'directory',\n"
+      "  'name': '//root/bar',\n"
+      "  'contents': [ {\n"
+      "                  'type': 'file',\n"
+      "                  'name': 'a',\n"
+      "                  'external-contents': '//root/foo/a'\n"
+      "                }\n"
+      "              ]\n"
+      "}\n"
+      "]\n"
+      "}",
+      Lower);
+  ASSERT_TRUE(FS.get() != nullptr);
+  std::error_code EC = FS->setCurrentWorkingDirectory("//root/");
+  ASSERT_FALSE(EC);
+  ASSERT_TRUE(FS.get() != nullptr);
+
+  llvm::ErrorOr<vfs::Status> Status = FS->status("bar/a");
+  ASSERT_FALSE(Status.getError());
+  EXPECT_TRUE(Status->exists());
+
+  Status = FS->status("foo/a");
+  ASSERT_FALSE(Status.getError());
+  EXPECT_TRUE(Status->exists());
+
+  EC = FS->setCurrentWorkingDirectory("//root/bar");
+  ASSERT_FALSE(EC);
+
+  Status = FS->status("./a");
+  ASSERT_FALSE(Status.getError());
+  EXPECT_TRUE(Status->exists());
+
+  Status = FS->status("./b");
+  ASSERT_TRUE(Status.getError());
+
+  Status = FS->status("./c");
+  ASSERT_TRUE(Status.getError());
+
+  EC = FS->setCurrentWorkingDirectory("//root/");
+  ASSERT_FALSE(EC);
+
+  Status = FS->status("c");
+  ASSERT_FALSE(Status.getError());
+  EXPECT_TRUE(Status->exists());
+}
+
+TEST_F(VFSFromYAMLTest, WorkingDirectoryFallthroughInvalid) {
+  IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
+  Lower->addDirectory("//root/");
+  Lower->addDirectory("//root/foo");
+  Lower->addRegularFile("//root/foo/a");
+  Lower->addRegularFile("//root/foo/b");
+  Lower->addRegularFile("//root/c");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
+      "{ 'use-external-names': false,\n"
+      "  'roots': [\n"
+      "{\n"
+      "  'type': 'directory',\n"
+      "  'name': '//root/bar',\n"
+      "  'contents': [ {\n"
+      "                  'type': 'file',\n"
+      "                  'name': 'a',\n"
+      "                  'external-contents': '//root/foo/a'\n"
+      "                }\n"
+      "              ]\n"
+      "}\n"
+      "]\n"
+      "}",
+      Lower);
+  ASSERT_TRUE(FS.get() != nullptr);
+  std::error_code EC = FS->setCurrentWorkingDirectory("//root/");
+  ASSERT_FALSE(EC);
+  ASSERT_TRUE(FS.get() != nullptr);
+
+  llvm::ErrorOr<vfs::Status> Status = FS->status("bar/a");
+  ASSERT_FALSE(Status.getError());
+  EXPECT_TRUE(Status->exists());
+
+  Status = FS->status("foo/a");
+  ASSERT_TRUE(Status.getError());
 }

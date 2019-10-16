@@ -5085,7 +5085,7 @@ SwitchLookupTable::SwitchLookupTable(
   Array->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   // Set the alignment to that of an array items. We will be only loading one
   // value out of it.
-  Array->setAlignment(DL.getPrefTypeAlignment(ValueType));
+  Array->setAlignment(Align(DL.getPrefTypeAlignment(ValueType)));
   Kind = ArrayKind;
 }
 

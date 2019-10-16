@@ -26,7 +26,6 @@ INLINE uint64_t __kmpc_impl_pack(uint32_t lo, uint32_t hi) {
   return val;
 }
 
-typedef uint32_t __kmpc_impl_lanemask_t;
 static const __kmpc_impl_lanemask_t __kmpc_impl_all_lanes =
     UINT32_C(0xffffffff);
 

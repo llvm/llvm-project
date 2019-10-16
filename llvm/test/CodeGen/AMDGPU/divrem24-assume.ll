@@ -12,7 +12,7 @@ define amdgpu_kernel void @divrem24_assume(i32 addrspace(1)* %arg, i32 %arg1) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = fdiv fast float 1.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast float [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.trunc.f32(float [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = fsub fast float -0.000000e+00, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fneg fast float [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.amdgcn.fmad.ftz.f32(float [[TMP5]], float [[TMP1]], float [[TMP0]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = fptoui float [[TMP4]] to i32
 ; CHECK-NEXT:    [[TMP8:%.*]] = call fast float @llvm.fabs.f32(float [[TMP6]])

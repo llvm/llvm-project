@@ -456,14 +456,14 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
 
     bool HasExternal = false;
     StringRef FirstExternalName;
-    unsigned MaxAlign = 1;
+    Align MaxAlign;
     unsigned CurIdx = 0;
     for (j = i; j != -1; j = GlobalSet.find_next(j)) {
       Type *Ty = Globals[j]->getValueType();
 
       // Make sure we use the same alignment AsmPrinter would use.
-      unsigned Align = DL.getPreferredAlignment(Globals[j]);
-      unsigned Padding = alignTo(MergedSize, Align) - MergedSize;
+      Align Alignment(DL.getPreferredAlignment(Globals[j]));
+      unsigned Padding = alignTo(MergedSize, Alignment) - MergedSize;
       MergedSize += Padding;
       MergedSize += DL.getTypeAllocSize(Ty);
       if (MergedSize > MaxOffset) {
@@ -478,7 +478,7 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
       Inits.push_back(Globals[j]->getInitializer());
       StructIdxs.push_back(CurIdx++);
 
-      MaxAlign = std::max(MaxAlign, Align);
+      MaxAlign = std::max(MaxAlign, Alignment);
 
       if (Globals[j]->hasExternalLinkage() && !HasExternal) {
         HasExternal = true;

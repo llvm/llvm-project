@@ -8,7 +8,7 @@
 #
 # END.
 
-# CHECK: Failing Tests (27)
+# CHECK: Failing Tests (32)
 # CHECK: Failing Tests (1)
 # CHECK: Failing Tests (2)
 # CHECK: error: argument --max-failures: requires positive integer, but found '0'

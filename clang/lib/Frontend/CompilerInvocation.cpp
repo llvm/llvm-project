@@ -758,8 +758,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.CodeViewGHash = Args.hasArg(OPT_gcodeview_ghash);
   Opts.MacroDebugInfo = Args.hasArg(OPT_debug_info_macro);
   Opts.WholeProgramVTables = Args.hasArg(OPT_fwhole_program_vtables);
-  Opts.VirtualFunctionElimination =
-      Args.hasArg(OPT_fvirtual_function_elimination);
   Opts.LTOVisibilityPublicStd = Args.hasArg(OPT_flto_visibility_public_std);
   Opts.SplitDwarfFile = Args.getLastArgValue(OPT_split_dwarf_file);
   Opts.SplitDwarfOutput = Args.getLastArgValue(OPT_split_dwarf_output);
@@ -2081,6 +2079,8 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
       getLastArgUInt64Value(Args, OPT_fbuild_session_timestamp, 0);
   Opts.ModulesValidateSystemHeaders =
       Args.hasArg(OPT_fmodules_validate_system_headers);
+  Opts.ValidateASTInputFilesContent =
+      Args.hasArg(OPT_fvalidate_ast_input_files_content);
   if (const Arg *A = Args.getLastArg(OPT_fmodule_format_EQ))
     Opts.ModuleFormat = A->getValue();
 
@@ -3346,6 +3346,8 @@ static void ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
   // "editor placeholder in source file" error in PP only mode.
   if (isStrictlyPreprocessorAction(Action))
     Opts.LexEditorPlaceholders = false;
+
+  Opts.SetUpStaticAnalyzer = Args.hasArg(OPT_setup_static_analyzer);
 }
 
 static void ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,

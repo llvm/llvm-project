@@ -29,14 +29,8 @@
 #include <utility>
 
 namespace clang {
-namespace tooling {
+namespace transformer {
 using TextGenerator = MatchConsumer<std::string>;
-
-/// Wraps a string as a TextGenerator.
-inline TextGenerator text(std::string M) {
-  return [M](const ast_matchers::MatchFinder::MatchResult &)
-             -> Expected<std::string> { return M; };
-}
 
 // Description of a source-code edit, expressed in terms of an AST node.
 // Includes: an ID for the (bound) node, a selector for source related to the
@@ -222,7 +216,9 @@ inline ASTEdit insertAfter(RangeSelector S, TextGenerator Replacement) {
 
 /// Removes the source selected by \p S.
 inline ASTEdit remove(RangeSelector S) {
-  return change(std::move(S), text(""));
+  return change(std::move(S),
+                [](const ast_matchers::MatchFinder::MatchResult &)
+                    -> Expected<std::string> { return ""; });
 }
 
 /// The following three functions are a low-level part of the RewriteRule
@@ -281,6 +277,31 @@ struct Transformation {
 Expected<SmallVector<Transformation, 1>>
 translateEdits(const ast_matchers::MatchFinder::MatchResult &Result,
                llvm::ArrayRef<ASTEdit> Edits);
+} // namespace detail
+} // namespace transformer
+
+namespace tooling {
+// DEPRECATED: These are temporary aliases supporting client migration to the
+// `transformer` namespace.
+/// Wraps a string as a TextGenerator.
+using TextGenerator = transformer::TextGenerator;
+
+inline TextGenerator text(std::string M) {
+  return [M](const ast_matchers::MatchFinder::MatchResult &)
+             -> Expected<std::string> { return M; };
+}
+
+using transformer::addInclude;
+using transformer::applyFirst;
+using transformer::change;
+using transformer::insertAfter;
+using transformer::insertBefore;
+using transformer::makeRule;
+using transformer::remove;
+using transformer::RewriteRule;
+using transformer::IncludeFormat;
+namespace detail {
+using namespace transformer::detail;
 } // namespace detail
 } // namespace tooling
 } // namespace clang

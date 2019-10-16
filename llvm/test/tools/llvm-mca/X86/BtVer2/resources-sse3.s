@@ -83,7 +83,7 @@ mwait
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT: 1.00   1.00    -     15.00  3.00   15.50  3.50   10.00   -      -      -     0.50   0.50    -
+# CHECK-NEXT: 1.00   1.00    -     15.00  3.00   15.00  3.00   10.00   -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
@@ -99,7 +99,7 @@ mwait
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -     1.00    -      -      -      -      -      -     hsubpd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     hsubps	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -     1.00    -      -      -      -      -      -     hsubps	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     lddqu	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     lddqu	(%rax), %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     monitor
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -      -     movddup	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50   0.50   0.50   1.00    -      -      -      -      -      -     movddup	(%rax), %xmm2

@@ -1389,9 +1389,11 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
              "Expected inlined-at fields to agree");
       // A dbg.declare describes the address of a source variable, so lower it
       // into an indirect DBG_VALUE.
+      auto *Expr = DI->getExpression();
+      Expr = DIExpression::append(Expr, {dwarf::DW_OP_deref});
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-              TII.get(TargetOpcode::DBG_VALUE), /*IsIndirect*/ true,
-              *Op, DI->getVariable(), DI->getExpression());
+              TII.get(TargetOpcode::DBG_VALUE), /*IsIndirect*/ false,
+              *Op, DI->getVariable(), Expr);
     } else {
       // We can't yet handle anything else here because it would require
       // generating code, thus altering codegen because of debug info.
@@ -1415,19 +1417,19 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
       if (CI->getBitWidth() > 64)
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II)
             .addCImm(CI)
-            .addImm(0U)
+            .addReg(0U)
             .addMetadata(DI->getVariable())
             .addMetadata(DI->getExpression());
       else
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II)
             .addImm(CI->getZExtValue())
-            .addImm(0U)
+            .addReg(0U)
             .addMetadata(DI->getVariable())
             .addMetadata(DI->getExpression());
     } else if (const auto *CF = dyn_cast<ConstantFP>(V)) {
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II)
           .addFPImm(CF)
-          .addImm(0U)
+          .addReg(0U)
           .addMetadata(DI->getVariable())
           .addMetadata(DI->getExpression());
     } else if (unsigned Reg = lookUpRegForValue(V)) {
@@ -1454,24 +1456,12 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
             TII.get(TargetOpcode::DBG_LABEL)).addMetadata(DI->getLabel());
     return true;
   }
-  case Intrinsic::objectsize: {
-    ConstantInt *CI = cast<ConstantInt>(II->getArgOperand(1));
-    unsigned long long Res = CI->isZero() ? -1ULL : 0;
-    Constant *ResCI = ConstantInt::get(II->getType(), Res);
-    unsigned ResultReg = getRegForValue(ResCI);
-    if (!ResultReg)
-      return false;
-    updateValueMap(II, ResultReg);
-    return true;
-  }
-  case Intrinsic::is_constant: {
-    Constant *ResCI = ConstantInt::get(II->getType(), 0);
-    unsigned ResultReg = getRegForValue(ResCI);
-    if (!ResultReg)
-      return false;
-    updateValueMap(II, ResultReg);
-    return true;
-  }
+  case Intrinsic::objectsize:
+    llvm_unreachable("llvm.objectsize.* should have been lowered already");
+
+  case Intrinsic::is_constant:
+    llvm_unreachable("llvm.is.constant.* should have been lowered already");
+
   case Intrinsic::launder_invariant_group:
   case Intrinsic::strip_invariant_group:
   case Intrinsic::expect: {

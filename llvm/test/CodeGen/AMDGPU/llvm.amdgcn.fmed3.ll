@@ -53,8 +53,8 @@ define amdgpu_kernel void @test_fabs_fmed3(float addrspace(1)* %out, float %src0
 }
 
 ; GCN-LABEL: {{^}}test_fneg_fmed3_rr_0:
-; GCN: s_brev_b32 [[NEG0:s[0-9]+]], 1
-; GCN: v_med3_f32 v{{[0-9]+}}, -v{{[0-9]+}}, -v{{[0-9]+}}, [[NEG0]]
+; GCN: v_bfrev_b32_e32 [[NEG0:v[0-9]+]], 1
+; GCN: v_med3_f32 v{{[0-9]+}}, -s{{[0-9]+}}, -v{{[0-9]+}}, [[NEG0]]
 define amdgpu_kernel void @test_fneg_fmed3_rr_0(float addrspace(1)* %out, float %src0, float %src1) #1 {
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %src0, float %src1, float 0.0)
   %neg.med3 = fsub float -0.0, %med3
@@ -88,8 +88,8 @@ define amdgpu_kernel void @test_fneg_fmed3_r_inv2pi_0(float addrspace(1)* %out, 
 
 ; GCN-LABEL: {{^}}test_fneg_fmed3_r_inv2pi_0_foldable_user:
 ; GCN-DAG: v_bfrev_b32_e32 [[NEG0:v[0-9]+]], 1
-; GCN-DAG: s_mov_b32 [[NEG_INV:s[0-9]+]], 0xbe22f983
-; GCN: v_med3_f32 [[MED3:v[0-9]+]], -v{{[0-9]+}}, [[NEG_INV]], [[NEG0]]
+; GCN-DAG: v_mov_b32_e32 [[NEG_INV:v[0-9]+]], 0xbe22f983
+; GCN: v_med3_f32 [[MED3:v[0-9]+]], -s{{[0-9]+}}, [[NEG_INV]], [[NEG0]]
 ; GCN: v_mul_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, [[MED3]]
 define amdgpu_kernel void @test_fneg_fmed3_r_inv2pi_0_foldable_user(float addrspace(1)* %out, float %src0, float %mul.arg) #1 {
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %src0, float 0x3FC45F3060000000, float 0.0)

@@ -231,6 +231,7 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
 
 #else
   if (host_arch.GetMachine() == llvm::Triple::aarch64 ||
+      host_arch.GetMachine() == llvm::Triple::aarch64_32 ||
       host_arch.GetMachine() == llvm::Triple::aarch64_be ||
       host_arch.GetMachine() == llvm::Triple::arm ||
       host_arch.GetMachine() == llvm::Triple::armeb || host_arch.IsMIPS())
@@ -507,7 +508,11 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Open(
   packet.GetHexByteStringTerminatedBy(path, ',');
   if (!path.empty()) {
     if (packet.GetChar() == ',') {
-      uint32_t flags = packet.GetHexMaxU32(false, 0);
+      // FIXME
+      // The flag values for OpenOptions do not match the values used by GDB
+      // * https://sourceware.org/gdb/onlinedocs/gdb/Open-Flags.html#Open-Flags
+      // * rdar://problem/46788934
+      auto flags = File::OpenOptions(packet.GetHexMaxU32(false, 0));
       if (packet.GetChar() == ',') {
         mode_t mode = packet.GetHexMaxU32(false, 0600);
         FileSpec path_spec(path);
@@ -546,7 +551,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Close(
   int err = -1;
   int save_errno = 0;
   if (fd >= 0) {
-    NativeFile file(fd, 0, true);
+    NativeFile file(fd, File::OpenOptions(0), true);
     Status error = file.Close();
     err = 0;
     save_errno = error.GetError();
@@ -1181,6 +1186,15 @@ void GDBRemoteCommunicationServerCommon::CreateProcessInfoResponse(
       proc_info.GetEffectiveUserID(), proc_info.GetEffectiveGroupID());
   response.PutCString("name:");
   response.PutStringAsRawHex8(proc_info.GetExecutableFile().GetCString());
+
+  response.PutChar(';');
+  response.PutCString("args:");
+  response.PutStringAsRawHex8(proc_info.GetArg0());
+  for (auto &arg : proc_info.GetArguments()) {
+    response.PutChar('-');
+    response.PutStringAsRawHex8(arg.ref());
+  }
+
   response.PutChar(';');
   const ArchSpec &proc_arch = proc_info.GetArchitecture();
   if (proc_arch.IsValid()) {
@@ -1230,6 +1244,7 @@ void GDBRemoteCommunicationServerCommon::
       case llvm::Triple::arm:
       case llvm::Triple::thumb:
       case llvm::Triple::aarch64:
+      case llvm::Triple::aarch64_32:
         ostype = "ios";
         break;
       default:

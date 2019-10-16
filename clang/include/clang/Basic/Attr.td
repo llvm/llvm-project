@@ -2020,6 +2020,14 @@ def PragmaClangRodataSection : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def PragmaClangRelroSection : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  let Spellings = [];
+  let Args = [StringArgument<"Name">];
+  let Subjects = SubjectList<[GlobalVar], ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+
 def PragmaClangTextSection : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];

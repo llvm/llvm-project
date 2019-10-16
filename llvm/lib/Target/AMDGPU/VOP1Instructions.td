@@ -104,13 +104,18 @@ multiclass VOP1Inst <string opName, VOPProfile P,
                      SDPatternOperator node = null_frag> {
   def _e32 : VOP1_Pseudo <opName, P>;
   def _e64 : VOP3_Pseudo <opName, P, getVOP1Pat64<node, P>.ret>;
-  def _sdwa : VOP1_SDWA_Pseudo <opName, P>;
+
+  foreach _ = BoolToList<P.HasExtSDWA>.ret in
+    def _sdwa : VOP1_SDWA_Pseudo <opName, P>;
+
   foreach _ = BoolToList<P.HasExtDPP>.ret in
     def _dpp : VOP1_DPP_Pseudo <opName, P>;
 
   def : MnemonicAlias<opName#"_e32", opName>, LetDummies;
   def : MnemonicAlias<opName#"_e64", opName>, LetDummies;
-  def : MnemonicAlias<opName#"_sdwa", opName>, LetDummies;
+
+  foreach _ = BoolToList<P.HasExtSDWA>.ret in
+    def : MnemonicAlias<opName#"_sdwa", opName>, LetDummies;
 
   foreach _ = BoolToList<P.HasExtDPP>.ret in
     def : MnemonicAlias<opName#"_dpp", opName>, LetDummies;
@@ -500,6 +505,7 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
       VOP3e_gfx10<{0, 1, 1, op{6-0}}, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl>;
   }
   multiclass VOP1_Real_sdwa_gfx10<bits<9> op> {
+    foreach _ = BoolToList<!cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA9>.ret in
     def _sdwa_gfx10 :
       VOP_SDWA10_Real<!cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa")>,
       VOP1_SDWA9Ae<op{7-0}, !cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa").Pfl> {
@@ -714,10 +720,12 @@ multiclass VOP1_Real_e32e64_vi <bits<10> op> {
 multiclass VOP1_Real_vi <bits<10> op> {
   defm NAME : VOP1_Real_e32e64_vi <op>;
 
+  foreach _ = BoolToList<!cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA>.ret in
   def _sdwa_vi :
     VOP_SDWA_Real <!cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOP1_SDWAe <op{7-0}, !cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 
+  foreach _ = BoolToList<!cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA9>.ret in
   def _sdwa_gfx9 :
     VOP_SDWA9_Real <!cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOP1_SDWA9Ae <op{7-0}, !cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
@@ -895,6 +903,7 @@ multiclass VOP1_Real_gfx9 <bits<10> op> {
     defm NAME : VOP1_Real_e32e64_vi <op>;
   }
 
+  foreach _ = BoolToList<!cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA9>.ret in
   def _sdwa_gfx9 :
     VOP_SDWA9_Real <!cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOP1_SDWA9Ae <op{7-0}, !cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;

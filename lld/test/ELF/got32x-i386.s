@@ -33,8 +33,8 @@
 
 ## 73728 == 0x12000 == ADDR(.got)
 # CHECK: Sections:
-# CHECK:  Name Size     VMA
-# CHECK:  .got.plt 0000000c 0000000000403134
+# CHECK:  Name     Size     VMA
+# CHECK:  .got.plt 0000000c 00403134
 # CHECK:       _start:
 # CHECK-NEXT:   401115: 8b 05 {{.*}} movl 4202800, %eax
 # CHECK-NEXT:   40111b: 8b 1d {{.*}} movl 4202800, %ebx

@@ -1368,7 +1368,7 @@ let test_builder () =
      * CHECK: %build_neg = sub i32 0, %P1
      * CHECK: %build_nsw_neg = sub nsw i32 0, %P1
      * CHECK: %build_nuw_neg = sub nuw i32 0, %P1
-     * CHECK: %build_fneg = fsub float {{.*}}0{{.*}}, %F1
+     * CHECK: %build_fneg = fneg float %F1
      * CHECK: %build_not = xor i32 %P1, -1
      *)
     ignore (build_add p1 p2 "build_add" b);

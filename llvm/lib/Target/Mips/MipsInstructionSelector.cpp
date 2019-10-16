@@ -45,6 +45,8 @@ private:
   const TargetRegisterClass *
   getRegClassForTypeOnBank(unsigned OpSize, const RegisterBank &RB,
                            const RegisterBankInfo &RBI) const;
+  unsigned selectLoadStoreOpCode(MachineInstr &I,
+                                 MachineRegisterInfo &MRI) const;
 
   const MipsTargetMachine &TM;
   const MipsSubtarget &STI;
@@ -159,9 +161,15 @@ bool MipsInstructionSelector::materialize32BitImm(Register DestReg, APInt Imm,
 }
 
 /// Returning Opc indicates that we failed to select MIPS instruction opcode.
-static unsigned selectLoadStoreOpCode(unsigned Opc, unsigned MemSizeInBytes,
-                                      unsigned RegBank, bool isFP64) {
-  bool isStore = Opc == TargetOpcode::G_STORE;
+unsigned
+MipsInstructionSelector::selectLoadStoreOpCode(MachineInstr &I,
+                                               MachineRegisterInfo &MRI) const {
+  STI.getRegisterInfo();
+  const Register DestReg = I.getOperand(0).getReg();
+  const unsigned RegBank = RBI.getRegBank(DestReg, MRI, TRI)->getID();
+  const unsigned MemSizeInBytes = (*I.memoperands_begin())->getSize();
+  unsigned Opc = I.getOpcode();
+  const bool isStore = Opc == TargetOpcode::G_STORE;
   if (RegBank == Mips::GPRBRegBankID) {
     if (isStore)
       switch (MemSizeInBytes) {
@@ -193,10 +201,24 @@ static unsigned selectLoadStoreOpCode(unsigned Opc, unsigned MemSizeInBytes,
     case 4:
       return isStore ? Mips::SWC1 : Mips::LWC1;
     case 8:
-      if (isFP64)
+      if (STI.isFP64bit())
         return isStore ? Mips::SDC164 : Mips::LDC164;
       else
         return isStore ? Mips::SDC1 : Mips::LDC1;
+    case 16: {
+      assert(STI.hasMSA() && "Vector instructions require target with MSA.");
+      const unsigned VectorElementSizeInBytes =
+          MRI.getType(DestReg).getElementType().getSizeInBytes();
+      if (VectorElementSizeInBytes == 1)
+        return isStore ? Mips::ST_B : Mips::LD_B;
+      if (VectorElementSizeInBytes == 2)
+        return isStore ? Mips::ST_H : Mips::LD_H;
+      if (VectorElementSizeInBytes == 4)
+        return isStore ? Mips::ST_W : Mips::LD_W;
+      if (VectorElementSizeInBytes == 8)
+        return isStore ? Mips::ST_D : Mips::LD_D;
+      return Opc;
+    }
     default:
       return Opc;
     }
@@ -361,19 +383,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
   case G_LOAD:
   case G_ZEXTLOAD:
   case G_SEXTLOAD: {
-    const Register DestReg = I.getOperand(0).getReg();
-    const unsigned DestRegBank = RBI.getRegBank(DestReg, MRI, TRI)->getID();
-    const unsigned OpSize = MRI.getType(DestReg).getSizeInBits();
-    const unsigned OpMemSizeInBytes = (*I.memoperands_begin())->getSize();
-
-    if (DestRegBank == Mips::GPRBRegBankID && OpSize != 32)
-      return false;
-
-    if (DestRegBank == Mips::FPRBRegBankID && OpSize != 32 && OpSize != 64)
-      return false;
-
-    const unsigned NewOpc = selectLoadStoreOpCode(
-        I.getOpcode(), OpMemSizeInBytes, DestRegBank, STI.isFP64bit());
+    const unsigned NewOpc = selectLoadStoreOpCode(I, MRI);
     if (NewOpc == I.getOpcode())
       return false;
 

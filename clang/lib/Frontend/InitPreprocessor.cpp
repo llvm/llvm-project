@@ -560,6 +560,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
 static void InitializePredefinedMacros(const TargetInfo &TI,
                                        const LangOptions &LangOpts,
                                        const FrontendOptions &FEOpts,
+                                       const PreprocessorOptions &PPOpts,
                                        MacroBuilder &Builder) {
   // Compiler version introspection macros.
   Builder.defineMacro("__llvm__");  // LLVM Backend
@@ -997,8 +998,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   else if (LangOpts.getStackProtector() == LangOptions::SSPReq)
     Builder.defineMacro("__SSP_ALL__", "3");
 
-  // Define a macro that exists only when using the static analyzer.
-  if (FEOpts.ProgramAction == frontend::RunAnalysis)
+  if (PPOpts.SetUpStaticAnalyzer)
     Builder.defineMacro("__clang_analyzer__");
 
   if (LangOpts.FastRelaxedMath)
@@ -1125,9 +1125,10 @@ void clang::InitializePreprocessor(
     // macros. This is not the right way to handle this.
     if ((LangOpts.CUDA || LangOpts.OpenMPIsDevice) && PP.getAuxTargetInfo())
       InitializePredefinedMacros(*PP.getAuxTargetInfo(), LangOpts, FEOpts,
-                                 Builder);
+                                 PP.getPreprocessorOpts(), Builder);
 
-    InitializePredefinedMacros(PP.getTargetInfo(), LangOpts, FEOpts, Builder);
+    InitializePredefinedMacros(PP.getTargetInfo(), LangOpts, FEOpts,
+                               PP.getPreprocessorOpts(), Builder);
 
     // Install definitions to make Objective-C++ ARC work well with various
     // C++ Standard Library implementations.

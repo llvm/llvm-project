@@ -1758,3 +1758,62 @@ cleanup:
   %res = phi i1 [ false, %for.body ], [ true, %for.cond ], [ false, %entry ]
   ret i1 %res
 }
+
+; With -m32:
+; int index_wider_than_pointer(int* a, int* b, long long num) {
+;     for(long long i = 0; i < num; ++i) {
+;         if(a[i] != b[i])
+;             return 1;
+;     }
+;     return 0;
+; }
+define dso_local i64 @test(i64* %a, i64* %b, i128 %num) {
+; CHECK-LABEL: @test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i128 [[NUM:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP9]], label [[FOR_BODY_PREHEADER:%.*]], label [[CLEANUP:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i128 [[INC:%.*]], [[NUM]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP_LOOPEXIT:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_010:%.*]] = phi i128 [ [[INC]], [[FOR_COND:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[IDXPROM:%.*]] = trunc i128 [[I_010]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[ARRAYIDX]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[B:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, i64* [[ARRAYIDX2]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i64 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i128 [[I_010]], 1
+; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_COND]], label [[CLEANUP_LOOPEXIT]]
+; CHECK:       cleanup.loopexit:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i64 [ 1, [[FOR_BODY]] ], [ 0, [[FOR_COND]] ]
+; CHECK-NEXT:    br label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[DOTPH]], [[CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+entry:
+  %cmp9 = icmp sgt i128 %num, 0
+  br i1 %cmp9, label %for.body, label %cleanup
+
+for.cond:                                         ; preds = %for.body
+  %cmp = icmp slt i128 %inc, %num
+  br i1 %cmp, label %for.body, label %cleanup
+
+for.body:                                         ; preds = %entry, %for.cond
+  %i.010 = phi i128 [ %inc, %for.cond ], [ 0, %entry ]
+  %idxprom = trunc i128 %i.010 to i64
+  %arrayidx = getelementptr inbounds i64, i64* %a, i64 %idxprom
+  %0 = load i64, i64* %arrayidx
+  %arrayidx2 = getelementptr inbounds i64, i64* %b, i64 %idxprom
+  %1 = load i64, i64* %arrayidx2
+  %cmp3 = icmp eq i64 %0, %1
+  %inc = add nuw nsw i128 %i.010, 1
+  br i1 %cmp3, label %for.cond, label %cleanup
+
+cleanup:                                          ; preds = %for.body, %for.cond, %entry
+  %2 = phi i64 [ 0, %entry ], [ 0, %for.cond ], [ 1, %for.body ]
+  ret i64 %2
+}

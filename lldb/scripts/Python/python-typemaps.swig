@@ -434,6 +434,22 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   }
 }
 
+%typemap(out) lldb::FileSP {
+  using namespace lldb_private;
+  $result = nullptr;
+  lldb::FileSP &sp = $1;
+  if (sp) {
+    PythonFile pyfile = unwrapOrSetPythonException(PythonFile::FromFile(*sp));
+    if (!pyfile.IsValid())
+      return nullptr;
+    $result = pyfile.release();
+  }
+  if (!$result)
+  {
+      $result = Py_None;
+      Py_INCREF(Py_None);
+  }
+}
 
 // FIXME both of these paths wind up calling fdopen() with no provision for ever calling
 // fclose() on the result.  SB interfaces that use FILE* should be deprecated for scripting

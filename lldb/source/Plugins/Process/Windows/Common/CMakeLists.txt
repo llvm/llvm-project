@@ -4,6 +4,7 @@ add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
   LocalDebugDelegate.cpp
   NativeProcessWindows.cpp
   NativeRegisterContextWindows.cpp
+  NativeRegisterContextWindows_arm64.cpp
   NativeRegisterContextWindows_i386.cpp
   NativeRegisterContextWindows_WoW64.cpp
   NativeRegisterContextWindows_x86_64.cpp
@@ -13,9 +14,10 @@ add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
   ProcessWindowsLog.cpp
   RegisterContextWindows.cpp
   TargetThreadWindows.cpp
+  arm64/RegisterContextWindows_arm64.cpp
   x64/RegisterContextWindows_x64.cpp
   x86/RegisterContextWindows_x86.cpp
-  # TODO add support for ARM (NT) and ARM64
+  # TODO add support for ARM (NT)
 
   LINK_LIBS
     lldbCore

@@ -78,18 +78,18 @@ body: |
     ; SI-LABEL: name: test_fminnum_s32_nnan
     ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; SI: %2:_(s32) = nnan G_FMINNUM_IEEE [[COPY]], [[COPY1]]
-    ; SI: $vgpr0 = COPY %2(s32)
+    ; SI: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = nnan G_FMINNUM_IEEE [[COPY]], [[COPY1]]
+    ; SI: $vgpr0 = COPY [[FMINNUM_IEEE]](s32)
     ; VI-LABEL: name: test_fminnum_s32_nnan
     ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; VI: %2:_(s32) = nnan G_FMINNUM_IEEE [[COPY]], [[COPY1]]
-    ; VI: $vgpr0 = COPY %2(s32)
+    ; VI: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = nnan G_FMINNUM_IEEE [[COPY]], [[COPY1]]
+    ; VI: $vgpr0 = COPY [[FMINNUM_IEEE]](s32)
     ; GFX9-LABEL: name: test_fminnum_s32_nnan
     ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; GFX9: %2:_(s32) = nnan G_FMINNUM_IEEE [[COPY]], [[COPY1]]
-    ; GFX9: $vgpr0 = COPY %2(s32)
+    ; GFX9: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = nnan G_FMINNUM_IEEE [[COPY]], [[COPY1]]
+    ; GFX9: $vgpr0 = COPY [[FMINNUM_IEEE]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = nnan G_FMINNUM %0, %1
@@ -104,22 +104,22 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; SI-LABEL: name: test_fminnum_s32_nnan_lhs
-    ; SI: %0:_(s32) = nnan COPY $vgpr0
-    ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; SI: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
-    ; SI: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE %0, [[FCANONICALIZE]]
+    ; SI: [[COPY:%[0-9]+]]:_(s32) = nnan COPY $vgpr0
+    ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; SI: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
+    ; SI: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[COPY]], [[FCANONICALIZE]]
     ; SI: $vgpr0 = COPY [[FMINNUM_IEEE]](s32)
     ; VI-LABEL: name: test_fminnum_s32_nnan_lhs
-    ; VI: %0:_(s32) = nnan COPY $vgpr0
-    ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; VI: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
-    ; VI: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE %0, [[FCANONICALIZE]]
+    ; VI: [[COPY:%[0-9]+]]:_(s32) = nnan COPY $vgpr0
+    ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; VI: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
+    ; VI: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[COPY]], [[FCANONICALIZE]]
     ; VI: $vgpr0 = COPY [[FMINNUM_IEEE]](s32)
     ; GFX9-LABEL: name: test_fminnum_s32_nnan_lhs
-    ; GFX9: %0:_(s32) = nnan COPY $vgpr0
-    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; GFX9: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
-    ; GFX9: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE %0, [[FCANONICALIZE]]
+    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = nnan COPY $vgpr0
+    ; GFX9: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; GFX9: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY1]]
+    ; GFX9: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[COPY]], [[FCANONICALIZE]]
     ; GFX9: $vgpr0 = COPY [[FMINNUM_IEEE]](s32)
     %0:_(s32) = nnan COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
@@ -136,21 +136,21 @@ body: |
 
     ; SI-LABEL: name: test_fminnum_s32_nnan_rhs
     ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; SI: %1:_(s32) = nnan COPY $vgpr1
+    ; SI: [[COPY1:%[0-9]+]]:_(s32) = nnan COPY $vgpr1
     ; SI: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
-    ; SI: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], %1
+    ; SI: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[COPY1]]
     ; SI: $vgpr0 = COPY [[FMINNUM_IEEE]](s32)
     ; VI-LABEL: name: test_fminnum_s32_nnan_rhs
     ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; VI: %1:_(s32) = nnan COPY $vgpr1
+    ; VI: [[COPY1:%[0-9]+]]:_(s32) = nnan COPY $vgpr1
     ; VI: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
-    ; VI: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], %1
+    ; VI: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[COPY1]]
     ; VI: $vgpr0 = COPY [[FMINNUM_IEEE]](s32)
     ; GFX9-LABEL: name: test_fminnum_s32_nnan_rhs
     ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GFX9: %1:_(s32) = nnan COPY $vgpr1
+    ; GFX9: [[COPY1:%[0-9]+]]:_(s32) = nnan COPY $vgpr1
     ; GFX9: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[COPY]]
-    ; GFX9: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], %1
+    ; GFX9: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[COPY1]]
     ; GFX9: $vgpr0 = COPY [[FMINNUM_IEEE]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = nnan COPY $vgpr1
@@ -165,19 +165,19 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; SI-LABEL: name: test_fminnum_s32_nnan_lhs_rhs
-    ; SI: %0:_(s32) = nnan COPY $vgpr0
-    ; SI: %1:_(s32) = nnan COPY $vgpr1
-    ; SI: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE %0, %1
+    ; SI: [[COPY:%[0-9]+]]:_(s32) = nnan COPY $vgpr0
+    ; SI: [[COPY1:%[0-9]+]]:_(s32) = nnan COPY $vgpr1
+    ; SI: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[COPY]], [[COPY1]]
     ; SI: $vgpr0 = COPY [[FMINNUM_IEEE]](s32)
     ; VI-LABEL: name: test_fminnum_s32_nnan_lhs_rhs
-    ; VI: %0:_(s32) = nnan COPY $vgpr0
-    ; VI: %1:_(s32) = nnan COPY $vgpr1
-    ; VI: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE %0, %1
+    ; VI: [[COPY:%[0-9]+]]:_(s32) = nnan COPY $vgpr0
+    ; VI: [[COPY1:%[0-9]+]]:_(s32) = nnan COPY $vgpr1
+    ; VI: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[COPY]], [[COPY1]]
     ; VI: $vgpr0 = COPY [[FMINNUM_IEEE]](s32)
     ; GFX9-LABEL: name: test_fminnum_s32_nnan_lhs_rhs
-    ; GFX9: %0:_(s32) = nnan COPY $vgpr0
-    ; GFX9: %1:_(s32) = nnan COPY $vgpr1
-    ; GFX9: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE %0, %1
+    ; GFX9: [[COPY:%[0-9]+]]:_(s32) = nnan COPY $vgpr0
+    ; GFX9: [[COPY1:%[0-9]+]]:_(s32) = nnan COPY $vgpr1
+    ; GFX9: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = G_FMINNUM_IEEE [[COPY]], [[COPY1]]
     ; GFX9: $vgpr0 = COPY [[FMINNUM_IEEE]](s32)
     %0:_(s32) = nnan COPY $vgpr0
     %1:_(s32) = nnan COPY $vgpr1

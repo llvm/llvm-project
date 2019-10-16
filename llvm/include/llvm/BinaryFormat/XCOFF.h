@@ -148,6 +148,68 @@ enum SymbolType {
   XTY_CM = 3  ///< Common csect definition. For uninitialized storage.
 };
 
+// Relocation types, defined in `/usr/include/reloc.h`.
+enum RelocationType : uint8_t {
+  R_POS = 0x00, ///< Positive relocation. Provides the address of the referenced
+                ///< symbol.
+  R_RL = 0x0c,  ///< Positive indirect load relocation. Modifiable instruction.
+  R_RLA = 0x0d, ///< Positive load address relocation. Modifiable instruction.
+
+  R_NEG = 0x01, ///< Negative relocation. Provides the negative of the address
+                ///< of the referenced symbol.
+  R_REL = 0x02, ///< Relative to self relocation. Provides a displacement value
+                ///< between the address of the referenced symbol and the
+                ///< address being relocated.
+
+  R_TOC = 0x03, ///< Relative to the TOC relocation. Provides a displacement
+                ///< that is the difference between the address of the
+                ///< referenced symbol and the TOC anchor csect.
+  R_TRL = 0x12, ///< TOC relative indirect load relocation. Similar to R_TOC,
+                ///< but not modifiable instruction.
+
+  R_TRLA =
+      0x13, ///< Relative to the TOC or to the thread-local storage base
+            ///< relocation. Compilers are not permitted to generate this
+            ///< relocation type. It is the result of a reversible
+            ///< transformation by the linker of an R_TOC relation that turned a
+            ///< load instruction into an add-immediate instruction.
+
+  R_GL = 0x05, ///< Global linkage-external TOC address relocation. Provides the
+               ///< address of the external TOC associated with a defined
+               ///< external symbol.
+  R_TCL = 0x06, ///< Local object TOC address relocation. Provides the address
+                ///< of the local TOC entry of a defined external symbol.
+
+  R_REF = 0x0f, ///< A non-relocating relocation. Used to prevent the binder
+                ///< from garbage collecting a csect (such as code used for
+                ///< dynamic initialization of non-local statics) for which
+                ///< another csect has an implicit dependency.
+
+  R_BA = 0x08, ///< Branch absolute relocation. Provides the address of the
+               ///< referenced symbol. References a non-modifiable instruction.
+  R_BR = 0x0a, ///< Branch relative to self relocation. Provides the
+               ///< displacement that is the difference between the address of
+               ///< the referenced symbol and the address of the referenced
+               ///< branch instruction. References a non-modifiable instruction.
+  R_RBA = 0x18, ///< Branch absolute relocation. Similar to R_BA but
+                ///< references a modifiable instruction.
+  R_RBR = 0x1a, ///< Branch relative to self relocation. Similar to the R_BR
+                ///< relocation type, but references a modifiable instruction.
+
+  R_TLS = 0x20,    ///< General-dynamic reference to TLS symbol.
+  R_TLS_IE = 0x21, ///< Initial-exec reference to TLS symbol.
+  R_TLS_LD = 0x22, ///< Local-dynamic reference to TLS symbol.
+  R_TLS_LE = 0x23, ///< Local-exec reference to TLS symbol.
+  R_TLSM = 0x24,  ///< Module reference to TLS. Provides a handle for the module
+                  ///< containing the referenced symbol.
+  R_TLSML = 0x25, ///< Module reference to the local TLS storage.
+
+  R_TOCU = 0x30, ///< Relative to TOC upper. Specifies the high-order 16 bits of
+                 ///< a large code model TOC-relative relocation.
+  R_TOCL = 0x31 ///< Relative to TOC lower. Specifies the low-order 16 bits of a
+                ///< large code model TOC-relative relocation.
+};
+
 struct FileHeader32 {
   uint16_t Magic;
   uint16_t NumberOfSections;

@@ -397,6 +397,13 @@ FunctionPass *createLowerExpectIntrinsicPass();
 
 //===----------------------------------------------------------------------===//
 //
+// LowerConstantIntrinsicss - Expand any remaining llvm.objectsize and
+// llvm.is.constant intrinsic calls, even for the unknown cases.
+//
+FunctionPass *createLowerConstantIntrinsicsPass();
+
+//===----------------------------------------------------------------------===//
+//
 // PartiallyInlineLibCalls - Tries to inline the fast path of library
 // calls such as sqrt.
 //

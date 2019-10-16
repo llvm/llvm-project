@@ -829,6 +829,12 @@ void StmtPrinter::VisitOMPMasterTaskLoopDirective(
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPParallelMasterTaskLoopDirective(
+    OMPParallelMasterTaskLoopDirective *Node) {
+  Indent() << "#pragma omp parallel master taskloop";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPDistributeDirective(OMPDistributeDirective *Node) {
   Indent() << "#pragma omp distribute";
   PrintOMPExecutableDirective(Node);
@@ -2223,6 +2229,17 @@ void StmtPrinter::VisitCXXFoldExpr(CXXFoldExpr *E) {
     PrintExpr(E->getRHS());
   }
   OS << ")";
+}
+
+void StmtPrinter::VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {
+  NestedNameSpecifierLoc NNS = E->getNestedNameSpecifierLoc();
+  if (NNS)
+    NNS.getNestedNameSpecifier()->print(OS, Policy);
+  if (E->getTemplateKWLoc().isValid())
+    OS << "template ";
+  OS << E->getFoundDecl()->getName();
+  printTemplateArgumentList(OS, E->getTemplateArgsAsWritten()->arguments(),
+                            Policy);
 }
 
 // C++ Coroutines TS
