@@ -143,6 +143,7 @@ public:
     Path.toVector(P);
     std::error_code EC = makeAbsolute(P);
     assert(!EC);
+    (void)EC;
     return FilesAndDirs.find(P.str());
   }
 
