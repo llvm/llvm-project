@@ -63,12 +63,15 @@ bool parseExpectError(const char (&Buf)[N], const char *Error) {
   return StringRef(Stream.str()).contains(Error);
 }
 
-void parseExpectErrorMeta(StringRef Buf, const char *Error) {
+void parseExpectErrorMeta(StringRef Buf, const char *Error,
+                          Optional<StringRef> ExternalFilePrependPath = None) {
   std::string ErrorStr;
   raw_string_ostream Stream(ErrorStr);
 
   Expected<std::unique_ptr<remarks::RemarkParser>> MaybeParser =
-      remarks::createRemarkParserFromMeta(remarks::Format::YAML, Buf);
+      remarks::createRemarkParserFromMeta(remarks::Format::YAML, Buf,
+                                          /*StrTab=*/None,
+                                          std::move(ExternalFilePrependPath));
   handleAllErrors(MaybeParser.takeError(),
                   [&](const ErrorInfoBase &EIB) { EIB.log(Stream); });
 
@@ -705,6 +708,14 @@ TEST(YAMLRemarks, ParsingBadMeta) {
                                  "\0\0\0\0\0\0\0\0"
                                  "\0\0\0\0\0\0\0\0"
                                  "/path/",
-                                 28),
-                       "No such file or directory");
+                                 30),
+                       "'/path/': No such file or directory");
+
+  parseExpectErrorMeta(StringRef("REMARKS\0"
+                                 "\0\0\0\0\0\0\0\0"
+                                 "\0\0\0\0\0\0\0\0"
+                                 "/path/",
+                                 30),
+                       "'/baddir/path/': No such file or directory",
+                       StringRef("/baddir/"));
 }
