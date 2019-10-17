@@ -10,10 +10,12 @@
 # LLVM-ALL: Sections [
 # LLVM-ALL: Relocations [
 # LLVM-ALL: Symbols [
+# LLVM-ALL: EHFrameHeader {
+# LLVM-ALL: .eh_frame section at offset 0x1128 address 0x0:
 # LLVM-ALL: ProgramHeaders [
-# LLVM-ALL: Version symbols [
-# LLVM-ALL: SHT_GNU_verdef {
-# LLVM-ALL: SHT_GNU_verneed {
+# LLVM-ALL: VersionSymbols [
+# LLVM-ALL: VersionDefinitions [
+# LLVM-ALL: VersionRequirements [
 # LLVM-ALL: Addrsig [
 # LLVM-ALL: Notes [
 # LLVM-ALL: StackSizes [
@@ -25,7 +27,7 @@
 # GNU-ALL: There are {{.*}} section headers, starting at offset {{.*}}:
 # GNU-ALL: Relocation section '.rela.data' at offset {{.*}} contains {{.*}} entries:
 # GNU-ALL: Symbol table '.symtab' contains {{.*}} entries:
-# GNU-ALL: EH_FRAME Header [
+# GNU-ALL: EHFrameHeader {
 # GNU-ALL: .eh_frame section at offset {{.*}} address 0x0:
 # GNU-ALL: Dynamic section at offset {{.*}} contains {{.*}} entries:
 # GNU-ALL: Program Headers:

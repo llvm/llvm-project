@@ -863,7 +863,7 @@ public:
 class Reader {
 public:
   virtual ~Reader();
-  virtual std::unique_ptr<Object> create() const = 0;
+  virtual std::unique_ptr<Object> create(bool EnsureSymtab) const = 0;
 };
 
 using object::Binary;
@@ -926,7 +926,7 @@ private:
   void initGroupSection(GroupSection *GroupSec);
   void initSymbolTable(SymbolTableSection *SymTab);
   void readSectionHeaders();
-  void readSections();
+  void readSections(bool EnsureSymtab);
   void findEhdrOffset();
   SectionBase &makeSection(const Elf_Shdr &Shdr);
 
@@ -936,7 +936,7 @@ public:
       : ElfFile(*ElfObj.getELFFile()), Obj(Obj),
         ExtractPartition(ExtractPartition) {}
 
-  void build();
+  void build(bool EnsureSymtab);
 };
 
 class BinaryReader : public Reader {
@@ -946,7 +946,7 @@ class BinaryReader : public Reader {
 public:
   BinaryReader(MemoryBuffer *MB, const uint8_t NewSymbolVisibility)
       : MemBuf(MB), NewSymbolVisibility(NewSymbolVisibility) {}
-  std::unique_ptr<Object> create() const override;
+  std::unique_ptr<Object> create(bool EnsureSymtab) const override;
 };
 
 class IHexReader : public Reader {
@@ -968,7 +968,7 @@ class IHexReader : public Reader {
 public:
   IHexReader(MemoryBuffer *MB) : MemBuf(MB) {}
 
-  std::unique_ptr<Object> create() const override;
+  std::unique_ptr<Object> create(bool EnsureSymtab) const override;
 };
 
 class ELFReader : public Reader {
@@ -976,7 +976,7 @@ class ELFReader : public Reader {
   Optional<StringRef> ExtractPartition;
 
 public:
-  std::unique_ptr<Object> create() const override;
+  std::unique_ptr<Object> create(bool EnsureSymtab) const override;
   explicit ELFReader(Binary *B, Optional<StringRef> ExtractPartition)
       : Bin(B), ExtractPartition(ExtractPartition) {}
 };

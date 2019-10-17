@@ -31,6 +31,8 @@ extern cl::opt<bool> Demangle;
 
 typedef std::function<bool(llvm::object::SectionRef const &)> FilterPredicate;
 
+/// A filtered iterator for SectionRefs that skips sections based on some given
+/// predicate.
 class SectionFilterIterator {
 public:
   SectionFilterIterator(FilterPredicate P,
@@ -60,6 +62,8 @@ private:
   llvm::object::section_iterator End;
 };
 
+/// Creates an iterator range of SectionFilterIterators for a given Object and
+/// predicate.
 class SectionFilter {
 public:
   SectionFilter(FilterPredicate P, llvm::object::ObjectFile const &O)
@@ -79,7 +83,15 @@ private:
 };
 
 // Various helper functions.
-SectionFilter ToolSectionFilter(llvm::object::ObjectFile const &O);
+
+/// Creates a SectionFilter with a standard predicate that conditionally skips
+/// sections when the --section objdump flag is provided.
+///
+/// Idx is an optional output parameter that keeps track of which section index
+/// this is. This may be different than the actual section number, as some
+/// sections may be filtered (e.g. symbol tables).
+SectionFilter ToolSectionFilter(llvm::object::ObjectFile const &O,
+                                uint64_t *Idx = nullptr);
 
 Error getELFRelocationValueString(const object::ELFObjectFileBase *Obj,
                                   const object::RelocationRef &Rel,

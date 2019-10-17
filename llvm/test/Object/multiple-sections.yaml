@@ -4,8 +4,8 @@
 # Test that multiple sections with the same type does not trigger an error.
 
 # CHECK: ElfHeader {
-# CHECK: SHT_GNU_verdef {
-# CHECK: SHT_GNU_verneed {
+# CHECK: VersionDefinitions [
+# CHECK: VersionRequirements [
 # CHECK: CGProfile [
 # CHECK: Addrsig [
 

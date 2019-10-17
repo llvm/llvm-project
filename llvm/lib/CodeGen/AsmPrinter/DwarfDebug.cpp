@@ -2262,7 +2262,7 @@ void DwarfDebug::emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry,
 }
 
 // Emit the common part of the DWARF 5 range/locations list tables header.
-static void emitListsTableHeaderStart(AsmPrinter *Asm, const DwarfFile &Holder,
+static void emitListsTableHeaderStart(AsmPrinter *Asm,
                                       MCSymbol *TableStart,
                                       MCSymbol *TableEnd) {
   // Build the table header, which starts with the length field.
@@ -2287,7 +2287,7 @@ static MCSymbol *emitRnglistsTableHeader(AsmPrinter *Asm,
                                          const DwarfFile &Holder) {
   MCSymbol *TableStart = Asm->createTempSymbol("debug_rnglist_table_start");
   MCSymbol *TableEnd = Asm->createTempSymbol("debug_rnglist_table_end");
-  emitListsTableHeaderStart(Asm, Holder, TableStart, TableEnd);
+  emitListsTableHeaderStart(Asm, TableStart, TableEnd);
 
   Asm->OutStreamer->AddComment("Offset entry count");
   Asm->emitInt32(Holder.getRangeLists().size());
@@ -2307,7 +2307,7 @@ static MCSymbol *emitLoclistsTableHeader(AsmPrinter *Asm,
                                          const DwarfFile &Holder) {
   MCSymbol *TableStart = Asm->createTempSymbol("debug_loclist_table_start");
   MCSymbol *TableEnd = Asm->createTempSymbol("debug_loclist_table_end");
-  emitListsTableHeaderStart(Asm, Holder, TableStart, TableEnd);
+  emitListsTableHeaderStart(Asm, TableStart, TableEnd);
 
   // FIXME: Generate the offsets table and use DW_FORM_loclistx with the
   // DW_AT_loclists_base attribute. Until then set the number of offsets to 0.

@@ -89,4 +89,18 @@ define zeroext i1 @t6(i32 %a) #0 {
   ret i1 %.not
 }
 
+define i16 @shift_and(i16 %a) {
+; CHECK-LABEL: shift_and:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shrl $10, %eax
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+  %and = and i16 %a, 1024
+  %cmp = icmp ne i16 %and, 0
+  %conv = zext i1 %cmp to i16
+  ret i16 %conv
+}
+
 attributes #0 = { "target-cpu"="skylake-avx512" }

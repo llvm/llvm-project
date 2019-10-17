@@ -783,23 +783,13 @@ entry:
 }
 
 define void @foo_trunc_v8i8_v8i16(<8 x i8> *%dest, <8 x i16> *%mask, <8 x i16> *%src) {
-; CHECK-LE-LABEL: foo_trunc_v8i8_v8i16:
-; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vldrh.u16 q0, [r1]
-; CHECK-LE-NEXT:    vptt.s16 gt, q0, zr
-; CHECK-LE-NEXT:    vldrht.u16 q0, [r2]
-; CHECK-LE-NEXT:    vstrbt.8 q0, [r0]
-; CHECK-LE-NEXT:    bx lr
-;
-; CHECK-BE-LABEL: foo_trunc_v8i8_v8i16:
-; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    vldrh.u16 q0, [r1]
-; CHECK-BE-NEXT:    vpt.s16 gt, q0, zr
-; CHECK-BE-NEXT:    vldrht.u16 q0, [r2]
-; CHECK-BE-NEXT:    vrev16.8 q0, q0
-; CHECK-BE-NEXT:    vpst
-; CHECK-BE-NEXT:    vstrbt.8 q0, [r0]
-; CHECK-BE-NEXT:    bx lr
+; CHECK-LABEL: foo_trunc_v8i8_v8i16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrh.u16 q0, [r1]
+; CHECK-NEXT:    vptt.s16 gt, q0, zr
+; CHECK-NEXT:    vldrht.u16 q0, [r2]
+; CHECK-NEXT:    vstrbt.16 q0, [r0]
+; CHECK-NEXT:    bx lr
 entry:
   %0 = load <8 x i16>, <8 x i16>* %mask, align 2
   %1 = icmp sgt <8 x i16> %0, zeroinitializer
@@ -810,23 +800,13 @@ entry:
 }
 
 define void @foo_trunc_v4i8_v4i32(<4 x i8> *%dest, <4 x i32> *%mask, <4 x i32> *%src) {
-; CHECK-LE-LABEL: foo_trunc_v4i8_v4i32:
-; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-LE-NEXT:    vptt.s32 gt, q0, zr
-; CHECK-LE-NEXT:    vldrwt.u32 q0, [r2]
-; CHECK-LE-NEXT:    vstrbt.8 q0, [r0]
-; CHECK-LE-NEXT:    bx lr
-;
-; CHECK-BE-LABEL: foo_trunc_v4i8_v4i32:
-; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-BE-NEXT:    vpt.s32 gt, q0, zr
-; CHECK-BE-NEXT:    vldrwt.u32 q0, [r2]
-; CHECK-BE-NEXT:    vrev32.8 q0, q0
-; CHECK-BE-NEXT:    vpst
-; CHECK-BE-NEXT:    vstrbt.8 q0, [r0]
-; CHECK-BE-NEXT:    bx lr
+; CHECK-LABEL: foo_trunc_v4i8_v4i32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    vptt.s32 gt, q0, zr
+; CHECK-NEXT:    vldrwt.u32 q0, [r2]
+; CHECK-NEXT:    vstrbt.32 q0, [r0]
+; CHECK-NEXT:    bx lr
 entry:
   %0 = load <4 x i32>, <4 x i32>* %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer
@@ -837,23 +817,13 @@ entry:
 }
 
 define void @foo_trunc_v4i16_v4i32(<4 x i16> *%dest, <4 x i32> *%mask, <4 x i32> *%src) {
-; CHECK-LE-LABEL: foo_trunc_v4i16_v4i32:
-; CHECK-LE:       @ %bb.0: @ %entry
-; CHECK-LE-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-LE-NEXT:    vptt.s32 gt, q0, zr
-; CHECK-LE-NEXT:    vldrwt.u32 q0, [r2]
-; CHECK-LE-NEXT:    vstrbt.8 q0, [r0]
-; CHECK-LE-NEXT:    bx lr
-;
-; CHECK-BE-LABEL: foo_trunc_v4i16_v4i32:
-; CHECK-BE:       @ %bb.0: @ %entry
-; CHECK-BE-NEXT:    vldrw.u32 q0, [r1]
-; CHECK-BE-NEXT:    vpt.s32 gt, q0, zr
-; CHECK-BE-NEXT:    vldrwt.u32 q0, [r2]
-; CHECK-BE-NEXT:    vrev32.8 q0, q0
-; CHECK-BE-NEXT:    vpst
-; CHECK-BE-NEXT:    vstrbt.8 q0, [r0]
-; CHECK-BE-NEXT:    bx lr
+; CHECK-LABEL: foo_trunc_v4i16_v4i32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    vptt.s32 gt, q0, zr
+; CHECK-NEXT:    vldrwt.u32 q0, [r2]
+; CHECK-NEXT:    vstrht.32 q0, [r0]
+; CHECK-NEXT:    bx lr
 entry:
   %0 = load <4 x i32>, <4 x i32>* %mask, align 4
   %1 = icmp sgt <4 x i32> %0, zeroinitializer

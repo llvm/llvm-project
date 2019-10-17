@@ -240,22 +240,23 @@ entry:
 define i128 @invalidv1i128(<2 x i128> %v1, <2 x i128> %v2) {
 ; CHECK-LABEL: invalidv1i128:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    mfvsrd 3, 36
 ; CHECK-NEXT:    xxswapd 0, 36
-; CHECK-NEXT:    mfvsrd 4, 36
-; CHECK-NEXT:    mfvsrd 5, 34
+; CHECK-NEXT:    mfvsrd 4, 34
+; CHECK-NEXT:    xxswapd 1, 34
+; CHECK-NEXT:    cmpld 4, 3
+; CHECK-NEXT:    cmpd 1, 4, 3
 ; CHECK-NEXT:    mfvsrd 3, 0
-; CHECK-NEXT:    xxswapd 0, 34
-; CHECK-NEXT:    cmpld 5, 4
-; CHECK-NEXT:    cmpd 1, 5, 4
 ; CHECK-NEXT:    crandc 20, 4, 2
-; CHECK-NEXT:    mfvsrd 6, 0
-; CHECK-NEXT:    cmpld 1, 6, 3
-; CHECK-NEXT:    crand 21, 2, 4
-; CHECK-NEXT:    cror 20, 21, 20
-; CHECK-NEXT:    bc 12, 20, .LBB12_2
+; CHECK-NEXT:    mfvsrd 4, 1
+; CHECK-NEXT:    cmpld 1, 4, 3
+; CHECK-NEXT:    bc 12, 20, .LBB12_3
 ; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    crand 20, 2, 4
+; CHECK-NEXT:    bc 12, 20, .LBB12_3
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    vmr 2, 4
-; CHECK-NEXT:  .LBB12_2:
+; CHECK-NEXT:  .LBB12_3:
 ; CHECK-NEXT:    xxswapd 0, 34
 ; CHECK-NEXT:    mfvsrd 4, 34
 ; CHECK-NEXT:    mfvsrd 3, 0

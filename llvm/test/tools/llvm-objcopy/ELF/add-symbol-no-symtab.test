@@ -1,0 +1,81 @@
+## Test --add-symbol creates .symtab if it does not exist.
+
+# RUN: yaml2obj --docnum=1 %s -o %t
+
+## If a non-SHF_ALLOC SHT_STRTAB exists but SHT_SYMTAB does not, create .symtab
+## and set its sh_link to the SHT_STRTAB.
+# RUN: llvm-objcopy --remove-section=.symtab %t %t1
+# RUN: llvm-objcopy --add-symbol='abs1=1' %t1 %t2
+# RUN: llvm-readobj -S %t2 | FileCheck --check-prefix=SEC %s
+# RUN: llvm-readelf -s %t2 | FileCheck %s
+
+# SEC:      Index: 1
+# SEC-NEXT: Name: .strtab
+# SEC-NEXT: Type: SHT_STRTAB
+# SEC:      Index: 2
+# SEC-NEXT: Name: .shstrtab
+# SEC-NEXT: Type: SHT_STRTAB
+# SEC:      Index: 3
+# SEC-NEXT: Name: .symtab
+# SEC-NEXT: Type: SHT_SYMTAB
+# SEC-NOT:  }
+# SEC:      Link: 1
+
+# CHECK:      0: 0000000000000000 0 NOTYPE LOCAL  DEFAULT UND
+# CHECK-NEXT: 1: 0000000000000001 0 NOTYPE GLOBAL DEFAULT ABS abs1
+
+## Don't create .symtab if --add-symbol is not specified.
+# RUN: llvm-objcopy --remove-section=.symtab --remove-section=.strtab %t %t1
+# RUN: llvm-objcopy %t1 %t2
+# RUN: llvm-readobj -S %t2 | FileCheck --implicit-check-not=.symtab /dev/null
+
+## Check that we create both .strtab and .symtab.
+## We reuse the existing .shstrtab (section names) for symbol names.
+## This may look strange but it works.
+# RUN: llvm-objcopy --add-symbol='abs1=1' %t1 %t2
+# RUN: llvm-readobj -S %t2 | FileCheck --check-prefix=SEC2 %s
+# RUN: llvm-readelf -s %t2 | FileCheck %s
+
+# SEC2:      Index: 1
+# SEC2-NEXT: Name: .shstrtab
+# SEC2-NEXT: Type: SHT_STRTAB
+# SEC2:      Index: 2
+# SEC2-NEXT: Name: .symtab
+# SEC2-NEXT: Type: SHT_SYMTAB
+# SEC2-NOT:  }
+# SEC2:      Link: 1
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Symbols:
+...
+
+## Check the created .symtab does not link to .dynstr (SHF_ALLOC).
+# RUN: yaml2obj --docnum=2 %s -o %t
+# RUN: llvm-objcopy --remove-section=.symtab --remove-section=.strtab %t %t1
+# RUN: llvm-objcopy --add-symbol='abs1=1' %t1 %t2
+# RUN: llvm-readobj -S %t2 | FileCheck --check-prefix=SEC3 %s
+
+# SEC3:      Index: 1
+# SEC3-NEXT: Name: .shstrtab
+# SEC3-NEXT: Type: SHT_STRTAB
+# SEC3:      Name: .symtab
+# SEC3-NEXT: Type: SHT_SYMTAB
+# SEC3-NOT:  }
+# SEC3:      Link: 1
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+DynamicSymbols:
+  - Name:    dummy
+    Binding: STB_GLOBAL
+Symbols:
+...

@@ -3,7 +3,7 @@
 
 # Check we are able to handle the SHT_GNU_verneed sections.
 
-# CHECK:      SHT_GNU_verneed {
+# CHECK:      VersionRequirements [
 # CHECK-NEXT:   Dependency {
 # CHECK-NEXT:     Version: 1
 # CHECK-NEXT:     Count: 2
@@ -36,7 +36,7 @@
 # CHECK-NEXT:       }
 # CHECK-NEXT:     ]
 # CHECK-NEXT:   }
-# CHECK-NEXT: }
+# CHECK-NEXT: ]
 
 --- !ELF
 FileHeader:

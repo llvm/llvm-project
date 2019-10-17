@@ -57,7 +57,7 @@ using namespace llvm;
 static cl::opt<unsigned> UnrollThresholdPrivate(
   "amdgpu-unroll-threshold-private",
   cl::desc("Unroll threshold for AMDGPU if private memory used in a loop"),
-  cl::init(2500), cl::Hidden);
+  cl::init(2000), cl::Hidden);
 
 static cl::opt<unsigned> UnrollThresholdLocal(
   "amdgpu-unroll-threshold-local",
@@ -691,6 +691,39 @@ bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
 void GCNTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP) {
   CommonTTI.getUnrollingPreferences(L, SE, UP);
+}
+
+unsigned GCNTTIImpl::getUserCost(const User *U,
+                                 ArrayRef<const Value *> Operands) {
+  // Estimate extractelement elimination
+  if (const ExtractElementInst *EE = dyn_cast<ExtractElementInst>(U)) {
+    ConstantInt *CI = dyn_cast<ConstantInt>(EE->getOperand(1));
+    unsigned Idx = -1;
+    if (CI)
+      Idx = CI->getZExtValue();
+    return getVectorInstrCost(EE->getOpcode(), EE->getOperand(0)->getType(),
+                              Idx);
+  }
+
+  // Estimate insertelement elimination
+  if (const InsertElementInst *IE = dyn_cast<InsertElementInst>(U)) {
+    ConstantInt *CI = dyn_cast<ConstantInt>(IE->getOperand(2));
+    unsigned Idx = -1;
+    if (CI)
+      Idx = CI->getZExtValue();
+    return getVectorInstrCost(IE->getOpcode(), IE->getType(), Idx);
+  }
+
+  // Estimate different intrinsics, e.g. llvm.fabs
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
+    SmallVector<Value *, 4> Args(II->arg_operands());
+    FastMathFlags FMF;
+    if (auto *FPMO = dyn_cast<FPMathOperator>(II))
+      FMF = FPMO->getFastMathFlags();
+    return getIntrinsicInstrCost(II->getIntrinsicID(), II->getType(), Args,
+                                 FMF);
+  }
+  return BaseT::getUserCost(U, Operands);
 }
 
 unsigned R600TTIImpl::getHardwareNumberOfRegisters(bool Vec) const {

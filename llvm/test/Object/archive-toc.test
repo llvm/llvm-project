@@ -46,3 +46,17 @@ RUN: env TZ=GMT llvm-ar tv Inputs/thin-path.a | FileCheck %s --check-prefix=THIN
 
 THINPATH:      rw-r--r-- 0/0   1224 Jan  1 00:00 1970 Inputs/test.o
 THINPATH-NEXT: rw-r--r-- 0/0   1224 Jan  1 00:00 1970 Inputs/t/test2.o
+
+RUN: llvm-ar tO Inputs/GNU.a | FileCheck %s --check-prefix=GNU-O --strict-whitespace
+
+GNU-O:      {{^}}evenlen 0x10c
+GNU-O-NEXT: {{^}}oddlen 0x150
+GNU-O-NEXT: {{^}}very_long_bytecode_file_name.bc 0x194
+GNU-O-NEXT: {{^}}IsNAN.o 0x78a
+
+RUN: env TZ=GMT llvm-ar tvO Inputs/GNU.a | FileCheck %s --check-prefix=GNU-VO --strict-whitespace
+
+GNU-VO:      rw-r--r-- 500/500      8 Nov 19 02:57 2004 evenlen 0x10c
+GNU-VO-NEXT: rw-r--r-- 500/500      7 Nov 19 02:57 2004 oddlen 0x150
+GNU-VO-NEXT: rwxr-xr-x 500/500   1465 Nov 19 03:01 2004 very_long_bytecode_file_name.bc 0x194
+GNU-VO-NEXT: rw-r--r-- 500/500   2280 Nov 19 03:04 2004 IsNAN.o 0x78a

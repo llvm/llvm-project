@@ -3,7 +3,7 @@
 
 # Check we are able to handle the SHT_GNU_verdef sections.
 
-# CHECK:      SHT_GNU_verdef {
+# CHECK:      VersionDefinitions [
 # CHECK-NEXT:   Definition {
 # CHECK-NEXT:     Version: 1
 # CHECK-NEXT:     Flags: Base
@@ -26,7 +26,7 @@
 # CHECK-NEXT:     Name: VERSION_2
 # CHECK-NEXT:     Predecessor: VERSION_3
 # CHECK-NEXT:   }
-# CHECK-NEXT: }
+# CHECK-NEXT: ]
 
 --- !ELF
 FileHeader:

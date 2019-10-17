@@ -1,6 +1,10 @@
 ; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa %s | FileCheck -check-prefixes=GCN,CI %s
-; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=fiji %s | FileCheck -check-prefixes=GCN,VI %s
-; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=fiji %s | FileCheck -check-prefixes=GCN,GFX89 %s
+; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 %s | FileCheck -check-prefixes=GCN,GFX89 %s
+; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa %s | FileCheck -check-prefixes=GCN,CI %s
+; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=fiji %s | FileCheck -check-prefixes=GCN,GFX89 %s
+; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx900 %s | FileCheck -check-prefixes=GCN,GFX89 %s
+
 
 ; GCN: 'extractelement_v2i32'
 ; GCN: estimated cost of 0 for {{.*}} extractelement <2 x i32>
@@ -113,8 +117,7 @@ define amdgpu_kernel void @extractelement_v4i8(i8 addrspace(1)* %out, <4 x i8> a
 
 ; GCN: 'extractelement_0_v2i16':
 ; CI: estimated cost of 1 for {{.*}} extractelement <2 x i16> %vec, i16 0
-; VI: estimated cost of 0 for {{.*}} extractelement <2 x i16>
-; GFX9: estimated cost of 0 for {{.*}} extractelement <2 x i16>
+; GFX89: estimated cost of 0 for {{.*}} extractelement <2 x i16>
 define amdgpu_kernel void @extractelement_0_v2i16(i16 addrspace(1)* %out, <2 x i16> addrspace(1)* %vaddr) {
   %vec = load <2 x i16>, <2 x i16> addrspace(1)* %vaddr
   %elt = extractelement <2 x i16> %vec, i16 0

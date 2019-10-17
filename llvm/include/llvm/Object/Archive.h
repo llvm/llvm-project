@@ -135,6 +135,7 @@ public:
 
     Expected<StringRef> getBuffer() const;
     uint64_t getChildOffset() const;
+    uint64_t getDataOffset() const { return getChildOffset() + StartOfFile; }
 
     Expected<MemoryBufferRef> getMemoryBufferRef() const;
 

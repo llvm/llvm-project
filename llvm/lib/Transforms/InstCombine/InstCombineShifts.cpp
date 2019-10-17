@@ -158,8 +158,8 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
   assert(OuterShift->getOpcode() == Instruction::BinaryOps::Shl &&
          "The input must be 'shl'!");
 
-  Value *Masked = OuterShift->getOperand(0);
-  Value *ShiftShAmt = OuterShift->getOperand(1);
+  Value *Masked, *ShiftShAmt;
+  match(OuterShift, m_Shift(m_Value(Masked), m_Value(ShiftShAmt)));
 
   Type *NarrowestTy = OuterShift->getType();
   Type *WidestTy = Masked->getType();
@@ -252,8 +252,8 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
   }
 
   // No 'NUW'/'NSW'! We no longer know that we won't shift-out non-0 bits.
-  auto *NewShift =
-      BinaryOperator::Create(OuterShift->getOpcode(), X, ShiftShAmt);
+  auto *NewShift = BinaryOperator::Create(OuterShift->getOpcode(), X,
+                                          OuterShift->getOperand(1));
 
   if (!NeedMask)
     return NewShift;

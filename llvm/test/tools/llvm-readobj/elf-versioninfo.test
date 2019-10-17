@@ -77,7 +77,7 @@ DynamicSymbols:
     Binding:         STB_GLOBAL
 ...
 
-# LLVM:      Version symbols [
+# LLVM:      VersionSymbols [
 # LLVM-NEXT:   Symbol {
 # LLVM-NEXT:     Version: 0
 # LLVM-NEXT:     Name:
@@ -103,7 +103,7 @@ DynamicSymbols:
 # LLVM-NEXT:     Name: sym5@v3
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]
-# LLVM-NEXT: SHT_GNU_verdef {
+# LLVM-NEXT: VersionDefinitions [
 # LLVM-NEXT:   Definition {
 # LLVM-NEXT:     Version: 1
 # LLVM-NEXT:     Flags: 0x0
@@ -127,8 +127,8 @@ DynamicSymbols:
 # LLVM-NEXT:     Name: VERSION2
 # LLVM-NEXT:     Predecessor: VERSION1
 # LLVM-NEXT:   }
-# LLVM-NEXT: }
-# LLVM-NEXT: SHT_GNU_verneed {
+# LLVM-NEXT: ]
+# LLVM-NEXT: VersionRequirements [
 # LLVM-NEXT:   Dependency {
 # LLVM-NEXT:     Version: 1
 # LLVM-NEXT:     Count: 2
@@ -161,7 +161,7 @@ DynamicSymbols:
 # LLVM-NEXT:       }
 # LLVM-NEXT:     ]
 # LLVM-NEXT:   }
-# LLVM-NEXT: }
+# LLVM-NEXT: ]
 
 # GNU:      Version symbols section '.gnu.version' contains 6 entries:
 # GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 7 (.dynsym)

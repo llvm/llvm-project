@@ -204,7 +204,7 @@ public:
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
 
-  unsigned getInliningThresholdMultiplier() { return 7; }
+  unsigned getInliningThresholdMultiplier() { return 9; }
 
   int getInlinerVectorBonusPercent() { return 0; }
 
@@ -214,6 +214,7 @@ public:
   int getMinMaxReductionCost(Type *Ty, Type *CondTy,
                              bool IsPairwiseForm,
                              bool IsUnsigned);
+  unsigned getUserCost(const User *U, ArrayRef<const Value *> Operands);
 };
 
 class R600TTIImpl final : public BasicTTIImplBase<R600TTIImpl> {
