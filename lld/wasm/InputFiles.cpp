@@ -189,7 +189,7 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &reloc) const {
   case R_WASM_MEMORY_ADDR_I32:
   case R_WASM_MEMORY_ADDR_LEB:
   case R_WASM_MEMORY_ADDR_REL_SLEB:
-    if (isa<UndefinedData>(sym))
+    if (isa<UndefinedData>(sym) || sym->isUndefWeak())
       return 0;
     return cast<DefinedData>(sym)->getVirtualAddress() + reloc.Addend;
   case R_WASM_TYPE_INDEX_LEB:
@@ -527,8 +527,8 @@ static Symbol *createBitcodeSymbol(const std::vector<bool> &keptComdats,
   if (objSym.isUndefined() || excludedByComdat) {
     flags |= WASM_SYMBOL_UNDEFINED;
     if (objSym.isExecutable())
-      return symtab->addUndefinedFunction(name, name, defaultModule, flags, &f,
-                                          nullptr, true);
+      return symtab->addUndefinedFunction(name, "", "", flags, &f, nullptr,
+                                          true);
     return symtab->addUndefinedData(name, flags, &f);
   }
 

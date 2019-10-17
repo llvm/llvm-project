@@ -505,7 +505,7 @@ namespace {
     /// otherwise.
     bool convertBlockPointerToFunctionPointer(QualType &T) {
       if (isTopLevelBlockPointerType(T)) {
-        const BlockPointerType *BPT = T->getAs<BlockPointerType>();
+        const auto *BPT = T->castAs<BlockPointerType>();
         T = Context->getPointerType(BPT->getPointeeType());
         return true;
       }
@@ -856,8 +856,7 @@ RewriteModernObjC::getIvarAccessString(ObjCIvarDecl *D) {
     RD = RD->getDefinition();
     if (RD && !RD->getDeclName().getAsIdentifierInfo()) {
       // decltype(((Foo_IMPL*)0)->bar) *
-      ObjCContainerDecl *CDecl =
-      dyn_cast<ObjCContainerDecl>(D->getDeclContext());
+      auto *CDecl = cast<ObjCContainerDecl>(D->getDeclContext());
       // ivar in class extensions requires special treatment.
       if (ObjCCategoryDecl *CatDecl = dyn_cast<ObjCCategoryDecl>(CDecl))
         CDecl = CatDecl->getClassInterface();
@@ -1332,6 +1331,7 @@ void RewriteModernObjC::RewriteObjCMethodDecl(const ObjCInterfaceDecl *IDecl,
 void RewriteModernObjC::RewriteImplementationDecl(Decl *OID) {
   ObjCImplementationDecl *IMD = dyn_cast<ObjCImplementationDecl>(OID);
   ObjCCategoryImplDecl *CID = dyn_cast<ObjCCategoryImplDecl>(OID);
+  assert((IMD || CID) && "Unknown implementation type");
 
   if (IMD) {
     if (IMD->getIvarRBraceLoc().isValid()) {
@@ -2103,8 +2103,7 @@ RewriteModernObjC::SynthesizeCallToFunctionDecl(FunctionDecl *FD,
     ImplicitCastExpr::Create(*Context, pToFunc, CK_FunctionToPointerDecay,
                              DRE, nullptr, VK_RValue);
 
-  const FunctionType *FT = msgSendType->getAs<FunctionType>();
-
+  const auto *FT = msgSendType->castAs<FunctionType>();
   CallExpr *Exp = CallExpr::Create(
       *Context, ICE, Args, FT->getCallResultType(*Context), VK_RValue, EndLoc);
   return Exp;

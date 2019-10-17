@@ -1,0 +1,11 @@
+## Show that the version for llvm-ar can be printed with either the long flag
+## -version or with the V modifier.
+
+RUN: llvm-ar V | FileCheck %s
+RUN: llvm-ar xV | FileCheck %s
+RUN: llvm-ar -V | FileCheck %s
+RUN: llvm-ar -xV | FileCheck %s
+RUN: llvm-ar -version | FileCheck %s
+RUN: llvm-ar --version | FileCheck %s
+
+CHECK: version

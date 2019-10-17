@@ -78,7 +78,7 @@ protected:
 
   /// stackAlignment - The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
-  unsigned StackAlignment;
+  Align StackAlignment;
 
   /// Selected instruction itineraries (one entry per itinerary class.)
   InstrItineraryData InstrItins;
@@ -166,7 +166,7 @@ public:
   /// getStackAlignment - Returns the minimum alignment known to hold of the
   /// stack frame on entry to the function and which must be maintained by every
   /// function for this subtarget.
-  unsigned getStackAlignment() const { return StackAlignment; }
+  Align getStackAlignment() const { return StackAlignment; }
 
   /// getDarwinDirective - Returns the -m directive specified for the cpu.
   ///
@@ -281,11 +281,11 @@ public:
   bool hasDirectMove() const { return HasDirectMove; }
 
   bool isQPXStackUnaligned() const { return IsQPXStackUnaligned; }
-  unsigned getPlatformStackAlignment() const {
+  Align getPlatformStackAlignment() const {
     if ((hasQPX() || isBGQ()) && !isQPXStackUnaligned())
-      return 32;
+      return Align(32);
 
-    return 16;
+    return Align(16);
   }
 
   // DarwinABI has a 224-byte red zone. PPC32 SVR4ABI(Non-DarwinABI) has no

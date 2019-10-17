@@ -5,9 +5,6 @@ RUN:     | FileCheck %s
 RUN: llvm-symbolizer 0x5009 0x5038 -i --relative-address -obj="%p/Inputs/coff-dwarf.exe" \
 RUN:     | FileCheck %s
 
-This test relies on UnDecorateSymbolName, which is Windows-only.
-REQUIRES: system-windows
-
 CHECK: foo(void)
 CHECK: coff-dwarf.cpp:7
 CHECK: bar(void)

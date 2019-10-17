@@ -1396,9 +1396,8 @@ EmitCheckedMixedSignMultiply(CodeGenFunction &CGF, const clang::Expr *Op1,
 static llvm::Value *dumpRecord(CodeGenFunction &CGF, QualType RType,
                                Value *&RecordPtr, CharUnits Align,
                                llvm::FunctionCallee Func, int Lvl) {
-  const auto *RT = RType->getAs<RecordType>();
   ASTContext &Context = CGF.getContext();
-  RecordDecl *RD = RT->getDecl()->getDefinition();
+  RecordDecl *RD = RType->castAs<RecordType>()->getDecl()->getDefinition();
   std::string Pad = std::string(Lvl * 4, ' ');
 
   Value *GString =
@@ -3693,13 +3692,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BIget_pipe_num_packets:
   case Builtin::BIget_pipe_max_packets: {
     const char *BaseName;
-    const PipeType *PipeTy = E->getArg(0)->getType()->getAs<PipeType>();
+    const auto *PipeTy = E->getArg(0)->getType()->castAs<PipeType>();
     if (BuiltinID == Builtin::BIget_pipe_num_packets)
       BaseName = "__get_pipe_num_packets";
     else
       BaseName = "__get_pipe_max_packets";
-    auto Name = std::string(BaseName) +
-                std::string(PipeTy->isReadOnly() ? "_ro" : "_wo");
+    std::string Name = std::string(BaseName) +
+                       std::string(PipeTy->isReadOnly() ? "_ro" : "_wo");
 
     // Building the generic function prototype.
     Value *Arg0 = EmitScalarExpr(E->getArg(0));

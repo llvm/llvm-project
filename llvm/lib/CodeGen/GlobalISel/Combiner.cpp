@@ -27,6 +27,18 @@
 
 using namespace llvm;
 
+namespace llvm {
+cl::OptionCategory GICombinerOptionCategory(
+    "GlobalISel Combiner",
+    "Control the rules which are enabled. These options all take a comma "
+    "separated list of rules to disable and may be specified by number "
+    "or number range (e.g. 1-10)."
+#ifndef NDEBUG
+    " They may also be specified by name."
+#endif
+);
+} // end namespace llvm
+
 namespace {
 /// This class acts as the glue the joins the CombinerHelper to the overall
 /// Combine algorithm. The CombinerHelper is intended to report the

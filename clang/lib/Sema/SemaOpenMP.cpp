@@ -4591,16 +4591,9 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       case OMPC_schedule:
         break;
       case OMPC_grainsize:
-        // Do not analyze if no parent parallel directive.
-        if (isOpenMPParallelDirective(DSAStack->getCurrentDirective()))
-          break;
-        continue;
       case OMPC_num_tasks:
-        // Do not analyze if no parent parallel directive.
-        if (isOpenMPParallelDirective(DSAStack->getCurrentDirective()))
-          break;
-        continue;
       case OMPC_final:
+      case OMPC_priority:
         // Do not analyze if no parent parallel directive.
         if (isOpenMPParallelDirective(DSAStack->getCurrentDirective()))
           break;
@@ -4609,7 +4602,6 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       case OMPC_device:
       case OMPC_num_teams:
       case OMPC_thread_limit:
-      case OMPC_priority:
       case OMPC_hint:
       case OMPC_collapse:
       case OMPC_safelen:
@@ -10788,6 +10780,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_grainsize:
   case OMPC_num_tasks:
   case OMPC_final:
+  case OMPC_priority:
     switch (DKind) {
     case OMPD_task:
     case OMPD_taskloop:
@@ -10888,7 +10881,6 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_threads:
   case OMPC_simd:
   case OMPC_map:
-  case OMPC_priority:
   case OMPC_nogroup:
   case OMPC_hint:
   case OMPC_defaultmap:
@@ -15937,14 +15929,19 @@ OMPClause *Sema::ActOnOpenMPPriorityClause(Expr *Priority,
                                            SourceLocation LParenLoc,
                                            SourceLocation EndLoc) {
   Expr *ValExpr = Priority;
+  Stmt *HelperValStmt = nullptr;
+  OpenMPDirectiveKind CaptureRegion = OMPD_unknown;
 
   // OpenMP [2.9.1, task Constrcut]
   // The priority-value is a non-negative numerical scalar expression.
-  if (!isNonNegativeIntegerValue(ValExpr, *this, OMPC_priority,
-                                 /*StrictlyPositive=*/false))
+  if (!isNonNegativeIntegerValue(
+          ValExpr, *this, OMPC_priority,
+          /*StrictlyPositive=*/false, /*BuildCapture=*/true,
+          DSAStack->getCurrentDirective(), &CaptureRegion, &HelperValStmt))
     return nullptr;
 
-  return new (Context) OMPPriorityClause(ValExpr, StartLoc, LParenLoc, EndLoc);
+  return new (Context) OMPPriorityClause(ValExpr, HelperValStmt, CaptureRegion,
+                                         StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *Sema::ActOnOpenMPGrainsizeClause(Expr *Grainsize,

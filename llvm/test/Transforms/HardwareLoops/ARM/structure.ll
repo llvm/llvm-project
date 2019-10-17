@@ -1,8 +1,7 @@
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -hardware-loops %s -S -o - | FileCheck %s
-; RUN: llc -mtriple=thumbv8.1m.main-arm-none-eabi %s -o - -pass-remarks-analysis=hardware-loops  2>&1 | FileCheck %s --check-prefix=CHECK-LLC
+; RUN: llc -mtriple=thumbv8.1m.main-arm-none-eabi %s -o - | FileCheck %s --check-prefix=CHECK-LLC
 ; RUN: opt -mtriple=thumbv8.1m.main -loop-unroll -unroll-remainder=false -S < %s | llc -mtriple=thumbv8.1m.main | FileCheck %s --check-prefix=CHECK-UNROLL
 
-; CHECK-LLC: remark: <unknown>:0:0: hardware-loop not created: it's not profitable to create a hardware-loop
 ; CHECK-LABEL: early_exit
 ; CHECK-NOT: llvm.set.loop.iterations
 ; CHECK-NOT: llvm.loop.decrement
@@ -47,7 +46,6 @@ do.end:
 ; CHECK-NOT: [[LOOP_DEC1:%[^ ]+]] = call i1 @llvm.loop.decrement.i32(i32 1)
 ; CHECK-NOT: br i1 [[LOOP_DEC1]], label %while.cond1.preheader.us, label %while.end7
 
-; CHECK-LLC: remark: <unknown>:0:0: hardware-loop not created: nested hardware-loops not supported
 ; CHECK-LLC:      nested:
 ; CHECK-LLC-NOT:    mov lr, r1
 ; CHECK-LLC:        dls lr, r1
@@ -178,9 +176,6 @@ while.end7:
   ret void
 }
 
-
-; CHECK-LLC: remark: <unknown>:0:0: hardware-loop not created: loop is not a candidate
-; CHECK-LLC: remark: <unknown>:0:0: hardware-loop not created: nested hardware-loops not supported
 ; CHECK-LABEL: not_rotated
 ; CHECK-NOT: call void @llvm.set.loop.iterations
 ; CHECK-NOT: call i32 @llvm.loop.decrement.i32

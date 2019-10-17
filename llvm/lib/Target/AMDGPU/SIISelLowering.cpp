@@ -2816,7 +2816,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       int32_t Offset = LocMemOffset;
 
       SDValue PtrOff = DAG.getConstant(Offset, DL, PtrVT);
-      unsigned Align = 0;
+      MaybeAlign Alignment;
 
       if (IsTailCall) {
         ISD::ArgFlagsTy Flags = Outs[realArgIdx].Flags;
@@ -2824,8 +2824,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
           Flags.getByValSize() : VA.getValVT().getStoreSize();
 
         // FIXME: We can have better than the minimum byval required alignment.
-        Align = Flags.isByVal() ? Flags.getByValAlign() :
-          MinAlign(Subtarget->getStackAlignment(), Offset);
+        Alignment =
+            Flags.isByVal()
+                ? MaybeAlign(Flags.getByValAlign())
+                : commonAlignment(Subtarget->getStackAlignment(), Offset);
 
         Offset = Offset + FPDiff;
         int FI = MFI.CreateFixedObject(OpSize, Offset, true);
@@ -2844,7 +2846,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       } else {
         DstAddr = PtrOff;
         DstInfo = MachinePointerInfo::getStack(MF, LocMemOffset);
-        Align = MinAlign(Subtarget->getStackAlignment(), LocMemOffset);
+        Alignment =
+            commonAlignment(Subtarget->getStackAlignment(), LocMemOffset);
       }
 
       if (Outs[i].Flags.isByVal()) {
@@ -2859,7 +2862,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
         MemOpChains.push_back(Cpy);
       } else {
-        SDValue Store = DAG.getStore(Chain, DL, Arg, DstAddr, DstInfo, Align);
+        SDValue Store = DAG.getStore(Chain, DL, Arg, DstAddr, DstInfo,
+                                     Alignment ? Alignment->value() : 0);
         MemOpChains.push_back(Store);
       }
     }

@@ -1,12 +1,6 @@
 ; RUN: opt -force-hardware-loops=true -hardware-loop-decrement=1 -hardware-loop-counter-bitwidth=32 -hardware-loops -S %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ALLOW
 ; RUN: opt -force-hardware-loops=true -hardware-loop-decrement=1 -hardware-loop-counter-bitwidth=32 -hardware-loops -force-hardware-loop-guard=true -S %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ALLOW
-;
-; RUN: opt -force-hardware-loops=true -hardware-loop-decrement=1 \
-; RUN:     -hardware-loop-counter-bitwidth=32 -force-hardware-loop-phi=true \
-; RUN:     -hardware-loops -S -pass-remarks-analysis=hardware-loops %s -o - \
-; RUN:     2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-LATCH
-
-; CHECK-LATCH: remark: <unknown>:0:0: hardware-loop not created: loop is not a candidate
+; RUN: opt -force-hardware-loops=true -hardware-loop-decrement=1 -hardware-loop-counter-bitwidth=32 -force-hardware-loop-phi=true -hardware-loops -S %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LATCH
 
 ; CHECK-LABEL: not_rotated
 ; CHECK-LATCH-NOT: call void @llvm.set.loop.iterations

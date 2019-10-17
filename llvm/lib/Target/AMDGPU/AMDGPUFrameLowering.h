@@ -25,7 +25,7 @@ namespace llvm {
 /// See TargetFrameInfo for more comments.
 class AMDGPUFrameLowering : public TargetFrameLowering {
 public:
-  AMDGPUFrameLowering(StackDirection D, unsigned StackAl, int LAO,
+  AMDGPUFrameLowering(StackDirection D, Align StackAl, int LAO,
                       unsigned TransAl = 1);
   ~AMDGPUFrameLowering() override;
 

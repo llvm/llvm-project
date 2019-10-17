@@ -5,6 +5,7 @@ import functools
 import io
 import itertools
 import getopt
+import locale
 import os, signal, subprocess, sys
 import re
 import stat
@@ -415,32 +416,21 @@ def executeBuiltinDiff(cmd, cmd_shenv):
             return path, sorted(child_trees)
 
     def compareTwoFiles(filepaths):
-        compare_bytes = False
-        encoding = None
         filelines = []
         for file in filepaths:
+            with open(file, 'rb') as file_bin:
+                filelines.append(file_bin.readlines())
+
+        try:
+            return compareTwoTextFiles(filepaths, filelines,
+                                       locale.getpreferredencoding(False))
+        except UnicodeDecodeError:
             try:
-                with open(file, 'r') as f:
-                    filelines.append(f.readlines())
-            except UnicodeDecodeError:
-                try:
-                    with io.open(file, 'r', encoding="utf-8") as f:
-                        filelines.append(f.readlines())
-                    encoding = "utf-8"
-                except:
-                    compare_bytes = True
+                return compareTwoTextFiles(filepaths, filelines, "utf-8")
+            except:
+                return compareTwoBinaryFiles(filepaths, filelines)
 
-        if compare_bytes:
-            return compareTwoBinaryFiles(filepaths)
-        else:
-            return compareTwoTextFiles(filepaths, encoding)
-
-    def compareTwoBinaryFiles(filepaths):
-        filelines = []
-        for file in filepaths:
-            with open(file, 'rb') as f:
-                filelines.append(f.readlines())
-
+    def compareTwoBinaryFiles(filepaths, filelines):
         exitCode = 0
         if hasattr(difflib, 'diff_bytes'):
             # python 3.5 or newer
@@ -448,7 +438,7 @@ def executeBuiltinDiff(cmd, cmd_shenv):
                                        filelines[1], filepaths[0].encode(),
                                        filepaths[1].encode(),
                                        n = num_context_lines)
-            diffs = [diff.decode() for diff in diffs]
+            diffs = [diff.decode(errors="backslashreplace") for diff in diffs]
         else:
             # python 2.7
             func = difflib.unified_diff if unified_diff else difflib.context_diff
@@ -456,19 +446,18 @@ def executeBuiltinDiff(cmd, cmd_shenv):
                          n = num_context_lines)
 
         for diff in diffs:
-            stdout.write(diff)
+            stdout.write(to_string(diff))
             exitCode = 1
         return exitCode
 
-    def compareTwoTextFiles(filepaths, encoding):
+    def compareTwoTextFiles(filepaths, filelines_bin, encoding):
         filelines = []
-        for file in filepaths:
-            if encoding is None:
-                with open(file, 'r') as f:
-                    filelines.append(f.readlines())
-            else:
-                with io.open(file, 'r', encoding=encoding) as f:
-                    filelines.append(f.readlines())
+        for lines_bin in filelines_bin:
+            lines = []
+            for line_bin in lines_bin:
+                line = line_bin.decode(encoding=encoding)
+                lines.append(line)
+            filelines.append(lines)
 
         exitCode = 0
         def compose2(f, g):
@@ -476,7 +465,7 @@ def executeBuiltinDiff(cmd, cmd_shenv):
 
         f = lambda x: x
         if strip_trailing_cr:
-            f = compose2(lambda line: line.rstrip('\r'), f)
+            f = compose2(lambda line: line.replace('\r\n', '\n'), f)
         if ignore_all_space or ignore_space_change:
             ignoreSpace = lambda line, separator: separator.join(line.split())
             ignoreAllSpaceOrSpaceChange = functools.partial(ignoreSpace, separator='' if ignore_all_space else ' ')
@@ -488,7 +477,7 @@ def executeBuiltinDiff(cmd, cmd_shenv):
         func = difflib.unified_diff if unified_diff else difflib.context_diff
         for diff in func(filelines[0], filelines[1], filepaths[0], filepaths[1],
                          n = num_context_lines):
-            stdout.write(diff)
+            stdout.write(to_string(diff))
             exitCode = 1
         return exitCode
 

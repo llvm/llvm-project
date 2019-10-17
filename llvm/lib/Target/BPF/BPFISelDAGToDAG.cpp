@@ -45,9 +45,7 @@ class BPFDAGToDAGISel : public SelectionDAGISel {
 
 public:
   explicit BPFDAGToDAGISel(BPFTargetMachine &TM)
-      : SelectionDAGISel(TM), Subtarget(nullptr) {
-    curr_func_ = nullptr;
-  }
+      : SelectionDAGISel(TM), Subtarget(nullptr) {}
 
   StringRef getPassName() const override {
     return "BPF DAG->DAG Pattern Instruction Selection";
@@ -92,14 +90,8 @@ private:
                           val_vec_type &Vals, int Offset);
   bool getConstantFieldValue(const GlobalAddressSDNode *Node, uint64_t Offset,
                              uint64_t Size, unsigned char *ByteSeq);
-  bool checkLoadDef(unsigned DefReg, unsigned match_load_op);
-
   // Mapping from ConstantStruct global value to corresponding byte-list values
   std::map<const void *, val_vec_type> cs_vals_;
-  // Mapping from vreg to load memory opcode
-  std::map<unsigned, unsigned> load_to_vreg_;
-  // Current function
-  const Function *curr_func_;
 };
 } // namespace
 
@@ -325,32 +317,13 @@ void BPFDAGToDAGISel::PreprocessLoad(SDNode *Node,
 }
 
 void BPFDAGToDAGISel::PreprocessISelDAG() {
-  // Iterate through all nodes, interested in the following cases:
+  // Iterate through all nodes, interested in the following case:
   //
   //  . loads from ConstantStruct or ConstantArray of constructs
   //    which can be turns into constant itself, with this we can
   //    avoid reading from read-only section at runtime.
   //
-  //  . reg truncating is often the result of 8/16/32bit->64bit or
-  //    8/16bit->32bit conversion. If the reg value is loaded with
-  //    masked byte width, the AND operation can be removed since
-  //    BPF LOAD already has zero extension.
-  //
-  //    This also solved a correctness issue.
-  //    In BPF socket-related program, e.g., __sk_buff->{data, data_end}
-  //    are 32-bit registers, but later on, kernel verifier will rewrite
-  //    it with 64-bit value. Therefore, truncating the value after the
-  //    load will result in incorrect code.
-
-  // clear the load_to_vreg_ map so that we have a clean start
-  // for this function.
-  if (!curr_func_) {
-    curr_func_ = FuncInfo->Fn;
-  } else if (curr_func_ != FuncInfo->Fn) {
-    load_to_vreg_.clear();
-    curr_func_ = FuncInfo->Fn;
-  }
-
+  //  . Removing redundant AND for intrinsic narrow loads.
   for (SelectionDAG::allnodes_iterator I = CurDAG->allnodes_begin(),
                                        E = CurDAG->allnodes_end();
        I != E;) {
@@ -358,8 +331,6 @@ void BPFDAGToDAGISel::PreprocessISelDAG() {
     unsigned Opcode = Node->getOpcode();
     if (Opcode == ISD::LOAD)
       PreprocessLoad(Node, I);
-    else if (Opcode == ISD::CopyToReg)
-      PreprocessCopyToReg(Node);
     else if (Opcode == ISD::AND)
       PreprocessTrunc(Node, I);
   }
@@ -491,36 +462,6 @@ bool BPFDAGToDAGISel::fillConstantStruct(const DataLayout &DL,
   return true;
 }
 
-void BPFDAGToDAGISel::PreprocessCopyToReg(SDNode *Node) {
-  const RegisterSDNode *RegN = dyn_cast<RegisterSDNode>(Node->getOperand(1));
-  if (!RegN || !Register::isVirtualRegister(RegN->getReg()))
-    return;
-
-  const LoadSDNode *LD = dyn_cast<LoadSDNode>(Node->getOperand(2));
-  if (!LD)
-    return;
-
-  // Assign a load value to a virtual register. record its load width
-  unsigned mem_load_op = 0;
-  switch (LD->getMemOperand()->getSize()) {
-  default:
-    return;
-  case 4:
-    mem_load_op = BPF::LDW;
-    break;
-  case 2:
-    mem_load_op = BPF::LDH;
-    break;
-  case 1:
-    mem_load_op = BPF::LDB;
-    break;
-  }
-
-  LLVM_DEBUG(dbgs() << "Find Load Value to VReg "
-                    << Register::virtReg2Index(RegN->getReg()) << '\n');
-  load_to_vreg_[RegN->getReg()] = mem_load_op;
-}
-
 void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
                                       SelectionDAG::allnodes_iterator &I) {
   ConstantSDNode *MaskN = dyn_cast<ConstantSDNode>(Node->getOperand(1));
@@ -534,112 +475,26 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
   // which the generic optimizer doesn't understand their results are
   // zero extended.
   SDValue BaseV = Node->getOperand(0);
-  if (BaseV.getOpcode() == ISD::INTRINSIC_W_CHAIN) {
-    unsigned IntNo = cast<ConstantSDNode>(BaseV->getOperand(1))->getZExtValue();
-    uint64_t MaskV = MaskN->getZExtValue();
-
-    if (!((IntNo == Intrinsic::bpf_load_byte && MaskV == 0xFF) ||
-          (IntNo == Intrinsic::bpf_load_half && MaskV == 0xFFFF) ||
-          (IntNo == Intrinsic::bpf_load_word && MaskV == 0xFFFFFFFF)))
-      return;
-
-    LLVM_DEBUG(dbgs() << "Remove the redundant AND operation in: ";
-               Node->dump(); dbgs() << '\n');
-
-    I--;
-    CurDAG->ReplaceAllUsesWith(SDValue(Node, 0), BaseV);
-    I++;
-    CurDAG->DeleteNode(Node);
-
-    return;
-  }
-
-  // Multiple basic blocks case.
-  if (BaseV.getOpcode() != ISD::CopyFromReg)
+  if (BaseV.getOpcode() != ISD::INTRINSIC_W_CHAIN)
     return;
 
-  unsigned match_load_op = 0;
-  switch (MaskN->getZExtValue()) {
-  default:
+  unsigned IntNo = cast<ConstantSDNode>(BaseV->getOperand(1))->getZExtValue();
+  uint64_t MaskV = MaskN->getZExtValue();
+
+  if (!((IntNo == Intrinsic::bpf_load_byte && MaskV == 0xFF) ||
+        (IntNo == Intrinsic::bpf_load_half && MaskV == 0xFFFF) ||
+        (IntNo == Intrinsic::bpf_load_word && MaskV == 0xFFFFFFFF)))
     return;
-  case 0xFFFFFFFF:
-    match_load_op = BPF::LDW;
-    break;
-  case 0xFFFF:
-    match_load_op = BPF::LDH;
-    break;
-  case 0xFF:
-    match_load_op = BPF::LDB;
-    break;
-  }
 
-  const RegisterSDNode *RegN =
-      dyn_cast<RegisterSDNode>(BaseV.getNode()->getOperand(1));
-  if (!RegN || !Register::isVirtualRegister(RegN->getReg()))
-    return;
-  unsigned AndOpReg = RegN->getReg();
-  LLVM_DEBUG(dbgs() << "Examine " << printReg(AndOpReg) << '\n');
-
-  // Examine the PHI insns in the MachineBasicBlock to found out the
-  // definitions of this virtual register. At this stage (DAG2DAG
-  // transformation), only PHI machine insns are available in the machine basic
-  // block.
-  MachineBasicBlock *MBB = FuncInfo->MBB;
-  MachineInstr *MII = nullptr;
-  for (auto &MI : *MBB) {
-    for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
-      const MachineOperand &MOP = MI.getOperand(i);
-      if (!MOP.isReg() || !MOP.isDef())
-        continue;
-      Register Reg = MOP.getReg();
-      if (Register::isVirtualRegister(Reg) && Reg == AndOpReg) {
-        MII = &MI;
-        break;
-      }
-    }
-  }
-
-  if (MII == nullptr) {
-    // No phi definition in this block.
-    if (!checkLoadDef(AndOpReg, match_load_op))
-      return;
-  } else {
-    // The PHI node looks like:
-    //   %2 = PHI %0, <%bb.1>, %1, <%bb.3>
-    // Trace each incoming definition, e.g., (%0, %bb.1) and (%1, %bb.3)
-    // The AND operation can be removed if both %0 in %bb.1 and %1 in
-    // %bb.3 are defined with a load matching the MaskN.
-    LLVM_DEBUG(dbgs() << "Check PHI Insn: "; MII->dump(); dbgs() << '\n');
-    unsigned PrevReg = -1;
-    for (unsigned i = 0; i < MII->getNumOperands(); ++i) {
-      const MachineOperand &MOP = MII->getOperand(i);
-      if (MOP.isReg()) {
-        if (MOP.isDef())
-          continue;
-        PrevReg = MOP.getReg();
-        if (!Register::isVirtualRegister(PrevReg))
-          return;
-        if (!checkLoadDef(PrevReg, match_load_op))
-          return;
-      }
-    }
-  }
-
-  LLVM_DEBUG(dbgs() << "Remove the redundant AND operation in: "; Node->dump();
-             dbgs() << '\n');
+  LLVM_DEBUG(dbgs() << "Remove the redundant AND operation in: ";
+             Node->dump(); dbgs() << '\n');
 
   I--;
   CurDAG->ReplaceAllUsesWith(SDValue(Node, 0), BaseV);
   I++;
   CurDAG->DeleteNode(Node);
-}
 
-bool BPFDAGToDAGISel::checkLoadDef(unsigned DefReg, unsigned match_load_op) {
-  auto it = load_to_vreg_.find(DefReg);
-  if (it == load_to_vreg_.end())
-    return false; // The definition of register is not exported yet.
-
-  return it->second == match_load_op;
+  return;
 }
 
 FunctionPass *llvm::createBPFISelDag(BPFTargetMachine &TM) {

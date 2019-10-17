@@ -4,7 +4,7 @@
 ; RUN: grep "^\^" %t.ll >%t3
 ; Expect that the summary information is the same after round-trip through
 ; llvm-as and llvm-dis.
-; RUN: diff %t2 %t3
+; RUN: diff --strip-trailing-cr %t2 %t3
 
 source_filename = "thinlto-vtable-summary.ll"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

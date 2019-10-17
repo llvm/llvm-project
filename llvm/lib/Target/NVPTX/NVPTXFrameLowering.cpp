@@ -25,7 +25,7 @@
 using namespace llvm;
 
 NVPTXFrameLowering::NVPTXFrameLowering()
-    : TargetFrameLowering(TargetFrameLowering::StackGrowsUp, 8, 0) {}
+    : TargetFrameLowering(TargetFrameLowering::StackGrowsUp, Align(8), 0) {}
 
 bool NVPTXFrameLowering::hasFP(const MachineFunction &MF) const { return true; }
 

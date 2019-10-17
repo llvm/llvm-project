@@ -83,10 +83,16 @@ bool DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI = nullptr);
 
 /// Attempts to merge a block into its predecessor, if possible. The return
 /// value indicates success or failure.
+/// By default do not merge blocks if BB's predecessor has multiple successors.
+/// If PredecessorWithTwoSuccessors = true, the blocks can only be merged
+/// if BB's Pred has a branch to BB and to AnotherBB, and BB has a single
+/// successor Sing. In this case the branch will be updated with Sing instead of
+/// BB, and BB will still be merged into its predecessor and removed.
 bool MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU = nullptr,
                                LoopInfo *LI = nullptr,
                                MemorySSAUpdater *MSSAU = nullptr,
-                               MemoryDependenceResults *MemDep = nullptr);
+                               MemoryDependenceResults *MemDep = nullptr,
+                               bool PredecessorWithTwoSuccessors = false);
 
 /// Replace all uses of an instruction (specified by BI) with a value, then
 /// remove and delete the original instruction.

@@ -35,8 +35,8 @@
 using namespace llvm;
 
 X86FrameLowering::X86FrameLowering(const X86Subtarget &STI,
-                                   unsigned StackAlignOverride)
-    : TargetFrameLowering(StackGrowsDown, StackAlignOverride,
+                                   MaybeAlign StackAlignOverride)
+    : TargetFrameLowering(StackGrowsDown, StackAlignOverride.valueOrOne(),
                           STI.is64Bit() ? -8 : -4),
       STI(STI), TII(*STI.getInstrInfo()), TRI(STI.getRegisterInfo()) {
   // Cache a bunch of frame-related predicates for this subtarget.

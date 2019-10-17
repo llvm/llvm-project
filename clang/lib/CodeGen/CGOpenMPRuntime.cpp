@@ -3075,14 +3075,18 @@ void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
     CGF.EmitRuntimeCall(
         RT.createRuntimeFunction(OMPRTL__kmpc_serialized_parallel), Args);
 
-    // OutlinedFn(&GTid, &zero, CapturedStruct);
+    // OutlinedFn(&zero, &zero_bound, CapturedStruct);
     Address ZeroAddr = CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty,
-                                                        /*Name*/ ".zero.addr");
+                                                        /*Name=*/".zero.addr");
     CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C*/ 0));
+    Address ZeroAddrBound =
+        CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty,
+                                         /*Name=*/".bound.zero.addr");
+    CGF.InitTempAlloca(ZeroAddrBound, CGF.Builder.getInt32(/*C*/ 0));
     llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
     // ThreadId for serialized parallels is 0.
     OutlinedFnArgs.push_back(ZeroAddr.getPointer());
-    OutlinedFnArgs.push_back(ZeroAddr.getPointer());
+    OutlinedFnArgs.push_back(ZeroAddrBound.getPointer());
     OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
     RT.emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
 

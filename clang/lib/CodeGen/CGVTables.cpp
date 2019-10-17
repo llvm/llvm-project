@@ -808,7 +808,7 @@ CodeGenVTables::GenerateConstructionVTable(const CXXRecordDecl *RD,
   assert(!VTable->isDeclaration() && "Shouldn't set properties on declaration");
   CGM.setGVProperties(VTable, RD);
 
-  CGM.EmitVTableTypeMetadata(VTable, *VTLayout.get());
+  CGM.EmitVTableTypeMetadata(RD, VTable, *VTLayout.get());
 
   return VTable;
 }
@@ -1039,7 +1039,32 @@ bool CodeGenModule::HasHiddenLTOVisibility(const CXXRecordDecl *RD) {
   return true;
 }
 
-void CodeGenModule::EmitVTableTypeMetadata(llvm::GlobalVariable *VTable,
+llvm::GlobalObject::VCallVisibility
+CodeGenModule::GetVCallVisibilityLevel(const CXXRecordDecl *RD) {
+  LinkageInfo LV = RD->getLinkageAndVisibility();
+  llvm::GlobalObject::VCallVisibility TypeVis;
+  if (!isExternallyVisible(LV.getLinkage()))
+    TypeVis = llvm::GlobalObject::VCallVisibilityTranslationUnit;
+  else if (HasHiddenLTOVisibility(RD))
+    TypeVis = llvm::GlobalObject::VCallVisibilityLinkageUnit;
+  else
+    TypeVis = llvm::GlobalObject::VCallVisibilityPublic;
+
+  for (auto B : RD->bases())
+    if (B.getType()->getAsCXXRecordDecl()->isDynamicClass())
+      TypeVis = std::min(TypeVis,
+                    GetVCallVisibilityLevel(B.getType()->getAsCXXRecordDecl()));
+
+  for (auto B : RD->vbases())
+    if (B.getType()->getAsCXXRecordDecl()->isDynamicClass())
+      TypeVis = std::min(TypeVis,
+                    GetVCallVisibilityLevel(B.getType()->getAsCXXRecordDecl()));
+
+  return TypeVis;
+}
+
+void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
+                                           llvm::GlobalVariable *VTable,
                                            const VTableLayout &VTLayout) {
   if (!getCodeGenOpts().LTOUnit)
     return;
@@ -1098,5 +1123,11 @@ void CodeGenModule::EmitVTableTypeMetadata(llvm::GlobalVariable *VTable,
               Context.getRecordType(AP.first).getTypePtr()));
       VTable->addTypeMetadata((PointerWidth * I).getQuantity(), MD);
     }
+  }
+
+  if (getCodeGenOpts().VirtualFunctionElimination) {
+    llvm::GlobalObject::VCallVisibility TypeVis = GetVCallVisibilityLevel(RD);
+    if (TypeVis != llvm::GlobalObject::VCallVisibilityPublic)
+      VTable->addVCallVisibilityMetadata(TypeVis);
   }
 }

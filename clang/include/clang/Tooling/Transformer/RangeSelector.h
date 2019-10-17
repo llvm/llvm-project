@@ -92,6 +92,8 @@ RangeSelector expansion(RangeSelector S);
 namespace tooling {
 // DEPRECATED: These are temporary aliases supporting client migration to the
 // `transformer` namespace.
+using RangeSelector = transformer::RangeSelector;
+
 using transformer::after;
 using transformer::before;
 using transformer::callArgs;

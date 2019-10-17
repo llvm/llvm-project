@@ -317,8 +317,9 @@ body: |
     S_BRANCH %bb.3
 
   bb.3:
+    $m0 = S_MOV_B32 $sgpr4
     $vgpr0,implicit $vcc = V_ADD_I32_e32 $vgpr1, $vgpr2, implicit $vcc, implicit $exec
-    $vgpr4 = V_WRITELANE_B32 $sgpr4, $vcc_lo, $vgpr4
+    $vgpr4 = V_WRITELANE_B32 $m0, $vcc_lo, $vgpr4
     S_ENDPGM 0
 
 ...

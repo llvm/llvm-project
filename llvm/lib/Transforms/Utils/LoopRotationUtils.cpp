@@ -615,35 +615,9 @@ bool LoopRotate::simplifyLoopLatch(Loop *L) {
   LLVM_DEBUG(dbgs() << "Folding loop latch " << Latch->getName() << " into "
                     << LastExit->getName() << "\n");
 
-  Instruction *FirstLatchInst = &*Latch->begin();
-  // If there's nothing to move, mark the starting instruction as the last
-  // instruction in the block.
-  if (FirstLatchInst == Jmp)
-    FirstLatchInst = BI;
-
-  // Hoist the instructions from Latch into LastExit.
-  LastExit->getInstList().splice(BI->getIterator(), Latch->getInstList(),
-                                 Latch->begin(), Jmp->getIterator());
-
-  // Update MemorySSA
-  if (MSSAU)
-    MSSAU->moveAllAfterMergeBlocks(Latch, LastExit, FirstLatchInst);
-
-  unsigned FallThruPath = BI->getSuccessor(0) == Latch ? 0 : 1;
-  BasicBlock *Header = Jmp->getSuccessor(0);
-  assert(Header == L->getHeader() && "expected a backward branch");
-
-  // Remove Latch from the CFG so that LastExit becomes the new Latch.
-  BI->setSuccessor(FallThruPath, Header);
-  Latch->replaceSuccessorsPhiUsesWith(LastExit);
-  Jmp->eraseFromParent();
-
-  // Nuke the Latch block.
-  assert(Latch->empty() && "unable to evacuate Latch");
-  LI->removeBlock(Latch);
-  if (DT)
-    DT->eraseNode(Latch);
-  Latch->eraseFromParent();
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  MergeBlockIntoPredecessor(Latch, &DTU, LI, MSSAU, nullptr,
+                            /*PredecessorWithTwoSuccessors=*/true);
 
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();

@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Remarks/RemarkParser.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace llvm::remarks;
@@ -109,7 +110,8 @@ static Expected<ParsedStringTable> parseStrTab(StringRef &Buf,
 
 Expected<std::unique_ptr<YAMLRemarkParser>>
 remarks::createYAMLParserFromMeta(StringRef Buf,
-                                  Optional<ParsedStringTable> StrTab) {
+                                  Optional<ParsedStringTable> StrTab,
+                                  Optional<StringRef> ExternalFilePrependPath) {
   // We now have a magic number. The metadata has to be correct.
   Expected<bool> isMeta = parseMagic(Buf);
   if (!isMeta)
@@ -138,11 +140,17 @@ remarks::createYAMLParserFromMeta(StringRef Buf,
     // If it starts with "---", there is no external file.
     if (!Buf.startswith("---")) {
       // At this point, we expect Buf to contain the external file path.
+      StringRef ExternalFilePath = Buf;
+      SmallString<80> FullPath;
+      if (ExternalFilePrependPath)
+        FullPath = *ExternalFilePrependPath;
+      sys::path::append(FullPath, ExternalFilePath);
+
       // Try to open the file and start parsing from there.
       ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-          MemoryBuffer::getFile(Buf);
+          MemoryBuffer::getFile(FullPath);
       if (std::error_code EC = BufferOrErr.getError())
-        return errorCodeToError(EC);
+        return createFileError(FullPath, EC);
 
       // Keep the buffer alive.
       SeparateBuf = std::move(*BufferOrErr);

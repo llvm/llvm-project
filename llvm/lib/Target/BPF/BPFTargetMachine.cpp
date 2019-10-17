@@ -36,6 +36,7 @@ extern "C" void LLVMInitializeBPFTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeBPFAbstractMemberAccessPass(PR);
   initializeBPFMIPeepholePass(PR);
+  initializeBPFMIPeepholeTruncElimPass(PR);
 }
 
 // DataLayout: little or big endian
@@ -115,15 +116,16 @@ void BPFPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
 
   const BPFSubtarget *Subtarget = getBPFTargetMachine().getSubtargetImpl();
-  if (Subtarget->getHasAlu32() && !DisableMIPeephole)
-    addPass(createBPFMIPeepholePass());
+  if (!DisableMIPeephole) {
+    if (Subtarget->getHasAlu32())
+      addPass(createBPFMIPeepholePass());
+    addPass(createBPFMIPeepholeTruncElimPass());
+  }
 }
 
 void BPFPassConfig::addPreEmitPass() {
-  const BPFSubtarget *Subtarget = getBPFTargetMachine().getSubtargetImpl();
-
   addPass(createBPFMIPreEmitCheckingPass());
   if (getOptLevel() != CodeGenOpt::None)
-    if (Subtarget->getHasAlu32() && !DisableMIPeephole)
+    if (!DisableMIPeephole)
       addPass(createBPFMIPreEmitPeepholePass());
 }

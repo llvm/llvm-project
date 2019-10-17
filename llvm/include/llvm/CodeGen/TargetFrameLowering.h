@@ -54,15 +54,15 @@ public:
   };
 private:
   StackDirection StackDir;
-  unsigned StackAlignment;
+  Align StackAlignment;
   unsigned TransientStackAlignment;
   int LocalAreaOffset;
   bool StackRealignable;
 public:
-  TargetFrameLowering(StackDirection D, unsigned StackAl, int LAO,
+  TargetFrameLowering(StackDirection D, Align StackAl, int LAO,
                       unsigned TransAl = 1, bool StackReal = true)
-    : StackDir(D), StackAlignment(StackAl), TransientStackAlignment(TransAl),
-      LocalAreaOffset(LAO), StackRealignable(StackReal) {}
+      : StackDir(D), StackAlignment(StackAl), TransientStackAlignment(TransAl),
+        LocalAreaOffset(LAO), StackRealignable(StackReal) {}
 
   virtual ~TargetFrameLowering();
 
@@ -77,7 +77,7 @@ public:
   /// stack pointer must be aligned on entry to a function.  Typically, this
   /// is the largest alignment for any data object in the target.
   ///
-  unsigned getStackAlignment() const { return StackAlignment; }
+  unsigned getStackAlignment() const { return StackAlignment.value(); }
 
   /// alignSPAdjust - This method aligns the stack adjustment to the correct
   /// alignment.

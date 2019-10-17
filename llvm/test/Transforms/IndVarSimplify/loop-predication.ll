@@ -784,28 +784,22 @@ exit:
 ; If we have a dominating exit (exit1) which can't be itself rewritten, we
 ; can't rewrite a later exit (exit2).  Doing so would cause the loop to exit
 ; from the exit2 when it should have exited from exit1.
-; FIXME: This currently demonstrates a miscompile.
 define i32 @neg_dominating_exit(i32* %array, i32 %length, i32 %n) {
 ; CHECK-LABEL: @neg_dominating_exit(
 ; CHECK-NEXT:  loop.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[N:%.*]], 1
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[UMAX]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[LENGTH:%.*]], [[TMP1]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP2]], i32 [[LENGTH]], i32 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[LENGTH]], [[UMIN]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED2:%.*]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED2]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH]]
+; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    br i1 [[WITHIN_BOUNDS]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
 ; CHECK:       deopt:
 ; CHECK-NEXT:    [[RESULT:%.*]] = phi i32 [ [[LOOP_ACC]], [[LOOP]] ]
 ; CHECK-NEXT:    call void @prevent_merging()
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    br i1 [[TMP3]], label [[GUARDED2]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    [[WITHIN_BOUNDS2:%.*]] = icmp ult i32 [[I]], [[LENGTH]]
+; CHECK-NEXT:    br i1 [[WITHIN_BOUNDS2]], label [[GUARDED2]], label [[DEOPT2:%.*]], !prof !0
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void @prevent_merging()
 ; CHECK-NEXT:    ret i32 -1
@@ -815,7 +809,7 @@ define i32 @neg_dominating_exit(i32* %array, i32 %length, i32 %n) {
 ; CHECK-NEXT:    [[ARRAY_I:%.*]] = load i32, i32* [[ARRAY_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_NEXT]] = add i32 [[LOOP_ACC]], [[ARRAY_I]]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
-; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ult i32 [[I_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[RESULT2:%.*]] = phi i32 [ [[LOOP_ACC_NEXT]], [[GUARDED2]] ]

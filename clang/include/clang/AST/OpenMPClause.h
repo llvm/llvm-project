@@ -5206,7 +5206,7 @@ public:
 /// \endcode
 /// In this example directive '#pragma omp teams' has clause 'priority' with
 /// single expression 'n'.
-class OMPPriorityClause : public OMPClause {
+class OMPPriorityClause : public OMPClause, public OMPClauseWithPreInit {
   friend class OMPClauseReader;
 
   /// Location of '('.
@@ -5223,18 +5223,25 @@ class OMPPriorityClause : public OMPClause {
 public:
   /// Build 'priority' clause.
   ///
-  /// \param E Expression associated with this clause.
+  /// \param Priority Expression associated with this clause.
+  /// \param HelperPriority Helper priority for the construct.
+  /// \param CaptureRegion Innermost OpenMP region where expressions in this
+  /// clause must be captured.
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPPriorityClause(Expr *E, SourceLocation StartLoc, SourceLocation LParenLoc,
-                    SourceLocation EndLoc)
-      : OMPClause(OMPC_priority, StartLoc, EndLoc), LParenLoc(LParenLoc),
-        Priority(E) {}
+  OMPPriorityClause(Expr *Priority, Stmt *HelperPriority,
+                    OpenMPDirectiveKind CaptureRegion, SourceLocation StartLoc,
+                    SourceLocation LParenLoc, SourceLocation EndLoc)
+      : OMPClause(OMPC_priority, StartLoc, EndLoc), OMPClauseWithPreInit(this),
+        LParenLoc(LParenLoc), Priority(Priority) {
+    setPreInitStmt(HelperPriority, CaptureRegion);
+  }
 
   /// Build an empty clause.
   OMPPriorityClause()
-      : OMPClause(OMPC_priority, SourceLocation(), SourceLocation()) {}
+      : OMPClause(OMPC_priority, SourceLocation(), SourceLocation()),
+        OMPClauseWithPreInit(this) {}
 
   /// Sets the location of '('.
   void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
@@ -5254,11 +5261,10 @@ public:
     return const_child_range(&Priority, &Priority + 1);
   }
 
-  child_range used_children() {
-    return child_range(child_iterator(), child_iterator());
-  }
+  child_range used_children();
   const_child_range used_children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
+    auto Children = const_cast<OMPPriorityClause *>(this)->used_children();
+    return const_child_range(Children.begin(), Children.end());
   }
 
   static bool classof(const OMPClause *T) {

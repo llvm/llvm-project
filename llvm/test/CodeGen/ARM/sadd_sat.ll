@@ -207,7 +207,7 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
   ret i64 %tmp
 }
 
-define i16 @func16(i16 %x, i16 %y) nounwind {
+define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 ; CHECK-T1-LABEL: func16:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    lsls r3, r1, #16
@@ -276,7 +276,7 @@ define i16 @func16(i16 %x, i16 %y) nounwind {
   ret i16 %tmp
 }
 
-define i8 @func8(i8 %x, i8 %y) nounwind {
+define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
 ; CHECK-T1-LABEL: func8:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    lsls r3, r1, #24
@@ -345,7 +345,7 @@ define i8 @func8(i8 %x, i8 %y) nounwind {
   ret i8 %tmp
 }
 
-define i4 @func3(i4 %x, i4 %y) nounwind {
+define signext i4 @func3(i4 signext %x, i4 signext %y) nounwind {
 ; CHECK-T1-LABEL: func3:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    lsls r3, r1, #28

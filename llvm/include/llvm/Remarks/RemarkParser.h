@@ -39,6 +39,8 @@ public:
 struct RemarkParser {
   /// The format of the parser.
   Format ParserFormat;
+  /// Path to prepend when opening an external remark file.
+  std::string ExternalFilePrependPath;
 
   RemarkParser(Format ParserFormat) : ParserFormat(ParserFormat) {}
 
@@ -82,7 +84,8 @@ createRemarkParser(Format ParserFormat, StringRef Buf,
 
 Expected<std::unique_ptr<RemarkParser>>
 createRemarkParserFromMeta(Format ParserFormat, StringRef Buf,
-                           Optional<ParsedStringTable> StrTab = None);
+                           Optional<ParsedStringTable> StrTab = None,
+                           Optional<StringRef> ExternalFilePrependPath = None);
 
 } // end namespace remarks
 } // end namespace llvm

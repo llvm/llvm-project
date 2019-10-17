@@ -41,7 +41,20 @@ Non-comprehensive list of changes in this release
    for adding a new subsection.
 
 * The ISD::FP_ROUND_INREG opcode and related code was removed from SelectionDAG.
-* Enabled MemorySSA as a loop dependency.
+* Enabled MemorySSA as a loop dependency. Since
+  `r370957 <https://reviews.llvm.org/rL370957>`_
+  (`D58311 <https://reviews.llvm.org/D58311>`_ ``[MemorySSA & LoopPassManager]
+  Enable MemorySSA as loop dependency. Update tests.``), the MemorySSA analysis
+  is being preserved and used by a series of loop passes. The most significant
+  use is in LICM, where the instruction hoisting and sinking relies on aliasing
+  information provided by MemorySSA vs previously creating an AliasSetTracker.
+  The LICM step of promoting variables to scalars still relies on the creation
+  of an AliasSetTracker, but its use is reduced to only be enabled for loops
+  with a small number of overall memory instructions. This choice was motivated
+  by experimental results showing compile and run time benefits or replacing the
+  AliasSetTracker usage with MemorySSA without any performance penalties.
+  The fact that MemorySSA is now preserved by and available in a series of loop
+  passes, also opens up opportunities for its use in those respective passes.
 
 .. NOTE
    If you would like to document a larger change, then you can add a

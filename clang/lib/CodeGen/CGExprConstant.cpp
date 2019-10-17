@@ -1269,8 +1269,8 @@ public:
       return nullptr;
 
     // FIXME: We should not have to call getBaseElementType here.
-    const RecordType *RT =
-      CGM.getContext().getBaseElementType(Ty)->getAs<RecordType>();
+    const auto *RT =
+        CGM.getContext().getBaseElementType(Ty)->castAs<RecordType>();
     const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
 
     // If the class doesn't have a trivial destructor, we can't emit it as a

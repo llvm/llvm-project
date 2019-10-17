@@ -73,9 +73,9 @@ private:
   Error processExternalFilePath(Optional<StringRef> ExternalFilePath);
 };
 
-Expected<std::unique_ptr<BitstreamRemarkParser>>
-createBitstreamParserFromMeta(StringRef Buf,
-                              Optional<ParsedStringTable> StrTab = None);
+Expected<std::unique_ptr<BitstreamRemarkParser>> createBitstreamParserFromMeta(
+    StringRef Buf, Optional<ParsedStringTable> StrTab = None,
+    Optional<StringRef> ExternalFilePrependPath = None);
 
 } // end namespace remarks
 } // end namespace llvm

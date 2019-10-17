@@ -21,7 +21,6 @@ using namespace ast_matchers;
 namespace {
 using ::testing::IsEmpty;
 using transformer::RewriteRule;
-using transformer::text;
 
 constexpr char KHeaderContents[] = R"cc(
   struct string {

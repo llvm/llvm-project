@@ -161,7 +161,17 @@ inline bool isAddrAligned(Align Lhs, const void *Addr) {
 
 /// Returns a multiple of A needed to store `Size` bytes.
 inline uint64_t alignTo(uint64_t Size, Align A) {
-  return (Size + A.value() - 1) / A.value() * A.value();
+  const uint64_t value = A.value();
+  // The following line is equivalent to `(Size + value - 1) / value * value`.
+
+  // The division followed by a multiplication can be thought of as a right
+  // shift followed by a left shift which zeros out the extra bits produced in
+  // the bump; `~(value - 1)` is a mask where all those bits being zeroed out
+  // are just zero.
+
+  // Most compilers can generate this code but the pattern may be missed when
+  // multiple functions gets inlined.
+  return (Size + value - 1) & ~(value - 1);
 }
 
 /// Returns a multiple of A needed to store `Size` bytes.
@@ -173,7 +183,8 @@ inline uint64_t alignTo(uint64_t Size, MaybeAlign A) {
 /// Aligns `Addr` to `Alignment` bytes, rounding up.
 inline uintptr_t alignAddr(const void *Addr, Align Alignment) {
   uintptr_t ArithAddr = reinterpret_cast<uintptr_t>(Addr);
-  assert(ArithAddr + Alignment.value() - 1 >= ArithAddr && "Overflow");
+  assert(static_cast<uintptr_t>(ArithAddr + Alignment.value() - 1) >=
+             ArithAddr && "Overflow");
   return alignTo(ArithAddr, Alignment);
 }
 
