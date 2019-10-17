@@ -1,5 +1,6 @@
 // UNSUPPORTED: armv6m-target-arch
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_bswapsi2
 //===-- bswapsi2_test.c - Test __bswapsi2 ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.

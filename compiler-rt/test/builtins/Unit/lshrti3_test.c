@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_lshrti3
 // REQUIRES: int128
 //===-- lshrti3_test.c - Test __lshrti3 -----------------------------------===//
 //

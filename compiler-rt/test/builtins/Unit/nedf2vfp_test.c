@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_nedf2vfp
 
 //===-- nedf2vfp_test.c - Test __nedf2vfp ---------------------------------===//
 //
