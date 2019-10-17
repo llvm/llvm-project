@@ -14309,6 +14309,25 @@ def NOR_Urrr: DPUInstruction {
 	let Inst{47-44} = 0b1001;
 }
 
+def NOTrrci: DPUInstruction {
+	let OutOperandList   = (outs SimpleReg:$rc);
+	let InOperandList    = (ins SimpleRegOrCst:$ra, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "not $rc, $ra, $cc, $pc";
+	let Pattern          = [];
+	let isAsCheapAsAMove = 1;
+	let isBranch         = 1;
+	let isCompare        = 1;
+	let isTerminator     = 1;
+	bits<16> pc; bits<4> cc; bits<5> ra; bits<5> rc;
+	let Inst{15-0} = pc{15-0};
+	let Inst{23-16} = 0b11111111;
+	let Inst{27-24} = cc{3-0};
+	let Inst{33-28} = 0b111000;
+	let Inst{38-34} = ra{4-0};
+	let Inst{43-39} = rc{4-0};
+	let Inst{47-44} = 0b1000;
+}
+
 def NOTrr: DPUInstruction {
 	let OutOperandList   = (outs SimpleReg:$rc);
 	let InOperandList    = (ins SimpleRegOrCst:$ra);

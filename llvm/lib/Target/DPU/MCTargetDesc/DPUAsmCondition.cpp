@@ -2266,6 +2266,8 @@ ConditionClass findConditionClassForInstruction(unsigned InstOpcode) {
     return ConditionClass::Mul_nzCC;
   case DPU::CAOrrci:
     return ConditionClass::Count_nzCC;
+  case DPU::NOTrrci:
+    return ConditionClass::Log_nzCC;
   case DPU::NANDzrrc:
     return ConditionClass::Log_setCC;
   case DPU::ROL_ADDzrrici:

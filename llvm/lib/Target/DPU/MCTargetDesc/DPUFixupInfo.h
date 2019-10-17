@@ -1990,6 +1990,13 @@ static inline DPU::Fixups findFixupForOperand(unsigned OpNum,
     case 3:
       return DPU::Fixups::FIXUP_DPU_PC;
     }
+  case DPU::NOTrrci:
+    switch (OpNum) {
+    default:
+      llvm_unreachable("invalid operand number");
+    case 3:
+      return DPU::Fixups::FIXUP_DPU_PC;
+    }
   case DPU::NANDzrrc:
     switch (OpNum) {
     default:

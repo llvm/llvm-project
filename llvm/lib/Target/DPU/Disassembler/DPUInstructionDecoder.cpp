@@ -11151,6 +11151,16 @@ MCDisassembler::DecodeStatus DPUInstructionDecoder::getInstruction(
                (((((Insn >> 24) & 0xfL)) > (0xbL)) ||
                 (((((Insn >> 24) & 0xfL)) & (0xeL)) == (0x8L)))) &&
               ((((Insn >> 24) & 0xfL)) != (0x0L))) {
+            if (useSugar && (((((Insn >> 0) & 0xffffffffffffL)) &
+                              (0xff0000L)) == (0xff0000L))) {
+              MI.setOpcode(DPU::NOTrrci);
+              DAsm.Decode_rc(MI, (((Insn >> 39) & 31) << 0));
+              DAsm.Decode_ra(MI, (((Insn >> 34) & 31) << 0));
+              DAsm.Decode_cc(MI, ConditionClass::Log_nzCC,
+                             (((Insn >> 24) & 15) << 0));
+              DAsm.Decode_pc(MI, (((Insn >> 0) & 65535) << 0));
+              return MCDisassembler::Success;
+            }
             MI.setOpcode(DPU::XORrrici);
             DAsm.Decode_rc(MI, (((Insn >> 39) & 31) << 0));
             DAsm.Decode_ra(MI, (((Insn >> 34) & 31) << 0));
