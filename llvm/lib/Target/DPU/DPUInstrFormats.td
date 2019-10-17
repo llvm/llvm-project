@@ -14328,6 +14328,24 @@ def NOTrrci: DPUInstruction {
 	let Inst{47-44} = 0b1000;
 }
 
+def NOTrci: DPUInstruction {
+	let OutOperandList   = (outs);
+	let InOperandList    = (ins SimpleRegOrCst:$ra, log_nz_cc:$cc, pc16:$pc);
+	let AsmString        = "not $ra, $cc, $pc";
+	let Pattern          = [];
+	let isAsCheapAsAMove = 1;
+	let isBranch         = 1;
+	let isCompare        = 1;
+	let isTerminator     = 1;
+	bits<16> pc; bits<4> cc; bits<5> ra;
+	let Inst{15-0} = pc{15-0};
+	let Inst{23-16} = 0b11111111;
+	let Inst{27-24} = cc{3-0};
+	let Inst{33-28} = 0b111000;
+	let Inst{38-34} = ra{4-0};
+	let Inst{47-39} = 0b100111111;
+}
+
 def NOTrr: DPUInstruction {
 	let OutOperandList   = (outs SimpleReg:$rc);
 	let InOperandList    = (ins SimpleRegOrCst:$ra);
@@ -17981,6 +17999,28 @@ def SB_IDri: DPUInstruction {
 	let Inst{47-42} = 0b011111;
 }
 
+def SBSrii: DPUInstruction {
+	let OutOperandList   = (outs);
+	let InOperandList    = (ins SimpleRegOrCst:$ra, s12_imm:$off, s8_imm:$imm);
+	let AsmString        = "sbs $ra, $off, $imm";
+	let Pattern          = [];
+	let isAsCheapAsAMove = 1;
+	bits<8> imm; bits<12> off; bits<5> ra;
+	let Inst{3-0} = imm{7-4};
+	let Inst{11-4} = 0b00000000;
+	let Inst{12} = off{11};
+	let Inst{13} = off{10};
+	let Inst{14} = off{9};
+	let Inst{15} = off{8};
+	let Inst{19-16} = imm{3-0};
+	let Inst{23-20} = off{3-0};
+	let Inst{24} = off{7};
+	let Inst{33-25} = 0b110101000;
+	let Inst{38-34} = ra{4-0};
+	let Inst{41-39} = off{6-4};
+	let Inst{47-42} = 0b011111;
+}
+
 def SBSrir: DPUInstruction {
 	let OutOperandList   = (outs);
 	let InOperandList    = (ins SimpleRegOrCst:$ra, s24_imm:$off, SimpleReg:$rb);
@@ -17999,28 +18039,6 @@ def SBSrir: DPUInstruction {
 	let Inst{24} = off{7};
 	let Inst{31-25} = 0b0101000;
 	let Inst{33-32} = rb{4-3};
-	let Inst{38-34} = ra{4-0};
-	let Inst{41-39} = off{6-4};
-	let Inst{47-42} = 0b011111;
-}
-
-def SBSrii: DPUInstruction {
-	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s12_imm:$off, s8_imm:$imm);
-	let AsmString        = "sbs $ra, $off, $imm";
-	let Pattern          = [];
-	let isAsCheapAsAMove = 1;
-	bits<8> imm; bits<12> off; bits<5> ra;
-	let Inst{3-0} = imm{7-4};
-	let Inst{11-4} = 0b00000000;
-	let Inst{12} = off{11};
-	let Inst{13} = off{10};
-	let Inst{14} = off{9};
-	let Inst{15} = off{8};
-	let Inst{19-16} = imm{3-0};
-	let Inst{23-20} = off{3-0};
-	let Inst{24} = off{7};
-	let Inst{33-25} = 0b110101000;
 	let Inst{38-34} = ra{4-0};
 	let Inst{41-39} = off{6-4};
 	let Inst{47-42} = 0b011111;

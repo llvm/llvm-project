@@ -2170,6 +2170,8 @@ ConditionClass findConditionClassForInstruction(unsigned InstOpcode) {
     return ConditionClass::BootCC;
   case DPU::RORrrrci:
     return ConditionClass::Shift_nzCC;
+  case DPU::NOTrci:
+    return ConditionClass::Log_nzCC;
   case DPU::CMPB4zrrci:
     return ConditionClass::Log_nzCC;
   case DPU::HASH_Urric:
