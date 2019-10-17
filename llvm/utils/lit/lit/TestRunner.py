@@ -1,11 +1,8 @@
 from __future__ import absolute_import
-import difflib
 import errno
-import functools
 import io
 import itertools
 import getopt
-import locale
 import os, signal, subprocess, sys
 import re
 import stat
@@ -362,222 +359,6 @@ def executeBuiltinMkdir(cmd, cmd_shenv):
                 exitCode = 1
     return ShellCommandResult(cmd, "", stderr.getvalue(), exitCode, False)
 
-def executeBuiltinDiff(cmd, cmd_shenv):
-    """executeBuiltinDiff - Compare files line by line."""
-    args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
-    try:
-        opts, args = getopt.gnu_getopt(args, "wbuU:r", ["strip-trailing-cr"])
-    except getopt.GetoptError as err:
-        raise InternalShellError(cmd, "Unsupported: 'diff':  %s" % str(err))
-
-    filelines, filepaths, dir_trees = ([] for i in range(3))
-    ignore_all_space = False
-    ignore_space_change = False
-    unified_diff = False
-    num_context_lines = 3
-    recursive_diff = False
-    strip_trailing_cr = False
-    for o, a in opts:
-        if o == "-w":
-            ignore_all_space = True
-        elif o == "-b":
-            ignore_space_change = True
-        elif o == "-u":
-            unified_diff = True
-        elif o.startswith("-U"):
-            unified_diff = True
-            try:
-                num_context_lines = int(a)
-                if num_context_lines < 0:
-                    raise ValueException
-            except:
-                raise InternalShellError(cmd,
-                                         "Error: invalid '-U' argument: {}\n"
-                                         .format(a))
-        elif o == "-r":
-            recursive_diff = True
-        elif o == "--strip-trailing-cr":
-            strip_trailing_cr = True
-        else:
-            assert False, "unhandled option"
-
-    if len(args) != 2:
-        raise InternalShellError(cmd, "Error:  missing or extra operand")
-
-    def getDirTree(path, basedir=""):
-        # Tree is a tuple of form (dirname, child_trees).
-        # An empty dir has child_trees = [], a file has child_trees = None.
-        child_trees = []
-        for dirname, child_dirs, files in os.walk(os.path.join(basedir, path)):
-            for child_dir in child_dirs:
-                child_trees.append(getDirTree(child_dir, dirname))
-            for filename in files:
-                child_trees.append((filename, None))
-            return path, sorted(child_trees)
-
-    def compareTwoFiles(filepaths):
-        filelines = []
-        for file in filepaths:
-            with open(file, 'rb') as file_bin:
-                filelines.append(file_bin.readlines())
-
-        try:
-            return compareTwoTextFiles(filepaths, filelines,
-                                       locale.getpreferredencoding(False))
-        except UnicodeDecodeError:
-            try:
-                return compareTwoTextFiles(filepaths, filelines, "utf-8")
-            except:
-                return compareTwoBinaryFiles(filepaths, filelines)
-
-    def compareTwoBinaryFiles(filepaths, filelines):
-        exitCode = 0
-        if hasattr(difflib, 'diff_bytes'):
-            # python 3.5 or newer
-            diffs = difflib.diff_bytes(difflib.unified_diff, filelines[0],
-                                       filelines[1], filepaths[0].encode(),
-                                       filepaths[1].encode(),
-                                       n = num_context_lines)
-            diffs = [diff.decode(errors="backslashreplace") for diff in diffs]
-        else:
-            # python 2.7
-            func = difflib.unified_diff if unified_diff else difflib.context_diff
-            diffs = func(filelines[0], filelines[1], filepaths[0], filepaths[1],
-                         n = num_context_lines)
-
-        for diff in diffs:
-            stdout.write(to_string(diff))
-            exitCode = 1
-        return exitCode
-
-    def compareTwoTextFiles(filepaths, filelines_bin, encoding):
-        filelines = []
-        for lines_bin in filelines_bin:
-            lines = []
-            for line_bin in lines_bin:
-                line = line_bin.decode(encoding=encoding)
-                lines.append(line)
-            filelines.append(lines)
-
-        exitCode = 0
-        def compose2(f, g):
-            return lambda x: f(g(x))
-
-        f = lambda x: x
-        if strip_trailing_cr:
-            f = compose2(lambda line: line.replace('\r\n', '\n'), f)
-        if ignore_all_space or ignore_space_change:
-            ignoreSpace = lambda line, separator: separator.join(line.split())
-            ignoreAllSpaceOrSpaceChange = functools.partial(ignoreSpace, separator='' if ignore_all_space else ' ')
-            f = compose2(ignoreAllSpaceOrSpaceChange, f)
-
-        for idx, lines in enumerate(filelines):
-            filelines[idx]= [f(line) for line in lines]
-
-        func = difflib.unified_diff if unified_diff else difflib.context_diff
-        for diff in func(filelines[0], filelines[1], filepaths[0], filepaths[1],
-                         n = num_context_lines):
-            stdout.write(to_string(diff))
-            exitCode = 1
-        return exitCode
-
-    def printDirVsFile(dir_path, file_path):
-        if os.path.getsize(file_path):
-            msg = "File %s is a directory while file %s is a regular file"
-        else:
-            msg = "File %s is a directory while file %s is a regular empty file"
-        stdout.write(msg % (dir_path, file_path) + "\n")
-
-    def printFileVsDir(file_path, dir_path):
-        if os.path.getsize(file_path):
-            msg = "File %s is a regular file while file %s is a directory"
-        else:
-            msg = "File %s is a regular empty file while file %s is a directory"
-        stdout.write(msg % (file_path, dir_path) + "\n")
-
-    def printOnlyIn(basedir, path, name):
-        stdout.write("Only in %s: %s\n" % (os.path.join(basedir, path), name))
-
-    def compareDirTrees(dir_trees, base_paths=["", ""]):
-        # Dirnames of the trees are not checked, it's caller's responsibility,
-        # as top-level dirnames are always different. Base paths are important
-        # for doing os.walk, but we don't put it into tree's dirname in order
-        # to speed up string comparison below and while sorting in getDirTree.
-        left_tree, right_tree = dir_trees[0], dir_trees[1]
-        left_base, right_base = base_paths[0], base_paths[1]
-
-        # Compare two files or report file vs. directory mismatch.
-        if left_tree[1] is None and right_tree[1] is None:
-            return compareTwoFiles([os.path.join(left_base, left_tree[0]),
-                                    os.path.join(right_base, right_tree[0])])
-
-        if left_tree[1] is None and right_tree[1] is not None:
-            printFileVsDir(os.path.join(left_base, left_tree[0]),
-                           os.path.join(right_base, right_tree[0]))
-            return 1
-
-        if left_tree[1] is not None and right_tree[1] is None:
-            printDirVsFile(os.path.join(left_base, left_tree[0]),
-                           os.path.join(right_base, right_tree[0]))
-            return 1
-
-        # Compare two directories via recursive use of compareDirTrees.
-        exitCode = 0
-        left_names = [node[0] for node in left_tree[1]]
-        right_names = [node[0] for node in right_tree[1]]
-        l, r = 0, 0
-        while l < len(left_names) and r < len(right_names):
-            # Names are sorted in getDirTree, rely on that order.
-            if left_names[l] < right_names[r]:
-                exitCode = 1
-                printOnlyIn(left_base, left_tree[0], left_names[l])
-                l += 1
-            elif left_names[l] > right_names[r]:
-                exitCode = 1
-                printOnlyIn(right_base, right_tree[0], right_names[r])
-                r += 1
-            else:
-                exitCode |= compareDirTrees([left_tree[1][l], right_tree[1][r]],
-                                            [os.path.join(left_base, left_tree[0]),
-                                            os.path.join(right_base, right_tree[0])])
-                l += 1
-                r += 1
-
-        # At least one of the trees has ended. Report names from the other tree.
-        while l < len(left_names):
-            exitCode = 1
-            printOnlyIn(left_base, left_tree[0], left_names[l])
-            l += 1
-        while r < len(right_names):
-            exitCode = 1
-            printOnlyIn(right_base, right_tree[0], right_names[r])
-            r += 1
-        return exitCode
-
-    stderr = StringIO()
-    stdout = StringIO()
-    exitCode = 0
-    try:
-        for file in args:
-            if not os.path.isabs(file):
-                file = os.path.realpath(os.path.join(cmd_shenv.cwd, file))
-    
-            if recursive_diff:
-                dir_trees.append(getDirTree(file))
-            else:
-                filepaths.append(file)
-
-        if not recursive_diff:
-            exitCode = compareTwoFiles(filepaths)
-        else:
-            exitCode = compareDirTrees(dir_trees)
-
-    except IOError as err:
-        stderr.write("Error: 'diff' command failed, %s\n" % str(err))
-        exitCode = 1
-
-    return ShellCommandResult(cmd, stdout.getvalue(), stderr.getvalue(), exitCode, False)
-
 def executeBuiltinRm(cmd, cmd_shenv):
     """executeBuiltinRm - Removes (deletes) files or directories."""
     args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
@@ -843,14 +624,6 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         results.append(cmdResult)
         return cmdResult.exitCode
 
-    if cmd.commands[0].args[0] == 'diff':
-        if len(cmd.commands) != 1:
-            raise InternalShellError(cmd.commands[0], "Unsupported: 'diff' "
-                                     "cannot be part of a pipeline")
-        cmdResult = executeBuiltinDiff(cmd.commands[0], shenv)
-        results.append(cmdResult)
-        return cmdResult.exitCode
-
     if cmd.commands[0].args[0] == 'rm':
         if len(cmd.commands) != 1:
             raise InternalShellError(cmd.commands[0], "Unsupported: 'rm' "
@@ -871,7 +644,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     stderrTempFiles = []
     opened_files = []
     named_temp_files = []
-    builtin_commands = set(['cat'])
+    builtin_commands = set(['cat', 'diff'])
     builtin_commands_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "builtin_commands")
     # To avoid deadlock, we use a single stderr stream for piped
     # output. This is null until we have seen some output using
@@ -942,6 +715,8 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         args = expand_glob_expressions(args, cmd_shenv.cwd)
         if is_builtin_cmd:
             args.insert(0, sys.executable)
+            cmd_shenv.env['PYTHONPATH'] = \
+                os.path.dirname(os.path.abspath(__file__))
             args[1] = os.path.join(builtin_commands_dir ,args[1] + ".py")
 
         # On Windows, do our own command line quoting for better compatibility
