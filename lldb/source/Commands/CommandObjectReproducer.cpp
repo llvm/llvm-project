@@ -9,8 +9,8 @@
 #include "CommandObjectReproducer.h"
 
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/GDBRemote.h"
+#include "lldb/Utility/Reproducer.h"
 
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -27,6 +27,7 @@ enum ReproducerProvider {
   eReproducerProviderFiles,
   eReproducerProviderGDB,
   eReproducerProviderVersion,
+  eReproducerProviderWorkingDirectory,
   eReproducerProviderNone
 };
 
@@ -50,6 +51,11 @@ static constexpr OptionEnumValueElement g_reproducer_provider_type[] = {
         eReproducerProviderVersion,
         "version",
         "Version",
+    },
+    {
+        eReproducerProviderWorkingDirectory,
+        "cwd",
+        "Working Directory",
     },
     {
         eReproducerProviderNone,
@@ -274,6 +280,17 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;
     }
+    case eReproducerProviderWorkingDirectory: {
+      Expected<std::string> cwd =
+          loader->LoadBuffer<WorkingDirectoryProvider>();
+      if (!cwd) {
+        SetError(result, cwd.takeError());
+        return false;
+      }
+      result.AppendMessage(*cwd);
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return true;
+    }
     case eReproducerProviderCommands: {
       // Create a new command loader.
       std::unique_ptr<repro::CommandLoader> command_loader =
@@ -320,7 +337,7 @@ protected:
         return false;
       }
 
-      for (GDBRemotePacket& packet : packets) {
+      for (GDBRemotePacket &packet : packets) {
         packet.Dump(result.GetOutputStream());
       }
 
