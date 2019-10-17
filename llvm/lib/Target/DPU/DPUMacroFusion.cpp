@@ -80,6 +80,7 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
   case DPU::ANDrri:
   case DPU::XORrri:
   case DPU::XORrrr:
+  case DPU::NOTrr:
   case DPU::LSLrri:
   case DPU::LSLrrr:
   case DPU::LSRrrr:

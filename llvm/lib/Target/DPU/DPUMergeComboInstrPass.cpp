@@ -600,6 +600,12 @@ static bool mergeComboInstructionsInMBB(MachineBasicBlock *MBB,
     OpNullJumpOpc = DPU::MUL_SL_SLzrrci;
     usableConditions = normalConditionsSet;
     break;
+  case DPU::NOTrr:
+    OpPrototype = Oprr;
+    OpJumpOpc = DPU::NOTrrci;
+    OpNullJumpOpc = DPU::NOTrci;
+    usableConditions = normalConditionsSet;
+    break;
   }
 
   usableConditionsTranslatableToSourceConditions = sourceConditionsSet;
