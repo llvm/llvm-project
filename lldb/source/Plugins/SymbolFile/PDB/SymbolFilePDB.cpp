@@ -1353,7 +1353,6 @@ void SymbolFilePDB::FindFunctions(const lldb_private::RegularExpression &regex,
   if (!regex.IsValid())
     return;
 
-  auto old_size = sc_list.GetSize();
   CacheFunctionNames();
 
   std::set<uint32_t> resolved_ids;

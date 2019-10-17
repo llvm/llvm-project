@@ -31,6 +31,7 @@
 using namespace lldb_private;
 using namespace lldb;
 using namespace lldb_private::python;
+using llvm::cantFail;
 using llvm::Error;
 using llvm::Expected;
 
@@ -45,6 +46,20 @@ Expected<long long> python::As<long long>(Expected<PythonObject> &&obj) {
   if (!obj)
     return obj.takeError();
   return obj.get().AsLongLong();
+}
+
+template <>
+Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
+  if (!obj)
+    return obj.takeError();
+  PyObject *str_obj = PyObject_Str(obj.get().get());
+  if (!obj)
+    return llvm::make_error<PythonException>();
+  auto str = Take<PythonString>(str_obj);
+  auto utf8 = str.AsUTF8();
+  if (!utf8)
+    return utf8.takeError();
+  return utf8.get();
 }
 
 void StructuredPythonObject::Serialize(llvm::json::OStream &s) const {
@@ -395,7 +410,7 @@ void PythonString::SetString(llvm::StringRef string) {
     llvm::consumeError(s.takeError());
     Reset();
   } else {
-    PythonObject::Reset(std::move(s.get()));
+    *this = std::move(s.get());
   }
 }
 
@@ -657,16 +672,66 @@ PythonList PythonDictionary::GetKeys() const {
 }
 
 PythonObject PythonDictionary::GetItemForKey(const PythonObject &key) const {
-  if (IsAllocated() && key.IsValid())
-    return PythonObject(PyRefType::Borrowed,
-                        PyDict_GetItem(m_py_obj, key.get()));
-  return PythonObject();
+  auto item = GetItem(key);
+  if (!item) {
+    llvm::consumeError(item.takeError());
+    return PythonObject();
+  }
+  return std::move(item.get());
+}
+
+Expected<PythonObject>
+PythonDictionary::GetItem(const PythonObject &key) const {
+  if (!IsValid())
+    return nullDeref();
+#if PY_MAJOR_VERSION >= 3
+  PyObject *o = PyDict_GetItemWithError(m_py_obj, key.get());
+  if (PyErr_Occurred())
+    return exception();
+#else
+  PyObject *o = PyDict_GetItem(m_py_obj, key.get());
+#endif
+  if (!o)
+    return keyError();
+  return Retain<PythonObject>(o);
+}
+
+Expected<PythonObject> PythonDictionary::GetItem(const char *key) const {
+  if (!IsValid())
+    return nullDeref();
+  PyObject *o = PyDict_GetItemString(m_py_obj, key);
+  if (PyErr_Occurred())
+    return exception();
+  if (!o)
+    return keyError();
+  return Retain<PythonObject>(o);
+}
+
+Error PythonDictionary::SetItem(const PythonObject &key,
+                                const PythonObject &value) const {
+  if (!IsValid() || !value.IsValid())
+    return nullDeref();
+  int r = PyDict_SetItem(m_py_obj, key.get(), value.get());
+  if (r < 0)
+    return exception();
+  return Error::success();
+}
+
+Error PythonDictionary::SetItem(const char *key,
+                                const PythonObject &value) const {
+  if (!IsValid() || !value.IsValid())
+    return nullDeref();
+  int r = PyDict_SetItemString(m_py_obj, key, value.get());
+  if (r < 0)
+    return exception();
+  return Error::success();
 }
 
 void PythonDictionary::SetItemForKey(const PythonObject &key,
                                      const PythonObject &value) {
-  if (IsAllocated() && key.IsValid() && value.IsValid())
-    PyDict_SetItem(m_py_obj, key.get(), value.get());
+  Error error = SetItem(key, value);
+  if (error)
+    llvm::consumeError(std::move(error));
 }
 
 StructuredData::DictionarySP
@@ -736,23 +801,89 @@ bool PythonCallable::Check(PyObject *py_obj) {
 }
 
 PythonCallable::ArgInfo PythonCallable::GetNumInitArguments() const {
-  ArgInfo result = {0, false, false, false};
-  if (!IsValid())
-    return result;
-
-  PythonObject __init__ = GetAttributeValue("__init__");
-  if (__init__.IsValid() ) {
-    auto __init_callable__ = __init__.AsType<PythonCallable>();
-    if (__init_callable__.IsValid())
-      return __init_callable__.GetNumArguments();
+  auto arginfo = GetInitArgInfo();
+  if (!arginfo) {
+    llvm::consumeError(arginfo.takeError());
+    return ArgInfo{};
   }
-  return result;
+  return arginfo.get();
 }
 
-PythonCallable::ArgInfo PythonCallable::GetNumArguments() const {
-  ArgInfo result = {0, false, false, false};
+Expected<PythonCallable::ArgInfo> PythonCallable::GetInitArgInfo() const {
   if (!IsValid())
-    return result;
+    return nullDeref();
+  auto init = As<PythonCallable>(GetAttribute("__init__"));
+  if (!init)
+    return init.takeError();
+  return init.get().GetArgInfo();
+}
+
+#if PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 3
+static const char get_arg_info_script[] = R"(
+from inspect import signature, Parameter, ismethod
+from collections import namedtuple
+ArgInfo = namedtuple('ArgInfo', ['count', 'has_varargs', 'is_bound_method'])
+def get_arg_info(f):
+    count = 0
+    varargs = False
+    for parameter in signature(f).parameters.values():
+        kind = parameter.kind
+        if kind in (Parameter.POSITIONAL_ONLY,
+                    Parameter.POSITIONAL_OR_KEYWORD):
+            count += 1
+        elif kind == Parameter.VAR_POSITIONAL:
+            varargs = True
+        elif kind in (Parameter.KEYWORD_ONLY,
+                      Parameter.VAR_KEYWORD):
+            pass
+        else:
+            raise Exception(f'unknown parameter kind: {kind}')
+    return ArgInfo(count, varargs, ismethod(f))
+)";
+#endif
+
+Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
+  ArgInfo result = {};
+  if (!IsValid())
+    return nullDeref();
+
+#if PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 3
+
+  // this global is protected by the GIL
+  static PythonCallable get_arg_info;
+
+  if (!get_arg_info.IsValid()) {
+    PythonDictionary globals(PyInitialValue::Empty);
+
+    auto builtins = PythonModule::BuiltinsModule();
+    Error error = globals.SetItem("__builtins__", builtins);
+    if (error)
+      return std::move(error);
+    PyObject *o = PyRun_String(get_arg_info_script, Py_file_input,
+                               globals.get(), globals.get());
+    if (!o)
+      return exception();
+    Take<PythonObject>(o);
+    auto function = As<PythonCallable>(globals.GetItem("get_arg_info"));
+    if (!function)
+      return function.takeError();
+    get_arg_info = std::move(function.get());
+  }
+
+  Expected<PythonObject> pyarginfo = get_arg_info.Call(*this);
+  if (!pyarginfo)
+    return pyarginfo.takeError();
+  result.count = cantFail(As<long long>(pyarginfo.get().GetAttribute("count")));
+  result.has_varargs =
+      cantFail(As<bool>(pyarginfo.get().GetAttribute("has_varargs")));
+  result.is_bound_method =
+      cantFail(As<bool>(pyarginfo.get().GetAttribute("is_bound_method")));
+
+  // FIXME emulate old broken behavior
+  if (result.is_bound_method)
+    result.count++;
+
+#else
 
   PyObject *py_func_obj = m_py_obj;
   if (PyMethod_Check(py_func_obj)) {
@@ -785,8 +916,19 @@ PythonCallable::ArgInfo PythonCallable::GetNumArguments() const {
 
   result.count = code->co_argcount;
   result.has_varargs = !!(code->co_flags & CO_VARARGS);
-  result.has_kwargs = !!(code->co_flags & CO_VARKEYWORDS);
+
+#endif
+
   return result;
+}
+
+PythonCallable::ArgInfo PythonCallable::GetNumArguments() const {
+  auto arginfo = GetArgInfo();
+  if (!arginfo) {
+    llvm::consumeError(arginfo.takeError());
+    return ArgInfo{};
+  }
+  return arginfo.get();
 }
 
 PythonObject PythonCallable::operator()() {
