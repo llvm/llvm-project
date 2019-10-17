@@ -220,6 +220,8 @@ Retry:
         Decl =
             ParseDeclaration(DeclaratorContext::BlockContext, DeclEnd, Attrs);
       }
+      if (Attrs.Range.getBegin().isValid())
+        DeclStart = Attrs.Range.getBegin();
       return Actions.ActOnDeclStmt(Decl, DeclStart, DeclEnd);
     }
 

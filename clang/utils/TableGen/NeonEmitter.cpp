@@ -1442,7 +1442,8 @@ void Intrinsic::emitBodyAsBuiltinCall() {
     }
 
     // Check if an explicit cast is needed.
-    if (CastToType.isVector() && LocalCK == ClassB) {
+    if (CastToType.isVector() &&
+        (LocalCK == ClassB || (T.isHalf() && !T.isScalarForMangling()))) {
       CastToType.makeInteger(8, true);
       Arg = "(" + CastToType.str() + ")" + Arg;
     } else if (CastToType.isVector() && LocalCK == ClassI) {

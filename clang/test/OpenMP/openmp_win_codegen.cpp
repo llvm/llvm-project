@@ -50,11 +50,10 @@ int main() {
 }
 
 // CHECK: define internal void [[OUTLINED]](
-// CHECK: [[GID:%.+]] = {{.*}}call i32 @__kmpc_global_thread_num(%struct.ident_t* {{.*}}@0)
 // CHECK: invoke void @{{.+}}foo
 // CHECK: [[CATCHSWITCH:%.+]] = catchswitch within none
 // CHECK: [[CATCHPAD:%.+]] = catchpad within [[CATCHSWITCH]]
-// CHECK: call void @__kmpc_critical(%struct.ident_t* {{.*}}@0, i32 [[GID]],
+// CHECK: call void @__kmpc_critical(%struct.ident_t* {{.*}}@0, i32 [[GID:%.+]],
 // CHECK: invoke void @{{.+}}bar
 // CHECK: call void @__kmpc_end_critical(%struct.ident_t* {{.*}}@0, i32 [[GID]],
 // CHECK: catchret from [[CATCHPAD]] to
