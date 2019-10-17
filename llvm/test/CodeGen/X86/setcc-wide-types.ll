@@ -401,19 +401,19 @@ define i32 @ne_i512(<8 x i64> %x, <8 x i64> %y) {
 ;
 ; AVX512F-LABEL: ne_i512:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
 ; AVX512F-NEXT:    xorl %eax, %eax
 ; AVX512F-NEXT:    kortestw %k0, %k0
-; AVX512F-NEXT:    setae %al
+; AVX512F-NEXT:    setne %al
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: ne_i512:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpcmpeqb %zmm1, %zmm0, %k0
+; AVX512BW-NEXT:    vpcmpneqb %zmm1, %zmm0, %k0
 ; AVX512BW-NEXT:    xorl %eax, %eax
 ; AVX512BW-NEXT:    kortestq %k0, %k0
-; AVX512BW-NEXT:    setae %al
+; AVX512BW-NEXT:    setne %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %bcx = bitcast <8 x i64> %x to i512
@@ -592,19 +592,19 @@ define i32 @eq_i512(<8 x i64> %x, <8 x i64> %y) {
 ;
 ; AVX512F-LABEL: eq_i512:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; AVX512F-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
 ; AVX512F-NEXT:    xorl %eax, %eax
 ; AVX512F-NEXT:    kortestw %k0, %k0
-; AVX512F-NEXT:    setb %al
+; AVX512F-NEXT:    sete %al
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: eq_i512:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpcmpeqb %zmm1, %zmm0, %k0
+; AVX512BW-NEXT:    vpcmpneqb %zmm1, %zmm0, %k0
 ; AVX512BW-NEXT:    xorl %eax, %eax
 ; AVX512BW-NEXT:    kortestq %k0, %k0
-; AVX512BW-NEXT:    setb %al
+; AVX512BW-NEXT:    sete %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %bcx = bitcast <8 x i64> %x to i512
@@ -1019,11 +1019,11 @@ define i32 @ne_i512_pair(i512* %a, i512* %b) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
 ; AVX512F-NEXT:    vmovdqu64 64(%rdi), %zmm1
-; AVX512F-NEXT:    vpcmpeqd (%rsi), %zmm0, %k1
-; AVX512F-NEXT:    vpcmpeqd 64(%rsi), %zmm1, %k0 {%k1}
+; AVX512F-NEXT:    vpcmpneqd 64(%rsi), %zmm1, %k0
+; AVX512F-NEXT:    vpcmpneqd (%rsi), %zmm0, %k1
 ; AVX512F-NEXT:    xorl %eax, %eax
-; AVX512F-NEXT:    kortestw %k0, %k0
-; AVX512F-NEXT:    setae %al
+; AVX512F-NEXT:    kortestw %k0, %k1
+; AVX512F-NEXT:    setne %al
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -1031,11 +1031,11 @@ define i32 @ne_i512_pair(i512* %a, i512* %b) {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0
 ; AVX512BW-NEXT:    vmovdqu64 64(%rdi), %zmm1
-; AVX512BW-NEXT:    vpcmpeqb (%rsi), %zmm0, %k1
-; AVX512BW-NEXT:    vpcmpeqb 64(%rsi), %zmm1, %k0 {%k1}
+; AVX512BW-NEXT:    vpcmpneqb 64(%rsi), %zmm1, %k0
+; AVX512BW-NEXT:    vpcmpneqb (%rsi), %zmm0, %k1
 ; AVX512BW-NEXT:    xorl %eax, %eax
-; AVX512BW-NEXT:    kortestq %k0, %k0
-; AVX512BW-NEXT:    setae %al
+; AVX512BW-NEXT:    kortestq %k0, %k1
+; AVX512BW-NEXT:    setne %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %a0 = load i512, i512* %a
@@ -1113,11 +1113,11 @@ define i32 @eq_i512_pair(i512* %a, i512* %b) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
 ; AVX512F-NEXT:    vmovdqu64 64(%rdi), %zmm1
-; AVX512F-NEXT:    vpcmpeqd (%rsi), %zmm0, %k1
-; AVX512F-NEXT:    vpcmpeqd 64(%rsi), %zmm1, %k0 {%k1}
+; AVX512F-NEXT:    vpcmpneqd 64(%rsi), %zmm1, %k0
+; AVX512F-NEXT:    vpcmpneqd (%rsi), %zmm0, %k1
 ; AVX512F-NEXT:    xorl %eax, %eax
-; AVX512F-NEXT:    kortestw %k0, %k0
-; AVX512F-NEXT:    setb %al
+; AVX512F-NEXT:    kortestw %k0, %k1
+; AVX512F-NEXT:    sete %al
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -1125,11 +1125,11 @@ define i32 @eq_i512_pair(i512* %a, i512* %b) {
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0
 ; AVX512BW-NEXT:    vmovdqu64 64(%rdi), %zmm1
-; AVX512BW-NEXT:    vpcmpeqb (%rsi), %zmm0, %k1
-; AVX512BW-NEXT:    vpcmpeqb 64(%rsi), %zmm1, %k0 {%k1}
+; AVX512BW-NEXT:    vpcmpneqb 64(%rsi), %zmm1, %k0
+; AVX512BW-NEXT:    vpcmpneqb (%rsi), %zmm0, %k1
 ; AVX512BW-NEXT:    xorl %eax, %eax
-; AVX512BW-NEXT:    kortestq %k0, %k0
-; AVX512BW-NEXT:    setb %al
+; AVX512BW-NEXT:    kortestq %k0, %k1
+; AVX512BW-NEXT:    sete %al
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
   %a0 = load i512, i512* %a

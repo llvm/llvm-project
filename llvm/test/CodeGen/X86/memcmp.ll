@@ -7,10 +7,12 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=sse4.1 | FileCheck %s --check-prefixes=X64,X64-SSE,X64-SSE41
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx    | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx2   | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX2
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512f,+prefer-256-bit  | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512bw,+prefer-256-bit | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX2
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512f,-prefer-256-bit  | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX512,X64-AVX512F
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512bw,-prefer-256-bit | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX512,X64-AVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512f,+prefer-256-bit,-prefer-mask-registers | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512f,-prefer-256-bit,-prefer-mask-registers | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX512,X64-AVX512F
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512f,+prefer-256-bit,+prefer-mask-registers | FileCheck %s --check-prefixes=X64,X64-MIC-AVX,X64-MIC-AVX2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512f,-prefer-256-bit,+prefer-mask-registers | FileCheck %s --check-prefixes=X64,X64-MIC-AVX,X64-MIC-AVX512F
 
 ; This tests codegen time inlining/optimization of memcmp
 ; rdar://6480398
@@ -1031,6 +1033,16 @@ define i1 @length16_eq(i8* %x, i8* %y) nounwind {
 ; X64-AVX-NEXT:    vptest %xmm0, %xmm0
 ; X64-AVX-NEXT:    setne %al
 ; X64-AVX-NEXT:    retq
+;
+; X64-MIC-AVX-LABEL: length16_eq:
+; X64-MIC-AVX:       # %bb.0:
+; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; X64-MIC-AVX-NEXT:    vmovdqu (%rsi), %xmm1
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
+; X64-MIC-AVX-NEXT:    kortestw %k0, %k0
+; X64-MIC-AVX-NEXT:    setne %al
+; X64-MIC-AVX-NEXT:    vzeroupper
+; X64-MIC-AVX-NEXT:    retq
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 16) nounwind
   %cmp = icmp ne i32 %call, 0
   ret i1 %cmp
@@ -1190,6 +1202,16 @@ define i1 @length16_eq_const(i8* %X) nounwind {
 ; X64-AVX-NEXT:    vptest %xmm0, %xmm0
 ; X64-AVX-NEXT:    sete %al
 ; X64-AVX-NEXT:    retq
+;
+; X64-MIC-AVX-LABEL: length16_eq_const:
+; X64-MIC-AVX:       # %bb.0:
+; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [858927408,926299444,825243960,892613426]
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
+; X64-MIC-AVX-NEXT:    kortestw %k0, %k0
+; X64-MIC-AVX-NEXT:    sete %al
+; X64-MIC-AVX-NEXT:    vzeroupper
+; X64-MIC-AVX-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([513 x i8], [513 x i8]* @.str, i32 0, i32 0), i64 16) nounwind
   %c = icmp eq i32 %m, 0
   ret i1 %c
@@ -1310,6 +1332,19 @@ define i1 @length24_eq(i8* %x, i8* %y) nounwind {
 ; X64-AVX-NEXT:    vptest %xmm0, %xmm0
 ; X64-AVX-NEXT:    sete %al
 ; X64-AVX-NEXT:    retq
+;
+; X64-MIC-AVX-LABEL: length24_eq:
+; X64-MIC-AVX:       # %bb.0:
+; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; X64-MIC-AVX-NEXT:    vmovdqu (%rsi), %xmm1
+; X64-MIC-AVX-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; X64-MIC-AVX-NEXT:    vmovq {{.*#+}} xmm3 = mem[0],zero
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm3, %zmm2, %k0
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
+; X64-MIC-AVX-NEXT:    kortestw %k0, %k1
+; X64-MIC-AVX-NEXT:    sete %al
+; X64-MIC-AVX-NEXT:    vzeroupper
+; X64-MIC-AVX-NEXT:    retq
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 24) nounwind
   %cmp = icmp eq i32 %call, 0
   ret i1 %cmp
@@ -1452,6 +1487,19 @@ define i1 @length24_eq_const(i8* %X) nounwind {
 ; X64-AVX-NEXT:    vptest %xmm0, %xmm0
 ; X64-AVX-NEXT:    setne %al
 ; X64-AVX-NEXT:    retq
+;
+; X64-MIC-AVX-LABEL: length24_eq_const:
+; X64-MIC-AVX:       # %bb.0:
+; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; X64-MIC-AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [959985462,858927408,0,0]
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm2, %zmm1, %k0
+; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [858927408,926299444,825243960,892613426]
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
+; X64-MIC-AVX-NEXT:    kortestw %k0, %k1
+; X64-MIC-AVX-NEXT:    setne %al
+; X64-MIC-AVX-NEXT:    vzeroupper
+; X64-MIC-AVX-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([513 x i8], [513 x i8]* @.str, i32 0, i32 0), i64 24) nounwind
   %c = icmp ne i32 %m, 0
   ret i1 %c
@@ -1569,6 +1617,19 @@ define i1 @length31_eq(i8* %x, i8* %y) nounwind {
 ; X64-AVX-NEXT:    vptest %xmm0, %xmm0
 ; X64-AVX-NEXT:    sete %al
 ; X64-AVX-NEXT:    retq
+;
+; X64-MIC-AVX-LABEL: length31_eq:
+; X64-MIC-AVX:       # %bb.0:
+; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; X64-MIC-AVX-NEXT:    vmovdqu 15(%rdi), %xmm1
+; X64-MIC-AVX-NEXT:    vmovdqu (%rsi), %xmm2
+; X64-MIC-AVX-NEXT:    vmovdqu 15(%rsi), %xmm3
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm3, %zmm1, %k0
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm2, %zmm0, %k1
+; X64-MIC-AVX-NEXT:    kortestw %k0, %k1
+; X64-MIC-AVX-NEXT:    sete %al
+; X64-MIC-AVX-NEXT:    vzeroupper
+; X64-MIC-AVX-NEXT:    retq
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 31) nounwind
   %cmp = icmp eq i32 %call, 0
   ret i1 %cmp
@@ -1721,6 +1782,19 @@ define i1 @length31_eq_prefer128(i8* %x, i8* %y) nounwind "prefer-vector-width"=
 ; X64-AVX-NEXT:    vptest %xmm0, %xmm0
 ; X64-AVX-NEXT:    sete %al
 ; X64-AVX-NEXT:    retq
+;
+; X64-MIC-AVX-LABEL: length31_eq_prefer128:
+; X64-MIC-AVX:       # %bb.0:
+; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; X64-MIC-AVX-NEXT:    vmovdqu 15(%rdi), %xmm1
+; X64-MIC-AVX-NEXT:    vmovdqu (%rsi), %xmm2
+; X64-MIC-AVX-NEXT:    vmovdqu 15(%rsi), %xmm3
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm3, %zmm1, %k0
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm2, %zmm0, %k1
+; X64-MIC-AVX-NEXT:    kortestw %k0, %k1
+; X64-MIC-AVX-NEXT:    sete %al
+; X64-MIC-AVX-NEXT:    vzeroupper
+; X64-MIC-AVX-NEXT:    retq
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 31) nounwind
   %cmp = icmp eq i32 %call, 0
   ret i1 %cmp
@@ -1809,6 +1883,19 @@ define i1 @length31_eq_const(i8* %X) nounwind {
 ; X64-AVX-NEXT:    vptest %xmm0, %xmm0
 ; X64-AVX-NEXT:    setne %al
 ; X64-AVX-NEXT:    retq
+;
+; X64-MIC-AVX-LABEL: length31_eq_const:
+; X64-MIC-AVX:       # %bb.0:
+; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; X64-MIC-AVX-NEXT:    vmovdqu 15(%rdi), %xmm1
+; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [943142453,842084409,909456435,809056311]
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm2, %zmm1, %k0
+; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [858927408,926299444,825243960,892613426]
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
+; X64-MIC-AVX-NEXT:    kortestw %k0, %k1
+; X64-MIC-AVX-NEXT:    setne %al
+; X64-MIC-AVX-NEXT:    vzeroupper
+; X64-MIC-AVX-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([513 x i8], [513 x i8]* @.str, i32 0, i32 0), i64 31) nounwind
   %c = icmp ne i32 %m, 0
   ret i1 %c
@@ -1946,6 +2033,16 @@ define i1 @length32_eq(i8* %x, i8* %y) nounwind {
 ; X64-AVX512-NEXT:    sete %al
 ; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq
+;
+; X64-MIC-AVX-LABEL: length32_eq:
+; X64-MIC-AVX:       # %bb.0:
+; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %ymm0
+; X64-MIC-AVX-NEXT:    vmovdqu (%rsi), %ymm1
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
+; X64-MIC-AVX-NEXT:    kortestw %k0, %k0
+; X64-MIC-AVX-NEXT:    sete %al
+; X64-MIC-AVX-NEXT:    vzeroupper
+; X64-MIC-AVX-NEXT:    retq
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 32) nounwind
   %cmp = icmp eq i32 %call, 0
   ret i1 %cmp
@@ -2098,6 +2195,19 @@ define i1 @length32_eq_prefer128(i8* %x, i8* %y) nounwind "prefer-vector-width"=
 ; X64-AVX-NEXT:    vptest %xmm0, %xmm0
 ; X64-AVX-NEXT:    sete %al
 ; X64-AVX-NEXT:    retq
+;
+; X64-MIC-AVX-LABEL: length32_eq_prefer128:
+; X64-MIC-AVX:       # %bb.0:
+; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; X64-MIC-AVX-NEXT:    vmovdqu 16(%rdi), %xmm1
+; X64-MIC-AVX-NEXT:    vmovdqu (%rsi), %xmm2
+; X64-MIC-AVX-NEXT:    vmovdqu 16(%rsi), %xmm3
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm3, %zmm1, %k0
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm2, %zmm0, %k1
+; X64-MIC-AVX-NEXT:    kortestw %k0, %k1
+; X64-MIC-AVX-NEXT:    sete %al
+; X64-MIC-AVX-NEXT:    vzeroupper
+; X64-MIC-AVX-NEXT:    retq
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 32) nounwind
   %cmp = icmp eq i32 %call, 0
   ret i1 %cmp
@@ -2204,6 +2314,16 @@ define i1 @length32_eq_const(i8* %X) nounwind {
 ; X64-AVX512-NEXT:    setne %al
 ; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq
+;
+; X64-MIC-AVX-LABEL: length32_eq_const:
+; X64-MIC-AVX:       # %bb.0:
+; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %ymm0
+; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [858927408,926299444,825243960,892613426,959985462,858927408,926299444,825243960]
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
+; X64-MIC-AVX-NEXT:    kortestw %k0, %k0
+; X64-MIC-AVX-NEXT:    setne %al
+; X64-MIC-AVX-NEXT:    vzeroupper
+; X64-MIC-AVX-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([513 x i8], [513 x i8]* @.str, i32 0, i32 0), i64 32) nounwind
   %c = icmp ne i32 %m, 0
   ret i1 %c
@@ -2458,6 +2578,33 @@ define i1 @length48_eq(i8* %x, i8* %y) nounwind {
 ; X64-AVX512-NEXT:    sete %al
 ; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq
+;
+; X64-MIC-AVX-LABEL: length48_eq:
+; X64-MIC-AVX:       # %bb.0:
+; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %ymm0
+; X64-MIC-AVX-NEXT:    vmovdqu (%rsi), %ymm1
+; X64-MIC-AVX-NEXT:    movq 40(%rdi), %rax
+; X64-MIC-AVX-NEXT:    movq 32(%rdi), %rcx
+; X64-MIC-AVX-NEXT:    vmovd %ecx, %xmm2
+; X64-MIC-AVX-NEXT:    shrq $32, %rcx
+; X64-MIC-AVX-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
+; X64-MIC-AVX-NEXT:    vpinsrd $2, %eax, %xmm2, %xmm2
+; X64-MIC-AVX-NEXT:    shrq $32, %rax
+; X64-MIC-AVX-NEXT:    movq 40(%rsi), %rcx
+; X64-MIC-AVX-NEXT:    movq 32(%rsi), %rdx
+; X64-MIC-AVX-NEXT:    vmovd %edx, %xmm3
+; X64-MIC-AVX-NEXT:    shrq $32, %rdx
+; X64-MIC-AVX-NEXT:    vpinsrd $1, %edx, %xmm3, %xmm3
+; X64-MIC-AVX-NEXT:    vpinsrd $2, %ecx, %xmm3, %xmm3
+; X64-MIC-AVX-NEXT:    shrq $32, %rcx
+; X64-MIC-AVX-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
+; X64-MIC-AVX-NEXT:    vpinsrd $3, %ecx, %xmm3, %xmm3
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm3, %zmm2, %k0
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
+; X64-MIC-AVX-NEXT:    kortestw %k0, %k1
+; X64-MIC-AVX-NEXT:    sete %al
+; X64-MIC-AVX-NEXT:    vzeroupper
+; X64-MIC-AVX-NEXT:    retq
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 48) nounwind
   %cmp = icmp eq i32 %call, 0
   ret i1 %cmp
@@ -2708,6 +2855,26 @@ define i1 @length48_eq_const(i8* %X) nounwind {
 ; X64-AVX512-NEXT:    popq %rbp
 ; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq
+;
+; X64-MIC-AVX-LABEL: length48_eq_const:
+; X64-MIC-AVX:       # %bb.0:
+; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %ymm0
+; X64-MIC-AVX-NEXT:    movq 40(%rdi), %rax
+; X64-MIC-AVX-NEXT:    movq 32(%rdi), %rcx
+; X64-MIC-AVX-NEXT:    vmovd %ecx, %xmm1
+; X64-MIC-AVX-NEXT:    shrq $32, %rcx
+; X64-MIC-AVX-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
+; X64-MIC-AVX-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; X64-MIC-AVX-NEXT:    shrq $32, %rax
+; X64-MIC-AVX-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
+; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} ymm2 = [858927408,926299444,825243960,892613426,959985462,858927408,926299444,825243960]
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm2, %zmm0, %k0
+; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} ymm0 = [892613426,959985462,858927408,926299444,0,0,0,0]
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm0, %zmm1, %k1
+; X64-MIC-AVX-NEXT:    kortestw %k1, %k0
+; X64-MIC-AVX-NEXT:    setne %al
+; X64-MIC-AVX-NEXT:    vzeroupper
+; X64-MIC-AVX-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([513 x i8], [513 x i8]* @.str, i32 0, i32 0), i64 48) nounwind
   %c = icmp ne i32 %m, 0
   ret i1 %c
@@ -2788,6 +2955,19 @@ define i1 @length63_eq(i8* %x, i8* %y) nounwind {
 ; X64-AVX512-NEXT:    setne %al
 ; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq
+;
+; X64-MIC-AVX-LABEL: length63_eq:
+; X64-MIC-AVX:       # %bb.0:
+; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %ymm0
+; X64-MIC-AVX-NEXT:    vmovdqu 31(%rdi), %ymm1
+; X64-MIC-AVX-NEXT:    vmovdqu (%rsi), %ymm2
+; X64-MIC-AVX-NEXT:    vmovdqu 31(%rsi), %ymm3
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm3, %zmm1, %k0
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm2, %zmm0, %k1
+; X64-MIC-AVX-NEXT:    kortestw %k0, %k1
+; X64-MIC-AVX-NEXT:    setne %al
+; X64-MIC-AVX-NEXT:    vzeroupper
+; X64-MIC-AVX-NEXT:    retq
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 63) nounwind
   %cmp = icmp ne i32 %call, 0
   ret i1 %cmp
@@ -2905,6 +3085,19 @@ define i1 @length63_eq_const(i8* %X) nounwind {
 ; X64-AVX512-NEXT:    sete %al
 ; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq
+;
+; X64-MIC-AVX-LABEL: length63_eq_const:
+; X64-MIC-AVX:       # %bb.0:
+; X64-MIC-AVX-NEXT:    vmovdqu (%rdi), %ymm0
+; X64-MIC-AVX-NEXT:    vmovdqu 31(%rdi), %ymm1
+; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} ymm2 = [875770417,943142453,842084409,909456435,809056311,875770417,943142453,842084409]
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm2, %zmm1, %k0
+; X64-MIC-AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [858927408,926299444,825243960,892613426,959985462,858927408,926299444,825243960]
+; X64-MIC-AVX-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
+; X64-MIC-AVX-NEXT:    kortestw %k0, %k1
+; X64-MIC-AVX-NEXT:    sete %al
+; X64-MIC-AVX-NEXT:    vzeroupper
+; X64-MIC-AVX-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([513 x i8], [513 x i8]* @.str, i32 0, i32 0), i64 63) nounwind
   %c = icmp eq i32 %m, 0
   ret i1 %c
@@ -2974,23 +3167,45 @@ define i1 @length64_eq(i8* %x, i8* %y) nounwind {
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;
-; X64-AVX512F-LABEL: length64_eq:
-; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512F-NEXT:    vpcmpeqd (%rsi), %zmm0, %k0
-; X64-AVX512F-NEXT:    kortestw %k0, %k0
-; X64-AVX512F-NEXT:    setae %al
-; X64-AVX512F-NEXT:    vzeroupper
-; X64-AVX512F-NEXT:    retq
-;
 ; X64-AVX512BW-LABEL: length64_eq:
 ; X64-AVX512BW:       # %bb.0:
 ; X64-AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512BW-NEXT:    vpcmpeqb (%rsi), %zmm0, %k0
+; X64-AVX512BW-NEXT:    vpcmpneqb (%rsi), %zmm0, %k0
 ; X64-AVX512BW-NEXT:    kortestq %k0, %k0
-; X64-AVX512BW-NEXT:    setae %al
+; X64-AVX512BW-NEXT:    setne %al
 ; X64-AVX512BW-NEXT:    vzeroupper
 ; X64-AVX512BW-NEXT:    retq
+;
+; X64-AVX512F-LABEL: length64_eq:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-AVX512F-NEXT:    vpcmpneqd (%rsi), %zmm0, %k0
+; X64-AVX512F-NEXT:    kortestw %k0, %k0
+; X64-AVX512F-NEXT:    setne %al
+; X64-AVX512F-NEXT:    vzeroupper
+; X64-AVX512F-NEXT:    retq
+;
+; X64-MIC-AVX2-LABEL: length64_eq:
+; X64-MIC-AVX2:       # %bb.0:
+; X64-MIC-AVX2-NEXT:    vmovdqu (%rdi), %ymm0
+; X64-MIC-AVX2-NEXT:    vmovdqu 32(%rdi), %ymm1
+; X64-MIC-AVX2-NEXT:    vmovdqu (%rsi), %ymm2
+; X64-MIC-AVX2-NEXT:    vmovdqu 32(%rsi), %ymm3
+; X64-MIC-AVX2-NEXT:    vpcmpneqd %zmm3, %zmm1, %k0
+; X64-MIC-AVX2-NEXT:    vpcmpneqd %zmm2, %zmm0, %k1
+; X64-MIC-AVX2-NEXT:    kortestw %k0, %k1
+; X64-MIC-AVX2-NEXT:    setne %al
+; X64-MIC-AVX2-NEXT:    vzeroupper
+; X64-MIC-AVX2-NEXT:    retq
+;
+; X64-MIC-AVX512F-LABEL: length64_eq:
+; X64-MIC-AVX512F:       # %bb.0:
+; X64-MIC-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd (%rsi), %zmm0, %k0
+; X64-MIC-AVX512F-NEXT:    kortestw %k0, %k0
+; X64-MIC-AVX512F-NEXT:    setne %al
+; X64-MIC-AVX512F-NEXT:    vzeroupper
+; X64-MIC-AVX512F-NEXT:    retq
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 64) nounwind
   %cmp = icmp ne i32 %call, 0
   ret i1 %cmp
@@ -3097,23 +3312,45 @@ define i1 @length64_eq_const(i8* %X) nounwind {
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;
-; X64-AVX512F-LABEL: length64_eq_const:
-; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512F-NEXT:    vpcmpeqd {{.*}}(%rip), %zmm0, %k0
-; X64-AVX512F-NEXT:    kortestw %k0, %k0
-; X64-AVX512F-NEXT:    setb %al
-; X64-AVX512F-NEXT:    vzeroupper
-; X64-AVX512F-NEXT:    retq
-;
 ; X64-AVX512BW-LABEL: length64_eq_const:
 ; X64-AVX512BW:       # %bb.0:
 ; X64-AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512BW-NEXT:    vpcmpeqb {{.*}}(%rip), %zmm0, %k0
+; X64-AVX512BW-NEXT:    vpcmpneqb {{.*}}(%rip), %zmm0, %k0
 ; X64-AVX512BW-NEXT:    kortestq %k0, %k0
-; X64-AVX512BW-NEXT:    setb %al
+; X64-AVX512BW-NEXT:    sete %al
 ; X64-AVX512BW-NEXT:    vzeroupper
 ; X64-AVX512BW-NEXT:    retq
+;
+; X64-AVX512F-LABEL: length64_eq_const:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-AVX512F-NEXT:    vpcmpneqd {{.*}}(%rip), %zmm0, %k0
+; X64-AVX512F-NEXT:    kortestw %k0, %k0
+; X64-AVX512F-NEXT:    sete %al
+; X64-AVX512F-NEXT:    vzeroupper
+; X64-AVX512F-NEXT:    retq
+;
+; X64-MIC-AVX2-LABEL: length64_eq_const:
+; X64-MIC-AVX2:       # %bb.0:
+; X64-MIC-AVX2-NEXT:    vmovdqu (%rdi), %ymm0
+; X64-MIC-AVX2-NEXT:    vmovdqu 32(%rdi), %ymm1
+; X64-MIC-AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [892613426,959985462,858927408,926299444,825243960,892613426,959985462,858927408]
+; X64-MIC-AVX2-NEXT:    vpcmpneqd %zmm2, %zmm1, %k0
+; X64-MIC-AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [858927408,926299444,825243960,892613426,959985462,858927408,926299444,825243960]
+; X64-MIC-AVX2-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
+; X64-MIC-AVX2-NEXT:    kortestw %k0, %k1
+; X64-MIC-AVX2-NEXT:    sete %al
+; X64-MIC-AVX2-NEXT:    vzeroupper
+; X64-MIC-AVX2-NEXT:    retq
+;
+; X64-MIC-AVX512F-LABEL: length64_eq_const:
+; X64-MIC-AVX512F:       # %bb.0:
+; X64-MIC-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd {{.*}}(%rip), %zmm0, %k0
+; X64-MIC-AVX512F-NEXT:    kortestw %k0, %k0
+; X64-MIC-AVX512F-NEXT:    sete %al
+; X64-MIC-AVX512F-NEXT:    vzeroupper
+; X64-MIC-AVX512F-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([513 x i8], [513 x i8]* @.str, i32 0, i32 0), i64 64) nounwind
   %c = icmp eq i32 %m, 0
   ret i1 %c
@@ -3180,50 +3417,6 @@ define i1 @length96_eq(i8* %x, i8* %y) nounwind {
 ; X64-AVX2-NEXT:    setne %al
 ; X64-AVX2-NEXT:    popq %rcx
 ; X64-AVX2-NEXT:    retq
-;
-; X64-AVX512F-LABEL: length96_eq:
-; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    movq 80(%rdi), %rax
-; X64-AVX512F-NEXT:    vmovd %eax, %xmm0
-; X64-AVX512F-NEXT:    shrq $32, %rax
-; X64-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; X64-AVX512F-NEXT:    movq 88(%rdi), %rax
-; X64-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; X64-AVX512F-NEXT:    shrq $32, %rax
-; X64-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
-; X64-AVX512F-NEXT:    movq 64(%rdi), %rax
-; X64-AVX512F-NEXT:    vmovd %eax, %xmm1
-; X64-AVX512F-NEXT:    shrq $32, %rax
-; X64-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm2
-; X64-AVX512F-NEXT:    movq 72(%rdi), %rax
-; X64-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X64-AVX512F-NEXT:    shrq $32, %rax
-; X64-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; X64-AVX512F-NEXT:    movq 80(%rsi), %rax
-; X64-AVX512F-NEXT:    vmovd %eax, %xmm3
-; X64-AVX512F-NEXT:    shrq $32, %rax
-; X64-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
-; X64-AVX512F-NEXT:    movq 88(%rsi), %rax
-; X64-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
-; X64-AVX512F-NEXT:    shrq $32, %rax
-; X64-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm3
-; X64-AVX512F-NEXT:    movq 64(%rsi), %rax
-; X64-AVX512F-NEXT:    vmovd %eax, %xmm4
-; X64-AVX512F-NEXT:    shrq $32, %rax
-; X64-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm4, %xmm4
-; X64-AVX512F-NEXT:    movq 72(%rsi), %rax
-; X64-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm4
-; X64-AVX512F-NEXT:    shrq $32, %rax
-; X64-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm4, %xmm4
-; X64-AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; X64-AVX512F-NEXT:    vinserti128 $1, %xmm3, %ymm4, %ymm1
-; X64-AVX512F-NEXT:    vpcmpeqd %zmm1, %zmm0, %k1
-; X64-AVX512F-NEXT:    vpcmpeqd (%rsi), %zmm2, %k0 {%k1}
-; X64-AVX512F-NEXT:    kortestw %k0, %k0
-; X64-AVX512F-NEXT:    setae %al
-; X64-AVX512F-NEXT:    vzeroupper
-; X64-AVX512F-NEXT:    retq
 ;
 ; X64-AVX512BW-LABEL: length96_eq:
 ; X64-AVX512BW:       # %bb.0:
@@ -3378,40 +3571,138 @@ define i1 @length96_eq(i8* %x, i8* %y) nounwind {
 ; X64-AVX512BW-NEXT:    movq %rcx, %rdx
 ; X64-AVX512BW-NEXT:    shrq $40, %rcx
 ; X64-AVX512BW-NEXT:    vpinsrb $5, %ecx, %xmm4, %xmm4
+; X64-AVX512BW-NEXT:    vpcmpneqb (%rsi), %zmm1, %k0
 ; X64-AVX512BW-NEXT:    movq 72(%rsi), %rcx
 ; X64-AVX512BW-NEXT:    shrq $48, %rdx
-; X64-AVX512BW-NEXT:    vpinsrb $6, %edx, %xmm4, %xmm4
+; X64-AVX512BW-NEXT:    vpinsrb $6, %edx, %xmm4, %xmm1
 ; X64-AVX512BW-NEXT:    movq %rcx, %rdx
 ; X64-AVX512BW-NEXT:    shrq $56, %rax
-; X64-AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm4, %xmm4
+; X64-AVX512BW-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm1
 ; X64-AVX512BW-NEXT:    movl %ecx, %eax
 ; X64-AVX512BW-NEXT:    shrl $8, %eax
-; X64-AVX512BW-NEXT:    vpinsrb $8, %ecx, %xmm4, %xmm4
-; X64-AVX512BW-NEXT:    vpinsrb $9, %eax, %xmm4, %xmm4
+; X64-AVX512BW-NEXT:    vpinsrb $8, %ecx, %xmm1, %xmm1
+; X64-AVX512BW-NEXT:    vpinsrb $9, %eax, %xmm1, %xmm1
 ; X64-AVX512BW-NEXT:    movl %ecx, %eax
 ; X64-AVX512BW-NEXT:    shrl $16, %eax
-; X64-AVX512BW-NEXT:    vpinsrb $10, %eax, %xmm4, %xmm4
+; X64-AVX512BW-NEXT:    vpinsrb $10, %eax, %xmm1, %xmm1
 ; X64-AVX512BW-NEXT:    movl %ecx, %eax
 ; X64-AVX512BW-NEXT:    shrl $24, %eax
-; X64-AVX512BW-NEXT:    vpinsrb $11, %eax, %xmm4, %xmm4
+; X64-AVX512BW-NEXT:    vpinsrb $11, %eax, %xmm1, %xmm1
 ; X64-AVX512BW-NEXT:    movq %rcx, %rax
 ; X64-AVX512BW-NEXT:    shrq $32, %rax
-; X64-AVX512BW-NEXT:    vpinsrb $12, %eax, %xmm4, %xmm4
+; X64-AVX512BW-NEXT:    vpinsrb $12, %eax, %xmm1, %xmm1
 ; X64-AVX512BW-NEXT:    movq %rcx, %rax
 ; X64-AVX512BW-NEXT:    shrq $40, %rcx
-; X64-AVX512BW-NEXT:    vpinsrb $13, %ecx, %xmm4, %xmm4
+; X64-AVX512BW-NEXT:    vpinsrb $13, %ecx, %xmm1, %xmm1
 ; X64-AVX512BW-NEXT:    shrq $48, %rax
-; X64-AVX512BW-NEXT:    vpinsrb $14, %eax, %xmm4, %xmm4
+; X64-AVX512BW-NEXT:    vpinsrb $14, %eax, %xmm1, %xmm1
 ; X64-AVX512BW-NEXT:    shrq $56, %rdx
-; X64-AVX512BW-NEXT:    vpinsrb $15, %edx, %xmm4, %xmm4
+; X64-AVX512BW-NEXT:    vpinsrb $15, %edx, %xmm1, %xmm1
 ; X64-AVX512BW-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
-; X64-AVX512BW-NEXT:    vinserti128 $1, %xmm3, %ymm4, %ymm2
-; X64-AVX512BW-NEXT:    vpcmpeqb %zmm2, %zmm0, %k1
-; X64-AVX512BW-NEXT:    vpcmpeqb (%rsi), %zmm1, %k0 {%k1}
-; X64-AVX512BW-NEXT:    kortestq %k0, %k0
-; X64-AVX512BW-NEXT:    setae %al
+; X64-AVX512BW-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
+; X64-AVX512BW-NEXT:    vpcmpneqb %zmm1, %zmm0, %k1
+; X64-AVX512BW-NEXT:    kortestq %k1, %k0
+; X64-AVX512BW-NEXT:    setne %al
 ; X64-AVX512BW-NEXT:    vzeroupper
 ; X64-AVX512BW-NEXT:    retq
+;
+; X64-AVX512F-LABEL: length96_eq:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    movq 80(%rdi), %rax
+; X64-AVX512F-NEXT:    vmovd %eax, %xmm0
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X64-AVX512F-NEXT:    movq 88(%rdi), %rax
+; X64-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X64-AVX512F-NEXT:    movq 64(%rdi), %rax
+; X64-AVX512F-NEXT:    vmovd %eax, %xmm1
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
+; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm2
+; X64-AVX512F-NEXT:    movq 72(%rdi), %rax
+; X64-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
+; X64-AVX512F-NEXT:    movq 80(%rsi), %rax
+; X64-AVX512F-NEXT:    vmovd %eax, %xmm3
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
+; X64-AVX512F-NEXT:    movq 88(%rsi), %rax
+; X64-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm3
+; X64-AVX512F-NEXT:    movq 64(%rsi), %rax
+; X64-AVX512F-NEXT:    vmovd %eax, %xmm4
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm4, %xmm4
+; X64-AVX512F-NEXT:    vpcmpneqd (%rsi), %zmm2, %k0
+; X64-AVX512F-NEXT:    movq 72(%rsi), %rax
+; X64-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm2
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
+; X64-AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; X64-AVX512F-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm1
+; X64-AVX512F-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
+; X64-AVX512F-NEXT:    kortestw %k1, %k0
+; X64-AVX512F-NEXT:    setne %al
+; X64-AVX512F-NEXT:    vzeroupper
+; X64-AVX512F-NEXT:    retq
+;
+; X64-MIC-AVX2-LABEL: length96_eq:
+; X64-MIC-AVX2:       # %bb.0:
+; X64-MIC-AVX2-NEXT:    pushq %rax
+; X64-MIC-AVX2-NEXT:    movl $96, %edx
+; X64-MIC-AVX2-NEXT:    callq memcmp
+; X64-MIC-AVX2-NEXT:    testl %eax, %eax
+; X64-MIC-AVX2-NEXT:    setne %al
+; X64-MIC-AVX2-NEXT:    popq %rcx
+; X64-MIC-AVX2-NEXT:    retq
+;
+; X64-MIC-AVX512F-LABEL: length96_eq:
+; X64-MIC-AVX512F:       # %bb.0:
+; X64-MIC-AVX512F-NEXT:    movq 80(%rdi), %rax
+; X64-MIC-AVX512F-NEXT:    vmovd %eax, %xmm0
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X64-MIC-AVX512F-NEXT:    movq 88(%rdi), %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X64-MIC-AVX512F-NEXT:    movq 64(%rdi), %rax
+; X64-MIC-AVX512F-NEXT:    vmovd %eax, %xmm1
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
+; X64-MIC-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm2
+; X64-MIC-AVX512F-NEXT:    movq 72(%rdi), %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
+; X64-MIC-AVX512F-NEXT:    movq 80(%rsi), %rax
+; X64-MIC-AVX512F-NEXT:    vmovd %eax, %xmm3
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm3, %xmm3
+; X64-MIC-AVX512F-NEXT:    movq 88(%rsi), %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm3, %xmm3
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm3, %xmm3
+; X64-MIC-AVX512F-NEXT:    movq 64(%rsi), %rax
+; X64-MIC-AVX512F-NEXT:    vmovd %eax, %xmm4
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $1, %eax, %xmm4, %xmm4
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd (%rsi), %zmm2, %k0
+; X64-MIC-AVX512F-NEXT:    movq 72(%rsi), %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm4, %xmm2
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm2
+; X64-MIC-AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; X64-MIC-AVX512F-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm1
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd %zmm1, %zmm0, %k1
+; X64-MIC-AVX512F-NEXT:    kortestw %k1, %k0
+; X64-MIC-AVX512F-NEXT:    setne %al
+; X64-MIC-AVX512F-NEXT:    vzeroupper
+; X64-MIC-AVX512F-NEXT:    retq
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 96) nounwind
   %cmp = icmp ne i32 %call, 0
   ret i1 %cmp
@@ -3517,33 +3808,6 @@ define i1 @length96_eq_const(i8* %X) nounwind {
 ; X64-AVX2-NEXT:    popq %rcx
 ; X64-AVX2-NEXT:    retq
 ;
-; X64-AVX512F-LABEL: length96_eq_const:
-; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512F-NEXT:    movq 72(%rdi), %rax
-; X64-AVX512F-NEXT:    movq 64(%rdi), %rcx
-; X64-AVX512F-NEXT:    vmovd %ecx, %xmm1
-; X64-AVX512F-NEXT:    shrq $32, %rcx
-; X64-AVX512F-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
-; X64-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
-; X64-AVX512F-NEXT:    shrq $32, %rax
-; X64-AVX512F-NEXT:    movq 88(%rdi), %rcx
-; X64-AVX512F-NEXT:    movq 80(%rdi), %rdx
-; X64-AVX512F-NEXT:    vmovd %edx, %xmm2
-; X64-AVX512F-NEXT:    shrq $32, %rdx
-; X64-AVX512F-NEXT:    vpinsrd $1, %edx, %xmm2, %xmm2
-; X64-AVX512F-NEXT:    vpinsrd $2, %ecx, %xmm2, %xmm2
-; X64-AVX512F-NEXT:    shrq $32, %rcx
-; X64-AVX512F-NEXT:    vpinsrd $3, %ecx, %xmm2, %xmm2
-; X64-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
-; X64-AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; X64-AVX512F-NEXT:    vpcmpeqd {{.*}}(%rip), %zmm0, %k1
-; X64-AVX512F-NEXT:    vpcmpeqd {{.*}}(%rip), %zmm1, %k0 {%k1}
-; X64-AVX512F-NEXT:    kortestw %k0, %k0
-; X64-AVX512F-NEXT:    setb %al
-; X64-AVX512F-NEXT:    vzeroupper
-; X64-AVX512F-NEXT:    retq
-;
 ; X64-AVX512BW-LABEL: length96_eq_const:
 ; X64-AVX512BW:       # %bb.0:
 ; X64-AVX512BW-NEXT:    movq 80(%rdi), %rax
@@ -3636,12 +3900,77 @@ define i1 @length96_eq_const(i8* %X) nounwind {
 ; X64-AVX512BW-NEXT:    shrq $56, %rdx
 ; X64-AVX512BW-NEXT:    vpinsrb $15, %edx, %xmm1, %xmm1
 ; X64-AVX512BW-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
-; X64-AVX512BW-NEXT:    vpcmpeqb {{.*}}(%rip), %zmm2, %k1
-; X64-AVX512BW-NEXT:    vpcmpeqb {{.*}}(%rip), %zmm0, %k0 {%k1}
-; X64-AVX512BW-NEXT:    kortestq %k0, %k0
-; X64-AVX512BW-NEXT:    setb %al
+; X64-AVX512BW-NEXT:    vpcmpneqb {{.*}}(%rip), %zmm0, %k0
+; X64-AVX512BW-NEXT:    vpcmpneqb {{.*}}(%rip), %zmm2, %k1
+; X64-AVX512BW-NEXT:    kortestq %k0, %k1
+; X64-AVX512BW-NEXT:    sete %al
 ; X64-AVX512BW-NEXT:    vzeroupper
 ; X64-AVX512BW-NEXT:    retq
+;
+; X64-AVX512F-LABEL: length96_eq_const:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-AVX512F-NEXT:    movq 72(%rdi), %rax
+; X64-AVX512F-NEXT:    movq 64(%rdi), %rcx
+; X64-AVX512F-NEXT:    vmovd %ecx, %xmm1
+; X64-AVX512F-NEXT:    shrq $32, %rcx
+; X64-AVX512F-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
+; X64-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; X64-AVX512F-NEXT:    shrq $32, %rax
+; X64-AVX512F-NEXT:    movq 88(%rdi), %rcx
+; X64-AVX512F-NEXT:    movq 80(%rdi), %rdx
+; X64-AVX512F-NEXT:    vmovd %edx, %xmm2
+; X64-AVX512F-NEXT:    shrq $32, %rdx
+; X64-AVX512F-NEXT:    vpinsrd $1, %edx, %xmm2, %xmm2
+; X64-AVX512F-NEXT:    vpinsrd $2, %ecx, %xmm2, %xmm2
+; X64-AVX512F-NEXT:    shrq $32, %rcx
+; X64-AVX512F-NEXT:    vpinsrd $3, %ecx, %xmm2, %xmm2
+; X64-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
+; X64-AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; X64-AVX512F-NEXT:    vpcmpneqd {{.*}}(%rip), %zmm1, %k0
+; X64-AVX512F-NEXT:    vpcmpneqd {{.*}}(%rip), %zmm0, %k1
+; X64-AVX512F-NEXT:    kortestw %k0, %k1
+; X64-AVX512F-NEXT:    sete %al
+; X64-AVX512F-NEXT:    vzeroupper
+; X64-AVX512F-NEXT:    retq
+;
+; X64-MIC-AVX2-LABEL: length96_eq_const:
+; X64-MIC-AVX2:       # %bb.0:
+; X64-MIC-AVX2-NEXT:    pushq %rax
+; X64-MIC-AVX2-NEXT:    movl $.L.str, %esi
+; X64-MIC-AVX2-NEXT:    movl $96, %edx
+; X64-MIC-AVX2-NEXT:    callq memcmp
+; X64-MIC-AVX2-NEXT:    testl %eax, %eax
+; X64-MIC-AVX2-NEXT:    sete %al
+; X64-MIC-AVX2-NEXT:    popq %rcx
+; X64-MIC-AVX2-NEXT:    retq
+;
+; X64-MIC-AVX512F-LABEL: length96_eq_const:
+; X64-MIC-AVX512F:       # %bb.0:
+; X64-MIC-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-MIC-AVX512F-NEXT:    movq 72(%rdi), %rax
+; X64-MIC-AVX512F-NEXT:    movq 64(%rdi), %rcx
+; X64-MIC-AVX512F-NEXT:    vmovd %ecx, %xmm1
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rcx
+; X64-MIC-AVX512F-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
+; X64-MIC-AVX512F-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rax
+; X64-MIC-AVX512F-NEXT:    movq 88(%rdi), %rcx
+; X64-MIC-AVX512F-NEXT:    movq 80(%rdi), %rdx
+; X64-MIC-AVX512F-NEXT:    vmovd %edx, %xmm2
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rdx
+; X64-MIC-AVX512F-NEXT:    vpinsrd $1, %edx, %xmm2, %xmm2
+; X64-MIC-AVX512F-NEXT:    vpinsrd $2, %ecx, %xmm2, %xmm2
+; X64-MIC-AVX512F-NEXT:    shrq $32, %rcx
+; X64-MIC-AVX512F-NEXT:    vpinsrd $3, %ecx, %xmm2, %xmm2
+; X64-MIC-AVX512F-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
+; X64-MIC-AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd {{.*}}(%rip), %zmm1, %k0
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd {{.*}}(%rip), %zmm0, %k1
+; X64-MIC-AVX512F-NEXT:    kortestw %k0, %k1
+; X64-MIC-AVX512F-NEXT:    sete %al
+; X64-MIC-AVX512F-NEXT:    vzeroupper
+; X64-MIC-AVX512F-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([513 x i8], [513 x i8]* @.str, i32 0, i32 0), i64 96) nounwind
   %c = icmp eq i32 %m, 0
   ret i1 %c
@@ -3709,27 +4038,48 @@ define i1 @length127_eq(i8* %x, i8* %y) nounwind {
 ; X64-AVX2-NEXT:    popq %rcx
 ; X64-AVX2-NEXT:    retq
 ;
-; X64-AVX512F-LABEL: length127_eq:
-; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512F-NEXT:    vmovdqu64 63(%rdi), %zmm1
-; X64-AVX512F-NEXT:    vpcmpeqd (%rsi), %zmm0, %k1
-; X64-AVX512F-NEXT:    vpcmpeqd 63(%rsi), %zmm1, %k0 {%k1}
-; X64-AVX512F-NEXT:    kortestw %k0, %k0
-; X64-AVX512F-NEXT:    setae %al
-; X64-AVX512F-NEXT:    vzeroupper
-; X64-AVX512F-NEXT:    retq
-;
 ; X64-AVX512BW-LABEL: length127_eq:
 ; X64-AVX512BW:       # %bb.0:
 ; X64-AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0
 ; X64-AVX512BW-NEXT:    vmovdqu64 63(%rdi), %zmm1
-; X64-AVX512BW-NEXT:    vpcmpeqb (%rsi), %zmm0, %k1
-; X64-AVX512BW-NEXT:    vpcmpeqb 63(%rsi), %zmm1, %k0 {%k1}
-; X64-AVX512BW-NEXT:    kortestq %k0, %k0
-; X64-AVX512BW-NEXT:    setae %al
+; X64-AVX512BW-NEXT:    vpcmpneqb 63(%rsi), %zmm1, %k0
+; X64-AVX512BW-NEXT:    vpcmpneqb (%rsi), %zmm0, %k1
+; X64-AVX512BW-NEXT:    kortestq %k0, %k1
+; X64-AVX512BW-NEXT:    setne %al
 ; X64-AVX512BW-NEXT:    vzeroupper
 ; X64-AVX512BW-NEXT:    retq
+;
+; X64-AVX512F-LABEL: length127_eq:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-AVX512F-NEXT:    vmovdqu64 63(%rdi), %zmm1
+; X64-AVX512F-NEXT:    vpcmpneqd 63(%rsi), %zmm1, %k0
+; X64-AVX512F-NEXT:    vpcmpneqd (%rsi), %zmm0, %k1
+; X64-AVX512F-NEXT:    kortestw %k0, %k1
+; X64-AVX512F-NEXT:    setne %al
+; X64-AVX512F-NEXT:    vzeroupper
+; X64-AVX512F-NEXT:    retq
+;
+; X64-MIC-AVX2-LABEL: length127_eq:
+; X64-MIC-AVX2:       # %bb.0:
+; X64-MIC-AVX2-NEXT:    pushq %rax
+; X64-MIC-AVX2-NEXT:    movl $127, %edx
+; X64-MIC-AVX2-NEXT:    callq memcmp
+; X64-MIC-AVX2-NEXT:    testl %eax, %eax
+; X64-MIC-AVX2-NEXT:    setne %al
+; X64-MIC-AVX2-NEXT:    popq %rcx
+; X64-MIC-AVX2-NEXT:    retq
+;
+; X64-MIC-AVX512F-LABEL: length127_eq:
+; X64-MIC-AVX512F:       # %bb.0:
+; X64-MIC-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-MIC-AVX512F-NEXT:    vmovdqu64 63(%rdi), %zmm1
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd 63(%rsi), %zmm1, %k0
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd (%rsi), %zmm0, %k1
+; X64-MIC-AVX512F-NEXT:    kortestw %k0, %k1
+; X64-MIC-AVX512F-NEXT:    setne %al
+; X64-MIC-AVX512F-NEXT:    vzeroupper
+; X64-MIC-AVX512F-NEXT:    retq
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 127) nounwind
   %cmp = icmp ne i32 %call, 0
   ret i1 %cmp
@@ -3835,27 +4185,49 @@ define i1 @length127_eq_const(i8* %X) nounwind {
 ; X64-AVX2-NEXT:    popq %rcx
 ; X64-AVX2-NEXT:    retq
 ;
-; X64-AVX512F-LABEL: length127_eq_const:
-; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512F-NEXT:    vmovdqu64 63(%rdi), %zmm1
-; X64-AVX512F-NEXT:    vpcmpeqd {{.*}}(%rip), %zmm0, %k1
-; X64-AVX512F-NEXT:    vpcmpeqd .L.str+{{.*}}(%rip), %zmm1, %k0 {%k1}
-; X64-AVX512F-NEXT:    kortestw %k0, %k0
-; X64-AVX512F-NEXT:    setb %al
-; X64-AVX512F-NEXT:    vzeroupper
-; X64-AVX512F-NEXT:    retq
-;
 ; X64-AVX512BW-LABEL: length127_eq_const:
 ; X64-AVX512BW:       # %bb.0:
 ; X64-AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0
 ; X64-AVX512BW-NEXT:    vmovdqu64 63(%rdi), %zmm1
-; X64-AVX512BW-NEXT:    vpcmpeqb {{.*}}(%rip), %zmm0, %k1
-; X64-AVX512BW-NEXT:    vpcmpeqb .L.str+{{.*}}(%rip), %zmm1, %k0 {%k1}
-; X64-AVX512BW-NEXT:    kortestq %k0, %k0
-; X64-AVX512BW-NEXT:    setb %al
+; X64-AVX512BW-NEXT:    vpcmpneqb .L.str+{{.*}}(%rip), %zmm1, %k0
+; X64-AVX512BW-NEXT:    vpcmpneqb {{.*}}(%rip), %zmm0, %k1
+; X64-AVX512BW-NEXT:    kortestq %k0, %k1
+; X64-AVX512BW-NEXT:    sete %al
 ; X64-AVX512BW-NEXT:    vzeroupper
 ; X64-AVX512BW-NEXT:    retq
+;
+; X64-AVX512F-LABEL: length127_eq_const:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-AVX512F-NEXT:    vmovdqu64 63(%rdi), %zmm1
+; X64-AVX512F-NEXT:    vpcmpneqd .L.str+{{.*}}(%rip), %zmm1, %k0
+; X64-AVX512F-NEXT:    vpcmpneqd {{.*}}(%rip), %zmm0, %k1
+; X64-AVX512F-NEXT:    kortestw %k0, %k1
+; X64-AVX512F-NEXT:    sete %al
+; X64-AVX512F-NEXT:    vzeroupper
+; X64-AVX512F-NEXT:    retq
+;
+; X64-MIC-AVX2-LABEL: length127_eq_const:
+; X64-MIC-AVX2:       # %bb.0:
+; X64-MIC-AVX2-NEXT:    pushq %rax
+; X64-MIC-AVX2-NEXT:    movl $.L.str, %esi
+; X64-MIC-AVX2-NEXT:    movl $127, %edx
+; X64-MIC-AVX2-NEXT:    callq memcmp
+; X64-MIC-AVX2-NEXT:    testl %eax, %eax
+; X64-MIC-AVX2-NEXT:    sete %al
+; X64-MIC-AVX2-NEXT:    popq %rcx
+; X64-MIC-AVX2-NEXT:    retq
+;
+; X64-MIC-AVX512F-LABEL: length127_eq_const:
+; X64-MIC-AVX512F:       # %bb.0:
+; X64-MIC-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-MIC-AVX512F-NEXT:    vmovdqu64 63(%rdi), %zmm1
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd .L.str+{{.*}}(%rip), %zmm1, %k0
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd {{.*}}(%rip), %zmm0, %k1
+; X64-MIC-AVX512F-NEXT:    kortestw %k0, %k1
+; X64-MIC-AVX512F-NEXT:    sete %al
+; X64-MIC-AVX512F-NEXT:    vzeroupper
+; X64-MIC-AVX512F-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([513 x i8], [513 x i8]* @.str, i32 0, i32 0), i64 127) nounwind
   %c = icmp eq i32 %m, 0
   ret i1 %c
@@ -3923,27 +4295,48 @@ define i1 @length128_eq(i8* %x, i8* %y) nounwind {
 ; X64-AVX2-NEXT:    popq %rcx
 ; X64-AVX2-NEXT:    retq
 ;
-; X64-AVX512F-LABEL: length128_eq:
-; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512F-NEXT:    vmovdqu64 64(%rdi), %zmm1
-; X64-AVX512F-NEXT:    vpcmpeqd (%rsi), %zmm0, %k1
-; X64-AVX512F-NEXT:    vpcmpeqd 64(%rsi), %zmm1, %k0 {%k1}
-; X64-AVX512F-NEXT:    kortestw %k0, %k0
-; X64-AVX512F-NEXT:    setae %al
-; X64-AVX512F-NEXT:    vzeroupper
-; X64-AVX512F-NEXT:    retq
-;
 ; X64-AVX512BW-LABEL: length128_eq:
 ; X64-AVX512BW:       # %bb.0:
 ; X64-AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0
 ; X64-AVX512BW-NEXT:    vmovdqu64 64(%rdi), %zmm1
-; X64-AVX512BW-NEXT:    vpcmpeqb (%rsi), %zmm0, %k1
-; X64-AVX512BW-NEXT:    vpcmpeqb 64(%rsi), %zmm1, %k0 {%k1}
-; X64-AVX512BW-NEXT:    kortestq %k0, %k0
-; X64-AVX512BW-NEXT:    setae %al
+; X64-AVX512BW-NEXT:    vpcmpneqb 64(%rsi), %zmm1, %k0
+; X64-AVX512BW-NEXT:    vpcmpneqb (%rsi), %zmm0, %k1
+; X64-AVX512BW-NEXT:    kortestq %k0, %k1
+; X64-AVX512BW-NEXT:    setne %al
 ; X64-AVX512BW-NEXT:    vzeroupper
 ; X64-AVX512BW-NEXT:    retq
+;
+; X64-AVX512F-LABEL: length128_eq:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-AVX512F-NEXT:    vmovdqu64 64(%rdi), %zmm1
+; X64-AVX512F-NEXT:    vpcmpneqd 64(%rsi), %zmm1, %k0
+; X64-AVX512F-NEXT:    vpcmpneqd (%rsi), %zmm0, %k1
+; X64-AVX512F-NEXT:    kortestw %k0, %k1
+; X64-AVX512F-NEXT:    setne %al
+; X64-AVX512F-NEXT:    vzeroupper
+; X64-AVX512F-NEXT:    retq
+;
+; X64-MIC-AVX2-LABEL: length128_eq:
+; X64-MIC-AVX2:       # %bb.0:
+; X64-MIC-AVX2-NEXT:    pushq %rax
+; X64-MIC-AVX2-NEXT:    movl $128, %edx
+; X64-MIC-AVX2-NEXT:    callq memcmp
+; X64-MIC-AVX2-NEXT:    testl %eax, %eax
+; X64-MIC-AVX2-NEXT:    setne %al
+; X64-MIC-AVX2-NEXT:    popq %rcx
+; X64-MIC-AVX2-NEXT:    retq
+;
+; X64-MIC-AVX512F-LABEL: length128_eq:
+; X64-MIC-AVX512F:       # %bb.0:
+; X64-MIC-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-MIC-AVX512F-NEXT:    vmovdqu64 64(%rdi), %zmm1
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd 64(%rsi), %zmm1, %k0
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd (%rsi), %zmm0, %k1
+; X64-MIC-AVX512F-NEXT:    kortestw %k0, %k1
+; X64-MIC-AVX512F-NEXT:    setne %al
+; X64-MIC-AVX512F-NEXT:    vzeroupper
+; X64-MIC-AVX512F-NEXT:    retq
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 128) nounwind
   %cmp = icmp ne i32 %call, 0
   ret i1 %cmp
@@ -4049,27 +4442,49 @@ define i1 @length128_eq_const(i8* %X) nounwind {
 ; X64-AVX2-NEXT:    popq %rcx
 ; X64-AVX2-NEXT:    retq
 ;
-; X64-AVX512F-LABEL: length128_eq_const:
-; X64-AVX512F:       # %bb.0:
-; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
-; X64-AVX512F-NEXT:    vmovdqu64 64(%rdi), %zmm1
-; X64-AVX512F-NEXT:    vpcmpeqd {{.*}}(%rip), %zmm0, %k1
-; X64-AVX512F-NEXT:    vpcmpeqd .L.str+{{.*}}(%rip), %zmm1, %k0 {%k1}
-; X64-AVX512F-NEXT:    kortestw %k0, %k0
-; X64-AVX512F-NEXT:    setb %al
-; X64-AVX512F-NEXT:    vzeroupper
-; X64-AVX512F-NEXT:    retq
-;
 ; X64-AVX512BW-LABEL: length128_eq_const:
 ; X64-AVX512BW:       # %bb.0:
 ; X64-AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0
 ; X64-AVX512BW-NEXT:    vmovdqu64 64(%rdi), %zmm1
-; X64-AVX512BW-NEXT:    vpcmpeqb {{.*}}(%rip), %zmm0, %k1
-; X64-AVX512BW-NEXT:    vpcmpeqb .L.str+{{.*}}(%rip), %zmm1, %k0 {%k1}
-; X64-AVX512BW-NEXT:    kortestq %k0, %k0
-; X64-AVX512BW-NEXT:    setb %al
+; X64-AVX512BW-NEXT:    vpcmpneqb .L.str+{{.*}}(%rip), %zmm1, %k0
+; X64-AVX512BW-NEXT:    vpcmpneqb {{.*}}(%rip), %zmm0, %k1
+; X64-AVX512BW-NEXT:    kortestq %k0, %k1
+; X64-AVX512BW-NEXT:    sete %al
 ; X64-AVX512BW-NEXT:    vzeroupper
 ; X64-AVX512BW-NEXT:    retq
+;
+; X64-AVX512F-LABEL: length128_eq_const:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-AVX512F-NEXT:    vmovdqu64 64(%rdi), %zmm1
+; X64-AVX512F-NEXT:    vpcmpneqd .L.str+{{.*}}(%rip), %zmm1, %k0
+; X64-AVX512F-NEXT:    vpcmpneqd {{.*}}(%rip), %zmm0, %k1
+; X64-AVX512F-NEXT:    kortestw %k0, %k1
+; X64-AVX512F-NEXT:    sete %al
+; X64-AVX512F-NEXT:    vzeroupper
+; X64-AVX512F-NEXT:    retq
+;
+; X64-MIC-AVX2-LABEL: length128_eq_const:
+; X64-MIC-AVX2:       # %bb.0:
+; X64-MIC-AVX2-NEXT:    pushq %rax
+; X64-MIC-AVX2-NEXT:    movl $.L.str, %esi
+; X64-MIC-AVX2-NEXT:    movl $128, %edx
+; X64-MIC-AVX2-NEXT:    callq memcmp
+; X64-MIC-AVX2-NEXT:    testl %eax, %eax
+; X64-MIC-AVX2-NEXT:    sete %al
+; X64-MIC-AVX2-NEXT:    popq %rcx
+; X64-MIC-AVX2-NEXT:    retq
+;
+; X64-MIC-AVX512F-LABEL: length128_eq_const:
+; X64-MIC-AVX512F:       # %bb.0:
+; X64-MIC-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0
+; X64-MIC-AVX512F-NEXT:    vmovdqu64 64(%rdi), %zmm1
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd .L.str+{{.*}}(%rip), %zmm1, %k0
+; X64-MIC-AVX512F-NEXT:    vpcmpneqd {{.*}}(%rip), %zmm0, %k1
+; X64-MIC-AVX512F-NEXT:    kortestw %k0, %k1
+; X64-MIC-AVX512F-NEXT:    sete %al
+; X64-MIC-AVX512F-NEXT:    vzeroupper
+; X64-MIC-AVX512F-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([513 x i8], [513 x i8]* @.str, i32 0, i32 0), i64 128) nounwind
   %c = icmp eq i32 %m, 0
   ret i1 %c
