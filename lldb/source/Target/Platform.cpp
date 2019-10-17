@@ -1823,6 +1823,12 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
     trap_opcode_size = sizeof(g_aarch64_opcode);
   } break;
 
+  case llvm::Triple::arc: {
+    static const uint8_t g_hex_opcode[] = { 0xff, 0x7f };
+    trap_opcode = g_hex_opcode;
+    trap_opcode_size = sizeof(g_hex_opcode);
+  } break;
+
   // TODO: support big-endian arm and thumb trap codes.
   case llvm::Triple::arm: {
     // The ARM reference recommends the use of 0xe7fddefe and 0xdefe but the

@@ -184,6 +184,8 @@ public:
     eCore_uknownMach32,
     eCore_uknownMach64,
 
+    eCore_arc, // little endian ARC
+
     kNumCores,
 
     kCore_invalid,

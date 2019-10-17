@@ -25,6 +25,7 @@
 #include "Plugins/ABI/MacOSX-arm/ABIMacOSX_arm.h"
 #include "Plugins/ABI/MacOSX-arm64/ABIMacOSX_arm64.h"
 #include "Plugins/ABI/MacOSX-i386/ABIMacOSX_i386.h"
+#include "Plugins/ABI/SysV-arc/ABISysV_arc.h"
 #include "Plugins/ABI/SysV-arm/ABISysV_arm.h"
 #include "Plugins/ABI/SysV-arm64/ABISysV_arm64.h"
 #include "Plugins/ABI/SysV-hexagon/ABISysV_hexagon.h"
@@ -161,6 +162,8 @@ static void SwiftTerminate() {
 #define LLDB_PROCESS_ARM(op)                                                   \
   ABIMacOSX_arm::op();                                                         \
   ABISysV_arm::op();
+#define LLDB_PROCESS_ARC(op)                                                   \
+  ABISysV_arc::op();
 #define LLDB_PROCESS_Hexagon(op) ABISysV_hexagon::op();
 #define LLDB_PROCESS_Mips(op)                                                  \
   ABISysV_mips::op();                                                          \
@@ -176,7 +179,6 @@ static void SwiftTerminate() {
   ABIWindows_x86_64::op();
 
 #define LLDB_PROCESS_AMDGPU(op)
-#define LLDB_PROCESS_ARC(op)
 #define LLDB_PROCESS_AVR(op)
 #define LLDB_PROCESS_BPF(op)
 #define LLDB_PROCESS_Lanai(op)

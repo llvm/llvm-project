@@ -66,7 +66,7 @@
 # DSO-NEXT:      Section: .text (0x6)
 # DSO-NEXT:    }
 # DSO-NEXT:  ]
-# DSO-NEXT:  Version symbols [
+# DSO-NEXT:  VersionSymbols [
 # DSO-NEXT:    Symbol {
 # DSO-NEXT:      Version: 0
 # DSO-NEXT:      Name:
