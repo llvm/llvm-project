@@ -10,6 +10,8 @@ public:
 };
 
 int main() {
+  Base realbase;
+  realbase.foo();
   Derived d;
   Base *b = &d;
   return 0; // Set breakpoint here

@@ -46,4 +46,11 @@ class ExprCommandCallOverriddenMethod(TestBase):
         # Test call to overridden method in derived class (this will fail if the
         # overrides table is not correctly set up, as Derived::foo will be assigned
         # a vtable entry that does not exist in the compiled program).
-        self.expect("expr d.foo()")
+        self.expect("expr d.foo()", substrs=["2"])
+
+        # Test calling the base class.
+        self.expect("expr realbase.foo()", substrs=["1"])
+
+        # Test with locally constructed instances.
+        self.expect("expr Base().foo()", substrs=["1"])
+        self.expect("expr Derived().foo()", substrs=["2"])
