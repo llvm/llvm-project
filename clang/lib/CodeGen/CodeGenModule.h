@@ -1280,8 +1280,16 @@ public:
   /// optimization.
   bool HasHiddenLTOVisibility(const CXXRecordDecl *RD);
 
+  /// Returns the vcall visibility of the given type. This is the scope in which
+  /// a virtual function call could be made which ends up being dispatched to a
+  /// member function of this class. This scope can be wider than the visibility
+  /// of the class itself when the class has a more-visible dynamic base class.
+  llvm::GlobalObject::VCallVisibility
+  GetVCallVisibilityLevel(const CXXRecordDecl *RD);
+
   /// Emit type metadata for the given vtable using the given layout.
-  void EmitVTableTypeMetadata(llvm::GlobalVariable *VTable,
+  void EmitVTableTypeMetadata(const CXXRecordDecl *RD,
+                              llvm::GlobalVariable *VTable,
                               const VTableLayout &VTLayout);
 
   /// Generate a cross-DSO type identifier for MD.

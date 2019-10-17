@@ -712,6 +712,7 @@ int bar(int n){
 
   // CHECK-NOT: call void @__kmpc_get_team_static_memory
   // CHECK: store i32 0,
+  // CHECK: store i32 0,
   // CHECK: store i32 0, i32* [[A_ADDR:%.+]], align
   // CHECK: store i16 -32768, i16* [[B_ADDR:%.+]], align
   // CHECK: call void [[OUTLINED:@.+]](i32* {{.+}}, i32* {{.+}}, i32* [[A_ADDR]], i16* [[B_ADDR]])

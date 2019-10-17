@@ -195,9 +195,11 @@ StencilPart dPrint(llvm::StringRef Id);
 } // namespace transformer
 
 namespace tooling {
-namespace stencil {
 // DEPRECATED: These are temporary aliases supporting client migration to the
 // `transformer` namespace.
+using Stencil = transformer::Stencil;
+using StencilPart = transformer::StencilPart;
+namespace stencil {
 using transformer::access;
 using transformer::addressOf;
 using transformer::cat;
