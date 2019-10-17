@@ -1697,18 +1697,23 @@ llvm::Value *CGOpenMPRuntime::getThreadID(CodeGenFunction &CGF,
       return ThreadID;
   }
   // If exceptions are enabled, do not use parameter to avoid possible crash.
-  if (!CGF.EHStack.requiresLandingPad() || !CGF.getLangOpts().Exceptions ||
-      !CGF.getLangOpts().CXXExceptions ||
-      CGF.Builder.GetInsertBlock() == CGF.AllocaInsertPt->getParent()) {
-    if (auto *OMPRegionInfo =
-            dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo)) {
-      if (OMPRegionInfo->getThreadIDVariable()) {
-        // Check if this an outlined function with thread id passed as argument.
-        LValue LVal = OMPRegionInfo->getThreadIDVariableLValue(CGF);
+  if (auto *OMPRegionInfo =
+          dyn_cast_or_null<CGOpenMPRegionInfo>(CGF.CapturedStmtInfo)) {
+    if (OMPRegionInfo->getThreadIDVariable()) {
+      // Check if this an outlined function with thread id passed as argument.
+      LValue LVal = OMPRegionInfo->getThreadIDVariableLValue(CGF);
+      llvm::BasicBlock *TopBlock = CGF.AllocaInsertPt->getParent();
+      if (!CGF.EHStack.requiresLandingPad() || !CGF.getLangOpts().Exceptions ||
+          !CGF.getLangOpts().CXXExceptions ||
+          CGF.Builder.GetInsertBlock() == TopBlock ||
+          !isa<llvm::Instruction>(LVal.getPointer()) ||
+          cast<llvm::Instruction>(LVal.getPointer())->getParent() == TopBlock ||
+          cast<llvm::Instruction>(LVal.getPointer())->getParent() ==
+              CGF.Builder.GetInsertBlock()) {
         ThreadID = CGF.EmitLoadOfScalar(LVal, Loc);
         // If value loaded in entry block, cache it and use it everywhere in
         // function.
-        if (CGF.Builder.GetInsertBlock() == CGF.AllocaInsertPt->getParent()) {
+        if (CGF.Builder.GetInsertBlock() == TopBlock) {
           auto &Elem = OpenMPLocThreadIDMap.FindAndConstruct(CGF.CurFn);
           Elem.second.ThreadID = ThreadID;
         }
@@ -3075,17 +3080,15 @@ void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
     CGF.EmitRuntimeCall(
         RT.createRuntimeFunction(OMPRTL__kmpc_serialized_parallel), Args);
 
-    // OutlinedFn(&zero, &zero_bound, CapturedStruct);
-    Address ZeroAddr = CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty,
-                                                        /*Name=*/".zero.addr");
-    CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C*/ 0));
+    // OutlinedFn(&GTid, &zero_bound, CapturedStruct);
+    Address ThreadIDAddr = RT.emitThreadIDAddress(CGF, Loc);
     Address ZeroAddrBound =
         CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty,
                                          /*Name=*/".bound.zero.addr");
     CGF.InitTempAlloca(ZeroAddrBound, CGF.Builder.getInt32(/*C*/ 0));
     llvm::SmallVector<llvm::Value *, 16> OutlinedFnArgs;
     // ThreadId for serialized parallels is 0.
-    OutlinedFnArgs.push_back(ZeroAddr.getPointer());
+    OutlinedFnArgs.push_back(ThreadIDAddr.getPointer());
     OutlinedFnArgs.push_back(ZeroAddrBound.getPointer());
     OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
     RT.emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);

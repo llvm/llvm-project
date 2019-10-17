@@ -40,7 +40,7 @@ void with_var_schedule() {
 // CHECK: [[CHUNK_VAL:%.+]] = load i8, i8* %
 // CHECK: [[CHUNK_SIZE:%.+]] = sext i8 [[CHUNK_VAL]] to i64
 // CHECK: call void @__kmpc_for_static_init_8u([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID:%[^,]+]], i32 33, i32* [[IS_LAST:%[^,]+]], i64* [[OMP_LB:%[^,]+]], i64* [[OMP_UB:%[^,]+]], i64* [[OMP_ST:%[^,]+]], i64 1, i64 [[CHUNK_SIZE]])
-// CHECK: call void @__kmpc_for_static_fini([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID]])
+// CHECK: call void @__kmpc_for_static_fini([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID:%.+]])
 #pragma omp parallel for schedule(static, char(a)) private(a)
   for (unsigned long long i = 1; i < 2 + a; ++i) {
   }
@@ -284,7 +284,7 @@ void test_auto(float *a, float *b, float *c, float *d) {
 // CHECK: store i32* [[GTID_PARAM_ADDR]], i32** [[GTID_REF_ADDR:%.+]],
 // CHECK: call void @__kmpc_dispatch_init_8([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32 38, i64 0, i64 [[LAST_ITER:%[^,]+]], i64 1, i64 1)
 //
-// CHECK: [[HASWORK:%.+]] = call i32 @__kmpc_dispatch_next_8([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], i32* [[OMP_ISLAST:%[^,]+]], i64* [[OMP_LB:%[^,]+]], i64* [[OMP_UB:%[^,]+]], i64* [[OMP_ST:%[^,]+]])
+// CHECK: [[HASWORK:%.+]] = call i32 @__kmpc_dispatch_next_8([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID:%.+]], i32* [[OMP_ISLAST:%[^,]+]], i64* [[OMP_LB:%[^,]+]], i64* [[OMP_UB:%[^,]+]], i64* [[OMP_ST:%[^,]+]])
 // CHECK-NEXT: [[O_CMP:%.+]] = icmp ne i32 [[HASWORK]], 0
 // CHECK-NEXT: br i1 [[O_CMP]], label %[[O_LOOP1_BODY:[^,]+]], label %[[O_LOOP1_END:[^,]+]]
 
@@ -494,7 +494,6 @@ void range_for_single() {
 // OMP5: [[IS_LAST:%.+]] = alloca i32,
 // OMP5: [[BEGIN:%.+]] = alloca i32*,
 // OMP5: [[A_PTR:%.+]] = alloca i32*,
-// OMP5: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(
 
 // __range = arr;
 // OMP5: [[ARR:%.+]] = load [10 x i32]*, [10 x i32]** [[ARR_ADDR]],
@@ -551,7 +550,7 @@ void range_for_single() {
 // OMP5: store i32 0, i32* [[IS_LAST]],
 
 // loop.
-// OMP5: call void @__kmpc_for_static_init_8(%struct.ident_t* {{.+}}, i32 [[GTID]], i32 34, i32* [[IS_LAST]], i64* [[LB]], i64* [[UB]], i64* [[STRIDE]], i64 1, i64 1)
+// OMP5: call void @__kmpc_for_static_init_8(%struct.ident_t* {{.+}}, i32 [[GTID:%.+]], i32 34, i32* [[IS_LAST]], i64* [[LB]], i64* [[UB]], i64* [[STRIDE]], i64 1, i64 1)
 
 // ub = (ub > number_of_elems ? number_of_elems : ub);
 // OMP5: [[UB_VAL:%.+]] = load i64, i64* [[UB]],
@@ -613,7 +612,7 @@ void range_for_single() {
 
 // end:
 // OMP5: [[END]]:
-// OMP5: call void @__kmpc_for_static_fini(%struct.ident_t* {{.+}}, i32 [[GTID]])
+// OMP5: call void @__kmpc_for_static_fini(%struct.ident_t* {{.+}}, i32 [[GTID:%.+]])
 // exit:
 // OMP5: [[EXIT]]:
 // OMP5: ret void
@@ -621,12 +620,12 @@ void range_for_single() {
 // OMP5-LABEL: range_for_collapsed
 void range_for_collapsed() {
   int arr[10] = {0};
-// OMP5: call void @__kmpc_for_static_init_8(%struct.ident_t* {{.+}}, i32 [[GTID%.+]], i32 34, i32* %{{.+}}, i64* %{{.+}}, i64* %{{.+}}, i64* %{{.+}}, i64 1, i64 1)
+// OMP5: call void @__kmpc_for_static_init_8(%struct.ident_t* {{.+}}, i32 [[GTID:%.+]], i32 34, i32* %{{.+}}, i64* %{{.+}}, i64* %{{.+}}, i64* %{{.+}}, i64 1, i64 1)
 #pragma omp parallel for collapse(2)
   for (auto &a : arr)
     for (auto b : arr)
       a = b;
-// OMP5: call void @__kmpc_for_static_fini(%struct.ident_t* {{.+}}, i32 [[GTID]])
+// OMP5: call void @__kmpc_for_static_fini(%struct.ident_t* {{.+}}, i32 [[GTID:%.+]])
 }
 #endif // OMP5
 

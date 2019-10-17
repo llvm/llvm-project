@@ -5,7 +5,7 @@
 #endif
 
 @interface Root
-+ (instancetype)alloc;
++ (instancetype)alloc; // expected-note {{explicitly declared 'instancetype'}}
 - (instancetype)init; // expected-note{{overridden method is part of the 'init' method family}}
 - (instancetype)self; // expected-note {{explicitly declared 'instancetype'}}
 - (Class)class;
@@ -143,7 +143,7 @@ void test_instancetype_narrow_method_search() {
 
 @implementation Subclass4
 + (id)alloc {
-  return self; // FIXME: we accept this in ObjC++ but not ObjC?
+  return self; // expected-error{{cannot initialize return object of type 'Subclass4 *' with an lvalue of type 'Class'}}
 }
 
 - (Subclass3 *)init { return 0; } // don't complain: we lost the related return type

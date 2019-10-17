@@ -4824,7 +4824,8 @@ CFGBlock *CFGBuilder::VisitOMPExecutableDirective(OMPExecutableDirective *D,
   }
   // Visit associated structured block if any.
   if (!D->isStandaloneDirective())
-    if (Stmt *S = D->getStructuredBlock()) {
+    if (CapturedStmt *CS = D->getInnermostCapturedStmt()) {
+      Stmt *S = CS->getCapturedStmt();
       if (!isa<CompoundStmt>(S))
         addLocalScopeAndDtors(S);
       if (CFGBlock *R = addStmt(S))

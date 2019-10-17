@@ -31,7 +31,7 @@
 // CHECK-IR: [[ENTBEGIN:@.+]] = external hidden constant [[ENTTY]]
 // CHECK-IR: [[ENTEND:@.+]] = external hidden constant [[ENTTY]]
 
-// CHECK-IR: [[DUMMY:@.+]] = hidden constant [0 x %__tgt_offload_entry] zeroinitializer, section "omp_offloading_entries"
+// CHECK-IR: [[DUMMY:@.+]] = hidden constant [0 x [[ENTTY]]] zeroinitializer, section "omp_offloading_entries"
 
 // CHECK-IR: [[BIN:@.+]] = internal unnamed_addr constant [[BINTY:\[[0-9]+ x i8\]]] c"Content of device file{{.+}}"
 

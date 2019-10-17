@@ -17,8 +17,9 @@
 static XX *obj;
 
 + (void)classMethod {
-  [obj addObserver:self];     // expected-warning {{incompatible pointer types sending 'Class' to parameter of type 'XX *'}}
+  [obj addObserver:self];     // expected-error {{cannot initialize a parameter of type 'XX *' with an lvalue of type 'Class'}}
   Class whatever;
-  [obj addObserver:whatever]; // expected-warning {{incompatible pointer types sending 'Class' to parameter of type 'XX *'}}
+  [obj addObserver:whatever]; // expected-error {{cannot initialize a parameter of type 'XX *' with an lvalue of type 'Class'}}
 }
 @end
+
