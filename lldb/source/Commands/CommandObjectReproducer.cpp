@@ -265,19 +265,12 @@ protected:
       return true;
     }
     case eReproducerProviderVersion: {
-      FileSpec version_file = loader->GetFile<VersionProvider::Info>();
-
-      // Load the version info into a buffer.
-      ErrorOr<std::unique_ptr<MemoryBuffer>> buffer =
-          vfs::getRealFileSystem()->getBufferForFile(version_file.GetPath());
-      if (!buffer) {
-        SetError(result, errorCodeToError(buffer.getError()));
+      Expected<std::string> version = loader->LoadBuffer<VersionProvider>();
+      if (!version) {
+        SetError(result, version.takeError());
         return false;
       }
-
-      // Return the version string.
-      StringRef version = (*buffer)->getBuffer();
-      result.AppendMessage(version.str());
+      result.AppendMessage(*version);
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;
     }
