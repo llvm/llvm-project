@@ -1,0 +1,11 @@
+# This tests relative capture paths.
+
+# RUN: echo "CHECK: %t" > %t.check
+
+# RUN: rm -rf %t.repro
+# RUN: mkdir -p %t.repro
+# RUN: mkdir -p %t
+# RUN: cd %t
+# RUN: %clang %S/Inputs/simple.c -g -o %t/reproducer.out
+# RUN: %lldb -x -b -s %S/Inputs/FileCapture.in --capture --capture-path %t.repro %t/reproducer.out
+# RUN: cat %t.repro/cwd.txt | FileCheck %t.check
