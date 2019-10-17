@@ -1909,7 +1909,7 @@ static void unswitchNontrivialInvariants(
 
   // We can only unswitch switches, conditional branches with an invariant
   // condition, or combining invariant conditions with an instruction.
-  assert((SI || BI->isConditional()) &&
+  assert((SI || (BI && BI->isConditional())) &&
          "Can only unswitch switches and conditional branch!");
   bool FullUnswitch = SI || BI->getCondition() == Invariants[0];
   if (FullUnswitch)
@@ -2724,7 +2724,7 @@ unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
     return Cost * (SuccessorsCount - 1);
   };
   Instruction *BestUnswitchTI = nullptr;
-  int BestUnswitchCost;
+  int BestUnswitchCost = 0;
   ArrayRef<Value *> BestUnswitchInvariants;
   for (auto &TerminatorAndInvariants : UnswitchCandidates) {
     Instruction &TI = *TerminatorAndInvariants.first;
@@ -2756,6 +2756,7 @@ unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
       BestUnswitchInvariants = Invariants;
     }
   }
+  assert(BestUnswitchTI && "Failed to find loop unswitch candidate");
 
   if (BestUnswitchCost >= UnswitchThreshold) {
     LLVM_DEBUG(dbgs() << "Cannot unswitch, lowest cost found: "

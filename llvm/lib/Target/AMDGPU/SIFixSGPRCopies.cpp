@@ -684,6 +684,67 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         }
         break;
       }
+      case AMDGPU::V_WRITELANE_B32: {
+        // Some architectures allow more than one constant bus access without
+        // SGPR restriction
+        if (ST.getConstantBusLimit(MI.getOpcode()) != 1)
+          break;
+
+        // Writelane is special in that it can use SGPR and M0 (which would
+        // normally count as using the constant bus twice - but in this case it
+        // is allowed since the lane selector doesn't count as a use of the
+        // constant bus). However, it is still required to abide by the 1 SGPR
+        // rule. Apply a fix here as we might have multiple SGPRs after
+        // legalizing VGPRs to SGPRs
+        int Src0Idx =
+            AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
+        int Src1Idx =
+            AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src1);
+        MachineOperand &Src0 = MI.getOperand(Src0Idx);
+        MachineOperand &Src1 = MI.getOperand(Src1Idx);
+
+        // Check to see if the instruction violates the 1 SGPR rule
+        if ((Src0.isReg() && TRI->isSGPRReg(*MRI, Src0.getReg()) &&
+             Src0.getReg() != AMDGPU::M0) &&
+            (Src1.isReg() && TRI->isSGPRReg(*MRI, Src1.getReg()) &&
+             Src1.getReg() != AMDGPU::M0)) {
+
+          // Check for trivially easy constant prop into one of the operands
+          // If this is the case then perform the operation now to resolve SGPR
+          // issue. If we don't do that here we will always insert a mov to m0
+          // that can't be resolved in later operand folding pass
+          bool Resolved = false;
+          for (MachineOperand *MO : {&Src0, &Src1}) {
+            if (Register::isVirtualRegister(MO->getReg())) {
+              MachineInstr *DefMI = MRI->getVRegDef(MO->getReg());
+              if (DefMI && TII->isFoldableCopy(*DefMI)) {
+                const MachineOperand &Def = DefMI->getOperand(0);
+                if (Def.isReg() &&
+                    MO->getReg() == Def.getReg() &&
+                    MO->getSubReg() == Def.getSubReg()) {
+                  const MachineOperand &Copied = DefMI->getOperand(1);
+                  if (Copied.isImm() &&
+                      TII->isInlineConstant(APInt(64, Copied.getImm(), true))) {
+                    MO->ChangeToImmediate(Copied.getImm());
+                    Resolved = true;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
+          if (!Resolved) {
+            // Haven't managed to resolve by replacing an SGPR with an immediate
+            // Move src1 to be in M0
+            BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                    TII->get(AMDGPU::COPY), AMDGPU::M0)
+                .add(Src1);
+            Src1.ChangeToRegister(AMDGPU::M0, false);
+          }
+        }
+        break;
+      }
       }
     }
   }

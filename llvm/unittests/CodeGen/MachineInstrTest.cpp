@@ -35,7 +35,7 @@ public:
 class BogusFrameLowering : public TargetFrameLowering {
 public:
   BogusFrameLowering()
-      : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, 4, 4) {}
+      : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(4), 4) {}
 
   void emitPrologue(MachineFunction &MF,
                     MachineBasicBlock &MBB) const override {}

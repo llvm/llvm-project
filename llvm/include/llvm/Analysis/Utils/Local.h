@@ -32,7 +32,7 @@ Value *EmitGEPOffset(IRBuilderTy *Builder, const DataLayout &DL, User *GEP,
   Value *Result = Constant::getNullValue(IntPtrTy);
 
   // If the GEP is inbounds, we know that none of the addressing operations will
-  // overflow in an unsigned sense.
+  // overflow in a signed sense.
   bool isInBounds = GEPOp->isInBounds() && !NoAssumptions;
 
   // Build a mask for high order bits.
@@ -66,7 +66,8 @@ Value *EmitGEPOffset(IRBuilderTy *Builder, const DataLayout &DL, User *GEP,
 
       Constant *Scale = ConstantInt::get(IntPtrTy, Size);
       Constant *OC = ConstantExpr::getIntegerCast(OpC, IntPtrTy, true /*SExt*/);
-      Scale = ConstantExpr::getMul(OC, Scale, isInBounds/*NUW*/);
+      Scale =
+          ConstantExpr::getMul(OC, Scale, false /*NUW*/, isInBounds /*NSW*/);
       // Emit an add instruction.
       Result = Builder->CreateAdd(Result, Scale, GEP->getName()+".offs");
       continue;
@@ -82,7 +83,8 @@ Value *EmitGEPOffset(IRBuilderTy *Builder, const DataLayout &DL, User *GEP,
     if (Size != 1) {
       // We'll let instcombine(mul) convert this to a shl if possible.
       Op = Builder->CreateMul(Op, ConstantInt::get(IntPtrTy, Size),
-                              GEP->getName()+".idx", isInBounds /*NUW*/);
+                              GEP->getName() + ".idx", false /*NUW*/,
+                              isInBounds /*NSW*/);
     }
 
     // Emit an add instruction.

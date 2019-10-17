@@ -15,6 +15,7 @@
 #include "BitstreamRemarkParser.h"
 #include "llvm/Remarks/BitstreamRemarkContainer.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace llvm::remarks;
@@ -304,8 +305,9 @@ static Error advanceToMetaBlock(BitstreamParserHelper &Helper) {
 }
 
 Expected<std::unique_ptr<BitstreamRemarkParser>>
-remarks::createBitstreamParserFromMeta(StringRef Buf,
-                                       Optional<ParsedStringTable> StrTab) {
+remarks::createBitstreamParserFromMeta(
+    StringRef Buf, Optional<ParsedStringTable> StrTab,
+    Optional<StringRef> ExternalFilePrependPath) {
   BitstreamParserHelper Helper(Buf);
   Expected<std::array<char, 4>> Magic = Helper.parseMagic();
   if (!Magic)
@@ -314,9 +316,14 @@ remarks::createBitstreamParserFromMeta(StringRef Buf,
   if (Error E = validateMagicNumber(StringRef(Magic->data(), Magic->size())))
     return std::move(E);
 
-  return StrTab
-             ? std::make_unique<BitstreamRemarkParser>(Buf, std::move(*StrTab))
+  auto Parser =
+      StrTab ? std::make_unique<BitstreamRemarkParser>(Buf, std::move(*StrTab))
              : std::make_unique<BitstreamRemarkParser>(Buf);
+
+  if (ExternalFilePrependPath)
+    Parser->ExternalFilePrependPath = *ExternalFilePrependPath;
+
+  return std::move(Parser);
 }
 
 Expected<std::unique_ptr<Remark>> BitstreamRemarkParser::next() {
@@ -409,13 +416,16 @@ Error BitstreamRemarkParser::processExternalFilePath(
         std::make_error_code(std::errc::illegal_byte_sequence),
         "Error while parsing BLOCK_META: missing external file path.");
 
+  SmallString<80> FullPath(ExternalFilePrependPath);
+  sys::path::append(FullPath, *ExternalFilePath);
+
   // External file: open the external file, parse it, check if its metadata
   // matches the one from the separate metadata, then replace the current parser
   // with the one parsing the remarks.
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-      MemoryBuffer::getFile(*ExternalFilePath);
+      MemoryBuffer::getFile(FullPath);
   if (std::error_code EC = BufferOrErr.getError())
-    return errorCodeToError(EC);
+    return createFileError(FullPath, EC);
   TmpRemarkBuffer = std::move(*BufferOrErr);
 
   // Create a separate parser used for parsing the separate file.

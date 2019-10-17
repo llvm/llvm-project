@@ -2768,7 +2768,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       !isSafeToExpand(ExactBTC, *SE))
     return Changed;
 
-  auto Filter = [&](BasicBlock *ExitingBB) {
+  auto BadExit = [&](BasicBlock *ExitingBB) {
     // If our exiting block exits multiple loops, we can only rewrite the
     // innermost one.  Otherwise, we're changing how many times the innermost
     // loop runs before it exits. 
@@ -2800,15 +2800,43 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
 
     return false;
   };
-  auto Erased = std::remove_if(ExitingBlocks.begin(), ExitingBlocks.end(),
-                               Filter);
-  ExitingBlocks.erase(Erased, ExitingBlocks.end());
+
+  // If we have any exits which can't be predicated themselves, than we can't
+  // predicate any exit which isn't guaranteed to execute before it.  Consider
+  // two exits (a) and (b) which would both exit on the same iteration.  If we
+  // can predicate (b), but not (a), and (a) preceeds (b) along some path, then
+  // we could convert a loop from exiting through (a) to one exiting through
+  // (b).  Note that this problem exists only for exits with the same exit
+  // count, and we could be more aggressive when exit counts are known inequal.
+  llvm::sort(ExitingBlocks,
+            [&](BasicBlock *A, BasicBlock *B) {
+              // std::sort sorts in ascending order, so we want the inverse of
+              // the normal dominance relation, plus a tie breaker for blocks
+              // unordered by dominance.
+              if (DT->properlyDominates(A, B)) return true;
+              if (DT->properlyDominates(B, A)) return false;
+              return A->getName() < B->getName();
+            });
+  // Check to see if our exit blocks are a total order (i.e. a linear chain of
+  // exits before the backedge).  If they aren't, reasoning about reachability
+  // is complicated and we choose not to for now.
+  for (unsigned i = 1; i < ExitingBlocks.size(); i++)
+    if (!DT->dominates(ExitingBlocks[i-1], ExitingBlocks[i]))
+      return Changed;
+
+  // Given our sorted total order, we know that exit[j] must be evaluated
+  // after all exit[i] such j > i.
+  for (unsigned i = 0, e = ExitingBlocks.size(); i < e; i++)
+    if (BadExit(ExitingBlocks[i])) {
+      ExitingBlocks.resize(i);  
+      break;
+    }
 
   if (ExitingBlocks.empty())
     return Changed;
 
   // We rely on not being able to reach an exiting block on a later iteration
-  // than it's statically compute exit count.  The implementaton of
+  // then it's statically compute exit count.  The implementaton of
   // getExitCount currently has this invariant, but assert it here so that
   // breakage is obvious if this ever changes..
   assert(llvm::all_of(ExitingBlocks, [&](BasicBlock *ExitingBB) {

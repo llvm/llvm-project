@@ -148,6 +148,11 @@ static Expected<std::vector<std::string>> getInputs(opt::InputArgList &Args,
 
 // Verify that the given combination of options makes sense.
 static Error verifyOptions(const DsymutilOptions &Options) {
+  if (Options.InputFiles.empty()) {
+    return make_error<StringError>("no input files specified",
+                                   errc::invalid_argument);
+  }
+
   if (Options.LinkOpts.Update &&
       std::find(Options.InputFiles.begin(), Options.InputFiles.end(), "-") !=
           Options.InputFiles.end()) {
@@ -439,6 +444,11 @@ int main(int argc, char **argv) {
   void *P = (void *)(intptr_t)getOutputFileName;
   std::string SDKPath = sys::fs::getMainExecutable(argv[0], P);
   SDKPath = sys::path::parent_path(SDKPath);
+
+  for (auto *Arg : Args.filtered(OPT_UNKNOWN)) {
+    WithColor::warning() << "ignoring unknown option: " << Arg->getSpelling()
+                         << '\n';
+  }
 
   if (Args.hasArg(OPT_help)) {
     T.PrintHelp(

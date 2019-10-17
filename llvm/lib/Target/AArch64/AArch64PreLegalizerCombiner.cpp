@@ -47,7 +47,11 @@ public:
                                   GISelKnownBits *KB, MachineDominatorTree *MDT)
       : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize),
-        KB(KB), MDT(MDT) {}
+        KB(KB), MDT(MDT) {
+    if (!Generated.parseCommandLineOption())
+      report_fatal_error("Invalid rule identifier");
+  }
+
   virtual bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
                        MachineIRBuilder &B) const override;
 };
@@ -58,12 +62,8 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
   CombinerHelper Helper(Observer, B, KB, MDT);
 
   switch (MI.getOpcode()) {
-  default:
-    return false;
-  case TargetOpcode::COPY:
-    return Helper.tryCombineCopy(MI);
-  case TargetOpcode::G_BR:
-    return Helper.tryCombineBr(MI);
+  case TargetOpcode::G_CONCAT_VECTORS:
+    return Helper.tryCombineConcatVectors(MI);
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD: {
@@ -118,7 +118,7 @@ public:
 private:
   bool IsOptNone;
 };
-}
+} // end anonymous namespace
 
 void AArch64PreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();

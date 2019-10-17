@@ -114,7 +114,7 @@ class LiveRangeCalc {
     VNInfo *Value = nullptr;
 
     LiveInBlock(LiveRange &LR, MachineDomTreeNode *node, SlotIndex kill)
-      : LR(LR), DomNode(node), Kill(kill) {}
+        : LR(LR), DomNode(node), Kill(kill) {}
   };
 
   /// LiveIn - Work list of blocks where the live-in value has yet to be
@@ -145,9 +145,8 @@ class LiveRangeCalc {
   /// @p Undef, the function returns false.
   ///
   /// PhysReg, when set, is used to verify live-in lists on basic blocks.
-  bool findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
-                        SlotIndex Use, unsigned PhysReg,
-                        ArrayRef<SlotIndex> Undefs);
+  bool findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB, SlotIndex Use,
+                        unsigned PhysReg, ArrayRef<SlotIndex> Undefs);
 
   /// updateSSA - Compute the values that will be live in to all requested
   /// blocks in LiveIn.  Create PHI-def values as required to preserve SSA form.
@@ -267,8 +266,7 @@ public:
   /// @param Kill    Index in block where LI is killed.  If the value is
   ///                live-through, set Kill = SLotIndex() and also call
   ///                setLiveOutValue(MBB, 0).
-  void addLiveInBlock(LiveRange &LR,
-                      MachineDomTreeNode *DomNode,
+  void addLiveInBlock(LiveRange &LR, MachineDomTreeNode *DomNode,
                       SlotIndex Kill = SlotIndex()) {
     LiveIn.push_back(LiveInBlock(LR, DomNode, Kill));
   }

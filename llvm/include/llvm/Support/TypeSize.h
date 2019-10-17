@@ -120,7 +120,7 @@ public:
 
   // Return the minimum size with the assumption that the size is exact.
   // Use in places where a scalable size doesn't make sense (e.g. non-vector
-  // types, or vectors in backends which don't support scalable vectors)
+  // types, or vectors in backends which don't support scalable vectors).
   uint64_t getFixedSize() const {
     assert(!IsScalable && "Request for a fixed size on a scalable object");
     return MinSize;
@@ -141,12 +141,12 @@ public:
   // Casts to a uint64_t if this is a fixed-width size.
   //
   // NOTE: This interface is obsolete and will be removed in a future version
-  // of LLVM in favour of calling getFixedSize() directly
+  // of LLVM in favour of calling getFixedSize() directly.
   operator uint64_t() const {
     return getFixedSize();
   }
 
-  // Additional convenience operators needed to avoid ambiguous parses
+  // Additional convenience operators needed to avoid ambiguous parses.
   // TODO: Make uint64_t the default operator?
   TypeSize operator*(uint64_t RHS) const {
     return { MinSize * RHS, IsScalable };

@@ -28,6 +28,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
+#include "llvm/Support/Automaton.h"
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -76,59 +77,26 @@ using DFAStateInput = int64_t;
 
 class DFAPacketizer {
 private:
-  using UnsignPair = std::pair<unsigned, DFAInput>;
-
   const InstrItineraryData *InstrItins;
-  int CurrentState = 0;
-  const DFAStateInput (*DFAStateInputTable)[2];
-  const unsigned *DFAStateEntryTable;
-  const unsigned (*DFAResourceTransitionTable)[2];
-  const unsigned *DFAResourceTransitionEntryTable;
-
-  // CachedTable is a map from <FromState, Input> to ToState.
-  DenseMap<UnsignPair, unsigned> CachedTable;
-  // CachedResourceTransitions is a map from <FromState, Input> to a list of
-  // resource transitions.
-  DenseMap<UnsignPair, ArrayRef<unsigned[2]>>
-      CachedResourceTransitions;
-
-  // Read the DFA transition table and update CachedTable.
-  void ReadTable(unsigned state);
-
-  bool TrackResources = false;
-  // State for the current packet. Every entry is a possible packing of the
-  // bundle, indexed by cumulative resource state. Each entry is a list of the
-  // cumulative resource states after packing each instruction. For example if
-  // we pack I0: [0x4] and I1: [0x2] we will end up with:
-  //   ResourceStates[0x6] = [0x4, 0x6]
-  DenseMap<unsigned, SmallVector<unsigned, 8>> ResourceStates;
+  Automaton<DFAInput> A;
 
 public:
-  DFAPacketizer(const InstrItineraryData *I, const DFAStateInput (*SIT)[2],
-                const unsigned *SET,
-                const unsigned (*RTT)[2] = nullptr,
-                const unsigned *RTET = nullptr);
+  DFAPacketizer(const InstrItineraryData *InstrItins, Automaton<uint64_t> a) :
+      InstrItins(InstrItins), A(std::move(a)) {
+    // Start off with resource tracking disabled.
+    A.enableTranscription(false);
+  }
 
   // Reset the current state to make all resources available.
   void clearResources() {
-    CurrentState = 0;
-    ResourceStates.clear();
-    ResourceStates[0] = {};
+    A.reset();
   }
 
   // Set whether this packetizer should track not just whether instructions
   // can be packetized, but also which functional units each instruction ends up
   // using after packetization.
   void setTrackResources(bool Track) {
-    if (Track != TrackResources) {
-      TrackResources = Track;
-      if (Track) {
-        CachedTable.clear();
-        assert(DFAResourceTransitionEntryTable);
-        assert(DFAResourceTransitionTable);
-      }
-    }
-    assert(CurrentState == 0 && "Can only change TrackResources on an empty packetizer!");
+    A.enableTranscription(Track);
   }
 
   // Return the DFAInput for an instruction class.

@@ -35,6 +35,12 @@ Here's where **llvm-ar** departs from previous ``ar`` implementations:
 
  Currently **llvm-ar** can read GNU and BSD long file names, but only writes
  archives with the GNU format.
+ 
+*Windows Paths*
+
+ When on Windows **llvm-ar** treats the names of archived *files* in the same
+ case sensitive manner as the operating system. When on a non-Windows machine
+ **llvm-ar** does not consider character case.
 
 OPTIONS
 -------

@@ -93,6 +93,8 @@ def fencearg : Operand<XLenVT> {
   let ParserMatchClass = FenceArg;
   let PrintMethod = "printFenceArg";
   let DecoderMethod = "decodeUImmOperand<4>";
+  let OperandType = "OPERAND_UIMM4";
+  let OperandNamespace = "RISCVOp";
 }
 
 def UImmLog2XLenAsmOperand : AsmOperandClass {
@@ -117,11 +119,15 @@ def uimmlog2xlen : Operand<XLenVT>, ImmLeaf<XLenVT, [{
       return  isUInt<6>(Imm);
     return isUInt<5>(Imm);
   }];
+  let OperandType = "OPERAND_UIMMLOG2XLEN";
+  let OperandNamespace = "RISCVOp";
 }
 
 def uimm5 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5>;
   let DecoderMethod = "decodeUImmOperand<5>";
+  let OperandType = "OPERAND_UIMM5";
+  let OperandNamespace = "RISCVOp";
 }
 
 def simm12 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<12>(Imm);}]> {
@@ -134,6 +140,8 @@ def simm12 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<12>(Imm);}]> {
       return isInt<12>(Imm);
     return MCOp.isBareSymbolRef();
   }];
+  let OperandType = "OPERAND_SIMM12";
+  let OperandNamespace = "RISCVOp";
 }
 
 // A 13-bit signed immediate where the least significant bit is zero.
@@ -147,6 +155,8 @@ def simm13_lsb0 : Operand<OtherVT> {
       return isShiftedInt<12, 1>(Imm);
     return MCOp.isBareSymbolRef();
   }];
+  let OperandType = "OPERAND_SIMM13_LSB0";
+  let OperandNamespace = "RISCVOp";
 }
 
 class UImm20Operand : Operand<XLenVT> {
@@ -158,6 +168,8 @@ class UImm20Operand : Operand<XLenVT> {
       return isUInt<20>(Imm);
     return MCOp.isBareSymbolRef();
   }];
+  let OperandType = "OPERAND_UIMM20";
+  let OperandNamespace = "RISCVOp";
 }
 
 def uimm20_lui : UImm20Operand {
@@ -182,6 +194,8 @@ def simm21_lsb0_jal : Operand<OtherVT> {
       return isShiftedInt<20, 1>(Imm);
     return MCOp.isBareSymbolRef();
   }];
+  let OperandType = "OPERAND_SIMM21_LSB0";
+  let OperandNamespace = "RISCVOp";
 }
 
 def BareSymbol : AsmOperandClass {
@@ -230,6 +244,8 @@ def csr_sysreg : Operand<XLenVT> {
   let ParserMatchClass = CSRSystemRegister;
   let PrintMethod = "printCSRSystemRegister";
   let DecoderMethod = "decodeUImmOperand<12>";
+  let OperandType = "OPERAND_UIMM12";
+  let OperandNamespace = "RISCVOp";
 }
 
 // A parameterized register class alternative to i32imm/i64imm from Target.td.

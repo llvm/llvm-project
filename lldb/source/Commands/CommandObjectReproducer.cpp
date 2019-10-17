@@ -9,8 +9,8 @@
 #include "CommandObjectReproducer.h"
 
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/GDBRemote.h"
+#include "lldb/Utility/Reproducer.h"
 
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -27,6 +27,7 @@ enum ReproducerProvider {
   eReproducerProviderFiles,
   eReproducerProviderGDB,
   eReproducerProviderVersion,
+  eReproducerProviderWorkingDirectory,
   eReproducerProviderNone
 };
 
@@ -50,6 +51,11 @@ static constexpr OptionEnumValueElement g_reproducer_provider_type[] = {
         eReproducerProviderVersion,
         "version",
         "Version",
+    },
+    {
+        eReproducerProviderWorkingDirectory,
+        "cwd",
+        "Working Directory",
     },
     {
         eReproducerProviderNone,
@@ -265,19 +271,23 @@ protected:
       return true;
     }
     case eReproducerProviderVersion: {
-      FileSpec version_file = loader->GetFile<VersionProvider::Info>();
-
-      // Load the version info into a buffer.
-      ErrorOr<std::unique_ptr<MemoryBuffer>> buffer =
-          vfs::getRealFileSystem()->getBufferForFile(version_file.GetPath());
-      if (!buffer) {
-        SetError(result, errorCodeToError(buffer.getError()));
+      Expected<std::string> version = loader->LoadBuffer<VersionProvider>();
+      if (!version) {
+        SetError(result, version.takeError());
         return false;
       }
-
-      // Return the version string.
-      StringRef version = (*buffer)->getBuffer();
-      result.AppendMessage(version.str());
+      result.AppendMessage(*version);
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return true;
+    }
+    case eReproducerProviderWorkingDirectory: {
+      Expected<std::string> cwd =
+          loader->LoadBuffer<WorkingDirectoryProvider>();
+      if (!cwd) {
+        SetError(result, cwd.takeError());
+        return false;
+      }
+      result.AppendMessage(*cwd);
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;
     }
@@ -327,7 +337,7 @@ protected:
         return false;
       }
 
-      for (GDBRemotePacket& packet : packets) {
+      for (GDBRemotePacket &packet : packets) {
         packet.Dump(result.GetOutputStream());
       }
 

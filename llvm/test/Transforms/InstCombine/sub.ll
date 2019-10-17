@@ -494,7 +494,7 @@ define i16 @test24a_as1(i8 addrspace(1)* %P, i16 %A) {
 
 define i64 @test24b(i8* %P, i64 %A){
 ; CHECK-LABEL: @test24b(
-; CHECK-NEXT:    [[B_IDX:%.*]] = shl nuw i64 [[A:%.*]], 1
+; CHECK-NEXT:    [[B_IDX:%.*]] = shl nsw i64 [[A:%.*]], 1
 ; CHECK-NEXT:    ret i64 [[B_IDX]]
 ;
   %B = getelementptr inbounds [42 x i16], [42 x i16]* @Arr, i64 0, i64 %A
@@ -506,9 +506,9 @@ define i64 @test24b(i8* %P, i64 %A){
 
 define i64 @test25(i8* %P, i64 %A){
 ; CHECK-LABEL: @test25(
-; CHECK-NEXT:    [[B_IDX:%.*]] = shl nuw i64 [[A:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[B_IDX]], -84
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[B_IDX:%.*]] = shl nsw i64 [[A:%.*]], 1
+; CHECK-NEXT:    [[DIFF_NEG:%.*]] = add i64 [[B_IDX]], -84
+; CHECK-NEXT:    ret i64 [[DIFF_NEG]]
 ;
   %B = getelementptr inbounds [42 x i16], [42 x i16]* @Arr, i64 0, i64 %A
   %C = ptrtoint i16* %B to i64
@@ -521,9 +521,9 @@ define i64 @test25(i8* %P, i64 %A){
 define i16 @test25_as1(i8 addrspace(1)* %P, i64 %A) {
 ; CHECK-LABEL: @test25_as1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[A:%.*]] to i16
-; CHECK-NEXT:    [[B_IDX:%.*]] = shl nuw i16 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i16 [[B_IDX]], -84
-; CHECK-NEXT:    ret i16 [[TMP2]]
+; CHECK-NEXT:    [[B_IDX:%.*]] = shl nsw i16 [[TMP1]], 1
+; CHECK-NEXT:    [[DIFF_NEG:%.*]] = add i16 [[B_IDX]], -84
+; CHECK-NEXT:    ret i16 [[DIFF_NEG]]
 ;
   %B = getelementptr inbounds [42 x i16], [42 x i16] addrspace(1)* @Arr_as1, i64 0, i64 %A
   %C = ptrtoint i16 addrspace(1)* %B to i16
@@ -668,7 +668,7 @@ define i64 @test29(i8* %foo, i64 %i, i64 %j) {
 
 define i64 @test30(i8* %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test30(
-; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nuw i64 [[I:%.*]], 2
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i64 [[I:%.*]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[GEP1_IDX]], [[J:%.*]]
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
@@ -683,7 +683,7 @@ define i64 @test30(i8* %foo, i64 %i, i64 %j) {
 
 define i16 @test30_as1(i8 addrspace(1)* %foo, i16 %i, i16 %j) {
 ; CHECK-LABEL: @test30_as1(
-; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nuw i16 [[I:%.*]], 2
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i16 [[I:%.*]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i16 [[GEP1_IDX]], [[J:%.*]]
 ; CHECK-NEXT:    ret i16 [[TMP1]]
 ;

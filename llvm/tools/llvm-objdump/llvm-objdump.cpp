@@ -342,27 +342,14 @@ static StringRef ToolName;
 
 typedef std::vector<std::tuple<uint64_t, StringRef, uint8_t>> SectionSymbolsTy;
 
-namespace {
-struct FilterResult {
-  // True if the section should not be skipped.
-  bool Keep;
-
-  // True if the index counter should be incremented, even if the section should
-  // be skipped. For example, sections may be skipped if they are not included
-  // in the --section flag, but we still want those to count toward the section
-  // count.
-  bool IncrementIndex;
-};
-} // namespace
-
-static FilterResult checkSectionFilter(object::SectionRef S) {
+static bool shouldKeep(object::SectionRef S) {
   if (FilterSections.empty())
-    return {/*Keep=*/true, /*IncrementIndex=*/true};
+    return true;
 
   Expected<StringRef> SecNameOrErr = S.getName();
   if (!SecNameOrErr) {
     consumeError(SecNameOrErr.takeError());
-    return {/*Keep=*/false, /*IncrementIndex=*/false};
+    return false;
   }
   StringRef SecName = *SecNameOrErr;
 
@@ -370,26 +357,11 @@ static FilterResult checkSectionFilter(object::SectionRef S) {
   // no name (such as the section with index 0) here.
   if (!SecName.empty())
     FoundSectionSet.insert(SecName);
-
-  // Only show the section if it's in the FilterSections list, but always
-  // increment so the indexing is stable.
-  return {/*Keep=*/is_contained(FilterSections, SecName),
-          /*IncrementIndex=*/true};
+  return is_contained(FilterSections, SecName);
 }
 
-SectionFilter ToolSectionFilter(object::ObjectFile const &O, uint64_t *Idx) {
-  // Start at UINT64_MAX so that the first index returned after an increment is
-  // zero (after the unsigned wrap).
-  if (Idx)
-    *Idx = UINT64_MAX;
-  return SectionFilter(
-      [Idx](object::SectionRef S) {
-        FilterResult Result = checkSectionFilter(S);
-        if (Idx != nullptr && Result.IncrementIndex)
-          *Idx += 1;
-        return Result.Keep;
-      },
-      O);
+SectionFilter ToolSectionFilter(object::ObjectFile const &O) {
+  return SectionFilter([](object::SectionRef S) { return shouldKeep(S); }, O);
 }
 
 std::string getFileNameForError(const object::Archive::Child &C,
@@ -995,7 +967,7 @@ getRelocsMap(object::ObjectFile const &Obj) {
   std::map<SectionRef, std::vector<RelocationRef>> Ret;
   for (SectionRef Sec : Obj.sections()) {
     section_iterator Relocated = Sec.getRelocatedSection();
-    if (Relocated == Obj.section_end() || !checkSectionFilter(*Relocated).Keep)
+    if (Relocated == Obj.section_end() || !shouldKeep(*Relocated))
       continue;
     std::vector<RelocationRef> &V = Ret[*Relocated];
     for (const RelocationRef &R : Sec.relocations())
@@ -1704,8 +1676,7 @@ void printSectionHeaders(const ObjectFile *Obj) {
            << left_justify("Name", NameWidth) << " Size     "
            << left_justify("VMA", AddressWidth) << " Type\n";
 
-  uint64_t Idx;
-  for (const SectionRef &Section : ToolSectionFilter(*Obj, &Idx)) {
+  for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
     StringRef Name = unwrapOrError(Section.getName(), Obj->getFileName());
     uint64_t VMA = Section.getAddress();
     if (shouldAdjustVA(Section))
@@ -1720,14 +1691,14 @@ void printSectionHeaders(const ObjectFile *Obj) {
       Type += Type.empty() ? "BSS" : " BSS";
 
     if (HasLMAColumn)
-      outs() << format("%3d %-*s %08" PRIx64 " ", Idx, NameWidth,
-                       Name.str().c_str(), Size)
+      outs() << format("%3d %-*s %08" PRIx64 " ", (unsigned)Section.getIndex(),
+                       NameWidth, Name.str().c_str(), Size)
              << format_hex_no_prefix(VMA, AddressWidth) << " "
              << format_hex_no_prefix(getELFSectionLMA(Section), AddressWidth)
              << " " << Type << "\n";
     else
-      outs() << format("%3d %-*s %08" PRIx64 " ", Idx, NameWidth,
-                       Name.str().c_str(), Size)
+      outs() << format("%3d %-*s %08" PRIx64 " ", (unsigned)Section.getIndex(),
+                       NameWidth, Name.str().c_str(), Size)
              << format_hex_no_prefix(VMA, AddressWidth) << " " << Type << "\n";
   }
   outs() << "\n";

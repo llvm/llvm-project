@@ -585,8 +585,9 @@ TEST_F(PythonDataObjectsTest, TestPythonFile) {
   auto file = FileSystem::Instance().Open(FileSpec(FileSystem::DEV_NULL),
                                           File::eOpenOptionRead);
   ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
-  PythonFile py_file(*file.get(), "r");
-  EXPECT_TRUE(PythonFile::Check(py_file.get()));
+  auto py_file = PythonFile::FromFile(*file.get(), "r");
+  ASSERT_THAT_EXPECTED(py_file, llvm::Succeeded());
+  EXPECT_TRUE(PythonFile::Check(py_file.get().get()));
 }
 
 TEST_F(PythonDataObjectsTest, TestObjectAttributes) {

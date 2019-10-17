@@ -90,7 +90,7 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
   ret i64 %tmp
 }
 
-define i16 @func16(i16 %x, i16 %y) nounwind {
+define zeroext i16 @func16(i16 zeroext %x, i16 zeroext %y) nounwind {
 ; CHECK-T1-LABEL: func16:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    lsls r1, r1, #16
@@ -125,7 +125,7 @@ define i16 @func16(i16 %x, i16 %y) nounwind {
   ret i16 %tmp
 }
 
-define i8 @func8(i8 %x, i8 %y) nounwind {
+define zeroext i8 @func8(i8 zeroext %x, i8 zeroext %y) nounwind {
 ; CHECK-T1-LABEL: func8:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    lsls r1, r1, #24
@@ -160,7 +160,7 @@ define i8 @func8(i8 %x, i8 %y) nounwind {
   ret i8 %tmp
 }
 
-define i4 @func3(i4 %x, i4 %y) nounwind {
+define zeroext i4 @func3(i4 zeroext %x, i4 zeroext %y) nounwind {
 ; CHECK-T1-LABEL: func3:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    lsls r1, r1, #28

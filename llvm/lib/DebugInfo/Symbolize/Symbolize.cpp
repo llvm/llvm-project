@@ -35,19 +35,6 @@
 #include <cassert>
 #include <cstring>
 
-#if defined(_MSC_VER)
-#include <Windows.h>
-
-// This must be included after windows.h.
-#include <DbgHelp.h>
-#pragma comment(lib, "dbghelp.lib")
-
-// Windows.h conflicts with our COFF header definitions.
-#ifdef IMAGE_FILE_MACHINE_I386
-#undef IMAGE_FILE_MACHINE_I386
-#endif
-#endif
-
 namespace llvm {
 namespace symbolize {
 
@@ -534,21 +521,20 @@ LLVMSymbolizer::DemangleName(const std::string &Name,
     return Result;
   }
 
-#if defined(_MSC_VER)
   if (!Name.empty() && Name.front() == '?') {
     // Only do MSVC C++ demangling on symbols starting with '?'.
-    char DemangledName[1024] = {0};
-    DWORD result = ::UnDecorateSymbolName(
-        Name.c_str(), DemangledName, 1023,
-        UNDNAME_NO_ACCESS_SPECIFIERS |       // Strip public, private, protected
-            UNDNAME_NO_ALLOCATION_LANGUAGE | // Strip __thiscall, __stdcall, etc
-            UNDNAME_NO_THROW_SIGNATURES |    // Strip throw() specifications
-            UNDNAME_NO_MEMBER_TYPE | // Strip virtual, static, etc specifiers
-            UNDNAME_NO_MS_KEYWORDS | // Strip all MS extension keywords
-            UNDNAME_NO_FUNCTION_RETURNS); // Strip function return types
-    return (result == 0) ? Name : std::string(DemangledName);
+    int status = 0;
+    char *DemangledName = microsoftDemangle(
+        Name.c_str(), nullptr, nullptr, &status,
+        MSDemangleFlags(MSDF_NoAccessSpecifier | MSDF_NoCallingConvention |
+                        MSDF_NoMemberType | MSDF_NoReturnType));
+    if (status != 0)
+      return Name;
+    std::string Result = DemangledName;
+    free(DemangledName);
+    return Result;
   }
-#endif
+
   if (DbiModuleDescriptor && DbiModuleDescriptor->isWin32Module())
     return std::string(demanglePE32ExternCFunc(Name));
   return Name;

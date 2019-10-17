@@ -12,4 +12,7 @@
 include "llvm/Target/GlobalISel/Combine.td"
 
 def AArch64PreLegalizerCombinerHelper: GICombinerHelper<
-  "AArch64GenPreLegalizerCombinerHelper">;
+  "AArch64GenPreLegalizerCombinerHelper", [all_combines,
+                                           elide_br_by_inverting_cond]> {
+  let DisableRuleOption = "aarch64prelegalizercombiner-disable-rule";
+}

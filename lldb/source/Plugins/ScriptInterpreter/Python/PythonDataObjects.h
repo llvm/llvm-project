@@ -637,20 +637,6 @@ public:
   static llvm::Expected<PythonFile> FromFile(File &file,
                                              const char *mode = nullptr);
 
-  // FIXME delete this after FILE* typemaps are deleted
-  // and ScriptInterpreterPython is fixed
-  PythonFile(File &file, const char *mode = nullptr) {
-    auto f = FromFile(file, mode);
-    if (f)
-      *this = std::move(f.get());
-    else {
-      Reset();
-      llvm::consumeError(f.takeError());
-    }
-  }
-
-  lldb::FileUP GetUnderlyingFile() const;
-
   llvm::Expected<lldb::FileSP> ConvertToFile(bool borrowed = false);
   llvm::Expected<lldb::FileSP>
   ConvertToFileForcingUseOfScriptingIOMethods(bool borrowed = false);

@@ -971,6 +971,13 @@ InstCombiner::simplifyShrShlDemandedBits(Instruction *Shr, const APInt &ShrOp1,
 Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
                                                            APInt DemandedElts,
                                                            int DMaskIdx) {
+
+  // FIXME: Allow v3i16/v3f16 in buffer intrinsics when the types are fully supported.
+  if (DMaskIdx < 0 &&
+      II->getType()->getScalarSizeInBits() != 32 &&
+      DemandedElts.getActiveBits() == 3)
+    return nullptr;
+
   unsigned VWidth = II->getType()->getVectorNumElements();
   if (VWidth == 1)
     return nullptr;

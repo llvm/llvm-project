@@ -651,10 +651,15 @@ bool ScriptInterpreterPythonImpl::SetStdHandle(FileSP file_sp,
 
   PythonDictionary &sys_module_dict = GetSysModuleDictionary();
 
+  auto new_file = PythonFile::FromFile(file, mode);
+  if (!new_file) {
+    llvm::consumeError(new_file.takeError());
+    return false;
+  }
+
   save_file = sys_module_dict.GetItemForKey(PythonString(py_name));
 
-  PythonFile new_file(file, mode);
-  sys_module_dict.SetItemForKey(PythonString(py_name), new_file);
+  sys_module_dict.SetItemForKey(PythonString(py_name), new_file.get());
   return true;
 }
 

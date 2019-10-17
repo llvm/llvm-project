@@ -20,12 +20,14 @@ ModulePass *createBPFAbstractMemberAccess(BPFTargetMachine *TM);
 FunctionPass *createBPFISelDag(BPFTargetMachine &TM);
 FunctionPass *createBPFMISimplifyPatchablePass();
 FunctionPass *createBPFMIPeepholePass();
+FunctionPass *createBPFMIPeepholeTruncElimPass();
 FunctionPass *createBPFMIPreEmitPeepholePass();
 FunctionPass *createBPFMIPreEmitCheckingPass();
 
 void initializeBPFAbstractMemberAccessPass(PassRegistry&);
 void initializeBPFMISimplifyPatchablePass(PassRegistry&);
 void initializeBPFMIPeepholePass(PassRegistry&);
+void initializeBPFMIPeepholeTruncElimPass(PassRegistry&);
 void initializeBPFMIPreEmitPeepholePass(PassRegistry&);
 void initializeBPFMIPreEmitCheckingPass(PassRegistry&);
 }

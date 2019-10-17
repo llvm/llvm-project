@@ -115,7 +115,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
   // (approximately) the same storage mapping class. For example all the csects
   // with a storage mapping class of `xmc_pr` will get placed into the same
   // container.
-  using ControlSections = std::deque<ControlSection>;
+  using CsectGroup = std::deque<ControlSection>;
 
   support::endian::Writer W;
   std::unique_ptr<MCXCOFFObjectTargetWriter> TargetObjectWriter;
@@ -129,11 +129,11 @@ class XCOFFObjectWriter : public MCObjectWriter {
   Section Text;
   Section BSS;
 
-  // ControlSections. These store the csects which make up different parts of
+  // CsectGroups. These store the csects which make up different parts of
   // the sections. Should have one for each set of csects that get mapped into
   // the same section and get handled in a 'similar' way.
-  ControlSections ProgramCodeCsects;
-  ControlSections BSSCsects;
+  CsectGroup ProgramCodeCsects;
+  CsectGroup BSSCsects;
 
   uint32_t SymbolTableEntryCount = 0;
   uint32_t SymbolTableOffset = 0;

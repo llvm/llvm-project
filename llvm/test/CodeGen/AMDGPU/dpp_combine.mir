@@ -563,6 +563,42 @@ body: |
     %3:vgpr_32 = V_CEIL_F32_e32 %2, implicit $exec
 ...
 
+# Do not combine a dpp mov which writes a physreg.
+# GCN-LABEL: name: phys_dpp_mov_dst
+# GCN: $vgpr0 = V_MOV_B32_dpp undef %0:vgpr_32, undef %1:vgpr_32, 1, 15, 15, 1, implicit $exec
+# GCN: %2:vgpr_32 = V_CEIL_F32_e32 $vgpr0, implicit $exec
+name: phys_dpp_mov_dst
+tracksRegLiveness: true
+body: |
+  bb.0:
+    $vgpr0 = V_MOV_B32_dpp undef %1:vgpr_32, undef %0:vgpr_32, 1, 15, 15, 1, implicit $exec
+    %2:vgpr_32 = V_CEIL_F32_e32 $vgpr0, implicit $exec
+...
+
+# Do not combine a dpp mov which reads a physreg.
+# GCN-LABEL: name: phys_dpp_mov_old_src
+# GCN: %0:vgpr_32 = V_MOV_B32_dpp undef $vgpr0, undef %1:vgpr_32, 1, 15, 15, 1, implicit $exec
+# GCN: %2:vgpr_32 = V_CEIL_F32_e32 %0, implicit $exec
+name: phys_dpp_mov_old_src
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %1:vgpr_32 = V_MOV_B32_dpp undef $vgpr0, undef %0:vgpr_32, 1, 15, 15, 1, implicit $exec
+    %2:vgpr_32 = V_CEIL_F32_e32 %1, implicit $exec
+...
+
+# Do not combine a dpp mov which reads a physreg.
+# GCN-LABEL: name: phys_dpp_mov_src
+# GCN: %0:vgpr_32 = V_MOV_B32_dpp undef %1:vgpr_32, undef $vgpr0, 1, 15, 15, 1, implicit $exec
+# GCN: %2:vgpr_32 = V_CEIL_F32_e32 %0, implicit $exec
+name: phys_dpp_mov_src
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %1:vgpr_32 = V_MOV_B32_dpp undef %0:vgpr_32, undef $vgpr0, 1, 15, 15, 1, implicit $exec
+    %2:vgpr_32 = V_CEIL_F32_e32 %1, implicit $exec
+...
+
 # GCN-LABEL: name: dpp_reg_sequence_both_combined
 # GCN: %0:vreg_64 = COPY $vgpr0_vgpr1
 # GCN: %1:vreg_64 = COPY $vgpr2_vgpr3

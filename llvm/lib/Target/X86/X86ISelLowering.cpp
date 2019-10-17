@@ -29056,6 +29056,9 @@ bool X86TargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
 }
 
 bool X86TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
+  if (isa<MaskedLoadSDNode>(ExtVal.getOperand(0)))
+    return false;
+
   EVT SrcVT = ExtVal.getOperand(0).getValueType();
 
   // There is no extending load for vXi1.

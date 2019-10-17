@@ -66,9 +66,9 @@ body:             |
     ; CHECK:   renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 1, internal killed renamable $vpr
     ; CHECK: }
     ; CHECK: renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    ; CHECK: BUNDLE implicit-def $vpr, implicit killed $q2, implicit $zr {
-    ; CHECK:   MVE_VPST 8, implicit-def $vpr
-    ; CHECK:   renamable $vpr = MVE_VCMPi32r killed renamable $q2, $zr, 0, 1, internal killed renamable $vpr
+    ; CHECK: BUNDLE implicit-def $vpr, implicit killed $vpr, implicit killed $q2, implicit $zr {
+    ; CHECK:   MVE_VPST 8, implicit $vpr
+    ; CHECK:   renamable $vpr = MVE_VCMPi32r killed renamable $q2, $zr, 0, 1, killed renamable $vpr
     ; CHECK: }
     ; CHECK: renamable $q0 = MVE_VPSEL killed renamable $q0, killed renamable $q1, 0, killed renamable $vpr
     ; CHECK: tBX_RET 14, $noreg, implicit $q0
@@ -100,9 +100,9 @@ body:             |
   ; CHECK:   renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
   ; CHECK: bb.1.bb2:
   ; CHECK:   liveins: $q0, $q1, $q2, $vpr
-  ; CHECK:   BUNDLE implicit-def $vpr, implicit killed $q2, implicit $zr {
-  ; CHECK:     MVE_VPST 8, implicit-def $vpr
-  ; CHECK:     renamable $vpr = MVE_VCMPi32r killed renamable $q2, $zr, 0, 1, internal killed renamable $vpr
+  ; CHECK:   BUNDLE implicit-def $vpr, implicit killed $vpr, implicit killed $q2, implicit $zr {
+  ; CHECK:     MVE_VPST 8, implicit $vpr
+  ; CHECK:     renamable $vpr = MVE_VCMPi32r killed renamable $q2, $zr, 0, 1, killed renamable $vpr
   ; CHECK:   }
   ; CHECK:   renamable $q0 = MVE_VPSEL killed renamable $q0, killed renamable $q1, 0, killed renamable $vpr
   ; CHECK:   tBX_RET 14, $noreg, implicit $q0
@@ -141,9 +141,9 @@ body:             |
     ; CHECK: }
     ; CHECK: renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
     ; CHECK: renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    ; CHECK: BUNDLE implicit-def $vpr, implicit killed $q2, implicit $zr {
-    ; CHECK:   MVE_VPST 8, implicit-def $vpr
-    ; CHECK:   renamable $vpr = MVE_VCMPi32r killed renamable $q2, $zr, 0, 1, internal killed renamable $vpr
+    ; CHECK: BUNDLE implicit-def $vpr, implicit killed $vpr, implicit killed $q2, implicit $zr {
+    ; CHECK:   MVE_VPST 8, implicit $vpr
+    ; CHECK:   renamable $vpr = MVE_VCMPi32r killed renamable $q2, $zr, 0, 1, killed renamable $vpr
     ; CHECK: }
     ; CHECK: renamable $q0 = MVE_VPSEL killed renamable $q0, killed renamable $q1, 0, killed renamable $vpr
     ; CHECK: tBX_RET 14, $noreg, implicit $q0
@@ -179,9 +179,9 @@ body:             |
     ; CHECK: renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
     ; CHECK: renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
     ; CHECK: renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    ; CHECK: BUNDLE implicit-def $vpr, implicit killed $q2, implicit $zr {
-    ; CHECK:   MVE_VPST 8, implicit-def $vpr
-    ; CHECK:   renamable $vpr = MVE_VCMPi32r killed renamable $q2, $zr, 0, 1, internal killed renamable $vpr
+    ; CHECK: BUNDLE implicit-def $vpr, implicit killed $vpr, implicit killed $q2, implicit $zr {
+    ; CHECK:   MVE_VPST 8, implicit $vpr
+    ; CHECK:   renamable $vpr = MVE_VCMPi32r killed renamable $q2, $zr, 0, 1, killed renamable $vpr
     ; CHECK: }
     ; CHECK: renamable $q0 = MVE_VPSEL killed renamable $q0, killed renamable $q1, 0, killed renamable $vpr
     ; CHECK: tBX_RET 14, $noreg, implicit $q0
@@ -213,9 +213,9 @@ body:             |
     ; CHECK: liveins: $q0, $q1, $q2
     ; CHECK: renamable $vpr = MVE_VCMPs32r renamable $q0, $zr, 11, 0, $noreg
     ; CHECK: renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    ; CHECK: BUNDLE implicit-def $vpr, implicit $q1, implicit $zr, implicit killed $q2 {
-    ; CHECK:   MVE_VPST 4, implicit-def $vpr
-    ; CHECK:   renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 1, internal killed renamable $vpr
+    ; CHECK: BUNDLE implicit-def $vpr, implicit killed $vpr, implicit $q1, implicit $zr, implicit killed $q2 {
+    ; CHECK:   MVE_VPST 4, implicit $vpr
+    ; CHECK:   renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 1, killed renamable $vpr
     ; CHECK:   renamable $vpr = MVE_VCMPi32r killed renamable $q2, $zr, 0, 1, internal killed renamable $vpr
     ; CHECK: }
     ; CHECK: renamable $q0 = MVE_VPSEL killed renamable $q0, killed renamable $q1, 0, killed renamable $vpr
@@ -244,14 +244,14 @@ body:             |
     ; CHECK: liveins: $q0, $q1, $q2
     ; CHECK: renamable $vpr = MVE_VCMPs32r renamable $q0, $zr, 11, 0, $noreg
     ; CHECK: renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    ; CHECK: BUNDLE implicit-def $vpr, implicit $q1, implicit $zr {
-    ; CHECK:   MVE_VPST 8, implicit-def $vpr
-    ; CHECK:   renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 1, internal killed renamable $vpr
+    ; CHECK: BUNDLE implicit-def $vpr, implicit killed $vpr, implicit $q1, implicit $zr {
+    ; CHECK:   MVE_VPST 8, implicit $vpr
+    ; CHECK:   renamable $vpr = MVE_VCMPs32r renamable $q1, $zr, 12, 1, killed renamable $vpr
     ; CHECK: }
     ; CHECK: renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
-    ; CHECK: BUNDLE implicit-def $vpr, implicit killed $q2, implicit $zr {
-    ; CHECK:   MVE_VPST 8, implicit-def $vpr
-    ; CHECK:   renamable $vpr = MVE_VCMPi32r killed renamable $q2, $zr, 0, 1, internal killed renamable $vpr
+    ; CHECK: BUNDLE implicit-def $vpr, implicit killed $vpr, implicit killed $q2, implicit $zr {
+    ; CHECK:   MVE_VPST 8, implicit $vpr
+    ; CHECK:   renamable $vpr = MVE_VCMPi32r killed renamable $q2, $zr, 0, 1, killed renamable $vpr
     ; CHECK: }
     ; CHECK: renamable $vpr = MVE_VPNOT killed renamable $vpr, 0, $noreg
     ; CHECK: renamable $q0 = MVE_VPSEL killed renamable $q0, killed renamable $q1, 0, killed renamable $vpr

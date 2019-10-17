@@ -495,16 +495,21 @@ bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, MaybeAlign Alignment) {
   if (!EnableMaskedLoadStores || !ST->hasMVEIntegerOps())
     return false;
 
-  if (DataTy->isVectorTy()) {
-    // We don't yet support narrowing or widening masked loads/stores. Expand
-    // them for the moment.
-    unsigned VecWidth = DataTy->getPrimitiveSizeInBits();
-    if (VecWidth != 128)
+  if (auto *VecTy = dyn_cast<VectorType>(DataTy)) {
+    // Don't support v2i1 yet.
+    if (VecTy->getNumElements() == 2)
+      return false;
+
+    // We don't support extending fp types.
+     unsigned VecWidth = DataTy->getPrimitiveSizeInBits();
+    if (VecWidth != 128 && VecTy->getElementType()->isFloatingPointTy())
       return false;
   }
 
   unsigned EltWidth = DataTy->getScalarSizeInBits();
-  return EltWidth == 32 || EltWidth == 16 || EltWidth == 8;
+  return (EltWidth == 32 && (!Alignment || Alignment >= 4)) ||
+         (EltWidth == 16 && (!Alignment || Alignment >= 2)) ||
+         (EltWidth == 8);
 }
 
 int ARMTTIImpl::getMemcpyCost(const Instruction *I) {
