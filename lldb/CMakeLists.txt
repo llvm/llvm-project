@@ -26,7 +26,11 @@ include(LLDBConfig)
 include(AddLLDB)
 
 # BEGIN - Swift Mods
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../swift)
+if(EXISTS "${LLVM_EXTERNAL_SWIFT_SOURCE_DIR}")
+   list(APPEND CMAKE_MODULE_PATH
+        "${LLVM_EXTERNAL_SWIFT_SOURCE_DIR}/cmake"
+        "${LLVM_EXTERNAL_SWIFT_SOURCE_DIR}/cmake/modules")
+elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../swift)
    list(APPEND CMAKE_MODULE_PATH
         "${CMAKE_CURRENT_SOURCE_DIR}/../swift/cmake"
         "${CMAKE_CURRENT_SOURCE_DIR}/../swift/cmake/modules")
