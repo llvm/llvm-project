@@ -148,13 +148,9 @@ public:
   ///     The equivalent symbol list - any equivalent symbols found are appended
   ///     to this list.
   ///
-  /// \return
-  ///    Number of equivalent symbols found.
-  virtual size_t FindEquivalentSymbols(Symbol *original_symbol,
-                                       ModuleList &module_list,
-                                       SymbolContextList &equivalent_symbols) {
-    return 0;
-  }
+  virtual void FindEquivalentSymbols(Symbol *original_symbol,
+                                     ModuleList &module_list,
+                                     SymbolContextList &equivalent_symbols) {}
 
   /// Ask if it is ok to try and load or unload an shared library (image).
   ///

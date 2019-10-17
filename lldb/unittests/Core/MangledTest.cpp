@@ -163,7 +163,8 @@ Symbols:
 
   auto Count = [M](const char *Name, FunctionNameType Type) -> int {
     SymbolContextList SymList;
-    return M->FindFunctionSymbols(ConstString(Name), Type, SymList);
+    M->FindFunctionSymbols(ConstString(Name), Type, SymList);
+    return SymList.GetSize();
   };
 
   // Unmangled

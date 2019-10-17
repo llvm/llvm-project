@@ -5471,8 +5471,9 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
       if (module_sp) {
         SymbolContextList contexts;
         SymbolContext context;
-        if (module_sp->FindSymbolsWithNameAndType(ConstString("start"),
-                                                  eSymbolTypeCode, contexts)) {
+        module_sp->FindSymbolsWithNameAndType(ConstString("start"),
+                                              eSymbolTypeCode, contexts);
+        if (contexts.GetSize()) {
           if (contexts.GetContextAtIndex(0, context))
             m_entry_point_address = context.symbol->GetAddress();
         }

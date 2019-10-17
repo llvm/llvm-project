@@ -129,8 +129,9 @@ void ModuleCacheTest::TryGetAndPut(const FileSpec &cache_dir,
   ASSERT_TRUE(bool(module_sp));
 
   SymbolContextList sc_list;
-  EXPECT_EQ(1u, module_sp->FindFunctionSymbols(ConstString("boom"),
-                                               eFunctionNameTypeFull, sc_list));
+  module_sp->FindFunctionSymbols(ConstString("boom"), eFunctionNameTypeFull,
+                                 sc_list);
+  EXPECT_EQ(1u, sc_list.GetSize());
   EXPECT_STREQ(GetDummyRemotePath().GetCString(),
                module_sp->GetPlatformFileSpec().GetCString());
   EXPECT_STREQ(module_uuid, module_sp->GetUUID().GetAsString().c_str());

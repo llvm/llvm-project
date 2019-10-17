@@ -371,12 +371,28 @@ bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
       // to set it (for instance when we stop somewhere...)
       Module *executable_ptr = target_sp->GetExecutableModulePointer();
       if (executable_ptr) {
-        lldb_private::LineEntry line_entry(FindEntryPoint(executable_ptr));
-        if (line_entry.IsValid()) {
-          SetDefaultFileAndLine(line_entry.file, line_entry.line);
-          file_spec = m_last_file_sp->GetFileSpec();
-          line = m_last_line;
-          return true;
+        SymbolContextList sc_list;
+        ConstString main_name("main");
+        bool symbols_okay = false; // Force it to be a debug symbol.
+        bool inlines_okay = true;
+        executable_ptr->FindFunctions(main_name, nullptr,
+                                      lldb::eFunctionNameTypeBase, inlines_okay,
+                                      symbols_okay, sc_list);
+        size_t num_matches = sc_list.GetSize();
+        for (size_t idx = 0; idx < num_matches; idx++) {
+          SymbolContext sc;
+          sc_list.GetContextAtIndex(idx, sc);
+          if (sc.function) {
+            lldb_private::LineEntry line_entry;
+            if (sc.function->GetAddressRange()
+                    .GetBaseAddress()
+                    .CalculateSymbolContextLineEntry(line_entry)) {
+              SetDefaultFileAndLine(line_entry.file, line_entry.line);
+              file_spec = m_last_file_sp->GetFileSpec();
+              line = m_last_line;
+              return true;
+            }
+          }
         }
       }
     }

@@ -1179,7 +1179,7 @@ size_t SymbolFileNativePDB::ParseBlocksRecursive(Function &func) {
 
 void SymbolFileNativePDB::DumpClangAST(Stream &s) { m_ast->Dump(s); }
 
-uint32_t SymbolFileNativePDB::FindGlobalVariables(
+void SymbolFileNativePDB::FindGlobalVariables(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches, VariableList &variables) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
@@ -1204,17 +1204,16 @@ uint32_t SymbolFileNativePDB::FindGlobalVariables(
       continue;
     }
   }
-  return variables.GetSize();
 }
 
-uint32_t SymbolFileNativePDB::FindFunctions(
+void SymbolFileNativePDB::FindFunctions(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
-    FunctionNameType name_type_mask, bool include_inlines, bool append,
+    FunctionNameType name_type_mask, bool include_inlines,
     SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   // For now we only support lookup by method name.
   if (!(name_type_mask & eFunctionNameTypeMethod))
-    return 0;
+    return;
 
   using SymbolAndOffset = std::pair<uint32_t, llvm::codeview::CVSymbol>;
 
@@ -1239,15 +1238,11 @@ uint32_t SymbolFileNativePDB::FindFunctions(
 
     sc_list.Append(sc);
   }
-
-  return sc_list.GetSize();
 }
 
-uint32_t SymbolFileNativePDB::FindFunctions(const RegularExpression &regex,
-                                            bool include_inlines, bool append,
-                                            SymbolContextList &sc_list) {
-  return 0;
-}
+void SymbolFileNativePDB::FindFunctions(const RegularExpression &regex,
+                                        bool include_inlines,
+                                        SymbolContextList &sc_list) {}
 
 void SymbolFileNativePDB::FindTypes(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,

@@ -174,11 +174,10 @@ bool Disassembler::Disassemble(
   SymbolContextList sc_list;
   if (module) {
     module->FindFunctions(name, nullptr, eFunctionNameTypeAuto, include_symbols,
-                          include_inlines, true, sc_list);
+                          include_inlines, sc_list);
   } else if (exe_ctx.GetTargetPtr()) {
     exe_ctx.GetTargetPtr()->GetImages().FindFunctions(
-        name, eFunctionNameTypeAuto, include_symbols, include_inlines, false,
-        sc_list);
+        name, eFunctionNameTypeAuto, include_symbols, include_inlines, sc_list);
   }
 
   // If no functions were found there's nothing to disassemble.

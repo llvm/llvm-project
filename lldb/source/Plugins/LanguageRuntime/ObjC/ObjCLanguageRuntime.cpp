@@ -103,8 +103,8 @@ ObjCLanguageRuntime::LookupInCompleteClassCache(ConstString &name) {
   const ModuleList &modules = m_process->GetTarget().GetImages();
 
   SymbolContextList sc_list;
-  const size_t matching_symbols =
-      modules.FindSymbolsWithNameAndType(name, eSymbolTypeObjCClass, sc_list);
+  modules.FindSymbolsWithNameAndType(name, eSymbolTypeObjCClass, sc_list);
+  const size_t matching_symbols = sc_list.GetSize();
 
   if (matching_symbols) {
     SymbolContext sc;
