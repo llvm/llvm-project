@@ -673,8 +673,7 @@ TEST_F(SymbolCollectorTest, Relations) {
   const Symbol &Base = findSymbol(Symbols, "Base");
   const Symbol &Derived = findSymbol(Symbols, "Derived");
   EXPECT_THAT(Relations,
-              Contains(Relation{Base.ID, index::SymbolRole::RelationBaseOf,
-                                Derived.ID}));
+              Contains(Relation{Base.ID, RelationKind::BaseOf, Derived.ID}));
 }
 
 TEST_F(SymbolCollectorTest, References) {

@@ -364,7 +364,7 @@ TEST(FileIndexTest, Relations) {
   uint32_t Results = 0;
   RelationsRequest Req;
   Req.Subjects.insert(A);
-  Req.Predicate = index::SymbolRole::RelationBaseOf;
+  Req.Predicate = RelationKind::BaseOf;
   Index.relations(Req, [&](const SymbolID &, const Symbol &) { ++Results; });
   EXPECT_EQ(Results, 1u);
 }

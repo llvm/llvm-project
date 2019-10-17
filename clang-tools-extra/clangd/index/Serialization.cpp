@@ -29,29 +29,6 @@ llvm::Error makeError(const llvm::Twine &Msg) {
   return llvm::make_error<llvm::StringError>(Msg,
                                              llvm::inconvertibleErrorCode());
 }
-} // namespace
-
-RelationKind symbolRoleToRelationKind(index::SymbolRole Role) {
-  // SymbolRole is used to record relations in the index.
-  // Only handle the relations we actually store currently.
-  // If we start storing more relations, this list can be expanded.
-  switch (Role) {
-  case index::SymbolRole::RelationBaseOf:
-    return RelationKind::BaseOf;
-  default:
-    llvm_unreachable("Unsupported symbol role");
-  }
-}
-
-index::SymbolRole relationKindToSymbolRole(RelationKind Kind) {
-  switch (Kind) {
-  case RelationKind::BaseOf:
-    return index::SymbolRole::RelationBaseOf;
-  }
-  llvm_unreachable("Invalid relation kind");
-}
-
-namespace {
 
 // IO PRIMITIVES
 // We use little-endian 32 bit ints, sometimes with variable-length encoding.
@@ -395,15 +372,13 @@ readRefs(Reader &Data, llvm::ArrayRef<llvm::StringRef> Strings) {
 
 void writeRelation(const Relation &R, llvm::raw_ostream &OS) {
   OS << R.Subject.raw();
-  RelationKind Kind = symbolRoleToRelationKind(R.Predicate);
-  OS.write(static_cast<uint8_t>(Kind));
+  OS.write(static_cast<uint8_t>(R.Predicate));
   OS << R.Object.raw();
 }
 
 Relation readRelation(Reader &Data) {
   SymbolID Subject = Data.consumeID();
-  index::SymbolRole Predicate =
-      relationKindToSymbolRole(static_cast<RelationKind>(Data.consume8()));
+  RelationKind Predicate = static_cast<RelationKind>(Data.consume8());
   SymbolID Object = Data.consumeID();
   return {Subject, Predicate, Object};
 }

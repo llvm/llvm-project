@@ -18,6 +18,7 @@
 #include "URI.h"
 #include "index/Index.h"
 #include "index/Merge.h"
+#include "index/Relation.h"
 #include "index/SymbolCollector.h"
 #include "index/SymbolLocation.h"
 #include "clang/AST/ASTContext.h"
@@ -1107,7 +1108,7 @@ static void fillSubTypes(const SymbolID &ID,
                          const SymbolIndex *Index, int Levels, PathRef TUPath) {
   RelationsRequest Req;
   Req.Subjects.insert(ID);
-  Req.Predicate = index::SymbolRole::RelationBaseOf;
+  Req.Predicate = RelationKind::BaseOf;
   Index->relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
     if (Optional<TypeHierarchyItem> ChildSym =
             symbolToTypeHierarchyItem(Object, Index, TUPath)) {

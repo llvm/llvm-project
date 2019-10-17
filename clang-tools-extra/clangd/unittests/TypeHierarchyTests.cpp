@@ -482,7 +482,7 @@ std::vector<SymbolID> collectSubtypes(SymbolID Subject, SymbolIndex *Index) {
   std::vector<SymbolID> Result;
   RelationsRequest Req;
   Req.Subjects.insert(Subject);
-  Req.Predicate = index::SymbolRole::RelationBaseOf;
+  Req.Predicate = RelationKind::BaseOf;
   Index->relations(Req,
                    [&Result](const SymbolID &Subject, const Symbol &Object) {
                      Result.push_back(Object.ID);

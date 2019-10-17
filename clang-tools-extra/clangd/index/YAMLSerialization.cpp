@@ -282,14 +282,11 @@ template <> struct MappingTraits<Ref> {
 
 struct NormalizedSymbolRole {
   NormalizedSymbolRole(IO &) {}
-  NormalizedSymbolRole(IO &IO, SymbolRole R) {
-    Kind = static_cast<uint8_t>(clang::clangd::symbolRoleToRelationKind(R));
+  NormalizedSymbolRole(IO &IO, RelationKind R) {
+    Kind = static_cast<uint8_t>(R);
   }
 
-  SymbolRole denormalize(IO &IO) {
-    return clang::clangd::relationKindToSymbolRole(
-        static_cast<RelationKind>(Kind));
-  }
+  RelationKind denormalize(IO &IO) { return static_cast<RelationKind>(Kind); }
 
   uint8_t Kind = 0;
 };
@@ -303,7 +300,7 @@ template <> struct MappingTraits<SymbolID> {
 
 template <> struct MappingTraits<Relation> {
   static void mapping(IO &IO, Relation &Relation) {
-    MappingNormalization<NormalizedSymbolRole, SymbolRole> NRole(
+    MappingNormalization<NormalizedSymbolRole, RelationKind> NRole(
         IO, Relation.Predicate);
     IO.mapRequired("Subject", Relation.Subject);
     IO.mapRequired("Predicate", NRole->Kind);
