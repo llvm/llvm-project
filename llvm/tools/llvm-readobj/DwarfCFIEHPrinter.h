@@ -99,7 +99,7 @@ template <typename ELFT>
 void PrinterContext<ELFT>::printEHFrameHdr(uint64_t EHFrameHdrOffset,
                                            uint64_t EHFrameHdrAddress,
                                            uint64_t EHFrameHdrSize) const {
-  ListScope L(W, "EH_FRAME Header");
+  DictScope L(W, "EHFrameHeader");
   W.startLine() << format("Address: 0x%" PRIx64 "\n", EHFrameHdrAddress);
   W.startLine() << format("Offset: 0x%" PRIx64 "\n", EHFrameHdrOffset);
   W.startLine() << format("Size: 0x%" PRIx64 "\n", EHFrameHdrSize);

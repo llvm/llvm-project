@@ -149,7 +149,11 @@ class IndVarSimplify {
   bool rewriteNonIntegerIVs(Loop *L);
 
   bool simplifyAndExtend(Loop *L, SCEVExpander &Rewriter, LoopInfo *LI);
+  /// Try to eliminate loop exits based on analyzeable exit counts
   bool optimizeLoopExits(Loop *L, SCEVExpander &Rewriter);
+  /// Try to form loop invariant tests for loop exits by changing how many
+  /// iterations of the loop run when that is unobservable.
+  bool predicateLoopExits(Loop *L, SCEVExpander &Rewriter);
 
   bool canLoopBeDeleted(Loop *L, SmallVector<RewritePhi, 8> &RewritePhiSet);
   bool rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter);
@@ -2646,53 +2650,80 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   return MadeAnyChanges;
 }
 
-bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
+/// Return a symbolic upper bound for the backedge taken count of the loop.
+/// This is more general than getConstantMaxBackedgeTakenCount as it returns
+/// an arbitrary expression as opposed to only constants.
+/// TODO: Move into the ScalarEvolution class.
+static const SCEV* getMaxBackedgeTakenCount(ScalarEvolution &SE,
+                                            DominatorTree &DT, Loop *L) {
   SmallVector<BasicBlock*, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
   // Form an expression for the maximum exit count possible for this loop. We
   // merge the max and exact information to approximate a version of
   // getConstantMaxBackedgeTakenCount which isn't restricted to just constants.
-  // TODO: factor this out as a version of getConstantMaxBackedgeTakenCount which
-  // isn't guaranteed to return a constant.
   SmallVector<const SCEV*, 4> ExitCounts;
-  const SCEV *MaxConstEC = SE->getConstantMaxBackedgeTakenCount(L);
+  const SCEV *MaxConstEC = SE.getConstantMaxBackedgeTakenCount(L);
   if (!isa<SCEVCouldNotCompute>(MaxConstEC))
     ExitCounts.push_back(MaxConstEC);
   for (BasicBlock *ExitingBB : ExitingBlocks) {
-    const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
+    const SCEV *ExitCount = SE.getExitCount(L, ExitingBB);
     if (!isa<SCEVCouldNotCompute>(ExitCount)) {
-      assert(DT->dominates(ExitingBB, L->getLoopLatch()) &&
+      assert(DT.dominates(ExitingBB, L->getLoopLatch()) &&
              "We should only have known counts for exiting blocks that "
              "dominate latch!");
       ExitCounts.push_back(ExitCount);
     }
   }
   if (ExitCounts.empty())
-    return false;
-  const SCEV *MaxExitCount = SE->getUMinFromMismatchedTypes(ExitCounts);
+    return SE.getCouldNotCompute();
+  return SE.getUMinFromMismatchedTypes(ExitCounts);
+}
 
-  bool Changed = false;
-  for (BasicBlock *ExitingBB : ExitingBlocks) {
+bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
+  SmallVector<BasicBlock*, 16> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+
+  // Remove all exits which aren't both rewriteable and analyzeable.
+  auto NewEnd = llvm::remove_if(ExitingBlocks,
+                                [&](BasicBlock *ExitingBB) {
     // If our exitting block exits multiple loops, we can only rewrite the
     // innermost one.  Otherwise, we're changing how many times the innermost
     // loop runs before it exits. 
     if (LI->getLoopFor(ExitingBB) != L)
-      continue;
+      return true;
 
     // Can't rewrite non-branch yet.
     BranchInst *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
     if (!BI)
-      continue;
+      return true;
 
     // If already constant, nothing to do.
     if (isa<Constant>(BI->getCondition()))
-      continue;
+      return true;
     
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
     if (isa<SCEVCouldNotCompute>(ExitCount))
-      continue;
+      return true;
+    return false;
+   });
+  ExitingBlocks.erase(NewEnd, ExitingBlocks.end());
 
+  if (ExitingBlocks.empty())
+    return false;
+  
+  // Get a symbolic upper bound on the loop backedge taken count.  
+  const SCEV *MaxExitCount = getMaxBackedgeTakenCount(*SE, *DT, L);
+  if (isa<SCEVCouldNotCompute>(MaxExitCount))
+    return false;
+
+  bool Changed = false;
+  for (BasicBlock *ExitingBB : ExitingBlocks) {
+    BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+
+    const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
+    assert(!isa<SCEVCouldNotCompute>(ExitCount) && "checked above");
+    
     // If we know we'd exit on the first iteration, rewrite the exit to
     // reflect this.  This does not imply the loop must exit through this
     // exit; there may be an earlier one taken on the first iteration.
@@ -2743,6 +2774,14 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // the loop, then we can discharge all other exits.  (May fall out of
     // previous TODO.)
   }
+  return Changed;
+}
+
+bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
+  SmallVector<BasicBlock*, 16> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+
+  bool Changed = false;
 
   // Finally, see if we can rewrite our exit conditions into a loop invariant
   // form.  If we have a read-only loop, and we can tell that we must exit down
@@ -2958,7 +2997,12 @@ bool IndVarSimplify::run(Loop *L) {
   // Eliminate redundant IV cycles.
   NumElimIV += Rewriter.replaceCongruentIVs(L, DT, DeadInsts);
 
+  // Try to eliminate loop exits based on analyzeable exit counts
   Changed |= optimizeLoopExits(L, Rewriter);
+  
+  // Try to form loop invariant tests for loop exits by changing how many
+  // iterations of the loop run when that is unobservable.
+  Changed |= predicateLoopExits(L, Rewriter);
 
   // If we have a trip count expression, rewrite the loop's exit condition
   // using it.  

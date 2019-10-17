@@ -1968,21 +1968,22 @@ bool LoopIdiomRecognize::recognizeBCmpLoopControlFlow(
   if (CmpLoop.LatchBrContinueBB != LoopHeaderBB)
     std::swap(CmpLoop.LatchBrFinishBB, CmpLoop.LatchBrContinueBB);
 
+  SmallVector<BasicBlock *, 2> ExitBlocks;
+
+  CurLoop->getUniqueExitBlocks(ExitBlocks);
+  assert(ExitBlocks.size() <= 2U && "Can't have more than two exit blocks.");
+
   // Check that control-flow between blocks is as expected.
   if (CmpLoop.HeaderBrEqualBB != LoopLatchBB ||
-      CmpLoop.LatchBrContinueBB != LoopHeaderBB) {
+      CmpLoop.LatchBrContinueBB != LoopHeaderBB ||
+      !is_contained(ExitBlocks, CmpLoop.HeaderBrUnequalBB) ||
+      !is_contained(ExitBlocks, CmpLoop.LatchBrFinishBB)) {
     LLVM_DEBUG(dbgs() << "Loop control-flow not recognized.\n");
     return false;
   }
 
-  SmallVector<BasicBlock *, 2> ExitBlocks;
-  CurLoop->getUniqueExitBlocks(ExitBlocks);
-  assert(ExitBlocks.size() <= 2U && "Can't have more than two exit blocks.");
-
   assert(!is_contained(ExitBlocks, CmpLoop.HeaderBrEqualBB) &&
-         is_contained(ExitBlocks, CmpLoop.HeaderBrUnequalBB) &&
          !is_contained(ExitBlocks, CmpLoop.LatchBrContinueBB) &&
-         is_contained(ExitBlocks, CmpLoop.LatchBrFinishBB) &&
          "Unexpected exit edges.");
 
   LLVM_DEBUG(dbgs() << "Recognized loop control-flow.\n");

@@ -339,7 +339,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
                                   // not, we assume no limit
 
   // build the qSupported packet
-  std::vector<std::string> features = {"xmlRegisters=i386,arm,mips"};
+  std::vector<std::string> features = {"xmlRegisters=i386,arm,mips,arc"};
   StreamString packet;
   packet.PutCString("qSupported");
   for (uint32_t i = 0; i < features.size(); ++i) {
@@ -3834,8 +3834,9 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
 
               addr_t symbol_load_addr = LLDB_INVALID_ADDRESS;
               lldb_private::SymbolContextList sc_list;
-              if (process->GetTarget().GetImages().FindSymbolsWithNameAndType(
-                      ConstString(symbol_name), eSymbolTypeAny, sc_list)) {
+              process->GetTarget().GetImages().FindSymbolsWithNameAndType(
+                  ConstString(symbol_name), eSymbolTypeAny, sc_list);
+              if (!sc_list.IsEmpty()) {
                 const size_t num_scs = sc_list.GetSize();
                 for (size_t sc_idx = 0;
                      sc_idx < num_scs &&

@@ -1007,8 +1007,11 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                               is_attr_used, attrs.is_artificial);
 
                       type_handled = cxx_method_decl != NULL;
+                      // Artificial methods are always handled even when don't
+                      // create a new declaration for them.
+                      type_handled |= attrs.is_artificial;
 
-                      if (type_handled) {
+                      if (cxx_method_decl) {
                         LinkDeclContextToDIE(
                             ClangASTContext::GetAsDeclContext(cxx_method_decl),
                             die);

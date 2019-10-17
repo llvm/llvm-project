@@ -5,7 +5,7 @@
 # RUN: llvm-readobj -V %t | FileCheck %s --check-prefix=LLVM-VERDEF
 # RUN: llvm-readelf -V %t | FileCheck %s --check-prefix=GNU-VERDEF
 
-# LLVM-VERDEF:      SHT_GNU_verneed {
+# LLVM-VERDEF:      VersionRequirements [
 # LLVM-VERDEF-NEXT:   Dependency {
 # LLVM-VERDEF-NEXT:     Version: 1
 # LLVM-VERDEF-NEXT:     Count: 6
@@ -49,7 +49,7 @@
 # LLVM-VERDEF-NEXT:       }
 # LLVM-VERDEF-NEXT:     ]
 # LLVM-VERDEF-NEXT:   }
-# LLVM-VERDEF-NEXT: }
+# LLVM-VERDEF-NEXT: ]
 
 # GNU-VERDEF:      Version needs section '.gnu.version_r' contains 1 entries:
 # GNU-VERDEF-NEXT:  Addr: 0000000000000000  Offset: 0x000200  Link: 6 (.dynstr)

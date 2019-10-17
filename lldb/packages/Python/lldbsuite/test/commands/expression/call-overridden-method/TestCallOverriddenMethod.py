@@ -49,3 +49,24 @@ class ExprCommandCallOverriddenMethod(TestBase):
 
         # Test calling the base class.
         self.expect("expr realbase.foo()", substrs=["1"])
+
+        # Test with locally constructed instances.
+        self.expect("expr Base().foo()", substrs=["1"])
+        self.expect("expr Derived().foo()", substrs=["2"])
+
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr43707")
+    def test_call_on_temporary(self):
+        """Test calls to overridden methods in derived classes."""
+        self.build()
+
+        # Set breakpoint in main and run exe
+        self.runCmd("file " + self.getBuildArtifact("a.out"),
+                    CURRENT_EXECUTABLE_SET)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.line, num_expected_locations=-1, loc_exact=True)
+
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        # Test with locally constructed instances.
+        self.expect("expr Base().foo()", substrs=["1"])
+        self.expect("expr Derived().foo()", substrs=["2"])

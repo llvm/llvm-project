@@ -19,7 +19,7 @@
 using namespace llvm;
 
 static bool hasWildcard(StringRef S) {
-  return S.find_first_of("?*[") != StringRef::npos;
+  return S.find_first_of("?*[\\") != StringRef::npos;
 }
 
 // Expands character ranges and returns a bitmap.
@@ -60,8 +60,9 @@ static Expected<BitVector> expand(StringRef S, StringRef Original) {
 }
 
 // This is a scanner for the glob pattern.
-// A glob pattern token is one of "*", "?", "[<chars>]", "[^<chars>]"
-// (which is a negative form of "[<chars>]"), or a non-meta character.
+// A glob pattern token is one of "*", "?", "\", "[<chars>]", "[^<chars>]"
+// (which is a negative form of "[<chars>]"), "[!<chars>]" (which is
+// equivalent to "[^<chars>]"), or a non-meta character.
 // This function returns the first token in S.
 static Expected<BitVector> scan(StringRef &S, StringRef Original) {
   switch (S[0]) {
@@ -74,14 +75,16 @@ static Expected<BitVector> scan(StringRef &S, StringRef Original) {
     S = S.substr(1);
     return BitVector(256, true);
   case '[': {
-    size_t End = S.find(']', 1);
+    // ']' is allowed as the first character of a character class. '[]' is
+    // invalid. So, just skip the first character.
+    size_t End = S.find(']', 2);
     if (End == StringRef::npos)
       return make_error<StringError>("invalid glob pattern: " + Original,
                                      errc::invalid_argument);
 
     StringRef Chars = S.substr(1, End - 1);
     S = S.substr(End + 1);
-    if (Chars.startswith("^")) {
+    if (Chars.startswith("^") || Chars.startswith("!")) {
       Expected<BitVector> BV = expand(Chars.substr(1), Original);
       if (!BV)
         return BV.takeError();
@@ -89,6 +92,11 @@ static Expected<BitVector> scan(StringRef &S, StringRef Original) {
     }
     return expand(Chars, Original);
   }
+  case '\\':
+    // Eat this character and fall through below to treat it like a non-meta
+    // character.
+    S = S.substr(1);
+    LLVM_FALLTHROUGH;
   default:
     BitVector BV(256, false);
     BV[(uint8_t)S[0]] = true;
@@ -107,8 +115,9 @@ Expected<GlobPattern> GlobPattern::create(StringRef S) {
     return Pat;
   }
 
-  // S is something like "foo*". We can use startswith().
-  if (S.endswith("*") && !hasWildcard(S.drop_back())) {
+  // S is something like "foo*", and the "* is not escaped. We can use
+  // startswith().
+  if (S.endswith("*") && !S.endswith("\\*") && !hasWildcard(S.drop_back())) {
     Pat.Prefix = S.drop_back();
     return Pat;
   }

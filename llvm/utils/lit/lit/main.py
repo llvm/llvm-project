@@ -215,11 +215,11 @@ def run_tests(tests, litConfig, opts, numTotalTests):
         if opts.incremental:
             update_incremental_cache(test)
 
-    run = lit.run.Run(tests, litConfig, progress_callback, opts.maxTime,
-                      opts.numWorkers)
+    run = lit.run.create_run(tests, litConfig, opts.numWorkers,
+                             progress_callback, opts.maxTime)
 
     try:
-        elapsed = run_tests_in_tmp_dir(run.execute_tests, litConfig)
+        elapsed = run_tests_in_tmp_dir(run.execute, litConfig)
     except KeyboardInterrupt:
         #TODO(yln): should we attempt to cleanup the progress bar here?
         sys.exit(2)

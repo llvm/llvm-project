@@ -92,15 +92,15 @@ public:
       const RegularExpression &regex, lldb::SymbolType symbol_type,
       Debug symbol_debug_type, Visibility symbol_visibility,
       std::vector<uint32_t> &indexes);
-  size_t FindAllSymbolsWithNameAndType(ConstString name,
-                                       lldb::SymbolType symbol_type,
-                                       std::vector<uint32_t> &symbol_indexes);
-  size_t FindAllSymbolsWithNameAndType(ConstString name,
-                                       lldb::SymbolType symbol_type,
-                                       Debug symbol_debug_type,
-                                       Visibility symbol_visibility,
-                                       std::vector<uint32_t> &symbol_indexes);
-  size_t FindAllSymbolsMatchingRexExAndType(
+  void FindAllSymbolsWithNameAndType(ConstString name,
+                                     lldb::SymbolType symbol_type,
+                                     std::vector<uint32_t> &symbol_indexes);
+  void FindAllSymbolsWithNameAndType(ConstString name,
+                                     lldb::SymbolType symbol_type,
+                                     Debug symbol_debug_type,
+                                     Visibility symbol_visibility,
+                                     std::vector<uint32_t> &symbol_indexes);
+  void FindAllSymbolsMatchingRexExAndType(
       const RegularExpression &regex, lldb::SymbolType symbol_type,
       Debug symbol_debug_type, Visibility symbol_visibility,
       std::vector<uint32_t> &symbol_indexes);
@@ -112,8 +112,8 @@ public:
   Symbol *FindSymbolContainingFileAddress(lldb::addr_t file_addr);
   void ForEachSymbolContainingFileAddress(
       lldb::addr_t file_addr, std::function<bool(Symbol *)> const &callback);
-  size_t FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
-                             SymbolContextList &sc_list);
+  void FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
+                           SymbolContextList &sc_list);
   void CalculateSymbolSizes();
 
   void SortSymbolIndexesByValue(std::vector<uint32_t> &indexes,

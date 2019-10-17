@@ -536,6 +536,7 @@ static MCSymbol *getMCSymbolForTOCPseudoMO(const MachineOperand &MO,
 void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   MCInst TmpInst;
   const bool IsDarwin = TM.getTargetTriple().isOSDarwin();
+  const bool IsAIX = Subtarget->isAIXABI();
   const Module *M = MF->getFunction().getParent();
   PICLevel::Level PL = M->getPICLevel();
 
@@ -683,11 +684,10 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
     const MachineOperand &MO = MI->getOperand(1);
     assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
-           "Unexpected operand type for LWZtoc pseudo.");
+           "Invalid operand for LWZtoc.");
 
     // Map the operand to its corresponding MCSymbol.
     const MCSymbol *const MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
-    const bool IsAIX = TM.getTargetTriple().isOSAIX();
 
     // Create a reference to the GOT entry for the symbol. The GOT entry will be
     // synthesized later.
@@ -700,7 +700,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       return;
     }
 
-    // Otherwise use the TOC. 'TOCEntry' is a label used to reference the
+    // Otherwise, use the TOC. 'TOCEntry' is a label used to reference the
     // storage allocated in the TOC which contains the address of
     // 'MOSymbol'. Said TOC entry will be synthesized later.
     MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(MOSymbol);
@@ -732,6 +732,8 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case PPC::LDtocCPT:
   case PPC::LDtocBA:
   case PPC::LDtoc: {
+    assert(!IsDarwin && "TOC is an ELF/XCOFF construct");
+
     // Transform %x3 = LDtoc @min1, %x2
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
 
@@ -748,15 +750,79 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     MCSymbol *TOCEntry =
         lookUpOrCreateTOCEntry(getMCSymbolForTOCPseudoMO(MO, *this));
 
+    const MCSymbolRefExpr::VariantKind VK =
+        IsAIX ? MCSymbolRefExpr::VK_None : MCSymbolRefExpr::VK_PPC_TOC;
     const MCExpr *Exp =
-      MCSymbolRefExpr::create(TOCEntry, MCSymbolRefExpr::VK_PPC_TOC,
-                              OutContext);
+        MCSymbolRefExpr::create(TOCEntry, VK, OutContext);
     TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }
+  case PPC::ADDIStocHA: {
+    assert((IsAIX && !Subtarget->isPPC64() &&
+            TM.getCodeModel() == CodeModel::Large) &&
+           "This pseudo should only be selected for 32-bit large code model on"
+           " AIX.");
 
+    // Transform %rd = ADDIStocHA %rA, @sym(%r2)
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
+
+    // Change the opcode to ADDIS.
+    TmpInst.setOpcode(PPC::ADDIS);
+
+    const MachineOperand &MO = MI->getOperand(2);
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
+           "Invalid operand for ADDIStocHA.");
+
+    // Map the machine operand to its corresponding MCSymbol.
+    MCSymbol *MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
+
+    // Always use TOC on AIX. Map the global address operand to be a reference
+    // to the TOC entry we will synthesize later. 'TOCEntry' is a label used to
+    // reference the storage allocated in the TOC which contains the address of
+    // 'MOSymbol'.
+    MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(MOSymbol);
+    const MCExpr *Exp = MCSymbolRefExpr::create(TOCEntry,
+                                                MCSymbolRefExpr::VK_PPC_U,
+                                                OutContext);
+    TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
+    EmitToStreamer(*OutStreamer, TmpInst);
+    return;
+  }
+  case PPC::LWZtocL: {
+    assert(IsAIX && !Subtarget->isPPC64() &&
+           TM.getCodeModel() == CodeModel::Large &&
+           "This pseudo should only be selected for 32-bit large code model on"
+           " AIX.");
+
+    // Transform %rd = LWZtocL @sym, %rs.
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
+
+    // Change the opcode to lwz.
+    TmpInst.setOpcode(PPC::LWZ);
+
+    const MachineOperand &MO = MI->getOperand(1);
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
+           "Invalid operand for LWZtocL.");
+
+    // Map the machine operand to its corresponding MCSymbol.
+    MCSymbol *MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
+
+    // Always use TOC on AIX. Map the global address operand to be a reference
+    // to the TOC entry we will synthesize later. 'TOCEntry' is a label used to
+    // reference the storage allocated in the TOC which contains the address of
+    // 'MOSymbol'.
+    MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(MOSymbol);
+    const MCExpr *Exp = MCSymbolRefExpr::create(TOCEntry,
+                                                MCSymbolRefExpr::VK_PPC_L,
+                                                OutContext);
+    TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
+    EmitToStreamer(*OutStreamer, TmpInst);
+    return;
+  }
   case PPC::ADDIStocHA8: {
+    assert(!IsDarwin && "TOC is an ELF/XCOFF construct");
+
     // Transform %xd = ADDIStocHA8 %x2, @sym
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
 
@@ -778,9 +844,11 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
         (MO.isCPI() && TM.getCodeModel() == CodeModel::Large))
       MOSymbol = lookUpOrCreateTOCEntry(MOSymbol);
 
+    const MCSymbolRefExpr::VariantKind VK =
+        IsAIX ? MCSymbolRefExpr::VK_PPC_U : MCSymbolRefExpr::VK_PPC_TOC_HA;
+
     const MCExpr *Exp =
-      MCSymbolRefExpr::create(MOSymbol, MCSymbolRefExpr::VK_PPC_TOC_HA,
-                              OutContext);
+        MCSymbolRefExpr::create(MOSymbol, VK, OutContext);
 
     if (!MO.isJTI() && MO.getOffset())
       Exp = MCBinaryExpr::createAdd(Exp,
@@ -793,6 +861,8 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
   case PPC::LDtocL: {
+    assert(!IsDarwin && "TOC is an ELF/XCOFF construct");
+
     // Transform %xd = LDtocL @sym, %xs
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
 
@@ -817,9 +887,10 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     if (!MO.isCPI() || TM.getCodeModel() == CodeModel::Large)
       MOSymbol = lookUpOrCreateTOCEntry(MOSymbol);
 
+    const MCSymbolRefExpr::VariantKind VK =
+        IsAIX ? MCSymbolRefExpr::VK_PPC_L : MCSymbolRefExpr::VK_PPC_TOC_LO;
     const MCExpr *Exp =
-      MCSymbolRefExpr::create(MOSymbol, MCSymbolRefExpr::VK_PPC_TOC_LO,
-                              OutContext);
+        MCSymbolRefExpr::create(MOSymbol, VK, OutContext);
     TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
@@ -855,8 +926,8 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     const GlobalValue *GValue = MO.getGlobal();
     MCSymbol *MOSymbol = getSymbol(GValue);
     const MCExpr *SymGotTprel =
-      MCSymbolRefExpr::create(MOSymbol, MCSymbolRefExpr::VK_PPC_GOT_TPREL_HA,
-                              OutContext);
+        MCSymbolRefExpr::create(MOSymbol, MCSymbolRefExpr::VK_PPC_GOT_TPREL_HA,
+                                OutContext);
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDIS8)
                                  .addReg(MI->getOperand(0).getReg())
                                  .addReg(MI->getOperand(1).getReg())

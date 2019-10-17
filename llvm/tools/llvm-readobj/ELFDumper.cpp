@@ -5607,7 +5607,7 @@ void LLVMStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
 template <class ELFT>
 void LLVMStyle<ELFT>::printVersionSymbolSection(const ELFFile<ELFT> *Obj,
                                                 const Elf_Shdr *Sec) {
-  ListScope SS(W, "Version symbols");
+  ListScope SS(W, "VersionSymbols");
   if (!Sec)
     return;
 
@@ -5631,7 +5631,7 @@ void LLVMStyle<ELFT>::printVersionSymbolSection(const ELFFile<ELFT> *Obj,
 template <class ELFT>
 void LLVMStyle<ELFT>::printVersionDefinitionSection(const ELFFile<ELFT> *Obj,
                                                     const Elf_Shdr *Sec) {
-  DictScope SD(W, "SHT_GNU_verdef");
+  ListScope SD(W, "VersionDefinitions");
   if (!Sec)
     return;
 
@@ -5679,7 +5679,7 @@ void LLVMStyle<ELFT>::printVersionDefinitionSection(const ELFFile<ELFT> *Obj,
 template <class ELFT>
 void LLVMStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
                                                     const Elf_Shdr *Sec) {
-  DictScope SD(W, "SHT_GNU_verneed");
+  ListScope SD(W, "VersionRequirements");
   if (!Sec)
     return;
 

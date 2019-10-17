@@ -4,13 +4,27 @@
 define void @f(i8*, i8*, i64*) {
 ; Check we don't assert and this is not a Hardware Loop
 ; CHECK-LABEL: f:
-; CHECK:  .LBB0_2: #
-; CHECK-NEXT:    cmplwi
-; CHECK-NEXT:    cmpd
-; CHECK-NEXT:    sldi
-; CHECK-NEXT:    cror
-; CHECK-NEXT:    addi
-; CHECK-NEXT:    bc
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpld 3, 4
+; CHECK-NEXT:    beqlr 0
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    ld 6, 8(5)
+; CHECK-NEXT:    not 3, 3
+; CHECK-NEXT:    add 3, 3, 4
+; CHECK-NEXT:    li 4, 0
+; CHECK-NEXT:    .p2align 5
+; CHECK-NEXT:  .LBB0_2: #
+; CHECK-NEXT:    sldi 6, 6, 4
+; CHECK-NEXT:    cmplwi 4, 14
+; CHECK-NEXT:    addi 7, 4, 1
+; CHECK-NEXT:    bc 12, 1, .LBB0_4
+; CHECK-NEXT:  # %bb.3: #
+; CHECK-NEXT:    cmpd 3, 4
+; CHECK-NEXT:    mr 4, 7
+; CHECK-NEXT:    bc 4, 2, .LBB0_2
+; CHECK-NEXT:  .LBB0_4:
+; CHECK-NEXT:    std 6, 8(5)
+; CHECK-NEXT:    blr
 
   %4 = icmp eq i8* %0, %1
   br i1 %4, label %9, label %5

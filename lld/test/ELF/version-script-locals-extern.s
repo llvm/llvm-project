@@ -4,7 +4,7 @@
 # RUN: echo "FOO { local: extern \"C++\" { \"abb(int)\"; }; };" > %t.script
 # RUN: ld.lld --version-script %t.script -shared %t.o -o %t.so
 # RUN: llvm-readobj -V %t.so | FileCheck %s --check-prefix=ABB
-# ABB:      Version symbols [
+# ABB:      VersionSymbols [
 # ABB-NEXT:   Symbol {
 # ABB-NEXT:     Version: 0
 # ABB-NEXT:     Name:
@@ -23,7 +23,7 @@
 # RUN: echo "FOO { local: extern \"C++\" { abc*; }; };" > %t.script
 # RUN: ld.lld --version-script %t.script -shared %t.o -o %t.so
 # RUN: llvm-readobj -V %t.so | FileCheck %s --check-prefix=ABC
-# ABC:      Version symbols [
+# ABC:      VersionSymbols [
 # ABC-NEXT:   Symbol {
 # ABC-NEXT:     Version: 0
 # ABC-NEXT:     Name:

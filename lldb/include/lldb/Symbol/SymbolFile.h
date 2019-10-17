@@ -173,21 +173,19 @@ public:
                                         SymbolContextList &sc_list);
 
   virtual void DumpClangAST(Stream &s) {}
-  virtual uint32_t
+  virtual void
   FindGlobalVariables(ConstString name,
                       const CompilerDeclContext *parent_decl_ctx,
                       uint32_t max_matches, VariableList &variables);
-  virtual uint32_t FindGlobalVariables(const RegularExpression &regex,
-                                       uint32_t max_matches,
-                                       VariableList &variables);
-  virtual uint32_t FindFunctions(ConstString name,
-                                 const CompilerDeclContext *parent_decl_ctx,
-                                 lldb::FunctionNameType name_type_mask,
-                                 bool include_inlines, bool append,
-                                 SymbolContextList &sc_list);
-  virtual uint32_t FindFunctions(const RegularExpression &regex,
-                                 bool include_inlines, bool append,
-                                 SymbolContextList &sc_list);
+  virtual void FindGlobalVariables(const RegularExpression &regex,
+                                   uint32_t max_matches,
+                                   VariableList &variables);
+  virtual void FindFunctions(ConstString name,
+                             const CompilerDeclContext *parent_decl_ctx,
+                             lldb::FunctionNameType name_type_mask,
+                             bool include_inlines, SymbolContextList &sc_list);
+  virtual void FindFunctions(const RegularExpression &regex,
+                             bool include_inlines, SymbolContextList &sc_list);
   virtual void
   FindTypes(ConstString name, const CompilerDeclContext *parent_decl_ctx,
             uint32_t max_matches,

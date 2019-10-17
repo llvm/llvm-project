@@ -157,25 +157,25 @@ public:
                        lldb::SymbolContextItem resolve_scope,
                        lldb_private::SymbolContextList &sc_list) override;
 
-  uint32_t
+  void
   FindGlobalVariables(lldb_private::ConstString name,
                       const lldb_private::CompilerDeclContext *parent_decl_ctx,
                       uint32_t max_matches,
                       lldb_private::VariableList &variables) override;
 
-  uint32_t FindGlobalVariables(const lldb_private::RegularExpression &regex,
-                               uint32_t max_matches,
-                               lldb_private::VariableList &variables) override;
+  void FindGlobalVariables(const lldb_private::RegularExpression &regex,
+                           uint32_t max_matches,
+                           lldb_private::VariableList &variables) override;
 
-  uint32_t
-  FindFunctions(lldb_private::ConstString name,
-                const lldb_private::CompilerDeclContext *parent_decl_ctx,
-                lldb::FunctionNameType name_type_mask, bool include_inlines,
-                bool append, lldb_private::SymbolContextList &sc_list) override;
+  void FindFunctions(lldb_private::ConstString name,
+                     const lldb_private::CompilerDeclContext *parent_decl_ctx,
+                     lldb::FunctionNameType name_type_mask,
+                     bool include_inlines,
+                     lldb_private::SymbolContextList &sc_list) override;
 
-  uint32_t FindFunctions(const lldb_private::RegularExpression &regex,
-                         bool include_inlines, bool append,
-                         lldb_private::SymbolContextList &sc_list) override;
+  void FindFunctions(const lldb_private::RegularExpression &regex,
+                     bool include_inlines,
+                     lldb_private::SymbolContextList &sc_list) override;
 
   void GetMangledNamesForFunction(
       const std::string &scope_qualified_name,

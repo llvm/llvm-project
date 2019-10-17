@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s > %t.exe
 # RUN: llvm-readobj --unwind %t.exe | FileCheck %s
 
-# CHECK:      EH_FRAME Header [
+# CHECK:      EHFrameHeader {
 # CHECK-NEXT:  Address: 0x4013c0
 # CHECK-NEXT:  Offset: 0xbc
 # CHECK-NEXT:  Size: 0x3c
@@ -38,7 +38,7 @@
 # CHECK-NEXT:      address: 0x4014f0
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
-# CHECK-NEXT:]
+# CHECK-NEXT:}
 
 # CHECK:      .eh_frame section at offset 0xf8 address 0x401400:
 # CHECK-NEXT:  [0x401400] CIE length=20

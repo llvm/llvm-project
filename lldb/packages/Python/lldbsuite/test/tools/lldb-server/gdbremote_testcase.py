@@ -31,9 +31,9 @@ class GdbRemoteTestCaseBase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    _TIMEOUT_SECONDS = 120 * (1 if ('ASAN_OPTIONS' in os.environ) else 10)
-    _READ_TIMEOUT    =   5 * (1 if ('ASAN_OPTIONS' in os.environ) else 10)
-    _WAIT_TIMEOUT    =   3 * (1 if ('ASAN_OPTIONS' in os.environ) else 10)
+    _TIMEOUT_SECONDS = 120 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
+    _READ_TIMEOUT    =   5 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
+    _WAIT_TIMEOUT    =   3 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
 
     _GDBREMOTE_KILL_PACKET = "$k#6b"
 

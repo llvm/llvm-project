@@ -785,12 +785,12 @@ corresponding to the byte size of the data type.");
 protected:
   static size_t GetVariableCallback(void *baton, const char *name,
                                     VariableList &variable_list) {
+    size_t old_size = variable_list.GetSize();
     Target *target = static_cast<Target *>(baton);
-    if (target) {
-      return target->GetImages().FindGlobalVariables(ConstString(name),
-                                                     UINT32_MAX, variable_list);
-    }
-    return 0;
+    if (target)
+      target->GetImages().FindGlobalVariables(ConstString(name), UINT32_MAX,
+                                              variable_list);
+    return variable_list.GetSize() - old_size;
   }
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {

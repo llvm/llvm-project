@@ -106,6 +106,7 @@ MODIFIERS:
   [L] - add archive's contents
   [N] - use instance [count] of name
   [o] - preserve original dates
+  [O] - display member offsets
   [P] - use full names when matching (implied for thin archives)
   [s] - create an archive index (cf. ranlib)
   [S] - do not build a symbol table
@@ -187,17 +188,18 @@ enum ArchiveOperation {
 };
 
 // Modifiers to follow operation to vary behavior
-static bool AddAfter = false;        ///< 'a' modifier
-static bool AddBefore = false;       ///< 'b' modifier
-static bool Create = false;          ///< 'c' modifier
-static bool OriginalDates = false;   ///< 'o' modifier
-static bool CompareFullPath = false; ///< 'P' modifier
-static bool OnlyUpdate = false;      ///< 'u' modifier
-static bool Verbose = false;         ///< 'v' modifier
-static bool Symtab = true;           ///< 's' modifier
-static bool Deterministic = true;    ///< 'D' and 'U' modifiers
-static bool Thin = false;            ///< 'T' modifier
-static bool AddLibrary = false;      ///< 'L' modifier
+static bool AddAfter = false;             ///< 'a' modifier
+static bool AddBefore = false;            ///< 'b' modifier
+static bool Create = false;               ///< 'c' modifier
+static bool OriginalDates = false;        ///< 'o' modifier
+static bool DisplayMemberOffsets = false; ///< 'O' modifier
+static bool CompareFullPath = false;      ///< 'P' modifier
+static bool OnlyUpdate = false;           ///< 'u' modifier
+static bool Verbose = false;              ///< 'v' modifier
+static bool Symtab = true;                ///< 's' modifier
+static bool Deterministic = true;         ///< 'D' and 'U' modifiers
+static bool Thin = false;                 ///< 'T' modifier
+static bool AddLibrary = false;           ///< 'L' modifier
 
 // Relative Positional Argument (for insert/move). This variable holds
 // the name of the archive member to which the 'a', 'b' or 'i' modifier
@@ -328,6 +330,9 @@ static ArchiveOperation parseCommandLine() {
       break;
     case 'o':
       OriginalDates = true;
+      break;
+    case 'O':
+      DisplayMemberOffsets = true;
       break;
     case 'P':
       CompareFullPath = true;
@@ -486,8 +491,13 @@ static void doDisplayTable(StringRef Name, const object::Archive::Child &C) {
       if (!ParentDir.empty())
         outs() << sys::path::convert_to_slash(ParentDir) << '/';
     }
+    outs() << Name;
+  } else {
+    outs() << Name;
+    if (DisplayMemberOffsets)
+      outs() << " 0x" << utohexstr(C.getDataOffset(), true);
   }
-  outs() << Name << "\n";
+  outs() << '\n';
 }
 
 static std::string normalizePath(StringRef Path) {

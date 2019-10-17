@@ -1216,14 +1216,12 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     }
 
     const bool include_inlines = false;
-    const bool append = false;
-
+    sc_list.Clear();
     if (namespace_decl && module_sp) {
       const bool include_symbols = false;
 
       module_sp->FindFunctions(name, &namespace_decl, eFunctionNameTypeBase,
-                               include_symbols, include_inlines, append,
-                               sc_list);
+                               include_symbols, include_inlines, sc_list);
     } else if (target && !namespace_decl) {
       const bool include_symbols = true;
 
@@ -1232,7 +1230,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
       target->GetImages().FindFunctions(name, eFunctionNameTypeFull,
                                         include_symbols, include_inlines,
-                                        append, sc_list);
+                                        sc_list);
     }
 
     // If we found more than one function, see if we can use the frame's decl

@@ -2005,7 +2005,7 @@ bool SymbolFileDWARF::DeclContextMatchesThisSymbolFile(
   return false;
 }
 
-uint32_t SymbolFileDWARF::FindGlobalVariables(
+void SymbolFileDWARF::FindGlobalVariables(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches, VariableList &variables) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
@@ -2020,11 +2020,11 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(
         max_matches);
 
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
-    return 0;
+    return;
 
   DWARFDebugInfo *info = DebugInfo();
-  if (info == nullptr)
-    return 0;
+  if (!info)
+    return;
 
   // Remember how many variables are in the list before we search.
   const uint32_t original_size = variables.GetSize();
@@ -2111,12 +2111,11 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(
         name.GetCString(), static_cast<const void *>(parent_decl_ctx),
         max_matches, num_matches);
   }
-  return num_matches;
 }
 
-uint32_t SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
-                                              uint32_t max_matches,
-                                              VariableList &variables) {
+void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
+                                          uint32_t max_matches,
+                                          VariableList &variables) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS));
 
@@ -2129,8 +2128,8 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
   }
 
   DWARFDebugInfo *info = DebugInfo();
-  if (info == nullptr)
-    return 0;
+  if (!info)
+    return;
 
   // Remember how many variables are in the list before we search.
   const uint32_t original_size = variables.GetSize();
@@ -2163,9 +2162,6 @@ uint32_t SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
         m_index->ReportInvalidDIERef(die_ref, regex.GetText());
     }
   }
-
-  // Return the number of variable that were appended to the list
-  return variables.GetSize() - original_size;
 }
 
 bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
@@ -2241,10 +2237,11 @@ bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext *decl_ctx,
   return false;
 }
 
-uint32_t SymbolFileDWARF::FindFunctions(
-    ConstString name, const CompilerDeclContext *parent_decl_ctx,
-    FunctionNameType name_type_mask, bool include_inlines, bool append,
-    SymbolContextList &sc_list) {
+void SymbolFileDWARF::FindFunctions(ConstString name,
+                                    const CompilerDeclContext *parent_decl_ctx,
+                                    FunctionNameType name_type_mask,
+                                    bool include_inlines,
+                                    SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, "SymbolFileDWARF::FindFunctions (name = '%s')",
@@ -2259,21 +2256,16 @@ uint32_t SymbolFileDWARF::FindFunctions(
   if (log) {
     GetObjectFile()->GetModule()->LogMessage(
         log,
-        "SymbolFileDWARF::FindFunctions (name=\"%s\", "
-        "name_type_mask=0x%x, append=%u, sc_list)",
-        name.GetCString(), name_type_mask, append);
+        "SymbolFileDWARF::FindFunctions (name=\"%s\", name_type_mask=0x%x, sc_list)",
+        name.GetCString(), name_type_mask);
   }
 
-  // If we aren't appending the results to this list, then clear the list
-  if (!append)
-    sc_list.Clear();
-
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
-    return 0;
+    return;
 
   // If name is empty then we won't find anything.
   if (name.IsEmpty())
-    return 0;
+    return;
 
   // Remember how many sc_list are in the list before we search in case we are
   // appending the results to a variable list.
@@ -2300,17 +2292,15 @@ uint32_t SymbolFileDWARF::FindFunctions(
     GetObjectFile()->GetModule()->LogMessage(
         log,
         "SymbolFileDWARF::FindFunctions (name=\"%s\", "
-        "name_type_mask=0x%x, include_inlines=%d, append=%u, sc_list) => "
-        "%u",
-        name.GetCString(), name_type_mask, include_inlines, append,
+        "name_type_mask=0x%x, include_inlines=%d, sc_list) => %u",
+        name.GetCString(), name_type_mask, include_inlines,
         num_matches);
   }
-  return num_matches;
 }
 
-uint32_t SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
-                                        bool include_inlines, bool append,
-                                        SymbolContextList &sc_list) {
+void SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
+                                    bool include_inlines,
+                                    SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, "SymbolFileDWARF::FindFunctions (regex = '%s')",
@@ -2320,22 +2310,13 @@ uint32_t SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
 
   if (log) {
     GetObjectFile()->GetModule()->LogMessage(
-        log,
-        "SymbolFileDWARF::FindFunctions (regex=\"%s\", append=%u, sc_list)",
-        regex.GetText().str().c_str(), append);
+        log, "SymbolFileDWARF::FindFunctions (regex=\"%s\", sc_list)",
+        regex.GetText().str().c_str());
   }
-
-  // If we aren't appending the results to this list, then clear the list
-  if (!append)
-    sc_list.Clear();
 
   DWARFDebugInfo *info = DebugInfo();
   if (!info)
-    return 0;
-
-  // Remember how many sc_list are in the list before we search in case we are
-  // appending the results to a variable list.
-  uint32_t original_size = sc_list.GetSize();
+    return;
 
   DIEArray offsets;
   m_index->GetFunctions(regex, offsets);
@@ -2350,9 +2331,6 @@ uint32_t SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
     if (resolved_dies.insert(die.GetDIE()).second)
       ResolveFunction(die, include_inlines, sc_list);
   }
-
-  // Return the number of variable that were appended to the list
-  return sc_list.GetSize() - original_size;
 }
 
 void SymbolFileDWARF::GetMangledNamesForFunction(

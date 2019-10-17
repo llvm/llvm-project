@@ -51,7 +51,7 @@ ArgAllocaCutoff("amdgpu-inline-arg-alloca-cutoff", cl::Hidden, cl::init(256),
 
 // Inliner constraint to achieve reasonable compilation time
 static cl::opt<size_t>
-MaxBB("amdgpu-inline-max-bb", cl::Hidden, cl::init(300),
+MaxBB("amdgpu-inline-max-bb", cl::Hidden, cl::init(1100),
       cl::desc("Maximum BB number allowed in a function after inlining"
                " (compile time constraint)"));
 
