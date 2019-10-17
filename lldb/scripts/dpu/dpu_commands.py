@@ -46,7 +46,7 @@ def get_object_from_command(command, debugger, target, name, object_type,
                         0)
             if addr == 0:
                 print("Could not interpret command '" + command + "'")
-                sys.exit(1)
+                return None
     return target.CreateValueFromExpression(
         name, "(" + object_type + ")" + str(addr))
 
@@ -148,10 +148,14 @@ def break_to_next_boot_and_get_dpus(debugger, target):
         nb_ci = get_dpu_from_command(
             "(int)(rank->description->topology.nr_of_control_interfaces)",
             debugger, target)
+        if nb_ci is None:
+            return None, frame
         nb_dpu_per_ci = get_dpu_from_command(
             "(int)(rank->description->topology."
             "nr_of_dpus_per_control_interface)",
             debugger, target)
+        if nb_dpu_per_ci is None:
+            return None, frame
         nb_dpu = int(nb_ci.GetValue(), 16) * int(nb_dpu_per_ci.GetValue(), 16)
         for each_dpu in range(0, nb_dpu):
             dpu_list.append(get_dpu_from_command("&rank->dpus["
@@ -171,22 +175,25 @@ def dpu_attach_on_boot(debugger, command, result, internal_dict):
 
     dpus_booting, host_frame = \
         break_to_next_boot_and_get_dpus(debugger, target)
-    if len(dpus_booting) == 0:
+    if dpus_booting is None or len(dpus_booting) == 0:
         print("Could not find any dpu booting")
-        sys.exit(1)
+        return None
 
     # If a dpu is specified in the command, wait for this specific dpu to boot
     if command != "":
         dpu_to_attach = get_dpu_from_command(command, debugger, target)
+        if dpu_to_attach is None:
+            print("Could not find the dpu to attach to")
+            return None
         dpus_booting = filter(
             lambda dpu: dpu.GetValue() == dpu_to_attach.GetValue(),
             dpus_booting)
         while len(dpus_booting) == 0:
             dpus_booting, host_frame =\
                 break_to_next_boot_and_get_dpus(debugger, target)
-            if len(dpus_booting) == 0:
+            if dpus_booting is None or len(dpus_booting) == 0:
                 print("Could not find the dpu booting")
-                sys.exit(1)
+                return None
             dpus_booting = filter(
                 lambda dpu: dpu.GetValue() == dpu_to_attach.GetValue(),
                 dpus_booting)
@@ -194,6 +201,9 @@ def dpu_attach_on_boot(debugger, command, result, internal_dict):
     dpu_addr = dpus_booting[0].GetValue()
     print("Setting up dpu '" + str(dpu_addr) + "' for attach on boot...")
     target_dpu = dpu_attach(debugger, dpu_addr, None, None)
+    if target_dpu is None:
+        print("Could not attach to dpu")
+        return None
 
     error = lldb.SBError()
     process_dpu = target_dpu.GetProcess()
@@ -211,6 +221,9 @@ def dpu_attach_on_boot(debugger, command, result, internal_dict):
     print("dpu '" + str(dpu_addr) + "' has booted")
 
     target_dpu = dpu_attach(debugger, dpu_addr, None, None)
+    if target_dpu is None:
+        print("Could not attach to dpu")
+        return None
     target_dpu.GetProcess().WriteMemory(dpu_first_instruction_addr,
                                         dpu_first_instruction, error)
 
@@ -223,9 +236,9 @@ def dpu_attach(debugger, command, result, internal_dict):
     '''
     target = debugger.GetSelectedTarget()
     dpu = get_dpu_from_command(command, debugger, target)
-    if not(dpu.IsValid()):
+    if dpu is None or not(dpu.IsValid):
         print("Could not find dpu")
-        sys.exit(1)
+        return None
     print("Attaching to dpu '" + dpu.GetValue() + "'")
 
     program_path = get_dpu_program_path(dpu)
@@ -233,12 +246,12 @@ def dpu_attach(debugger, command, result, internal_dict):
     rank = dpu.GetChildMemberWithName("rank")
     if not(rank.IsValid()):
         print("Could not find dpu rank")
-        sys.exit(1)
+        return None
 
     region_id, rank_id = get_region_id_and_rank_id(rank, target)
     if region_id == -1 or rank_id == -1:
         print("Could not attach to simulator (hardware only)")
-        sys.exit(1)
+        return None
 
     slice_id = dpu.GetChildMemberWithName("slice_id").GetValueAsUnsigned()
     dpu_id = dpu.GetChildMemberWithName("dpu_id").GetValueAsUnsigned()
@@ -248,11 +261,11 @@ def dpu_attach(debugger, command, result, internal_dict):
         .GetChildMemberWithName("slice_info").GetChildAtIndex(slice_id)
     if not(slice_info.IsValid()):
         print("Could not find dpu slice_info")
-        sys.exit(1)
+        return None
     slice_target = slice_info.GetChildMemberWithName("slice_target")
     if not(slice_target.IsValid()):
         print("Could not find dpu slice_target")
-        sys.exit(1)
+        return None
 
     structure_value = slice_info.GetChildMemberWithName("structure_value") \
         .GetValueAsUnsigned()
@@ -266,7 +279,7 @@ def dpu_attach(debugger, command, result, internal_dict):
 
     if not(set_debug_mode(debugger, rank, 1)):
         print("Could not set dpu in debug mode")
-        sys.exit(1)
+        return None
 
     lldb_server_dpu_env = os.environ.copy()
     lldb_server_dpu_env["UPMEM_LLDB_STRUCTURE_VALUE"] = str(structure_value)
@@ -283,7 +296,7 @@ def dpu_attach(debugger, command, result, internal_dict):
                                                      "dpu-upmem-dpurte")
     if not(target_dpu.IsValid()):
         print("Could not create dpu target")
-        sys.exit(1)
+        return None
 
     listener = debugger.GetListener()
     error = lldb.SBError()
@@ -293,12 +306,12 @@ def dpu_attach(debugger, command, result, internal_dict):
                                            error)
     if not(process_dpu.IsValid()):
         print("Could not connect to dpu")
-        sys.exit(1)
+        return None
 
     debugger.SetSelectedTarget(target)
     if not(set_debug_mode(debugger, rank, 0)):
         print("Could not unset dpu from debug mode")
-        sys.exit(1)
+        return None
 
     debugger.SetSelectedTarget(target_dpu)
     return target_dpu
@@ -335,7 +348,7 @@ def dpu_list(debugger, command, result, internal_dict):
             debugger, "dpu_rank_handler_dpu_rank_list_size", 10)
     if not(success):
         print("dpu_list: internal error 1")
-        sys.exit(1)
+        return None
 
     target = debugger.GetSelectedTarget()
     result_list = []
@@ -345,9 +358,9 @@ def dpu_list(debugger, command, result, internal_dict):
             "dpu_rank_handler_dpu_rank_list[" + str(each_rank) + "]",
             debugger,
             target)
-        if not(rank.IsValid()):
+        if rank is None or not(rank.IsValid()):
             print("dpu_list: internal error 2")
-            sys.exit(1)
+            return None
         rank_addr = rank.GetValue()
         if int(rank_addr, 16) == 0:
             continue
@@ -357,9 +370,12 @@ def dpu_list(debugger, command, result, internal_dict):
         slice_id = 0
         dpu_id = 0
         dpu = dpu_get(rank_addr, slice_id, dpu_id, debugger, target)
+        if dpu is None:
+            return None
         if not(dpu.IsValid):
             print("dpu_list: internal error 3")
-            sys.exit(1)
+            return None
+
         while int(dpu.GetValue(), 16) != 0:
             while int(dpu.GetValue(), 16) != 0:
                 program_path = get_dpu_program_path(dpu)
@@ -374,10 +390,14 @@ def dpu_list(debugger, command, result, internal_dict):
 
                 dpu_id = dpu_id + 1
                 dpu = dpu_get(rank_addr, slice_id, dpu_id, debugger, target)
+                if dpu is None:
+                    return None
 
             dpu_id = 0
             slice_id = slice_id + 1
             dpu = dpu_get(rank_addr, slice_id, dpu_id, debugger, target)
+            if dpu is None:
+                return None
 
         print_list(result_list, result)
         return result_list
@@ -390,6 +410,6 @@ def dpu_detach(debugger, command, result, internal_dict):
     target = debugger.GetSelectedTarget()
     if target.GetTriple() != "dpu-upmem-dpurte":
         print("Current target is not a DPU target")
-        sys.exit(1)
+        return None
     target.GetProcess().Detach()
     debugger.DeleteTarget(target)
