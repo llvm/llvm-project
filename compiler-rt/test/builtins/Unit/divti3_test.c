@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_divti3
 // REQUIRES: int128
 //===-- divti3_test.c - Test __divti3 -------------------------------------===//
 //

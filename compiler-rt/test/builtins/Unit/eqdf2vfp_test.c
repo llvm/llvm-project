@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_eqdf2vfp
 
 //===-- eqdf2vfp_test.c - Test __eqdf2vfp ---------------------------------===//
 //

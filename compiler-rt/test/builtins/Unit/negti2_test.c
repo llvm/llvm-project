@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_negti2
 // REQUIRES: int128
 //===-- negti2_test.c - Test __negti2 -------------------------------------===//
 //
