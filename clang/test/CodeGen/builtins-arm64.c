@@ -106,4 +106,21 @@ void wsrp(void *v) {
   __builtin_arm_wsrp("1:2:3:4:5", v);
 }
 
+unsigned int cls(uint32_t v) {
+  // CHECK: call i32 @llvm.aarch64.cls(i32 %v)
+  return __builtin_arm_cls(v);
+}
+
+unsigned int clsl(unsigned long v) {
+  // CHECK-WIN: [[V64:%[^ ]+]] = zext i32 %v to i64
+  // CHECK-WIN: call i32 @llvm.aarch64.cls64(i64 [[V64]]
+  // CHECK-LINUX: call i32 @llvm.aarch64.cls64(i64 %v)
+  return __builtin_arm_cls64(v);
+}
+
+unsigned int clsll(uint64_t v) {
+  // CHECK: call i32 @llvm.aarch64.cls64(i64 %v)
+  return __builtin_arm_cls64(v);
+}
+
 // CHECK: ![[M0]] = !{!"1:2:3:4:5"}
