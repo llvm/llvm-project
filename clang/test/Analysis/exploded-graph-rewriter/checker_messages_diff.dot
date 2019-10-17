@@ -5,12 +5,15 @@
 
 Node0x1 [shape=record,label=
  "{
-    { "node_id": 1,
-      "pointer": "0x1",
-      "has_report": false,
-      "is_sink": false,
-      "state_id": 2,
-      "program_points": [],
+    { "state_id": 2,
+      "program_points": [
+        {
+          "kind": "BlockEntrance", "block_id": 1,
+          "terminator": null, "term_kind": null,
+          "tag": null, "node_id": 1,
+          "has_report": 0, "is_sink": 0
+        }
+      ],
       "program_state": {
         "environment": null,
         "store": null,
@@ -59,12 +62,16 @@ Node0x1 -> Node0x4;
 // CHECK-SAME: </tr>
 Node0x4 [shape=record,label=
  "{
-    { "node_id": 4,
-      "pointer": "0x4",
-      "has_report": false,
-      "is_sink": false,
+    {
       "state_id": 5,
-      "program_points": [],
+      "program_points": [
+        {
+          "kind": "BlockEntrance", "block_id": 1,
+          "terminator": null, "term_kind": null,
+          "tag": null, "node_id": 1,
+          "has_report": 0, "is_sink": 0
+        }
+      ],
       "program_state": {
         "environment": null,
         "store": null,
@@ -88,12 +95,15 @@ Node0x4 -> Node0x6;
 
 Node0x6 [shape=record,label=
  "{
-    { "node_id": 6,
-      "pointer": "0x6",
-      "has_report": false,
-      "is_sink": false,
-      "state_id": 7,
-      "program_points": [],
+    { "state_id": 7,
+      "program_points": [
+        {
+          "kind": "BlockEntrance", "block_id": 1,
+          "terminator": null, "term_kind": null,
+          "tag": null, "node_id": 1,
+          "has_report": 0, "is_sink": 0
+        }
+      ],
       "program_state": null
     }
 \l}"];

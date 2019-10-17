@@ -12,12 +12,16 @@
 // TOPOLOGY-NOT: Checker State
 Node0x1 [shape=record,label=
  "{
-    { "node_id": 1,
-      "pointer": "0x1",
-      "has_report": false,
-      "is_sink": false,
+    {
       "state_id": 2,
-      "program_points": [],
+      "program_points": [
+        {
+          "kind": "BlockEntrance", "block_id": 1,
+          "terminator": null, "term_kind": null,
+          "tag": null, "node_id": 1,
+          "has_report": 0, "is_sink": 0
+        }
+      ],
       "program_state": {
         "environment": null,
         "constraints": null,
