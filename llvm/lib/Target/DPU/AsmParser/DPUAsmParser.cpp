@@ -107,6 +107,9 @@ public:
 
   bool ParseDirective(AsmToken DirectiveID) override;
 
+  unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
+                                      unsigned Kind) override;
+
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
@@ -236,6 +239,9 @@ private:
   OperandMatchResultTy
   parseAnyCondition(OperandVector &Operands,
                     DPUAsmCondition::ConditionClass CondClass);
+
+  bool isConditionKind(unsigned int Kind,
+                       DPUAsmCondition::ConditionClass &CondClass);
 };
 
 /// DPUOperand - Instances of this class represent a parsed DPU machine
@@ -277,8 +283,8 @@ private:
     struct RegTy Reg;
     struct ImmTy Imm;
     struct EndianTy Endian;
-    struct CondTy Cond;
   };
+  struct CondTy Cond;
 
   SMLoc StartLoc, EndLoc;
 
@@ -336,6 +342,12 @@ public:
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
+  }
+
+  void SetCondTy(DPUAsmCondition::Condition SetCond,
+                 DPUAsmCondition::ConditionClass SetCondClass) {
+    Cond.Cond = SetCond;
+    Cond.CondClass = SetCondClass;
   }
 
   unsigned getReg() const override {
@@ -809,6 +821,125 @@ bool DPUAsmParser::mnemonicIsValid(StringRef Mnemonic, unsigned VariantID) {
   // Search the table.
   auto MnemonicRange = std::equal_range(Start, End, Mnemonic, LessOpcode());
   return MnemonicRange.first != MnemonicRange.second;
+}
+
+bool DPUAsmParser::isConditionKind(unsigned Kind,
+                                   DPUAsmCondition::ConditionClass &CondClass) {
+  switch ((MatchClassKind)Kind) {
+  default:
+    return false;
+  case MCK_Acquire_cc:
+    CondClass = DPUAsmCondition::ConditionClass::AcquireCC;
+    break;
+  case MCK_Add_cc:
+    CondClass = DPUAsmCondition::ConditionClass::AddCC;
+    break;
+  case MCK_Add_nz_cc:
+    CondClass = DPUAsmCondition::ConditionClass::Add_nzCC;
+    break;
+  case MCK_Boot_cc:
+    CondClass = DPUAsmCondition::ConditionClass::BootCC;
+    break;
+  case MCK_Const_cc_ge0:
+    CondClass = DPUAsmCondition::ConditionClass::ConstCC_ge0;
+    break;
+  case MCK_Const_cc_geu:
+    CondClass = DPUAsmCondition::ConditionClass::ConstCC_geu;
+    break;
+  case MCK_Const_cc_zero:
+    CondClass = DPUAsmCondition::ConditionClass::ConstCC_zero;
+    break;
+  case MCK_Count_cc:
+    CondClass = DPUAsmCondition::ConditionClass::CountCC;
+    break;
+  case MCK_Count_nz_cc:
+    CondClass = DPUAsmCondition::ConditionClass::Count_nzCC;
+    break;
+  case MCK_Div_cc:
+    CondClass = DPUAsmCondition::ConditionClass::DivCC;
+    break;
+  case MCK_Div_nz_cc:
+    CondClass = DPUAsmCondition::ConditionClass::Div_nzCC;
+    break;
+  case MCK_Ext_sub_set_cc:
+    CondClass = DPUAsmCondition::ConditionClass::Ext_sub_setCC;
+    break;
+  case MCK_False_cc:
+    CondClass = DPUAsmCondition::ConditionClass::FalseCC;
+    break;
+  case MCK_Imm_shift_cc:
+    CondClass = DPUAsmCondition::ConditionClass::Imm_shiftCC;
+    break;
+  case MCK_Imm_shift_nz_cc:
+    CondClass = DPUAsmCondition::ConditionClass::Imm_shift_nzCC;
+    break;
+  case MCK_Log_cc:
+    CondClass = DPUAsmCondition::ConditionClass::LogCC;
+    break;
+  case MCK_Log_nz_cc:
+    CondClass = DPUAsmCondition::ConditionClass::Log_nzCC;
+    break;
+  case MCK_Log_set_cc:
+    CondClass = DPUAsmCondition::ConditionClass::Log_setCC;
+    break;
+  case MCK_Mul_cc:
+    CondClass = DPUAsmCondition::ConditionClass::MulCC;
+    break;
+  case MCK_Mul_nz_cc:
+    CondClass = DPUAsmCondition::ConditionClass::Mul_nzCC;
+    break;
+  case MCK_No_cc:
+    CondClass = DPUAsmCondition::ConditionClass::NoCC;
+    break;
+  case MCK_Release_cc:
+    CondClass = DPUAsmCondition::ConditionClass::ReleaseCC;
+    break;
+  case MCK_Shift_cc:
+    CondClass = DPUAsmCondition::ConditionClass::ShiftCC;
+    break;
+  case MCK_Shift_nz_cc:
+    CondClass = DPUAsmCondition::ConditionClass::Shift_nzCC;
+    break;
+  case MCK_Sub_cc:
+    CondClass = DPUAsmCondition::ConditionClass::SubCC;
+    break;
+  case MCK_Sub_nz_cc:
+    CondClass = DPUAsmCondition::ConditionClass::Sub_nzCC;
+    break;
+  case MCK_Sub_set_cc:
+    CondClass = DPUAsmCondition::ConditionClass::Sub_setCC;
+    break;
+  case MCK_True_cc:
+    CondClass = DPUAsmCondition::ConditionClass::TrueCC;
+    break;
+  case MCK_True_false_cc:
+    CondClass = DPUAsmCondition::ConditionClass::True_falseCC;
+    break;
+  }
+  return true;
+}
+
+unsigned DPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
+                                                  unsigned Kind) {
+  DPUOperand &Op = static_cast<DPUOperand &>(AsmOp);
+  DPUAsmCondition::ConditionClass CondClass;
+  DPUAsmCondition::Condition Cond;
+
+  if (!Op.isImm() || !isConditionKind(Kind, CondClass)) {
+    return Match_InvalidOperand;
+  }
+
+  std::string str;
+  raw_string_ostream rso(str);
+  rso << *Op.getImm();
+  if (!fromString(rso.str().c_str(), Cond)) {
+    if (isInConditionClass(Cond, CondClass)) {
+      Op.SetCondTy(Cond, CondClass);
+      return Match_Success;
+    }
+  }
+
+  return Match_InvalidOperand;
 }
 
 } // end anonymous namespace
