@@ -83,11 +83,6 @@ std::string toYAML(const Relation &);
 std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef Filename,
                                        bool UseDex = true);
 
-// Used for serializing SymbolRole as used in Relation.
-enum class RelationKind : uint8_t { BaseOf };
-RelationKind symbolRoleToRelationKind(index::SymbolRole);
-index::SymbolRole relationKindToSymbolRole(RelationKind);
-
 } // namespace clangd
 } // namespace clang
 

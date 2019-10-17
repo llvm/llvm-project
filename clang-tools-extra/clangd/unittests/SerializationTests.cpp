@@ -152,9 +152,9 @@ TEST(SerializationTest, YAMLConversions) {
   SymbolID Base = cantFail(SymbolID::fromStr("6481EE7AF2841756"));
   SymbolID Derived = cantFail(SymbolID::fromStr("6512AEC512EA3A2D"));
   ASSERT_TRUE(bool(ParsedYAML->Relations));
-  EXPECT_THAT(*ParsedYAML->Relations,
-              UnorderedElementsAre(
-                  Relation{Base, index::SymbolRole::RelationBaseOf, Derived}));
+  EXPECT_THAT(
+      *ParsedYAML->Relations,
+      UnorderedElementsAre(Relation{Base, RelationKind::BaseOf, Derived}));
 }
 
 std::vector<std::string> YAMLFromSymbols(const SymbolSlab &Slab) {

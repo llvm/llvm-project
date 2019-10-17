@@ -478,7 +478,7 @@ canOverloadedOperatorArgsBeModified(const FunctionDecl *OperatorDecl,
   // These functions must be declared const in order to not be able to modify
   // the instance of the class they are called through.
   if (ParamCount == 1 &&
-      !OperatorDecl->getType()->getAs<FunctionType>()->isConst())
+      !OperatorDecl->getType()->castAs<FunctionType>()->isConst())
     return true;
 
   if (isNonConstReferenceType(OperatorDecl->getParamDecl(0)->getType()))

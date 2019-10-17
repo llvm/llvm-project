@@ -239,9 +239,8 @@ TEST_F(BackgroundIndexTest, ShardStorageTest) {
   // containing the definition of the subject (A_CC)
   SymbolID A = findSymbol(*ShardHeader->Symbols, "A_CC").ID;
   SymbolID B = findSymbol(*ShardSource->Symbols, "B_CC").ID;
-  EXPECT_THAT(
-      *ShardHeader->Relations,
-      UnorderedElementsAre(Relation{A, index::SymbolRole::RelationBaseOf, B}));
+  EXPECT_THAT(*ShardHeader->Relations,
+              UnorderedElementsAre(Relation{A, RelationKind::BaseOf, B}));
   // (and not in the file containing the definition of the object (B_CC)).
   EXPECT_EQ(ShardSource->Relations->size(), 0u);
 }
