@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_divmodsi4
 //===-- divmodsi4_test.c - Test __divmodsi4 -------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.

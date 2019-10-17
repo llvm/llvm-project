@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_floattidf
 // REQUIRES: int128
 //===-- floattidf.c - Test __floattidf ------------------------------------===//
 //

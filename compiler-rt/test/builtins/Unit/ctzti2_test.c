@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_ctzti2
 // REQUIRES: int128
 //===-- ctzti2_test.c - Test __ctzti2 -------------------------------------===//
 //

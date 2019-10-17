@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_subvti3
 // REQUIRES: int128
 //===-- subvti3_test.c - Test __subvti3 -----------------------------------===//
 //
