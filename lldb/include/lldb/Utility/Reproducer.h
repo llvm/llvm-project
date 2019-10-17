@@ -302,6 +302,15 @@ public:
     return GetRoot().CopyByAppendingPathComponent(T::file);
   }
 
+  template <typename T> llvm::Expected<std::string> LoadBuffer() {
+    FileSpec file = GetFile<typename T::Info>();
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> buffer =
+        llvm::vfs::getRealFileSystem()->getBufferForFile(file.GetPath());
+    if (!buffer)
+      return llvm::errorCodeToError(buffer.getError());
+    return (*buffer)->getBuffer().str();
+  }
+
   llvm::Error LoadIndex();
 
   const FileSpec &GetRoot() const { return m_root; }
