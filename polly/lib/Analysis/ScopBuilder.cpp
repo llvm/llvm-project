@@ -2119,14 +2119,27 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
   joinOrderedPHIs(UnionFind, ModeledInsts);
 
   // The list of instructions for statement (statement represented by the leader
-  // instruction). The order of statements instructions is reversed such that
-  // the epilogue is first. This makes it easier to ensure that the epilogue is
-  // the last statement.
+  // instruction).
   MapVector<Instruction *, std::vector<Instruction *>> LeaderToInstList;
+
+  // The order of statements must be preserved w.r.t. their ordered
+  // instructions. Without this explicit scan, we would also use non-ordered
+  // instructions (whose order is arbitrary) to determine statement order.
+  for (Instruction &Inst : *BB) {
+    if (!isOrderedInstruction(&Inst))
+      continue;
+
+    auto LeaderIt = UnionFind.findLeader(&Inst);
+    if (LeaderIt == UnionFind.member_end())
+      continue;
+
+    // Insert element for the leader instruction.
+    (void)LeaderToInstList[*LeaderIt];
+  }
 
   // Collect the instructions of all leaders. UnionFind's member iterator
   // unfortunately are not in any specific order.
-  for (Instruction &Inst : reverse(*BB)) {
+  for (Instruction &Inst : *BB) {
     auto LeaderIt = UnionFind.findLeader(&Inst);
     if (LeaderIt == UnionFind.member_end())
       continue;
@@ -2140,13 +2153,12 @@ void ScopBuilder::buildEqivClassBlockStmts(BasicBlock *BB) {
   // Finally build the statements.
   int Count = 0;
   long BBIdx = scop->getNextStmtIdx();
-  for (auto &Instructions : reverse(LeaderToInstList)) {
+  for (auto &Instructions : LeaderToInstList) {
     std::vector<Instruction *> &InstList = Instructions.second;
 
     // If there is no main instruction, make the first statement the main.
     bool IsMain = (MainInst ? MainLeader == Instructions.first : Count == 0);
 
-    std::reverse(InstList.begin(), InstList.end());
     std::string Name = makeStmtName(BB, BBIdx, Count, IsMain);
     scop->addScopStmt(BB, Name, L, std::move(InstList));
     Count += 1;
