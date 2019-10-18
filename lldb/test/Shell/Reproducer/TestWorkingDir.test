@@ -1,3 +1,5 @@
+# XFAIL: system-windows
+
 # This tests that the reproducer can deal with relative files. We create a
 # binary in a subdirectory and pass its relative path to LLDB. The subdirectory
 # is removed before replay so that it only exists in the reproducer's VFS.
