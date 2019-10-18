@@ -13,7 +13,7 @@ body: |
     liveins: $sgpr0, $vgpr0
     ; GCN-LABEL: name: cvt_pk_u16_vsv
     ; GCN: liveins: $sgpr0, $vgpr0
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[V_CVT_PK_U16_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_PK_U16_U32_e64 [[COPY]], [[COPY1]], implicit $exec
     ; GCN: S_ENDPGM 0, implicit [[V_CVT_PK_U16_U32_e64_]]
@@ -36,7 +36,7 @@ body: |
     ; GCN-LABEL: name: cvt_pk_u16_vvs
     ; GCN: liveins: $sgpr0, $vgpr0
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[V_CVT_PK_U16_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_PK_U16_U32_e64 [[COPY]], [[COPY1]], implicit $exec
     ; GCN: S_ENDPGM 0, implicit [[V_CVT_PK_U16_U32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0

@@ -268,7 +268,7 @@ public:
                                  const MachineRegisterInfo &MRI) const override;
 
   const TargetRegisterClass *getBoolRC() const {
-    return isWave32 ? &AMDGPU::SReg_32_XM0RegClass
+    return isWave32 ? &AMDGPU::SReg_32RegClass
                     : &AMDGPU::SReg_64RegClass;
   }
 

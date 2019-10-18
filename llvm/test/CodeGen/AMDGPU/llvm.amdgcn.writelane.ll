@@ -39,9 +39,9 @@ define amdgpu_kernel void @test_writelane_vreg_lane(i32 addrspace(1)* %out, <2 x
 
 ; CHECK-LABEL: {{^}}test_writelane_m0_sreg:
 ; CHECK: s_mov_b32 m0, -1
-; CHECK: s_mov_b32 [[COPY_M0:s[0-9]+]], m0
+; CIGFX9: s_mov_b32 [[COPY_M0:s[0-9]+]], m0
 ; CIGFX9: v_writelane_b32 v{{[0-9]+}}, [[COPY_M0]], m0
-; GFX10: v_writelane_b32 v{{[0-9]+}}, [[COPY_M0]], s{{[0-9]+}}
+; GFX10: v_writelane_b32 v{{[0-9]+}}, m0, s{{[0-9]+}}
 define amdgpu_kernel void @test_writelane_m0_sreg(i32 addrspace(1)* %out, i32 %src1) #1 {
   %oldval = load i32, i32 addrspace(1)* %out
   %m0 = call i32 asm "s_mov_b32 m0, -1", "={m0}"()

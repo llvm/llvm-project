@@ -33,7 +33,7 @@ body: |
 
     ; CHECK-LABEL: name: ctpop_s32_vs
     ; CHECK: liveins: $sgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[COPY]], 0, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_BCNT_U32_B32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
@@ -145,7 +145,7 @@ body: |
     ; CHECK-LABEL: name: add_ctpop_s32_v_vs_commute0
     ; CHECK: liveins: $vgpr0, $sgpr0
     ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[COPY]], [[COPY1]], implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_BCNT_U32_B32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
@@ -169,7 +169,7 @@ body: |
     ; CHECK-LABEL: name: add_ctpop_s32_v_sv_commute0
     ; CHECK: liveins: $vgpr0, $sgpr0
     ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[COPY1]], [[COPY]], implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_BCNT_U32_B32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
@@ -192,7 +192,7 @@ body: |
 
     ; CHECK-LABEL: name: add_ctpop_s32_s_sv_commute0
     ; CHECK: liveins: $sgpr0, $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[COPY]], [[COPY1]], implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_BCNT_U32_B32_e64_]]

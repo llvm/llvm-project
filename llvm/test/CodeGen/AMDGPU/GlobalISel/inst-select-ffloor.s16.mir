@@ -15,8 +15,8 @@ body: |
     ; VI: liveins: $sgpr0
     ; VI: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; VI: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; VI: [[FFLOOR:%[0-9]+]]:sreg_32_xm0(s16) = G_FFLOOR [[TRUNC]]
-    ; VI: [[COPY1:%[0-9]+]]:sreg_32_xm0(s32) = COPY [[FFLOOR]](s16)
+    ; VI: [[FFLOOR:%[0-9]+]]:sreg_32(s16) = G_FFLOOR [[TRUNC]]
+    ; VI: [[COPY1:%[0-9]+]]:sreg_32(s32) = COPY [[FFLOOR]](s16)
     ; VI: $sgpr0 = COPY [[COPY1]](s32)
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0
@@ -59,7 +59,7 @@ body: |
 
     ; VI-LABEL: name: ffloor_s16_vs
     ; VI: liveins: $sgpr0
-    ; VI: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; VI: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; VI: [[V_FLOOR_F16_e64_:%[0-9]+]]:vgpr_32 = V_FLOOR_F16_e64 0, [[COPY]], 0, 0, implicit $exec
     ; VI: $vgpr0 = COPY [[V_FLOOR_F16_e64_]]
     %0:sgpr(s32) = COPY $sgpr0

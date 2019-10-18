@@ -636,7 +636,7 @@ MachineSDNode *AMDGPUDAGToDAGISel::buildSMovImm64(SDLoc &DL, uint64_t Imm,
 static unsigned selectSGPRVectorRegClassID(unsigned NumVectorElts) {
   switch (NumVectorElts) {
   case 1:
-    return AMDGPU::SReg_32_XM0RegClassID;
+    return AMDGPU::SReg_32RegClassID;
   case 2:
     return AMDGPU::SReg_64RegClassID;
   case 3:

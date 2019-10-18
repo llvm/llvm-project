@@ -45,7 +45,7 @@ body: |
 
     ; GCN-LABEL: name: fmed3_s16_vsvv
     ; GCN: liveins: $sgpr0, $vgpr0, $vgpr1
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GCN: [[V_MED3_F16_:%[0-9]+]]:vgpr_32 = V_MED3_F16 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $exec
