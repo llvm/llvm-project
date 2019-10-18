@@ -44,3 +44,5 @@ int foo() {
 // CHECK: \"pretty\": \"*x\", \"location\": \{ \"line\": 16, \"column\": 10, \"file\": \"{{(.+)}}dump_egraph.c\" \}
 
 // CHECK: \"has_report\": 1
+
+// CHECK-NOT: \"program_state\": null
