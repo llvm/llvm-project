@@ -316,6 +316,7 @@ NameOrPattern::create(StringRef Pattern, MatchStyle MS,
         ("^" + Pattern.ltrim('^').rtrim('$') + "$").toStringRef(Data)));
   }
   }
+  llvm_unreachable("Unhandled llvm.objcopy.MatchStyle enum");
 }
 
 static Error addSymbolsToRenameFromFile(StringMap<StringRef> &SymbolsToRename,
