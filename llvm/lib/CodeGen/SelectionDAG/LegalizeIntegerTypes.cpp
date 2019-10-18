@@ -100,6 +100,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
                          Res = PromoteIntRes_BUILD_VECTOR(N); break;
   case ISD::SCALAR_TO_VECTOR:
                          Res = PromoteIntRes_SCALAR_TO_VECTOR(N); break;
+  case ISD::SPLAT_VECTOR:
+                         Res = PromoteIntRes_SPLAT_VECTOR(N); break;
   case ISD::CONCAT_VECTORS:
                          Res = PromoteIntRes_CONCAT_VECTORS(N); break;
 
@@ -1166,6 +1168,8 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
                           Res = PromoteIntOp_INSERT_VECTOR_ELT(N, OpNo);break;
   case ISD::SCALAR_TO_VECTOR:
                           Res = PromoteIntOp_SCALAR_TO_VECTOR(N); break;
+  case ISD::SPLAT_VECTOR:
+                          Res = PromoteIntOp_SPLAT_VECTOR(N); break;
   case ISD::VSELECT:
   case ISD::SELECT:       Res = PromoteIntOp_SELECT(N, OpNo); break;
   case ISD::SELECT_CC:    Res = PromoteIntOp_SELECT_CC(N, OpNo); break;
@@ -1394,6 +1398,13 @@ SDValue DAGTypeLegalizer::PromoteIntOp_SCALAR_TO_VECTOR(SDNode *N) {
   // the operand in place.
   return SDValue(DAG.UpdateNodeOperands(N,
                                 GetPromotedInteger(N->getOperand(0))), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_SPLAT_VECTOR(SDNode *N) {
+  // Integer SPLAT_VECTOR operands are implicitly truncated, so just promote the
+  // operand in place.
+  return SDValue(
+      DAG.UpdateNodeOperands(N, GetPromotedInteger(N->getOperand(0))), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_SELECT(SDNode *N, unsigned OpNo) {
@@ -4135,6 +4146,23 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SCALAR_TO_VECTOR(SDNode *N) {
   SDValue Op = DAG.getNode(ISD::ANY_EXTEND, dl, NOutVTElem, N->getOperand(0));
 
   return DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, NOutVT, Op);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_SPLAT_VECTOR(SDNode *N) {
+  SDLoc dl(N);
+
+  SDValue SplatVal = N->getOperand(0);
+
+  assert(!SplatVal.getValueType().isVector() && "Input must be a scalar");
+
+  EVT OutVT = N->getValueType(0);
+  EVT NOutVT = TLI.getTypeToTransformTo(*DAG.getContext(), OutVT);
+  assert(NOutVT.isVector() && "Type must be promoted to a vector type");
+  EVT NOutElemVT = NOutVT.getVectorElementType();
+
+  SDValue Op = DAG.getNode(ISD::ANY_EXTEND, dl, NOutElemVT, SplatVal);
+
+  return DAG.getNode(ISD::SPLAT_VECTOR, dl, NOutVT, Op);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_CONCAT_VECTORS(SDNode *N) {

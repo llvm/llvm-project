@@ -187,7 +187,7 @@ let Predicates = [HasSVE] in {
   defm FCPY_ZPmI : sve_int_dup_fpimm_pred<"fcpy">;
 
   // Splat scalar register (unpredicated, GPR or vector + element index)
-  defm DUP_ZR  : sve_int_perm_dup_r<"dup">;
+  defm DUP_ZR  : sve_int_perm_dup_r<"dup", AArch64dup>;
   defm DUP_ZZI : sve_int_perm_dup_i<"dup">;
 
   // Splat scalar register (predicated)
