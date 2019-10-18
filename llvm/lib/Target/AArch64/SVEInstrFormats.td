@@ -848,10 +848,14 @@ class sve_int_perm_unpk<bits<2> sz16_64, bits<2> opc, string asm,
   let Inst{4-0}   = Zd;
 }
 
-multiclass sve_int_perm_unpk<bits<2> opc, string asm> {
+multiclass sve_int_perm_unpk<bits<2> opc, string asm, SDPatternOperator op> {
   def _H : sve_int_perm_unpk<0b01, opc, asm, ZPR16, ZPR8>;
   def _S : sve_int_perm_unpk<0b10, opc, asm, ZPR32, ZPR16>;
   def _D : sve_int_perm_unpk<0b11, opc, asm, ZPR64, ZPR32>;
+
+  def : SVE_1_Op_Pat<nxv8i16, op, nxv16i8, !cast<Instruction>(NAME # _H)>;
+  def : SVE_1_Op_Pat<nxv4i32, op, nxv8i16, !cast<Instruction>(NAME # _S)>;
+  def : SVE_1_Op_Pat<nxv2i64, op, nxv4i32, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve_int_perm_insrs<bits<2> sz8_64, string asm, ZPRRegOp zprty,

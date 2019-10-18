@@ -191,6 +191,11 @@ enum NodeType : unsigned {
   FRECPE, FRECPS,
   FRSQRTE, FRSQRTS,
 
+  SUNPKHI,
+  SUNPKLO,
+  UUNPKHI,
+  UUNPKLO,
+
   // NEON Load/Store with post-increment base updates
   LD2post = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LD3post,
