@@ -3061,16 +3061,7 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
     const unsigned int Space = 1;
     ProgramStateRef State = N->getState();
 
-    auto Noop = [](const ExplodedNode*){};
-    bool HasReport = traverseHiddenNodes(
-        N, Noop, Noop, &nodeHasBugReport);
-    bool IsSink = traverseHiddenNodes(
-        N, Noop, Noop, [](const ExplodedNode *N) { return N->isSink(); });
-
-    Out << "{ \"node_id\": " << N->getID(G) << ", \"pointer\": \""
-        << (const void *)N << "\", \"state_id\": " << State->getID()
-        << ", \"has_report\": " << (HasReport ? "true" : "false")
-        << ", \"is_sink\": " << (IsSink ? "true" : "false")
+    Out << "{ \"state_id\": " << State->getID()
         << ",\\l";
 
     Indent(Out, Space, IsDot) << "\"program_points\": [\\l";
@@ -3083,9 +3074,12 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
           OtherNode->getLocation().printJson(Out, /*NL=*/"\\l");
           Out << ", \"tag\": ";
           if (const ProgramPointTag *Tag = OtherNode->getLocation().getTag())
-            Out << '\"' << Tag->getTagDescription() << "\" }";
+            Out << '\"' << Tag->getTagDescription() << "\"";
           else
-            Out << "null }";
+            Out << "null";
+          Out << ", \"node_id\": " << OtherNode->getID() <<
+                 ", \"is_sink\": " << OtherNode->isSink() <<
+                 ", \"has_report\": " << nodeHasBugReport(OtherNode) << " }";
         },
         // Adds a comma and a new-line between each program point.
         [&](const ExplodedNode *) { Out << ",\\l"; },

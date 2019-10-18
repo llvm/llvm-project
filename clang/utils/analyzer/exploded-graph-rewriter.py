@@ -67,6 +67,9 @@ class ProgramPoint(object):
         super(ProgramPoint, self).__init__()
         self.kind = json_pp['kind']
         self.tag = json_pp['tag']
+        self.node_id = json_pp['node_id']
+        self.is_sink = bool(json_pp['is_sink'])
+        self.has_report = bool(json_pp['has_report'])
         if self.kind == 'Edge':
             self.src_id = json_pp['src_id']
             self.dst_id = json_pp['dst_id']
@@ -309,11 +312,9 @@ class ExplodedNode(object):
 
     def construct(self, node_id, json_node):
         logging.debug('Adding ' + node_id)
-        self.node_id = json_node['node_id']
-        self.ptr = json_node['pointer']
-        self.has_report = json_node['has_report']
-        self.is_sink = json_node['is_sink']
+        self.ptr = node_id[4:]
         self.points = [ProgramPoint(p) for p in json_node['program_points']]
+        self.node_id = self.points[-1].node_id
         self.state = ProgramState(json_node['state_id'],
                                   json_node['program_state']) \
             if json_node['program_state'] is not None else None
@@ -488,12 +489,14 @@ class DotDumpVisitor(object):
         else:
             color = 'forestgreen'
 
+        self._dump('<tr><td align="left">%s.</td>' % p.node_id)
+
         if p.kind == 'Statement':
             # This avoids pretty-printing huge statements such as CompoundStmt.
             # Such statements show up only at [Pre|Post]StmtPurgeDeadSymbols
             skip_pretty = 'PurgeDeadSymbols' in p.stmt_point_kind
             stmt_color = 'cyan3'
-            self._dump('<tr><td align="left" width="0">%s:</td>'
+            self._dump('<td align="left" width="0">%s:</td>'
                        '<td align="left" width="0"><font color="%s">'
                        '%s</font> </td>'
                        '<td align="left"><i>S%s</i></td>'
@@ -506,29 +509,40 @@ class DotDumpVisitor(object):
                           self._short_pretty(p.pretty)
                           if not skip_pretty else ''))
         elif p.kind == 'Edge':
-            self._dump('<tr><td width="0"></td>'
+            self._dump('<td width="0"></td>'
                        '<td align="left" width="0">'
                        '<font color="%s">%s</font></td><td align="left">'
                        '[B%d] -\\> [B%d]</td></tr>'
                        % (color, 'BlockEdge', p.src_id, p.dst_id))
         elif p.kind == 'BlockEntrance':
-            self._dump('<tr><td width="0"></td>'
+            self._dump('<td width="0"></td>'
                        '<td align="left" width="0">'
                        '<font color="%s">%s</font></td>'
                        '<td align="left">[B%d]</td></tr>'
                        % (color, p.kind, p.block_id))
         else:
             # TODO: Print more stuff for other kinds of points.
-            self._dump('<tr><td width="0"></td>'
+            self._dump('<td width="0"></td>'
                        '<td align="left" width="0" colspan="2">'
                        '<font color="%s">%s</font></td></tr>'
                        % (color, p.kind))
 
         if p.tag is not None:
-            self._dump('<tr><td width="0"></td>'
+            self._dump('<tr><td width="0"></td><td width="0"></td>'
                        '<td colspan="3" align="left">'
                        '<b>Tag: </b> <font color="crimson">'
                        '%s</font></td></tr>' % p.tag)
+
+        if p.has_report:
+            self._dump('<tr><td width="0"></td><td width="0"></td>'
+                       '<td colspan="3" align="left">'
+                       '<font color="red"><b>Bug Report Attached'
+                       '</b></font></td></tr>')
+        if p.is_sink:
+            self._dump('<tr><td width="0"></td><td width="0"></td>'
+                       '<td colspan="3" align="left">'
+                       '<font color="cornflowerblue"><b>Sink Node'
+                       '</b></font></td></tr>')
 
     def visit_environment(self, e, prev_e=None):
         self._dump('<table border="0">')
@@ -786,17 +800,10 @@ class DotDumpVisitor(object):
             self._dump('color="white",fontcolor="gray80",')
         self._dump('label=<<table border="0">')
 
-        self._dump('<tr><td bgcolor="%s"><b>Node %d (%s) - '
-                   'State %s</b></td></tr>'
+        self._dump('<tr><td bgcolor="%s"><b>State %s</b></td></tr>'
                    % ("gray20" if self._dark_mode else "gray70",
-                      node.node_id, node.ptr, node.state.state_id
+                      node.state.state_id
                       if node.state is not None else 'Unspecified'))
-        if node.has_report:
-            self._dump('<tr><td><font color="red"><b>Bug Report Attached'
-                       '</b></font></td></tr>')
-        if node.is_sink:
-            self._dump('<tr><td><font color="cornflowerblue"><b>Sink Node'
-                       '</b></font></td></tr>')
         if not self._topo_mode:
             self._dump('<tr><td align="left" width="0">')
             if len(node.points) > 1:
