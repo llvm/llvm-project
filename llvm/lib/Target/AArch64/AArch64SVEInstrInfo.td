@@ -211,10 +211,10 @@ let Predicates = [HasSVE] in {
   defm REV_PP : sve_int_perm_reverse_p<"rev">;
   defm REV_ZZ : sve_int_perm_reverse_z<"rev">;
 
-  defm SUNPKLO_ZZ : sve_int_perm_unpk<0b00, "sunpklo">;
-  defm SUNPKHI_ZZ : sve_int_perm_unpk<0b01, "sunpkhi">;
-  defm UUNPKLO_ZZ : sve_int_perm_unpk<0b10, "uunpklo">;
-  defm UUNPKHI_ZZ : sve_int_perm_unpk<0b11, "uunpkhi">;
+  defm SUNPKLO_ZZ : sve_int_perm_unpk<0b00, "sunpklo", AArch64sunpklo>;
+  defm SUNPKHI_ZZ : sve_int_perm_unpk<0b01, "sunpkhi", AArch64sunpkhi>;
+  defm UUNPKLO_ZZ : sve_int_perm_unpk<0b10, "uunpklo", AArch64uunpklo>;
+  defm UUNPKHI_ZZ : sve_int_perm_unpk<0b11, "uunpkhi", AArch64uunpkhi>;
 
   defm PUNPKLO_PP : sve_int_perm_punpk<0b0, "punpklo", int_aarch64_sve_punpklo>;
   defm PUNPKHI_PP : sve_int_perm_punpk<0b1, "punpkhi", int_aarch64_sve_punpkhi>;
