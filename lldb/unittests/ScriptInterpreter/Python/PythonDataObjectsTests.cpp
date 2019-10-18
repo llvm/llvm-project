@@ -323,8 +323,8 @@ TEST_F(PythonDataObjectsTest, TestPythonListValueEquality) {
   PythonList list(PyRefType::Owned, py_list);
 
   PythonObject list_items[list_size];
-  list_items[0].Reset(PythonInteger(long_value0));
-  list_items[1].Reset(PythonString(string_value1));
+  list_items[0] = PythonInteger(long_value0);
+  list_items[1] = PythonString(string_value1);
 
   for (unsigned i = 0; i < list_size; ++i)
     list.SetItemAtIndex(i, list_items[i]);
@@ -469,10 +469,10 @@ TEST_F(PythonDataObjectsTest, TestPythonDictionaryValueEquality) {
   PythonObject py_keys[dict_entries];
   PythonObject py_values[dict_entries];
 
-  py_keys[0].Reset(PythonString(key_0));
-  py_keys[1].Reset(PythonInteger(key_1));
-  py_values[0].Reset(PythonInteger(value_0));
-  py_values[1].Reset(PythonString(value_1));
+  py_keys[0] = PythonString(key_0);
+  py_keys[1] = PythonInteger(key_1);
+  py_values[0] = PythonInteger(value_0);
+  py_values[1] = PythonString(value_1);
 
   PyObject *py_dict = PyDict_New();
   EXPECT_TRUE(PythonDictionary::Check(py_dict));
@@ -509,10 +509,10 @@ TEST_F(PythonDataObjectsTest, TestPythonDictionaryManipulation) {
   PythonString keys[dict_entries];
   PythonObject values[dict_entries];
 
-  keys[0].Reset(PythonString(key_0));
-  keys[1].Reset(PythonString(key_1));
-  values[0].Reset(PythonInteger(value_0));
-  values[1].Reset(PythonString(value_1));
+  keys[0] = PythonString(key_0);
+  keys[1] = PythonString(key_1);
+  values[0] = PythonInteger(value_0);
+  values[1] = PythonString(value_1);
 
   PythonDictionary dict(PyInitialValue::Empty);
   for (int i = 0; i < 2; ++i)

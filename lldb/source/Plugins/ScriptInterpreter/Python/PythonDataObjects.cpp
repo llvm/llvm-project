@@ -410,7 +410,7 @@ void PythonString::SetString(llvm::StringRef string) {
     llvm::consumeError(s.takeError());
     Reset();
   } else {
-    PythonObject::Reset(std::move(s.get()));
+    *this = std::move(s.get());
   }
 }
 
