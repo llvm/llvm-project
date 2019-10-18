@@ -219,6 +219,9 @@ Status ProcessMinidump::DoLoadCore() {
 
   m_thread_list = m_minidump_parser->GetThreads();
   m_active_exception = m_minidump_parser->GetExceptionStream();
+
+  SetUnixSignals(UnixSignals::Create(GetArchitecture()));
+
   ReadModuleList();
 
   llvm::Optional<lldb::pid_t> pid = m_minidump_parser->GetPid();
@@ -238,6 +241,7 @@ uint32_t ProcessMinidump::GetPluginVersion() { return 1; }
 Status ProcessMinidump::DoDestroy() { return Status(); }
 
 void ProcessMinidump::RefreshStateAfterStop() {
+
   if (!m_active_exception)
     return;
 
@@ -264,8 +268,15 @@ void ProcessMinidump::RefreshStateAfterStop() {
   ArchSpec arch = GetArchitecture();
 
   if (arch.GetTriple().getOS() == llvm::Triple::Linux) {
+    uint32_t signo = m_active_exception->ExceptionRecord.ExceptionCode;
+
+    if (signo == 0) {
+      // No stop.
+      return;
+    }
+
     stop_info = StopInfo::CreateStopReasonWithSignal(
-        *stop_thread, m_active_exception->ExceptionRecord.ExceptionCode);
+        *stop_thread, signo);
   } else if (arch.GetTriple().getVendor() == llvm::Triple::Apple) {
     stop_info = StopInfoMachException::CreateStopReasonWithMachException(
         *stop_thread, m_active_exception->ExceptionRecord.ExceptionCode, 2,
