@@ -421,6 +421,46 @@ TEST(LiveIntervalTest, DeadSubRegMoveUp) {
   });
 }
 
+TEST(LiveIntervalTest, TestMoveSubRegDefAcrossUseDef) {
+  liveIntervalTest(R"MIR(
+    %1:vreg_64 = IMPLICIT_DEF
+
+  bb.1:
+    %2:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
+    %3:vgpr_32 = V_ADD_U32_e32 %2, %1.sub0, implicit $exec
+    undef %1.sub0:vreg_64 = V_ADD_U32_e32 %2, %2, implicit $exec
+    %1.sub1:vreg_64 = COPY %2
+    S_NOP 0, implicit %1.sub1
+    S_BRANCH %bb.1
+
+)MIR", [](MachineFunction &MF, LiveIntervals &LIS) {
+     MachineInstr &UndefSubregDef = getMI(MF, 2, 1);
+     // The scheduler clears undef from subregister defs before moving
+     UndefSubregDef.getOperand(0).setIsUndef(false);
+     testHandleMove(MF, LIS, 3, 1, 1);
+  });
+}
+
+TEST(LiveIntervalTest, TestMoveSubRegDefAcrossUseDefMulti) {
+  liveIntervalTest(R"MIR(
+    %1:vreg_96 = IMPLICIT_DEF
+
+  bb.1:
+    %2:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
+    %3:vgpr_32 = V_ADD_U32_e32 %2, %1.sub0, implicit $exec
+    undef %1.sub0:vreg_96 = V_ADD_U32_e32 %2, %2, implicit $exec
+    %1.sub1:vreg_96 = COPY %2
+    %1.sub2:vreg_96 = COPY %2
+    S_NOP 0, implicit %1.sub1, implicit %1.sub2
+    S_BRANCH %bb.1
+
+)MIR", [](MachineFunction &MF, LiveIntervals &LIS) {
+     MachineInstr &UndefSubregDef = getMI(MF, 2, 1);
+     // The scheduler clears undef from subregister defs before moving
+     UndefSubregDef.getOperand(0).setIsUndef(false);
+     testHandleMove(MF, LIS, 4, 1, 1);
+  });
+}
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   initLLVM();
