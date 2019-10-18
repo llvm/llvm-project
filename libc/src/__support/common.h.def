@@ -1,0 +1,18 @@
+//===-------------------- Common internal contructs ---------------------*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_SUPPORT_COMMON_H
+#define LLVM_LIBC_SUPPORT_COMMON_H
+
+#define INLINE_ASM __asm__ __volatile__
+
+<!> The entrypoint macro has a platform specific definition. So, we include the
+<!> right definition at build time.
+%%include_file(${entrypoint_macro})
+
+#endif // LLVM_LIBC_SUPPORT_COMMON_H
