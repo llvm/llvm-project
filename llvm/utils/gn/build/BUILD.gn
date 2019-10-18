@@ -221,6 +221,7 @@ config("crt_code") {
     "-fPIC",
     "-funwind-tables",
     "-gline-tables-only",
+    "-fvisibility=hidden",
   ]
 }
 
