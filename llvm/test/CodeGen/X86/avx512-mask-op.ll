@@ -2027,8 +2027,8 @@ define void @ktest_1(<8 x double> %in, double * %base) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vcmpgtpd (%rdi), %zmm0, %k1
 ; SKX-NEXT:    vmovupd 8(%rdi), %zmm1 {%k1} {z}
-; SKX-NEXT:    vcmpltpd %zmm1, %zmm0, %k0 {%k1}
-; SKX-NEXT:    kortestb %k0, %k0
+; SKX-NEXT:    vcmpltpd %zmm1, %zmm0, %k0
+; SKX-NEXT:    ktestb %k0, %k1
 ; SKX-NEXT:    je LBB43_2
 ; SKX-NEXT:  ## %bb.1: ## %L1
 ; SKX-NEXT:    vmovapd %zmm0, (%rdi)
@@ -2060,8 +2060,8 @@ define void @ktest_1(<8 x double> %in, double * %base) {
 ; AVX512DQ:       ## %bb.0:
 ; AVX512DQ-NEXT:    vcmpgtpd (%rdi), %zmm0, %k1
 ; AVX512DQ-NEXT:    vmovupd 8(%rdi), %zmm1 {%k1} {z}
-; AVX512DQ-NEXT:    vcmpltpd %zmm1, %zmm0, %k0 {%k1}
-; AVX512DQ-NEXT:    kortestb %k0, %k0
+; AVX512DQ-NEXT:    vcmpltpd %zmm1, %zmm0, %k0
+; AVX512DQ-NEXT:    ktestb %k0, %k1
 ; AVX512DQ-NEXT:    je LBB43_2
 ; AVX512DQ-NEXT:  ## %bb.1: ## %L1
 ; AVX512DQ-NEXT:    vmovapd %zmm0, (%rdi)
@@ -2077,8 +2077,8 @@ define void @ktest_1(<8 x double> %in, double * %base) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vcmpgtpd (%eax), %zmm0, %k1
 ; X86-NEXT:    vmovupd 8(%eax), %zmm1 {%k1} {z}
-; X86-NEXT:    vcmpltpd %zmm1, %zmm0, %k0 {%k1}
-; X86-NEXT:    kortestb %k0, %k0
+; X86-NEXT:    vcmpltpd %zmm1, %zmm0, %k0
+; X86-NEXT:    ktestb %k0, %k1
 ; X86-NEXT:    je LBB43_2
 ; X86-NEXT:  ## %bb.1: ## %L1
 ; X86-NEXT:    vmovapd %zmm0, (%eax)
