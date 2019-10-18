@@ -55,7 +55,7 @@ struct MapPlatformData {};
 // The Android Bionic team has allocated a TLS slot for sanitizers starting
 // with Q, given that Android currently doesn't support ELF TLS. It is used to
 // store sanitizer thread specific data.
-static const int TLS_SLOT_SANITIZER = 8; // TODO(kostyak): 6 for Q!!
+static const int TLS_SLOT_SANITIZER = 6;
 
 ALWAYS_INLINE uptr *getAndroidTlsPtr() {
   return reinterpret_cast<uptr *>(&__get_tls()[TLS_SLOT_SANITIZER]);
