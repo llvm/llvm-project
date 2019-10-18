@@ -27,10 +27,9 @@ class LitTestCase(unittest.TestCase):
 
     def runTest(self):
         # Run the test.
-        lit.worker._execute_test(self._test, self._lit_config)
+        result = lit.worker._execute_test(self._test, self._lit_config)
 
         # Adapt the result to unittest.
-        result = self._test.result
         if result.code is lit.Test.UNRESOLVED:
             raise UnresolvedError(result.output)
         elif result.code.isFailure:

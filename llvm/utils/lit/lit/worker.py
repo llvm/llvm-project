@@ -31,9 +31,9 @@ def run_one_test(test_index, test):
     the display.
     """
     try:
-        _execute_test_in_parallelism_group(test, _lit_config,
-                                           _parallelism_semaphores)
-        return (test_index, test)
+        result = _execute_test_in_parallelism_group(test, _lit_config,
+                                                    _parallelism_semaphores)
+        return (test_index, result)
     except KeyboardInterrupt:
         # If a worker process gets an interrupt, abort it immediately.
         lit.util.abort_now()
@@ -50,11 +50,11 @@ def _execute_test_in_parallelism_group(test, lit_config, parallelism_semaphores)
         semaphore = parallelism_semaphores[pg]
         try:
             semaphore.acquire()
-            _execute_test(test, lit_config)
+            return _execute_test(test, lit_config)
         finally:
             semaphore.release()
     else:
-        _execute_test(test, lit_config)
+        return _execute_test(test, lit_config)
 
 
 def _execute_test(test, lit_config):
@@ -66,7 +66,7 @@ def _execute_test(test, lit_config):
     result.elapsed = end - start
     resolve_result_code(result, test)
 
-    test.setResult(result)
+    return result
 
 
 # TODO(yln): is this the right place to deal with this?
