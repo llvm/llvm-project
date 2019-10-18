@@ -161,6 +161,7 @@ private:
   SDValue EmitStackConvert(SDValue SrcOp, EVT SlotVT, EVT DestVT,
                            const SDLoc &dl, SDValue ChainIn);
   SDValue ExpandBUILD_VECTOR(SDNode *Node);
+  SDValue ExpandSPLAT_VECTOR(SDNode *Node);
   SDValue ExpandSCALAR_TO_VECTOR(SDNode *Node);
   void ExpandDYNAMIC_STACKALLOC(SDNode *Node,
                                 SmallVectorImpl<SDValue> &Results);
@@ -2005,6 +2006,14 @@ SDValue SelectionDAGLegalize::ExpandBUILD_VECTOR(SDNode *Node) {
   return ExpandVectorBuildThroughStack(Node);
 }
 
+SDValue SelectionDAGLegalize::ExpandSPLAT_VECTOR(SDNode *Node) {
+  SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
+  SDValue SplatVal = Node->getOperand(0);
+
+  return DAG.getSplatBuildVector(VT, DL, SplatVal);
+}
+
 // Expand a node into a call to a libcall.  If the result value
 // does not fit into a register, return the lo part and set the hi part to the
 // by-reg argument.  If it does fit into a single register, return the result
@@ -3641,6 +3650,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::BUILD_VECTOR:
     Results.push_back(ExpandBUILD_VECTOR(Node));
+    break;
+  case ISD::SPLAT_VECTOR:
+    Results.push_back(ExpandSPLAT_VECTOR(Node));
     break;
   case ISD::SRA:
   case ISD::SRL:

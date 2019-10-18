@@ -297,6 +297,7 @@ private:
   SDValue PromoteIntRes_VECTOR_SHUFFLE(SDNode *N);
   SDValue PromoteIntRes_BUILD_VECTOR(SDNode *N);
   SDValue PromoteIntRes_SCALAR_TO_VECTOR(SDNode *N);
+  SDValue PromoteIntRes_SPLAT_VECTOR(SDNode *N);
   SDValue PromoteIntRes_EXTEND_VECTOR_INREG(SDNode *N);
   SDValue PromoteIntRes_INSERT_VECTOR_ELT(SDNode *N);
   SDValue PromoteIntRes_CONCAT_VECTORS(SDNode *N);
@@ -354,6 +355,7 @@ private:
   SDValue PromoteIntOp_EXTRACT_SUBVECTOR(SDNode *N);
   SDValue PromoteIntOp_CONCAT_VECTORS(SDNode *N);
   SDValue PromoteIntOp_SCALAR_TO_VECTOR(SDNode *N);
+  SDValue PromoteIntOp_SPLAT_VECTOR(SDNode *N);
   SDValue PromoteIntOp_SELECT(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_SELECT_CC(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_SETCC(SDNode *N, unsigned OpNo);
