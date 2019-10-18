@@ -50,8 +50,9 @@ class Run(object):
         self.failure_count = 0
         self.hit_max_failures = False
 
-        one_year = 365 * 24 * 60 * 60  # days * hours * minutes * seconds
-        timeout = self.timeout or one_year
+        # Larger timeouts (one year, positive infinity) don't work on Windows.
+        one_week = 7 * 24 * 60 * 60  # days * hours * minutes * seconds
+        timeout = self.timeout or one_week
 
         start = time.time()
         deadline = start + timeout
