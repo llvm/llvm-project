@@ -36,7 +36,7 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:  # %bb.1: # %bb5
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    li 4, 0
-; CHECK-NEXT:    b .LBB0_17
+; CHECK-NEXT:    b .LBB0_16
 ; CHECK-NEXT:  .LBB0_2: # %bb1
 ; CHECK-NEXT:    lfd 0, 400(1)
 ; CHECK-NEXT:    lis 3, 15856
@@ -166,11 +166,13 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:    bl __gcc_qsub@PLT
 ; CHECK-NEXT:    stfd 2, 176(1)
 ; CHECK-NEXT:    stfd 1, 168(1)
-; CHECK-NEXT:    fcmpu 1, 2, 27
+; CHECK-NEXT:    fcmpu 0, 2, 27
 ; CHECK-NEXT:    lwz 3, 180(1)
-; CHECK-NEXT:    fcmpu 0, 1, 27
-; CHECK-NEXT:    crandc 20, 2, 4
+; CHECK-NEXT:    fcmpu 1, 1, 27
+; CHECK-NEXT:    crandc 20, 6, 0
+; CHECK-NEXT:    cror 21, 5, 7
 ; CHECK-NEXT:    stw 3, 268(1)
+; CHECK-NEXT:    cror 20, 21, 20
 ; CHECK-NEXT:    lwz 3, 176(1)
 ; CHECK-NEXT:    stw 3, 264(1)
 ; CHECK-NEXT:    lwz 3, 172(1)
@@ -179,11 +181,8 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:    lwz 3, 168(1)
 ; CHECK-NEXT:    stw 3, 272(1)
 ; CHECK-NEXT:    lfd 31, 272(1)
-; CHECK-NEXT:    bc 12, 20, .LBB0_14
-; CHECK-NEXT:  # %bb.10: # %bb1
-; CHECK-NEXT:    cror 20, 1, 3
-; CHECK-NEXT:    bc 12, 20, .LBB0_14
-; CHECK-NEXT:  # %bb.11: # %bb2
+; CHECK-NEXT:    bc 12, 20, .LBB0_13
+; CHECK-NEXT:  # %bb.10: # %bb2
 ; CHECK-NEXT:    fneg 28, 31
 ; CHECK-NEXT:    stfd 28, 48(1)
 ; CHECK-NEXT:    lis 3, 16864
@@ -232,15 +231,15 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:    crandc 20, 6, 1
 ; CHECK-NEXT:    cror 20, 4, 20
 ; CHECK-NEXT:    addis 3, 3, -32768
-; CHECK-NEXT:    bc 12, 20, .LBB0_13
-; CHECK-NEXT:  # %bb.12: # %bb2
+; CHECK-NEXT:    bc 12, 20, .LBB0_12
+; CHECK-NEXT:  # %bb.11: # %bb2
 ; CHECK-NEXT:    ori 3, 4, 0
-; CHECK-NEXT:    b .LBB0_13
-; CHECK-NEXT:  .LBB0_13: # %bb2
+; CHECK-NEXT:    b .LBB0_12
+; CHECK-NEXT:  .LBB0_12: # %bb2
 ; CHECK-NEXT:    subfic 4, 3, 0
 ; CHECK-NEXT:    subfe 3, 29, 30
-; CHECK-NEXT:    b .LBB0_17
-; CHECK-NEXT:  .LBB0_14: # %bb3
+; CHECK-NEXT:    b .LBB0_16
+; CHECK-NEXT:  .LBB0_13: # %bb3
 ; CHECK-NEXT:    stfd 31, 112(1)
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    stw 3, 148(1)
@@ -287,13 +286,13 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:    crandc 20, 6, 0
 ; CHECK-NEXT:    cror 20, 5, 20
 ; CHECK-NEXT:    addis 3, 3, -32768
-; CHECK-NEXT:    bc 12, 20, .LBB0_15
-; CHECK-NEXT:    b .LBB0_16
-; CHECK-NEXT:  .LBB0_15: # %bb3
+; CHECK-NEXT:    bc 12, 20, .LBB0_14
+; CHECK-NEXT:    b .LBB0_15
+; CHECK-NEXT:  .LBB0_14: # %bb3
 ; CHECK-NEXT:    addi 4, 3, 0
-; CHECK-NEXT:  .LBB0_16: # %bb3
+; CHECK-NEXT:  .LBB0_15: # %bb3
 ; CHECK-NEXT:    mr 3, 30
-; CHECK-NEXT:  .LBB0_17: # %bb5
+; CHECK-NEXT:  .LBB0_16: # %bb5
 ; CHECK-NEXT:    lfd 31, 456(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    lfd 30, 448(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    lfd 29, 440(1) # 8-byte Folded Reload
