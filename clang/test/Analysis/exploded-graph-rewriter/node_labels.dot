@@ -13,7 +13,7 @@
 // LIGHT: Node0x1 [shape=record,label=<
 // DARK:  Node0x1 [shape=record,color="white",fontcolor="gray80",label=<
 // CHECK-SAME:   <tr>
-// LIGHT-SAME:     <td bgcolor="gray">
+// LIGHT-SAME:     <td bgcolor="gray70">
 // DARK-SAME:      <td bgcolor="gray20">
 // CHECK-SAME:       <b>Node 1 (0x1) - State Unspecified</b>
 // CHECK-SAME:     </td>

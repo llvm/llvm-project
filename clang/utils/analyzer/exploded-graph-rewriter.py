@@ -784,7 +784,7 @@ class DotDumpVisitor(object):
 
         self._dump('<tr><td bgcolor="%s"><b>Node %d (%s) - '
                    'State %s</b></td></tr>'
-                   % ("gray20" if self._dark_mode else "gray",
+                   % ("gray20" if self._dark_mode else "gray70",
                       node.node_id, node.ptr, node.state.state_id
                       if node.state is not None else 'Unspecified'))
         if node.has_report:
