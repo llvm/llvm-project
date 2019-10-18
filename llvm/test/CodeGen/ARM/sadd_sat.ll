@@ -210,67 +210,51 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 ; CHECK-T1-LABEL: func16:
 ; CHECK-T1:       @ %bb.0:
-; CHECK-T1-NEXT:    lsls r3, r1, #16
-; CHECK-T1-NEXT:    lsls r1, r0, #16
-; CHECK-T1-NEXT:    movs r2, #1
-; CHECK-T1-NEXT:    adds r0, r1, r3
-; CHECK-T1-NEXT:    mov r3, r2
-; CHECK-T1-NEXT:    bmi .LBB2_2
+; CHECK-T1-NEXT:    adds r0, r0, r1
+; CHECK-T1-NEXT:    ldr r1, .LCPI2_0
+; CHECK-T1-NEXT:    cmp r0, r1
+; CHECK-T1-NEXT:    blt .LBB2_2
 ; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:    movs r3, #0
+; CHECK-T1-NEXT:    mov r0, r1
 ; CHECK-T1-NEXT:  .LBB2_2:
-; CHECK-T1-NEXT:    cmp r3, #0
-; CHECK-T1-NEXT:    bne .LBB2_4
+; CHECK-T1-NEXT:    ldr r1, .LCPI2_1
+; CHECK-T1-NEXT:    cmp r0, r1
+; CHECK-T1-NEXT:    bgt .LBB2_4
 ; CHECK-T1-NEXT:  @ %bb.3:
-; CHECK-T1-NEXT:    lsls r2, r2, #31
-; CHECK-T1-NEXT:    cmp r0, r1
-; CHECK-T1-NEXT:    bvs .LBB2_5
-; CHECK-T1-NEXT:    b .LBB2_6
+; CHECK-T1-NEXT:    mov r0, r1
 ; CHECK-T1-NEXT:  .LBB2_4:
-; CHECK-T1-NEXT:    ldr r2, .LCPI2_0
-; CHECK-T1-NEXT:    cmp r0, r1
-; CHECK-T1-NEXT:    bvc .LBB2_6
-; CHECK-T1-NEXT:  .LBB2_5:
-; CHECK-T1-NEXT:    mov r0, r2
-; CHECK-T1-NEXT:  .LBB2_6:
-; CHECK-T1-NEXT:    asrs r0, r0, #16
 ; CHECK-T1-NEXT:    bx lr
 ; CHECK-T1-NEXT:    .p2align 2
-; CHECK-T1-NEXT:  @ %bb.7:
+; CHECK-T1-NEXT:  @ %bb.5:
 ; CHECK-T1-NEXT:  .LCPI2_0:
-; CHECK-T1-NEXT:    .long 2147483647 @ 0x7fffffff
+; CHECK-T1-NEXT:    .long 32767 @ 0x7fff
+; CHECK-T1-NEXT:  .LCPI2_1:
+; CHECK-T1-NEXT:    .long 4294934528 @ 0xffff8000
 ;
 ; CHECK-T2-LABEL: func16:
 ; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    lsls r2, r0, #16
-; CHECK-T2-NEXT:    add.w r1, r2, r1, lsl #16
-; CHECK-T2-NEXT:    movs r2, #0
-; CHECK-T2-NEXT:    cmp r1, #0
-; CHECK-T2-NEXT:    mov.w r3, #-2147483648
-; CHECK-T2-NEXT:    it mi
-; CHECK-T2-NEXT:    movmi r2, #1
-; CHECK-T2-NEXT:    cmp r2, #0
-; CHECK-T2-NEXT:    it ne
-; CHECK-T2-NEXT:    mvnne r3, #-2147483648
-; CHECK-T2-NEXT:    cmp.w r1, r0, lsl #16
-; CHECK-T2-NEXT:    it vc
-; CHECK-T2-NEXT:    movvc r3, r1
-; CHECK-T2-NEXT:    asrs r0, r3, #16
+; CHECK-T2-NEXT:    add r0, r1
+; CHECK-T2-NEXT:    movw r1, #32767
+; CHECK-T2-NEXT:    cmp r0, r1
+; CHECK-T2-NEXT:    it lt
+; CHECK-T2-NEXT:    movlt r1, r0
+; CHECK-T2-NEXT:    movw r0, #32768
+; CHECK-T2-NEXT:    cmn.w r1, #32768
+; CHECK-T2-NEXT:    movt r0, #65535
+; CHECK-T2-NEXT:    it gt
+; CHECK-T2-NEXT:    movgt r0, r1
 ; CHECK-T2-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func16:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    lsl r2, r0, #16
-; CHECK-ARM-NEXT:    add r1, r2, r1, lsl #16
-; CHECK-ARM-NEXT:    mov r2, #0
-; CHECK-ARM-NEXT:    cmp r1, #0
-; CHECK-ARM-NEXT:    movwmi r2, #1
-; CHECK-ARM-NEXT:    mov r3, #-2147483648
-; CHECK-ARM-NEXT:    cmp r2, #0
-; CHECK-ARM-NEXT:    mvnne r3, #-2147483648
-; CHECK-ARM-NEXT:    cmp r1, r0, lsl #16
-; CHECK-ARM-NEXT:    movvc r3, r1
-; CHECK-ARM-NEXT:    asr r0, r3, #16
+; CHECK-ARM-NEXT:    add r0, r0, r1
+; CHECK-ARM-NEXT:    movw r1, #32767
+; CHECK-ARM-NEXT:    cmp r0, r1
+; CHECK-ARM-NEXT:    movlt r1, r0
+; CHECK-ARM-NEXT:    movw r0, #32768
+; CHECK-ARM-NEXT:    movt r0, #65535
+; CHECK-ARM-NEXT:    cmn r1, #32768
+; CHECK-ARM-NEXT:    movgt r0, r1
 ; CHECK-ARM-NEXT:    bx lr
   %tmp = call i16 @llvm.sadd.sat.i16(i16 %x, i16 %y)
   ret i16 %tmp
@@ -279,67 +263,39 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
 ; CHECK-T1-LABEL: func8:
 ; CHECK-T1:       @ %bb.0:
-; CHECK-T1-NEXT:    lsls r3, r1, #24
-; CHECK-T1-NEXT:    lsls r1, r0, #24
-; CHECK-T1-NEXT:    movs r2, #1
-; CHECK-T1-NEXT:    adds r0, r1, r3
-; CHECK-T1-NEXT:    mov r3, r2
-; CHECK-T1-NEXT:    bmi .LBB3_2
+; CHECK-T1-NEXT:    adds r0, r0, r1
+; CHECK-T1-NEXT:    movs r1, #127
+; CHECK-T1-NEXT:    cmp r0, #127
+; CHECK-T1-NEXT:    blt .LBB3_2
 ; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:    movs r3, #0
+; CHECK-T1-NEXT:    mov r0, r1
 ; CHECK-T1-NEXT:  .LBB3_2:
-; CHECK-T1-NEXT:    cmp r3, #0
-; CHECK-T1-NEXT:    bne .LBB3_4
+; CHECK-T1-NEXT:    mvns r1, r1
+; CHECK-T1-NEXT:    cmp r0, r1
+; CHECK-T1-NEXT:    bgt .LBB3_4
 ; CHECK-T1-NEXT:  @ %bb.3:
-; CHECK-T1-NEXT:    lsls r2, r2, #31
-; CHECK-T1-NEXT:    cmp r0, r1
-; CHECK-T1-NEXT:    bvs .LBB3_5
-; CHECK-T1-NEXT:    b .LBB3_6
+; CHECK-T1-NEXT:    mov r0, r1
 ; CHECK-T1-NEXT:  .LBB3_4:
-; CHECK-T1-NEXT:    ldr r2, .LCPI3_0
-; CHECK-T1-NEXT:    cmp r0, r1
-; CHECK-T1-NEXT:    bvc .LBB3_6
-; CHECK-T1-NEXT:  .LBB3_5:
-; CHECK-T1-NEXT:    mov r0, r2
-; CHECK-T1-NEXT:  .LBB3_6:
-; CHECK-T1-NEXT:    asrs r0, r0, #24
 ; CHECK-T1-NEXT:    bx lr
-; CHECK-T1-NEXT:    .p2align 2
-; CHECK-T1-NEXT:  @ %bb.7:
-; CHECK-T1-NEXT:  .LCPI3_0:
-; CHECK-T1-NEXT:    .long 2147483647 @ 0x7fffffff
 ;
 ; CHECK-T2-LABEL: func8:
 ; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    lsls r2, r0, #24
-; CHECK-T2-NEXT:    add.w r1, r2, r1, lsl #24
-; CHECK-T2-NEXT:    movs r2, #0
-; CHECK-T2-NEXT:    cmp r1, #0
-; CHECK-T2-NEXT:    mov.w r3, #-2147483648
-; CHECK-T2-NEXT:    it mi
-; CHECK-T2-NEXT:    movmi r2, #1
-; CHECK-T2-NEXT:    cmp r2, #0
-; CHECK-T2-NEXT:    it ne
-; CHECK-T2-NEXT:    mvnne r3, #-2147483648
-; CHECK-T2-NEXT:    cmp.w r1, r0, lsl #24
-; CHECK-T2-NEXT:    it vc
-; CHECK-T2-NEXT:    movvc r3, r1
-; CHECK-T2-NEXT:    asrs r0, r3, #24
+; CHECK-T2-NEXT:    add r0, r1
+; CHECK-T2-NEXT:    cmp r0, #127
+; CHECK-T2-NEXT:    it ge
+; CHECK-T2-NEXT:    movge r0, #127
+; CHECK-T2-NEXT:    cmn.w r0, #128
+; CHECK-T2-NEXT:    it le
+; CHECK-T2-NEXT:    mvnle r0, #127
 ; CHECK-T2-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func8:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    lsl r2, r0, #24
-; CHECK-ARM-NEXT:    add r1, r2, r1, lsl #24
-; CHECK-ARM-NEXT:    mov r2, #0
-; CHECK-ARM-NEXT:    cmp r1, #0
-; CHECK-ARM-NEXT:    movwmi r2, #1
-; CHECK-ARM-NEXT:    mov r3, #-2147483648
-; CHECK-ARM-NEXT:    cmp r2, #0
-; CHECK-ARM-NEXT:    mvnne r3, #-2147483648
-; CHECK-ARM-NEXT:    cmp r1, r0, lsl #24
-; CHECK-ARM-NEXT:    movvc r3, r1
-; CHECK-ARM-NEXT:    asr r0, r3, #24
+; CHECK-ARM-NEXT:    add r0, r0, r1
+; CHECK-ARM-NEXT:    cmp r0, #127
+; CHECK-ARM-NEXT:    movge r0, #127
+; CHECK-ARM-NEXT:    cmn r0, #128
+; CHECK-ARM-NEXT:    mvnle r0, #127
 ; CHECK-ARM-NEXT:    bx lr
   %tmp = call i8 @llvm.sadd.sat.i8(i8 %x, i8 %y)
   ret i8 %tmp
@@ -348,67 +304,39 @@ define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
 define signext i4 @func3(i4 signext %x, i4 signext %y) nounwind {
 ; CHECK-T1-LABEL: func3:
 ; CHECK-T1:       @ %bb.0:
-; CHECK-T1-NEXT:    lsls r3, r1, #28
-; CHECK-T1-NEXT:    lsls r1, r0, #28
-; CHECK-T1-NEXT:    movs r2, #1
-; CHECK-T1-NEXT:    adds r0, r1, r3
-; CHECK-T1-NEXT:    mov r3, r2
-; CHECK-T1-NEXT:    bmi .LBB4_2
+; CHECK-T1-NEXT:    adds r0, r0, r1
+; CHECK-T1-NEXT:    movs r1, #7
+; CHECK-T1-NEXT:    cmp r0, #7
+; CHECK-T1-NEXT:    blt .LBB4_2
 ; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:    movs r3, #0
+; CHECK-T1-NEXT:    mov r0, r1
 ; CHECK-T1-NEXT:  .LBB4_2:
-; CHECK-T1-NEXT:    cmp r3, #0
-; CHECK-T1-NEXT:    bne .LBB4_4
+; CHECK-T1-NEXT:    mvns r1, r1
+; CHECK-T1-NEXT:    cmp r0, r1
+; CHECK-T1-NEXT:    bgt .LBB4_4
 ; CHECK-T1-NEXT:  @ %bb.3:
-; CHECK-T1-NEXT:    lsls r2, r2, #31
-; CHECK-T1-NEXT:    cmp r0, r1
-; CHECK-T1-NEXT:    bvs .LBB4_5
-; CHECK-T1-NEXT:    b .LBB4_6
+; CHECK-T1-NEXT:    mov r0, r1
 ; CHECK-T1-NEXT:  .LBB4_4:
-; CHECK-T1-NEXT:    ldr r2, .LCPI4_0
-; CHECK-T1-NEXT:    cmp r0, r1
-; CHECK-T1-NEXT:    bvc .LBB4_6
-; CHECK-T1-NEXT:  .LBB4_5:
-; CHECK-T1-NEXT:    mov r0, r2
-; CHECK-T1-NEXT:  .LBB4_6:
-; CHECK-T1-NEXT:    asrs r0, r0, #28
 ; CHECK-T1-NEXT:    bx lr
-; CHECK-T1-NEXT:    .p2align 2
-; CHECK-T1-NEXT:  @ %bb.7:
-; CHECK-T1-NEXT:  .LCPI4_0:
-; CHECK-T1-NEXT:    .long 2147483647 @ 0x7fffffff
 ;
 ; CHECK-T2-LABEL: func3:
 ; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    lsls r2, r0, #28
-; CHECK-T2-NEXT:    add.w r1, r2, r1, lsl #28
-; CHECK-T2-NEXT:    movs r2, #0
-; CHECK-T2-NEXT:    cmp r1, #0
-; CHECK-T2-NEXT:    mov.w r3, #-2147483648
-; CHECK-T2-NEXT:    it mi
-; CHECK-T2-NEXT:    movmi r2, #1
-; CHECK-T2-NEXT:    cmp r2, #0
-; CHECK-T2-NEXT:    it ne
-; CHECK-T2-NEXT:    mvnne r3, #-2147483648
-; CHECK-T2-NEXT:    cmp.w r1, r0, lsl #28
-; CHECK-T2-NEXT:    it vc
-; CHECK-T2-NEXT:    movvc r3, r1
-; CHECK-T2-NEXT:    asrs r0, r3, #28
+; CHECK-T2-NEXT:    add r0, r1
+; CHECK-T2-NEXT:    cmp r0, #7
+; CHECK-T2-NEXT:    it ge
+; CHECK-T2-NEXT:    movge r0, #7
+; CHECK-T2-NEXT:    cmn.w r0, #8
+; CHECK-T2-NEXT:    it le
+; CHECK-T2-NEXT:    mvnle r0, #7
 ; CHECK-T2-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func3:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    lsl r2, r0, #28
-; CHECK-ARM-NEXT:    add r1, r2, r1, lsl #28
-; CHECK-ARM-NEXT:    mov r2, #0
-; CHECK-ARM-NEXT:    cmp r1, #0
-; CHECK-ARM-NEXT:    movwmi r2, #1
-; CHECK-ARM-NEXT:    mov r3, #-2147483648
-; CHECK-ARM-NEXT:    cmp r2, #0
-; CHECK-ARM-NEXT:    mvnne r3, #-2147483648
-; CHECK-ARM-NEXT:    cmp r1, r0, lsl #28
-; CHECK-ARM-NEXT:    movvc r3, r1
-; CHECK-ARM-NEXT:    asr r0, r3, #28
+; CHECK-ARM-NEXT:    add r0, r0, r1
+; CHECK-ARM-NEXT:    cmp r0, #7
+; CHECK-ARM-NEXT:    movge r0, #7
+; CHECK-ARM-NEXT:    cmn r0, #8
+; CHECK-ARM-NEXT:    mvnle r0, #7
 ; CHECK-ARM-NEXT:    bx lr
   %tmp = call i4 @llvm.sadd.sat.i4(i4 %x, i4 %y)
   ret i4 %tmp

@@ -158,19 +158,19 @@ define signext i8 @func8(i8 signext %x, i8 signext %y, i8 signext %z) nounwind {
 define signext i4 @func4(i4 signext %x, i4 signext %y, i4 signext %z) nounwind {
 ; X86-LABEL: func4:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    mulb {{[0-9]+}}(%esp)
 ; X86-NEXT:    shlb $4, %al
-; X86-NEXT:    shlb $4, %dl
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    cmpb %al, %dl
-; X86-NEXT:    setns %cl
-; X86-NEXT:    addl $127, %ecx
-; X86-NEXT:    subb %al, %dl
-; X86-NEXT:    movzbl %dl, %eax
-; X86-NEXT:    cmovol %ecx, %eax
 ; X86-NEXT:    sarb $4, %al
+; X86-NEXT:    subb %al, %cl
+; X86-NEXT:    movzbl %cl, %eax
+; X86-NEXT:    cmpb $7, %cl
+; X86-NEXT:    movl $7, %ecx
+; X86-NEXT:    cmovll %eax, %ecx
+; X86-NEXT:    cmpb $-8, %cl
+; X86-NEXT:    movl $248, %eax
+; X86-NEXT:    cmovgl %ecx, %eax
 ; X86-NEXT:    movsbl %al, %eax
 ; X86-NEXT:    retl
 ;
@@ -180,15 +180,15 @@ define signext i4 @func4(i4 signext %x, i4 signext %y, i4 signext %z) nounwind {
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    mulb %dl
 ; X64-NEXT:    shlb $4, %al
-; X64-NEXT:    shlb $4, %dil
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    cmpb %al, %dil
-; X64-NEXT:    setns %cl
-; X64-NEXT:    addl $127, %ecx
+; X64-NEXT:    sarb $4, %al
 ; X64-NEXT:    subb %al, %dil
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    cmovol %ecx, %eax
-; X64-NEXT:    sarb $4, %al
+; X64-NEXT:    cmpb $7, %al
+; X64-NEXT:    movl $7, %ecx
+; X64-NEXT:    cmovll %eax, %ecx
+; X64-NEXT:    cmpb $-8, %cl
+; X64-NEXT:    movl $248, %eax
+; X64-NEXT:    cmovgl %ecx, %eax
 ; X64-NEXT:    movsbl %al, %eax
 ; X64-NEXT:    retq
   %a = mul i4 %y, %z
