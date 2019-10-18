@@ -84,6 +84,17 @@ namespace sys {
   /// function.  Note also that the handler may be executed on a different
   /// thread on some platforms.
   void SetInfoSignalFunction(void (*Handler)());
+
+  /// Registers a function to be called when a "pipe" signal is delivered to
+  /// the process.
+  ///
+  /// The "pipe" signal typically indicates a failed write to a pipe (SIGPIPE).
+  /// The default installed handler calls `exit(EX_IOERR)`, causing the process
+  /// to immediately exit with an IO error exit code.
+  ///
+  /// This function is only applicable on POSIX systems.
+  void SetPipeSignalFunction(void (*Handler)());
+
 } // End sys namespace
 } // End llvm namespace
 
