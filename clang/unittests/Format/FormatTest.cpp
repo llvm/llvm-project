@@ -7541,6 +7541,8 @@ TEST_F(FormatTest, FormatsCasts) {
   verifyFormat("my_int a = (ns::my_int)-2;");
   verifyFormat("case (my_int)ONE:");
   verifyFormat("auto x = (X)this;");
+  // Casts in Obj-C style calls used to not be recognized as such.
+  verifyFormat("int a = [(type*)[((type*)val) arg] arg];", getGoogleStyle());
 
   // FIXME: single value wrapped with paren will be treated as cast.
   verifyFormat("void f(int i = (kValue)*kMask) {}");
@@ -7581,6 +7583,29 @@ TEST_F(FormatTest, FormatsCasts) {
   verifyFormat("int a = alignof(int *) + b;", getGoogleStyle());
   verifyFormat("bool b = f(g<int>) && c;");
   verifyFormat("typedef void (*f)(int i) func;");
+  verifyFormat("void operator++(int) noexcept;");
+  verifyFormat("void operator++(int &) noexcept;");
+  verifyFormat("void operator delete(void *, std::size_t, const std::nothrow_t "
+               "&) noexcept;");
+  verifyFormat(
+      "void operator delete(std::size_t, const std::nothrow_t &) noexcept;");
+  verifyFormat("void operator delete(const std::nothrow_t &) noexcept;");
+  verifyFormat("void operator delete(std::nothrow_t &) noexcept;");
+  verifyFormat("void operator delete(nothrow_t &) noexcept;");
+  verifyFormat("void operator delete(foo &) noexcept;");
+  verifyFormat("void operator delete(foo) noexcept;");
+  verifyFormat("void operator delete(int) noexcept;");
+  verifyFormat("void operator delete(int &) noexcept;");
+  verifyFormat("void operator delete(int &) volatile noexcept;");
+  verifyFormat("void operator delete(int &) const");
+  verifyFormat("void operator delete(int &) = default");
+  verifyFormat("void operator delete(int &) = delete");
+  verifyFormat("void operator delete(int &) [[noreturn]]");
+  verifyFormat("void operator delete(int &) throw();");
+  verifyFormat("void operator delete(int &) throw(int);");
+  verifyFormat("auto operator delete(int &) -> int;");
+  verifyFormat("auto operator delete(int &) override");
+  verifyFormat("auto operator delete(int &) final");
 
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa *foo = (aaaaaaaaaaaaaaaaa *)\n"
                "    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;");
@@ -14694,33 +14719,6 @@ TEST_F(FormatTest, AlternativeOperators) {
   verifyFormat("%:define ABC abc"); // #define ABC abc
   verifyFormat("%:%:");             // ##
   */
-}
-
-TEST_F(FormatTest, NotCastRPaen) {
-
-  verifyFormat("void operator++(int) noexcept;");
-  verifyFormat("void operator++(int &) noexcept;");
-  verifyFormat("void operator delete(void *, std::size_t, const std::nothrow_t "
-               "&) noexcept;");
-  verifyFormat(
-      "void operator delete(std::size_t, const std::nothrow_t &) noexcept;");
-  verifyFormat("void operator delete(const std::nothrow_t &) noexcept;");
-  verifyFormat("void operator delete(std::nothrow_t &) noexcept;");
-  verifyFormat("void operator delete(nothrow_t &) noexcept;");
-  verifyFormat("void operator delete(foo &) noexcept;");
-  verifyFormat("void operator delete(foo) noexcept;");
-  verifyFormat("void operator delete(int) noexcept;");
-  verifyFormat("void operator delete(int &) noexcept;");
-  verifyFormat("void operator delete(int &) volatile noexcept;");
-  verifyFormat("void operator delete(int &) const");
-  verifyFormat("void operator delete(int &) = default");
-  verifyFormat("void operator delete(int &) = delete");
-  verifyFormat("void operator delete(int &) [[noreturn]]");
-  verifyFormat("void operator delete(int &) throw();");
-  verifyFormat("void operator delete(int &) throw(int);");
-  verifyFormat("auto operator delete(int &) -> int;");
-  verifyFormat("auto operator delete(int &) override");
-  verifyFormat("auto operator delete(int &) final");
 }
 
 TEST_F(FormatTest, STLWhileNotDefineChed) {
