@@ -2459,9 +2459,10 @@ Code that requires different behavior than this should use the
 Fast-Math Flags
 ---------------
 
-LLVM IR floating-point operations (:ref:`fadd <i_fadd>`,
+LLVM IR floating-point operations (:ref:`fneg <i_fneg>`, :ref:`fadd <i_fadd>`,
 :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`, :ref:`fdiv <i_fdiv>`,
-:ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`) and :ref:`call <i_call>`
+:ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`), :ref:`phi <i_phi>`,
+:ref:`select <i_select>` and :ref:`call <i_call>`
 may use the following flags to enable otherwise unsafe
 floating-point transformations.
 
