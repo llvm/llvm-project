@@ -65,7 +65,7 @@ class Run(object):
 
         return end - start
 
-    def _consume_test_result(self, pool_result):
+    def _consume_test_result(self, test, result):
         """Test completion callback for lit.worker.run_one_test
 
         Updates the test result status in the parent process. Each task in the
@@ -79,8 +79,6 @@ class Run(object):
         if self.hit_max_failures:
             return
 
-        (test_index, result) = pool_result
-        test = self.tests[test_index]
         # Update the parent process copy of the test. This includes the result,
         # XFAILS, REQUIRES, and UNSUPPORTED statuses.
         test.setResult(result)
@@ -100,9 +98,9 @@ class SerialRun(Run):
 
     def _execute(self, deadline):
         # TODO(yln): ignores deadline
-        for test_index, test in enumerate(self.tests):
+        for test in self.tests:
             result = lit.worker._execute_test(test, self.lit_config)
-            self._consume_test_result((test_index, result))
+            self._consume_test_result(test, result)
             if self.hit_max_failures:
                 break
 
@@ -137,9 +135,9 @@ class ParallelRun(Run):
 
         try:
             async_results = [pool.apply_async(lit.worker.run_one_test,
-                                              args=(test_index, test),
-                                              callback=self._consume_test_result)
-                             for test_index, test in enumerate(self.tests)]
+                                              args=(test,),
+                                              callback=lambda r,t=test: self._consume_test_result(t, r))
+                             for test in self.tests]
             pool.close()
 
             # Wait for all results to come in. The callback that runs in the
