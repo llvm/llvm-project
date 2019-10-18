@@ -729,8 +729,8 @@ define { <2 x i32>, <2 x i1> } @uaddo_vec(<2 x i32> %a) {
 }
 
 
-define i8 @uadd_sat_no_overflow(i8 %x) {
-; CHECK-LABEL: @uadd_sat_no_overflow(
+define i8 @uadd_sat_no_unsigned_overflow(i8 %x) {
+; CHECK-LABEL: @uadd_sat_no_unsigned_overflow(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], 100
 ; CHECK-NEXT:    br i1 [[CMP]], label [[TRAP:%.*]], label [[CONT:%.*]]
 ; CHECK:       trap:
@@ -752,8 +752,31 @@ cont:
   ret i8 %res
 }
 
-define i8 @sadd_sat_no_overflow(i8 %x) {
-; CHECK-LABEL: @sadd_sat_no_overflow(
+define i8 @uadd_sat_no_overflow(i8 %x) {
+; CHECK-LABEL: @uadd_sat_no_overflow(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], 27
+; CHECK-NEXT:    br i1 [[CMP]], label [[TRAP:%.*]], label [[CONT:%.*]]
+; CHECK:       trap:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       cont:
+; CHECK-NEXT:    [[RES1:%.*]] = add nuw i8 [[X]], 100
+; CHECK-NEXT:    ret i8 [[RES1]]
+;
+  %cmp = icmp ugt i8 %x, 27
+  br i1 %cmp, label %trap, label %cont
+
+trap:
+  call void @llvm.trap()
+  unreachable
+
+cont:
+  %res = call i8 @llvm.uadd.sat.i8(i8 %x, i8 100)
+  ret i8 %res
+}
+
+define i8 @sadd_sat_no_signed_overflow(i8 %x) {
+; CHECK-LABEL: @sadd_sat_no_signed_overflow(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], 100
 ; CHECK-NEXT:    br i1 [[CMP]], label [[TRAP:%.*]], label [[CONT:%.*]]
 ; CHECK:       trap:
@@ -775,8 +798,31 @@ cont:
   ret i8 %res
 }
 
-define i8 @usub_sat_no_overflow(i8 %x) {
-; CHECK-LABEL: @usub_sat_no_overflow(
+define i8 @sadd_sat_no_overflow(i8 %x) {
+; CHECK-LABEL: @sadd_sat_no_overflow(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], 107
+; CHECK-NEXT:    br i1 [[CMP]], label [[TRAP:%.*]], label [[CONT:%.*]]
+; CHECK:       trap:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       cont:
+; CHECK-NEXT:    [[RES1:%.*]] = add nsw i8 [[X]], 20
+; CHECK-NEXT:    ret i8 [[RES1]]
+;
+  %cmp = icmp ugt i8 %x, 107
+  br i1 %cmp, label %trap, label %cont
+
+trap:
+  call void @llvm.trap()
+  unreachable
+
+cont:
+  %res = call i8 @llvm.sadd.sat.i8(i8 %x, i8 20)
+  ret i8 %res
+}
+
+define i8 @usub_sat_no_unsigned_overflow(i8 %x) {
+; CHECK-LABEL: @usub_sat_no_unsigned_overflow(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X:%.*]], 100
 ; CHECK-NEXT:    br i1 [[CMP]], label [[TRAP:%.*]], label [[CONT:%.*]]
 ; CHECK:       trap:
@@ -798,8 +844,31 @@ cont:
   ret i8 %res
 }
 
-define i8 @ssub_sat_no_overflow(i8 %x) {
-; CHECK-LABEL: @ssub_sat_no_overflow(
+define i8 @usub_sat_no_overflow(i8 %x) {
+; CHECK-LABEL: @usub_sat_no_overflow(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X:%.*]], -28
+; CHECK-NEXT:    br i1 [[CMP]], label [[TRAP:%.*]], label [[CONT:%.*]]
+; CHECK:       trap:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       cont:
+; CHECK-NEXT:    [[RES1:%.*]] = sub nuw i8 [[X]], 100
+; CHECK-NEXT:    ret i8 [[RES1]]
+;
+  %cmp = icmp ult i8 %x, 228
+  br i1 %cmp, label %trap, label %cont
+
+trap:
+  call void @llvm.trap()
+  unreachable
+
+cont:
+  %res = call i8 @llvm.usub.sat.i8(i8 %x, i8 100)
+  ret i8 %res
+}
+
+define i8 @ssub_sat_no_signed_overflow(i8 %x) {
+; CHECK-LABEL: @ssub_sat_no_signed_overflow(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], -100
 ; CHECK-NEXT:    br i1 [[CMP]], label [[TRAP:%.*]], label [[CONT:%.*]]
 ; CHECK:       trap:
@@ -810,6 +879,29 @@ define i8 @ssub_sat_no_overflow(i8 %x) {
 ; CHECK-NEXT:    ret i8 [[RES1]]
 ;
   %cmp = icmp slt i8 %x, -100
+  br i1 %cmp, label %trap, label %cont
+
+trap:
+  call void @llvm.trap()
+  unreachable
+
+cont:
+  %res = call i8 @llvm.ssub.sat.i8(i8 %x, i8 20)
+  ret i8 %res
+}
+
+define i8 @ssub_sat_no_overflow(i8 %x) {
+; CHECK-LABEL: @ssub_sat_no_overflow(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X:%.*]], -108
+; CHECK-NEXT:    br i1 [[CMP]], label [[TRAP:%.*]], label [[CONT:%.*]]
+; CHECK:       trap:
+; CHECK-NEXT:    call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       cont:
+; CHECK-NEXT:    [[RES1:%.*]] = sub nsw i8 [[X]], 20
+; CHECK-NEXT:    ret i8 [[RES1]]
+;
+  %cmp = icmp ult i8 %x, 148
   br i1 %cmp, label %trap, label %cont
 
 trap:
