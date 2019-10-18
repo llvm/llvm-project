@@ -69,6 +69,8 @@ Stream::~Stream() = default;
 
 Stream::StreamKind Stream::getKind(StreamType Type) {
   switch (Type) {
+  case StreamType::Exception:
+    return StreamKind::Exception;
   case StreamType::MemoryInfoList:
     return StreamKind::MemoryInfoList;
   case StreamType::MemoryList:
@@ -95,6 +97,8 @@ Stream::StreamKind Stream::getKind(StreamType Type) {
 std::unique_ptr<Stream> Stream::create(StreamType Type) {
   StreamKind Kind = getKind(Type);
   switch (Kind) {
+  case StreamKind::Exception:
+    return std::make_unique<ExceptionStream>();
   case StreamKind::MemoryInfoList:
     return std::make_unique<MemoryInfoListStream>();
   case StreamKind::MemoryList:
@@ -274,8 +278,7 @@ void yaml::MappingTraits<ModuleListStream::entry_type>::mapping(
   mapRequiredHex(IO, "Base of Image", M.Entry.BaseOfImage);
   mapRequiredHex(IO, "Size of Image", M.Entry.SizeOfImage);
   mapOptionalHex(IO, "Checksum", M.Entry.Checksum, 0);
-  IO.mapOptional("Time Date Stamp", M.Entry.TimeDateStamp,
-                 support::ulittle32_t(0));
+  mapOptional(IO, "Time Date Stamp", M.Entry.TimeDateStamp, 0);
   IO.mapRequired("Module Name", M.Name);
   IO.mapOptional("Version Info", M.Entry.VersionInfo, VSFixedFileInfo());
   IO.mapRequired("CodeView Record", M.CvRecord);
@@ -367,6 +370,32 @@ static void streamMapping(yaml::IO &IO, ThreadListStream &Stream) {
   IO.mapRequired("Threads", Stream.Entries);
 }
 
+static void streamMapping(yaml::IO &IO, MinidumpYAML::ExceptionStream &Stream) {
+  mapRequiredHex(IO, "Thread ID", Stream.MDExceptionStream.ThreadId);
+  IO.mapRequired("Exception Record", Stream.MDExceptionStream.ExceptionRecord);
+  IO.mapRequired("Thread Context", Stream.ThreadContext);
+}
+
+void yaml::MappingTraits<minidump::Exception>::mapping(
+    yaml::IO &IO, minidump::Exception &Exception) {
+  mapRequiredHex(IO, "Exception Code", Exception.ExceptionCode);
+  mapOptionalHex(IO, "Exception Flags", Exception.ExceptionFlags, 0);
+  mapOptionalHex(IO, "Exception Record", Exception.ExceptionRecord, 0);
+  mapOptionalHex(IO, "Exception Address", Exception.ExceptionAddress, 0);
+  mapOptional(IO, "Number of Parameters", Exception.NumberParameters, 0);
+
+  for (size_t Index = 0; Index < Exception.MaxParameters; ++Index) {
+    SmallString<16> Name("Parameter ");
+    Twine(Index).toVector(Name);
+    support::ulittle64_t &Field = Exception.ExceptionInformation[Index];
+
+    if (Index < Exception.NumberParameters)
+      mapRequiredHex(IO, Name.c_str(), Field);
+    else
+      mapOptionalHex(IO, Name.c_str(), Field, 0);
+  }
+}
+
 void yaml::MappingTraits<std::unique_ptr<Stream>>::mapping(
     yaml::IO &IO, std::unique_ptr<MinidumpYAML::Stream> &S) {
   StreamType Type;
@@ -377,6 +406,9 @@ void yaml::MappingTraits<std::unique_ptr<Stream>>::mapping(
   if (!IO.outputting())
     S = MinidumpYAML::Stream::create(Type);
   switch (S->Kind) {
+  case MinidumpYAML::Stream::StreamKind::Exception:
+    streamMapping(IO, llvm::cast<MinidumpYAML::ExceptionStream>(*S));
+    break;
   case MinidumpYAML::Stream::StreamKind::MemoryInfoList:
     streamMapping(IO, llvm::cast<MemoryInfoListStream>(*S));
     break;
@@ -406,6 +438,7 @@ StringRef yaml::MappingTraits<std::unique_ptr<Stream>>::validate(
   switch (S->Kind) {
   case MinidumpYAML::Stream::StreamKind::RawContent:
     return streamValidate(cast<RawContentStream>(*S));
+  case MinidumpYAML::Stream::StreamKind::Exception:
   case MinidumpYAML::Stream::StreamKind::MemoryInfoList:
   case MinidumpYAML::Stream::StreamKind::MemoryList:
   case MinidumpYAML::Stream::StreamKind::ModuleList:
@@ -429,6 +462,18 @@ Expected<std::unique_ptr<Stream>>
 Stream::create(const Directory &StreamDesc, const object::MinidumpFile &File) {
   StreamKind Kind = getKind(StreamDesc.Type);
   switch (Kind) {
+  case StreamKind::Exception: {
+    Expected<const minidump::ExceptionStream &> ExpectedExceptionStream =
+        File.getExceptionStream();
+    if (!ExpectedExceptionStream)
+      return ExpectedExceptionStream.takeError();
+    Expected<ArrayRef<uint8_t>> ExpectedThreadContext =
+        File.getRawData(ExpectedExceptionStream->ThreadContext);
+    if (!ExpectedThreadContext)
+      return ExpectedThreadContext.takeError();
+    return std::make_unique<ExceptionStream>(*ExpectedExceptionStream,
+                                             *ExpectedThreadContext);
+  }
   case StreamKind::MemoryInfoList: {
     if (auto ExpectedList = File.getMemoryInfoList())
       return std::make_unique<MemoryInfoListStream>(*ExpectedList);
