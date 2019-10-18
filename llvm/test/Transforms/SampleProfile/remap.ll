@@ -1,5 +1,9 @@
 ; RUN: opt %s -passes=sample-profile -sample-profile-file=%S/Inputs/remap.prof -sample-profile-remapping-file=%S/Inputs/remap.map | opt -analyze -branch-prob | FileCheck %s
-
+;
+; Check whether profile remapping work with loading profile on demand used by extbinary format profile.
+; RUN: llvm-profdata merge -sample -extbinary %S/Inputs/remap.prof -o %t.extbinary.afdo
+; RUN: opt %s -passes=sample-profile -sample-profile-file=%S/Inputs/remap.prof -sample-profile-remapping-file=%S/Inputs/remap.map | opt -analyze -branch-prob | FileCheck %s
+;
 ; Reduced from branch.ll
 
 declare i1 @foo()
