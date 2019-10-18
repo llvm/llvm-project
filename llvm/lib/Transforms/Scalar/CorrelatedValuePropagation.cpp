@@ -457,17 +457,17 @@ static void setDeducedOverflowingFlags(Value *V, Instruction::BinaryOps Opcode,
   auto *Inst = dyn_cast<Instruction>(V);
   if (NewNSW) {
     ++NumNW;
-    ++OpcNW;
+    ++*OpcNW;
     ++NumNSW;
-    ++OpcNSW;
+    ++*OpcNSW;
     if (Inst)
       Inst->setHasNoSignedWrap();
   }
   if (NewNUW) {
     ++NumNW;
-    ++OpcNW;
+    ++*OpcNW;
     ++NumNUW;
-    ++OpcNUW;
+    ++*OpcNUW;
     if (Inst)
       Inst->setHasNoUnsignedWrap();
   }
