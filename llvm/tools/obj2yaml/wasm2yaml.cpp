@@ -198,13 +198,10 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       for (const auto &FunctionSig : Obj.types()) {
         WasmYAML::Signature Sig;
         Sig.Index = Index++;
-        Sig.ReturnType = wasm::WASM_TYPE_NORESULT;
-        assert(FunctionSig.Returns.size() <= 1 &&
-               "Functions with multiple returns are not supported");
-        if (FunctionSig.Returns.size())
-          Sig.ReturnType = static_cast<uint32_t>(FunctionSig.Returns[0]);
         for (const auto &ParamType : FunctionSig.Params)
           Sig.ParamTypes.emplace_back(static_cast<uint32_t>(ParamType));
+        for (const auto &ReturnType : FunctionSig.Returns)
+          Sig.ReturnTypes.emplace_back(static_cast<uint32_t>(ReturnType));
         TypeSec->Signatures.push_back(Sig);
       }
       S = std::move(TypeSec);
