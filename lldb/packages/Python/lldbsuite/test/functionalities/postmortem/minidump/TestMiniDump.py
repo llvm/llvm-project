@@ -90,6 +90,7 @@ class MiniDumpTestCase(TestBase):
             "fizzbuzz.syms", "has been added to", "fizzbuzz.exe"]),
         self.assertTrue(self.target.modules[0].FindSymbol("main"))
 
+    @skipIfLLVMTargetMissing("X86")
     def test_stack_info_in_mini_dump(self):
         """Test that we can see a trivial stack in a VS-generate mini dump."""
         # target create -c fizzbuzz_no_heap.dmp
