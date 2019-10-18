@@ -44,7 +44,7 @@ def get_object_from_command(command, debugger, target, name, object_type,
         addr = int(command, base)
     except:
         success, addr = get_value_from_command(debugger, command, base)
-        if not(success):
+        if not(success) and not(re.match(".*\..*\..*\..*", command) is None):
             dpus = dpu_list(debugger, None, None, None)
             addr = next((dpu[0] for dpu in dpus
                          if (command ==
