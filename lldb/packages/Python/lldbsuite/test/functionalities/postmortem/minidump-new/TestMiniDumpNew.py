@@ -332,6 +332,7 @@ class MiniDumpNewTestCase(TestBase):
             function_name = frame.GetFunctionName()
             self.assertTrue(name in function_name)
 
+    @skipIfLLVMTargetMissing("X86")
     def test_deeper_stack_in_minidump(self):
         """Test that we can examine a more interesting stack in a Minidump."""
         # Launch with the Minidump, and inspect the stack.
