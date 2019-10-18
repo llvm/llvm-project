@@ -506,7 +506,7 @@ void ElementRegion::dumpToStream(raw_ostream &os) const {
 }
 
 void FieldRegion::dumpToStream(raw_ostream &os) const {
-  os << superRegion << "->" << *getDecl();
+  os << superRegion << "." << *getDecl();
 }
 
 void ObjCIvarRegion::dumpToStream(raw_ostream &os) const {

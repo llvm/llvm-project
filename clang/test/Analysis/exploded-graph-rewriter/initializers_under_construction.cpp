@@ -20,6 +20,6 @@ struct B {
 void test() {
   // CHECK: (construct into member variable)
   // CHECK-SAME: <td align="left">a</td>
-  // CHECK-SAME: <td align="left">&amp;b-&gt;a</td>
+  // CHECK-SAME: <td align="left">&amp;b.a</td>
   B b;
 }
