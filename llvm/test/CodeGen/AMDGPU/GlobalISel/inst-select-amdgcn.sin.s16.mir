@@ -16,7 +16,7 @@ body: |
 
     ; CHECK-LABEL: name: sin_s16_vs
     ; CHECK: liveins: $sgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK: [[V_SIN_F16_e64_:%[0-9]+]]:vgpr_32 = V_SIN_F16_e64 0, [[COPY]], 0, 0, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_SIN_F16_e64_]]
     %0:sgpr(s32) = COPY $sgpr0

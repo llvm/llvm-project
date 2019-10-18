@@ -11,7 +11,7 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: insert_s512_s32
     ; CHECK: [[DEF:%[0-9]+]]:sreg_512 = IMPLICIT_DEF
-    ; CHECK: [[DEF1:%[0-9]+]]:sreg_32_xm0 = IMPLICIT_DEF
+    ; CHECK: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sreg_512 = INSERT_SUBREG [[DEF]], [[DEF1]], %subreg.sub0
     ; CHECK: [[INSERT_SUBREG1:%[0-9]+]]:sreg_512 = INSERT_SUBREG [[INSERT_SUBREG]], [[DEF1]], %subreg.sub1
     ; CHECK: [[INSERT_SUBREG2:%[0-9]+]]:sreg_512 = INSERT_SUBREG [[INSERT_SUBREG1]], [[DEF1]], %subreg.sub2
@@ -97,7 +97,7 @@ body: |
     liveins:  $sgpr0_sgpr1, $sgpr2
     ; CHECK-LABEL: name: insert_s_s64_s_s32_0
     ; CHECK: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr2
+    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr2
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sreg_64_xexec = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0
     ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
@@ -117,7 +117,7 @@ body: |
     liveins:  $sgpr0_sgpr1, $sgpr2
     ; CHECK-LABEL: name: insert_s_s64_s_s32_32
     ; CHECK: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr2
+    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr2
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sreg_64_xexec = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1
     ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
@@ -157,7 +157,7 @@ body: |
     liveins:  $vgpr0_vgpr1, $sgpr0
     ; CHECK-LABEL: name: insert_v_s64_s_s32_32
     ; CHECK: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:vreg_64 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1
     ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1

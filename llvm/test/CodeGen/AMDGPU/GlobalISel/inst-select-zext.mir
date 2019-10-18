@@ -15,7 +15,7 @@ body: |
     ; GCN: S_CMP_EQ_U32 [[COPY]], [[COPY]], implicit-def $scc
     ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY $scc
     ; GCN: $scc = COPY [[COPY1]]
-    ; GCN: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0 = S_CSELECT_B32 0, 1, implicit $scc
+    ; GCN: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 0, 1, implicit $scc
     ; GCN: $sgpr0 = COPY [[S_CSELECT_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:scc(s1) = G_ICMP intpred(eq), %0, %0
@@ -55,8 +55,8 @@ body: |
     liveins: $sgpr0
 
     ; GCN-LABEL: name: zext_sgpr_s1_to_sgpr_s32
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
-    ; GCN: [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0 = S_AND_B32 [[COPY]], 1, implicit-def $scc
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], 1, implicit-def $scc
     ; GCN: $sgpr0 = COPY [[S_AND_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s1) = G_TRUNC %0
@@ -74,7 +74,7 @@ body: |
     liveins: $sgpr0
 
     ; GCN-LABEL: name: zext_sgpr_s1_to_sgpr_s64
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[DEF]], %subreg.sub1
     ; GCN: [[S_BFE_U64_:%[0-9]+]]:sreg_64_xexec = S_BFE_U64 [[REG_SEQUENCE]], 65536, implicit-def $scc
@@ -95,8 +95,8 @@ body: |
     liveins: $sgpr0
 
     ; GCN-LABEL: name: zext_sgpr_s8_to_sgpr_s32
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
-    ; GCN: [[S_BFE_U32_:%[0-9]+]]:sreg_32_xm0 = S_BFE_U32 [[COPY]], 524288, implicit-def $scc
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN: [[S_BFE_U32_:%[0-9]+]]:sreg_32 = S_BFE_U32 [[COPY]], 524288, implicit-def $scc
     ; GCN: $sgpr0 = COPY [[S_BFE_U32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s8) = G_TRUNC %0
@@ -115,8 +115,8 @@ body: |
     liveins: $sgpr0
 
     ; GCN-LABEL: name: zext_sgpr_s16_to_sgpr_s32
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
-    ; GCN: [[S_BFE_U32_:%[0-9]+]]:sreg_32_xm0 = S_BFE_U32 [[COPY]], 1048576, implicit-def $scc
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN: [[S_BFE_U32_:%[0-9]+]]:sreg_32 = S_BFE_U32 [[COPY]], 1048576, implicit-def $scc
     ; GCN: $sgpr0 = COPY [[S_BFE_U32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0
@@ -135,7 +135,7 @@ body: |
     liveins: $sgpr0
 
     ; GCN-LABEL: name: zext_sgpr_s16_to_sgpr_s64
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[DEF]], %subreg.sub1
     ; GCN: [[S_BFE_U64_:%[0-9]+]]:sreg_64_xexec = S_BFE_U64 [[REG_SEQUENCE]], 1048576, implicit-def $scc

@@ -49,7 +49,7 @@ body: |
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: [[V_CMP_EQ_F16_e64_:%[0-9]+]]:sreg_32_xm0 = V_CMP_EQ_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
+    ; WAVE32: [[V_CMP_EQ_F16_e64_:%[0-9]+]]:sreg_32 = V_CMP_EQ_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_EQ_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -76,7 +76,7 @@ body: |
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: [[V_CMP_GT_F16_e64_:%[0-9]+]]:sreg_32_xm0 = V_CMP_GT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
+    ; WAVE32: [[V_CMP_GT_F16_e64_:%[0-9]+]]:sreg_32 = V_CMP_GT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_GT_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -103,7 +103,7 @@ body: |
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: [[V_CMP_GE_F16_e64_:%[0-9]+]]:sreg_32_xm0 = V_CMP_GE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
+    ; WAVE32: [[V_CMP_GE_F16_e64_:%[0-9]+]]:sreg_32 = V_CMP_GE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_GE_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -130,7 +130,7 @@ body: |
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: [[V_CMP_LT_F16_e64_:%[0-9]+]]:sreg_32_xm0 = V_CMP_LT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
+    ; WAVE32: [[V_CMP_LT_F16_e64_:%[0-9]+]]:sreg_32 = V_CMP_LT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_LT_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -157,7 +157,7 @@ body: |
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: [[V_CMP_LE_F16_e64_:%[0-9]+]]:sreg_32_xm0 = V_CMP_LE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
+    ; WAVE32: [[V_CMP_LE_F16_e64_:%[0-9]+]]:sreg_32 = V_CMP_LE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_LE_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -183,7 +183,7 @@ body: |
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: [[V_CMP_LG_F16_e64_:%[0-9]+]]:sreg_32_xm0 = V_CMP_LG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
+    ; WAVE32: [[V_CMP_LG_F16_e64_:%[0-9]+]]:sreg_32 = V_CMP_LG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_LG_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -210,7 +210,7 @@ body: |
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: [[V_CMP_LG_F16_e64_:%[0-9]+]]:sreg_32_xm0 = V_CMP_LG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
+    ; WAVE32: [[V_CMP_LG_F16_e64_:%[0-9]+]]:sreg_32 = V_CMP_LG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_LG_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -237,7 +237,7 @@ body: |
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: [[V_CMP_U_F16_e64_:%[0-9]+]]:sreg_32_xm0 = V_CMP_U_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
+    ; WAVE32: [[V_CMP_U_F16_e64_:%[0-9]+]]:sreg_32 = V_CMP_U_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_U_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -264,7 +264,7 @@ body: |
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: [[V_CMP_NLG_F16_e64_:%[0-9]+]]:sreg_32_xm0 = V_CMP_NLG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
+    ; WAVE32: [[V_CMP_NLG_F16_e64_:%[0-9]+]]:sreg_32 = V_CMP_NLG_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_NLG_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -291,7 +291,7 @@ body: |
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: [[V_CMP_NLE_F16_e64_:%[0-9]+]]:sreg_32_xm0 = V_CMP_NLE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
+    ; WAVE32: [[V_CMP_NLE_F16_e64_:%[0-9]+]]:sreg_32 = V_CMP_NLE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_NLE_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -318,7 +318,7 @@ body: |
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: [[V_CMP_NLT_F16_e64_:%[0-9]+]]:sreg_32_xm0 = V_CMP_NLT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
+    ; WAVE32: [[V_CMP_NLT_F16_e64_:%[0-9]+]]:sreg_32 = V_CMP_NLT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_NLT_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -345,7 +345,7 @@ body: |
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: [[V_CMP_NGE_F16_e64_:%[0-9]+]]:sreg_32_xm0 = V_CMP_NGE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
+    ; WAVE32: [[V_CMP_NGE_F16_e64_:%[0-9]+]]:sreg_32 = V_CMP_NGE_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_NGE_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -372,7 +372,7 @@ body: |
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: [[V_CMP_NGT_F16_e64_:%[0-9]+]]:sreg_32_xm0 = V_CMP_NGT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
+    ; WAVE32: [[V_CMP_NGT_F16_e64_:%[0-9]+]]:sreg_32 = V_CMP_NGT_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_NGT_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
@@ -399,7 +399,7 @@ body: |
     ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32: [[V_CMP_NEQ_F16_e64_:%[0-9]+]]:sreg_32_xm0 = V_CMP_NEQ_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
+    ; WAVE32: [[V_CMP_NEQ_F16_e64_:%[0-9]+]]:sreg_32 = V_CMP_NEQ_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $exec
     ; WAVE32: S_ENDPGM 0, implicit [[V_CMP_NEQ_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1

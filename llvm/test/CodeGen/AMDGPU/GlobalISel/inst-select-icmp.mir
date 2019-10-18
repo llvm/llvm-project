@@ -17,9 +17,9 @@ regBankSelected: true
 # GCN: [[SGPR6:%[0-9]+]]:sreg_32 = COPY $sgpr6
 # GCN: [[SGPR7:%[0-9]+]]:sreg_32 = COPY $sgpr7
 # GCN: S_CMP_LG_U32 [[SGPR0]], [[SGPR1]], implicit-def $scc
-# GCN-NEXT: [[COND0:%[0-9]+]]:sreg_32_xm0 = COPY $scc
+# GCN-NEXT: [[COND0:%[0-9]+]]:sgpr_32 = COPY $scc
 # GCN: S_CMP_LG_U32 [[SGPR4]], [[SGPR5]], implicit-def $scc
-# GCN-NEXT: [[COND1:%[0-9]+]]:sreg_32_xm0 = COPY $scc
+# GCN-NEXT: [[COND1:%[0-9]+]]:sgpr_32 = COPY $scc
 # GCN: $scc = COPY [[COND0]]
 # GCN-NEXT: S_CSELECT_B32 [[SGPR6]], [[SGPR7]], implicit $scc
 # GCN: $scc = COPY [[COND1]]
@@ -244,7 +244,7 @@ regBankSelected: true
 
 # GCN-LABEL: name: icmp_s32_vs
 # GCN: [[VGPR2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-# GCN: [[SGPR0:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+# GCN: [[SGPR0:%[0-9]+]]:sreg_32 = COPY $sgpr0
 # GCN: V_CMP_NE_U32_e64 [[VGPR2]], [[SGPR0]]
 
 body: |
@@ -268,7 +268,7 @@ regBankSelected: true
 
 # GCN-LABEL: name: icmp_s32_sv
 # GCN: [[VGPR2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-# GCN: [[SGPR0:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+# GCN: [[SGPR0:%[0-9]+]]:sreg_32 = COPY $sgpr0
 # GCN: V_CMP_NE_U32_e64 [[SGPR0]], [[VGPR2]]
 
 body: |
@@ -292,7 +292,7 @@ regBankSelected: true
 
 # GCN-LABEL: name: icmp_s32_or_vcc
 # GCN: [[VGPR2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-# GCN: [[SGPR0:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+# GCN: [[SGPR0:%[0-9]+]]:sreg_32 = COPY $sgpr0
 # GCN: V_CMP_NE_U32_e64 [[SGPR0]], [[VGPR2]]
 
 body: |

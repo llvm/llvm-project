@@ -44,7 +44,7 @@ body: |
   bb.0:
     liveins: $sgpr0
     ; CHECK-LABEL: name: bitreverse_i32_vs
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK: [[V_BFREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFREV_B32_e64 [[COPY]], implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_BFREV_B32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0

@@ -115,7 +115,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::i1, &AMDGPU::VReg_1RegClass);
   addRegisterClass(MVT::i64, &AMDGPU::SReg_64RegClass);
 
-  addRegisterClass(MVT::i32, &AMDGPU::SReg_32_XM0RegClass);
+  addRegisterClass(MVT::i32, &AMDGPU::SReg_32RegClass);
   addRegisterClass(MVT::f32, &AMDGPU::VGPR_32RegClass);
 
   addRegisterClass(MVT::f64, &AMDGPU::VReg_64RegClass);
@@ -141,12 +141,12 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::v16f32, &AMDGPU::VReg_512RegClass);
 
   if (Subtarget->has16BitInsts()) {
-    addRegisterClass(MVT::i16, &AMDGPU::SReg_32_XM0RegClass);
-    addRegisterClass(MVT::f16, &AMDGPU::SReg_32_XM0RegClass);
+    addRegisterClass(MVT::i16, &AMDGPU::SReg_32RegClass);
+    addRegisterClass(MVT::f16, &AMDGPU::SReg_32RegClass);
 
     // Unless there are also VOP3P operations, not operations are really legal.
-    addRegisterClass(MVT::v2i16, &AMDGPU::SReg_32_XM0RegClass);
-    addRegisterClass(MVT::v2f16, &AMDGPU::SReg_32_XM0RegClass);
+    addRegisterClass(MVT::v2i16, &AMDGPU::SReg_32RegClass);
+    addRegisterClass(MVT::v2f16, &AMDGPU::SReg_32RegClass);
     addRegisterClass(MVT::v4i16, &AMDGPU::SReg_64RegClass);
     addRegisterClass(MVT::v4f16, &AMDGPU::SReg_64RegClass);
   }
@@ -1821,25 +1821,25 @@ void SITargetLowering::allocateSystemSGPRs(CCState &CCInfo,
                                            bool IsShader) const {
   if (Info.hasWorkGroupIDX()) {
     unsigned Reg = Info.addWorkGroupIDX();
-    MF.addLiveIn(Reg, &AMDGPU::SReg_32_XM0RegClass);
+    MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
     CCInfo.AllocateReg(Reg);
   }
 
   if (Info.hasWorkGroupIDY()) {
     unsigned Reg = Info.addWorkGroupIDY();
-    MF.addLiveIn(Reg, &AMDGPU::SReg_32_XM0RegClass);
+    MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
     CCInfo.AllocateReg(Reg);
   }
 
   if (Info.hasWorkGroupIDZ()) {
     unsigned Reg = Info.addWorkGroupIDZ();
-    MF.addLiveIn(Reg, &AMDGPU::SReg_32_XM0RegClass);
+    MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
     CCInfo.AllocateReg(Reg);
   }
 
   if (Info.hasWorkGroupInfo()) {
     unsigned Reg = Info.addWorkGroupInfo();
-    MF.addLiveIn(Reg, &AMDGPU::SReg_32_XM0RegClass);
+    MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
     CCInfo.AllocateReg(Reg);
   }
 
@@ -3603,22 +3603,22 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MachineOperand &Src0 = MI.getOperand(1);
     MachineOperand &Src1 = MI.getOperand(2);
 
-    Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
-    Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+    Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    Register DestSub1 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
     MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(MI, MRI,
      Src0, BoolRC, AMDGPU::sub0,
-     &AMDGPU::SReg_32_XM0RegClass);
+     &AMDGPU::SReg_32RegClass);
     MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(MI, MRI,
       Src0, BoolRC, AMDGPU::sub1,
-      &AMDGPU::SReg_32_XM0RegClass);
+      &AMDGPU::SReg_32RegClass);
 
     MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(MI, MRI,
       Src1, BoolRC, AMDGPU::sub0,
-      &AMDGPU::SReg_32_XM0RegClass);
+      &AMDGPU::SReg_32RegClass);
     MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(MI, MRI,
       Src1, BoolRC, AMDGPU::sub1,
-      &AMDGPU::SReg_32_XM0RegClass);
+      &AMDGPU::SReg_32RegClass);
 
     bool IsAdd = (MI.getOpcode() == AMDGPU::S_ADD_U64_PSEUDO);
 
@@ -10562,7 +10562,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, nullptr);
       case 32:
       case 16:
-        RC = &AMDGPU::SReg_32_XM0RegClass;
+        RC = &AMDGPU::SReg_32RegClass;
         break;
       case 64:
         RC = &AMDGPU::SGPR_64RegClass;

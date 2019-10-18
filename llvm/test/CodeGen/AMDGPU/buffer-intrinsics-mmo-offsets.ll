@@ -7,7 +7,7 @@ define amdgpu_cs void @mmo_offsets0(<4 x i32> addrspace(6)* inreg noalias derefe
   ; GCN:   liveins: $sgpr0, $vgpr0
   ; GCN:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GCN:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-  ; GCN:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 0
+  ; GCN:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GCN:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1
   ; GCN:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM killed [[REG_SEQUENCE]], 0, 0, 0 :: (dereferenceable invariant load 16 from %ir.arg0, addrspace 6)
   ; GCN:   [[BUFFER_LOAD_DWORDX4_OFFSET:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 16, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7 + 16, align 1, addrspace 4)
@@ -57,27 +57,27 @@ define amdgpu_cs void @mmo_offsets0(<4 x i32> addrspace(6)* inreg noalias derefe
   ; GCN:   BUFFER_ATOMIC_ADD_F32_IDXEN [[V_MOV_B32_e32_1]], [[COPY]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 112, 0, implicit $exec :: (load store 4 on custom TargetCustom7, addrspace 4)
   ; GCN:   INLINEASM &"", 1
   ; GCN:   [[BUFFER_LOAD_DWORDX4_OFFSET1:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7 + 128, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 64
+  ; GCN:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 64
   ; GCN:   [[BUFFER_LOAD_DWORDX4_OFFSET2:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET [[S_LOAD_DWORDX4_IMM]], killed [[S_MOV_B32_1]], 64, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7 + 128, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 128
+  ; GCN:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 128
   ; GCN:   [[BUFFER_LOAD_DWORDX4_OFFSET3:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_2]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7 + 128, align 1, addrspace 4)
   ; GCN:   [[BUFFER_LOAD_DWORDX4_OFFEN1:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFEN [[COPY]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_2]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7, align 1, addrspace 4)
   ; GCN:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[COPY]]
   ; GCN:   [[BUFFER_LOAD_DWORDX4_OFFSET4:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET [[S_LOAD_DWORDX4_IMM]], [[COPY6]], 128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7, align 1, addrspace 4)
   ; GCN:   INLINEASM &"", 1
   ; GCN:   [[BUFFER_LOAD_FORMAT_XYZW_OFFSET1:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_OFFSET [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 144, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7 + 144, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 72
+  ; GCN:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 72
   ; GCN:   [[BUFFER_LOAD_FORMAT_XYZW_OFFSET2:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_OFFSET [[S_LOAD_DWORDX4_IMM]], killed [[S_MOV_B32_3]], 72, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7 + 144, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 144
+  ; GCN:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 144
   ; GCN:   [[BUFFER_LOAD_FORMAT_XYZW_OFFSET3:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_OFFSET [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_4]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7 + 144, align 1, addrspace 4)
   ; GCN:   [[BUFFER_LOAD_FORMAT_XYZW_OFFEN1:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_OFFEN [[COPY]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_4]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7, align 1, addrspace 4)
   ; GCN:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[COPY]]
   ; GCN:   [[BUFFER_LOAD_FORMAT_XYZW_OFFSET4:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_OFFSET [[S_LOAD_DWORDX4_IMM]], [[COPY7]], 144, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7, align 1, addrspace 4)
   ; GCN:   INLINEASM &"", 1
   ; GCN:   BUFFER_ATOMIC_ADD_OFFSET [[COPY]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 160, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom TargetCustom7 + 160, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 80
+  ; GCN:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 80
   ; GCN:   BUFFER_ATOMIC_ADD_OFFSET [[COPY]], [[S_LOAD_DWORDX4_IMM]], killed [[S_MOV_B32_5]], 80, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom TargetCustom7 + 160, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_6:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 160
+  ; GCN:   [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 160
   ; GCN:   BUFFER_ATOMIC_ADD_OFFSET [[COPY]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_6]], 0, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom TargetCustom7 + 160, align 1, addrspace 4)
   ; GCN:   BUFFER_ATOMIC_ADD_OFFEN [[COPY]], [[COPY]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_6]], 0, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom TargetCustom7, align 1, addrspace 4)
   ; GCN:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[COPY]]
@@ -86,11 +86,11 @@ define amdgpu_cs void @mmo_offsets0(<4 x i32> addrspace(6)* inreg noalias derefe
   ; GCN:   [[DEF4:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
   ; GCN:   BUFFER_ATOMIC_CMPSWAP_OFFSET [[REG_SEQUENCE1]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 176, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom TargetCustom7 + 176, align 1, addrspace 4)
   ; GCN:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[DEF4]].sub0
-  ; GCN:   [[S_MOV_B32_7:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 88
+  ; GCN:   [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 88
   ; GCN:   [[DEF5:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
   ; GCN:   BUFFER_ATOMIC_CMPSWAP_OFFSET [[REG_SEQUENCE1]], [[S_LOAD_DWORDX4_IMM]], killed [[S_MOV_B32_7]], 88, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom TargetCustom7 + 176, align 1, addrspace 4)
   ; GCN:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[DEF5]].sub0
-  ; GCN:   [[S_MOV_B32_8:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 176
+  ; GCN:   [[S_MOV_B32_8:%[0-9]+]]:sreg_32 = S_MOV_B32 176
   ; GCN:   [[DEF6:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
   ; GCN:   BUFFER_ATOMIC_CMPSWAP_OFFSET [[REG_SEQUENCE1]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_8]], 0, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom TargetCustom7 + 176, align 1, addrspace 4)
   ; GCN:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[DEF6]].sub0
@@ -103,18 +103,18 @@ define amdgpu_cs void @mmo_offsets0(<4 x i32> addrspace(6)* inreg noalias derefe
   ; GCN:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[DEF8]].sub0
   ; GCN:   INLINEASM &"", 1
   ; GCN:   BUFFER_STORE_DWORDX4_OFFSET_exact killed [[BUFFER_LOAD_DWORDX4_OFFSET1]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 192, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom TargetCustom7 + 192, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_9:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 96
+  ; GCN:   [[S_MOV_B32_9:%[0-9]+]]:sreg_32 = S_MOV_B32 96
   ; GCN:   BUFFER_STORE_DWORDX4_OFFSET_exact killed [[BUFFER_LOAD_DWORDX4_OFFSET2]], [[S_LOAD_DWORDX4_IMM]], killed [[S_MOV_B32_9]], 96, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom TargetCustom7 + 192, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_10:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 192
+  ; GCN:   [[S_MOV_B32_10:%[0-9]+]]:sreg_32 = S_MOV_B32 192
   ; GCN:   BUFFER_STORE_DWORDX4_OFFSET_exact killed [[BUFFER_LOAD_DWORDX4_OFFSET3]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_10]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom TargetCustom7 + 192, align 1, addrspace 4)
   ; GCN:   BUFFER_STORE_DWORDX4_OFFEN_exact killed [[BUFFER_LOAD_DWORDX4_OFFEN1]], [[COPY]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_10]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom TargetCustom7, align 1, addrspace 4)
   ; GCN:   [[COPY15:%[0-9]+]]:sreg_32 = COPY [[COPY]]
   ; GCN:   BUFFER_STORE_DWORDX4_OFFSET_exact killed [[BUFFER_LOAD_DWORDX4_OFFSET4]], [[S_LOAD_DWORDX4_IMM]], [[COPY15]], 192, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom TargetCustom7, align 1, addrspace 4)
   ; GCN:   INLINEASM &"", 1
   ; GCN:   BUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed [[BUFFER_LOAD_FORMAT_XYZW_OFFSET1]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 208, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom TargetCustom7 + 208, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_11:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 104
+  ; GCN:   [[S_MOV_B32_11:%[0-9]+]]:sreg_32 = S_MOV_B32 104
   ; GCN:   BUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed [[BUFFER_LOAD_FORMAT_XYZW_OFFSET2]], [[S_LOAD_DWORDX4_IMM]], killed [[S_MOV_B32_11]], 104, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom TargetCustom7 + 208, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_12:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 208
+  ; GCN:   [[S_MOV_B32_12:%[0-9]+]]:sreg_32 = S_MOV_B32 208
   ; GCN:   BUFFER_STORE_FORMAT_XYZW_OFFSET_exact killed [[BUFFER_LOAD_FORMAT_XYZW_OFFSET3]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_12]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom TargetCustom7 + 208, align 1, addrspace 4)
   ; GCN:   BUFFER_STORE_FORMAT_XYZW_OFFEN_exact killed [[BUFFER_LOAD_FORMAT_XYZW_OFFEN1]], [[COPY]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_12]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom TargetCustom7, align 1, addrspace 4)
   ; GCN:   [[COPY16:%[0-9]+]]:sreg_32 = COPY [[COPY]]
@@ -122,10 +122,10 @@ define amdgpu_cs void @mmo_offsets0(<4 x i32> addrspace(6)* inreg noalias derefe
   ; GCN:   INLINEASM &"", 1
   ; GCN:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GCN:   [[BUFFER_LOAD_DWORDX4_IDXEN2:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_IDXEN [[COPY17]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 224, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7 + 224, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_13:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 112
+  ; GCN:   [[S_MOV_B32_13:%[0-9]+]]:sreg_32 = S_MOV_B32 112
   ; GCN:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GCN:   [[BUFFER_LOAD_DWORDX4_IDXEN3:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_IDXEN [[COPY18]], [[S_LOAD_DWORDX4_IMM]], killed [[S_MOV_B32_13]], 112, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7 + 224, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_14:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 224
+  ; GCN:   [[S_MOV_B32_14:%[0-9]+]]:sreg_32 = S_MOV_B32 224
   ; GCN:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GCN:   [[BUFFER_LOAD_DWORDX4_IDXEN4:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_IDXEN [[COPY19]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_14]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7 + 224, align 1, addrspace 4)
   ; GCN:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[COPY]], %subreg.sub1
@@ -138,10 +138,10 @@ define amdgpu_cs void @mmo_offsets0(<4 x i32> addrspace(6)* inreg noalias derefe
   ; GCN:   INLINEASM &"", 1
   ; GCN:   [[COPY22:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GCN:   [[BUFFER_LOAD_FORMAT_XYZW_IDXEN2:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN [[COPY22]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 240, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7 + 240, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_15:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 120
+  ; GCN:   [[S_MOV_B32_15:%[0-9]+]]:sreg_32 = S_MOV_B32 120
   ; GCN:   [[COPY23:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GCN:   [[BUFFER_LOAD_FORMAT_XYZW_IDXEN3:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN [[COPY23]], [[S_LOAD_DWORDX4_IMM]], killed [[S_MOV_B32_15]], 120, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7 + 240, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_16:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 240
+  ; GCN:   [[S_MOV_B32_16:%[0-9]+]]:sreg_32 = S_MOV_B32 240
   ; GCN:   [[COPY24:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GCN:   [[BUFFER_LOAD_FORMAT_XYZW_IDXEN4:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN [[COPY24]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_16]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7 + 240, align 1, addrspace 4)
   ; GCN:   [[BUFFER_LOAD_FORMAT_XYZW_BOTHEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_BOTHEN [[REG_SEQUENCE2]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_16]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7, align 1, addrspace 4)
@@ -155,7 +155,7 @@ define amdgpu_cs void @mmo_offsets0(<4 x i32> addrspace(6)* inreg noalias derefe
   ; GCN:   BUFFER_ATOMIC_ADD_IDXEN [[COPY]], [[COPY27]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 256, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom TargetCustom7 + 256, align 1, addrspace 4)
   ; GCN:   [[COPY28:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GCN:   BUFFER_ATOMIC_ADD_IDXEN [[COPY]], [[COPY28]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_2]], 128, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom TargetCustom7 + 256, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_17:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 256
+  ; GCN:   [[S_MOV_B32_17:%[0-9]+]]:sreg_32 = S_MOV_B32 256
   ; GCN:   [[COPY29:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GCN:   BUFFER_ATOMIC_ADD_IDXEN [[COPY]], [[COPY29]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_17]], 0, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom TargetCustom7 + 256, align 1, addrspace 4)
   ; GCN:   BUFFER_ATOMIC_ADD_BOTHEN [[COPY]], [[REG_SEQUENCE2]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_17]], 0, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom TargetCustom7, align 1, addrspace 4)
@@ -169,12 +169,12 @@ define amdgpu_cs void @mmo_offsets0(<4 x i32> addrspace(6)* inreg noalias derefe
   ; GCN:   [[DEF9:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
   ; GCN:   BUFFER_ATOMIC_CMPSWAP_IDXEN [[REG_SEQUENCE1]], [[COPY32]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 272, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom TargetCustom7 + 272, align 1, addrspace 4)
   ; GCN:   [[COPY33:%[0-9]+]]:vgpr_32 = COPY [[DEF9]].sub0
-  ; GCN:   [[S_MOV_B32_18:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 136
+  ; GCN:   [[S_MOV_B32_18:%[0-9]+]]:sreg_32 = S_MOV_B32 136
   ; GCN:   [[COPY34:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GCN:   [[DEF10:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
   ; GCN:   BUFFER_ATOMIC_CMPSWAP_IDXEN [[REG_SEQUENCE1]], [[COPY34]], [[S_LOAD_DWORDX4_IMM]], killed [[S_MOV_B32_18]], 136, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom TargetCustom7 + 272, align 1, addrspace 4)
   ; GCN:   [[COPY35:%[0-9]+]]:vgpr_32 = COPY [[DEF10]].sub0
-  ; GCN:   [[S_MOV_B32_19:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 272
+  ; GCN:   [[S_MOV_B32_19:%[0-9]+]]:sreg_32 = S_MOV_B32 272
   ; GCN:   [[COPY36:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GCN:   [[DEF11:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
   ; GCN:   BUFFER_ATOMIC_CMPSWAP_IDXEN [[REG_SEQUENCE1]], [[COPY36]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_19]], 0, 0, implicit $exec :: (volatile dereferenceable load store 4 on custom TargetCustom7 + 272, align 1, addrspace 4)
@@ -198,7 +198,7 @@ define amdgpu_cs void @mmo_offsets0(<4 x i32> addrspace(6)* inreg noalias derefe
   ; GCN:   BUFFER_STORE_DWORDX4_IDXEN_exact killed [[BUFFER_LOAD_DWORDX4_IDXEN2]], [[COPY44]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 288, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom TargetCustom7 + 288, align 1, addrspace 4)
   ; GCN:   [[COPY45:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GCN:   BUFFER_STORE_DWORDX4_IDXEN_exact killed [[BUFFER_LOAD_DWORDX4_IDXEN3]], [[COPY45]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_4]], 144, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom TargetCustom7 + 288, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_20:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 288
+  ; GCN:   [[S_MOV_B32_20:%[0-9]+]]:sreg_32 = S_MOV_B32 288
   ; GCN:   [[COPY46:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GCN:   BUFFER_STORE_DWORDX4_IDXEN_exact killed [[BUFFER_LOAD_DWORDX4_IDXEN4]], [[COPY46]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_20]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom TargetCustom7 + 288, align 1, addrspace 4)
   ; GCN:   BUFFER_STORE_DWORDX4_BOTHEN_exact killed [[BUFFER_LOAD_DWORDX4_BOTHEN]], [[REG_SEQUENCE2]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_20]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom TargetCustom7, align 1, addrspace 4)
@@ -210,10 +210,10 @@ define amdgpu_cs void @mmo_offsets0(<4 x i32> addrspace(6)* inreg noalias derefe
   ; GCN:   INLINEASM &"", 1
   ; GCN:   [[COPY49:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GCN:   BUFFER_STORE_FORMAT_XYZW_IDXEN_exact killed [[BUFFER_LOAD_FORMAT_XYZW_IDXEN2]], [[COPY49]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_]], 304, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom TargetCustom7 + 304, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_21:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 152
+  ; GCN:   [[S_MOV_B32_21:%[0-9]+]]:sreg_32 = S_MOV_B32 152
   ; GCN:   [[COPY50:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GCN:   BUFFER_STORE_FORMAT_XYZW_IDXEN_exact killed [[BUFFER_LOAD_FORMAT_XYZW_IDXEN3]], [[COPY50]], [[S_LOAD_DWORDX4_IMM]], killed [[S_MOV_B32_21]], 152, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom TargetCustom7 + 304, align 1, addrspace 4)
-  ; GCN:   [[S_MOV_B32_22:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 304
+  ; GCN:   [[S_MOV_B32_22:%[0-9]+]]:sreg_32 = S_MOV_B32 304
   ; GCN:   [[COPY51:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; GCN:   BUFFER_STORE_FORMAT_XYZW_IDXEN_exact killed [[BUFFER_LOAD_FORMAT_XYZW_IDXEN4]], [[COPY51]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_22]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom TargetCustom7 + 304, align 1, addrspace 4)
   ; GCN:   BUFFER_STORE_FORMAT_XYZW_BOTHEN_exact killed [[BUFFER_LOAD_FORMAT_XYZW_BOTHEN]], [[REG_SEQUENCE2]], [[S_LOAD_DWORDX4_IMM]], [[S_MOV_B32_22]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom TargetCustom7, align 1, addrspace 4)

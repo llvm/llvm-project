@@ -16,7 +16,7 @@ body: |
     ; GCN: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
     ; GCN: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
     ; GCN: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GCN: [[COPY4:%[0-9]+]]:sreg_32_xm0 = COPY $scc
+    ; GCN: [[COPY4:%[0-9]+]]:sgpr_32 = COPY $scc
     ; GCN: $scc = COPY [[COPY4]]
     ; GCN: [[S_CSELECT_B64_:%[0-9]+]]:sreg_64 = S_CSELECT_B64 [[COPY2]], [[COPY3]], implicit $scc
     ; GCN: S_ENDPGM 0, implicit [[S_CSELECT_B64_]]
@@ -45,7 +45,7 @@ body: |
     ; GCN: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
     ; GCN: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
     ; GCN: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GCN: [[COPY4:%[0-9]+]]:sreg_32_xm0 = COPY $scc
+    ; GCN: [[COPY4:%[0-9]+]]:sgpr_32 = COPY $scc
     ; GCN: $scc = COPY [[COPY4]]
     ; GCN: [[S_CSELECT_B64_:%[0-9]+]]:sreg_64 = S_CSELECT_B64 [[COPY2]], [[COPY3]], implicit $scc
     ; GCN: S_ENDPGM 0, implicit [[S_CSELECT_B64_]]
@@ -69,12 +69,12 @@ body: |
     liveins:  $sgpr0, $sgpr1, $sgpr2, $sgpr3
 
     ; GCN-LABEL: name: select_s16_scc
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr1
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GCN: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
     ; GCN: [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
     ; GCN: S_CMP_EQ_U32 [[COPY2]], [[COPY3]], implicit-def $scc
-    ; GCN: [[COPY4:%[0-9]+]]:sreg_32_xm0 = COPY $scc
+    ; GCN: [[COPY4:%[0-9]+]]:sgpr_32 = COPY $scc
     ; GCN: $scc = COPY [[COPY4]]
     ; GCN: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY]], [[COPY1]], implicit $scc
     ; GCN: S_ENDPGM 0, implicit [[S_CSELECT_B32_]]
@@ -105,7 +105,7 @@ body: |
     ; GCN: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
     ; GCN: [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
     ; GCN: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GCN: [[COPY4:%[0-9]+]]:sreg_32_xm0 = COPY $scc
+    ; GCN: [[COPY4:%[0-9]+]]:sgpr_32 = COPY $scc
     ; GCN: $scc = COPY [[COPY4]]
     ; GCN: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY2]], [[COPY3]], implicit $scc
     ; GCN: S_ENDPGM 0, implicit [[S_CSELECT_B32_]]

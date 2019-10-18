@@ -25,25 +25,25 @@ regBankSelected: true
 # VI:   S_LOAD_DWORD_IMM [[PTR]], 1020, 0, 0
 
 # Immediate overflow for SI
-# SI: [[K1024:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1024
+# SI: [[K1024:%[0-9]+]]:sreg_32 = S_MOV_B32 1024
 # SI: S_LOAD_DWORD_SGPR [[PTR]], [[K1024]], 0
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 256, 0
 # VI: S_LOAD_DWORD_IMM [[PTR]], 1024, 0
 
 # Max immediate offset for VI
-# SI: [[K1048572:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1048572
+# SI: [[K1048572:%[0-9]+]]:sreg_32 = S_MOV_B32 1048572
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 262143
 # VI: S_LOAD_DWORD_IMM [[PTR]], 1048572
 
 #
 # Immediate overflow for VI
-# SIVI: [[K1048576:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1048576
+# SIVI: [[K1048576:%[0-9]+]]:sreg_32 = S_MOV_B32 1048576
 # SIVI: S_LOAD_DWORD_SGPR [[PTR]], [[K1048576]], 0
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 262144, 0
 
 # Max immediate for CI
-# SIVI: [[K_LO:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 4294967292
-# SIVI: [[K_HI:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 3
+# SIVI: [[K_LO:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967292
+# SIVI: [[K_HI:%[0-9]+]]:sreg_32 = S_MOV_B32 3
 # SIVI: [[K:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[K_LO]], %subreg.sub0, [[K_HI]], %subreg.sub1
 # SIVI-DAG: [[K_SUB0:%[0-9]+]]:sreg_32 = COPY [[K]].sub0
 # SIVI-DAG: [[PTR_LO:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub0
@@ -56,8 +56,8 @@ regBankSelected: true
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 4294967295, 0, 0
 
 # Immediate overflow for CI
-# GCN: [[K_LO:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 0
-# GCN: [[K_HI:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 4
+# GCN: [[K_LO:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+# GCN: [[K_HI:%[0-9]+]]:sreg_32 = S_MOV_B32 4
 # GCN: [[K:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[K_LO]], %subreg.sub0, [[K_HI]], %subreg.sub1
 # GCN-DAG: [[K_SUB0:%[0-9]+]]:sreg_32 = COPY [[K]].sub0
 # GCN-DAG: [[PTR_LO:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub0
@@ -69,13 +69,13 @@ regBankSelected: true
 # GCN: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0, 0
 
 # Max 32-bit byte offset
-# SIVI: [[K4294967292:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 4294967292
+# SIVI: [[K4294967292:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967292
 # SIVI: S_LOAD_DWORD_SGPR [[PTR]], [[K4294967292]], 0
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 1073741823, 0
 
 # Overflow 32-bit byte offset
-# SIVI: [[K_LO:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 0
-# SIVI: [[K_HI:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1
+# SIVI: [[K_LO:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+# SIVI: [[K_HI:%[0-9]+]]:sreg_32 = S_MOV_B32 1
 # SIVI: [[K:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[K_LO]], %subreg.sub0, [[K_HI]], %subreg.sub1
 # SIVI-DAG: [[K_SUB0:%[0-9]+]]:sreg_32 = COPY [[K]].sub0
 # SIVI-DAG: [[PTR_LO:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub0

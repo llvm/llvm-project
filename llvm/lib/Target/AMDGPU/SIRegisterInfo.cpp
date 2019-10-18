@@ -1946,18 +1946,22 @@ SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
       return isWave32 ?
         &AMDGPU::SReg_32_XM0_XEXECRegClass : &AMDGPU::SReg_64_XEXECRegClass;
     case AMDGPU::SGPRRegBankID:
-      return &AMDGPU::SReg_32_XM0RegClass;
+      return &AMDGPU::SReg_32RegClass;
     case AMDGPU::SCCRegBankID:
       // This needs to return an allocatable class, so don't bother returning
       // the dummy SCC class.
-      return &AMDGPU::SReg_32_XM0RegClass;
+      //
+      // FIXME: This is a grotesque hack. We use SGPR_32 as an indication this
+      // was not an VCC bank value since we use the larger class SReg_32 for
+      // other values. These should all use SReg_32.
+      return &AMDGPU::SGPR_32RegClass;
     default:
       llvm_unreachable("unknown register bank");
     }
   }
   case 32:
     return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VGPR_32RegClass :
-                                                 &AMDGPU::SReg_32_XM0RegClass;
+                                                 &AMDGPU::SReg_32RegClass;
   case 64:
     return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_64RegClass :
                                                  &AMDGPU::SReg_64_XEXECRegClass;
@@ -1982,7 +1986,7 @@ SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
   default:
     if (Size < 32)
       return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VGPR_32RegClass :
-                                                   &AMDGPU::SReg_32_XM0RegClass;
+                                                   &AMDGPU::SReg_32RegClass;
     return nullptr;
   }
 }

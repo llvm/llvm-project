@@ -741,7 +741,7 @@ body: |
     ; GFX6-LABEL: name: load_constant_s32_from_4_gep_1024
     ; GFX6: liveins: $sgpr0_sgpr1
     ; GFX6: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX6: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1024
+    ; GFX6: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1024
     ; GFX6: [[S_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_SGPR [[COPY]], [[S_MOV_B32_]], 0, 0 :: (load 4, addrspace 4)
     ; GFX6: $sgpr0 = COPY [[S_LOAD_DWORD_SGPR]]
     ; GFX7-LABEL: name: load_constant_s32_from_4_gep_1024
@@ -782,7 +782,7 @@ body: |
     ; GFX6-LABEL: name: load_constant_s32_from_4_gep_1048575
     ; GFX6: liveins: $sgpr0_sgpr1
     ; GFX6: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX6: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1048575
+    ; GFX6: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1048575
     ; GFX6: [[S_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_SGPR [[COPY]], [[S_MOV_B32_]], 0, 0 :: (load 4, addrspace 4)
     ; GFX6: $sgpr0 = COPY [[S_LOAD_DWORD_SGPR]]
     ; GFX7-LABEL: name: load_constant_s32_from_4_gep_1048575
@@ -823,7 +823,7 @@ body: |
     ; GFX6-LABEL: name: load_constant_s32_from_4_gep_1048576
     ; GFX6: liveins: $sgpr0_sgpr1
     ; GFX6: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX6: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1048576
+    ; GFX6: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1048576
     ; GFX6: [[S_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_SGPR [[COPY]], [[S_MOV_B32_]], 0, 0 :: (load 4, addrspace 4)
     ; GFX6: $sgpr0 = COPY [[S_LOAD_DWORD_SGPR]]
     ; GFX7-LABEL: name: load_constant_s32_from_4_gep_1048576
@@ -834,14 +834,14 @@ body: |
     ; GFX8-LABEL: name: load_constant_s32_from_4_gep_1048576
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX8: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1048576
+    ; GFX8: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1048576
     ; GFX8: [[S_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_SGPR [[COPY]], [[S_MOV_B32_]], 0, 0 :: (load 4, addrspace 4)
     ; GFX8: $sgpr0 = COPY [[S_LOAD_DWORD_SGPR]]
     ; GFX10-LABEL: name: load_constant_s32_from_4_gep_1048576
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX10: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1048576
+    ; GFX10: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1048576
     ; GFX10: [[S_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_SGPR [[COPY]], [[S_MOV_B32_]], 0, 0 :: (load 4, addrspace 4)
     ; GFX10: $sgpr0 = COPY [[S_LOAD_DWORD_SGPR]]
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
@@ -866,7 +866,7 @@ body: |
     ; GFX6-LABEL: name: load_constant_s32_from_4_gep_1073741823
     ; GFX6: liveins: $sgpr0_sgpr1
     ; GFX6: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX6: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1073741823
+    ; GFX6: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1073741823
     ; GFX6: [[S_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_SGPR [[COPY]], [[S_MOV_B32_]], 0, 0 :: (load 4, addrspace 4)
     ; GFX6: $sgpr0 = COPY [[S_LOAD_DWORD_SGPR]]
     ; GFX7-LABEL: name: load_constant_s32_from_4_gep_1073741823
@@ -877,14 +877,14 @@ body: |
     ; GFX8-LABEL: name: load_constant_s32_from_4_gep_1073741823
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX8: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1073741823
+    ; GFX8: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1073741823
     ; GFX8: [[S_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_SGPR [[COPY]], [[S_MOV_B32_]], 0, 0 :: (load 4, addrspace 4)
     ; GFX8: $sgpr0 = COPY [[S_LOAD_DWORD_SGPR]]
     ; GFX10-LABEL: name: load_constant_s32_from_4_gep_1073741823
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX10: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1073741823
+    ; GFX10: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1073741823
     ; GFX10: [[S_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_SGPR [[COPY]], [[S_MOV_B32_]], 0, 0 :: (load 4, addrspace 4)
     ; GFX10: $sgpr0 = COPY [[S_LOAD_DWORD_SGPR]]
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
