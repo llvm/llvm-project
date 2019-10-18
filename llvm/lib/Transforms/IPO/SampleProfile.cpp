@@ -1675,7 +1675,10 @@ INITIALIZE_PASS_END(SampleProfileLoaderLegacyPass, "sample-profile",
 
 bool SampleProfileLoader::doInitialization(Module &M) {
   auto &Ctx = M.getContext();
-  auto ReaderOrErr = SampleProfileReader::create(Filename, Ctx);
+
+  std::unique_ptr<SampleProfileReaderItaniumRemapper> RemapReader;
+  auto ReaderOrErr =
+      SampleProfileReader::create(Filename, Ctx, RemappingFilename);
   if (std::error_code EC = ReaderOrErr.getError()) {
     std::string Msg = "Could not open profile: " + EC.message();
     Ctx.diagnose(DiagnosticInfoSampleProfile(Filename, Msg));
@@ -1695,20 +1698,6 @@ bool SampleProfileLoader::doInitialization(Module &M) {
       NamesInProfile.insert(NameTable->begin(), NameTable->end());
   }
 
-  if (!RemappingFilename.empty()) {
-    // Apply profile remappings to the loaded profile data if requested.
-    // For now, we only support remapping symbols encoded using the Itanium
-    // C++ ABI's name mangling scheme.
-    ReaderOrErr = SampleProfileReaderItaniumRemapper::create(
-        RemappingFilename, Ctx, std::move(Reader));
-    if (std::error_code EC = ReaderOrErr.getError()) {
-      std::string Msg = "Could not open profile remapping file: " + EC.message();
-      Ctx.diagnose(DiagnosticInfoSampleProfile(Filename, Msg));
-      return false;
-    }
-    Reader = std::move(ReaderOrErr.get());
-    ProfileIsValid = (Reader->read() == sampleprof_error::success);
-  }
   return true;
 }
 
