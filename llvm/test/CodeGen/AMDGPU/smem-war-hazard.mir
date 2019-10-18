@@ -304,6 +304,21 @@ body: |
     S_ENDPGM 0
 ...
 
+# Workaround since spilling/restoring SGPRs use real opcodes.
+# GCN-LABEL: name: hazard_smem_war_readlane_gfx10
+# GCN:      S_LOAD_DWORD_IMM
+# GCN:      $sgpr_null = S_MOV_B32 0
+# GCN-NEXT: V_READLANE_B32_gfx10
+---
+name: hazard_smem_war_readlane_gfx10
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr3, $vgpr0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr0 = V_READLANE_B32_gfx10 $vgpr0, $sgpr3
+    S_ENDPGM 0
+...
+
 # GCN-LABEL: name: hazard_smem_war_readfirstlane
 # GCN:      S_LOAD_DWORD_IMM
 # GCN:      $sgpr_null = S_MOV_B32 0

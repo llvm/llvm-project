@@ -952,6 +952,7 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
   unsigned SDSTName;
   switch (MI->getOpcode()) {
   case AMDGPU::V_READLANE_B32:
+  case AMDGPU::V_READLANE_B32_gfx10:
   case AMDGPU::V_READFIRSTLANE_B32:
     SDSTName = AMDGPU::OpName::vdst;
     break;
