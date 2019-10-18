@@ -227,6 +227,27 @@ struct Thread {
 };
 static_assert(sizeof(Thread) == 48, "");
 
+struct Exception {
+  static constexpr size_t MaxParameters = 15;
+
+  support::ulittle32_t ExceptionCode;
+  support::ulittle32_t ExceptionFlags;
+  support::ulittle64_t ExceptionRecord;
+  support::ulittle64_t ExceptionAddress;
+  support::ulittle32_t NumberParameters;
+  support::ulittle32_t UnusedAlignment;
+  support::ulittle64_t ExceptionInformation[MaxParameters];
+};
+static_assert(sizeof(Exception) == 152, "");
+
+struct ExceptionStream {
+  support::ulittle32_t ThreadId;
+  support::ulittle32_t UnusedAlignment;
+  Exception ExceptionRecord;
+  LocationDescriptor ThreadContext;
+};
+static_assert(sizeof(ExceptionStream) == 168, "");
+
 } // namespace minidump
 
 template <> struct DenseMapInfo<minidump::StreamType> {
