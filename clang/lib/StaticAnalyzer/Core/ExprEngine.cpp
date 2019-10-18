@@ -3083,16 +3083,7 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
     Out << "\\l"; // Adds a new-line to the last program point.
     Indent(Out, Space, IsDot) << "],\\l";
 
-    bool SameAsAllPredecessors =
-        std::all_of(N->pred_begin(), N->pred_end(), [&](const ExplodedNode *P) {
-          return P->getState() == State;
-        });
-
-    if (!SameAsAllPredecessors) {
-      State->printDOT(Out, N->getLocationContext(), Space);
-    } else {
-      Indent(Out, Space, IsDot) << "\"program_state\": null";
-    }
+    State->printDOT(Out, N->getLocationContext(), Space);
 
     Out << "\\l}\\l";
     return Out.str();

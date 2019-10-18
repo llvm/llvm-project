@@ -48,3 +48,5 @@ int foo() {
 // CHECK: \"pretty\": \"'\\\\x13'\"
 
 // CHECK: \"has_report\": 1
+
+// CHECK-NOT: \"program_state\": null
