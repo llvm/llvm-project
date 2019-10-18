@@ -1308,7 +1308,8 @@ llvm::DenseSet<const Decl *> getNonLocalDeclRefs(ParsedAST &AST,
   llvm::DenseSet<const Decl *> DeclRefs;
   findExplicitReferences(FD, [&](ReferenceLoc Ref) {
     for (const Decl *D : Ref.Targets) {
-      if (!index::isFunctionLocalSymbol(D) && !D->isTemplateParameter())
+      if (!index::isFunctionLocalSymbol(D) && !D->isTemplateParameter() &&
+          !Ref.IsDecl)
         DeclRefs.insert(D);
     }
   });
