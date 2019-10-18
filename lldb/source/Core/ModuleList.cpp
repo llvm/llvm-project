@@ -424,6 +424,8 @@ void ModuleList::FindFunctionSymbols(ConstString name,
 void ModuleList::FindFunctions(const RegularExpression &name,
                                bool include_symbols, bool include_inlines,
                                SymbolContextList &sc_list) {
+  const size_t initial_size = sc_list.GetSize();
+
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   collection::const_iterator pos, end = m_modules.end();
   collection dylinker_modules;
@@ -504,6 +506,8 @@ void ModuleList::FindSymbolsWithNameAndType(ConstString name,
                                             SymbolType symbol_type,
                                             SymbolContextList &sc_list) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
+  const size_t initial_size = sc_list.GetSize();
+
   collection::const_iterator pos, end = m_modules.end();
   collection dylinker_modules;
   for (pos = m_modules.begin(); pos != end; ++pos) {
@@ -528,6 +532,8 @@ void ModuleList::FindSymbolsMatchingRegExAndType(
     const RegularExpression &regex, lldb::SymbolType symbol_type,
     SymbolContextList &sc_list) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
+  const size_t initial_size = sc_list.GetSize();
+
   collection::const_iterator pos, end = m_modules.end();
   collection dylinker_modules;
   for (pos = m_modules.begin(); pos != end; ++pos) {

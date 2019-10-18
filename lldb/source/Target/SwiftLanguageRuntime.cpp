@@ -192,8 +192,8 @@ FindSymbolForSwiftObject(Target &target, ConstString object,
   llvm::Optional<lldb::addr_t> retval;
 
   SymbolContextList sc_list;
-  if (target.GetImages().FindSymbolsWithNameAndType(object, sym_type,
-                                                    sc_list)) {
+  target.GetImages().FindSymbolsWithNameAndType(object, sym_type, sc_list);
+  if (!sc_list.IsEmpty()) {
     SymbolContext SwiftObject_Class;
     if (sc_list.GetSize() == 1 &&
         sc_list.GetContextAtIndex(0, SwiftObject_Class)) {
@@ -965,8 +965,9 @@ public:
 
     ConstString name_cs(name.c_str(), name.size());
     SymbolContextList sc_list;
-    if (!m_process->GetTarget().GetImages().FindSymbolsWithNameAndType(
-            name_cs, lldb::eSymbolTypeAny, sc_list)) {
+    m_process->GetTarget().GetImages().FindSymbolsWithNameAndType(
+        name_cs, lldb::eSymbolTypeAny, sc_list);
+    if (sc_list.IsEmpty()) {
       LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
                "[MemoryReader] symbol resoution failed {0}", name);
       return swift::remote::RemoteAddress(nullptr);
@@ -2516,8 +2517,10 @@ bool SwiftLanguageRuntime::GetTargetOfPartialApply(SymbolContext &curr_sc,
   
   std::string apply_target = demangle_ctx.getThunkTarget(apply_name.GetStringRef());
   if (!apply_target.empty()) {
-    size_t num_symbols = curr_sc.module_sp->FindFunctions(
-        ConstString(apply_target), NULL, eFunctionNameTypeFull, true, false, false, sc_list);
+    curr_sc.module_sp->FindFunctions(ConstString(apply_target), NULL,
+                                     eFunctionNameTypeFull, true, false,
+                                     sc_list);
+    size_t num_symbols = sc_list.GetSize();
     if (num_symbols == 0)
       return false;
       
