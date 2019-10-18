@@ -120,7 +120,8 @@ ProcessDpu::Factory::Attach(
   dpu_id = pid & 0xffff;
 
   char profile[256];
-  sprintf(profile, "backend=hw,rankPath=/dev/dpu_region%u/dpu_rank%u", region_id, rank_id);
+  sprintf(profile, "backend=hw,rankPath=/dev/dpu_region%u/dpu_rank%u",
+          region_id, rank_id);
 
   DpuRank *rank = new DpuRank();
   bool success = rank->Open(profile);
