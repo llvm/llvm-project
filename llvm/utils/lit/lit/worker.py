@@ -64,7 +64,28 @@ def _execute_test(test, lit_config):
     end = time.time()
 
     result.elapsed = end - start
+    resolve_result_code(result, test)
+
     test.setResult(result)
+
+
+# TODO(yln): is this the right place to deal with this?
+# isExpectedToFail() only works after the test has been executed.
+def resolve_result_code(result, test):
+    try:
+        expected_to_fail = test.isExpectedToFail()
+    except ValueError as e:
+        # Syntax error in an XFAIL line.
+        result.code = lit.Test.UNRESOLVED
+        result.output = str(e)
+    else:
+        if expected_to_fail:
+            # pass -> unexpected pass
+            if result.code is lit.Test.PASS:
+                result.code = lit.Test.XPASS
+            # fail -> expected fail
+            if result.code is lit.Test.FAIL:
+                result.code = lit.Test.XFAIL
 
 
 def _execute_test_handle_errors(test, lit_config):
