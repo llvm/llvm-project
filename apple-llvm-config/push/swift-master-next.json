@@ -1,8 +1,0 @@
-{
-  "branch_to_dest_branch_mapping": {
-    "swift/master-next:lldb": "upstream-with-swift"
-  },
-  "repo_mapping": {
-    "lldb": "git@github.com:apple/swift-lldb.git"
-  }
-}
