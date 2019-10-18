@@ -37,6 +37,8 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
 
   MachineInstrBuilder MIB;
 
+  bool isIncomingArgumentHandler() const override { return false; }
+
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
     llvm_unreachable("not implemented");
