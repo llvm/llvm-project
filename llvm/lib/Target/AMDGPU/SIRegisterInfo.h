@@ -35,7 +35,6 @@ private:
   BitVector VGPRPressureSets;
   BitVector AGPRPressureSets;
   bool SpillSGPRToVGPR;
-  bool SpillSGPRToSMEM;
   bool isWave32;
 
   void classifyPressureSet(unsigned PSetID, unsigned Reg,
@@ -45,10 +44,6 @@ public:
 
   bool spillSGPRToVGPR() const {
     return SpillSGPRToVGPR;
-  }
-
-  bool spillSGPRToSMEM() const {
-    return SpillSGPRToSMEM;
   }
 
   /// Return the end register initially reserved for the scratch buffer in case

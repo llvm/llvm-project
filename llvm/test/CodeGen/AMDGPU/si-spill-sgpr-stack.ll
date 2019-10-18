@@ -1,5 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -amdgpu-spill-sgpr-to-smem=0 -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=SGPR %s
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -amdgpu-spill-sgpr-to-smem=1 -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=SMEM %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=SGPR %s
 
 ; Make sure this doesn't crash.
 ; ALL-LABEL: {{^}}test:
@@ -14,15 +13,6 @@
 ; SGPR-NEXT: s_nop 4
 ; SGPR-NEXT: buffer_store_dword v0, off, s[0:[[HI]]{{\]}}, 0
 
-; Make sure scratch wave offset register is correctly incremented and
-; then restored.
-; SMEM: s_add_u32 m0, s[[OFF]], 0x100{{$}}
-; SMEM: s_buffer_store_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[LO]]:[[HI]]], m0 ; 16-byte Folded Spill
-
-; SMEM: s_add_u32 m0, s[[OFF]], 0x100{{$}}
-; SMEM: s_buffer_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[LO]]:[[HI]]], m0 ; 16-byte Folded Reload
-
-; SMEM: s_dcache_wb
 ; ALL: s_endpgm
 define amdgpu_kernel void @test(i32 addrspace(1)* %out, i32 %in) {
   call void asm sideeffect "", "~{s[0:7]}" ()
