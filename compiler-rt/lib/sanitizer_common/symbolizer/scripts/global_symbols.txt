@@ -75,6 +75,7 @@ getpid U
 getrlimit U
 gettimeofday U
 ioctl U
+isalnum U
 isalpha U
 isatty U
 islower U
