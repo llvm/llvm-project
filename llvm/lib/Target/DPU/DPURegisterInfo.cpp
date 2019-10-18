@@ -58,6 +58,17 @@ BitVector DPURegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserved.set(DPU::ID2);
   reserved.set(DPU::ID4);
   reserved.set(DPU::ID8);
+  reserved.set(DPU::MAJ_D22);
+  reserved.set(DPU::MAJ_R22);
+  reserved.set(DPU::MAJ_R23);
+  reserved.set(DPU::MAJ_ZERO);
+  reserved.set(DPU::MAJ_ONE);
+  reserved.set(DPU::MAJ_LNEG);
+  reserved.set(DPU::MAJ_MNEG);
+  reserved.set(DPU::MAJ_ID);
+  reserved.set(DPU::MAJ_ID2);
+  reserved.set(DPU::MAJ_ID4);
+  reserved.set(DPU::MAJ_ID8);
   return reserved;
 }
 
