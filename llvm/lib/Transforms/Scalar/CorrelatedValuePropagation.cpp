@@ -64,6 +64,18 @@ STATISTIC(NumAShrs,     "Number of ashr converted to lshr");
 STATISTIC(NumSRems,     "Number of srem converted to urem");
 STATISTIC(NumSExt,      "Number of sext converted to zext");
 STATISTIC(NumAnd,       "Number of ands removed");
+STATISTIC(NumNW,        "Number of no-wrap deductions");
+STATISTIC(NumNSW,       "Number of no-signed-wrap deductions");
+STATISTIC(NumNUW,       "Number of no-unsigned-wrap deductions");
+STATISTIC(NumAddNW,     "Number of no-wrap deductions for add");
+STATISTIC(NumAddNSW,    "Number of no-signed-wrap deductions for add");
+STATISTIC(NumAddNUW,    "Number of no-unsigned-wrap deductions for add");
+STATISTIC(NumSubNW,     "Number of no-wrap deductions for sub");
+STATISTIC(NumSubNSW,    "Number of no-signed-wrap deductions for sub");
+STATISTIC(NumSubNUW,    "Number of no-unsigned-wrap deductions for sub");
+STATISTIC(NumMulNW,     "Number of no-wrap deductions for mul");
+STATISTIC(NumMulNSW,    "Number of no-signed-wrap deductions for mul");
+STATISTIC(NumMulNUW,    "Number of no-unsigned-wrap deductions for mul");
 STATISTIC(NumOverflows, "Number of overflow checks removed");
 STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
@@ -419,18 +431,58 @@ static bool willNotOverflow(BinaryOpIntrinsic *BO, LazyValueInfo *LVI) {
   return NWRegion.contains(LRange);
 }
 
+static void setDeducedOverflowingFlags(Value *V, Instruction::BinaryOps Opcode,
+                                       bool NewNSW, bool NewNUW) {
+  Statistic *OpcNW, *OpcNSW, *OpcNUW;
+  switch (Opcode) {
+  case Instruction::Add:
+    OpcNW = &NumAddNW;
+    OpcNSW = &NumAddNSW;
+    OpcNUW = &NumAddNUW;
+    break;
+  case Instruction::Sub:
+    OpcNW = &NumSubNW;
+    OpcNSW = &NumSubNSW;
+    OpcNUW = &NumSubNUW;
+    break;
+  case Instruction::Mul:
+    OpcNW = &NumMulNW;
+    OpcNSW = &NumMulNSW;
+    OpcNUW = &NumMulNUW;
+    break;
+  default:
+    llvm_unreachable("Will not be called with other binops");
+  }
+
+  auto *Inst = dyn_cast<Instruction>(V);
+  if (NewNSW) {
+    ++NumNW;
+    ++OpcNW;
+    ++NumNSW;
+    ++OpcNSW;
+    if (Inst)
+      Inst->setHasNoSignedWrap();
+  }
+  if (NewNUW) {
+    ++NumNW;
+    ++OpcNW;
+    ++NumNUW;
+    ++OpcNUW;
+    if (Inst)
+      Inst->setHasNoUnsignedWrap();
+  }
+}
+
 // Rewrite this with.overflow intrinsic as non-overflowing.
 static void processOverflowIntrinsic(WithOverflowInst *WO) {
   IRBuilder<> B(WO);
-  Value *NewOp = B.CreateBinOp(
-      WO->getBinaryOp(), WO->getLHS(), WO->getRHS(), WO->getName());
-  // Constant-folding could have happened.
-  if (auto *Inst = dyn_cast<Instruction>(NewOp)) {
-    if (WO->isSigned())
-      Inst->setHasNoSignedWrap();
-    else
-      Inst->setHasNoUnsignedWrap();
-  }
+  Instruction::BinaryOps Opcode = WO->getBinaryOp();
+  bool NSW = WO->isSigned();
+  bool NUW = !WO->isSigned();
+
+  Value *NewOp =
+      B.CreateBinOp(Opcode, WO->getLHS(), WO->getRHS(), WO->getName());
+  setDeducedOverflowingFlags(NewOp, Opcode, NSW, NUW);
 
   StructType *ST = cast<StructType>(WO->getType());
   Constant *Struct = ConstantStruct::get(ST,
@@ -443,13 +495,13 @@ static void processOverflowIntrinsic(WithOverflowInst *WO) {
 }
 
 static void processSaturatingInst(SaturatingInst *SI) {
+  Instruction::BinaryOps Opcode = SI->getBinaryOp();
+  bool NSW = SI->isSigned();
+  bool NUW = !SI->isSigned();
   BinaryOperator *BinOp = BinaryOperator::Create(
-      SI->getBinaryOp(), SI->getLHS(), SI->getRHS(), SI->getName(), SI);
+      Opcode, SI->getLHS(), SI->getRHS(), SI->getName(), SI);
   BinOp->setDebugLoc(SI->getDebugLoc());
-  if (SI->isSigned())
-    BinOp->setHasNoSignedWrap();
-  else
-    BinOp->setHasNoUnsignedWrap();
+  setDeducedOverflowingFlags(BinOp, Opcode, NSW, NUW);
 
   SI->replaceAllUsesWith(BinOp);
   SI->eraseFromParent();
@@ -676,6 +728,7 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
 
   BasicBlock *BB = BinOp->getParent();
 
+  Instruction::BinaryOps Opcode = BinOp->getOpcode();
   Value *LHS = BinOp->getOperand(0);
   Value *RHS = BinOp->getOperand(1);
 
@@ -683,20 +736,21 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   ConstantRange RRange = LVI->getConstantRange(RHS, BB, BinOp);
 
   bool Changed = false;
+  bool NewNUW = false, NewNSW = false;
   if (!NUW) {
     ConstantRange NUWRange = ConstantRange::makeGuaranteedNoWrapRegion(
-        BinOp->getOpcode(), RRange, OBO::NoUnsignedWrap);
-    bool NewNUW = NUWRange.contains(LRange);
-    BinOp->setHasNoUnsignedWrap(NewNUW);
+        Opcode, RRange, OBO::NoUnsignedWrap);
+    NewNUW = NUWRange.contains(LRange);
     Changed |= NewNUW;
   }
   if (!NSW) {
     ConstantRange NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(
-        BinOp->getOpcode(), RRange, OBO::NoSignedWrap);
-    bool NewNSW = NSWRange.contains(LRange);
-    BinOp->setHasNoSignedWrap(NewNSW);
+        Opcode, RRange, OBO::NoSignedWrap);
+    NewNSW = NSWRange.contains(LRange);
     Changed |= NewNSW;
   }
+
+  setDeducedOverflowingFlags(BinOp, Opcode, NewNSW, NewNUW);
 
   return Changed;
 }
