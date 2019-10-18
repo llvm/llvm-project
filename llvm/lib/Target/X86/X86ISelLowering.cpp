@@ -33035,6 +33035,7 @@ static SDValue combineX86ShufflesRecursively(
   SmallVector<SDValue, 2> OpInputs;
   APInt OpUndef, OpZero;
   APInt OpDemandedElts = APInt::getAllOnesValue(VT.getVectorNumElements());
+  bool IsOpVariableMask = isTargetShuffleVariableMask(Op.getOpcode());
   if (!getTargetShuffleInputs(Op, OpDemandedElts, OpInputs, OpMask, OpUndef,
                               OpZero, DAG, Depth, false))
     return SDValue();
@@ -33156,7 +33157,7 @@ static SDValue combineX86ShufflesRecursively(
                          SDLoc(Root));
 
   assert(!Ops.empty() && "Shuffle with no inputs detected");
-  HasVariableMask |= isTargetShuffleVariableMask(Op.getOpcode());
+  HasVariableMask |= IsOpVariableMask;
 
   // Update the list of shuffle nodes that have been combined so far.
   SmallVector<const SDNode *, 16> CombinedNodes(SrcNodes.begin(),
