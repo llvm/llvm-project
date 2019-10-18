@@ -5,6 +5,13 @@ import os
 import lldb
 
 
+def check_target(target):
+    if target.GetTriple() == "dpu-upmem-dpurte":
+        print("Command not allowed on dpu target")
+        return False
+    return True
+
+
 def compute_dpu_pid(region_id, rank_id, slice_id, dpu_id):
     return dpu_id + (slice_id << 16) + (rank_id << 32) + (region_id << 48) \
         + 0x80000000
@@ -172,6 +179,8 @@ def dpu_attach_on_boot(debugger, command, result, internal_dict):
     usage: dpu_attach_on_boot [<struct dpu_t *>]
     '''
     target = debugger.GetSelectedTarget()
+    if not(check_target(target)):
+        return None
 
     dpus_booting, host_frame = \
         break_to_next_boot_and_get_dpus(debugger, target)
@@ -235,6 +244,9 @@ def dpu_attach(debugger, command, result, internal_dict):
     usage: dpu_attach <struct dpu_t *>
     '''
     target = debugger.GetSelectedTarget()
+    if not(check_target(target)):
+        return None
+
     dpu = get_dpu_from_command(command, debugger, target)
     if dpu is None or not(dpu.IsValid):
         print("Could not find dpu")
@@ -343,6 +355,10 @@ def dpu_list(debugger, command, result, internal_dict):
     '''
     usage: dpu_list
     '''
+    target = debugger.GetSelectedTarget()
+    if not(check_target(target)):
+        return None
+
     success, nb_allocated_rank = \
         get_value_from_command(
             debugger, "dpu_rank_handler_dpu_rank_list_size", 10)
@@ -350,7 +366,6 @@ def dpu_list(debugger, command, result, internal_dict):
         print("dpu_list: internal error 1")
         return None
 
-    target = debugger.GetSelectedTarget()
     result_list = []
 
     for each_rank in range(0, nb_allocated_rank):
