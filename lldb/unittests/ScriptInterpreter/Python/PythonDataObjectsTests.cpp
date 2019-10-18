@@ -20,6 +20,7 @@
 #include "PythonTestSuite.h"
 
 using namespace lldb_private;
+using namespace lldb_private::python;
 
 class PythonDataObjectsTest : public PythonTestSuite {
 public:
@@ -625,4 +626,117 @@ TEST_F(PythonDataObjectsTest, TestExtractingUInt64ThroughStructuredData) {
       EXPECT_TRUE(extracted_value == value);
     }
   }
+}
+
+TEST_F(PythonDataObjectsTest, TestCallable) {
+
+  PythonDictionary globals(PyInitialValue::Empty);
+  auto builtins = PythonModule::BuiltinsModule();
+  llvm::Error error = globals.SetItem("__builtins__", builtins);
+  ASSERT_FALSE(error);
+
+  {
+    PyObject *o = PyRun_String("lambda x : x", Py_eval_input, globals.get(),
+                               globals.get());
+    ASSERT_FALSE(o == NULL);
+    auto lambda = Take<PythonCallable>(o);
+    auto arginfo = lambda.GetArgInfo();
+    ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
+    EXPECT_EQ(arginfo.get().count, 1);
+    EXPECT_EQ(arginfo.get().has_varargs, false);
+    EXPECT_EQ(arginfo.get().is_bound_method, false);
+  }
+
+  {
+    PyObject *o = PyRun_String("lambda x,y=0: x", Py_eval_input, globals.get(),
+                               globals.get());
+    ASSERT_FALSE(o == NULL);
+    auto lambda = Take<PythonCallable>(o);
+    auto arginfo = lambda.GetArgInfo();
+    ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
+    EXPECT_EQ(arginfo.get().count, 2);
+    EXPECT_EQ(arginfo.get().has_varargs, false);
+    EXPECT_EQ(arginfo.get().is_bound_method, false);
+  }
+
+  {
+    PyObject *o = PyRun_String("lambda x,y=0, **kw: x", Py_eval_input,
+                               globals.get(), globals.get());
+    ASSERT_FALSE(o == NULL);
+    auto lambda = Take<PythonCallable>(o);
+    auto arginfo = lambda.GetArgInfo();
+    ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
+    EXPECT_EQ(arginfo.get().count, 2);
+    EXPECT_EQ(arginfo.get().has_varargs, false);
+  }
+
+  {
+    PyObject *o = PyRun_String("lambda x,y,*a: x", Py_eval_input, globals.get(),
+                               globals.get());
+    ASSERT_FALSE(o == NULL);
+    auto lambda = Take<PythonCallable>(o);
+    auto arginfo = lambda.GetArgInfo();
+    ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
+    EXPECT_EQ(arginfo.get().count, 2);
+    EXPECT_EQ(arginfo.get().has_varargs, true);
+    EXPECT_EQ(arginfo.get().is_bound_method, false);
+  }
+
+  {
+    PyObject *o = PyRun_String("lambda x,y,*a,**kw: x", Py_eval_input,
+                               globals.get(), globals.get());
+    ASSERT_FALSE(o == NULL);
+    auto lambda = Take<PythonCallable>(o);
+    auto arginfo = lambda.GetArgInfo();
+    ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
+    EXPECT_EQ(arginfo.get().count, 2);
+    EXPECT_EQ(arginfo.get().has_varargs, true);
+  }
+
+  {
+    const char *script = R"(
+class Foo:
+  def bar(self, x):
+     return x
+bar_bound   = Foo().bar
+bar_unbound = Foo.bar
+)";
+    PyObject *o =
+        PyRun_String(script, Py_file_input, globals.get(), globals.get());
+    ASSERT_FALSE(o == NULL);
+    Take<PythonObject>(o);
+
+    auto bar_bound = As<PythonCallable>(globals.GetItem("bar_bound"));
+    ASSERT_THAT_EXPECTED(bar_bound, llvm::Succeeded());
+    auto arginfo = bar_bound.get().GetArgInfo();
+    ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
+    EXPECT_EQ(arginfo.get().count, 2); // FIXME, wrong
+    EXPECT_EQ(arginfo.get().has_varargs, false);
+    EXPECT_EQ(arginfo.get().is_bound_method, true);
+
+    auto bar_unbound = As<PythonCallable>(globals.GetItem("bar_unbound"));
+    ASSERT_THAT_EXPECTED(bar_unbound, llvm::Succeeded());
+    arginfo = bar_unbound.get().GetArgInfo();
+    ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
+    EXPECT_EQ(arginfo.get().count, 2);
+    EXPECT_EQ(arginfo.get().has_varargs, false);
+    EXPECT_EQ(arginfo.get().is_bound_method, false);
+  }
+
+#if PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 3
+
+  // the old implementation of GetArgInfo just doesn't work on builtins.
+
+  {
+    auto builtins = PythonModule::BuiltinsModule();
+    auto hex = As<PythonCallable>(builtins.GetAttribute("hex"));
+    ASSERT_THAT_EXPECTED(hex, llvm::Succeeded());
+    auto arginfo = hex.get().GetArgInfo();
+    ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
+    EXPECT_EQ(arginfo.get().count, 1);
+    EXPECT_EQ(arginfo.get().has_varargs, false);
+    EXPECT_EQ(arginfo.get().is_bound_method, false);
+  }
+
+#endif
 }
