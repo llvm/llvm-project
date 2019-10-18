@@ -1,15 +1,21 @@
 # REQUIRES: x86
 # RUN: yaml2obj < %s > %t1.obj
 # RUN: yaml2obj < %s > %t2.obj
-# RUN: not lld-link /out:%t.exe %t1.obj %t2.obj >& %t.log
-# RUN: FileCheck %s < %t.log
+# RUN: not lld-link /out:%t.exe %t1.obj %t2.obj 2>&1 | FileCheck --check-prefix=OBJ %s
 
 # RUN: llvm-as -o %t.lto1.obj %S/Inputs/conflict.ll
 # RUN: llvm-as -o %t.lto2.obj %S/Inputs/conflict.ll
-# RUN: not lld-link /out:%t.exe %t.lto1.obj %t.lto2.obj >& %t.log
-# RUN: FileCheck %s < %t.log
+# RUN: not lld-link /out:%t.exe %t.lto1.obj %t.lto2.obj 2>&1 | FileCheck --check-prefix=BC %s
 
-# CHECK: duplicate symbol: foo in {{.+}}1.obj and in {{.+}}2.obj
+# OBJ: duplicate symbol: foo
+# OBJ: defined at {{.+}}1.obj
+# OBJ: defined at {{.+}}2.obj
+
+# BC: duplicate symbol: foo
+# BC: defined at {{.+}}conflict.ll
+# BC:            {{.+}}1.obj
+# BC: defined at {{.+}}conflict.ll
+# BC:            {{.+}}2.obj
 
 --- !COFF
 header:

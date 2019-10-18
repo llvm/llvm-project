@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
@@ -202,6 +203,9 @@ public:
   // The .debug$T stream if there's one.
   llvm::Optional<llvm::codeview::CVTypeArray> debugTypes;
 
+  llvm::Optional<std::pair<StringRef, uint32_t>>
+  getVariableLocation(StringRef var);
+
 private:
   const coff_section* getSection(uint32_t i);
   const coff_section *getSection(COFFSymbolRef sym) {
@@ -212,6 +216,7 @@ private:
   void initializeSymbols();
   void initializeFlags();
   void initializeDependencies();
+  void initializeDwarf();
 
   SectionChunk *
   readSection(uint32_t sectionNumber,
@@ -285,6 +290,15 @@ private:
   // index. Nonexistent indices (which are occupied by auxiliary
   // symbols in the real symbol table) are filled with null pointers.
   std::vector<Symbol *> symbols;
+
+  std::unique_ptr<llvm::DWARFContext> dwarf;
+  std::vector<const llvm::DWARFDebugLine::LineTable *> lineTables;
+  struct VarLoc {
+    const llvm::DWARFDebugLine::LineTable *lt;
+    unsigned file;
+    unsigned line;
+  };
+  llvm::DenseMap<StringRef, VarLoc> variableLoc;
 };
 
 // This type represents import library members that contain DLL names
