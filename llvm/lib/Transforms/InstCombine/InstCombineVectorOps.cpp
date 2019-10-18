@@ -1061,17 +1061,23 @@ static bool canEvaluateShuffled(Value *V, ArrayRef<int> Mask,
   if (Depth == 0) return false;
 
   switch (I->getOpcode()) {
+    case Instruction::UDiv:
+    case Instruction::SDiv:
+    case Instruction::URem:
+    case Instruction::SRem:
+      // Propagating an undefined shuffle mask element to integer div/rem is not
+      // allowed because those opcodes can create immediate undefined behavior
+      // from an undefined element in an operand.
+      if (llvm::any_of(Mask, [](int M){ return M == -1; }))
+        return false;
+      LLVM_FALLTHROUGH;
     case Instruction::Add:
     case Instruction::FAdd:
     case Instruction::Sub:
     case Instruction::FSub:
     case Instruction::Mul:
     case Instruction::FMul:
-    case Instruction::UDiv:
-    case Instruction::SDiv:
     case Instruction::FDiv:
-    case Instruction::URem:
-    case Instruction::SRem:
     case Instruction::FRem:
     case Instruction::Shl:
     case Instruction::LShr:
@@ -1092,9 +1098,7 @@ static bool canEvaluateShuffled(Value *V, ArrayRef<int> Mask,
     case Instruction::FPExt:
     case Instruction::GetElementPtr: {
       // Bail out if we would create longer vector ops. We could allow creating
-      // longer vector ops, but that may result in more expensive codegen. We
-      // would also need to limit the transform to avoid undefined behavior for
-      // integer div/rem.
+      // longer vector ops, but that may result in more expensive codegen.
       Type *ITy = I->getType();
       if (ITy->isVectorTy() && Mask.size() > ITy->getVectorNumElements())
         return false;

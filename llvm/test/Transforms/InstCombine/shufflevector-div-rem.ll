@@ -8,7 +8,12 @@
 ; extracting the second element in the vector).
 define i16 @test_srem_orig(i16 %a, i1 %cmp) {
 ; CHECK-LABEL: @test_srem_orig(
-; CHECK-NEXT:    ret i16 1
+; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = srem <2 x i16> [[SPLATINSERT]], <i16 2, i16 1>
+; CHECK-NEXT:    [[SPLAT_OP:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> undef, <2 x i32> <i32 undef, i32 0>
+; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x i16> <i16 undef, i16 1>, <2 x i16> [[SPLAT_OP]]
+; CHECK-NEXT:    [[T3:%.*]] = extractelement <2 x i16> [[T2]], i32 1
+; CHECK-NEXT:    ret i16 [[T3]]
 ;
   %splatinsert = insertelement <2 x i16> undef, i16 %a, i32 0
   %splat = shufflevector <2 x i16> %splatinsert, <2 x i16> undef, <2 x i32> zeroinitializer
@@ -24,7 +29,11 @@ define i16 @test_srem_orig(i16 %a, i1 %cmp) {
 ; "evaluateInDifferentElementOrder".
 define <2 x i16> @test_srem(i16 %a, i1 %cmp) {
 ; CHECK-LABEL: @test_srem(
-; CHECK-NEXT:    ret <2 x i16> <i16 77, i16 99>
+; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[T1:%.*]] = srem <2 x i16> [[SPLATINSERT]], <i16 2, i16 1>
+; CHECK-NEXT:    [[SPLAT_OP:%.*]] = shufflevector <2 x i16> [[T1]], <2 x i16> undef, <2 x i32> <i32 undef, i32 0>
+; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x i16> <i16 77, i16 99>, <2 x i16> [[SPLAT_OP]]
+; CHECK-NEXT:    ret <2 x i16> [[T2]]
 ;
   %splatinsert = insertelement <2 x i16> undef, i16 %a, i32 0
   %t1 = srem <2 x i16> %splatinsert, <i16 2, i16 1>
@@ -35,7 +44,11 @@ define <2 x i16> @test_srem(i16 %a, i1 %cmp) {
 
 define <2 x i16> @test_urem(i16 %a, i1 %cmp) {
 ; CHECK-LABEL: @test_urem(
-; CHECK-NEXT:    ret <2 x i16> <i16 77, i16 99>
+; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[T1:%.*]] = urem <2 x i16> [[SPLATINSERT]], <i16 3, i16 1>
+; CHECK-NEXT:    [[SPLAT_OP:%.*]] = shufflevector <2 x i16> [[T1]], <2 x i16> undef, <2 x i32> <i32 undef, i32 0>
+; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x i16> <i16 77, i16 99>, <2 x i16> [[SPLAT_OP]]
+; CHECK-NEXT:    ret <2 x i16> [[T2]]
 ;
   %splatinsert = insertelement <2 x i16> undef, i16 %a, i32 0
   %t1 = urem <2 x i16> %splatinsert, <i16 3, i16 1>
@@ -46,7 +59,11 @@ define <2 x i16> @test_urem(i16 %a, i1 %cmp) {
 
 define <2 x i16> @test_sdiv(i16 %a, i1 %cmp) {
 ; CHECK-LABEL: @test_sdiv(
-; CHECK-NEXT:    ret <2 x i16> <i16 77, i16 99>
+; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[T1:%.*]] = sdiv <2 x i16> [[SPLATINSERT]], <i16 2, i16 1>
+; CHECK-NEXT:    [[SPLAT_OP:%.*]] = shufflevector <2 x i16> [[T1]], <2 x i16> undef, <2 x i32> <i32 undef, i32 0>
+; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x i16> <i16 77, i16 99>, <2 x i16> [[SPLAT_OP]]
+; CHECK-NEXT:    ret <2 x i16> [[T2]]
 ;
   %splatinsert = insertelement <2 x i16> undef, i16 %a, i32 0
   %t1 = sdiv <2 x i16> %splatinsert, <i16 2, i16 1>
@@ -57,7 +74,11 @@ define <2 x i16> @test_sdiv(i16 %a, i1 %cmp) {
 
 define <2 x i16> @test_udiv(i16 %a, i1 %cmp) {
 ; CHECK-LABEL: @test_udiv(
-; CHECK-NEXT:    ret <2 x i16> <i16 77, i16 99>
+; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[T1:%.*]] = udiv <2 x i16> [[SPLATINSERT]], <i16 3, i16 1>
+; CHECK-NEXT:    [[SPLAT_OP:%.*]] = shufflevector <2 x i16> [[T1]], <2 x i16> undef, <2 x i32> <i32 undef, i32 0>
+; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x i16> <i16 77, i16 99>, <2 x i16> [[SPLAT_OP]]
+; CHECK-NEXT:    ret <2 x i16> [[T2]]
 ;
   %splatinsert = insertelement <2 x i16> undef, i16 %a, i32 0
   %t1 = udiv <2 x i16> %splatinsert, <i16 3, i16 1>
