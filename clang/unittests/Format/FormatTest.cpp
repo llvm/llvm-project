@@ -6912,6 +6912,7 @@ TEST_F(FormatTest, UnderstandsUnaryOperators) {
   verifyFormat("alignof(char);", getGoogleStyle());
 
   verifyFormat("return -1;");
+  verifyFormat("throw -1;");
   verifyFormat("switch (a) {\n"
                "case -1:\n"
                "  break;\n"

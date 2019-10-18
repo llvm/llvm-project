@@ -1757,7 +1757,7 @@ private:
     // Use heuristics to recognize unary operators.
     if (PrevToken->isOneOf(tok::equal, tok::l_paren, tok::comma, tok::l_square,
                            tok::question, tok::colon, tok::kw_return,
-                           tok::kw_case, tok::at, tok::l_brace))
+                           tok::kw_case, tok::at, tok::l_brace, tok::kw_throw))
       return TT_UnaryOperator;
 
     // There can't be two consecutive binary operators.
