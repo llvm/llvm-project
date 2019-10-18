@@ -2717,10 +2717,19 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
   if (isa<SCEVCouldNotCompute>(MaxExitCount))
     return false;
 
+  auto FoldExit = [&](BasicBlock *ExitingBB, bool IsTaken) {
+    BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+    bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
+    auto *OldCond = BI->getCondition();
+    auto *NewCond = ConstantInt::get(OldCond->getType(),
+                                     IsTaken ? ExitIfTrue : !ExitIfTrue);
+    BI->setCondition(NewCond);
+    if (OldCond->use_empty())
+      DeadInsts.push_back(OldCond);
+  };
+
   bool Changed = false;
   for (BasicBlock *ExitingBB : ExitingBlocks) {
-    BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
-
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
     assert(!isa<SCEVCouldNotCompute>(ExitCount) && "checked above");
     
@@ -2730,13 +2739,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // TODO: Given we know the backedge can't be taken, we should go ahead
     // and break it.  Or at least, kill all the header phis and simplify.
     if (ExitCount->isZero()) {
-      bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
-      auto *OldCond = BI->getCondition();
-      auto *NewCond = ExitIfTrue ? ConstantInt::getTrue(OldCond->getType()) :
-        ConstantInt::getFalse(OldCond->getType());
-      BI->setCondition(NewCond);
-      if (OldCond->use_empty())
-        DeadInsts.push_back(OldCond);
+      FoldExit(ExitingBB, true);
       Changed = true;
       continue;
     }
@@ -2758,13 +2761,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // one?
     if (SE->isLoopEntryGuardedByCond(L, CmpInst::ICMP_ULT,
                                      MaxExitCount, ExitCount)) {
-      bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
-      auto *OldCond = BI->getCondition();
-      auto *NewCond = ExitIfTrue ? ConstantInt::getFalse(OldCond->getType()) :
-        ConstantInt::getTrue(OldCond->getType());
-      BI->setCondition(NewCond);
-      if (OldCond->use_empty())
-        DeadInsts.push_back(OldCond);
+      FoldExit(ExitingBB, false);
       Changed = true;
       continue;
     }
