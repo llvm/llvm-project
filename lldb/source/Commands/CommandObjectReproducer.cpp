@@ -161,7 +161,9 @@ class CommandObjectReproducerDump : public CommandObjectParsed {
 public:
   CommandObjectReproducerDump(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "reproducer dump",
-                            "Dump the information contained in a reproducer.",
+                            "Dump the information contained in a reproducer. "
+                            "If no reproducer is specified during replay, it "
+                            "dumps the content of the current reproducer.",
                             nullptr) {}
 
   ~CommandObjectReproducerDump() override = default;
@@ -361,7 +363,15 @@ CommandObjectReproducer::CommandObjectReproducer(
     CommandInterpreter &interpreter)
     : CommandObjectMultiword(
           interpreter, "reproducer",
-          "Commands for manipulate the reproducer functionality.",
+          "Commands for manipulating reproducers. Reproducers make it possible "
+          "to capture full debug sessions with all its dependencies. The "
+          "resulting reproducer is used to replay the debug session while "
+          "debugging the debugger.\n"
+          "Because reproducers need the whole the debug session from "
+          "beginning to end, you need to launch the debugger in capture or "
+          "replay mode, commonly though the command line driver.\n"
+          "Reproducers are unrelated record-replay debugging, as you cannot "
+          "interact with the debugger during replay.\n",
           "reproducer <subcommand> [<subcommand-options>]") {
   LoadSubCommand(
       "generate",
