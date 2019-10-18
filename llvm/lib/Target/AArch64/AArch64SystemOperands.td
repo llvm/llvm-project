@@ -1322,6 +1322,12 @@ def : RWSysReg<"CNTHPS_CTL_EL2",  0b11, 0b100, 0b1110, 0b0101, 0b001>;
 def : RWSysReg<"SDER32_EL2", 0b11, 0b100, 0b0001, 0b0011, 0b001>;
 } // FeatureSEL2
 
+// v8.4a PMU registers
+//                          Op0   Op1    CRn     CRm     Op2
+let Requires = [{ {AArch64::FeaturePMU} }] in {
+def : RWSysReg<"PMMIR_EL1", 0b11, 0b000, 0b1001, 0b1110, 0b110>;
+} // FeaturePMU
+
 // v8.4a RAS registers
 //                              Op0   Op1    CRn     CRm     Op2
 let Requires = [{ {AArch64::FeatureRASv8_4} }] in {
