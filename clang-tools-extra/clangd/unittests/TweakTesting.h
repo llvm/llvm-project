@@ -10,9 +10,11 @@
 #define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TWEAKTESTING_H
 
 #include "TestTU.h"
+#include "index/Index.h"
 #include "llvm/ADT/StringMap.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <memory>
 #include <string>
 
 namespace clang {
@@ -65,6 +67,9 @@ protected:
 
   // Context in which snippets of code should be placed to run tweaks.
   CodeContext Context = File;
+
+  // Index to be passed into Tweak::Selection.
+  std::unique_ptr<const SymbolIndex> Index = nullptr;
 
   // Apply the current tweak to the range (or point) in MarkedCode.
   // MarkedCode will be wrapped according to the Context.
