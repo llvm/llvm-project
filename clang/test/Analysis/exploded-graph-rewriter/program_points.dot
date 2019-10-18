@@ -29,7 +29,7 @@
 Node0x1 [shape=record,label=
  "{
     {
-      "program_state": null, "program_points": [
+      "state_id": 0, "program_state": null, "program_points": [
       {
         "kind": "Edge",
         "src_id": 0,
@@ -80,7 +80,7 @@ Node0x1 [shape=record,label=
 // CHECK-SAME: </table>
 Node0x3 [shape=record,label=
  "{
-    { "program_state": null, "program_points": [
+    { "state_id": 0, "program_state": null, "program_points": [
       {
         "kind": "Statement",
         "stmt_kind": "DeclRefExpr",
@@ -109,7 +109,7 @@ Node0x3 [shape=record,label=
 Node0x4 [shape=record,label=
  "{
     {
-      "program_state": null, "program_points": [
+      "state_id": 0, "program_state": null, "program_points": [
       {
         "kind": "Statement",
         "stmt_kind": "CompoundStmt",
@@ -157,7 +157,7 @@ Node0x4 [shape=record,label=
 // CHECK-SAME: </table>
 Node0x5 [shape=record,label=
  "{
-    { "program_state": null, "program_points": [
+    { "state_id": 0, "program_state": null, "program_points": [
       {
         "kind": "Statement",
         "stmt_kind": "ImplicitCastExpr",
