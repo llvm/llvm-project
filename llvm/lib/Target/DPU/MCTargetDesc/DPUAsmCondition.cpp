@@ -9,6 +9,7 @@
 
 #include "DPUAsmCondition.h"
 #include "assert.h"
+#include <map>
 #include <set>
 
 #define GET_INSTRINFO_ENUM
@@ -25,6 +26,44 @@ const std::string ConditionStrings[] = {
     {"nsh32"}, {"nz"},   {"o"},     {"ov"},   {"pl"},   {"sh32"}, {"small"},
     {"se"},    {"smi"},  {"snz"},   {"so"},   {"spl"},  {"sz"},   {"true"},
     {"z"},
+};
+
+std::map<const std::string, const std::string> ConditionStringsAliases = {
+    {"C", "c"},         {"c", "c"},         {"EQ", "eq"},
+    {"eq", "eq"},       {"E", "e"},         {"e", "e"},
+    {"XGTS", "xgts"},   {"xgts", "xgts"},   {"XGTU", "xgtu"},
+    {"xgtu", "xgtu"},   {"XLES", "xles"},   {"xles", "xles"},
+    {"XLEU", "xleu"},   {"xleu", "xleu"},   {"XNZ", "xnz"},
+    {"xnz", "xnz"},     {"XZ", "xz"},       {"xz", "xz"},
+    {"FALSE", "false"}, {"false", "false"}, {"GES", "ges"},
+    {"ges", "ges"},     {"GEU", "geu"},     {"geu", "geu"},
+    {"GTS", "gts"},     {"gts", "gts"},     {"GTU", "gtu"},
+    {"gtu", "gtu"},     {"LARGE", "large"}, {"large", "large"},
+    {"LES", "les"},     {"les", "les"},     {"LEU", "leu"},
+    {"leu", "leu"},     {"LTS", "lts"},     {"lts", "lts"},
+    {"LTU", "ltu"},     {"ltu", "ltu"},     {"MAX", "max"},
+    {"max", "max"},     {"MI", "mi"},       {"mi", "mi"},
+    {"NC", "nc"},       {"nc", "nc"},       {"NC10", "nc10"},
+    {"nc10", "nc10"},   {"NC11", "nc11"},   {"nc11", "nc11"},
+    {"NC12", "nc12"},   {"nc12", "nc12"},   {"NC13", "nc13"},
+    {"nc13", "nc13"},   {"NC14", "nc14"},   {"nc14", "nc14"},
+    {"NC5", "nc5"},     {"nc5", "nc5"},     {"NC6", "nc6"},
+    {"nc6", "nc6"},     {"NC7", "nc7"},     {"nc7", "nc7"},
+    {"NC8", "nc8"},     {"nc8", "nc8"},     {"NC9", "nc9"},
+    {"nc9", "nc9"},     {"NEQ", "neq"},     {"neq", "neq"},
+    {"NMAX", "nmax"},   {"nmax", "nmax"},   {"NOV", "nov"},
+    {"nov", "nov"},     {"NSH32", "nsh32"}, {"nsh32", "nsh32"},
+    {"NZ", "nz"},       {"nz", "nz"},       {"O", "o"},
+    {"o", "o"},         {"OV", "ov"},       {"ov", "ov"},
+    {"PL", "pl"},       {"pl", "pl"},       {"SH32", "sh32"},
+    {"sh32", "sh32"},   {"SMALL", "small"}, {"small", "small"},
+    {"SE", "se"},       {"se", "se"},       {"SMI", "smi"},
+    {"smi", "smi"},     {"SNZ", "snz"},     {"snz", "snz"},
+    {"SO", "so"},       {"so", "so"},       {"SPL", "spl"},
+    {"spl", "spl"},     {"SZ", "sz"},       {"sz", "sz"},
+    {"TRUE", "true"},   {"true", "true"},   {"Z", "z"},
+    {"z", "z"},         {"nsz", "snz"},     {"NSZ", "snz"},
+    {"t", "true"},      {"T", "true"},
 };
 
 const std::set<Condition> ConditionClassSets[] = {
@@ -1867,8 +1906,10 @@ const int64_t
 };
 
 bool fromString(const std::string &string, Condition &Cond) {
-  const std::string *cond = std::find(std::begin(ConditionStrings),
-                                      std::end(ConditionStrings), string);
+  const std::string string_no_alias = ConditionStringsAliases[string];
+  const std::string *cond =
+      std::find(std::begin(ConditionStrings), std::end(ConditionStrings),
+                string_no_alias);
 
   if (cond == std::end(ConditionStrings)) {
     return true;
