@@ -6,14 +6,15 @@ Sections:
   - Type:            TYPE
     Signatures:
       - Index:           0
-        ReturnType:      F32
         ParamTypes:
           - I32
+        ReturnTypes:
+          - F32
       - Index:           1
-        ReturnType:      NORESULT
         ParamTypes:
           - I32
           - I64
+        ReturnTypes:     []
   - Type:            FUNCTION
     FunctionTypes:
       - 0
@@ -59,14 +60,15 @@ Sections:
 # CHECK:  - Type:            TYPE
 # CHECK:    Signatures:
 # CHECK:      - Index:           0
-# CHECK:        ReturnType:      F32
 # CHECK:        ParamTypes:
 # CHECK:          - I32
+# CHECK:        ReturnTypes:
+# CHECK:          - F32
 # CHECK:      - Index:           1
-# CHECK:        ReturnType:      NORESULT
 # CHECK:        ParamTypes:
 # CHECK:          - I32
 # CHECK:          - I64
+# CHECK:        ReturnTypes:     []
 # CHECK:  - Type:            CODE
 # CHECK:    Relocations:
 # CHECK:      - Type:            R_WASM_TABLE_INDEX_SLEB

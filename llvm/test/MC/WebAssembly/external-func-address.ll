@@ -27,14 +27,15 @@ define void @call(i32) {
 ; CHECK-NEXT:   - Type:            TYPE
 ; CHECK-NEXT:     Signatures:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         ReturnType:      NORESULT
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:           - I32
+; CHECK-NEXT:         ReturnTypes:     []
 ; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         ReturnType:      I32
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:           - I32
 ; CHECK-NEXT:           - I32
+; CHECK-NEXT:           - I32
+; CHECK-NEXT:         ReturnTypes:
 ; CHECK-NEXT:           - I32
 ; CHECK:        - Type:            IMPORT
 ; CHECK-NEXT:     Imports:

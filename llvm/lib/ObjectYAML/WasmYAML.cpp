@@ -295,8 +295,8 @@ void ScalarEnumerationTraits<WasmYAML::SectionType>::enumeration(
 void MappingTraits<WasmYAML::Signature>::mapping(
     IO &IO, WasmYAML::Signature &Signature) {
   IO.mapRequired("Index", Signature.Index);
-  IO.mapRequired("ReturnType", Signature.ReturnType);
   IO.mapRequired("ParamTypes", Signature.ParamTypes);
+  IO.mapRequired("ReturnTypes", Signature.ReturnTypes);
 }
 
 void MappingTraits<WasmYAML::Table>::mapping(IO &IO, WasmYAML::Table &Table) {
@@ -560,7 +560,6 @@ void ScalarEnumerationTraits<WasmYAML::ValueType>::enumeration(
   ECase(V128);
   ECase(FUNCREF);
   ECase(FUNC);
-  ECase(NORESULT);
 #undef ECase
 }
 

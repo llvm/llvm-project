@@ -19,13 +19,14 @@ define i32 @test_throw1(i8* %p) {
 ; CHECK-NEXT:   - Type:            TYPE
 ; CHECK-NEXT:     Signatures:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         ReturnType:      I32
 ; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:           - I32
+; CHECK-NEXT:         ReturnTypes:
 ; CHECK-NEXT:           - I32
 ; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         ReturnType:      NORESULT
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:           - I32
+; CHECK-NEXT:         ReturnTypes:      []
 
 ; CHECK:        - Type:            EVENT
 ; CHECK-NEXT:     Events:

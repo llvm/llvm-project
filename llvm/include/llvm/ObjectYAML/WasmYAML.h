@@ -145,7 +145,7 @@ struct Signature {
   uint32_t Index;
   SignatureForm Form = wasm::WASM_TYPE_FUNC;
   std::vector<ValueType> ParamTypes;
-  ValueType ReturnType;
+  std::vector<ValueType> ReturnTypes;
 };
 
 struct SymbolInfo {

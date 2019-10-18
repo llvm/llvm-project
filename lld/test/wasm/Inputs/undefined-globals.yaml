@@ -5,8 +5,9 @@ Sections:
   - Type:            TYPE
     Signatures:
       - Index:           0
-        ReturnType:      I64
         ParamTypes:
+        ReturnTypes:
+          - I64
   - Type:            IMPORT
     Imports:
       - Module:          env
