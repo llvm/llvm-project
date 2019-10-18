@@ -4808,7 +4808,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     // Imitate GCC 4.2.1 by default if -fms-compatibility is not in effect.
     GNUCVer = VersionTuple(4, 2, 1);
   }
-  if (!GNUCVer.empty()) {
+  if (C.getDefaultToolChain().getArch() != llvm::Triple::amdgcn &&
+      !GNUCVer.empty()) {
     CmdArgs.push_back(
         Args.MakeArgString("-fgnuc-version=" + GNUCVer.getAsString()));
   }
