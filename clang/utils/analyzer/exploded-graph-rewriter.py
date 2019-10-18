@@ -792,7 +792,7 @@ class DotDumpVisitor(object):
 
     def visit_state(self, s, prev_s):
         self.visit_store_in_state(s, prev_s)
-        self.visit_environment_in_state('environment', 'Environment',
+        self.visit_environment_in_state('environment', 'Expressions',
                                         s, prev_s)
         self.visit_generic_map_in_state('constraints', 'Ranges',
                                         s, prev_s)
