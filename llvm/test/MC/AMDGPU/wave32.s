@@ -63,6 +63,30 @@ v_cndmask_b32_e32 v1, v2, v3, vcc
 // GFX1032-ERR: error: instruction not supported on this GPU
 // GFX1064: v_cndmask_b32_e32 v1, v2, v3, vcc ; encoding: [0x02,0x07,0x02,0x02]
 
+v_cndmask_b32_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD
+// GFX1032: v_cndmask_b32_sdwa v5, v1, v2, vcc_lo  dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0x04,0x0a,0x02,0x01,0x16,0x06,0x06]
+// GFX1064: v_cndmask_b32_sdwa v5, v1, v2, vcc  dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0x04,0x0a,0x02,0x01,0x16,0x06,0x06]
+
+v_cndmask_b32_sdwa v5, v1, v2, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD
+// GFX1032: v_cndmask_b32_sdwa v5, v1, v2, vcc_lo  dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0x04,0x0a,0x02,0x01,0x16,0x06,0x06]
+// GFX1064-ERR: error: instruction not supported on this GPU
+
+v_cndmask_b32_sdwa v5, v1, v2, vcc dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD
+// GFX1032-ERR: error: instruction not supported on this GPU
+// GFX1064: v_cndmask_b32_sdwa v5, v1, v2, vcc  dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD ; encoding: [0xf9,0x04,0x0a,0x02,0x01,0x16,0x06,0x06]
+
+v_cndmask_b32_dpp v5, v1, v2 quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0
+// GFX1032: v_cndmask_b32_dpp v5, v1, v2, vcc_lo  quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 ; encoding: [0xfa,0x04,0x0a,0x02,0x01,0xe4,0x00,0x00]
+// GFX1064: v_cndmask_b32_dpp v5, v1, v2, vcc  quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 ; encoding: [0xfa,0x04,0x0a,0x02,0x01,0xe4,0x00,0x00]
+
+v_cndmask_b32_dpp v5, v1, v2, vcc_lo quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0
+// GFX1032: v_cndmask_b32_dpp v5, v1, v2, vcc_lo  quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 ; encoding: [0xfa,0x04,0x0a,0x02,0x01,0xe4,0x00,0x00]
+// GFX1064-ERR: error: instruction not supported on this GPU
+
+v_cndmask_b32_dpp v5, v1, v2, vcc quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0
+// GFX1032-ERR: error: instruction not supported on this GPU
+// GFX1064: v_cndmask_b32_dpp v5, v1, v2, vcc  quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 ; encoding: [0xfa,0x04,0x0a,0x02,0x01,0xe4,0x00,0x00]
+
 v_add_co_u32_e32 v2, vcc_lo, s0, v2
 // GFX1032-ERR: error: instruction not supported on this GPU
 // GFX1064-ERR: error: instruction not supported on this GPU
