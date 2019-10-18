@@ -1,8 +1,0 @@
-{
-  "branch_to_dest_branch_mapping": {
-    "swift/master:lldb": "stable"
-  },
-  "repo_mapping": {
-    "lldb": "https://github.com/apple/swift-lldb.git"
-  }
-}
