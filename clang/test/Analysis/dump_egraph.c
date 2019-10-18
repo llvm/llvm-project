@@ -27,7 +27,7 @@ int foo() {
 // CHECK-SAME:    \"node_id\": 2, \"is_sink\": 0, \"has_report\": 0
 // CHECK-SAME: \},
 // CHECK-SAME: \{ \"kind\": \"Statement\", \"stmt_kind\": \"IntegerLiteral\",
-// CHECK-SAME:    \"stmt_id\": 597, \"pointer\": \"0x{{[0-9a-f]*}}\",
+// CHECK-SAME:    \"stmt_id\": {{[0-9]*}}, \"pointer\": \"0x{{[0-9a-f]*}}\",
 // CHECK-SAME:    \"pretty\": \"0\", \"location\": \{
 // CHECK-SAME:        \"line\": 15, \"column\": 12, \"file\":
 // CHECK-SAME:    \}, \"stmt_point_kind\": \"PreStmtPurgeDeadSymbols\",
@@ -35,7 +35,7 @@ int foo() {
 // CHECK-SAME:    \"is_sink\": 0, \"has_report\": 0
 // CHECK-SAME: \},
 // CHECK-SAME: \{ \"kind\": \"Statement\", \"stmt_kind\": \"IntegerLiteral\",
-// CHECK-SAME:    \"stmt_id\": 597, \"pointer\": \"0x{{[0-9a-f]*}}\",
+// CHECK-SAME:    \"stmt_id\": {{[0-9]*}}, \"pointer\": \"0x{{[0-9a-f]*}}\",
 // CHECK-SAME:    \"pretty\": \"0\", \"location\": \{
 // CHECK-SAME:        \"line\": 15, \"column\": 12, \"file\":
 // CHECK-SAME:    \}, \"stmt_point_kind\": \"PostStmt\", \"tag\": null,
