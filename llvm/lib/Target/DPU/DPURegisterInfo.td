@@ -56,6 +56,32 @@ def R22 : DPUReg<22, "r22">, DwarfRegNum<[22]>;
 // R23: reserved as the return address for functions
 def R23 : DPUReg<23, "r23">, DwarfRegNum<[23]>;
 
+// Thread data registers
+def MAJ_R0 : DPUReg<0, "R0", [], [R0]>, DwarfRegNum<[0]>;
+def MAJ_R1 : DPUReg<1, "R1", [], [R1]>, DwarfRegNum<[1]>;
+def MAJ_R2 : DPUReg<2, "R2", [], [R2]>, DwarfRegNum<[2]>;
+def MAJ_R3 : DPUReg<3, "R3", [], [R3]>, DwarfRegNum<[3]>;
+def MAJ_R4 : DPUReg<4, "R4", [], [R4]>, DwarfRegNum<[4]>;
+def MAJ_R5 : DPUReg<5, "R5", [], [R5]>, DwarfRegNum<[5]>;
+def MAJ_R6 : DPUReg<6, "R6", [], [R6]>, DwarfRegNum<[6]>;
+def MAJ_R7 : DPUReg<7, "R7", [], [R7]>, DwarfRegNum<[7]>;
+def MAJ_R8 : DPUReg<8, "R8", [], [R8]>, DwarfRegNum<[8]>;
+def MAJ_R9 : DPUReg<9, "R9", [], [R9]>, DwarfRegNum<[9]>;
+def MAJ_R10 : DPUReg<10, "R10", [], [R10]>, DwarfRegNum<[10]>;
+def MAJ_R11 : DPUReg<11, "R11", [], [R11]>, DwarfRegNum<[11]>;
+def MAJ_R12 : DPUReg<12, "R12", [], [R12]>, DwarfRegNum<[12]>;
+def MAJ_R13 : DPUReg<13, "R13", [], [R13]>, DwarfRegNum<[13]>;
+def MAJ_R14 : DPUReg<14, "R14", [], [R14]>, DwarfRegNum<[14]>;
+def MAJ_R15 : DPUReg<15, "R15", [], [R15]>, DwarfRegNum<[15]>;
+def MAJ_R16 : DPUReg<16, "R16", [], [R16]>, DwarfRegNum<[16]>;
+def MAJ_R17 : DPUReg<17, "R17", [], [R17]>, DwarfRegNum<[17]>;
+def MAJ_R18 : DPUReg<18, "R18", [], [R18]>, DwarfRegNum<[18]>;
+def MAJ_R19 : DPUReg<19, "R19", [], [R19]>, DwarfRegNum<[19]>;
+def MAJ_R20 : DPUReg<20, "R20", [], [R20]>, DwarfRegNum<[20]>;
+def MAJ_R21 : DPUReg<21, "R21", [], [R21]>, DwarfRegNum<[21]>;
+def MAJ_R22 : DPUReg<22, "R22", [], [R22]>, DwarfRegNum<[22]>;
+def MAJ_R23 : DPUReg<23, "R23", [], [R23]>, DwarfRegNum<[23]>;
+
 // Thread data registers, extended to 64 bits.
 let SubRegIndices = [sub_32bit, sub_32bit_hi], CoveredBySubRegs = 1 in {
   def D0 : DPUReg<0, "d0", [R1, R0]>;
@@ -70,19 +96,40 @@ let SubRegIndices = [sub_32bit, sub_32bit_hi], CoveredBySubRegs = 1 in {
   def D18 : DPUReg<18, "d18", [R19, R18]>;
   def D20 : DPUReg<20, "d20", [R21, R20]>;
   def D22 : DPUReg<22, "d22", [R23, R22]>;
+
+  def MAJ_D0 : DPUReg<0, "D0", [MAJ_R1, MAJ_R0], [D0]>;
+  def MAJ_D2 : DPUReg<2, "D2", [MAJ_R3, MAJ_R2], [D2]>;
+  def MAJ_D4 : DPUReg<4, "D4", [MAJ_R5, MAJ_R4], [D4]>;
+  def MAJ_D6 : DPUReg<6, "D6", [MAJ_R7, MAJ_R6], [D6]>;
+  def MAJ_D8 : DPUReg<8, "D8", [MAJ_R9, MAJ_R8], [D8]>;
+  def MAJ_D10 : DPUReg<10, "D10", [MAJ_R11, MAJ_R10], [D10]>;
+  def MAJ_D12 : DPUReg<12, "D12", [MAJ_R13, MAJ_R12], [D12]>;
+  def MAJ_D14 : DPUReg<14, "D14", [MAJ_R15, MAJ_R14], [D14]>;
+  def MAJ_D16 : DPUReg<16, "D16", [MAJ_R17, MAJ_R16], [D16]>;
+  def MAJ_D18 : DPUReg<18, "D18", [MAJ_R19, MAJ_R18], [D18]>;
+  def MAJ_D20 : DPUReg<20, "D20", [MAJ_R21, MAJ_R20], [D20]>;
+  def MAJ_D22 : DPUReg<22, "D22", [MAJ_R23, MAJ_R22], [D22]>;
 }
 
 // Constant registers.
 def ZERO: DPUReg<24, "zero">;
+def MAJ_ZERO: DPUReg<24, "ZERO", [], [ZERO]>;
 def ONE: DPUReg<25, "one">;
+def MAJ_ONE: DPUReg<25, "ONE", [], [ONE]>;
 def LNEG: DPUReg<26, "lneg">;
+def MAJ_LNEG: DPUReg<26, "LNEG", [], [LNEG]>;
 def MNEG:  DPUReg<27, "mneg">;
+def MAJ_MNEG: DPUReg<27, "MNEG", [], [MNEG]>;
 // Thread id registers. Return the thread identification for the
 // current thread, times 1, 2, 4, 8.
 def ID:    DPUReg<28, "id">;
 def ID2:   DPUReg<29, "id2">;
 def ID4:   DPUReg<30, "id4">;
 def ID8:   DPUReg<31, "id8">;
+def MAJ_ID:    DPUReg<28, "ID", [], [ID]>;
+def MAJ_ID2:   DPUReg<29, "ID2", [], [ID2]>;
+def MAJ_ID4:   DPUReg<30, "ID4", [], [ID4]>;
+def MAJ_ID8:   DPUReg<31, "ID8", [], [ID8]>;
 
 // Define the register class representing this bank of general
 // purpose registers used by ONE thread.
@@ -92,16 +139,16 @@ def ID8:   DPUReg<31, "id8">;
 // that can be used as an instruction operand.
 // Hide the reserved registers, so that we are very sure that the compiler will
 // not do anything with them.
-def GP_REG    : RegisterClass<"DPU", [i32], 32, (add (sequence "R%u", 0, 23))>;
-def GPZ_REG   : RegisterClass<"DPU", [i32], 32, (add GP_REG, ZERO)>;
-def CONST_REG : RegisterClass<"DPU", [i32], 32, (add ZERO, ONE, LNEG, MNEG)>;
-def ID_REG    : RegisterClass<"DPU", [i32], 32, (add ID, ID2, ID4, ID8)>;
+def GP_REG    : RegisterClass<"DPU", [i32], 32, (add (sequence "R%u", 0, 23), (sequence "MAJ_R%u", 0, 23))>;
+def CONST_REG : RegisterClass<"DPU", [i32], 32, (add ZERO, ONE, LNEG, MNEG, MAJ_ZERO, MAJ_ONE, MAJ_LNEG, MAJ_MNEG)>;
+def ID_REG    : RegisterClass<"DPU", [i32], 32, (add ID, ID2, ID4, ID8, MAJ_ID, MAJ_ID2, MAJ_ID4, MAJ_ID8)>;
+def ZERO_REG  : RegisterClass<"DPU", [i32], 32, (add ZERO, MAJ_ZERO)>;
 def OP_REG    : RegisterClass<"DPU", [i32], 32, (add GP_REG, CONST_REG, ID_REG)>;
-def ZERO_REG  : RegisterClass<"DPU", [i32], 32, (add ZERO)>;
+def GPZ_REG   : RegisterClass<"DPU", [i32], 32, (add GP_REG, ZERO_REG)>;
 
 // 64 bits registers are the combinations of 2 consecutive registers.
 def GP64_REG  : RegisterClass<"DPU", [i64], 64,
-                          (add D0, D2, D4, D6, D8, D10, D12, D14, D16, D18, D20, D22)>;
+                          (add D0, D2, D4, D6, D8, D10, D12, D14, D16, D18, D20, D22, MAJ_D0, MAJ_D2, MAJ_D4, MAJ_D6, MAJ_D8, MAJ_D10, MAJ_D12, MAJ_D14, MAJ_D16, MAJ_D18, MAJ_D20, MAJ_D22)>;
 
 def S0:   DPUReg<0, "s0">;
 def S1:   DPUReg<1, "s1">;
