@@ -8026,13 +8026,14 @@ bool ASTContext::ObjCQualifiedClassTypesAreCompatible(
 bool ASTContext::ObjCQualifiedIdTypesAreCompatible(
     const ObjCObjectPointerType *lhs, const ObjCObjectPointerType *rhs,
     bool compare) {
-  // Allow id<P..> and an 'id' or void* type in all cases.
-  if (lhs->isVoidPointerType() ||
-      lhs->isObjCIdType() || lhs->isObjCClassType())
+  // Allow id<P..> and an 'id' in all cases.
+  if (lhs->isObjCIdType() || rhs->isObjCIdType())
     return true;
-  else if (rhs->isVoidPointerType() ||
-           rhs->isObjCIdType() || rhs->isObjCClassType())
-    return true;
+
+  // Don't allow id<P..> to convert to Class or Class<P..> in either direction.
+  if (lhs->isObjCClassType() || lhs->isObjCQualifiedClassType() ||
+      rhs->isObjCClassType() || rhs->isObjCQualifiedClassType())
+    return false;
 
   if (lhs->isObjCQualifiedIdType()) {
     if (rhs->qual_empty()) {
@@ -8143,9 +8144,8 @@ bool ASTContext::canAssignObjCInterfaces(const ObjCObjectPointerType *LHSOPT,
   const ObjCObjectType* LHS = LHSOPT->getObjectType();
   const ObjCObjectType* RHS = RHSOPT->getObjectType();
 
-  // If either type represents the built-in 'id' or 'Class' types, return true.
-  if (LHS->isObjCUnqualifiedIdOrClass() ||
-      RHS->isObjCUnqualifiedIdOrClass())
+  // If either type represents the built-in 'id' type, return true.
+  if (LHS->isObjCUnqualifiedId() || RHS->isObjCUnqualifiedId())
     return true;
 
   // Function object that propagates a successful result or handles
@@ -8163,12 +8163,20 @@ bool ASTContext::canAssignObjCInterfaces(const ObjCObjectPointerType *LHSOPT,
                                    LHSOPT->stripObjCKindOfTypeAndQuals(*this));
   };
 
+  // Casts from or to id<P> are allowed when the other side has compatible
+  // protocols.
   if (LHS->isObjCQualifiedId() || RHS->isObjCQualifiedId()) {
     return finish(ObjCQualifiedIdTypesAreCompatible(LHSOPT, RHSOPT, false));
   }
 
+  // Verify protocol compatibility for casts from Class<P1> to Class<P2>.
   if (LHS->isObjCQualifiedClass() && RHS->isObjCQualifiedClass()) {
     return finish(ObjCQualifiedClassTypesAreCompatible(LHSOPT, RHSOPT));
+  }
+
+  // Casts from Class to Class<Foo>, or vice-versa, are allowed.
+  if (LHS->isObjCClass() && RHS->isObjCClass()) {
+    return true;
   }
 
   // If we have 2 user-defined types, fall into that path.

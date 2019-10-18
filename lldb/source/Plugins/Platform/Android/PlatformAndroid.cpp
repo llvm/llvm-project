@@ -364,9 +364,9 @@ PlatformAndroid::GetLibdlFunctionDeclarations(lldb_private::Process *process) {
   const char *dl_open_name = nullptr;
   Target &target = process->GetTarget();
   for (auto name: dl_open_names) {
-    if (target.GetImages().FindFunctionSymbols(ConstString(name),
-                                               eFunctionNameTypeFull,
-                                               matching_symbols)) {
+    target.GetImages().FindFunctionSymbols(
+        ConstString(name), eFunctionNameTypeFull, matching_symbols);
+    if (matching_symbols.GetSize()) {
        dl_open_name = name;
        break;
     }

@@ -1616,48 +1616,30 @@ void LoopUnswitch::SimplifyCode(std::vector<Instruction*> &Worklist, Loop *L) {
         // If BI's parent is the only pred of the successor, fold the two blocks
         // together.
         BasicBlock *Pred = BI->getParent();
+        (void)Pred;
         BasicBlock *Succ = BI->getSuccessor(0);
         BasicBlock *SinglePred = Succ->getSinglePredecessor();
         if (!SinglePred) continue;  // Nothing to do.
         assert(SinglePred == Pred && "CFG broken");
 
-        LLVM_DEBUG(dbgs() << "Merging blocks: " << Pred->getName() << " <- "
-                          << Succ->getName() << "\n");
-
-        // Resolve any single entry PHI nodes in Succ.
-        while (PHINode *PN = dyn_cast<PHINode>(Succ->begin()))
-          ReplaceUsesOfWith(PN, PN->getIncomingValue(0), Worklist, L, LPM,
-                            MSSAU.get());
-
-        Instruction *STI = Succ->getTerminator();
-        Instruction *Start = &*Succ->begin();
-        // If there's nothing to move, mark the starting instruction as the last
-        // instruction in the block.
-        if (Start == STI)
-          Start = BI;
-
-        // Move all of the successor contents from Succ to Pred.
-        Pred->getInstList().splice(BI->getIterator(), Succ->getInstList(),
-                                   Succ->begin(), STI->getIterator());
-        if (MSSAU)
-          MSSAU->moveAllAfterMergeBlocks(Succ, Pred, Start);
-
-        // Move terminator instruction from Succ now, we're deleting BI below.
-        // FIXME: remove BI first might be more intuitive.
-        Pred->getInstList().splice(Pred->end(), Succ->getInstList());
-
-        // If Succ has any successors with PHI nodes, update them to have
-        // entries coming from Pred instead of Succ.
-        Succ->replaceAllUsesWith(Pred);
-
+        // Make the LPM and Worklist updates specific to LoopUnswitch.
         LPM->deleteSimpleAnalysisValue(BI, L);
         RemoveFromWorklist(BI, Worklist);
-        BI->eraseFromParent();
-
-        // Remove Succ from the loop tree.
-        LI->removeBlock(Succ);
         LPM->deleteSimpleAnalysisValue(Succ, L);
-        Succ->eraseFromParent();
+        auto SuccIt = Succ->begin();
+        while (PHINode *PN = dyn_cast<PHINode>(SuccIt++)) {
+          for (unsigned It = 0, E = PN->getNumOperands(); It != E; ++It)
+            if (Instruction *Use = dyn_cast<Instruction>(PN->getOperand(It)))
+              Worklist.push_back(Use);
+          for (User *U : PN->users())
+            Worklist.push_back(cast<Instruction>(U));
+          LPM->deleteSimpleAnalysisValue(PN, L);
+          RemoveFromWorklist(PN, Worklist);
+          ++NumSimplify;
+        }
+        // Merge the block and make the remaining analyses updates.
+        DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+        MergeBlockIntoPredecessor(Succ, &DTU, LI, MSSAU.get());
         ++NumSimplify;
         continue;
       }

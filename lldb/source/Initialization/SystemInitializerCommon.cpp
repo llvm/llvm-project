@@ -78,6 +78,19 @@ llvm::Error SystemInitializerCommon::Initialize() {
     } else {
       FileSystem::Initialize();
     }
+    if (llvm::Expected<std::string> cwd =
+            loader->LoadBuffer<WorkingDirectoryProvider>()) {
+      cwd->erase(std::remove_if(cwd->begin(), cwd->end(),
+                                [](char c) { return std::iscntrl(c); }),
+                 cwd->end());
+      if (std::error_code ec = FileSystem::Instance()
+                                   .GetVirtualFileSystem()
+                                   ->setCurrentWorkingDirectory(*cwd)) {
+        return llvm::errorCodeToError(ec);
+      }
+    } else {
+      return cwd.takeError();
+    }
   } else if (repro::Generator *g = r.GetGenerator()) {
     repro::VersionProvider &vp = g->GetOrCreate<repro::VersionProvider>();
     vp.SetVersion(lldb_private::GetVersion());

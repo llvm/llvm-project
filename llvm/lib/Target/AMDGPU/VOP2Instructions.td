@@ -224,7 +224,7 @@ multiclass VOP2eInst <string opName,
 
       foreach _ = BoolToList<P.HasExtSDWA>.ret in
         def _sdwa : VOP2_SDWA_Pseudo <opName, P> {
-          let AsmMatchConverter = "cvtSdwaVOP2b";
+          let AsmMatchConverter = "cvtSdwaVOP2e";
         }
 
       foreach _ = BoolToList<P.HasExtDPP>.ret in

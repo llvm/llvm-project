@@ -1527,7 +1527,7 @@ template <class ELFT> void ELFBuilder<ELFT>::readSectionHeaders() {
   }
 }
 
-template <class ELFT> void ELFBuilder<ELFT>::readSections() {
+template <class ELFT> void ELFBuilder<ELFT>::readSections(bool EnsureSymtab) {
   // If a section index table exists we'll need to initialize it before we
   // initialize the symbol table because the symbol table might need to
   // reference it.
@@ -1540,6 +1540,27 @@ template <class ELFT> void ELFBuilder<ELFT>::readSections() {
   if (Obj.SymbolTable) {
     Obj.SymbolTable->initialize(Obj.sections());
     initSymbolTable(Obj.SymbolTable);
+  } else if (EnsureSymtab) {
+    // Reuse the existing SHT_STRTAB section if exists.
+    StringTableSection *StrTab = nullptr;
+    for (auto &Sec : Obj.sections()) {
+      if (Sec.Type == ELF::SHT_STRTAB && !(Sec.Flags & SHF_ALLOC)) {
+        StrTab = static_cast<StringTableSection *>(&Sec);
+
+        // Prefer .strtab to .shstrtab.
+        if (Obj.SectionNames != &Sec)
+          break;
+      }
+    }
+    if (!StrTab)
+      StrTab = &Obj.addSection<StringTableSection>();
+
+    SymbolTableSection &SymTab = Obj.addSection<SymbolTableSection>();
+    SymTab.Name = ".symtab";
+    SymTab.Link = StrTab->Index;
+    SymTab.initialize(Obj.sections());
+    SymTab.addSymbol("", 0, 0, nullptr, 0, 0, 0, 0);
+    Obj.SymbolTable = &SymTab;
   }
 
   // Now that all sections and symbols have been added we can add
@@ -1578,7 +1599,7 @@ template <class ELFT> void ELFBuilder<ELFT>::readSections() {
                 " is not a string table");
 }
 
-template <class ELFT> void ELFBuilder<ELFT>::build() {
+template <class ELFT> void ELFBuilder<ELFT>::build(bool EnsureSymtab) {
   readSectionHeaders();
   findEhdrOffset();
 
@@ -1597,7 +1618,7 @@ template <class ELFT> void ELFBuilder<ELFT>::build() {
   Obj.Entry = Ehdr.e_entry;
   Obj.Flags = Ehdr.e_flags;
 
-  readSections();
+  readSections(EnsureSymtab);
   readProgramHeaders(HeadersFile);
 }
 
@@ -1605,7 +1626,7 @@ Writer::~Writer() {}
 
 Reader::~Reader() {}
 
-std::unique_ptr<Object> BinaryReader::create() const {
+std::unique_ptr<Object> BinaryReader::create(bool /*EnsureSymtab*/) const {
   return BinaryELFBuilder(MemBuf, NewSymbolVisibility).build();
 }
 
@@ -1635,28 +1656,28 @@ Expected<std::vector<IHexRecord>> IHexReader::parse() const {
   return std::move(Records);
 }
 
-std::unique_ptr<Object> IHexReader::create() const {
+std::unique_ptr<Object> IHexReader::create(bool /*EnsureSymtab*/) const {
   std::vector<IHexRecord> Records = unwrapOrError(parse());
   return IHexELFBuilder(Records).build();
 }
 
-std::unique_ptr<Object> ELFReader::create() const {
+std::unique_ptr<Object> ELFReader::create(bool EnsureSymtab) const {
   auto Obj = std::make_unique<Object>();
   if (auto *O = dyn_cast<ELFObjectFile<ELF32LE>>(Bin)) {
     ELFBuilder<ELF32LE> Builder(*O, *Obj, ExtractPartition);
-    Builder.build();
+    Builder.build(EnsureSymtab);
     return Obj;
   } else if (auto *O = dyn_cast<ELFObjectFile<ELF64LE>>(Bin)) {
     ELFBuilder<ELF64LE> Builder(*O, *Obj, ExtractPartition);
-    Builder.build();
+    Builder.build(EnsureSymtab);
     return Obj;
   } else if (auto *O = dyn_cast<ELFObjectFile<ELF32BE>>(Bin)) {
     ELFBuilder<ELF32BE> Builder(*O, *Obj, ExtractPartition);
-    Builder.build();
+    Builder.build(EnsureSymtab);
     return Obj;
   } else if (auto *O = dyn_cast<ELFObjectFile<ELF64BE>>(Bin)) {
     ELFBuilder<ELF64BE> Builder(*O, *Obj, ExtractPartition);
-    Builder.build();
+    Builder.build(EnsureSymtab);
     return Obj;
   }
   error("invalid file type");

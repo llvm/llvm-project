@@ -1885,6 +1885,13 @@ def fforce_emit_vtables : Flag<["-"], "fforce-emit-vtables">, Group<f_Group>,
     HelpText<"Emits more virtual tables to improve devirtualization">;
 def fno_force_emit_vtables : Flag<["-"], "fno-force-emit-vtables">, Group<f_Group>,
   Flags<[CoreOption]>;
+
+def fvirtual_function_elimination : Flag<["-"], "fvirtual-function-elimination">, Group<f_Group>,
+  Flags<[CoreOption, CC1Option]>,
+  HelpText<"Enables dead virtual function elimination optimization. Requires -flto=full">;
+def fno_virtual_function_elimination : Flag<["-"], "fno-virtual-function_elimination">, Group<f_Group>,
+  Flags<[CoreOption]>;
+
 def fwrapv : Flag<["-"], "fwrapv">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Treat signed integer overflow as two's complement">;
 def fwritable_strings : Flag<["-"], "fwritable-strings">, Group<f_Group>, Flags<[CC1Option]>,

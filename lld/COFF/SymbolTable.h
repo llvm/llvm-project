@@ -91,7 +91,7 @@ public:
   Symbol *addAbsolute(StringRef n, COFFSymbolRef s);
   Symbol *addRegular(InputFile *f, StringRef n,
                      const llvm::object::coff_symbol_generic *s = nullptr,
-                     SectionChunk *c = nullptr);
+                     SectionChunk *c = nullptr, uint32_t sectionOffset = 0);
   std::pair<DefinedRegular *, bool>
   addComdat(InputFile *f, StringRef n,
             const llvm::object::coff_symbol_generic *s = nullptr);
@@ -103,7 +103,9 @@ public:
                          uint16_t machine);
   void addLibcall(StringRef name);
 
-  void reportDuplicate(Symbol *existing, InputFile *newFile);
+  void reportDuplicate(Symbol *existing, InputFile *newFile,
+                       SectionChunk *newSc = nullptr,
+                       uint32_t newSectionOffset = 0);
 
   // A list of chunks which to be added to .rdata.
   std::vector<Chunk *> localImportChunks;

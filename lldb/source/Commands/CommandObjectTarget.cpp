@@ -798,12 +798,12 @@ public:
 
   static size_t GetVariableCallback(void *baton, const char *name,
                                     VariableList &variable_list) {
+    size_t old_size = variable_list.GetSize();
     Target *target = static_cast<Target *>(baton);
-    if (target) {
-      return target->GetImages().FindGlobalVariables(ConstString(name),
-                                                     UINT32_MAX, variable_list);
-    }
-    return 0;
+    if (target)
+      target->GetImages().FindGlobalVariables(ConstString(name), UINT32_MAX,
+                                              variable_list);
+    return variable_list.GetSize() - old_size;
   }
 
   Options *GetOptions() override { return &m_option_group; }
@@ -866,8 +866,9 @@ protected:
             return false;
           }
           use_var_name = true;
-          matches = target->GetImages().FindGlobalVariables(regex, UINT32_MAX,
-                                                            variable_list);
+          target->GetImages().FindGlobalVariables(regex, UINT32_MAX,
+                                                  variable_list);
+          matches = variable_list.GetSize();
         } else {
           Status error(Variable::GetValuesForVariableExpressionPath(
               arg, m_exe_ctx.GetBestExecutionContextScope(),
@@ -942,7 +943,6 @@ protected:
         }
       } else {
         SymbolContextList sc_list;
-        const bool append = true;
         // We have one or more compile unit or shlib
         if (num_shlibs > 0) {
           for (size_t shlib_idx = 0; shlib_idx < num_shlibs; ++shlib_idx) {
@@ -955,8 +955,7 @@ protected:
               if (num_compile_units > 0) {
                 for (size_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx)
                   module_sp->FindCompileUnits(
-                      compile_units.GetFileSpecAtIndex(cu_idx), append,
-                      sc_list);
+                      compile_units.GetFileSpecAtIndex(cu_idx), sc_list);
               } else {
                 SymbolContext sc;
                 sc.module_sp = module_sp;
@@ -974,7 +973,7 @@ protected:
           // units files that were specified
           for (size_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx)
             target->GetImages().FindCompileUnits(
-                compile_units.GetFileSpecAtIndex(cu_idx), append, sc_list);
+                compile_units.GetFileSpecAtIndex(cu_idx), sc_list);
         }
 
         const uint32_t num_scs = sc_list.GetSize();
@@ -1598,19 +1597,17 @@ static size_t LookupFunctionInModule(CommandInterpreter &interpreter,
                                      bool verbose) {
   if (module && name && name[0]) {
     SymbolContextList sc_list;
-    const bool append = true;
     size_t num_matches = 0;
     if (name_is_regex) {
       RegularExpression function_name_regex((llvm::StringRef(name)));
-      num_matches = module->FindFunctions(function_name_regex, include_symbols,
-                                          include_inlines, append, sc_list);
+      module->FindFunctions(function_name_regex, include_symbols,
+                            include_inlines, sc_list);
     } else {
       ConstString function_name(name);
-      num_matches = module->FindFunctions(
-          function_name, nullptr, eFunctionNameTypeAuto, include_symbols,
-          include_inlines, append, sc_list);
+      module->FindFunctions(function_name, nullptr, eFunctionNameTypeAuto,
+                            include_symbols, include_inlines, sc_list);
     }
-
+    num_matches = sc_list.GetSize();
     if (num_matches) {
       strm.Indent();
       strm.Printf("%" PRIu64 " match%s found in ", (uint64_t)num_matches,
@@ -1770,8 +1767,8 @@ static size_t FindModulesByName(Target *target, const char *module_name,
     }
   } else {
     if (target) {
-      const size_t num_matches =
-          target->GetImages().FindModules(module_spec, module_list);
+      target->GetImages().FindModules(module_spec, module_list);
+      const size_t num_matches = module_list.GetSize();
 
       // Not found in our module list for our target, check the main shared
       // module list in case it is a extra file used somewhere else
@@ -2695,8 +2692,8 @@ protected:
 
     if (search_using_module_spec) {
       ModuleList matching_modules;
-      const size_t num_matches =
-          target->GetImages().FindModules(module_spec, matching_modules);
+      target->GetImages().FindModules(module_spec, matching_modules);
+      const size_t num_matches = matching_modules.GetSize();
 
       char path[PATH_MAX];
       if (num_matches == 1) {
@@ -3352,7 +3349,7 @@ protected:
     if (m_options.m_type == eLookupTypeFunctionOrSymbol) {
       ConstString function_name(m_options.m_str.c_str());
       target->GetImages().FindFunctions(function_name, eFunctionNameTypeAuto,
-                                        true, false, true, sc_list);
+                                        true, false, sc_list);
     } else if (m_options.m_type == eLookupTypeAddress && target) {
       Address addr;
       if (target->GetSectionLoadList().ResolveLoadAddress(m_options.m_addr,
@@ -4067,8 +4064,9 @@ protected:
             // It has a UUID, look for this UUID in the target modules
             ModuleSpec symfile_uuid_module_spec;
             symfile_uuid_module_spec.GetUUID() = symfile_module_spec.GetUUID();
-            num_matches = target->GetImages().FindModules(
-                symfile_uuid_module_spec, matching_module_list);
+            target->GetImages().FindModules(symfile_uuid_module_spec,
+                                            matching_module_list);
+            num_matches = matching_module_list.GetSize();
           }
         }
 
@@ -4086,8 +4084,9 @@ protected:
                 ModuleSpec symfile_uuid_module_spec;
                 symfile_uuid_module_spec.GetUUID() =
                     symfile_module_spec.GetUUID();
-                num_matches = target->GetImages().FindModules(
-                    symfile_uuid_module_spec, matching_module_list);
+                target->GetImages().FindModules(symfile_uuid_module_spec,
+                                                matching_module_list);
+                num_matches = matching_module_list.GetSize();
               }
             }
           }
@@ -4096,9 +4095,10 @@ protected:
 
       // Just try to match up the file by basename if we have no matches at
       // this point
-      if (num_matches == 0)
-        num_matches =
-            target->GetImages().FindModules(module_spec, matching_module_list);
+      if (num_matches == 0) {
+        target->GetImages().FindModules(module_spec, matching_module_list);
+        num_matches = matching_module_list.GetSize();
+      }
 
       while (num_matches == 0) {
         ConstString filename_no_extension(
@@ -4115,8 +4115,8 @@ protected:
         // Replace basename with one less extension
         module_spec.GetFileSpec().GetFilename() = filename_no_extension;
 
-        num_matches =
-            target->GetImages().FindModules(module_spec, matching_module_list);
+        target->GetImages().FindModules(module_spec, matching_module_list);
+        num_matches = matching_module_list.GetSize();
       }
 
       if (num_matches > 1) {

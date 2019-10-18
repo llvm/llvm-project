@@ -29,7 +29,7 @@ public:
   static const size_t RedZoneSize = 128;
 
   WebAssemblyFrameLowering()
-      : TargetFrameLowering(StackGrowsDown, /*StackAlignment=*/16,
+      : TargetFrameLowering(StackGrowsDown, /*StackAlignment=*/Align(16),
                             /*LocalAreaOffset=*/0,
                             /*TransientStackAlignment=*/16,
                             /*StackRealignable=*/true) {}

@@ -436,7 +436,8 @@ Error opts::symbols::findFunctions(lldb_private::Module &Module) {
   } else if (Regex) {
     RegularExpression RE(Name);
     assert(RE.IsValid());
-    Symfile.FindFunctions(RE, true, false, List);
+    List.Clear();
+    Symfile.FindFunctions(RE, true, List);
   } else {
     Expected<CompilerDeclContext> ContextOr = getDeclContext(Symfile);
     if (!ContextOr)
@@ -444,8 +445,9 @@ Error opts::symbols::findFunctions(lldb_private::Module &Module) {
     CompilerDeclContext *ContextPtr =
         ContextOr->IsValid() ? &*ContextOr : nullptr;
 
+    List.Clear();
     Symfile.FindFunctions(ConstString(Name), ContextPtr, getFunctionNameFlags(),
-                         true, false, List);
+                         true, List);
   }
   outs() << formatv("Found {0} functions:\n", List.GetSize());
   StreamString Stream;

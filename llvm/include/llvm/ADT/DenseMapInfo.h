@@ -67,6 +67,17 @@ template<> struct DenseMapInfo<char> {
   }
 };
 
+// Provide DenseMapInfo for unsigned chars.
+template <> struct DenseMapInfo<unsigned char> {
+  static inline unsigned char getEmptyKey() { return ~0; }
+  static inline unsigned char getTombstoneKey() { return ~0 - 1; }
+  static unsigned getHashValue(const unsigned char &Val) { return Val * 37U; }
+
+  static bool isEqual(const unsigned char &LHS, const unsigned char &RHS) {
+    return LHS == RHS;
+  }
+};
+
 // Provide DenseMapInfo for unsigned shorts.
 template <> struct DenseMapInfo<unsigned short> {
   static inline unsigned short getEmptyKey() { return 0xFFFF; }

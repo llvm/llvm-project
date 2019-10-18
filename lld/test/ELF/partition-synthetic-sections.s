@@ -88,7 +88,7 @@
 //                                0x490 + 0x3b70 = 0x4000
 // PART-INDEX-NEXT: 048c 26ffffff 703b0000 50410000
 
-// CHECK: {{.*}}EH_FRAME Header
+// CHECK: {{.*}}EHFrameHeader
 // CHECK: Address: 0x[[EH_FRAME_HDR_ADDR]]
 // CHECK: eh_frame_ptr: 0x[[EH_FRAME_ADDR]]
 // CHECK: initial_location: 0x[[TEXT_ADDR]]

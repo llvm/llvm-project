@@ -117,8 +117,6 @@ Status File::GetFileSpec(FileSpec &file_spec) const {
   return std::error_code(ENOTSUP, std::system_category());
 }
 
-FILE *File::TakeStreamAndClear() { return nullptr; }
-
 int File::GetDescriptor() const { return kInvalidDescriptor; }
 
 FILE *File::GetStream() { return nullptr; }
@@ -329,18 +327,6 @@ Status NativeFile::Close() {
   m_is_interactive = eLazyBoolCalculate;
   m_is_real_terminal = eLazyBoolCalculate;
   return error;
-}
-
-FILE *NativeFile::TakeStreamAndClear() {
-  FILE *stream = GetStream();
-  m_stream = NULL;
-  m_descriptor = kInvalidDescriptor;
-  m_options = OpenOptions();
-  m_own_stream = false;
-  m_own_descriptor = false;
-  m_is_interactive = m_supports_colors = m_is_real_terminal =
-      eLazyBoolCalculate;
-  return stream;
 }
 
 Status NativeFile::GetFileSpec(FileSpec &file_spec) const {

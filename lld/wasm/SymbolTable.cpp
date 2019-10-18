@@ -393,6 +393,36 @@ Symbol *SymbolTable::addDefinedEvent(StringRef name, uint32_t flags,
   return s;
 }
 
+// This function get called when an undefined symbol is added, and there is
+// already an existing one in the symbols table.  In this case we check that
+// custom 'import-module' and 'import-field' symbol attributes agree.
+// With LTO these attributes are not avialable when the bitcode is read and only
+// become available when the LTO object is read.  In this case we silently
+// replace the empty attributes with the valid ones.
+template <typename T>
+static void setImportAttributes(T *existing, StringRef importName,
+                                StringRef importModule, InputFile *file) {
+  if (!importName.empty()) {
+    if (existing->importName.empty())
+      existing->importName = importName;
+    if (existing->importName != importName)
+      error("import name mismatch for symbol: " + toString(*existing) +
+            "\n>>> defined as " + existing->importName + " in " +
+            toString(existing->getFile()) + "\n>>> defined as " + importName +
+            " in " + toString(file));
+  }
+
+  if (!importModule.empty()) {
+    if (existing->importModule.empty())
+      existing->importModule = importModule;
+    if (existing->importModule != importModule)
+      error("import module mismatch for symbol: " + toString(*existing) +
+            "\n>>> defined as " + existing->importModule + " in " +
+            toString(existing->getFile()) + "\n>>> defined as " + importModule +
+            " in " + toString(file));
+  }
+}
+
 Symbol *SymbolTable::addUndefinedFunction(StringRef name, StringRef importName,
                                           StringRef importModule,
                                           uint32_t flags, InputFile *file,
@@ -424,10 +454,10 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef name, StringRef importName,
       reportTypeError(s, file, WASM_SYMBOL_TYPE_FUNCTION);
       return s;
     }
+    auto *existingUndefined = dyn_cast<UndefinedFunction>(existingFunction);
     if (!existingFunction->signature && sig)
       existingFunction->signature = sig;
     if (isCalledDirectly && !signatureMatches(existingFunction, sig)) {
-      auto* existingUndefined = dyn_cast<UndefinedFunction>(existingFunction);
       // If the existing undefined functions is not called direcltly then let
       // this one take precedence.  Otherwise the existing function is either
       // direclty called or defined, in which case we need a function variant.
@@ -436,6 +466,8 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef name, StringRef importName,
       else if (getFunctionVariant(s, sig, file, &s))
         replaceSym();
     }
+    if (existingUndefined)
+      setImportAttributes(existingUndefined, importName, importModule, file);
   }
 
   return s;

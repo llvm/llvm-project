@@ -56,19 +56,41 @@ def _execute_test_in_parallelism_group(test, lit_config, parallelism_semaphores)
     else:
         _execute_test(test, lit_config)
 
+
 def _execute_test(test, lit_config):
     """Execute one test"""
+    start = time.time()
+    result = _execute_test_handle_errors(test, lit_config)
+    end = time.time()
+
+    result.elapsed = end - start
+    resolve_result_code(result, test)
+
+    test.setResult(result)
+
+
+# TODO(yln): is this the right place to deal with this?
+# isExpectedToFail() only works after the test has been executed.
+def resolve_result_code(result, test):
     try:
-        start_time = time.time()
-        result = test.config.test_format.execute(test, lit_config)
-        # Support deprecated result from execute() which returned the result
-        # code and additional output as a tuple.
-        if isinstance(result, tuple):
-            code, output = result
-            result = lit.Test.Result(code, output)
-        elif not isinstance(result, lit.Test.Result):
-            raise ValueError("unexpected result from test execution")
-        result.elapsed = time.time() - start_time
+        expected_to_fail = test.isExpectedToFail()
+    except ValueError as e:
+        # Syntax error in an XFAIL line.
+        result.code = lit.Test.UNRESOLVED
+        result.output = str(e)
+    else:
+        if expected_to_fail:
+            # pass -> unexpected pass
+            if result.code is lit.Test.PASS:
+                result.code = lit.Test.XPASS
+            # fail -> expected fail
+            if result.code is lit.Test.FAIL:
+                result.code = lit.Test.XFAIL
+
+
+def _execute_test_handle_errors(test, lit_config):
+    try:
+        return _adapt_result(test.config.test_format.execute(test, lit_config))
     except KeyboardInterrupt:
         raise
     except:
@@ -77,6 +99,14 @@ def _execute_test(test, lit_config):
         output = 'Exception during script execution:\n'
         output += traceback.format_exc()
         output += '\n'
-        result = lit.Test.Result(lit.Test.UNRESOLVED, output)
+        return lit.Test.Result(lit.Test.UNRESOLVED, output)
 
-    test.setResult(result)
+
+# Support deprecated result from execute() which returned the result
+# code and additional output as a tuple.
+def _adapt_result(result):
+    if isinstance(result, lit.Test.Result):
+        return result
+    assert isinstance(result, tuple)
+    code, output = result
+    return lit.Test.Result(code, output)

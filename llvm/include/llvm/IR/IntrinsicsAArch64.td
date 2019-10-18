@@ -775,6 +775,11 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  llvm_anyvector_ty],
                 [IntrNoMem]>;
 
+  class AdvSIMD_SVE_Unpack_Intrinsic
+   : Intrinsic<[llvm_anyvector_ty],
+               [LLVMSubdivide2VectorType<0>],
+               [IntrNoMem]>;
+
   class AdvSIMD_SVE_PUNPKHI_Intrinsic
     : Intrinsic<[LLVMHalfElementsVectorType<0>],
                 [llvm_anyvector_ty],
@@ -825,6 +830,16 @@ def int_aarch64_sve_udot_lane : AdvSIMD_SVE_DOT_Indexed_Intrinsic;
 //
 
 def int_aarch64_sve_cnt : AdvSIMD_SVE_CNT_Intrinsic;
+
+//
+// Permutations and selection
+//
+
+def int_aarch64_sve_sunpkhi   : AdvSIMD_SVE_Unpack_Intrinsic;
+def int_aarch64_sve_sunpklo   : AdvSIMD_SVE_Unpack_Intrinsic;
+
+def int_aarch64_sve_uunpkhi   : AdvSIMD_SVE_Unpack_Intrinsic;
+def int_aarch64_sve_uunpklo   : AdvSIMD_SVE_Unpack_Intrinsic;
 
 //
 // Floating-point comparisons

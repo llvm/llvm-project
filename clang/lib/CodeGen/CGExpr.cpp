@@ -2821,7 +2821,6 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
       CGM.getModule(), Descriptor->getType(),
       /*isConstant=*/true, llvm::GlobalVariable::PrivateLinkage, Descriptor);
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-  CGM.setPragmaSectionAttributes(CurFuncDecl, GV);
   CGM.getSanitizerMetadata()->disableSanitizerForGlobal(GV);
 
   // Remember the descriptor for this type.
@@ -2901,7 +2900,6 @@ llvm::Constant *CodeGenFunction::EmitCheckSourceLocation(SourceLocation Loc) {
     }
 
     auto FilenameGV = CGM.GetAddrOfConstantCString(FilenameString, ".src");
-    CGM.setPragmaSectionAttributes(CurFuncDecl, cast<llvm::GlobalVariable>(FilenameGV.getPointer()));
     CGM.getSanitizerMetadata()->disableSanitizerForGlobal(
                           cast<llvm::GlobalVariable>(FilenameGV.getPointer()));
     Filename = FilenameGV.getPointer();
@@ -3075,7 +3073,6 @@ void CodeGenFunction::EmitCheck(
           new llvm::GlobalVariable(CGM.getModule(), Info->getType(), false,
                                    llvm::GlobalVariable::PrivateLinkage, Info);
       InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-      CGM.setPragmaSectionAttributes(CurFuncDecl, InfoPtr);
       CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
       Args.push_back(Builder.CreateBitCast(InfoPtr, Int8PtrTy));
       ArgTypes.push_back(Int8PtrTy);

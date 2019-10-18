@@ -603,9 +603,8 @@ TEST_F(SymbolFilePDBTests, TestFindSymbolsWithNameAndType) {
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
   SymbolContextList sc_list;
-  EXPECT_EQ(1u,
-            module->FindSymbolsWithNameAndType(ConstString("?foo@@YAHH@Z"),
-                                               lldb::eSymbolTypeAny, sc_list));
+  module->FindSymbolsWithNameAndType(ConstString("?foo@@YAHH@Z"),
+                                     lldb::eSymbolTypeAny, sc_list);
   EXPECT_EQ(1u, sc_list.GetSize());
 
   SymbolContext sc;

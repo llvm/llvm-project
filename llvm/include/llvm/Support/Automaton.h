@@ -167,6 +167,8 @@ template <typename ActionT> class Automaton {
   std::unique_ptr<internal::NfaTranscriber> Transcriber;
   /// The initial DFA state is 1.
   uint64_t State = 1;
+  /// True if we should transcribe and false if not (even if Transcriber is defined).
+  bool Transcribe;
 
 public:
   /// Create an automaton.
@@ -186,6 +188,7 @@ public:
     if (!TranscriptionTable.empty())
       Transcriber =
           std::make_unique<internal::NfaTranscriber>(TranscriptionTable);
+    Transcribe = Transcriber != nullptr;
     for (const auto &I : Transitions)
       // Greedily read and cache the transition table.
       M.emplace(std::make_pair(I.FromDfaState, I.Action),
@@ -199,6 +202,15 @@ public:
       Transcriber->reset();
   }
 
+  /// Enable or disable transcription. Transcription is only available if
+  /// TranscriptionTable was provided to the constructor.
+  void enableTranscription(bool Enable = true) {
+    assert(Transcriber &&
+           "Transcription is only available if TranscriptionTable was provided "
+           "to the Automaton constructor");
+    Transcribe = Enable;
+  }
+
   /// Transition the automaton based on input symbol A. Return true if the
   /// automaton transitioned to a valid state, false if the automaton
   /// transitioned to an invalid state.
@@ -209,17 +221,24 @@ public:
     auto I = M.find({State, A});
     if (I == M.end())
       return false;
-    if (Transcriber)
+    if (Transcriber && Transcribe)
       Transcriber->transition(I->second.second);
     State = I->second.first;
     return true;
+  }
+
+  /// Return true if the automaton can be transitioned based on input symbol A.
+  bool canAdd(const ActionT &A) {
+    auto I = M.find({State, A});
+    return I != M.end();
   }
 
   /// Obtain a set of possible paths through the input nondeterministic
   /// automaton that could be obtained from the sequence of input actions
   /// presented to this deterministic automaton.
   ArrayRef<NfaPath> getNfaPaths() {
-    assert(Transcriber && "Can only obtain NFA paths if transcribing!");
+    assert(Transcriber && Transcribe &&
+           "Can only obtain NFA paths if transcribing!");
     return Transcriber->getPaths();
   }
 };

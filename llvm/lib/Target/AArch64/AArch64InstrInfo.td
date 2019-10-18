@@ -62,6 +62,9 @@ def HasAM            : Predicate<"Subtarget->hasAM()">,
 def HasSEL2          : Predicate<"Subtarget->hasSEL2()">,
                        AssemblerPredicate<"FeatureSEL2", "sel2">;
 
+def HasPMU           : Predicate<"Subtarget->hasPMU()">,
+                       AssemblerPredicate<"FeaturePMU", "pmu">;
+
 def HasTLB_RMI          : Predicate<"Subtarget->hasTLB_RMI()">,
                        AssemblerPredicate<"FeatureTLB_RMI", "tlb-rmi">;
 
@@ -420,6 +423,14 @@ def AArch64stg : SDNode<"AArch64ISD::STG", SDT_AArch64SETTAG, [SDNPHasChain, SDN
 def AArch64stzg : SDNode<"AArch64ISD::STZG", SDT_AArch64SETTAG, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def AArch64st2g : SDNode<"AArch64ISD::ST2G", SDT_AArch64SETTAG, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def AArch64stz2g : SDNode<"AArch64ISD::STZ2G", SDT_AArch64SETTAG, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+def SDT_AArch64unpk : SDTypeProfile<1, 1, [
+    SDTCisInt<0>, SDTCisInt<1>, SDTCisOpSmallerThanOp<1, 0>
+]>;
+def AArch64sunpkhi : SDNode<"AArch64ISD::SUNPKHI", SDT_AArch64unpk>;
+def AArch64sunpklo : SDNode<"AArch64ISD::SUNPKLO", SDT_AArch64unpk>;
+def AArch64uunpkhi : SDNode<"AArch64ISD::UUNPKHI", SDT_AArch64unpk>;
+def AArch64uunpklo : SDNode<"AArch64ISD::UUNPKLO", SDT_AArch64unpk>;
 
 //===----------------------------------------------------------------------===//
 

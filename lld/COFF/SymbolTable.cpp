@@ -520,15 +520,69 @@ void SymbolTable::addLazyObject(LazyObjFile *f, StringRef n) {
   f->fetch();
 }
 
-void SymbolTable::reportDuplicate(Symbol *existing, InputFile *newFile) {
-  std::string msg = "duplicate symbol: " + toString(*existing) + " in " +
-                    toString(existing->getFile()) + " and in " +
-                    toString(newFile);
+static std::string getSourceLocationBitcode(BitcodeFile *file) {
+  std::string res("\n>>> defined at ");
+  StringRef source = file->obj->getSourceFileName();
+  if (!source.empty())
+    res += source.str() + "\n>>>            ";
+  res += toString(file);
+  return res;
+}
+
+static std::string getSourceLocationObj(ObjFile *file, SectionChunk *sc,
+                                        uint32_t offset, StringRef name) {
+  Optional<std::pair<StringRef, uint32_t>> fileLine;
+  if (sc)
+    fileLine = getFileLine(sc, offset);
+  if (!fileLine)
+    fileLine = file->getVariableLocation(name);
+
+  std::string res;
+  llvm::raw_string_ostream os(res);
+  os << "\n>>> defined at ";
+  if (fileLine)
+    os << fileLine->first << ":" << fileLine->second << "\n>>>            ";
+  os << toString(file);
+  return os.str();
+}
+
+static std::string getSourceLocation(InputFile *file, SectionChunk *sc,
+                                     uint32_t offset, StringRef name) {
+  if (auto *o = dyn_cast<ObjFile>(file))
+    return getSourceLocationObj(o, sc, offset, name);
+  if (auto *b = dyn_cast<BitcodeFile>(file))
+    return getSourceLocationBitcode(b);
+  return "\n>>> defined at " + toString(file);
+}
+
+// Construct and print an error message in the form of:
+//
+//   lld-link: error: duplicate symbol: foo
+//   >>> defined at bar.c:30
+//   >>>            bar.o
+//   >>> defined at baz.c:563
+//   >>>            baz.o
+void SymbolTable::reportDuplicate(Symbol *existing, InputFile *newFile,
+                                  SectionChunk *newSc,
+                                  uint32_t newSectionOffset) {
+  std::string msg;
+  llvm::raw_string_ostream os(msg);
+  os << "duplicate symbol: " << toString(*existing);
+
+  DefinedRegular *d = cast<DefinedRegular>(existing);
+  if (d && isa<ObjFile>(d->getFile())) {
+    os << getSourceLocation(d->getFile(), d->getChunk(), d->getValue(),
+                            existing->getName());
+  } else {
+    os << getSourceLocation(existing->getFile(), nullptr, 0, "");
+  }
+  os << getSourceLocation(newFile, newSc, newSectionOffset,
+                          existing->getName());
 
   if (config->forceMultiple)
-    warn(msg);
+    warn(os.str());
   else
-    error(msg);
+    error(os.str());
 }
 
 Symbol *SymbolTable::addAbsolute(StringRef n, COFFSymbolRef sym) {
@@ -568,8 +622,8 @@ Symbol *SymbolTable::addSynthetic(StringRef n, Chunk *c) {
 }
 
 Symbol *SymbolTable::addRegular(InputFile *f, StringRef n,
-                                const coff_symbol_generic *sym,
-                                SectionChunk *c) {
+                                const coff_symbol_generic *sym, SectionChunk *c,
+                                uint32_t sectionOffset) {
   Symbol *s;
   bool wasInserted;
   std::tie(s, wasInserted) = insert(n, f);
@@ -577,7 +631,7 @@ Symbol *SymbolTable::addRegular(InputFile *f, StringRef n,
     replaceSymbol<DefinedRegular>(s, f, n, /*IsCOMDAT*/ false,
                                   /*IsExternal*/ true, sym, c);
   else
-    reportDuplicate(s, f);
+    reportDuplicate(s, f, c, sectionOffset);
   return s;
 }
 

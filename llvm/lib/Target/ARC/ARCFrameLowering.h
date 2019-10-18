@@ -27,8 +27,8 @@ class ARCInstrInfo;
 class ARCFrameLowering : public TargetFrameLowering {
 public:
   ARCFrameLowering(const ARCSubtarget &st)
-      : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, 4, 0), ST(st) {
-  }
+      : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(4), 0),
+        ST(st) {}
 
   /// Insert Prologue into the function.
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;

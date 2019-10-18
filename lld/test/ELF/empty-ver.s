@@ -21,7 +21,7 @@
 // CHECK-NEXT:   0000: 00666F6F 00742E73 6F007665 7200      |.foo.t.so.ver.|
 // CHECK-NEXT: )
 
-// CHECK:      Version symbols [
+// CHECK:      VersionSymbols [
 // CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Version: 0
 // CHECK-NEXT:    Name:

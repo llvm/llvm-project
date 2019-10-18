@@ -141,7 +141,7 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
                          options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fuse-init-array");
 
-  // '-pthread' implies atomics, bulk-memory, and mutable-globals
+  // '-pthread' implies atomics, bulk-memory, mutable-globals, and sign-ext
   if (DriverArgs.hasFlag(options::OPT_pthread, options::OPT_no_pthread,
                          false)) {
     if (DriverArgs.hasFlag(options::OPT_mno_atomics, options::OPT_matomics,
@@ -159,12 +159,19 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)
           << "-pthread"
           << "-mno-mutable-globals";
+    if (DriverArgs.hasFlag(options::OPT_mno_sign_ext, options::OPT_msign_ext,
+                           false))
+      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+          << "-pthread"
+          << "-mno-sign-ext";
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+atomics");
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+bulk-memory");
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+mutable-globals");
+    CC1Args.push_back("-target-feature");
+    CC1Args.push_back("+sign-ext");
   }
 
   if (DriverArgs.getLastArg(options::OPT_fwasm_exceptions)) {

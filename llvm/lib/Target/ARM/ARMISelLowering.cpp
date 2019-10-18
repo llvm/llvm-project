@@ -8898,9 +8898,13 @@ static SDValue LowerMLOAD(SDValue Op, SelectionDAG &DAG) {
   SDValue PassThru = N->getPassThru();
   SDLoc dl(Op);
 
-  if (ISD::isBuildVectorAllZeros(PassThru.getNode()) ||
+  auto IsZero = [](SDValue PassThru) {
+    return (ISD::isBuildVectorAllZeros(PassThru.getNode()) ||
       (PassThru->getOpcode() == ARMISD::VMOVIMM &&
-       isNullConstant(PassThru->getOperand(0))))
+       isNullConstant(PassThru->getOperand(0))));
+  };
+
+  if (IsZero(PassThru))
     return Op;
 
   // MVE Masked loads use zero as the passthru value. Here we convert undef to
@@ -8911,7 +8915,9 @@ static SDValue LowerMLOAD(SDValue Op, SelectionDAG &DAG) {
       VT, dl, N->getChain(), N->getBasePtr(), Mask, ZeroVec, N->getMemoryVT(),
       N->getMemOperand(), N->getExtensionType(), N->isExpandingLoad());
   SDValue Combo = NewLoad;
-  if (!PassThru.isUndef())
+  if (!PassThru.isUndef() &&
+      (PassThru.getOpcode() != ISD::BITCAST ||
+       !IsZero(PassThru->getOperand(0))))
     Combo = DAG.getNode(ISD::VSELECT, dl, VT, Mask, NewLoad, PassThru);
   return DAG.getMergeValues({Combo, NewLoad.getValue(1)}, dl);
 }
@@ -14697,6 +14703,11 @@ bool ARMTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
 
   if (!isTypeLegal(VT))
     return false;
+
+  if (auto *Ld = dyn_cast<MaskedLoadSDNode>(ExtVal.getOperand(0))) {
+    if (Ld->isExpandingLoad())
+      return false;
+  }
 
   // Don't create a loadext if we can fold the extension into a wide/long
   // instruction.

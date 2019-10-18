@@ -111,3 +111,13 @@ def version : Flag<["--"], "version">,
 def V : Flag<["-"], "V">,
         Alias<version>,
         HelpText<"Alias for --version">;
+
+def wildcard
+    : Flag<["--"], "wildcard">,
+      HelpText<"Allow wildcard syntax for symbol-related flags. Incompatible "
+               "with --regex. Allows using '*' to match any number of "
+               "characters, '?' to match any single character, '\' to escape "
+               "special characters, and '[]' to define character classes. "
+               "Wildcards beginning with '!' will prevent a match, for example "
+               "\"-N '*' -N '!x'\" will strip all symbols except for \"x\".">;
+def w : Flag<["-"], "w">, Alias<wildcard>, HelpText<"Alias for --wildcard">;

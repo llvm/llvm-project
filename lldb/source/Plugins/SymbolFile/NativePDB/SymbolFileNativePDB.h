@@ -88,10 +88,10 @@ public:
 
   size_t ParseBlocksRecursive(Function &func) override;
 
-  uint32_t FindGlobalVariables(ConstString name,
-                               const CompilerDeclContext *parent_decl_ctx,
-                               uint32_t max_matches,
-                               VariableList &variables) override;
+  void FindGlobalVariables(ConstString name,
+                           const CompilerDeclContext *parent_decl_ctx,
+                           uint32_t max_matches,
+                           VariableList &variables) override;
 
   size_t ParseVariablesForContext(const SymbolContext &sc) override;
 
@@ -117,14 +117,13 @@ public:
   void GetTypes(SymbolContextScope *sc_scope, lldb::TypeClass type_mask,
                 TypeList &type_list) override;
 
-  uint32_t FindFunctions(ConstString name,
-                         const CompilerDeclContext *parent_decl_ctx,
-                         lldb::FunctionNameType name_type_mask,
-                         bool include_inlines, bool append,
-                         SymbolContextList &sc_list) override;
+  void FindFunctions(ConstString name,
+                     const CompilerDeclContext *parent_decl_ctx,
+                     lldb::FunctionNameType name_type_mask,
+                     bool include_inlines, SymbolContextList &sc_list) override;
 
-  uint32_t FindFunctions(const RegularExpression &regex, bool include_inlines,
-                         bool append, SymbolContextList &sc_list) override;
+  void FindFunctions(const RegularExpression &regex, bool include_inlines,
+                     SymbolContextList &sc_list) override;
 
   void FindTypes(ConstString name, const CompilerDeclContext *parent_decl_ctx,
                  uint32_t max_matches,

@@ -5,9 +5,13 @@
 # RUN: not lld-link /out:%t.exe /demangle %t1.obj %t2.obj 2>&1 | FileCheck %s
 # RUN: not lld-link /out:%t.exe /demangle:no %t1.obj %t2.obj 2>&1 | FileCheck --check-prefix=NODEMANGLE %s
 
-# NODEMANGLE: duplicate symbol: ?mangled@@YAHXZ in {{.+}}1.obj and in {{.+}}2.obj
+# NODEMANGLE: duplicate symbol: ?mangled@@YAHXZ
+# NODEMANGLE: defined at {{.+}}1.obj
+# NODEMANGLE: defined at {{.+}}2.obj
 
-# CHECK: duplicate symbol: int __cdecl mangled(void) in {{.+}}1.obj and in {{.+}}2.obj
+# CHECK: duplicate symbol: int __cdecl mangled(void)
+# CHECK: defined at {{.+}}1.obj
+# CHECK: defined at {{.+}}2.obj
 
 --- !COFF
 header:

@@ -10068,8 +10068,8 @@ static bool convertPointersToCompositeType(Sema &S, SourceLocation Loc,
 
   QualType T = S.FindCompositePointerType(Loc, LHS, RHS);
   if (T.isNull()) {
-    if ((LHSType->isPointerType() || LHSType->isMemberPointerType()) &&
-        (RHSType->isPointerType() || RHSType->isMemberPointerType()))
+    if ((LHSType->isAnyPointerType() || LHSType->isMemberPointerType()) &&
+        (RHSType->isAnyPointerType() || RHSType->isMemberPointerType()))
       diagnoseDistinctPointerComparison(S, Loc, LHS, RHS, /*isError*/true);
     else
       S.InvalidOperands(Loc, LHS, RHS);

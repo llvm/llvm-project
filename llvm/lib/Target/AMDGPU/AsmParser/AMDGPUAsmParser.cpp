@@ -1423,9 +1423,12 @@ public:
   void cvtSdwaVOP1(MCInst &Inst, const OperandVector &Operands);
   void cvtSdwaVOP2(MCInst &Inst, const OperandVector &Operands);
   void cvtSdwaVOP2b(MCInst &Inst, const OperandVector &Operands);
+  void cvtSdwaVOP2e(MCInst &Inst, const OperandVector &Operands);
   void cvtSdwaVOPC(MCInst &Inst, const OperandVector &Operands);
   void cvtSDWA(MCInst &Inst, const OperandVector &Operands,
-                uint64_t BasicInstType, bool skipVcc = false);
+               uint64_t BasicInstType,
+               bool SkipDstVcc = false,
+               bool SkipSrcVcc = false);
 
   AMDGPUOperand::Ptr defaultBLGP() const;
   AMDGPUOperand::Ptr defaultCBSZ() const;
@@ -6813,7 +6816,11 @@ void AMDGPUAsmParser::cvtSdwaVOP2(MCInst &Inst, const OperandVector &Operands) {
 }
 
 void AMDGPUAsmParser::cvtSdwaVOP2b(MCInst &Inst, const OperandVector &Operands) {
-  cvtSDWA(Inst, Operands, SIInstrFlags::VOP2, true);
+  cvtSDWA(Inst, Operands, SIInstrFlags::VOP2, true, true);
+}
+
+void AMDGPUAsmParser::cvtSdwaVOP2e(MCInst &Inst, const OperandVector &Operands) {
+  cvtSDWA(Inst, Operands, SIInstrFlags::VOP2, false, true);
 }
 
 void AMDGPUAsmParser::cvtSdwaVOPC(MCInst &Inst, const OperandVector &Operands) {
@@ -6821,11 +6828,14 @@ void AMDGPUAsmParser::cvtSdwaVOPC(MCInst &Inst, const OperandVector &Operands) {
 }
 
 void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
-                              uint64_t BasicInstType, bool skipVcc) {
+                              uint64_t BasicInstType,
+                              bool SkipDstVcc,
+                              bool SkipSrcVcc) {
   using namespace llvm::AMDGPU::SDWA;
 
   OptionalImmIndexMap OptionalIdx;
-  bool skippedVcc = false;
+  bool SkipVcc = SkipDstVcc || SkipSrcVcc;
+  bool SkippedVcc = false;
 
   unsigned I = 1;
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
@@ -6835,19 +6845,21 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
 
   for (unsigned E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
-    if (skipVcc && !skippedVcc && Op.isReg() &&
+    if (SkipVcc && !SkippedVcc && Op.isReg() &&
         (Op.getReg() == AMDGPU::VCC || Op.getReg() == AMDGPU::VCC_LO)) {
       // VOP2b (v_add_u32, v_sub_u32 ...) sdwa use "vcc" token as dst.
       // Skip it if it's 2nd (e.g. v_add_i32_sdwa v1, vcc, v2, v3)
       // or 4th (v_addc_u32_sdwa v1, vcc, v2, v3, vcc) operand.
       // Skip VCC only if we didn't skip it on previous iteration.
+      // Note that src0 and src1 occupy 2 slots each because of modifiers.
       if (BasicInstType == SIInstrFlags::VOP2 &&
-          (Inst.getNumOperands() == 1 || Inst.getNumOperands() == 5)) {
-        skippedVcc = true;
+          ((SkipDstVcc && Inst.getNumOperands() == 1) ||
+           (SkipSrcVcc && Inst.getNumOperands() == 5))) {
+        SkippedVcc = true;
         continue;
       } else if (BasicInstType == SIInstrFlags::VOPC &&
                  Inst.getNumOperands() == 0) {
-        skippedVcc = true;
+        SkippedVcc = true;
         continue;
       }
     }
@@ -6859,7 +6871,7 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
     } else {
       llvm_unreachable("Invalid operand type");
     }
-    skippedVcc = false;
+    SkippedVcc = false;
   }
 
   if (Inst.getOpcode() != AMDGPU::V_NOP_sdwa_gfx10 &&

@@ -21,7 +21,7 @@ namespace llvm {
 class AArch64FrameLowering : public TargetFrameLowering {
 public:
   explicit AArch64FrameLowering()
-      : TargetFrameLowering(StackGrowsDown, 16, 0, 16,
+      : TargetFrameLowering(StackGrowsDown, Align(16), 0, 16,
                             true /*StackRealignable*/) {}
 
   void emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,

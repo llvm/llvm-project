@@ -8,13 +8,6 @@
 
 #include "lldb/Core/Mangled.h"
 
-#if defined(_WIN32)
-#include "lldb/Host/windows/windows.h"
-
-#include <dbghelp.h>
-#pragma comment(lib, "dbghelp.lib")
-#endif
-
 #include "lldb/Core/RichManglingContext.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
@@ -38,25 +31,6 @@
 #include <stdlib.h>
 #include <string.h>
 using namespace lldb_private;
-
-#if defined(_MSC_VER)
-static DWORD safeUndecorateName(const char *Mangled, char *Demangled,
-                                DWORD DemangledLength) {
-  static std::mutex M;
-  std::lock_guard<std::mutex> Lock(M);
-  return ::UnDecorateSymbolName(
-      Mangled, Demangled, DemangledLength,
-      UNDNAME_NO_ACCESS_SPECIFIERS |       // Strip public, private, protected
-                                           // keywords
-          UNDNAME_NO_ALLOCATION_LANGUAGE | // Strip __thiscall, __stdcall,
-                                           // etc keywords
-          UNDNAME_NO_THROW_SIGNATURES |    // Strip throw() specifications
-          UNDNAME_NO_MEMBER_TYPE |         // Strip virtual, static, etc
-                                           // specifiers
-          UNDNAME_NO_MS_KEYWORDS           // Strip all MS extension keywords
-      );
-}
-#endif
 
 static inline Mangled::ManglingScheme cstring_mangling_scheme(const char *s) {
   if (s) {
@@ -200,28 +174,20 @@ void Mangled::SetValue(ConstString name) {
 
 // Local helpers for different demangling implementations.
 static char *GetMSVCDemangledStr(const char *M) {
-#if defined(_MSC_VER)
-  const size_t demangled_length = 2048;
-  char *demangled_cstr = static_cast<char *>(::malloc(demangled_length));
-  ::ZeroMemory(demangled_cstr, demangled_length);
-  DWORD result = safeUndecorateName(M, demangled_cstr, demangled_length);
+  char *demangled_cstr = llvm::microsoftDemangle(
+      M, nullptr, nullptr, nullptr,
+      llvm::MSDemangleFlags(llvm::MSDF_NoAccessSpecifier |
+                            llvm::MSDF_NoCallingConvention |
+                            llvm::MSDF_NoMemberType));
 
   if (Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE)) {
     if (demangled_cstr && demangled_cstr[0])
       LLDB_LOGF(log, "demangled msvc: %s -> \"%s\"", M, demangled_cstr);
     else
-      LLDB_LOGF(log, "demangled msvc: %s -> error: 0x%lu", M, result);
+      LLDB_LOGF(log, "demangled msvc: %s -> error", M);
   }
 
-  if (result != 0) {
-    return demangled_cstr;
-  } else {
-    ::free(demangled_cstr);
-    return nullptr;
-  }
-#else
-  return nullptr;
-#endif
+  return demangled_cstr;
 }
 
 static char *GetItaniumDemangledStr(const char *M) {

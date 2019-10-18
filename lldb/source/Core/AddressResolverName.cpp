@@ -86,7 +86,6 @@ AddressResolverName::SearchCallback(SearchFilter &filter,
 
   const bool include_symbols = false;
   const bool include_inlines = true;
-  const bool append = false;
   switch (m_match_type) {
   case AddressResolver::Exact:
     if (context.module_sp) {
@@ -94,7 +93,7 @@ AddressResolverName::SearchCallback(SearchFilter &filter,
                                                     eSymbolTypeCode, sym_list);
       context.module_sp->FindFunctions(m_func_name, nullptr,
                                        eFunctionNameTypeAuto, include_symbols,
-                                       include_inlines, append, func_list);
+                                       include_inlines, func_list);
     }
     break;
 
@@ -103,7 +102,7 @@ AddressResolverName::SearchCallback(SearchFilter &filter,
       context.module_sp->FindSymbolsMatchingRegExAndType(
           m_regex, eSymbolTypeCode, sym_list);
       context.module_sp->FindFunctions(m_regex, include_symbols,
-                                       include_inlines, append, func_list);
+                                       include_inlines, func_list);
     }
     break;
 

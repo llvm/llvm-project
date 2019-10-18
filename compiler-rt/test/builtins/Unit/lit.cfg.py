@@ -94,3 +94,27 @@ config.suffixes = ['.c', '.cpp']
 
 if not config.emulator:
   config.available_features.add('native-run')
+
+# Add features for available sources
+builtins_source_features = config.builtins_lit_source_features.split(';')
+# Sanity checks
+if not builtins_source_features:
+  lit_config.fatal('builtins_source_features cannot be empty')
+builtins_source_features_set = set()
+builtins_source_feature_duplicates = []
+for builtin_source_feature in builtins_source_features:
+  if len(builtin_source_feature) == 0:
+    lit_config.fatal('builtins_source_feature cannot contain empty features')
+  if builtin_source_feature not in builtins_source_features_set:
+    builtins_source_features_set.add(builtin_source_feature)
+  else:
+    builtins_source_feature_duplicates.append(builtin_source_feature)
+
+if len(builtins_source_feature_duplicates) > 0:
+  # FIXME(dliew): There's a bug in the build system for powerpc where two definitions of the same
+  # function are present in the library. So just downgrade this to a warning until this is fixed.
+  lit_config.warning(
+    'builtins_source_features contains duplicates: {}'.format(
+      builtins_source_feature_duplicates)
+  )
+config.available_features.update(builtins_source_features)

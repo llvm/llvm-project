@@ -183,7 +183,8 @@ inline uint64_t alignTo(uint64_t Size, MaybeAlign A) {
 /// Aligns `Addr` to `Alignment` bytes, rounding up.
 inline uintptr_t alignAddr(const void *Addr, Align Alignment) {
   uintptr_t ArithAddr = reinterpret_cast<uintptr_t>(Addr);
-  assert(ArithAddr + Alignment.value() - 1 >= ArithAddr && "Overflow");
+  assert(static_cast<uintptr_t>(ArithAddr + Alignment.value() - 1) >=
+             ArithAddr && "Overflow");
   return alignTo(ArithAddr, Alignment);
 }
 

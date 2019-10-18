@@ -14,8 +14,7 @@ namespace clang {
 namespace clangd {
 
 llvm::iterator_range<RelationSlab::iterator>
-RelationSlab::lookup(const SymbolID &Subject,
-                     index::SymbolRole Predicate) const {
+RelationSlab::lookup(const SymbolID &Subject, RelationKind Predicate) const {
   auto IterPair = std::equal_range(Relations.begin(), Relations.end(),
                                    Relation{Subject, Predicate, SymbolID{}},
                                    [](const Relation &A, const Relation &B) {

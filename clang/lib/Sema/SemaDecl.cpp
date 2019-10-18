@@ -9062,25 +9062,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         Context, PragmaClangTextSection.SectionName,
         PragmaClangTextSection.PragmaLocation, AttributeCommonInfo::AS_Pragma));
 
-  if (D.isFunctionDefinition()) {
-    if (PragmaClangBSSSection.Valid)
-      NewFD->addAttr(PragmaClangBSSSectionAttr::CreateImplicit(
-          Context, PragmaClangBSSSection.SectionName,
-          PragmaClangBSSSection.PragmaLocation));
-    if (PragmaClangDataSection.Valid)
-      NewFD->addAttr(PragmaClangDataSectionAttr::CreateImplicit(
-          Context, PragmaClangDataSection.SectionName,
-          PragmaClangDataSection.PragmaLocation));
-    if (PragmaClangRodataSection.Valid)
-      NewFD->addAttr(PragmaClangRodataSectionAttr::CreateImplicit(
-          Context, PragmaClangRodataSection.SectionName,
-          PragmaClangRodataSection.PragmaLocation));
-    if (PragmaClangRelroSection.Valid)
-      NewFD->addAttr(PragmaClangRelroSectionAttr::CreateImplicit(
-          Context, PragmaClangRelroSection.SectionName,
-          PragmaClangRelroSection.PragmaLocation));
-  }
-
   // Apply an implicit SectionAttr if #pragma code_seg is active.
   if (CodeSegStack.CurrentValue && D.isFunctionDefinition() &&
       !NewFD->hasAttr<SectionAttr>()) {

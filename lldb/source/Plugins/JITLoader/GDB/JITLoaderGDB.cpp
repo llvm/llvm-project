@@ -458,8 +458,8 @@ addr_t JITLoaderGDB::GetSymbolAddress(ModuleList &module_list,
   SymbolContextList target_symbols;
   Target &target = m_process->GetTarget();
 
-  if (!module_list.FindSymbolsWithNameAndType(name, symbol_type,
-                                              target_symbols))
+  module_list.FindSymbolsWithNameAndType(name, symbol_type, target_symbols);
+  if (target_symbols.IsEmpty())
     return LLDB_INVALID_ADDRESS;
 
   SymbolContext sym_ctx;

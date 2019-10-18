@@ -223,11 +223,14 @@ Address *AppleObjCRuntime::GetPrintForDebuggerAddr() {
     SymbolContextList contexts;
     SymbolContext context;
 
-    if ((!modules.FindSymbolsWithNameAndType(ConstString("_NSPrintForDebugger"),
-                                             eSymbolTypeCode, contexts)) &&
-        (!modules.FindSymbolsWithNameAndType(ConstString("_CFPrintForDebugger"),
-                                             eSymbolTypeCode, contexts)))
-      return nullptr;
+    modules.FindSymbolsWithNameAndType(ConstString("_NSPrintForDebugger"),
+                                        eSymbolTypeCode, contexts);
+    if (contexts.IsEmpty()) {
+      modules.FindSymbolsWithNameAndType(ConstString("_CFPrintForDebugger"),
+                                         eSymbolTypeCode, contexts);
+      if (contexts.IsEmpty())
+        return nullptr;
+    }
 
     contexts.GetContextAtIndex(0, context);
 
@@ -444,10 +447,12 @@ bool AppleObjCRuntime::CalculateHasNewLiteralsAndIndexing() {
 
   SymbolContextList sc_list;
 
-  return target.GetImages().FindSymbolsWithNameAndType(
-             s_method_signature, eSymbolTypeCode, sc_list) ||
-         target.GetImages().FindSymbolsWithNameAndType(
-             s_arclite_method_signature, eSymbolTypeCode, sc_list);
+  target.GetImages().FindSymbolsWithNameAndType(s_method_signature,
+                                                eSymbolTypeCode, sc_list);
+  if (sc_list.IsEmpty())
+    target.GetImages().FindSymbolsWithNameAndType(s_arclite_method_signature,
+                                                  eSymbolTypeCode, sc_list);
+  return !sc_list.IsEmpty();
 }
 
 lldb::SearchFilterSP AppleObjCRuntime::CreateExceptionSearchFilter() {

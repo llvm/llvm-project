@@ -3302,7 +3302,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       //        itself in this case.
       return ExprError();
 
-    QualType Pointee = Type->getAs<PointerType>()->getPointeeType();
+    QualType Pointee = Type->castAs<PointerType>()->getPointeeType();
     QualType PointeeElem = Context.getBaseElementType(Pointee);
 
     if (Pointee.getAddressSpace() != LangAS::Default &&
@@ -4034,8 +4034,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 
   case ICK_Complex_Promotion:
   case ICK_Complex_Conversion: {
-    QualType FromEl = From->getType()->getAs<ComplexType>()->getElementType();
-    QualType ToEl = ToType->getAs<ComplexType>()->getElementType();
+    QualType FromEl = From->getType()->castAs<ComplexType>()->getElementType();
+    QualType ToEl = ToType->castAs<ComplexType>()->getElementType();
     CastKind CK;
     if (FromEl->isRealFloatingType()) {
       if (ToEl->isRealFloatingType())

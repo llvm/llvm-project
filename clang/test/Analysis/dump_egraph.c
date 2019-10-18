@@ -18,7 +18,7 @@ int foo() {
   return *x + *y;
 }
 
-// CHECK: \"program_points\": [\l&nbsp;&nbsp;&nbsp;&nbsp;\{ \"kind\": \"Edge\", \"src_id\": 2, \"dst_id\": 1, \"terminator\": null, \"term_kind\": null, \"tag\": null \}\l&nbsp;&nbsp;],\l&nbsp;&nbsp;\"program_state\": null
+// CHECK: \"program_points\": [\l&nbsp;&nbsp;&nbsp;&nbsp;\{ \"kind\": \"Edge\", \"src_id\": 2, \"dst_id\": 1, \"terminator\": null, \"term_kind\": null, \"tag\": null, \"node_id\": 1, \"is_sink\": 0, \"has_report\": 0 \}\l&nbsp;&nbsp;],\l&nbsp;&nbsp;\"program_state\": null
 
 // CHECK: \"program_points\": [\l&nbsp;&nbsp;&nbsp;&nbsp;\{ \"kind\": \"BlockEntrance\", \"block_id\": 1
 
@@ -27,4 +27,4 @@ int foo() {
 
 // CHECK: \"pretty\": \"'\\\\x13'\"
 
-// CHECK: \"has_report\": true
+// CHECK: \"has_report\": 1

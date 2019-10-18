@@ -449,7 +449,7 @@ protected:
 
   /// stackAlignment - The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
-  unsigned stackAlignment = 4;
+  Align stackAlignment = Align(4);
 
   /// CPUString - String name of used CPU.
   std::string CPUString;
@@ -816,7 +816,7 @@ public:
   /// getStackAlignment - Returns the minimum alignment known to hold of the
   /// stack frame on entry to the function and which must be maintained by every
   /// function for this subtarget.
-  unsigned getStackAlignment() const { return stackAlignment; }
+  Align getStackAlignment() const { return stackAlignment; }
 
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
 

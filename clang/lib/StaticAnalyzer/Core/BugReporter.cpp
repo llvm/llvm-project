@@ -2566,7 +2566,8 @@ BugPathInfo *BugPathGetter::getNextBugPath() {
     // Create the equivalent node in the new graph with the same state
     // and location.
     ExplodedNode *NewN = GNew->createUncachedNode(
-        OrigN->getLocation(), OrigN->getState(), OrigN->isSink());
+        OrigN->getLocation(), OrigN->getState(),
+        OrigN->getID(), OrigN->isSink());
 
     // Link up the new node with the previous node.
     if (Succ)

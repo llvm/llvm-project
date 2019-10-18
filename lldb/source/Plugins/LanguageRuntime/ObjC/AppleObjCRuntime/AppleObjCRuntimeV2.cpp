@@ -2640,8 +2640,9 @@ bool AppleObjCRuntimeV2::GetCFBooleanValuesIfNeeded() {
   std::function<lldb::addr_t(ConstString)> get_symbol =
       [this](ConstString sym) -> lldb::addr_t {
     SymbolContextList sc_list;
-    if (GetProcess()->GetTarget().GetImages().FindSymbolsWithNameAndType(
-            sym, lldb::eSymbolTypeData, sc_list) == 1) {
+    GetProcess()->GetTarget().GetImages().FindSymbolsWithNameAndType(
+        sym, lldb::eSymbolTypeData, sc_list);
+    if (sc_list.GetSize() == 1) {
       SymbolContext sc;
       sc_list.GetContextAtIndex(0, sc);
       if (sc.symbol)

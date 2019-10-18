@@ -72,52 +72,13 @@ static DFAInput getDFAInsnInput(const std::vector<unsigned> &InsnClass) {
 
 // --------------------------------------------------------------------
 
-DFAPacketizer::DFAPacketizer(const InstrItineraryData *I,
-                             const DFAStateInput (*SIT)[2], const unsigned *SET,
-                             const unsigned (*RTT)[2],
-                             const unsigned *RTET)
-    : InstrItins(I), DFAStateInputTable(SIT), DFAStateEntryTable(SET),
-      DFAResourceTransitionTable(RTT), DFAResourceTransitionEntryTable(RTET) {
-  // Make sure DFA types are large enough for the number of terms & resources.
-  static_assert((DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) <=
-                    (8 * sizeof(DFAInput)),
-                "(DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) too big for DFAInput");
-  static_assert(
-      (DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) <= (8 * sizeof(DFAStateInput)),
-      "(DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) too big for DFAStateInput");
-  clearResources();
-}
-
-// Read the DFA transition table and update CachedTable.
-//
-// Format of the transition tables:
-// DFAStateInputTable[][2] = pairs of <Input, Transition> for all valid
-//                           transitions
-// DFAStateEntryTable[i] = Index of the first entry in DFAStateInputTable
-//                         for the ith state
-//
-void DFAPacketizer::ReadTable(unsigned int state) {
-  unsigned ThisStateIdx = DFAStateEntryTable[state];
-  unsigned NextStateIdxInTable = DFAStateEntryTable[state + 1];
-  // Early exit in case CachedTable has already contains this
-  // state's transitions.
-  if (CachedTable.count(UnsignPair(state, DFAStateInputTable[ThisStateIdx][0])))
-    return;
-
-  for (unsigned TransitionIdx = ThisStateIdx;
-       TransitionIdx < NextStateIdxInTable; TransitionIdx++) {
-    auto TransitionPair =
-        UnsignPair(state, DFAStateInputTable[TransitionIdx][0]);
-    CachedTable[TransitionPair] = DFAStateInputTable[TransitionIdx][1];
-
-    if (TrackResources) {
-      unsigned I = DFAResourceTransitionEntryTable[TransitionIdx];
-      unsigned E = DFAResourceTransitionEntryTable[TransitionIdx + 1];
-      CachedResourceTransitions[TransitionPair] = makeArrayRef(
-          &DFAResourceTransitionTable[I], &DFAResourceTransitionTable[E]);
-    }
-  }
-}
+// Make sure DFA types are large enough for the number of terms & resources.
+static_assert((DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) <=
+              (8 * sizeof(DFAInput)),
+              "(DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) too big for DFAInput");
+static_assert(
+    (DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) <= (8 * sizeof(DFAStateInput)),
+    "(DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) too big for DFAStateInput");
 
 // Return the DFAInput for an instruction class.
 DFAInput DFAPacketizer::getInsnInput(unsigned InsnClass) {
@@ -143,9 +104,7 @@ DFAInput DFAPacketizer::getInsnInput(const std::vector<unsigned> &InsnClass) {
 bool DFAPacketizer::canReserveResources(const MCInstrDesc *MID) {
   unsigned InsnClass = MID->getSchedClass();
   DFAInput InsnInput = getInsnInput(InsnClass);
-  UnsignPair StateTrans = UnsignPair(CurrentState, InsnInput);
-  ReadTable(CurrentState);
-  return CachedTable.count(StateTrans) != 0;
+  return A.canAdd(InsnInput);
 }
 
 // Reserve the resources occupied by a MCInstrDesc and change the current
@@ -153,20 +112,7 @@ bool DFAPacketizer::canReserveResources(const MCInstrDesc *MID) {
 void DFAPacketizer::reserveResources(const MCInstrDesc *MID) {
   unsigned InsnClass = MID->getSchedClass();
   DFAInput InsnInput = getInsnInput(InsnClass);
-  UnsignPair StateTrans = UnsignPair(CurrentState, InsnInput);
-  ReadTable(CurrentState);
-
-  if (TrackResources) {
-    DenseMap<unsigned, SmallVector<unsigned, 8>> NewResourceStates;
-    for (const auto &KV : CachedResourceTransitions[StateTrans]) {
-      assert(ResourceStates.count(KV[0]));
-      NewResourceStates[KV[1]] = ResourceStates[KV[0]];
-      NewResourceStates[KV[1]].push_back(KV[1]);
-    }
-    ResourceStates = NewResourceStates;
-  }
-  assert(CachedTable.count(StateTrans) != 0);
-  CurrentState = CachedTable[StateTrans];
+  A.add(InsnInput);
 }
 
 // Check if the resources occupied by a machine instruction are available
@@ -184,10 +130,9 @@ void DFAPacketizer::reserveResources(MachineInstr &MI) {
 }
 
 unsigned DFAPacketizer::getUsedResources(unsigned InstIdx) {
-  assert(TrackResources && "getUsedResources requires resource tracking!");
-  // Assert that there is at least one example of a valid bundle format.
-  assert(!ResourceStates.empty() && "Invalid bundle!");
-  SmallVectorImpl<unsigned> &RS = ResourceStates.begin()->second;
+  ArrayRef<NfaPath> NfaPaths = A.getNfaPaths();
+  assert(!NfaPaths.empty() && "Invalid bundle!");
+  const NfaPath &RS = NfaPaths.front();
 
   // RS stores the cumulative resources used up to and including the I'th
   // instruction. The 0th instruction is the base case.

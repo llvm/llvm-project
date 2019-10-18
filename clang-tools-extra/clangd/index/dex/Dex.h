@@ -26,6 +26,7 @@
 #include "Trigram.h"
 #include "index/Index.h"
 #include "index/MemIndex.h"
+#include "index/Relation.h"
 #include "index/SymbolCollector.h"
 
 namespace clang {
@@ -49,8 +50,9 @@ public:
     for (auto &&Ref : Refs)
       this->Refs.try_emplace(Ref.first, Ref.second);
     for (auto &&Rel : Relations)
-      this->Relations[std::make_pair(Rel.Subject, Rel.Predicate)].push_back(
-          Rel.Object);
+      this->Relations[std::make_pair(Rel.Subject,
+                                     static_cast<uint8_t>(Rel.Predicate))]
+          .push_back(Rel.Object);
     buildIndex();
   }
   // Symbols and Refs are owned by BackingData, Index takes ownership.
@@ -106,8 +108,9 @@ private:
   llvm::DenseMap<Token, PostingList> InvertedIndex;
   dex::Corpus Corpus;
   llvm::DenseMap<SymbolID, llvm::ArrayRef<Ref>> Refs;
-  llvm::DenseMap<std::pair<SymbolID, index::SymbolRole>, std::vector<SymbolID>>
-      Relations;
+  static_assert(sizeof(RelationKind) == sizeof(uint8_t),
+                "RelationKind should be of same size as a uint8_t");
+  llvm::DenseMap<std::pair<SymbolID, uint8_t>, std::vector<SymbolID>> Relations;
   std::shared_ptr<void> KeepAlive; // poor man's move-only std::any
   // Size of memory retained by KeepAlive.
   size_t BackingDataSize = 0;

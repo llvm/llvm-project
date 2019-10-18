@@ -75,7 +75,7 @@ struct RefsRequest {
 
 struct RelationsRequest {
   llvm::DenseSet<SymbolID> Subjects;
-  index::SymbolRole Predicate;
+  RelationKind Predicate;
   /// If set, limit the number of relations returned from the index.
   llvm::Optional<uint32_t> Limit;
 };

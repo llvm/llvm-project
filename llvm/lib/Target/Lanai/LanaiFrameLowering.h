@@ -31,7 +31,7 @@ protected:
 public:
   explicit LanaiFrameLowering(const LanaiSubtarget &Subtarget)
       : TargetFrameLowering(StackGrowsDown,
-                            /*StackAlignment=*/8,
+                            /*StackAlignment=*/Align(8),
                             /*LocalAreaOffset=*/0),
         STI(Subtarget) {}
 

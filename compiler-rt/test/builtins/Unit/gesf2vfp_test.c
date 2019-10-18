@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_gesf2vfp
 
 //===-- gesf2vfp_test.c - Test __gesf2vfp ---------------------------------===//
 //

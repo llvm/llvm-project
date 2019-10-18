@@ -2,8 +2,8 @@
 ; REQUIRES: asserts
 
 ; CHECK: Finalizing packet:
-; CHECK-NEXT: * [res:0x8] renamable $r1 = S2_vsplatrb renamable $r0
-; CHECK-NEXT: * [res:0x4] renamable $d1 = S2_vsplatrh killed renamable $r0
+; CHECK-NEXT: * [res:0x4] renamable $r1 = S2_vsplatrb renamable $r0
+; CHECK-NEXT: * [res:0x8] renamable $d1 = S2_vsplatrh killed renamable $r0
 
 target triple = "hexagon"
 

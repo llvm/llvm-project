@@ -41,15 +41,15 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 ; CHECK-LABEL: func16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul w8, w1, w2
-; CHECK-NEXT:    lsl w9, w0, #16
-; CHECK-NEXT:    adds w11, w9, w8, lsl #16
-; CHECK-NEXT:    mov w10, #2147483647
-; CHECK-NEXT:    cmp w11, #0 // =0
-; CHECK-NEXT:    cinv w10, w10, ge
-; CHECK-NEXT:    adds w8, w9, w8, lsl #16
-; CHECK-NEXT:    csel w8, w10, w8, vs
-; CHECK-NEXT:    asr w0, w8, #16
+; CHECK-NEXT:    sxth w8, w0
+; CHECK-NEXT:    mul w9, w1, w2
+; CHECK-NEXT:    mov w10, #32767
+; CHECK-NEXT:    add w8, w8, w9, sxth
+; CHECK-NEXT:    cmp w8, w10
+; CHECK-NEXT:    csel w8, w8, w10, lt
+; CHECK-NEXT:    cmn w8, #8, lsl #12 // =32768
+; CHECK-NEXT:    mov w9, #-32768
+; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret
   %a = mul i16 %y, %z
   %tmp = call i16 @llvm.sadd.sat.i16(i16 %x, i16 %a)
@@ -59,15 +59,15 @@ define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 define i8 @func8(i8 %x, i8 %y, i8 %z) nounwind {
 ; CHECK-LABEL: func8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul w8, w1, w2
-; CHECK-NEXT:    lsl w9, w0, #24
-; CHECK-NEXT:    adds w11, w9, w8, lsl #24
-; CHECK-NEXT:    mov w10, #2147483647
-; CHECK-NEXT:    cmp w11, #0 // =0
-; CHECK-NEXT:    cinv w10, w10, ge
-; CHECK-NEXT:    adds w8, w9, w8, lsl #24
-; CHECK-NEXT:    csel w8, w10, w8, vs
-; CHECK-NEXT:    asr w0, w8, #24
+; CHECK-NEXT:    sxtb w8, w0
+; CHECK-NEXT:    mul w9, w1, w2
+; CHECK-NEXT:    add w8, w8, w9, sxtb
+; CHECK-NEXT:    mov w10, #127
+; CHECK-NEXT:    cmp w8, #127 // =127
+; CHECK-NEXT:    csel w8, w8, w10, lt
+; CHECK-NEXT:    cmn w8, #128 // =128
+; CHECK-NEXT:    mov w9, #-128
+; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret
   %a = mul i8 %y, %z
   %tmp = call i8 @llvm.sadd.sat.i8(i8 %x, i8 %a)
@@ -77,15 +77,16 @@ define i8 @func8(i8 %x, i8 %y, i8 %z) nounwind {
 define i4 @func4(i4 %x, i4 %y, i4 %z) nounwind {
 ; CHECK-LABEL: func4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul w8, w1, w2
-; CHECK-NEXT:    lsl w9, w0, #28
-; CHECK-NEXT:    adds w11, w9, w8, lsl #28
-; CHECK-NEXT:    mov w10, #2147483647
-; CHECK-NEXT:    cmp w11, #0 // =0
-; CHECK-NEXT:    cinv w10, w10, ge
-; CHECK-NEXT:    adds w8, w9, w8, lsl #28
-; CHECK-NEXT:    csel w8, w10, w8, vs
-; CHECK-NEXT:    asr w0, w8, #28
+; CHECK-NEXT:    mul w9, w1, w2
+; CHECK-NEXT:    sbfx w8, w0, #0, #4
+; CHECK-NEXT:    lsl w9, w9, #28
+; CHECK-NEXT:    add w8, w8, w9, asr #28
+; CHECK-NEXT:    mov w10, #7
+; CHECK-NEXT:    cmp w8, #7 // =7
+; CHECK-NEXT:    csel w8, w8, w10, lt
+; CHECK-NEXT:    cmn w8, #8 // =8
+; CHECK-NEXT:    mov w9, #-8
+; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret
   %a = mul i4 %y, %z
   %tmp = call i4 @llvm.sadd.sat.i4(i4 %x, i4 %a)

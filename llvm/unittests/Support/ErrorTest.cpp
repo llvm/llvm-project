@@ -390,7 +390,8 @@ TEST(Error, FailureToHandle) {
   };
 
   EXPECT_DEATH(FailToHandle(),
-               "Failure value returned from cantFail wrapped call")
+               "Failure value returned from cantFail wrapped call\n"
+               "CustomError \\{7\\}")
       << "Unhandled Error in handleAllErrors call did not cause an "
          "abort()";
 }
@@ -409,7 +410,8 @@ TEST(Error, FailureFromHandler) {
   };
 
   EXPECT_DEATH(ReturnErrorFromHandler(),
-               "Failure value returned from cantFail wrapped call")
+               "Failure value returned from cantFail wrapped call\n"
+               "CustomError \\{7\\}")
       << " Error returned from handler in handleAllErrors call did not "
          "cause abort()";
 }
@@ -510,11 +512,12 @@ TEST(Error, CantFailSuccess) {
 // Test that cantFail results in a crash if you pass it a failure value.
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
 TEST(Error, CantFailDeath) {
-  EXPECT_DEATH(
-      cantFail(make_error<StringError>("foo", inconvertibleErrorCode()),
-               "Cantfail call failed"),
-      "Cantfail call failed")
-    << "cantFail(Error) did not cause an abort for failure value";
+  EXPECT_DEATH(cantFail(make_error<StringError>("Original error message",
+                                                inconvertibleErrorCode()),
+                        "Cantfail call failed"),
+               "Cantfail call failed\n"
+               "Original error message")
+      << "cantFail(Error) did not cause an abort for failure value";
 
   EXPECT_DEATH(
       {

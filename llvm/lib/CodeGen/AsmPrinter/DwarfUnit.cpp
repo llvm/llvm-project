@@ -1714,15 +1714,6 @@ void DwarfUnit::addRnglistsBase() {
                   TLOF.getDwarfRnglistsSection()->getBeginSymbol());
 }
 
-void DwarfUnit::addLoclistsBase() {
-  assert(DD->getDwarfVersion() >= 5 &&
-         "DW_AT_loclists_base requires DWARF version 5 or later");
-  const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
-  addSectionLabel(getUnitDie(), dwarf::DW_AT_loclists_base,
-                  DU->getLoclistsTableBaseSym(),
-                  TLOF.getDwarfLoclistsSection()->getBeginSymbol());
-}
-
 void DwarfTypeUnit::finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) {
   addFlag(D, dwarf::DW_AT_declaration);
   StringRef Name = CTy->getName();

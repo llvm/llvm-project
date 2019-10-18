@@ -270,7 +270,7 @@ multiclass FLAT_Atomic_Pseudo<
   SDPatternOperator atomic = null_frag,
   ValueType data_vt = vt,
   RegisterClass data_rc = vdst_rc,
-  bit isFP = getIsFP<data_vt>.ret> {
+  bit isFP = isFloatType<data_vt>.ret> {
   def "" : FLAT_AtomicNoRet_Pseudo <opName,
     (outs),
     (ins VReg_64:$vaddr, data_rc:$vdata, flat_offset:$offset, SLC:$slc),
@@ -300,7 +300,7 @@ multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
   SDPatternOperator atomic = null_frag,
   ValueType data_vt = vt,
   RegisterClass data_rc = vdst_rc,
-  bit isFP = getIsFP<data_vt>.ret> {
+  bit isFP = isFloatType<data_vt>.ret> {
 
   def "" : FLAT_AtomicNoRet_Pseudo <opName,
     (outs),
@@ -333,7 +333,7 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
   SDPatternOperator atomic = null_frag,
   ValueType data_vt = vt,
   RegisterClass data_rc = vdst_rc,
-  bit isFP = getIsFP<data_vt>.ret> {
+  bit isFP = isFloatType<data_vt>.ret> {
 
   def _RTN : FLAT_AtomicRet_Pseudo <opName,
     (outs vdst_rc:$vdst),

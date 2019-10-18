@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_truncsfhf2
 
 //===--------------- truncsfhf2_test.c - Test __truncsfhf2 ----------------===//
 //

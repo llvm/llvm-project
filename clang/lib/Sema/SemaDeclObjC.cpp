@@ -586,7 +586,7 @@ ActOnSuperClassOfClassInterface(Scope *S,
           dyn_cast_or_null<TypedefNameDecl>(PrevDecl)) {
         QualType T = TDecl->getUnderlyingType();
         if (T->isObjCObjectType()) {
-          if (NamedDecl *IDecl = T->getAs<ObjCObjectType>()->getInterface()) {
+          if (NamedDecl *IDecl = T->castAs<ObjCObjectType>()->getInterface()) {
             SuperClassDecl = dyn_cast<ObjCInterfaceDecl>(IDecl);
             SuperClassType = Context.getTypeDeclType(TDecl);
 
@@ -1151,7 +1151,7 @@ Decl *Sema::ActOnCompatibilityAlias(SourceLocation AtLoc,
         dyn_cast_or_null<TypedefNameDecl>(CDeclU)) {
     QualType T = TDecl->getUnderlyingType();
     if (T->isObjCObjectType()) {
-      if (NamedDecl *IDecl = T->getAs<ObjCObjectType>()->getInterface()) {
+      if (NamedDecl *IDecl = T->castAs<ObjCObjectType>()->getInterface()) {
         ClassName = IDecl->getIdentifier();
         CDeclU = LookupSingleName(TUScope, ClassName, ClassLocation,
                                   LookupOrdinaryName,
@@ -4876,7 +4876,7 @@ VarDecl *Sema::BuildObjCExceptionDecl(TypeSourceInfo *TInfo, QualType T,
   } else if (!T->isObjCObjectPointerType()) {
     Invalid = true;
     Diag(IdLoc, diag::err_catch_param_not_objc_type);
-  } else if (!T->getAs<ObjCObjectPointerType>()->getInterfaceType()) {
+  } else if (!T->castAs<ObjCObjectPointerType>()->getInterfaceType()) {
     Invalid = true;
     Diag(IdLoc, diag::err_catch_param_not_objc_type);
   }

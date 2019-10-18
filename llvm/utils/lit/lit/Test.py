@@ -231,18 +231,6 @@ class Test:
 
         self.result = result
 
-        # Apply the XFAIL handling to resolve the result exit code.
-        try:
-            if self.isExpectedToFail():
-                if self.result.code == PASS:
-                    self.result.code = XPASS
-                elif self.result.code == FAIL:
-                    self.result.code = XFAIL
-        except ValueError as e:
-            # Syntax error in an XFAIL line.
-            self.result.code = UNRESOLVED
-            self.result.output = str(e)
-        
     def getFullName(self):
         return self.suite.config.name + ' :: ' + '/'.join(self.path_in_suite)
 

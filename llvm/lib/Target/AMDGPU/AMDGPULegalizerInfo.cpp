@@ -287,11 +287,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .widenScalarToNextPow2(0)
     .scalarize(0);
 
-  getActionDefinitionsBuilder({G_UADDO, G_SADDO, G_USUBO, G_SSUBO,
+  getActionDefinitionsBuilder({G_UADDO, G_USUBO,
                                G_UADDE, G_SADDE, G_USUBE, G_SSUBE})
     .legalFor({{S32, S1}})
     .clampScalar(0, S32, S32)
     .scalarize(0); // TODO: Implement.
+
+  getActionDefinitionsBuilder({G_SADDO, G_SSUBO})
+    .lower();
 
   getActionDefinitionsBuilder(G_BITCAST)
     // Don't worry about the size constraint.

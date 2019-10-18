@@ -1720,13 +1720,13 @@ void printSectionHeaders(const ObjectFile *Obj) {
       Type += Type.empty() ? "BSS" : " BSS";
 
     if (HasLMAColumn)
-      outs() << format("%3d %-*s %08" PRIx64 " ", Idx, NameWidth,
+      outs() << format("%3" PRIu64 " %-*s %08" PRIx64 " ", Idx, NameWidth,
                        Name.str().c_str(), Size)
              << format_hex_no_prefix(VMA, AddressWidth) << " "
              << format_hex_no_prefix(getELFSectionLMA(Section), AddressWidth)
              << " " << Type << "\n";
     else
-      outs() << format("%3d %-*s %08" PRIx64 " ", Idx, NameWidth,
+      outs() << format("%3" PRIu64 " %-*s %08" PRIx64 " ", Idx, NameWidth,
                        Name.str().c_str(), Size)
              << format_hex_no_prefix(VMA, AddressWidth) << " " << Type << "\n";
   }

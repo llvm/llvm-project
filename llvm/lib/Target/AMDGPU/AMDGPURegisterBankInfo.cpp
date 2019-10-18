@@ -2276,9 +2276,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_LSHR:
   case AMDGPU::G_ASHR:
   case AMDGPU::G_UADDO:
-  case AMDGPU::G_SADDO:
   case AMDGPU::G_USUBO:
-  case AMDGPU::G_SSUBO:
   case AMDGPU::G_UADDE:
   case AMDGPU::G_SADDE:
   case AMDGPU::G_USUBE:

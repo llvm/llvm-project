@@ -866,9 +866,7 @@ public:
   // on the pointer value itself may rely on the alignment / known low bits of
   // the pointer. Set this to something above the minimum to avoid needing
   // dynamic realignment in common cases.
-  unsigned getStackAlignment() const {
-    return 16;
-  }
+  Align getStackAlignment() const { return Align(16); }
 
   bool enableMachineScheduler() const override {
     return true;
@@ -1257,9 +1255,7 @@ public:
     return Gen;
   }
 
-  unsigned getStackAlignment() const {
-    return 4;
-  }
+  Align getStackAlignment() const { return Align(4); }
 
   R600Subtarget &initializeSubtargetDependencies(const Triple &TT,
                                                  StringRef GPU, StringRef FS);

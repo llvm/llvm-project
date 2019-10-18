@@ -283,10 +283,6 @@ ExplodedNode * const *ExplodedNode::NodeGroup::end() const {
   return Storage.getAddrOfPtr1() + 1;
 }
 
-int64_t ExplodedNode::getID(ExplodedGraph *G) const {
-  return G->getAllocator().identifyKnownAlignedObject<ExplodedNode>(this);
-}
-
 bool ExplodedNode::isTrivial() const {
   return pred_size() == 1 && succ_size() == 1 &&
          getFirstPred()->getState()->getID() == getState()->getID() &&
@@ -417,14 +413,14 @@ ExplodedNode *ExplodedGraph::getNode(const ProgramPoint &L,
       V = (NodeTy*) getAllocator().Allocate<NodeTy>();
     }
 
-    new (V) NodeTy(L, State, IsSink);
+    ++NumNodes;
+    new (V) NodeTy(L, State, NumNodes, IsSink);
 
     if (ReclaimNodeInterval)
       ChangedNodes.push_back(V);
 
     // Insert the node into the node set and return it.
     Nodes.InsertNode(V, InsertPos);
-    ++NumNodes;
 
     if (IsNew) *IsNew = true;
   }
@@ -436,9 +432,10 @@ ExplodedNode *ExplodedGraph::getNode(const ProgramPoint &L,
 
 ExplodedNode *ExplodedGraph::createUncachedNode(const ProgramPoint &L,
                                                 ProgramStateRef State,
+                                                int64_t Id,
                                                 bool IsSink) {
   NodeTy *V = (NodeTy *) getAllocator().Allocate<NodeTy>();
-  new (V) NodeTy(L, State, IsSink);
+  new (V) NodeTy(L, State, Id, IsSink);
   return V;
 }
 
@@ -498,7 +495,8 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
 
     // Create the corresponding node in the new graph and record the mapping
     // from the old node to the new node.
-    ExplodedNode *NewN = G->createUncachedNode(N->getLocation(), N->State, N->isSink());
+    ExplodedNode *NewN = G->createUncachedNode(N->getLocation(), N->State,
+                                               N->getID(), N->isSink());
     Pass2[N] = NewN;
 
     // Also record the reverse mapping from the new node to the old node.

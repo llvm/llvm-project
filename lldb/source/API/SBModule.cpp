@@ -282,8 +282,7 @@ SBSymbolContextList SBModule::FindCompileUnits(const SBFileSpec &sb_file_spec) {
   SBSymbolContextList sb_sc_list;
   const ModuleSP module_sp(GetSP());
   if (sb_file_spec.IsValid() && module_sp) {
-    const bool append = true;
-    module_sp->FindCompileUnits(*sb_file_spec, append, *sb_sc_list);
+    module_sp->FindCompileUnits(*sb_file_spec, *sb_sc_list);
   }
   return LLDB_RECORD_RESULT(sb_sc_list);
 }
@@ -342,8 +341,9 @@ lldb::SBSymbolContextList SBModule::FindSymbols(const char *name,
     Symtab *symtab = GetUnifiedSymbolTable(module_sp);
     if (symtab) {
       std::vector<uint32_t> matching_symbol_indexes;
-      const size_t num_matches = symtab->FindAllSymbolsWithNameAndType(
-          ConstString(name), symbol_type, matching_symbol_indexes);
+      symtab->FindAllSymbolsWithNameAndType(ConstString(name), symbol_type,
+                                            matching_symbol_indexes);
+      const size_t num_matches = matching_symbol_indexes.size();
       if (num_matches) {
         SymbolContext sc;
         sc.module_sp = module_sp;
@@ -398,12 +398,11 @@ lldb::SBSymbolContextList SBModule::FindFunctions(const char *name,
   lldb::SBSymbolContextList sb_sc_list;
   ModuleSP module_sp(GetSP());
   if (name && module_sp) {
-    const bool append = true;
     const bool symbols_ok = true;
     const bool inlines_ok = true;
     FunctionNameType type = static_cast<FunctionNameType>(name_type_mask);
     module_sp->FindFunctions(ConstString(name), nullptr, type, symbols_ok,
-                             inlines_ok, append, *sb_sc_list);
+                             inlines_ok, *sb_sc_list);
   }
   return LLDB_RECORD_RESULT(sb_sc_list);
 }
@@ -418,9 +417,9 @@ SBValueList SBModule::FindGlobalVariables(SBTarget &target, const char *name,
   ModuleSP module_sp(GetSP());
   if (name && module_sp) {
     VariableList variable_list;
-    const uint32_t match_count = module_sp->FindGlobalVariables(
-        ConstString(name), nullptr, max_matches, variable_list);
-
+    module_sp->FindGlobalVariables(ConstString(name), nullptr, max_matches,
+                                   variable_list);
+    const uint32_t match_count = variable_list.GetSize();
     if (match_count > 0) {
       for (uint32_t i = 0; i < match_count; ++i) {
         lldb::ValueObjectSP valobj_sp;

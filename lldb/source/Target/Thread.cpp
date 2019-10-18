@@ -2061,6 +2061,7 @@ Unwind *Thread::GetUnwinder() {
     case llvm::Triple::ppc64le:
     case llvm::Triple::systemz:
     case llvm::Triple::hexagon:
+    case llvm::Triple::arc:
       m_unwinder_up.reset(new UnwindLLDB(*this));
       break;
 

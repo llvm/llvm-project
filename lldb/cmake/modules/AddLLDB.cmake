@@ -148,7 +148,7 @@ function(add_lldb_executable name)
   cmake_parse_arguments(ARG
     "GENERATE_INSTALL"
     "INSTALL_PREFIX;ENTITLEMENTS"
-    "LINK_LIBS;CLANG_LIBS;LINK_COMPONENTS"
+    "LINK_LIBS;CLANG_LIBS;LINK_COMPONENTS;BUILD_RPATH;INSTALL_RPATH"
     ${ARGN}
     )
 
@@ -175,13 +175,26 @@ function(add_lldb_executable name)
   endif()
   set_target_properties(${name} PROPERTIES FOLDER "lldb executables")
 
+  if (ARG_BUILD_RPATH)
+    set_target_properties(${name} PROPERTIES BUILD_RPATH "${ARG_BUILD_RPATH}")
+  endif()
+
+  if (ARG_INSTALL_RPATH)
+    set_target_properties(${name} PROPERTIES
+      BUILD_WITH_INSTALL_RPATH OFF
+      INSTALL_RPATH "${ARG_INSTALL_RPATH}")
+  endif()
+
   if(ARG_GENERATE_INSTALL)
     set(install_dest bin)
     if(ARG_INSTALL_PREFIX)
       set(install_dest ${ARG_INSTALL_PREFIX})
     endif()
     install(TARGETS ${name} COMPONENT ${name}
-            RUNTIME DESTINATION ${install_dest})
+            RUNTIME DESTINATION ${install_dest}
+            LIBRARY DESTINATION ${install_dest}
+            BUNDLE DESTINATION ${install_dest}
+            FRAMEWORK DESTINATION ${install_dest})
     if (NOT CMAKE_CONFIGURATION_TYPES)
       add_llvm_install_targets(install-${name}
                                DEPENDS ${name}

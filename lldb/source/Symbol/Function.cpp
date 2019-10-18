@@ -149,8 +149,8 @@ void CallEdge::ParseSymbolFileAndResolve(ModuleList &images) {
   auto resolve_lazy_callee = [&]() -> Function * {
     ConstString callee_name{lazy_callee.symbol_name};
     SymbolContextList sc_list;
-    size_t num_matches =
-        images.FindFunctionSymbols(callee_name, eFunctionNameTypeAuto, sc_list);
+    images.FindFunctionSymbols(callee_name, eFunctionNameTypeAuto, sc_list);
+    size_t num_matches = sc_list.GetSize();
     if (num_matches == 0 || !sc_list[0].symbol) {
       LLDB_LOG(log, "CallEdge: Found no symbols for {0}, cannot resolve it",
                callee_name);

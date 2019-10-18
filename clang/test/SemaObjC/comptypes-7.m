@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -pedantic %s
 
 #define nil (void *)0;
-#define Nil (void *)0;
 
 extern void foo();
 
@@ -17,7 +16,7 @@ int main()
   id obj = nil;
   id <MyProtocol> obj_p = nil;
   MyClass *obj_c = nil;
-  Class obj_C = Nil;
+  Class obj_C = nil;
   
   int i = 0;
   int *j = nil;
@@ -66,8 +65,8 @@ int main()
   if (obj_C == j) foo() ; // expected-warning {{comparison of distinct pointer types ('Class' and 'int *')}}
   if (j == obj_C) foo() ; // expected-warning {{comparison of distinct pointer types ('int *' and 'Class')}}
 
-  Class bar1 = Nil;
-  Class <MyProtocol> bar = Nil;
+  Class bar1 = nil;
+  Class <MyProtocol> bar = nil;
   bar = bar1;
   bar1 = bar;
 

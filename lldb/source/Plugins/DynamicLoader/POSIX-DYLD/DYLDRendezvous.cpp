@@ -558,9 +558,10 @@ bool DYLDRendezvous::FindMetadata(const char *name, PThreadField field,
   Target &target = m_process->GetTarget();
 
   SymbolContextList list;
-  if (!target.GetImages().FindSymbolsWithNameAndType(ConstString(name),
-                                                     eSymbolTypeAny, list))
-    return false;
+  target.GetImages().FindSymbolsWithNameAndType(ConstString(name),
+                                                eSymbolTypeAny, list);
+  if (list.IsEmpty())
+  return false;
 
   Address address = list[0].symbol->GetAddress();
   addr_t addr = address.GetLoadAddress(&target);

@@ -447,9 +447,8 @@ Searcher::CallbackReturn CommandCompletions::SymbolCompleter::SearchCallback(
     SymbolContextList sc_list;
     const bool include_symbols = true;
     const bool include_inlines = true;
-    const bool append = true;
     context.module_sp->FindFunctions(m_regex, include_symbols, include_inlines,
-                                     append, sc_list);
+                                     sc_list);
 
     SymbolContext sc;
     // Now add the functions & symbols to the list - only add if unique:

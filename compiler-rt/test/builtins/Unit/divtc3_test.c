@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -lm -o %t && %run %t
+// REQUIRES: librt_has_divtc3
 //
 // 32-bit: Bug 42493, 64-bit: Bug 42496
 // XFAIL: sparc
