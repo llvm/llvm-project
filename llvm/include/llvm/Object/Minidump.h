@@ -81,6 +81,15 @@ public:
     return getListStream<minidump::Thread>(minidump::StreamType::ThreadList);
   }
 
+  /// Returns the contents of the Exception stream.  An error is returned if the
+  /// file does not contain this stream, or the stream is smaller than the size
+  /// of the ExceptionStream structure.  The internal consistency of the stream
+  /// is not checked in any way.
+  Expected<const minidump::ExceptionStream &> getExceptionStream() const {
+    return getStream<minidump::ExceptionStream>(
+        minidump::StreamType::Exception);
+  }
+
   /// Returns the list of descriptors embedded in the MemoryList stream. The
   /// descriptors provide the content of interesting regions of memory at the
   /// time the minidump was taken. An error is returned if the file does not
