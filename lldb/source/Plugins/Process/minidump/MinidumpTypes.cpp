@@ -57,17 +57,6 @@ LinuxProcStatus::Parse(llvm::ArrayRef<uint8_t> &data) {
 
 lldb::pid_t LinuxProcStatus::GetPid() const { return pid; }
 
-// Exception stuff
-const MinidumpExceptionStream *
-MinidumpExceptionStream::Parse(llvm::ArrayRef<uint8_t> &data) {
-  const MinidumpExceptionStream *exception_stream = nullptr;
-  Status error = consumeObject(data, exception_stream);
-  if (error.Fail())
-    return nullptr;
-
-  return exception_stream;
-}
-
 std::pair<llvm::ArrayRef<MinidumpMemoryDescriptor64>, uint64_t>
 MinidumpMemoryDescriptor64::ParseMemory64List(llvm::ArrayRef<uint8_t> &data) {
   const llvm::support::ulittle64_t *mem_ranges_count;
