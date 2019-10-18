@@ -26,6 +26,7 @@ namespace MinidumpYAML {
 /// from Types to Kinds is fixed and given by the static getKind function.
 struct Stream {
   enum class StreamKind {
+    Exception,
     MemoryInfoList,
     MemoryList,
     ModuleList,
@@ -102,6 +103,25 @@ struct ParsedMemoryDescriptor {
 using ModuleListStream = detail::ListStream<detail::ParsedModule>;
 using ThreadListStream = detail::ListStream<detail::ParsedThread>;
 using MemoryListStream = detail::ListStream<detail::ParsedMemoryDescriptor>;
+
+/// ExceptionStream minidump stream.
+struct ExceptionStream : public Stream {
+  minidump::ExceptionStream MDExceptionStream;
+  yaml::BinaryRef ThreadContext;
+
+  ExceptionStream()
+      : Stream(StreamKind::Exception, minidump::StreamType::Exception),
+        MDExceptionStream({}) {}
+
+  explicit ExceptionStream(const minidump::ExceptionStream &MDExceptionStream,
+                           ArrayRef<uint8_t> ThreadContext)
+      : Stream(StreamKind::Exception, minidump::StreamType::Exception),
+        MDExceptionStream(MDExceptionStream), ThreadContext(ThreadContext) {}
+
+  static bool classof(const Stream *S) {
+    return S->Kind == StreamKind::Exception;
+  }
+};
 
 /// A structure containing the list of MemoryInfo entries comprising a
 /// MemoryInfoList stream.
@@ -239,6 +259,7 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::minidump::StreamType)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::minidump::CPUInfo::ArmInfo)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::minidump::CPUInfo::OtherInfo)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::minidump::CPUInfo::X86Info)
+LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::minidump::Exception)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::minidump::MemoryInfo)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(llvm::minidump::VSFixedFileInfo)
 
