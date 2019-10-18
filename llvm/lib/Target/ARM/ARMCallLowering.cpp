@@ -90,6 +90,8 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
                        MachineInstrBuilder &MIB, CCAssignFn *AssignFn)
       : ValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
 
+  bool isIncomingArgumentHandler() const override { return false; }
+
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
     assert((Size == 1 || Size == 2 || Size == 4 || Size == 8) &&
