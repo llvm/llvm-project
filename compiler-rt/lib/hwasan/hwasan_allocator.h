@@ -13,7 +13,6 @@
 #ifndef HWASAN_ALLOCATOR_H
 #define HWASAN_ALLOCATOR_H
 
-#include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
@@ -24,11 +23,6 @@
 
 #if !defined(__aarch64__) && !defined(__x86_64__)
 #error Unsupported platform
-#endif
-
-#if HWASAN_WITH_INTERCEPTORS
-DECLARE_REAL(void *, realloc, void *ptr, uptr size)
-DECLARE_REAL(void, free, void *ptr)
 #endif
 
 namespace __hwasan {
