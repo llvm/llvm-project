@@ -79,17 +79,17 @@ class Run(object):
         if self.hit_max_failures:
             return
 
-        (test_index, test_with_result) = pool_result
+        (test_index, result) = pool_result
+        test = self.tests[test_index]
         # Update the parent process copy of the test. This includes the result,
         # XFAILS, REQUIRES, and UNSUPPORTED statuses.
-        assert self.tests[test_index].file_path == test_with_result.file_path, \
-                "parent and child disagree on test path"
-        self.tests[test_index] = test_with_result
-        self.progress_callback(test_with_result)
+        test.setResult(result)
+
+        self.progress_callback(test)
 
         # If we've finished all the tests or too many tests have failed, notify
         # the main thread that we've stopped testing.
-        self.failure_count += (test_with_result.result.code == lit.Test.FAIL)
+        self.failure_count += (result.code == lit.Test.FAIL)
         if self.lit_config.maxFailures and \
                 self.failure_count == self.lit_config.maxFailures:
             self.hit_max_failures = True
@@ -101,8 +101,8 @@ class SerialRun(Run):
     def _execute(self, deadline):
         # TODO(yln): ignores deadline
         for test_index, test in enumerate(self.tests):
-            lit.worker._execute_test(test, self.lit_config)
-            self._consume_test_result((test_index, test))
+            result = lit.worker._execute_test(test, self.lit_config)
+            self._consume_test_result((test_index, result))
             if self.hit_max_failures:
                 break
 
