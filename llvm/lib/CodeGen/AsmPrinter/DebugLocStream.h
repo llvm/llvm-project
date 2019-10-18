@@ -49,6 +49,7 @@ private:
   SmallVector<Entry, 32> Entries;
   SmallString<256> DWARFBytes;
   std::vector<std::string> Comments;
+  MCSymbol *Sym;
 
   /// Only verbose textual output needs comments.  This will be set to
   /// true for that case, and false otherwise.
@@ -59,6 +60,12 @@ public:
   size_t getNumLists() const { return Lists.size(); }
   const List &getList(size_t LI) const { return Lists[LI]; }
   ArrayRef<List> getLists() const { return Lists; }
+  MCSymbol *getSym() const {
+    return Sym;
+  }
+  void setSym(MCSymbol *Sym) {
+    this->Sym = Sym;
+  }
 
   class ListBuilder;
   class EntryBuilder;
