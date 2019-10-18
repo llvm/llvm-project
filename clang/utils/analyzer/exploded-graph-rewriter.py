@@ -73,6 +73,8 @@ class ProgramPoint(object):
         elif self.kind == 'Statement':
             logging.debug(json_pp)
             self.stmt_kind = json_pp['stmt_kind']
+            self.cast_kind = json_pp['cast_kind'] \
+                if 'cast_kind' in json_pp else None
             self.stmt_point_kind = json_pp['stmt_point_kind']
             self.stmt_id = json_pp['stmt_id']
             self.pointer = json_pp['pointer']
@@ -497,7 +499,9 @@ class DotDumpVisitor(object):
                        '<td align="left"><i>S%s</i></td>'
                        '<td align="left"><font color="%s">%s</font></td>'
                        '<td align="left">%s</td></tr>'
-                       % (self._make_sloc(p.loc), color, p.stmt_kind,
+                       % (self._make_sloc(p.loc), color,
+                          '%s (%s)' % (p.stmt_kind, p.cast_kind)
+                          if p.cast_kind is not None else p.stmt_kind,
                           p.stmt_id, stmt_color, p.stmt_point_kind,
                           self._short_pretty(p.pretty)
                           if not skip_pretty else ''))
