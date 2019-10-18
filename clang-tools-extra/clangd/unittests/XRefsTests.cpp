@@ -2284,7 +2284,8 @@ TEST(GetNonLocalDeclRefs, All) {
       if (const auto *ND = llvm::dyn_cast<NamedDecl>(D))
         Names.push_back(ND->getQualifiedNameAsString());
     }
-    EXPECT_THAT(Names, UnorderedElementsAreArray(C.ExpectedDecls));
+    EXPECT_THAT(Names, UnorderedElementsAreArray(C.ExpectedDecls))
+        << File.code();
   }
 }
 

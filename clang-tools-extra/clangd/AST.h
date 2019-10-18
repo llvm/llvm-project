@@ -104,6 +104,12 @@ bool isImplicitTemplateInstantiation(const NamedDecl *D);
 ///   explicit specialization.
 bool isExplicitTemplateSpecialization(const NamedDecl *D);
 
+/// Returns a nested name specifier loc of \p ND if it was present in the
+/// source, e.g.
+///     void ns::something::foo() -> returns 'ns::something'
+///     void foo() -> returns null
+NestedNameSpecifierLoc getQualifierLoc(const NamedDecl &ND);
+
 } // namespace clangd
 } // namespace clang
 
