@@ -389,9 +389,12 @@ class CXXRecordDecl : public RecordDecl {
     /// The number of explicit captures in this lambda.
     unsigned NumExplicitCaptures : 13;
 
+    /// Has known `internal` linkage.
+    unsigned HasKnownInternalLinkage : 1;
+
     /// The number used to indicate this lambda expression for name
     /// mangling in the Itanium C++ ABI.
-    unsigned ManglingNumber = 0;
+    unsigned ManglingNumber : 31;
 
     /// The declaration that provides context for this lambda, if the
     /// actual DeclContext does not suffice. This is used for lambdas that
@@ -406,12 +409,12 @@ class CXXRecordDecl : public RecordDecl {
     /// The type of the call method.
     TypeSourceInfo *MethodTyInfo;
 
-    LambdaDefinitionData(CXXRecordDecl *D, TypeSourceInfo *Info,
-                         bool Dependent, bool IsGeneric,
-                         LambdaCaptureDefault CaptureDefault)
-      : DefinitionData(D), Dependent(Dependent), IsGenericLambda(IsGeneric),
-        CaptureDefault(CaptureDefault), NumCaptures(0), NumExplicitCaptures(0),
-        MethodTyInfo(Info) {
+    LambdaDefinitionData(CXXRecordDecl *D, TypeSourceInfo *Info, bool Dependent,
+                         bool IsGeneric, LambdaCaptureDefault CaptureDefault)
+        : DefinitionData(D), Dependent(Dependent), IsGenericLambda(IsGeneric),
+          CaptureDefault(CaptureDefault), NumCaptures(0),
+          NumExplicitCaptures(0), HasKnownInternalLinkage(0), ManglingNumber(0),
+          MethodTyInfo(Info) {
       IsLambda = true;
 
       // C++1z [expr.prim.lambda]p4:
@@ -1705,6 +1708,13 @@ public:
     return getLambdaData().ManglingNumber;
   }
 
+  /// The lambda is known to has internal linkage no matter whether it has name
+  /// mangling number.
+  bool hasKnownLambdaInternalLinkage() const {
+    assert(isLambda() && "Not a lambda closure type!");
+    return getLambdaData().HasKnownInternalLinkage;
+  }
+
   /// Retrieve the declaration that provides additional context for a
   /// lambda, when the normal declaration context is not specific enough.
   ///
@@ -1718,9 +1728,12 @@ public:
 
   /// Set the mangling number and context declaration for a lambda
   /// class.
-  void setLambdaMangling(unsigned ManglingNumber, Decl *ContextDecl) {
+  void setLambdaMangling(unsigned ManglingNumber, Decl *ContextDecl,
+                         bool HasKnownInternalLinkage = false) {
+    assert(isLambda() && "Not a lambda closure type!");
     getLambdaData().ManglingNumber = ManglingNumber;
     getLambdaData().ContextDecl = ContextDecl;
+    getLambdaData().HasKnownInternalLinkage = HasKnownInternalLinkage;
   }
 
   /// Returns the inheritance model used for this record.
