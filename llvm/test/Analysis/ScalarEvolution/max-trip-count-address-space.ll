@@ -65,4 +65,4 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 
 ; CHECK: Determining loop execution counts for: @test
 ; CHECK-NEXT: backedge-taken count is
-; CHECK-NEXT: max backedge-taken count is -1
+; CHECK-NEXT: max backedge-taken count is 4294967294
