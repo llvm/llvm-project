@@ -34,6 +34,7 @@ using namespace lldb_private::python;
 using llvm::cantFail;
 using llvm::Error;
 using llvm::Expected;
+using llvm::Twine;
 
 template <> Expected<bool> python::As<bool>(Expected<PythonObject> &&obj) {
   if (!obj)
@@ -278,7 +279,7 @@ PythonByteArray::PythonByteArray(llvm::ArrayRef<uint8_t> bytes)
 
 PythonByteArray::PythonByteArray(const uint8_t *bytes, size_t length) {
   const char *str = reinterpret_cast<const char *>(bytes);
-  Reset(PyRefType::Owned, PyByteArray_FromStringAndSize(str, length));
+  *this = Take<PythonByteArray>(PyByteArray_FromStringAndSize(str, length));
 }
 
 bool PythonByteArray::Check(PyObject *py_obj) {
@@ -522,11 +523,11 @@ StructuredData::BooleanSP PythonBoolean::CreateStructuredBoolean() const {
 
 PythonList::PythonList(PyInitialValue value) {
   if (value == PyInitialValue::Empty)
-    Reset(PyRefType::Owned, PyList_New(0));
+    *this = Take<PythonList>(PyList_New(0));
 }
 
 PythonList::PythonList(int list_size) {
-  Reset(PyRefType::Owned, PyList_New(list_size));
+  *this = Take<PythonList>(PyList_New(list_size));
 }
 
 bool PythonList::Check(PyObject *py_obj) {
@@ -578,11 +579,11 @@ StructuredData::ArraySP PythonList::CreateStructuredArray() const {
 
 PythonTuple::PythonTuple(PyInitialValue value) {
   if (value == PyInitialValue::Empty)
-    Reset(PyRefType::Owned, PyTuple_New(0));
+    *this = Take<PythonTuple>(PyTuple_New(0));
 }
 
 PythonTuple::PythonTuple(int tuple_size) {
-  Reset(PyRefType::Owned, PyTuple_New(tuple_size));
+  *this = Take<PythonTuple>(PyTuple_New(tuple_size));
 }
 
 PythonTuple::PythonTuple(std::initializer_list<PythonObject> objects) {
@@ -649,7 +650,7 @@ StructuredData::ArraySP PythonTuple::CreateStructuredArray() const {
 
 PythonDictionary::PythonDictionary(PyInitialValue value) {
   if (value == PyInitialValue::Empty)
-    Reset(PyRefType::Owned, PyDict_New());
+    *this = Take<PythonDictionary>(PyDict_New());
 }
 
 bool PythonDictionary::Check(PyObject *py_obj) {
@@ -696,10 +697,10 @@ PythonDictionary::GetItem(const PythonObject &key) const {
   return Retain<PythonObject>(o);
 }
 
-Expected<PythonObject> PythonDictionary::GetItem(const char *key) const {
+Expected<PythonObject> PythonDictionary::GetItem(const Twine &key) const {
   if (!IsValid())
     return nullDeref();
-  PyObject *o = PyDict_GetItemString(m_py_obj, key);
+  PyObject *o = PyDict_GetItemString(m_py_obj, NullTerminated(key));
   if (PyErr_Occurred())
     return exception();
   if (!o)
@@ -717,11 +718,11 @@ Error PythonDictionary::SetItem(const PythonObject &key,
   return Error::success();
 }
 
-Error PythonDictionary::SetItem(const char *key,
+Error PythonDictionary::SetItem(const Twine &key,
                                 const PythonObject &value) const {
   if (!IsValid() || !value.IsValid())
     return nullDeref();
-  int r = PyDict_SetItemString(m_py_obj, key, value.get());
+  int r = PyDict_SetItemString(m_py_obj, NullTerminated(key), value.get());
   if (r < 0)
     return exception();
   return Error::success();
@@ -763,20 +764,20 @@ PythonModule PythonModule::AddModule(llvm::StringRef module) {
   return PythonModule(PyRefType::Borrowed, PyImport_AddModule(str.c_str()));
 }
 
-Expected<PythonModule> PythonModule::Import(const char *name) {
-  PyObject *mod = PyImport_ImportModule(name);
+Expected<PythonModule> PythonModule::Import(const Twine &name) {
+  PyObject *mod = PyImport_ImportModule(NullTerminated(name));
   if (!mod)
     return exception();
   return Take<PythonModule>(mod);
 }
 
-Expected<PythonObject> PythonModule::Get(const char *name) {
+Expected<PythonObject> PythonModule::Get(const Twine &name) {
   if (!IsValid())
     return nullDeref();
   PyObject *dict = PyModule_GetDict(m_py_obj);
   if (!dict)
     return exception();
-  PyObject *item = PyDict_GetItemString(dict, name);
+  PyObject *item = PyDict_GetItemString(dict, NullTerminated(name));
   if (!item)
     return exception();
   return Retain<PythonObject>(item);
@@ -790,7 +791,9 @@ bool PythonModule::Check(PyObject *py_obj) {
 }
 
 PythonDictionary PythonModule::GetDictionary() const {
-  return PythonDictionary(PyRefType::Borrowed, PyModule_GetDict(m_py_obj));
+  if (!IsValid())
+    return PythonDictionary();
+  return Retain<PythonDictionary>(PyModule_GetDict(m_py_obj));
 }
 
 bool PythonCallable::Check(PyObject *py_obj) {
@@ -1092,6 +1095,8 @@ public:
     assert(m_py_obj);
     GIL takeGIL;
     Close();
+    // we need to ensure the python object is released while we still
+    // hold the GIL
     m_py_obj.Reset();
   }
 
