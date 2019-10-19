@@ -21,6 +21,8 @@
 #include "SIDefines.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/EndianStream.h"
 

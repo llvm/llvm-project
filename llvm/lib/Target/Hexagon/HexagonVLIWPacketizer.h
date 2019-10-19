@@ -69,8 +69,7 @@ private:
 
 public:
   HexagonPacketizerList(MachineFunction &MF, MachineLoopInfo &MLI,
-                        AliasAnalysis *AA,
-                        const MachineBranchProbabilityInfo *MBPI,
+                        AAResults *AA, const MachineBranchProbabilityInfo *MBPI,
                         bool Minimal);
 
   // initPacketizerState - initialize some internal flags.
