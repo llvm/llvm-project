@@ -56,6 +56,11 @@ Improvements to Clang's diagnostics
 - -Wtautological-compare for self comparisons and
   -Wtautological-overlap-compare will now look through member and array
   access to determine if two operand expressions are the same.
+- -Wtautological-bitwise-compare is a new warning group.  This group has the
+  current warning which diagnoses the tautological comparison of a bitwise
+  operation and a constant.  The group also has the new warning which diagnoses
+  when a bitwise-or with a non-negative value is converted to a bool, since
+  that bool will always be true.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
