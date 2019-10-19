@@ -314,7 +314,9 @@ StringRef CGDebugInfo::getClassName(const RecordDecl *RD) {
   if (isa<ClassTemplateSpecializationDecl>(RD)) {
     SmallString<128> Name;
     llvm::raw_svector_ostream OS(Name);
-    RD->getNameForDiagnostic(OS, getPrintingPolicy(),
+    PrintingPolicy PP = getPrintingPolicy();
+    PP.PrintCanonicalTypes = true;
+    RD->getNameForDiagnostic(OS, PP,
                              /*Qualified*/ false);
 
     // Copy this name on the side and use its reference.
