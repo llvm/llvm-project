@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZMachineScheduler.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 
 using namespace llvm;
 

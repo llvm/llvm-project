@@ -56,6 +56,7 @@
 #include "WebAssembly.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/Support/Debug.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-fix-irreducible-control-flow"
