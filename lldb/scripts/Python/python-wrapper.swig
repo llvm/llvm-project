@@ -163,14 +163,19 @@ LLDBSwigPythonCallTypeScript
     }
 
     PythonObject result;
-    auto argc = pfunc.GetNumArguments();
-    // if the third argument is supported, or varargs are allowed
+    auto argc = pfunc.GetArgInfo();
+    if (!argc) {
+        llvm::consumeError(argc.takeError());
+        return false;
+    }
+
     PythonObject value_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_value));
     PythonObject options_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_options));
-    if (argc.count == 3 || argc.has_varargs)
-        result = pfunc(value_arg,dict,options_arg);
-    else
+
+    if (argc.get().max_positional_args < 3)
         result = pfunc(value_arg,dict);
+    else
+        result = pfunc(value_arg,dict,options_arg);
 
     retval = result.Str().GetString().str();
 

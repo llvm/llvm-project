@@ -1,3 +1,5 @@
+import lldb
+
 def foo_SummaryProvider(valobj, dict):
     a = valobj.GetChildMemberWithName('a')
     a_ptr = valobj.GetChildMemberWithName('a_ptr')
@@ -15,3 +17,8 @@ def foo_SummaryProvider(valobj, dict):
         ', i_ptr = ' + str(i_ptr.GetValueAsUnsigned(0)) + ' -> ' + str(i_ptr.Dereference().GetValueAsUnsigned(0)) + \
         ', b_ref = ' + str(b_ref.GetValueAsUnsigned(0)) + \
         ', h = ' + str(h.GetValueAsUnsigned(0)) + ' , k = ' + str(k.GetValueAsUnsigned(0))
+
+def foo_SummaryProvider3(valobj, dict, options):
+    if not isinstance(options, lldb.SBTypeSummaryOptions):
+        raise Exception()
+    return foo_SummaryProvider(valobj, dict) + ", WITH_OPTS"
