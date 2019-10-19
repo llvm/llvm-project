@@ -93,6 +93,28 @@ void conditional_op(int x, int y, _Bool b, void* p) {
 
   (void)(x + y > 0 ? 1 : 2); // no warning
   (void)(x + (y > 0) ? 1 : 2); // expected-warning {{operator '?:' has lower precedence than '+'}} expected-note 2{{place parentheses}}
+
+  (void)(b ? 0xf0 : 0x10 | b ? 0x5 : 0x2); // expected-warning {{operator '?:' has lower precedence than '|'}} expected-note 2{{place parentheses}}
+
+  (void)((b ? 0xf0 : 0x10) | (b ? 0x5 : 0x2));  // no warning, has parentheses
+  (void)(b ? 0xf0 : (0x10 | b) ? 0x5 : 0x2);  // no warning, has parentheses
+
+  (void)(x | b ? 1 : 2); // expected-warning {{operator '?:' has lower precedence than '|'}} expected-note 2{{place parentheses}}
+  (void)(x & b ? 1 : 2); // expected-warning {{operator '?:' has lower precedence than '&'}} expected-note 2{{place parentheses}}
+
+  (void)((x | b) ? 1 : 2);  // no warning, has parentheses
+  (void)(x | (b ? 1 : 2));  // no warning, has parentheses
+  (void)((x & b) ? 1 : 2);  // no warning, has parentheses
+  (void)(x & (b ? 1 : 2));  // no warning, has parentheses
+
+  // Only warn on uses of the bitwise operators, and not the logical operators.
+  // The bitwise operators are more likely to be bugs while the logical
+  // operators are more likely to be used correctly.  Since there is no
+  // explicit logical-xor operator, the bitwise-xor is commonly used instead.
+  // For this warning, treat the bitwise-xor as if it were a logical operator.
+  (void)(x ^ b ? 1 : 2);  // no warning, ^ is often used as logical xor
+  (void)(x || b ? 1 : 2);  // no warning, logical operator
+  (void)(x && b ? 1 : 2);  // no warning, logical operator
 }
 
 // RUN: not %clang_cc1 -fsyntax-only -Wparentheses -Werror -fdiagnostics-show-option %s 2>&1 | FileCheck %s -check-prefix=CHECK-FLAG

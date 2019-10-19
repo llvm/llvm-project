@@ -5815,6 +5815,9 @@ def note_precedence_silence : Note<
 def warn_precedence_conditional : Warning<
   "operator '?:' has lower precedence than '%0'; '%0' will be evaluated first">,
   InGroup<Parentheses>;
+def warn_precedence_bitwise_conditional : Warning<
+  "operator '?:' has lower precedence than '%0'; '%0' will be evaluated first">,
+  InGroup<BitwiseConditionalParentheses>;
 def note_precedence_conditional_first : Note<
   "place parentheses around the '?:' expression to evaluate it first">;
 
