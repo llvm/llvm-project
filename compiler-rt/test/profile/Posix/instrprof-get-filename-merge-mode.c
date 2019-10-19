@@ -1,6 +1,6 @@
 // Test __llvm_profile_get_filename when the on-line merging mode is enabled.
 //
-// RUN: %clang_pgogen -dynamiclib -o %t.dso %p/Inputs/instrprof-get-filename-dso.c
+// RUN: %clang_pgogen -fPIC -shared -o %t.dso %p/../Inputs/instrprof-get-filename-dso.c
 // RUN: %clang_pgogen -o %t %s %t.dso
 // RUN: env LLVM_PROFILE_FILE="%t-%m.profraw" %run %t
 
