@@ -114,6 +114,7 @@ def GNUNullExpr : DStmt<Expr>;
 // C++ Expressions.
 def CXXOperatorCallExpr : DStmt<CallExpr>;
 def CXXMemberCallExpr : DStmt<CallExpr>;
+def CXXRewrittenBinaryOperator : DStmt<Expr>;
 def CXXNamedCastExpr : DStmt<ExplicitCastExpr, 1>;
 def CXXStaticCastExpr : DStmt<CXXNamedCastExpr>;
 def CXXDynamicCastExpr : DStmt<CXXNamedCastExpr>;

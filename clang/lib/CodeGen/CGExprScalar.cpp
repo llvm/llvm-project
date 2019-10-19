@@ -817,6 +817,10 @@ public:
   Value *VisitBinPtrMemD(const Expr *E) { return EmitLoadOfLValue(E); }
   Value *VisitBinPtrMemI(const Expr *E) { return EmitLoadOfLValue(E); }
 
+  Value *VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *E) {
+    return Visit(E->getSemanticForm());
+  }
+
   // Other Operators.
   Value *VisitBlockExpr(const BlockExpr *BE);
   Value *VisitAbstractConditionalOperator(const AbstractConditionalOperator *);

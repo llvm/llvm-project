@@ -4090,6 +4090,17 @@ recurse:
     break;
   }
 
+  case Expr::CXXRewrittenBinaryOperatorClass: {
+    // The mangled form represents the original syntax.
+    CXXRewrittenBinaryOperator::DecomposedForm Decomposed =
+        cast<CXXRewrittenBinaryOperator>(E)->getDecomposedForm();
+    mangleOperatorName(BinaryOperator::getOverloadedOperator(Decomposed.Opcode),
+                       /*Arity=*/2);
+    mangleExpression(Decomposed.LHS);
+    mangleExpression(Decomposed.RHS);
+    break;
+  }
+
   case Expr::ConditionalOperatorClass: {
     const ConditionalOperator *CO = cast<ConditionalOperator>(E);
     mangleOperatorName(OO_Conditional, /*Arity=*/3);
