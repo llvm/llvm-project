@@ -10338,10 +10338,43 @@ bool ScalarEvolution::isImpliedViaOperations(ICmpInst::Predicate Pred,
   return false;
 }
 
+static bool isKnownPredicateExtendIdiom(ICmpInst::Predicate Pred,
+                                        const SCEV *LHS, const SCEV *RHS) {
+  // zext x u<= sext x, sext x s<= zext x
+  switch (Pred) {
+  case ICmpInst::ICMP_SGE:
+    std::swap(LHS, RHS);
+    LLVM_FALLTHROUGH;
+  case ICmpInst::ICMP_SLE: {
+    // If operand >=s 0 then ZExt == SExt.  If operand <s 0 then SExt <s ZExt.
+    const SCEVSignExtendExpr *SExt = dyn_cast<SCEVSignExtendExpr>(LHS);
+    const SCEVZeroExtendExpr *ZExt = dyn_cast<SCEVZeroExtendExpr>(RHS);
+    if (SExt && ZExt && SExt->getOperand() == ZExt->getOperand())
+      return true;
+    break;
+  }
+  case ICmpInst::ICMP_UGE:
+    std::swap(LHS, RHS);
+    LLVM_FALLTHROUGH;
+  case ICmpInst::ICMP_ULE: { 
+    // If operand >=s 0 then ZExt == SExt.  If operand <s 0 then ZExt <u SExt.
+    const SCEVZeroExtendExpr *ZExt = dyn_cast<SCEVZeroExtendExpr>(LHS);
+    const SCEVSignExtendExpr *SExt = dyn_cast<SCEVSignExtendExpr>(RHS);
+    if (SExt && ZExt && SExt->getOperand() == ZExt->getOperand())
+      return true;
+    break;
+  }
+  default:
+    break;
+  };
+  return false;
+}
+
 bool
 ScalarEvolution::isKnownViaNonRecursiveReasoning(ICmpInst::Predicate Pred,
                                            const SCEV *LHS, const SCEV *RHS) {
-  return isKnownPredicateViaConstantRanges(Pred, LHS, RHS) ||
+  return isKnownPredicateExtendIdiom(Pred, LHS, RHS) ||
+         isKnownPredicateViaConstantRanges(Pred, LHS, RHS) ||
          IsKnownPredicateViaMinOrMax(*this, Pred, LHS, RHS) ||
          IsKnownPredicateViaAddRecStart(*this, Pred, LHS, RHS) ||
          isKnownPredicateViaNoOverflow(Pred, LHS, RHS);
