@@ -7620,7 +7620,12 @@ static void SuggestParentheses(Sema &Self, SourceLocation Loc,
 static bool IsArithmeticOp(BinaryOperatorKind Opc) {
   return BinaryOperator::isAdditiveOp(Opc) ||
          BinaryOperator::isMultiplicativeOp(Opc) ||
-         BinaryOperator::isShiftOp(Opc);
+         BinaryOperator::isShiftOp(Opc) || Opc == BO_And || Opc == BO_Or;
+  // This only checks for bitwise-or and bitwise-and, but not bitwise-xor and
+  // not any of the logical operators.  Bitwise-xor is commonly used as a
+  // logical-xor because there is no logical-xor operator.  The logical
+  // operators, including uses of xor, have a high false positive rate for
+  // precedence warnings.
 }
 
 /// IsArithmeticBinaryExpr - Returns true if E is an arithmetic binary
@@ -7710,7 +7715,11 @@ static void DiagnoseConditionalPrecedence(Sema &Self,
   // The condition is an arithmetic binary expression, with a right-
   // hand side that looks boolean, so warn.
 
-  Self.Diag(OpLoc, diag::warn_precedence_conditional)
+  unsigned DiagID = BinaryOperator::isBitwiseOp(CondOpcode)
+                        ? diag::warn_precedence_bitwise_conditional
+                        : diag::warn_precedence_conditional;
+
+  Self.Diag(OpLoc, DiagID)
       << Condition->getSourceRange()
       << BinaryOperator::getOpcodeStr(CondOpcode);
 

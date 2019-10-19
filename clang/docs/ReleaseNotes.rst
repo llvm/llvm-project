@@ -61,6 +61,9 @@ Improvements to Clang's diagnostics
   operation and a constant.  The group also has the new warning which diagnoses
   when a bitwise-or with a non-negative value is converted to a bool, since
   that bool will always be true.
+- -Wbitwise-conditional-parentheses will warn on operator precedence issues
+  when mixing bitwise-and (&) and bitwise-or (|) operator with the
+  conditional operator (?:).
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
