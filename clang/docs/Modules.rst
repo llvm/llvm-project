@@ -226,7 +226,7 @@ Command-line parameters
   Specify the path to the prebuilt modules. If specified, we will look for modules in this directory for a given top-level module name. We don't need a module map for loading prebuilt modules in this directory and the compiler will not try to rebuild these modules. This can be specified multiple times.
 
 -cc1 Options
-^^^^^^^^^^^^
+~~~~~~~~~~~~
 
 ``-fmodules-strict-context-hash``
   Enables hashing of all compiler options that could impact the semantics of a
