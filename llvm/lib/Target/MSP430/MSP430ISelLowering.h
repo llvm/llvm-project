@@ -124,6 +124,8 @@ namespace llvm {
     bool isZExtFree(EVT VT1, EVT VT2) const override;
     bool isZExtFree(SDValue Val, EVT VT2) const override;
 
+    unsigned getShiftAmountThreshold(EVT VT) const override;
+
     MachineBasicBlock *
     EmitInstrWithCustomInserter(MachineInstr &MI,
                                 MachineBasicBlock *BB) const override;
