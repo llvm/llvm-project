@@ -5852,20 +5852,21 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
       LVK == RVK && LVK != VK_RValue) {
     // DerivedToBase was already handled by the class-specific case above.
     // FIXME: Should we allow ObjC conversions here?
-    bool DerivedToBase, ObjCConversion, ObjCLifetimeConversion;
-    if (CompareReferenceRelationship(
-            QuestionLoc, LTy, RTy, DerivedToBase,
-            ObjCConversion, ObjCLifetimeConversion) == Ref_Compatible &&
+    bool DerivedToBase, ObjCConversion, ObjCLifetimeConversion,
+        FunctionConversion;
+    if (CompareReferenceRelationship(QuestionLoc, LTy, RTy, DerivedToBase,
+                                     ObjCConversion, ObjCLifetimeConversion,
+                                     FunctionConversion) == Ref_Compatible &&
         !DerivedToBase && !ObjCConversion && !ObjCLifetimeConversion &&
         // [...] subject to the constraint that the reference must bind
         // directly [...]
-        !RHS.get()->refersToBitField() &&
-        !RHS.get()->refersToVectorElement()) {
+        !RHS.get()->refersToBitField() && !RHS.get()->refersToVectorElement()) {
       RHS = ImpCastExprToType(RHS.get(), LTy, CK_NoOp, RVK);
       RTy = RHS.get()->getType();
     } else if (CompareReferenceRelationship(
-                   QuestionLoc, RTy, LTy, DerivedToBase,
-                   ObjCConversion, ObjCLifetimeConversion) == Ref_Compatible &&
+                   QuestionLoc, RTy, LTy, DerivedToBase, ObjCConversion,
+                   ObjCLifetimeConversion,
+                   FunctionConversion) == Ref_Compatible &&
                !DerivedToBase && !ObjCConversion && !ObjCLifetimeConversion &&
                !LHS.get()->refersToBitField() &&
                !LHS.get()->refersToVectorElement()) {

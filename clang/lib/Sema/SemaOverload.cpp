@@ -4372,7 +4372,8 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
                                    QualType OrigT1, QualType OrigT2,
                                    bool &DerivedToBase,
                                    bool &ObjCConversion,
-                                   bool &ObjCLifetimeConversion) {
+                                   bool &ObjCLifetimeConversion,
+                                   bool &FunctionConversion) {
   assert(!OrigT1->isReferenceType() &&
     "T1 must be the pointee type of the reference type");
   assert(!OrigT2->isReferenceType() && "T2 cannot be a reference type");
@@ -4402,15 +4403,16 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
            Context.canBindObjCObjectType(UnqualT1, UnqualT2))
     ObjCConversion = true;
   else if (UnqualT2->isFunctionType() &&
-           IsFunctionConversion(UnqualT2, UnqualT1, ConvertedT2))
+           IsFunctionConversion(UnqualT2, UnqualT1, ConvertedT2)) {
     // C++1z [dcl.init.ref]p4:
     //   cv1 T1" is reference-compatible with "cv2 T2" if [...] T2 is "noexcept
     //   function" and T1 is "function"
     //
     // We extend this to also apply to 'noreturn', so allow any function
     // conversion between function types.
+    FunctionConversion = true;
     return Ref_Compatible;
-  else
+  } else
     return Ref_Incompatible;
 
   // At this point, we know that T1 and T2 are reference-related (at
@@ -4491,6 +4493,7 @@ FindConversionForRefInit(Sema &S, ImplicitConversionSequence &ICS,
       bool DerivedToBase = false;
       bool ObjCConversion = false;
       bool ObjCLifetimeConversion = false;
+      bool FunctionConversion = false;
 
       // If we are initializing an rvalue reference, don't permit conversion
       // functions that return lvalues.
@@ -4503,12 +4506,13 @@ FindConversionForRefInit(Sema &S, ImplicitConversionSequence &ICS,
 
       if (!ConvTemplate &&
           S.CompareReferenceRelationship(
-            DeclLoc,
-            Conv->getConversionType().getNonReferenceType()
-              .getUnqualifiedType(),
-            DeclType.getNonReferenceType().getUnqualifiedType(),
-            DerivedToBase, ObjCConversion, ObjCLifetimeConversion) ==
-          Sema::Ref_Incompatible)
+              DeclLoc,
+              Conv->getConversionType()
+                  .getNonReferenceType()
+                  .getUnqualifiedType(),
+              DeclType.getNonReferenceType().getUnqualifiedType(),
+              DerivedToBase, ObjCConversion, ObjCLifetimeConversion,
+              FunctionConversion) == Sema::Ref_Incompatible)
         continue;
     } else {
       // If the conversion function doesn't return a reference type,
@@ -4612,11 +4616,11 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
   bool DerivedToBase = false;
   bool ObjCConversion = false;
   bool ObjCLifetimeConversion = false;
+  bool FunctionConversion = false;
   Expr::Classification InitCategory = Init->Classify(S.Context);
-  Sema::ReferenceCompareResult RefRelationship
-    = S.CompareReferenceRelationship(DeclLoc, T1, T2, DerivedToBase,
-                                     ObjCConversion, ObjCLifetimeConversion);
-
+  Sema::ReferenceCompareResult RefRelationship = S.CompareReferenceRelationship(
+      DeclLoc, T1, T2, DerivedToBase, ObjCConversion, ObjCLifetimeConversion,
+      FunctionConversion);
 
   // C++0x [dcl.init.ref]p5:
   //   A reference to type "cv1 T1" is initialized by an expression
@@ -5041,9 +5045,10 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
       bool dummy1 = false;
       bool dummy2 = false;
       bool dummy3 = false;
+      bool dummy4 = false;
       Sema::ReferenceCompareResult RefRelationship =
           S.CompareReferenceRelationship(From->getBeginLoc(), T1, T2, dummy1,
-                                         dummy2, dummy3);
+                                         dummy2, dummy3, dummy4);
 
       if (RefRelationship >= Sema::Ref_Related) {
         return TryReferenceInit(S, Init, ToType, /*FIXME*/ From->getBeginLoc(),
