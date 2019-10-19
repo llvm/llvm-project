@@ -3473,6 +3473,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ArrayInitLoopExprClass:
   case ParenListExprClass:
   case CXXPseudoDestructorExprClass:
+  case CXXRewrittenBinaryOperatorClass:
   case CXXStdInitializerListExprClass:
   case SubstNonTypeTemplateParmExprClass:
   case MaterializeTemporaryExprClass:

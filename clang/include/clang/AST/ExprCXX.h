@@ -220,6 +220,96 @@ public:
   }
 };
 
+/// A rewritten comparison expression that was originally written using
+/// operator syntax.
+///
+/// In C++20, the following rewrites are performed:
+/// - <tt>a == b</tt> -> <tt>b == a</tt>
+/// - <tt>a != b</tt> -> <tt>!(a == b)</tt>
+/// - <tt>a != b</tt> -> <tt>!(b == a)</tt>
+/// - For \c \@ in \c <, \c <=, \c >, \c >=, \c <=>:
+///   - <tt>a @ b<tt> -> <tt>(a <=> b) @ 0</tt>
+///   - <tt>a @ b<tt> -> <tt>0 @ (b <=> a)</tt>
+///
+/// This expression provides access to both the original syntax and the
+/// rewritten expression.
+///
+/// Note that the rewritten calls to \c ==, \c <=>, and \c \@ are typically
+/// \c CXXOperatorCallExprs, but could theoretically be \c BinaryOperators.
+class CXXRewrittenBinaryOperator : public Expr {
+  friend class ASTStmtReader;
+
+  /// The rewritten semantic form.
+  Stmt *SemanticForm;
+
+public:
+  CXXRewrittenBinaryOperator(Expr *SemanticForm, bool IsReversed)
+      : Expr(CXXRewrittenBinaryOperatorClass, SemanticForm->getType(),
+             SemanticForm->getValueKind(), SemanticForm->getObjectKind(),
+             SemanticForm->isTypeDependent(), SemanticForm->isValueDependent(),
+             SemanticForm->isInstantiationDependent(),
+             SemanticForm->containsUnexpandedParameterPack()),
+        SemanticForm(SemanticForm) {
+    CXXRewrittenBinaryOperatorBits.IsReversed = IsReversed;
+  }
+  CXXRewrittenBinaryOperator(EmptyShell Empty)
+      : Expr(CXXRewrittenBinaryOperatorClass, Empty), SemanticForm() {}
+
+  /// Get an equivalent semantic form for this expression.
+  Expr *getSemanticForm() { return cast<Expr>(SemanticForm); }
+  const Expr *getSemanticForm() const { return cast<Expr>(SemanticForm); }
+
+  struct DecomposedForm {
+    /// The original opcode, prior to rewriting.
+    BinaryOperatorKind Opcode;
+    /// The original left-hand side.
+    const Expr *LHS;
+    /// The original right-hand side.
+    const Expr *RHS;
+    /// The inner \c == or \c <=> operator expression.
+    const Expr *InnerBinOp;
+  };
+
+  /// Decompose this operator into its syntactic form.
+  DecomposedForm getDecomposedForm() const LLVM_READONLY;
+
+  /// Determine whether this expression was rewritten in reverse form.
+  bool isReversed() const { return CXXRewrittenBinaryOperatorBits.IsReversed; }
+
+  BinaryOperatorKind getOperator() const { return getDecomposedForm().Opcode; }
+  const Expr *getLHS() const { return getDecomposedForm().LHS; }
+  const Expr *getRHS() const { return getDecomposedForm().RHS; }
+
+  SourceLocation getOperatorLoc() const LLVM_READONLY {
+    return getDecomposedForm().InnerBinOp->getExprLoc();
+  }
+  SourceLocation getExprLoc() const LLVM_READONLY { return getOperatorLoc(); }
+
+  /// Compute the begin and end locations from the decomposed form.
+  /// The locations of the semantic form are not reliable if this is
+  /// a reversed expression.
+  //@{
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getDecomposedForm().LHS->getBeginLoc();
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getDecomposedForm().RHS->getEndLoc();
+  }
+  SourceRange getSourceRange() const LLVM_READONLY {
+    DecomposedForm DF = getDecomposedForm();
+    return SourceRange(DF.LHS->getBeginLoc(), DF.RHS->getEndLoc());
+  }
+  //@}
+
+  child_range children() {
+    return child_range(&SemanticForm, &SemanticForm + 1);
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXRewrittenBinaryOperatorClass;
+  }
+};
+
 /// Represents a call to a CUDA kernel function.
 class CUDAKernelCallExpr final : public CallExpr {
   friend class ASTStmtReader;

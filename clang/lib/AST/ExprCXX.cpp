@@ -58,6 +58,76 @@ bool CXXOperatorCallExpr::isInfixBinaryOp() const {
   }
 }
 
+CXXRewrittenBinaryOperator::DecomposedForm
+CXXRewrittenBinaryOperator::getDecomposedForm() const {
+  DecomposedForm Result = {};
+  const Expr *E = getSemanticForm()->IgnoreImplicit();
+
+  // Remove an outer '!' if it exists (only happens for a '!=' rewrite).
+  bool SkippedNot = false;
+  if (auto *NotEq = dyn_cast<UnaryOperator>(E)) {
+    assert(NotEq->getOpcode() == UO_LNot);
+    E = NotEq->getSubExpr()->IgnoreImplicit();
+    SkippedNot = true;
+  }
+
+  // Decompose the outer binary operator.
+  if (auto *BO = dyn_cast<BinaryOperator>(E)) {
+    assert(!SkippedNot || BO->getOpcode() == BO_EQ);
+    Result.Opcode = SkippedNot ? BO_NE : BO->getOpcode();
+    Result.LHS = BO->getLHS();
+    Result.RHS = BO->getRHS();
+    Result.InnerBinOp = BO;
+  } else if (auto *BO = dyn_cast<CXXOperatorCallExpr>(E)) {
+    assert(!SkippedNot || BO->getOperator() == OO_Equal);
+    assert(BO->isInfixBinaryOp());
+    switch (BO->getOperator()) {
+    case OO_Less: Result.Opcode = BO_LT; break;
+    case OO_LessEqual: Result.Opcode = BO_LE; break;
+    case OO_Greater: Result.Opcode = BO_GT; break;
+    case OO_GreaterEqual: Result.Opcode = BO_GE; break;
+    case OO_Spaceship: Result.Opcode = BO_Cmp; break;
+    case OO_EqualEqual: Result.Opcode = SkippedNot ? BO_NE : BO_EQ; break;
+    default: llvm_unreachable("unexpected binop in rewritten operator expr");
+    }
+    Result.LHS = BO->getArg(0);
+    Result.RHS = BO->getArg(1);
+    Result.InnerBinOp = BO;
+  } else {
+    llvm_unreachable("unexpected rewritten operator form");
+  }
+
+  // Put the operands in the right order for == and !=, and canonicalize the
+  // <=> subexpression onto the LHS for all other forms.
+  if (isReversed())
+    std::swap(Result.LHS, Result.RHS);
+
+  // If this isn't a spaceship rewrite, we're done.
+  if (Result.Opcode == BO_EQ || Result.Opcode == BO_NE)
+    return Result;
+
+  // Otherwise, we expect a <=> to now be on the LHS.
+  E = Result.InnerBinOp->IgnoreImplicit();
+  if (auto *BO = dyn_cast<BinaryOperator>(E)) {
+    assert(BO->getOpcode() == BO_Cmp);
+    Result.LHS = BO->getLHS();
+    Result.RHS = BO->getRHS();
+    Result.InnerBinOp = BO;
+  } else if (auto *BO = dyn_cast<CXXOperatorCallExpr>(E)) {
+    assert(BO->getOperator() == OO_Spaceship);
+    Result.LHS = BO->getArg(0);
+    Result.RHS = BO->getArg(1);
+    Result.InnerBinOp = BO;
+  } else {
+    llvm_unreachable("unexpected rewritten operator form");
+  }
+
+  // Put the comparison operands in the right order.
+  if (isReversed())
+    std::swap(Result.LHS, Result.RHS);
+  return Result;
+}
+
 bool CXXTypeidExpr::isPotentiallyEvaluated() const {
   if (isTypeOperand())
     return false;

@@ -2353,6 +2353,17 @@ public:
     return getSema().BuildBinOp(/*Scope=*/nullptr, OpLoc, Opc, LHS, RHS);
   }
 
+  /// Build a new rewritten operator expression.
+  ///
+  /// By default, builds the rewritten operator without performing any semantic
+  /// analysis. Subclasses may override this routine to provide different
+  /// behavior.
+  ExprResult RebuildCXXRewrittenBinaryOperator(Expr *SemanticForm,
+                                             bool IsReversed) {
+    return new (getSema().Context)
+        CXXRewrittenBinaryOperator(SemanticForm, IsReversed);
+  }
+
   /// Build a new conditional operator expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
@@ -9767,6 +9778,29 @@ TreeTransform<Derived>::TransformBinaryOperator(BinaryOperator *E) {
 
   return getDerived().RebuildBinaryOperator(E->getOperatorLoc(), E->getOpcode(),
                                             LHS.get(), RHS.get());
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformCXXRewrittenBinaryOperator(
+    CXXRewrittenBinaryOperator *E) {
+  // FIXME: C++ [temp.deduct]p7 "The substitution proceeds in lexical order and
+  // stops when a condition that causes deduction to fail is encountered."
+  // requires us to substitute into the LHS before the RHS, even in a rewrite
+  // that reversed the operand order.
+  //
+  // We can't decompose back to a binary operator here, because that would lose
+  // the unqualified lookup results from the phase 1 name lookup.
+
+  ExprResult SemanticForm = getDerived().TransformExpr(E->getSemanticForm());
+  if (SemanticForm.isInvalid())
+    return ExprError();
+
+  if (!getDerived().AlwaysRebuild() &&
+      SemanticForm.get() == E->getSemanticForm())
+    return E;
+
+  return getDerived().RebuildCXXRewrittenBinaryOperator(SemanticForm.get(),
+                                                      E->isReversed());
 }
 
 template<typename Derived>
