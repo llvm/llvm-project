@@ -4229,10 +4229,10 @@ static void TryReferenceListInitialization(Sema &S,
       return;
 
     SourceLocation DeclLoc = Initializer->getBeginLoc();
-    bool dummy1, dummy2, dummy3;
+    bool dummy1, dummy2, dummy3, dummy4;
     Sema::ReferenceCompareResult RefRelationship
       = S.CompareReferenceRelationship(DeclLoc, cv1T1, cv2T2, dummy1,
-                                       dummy2, dummy3);
+                                       dummy2, dummy3, dummy4);
     if (RefRelationship >= Sema::Ref_Related) {
       // Try to bind the reference here.
       TryReferenceInitializationCore(S, Entity, Kind, Initializer, cv1T1, T1,
@@ -4472,13 +4472,15 @@ static OverloadingResult TryRefInitWithConversionFunction(
   bool DerivedToBase;
   bool ObjCConversion;
   bool ObjCLifetimeConversion;
-  assert(!S.CompareReferenceRelationship(Initializer->getBeginLoc(), T1, T2,
-                                         DerivedToBase, ObjCConversion,
-                                         ObjCLifetimeConversion) &&
+  bool FunctionConversion;
+  assert(!S.CompareReferenceRelationship(
+             Initializer->getBeginLoc(), T1, T2, DerivedToBase, ObjCConversion,
+             ObjCLifetimeConversion, FunctionConversion) &&
          "Must have incompatible references when binding via conversion");
   (void)DerivedToBase;
   (void)ObjCConversion;
   (void)ObjCLifetimeConversion;
+  (void)FunctionConversion;
 
   // Build the candidate set directly in the initialization sequence
   // structure, so that it will persist if we fail.
@@ -4605,10 +4607,11 @@ static OverloadingResult TryRefInitWithConversionFunction(
   bool NewDerivedToBase = false;
   bool NewObjCConversion = false;
   bool NewObjCLifetimeConversion = false;
-  Sema::ReferenceCompareResult NewRefRelationship
-    = S.CompareReferenceRelationship(DeclLoc, T1, cv3T3,
-                                     NewDerivedToBase, NewObjCConversion,
-                                     NewObjCLifetimeConversion);
+  bool NewFunctionConversion = false;
+  Sema::ReferenceCompareResult NewRefRelationship =
+      S.CompareReferenceRelationship(
+          DeclLoc, T1, cv3T3, NewDerivedToBase, NewObjCConversion,
+          NewObjCLifetimeConversion, NewFunctionConversion);
 
   // Add the final conversion sequence, if necessary.
   if (NewRefRelationship == Sema::Ref_Incompatible) {
@@ -4642,6 +4645,8 @@ static OverloadingResult TryRefInitWithConversionFunction(
     Sequence.AddDerivedToBaseCastStep(cv1T1, VK);
   else if (NewObjCConversion)
     Sequence.AddObjCObjectConversionStep(cv1T1);
+  else if (NewFunctionConversion)
+    Sequence.AddQualificationConversionStep(cv1T1, VK);
 
   return OR_Success;
 }
@@ -4701,10 +4706,11 @@ static void TryReferenceInitializationCore(Sema &S,
   bool DerivedToBase = false;
   bool ObjCConversion = false;
   bool ObjCLifetimeConversion = false;
+  bool FunctionConversion = false;
   Expr::Classification InitCategory = Initializer->Classify(S.Context);
-  Sema::ReferenceCompareResult RefRelationship
-    = S.CompareReferenceRelationship(DeclLoc, cv1T1, cv2T2, DerivedToBase,
-                                     ObjCConversion, ObjCLifetimeConversion);
+  Sema::ReferenceCompareResult RefRelationship = S.CompareReferenceRelationship(
+      DeclLoc, cv1T1, cv2T2, DerivedToBase, ObjCConversion,
+      ObjCLifetimeConversion, FunctionConversion);
 
   // C++0x [dcl.init.ref]p5:
   //   A reference to type "cv1 T1" is initialized by an expression of type
@@ -4735,6 +4741,8 @@ static void TryReferenceInitializationCore(Sema &S,
         Sequence.AddDerivedToBaseCastStep(cv1T1, VK_LValue);
       else if (ObjCConversion)
         Sequence.AddObjCObjectConversionStep(cv1T1);
+      else if (FunctionConversion)
+        Sequence.AddQualificationConversionStep(cv1T1, VK_LValue);
 
       // We only create a temporary here when binding a reference to a
       // bit-field or vector element. Those cases are't supposed to be
