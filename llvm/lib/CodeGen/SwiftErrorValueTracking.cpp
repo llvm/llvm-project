@@ -13,9 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/SwiftErrorValueTracking.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Value.h"
