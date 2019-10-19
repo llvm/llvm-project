@@ -4,7 +4,7 @@
 ; Test for ICE in SelectionDAG::computeKnownBits when visiting EXTRACT_SUBVECTOR
 ; with DemandedElts already as wide as the source vector.
 
-define <3 x i32> @quux() #0 {
+define <3 x i32> @quux() {
 ; CHECK-LABEL: quux:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -26,5 +26,3 @@ bb:
   %tmp10 = lshr <3 x i32> %tmp9, <i32 1, i32 1, i32 1>
   ret <3 x i32> %tmp10
 }
-
-attributes #0 = { noinline optnone }
