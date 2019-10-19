@@ -1213,6 +1213,7 @@ public:
   virtual void compareAlwaysTrue(const BinaryOperator *B, bool isAlwaysTrue) {}
   virtual void compareBitwiseEquality(const BinaryOperator *B,
                                       bool isAlwaysTrue) {}
+  virtual void compareBitwiseOr(const BinaryOperator *B) {}
 };
 
 /// Represents a source-level, intra-procedural CFG that represents the

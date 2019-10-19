@@ -1139,6 +1139,31 @@ private:
     return {};
   }
 
+  /// A bitwise-or with a non-zero constant always evaluates to true.
+  TryResult checkIncorrectBitwiseOrOperator(const BinaryOperator *B) {
+    const Expr *LHSConstant =
+        tryTransformToIntOrEnumConstant(B->getLHS()->IgnoreParenImpCasts());
+    const Expr *RHSConstant =
+        tryTransformToIntOrEnumConstant(B->getRHS()->IgnoreParenImpCasts());
+
+    if ((LHSConstant && RHSConstant) || (!LHSConstant && !RHSConstant))
+      return {};
+
+    const Expr *Constant = LHSConstant ? LHSConstant : RHSConstant;
+
+    Expr::EvalResult Result;
+    if (!Constant->EvaluateAsInt(Result, *Context))
+      return {};
+
+    if (Result.Val.getInt() == 0)
+      return {};
+
+    if (BuildOpts.Observer)
+      BuildOpts.Observer->compareBitwiseOr(B);
+
+    return TryResult(true);
+  }
+
   /// Try and evaluate an expression to an integer constant.
   bool tryEvaluate(Expr *S, Expr::EvalResult &outResult) {
     if (!BuildOpts.PruneTriviallyFalseEdges)
@@ -1156,7 +1181,7 @@ private:
       return {};
 
     if (BinaryOperator *Bop = dyn_cast<BinaryOperator>(S)) {
-      if (Bop->isLogicalOp()) {
+      if (Bop->isLogicalOp() || Bop->isEqualityOp()) {
         // Check the cache first.
         CachedBoolEvalsTy::iterator I = CachedBoolEvals.find(S);
         if (I != CachedBoolEvals.end())
@@ -1238,6 +1263,10 @@ private:
             return BopRes.isTrue();
       } else if (Bop->isRelationalOp()) {
         TryResult BopRes = checkIncorrectRelationalOperator(Bop);
+        if (BopRes.isKnown())
+          return BopRes.isTrue();
+      } else if (Bop->getOpcode() == BO_Or) {
+        TryResult BopRes = checkIncorrectBitwiseOrOperator(Bop);
         if (BopRes.isKnown())
           return BopRes.isTrue();
       }
@@ -2340,6 +2369,9 @@ CFGBlock *CFGBuilder::VisitUnaryOperator(UnaryOperator *U,
     appendStmt(Block, U);
   }
 
+  if (U->getOpcode() == UO_LNot)
+    tryEvaluateBool(U->getSubExpr()->IgnoreParens());
+
   return Visit(U->getSubExpr(), AddStmtChoice());
 }
 
@@ -2473,6 +2505,9 @@ CFGBlock *CFGBuilder::VisitBinaryOperator(BinaryOperator *B,
     autoCreateBlock();
     appendStmt(Block, B);
   }
+
+  if (B->isEqualityOp() || B->isRelationalOp())
+    tryEvaluateBool(B);
 
   CFGBlock *RBlock = Visit(B->getRHS());
   CFGBlock *LBlock = Visit(B->getLHS());
@@ -4527,6 +4562,10 @@ CFGBlock *CFGBuilder::VisitImplicitCastExpr(ImplicitCastExpr *E,
     autoCreateBlock();
     appendStmt(Block, E);
   }
+
+  if (E->getCastKind() == CK_IntegralToBoolean)
+    tryEvaluateBool(E->getSubExpr()->IgnoreParens());
+
   return Visit(E->getSubExpr(), AddStmtChoice());
 }
 
