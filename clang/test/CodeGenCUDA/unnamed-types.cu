@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++11 -x hip -triple x86_64-linux-gnu -aux-triple amdgcn-amd-amdhsa -fcuda-force-lambda-odr -emit-llvm %s -o - | FileCheck %s --check-prefix=HOST
-// RUN: %clang_cc1 -std=c++11 -x hip -triple x86_64-pc-windows-msvc -aux-triple amdgcn-amd-amdhsa -fcuda-force-lambda-odr -emit-llvm %s -o - | FileCheck %s --check-prefix=MSVC
-// RUN: %clang_cc1 -std=c++11 -x hip -triple amdgcn-amd-amdhsa -fcuda-force-lambda-odr -fcuda-is-device -emit-llvm %s -o - | FileCheck %s --check-prefix=DEVICE
+// RUN: %clang_cc1 -std=c++11 -x hip -triple x86_64-linux-gnu -aux-triple amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=HOST
+// RUN: %clang_cc1 -std=c++11 -x hip -triple x86_64-pc-windows-msvc -aux-triple amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=MSVC
+// RUN: %clang_cc1 -std=c++11 -x hip -triple amdgcn-amd-amdhsa -fcuda-is-device -emit-llvm %s -o - | FileCheck %s --check-prefix=DEVICE
 
 #include "Inputs/cuda.h"
 
@@ -19,12 +19,16 @@ __device__ float d1(float x) {
 }
 
 // DEVICE: amdgpu_kernel void @_Z2k0IZZ2f1PfENKUlS0_E_clES0_EUlfE_EvS0_T_(
+// DEVICE: define internal float @_ZZZ2f1PfENKUlS_E_clES_ENKUlfE_clEf(
 template <typename F>
 __global__ void k0(float *p, F f) {
   p[0] = f(p[0]) + d0(p[1]) + d1(p[2]);
 }
 
 // DEVICE: amdgpu_kernel void @_Z2k1IZ2f1PfEUlfE_Z2f1S0_EUlffE_Z2f1S0_EUlfE0_EvS0_T_T0_T1_(
+// DEVICE: define internal float @_ZZ2f1PfENKUlfE_clEf(
+// DEVICE: define internal float @_ZZ2f1PfENKUlffE_clEff(
+// DEVICE: define internal float @_ZZ2f1PfENKUlfE0_clEf(
 template <typename F0, typename F1, typename F2>
 __global__ void k1(float *p, F0 f0, F1 f1, F2 f2) {
   p[0] = f0(p[0]) + f1(p[1], p[2]) + f2(p[3]);
@@ -36,6 +40,10 @@ void f0(float *p) {
   }(p);
 }
 
+// The inner/outer lambdas are required to be mangled following ODR but their
+// linkages are still required to keep the original `internal` linkage.
+
+// HOST: define internal void @_ZZ2f1PfENKUlS_E_clES_(
 void f1(float *p) {
   [](float *p) {
     k0<<<1,1>>>(p, [] __device__ (float x) { return x + 3.f; });
