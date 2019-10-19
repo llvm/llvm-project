@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -w -analyzer-checker=core,cplusplus -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -std=c++14 -w -analyzer-checker=core,cplusplus -analyzer-output=text -verify %s
 
 namespace no_crash_on_delete_dtor {
 // We were crashing when producing diagnostics for this code, but not for the
