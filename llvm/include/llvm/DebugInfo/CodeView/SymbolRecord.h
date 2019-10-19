@@ -469,50 +469,54 @@ public:
   uint32_t RecordOffset = 0;
 };
 
+struct DefRangeRegisterHeader {
+  ulittle16_t Register;
+  ulittle16_t MayHaveNoName;
+};
+
 // S_DEFRANGE_REGISTER
 class DefRangeRegisterSym : public SymbolRecord {
 public:
-  struct Header {
-    ulittle16_t Register;
-    ulittle16_t MayHaveNoName;
-  };
-
   explicit DefRangeRegisterSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit DefRangeRegisterSym(uint32_t RecordOffset)
       : SymbolRecord(SymbolRecordKind::DefRangeRegisterSym),
         RecordOffset(RecordOffset) {}
 
-  uint32_t getRelocationOffset() const { return RecordOffset + sizeof(Header); }
+  uint32_t getRelocationOffset() const { return RecordOffset + sizeof(DefRangeRegisterHeader); }
 
-  Header Hdr;
+  DefRangeRegisterHeader Hdr;
   LocalVariableAddrRange Range;
   std::vector<LocalVariableAddrGap> Gaps;
 
   uint32_t RecordOffset = 0;
 };
 
+struct DefRangeSubfieldRegisterHeader {
+  ulittle16_t Register;
+  ulittle16_t MayHaveNoName;
+  ulittle32_t OffsetInParent;
+};
+
 // S_DEFRANGE_SUBFIELD_REGISTER
 class DefRangeSubfieldRegisterSym : public SymbolRecord {
 public:
-  struct Header {
-    ulittle16_t Register;
-    ulittle16_t MayHaveNoName;
-    ulittle32_t OffsetInParent;
-  };
-
   explicit DefRangeSubfieldRegisterSym(SymbolRecordKind Kind)
       : SymbolRecord(Kind) {}
   explicit DefRangeSubfieldRegisterSym(uint32_t RecordOffset)
       : SymbolRecord(SymbolRecordKind::DefRangeSubfieldRegisterSym),
         RecordOffset(RecordOffset) {}
 
-  uint32_t getRelocationOffset() const { return RecordOffset + sizeof(Header); }
+  uint32_t getRelocationOffset() const { return RecordOffset + sizeof(DefRangeSubfieldRegisterHeader); }
 
-  Header Hdr;
+  DefRangeSubfieldRegisterHeader Hdr;
   LocalVariableAddrRange Range;
   std::vector<LocalVariableAddrGap> Gaps;
 
   uint32_t RecordOffset = 0;
+};
+
+struct DefRangeFramePointerRelHeader {
+  little32_t Offset;
 };
 
 // S_DEFRANGE_FRAMEPOINTER_REL
@@ -520,10 +524,6 @@ class DefRangeFramePointerRelSym : public SymbolRecord {
   static constexpr uint32_t RelocationOffset = 8;
 
 public:
-  struct Header {
-    little32_t Offset;
-  };
-
   explicit DefRangeFramePointerRelSym(SymbolRecordKind Kind)
       : SymbolRecord(Kind) {}
   explicit DefRangeFramePointerRelSym(uint32_t RecordOffset)
@@ -534,22 +534,22 @@ public:
     return RecordOffset + RelocationOffset;
   }
 
-  Header Hdr;
+  DefRangeFramePointerRelHeader Hdr;
   LocalVariableAddrRange Range;
   std::vector<LocalVariableAddrGap> Gaps;
 
   uint32_t RecordOffset = 0;
 };
 
+struct DefRangeRegisterRelHeader {
+  ulittle16_t Register;
+  ulittle16_t Flags;
+  little32_t BasePointerOffset;
+};
+
 // S_DEFRANGE_REGISTER_REL
 class DefRangeRegisterRelSym : public SymbolRecord {
 public:
-  struct Header {
-    ulittle16_t Register;
-    ulittle16_t Flags;
-    little32_t BasePointerOffset;
-  };
-
   explicit DefRangeRegisterRelSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
   explicit DefRangeRegisterRelSym(uint32_t RecordOffset)
       : SymbolRecord(SymbolRecordKind::DefRangeRegisterRelSym),
@@ -567,9 +567,9 @@ public:
   bool hasSpilledUDTMember() const { return Hdr.Flags & IsSubfieldFlag; }
   uint16_t offsetInParent() const { return Hdr.Flags >> OffsetInParentShift; }
 
-  uint32_t getRelocationOffset() const { return RecordOffset + sizeof(Header); }
+  uint32_t getRelocationOffset() const { return RecordOffset + sizeof(DefRangeRegisterRelHeader); }
 
-  Header Hdr;
+  DefRangeRegisterRelHeader Hdr;
   LocalVariableAddrRange Range;
   std::vector<LocalVariableAddrGap> Gaps;
 
