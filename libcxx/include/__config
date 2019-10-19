@@ -242,6 +242,7 @@
 
 #ifdef __FreeBSD__
 #  include <sys/endian.h>
+#  include <osreldate.h>
 #  if _BYTE_ORDER == _LITTLE_ENDIAN
 #    define _LIBCPP_LITTLE_ENDIAN
 #  else  // _BYTE_ORDER == _LITTLE_ENDIAN
@@ -1178,7 +1179,8 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 
 // Some systems do not provide gets() in their C library, for security reasons.
 #ifndef _LIBCPP_C_HAS_NO_GETS
-#  if defined(_LIBCPP_MSVCRT) || (defined(__FreeBSD__) && __FreeBSD__ >= 13)
+#  if defined(_LIBCPP_MSVCRT) || \
+      (defined(__FreeBSD_version) && __FreeBSD_version >= 1300043)
 #    define _LIBCPP_C_HAS_NO_GETS
 #  endif
 #endif
