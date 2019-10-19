@@ -63,14 +63,13 @@ private:
   /// HazardRec - The hazard recognizer to use.
   ScheduleHazardRecognizer *HazardRec;
 
-  /// AA - AliasAnalysis for making memory reference queries.
-  AliasAnalysis *AA;
+  /// AA - AAResults for making memory reference queries.
+  AAResults *AA;
 
 public:
-  ScheduleDAGVLIW(MachineFunction &mf,
-                  AliasAnalysis *aa,
+  ScheduleDAGVLIW(MachineFunction &mf, AAResults *aa,
                   SchedulingPriorityQueue *availqueue)
-    : ScheduleDAGSDNodes(mf), AvailableQueue(availqueue), AA(aa) {
+      : ScheduleDAGSDNodes(mf), AvailableQueue(availqueue), AA(aa) {
     const TargetSubtargetInfo &STI = mf.getSubtarget();
     HazardRec = STI.getInstrInfo()->CreateTargetHazardRecognizer(&STI, this);
   }

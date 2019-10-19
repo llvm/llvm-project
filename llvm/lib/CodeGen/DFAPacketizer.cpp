@@ -24,6 +24,7 @@
 
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
@@ -149,13 +150,13 @@ namespace llvm {
 // to build the dependence graph.
 class DefaultVLIWScheduler : public ScheduleDAGInstrs {
 private:
-  AliasAnalysis *AA;
+  AAResults *AA;
   /// Ordered list of DAG postprocessing steps.
   std::vector<std::unique_ptr<ScheduleDAGMutation>> Mutations;
 
 public:
   DefaultVLIWScheduler(MachineFunction &MF, MachineLoopInfo &MLI,
-                       AliasAnalysis *AA);
+                       AAResults *AA);
 
   // Actual scheduling work.
   void schedule() override;
@@ -173,7 +174,7 @@ protected:
 
 DefaultVLIWScheduler::DefaultVLIWScheduler(MachineFunction &MF,
                                            MachineLoopInfo &MLI,
-                                           AliasAnalysis *AA)
+                                           AAResults *AA)
     : ScheduleDAGInstrs(MF, &MLI), AA(AA) {
   CanHandleTerminators = true;
 }
@@ -191,7 +192,7 @@ void DefaultVLIWScheduler::schedule() {
 }
 
 VLIWPacketizerList::VLIWPacketizerList(MachineFunction &mf,
-                                       MachineLoopInfo &mli, AliasAnalysis *aa)
+                                       MachineLoopInfo &mli, AAResults *aa)
     : MF(mf), TII(mf.getSubtarget().getInstrInfo()), AA(aa) {
   ResourceTracker = TII->CreateTargetScheduleState(MF.getSubtarget());
   ResourceTracker->setTrackResources(true);
