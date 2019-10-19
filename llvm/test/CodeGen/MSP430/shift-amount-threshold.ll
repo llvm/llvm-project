@@ -4,13 +4,9 @@
 define i16 @testSimplifySetCC_0(i16 %a) {
 ; CHECK-LABEL: testSimplifySetCC_0:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    and #32, r12
-; CHECK-NEXT:    clrc
-; CHECK-NEXT:    rrc r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
+; CHECK-NEXT:    bit #32, r12
+; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    and #1, r12
 ; CHECK-NEXT:    ret
 entry:
   %and = and i16 %a, 32
@@ -22,13 +18,9 @@ entry:
 define i16 @testSimplifySetCC_1(i16 %a) {
 ; CHECK-LABEL: testSimplifySetCC_1:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    and #32, r12
-; CHECK-NEXT:    clrc
-; CHECK-NEXT:    rrc r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
+; CHECK-NEXT:    bit #32, r12
+; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    and #1, r12
 ; CHECK-NEXT:    ret
 entry:
   %and = and i16 %a, 32

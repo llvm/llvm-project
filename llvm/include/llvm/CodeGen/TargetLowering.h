@@ -2608,6 +2608,12 @@ public:
   // same blocks of its users.
   virtual bool shouldConsiderGEPOffsetSplit() const { return false; }
 
+  // Return the shift amount threshold for profitable transforms into shifts.
+  // Transforms creating shifts above the returned value will be avoided.
+  virtual unsigned getShiftAmountThreshold(EVT VT) const {
+    return VT.getScalarSizeInBits();
+  }
+
   //===--------------------------------------------------------------------===//
   // Runtime Library hooks
   //
