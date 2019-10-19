@@ -1,12 +1,12 @@
-// RUN: %clang_analyze_cc1 -DNO_CF_OBJECT -verify %s \
+// RUN: %clang_analyze_cc1 -std=c++14 -DNO_CF_OBJECT -verify %s \
 // RUN:   -analyzer-checker=core,osx \
 // RUN:   -analyzer-disable-checker osx.cocoa.RetainCount
 //
-// RUN: %clang_analyze_cc1 -DNO_OS_OBJECT -verify %s \
+// RUN: %clang_analyze_cc1 -std=c++14 -DNO_OS_OBJECT -verify %s \
 // RUN:   -analyzer-checker=core,osx \
 // RUN:   -analyzer-disable-checker osx.OSObjectRetainCount
 //
-// RUN: %clang_analyze_cc1 -DNO_OS_OBJECT -verify %s \
+// RUN: %clang_analyze_cc1 -std=c++14 -DNO_OS_OBJECT -verify %s \
 // RUN:   -analyzer-checker=core,osx \
 // RUN:   -analyzer-config "osx.cocoa.RetainCount:CheckOSObject=false"
 
