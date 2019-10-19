@@ -235,6 +235,62 @@ class raw_ostream;
 
 namespace sampleprof {
 
+class SampleProfileReader;
+
+/// SampleProfileReaderItaniumRemapper remaps the profile data from a
+/// sample profile data reader, by applying a provided set of equivalences
+/// between components of the symbol names in the profile.
+class SampleProfileReaderItaniumRemapper {
+public:
+  SampleProfileReaderItaniumRemapper(std::unique_ptr<MemoryBuffer> B,
+                                     std::unique_ptr<SymbolRemappingReader> SRR,
+                                     SampleProfileReader &R)
+      : Buffer(std::move(B)), Remappings(std::move(SRR)), Reader(R) {
+    assert(Remappings && "Remappings cannot be nullptr");
+  }
+
+  /// Create a remapper from the given remapping file. The remapper will
+  /// be used for profile read in by Reader.
+  static ErrorOr<std::unique_ptr<SampleProfileReaderItaniumRemapper>>
+  create(const std::string Filename, SampleProfileReader &Reader,
+         LLVMContext &C);
+
+  /// Create a remapper from the given Buffer. The remapper will
+  /// be used for profile read in by Reader.
+  static ErrorOr<std::unique_ptr<SampleProfileReaderItaniumRemapper>>
+  create(std::unique_ptr<MemoryBuffer> &B, SampleProfileReader &Reader,
+         LLVMContext &C);
+
+  /// Apply remappings to the profile read by Reader.
+  void applyRemapping(LLVMContext &Ctx);
+
+  bool hasApplied() { return RemappingApplied; }
+
+  /// Insert function name into remapper.
+  void insert(StringRef FunctionName) { Remappings->insert(FunctionName); }
+
+  /// Query whether there is equivalent in the remapper which has been
+  /// inserted.
+  bool exist(StringRef FunctionName) {
+    return Remappings->lookup(FunctionName);
+  }
+
+  /// Return the samples collected for function \p F if remapper knows
+  /// it is present in SampleMap.
+  FunctionSamples *getSamplesFor(StringRef FunctionName);
+
+private:
+  // The buffer holding the content read from remapping file.
+  std::unique_ptr<MemoryBuffer> Buffer;
+  std::unique_ptr<SymbolRemappingReader> Remappings;
+  DenseMap<SymbolRemappingReader::Key, FunctionSamples *> SampleMap;
+  // The Reader the remapper is servicing.
+  SampleProfileReader &Reader;
+  // Indicate whether remapping has been applied to the profile read
+  // by Reader -- by calling applyRemapping.
+  bool RemappingApplied = false;
+};
+
 /// Sample-based profile reader.
 ///
 /// Each profile contains sample counts for all the functions
@@ -273,8 +329,17 @@ public:
   /// Read and validate the file header.
   virtual std::error_code readHeader() = 0;
 
-  /// Read sample profiles from the associated file.
-  virtual std::error_code read() = 0;
+  /// The interface to read sample profiles from the associated file.
+  std::error_code read() {
+    if (std::error_code EC = readImpl())
+      return EC;
+    if (Remapper)
+      Remapper->applyRemapping(Ctx);
+    return sampleprof_error::success;
+  }
+
+  /// The implementaion to read sample profiles from the associated file.
+  virtual std::error_code readImpl() = 0;
 
   /// Print the profile for \p FName on stream \p OS.
   void dumpFunctionProfile(StringRef FName, raw_ostream &OS = dbgs());
@@ -295,6 +360,10 @@ public:
 
   /// Return the samples collected for function \p F.
   virtual FunctionSamples *getSamplesFor(StringRef Fname) {
+    if (Remapper) {
+      if (auto FS = Remapper->getSamplesFor(Fname))
+        return FS;
+    }
     std::string FGUID;
     Fname = getRepInFormat(Fname, getFormat(), FGUID);
     auto It = Profiles.find(Fname);
@@ -313,18 +382,24 @@ public:
   }
 
   /// Create a sample profile reader appropriate to the file format.
+  /// Create a remapper underlying if RemapFilename is not empty.
   static ErrorOr<std::unique_ptr<SampleProfileReader>>
-  create(const Twine &Filename, LLVMContext &C);
+  create(const std::string Filename, LLVMContext &C,
+         const std::string RemapFilename = "");
 
   /// Create a sample profile reader from the supplied memory buffer.
+  /// Create a remapper underlying if RemapFilename is not empty.
   static ErrorOr<std::unique_ptr<SampleProfileReader>>
-  create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C);
+  create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C,
+         const std::string RemapFilename = "");
 
   /// Return the profile summary.
-  ProfileSummary &getSummary() { return *(Summary.get()); }
+  ProfileSummary &getSummary() const { return *(Summary.get()); }
+
+  MemoryBuffer *getBuffer() const { return Buffer.get(); }
 
   /// \brief Return the profile format.
-  SampleProfileFormat getFormat() { return Format; }
+  SampleProfileFormat getFormat() const { return Format; }
 
   virtual std::unique_ptr<ProfileSymbolList> getProfileSymbolList() {
     return nullptr;
@@ -361,6 +436,8 @@ protected:
   /// Compute summary for this profile.
   void computeSummary();
 
+  std::unique_ptr<SampleProfileReaderItaniumRemapper> Remapper;
+
   /// \brief The format of sample.
   SampleProfileFormat Format = SPF_None;
 };
@@ -374,7 +451,7 @@ public:
   std::error_code readHeader() override { return sampleprof_error::success; }
 
   /// Read sample profiles from the associated file.
-  std::error_code read() override;
+  std::error_code readImpl() override;
 
   /// Return true if \p Buffer is in the format supported by this class.
   static bool hasFormat(const MemoryBuffer &Buffer);
@@ -390,7 +467,7 @@ public:
   virtual std::error_code readHeader() override;
 
   /// Read sample profiles from the associated file.
-  std::error_code read() override;
+  std::error_code readImpl() override;
 
   /// It includes all the names that have samples either in outline instance
   /// or inline instance.
@@ -512,7 +589,7 @@ public:
       : SampleProfileReaderBinary(std::move(B), C, Format) {}
 
   /// Read sample profiles in extensible format from the associated file.
-  std::error_code read() override;
+  std::error_code readImpl() override;
 
   /// Get the total size of all \p Type sections.
   uint64_t getSectionSize(SecType Type);
@@ -581,7 +658,7 @@ public:
   static bool hasFormat(const MemoryBuffer &Buffer);
 
   /// Read samples only for functions to use.
-  std::error_code read() override;
+  std::error_code readImpl() override;
 
   /// Collect functions to be used when compiling Module \p M.
   void collectFuncsFrom(const Module &M) override;
@@ -612,7 +689,7 @@ public:
   std::error_code readHeader() override;
 
   /// Read sample profiles from the associated file.
-  std::error_code read() override;
+  std::error_code readImpl() override;
 
   /// Return true if \p Buffer is in the format supported by this class.
   static bool hasFormat(const MemoryBuffer &Buffer);
@@ -638,44 +715,6 @@ protected:
   /// GCOV tags used to separate sections in the profile file.
   static const uint32_t GCOVTagAFDOFileNames = 0xaa000000;
   static const uint32_t GCOVTagAFDOFunction = 0xac000000;
-};
-
-/// A profile data reader proxy that remaps the profile data from another
-/// sample profile data reader, by applying a provided set of equivalences
-/// between components of the symbol names in the profile.
-class SampleProfileReaderItaniumRemapper : public SampleProfileReader {
-public:
-  SampleProfileReaderItaniumRemapper(
-      std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
-      std::unique_ptr<SampleProfileReader> Underlying)
-      : SampleProfileReader(std::move(B), C, Underlying->getFormat()) {
-    Profiles = std::move(Underlying->getProfiles());
-    Summary = takeSummary(*Underlying);
-    // Keep the underlying reader alive; the profile data may contain
-    // StringRefs referencing names in its name table.
-    UnderlyingReader = std::move(Underlying);
-  }
-
-  /// Create a remapped sample profile from the given remapping file and
-  /// underlying samples.
-  static ErrorOr<std::unique_ptr<SampleProfileReader>>
-  create(const Twine &Filename, LLVMContext &C,
-         std::unique_ptr<SampleProfileReader> Underlying);
-
-  /// Read and validate the file header.
-  std::error_code readHeader() override { return sampleprof_error::success; }
-
-  /// Read remapping file and apply it to the sample profile.
-  std::error_code read() override;
-
-  /// Return the samples collected for function \p F.
-  FunctionSamples *getSamplesFor(StringRef FunctionName) override;
-  using SampleProfileReader::getSamplesFor;
-
-private:
-  SymbolRemappingReader Remappings;
-  DenseMap<SymbolRemappingReader::Key, FunctionSamples*> SampleMap;
-  std::unique_ptr<SampleProfileReader> UnderlyingReader;
 };
 
 } // end namespace sampleprof

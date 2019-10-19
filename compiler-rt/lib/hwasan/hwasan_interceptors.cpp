@@ -260,8 +260,6 @@ void InitializeInterceptors() {
 #if !defined(__aarch64__)
   INTERCEPT_FUNCTION(pthread_create);
 #endif  // __aarch64__
-  INTERCEPT_FUNCTION(realloc);
-  INTERCEPT_FUNCTION(free);
 #endif
 
   inited = 1;
