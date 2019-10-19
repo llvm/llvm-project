@@ -2034,8 +2034,6 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
 
   // Is it a symbolic value?
   if (auto L = V.getAs<loc::MemRegionVal>()) {
-    report.addVisitor(std::make_unique<UndefOrNullArgVisitor>(L->getRegion()));
-
     // FIXME: this is a hack for fixing a later crash when attempting to
     // dereference a void* pointer.
     // We should not try to dereference pointers at all when we don't care
@@ -2056,10 +2054,14 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
     else if (CanDereference)
       RVal = LVState->getSVal(L->getRegion());
 
-    if (CanDereference)
+    if (CanDereference) {
+      report.addVisitor(
+          std::make_unique<UndefOrNullArgVisitor>(L->getRegion()));
+
       if (auto KV = RVal.getAs<KnownSVal>())
         report.addVisitor(std::make_unique<FindLastStoreBRVisitor>(
             *KV, L->getRegion(), EnableNullFPSuppression, TKind, SFC));
+    }
 
     const MemRegion *RegionRVal = RVal.getAsRegion();
     if (RegionRVal && isa<SymbolicRegion>(RegionRVal)) {
