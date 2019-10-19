@@ -11497,17 +11497,18 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
                                         E->getCaptureDefault());
   getDerived().transformedLocalDecl(OldClass, {Class});
 
-  Optional<std::pair<unsigned, Decl*>> Mangling;
+  Optional<std::tuple<unsigned, bool, Decl *>> Mangling;
   if (getDerived().ReplacingOriginal())
-    Mangling = std::make_pair(OldClass->getLambdaManglingNumber(),
-                              OldClass->getLambdaContextDecl());
+    Mangling = std::make_tuple(OldClass->getLambdaManglingNumber(),
+                               OldClass->hasKnownLambdaInternalLinkage(),
+                               OldClass->getLambdaContextDecl());
 
   // Build the call operator.
   CXXMethodDecl *NewCallOperator = getSema().startLambdaDefinition(
       Class, E->getIntroducerRange(), NewCallOpTSI,
       E->getCallOperator()->getEndLoc(),
       NewCallOpTSI->getTypeLoc().castAs<FunctionProtoTypeLoc>().getParams(),
-      E->getCallOperator()->getConstexprKind(), Mangling);
+      E->getCallOperator()->getConstexprKind());
 
   LSI->CallOperator = NewCallOperator;
 
@@ -11526,6 +11527,9 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
   getDerived().transformAttrs(E->getCallOperator(), NewCallOperator);
   getDerived().transformedLocalDecl(E->getCallOperator(), {NewCallOperator});
+
+  // Number the lambda for linkage purposes if necessary.
+  getSema().handleLambdaNumbering(Class, NewCallOperator, Mangling);
 
   // Introduce the context of the call operator.
   Sema::ContextRAII SavedContext(getSema(), NewCallOperator,
