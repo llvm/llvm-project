@@ -963,6 +963,20 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_DEPRECATED_IN_CXX17
 #endif
 
+// Macros to enter and leave a state where deprecation warnings are suppressed.
+#if !defined(_LIBCPP_SUPPRESS_DEPRECATED_PUSH) && \
+    (defined(_LIBCPP_COMPILER_CLANG) || defined(_LIBCPP_COMPILER_GCC))
+#  define _LIBCPP_SUPPRESS_DEPRECATED_PUSH \
+    _Pragma("GCC diagnostic push") \
+    _Pragma("GCC diagnostic ignored \"-Wdeprecated\"")
+#  define _LIBCPP_SUPPRESS_DEPRECATED_POP \
+    _Pragma("GCC diagnostic pop")
+#endif
+#if !defined(_LIBCPP_SUPPRESS_DEPRECATED_PUSH)
+#  define _LIBCPP_SUPPRESS_DEPRECATED_PUSH
+#  define _LIBCPP_SUPPRESS_DEPRECATED_POP
+#endif
+
 #if _LIBCPP_STD_VER <= 11
 #  define _LIBCPP_EXPLICIT_AFTER_CXX11
 #else
