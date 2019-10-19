@@ -206,6 +206,7 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case DefiningSynthesizedFunction:
   case ExceptionSpecEvaluation:
   case ConstraintSubstitution:
+  case RewritingOperatorAsSpaceship:
     return false;
 
   // This function should never be called when Kind's value is Memoization.
@@ -682,6 +683,11 @@ void Sema::PrintInstantiationStack() {
       break;
     }
 
+    case CodeSynthesisContext::RewritingOperatorAsSpaceship:
+      Diags.Report(Active->Entity->getLocation(),
+                   diag::note_rewriting_operator_as_spaceship);
+      break;
+
     case CodeSynthesisContext::Memoization:
       break;
     
@@ -754,6 +760,7 @@ Optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
 
     case CodeSynthesisContext::DeclaringSpecialMember:
     case CodeSynthesisContext::DefiningSynthesizedFunction:
+    case CodeSynthesisContext::RewritingOperatorAsSpaceship:
       // This happens in a context unrelated to template instantiation, so
       // there is no SFINAE.
       return None;

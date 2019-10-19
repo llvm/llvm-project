@@ -298,11 +298,11 @@ void test_enum_enum_compare_no_builtin() {
 
 template <int>
 struct Tag {};
-// expected-note@+1 {{candidate}}
-Tag<0> operator<=>(EnumA, EnumA) {
+Tag<0> operator<=>(EnumA, EnumA) { // expected-note {{not viable}}
   return {};
 }
-Tag<1> operator<=>(EnumA, EnumB) {
+// expected-note@+1 {{while rewriting comparison as call to 'operator<=>' declared here}}
+Tag<1> operator<=>(EnumA, EnumB) { // expected-note {{not viable}}
   return {};
 }
 
@@ -311,7 +311,7 @@ void test_enum_ovl_provided() {
   ASSERT_EXPR_TYPE(r1, Tag<0>);
   auto r2 = (EnumA::A <=> EnumB::B);
   ASSERT_EXPR_TYPE(r2, Tag<1>);
-  (void)(EnumB::B <=> EnumA::A); // expected-error {{invalid operands to binary expression ('EnumCompareTests::EnumB' and 'EnumCompareTests::EnumA')}}
+  (void)(EnumB::B <=> EnumA::A); // expected-error {{invalid operands to binary expression ('int' and 'Tag<1>')}}
 }
 
 void enum_float_test() {

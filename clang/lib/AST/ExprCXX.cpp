@@ -79,7 +79,7 @@ CXXRewrittenBinaryOperator::getDecomposedForm() const {
     Result.RHS = BO->getRHS();
     Result.InnerBinOp = BO;
   } else if (auto *BO = dyn_cast<CXXOperatorCallExpr>(E)) {
-    assert(!SkippedNot || BO->getOperator() == OO_Equal);
+    assert(!SkippedNot || BO->getOperator() == OO_EqualEqual);
     assert(BO->isInfixBinaryOp());
     switch (BO->getOperator()) {
     case OO_Less: Result.Opcode = BO_LT; break;
@@ -107,7 +107,7 @@ CXXRewrittenBinaryOperator::getDecomposedForm() const {
     return Result;
 
   // Otherwise, we expect a <=> to now be on the LHS.
-  E = Result.InnerBinOp->IgnoreImplicit();
+  E = Result.LHS->IgnoreImplicit();
   if (auto *BO = dyn_cast<BinaryOperator>(E)) {
     assert(BO->getOpcode() == BO_Cmp);
     Result.LHS = BO->getLHS();
