@@ -1418,14 +1418,19 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
     if (Optional<CallEnter> CE = Succ->getLocationAs<CallEnter>()) {
       if (const auto *VR = dyn_cast<VarRegion>(R)) {
 
-        const auto *Param = cast<ParmVarDecl>(VR->getDecl());
+        if (const auto *Param = dyn_cast<ParmVarDecl>(VR->getDecl())) {
+          ProgramStateManager &StateMgr = BRC.getStateManager();
+          CallEventManager &CallMgr = StateMgr.getCallEventManager();
 
-        ProgramStateManager &StateMgr = BRC.getStateManager();
-        CallEventManager &CallMgr = StateMgr.getCallEventManager();
-
-        CallEventRef<> Call = CallMgr.getCaller(CE->getCalleeContext(),
-                                                Succ->getState());
-        InitE = Call->getArgExpr(Param->getFunctionScopeIndex());
+          CallEventRef<> Call = CallMgr.getCaller(CE->getCalleeContext(),
+                                                  Succ->getState());
+          InitE = Call->getArgExpr(Param->getFunctionScopeIndex());
+        } else {
+          // Handle Objective-C 'self'.
+          assert(isa<ImplicitParamDecl>(VR->getDecl()));
+          InitE = cast<ObjCMessageExpr>(CE->getCalleeContext()->getCallSite())
+                      ->getInstanceReceiver()->IgnoreParenCasts();
+        }
         IsParam = true;
       }
     }
