@@ -367,17 +367,7 @@ public:
 
   /// Check if given function is safe for not having callee saved registers.
   /// This is used when interprocedural register allocation is enabled.
-  static bool isSafeForNoCSROpt(const Function &F) {
-    if (!F.hasLocalLinkage() || F.hasAddressTaken() ||
-        !F.hasFnAttribute(Attribute::NoRecurse))
-      return false;
-    // Function should not be optimized as tail call.
-    for (const User *U : F.users())
-      if (auto CS = ImmutableCallSite(U))
-        if (CS.isTailCall())
-          return false;
-    return true;
-  }
+  static bool isSafeForNoCSROpt(const Function &F);
 
   /// Check if the no-CSR optimisation is profitable for the given function.
   virtual bool isProfitableForNoCSROpt(const Function &F) const {

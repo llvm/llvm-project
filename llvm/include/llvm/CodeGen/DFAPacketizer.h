@@ -144,7 +144,7 @@ class VLIWPacketizerList {
 protected:
   MachineFunction &MF;
   const TargetInstrInfo *TII;
-  AliasAnalysis *AA;
+  AAResults *AA;
 
   // The VLIW Scheduler.
   DefaultVLIWScheduler *VLIWScheduler;
@@ -156,9 +156,9 @@ protected:
   std::map<MachineInstr*, SUnit*> MIToSUnit;
 
 public:
-  // The AliasAnalysis parameter can be nullptr.
+  // The AAResults parameter can be nullptr.
   VLIWPacketizerList(MachineFunction &MF, MachineLoopInfo &MLI,
-                     AliasAnalysis *AA);
+                     AAResults *AA);
 
   virtual ~VLIWPacketizerList();
 

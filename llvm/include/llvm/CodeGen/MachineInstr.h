@@ -20,11 +20,9 @@
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -38,6 +36,7 @@
 
 namespace llvm {
 
+class AAResults;
 template <typename T> class ArrayRef;
 class DIExpression;
 class DILocalVariable;
@@ -1043,9 +1042,7 @@ public:
 
   /// A DBG_VALUE is an entry value iff its debug expression contains the
   /// DW_OP_LLVM_entry_value operation.
-  bool isDebugEntryValue() const {
-    return isDebugValue() && getDebugExpression()->isEntryValue();
-  }
+  bool isDebugEntryValue() const;
 
   /// Return true if the instruction is a debug value which describes a part of
   /// a variable as unavailable.
@@ -1414,7 +1411,7 @@ public:
   /// Return true if it is safe to move this instruction. If
   /// SawStore is set to true, it means that there is a store (or call) between
   /// the instruction's location and its intended destination.
-  bool isSafeToMove(AliasAnalysis *AA, bool &SawStore) const;
+  bool isSafeToMove(AAResults *AA, bool &SawStore) const;
 
   /// Returns true if this instruction's memory access aliases the memory
   /// access of Other.
@@ -1426,7 +1423,7 @@ public:
   /// @param AA Optional alias analysis, used to compare memory operands.
   /// @param Other MachineInstr to check aliasing against.
   /// @param UseTBAA Whether to pass TBAA information to alias analysis.
-  bool mayAlias(AliasAnalysis *AA, const MachineInstr &Other, bool UseTBAA) const;
+  bool mayAlias(AAResults *AA, const MachineInstr &Other, bool UseTBAA) const;
 
   /// Return true if this instruction may have an ordered
   /// or volatile memory reference, or if the information describing the memory
@@ -1441,7 +1438,7 @@ public:
   /// argument area of a function (if it does not change).  If the instruction
   /// does multiple loads, this returns true only if all of the loads are
   /// dereferenceable and invariant.
-  bool isDereferenceableInvariantLoad(AliasAnalysis *AA) const;
+  bool isDereferenceableInvariantLoad(AAResults *AA) const;
 
   /// If the specified instruction is a PHI that always merges together the
   /// same virtual register, return the register, otherwise return 0.

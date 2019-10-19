@@ -206,7 +206,7 @@ public:
                                     int &FrameIndex) const override;
 
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
-                                         AliasAnalysis *AA) const override;
+                                         AAResults *AA) const override;
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                      unsigned DestReg, unsigned SubIdx,
                      const MachineInstr &Orig,

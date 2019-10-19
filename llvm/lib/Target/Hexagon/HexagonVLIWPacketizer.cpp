@@ -130,7 +130,7 @@ INITIALIZE_PASS_END(HexagonPacketizer, "hexagon-packetizer",
                     "Hexagon Packetizer", false, false)
 
 HexagonPacketizerList::HexagonPacketizerList(MachineFunction &MF,
-      MachineLoopInfo &MLI, AliasAnalysis *AA,
+      MachineLoopInfo &MLI, AAResults *AA,
       const MachineBranchProbabilityInfo *MBPI, bool Minimal)
     : VLIWPacketizerList(MF, MLI, AA), MBPI(MBPI), MLI(&MLI),
       Minimal(Minimal) {
