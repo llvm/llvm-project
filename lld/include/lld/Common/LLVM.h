@@ -17,6 +17,7 @@
 // This should be the only #include, force #includes of all the others on
 // clients.
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include <utility>
 

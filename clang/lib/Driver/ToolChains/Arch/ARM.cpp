@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/TargetParser.h"
+#include "llvm/Support/Host.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
