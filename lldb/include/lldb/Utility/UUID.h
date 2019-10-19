@@ -9,14 +9,11 @@
 #ifndef LLDB_UTILITY_UUID_H
 #define LLDB_UTILITY_UUID_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <string>
-#include "llvm/ADT/ArrayRef.h"
-
-namespace llvm {
-  class StringRef;
-}
 
 namespace lldb_private {
 
