@@ -415,6 +415,8 @@ private:
       return "DeclaringSpecialMember";
     case CodeSynthesisContext::DefiningSynthesizedFunction:
       return "DefiningSynthesizedFunction";
+    case CodeSynthesisContext::RewritingOperatorAsSpaceship:
+      return "RewritingOperatorAsSpaceship";
     case CodeSynthesisContext::Memoization:
       return "Memoization";
     case CodeSynthesisContext::ConstraintsCheck:

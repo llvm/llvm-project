@@ -13320,6 +13320,13 @@ static ExprResult BuildOverloadedBinOp(Sema &S, Scope *Sc, SourceLocation OpLoc,
     S.LookupOverloadedOperatorName(OverOp, Sc, LHS->getType(),
                                    RHS->getType(), Functions);
 
+  // In C++20 onwards, we may have a second operator to look up.
+  if (S.getLangOpts().CPlusPlus2a) {
+    if (OverloadedOperatorKind ExtraOp = getRewrittenOverloadedOperator(OverOp))
+      S.LookupOverloadedOperatorName(ExtraOp, Sc, LHS->getType(),
+                                     RHS->getType(), Functions);
+  }
+
   // Build the (potentially-overloaded, potentially-dependent)
   // binary operation.
   return S.CreateOverloadedBinOp(OpLoc, Opc, Functions, LHS, RHS);

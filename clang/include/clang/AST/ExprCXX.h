@@ -220,6 +220,40 @@ public:
   }
 };
 
+/// Represents a call to a CUDA kernel function.
+class CUDAKernelCallExpr final : public CallExpr {
+  friend class ASTStmtReader;
+
+  enum { CONFIG, END_PREARG };
+
+  // CUDAKernelCallExpr has some trailing objects belonging
+  // to CallExpr. See CallExpr for the details.
+
+  CUDAKernelCallExpr(Expr *Fn, CallExpr *Config, ArrayRef<Expr *> Args,
+                     QualType Ty, ExprValueKind VK, SourceLocation RP,
+                     unsigned MinNumArgs);
+
+  CUDAKernelCallExpr(unsigned NumArgs, EmptyShell Empty);
+
+public:
+  static CUDAKernelCallExpr *Create(const ASTContext &Ctx, Expr *Fn,
+                                    CallExpr *Config, ArrayRef<Expr *> Args,
+                                    QualType Ty, ExprValueKind VK,
+                                    SourceLocation RP, unsigned MinNumArgs = 0);
+
+  static CUDAKernelCallExpr *CreateEmpty(const ASTContext &Ctx,
+                                         unsigned NumArgs, EmptyShell Empty);
+
+  const CallExpr *getConfig() const {
+    return cast_or_null<CallExpr>(getPreArg(CONFIG));
+  }
+  CallExpr *getConfig() { return cast_or_null<CallExpr>(getPreArg(CONFIG)); }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CUDAKernelCallExprClass;
+  }
+};
+
 /// A rewritten comparison expression that was originally written using
 /// operator syntax.
 ///
@@ -307,40 +341,6 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXRewrittenBinaryOperatorClass;
-  }
-};
-
-/// Represents a call to a CUDA kernel function.
-class CUDAKernelCallExpr final : public CallExpr {
-  friend class ASTStmtReader;
-
-  enum { CONFIG, END_PREARG };
-
-  // CUDAKernelCallExpr has some trailing objects belonging
-  // to CallExpr. See CallExpr for the details.
-
-  CUDAKernelCallExpr(Expr *Fn, CallExpr *Config, ArrayRef<Expr *> Args,
-                     QualType Ty, ExprValueKind VK, SourceLocation RP,
-                     unsigned MinNumArgs);
-
-  CUDAKernelCallExpr(unsigned NumArgs, EmptyShell Empty);
-
-public:
-  static CUDAKernelCallExpr *Create(const ASTContext &Ctx, Expr *Fn,
-                                    CallExpr *Config, ArrayRef<Expr *> Args,
-                                    QualType Ty, ExprValueKind VK,
-                                    SourceLocation RP, unsigned MinNumArgs = 0);
-
-  static CUDAKernelCallExpr *CreateEmpty(const ASTContext &Ctx,
-                                         unsigned NumArgs, EmptyShell Empty);
-
-  const CallExpr *getConfig() const {
-    return cast_or_null<CallExpr>(getPreArg(CONFIG));
-  }
-  CallExpr *getConfig() { return cast_or_null<CallExpr>(getPreArg(CONFIG)); }
-
-  static bool classof(const Stmt *T) {
-    return T->getStmtClass() == CUDAKernelCallExprClass;
   }
 };
 
