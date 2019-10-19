@@ -11,3 +11,22 @@ command script add tell_async --function welcome.check_for_synchro --synchronici
 command script add tell_curr --function welcome.check_for_synchro --synchronicity curr
 command script add takes_exe_ctx --function welcome.takes_exe_ctx
 command script import decorated.py
+
+
+command script import callables.py
+
+command script add -f callables.foobar foobar
+command script add -f callables.foobar4 foobar4
+command script add -f callables.vfoobar vfoobar
+command script add -f callables.v5foobar v5foobar
+
+command script add -f callables.FooBar.sfoobar sfoobar
+command script add -f callables.FooBar.cfoobar cfoobar
+command script add -f callables.FooBarObj.ifoobar ifoobar
+
+command script add -f callables.FooBar.sfoobar4 sfoobar4
+command script add -f callables.FooBar.cfoobar4 cfoobar4
+command script add -f callables.FooBarObj.ifoobar4 ifoobar4
+
+command script add -f callables.FooBarObj ofoobar
+command script add -f callables.FooBar4Obj ofoobar4

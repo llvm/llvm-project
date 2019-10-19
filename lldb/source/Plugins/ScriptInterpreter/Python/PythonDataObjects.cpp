@@ -876,21 +876,23 @@ Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
   result.count = cantFail(As<long long>(pyarginfo.get().GetAttribute("count")));
   result.has_varargs =
       cantFail(As<bool>(pyarginfo.get().GetAttribute("has_varargs")));
-  result.is_bound_method =
+  bool is_method =
       cantFail(As<bool>(pyarginfo.get().GetAttribute("is_bound_method")));
+  result.max_positional_args =
+      result.has_varargs ? ArgInfo::UNBOUNDED : result.count;
 
   // FIXME emulate old broken behavior
-  if (result.is_bound_method)
+  if (is_method)
     result.count++;
 
 #else
-
+  bool is_bound_method = false;
   PyObject *py_func_obj = m_py_obj;
   if (PyMethod_Check(py_func_obj)) {
     py_func_obj = PyMethod_GET_FUNCTION(py_func_obj);
     PythonObject im_self = GetAttributeValue("im_self");
     if (im_self.IsValid() && !im_self.IsNone())
-      result.is_bound_method = true;
+      is_bound_method = true;
   } else {
     // see if this is a callable object with an __call__ method
     if (!PyFunction_Check(py_func_obj)) {
@@ -899,9 +901,9 @@ Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
         auto __callable__ = __call__.AsType<PythonCallable>();
         if (__callable__.IsValid()) {
           py_func_obj = PyMethod_GET_FUNCTION(__callable__.get());
-          PythonObject im_self = GetAttributeValue("im_self");
+          PythonObject im_self = __callable__.GetAttributeValue("im_self");
           if (im_self.IsValid() && !im_self.IsNone())
-            result.is_bound_method = true;
+            is_bound_method = true;
         }
       }
     }
@@ -916,11 +918,17 @@ Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
 
   result.count = code->co_argcount;
   result.has_varargs = !!(code->co_flags & CO_VARARGS);
+  result.max_positional_args = result.has_varargs
+                                   ? ArgInfo::UNBOUNDED
+                                   : (result.count - (int)is_bound_method);
 
 #endif
 
   return result;
 }
+
+constexpr unsigned
+    PythonCallable::ArgInfo::UNBOUNDED; // FIXME delete after c++17
 
 PythonCallable::ArgInfo PythonCallable::GetNumArguments() const {
   auto arginfo = GetArgInfo();

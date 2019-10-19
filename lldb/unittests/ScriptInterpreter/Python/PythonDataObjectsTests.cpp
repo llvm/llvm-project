@@ -643,8 +643,8 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
     auto arginfo = lambda.GetArgInfo();
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().count, 1);
+    EXPECT_EQ(arginfo.get().max_positional_args, 1u);
     EXPECT_EQ(arginfo.get().has_varargs, false);
-    EXPECT_EQ(arginfo.get().is_bound_method, false);
   }
 
   {
@@ -655,8 +655,8 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
     auto arginfo = lambda.GetArgInfo();
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().count, 2);
+    EXPECT_EQ(arginfo.get().max_positional_args, 2u);
     EXPECT_EQ(arginfo.get().has_varargs, false);
-    EXPECT_EQ(arginfo.get().is_bound_method, false);
   }
 
   {
@@ -667,6 +667,7 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
     auto arginfo = lambda.GetArgInfo();
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().count, 2);
+    EXPECT_EQ(arginfo.get().max_positional_args, 2u);
     EXPECT_EQ(arginfo.get().has_varargs, false);
   }
 
@@ -678,8 +679,9 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
     auto arginfo = lambda.GetArgInfo();
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().count, 2);
+    EXPECT_EQ(arginfo.get().max_positional_args,
+              PythonCallable::ArgInfo::UNBOUNDED);
     EXPECT_EQ(arginfo.get().has_varargs, true);
-    EXPECT_EQ(arginfo.get().is_bound_method, false);
   }
 
   {
@@ -690,6 +692,8 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
     auto arginfo = lambda.GetArgInfo();
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().count, 2);
+    EXPECT_EQ(arginfo.get().max_positional_args,
+              PythonCallable::ArgInfo::UNBOUNDED);
     EXPECT_EQ(arginfo.get().has_varargs, true);
   }
 
@@ -698,7 +702,18 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
 class Foo:
   def bar(self, x):
      return x
+  @classmethod
+  def classbar(cls, x):
+     return x
+  @staticmethod
+  def staticbar(x):
+     return x
+  def __call__(self, x):
+     return x
+obj = Foo()
 bar_bound   = Foo().bar
+bar_class   = Foo().classbar
+bar_static  = Foo().staticbar
 bar_unbound = Foo.bar
 )";
     PyObject *o =
@@ -711,16 +726,37 @@ bar_unbound = Foo.bar
     auto arginfo = bar_bound.get().GetArgInfo();
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().count, 2); // FIXME, wrong
+    EXPECT_EQ(arginfo.get().max_positional_args, 1u);
     EXPECT_EQ(arginfo.get().has_varargs, false);
-    EXPECT_EQ(arginfo.get().is_bound_method, true);
 
     auto bar_unbound = As<PythonCallable>(globals.GetItem("bar_unbound"));
     ASSERT_THAT_EXPECTED(bar_unbound, llvm::Succeeded());
     arginfo = bar_unbound.get().GetArgInfo();
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().count, 2);
+    EXPECT_EQ(arginfo.get().max_positional_args, 2u);
     EXPECT_EQ(arginfo.get().has_varargs, false);
-    EXPECT_EQ(arginfo.get().is_bound_method, false);
+
+    auto bar_class = As<PythonCallable>(globals.GetItem("bar_class"));
+    ASSERT_THAT_EXPECTED(bar_class, llvm::Succeeded());
+    arginfo = bar_class.get().GetArgInfo();
+    ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
+    EXPECT_EQ(arginfo.get().max_positional_args, 1u);
+    EXPECT_EQ(arginfo.get().has_varargs, false);
+
+    auto bar_static = As<PythonCallable>(globals.GetItem("bar_static"));
+    ASSERT_THAT_EXPECTED(bar_static, llvm::Succeeded());
+    arginfo = bar_static.get().GetArgInfo();
+    ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
+    EXPECT_EQ(arginfo.get().max_positional_args, 1u);
+    EXPECT_EQ(arginfo.get().has_varargs, false);
+
+    auto obj = As<PythonCallable>(globals.GetItem("obj"));
+    ASSERT_THAT_EXPECTED(obj, llvm::Succeeded());
+    arginfo = obj.get().GetArgInfo();
+    ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
+    EXPECT_EQ(arginfo.get().max_positional_args, 1u);
+    EXPECT_EQ(arginfo.get().has_varargs, false);
   }
 
 #if PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 3
@@ -734,8 +770,8 @@ bar_unbound = Foo.bar
     auto arginfo = hex.get().GetArgInfo();
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().count, 1);
+    EXPECT_EQ(arginfo.get().max_positional_args, 1u);
     EXPECT_EQ(arginfo.get().has_varargs, false);
-    EXPECT_EQ(arginfo.get().is_bound_method, false);
   }
 
 #endif
