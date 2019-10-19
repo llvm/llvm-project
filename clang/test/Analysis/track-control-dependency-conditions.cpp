@@ -1,10 +1,10 @@
-// RUN: %clang_analyze_cc1 %s \
+// RUN: %clang_analyze_cc1 %s -std=c++14 \
 // RUN:   -verify=expected,tracking \
 // RUN:   -analyzer-config track-conditions=true \
 // RUN:   -analyzer-output=text \
 // RUN:   -analyzer-checker=core
 
-// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN: not %clang_analyze_cc1 -std=c++14 -verify %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-config track-conditions=false \
 // RUN:   -analyzer-config track-conditions-debug=true \
@@ -14,14 +14,14 @@
 // CHECK-INVALID-DEBUG-SAME:        'track-conditions-debug', that expects
 // CHECK-INVALID-DEBUG-SAME:        'track-conditions' to also be enabled
 //
-// RUN: %clang_analyze_cc1 %s \
+// RUN: %clang_analyze_cc1 %s -std=c++14 \
 // RUN:   -verify=expected,tracking,debug \
 // RUN:   -analyzer-config track-conditions=true \
 // RUN:   -analyzer-config track-conditions-debug=true \
 // RUN:   -analyzer-output=text \
 // RUN:   -analyzer-checker=core
 
-// RUN: %clang_analyze_cc1 %s -verify \
+// RUN: %clang_analyze_cc1 %s -std=c++14 -verify \
 // RUN:   -analyzer-output=text \
 // RUN:   -analyzer-config track-conditions=false \
 // RUN:   -analyzer-checker=core

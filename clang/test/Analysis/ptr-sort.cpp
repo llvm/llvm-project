@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 %s -analyzer-output=text -verify \
+// RUN: %clang_analyze_cc1 %s -std=c++14 -analyzer-output=text -verify \
 // RUN: -analyzer-checker=core,alpha.nondeterminism.PointerSorting
 
 #include "Inputs/system-header-simulator-cxx.h"

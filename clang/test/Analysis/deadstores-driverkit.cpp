@@ -5,7 +5,7 @@
 // It needs to be on the top.
 // Run-lines can wait.
 
-// RUN: %clang_analyze_cc1 -w -triple x86_64-apple-driverkit19.0 \
+// RUN: %clang_analyze_cc1 -std=c++17 -w -triple x86_64-apple-driverkit19.0 \
 // RUN:   -analyzer-checker=deadcode -verify %s
 
 // expected-no-diagnostics

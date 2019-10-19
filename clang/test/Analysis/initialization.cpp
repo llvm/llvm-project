@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -analyze -analyzer-checker=core.builtin,debug.ExprInspection -verify %s
+// RUN: %clang_cc1 -std=c++14 -triple i386-apple-darwin10 -analyze -analyzer-checker=core.builtin,debug.ExprInspection -verify %s
 
 void clang_analyzer_eval(int);
 

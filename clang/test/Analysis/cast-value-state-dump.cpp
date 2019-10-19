@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 \
+// RUN: %clang_analyze_cc1 -std=c++14 \
 // RUN:  -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
 // RUN:  -analyzer-output=text -verify %s 2>&1 | FileCheck %s
 

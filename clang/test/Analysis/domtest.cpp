@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 %s \
+// RUN: %clang_analyze_cc1 -std=c++14 %s \
 // RUN:   -analyzer-checker=debug.DumpDominators \
 // RUN:   -analyzer-checker=debug.DumpPostDominators \
 // RUN:   -analyzer-checker=debug.DumpControlDependencies \
