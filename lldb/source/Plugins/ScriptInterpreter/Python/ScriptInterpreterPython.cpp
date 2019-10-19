@@ -55,6 +55,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::python;
 
 // Defined in the SWIG source file
 #if PY_MAJOR_VERSION >= 3
@@ -765,19 +766,16 @@ PythonDictionary &ScriptInterpreterPythonImpl::GetSessionDictionary() {
   if (!main_dict.IsValid())
     return m_session_dict;
 
-  PythonObject item = main_dict.GetItemForKey(PythonString(m_dictionary_name));
-  m_session_dict.Reset(PyRefType::Borrowed, item.get());
+  m_session_dict = unwrapIgnoringErrors(
+      As<PythonDictionary>(main_dict.GetItem(m_dictionary_name)));
   return m_session_dict;
 }
 
 PythonDictionary &ScriptInterpreterPythonImpl::GetSysModuleDictionary() {
   if (m_sys_module_dict.IsValid())
     return m_sys_module_dict;
-
-  PythonObject sys_module(PyRefType::Borrowed, PyImport_AddModule("sys"));
-  if (sys_module.IsValid())
-    m_sys_module_dict.Reset(PyRefType::Borrowed,
-                            PyModule_GetDict(sys_module.get()));
+  PythonModule sys_module = unwrapIgnoringErrors(PythonModule::Import("sys"));
+  m_sys_module_dict = sys_module.GetDictionary();
   return m_sys_module_dict;
 }
 
@@ -1053,9 +1051,8 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLineWithReturn(
   PythonDictionary locals = GetSessionDictionary();
 
   if (!locals.IsValid()) {
-    locals.Reset(
-        PyRefType::Owned,
-        PyObject_GetAttrString(globals.get(), m_dictionary_name.c_str()));
+    locals = unwrapIgnoringErrors(
+        As<PythonDictionary>(globals.GetAttribute(m_dictionary_name)));
   }
 
   if (!locals.IsValid())
@@ -1204,9 +1201,8 @@ Status ScriptInterpreterPythonImpl::ExecuteMultipleLines(
   PythonDictionary locals = GetSessionDictionary();
 
   if (!locals.IsValid())
-    locals.Reset(
-        PyRefType::Owned,
-        PyObject_GetAttrString(globals.get(), m_dictionary_name.c_str()));
+    locals = unwrapIgnoringErrors(
+        As<PythonDictionary>(globals.GetAttribute(m_dictionary_name)));
 
   if (!locals.IsValid())
     locals = globals;

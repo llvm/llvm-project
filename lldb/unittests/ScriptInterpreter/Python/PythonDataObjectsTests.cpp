@@ -27,8 +27,7 @@ public:
   void SetUp() override {
     PythonTestSuite::SetUp();
 
-    PythonString sys_module("sys");
-    m_sys_module.Reset(PyRefType::Owned, PyImport_Import(sys_module.get()));
+    m_sys_module = unwrapIgnoringErrors(PythonModule::Import("sys"));
     m_main_module = PythonModule::MainModule();
     m_builtins_module = PythonModule::BuiltinsModule();
   }
@@ -70,13 +69,10 @@ TEST_F(PythonDataObjectsTest, TestResetting) {
   PythonDictionary dict(PyInitialValue::Empty);
 
   PyObject *new_dict = PyDict_New();
-  dict.Reset(PyRefType::Owned, new_dict);
+  dict = Take<PythonDictionary>(new_dict);
   EXPECT_EQ(new_dict, dict.get());
 
-  dict.Reset(PyRefType::Owned, nullptr);
-  EXPECT_EQ(nullptr, dict.get());
-
-  dict.Reset(PyRefType::Owned, PyDict_New());
+  dict = Take<PythonDictionary>(PyDict_New());
   EXPECT_NE(nullptr, dict.get());
   dict.Reset();
   EXPECT_EQ(nullptr, dict.get());
