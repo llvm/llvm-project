@@ -14269,8 +14269,16 @@ static SDValue lowerV16I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                DAG.getUNDEF(MVT::v8i16), PreDupI16Shuffle));
 
       // Unpack the bytes to form the i16s that will be shuffled into place.
+      bool EvenInUse = false, OddInUse = false;
+      for (int i = 0; i < 16; i += 2) {
+        EvenInUse |= (Mask[i + 0] >= 0);
+        OddInUse |= (Mask[i + 1] >= 0);
+        if (EvenInUse && OddInUse)
+          break;
+      }
       V1 = DAG.getNode(TargetLo ? X86ISD::UNPCKL : X86ISD::UNPCKH, DL,
-                       MVT::v16i8, V1, V1);
+                       MVT::v16i8, EvenInUse ? V1 : DAG.getUNDEF(MVT::v16i8),
+                       OddInUse ? V1 : DAG.getUNDEF(MVT::v16i8));
 
       int PostDupI16Shuffle[8] = {-1, -1, -1, -1, -1, -1, -1, -1};
       for (int i = 0; i < 16; ++i)
