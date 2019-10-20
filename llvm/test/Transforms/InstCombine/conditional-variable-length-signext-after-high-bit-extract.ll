@@ -57,7 +57,7 @@ define i32 @t0_notrunc_or(i32 %data, i32 %nbits) {
 ; CHECK-NEXT:    call void @use1(i1 [[SHOULD_SIGNEXT]])
 ; CHECK-NEXT:    call void @use32(i32 [[ALL_BITS_EXCEPT_LOW_NBITS]])
 ; CHECK-NEXT:    call void @use32(i32 [[MAGIC]])
-; CHECK-NEXT:    [[SIGNEXTENDED:%.*]] = or i32 [[HIGH_BITS_EXTRACTED]], [[MAGIC]]
+; CHECK-NEXT:    [[SIGNEXTENDED:%.*]] = ashr i32 [[DATA]], [[LOW_BITS_TO_SKIP]]
 ; CHECK-NEXT:    ret i32 [[SIGNEXTENDED]]
 ;
   %low_bits_to_skip = sub i32 32, %nbits
@@ -152,14 +152,14 @@ define i32 @t2_trunc_or(i64 %data, i32 %nbits) {
 ; CHECK-NEXT:    [[HIGH_BITS_EXTRACTED:%.*]] = trunc i64 [[HIGH_BITS_EXTRACTED_WIDE]] to i32
 ; CHECK-NEXT:    [[SHOULD_SIGNEXT:%.*]] = icmp slt i64 [[DATA]], 0
 ; CHECK-NEXT:    [[ALL_BITS_EXCEPT_LOW_NBITS:%.*]] = shl i32 -1, [[NBITS]]
-; CHECK-NEXT:    [[MAGIC:%.*]] = select i1 [[SHOULD_SIGNEXT]], i32 [[ALL_BITS_EXCEPT_LOW_NBITS]], i32 0
 ; CHECK-NEXT:    call void @use32(i32 [[LOW_BITS_TO_SKIP]])
 ; CHECK-NEXT:    call void @use64(i64 [[LOW_BITS_TO_SKIP_WIDE]])
 ; CHECK-NEXT:    call void @use64(i64 [[HIGH_BITS_EXTRACTED_WIDE]])
 ; CHECK-NEXT:    call void @use32(i32 [[HIGH_BITS_EXTRACTED]])
 ; CHECK-NEXT:    call void @use1(i1 [[SHOULD_SIGNEXT]])
 ; CHECK-NEXT:    call void @use32(i32 [[ALL_BITS_EXCEPT_LOW_NBITS]])
-; CHECK-NEXT:    [[SIGNEXTENDED:%.*]] = or i32 [[MAGIC]], [[HIGH_BITS_EXTRACTED]]
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i64 [[DATA]], [[LOW_BITS_TO_SKIP_WIDE]]
+; CHECK-NEXT:    [[SIGNEXTENDED:%.*]] = trunc i64 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[SIGNEXTENDED]]
 ;
   %low_bits_to_skip = sub i32 64, %nbits
