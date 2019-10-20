@@ -1532,6 +1532,68 @@ TEST(ConstantRange, MakeGuaranteedNoWrapRegion) {
   EXPECT_EQ(ConstantRange::makeGuaranteedNoWrapRegion(
                 Instruction::Sub, One, OBO::NoUnsignedWrap),
             ConstantRange(APInt::getMinValue(32) + 1, APInt::getMinValue(32)));
+
+  ConstantRange OneLessThanBitWidth(APInt(32, 0), APInt(32, 31) + 1);
+  ConstantRange UpToBitWidth(APInt(32, 0), APInt(32, 32) + 1);
+  EXPECT_EQ(ConstantRange::makeGuaranteedNoWrapRegion(
+                Instruction::Shl, UpToBitWidth, OBO::NoUnsignedWrap),
+            ConstantRange::makeGuaranteedNoWrapRegion(
+                Instruction::Shl, OneLessThanBitWidth, OBO::NoUnsignedWrap));
+  EXPECT_EQ(ConstantRange::makeGuaranteedNoWrapRegion(
+                Instruction::Shl, UpToBitWidth, OBO::NoSignedWrap),
+            ConstantRange::makeGuaranteedNoWrapRegion(
+                Instruction::Shl, OneLessThanBitWidth, OBO::NoSignedWrap));
+  EXPECT_EQ(ConstantRange::makeGuaranteedNoWrapRegion(
+                Instruction::Shl, UpToBitWidth, OBO::NoUnsignedWrap),
+            ConstantRange(APInt(32, 0), APInt(32, 1) + 1));
+  EXPECT_EQ(ConstantRange::makeGuaranteedNoWrapRegion(
+                Instruction::Shl, UpToBitWidth, OBO::NoSignedWrap),
+            ConstantRange(APInt(32, -1), APInt(32, 0) + 1));
+
+  EXPECT_EQ(
+      ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::Shl, ConstantRange::getFull(32), OBO::NoUnsignedWrap),
+      ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::Shl, OneLessThanBitWidth, OBO::NoUnsignedWrap));
+  EXPECT_EQ(
+      ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::Shl, ConstantRange::getFull(32), OBO::NoSignedWrap),
+      ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::Shl, OneLessThanBitWidth, OBO::NoSignedWrap));
+
+  ConstantRange IllegalShAmt(APInt(32, 32), APInt(32, 0) + 1);
+  EXPECT_EQ(ConstantRange::makeGuaranteedNoWrapRegion(
+                Instruction::Shl, IllegalShAmt, OBO::NoUnsignedWrap),
+            ConstantRange::getFull(32));
+  EXPECT_EQ(ConstantRange::makeGuaranteedNoWrapRegion(
+                Instruction::Shl, IllegalShAmt, OBO::NoSignedWrap),
+            ConstantRange::getFull(32));
+
+  EXPECT_EQ(
+      ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::Shl, ConstantRange(APInt(32, -32), APInt(32, 16) + 1),
+          OBO::NoUnsignedWrap),
+      ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::Shl, ConstantRange(APInt(32, 0), APInt(32, 16) + 1),
+          OBO::NoUnsignedWrap));
+  EXPECT_EQ(
+      ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::Shl, ConstantRange(APInt(32, -32), APInt(32, 16) + 1),
+          OBO::NoSignedWrap),
+      ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::Shl, ConstantRange(APInt(32, 0), APInt(32, 16) + 1),
+          OBO::NoSignedWrap));
+
+  EXPECT_EQ(ConstantRange::makeGuaranteedNoWrapRegion(
+                Instruction::Shl,
+                ConstantRange(APInt(32, -32), APInt(32, 16) + 1),
+                OBO::NoUnsignedWrap),
+            ConstantRange(APInt(32, 0), APInt(32, 65535) + 1));
+  EXPECT_EQ(ConstantRange::makeGuaranteedNoWrapRegion(
+                Instruction::Shl,
+                ConstantRange(APInt(32, -32), APInt(32, 16) + 1),
+                OBO::NoSignedWrap),
+            ConstantRange(APInt(32, -32768), APInt(32, 32767) + 1));
 }
 
 template<typename Fn>
@@ -1540,6 +1602,8 @@ void TestNoWrapRegionExhaustive(Instruction::BinaryOps BinOp,
   unsigned Bits = 5;
   EnumerateConstantRanges(Bits, [&](const ConstantRange &CR) {
     if (CR.isEmptySet())
+      return;
+    if (Instruction::isShift(BinOp) && CR.getUnsignedMax().uge(Bits))
       return;
 
     ConstantRange NoWrap =
@@ -1609,6 +1673,20 @@ TEST(ConstantRange, NoWrapRegionExhaustive) {
         (void) N1.smul_ov(N2, Overflow);
         return Overflow;
       });
+  TestNoWrapRegionExhaustive(Instruction::Shl,
+                             OverflowingBinaryOperator::NoUnsignedWrap,
+                             [](const APInt &N1, const APInt &N2) {
+                               bool Overflow;
+                               (void)N1.ushl_ov(N2, Overflow);
+                               return Overflow;
+                             });
+  TestNoWrapRegionExhaustive(Instruction::Shl,
+                             OverflowingBinaryOperator::NoSignedWrap,
+                             [](const APInt &N1, const APInt &N2) {
+                               bool Overflow;
+                               (void)N1.sshl_ov(N2, Overflow);
+                               return Overflow;
+                             });
 }
 
 TEST(ConstantRange, GetEquivalentICmp) {
