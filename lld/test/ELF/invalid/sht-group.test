@@ -12,7 +12,6 @@ FileHeader:
 Sections:
   - Name:              .group
     Type:              SHT_GROUP
-    Link:              .symtab
     Info:              12345
     Members:
       - SectionOrType: GRP_COMDAT
