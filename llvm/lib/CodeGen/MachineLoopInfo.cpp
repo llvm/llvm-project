@@ -36,13 +36,9 @@ INITIALIZE_PASS_END(MachineLoopInfo, "machine-loops",
 char &llvm::MachineLoopInfoID = MachineLoopInfo::ID;
 
 bool MachineLoopInfo::runOnMachineFunction(MachineFunction &) {
-  calculate(getAnalysis<MachineDominatorTree>());
-  return false;
-}
-
-void MachineLoopInfo::calculate(MachineDominatorTree &MDT) {
   releaseMemory();
-  LI.analyze(MDT.getBase());
+  LI.analyze(getAnalysis<MachineDominatorTree>().getBase());
+  return false;
 }
 
 void MachineLoopInfo::getAnalysisUsage(AnalysisUsage &AU) const {

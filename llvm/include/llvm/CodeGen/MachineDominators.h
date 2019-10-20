@@ -81,9 +81,6 @@ public:
   static char ID; // Pass ID, replacement for typeid
 
   MachineDominatorTree();
-  explicit MachineDominatorTree(MachineFunction &MF) : MachineFunctionPass(ID) {
-    calculate(MF);
-  }
 
   DomTreeT &getBase() {
     if (!DT) DT.reset(new DomTreeT());
@@ -113,8 +110,6 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &F) override;
-
-  void calculate(MachineFunction &F);
 
   bool dominates(const MachineDomTreeNode *A,
                  const MachineDomTreeNode *B) const {

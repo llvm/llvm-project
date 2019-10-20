@@ -172,13 +172,6 @@ MachineBlockFrequencyInfo::MachineBlockFrequencyInfo()
   initializeMachineBlockFrequencyInfoPass(*PassRegistry::getPassRegistry());
 }
 
-MachineBlockFrequencyInfo::MachineBlockFrequencyInfo(
-      MachineFunction &F,
-      MachineBranchProbabilityInfo &MBPI,
-      MachineLoopInfo &MLI) : MachineFunctionPass(ID) {
-  calculate(F, MBPI, MLI);
-}
-
 MachineBlockFrequencyInfo::~MachineBlockFrequencyInfo() = default;
 
 void MachineBlockFrequencyInfo::getAnalysisUsage(AnalysisUsage &AU) const {
