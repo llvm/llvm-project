@@ -262,6 +262,8 @@ private:
 
   SDValue getHi16Elt(SDValue In) const;
 
+  SDValue getMaterializedScalarImm32(int64_t Val, const SDLoc &DL) const;
+
   void SelectADD_SUB_I64(SDNode *N);
   void SelectAddcSubb(SDNode *N);
   void SelectUADDO_USUBO(SDNode *N);
@@ -963,6 +965,14 @@ bool AMDGPUDAGToDAGISel::SelectADDRIndirect(SDValue Addr, SDValue &Base,
   return true;
 }
 
+SDValue AMDGPUDAGToDAGISel::getMaterializedScalarImm32(int64_t Val,
+                                                       const SDLoc &DL) const {
+  SDNode *Mov = CurDAG->getMachineNode(
+    AMDGPU::S_MOV_B32, DL, MVT::i32,
+    CurDAG->getTargetConstant(Val, DL, MVT::i32));
+  return SDValue(Mov, 0);
+}
+
 // FIXME: Should only handle addcarry/subcarry
 void AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
   SDLoc DL(N);
@@ -1630,13 +1640,80 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDNode *N,
       CurDAG->isBaseWithConstantOffset(Addr)) {
     SDValue N0 = Addr.getOperand(0);
     SDValue N1 = Addr.getOperand(1);
-    int64_t COffsetVal = cast<ConstantSDNode>(N1)->getSExtValue();
+    uint64_t COffsetVal = cast<ConstantSDNode>(N1)->getSExtValue();
 
     const SIInstrInfo *TII = Subtarget->getInstrInfo();
-    if (TII->isLegalFLATOffset(COffsetVal, findMemSDNode(N)->getAddressSpace(),
-                               IsSigned)) {
+    unsigned AS = findMemSDNode(N)->getAddressSpace();
+    if (TII->isLegalFLATOffset(COffsetVal, AS, IsSigned)) {
       Addr = N0;
       OffsetVal = COffsetVal;
+    } else {
+      // If the offset doesn't fit, put the low bits into the offset field and
+      // add the rest.
+
+      SDLoc DL(N);
+      uint64_t ImmField;
+      const unsigned NumBits = TII->getNumFlatOffsetBits(AS, IsSigned);
+      if (IsSigned) {
+        ImmField = SignExtend64(COffsetVal, NumBits);
+
+        // Don't use a negative offset field if the base offset is positive.
+        // Since the scheduler currently relies on the offset field, doing so
+        // could result in strange scheduling decisions.
+
+        // TODO: Should we not do this in the opposite direction as well?
+        if (static_cast<int64_t>(COffsetVal) > 0) {
+          if (static_cast<int64_t>(ImmField) < 0) {
+            const uint64_t OffsetMask = maskTrailingOnes<uint64_t>(NumBits - 1);
+            ImmField = COffsetVal & OffsetMask;
+          }
+        }
+      } else {
+        // TODO: Should we do this for a negative offset?
+        const uint64_t OffsetMask = maskTrailingOnes<uint64_t>(NumBits);
+        ImmField = COffsetVal & OffsetMask;
+      }
+
+      uint64_t RemainderOffset = COffsetVal - ImmField;
+
+      assert(TII->isLegalFLATOffset(ImmField, AS, IsSigned));
+      assert(RemainderOffset + ImmField == COffsetVal);
+
+      OffsetVal = ImmField;
+
+      // TODO: Should this try to use a scalar add pseudo if the base address is
+      // uniform and saddr is usable?
+      SDValue Sub0 = CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32);
+      SDValue Sub1 = CurDAG->getTargetConstant(AMDGPU::sub1, DL, MVT::i32);
+
+      SDNode *N0Lo = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG,
+                                            DL, MVT::i32, N0, Sub0);
+      SDNode *N0Hi = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG,
+                                            DL, MVT::i32, N0, Sub1);
+
+      SDValue AddOffsetLo
+        = getMaterializedScalarImm32(Lo_32(RemainderOffset), DL);
+      SDValue AddOffsetHi
+        = getMaterializedScalarImm32(Hi_32(RemainderOffset), DL);
+
+      SDVTList VTs = CurDAG->getVTList(MVT::i32, MVT::i1);
+      SDValue Clamp = CurDAG->getTargetConstant(0, DL, MVT::i1);
+
+      SDNode *Add = CurDAG->getMachineNode(
+        AMDGPU::V_ADD_I32_e64, DL, VTs,
+        {AddOffsetLo, SDValue(N0Lo, 0), Clamp});
+
+      SDNode *Addc = CurDAG->getMachineNode(
+        AMDGPU::V_ADDC_U32_e64, DL, VTs,
+        {AddOffsetHi, SDValue(N0Hi, 0), SDValue(Add, 1), Clamp});
+
+      SDValue RegSequenceArgs[] = {
+        CurDAG->getTargetConstant(AMDGPU::VReg_64RegClassID, DL, MVT::i32),
+        SDValue(Add, 0), Sub0, SDValue(Addc, 0), Sub1
+      };
+
+      Addr = SDValue(CurDAG->getMachineNode(AMDGPU::REG_SEQUENCE, DL,
+                                            MVT::i64, RegSequenceArgs), 0);
     }
   }
 
