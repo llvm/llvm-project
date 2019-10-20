@@ -185,5 +185,39 @@ exit:
   ret void
 }
 
+define void @mixed_width(i32 %len) {
+; CHECK-LABEL: @mixed_width(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LEN_ZEXT:%.*]] = zext i32 [[LEN:%.*]] to i64
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[IV]], [[LEN_ZEXT]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[BACKEDGE]], label [[EXIT:%.*]]
+; CHECK:       backedge:
+; CHECK-NEXT:    call void @side_effect()
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %len.zext = zext i32 %len to i64
+  br label %loop
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %backedge]
+  %iv2 = phi i32 [0, %entry], [%iv2.next, %backedge]
+  %iv.next = add i64 %iv, 1
+  %iv2.next = add i32 %iv2, 1
+  %cmp1 = icmp ult i64 %iv, %len.zext
+  br i1 %cmp1, label %backedge, label %exit
+
+backedge:
+  call void @side_effect()
+  %cmp2 = icmp ult i32 %iv2, %len
+  br i1 %cmp2, label %loop, label %exit
+exit:
+  ret void
+}
 
 declare void @side_effect()
