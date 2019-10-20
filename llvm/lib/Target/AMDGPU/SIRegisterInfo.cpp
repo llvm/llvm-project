@@ -376,9 +376,6 @@ void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
 
 void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
                                        int64_t Offset) const {
-
-  MachineBasicBlock *MBB = MI.getParent();
-  MachineFunction *MF = MBB->getParent();
   const SIInstrInfo *TII = ST.getInstrInfo();
 
 #ifndef NDEBUG
@@ -395,6 +392,10 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
 #endif
 
   MachineOperand *FIOp = TII->getNamedOperand(MI, AMDGPU::OpName::vaddr);
+#ifndef NDEBUG
+  MachineBasicBlock *MBB = MI.getParent();
+  MachineFunction *MF = MBB->getParent();
+#endif
   assert(FIOp && FIOp->isFI() && "frame index must be address operand");
   assert(TII->isMUBUF(MI));
   assert(TII->getNamedOperand(MI, AMDGPU::OpName::soffset)->getReg() ==
