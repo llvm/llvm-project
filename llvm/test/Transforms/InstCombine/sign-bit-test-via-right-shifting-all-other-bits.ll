@@ -45,7 +45,7 @@ define i1 @highest_bit_test_via_lshr_with_truncation(i64 %data, i32 %nbits) {
 ; CHECK-NEXT:    call void @use32(i32 [[HIGH_BITS_EXTRACTED_NARROW]])
 ; CHECK-NEXT:    call void @use32(i32 [[SKIP_ALL_BITS_TILL_SIGNBIT]])
 ; CHECK-NEXT:    call void @use32(i32 [[SIGNBIT]])
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp ne i32 [[SIGNBIT]], 0
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i64 [[DATA]], 0
 ; CHECK-NEXT:    ret i1 [[ISNEG]]
 ;
   %num_low_bits_to_skip = sub i32 64, %nbits
@@ -107,7 +107,7 @@ define i1 @highest_bit_test_via_ashr_with_truncation(i64 %data, i32 %nbits) {
 ; CHECK-NEXT:    call void @use32(i32 [[HIGH_BITS_EXTRACTED_NARROW]])
 ; CHECK-NEXT:    call void @use32(i32 [[SKIP_ALL_BITS_TILL_SIGNBIT]])
 ; CHECK-NEXT:    call void @use32(i32 [[SIGNBIT]])
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp ne i32 [[SIGNBIT]], 0
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i64 [[DATA]], 0
 ; CHECK-NEXT:    ret i1 [[ISNEG]]
 ;
   %num_low_bits_to_skip = sub i32 64, %nbits
@@ -138,7 +138,7 @@ define i1 @highest_bit_test_via_lshr_ashr(i32 %data, i32 %nbits) {
 ; CHECK-NEXT:    call void @use32(i32 [[HIGH_BITS_EXTRACTED]])
 ; CHECK-NEXT:    call void @use32(i32 [[SKIP_ALL_BITS_TILL_SIGNBIT]])
 ; CHECK-NEXT:    call void @use32(i32 [[SIGNBIT]])
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp ne i32 [[SIGNBIT]], 0
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[DATA]], 0
 ; CHECK-NEXT:    ret i1 [[ISNEG]]
 ;
   %num_low_bits_to_skip = sub i32 32, %nbits
@@ -169,7 +169,7 @@ define i1 @highest_bit_test_via_lshr_ashe_with_truncation(i64 %data, i32 %nbits)
 ; CHECK-NEXT:    call void @use32(i32 [[HIGH_BITS_EXTRACTED_NARROW]])
 ; CHECK-NEXT:    call void @use32(i32 [[SKIP_ALL_BITS_TILL_SIGNBIT]])
 ; CHECK-NEXT:    call void @use32(i32 [[SIGNBIT]])
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp ne i32 [[SIGNBIT]], 0
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i64 [[DATA]], 0
 ; CHECK-NEXT:    ret i1 [[ISNEG]]
 ;
   %num_low_bits_to_skip = sub i32 64, %nbits
@@ -200,7 +200,7 @@ define i1 @highest_bit_test_via_ashr_lshr(i32 %data, i32 %nbits) {
 ; CHECK-NEXT:    call void @use32(i32 [[HIGH_BITS_EXTRACTED]])
 ; CHECK-NEXT:    call void @use32(i32 [[SKIP_ALL_BITS_TILL_SIGNBIT]])
 ; CHECK-NEXT:    call void @use32(i32 [[SIGNBIT]])
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp ne i32 [[SIGNBIT]], 0
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[DATA]], 0
 ; CHECK-NEXT:    ret i1 [[ISNEG]]
 ;
   %num_low_bits_to_skip = sub i32 32, %nbits
@@ -231,7 +231,7 @@ define i1 @highest_bit_test_via_ashr_lshr_with_truncation(i64 %data, i32 %nbits)
 ; CHECK-NEXT:    call void @use32(i32 [[HIGH_BITS_EXTRACTED_NARROW]])
 ; CHECK-NEXT:    call void @use32(i32 [[SKIP_ALL_BITS_TILL_SIGNBIT]])
 ; CHECK-NEXT:    call void @use32(i32 [[SIGNBIT]])
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp ne i32 [[SIGNBIT]], 0
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i64 [[DATA]], 0
 ; CHECK-NEXT:    ret i1 [[ISNEG]]
 ;
   %num_low_bits_to_skip = sub i32 64, %nbits

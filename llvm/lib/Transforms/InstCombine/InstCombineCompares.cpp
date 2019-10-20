@@ -1358,19 +1358,28 @@ Instruction *InstCombiner::foldIRemByPowerOfTwoToBitTest(ICmpInst &I) {
 
 /// Fold equality-comparison between zero and any (maybe truncated) right-shift
 /// by one-less-than-bitwidth into a sign test on the original value.
-Instruction *foldSignBitTest(ICmpInst &I) {
+Instruction *InstCombiner::foldSignBitTest(ICmpInst &I) {
+  Instruction *Val;
   ICmpInst::Predicate Pred;
-  Value *X;
-  Constant *C;
-  if (!I.isEquality() ||
-      !match(&I, m_ICmp(Pred, m_TruncOrSelf(m_Shr(m_Value(X), m_Constant(C))),
-                        m_Zero())))
+  if (!I.isEquality() || !match(&I, m_ICmp(Pred, m_Instruction(Val), m_Zero())))
     return nullptr;
 
-  Type *XTy = X->getType();
-  unsigned XBitWidth = XTy->getScalarSizeInBits();
-  if (!match(C, m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
-                                   APInt(XBitWidth, XBitWidth - 1))))
+  Value *X;
+  Type *XTy;
+
+  Constant *C;
+  if (match(Val, m_TruncOrSelf(m_Shr(m_Value(X), m_Constant(C))))) {
+    XTy = X->getType();
+    unsigned XBitWidth = XTy->getScalarSizeInBits();
+    if (!match(C, m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
+                                     APInt(XBitWidth, XBitWidth - 1))))
+      return nullptr;
+  } else if (isa<BinaryOperator>(Val) &&
+             (X = reassociateShiftAmtsOfTwoSameDirectionShifts(
+                  cast<BinaryOperator>(Val), SQ.getWithInstruction(Val),
+                  /*AnalyzeForSignBitExtraction=*/true))) {
+    XTy = X->getType();
+  } else
     return nullptr;
 
   return ICmpInst::Create(Instruction::ICmp,
