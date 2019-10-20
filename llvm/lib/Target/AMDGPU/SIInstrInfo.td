@@ -871,6 +871,18 @@ def ExpTgtMatchClass : AsmOperandClass {
   let RenderMethod = "printExpTgt";
 }
 
+def SWaitMatchClass : AsmOperandClass {
+  let Name = "SWaitCnt";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseSWaitCntOps";
+}
+
+def VReg32OrOffClass : AsmOperandClass {
+  let Name = "VReg32OrOff";
+  let ParserMethod = "parseVReg32OrOff";
+}
+
+let OperandType = "OPERAND_IMMEDIATE" in {
 def SendMsgImm : Operand<i32> {
   let PrintMethod = "printSendMsg";
   let ParserMatchClass = SendMsgMatchClass;
@@ -886,22 +898,11 @@ def EndpgmImm : Operand<i16> {
   let ParserMatchClass = EndpgmMatchClass;
 }
 
-def SWaitMatchClass : AsmOperandClass {
-  let Name = "SWaitCnt";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "parseSWaitCntOps";
-}
-
-def VReg32OrOffClass : AsmOperandClass {
-  let Name = "VReg32OrOff";
-  let ParserMethod = "parseVReg32OrOff";
-}
-
 def WAIT_FLAG : Operand <i32> {
   let ParserMatchClass = SWaitMatchClass;
   let PrintMethod = "printWaitFlag";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
+} // End OperandType = "OPERAND_IMMEDIATE"
 
 include "SIInstrFormats.td"
 include "VIInstrFormats.td"
