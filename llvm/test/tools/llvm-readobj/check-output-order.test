@@ -39,6 +39,7 @@ Sections:
     Entries:
       - Tag: DT_NULL
         Value: 0
+Symbols: []
 ProgramHeaders:
   - Type: PT_DYNAMIC
     Sections:

@@ -17,7 +17,6 @@ Sections:
     Content:         "0000000000000000"
   - Name:            .rel.text
     Type:            SHT_REL
-    Link:            .symtab
     Info:            .text
     Relocations:
       - Offset: 0x1000

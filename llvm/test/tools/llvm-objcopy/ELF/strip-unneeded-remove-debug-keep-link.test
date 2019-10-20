@@ -20,11 +20,10 @@ Sections:
   - Name:            .debugfoo
     Type:            SHT_PROGBITS
 
-# CHECK: There are 6 section headers
+# CHECK: There are 5 section headers
 
 # CHECK:        [ 0]
 # CHECK-NEXT:   [ 1] .text
-# CHECK-NEXT:   [ 2] .symtab
-# CHECK-NEXT:   [ 3] .strtab
-# CHECK-NEXT:   [ 4] .shstrtab
-# CHECK-NEXT:   [ 5] .gnu_debuglink
+# CHECK-NEXT:   [ 2] .strtab
+# CHECK-NEXT:   [ 3] .shstrtab
+# CHECK-NEXT:   [ 4] .gnu_debuglink

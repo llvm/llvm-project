@@ -376,7 +376,7 @@ struct Object {
   // cleaner and nicer if we read them from the YAML as a separate
   // top-level key, which automatically ensures that invariants like there
   // being a single SHT_SYMTAB section are upheld.
-  std::vector<Symbol> Symbols;
+  Optional<std::vector<Symbol>> Symbols;
   std::vector<Symbol> DynamicSymbols;
 };
 

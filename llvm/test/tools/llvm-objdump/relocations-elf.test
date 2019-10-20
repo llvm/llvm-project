@@ -86,7 +86,6 @@ FileHeader:
 Sections:
 - Name: .rela.foo
   Type: SHT_RELA
-  Link: .symtab
   Info: 0x255
   Relocations:
     - Offset: 0x1

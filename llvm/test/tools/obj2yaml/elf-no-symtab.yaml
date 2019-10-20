@@ -1,0 +1,43 @@
+## Check that obj2yaml doesn't create a "Symbols" tag for the objects
+## without a symbol table.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=NOSYMTAB
+
+# NOSYMTAB:      --- !ELF
+# NOSYMTAB-NEXT:  FileHeader:
+# NOSYMTAB-NEXT:    Class:           ELFCLASS64
+# NOSYMTAB-NEXT:    Data:            ELFDATA2LSB
+# NOSYMTAB-NEXT:    Type:            ET_DYN
+# NOSYMTAB-NEXT:    Machine:         EM_X86_64
+# NOSYMTAB-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+
+## Check that obj2yaml creates a "Symbols" tag for the objects
+## that have a symbol table.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=SYMTAB
+
+# SYMTAB:      --- !ELF
+# SYMTAB-NEXT:  FileHeader:
+# SYMTAB-NEXT:   Class:   ELFCLASS64
+# SYMTAB-NEXT:   Data:    ELFDATA2LSB
+# SYMTAB-NEXT:   Type:    ET_DYN
+# SYMTAB-NEXT:   Machine: EM_X86_64
+# SYMTAB-NEXT:  Symbols: []
+# SYMTAB-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Symbols: []

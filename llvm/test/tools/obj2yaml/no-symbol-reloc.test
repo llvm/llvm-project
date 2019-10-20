@@ -26,6 +26,7 @@
 # CHECK-NEXT:       - Offset: 0x0000000000000004
 # CHECK-NEXT:         Symbol: ''
 # CHECK-NEXT:         Type:   R_X86_64_NONE
+# CHECK-NEXT: Symbols: []
 # CHECK-NEXT: ...
 
 --- !ELF

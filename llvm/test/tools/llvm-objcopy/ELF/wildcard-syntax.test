@@ -57,6 +57,7 @@ Sections:
     Type: SHT_PROGBITS
   - Name: .bar
     Type: SHT_PROGBITS
+Symbols: []
 
 ## Use a separate test file with special characters for the following tests.
 
@@ -128,6 +129,7 @@ Sections:
     Type: SHT_PROGBITS
   - Name: .foo
     Type: SHT_PROGBITS
+Symbols: []
 
 # WARN: warning: invalid glob pattern: ][]
 

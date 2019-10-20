@@ -84,3 +84,30 @@ Sections:
   - Name:    .text.foo
     Type:    SHT_PROGBITS
     Address: 0x200
+
+## Check we don't add a symbol table when no "Symbols" key is specified.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readelf -S %t3 | FileCheck /dev/null --implicit-check-not=.symtab
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+
+## Check we add a symbol table when "Symbols" key is specified.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-readelf -S %t4 | FileCheck %s --check-prefix=SYMTAB
+
+# SYMTAB: .symtab
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Symbols: []

@@ -16,6 +16,7 @@ Sections:
     Link:            .symtab
     Type:            SHT_PROGBITS
     Flags:           [ ]
+Symbols: []
 
 # CHECK:      Name: .foo
 # CHECK-NEXT: Type:

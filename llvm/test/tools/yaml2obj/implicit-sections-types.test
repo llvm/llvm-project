@@ -24,6 +24,8 @@ FileHeader:
   Data:    ELFDATA2LSB
   Type:    ET_DYN
   Machine: EM_X86_64
+## Needed to force the creation of the .symtab.
+Symbols: []
 ## Needed to force the creation of the .dynsym and .dynstr.
 DynamicSymbols:
   - Name:    foo
