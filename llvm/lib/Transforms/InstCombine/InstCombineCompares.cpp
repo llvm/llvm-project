@@ -3076,6 +3076,28 @@ Instruction *InstCombiner::foldICmpEqIntrinsicWithConstant(ICmpInst &Cmp,
     }
     break;
   }
+
+  case Intrinsic::uadd_sat: {
+    // uadd.sat(a, b) == 0  ->  (a | b) == 0
+    if (C.isNullValue()) {
+      Value *Or = Builder.CreateOr(II->getArgOperand(0), II->getArgOperand(1));
+      return replaceInstUsesWith(Cmp, Builder.CreateICmp(
+          Cmp.getPredicate(), Or, Constant::getNullValue(Ty)));
+
+    }
+    break;
+  }
+
+  case Intrinsic::usub_sat: {
+    // usub.sat(a, b) == 0  ->  a <= b
+    if (C.isNullValue()) {
+      ICmpInst::Predicate NewPred = Cmp.getPredicate() == ICmpInst::ICMP_EQ
+          ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_UGT;
+      return ICmpInst::Create(Instruction::ICmp, NewPred,
+                              II->getArgOperand(0), II->getArgOperand(1));
+    }
+    break;
+  }
   default:
     break;
   }
