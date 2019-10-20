@@ -269,6 +269,27 @@ ConstantRange::makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
 
     return makeExactMulNSWRegion(Other.getSignedMin())
         .intersectWith(makeExactMulNSWRegion(Other.getSignedMax()));
+
+  case Instruction::Shl: {
+    // For given range of shift amounts, if we ignore all illegal shift amounts
+    // (that always produce poison), what shift amount range is left?
+    ConstantRange ShAmt = Other.intersectWith(
+        ConstantRange(APInt(BitWidth, 0), APInt(BitWidth, (BitWidth - 1) + 1)));
+    if (ShAmt.isEmptySet()) {
+      // If the entire range of shift amounts is already poison-producing,
+      // then we can freely add more poison-producing flags ontop of that.
+      return getFull(BitWidth);
+    }
+    // There are some legal shift amounts, we can compute conservatively-correct
+    // range of no-wrap inputs. Note that by now we have clamped the ShAmtUMax
+    // to be at most bitwidth-1, which results in most conservative range.
+    APInt ShAmtUMax = ShAmt.getUnsignedMax();
+    if (Unsigned)
+      return getNonEmpty(APInt::getNullValue(BitWidth),
+                         APInt::getMaxValue(BitWidth).lshr(ShAmtUMax) + 1);
+    return getNonEmpty(APInt::getSignedMinValue(BitWidth).ashr(ShAmtUMax),
+                       APInt::getSignedMaxValue(BitWidth).ashr(ShAmtUMax) + 1);
+  }
   }
 }
 
