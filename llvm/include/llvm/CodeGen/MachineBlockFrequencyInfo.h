@@ -38,9 +38,6 @@ public:
   static char ID;
 
   MachineBlockFrequencyInfo();
-  explicit MachineBlockFrequencyInfo(MachineFunction &F,
-                                     MachineBranchProbabilityInfo &MBPI,
-                                     MachineLoopInfo &MLI);
   ~MachineBlockFrequencyInfo() override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;

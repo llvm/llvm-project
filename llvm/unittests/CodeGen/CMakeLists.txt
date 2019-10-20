@@ -19,7 +19,6 @@ add_llvm_unittest(CodeGenTests
   MachineInstrBundleIteratorTest.cpp
   MachineInstrTest.cpp
   MachineOperandTest.cpp
-  MachineSizeOptsTest.cpp
   ScalableVectorMVTsTest.cpp
   TypeTraitsTest.cpp
   TargetOptionsTest.cpp
