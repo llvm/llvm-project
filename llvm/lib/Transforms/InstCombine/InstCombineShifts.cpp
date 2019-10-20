@@ -25,10 +25,12 @@ using namespace PatternMatch;
 // we should rewrite it as
 //   x shiftopcode (Q+K)  iff (Q+K) u< bitwidth(x)
 // This is valid for any shift, but they must be identical.
-static Instruction *
-reassociateShiftAmtsOfTwoSameDirectionShifts(BinaryOperator *Sh0,
-                                             const SimplifyQuery &SQ,
-                                             InstCombiner::BuilderTy &Builder) {
+//
+// AnalyzeForSignBitExtraction indicates that we will only analyze whether this
+// pattern has any 2 right-shifts that sum to 1 less than original bit width.
+Value *InstCombiner::reassociateShiftAmtsOfTwoSameDirectionShifts(
+    BinaryOperator *Sh0, const SimplifyQuery &SQ,
+    bool AnalyzeForSignBitExtraction) {
   // Look for a shift of some instruction, ignore zext of shift amount if any.
   Instruction *Sh0Op0;
   Value *ShAmt0;
@@ -56,14 +58,25 @@ reassociateShiftAmtsOfTwoSameDirectionShifts(BinaryOperator *Sh0,
   if (ShAmt0->getType() != ShAmt1->getType())
     return nullptr;
 
-  // The shift opcodes must be identical.
+  // We are only looking for signbit extraction if we have two right shifts.
+  bool HadTwoRightShifts = match(Sh0, m_Shr(m_Value(), m_Value())) &&
+                           match(Sh1, m_Shr(m_Value(), m_Value()));
+  // ... and if it's not two right-shifts, we know the answer already.
+  if (AnalyzeForSignBitExtraction && !HadTwoRightShifts)
+    return nullptr;
+
+  // The shift opcodes must be identical, unless we are just checking whether
+  // this pattern can be interpreted as a sign-bit-extraction.
   Instruction::BinaryOps ShiftOpcode = Sh0->getOpcode();
-  if (ShiftOpcode != Sh1->getOpcode())
+  bool IdenticalShOpcodes = Sh0->getOpcode() == Sh1->getOpcode();
+  if (!IdenticalShOpcodes && !AnalyzeForSignBitExtraction)
     return nullptr;
 
   // If we saw truncation, we'll need to produce extra instruction,
-  // and for that one of the operands of the shift must be one-use.
-  if (Trunc && !match(Sh0, m_c_BinOp(m_OneUse(m_Value()), m_Value())))
+  // and for that one of the operands of the shift must be one-use,
+  // unless of course we don't actually plan to produce any instructions here.
+  if (Trunc && !AnalyzeForSignBitExtraction &&
+      !match(Sh0, m_c_BinOp(m_OneUse(m_Value()), m_Value())))
     return nullptr;
 
   // Can we fold (ShAmt0+ShAmt1) ?
@@ -80,14 +93,22 @@ reassociateShiftAmtsOfTwoSameDirectionShifts(BinaryOperator *Sh0,
     return nullptr; // FIXME: could perform constant-folding.
 
   // If there was a truncation, and we have a right-shift, we can only fold if
-  // we are left with the original sign bit.
+  // we are left with the original sign bit. Likewise, if we were just checking
+  // that this is a sighbit extraction, this is the place to check it.
   // FIXME: zero shift amount is also legal here, but we can't *easily* check
   // more than one predicate so it's not really worth it.
-  if (Trunc && ShiftOpcode != Instruction::BinaryOps::Shl &&
-      !match(NewShAmt,
-             m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
-                                APInt(NewShAmtBitWidth, XBitWidth - 1))))
-    return nullptr;
+  if (HadTwoRightShifts && (Trunc || AnalyzeForSignBitExtraction)) {
+    // If it's not a sign bit extraction, then we're done.
+    if (!match(NewShAmt,
+               m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
+                                  APInt(NewShAmtBitWidth, XBitWidth - 1))))
+      return nullptr;
+    // If it is, and that was the question, return the base value.
+    if (AnalyzeForSignBitExtraction)
+      return X;
+  }
+
+  assert(IdenticalShOpcodes && "Should not get here with different shifts.");
 
   // All good, we can do this fold.
   NewShAmt = ConstantExpr::getZExtOrBitCast(NewShAmt, X->getType());
@@ -287,8 +308,8 @@ Instruction *InstCombiner::commonShiftTransforms(BinaryOperator &I) {
     if (Instruction *Res = FoldShiftByConstant(Op0, CUI, I))
       return Res;
 
-  if (Instruction *NewShift =
-          reassociateShiftAmtsOfTwoSameDirectionShifts(&I, SQ, Builder))
+  if (auto *NewShift = cast_or_null<Instruction>(
+          reassociateShiftAmtsOfTwoSameDirectionShifts(&I, SQ)))
     return NewShift;
 
   // (C1 shift (A add C2)) -> (C1 shift C2) shift A)

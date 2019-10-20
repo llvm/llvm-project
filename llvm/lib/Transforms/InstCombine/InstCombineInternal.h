@@ -390,6 +390,9 @@ public:
   Instruction *visitOr(BinaryOperator &I);
   Instruction *visitXor(BinaryOperator &I);
   Instruction *visitShl(BinaryOperator &I);
+  Value *reassociateShiftAmtsOfTwoSameDirectionShifts(
+      BinaryOperator *Sh0, const SimplifyQuery &SQ,
+      bool AnalyzeForSignBitExtraction = false);
   Instruction *foldVariableSignZeroExtensionOfVariableHighBitExtract(
       BinaryOperator &OldAShr);
   Instruction *visitAShr(BinaryOperator &I);
@@ -912,6 +915,7 @@ private:
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
   Instruction *foldICmpEquality(ICmpInst &Cmp);
   Instruction *foldIRemByPowerOfTwoToBitTest(ICmpInst &I);
+  Instruction *foldSignBitTest(ICmpInst &I);
   Instruction *foldICmpWithZero(ICmpInst &Cmp);
 
   Value *foldUnsignedMultiplicationOverflowCheck(ICmpInst &Cmp);
