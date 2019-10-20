@@ -2688,6 +2688,15 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool IsThisReturn = false;
   MachineFunction &MF = DAG.getMachineFunction();
 
+  if (Callee.isUndef() || isNullConstant(Callee)) {
+    if (!CLI.IsTailCall) {
+      for (unsigned I = 0, E = CLI.Ins.size(); I != E; ++I)
+        InVals.push_back(DAG.getUNDEF(CLI.Ins[I].VT));
+    }
+
+    return Chain;
+  }
+
   if (IsVarArg) {
     return lowerUnhandledCall(CLI, InVals,
                               "unsupported call to variadic function ");
