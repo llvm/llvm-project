@@ -393,6 +393,8 @@ public:
   Value *reassociateShiftAmtsOfTwoSameDirectionShifts(
       BinaryOperator *Sh0, const SimplifyQuery &SQ,
       bool AnalyzeForSignBitExtraction = false);
+  Instruction *canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(
+      BinaryOperator &I);
   Instruction *foldVariableSignZeroExtensionOfVariableHighBitExtract(
       BinaryOperator &OldAShr);
   Instruction *visitAShr(BinaryOperator &I);
