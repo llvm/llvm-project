@@ -16,13 +16,12 @@ Sections:
     Flags:           [ SHF_ALLOC ]
     Content:        "c3c3c3c3"
 
-# CHECK: SectionHeaderCount: 5
+# CHECK: SectionHeaderCount: 4
 
 # CHECK: Name: .bar
 # CHECK: SectionData (
 # CHECK-NEXT:   0000: C3C3C3C3
 # CHECK-NEXT: )
-# CHECK: Name: .symtab
 # CHECK: Name: .strtab
 # CHECK: Name: .shstrtab
 

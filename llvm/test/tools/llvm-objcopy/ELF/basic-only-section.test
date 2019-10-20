@@ -15,9 +15,7 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ ]
 
-# CHECK: SectionHeaderCount: 5
+# CHECK: SectionHeaderCount: 3
 
 # CHECK:     Name: .test
-# CHECK:     Name: .symtab
-# CHECK:     Name: .strtab
 # CHECK:     Name: .shstrtab

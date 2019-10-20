@@ -23,11 +23,10 @@ Sections:
     Flags:           [ SHF_ALLOC ]
     Content:        "32323232"
 
-# CHECK: SectionHeaderCount: 7
+# CHECK: SectionHeaderCount: 6
 
 # CHECK: Name: .test1
 # CHECK: Name: .test3
-# CHECK: Name: .symtab
 # CHECK: Name: .strtab
 # CHECK: Name: .shstrtab
 # CHECK: Name: .test2

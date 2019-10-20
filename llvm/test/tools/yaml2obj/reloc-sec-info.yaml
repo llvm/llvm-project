@@ -20,7 +20,6 @@ FileHeader:
 Sections:
   - Name:            .rela.text
     Type:            SHT_RELA
-    Link:            .symtab
     Info:            12345
     Relocations:
 

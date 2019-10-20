@@ -40,6 +40,9 @@ ProgramHeaders:
     PAddr: 0x3000
     Sections:
       - Section: .text3
+## TODO (grimar): without the following line (i.e. without an empty symbol table),
+## llvm-objcopy adds an empty .strtab section. It doesn't look correct.
+Symbols: []
 
 #CHECK: SectionHeaderCount: 4
 

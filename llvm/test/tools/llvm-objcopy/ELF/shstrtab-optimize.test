@@ -11,7 +11,7 @@
 # CHECK-NEXT: ]
 # CHECK-NEXT: Address:
 # CHECK-NEXT: Offset:
-# CHECK-NEXT: Size: 36
+# CHECK-NEXT: Size: 28
 
 !ELF
 FileHeader:

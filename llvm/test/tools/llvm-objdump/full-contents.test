@@ -64,3 +64,4 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ ]
     Content:         '11112222'
+Symbols: []

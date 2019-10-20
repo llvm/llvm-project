@@ -41,8 +41,6 @@ Sections:
   - Name: .rela.text
     Type: SHT_RELA
     Info: .text
-    Link: .symtab
   - Name: .rel.text
     Type: SHT_REL
     Info: .text
-    Link: .symtab

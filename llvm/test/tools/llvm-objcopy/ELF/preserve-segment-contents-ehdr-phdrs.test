@@ -39,3 +39,4 @@ ProgramHeaders:
   - Type:     PT_LOAD
     Sections:
       - Section: .keep_me
+Symbols: []

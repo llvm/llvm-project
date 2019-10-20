@@ -66,5 +66,6 @@ Sections:
     Info: 0xFF
     Members:
       - SectionOrType: GRP_COMDAT
+Symbols: []
 
 # ERR: Error reading file: {{.*}}2.o: unable to get symbol from section [index 2]: invalid symbol index (255)
