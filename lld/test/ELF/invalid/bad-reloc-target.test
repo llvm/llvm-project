@@ -68,7 +68,6 @@ Sections:
     Flags:       [ SHF_ALLOC, SHF_EXECINSTR ]
   - Name:        .rela.text
     Type:        SHT_RELA
-    Link:        .symtab
     Info:        .text
     Relocations:
       - Offset:  0x0000000000000000
