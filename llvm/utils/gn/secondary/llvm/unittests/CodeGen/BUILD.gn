@@ -20,7 +20,6 @@ unittest("CodeGenTests") {
     "MachineInstrBundleIteratorTest.cpp",
     "MachineInstrTest.cpp",
     "MachineOperandTest.cpp",
-    "MachineSizeOptsTest.cpp",
     "ScalableVectorMVTsTest.cpp",
     "TargetOptionsTest.cpp",
     "TypeTraitsTest.cpp",
