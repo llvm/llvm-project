@@ -19891,8 +19891,8 @@ static SDValue getSETCC(X86::CondCode Cond, SDValue EFLAGS, const SDLoc &dl,
 
 /// Helper for matching OR(EXTRACTELT(X,0),OR(EXTRACTELT(X,1),...))
 /// style scalarized (associative) reduction patterns.
-static bool matchBitOpReduction(SDValue Op, ISD::NodeType BinOp,
-                                SmallVectorImpl<SDValue> &SrcOps) {
+static bool matchScalarReduction(SDValue Op, ISD::NodeType BinOp,
+                                 SmallVectorImpl<SDValue> &SrcOps) {
   SmallVector<SDValue, 8> Opnds;
   DenseMap<SDValue, APInt> SrcOpMap;
   EVT VT = MVT::Other;
@@ -19965,7 +19965,7 @@ static SDValue LowerVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
     return SDValue();
 
   SmallVector<SDValue, 8> VecIns;
-  if (!matchBitOpReduction(Op, ISD::OR, VecIns))
+  if (!matchScalarReduction(Op, ISD::OR, VecIns))
     return SDValue();
 
   // Quit if not 128/256-bit vector.
@@ -39129,7 +39129,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   // TODO: Support multiple SrcOps.
   if (VT == MVT::i1) {
     SmallVector<SDValue, 2> SrcOps;
-    if (matchBitOpReduction(SDValue(N, 0), ISD::AND, SrcOps) &&
+    if (matchScalarReduction(SDValue(N, 0), ISD::AND, SrcOps) &&
         SrcOps.size() == 1) {
       SDLoc dl(N);
       unsigned NumElts = SrcOps[0].getValueType().getVectorNumElements();
