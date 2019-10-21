@@ -2,7 +2,9 @@
 ; RUN: llc < %s -mtriple=thumbv6m-none-eabi | FileCheck %s --check-prefix=CHECK-T1
 ; RUN: llc < %s -mtriple=thumbv7m-none-eabi | FileCheck %s --check-prefix=CHECK-T2 --check-prefix=CHECK-T2NODSP
 ; RUN: llc < %s -mtriple=thumbv7em-none-eabi | FileCheck %s --check-prefix=CHECK-T2 --check-prefix=CHECK-T2DSP
-; RUN: llc < %s -mtriple=armv8a-none-eabi | FileCheck %s --check-prefix=CHECK-ARM
+; RUN: llc < %s -mtriple=armv5t-none-eabi | FileCheck %s --check-prefix=CHECK-ARM --check-prefix=CHECK-ARMNODPS
+; RUN: llc < %s -mtriple=armv5te-none-eabi | FileCheck %s --check-prefix=CHECK-ARM --check-prefix=CHECK-ARMBASEDSP
+; RUN: llc < %s -mtriple=armv6-none-eabi | FileCheck %s --check-prefix=CHECK-ARM --check-prefix=CHECK-ARMDSP
 
 declare i4 @llvm.sadd.sat.i4(i4, i4)
 declare i8 @llvm.sadd.sat.i8(i8, i8)
@@ -61,7 +63,7 @@ define i32 @func(i32 %x, i32 %y) nounwind {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    adds r2, r0, r1
 ; CHECK-ARM-NEXT:    mov r3, #0
-; CHECK-ARM-NEXT:    movwmi r3, #1
+; CHECK-ARM-NEXT:    movmi r3, #1
 ; CHECK-ARM-NEXT:    mov r1, #-2147483648
 ; CHECK-ARM-NEXT:    cmp r3, #0
 ; CHECK-ARM-NEXT:    mvnne r1, #-2147483648
@@ -179,29 +181,29 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    .save {r11, lr}
 ; CHECK-ARM-NEXT:    push {r11, lr}
-; CHECK-ARM-NEXT:    adds r0, r0, r2
-; CHECK-ARM-NEXT:    mov r2, #0
-; CHECK-ARM-NEXT:    adc r12, r1, r3
 ; CHECK-ARM-NEXT:    cmn r1, #1
-; CHECK-ARM-NEXT:    mov r1, #0
 ; CHECK-ARM-NEXT:    mov lr, #0
-; CHECK-ARM-NEXT:    movwgt r1, #1
-; CHECK-ARM-NEXT:    cmn r12, #1
-; CHECK-ARM-NEXT:    movwgt r2, #1
-; CHECK-ARM-NEXT:    subs r2, r1, r2
-; CHECK-ARM-NEXT:    movwne r2, #1
+; CHECK-ARM-NEXT:    movgt lr, #1
+; CHECK-ARM-NEXT:    adds r0, r0, r2
+; CHECK-ARM-NEXT:    adc r2, r1, r3
+; CHECK-ARM-NEXT:    mov r1, #0
+; CHECK-ARM-NEXT:    cmn r2, #1
+; CHECK-ARM-NEXT:    mov r12, #0
+; CHECK-ARM-NEXT:    movgt r1, #1
+; CHECK-ARM-NEXT:    subs r1, lr, r1
+; CHECK-ARM-NEXT:    movne r1, #1
 ; CHECK-ARM-NEXT:    cmn r3, #1
-; CHECK-ARM-NEXT:    movwgt lr, #1
-; CHECK-ARM-NEXT:    sub r1, r1, lr
-; CHECK-ARM-NEXT:    clz r1, r1
-; CHECK-ARM-NEXT:    lsr r1, r1, #5
-; CHECK-ARM-NEXT:    ands r2, r1, r2
-; CHECK-ARM-NEXT:    asrne r0, r12, #31
+; CHECK-ARM-NEXT:    movgt r12, #1
+; CHECK-ARM-NEXT:    sub r3, lr, r12
+; CHECK-ARM-NEXT:    clz r3, r3
+; CHECK-ARM-NEXT:    lsr r3, r3, #5
+; CHECK-ARM-NEXT:    ands r3, r3, r1
 ; CHECK-ARM-NEXT:    mov r1, #-2147483648
-; CHECK-ARM-NEXT:    cmp r12, #0
-; CHECK-ARM-NEXT:    mvnmi r1, #-2147483648
+; CHECK-ARM-NEXT:    asrne r0, r2, #31
 ; CHECK-ARM-NEXT:    cmp r2, #0
-; CHECK-ARM-NEXT:    moveq r1, r12
+; CHECK-ARM-NEXT:    mvnmi r1, #-2147483648
+; CHECK-ARM-NEXT:    cmp r3, #0
+; CHECK-ARM-NEXT:    moveq r1, r2
 ; CHECK-ARM-NEXT:    pop {r11, pc}
   %tmp = call i64 @llvm.sadd.sat.i64(i64 %x, i64 %y)
   ret i64 %tmp
@@ -248,14 +250,18 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 ; CHECK-ARM-LABEL: func16:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    add r0, r0, r1
-; CHECK-ARM-NEXT:    movw r1, #32767
+; CHECK-ARM-NEXT:    mov r1, #255
+; CHECK-ARM-NEXT:    orr r1, r1, #32512
 ; CHECK-ARM-NEXT:    cmp r0, r1
 ; CHECK-ARM-NEXT:    movlt r1, r0
-; CHECK-ARM-NEXT:    movw r0, #32768
-; CHECK-ARM-NEXT:    movt r0, #65535
+; CHECK-ARM-NEXT:    ldr r0, .LCPI2_0
 ; CHECK-ARM-NEXT:    cmn r1, #32768
 ; CHECK-ARM-NEXT:    movgt r0, r1
 ; CHECK-ARM-NEXT:    bx lr
+; CHECK-ARM-NEXT:    .p2align 2
+; CHECK-ARM-NEXT:  @ %bb.1:
+; CHECK-ARM-NEXT:  .LCPI2_0:
+; CHECK-ARM-NEXT:    .long 4294934528 @ 0xffff8000
   %tmp = call i16 @llvm.sadd.sat.i16(i16 %x, i16 %y)
   ret i16 %tmp
 }
