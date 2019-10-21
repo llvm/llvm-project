@@ -172,8 +172,9 @@ private:
 
   MachineSDNode *buildSMovImm64(SDLoc &DL, uint64_t Val, EVT VT) const;
 
-  SDNode *glueCopyToM0LDSInit(SDNode *N) const;
+  SDNode *glueCopyToOp(SDNode *N, SDValue NewChain, SDValue Glue) const;
   SDNode *glueCopyToM0(SDNode *N, SDValue Val) const;
+  SDNode *glueCopyToM0LDSInit(SDNode *N) const;
 
   const TargetRegisterClass *getOperandRegClass(SDNode *N, unsigned OpNo) const;
   virtual bool SelectADDRVTX_READ(SDValue Addr, SDValue &Base, SDValue &Offset);
@@ -585,24 +586,25 @@ const TargetRegisterClass *AMDGPUDAGToDAGISel::getOperandRegClass(SDNode *N,
   }
 }
 
+SDNode *AMDGPUDAGToDAGISel::glueCopyToOp(SDNode *N, SDValue NewChain,
+                                         SDValue Glue) const {
+  SmallVector <SDValue, 8> Ops;
+  Ops.push_back(NewChain); // Replace the chain.
+  for (unsigned i = 1, e = N->getNumOperands(); i != e; ++i)
+    Ops.push_back(N->getOperand(i));
+
+  Ops.push_back(Glue);
+  return CurDAG->MorphNodeTo(N, N->getOpcode(), N->getVTList(), Ops);
+}
+
 SDNode *AMDGPUDAGToDAGISel::glueCopyToM0(SDNode *N, SDValue Val) const {
   const SITargetLowering& Lowering =
     *static_cast<const SITargetLowering*>(getTargetLowering());
 
   assert(N->getOperand(0).getValueType() == MVT::Other && "Expected chain");
 
-  SDValue M0 = Lowering.copyToM0(*CurDAG, N->getOperand(0), SDLoc(N),
-                                 Val);
-
-  SDValue Glue = M0.getValue(1);
-
-  SmallVector <SDValue, 8> Ops;
-  Ops.push_back(M0); // Replace the chain.
-  for (unsigned i = 1, e = N->getNumOperands(); i != e; ++i)
-    Ops.push_back(N->getOperand(i));
-
-  Ops.push_back(Glue);
-  return CurDAG->MorphNodeTo(N, N->getOpcode(), N->getVTList(), Ops);
+  SDValue M0 = Lowering.copyToM0(*CurDAG, N->getOperand(0), SDLoc(N), Val);
+  return glueCopyToOp(N, M0, M0.getValue(1));
 }
 
 SDNode *AMDGPUDAGToDAGISel::glueCopyToM0LDSInit(SDNode *N) const {
