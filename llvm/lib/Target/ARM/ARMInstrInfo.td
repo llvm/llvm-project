@@ -3759,6 +3759,10 @@ def : ARMV5TEPat<(saddsat GPR:$a, GPR:$b),
                  (QADD GPR:$a, GPR:$b)>;
 def : ARMV5TEPat<(ssubsat GPR:$a, GPR:$b),
                  (QSUB GPR:$a, GPR:$b)>;
+def : ARMV5TEPat<(saddsat(saddsat rGPR:$Rm, rGPR:$Rm), rGPR:$Rn),
+                 (QDADD rGPR:$Rm, rGPR:$Rn)>;
+def : ARMV5TEPat<(ssubsat rGPR:$Rm, (saddsat rGPR:$Rn, rGPR:$Rn)),
+                 (QDSUB rGPR:$Rm, rGPR:$Rn)>;
 def : ARMV6Pat<(ARMqadd8b rGPR:$Rm, rGPR:$Rn),
                (QADD8 rGPR:$Rm, rGPR:$Rn)>;
 def : ARMV6Pat<(ARMqsub8b rGPR:$Rm, rGPR:$Rn),
