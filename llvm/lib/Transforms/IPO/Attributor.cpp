@@ -2994,7 +2994,7 @@ struct AANoCaptureImpl : public AANoCapture {
     if (F.doesNotThrow() && ArgNo >= 0) {
       for (unsigned u = 0, e = F.arg_size(); u< e; ++u)
         if (F.hasParamAttribute(u, Attribute::Returned)) {
-          if (u == ArgNo)
+          if (u == unsigned(ArgNo))
             State.removeAssumedBits(NOT_CAPTURED_IN_RET);
           else if (F.onlyReadsMemory())
             State.addKnownBits(NO_CAPTURE);
