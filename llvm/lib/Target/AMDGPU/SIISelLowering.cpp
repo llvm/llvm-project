@@ -5951,22 +5951,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getNode(AMDGPUISD::INTERP_P1LL_F16, DL, MVT::f32, Ops);
     }
   }
-  case Intrinsic::amdgcn_interp_p2_f16: {
-    SDValue ToM0 = DAG.getCopyToReg(DAG.getEntryNode(), DL, AMDGPU::M0,
-                                    Op.getOperand(6), SDValue());
-    SDValue Ops[] = {
-      Op.getOperand(2), // Src0
-      Op.getOperand(3), // Attrchan
-      Op.getOperand(4), // Attr
-      DAG.getTargetConstant(0, DL, MVT::i32), // $src0_modifiers
-      Op.getOperand(1), // Src2
-      DAG.getTargetConstant(0, DL, MVT::i32), // $src2_modifiers
-      Op.getOperand(5), // high
-      DAG.getTargetConstant(0, DL, MVT::i1), // $clamp
-      ToM0.getValue(1)
-    };
-    return DAG.getNode(AMDGPUISD::INTERP_P2_F16, DL, MVT::f16, Ops);
-  }
   case Intrinsic::amdgcn_sin:
     return DAG.getNode(AMDGPUISD::SIN_HW, DL, VT, Op.getOperand(1));
 
