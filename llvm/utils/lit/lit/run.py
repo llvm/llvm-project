@@ -127,27 +127,20 @@ class ParallelRun(Run):
                 return True
             lit.util.win32api.SetConsoleCtrlHandler(console_ctrl_handler, True)
 
-        try:
-            async_results = [
-                pool.apply_async(lit.worker.execute, args=[test],
-                    callback=lambda r, t=test: self._process_result(t, r))
-                for test in self.tests]
-            pool.close()
+        async_results = [
+            pool.apply_async(lit.worker.execute, args=[test],
+                callback=lambda r, t=test: self._process_result(t, r))
+            for test in self.tests]
+        pool.close()
 
-            # Wait for all results to come in. The callback that runs in the
-            # parent process will update the display.
-            for a in async_results:
-                timeout = deadline - time.time()
-                a.wait(timeout)
-                if not a.successful():
-                    # TODO(yln): this also raises on a --max-time time
-                    a.get() # Exceptions raised here come from the worker.
-                if self.hit_max_failures:
-                    break
-        except:
-            # Stop the workers and wait for any straggling results to come in
-            # if we exited without waiting on every async result.
-            pool.terminate()
-            raise
-        finally:
-            pool.join()
+        for ar in async_results:
+            timeout = deadline - time.time()
+            try:
+                ar.get(timeout)
+            except multiprocessing.TimeoutError:
+                # TODO(yln): print timeout error
+                pool.terminate()
+                break
+            if self.hit_max_failures:
+                pool.terminate()
+                break
