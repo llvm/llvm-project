@@ -860,6 +860,7 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
         break;
       case Instruction::Add:
       case Instruction::Sub:
+      case Instruction::Mul:
         BBChanged |= processBinOp(cast<BinaryOperator>(II), LVI);
         break;
       case Instruction::And:
