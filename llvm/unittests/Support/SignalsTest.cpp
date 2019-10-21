@@ -9,6 +9,7 @@
 #if !defined(_WIN32)
 #include <unistd.h>
 #include <sysexits.h>
+#include <signal.h>
 #endif // !defined(_WIN32)
 
 #include "llvm/Support/Signals.h"
