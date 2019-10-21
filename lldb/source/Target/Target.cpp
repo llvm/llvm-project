@@ -3085,8 +3085,8 @@ lldb::addr_t Target::FindLoadAddrForNameInSymbolsAndPersistentVariables(
   lldb::addr_t symbol_addr = LLDB_INVALID_ADDRESS;
   SymbolContextList sc_list;
 
-  if (GetImages().FindSymbolsWithNameAndType(name_const_str, symbol_type,
-                                             sc_list)) {
+  GetImages().FindSymbolsWithNameAndType(name_const_str, symbol_type, sc_list);
+  if (!sc_list.IsEmpty()) {
     SymbolContext desired_symbol;
 
     if (sc_list.GetSize() == 1 &&

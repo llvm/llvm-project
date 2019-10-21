@@ -3846,8 +3846,9 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
       module_spec.GetFileSpec().GetFilename() = library_cstr;
       lldb_private::ModuleList matching_module_list;
       bool module_already_loaded = false;
-      if (process.GetTarget().GetImages().FindModules(module_spec,
-                                                      matching_module_list)) {
+      process.GetTarget().GetImages().FindModules(module_spec,
+                                                  matching_module_list);
+      if (!matching_module_list.IsEmpty()) {
         matching_module_list.ForEach(
             [&module_already_loaded, &module_spec,
              &framework_name](const ModuleSP &module_sp) -> bool {
@@ -4037,8 +4038,9 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
   module_spec.GetFileSpec().GetFilename().SetCString(library_fullname.c_str());
   lldb_private::ModuleList matching_module_list;
 
-  if (process.GetTarget().GetImages().FindModules(module_spec,
-                                                  matching_module_list) > 0) {
+  process.GetTarget().GetImages().FindModules(module_spec,
+                                              matching_module_list);
+  if (!matching_module_list.IsEmpty()) {
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "Skipping module %s as it is already loaded.",
                library_fullname.c_str());
     return true;

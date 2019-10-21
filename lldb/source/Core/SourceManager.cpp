@@ -334,10 +334,10 @@ static lldb_private::LineEntry FindEntryPoint(Module *exe_module) {
     SymbolContextList sc_list;
     bool symbols_okay = false; // Force it to be a debug symbol.
     bool inlines_okay = true;
-    bool append = false;
-    size_t num_matches = exe_module->FindFunctions(
-        entry_point_name, NULL, lldb::eFunctionNameTypeBase, inlines_okay,
-        symbols_okay, append, sc_list);
+    exe_module->FindFunctions(entry_point_name, NULL,
+                              lldb::eFunctionNameTypeBase, inlines_okay,
+                              symbols_okay, sc_list);
+    size_t num_matches = sc_list.GetSize();
     for (size_t idx = 0; idx < num_matches; idx++) {
       SymbolContext sc;
       sc_list.GetContextAtIndex(idx, sc);
