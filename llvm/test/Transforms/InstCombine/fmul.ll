@@ -1069,3 +1069,53 @@ define <2 x double> @negate_if_true_wrong_constant(<2 x double> %px, i1 %cond) {
   %r = fmul <2 x double> %x, %sel
   ret <2 x double> %r
 }
+
+; X *fast (C ? 1.0 : 0.0) -> C ? X : 0.0
+define float @fmul_select(float %x, i1 %c) {
+; CHECK-LABEL: @fmul_select(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], float 1.000000e+00, float 0.000000e+00
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[SEL]], [[X:%.*]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %sel = select i1 %c, float 1.0, float 0.0
+  %mul = fmul fast float %sel, %x
+  ret float %mul
+}
+
+; X *fast (C ? 1.0 : 0.0) -> C ? X : 0.0
+define <2 x float> @fmul_select_vec(<2 x float> %x, i1 %c) {
+; CHECK-LABEL: @fmul_select_vec(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float> zeroinitializer
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast <2 x float> [[SEL]], [[X:%.*]]
+; CHECK-NEXT:    ret <2 x float> [[MUL]]
+;
+  %sel = select i1 %c, <2 x float> <float 1.0, float 1.0>, <2 x float> zeroinitializer
+  %mul = fmul fast <2 x float> %sel, %x
+  ret <2 x float> %mul
+}
+
+; Without fast math flags we can't optimize X * (C ? 1.0 : 0.0) -> C ? X : 0.0
+define float @fmul_select_strict(float %x, i1 %c) {
+; CHECK-LABEL: @fmul_select_strict(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], float 1.000000e+00, float 0.000000e+00
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SEL]], [[X:%.*]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %sel = select i1 %c, float 1.0, float 0.0
+  %mul = fmul float %sel, %x
+  ret float %mul
+}
+
+; sqrt(X) *fast (C ? sqrt(X) : 1.0) -> C ? X : sqrt(X)
+define double @fmul_sqrt_select(double %x, i1 %c) {
+; CHECK-LABEL: @fmul_sqrt_select(
+; CHECK-NEXT:    [[SQR:%.*]] = call double @llvm.sqrt.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], double [[SQR]], double 1.000000e+00
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[SQR]], [[SEL]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %sqr = call double @llvm.sqrt.f64(double %x)
+  %sel = select i1 %c, double %sqr, double 1.0
+  %mul = fmul fast double %sqr, %sel
+  ret double %mul
+}
