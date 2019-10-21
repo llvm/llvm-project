@@ -31,7 +31,7 @@ public:
   WebAssemblyFrameLowering()
       : TargetFrameLowering(StackGrowsDown, /*StackAlignment=*/Align(16),
                             /*LocalAreaOffset=*/0,
-                            /*TransientStackAlignment=*/16,
+                            /*TransientStackAlignment=*/Align(16),
                             /*StackRealignable=*/true) {}
 
   MachineBasicBlock::iterator

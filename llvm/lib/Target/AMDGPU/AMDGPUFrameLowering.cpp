@@ -14,7 +14,7 @@
 
 using namespace llvm;
 AMDGPUFrameLowering::AMDGPUFrameLowering(StackDirection D, Align StackAl,
-                                         int LAO, unsigned TransAl)
+                                         int LAO, Align TransAl)
     : TargetFrameLowering(D, StackAl, LAO, TransAl) {}
 
 AMDGPUFrameLowering::~AMDGPUFrameLowering() = default;

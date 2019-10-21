@@ -21,7 +21,7 @@ class GCNSubtarget;
 class SIFrameLowering final : public AMDGPUFrameLowering {
 public:
   SIFrameLowering(StackDirection D, Align StackAl, int LAO,
-                  unsigned TransAl = 1)
+                  Align TransAl = Align::None())
       : AMDGPUFrameLowering(D, StackAl, LAO, TransAl) {}
   ~SIFrameLowering() override = default;
 

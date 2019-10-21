@@ -55,12 +55,12 @@ public:
 private:
   StackDirection StackDir;
   Align StackAlignment;
-  unsigned TransientStackAlignment;
+  Align TransientStackAlignment;
   int LocalAreaOffset;
   bool StackRealignable;
 public:
   TargetFrameLowering(StackDirection D, Align StackAl, int LAO,
-                      unsigned TransAl = 1, bool StackReal = true)
+                      Align TransAl = Align::None(), bool StackReal = true)
       : StackDir(D), StackAlignment(StackAl), TransientStackAlignment(TransAl),
         LocalAreaOffset(LAO), StackRealignable(StackReal) {}
 
@@ -96,7 +96,7 @@ public:
   /// calls.
   ///
   unsigned getTransientStackAlignment() const {
-    return TransientStackAlignment;
+    return TransientStackAlignment.value();
   }
 
   /// isStackRealignable - This method returns whether the stack can be
