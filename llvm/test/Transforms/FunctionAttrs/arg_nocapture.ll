@@ -405,35 +405,33 @@ entry:
 ;
 ; Make sure the returned flag on %r is strong enough to justify nocapture on %b but **not** on %r.
 ;
-; FIXME: The "returned" information is not propagated to the fullest extend causing us to miss "nocapture" on %b in the following:
-; CHECK: define i32* @not_captured_by_readonly_call_not_returned_either1(i32* readonly %b, i32* readonly returned %r)
+; CHECK: define i32* @not_captured_by_readonly_call_not_returned_either1(i32* nocapture readonly %b, i32* readonly returned %r)
 ;
-; CHECK: define i32* @not_captured_by_readonly_call_not_returned_either2(i32* readonly %b, i32* readonly returned %r)
-; CHECK: define i32* @not_captured_by_readonly_call_not_returned_either3(i32* readonly %b, i32* readonly returned %r)
+; CHECK: define i32* @not_captured_by_readonly_call_not_returned_either2(i32* nocapture readonly %b, i32* readonly returned %r)
+; CHECK: define i32* @not_captured_by_readonly_call_not_returned_either3(i32* nocapture readonly %b, i32* readonly returned %r)
 ;
-; FIXME: The "nounwind" information is not derived to the fullest extend causing us to miss "nocapture" on %b in the following:
-; CHECK: define i32* @not_captured_by_readonly_call_not_returned_either4(i32* readonly %b, i32* readonly returned %r)
-define i32* @not_captured_by_readonly_call_not_returned_either1(i32* %b, i32* returned %r) #0 {
+; CHECK: define i32* @not_captured_by_readonly_call_not_returned_either4(i32* nocapture readonly %b, i32* readonly returned %r)
+define i32* @not_captured_by_readonly_call_not_returned_either1(i32* %b, i32* returned %r) {
 entry:
   %call = call i32* @readonly_unknown(i32* %b, i32* %r) nounwind
   ret i32* %call
 }
 
 declare i32* @readonly_unknown_r1a(i32*, i32* returned) readonly
-define i32* @not_captured_by_readonly_call_not_returned_either2(i32* %b, i32* %r) #0 {
+define i32* @not_captured_by_readonly_call_not_returned_either2(i32* %b, i32* %r) {
 entry:
   %call = call i32* @readonly_unknown_r1a(i32* %b, i32* %r) nounwind
   ret i32* %call
 }
 
 declare i32* @readonly_unknown_r1b(i32*, i32* returned) readonly nounwind
-define i32* @not_captured_by_readonly_call_not_returned_either3(i32* %b, i32* %r) #0 {
+define i32* @not_captured_by_readonly_call_not_returned_either3(i32* %b, i32* %r) {
 entry:
   %call = call i32* @readonly_unknown_r1b(i32* %b, i32* %r)
   ret i32* %call
 }
 
-define i32* @not_captured_by_readonly_call_not_returned_either4(i32* %b, i32* %r) #0 {
+define i32* @not_captured_by_readonly_call_not_returned_either4(i32* %b, i32* %r) nounwind {
 entry:
   %call = call i32* @readonly_unknown_r1a(i32* %b, i32* %r)
   ret i32* %call
