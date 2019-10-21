@@ -39527,6 +39527,24 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
                                       DAG.getBitcast(MVT::v4f32, N1)));
   }
 
+  // Match any-of bool scalar reductions into a bitcast/movmsk + cmp.
+  // TODO: Support multiple SrcOps.
+  if (VT == MVT::i1) {
+    SmallVector<SDValue, 2> SrcOps;
+    if (matchScalarReduction(SDValue(N, 0), ISD::OR, SrcOps) &&
+        SrcOps.size() == 1) {
+      SDLoc dl(N);
+      unsigned NumElts = SrcOps[0].getValueType().getVectorNumElements();
+      EVT MaskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
+      SDValue Mask = combineBitcastvxi1(DAG, MaskVT, SrcOps[0], dl, Subtarget);
+      if (Mask) {
+        APInt AllBits = APInt::getNullValue(NumElts);
+        return DAG.getSetCC(dl, MVT::i1, Mask,
+                            DAG.getConstant(AllBits, dl, MaskVT), ISD::SETNE);
+      }
+    }
+  }
+
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
