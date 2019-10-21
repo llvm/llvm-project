@@ -262,8 +262,8 @@ public:
 /// - <tt>a != b</tt> -> <tt>!(a == b)</tt>
 /// - <tt>a != b</tt> -> <tt>!(b == a)</tt>
 /// - For \c \@ in \c <, \c <=, \c >, \c >=, \c <=>:
-///   - <tt>a @ b<tt> -> <tt>(a <=> b) @ 0</tt>
-///   - <tt>a @ b<tt> -> <tt>0 @ (b <=> a)</tt>
+///   - <tt>a @ b</tt> -> <tt>(a <=> b) @ 0</tt>
+///   - <tt>a @ b</tt> -> <tt>0 @ (b <=> a)</tt>
 ///
 /// This expression provides access to both the original syntax and the
 /// rewritten expression.
