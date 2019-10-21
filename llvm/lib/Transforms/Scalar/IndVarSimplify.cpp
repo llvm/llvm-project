@@ -2794,6 +2794,13 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       Changed = true;
       continue;
     }
+
+    // TODO: There might be another oppurtunity to leverage SCEV's reasoning
+    // here.  If we kept track of the min of dominanting exits so far, we could
+    // discharge exits with EC >= MDEC. This is less powerful than the existing
+    // transform (since later exits aren't considered), but potentially more
+    // powerful for any case where SCEV can prove a >=u b, but neither a == b
+    // or a >u b.  Such a case is not currently known.
   }
   return Changed;
 }
