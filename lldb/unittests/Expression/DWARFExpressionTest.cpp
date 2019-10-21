@@ -282,7 +282,7 @@ TEST(DWARFExpression, DW_OP_convert) {
   //
   // Positive tests.
   //
-  
+
   // Truncate to default unspecified (pointer-sized) type.
   EXPECT_THAT_EXPECTED(
       t.Eval({DW_OP_const8u, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, //
