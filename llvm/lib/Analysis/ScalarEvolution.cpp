@@ -10356,7 +10356,7 @@ static bool isKnownPredicateExtendIdiom(ICmpInst::Predicate Pred,
   case ICmpInst::ICMP_UGE:
     std::swap(LHS, RHS);
     LLVM_FALLTHROUGH;
-  case ICmpInst::ICMP_ULE: { 
+  case ICmpInst::ICMP_ULE: {
     // If operand >=s 0 then ZExt == SExt.  If operand <s 0 then ZExt <u SExt.
     const SCEVZeroExtendExpr *ZExt = dyn_cast<SCEVZeroExtendExpr>(LHS);
     const SCEVSignExtendExpr *SExt = dyn_cast<SCEVSignExtendExpr>(RHS);

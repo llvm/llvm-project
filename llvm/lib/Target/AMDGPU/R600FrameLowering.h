@@ -16,7 +16,7 @@ namespace llvm {
 class R600FrameLowering : public AMDGPUFrameLowering {
 public:
   R600FrameLowering(StackDirection D, Align StackAl, int LAO,
-                    unsigned TransAl = 1)
+                    Align TransAl = Align::None())
       : AMDGPUFrameLowering(D, StackAl, LAO, TransAl) {}
   ~R600FrameLowering() override;
 
