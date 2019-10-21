@@ -3,5 +3,4 @@ add_llvm_library(LLVMAMDGPUUtils
   AMDKernelCodeTUtils.cpp
   AMDGPUAsmUtils.cpp
   AMDGPUPALMetadata.cpp
-  AMDGPUMCUtils.cpp
   )

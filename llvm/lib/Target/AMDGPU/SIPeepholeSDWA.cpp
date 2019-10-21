@@ -26,7 +26,6 @@
 #include "SIRegisterInfo.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "Utils/AMDGPUMCUtils.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -77,6 +76,8 @@ private:
   std::unordered_map<MachineInstr *, std::unique_ptr<SDWAOperand>> SDWAOperands;
   std::unordered_map<MachineInstr *, SDWAOperandsVector> PotentialMatches;
   SmallVector<MachineInstr *, 8> ConvertedInstructions;
+
+  Optional<int64_t> foldToImm(const MachineOperand &Op) const;
 
 public:
   static char ID;
@@ -518,6 +519,33 @@ bool SDWADstPreserveOperand::convertToSDWA(MachineInstr &MI,
   return SDWADstOperand::convertToSDWA(MI, TII);
 }
 
+Optional<int64_t> SIPeepholeSDWA::foldToImm(const MachineOperand &Op) const {
+  if (Op.isImm()) {
+    return Op.getImm();
+  }
+
+  // If this is not immediate then it can be copy of immediate value, e.g.:
+  // %1 = S_MOV_B32 255;
+  if (Op.isReg()) {
+    for (const MachineOperand &Def : MRI->def_operands(Op.getReg())) {
+      if (!isSameReg(Op, Def))
+        continue;
+
+      const MachineInstr *DefInst = Def.getParent();
+      if (!TII->isFoldableCopy(*DefInst))
+        return None;
+
+      const MachineOperand &Copied = DefInst->getOperand(1);
+      if (!Copied.isImm())
+        return None;
+
+      return Copied.getImm();
+    }
+  }
+
+  return None;
+}
+
 std::unique_ptr<SDWAOperand>
 SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
@@ -537,7 +565,7 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
     // from: v_lshlrev_b32_e32 v1, 16/24, v0
     // to SDWA dst:v1 dst_sel:WORD_1/BYTE_3 dst_unused:UNUSED_PAD
     MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
-    auto Imm = AMDGPU::foldToImm(*Src0, MRI, TII);
+    auto Imm = foldToImm(*Src0);
     if (!Imm)
       break;
 
@@ -578,7 +606,7 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
     // from: v_lshlrev_b16_e32 v1, 8, v0
     // to SDWA dst:v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD
     MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
-    auto Imm = AMDGPU::foldToImm(*Src0, MRI, TII);
+    auto Imm = foldToImm(*Src0);
     if (!Imm || *Imm != 8)
       break;
 
@@ -618,12 +646,12 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
     // 24     | 8     | BYTE_3
 
     MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
-    auto Offset = AMDGPU::foldToImm(*Src1, MRI, TII);
+    auto Offset = foldToImm(*Src1);
     if (!Offset)
       break;
 
     MachineOperand *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
-    auto Width = AMDGPU::foldToImm(*Src2, MRI, TII);
+    auto Width = foldToImm(*Src2);
     if (!Width)
       break;
 
@@ -666,10 +694,10 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
     MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
     MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
     auto ValSrc = Src1;
-    auto Imm = AMDGPU::foldToImm(*Src0, MRI, TII);
+    auto Imm = foldToImm(*Src0);
 
     if (!Imm) {
-      Imm = AMDGPU::foldToImm(*Src1, MRI, TII);
+      Imm = foldToImm(*Src1);
       ValSrc = Src0;
     }
 
