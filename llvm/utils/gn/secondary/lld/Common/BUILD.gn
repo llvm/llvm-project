@@ -16,6 +16,7 @@ static_library("Common") {
   ]
   sources = [
     "Args.cpp",
+    "DWARF.cpp",
     "ErrorHandler.cpp",
     "Filesystem.cpp",
     "Memory.cpp",
