@@ -672,6 +672,12 @@ public:
   bool hasSB() const { return HasSB; }
   bool genLongCalls() const { return GenLongCalls; }
   bool genExecuteOnly() const { return GenExecuteOnly; }
+  bool hasBaseDSP() const {
+    if (isThumb())
+      return hasDSP();
+    else
+      return hasV5TEOps();
+  }
 
   bool hasFP16() const { return HasFP16; }
   bool hasD32() const { return HasD32; }
