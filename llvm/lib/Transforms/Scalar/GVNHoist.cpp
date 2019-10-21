@@ -539,7 +539,7 @@ private:
 
     // Check for unsafe hoistings due to side effects.
     if (K == InsKind::Store) {
-      if (hasEHOrLoadsOnPath(NewPt, dyn_cast<MemoryDef>(U), NBBsOnAllPaths))
+      if (hasEHOrLoadsOnPath(NewPt, cast<MemoryDef>(U), NBBsOnAllPaths))
         return false;
     } else if (hasEHOnPath(NewBB, OldBB, NBBsOnAllPaths))
       return false;
