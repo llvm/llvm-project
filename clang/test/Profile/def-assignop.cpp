@@ -18,9 +18,12 @@ struct A {
   // PGOGEN: {{.*}}add{{.*}}%pgocount, 1
   // PGOGEN: store{{.*}}@__profc__ZN1AaSEOS_
 
-  // Check that coverage mapping includes 6 function records including the
+  // Check that coverage mapping includes 3 function records including the
   // defaulted copy and move operators: A::operator=
-  // COVMAP: @__llvm_coverage_mapping = {{.*}} { { i32, i32, i32, i32 }, [3 x <{{.*}}>],
+  // COVMAP: section "__llvm_covfun", comdat
+  // COVMAP: section "__llvm_covfun", comdat
+  // COVMAP: section "__llvm_covfun", comdat
+  // COVMAP: @__llvm_coverage_mapping = {{.*}} { { i32, i32, i32, i32 }
   B b;
 };
 
