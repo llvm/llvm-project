@@ -84,7 +84,8 @@ bool ObjectFile::isBerkeleyData(DataRefImpl Sec) const {
   return isSectionData(Sec);
 }
 
-section_iterator ObjectFile::getRelocatedSection(DataRefImpl Sec) const {
+Expected<section_iterator>
+ObjectFile::getRelocatedSection(DataRefImpl Sec) const {
   return section_iterator(SectionRef(Sec, this));
 }
 

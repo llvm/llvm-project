@@ -4894,8 +4894,16 @@ void DumpStyle<ELFT>::printRelocatableStackSizes(
     if (SectionType != ELF::SHT_RELA && SectionType != ELF::SHT_REL)
       continue;
 
-    SectionRef Contents = *Sec.getRelocatedSection();
-    const Elf_Shdr *ContentsSec = Obj->getSection(Contents.getRawDataRefImpl());
+    Expected<section_iterator> RelSecOrErr = Sec.getRelocatedSection();
+    if (!RelSecOrErr)
+      reportError(createStringError(object_error::parse_failed,
+                                    "%s: failed to get a relocated section: %s",
+                                    SectionName.data(),
+                                    toString(RelSecOrErr.takeError()).c_str()),
+                  Obj->getFileName());
+
+    const Elf_Shdr *ContentsSec =
+        Obj->getSection((*RelSecOrErr)->getRawDataRefImpl());
     Expected<StringRef> ContentsSectionNameOrErr =
         EF->getSectionName(ContentsSec);
     if (!ContentsSectionNameOrErr) {

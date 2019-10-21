@@ -288,7 +288,8 @@ protected:
   relocation_iterator section_rel_begin(DataRefImpl Sec) const override;
   relocation_iterator section_rel_end(DataRefImpl Sec) const override;
   std::vector<SectionRef> dynamic_relocation_sections() const override;
-  section_iterator getRelocatedSection(DataRefImpl Sec) const override;
+  Expected<section_iterator>
+  getRelocatedSection(DataRefImpl Sec) const override;
 
   void moveRelocationNext(DataRefImpl &Rel) const override;
   uint64_t getRelocationOffset(DataRefImpl Rel) const override;
@@ -841,7 +842,7 @@ ELFObjectFile<ELFT>::section_rel_end(DataRefImpl Sec) const {
 }
 
 template <class ELFT>
-section_iterator
+Expected<section_iterator>
 ELFObjectFile<ELFT>::getRelocatedSection(DataRefImpl Sec) const {
   if (EF.getHeader()->e_type != ELF::ET_REL)
     return section_end();
@@ -851,10 +852,10 @@ ELFObjectFile<ELFT>::getRelocatedSection(DataRefImpl Sec) const {
   if (Type != ELF::SHT_REL && Type != ELF::SHT_RELA)
     return section_end();
 
-  auto R = EF.getSection(EShdr->sh_info);
-  if (!R)
-    report_fatal_error(errorToErrorCode(R.takeError()).message());
-  return section_iterator(SectionRef(toDRI(*R), this));
+  Expected<const Elf_Shdr *> SecOrErr = EF.getSection(EShdr->sh_info);
+  if (!SecOrErr)
+    return SecOrErr.takeError();
+  return section_iterator(SectionRef(toDRI(*SecOrErr), this));
 }
 
 // Relocations

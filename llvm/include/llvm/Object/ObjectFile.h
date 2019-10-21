@@ -130,7 +130,7 @@ public:
   iterator_range<relocation_iterator> relocations() const {
     return make_range(relocation_begin(), relocation_end());
   }
-  section_iterator getRelocatedSection() const;
+  Expected<section_iterator> getRelocatedSection() const;
 
   DataRefImpl getRawDataRefImpl() const;
   const ObjectFile *getObject() const;
@@ -272,7 +272,7 @@ protected:
   virtual bool isBerkeleyData(DataRefImpl Sec) const;
   virtual relocation_iterator section_rel_begin(DataRefImpl Sec) const = 0;
   virtual relocation_iterator section_rel_end(DataRefImpl Sec) const = 0;
-  virtual section_iterator getRelocatedSection(DataRefImpl Sec) const;
+  virtual Expected<section_iterator> getRelocatedSection(DataRefImpl Sec) const;
 
   // Same as above for RelocationRef.
   friend class RelocationRef;
@@ -501,7 +501,7 @@ inline relocation_iterator SectionRef::relocation_end() const {
   return OwningObject->section_rel_end(SectionPimpl);
 }
 
-inline section_iterator SectionRef::getRelocatedSection() const {
+inline Expected<section_iterator> SectionRef::getRelocatedSection() const {
   return OwningObject->getRelocatedSection(SectionPimpl);
 }
 

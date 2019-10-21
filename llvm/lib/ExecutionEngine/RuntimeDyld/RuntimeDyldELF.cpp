@@ -606,7 +606,12 @@ Error RuntimeDyldELF::findOPDEntrySection(const ELFObjectFileBase &Obj,
   // .opd entries
   for (section_iterator si = Obj.section_begin(), se = Obj.section_end();
        si != se; ++si) {
-    section_iterator RelSecI = si->getRelocatedSection();
+
+    Expected<section_iterator> RelSecOrErr = si->getRelocatedSection();
+    if (!RelSecOrErr)
+      report_fatal_error(toString(RelSecOrErr.takeError()));
+
+    section_iterator RelSecI = *RelSecOrErr;
     if (RelSecI == Obj.section_end())
       continue;
 
@@ -1871,7 +1876,12 @@ Error RuntimeDyldELF::finalizeLoad(const ObjectFile &Obj,
       for (section_iterator SI = Obj.section_begin(), SE = Obj.section_end();
            SI != SE; ++SI) {
         if (SI->relocation_begin() != SI->relocation_end()) {
-          section_iterator RelocatedSection = SI->getRelocatedSection();
+          Expected<section_iterator> RelSecOrErr = SI->getRelocatedSection();
+          if (!RelSecOrErr)
+            return make_error<RuntimeDyldError>(
+                toString(RelSecOrErr.takeError()));
+
+          section_iterator RelocatedSection = *RelSecOrErr;
           ObjSectionToIDMap::iterator i = SectionMap.find(*RelocatedSection);
           assert (i != SectionMap.end());
           SectionToGOTMap[i->second] = GOTSectionID;
