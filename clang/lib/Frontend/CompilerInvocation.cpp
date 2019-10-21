@@ -2081,6 +2081,7 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
     Opts.AddPrebuiltModulePath(A->getValue());
   Opts.DisableModuleHash = Args.hasArg(OPT_fdisable_module_hash);
   Opts.ModulesHashContent = Args.hasArg(OPT_fmodules_hash_content);
+  Opts.ModulesStrictContextHash = Args.hasArg(OPT_fmodules_strict_context_hash);
   Opts.ModulesValidateDiagnosticOptions =
       !Args.hasArg(OPT_fmodules_disable_diagnostic_validation);
   Opts.ImplicitModuleMaps = Args.hasArg(OPT_fimplicit_module_maps);
@@ -3590,6 +3591,7 @@ std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
   using llvm::hash_code;
   using llvm::hash_value;
   using llvm::hash_combine;
+  using llvm::hash_combine_range;
 
   // Start the signature with the compiler version.
   // FIXME: We'd rather use something more cryptographically sound than
@@ -3643,6 +3645,24 @@ std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
                       hsOpts.UseLibcxx,
                       hsOpts.ModulesValidateDiagnosticOptions);
   code = hash_combine(code, hsOpts.ResourceDir);
+
+  if (hsOpts.ModulesStrictContextHash) {
+    hash_code SHPC = hash_combine_range(hsOpts.SystemHeaderPrefixes.begin(),
+                                        hsOpts.SystemHeaderPrefixes.end());
+    hash_code UEC = hash_combine_range(hsOpts.UserEntries.begin(),
+                                       hsOpts.UserEntries.end());
+    code = hash_combine(code, hsOpts.SystemHeaderPrefixes.size(), SHPC,
+                        hsOpts.UserEntries.size(), UEC);
+
+    const DiagnosticOptions &diagOpts = getDiagnosticOpts();
+    #define DIAGOPT(Name, Bits, Default) \
+      code = hash_combine(code, diagOpts.Name);
+    #define ENUM_DIAGOPT(Name, Type, Bits, Default) \
+      code = hash_combine(code, diagOpts.get##Name());
+    #include "clang/Basic/DiagnosticOptions.def"
+    #undef DIAGOPT
+    #undef ENUM_DIAGOPT
+  }
 
   // Extend the signature with the user build path.
   code = hash_combine(code, hsOpts.ModuleUserBuildPath);
