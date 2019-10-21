@@ -21,12 +21,13 @@
 using namespace clang;
 
 void clang_fuzzer::HandleCXX(const std::string &S,
+                             const char *FileName,
                              const std::vector<const char *> &ExtraArgs) {
   llvm::opt::ArgStringList CC1Args;
   CC1Args.push_back("-cc1");
   for (auto &A : ExtraArgs)
     CC1Args.push_back(A);
-  CC1Args.push_back("./test.cc");
+  CC1Args.push_back(FileName);
 
   llvm::IntrusiveRefCntPtr<FileManager> Files(
       new FileManager(FileSystemOptions()));
@@ -39,7 +40,7 @@ void clang_fuzzer::HandleCXX(const std::string &S,
       tooling::newInvocation(&Diagnostics, CC1Args));
   std::unique_ptr<llvm::MemoryBuffer> Input =
       llvm::MemoryBuffer::getMemBuffer(S);
-  Invocation->getPreprocessorOpts().addRemappedFile("./test.cc",
+  Invocation->getPreprocessorOpts().addRemappedFile(FileName,
                                                     Input.release());
   std::unique_ptr<tooling::ToolAction> action(
       tooling::newFrontendActionFactory<clang::EmitObjAction>());
