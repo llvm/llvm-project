@@ -294,7 +294,7 @@ private:
   // symbols in the real symbol table) are filled with null pointers.
   std::vector<Symbol *> symbols;
 
-  DWARFCache *dwarf;
+  DWARFCache *dwarf = nullptr;
 };
 
 // This type represents import library members that contain DLL names
