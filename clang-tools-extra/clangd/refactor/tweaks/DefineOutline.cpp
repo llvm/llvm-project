@@ -13,9 +13,17 @@
 #include "refactor/Tweak.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Stmt.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Driver/Types.h"
+#include "clang/Format/Format.h"
+#include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/Support/Path.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+#include <cstddef>
 
 namespace clang {
 namespace clangd {
@@ -38,6 +46,51 @@ const FunctionDecl *getSelectedFunction(const SelectionTree::Node *SelNode) {
       return P->ASTNode.get<FunctionDecl>();
   }
   return nullptr;
+}
+
+llvm::Optional<Path> getSourceFile(llvm::StringRef FileName,
+                                   const Tweak::Selection &Sel) {
+  if (auto Source = getCorrespondingHeaderOrSource(
+          FileName,
+          &Sel.AST.getSourceManager().getFileManager().getVirtualFileSystem()))
+    return *Source;
+  return getCorrespondingHeaderOrSource(FileName, Sel.AST, Sel.Index);
+}
+
+// Creates a modified version of function definition that can be inserted at a
+// different location. Contains both function signature and body.
+llvm::Optional<llvm::StringRef> getFunctionSourceCode(const FunctionDecl *FD) {
+  auto &SM = FD->getASTContext().getSourceManager();
+  auto CharRange = toHalfOpenFileRange(SM, FD->getASTContext().getLangOpts(),
+                                       FD->getSourceRange());
+  if (!CharRange)
+    return llvm::None;
+  // Include template parameter list.
+  if (auto *FTD = FD->getDescribedFunctionTemplate())
+    CharRange->setBegin(FTD->getBeginLoc());
+
+  // FIXME: Qualify return type.
+  // FIXME: Qualify function name depending on the target context.
+  return toSourceCode(SM, *CharRange);
+}
+
+// Returns the most natural insertion point for \p QualifiedName in \p Contents.
+// This currently cares about only the namespace proximity, but in feature it
+// should also try to follow ordering of declarations. For example, if decls
+// come in order `foo, bar, baz` then this function should return some point
+// between foo and baz for inserting bar.
+llvm::Expected<size_t> getInsertionOffset(llvm::StringRef Contents,
+                                          llvm::StringRef QualifiedName,
+                                          const format::FormatStyle &Style) {
+  auto Region = getEligiblePoints(Contents, QualifiedName, Style);
+
+  assert(!Region.EligiblePoints.empty());
+  // FIXME: This selection can be made smarter by looking at the definition
+  // locations for adjacent decls to Source. Unfortunately psudeo parsing in
+  // getEligibleRegions only knows about namespace begin/end events so we
+  // can't match function start/end positions yet.
+  auto InsertionPoint = Region.EligiblePoints.back();
+  return positionToOffset(Contents, InsertionPoint);
 }
 
 /// Moves definition of a function/method to an appropriate implementation file.
@@ -94,8 +147,64 @@ public:
   }
 
   Expected<Effect> apply(const Selection &Sel) override {
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Not implemented yet");
+    const SourceManager &SM = Sel.AST.getSourceManager();
+    auto MainFileName =
+        getCanonicalPath(SM.getFileEntryForID(SM.getMainFileID()), SM);
+    if (!MainFileName)
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Couldn't get absolute path for mainfile.");
+
+    auto CCFile = getSourceFile(*MainFileName, Sel);
+    if (!CCFile)
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Couldn't find a suitable implementation file.");
+
+    auto &FS =
+        Sel.AST.getSourceManager().getFileManager().getVirtualFileSystem();
+    auto Buffer = FS.getBufferForFile(*CCFile);
+    // FIXME: Maybe we should consider creating the implementation file if it
+    // doesn't exist?
+    if (!Buffer)
+      return llvm::createStringError(Buffer.getError(),
+                                     Buffer.getError().message());
+    auto Contents = Buffer->get()->getBuffer();
+    auto InsertionOffset =
+        getInsertionOffset(Contents, Source->getQualifiedNameAsString(),
+                           getFormatStyleForFile(*CCFile, Contents, &FS));
+    if (!InsertionOffset)
+      return InsertionOffset.takeError();
+
+    auto FuncDef = getFunctionSourceCode(Source);
+    if (!FuncDef)
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Couldn't get full source for function definition.");
+
+    SourceManagerForFile SMFF(*CCFile, Contents);
+    const tooling::Replacement InsertFunctionDef(*CCFile, *InsertionOffset, 0,
+                                                 *FuncDef);
+    auto Effect = Effect::mainFileEdit(
+        SMFF.get(), tooling::Replacements(InsertFunctionDef));
+    if (!Effect)
+      return Effect.takeError();
+
+    // FIXME: We should also get rid of inline qualifier.
+    const tooling::Replacement DeleteFuncBody(
+        Sel.AST.getSourceManager(),
+        CharSourceRange::getTokenRange(
+            *toHalfOpenFileRange(SM, Sel.AST.getASTContext().getLangOpts(),
+                                 Source->getBody()->getSourceRange())),
+        ";");
+    auto HeaderFE = Effect::fileEdit(SM, SM.getMainFileID(),
+                                     tooling::Replacements(DeleteFuncBody));
+    if (!HeaderFE)
+      return HeaderFE.takeError();
+
+    Effect->ApplyEdits.try_emplace(HeaderFE->first,
+                                   std::move(HeaderFE->second));
+    return std::move(*Effect);
   }
 
 private:

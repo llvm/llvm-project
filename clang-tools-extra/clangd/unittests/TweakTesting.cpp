@@ -127,7 +127,7 @@ std::string TweakTest::apply(llvm::StringRef MarkedCode,
         ADD_FAILURE() << "There were changes to additional files, but client "
                          "provided a nullptr for EditedFiles.";
       else
-        EditedFiles->try_emplace(It.first(), Unwrapped.str());
+        EditedFiles->insert_or_assign(It.first(), Unwrapped.str());
     }
   }
   return EditedMainFile;
