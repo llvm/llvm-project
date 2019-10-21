@@ -263,8 +263,7 @@ static bool hasImplicitExceptionSpec(FunctionDecl *Decl) {
   if (!Decl->getTypeSourceInfo())
     return isa<CXXDestructorDecl>(Decl);
 
-  const FunctionProtoType *Ty =
-    Decl->getTypeSourceInfo()->getType()->getAs<FunctionProtoType>();
+  auto *Ty = Decl->getTypeSourceInfo()->getType()->castAs<FunctionProtoType>();
   return !Ty->hasExceptionSpec();
 }
 
@@ -965,9 +964,9 @@ bool Sema::CheckOverridingFunctionExceptionSpec(const CXXMethodDecl *New,
                                   PDiag(diag::err_deep_exception_specs_differ),
                                   PDiag(diag::note_overridden_virtual_function),
                                   PDiag(diag::ext_override_exception_spec),
-                                  Old->getType()->getAs<FunctionProtoType>(),
+                                  Old->getType()->castAs<FunctionProtoType>(),
                                   Old->getLocation(),
-                                  New->getType()->getAs<FunctionProtoType>(),
+                                  New->getType()->castAs<FunctionProtoType>(),
                                   New->getLocation());
 }
 
