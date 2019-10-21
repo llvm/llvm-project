@@ -219,6 +219,12 @@ class VectorType;
       SMMLAR,       // Signed multiply long, round and add
       SMMLSR,       // Signed multiply long, subtract and round
 
+      // Single Lane QADD8 and QADD16. Only the bottom lane. That's what the b stands for.
+      QADD8b,
+      QSUB8b,
+      QADD16b,
+      QSUB16b,
+
       // Operands of the standard BUILD_VECTOR node are not legalized, which
       // is fine if BUILD_VECTORs are always lowered to shuffles or other
       // operations, but for ARM some BUILD_VECTORs are legal as-is and their

@@ -245,34 +245,34 @@ define signext i16 @func16(i16 signext %x, i16 signext %y, i16 signext %z) nounw
 ; CHECK-T1-NEXT:  .LCPI2_1:
 ; CHECK-T1-NEXT:    .long 4294934528 @ 0xffff8000
 ;
-; CHECK-T2-LABEL: func16:
-; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    muls r1, r2, r1
-; CHECK-T2-NEXT:    sxth r1, r1
-; CHECK-T2-NEXT:    subs r0, r0, r1
-; CHECK-T2-NEXT:    movw r1, #32767
-; CHECK-T2-NEXT:    cmp r0, r1
-; CHECK-T2-NEXT:    it lt
-; CHECK-T2-NEXT:    movlt r1, r0
-; CHECK-T2-NEXT:    movw r0, #32768
-; CHECK-T2-NEXT:    movt r0, #65535
-; CHECK-T2-NEXT:    cmn.w r1, #32768
-; CHECK-T2-NEXT:    it gt
-; CHECK-T2-NEXT:    movgt r0, r1
-; CHECK-T2-NEXT:    bx lr
+; CHECK-T2NODSP-LABEL: func16:
+; CHECK-T2NODSP:       @ %bb.0:
+; CHECK-T2NODSP-NEXT:    muls r1, r2, r1
+; CHECK-T2NODSP-NEXT:    sxth r1, r1
+; CHECK-T2NODSP-NEXT:    subs r0, r0, r1
+; CHECK-T2NODSP-NEXT:    movw r1, #32767
+; CHECK-T2NODSP-NEXT:    cmp r0, r1
+; CHECK-T2NODSP-NEXT:    it lt
+; CHECK-T2NODSP-NEXT:    movlt r1, r0
+; CHECK-T2NODSP-NEXT:    movw r0, #32768
+; CHECK-T2NODSP-NEXT:    movt r0, #65535
+; CHECK-T2NODSP-NEXT:    cmn.w r1, #32768
+; CHECK-T2NODSP-NEXT:    it gt
+; CHECK-T2NODSP-NEXT:    movgt r0, r1
+; CHECK-T2NODSP-NEXT:    bx lr
+;
+; CHECK-T2DSP-LABEL: func16:
+; CHECK-T2DSP:       @ %bb.0:
+; CHECK-T2DSP-NEXT:    muls r1, r2, r1
+; CHECK-T2DSP-NEXT:    qsub16 r0, r0, r1
+; CHECK-T2DSP-NEXT:    sxth r0, r0
+; CHECK-T2DSP-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func16:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    smulbb r1, r1, r2
-; CHECK-ARM-NEXT:    sxth r1, r1
-; CHECK-ARM-NEXT:    sub r0, r0, r1
-; CHECK-ARM-NEXT:    movw r1, #32767
-; CHECK-ARM-NEXT:    cmp r0, r1
-; CHECK-ARM-NEXT:    movlt r1, r0
-; CHECK-ARM-NEXT:    movw r0, #32768
-; CHECK-ARM-NEXT:    movt r0, #65535
-; CHECK-ARM-NEXT:    cmn r1, #32768
-; CHECK-ARM-NEXT:    movgt r0, r1
+; CHECK-ARM-NEXT:    qsub16 r0, r0, r1
+; CHECK-ARM-NEXT:    sxth r0, r0
 ; CHECK-ARM-NEXT:    bx lr
   %a = mul i16 %y, %z
   %tmp = call i16 @llvm.ssub.sat.i16(i16 %x, i16 %a)
@@ -299,28 +299,31 @@ define signext i8 @func8(i8 signext %x, i8 signext %y, i8 signext %z) nounwind {
 ; CHECK-T1-NEXT:  .LBB3_4:
 ; CHECK-T1-NEXT:    bx lr
 ;
-; CHECK-T2-LABEL: func8:
-; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    muls r1, r2, r1
-; CHECK-T2-NEXT:    sxtb r1, r1
-; CHECK-T2-NEXT:    subs r0, r0, r1
-; CHECK-T2-NEXT:    cmp r0, #127
-; CHECK-T2-NEXT:    it ge
-; CHECK-T2-NEXT:    movge r0, #127
-; CHECK-T2-NEXT:    cmn.w r0, #128
-; CHECK-T2-NEXT:    it le
-; CHECK-T2-NEXT:    mvnle r0, #127
-; CHECK-T2-NEXT:    bx lr
+; CHECK-T2NODSP-LABEL: func8:
+; CHECK-T2NODSP:       @ %bb.0:
+; CHECK-T2NODSP-NEXT:    muls r1, r2, r1
+; CHECK-T2NODSP-NEXT:    sxtb r1, r1
+; CHECK-T2NODSP-NEXT:    subs r0, r0, r1
+; CHECK-T2NODSP-NEXT:    cmp r0, #127
+; CHECK-T2NODSP-NEXT:    it ge
+; CHECK-T2NODSP-NEXT:    movge r0, #127
+; CHECK-T2NODSP-NEXT:    cmn.w r0, #128
+; CHECK-T2NODSP-NEXT:    it le
+; CHECK-T2NODSP-NEXT:    mvnle r0, #127
+; CHECK-T2NODSP-NEXT:    bx lr
+;
+; CHECK-T2DSP-LABEL: func8:
+; CHECK-T2DSP:       @ %bb.0:
+; CHECK-T2DSP-NEXT:    muls r1, r2, r1
+; CHECK-T2DSP-NEXT:    qsub8 r0, r0, r1
+; CHECK-T2DSP-NEXT:    sxtb r0, r0
+; CHECK-T2DSP-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func8:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    smulbb r1, r1, r2
-; CHECK-ARM-NEXT:    sxtb r1, r1
-; CHECK-ARM-NEXT:    sub r0, r0, r1
-; CHECK-ARM-NEXT:    cmp r0, #127
-; CHECK-ARM-NEXT:    movge r0, #127
-; CHECK-ARM-NEXT:    cmn r0, #128
-; CHECK-ARM-NEXT:    mvnle r0, #127
+; CHECK-ARM-NEXT:    qsub8 r0, r0, r1
+; CHECK-ARM-NEXT:    sxtb r0, r0
 ; CHECK-ARM-NEXT:    bx lr
   %a = mul i8 %y, %z
   %tmp = call i8 @llvm.ssub.sat.i8(i8 %x, i8 %a)

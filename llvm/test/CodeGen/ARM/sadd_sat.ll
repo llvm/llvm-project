@@ -233,35 +233,63 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 ; CHECK-T1-NEXT:  .LCPI2_1:
 ; CHECK-T1-NEXT:    .long 4294934528 @ 0xffff8000
 ;
-; CHECK-T2-LABEL: func16:
-; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    add r0, r1
-; CHECK-T2-NEXT:    movw r1, #32767
-; CHECK-T2-NEXT:    cmp r0, r1
-; CHECK-T2-NEXT:    it lt
-; CHECK-T2-NEXT:    movlt r1, r0
-; CHECK-T2-NEXT:    movw r0, #32768
-; CHECK-T2-NEXT:    cmn.w r1, #32768
-; CHECK-T2-NEXT:    movt r0, #65535
-; CHECK-T2-NEXT:    it gt
-; CHECK-T2-NEXT:    movgt r0, r1
-; CHECK-T2-NEXT:    bx lr
+; CHECK-T2NODSP-LABEL: func16:
+; CHECK-T2NODSP:       @ %bb.0:
+; CHECK-T2NODSP-NEXT:    add r0, r1
+; CHECK-T2NODSP-NEXT:    movw r1, #32767
+; CHECK-T2NODSP-NEXT:    cmp r0, r1
+; CHECK-T2NODSP-NEXT:    it lt
+; CHECK-T2NODSP-NEXT:    movlt r1, r0
+; CHECK-T2NODSP-NEXT:    movw r0, #32768
+; CHECK-T2NODSP-NEXT:    cmn.w r1, #32768
+; CHECK-T2NODSP-NEXT:    movt r0, #65535
+; CHECK-T2NODSP-NEXT:    it gt
+; CHECK-T2NODSP-NEXT:    movgt r0, r1
+; CHECK-T2NODSP-NEXT:    bx lr
 ;
-; CHECK-ARM-LABEL: func16:
-; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    add r0, r0, r1
-; CHECK-ARM-NEXT:    mov r1, #255
-; CHECK-ARM-NEXT:    orr r1, r1, #32512
-; CHECK-ARM-NEXT:    cmp r0, r1
-; CHECK-ARM-NEXT:    movlt r1, r0
-; CHECK-ARM-NEXT:    ldr r0, .LCPI2_0
-; CHECK-ARM-NEXT:    cmn r1, #32768
-; CHECK-ARM-NEXT:    movgt r0, r1
-; CHECK-ARM-NEXT:    bx lr
-; CHECK-ARM-NEXT:    .p2align 2
-; CHECK-ARM-NEXT:  @ %bb.1:
-; CHECK-ARM-NEXT:  .LCPI2_0:
-; CHECK-ARM-NEXT:    .long 4294934528 @ 0xffff8000
+; CHECK-T2DSP-LABEL: func16:
+; CHECK-T2DSP:       @ %bb.0:
+; CHECK-T2DSP-NEXT:    qadd16 r0, r0, r1
+; CHECK-T2DSP-NEXT:    sxth r0, r0
+; CHECK-T2DSP-NEXT:    bx lr
+;
+; CHECK-ARMNODPS-LABEL: func16:
+; CHECK-ARMNODPS:       @ %bb.0:
+; CHECK-ARMNODPS-NEXT:    add r0, r0, r1
+; CHECK-ARMNODPS-NEXT:    mov r1, #255
+; CHECK-ARMNODPS-NEXT:    orr r1, r1, #32512
+; CHECK-ARMNODPS-NEXT:    cmp r0, r1
+; CHECK-ARMNODPS-NEXT:    movlt r1, r0
+; CHECK-ARMNODPS-NEXT:    ldr r0, .LCPI2_0
+; CHECK-ARMNODPS-NEXT:    cmn r1, #32768
+; CHECK-ARMNODPS-NEXT:    movgt r0, r1
+; CHECK-ARMNODPS-NEXT:    bx lr
+; CHECK-ARMNODPS-NEXT:    .p2align 2
+; CHECK-ARMNODPS-NEXT:  @ %bb.1:
+; CHECK-ARMNODPS-NEXT:  .LCPI2_0:
+; CHECK-ARMNODPS-NEXT:    .long 4294934528 @ 0xffff8000
+;
+; CHECK-ARMBASEDSP-LABEL: func16:
+; CHECK-ARMBASEDSP:       @ %bb.0:
+; CHECK-ARMBASEDSP-NEXT:    add r0, r0, r1
+; CHECK-ARMBASEDSP-NEXT:    mov r1, #255
+; CHECK-ARMBASEDSP-NEXT:    orr r1, r1, #32512
+; CHECK-ARMBASEDSP-NEXT:    cmp r0, r1
+; CHECK-ARMBASEDSP-NEXT:    movlt r1, r0
+; CHECK-ARMBASEDSP-NEXT:    ldr r0, .LCPI2_0
+; CHECK-ARMBASEDSP-NEXT:    cmn r1, #32768
+; CHECK-ARMBASEDSP-NEXT:    movgt r0, r1
+; CHECK-ARMBASEDSP-NEXT:    bx lr
+; CHECK-ARMBASEDSP-NEXT:    .p2align 2
+; CHECK-ARMBASEDSP-NEXT:  @ %bb.1:
+; CHECK-ARMBASEDSP-NEXT:  .LCPI2_0:
+; CHECK-ARMBASEDSP-NEXT:    .long 4294934528 @ 0xffff8000
+;
+; CHECK-ARMDSP-LABEL: func16:
+; CHECK-ARMDSP:       @ %bb.0:
+; CHECK-ARMDSP-NEXT:    qadd16 r0, r0, r1
+; CHECK-ARMDSP-NEXT:    sxth r0, r0
+; CHECK-ARMDSP-NEXT:    bx lr
   %tmp = call i16 @llvm.sadd.sat.i16(i16 %x, i16 %y)
   ret i16 %tmp
 }
@@ -284,25 +312,46 @@ define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
 ; CHECK-T1-NEXT:  .LBB3_4:
 ; CHECK-T1-NEXT:    bx lr
 ;
-; CHECK-T2-LABEL: func8:
-; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    add r0, r1
-; CHECK-T2-NEXT:    cmp r0, #127
-; CHECK-T2-NEXT:    it ge
-; CHECK-T2-NEXT:    movge r0, #127
-; CHECK-T2-NEXT:    cmn.w r0, #128
-; CHECK-T2-NEXT:    it le
-; CHECK-T2-NEXT:    mvnle r0, #127
-; CHECK-T2-NEXT:    bx lr
+; CHECK-T2NODSP-LABEL: func8:
+; CHECK-T2NODSP:       @ %bb.0:
+; CHECK-T2NODSP-NEXT:    add r0, r1
+; CHECK-T2NODSP-NEXT:    cmp r0, #127
+; CHECK-T2NODSP-NEXT:    it ge
+; CHECK-T2NODSP-NEXT:    movge r0, #127
+; CHECK-T2NODSP-NEXT:    cmn.w r0, #128
+; CHECK-T2NODSP-NEXT:    it le
+; CHECK-T2NODSP-NEXT:    mvnle r0, #127
+; CHECK-T2NODSP-NEXT:    bx lr
 ;
-; CHECK-ARM-LABEL: func8:
-; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    add r0, r0, r1
-; CHECK-ARM-NEXT:    cmp r0, #127
-; CHECK-ARM-NEXT:    movge r0, #127
-; CHECK-ARM-NEXT:    cmn r0, #128
-; CHECK-ARM-NEXT:    mvnle r0, #127
-; CHECK-ARM-NEXT:    bx lr
+; CHECK-T2DSP-LABEL: func8:
+; CHECK-T2DSP:       @ %bb.0:
+; CHECK-T2DSP-NEXT:    qadd8 r0, r0, r1
+; CHECK-T2DSP-NEXT:    sxtb r0, r0
+; CHECK-T2DSP-NEXT:    bx lr
+;
+; CHECK-ARMNODPS-LABEL: func8:
+; CHECK-ARMNODPS:       @ %bb.0:
+; CHECK-ARMNODPS-NEXT:    add r0, r0, r1
+; CHECK-ARMNODPS-NEXT:    cmp r0, #127
+; CHECK-ARMNODPS-NEXT:    movge r0, #127
+; CHECK-ARMNODPS-NEXT:    cmn r0, #128
+; CHECK-ARMNODPS-NEXT:    mvnle r0, #127
+; CHECK-ARMNODPS-NEXT:    bx lr
+;
+; CHECK-ARMBASEDSP-LABEL: func8:
+; CHECK-ARMBASEDSP:       @ %bb.0:
+; CHECK-ARMBASEDSP-NEXT:    add r0, r0, r1
+; CHECK-ARMBASEDSP-NEXT:    cmp r0, #127
+; CHECK-ARMBASEDSP-NEXT:    movge r0, #127
+; CHECK-ARMBASEDSP-NEXT:    cmn r0, #128
+; CHECK-ARMBASEDSP-NEXT:    mvnle r0, #127
+; CHECK-ARMBASEDSP-NEXT:    bx lr
+;
+; CHECK-ARMDSP-LABEL: func8:
+; CHECK-ARMDSP:       @ %bb.0:
+; CHECK-ARMDSP-NEXT:    qadd8 r0, r0, r1
+; CHECK-ARMDSP-NEXT:    sxtb r0, r0
+; CHECK-ARMDSP-NEXT:    bx lr
   %tmp = call i8 @llvm.sadd.sat.i8(i8 %x, i8 %y)
   ret i8 %tmp
 }
