@@ -1213,7 +1213,7 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
       if (!FrameAlign)
         FrameAlign = TLI.getByValTypeAlignment(ElementTy, DL);
       Flags.setByValSize(FrameSize);
-      Flags.setByValAlign(FrameAlign);
+      Flags.setByValAlign(Align(FrameAlign));
     }
     if (Arg.IsNest)
       Flags.setNest();

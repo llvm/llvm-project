@@ -106,7 +106,7 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
       FrameAlign = FuncInfo.getParamAlignment(OpIdx - 2);
     else
       FrameAlign = getTLI()->getByValTypeAlignment(ElementTy, DL);
-    Flags.setByValAlign(FrameAlign);
+    Flags.setByValAlign(Align(FrameAlign));
   }
   if (Attrs.hasAttribute(OpIdx, Attribute::Nest))
     Flags.setNest();
