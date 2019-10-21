@@ -420,6 +420,8 @@ static SectionKind getELFKindForNamedSection(StringRef Name, SectionKind K) {
   //   .section   .eh_frame,"a",@progbits
 
   if (Name == getInstrProfSectionName(IPSK_covmap, Triple::ELF,
+                                      /*AddSegmentInfo=*/false) ||
+      Name == getInstrProfSectionName(IPSK_covfun, Triple::ELF,
                                       /*AddSegmentInfo=*/false))
     return SectionKind::getMetadata();
 
