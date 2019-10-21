@@ -473,7 +473,7 @@ class CALL<string OpcodeStr>
 class CALLX<string OpcodeStr>
     : TYPE_ALU_JMP<BPF_CALL.Value, BPF_X.Value,
                    (outs),
-                   (ins calltarget:$BrDst),
+                   (ins GPR:$BrDst),
                    !strconcat(OpcodeStr, " $BrDst"),
                    []> {
   bits<32> BrDst;
