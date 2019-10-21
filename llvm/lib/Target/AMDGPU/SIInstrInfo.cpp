@@ -4576,6 +4576,10 @@ void SIInstrInfo::legalizeOperands(MachineInstr &MI,
           VRC = RI.hasAGPRs(getOpRegClass(MI, 0))
                     ? RI.getEquivalentAGPRClass(SRC)
                     : RI.getEquivalentVGPRClass(SRC);
+      } else {
+          VRC = RI.hasAGPRs(getOpRegClass(MI, 0))
+                    ? RI.getEquivalentAGPRClass(VRC)
+                    : RI.getEquivalentVGPRClass(VRC);
       }
       RC = VRC;
     } else {
