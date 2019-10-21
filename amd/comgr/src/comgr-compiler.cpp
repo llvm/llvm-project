@@ -611,6 +611,7 @@ amd_comgr_status_t InProcessDriver::execute(ArrayRef<const char *> Args) {
         logArgv(DiagOS, "clang", Argv);
       std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
       Clang->createDiagnostics(DiagClient, /* ShouldOwnClient */ false);
+      Clang->setVerboseOutputStream(DiagOS);
       if (!Clang->hasDiagnostics())
         return AMD_COMGR_STATUS_ERROR;
       if (!CompilerInvocation::CreateFromArgs(

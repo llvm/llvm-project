@@ -153,10 +153,8 @@ int main(int argc, char *argv[]) {
                                dataAction, dataSetCL, dataSetOut);
   checkLogs("COMPILE_SOURCE_TO_BC", dataSetOut,
             "error: unknown type name 'invalid'");
-  /* FIXME: These "verbose" diagnostics should be captured in the LOG
   checkLogs("COMPILE_SOURCE_TO_BC", dataSetOut,
             "2 errors generated.");
-  */
 
   status =
       amd_comgr_action_data_count(dataSetOut, AMD_COMGR_DATA_KIND_LOG, &count);
@@ -228,6 +226,8 @@ int main(int argc, char *argv[]) {
                                dataAction, dataSetBC, dataSetOut);
   checkLogs("CODEGEN_BC_TO_RELOCATABLE", dataSetOut,
             "error: expected top-level entity");
+  checkLogs("CODEGEN_BC_TO_RELOCATABLE", dataSetOut,
+            "1 error generated.");
 
   status =
       amd_comgr_action_data_count(dataSetOut, AMD_COMGR_DATA_KIND_LOG, &count);
