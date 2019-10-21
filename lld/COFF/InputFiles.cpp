@@ -807,6 +807,19 @@ ObjFile::getVariableLocation(StringRef var) {
   return std::make_pair(saver.save(ret->first), ret->second);
 }
 
+// Used only for DWARF debug info, which is not common (except in MinGW
+// environments).
+Optional<DILineInfo> ObjFile::getDILineInfo(uint32_t offset,
+                                            uint32_t sectionIndex) {
+  if (!dwarf) {
+    dwarf = make<DWARFCache>(DWARFContext::create(*getCOFFObj()));
+    if (!dwarf)
+      return None;
+  }
+
+  return dwarf->getDILineInfo(offset, sectionIndex);
+}
+
 StringRef ltrim1(StringRef s, const char *chars) {
   if (!s.empty() && strchr(chars, s[0]))
     return s.substr(1);

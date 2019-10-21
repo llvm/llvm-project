@@ -110,13 +110,11 @@ static std::vector<std::string> getSymbolLocations(BitcodeFile *file) {
 
 static Optional<std::pair<StringRef, uint32_t>>
 getFileLineDwarf(const SectionChunk *c, uint32_t addr) {
-  if (!config->symbolizer)
-    config->symbolizer = make<symbolize::LLVMSymbolizer>();
-  Expected<DILineInfo> expectedLineInfo = config->symbolizer->symbolizeCode(
-      *c->file->getCOFFObj(), {addr, c->getSectionNumber() - 1});
-  if (!expectedLineInfo)
+  Optional<DILineInfo> optionalLineInfo =
+      c->file->getDILineInfo(addr, c->getSectionNumber() - 1);
+  if (!optionalLineInfo)
     return None;
-  const DILineInfo &lineInfo = *expectedLineInfo;
+  const DILineInfo &lineInfo = *optionalLineInfo;
   if (lineInfo.FileName == DILineInfo::BadString)
     return None;
   return std::make_pair(saver.save(lineInfo.FileName), lineInfo.Line);
