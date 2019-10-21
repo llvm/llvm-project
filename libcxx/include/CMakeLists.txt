@@ -201,8 +201,8 @@ else()
     )
 endif()
 
-# In some build configuraitons (like boostrapping clang), we need to be able to
-# install the libcxx headers before CMake configuraiton for libcxx runs. Making
+# In some build configurations (like bootstrapping clang), we need to be able to
+# install the libcxx headers before the CMake configuration for libcxx runs. Making
 # the name of this target configurable allows LLVM/runtimes/CMakeLists.txt to
 # add this subdirectory to the LLVM build to put libcxx's headers in place
 # before libcxx's build configuration is run.
