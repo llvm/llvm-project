@@ -5876,36 +5876,21 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_fdiv_fast:
     return lowerFDIV_FAST(Op, DAG);
-  case Intrinsic::amdgcn_interp_mov: {
-    SDValue ToM0 = DAG.getCopyToReg(DAG.getEntryNode(), DL, AMDGPU::M0,
-                                    Op.getOperand(4), SDValue());
-    return DAG.getNode(AMDGPUISD::INTERP_MOV, DL, MVT::f32, Op.getOperand(1),
-                       Op.getOperand(2), Op.getOperand(3), ToM0.getValue(1));
-  }
-  case Intrinsic::amdgcn_interp_p1: {
-    SDValue ToM0 = DAG.getCopyToReg(DAG.getEntryNode(), DL, AMDGPU::M0,
-                                    Op.getOperand(4), SDValue());
-    return DAG.getNode(AMDGPUISD::INTERP_P1, DL, MVT::f32, Op.getOperand(1),
-                       Op.getOperand(2), Op.getOperand(3), ToM0.getValue(1));
-  }
-  case Intrinsic::amdgcn_interp_p2: {
-    SDValue ToM0 = DAG.getCopyToReg(DAG.getEntryNode(), DL, AMDGPU::M0,
-                                    Op.getOperand(5), SDValue());
-    return DAG.getNode(AMDGPUISD::INTERP_P2, DL, MVT::f32, Op.getOperand(1),
-                       Op.getOperand(2), Op.getOperand(3), Op.getOperand(4),
-                       ToM0.getValue(1));
-  }
   case Intrinsic::amdgcn_interp_p1_f16: {
     SDValue ToM0 = DAG.getCopyToReg(DAG.getEntryNode(), DL, AMDGPU::M0,
                                     Op.getOperand(5), SDValue());
-
     if (getSubtarget()->getLDSBankCount() == 16) {
       // 16 bank LDS
-      SDValue S = DAG.getNode(AMDGPUISD::INTERP_MOV, DL, MVT::f32,
-                              DAG.getConstant(2, DL, MVT::i32), // P0
-                              Op.getOperand(2), // Attrchan
-                              Op.getOperand(3), // Attr
-                              ToM0.getValue(1));
+
+      // FIXME: This implicitly will insert a second CopyToReg to M0.
+      SDValue S = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, MVT::f32,
+        DAG.getTargetConstant(Intrinsic::amdgcn_interp_mov, DL, MVT::i32),
+        DAG.getConstant(2, DL, MVT::i32), // P0
+        Op.getOperand(2),  // Attrchan
+        Op.getOperand(3),  // Attr
+        Op.getOperand(5)); // m0
+
       SDValue Ops[] = {
         Op.getOperand(1), // Src0
         Op.getOperand(2), // Attrchan
@@ -10895,12 +10880,6 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode * N,
     case ISD::INTRINSIC_W_CHAIN:
       return AMDGPU::isIntrinsicSourceOfDivergence(
       cast<ConstantSDNode>(N->getOperand(1))->getZExtValue());
-    // In some cases intrinsics that are a source of divergence have been
-    // lowered to AMDGPUISD so we also need to check those too.
-    case AMDGPUISD::INTERP_MOV:
-    case AMDGPUISD::INTERP_P1:
-    case AMDGPUISD::INTERP_P2:
-      return true;
   }
   return false;
 }
