@@ -12,6 +12,7 @@
 #include "TestTU.h"
 #include "index/Index.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -61,6 +62,8 @@ protected:
   // This typically contains declarations that will be used for a set of related
   // testcases.
   std::string Header;
+
+  llvm::StringRef FileName = "TestTU.cpp";
 
   // Extra flags passed to the compilation in apply().
   std::vector<const char *> ExtraArgs;
