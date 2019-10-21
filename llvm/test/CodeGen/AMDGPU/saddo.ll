@@ -40,15 +40,15 @@ define amdgpu_kernel void @saddo_i64_zext(i64 addrspace(1)* %out, i64 %a, i64 %b
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s6
-; VI-NEXT:    s_add_u32 s8, s6, s0
-; VI-NEXT:    s_addc_u32 s9, s7, s1
+; VI-NEXT:    s_add_u32 s2, s6, s0
+; VI-NEXT:    s_addc_u32 s3, s7, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s7
-; VI-NEXT:    v_cmp_lt_i64_e32 vcc, s[8:9], v[1:2]
-; VI-NEXT:    v_cmp_lt_i64_e64 s[2:3], s[0:1], 0
-; VI-NEXT:    v_mov_b32_e32 v3, s9
-; VI-NEXT:    s_xor_b64 s[0:1], s[2:3], vcc
+; VI-NEXT:    v_cmp_lt_i64_e32 vcc, s[2:3], v[1:2]
+; VI-NEXT:    v_cmp_lt_i64_e64 s[8:9], s[0:1], 0
+; VI-NEXT:    v_mov_b32_e32 v3, s3
+; VI-NEXT:    s_xor_b64 s[0:1], s[8:9], vcc
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]
-; VI-NEXT:    v_add_u32_e32 v2, vcc, s8, v2
+; VI-NEXT:    v_add_u32_e32 v2, vcc, s2, v2
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
@@ -61,15 +61,15 @@ define amdgpu_kernel void @saddo_i64_zext(i64 addrspace(1)* %out, i64 %a, i64 %b
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s6
-; GFX9-NEXT:    s_add_u32 s8, s6, s0
-; GFX9-NEXT:    s_addc_u32 s9, s7, s1
+; GFX9-NEXT:    s_add_u32 s2, s6, s0
+; GFX9-NEXT:    s_addc_u32 s3, s7, s1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s7
-; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, s[8:9], v[1:2]
-; GFX9-NEXT:    v_cmp_lt_i64_e64 s[2:3], s[0:1], 0
-; GFX9-NEXT:    v_mov_b32_e32 v3, s9
-; GFX9-NEXT:    s_xor_b64 s[0:1], s[2:3], vcc
+; GFX9-NEXT:    v_cmp_lt_i64_e32 vcc, s[2:3], v[1:2]
+; GFX9-NEXT:    v_cmp_lt_i64_e64 s[8:9], s[0:1], 0
+; GFX9-NEXT:    v_mov_b32_e32 v3, s3
+; GFX9-NEXT:    s_xor_b64 s[0:1], s[8:9], vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]
-; GFX9-NEXT:    v_add_co_u32_e32 v2, vcc, s8, v2
+; GFX9-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v2
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
