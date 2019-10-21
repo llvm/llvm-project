@@ -1074,16 +1074,22 @@ Value *InstCombiner::simplifyAMDGCNMemoryIntrinsicDemanded(IntrinsicInst *II,
 }
 
 /// The specified value produces a vector with any number of elements.
+/// This method analyzes which elements of the operand are undef and returns
+/// that information in UndefElts.
+///
 /// DemandedElts contains the set of elements that are actually used by the
-/// caller. This method analyzes which elements of the operand are undef and
-/// returns that information in UndefElts.
+/// caller, and by default (AllowMultipleUsers equals false) the value is
+/// simplified only if it has a single caller. If AllowMultipleUsers is set
+/// to true, DemandedElts refers to the union of sets of elements that are
+/// used by all callers.
 ///
 /// If the information about demanded elements can be used to simplify the
 /// operation, the operation is simplified, then the resultant value is
 /// returned.  This returns null if no change was made.
 Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
                                                 APInt &UndefElts,
-                                                unsigned Depth) {
+                                                unsigned Depth,
+                                                bool AllowMultipleUsers) {
   unsigned VWidth = V->getType()->getVectorNumElements();
   APInt EltMask(APInt::getAllOnesValue(VWidth));
   assert((DemandedElts & ~EltMask) == 0 && "Invalid DemandedElts!");
@@ -1137,19 +1143,21 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
   if (Depth == 10)
     return nullptr;
 
-  // If multiple users are using the root value, proceed with
-  // simplification conservatively assuming that all elements
-  // are needed.
-  if (!V->hasOneUse()) {
-    // Quit if we find multiple users of a non-root value though.
-    // They'll be handled when it's their turn to be visited by
-    // the main instcombine process.
-    if (Depth != 0)
-      // TODO: Just compute the UndefElts information recursively.
-      return nullptr;
+  if (!AllowMultipleUsers) {
+    // If multiple users are using the root value, proceed with
+    // simplification conservatively assuming that all elements
+    // are needed.
+    if (!V->hasOneUse()) {
+      // Quit if we find multiple users of a non-root value though.
+      // They'll be handled when it's their turn to be visited by
+      // the main instcombine process.
+      if (Depth != 0)
+        // TODO: Just compute the UndefElts information recursively.
+        return nullptr;
 
-    // Conservatively assume that all elements are needed.
-    DemandedElts = EltMask;
+      // Conservatively assume that all elements are needed.
+      DemandedElts = EltMask;
+    }
   }
 
   Instruction *I = dyn_cast<Instruction>(V);
