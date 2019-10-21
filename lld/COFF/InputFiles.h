@@ -26,6 +26,7 @@
 #include <vector>
 
 namespace llvm {
+struct DILineInfo;
 namespace pdb {
 class DbiModuleDescriptorBuilder;
 }
@@ -205,6 +206,9 @@ public:
 
   llvm::Optional<std::pair<StringRef, uint32_t>>
   getVariableLocation(StringRef var);
+
+  llvm::Optional<llvm::DILineInfo> getDILineInfo(uint32_t offset,
+                                                 uint32_t sectionIndex);
 
 private:
   const coff_section* getSection(uint32_t i);
