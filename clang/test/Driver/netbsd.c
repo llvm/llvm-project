@@ -169,12 +169,14 @@
 // PIE: "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // X86_64: clang{{.*}}" "-cc1" "-triple" "x86_64-unknown-netbsd"
+// X86_64: "-fuse-init-array"
 // X86_64: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // X86_64: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
 // X86_64: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
 // X86_64: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // X86_64-7: clang{{.*}}" "-cc1" "-triple" "x86_64-unknown-netbsd7.0.0"
+// X86_64-7-NOT: "-fuse-init-array"
 // X86_64-7: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // X86_64-7: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
 // X86_64-7:  "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
@@ -187,30 +189,35 @@
 // X86_64-6: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // AARCH64: clang{{.*}}" "-cc1" "-triple" "aarch64-unknown-netbsd"
+// AARCH64: "-fuse-init-array"
 // AARCH64: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // AARCH64: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
 // AARCH64: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
 // AARCH64: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // AARCH64-7: clang{{.*}}" "-cc1" "-triple" "aarch64-unknown-netbsd7.0.0"
+// AARCH64-7: "-fuse-init-array"
 // AARCH64-7: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // AARCH64-7: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
 // AARCH64-7:  "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
 // AARCH64-7: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // AARCH64_BE: clang{{.*}}" "-cc1" "-triple" "aarch64_be-unknown-netbsd"
+// AARCH64_BE: "-fuse-init-array"
 // AARCH64_BE: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // AARCH64_BE: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
 // AARCH64_BE: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
 // AARCH64_BE: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // AARCH64_BE-7: clang{{.*}}" "-cc1" "-triple" "aarch64_be-unknown-netbsd7.0.0"
+// AARCH64_BE-7: "-fuse-init-array"
 // AARCH64_BE-7: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // AARCH64_BE-7: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
 // AARCH64_BE-7:  "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
 // AARCH64_BE-7: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // ARM: clang{{.*}}" "-cc1" "-triple" "armv5e-unknown-netbsd-eabi"
+// ARM: "-fuse-init-array"
 // ARM: as{{.*}}" "-mcpu=arm926ej-s" "-o"
 // ARM: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // ARM: "-m" "armelf_nbsd_eabi"
@@ -220,6 +227,7 @@
 // ARM: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // ARMEB: clang{{.*}}" "-cc1" "-triple" "armebv5e-unknown-netbsd-eabi"
+// ARMEB: "-fuse-init-array"
 // ARMEB: as{{.*}}" "-mcpu=arm926ej-s" "-o"
 // ARMEB: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // ARMEB-NOT: "--be8"
@@ -271,6 +279,7 @@
 // THUMBEB: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // ARM-7: clang{{.*}}" "-cc1" "-triple" "armv5e-unknown-netbsd7.0.0-eabi"
+// ARM-7: "-fuse-init-array"
 // ARM-7: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // ARM-7: "-m" "armelf_nbsd_eabi"
 // ARM-7: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
@@ -287,6 +296,7 @@
 // ARM-6: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // SPARC: clang{{.*}}" "-cc1" "-triple" "sparc-unknown-netbsd"
+// SPARC: "-fuse-init-array"
 // SPARC: as{{.*}}" "-32" "-Av8" "-o"
 // SPARC: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // SPARC: "-m" "elf32_sparc"
@@ -296,6 +306,7 @@
 // SPARC: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // SPARC64: clang{{.*}}" "-cc1" "-triple" "sparc64-unknown-netbsd"
+// SPARC64: "-fuse-init-array"
 // SPARC64: as{{.*}}" "-64" "-Av9" "-o"
 // SPARC64: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // SPARC64: "-m" "elf64_sparc"
@@ -304,6 +315,7 @@
 // SPARC64: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // POWERPC: clang{{.*}}" "-cc1" "-triple" "powerpc-unknown-netbsd"
+// POWERPC: "-fuse-init-array"
 // POWERPC: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // POWERPC: "-m" "elf32ppc_nbsd"
 // POWERPC: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
@@ -312,6 +324,7 @@
 // POWERPC: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // POWERPC64: clang{{.*}}" "-cc1" "-triple" "powerpc64-unknown-netbsd"
+// POWERPC64: "-fuse-init-array"
 // POWERPC64: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // POWERPC64: "-m" "elf64ppc"
 // POWERPC64: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
@@ -405,6 +418,7 @@
 // S-SPARC-6: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // S-SPARC-7: clang{{.*}}" "-cc1" "-triple" "sparc-unknown-netbsd7.0.0"
+// S-SPARC-7-NOT: "-fuse-init-array"
 // S-SPARC-7: ld{{.*}}" "--eh-frame-hdr" "-Bstatic"
 // S-SPARC-7: "-m" "elf32_sparc"
 // S-SPARC-7: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
@@ -421,6 +435,7 @@
 // S-SPARC64-6: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // S-SPARC64-7: clang{{.*}}" "-cc1" "-triple" "sparc64-unknown-netbsd7.0.0"
+// S-SPARC64-7-NOT: "-fuse-init-array"
 // S-SPARC64-7: ld{{.*}}" "--eh-frame-hdr" "-Bstatic"
 // S-SPARC64-7: "-m" "elf64_sparc"
 // S-SPARC64-7: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
