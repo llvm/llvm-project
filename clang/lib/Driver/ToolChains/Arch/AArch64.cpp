@@ -139,10 +139,14 @@ getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
   // Handle CPU name is 'native'.
   if (MtuneLowerCase == "native")
     MtuneLowerCase = llvm::sys::getHostCPUName();
-  if (MtuneLowerCase == "cyclone") {
+
+  // 'cyclone' and later have zero-cycle register moves and zeroing.
+  if (MtuneLowerCase == "cyclone" ||
+      MtuneLowerCase == "vortex") {
     Features.push_back("+zcm");
     Features.push_back("+zcz");
   }
+
   return true;
 }
 
