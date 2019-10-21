@@ -112,6 +112,23 @@ public:
   void applyCombineConcatVectors(MachineInstr &MI, bool IsUndef,
                                  const ArrayRef<Register> Ops);
 
+  /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
+  /// Returns true if MI changed.
+  ///
+  /// \pre MI.getOpcode() == G_SHUFFLE_VECTOR.
+  bool tryCombineShuffleVector(MachineInstr &MI);
+  /// Check if the G_SHUFFLE_VECTOR \p MI can be replaced by a
+  /// concat_vectors.
+  /// \p Ops will contain the operands needed to produce the flattened
+  /// concat_vectors.
+  ///
+  /// \pre MI.getOpcode() == G_SHUFFLE_VECTOR.
+  bool matchCombineShuffleVector(MachineInstr &MI,
+                                 SmallVectorImpl<Register> &Ops);
+  /// Replace \p MI with a concat_vectors with \p Ops.
+  void applyCombineShuffleVector(MachineInstr &MI,
+                                 const ArrayRef<Register> Ops);
+
   /// Optimize memcpy intrinsics et al, e.g. constant len calls.
   /// /p MaxLen if non-zero specifies the max length of a mem libcall to inline.
   ///

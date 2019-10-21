@@ -173,6 +173,93 @@ void CombinerHelper::applyCombineConcatVectors(
   replaceRegWith(MRI, DstReg, NewDstReg);
 }
 
+bool CombinerHelper::tryCombineShuffleVector(MachineInstr &MI) {
+  SmallVector<Register, 4> Ops;
+  if (matchCombineShuffleVector(MI, Ops)) {
+    applyCombineShuffleVector(MI, Ops);
+    return true;
+  }
+  return false;
+}
+
+bool CombinerHelper::matchCombineShuffleVector(MachineInstr &MI,
+                                               SmallVectorImpl<Register> &Ops) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&
+         "Invalid instruction kind");
+  LLT DstType = MRI.getType(MI.getOperand(0).getReg());
+  Register Src1 = MI.getOperand(1).getReg();
+  LLT SrcType = MRI.getType(Src1);
+  unsigned DstNumElts = DstType.getNumElements();
+  unsigned SrcNumElts = SrcType.getNumElements();
+
+  // If the resulting vector is smaller than the size of the source
+  // vectors being concatenated, we won't be able to replace the
+  // shuffle vector into a concat_vectors.
+  //
+  // Note: We may still be able to produce a concat_vectors fed by
+  //       extract_vector_elt and so on. It is less clear that would
+  //       be better though, so don't bother for now.
+  if (DstNumElts < 2 * SrcNumElts)
+    return false;
+
+  // Check that the shuffle mask can be broken evenly between the
+  // different sources.
+  if (DstNumElts % SrcNumElts != 0)
+    return false;
+
+  // Mask length is a multiple of the source vector length.
+  // Check if the shuffle is some kind of concatenation of the input
+  // vectors.
+  unsigned NumConcat = DstNumElts / SrcNumElts;
+  SmallVector<int, 8> ConcatSrcs(NumConcat, -1);
+  SmallVector<int, 8> Mask;
+  ShuffleVectorInst::getShuffleMask(MI.getOperand(3).getShuffleMask(), Mask);
+  for (unsigned i = 0; i != DstNumElts; ++i) {
+    int Idx = Mask[i];
+    // Undef value.
+    if (Idx < 0)
+      continue;
+    // Ensure the indices in each SrcType sized piece are sequential and that
+    // the same source is used for the whole piece.
+    if ((Idx % SrcNumElts != (i % SrcNumElts)) ||
+        (ConcatSrcs[i / SrcNumElts] >= 0 &&
+         ConcatSrcs[i / SrcNumElts] != (int)(Idx / SrcNumElts)))
+      return false;
+    // Remember which source this index came from.
+    ConcatSrcs[i / SrcNumElts] = Idx / SrcNumElts;
+  }
+
+  // The shuffle is concatenating multiple vectors together.
+  // Collect the different operands for that.
+  Register UndefReg;
+  Register Src2 = MI.getOperand(2).getReg();
+  for (auto Src : ConcatSrcs) {
+    if (Src < 0) {
+      if (!UndefReg) {
+        Builder.setInsertPt(*MI.getParent(), MI);
+        UndefReg = Builder.buildUndef(SrcType).getReg(0);
+      }
+      Ops.push_back(UndefReg);
+    } else if (Src == 0)
+      Ops.push_back(Src1);
+    else
+      Ops.push_back(Src2);
+  }
+  return true;
+}
+
+void CombinerHelper::applyCombineShuffleVector(MachineInstr &MI,
+                                               const ArrayRef<Register> Ops) {
+  Register DstReg = MI.getOperand(0).getReg();
+  Builder.setInsertPt(*MI.getParent(), MI);
+  Register NewDstReg = MRI.cloneVirtualRegister(DstReg);
+
+  Builder.buildConcatVectors(NewDstReg, Ops);
+
+  MI.eraseFromParent();
+  replaceRegWith(MRI, DstReg, NewDstReg);
+}
+
 namespace {
 
 /// Select a preference between two uses. CurrentUse is the current preference
