@@ -329,7 +329,6 @@ static lldb_private::LineEntry FindEntryPoint(Module *exe_module) {
   const std::vector<std::pair<ConstString, bool>> &entry_points(
       GetEntryPointNames());
   for (std::pair<ConstString, bool> entry_point : entry_points) {
-#if 0 // llvm.org version
     const ConstString entry_point_name = entry_point.first;
     const bool skip_prologue = entry_point.second;
     SymbolContextList sc_list;
@@ -353,15 +352,6 @@ static lldb_private::LineEntry FindEntryPoint(Module *exe_module) {
         }
       }
     }
-#else // FIXME: upstream this!
-    lldb_private::LineEntry line_entry(FindEntryPoint(executable_ptr));
-    if (line_entry.IsValid()) {
-      SetDefaultFileAndLine(line_entry.file, line_entry.line);
-      file_spec = m_last_file_sp->GetFileSpec();
-      line = m_last_line;
-      return true;
-    }
-#endif
   }
   return LineEntry();
 }
@@ -381,6 +371,7 @@ bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
       // to set it (for instance when we stop somewhere...)
       Module *executable_ptr = target_sp->GetExecutableModulePointer();
       if (executable_ptr) {
+#if 0 // llvm.org
         SymbolContextList sc_list;
         ConstString main_name("main");
         bool symbols_okay = false; // Force it to be a debug symbol.
@@ -404,6 +395,15 @@ bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
             }
           }
         }
+#else // FIXME: upstream this!
+        lldb_private::LineEntry line_entry(FindEntryPoint(executable_ptr));
+        if (line_entry.IsValid()) {
+          SetDefaultFileAndLine(line_entry.file, line_entry.line);
+          file_spec = m_last_file_sp->GetFileSpec();
+          line = m_last_line;
+          return true;
+        }
+#endif
       }
     }
   }
