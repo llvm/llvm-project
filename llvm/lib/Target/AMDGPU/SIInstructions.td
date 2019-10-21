@@ -43,8 +43,8 @@ multiclass V_INTERP_P1_F32_m : VINTRP_m <
   (outs VINTRPDst:$vdst),
   (ins VGPR_32:$vsrc, Attr:$attr, AttrChan:$attrchan),
   "v_interp_p1_f32$vdst, $vsrc, $attr$attrchan",
-  [(set f32:$vdst, (AMDGPUinterp_p1 f32:$vsrc, (i32 timm:$attrchan),
-                                               (i32 timm:$attr)))]
+  [(set f32:$vdst, (int_amdgcn_interp_p1 f32:$vsrc,
+                   (i32 timm:$attrchan), (i32 timm:$attr), M0))]
 >;
 
 let OtherPredicates = [has32BankLDS] in {
@@ -66,8 +66,8 @@ defm V_INTERP_P2_F32 : VINTRP_m <
   (outs VINTRPDst:$vdst),
   (ins VGPR_32:$src0, VGPR_32:$vsrc, Attr:$attr, AttrChan:$attrchan),
   "v_interp_p2_f32$vdst, $vsrc, $attr$attrchan",
-  [(set f32:$vdst, (AMDGPUinterp_p2 f32:$src0, f32:$vsrc, (i32 timm:$attrchan),
-                                                          (i32 timm:$attr)))]>;
+  [(set f32:$vdst, (int_amdgcn_interp_p2 f32:$src0, f32:$vsrc,
+                   (i32 timm:$attrchan), (i32 timm:$attr), M0))]>;
 
 } // End DisableEncoding = "$src0", Constraints = "$src0 = $vdst"
 
@@ -76,8 +76,8 @@ defm V_INTERP_MOV_F32 : VINTRP_m <
   (outs VINTRPDst:$vdst),
   (ins InterpSlot:$vsrc, Attr:$attr, AttrChan:$attrchan),
   "v_interp_mov_f32$vdst, $vsrc, $attr$attrchan",
-  [(set f32:$vdst, (AMDGPUinterp_mov (i32 imm:$vsrc), (i32 timm:$attrchan),
-                                     (i32 timm:$attr)))]>;
+  [(set f32:$vdst, (int_amdgcn_interp_mov (i32 imm:$vsrc),
+                   (i32 timm:$attrchan), (i32 timm:$attr), M0))]>;
 
 } // End Uses = [M0, EXEC]
 

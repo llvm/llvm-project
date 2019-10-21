@@ -329,18 +329,6 @@ def AMDGPUfdot2 : SDNode<"AMDGPUISD::FDOT2",
 
 def AMDGPUperm : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
 
-def AMDGPUinterp_mov : SDNode<"AMDGPUISD::INTERP_MOV",
-                        SDTypeProfile<1, 3, [SDTCisFP<0>]>,
-                        [SDNPInGlue]>;
-
-def AMDGPUinterp_p1 : SDNode<"AMDGPUISD::INTERP_P1",
-                      SDTypeProfile<1, 3, [SDTCisFP<0>]>,
-                      [SDNPInGlue, SDNPOutGlue]>;
-
-def AMDGPUinterp_p2 : SDNode<"AMDGPUISD::INTERP_P2",
-                      SDTypeProfile<1, 4, [SDTCisFP<0>]>,
-                      [SDNPInGlue]>;
-
 def AMDGPUinterp_p1ll_f16 : SDNode<"AMDGPUISD::INTERP_P1LL_F16",
                             SDTypeProfile<1, 7, [SDTCisFP<0>]>,
                             [SDNPInGlue, SDNPOutGlue]>;
