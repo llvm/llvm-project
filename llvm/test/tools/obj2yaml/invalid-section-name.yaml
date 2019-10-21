@@ -1,6 +1,6 @@
 ## Check we do not crash/assert when dumping a broken section name.
 ## Here we replace "foo" name with a sequence of characters that
-## do are not representable as unsigned char.
+## are not representable as unsigned char.
 ## We used to have an assert for this case before. 
 
 # RUN: yaml2obj %s -o %t
