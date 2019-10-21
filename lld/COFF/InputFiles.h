@@ -10,6 +10,7 @@
 #define LLD_COFF_INPUT_FILES_H
 
 #include "Config.h"
+#include "lld/Common/DWARF.h"
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -258,6 +259,8 @@ private:
   // index. Nonexistent indices (which are occupied by auxiliary
   // symbols in the real symbol table) are filled with null pointers.
   std::vector<Symbol *> Symbols;
+
+  DWARFCache *dwarf;
 };
 
 // This type represents import library members that contain DLL names
