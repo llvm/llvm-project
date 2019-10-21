@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Type.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -42,6 +44,16 @@ TEST(DataLayoutTest, FunctionPtrAlign) {
   EXPECT_EQ(a, b);
   a = c;
   EXPECT_EQ(a, c);
+}
+
+TEST(DataLayoutTest, ValueOrABITypeAlignment) {
+  const DataLayout DL("Fi8");
+  LLVMContext Context;
+  Type *const FourByteAlignType = Type::getInt32Ty(Context);
+  EXPECT_EQ(Align(16),
+            DL.getValueOrABITypeAlignment(MaybeAlign(16), FourByteAlignType));
+  EXPECT_EQ(Align(4),
+            DL.getValueOrABITypeAlignment(MaybeAlign(), FourByteAlignType));
 }
 
 }  // anonymous namespace
