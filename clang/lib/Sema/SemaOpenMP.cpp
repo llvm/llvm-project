@@ -3239,7 +3239,8 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   }
   case OMPD_taskloop:
   case OMPD_taskloop_simd:
-  case OMPD_master_taskloop: {
+  case OMPD_master_taskloop:
+  case OMPD_master_taskloop_simd: {
     QualType KmpInt32Ty =
         Context.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1)
             .withConst();
@@ -4471,6 +4472,11 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
     AllowedNameModifiers.push_back(OMPD_taskloop);
     break;
+  case OMPD_master_taskloop_simd:
+    Res = ActOnOpenMPMasterTaskLoopSimdDirective(
+        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    AllowedNameModifiers.push_back(OMPD_taskloop);
+    break;
   case OMPD_parallel_master_taskloop:
     Res = ActOnOpenMPParallelMasterTaskLoopDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
@@ -4591,11 +4597,9 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       case OMPC_schedule:
         break;
       case OMPC_grainsize:
-        // Do not analyze if no parent parallel directive.
-        if (isOpenMPParallelDirective(DSAStack->getCurrentDirective()))
-          break;
-        continue;
       case OMPC_num_tasks:
+      case OMPC_final:
+      case OMPC_priority:
         // Do not analyze if no parent parallel directive.
         if (isOpenMPParallelDirective(DSAStack->getCurrentDirective()))
           break;
@@ -4604,12 +4608,10 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       case OMPC_device:
       case OMPC_num_teams:
       case OMPC_thread_limit:
-      case OMPC_priority:
       case OMPC_hint:
       case OMPC_collapse:
       case OMPC_safelen:
       case OMPC_simdlen:
-      case OMPC_final:
       case OMPC_default:
       case OMPC_proc_bind:
       case OMPC_private:
@@ -9361,6 +9363,55 @@ StmtResult Sema::ActOnOpenMPMasterTaskLoopDirective(
                                             NestedLoopCount, Clauses, AStmt, B);
 }
 
+StmtResult Sema::ActOnOpenMPMasterTaskLoopSimdDirective(
+    ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+    SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA) {
+  if (!AStmt)
+    return StmtError();
+
+  assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
+  OMPLoopDirective::HelperExprs B;
+  // In presence of clause 'collapse' or 'ordered' with number of loops, it will
+  // define the nested loops number.
+  unsigned NestedLoopCount =
+      checkOpenMPLoop(OMPD_master_taskloop_simd, getCollapseNumberExpr(Clauses),
+                      /*OrderedLoopCountExpr=*/nullptr, AStmt, *this, *DSAStack,
+                      VarsWithImplicitDSA, B);
+  if (NestedLoopCount == 0)
+    return StmtError();
+
+  assert((CurContext->isDependentContext() || B.builtAll()) &&
+         "omp for loop exprs were not built");
+
+  if (!CurContext->isDependentContext()) {
+    // Finalize the clauses that need pre-built expressions for CodeGen.
+    for (OMPClause *C : Clauses) {
+      if (auto *LC = dyn_cast<OMPLinearClause>(C))
+        if (FinishOpenMPLinearClause(*LC, cast<DeclRefExpr>(B.IterationVarRef),
+                                     B.NumIterations, *this, CurScope,
+                                     DSAStack))
+          return StmtError();
+    }
+  }
+
+  // OpenMP, [2.9.2 taskloop Construct, Restrictions]
+  // The grainsize clause and num_tasks clause are mutually exclusive and may
+  // not appear on the same taskloop directive.
+  if (checkGrainsizeNumTasksClauses(*this, Clauses))
+    return StmtError();
+  // OpenMP, [2.9.2 taskloop Construct, Restrictions]
+  // If a reduction clause is present on the taskloop directive, the nogroup
+  // clause must not be specified.
+  if (checkReductionClauseWithNogroup(*this, Clauses))
+    return StmtError();
+  if (checkSimdlenSafelenSpecified(*this, Clauses))
+    return StmtError();
+
+  setFunctionHasBranchProtectedScope();
+  return OMPMasterTaskLoopSimdDirective::Create(
+      Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
+}
+
 StmtResult Sema::ActOnOpenMPParallelMasterTaskLoopDirective(
     ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
     SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA) {
@@ -10327,6 +10378,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
     case OMPD_master_taskloop:
+    case OMPD_master_taskloop_simd:
     case OMPD_target_data:
       // Do not capture if-clause expressions.
       break;
@@ -10401,6 +10453,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
     case OMPD_master_taskloop:
+    case OMPD_master_taskloop_simd:
     case OMPD_threadprivate:
     case OMPD_allocate:
     case OMPD_taskyield:
@@ -10458,6 +10511,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
     case OMPD_master_taskloop:
+    case OMPD_master_taskloop_simd:
     case OMPD_parallel_master_taskloop:
     case OMPD_target_data:
     case OMPD_target_enter_data:
@@ -10527,6 +10581,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
     case OMPD_master_taskloop:
+    case OMPD_master_taskloop_simd:
     case OMPD_parallel_master_taskloop:
     case OMPD_target_data:
     case OMPD_target_enter_data:
@@ -10596,6 +10651,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
     case OMPD_master_taskloop:
+    case OMPD_master_taskloop_simd:
     case OMPD_parallel_master_taskloop:
     case OMPD_target_data:
     case OMPD_target_enter_data:
@@ -10669,6 +10725,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
     case OMPD_master_taskloop:
+    case OMPD_master_taskloop_simd:
     case OMPD_parallel_master_taskloop:
     case OMPD_target_data:
     case OMPD_target_enter_data:
@@ -10743,6 +10800,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
     case OMPD_master_taskloop:
+    case OMPD_master_taskloop_simd:
     case OMPD_parallel_master_taskloop:
     case OMPD_cancel:
     case OMPD_parallel:
@@ -10783,11 +10841,14 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     break;
   case OMPC_grainsize:
   case OMPC_num_tasks:
+  case OMPC_final:
+  case OMPC_priority:
     switch (DKind) {
     case OMPD_task:
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
     case OMPD_master_taskloop:
+    case OMPD_master_taskloop_simd:
       break;
     case OMPD_parallel_master_taskloop:
       CaptureRegion = OMPD_parallel;
@@ -10858,7 +10919,6 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_linear:
   case OMPC_default:
   case OMPC_proc_bind:
-  case OMPC_final:
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_allocator:
@@ -10884,7 +10944,6 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_threads:
   case OMPC_simd:
   case OMPC_map:
-  case OMPC_priority:
   case OMPC_nogroup:
   case OMPC_hint:
   case OMPC_defaultmap:
@@ -10945,6 +11004,8 @@ OMPClause *Sema::ActOnOpenMPFinalClause(Expr *Condition,
                                         SourceLocation LParenLoc,
                                         SourceLocation EndLoc) {
   Expr *ValExpr = Condition;
+  Stmt *HelperValStmt = nullptr;
+  OpenMPDirectiveKind CaptureRegion = OMPD_unknown;
   if (!Condition->isValueDependent() && !Condition->isTypeDependent() &&
       !Condition->isInstantiationDependent() &&
       !Condition->containsUnexpandedParameterPack()) {
@@ -10953,10 +11014,21 @@ OMPClause *Sema::ActOnOpenMPFinalClause(Expr *Condition,
       return nullptr;
 
     ValExpr = MakeFullExpr(Val.get()).get();
+
+    OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
+    CaptureRegion = getOpenMPCaptureRegionForClause(DKind, OMPC_final);
+    if (CaptureRegion != OMPD_unknown && !CurContext->isDependentContext()) {
+      ValExpr = MakeFullExpr(ValExpr).get();
+      llvm::MapVector<const Expr *, DeclRefExpr *> Captures;
+      ValExpr = tryBuildCapture(*this, ValExpr, Captures).get();
+      HelperValStmt = buildPreInits(Context, Captures);
+    }
   }
 
-  return new (Context) OMPFinalClause(ValExpr, StartLoc, LParenLoc, EndLoc);
+  return new (Context) OMPFinalClause(ValExpr, HelperValStmt, CaptureRegion,
+                                      StartLoc, LParenLoc, EndLoc);
 }
+
 ExprResult Sema::PerformOpenMPImplicitIntegerConversion(SourceLocation Loc,
                                                         Expr *Op) {
   if (!Op)
@@ -15920,14 +15992,19 @@ OMPClause *Sema::ActOnOpenMPPriorityClause(Expr *Priority,
                                            SourceLocation LParenLoc,
                                            SourceLocation EndLoc) {
   Expr *ValExpr = Priority;
+  Stmt *HelperValStmt = nullptr;
+  OpenMPDirectiveKind CaptureRegion = OMPD_unknown;
 
   // OpenMP [2.9.1, task Constrcut]
   // The priority-value is a non-negative numerical scalar expression.
-  if (!isNonNegativeIntegerValue(ValExpr, *this, OMPC_priority,
-                                 /*StrictlyPositive=*/false))
+  if (!isNonNegativeIntegerValue(
+          ValExpr, *this, OMPC_priority,
+          /*StrictlyPositive=*/false, /*BuildCapture=*/true,
+          DSAStack->getCurrentDirective(), &CaptureRegion, &HelperValStmt))
     return nullptr;
 
-  return new (Context) OMPPriorityClause(ValExpr, StartLoc, LParenLoc, EndLoc);
+  return new (Context) OMPPriorityClause(ValExpr, HelperValStmt, CaptureRegion,
+                                         StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *Sema::ActOnOpenMPGrainsizeClause(Expr *Grainsize,

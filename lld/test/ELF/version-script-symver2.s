@@ -4,7 +4,7 @@
 # RUN: ld.lld -shared %t.o --version-script %t.map -o %t.so --fatal-warnings
 # RUN: llvm-readobj -V %t.so | FileCheck %s
 
-# CHECK:      Version symbols [
+# CHECK:      VersionSymbols [
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Version: 0
 # CHECK-NEXT:     Name:

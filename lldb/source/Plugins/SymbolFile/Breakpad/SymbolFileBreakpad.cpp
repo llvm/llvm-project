@@ -289,23 +289,17 @@ uint32_t SymbolFileBreakpad::ResolveSymbolContext(
   return sc_list.GetSize() - old_size;
 }
 
-uint32_t SymbolFileBreakpad::FindFunctions(
+void SymbolFileBreakpad::FindFunctions(
     ConstString name, const CompilerDeclContext *parent_decl_ctx,
-    FunctionNameType name_type_mask, bool include_inlines, bool append,
+    FunctionNameType name_type_mask, bool include_inlines,
     SymbolContextList &sc_list) {
   // TODO
-  if (!append)
-    sc_list.Clear();
-  return sc_list.GetSize();
 }
 
-uint32_t SymbolFileBreakpad::FindFunctions(const RegularExpression &regex,
-                                           bool include_inlines, bool append,
-                                           SymbolContextList &sc_list) {
+void SymbolFileBreakpad::FindFunctions(const RegularExpression &regex,
+                                       bool include_inlines,
+                                       SymbolContextList &sc_list) {
   // TODO
-  if (!append)
-    sc_list.Clear();
-  return sc_list.GetSize();
 }
 
 void SymbolFileBreakpad::FindTypes(

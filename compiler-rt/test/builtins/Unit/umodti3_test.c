@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_umodti3
 // REQUIRES: int128
 //===-- umodti3_test.c - Test __umodti3 -----------------------------------===//
 //

@@ -220,6 +220,10 @@ function(add_entrypoint_library target_name)
 endfunction(add_entrypoint_library)
 
 function(add_libc_unittest target_name)
+  if(NOT LLVM_INCLUDE_TESTS)
+    return()
+  endif()
+
   cmake_parse_arguments(
     "LIBC_UNITTEST"
     "" # No optional arguments

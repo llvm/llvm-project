@@ -102,36 +102,24 @@ uint32_t SymbolFile::ResolveSymbolContext(const FileSpec &file_spec,
   return 0;
 }
 
-uint32_t
-SymbolFile::FindGlobalVariables(ConstString name,
-                                const CompilerDeclContext *parent_decl_ctx,
-                                uint32_t max_matches, VariableList &variables) {
-  return 0;
-}
+void SymbolFile::FindGlobalVariables(ConstString name,
+                                     const CompilerDeclContext *parent_decl_ctx,
+                                     uint32_t max_matches,
+                                     VariableList &variables) {}
 
-uint32_t SymbolFile::FindGlobalVariables(const RegularExpression &regex,
-                                         uint32_t max_matches,
-                                         VariableList &variables) {
-  return 0;
-}
+void SymbolFile::FindGlobalVariables(const RegularExpression &regex,
+                                     uint32_t max_matches,
+                                     VariableList &variables) {}
 
-uint32_t SymbolFile::FindFunctions(ConstString name,
-                                   const CompilerDeclContext *parent_decl_ctx,
-                                   lldb::FunctionNameType name_type_mask,
-                                   bool include_inlines, bool append,
-                                   SymbolContextList &sc_list) {
-  if (!append)
-    sc_list.Clear();
-  return 0;
-}
+void SymbolFile::FindFunctions(ConstString name,
+                               const CompilerDeclContext *parent_decl_ctx,
+                               lldb::FunctionNameType name_type_mask,
+                               bool include_inlines,
+                               SymbolContextList &sc_list) {}
 
-uint32_t SymbolFile::FindFunctions(const RegularExpression &regex,
-                                   bool include_inlines, bool append,
-                                   SymbolContextList &sc_list) {
-  if (!append)
-    sc_list.Clear();
-  return 0;
-}
+void SymbolFile::FindFunctions(const RegularExpression &regex,
+                               bool include_inlines,
+                               SymbolContextList &sc_list) {}
 
 void SymbolFile::GetMangledNamesForFunction(
     const std::string &scope_qualified_name,

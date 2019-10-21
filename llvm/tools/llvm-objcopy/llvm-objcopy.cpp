@@ -335,7 +335,7 @@ int main(int argc, char **argv) {
 
   Expected<DriverConfig> DriverConfig =
       IsStrip ? parseStripOptions(Args, reportWarning)
-              : parseObjcopyOptions(Args);
+              : parseObjcopyOptions(Args, reportWarning);
   if (!DriverConfig) {
     logAllUnhandledErrors(DriverConfig.takeError(),
                           WithColor::error(errs(), ToolName));

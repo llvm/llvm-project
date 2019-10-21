@@ -46,8 +46,8 @@ static const TargetFrameLowering::SpillSlot SpillOffsetTable[] = {
 } // end anonymous namespace
 
 SystemZFrameLowering::SystemZFrameLowering()
-    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, 8,
-                          -SystemZMC::CallFrameSize, 8,
+    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(8),
+                          -SystemZMC::CallFrameSize, Align(8),
                           false /* StackRealignable */) {
   // Create a mapping from register number to save slot offset.
   RegSpillOffsets.grow(SystemZ::NUM_TARGET_REGS);

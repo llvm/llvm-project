@@ -722,7 +722,7 @@ private:
   /// Converts alignment exponent (i.e. power of two (or zero)) to the
   /// corresponding alignment to use. If alignment is too large, returns
   /// a corresponding error code.
-  Error parseAlignmentValue(uint64_t Exponent, unsigned &Alignment);
+  Error parseAlignmentValue(uint64_t Exponent, MaybeAlign &Alignment);
   Error parseAttrKind(uint64_t Code, Attribute::AttrKind *Kind);
   Error parseModule(uint64_t ResumeBit, bool ShouldLazyLoadMetadata = false);
 
@@ -1544,12 +1544,12 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
 }
 
 Error BitcodeReader::parseAlignmentValue(uint64_t Exponent,
-                                         unsigned &Alignment) {
+                                         MaybeAlign &Alignment) {
   // Note: Alignment in bitcode files is incremented by 1, so that zero
   // can be used for default alignment.
   if (Exponent > Value::MaxAlignmentExponent + 1)
     return error("Invalid alignment value");
-  Alignment = (1 << static_cast<unsigned>(Exponent)) >> 1;
+  Alignment = decodeMaybeAlign(Exponent);
   return Error::success();
 }
 
@@ -3112,7 +3112,7 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
 
   uint64_t RawLinkage = Record[3];
   GlobalValue::LinkageTypes Linkage = getDecodedLinkage(RawLinkage);
-  unsigned Alignment;
+  MaybeAlign Alignment;
   if (Error Err = parseAlignmentValue(Record[4], Alignment))
     return Err;
   std::string Section;
@@ -3243,7 +3243,7 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
                               Context, getPointerElementFlatType(PTy)));
   }
 
-  unsigned Alignment;
+  MaybeAlign Alignment;
   if (Error Err = parseAlignmentValue(Record[5], Alignment))
     return Err;
   Func->setAlignment(Alignment);
@@ -4750,7 +4750,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       }
       Type *OpTy = getTypeByID(Record[1]);
       Value *Size = getFnValueByID(Record[2], OpTy);
-      unsigned Align;
+      MaybeAlign Align;
       if (Error Err = parseAlignmentValue(AlignRecord & ~FlagMask, Align)) {
         return Err;
       }
@@ -4761,7 +4761,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       const DataLayout &DL = TheModule->getDataLayout();
       unsigned AS = DL.getAllocaAddrSpace();
 
-      AllocaInst *AI = new AllocaInst(Ty, AS, Size, Align);
+      AllocaInst *AI = new AllocaInst(Ty, AS, Size, Align ? Align->value() : 0);
       AI->setUsedWithInAlloca(InAlloca);
       AI->setSwiftError(SwiftError);
       I = AI;
@@ -4789,10 +4789,11 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (Error Err = typeCheckLoadStoreInst(Ty, Op->getType()))
         return Err;
 
-      unsigned Align;
+      MaybeAlign Align;
       if (Error Err = parseAlignmentValue(Record[OpNum], Align))
         return Err;
-      I = new LoadInst(Ty, Op, "", Record[OpNum + 1], Align);
+      I = new LoadInst(Ty, Op, "", Record[OpNum + 1],
+                       Align ? Align->value() : 0);
       InstructionList.push_back(I);
       break;
     }
@@ -4826,10 +4827,11 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("Invalid record");
       SyncScope::ID SSID = getDecodedSyncScopeID(Record[OpNum + 3]);
 
-      unsigned Align;
+      MaybeAlign Align;
       if (Error Err = parseAlignmentValue(Record[OpNum], Align))
         return Err;
-      I = new LoadInst(Ty, Op, "", Record[OpNum + 1], Align, Ordering, SSID);
+      I = new LoadInst(Ty, Op, "", Record[OpNum + 1],
+                       Align ? Align->value() : 0, Ordering, SSID);
       InstructionList.push_back(I);
       break;
     }
@@ -4848,10 +4850,11 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
 
       if (Error Err = typeCheckLoadStoreInst(Val->getType(), Ptr->getType()))
         return Err;
-      unsigned Align;
+      MaybeAlign Align;
       if (Error Err = parseAlignmentValue(Record[OpNum], Align))
         return Err;
-      I = new StoreInst(Val, Ptr, Record[OpNum+1], Align);
+      I = new StoreInst(Val, Ptr, Record[OpNum + 1],
+                        Align ? Align->value() : 0);
       InstructionList.push_back(I);
       break;
     }
@@ -4881,10 +4884,11 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (Ordering != AtomicOrdering::NotAtomic && Record[OpNum] == 0)
         return error("Invalid record");
 
-      unsigned Align;
+      MaybeAlign Align;
       if (Error Err = parseAlignmentValue(Record[OpNum], Align))
         return Err;
-      I = new StoreInst(Val, Ptr, Record[OpNum+1], Align, Ordering, SSID);
+      I = new StoreInst(Val, Ptr, Record[OpNum + 1], Align ? Align->value() : 0,
+                        Ordering, SSID);
       InstructionList.push_back(I);
       break;
     }

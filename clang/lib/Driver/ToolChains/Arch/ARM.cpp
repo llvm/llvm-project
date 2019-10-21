@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/TargetParser.h"
+#include "llvm/Support/Host.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -465,6 +466,7 @@ fp16_fml_fallthrough:
             "vfp4", "vfp4sp", "vfp4d16", "vfp4d16sp",
             "fp-armv8", "fp-armv8sp", "fp-armv8d16", "fp-armv8d16sp",
             "fullfp16", "neon", "crypto", "dotprod", "fp16fml",
+            "mve", "mve.fp",
             "fp64", "d32", "fpregs"})
       Features.push_back(Args.MakeArgString("-" + Feature));
   }

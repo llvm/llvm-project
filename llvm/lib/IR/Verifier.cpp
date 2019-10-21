@@ -518,6 +518,7 @@ private:
                                 DIExpression::FragmentInfo Fragment,
                                 ValueOrMetadata *Desc);
   void verifyFnArgs(const DbgVariableIntrinsic &I);
+  void verifyNotEntryValue(const DbgVariableIntrinsic &I);
 
   /// Module-level debug info verification...
   void verifyCompileUnits();
@@ -4214,8 +4215,10 @@ void Verifier::visitInstruction(Instruction &I) {
     visitMDNode(*N);
   }
 
-  if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I))
+  if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
     verifyFragmentExpression(*DII);
+    verifyNotEntryValue(*DII);
+  }
 
   InstsInThisBlock.insert(&I);
 }
@@ -5046,6 +5049,16 @@ void Verifier::verifyFnArgs(const DbgVariableIntrinsic &I) {
   DebugFnArgs[ArgNo - 1] = Var;
   AssertDI(!Prev || (Prev == Var), "conflicting debug info for argument", &I,
            Prev, Var);
+}
+
+void Verifier::verifyNotEntryValue(const DbgVariableIntrinsic &I) {
+  DIExpression *E = dyn_cast_or_null<DIExpression>(I.getRawExpression());
+
+  // We don't know whether this intrinsic verified correctly.
+  if (!E || !E->isValid())
+    return;
+
+  AssertDI(!E->isEntryValue(), "Entry values are only allowed in MIR", &I);
 }
 
 void Verifier::verifyCompileUnits() {

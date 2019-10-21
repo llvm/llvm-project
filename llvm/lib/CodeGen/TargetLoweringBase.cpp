@@ -690,6 +690,7 @@ void TargetLoweringBase::initActions() {
       setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG, VT, Expand);
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, VT, Expand);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Expand);
+      setOperationAction(ISD::SPLAT_VECTOR, VT, Expand);
     }
 
     // Constrained floating-point operations default to expand.
@@ -1265,18 +1266,23 @@ void TargetLoweringBase::computeRegisterProperties(
     MVT EltVT = VT.getVectorElementType();
     unsigned NElts = VT.getVectorNumElements();
     bool IsLegalWiderType = false;
+    bool IsScalable = VT.isScalableVector();
     LegalizeTypeAction PreferredAction = getPreferredVectorAction(VT);
     switch (PreferredAction) {
-    case TypePromoteInteger:
+    case TypePromoteInteger: {
+      MVT::SimpleValueType EndVT = IsScalable ?
+                                   MVT::LAST_INTEGER_SCALABLE_VECTOR_VALUETYPE :
+                                   MVT::LAST_INTEGER_FIXEDLEN_VECTOR_VALUETYPE;
       // Try to promote the elements of integer vectors. If no legal
       // promotion was found, fall through to the widen-vector method.
       for (unsigned nVT = i + 1;
-           nVT <= MVT::LAST_INTEGER_FIXEDLEN_VECTOR_VALUETYPE; ++nVT) {
+           (MVT::SimpleValueType)nVT <= EndVT; ++nVT) {
         MVT SVT = (MVT::SimpleValueType) nVT;
         // Promote vectors of integers to vectors with the same number
         // of elements, with a wider element type.
         if (SVT.getScalarSizeInBits() > EltVT.getSizeInBits() &&
-            SVT.getVectorNumElements() == NElts && isTypeLegal(SVT)) {
+            SVT.getVectorNumElements() == NElts &&
+            SVT.isScalableVector() == IsScalable && isTypeLegal(SVT)) {
           TransformToType[i] = SVT;
           RegisterTypeForVT[i] = SVT;
           NumRegistersForVT[i] = 1;
@@ -1288,6 +1294,7 @@ void TargetLoweringBase::computeRegisterProperties(
       if (IsLegalWiderType)
         break;
       LLVM_FALLTHROUGH;
+    }
 
     case TypeWidenVector:
       if (isPowerOf2_32(NElts)) {
@@ -1295,7 +1302,8 @@ void TargetLoweringBase::computeRegisterProperties(
         for (unsigned nVT = i + 1; nVT <= MVT::LAST_VECTOR_VALUETYPE; ++nVT) {
           MVT SVT = (MVT::SimpleValueType) nVT;
           if (SVT.getVectorElementType() == EltVT
-              && SVT.getVectorNumElements() > NElts && isTypeLegal(SVT)) {
+              && SVT.getVectorNumElements() > NElts
+              && SVT.isScalableVector() == IsScalable && isTypeLegal(SVT)) {
             TransformToType[i] = SVT;
             RegisterTypeForVT[i] = SVT;
             NumRegistersForVT[i] = 1;

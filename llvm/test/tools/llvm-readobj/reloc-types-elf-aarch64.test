@@ -140,7 +140,6 @@ Sections:
     Content: 00
   - Name:         .rela.text
     Type:         SHT_RELA
-    Link:         .symtab
     AddressAlign: 0x0000000000000008
     EntSize:      0x0000000000000018
     Info:         .text

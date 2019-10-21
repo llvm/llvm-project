@@ -6,7 +6,7 @@
 # RUN: ld.lld --hash-style=sysv --version-script %t.script -shared -soname shared %t.o -o %t.so
 # RUN: llvm-readobj -V --dyn-syms %t.so | FileCheck --check-prefix=DSO %s
 
-# DSO:       Version symbols [
+# DSO:       VersionSymbols [
 # DSO-NEXT:   Symbol {
 # DSO-NEXT:     Version: 0
 # DSO-NEXT:     Name:
@@ -24,7 +24,7 @@
 # DSO-NEXT:     Name: c@@LIBSAMPLE_3.0
 # DSO-NEXT:   }
 # DSO-NEXT: ]
-# DSO-NEXT: SHT_GNU_verdef {
+# DSO-NEXT: VersionDefinitions [
 # DSO-NEXT:   Definition {
 # DSO-NEXT:     Version: 1
 # DSO-NEXT:     Flags: Base
@@ -53,16 +53,16 @@
 # DSO-NEXT:     Hash: 98456672
 # DSO-NEXT:     Name: LIBSAMPLE_3.0
 # DSO-NEXT:   }
-# DSO-NEXT: }
-# DSO-NEXT: SHT_GNU_verneed {
-# DSO-NEXT: }
+# DSO-NEXT: ]
+# DSO-NEXT: VersionRequirements [
+# DSO-NEXT: ]
 
 ## Check that we can link agains DSO we produced.
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %S/Inputs/verdef.s -o %tmain.o
 # RUN: ld.lld --hash-style=sysv %tmain.o %t.so -o %tout
 # RUN: llvm-readobj -V %tout | FileCheck --check-prefix=MAIN %s
 
-# MAIN:      Version symbols [
+# MAIN:      VersionSymbols [
 # MAIN-NEXT:   Symbol {
 # MAIN-NEXT:     Version: 0
 # MAIN-NEXT:     Name:
@@ -80,8 +80,8 @@
 # MAIN-NEXT:     Name: c@LIBSAMPLE_3.0
 # MAIN-NEXT:   }
 # MAIN-NEXT: ]
-# MAIN-NEXT: SHT_GNU_verdef {
-# MAIN-NEXT: }
+# MAIN-NEXT: VersionDefinitions [
+# MAIN-NEXT: ]
 
 # RUN: echo "VERSION {" > %t.script
 # RUN: echo "LIBSAMPLE_1.0 { global: a; local: *; };" >> %t.script

@@ -170,32 +170,58 @@ static const char *const DbgTimerDescription = "DWARF Debug Writer";
 static constexpr unsigned ULEB128PadSize = 4;
 
 void DebugLocDwarfExpression::emitOp(uint8_t Op, const char *Comment) {
-  BS.EmitInt8(
+  getActiveStreamer().EmitInt8(
       Op, Comment ? Twine(Comment) + " " + dwarf::OperationEncodingString(Op)
                   : dwarf::OperationEncodingString(Op));
 }
 
 void DebugLocDwarfExpression::emitSigned(int64_t Value) {
-  BS.EmitSLEB128(Value, Twine(Value));
+  getActiveStreamer().EmitSLEB128(Value, Twine(Value));
 }
 
 void DebugLocDwarfExpression::emitUnsigned(uint64_t Value) {
-  BS.EmitULEB128(Value, Twine(Value));
+  getActiveStreamer().EmitULEB128(Value, Twine(Value));
 }
 
 void DebugLocDwarfExpression::emitData1(uint8_t Value) {
-  BS.EmitInt8(Value, Twine(Value));
+  getActiveStreamer().EmitInt8(Value, Twine(Value));
 }
 
 void DebugLocDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
   assert(Idx < (1ULL << (ULEB128PadSize * 7)) && "Idx wont fit");
-  BS.EmitULEB128(Idx, Twine(Idx), ULEB128PadSize);
+  getActiveStreamer().EmitULEB128(Idx, Twine(Idx), ULEB128PadSize);
 }
 
 bool DebugLocDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
                                               unsigned MachineReg) {
   // This information is not available while emitting .debug_loc entries.
   return false;
+}
+
+void DebugLocDwarfExpression::enableTemporaryBuffer() {
+  assert(!IsBuffering && "Already buffering?");
+  if (!TmpBuf)
+    TmpBuf = std::make_unique<TempBuffer>(OutBS.GenerateComments);
+  IsBuffering = true;
+}
+
+void DebugLocDwarfExpression::disableTemporaryBuffer() { IsBuffering = false; }
+
+unsigned DebugLocDwarfExpression::getTemporaryBufferSize() {
+  return TmpBuf ? TmpBuf->Bytes.size() : 0;
+}
+
+void DebugLocDwarfExpression::commitTemporaryBuffer() {
+  if (!TmpBuf)
+    return;
+  for (auto Byte : enumerate(TmpBuf->Bytes)) {
+    const char *Comment = (Byte.index() < TmpBuf->Comments.size())
+                              ? TmpBuf->Comments[Byte.index()].c_str()
+                              : "";
+    OutBS.EmitInt8(Byte.value(), Comment);
+  }
+  TmpBuf->Bytes.clear();
+  TmpBuf->Comments.clear();
 }
 
 const DIType *DbgVariable::getType() const {
@@ -643,10 +669,9 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
 
   // Emit the call site parameter's value as an entry value.
   if (ShouldTryEmitEntryVals) {
-    // Create an entry value expression where the expression following
-    // the 'DW_OP_entry_value' will be the size of 1 (a register operation).
-    DIExpression *EntryExpr = DIExpression::get(MF->getFunction().getContext(),
-                                                {dwarf::DW_OP_entry_value, 1});
+    // Create an expression where the register's entry value is used.
+    DIExpression *EntryExpr = DIExpression::get(
+        MF->getFunction().getContext(), {dwarf::DW_OP_LLVM_entry_value, 1});
     for (auto RegEntry : ForwardedRegWorklist) {
       unsigned FwdReg = RegEntry;
       auto EntryValReg = RegsForEntryValues.find(RegEntry);
@@ -940,8 +965,6 @@ void DwarfDebug::beginModule() {
     DwarfFile &Holder = useSplitDwarf() ? SkeletonHolder : InfoHolder;
     Holder.setRnglistsTableBaseSym(
         Asm->createTempSymbol("rnglists_table_base"));
-    Holder.setLoclistsTableBaseSym(
-        Asm->createTempSymbol("loclists_table_base"));
 
     if (useSplitDwarf())
       InfoHolder.setRnglistsTableBaseSym(
@@ -1113,8 +1136,12 @@ void DwarfDebug::finalizeModuleInfo() {
       if (U.hasRangeLists())
         U.addRnglistsBase();
 
-      if (!DebugLocs.getLists().empty() && !useSplitDwarf())
-        U.addLoclistsBase();
+      if (!DebugLocs.getLists().empty() && !useSplitDwarf()) {
+        DebugLocs.setSym(Asm->createTempSymbol("loclists_table_base"));
+        U.addSectionLabel(U.getUnitDie(), dwarf::DW_AT_loclists_base,
+                          DebugLocs.getSym(),
+                          TLOF.getDwarfLoclistsSection()->getBeginSymbol());
+      }
     }
 
     auto *CUNode = cast<DICompileUnit>(P.first);
@@ -2174,7 +2201,7 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
 
     if (DIExpr->isEntryValue()) {
       DwarfExpr.setEntryValueFlag();
-      DwarfExpr.addEntryValueExpression(Cursor);
+      DwarfExpr.beginEntryValueExpression(Cursor);
     }
 
     const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
@@ -2237,7 +2264,7 @@ void DwarfDebug::emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry,
 }
 
 // Emit the common part of the DWARF 5 range/locations list tables header.
-static void emitListsTableHeaderStart(AsmPrinter *Asm, const DwarfFile &Holder,
+static void emitListsTableHeaderStart(AsmPrinter *Asm,
                                       MCSymbol *TableStart,
                                       MCSymbol *TableEnd) {
   // Build the table header, which starts with the length field.
@@ -2262,7 +2289,7 @@ static MCSymbol *emitRnglistsTableHeader(AsmPrinter *Asm,
                                          const DwarfFile &Holder) {
   MCSymbol *TableStart = Asm->createTempSymbol("debug_rnglist_table_start");
   MCSymbol *TableEnd = Asm->createTempSymbol("debug_rnglist_table_end");
-  emitListsTableHeaderStart(Asm, Holder, TableStart, TableEnd);
+  emitListsTableHeaderStart(Asm, TableStart, TableEnd);
 
   Asm->OutStreamer->AddComment("Offset entry count");
   Asm->emitInt32(Holder.getRangeLists().size());
@@ -2279,16 +2306,18 @@ static MCSymbol *emitRnglistsTableHeader(AsmPrinter *Asm,
 // designates the end of the table for the caller to emit when the table is
 // complete.
 static MCSymbol *emitLoclistsTableHeader(AsmPrinter *Asm,
-                                         const DwarfFile &Holder) {
+                                         const DwarfDebug &DD) {
   MCSymbol *TableStart = Asm->createTempSymbol("debug_loclist_table_start");
   MCSymbol *TableEnd = Asm->createTempSymbol("debug_loclist_table_end");
-  emitListsTableHeaderStart(Asm, Holder, TableStart, TableEnd);
+  emitListsTableHeaderStart(Asm, TableStart, TableEnd);
+
+  const auto &DebugLocs = DD.getDebugLocs();
 
   // FIXME: Generate the offsets table and use DW_FORM_loclistx with the
   // DW_AT_loclists_base attribute. Until then set the number of offsets to 0.
   Asm->OutStreamer->AddComment("Offset entry count");
   Asm->emitInt32(0);
-  Asm->OutStreamer->EmitLabel(Holder.getLoclistsTableBaseSym());
+  Asm->OutStreamer->EmitLabel(DebugLocs.getSym());
 
   return TableEnd;
 }
@@ -2410,8 +2439,7 @@ void DwarfDebug::emitDebugLoc() {
   if (getDwarfVersion() >= 5) {
     Asm->OutStreamer->SwitchSection(
         Asm->getObjFileLowering().getDwarfLoclistsSection());
-    TableEnd = emitLoclistsTableHeader(Asm, useSplitDwarf() ? SkeletonHolder
-                                                            : InfoHolder);
+    TableEnd = emitLoclistsTableHeader(Asm, *this);
   } else {
     Asm->OutStreamer->SwitchSection(
         Asm->getObjFileLowering().getDwarfLocSection());

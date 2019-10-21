@@ -677,7 +677,7 @@ MachineInstr *
 InstrEmitter::EmitDbgValue(SDDbgValue *SD,
                            DenseMap<SDValue, unsigned> &VRBaseMap) {
   MDNode *Var = SD->getVariable();
-  MDNode *Expr = SD->getExpression();
+  const DIExpression *Expr = SD->getExpression();
   DebugLoc DL = SD->getDebugLoc();
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
@@ -701,12 +701,11 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
     // EmitTargetCodeForFrameDebugValue is responsible for allocation.
     auto FrameMI = BuildMI(*MF, DL, TII->get(TargetOpcode::DBG_VALUE))
                        .addFrameIndex(SD->getFrameIx());
+
     if (SD->isIndirect())
-      // Push [fi + 0] onto the DIExpression stack.
-      FrameMI.addImm(0);
-    else
-      // Push fi onto the DIExpression stack.
-      FrameMI.addReg(0);
+      Expr = DIExpression::append(Expr, {dwarf::DW_OP_deref});
+
+    FrameMI.addReg(0);
     return FrameMI.addMetadata(Var).addMetadata(Expr);
   }
   // Otherwise, we're going to create an instruction here.
@@ -752,9 +751,9 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
 
   // Indirect addressing is indicated by an Imm as the second parameter.
   if (SD->isIndirect())
-    MIB.addImm(0U);
-  else
-    MIB.addReg(0U, RegState::Debug);
+    Expr = DIExpression::append(Expr, {dwarf::DW_OP_deref});
+
+  MIB.addReg(0U, RegState::Debug);
 
   MIB.addMetadata(Var);
   MIB.addMetadata(Expr);

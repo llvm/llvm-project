@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "LiveRangeCalc.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -22,6 +21,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/LiveRangeCalc.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -1288,6 +1288,20 @@ private:
           const SlotIndex SplitPos = NewIdxDef;
           OldIdxVNI = OldIdxIn->valno;
 
+          SlotIndex NewDefEndPoint = std::next(NewIdxIn)->end;
+          LiveRange::iterator Prev = std::prev(OldIdxIn);
+          if (OldIdxIn != LR.begin() &&
+              SlotIndex::isEarlierInstr(NewIdx, Prev->end)) {
+            // If the segment before OldIdx read a value defined earlier than
+            // NewIdx, the moved instruction also reads and forwards that
+            // value. Extend the lifetime of the new def point.
+
+            // Extend to where the previous range started, unless there is
+            // another redef first.
+            NewDefEndPoint = std::min(OldIdxIn->start,
+                                      std::next(NewIdxOut)->start);
+          }
+
           // Merge the OldIdxIn and OldIdxOut segments into OldIdxOut.
           OldIdxOut->valno->def = OldIdxIn->start;
           *OldIdxOut = LiveRange::Segment(OldIdxIn->start, OldIdxOut->end,
@@ -1305,7 +1319,8 @@ private:
             // There is no gap between NewSegment and its predecessor.
             *NewSegment = LiveRange::Segment(Next->start, SplitPos,
                                              Next->valno);
-            *Next = LiveRange::Segment(SplitPos, Next->end, OldIdxVNI);
+
+            *Next = LiveRange::Segment(SplitPos, NewDefEndPoint, OldIdxVNI);
             Next->valno->def = SplitPos;
           } else {
             // There is a gap between NewSegment and its predecessor

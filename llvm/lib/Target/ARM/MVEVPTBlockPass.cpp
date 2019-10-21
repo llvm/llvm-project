@@ -25,6 +25,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Debug.h"
 #include <cassert>
 #include <new>
 

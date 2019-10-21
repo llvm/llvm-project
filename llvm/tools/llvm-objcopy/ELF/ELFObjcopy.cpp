@@ -263,7 +263,7 @@ static Error linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
 
 static Error splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
                             StringRef File, ElfType OutputElfType) {
-  auto DWOFile = Reader.create();
+  auto DWOFile = Reader.create(false);
   auto OnlyKeepDWOPred = [&DWOFile](const SectionBase &Sec) {
     return onlyKeepDWOPred(*DWOFile, Sec);
   };
@@ -743,7 +743,7 @@ static Error writeOutput(const CopyConfig &Config, Object &Obj, Buffer &Out,
 Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
                            Buffer &Out) {
   IHexReader Reader(&In);
-  std::unique_ptr<Object> Obj = Reader.create();
+  std::unique_ptr<Object> Obj = Reader.create(true);
   const ElfType OutputElfType =
     getOutputElfType(Config.OutputArch.getValueOr(MachineInfo()));
   if (Error E = handleArgs(Config, *Obj, Reader, OutputElfType))
@@ -756,7 +756,7 @@ Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
   uint8_t NewSymbolVisibility =
       Config.ELF->NewSymbolVisibility.getValueOr((uint8_t)ELF::STV_DEFAULT);
   BinaryReader Reader(&In, NewSymbolVisibility);
-  std::unique_ptr<Object> Obj = Reader.create();
+  std::unique_ptr<Object> Obj = Reader.create(true);
 
   // Prefer OutputArch (-O<format>) if set, otherwise fallback to BinaryArch
   // (-B<arch>).
@@ -770,7 +770,7 @@ Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
 Error executeObjcopyOnBinary(const CopyConfig &Config,
                              object::ELFObjectFileBase &In, Buffer &Out) {
   ELFReader Reader(&In, Config.ExtractPartition);
-  std::unique_ptr<Object> Obj = Reader.create();
+  std::unique_ptr<Object> Obj = Reader.create(!Config.SymbolsToAdd.empty());
   // Prefer OutputArch (-O<format>) if set, otherwise infer it from the input.
   const ElfType OutputElfType =
       Config.OutputArch ? getOutputElfType(Config.OutputArch.getValue())

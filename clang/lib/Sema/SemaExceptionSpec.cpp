@@ -1201,6 +1201,7 @@ CanThrowResult Sema::canThrow(const Expr *E) {
   case Expr::CoyieldExprClass:
   case Expr::CXXConstCastExprClass:
   case Expr::CXXReinterpretCastExprClass:
+  case Expr::CXXRewrittenBinaryOperatorClass:
   case Expr::BuiltinBitCastExprClass:
   case Expr::CXXStdInitializerListExprClass:
   case Expr::DesignatedInitExprClass:
@@ -1314,6 +1315,7 @@ CanThrowResult Sema::canThrow(const Expr *E) {
   case Expr::SizeOfPackExprClass:
   case Expr::StringLiteralClass:
   case Expr::SourceLocExprClass:
+  case Expr::ConceptSpecializationExprClass:
     // These expressions can never throw.
     return CT_Cannot;
 

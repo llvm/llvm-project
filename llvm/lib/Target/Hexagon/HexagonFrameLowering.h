@@ -30,7 +30,7 @@ class TargetRegisterClass;
 class HexagonFrameLowering : public TargetFrameLowering {
 public:
   explicit HexagonFrameLowering()
-      : TargetFrameLowering(StackGrowsDown, 8, 0, 1, true) {}
+      : TargetFrameLowering(StackGrowsDown, Align(8), 0, Align::None(), true) {}
 
   // All of the prolog/epilog functionality, including saving and restoring
   // callee-saved registers is handled in emitPrologue. This is to have the

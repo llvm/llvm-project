@@ -132,6 +132,27 @@ public:
   static char ID;
 };
 
+/// Provider for the LLDB current working directroy.
+///
+/// When the reproducer is kept, it writes lldb's current working directory to
+/// a file named cwd.txt in the reproducer root.
+class WorkingDirectoryProvider : public Provider<WorkingDirectoryProvider> {
+public:
+  WorkingDirectoryProvider(const FileSpec &directory) : Provider(directory) {
+    llvm::SmallString<128> cwd;
+    if (std::error_code EC = llvm::sys::fs::current_path(cwd))
+      return;
+    m_cwd = cwd.str();
+  }
+  struct Info {
+    static const char *name;
+    static const char *file;
+  };
+  void Keep() override;
+  std::string m_cwd;
+  static char ID;
+};
+
 class DataRecorder {
 public:
   DataRecorder(const FileSpec &filename, std::error_code &ec)
@@ -279,6 +300,15 @@ public:
       return {};
 
     return GetRoot().CopyByAppendingPathComponent(T::file);
+  }
+
+  template <typename T> llvm::Expected<std::string> LoadBuffer() {
+    FileSpec file = GetFile<typename T::Info>();
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> buffer =
+        llvm::vfs::getRealFileSystem()->getBufferForFile(file.GetPath());
+    if (!buffer)
+      return llvm::errorCodeToError(buffer.getError());
+    return (*buffer)->getBuffer().str();
   }
 
   llvm::Error LoadIndex();

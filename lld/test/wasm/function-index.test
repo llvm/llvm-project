@@ -7,12 +7,14 @@ CHECK: Sections:
 CHECK:   - Type:            TYPE
 CHECK:     Signatures:
 CHECK:       - Index:           0
-CHECK:         ReturnType:      I32
 CHECK:         ParamTypes:
 CHECK:           - F32
+CHECK:         ReturnTypes:
+CHECK:           - I32
 CHECK:       - Index:           1
-CHECK:         ReturnType:      I64
 CHECK:         ParamTypes:
 CHECK:           - F64
+CHECK:         ReturnTypes:
+CHECK:           - I64
 CHECK: - Type:            FUNCTION
 CHECK:   FunctionTypes: [ 0, 1 ]

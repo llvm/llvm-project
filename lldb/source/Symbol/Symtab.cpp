@@ -738,7 +738,7 @@ Symbol *Symtab::FindSymbolWithType(SymbolType symbol_type,
   return nullptr;
 }
 
-size_t
+void
 Symtab::FindAllSymbolsWithNameAndType(ConstString name,
                                       SymbolType symbol_type,
                                       std::vector<uint32_t> &symbol_indexes) {
@@ -756,10 +756,9 @@ Symtab::FindAllSymbolsWithNameAndType(ConstString name,
     // the symbols and match the symbol_type if any was given.
     AppendSymbolIndexesWithNameAndType(name, symbol_type, symbol_indexes);
   }
-  return symbol_indexes.size();
 }
 
-size_t Symtab::FindAllSymbolsWithNameAndType(
+void Symtab::FindAllSymbolsWithNameAndType(
     ConstString name, SymbolType symbol_type, Debug symbol_debug_type,
     Visibility symbol_visibility, std::vector<uint32_t> &symbol_indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -777,10 +776,9 @@ size_t Symtab::FindAllSymbolsWithNameAndType(
     AppendSymbolIndexesWithNameAndType(name, symbol_type, symbol_debug_type,
                                        symbol_visibility, symbol_indexes);
   }
-  return symbol_indexes.size();
 }
 
-size_t Symtab::FindAllSymbolsMatchingRexExAndType(
+void Symtab::FindAllSymbolsMatchingRexExAndType(
     const RegularExpression &regex, SymbolType symbol_type,
     Debug symbol_debug_type, Visibility symbol_visibility,
     std::vector<uint32_t> &symbol_indexes) {
@@ -788,7 +786,6 @@ size_t Symtab::FindAllSymbolsMatchingRexExAndType(
 
   AppendSymbolIndexesMatchingRegExAndType(regex, symbol_type, symbol_debug_type,
                                           symbol_visibility, symbol_indexes);
-  return symbol_indexes.size();
 }
 
 Symbol *Symtab::FindFirstSymbolWithNameAndType(ConstString name,
@@ -1024,10 +1021,8 @@ void Symtab::SymbolIndicesToSymbolContextList(
   }
 }
 
-size_t Symtab::FindFunctionSymbols(ConstString name,
-                                   uint32_t name_type_mask,
-                                   SymbolContextList &sc_list) {
-  size_t count = 0;
+void Symtab::FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
+                                 SymbolContextList &sc_list) {
   std::vector<uint32_t> symbol_indexes;
 
   // eFunctionNameTypeAuto should be pre-resolved by a call to
@@ -1108,11 +1103,8 @@ size_t Symtab::FindFunctionSymbols(ConstString name,
     symbol_indexes.erase(
         std::unique(symbol_indexes.begin(), symbol_indexes.end()),
         symbol_indexes.end());
-    count = symbol_indexes.size();
     SymbolIndicesToSymbolContextList(symbol_indexes, sc_list);
   }
-
-  return count;
 }
 
 const Symbol *Symtab::GetParent(Symbol *child_symbol) const {

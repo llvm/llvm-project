@@ -116,6 +116,7 @@ protected:
   bool HasTRACEV8_4 = false;
   bool HasAM = false;
   bool HasSEL2 = false;
+  bool HasPMU = false;
   bool HasTLB_RMI = false;
   bool HasFMI = false;
   bool HasRCPC_IMMO = false;
@@ -435,6 +436,7 @@ public:
   bool hasTRACEV8_4() const { return HasTRACEV8_4; }
   bool hasAM() const { return HasAM; }
   bool hasSEL2() const { return HasSEL2; }
+  bool hasPMU() const { return HasPMU; }
   bool hasTLB_RMI() const { return HasTLB_RMI; }
   bool hasFMI() const { return HasFMI; }
   bool hasRCPC_IMMO() const { return HasRCPC_IMMO; }

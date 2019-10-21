@@ -8,8 +8,8 @@
 define amdgpu_hs void @main([0 x i8] addrspace(6)* inreg %arg) {
   ; GCN-LABEL: name: main
   ; GCN: bb.0.main_body:
-  ; GCN:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 0
-  ; GCN:   [[DEF:%[0-9]+]]:sreg_32_xm0 = IMPLICIT_DEF
+  ; GCN:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; GCN:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GCN:   [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
   ; GCN:   [[DEF1:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
   ; GCN:   [[BUFFER_LOAD_DWORDX4_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFEN [[COPY]], [[DEF1]], [[S_MOV_B32_]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom TargetCustom7, align 1, addrspace 4)
@@ -18,7 +18,7 @@ define amdgpu_hs void @main([0 x i8] addrspace(6)* inreg %arg) {
   ; GCN:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub0
   ; GCN:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_96 = REG_SEQUENCE killed [[COPY3]], %subreg.sub0, killed [[COPY2]], %subreg.sub1, killed [[COPY1]], %subreg.sub2
   ; GCN:   [[COPY4:%[0-9]+]]:vreg_96 = COPY [[REG_SEQUENCE]]
-  ; GCN:   [[DEF2:%[0-9]+]]:sreg_32_xm0 = IMPLICIT_DEF
+  ; GCN:   [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GCN:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
   ; GCN:   [[DEF3:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
   ; GCN:   BUFFER_STORE_DWORDX3_OFFEN_exact killed [[COPY4]], [[COPY5]], [[DEF3]], [[S_MOV_B32_]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 12 into custom TargetCustom7, align 1, addrspace 4)
@@ -34,4 +34,3 @@ main_body:
 
 declare void @llvm.amdgcn.raw.buffer.store.v3i32(<3 x i32>, <4 x i32>, i32, i32, i32 immarg)
 declare <4 x float> @llvm.amdgcn.raw.buffer.load.v4f32(<4 x i32>, i32, i32, i32 immarg)
-

@@ -629,7 +629,7 @@ GlobalVariable *IRLinker::copyGlobalVariableProto(const GlobalVariable *SGVar) {
                          /*init*/ nullptr, SGVar->getName(),
                          /*insertbefore*/ nullptr, SGVar->getThreadLocalMode(),
                          SGVar->getType()->getAddressSpace());
-  NewDGV->setAlignment(SGVar->getAlignment());
+  NewDGV->setAlignment(MaybeAlign(SGVar->getAlignment()));
   NewDGV->copyAttributesFrom(SGVar);
   return NewDGV;
 }

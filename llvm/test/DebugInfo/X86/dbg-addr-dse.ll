@@ -3,6 +3,10 @@
 ; RUN: FileCheck %s < %t.s --check-prefix=ASM
 ; RUN: llvm-dwarfdump %t.o | FileCheck %s --check-prefix=DWARF
 
+; XFAIL: *
+; See PR41992, the third and final dbg.value disappears after
+; LiveDebugVariables.
+
 ; In this example, the variable lives mostly in memory, but at the point of the
 ; assignment to global, it lives nowhere, and is described as the constant
 ; value 1.
@@ -46,12 +50,12 @@ entry:
 }
 
 ; ASM-LABEL: f: # @f
-; ASM: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X:[0-9]+]]] [$rsp+0]
+; ASM: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X:[0-9]+]], DW_OP_deref] $rsp
 ; ASM: movl    %ecx, [[OFF_X]](%rsp)
 ; ASM: callq   escape
 ; ASM: #DEBUG_VALUE: f:x <- 1
 ; ASM: movl    $1, global(%rip)
-; ASM: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X]]] [$rsp+0]
+; ASM: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X]], DW_OP_deref] $rsp
 ; ASM: movl    $2, [[OFF_X]](%rsp)
 ; ASM: callq   escape
 ; ASM: retq

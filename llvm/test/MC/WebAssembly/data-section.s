@@ -35,8 +35,9 @@ test0:
 # BIN-NEXT:   - Type:            TYPE
 # BIN-NEXT:     Signatures:
 # BIN-NEXT:       - Index:           0
-# BIN-NEXT:         ReturnType:      I32
 # BIN-NEXT:         ParamTypes:      []
+# BIN-NEXT:         ReturnTypes:
+# BIN-NEXT:           - I32
 # BIN-NEXT:   - Type:            IMPORT
 # BIN-NEXT:     Imports:
 # BIN-NEXT:       - Module:          env

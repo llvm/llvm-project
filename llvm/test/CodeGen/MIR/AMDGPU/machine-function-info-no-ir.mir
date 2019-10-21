@@ -76,7 +76,7 @@ body:             |
 # ALL-LABEL: name: no_mfi
 # FULL: machineFunctionInfo:
 # FULL-NEXT: explicitKernArgSize: 0
-# FULL-NEXT: maxKernArgAlign: 0
+# FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
 # FULL-NEXT: isEntryFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
@@ -96,6 +96,7 @@ body:             |
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
+# SIMPLE-NEXT: maxKernArgAlign: 1
 # SIMPLE-NEXT: argumentInfo:
 # SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 # SIMPLE-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr33' }
@@ -112,7 +113,7 @@ body:             |
 # ALL-LABEL: name: empty_mfi
 # FULL: machineFunctionInfo:
 # FULL-NEXT: explicitKernArgSize: 0
-# FULL-NEXT: maxKernArgAlign: 0
+# FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
 # FULL-NEXT: isEntryFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
@@ -132,6 +133,7 @@ body:             |
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
+# SIMPLE-NEXT: maxKernArgAlign: 1
 # SIMPLE-NEXT: argumentInfo:
 # SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 # SIMPLE-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr33' }
@@ -149,7 +151,7 @@ body:             |
 # ALL-LABEL: name: empty_mfi_entry_func
 # FULL: machineFunctionInfo:
 # FULL-NEXT: explicitKernArgSize: 0
-# FULL-NEXT: maxKernArgAlign: 0
+# FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
 # FULL-NEXT: isEntryFunction: true
 # FULL-NEXT: noSignedZerosFPMath: false
@@ -169,6 +171,7 @@ body:             |
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
+# SIMPLE-NEXT: maxKernArgAlign: 1
 # SIMPLE-NEXT: isEntryFunction: true
 # SIMPLE-NEXT: argumentInfo:
 # SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }

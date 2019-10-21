@@ -2050,6 +2050,7 @@ Unwind *Thread::GetUnwinder() {
     case llvm::Triple::x86:
     case llvm::Triple::arm:
     case llvm::Triple::aarch64:
+    case llvm::Triple::aarch64_32:
     case llvm::Triple::thumb:
     case llvm::Triple::mips:
     case llvm::Triple::mipsel:
@@ -2060,6 +2061,7 @@ Unwind *Thread::GetUnwinder() {
     case llvm::Triple::ppc64le:
     case llvm::Triple::systemz:
     case llvm::Triple::hexagon:
+    case llvm::Triple::arc:
       m_unwinder_up.reset(new UnwindLLDB(*this));
       break;
 

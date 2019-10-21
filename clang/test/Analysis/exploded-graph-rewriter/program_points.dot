@@ -28,22 +28,28 @@
 // CHECK-SAME: </table>
 Node0x1 [shape=record,label=
  "{
-    { "node_id": 1, "pointer": "0x1", "has_report": false, "is_sink": false,
-      "program_state": null, "program_points": [
+    {
+      "state_id": 0, "program_state": null, "program_points": [
       {
         "kind": "Edge",
         "src_id": 0,
         "dst_id": 1,
         "terminator": null,
         "term_kind": null,
-        "tag": null
+        "tag": null,
+        "node_id": 1,
+        "has_report": 0,
+        "is_sink": 0
       },
       {
         "kind": "BlockEntrance",
         "block_id": 1,
         "terminator": null,
         "term_kind": null,
-        "tag": null
+        "tag": null,
+        "node_id": 2,
+        "has_report": 0,
+        "is_sink": 0
       }
     ]}
 \l}"];
@@ -72,10 +78,9 @@ Node0x1 [shape=record,label=
 // CHECK-SAME:     </td>
 // CHECK-SAME:   </tr>
 // CHECK-SAME: </table>
-Node0x2 [shape=record,label=
+Node0x3 [shape=record,label=
  "{
-    { "node_id": 2, "pointer": "0x2", "has_report": false, "is_sink": false,
-      "program_state": null, "program_points": [
+    { "state_id": 0, "program_state": null, "program_points": [
       {
         "kind": "Statement",
         "stmt_kind": "DeclRefExpr",
@@ -88,7 +93,11 @@ Node0x2 [shape=record,label=
           "line": 4,
           "column": 5
         },
-        "tag": "ExprEngine : Clean Node"
+        "tag": "ExprEngine : Clean Node",
+        "node_id": 3,
+        "pointer": "0x3",
+        "has_report": 0,
+        "is_sink": 0
       }
     ]}
 \l}"];
@@ -97,10 +106,10 @@ Node0x2 [shape=record,label=
 
 // CHECK-NEXT: <b>Program point:</b>
 // CHECK-SAME: <td align="left">\{ ... \}</td>
-Node0x3 [shape=record,label=
+Node0x4 [shape=record,label=
  "{
-    { "node_id": 3, "pointer": "0x3", "has_report": false, "is_sink": false,
-      "program_state": null, "program_points": [
+    {
+      "state_id": 0, "program_state": null, "program_points": [
       {
         "kind": "Statement",
         "stmt_kind": "CompoundStmt",
@@ -112,7 +121,60 @@ Node0x3 [shape=record,label=
           "line": 7,
           "column": 8
         },
-        "tag": "ExprEngine : Clean Node"
+        "tag": "ExprEngine : Clean Node",
+        "node_id": 4,
+        "has_report": 0,
+        "is_sink": 0
+      }
+    ]}
+\l}"];
+
+// CHECK-NEXT: <b>Program point:</b>
+// CHECK-SAME: <table border="0" align="left" width="0">
+// CHECK-SAME:   <tr>
+// CHECK-SAME:     <td align="left" width="0">
+// CHECK-SAME:       main.cpp:<b>8</b>:<b>9</b>:
+// CHECK-SAME:     </td>
+// CHECK-SAME:     <td align="left" width="0">
+// CHECK-SAME:       <font color="cyan4">
+// CHECK-SAME:         ImplicitCastExpr (LValueToRValue)
+// CHECK-SAME:       </font>
+// CHECK-SAME:     </td>
+// CHECK-SAME:     <td align="left"><i>S5</i></td>
+// CHECK-SAME:     <td align="left">
+// CHECK-SAME:       <font color="cyan3">PreStmt</font>
+// CHECK-SAME:     </td>
+// CHECK-SAME:     <td align="left">y</td>
+// CHECK-SAME:   </tr>
+// CHECK-SAME:   <tr>
+// CHECK-SAME:     <td width="0">
+// CHECK-SAME:     </td>
+// CHECK-SAME:     <td colspan="3" align="left">
+// CHECK-SAME:       <b>Tag: </b>
+// CHECK-SAME:       <font color="crimson">ExprEngine : Clean Node</font>
+// CHECK-SAME:     </td>
+// CHECK-SAME:   </tr>
+// CHECK-SAME: </table>
+Node0x5 [shape=record,label=
+ "{
+    { "state_id": 0, "program_state": null, "program_points": [
+      {
+        "kind": "Statement",
+        "stmt_kind": "ImplicitCastExpr",
+        "cast_kind": "LValueToRValue",
+        "stmt_point_kind": "PreStmt",
+        "stmt_id": 5,
+        "pointer": "0x6",
+        "pretty": "y",
+        "location": {
+          "file": "main.cpp",
+          "line": 8,
+          "column": 9
+        },
+        "tag": "ExprEngine : Clean Node",
+        "node_id": 5,
+        "has_report": 0,
+        "is_sink": 0
       }
     ]}
 \l}"];

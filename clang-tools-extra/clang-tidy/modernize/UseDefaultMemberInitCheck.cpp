@@ -29,7 +29,7 @@ static StringRef getValueOfValueInit(const QualType InitType) {
     return "false";
 
   case Type::STK_Integral:
-    switch (InitType->getAs<BuiltinType>()->getKind()) {
+    switch (InitType->castAs<BuiltinType>()->getKind()) {
     case BuiltinType::Char_U:
     case BuiltinType::UChar:
     case BuiltinType::Char_S:
@@ -47,7 +47,7 @@ static StringRef getValueOfValueInit(const QualType InitType) {
     }
 
   case Type::STK_Floating:
-    switch (InitType->getAs<BuiltinType>()->getKind()) {
+    switch (InitType->castAs<BuiltinType>()->getKind()) {
     case BuiltinType::Half:
     case BuiltinType::Float:
       return "0.0f";
@@ -58,10 +58,10 @@ static StringRef getValueOfValueInit(const QualType InitType) {
   case Type::STK_FloatingComplex:
   case Type::STK_IntegralComplex:
     return getValueOfValueInit(
-        InitType->getAs<ComplexType>()->getElementType());
+        InitType->castAs<ComplexType>()->getElementType());
 
   case Type::STK_FixedPoint:
-    switch (InitType->getAs<BuiltinType>()->getKind()) {
+    switch (InitType->castAs<BuiltinType>()->getKind()) {
     case BuiltinType::ShortAccum:
     case BuiltinType::SatShortAccum:
       return "0.0hk";

@@ -339,7 +339,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
                                   // not, we assume no limit
 
   // build the qSupported packet
-  std::vector<std::string> features = {"xmlRegisters=i386,arm,mips"};
+  std::vector<std::string> features = {"xmlRegisters=i386,arm,mips,arc"};
   StreamString packet;
   packet.PutCString("qSupported");
   for (uint32_t i = 0; i < features.size(); ++i) {
@@ -1271,6 +1271,7 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
                 host_triple.getOS() == llvm::Triple::Darwin) {
               switch (m_host_arch.GetMachine()) {
               case llvm::Triple::aarch64:
+              case llvm::Triple::aarch64_32:
               case llvm::Triple::arm:
               case llvm::Triple::thumb:
                 host_triple.setOS(llvm::Triple::IOS);
@@ -1927,6 +1928,26 @@ bool GDBRemoteCommunicationClient::DecodeProcessInfoResponse(
         std::string name;
         extractor.GetHexByteString(name);
         process_info.GetExecutableFile().SetFile(name, FileSpec::Style::native);
+      } else if (name.equals("args")) {
+        llvm::StringRef encoded_args(value), hex_arg;
+
+        bool is_arg0 = true;
+        while (!encoded_args.empty()) {
+          std::tie(hex_arg, encoded_args) = encoded_args.split('-');
+          std::string arg;
+          StringExtractor extractor(hex_arg);
+          if (extractor.GetHexByteString(arg) * 2 != hex_arg.size()) {
+            // In case of wrong encoding, we discard all the arguments
+            process_info.GetArguments().Clear();
+            process_info.SetArg0("");
+            break;
+          }
+          if (is_arg0)
+            process_info.SetArg0(arg);
+          else
+            process_info.GetArguments().AppendArgument(arg);
+          is_arg0 = false;
+        }
       } else if (name.equals("cputype")) {
         value.getAsInteger(0, cpu);
       } else if (name.equals("cpusubtype")) {
@@ -3162,7 +3183,8 @@ bool GDBRemoteCommunicationClient::AvoidGPackets(ProcessGDBRemote *process) {
       if (arch.IsValid() &&
           arch.GetTriple().getVendor() == llvm::Triple::Apple &&
           arch.GetTriple().getOS() == llvm::Triple::IOS &&
-          arch.GetTriple().getArch() == llvm::Triple::aarch64) {
+          (arch.GetTriple().getArch() == llvm::Triple::aarch64 ||
+           arch.GetTriple().getArch() == llvm::Triple::aarch64_32)) {
         m_avoid_g_packets = eLazyBoolYes;
         uint32_t gdb_server_version = GetGDBServerProgramVersion();
         if (gdb_server_version != 0) {
@@ -3812,8 +3834,9 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
 
               addr_t symbol_load_addr = LLDB_INVALID_ADDRESS;
               lldb_private::SymbolContextList sc_list;
-              if (process->GetTarget().GetImages().FindSymbolsWithNameAndType(
-                      ConstString(symbol_name), eSymbolTypeAny, sc_list)) {
+              process->GetTarget().GetImages().FindSymbolsWithNameAndType(
+                  ConstString(symbol_name), eSymbolTypeAny, sc_list);
+              if (!sc_list.IsEmpty()) {
                 const size_t num_scs = sc_list.GetSize();
                 for (size_t sc_idx = 0;
                      sc_idx < num_scs &&

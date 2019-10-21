@@ -673,6 +673,10 @@ public:
     return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue());
   }
 
+  Value *VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E) {
+    return Builder.getInt1(E->isSatisfied());
+  }
+
   Value *VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *E) {
     return llvm::ConstantInt::get(Builder.getInt32Ty(), E->getValue());
   }
@@ -812,6 +816,10 @@ public:
 
   Value *VisitBinPtrMemD(const Expr *E) { return EmitLoadOfLValue(E); }
   Value *VisitBinPtrMemI(const Expr *E) { return EmitLoadOfLValue(E); }
+
+  Value *VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *E) {
+    return Visit(E->getSemanticForm());
+  }
 
   // Other Operators.
   Value *VisitBlockExpr(const BlockExpr *BE);

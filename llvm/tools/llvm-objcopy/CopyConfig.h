@@ -19,6 +19,7 @@
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/Regex.h"
 // Necessary for llvm::DebugCompressionType::None
 #include "llvm/Target/TargetOptions.h"
@@ -88,28 +89,58 @@ enum class DiscardType {
   Locals, // --discard-locals (-X)
 };
 
-class NameOrRegex {
+enum class MatchStyle {
+  Literal,  // Default for symbols.
+  Wildcard, // Default for sections, or enabled with --wildcard (-w).
+  Regex,    // Enabled with --regex.
+};
+
+class NameOrPattern {
   StringRef Name;
   // Regex is shared between multiple CopyConfig instances.
   std::shared_ptr<Regex> R;
+  std::shared_ptr<GlobPattern> G;
+  bool IsPositiveMatch = true;
+
+  NameOrPattern(StringRef N) : Name(N) {}
+  NameOrPattern(std::shared_ptr<Regex> R) : R(R) {}
+  NameOrPattern(std::shared_ptr<GlobPattern> G, bool IsPositiveMatch)
+      : G(G), IsPositiveMatch(IsPositiveMatch) {}
 
 public:
-  NameOrRegex(StringRef Pattern, bool IsRegex);
-  bool operator==(StringRef S) const { return R ? R->match(S) : Name == S; }
+  // ErrorCallback is used to handle recoverable errors. An Error returned
+  // by the callback aborts the parsing and is then returned by this function.
+  static Expected<NameOrPattern>
+  create(StringRef Pattern, MatchStyle MS,
+         llvm::function_ref<Error(Error)> ErrorCallback);
+
+  bool isPositiveMatch() const { return IsPositiveMatch; }
+  bool operator==(StringRef S) const {
+    return R ? R->match(S) : G ? G->match(S) : Name == S;
+  }
   bool operator!=(StringRef S) const { return !operator==(S); }
 };
 
 // Matcher that checks symbol or section names against the command line flags
 // provided for that option.
 class NameMatcher {
-  std::vector<NameOrRegex> Matchers;
+  std::vector<NameOrPattern> PosMatchers;
+  std::vector<NameOrPattern> NegMatchers;
 
 public:
-  void addMatcher(NameOrRegex Matcher) {
-    Matchers.push_back(std::move(Matcher));
+  Error addMatcher(Expected<NameOrPattern> Matcher) {
+    if (!Matcher)
+      return Matcher.takeError();
+    if (Matcher->isPositiveMatch())
+      PosMatchers.push_back(std::move(*Matcher));
+    else
+      NegMatchers.push_back(std::move(*Matcher));
+    return Error::success();
   }
-  bool matches(StringRef S) const { return is_contained(Matchers, S); }
-  bool empty() const { return Matchers.empty(); }
+  bool matches(StringRef S) const {
+    return is_contained(PosMatchers, S) && !is_contained(NegMatchers, S);
+  }
+  bool empty() const { return PosMatchers.empty() && NegMatchers.empty(); }
 };
 
 // Configuration for copying/stripping a single file.
@@ -214,8 +245,11 @@ struct DriverConfig {
 
 // ParseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseObjcopyOptions will print the help messege and
-// exit.
-Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr);
+// exit. ErrorCallback is used to handle recoverable errors. An Error returned
+// by the callback aborts the parsing and is then returned by this function.
+Expected<DriverConfig>
+parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
+                    llvm::function_ref<Error(Error)> ErrorCallback);
 
 // ParseStripOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseStripOptions will print the help messege and
@@ -223,7 +257,7 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr);
 // by the callback aborts the parsing and is then returned by this function.
 Expected<DriverConfig>
 parseStripOptions(ArrayRef<const char *> ArgsArr,
-                  std::function<Error(Error)> ErrorCallback);
+                  llvm::function_ref<Error(Error)> ErrorCallback);
 
 } // namespace objcopy
 } // namespace llvm

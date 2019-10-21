@@ -5,13 +5,25 @@
 // UNSUPPORTED: system-windows
 
 Node0x1 [shape=record,label=
- "{{ "node_id": 1, "pointer": "0x1", "has_report": false, "is_sink": false,
-     "program_state": null, "program_points": []}\l}"];
+ "{{ "state_id": 0, "program_state": null, "program_points": [
+    {
+      "kind": "BlockEntrance", "block_id": 1,
+      "terminator": null, "term_kind": null,
+      "tag": null, "node_id": 1,
+      "has_report": 0, "is_sink": 0
+    }
+  ]}\l}"];
 
 // LIGHT: Node0x1 -> Node0x2;
 // DARK:  Node0x1 -> Node0x2 [color="white"];
 Node0x1 -> Node0x2;
 
 Node0x2 [shape=record,label=
- "{{ "node_id": 2, "pointer": "0x2", "has_report": false, "is_sink": false,
-     "program_state": null, "program_points": []}\l}"];
+ "{{ "state_id": 0, "program_state": null, "program_points": [
+    {
+      "kind": "BlockEntrance", "block_id": 1,
+      "terminator": null, "term_kind": null,
+      "tag": null, "node_id": 1,
+      "has_report": 0, "is_sink": 0
+    }
+ ]}\l}"];

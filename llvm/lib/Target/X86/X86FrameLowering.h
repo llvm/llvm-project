@@ -25,7 +25,7 @@ class X86RegisterInfo;
 
 class X86FrameLowering : public TargetFrameLowering {
 public:
-  X86FrameLowering(const X86Subtarget &STI, unsigned StackAlignOverride);
+  X86FrameLowering(const X86Subtarget &STI, MaybeAlign StackAlignOverride);
 
   // Cached subtarget predicates.
 

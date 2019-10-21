@@ -22,7 +22,8 @@ protected:
 
 public:
   explicit MSP430FrameLowering()
-      : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, 2, -2, 2) {}
+      : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(2), -2,
+                            Align(2)) {}
 
   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
   /// the function.

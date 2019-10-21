@@ -406,6 +406,13 @@ namespace ISD {
     /// than the vector element type, and is implicitly truncated to it.
     SCALAR_TO_VECTOR,
 
+    /// SPLAT_VECTOR(VAL) - Returns a vector with the scalar value VAL
+    /// duplicated in all lanes. The type of the operand must match the vector
+    /// element type, except when they are integer types.  In this case the
+    /// operand is allowed to be wider than the vector element type, and is
+    /// implicitly truncated to it.
+    SPLAT_VECTOR,
+
     /// MULHU/MULHS - Multiply high - Multiply two integers of type iN,
     /// producing an unsigned/signed value of type i[2*N], then return the top
     /// part.

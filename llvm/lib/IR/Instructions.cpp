@@ -2983,8 +2983,8 @@ bool CastInst::isCastable(Type *SrcTy, Type *DestTy) {
       }
 
   // Get the bit sizes, we'll need these
-  auto SrcBits = SrcTy->getPrimitiveSizeInBits();   // 0 for ptr
-  auto DestBits = DestTy->getPrimitiveSizeInBits(); // 0 for ptr
+  TypeSize SrcBits = SrcTy->getPrimitiveSizeInBits();   // 0 for ptr
+  TypeSize DestBits = DestTy->getPrimitiveSizeInBits(); // 0 for ptr
 
   // Run through the possibilities ...
   if (DestTy->isIntegerTy()) {               // Casting to integral
@@ -3045,8 +3045,8 @@ bool CastInst::isBitCastable(Type *SrcTy, Type *DestTy) {
     }
   }
 
-  auto SrcBits = SrcTy->getPrimitiveSizeInBits();   // 0 for ptr
-  auto DestBits = DestTy->getPrimitiveSizeInBits(); // 0 for ptr
+  TypeSize SrcBits = SrcTy->getPrimitiveSizeInBits();   // 0 for ptr
+  TypeSize DestBits = DestTy->getPrimitiveSizeInBits(); // 0 for ptr
 
   // Could still have vectors of pointers if the number of elements doesn't
   // match

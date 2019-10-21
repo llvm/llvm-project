@@ -1119,8 +1119,12 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_rvalue_reference
 template <class _Tp> using add_rvalue_reference_t = typename add_rvalue_reference<_Tp>::type;
 #endif
 
+// Suppress deprecation notice for volatile-qualified return type resulting
+// from volatile-qualified types _Tp.
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp> _Tp&& __declval(int);
 template <class _Tp> _Tp   __declval(long);
+_LIBCPP_SUPPRESS_DEPRECATED_POP
 
 template <class _Tp>
 decltype(_VSTD::__declval<_Tp>(0))

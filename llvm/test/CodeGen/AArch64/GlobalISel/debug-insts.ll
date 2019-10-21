@@ -15,7 +15,7 @@ entry:
 }
 
 ; CHECK-LABEL: name: debug_declare_vla
-; CHECK: DBG_VALUE %{{[0-9]+}}(p0), 0, !14, !DIExpression(), debug-location !15
+; CHECK: DBG_VALUE %{{[0-9]+}}(p0), $noreg, !14, !DIExpression(DW_OP_deref), debug-location !15
 define void @debug_declare_vla(i32 %in) #0 !dbg !13 {
 entry:
   %vla.addr = alloca i32, i32 %in
@@ -32,11 +32,11 @@ define void @debug_value(i32 %in) #0 !dbg !16 {
   store i32 %in, i32* %addr
 ; CHECK: DBG_VALUE %1(p0), $noreg, !17, !DIExpression(DW_OP_deref), debug-location !18
   call void @llvm.dbg.value(metadata i32* %addr, i64 0, metadata !17, metadata !DIExpression(DW_OP_deref)), !dbg !18
-; CHECK: DBG_VALUE 123, 0, !17, !DIExpression(), debug-location !18
+; CHECK: DBG_VALUE 123, $noreg, !17, !DIExpression(), debug-location !18
   call void @llvm.dbg.value(metadata i32 123, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
-; CHECK: DBG_VALUE float 1.000000e+00, 0, !17, !DIExpression(), debug-location !18
+; CHECK: DBG_VALUE float 1.000000e+00, $noreg, !17, !DIExpression(), debug-location !18
   call void @llvm.dbg.value(metadata float 1.000000e+00, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
-; CHECK: DBG_VALUE $noreg, 0, !17, !DIExpression(), debug-location !18
+; CHECK: DBG_VALUE $noreg, $noreg, !17, !DIExpression(), debug-location !18
   call void @llvm.dbg.value(metadata i32* null, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
   ret void
 }

@@ -45,6 +45,6 @@ int main() {
 // CHECK: AddressSanitizer: heap-use-after-free on address [[ADDR:0x[0-9a-f]+]]
 // CHECK: foo::bar<42>{{.*}}demangled_names.cpp
 // CHECK: foo::spam{{.*}}demangled_names.cpp
-// CHECK: baz<char *,1>{{.*}}demangled_names.cpp
+// CHECK: baz<char *,{{ *}}1>{{.*}}demangled_names.cpp
 // CHECK: A<char *>::~A<char *>{{.*}}demangled_names.cpp
 }

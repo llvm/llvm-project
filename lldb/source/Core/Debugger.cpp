@@ -973,34 +973,31 @@ void Debugger::AdoptTopIOHandlerFilesIfInvalid(FileSP &in, StreamFileSP &out,
   std::lock_guard<std::recursive_mutex> guard(m_input_reader_stack.GetMutex());
   IOHandlerSP top_reader_sp(m_input_reader_stack.Top());
   // If no STDIN has been set, then set it appropriately
-  if (!in) {
+  if (!in || !in->IsValid()) {
     if (top_reader_sp)
       in = top_reader_sp->GetInputFileSP();
     else
       in = GetInputFileSP();
-
     // If there is nothing, use stdin
     if (!in)
       in = std::make_shared<NativeFile>(stdin, false);
   }
   // If no STDOUT has been set, then set it appropriately
-  if (!out) {
+  if (!out || !out->GetFile().IsValid()) {
     if (top_reader_sp)
       out = top_reader_sp->GetOutputStreamFileSP();
     else
       out = GetOutputStreamSP();
-
     // If there is nothing, use stdout
     if (!out)
       out = std::make_shared<StreamFile>(stdout, false);
   }
   // If no STDERR has been set, then set it appropriately
-  if (!err) {
+  if (!err || !err->GetFile().IsValid()) {
     if (top_reader_sp)
       err = top_reader_sp->GetErrorStreamFileSP();
     else
       err = GetErrorStreamSP();
-
     // If there is nothing, use stderr
     if (!err)
       err = std::make_shared<StreamFile>(stderr, false);

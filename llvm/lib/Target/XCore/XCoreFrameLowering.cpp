@@ -211,7 +211,7 @@ static void RestoreSpillList(MachineBasicBlock &MBB,
 //===----------------------------------------------------------------------===//
 
 XCoreFrameLowering::XCoreFrameLowering(const XCoreSubtarget &sti)
-  : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, 4, 0) {
+    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(4), 0) {
   // Do nothing
 }
 

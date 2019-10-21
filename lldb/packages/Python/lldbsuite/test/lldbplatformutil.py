@@ -27,7 +27,7 @@ def check_first_register_readable(test_case):
         test_case.expect("register read eax", substrs=['eax = 0x'])
     elif arch in ['arm', 'armv7', 'armv7k']:
         test_case.expect("register read r0", substrs=['r0 = 0x'])
-    elif arch in ['aarch64', 'arm64']:
+    elif arch in ['aarch64', 'arm64', 'arm64e', 'arm64_32']:
         test_case.expect("register read x0", substrs=['x0 = 0x'])
     elif re.match("mips", arch):
         test_case.expect("register read zero", substrs=['zero = 0x'])

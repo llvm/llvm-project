@@ -37,6 +37,14 @@
 # GFX1064: v_cndmask_b32_e32 v1, v2, v3, vcc ;
 0x02,0x07,0x02,0x02
 
+# GFX1032: v_cndmask_b32_sdwa v5, v1, v2, vcc_lo  dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD
+# GFX1064: v_cndmask_b32_sdwa v5, v1, v2, vcc  dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:DWORD
+0xf9,0x04,0x0a,0x02,0x01,0x16,0x06,0x06
+
+# GFX1032: v_cndmask_b32_dpp v5, v1, v2, vcc_lo  quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0
+# GFX1064: v_cndmask_b32_dpp v5, v1, v2, vcc  quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0
+0xfa,0x04,0x0a,0x02,0x01,0xe4,0x00,0x00
+
 # GFX1032: v_add_co_u32_e64 v2, vcc_lo, s0, v2
 # GFX1064: v_add_co_u32_e64 v2, vcc, s0, v2
 0x02,0x6a,0x0f,0xd7,0x00,0x04,0x02,0x00

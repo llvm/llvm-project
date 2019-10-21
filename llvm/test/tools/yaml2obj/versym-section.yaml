@@ -4,7 +4,7 @@
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readobj -V %t1 | FileCheck %s
 
-# CHECK:      Version symbols [
+# CHECK:      VersionSymbols [
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Version: 0
 # CHECK-NEXT:     Name:
@@ -18,9 +18,9 @@
 # CHECK-NEXT:     Name: f2@v2
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
-# CHECK-NEXT: SHT_GNU_verdef {
-# CHECK-NEXT: }
-# CHECK-NEXT: SHT_GNU_verneed {
+# CHECK-NEXT: VersionDefinitions [
+# CHECK-NEXT: ]
+# CHECK-NEXT: VersionRequirements [
 # CHECK-NEXT:   Dependency {
 # CHECK-NEXT:     Version: 1
 # CHECK-NEXT:     Count: 2
@@ -40,7 +40,7 @@
 # CHECK-NEXT:       }
 # CHECK-NEXT:     ]
 # CHECK-NEXT:   }
-# CHECK-NEXT: }
+# CHECK-NEXT: ]
 
 --- !ELF
 FileHeader:

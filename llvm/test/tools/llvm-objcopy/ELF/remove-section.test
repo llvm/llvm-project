@@ -30,6 +30,7 @@ Sections:
   - Name:            .test3
     Type:            SHT_PROGBITS
     Flags:           [ ]
+Symbols: []
 
 # CHECK: SectionHeaderCount: 6
 

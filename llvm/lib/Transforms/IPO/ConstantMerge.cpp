@@ -120,7 +120,7 @@ static void replace(Module &M, GlobalVariable *Old, GlobalVariable *New) {
 
   // Bump the alignment if necessary.
   if (Old->getAlignment() || New->getAlignment())
-    New->setAlignment(std::max(getAlignment(Old), getAlignment(New)));
+    New->setAlignment(Align(std::max(getAlignment(Old), getAlignment(New))));
 
   copyDebugLocMetadata(Old, New);
   Old->replaceAllUsesWith(NewConstant);

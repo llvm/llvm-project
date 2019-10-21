@@ -21,6 +21,7 @@
 
 namespace llvm {
 
+struct BasicBlockInfo;
 using BBInfoVector = SmallVectorImpl<BasicBlockInfo>;
 
 /// UnknownPadding - Return the worst case padding that could result from

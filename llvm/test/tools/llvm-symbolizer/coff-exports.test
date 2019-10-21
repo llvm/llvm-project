@@ -5,9 +5,6 @@ RUN:   | FileCheck %s
 RUN: llvm-symbolizer 0x500A 0x5038 0x504B -i --relative-address -obj="%p/Inputs/coff-exports.exe" \
 RUN:   | FileCheck %s
 
-This test relies on UnDecorateSymbolName, which is Win32-only.
-REQUIRES: system-windows
-
 We get the expected stack trace, except 'foo' appears for the 'bar' frame
 because 'bar' isn't in the export table.
 

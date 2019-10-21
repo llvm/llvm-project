@@ -105,7 +105,7 @@ static const llvm::opt::ArgStringList *getCC1Arguments(
         // tooling will consider host-compilation only. For tooling on device
         // compilation, device compilation only option, such as
         // `--cuda-device-only`, needs specifying.
-        assert(Actions.size() == 2);
+        assert(Actions.size() > 1);
         assert(
             isa<driver::CompileJobAction>(Actions.front()) ||
             // On MacOSX real actions may end up being wrapped in

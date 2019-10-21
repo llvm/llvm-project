@@ -9,8 +9,8 @@
 #include "CommandObjectReproducer.h"
 
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/GDBRemote.h"
+#include "lldb/Utility/Reproducer.h"
 
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -27,6 +27,7 @@ enum ReproducerProvider {
   eReproducerProviderFiles,
   eReproducerProviderGDB,
   eReproducerProviderVersion,
+  eReproducerProviderWorkingDirectory,
   eReproducerProviderNone
 };
 
@@ -50,6 +51,11 @@ static constexpr OptionEnumValueElement g_reproducer_provider_type[] = {
         eReproducerProviderVersion,
         "version",
         "Version",
+    },
+    {
+        eReproducerProviderWorkingDirectory,
+        "cwd",
+        "Working Directory",
     },
     {
         eReproducerProviderNone,
@@ -155,7 +161,9 @@ class CommandObjectReproducerDump : public CommandObjectParsed {
 public:
   CommandObjectReproducerDump(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "reproducer dump",
-                            "Dump the information contained in a reproducer.",
+                            "Dump the information contained in a reproducer. "
+                            "If no reproducer is specified during replay, it "
+                            "dumps the content of the current reproducer.",
                             nullptr) {}
 
   ~CommandObjectReproducerDump() override = default;
@@ -265,19 +273,23 @@ protected:
       return true;
     }
     case eReproducerProviderVersion: {
-      FileSpec version_file = loader->GetFile<VersionProvider::Info>();
-
-      // Load the version info into a buffer.
-      ErrorOr<std::unique_ptr<MemoryBuffer>> buffer =
-          vfs::getRealFileSystem()->getBufferForFile(version_file.GetPath());
-      if (!buffer) {
-        SetError(result, errorCodeToError(buffer.getError()));
+      Expected<std::string> version = loader->LoadBuffer<VersionProvider>();
+      if (!version) {
+        SetError(result, version.takeError());
         return false;
       }
-
-      // Return the version string.
-      StringRef version = (*buffer)->getBuffer();
-      result.AppendMessage(version.str());
+      result.AppendMessage(*version);
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return true;
+    }
+    case eReproducerProviderWorkingDirectory: {
+      Expected<std::string> cwd =
+          loader->LoadBuffer<WorkingDirectoryProvider>();
+      if (!cwd) {
+        SetError(result, cwd.takeError());
+        return false;
+      }
+      result.AppendMessage(*cwd);
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;
     }
@@ -327,7 +339,7 @@ protected:
         return false;
       }
 
-      for (GDBRemotePacket& packet : packets) {
+      for (GDBRemotePacket &packet : packets) {
         packet.Dump(result.GetOutputStream());
       }
 
@@ -351,7 +363,15 @@ CommandObjectReproducer::CommandObjectReproducer(
     CommandInterpreter &interpreter)
     : CommandObjectMultiword(
           interpreter, "reproducer",
-          "Commands for manipulate the reproducer functionality.",
+          "Commands for manipulating reproducers. Reproducers make it possible "
+          "to capture full debug sessions with all its dependencies. The "
+          "resulting reproducer is used to replay the debug session while "
+          "debugging the debugger.\n"
+          "Because reproducers need the whole the debug session from "
+          "beginning to end, you need to launch the debugger in capture or "
+          "replay mode, commonly though the command line driver.\n"
+          "Reproducers are unrelated record-replay debugging, as you cannot "
+          "interact with the debugger during replay.\n",
           "reproducer <subcommand> [<subcommand-options>]") {
   LoadSubCommand(
       "generate",

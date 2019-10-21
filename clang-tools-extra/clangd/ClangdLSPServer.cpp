@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangdLSPServer.h"
+#include "Context.h"
 #include "Diagnostics.h"
 #include "DraftStore.h"
 #include "FormattedString.h"
@@ -465,10 +466,6 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
         break;
       }
   }
-  llvm::Optional<WithContextValue> WithOffsetEncoding;
-  if (NegotiatedOffsetEncoding)
-    WithOffsetEncoding.emplace(kCurrentOffsetEncoding,
-                               *NegotiatedOffsetEncoding);
 
   ClangdServerOpts.SemanticHighlighting =
       Params.capabilities.SemanticHighlighting;
@@ -490,8 +487,18 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   }
   CDB.emplace(BaseCDB.get(), Params.initializationOptions.fallbackFlags,
               ClangdServerOpts.ResourceDir);
-  Server.emplace(*CDB, FSProvider, static_cast<DiagnosticsConsumer &>(*this),
-                 ClangdServerOpts);
+  {
+    // Switch caller's context with LSPServer's background context. Since we
+    // rather want to propagate information from LSPServer's context into the
+    // Server, CDB, etc.
+    WithContext MainContext(BackgroundContext.clone());
+    llvm::Optional<WithContextValue> WithOffsetEncoding;
+    if (NegotiatedOffsetEncoding)
+      WithOffsetEncoding.emplace(kCurrentOffsetEncoding,
+                                 *NegotiatedOffsetEncoding);
+    Server.emplace(*CDB, FSProvider, static_cast<DiagnosticsConsumer &>(*this),
+                   ClangdServerOpts);
+  }
   applyConfiguration(Params.initializationOptions.ConfigSettings);
 
   CCOpts.EnableSnippets = Params.capabilities.CompletionSnippets;
@@ -1184,9 +1191,9 @@ ClangdLSPServer::ClangdLSPServer(
     llvm::Optional<Path> CompileCommandsDir, bool UseDirBasedCDB,
     llvm::Optional<OffsetEncoding> ForcedOffsetEncoding,
     const ClangdServer::Options &Opts)
-    : Transp(Transp), MsgHandler(new MessageHandler(*this)),
-      FSProvider(FSProvider), CCOpts(CCOpts),
-      SupportedSymbolKinds(defaultSymbolKinds()),
+    : BackgroundContext(Context::current().clone()), Transp(Transp),
+      MsgHandler(new MessageHandler(*this)), FSProvider(FSProvider),
+      CCOpts(CCOpts), SupportedSymbolKinds(defaultSymbolKinds()),
       SupportedCompletionItemKinds(defaultCompletionItemKinds()),
       UseDirBasedCDB(UseDirBasedCDB),
       CompileCommandsDir(std::move(CompileCommandsDir)), ClangdServerOpts(Opts),

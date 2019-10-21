@@ -832,6 +832,10 @@ const DIExpression *MachineInstr::getDebugExpression() const {
   return cast<DIExpression>(getOperand(3).getMetadata());
 }
 
+bool MachineInstr::isDebugEntryValue() const {
+  return isDebugValue() && getDebugExpression()->isEntryValue();
+}
+
 const TargetRegisterClass*
 MachineInstr::getRegClassConstraint(unsigned OpIdx,
                                     const TargetInstrInfo *TII,
@@ -1164,7 +1168,7 @@ void MachineInstr::substituteRegister(Register FromReg, Register ToReg,
 /// isSafeToMove - Return true if it is safe to move this instruction. If
 /// SawStore is set to true, it means that there is a store (or call) between
 /// the instruction's location and its intended destination.
-bool MachineInstr::isSafeToMove(AliasAnalysis *AA, bool &SawStore) const {
+bool MachineInstr::isSafeToMove(AAResults *AA, bool &SawStore) const {
   // Ignore stuff that we obviously can't move.
   //
   // Treat volatile loads as stores. This is not strictly necessary for
@@ -1193,7 +1197,7 @@ bool MachineInstr::isSafeToMove(AliasAnalysis *AA, bool &SawStore) const {
   return true;
 }
 
-bool MachineInstr::mayAlias(AliasAnalysis *AA, const MachineInstr &Other,
+bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,
                             bool UseTBAA) const {
   const MachineFunction *MF = getMF();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
@@ -1311,7 +1315,7 @@ bool MachineInstr::hasOrderedMemoryRef() const {
 /// isDereferenceableInvariantLoad - Return true if this instruction will never
 /// trap and is loading from a location whose value is invariant across a run of
 /// this function.
-bool MachineInstr::isDereferenceableInvariantLoad(AliasAnalysis *AA) const {
+bool MachineInstr::isDereferenceableInvariantLoad(AAResults *AA) const {
   // If the instruction doesn't load at all, it isn't an invariant load.
   if (!mayLoad())
     return false;

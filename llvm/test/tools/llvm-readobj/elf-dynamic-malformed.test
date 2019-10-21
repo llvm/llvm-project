@@ -34,6 +34,7 @@ Sections:
     Type:    SHT_DYNAMIC
     Address: 0x1000
     Content: "01234567"
+Symbols: []
 ProgramHeaders:
   - Type: PT_LOAD
     VAddr: 0x1000
@@ -76,6 +77,7 @@ Sections:
         Value: 0
       - Tag:   DT_NULL
         Value: 0
+Symbols: []
 ProgramHeaders:
   - Type: PT_LOAD
     VAddr: 0x1000
@@ -143,6 +145,7 @@ Sections:
         Value: 1
       - Tag:   DT_NULL
         Value: 0
+Symbols: []
 ProgramHeaders:
   - Type: PT_LOAD
     VAddr: 0x1000
@@ -189,6 +192,7 @@ Sections:
         Value: 1
       - Tag:   DT_NULL
         Value: 0x0
+Symbols: []
 ProgramHeaders:
   - Type: PT_LOAD
     VAddr: 0x1000
@@ -231,6 +235,7 @@ Sections:
         Value: 0x1000000
       - Tag:   DT_NULL
         Value: 0x0
+Symbols: []
 ProgramHeaders:
   - Type: PT_LOAD
     VAddr: 0x1000

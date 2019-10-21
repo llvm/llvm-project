@@ -18,7 +18,7 @@ class WatchpointIteratorTestCase(TestBase):
 
     # hardware watchpoints are not reported with a hardware index # on armv7 on ios devices
     def affected_by_radar_34564183(self):
-        return (self.getArchitecture() == 'armv7' or self.getArchitecture() == 'armv7k') and self.platformIsDarwin()
+        return (self.getArchitecture() in ['armv7', 'armv7k', 'arm64_32']) and self.platformIsDarwin()
 
     def setUp(self):
         # Call super's setUp().

@@ -13,10 +13,10 @@ int f(char c, char *p, char *q) {
   // [[PTR1:0x[0-9a-f]+]] [[PTR2:0x[0-9a-f]+]]
   switch (c) {
   case 'g':
-    // CMP: #{{[0-9]+ .*}} in f({{char, char\*, char\*|char,char \*,char \*}}) {{.*}}invalid-pointer-pairs.cpp:[[@LINE+1]]
+    // CMP: #{{[0-9]+ .*}} in f({{char, *char *\*, *char *\*}}) {{.*}}invalid-pointer-pairs.cpp:[[@LINE+1]]
     return p > q;
   case 's':
-    // SUB: #{{[0-9]+ .*}} in f({{char, char\*, char\*|char,char \*,char \*}}) {{.*}}invalid-pointer-pairs.cpp:[[@LINE+1]]
+    // SUB: #{{[0-9]+ .*}} in f({{char, *char *\*, *char *\*}}) {{.*}}invalid-pointer-pairs.cpp:[[@LINE+1]]
     return p - q;
   case 'k': {
     // OK-NOT: ERROR
@@ -26,7 +26,7 @@ int f(char c, char *p, char *q) {
   case 'f': {
     char *p3 = p + 20;
     free(p);
-    // FREE: #{{[0-9]+ .*}} in f({{char, char\*, char\*|char,char \*,char \*}}) {{.*}}invalid-pointer-pairs.cpp:[[@LINE+2]]
+    // FREE: #{{[0-9]+ .*}} in f({{char, *char *\*, *char *\*}}) {{.*}}invalid-pointer-pairs.cpp:[[@LINE+2]]
     // FREE: freed by thread
     return p < p3;
   }

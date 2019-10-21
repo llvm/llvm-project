@@ -10,6 +10,7 @@
 #define LLD_COFF_INPUT_FILES_H
 
 #include "Config.h"
+#include "lld/Common/DWARF.h"
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -25,6 +26,7 @@
 #include <vector>
 
 namespace llvm {
+struct DILineInfo;
 namespace pdb {
 class DbiModuleDescriptorBuilder;
 }
@@ -202,6 +204,12 @@ public:
   // The .debug$T stream if there's one.
   llvm::Optional<llvm::codeview::CVTypeArray> debugTypes;
 
+  llvm::Optional<std::pair<StringRef, uint32_t>>
+  getVariableLocation(StringRef var);
+
+  llvm::Optional<llvm::DILineInfo> getDILineInfo(uint32_t offset,
+                                                 uint32_t sectionIndex);
+
 private:
   const coff_section* getSection(uint32_t i);
   const coff_section *getSection(COFFSymbolRef sym) {
@@ -285,6 +293,8 @@ private:
   // index. Nonexistent indices (which are occupied by auxiliary
   // symbols in the real symbol table) are filled with null pointers.
   std::vector<Symbol *> symbols;
+
+  DWARFCache *dwarf;
 };
 
 // This type represents import library members that contain DLL names

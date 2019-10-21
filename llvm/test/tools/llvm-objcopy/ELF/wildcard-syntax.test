@@ -1,0 +1,151 @@
+## This test checks that llvm-objcopy accepts glob (or "shell wildcard") syntax
+## for the --wildcard (-w) flag correctly.
+
+# RUN: yaml2obj --docnum=1 %s > %t.o
+
+## * matches all characters.
+# RUN: llvm-objcopy --remove-section='.f*' %t.o %t.glob.o
+# RUN: llvm-readobj --sections %t.glob.o \
+# RUN:   | FileCheck %s --implicit-check-not=Name: --check-prefixes=CHECK,BAR
+
+## Glob matches are full matches. ("*a" does not match ".bar").
+# RUN: llvm-objcopy --remove-section='*a' %t.o %t.full.o
+# RUN: llvm-readobj --sections %t.full.o \
+# RUN:   | FileCheck %s --implicit-check-not=Name: --check-prefixes=CHECK,FOO,BAR
+
+## ? matches one character.
+# RUN: llvm-objcopy --remove-section='.b?r' %t.o %t.question.o
+# RUN: llvm-readobj --sections %t.question.o \
+# RUN:   | FileCheck %s --implicit-check-not=Name: --check-prefixes=CHECK,FOO
+
+## ! (as a leading character) prevents matches, and is not dependent on
+## ordering.
+# RUN: llvm-objcopy --remove-section='.???' --remove-section='!.f*' \
+# RUN:   %t.o %t.negmatch1.o
+# RUN: llvm-readobj --sections %t.negmatch1.o \
+# RUN:   | FileCheck %s --implicit-check-not=Name: --check-prefixes=CHECK,FOO
+# RUN: llvm-objcopy --remove-section='!.f*' --remove-section='.???' \
+# RUN:   %t.o %t.negmatch2.o
+# RUN: llvm-readobj --sections %t.negmatch2.o \
+# RUN:   | FileCheck %s --implicit-check-not=Name: --check-prefixes=CHECK,FOO
+# RUN: llvm-objcopy --remove-section='.???' --remove-section='!.f*' \
+# RUN:   --remove-section='.???' %t.o %t.negmatch3.o
+# RUN: llvm-readobj --sections %t.negmatch3.o \
+# RUN:   | FileCheck %s --implicit-check-not=Name: --check-prefixes=CHECK,FOO
+
+## [a-z] matches a range of characters.
+# RUN: llvm-objcopy --remove-section='.[a-c][a-a][q-s]' %t.o %t.range.o
+# RUN: llvm-readobj --sections %t.range.o \
+# RUN:   | FileCheck %s --implicit-check-not=Name: --check-prefixes=CHECK,FOO
+
+## [^a-z] or [!a-z] match a negated range of characters.
+# RUN: llvm-objcopy --remove-section='.[^x]oo' %t.o %t.negrange.1.o
+# RUN: llvm-readobj --sections %t.negrange.1.o \
+# RUN:   | FileCheck %s --implicit-check-not=Name: --check-prefixes=CHECK,BAR
+# RUN: llvm-objcopy --remove-section='.[!x]oo' %t.o %t.negrange.2.o
+# RUN: llvm-readobj --sections %t.negrange.2.o \
+# RUN:   | FileCheck %s --implicit-check-not=Name: --check-prefixes=CHECK,BAR
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+  - Name: .bar
+    Type: SHT_PROGBITS
+Symbols: []
+
+## Use a separate test file with special characters for the following tests.
+
+# RUN: yaml2obj --docnum=2 %s > %t.special.o
+
+## \ escapes wildcard characters.
+# RUN: llvm-objcopy --remove-section='\*' %t.special.o %t.escape.1.o
+# RUN: llvm-readobj --sections %t.escape.1.o \
+# RUN:   | FileCheck %s --implicit-check-not=Name: \
+# RUN:   --check-prefixes=CHECK,DOT,QUESTION,LEFT-BRACKET,RIGHT-BRACKET,INVALID-GLOB,Z,XYZ,FOO
+# RUN: llvm-objcopy --remove-section='\?' %t.special.o %t.escape.2.o
+# RUN: llvm-readobj --sections %t.escape.2.o \
+# RUN:   | FileCheck %s --implicit-check-not=Name: \
+# RUN:   --check-prefixes=CHECK,DOT,ASTERISK,LEFT-BRACKET,RIGHT-BRACKET,INVALID-GLOB,Z,XYZ,FOO
+
+## Special characters are not treated like regular expression characters.
+# RUN: llvm-objcopy --remove-section='.' %t.special.o %t.dot.o
+# RUN: llvm-readobj --sections %t.dot.o \
+# RUN:   | FileCheck %s --implicit-check-not=Name: \
+# RUN:   --check-prefixes=CHECK,ASTERISK,QUESTION,LEFT-BRACKET,RIGHT-BRACKET,INVALID-GLOB,Z,XYZ,FOO
+
+## Special characters in character classes are treated literally.
+## [*] should not get expanded to [.*], which would match both '.' and '*'
+# RUN: llvm-objcopy --remove-section='[*]' %t.special.o %t.class.1.o
+# RUN: llvm-readobj --sections %t.class.1.o \
+# RUN:   | FileCheck %s --implicit-check-not=Name: \
+# RUN:   --check-prefixes=CHECK,DOT,QUESTION,LEFT-BRACKET,RIGHT-BRACKET,INVALID-GLOB,Z,XYZ,FOO
+
+## ] doesn't close the character class as a first character. This glob matches
+## a single character which is one of ']xyz'. ']' and 'z' are removed, and more explicitly,
+## section 'xyz]' is not removed, i.e. the glob is not interpreted as "an empty
+## character class followed by 'xyz]'"
+# RUN: llvm-objcopy --remove-section='[]xyz]' %t.special.o %t.class.2.o
+# RUN: llvm-readobj --sections %t.class.2.o \
+# RUN:   | FileCheck %s --implicit-check-not=Name: \
+# RUN:   --check-prefixes=CHECK,DOT,ASTERISK,QUESTION,LEFT-BRACKET,INVALID-GLOB,XYZ,FOO
+
+## An invalid glob expression is interpreted as a literal instead.
+# RUN: llvm-objcopy --remove-section='][]' %t.special.o %t.class.3.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=WARN
+# RUN: llvm-readobj --sections %t.class.3.o \
+# RUN:   | FileCheck %s --implicit-check-not=Name: \
+# RUN:   --check-prefixes=CHECK,DOT,ASTERISK,QUESTION,LEFT-BRACKET,RIGHT-BRACKET,Z,XYZ,FOO
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .
+    Type: SHT_PROGBITS
+  - Name: '*'
+    Type: SHT_PROGBITS
+  - Name: '?'
+    Type: SHT_PROGBITS
+  - Name: '['
+    Type: SHT_PROGBITS
+  - Name: ']'
+    Type: SHT_PROGBITS
+  - Name: '][]'
+    Type: SHT_PROGBITS
+  - Name: z
+    Type: SHT_PROGBITS
+  - Name: 'xyz]'
+    Type: SHT_PROGBITS
+  - Name: '[]xyz]'
+    Type: SHT_PROGBITS
+  - Name: .foo
+    Type: SHT_PROGBITS
+Symbols: []
+
+# WARN: warning: invalid glob pattern: ][]
+
+# CHECK: LoadName:
+# CHECK:         Name: (0)
+# DOT:           Name: .
+# ASTERISK:      Name: *
+# QUESTION:      Name: ?
+# LEFT-BRACKET:  Name: [
+# RIGHT-BRACKET: Name: ]
+# INVALID-GLOB:  Name: ][]
+# Z:             Name: z
+# XYZ:           Name: xyz]
+# XYZ:           Name: []xyz]
+# FOO:           Name: .foo
+# BAR:           Name: .bar
+# CHECK:         Name: .symtab
+# CHECK:         Name: .strtab
+# CHECK:         Name: .shstrtab

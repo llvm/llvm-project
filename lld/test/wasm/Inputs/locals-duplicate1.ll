@@ -1,11 +1,11 @@
 target triple = "wasm32-unknown-unknown"
 
 ; Will collide: local (internal linkage) with global (external) linkage
-@colliding_global1 = internal default global i32 0, align 4
+@colliding_global1 = internal default global i32 1, align 4
 ; Will collide: global with local
-@colliding_global2 = default global i32 0, align 4
+@colliding_global2 = default global i32 1, align 4
 ; Will collide: local with local
-@colliding_global3 = internal default global i32 0, align 4
+@colliding_global3 = internal default global i32 1, align 4
 
 ; Will collide: local with global
 define internal i32 @colliding_func1() {

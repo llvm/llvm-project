@@ -440,6 +440,7 @@ void OMPClauseProfiler::VisitOMPIfClause(const OMPIfClause *C) {
 }
 
 void OMPClauseProfiler::VisitOMPFinalClause(const OMPFinalClause *C) {
+  VistOMPClauseWithPreInit(C);
   if (C->getCondition())
     Profiler->VisitStmt(C->getCondition());
 }
@@ -736,6 +737,7 @@ void OMPClauseProfiler::VisitOMPThreadLimitClause(
     Profiler->VisitStmt(C->getThreadLimit());
 }
 void OMPClauseProfiler::VisitOMPPriorityClause(const OMPPriorityClause *C) {
+  VistOMPClauseWithPreInit(C);
   if (C->getPriority())
     Profiler->VisitStmt(C->getPriority());
 }
@@ -922,6 +924,11 @@ void StmtProfiler::VisitOMPTaskLoopSimdDirective(
 
 void StmtProfiler::VisitOMPMasterTaskLoopDirective(
     const OMPMasterTaskLoopDirective *S) {
+  VisitOMPLoopDirective(S);
+}
+
+void StmtProfiler::VisitOMPMasterTaskLoopSimdDirective(
+    const OMPMasterTaskLoopSimdDirective *S) {
   VisitOMPLoopDirective(S);
 }
 
@@ -1309,6 +1316,14 @@ void StmtProfiler::VisitAtomicExpr(const AtomicExpr *S) {
   ID.AddInteger(S->getOp());
 }
 
+void StmtProfiler::VisitConceptSpecializationExpr(
+                                           const ConceptSpecializationExpr *S) {
+  VisitExpr(S);
+  VisitDecl(S->getFoundDecl());
+  VisitTemplateArguments(S->getTemplateArgsAsWritten()->getTemplateArgs(),
+                         S->getTemplateArgsAsWritten()->NumTemplateArgs);
+}
+
 static Stmt::StmtClass DecodeOperatorCall(const CXXOperatorCallExpr *S,
                                           UnaryOperatorKind &UnaryOp,
                                           BinaryOperatorKind &BinaryOp) {
@@ -1540,6 +1555,16 @@ void StmtProfiler::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *S) {
 
   VisitCallExpr(S);
   ID.AddInteger(S->getOperator());
+}
+
+void StmtProfiler::VisitCXXRewrittenBinaryOperator(
+    const CXXRewrittenBinaryOperator *S) {
+  // If a rewritten operator were ever to be type-dependent, we should profile
+  // it following its syntactic operator.
+  assert(!S->isTypeDependent() &&
+         "resolved rewritten operator should never be type-dependent");
+  ID.AddBoolean(S->isReversed());
+  VisitExpr(S->getSemanticForm());
 }
 
 #if defined(_MSC_VER) && !defined(__clang__)

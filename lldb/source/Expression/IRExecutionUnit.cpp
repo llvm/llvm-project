@@ -854,7 +854,6 @@ lldb::addr_t IRExecutionUnit::FindInSymbols(
       sc.module_sp->FindFunctions(spec.name, nullptr, spec.mask,
                                   true,  // include_symbols
                                   false, // include_inlines
-                                  true,  // append
                                   sc_list);
     }
 
@@ -870,7 +869,6 @@ lldb::addr_t IRExecutionUnit::FindInSymbols(
       sc.target_sp->GetImages().FindFunctions(spec.name, spec.mask,
                                               true,  // include_symbols
                                               false, // include_inlines
-                                              true,  // append
                                               sc_list);
     }
 

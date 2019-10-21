@@ -54,15 +54,15 @@ public:
   };
 private:
   StackDirection StackDir;
-  unsigned StackAlignment;
-  unsigned TransientStackAlignment;
+  Align StackAlignment;
+  Align TransientStackAlignment;
   int LocalAreaOffset;
   bool StackRealignable;
 public:
-  TargetFrameLowering(StackDirection D, unsigned StackAl, int LAO,
-                      unsigned TransAl = 1, bool StackReal = true)
-    : StackDir(D), StackAlignment(StackAl), TransientStackAlignment(TransAl),
-      LocalAreaOffset(LAO), StackRealignable(StackReal) {}
+  TargetFrameLowering(StackDirection D, Align StackAl, int LAO,
+                      Align TransAl = Align::None(), bool StackReal = true)
+      : StackDir(D), StackAlignment(StackAl), TransientStackAlignment(TransAl),
+        LocalAreaOffset(LAO), StackRealignable(StackReal) {}
 
   virtual ~TargetFrameLowering();
 
@@ -77,7 +77,7 @@ public:
   /// stack pointer must be aligned on entry to a function.  Typically, this
   /// is the largest alignment for any data object in the target.
   ///
-  unsigned getStackAlignment() const { return StackAlignment; }
+  unsigned getStackAlignment() const { return StackAlignment.value(); }
 
   /// alignSPAdjust - This method aligns the stack adjustment to the correct
   /// alignment.
@@ -96,7 +96,7 @@ public:
   /// calls.
   ///
   unsigned getTransientStackAlignment() const {
-    return TransientStackAlignment;
+    return TransientStackAlignment.value();
   }
 
   /// isStackRealignable - This method returns whether the stack can be
@@ -367,17 +367,7 @@ public:
 
   /// Check if given function is safe for not having callee saved registers.
   /// This is used when interprocedural register allocation is enabled.
-  static bool isSafeForNoCSROpt(const Function &F) {
-    if (!F.hasLocalLinkage() || F.hasAddressTaken() ||
-        !F.hasFnAttribute(Attribute::NoRecurse))
-      return false;
-    // Function should not be optimized as tail call.
-    for (const User *U : F.users())
-      if (auto CS = ImmutableCallSite(U))
-        if (CS.isTailCall())
-          return false;
-    return true;
-  }
+  static bool isSafeForNoCSROpt(const Function &F);
 
   /// Check if the no-CSR optimisation is profitable for the given function.
   virtual bool isProfitableForNoCSROpt(const Function &F) const {

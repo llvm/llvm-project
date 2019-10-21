@@ -486,12 +486,20 @@ def DPair : RegisterClass<"ARM", [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
 
 // Pseudo-registers representing even-odd pairs of GPRs from R1 to R13/SP.
 // These are needed by instructions (e.g. ldrexd/strexd) requiring even-odd GPRs.
-def Tuples2R : RegisterTuples<[gsub_0, gsub_1],
-                              [(add R0, R2, R4, R6, R8, R10, R12),
-                               (add R1, R3, R5, R7, R9, R11, SP)]>;
+def Tuples2Rnosp : RegisterTuples<[gsub_0, gsub_1],
+                                  [(add R0, R2, R4, R6, R8, R10),
+                                   (add R1, R3, R5, R7, R9, R11)]>;
+
+def Tuples2Rsp   : RegisterTuples<[gsub_0, gsub_1],
+                                  [(add R12), (add SP)]>;
 
 // Register class representing a pair of even-odd GPRs.
-def GPRPair : RegisterClass<"ARM", [untyped], 64, (add Tuples2R)> {
+def GPRPair : RegisterClass<"ARM", [untyped], 64, (add Tuples2Rnosp, Tuples2Rsp)> {
+  let Size = 64; // 2 x 32 bits, we have no predefined type of that size.
+}
+
+// Register class representing a pair of even-odd GPRs, except (R12, SP).
+def GPRPairnosp : RegisterClass<"ARM", [untyped], 64, (add Tuples2Rnosp)> {
   let Size = 64; // 2 x 32 bits, we have no predefined type of that size.
 }
 

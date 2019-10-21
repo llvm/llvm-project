@@ -16,6 +16,7 @@
 #include "RISCVMCAsmInfo.h"
 #include "RISCVTargetStreamer.h"
 #include "TargetInfo/RISCVTargetInfo.h"
+#include "Utils/RISCVBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/MC/MCAsmInfo.h"

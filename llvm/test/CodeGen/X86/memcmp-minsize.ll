@@ -2,7 +2,8 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=cmov | FileCheck %s --check-prefix=X86 --check-prefix=X86-NOSSE
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefix=X86 --check-prefix=X86-SSE2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=X64 --check-prefix=X64-SSE2
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx2 | FileCheck %s --check-prefix=X64 --check-prefix=X64-AVX2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx | FileCheck %s --check-prefix=X64 --check-prefix=X64-AVX --check-prefix=X64-AVX1
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx2 | FileCheck %s --check-prefix=X64 --check-prefix=X64-AVX --check-prefix=X64-AVX2
 
 ; This tests codegen time inlining/optimization of memcmp
 ; rdar://6480398
@@ -426,14 +427,13 @@ define i1 @length16_eq(i8* %x, i8* %y) nounwind minsize {
 ; X64-SSE2-NEXT:    setne %al
 ; X64-SSE2-NEXT:    retq
 ;
-; X64-AVX2-LABEL: length16_eq:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-AVX2-NEXT:    vpcmpeqb (%rsi), %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpmovmskb %xmm0, %eax
-; X64-AVX2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
-; X64-AVX2-NEXT:    setne %al
-; X64-AVX2-NEXT:    retq
+; X64-AVX-LABEL: length16_eq:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; X64-AVX-NEXT:    vpxor (%rsi), %xmm0, %xmm0
+; X64-AVX-NEXT:    vptest %xmm0, %xmm0
+; X64-AVX-NEXT:    setne %al
+; X64-AVX-NEXT:    retq
   %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 16) nounwind
   %cmp = icmp ne i32 %call, 0
   ret i1 %cmp
@@ -471,14 +471,13 @@ define i1 @length16_eq_const(i8* %X) nounwind minsize {
 ; X64-SSE2-NEXT:    sete %al
 ; X64-SSE2-NEXT:    retq
 ;
-; X64-AVX2-LABEL: length16_eq_const:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-AVX2-NEXT:    vpcmpeqb {{.*}}(%rip), %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpmovmskb %xmm0, %eax
-; X64-AVX2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
-; X64-AVX2-NEXT:    sete %al
-; X64-AVX2-NEXT:    retq
+; X64-AVX-LABEL: length16_eq_const:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; X64-AVX-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vptest %xmm0, %xmm0
+; X64-AVX-NEXT:    sete %al
+; X64-AVX-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* getelementptr inbounds ([65 x i8], [65 x i8]* @.str, i32 0, i32 0), i64 16) nounwind
   %c = icmp eq i32 %m, 0
   ret i1 %c
@@ -609,12 +608,20 @@ define i1 @length32_eq(i8* %x, i8* %y) nounwind minsize {
 ; X64-SSE2-NEXT:    popq %rcx
 ; X64-SSE2-NEXT:    retq
 ;
+; X64-AVX1-LABEL: length32_eq:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vxorps (%rsi), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vptest %ymm0, %ymm
+; X64-AVX1-NEXT:    sete %al
+; X64-AVX1-NEXT:    vzeroupper
+; X64-AVX1-NEXT:    retq
+;
 ; X64-AVX2-LABEL: length32_eq:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vmovdqu (%rdi), %ymm0
-; X64-AVX2-NEXT:    vpcmpeqb (%rsi), %ymm0, %ymm0
-; X64-AVX2-NEXT:    vpmovmskb %ymm0, %eax
-; X64-AVX2-NEXT:    cmpl $-1, %eax
+; X64-AVX2-NEXT:    vpxor (%rsi), %ymm0, %ymm0
+; X64-AVX2-NEXT:    vptest %ymm0, %ymm
 ; X64-AVX2-NEXT:    sete %al
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
@@ -648,12 +655,20 @@ define i1 @length32_eq_const(i8* %X) nounwind minsize {
 ; X64-SSE2-NEXT:    popq %rcx
 ; X64-SSE2-NEXT:    retq
 ;
+; X64-AVX1-LABEL: length32_eq_const:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
+; X64-AVX1-NEXT:    setne %al
+; X64-AVX1-NEXT:    vzeroupper
+; X64-AVX1-NEXT:    retq
+;
 ; X64-AVX2-LABEL: length32_eq_const:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vmovdqu (%rdi), %ymm0
-; X64-AVX2-NEXT:    vpcmpeqb {{.*}}(%rip), %ymm0, %ymm0
-; X64-AVX2-NEXT:    vpmovmskb %ymm0, %eax
-; X64-AVX2-NEXT:    cmpl $-1, %eax
+; X64-AVX2-NEXT:    vpxor {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX2-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX2-NEXT:    setne %al
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq

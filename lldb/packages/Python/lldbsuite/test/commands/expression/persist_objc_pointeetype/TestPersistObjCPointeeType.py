@@ -23,7 +23,7 @@ class PersistObjCPointeeType(TestBase):
 
     @skipUnlessDarwin
     @skipIf(archs=["i386", "i686"])
-    @skipIf(debug_info="gmodules", archs=['arm64', 'armv7', 'armv7k'])  # compile error with gmodules for iOS
+    @skipIf(debug_info="gmodules", archs=['arm64', 'armv7', 'armv7k', 'arm64e', 'arm64_32'])  # compile error with gmodules for iOS
     def test_with(self):
         """Test that we can p *objcObject"""
         self.build()

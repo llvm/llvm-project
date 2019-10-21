@@ -44,46 +44,6 @@ uintptr_t GetCurrentProcess(void);
 #include <sys/cachectl.h>
 #include <sys/syscall.h>
 #include <unistd.h>
-#if defined(__ANDROID__) && defined(__LP64__)
-// clear_mips_cache - Invalidates instruction cache for Mips.
-static void clear_mips_cache(const void *Addr, size_t Size) {
-  __asm__ volatile(
-      ".set push\n"
-      ".set noreorder\n"
-      ".set noat\n"
-      "beq %[Size], $zero, 20f\n" // If size == 0, branch around.
-      "nop\n"
-      "daddu %[Size], %[Addr], %[Size]\n" // Calculate end address + 1
-      "rdhwr $v0, $1\n"                   // Get step size for SYNCI.
-                                          // $1 is $HW_SYNCI_Step
-      "beq $v0, $zero, 20f\n"             // If no caches require
-                                          // synchronization, branch
-                                          // around.
-      "nop\n"
-      "10:\n"
-      "synci 0(%[Addr])\n"            // Synchronize all caches around
-                                      // address.
-      "daddu %[Addr], %[Addr], $v0\n" // Add step size.
-      "sltu $at, %[Addr], %[Size]\n"  // Compare current with end
-                                      // address.
-      "bne $at, $zero, 10b\n"         // Branch if more to do.
-      "nop\n"
-      "sync\n" // Clear memory hazards.
-      "20:\n"
-      "bal 30f\n"
-      "nop\n"
-      "30:\n"
-      "daddiu $ra, $ra, 12\n" // $ra has a value of $pc here.
-                              // Add offset of 12 to point to the
-                              // instruction after the last nop.
-                              //
-      "jr.hb $ra\n"           // Return, clearing instruction
-                              // hazards.
-      "nop\n"
-      ".set pop\n"
-      : [ Addr ] "+r"(Addr), [ Size ] "+r"(Size)::"at", "ra", "v0", "memory");
-}
-#endif
 #endif
 
 // The compiler generates calls to __clear_cache() when creating
@@ -127,17 +87,7 @@ void __clear_cache(void *start, void *end) {
 #elif defined(__linux__) && defined(__mips__)
   const uintptr_t start_int = (uintptr_t)start;
   const uintptr_t end_int = (uintptr_t)end;
-#if defined(__ANDROID__) && defined(__LP64__)
-  // Call synci implementation for short address range.
-  const uintptr_t address_range_limit = 256;
-  if ((end_int - start_int) <= address_range_limit) {
-    clear_mips_cache(start, (end_int - start_int));
-  } else {
-    syscall(__NR_cacheflush, start, (end_int - start_int), BCACHE);
-  }
-#else
   syscall(__NR_cacheflush, start, (end_int - start_int), BCACHE);
-#endif
 #elif defined(__mips__) && defined(__OpenBSD__)
   cacheflush(start, (uintptr_t)end - (uintptr_t)start, BCACHE);
 #elif defined(__aarch64__) && !defined(__APPLE__)

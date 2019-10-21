@@ -144,7 +144,9 @@ static FileSpec MakeAbsolute(FileSpec file_spec) {
 }
 
 Generator::Generator(FileSpec root)
-    : m_root(MakeAbsolute(std::move(root))), m_done(false) {}
+    : m_root(MakeAbsolute(std::move(root))), m_done(false) {
+  GetOrCreate<repro::WorkingDirectoryProvider>();
+}
 
 Generator::~Generator() {}
 
@@ -281,6 +283,15 @@ void VersionProvider::Keep() {
   os << m_version << "\n";
 }
 
+void WorkingDirectoryProvider::Keep() {
+  FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
+  std::error_code ec;
+  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
+  if (ec)
+    return;
+  os << m_cwd << "\n";
+}
+
 llvm::raw_ostream *ProcessGDBRemoteProvider::GetHistoryStream() {
   FileSpec history_file = GetRoot().CopyByAppendingPathComponent(Info::file);
 
@@ -330,6 +341,7 @@ char FileProvider::ID = 0;
 char ProcessGDBRemoteProvider::ID = 0;
 char ProviderBase::ID = 0;
 char VersionProvider::ID = 0;
+char WorkingDirectoryProvider::ID = 0;
 const char *CommandProvider::Info::file = "command-interpreter.yaml";
 const char *CommandProvider::Info::name = "command-interpreter";
 const char *FileProvider::Info::file = "files.yaml";
@@ -338,3 +350,5 @@ const char *ProcessGDBRemoteProvider::Info::file = "gdb-remote.yaml";
 const char *ProcessGDBRemoteProvider::Info::name = "gdb-remote";
 const char *VersionProvider::Info::file = "version.txt";
 const char *VersionProvider::Info::name = "version";
+const char *WorkingDirectoryProvider::Info::file = "cwd.txt";
+const char *WorkingDirectoryProvider::Info::name = "cwd";

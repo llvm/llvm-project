@@ -15,6 +15,14 @@
 // RUN: %clang -target x86_64-apple-macos10.15 -S %s -o -  -gen-cdb-fragment-path %t.cdb
 // RUN: ls %t.cdb | FileCheck --check-prefix=CHECK-LS %s
 
+// Working directory arg is respected.
+// RUN: rm -rf %t.cdb
+// RUN: mkdir %t.cdb
+// RUN: %clang -target x86_64-apple-macos10.15 -working-directory %t.cdb -c %s -o -  -gen-cdb-fragment-path "."
+// RUN: ls %t.cdb | FileCheck --check-prefix=CHECK-LS %s
+// RUN: cat %t.cdb/*.json | FileCheck --check-prefix=CHECK-CWD %s
+// CHECK-CWD: "directory": "{{.*}}.cdb"
+
 // -### does not emit the CDB fragment
 // RUN: rm -rf %t.cdb
 // RUN: mkdir %t.cdb

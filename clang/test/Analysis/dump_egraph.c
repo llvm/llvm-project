@@ -18,13 +18,35 @@ int foo() {
   return *x + *y;
 }
 
-// CHECK: \"program_points\": [\l&nbsp;&nbsp;&nbsp;&nbsp;\{ \"kind\": \"Edge\", \"src_id\": 2, \"dst_id\": 1, \"terminator\": null, \"term_kind\": null, \"tag\": null \}\l&nbsp;&nbsp;],\l&nbsp;&nbsp;\"program_state\": null
-
-// CHECK: \"program_points\": [\l&nbsp;&nbsp;&nbsp;&nbsp;\{ \"kind\": \"BlockEntrance\", \"block_id\": 1
-
+// CHECK: \"program_points\": [\l
+// CHECK-SAME: \{ \"kind\": \"Edge\", \"src_id\": 2, \"dst_id\": 1,
+// CHECK-SAME:    \"terminator\": null, \"term_kind\": null, \"tag\": null,
+// CHECK-SAME:    \"node_id\": 1, \"is_sink\": 0, \"has_report\": 0
+// CHECK-SAME: \},
+// CHECK-SAME: \{ \"kind\": \"BlockEntrance\", \"block_id\": 1, \"tag\": null,
+// CHECK-SAME:    \"node_id\": 2, \"is_sink\": 0, \"has_report\": 0
+// CHECK-SAME: \},
+// CHECK-SAME: \{ \"kind\": \"Statement\", \"stmt_kind\": \"IntegerLiteral\",
+// CHECK-SAME:    \"stmt_id\": {{[0-9]*}}, \"pointer\": \"0x{{[0-9a-f]*}}\",
+// CHECK-SAME:    \"pretty\": \"0\", \"location\": \{
+// CHECK-SAME:        \"line\": 15, \"column\": 12, \"file\":
+// CHECK-SAME:    \}, \"stmt_point_kind\": \"PreStmtPurgeDeadSymbols\",
+// CHECK-SAME:    \"tag\": \"ExprEngine : Clean Node\", \"node_id\": 3,
+// CHECK-SAME:    \"is_sink\": 0, \"has_report\": 0
+// CHECK-SAME: \},
+// CHECK-SAME: \{ \"kind\": \"Statement\", \"stmt_kind\": \"IntegerLiteral\",
+// CHECK-SAME:    \"stmt_id\": {{[0-9]*}}, \"pointer\": \"0x{{[0-9a-f]*}}\",
+// CHECK-SAME:    \"pretty\": \"0\", \"location\": \{
+// CHECK-SAME:        \"line\": 15, \"column\": 12, \"file\":
+// CHECK-SAME:    \}, \"stmt_point_kind\": \"PostStmt\", \"tag\": null,
+// CHECK-SAME:    \"node_id\": 4, \"is_sink\": 0, \"has_report\": 0
+// CHECK-SAME: \}
+// CHECK-SAME: ]
 
 // CHECK: \"pretty\": \"*x\", \"location\": \{ \"line\": 18, \"column\": 10, \"file\": \"{{(.+)}}dump_egraph.c\" \}
 
 // CHECK: \"pretty\": \"'\\\\x13'\"
 
-// CHECK: \"has_report\": true
+// CHECK: \"has_report\": 1
+
+// CHECK-NOT: \"program_state\": null

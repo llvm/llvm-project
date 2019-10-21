@@ -91,7 +91,7 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
   ret i64 %tmp;
 }
 
-define i16 @func16(i16 %x, i16 %y) nounwind {
+define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 ; X86-LABEL: func16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -123,7 +123,7 @@ define i16 @func16(i16 %x, i16 %y) nounwind {
   ret i16 %tmp
 }
 
-define i8 @func8(i8 %x, i8 %y) nounwind {
+define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
 ; X86-LABEL: func8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
@@ -155,39 +155,32 @@ define i8 @func8(i8 %x, i8 %y) nounwind {
   ret i8 %tmp
 }
 
-define i4 @func3(i4 %x, i4 %y) nounwind {
+define signext i4 @func3(i4 signext %x, i4 signext %y) nounwind {
 ; X86-LABEL: func3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
-; X86-NEXT:    shlb $4, %dl
-; X86-NEXT:    shlb $4, %al
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    movb %al, %ah
-; X86-NEXT:    addb %dl, %ah
-; X86-NEXT:    setns %cl
-; X86-NEXT:    addl $127, %ecx
-; X86-NEXT:    addb %dl, %al
-; X86-NEXT:    movzbl %al, %eax
-; X86-NEXT:    cmovol %ecx, %eax
-; X86-NEXT:    sarb $4, %al
-; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    addb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl %al, %ecx
+; X86-NEXT:    cmpb $7, %al
+; X86-NEXT:    movl $7, %eax
+; X86-NEXT:    cmovll %ecx, %eax
+; X86-NEXT:    cmpb $-8, %al
+; X86-NEXT:    movl $248, %ecx
+; X86-NEXT:    cmovgl %eax, %ecx
+; X86-NEXT:    movsbl %cl, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: func3:
 ; X64:       # %bb.0:
-; X64-NEXT:    shlb $4, %sil
-; X64-NEXT:    shlb $4, %dil
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    addb %sil, %al
-; X64-NEXT:    setns %cl
-; X64-NEXT:    addl $127, %ecx
 ; X64-NEXT:    addb %sil, %dil
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    cmovol %ecx, %eax
-; X64-NEXT:    sarb $4, %al
-; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    cmpb $7, %al
+; X64-NEXT:    movl $7, %ecx
+; X64-NEXT:    cmovll %eax, %ecx
+; X64-NEXT:    cmpb $-8, %cl
+; X64-NEXT:    movl $248, %eax
+; X64-NEXT:    cmovgl %ecx, %eax
+; X64-NEXT:    movsbl %al, %eax
 ; X64-NEXT:    retq
   %tmp = call i4 @llvm.sadd.sat.i4(i4 %x, i4 %y);
   ret i4 %tmp;

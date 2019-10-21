@@ -131,10 +131,12 @@ class ExplodedNode : public llvm::FoldingSetNode {
   /// Succs - The successors of this node.
   NodeGroup Succs;
 
+  int64_t Id;
+
 public:
   explicit ExplodedNode(const ProgramPoint &loc, ProgramStateRef state,
-                        bool IsSink)
-      : Location(loc), State(std::move(state)), Succs(IsSink) {
+                        int64_t Id, bool IsSink)
+      : Location(loc), State(std::move(state)), Succs(IsSink), Id(Id) {
     assert(isSink() == IsSink);
   }
 
@@ -258,7 +260,7 @@ public:
   }
   const_succ_range succs() const { return {Succs.begin(), Succs.end()}; }
 
-  int64_t getID(ExplodedGraph *G) const;
+  int64_t getID() const { return Id; }
 
   /// The node is trivial if it has only one successor, only one predecessor,
   /// it's predecessor has only one successor,
@@ -324,7 +326,7 @@ protected:
   BumpVectorContext BVC;
 
   /// NumNodes - The number of nodes in the graph.
-  unsigned NumNodes = 0;
+  int64_t NumNodes = 0;
 
   /// A list of recently allocated nodes that can potentially be recycled.
   NodeVector ChangedNodes;
@@ -358,6 +360,7 @@ public:
   ///  ExplodedGraph for further processing.
   ExplodedNode *createUncachedNode(const ProgramPoint &L,
     ProgramStateRef State,
+    int64_t Id,
     bool IsSink = false);
 
   std::unique_ptr<ExplodedGraph> MakeEmptyGraph() const {

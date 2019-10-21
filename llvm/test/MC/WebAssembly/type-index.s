@@ -22,12 +22,14 @@ test0:
 # BIN-NEXT:   - Type:            TYPE
 # BIN-NEXT:     Signatures:
 # BIN-NEXT:       - Index:           0
-# BIN-NEXT:         ReturnType:      I32
 # BIN-NEXT:         ParamTypes:
 # BIN-NEXT:           - I32
+# BIN-NEXT:         ReturnTypes:
+# BIN-NEXT:           - I32
 # BIN-NEXT:       - Index:           1
-# BIN-NEXT:         ReturnType:      F64
 # BIN-NEXT:         ParamTypes:
+# BIN-NEXT:           - F64
+# BIN-NEXT:         ReturnTypes:
 # BIN-NEXT:           - F64
 # BIN-NEXT:   - Type:            IMPORT
 # BIN-NEXT:     Imports:
@@ -64,4 +66,3 @@ test0:
 # BIN-NEXT:         Flags:           [ BINDING_LOCAL ]
 # BIN-NEXT:         Function:        0
 # BIN-NEXT: ...
-

@@ -205,9 +205,9 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     NoARM = true;
 
   if (isAAPCS_ABI())
-    stackAlignment = 8;
+    stackAlignment = Align(8);
   if (isTargetNaCl() || isAAPCS16_ABI())
-    stackAlignment = 16;
+    stackAlignment = Align(16);
 
   // FIXME: Completely disable sibcall for Thumb1 since ThumbRegisterInfo::
   // emitEpilogue is not ready for them. Thumb tail calls also use t2B, as

@@ -803,8 +803,8 @@ clang_codeCompleteAt_Impl(CXTranslationUnit TU, const char *complete_filename,
           os << arg << ".pth";
         }
         pchName.push_back('\0');
-        struct stat stat_results;
-        if (stat(pchName.str().c_str(), &stat_results) == 0)
+        llvm::sys::fs::file_status stat_results;
+        if (!llvm::sys::fs::status(pchName, stat_results))
           usesPCH = true;
         continue;
       }

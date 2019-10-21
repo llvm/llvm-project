@@ -34,7 +34,8 @@ DisableLeafProc("disable-sparc-leaf-proc",
 
 SparcFrameLowering::SparcFrameLowering(const SparcSubtarget &ST)
     : TargetFrameLowering(TargetFrameLowering::StackGrowsDown,
-                          ST.is64Bit() ? 16 : 8, 0, ST.is64Bit() ? 16 : 8) {}
+                          ST.is64Bit() ? Align(16) : Align(8), 0,
+                          ST.is64Bit() ? Align(16) : Align(8)) {}
 
 void SparcFrameLowering::emitSPAdjustment(MachineFunction &MF,
                                           MachineBasicBlock &MBB,

@@ -930,6 +930,9 @@ private:
   /// Whether validate system input files.
   bool ValidateSystemInputs;
 
+  /// Whether validate headers and module maps using hash based on contents.
+  bool ValidateASTInputFilesContent;
+
   /// Whether we are allowed to use the global module index.
   bool UseGlobalIndex;
 
@@ -1203,6 +1206,7 @@ private:
 
   struct InputFileInfo {
     std::string Filename;
+    uint64_t ContentHash;
     off_t StoredSize;
     time_t StoredTime;
     bool Overridden;
@@ -1437,6 +1441,8 @@ private:
   void Error(StringRef Msg) const;
   void Error(unsigned DiagID, StringRef Arg1 = StringRef(),
              StringRef Arg2 = StringRef()) const;
+  void Error(unsigned DiagID, StringRef Arg1, StringRef Arg2,
+             unsigned Select) const;
   void Error(llvm::Error &&Err) const;
 
 public:
@@ -1485,7 +1491,9 @@ public:
             StringRef isysroot = "", bool DisableValidation = false,
             bool AllowASTWithCompilerErrors = false,
             bool AllowConfigurationMismatch = false,
-            bool ValidateSystemInputs = false, bool UseGlobalIndex = true,
+            bool ValidateSystemInputs = false,
+            bool ValidateASTInputFilesContent = false,
+            bool UseGlobalIndex = true,
             std::unique_ptr<llvm::Timer> ReadTimer = {});
   ASTReader(const ASTReader &) = delete;
   ASTReader &operator=(const ASTReader &) = delete;

@@ -1265,7 +1265,7 @@ void HWAddressSanitizer::instrumentGlobal(GlobalVariable *GV, uint8_t Tag) {
   NewGV->setLinkage(GlobalValue::PrivateLinkage);
   NewGV->copyMetadata(GV, 0);
   NewGV->setAlignment(
-      std::max(GV->getAlignment(), Mapping.getObjectAlignment()));
+      MaybeAlign(std::max(GV->getAlignment(), Mapping.getObjectAlignment())));
 
   // It is invalid to ICF two globals that have different tags. In the case
   // where the size of the global is a multiple of the tag granularity the
@@ -1370,7 +1370,7 @@ void HWAddressSanitizer::instrumentGlobals() {
                          GlobalValue::PrivateLinkage, nullptr, kHwasanNoteName);
   Note->setSection(".note.hwasan.globals");
   Note->setComdat(NoteComdat);
-  Note->setAlignment(4);
+  Note->setAlignment(Align(4));
   Note->setDSOLocal(true);
 
   // The pointers in the note need to be relative so that the note ends up being

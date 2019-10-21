@@ -103,16 +103,24 @@ static bool isAnonymous(const DeclarationName &N) {
   return N.isIdentifier() && !N.getAsIdentifierInfo();
 }
 
-/// Returns a nested name specifier of \p ND if it was present in the source,
-/// e.g.
-///     void ns::something::foo() -> returns 'ns::something'
-///     void foo() -> returns null
-static NestedNameSpecifier *getQualifier(const NamedDecl &ND) {
+NestedNameSpecifierLoc getQualifierLoc(const NamedDecl &ND) {
   if (auto *V = llvm::dyn_cast<DeclaratorDecl>(&ND))
-    return V->getQualifier();
+    return V->getQualifierLoc();
   if (auto *T = llvm::dyn_cast<TagDecl>(&ND))
-    return T->getQualifier();
-  return nullptr;
+    return T->getQualifierLoc();
+  return NestedNameSpecifierLoc();
+}
+
+std::string printUsingNamespaceName(const ASTContext &Ctx,
+                                    const UsingDirectiveDecl &D) {
+  PrintingPolicy PP(Ctx.getLangOpts());
+  std::string Name;
+  llvm::raw_string_ostream Out(Name);
+
+  if (auto *Qual = D.getQualifier())
+    Qual->print(Out, PP);
+  D.getNominatedNamespaceAsWritten()->printName(Out);
+  return Out.str();
 }
 
 std::string printName(const ASTContext &Ctx, const NamedDecl &ND) {
@@ -141,7 +149,7 @@ std::string printName(const ASTContext &Ctx, const NamedDecl &ND) {
   }
 
   // Print nested name qualifier if it was written in the source code.
-  if (auto *Qualifier = getQualifier(ND))
+  if (auto *Qualifier = getQualifierLoc(ND).getNestedNameSpecifier())
     Qualifier->print(Out, PP);
   // Print the name itself.
   ND.getDeclName().print(Out, PP);

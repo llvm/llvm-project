@@ -129,7 +129,7 @@ void GlobalObject::setAlignment(MaybeAlign Align) {
 
 void GlobalObject::copyAttributesFrom(const GlobalObject *Src) {
   GlobalValue::copyAttributesFrom(Src);
-  setAlignment(Src->getAlignment());
+  setAlignment(MaybeAlign(Src->getAlignment()));
   setSection(Src->getSection());
 }
 

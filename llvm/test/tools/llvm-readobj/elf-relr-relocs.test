@@ -91,6 +91,7 @@ Sections:
     Link:            .symtab
     AddressAlign:    0x0000000000000001
     Content:         600D0100000000000301000000000000000002000000000001050F00000000000900405005700A00
+Symbols: []
 ...
 
 # RUN: yaml2obj -docnum 2 %s \
@@ -169,4 +170,5 @@ Sections:
     Link:            .symtab
     AddressAlign:    0x00000001
     Content:         600D0100030100000000020001050F0009004050
+Symbols: []
 ...

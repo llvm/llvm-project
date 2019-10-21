@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_absvti2
 // REQUIRES: int128
 //===-- absvti2_test.c - Test __absvti2 -----------------------------------===//
 //

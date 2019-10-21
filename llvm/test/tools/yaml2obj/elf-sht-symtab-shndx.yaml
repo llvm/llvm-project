@@ -126,4 +126,3 @@ Sections:
     Type:    SHT_SYMTAB_SHNDX
     Entries: [ 0 ]
     EntSize: 2
-    Link:    .symtab

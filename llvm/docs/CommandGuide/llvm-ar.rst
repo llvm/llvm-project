@@ -35,6 +35,12 @@ Here's where **llvm-ar** departs from previous ``ar`` implementations:
 
  Currently **llvm-ar** can read GNU and BSD long file names, but only writes
  archives with the GNU format.
+ 
+*Windows Paths*
+
+ When on Windows **llvm-ar** treats the names of archived *files* in the same
+ case sensitive manner as the operating system. When on a non-Windows machine
+ **llvm-ar** does not consider character case.
 
 OPTIONS
 -------
@@ -94,15 +100,15 @@ r[abu]
  *files* or insert them at the end of the archive if they do not exist. If no
  *files* are specified, the archive is not modified.
 
-t[v]
+t[vO]
 
  Print the table of contents. Without any modifiers, this operation just prints
  the names of the members to the standard output. With the *v* modifier,
  **llvm-ar** also prints out the file type (B=bitcode, S=symbol
  table, blank=regular file), the permission mode, the owner and group, the
- size, and the date. If any *files* are specified, the listing is only for
- those files. If no *files* are specified, the table of contents for the
- whole archive is printed.
+ size, and the date. With the :option:`O` modifier, display member offsets.
+ If any *files* are specified, the listing is only for those files. If no
+ *files* are specified, the table of contents for the whole archive is printed.
 
 x[oP]
 
@@ -138,6 +144,10 @@ section (above) to determine which modifiers are applicable to which operations.
 
  When extracting files, this option will cause **llvm-ar** to preserve the
  original modification times of the files it writes.
+
+.. option:: O
+
+ Display member offsets inside the archive.
 
 [u]
 

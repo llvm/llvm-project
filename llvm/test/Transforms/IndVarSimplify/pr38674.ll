@@ -14,10 +14,9 @@ define i32 @test_01() {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i16 1 to i32
 ; CHECK-NEXT:    br label [[FOR_BODY6:%.*]]
 ; CHECK:       for.cond4:
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[INC:%.*]], 2
-; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY6]], label [[FOR_END:%.*]]
+; CHECK-NEXT:    br i1 true, label [[FOR_BODY6]], label [[FOR_END:%.*]]
 ; CHECK:       for.body6:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[FOR_COND4_PREHEADER]] ], [ [[INC]], [[FOR_COND4:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[FOR_COND4_PREHEADER]] ], [ [[INC:%.*]], [[FOR_COND4:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[IV]], [[ZEXT]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[RETURN_LOOPEXIT:%.*]], label [[FOR_COND4]]

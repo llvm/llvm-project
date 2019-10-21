@@ -1841,7 +1841,8 @@ define <2 x double> @test_mm_cvtu64_sd(<2 x double> %__A, i64 %__B) {
 ; X86-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm1, %xmm1
 ; X86-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
 ; X86-NEXT:    vsubpd {{\.LCPI.*}}, %xmm1, %xmm1
-; X86-NEXT:    vhaddpd %xmm1, %xmm1, %xmm1
+; X86-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; X86-NEXT:    vaddsd %xmm1, %xmm2, %xmm1
 ; X86-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; X86-NEXT:    retl
 ;

@@ -17,6 +17,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/NestedNameSpecifier.h"
@@ -250,6 +251,96 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CUDAKernelCallExprClass;
+  }
+};
+
+/// A rewritten comparison expression that was originally written using
+/// operator syntax.
+///
+/// In C++20, the following rewrites are performed:
+/// - <tt>a == b</tt> -> <tt>b == a</tt>
+/// - <tt>a != b</tt> -> <tt>!(a == b)</tt>
+/// - <tt>a != b</tt> -> <tt>!(b == a)</tt>
+/// - For \c \@ in \c <, \c <=, \c >, \c >=, \c <=>:
+///   - <tt>a @ b<tt> -> <tt>(a <=> b) @ 0</tt>
+///   - <tt>a @ b<tt> -> <tt>0 @ (b <=> a)</tt>
+///
+/// This expression provides access to both the original syntax and the
+/// rewritten expression.
+///
+/// Note that the rewritten calls to \c ==, \c <=>, and \c \@ are typically
+/// \c CXXOperatorCallExprs, but could theoretically be \c BinaryOperators.
+class CXXRewrittenBinaryOperator : public Expr {
+  friend class ASTStmtReader;
+
+  /// The rewritten semantic form.
+  Stmt *SemanticForm;
+
+public:
+  CXXRewrittenBinaryOperator(Expr *SemanticForm, bool IsReversed)
+      : Expr(CXXRewrittenBinaryOperatorClass, SemanticForm->getType(),
+             SemanticForm->getValueKind(), SemanticForm->getObjectKind(),
+             SemanticForm->isTypeDependent(), SemanticForm->isValueDependent(),
+             SemanticForm->isInstantiationDependent(),
+             SemanticForm->containsUnexpandedParameterPack()),
+        SemanticForm(SemanticForm) {
+    CXXRewrittenBinaryOperatorBits.IsReversed = IsReversed;
+  }
+  CXXRewrittenBinaryOperator(EmptyShell Empty)
+      : Expr(CXXRewrittenBinaryOperatorClass, Empty), SemanticForm() {}
+
+  /// Get an equivalent semantic form for this expression.
+  Expr *getSemanticForm() { return cast<Expr>(SemanticForm); }
+  const Expr *getSemanticForm() const { return cast<Expr>(SemanticForm); }
+
+  struct DecomposedForm {
+    /// The original opcode, prior to rewriting.
+    BinaryOperatorKind Opcode;
+    /// The original left-hand side.
+    const Expr *LHS;
+    /// The original right-hand side.
+    const Expr *RHS;
+    /// The inner \c == or \c <=> operator expression.
+    const Expr *InnerBinOp;
+  };
+
+  /// Decompose this operator into its syntactic form.
+  DecomposedForm getDecomposedForm() const LLVM_READONLY;
+
+  /// Determine whether this expression was rewritten in reverse form.
+  bool isReversed() const { return CXXRewrittenBinaryOperatorBits.IsReversed; }
+
+  BinaryOperatorKind getOperator() const { return getDecomposedForm().Opcode; }
+  const Expr *getLHS() const { return getDecomposedForm().LHS; }
+  const Expr *getRHS() const { return getDecomposedForm().RHS; }
+
+  SourceLocation getOperatorLoc() const LLVM_READONLY {
+    return getDecomposedForm().InnerBinOp->getExprLoc();
+  }
+  SourceLocation getExprLoc() const LLVM_READONLY { return getOperatorLoc(); }
+
+  /// Compute the begin and end locations from the decomposed form.
+  /// The locations of the semantic form are not reliable if this is
+  /// a reversed expression.
+  //@{
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getDecomposedForm().LHS->getBeginLoc();
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getDecomposedForm().RHS->getEndLoc();
+  }
+  SourceRange getSourceRange() const LLVM_READONLY {
+    DecomposedForm DF = getDecomposedForm();
+    return SourceRange(DF.LHS->getBeginLoc(), DF.RHS->getEndLoc());
+  }
+  //@}
+
+  child_range children() {
+    return child_range(&SemanticForm, &SemanticForm + 1);
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXRewrittenBinaryOperatorClass;
   }
 };
 
@@ -4747,6 +4838,125 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == BuiltinBitCastExprClass;
+  }
+};
+
+/// \brief Represents the specialization of a concept - evaluates to a prvalue
+/// of type bool.
+///
+/// According to C++2a [expr.prim.id]p3 an id-expression that denotes the
+/// specialization of a concept results in a prvalue of type bool.
+class ConceptSpecializationExpr final : public Expr,
+      private llvm::TrailingObjects<ConceptSpecializationExpr,
+                                    TemplateArgument> {
+  friend class ASTStmtReader;
+  friend TrailingObjects;
+
+  // \brief The optional nested name specifier used when naming the concept.
+  NestedNameSpecifierLoc NestedNameSpec;
+
+  /// \brief The location of the template keyword, if specified when naming the
+  /// concept.
+  SourceLocation TemplateKWLoc;
+
+  /// \brief The location of the concept name in the expression.
+  SourceLocation ConceptNameLoc;
+
+  /// \brief The declaration found by name lookup when the expression was
+  /// created.
+  /// Can differ from NamedConcept when, for example, the concept was found
+  /// through a UsingShadowDecl.
+  NamedDecl *FoundDecl;
+
+  /// \brief The concept named, and whether or not the concept with the given
+  /// arguments was satisfied when the expression was created.
+  /// If any of the template arguments are dependent (this expr would then be
+  /// isValueDependent()), this bit is to be ignored.
+  llvm::PointerIntPair<ConceptDecl *, 1, bool> NamedConcept;
+
+  /// \brief The template argument list source info used to specialize the
+  /// concept.
+  const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
+
+  /// \brief The number of template arguments in the tail-allocated list of
+  /// converted template arguments.
+  unsigned NumTemplateArgs;
+
+  ConceptSpecializationExpr(ASTContext &C, NestedNameSpecifierLoc NNS,
+                            SourceLocation TemplateKWLoc,
+                            SourceLocation ConceptNameLoc, NamedDecl *FoundDecl,
+                            ConceptDecl *NamedConcept,
+                            const ASTTemplateArgumentListInfo *ArgsAsWritten,
+                            ArrayRef<TemplateArgument> ConvertedArgs,
+                            Optional<bool> IsSatisfied);
+
+  ConceptSpecializationExpr(EmptyShell Empty, unsigned NumTemplateArgs);
+
+public:
+
+  static ConceptSpecializationExpr *
+  Create(ASTContext &C, NestedNameSpecifierLoc NNS,
+         SourceLocation TemplateKWLoc, SourceLocation ConceptNameLoc,
+         NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
+         const ASTTemplateArgumentListInfo *ArgsAsWritten,
+         ArrayRef<TemplateArgument> ConvertedArgs, Optional<bool> IsSatisfied);
+
+  static ConceptSpecializationExpr *
+  Create(ASTContext &C, EmptyShell Empty, unsigned NumTemplateArgs);
+
+  const NestedNameSpecifierLoc &getNestedNameSpecifierLoc() const {
+    return NestedNameSpec;
+  }
+
+  NamedDecl *getFoundDecl() const {
+    return FoundDecl;
+  }
+
+  ConceptDecl *getNamedConcept() const {
+    return NamedConcept.getPointer();
+  }
+
+  ArrayRef<TemplateArgument> getTemplateArguments() const {
+    return ArrayRef<TemplateArgument>(getTrailingObjects<TemplateArgument>(),
+                                      NumTemplateArgs);
+  }
+
+  const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
+    return ArgsAsWritten;
+  }
+
+  /// \brief Set new template arguments for this concept specialization.
+  void setTemplateArguments(const ASTTemplateArgumentListInfo *ArgsAsWritten,
+                            ArrayRef<TemplateArgument> Converted);
+
+  /// \brief Whether or not the concept with the given arguments was satisfied
+  /// when the expression was created. This method assumes that the expression
+  /// is not dependent!
+  bool isSatisfied() const {
+    assert(!isValueDependent()
+           && "isSatisfied called on a dependent ConceptSpecializationExpr");
+    return NamedConcept.getInt();
+  }
+
+  SourceLocation getConceptNameLoc() const { return ConceptNameLoc; }
+
+  SourceLocation getTemplateKWLoc() const { return TemplateKWLoc; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == ConceptSpecializationExprClass;
+  }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return ConceptNameLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return ArgsAsWritten->RAngleLoc;
+  }
+
+  // Iterators
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 };
 

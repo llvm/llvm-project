@@ -5,7 +5,7 @@ int foo(int x) {
 }
 
 struct X {
-  bool operator==(const X &x);
+  bool operator==(const X &x) const;
 };
 
 struct A {

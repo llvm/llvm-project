@@ -3749,11 +3749,10 @@ bool X86AsmParser::parseSEHRegisterNumber(unsigned RegClassID,
   SMLoc startLoc = getLexer().getLoc();
   const MCRegisterInfo *MRI = getContext().getRegisterInfo();
 
-  // A percent indicates a symbolic register name. Parse it as usual and check
-  // the register class.
-  if (getLexer().is(AsmToken::Percent)) {
+  // Try parsing the argument as a register first.
+  if (getLexer().getTok().isNot(AsmToken::Integer)) {
     SMLoc endLoc;
-    if (getParser().getTargetParser().ParseRegister(RegNo, startLoc, endLoc))
+    if (ParseRegister(RegNo, startLoc, endLoc))
       return true;
 
     if (!X86MCRegisterClasses[RegClassID].contains(RegNo)) {

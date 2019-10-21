@@ -20,11 +20,14 @@
 #include "ProcessWindowsLog.h"
 #include "TargetThreadWindows.h"
 
-// TODO support _M_ARM and _M_ARM64
 #if defined(__x86_64__) || defined(_M_AMD64)
 #include "x64/RegisterContextWindows_x64.h"
 #elif defined(__i386__) || defined(_M_IX86)
 #include "x86/RegisterContextWindows_x86.h"
+#elif defined(__aarch64__) || defined(_M_ARM64)
+#include "arm64/RegisterContextWindows_arm64.h"
+#elif defined(__arm__) || defined(_M_ARM)
+#include "arm/RegisterContextWindows_arm.h"
 #endif
 
 using namespace lldb;
@@ -69,11 +72,21 @@ TargetThreadWindows::CreateRegisterContextForFrame(StackFrame *frame) {
       switch (arch.GetMachine()) {
       case llvm::Triple::arm:
       case llvm::Triple::thumb:
-        LLDB_LOG(log, "debugging ARM (NT) targets is currently unsupported");
+#if defined(__arm__) || defined(_M_ARM)
+        m_thread_reg_ctx_sp.reset(
+            new RegisterContextWindows_arm(*this, concrete_frame_idx));
+#else
+        LLDB_LOG(log, "debugging foreign targets is currently unsupported");
+#endif
         break;
 
       case llvm::Triple::aarch64:
-        LLDB_LOG(log, "debugging ARM64 targets is currently unsupported");
+#if defined(__aarch64__) || defined(_M_ARM64)
+        m_thread_reg_ctx_sp.reset(
+            new RegisterContextWindows_arm64(*this, concrete_frame_idx));
+#else
+        LLDB_LOG(log, "debugging foreign targets is currently unsupported");
+#endif
         break;
 
       case llvm::Triple::x86:

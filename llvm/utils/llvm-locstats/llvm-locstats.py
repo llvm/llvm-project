@@ -167,6 +167,7 @@ def Main():
         cov_category = \
           "params (excluding the debug entry values) " \
           "with {} of its scope covered".format(cov_bucket)
+        variables_coverage_map[cov_bucket] = json_parsed[cov_category]
   else:
     # Read the JSON for both local variables and formal parameters.
     variables_total = \

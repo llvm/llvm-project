@@ -550,6 +550,14 @@ public:
     return *static_cast<T *>(Last ? Last->Next.getPointer() : nullptr);
   }
 
+  void takeNodes(IntrusiveBackList<T> &Other) {
+    for (auto &N : Other) {
+      N.Next.setPointerAndInt(&N, true);
+      push_back(N);
+    }
+    Other.Last = nullptr;
+  }
+
   class const_iterator;
   class iterator
       : public iterator_facade_base<iterator, std::forward_iterator_tag, T> {
@@ -684,6 +692,10 @@ public:
                     dwarf::Form Form, T &&Value) {
     return addValue(Alloc, DIEValue(Attribute, Form, std::forward<T>(Value)));
   }
+
+  /// Take ownership of the nodes in \p Other, and append them to the back of
+  /// the list.
+  void takeValues(DIEValueList &Other) { List.takeNodes(Other.List); }
 
   value_range values() {
     return make_range(value_iterator(List.begin()), value_iterator(List.end()));

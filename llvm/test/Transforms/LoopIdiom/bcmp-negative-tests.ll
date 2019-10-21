@@ -6,6 +6,30 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
 define i1 @three_blocks_and_two_latches_in_loop(i8* %ptr0, i8* %ptr1) {
+; CHECK-LABEL: @three_blocks_and_two_latches_in_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[I_08_BE:%.*]], [[FOR_BODY_BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[PTR0:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V0:%.*]] = load i8, i8* [[ARRAYIDX]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[PTR1:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[ARRAYIDX1]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[V0]], [[V1]]
+; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i64 [[I_08]], 1
+; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_PASSTHROUGH:%.*]], label [[CLEANUP:%.*]]
+; CHECK:       for.passthrough:
+; CHECK-NEXT:    br i1 true, label [[FOR_COND:%.*]], label [[FOR_BODY_BACKEDGE]]
+; CHECK:       for.body.backedge:
+; CHECK-NEXT:    [[I_08_BE]] = phi i64 [ [[INC]], [[FOR_COND]] ], [ 0, [[FOR_PASSTHROUGH]] ]
+; CHECK-NEXT:    br label [[FOR_BODY]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 8
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY_BACKEDGE]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_COND]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   br label %for.body
 
@@ -32,6 +56,27 @@ cleanup:
 }
 
 define i1 @three_blocks_in_loop(i8* %ptr0, i8* %ptr1) {
+; CHECK-LABEL: @three_blocks_in_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_COND:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[PTR0:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V0:%.*]] = load i8, i8* [[ARRAYIDX]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[PTR1:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[ARRAYIDX1]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[V0]], [[V1]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
+; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_PASSTHROUGH:%.*]], label [[CLEANUP:%.*]]
+; CHECK:       for.passthrough:
+; CHECK-NEXT:    br label [[FOR_COND]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 8
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_COND]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   br label %for.body
 
@@ -58,6 +103,25 @@ cleanup:
 }
 
 define i1 @body_cmp_is_not_equality(i8* %ptr0, i8* %ptr1) {
+; CHECK-LABEL: @body_cmp_is_not_equality(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_COND:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[PTR0:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V0:%.*]] = load i8, i8* [[ARRAYIDX]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[PTR1:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[ARRAYIDX1]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i8 [[V0]], [[V1]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
+; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_COND]], label [[CLEANUP:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 8
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_COND]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   br label %for.body
 
@@ -81,6 +145,23 @@ cleanup:
 }
 
 define i1 @only_one_load(i8* %ptr0, i8* %ptr1) {
+; CHECK-LABEL: @only_one_load(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_COND:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[PTR0:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V0:%.*]] = load i8, i8* [[ARRAYIDX]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[V0]], 0
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
+; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_COND]], label [[CLEANUP:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 8
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_COND]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   br label %for.body
 
@@ -102,6 +183,25 @@ cleanup:
 }
 
 define i1 @loads_of_less_than_byte(i7* %ptr0, i7* %ptr1) {
+; CHECK-LABEL: @loads_of_less_than_byte(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_COND:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i7, i7* [[PTR0:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V0:%.*]] = load i7, i7* [[ARRAYIDX]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i7, i7* [[PTR1:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V1:%.*]] = load i7, i7* [[ARRAYIDX1]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i7 [[V0]], [[V1]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
+; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_COND]], label [[CLEANUP:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 8
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_COND]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   br label %for.body
 
@@ -125,6 +225,25 @@ cleanup:
 }
 
 define i1 @loads_of_not_multiple_of_a_byte(i9* %ptr0, i9* %ptr1) {
+; CHECK-LABEL: @loads_of_not_multiple_of_a_byte(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_COND:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i9, i9* [[PTR0:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V0:%.*]] = load i9, i9* [[ARRAYIDX]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i9, i9* [[PTR1:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V1:%.*]] = load i9, i9* [[ARRAYIDX1]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i9 [[V0]], [[V1]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
+; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_COND]], label [[CLEANUP:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 8
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_COND]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   br label %for.body
 
@@ -148,6 +267,25 @@ cleanup:
 }
 
 define i1 @loop_instruction_used_in_phi_node_outside_loop(i8* %ptr0, i8* %ptr1) {
+; CHECK-LABEL: @loop_instruction_used_in_phi_node_outside_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_COND:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[PTR0:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V0:%.*]] = load i8, i8* [[ARRAYIDX]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[PTR1:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[ARRAYIDX1]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[V0]], [[V1]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
+; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_COND]], label [[CLEANUP:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 8
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ [[CMP3]], [[FOR_BODY]] ], [ true, [[FOR_COND]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   br label %for.body
 
@@ -171,6 +309,26 @@ cleanup:
 }
 
 define i1 @loop_has_write(i8* %ptr0, i8* %ptr1, i32* %write) {
+; CHECK-LABEL: @loop_has_write(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_COND:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[PTR0:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V0:%.*]] = load i8, i8* [[ARRAYIDX]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[PTR1:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[ARRAYIDX1]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[V0]], [[V1]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
+; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_COND]], label [[CLEANUP:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 8
+; CHECK-NEXT:    store i32 0, i32* [[WRITE:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_COND]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   br label %for.body
 
@@ -196,6 +354,26 @@ cleanup:
 
 declare void @sink()
 define i1 @loop_has_call(i8* %ptr0, i8* %ptr1, i32* %load) {
+; CHECK-LABEL: @loop_has_call(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_COND:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[PTR0:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V0:%.*]] = load i8, i8* [[ARRAYIDX]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[PTR1:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[ARRAYIDX1]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[V0]], [[V1]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
+; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_COND]], label [[CLEANUP:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 8
+; CHECK-NEXT:    tail call void @sink()
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_COND]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   br label %for.body
 
@@ -220,6 +398,26 @@ cleanup:
 }
 
 define i1 @loop_has_atomic_load(i8* %ptr0, i8* %ptr1, i32* %load) {
+; CHECK-LABEL: @loop_has_atomic_load(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_COND:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[PTR0:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V0:%.*]] = load i8, i8* [[ARRAYIDX]]
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[PTR1:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[ARRAYIDX1]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8 [[V0]], [[V1]]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
+; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_COND]], label [[CLEANUP:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 8
+; CHECK-NEXT:    [[TMP:%.*]] = load atomic i32, i32* [[LOAD:%.*]] unordered, align 1
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_COND]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   br label %for.body
 
@@ -244,6 +442,28 @@ cleanup:
 }
 
 define i1 @different_load_step(i8* %ptr) {
+; CHECK-LABEL: @different_load_step(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 8
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_015:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[PTR1_014:%.*]] = phi i8* [ [[ADD_PTR]], [[ENTRY]] ], [ [[ADD_PTR3:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[PTR0_013:%.*]] = phi i8* [ [[PTR]], [[ENTRY]] ], [ [[INCDEC_PTR:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[V0:%.*]] = load i8, i8* [[PTR0_013]]
+; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[PTR1_014]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[V0]], [[V1]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_INC]], label [[CLEANUP:%.*]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_015]], 1
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, i8* [[PTR0_013]], i64 1
+; CHECK-NEXT:    [[ADD_PTR3]] = getelementptr inbounds i8, i8* [[PTR1_014]], i64 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 16
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_INC]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
   br label %for.body
@@ -270,6 +490,28 @@ cleanup:
 }
 
 define i1 @step_is_variable(i8* %ptr, i64 %step) {
+; CHECK-LABEL: @step_is_variable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 8
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_015:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[PTR1_014:%.*]] = phi i8* [ [[ADD_PTR]], [[ENTRY]] ], [ [[ADD_PTR3:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[PTR0_013:%.*]] = phi i8* [ [[PTR]], [[ENTRY]] ], [ [[INCDEC_PTR:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[V0:%.*]] = load i8, i8* [[PTR0_013]]
+; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[PTR1_014]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[V0]], [[V1]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_INC]], label [[CLEANUP:%.*]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_015]], [[STEP:%.*]]
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, i8* [[PTR0_013]], i64 1
+; CHECK-NEXT:    [[ADD_PTR3]] = getelementptr inbounds i8, i8* [[PTR1_014]], i64 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 16
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_INC]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
   br label %for.body
@@ -296,6 +538,28 @@ cleanup:
 }
 
 define i1 @load_step_is_variable(i8* %ptr, i64 %step) {
+; CHECK-LABEL: @load_step_is_variable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 8
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_015:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[PTR1_014:%.*]] = phi i8* [ [[ADD_PTR]], [[ENTRY]] ], [ [[ADD_PTR3:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[PTR0_013:%.*]] = phi i8* [ [[PTR]], [[ENTRY]] ], [ [[INCDEC_PTR:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[V0:%.*]] = load i8, i8* [[PTR0_013]]
+; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[PTR1_014]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[V0]], [[V1]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_INC]], label [[CLEANUP:%.*]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_015]], 1
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, i8* [[PTR0_013]], i64 [[STEP:%.*]]
+; CHECK-NEXT:    [[ADD_PTR3]] = getelementptr inbounds i8, i8* [[PTR1_014]], i64 [[STEP]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 16
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_INC]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
   br label %for.body
@@ -322,6 +586,28 @@ cleanup:
 }
 
 define i1 @step_and_load_step_is_variable(i8* %ptr, i64 %step) {
+; CHECK-LABEL: @step_and_load_step_is_variable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 8
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_015:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[PTR1_014:%.*]] = phi i8* [ [[ADD_PTR]], [[ENTRY]] ], [ [[ADD_PTR3:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[PTR0_013:%.*]] = phi i8* [ [[PTR]], [[ENTRY]] ], [ [[INCDEC_PTR:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[V0:%.*]] = load i8, i8* [[PTR0_013]]
+; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[PTR1_014]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[V0]], [[V1]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_INC]], label [[CLEANUP:%.*]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_015]], [[STEP:%.*]]
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, i8* [[PTR0_013]], i64 [[STEP]]
+; CHECK-NEXT:    [[ADD_PTR3]] = getelementptr inbounds i8, i8* [[PTR1_014]], i64 [[STEP]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 16
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_INC]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
   br label %for.body
@@ -348,6 +634,28 @@ cleanup:
 }
 
 define i1 @load_step_not_affine(i8* %ptr) {
+; CHECK-LABEL: @load_step_not_affine(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 8
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_018:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[PTR1_017:%.*]] = phi i8* [ [[ADD_PTR]], [[ENTRY]] ], [ [[ADD_PTR4:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[PTR0_016:%.*]] = phi i8* [ [[PTR]], [[ENTRY]] ], [ [[ADD_PTR3:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[V0:%.*]] = load i8, i8* [[PTR0_016]]
+; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[PTR1_017]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[V0]], [[V1]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_INC]], label [[CLEANUP:%.*]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_018]], 1
+; CHECK-NEXT:    [[ADD_PTR3]] = getelementptr inbounds i8, i8* [[PTR0_016]], i64 [[INC]]
+; CHECK-NEXT:    [[ADD_PTR4]] = getelementptr inbounds i8, i8* [[PTR1_017]], i64 [[INC]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 16
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_INC]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
   br label %for.body
@@ -374,6 +682,28 @@ cleanup:
 }
 
 define i1 @no_overlap_between_loads(i8* %ptr) {
+; CHECK-LABEL: @no_overlap_between_loads(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 8
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_016:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[PTR1_015:%.*]] = phi i8* [ [[ADD_PTR]], [[ENTRY]] ], [ [[ADD_PTR4:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[PTR0_014:%.*]] = phi i8* [ [[PTR]], [[ENTRY]] ], [ [[ADD_PTR3:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[V0:%.*]] = load i8, i8* [[PTR0_014]]
+; CHECK-NEXT:    [[V1:%.*]] = load i8, i8* [[PTR1_015]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[V0]], [[V1]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_INC]], label [[CLEANUP:%.*]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_016]], 1
+; CHECK-NEXT:    [[ADD_PTR3]] = getelementptr inbounds i8, i8* [[PTR0_014]], i64 2
+; CHECK-NEXT:    [[ADD_PTR4]] = getelementptr inbounds i8, i8* [[PTR1_015]], i64 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 16
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_INC]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
   br label %for.body
@@ -400,6 +730,28 @@ cleanup:
 }
 
 define i1 @volatile_loads(i8* %ptr) {
+; CHECK-LABEL: @volatile_loads(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 8
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_016:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[PTR1_015:%.*]] = phi i8* [ [[ADD_PTR]], [[ENTRY]] ], [ [[ADD_PTR4:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[PTR0_014:%.*]] = phi i8* [ [[PTR]], [[ENTRY]] ], [ [[ADD_PTR3:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[V0:%.*]] = load volatile i8, i8* [[PTR0_014]]
+; CHECK-NEXT:    [[V1:%.*]] = load volatile i8, i8* [[PTR1_015]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[V0]], [[V1]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_INC]], label [[CLEANUP:%.*]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_016]], 1
+; CHECK-NEXT:    [[ADD_PTR3]] = getelementptr inbounds i8, i8* [[PTR0_014]], i64 1
+; CHECK-NEXT:    [[ADD_PTR4]] = getelementptr inbounds i8, i8* [[PTR1_015]], i64 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 16
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_INC]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
   br label %for.body
@@ -426,6 +778,28 @@ cleanup:
 }
 
 define i1 @atomic_loads(i8* %ptr) {
+; CHECK-LABEL: @atomic_loads(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i64 8
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_016:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[PTR1_015:%.*]] = phi i8* [ [[ADD_PTR]], [[ENTRY]] ], [ [[ADD_PTR4:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[PTR0_014:%.*]] = phi i8* [ [[PTR]], [[ENTRY]] ], [ [[ADD_PTR3:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[V0:%.*]] = load atomic i8, i8* [[PTR0_014]] unordered, align 1
+; CHECK-NEXT:    [[V1:%.*]] = load atomic i8, i8* [[PTR1_015]] unordered, align 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[V0]], [[V1]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_INC]], label [[CLEANUP:%.*]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_016]], 1
+; CHECK-NEXT:    [[ADD_PTR3]] = getelementptr inbounds i8, i8* [[PTR0_014]], i64 1
+; CHECK-NEXT:    [[ADD_PTR4]] = getelementptr inbounds i8, i8* [[PTR1_015]], i64 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 16
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_INC]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
   br label %for.body
@@ -452,6 +826,28 @@ cleanup:
 }
 
 define i1 @address_space(i8 addrspace(1)* %ptr) {
+; CHECK-LABEL: @address_space(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8 addrspace(1)* [[PTR:%.*]], i64 8
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_016:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[PTR1_015:%.*]] = phi i8 addrspace(1)* [ [[ADD_PTR]], [[ENTRY]] ], [ [[ADD_PTR4:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[PTR0_014:%.*]] = phi i8 addrspace(1)* [ [[PTR]], [[ENTRY]] ], [ [[ADD_PTR3:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[V0:%.*]] = load i8, i8 addrspace(1)* [[PTR0_014]]
+; CHECK-NEXT:    [[V1:%.*]] = load i8, i8 addrspace(1)* [[PTR1_015]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[V0]], [[V1]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_INC]], label [[CLEANUP:%.*]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_016]], 1
+; CHECK-NEXT:    [[ADD_PTR3]] = getelementptr inbounds i8, i8 addrspace(1)* [[PTR0_014]], i64 1
+; CHECK-NEXT:    [[ADD_PTR4]] = getelementptr inbounds i8, i8 addrspace(1)* [[PTR1_015]], i64 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 16
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[FOR_BODY]] ], [ true, [[FOR_INC]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
 entry:
   %add.ptr = getelementptr inbounds i8, i8 addrspace(1)* %ptr, i64 8
   br label %for.body
@@ -489,6 +885,45 @@ cleanup:
 ; The loads proceed differently here - fillch[i] changes once per outer loop,
 ; while bptr[i][j] changes both in inner loop, and in outer loop.
 define i1 @pr43206_different_loops(i32 %i_max, i32 %j_max, i32** %bptr, i32* %fillch) {
+; CHECK-LABEL: @pr43206_different_loops(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP31:%.*]] = icmp sgt i32 [[I_MAX:%.*]], 0
+; CHECK-NEXT:    [[CMP229:%.*]] = icmp sgt i32 [[J_MAX:%.*]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP31]], [[CMP229]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FOR_COND1_PREHEADER_US_PREHEADER:%.*]], label [[CLEANUP12:%.*]]
+; CHECK:       for.cond1.preheader.us.preheader:
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT38:%.*]] = zext i32 [[I_MAX]] to i64
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[J_MAX]] to i64
+; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
+; CHECK:       for.cond1.preheader.us:
+; CHECK-NEXT:    [[INDVARS_IV36:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER_US_PREHEADER]] ], [ [[INDVARS_IV_NEXT37:%.*]], [[FOR_COND1_FOR_INC10_CRIT_EDGE_US:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32*, i32** [[BPTR:%.*]], i64 [[INDVARS_IV36]]
+; CHECK-NEXT:    [[V0:%.*]] = load i32*, i32** [[ARRAYIDX_US]], align 8
+; CHECK-NEXT:    [[ARRAYIDX8_US:%.*]] = getelementptr inbounds i32, i32* [[FILLCH:%.*]], i64 [[INDVARS_IV36]]
+; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[ARRAYIDX8_US]], align 4
+; CHECK-NEXT:    br label [[FOR_BODY4_US:%.*]]
+; CHECK:       for.cond1.us:
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT:%.*]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND1_FOR_INC10_CRIT_EDGE_US]], label [[FOR_BODY4_US]]
+; CHECK:       for.body4.us:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER_US]] ], [ [[INDVARS_IV_NEXT]], [[FOR_COND1_US:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX6_US:%.*]] = getelementptr inbounds i32, i32* [[V0]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[ARRAYIDX6_US]], align 4
+; CHECK-NEXT:    [[CMP9_US:%.*]] = icmp eq i32 [[V2]], [[V1]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    br i1 [[CMP9_US]], label [[FOR_COND1_US]], label [[CLEANUP12_LOOPEXIT:%.*]]
+; CHECK:       for.cond1.for.inc10_crit_edge.us:
+; CHECK-NEXT:    [[INDVARS_IV_NEXT37]] = add nuw nsw i64 [[INDVARS_IV36]], 1
+; CHECK-NEXT:    [[EXITCOND39:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT37]], [[WIDE_TRIP_COUNT38]]
+; CHECK-NEXT:    br i1 [[EXITCOND39]], label [[CLEANUP12_LOOPEXIT1:%.*]], label [[FOR_COND1_PREHEADER_US]]
+; CHECK:       cleanup12.loopexit:
+; CHECK-NEXT:    br label [[CLEANUP12]]
+; CHECK:       cleanup12.loopexit1:
+; CHECK-NEXT:    br label [[CLEANUP12]]
+; CHECK:       cleanup12:
+; CHECK-NEXT:    [[V3:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ true, [[CLEANUP12_LOOPEXIT]] ], [ false, [[CLEANUP12_LOOPEXIT1]] ]
+; CHECK-NEXT:    ret i1 [[V3]]
+;
 entry:
   %cmp31 = icmp sgt i32 %i_max, 0
   %cmp229 = icmp sgt i32 %j_max, 0
@@ -528,4 +963,37 @@ for.cond1.for.inc10_crit_edge.us:                 ; preds = %for.cond1.us
 cleanup12:                                        ; preds = %for.cond1.for.inc10_crit_edge.us, %for.body4.us, %entry
   %v3 = phi i1 [ false, %entry ], [ true, %for.body4.us ], [ false, %for.cond1.for.inc10_crit_edge.us ]
   ret i1 %v3
+}
+
+; From https://bugs.llvm.org/show_bug.cgi?id=43687
+define void @body_always_branches_to_latch(i16* %a, i16* %b, i32) {
+; CHECK-LABEL: @body_always_branches_to_latch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BODY:%.*]]
+; CHECK:       body:
+; CHECK-NEXT:    [[A_DATA:%.*]] = load i16, i16* [[A:%.*]]
+; CHECK-NEXT:    [[B_DATA:%.*]] = load i16, i16* [[B:%.*]]
+; CHECK-NEXT:    [[COMPARED_EQUAL:%.*]] = icmp eq i16 [[A_DATA]], [[B_DATA]]
+; CHECK-NEXT:    br i1 [[COMPARED_EQUAL]], label [[LATCH:%.*]], label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[SHOULD_CONTINUE:%.*]] = icmp slt i32 undef, 79
+; CHECK-NEXT:    br i1 [[SHOULD_CONTINUE]], label [[BODY]], label [[END:%.*]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %body
+
+body:                                   ; preds = %latch, %for.end1317
+  %a_data = load i16, i16* %a
+  %b_data = load i16, i16* %b
+  %compared_equal = icmp eq i16 %a_data, %b_data
+  br i1 %compared_equal, label %latch, label %latch
+
+latch:                                    ; preds = %body, %body
+  %should_continue = icmp slt i32 undef, 79
+  br i1 %should_continue, label %body, label %end
+
+end:                                    ; preds = %latch
+  ret void
 }

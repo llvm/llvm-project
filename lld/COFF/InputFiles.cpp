@@ -382,7 +382,8 @@ Symbol *ObjFile::createRegular(COFFSymbolRef sym) {
     StringRef name;
     coffObj->getSymbolName(sym, name);
     if (sc)
-      return symtab->addRegular(this, name, sym.getGeneric(), sc);
+      return symtab->addRegular(this, name, sym.getGeneric(), sc,
+                                sym.getValue());
     // For MinGW symbols named .weak.* that point to a discarded section,
     // don't create an Undefined symbol. If nothing ever refers to the symbol,
     // everything should be fine. If something actually refers to the symbol
@@ -536,7 +537,7 @@ void ObjFile::handleComdatSelection(COFFSymbolRef sym, COMDATType &selection,
     // if the two comdat sections have e.g. different alignment.
     // Match that.
     if (leaderChunk->getContents() != newChunk.getContents())
-      symtab->reportDuplicate(leader, this);
+      symtab->reportDuplicate(leader, this, &newChunk, sym.getValue());
     break;
   }
 
@@ -786,6 +787,37 @@ void ObjFile::initializeDependencies() {
   }
 
   debugTypesObj = makeTpiSource(this);
+}
+
+// Used only for DWARF debug info, which is not common (except in MinGW
+// environments). This returns an optional pair of file name and line
+// number for where the variable was defined.
+Optional<std::pair<StringRef, uint32_t>>
+ObjFile::getVariableLocation(StringRef var) {
+  if (!dwarf) {
+    dwarf = make<DWARFCache>(DWARFContext::create(*getCOFFObj()));
+    if (!dwarf)
+      return None;
+  }
+  if (config->machine == I386)
+    var.consume_front("_");
+  Optional<std::pair<std::string, unsigned>> ret = dwarf->getVariableLoc(var);
+  if (!ret)
+    return None;
+  return std::make_pair(saver.save(ret->first), ret->second);
+}
+
+// Used only for DWARF debug info, which is not common (except in MinGW
+// environments).
+Optional<DILineInfo> ObjFile::getDILineInfo(uint32_t offset,
+                                            uint32_t sectionIndex) {
+  if (!dwarf) {
+    dwarf = make<DWARFCache>(DWARFContext::create(*getCOFFObj()));
+    if (!dwarf)
+      return None;
+  }
+
+  return dwarf->getDILineInfo(offset, sectionIndex);
 }
 
 StringRef ltrim1(StringRef s, const char *chars) {

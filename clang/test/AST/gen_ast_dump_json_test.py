@@ -131,10 +131,10 @@ def main():
             index = 0
             for append_line in append_str.splitlines()[2:]:
                 if index == 0:
-                    out_str += '// CHECK: %s\n' %(append_line)
+                    out_str += '// CHECK: %s\n' %(append_line.rstrip())
                     index += 1
                 else:
-                    out_str += '// CHECK-NEXT: %s\n' %(append_line)
+                    out_str += '// CHECK-NEXT: %s\n' %(append_line.rstrip())
                     
             f.write(out_str)
     

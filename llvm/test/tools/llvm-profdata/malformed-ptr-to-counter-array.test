@@ -29,8 +29,11 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\067\265\035\031\112\165\023\344' >> %t.profraw
 RUN: printf '\02\0\0\0\0\0\0\0' >> %t.profraw
 
-// Note: The CounterPtr here is off-by-one. This should trigger a malformed profile error.
-RUN: printf '\0\0\6\0\1\0\0\1' >> %t.profraw
+// Note: The CounterPtr here is off-by-one.
+//
+// Octal '\11' is 9 in decimal: this should push CounterOffset to 1. As there are two counters,
+// the profile reader should error out.
+RUN: printf '\11\0\6\0\1\0\0\0' >> %t.profraw
 
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
@@ -45,4 +48,5 @@ RUN: printf '\101\0\0\0\0\0\0\0' >> %t.profraw
 
 RUN: printf '\3\0bar\0\0\0' >> %t.profraw
 
-RUN: not llvm-profdata merge -o /dev/null %t.profraw
+RUN: not llvm-profdata merge -o /dev/null %t.profraw 2>&1 | FileCheck %s
+CHECK: Malformed instrumentation profile data

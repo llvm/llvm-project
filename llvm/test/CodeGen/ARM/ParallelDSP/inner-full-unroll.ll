@@ -11,14 +11,14 @@
 ; CHECK: [[BIJ_LD:%[^ ]+]] = load i32, i32* [[BIJ_CAST]], align 2
 ; CHECK: [[CIJ_CAST:%[^ ]+]] = bitcast i16* [[CIJ]] to i32*
 ; CHECK: [[CIJ_LD:%[^ ]+]] = load i32, i32* [[CIJ_CAST]], align 2
+; CHECK: [[SMLAD0:%[^ ]+]] = call i32 @llvm.arm.smlad(i32 [[CIJ_LD]], i32 [[BIJ_LD]], i32 0)
 ; CHECK: [[BIJ_2:%[^ ]+]] = getelementptr inbounds i16, i16* [[BIJ]], i32 2
 ; CHECK: [[BIJ_2_CAST:%[^ ]+]] = bitcast i16* [[BIJ_2]] to i32*
 ; CHECK: [[BIJ_2_LD:%[^ ]+]] = load i32, i32* [[BIJ_2_CAST]], align 2
 ; CHECK: [[CIJ_2:%[^ ]+]] = getelementptr inbounds i16, i16* [[CIJ]], i32 2
 ; CHECK: [[CIJ_2_CAST:%[^ ]+]] = bitcast i16* [[CIJ_2]] to i32*
 ; CHECK: [[CIJ_2_LD:%[^ ]+]] = load i32, i32* [[CIJ_2_CAST]], align 2
-; CHECK: [[SMLAD0:%[^ ]+]] = call i32 @llvm.arm.smlad(i32 [[CIJ_2_LD]], i32 [[BIJ_2_LD]], i32 0)
-; CHECK: [[SMLAD1:%[^ ]+]] = call i32 @llvm.arm.smlad(i32 [[CIJ_LD]], i32 [[BIJ_LD]], i32 [[SMLAD0]])
+; CHECK: [[SMLAD1:%[^ ]+]] = call i32 @llvm.arm.smlad(i32 [[CIJ_2_LD]], i32 [[BIJ_2_LD]], i32 [[SMLAD0]])
 ; CHECK: store i32 [[SMLAD1]], i32* %arrayidx, align 4
 
 define void @full_unroll(i32* noalias nocapture %a, i16** noalias nocapture readonly %b, i16** noalias nocapture readonly %c, i32 %N) {

@@ -70,6 +70,8 @@ TemplateParameterList::TemplateParameterList(SourceLocation TemplateLoc,
   }
   if (RequiresClause) {
     *getTrailingObjects<Expr *>() = RequiresClause;
+    if (RequiresClause->containsUnexpandedParameterPack())
+      ContainsUnexpandedParameterPack = true;
   }
 }
 
@@ -136,6 +138,18 @@ static void AdoptTemplateParameterList(TemplateParameterList *Params,
   }
 }
 
+void TemplateParameterList::
+getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
+  // TODO: Concepts: Collect immediately-introduced constraints.
+  if (HasRequiresClause)
+    AC.push_back(getRequiresClause());
+}
+
+bool TemplateParameterList::hasAssociatedConstraints() const {
+  // TODO: Concepts: Regard immediately-introduced constraints.
+  return HasRequiresClause;
+}
+
 namespace clang {
 
 void *allocateDefaultArgStorageChain(const ASTContext &C) {
@@ -143,6 +157,28 @@ void *allocateDefaultArgStorageChain(const ASTContext &C) {
 }
 
 } // namespace clang
+
+//===----------------------------------------------------------------------===//
+// TemplateDecl Implementation
+//===----------------------------------------------------------------------===//
+
+TemplateDecl::TemplateDecl(Kind DK, DeclContext *DC, SourceLocation L,
+                           DeclarationName Name, TemplateParameterList *Params,
+                           NamedDecl *Decl)
+    : NamedDecl(DK, DC, L, Name), TemplatedDecl(Decl), TemplateParams(Params) {}
+
+void TemplateDecl::anchor() {}
+
+void TemplateDecl::
+getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
+  // TODO: Concepts: Append function trailing requires clause.
+  TemplateParams->getAssociatedConstraints(AC);
+}
+
+bool TemplateDecl::hasAssociatedConstraints() const {
+  // TODO: Concepts: Regard function trailing requires clause.
+  return TemplateParams->hasAssociatedConstraints();
+}
 
 //===----------------------------------------------------------------------===//
 // RedeclarableTemplateDecl Implementation
@@ -344,19 +380,10 @@ ClassTemplateDecl *ClassTemplateDecl::Create(ASTContext &C,
                                              SourceLocation L,
                                              DeclarationName Name,
                                              TemplateParameterList *Params,
-                                             NamedDecl *Decl,
-                                             Expr *AssociatedConstraints) {
+                                             NamedDecl *Decl) {
   AdoptTemplateParameterList(Params, cast<DeclContext>(Decl));
 
-  if (!AssociatedConstraints) {
-    return new (C, DC) ClassTemplateDecl(C, DC, L, Name, Params, Decl);
-  }
-
-  auto *const CTDI = new (C) ConstrainedTemplateDeclInfo;
-  auto *const New =
-      new (C, DC) ClassTemplateDecl(CTDI, C, DC, L, Name, Params, Decl);
-  New->setAssociatedConstraints(AssociatedConstraints);
-  return New;
+  return new (C, DC) ClassTemplateDecl(C, DC, L, Name, Params, Decl);
 }
 
 ClassTemplateDecl *ClassTemplateDecl::CreateDeserialized(ASTContext &C,
@@ -706,12 +733,6 @@ FunctionTemplateSpecializationInfo *FunctionTemplateSpecializationInfo::Create(
   return new (Mem) FunctionTemplateSpecializationInfo(
       FD, Template, TSK, TemplateArgs, ArgsAsWritten, POI, MSInfo);
 }
-
-//===----------------------------------------------------------------------===//
-// TemplateDecl Implementation
-//===----------------------------------------------------------------------===//
-
-void TemplateDecl::anchor() {}
 
 //===----------------------------------------------------------------------===//
 // ClassTemplateSpecializationDecl Implementation

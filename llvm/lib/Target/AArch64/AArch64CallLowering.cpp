@@ -136,6 +136,8 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
         AssignFnVarArg(AssignFnVarArg), IsTailCall(IsTailCall), FPDiff(FPDiff),
         StackSize(0) {}
 
+  bool isIncomingArgumentHandler() const override { return false; }
+
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
     MachineFunction &MF = MIRBuilder.getMF();

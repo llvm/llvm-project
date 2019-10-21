@@ -42,6 +42,9 @@ ProgramHeaders:
       - Section: .text
       - Section: .text2
       - Section: .text3
+## TODO (grimar): without the following line (i.e. without an empty symbol table),
+## llvm-objcopy adds an empty .strtab section. It doesn't look correct.
+Symbols: []
 
 # Make sure that when we remove a section we overwrite it with zeros
 # DATA: {{^[^[:blank:]]+}} 00 00 00 00

@@ -34,7 +34,7 @@ define i64 @foo(i64 %bar1, i64 %bar2, i64 %bar3, i64 %bar4, i64 %bar5) local_unn
 ; We expect to find a DBG_VALUE refering to the metadata id for bar5, using the lowest
 ; of the two fixed stack offsets found earlier.
 ; CHECK-LABEL: body:
-; CHECK: DBG_VALUE $r1, 0, !17, !DIExpression(DW_OP_plus_uconst, 8)
+; CHECK: DBG_VALUE $r1, $noreg, !17, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref)
 entry:
   tail call void @llvm.dbg.value(metadata i64 %bar1, metadata !13, metadata !DIExpression()), !dbg !18
   tail call void @llvm.dbg.value(metadata i64 %bar2, metadata !14, metadata !DIExpression()), !dbg !19

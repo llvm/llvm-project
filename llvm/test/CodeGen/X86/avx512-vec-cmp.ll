@@ -1424,3 +1424,110 @@ define <4 x i32> @zext_bool_logic(<4 x i64> %cond1, <4 x i64> %cond2, <4 x i32> 
   %e = add <4 x i32> %d, %x
   ret <4 x i32> %e
 }
+
+; This used to crash in WidenVecRes_SETCC due to generating the wrong
+; result type.
+define void @half_vec_compare(<2 x half>* %x, <2 x i8>* %y) {
+; KNL-LABEL: half_vec_compare:
+; KNL:       ## %bb.0: ## %entry
+; KNL-NEXT:    movzwl (%rdi), %eax ## encoding: [0x0f,0xb7,0x07]
+; KNL-NEXT:    movzwl 2(%rdi), %ecx ## encoding: [0x0f,0xb7,0x4f,0x02]
+; KNL-NEXT:    cwtl ## encoding: [0x98]
+; KNL-NEXT:    vmovd %eax, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc0]
+; KNL-NEXT:    vcvtph2ps %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x13,0xc0]
+; KNL-NEXT:    movswl %cx, %eax ## encoding: [0x0f,0xbf,0xc1]
+; KNL-NEXT:    vmovd %eax, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc8]
+; KNL-NEXT:    vcvtph2ps %xmm1, %xmm1 ## encoding: [0xc4,0xe2,0x79,0x13,0xc9]
+; KNL-NEXT:    vxorps %xmm2, %xmm2, %xmm2 ## encoding: [0xc5,0xe8,0x57,0xd2]
+; KNL-NEXT:    vucomiss %xmm2, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2e,0xca]
+; KNL-NEXT:    setp %al ## encoding: [0x0f,0x9a,0xc0]
+; KNL-NEXT:    setne %cl ## encoding: [0x0f,0x95,0xc1]
+; KNL-NEXT:    orb %al, %cl ## encoding: [0x08,0xc1]
+; KNL-NEXT:    kmovw %ecx, %k0 ## encoding: [0xc5,0xf8,0x92,0xc1]
+; KNL-NEXT:    kshiftlw $1, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x01]
+; KNL-NEXT:    vucomiss %xmm2, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2e,0xc2]
+; KNL-NEXT:    setp %al ## encoding: [0x0f,0x9a,0xc0]
+; KNL-NEXT:    setne %cl ## encoding: [0x0f,0x95,0xc1]
+; KNL-NEXT:    orb %al, %cl ## encoding: [0x08,0xc1]
+; KNL-NEXT:    andl $1, %ecx ## encoding: [0x83,0xe1,0x01]
+; KNL-NEXT:    kmovw %ecx, %k1 ## encoding: [0xc5,0xf8,0x92,0xc9]
+; KNL-NEXT:    korw %k0, %k1, %k1 ## encoding: [0xc5,0xf4,0x45,0xc8]
+; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf3,0x7d,0xc9,0x25,0xc0,0xff]
+; KNL-NEXT:    vpmovdw %zmm0, %ymm0 ## encoding: [0x62,0xf2,0x7e,0x48,0x33,0xc0]
+; KNL-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x63,0xc0]
+; KNL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
+; KNL-NEXT:    ## fixup A - offset: 4, value: LCPI68_0-4, kind: reloc_riprel_4byte
+; KNL-NEXT:    vpextrw $0, %xmm0, (%rsi) ## encoding: [0xc4,0xe3,0x79,0x15,0x06,0x00]
+; KNL-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; KNL-NEXT:    retq ## encoding: [0xc3]
+;
+; AVX512BW-LABEL: half_vec_compare:
+; AVX512BW:       ## %bb.0: ## %entry
+; AVX512BW-NEXT:    movzwl (%rdi), %eax ## encoding: [0x0f,0xb7,0x07]
+; AVX512BW-NEXT:    movzwl 2(%rdi), %ecx ## encoding: [0x0f,0xb7,0x4f,0x02]
+; AVX512BW-NEXT:    cwtl ## encoding: [0x98]
+; AVX512BW-NEXT:    vmovd %eax, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc0]
+; AVX512BW-NEXT:    vcvtph2ps %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x13,0xc0]
+; AVX512BW-NEXT:    movswl %cx, %eax ## encoding: [0x0f,0xbf,0xc1]
+; AVX512BW-NEXT:    vmovd %eax, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc8]
+; AVX512BW-NEXT:    vcvtph2ps %xmm1, %xmm1 ## encoding: [0xc4,0xe2,0x79,0x13,0xc9]
+; AVX512BW-NEXT:    vxorps %xmm2, %xmm2, %xmm2 ## encoding: [0xc5,0xe8,0x57,0xd2]
+; AVX512BW-NEXT:    vucomiss %xmm2, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2e,0xca]
+; AVX512BW-NEXT:    setp %al ## encoding: [0x0f,0x9a,0xc0]
+; AVX512BW-NEXT:    setne %cl ## encoding: [0x0f,0x95,0xc1]
+; AVX512BW-NEXT:    orb %al, %cl ## encoding: [0x08,0xc1]
+; AVX512BW-NEXT:    kmovd %ecx, %k0 ## encoding: [0xc5,0xfb,0x92,0xc1]
+; AVX512BW-NEXT:    kshiftlw $1, %k0, %k0 ## encoding: [0xc4,0xe3,0xf9,0x32,0xc0,0x01]
+; AVX512BW-NEXT:    vucomiss %xmm2, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2e,0xc2]
+; AVX512BW-NEXT:    setp %al ## encoding: [0x0f,0x9a,0xc0]
+; AVX512BW-NEXT:    setne %cl ## encoding: [0x0f,0x95,0xc1]
+; AVX512BW-NEXT:    orb %al, %cl ## encoding: [0x08,0xc1]
+; AVX512BW-NEXT:    andl $1, %ecx ## encoding: [0x83,0xe1,0x01]
+; AVX512BW-NEXT:    kmovw %ecx, %k1 ## encoding: [0xc5,0xf8,0x92,0xc9]
+; AVX512BW-NEXT:    korw %k0, %k1, %k0 ## encoding: [0xc5,0xf4,0x45,0xc0]
+; AVX512BW-NEXT:    vpmovm2w %k0, %zmm0 ## encoding: [0x62,0xf2,0xfe,0x48,0x28,0xc0]
+; AVX512BW-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x63,0xc0]
+; AVX512BW-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
+; AVX512BW-NEXT:    ## fixup A - offset: 4, value: LCPI68_0-4, kind: reloc_riprel_4byte
+; AVX512BW-NEXT:    vpextrw $0, %xmm0, (%rsi) ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x15,0x06,0x00]
+; AVX512BW-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
+; AVX512BW-NEXT:    retq ## encoding: [0xc3]
+;
+; SKX-LABEL: half_vec_compare:
+; SKX:       ## %bb.0: ## %entry
+; SKX-NEXT:    movzwl (%rdi), %eax ## encoding: [0x0f,0xb7,0x07]
+; SKX-NEXT:    movzwl 2(%rdi), %ecx ## encoding: [0x0f,0xb7,0x4f,0x02]
+; SKX-NEXT:    cwtl ## encoding: [0x98]
+; SKX-NEXT:    vmovd %eax, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc0]
+; SKX-NEXT:    vcvtph2ps %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x13,0xc0]
+; SKX-NEXT:    movswl %cx, %eax ## encoding: [0x0f,0xbf,0xc1]
+; SKX-NEXT:    vmovd %eax, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc8]
+; SKX-NEXT:    vcvtph2ps %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x13,0xc9]
+; SKX-NEXT:    vxorps %xmm2, %xmm2, %xmm2 ## EVEX TO VEX Compression encoding: [0xc5,0xe8,0x57,0xd2]
+; SKX-NEXT:    vucomiss %xmm2, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2e,0xca]
+; SKX-NEXT:    setp %al ## encoding: [0x0f,0x9a,0xc0]
+; SKX-NEXT:    setne %cl ## encoding: [0x0f,0x95,0xc1]
+; SKX-NEXT:    orb %al, %cl ## encoding: [0x08,0xc1]
+; SKX-NEXT:    kmovd %ecx, %k0 ## encoding: [0xc5,0xfb,0x92,0xc1]
+; SKX-NEXT:    kshiftlb $1, %k0, %k0 ## encoding: [0xc4,0xe3,0x79,0x32,0xc0,0x01]
+; SKX-NEXT:    vucomiss %xmm2, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2e,0xc2]
+; SKX-NEXT:    setp %al ## encoding: [0x0f,0x9a,0xc0]
+; SKX-NEXT:    setne %cl ## encoding: [0x0f,0x95,0xc1]
+; SKX-NEXT:    orb %al, %cl ## encoding: [0x08,0xc1]
+; SKX-NEXT:    kmovd %ecx, %k1 ## encoding: [0xc5,0xfb,0x92,0xc9]
+; SKX-NEXT:    kshiftlb $7, %k1, %k1 ## encoding: [0xc4,0xe3,0x79,0x32,0xc9,0x07]
+; SKX-NEXT:    kshiftrb $7, %k1, %k1 ## encoding: [0xc4,0xe3,0x79,0x30,0xc9,0x07]
+; SKX-NEXT:    korw %k0, %k1, %k0 ## encoding: [0xc5,0xf4,0x45,0xc0]
+; SKX-NEXT:    vpmovm2w %k0, %xmm0 ## encoding: [0x62,0xf2,0xfe,0x08,0x28,0xc0]
+; SKX-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x63,0xc0]
+; SKX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
+; SKX-NEXT:    ## fixup A - offset: 4, value: LCPI68_0-4, kind: reloc_riprel_4byte
+; SKX-NEXT:    vpextrw $0, %xmm0, (%rsi) ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x15,0x06,0x00]
+; SKX-NEXT:    retq ## encoding: [0xc3]
+entry:
+  %0 = load <2 x half>, <2 x half>* %x
+  %1 = fcmp une <2 x half> %0, zeroinitializer
+  %2 = zext <2 x i1> %1 to <2 x i8>
+  store <2 x i8> %2, <2 x i8>* %y
+  ret void
+}

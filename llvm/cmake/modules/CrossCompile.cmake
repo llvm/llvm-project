@@ -1,3 +1,4 @@
+include(AddLLVM)
 include(LLVMExternalProjectUtils)
 
 
@@ -57,6 +58,13 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
   string(REPLACE ";" "$<SEMICOLON>" llvm_external_projects_arg
          "${LLVM_EXTERNAL_PROJECTS}")
 
+  set(external_project_source_dirs)
+  foreach(project ${LLVM_EXTERNAL_PROJECTS})
+    canonicalize_tool_name(${project} name)
+    list(APPEND external_project_source_dirs
+         "-DLLVM_EXTERNAL_${name}_SOURCE_DIR=${LLVM_EXTERNAL_${name}_SOURCE_DIR}")
+  endforeach()
+
   add_custom_command(OUTPUT ${${project_name}_${target_name}_BUILD}/CMakeCache.txt
     COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
         -DCMAKE_MAKE_PROGRAM="${CMAKE_MAKE_PROGRAM}"
@@ -69,6 +77,7 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
         -DLLVM_TARGET_ARCH="${LLVM_TARGET_ARCH}"
         -DLLVM_ENABLE_PROJECTS="${llvm_enable_projects_arg}"
         -DLLVM_EXTERNAL_PROJECTS="${llvm_external_projects_arg}"
+        ${external_project_source_dirs}
         -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN="${LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN}"
         ${build_type_flags} ${linker_flag} ${external_clang_dir}
         ${ARGN}

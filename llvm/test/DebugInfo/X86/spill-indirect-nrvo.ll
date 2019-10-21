@@ -21,7 +21,7 @@
 ; }
 
 ; CHECK-LABEL: _Z10get_stringv:
-; CHECK: #DEBUG_VALUE: get_string:result <- [$rdi+0]
+; CHECK: #DEBUG_VALUE: get_string:result <- [DW_OP_deref] $rdi
 ; CHECK: movq   %rdi, [[OFFS:[0-9]+]](%rsp)          # 8-byte Spill
 ; CHECK: #DEBUG_VALUE: get_string:result <- [DW_OP_plus_uconst [[OFFS]], DW_OP_deref] [$rsp+0]
 ; CHECK: callq  _ZN6stringC1Ei

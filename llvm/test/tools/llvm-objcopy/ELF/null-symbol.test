@@ -15,6 +15,7 @@ Sections:
     Address:         0x1000
     AddressAlign:    0x0000000000000010
     Size:            8
+Symbols: []
 
 #CHECK: Symbols [
 #CHECK-NEXT:  Symbol {

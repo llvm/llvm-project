@@ -829,6 +829,12 @@ void StmtPrinter::VisitOMPMasterTaskLoopDirective(
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPMasterTaskLoopSimdDirective(
+    OMPMasterTaskLoopSimdDirective *Node) {
+  Indent() << "#pragma omp master taskloop simd";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPParallelMasterTaskLoopDirective(
     OMPParallelMasterTaskLoopDirective *Node) {
   Indent() << "#pragma omp parallel master taskloop";
@@ -1691,6 +1697,15 @@ void StmtPrinter::VisitCUDAKernelCallExpr(CUDAKernelCallExpr *Node) {
   OS << ")";
 }
 
+void StmtPrinter::VisitCXXRewrittenBinaryOperator(
+    CXXRewrittenBinaryOperator *Node) {
+  CXXRewrittenBinaryOperator::DecomposedForm Decomposed =
+      Node->getDecomposedForm();
+  PrintExpr(const_cast<Expr*>(Decomposed.LHS));
+  OS << ' ' << BinaryOperator::getOpcodeStr(Decomposed.Opcode) << ' ';
+  PrintExpr(const_cast<Expr*>(Decomposed.RHS));
+}
+
 void StmtPrinter::VisitCXXNamedCastExpr(CXXNamedCastExpr *Node) {
   OS << Node->getCastName() << '<';
   Node->getTypeAsWritten().print(OS, Policy);
@@ -2229,6 +2244,17 @@ void StmtPrinter::VisitCXXFoldExpr(CXXFoldExpr *E) {
     PrintExpr(E->getRHS());
   }
   OS << ")";
+}
+
+void StmtPrinter::VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {
+  NestedNameSpecifierLoc NNS = E->getNestedNameSpecifierLoc();
+  if (NNS)
+    NNS.getNestedNameSpecifier()->print(OS, Policy);
+  if (E->getTemplateKWLoc().isValid())
+    OS << "template ";
+  OS << E->getFoundDecl()->getName();
+  printTemplateArgumentList(OS, E->getTemplateArgsAsWritten()->arguments(),
+                            Policy);
 }
 
 // C++ Coroutines TS

@@ -29,8 +29,9 @@
 
 using namespace llvm;
 
-RISCVInstrInfo::RISCVInstrInfo()
-    : RISCVGenInstrInfo(RISCV::ADJCALLSTACKDOWN, RISCV::ADJCALLSTACKUP) {}
+RISCVInstrInfo::RISCVInstrInfo(RISCVSubtarget &STI)
+    : RISCVGenInstrInfo(RISCV::ADJCALLSTACKDOWN, RISCV::ADJCALLSTACKUP),
+      STI(STI) {}
 
 unsigned RISCVInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                              int &FrameIndex) const {
@@ -485,4 +486,59 @@ bool RISCVInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
       return (MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0);
   }
   return MI.isAsCheapAsAMove();
+}
+
+bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
+                                       StringRef &ErrInfo) const {
+  const MCInstrInfo *MCII = STI.getInstrInfo();
+  MCInstrDesc const &Desc = MCII->get(MI.getOpcode());
+
+  for (auto &OI : enumerate(Desc.operands())) {
+    unsigned OpType = OI.value().OperandType;
+    if (OpType >= RISCVOp::OPERAND_FIRST_RISCV_IMM &&
+        OpType <= RISCVOp::OPERAND_LAST_RISCV_IMM) {
+      const MachineOperand &MO = MI.getOperand(OI.index());
+      if (MO.isImm()) {
+        int64_t Imm = MO.getImm();
+        bool Ok;
+        switch (OpType) {
+        default:
+          llvm_unreachable("Unexpected operand type");
+        case RISCVOp::OPERAND_UIMM4:
+          Ok = isUInt<4>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM5:
+          Ok = isUInt<5>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM12:
+          Ok = isUInt<12>(Imm);
+          break;
+        case RISCVOp::OPERAND_SIMM12:
+          Ok = isInt<12>(Imm);
+          break;
+        case RISCVOp::OPERAND_SIMM13_LSB0:
+          Ok = isShiftedInt<12, 1>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM20:
+          Ok = isUInt<20>(Imm);
+          break;
+        case RISCVOp::OPERAND_SIMM21_LSB0:
+          Ok = isShiftedInt<20, 1>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMMLOG2XLEN:
+          if (STI.getTargetTriple().isArch64Bit())
+            Ok = isUInt<6>(Imm);
+          else
+            Ok = isUInt<5>(Imm);
+          break;
+        }
+        if (!Ok) {
+          ErrInfo = "Invalid immediate";
+          return false;
+        }
+      }
+    }
+  }
+
+  return true;
 }

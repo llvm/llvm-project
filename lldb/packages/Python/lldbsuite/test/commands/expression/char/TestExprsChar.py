@@ -59,8 +59,10 @@ class ExprCharTestCase(TestBase):
             "i[3-6]86",
             "x86_64",
             "arm64",
+            'arm64e',
             'armv7',
-            'armv7k'],
+            'armv7k',
+            'arm64_32'],
         bugnumber="llvm.org/pr23069, <rdar://problem/28721938>")
     @expectedFailureAll(triple='mips*', bugnumber="llvm.org/pr23069")
     def test_unsigned_char(self):

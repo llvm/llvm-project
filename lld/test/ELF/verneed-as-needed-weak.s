@@ -7,8 +7,8 @@
 # RUN: ld.lld %t.o --as-needed %t.so -o %t
 # RUN: llvm-readobj -V %t | FileCheck %s
 
-# CHECK:       SHT_GNU_verneed {
-# CHECK-NEXT:  }
+# CHECK:       VersionRequirements [
+# CHECK-NEXT:  ]
 
 .weak f1
 

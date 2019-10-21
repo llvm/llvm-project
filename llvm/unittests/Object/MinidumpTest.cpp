@@ -710,3 +710,61 @@ TEST(MinidumpFile, getMemoryInfoList) {
               testing::ElementsAre(0x0000000003020100u, 0x0000070605040000u,
                                    0x0001000908000000u));
 }
+
+TEST(MinidumpFile, getExceptionStream) {
+  std::vector<uint8_t> Data{
+      // Header
+      'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
+      1, 0, 0, 0,                           // NumberOfStreams,
+      0x20, 0, 0, 0,                        // StreamDirectoryRVA
+      0, 1, 2, 3, 4, 5, 6, 7,               // Checksum, TimeDateStamp
+      8, 9, 0, 1, 2, 3, 4, 5,               // Flags
+      // Stream Directory
+      6, 0, 0, 0, 168, 0, 0, 0, // Type, DataSize,
+      0x2c, 0, 0, 0,            // RVA
+      // Exception Stream
+      1, 2, 3, 4, // Thread ID
+      0, 0, 0, 0, // Padding
+      // Exception Record
+      2, 3, 4, 2, 7, 8, 8, 9,  // Code, Flags
+      3, 4, 5, 6, 7, 8, 9, 10, // Inner exception record address
+      8, 7, 6, 5, 4, 3, 2, 1,  // Exception address
+      4, 0, 0, 0, 0, 0, 0, 0,  // Parameter count, padding
+      0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, // Parameter 0
+      0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, // Parameter 1
+      0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, // Parameter 2
+      0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, // Parameter 3
+      0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, // Parameter 4
+      0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, // Parameter 5
+      0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, // Parameter 6
+      0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, // Parameter 7
+      0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, // Parameter 8
+      0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, // Parameter 9
+      0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, // Parameter 10
+      0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, // Parameter 11
+      0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, // Parameter 12
+      0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, // Parameter 13
+      0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, // Parameter 14
+      // Thread Context
+      0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, // DataSize, RVA
+  };
+  auto ExpectedFile = create(Data);
+  ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
+  const MinidumpFile &File = **ExpectedFile;
+  Expected<const minidump::ExceptionStream &> ExpectedStream =
+      File.getExceptionStream();
+  ASSERT_THAT_EXPECTED(ExpectedStream, Succeeded());
+  EXPECT_EQ(0x04030201u, ExpectedStream->ThreadId);
+  const minidump::Exception &Exception = ExpectedStream->ExceptionRecord;
+  EXPECT_EQ(0x02040302u, Exception.ExceptionCode);
+  EXPECT_EQ(0x09080807u, Exception.ExceptionFlags);
+  EXPECT_EQ(0x0a09080706050403u, Exception.ExceptionRecord);
+  EXPECT_EQ(0x0102030405060708u, Exception.ExceptionAddress);
+  EXPECT_EQ(4u, Exception.NumberParameters);
+  for (uint64_t index = 0; index < Exception.MaxParameters; ++index) {
+    EXPECT_EQ(0x1716151413121110u + index * 0x1010101010101010u,
+              Exception.ExceptionInformation[index]);
+  }
+  EXPECT_EQ(0x84838281, ExpectedStream->ThreadContext.DataSize);
+  EXPECT_EQ(0x88878685, ExpectedStream->ThreadContext.RVA);
+}

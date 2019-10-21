@@ -1607,8 +1607,9 @@ private:
     // Functions which end with decorations like volatile, noexcept are unlikely
     // to be casts.
     if (Tok.Next->isOneOf(tok::kw_noexcept, tok::kw_volatile, tok::kw_const,
-                          tok::kw_throw, tok::l_square, tok::arrow,
-                          Keywords.kw_override, Keywords.kw_final))
+                          tok::kw_throw, tok::arrow, Keywords.kw_override,
+                          Keywords.kw_final) ||
+        isCpp11AttributeSpecifier(*Tok.Next))
       return false;
 
     // As Java has no function types, a "(" after the ")" likely means that this
@@ -1756,7 +1757,7 @@ private:
     // Use heuristics to recognize unary operators.
     if (PrevToken->isOneOf(tok::equal, tok::l_paren, tok::comma, tok::l_square,
                            tok::question, tok::colon, tok::kw_return,
-                           tok::kw_case, tok::at, tok::l_brace))
+                           tok::kw_case, tok::at, tok::l_brace, tok::kw_throw))
       return TT_UnaryOperator;
 
     // There can't be two consecutive binary operators.

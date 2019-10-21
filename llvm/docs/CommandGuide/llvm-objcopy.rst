@@ -142,6 +142,30 @@ multiple file formats.
 
  Read command-line options and commands from response file `<FILE>`.
 
+.. option:: --wildcard, -w
+
+  Allow wildcard syntax for symbol-related flags. On by default for
+  section-related flags. Incompatible with --regex.
+
+  Wildcard syntax allows the following special symbols:
+
+  ====================== ========================= ==================
+   Character              Meaning                   Equivalent
+  ====================== ========================= ==================
+  ``*``                  Any number of characters  ``.*``
+  ``?``                  Any single character      ``.``
+  ``\``                  Escape the next character ``\``
+  ``[a-z]``              Character class           ``[a-z]``
+  ``[!a-z]``, ``[^a-z]`` Negated character class   ``[^a-z]``
+  ====================== ========================= ==================
+
+  Additionally, starting a wildcard with '!' will prevent a match, even if
+  another flag matches. For example ``-w -N '*' -N '!x'`` will strip all symbols
+  except for ``x``.
+
+  The order of wildcards does not matter. For example, ``-w -N '*' -N '!x'`` is
+  the same as ``-w -N '!x' -N '*'``.
+
 COFF-SPECIFIC OPTIONS
 ---------------------
 

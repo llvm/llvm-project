@@ -29,14 +29,14 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux \
 # RUN:   %p/Inputs/filename-spec.s -o %T/filename-spec2.o
 
-# RUN: echo "SECTIONS{.foo :{ %T/filename-spec2.o(.foo) %T/filename-spec1.o(.foo) }}" > %t5.script
+# RUN: echo "SECTIONS{.foo :{ %/T/filename-spec2.o(.foo) %/T/filename-spec1.o(.foo) }}" > %t5.script
 # RUN: ld.lld -o %t5 --script %t5.script \
-# RUN:   %T/filename-spec1.o %T/filename-spec2.o
+# RUN:   %/T/filename-spec1.o %/T/filename-spec2.o
 # RUN: llvm-objdump -s %t5 | FileCheck --check-prefix=SECONDFIRST %s
 
-# RUN: echo "SECTIONS{.foo :{ %T/filename-spec1.o(.foo) %T/filename-spec2.o(.foo) }}" > %t6.script
+# RUN: echo "SECTIONS{.foo :{ %/T/filename-spec1.o(.foo) %/T/filename-spec2.o(.foo) }}" > %t6.script
 # RUN: ld.lld -o %t6 --script %t6.script \
-# RUN:   %T/filename-spec1.o %T/filename-spec2.o
+# RUN:   %/T/filename-spec1.o %/T/filename-spec2.o
 # RUN: llvm-objdump -s %t6 | FileCheck --check-prefix=FIRSTY %s
 
 # RUN: mkdir -p %t.testdir1 %t.testdir2

@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 
+#include "llvm/Support/Host.h"
 #include "llvm/Support/TargetRegistry.h"
 
 namespace llvm {

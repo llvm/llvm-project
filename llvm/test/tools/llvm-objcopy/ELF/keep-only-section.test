@@ -20,19 +20,15 @@ Sections:
   - Name:            .test3
     Type:            SHT_PROGBITS
 
-# CHECK: SectionHeaderCount: 6
+# CHECK: SectionHeaderCount: 4
 
 # CHECK:     Name: .test
 # CHECK:     Name: .test2
-# CHECK:     Name: .symtab
-# CHECK:     Name: .strtab
 # CHECK:     Name: .shstrtab
 
-# REGEX: SectionHeaderCount: 7
+# REGEX: SectionHeaderCount: 5
 
 # REGEX:     Name: .test
 # REGEX:     Name: .test2
 # REGEX:     Name: .test3
-# REGEX:     Name: .symtab
-# REGEX:     Name: .strtab
 # REGEX:     Name: .shstrtab

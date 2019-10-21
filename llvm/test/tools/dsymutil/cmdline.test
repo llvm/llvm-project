@@ -26,3 +26,9 @@ HELP-NOT: -reverse-iterate
 
 RUN: dsymutil --version 2>&1 | FileCheck --check-prefix=VERSION %s
 VERSION: {{ version }}
+
+RUN: not dsymutil 2>&1 | FileCheck --check-prefix=NOINPUT %s
+NOINPUT: error: no input files specified
+
+RUN: dsymutil -bogus -help 2>&1 | FileCheck --check-prefix=BOGUS %s
+BOGUS: warning: ignoring unknown option: -bogus

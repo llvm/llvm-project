@@ -102,6 +102,8 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
         DL(MIRBuilder.getMF().getDataLayout()),
         STI(MIRBuilder.getMF().getSubtarget<X86Subtarget>()) {}
 
+  bool isIncomingArgumentHandler() const override { return false; }
+
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
     LLT p0 = LLT::pointer(0, DL.getPointerSizeInBits(0));

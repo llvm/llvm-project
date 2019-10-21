@@ -37,32 +37,37 @@ define void @vararg(i32, i32, ...) {
 ; CHECK-LABEL: - Type: TYPE
 ; CHECK-NEXT:    Signatures:
 ; CHECK-NEXT:       - Index: 0
-; CHECK-NEXT:         ReturnType: NORESULT
 ; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:         ReturnTypes: []
 ; CHECK-NEXT:       - Index: 1
-; CHECK-NEXT:         ReturnType: I32
 ; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:         ReturnTypes:
+; CHECK-NEXT:           - I32
 ; CHECK-NEXT:       - Index: 2
-; CHECK-NEXT:         ReturnType: I64
 ; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:         ReturnTypes:
+; CHECK-NEXT:           - I64
 ; CHECK-NEXT:       - Index: 3
-; CHECK-NEXT:         ReturnType: F32
 ; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:         ReturnTypes:
+; CHECK-NEXT:           - F32
 ; CHECK-NEXT:       - Index: 4
-; CHECK-NEXT:         ReturnType: F64
 ; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:         ReturnTypes:
+; CHECK-NEXT:           - F64
 ; CHECK-NEXT:       - Index: 5
-; CHECK-NEXT:         ReturnType: V128
 ; CHECK-NEXT:         ParamTypes:
+; CHECK-NEXT:         ReturnTypes:
+; CHECK-NEXT:           - V128
 ; CHECK-NEXT:       - Index: 6
-; CHECK-NEXT:         ReturnType: NORESULT
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:           - I32
+; CHECK-NEXT:         ReturnTypes: []
 ; CHECK-NEXT:       - Index: 7
-; CHECK-NEXT:         ReturnType: NORESULT
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:           - I32
 ; CHECK-NEXT:           - I32
 ; CHECK-NEXT:           - I32
+; CHECK-NEXT:         ReturnTypes: []
 ; should be no additional types
-; CHECK-NOT: ReturnType
+; CHECK-NOT: ReturnTypes

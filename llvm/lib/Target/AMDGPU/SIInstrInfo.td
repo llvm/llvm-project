@@ -284,7 +284,9 @@ class isFloatType<ValueType SrcVT> {
     !if(!eq(SrcVT.Value, f64.Value), 1,
     !if(!eq(SrcVT.Value, v2f16.Value), 1,
     !if(!eq(SrcVT.Value, v4f16.Value), 1,
-    0)))));
+    !if(!eq(SrcVT.Value, v2f32.Value), 1,
+    !if(!eq(SrcVT.Value, v2f64.Value), 1,
+    0)))))));
 }
 
 class isIntType<ValueType SrcVT> {
@@ -869,6 +871,18 @@ def ExpTgtMatchClass : AsmOperandClass {
   let RenderMethod = "printExpTgt";
 }
 
+def SWaitMatchClass : AsmOperandClass {
+  let Name = "SWaitCnt";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseSWaitCntOps";
+}
+
+def VReg32OrOffClass : AsmOperandClass {
+  let Name = "VReg32OrOff";
+  let ParserMethod = "parseVReg32OrOff";
+}
+
+let OperandType = "OPERAND_IMMEDIATE" in {
 def SendMsgImm : Operand<i32> {
   let PrintMethod = "printSendMsg";
   let ParserMatchClass = SendMsgMatchClass;
@@ -884,22 +898,11 @@ def EndpgmImm : Operand<i16> {
   let ParserMatchClass = EndpgmMatchClass;
 }
 
-def SWaitMatchClass : AsmOperandClass {
-  let Name = "SWaitCnt";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "parseSWaitCntOps";
-}
-
-def VReg32OrOffClass : AsmOperandClass {
-  let Name = "VReg32OrOff";
-  let ParserMethod = "parseVReg32OrOff";
-}
-
 def WAIT_FLAG : Operand <i32> {
   let ParserMatchClass = SWaitMatchClass;
   let PrintMethod = "printWaitFlag";
-  let OperandType = "OPERAND_IMMEDIATE";
 }
+} // End OperandType = "OPERAND_IMMEDIATE"
 
 include "SIInstrFormats.td"
 include "VIInstrFormats.td"
@@ -1424,18 +1427,6 @@ class getVALUDstForVT<ValueType VT> {
                               VOPDstS64orS32)))); // else VT == i1
 }
 
-// Returns true if VT is floating point.
-class getIsFP<ValueType VT> {
-  bit ret = !if(!eq(VT.Value, f16.Value), 1,
-            !if(!eq(VT.Value, v2f16.Value), 1,
-            !if(!eq(VT.Value, v4f16.Value), 1,
-            !if(!eq(VT.Value, f32.Value), 1,
-            !if(!eq(VT.Value, v2f32.Value), 1,
-            !if(!eq(VT.Value, f64.Value), 1,
-            !if(!eq(VT.Value, v2f64.Value), 1,
-            0)))))));
-}
-
 // Returns the register class to use for the destination of VOP[12C]
 // instructions with SDWA extension
 class getSDWADstForVT<ValueType VT> {
@@ -1447,7 +1438,7 @@ class getSDWADstForVT<ValueType VT> {
 // Returns the register class to use for source 0 of VOP[12C]
 // instructions for the given VT.
 class getVOPSrc0ForVT<ValueType VT> {
-  bit isFP = getIsFP<VT>.ret;
+  bit isFP = isFloatType<VT>.ret;
 
   RegisterOperand ret =
     !if(isFP,
@@ -1487,7 +1478,7 @@ class getVregSrcForVT<ValueType VT> {
 }
 
 class getSDWASrcForVT <ValueType VT> {
-  bit isFP = getIsFP<VT>.ret;
+  bit isFP = isFloatType<VT>.ret;
   RegisterOperand retFlt = !if(!eq(VT.Size, 16), SDWASrc_f16, SDWASrc_f32);
   RegisterOperand retInt = !if(!eq(VT.Size, 16), SDWASrc_i16, SDWASrc_i32);
   RegisterOperand ret = !if(isFP, retFlt, retInt);
@@ -1496,7 +1487,7 @@ class getSDWASrcForVT <ValueType VT> {
 // Returns the register class to use for sources of VOP3 instructions for the
 // given VT.
 class getVOP3SrcForVT<ValueType VT> {
-  bit isFP = getIsFP<VT>.ret;
+  bit isFP = isFloatType<VT>.ret;
   RegisterOperand ret =
   !if(!eq(VT.Size, 128),
      VSrc_128,
@@ -1543,7 +1534,7 @@ class isModifierType<ValueType SrcVT> {
 
 // Return type of input modifiers operand for specified input operand
 class getSrcMod <ValueType VT, bit EnableF32SrcMods> {
-  bit isFP = getIsFP<VT>.ret;
+  bit isFP = isFloatType<VT>.ret;
   bit isPacked = isPackedType<VT>.ret;
   Operand ret =  !if(!eq(VT.Size, 64),
                      !if(isFP, FP64InputMods, Int64InputMods),
@@ -1562,7 +1553,7 @@ class getOpSelMod <ValueType VT> {
 
 // Return type of input modifiers operand specified input operand for DPP
 class getSrcModExt <ValueType VT> {
-  bit isFP = getIsFP<VT>.ret;
+  bit isFP = isFloatType<VT>.ret;
   Operand ret = !if(isFP, FPVRegInputMods, IntVRegInputMods);
 }
 

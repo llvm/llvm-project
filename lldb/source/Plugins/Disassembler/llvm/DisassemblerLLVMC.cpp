@@ -1189,10 +1189,12 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
 
   // If any AArch64 variant, enable the ARMv8.5 ISA with SVE extensions so we
   // can disassemble newer instructions.
-  if (triple.getArch() == llvm::Triple::aarch64)
+  if (triple.getArch() == llvm::Triple::aarch64 || 
+      triple.getArch() == llvm::Triple::aarch64_32)
     features_str += "+v8.5a,+sve2";
 
-  if (triple.getArch() == llvm::Triple::aarch64
+  if ((triple.getArch() == llvm::Triple::aarch64 ||
+       triple.getArch() == llvm::Triple::aarch64_32)
       && triple.getVendor() == llvm::Triple::Apple) {
     cpu = "apple-latest";
   }

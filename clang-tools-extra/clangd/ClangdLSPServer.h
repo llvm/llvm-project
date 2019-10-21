@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CLANGDLSPSERVER_H
 
 #include "ClangdServer.h"
+#include "Context.h"
 #include "DraftStore.h"
 #include "Features.inc"
 #include "FindSymbols.h"
@@ -130,6 +131,12 @@ private:
   /// Sends a "publishDiagnostics" notification to the LSP client.
   void publishDiagnostics(const URIForFile &File,
                           std::vector<clangd::Diagnostic> Diagnostics);
+
+  /// Since initialization of CDBs and ClangdServer is done lazily, the
+  /// following context captures the one used while creating ClangdLSPServer and
+  /// passes it to above mentioned object instances to make sure they share the
+  /// same state.
+  Context BackgroundContext;
 
   /// Used to indicate that the 'shutdown' request was received from the
   /// Language Server client.

@@ -24,6 +24,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -213,10 +214,29 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
         return MCDisassembler::Fail;
       break;
     }
-    // block_type operands (uint8_t).
+    // block_type operands:
     case WebAssembly::OPERAND_SIGNATURE: {
-      if (!parseImmediate<uint8_t>(MI, Size, Bytes))
+      int64_t Val;
+      uint64_t PrevSize = Size;
+      if (!nextLEB(Val, Bytes, Size, true))
         return MCDisassembler::Fail;
+      if (Val < 0) {
+        // Negative values are single septet value types or empty types
+        if (Size != PrevSize + 1) {
+          MI.addOperand(
+              MCOperand::createImm(int64_t(WebAssembly::BlockType::Invalid)));
+        } else {
+          MI.addOperand(MCOperand::createImm(Val & 0x7f));
+        }
+      } else {
+        // We don't have access to the signature, so create a symbol without one
+        MCSymbol *Sym = getContext().createTempSymbol("typeindex", true);
+        auto *WasmSym = cast<MCSymbolWasm>(Sym);
+        WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
+        const MCExpr *Expr = MCSymbolRefExpr::create(
+            WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, getContext());
+        MI.addOperand(MCOperand::createExpr(Expr));
+      }
       break;
     }
     // FP operands.

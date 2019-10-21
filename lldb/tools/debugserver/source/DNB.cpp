@@ -1719,7 +1719,8 @@ nub_bool_t DNBSetArchitecture(const char *arch) {
     else if ((strcasecmp(arch, "x86_64") == 0) ||
              (strcasecmp(arch, "x86_64h") == 0))
       return DNBArchProtocol::SetArchitecture(CPU_TYPE_X86_64);
-    else if (strstr(arch, "arm64_32") == arch)
+    else if (strstr(arch, "arm64_32") == arch || 
+             strstr(arch, "aarch64_32") == arch)
       return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64_32);
     else if (strstr(arch, "arm64") == arch || strstr(arch, "armv8") == arch ||
              strstr(arch, "aarch64") == arch)

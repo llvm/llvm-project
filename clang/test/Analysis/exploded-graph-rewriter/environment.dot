@@ -3,7 +3,7 @@
 // FIXME: Substitution doesn't seem to work on Windows.
 // UNSUPPORTED: system-windows
 
-// CHECK: <b>Environment: </b>
+// CHECK: <b>Expressions: </b>
 // CHECK-SAME: <table border="0">
 // CHECK-SAME:   <tr>
 // CHECK-SAME:     <td align="left">
@@ -11,7 +11,7 @@
 // CHECK-SAME:     </td>
 // CHECK-SAME:     <td align="left" colspan="2">
 // CHECK-SAME:       <font color="gray60">foo </font>
-// CHECK-SAME:       (environment.cpp:<b>4</b>:<b>6</b> 
+// CHECK-SAME:       (environment.cpp:<b>4</b>:<b>6</b>
 // CHECK-SAME:       <font color="royalblue1">
 // CHECK-SAME:         (<i>spelling at </i> environment.h:<b>7</b>:<b>8</b>)
 // CHECK-SAME:       </font>)
@@ -36,7 +36,14 @@ Node0x1 [shape=record,label=
       "has_report": false,
       "is_sink": false,
       "state_id": 2,
-      "program_points": [],
+      "program_points": [
+        {
+          "kind": "BlockEntrance", "block_id": 1,
+          "terminator": null, "term_kind": null,
+          "tag": null, "node_id": 1,
+          "has_report": 0, "is_sink": 0
+        }
+      ],
       "program_state": {
         "store": null,
         "constraints": null,

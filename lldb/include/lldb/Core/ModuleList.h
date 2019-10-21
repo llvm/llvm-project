@@ -247,35 +247,24 @@ public:
   /// \param[in] path
   ///     The name of the compile unit we are looking for.
   ///
-  /// \param[in] append
-  ///     If \b true, then append any compile units that were found
-  ///     to \a sc_list. If \b false, then the \a sc_list is cleared
-  ///     and the contents of \a sc_list are replaced.
-  ///
   /// \param[out] sc_list
   ///     A symbol context list that gets filled in with all of the
   ///     matches.
-  ///
-  /// \return
-  ///     The number of matches added to \a sc_list.
-  size_t FindCompileUnits(const FileSpec &path, bool append,
-                          SymbolContextList &sc_list) const;
+  void FindCompileUnits(const FileSpec &path, SymbolContextList &sc_list) const;
 
   /// \see Module::FindFunctions ()
-  size_t FindFunctions(ConstString name,
-                       lldb::FunctionNameType name_type_mask,
-                       bool include_symbols, bool include_inlines, bool append,
-                       SymbolContextList &sc_list) const;
+  void FindFunctions(ConstString name, lldb::FunctionNameType name_type_mask,
+                     bool include_symbols, bool include_inlines,
+                     SymbolContextList &sc_list) const;
 
   /// \see Module::FindFunctionSymbols ()
-  size_t FindFunctionSymbols(ConstString name,
-                             lldb::FunctionNameType name_type_mask,
-                             SymbolContextList &sc_list);
+  void FindFunctionSymbols(ConstString name,
+                           lldb::FunctionNameType name_type_mask,
+                           SymbolContextList &sc_list);
 
   /// \see Module::FindFunctions ()
-  size_t FindFunctions(const RegularExpression &name, bool include_symbols,
-                       bool include_inlines, bool append,
-                       SymbolContextList &sc_list);
+  void FindFunctions(const RegularExpression &name, bool include_symbols,
+                     bool include_inlines, SymbolContextList &sc_list);
 
   /// Find global and static variables by name.
   ///
@@ -289,11 +278,8 @@ public:
   ///
   /// \param[in] variable_list
   ///     A list of variables that gets the matches appended to.
-  ///
-  /// \return
-  ///     The number of matches added to \a variable_list.
-  size_t FindGlobalVariables(ConstString name, size_t max_matches,
-                             VariableList &variable_list) const;
+  void FindGlobalVariables(ConstString name, size_t max_matches,
+                           VariableList &variable_list) const;
 
   /// Find global and static variables by regular expression.
   ///
@@ -306,11 +292,8 @@ public:
   ///
   /// \param[in] variable_list
   ///     A list of variables that gets the matches appended to.
-  ///
-  /// \return
-  ///     The number of matches added to \a variable_list.
-  size_t FindGlobalVariables(const RegularExpression &regex, size_t max_matches,
-                             VariableList &variable_list) const;
+  void FindGlobalVariables(const RegularExpression &regex, size_t max_matches,
+                           VariableList &variable_list) const;
 
   /// Finds the first module whose file specification matches \a file_spec.
   ///
@@ -337,11 +320,8 @@ public:
   /// \param[out] matching_module_list
   ///     A module list that gets filled in with any modules that
   ///     match the search criteria.
-  ///
-  /// \return
-  ///     The number of matching modules found by the search.
-  size_t FindModules(const ModuleSpec &module_spec,
-                     ModuleList &matching_module_list) const;
+  void FindModules(const ModuleSpec &module_spec,
+                   ModuleList &matching_module_list) const;
 
   lldb::ModuleSP FindModule(const Module *module_ptr) const;
 
@@ -354,15 +334,13 @@ public:
 
   lldb::ModuleSP FindFirstModule(const ModuleSpec &module_spec) const;
 
-  size_t FindSymbolsWithNameAndType(ConstString name,
-                                    lldb::SymbolType symbol_type,
-                                    SymbolContextList &sc_list,
-                                    bool append = false) const;
+  void FindSymbolsWithNameAndType(ConstString name,
+                                  lldb::SymbolType symbol_type,
+                                  SymbolContextList &sc_list) const;
 
-  size_t FindSymbolsMatchingRegExAndType(const RegularExpression &regex,
-                                         lldb::SymbolType symbol_type,
-                                         SymbolContextList &sc_list,
-                                         bool append = false) const;
+  void FindSymbolsMatchingRegExAndType(const RegularExpression &regex,
+                                       lldb::SymbolType symbol_type,
+                                       SymbolContextList &sc_list) const;
 
   /// Find types by name.
   ///
@@ -474,6 +452,7 @@ public:
   /// \return
   ///     The number of modules in the module list.
   size_t GetSize() const;
+  bool IsEmpty() const { return !GetSize(); }
 
   bool LoadScriptingResourcesInTarget(Target *target, std::list<Status> &errors,
                                       Stream *feedback_stream = nullptr,
@@ -492,8 +471,8 @@ public:
 
   static bool RemoveSharedModule(lldb::ModuleSP &module_sp);
 
-  static size_t FindSharedModules(const ModuleSpec &module_spec,
-                                  ModuleList &matching_module_list);
+  static void FindSharedModules(const ModuleSpec &module_spec,
+                                ModuleList &matching_module_list);
 
   static size_t RemoveOrphanSharedModules(bool mandatory);
 

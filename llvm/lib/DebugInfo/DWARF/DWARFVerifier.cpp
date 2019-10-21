@@ -34,11 +34,11 @@ DWARFVerifier::DieRangeInfo::insert(const DWARFAddressRange &R) {
 
   if (Pos != End) {
     if (Pos->intersects(R))
-      return Pos;
+      return std::move(Pos);
     if (Pos != Begin) {
       auto Iter = Pos - 1;
       if (Iter->intersects(R))
-        return Iter;
+        return std::move(Iter);
     }
   }
 

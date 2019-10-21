@@ -1789,10 +1789,10 @@ static bool findLineTable(const SectionChunk *c, uint32_t addr,
 }
 
 // Use CodeView line tables to resolve a file and line number for the given
-// offset into the given chunk and return them, or {"", 0} if a line table was
+// offset into the given chunk and return them, or None if a line table was
 // not found.
-std::pair<StringRef, uint32_t> getFileLineCodeView(const SectionChunk *c,
-                                                         uint32_t addr) {
+Optional<std::pair<StringRef, uint32_t>>
+getFileLineCodeView(const SectionChunk *c, uint32_t addr) {
   ExitOnError exitOnErr;
 
   DebugStringTableSubsectionRef cVStrTab;
@@ -1801,7 +1801,7 @@ std::pair<StringRef, uint32_t> getFileLineCodeView(const SectionChunk *c,
   uint32_t offsetInLinetable;
 
   if (!findLineTable(c, addr, cVStrTab, checksums, lines, offsetInLinetable))
-    return {"", 0};
+    return None;
 
   Optional<uint32_t> nameIndex;
   Optional<uint32_t> lineNumber;
@@ -1815,16 +1815,16 @@ std::pair<StringRef, uint32_t> getFileLineCodeView(const SectionChunk *c,
         }
         StringRef filename =
             exitOnErr(getFileName(cVStrTab, checksums, *nameIndex));
-        return {filename, *lineNumber};
+        return std::make_pair(filename, *lineNumber);
       }
       nameIndex = entry.NameIndex;
       lineNumber = li.getStartLine();
     }
   }
   if (!nameIndex)
-    return {"", 0};
+    return None;
   StringRef filename = exitOnErr(getFileName(cVStrTab, checksums, *nameIndex));
-  return {filename, *lineNumber};
+  return std::make_pair(filename, *lineNumber);
 }
 
 } // namespace coff

@@ -153,13 +153,24 @@ class MiniDumpNewTestCase(TestBase):
         self.assertTrue(eip.IsValid())
         self.assertEqual(pc, eip.GetValueAsUnsigned())
 
-    def test_snapshot_minidump(self):
+    def test_snapshot_minidump_dump_requested(self):
         """Test that if we load a snapshot minidump file (meaning the process
-        did not crash) there is no stop reason."""
+        did not crash) with exception code "DUMP_REQUESTED" there is no stop reason."""
         # target create -c linux-x86_64_not_crashed.dmp
         self.dbg.CreateTarget(None)
         self.target = self.dbg.GetSelectedTarget()
         self.process = self.target.LoadCore("linux-x86_64_not_crashed.dmp")
+        self.check_state()
+        self.assertEqual(self.process.GetNumThreads(), 1)
+        thread = self.process.GetThreadAtIndex(0)
+        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonNone)
+        stop_description = thread.GetStopDescription(256)
+        self.assertEqual(stop_description, "")
+
+    def test_snapshot_minidump_null_exn_code(self):
+        """Test that if we load a snapshot minidump file (meaning the process
+        did not crash) with exception code zero there is no stop reason."""
+        self.process_from_yaml("linux-x86_64_null_signal.yaml")
         self.check_state()
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
@@ -332,6 +343,7 @@ class MiniDumpNewTestCase(TestBase):
             function_name = frame.GetFunctionName()
             self.assertTrue(name in function_name)
 
+    @skipIfLLVMTargetMissing("X86")
     def test_deeper_stack_in_minidump(self):
         """Test that we can examine a more interesting stack in a Minidump."""
         # Launch with the Minidump, and inspect the stack.

@@ -31,8 +31,7 @@
 #include <vector>
 
 namespace clang {
-namespace tooling {
-
+namespace transformer {
 /// A stencil is represented as a sequence of "parts" that can each individually
 /// generate a code string based on a match result.  The different kinds of
 /// parts include (raw) text, references to bound nodes and assorted operations
@@ -133,8 +132,10 @@ private:
   std::vector<StencilPart> Parts;
 };
 
+//
 // Functions for conveniently building stencils.
-namespace stencil {
+//
+
 /// Convenience wrapper for Stencil::cat that can be imported with a using decl.
 template <typename... Ts> Stencil cat(Ts &&... Parts) {
   return Stencil::cat(std::forward<Ts>(Parts)...);
@@ -145,12 +146,6 @@ StencilPart text(llvm::StringRef Text);
 
 /// \returns the source corresponding to the selected range.
 StencilPart selection(RangeSelector Selector);
-
-/// \returns the source corresponding to the identified node.
-/// FIXME: Deprecated. Write `selection(node(Id))` instead.
-inline StencilPart node(llvm::StringRef Id) {
-  return selection(tooling::node(Id));
-}
 
 /// Generates the source of the expression bound to \p Id, wrapping it in
 /// parentheses if it may parse differently depending on context. For example, a
@@ -197,6 +192,29 @@ StencilPart run(MatchConsumer<std::string> C);
 ///
 /// \returns the string resulting from calling the node's print() method.
 StencilPart dPrint(llvm::StringRef Id);
+} // namespace transformer
+
+namespace tooling {
+// DEPRECATED: These are temporary aliases supporting client migration to the
+// `transformer` namespace.
+using Stencil = transformer::Stencil;
+using StencilPart = transformer::StencilPart;
+namespace stencil {
+using transformer::access;
+using transformer::addressOf;
+using transformer::cat;
+using transformer::deref;
+using transformer::dPrint;
+using transformer::expression;
+using transformer::ifBound;
+using transformer::run;
+using transformer::selection;
+using transformer::text;
+/// \returns the source corresponding to the identified node.
+/// FIXME: Deprecated. Write `selection(node(Id))` instead.
+inline transformer::StencilPart node(llvm::StringRef Id) {
+  return selection(tooling::node(Id));
+}
 } // namespace stencil
 } // namespace tooling
 } // namespace clang

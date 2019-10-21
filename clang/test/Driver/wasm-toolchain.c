@@ -48,11 +48,11 @@
 
 // Thread-related command line tests.
 
-// '-pthread' sets +atomics, +bulk-memory, +mutable-globals, and --shared-memory
+// '-pthread' sets +atomics, +bulk-memory, +mutable-globals, +sign-ext, and --shared-memory
 // RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown \
 // RUN:    --sysroot=/foo %s -fuse-ld=wasm-ld -pthread 2>&1 \
 // RUN:  | FileCheck -check-prefix=PTHREAD %s
-// PTHREAD: clang{{.*}}" "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals"
+// PTHREAD: clang{{.*}}" "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
 // PTHREAD: wasm-ld{{.*}}" "-lpthread" "--shared-memory"
 
 // '-pthread' not allowed with '-mno-atomics'
@@ -72,6 +72,12 @@
 // RUN:     --sysroot=/foo %s -pthread -mno-mutable-globals 2>&1 \
 // RUN:   | FileCheck -check-prefix=PTHREAD_NO_MUT_GLOBALS %s
 // PTHREAD_NO_MUT_GLOBALS: invalid argument '-pthread' not allowed with '-mno-mutable-globals'
+
+// '-pthread' not allowed with '-mno-sign-ext'
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -pthread -mno-sign-ext 2>&1 \
+// RUN:   | FileCheck -check-prefix=PTHREAD_NO_SIGN_EXT %s
+// PTHREAD_NO_SIGN_EXT: invalid argument '-pthread' not allowed with '-mno-sign-ext'
 
 // '-fwasm-exceptions' sets +exception-handling
 // RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown \

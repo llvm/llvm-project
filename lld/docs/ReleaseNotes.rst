@@ -24,7 +24,11 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* ...
+* Glob pattern, which you can use in linker scripts or version scripts,
+  now supports `\` and `[!...]`. Except character classes
+  (e.g. `[[:digit:]]`), lld's glob pattern should be fully compatible
+  with GNU now. (`r375051
+  <https://github.com/llvm/llvm-project/commit/48993d5ab9413f0e5b94dfa292a233ce55b09e3e>`_)
 
 COFF Improvements
 -----------------

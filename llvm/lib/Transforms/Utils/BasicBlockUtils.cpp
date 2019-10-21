@@ -170,7 +170,8 @@ bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI) {
 
 bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
                                      LoopInfo *LI, MemorySSAUpdater *MSSAU,
-                                     MemoryDependenceResults *MemDep) {
+                                     MemoryDependenceResults *MemDep,
+                                     bool PredecessorWithTwoSuccessors) {
   if (BB->hasAddressTaken())
     return false;
 
@@ -185,8 +186,23 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     return false;
 
   // Can't merge if there are multiple distinct successors.
-  if (PredBB->getUniqueSuccessor() != BB)
+  if (!PredecessorWithTwoSuccessors && PredBB->getUniqueSuccessor() != BB)
     return false;
+
+  // Currently only allow PredBB to have two predecessors, one being BB.
+  // Update BI to branch to BB's only successor instead of BB.
+  BranchInst *PredBB_BI;
+  BasicBlock *NewSucc = nullptr;
+  unsigned FallThruPath;
+  if (PredecessorWithTwoSuccessors) {
+    if (!(PredBB_BI = dyn_cast<BranchInst>(PredBB->getTerminator())))
+      return false;
+    BranchInst *BB_JmpI = dyn_cast<BranchInst>(BB->getTerminator());
+    if (!BB_JmpI || !BB_JmpI->isUnconditional())
+      return false;
+    NewSucc = BB_JmpI->getSuccessor(0);
+    FallThruPath = PredBB_BI->getSuccessor(0) == BB ? 0 : 1;
+  }
 
   // Can't merge if there is PHI loop.
   for (PHINode &PN : BB->phis())
@@ -246,11 +262,20 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   // source...
   BB->replaceAllUsesWith(PredBB);
 
-  // Delete the unconditional branch from the predecessor...
-  PredBB->getInstList().pop_back();
+  if (PredecessorWithTwoSuccessors) {
+    // Delete the unconditional branch from BB.
+    BB->getInstList().pop_back();
 
-  // Move terminator instruction and add unreachable to now empty BB.
-  PredBB->getInstList().splice(PredBB->end(), BB->getInstList());
+    // Update branch in the predecessor.
+    PredBB_BI->setSuccessor(FallThruPath, NewSucc);
+  } else {
+    // Delete the unconditional branch from the predecessor.
+    PredBB->getInstList().pop_back();
+
+    // Move terminator instruction.
+    PredBB->getInstList().splice(PredBB->end(), BB->getInstList());
+  }
+  // Add unreachable to now empty BB.
   new UnreachableInst(BB->getContext(), BB);
 
   // Eliminate duplicate dbg.values describing the entry PHI node post-splice.

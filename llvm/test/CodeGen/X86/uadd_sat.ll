@@ -50,7 +50,7 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
   ret i64 %tmp
 }
 
-define i16 @func16(i16 %x, i16 %y) nounwind {
+define zeroext i16 @func16(i16 zeroext %x, i16 zeroext %y) nounwind {
 ; X86-LABEL: func16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
@@ -71,7 +71,7 @@ define i16 @func16(i16 %x, i16 %y) nounwind {
   ret i16 %tmp
 }
 
-define i8 @func8(i8 %x, i8 %y) nounwind {
+define zeroext i8 @func8(i8 zeroext %x, i8 zeroext %y) nounwind {
 ; X86-LABEL: func8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
@@ -94,31 +94,26 @@ define i8 @func8(i8 %x, i8 %y) nounwind {
   ret i8 %tmp
 }
 
-define i4 @func3(i4 %x, i4 %y) nounwind {
+define zeroext i4 @func3(i4 zeroext %x, i4 zeroext %y) nounwind {
 ; X86-LABEL: func3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    shlb $4, %cl
-; X86-NEXT:    shlb $4, %al
-; X86-NEXT:    addb %cl, %al
+; X86-NEXT:    addb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    movzbl %al, %ecx
-; X86-NEXT:    movl $255, %eax
-; X86-NEXT:    cmovael %ecx, %eax
-; X86-NEXT:    shrb $4, %al
-; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    cmpb $15, %al
+; X86-NEXT:    movl $15, %eax
+; X86-NEXT:    cmovbl %ecx, %eax
+; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: func3:
 ; X64:       # %bb.0:
-; X64-NEXT:    shlb $4, %sil
-; X64-NEXT:    shlb $4, %dil
 ; X64-NEXT:    addb %sil, %dil
-; X64-NEXT:    movzbl %dil, %ecx
-; X64-NEXT:    movl $255, %eax
-; X64-NEXT:    cmovael %ecx, %eax
-; X64-NEXT:    shrb $4, %al
-; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    cmpb $15, %al
+; X64-NEXT:    movl $15, %ecx
+; X64-NEXT:    cmovbl %eax, %ecx
+; X64-NEXT:    movzbl %cl, %eax
 ; X64-NEXT:    retq
   %tmp = call i4 @llvm.uadd.sat.i4(i4 %x, i4 %y)
   ret i4 %tmp

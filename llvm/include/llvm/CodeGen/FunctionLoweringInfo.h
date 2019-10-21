@@ -20,7 +20,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -37,6 +36,7 @@ namespace llvm {
 class Argument;
 class BasicBlock;
 class BranchProbabilityInfo;
+class LegacyDivergenceAnalysis;
 class Function;
 class Instruction;
 class MachineFunction;

@@ -231,7 +231,7 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   SymbolContextList scl;
 
   target.GetImages().FindSymbolsMatchingRegExAndType(
-      RegularExpression{R"(^)" + func_to_match}, eSymbolTypeAny, scl, true);
+      RegularExpression{R"(^)" + func_to_match}, eSymbolTypeAny, scl);
 
   // Case 1,2 or 3
   if (scl.GetSize() >= 1) {

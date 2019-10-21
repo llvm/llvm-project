@@ -236,6 +236,7 @@ public:
   LegalizeResult lowerDynStackAlloc(MachineInstr &MI);
   LegalizeResult lowerExtract(MachineInstr &MI);
   LegalizeResult lowerInsert(MachineInstr &MI);
+  LegalizeResult lowerSADDO_SSUBO(MachineInstr &MI);
 
 private:
   MachineRegisterInfo &MRI;

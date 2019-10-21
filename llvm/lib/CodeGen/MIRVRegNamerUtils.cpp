@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MIRVRegNamerUtils.h"
+#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 

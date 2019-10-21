@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_ltdf2vfp
 
 //===-- ltdf2vfp_test.c - Test __ltdf2vfp ---------------------------------===//
 //

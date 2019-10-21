@@ -39,16 +39,29 @@
 ; OBJ-NEXT: AddressSize: 32bit
 ; OBJ-NEXT: FileHeader {
 ; OBJ-NEXT:   Magic: 0x1DF
-; OBJ-NEXT:   NumberOfSections: 1
+; OBJ-NEXT:   NumberOfSections: 2
 ; OBJ-NEXT:   TimeStamp:
-; OBJ-NEXT:   SymbolTableOffset: 0x3C
-; OBJ-NEXT:   SymbolTableEntries: 14
+; OBJ-NEXT:   SymbolTableOffset: 0x64
+; OBJ-NEXT:   SymbolTableEntries: 16
 ; OBJ-NEXT:   OptionalHeaderSize: 0x0
 ; OBJ-NEXT:   Flags: 0x0
 ; OBJ-NEXT: }
 ; OBJ-NEXT: Sections [
 ; OBJ-NEXT:   Section {
 ; OBJ-NEXT:     Index: 1
+; OBJ-NEXT:     Name: .text
+; OBJ-NEXT:     PhysicalAddress: 0x0
+; OBJ-NEXT:     VirtualAddress: 0x0
+; OBJ-NEXT:     Size: 0x0
+; OBJ-NEXT:     RawDataOffset: 0x64
+; OBJ-NEXT:     RelocationPointer: 0x0
+; OBJ-NEXT:     LineNumberPointer: 0x0
+; OBJ-NEXT:     NumberOfRelocations: 0
+; OBJ-NEXT:     NumberOfLineNumbers: 0
+; OBJ-NEXT:     Type: STYP_TEXT (0x20)
+; OBJ-NEXT:   }
+; OBJ-NEXT:   Section {
+; OBJ-NEXT:     Index: 2
 ; OBJ-NEXT:     Name: .bss
 ; OBJ-NEXT:     PhysicalAddress: 0x0
 ; OBJ-NEXT:     VirtualAddress: 0x0
@@ -67,9 +80,7 @@
 ; SYMS-NEXT: Arch: powerpc
 ; SYMS-NEXT: AddressSize: 32bit
 ; SYMS-NEXT: Symbols [
-; SYMS-NEXT:   Symbol {
-; SYMS-NEXT:     Index: [[#Index:]]
-; SYMS-NEXT:     Name: a
+; SYMS:        Symbol {{[{][[:space:]] *}}Index: [[#Index:]]{{[[:space:]] *}}Name: a
 ; SYMS-NEXT:     Value (RelocatableAddress): 0x0
 ; SYMS-NEXT:     Section: .bss
 ; SYMS-NEXT:     Type: 0x0

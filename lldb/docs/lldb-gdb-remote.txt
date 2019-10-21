@@ -1,15 +1,15 @@
 LLDB has added new GDB server packets to better support multi-threaded and
 remote debugging. Why? Normally you need to start the correct GDB and the
 correct GDB server when debugging. If you have mismatch, then things go wrong
-very quickly. LLDB makes extensive use of the GDB remote protocol and we 
+very quickly. LLDB makes extensive use of the GDB remote protocol and we
 wanted to make sure that the experience was a bit more dynamic where we can
 discover information about a remote target with having to know anything up
-front. We also ran into performance issues with the existing GDB remote 
+front. We also ran into performance issues with the existing GDB remote
 protocol that can be overcome when using a reliable communications layer.
 Some packets improve performance, others allow for remote process launching
 (if you have an OS), and others allow us to dynamically figure out what
 registers a thread might have. Again with GDB, both sides pre-agree on how the
-registers will look (how many, their register number,name and offsets). We 
+registers will look (how many, their register number,name and offsets). We
 prefer to be able to dynamically determine what kind of architecture, OS and
 vendor we are debugging, as well as how things are laid out when it comes to
 the thread register contexts. Below are the details on the new packets we have
@@ -79,10 +79,10 @@ debugging.
 //  launched using the "A" packet.
 //
 // NB: key/value pairs are sent as-is so gdb-remote protocol meta characters
-//     (e.g. '#' or '$') are not acceptable.  If any non-printable or 
+//     (e.g. '#' or '$') are not acceptable.  If any non-printable or
 //     metacharacters are present in the strings, QEnvironmentHexEncoded
 //     should be used instead if it is available.  If you don't want to
-//     scan the environment strings before sending, prefer 
+//     scan the environment strings before sending, prefer
 //     the QEnvironmentHexEncoded packet over QEnvironment, if it is
 //     available.
 //
@@ -142,7 +142,7 @@ This packet can be sent one or more times _prior_ to sending a "A" packet.
 //  It must be noted that even if the client has enabled reporting
 //  strings in error replies, it must not expect error strings to all
 //  error replies.
-// 
+//
 // PRIORITY TO IMPLEMENT
 //  Low. Only needed if the remote target wants to provide strings that
 //  are human readable along with an error code.
@@ -157,7 +157,7 @@ read packet: $OK#00
 // "QSetSTDERR:<ascii-hex-path>"
 //
 // BRIEF
-//  Setup where STDIN, STDOUT, and STDERR go prior to sending an "A" 
+//  Setup where STDIN, STDOUT, and STDERR go prior to sending an "A"
 //  packet.
 //
 // PRIORITY TO IMPLEMENT
@@ -221,7 +221,7 @@ This packet must be sent  _prior_ to sending a "A" packet.
 //
 // BRIEF
 //  Enable the threads: and thread-pcs: data in the question-mark packet
-//  ("T packet") responses when the stub reports that a program has 
+//  ("T packet") responses when the stub reports that a program has
 //  stopped executing.
 //
 // PRIORITY TO IMPLEMENT
@@ -404,7 +404,7 @@ read packet: {"conf1":<conf1>,"conf2":<conf2>,"params":{"paramName":paramValue}]
 //  will get picked up automatically, and allows registers to change
 //  depending on the actual CPU type that is used.
 //
-//  NB: As of summer 2015, lldb can get register information from the 
+//  NB: As of summer 2015, lldb can get register information from the
 //  "qXfer:features:read:target.xml" FSF gdb standard register packet
 //  where the stub provides register definitions in an XML file.
 //  If qXfer:features:read:target.xml is supported, qRegisterInfo does
@@ -539,11 +539,11 @@ read packet: $E45#00
 
 As we see above we keep making subsequent calls to the remote server to
 discover all registers by increasing the number appended to qRegisterInfo and
-we get a response back that is a series of "key=value;" strings. 
+we get a response back that is a series of "key=value;" strings.
 
 The offset: fields should not leave a gap anywhere in the g/G packet -- the
 register values should be appended one after another.  For instance, if the
-register context for a thread looks like 
+register context for a thread looks like
 
 struct rctx {
     uint32_t gpr1;  // offset 0
@@ -554,8 +554,8 @@ struct rctx {
 
 You may end up with a 4-byte gap between gpr3 and fp1 on architectures
 that align values like this.  The correct offset: value for fp1 is 12 -
-in the g/G packet fp1 will immediately follow gpr3, even though the 
-in-memory thread structure has an empty 4 bytes for alignment between 
+in the g/G packet fp1 will immediately follow gpr3, even though the
+in-memory thread structure has an empty 4 bytes for alignment between
 these two registers.
 
 The keys and values are detailed below:
@@ -571,10 +571,10 @@ bitsize     Size in bits of a register (32, 64, etc).  Base 10.
 
 offset      The offset within the "g" and "G" packet of the register data for
             this register.  This is the byte offset once the data has been
-            transformed into binary, not the character offset into the g/G 
+            transformed into binary, not the character offset into the g/G
             packet.  Base 10.
 
-encoding    The encoding type of the register which must be one of: 
+encoding    The encoding type of the register which must be one of:
 
                  uint (unsigned integer)
                  sint (signed integer)
@@ -589,7 +589,7 @@ format      The preferred format for display of this register. The value must
                 hex
                 float
                 vector-sint8
-                vector-uint8 
+                vector-uint8
                 vector-sint16
                 vector-uint16
                 vector-sint32
@@ -605,7 +605,7 @@ gcc         The GCC compiler registers number for this register (used for
             string passed to strtoul() with a base of zero, so the number
             can be decimal, or hex if it is prefixed with "0x".
 
-            NOTE: If the compiler doesn't have a register number for this 
+            NOTE: If the compiler doesn't have a register number for this
             register, this key/value pair should be omitted.
 
 dwarf       The DWARF register number for this register that is used for this
@@ -613,30 +613,30 @@ dwarf       The DWARF register number for this register that is used for this
             like a string passed to strtoul() with a base of zero, so the number
             can be decimal, or hex if it is prefixed with "0x".
 
-            NOTE: If the compiler doesn't have a register number for this 
+            NOTE: If the compiler doesn't have a register number for this
             register, this key/value pair should be omitted.
 
 generic     If the register is a generic register that most CPUs have, classify
             it correctly so the debugger knows. Valid values are one of:
-             pc  (a program counter register. for example "name=eip;" (i386), 
-                  "name=rip;" (x86_64), "name=r15;" (32 bit arm) would 
+             pc  (a program counter register. for example "name=eip;" (i386),
+                  "name=rip;" (x86_64), "name=r15;" (32 bit arm) would
                   include a "generic=pc;" key value pair)
-             sp  (a stack pointer register. for example "name=esp;" (i386), 
-                  "name=rsp;" (x86_64), "name=r13;" (32 bit arm) would 
+             sp  (a stack pointer register. for example "name=esp;" (i386),
+                  "name=rsp;" (x86_64), "name=r13;" (32 bit arm) would
                   include a "generic=sp;" key value pair)
-             fp  (a frame pointer register. for example "name=ebp;" (i386), 
-                   "name=rbp;" (x86_64), "name=r7;" (32 bit arm with macosx 
+             fp  (a frame pointer register. for example "name=ebp;" (i386),
+                   "name=rbp;" (x86_64), "name=r7;" (32 bit arm with macosx
                    ABI) would include a "generic=fp;" key value pair)
-             ra  (a return address register. for example "name=lr;" (32 bit ARM) 
+             ra  (a return address register. for example "name=lr;" (32 bit ARM)
                   would include a "generic=ra;" key value pair)
-             fp  (a CPU flags register. for example "name=eflags;" (i386), 
-                  "name=rflags;" (x86_64), "name=cpsr;" (32 bit ARM) 
+             fp  (a CPU flags register. for example "name=eflags;" (i386),
+                  "name=rflags;" (x86_64), "name=cpsr;" (32 bit ARM)
                   would include a "generic=flags;" key value pair)
-             arg1 - arg8 (specified for registers that contain function 
+             arg1 - arg8 (specified for registers that contain function
                       arguments when the argument fits into a register)
 
 container-regs
-            The value for this key is a comma separated list of raw hex (optional 
+            The value for this key is a comma separated list of raw hex (optional
             leading "0x") register numbers.
 
             This specifies that this register is contained in other concrete
@@ -644,25 +644,25 @@ container-regs
             "rax" register value for x86_64, so "eax" could specify that it is
             contained in "rax" by specifying the register number for "rax" (whose
             register number is 0x00)
-            
+
             "container-regs:00;"
-            
+
             If a register is comprised of one or more registers, like "d0" is ARM
             which is a 64 bit register, it might be made up of "s0" and "s1". If
             the register number for "s0" is 0x20, and the register number of "s1"
             is "0x21", the "container-regs" key/value pair would be:
-            
+
             "container-regs:20,21;"
-            
+
             This is handy for defining what GDB used to call "pseudo" registers.
             These registers are never requested by LLDB via the register read
             or write packets, the container registers will be requested on behalf
             of this register.
-            
+
 invalidate-regs
-            The value for this key is a comma separated list of raw hex (optional 
+            The value for this key is a comma separated list of raw hex (optional
             leading "0x") register numbers.
-            
+
             This specifies which register values should be invalidated when this
             register is modified. For example if modifying "eax" would cause "rax",
             "eax", "ax", "ah", and "al" to be modified where rax is 0x0, eax is 0x15,
@@ -670,16 +670,16 @@ invalidate-regs
             pair would be:
 
             "invalidate-regs:0,15,25,35,39;"
-            
+
             If there is a single register that gets invalidated, then omit the comma
             and just list a single register:
-            
+
             "invalidate-regs:0;"
-            
+
             This is handy when modifying a specific register can cause other
             register values to change. For example, when debugging an ARM target,
             modifying the CPSR register can cause the r8 - r14 and cpsr value to
-            change depending on if the mode has changed. 
+            change depending on if the mode has changed.
 
 //----------------------------------------------------------------------
 // "qPlatform_shell"
@@ -795,12 +795,12 @@ ospatch: optional, specifies the patch level number of the OS (e.g. for macOS 10
 // "qGDBServerVersion"
 //
 // BRIEF
-//  Get version information about this implementation of the gdb-remote 
+//  Get version information about this implementation of the gdb-remote
 //  protocol.
 //
 // PRIORITY TO IMPLEMENT
 //  High. This packet is usually very easy to implement and can help
-//  LLDB to work around bugs in a server's implementation when they 
+//  LLDB to work around bugs in a server's implementation when they
 //  are found.
 //----------------------------------------------------------------------
 
@@ -819,8 +819,8 @@ send packet: $qGDBServerVersion#00
 read packet: $name:debugserver;version:310.2;#00
 
 Other clients may find other key-value pairs to be useful for identifying
-a gdb stub.  Patch level, release name, build number may all be keys that 
-better describe your implementation's version.  
+a gdb stub.  Patch level, release name, build number may all be keys that
+better describe your implementation's version.
 Suggested key names:
 
   name   : the name of your remote server - "debugserver" is the lldb standard
@@ -846,10 +846,10 @@ Suggested key names:
 //
 // PRIORITY TO IMPLEMENT
 //  Medium.  On systems which can launch multiple different architecture processes,
-//  the qHostInfo may not disambiguate sufficiently to know what kind of 
+//  the qHostInfo may not disambiguate sufficiently to know what kind of
 //  process is being debugged.
 //  e.g. on a 64-bit x86 Mac system both 32-bit and 64-bit user processes are possible,
-//  and with Mach-O universal files, the executable file may contain both 32- and 
+//  and with Mach-O universal files, the executable file may contain both 32- and
 //  64-bit slices so it may be impossible to know until you're attached to a real
 //  process to know what you're working with.
 //
@@ -886,17 +886,17 @@ ptrsize: is a number that represents how big pointers are in bytes
 // "qShlibInfoAddr"
 //
 // BRIEF
-//  Get an address where the dynamic linker stores information about 
+//  Get an address where the dynamic linker stores information about
 //  where shared libraries are loaded.
 //
 // PRIORITY TO IMPLEMENT
 //  High if you have a dynamic loader plug-in in LLDB for your target
 //  triple (see the "qHostInfo" packet) that can use this information.
-//  Many times address load randomization can make it hard to detect 
+//  Many times address load randomization can make it hard to detect
 //  where the dynamic loader binary and data structures are located and
 //  some platforms know, or can find out where this information is.
 //
-//  Low if you have a debug target where all object and symbol files 
+//  Low if you have a debug target where all object and symbol files
 //  contain static load addresses.
 //----------------------------------------------------------------------
 
@@ -923,11 +923,11 @@ read packet: $7fff5fc40040#00
 //  Many times one thread will hit a breakpoint and while the debugger
 //  is in the process of suspending the other threads, other threads
 //  will also hit a breakpoint. This packet allows LLDB to know why all
-//  threads (live system debug) / cores (JTAG) in your program have 
-//  stopped and allows LLDB to display and control your program 
+//  threads (live system debug) / cores (JTAG) in your program have
+//  stopped and allows LLDB to display and control your program
 //  correctly.
 //----------------------------------------------------------------------
-    
+
 LLDB tries to use the "qThreadStopInfo" packet which is formatted as
 "qThreadStopInfo%x" where %x is the hex thread ID. This requests information
 about why a thread is stopped. The response is the same as the stop reply
@@ -1009,9 +1009,9 @@ code. The packet is formatted as:
 char packet[256];
 int packet_len;
 packet_len = ::snprintf (
-    packet, 
-    sizeof(packet), 
-    "_M%zx,%s%s%s", 
+    packet,
+    sizeof(packet),
+    "_M%zx,%s%s%s",
     (size_t)size,
     permissions & lldb::ePermissionsReadable ? "r" : "",
     permissions & lldb::ePermissionsWritable ? "w" : "",
@@ -1059,17 +1059,17 @@ not supported.
 We added a way to get information for a memory region. The packet is:
 
     qMemoryRegionInfo:<addr>
-    
+
 Where <addr> is a big endian hex address. The response is returned in a series
 of tuples like the data returned in a stop reply packet. The currently valid
 tuples to return are:
 
-    start:<start-addr>; // <start-addr> is a big endian hex address that is 
+    start:<start-addr>; // <start-addr> is a big endian hex address that is
                         // the start address of the range that contains <addr>
-    
+
     size:<size>;    // <size> is a big endian hex byte size of the address
                     // of the range that contains <addr>
-    
+
     permissions:<permissions>;  // <permissions> is a string that contains one
                                 // or more of the characters from "rwx"
 
@@ -1078,13 +1078,13 @@ tuples to return are:
                  // regions backed by a file it have to be the absolute path of
                  // the file while for anonymous regions it have to be the name
                  // associated to the region if that is available.
-                                
+
     error:<ascii-byte-error-string>; // where <ascii-byte-error-string> is
-                                     // a hex encoded string value that 
+                                     // a hex encoded string value that
                                      // contains an error string
-                                    
+
 If the address requested is not in a mapped region (e.g. we've jumped through
-a NULL pointer and are at 0x0) currently lldb expects to get back the size 
+a NULL pointer and are at 0x0) currently lldb expects to get back the size
 of the unmapped region -- that is, the distance to the next valid region.
 For instance, with a macOS process which has nothing mapped in the first
 4GB of its address space, if we're asking about address 0x2,
@@ -1124,8 +1124,8 @@ for this region.
 //
 // The "0x" prefixes are optional - like most of the gdb-remote packets,
 // omitting them will work fine; these numbers are always base 16.
-// 
-// The length of the payload is not provided.  A reliable, 8-bit clean, 
+//
+// The length of the payload is not provided.  A reliable, 8-bit clean,
 // transport layer is assumed.
 //----------------------------------------------------------------------
 
@@ -1141,7 +1141,7 @@ for this region.
 // to query whether the monitor supports the extended detach, and if it does,
 // when we want the monitor to detach but not resume the target, we will
 // send:
-// 
+//
 //   D1
 //
 // In any case, if we want the normal detach behavior we will just send:
@@ -1155,13 +1155,13 @@ for this region.
 //
 // BRIEF
 //  The QSaveRegisterState packet tells the remote debugserver to save
-//  all registers and return a non-zero unique integer ID that 
+//  all registers and return a non-zero unique integer ID that
 //  represents these save registers. If thread suffixes are enabled the
-//  second form of this packet is used, otherwise the first form is 
+//  second form of this packet is used, otherwise the first form is
 //  used. This packet is called prior to executing an expression, so
-//  the remote GDB server should do anything it needs to in order to 
+//  the remote GDB server should do anything it needs to in order to
 //  ensure the registers that are saved are correct. On macOS this
-//  involves calling "thread_abort_safely(mach_port_t thread)" to 
+//  involves calling "thread_abort_safely(mach_port_t thread)" to
 //  ensure we get the correct registers for a thread in case it is
 //  currently having code run on its behalf in the kernel.
 //
@@ -1184,14 +1184,14 @@ for this region.
 // QRestoreRegisterState:<save_id>;thread:XXXX;
 //
 // BRIEF
-//  The QRestoreRegisterState packet tells the remote debugserver to 
+//  The QRestoreRegisterState packet tells the remote debugserver to
 //  restore all registers using the "save_id" which is an unsigned
-//  integer that was returned from a previous call to 
+//  integer that was returned from a previous call to
 //  QSaveRegisterState. The restoration process can only be done once
-//  as the data backing the register state will be freed upon the 
+//  as the data backing the register state will be freed upon the
 //  completion of the QRestoreRegisterState command.
 //
-//  If thread suffixes are enabled the second form of this packet is 
+//  If thread suffixes are enabled the second form of this packet is
 //  used, otherwise the first form is used.
 //
 // RESPONSE
@@ -1273,13 +1273,13 @@ for this region.
 //  following forms:
 //
 //  "SAA"
-//  "S" means signal and "AA" is a hex signal number that describes why 
+//  "S" means signal and "AA" is a hex signal number that describes why
 //  the thread or stopped. It doesn't specify which thread, so the "T"
 //  packet is recommended to use instead of the "S" packet.
 //
 //  "TAAkey1:value1;key2:value2;..."
-//  "T" means a thread stopped due to a unix signal where "AA" is a hex 
-//  signal number that describes why the program stopped. This is 
+//  "T" means a thread stopped due to a unix signal where "AA" is a hex
+//  signal number that describes why the program stopped. This is
 //  followed by a series of key/value pairs:
 //      - If key is a hex number, it is a register number and value is
 //        the hex value of the register in debuggee endian byte order.
@@ -1313,14 +1313,14 @@ for this region.
 //  KEY           VALUE     DESCRIPTION
 //  ===========   ========  ================================================
 //  "metype"      unsigned  mach exception type (the value of the EXC_XXX enumerations)
-//                          as an unsigned integer. For targets with mach 
+//                          as an unsigned integer. For targets with mach
 //                          kernels only.
 //
 //  "mecount"     unsigned  mach exception data count as an unsigned integer
 //                          For targets with mach kernels only.
 //
 //  "medata"      unsigned  There should be "mecount" of these and it is the data
-//                          that goes along with a mach exception (as an unsigned 
+//                          that goes along with a mach exception (as an unsigned
 //                          integer). For targets with mach kernels only.
 //
 //  "name"        string    The name of the thread as a plain string. The string
@@ -1342,7 +1342,7 @@ for this region.
 //                          "signal" stopped due to an actual unix signal, not
 //                              just the debugger using a unix signal to keep
 //                              the GDB remote client happy.
-//                          "watchpoint". Should be used in conjunction with 
+//                          "watchpoint". Should be used in conjunction with
 //                              the "watch"/"rwatch"/"awatch" key value pairs.
 //                          "exception" an exception stop reason. Use with
 //                              the "description" key/value pair to describe the
@@ -1359,7 +1359,7 @@ for this region.
 //                                  request that this be included in the T packet via
 //                                  the QListThreadsInStopReply packet earlier in
 //                                  the debug session.
-//                                  
+//
 //                                  Example:
 //                                  threads:63387,633b2,63424,63462,63486;
 //
@@ -1370,12 +1370,12 @@ for this region.
 //                                  "threads" key is already included in the T packet.
 //                                  The pc values correspond to the threads reported
 //                                  in the "threads" list.  The number of pcs in the
-//                                  "thread-pcs" list will be the same as the number of 
+//                                  "thread-pcs" list will be the same as the number of
 //                                  threads in the "threads" list.
-//                                  lldb may request that this be included in the T 
-//                                  packet via the QListThreadsInStopReply packet 
+//                                  lldb may request that this be included in the T
+//                                  packet via the QListThreadsInStopReply packet
 //                                  earlier in the debug session.
-//                                  
+//
 //                                  Example:
 //                                  thread-pcs:dec14,2cf872b0,2cf8681c,2d02d68c,2cf716a8;
 //
@@ -1386,11 +1386,11 @@ for this region.
 //  thread.
 //
 //  If a thread is stopped for no reason (like just because another thread
-//  stopped, or because when one core stops all cores should stop), use a 
-//  "T" packet with "00" as the signal number and fill in as many key values 
+//  stopped, or because when one core stops all cores should stop), use a
+//  "T" packet with "00" as the signal number and fill in as many key values
 //  and registers as possible.
 //
-//  LLDB likes to know why a thread stopped since many thread control 
+//  LLDB likes to know why a thread stopped since many thread control
 //  operations like stepping over a source line, actually are implemented
 //  by running the process multiple times. If a breakpoint is hit while
 //  trying to step over a source line and LLDB finds out that a breakpoint
@@ -1399,12 +1399,12 @@ for this region.
 //  do the step. If we are at a breakpoint and we disable the breakpoint
 //  at the current PC and do an instruction single step, knowing that
 //  we stopped due to a "trace" helps us know that we can continue
-//  running versus stopping due to a "breakpoint" (if we have two 
+//  running versus stopping due to a "breakpoint" (if we have two
 //  breakpoint instruction on consecutive instructions). So the more info
 //  we can get about the reason a thread stops, the better job LLDB can
-//  do when controlling your process. A typical GDB server behavior is 
+//  do when controlling your process. A typical GDB server behavior is
 //  to send a SIGTRAP for breakpoints _and_ also when instruction single
-//  stepping, in this case the debugger doesn't really know why we 
+//  stepping, in this case the debugger doesn't really know why we
 //  stopped and it can make it hard for the debugger to control your
 //  program correctly. What if a real SIGTRAP was delivered to a thread
 //  while we were trying to single step? We wouldn't know the difference
@@ -1414,7 +1414,7 @@ for this region.
 //  High. Having the extra information in your stop reply packets makes
 //  your debug session more reliable and informative.
 //----------------------------------------------------------------------
- 
+
 
 //----------------------------------------------------------------------
 // PLATFORM EXTENSION - for use as a GDB remote platform
@@ -1424,7 +1424,7 @@ for this region.
 //
 // BRIEF
 //  Get the first process info (qfProcessInfo) or subsequent process
-//  info (qsProcessInfo) for one or more processes on the remote 
+//  info (qsProcessInfo) for one or more processes on the remote
 //  platform. The first call gets the first match and subsequent calls
 //  to qsProcessInfo gets the subsequent matches. Return an error EXX,
 //  where XX are two hex digits, when no more matches are available.
@@ -1435,22 +1435,25 @@ for this region.
 //
 //  KEY           VALUE     DESCRIPTION
 //  ===========   ========  ================================================
-//  "name"        ascii-hex An ASCII hex string that contains the name of 
+//  "name"        ascii-hex An ASCII hex string that contains the name of
 //                          the process that will be matched.
-//  "name_match"  enum      One of: "equals", "starts_with", "ends_with", 
+//  "name_match"  enum      One of: "equals", "starts_with", "ends_with",
 //                          "contains" or "regex"
 //  "pid"         integer   A string value containing the decimal process ID
-//  "parent_pid"  integer   A string value containing the decimal parent 
+//  "parent_pid"  integer   A string value containing the decimal parent
 //                          process ID
 //  "uid"         integer   A string value containing the decimal user ID
 //  "gid"         integer   A string value containing the decimal group ID
 //  "euid"        integer   A string value containing the decimal effective user ID
 //  "egid"        integer   A string value containing the decimal effective group ID
 //  "all_users"   bool      A boolean value that specifies if processes should
-//                          be listed for all users, not just the user that the 
+//                          be listed for all users, not just the user that the
 //                          platform is running as
-//  "triple"      string    An ASCII triple string ("x86_64", 
+//  "triple"      string    An ASCII triple string ("x86_64",
 //                          "x86_64-apple-macosx", "armv7-apple-ios")
+//  "args"        string    A string value containing the process arguments
+//                          separated by the character '-', where each argument is
+//                          hex-encoded. It includes argv[0].
 //
 // The response consists of key/value pairs where the key is separated from the
 // values with colons and each pair is terminated with a semi colon. For a list
@@ -1513,7 +1516,7 @@ for this region.
 //  ID. PID is specified as a decimal integer.
 //
 // PRIORITY TO IMPLEMENT
-//  Optional. 
+//  Optional.
 //
 // The response consists of key/value pairs where the key is separated from the
 // values with colons and each pair is terminated with a semi colon.
@@ -1541,7 +1544,7 @@ for this region.
 //
 // BRIEF
 //  Same as vAttach, except instead of a "pid" you send a process name.
-//  
+//
 // PRIORITY TO IMPLEMENT
 //  Low. Only needed for "process attach -n".  If the packet isn't supported
 //  then "process attach -n" will fail gracefully.  So you need only to support
@@ -1586,7 +1589,7 @@ for this region.
 //  you don't implement it but do implement -n AND lldb can somehow get
 //  a process list from your device, it will fall back on scanning the
 //  process list, and sending vAttach or vAttachWait depending on
-//  whether the requested process exists already.  This is racy, 
+//  whether the requested process exists already.  This is racy,
 //  however, so if you want to support this behavior it is better to
 //  support this packet.
 //----------------------------------------------------------------------
@@ -1596,11 +1599,11 @@ for this region.
 //
 // BRIEF
 //  This packet, which takes its arguments as JSON and sends its reply as
-//  JSON, allows the gdb remote stub to provide additional information 
+//  JSON, allows the gdb remote stub to provide additional information
 //  about a given thread.
 //
 // PRIORITY TO IMPLEMENT
-//  Low.  This packet is only needed if the gdb remote stub wants to 
+//  Low.  This packet is only needed if the gdb remote stub wants to
 //  provide interesting additional information about a thread for the
 //  user.
 //
@@ -1619,7 +1622,7 @@ for this region.
 //
 //   jThreadExtendedInfo:{"plo_pthread_tsd_base_address_offset":0,"plo_pthread_tsd_base_offset":224,"plo_pthread_tsd_entry_size":8,"thread":612910}
 //
-// There are no requirements for what is included in the response.  A simple 
+// There are no requirements for what is included in the response.  A simple
 // reply on a OS X Yosemite / iOS 8 may include the pthread_t value, the
 // Thread Specific Data (TSD) address, the dispatch_queue_t value if the thread
 // is associated with a GCD queue, and the requested Quality of Service (QoS)
@@ -1627,12 +1630,12 @@ for this region.
 //
 //  {"tsd_address":4371349728,"requested_qos":{"enum_value":33,"constant_name":"QOS_CLASS_USER_INTERACTIVE","printable_name":"User Interactive"},"pthread_t":4371349504,"dispatch_queue_t":140735087127872}
 //
-// tsd_address, pthread_t, and dispatch_queue_t are all simple key-value pairs.  
-// The JSON standard requires that numbers be expressed in base 10 - so all of 
-// these are.  requested_qos is a dictionary with three key-value pairs in it - 
+// tsd_address, pthread_t, and dispatch_queue_t are all simple key-value pairs.
+// The JSON standard requires that numbers be expressed in base 10 - so all of
+// these are.  requested_qos is a dictionary with three key-value pairs in it -
 // so the UI layer may choose the form most appropriate for displaying to the user.
 //
-// Sending JSON over gdb-remote protocol introduces some problems.  We may be 
+// Sending JSON over gdb-remote protocol introduces some problems.  We may be
 // sending strings with arbitrary contents in them, including the '#', '$', and '*'
 // characters that have special meaning in gdb-remote protocol and cannot occur
 // in the middle of the string.  The standard solution for this would be to require
@@ -1655,13 +1658,13 @@ for this region.
 //
 // BRIEF
 //  This packet enables compression of the packets that the debug stub sends to lldb.
-//  If the debug stub can support compression, it indictes this in the reply of the 
+//  If the debug stub can support compression, it indictes this in the reply of the
 //  "qSupported" packet.  e.g.
 //   LLDB SENDS:    qSupported:xmlRegisters=i386,arm,mips
 //   STUB REPLIES:  qXfer:features:read+;SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;DefaultCompressionMinSize=384
 //
 //  If lldb knows how to use any of these compression algorithms, it can ask that this
-//  compression mode be enabled.  It may optionally change the minimum packet size 
+//  compression mode be enabled.  It may optionally change the minimum packet size
 //  where compression is used.  Typically small packets do not benefit from compression,
 //  as well as compression headers -- compression is most beneficial with larger packets.
 //
@@ -1672,7 +1675,7 @@ for this region.
 //  The debug stub should reply with an uncompressed "OK" packet to indicate that the
 //  request was accepted.  All further packets the stub sends will use this compression.
 //
-//  Packets are compressed as the last step before they are sent from the stub, and 
+//  Packets are compressed as the last step before they are sent from the stub, and
 //  decompressed as the first step after they are received.  The packet format in compressed
 //  mode becomes one of two:
 //
@@ -1681,7 +1684,7 @@ for this region.
 //   $C<size of uncompressed payload in base10>:<compressed payload>#00
 //
 //  Where "#00" is the actual checksum value if noack mode is not enabled.  The checksum
-//  value is for the "N<uncompressed payload>" or 
+//  value is for the "N<uncompressed payload>" or
 //  "C<size of uncompressed payload in base10>:<compressed payload>" bytes in the packet.
 //
 //  The size of the uncompressed payload in base10 is provided because it will simplify
@@ -1695,7 +1698,7 @@ for this region.
 //
 //    zlib-deflate
 //       The raw DEFLATE format as described in IETF RFC 1951.  With the ZLIB library, you
-//       can compress to this format with an initialization like 
+//       can compress to this format with an initialization like
 //           deflateInit2 (&stream, 5, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY)
 //       and you can decompress with an initialization like
 //           inflateInit2 (&stream, -15)
@@ -1737,9 +1740,9 @@ for this region.
 //       jGetLoadedDynamicLibrariesInfos:{"solib_addresses":[8382824135,3258302053,830202858503]}
 //
 //  The second call is both a performance optimization (instead of having lldb read the mach-o header/load commands
-//  out of memory with generic read packets) but also adds additional information in the form of the 
+//  out of memory with generic read packets) but also adds additional information in the form of the
 //  filename of the shared libraries (which is not available in the mach-o header/load commands.)
-//  
+//
 //  An example using the OS X 10.11 style call:
 //
 //  LLDB SENDS: jGetLoadedDynamicLibrariesInfos:{"image_count":1,"image_list_address":140734800075128}
@@ -1797,7 +1800,7 @@ for this region.
 // would need to work correctly on this platform.
 //
 // PRIORITY TO IMPLEMENT
-//  On OS X 10.11, iOS 9, tvOS 9, watchOS 2 and older: Low.  If this packet is absent, 
+//  On OS X 10.11, iOS 9, tvOS 9, watchOS 2 and older: Low.  If this packet is absent,
 //  lldb will read the Mach-O headers/load commands out of memory.
 //  On macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer: High.  If this packet is absent,
 //  lldb will not know anything about shared libraries in the inferior, or where the main

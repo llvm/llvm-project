@@ -380,8 +380,8 @@ public:
     return false;
   }
 
-  size_t FindMatchingModuleSpecs(const ModuleSpec &module_spec,
-                                 ModuleSpecList &matching_list) const {
+  void FindMatchingModuleSpecs(const ModuleSpec &module_spec,
+                               ModuleSpecList &matching_list) const {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     bool exact_arch_match = true;
     const size_t initial_match_count = matching_list.GetSize();
@@ -400,7 +400,6 @@ public:
           matching_list.Append(spec);
       }
     }
-    return matching_list.GetSize() - initial_match_count;
   }
 
   void Dump(Stream &strm) {

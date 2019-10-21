@@ -9,6 +9,7 @@
 #include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 

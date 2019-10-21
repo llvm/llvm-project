@@ -447,6 +447,9 @@ bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
 
+  if (MF.getFunction().hasOptSize())
+    return false;
+
   if (AFI->getLocalStackSize() == 0)
     return false;
 

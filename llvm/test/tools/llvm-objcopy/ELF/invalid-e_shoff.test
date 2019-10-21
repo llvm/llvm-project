@@ -28,5 +28,6 @@ FileHeader:
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS
+Symbols: []
 
 # CASE2: error: '[[INPUT]]': section header table goes past the end of the file: e_shoff = 0x40000000

@@ -13,32 +13,48 @@
 // LIGHT: Node0x1 [shape=record,label=<
 // DARK:  Node0x1 [shape=record,color="white",fontcolor="gray80",label=<
 // CHECK-SAME:   <tr>
-// LIGHT-SAME:     <td bgcolor="gray">
+// LIGHT-SAME:     <td bgcolor="gray70">
 // DARK-SAME:      <td bgcolor="gray20">
-// CHECK-SAME:       <b>Node 1 (0x1) - State Unspecified</b>
+// CHECK-SAME:       <b>State 0</b>
 // CHECK-SAME:     </td>
 // CHECK-SAME:   </tr>
 Node0x1 [shape=record,label=
  "{
-    { "node_id": 1, "pointer": "0x1", "has_report": false, "is_sink": false,
-      "program_state": null,
-      "program_points": []
+    { "state_id": 0, "program_state": null,
+      "program_points": [
+        {
+          "kind": "BlockEntrance", "block_id": 1,
+          "terminator": null, "term_kind": null,
+          "tag": null, "node_id": 1,
+          "has_report": 0, "is_sink": 0
+        }
+      ]
     }
 \l}"];
 
 // CHECK: Node0x2 [
-// CHECK-SAME: <tr><td>
-// COLOR-SAME:   <font color="red"><b>Bug Report Attached</b></font>
-// GRAY-SAME:    <b>Bug Report Attached</b>
-// CHECK-SAME: </td></tr>
-// CHECK-SAME: <tr><td>
-// COLOR-SAME:   <font color="cornflowerblue"><b>Sink Node</b></font>
-// GRAY-SAME:    <b>Sink Node</b>
-// CHECK-SAME: </td></tr>
+// CHECK-SAME: <tr>
+// CHECK-SAME:   <td colspan="3" align="left">
+// COLOR-SAME:     <font color="red"><b>Bug Report Attached</b></font>
+// GRAY-SAME:      <b>Bug Report Attached</b>
+// CHECK-SAME:   </td>
+// CHECK-SAME: </tr>
+// CHECK-SAME: <tr>
+// CHECK-SAME:   <td colspan="3" align="left">
+// COLOR-SAME:     <font color="cornflowerblue"><b>Sink Node</b></font>
+// GRAY-SAME:      <b>Sink Node</b>
+// CHECK-SAME:   </td>
+// CHECK-SAME: </tr>
 Node0x2 [shape=record,label=
  "{
-    { "node_id": 2, "pointer": "0x2", "has_report": true, "is_sink": true,
-      "program_state": null,
-      "program_points": []
+    { "state_id": 0, "program_state": null,
+      "program_points": [
+        {
+          "kind": "BlockEntrance", "block_id": 1,
+          "terminator": null, "term_kind": null,
+          "tag": null, "node_id": 2,
+          "has_report": 1, "is_sink": 1
+        }
+      ]
     }
 \l}"];

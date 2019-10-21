@@ -28,7 +28,7 @@
 ; CHECK: DW_AT_name{{.*}} = "func"
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK: DW_AT_location {{.*}}
-; CHECK-NEXT: DW_OP_breg4 RSI+0, DW_OP_deref
+; CHECK-NEXT: DW_OP_breg4 RSI+0)
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name{{.*}} = "f"
 
@@ -38,8 +38,8 @@
 ; CHECK: DW_AT_location{{.*}}(DW_OP_fbreg +23)
 ; CHECK: DW_TAG_formal_parameter
 ; CHECK: DW_AT_location{{.*}}(
-; CHECK-NEXT: {{.*}}: DW_OP_breg4 RSI+0, DW_OP_deref
-; CHECK-NEXT: {{.*}}: DW_OP_breg7 RSP+8, DW_OP_deref, DW_OP_deref)
+; CHECK-NEXT: {{.*}}: DW_OP_breg4 RSI+0{{$}}
+; CHECK-NEXT: {{.*}}: DW_OP_breg7 RSP+8, DW_OP_deref)
 ; CHECK-NOT: DW_TAG
 ; CHECK: DW_AT_name{{.*}} = "g"
 
@@ -48,7 +48,7 @@
 ; Function Attrs: uwtable
 define void @_ZN7pr147634funcENS_3fooE(%"struct.pr14763::foo"* noalias sret %agg.result, %"struct.pr14763::foo"* %f) #0 !dbg !4 {
 entry:
-  call void @llvm.dbg.declare(metadata %"struct.pr14763::foo"* %f, metadata !22, metadata !DIExpression(DW_OP_deref)), !dbg !24
+  call void @llvm.dbg.declare(metadata %"struct.pr14763::foo"* %f, metadata !22, metadata !DIExpression()), !dbg !24
   call void @_ZN7pr147633fooC1ERKS0_(%"struct.pr14763::foo"* %agg.result, %"struct.pr14763::foo"* %f), !dbg !25
   ret void, !dbg !25
 }
@@ -65,7 +65,7 @@ entry:
   %frombool = zext i1 %b to i8
   store i8 %frombool, i8* %b.addr, align 1
   call void @llvm.dbg.declare(metadata i8* %b.addr, metadata !26, metadata !DIExpression()), !dbg !27
-  call void @llvm.dbg.declare(metadata %"struct.pr14763::foo"* %g, metadata !28, metadata !DIExpression(DW_OP_deref)), !dbg !27
+  call void @llvm.dbg.declare(metadata %"struct.pr14763::foo"* %g, metadata !28, metadata !DIExpression()), !dbg !27
   %0 = load i8, i8* %b.addr, align 1, !dbg !29
   %tobool = trunc i8 %0 to i1, !dbg !29
   br i1 %tobool, label %if.then, label %if.end, !dbg !29

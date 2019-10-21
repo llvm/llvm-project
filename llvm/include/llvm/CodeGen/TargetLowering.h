@@ -28,7 +28,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
@@ -76,6 +75,7 @@ class GlobalValue;
 class GISelKnownBits;
 class IntrinsicInst;
 struct KnownBits;
+class LegacyDivergenceAnalysis;
 class LLVMContext;
 class MachineBasicBlock;
 class MachineFunction;
@@ -2607,6 +2607,12 @@ public:
   // GEP to make the GEP fit into the addressing mode and can be sunk into the
   // same blocks of its users.
   virtual bool shouldConsiderGEPOffsetSplit() const { return false; }
+
+  // Return the shift amount threshold for profitable transforms into shifts.
+  // Transforms creating shifts above the returned value will be avoided.
+  virtual unsigned getShiftAmountThreshold(EVT VT) const {
+    return VT.getScalarSizeInBits();
+  }
 
   //===--------------------------------------------------------------------===//
   // Runtime Library hooks

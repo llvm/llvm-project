@@ -5189,6 +5189,7 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
             }
             break;
           case llvm::MachO::CPU_TYPE_ARM64:
+          case llvm::MachO::CPU_TYPE_ARM64_32:
             if (flavor == 6) // ARM_THREAD_STATE64 from mach/arm/thread_status.h
             {
               offset += 256; // This is the offset of pc in the GPR thread state
@@ -5275,8 +5276,9 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
       if (module_sp) {
         SymbolContextList contexts;
         SymbolContext context;
-        if (module_sp->FindSymbolsWithNameAndType(ConstString("start"),
-                                                  eSymbolTypeCode, contexts)) {
+        module_sp->FindSymbolsWithNameAndType(ConstString("start"),
+                                              eSymbolTypeCode, contexts);
+        if (contexts.GetSize()) {
           if (contexts.GetContextAtIndex(0, context))
             m_entry_point_address = context.symbol->GetAddress();
         }
@@ -5469,6 +5471,7 @@ ObjectFileMachO::GetThreadContextAtIndex(uint32_t idx,
 
       switch (m_header.cputype) {
       case llvm::MachO::CPU_TYPE_ARM64:
+      case llvm::MachO::CPU_TYPE_ARM64_32:
         reg_ctx_sp =
             std::make_shared<RegisterContextDarwin_arm64_Mach>(thread, data);
         break;
@@ -6029,6 +6032,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
     bool make_core = false;
     switch (target_arch.GetMachine()) {
     case llvm::Triple::aarch64:
+    case llvm::Triple::aarch64_32:
     case llvm::Triple::arm:
     case llvm::Triple::thumb:
     case llvm::Triple::x86:
@@ -6131,6 +6135,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           if (thread_sp) {
             switch (mach_header.cputype) {
             case llvm::MachO::CPU_TYPE_ARM64:
+            case llvm::MachO::CPU_TYPE_ARM64_32:
               RegisterContextDarwin_arm64_Mach::Create_LC_THREAD(
                   thread_sp.get(), LC_THREAD_datas[thread_idx]);
               break;

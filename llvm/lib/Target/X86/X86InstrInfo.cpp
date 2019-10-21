@@ -480,7 +480,7 @@ static bool regIsPICBase(unsigned BaseReg, const MachineRegisterInfo &MRI) {
 }
 
 bool X86InstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
-                                                     AliasAnalysis *AA) const {
+                                                     AAResults *AA) const {
   switch (MI.getOpcode()) {
   default:
     // This function should only be called for opcodes with the ReMaterializable

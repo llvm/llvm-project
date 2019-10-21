@@ -62,6 +62,8 @@ public:
   static mode_t ConvertOpenOptionsForPOSIXOpen(OpenOptions open_options);
   static llvm::Expected<OpenOptions> GetOptionsFromMode(llvm::StringRef mode);
   static bool DescriptorIsValid(int descriptor) { return descriptor >= 0; };
+  static llvm::Expected<const char *>
+  GetStreamOpenModeFromOptions(OpenOptions options);
 
   File()
       : IOObject(eFDTypeFile), m_is_interactive(eLazyBoolCalculate),
@@ -133,20 +135,6 @@ public:
   /// \return
   ///     ENOTSUP, success, or another error.
   virtual Status GetFileSpec(FileSpec &file_spec) const;
-
-  /// DEPRECATED! Extract the underlying FILE* and reset this File without closing it.
-  ///
-  /// This is only here to support legacy SB interfaces that need to convert scripting
-  /// language objects into FILE* streams.   That conversion is inherently sketchy and
-  /// doing so may cause the stream to be leaked.
-  ///
-  /// After calling this the File will be reset to its original state.  It will be
-  /// invalid and it will not hold on to any resources.
-  ///
-  /// \return
-  ///     The underlying FILE* stream from this File, if one exists and can be extracted,
-  ///     nullptr otherwise.
-  virtual FILE *TakeStreamAndClear();
 
   /// Get underlying OS file descriptor for this file, or kInvalidDescriptor.
   /// If the descriptor is valid, then it may be used directly for I/O
@@ -317,6 +305,25 @@ public:
   ///     format string \a format.
   virtual size_t PrintfVarArg(const char *format, va_list args);
 
+  /// Return the OpenOptions for this file.
+  ///
+  /// Some options like eOpenOptionDontFollowSymlinks only make
+  /// sense when a file is being opened (or not at all)
+  /// and may not be preserved for this method.  But any valid
+  /// File should return either or both of eOpenOptionRead and
+  /// eOpenOptionWrite here.
+  ///
+  /// \return
+  ///    OpenOptions flags for this file, or an error.
+  virtual llvm::Expected<OpenOptions> GetOptions() const;
+
+  llvm::Expected<const char *> GetOpenMode() const {
+    auto opts = GetOptions();
+    if (!opts)
+      return opts.takeError();
+    return GetStreamOpenModeFromOptions(opts.get());
+  }
+
   /// Get the permissions for a this file.
   ///
   /// \return
@@ -351,6 +358,10 @@ public:
   operator bool() const { return IsValid(); };
 
   bool operator!() const { return !IsValid(); };
+
+  static char ID;
+  virtual bool isA(const void *classID) const { return classID == &ID; }
+  static bool classof(const File *file) { return file->isA(&ID); }
 
 protected:
   LazyBool m_is_interactive;
@@ -388,7 +399,6 @@ public:
   Status Close() override;
   WaitableHandle GetWaitableHandle() override;
   Status GetFileSpec(FileSpec &file_spec) const override;
-  FILE *TakeStreamAndClear() override;
   int GetDescriptor() const override;
   FILE *GetStream() override;
   off_t SeekFromStart(off_t offset, Status *error_ptr = nullptr) override;
@@ -399,6 +409,13 @@ public:
   Status Flush() override;
   Status Sync() override;
   size_t PrintfVarArg(const char *format, va_list args) override;
+  llvm::Expected<OpenOptions> GetOptions() const override;
+
+  static char ID;
+  virtual bool isA(const void *classID) const override {
+    return classID == &ID || File::isA(classID);
+  }
+  static bool classof(const File *file) { return file->isA(&ID); }
 
 protected:
   bool DescriptorIsValid() const {

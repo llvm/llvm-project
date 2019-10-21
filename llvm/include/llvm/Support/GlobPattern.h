@@ -21,7 +21,7 @@
 #include <vector>
 
 // This class represents a glob pattern. Supported metacharacters
-// are "*", "?", "[<chars>]" and "[^<chars>]".
+// are "*", "?", "\", "[<chars>]", "[^<chars>]", and "[!<chars>]".
 namespace llvm {
 class BitVector;
 template <typename T> class ArrayRef;

@@ -376,7 +376,7 @@ TEST_F(IRBuilderTest, UnaryOperators) {
   ASSERT_FALSE(isa<BinaryOperator>(U));
 
   // Test CreateFNegFMF(X)
-  Instruction *I = cast<Instruction>(V);
+  Instruction *I = cast<Instruction>(U);
   I->setHasNoSignedZeros(true);
   I->setHasNoNaNs(true);
   Value *VFMF = Builder.CreateFNegFMF(V, I);

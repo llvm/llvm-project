@@ -74,6 +74,21 @@ class ExprFormattersTestCase(TestBase):
         # EXPR-TYPES-NEW-FOO-NEXT:   }
         # EXPR-TYPES-NEW-FOO-NEXT: }
 
+
+        self.runCmd("type summary add -F formatters.foo_SummaryProvider3 foo")
+        self.filecheck("expression foo1", __file__, '-check-prefix=EXPR-FOO1opts')
+        # EXPR-FOO1opts: (foo) $
+        # EXPR-FOO1opts-SAME: a = 12
+        # EXPR-FOO1opts-SAME: a_ptr = {{[0-9]+}} -> 13
+        # EXPR-FOO1opts-SAME: i = 24
+        # EXPR-FOO1opts-SAME: i_ptr = {{[0-9]+}} -> 25
+        # EXPR-FOO1opts-SAME: b_ref = {{[0-9]+}}
+        # EXPR-FOO1opts-SAME: h = 27
+        # EXPR-FOO1opts-SAME: k = 29
+        # EXPR-FOO1opts-SAME: WITH_OPTS
+
+        self.runCmd("type summary delete foo")
+
         self.runCmd("type summary add -F formatters.foo_SummaryProvider foo")
 
         self.expect("expression new int(12)",

@@ -11,4 +11,4 @@
 
 def GPRBRegBank : RegisterBank<"GPRB", [GPR32]>;
 
-def FPRBRegBank : RegisterBank<"FPRB", [FGR64, AFGR64]>;
+def FPRBRegBank : RegisterBank<"FPRB", [FGR64, AFGR64, MSA128D]>;

@@ -14,7 +14,7 @@
 # GNU-EMPTY:
 # GNU-NEXT:  Section to Segment mapping:
 # GNU-NEXT:    Segment Sections...
-# GNU-NEXT:     None   .symtab .strtab .shstrtab
+# GNU-NEXT:     None   .strtab .shstrtab
 
 --- !ELF
 FileHeader:

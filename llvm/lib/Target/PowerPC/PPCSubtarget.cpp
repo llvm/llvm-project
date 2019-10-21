@@ -60,7 +60,7 @@ PPCSubtarget::PPCSubtarget(const Triple &TT, const std::string &CPU,
       InstrInfo(*this), TLInfo(TM, *this) {}
 
 void PPCSubtarget::initializeEnvironment() {
-  StackAlignment = 16;
+  StackAlignment = Align(16);
   DarwinDirective = PPC::DIR_NONE;
   HasMFOCRF = false;
   Has64BitSupport = false;

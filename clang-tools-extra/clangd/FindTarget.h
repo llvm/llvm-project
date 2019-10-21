@@ -86,6 +86,8 @@ struct ReferenceLoc {
   NestedNameSpecifierLoc Qualifier;
   /// Start location of the last name part, i.e. 'foo' in 'ns::foo<int>'.
   SourceLocation NameLoc;
+  /// True if the reference is a declaration or definition;
+  bool IsDecl = false;
   // FIXME: add info about template arguments.
   /// A list of targets referenced by this name. Normally this has a single
   /// element, but multiple is also possible, e.g. in case of using declarations

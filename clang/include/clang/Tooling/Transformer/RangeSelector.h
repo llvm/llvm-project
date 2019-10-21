@@ -23,7 +23,7 @@
 #include <string>
 
 namespace clang {
-namespace tooling {
+namespace transformer {
 using RangeSelector = MatchConsumer<CharSourceRange>;
 
 inline RangeSelector charRange(CharSourceRange R) {
@@ -87,6 +87,26 @@ RangeSelector elseBranch(std::string ID);
 /// source), if `S` is an expansion, and `S` itself, otherwise.  Corresponds to
 /// `SourceManager::getExpansionRange`.
 RangeSelector expansion(RangeSelector S);
+} // namespace transformer
+
+namespace tooling {
+// DEPRECATED: These are temporary aliases supporting client migration to the
+// `transformer` namespace.
+using RangeSelector = transformer::RangeSelector;
+
+using transformer::after;
+using transformer::before;
+using transformer::callArgs;
+using transformer::charRange;
+using transformer::elseBranch;
+using transformer::expansion;
+using transformer::initListElements;
+using transformer::member;
+using transformer::name;
+using transformer::node;
+using transformer::range;
+using transformer::statement;
+using transformer::statements;
 } // namespace tooling
 } // namespace clang
 

@@ -52,7 +52,7 @@ DynamicSymbols:
 
 # NUM:      Name: bar
 # NUM:      Section: 
-# NUM-SAME: .symtab (0x2)
+# NUM-SAME: .strtab (0x2)
 
 # NUM: error: '[[FILE]]': invalid section index: 255
 

@@ -1822,7 +1822,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
           GV->getPointerAlignment(*DL) < PrefAlign &&
           DL->getTypeAllocSize(GV->getValueType()) >=
               MinSize + Offset2)
-        GV->setAlignment(PrefAlign);
+        GV->setAlignment(MaybeAlign(PrefAlign));
     }
     // If this is a memcpy (or similar) then we may be able to improve the
     // alignment

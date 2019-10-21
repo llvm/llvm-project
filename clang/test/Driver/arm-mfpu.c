@@ -397,3 +397,9 @@
 // CHECK-ARM7-ANDROID-FP-D16-NOT: "-target-feature" "+fp-armv8"
 // CHECK-ARM7-ANDROID-FP-D16-NOT: "-target-feature" "+neon"
 // CHECK-ARM7-ANDROID-FP-D16-NOT: "-target-feature" "+crypto"
+
+// RUN: %clang -target arm-none-none-eabi %s -march=armv8.1-m.main+mve.fp+fp.dp -mfloat-abi=soft -### -c 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-SOFTFLOATABI-INHIBITS-MVE %s
+// CHECK-SOFTFLOATABI-INHIBITS-MVE-NOT: "-target-feature" "+mve"
+// CHECK-SOFTFLOATABI-INHIBITS-MVE-DAG: "-target-feature" "-mve"
+// CHECK-SOFTFLOATABI-INHIBITS-MVE-DAG: "-target-feature" "-mve.fp"

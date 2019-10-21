@@ -5,6 +5,7 @@
 // Self-tests for the debug.ExprInspection checker.
 
 void clang_analyzer_dump(int x);
+void clang_analyzer_dump_pointer(int *p);
 void clang_analyzer_printState();
 void clang_analyzer_numTimesReached();
 
@@ -30,7 +31,7 @@ void foo(int x) {
 // CHECK-NEXT:     ]}
 // CHECK-NEXT:   ]},
 // CHECK-NEXT:   "environment": { "pointer": "{{0x[0-9a-f]+}}", "items": [
-// CHECK-NEXT:     { "lctx_id": 1, "location_context": "#0 Call", "calling": "foo", "location": null, "items": [
+// CHECK-NEXT:     { "lctx_id": {{[0-9]+}}, "location_context": "#0 Call", "calling": "foo", "location": null, "items": [
 // CHECK-NEXT:       { "stmt_id": {{[0-9]+}}, "pretty": "clang_analyzer_printState", "value": "&code{clang_analyzer_printState}" }
 // CHECK-NEXT:     ]}
 // CHECK-NEXT:   ]},
@@ -43,3 +44,11 @@ void foo(int x) {
 // CHECK-NEXT:   "checker_messages": null
 // CHECK-NEXT: }
 
+struct S {
+  int x, y;
+};
+
+void test_field_dumps(struct S s, struct S *p) {
+  clang_analyzer_dump_pointer(&s.x); // expected-warning{{&s.x}}
+  clang_analyzer_dump_pointer(&p->x); // expected-warning{{&SymRegion{reg_$0<struct S * p>}.x}}
+}

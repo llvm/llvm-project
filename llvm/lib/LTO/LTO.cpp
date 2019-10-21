@@ -762,7 +762,8 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
       // For now they aren't reported correctly by ModuleSymbolTable.
       auto &CommonRes = RegularLTO.Commons[Sym.getIRName()];
       CommonRes.Size = std::max(CommonRes.Size, Sym.getCommonSize());
-      CommonRes.Align = std::max(CommonRes.Align, Sym.getCommonAlignment());
+      CommonRes.Align =
+          std::max(CommonRes.Align, MaybeAlign(Sym.getCommonAlignment()));
       CommonRes.Prevailing |= Res.Prevailing;
     }
 
@@ -1002,6 +1003,8 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       if (EnableLTOInternalization && R.second.Partition == 0)
         GV->setLinkage(GlobalValue::InternalLinkage);
     }
+
+    RegularLTO.CombinedModule->addModuleFlag(Module::Error, "LTOPostLink", 1);
 
     if (Conf.PostInternalizeModuleHook &&
         !Conf.PostInternalizeModuleHook(0, *RegularLTO.CombinedModule))

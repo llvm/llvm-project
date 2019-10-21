@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_fixunsdfti
 // REQUIRES: int128
 //===-- fixunsdfti_test.c - Test __fixunsdfti -----------------------------===//
 //

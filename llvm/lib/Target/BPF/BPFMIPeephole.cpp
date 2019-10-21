@@ -26,6 +26,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
@@ -71,7 +72,7 @@ void BPFMIPeephole::initialize(MachineFunction &MFParm) {
   MF = &MFParm;
   MRI = &MF->getRegInfo();
   TII = MF->getSubtarget<BPFSubtarget>().getInstrInfo();
-  LLVM_DEBUG(dbgs() << "*** BPF MachineSSA peephole pass ***\n\n");
+  LLVM_DEBUG(dbgs() << "*** BPF MachineSSA ZEXT Elim peephole pass ***\n\n");
 }
 
 bool BPFMIPeephole::isMovFrom32Def(MachineInstr *MovMI)
@@ -186,7 +187,8 @@ bool BPFMIPeephole::eliminateZExtSeq(void) {
 } // end default namespace
 
 INITIALIZE_PASS(BPFMIPeephole, DEBUG_TYPE,
-                "BPF MachineSSA Peephole Optimization", false, false)
+                "BPF MachineSSA Peephole Optimization For ZEXT Eliminate",
+                false, false)
 
 char BPFMIPeephole::ID = 0;
 FunctionPass* llvm::createBPFMIPeepholePass() { return new BPFMIPeephole(); }
@@ -253,12 +255,16 @@ bool BPFMIPreEmitPeephole::eliminateRedundantMov(void) {
       // enabled. The special type cast insn MOV_32_64 involves different
       // register class on src (i32) and dst (i64), RA could generate useless
       // instruction due to this.
-      if (MI.getOpcode() == BPF::MOV_32_64) {
+      unsigned Opcode = MI.getOpcode();
+      if (Opcode == BPF::MOV_32_64 ||
+          Opcode == BPF::MOV_rr || Opcode == BPF::MOV_rr_32) {
         Register dst = MI.getOperand(0).getReg();
-        Register dst_sub = TRI->getSubReg(dst, BPF::sub_32);
         Register src = MI.getOperand(1).getReg();
 
-        if (dst_sub != src)
+        if (Opcode == BPF::MOV_32_64)
+          dst = TRI->getSubReg(dst, BPF::sub_32);
+
+        if (dst != src)
           continue;
 
         ToErase = &MI;
@@ -280,4 +286,178 @@ char BPFMIPreEmitPeephole::ID = 0;
 FunctionPass* llvm::createBPFMIPreEmitPeepholePass()
 {
   return new BPFMIPreEmitPeephole();
+}
+
+STATISTIC(TruncElemNum, "Number of truncation eliminated");
+
+namespace {
+
+struct BPFMIPeepholeTruncElim : public MachineFunctionPass {
+
+  static char ID;
+  const BPFInstrInfo *TII;
+  MachineFunction *MF;
+  MachineRegisterInfo *MRI;
+
+  BPFMIPeepholeTruncElim() : MachineFunctionPass(ID) {
+    initializeBPFMIPeepholeTruncElimPass(*PassRegistry::getPassRegistry());
+  }
+
+private:
+  // Initialize class variables.
+  void initialize(MachineFunction &MFParm);
+
+  bool eliminateTruncSeq(void);
+
+public:
+
+  // Main entry point for this pass.
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+
+    initialize(MF);
+
+    return eliminateTruncSeq();
+  }
+};
+
+static bool TruncSizeCompatible(int TruncSize, unsigned opcode)
+{
+  if (TruncSize == 1)
+    return opcode == BPF::LDB || opcode == BPF::LDB32;
+
+  if (TruncSize == 2)
+    return opcode == BPF::LDH || opcode == BPF::LDH32;
+
+  if (TruncSize == 4)
+    return opcode == BPF::LDW || opcode == BPF::LDW32;
+
+  return false;
+}
+
+// Initialize class variables.
+void BPFMIPeepholeTruncElim::initialize(MachineFunction &MFParm) {
+  MF = &MFParm;
+  MRI = &MF->getRegInfo();
+  TII = MF->getSubtarget<BPFSubtarget>().getInstrInfo();
+  LLVM_DEBUG(dbgs() << "*** BPF MachineSSA TRUNC Elim peephole pass ***\n\n");
+}
+
+// Reg truncating is often the result of 8/16/32bit->64bit or
+// 8/16bit->32bit conversion. If the reg value is loaded with
+// masked byte width, the AND operation can be removed since
+// BPF LOAD already has zero extension.
+//
+// This also solved a correctness issue.
+// In BPF socket-related program, e.g., __sk_buff->{data, data_end}
+// are 32-bit registers, but later on, kernel verifier will rewrite
+// it with 64-bit value. Therefore, truncating the value after the
+// load will result in incorrect code.
+bool BPFMIPeepholeTruncElim::eliminateTruncSeq(void) {
+  MachineInstr* ToErase = nullptr;
+  bool Eliminated = false;
+
+  for (MachineBasicBlock &MBB : *MF) {
+    for (MachineInstr &MI : MBB) {
+      // The second insn to remove if the eliminate candidate is a pair.
+      MachineInstr *MI2 = nullptr;
+      Register DstReg, SrcReg;
+      MachineInstr *DefMI;
+      int TruncSize = -1;
+
+      // If the previous instruction was marked for elimination, remove it now.
+      if (ToErase) {
+        ToErase->eraseFromParent();
+        ToErase = nullptr;
+      }
+
+      // AND A, 0xFFFFFFFF will be turned into SLL/SRL pair due to immediate
+      // for BPF ANDI is i32, and this case only happens on ALU64.
+      if (MI.getOpcode() == BPF::SRL_ri &&
+          MI.getOperand(2).getImm() == 32) {
+        SrcReg = MI.getOperand(1).getReg();
+        MI2 = MRI->getVRegDef(SrcReg);
+        DstReg = MI.getOperand(0).getReg();
+
+        if (!MI2 ||
+            MI2->getOpcode() != BPF::SLL_ri ||
+            MI2->getOperand(2).getImm() != 32)
+          continue;
+
+        // Update SrcReg.
+        SrcReg = MI2->getOperand(1).getReg();
+        DefMI = MRI->getVRegDef(SrcReg);
+        if (DefMI)
+          TruncSize = 4;
+      } else if (MI.getOpcode() == BPF::AND_ri ||
+                 MI.getOpcode() == BPF::AND_ri_32) {
+        SrcReg = MI.getOperand(1).getReg();
+        DstReg = MI.getOperand(0).getReg();
+        DefMI = MRI->getVRegDef(SrcReg);
+
+        if (!DefMI)
+          continue;
+
+        int64_t imm = MI.getOperand(2).getImm();
+        if (imm == 0xff)
+          TruncSize = 1;
+        else if (imm == 0xffff)
+          TruncSize = 2;
+      }
+
+      if (TruncSize == -1)
+        continue;
+
+      // The definition is PHI node, check all inputs.
+      if (DefMI->isPHI()) {
+        bool CheckFail = false;
+
+        for (unsigned i = 1, e = DefMI->getNumOperands(); i < e; i += 2) {
+          MachineOperand &opnd = DefMI->getOperand(i);
+          if (!opnd.isReg()) {
+            CheckFail = true;
+            break;
+          }
+
+          MachineInstr *PhiDef = MRI->getVRegDef(opnd.getReg());
+          if (!PhiDef || PhiDef->isPHI() ||
+              !TruncSizeCompatible(TruncSize, PhiDef->getOpcode())) {
+            CheckFail = true;
+            break;
+          }
+        }
+
+        if (CheckFail)
+          continue;
+      } else if (!TruncSizeCompatible(TruncSize, DefMI->getOpcode())) {
+        continue;
+      }
+
+      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(BPF::MOV_rr), DstReg)
+              .addReg(SrcReg);
+
+      if (MI2)
+        MI2->eraseFromParent();
+
+      // Mark it to ToErase, and erase in the next iteration.
+      ToErase = &MI;
+      TruncElemNum++;
+      Eliminated = true;
+    }
+  }
+
+  return Eliminated;
+}
+
+} // end default namespace
+
+INITIALIZE_PASS(BPFMIPeepholeTruncElim, "bpf-mi-trunc-elim",
+                "BPF MachineSSA Peephole Optimization For TRUNC Eliminate",
+                false, false)
+
+char BPFMIPeepholeTruncElim::ID = 0;
+FunctionPass* llvm::createBPFMIPeepholeTruncElimPass()
+{
+  return new BPFMIPeepholeTruncElim();
 }

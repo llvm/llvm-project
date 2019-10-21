@@ -57,6 +57,7 @@ public:
 
   StringRef getSectionName() const { return Name; }
   XCOFF::StorageMappingClass getMappingClass() const { return MappingClass; }
+  XCOFF::StorageClass getStorageClass() const { return StorageClass; }
   XCOFF::SymbolType getCSectType() const { return Type; }
 
   void PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,

@@ -313,16 +313,17 @@ public:
     return Optional<wasm::ValType>();
   }
 
-  WebAssembly::ExprType parseBlockType(StringRef ID) {
-    return StringSwitch<WebAssembly::ExprType>(ID)
-        .Case("i32", WebAssembly::ExprType::I32)
-        .Case("i64", WebAssembly::ExprType::I64)
-        .Case("f32", WebAssembly::ExprType::F32)
-        .Case("f64", WebAssembly::ExprType::F64)
-        .Case("v128", WebAssembly::ExprType::V128)
-        .Case("exnref", WebAssembly::ExprType::Exnref)
-        .Case("void", WebAssembly::ExprType::Void)
-        .Default(WebAssembly::ExprType::Invalid);
+  WebAssembly::BlockType parseBlockType(StringRef ID) {
+    // Multivalue block types are handled separately in parseSignature
+    return StringSwitch<WebAssembly::BlockType>(ID)
+        .Case("i32", WebAssembly::BlockType::I32)
+        .Case("i64", WebAssembly::BlockType::I64)
+        .Case("f32", WebAssembly::BlockType::F32)
+        .Case("f64", WebAssembly::BlockType::F64)
+        .Case("v128", WebAssembly::BlockType::V128)
+        .Case("exnref", WebAssembly::BlockType::Exnref)
+        .Case("void", WebAssembly::BlockType::Void)
+        .Default(WebAssembly::BlockType::Invalid);
   }
 
   bool parseRegTypeList(SmallVectorImpl<wasm::ValType> &Types) {
@@ -416,7 +417,7 @@ public:
   }
 
   void addBlockTypeOperand(OperandVector &Operands, SMLoc NameLoc,
-                           WebAssembly::ExprType BT) {
+                           WebAssembly::BlockType BT) {
     Operands.push_back(std::make_unique<WebAssemblyOperand>(
         WebAssemblyOperand::Integer, NameLoc, NameLoc,
         WebAssemblyOperand::IntOp{static_cast<int64_t>(BT)}));
@@ -456,6 +457,7 @@ public:
     // If this instruction is part of a control flow structure, ensure
     // proper nesting.
     bool ExpectBlockType = false;
+    bool ExpectFuncType = false;
     if (Name == "block") {
       push(Block);
       ExpectBlockType = true;
@@ -494,6 +496,10 @@ public:
       if (pop(Name, Function) || ensureEmptyNestingStack())
         return true;
     } else if (Name == "call_indirect" || Name == "return_call_indirect") {
+      ExpectFuncType = true;
+    }
+
+    if (ExpectFuncType || (ExpectBlockType && Lexer.is(AsmToken::LParen))) {
       // This has a special TYPEINDEX operand which in text we
       // represent as a signature, such that we can re-build this signature,
       // attach it to an anonymous symbol, which is what WasmObjectWriter
@@ -502,6 +508,8 @@ public:
       auto Signature = std::make_unique<wasm::WasmSignature>();
       if (parseSignature(Signature.get()))
         return true;
+      // Got signature as block type, don't need more
+      ExpectBlockType = false;
       auto &Ctx = getStreamer().getContext();
       // The "true" here will cause this to be a nameless symbol.
       MCSymbol *Sym = Ctx.createTempSymbol("typeindex", true);
@@ -526,7 +534,7 @@ public:
         if (ExpectBlockType) {
           // Assume this identifier is a block_type.
           auto BT = parseBlockType(Id.getString());
-          if (BT == WebAssembly::ExprType::Invalid)
+          if (BT == WebAssembly::BlockType::Invalid)
             return error("Unknown block type: ", Id);
           addBlockTypeOperand(Operands, NameLoc, BT);
           Parser.Lex();
@@ -594,7 +602,7 @@ public:
     }
     if (ExpectBlockType && Operands.size() == 1) {
       // Support blocks with no operands as default to void.
-      addBlockTypeOperand(Operands, NameLoc, WebAssembly::ExprType::Void);
+      addBlockTypeOperand(Operands, NameLoc, WebAssembly::BlockType::Void);
     }
     Parser.Lex();
     return false;

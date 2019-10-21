@@ -1065,9 +1065,13 @@ void AsmPrinter::EmitFunctionBody() {
         ++NumInstsInFunction;
       }
 
-      // If there is a pre-instruction symbol, emit a label for it here.
+      // If there is a pre-instruction symbol, emit a label for it here. If the
+      // instruction was duplicated and the label has already been emitted,
+      // don't re-emit the same label.
+      // FIXME: Consider strengthening that to an assertion.
       if (MCSymbol *S = MI.getPreInstrSymbol())
-        OutStreamer->EmitLabel(S);
+        if (S->isUndefined())
+          OutStreamer->EmitLabel(S);
 
       if (ShouldPrintDebugScopes) {
         for (const HandlerInfo &HI : Handlers) {
@@ -1120,9 +1124,13 @@ void AsmPrinter::EmitFunctionBody() {
         break;
       }
 
-      // If there is a post-instruction symbol, emit a label for it here.
+      // If there is a post-instruction symbol, emit a label for it here.  If
+      // the instruction was duplicated and the label has already been emitted,
+      // don't re-emit the same label.
+      // FIXME: Consider strengthening that to an assertion.
       if (MCSymbol *S = MI.getPostInstrSymbol())
-        OutStreamer->EmitLabel(S);
+        if (S->isUndefined())
+          OutStreamer->EmitLabel(S);
 
       if (ShouldPrintDebugScopes) {
         for (const HandlerInfo &HI : Handlers) {

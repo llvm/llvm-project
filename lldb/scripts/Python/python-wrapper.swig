@@ -163,14 +163,19 @@ LLDBSwigPythonCallTypeScript
     }
 
     PythonObject result;
-    auto argc = pfunc.GetNumArguments();
-    // if the third argument is supported, or varargs are allowed
+    auto argc = pfunc.GetArgInfo();
+    if (!argc) {
+        llvm::consumeError(argc.takeError());
+        return false;
+    }
+
     PythonObject value_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_value));
     PythonObject options_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_options));
-    if (argc.count == 3 || argc.has_varargs)
-        result = pfunc(value_arg,dict,options_arg);
-    else
+
+    if (argc.get().max_positional_args < 3)
         result = pfunc(value_arg,dict);
+    else
+        result = pfunc(value_arg,dict,options_arg);
 
     retval = result.Str().GetString().str();
 
@@ -696,15 +701,19 @@ LLDBSwigPythonCallCommand
 
     // pass the pointer-to cmd_retobj_sb or watch the underlying object disappear from under you
     // see comment above for SBCommandReturnObjectReleaser for further details
-    auto argc = pfunc.GetNumArguments();
+    auto argc = pfunc.GetArgInfo();
+    if (!argc) {
+        llvm::consumeError(argc.takeError());
+        return false;
+    }
     PythonObject debugger_arg(PyRefType::Owned, SBTypeToSWIGWrapper(debugger_sb));
     PythonObject exe_ctx_arg(PyRefType::Owned, SBTypeToSWIGWrapper(exe_ctx_sb));
     PythonObject cmd_retobj_arg(PyRefType::Owned, SBTypeToSWIGWrapper(&cmd_retobj_sb));
 
-    if (argc.count == 5 || argc.is_bound_method || argc.has_varargs)
-        pfunc(debugger_arg, PythonString(args), exe_ctx_arg, cmd_retobj_arg, dict);
-    else
+    if (argc.get().max_positional_args < 5u)
         pfunc(debugger_arg, PythonString(args), cmd_retobj_arg, dict);
+    else
+        pfunc(debugger_arg, PythonString(args), exe_ctx_arg, cmd_retobj_arg, dict);
 
     return true;
 }

@@ -164,7 +164,7 @@ MachOUniversalBinary::MachOUniversalBinary(MemoryBufferRef Source, Error &Err)
                            ") (maximum 2^" + Twine(MaxSectionAlignment) + ")");
       return;
     }
-    if(A.getOffset() % (1 << A.getAlign()) != 0){
+    if(A.getOffset() % (1ull << A.getAlign()) != 0){
       Err = malformedError("offset: " + Twine(A.getOffset()) +
         " for cputype (" + Twine(A.getCPUType()) + ") cpusubtype (" +
         Twine(A.getCPUSubType() & ~MachO::CPU_SUBTYPE_MASK) +

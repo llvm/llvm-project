@@ -17,7 +17,7 @@ body: |
     liveins: $sgpr0, $vgpr0
     ; GCN-LABEL: name: ldexp_s16_vsv
     ; GCN: liveins: $sgpr0, $vgpr0
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[V_LDEXP_F16_e64_:%[0-9]+]]:vgpr_32 = V_LDEXP_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $exec
     ; GCN: S_ENDPGM 0, implicit [[V_LDEXP_F16_e64_]]
@@ -40,7 +40,7 @@ body: |
     ; GCN-LABEL: name: ldexp_s16_vvs
     ; GCN: liveins: $sgpr0, $vgpr0
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[V_LDEXP_F16_e64_:%[0-9]+]]:vgpr_32 = V_LDEXP_F16_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $exec
     ; GCN: S_ENDPGM 0, implicit [[V_LDEXP_F16_e64_]]
     %0:vgpr(s32) = COPY $vgpr0

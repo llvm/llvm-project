@@ -200,9 +200,16 @@ template <class ELFT>
 ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
     : Doc(D), ErrHandler(EH) {
   StringSet<> DocSections;
-  for (std::unique_ptr<ELFYAML::Section> &D : Doc.Sections)
+  for (std::unique_ptr<ELFYAML::Section> &D : Doc.Sections) {
     if (!D->Name.empty())
       DocSections.insert(D->Name);
+
+    // Some sections wants to link to .symtab by default.
+    // That means we want to create the symbol table for them.
+    if (D->Type == llvm::ELF::SHT_REL || D->Type == llvm::ELF::SHT_RELA)
+      if (!Doc.Symbols && D->Link.empty())
+        Doc.Symbols.emplace();
+  }
 
   // Insert SHT_NULL section implicitly when it is not defined in YAML.
   if (Doc.Sections.empty() || Doc.Sections.front()->Type != ELF::SHT_NULL)
@@ -211,7 +218,11 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
         std::make_unique<ELFYAML::Section>(
             ELFYAML::Section::SectionKind::RawContent, /*IsImplicit=*/true));
 
-  std::vector<StringRef> ImplicitSections = {".symtab", ".strtab", ".shstrtab"};
+  std::vector<StringRef> ImplicitSections;
+  if (Doc.Symbols)
+    ImplicitSections.push_back(".symtab");
+  ImplicitSections.insert(ImplicitSections.end(), {".strtab", ".shstrtab"});
+
   if (!Doc.DynamicSymbols.empty())
     ImplicitSections.insert(ImplicitSections.end(), {".dynsym", ".dynstr"});
 
@@ -508,7 +519,11 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
                                              ELFYAML::Section *YAMLSec) {
 
   bool IsStatic = STType == SymtabType::Static;
-  const auto &Symbols = IsStatic ? Doc.Symbols : Doc.DynamicSymbols;
+  ArrayRef<ELFYAML::Symbol> Symbols;
+  if (IsStatic && Doc.Symbols)
+    Symbols = *Doc.Symbols;
+  else if (!IsStatic)
+    Symbols = Doc.DynamicSymbols;
 
   ELFYAML::RawContentSection *RawSec =
       dyn_cast_or_null<ELFYAML::RawContentSection>(YAMLSec);
@@ -1044,14 +1059,16 @@ template <class ELFT> void ELFState<ELFT>::buildSymbolIndexes() {
     }
   };
 
-  Build(Doc.Symbols, SymN2I);
+  if (Doc.Symbols)
+    Build(*Doc.Symbols, SymN2I);
   Build(Doc.DynamicSymbols, DynSymN2I);
 }
 
 template <class ELFT> void ELFState<ELFT>::finalizeStrings() {
   // Add the regular symbol names to .strtab section.
-  for (const ELFYAML::Symbol &Sym : Doc.Symbols)
-    DotStrtab.add(ELFYAML::dropUniqueSuffix(Sym.Name));
+  if (Doc.Symbols)
+    for (const ELFYAML::Symbol &Sym : *Doc.Symbols)
+      DotStrtab.add(ELFYAML::dropUniqueSuffix(Sym.Name));
   DotStrtab.finalize();
 
   // Add the dynamic symbol names to .dynstr section.

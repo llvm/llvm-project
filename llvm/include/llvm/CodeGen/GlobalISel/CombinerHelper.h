@@ -85,8 +85,32 @@ public:
   /// legal and the surrounding code makes it useful.
   bool tryCombineIndexedLoadStore(MachineInstr &MI);
 
-  bool matchCombineBr(MachineInstr &MI);
-  bool tryCombineBr(MachineInstr &MI);
+  bool matchElideBrByInvertingCond(MachineInstr &MI);
+  void applyElideBrByInvertingCond(MachineInstr &MI);
+  bool tryElideBrByInvertingCond(MachineInstr &MI);
+
+  /// If \p MI is G_CONCAT_VECTORS, try to combine it.
+  /// Returns true if MI changed.
+  /// Right now, we support:
+  /// - concat_vector(undef, undef) => undef
+  /// - concat_vector(build_vector(A, B), build_vector(C, D)) =>
+  ///   build_vector(A, B, C, D)
+  ///
+  /// \pre MI.getOpcode() == G_CONCAT_VECTORS.
+  bool tryCombineConcatVectors(MachineInstr &MI);
+  /// Check if the G_CONCAT_VECTORS \p MI is undef or if it
+  /// can be flattened into a build_vector.
+  /// In the first case \p IsUndef will be true.
+  /// In the second case \p Ops will contain the operands needed
+  /// to produce the flattened build_vector.
+  ///
+  /// \pre MI.getOpcode() == G_CONCAT_VECTORS.
+  bool matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
+                                 SmallVectorImpl<Register> &Ops);
+  /// Replace \p MI with a flattened build_vector with \p Ops or an
+  /// implicit_def if IsUndef is true.
+  void applyCombineConcatVectors(MachineInstr &MI, bool IsUndef,
+                                 const ArrayRef<Register> Ops);
 
   /// Optimize memcpy intrinsics et al, e.g. constant len calls.
   /// /p MaxLen if non-zero specifies the max length of a mem libcall to inline.

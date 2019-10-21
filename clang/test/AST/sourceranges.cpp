@@ -92,6 +92,22 @@ struct map {
 
 }; // namespace std
 
+// CHECK: NamespaceDecl {{.*}} attributed_decl
+namespace attributed_decl {
+  void f() {
+    // CHECK: DeclStmt {{.*}} <line:[[@LINE+1]]:5, col:28>
+    [[maybe_unused]] int i1;
+    // CHECK: DeclStmt {{.*}} <line:[[@LINE+1]]:5, col:35>
+    __attribute__((unused)) int i2;
+    // CHECK: DeclStmt {{.*}} <line:[[@LINE+1]]:5, col:35>
+    int __attribute__((unused)) i3;
+    // CHECK: DeclStmt {{.*}} <<built-in>:{{.*}}, {{.*}}:[[@LINE+1]]:40>
+    __declspec(dllexport) extern int i4;
+    // CHECK: DeclStmt {{.*}} <line:[[@LINE+1]]:5, col:40>
+    extern int __declspec(dllexport) i5;
+  }
+}
+
 #if __cplusplus >= 201703L
 // CHECK-1Z: FunctionDecl {{.*}} construct_with_init_list
 std::map<int, int> construct_with_init_list() {

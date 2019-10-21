@@ -1648,11 +1648,11 @@ bool Target::ModuleIsExcludedForUnconstrainedSearches(
   if (GetBreakpointsConsultPlatformAvoidList()) {
     ModuleList matchingModules;
     ModuleSpec module_spec(module_file_spec);
-    size_t num_modules = GetImages().FindModules(module_spec, matchingModules);
+    GetImages().FindModules(module_spec, matchingModules);
+    size_t num_modules = matchingModules.GetSize();
 
-    // If there is more than one module for this file spec, only return true if
-    // ALL the modules are on the
-    // black list.
+    // If there is more than one module for this file spec, only
+    // return true if ALL the modules are on the black list.
     if (num_modules > 0) {
       for (size_t i = 0; i < num_modules; i++) {
         if (!ModuleIsExcludedForUnconstrainedSearches(
@@ -2059,11 +2059,9 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
             module_spec_copy.GetUUID().Clear();
 
             ModuleList found_modules;
-            size_t num_found =
-                m_images.FindModules(module_spec_copy, found_modules);
-            if (num_found == 1) {
+            m_images.FindModules(module_spec_copy, found_modules);
+            if (found_modules.GetSize() == 1)
               old_module_sp = found_modules.GetModuleAtIndex(0);
-            }
           }
         }
 

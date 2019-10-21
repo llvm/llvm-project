@@ -21,7 +21,7 @@ class BPFSubtarget;
 class BPFFrameLowering : public TargetFrameLowering {
 public:
   explicit BPFFrameLowering(const BPFSubtarget &sti)
-      : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, 8, 0) {}
+      : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(8), 0) {}
 
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;

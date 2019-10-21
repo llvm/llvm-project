@@ -70,7 +70,6 @@ typedef struct lprofFilename {
    * by runtime. */
   unsigned OwnsFilenamePat;
   const char *ProfilePathPrefix;
-  const char *Filename;
   char PidChars[MAX_PID_SIZE];
   char Hostname[COMPILER_RT_MAX_HOSTLEN];
   unsigned NumPids;
@@ -86,8 +85,8 @@ typedef struct lprofFilename {
   ProfileNameSpecifier PNS;
 } lprofFilename;
 
-COMPILER_RT_WEAK lprofFilename lprofCurFilename = {0,   0, 0, 0, {0},
-                                                   {0}, 0, 0, 0, PNS_unknown};
+static lprofFilename lprofCurFilename = {0, 0, 0, {0},        {0},
+                                         0, 0, 0, PNS_unknown};
 
 static int ProfileMergeRequested = 0;
 static int isProfileMergeRequested() { return ProfileMergeRequested; }
@@ -387,8 +386,6 @@ static int parseFilenamePattern(const char *FilenamePat,
   /* Clean up cached prefix and filename.  */
   if (lprofCurFilename.ProfilePathPrefix)
     free((void *)lprofCurFilename.ProfilePathPrefix);
-  if (lprofCurFilename.Filename)
-    free((void *)lprofCurFilename.Filename);
 
   if (lprofCurFilename.FilenamePat && lprofCurFilename.OwnsFilenamePat) {
     free((void *)lprofCurFilename.FilenamePat);
@@ -602,9 +599,6 @@ const char *__llvm_profile_get_filename(void) {
   char *FilenameBuf;
   const char *Filename;
 
-  if (lprofCurFilename.Filename)
-    return lprofCurFilename.Filename;
-
   Length = getCurFilenameLength();
   FilenameBuf = (char *)malloc(Length + 1);
   if (!FilenameBuf) {
@@ -615,7 +609,6 @@ const char *__llvm_profile_get_filename(void) {
   if (!Filename)
     return "\0";
 
-  lprofCurFilename.Filename = FilenameBuf;
   return FilenameBuf;
 }
 

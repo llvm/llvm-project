@@ -1097,19 +1097,19 @@ SymbolFilePDB::ParseVariables(const lldb_private::SymbolContext &sc,
   return num_added;
 }
 
-uint32_t SymbolFilePDB::FindGlobalVariables(
+void SymbolFilePDB::FindGlobalVariables(
     lldb_private::ConstString name,
     const lldb_private::CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches, lldb_private::VariableList &variables) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
-    return 0;
+    return;
   if (name.IsEmpty())
-    return 0;
+    return;
 
   auto results = m_global_scope_up->findAllChildren<PDBSymbolData>();
   if (!results)
-    return 0;
+    return;
 
   uint32_t matches = 0;
   size_t old_size = variables.GetSize();
@@ -1138,20 +1138,17 @@ uint32_t SymbolFilePDB::FindGlobalVariables(
     ParseVariables(sc, *pdb_data, &variables);
     matches = variables.GetSize() - old_size;
   }
-
-  return matches;
 }
 
-uint32_t
-SymbolFilePDB::FindGlobalVariables(const lldb_private::RegularExpression &regex,
-                                   uint32_t max_matches,
-                                   lldb_private::VariableList &variables) {
+void SymbolFilePDB::FindGlobalVariables(
+    const lldb_private::RegularExpression &regex, uint32_t max_matches,
+    lldb_private::VariableList &variables) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (!regex.IsValid())
-    return 0;
+    return;
   auto results = m_global_scope_up->findAllChildren<PDBSymbolData>();
   if (!results)
-    return 0;
+    return;
 
   uint32_t matches = 0;
   size_t old_size = variables.GetSize();
@@ -1176,8 +1173,6 @@ SymbolFilePDB::FindGlobalVariables(const lldb_private::RegularExpression &regex,
     ParseVariables(sc, *pdb_data, &variables);
     matches = variables.GetSize() - old_size;
   }
-
-  return matches;
 }
 
 bool SymbolFilePDB::ResolveFunction(const llvm::pdb::PDBSymbolFunc &pdb_func,
@@ -1299,24 +1294,21 @@ void SymbolFilePDB::CacheFunctionNames() {
   m_func_base_names.SizeToFit();
 }
 
-uint32_t SymbolFilePDB::FindFunctions(
+void SymbolFilePDB::FindFunctions(
     lldb_private::ConstString name,
     const lldb_private::CompilerDeclContext *parent_decl_ctx,
-    FunctionNameType name_type_mask, bool include_inlines, bool append,
+    FunctionNameType name_type_mask, bool include_inlines,
     lldb_private::SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  if (!append)
-    sc_list.Clear();
   lldbassert((name_type_mask & eFunctionNameTypeAuto) == 0);
 
   if (name_type_mask == eFunctionNameTypeNone)
-    return 0;
+    return;
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
-    return 0;
+    return;
   if (name.IsEmpty())
-    return 0;
+    return;
 
-  auto old_size = sc_list.GetSize();
   if (name_type_mask & eFunctionNameTypeFull ||
       name_type_mask & eFunctionNameTypeBase ||
       name_type_mask & eFunctionNameTypeMethod) {
@@ -1346,27 +1338,20 @@ uint32_t SymbolFilePDB::FindFunctions(
       ResolveFn(m_func_base_names);
       ResolveFn(m_func_method_names);
     }
-    if (name_type_mask & eFunctionNameTypeBase) {
+    if (name_type_mask & eFunctionNameTypeBase)
       ResolveFn(m_func_base_names);
-    }
-    if (name_type_mask & eFunctionNameTypeMethod) {
+    if (name_type_mask & eFunctionNameTypeMethod)
       ResolveFn(m_func_method_names);
-    }
   }
-  return sc_list.GetSize() - old_size;
 }
 
-uint32_t
-SymbolFilePDB::FindFunctions(const lldb_private::RegularExpression &regex,
-                             bool include_inlines, bool append,
-                             lldb_private::SymbolContextList &sc_list) {
+void SymbolFilePDB::FindFunctions(const lldb_private::RegularExpression &regex,
+                                  bool include_inlines,
+                                  lldb_private::SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  if (!append)
-    sc_list.Clear();
   if (!regex.IsValid())
-    return 0;
+    return;
 
-  auto old_size = sc_list.GetSize();
   CacheFunctionNames();
 
   std::set<uint32_t> resolved_ids;
@@ -1383,8 +1368,6 @@ SymbolFilePDB::FindFunctions(const lldb_private::RegularExpression &regex,
   };
   ResolveFn(m_func_full_names);
   ResolveFn(m_func_base_names);
-
-  return sc_list.GetSize() - old_size;
 }
 
 void SymbolFilePDB::GetMangledNamesForFunction(

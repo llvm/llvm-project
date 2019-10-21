@@ -1097,12 +1097,13 @@ static Instruction *foldToUnsignedSaturatedAdd(BinaryOperator &I) {
   return nullptr;
 }
 
-static Instruction *
-canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(
-    BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
+Instruction *
+InstCombiner::canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(
+    BinaryOperator &I) {
   assert((I.getOpcode() == Instruction::Add ||
+          I.getOpcode() == Instruction::Or ||
           I.getOpcode() == Instruction::Sub) &&
-         "Expecting add/sub instruction");
+         "Expecting add/or/sub instruction");
 
   // We have a subtraction/addition between a (potentially truncated) *logical*
   // right-shift of X and a "select".
@@ -1114,7 +1115,7 @@ canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(
                            m_Value(Select))))
     return nullptr;
 
-  // `add` is commutative; but for `sub`, "select" *must* be on RHS.
+  // `add`/`or` is commutative; but for `sub`, "select" *must* be on RHS.
   if (I.getOpcode() == Instruction::Sub && I.getOperand(1) != Select)
     return nullptr;
 
@@ -1140,13 +1141,13 @@ canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(
                                          X->getType()->getScalarSizeInBits()))))
     return nullptr;
 
-  // Sign-extending value can be sign-extended itself if we `add` it,
-  // or zero-extended if we `sub`tract it.
+  // Sign-extending value can be zero-extended if we `sub`tract it,
+  // or sign-extended otherwise.
   auto SkipExtInMagic = [&I](Value *&V) {
-    if (I.getOpcode() == Instruction::Add)
-      match(V, m_SExtOrSelf(m_Value(V)));
-    else
+    if (I.getOpcode() == Instruction::Sub)
       match(V, m_ZExtOrSelf(m_Value(V)));
+    else
+      match(V, m_SExtOrSelf(m_Value(V)));
   };
 
   // Now, finally validate the sign-extending magic.
@@ -1157,7 +1158,7 @@ canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(
   const APInt *Thr;
   Value *SignExtendingValue, *Zero;
   bool ShouldSignext;
-  // It must be a select between two values we will later estabilish to be a
+  // It must be a select between two values we will later establish to be a
   // sign-extending value and a zero constant. The condition guarding the
   // sign-extension must be based on a sign bit of the same X we had in `lshr`.
   if (!match(Select, m_Select(m_ICmp(Pred, m_Specific(X), m_APInt(Thr)),
@@ -1169,7 +1170,7 @@ canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(
   if (!ShouldSignext)
     std::swap(SignExtendingValue, Zero);
 
-  // If we should not perform sign-extension then we must add/subtract zero.
+  // If we should not perform sign-extension then we must add/or/subtract zero.
   if (!match(Zero, m_Zero()))
     return nullptr;
   // Otherwise, it should be some constant, left-shifted by the same NBits we
@@ -1181,10 +1182,10 @@ canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(
              m_Shl(m_Constant(SignExtendingValueBaseConstant),
                    m_ZExtOrSelf(m_Specific(NBits)))))
     return nullptr;
-  // If we `add`, then the constant should be all-ones, else it should be one.
-  if (I.getOpcode() == Instruction::Add
-          ? !match(SignExtendingValueBaseConstant, m_AllOnes())
-          : !match(SignExtendingValueBaseConstant, m_One()))
+  // If we `sub`, then the constant should be one, else it should be all-ones.
+  if (I.getOpcode() == Instruction::Sub
+          ? !match(SignExtendingValueBaseConstant, m_One())
+          : !match(SignExtendingValueBaseConstant, m_AllOnes()))
     return nullptr;
 
   auto *NewAShr = BinaryOperator::CreateAShr(X, LowBitsToSkip,
@@ -1403,8 +1404,7 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
     return V;
 
   if (Instruction *V =
-          canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(
-              I, Builder))
+          canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(I))
     return V;
 
   if (Instruction *SatAdd = foldToUnsignedSaturatedAdd(I))
@@ -2006,8 +2006,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
   }
 
   if (Instruction *V =
-          canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(
-              I, Builder))
+          canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(I))
     return V;
 
   if (Instruction *Ext = narrowMathIfNoOverflow(I))

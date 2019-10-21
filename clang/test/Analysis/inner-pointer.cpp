@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.InnerPointer   \
+// RUN: %clang_analyze_cc1 -std=c++14 -analyzer-checker=cplusplus.InnerPointer \
 // RUN:   -Wno-dangling -Wno-dangling-field -Wno-return-stack-address \
 // RUN:   %s -analyzer-output=text -verify
 

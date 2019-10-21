@@ -1368,6 +1368,28 @@ def fmodules_validate_system_headers : Flag<["-"], "fmodules-validate-system-hea
   HelpText<"Validate the system headers that a module depends on when loading the module">;
 def fno_modules_validate_system_headers : Flag<["-"], "fno-modules-validate-system-headers">,
   Group<i_Group>, Flags<[DriverOption]>;
+
+def fvalidate_ast_input_files_content:
+  Flag <["-"], "fvalidate-ast-input-files-content">,
+  Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Compute and store the hash of input files used to build an AST."
+           " Files with mismatching mtime's are considered valid"
+           " if both contents is identical">;
+def fmodules_validate_input_files_content:
+  Flag <["-"], "fmodules-validate-input-files-content">,
+  Group<f_Group>, Flags<[DriverOption]>,
+  HelpText<"Validate PCM input files based on content if mtime differs">;
+def fno_modules_validate_input_files_content:
+  Flag <["-"], "fno_modules-validate-input-files-content">,
+  Group<f_Group>, Flags<[DriverOption]>;
+def fpch_validate_input_files_content:
+  Flag <["-"], "fpch-validate-input-files-content">,
+  Group<f_Group>, Flags<[DriverOption]>,
+  HelpText<"Validate PCH input files based on content if mtime differs">;
+def fno_pch_validate_input_files_content:
+  Flag <["-"], "fno_pch-validate-input-files-content">,
+  Group<f_Group>, Flags<[DriverOption]>;
+
 def fmodules : Flag <["-"], "fmodules">, Group<f_Group>,
   Flags<[DriverOption, CC1Option]>,
   HelpText<"Enable the 'modules' language feature">;
@@ -1863,6 +1885,13 @@ def fforce_emit_vtables : Flag<["-"], "fforce-emit-vtables">, Group<f_Group>,
     HelpText<"Emits more virtual tables to improve devirtualization">;
 def fno_force_emit_vtables : Flag<["-"], "fno-force-emit-vtables">, Group<f_Group>,
   Flags<[CoreOption]>;
+
+def fvirtual_function_elimination : Flag<["-"], "fvirtual-function-elimination">, Group<f_Group>,
+  Flags<[CoreOption, CC1Option]>,
+  HelpText<"Enables dead virtual function elimination optimization. Requires -flto=full">;
+def fno_virtual_function_elimination : Flag<["-"], "fno-virtual-function_elimination">, Group<f_Group>,
+  Flags<[CoreOption]>;
+
 def fwrapv : Flag<["-"], "fwrapv">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Treat signed integer overflow as two's complement">;
 def fwritable_strings : Flag<["-"], "fwritable-strings">, Group<f_Group>, Flags<[CC1Option]>,

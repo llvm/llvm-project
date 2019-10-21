@@ -4,9 +4,9 @@
 
 extern int omp_default_mem_alloc;
 void xxx(int argc) {
-  int i, step; // expected-note {{initialize the variable 'step' to silence this warning}} expected-note {{initialize the variable 'i' to silence this warning}}
+  int i, step; // expected-note {{initialize the variable 'step' to silence this warning}}
 #pragma omp target
-#pragma omp teams distribute simd linear(i : step) // expected-warning {{variable 'i' is uninitialized when used here}} expected-warning {{variable 'step' is uninitialized when used here}}
+#pragma omp teams distribute simd linear(i : step) // expected-warning {{variable 'step' is uninitialized when used here}}
   for (i = 0; i < 10; ++i)
     ;
 }

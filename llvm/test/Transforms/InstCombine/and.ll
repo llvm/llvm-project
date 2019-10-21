@@ -346,8 +346,7 @@ define i32 @test30(i1 %X) {
 
 define i32 @test31(i1 %X) {
 ; CHECK-LABEL: @test31(
-; CHECK-NEXT:    [[Y:%.*]] = zext i1 %X to i32
-; CHECK-NEXT:    [[Z:%.*]] = shl nuw nsw i32 [[Y]], 4
+; CHECK-NEXT:    [[Z:%.*]] = select i1 [[X:%.*]], i32 16, i32 0
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %Y = zext i1 %X to i32

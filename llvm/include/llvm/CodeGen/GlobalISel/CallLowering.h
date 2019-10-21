@@ -118,7 +118,7 @@ public:
 
     /// Returns true if the handler is dealing with incoming arguments,
     /// i.e. those that move values from some physical location to vregs.
-    virtual bool isIncomingArgumentHandler() const { return false; }
+    virtual bool isIncomingArgumentHandler() const = 0;
 
     /// Materialize a VReg containing the address of the specified
     /// stack-based object. This is either based on a FrameIndex or
