@@ -617,8 +617,8 @@ class VectorType;
     void finalizeLowering(MachineFunction &MF) const override;
 
     /// Return the correct alignment for the current calling convention.
-    unsigned getABIAlignmentForCallingConv(Type *ArgTy,
-                                           DataLayout DL) const override;
+    Align getABIAlignmentForCallingConv(Type *ArgTy,
+                                        DataLayout DL) const override;
 
     bool isDesirableToCommuteWithShift(const SDNode *N,
                                        CombineLevel Level) const override;

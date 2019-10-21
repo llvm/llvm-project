@@ -690,7 +690,7 @@ void MipsCallLowering::subTargetRegTypeForCallingConv(
       if (i == 0)
         Flags.setOrigAlign(TLI.getABIAlignmentForCallingConv(Arg.Ty, DL));
       else
-        Flags.setOrigAlign(1);
+        Flags.setOrigAlign(Align::None());
 
       ISDArgs.emplace_back(Flags, RegisterVT, VT, true, OrigArgIndices[ArgNo],
                            0);
