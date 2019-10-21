@@ -599,6 +599,26 @@ def ProcVortex : SubtargetFeature<"vortex", "ARMProcFamily", "Vortex",
                                    HasV8_3aOps
                                    ]>;
 
+def ProcLightning : SubtargetFeature<"lightning", "ARMProcFamily", "Lightning",
+                                     "Lightning", [
+                                     FeatureAlternateSExtLoadCVTF32Pattern,
+                                     FeatureArithmeticBccFusion,
+                                     FeatureArithmeticCbzFusion,
+                                     FeatureCrypto,
+                                     FeatureDisableLatencySchedHeuristic,
+                                     FeatureFP16FML,
+                                     FeatureFullFP16,
+                                     FeatureFuseAES,
+                                     FeatureFuseCryptoEOR,
+                                     FeatureNEON,
+                                     FeaturePerfMon,
+                                     FeatureSHA3,
+                                     FeatureSM4,
+                                     FeatureZCRegMove,
+                                     FeatureZCZeroing,
+                                     HasV8_4aOps
+                                     ]>;
+
 def ProcExynosM1 : SubtargetFeature<"exynosm1", "ARMProcFamily", "ExynosM1",
                                     "Samsung Exynos-M1 processors",
                                     [FeatureSlowPaired128,
@@ -834,6 +854,7 @@ def : ProcessorModel<"neoverse-e1", CortexA53Model, [ProcNeoverseE1]>;
 def : ProcessorModel<"neoverse-n1", CortexA57Model, [ProcNeoverseN1]>;
 def : ProcessorModel<"cyclone", CycloneModel, [ProcCyclone]>;
 def : ProcessorModel<"vortex", CycloneModel, [ProcVortex]>;
+def : ProcessorModel<"lightning", CycloneModel, [ProcLightning]>;
 def : ProcessorModel<"exynos-m1", ExynosM1Model, [ProcExynosM1]>;
 def : ProcessorModel<"exynos-m2", ExynosM1Model, [ProcExynosM2]>;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, [ProcExynosM3]>;
@@ -853,7 +874,7 @@ def : ProcessorModel<"thunderx2t99", ThunderX2T99Model, [ProcThunderX2T99]>;
 def : ProcessorModel<"tsv110", CortexA57Model, [ProcTSV110]>;
 
 // Alias for the latest Apple processor model supported by LLVM.
-def : ProcessorModel<"apple-latest", CycloneModel, [ProcVortex]>;
+def : ProcessorModel<"apple-latest", CycloneModel, [ProcLightning]>;
 
 //===----------------------------------------------------------------------===//
 // Assembly parser

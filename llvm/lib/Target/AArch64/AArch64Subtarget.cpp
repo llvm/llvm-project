@@ -90,6 +90,7 @@ void AArch64Subtarget::initializeProperties() {
     break;
   case Cyclone:
   case Vortex:
+  case Lightning:
     CacheLineSize = 64;
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;

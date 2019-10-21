@@ -289,6 +289,9 @@
 // RUN: %clang -target arm64-apple-darwin -arch arm64 -march=armv8.3a -mcpu=vortex -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-VORTEX-V83 %s
 // ARM64-VORTEX-V83: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "vortex" "-target-feature" "+neon" "-target-feature" "+v8.3a" "-target-feature" "+zcm" "-target-feature" "+zcz"
 
+// RUN: %clang -target arm64-apple-darwin -arch arm64 -mcpu=lightning -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-LIGHTNING %s
+// ARM64-LIGHTNING: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "lightning" "-target-feature" "+v8.4a" "-target-feature" "+fp-armv8" "-target-feature" "+neon" "-target-feature" "+crc" "-target-feature" "+crypto"  "-target-feature" "+dotprod" "-target-feature" "+fullfp16" "-target-feature" "+ras" "-target-feature" "+lse" "-target-feature" "+rdm" "-target-feature" "+rcpc" "-target-feature" "+zcm" "-target-feature" "+zcz" "-target-feature" "+fp16fml" "-target-feature" "+sm4" "-target-feature" "+sha3" "-target-feature" "+sha2" "-target-feature" "+aes"
+
 // RUN: %clang -target aarch64_be -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC-BE %s
 // RUN: %clang -target aarch64 -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC-BE %s
 // RUN: %clang -target aarch64_be -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC-BE %s

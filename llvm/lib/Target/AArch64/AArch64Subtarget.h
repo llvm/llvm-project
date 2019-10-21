@@ -52,6 +52,7 @@ public:
     ExynosM3,
     Falkor,
     Kryo,
+    Lightning,
     NeoverseE1,
     NeoverseN1,
     Saphira,
