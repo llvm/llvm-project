@@ -76,6 +76,9 @@ STATISTIC(NumSubNUW,    "Number of no-unsigned-wrap deductions for sub");
 STATISTIC(NumMulNW,     "Number of no-wrap deductions for mul");
 STATISTIC(NumMulNSW,    "Number of no-signed-wrap deductions for mul");
 STATISTIC(NumMulNUW,    "Number of no-unsigned-wrap deductions for mul");
+STATISTIC(NumShlNW,     "Number of no-wrap deductions for shl");
+STATISTIC(NumShlNSW,    "Number of no-signed-wrap deductions for shl");
+STATISTIC(NumShlNUW,    "Number of no-unsigned-wrap deductions for shl");
 STATISTIC(NumOverflows, "Number of overflow checks removed");
 STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
@@ -449,6 +452,11 @@ static void setDeducedOverflowingFlags(Value *V, Instruction::BinaryOps Opcode,
     OpcNW = &NumMulNW;
     OpcNSW = &NumMulNSW;
     OpcNUW = &NumMulNUW;
+    break;
+  case Instruction::Shl:
+    OpcNW = &NumShlNW;
+    OpcNSW = &NumShlNSW;
+    OpcNUW = &NumShlNUW;
     break;
   default:
     llvm_unreachable("Will not be called with other binops");
@@ -861,6 +869,7 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
       case Instruction::Add:
       case Instruction::Sub:
       case Instruction::Mul:
+      case Instruction::Shl:
         BBChanged |= processBinOp(cast<BinaryOperator>(II), LVI);
         break;
       case Instruction::And:

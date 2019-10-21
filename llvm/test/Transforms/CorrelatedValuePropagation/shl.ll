@@ -85,7 +85,7 @@ define i8 @test4(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[B:%.*]], 7
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    ret i8 [[SHL]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0
@@ -104,7 +104,7 @@ exit:
 
 define i8 @test5(i8 %b) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 0, [[B:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 0, [[B:%.*]]
 ; CHECK-NEXT:    ret i8 [[SHL]]
 ;
   %shl = shl i8 0, %b
@@ -113,7 +113,7 @@ define i8 @test5(i8 %b) {
 
 define i8 @test6(i8 %b) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 1, [[B:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 1, [[B:%.*]]
 ; CHECK-NEXT:    ret i8 [[SHL]]
 ;
   %shl = shl i8 1, %b
@@ -126,7 +126,7 @@ define i8 @test7(i8 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[B:%.*]], 7
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 1, [[B]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 1, [[B]]
 ; CHECK-NEXT:    ret i8 [[SHL]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0
@@ -145,7 +145,7 @@ exit:
 
 define i8 @test8(i8 %b) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 -1, [[B:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 -1, [[B:%.*]]
 ; CHECK-NEXT:    ret i8 [[SHL]]
 ;
   %shl = shl i8 -1, %b
@@ -158,7 +158,7 @@ define i8 @test9(i8 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[B:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 -1, [[B]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 -1, [[B]]
 ; CHECK-NEXT:    ret i8 -1
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0
@@ -190,7 +190,7 @@ define i8 @test11(i8 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[B:%.*]], 2
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 42, [[B]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 42, [[B]]
 ; CHECK-NEXT:    ret i8 [[SHL]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0
@@ -213,7 +213,7 @@ define i8 @test12(i8 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[B:%.*]], 3
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 42, [[B]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 42, [[B]]
 ; CHECK-NEXT:    ret i8 [[SHL]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0
@@ -268,7 +268,7 @@ define i8 @test15(i8 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[B:%.*]], 2
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 -42, [[B]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i8 -42, [[B]]
 ; CHECK-NEXT:    ret i8 [[SHL]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0
@@ -314,7 +314,7 @@ define i8 @test17(i8 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[B:%.*]], 2
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 42, [[B]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 42, [[B]]
 ; CHECK-NEXT:    ret i8 [[SHL]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0
@@ -337,7 +337,7 @@ define i8 @test18(i8 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[B:%.*]], 3
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 42, [[B]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 42, [[B]]
 ; CHECK-NEXT:    ret i8 [[SHL]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0
