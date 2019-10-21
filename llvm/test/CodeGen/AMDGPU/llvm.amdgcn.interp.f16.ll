@@ -6,8 +6,8 @@
 define amdgpu_ps half @interp_f16(float inreg %i, float inreg %j, i32 inreg %m0) #0 {
 ; GFX9-32BANK-LABEL: interp_f16:
 ; GFX9-32BANK:       ; %bb.0: ; %main_body
-; GFX9-32BANK-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-32BANK-NEXT:    s_mov_b32 m0, s2
+; GFX9-32BANK-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-32BANK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 3
 ; GFX9-32BANK-NEXT:    v_interp_p1ll_f16 v1, v0, attr2.y
 ; GFX9-32BANK-NEXT:    v_mov_b32_e32 v2, s1
@@ -20,8 +20,8 @@ define amdgpu_ps half @interp_f16(float inreg %i, float inreg %j, i32 inreg %m0)
 ;
 ; GFX8-32BANK-LABEL: interp_f16:
 ; GFX8-32BANK:       ; %bb.0: ; %main_body
-; GFX8-32BANK-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-32BANK-NEXT:    s_mov_b32 m0, s2
+; GFX8-32BANK-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-32BANK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 3
 ; GFX8-32BANK-NEXT:    v_interp_p1ll_f16 v1, v0, attr2.y
 ; GFX8-32BANK-NEXT:    v_mov_b32_e32 v2, s1
@@ -119,8 +119,8 @@ main_body:
 define amdgpu_ps half @interp_p2_m0_setup(float inreg %i, float inreg %j, i32 inreg %m0) #0 {
 ; GFX9-32BANK-LABEL: interp_p2_m0_setup:
 ; GFX9-32BANK:       ; %bb.0: ; %main_body
-; GFX9-32BANK-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-32BANK-NEXT:    s_mov_b32 m0, s2
+; GFX9-32BANK-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-32BANK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 3
 ; GFX9-32BANK-NEXT:    v_interp_p1ll_f16 v0, v0, attr2.y
 ; GFX9-32BANK-NEXT:    ;;#ASMSTART
@@ -136,8 +136,8 @@ define amdgpu_ps half @interp_p2_m0_setup(float inreg %i, float inreg %j, i32 in
 ;
 ; GFX8-32BANK-LABEL: interp_p2_m0_setup:
 ; GFX8-32BANK:       ; %bb.0: ; %main_body
-; GFX8-32BANK-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-32BANK-NEXT:    s_mov_b32 m0, s2
+; GFX8-32BANK-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-32BANK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 3
 ; GFX8-32BANK-NEXT:    v_interp_p1ll_f16 v0, v0, attr2.y
 ; GFX8-32BANK-NEXT:    ;;#ASMSTART
