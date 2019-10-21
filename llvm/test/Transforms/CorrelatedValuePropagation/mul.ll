@@ -7,7 +7,7 @@ define i8 @test0(i8 %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[A:%.*]], 3
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[A]], 50
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i8 [[A]], 50
 ; CHECK-NEXT:    ret i8 [[MUL]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0
@@ -30,7 +30,7 @@ define i8 @test1(i8 %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[A:%.*]], 4
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[A]], 50
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i8 [[A]], 50
 ; CHECK-NEXT:    ret i8 [[MUL]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0
@@ -53,7 +53,7 @@ define i8 @test2(i8 %a) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[A:%.*]], 6
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[A]], 50
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i8 [[A]], 50
 ; CHECK-NEXT:    ret i8 [[MUL]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0
@@ -101,7 +101,7 @@ define i8 @test4(i8 %a) {
 ; CHECK-NEXT:    [[COND:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[A]], 50
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i8 [[A]], 50
 ; CHECK-NEXT:    ret i8 [[MUL]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i8 0
