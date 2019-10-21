@@ -99,6 +99,8 @@ class LLVMConfig(object):
                 features.add('target-x86_64')
             elif re.match(r'^aarch64.*', target_triple):
                 features.add('target-aarch64')
+            elif re.match(r'^arm.*', target_triple):
+                features.add('target-arm')
 
         use_gmalloc = lit_config.params.get('use_gmalloc', None)
         if lit.util.pythonize_bool(use_gmalloc):
