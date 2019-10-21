@@ -134,9 +134,9 @@ namespace ISD {
       MaybeAlign A = decodeMaybeAlign(OrigAlign);
       return A ? A->value() : 0;
     }
-    void setOrigAlign(unsigned A) {
-      OrigAlign = encode(Align(A));
-      assert(getOrigAlign() == A && "bitfield overflow");
+    void setOrigAlign(Align A) {
+      OrigAlign = encode(A);
+      assert(getOrigAlign() == A.value() && "bitfield overflow");
     }
 
     unsigned getByValSize() const { return ByValSize; }

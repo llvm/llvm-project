@@ -9109,7 +9109,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       // Certain targets (such as MIPS), may have a different ABI alignment
       // for a type depending on the context. Give the target a chance to
       // specify the alignment it wants.
-      unsigned OriginalAlignment = getABIAlignmentForCallingConv(ArgTy, DL);
+      const Align OriginalAlignment(getABIAlignmentForCallingConv(ArgTy, DL));
 
       if (Args[i].Ty->isPointerTy()) {
         Flags.setPointer();
@@ -9220,7 +9220,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         if (NumParts > 1 && j == 0)
           MyFlags.Flags.setSplit();
         else if (j != 0) {
-          MyFlags.Flags.setOrigAlign(1);
+          MyFlags.Flags.setOrigAlign(Align::None());
           if (j == NumParts - 1)
             MyFlags.Flags.setSplitEnd();
         }
@@ -9607,8 +9607,8 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
       // Certain targets (such as MIPS), may have a different ABI alignment
       // for a type depending on the context. Give the target a chance to
       // specify the alignment it wants.
-      unsigned OriginalAlignment =
-          TLI->getABIAlignmentForCallingConv(ArgTy, DL);
+      const Align OriginalAlignment(
+          TLI->getABIAlignmentForCallingConv(ArgTy, DL));
 
       if (Arg.getType()->isPointerTy()) {
         Flags.setPointer();
@@ -9691,7 +9691,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
           MyFlags.Flags.setSplit();
         // if it isn't first piece, alignment must be 1
         else if (i > 0) {
-          MyFlags.Flags.setOrigAlign(1);
+          MyFlags.Flags.setOrigAlign(Align::None());
           if (i == NumRegs - 1)
             MyFlags.Flags.setSplitEnd();
         }

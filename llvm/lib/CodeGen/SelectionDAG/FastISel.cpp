@@ -1219,8 +1219,7 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
       Flags.setNest();
     if (NeedsRegBlock)
       Flags.setInConsecutiveRegs();
-    unsigned OriginalAlignment = DL.getABITypeAlignment(Arg.Ty);
-    Flags.setOrigAlign(OriginalAlignment);
+    Flags.setOrigAlign(Align(DL.getABITypeAlignment(Arg.Ty)));
 
     CLI.OutVals.push_back(Arg.Val);
     CLI.OutFlags.push_back(Flags);

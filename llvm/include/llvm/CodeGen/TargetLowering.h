@@ -1357,9 +1357,9 @@ public:
 
   /// Certain targets have context senstive alignment requirements, where one
   /// type has the alignment requirement of another type.
-  virtual unsigned getABIAlignmentForCallingConv(Type *ArgTy,
-                                                 DataLayout DL) const {
-    return DL.getABITypeAlignment(ArgTy);
+  virtual Align getABIAlignmentForCallingConv(Type *ArgTy,
+                                              DataLayout DL) const {
+    return Align(DL.getABITypeAlignment(ArgTy));
   }
 
   /// If true, then instruction selection should seek to shrink the FP constant
