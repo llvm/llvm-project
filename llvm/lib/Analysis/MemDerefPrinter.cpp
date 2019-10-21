@@ -55,8 +55,8 @@ bool MemDerefPrinter::runOnFunction(Function &F) {
       Value *PO = LI->getPointerOperand();
       if (isDereferenceablePointer(PO, LI->getType(), DL))
         Deref.push_back(PO);
-      if (isDereferenceableAndAlignedPointer(PO, LI->getType(),
-                                             LI->getAlignment(), DL))
+      if (isDereferenceableAndAlignedPointer(
+              PO, LI->getType(), MaybeAlign(LI->getAlignment()), DL))
         DerefAndAligned.insert(PO);
     }
   }

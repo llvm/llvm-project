@@ -37,7 +37,8 @@ bool isDereferenceablePointer(const Value *V, Type *Ty,
 /// performs context-sensitive analysis and returns true if the pointer is
 /// dereferenceable at the specified instruction.
 bool isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
-                                        unsigned Align, const DataLayout &DL,
+                                        MaybeAlign Alignment,
+                                        const DataLayout &DL,
                                         const Instruction *CtxI = nullptr,
                                         const DominatorTree *DT = nullptr);
 
@@ -45,7 +46,7 @@ bool isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
 /// greater or equal than requested. If the context instruction is specified
 /// performs context-sensitive analysis and returns true if the pointer is
 /// dereferenceable at the specified instruction.
-bool isDereferenceableAndAlignedPointer(const Value *V, unsigned Align,
+bool isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
                                         const APInt &Size, const DataLayout &DL,
                                         const Instruction *CtxI = nullptr,
                                         const DominatorTree *DT = nullptr);
@@ -58,7 +59,7 @@ bool isDereferenceableAndAlignedPointer(const Value *V, unsigned Align,
 /// If it is not obviously safe to load from the specified pointer, we do a
 /// quick local scan of the basic block containing ScanFrom, to determine if
 /// the address is already accessed.
-bool isSafeToLoadUnconditionally(Value *V, unsigned Align, APInt &Size,
+bool isSafeToLoadUnconditionally(Value *V, MaybeAlign Alignment, APInt &Size,
                                  const DataLayout &DL,
                                  Instruction *ScanFrom = nullptr,
                                  const DominatorTree *DT = nullptr);
@@ -82,7 +83,7 @@ bool isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
 /// If it is not obviously safe to load from the specified pointer, we do a
 /// quick local scan of the basic block containing ScanFrom, to determine if
 /// the address is already accessed.
-bool isSafeToLoadUnconditionally(Value *V, Type *Ty, unsigned Align,
+bool isSafeToLoadUnconditionally(Value *V, Type *Ty, MaybeAlign Alignment,
                                  const DataLayout &DL,
                                  Instruction *ScanFrom = nullptr,
                                  const DominatorTree *DT = nullptr);
