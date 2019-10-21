@@ -329,6 +329,7 @@ static lldb_private::LineEntry FindEntryPoint(Module *exe_module) {
   const std::vector<std::pair<ConstString, bool>> &entry_points(
       GetEntryPointNames());
   for (std::pair<ConstString, bool> entry_point : entry_points) {
+#if 0 // llvm.org version
     const ConstString entry_point_name = entry_point.first;
     const bool skip_prologue = entry_point.second;
     SymbolContextList sc_list;
@@ -352,6 +353,15 @@ static lldb_private::LineEntry FindEntryPoint(Module *exe_module) {
         }
       }
     }
+#else // FIXME: upstream this!
+    lldb_private::LineEntry line_entry(FindEntryPoint(executable_ptr));
+    if (line_entry.IsValid()) {
+      SetDefaultFileAndLine(line_entry.file, line_entry.line);
+      file_spec = m_last_file_sp->GetFileSpec();
+      line = m_last_line;
+      return true;
+    }
+#endif
   }
   return LineEntry();
 }
