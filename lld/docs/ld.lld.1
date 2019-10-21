@@ -655,6 +655,11 @@ Set the
 flag to indicate that the object may not be opened by
 .Xr dlopen 3 .
 .Pp
+.It Cm nognustack
+Do not emit the
+.Dv PT_GNU_STACK
+segment.
+.Pp
 .It Cm norelro
 Do not indicate that portions of the object shold be mapped read-only
 after initial relocation processing.
