@@ -124,6 +124,8 @@ public:
     ARMSubArch_v5te,
     ARMSubArch_v4t,
 
+    AArch64SubArch_E,
+
     KalimbaSubArch_v3,
     KalimbaSubArch_v4,
     KalimbaSubArch_v5,

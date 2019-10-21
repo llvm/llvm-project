@@ -216,6 +216,12 @@ static std::string computeDataLayout(const Triple &TT,
   return "E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128";
 }
 
+static StringRef computeDefaultCPU(const Triple &TT, StringRef CPU) {
+  if (CPU.empty() && TT.getArchName() == "arm64e")
+    return "vortex";
+  return CPU;
+}
+
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            Optional<Reloc::Model> RM) {
   // AArch64 Darwin and Windows are always PIC.
@@ -264,7 +270,8 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
                                            bool LittleEndian)
     : LLVMTargetMachine(T,
                         computeDataLayout(TT, Options.MCOptions, LittleEndian),
-                        TT, CPU, FS, Options, getEffectiveRelocModel(TT, RM),
+                        TT, computeDefaultCPU(TT, CPU), FS, Options,
+                        getEffectiveRelocModel(TT, RM),
                         getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
   initAsmInfo();
@@ -288,6 +295,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
   // MachO/CodeModel::Large, which GlobalISel does not support.
   if (getOptLevel() <= EnableGlobalISelAtO &&
       TT.getArch() != Triple::aarch64_32 &&
+      TT.getArchName() != "arm64e" &&
       !(getCodeModel() == CodeModel::Large && TT.isOSBinFormatMachO())) {
     setGlobalISel(true);
     setGlobalISelAbort(GlobalISelAbortMode::Disable);
