@@ -2939,7 +2939,7 @@ struct AANoCaptureImpl : public AANoCapture {
 
     // Check what state the associated function can actually capture.
     if (F)
-      determineFunctionCaptureCapabilities(*F, *this);
+      determineFunctionCaptureCapabilities(IRP, *F, *this);
     else
       indicatePessimisticFixpoint();
   }
@@ -2965,7 +2965,8 @@ struct AANoCaptureImpl : public AANoCapture {
   /// Set the NOT_CAPTURED_IN_MEM and NOT_CAPTURED_IN_RET bits in \p Known
   /// depending on the ability of the function associated with \p IRP to capture
   /// state in memory and through "returning/throwing", respectively.
-  static void determineFunctionCaptureCapabilities(const Function &F,
+  static void determineFunctionCaptureCapabilities(const IRPosition &IRP,
+                                                   const Function &F,
                                                    IntegerState &State) {
     // TODO: Once we have memory behavior attributes we should use them here.
 
@@ -2987,6 +2988,21 @@ struct AANoCaptureImpl : public AANoCapture {
     // exceptions and doesn not return values.
     if (F.doesNotThrow() && F.getReturnType()->isVoidTy())
       State.addKnownBits(NOT_CAPTURED_IN_RET);
+
+    // Check existing "returned" attributes.
+    int ArgNo = IRP.getArgNo();
+    if (F.doesNotThrow() && ArgNo >= 0) {
+      for (unsigned u = 0, e = F.arg_size(); u< e; ++u)
+        if (F.hasParamAttribute(u, Attribute::Returned)) {
+          if (u == ArgNo)
+            State.removeAssumedBits(NOT_CAPTURED_IN_RET);
+          else if (F.onlyReadsMemory())
+            State.addKnownBits(NO_CAPTURE);
+          else
+            State.addKnownBits(NOT_CAPTURED_IN_RET);
+          break;
+        }
+    }
   }
 
   /// See AbstractState::getAsStr().
@@ -3158,15 +3174,54 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
   const Function *F =
       getArgNo() >= 0 ? IRP.getAssociatedFunction() : IRP.getAnchorScope();
   assert(F && "Expected a function!");
-  const auto &IsDeadAA = A.getAAFor<AAIsDead>(*this, IRPosition::function(*F));
+  const IRPosition &FnPos = IRPosition::function(*F);
+  const auto &IsDeadAA = A.getAAFor<AAIsDead>(*this, FnPos);
 
   AANoCapture::StateType T;
-  // TODO: Once we have memory behavior attributes we should use them here
-  // similar to the reasoning in
-  // AANoCaptureImpl::determineFunctionCaptureCapabilities(...).
 
-  // TODO: Use the AAReturnedValues to learn if the argument can return or
-  // not.
+  // Readonly means we cannot capture through memory.
+  const auto &FnMemAA = A.getAAFor<AAMemoryBehavior>(*this, FnPos);
+  if (FnMemAA.isAssumedReadOnly()) {
+    T.addKnownBits(NOT_CAPTURED_IN_MEM);
+    if (FnMemAA.isKnownReadOnly())
+      addKnownBits(NOT_CAPTURED_IN_MEM);
+  }
+
+  // Make sure all returned values are different than the underlying value.
+  // TODO: we could do this in a more sophisticated way inside
+  //       AAReturnedValues, e.g., track all values that escape through returns
+  //       directly somehow.
+  auto CheckReturnedArgs = [&](const AAReturnedValues &RVAA) {
+    bool SeenConstant = false;
+    for (auto &It : RVAA.returned_values()) {
+      if (isa<Constant>(It.first)) {
+        if (SeenConstant)
+          return false;
+        SeenConstant = true;
+      } else if (!isa<Argument>(It.first) ||
+                 It.first == getAssociatedArgument())
+        return false;
+    }
+    return true;
+  };
+
+  const auto &NoUnwindAA = A.getAAFor<AANoUnwind>(*this, FnPos);
+  if (NoUnwindAA.isAssumedNoUnwind()) {
+    bool IsVoidTy = F->getReturnType()->isVoidTy();
+    const AAReturnedValues *RVAA =
+        IsVoidTy ? nullptr : &A.getAAFor<AAReturnedValues>(*this, FnPos);
+    if (IsVoidTy || CheckReturnedArgs(*RVAA)) {
+      T.addKnownBits(NOT_CAPTURED_IN_RET);
+      if (T.isKnown(NOT_CAPTURED_IN_MEM))
+        return ChangeStatus::UNCHANGED;
+      if (NoUnwindAA.isKnownNoUnwind() &&
+          (IsVoidTy || RVAA->getState().isAtFixpoint())) {
+        addKnownBits(NOT_CAPTURED_IN_RET);
+        if (isKnown(NOT_CAPTURED_IN_MEM))
+          return indicateOptimisticFixpoint();
+      }
+    }
+  }
 
   // Use the CaptureTracker interface and logic with the specialized tracker,
   // defined in AACaptureUseTracker, that can look at in-flight abstract
