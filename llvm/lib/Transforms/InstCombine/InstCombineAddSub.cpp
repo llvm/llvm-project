@@ -1103,7 +1103,7 @@ InstCombiner::canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(
   assert((I.getOpcode() == Instruction::Add ||
           I.getOpcode() == Instruction::Or ||
           I.getOpcode() == Instruction::Sub) &&
-         "Expecting add/sub instruction");
+         "Expecting add/or/sub instruction");
 
   // We have a subtraction/addition between a (potentially truncated) *logical*
   // right-shift of X and a "select".
@@ -1158,7 +1158,7 @@ InstCombiner::canonicalizeCondSignextOfHighBitExtractToSignextHighBitExtract(
   const APInt *Thr;
   Value *SignExtendingValue, *Zero;
   bool ShouldSignext;
-  // It must be a select between two values we will later estabilish to be a
+  // It must be a select between two values we will later establish to be a
   // sign-extending value and a zero constant. The condition guarding the
   // sign-extension must be based on a sign bit of the same X we had in `lshr`.
   if (!match(Select, m_Select(m_ICmp(Pred, m_Specific(X), m_APInt(Thr)),
