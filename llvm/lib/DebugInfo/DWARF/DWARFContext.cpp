@@ -1527,10 +1527,19 @@ public:
         continue;
 
       StringRef Data;
-      section_iterator RelocatedSection = Section.getRelocatedSection();
+      Expected<section_iterator> SecOrErr = Section.getRelocatedSection();
+      if (!SecOrErr) {
+        ErrorPolicy EP = HandleError(createError(
+            "failed to get relocated section: ", SecOrErr.takeError()));
+        if (EP == ErrorPolicy::Halt)
+          return;
+        continue;
+      }
+
       // Try to obtain an already relocated version of this section.
       // Else use the unrelocated section from the object file. We'll have to
       // apply relocations ourselves later.
+      section_iterator RelocatedSection = *SecOrErr;
       if (!L || !L->getLoadedSectionContents(*RelocatedSection, Data)) {
         Expected<StringRef> E = Section.getContents();
         if (E)

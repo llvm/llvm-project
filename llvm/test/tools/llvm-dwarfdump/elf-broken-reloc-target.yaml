@@ -1,0 +1,20 @@
+## Check we report an error if the relocated section identified by the
+## sh_info field of a relocation section is invalid.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-dwarfdump %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
+
+# ERR: error: failed to get relocated section: invalid section index: 255
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+- Name: .rela.debug_info
+  Type: SHT_RELA
+  Link: 0
+  Info: 0xFF
+  Relocations: []
