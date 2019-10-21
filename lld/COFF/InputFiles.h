@@ -10,13 +10,13 @@
 #define LLD_COFF_INPUT_FILES_H
 
 #include "Config.h"
+#include "lld/Common/DWARF.h"
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
@@ -216,7 +216,6 @@ private:
   void initializeSymbols();
   void initializeFlags();
   void initializeDependencies();
-  void initializeDwarf();
 
   SectionChunk *
   readSection(uint32_t sectionNumber,
@@ -291,14 +290,7 @@ private:
   // symbols in the real symbol table) are filled with null pointers.
   std::vector<Symbol *> symbols;
 
-  std::unique_ptr<llvm::DWARFContext> dwarf;
-  std::vector<const llvm::DWARFDebugLine::LineTable *> lineTables;
-  struct VarLoc {
-    const llvm::DWARFDebugLine::LineTable *lt;
-    unsigned file;
-    unsigned line;
-  };
-  llvm::DenseMap<StringRef, VarLoc> variableLoc;
+  DWARFCache *dwarf;
 };
 
 // This type represents import library members that contain DLL names
