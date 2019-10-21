@@ -591,7 +591,7 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
           else
             Result = RC.getCheckInst();
         }
-
+        assert(Result && "Failed to find result value");
         Result->setName("wide.chk");
       }
       return true;
