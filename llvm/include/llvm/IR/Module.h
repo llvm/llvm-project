@@ -46,6 +46,7 @@ class FunctionType;
 class GVMaterializer;
 class LLVMContext;
 class MemoryBuffer;
+class Pass;
 class RandomNumberGenerator;
 template <class PtrType> class SmallPtrSetImpl;
 class StructType;

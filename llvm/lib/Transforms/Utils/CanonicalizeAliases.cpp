@@ -33,6 +33,7 @@
 
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Pass.h"
 
 using namespace llvm;
 
