@@ -36,7 +36,7 @@ int main(int, char**)
     assert(p);
   }
   // Test the return value of the builtin for basic sanity only. It's the
-  // compilers job to test tho builtin for correctness.
+  // compiler's job to test the builtin for correctness.
   {
     static_assert(std::is_constant_evaluated(), "");
     bool p = std::is_constant_evaluated();
