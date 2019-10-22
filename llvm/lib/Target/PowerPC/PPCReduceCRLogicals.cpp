@@ -381,10 +381,10 @@ private:
   const MachineBranchProbabilityInfo *MBPI;
 
   // A vector to contain all the CR logical operations
-  std::vector<CRLogicalOpInfo> AllCRLogicalOps;
+  SmallVector<CRLogicalOpInfo, 16> AllCRLogicalOps;
   void initialize(MachineFunction &MFParm);
   void collectCRLogicals();
-  bool handleCROp(CRLogicalOpInfo &CRI);
+  bool handleCROp(unsigned Idx);
   bool splitBlockOnBinaryCROp(CRLogicalOpInfo &CRI);
   static bool isCRLogical(MachineInstr &MI) {
     unsigned Opc = MI.getOpcode();
@@ -398,7 +398,7 @@ private:
     // Not using a range-based for loop here as the vector may grow while being
     // operated on.
     for (unsigned i = 0; i < AllCRLogicalOps.size(); i++)
-      Changed |= handleCROp(AllCRLogicalOps[i]);
+      Changed |= handleCROp(i);
     return Changed;
   }
 
@@ -578,10 +578,11 @@ void PPCReduceCRLogicals::initialize(MachineFunction &MFParam) {
 /// a unary CR logical might be used to change the condition code on a
 /// comparison feeding it. A nullary CR logical might simply be removable
 /// if the user of the bit it [un]sets can be transformed.
-bool PPCReduceCRLogicals::handleCROp(CRLogicalOpInfo &CRI) {
+bool PPCReduceCRLogicals::handleCROp(unsigned Idx) {
   // We can definitely split a block on the inputs to a binary CR operation
   // whose defs and (single) use are within the same block.
   bool Changed = false;
+  CRLogicalOpInfo CRI = AllCRLogicalOps[Idx];
   if (CRI.IsBinary && CRI.ContainedInBlock && CRI.SingleUse && CRI.FeedsBR &&
       CRI.DefsSingleUse) {
     Changed = splitBlockOnBinaryCROp(CRI);

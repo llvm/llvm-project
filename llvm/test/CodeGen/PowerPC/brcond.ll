@@ -1,5 +1,7 @@
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-unknown < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-unknown \
+; RUN:   -ppc-reduce-cr-logicals=false < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-unknown \
+; RUN:   -ppc-reduce-cr-logicals=false < %s | FileCheck %s
 
 define signext i32 @testi32slt(i32 signext %c1, i32 signext %c2, i32 signext %c3, i32 signext %c4, i32 signext %a1, i32 signext %a2) #0 {
 ; CHECK-LABEL: testi32slt
