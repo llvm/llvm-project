@@ -223,7 +223,7 @@ static uint32_t getEABI(InputFile *File) { return getEABI(getEFlags(File)); }
 uint32_t DPU::calcEFlags() const {
   uint32_t e_flags = UNKNOWN_E_FLAGS;
   InputFile *first_file = NULL;
-  for (InputFile *F : ObjectFiles) {
+  for (InputFile *F : objectFiles) {
     if (e_flags == UNKNOWN_E_FLAGS) {
       e_flags = getEFlags(F);
       first_file = F;
