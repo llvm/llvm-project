@@ -19,17 +19,14 @@ namespace elf {
 class InputFile;
 class OutputSection;
 class InputSectionBase;
-void copySectionsIntoPartitions();
-template <class ELFT> void createSyntheticSections();
-void combineEhSections();
 template <class ELFT> void writeResult();
 
 // This describes a program header entry.
 // Each contains type, access flags and range of output sections that will be
 // placed in it.
 struct PhdrEntry {
-  PhdrEntry(unsigned type, unsigned flags) : p_type(type), p_flags(flags) {}
-  void add(OutputSection *sec);
+  PhdrEntry(unsigned Type, unsigned Flags) : p_type(Type), p_flags(Flags) {}
+  void add(OutputSection *Sec);
 
   uint64_t p_paddr = 0;
   uint64_t p_vaddr = 0;
@@ -40,22 +37,22 @@ struct PhdrEntry {
   uint32_t p_type = 0;
   uint32_t p_flags = 0;
 
-  OutputSection *firstSec = nullptr;
-  OutputSection *lastSec = nullptr;
-  bool hasLMA = false;
+  OutputSection *FirstSec = nullptr;
+  OutputSection *LastSec = nullptr;
+  bool HasLMA = false;
 
-  uint64_t lmaOffset = 0;
+  uint64_t LMAOffset = 0;
 };
 
 void addReservedSymbols();
-llvm::StringRef getOutputSectionName(const InputSectionBase *s);
+llvm::StringRef getOutputSectionName(const InputSectionBase *S);
 
 template <class ELFT> uint32_t calcMipsEFlags();
 
-uint8_t getMipsFpAbiFlag(uint8_t oldFlag, uint8_t newFlag,
-                         llvm::StringRef fileName);
+uint8_t getMipsFpAbiFlag(uint8_t OldFlag, uint8_t NewFlag,
+                         llvm::StringRef FileName);
 
-bool isMipsN32Abi(const InputFile *f);
+bool isMipsN32Abi(const InputFile *F);
 bool isMicroMips();
 bool isMipsR6();
 } // namespace elf

@@ -22,8 +22,8 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::wasm;
 
-StringRef lld::relocTypeToString(uint8_t relocType) {
-  switch (relocType) {
+StringRef lld::relocTypeToString(uint8_t RelocType) {
+  switch (RelocType) {
 #define WASM_RELOC(NAME, REL)                                                  \
   case REL:                                                                    \
     return #NAME;
@@ -33,106 +33,104 @@ StringRef lld::relocTypeToString(uint8_t relocType) {
   llvm_unreachable("unknown reloc type");
 }
 
-std::string lld::toString(const InputChunk *c) {
-  return (toString(c->file) + ":(" + c->getName() + ")").str();
+std::string lld::toString(const InputChunk *C) {
+  return (toString(C->File) + ":(" + C->getName() + ")").str();
 }
 
 StringRef InputChunk::getComdatName() const {
-  uint32_t index = getComdat();
-  if (index == UINT32_MAX)
+  uint32_t Index = getComdat();
+  if (Index == UINT32_MAX)
     return StringRef();
-  return file->getWasmObj()->linkingData().Comdats[index];
+  return File->getWasmObj()->linkingData().Comdats[Index];
 }
 
 void InputChunk::verifyRelocTargets() const {
-  for (const WasmRelocation &rel : relocations) {
-    uint32_t existingValue;
-    unsigned bytesRead = 0;
-    uint32_t offset = rel.Offset - getInputSectionOffset();
-    const uint8_t *loc = data().data() + offset;
-    switch (rel.Type) {
+  for (const WasmRelocation &Rel : Relocations) {
+    uint32_t ExistingValue;
+    unsigned BytesRead = 0;
+    uint32_t Offset = Rel.Offset - getInputSectionOffset();
+    const uint8_t *Loc = data().data() + Offset;
+    switch (Rel.Type) {
     case R_WASM_TYPE_INDEX_LEB:
     case R_WASM_FUNCTION_INDEX_LEB:
     case R_WASM_GLOBAL_INDEX_LEB:
     case R_WASM_EVENT_INDEX_LEB:
     case R_WASM_MEMORY_ADDR_LEB:
-      existingValue = decodeULEB128(loc, &bytesRead);
+      ExistingValue = decodeULEB128(Loc, &BytesRead);
       break;
     case R_WASM_TABLE_INDEX_SLEB:
     case R_WASM_TABLE_INDEX_REL_SLEB:
     case R_WASM_MEMORY_ADDR_SLEB:
     case R_WASM_MEMORY_ADDR_REL_SLEB:
-      existingValue = static_cast<uint32_t>(decodeSLEB128(loc, &bytesRead));
+      ExistingValue = static_cast<uint32_t>(decodeSLEB128(Loc, &BytesRead));
       break;
     case R_WASM_TABLE_INDEX_I32:
     case R_WASM_MEMORY_ADDR_I32:
     case R_WASM_FUNCTION_OFFSET_I32:
     case R_WASM_SECTION_OFFSET_I32:
-      existingValue = static_cast<uint32_t>(read32le(loc));
+      ExistingValue = static_cast<uint32_t>(read32le(Loc));
       break;
     default:
       llvm_unreachable("unknown relocation type");
     }
 
-    if (bytesRead && bytesRead != 5)
+    if (BytesRead && BytesRead != 5)
       warn("expected LEB at relocation site be 5-byte padded");
 
-    if (rel.Type != R_WASM_GLOBAL_INDEX_LEB) {
-      uint32_t expectedValue = file->calcExpectedValue(rel);
-      if (expectedValue != existingValue)
-        warn("unexpected existing value for " + relocTypeToString(rel.Type) +
-             ": existing=" + Twine(existingValue) +
-             " expected=" + Twine(expectedValue));
+    if (Rel.Type != R_WASM_GLOBAL_INDEX_LEB) {
+      uint32_t ExpectedValue = File->calcExpectedValue(Rel);
+      if (ExpectedValue != ExistingValue)
+        warn("unexpected existing value for " + relocTypeToString(Rel.Type) +
+             ": existing=" + Twine(ExistingValue) +
+             " expected=" + Twine(ExpectedValue));
     }
   }
 }
 
 // Copy this input chunk to an mmap'ed output file and apply relocations.
-void InputChunk::writeTo(uint8_t *buf) const {
+void InputChunk::writeTo(uint8_t *Buf) const {
   // Copy contents
-  memcpy(buf + outputOffset, data().data(), data().size());
+  memcpy(Buf + OutputOffset, data().data(), data().size());
 
   // Apply relocations
-  if (relocations.empty())
+  if (Relocations.empty())
     return;
 
 #ifndef NDEBUG
   verifyRelocTargets();
 #endif
 
-  LLVM_DEBUG(dbgs() << "applying relocations: " << toString(this)
-                    << " count=" << relocations.size() << "\n");
-  int32_t off = outputOffset - getInputSectionOffset();
+  LLVM_DEBUG(dbgs() << "applying relocations: " << getName()
+                    << " count=" << Relocations.size() << "\n");
+  int32_t Off = OutputOffset - getInputSectionOffset();
 
-  for (const WasmRelocation &rel : relocations) {
-    uint8_t *loc = buf + rel.Offset + off;
-    uint32_t value = file->calcNewValue(rel);
-    LLVM_DEBUG(dbgs() << "apply reloc: type=" << relocTypeToString(rel.Type));
-    if (rel.Type != R_WASM_TYPE_INDEX_LEB)
-      LLVM_DEBUG(dbgs() << " sym=" << file->getSymbols()[rel.Index]->getName());
-    LLVM_DEBUG(dbgs() << " addend=" << rel.Addend << " index=" << rel.Index
-                      << " value=" << value << " offset=" << rel.Offset
+  for (const WasmRelocation &Rel : Relocations) {
+    uint8_t *Loc = Buf + Rel.Offset + Off;
+    uint32_t Value = File->calcNewValue(Rel);
+    LLVM_DEBUG(dbgs() << "apply reloc: type=" << relocTypeToString(Rel.Type)
+                      << " addend=" << Rel.Addend << " index=" << Rel.Index
+                      << " value=" << Value << " offset=" << Rel.Offset
                       << "\n");
 
-    switch (rel.Type) {
+    switch (Rel.Type) {
     case R_WASM_TYPE_INDEX_LEB:
     case R_WASM_FUNCTION_INDEX_LEB:
     case R_WASM_GLOBAL_INDEX_LEB:
     case R_WASM_EVENT_INDEX_LEB:
     case R_WASM_MEMORY_ADDR_LEB:
-      encodeULEB128(value, loc, 5);
+      encodeULEB128(Value, Loc, 5);
       break;
     case R_WASM_TABLE_INDEX_SLEB:
     case R_WASM_TABLE_INDEX_REL_SLEB:
     case R_WASM_MEMORY_ADDR_SLEB:
     case R_WASM_MEMORY_ADDR_REL_SLEB:
-      encodeSLEB128(static_cast<int32_t>(value), loc, 5);
+      encodeSLEB128(static_cast<int32_t>(Value), Loc, 5);
       break;
     case R_WASM_TABLE_INDEX_I32:
     case R_WASM_MEMORY_ADDR_I32:
     case R_WASM_FUNCTION_OFFSET_I32:
     case R_WASM_SECTION_OFFSET_I32:
-      write32le(loc, value);
+      write32le(Loc, Value);
       break;
     default:
       llvm_unreachable("unknown relocation type");
@@ -143,59 +141,59 @@ void InputChunk::writeTo(uint8_t *buf) const {
 // Copy relocation entries to a given output stream.
 // This function is used only when a user passes "-r". For a regular link,
 // we consume relocations instead of copying them to an output file.
-void InputChunk::writeRelocations(raw_ostream &os) const {
-  if (relocations.empty())
+void InputChunk::writeRelocations(raw_ostream &OS) const {
+  if (Relocations.empty())
     return;
 
-  int32_t off = outputOffset - getInputSectionOffset();
-  LLVM_DEBUG(dbgs() << "writeRelocations: " << file->getName()
-                    << " offset=" << Twine(off) << "\n");
+  int32_t Off = OutputOffset - getInputSectionOffset();
+  LLVM_DEBUG(dbgs() << "writeRelocations: " << File->getName()
+                    << " offset=" << Twine(Off) << "\n");
 
-  for (const WasmRelocation &rel : relocations) {
-    writeUleb128(os, rel.Type, "reloc type");
-    writeUleb128(os, rel.Offset + off, "reloc offset");
-    writeUleb128(os, file->calcNewIndex(rel), "reloc index");
+  for (const WasmRelocation &Rel : Relocations) {
+    writeUleb128(OS, Rel.Type, "reloc type");
+    writeUleb128(OS, Rel.Offset + Off, "reloc offset");
+    writeUleb128(OS, File->calcNewIndex(Rel), "reloc index");
 
-    if (relocTypeHasAddend(rel.Type))
-      writeSleb128(os, file->calcNewAddend(rel), "reloc addend");
+    if (relocTypeHasAddend(Rel.Type))
+      writeSleb128(OS, File->calcNewAddend(Rel), "reloc addend");
   }
 }
 
-void InputFunction::setFunctionIndex(uint32_t index) {
+void InputFunction::setFunctionIndex(uint32_t Index) {
   LLVM_DEBUG(dbgs() << "InputFunction::setFunctionIndex: " << getName()
-                    << " -> " << index << "\n");
+                    << " -> " << Index << "\n");
   assert(!hasFunctionIndex());
-  functionIndex = index;
+  FunctionIndex = Index;
 }
 
-void InputFunction::setTableIndex(uint32_t index) {
+void InputFunction::setTableIndex(uint32_t Index) {
   LLVM_DEBUG(dbgs() << "InputFunction::setTableIndex: " << getName() << " -> "
-                    << index << "\n");
+                    << Index << "\n");
   assert(!hasTableIndex());
-  tableIndex = index;
+  TableIndex = Index;
 }
 
 // Write a relocation value without padding and return the number of bytes
 // witten.
-static unsigned writeCompressedReloc(uint8_t *buf, const WasmRelocation &rel,
-                                     uint32_t value) {
-  switch (rel.Type) {
+static unsigned writeCompressedReloc(uint8_t *Buf, const WasmRelocation &Rel,
+                                     uint32_t Value) {
+  switch (Rel.Type) {
   case R_WASM_TYPE_INDEX_LEB:
   case R_WASM_FUNCTION_INDEX_LEB:
   case R_WASM_GLOBAL_INDEX_LEB:
   case R_WASM_EVENT_INDEX_LEB:
   case R_WASM_MEMORY_ADDR_LEB:
-    return encodeULEB128(value, buf);
+    return encodeULEB128(Value, Buf);
   case R_WASM_TABLE_INDEX_SLEB:
   case R_WASM_MEMORY_ADDR_SLEB:
-    return encodeSLEB128(static_cast<int32_t>(value), buf);
+    return encodeSLEB128(static_cast<int32_t>(Value), Buf);
   default:
     llvm_unreachable("unexpected relocation type");
   }
 }
 
-static unsigned getRelocWidthPadded(const WasmRelocation &rel) {
-  switch (rel.Type) {
+static unsigned getRelocWidthPadded(const WasmRelocation &Rel) {
+  switch (Rel.Type) {
   case R_WASM_TYPE_INDEX_LEB:
   case R_WASM_FUNCTION_INDEX_LEB:
   case R_WASM_GLOBAL_INDEX_LEB:
@@ -209,9 +207,9 @@ static unsigned getRelocWidthPadded(const WasmRelocation &rel) {
   }
 }
 
-static unsigned getRelocWidth(const WasmRelocation &rel, uint32_t value) {
-  uint8_t buf[5];
-  return writeCompressedReloc(buf, rel, value);
+static unsigned getRelocWidth(const WasmRelocation &Rel, uint32_t Value) {
+  uint8_t Buf[5];
+  return writeCompressedReloc(Buf, Rel, Value);
 }
 
 // Relocations of type LEB and SLEB in the code section are padded to 5 bytes
@@ -225,124 +223,124 @@ static unsigned getRelocWidth(const WasmRelocation &rel, uint32_t value) {
 // This function only computes the final output size.  It must be called
 // before getSize() is used to calculate of layout of the code section.
 void InputFunction::calculateSize() {
-  if (!file || !config->compressRelocations)
+  if (!File || !Config->CompressRelocations)
     return;
 
   LLVM_DEBUG(dbgs() << "calculateSize: " << getName() << "\n");
 
-  const uint8_t *secStart = file->codeSection->Content.data();
-  const uint8_t *funcStart = secStart + getInputSectionOffset();
-  uint32_t functionSizeLength;
-  decodeULEB128(funcStart, &functionSizeLength);
+  const uint8_t *SecStart = File->CodeSection->Content.data();
+  const uint8_t *FuncStart = SecStart + getInputSectionOffset();
+  uint32_t FunctionSizeLength;
+  decodeULEB128(FuncStart, &FunctionSizeLength);
 
-  uint32_t start = getInputSectionOffset();
-  uint32_t end = start + function->Size;
+  uint32_t Start = getInputSectionOffset();
+  uint32_t End = Start + Function->Size;
 
-  uint32_t lastRelocEnd = start + functionSizeLength;
-  for (const WasmRelocation &rel : relocations) {
-    LLVM_DEBUG(dbgs() << "  region: " << (rel.Offset - lastRelocEnd) << "\n");
-    compressedFuncSize += rel.Offset - lastRelocEnd;
-    compressedFuncSize += getRelocWidth(rel, file->calcNewValue(rel));
-    lastRelocEnd = rel.Offset + getRelocWidthPadded(rel);
+  uint32_t LastRelocEnd = Start + FunctionSizeLength;
+  for (const WasmRelocation &Rel : Relocations) {
+    LLVM_DEBUG(dbgs() << "  region: " << (Rel.Offset - LastRelocEnd) << "\n");
+    CompressedFuncSize += Rel.Offset - LastRelocEnd;
+    CompressedFuncSize += getRelocWidth(Rel, File->calcNewValue(Rel));
+    LastRelocEnd = Rel.Offset + getRelocWidthPadded(Rel);
   }
-  LLVM_DEBUG(dbgs() << "  final region: " << (end - lastRelocEnd) << "\n");
-  compressedFuncSize += end - lastRelocEnd;
+  LLVM_DEBUG(dbgs() << "  final region: " << (End - LastRelocEnd) << "\n");
+  CompressedFuncSize += End - LastRelocEnd;
 
   // Now we know how long the resulting function is we can add the encoding
   // of its length
-  uint8_t buf[5];
-  compressedSize = compressedFuncSize + encodeULEB128(compressedFuncSize, buf);
+  uint8_t Buf[5];
+  CompressedSize = CompressedFuncSize + encodeULEB128(CompressedFuncSize, Buf);
 
-  LLVM_DEBUG(dbgs() << "  calculateSize orig: " << function->Size << "\n");
-  LLVM_DEBUG(dbgs() << "  calculateSize  new: " << compressedSize << "\n");
+  LLVM_DEBUG(dbgs() << "  calculateSize orig: " << Function->Size << "\n");
+  LLVM_DEBUG(dbgs() << "  calculateSize  new: " << CompressedSize << "\n");
 }
 
 // Override the default writeTo method so that we can (optionally) write the
 // compressed version of the function.
-void InputFunction::writeTo(uint8_t *buf) const {
-  if (!file || !config->compressRelocations)
-    return InputChunk::writeTo(buf);
+void InputFunction::writeTo(uint8_t *Buf) const {
+  if (!File || !Config->CompressRelocations)
+    return InputChunk::writeTo(Buf);
 
-  buf += outputOffset;
-  uint8_t *orig = buf;
-  (void)orig;
+  Buf += OutputOffset;
+  uint8_t *Orig = Buf;
+  (void)Orig;
 
-  const uint8_t *secStart = file->codeSection->Content.data();
-  const uint8_t *funcStart = secStart + getInputSectionOffset();
-  const uint8_t *end = funcStart + function->Size;
-  uint32_t count;
-  decodeULEB128(funcStart, &count);
-  funcStart += count;
+  const uint8_t *SecStart = File->CodeSection->Content.data();
+  const uint8_t *FuncStart = SecStart + getInputSectionOffset();
+  const uint8_t *End = FuncStart + Function->Size;
+  uint32_t Count;
+  decodeULEB128(FuncStart, &Count);
+  FuncStart += Count;
 
   LLVM_DEBUG(dbgs() << "write func: " << getName() << "\n");
-  buf += encodeULEB128(compressedFuncSize, buf);
-  const uint8_t *lastRelocEnd = funcStart;
-  for (const WasmRelocation &rel : relocations) {
-    unsigned chunkSize = (secStart + rel.Offset) - lastRelocEnd;
-    LLVM_DEBUG(dbgs() << "  write chunk: " << chunkSize << "\n");
-    memcpy(buf, lastRelocEnd, chunkSize);
-    buf += chunkSize;
-    buf += writeCompressedReloc(buf, rel, file->calcNewValue(rel));
-    lastRelocEnd = secStart + rel.Offset + getRelocWidthPadded(rel);
+  Buf += encodeULEB128(CompressedFuncSize, Buf);
+  const uint8_t *LastRelocEnd = FuncStart;
+  for (const WasmRelocation &Rel : Relocations) {
+    unsigned ChunkSize = (SecStart + Rel.Offset) - LastRelocEnd;
+    LLVM_DEBUG(dbgs() << "  write chunk: " << ChunkSize << "\n");
+    memcpy(Buf, LastRelocEnd, ChunkSize);
+    Buf += ChunkSize;
+    Buf += writeCompressedReloc(Buf, Rel, File->calcNewValue(Rel));
+    LastRelocEnd = SecStart + Rel.Offset + getRelocWidthPadded(Rel);
   }
 
-  unsigned chunkSize = end - lastRelocEnd;
-  LLVM_DEBUG(dbgs() << "  write final chunk: " << chunkSize << "\n");
-  memcpy(buf, lastRelocEnd, chunkSize);
-  LLVM_DEBUG(dbgs() << "  total: " << (buf + chunkSize - orig) << "\n");
+  unsigned ChunkSize = End - LastRelocEnd;
+  LLVM_DEBUG(dbgs() << "  write final chunk: " << ChunkSize << "\n");
+  memcpy(Buf, LastRelocEnd, ChunkSize);
+  LLVM_DEBUG(dbgs() << "  total: " << (Buf + ChunkSize - Orig) << "\n");
 }
 
 // Generate code to apply relocations to the data section at runtime.
 // This is only called when generating shared libaries (PIC) where address are
 // not known at static link time.
-void InputSegment::generateRelocationCode(raw_ostream &os) const {
+void InputSegment::generateRelocationCode(raw_ostream &OS) const {
   LLVM_DEBUG(dbgs() << "generating runtime relocations: " << getName()
-                    << " count=" << relocations.size() << "\n");
+                    << " count=" << Relocations.size() << "\n");
 
   // TODO(sbc): Encode the relocations in the data section and write a loop
   // here to apply them.
-  uint32_t segmentVA = outputSeg->startVA + outputSegmentOffset;
-  for (const WasmRelocation &rel : relocations) {
-    uint32_t offset = rel.Offset - getInputSectionOffset();
-    uint32_t outputOffset = segmentVA + offset;
+  uint32_t SegmentVA = OutputSeg->StartVA + OutputSegmentOffset;
+  for (const WasmRelocation &Rel : Relocations) {
+    uint32_t Offset = Rel.Offset - getInputSectionOffset();
+    uint32_t OutputOffset = SegmentVA + Offset;
 
-    LLVM_DEBUG(dbgs() << "gen reloc: type=" << relocTypeToString(rel.Type)
-                      << " addend=" << rel.Addend << " index=" << rel.Index
-                      << " output offset=" << outputOffset << "\n");
+    LLVM_DEBUG(dbgs() << "gen reloc: type=" << relocTypeToString(Rel.Type)
+                      << " addend=" << Rel.Addend << " index=" << Rel.Index
+                      << " output offset=" << OutputOffset << "\n");
 
     // Get __memory_base
-    writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
-    writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(), "memory_base");
+    writeU8(OS, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
+    writeUleb128(OS, WasmSym::MemoryBase->getGlobalIndex(), "memory_base");
 
     // Add the offset of the relocation
-    writeU8(os, WASM_OPCODE_I32_CONST, "I32_CONST");
-    writeSleb128(os, outputOffset, "offset");
-    writeU8(os, WASM_OPCODE_I32_ADD, "ADD");
+    writeU8(OS, WASM_OPCODE_I32_CONST, "I32_CONST");
+    writeSleb128(OS, OutputOffset, "offset");
+    writeU8(OS, WASM_OPCODE_I32_ADD, "ADD");
 
-    Symbol *sym = file->getSymbol(rel);
+    Symbol *Sym = File->getSymbol(Rel);
     // Now figure out what we want to store
-    if (sym->hasGOTIndex()) {
-      writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
-      writeUleb128(os, sym->getGOTIndex(), "global index");
-      if (rel.Addend) {
-        writeU8(os, WASM_OPCODE_I32_CONST, "CONST");
-        writeSleb128(os, rel.Addend, "addend");
-        writeU8(os, WASM_OPCODE_I32_ADD, "ADD");
+    if (Sym->hasGOTIndex()) {
+      writeU8(OS, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
+      writeUleb128(OS, Sym->getGOTIndex(), "global index");
+      if (Rel.Addend) {
+        writeU8(OS, WASM_OPCODE_I32_CONST, "CONST");
+        writeSleb128(OS, Rel.Addend, "addend");
+        writeU8(OS, WASM_OPCODE_I32_ADD, "ADD");
       }
     } else {
-      const GlobalSymbol* baseSymbol = WasmSym::memoryBase;
-      if (rel.Type == R_WASM_TABLE_INDEX_I32)
-        baseSymbol = WasmSym::tableBase;
-      writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
-      writeUleb128(os, baseSymbol->getGlobalIndex(), "base");
-      writeU8(os, WASM_OPCODE_I32_CONST, "CONST");
-      writeSleb128(os, file->calcNewValue(rel), "offset");
-      writeU8(os, WASM_OPCODE_I32_ADD, "ADD");
+      const GlobalSymbol* BaseSymbol = WasmSym::MemoryBase;
+      if (Rel.Type == R_WASM_TABLE_INDEX_I32)
+        BaseSymbol = WasmSym::TableBase;
+      writeU8(OS, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
+      writeUleb128(OS, BaseSymbol->getGlobalIndex(), "base");
+      writeU8(OS, WASM_OPCODE_I32_CONST, "CONST");
+      writeSleb128(OS, File->calcNewValue(Rel), "offset");
+      writeU8(OS, WASM_OPCODE_I32_ADD, "ADD");
     }
 
     // Store that value at the virtual address
-    writeU8(os, WASM_OPCODE_I32_STORE, "I32_STORE");
-    writeUleb128(os, 2, "align");
-    writeUleb128(os, 0, "offset");
+    writeU8(OS, WASM_OPCODE_I32_STORE, "I32_STORE");
+    writeUleb128(OS, 2, "align");
+    writeUleb128(OS, 0, "offset");
   }
 }

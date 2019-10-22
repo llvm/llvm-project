@@ -30,7 +30,7 @@ if(${OPENMP_STANDALONE_BUILD})
   # If adding a new architecture, take a look at cmake/LibompGetArchitecture.cmake
   libomp_get_architecture(LIBOMP_DETECTED_ARCH)
   set(LIBOMP_ARCH ${LIBOMP_DETECTED_ARCH} CACHE STRING
-    "The architecture to build for (x86_64/i386/arm/ppc64/ppc64le/aarch64/mic/mips/mips64/riscv64).")
+    "The architecture to build for (x86_64/i386/arm/ppc64/ppc64le/aarch64/mic/mips/mips64).")
   # Should assertions be enabled?  They are on by default.
   set(LIBOMP_ENABLE_ASSERTIONS TRUE CACHE BOOL
     "enable assertions?")
@@ -58,21 +58,32 @@ else() # Part of LLVM build
     set(LIBOMP_ARCH aarch64)
   elseif(LIBOMP_NATIVE_ARCH MATCHES "arm")
     set(LIBOMP_ARCH arm)
-  elseif(LIBOMP_NATIVE_ARCH MATCHES "riscv64")
-    set(LIBOMP_ARCH riscv64)
   else()
     # last ditch effort
     libomp_get_architecture(LIBOMP_ARCH)
   endif ()
   set(LIBOMP_ENABLE_ASSERTIONS ${LLVM_ENABLE_ASSERTIONS})
 endif()
-libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc64 ppc64le aarch64 mic mips mips64 riscv64)
+libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc64 ppc64le aarch64 mic mips mips64)
 
 set(LIBOMP_LIB_TYPE normal CACHE STRING
   "Performance,Profiling,Stubs library (normal/profile/stubs)")
 libomp_check_variable(LIBOMP_LIB_TYPE normal profile stubs)
+set(LIBOMP_OMP_VERSION 50 CACHE STRING
+  "The OpenMP version (50/45/40/30)")
+libomp_check_variable(LIBOMP_OMP_VERSION 50 45 40 30)
 # Set the OpenMP Year and Month assiociated with version
-set(LIBOMP_OMP_YEAR_MONTH 201611)
+if(${LIBOMP_OMP_VERSION} GREATER 50 OR ${LIBOMP_OMP_VERSION} EQUAL 50)
+  set(LIBOMP_OMP_YEAR_MONTH 201611)
+elseif(${LIBOMP_OMP_VERSION} GREATER 45 OR ${LIBOMP_OMP_VERSION} EQUAL 45)
+  set(LIBOMP_OMP_YEAR_MONTH 201511)
+elseif(${LIBOMP_OMP_VERSION} GREATER 40 OR ${LIBOMP_OMP_VERSION} EQUAL 40)
+  set(LIBOMP_OMP_YEAR_MONTH 201307)
+elseif(${LIBOMP_OMP_VERSION} GREATER 30 OR ${LIBOMP_OMP_VERSION} EQUAL 30)
+  set(LIBOMP_OMP_YEAR_MONTH 201107)
+else()
+  set(LIBOMP_OMP_YEAR_MONTH 200505)
+endif()
 set(LIBOMP_MIC_ARCH knc CACHE STRING
   "Intel(R) Many Integrated Core Architecture (Intel(R) MIC Architecture) (knf/knc).  Ignored if not Intel(R) MIC Architecture build.")
 if("${LIBOMP_ARCH}" STREQUAL "mic")
@@ -97,6 +108,8 @@ if(NOT DEFINED CMAKE_MACOSX_RPATH)
 endif()
 
 # User specified flags.  These are appended to the configured flags.
+set(LIBOMP_CFLAGS "" CACHE STRING
+  "Appended user specified C compiler flags.")
 set(LIBOMP_CXXFLAGS "" CACHE STRING
   "Appended user specified C++ compiler flags.")
 set(LIBOMP_CPPFLAGS "" CACHE STRING
@@ -142,7 +155,6 @@ set(PPC64 FALSE)
 set(MIC FALSE)
 set(MIPS64 FALSE)
 set(MIPS FALSE)
-set(RISCV64 FALSE)
 if("${LIBOMP_ARCH}" STREQUAL "i386" OR "${LIBOMP_ARCH}" STREQUAL "32")    # IA-32 architecture
   set(IA32 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "x86_64" OR "${LIBOMP_ARCH}" STREQUAL "32e") # Intel(R) 64 architecture
@@ -163,8 +175,6 @@ elseif("${LIBOMP_ARCH}" STREQUAL "mips") # MIPS architecture
     set(MIPS TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "mips64") # MIPS64 architecture
     set(MIPS64 TRUE)
-  elseif("${LIBOMP_ARCH}" STREQUAL "riscv64") # RISCV64 architecture
-    set(RISCV64 TRUE)
 endif()
 
 # Set some flags based on build_type
@@ -203,7 +213,7 @@ endif()
 set(LIBOMP_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBOMP_SRC_DIR ${LIBOMP_BASE_DIR}/src)
 set(LIBOMP_TOOLS_DIR ${LIBOMP_BASE_DIR}/tools)
-set(LIBOMP_INC_DIR ${LIBOMP_SRC_DIR}/include)
+set(LIBOMP_INC_DIR ${LIBOMP_SRC_DIR}/include/${LIBOMP_OMP_VERSION})
 set(LIBOMP_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 # Enabling Fortran if it is needed
@@ -291,7 +301,7 @@ endif()
 # OMPT-support defaults to ON for OpenMP 5.0+ and if the requirements in
 # cmake/config-ix.cmake are fulfilled.
 set(OMPT_DEFAULT FALSE)
-if ((LIBOMP_HAVE_OMPT_SUPPORT) AND (NOT WIN32))
+if ((${LIBOMP_OMP_VERSION} GREATER 49) AND (LIBOMP_HAVE_OMPT_SUPPORT) AND (NOT WIN32))
   set(OMPT_DEFAULT TRUE)
 endif()
 set(LIBOMP_OMPT_SUPPORT ${OMPT_DEFAULT} CACHE BOOL
@@ -303,6 +313,9 @@ set(LIBOMP_OMPT_OPTIONAL TRUE CACHE BOOL
   "OMPT-optional?")
 if(LIBOMP_OMPT_SUPPORT AND (NOT LIBOMP_HAVE_OMPT_SUPPORT))
   libomp_error_say("OpenMP Tools Interface requested but not available in this implementation")
+endif()
+if(LIBOMP_OMPT_SUPPORT AND (${LIBOMP_OMP_VERSION} LESS 50))
+  libomp_error_say("OpenMP Tools Interface only available with OpenMP 5.0, LIBOMP_OMP_VERSION is ${LIBOMP_OMP_VERSION}")
 endif()
 
 # TSAN-support
@@ -355,6 +368,7 @@ if(${OPENMP_STANDALONE_BUILD})
     libomp_say("Intel(R) MIC Architecture    -- ${LIBOMP_MIC_ARCH}")
   endif()
   libomp_say("Build Type           -- ${CMAKE_BUILD_TYPE}")
+  libomp_say("OpenMP Version       -- ${LIBOMP_OMP_VERSION}")
   libomp_say("Library Kind         -- ${LIBOMP_LIBRARY_KIND}")
   libomp_say("Library Type         -- ${LIBOMP_LIB_TYPE}")
   libomp_say("Fortran Modules      -- ${LIBOMP_FORTRAN_MODULES}")

@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===----------------------------------------------------------------------===//
+//===-- execution_defs.h --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,10 +11,6 @@
 #define _PSTL_EXECUTION_POLICY_DEFS_H
 
 #include <type_traits>
-
-#include "pstl_config.h"
-
-_PSTL_HIDE_FROM_ABI_PUSH
 
 namespace __pstl
 {
@@ -156,7 +152,5 @@ using __enable_if_execution_policy =
 } // namespace __internal
 
 } // namespace __pstl
-
-_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_EXECUTION_POLICY_DEFS_H */

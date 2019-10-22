@@ -82,78 +82,74 @@ namespace lld {
 
 class ErrorHandler {
 public:
-  uint64_t errorCount = 0;
-  uint64_t errorLimit = 20;
-  StringRef errorLimitExceededMsg = "too many errors emitted, stopping now";
-  StringRef logName = "lld";
-  llvm::raw_ostream *errorOS = &llvm::errs();
-  bool exitEarly = true;
-  bool fatalWarnings = false;
-  bool verbose = false;
-  bool vsDiagnostics = false;
+  uint64_t ErrorCount = 0;
+  uint64_t ErrorLimit = 20;
+  StringRef ErrorLimitExceededMsg = "too many errors emitted, stopping now";
+  StringRef LogName = "lld";
+  llvm::raw_ostream *ErrorOS = &llvm::errs();
+  bool ColorDiagnostics = llvm::errs().has_colors();
+  bool ExitEarly = true;
+  bool FatalWarnings = false;
+  bool Verbose = false;
 
-  void error(const Twine &msg);
-  LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &msg);
-  void log(const Twine &msg);
-  void message(const Twine &msg);
-  void warn(const Twine &msg);
+  void error(const Twine &Msg);
+  LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
+  void log(const Twine &Msg);
+  void message(const Twine &Msg);
+  void warn(const Twine &Msg);
 
-  std::unique_ptr<llvm::FileOutputBuffer> outputBuffer;
+  std::unique_ptr<llvm::FileOutputBuffer> OutputBuffer;
 
 private:
-  using Colors = raw_ostream::Colors;
-
-  std::string getLocation(const Twine &msg);
+  void print(StringRef S, raw_ostream::Colors C);
 };
 
 /// Returns the default error handler.
 ErrorHandler &errorHandler();
 
-void enableColors(bool enable);
-
-inline void error(const Twine &msg) { errorHandler().error(msg); }
-inline LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &msg) {
-  errorHandler().fatal(msg);
+inline void error(const Twine &Msg) { errorHandler().error(Msg); }
+inline LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg) {
+  errorHandler().fatal(Msg);
 }
-inline void log(const Twine &msg) { errorHandler().log(msg); }
-inline void message(const Twine &msg) { errorHandler().message(msg); }
-inline void warn(const Twine &msg) { errorHandler().warn(msg); }
-inline uint64_t errorCount() { return errorHandler().errorCount; }
+inline void log(const Twine &Msg) { errorHandler().log(Msg); }
+inline void message(const Twine &Msg) { errorHandler().message(Msg); }
+inline void warn(const Twine &Msg) { errorHandler().warn(Msg); }
+inline uint64_t errorCount() { return errorHandler().ErrorCount; }
 
-LLVM_ATTRIBUTE_NORETURN void exitLld(int val);
+LLVM_ATTRIBUTE_NORETURN void exitLld(int Val);
 
-void diagnosticHandler(const llvm::DiagnosticInfo &di);
-void checkError(Error e);
+void diagnosticHandler(const llvm::DiagnosticInfo &DI);
+void checkError(Error E);
 
 // check functions are convenient functions to strip errors
 // from error-or-value objects.
-template <class T> T check(ErrorOr<T> e) {
-  if (auto ec = e.getError())
-    fatal(ec.message());
-  return std::move(*e);
+template <class T> T check(ErrorOr<T> E) {
+  if (auto EC = E.getError())
+    fatal(EC.message());
+  return std::move(*E);
 }
 
-template <class T> T check(Expected<T> e) {
-  if (!e)
-    fatal(llvm::toString(e.takeError()));
-  return std::move(*e);
-}
-
-template <class T>
-T check2(ErrorOr<T> e, llvm::function_ref<std::string()> prefix) {
-  if (auto ec = e.getError())
-    fatal(prefix() + ": " + ec.message());
-  return std::move(*e);
+template <class T> T check(Expected<T> E) {
+  if (!E)
+    fatal(llvm::toString(E.takeError()));
+  return std::move(*E);
 }
 
 template <class T>
-T check2(Expected<T> e, llvm::function_ref<std::string()> prefix) {
-  if (!e)
-    fatal(prefix() + ": " + toString(e.takeError()));
-  return std::move(*e);
+T check2(ErrorOr<T> E, llvm::function_ref<std::string()> Prefix) {
+  if (auto EC = E.getError())
+    fatal(Prefix() + ": " + EC.message());
+  return std::move(*E);
 }
 
-inline std::string toString(const Twine &s) { return s.str(); }
+template <class T>
+T check2(Expected<T> E, llvm::function_ref<std::string()> Prefix) {
+  if (!E)
+    fatal(Prefix() + ": " + toString(E.takeError()));
+  return std::move(*E);
+}
+
+inline std::string toString(const Twine &S) { return S.str(); }
 
 // To evaluate the second argument lazily, we use C macro.
 #define CHECK(E, S) check2((E), [&] { return toString(S); })

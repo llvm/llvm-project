@@ -6,27 +6,27 @@
 # RUN: llvm-readelf -x .got2 %t | FileCheck --check-prefix=HEX %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
-# RELOC:      .rela.dyn {
-# RELOC-NEXT:   0x10020108 R_PPC_IRELATIVE - 0x100100E0
+# RELOC:      .rela.plt {
+# RELOC-NEXT:   0x10020004 R_PPC_IRELATIVE - 0x10010000
 # RELOC-NEXT: }
 
-# SYM: 10010100 0 FUNC GLOBAL DEFAULT {{.*}} func
-# HEX: 0x10020104 10010100
+# SYM: 10010020 0 FUNC GLOBAL DEFAULT {{.*}} func
+# HEX: 0x10020000 10010020
 
 .section .got2,"aw"
 .long func
 
 # CHECK:      func_resolver:
-# CHECK-NEXT: 100100e0: blr
+# CHECK-NEXT: 10010000: blr
 # CHECK:      _start:
 # CHECK-NEXT:   bl .+12
 # CHECK-NEXT:   lis 9, 4097
-# CHECK-NEXT:   addi 9, 9, 256
+# CHECK-NEXT:   addi 9, 9, 32
 # CHECK-EMPTY:
 # CHECK-NEXT: 00000000.plt_call32.func:
-## 0x10020108 = 65536*4098+264
+## 10020004 = 65536*4098+4
 # CHECK-NEXT:   lis 11, 4098
-# CHECK-NEXT:   lwz 11, 264(11)
+# CHECK-NEXT:   lwz 11, 4(11)
 
 .text
 .globl func

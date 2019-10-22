@@ -1,4 +1,5 @@
 // RUN: %libomp-compile-and-run
+// REQUIRES: openmp-4.5
 // UNSUPPORTED: gcc
 // This test is incompatible with gcc because of the explicit call to
 // __kmpc_doacross_fini().  gcc relies on an implicit call to this function

@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===----------------------------------------------------------------------===//
+//===-- glue_memory_defs.h ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,9 +11,6 @@
 #define _PSTL_GLUE_MEMORY_DEFS_H
 
 #include "execution_defs.h"
-#include "pstl_config.h"
-
-_PSTL_HIDE_FROM_ABI_PUSH
 
 namespace std
 {
@@ -79,7 +76,4 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 uninitialized_value_construct_n(_ExecutionPolicy&& __exec, _ForwardIterator __first, _Size __n);
 
 } //  namespace std
-
-_PSTL_HIDE_FROM_ABI_POP
-
 #endif /* _PSTL_GLUE_MEMORY_DEFS_H */

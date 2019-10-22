@@ -103,7 +103,7 @@ struct test_non_const
     }
 };
 
-int
+int32_t
 main()
 {
     //const operator()

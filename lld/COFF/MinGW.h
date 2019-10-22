@@ -22,18 +22,18 @@ class AutoExporter {
 public:
   AutoExporter();
 
-  void addWholeArchive(StringRef path);
+  void addWholeArchive(StringRef Path);
 
-  llvm::StringSet<> excludeSymbols;
-  llvm::StringSet<> excludeSymbolPrefixes;
-  llvm::StringSet<> excludeSymbolSuffixes;
-  llvm::StringSet<> excludeLibs;
-  llvm::StringSet<> excludeObjects;
+  llvm::StringSet<> ExcludeSymbols;
+  llvm::StringSet<> ExcludeSymbolPrefixes;
+  llvm::StringSet<> ExcludeSymbolSuffixes;
+  llvm::StringSet<> ExcludeLibs;
+  llvm::StringSet<> ExcludeObjects;
 
-  bool shouldExport(Defined *sym) const;
+  bool shouldExport(Defined *Sym) const;
 };
 
-void writeDefFile(StringRef name);
+void writeDefFile(StringRef Name);
 
 } // namespace coff
 } // namespace lld

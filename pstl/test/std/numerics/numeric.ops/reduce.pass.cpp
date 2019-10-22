@@ -97,7 +97,7 @@ test_short_forms()
     }
 }
 
-int
+int32_t
 main()
 {
     // Test for popular types

@@ -14,7 +14,7 @@
 #include <memory>
 #include <execution>
 
-int
+int32_t
 main()
 {
     return 0;

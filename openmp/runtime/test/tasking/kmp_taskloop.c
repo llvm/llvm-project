@@ -1,5 +1,6 @@
 // RUN: %libomp-compile-and-run
 // RUN: %libomp-compile && env KMP_TASKLOOP_MIN_TASKS=1 %libomp-run
+// REQUIRES: openmp-4.5
 #include <stdio.h>
 #include <omp.h>
 #include "omp_my_sleep.h"

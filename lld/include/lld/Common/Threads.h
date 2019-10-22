@@ -63,28 +63,28 @@
 
 namespace lld {
 
-extern bool threadsEnabled;
+extern bool ThreadsEnabled;
 
-template <typename R, class FuncTy> void parallelForEach(R &&range, FuncTy fn) {
-  if (threadsEnabled)
-    for_each(llvm::parallel::par, std::begin(range), std::end(range), fn);
+template <typename R, class FuncTy> void parallelForEach(R &&Range, FuncTy Fn) {
+  if (ThreadsEnabled)
+    for_each(llvm::parallel::par, std::begin(Range), std::end(Range), Fn);
   else
-    for_each(llvm::parallel::seq, std::begin(range), std::end(range), fn);
+    for_each(llvm::parallel::seq, std::begin(Range), std::end(Range), Fn);
 }
 
-inline void parallelForEachN(size_t begin, size_t end,
-                             llvm::function_ref<void(size_t)> fn) {
-  if (threadsEnabled)
-    for_each_n(llvm::parallel::par, begin, end, fn);
+inline void parallelForEachN(size_t Begin, size_t End,
+                             llvm::function_ref<void(size_t)> Fn) {
+  if (ThreadsEnabled)
+    for_each_n(llvm::parallel::par, Begin, End, Fn);
   else
-    for_each_n(llvm::parallel::seq, begin, end, fn);
+    for_each_n(llvm::parallel::seq, Begin, End, Fn);
 }
 
-template <typename R, class FuncTy> void parallelSort(R &&range, FuncTy fn) {
-  if (threadsEnabled)
-    sort(llvm::parallel::par, std::begin(range), std::end(range), fn);
+template <typename R, class FuncTy> void parallelSort(R &&Range, FuncTy Fn) {
+  if (ThreadsEnabled)
+    sort(llvm::parallel::par, std::begin(Range), std::end(Range), Fn);
   else
-    sort(llvm::parallel::seq, std::begin(range), std::end(range), fn);
+    sort(llvm::parallel::seq, std::begin(Range), std::end(Range), Fn);
 }
 
 } // namespace lld

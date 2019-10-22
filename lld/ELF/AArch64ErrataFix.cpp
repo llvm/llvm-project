@@ -56,8 +56,8 @@ using namespace lld::elf;
 
 // ADRP
 // | 1 | immlo (2) | 1 | 0 0 0 0 | immhi (19) | Rd (5) |
-static bool isADRP(uint32_t instr) {
-  return (instr & 0x9f000000) == 0x90000000;
+static bool isADRP(uint32_t Instr) {
+  return (Instr & 0x9f000000) == 0x90000000;
 }
 
 // Load and store bit patterns from ARMv8-A ARM ARM.
@@ -66,8 +66,8 @@ static bool isADRP(uint32_t instr) {
 
 // All loads and stores have 1 (at bit postion 27), (0 at bit position 25).
 // | op0 x op1 (2) | 1 op2 0 op3 (2) | x | op4 (5) | xxxx | op5 (2) | x (10) |
-static bool isLoadStoreClass(uint32_t instr) {
-  return (instr & 0x0a000000) == 0x08000000;
+static bool isLoadStoreClass(uint32_t Instr) {
+  return (Instr & 0x0a000000) == 0x08000000;
 }
 
 // LDN/STN multiple no offset
@@ -82,20 +82,20 @@ static bool isLoadStoreClass(uint32_t instr) {
 // opcode == 0110 ST1 3 registers.
 // opcode == 0111 ST1 1 register.
 // opcode == 1010 ST1 2 registers.
-static bool isST1MultipleOpcode(uint32_t instr) {
-  return (instr & 0x0000f000) == 0x00002000 ||
-         (instr & 0x0000f000) == 0x00006000 ||
-         (instr & 0x0000f000) == 0x00007000 ||
-         (instr & 0x0000f000) == 0x0000a000;
+static bool isST1MultipleOpcode(uint32_t Instr) {
+  return (Instr & 0x0000f000) == 0x00002000 ||
+         (Instr & 0x0000f000) == 0x00006000 ||
+         (Instr & 0x0000f000) == 0x00007000 ||
+         (Instr & 0x0000f000) == 0x0000a000;
 }
 
-static bool isST1Multiple(uint32_t instr) {
-  return (instr & 0xbfff0000) == 0x0c000000 && isST1MultipleOpcode(instr);
+static bool isST1Multiple(uint32_t Instr) {
+  return (Instr & 0xbfff0000) == 0x0c000000 && isST1MultipleOpcode(Instr);
 }
 
 // Writes to Rn (writeback).
-static bool isST1MultiplePost(uint32_t instr) {
-  return (instr & 0xbfe00000) == 0x0c800000 && isST1MultipleOpcode(instr);
+static bool isST1MultiplePost(uint32_t Instr) {
+  return (Instr & 0xbfe00000) == 0x0c800000 && isST1MultipleOpcode(Instr);
 }
 
 // LDN/STN single no offset
@@ -110,41 +110,41 @@ static bool isST1MultiplePost(uint32_t instr) {
 // opcode == 000 ST1 8-bit.
 // opcode == 010 ST1 16-bit.
 // opcode == 100 ST1 32 or 64-bit (Size determines which).
-static bool isST1SingleOpcode(uint32_t instr) {
-  return (instr & 0x0040e000) == 0x00000000 ||
-         (instr & 0x0040e000) == 0x00004000 ||
-         (instr & 0x0040e000) == 0x00008000;
+static bool isST1SingleOpcode(uint32_t Instr) {
+  return (Instr & 0x0040e000) == 0x00000000 ||
+         (Instr & 0x0040e000) == 0x00004000 ||
+         (Instr & 0x0040e000) == 0x00008000;
 }
 
-static bool isST1Single(uint32_t instr) {
-  return (instr & 0xbfff0000) == 0x0d000000 && isST1SingleOpcode(instr);
+static bool isST1Single(uint32_t Instr) {
+  return (Instr & 0xbfff0000) == 0x0d000000 && isST1SingleOpcode(Instr);
 }
 
 // Writes to Rn (writeback).
-static bool isST1SinglePost(uint32_t instr) {
-  return (instr & 0xbfe00000) == 0x0d800000 && isST1SingleOpcode(instr);
+static bool isST1SinglePost(uint32_t Instr) {
+  return (Instr & 0xbfe00000) == 0x0d800000 && isST1SingleOpcode(Instr);
 }
 
-static bool isST1(uint32_t instr) {
-  return isST1Multiple(instr) || isST1MultiplePost(instr) ||
-         isST1Single(instr) || isST1SinglePost(instr);
+static bool isST1(uint32_t Instr) {
+  return isST1Multiple(Instr) || isST1MultiplePost(Instr) ||
+         isST1Single(Instr) || isST1SinglePost(Instr);
 }
 
 // Load/store exclusive
 // | size (2) 00 | 1000 | o2 L o1 | Rs (5) | o0 | Rt2 (5) | Rn (5) | Rt (5) |
 // L == 0 for Stores.
-static bool isLoadStoreExclusive(uint32_t instr) {
-  return (instr & 0x3f000000) == 0x08000000;
+static bool isLoadStoreExclusive(uint32_t Instr) {
+  return (Instr & 0x3f000000) == 0x08000000;
 }
 
-static bool isLoadExclusive(uint32_t instr) {
-  return (instr & 0x3f400000) == 0x08400000;
+static bool isLoadExclusive(uint32_t Instr) {
+  return (Instr & 0x3f400000) == 0x08400000;
 }
 
 // Load register literal
 // | opc (2) 01 | 1 V 00 | imm19 | Rt (5) |
-static bool isLoadLiteral(uint32_t instr) {
-  return (instr & 0x3b000000) == 0x18000000;
+static bool isLoadLiteral(uint32_t Instr) {
+  return (Instr & 0x3b000000) == 0x18000000;
 }
 
 // Load/store no-allocate pair
@@ -152,8 +152,8 @@ static bool isLoadLiteral(uint32_t instr) {
 // | opc (2) 10 | 1 V 00 | 0 L | imm7 | Rt2 (5) | Rn (5) | Rt (5) |
 // L == 0 for stores.
 // Never writes to register
-static bool isSTNP(uint32_t instr) {
-  return (instr & 0x3bc00000) == 0x28000000;
+static bool isSTNP(uint32_t Instr) {
+  return (Instr & 0x3bc00000) == 0x28000000;
 }
 
 // Load/store register pair
@@ -161,69 +161,69 @@ static bool isSTNP(uint32_t instr) {
 // | opc (2) 10 | 1 V 00 | 1 L | imm7 | Rt2 (5) | Rn (5) | Rt (5) |
 // L == 0 for stores, V == 0 for Scalar, V == 1 for Simd/FP
 // Writes to Rn.
-static bool isSTPPost(uint32_t instr) {
-  return (instr & 0x3bc00000) == 0x28800000;
+static bool isSTPPost(uint32_t Instr) {
+  return (Instr & 0x3bc00000) == 0x28800000;
 }
 
 // (offset)
 // | opc (2) 10 | 1 V 01 | 0 L | imm7 | Rt2 (5) | Rn (5) | Rt (5) |
-static bool isSTPOffset(uint32_t instr) {
-  return (instr & 0x3bc00000) == 0x29000000;
+static bool isSTPOffset(uint32_t Instr) {
+  return (Instr & 0x3bc00000) == 0x29000000;
 }
 
 // (pre-index)
 // | opc (2) 10 | 1 V 01 | 1 L | imm7 | Rt2 (5) | Rn (5) | Rt (5) |
 // Writes to Rn.
-static bool isSTPPre(uint32_t instr) {
-  return (instr & 0x3bc00000) == 0x29800000;
+static bool isSTPPre(uint32_t Instr) {
+  return (Instr & 0x3bc00000) == 0x29800000;
 }
 
-static bool isSTP(uint32_t instr) {
-  return isSTPPost(instr) || isSTPOffset(instr) || isSTPPre(instr);
+static bool isSTP(uint32_t Instr) {
+  return isSTPPost(Instr) || isSTPOffset(Instr) || isSTPPre(Instr);
 }
 
 // Load/store register (unscaled immediate)
 // | size (2) 11 | 1 V 00 | opc (2) 0 | imm9 | 00 | Rn (5) | Rt (5) |
 // V == 0 for Scalar, V == 1 for Simd/FP.
-static bool isLoadStoreUnscaled(uint32_t instr) {
-  return (instr & 0x3b000c00) == 0x38000000;
+static bool isLoadStoreUnscaled(uint32_t Instr) {
+  return (Instr & 0x3b000c00) == 0x38000000;
 }
 
 // Load/store register (immediate post-indexed)
 // | size (2) 11 | 1 V 00 | opc (2) 0 | imm9 | 01 | Rn (5) | Rt (5) |
-static bool isLoadStoreImmediatePost(uint32_t instr) {
-  return (instr & 0x3b200c00) == 0x38000400;
+static bool isLoadStoreImmediatePost(uint32_t Instr) {
+  return (Instr & 0x3b200c00) == 0x38000400;
 }
 
 // Load/store register (unprivileged)
 // | size (2) 11 | 1 V 00 | opc (2) 0 | imm9 | 10 | Rn (5) | Rt (5) |
-static bool isLoadStoreUnpriv(uint32_t instr) {
-  return (instr & 0x3b200c00) == 0x38000800;
+static bool isLoadStoreUnpriv(uint32_t Instr) {
+  return (Instr & 0x3b200c00) == 0x38000800;
 }
 
 // Load/store register (immediate pre-indexed)
 // | size (2) 11 | 1 V 00 | opc (2) 0 | imm9 | 11 | Rn (5) | Rt (5) |
-static bool isLoadStoreImmediatePre(uint32_t instr) {
-  return (instr & 0x3b200c00) == 0x38000c00;
+static bool isLoadStoreImmediatePre(uint32_t Instr) {
+  return (Instr & 0x3b200c00) == 0x38000c00;
 }
 
 // Load/store register (register offset)
 // | size (2) 11 | 1 V 00 | opc (2) 1 | Rm (5) | option (3) S | 10 | Rn | Rt |
-static bool isLoadStoreRegisterOff(uint32_t instr) {
-  return (instr & 0x3b200c00) == 0x38200800;
+static bool isLoadStoreRegisterOff(uint32_t Instr) {
+  return (Instr & 0x3b200c00) == 0x38200800;
 }
 
 // Load/store register (unsigned immediate)
 // | size (2) 11 | 1 V 01 | opc (2) | imm12 | Rn (5) | Rt (5) |
-static bool isLoadStoreRegisterUnsigned(uint32_t instr) {
-  return (instr & 0x3b000000) == 0x39000000;
+static bool isLoadStoreRegisterUnsigned(uint32_t Instr) {
+  return (Instr & 0x3b000000) == 0x39000000;
 }
 
 // Rt is always in bit position 0 - 4.
-static uint32_t getRt(uint32_t instr) { return (instr & 0x1f); }
+static uint32_t getRt(uint32_t Instr) { return (Instr & 0x1f); }
 
 // Rn is always in bit position 5 - 9.
-static uint32_t getRn(uint32_t instr) { return (instr >> 5) & 0x1f; }
+static uint32_t getRn(uint32_t Instr) { return (Instr >> 5) & 0x1f; }
 
 // C4.1.2 Branches, Exception Generating and System instructions
 // | op0 (3) 1 | 01 op1 (4) | x (22) |
@@ -232,41 +232,41 @@ static uint32_t getRn(uint32_t instr) { return (instr >> 5) & 0x1f; }
 // op0 == x00 101 op1 == xxxx Unconditional Branch immediate.
 // op0 == x01 101 op1 == 0xxx Compare and branch immediate.
 // op0 == x01 101 op1 == 1xxx Test and branch immediate.
-static bool isBranch(uint32_t instr) {
-  return ((instr & 0xfe000000) == 0xd6000000) || // Cond branch.
-         ((instr & 0xfe000000) == 0x54000000) || // Uncond branch reg.
-         ((instr & 0x7c000000) == 0x14000000) || // Uncond branch imm.
-         ((instr & 0x7c000000) == 0x34000000);   // Compare and test branch.
+static bool isBranch(uint32_t Instr) {
+  return ((Instr & 0xfe000000) == 0xd6000000) || // Cond branch.
+         ((Instr & 0xfe000000) == 0x54000000) || // Uncond branch reg.
+         ((Instr & 0x7c000000) == 0x14000000) || // Uncond branch imm.
+         ((Instr & 0x7c000000) == 0x34000000);   // Compare and test branch.
 }
 
-static bool isV8SingleRegisterNonStructureLoadStore(uint32_t instr) {
-  return isLoadStoreUnscaled(instr) || isLoadStoreImmediatePost(instr) ||
-         isLoadStoreUnpriv(instr) || isLoadStoreImmediatePre(instr) ||
-         isLoadStoreRegisterOff(instr) || isLoadStoreRegisterUnsigned(instr);
+static bool isV8SingleRegisterNonStructureLoadStore(uint32_t Instr) {
+  return isLoadStoreUnscaled(Instr) || isLoadStoreImmediatePost(Instr) ||
+         isLoadStoreUnpriv(Instr) || isLoadStoreImmediatePre(Instr) ||
+         isLoadStoreRegisterOff(Instr) || isLoadStoreRegisterUnsigned(Instr);
 }
 
 // Note that this function refers to v8.0 only and does not include the
 // additional load and store instructions added for in later revisions of
 // the architecture such as the Atomic memory operations introduced
 // in v8.1.
-static bool isV8NonStructureLoad(uint32_t instr) {
-  if (isLoadExclusive(instr))
+static bool isV8NonStructureLoad(uint32_t Instr) {
+  if (isLoadExclusive(Instr))
     return true;
-  if (isLoadLiteral(instr))
+  if (isLoadLiteral(Instr))
     return true;
-  else if (isV8SingleRegisterNonStructureLoadStore(instr)) {
+  else if (isV8SingleRegisterNonStructureLoadStore(Instr)) {
     // For Load and Store single register, Loads are derived from a
     // combination of the Size, V and Opc fields.
-    uint32_t size = (instr >> 30) & 0xff;
-    uint32_t v = (instr >> 26) & 0x1;
-    uint32_t opc = (instr >> 22) & 0x3;
+    uint32_t Size = (Instr >> 30) & 0xff;
+    uint32_t V = (Instr >> 26) & 0x1;
+    uint32_t Opc = (Instr >> 22) & 0x3;
     // For the load and store instructions that we are decoding.
     // Opc == 0 are all stores.
     // Opc == 1 with a couple of exceptions are loads. The exceptions are:
     // Size == 00 (0), V == 1, Opc == 10 (2) which is a store and
     // Size == 11 (3), V == 0, Opc == 10 (2) which is a prefetch.
-    return opc != 0 && !(size == 0 && v == 1 && opc == 2) &&
-           !(size == 3 && v == 0 && opc == 2);
+    return Opc != 0 && !(Size == 0 && V == 1 && Opc == 2) &&
+           !(Size == 3 && V == 0 && Opc == 2);
   }
   return false;
 }
@@ -275,18 +275,18 @@ static bool isV8NonStructureLoad(uint32_t instr) {
 // needed for errata 843419.
 
 // Instruction with writeback updates the index register after the load/store.
-static bool hasWriteback(uint32_t instr) {
-  return isLoadStoreImmediatePre(instr) || isLoadStoreImmediatePost(instr) ||
-         isSTPPre(instr) || isSTPPost(instr) || isST1SinglePost(instr) ||
-         isST1MultiplePost(instr);
+static bool hasWriteback(uint32_t Instr) {
+  return isLoadStoreImmediatePre(Instr) || isLoadStoreImmediatePost(Instr) ||
+         isSTPPre(Instr) || isSTPPost(Instr) || isST1SinglePost(Instr) ||
+         isST1MultiplePost(Instr);
 }
 
 // For the load and store class of instructions, a load can write to the
 // destination register, a load and a store can write to the base register when
 // the instruction has writeback.
-static bool doesLoadStoreWriteToReg(uint32_t instr, uint32_t reg) {
-  return (isV8NonStructureLoad(instr) && getRt(instr) == reg) ||
-         (hasWriteback(instr) && getRn(instr) == reg);
+static bool doesLoadStoreWriteToReg(uint32_t Instr, uint32_t Reg) {
+  return (isV8NonStructureLoad(Instr) && getRt(Instr) == Reg) ||
+         (hasWriteback(Instr) && getRn(Instr) == Reg);
 }
 
 // Scanner for Cortex-A53 errata 843419
@@ -318,18 +318,18 @@ static bool doesLoadStoreWriteToReg(uint32_t instr, uint32_t reg) {
 // Return true if the Instruction sequence Adrp, Instr2, and Instr4 match
 // the erratum sequence. The Adrp, Instr2 and Instr4 correspond to 1.), 2.),
 // and 4.) in the Scanner for Cortex-A53 errata comment above.
-static bool is843419ErratumSequence(uint32_t instr1, uint32_t instr2,
-                                    uint32_t instr4) {
-  if (!isADRP(instr1))
+static bool is843419ErratumSequence(uint32_t Instr1, uint32_t Instr2,
+                                    uint32_t Instr4) {
+  if (!isADRP(Instr1))
     return false;
 
-  uint32_t rn = getRt(instr1);
-  return isLoadStoreClass(instr2) &&
-         (isLoadStoreExclusive(instr2) || isLoadLiteral(instr2) ||
-          isV8SingleRegisterNonStructureLoadStore(instr2) || isSTP(instr2) ||
-          isSTNP(instr2) || isST1(instr2)) &&
-         !doesLoadStoreWriteToReg(instr2, rn) &&
-         isLoadStoreRegisterUnsigned(instr4) && getRn(instr4) == rn;
+  uint32_t Rn = getRt(Instr1);
+  return isLoadStoreClass(Instr2) &&
+         (isLoadStoreExclusive(Instr2) || isLoadLiteral(Instr2) ||
+          isV8SingleRegisterNonStructureLoadStore(Instr2) || isSTP(Instr2) ||
+          isSTNP(Instr2) || isST1(Instr2)) &&
+         !doesLoadStoreWriteToReg(Instr2, Rn) &&
+         isLoadStoreRegisterUnsigned(Instr4) && getRn(Instr4) == Rn;
 }
 
 // Scan the instruction sequence starting at Offset Off from the base of
@@ -338,143 +338,143 @@ static bool is843419ErratumSequence(uint32_t instr1, uint32_t instr2,
 // instructions we've scanned.
 // Return the offset of the load or store instruction in IS that we want to
 // patch or 0 if no patch required.
-static uint64_t scanCortexA53Errata843419(InputSection *isec, uint64_t &off,
-                                          uint64_t limit) {
-  uint64_t isecAddr = isec->getVA(0);
+static uint64_t scanCortexA53Errata843419(InputSection *IS, uint64_t &Off,
+                                          uint64_t Limit) {
+  uint64_t ISAddr = IS->getVA(0);
 
   // Advance Off so that (ISAddr + Off) modulo 0x1000 is at least 0xff8.
-  uint64_t initialPageOff = (isecAddr + off) & 0xfff;
-  if (initialPageOff < 0xff8)
-    off += 0xff8 - initialPageOff;
+  uint64_t InitialPageOff = (ISAddr + Off) & 0xfff;
+  if (InitialPageOff < 0xff8)
+    Off += 0xff8 - InitialPageOff;
 
-  bool optionalAllowed = limit - off > 12;
-  if (off >= limit || limit - off < 12) {
+  bool OptionalAllowed = Limit - Off > 12;
+  if (Off >= Limit || Limit - Off < 12) {
     // Need at least 3 4-byte sized instructions to trigger erratum.
-    off = limit;
+    Off = Limit;
     return 0;
   }
 
-  uint64_t patchOff = 0;
-  const uint8_t *buf = isec->data().begin();
-  const ulittle32_t *instBuf = reinterpret_cast<const ulittle32_t *>(buf + off);
-  uint32_t instr1 = *instBuf++;
-  uint32_t instr2 = *instBuf++;
-  uint32_t instr3 = *instBuf++;
-  if (is843419ErratumSequence(instr1, instr2, instr3)) {
-    patchOff = off + 8;
-  } else if (optionalAllowed && !isBranch(instr3)) {
-    uint32_t instr4 = *instBuf++;
-    if (is843419ErratumSequence(instr1, instr2, instr4))
-      patchOff = off + 12;
+  uint64_t PatchOff = 0;
+  const uint8_t *Buf = IS->data().begin();
+  const ulittle32_t *InstBuf = reinterpret_cast<const ulittle32_t *>(Buf + Off);
+  uint32_t Instr1 = *InstBuf++;
+  uint32_t Instr2 = *InstBuf++;
+  uint32_t Instr3 = *InstBuf++;
+  if (is843419ErratumSequence(Instr1, Instr2, Instr3)) {
+    PatchOff = Off + 8;
+  } else if (OptionalAllowed && !isBranch(Instr3)) {
+    uint32_t Instr4 = *InstBuf++;
+    if (is843419ErratumSequence(Instr1, Instr2, Instr4))
+      PatchOff = Off + 12;
   }
-  if (((isecAddr + off) & 0xfff) == 0xff8)
-    off += 4;
+  if (((ISAddr + Off) & 0xfff) == 0xff8)
+    Off += 4;
   else
-    off += 0xffc;
-  return patchOff;
+    Off += 0xffc;
+  return PatchOff;
 }
 
 class lld::elf::Patch843419Section : public SyntheticSection {
 public:
-  Patch843419Section(InputSection *p, uint64_t off);
+  Patch843419Section(InputSection *P, uint64_t Off);
 
-  void writeTo(uint8_t *buf) override;
+  void writeTo(uint8_t *Buf) override;
 
   size_t getSize() const override { return 8; }
 
   uint64_t getLDSTAddr() const;
 
   // The Section we are patching.
-  const InputSection *patchee;
+  const InputSection *Patchee;
   // The offset of the instruction in the Patchee section we are patching.
-  uint64_t patcheeOffset;
+  uint64_t PatcheeOffset;
   // A label for the start of the Patch that we can use as a relocation target.
-  Symbol *patchSym;
+  Symbol *PatchSym;
 };
 
-lld::elf::Patch843419Section::Patch843419Section(InputSection *p, uint64_t off)
+lld::elf::Patch843419Section::Patch843419Section(InputSection *P, uint64_t Off)
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 4,
                        ".text.patch"),
-      patchee(p), patcheeOffset(off) {
-  this->parent = p->getParent();
-  patchSym = addSyntheticLocal(
-      saver.save("__CortexA53843419_" + utohexstr(getLDSTAddr())), STT_FUNC, 0,
+      Patchee(P), PatcheeOffset(Off) {
+  this->Parent = P->getParent();
+  PatchSym = addSyntheticLocal(
+      Saver.save("__CortexA53843419_" + utohexstr(getLDSTAddr())), STT_FUNC, 0,
       getSize(), *this);
-  addSyntheticLocal(saver.save("$x"), STT_NOTYPE, 0, 0, *this);
+  addSyntheticLocal(Saver.save("$x"), STT_NOTYPE, 0, 0, *this);
 }
 
 uint64_t lld::elf::Patch843419Section::getLDSTAddr() const {
-  return patchee->getVA(patcheeOffset);
+  return Patchee->getVA(PatcheeOffset);
 }
 
-void lld::elf::Patch843419Section::writeTo(uint8_t *buf) {
+void lld::elf::Patch843419Section::writeTo(uint8_t *Buf) {
   // Copy the instruction that we will be replacing with a branch in the
   // Patchee Section.
-  write32le(buf, read32le(patchee->data().begin() + patcheeOffset));
+  write32le(Buf, read32le(Patchee->data().begin() + PatcheeOffset));
 
   // Apply any relocation transferred from the original PatcheeSection.
-  // For a SyntheticSection Buf already has outSecOff added, but relocateAlloc
-  // also adds outSecOff so we need to subtract to avoid double counting.
-  this->relocateAlloc(buf - outSecOff, buf - outSecOff + getSize());
+  // For a SyntheticSection Buf already has OutSecOff added, but relocateAlloc
+  // also adds OutSecOff so we need to subtract to avoid double counting.
+  this->relocateAlloc(Buf - OutSecOff, Buf - OutSecOff + getSize());
 
   // Return address is the next instruction after the one we have just copied.
-  uint64_t s = getLDSTAddr() + 4;
-  uint64_t p = patchSym->getVA() + 4;
-  target->relocateOne(buf + 4, R_AARCH64_JUMP26, s - p);
+  uint64_t S = getLDSTAddr() + 4;
+  uint64_t P = PatchSym->getVA() + 4;
+  Target->relocateOne(Buf + 4, R_AARCH64_JUMP26, S - P);
 }
 
 void AArch64Err843419Patcher::init() {
   // The AArch64 ABI permits data in executable sections. We must avoid scanning
   // this data as if it were instructions to avoid false matches. We use the
   // mapping symbols in the InputObjects to identify this data, caching the
-  // results in sectionMap so we don't have to recalculate it each pass.
+  // results in SectionMap so we don't have to recalculate it each pass.
 
   // The ABI Section 4.5.4 Mapping symbols; defines local symbols that describe
   // half open intervals [Symbol Value, Next Symbol Value) of code and data
   // within sections. If there is no next symbol then the half open interval is
   // [Symbol Value, End of section). The type, code or data, is determined by
   // the mapping symbol name, $x for code, $d for data.
-  auto isCodeMapSymbol = [](const Symbol *b) {
-    return b->getName() == "$x" || b->getName().startswith("$x.");
+  auto IsCodeMapSymbol = [](const Symbol *B) {
+    return B->getName() == "$x" || B->getName().startswith("$x.");
   };
-  auto isDataMapSymbol = [](const Symbol *b) {
-    return b->getName() == "$d" || b->getName().startswith("$d.");
+  auto IsDataMapSymbol = [](const Symbol *B) {
+    return B->getName() == "$d" || B->getName().startswith("$d.");
   };
 
   // Collect mapping symbols for every executable InputSection.
-  for (InputFile *file : objectFiles) {
-    auto *f = cast<ObjFile<ELF64LE>>(file);
-    for (Symbol *b : f->getLocalSymbols()) {
-      auto *def = dyn_cast<Defined>(b);
-      if (!def)
+  for (InputFile *File : ObjectFiles) {
+    auto *F = cast<ObjFile<ELF64LE>>(File);
+    for (Symbol *B : F->getLocalSymbols()) {
+      auto *Def = dyn_cast<Defined>(B);
+      if (!Def)
         continue;
-      if (!isCodeMapSymbol(def) && !isDataMapSymbol(def))
+      if (!IsCodeMapSymbol(Def) && !IsDataMapSymbol(Def))
         continue;
-      if (auto *sec = dyn_cast_or_null<InputSection>(def->section))
-        if (sec->flags & SHF_EXECINSTR)
-          sectionMap[sec].push_back(def);
+      if (auto *Sec = dyn_cast_or_null<InputSection>(Def->Section))
+        if (Sec->Flags & SHF_EXECINSTR)
+          SectionMap[Sec].push_back(Def);
     }
   }
   // For each InputSection make sure the mapping symbols are in sorted in
   // ascending order and free from consecutive runs of mapping symbols with
   // the same type. For example we must remove the redundant $d.1 from $x.0
   // $d.0 $d.1 $x.1.
-  for (auto &kv : sectionMap) {
-    std::vector<const Defined *> &mapSyms = kv.second;
-    if (mapSyms.size() <= 1)
+  for (auto &KV : SectionMap) {
+    std::vector<const Defined *> &MapSyms = KV.second;
+    if (MapSyms.size() <= 1)
       continue;
-    llvm::stable_sort(mapSyms, [](const Defined *a, const Defined *b) {
-      return a->value < b->value;
+    llvm::stable_sort(MapSyms, [](const Defined *A, const Defined *B) {
+      return A->Value < B->Value;
     });
-    mapSyms.erase(
-        std::unique(mapSyms.begin(), mapSyms.end(),
-                    [=](const Defined *a, const Defined *b) {
-                      return (isCodeMapSymbol(a) && isCodeMapSymbol(b)) ||
-                             (isDataMapSymbol(a) && isDataMapSymbol(b));
+    MapSyms.erase(
+        std::unique(MapSyms.begin(), MapSyms.end(),
+                    [=](const Defined *A, const Defined *B) {
+                      return (IsCodeMapSymbol(A) && IsCodeMapSymbol(B)) ||
+                             (IsDataMapSymbol(A) && IsDataMapSymbol(B));
                     }),
-        mapSyms.end());
+        MapSyms.end());
   }
-  initialized = true;
+  Initialized = true;
 }
 
 // Insert the PatchSections we have created back into the
@@ -483,60 +483,60 @@ void AArch64Err843419Patcher::init() {
 // executable sections, although we may need to insert them earlier if the
 // InputSectionDescription is larger than the maximum branch range.
 void AArch64Err843419Patcher::insertPatches(
-    InputSectionDescription &isd, std::vector<Patch843419Section *> &patches) {
-  uint64_t isecLimit;
-  uint64_t prevIsecLimit = isd.sections.front()->outSecOff;
-  uint64_t patchUpperBound = prevIsecLimit + target->getThunkSectionSpacing();
-  uint64_t outSecAddr = isd.sections.front()->getParent()->addr;
+    InputSectionDescription &ISD, std::vector<Patch843419Section *> &Patches) {
+  uint64_t ISLimit;
+  uint64_t PrevISLimit = ISD.Sections.front()->OutSecOff;
+  uint64_t PatchUpperBound = PrevISLimit + Target->getThunkSectionSpacing();
+  uint64_t OutSecAddr = ISD.Sections.front()->getParent()->Addr;
 
-  // Set the outSecOff of patches to the place where we want to insert them.
+  // Set the OutSecOff of patches to the place where we want to insert them.
   // We use a similar strategy to Thunk placement. Place patches roughly
   // every multiple of maximum branch range.
-  auto patchIt = patches.begin();
-  auto patchEnd = patches.end();
-  for (const InputSection *isec : isd.sections) {
-    isecLimit = isec->outSecOff + isec->getSize();
-    if (isecLimit > patchUpperBound) {
-      while (patchIt != patchEnd) {
-        if ((*patchIt)->getLDSTAddr() - outSecAddr >= prevIsecLimit)
+  auto PatchIt = Patches.begin();
+  auto PatchEnd = Patches.end();
+  for (const InputSection *IS : ISD.Sections) {
+    ISLimit = IS->OutSecOff + IS->getSize();
+    if (ISLimit > PatchUpperBound) {
+      while (PatchIt != PatchEnd) {
+        if ((*PatchIt)->getLDSTAddr() - OutSecAddr >= PrevISLimit)
           break;
-        (*patchIt)->outSecOff = prevIsecLimit;
-        ++patchIt;
+        (*PatchIt)->OutSecOff = PrevISLimit;
+        ++PatchIt;
       }
-      patchUpperBound = prevIsecLimit + target->getThunkSectionSpacing();
+      PatchUpperBound = PrevISLimit + Target->getThunkSectionSpacing();
     }
-    prevIsecLimit = isecLimit;
+    PrevISLimit = ISLimit;
   }
-  for (; patchIt != patchEnd; ++patchIt) {
-    (*patchIt)->outSecOff = isecLimit;
+  for (; PatchIt != PatchEnd; ++PatchIt) {
+    (*PatchIt)->OutSecOff = ISLimit;
   }
 
-  // merge all patch sections. We use the outSecOff assigned above to
+  // merge all patch sections. We use the OutSecOff assigned above to
   // determine the insertion point. This is ok as we only merge into an
   // InputSectionDescription once per pass, and at the end of the pass
-  // assignAddresses() will recalculate all the outSecOff values.
-  std::vector<InputSection *> tmp;
-  tmp.reserve(isd.sections.size() + patches.size());
-  auto mergeCmp = [](const InputSection *a, const InputSection *b) {
-    if (a->outSecOff < b->outSecOff)
+  // assignAddresses() will recalculate all the OutSecOff values.
+  std::vector<InputSection *> Tmp;
+  Tmp.reserve(ISD.Sections.size() + Patches.size());
+  auto MergeCmp = [](const InputSection *A, const InputSection *B) {
+    if (A->OutSecOff < B->OutSecOff)
       return true;
-    if (a->outSecOff == b->outSecOff && isa<Patch843419Section>(a) &&
-        !isa<Patch843419Section>(b))
+    if (A->OutSecOff == B->OutSecOff && isa<Patch843419Section>(A) &&
+        !isa<Patch843419Section>(B))
       return true;
     return false;
   };
-  std::merge(isd.sections.begin(), isd.sections.end(), patches.begin(),
-             patches.end(), std::back_inserter(tmp), mergeCmp);
-  isd.sections = std::move(tmp);
+  std::merge(ISD.Sections.begin(), ISD.Sections.end(), Patches.begin(),
+             Patches.end(), std::back_inserter(Tmp), MergeCmp);
+  ISD.Sections = std::move(Tmp);
 }
 
-// Given an erratum sequence that starts at address adrpAddr, with an
-// instruction that we need to patch at patcheeOffset from the start of
+// Given an erratum sequence that starts at address AdrpAddr, with an
+// instruction that we need to patch at PatcheeOffset from the start of
 // InputSection IS, create a Patch843419 Section and add it to the
 // Patches that we need to insert.
-static void implementPatch(uint64_t adrpAddr, uint64_t patcheeOffset,
-                           InputSection *isec,
-                           std::vector<Patch843419Section *> &patches) {
+static void implementPatch(uint64_t AdrpAddr, uint64_t PatcheeOffset,
+                           InputSection *IS,
+                           std::vector<Patch843419Section *> &Patches) {
   // There may be a relocation at the same offset that we are patching. There
   // are four cases that we need to consider.
   // Case 1: R_AARCH64_JUMP26 branch relocation. We have already patched this
@@ -551,29 +551,29 @@ static void implementPatch(uint64_t adrpAddr, uint64_t patcheeOffset,
   // and replace the relocation with a R_AARCH_JUMP26 branch relocation.
   // Case 4: No relocation. We must create a new R_AARCH64_JUMP26 branch
   // relocation at the offset.
-  auto relIt = llvm::find_if(isec->relocations, [=](const Relocation &r) {
-    return r.offset == patcheeOffset;
+  auto RelIt = llvm::find_if(IS->Relocations, [=](const Relocation &R) {
+    return R.Offset == PatcheeOffset;
   });
-  if (relIt != isec->relocations.end() &&
-      (relIt->type == R_AARCH64_JUMP26 || relIt->expr == R_RELAX_TLS_IE_TO_LE))
+  if (RelIt != IS->Relocations.end() &&
+      (RelIt->Type == R_AARCH64_JUMP26 || RelIt->Expr == R_RELAX_TLS_IE_TO_LE))
     return;
 
   log("detected cortex-a53-843419 erratum sequence starting at " +
-      utohexstr(adrpAddr) + " in unpatched output.");
+      utohexstr(AdrpAddr) + " in unpatched output.");
 
-  auto *ps = make<Patch843419Section>(isec, patcheeOffset);
-  patches.push_back(ps);
+  auto *PS = make<Patch843419Section>(IS, PatcheeOffset);
+  Patches.push_back(PS);
 
-  auto makeRelToPatch = [](uint64_t offset, Symbol *patchSym) {
-    return Relocation{R_PC, R_AARCH64_JUMP26, offset, 0, patchSym};
+  auto MakeRelToPatch = [](uint64_t Offset, Symbol *PatchSym) {
+    return Relocation{R_PC, R_AARCH64_JUMP26, Offset, 0, PatchSym};
   };
 
-  if (relIt != isec->relocations.end()) {
-    ps->relocations.push_back(
-        {relIt->expr, relIt->type, 0, relIt->addend, relIt->sym});
-    *relIt = makeRelToPatch(patcheeOffset, ps->patchSym);
+  if (RelIt != IS->Relocations.end()) {
+    PS->Relocations.push_back(
+        {RelIt->Expr, RelIt->Type, 0, RelIt->Addend, RelIt->Sym});
+    *RelIt = MakeRelToPatch(PatcheeOffset, PS->PatchSym);
   } else
-    isec->relocations.push_back(makeRelToPatch(patcheeOffset, ps->patchSym));
+    IS->Relocations.push_back(MakeRelToPatch(PatcheeOffset, PS->PatchSym));
 }
 
 // Scan all the instructions in InputSectionDescription, for each instance of
@@ -581,40 +581,40 @@ static void implementPatch(uint64_t adrpAddr, uint64_t patcheeOffset,
 // Patch843419Sections that need to be applied to ISD.
 std::vector<Patch843419Section *>
 AArch64Err843419Patcher::patchInputSectionDescription(
-    InputSectionDescription &isd) {
-  std::vector<Patch843419Section *> patches;
-  for (InputSection *isec : isd.sections) {
+    InputSectionDescription &ISD) {
+  std::vector<Patch843419Section *> Patches;
+  for (InputSection *IS : ISD.Sections) {
     //  LLD doesn't use the erratum sequence in SyntheticSections.
-    if (isa<SyntheticSection>(isec))
+    if (isa<SyntheticSection>(IS))
       continue;
-    // Use sectionMap to make sure we only scan code and not inline data.
+    // Use SectionMap to make sure we only scan code and not inline data.
     // We have already sorted MapSyms in ascending order and removed consecutive
     // mapping symbols of the same type. Our range of executable instructions to
-    // scan is therefore [codeSym->value, dataSym->value) or [codeSym->value,
+    // scan is therefore [CodeSym->Value, DataSym->Value) or [CodeSym->Value,
     // section size).
-    std::vector<const Defined *> &mapSyms = sectionMap[isec];
+    std::vector<const Defined *> &MapSyms = SectionMap[IS];
 
-    auto codeSym = llvm::find_if(mapSyms, [&](const Defined *ms) {
-      return ms->getName().startswith("$x");
+    auto CodeSym = llvm::find_if(MapSyms, [&](const Defined *MS) {
+      return MS->getName().startswith("$x");
     });
 
-    while (codeSym != mapSyms.end()) {
-      auto dataSym = std::next(codeSym);
-      uint64_t off = (*codeSym)->value;
-      uint64_t limit =
-          (dataSym == mapSyms.end()) ? isec->data().size() : (*dataSym)->value;
+    while (CodeSym != MapSyms.end()) {
+      auto DataSym = std::next(CodeSym);
+      uint64_t Off = (*CodeSym)->Value;
+      uint64_t Limit =
+          (DataSym == MapSyms.end()) ? IS->data().size() : (*DataSym)->Value;
 
-      while (off < limit) {
-        uint64_t startAddr = isec->getVA(off);
-        if (uint64_t patcheeOffset = scanCortexA53Errata843419(isec, off, limit))
-          implementPatch(startAddr, patcheeOffset, isec, patches);
+      while (Off < Limit) {
+        uint64_t StartAddr = IS->getVA(Off);
+        if (uint64_t PatcheeOffset = scanCortexA53Errata843419(IS, Off, Limit))
+          implementPatch(StartAddr, PatcheeOffset, IS, Patches);
       }
-      if (dataSym == mapSyms.end())
+      if (DataSym == MapSyms.end())
         break;
-      codeSym = std::next(dataSym);
+      CodeSym = std::next(DataSym);
     }
   }
-  return patches;
+  return Patches;
 }
 
 // For each InputSectionDescription make one pass over the executable sections
@@ -630,22 +630,22 @@ AArch64Err843419Patcher::patchInputSectionDescription(
 // Ouptut and Input Sections may have been changed.
 // Returns false if no patches were required and no changes were made.
 bool AArch64Err843419Patcher::createFixes() {
-  if (initialized == false)
+  if (Initialized == false)
     init();
 
-  bool addressesChanged = false;
-  for (OutputSection *os : outputSections) {
-    if (!(os->flags & SHF_ALLOC) || !(os->flags & SHF_EXECINSTR))
+  bool AddressesChanged = false;
+  for (OutputSection *OS : OutputSections) {
+    if (!(OS->Flags & SHF_ALLOC) || !(OS->Flags & SHF_EXECINSTR))
       continue;
-    for (BaseCommand *bc : os->sectionCommands)
-      if (auto *isd = dyn_cast<InputSectionDescription>(bc)) {
-        std::vector<Patch843419Section *> patches =
-            patchInputSectionDescription(*isd);
-        if (!patches.empty()) {
-          insertPatches(*isd, patches);
-          addressesChanged = true;
+    for (BaseCommand *BC : OS->SectionCommands)
+      if (auto *ISD = dyn_cast<InputSectionDescription>(BC)) {
+        std::vector<Patch843419Section *> Patches =
+            patchInputSectionDescription(*ISD);
+        if (!Patches.empty()) {
+          insertPatches(*ISD, Patches);
+          AddressesChanged = true;
         }
       }
   }
-  return addressesChanged;
+  return AddressesChanged;
 }

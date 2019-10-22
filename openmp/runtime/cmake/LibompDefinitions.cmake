@@ -28,3 +28,4 @@ function(libomp_get_definitions_flags cppflags)
   # CMake doesn't include CPPFLAGS from environment, but we will.
   set(${cppflags} ${cppflags_local} ${LIBOMP_CPPFLAGS} $ENV{CPPFLAGS} PARENT_SCOPE)
 endfunction()
+

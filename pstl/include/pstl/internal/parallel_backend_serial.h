@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===----------------------------------------------------------------------===//
+//===-- parallel_backend_serial.h -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,13 +16,9 @@
 #include <numeric>
 #include <utility>
 
-#include "pstl_config.h"
-
-_PSTL_HIDE_FROM_ABI_PUSH
-
 namespace __pstl
 {
-namespace __serial_backend
+namespace __serial
 {
 
 template <typename _Tp>
@@ -128,9 +124,15 @@ __parallel_invoke(_ExecutionPolicy&&, _F1&& __f1, _F2&& __f2)
     std::forward<_F2>(__f2)();
 }
 
-} // namespace __serial_backend
+} // namespace __serial
 } // namespace __pstl
 
-_PSTL_HIDE_FROM_ABI_POP
+namespace __pstl
+{
+namespace __par_backend
+{
+using namespace __pstl::__serial;
+}
+} // namespace __pstl
 
 #endif /* _PSTL_PARALLEL_BACKEND_SERIAL_H */

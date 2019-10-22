@@ -29,19 +29,19 @@ public:
 
 private:
   std::vector<Patch843419Section *>
-  patchInputSectionDescription(InputSectionDescription &isd);
+  patchInputSectionDescription(InputSectionDescription &ISD);
 
-  void insertPatches(InputSectionDescription &isd,
-                     std::vector<Patch843419Section *> &patches);
+  void insertPatches(InputSectionDescription &ISD,
+                     std::vector<Patch843419Section *> &Patches);
 
   void init();
 
-  // A cache of the mapping symbols defined by the InputSection sorted in order
+  // A cache of the mapping symbols defined by the InputSecion sorted in order
   // of ascending value with redundant symbols removed. These describe
   // the ranges of code and data in an executable InputSection.
-  std::map<InputSection *, std::vector<const Defined *>> sectionMap;
+  std::map<InputSection *, std::vector<const Defined *>> SectionMap;
 
-  bool initialized = false;
+  bool Initialized = false;
 };
 
 } // namespace elf

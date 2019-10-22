@@ -16,8 +16,8 @@ namespace elf {
 class InputSectionBase;
 struct EhSectionPiece;
 
-size_t readEhRecordSize(InputSectionBase *s, size_t off);
-uint8_t getFdeEncoding(EhSectionPiece *p);
+size_t readEhRecordSize(InputSectionBase *S, size_t Off);
+uint8_t getFdeEncoding(EhSectionPiece *P);
 } // namespace elf
 } // namespace lld
 

@@ -4,7 +4,7 @@
 // RUN: ld.lld %t2.o -o %t2.so -shared
 // RUN: not ld.lld %t.o %t2.so -o %t 2>&1 | FileCheck %s
 
-// CHECK: error: cannot preempt symbol: bar
+// CHECK: cannot preempt symbol: bar
 // CHECK: >>> defined in {{.*}}.so
 // CHECK: >>> referenced by {{.*}}.o:(.text+0x1)
 
@@ -12,10 +12,7 @@
 // CHECK-NEXT: >>> defined in {{.*}}.so
 // CHECK-NEXT: >>> referenced by {{.*}}.o:(.text+0x6)
 
-// RUN: ld.lld --noinhibit-exec %t.o %t2.so -o %t 2>&1 | FileCheck %s --check-prefix=NOINHIBIT
-// NOINHIBIT: warning: cannot preempt symbol: bar
-// NOINHIBIT-NEXT: >>> defined in {{.*}}.so
-// NOINHIBIT-NEXT: >>> referenced by {{.*}}.o:(.text+0x1)
+// RUN: not ld.lld --noinhibit-exec %t.o %t2.so -o %t 2>&1 | FileCheck %s --check-prefix=NOINHIBIT
 // NOINHIBIT: warning: symbol 'zed' has no type
 // NOINHIBIT-NEXT: >>> defined in {{.*}}.so
 // NOINHIBIT-NEXT: >>> referenced by {{.*}}.o:(.text+0x6)

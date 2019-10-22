@@ -33,14 +33,15 @@
 
 ## 73728 == 0x12000 == ADDR(.got)
 # CHECK:       _start:
-# CHECK-NEXT:   401115: 8b 05 {{.*}} movl 4202800, %eax
-# CHECK-NEXT:   40111b: 8b 1d {{.*}} movl 4202800, %ebx
-# CHECK-NEXT:   401121: 8b 80 {{.*}} movl -4100(%eax), %eax
-# CHECK-NEXT:   401127: 8b 83 {{.*}} movl -4100(%ebx), %eax
+# CHECK-NEXT:   401001: 8b 05 {{.*}} movl 4202496, %eax
+# CHECK-NEXT:   401007: 8b 1d {{.*}} movl 4202496, %ebx
+# CHECK-NEXT:   40100d: 8b 80 {{.*}} movl -4096(%eax), %eax
+# CHECK-NEXT:   401013: 8b 83 {{.*}} movl -4096(%ebx), %eax
 # CHECK: Sections:
 # CHECK:  Name Size     VMA
-# CHECK:  .got.plt 0000000c 0000000000403134
+# CHECK:  .got.plt 0000000c 0000000000403000
 
 # RUN: not ld.lld %S/Inputs/i386-got32x-baseless.elf -o %t1 -pie 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR
-# ERR-COUNT-2: error: symbol 'foo' cannot be preempted; recompile with -fPIE
+# ERR: error: can't create dynamic relocation R_386_GOT32X against symbol: foo in readonly segment; recompile object files with -fPIC or pass '-Wl,-z,notext' to allow text relocations in the output
+# ERR: error: can't create dynamic relocation R_386_GOT32X against symbol: foo in readonly segment; recompile object files with -fPIC or pass '-Wl,-z,notext' to allow text relocations in the output
