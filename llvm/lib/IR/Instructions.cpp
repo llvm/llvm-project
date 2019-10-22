@@ -1371,50 +1371,46 @@ StoreInst::StoreInst(Value *val, Value *addr, BasicBlock *InsertAtEnd)
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
                      Instruction *InsertBefore)
-    : StoreInst(val, addr, isVolatile, /*Align=*/0, InsertBefore) {}
+    : StoreInst(val, addr, isVolatile, /*Align=*/None, InsertBefore) {}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
                      BasicBlock *InsertAtEnd)
-    : StoreInst(val, addr, isVolatile, /*Align=*/0, InsertAtEnd) {}
+    : StoreInst(val, addr, isVolatile, /*Align=*/None, InsertAtEnd) {}
 
-StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, unsigned Align,
+StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, MaybeAlign Align,
                      Instruction *InsertBefore)
     : StoreInst(val, addr, isVolatile, Align, AtomicOrdering::NotAtomic,
                 SyncScope::System, InsertBefore) {}
 
-StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, unsigned Align,
+StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, MaybeAlign Align,
                      BasicBlock *InsertAtEnd)
     : StoreInst(val, addr, isVolatile, Align, AtomicOrdering::NotAtomic,
                 SyncScope::System, InsertAtEnd) {}
 
-StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
-                     unsigned Align, AtomicOrdering Order,
-                     SyncScope::ID SSID,
+StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, MaybeAlign Align,
+                     AtomicOrdering Order, SyncScope::ID SSID,
                      Instruction *InsertBefore)
-  : Instruction(Type::getVoidTy(val->getContext()), Store,
-                OperandTraits<StoreInst>::op_begin(this),
-                OperandTraits<StoreInst>::operands(this),
-                InsertBefore) {
+    : Instruction(Type::getVoidTy(val->getContext()), Store,
+                  OperandTraits<StoreInst>::op_begin(this),
+                  OperandTraits<StoreInst>::operands(this), InsertBefore) {
   Op<0>() = val;
   Op<1>() = addr;
   setVolatile(isVolatile);
-  setAlignment(MaybeAlign(Align));
+  setAlignment(Align);
   setAtomic(Order, SSID);
   AssertOK();
 }
 
-StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
-                     unsigned Align, AtomicOrdering Order,
-                     SyncScope::ID SSID,
+StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, MaybeAlign Align,
+                     AtomicOrdering Order, SyncScope::ID SSID,
                      BasicBlock *InsertAtEnd)
-  : Instruction(Type::getVoidTy(val->getContext()), Store,
-                OperandTraits<StoreInst>::op_begin(this),
-                OperandTraits<StoreInst>::operands(this),
-                InsertAtEnd) {
+    : Instruction(Type::getVoidTy(val->getContext()), Store,
+                  OperandTraits<StoreInst>::op_begin(this),
+                  OperandTraits<StoreInst>::operands(this), InsertAtEnd) {
   Op<0>() = val;
   Op<1>() = addr;
   setVolatile(isVolatile);
-  setAlignment(MaybeAlign(Align));
+  setAlignment(Align);
   setAtomic(Order, SSID);
   AssertOK();
 }
@@ -4146,8 +4142,8 @@ LoadInst *LoadInst::cloneImpl() const {
 
 StoreInst *StoreInst::cloneImpl() const {
   return new StoreInst(getOperand(0), getOperand(1), isVolatile(),
-                       getAlignment(), getOrdering(), getSyncScopeID());
-
+                       MaybeAlign(getAlignment()), getOrdering(),
+                       getSyncScopeID());
 }
 
 AtomicCmpXchgInst *AtomicCmpXchgInst::cloneImpl() const {

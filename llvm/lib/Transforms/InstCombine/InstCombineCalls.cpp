@@ -1085,7 +1085,8 @@ Instruction *InstCombiner::simplifyMaskedStore(IntrinsicInst &II) {
   // If the mask is all ones, this is a plain vector store of the 1st argument.
   if (ConstMask->isAllOnesValue()) {
     Value *StorePtr = II.getArgOperand(1);
-    unsigned Alignment = cast<ConstantInt>(II.getArgOperand(2))->getZExtValue();
+    MaybeAlign Alignment(
+        cast<ConstantInt>(II.getArgOperand(2))->getZExtValue());
     return new StoreInst(II.getArgOperand(0), StorePtr, false, Alignment);
   }
 
@@ -2360,7 +2361,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // Turn PPC VSX stores into normal stores.
     Type *OpPtrTy = PointerType::getUnqual(II->getArgOperand(0)->getType());
     Value *Ptr = Builder.CreateBitCast(II->getArgOperand(1), OpPtrTy);
-    return new StoreInst(II->getArgOperand(0), Ptr, false, 1);
+    return new StoreInst(II->getArgOperand(0), Ptr, false, Align::None());
   }
   case Intrinsic::ppc_qpx_qvlfs:
     // Turn PPC QPX qvlfs -> load if the pointer is known aligned.
