@@ -779,10 +779,12 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C, const AttrBuilder &B) {
       Attr = Attribute::getWithByValType(C, B.getByValType());
       break;
     case Attribute::Alignment:
-      Attr = Attribute::getWithAlignment(C, Align(B.getAlignment()));
+      assert(B.getAlignment() && "Alignment must be set");
+      Attr = Attribute::getWithAlignment(C, *B.getAlignment());
       break;
     case Attribute::StackAlignment:
-      Attr = Attribute::getWithStackAlignment(C, Align(B.getStackAlignment()));
+      assert(B.getStackAlignment() && "StackAlignment must be set");
+      Attr = Attribute::getWithStackAlignment(C, *B.getStackAlignment());
       break;
     case Attribute::Dereferenceable:
       Attr = Attribute::getWithDereferenceableBytes(
@@ -1162,7 +1164,7 @@ AttributeList AttributeList::addAttributes(LLVMContext &C, unsigned Index,
   // FIXME it is not obvious how this should work for alignment. For now, say
   // we can't change a known alignment.
   const MaybeAlign OldAlign = getAttributes(Index).getAlignment();
-  unsigned NewAlign = B.getAlignment();
+  const MaybeAlign NewAlign = B.getAlignment();
   assert((!OldAlign || !NewAlign || OldAlign == NewAlign) &&
          "Attempt to change alignment!");
 #endif
@@ -1460,9 +1462,9 @@ AttrBuilder &AttrBuilder::addAttribute(Attribute Attr) {
   Attrs[Kind] = true;
 
   if (Kind == Attribute::Alignment)
-    Alignment = MaybeAlign(Attr.getAlignment());
+    Alignment = Attr.getAlignment();
   else if (Kind == Attribute::StackAlignment)
-    StackAlignment = MaybeAlign(Attr.getStackAlignment());
+    StackAlignment = Attr.getStackAlignment();
   else if (Kind == Attribute::ByVal)
     ByValType = Attr.getValueAsType();
   else if (Kind == Attribute::Dereferenceable)

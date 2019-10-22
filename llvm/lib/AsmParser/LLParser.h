@@ -281,14 +281,14 @@ namespace llvm {
     void ParseOptionalVisibility(unsigned &Res);
     void ParseOptionalDLLStorageClass(unsigned &Res);
     bool ParseOptionalCallingConv(unsigned &CC);
-    bool ParseOptionalAlignment(unsigned &Alignment);
+    bool ParseOptionalAlignment(MaybeAlign &Alignment);
     bool ParseOptionalDerefAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes);
     bool ParseScopeAndOrdering(bool isAtomic, SyncScope::ID &SSID,
                                AtomicOrdering &Ordering);
     bool ParseScope(SyncScope::ID &SSID);
     bool ParseOrdering(AtomicOrdering &Ordering);
     bool ParseOptionalStackAlignment(unsigned &Alignment);
-    bool ParseOptionalCommaAlign(unsigned &Alignment, bool &AteExtraComma);
+    bool ParseOptionalCommaAlign(MaybeAlign &Alignment, bool &AteExtraComma);
     bool ParseOptionalCommaAddrSpace(unsigned &AddrSpace, LocTy &Loc,
                                      bool &AteExtraComma);
     bool ParseOptionalCommaInAlloca(bool &IsInAlloca);
