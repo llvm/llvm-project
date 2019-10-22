@@ -1437,6 +1437,7 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
         if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
           return error("inconsistent type for generic virtual register");
 
+        MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
         MRI.setType(Reg, Ty);
       }
     }
@@ -1455,6 +1456,7 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
     if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
       return error("inconsistent type for generic virtual register");
 
+    MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
     MRI.setType(Reg, Ty);
   } else if (Register::isVirtualRegister(Reg)) {
     // Generic virtual registers must have a type.
