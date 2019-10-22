@@ -435,7 +435,8 @@ public:
                                           PH->getTerminator());
     Value *Initial = new LoadInst(
         Cand.Load->getType(), InitialPtr, "load_initial",
-        /* isVolatile */ false, Cand.Load->getAlignment(), PH->getTerminator());
+        /* isVolatile */ false, MaybeAlign(Cand.Load->getAlignment()),
+        PH->getTerminator());
 
     PHINode *PHI = PHINode::Create(Initial->getType(), 2, "store_forwarded",
                                    &L->getHeader()->front());

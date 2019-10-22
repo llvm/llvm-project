@@ -1296,25 +1296,25 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name,
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    Instruction *InsertBef)
-    : LoadInst(Ty, Ptr, Name, isVolatile, /*Align=*/0, InsertBef) {}
+    : LoadInst(Ty, Ptr, Name, isVolatile, /*Align=*/None, InsertBef) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    BasicBlock *InsertAE)
-    : LoadInst(Ty, Ptr, Name, isVolatile, /*Align=*/0, InsertAE) {}
+    : LoadInst(Ty, Ptr, Name, isVolatile, /*Align=*/None, InsertAE) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
-                   unsigned Align, Instruction *InsertBef)
+                   MaybeAlign Align, Instruction *InsertBef)
     : LoadInst(Ty, Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
                SyncScope::System, InsertBef) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
-                   unsigned Align, BasicBlock *InsertAE)
+                   MaybeAlign Align, BasicBlock *InsertAE)
     : LoadInst(Ty, Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
                SyncScope::System, InsertAE) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
-                   unsigned Align, AtomicOrdering Order,
-                   SyncScope::ID SSID, Instruction *InsertBef)
+                   MaybeAlign Align, AtomicOrdering Order, SyncScope::ID SSID,
+                   Instruction *InsertBef)
     : UnaryInstruction(Ty, Load, Ptr, InsertBef) {
   assert(Ty == cast<PointerType>(Ptr->getType())->getElementType());
   setVolatile(isVolatile);
@@ -1325,12 +1325,12 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
 }
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
-                   unsigned Align, AtomicOrdering Order, SyncScope::ID SSID,
+                   MaybeAlign Align, AtomicOrdering Order, SyncScope::ID SSID,
                    BasicBlock *InsertAE)
     : UnaryInstruction(Ty, Load, Ptr, InsertAE) {
   assert(Ty == cast<PointerType>(Ptr->getType())->getElementType());
   setVolatile(isVolatile);
-  setAlignment(MaybeAlign(Align));
+  setAlignment(Align);
   setAtomic(Order, SSID);
   AssertOK();
   setName(Name);
@@ -4140,7 +4140,8 @@ AllocaInst *AllocaInst::cloneImpl() const {
 
 LoadInst *LoadInst::cloneImpl() const {
   return new LoadInst(getType(), getOperand(0), Twine(), isVolatile(),
-                      getAlignment(), getOrdering(), getSyncScopeID());
+                      MaybeAlign(getAlignment()), getOrdering(),
+                      getSyncScopeID());
 }
 
 StoreInst *StoreInst::cloneImpl() const {
