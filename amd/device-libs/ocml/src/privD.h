@@ -76,7 +76,7 @@
     double _sqrt_d1 = BUILTIN_FMA_F64(-_sqrt_s2, _sqrt_s2, _sqrt_x); \
     double _sqrt_ret = BUILTIN_FMA_F64(_sqrt_d1, _sqrt_h1, _sqrt_s2); \
     _sqrt_ret *= _sqrt_b ? 0x1.0p-128 : 1.0; \
-    _sqrt_ret = (_sqrt_x == 0.0) | (_sqrt_x == (double)INFINITY) ? _sqrt_x : _sqrt_ret; \
+    _sqrt_ret = ((_sqrt_x == 0.0) | (_sqrt_x == (double)INFINITY)) ? _sqrt_x : _sqrt_ret; \
     _sqrt_ret; \
 })
 

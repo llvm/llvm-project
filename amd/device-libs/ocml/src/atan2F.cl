@@ -43,10 +43,10 @@ MATH_MANGLE(atan2)(float y, float x)
     if (!FINITE_ONLY_OPT()) {
         // x and y are +- Inf
         t = x < 0.0f ? threepiby4 : piby4;
-        a = BUILTIN_ISINF_F32(x) & BUILTIN_ISINF_F32(y) ? t : a;
+        a = (BUILTIN_ISINF_F32(x) & BUILTIN_ISINF_F32(y)) ? t : a;
 
         // x or y is NaN
-        a = BUILTIN_ISNAN_F32(x) | BUILTIN_ISNAN_F32(y) ?
+        a = (BUILTIN_ISNAN_F32(x) | BUILTIN_ISNAN_F32(y)) ?
             AS_FLOAT(QNANBITPATT_SP32) : a;
     }
 

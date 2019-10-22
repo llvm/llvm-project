@@ -27,7 +27,7 @@ MATH_MANGLE(nextafter)(half x, half y)
         r = ax > (short)PINFBITPATT_HP16 ? ix : r;
         r = ay > (short)PINFBITPATT_HP16 ? iy : r;
     }
-    r = (ax | ay) == (short)0 | ix == iy ? iy : r;
+    r = ((ax | ay) == (short)0 | ix == iy) ? iy : r;
     return AS_HALF(r);
 }
 

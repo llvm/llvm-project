@@ -36,12 +36,11 @@ MATH_MANGLE(atan2pi)(half y, half x)
     if (!FINITE_ONLY_OPT()) {
         // x and y are +- Inf
         at = x < 0.0h ? 0.75h : 0.25h;
-        a = BUILTIN_ISINF_F16(x) &
-            BUILTIN_ISINF_F16(y) ?
+        a = (BUILTIN_ISINF_F16(x) & BUILTIN_ISINF_F16(y)) ?
             at : a;
 
         // x or y is NaN
-        a = BUILTIN_ISNAN_F16(x) | BUILTIN_ISNAN_F16(y) ?
+        a = (BUILTIN_ISNAN_F16(x) | BUILTIN_ISNAN_F16(y)) ?
             AS_HALF((short)QNANBITPATT_HP16) : a;
     }
 

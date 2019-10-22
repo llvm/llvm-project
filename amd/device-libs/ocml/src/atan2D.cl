@@ -38,9 +38,9 @@ MATH_MANGLE(atan2)(double y, double x)
     if (!FINITE_ONLY_OPT()) {
         t = xneg ? threepiby4 : piby4;
         t = BUILTIN_COPYSIGN_F64(t, y);
-        a = BUILTIN_ISINF_F64(x) & BUILTIN_ISINF_F64(y) ? t : a;
+        a = (BUILTIN_ISINF_F64(x) & BUILTIN_ISINF_F64(y)) ? t : a;
 
-        a = BUILTIN_ISNAN_F64(x) | BUILTIN_ISNAN_F64(y) ?
+        a = (BUILTIN_ISNAN_F64(x) | BUILTIN_ISNAN_F64(y)) ?
               AS_DOUBLE(QNANBITPATT_DP64) : a;
     }
 

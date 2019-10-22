@@ -262,7 +262,7 @@ MATH_MANGLE(lgamma_r_impl)(float x)
 
     int s = 0;
     if (x >= 0.0f) {
-        ret = (x == 1.0f) | (x == 2.0f) ? 0.0f : ret;
+        ret = ((x == 1.0f) | (x == 2.0f)) ? 0.0f : ret;
         s = x == 0.0f ? 0 : 1;
     } else if (uax < 0x4b000000) { // x > -0x1.0p+23
         float t = MATH_MANGLE(sinpi)(x);

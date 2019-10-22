@@ -25,7 +25,7 @@ MATH_MANGLE(nextafter)(float x, float y)
         r = ax > PINFBITPATT_SP32 ? ix : r;
         r = ay > PINFBITPATT_SP32 ? iy : r;
     }
-    r = (ax | ay) == 0 | ix == iy ? iy : r;
+    r = ((ax | ay) == 0 | ix == iy) ? iy : r;
     return AS_FLOAT(r);
 }
 

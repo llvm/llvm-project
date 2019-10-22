@@ -13,7 +13,7 @@
 ATTR T##N \
 sign(T##N x) \
 { \
-    return copysign(isnan(x) | (x == (T##N)0) ? (T##N)0 : (T##N)1, x); \
+    return copysign((isnan(x) | (x == (T##N)0)) ? (T##N)0 : (T##N)1, x); \
 }
 
 #define GEN(T) \

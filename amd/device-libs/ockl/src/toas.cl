@@ -23,7 +23,7 @@ __attribute__((const)) __global void *
 OCKL_MANGLE_T(to,global)(void *a)
 {
     __global void *ga = (__global void *)((ulong)a);
-    return OCKL_MANGLE_T(is_local,addr)(a) | OCKL_MANGLE_T(is_private,addr)(a) ?  (__global void *)0UL : ga;
+    return (OCKL_MANGLE_T(is_local,addr)(a) | OCKL_MANGLE_T(is_private,addr)(a)) ? (__global void *)0UL : ga;
 }
 
 __attribute__((const)) __local void *

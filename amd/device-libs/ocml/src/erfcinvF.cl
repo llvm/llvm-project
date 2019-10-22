@@ -42,7 +42,7 @@ MATH_MANGLE(erfcinv)(float y)
     }
 
     if (!FINITE_ONLY_OPT()) {
-        ret = (y < 0.0f) | (y > 2.0f) ? AS_FLOAT(QNANBITPATT_SP32) : ret;
+        ret = ((y < 0.0f) | (y > 2.0f)) ? AS_FLOAT(QNANBITPATT_SP32) : ret;
         ret = y == 0.0f ? AS_FLOAT(PINFBITPATT_SP32) : ret;
         ret = y == 2.0f ? AS_FLOAT(NINFBITPATT_SP32) : ret;
     }

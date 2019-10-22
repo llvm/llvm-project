@@ -25,7 +25,7 @@ MATH_MANGLE(nextafter)(double x, double y)
         r = BUILTIN_ISNAN_F64(x) ? ix : r;
         r = BUILTIN_ISNAN_F64(y) ? iy : r;
     }
-    r = (ax|ay) == 0L | ix == iy ? iy : r;
+    r = ((ax|ay) == 0L | ix == iy) ? iy : r;
     return AS_DOUBLE(r);
 }
 

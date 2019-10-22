@@ -25,8 +25,7 @@ MATH_MANGLE(rhypot)(half x, half y)
     half ret = (half)BUILTIN_RSQRT_F32(d2);
 
     if (!FINITE_ONLY_OPT()) {
-        ret = BUILTIN_ISINF_F16(x) |
-              BUILTIN_ISINF_F16(y) ?
+        ret = (BUILTIN_ISINF_F16(x) | BUILTIN_ISINF_F16(y)) ?
               0.0h : ret;
     }
 

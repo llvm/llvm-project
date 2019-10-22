@@ -268,7 +268,7 @@ MATH_MANGLE(lgamma_r_impl)(double x)
 
     int s = 0;
     if (x >= 0.0) {
-        ret = x == 1.0 | x == 2.0 ? 0.0 : ret;
+        ret = (x == 1.0 | x == 2.0) ? 0.0 : ret;
         s = x == 0.0 ? 0 : 1;
     } else if (hax < 0x43300000) { // x > -0x1.0p+52
         double t = MATH_MANGLE(sinpi)(x);

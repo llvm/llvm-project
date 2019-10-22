@@ -86,7 +86,7 @@ MATH_MANGLE(erfcinv)(double y)
     }
 
     if (!FINITE_ONLY_OPT()) {
-        ret = (y < 0.0) | (y > 2.0) ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
+        ret = ((y < 0.0) | (y > 2.0)) ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
         ret = y == 0.0 ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
         ret = y == 2.0 ? AS_DOUBLE(NINFBITPATT_DP64) : ret;
     }
