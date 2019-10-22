@@ -805,13 +805,13 @@ main = foo
 
   PythonScript foo(script);
 
-  EXPECT_THAT_EXPECTED(foo(),
-                       llvm::Failed<PythonException>(testing::Property(
-                           &PythonException::ReadBacktrace,
-                           testing::ContainsRegex("line 3, in foo..*"
-                                                  "line 5, in bar.*"
-                                                  "line 7, in baz.*"
-                                                  "ZeroDivisionError"))));
+  EXPECT_THAT_EXPECTED(
+      foo(), llvm::Failed<PythonException>(testing::Property(
+                 &PythonException::ReadBacktrace,
+                 testing::AllOf(testing::ContainsRegex("line 3, in foo"),
+                                testing::ContainsRegex("line 5, in bar"),
+                                testing::ContainsRegex("line 7, in baz"),
+                                testing::ContainsRegex("ZeroDivisionError")))));
 
   static const char script2[] = R"(
 class MyError(Exception):
