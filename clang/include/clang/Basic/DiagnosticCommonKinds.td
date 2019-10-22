@@ -317,6 +317,11 @@ def warn_apinotes_private_case_system : NonportablePrivateAPINotesPath,
 def err_openclcxx_not_supported : Error<
   "'%0' is not supported in C++ for OpenCL">;
 
+// HIP
+def warn_ignore_hip_only_option : Warning<
+  "'%0' is ignored since it is only supported for HIP">,
+  InGroup<HIPOnly>;
+
 // OpenMP
 def err_omp_more_one_clause : Error<
   "directive '#pragma omp %0' cannot contain more than one '%1' clause%select{| with '%3' name modifier| with 'source' dependence}2">;
