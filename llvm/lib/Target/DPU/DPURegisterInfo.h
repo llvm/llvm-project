@@ -32,7 +32,7 @@ public:
                            unsigned FIOperandNum,
                            RegScavenger *RS) const override;
 
-  unsigned getFrameRegister(const MachineFunction &MF) const override;
+  Register getFrameRegister(const MachineFunction &MF) const override;
 
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;

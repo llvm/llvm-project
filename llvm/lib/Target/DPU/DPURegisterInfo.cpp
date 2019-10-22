@@ -118,7 +118,7 @@ void DPURegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   });
 }
 
-unsigned DPURegisterInfo::getFrameRegister(const MachineFunction &MF) const {
+Register DPURegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return DPU::R22;
 }
 
