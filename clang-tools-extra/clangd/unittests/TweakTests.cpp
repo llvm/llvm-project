@@ -1972,6 +1972,56 @@ TEST_F(DefineOutlineTest, HandleMacros) {
   }
 }
 
+TEST_F(DefineOutlineTest, QualifyReturnValue) {
+  FileName = "Test.hpp";
+  ExtraFiles["Test.cpp"] = "";
+
+  struct {
+    llvm::StringRef Test;
+    llvm::StringRef ExpectedHeader;
+    llvm::StringRef ExpectedSource;
+  } Cases[] = {
+      {R"cpp(
+        namespace a { class Foo; }
+        using namespace a;
+        Foo fo^o() { return; })cpp",
+       R"cpp(
+        namespace a { class Foo; }
+        using namespace a;
+        Foo foo() ;)cpp",
+       "a::Foo foo() { return; }"},
+      {R"cpp(
+        namespace a {
+          class Foo {
+            class Bar {};
+            Bar fo^o() { return {}; }
+          };
+        })cpp",
+       R"cpp(
+        namespace a {
+          class Foo {
+            class Bar {};
+            Bar foo() ;
+          };
+        })cpp",
+       "a::Foo::Bar foo() { return {}; }\n"},
+      {R"cpp(
+        class Foo;
+        Foo fo^o() { return; })cpp",
+       R"cpp(
+        class Foo;
+        Foo foo() ;)cpp",
+       "Foo foo() { return; }"},
+  };
+  llvm::StringMap<std::string> EditedFiles;
+  for (auto &Case : Cases) {
+    apply(Case.Test, &EditedFiles);
+    EXPECT_EQ(apply(Case.Test, &EditedFiles), Case.ExpectedHeader);
+    EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
+                                 testPath("Test.cpp"), Case.ExpectedSource)));
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
