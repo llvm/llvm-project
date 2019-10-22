@@ -83,7 +83,7 @@ public:
   bool empty() const { return Seqs.empty(); }
 
   unsigned size() const {
-    assert(Entries && "Call layout() before size()");
+    assert((empty() || Entries) && "Call layout() before size()");
     return Entries;
   }
 
@@ -113,7 +113,7 @@ public:
   void emit(raw_ostream &OS,
             void (*Print)(raw_ostream&, ElemT),
             const char *Term = "0") const {
-    assert(Entries && "Call layout() before emit()");
+    assert((empty() || Entries) && "Call layout() before emit()");
     for (typename SeqMap::const_iterator I = Seqs.begin(), E = Seqs.end();
          I != E; ++I) {
       OS << "  /* " << I->second << " */ ";
