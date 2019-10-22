@@ -2404,8 +2404,9 @@ int X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
   return BaseT::getVectorInstrCost(Opcode, Val, Index) + RegisterFileMoveCost;
 }
 
-int X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
-                                unsigned AddressSpace, const Instruction *I) {
+int X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
+                                MaybeAlign Alignment, unsigned AddressSpace,
+                                const Instruction *I) {
   // Handle non-power-of-two vectors such as <3 x float>
   if (VectorType *VTy = dyn_cast<VectorType>(Src)) {
     unsigned NumElem = VTy->getVectorNumElements();
@@ -2456,7 +2457,7 @@ int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
   VectorType *SrcVTy = dyn_cast<VectorType>(SrcTy);
   if (!SrcVTy)
     // To calculate scalar take the regular cost, without mask
-    return getMemoryOpCost(Opcode, SrcTy, Alignment, AddressSpace);
+    return getMemoryOpCost(Opcode, SrcTy, MaybeAlign(Alignment), AddressSpace);
 
   unsigned NumElem = SrcVTy->getVectorNumElements();
   VectorType *MaskTy =
@@ -2474,7 +2475,7 @@ int X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy,
     int ValueSplitCost = getScalarizationOverhead(SrcVTy, IsLoad, IsStore);
     int MemopCost =
         NumElem * BaseT::getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
-                                         Alignment, AddressSpace);
+                                         MaybeAlign(Alignment), AddressSpace);
     return MemopCost + ValueSplitCost + MaskSplitCost + MaskCmpCost;
   }
 
@@ -3164,7 +3165,7 @@ int X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy, Value *Ptr,
                              ? ST->getGatherOverhead()
                              : ST->getScatterOverhead();
   return GSOverhead + VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
-                                           Alignment, AddressSpace);
+                                           MaybeAlign(Alignment), AddressSpace);
 }
 
 /// Return the cost of full scalarization of gather / scatter operation.
@@ -3194,7 +3195,7 @@ int X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
 
   // The cost of the scalar loads/stores.
   int MemoryOpCost = VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
-                                          Alignment, AddressSpace);
+                                          MaybeAlign(Alignment), AddressSpace);
 
   int InsertExtractCost = 0;
   if (Opcode == Instruction::Load)
@@ -3520,8 +3521,8 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX2(unsigned Opcode, Type *VecTy,
   // Get the cost of one memory operation.
   Type *SingleMemOpTy = VectorType::get(VecTy->getVectorElementType(),
                                         LegalVT.getVectorNumElements());
-  unsigned MemOpCost =
-      getMemoryOpCost(Opcode, SingleMemOpTy, Alignment, AddressSpace);
+  unsigned MemOpCost = getMemoryOpCost(Opcode, SingleMemOpTy,
+                                       MaybeAlign(Alignment), AddressSpace);
 
   VectorType *VT = VectorType::get(ScalarTy, VF);
   EVT ETy = TLI->getValueType(DL, VT);
@@ -3620,8 +3621,8 @@ int X86TTIImpl::getInterleavedMemoryOpCostAVX512(unsigned Opcode, Type *VecTy,
   // Get the cost of one memory operation.
   Type *SingleMemOpTy = VectorType::get(VecTy->getVectorElementType(),
                                         LegalVT.getVectorNumElements());
-  unsigned MemOpCost =
-      getMemoryOpCost(Opcode, SingleMemOpTy, Alignment, AddressSpace);
+  unsigned MemOpCost = getMemoryOpCost(Opcode, SingleMemOpTy,
+                                       MaybeAlign(Alignment), AddressSpace);
 
   unsigned VF = VecTy->getVectorNumElements() / Factor;
   MVT VT = MVT::getVectorVT(MVT::getVT(VecTy->getScalarType()), VF);

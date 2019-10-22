@@ -632,12 +632,12 @@ AArch64TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
 }
 
 int AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
-                                    unsigned Alignment, unsigned AddressSpace,
+                                    MaybeAlign Alignment, unsigned AddressSpace,
                                     const Instruction *I) {
   auto LT = TLI->getTypeLegalizationCost(DL, Ty);
 
   if (ST->isMisaligned128StoreSlow() && Opcode == Instruction::Store &&
-      LT.second.is128BitVector() && Alignment < 16) {
+      LT.second.is128BitVector() && (!Alignment || *Alignment < Align(16))) {
     // Unaligned stores are extremely inefficient. We don't split all
     // unaligned 128-bit stores because the negative impact that has shown in
     // practice on inlined block copy code.
@@ -703,8 +703,8 @@ int AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
     if (!I->isVectorTy())
       continue;
     if (I->getScalarSizeInBits() * I->getVectorNumElements() == 128)
-      Cost += getMemoryOpCost(Instruction::Store, I, 128, 0) +
-        getMemoryOpCost(Instruction::Load, I, 128, 0);
+      Cost += getMemoryOpCost(Instruction::Store, I, Align(128), 0) +
+              getMemoryOpCost(Instruction::Load, I, Align(128), 0);
   }
   return Cost;
 }

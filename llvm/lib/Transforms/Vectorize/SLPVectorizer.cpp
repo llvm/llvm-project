@@ -3162,7 +3162,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     }
     case Instruction::Load: {
       // Cost of wide load - cost of scalar loads.
-      unsigned alignment = cast<LoadInst>(VL0)->getAlignment();
+      MaybeAlign alignment(cast<LoadInst>(VL0)->getAlignment());
       int ScalarEltCost =
           TTI->getMemoryOpCost(Instruction::Load, ScalarTy, alignment, 0, VL0);
       if (NeedToShuffleReuses) {
@@ -3180,7 +3180,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     }
     case Instruction::Store: {
       // We know that we can merge the stores. Calculate the cost.
-      unsigned alignment = cast<StoreInst>(VL0)->getAlignment();
+      MaybeAlign alignment(cast<StoreInst>(VL0)->getAlignment());
       int ScalarEltCost =
           TTI->getMemoryOpCost(Instruction::Store, ScalarTy, alignment, 0, VL0);
       if (NeedToShuffleReuses) {

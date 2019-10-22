@@ -930,8 +930,9 @@ public:
   int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index = -1) const;
 
   /// \return The cost of Load and Store instructions.
-  int getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
-                      unsigned AddressSpace, const Instruction *I = nullptr) const;
+  int getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
+                      unsigned AddressSpace,
+                      const Instruction *I = nullptr) const;
 
   /// \return The cost of masked Load and Store instructions.
   int getMaskedMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
@@ -1305,7 +1306,7 @@ public:
                                 Type *CondTy, const Instruction *I) = 0;
   virtual int getVectorInstrCost(unsigned Opcode, Type *Val,
                                  unsigned Index) = 0;
-  virtual int getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
+  virtual int getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
                               unsigned AddressSpace, const Instruction *I) = 0;
   virtual int getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                     unsigned Alignment,
@@ -1711,7 +1712,7 @@ public:
   int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) override {
     return Impl.getVectorInstrCost(Opcode, Val, Index);
   }
-  int getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
+  int getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
                       unsigned AddressSpace, const Instruction *I) override {
     return Impl.getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, I);
   }

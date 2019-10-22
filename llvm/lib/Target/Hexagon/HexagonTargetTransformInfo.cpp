@@ -152,7 +152,9 @@ unsigned HexagonTTIImpl::getAddressComputationCost(Type *Tp,
 }
 
 unsigned HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
-      unsigned Alignment, unsigned AddressSpace, const Instruction *I) {
+                                         MaybeAlign Alignment,
+                                         unsigned AddressSpace,
+                                         const Instruction *I) {
   assert(Opcode == Instruction::Load || Opcode == Instruction::Store);
   if (Opcode == Instruction::Store)
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, I);
@@ -166,24 +168,30 @@ unsigned HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       // Cost of HVX loads.
       if (VecWidth % RegWidth == 0)
         return VecWidth / RegWidth;
-      // Cost of constructing HVX vector from scalar loads.
-      Alignment = std::min(Alignment, RegWidth / 8);
-      unsigned AlignWidth = 8 * std::max(1u, Alignment);
+      // Cost of constructing HVX vector from scalar loads
+      const Align RegAlign(RegWidth / 8);
+      if (!Alignment || *Alignment > RegAlign)
+        Alignment = RegAlign;
+      assert(Alignment);
+      unsigned AlignWidth = 8 * Alignment->value();
       unsigned NumLoads = alignTo(VecWidth, AlignWidth) / AlignWidth;
       return 3 * NumLoads;
     }
 
     // Non-HVX vectors.
     // Add extra cost for floating point types.
-    unsigned Cost = VecTy->getElementType()->isFloatingPointTy() ? FloatFactor
-                                                                 : 1;
-    Alignment = std::min(Alignment, 8u);
-    unsigned AlignWidth = 8 * std::max(1u, Alignment);
+    unsigned Cost =
+        VecTy->getElementType()->isFloatingPointTy() ? FloatFactor : 1;
+
+    // At this point unspecified alignment is considered as Align::None().
+    const Align BoundAlignment = std::min(Alignment.valueOrOne(), Align(8));
+    unsigned AlignWidth = 8 * BoundAlignment.value();
     unsigned NumLoads = alignTo(VecWidth, AlignWidth) / AlignWidth;
-    if (Alignment == 4 || Alignment == 8)
+    if (Alignment == Align(4) || Alignment == Align(8))
       return Cost * NumLoads;
     // Loads of less than 32 bits will need extra inserts to compose a vector.
-    unsigned LogA = Log2_32(Alignment);
+    assert(BoundAlignment <= Align(8));
+    unsigned LogA = Log2(BoundAlignment);
     return (3 - LogA) * Cost * NumLoads;
   }
 
@@ -214,7 +222,8 @@ unsigned HexagonTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode,
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
                                              Alignment, AddressSpace,
                                              UseMaskForCond, UseMaskForGaps);
-  return getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, nullptr);
+  return getMemoryOpCost(Opcode, VecTy, MaybeAlign(Alignment), AddressSpace,
+                         nullptr);
 }
 
 unsigned HexagonTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
