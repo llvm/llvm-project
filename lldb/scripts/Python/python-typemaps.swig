@@ -1,7 +1,6 @@
 /* Typemap definitions, to allow SWIG to properly handle 'char**' data types. */
 
 %typemap(in) char ** {
-  using namespace lldb_private;
   /* Check if is a list  */
   if (PythonList::Check($input)) {
     PythonList list(PyRefType::Borrowed, $input);
@@ -30,7 +29,6 @@
 %typemap(typecheck) char ** {
   /* Check if is a list  */
   $1 = 1;
-  using namespace lldb_private;
   if (PythonList::Check($input)) {
     PythonList list(PyRefType::Borrowed, $input);
     int size = list.GetSize();
@@ -55,7 +53,6 @@
   int i;
   len = 0;
   while ($1[len]) len++;
-  using namespace lldb_private;
   PythonList list(len);
   for (i = 0; i < len; i++)
     list.SetItemAtIndex(i, PythonString($1[i]));
@@ -64,7 +61,6 @@
 
 
 %typemap(in) lldb::tid_t {
-  using namespace lldb_private;
   if (PythonInteger::Check($input))
   {
     PythonInteger py_int(PyRefType::Borrowed, $input);
@@ -78,7 +74,6 @@
 }
 
 %typemap(in) lldb::StateType {
-  using namespace lldb_private;
   if (PythonInteger::Check($input))
   {
     PythonInteger py_int(PyRefType::Borrowed, $input);
@@ -122,12 +117,12 @@
 %typemap(argout) (char *dst, size_t dst_len) {
    Py_XDECREF($result);   /* Blow away any previous result */
    if (result == 0) {
-      lldb_private::PythonString string("");
+      PythonString string("");
       $result = string.release();
       Py_INCREF($result);
    } else {
       llvm::StringRef ref(static_cast<const char*>($1), result);
-      lldb_private::PythonString string(ref);
+      PythonString string(ref);
       $result = string.release();
    }
    free($1);
@@ -142,7 +137,6 @@
 // Ditto for SBProcess::PutSTDIN(const char *src, size_t src_len).
 %typemap(in) (const char *cstr, uint32_t cstr_len),
              (const char *src, size_t src_len) {
-   using namespace lldb_private;
    if (PythonString::Check($input)) {
       PythonString str(PyRefType::Borrowed, $input);
       $1 = (char*)str.GetString().data();
@@ -166,7 +160,6 @@
 // For SBProcess::WriteMemory, SBTarget::GetInstructions and SBDebugger::DispatchInput.
 %typemap(in) (const void *buf, size_t size),
              (const void *data, size_t data_len) {
-   using namespace lldb_private;
    if (PythonString::Check($input)) {
       PythonString str(PyRefType::Borrowed, $input);
       $1 = (void*)str.GetString().data();
@@ -214,7 +207,7 @@
       $result = Py_None;
       Py_INCREF($result);
    } else {
-      lldb_private::PythonBytes bytes(static_cast<const uint8_t*>($1), result);
+      PythonBytes bytes(static_cast<const uint8_t*>($1), result);
       $result = bytes.release();
    }
    free($1);
@@ -374,7 +367,6 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 
 
 %typemap(in) lldb::FileSP {
-  using namespace lldb_private;
   PythonFile py_file(PyRefType::Borrowed, $input);
   if (!py_file) {
     PyErr_SetString(PyExc_TypeError, "not a file");
@@ -387,7 +379,6 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 }
 
 %typemap(in) lldb::FileSP FORCE_IO_METHODS {
-  using namespace lldb_private;
   PythonFile py_file(PyRefType::Borrowed, $input);
   if (!py_file) {
     PyErr_SetString(PyExc_TypeError, "not a file");
@@ -400,7 +391,6 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 }
 
 %typemap(in) lldb::FileSP BORROWED {
- using namespace lldb_private;
   PythonFile py_file(PyRefType::Borrowed, $input);
   if (!py_file) {
     PyErr_SetString(PyExc_TypeError, "not a file");
@@ -413,7 +403,6 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 }
 
 %typemap(in) lldb::FileSP BORROWED_FORCE_IO_METHODS {
-  using namespace lldb_private;
   PythonFile py_file(PyRefType::Borrowed, $input);
   if (!py_file) {
     PyErr_SetString(PyExc_TypeError, "not a file");
@@ -426,7 +415,7 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 }
 
 %typecheck(SWIG_TYPECHECK_POINTER) lldb::FileSP {
-  if (lldb_private::PythonFile::Check($input)) {
+  if (PythonFile::Check($input)) {
     $1 = 1;
   } else {
     PyErr_Clear();
@@ -435,7 +424,6 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 }
 
 %typemap(out) lldb::FileSP {
-  using namespace lldb_private;
   $result = nullptr;
   lldb::FileSP &sp = $1;
   if (sp) {
@@ -452,7 +440,6 @@ bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 }
 
 %typemap(in) (const char* string, int len) {
-    using namespace lldb_private;
     if ($input == Py_None)
     {
         $1 = NULL;

@@ -5,7 +5,6 @@ add_definitions(-DLLDB_PYTHON_RELATIVE_LIBDIR="${LLDB_PYTHON_RELATIVE_PATH}")
 
 add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
   PythonDataObjects.cpp
-  PythonExceptionState.cpp
   ScriptInterpreterPython.cpp
 
   LINK_LIBS
