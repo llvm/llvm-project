@@ -909,7 +909,7 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
       // Replace the cmp X, 0 with a use of the bool value.
       // Sink the load to where the compare was, if atomic rules allow us to.
       Value *LV = new LoadInst(InitBool->getValueType(), InitBool,
-                               InitBool->getName() + ".val", false, 0,
+                               InitBool->getName() + ".val", false, None,
                                LI->getOrdering(), LI->getSyncScopeID(),
                                LI->isUnordered() ? (Instruction *)ICI : LI);
       InitBoolUsed = true;
@@ -1716,7 +1716,7 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
           assert(LI->getOperand(0) == GV && "Not a copy!");
           // Insert a new load, to preserve the saved value.
           StoreVal = new LoadInst(NewGV->getValueType(), NewGV,
-                                  LI->getName() + ".b", false, 0,
+                                  LI->getName() + ".b", false, None,
                                   LI->getOrdering(), LI->getSyncScopeID(), LI);
         } else {
           assert((isa<CastInst>(StoredVal) || isa<SelectInst>(StoredVal)) &&
@@ -1732,9 +1732,9 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
     } else {
       // Change the load into a load of bool then a select.
       LoadInst *LI = cast<LoadInst>(UI);
-      LoadInst *NLI =
-          new LoadInst(NewGV->getValueType(), NewGV, LI->getName() + ".b",
-                       false, 0, LI->getOrdering(), LI->getSyncScopeID(), LI);
+      LoadInst *NLI = new LoadInst(NewGV->getValueType(), NewGV,
+                                   LI->getName() + ".b", false, None,
+                                   LI->getOrdering(), LI->getSyncScopeID(), LI);
       Instruction *NSI;
       if (IsOneZero)
         NSI = new ZExtInst(NLI, LI->getType(), "", LI);
