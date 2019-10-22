@@ -602,6 +602,9 @@ def fhip_dump_offload_linker_script : Flag<["-"], "fhip-dump-offload-linker-scri
 def fhip_new_launch_api : Flag<["-"], "fhip-new-launch-api">,
   Flags<[CC1Option]>, HelpText<"Use new kernel launching API for HIP.">;
 def fno_hip_new_launch_api : Flag<["-"], "fno-hip-new-launch-api">;
+def fgpu_allow_device_init : Flag<["-"], "fgpu-allow-device-init">,
+  Flags<[CC1Option]>, HelpText<"Allow device side init function in HIP">;
+def fno_gpu_allow_device_init : Flag<["-"], "fno-gpu-allow-device-init">;
 def libomptarget_nvptx_path_EQ : Joined<["--"], "libomptarget-nvptx-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-nvptx libraries">;
 def dD : Flag<["-"], "dD">, Group<d_Group>, Flags<[CC1Option]>,

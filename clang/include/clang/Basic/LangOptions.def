@@ -224,6 +224,7 @@ LANGOPT(CUDAAllowVariadicFunctions, 1, 0, "allowing variadic functions in CUDA d
 LANGOPT(CUDAHostDeviceConstexpr, 1, 1, "treating unattributed constexpr functions as __host__ __device__")
 LANGOPT(CUDADeviceApproxTranscendentals, 1, 0, "using approximate transcendental functions")
 LANGOPT(GPURelocatableDeviceCode, 1, 0, "generate relocatable device code")
+LANGOPT(GPUAllowDeviceInit, 1, 0, "allowing device side global init functions for HIP")
 
 LANGOPT(SYCLIsDevice      , 1, 0, "Generate code for SYCL device")
 
