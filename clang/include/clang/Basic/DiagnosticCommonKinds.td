@@ -305,7 +305,7 @@ def err_openclcxx_not_supported : Error<
   "'%0' is not supported in C++ for OpenCL">;
 
 // HIP
-def warn_ignore_hip_only_option : Warning<
+def warn_ignored_hip_only_option : Warning<
   "'%0' is ignored since it is only supported for HIP">,
   InGroup<HIPOnly>;
 

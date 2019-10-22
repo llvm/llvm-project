@@ -2532,7 +2532,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     if (Opts.HIP)
       Opts.GPUAllowDeviceInit = 1;
     else
-      Diags.Report(diag::warn_ignore_hip_only_option)
+      Diags.Report(diag::warn_ignored_hip_only_option)
           << Args.getLastArg(OPT_fgpu_allow_device_init)->getAsString(Args);
   }
   Opts.HIPUseNewLaunchAPI = Args.hasArg(OPT_fhip_new_launch_api);
