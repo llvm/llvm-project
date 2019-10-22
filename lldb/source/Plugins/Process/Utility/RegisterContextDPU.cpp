@@ -125,7 +125,7 @@ bool RegisterContextDPU::GetUnwindPlanSP(Function *fct,
   Address pc_addr = fct->GetAddressRange().GetBaseAddress();
   ModuleSP module_sp(pc_addr.GetModule());
   DWARFCallFrameInfo *debug_frame =
-      module_sp->GetObjectFile()->GetUnwindTable().GetDebugFrameInfo();
+      module_sp->GetUnwindTable().GetDebugFrameInfo();
 
   if (debug_frame) {
     debug_frame->GetUnwindPlan(pc_addr, *unwind_plan_sp);

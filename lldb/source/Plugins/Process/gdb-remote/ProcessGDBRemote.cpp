@@ -265,7 +265,7 @@ Status ProcessGDBRemote::DoLoadCore() {
   ModuleList matching_modules;
   matching_modules.Append(initial_module);
   ModuleSpec initial_module_spec(initial_module->GetFileSpec());
-  target.GetSharedModule(initial_module_spec, &error);
+  target.GetOrCreateModule(initial_module_spec, false);
 
   // Load the section of the initial_module
   SectionList *section_list = initial_module->GetSectionList();
