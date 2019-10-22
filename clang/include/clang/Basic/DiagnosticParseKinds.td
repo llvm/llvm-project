@@ -1180,6 +1180,9 @@ def err_pragma_cilk_grainsize_missing_argument : Error<
 def warn_cilk_for_following_grainsize: Warning<
   "'#pragma cilk' ignored, because it is not followed by a '_Cilk_for' loop">,
   InGroup<SourceUsesCilkPlus>;
+def warn_pragma_cilk_grainsize_equals: Warning<
+  "'#pragma cilk grainsize' no longer requires '='">,
+  InGroup<SourceUsesCilkPlus>;
 
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<

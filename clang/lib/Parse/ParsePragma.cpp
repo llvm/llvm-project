@@ -3062,6 +3062,13 @@ void PragmaCilkHintHandler::HandlePragma(Preprocessor &PP,
     }
     PP.Lex(Tok);
 
+    // Handle = for backwards compatibility
+    bool GrainsizeEq = Tok.is(tok::equal);
+    if (GrainsizeEq) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_cilk_grainsize_equals);
+      PP.Lex(Tok);
+    }
+
     // Read '(' if it exists.
     bool ValueInParens = Tok.is(tok::l_paren);
     if (ValueInParens)
