@@ -444,7 +444,8 @@ void Sema::handleLambdaNumbering(
   }
 
   auto getMangleNumberingContext =
-      [this](CXXRecordDecl *Class, Decl *ManglingContextDecl) -> MangleNumberingContext * {
+      [this](CXXRecordDecl *Class,
+             Decl *ManglingContextDecl) -> MangleNumberingContext * {
     // Get mangle numbering context if there's any extra decl context.
     if (ManglingContextDecl)
       return &Context.getManglingNumberContext(
