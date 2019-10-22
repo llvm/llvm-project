@@ -27,7 +27,7 @@ TEST(FrontendOutputTests, TestOutputStream) {
       "test.cc", MemoryBuffer::getMemBuffer("").release());
   Invocation->getFrontendOpts().Inputs.push_back(
       FrontendInputFile("test.cc", Language::CXX));
-  Invocation->getFrontendOpts().ProgramAction = EmitBC;
+  Invocation->getFrontendOpts().ProgramAction = ParseSyntaxOnly;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler;
 
@@ -51,7 +51,7 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamShared) {
       "test.cc", MemoryBuffer::getMemBuffer("invalid").release());
   Invocation->getFrontendOpts().Inputs.push_back(
       FrontendInputFile("test.cc", Language::CXX));
-  Invocation->getFrontendOpts().ProgramAction = EmitBC;
+  Invocation->getFrontendOpts().ProgramAction = ParseSyntaxOnly;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler;
 
