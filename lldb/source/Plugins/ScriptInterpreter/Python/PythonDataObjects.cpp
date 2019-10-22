@@ -261,8 +261,7 @@ size_t PythonBytes::GetSize() const {
 
 void PythonBytes::SetBytes(llvm::ArrayRef<uint8_t> bytes) {
   const char *data = reinterpret_cast<const char *>(bytes.data());
-  PyObject *py_bytes = PyBytes_FromStringAndSize(data, bytes.size());
-  PythonObject::Reset(PyRefType::Owned, py_bytes);
+  *this = Take<PythonBytes>(PyBytes_FromStringAndSize(data, bytes.size()));
 }
 
 StructuredData::StringSP PythonBytes::CreateStructuredString() const {
@@ -486,7 +485,7 @@ int64_t PythonInteger::GetInteger() const {
 }
 
 void PythonInteger::SetInteger(int64_t value) {
-  PythonObject::Reset(PyRefType::Owned, PyLong_FromLongLong(value));
+  *this = Take<PythonInteger>(PyLong_FromLongLong(value));
 }
 
 StructuredData::IntegerSP PythonInteger::CreateStructuredInteger() const {
@@ -510,7 +509,7 @@ bool PythonBoolean::GetValue() const {
 }
 
 void PythonBoolean::SetValue(bool value) {
-  PythonObject::Reset(PyRefType::Owned, PyBool_FromLong(value));
+  *this = Take<PythonBoolean>(PyBool_FromLong(value));
 }
 
 StructuredData::BooleanSP PythonBoolean::CreateStructuredBoolean() const {
@@ -826,7 +825,7 @@ static const char get_arg_info_script[] = R"(
 from inspect import signature, Parameter, ismethod
 from collections import namedtuple
 ArgInfo = namedtuple('ArgInfo', ['count', 'has_varargs', 'is_bound_method'])
-def get_arg_info(f):
+def main(f):
     count = 0
     varargs = False
     for parameter in signature(f).parameters.values():
@@ -852,28 +851,9 @@ Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
 
 #if PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 3
 
-  // this global is protected by the GIL
-  static PythonCallable get_arg_info;
-
-  if (!get_arg_info.IsValid()) {
-    PythonDictionary globals(PyInitialValue::Empty);
-
-    auto builtins = PythonModule::BuiltinsModule();
-    Error error = globals.SetItem("__builtins__", builtins);
-    if (error)
-      return std::move(error);
-    PyObject *o = PyRun_String(get_arg_info_script, Py_file_input,
-                               globals.get(), globals.get());
-    if (!o)
-      return exception();
-    Take<PythonObject>(o);
-    auto function = As<PythonCallable>(globals.GetItem("get_arg_info"));
-    if (!function)
-      return function.takeError();
-    get_arg_info = std::move(function.get());
-  }
-
-  Expected<PythonObject> pyarginfo = get_arg_info.Call(*this);
+  // no need to synchronize access to this global, we already have the GIL
+  static PythonScript get_arg_info(get_arg_info_script);
+  Expected<PythonObject> pyarginfo = get_arg_info(*this);
   if (!pyarginfo)
     return pyarginfo.takeError();
   result.count = cantFail(As<long long>(pyarginfo.get().GetAttribute("count")));
@@ -1054,6 +1034,44 @@ void PythonException::log(llvm::raw_ostream &OS) const { OS << toCString(); }
 
 std::error_code PythonException::convertToErrorCode() const {
   return llvm::inconvertibleErrorCode();
+}
+
+bool PythonException::Matches(PyObject *exc) const {
+  return PyErr_GivenExceptionMatches(m_exception_type, exc);
+}
+
+const char read_exception_script[] = R"(
+import sys
+from traceback import print_exception
+if sys.version_info.major < 3:
+  from StringIO import StringIO
+else:
+  from io import StringIO
+def main(exc_type, exc_value, tb):
+  f = StringIO()
+  print_exception(exc_type, exc_value, tb, file=f)
+  return f.getvalue()
+)";
+
+std::string PythonException::ReadBacktrace() const {
+
+  if (!m_traceback)
+    return toCString();
+
+  // no need to synchronize access to this global, we already have the GIL
+  static PythonScript read_exception(read_exception_script);
+
+  Expected<std::string> backtrace = As<std::string>(
+      read_exception(m_exception_type, m_exception, m_traceback));
+
+  if (!backtrace) {
+    std::string message =
+        std::string(toCString()) + "\n" +
+        "Traceback unavailble, an error occurred while reading it:\n";
+    return (message + llvm::toString(backtrace.takeError()));
+  }
+
+  return std::move(backtrace.get());
 }
 
 char PythonException::ID = 0;
@@ -1494,6 +1512,71 @@ Expected<PythonFile> PythonFile::FromFile(File &file, const char *mode) {
     return exception();
 
   return Take<PythonFile>(file_obj);
+}
+
+Error PythonScript::Init() {
+  if (function.IsValid())
+    return Error::success();
+
+  PythonDictionary globals(PyInitialValue::Empty);
+  auto builtins = PythonModule::BuiltinsModule();
+  if (Error error = globals.SetItem("__builtins__", builtins))
+    return error;
+  PyObject *o =
+      PyRun_String(script, Py_file_input, globals.get(), globals.get());
+  if (!o)
+    return exception();
+  Take<PythonObject>(o);
+  auto f = As<PythonCallable>(globals.GetItem("main"));
+  if (!f)
+    return f.takeError();
+  function = std::move(f.get());
+
+  return Error::success();
+}
+
+llvm::Expected<PythonObject>
+python::runStringOneLine(const llvm::Twine &string,
+                         const PythonDictionary &globals,
+                         const PythonDictionary &locals) {
+  if (!globals.IsValid() || !locals.IsValid())
+    return nullDeref();
+
+  PyObject *code =
+      Py_CompileString(NullTerminated(string), "<string>", Py_eval_input);
+  if (!code) {
+    PyErr_Clear();
+    code =
+        Py_CompileString(NullTerminated(string), "<string>", Py_single_input);
+  }
+  if (!code)
+    return exception();
+  auto code_ref = Take<PythonObject>(code);
+
+#if PY_MAJOR_VERSION < 3
+  PyObject *result =
+      PyEval_EvalCode((PyCodeObject *)code, globals.get(), locals.get());
+#else
+  PyObject *result = PyEval_EvalCode(code, globals.get(), locals.get());
+#endif
+
+  if (!result)
+    return exception();
+
+  return Take<PythonObject>(result);
+}
+
+llvm::Expected<PythonObject>
+python::runStringMultiLine(const llvm::Twine &string,
+                           const PythonDictionary &globals,
+                           const PythonDictionary &locals) {
+  if (!globals.IsValid() || !locals.IsValid())
+    return nullDeref();
+  PyObject *result = PyRun_String(NullTerminated(string), Py_file_input,
+                                  globals.get(), locals.get());
+  if (!result)
+    return exception();
+  return Take<PythonObject>(result);
 }
 
 #endif
