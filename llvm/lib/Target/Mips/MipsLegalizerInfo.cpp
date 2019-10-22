@@ -41,6 +41,14 @@ CheckTy0Ty1MemSizeAlign(const LegalityQuery &Query,
   return false;
 }
 
+static bool CheckTyN(unsigned N, const LegalityQuery &Query,
+                     std::initializer_list<LLT> SupportedValues) {
+  for (auto &Val : SupportedValues)
+    if (Val == Query.Types[N])
+      return true;
+  return false;
+}
+
 MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   using namespace TargetOpcode;
 
@@ -53,8 +61,18 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   const LLT v2s64 = LLT::vector(2, 64);
   const LLT p0 = LLT::pointer(0, 32);
 
-  getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL})
+  getActionDefinitionsBuilder({G_SUB, G_MUL})
       .legalFor({s32})
+      .clampScalar(0, s32, s32);
+
+  getActionDefinitionsBuilder(G_ADD)
+      .legalIf([=, &ST](const LegalityQuery &Query) {
+        if (CheckTyN(0, Query, {s32}))
+          return true;
+        if (ST.hasMSA() && CheckTyN(0, Query, {v16s8, v8s16, v4s32, v2s64}))
+          return true;
+        return false;
+      })
       .clampScalar(0, s32, s32);
 
   getActionDefinitionsBuilder({G_UADDO, G_UADDE, G_USUBO, G_USUBE, G_UMULO})
@@ -270,6 +288,33 @@ bool MipsLegalizerInfo::legalizeCustom(MachineInstr &MI,
   return true;
 }
 
+static bool SelectMSA3OpIntrinsic(MachineInstr &MI, unsigned Opcode,
+                                  MachineIRBuilder &MIRBuilder,
+                                  const MipsSubtarget &ST) {
+  assert(ST.hasMSA() && "MSA intrinsic not supported on target without MSA.");
+  if (!MIRBuilder.buildInstr(Opcode)
+           .add(MI.getOperand(0))
+           .add(MI.getOperand(2))
+           .add(MI.getOperand(3))
+           .constrainAllUses(MIRBuilder.getTII(), *ST.getRegisterInfo(),
+                             *ST.getRegBankInfo()))
+    return false;
+  MI.eraseFromParent();
+  return true;
+}
+
+static bool MSA3OpIntrinsicToGeneric(MachineInstr &MI, unsigned Opcode,
+                                     MachineIRBuilder &MIRBuilder,
+                                     const MipsSubtarget &ST) {
+  assert(ST.hasMSA() && "MSA intrinsic not supported on target without MSA.");
+  MIRBuilder.buildInstr(Opcode)
+      .add(MI.getOperand(0))
+      .add(MI.getOperand(2))
+      .add(MI.getOperand(3));
+  MI.eraseFromParent();
+  return true;
+}
+
 bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
                                           MachineRegisterInfo &MRI,
                                           MachineIRBuilder &MIRBuilder) const {
@@ -306,6 +351,19 @@ bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::mips_addv_b:
+  case Intrinsic::mips_addv_h:
+  case Intrinsic::mips_addv_w:
+  case Intrinsic::mips_addv_d:
+    return MSA3OpIntrinsicToGeneric(MI, TargetOpcode::G_ADD, MIRBuilder, ST);
+  case Intrinsic::mips_addvi_b:
+    return SelectMSA3OpIntrinsic(MI, Mips::ADDVI_B, MIRBuilder, ST);
+  case Intrinsic::mips_addvi_h:
+    return SelectMSA3OpIntrinsic(MI, Mips::ADDVI_H, MIRBuilder, ST);
+  case Intrinsic::mips_addvi_w:
+    return SelectMSA3OpIntrinsic(MI, Mips::ADDVI_W, MIRBuilder, ST);
+  case Intrinsic::mips_addvi_d:
+    return SelectMSA3OpIntrinsic(MI, Mips::ADDVI_D, MIRBuilder, ST);
   default:
     break;
   }
