@@ -144,15 +144,15 @@ TEST(Attributes, AddMatchingAlignAttr) {
                        Attribute::getWithAlignment(C, Align(8)));
   AL = AL.addAttribute(C, AttributeList::FirstArgIndex + 1,
                        Attribute::getWithAlignment(C, Align(32)));
-  EXPECT_EQ(8U, AL.getParamAlignment(0));
-  EXPECT_EQ(32U, AL.getParamAlignment(1));
+  EXPECT_EQ(Align(8), AL.getParamAlignment(0));
+  EXPECT_EQ(Align(32), AL.getParamAlignment(1));
 
   AttrBuilder B;
   B.addAttribute(Attribute::NonNull);
   B.addAlignmentAttr(8);
   AL = AL.addAttributes(C, AttributeList::FirstArgIndex, B);
-  EXPECT_EQ(8U, AL.getParamAlignment(0));
-  EXPECT_EQ(32U, AL.getParamAlignment(1));
+  EXPECT_EQ(Align(8), AL.getParamAlignment(0));
+  EXPECT_EQ(Align(32), AL.getParamAlignment(1));
   EXPECT_TRUE(AL.hasParamAttribute(0, Attribute::NonNull));
 }
 

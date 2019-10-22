@@ -241,16 +241,16 @@ bool Attribute::hasAttribute(StringRef Kind) const {
   return pImpl && pImpl->hasAttribute(Kind);
 }
 
-unsigned Attribute::getAlignment() const {
+MaybeAlign Attribute::getAlignment() const {
   assert(hasAttribute(Attribute::Alignment) &&
          "Trying to get alignment from non-alignment attribute!");
-  return pImpl->getValueAsInt();
+  return MaybeAlign(pImpl->getValueAsInt());
 }
 
-unsigned Attribute::getStackAlignment() const {
+MaybeAlign Attribute::getStackAlignment() const {
   assert(hasAttribute(Attribute::StackAlignment) &&
          "Trying to get alignment from non-alignment attribute!");
-  return pImpl->getValueAsInt();
+  return MaybeAlign(pImpl->getValueAsInt());
 }
 
 uint64_t Attribute::getDereferenceableBytes() const {
@@ -667,12 +667,12 @@ Attribute AttributeSet::getAttribute(StringRef Kind) const {
   return SetNode ? SetNode->getAttribute(Kind) : Attribute();
 }
 
-unsigned AttributeSet::getAlignment() const {
-  return SetNode ? SetNode->getAlignment() : 0;
+MaybeAlign AttributeSet::getAlignment() const {
+  return SetNode ? SetNode->getAlignment() : None;
 }
 
-unsigned AttributeSet::getStackAlignment() const {
-  return SetNode ? SetNode->getStackAlignment() : 0;
+MaybeAlign AttributeSet::getStackAlignment() const {
+  return SetNode ? SetNode->getStackAlignment() : None;
 }
 
 uint64_t AttributeSet::getDereferenceableBytes() const {
@@ -833,18 +833,18 @@ Attribute AttributeSetNode::getAttribute(StringRef Kind) const {
   return {};
 }
 
-unsigned AttributeSetNode::getAlignment() const {
+MaybeAlign AttributeSetNode::getAlignment() const {
   for (const auto I : *this)
     if (I.hasAttribute(Attribute::Alignment))
       return I.getAlignment();
-  return 0;
+  return None;
 }
 
-unsigned AttributeSetNode::getStackAlignment() const {
+MaybeAlign AttributeSetNode::getStackAlignment() const {
   for (const auto I : *this)
     if (I.hasAttribute(Attribute::StackAlignment))
       return I.getStackAlignment();
-  return 0;
+  return None;
 }
 
 Type *AttributeSetNode::getByValType() const {
@@ -1161,7 +1161,7 @@ AttributeList AttributeList::addAttributes(LLVMContext &C, unsigned Index,
 #ifndef NDEBUG
   // FIXME it is not obvious how this should work for alignment. For now, say
   // we can't change a known alignment.
-  unsigned OldAlign = getAttributes(Index).getAlignment();
+  const MaybeAlign OldAlign = getAttributes(Index).getAlignment();
   unsigned NewAlign = B.getAlignment();
   assert((!OldAlign || !NewAlign || OldAlign == NewAlign) &&
          "Attempt to change alignment!");
@@ -1346,11 +1346,11 @@ Attribute AttributeList::getAttribute(unsigned Index, StringRef Kind) const {
   return getAttributes(Index).getAttribute(Kind);
 }
 
-unsigned AttributeList::getRetAlignment() const {
+MaybeAlign AttributeList::getRetAlignment() const {
   return getAttributes(ReturnIndex).getAlignment();
 }
 
-unsigned AttributeList::getParamAlignment(unsigned ArgNo) const {
+MaybeAlign AttributeList::getParamAlignment(unsigned ArgNo) const {
   return getAttributes(ArgNo + FirstArgIndex).getAlignment();
 }
 
@@ -1358,8 +1358,7 @@ Type *AttributeList::getParamByValType(unsigned Index) const {
   return getAttributes(Index+FirstArgIndex).getByValType();
 }
 
-
-unsigned AttributeList::getStackAlignment(unsigned Index) const {
+MaybeAlign AttributeList::getStackAlignment(unsigned Index) const {
   return getAttributes(Index).getStackAlignment();
 }
 
@@ -1516,8 +1515,7 @@ std::pair<unsigned, Optional<unsigned>> AttrBuilder::getAllocSizeArgs() const {
   return unpackAllocSizeArgs(AllocSizeArgs);
 }
 
-AttrBuilder &AttrBuilder::addAlignmentAttr(unsigned A) {
-  MaybeAlign Align(A);
+AttrBuilder &AttrBuilder::addAlignmentAttr(MaybeAlign Align) {
   if (!Align)
     return *this;
 
@@ -1528,8 +1526,7 @@ AttrBuilder &AttrBuilder::addAlignmentAttr(unsigned A) {
   return *this;
 }
 
-AttrBuilder &AttrBuilder::addStackAlignmentAttr(unsigned A) {
-  MaybeAlign Align(A);
+AttrBuilder &AttrBuilder::addStackAlignmentAttr(MaybeAlign Align) {
   // Default alignment, allow the target to define how to align it.
   if (!Align)
     return *this;
