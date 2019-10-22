@@ -337,17 +337,15 @@ public:
   StoreInst(Value *Val, Value *Ptr, bool isVolatile = false,
             Instruction *InsertBefore = nullptr);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, BasicBlock *InsertAtEnd);
-  StoreInst(Value *Val, Value *Ptr, bool isVolatile,
-            unsigned Align, Instruction *InsertBefore = nullptr);
-  StoreInst(Value *Val, Value *Ptr, bool isVolatile,
-            unsigned Align, BasicBlock *InsertAtEnd);
-  StoreInst(Value *Val, Value *Ptr, bool isVolatile,
-            unsigned Align, AtomicOrdering Order,
-            SyncScope::ID SSID = SyncScope::System,
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, MaybeAlign Align,
             Instruction *InsertBefore = nullptr);
-  StoreInst(Value *Val, Value *Ptr, bool isVolatile,
-            unsigned Align, AtomicOrdering Order, SyncScope::ID SSID,
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, MaybeAlign Align,
             BasicBlock *InsertAtEnd);
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, MaybeAlign Align,
+            AtomicOrdering Order, SyncScope::ID SSID = SyncScope::System,
+            Instruction *InsertBefore = nullptr);
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, MaybeAlign Align,
+            AtomicOrdering Order, SyncScope::ID SSID, BasicBlock *InsertAtEnd);
 
   // allocate space for exactly two operands
   void *operator new(size_t s) {
