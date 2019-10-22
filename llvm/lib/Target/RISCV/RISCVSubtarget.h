@@ -46,6 +46,7 @@ class RISCVSubtarget : public RISCVGenSubtargetInfo {
   unsigned XLen = 32;
   MVT XLenVT = MVT::i32;
   RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
+  BitVector UserReservedRegister;
   RISCVFrameLowering FrameLowering;
   RISCVInstrInfo InstrInfo;
   RISCVRegisterInfo RegInfo;
@@ -93,6 +94,10 @@ public:
   MVT getXLenVT() const { return XLenVT; }
   unsigned getXLen() const { return XLen; }
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
+  bool isRegisterReservedByUser(Register i) const {
+    assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");
+    return UserReservedRegister[i];
+  }
 
 protected:
   // GlobalISel related APIs.
