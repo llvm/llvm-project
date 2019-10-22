@@ -3045,6 +3045,62 @@ SDValue TargetLowering::foldSetCCWithBinOp(EVT VT, SDValue N0, SDValue N1,
   return DAG.getSetCC(DL, VT, X, YShl1, Cond);
 }
 
+/// x ==/!= c  ->  (x - c) ==/!= 0  iff '-c' can be folded into the x node.
+SDValue TargetLowering::optimizeSetCCToComparisonWithZero(
+    EVT SCCVT, SDValue N0, ConstantSDNode *N1C, ISD::CondCode Cond,
+    DAGCombinerInfo &DCI, const SDLoc &DL) const {
+  assert((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
+         "Only for equality-comparisons.");
+
+  // LHS should not be used elsewhere, to avoid creating an extra node.
+  if (!N0.hasOneUse())
+    return SDValue();
+
+  // Will we able to fold the '-c' into 'x' node?
+  bool IsAdd;
+  switch (N0.getOpcode()) {
+  default:
+    return SDValue(); // Don't know about that node.
+  case ISD::ADD:
+  case ISD::SUB:
+    return SDValue(); // Let's not touch these.
+  case ISD::ADDCARRY:
+    IsAdd = true;
+    break;
+  case ISD::SUBCARRY:
+    IsAdd = false;
+    break;
+  }
+
+  // Second operand must be a constant.
+  ConstantSDNode *N01C = isConstOrConstSplat(N0.getOperand(1));
+  if (!N01C)
+    return SDValue();
+
+  // And let's be even more specific for now, it must be a zero constant.
+  // It is possible to relax this requirement, but a precise cost-model needed.
+  if (!N01C->isNullValue())
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  EVT OpVT = N0.getValueType();
+
+  // (y + N01C) - N1C = y + (N01C - N1C)
+  // (y - N01C) - N1C = y - (N01C + N1C)
+  SDValue NewC = DAG.FoldConstantArithmetic(IsAdd ? ISD::SUB : ISD::ADD, DL,
+                                            OpVT, N01C, N1C);
+  assert(NewC && "Constant-folding failed!");
+
+  SmallVector<SDValue, 3> N0Ops(N0.getNode()->ops().begin(),
+                                N0.getNode()->ops().end());
+  N0Ops[1] = NewC;
+
+  N0 = DAG.getNode(N0.getOpcode(), DL, N0->getVTList(), N0Ops);
+
+  SDValue Zero = DAG.getConstant(0, DL, OpVT);
+  return DAG.getSetCC(DL, SCCVT, N0, Zero, Cond);
+}
+
 /// Try to simplify a setcc built with the specified operands and cc. If it is
 /// unable to simplify it, return a null SDValue.
 SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
@@ -3577,6 +3633,11 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                 VT, N0, N1, Cond, DCI, dl))
           return CC;
     }
+
+    if (Cond == ISD::SETEQ || Cond == ISD::SETNE)
+      if (SDValue CC =
+              optimizeSetCCToComparisonWithZero(VT, N0, N1C, Cond, DCI, dl))
+        return CC;
 
     // If we have "setcc X, C0", check to see if we can shrink the immediate
     // by changing cc.
