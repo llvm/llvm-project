@@ -210,6 +210,12 @@ private:
                                    Value *AlignedAddr, Value *CmpVal,
                                    Value *NewVal, Value *Mask,
                                    AtomicOrdering Ord) const override;
+
+  /// Generate error diagnostics if any register used by CC has been marked
+  /// reserved.
+  void validateCCReservedRegs(
+      const SmallVectorImpl<std::pair<llvm::Register, llvm::SDValue>> &Regs,
+      MachineFunction &MF) const;
 };
 }
 
