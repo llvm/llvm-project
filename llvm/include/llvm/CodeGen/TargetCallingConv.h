@@ -125,18 +125,18 @@ namespace ISD {
       MaybeAlign A = decodeMaybeAlign(ByValAlign);
       return A ? A->value() : 0;
     }
-    void setByValAlign(unsigned A) {
-      ByValAlign = encode(Align(A));
-      assert(getByValAlign() == A && "bitfield overflow");
+    void setByValAlign(Align A) {
+      ByValAlign = encode(A);
+      assert(getByValAlign() == A.value() && "bitfield overflow");
     }
 
     unsigned getOrigAlign() const {
       MaybeAlign A = decodeMaybeAlign(OrigAlign);
       return A ? A->value() : 0;
     }
-    void setOrigAlign(unsigned A) {
-      OrigAlign = encode(Align(A));
-      assert(getOrigAlign() == A && "bitfield overflow");
+    void setOrigAlign(Align A) {
+      OrigAlign = encode(A);
+      assert(getOrigAlign() == A.value() && "bitfield overflow");
     }
 
     unsigned getByValSize() const { return ByValSize; }

@@ -18,12 +18,6 @@
 #include <set>
 #include <string>
 
-namespace llvm {
-namespace symbolize {
-class LLVMSymbolizer;
-}
-} // namespace llvm
-
 namespace lld {
 namespace coff {
 
@@ -232,8 +226,6 @@ struct Configuration {
   bool swaprunNet = false;
   bool thinLTOEmitImportsFiles;
   bool thinLTOIndexOnly;
-
-  llvm::symbolize::LLVMSymbolizer *symbolizer = nullptr;
 };
 
 extern Configuration *config;

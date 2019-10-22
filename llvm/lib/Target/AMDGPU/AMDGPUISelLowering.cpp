@@ -563,15 +563,26 @@ static bool hasSourceMods(const SDNode *N) {
   case ISD::FREM:
   case ISD::INLINEASM:
   case ISD::INLINEASM_BR:
-  case AMDGPUISD::INTERP_P1:
-  case AMDGPUISD::INTERP_P2:
   case AMDGPUISD::DIV_SCALE:
+  case ISD::INTRINSIC_W_CHAIN:
 
   // TODO: Should really be looking at the users of the bitcast. These are
   // problematic because bitcasts are used to legalize all stores to integer
   // types.
   case ISD::BITCAST:
     return false;
+  case ISD::INTRINSIC_WO_CHAIN: {
+    switch (cast<ConstantSDNode>(N->getOperand(0))->getZExtValue()) {
+    case Intrinsic::amdgcn_interp_p1:
+    case Intrinsic::amdgcn_interp_p2:
+    case Intrinsic::amdgcn_interp_mov:
+    case Intrinsic::amdgcn_interp_p1_f16:
+    case Intrinsic::amdgcn_interp_p2_f16:
+      return false;
+    default:
+      return true;
+    }
+  }
   default:
     return true;
   }
@@ -4283,9 +4294,6 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(KILL)
   NODE_NAME_CASE(DUMMY_CHAIN)
   case AMDGPUISD::FIRST_MEM_OPCODE_NUMBER: break;
-  NODE_NAME_CASE(INTERP_MOV)
-  NODE_NAME_CASE(INTERP_P1)
-  NODE_NAME_CASE(INTERP_P2)
   NODE_NAME_CASE(INTERP_P1LL_F16)
   NODE_NAME_CASE(INTERP_P1LV_F16)
   NODE_NAME_CASE(INTERP_P2_F16)

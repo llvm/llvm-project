@@ -2890,7 +2890,7 @@ isl::set ScopBuilder::getNonHoistableCtx(MemoryAccess *Access,
 
   auto &DL = scop->getFunction().getParent()->getDataLayout();
   if (isSafeToLoadUnconditionally(LI->getPointerOperand(), LI->getType(),
-                                  LI->getAlignment(), DL)) {
+                                  MaybeAlign(LI->getAlignment()), DL)) {
     SafeToLoad = isl::set::universe(AccessRelation.get_space().range());
   } else if (BB != LI->getParent()) {
     // Skip accesses in non-affine subregions as they might not be executed
@@ -2940,9 +2940,9 @@ bool ScopBuilder::canAlwaysBeHoisted(MemoryAccess *MA,
 
   // TODO: We can provide more information for better but more expensive
   //       results.
-  if (!isDereferenceableAndAlignedPointer(LInst->getPointerOperand(),
-                                          LInst->getType(),
-                                          LInst->getAlignment(), DL))
+  if (!isDereferenceableAndAlignedPointer(
+          LInst->getPointerOperand(), LInst->getType(),
+          MaybeAlign(LInst->getAlignment()), DL))
     return false;
 
   // If the location might be overwritten we do not hoist it unconditionally.

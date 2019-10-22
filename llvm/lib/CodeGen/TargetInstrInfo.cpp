@@ -880,7 +880,7 @@ void TargetInstrInfo::genAlternativeCodeSequence(
 }
 
 bool TargetInstrInfo::isReallyTriviallyReMaterializableGeneric(
-    const MachineInstr &MI, AliasAnalysis *AA) const {
+    const MachineInstr &MI, AAResults *AA) const {
   const MachineFunction &MF = *MI.getMF();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 

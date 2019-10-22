@@ -118,6 +118,23 @@ static LocationDescriptor layout(BlobAllocator &File, yaml::BinaryRef Data) {
           support::ulittle32_t(File.allocateBytes(Data))};
 }
 
+static size_t layout(BlobAllocator &File, MinidumpYAML::ExceptionStream &S) {
+  File.allocateObject(S.MDExceptionStream);
+
+  size_t DataEnd = File.tell();
+
+  // Lay out the thread context data, (which is not a part of the stream).
+  // TODO: This usually (always?) matches the thread context of the
+  // corresponding thread, and may overlap memory regions as well.  We could
+  // add a level of indirection to the MinidumpYAML format (like an array of
+  // Blobs that the LocationDescriptors index into) to be able to distinguish
+  // the cases where location descriptions overlap vs happen to reference
+  // identical data.
+  S.MDExceptionStream.ThreadContext = layout(File, S.ThreadContext);
+
+  return DataEnd;
+}
+
 static void layout(BlobAllocator &File, MemoryListStream::entry_type &Range) {
   Range.Entry.Memory = layout(File, Range.Content);
 }
@@ -158,6 +175,9 @@ static Directory layout(BlobAllocator &File, Stream &S) {
   Result.Location.RVA = File.tell();
   Optional<size_t> DataEnd;
   switch (S.Kind) {
+  case Stream::StreamKind::Exception:
+    DataEnd = layout(File, cast<MinidumpYAML::ExceptionStream>(S));
+    break;
   case Stream::StreamKind::MemoryInfoList: {
     MemoryInfoListStream &InfoList = cast<MemoryInfoListStream>(S);
     File.allocateNewObject<minidump::MemoryInfoListHeader>(

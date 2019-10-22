@@ -336,6 +336,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalFor({S32, S64});
   auto &TrigActions = getActionDefinitionsBuilder({G_FSIN, G_FCOS})
     .customFor({S32, S64});
+  auto &FDIVActions = getActionDefinitionsBuilder(G_FDIV)
+    .customFor({S32, S64});
 
   if (ST.has16BitInsts()) {
     if (ST.hasVOP3PInsts())
@@ -344,6 +346,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       FPOpActions.legalFor({S16});
 
     TrigActions.customFor({S16});
+    FDIVActions.customFor({S16});
   }
 
   auto &MinNumMaxNum = getActionDefinitionsBuilder({
@@ -372,6 +375,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(0, ST.has16BitInsts() ? S16 : S32, S64);
 
   TrigActions
+    .scalarize(0)
+    .clampScalar(0, ST.has16BitInsts() ? S16 : S32, S64);
+
+  FDIVActions
     .scalarize(0)
     .clampScalar(0, ST.has16BitInsts() ? S16 : S32, S64);
 
@@ -1107,6 +1114,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeLoad(MI, MRI, B, Observer);
   case TargetOpcode::G_FMAD:
     return legalizeFMad(MI, MRI, B);
+  case TargetOpcode::G_FDIV:
+    return legalizeFDIV(MI, MRI, B);
   default:
     return false;
   }
@@ -1810,9 +1819,80 @@ bool AMDGPULegalizerInfo::legalizePreloadedArgIntrin(
   return false;
 }
 
-bool AMDGPULegalizerInfo::legalizeFDIVFast(MachineInstr &MI,
-                                           MachineRegisterInfo &MRI,
-                                           MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeFDIV(MachineInstr &MI,
+                                       MachineRegisterInfo &MRI,
+                                       MachineIRBuilder &B) const {
+  B.setInstr(MI);
+
+  if (legalizeFastUnsafeFDIV(MI, MRI, B))
+    return true;
+
+  return false;
+}
+
+bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
+                                                 MachineRegisterInfo &MRI,
+                                                 MachineIRBuilder &B) const {
+  Register Res = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+
+  uint16_t Flags = MI.getFlags();
+
+  LLT ResTy = MRI.getType(Res);
+  LLT S32 = LLT::scalar(32);
+  LLT S64 = LLT::scalar(64);
+
+  const MachineFunction &MF = B.getMF();
+  bool Unsafe =
+    MF.getTarget().Options.UnsafeFPMath || MI.getFlag(MachineInstr::FmArcp);
+
+  if (!MF.getTarget().Options.UnsafeFPMath && ResTy == S64)
+    return false;
+
+  if (!Unsafe && ResTy == S32 && ST.hasFP32Denormals())
+    return false;
+
+  if (auto CLHS = getConstantFPVRegVal(LHS, MRI)) {
+    // 1 / x -> RCP(x)
+    if (CLHS->isExactlyValue(1.0)) {
+      B.buildIntrinsic(Intrinsic::amdgcn_rcp, Res, false)
+        .addUse(RHS)
+        .setMIFlags(Flags);
+
+      MI.eraseFromParent();
+      return true;
+    }
+
+    // -1 / x -> RCP( FNEG(x) )
+    if (CLHS->isExactlyValue(-1.0)) {
+      auto FNeg = B.buildFNeg(ResTy, RHS, Flags);
+      B.buildIntrinsic(Intrinsic::amdgcn_rcp, Res, false)
+        .addUse(FNeg.getReg(0))
+        .setMIFlags(Flags);
+
+      MI.eraseFromParent();
+      return true;
+    }
+  }
+
+  // x / y -> x * (1.0 / y)
+  if (Unsafe) {
+    auto RCP = B.buildIntrinsic(Intrinsic::amdgcn_rcp, {ResTy}, false)
+      .addUse(RHS)
+      .setMIFlags(Flags);
+    B.buildFMul(Res, LHS, RCP, Flags);
+
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
+bool AMDGPULegalizerInfo::legalizeFDIVFastIntrin(MachineInstr &MI,
+                                                 MachineRegisterInfo &MRI,
+                                                 MachineIRBuilder &B) const {
   B.setInstr(MI);
   Register Res = MI.getOperand(0).getReg();
   Register LHS = MI.getOperand(2).getReg();
@@ -2029,7 +2109,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::DISPATCH_ID);
   case Intrinsic::amdgcn_fdiv_fast:
-    return legalizeFDIVFast(MI, MRI, B);
+    return legalizeFDIVFastIntrin(MI, MRI, B);
   case Intrinsic::amdgcn_is_shared:
     return legalizeIsAddrSpace(MI, MRI, B, AMDGPUAS::LOCAL_ADDRESS);
   case Intrinsic::amdgcn_is_private:

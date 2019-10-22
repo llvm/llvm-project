@@ -142,6 +142,7 @@ Sections:
     Type:    SHT_SYMTAB_SHNDX
     Entries: [ 0 ]
     Link:    .symtab
+Symbols: []
 
 ## Check that yaml2obj can't dump the object if SHT_SYMTAB_SHNDX is
 ## not associated with a SHT_SYMTAB section (this case is illegal).

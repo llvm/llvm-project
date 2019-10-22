@@ -155,6 +155,12 @@ class CompilerInstance : public ModuleLoader {
   /// One or more modules failed to build.
   bool ModuleBuildFailed = false;
 
+  /// The stream for verbose output if owned, otherwise nullptr.
+  std::unique_ptr<raw_ostream> OwnedVerboseOutputStream;
+
+  /// The stream for verbose output.
+  raw_ostream *VerboseOutputStream = &llvm::errs();
+
   /// Holds information about the output file.
   ///
   /// If TempFilename is not empty we must rename it to Filename at the end.
@@ -216,9 +222,6 @@ public:
   ///
   /// \param Act - The action to execute.
   /// \return - True on success.
-  //
-  // FIXME: This function should take the stream to write any debugging /
-  // verbose output to as an argument.
   //
   // FIXME: Eliminate the llvm_shutdown requirement, that should either be part
   // of the context or else not CompilerInstance specific.
@@ -347,6 +350,21 @@ public:
     assert(Diagnostics && Diagnostics->getClient() &&
            "Compiler instance has no diagnostic client!");
     return *Diagnostics->getClient();
+  }
+
+  /// }
+  /// @name VerboseOutputStream
+  /// }
+
+  /// Replace the current stream for verbose output.
+  void setVerboseOutputStream(raw_ostream &Value);
+
+  /// Replace the current stream for verbose output.
+  void setVerboseOutputStream(std::unique_ptr<raw_ostream> Value);
+
+  /// Get the current stream for verbose output.
+  raw_ostream &getVerboseOutputStream() {
+    return *VerboseOutputStream;
   }
 
   /// }

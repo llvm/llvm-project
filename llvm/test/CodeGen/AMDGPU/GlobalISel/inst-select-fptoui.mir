@@ -12,7 +12,7 @@ body: |
     liveins: $sgpr0, $vgpr0, $vgpr3_vgpr4
 
     ; GCN-LABEL: name: fptoui
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
     ; GCN: [[V_CVT_U32_F32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_U32_F32_e64 0, [[COPY]], 0, 0, implicit $exec
@@ -69,7 +69,7 @@ body: |
 
     ; GCN-LABEL: name: fptoui_s16_to_s32_vs
     ; GCN: liveins: $sgpr0
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[V_CVT_F32_F16_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_F16_e32 [[COPY]], implicit $exec
     ; GCN: [[V_CVT_U32_F32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_U32_F32_e32 [[V_CVT_F32_F16_e32_]], implicit $exec
     ; GCN: $vgpr0 = COPY [[V_CVT_U32_F32_e32_]]

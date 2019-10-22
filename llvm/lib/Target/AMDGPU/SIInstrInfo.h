@@ -173,7 +173,7 @@ public:
   }
 
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
-                                         AliasAnalysis *AA) const override;
+                                         AAResults *AA) const override;
 
   bool areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
                                int64_t &Offset1,
@@ -1003,6 +1003,8 @@ public:
   static bool isLegalMUBUFImmOffset(unsigned Imm) {
     return isUInt<12>(Imm);
   }
+
+  unsigned getNumFlatOffsetBits(unsigned AddrSpace, bool Signed) const;
 
   /// Returns if \p Offset is legal for the subtarget as the offset to a FLAT
   /// encoded instruction. If \p Signed, this is for an instruction that

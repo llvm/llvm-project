@@ -238,6 +238,11 @@ def ARMsmlalbt      : SDNode<"ARMISD::SMLALBT", SDT_LongMac, []>;
 def ARMsmlaltb      : SDNode<"ARMISD::SMLALTB", SDT_LongMac, []>;
 def ARMsmlaltt      : SDNode<"ARMISD::SMLALTT", SDT_LongMac, []>;
 
+def ARMqadd8b       : SDNode<"ARMISD::QADD8b", SDT_ARMAnd, []>;
+def ARMqsub8b       : SDNode<"ARMISD::QSUB8b", SDT_ARMAnd, []>;
+def ARMqadd16b      : SDNode<"ARMISD::QADD16b", SDT_ARMAnd, []>;
+def ARMqsub16b      : SDNode<"ARMISD::QSUB16b", SDT_ARMAnd, []>;
+
 // Vector operations shared between NEON and MVE
 
 def ARMvdup      : SDNode<"ARMISD::VDUP", SDTypeProfile<1, 1, [SDTCisVec<0>]>>;
@@ -3749,6 +3754,23 @@ let DecoderMethod = "DecodeQADDInstruction" in
   def QADD    : AAIRevOpr<0b00010000, 0b00000101, "qadd",
                 [(set GPRnopc:$Rd, (int_arm_qadd GPRnopc:$Rm, GPRnopc:$Rn))]>;
 }
+
+def : ARMV5TEPat<(saddsat GPR:$a, GPR:$b),
+                 (QADD GPR:$a, GPR:$b)>;
+def : ARMV5TEPat<(ssubsat GPR:$a, GPR:$b),
+                 (QSUB GPR:$a, GPR:$b)>;
+def : ARMV5TEPat<(saddsat(saddsat rGPR:$Rm, rGPR:$Rm), rGPR:$Rn),
+                 (QDADD rGPR:$Rm, rGPR:$Rn)>;
+def : ARMV5TEPat<(ssubsat rGPR:$Rm, (saddsat rGPR:$Rn, rGPR:$Rn)),
+                 (QDSUB rGPR:$Rm, rGPR:$Rn)>;
+def : ARMV6Pat<(ARMqadd8b rGPR:$Rm, rGPR:$Rn),
+               (QADD8 rGPR:$Rm, rGPR:$Rn)>;
+def : ARMV6Pat<(ARMqsub8b rGPR:$Rm, rGPR:$Rn),
+               (QSUB8 rGPR:$Rm, rGPR:$Rn)>;
+def : ARMV6Pat<(ARMqadd16b rGPR:$Rm, rGPR:$Rn),
+               (QADD16 rGPR:$Rm, rGPR:$Rn)>;
+def : ARMV6Pat<(ARMqsub16b rGPR:$Rm, rGPR:$Rn),
+               (QSUB16 rGPR:$Rm, rGPR:$Rn)>;
 
 def UQADD16 : AAIIntrinsic<0b01100110, 0b11110001, "uqadd16", int_arm_uqadd16>;
 def UQADD8  : AAIIntrinsic<0b01100110, 0b11111001, "uqadd8", int_arm_uqadd8>;

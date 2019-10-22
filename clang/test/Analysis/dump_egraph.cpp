@@ -20,7 +20,7 @@ void foo() {
 
 // CHECK: \"location_context\": \"#0 Call\", \"calling\": \"foo\", \"location\": null, \"items\": [\l&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\{ \"stmt_id\": {{[0-9]+}}, \"kind\": \"construct into local variable\", \"argument_index\": null, \"pretty\": \"T t;\", \"value\": \"&t\"
 
-// CHECK: \"location_context\": \"#0 Call\", \"calling\": \"T::T\", \"location\": \{ \"line\": 16, \"column\": 5, \"file\": \"{{.*}}dump_egraph.cpp\" \}, \"items\": [\l&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\{ \"init_id\": {{[0-9]+}}, \"kind\": \"construct into member variable\", \"argument_index\": null, \"pretty\": \"s\", \"value\": \"&t-\>s\"
+// CHECK: \"location_context\": \"#0 Call\", \"calling\": \"T::T\", \"location\": \{ \"line\": 16, \"column\": 5, \"file\": \"{{.*}}dump_egraph.cpp\" \}, \"items\": [\l&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\{ \"init_id\": {{[0-9]+}}, \"kind\": \"construct into member variable\", \"argument_index\": null, \"pretty\": \"s\", \"value\": \"&t.s\"
 
 // CHECK: \"cluster\": \"t\", \"pointer\": \"{{0x[0-9a-f]+}}\", \"items\": [\l&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\{ \"kind\": \"Default\", \"offset\": 0, \"value\": \"conj_$2\{int, LC5, no stmt, #1\}\"
 

@@ -61,6 +61,7 @@ unittest("SupportTests") {
     "ReplaceFileTest.cpp",
     "ReverseIterationTest.cpp",
     "ScaledNumberTest.cpp",
+    "SignalsTest.cpp",
     "SourceMgrTest.cpp",
     "SpecialCaseListTest.cpp",
     "StringPool.cpp",

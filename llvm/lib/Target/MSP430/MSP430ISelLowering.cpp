@@ -353,6 +353,9 @@ SDValue MSP430TargetLowering::LowerOperation(SDValue Op,
   }
 }
 
+unsigned MSP430TargetLowering::getShiftAmountThreshold(EVT VT) const {
+  return 2;
+}
 //===----------------------------------------------------------------------===//
 //                       MSP430 Inline Assembly Support
 //===----------------------------------------------------------------------===//

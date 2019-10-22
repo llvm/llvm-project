@@ -7,8 +7,8 @@ Sections:
   - Type:            TYPE
     Signatures:
       - Index:           0
-        ReturnType:      NORESULT
-        ParamTypes:
+        ParamTypes:      []
+        ReturnTypes:     []
   - Type:            FUNCTION
     FunctionTypes: [ 0, 0, 0 ]
   - Type:            START

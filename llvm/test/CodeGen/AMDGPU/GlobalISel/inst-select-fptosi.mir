@@ -33,7 +33,7 @@ body: |
 
     ; GCN-LABEL: name: fptosi_s32_to_s32_vs
     ; GCN: liveins: $sgpr0
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[V_CVT_I32_F32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_I32_F32_e64 0, [[COPY]], 0, 0, implicit $exec
     ; GCN: $vgpr0 = COPY [[V_CVT_I32_F32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
@@ -96,7 +96,7 @@ body: |
 
     ; GCN-LABEL: name: fptosi_s16_to_s32_vs
     ; GCN: liveins: $sgpr0
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[V_CVT_F32_F16_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_F16_e32 [[COPY]], implicit $exec
     ; GCN: [[V_CVT_I32_F32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_I32_F32_e32 [[V_CVT_F32_F16_e32_]], implicit $exec
     ; GCN: $vgpr0 = COPY [[V_CVT_I32_F32_e32_]]

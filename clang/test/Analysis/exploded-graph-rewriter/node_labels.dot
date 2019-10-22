@@ -15,13 +15,12 @@
 // CHECK-SAME:   <tr>
 // LIGHT-SAME:     <td bgcolor="gray70">
 // DARK-SAME:      <td bgcolor="gray20">
-// CHECK-SAME:       <b>State Unspecified</b>
+// CHECK-SAME:       <b>State 0</b>
 // CHECK-SAME:     </td>
 // CHECK-SAME:   </tr>
 Node0x1 [shape=record,label=
  "{
-    { "node_id": 1, "pointer": "0x1", "has_report": false, "is_sink": false,
-      "program_state": null,
+    { "state_id": 0, "program_state": null,
       "program_points": [
         {
           "kind": "BlockEntrance", "block_id": 1,
@@ -48,7 +47,7 @@ Node0x1 [shape=record,label=
 // CHECK-SAME: </tr>
 Node0x2 [shape=record,label=
  "{
-    { "program_state": null,
+    { "state_id": 0, "program_state": null,
       "program_points": [
         {
           "kind": "BlockEntrance", "block_id": 1,

@@ -1440,6 +1440,13 @@ void ASTStmtReader::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
   E->Range = Record.readSourceRange();
 }
 
+void ASTStmtReader::VisitCXXRewrittenBinaryOperator(
+    CXXRewrittenBinaryOperator *E) {
+  VisitExpr(E);
+  E->CXXRewrittenBinaryOperatorBits.IsReversed = Record.readInt();
+  E->SemanticForm = Record.readSubExpr();
+}
+
 void ASTStmtReader::VisitCXXConstructExpr(CXXConstructExpr *E) {
   VisitExpr(E);
 
@@ -2299,6 +2306,11 @@ void ASTStmtReader::VisitOMPMasterTaskLoopDirective(
   VisitOMPLoopDirective(D);
 }
 
+void ASTStmtReader::VisitOMPMasterTaskLoopSimdDirective(
+    OMPMasterTaskLoopSimdDirective *D) {
+  VisitOMPLoopDirective(D);
+}
+
 void ASTStmtReader::VisitOMPParallelMasterTaskLoopDirective(
     OMPParallelMasterTaskLoopDirective *D) {
   VisitOMPLoopDirective(D);
@@ -3103,6 +3115,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
     }
 
+    case STMT_OMP_MASTER_TASKLOOP_SIMD_DIRECTIVE: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPMasterTaskLoopSimdDirective::CreateEmpty(Context, NumClauses,
+                                                      CollapsedNum, Empty);
+      break;
+    }
+
     case STMT_OMP_PARALLEL_MASTER_TASKLOOP_DIRECTIVE: {
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
       unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields + 1];
@@ -3237,6 +3257,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case EXPR_CXX_MEMBER_CALL:
       S = CXXMemberCallExpr::CreateEmpty(
           Context, /*NumArgs=*/Record[ASTStmtReader::NumExprFields], Empty);
+      break;
+
+    case EXPR_CXX_REWRITTEN_BINARY_OPERATOR:
+      S = new (Context) CXXRewrittenBinaryOperator(Empty);
       break;
 
     case EXPR_CXX_CONSTRUCT:

@@ -108,7 +108,7 @@ private:
   FileSpec m_core_file;
   lldb::DataBufferSP m_core_data;
   llvm::ArrayRef<minidump::Thread> m_thread_list;
-  const MinidumpExceptionStream *m_active_exception;
+  const minidump::ExceptionStream *m_active_exception;
   lldb::CommandObjectSP m_command_sp;
   bool m_is_wow64;
 };

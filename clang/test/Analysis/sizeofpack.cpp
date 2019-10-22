@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection \
-// RUN:                    -verify %s
+// RUN:                    -std=c++14 -verify %s
 
 typedef __typeof(sizeof(int)) size_t;
 

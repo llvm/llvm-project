@@ -17,7 +17,7 @@
 // UNSUPPORTED: system-windows
 
 Node0x1 [shape=record,label=
- "{{ "program_state": null, "program_points": [
+ "{{ "state_id": 0, "program_state": null, "program_points": [
        {
          "kind": "BlockEntrance", "block_id": 1,
          "terminator": null, "term_kind": null,
@@ -27,7 +27,7 @@ Node0x1 [shape=record,label=
      ]}\l}"];
 
 Node0x2 [shape=record,label=
- "{{ "program_state": null, "program_points": [
+ "{{ "state_id": 0, "program_state": null, "program_points": [
        {
          "kind": "BlockEntrance", "block_id": 1,
          "terminator": null, "term_kind": null,
@@ -37,7 +37,7 @@ Node0x2 [shape=record,label=
      ]}\l}"];
 
 Node0x3 [shape=record,label=
- "{{ "program_state": null, "program_points": [
+ "{{ "state_id": 0, "program_state": null, "program_points": [
        {
          "kind": "BlockEntrance", "block_id": 1,
          "terminator": null, "term_kind": null,
@@ -47,7 +47,7 @@ Node0x3 [shape=record,label=
      ]}\l}"];
 
 Node0x4 [shape=record,label=
- "{{ "program_state": null, "program_points": [
+ "{{ "state_id": 0, "program_state": null, "program_points": [
        {
          "kind": "BlockEntrance", "block_id": 1,
          "terminator": null, "term_kind": null,

@@ -1156,6 +1156,48 @@ define i8 @test_scalar_uadd_sub_const(i8 %a) {
   ret i8 %res
 }
 
+define i1 @scalar_uadd_eq_zero(i8 %a, i8 %b) {
+; CHECK-LABEL: @scalar_uadd_eq_zero(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 %b)
+  %cmp = icmp eq i8 %sat, 0
+  ret i1 %cmp
+}
+
+define i1 @scalar_uadd_ne_zero(i8 %a, i8 %b) {
+; CHECK-LABEL: @scalar_uadd_ne_zero(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %a, i8 %b)
+  %cmp = icmp ne i8 %sat, 0
+  ret i1 %cmp
+}
+
+define i1 @scalar_usub_eq_zero(i8 %a, i8 %b) {
+; CHECK-LABEL: @scalar_usub_eq_zero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i8 @llvm.usub.sat.i8(i8 %a, i8 %b)
+  %cmp = icmp eq i8 %sat, 0
+  ret i1 %cmp
+}
+
+define i1 @scalar_usub_ne_zero(i8 %a, i8 %b) {
+; CHECK-LABEL: @scalar_usub_ne_zero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i8 @llvm.usub.sat.i8(i8 %a, i8 %b)
+  %cmp = icmp ne i8 %sat, 0
+  ret i1 %cmp
+}
+
 ; Raw IR tests
 
 define i32 @uadd_sat(i32 %x, i32 %y) {

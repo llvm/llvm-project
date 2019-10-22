@@ -610,8 +610,9 @@ define double @u64_to_d(i64 %a) nounwind {
 ; AVX512F_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX512F_32-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; AVX512F_32-NEXT:    vsubpd {{\.LCPI.*}}, %xmm0, %xmm0
-; AVX512F_32-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
-; AVX512F_32-NEXT:    vmovlpd %xmm0, (%esp)
+; AVX512F_32-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512F_32-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
+; AVX512F_32-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX512F_32-NEXT:    fldl (%esp)
 ; AVX512F_32-NEXT:    movl %ebp, %esp
 ; AVX512F_32-NEXT:    popl %ebp
@@ -646,6 +647,110 @@ define double @u64_to_d(i64 %a) nounwind {
 ; SSE2_64-NEXT:    retq
 ;
 ; X87-LABEL: u64_to_d:
+; X87:       # %bb.0:
+; X87-NEXT:    pushl %ebp
+; X87-NEXT:    movl %esp, %ebp
+; X87-NEXT:    andl $-8, %esp
+; X87-NEXT:    subl $16, %esp
+; X87-NEXT:    movl 8(%ebp), %eax
+; X87-NEXT:    movl 12(%ebp), %ecx
+; X87-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X87-NEXT:    movl %eax, (%esp)
+; X87-NEXT:    xorl %eax, %eax
+; X87-NEXT:    testl %ecx, %ecx
+; X87-NEXT:    setns %al
+; X87-NEXT:    fildll (%esp)
+; X87-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    movl %ebp, %esp
+; X87-NEXT:    popl %ebp
+; X87-NEXT:    retl
+  %r = uitofp i64 %a to double
+  ret double %r
+}
+
+define double @u64_to_d_optsize(i64 %a) nounwind optsize {
+; AVX512DQVL_32-LABEL: u64_to_d_optsize:
+; AVX512DQVL_32:       # %bb.0:
+; AVX512DQVL_32-NEXT:    pushl %ebp
+; AVX512DQVL_32-NEXT:    movl %esp, %ebp
+; AVX512DQVL_32-NEXT:    andl $-8, %esp
+; AVX512DQVL_32-NEXT:    subl $8, %esp
+; AVX512DQVL_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512DQVL_32-NEXT:    vcvtuqq2pd %ymm0, %ymm0
+; AVX512DQVL_32-NEXT:    vmovlps %xmm0, (%esp)
+; AVX512DQVL_32-NEXT:    fldl (%esp)
+; AVX512DQVL_32-NEXT:    movl %ebp, %esp
+; AVX512DQVL_32-NEXT:    popl %ebp
+; AVX512DQVL_32-NEXT:    vzeroupper
+; AVX512DQVL_32-NEXT:    retl
+;
+; AVX512_64-LABEL: u64_to_d_optsize:
+; AVX512_64:       # %bb.0:
+; AVX512_64-NEXT:    vcvtusi2sd %rdi, %xmm0, %xmm0
+; AVX512_64-NEXT:    retq
+;
+; AVX512DQ_32-LABEL: u64_to_d_optsize:
+; AVX512DQ_32:       # %bb.0:
+; AVX512DQ_32-NEXT:    pushl %ebp
+; AVX512DQ_32-NEXT:    movl %esp, %ebp
+; AVX512DQ_32-NEXT:    andl $-8, %esp
+; AVX512DQ_32-NEXT:    subl $8, %esp
+; AVX512DQ_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512DQ_32-NEXT:    vcvtuqq2pd %zmm0, %zmm0
+; AVX512DQ_32-NEXT:    vmovlps %xmm0, (%esp)
+; AVX512DQ_32-NEXT:    fldl (%esp)
+; AVX512DQ_32-NEXT:    movl %ebp, %esp
+; AVX512DQ_32-NEXT:    popl %ebp
+; AVX512DQ_32-NEXT:    vzeroupper
+; AVX512DQ_32-NEXT:    retl
+;
+; AVX512F_32-LABEL: u64_to_d_optsize:
+; AVX512F_32:       # %bb.0:
+; AVX512F_32-NEXT:    pushl %ebp
+; AVX512F_32-NEXT:    movl %esp, %ebp
+; AVX512F_32-NEXT:    andl $-8, %esp
+; AVX512F_32-NEXT:    subl $8, %esp
+; AVX512F_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512F_32-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; AVX512F_32-NEXT:    vsubpd {{\.LCPI.*}}, %xmm0, %xmm0
+; AVX512F_32-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
+; AVX512F_32-NEXT:    vmovlpd %xmm0, (%esp)
+; AVX512F_32-NEXT:    fldl (%esp)
+; AVX512F_32-NEXT:    movl %ebp, %esp
+; AVX512F_32-NEXT:    popl %ebp
+; AVX512F_32-NEXT:    retl
+;
+; SSE2_32-LABEL: u64_to_d_optsize:
+; SSE2_32:       # %bb.0:
+; SSE2_32-NEXT:    pushl %ebp
+; SSE2_32-NEXT:    movl %esp, %ebp
+; SSE2_32-NEXT:    andl $-8, %esp
+; SSE2_32-NEXT:    subl $8, %esp
+; SSE2_32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE2_32-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; SSE2_32-NEXT:    subpd {{\.LCPI.*}}, %xmm0
+; SSE2_32-NEXT:    movapd %xmm0, %xmm1
+; SSE2_32-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE2_32-NEXT:    addsd %xmm0, %xmm1
+; SSE2_32-NEXT:    movsd %xmm1, (%esp)
+; SSE2_32-NEXT:    fldl (%esp)
+; SSE2_32-NEXT:    movl %ebp, %esp
+; SSE2_32-NEXT:    popl %ebp
+; SSE2_32-NEXT:    retl
+;
+; SSE2_64-LABEL: u64_to_d_optsize:
+; SSE2_64:       # %bb.0:
+; SSE2_64-NEXT:    movq %rdi, %xmm1
+; SSE2_64-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
+; SSE2_64-NEXT:    subpd {{.*}}(%rip), %xmm1
+; SSE2_64-NEXT:    movapd %xmm1, %xmm0
+; SSE2_64-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; SSE2_64-NEXT:    addsd %xmm1, %xmm0
+; SSE2_64-NEXT:    retq
+;
+; X87-LABEL: u64_to_d_optsize:
 ; X87:       # %bb.0:
 ; X87-NEXT:    pushl %ebp
 ; X87-NEXT:    movl %esp, %ebp

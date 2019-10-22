@@ -161,10 +161,13 @@ template <typename ActionT> class Automaton {
   /// FIXME: This uses a std::map because ActionT can be a pair type including
   /// an enum. In particular DenseMapInfo<ActionT> must be defined to use
   /// DenseMap here.
-  std::map<std::pair<uint64_t, ActionT>, std::pair<uint64_t, unsigned>> M;
+  /// This is a shared_ptr to allow very quick copy-construction of Automata; this
+  /// state is immutable after construction so this is safe.
+  using MapTy = std::map<std::pair<uint64_t, ActionT>, std::pair<uint64_t, unsigned>>;
+  std::shared_ptr<MapTy> M;
   /// An optional transcription object. This uses much more state than simply
   /// traversing the DFA for acceptance, so is heap allocated.
-  std::unique_ptr<internal::NfaTranscriber> Transcriber;
+  std::shared_ptr<internal::NfaTranscriber> Transcriber;
   /// The initial DFA state is 1.
   uint64_t State = 1;
   /// True if we should transcribe and false if not (even if Transcriber is defined).
@@ -187,13 +190,15 @@ public:
             ArrayRef<NfaStatePair> TranscriptionTable = {}) {
     if (!TranscriptionTable.empty())
       Transcriber =
-          std::make_unique<internal::NfaTranscriber>(TranscriptionTable);
+          std::make_shared<internal::NfaTranscriber>(TranscriptionTable);
     Transcribe = Transcriber != nullptr;
+    M = std::make_shared<MapTy>();
     for (const auto &I : Transitions)
       // Greedily read and cache the transition table.
-      M.emplace(std::make_pair(I.FromDfaState, I.Action),
-                std::make_pair(I.ToDfaState, I.InfoIdx));
+      M->emplace(std::make_pair(I.FromDfaState, I.Action),
+                 std::make_pair(I.ToDfaState, I.InfoIdx));
   }
+  Automaton(const Automaton &) = default;
 
   /// Reset the automaton to its initial state.
   void reset() {
@@ -218,8 +223,8 @@ public:
   /// If this function returns false, all methods are undefined until reset() is
   /// called.
   bool add(const ActionT &A) {
-    auto I = M.find({State, A});
-    if (I == M.end())
+    auto I = M->find({State, A});
+    if (I == M->end())
       return false;
     if (Transcriber && Transcribe)
       Transcriber->transition(I->second.second);
@@ -229,8 +234,8 @@ public:
 
   /// Return true if the automaton can be transitioned based on input symbol A.
   bool canAdd(const ActionT &A) {
-    auto I = M.find({State, A});
-    return I != M.end();
+    auto I = M->find({State, A});
+    return I != M->end();
   }
 
   /// Obtain a set of possible paths through the input nondeterministic

@@ -33,7 +33,7 @@ body: |
 
     ; CHECK-LABEL: name: sffbh_s32_vs
     ; CHECK: liveins: $sgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK: [[V_FFBH_I32_e64_:%[0-9]+]]:vgpr_32 = V_FFBH_I32_e64 [[COPY]], implicit $exec
     ; CHECK: S_ENDPGM 0, implicit [[V_FFBH_I32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0

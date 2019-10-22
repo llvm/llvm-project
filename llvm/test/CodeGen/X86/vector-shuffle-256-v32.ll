@@ -3106,16 +3106,14 @@ define <4 x i64> @PR28136(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [8,8,10,10,12,12,14,14,9,9,11,11,13,13,15,15]
-; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm3
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
-; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1],xmm1[2],xmm4[2],xmm1[3],xmm4[3],xmm1[4],xmm4[4],xmm1[5],xmm4[5],xmm1[6],xmm4[6],xmm1[7],xmm4[7]
-; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm2 = xmm0[8,u,10,u,12,u,14,u,9,u,11,u,13,u,15,u]
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3],xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm3 = xmm1[u,8,u,10,u,12,u,14,u,9,u,11,u,13,u,15]
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
-; AVX1-NEXT:    vpblendvb %xmm4, %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,0,2,2,4,4,6,6,1,1,3,3,5,5,7,7]
-; AVX1-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendvb %xmm4, %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,u,2,u,4,u,6,u,1,u,3,u,5,u,7,u]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[u,0,u,2,u,4,u,6,u,1,u,3,u,5,u,7]
 ; AVX1-NEXT:    vpblendvb %xmm4, %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX1-NEXT:    retq

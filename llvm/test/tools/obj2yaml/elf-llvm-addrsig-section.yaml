@@ -62,7 +62,6 @@ Symbols:
 
 # INVALID-ENTRY:      - Name:    .llvm_addrsig
 # INVALID-ENTRY-NEXT:   Type:    SHT_LLVM_ADDRSIG
-# INVALID-ENTRY-NEXT:   Link:    .symtab
 # INVALID-ENTRY-NEXT:   Content: FFFFFFFFFF
 
 --- !ELF
@@ -83,7 +82,6 @@ Sections:
 
 # EMPTY:      - Name:    .llvm_addrsig
 # EMPTY-NEXT:   Type:    SHT_LLVM_ADDRSIG
-# EMPTY-NEXT:   Link:    .symtab
 # EMPTY-NEXT:   Symbols: []
 
 --- !ELF

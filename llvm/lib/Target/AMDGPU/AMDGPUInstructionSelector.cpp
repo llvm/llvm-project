@@ -79,7 +79,9 @@ static bool isSCC(Register Reg, const MachineRegisterInfo &MRI) {
   if (RC) {
     // FIXME: This is ambiguous for wave32. This could be SCC or VCC, but the
     // context of the register bank has been lost.
-    if (RC->getID() != AMDGPU::SReg_32_XM0RegClassID)
+    // Has a hack getRegClassForSizeOnBank uses exactly SGPR_32RegClass, which
+    // won't ever beconstrained any further.
+    if (RC != &AMDGPU::SGPR_32RegClass)
       return false;
     const LLT Ty = MRI.getType(Reg);
     return Ty.isValid() && Ty.getSizeInBits() == 1;
@@ -627,10 +629,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
 
     I.eraseFromParent();
 
-    for (Register Reg : { DstReg, Src0Reg, Src1Reg }) {
-      if (!MRI->getRegClassOrNull(Reg))
-        MRI->setRegClass(Reg, TRI.getWaveMaskRegClass());
-    }
+    for (Register Reg : { DstReg, Src0Reg, Src1Reg })
+      MRI->setRegClass(Reg, TRI.getWaveMaskRegClass());
 
     return true;
   }
@@ -1440,7 +1440,7 @@ bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
       .addImm(I.getOperand(1).getImm());
   } else {
     const TargetRegisterClass *RC = IsSgpr ?
-      &AMDGPU::SReg_32_XM0RegClass : &AMDGPU::VGPR_32RegClass;
+      &AMDGPU::SReg_32RegClass : &AMDGPU::VGPR_32RegClass;
     Register LoReg = MRI->createVirtualRegister(RC);
     Register HiReg = MRI->createVirtualRegister(RC);
 
@@ -1571,7 +1571,8 @@ bool AMDGPUInstructionSelector::selectG_BRCOND(MachineInstr &I) const {
   if (isSCC(CondReg, *MRI)) {
     CondPhysReg = AMDGPU::SCC;
     BrOpcode = AMDGPU::S_CBRANCH_SCC1;
-    ConstrainRC = &AMDGPU::SReg_32_XM0RegClass;
+    // FIXME: Hack for isSCC tests
+    ConstrainRC = &AMDGPU::SGPR_32RegClass;
   } else if (isVCC(CondReg, *MRI)) {
     // FIXME: Do we have to insert an and with exec here, like in SelectionDAG?
     // We sort of know that a VCC producer based on the register bank, that ands
@@ -1936,7 +1937,7 @@ AMDGPUInstructionSelector::selectSmrdSgpr(MachineOperand &Root) const {
   // failed trying to select this load into one of the _IMM variants since
   // the _IMM Patterns are considered before the _SGPR patterns.
   unsigned PtrReg = GEPInfo.SgprParts[0];
-  Register OffsetReg = MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+  Register OffsetReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
   BuildMI(*MBB, MI, MI->getDebugLoc(), TII.get(AMDGPU::S_MOV_B32), OffsetReg)
           .addImm(GEPInfo.Imm);
   return {{

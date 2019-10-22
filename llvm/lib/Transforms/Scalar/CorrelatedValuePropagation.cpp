@@ -76,6 +76,9 @@ STATISTIC(NumSubNUW,    "Number of no-unsigned-wrap deductions for sub");
 STATISTIC(NumMulNW,     "Number of no-wrap deductions for mul");
 STATISTIC(NumMulNSW,    "Number of no-signed-wrap deductions for mul");
 STATISTIC(NumMulNUW,    "Number of no-unsigned-wrap deductions for mul");
+STATISTIC(NumShlNW,     "Number of no-wrap deductions for shl");
+STATISTIC(NumShlNSW,    "Number of no-signed-wrap deductions for shl");
+STATISTIC(NumShlNUW,    "Number of no-unsigned-wrap deductions for shl");
 STATISTIC(NumOverflows, "Number of overflow checks removed");
 STATISTIC(NumSaturating,
     "Number of saturating arithmetics converted to normal arithmetics");
@@ -450,6 +453,11 @@ static void setDeducedOverflowingFlags(Value *V, Instruction::BinaryOps Opcode,
     OpcNSW = &NumMulNSW;
     OpcNUW = &NumMulNUW;
     break;
+  case Instruction::Shl:
+    OpcNW = &NumShlNW;
+    OpcNSW = &NumShlNSW;
+    OpcNUW = &NumShlNUW;
+    break;
   default:
     llvm_unreachable("Will not be called with other binops");
   }
@@ -457,24 +465,26 @@ static void setDeducedOverflowingFlags(Value *V, Instruction::BinaryOps Opcode,
   auto *Inst = dyn_cast<Instruction>(V);
   if (NewNSW) {
     ++NumNW;
-    ++OpcNW;
+    ++*OpcNW;
     ++NumNSW;
-    ++OpcNSW;
+    ++*OpcNSW;
     if (Inst)
       Inst->setHasNoSignedWrap();
   }
   if (NewNUW) {
     ++NumNW;
-    ++OpcNW;
+    ++*OpcNW;
     ++NumNUW;
-    ++OpcNUW;
+    ++*OpcNUW;
     if (Inst)
       Inst->setHasNoUnsignedWrap();
   }
 }
 
+static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI);
+
 // Rewrite this with.overflow intrinsic as non-overflowing.
-static void processOverflowIntrinsic(WithOverflowInst *WO) {
+static void processOverflowIntrinsic(WithOverflowInst *WO, LazyValueInfo *LVI) {
   IRBuilder<> B(WO);
   Instruction::BinaryOps Opcode = WO->getBinaryOp();
   bool NSW = WO->isSigned();
@@ -492,9 +502,13 @@ static void processOverflowIntrinsic(WithOverflowInst *WO) {
   WO->replaceAllUsesWith(NewI);
   WO->eraseFromParent();
   ++NumOverflows;
+
+  // See if we can infer the other no-wrap too.
+  if (auto *BO = dyn_cast<BinaryOperator>(NewOp))
+    processBinOp(BO, LVI);
 }
 
-static void processSaturatingInst(SaturatingInst *SI) {
+static void processSaturatingInst(SaturatingInst *SI, LazyValueInfo *LVI) {
   Instruction::BinaryOps Opcode = SI->getBinaryOp();
   bool NSW = SI->isSigned();
   bool NUW = !SI->isSigned();
@@ -506,6 +520,10 @@ static void processSaturatingInst(SaturatingInst *SI) {
   SI->replaceAllUsesWith(BinOp);
   SI->eraseFromParent();
   ++NumSaturating;
+
+  // See if we can infer the other no-wrap too.
+  if (auto *BO = dyn_cast<BinaryOperator>(BinOp))
+    processBinOp(BO, LVI);
 }
 
 /// Infer nonnull attributes for the arguments at the specified callsite.
@@ -515,14 +533,14 @@ static bool processCallSite(CallSite CS, LazyValueInfo *LVI) {
 
   if (auto *WO = dyn_cast<WithOverflowInst>(CS.getInstruction())) {
     if (WO->getLHS()->getType()->isIntegerTy() && willNotOverflow(WO, LVI)) {
-      processOverflowIntrinsic(WO);
+      processOverflowIntrinsic(WO, LVI);
       return true;
     }
   }
 
   if (auto *SI = dyn_cast<SaturatingInst>(CS.getInstruction())) {
     if (SI->getType()->isIntegerTy() && willNotOverflow(SI, LVI)) {
-      processSaturatingInst(SI);
+      processSaturatingInst(SI, LVI);
       return true;
     }
   }
@@ -850,6 +868,8 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
         break;
       case Instruction::Add:
       case Instruction::Sub:
+      case Instruction::Mul:
+      case Instruction::Shl:
         BBChanged |= processBinOp(cast<BinaryOperator>(II), LVI);
         break;
       case Instruction::And:

@@ -37,6 +37,5 @@ Sections:
   - Name:    .rela.text
     Type:    SHT_RELA
     Address: 0x0000000000000038
-    Link:    .symtab
     Info:    .text
     Relocations:

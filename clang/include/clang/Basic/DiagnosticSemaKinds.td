@@ -3769,7 +3769,8 @@ def note_ovl_too_many_candidates : Note<
     "pass -fshow-overloads=all to show them">;
 
 def select_ovl_candidate_kind : TextSubstitution<
-  "%select{function|function|constructor|"
+  "%select{function|function|function (with reversed parameter order)|"
+    "constructor|"
     "constructor (the implicit default constructor)|"
     "constructor (the implicit copy constructor)|"
     "constructor (the implicit move constructor)|"
@@ -3990,6 +3991,13 @@ def err_ovl_ambiguous_oper_unary : Error<
   "use of overloaded operator '%0' is ambiguous (operand type %1)">;
 def err_ovl_ambiguous_oper_binary : Error<
   "use of overloaded operator '%0' is ambiguous (with operand types %1 and %2)">;
+def ext_ovl_ambiguous_oper_binary_reversed : ExtWarn<
+  "ISO C++20 considers use of overloaded operator '%0' (with operand types %1 "
+  "and %2) to be ambiguous despite there being a unique best viable function">,
+  InGroup<DiagGroup<"ambiguous-reversed-operator">>, SFINAEFailure;
+def note_ovl_ambiguous_oper_binary_reversed_candidate : Note<
+  "ambiguity is between a regular call to this operator and a call with the "
+  "argument order reversed">;
 def err_ovl_no_viable_oper : Error<"no viable overloaded '%0'">;
 def note_assign_lhs_incomplete : Note<"type %0 is incomplete">;
 def err_ovl_deleted_oper : Error<
@@ -3997,6 +4005,9 @@ def err_ovl_deleted_oper : Error<
 def err_ovl_deleted_special_oper : Error<
   "object of type %0 cannot be %select{constructed|copied|moved|assigned|"
   "assigned|destroyed}1 because its %sub{select_special_member_kind}1 is implicitly deleted">;
+def err_ovl_rewrite_equalequal_not_bool : Error<
+  "return type %0 of selected 'operator==' function for rewritten "
+  "'%1' comparison is not 'bool'">;
 def err_ovl_no_viable_subscript :
     Error<"no viable overloaded operator[] for type %0">;
 def err_ovl_no_oper :
@@ -5734,6 +5745,9 @@ def note_precedence_silence : Note<
 def warn_precedence_conditional : Warning<
   "operator '?:' has lower precedence than '%0'; '%0' will be evaluated first">,
   InGroup<Parentheses>;
+def warn_precedence_bitwise_conditional : Warning<
+  "operator '?:' has lower precedence than '%0'; '%0' will be evaluated first">,
+  InGroup<BitwiseConditionalParentheses>;
 def note_precedence_conditional_first : Note<
   "place parentheses around the '?:' expression to evaluate it first">;
 
@@ -8321,7 +8335,10 @@ def warn_comparison_always : Warning<
   InGroup<TautologicalCompare>;
 def warn_comparison_bitwise_always : Warning<
   "bitwise comparison always evaluates to %select{false|true}0">,
-  InGroup<TautologicalCompare>;
+  InGroup<TautologicalBitwiseCompare>, DefaultIgnore;
+def warn_comparison_bitwise_or : Warning<
+  "bitwise or with non-zero value always evaluates to true">,
+  InGroup<TautologicalBitwiseCompare>, DefaultIgnore;
 def warn_tautological_overlap_comparison : Warning<
   "overlapping comparisons always evaluate to %select{false|true}0">,
   InGroup<TautologicalOverlapCompare>, DefaultIgnore;
@@ -9961,6 +9978,8 @@ def err_std_compare_type_not_supported : Error<
    "member '%2' is missing|"
    "the type is not trivially copyable|"
    "the type does not have the expected form}1">;
+def note_rewriting_operator_as_spaceship : Note<
+  "while rewriting comparison as call to 'operator<=>' declared here">;
 
 // Memory Tagging Extensions (MTE) diagnostics
 def err_memtag_arg_null_or_pointer : Error<

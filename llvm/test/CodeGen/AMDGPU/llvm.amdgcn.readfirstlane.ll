@@ -30,11 +30,9 @@ define amdgpu_kernel void @test_readfirstlane_imm_fold(i32 addrspace(1)* %out) #
   ret void
 }
 
-; TODO: m0 should be folded.
 ; CHECK-LABEL: {{^}}test_readfirstlane_m0:
 ; CHECK: s_mov_b32 m0, -1
-; CHECK: s_mov_b32 [[COPY_M0:s[0-9]+]], m0
-; CHECK: v_mov_b32_e32 [[VVAL:v[0-9]]], [[COPY_M0]]
+; CHECK: v_mov_b32_e32 [[VVAL:v[0-9]]], m0
 ; CHECK: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[VVAL]]
 define amdgpu_kernel void @test_readfirstlane_m0(i32 addrspace(1)* %out) #1 {
   %m0 = call i32 asm "s_mov_b32 m0, -1", "={m0}"()

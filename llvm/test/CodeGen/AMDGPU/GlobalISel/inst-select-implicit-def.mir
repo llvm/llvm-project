@@ -15,7 +15,7 @@ regBankSelected: true
 body: |
   bb.0:
     ; GCN-LABEL: name: implicit_def_s32_sgpr
-    ; GCN: [[DEF:%[0-9]+]]:sreg_32_xm0 = IMPLICIT_DEF
+    ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN: S_ENDPGM 0, implicit [[DEF]]
     %0:sgpr(s32) = G_IMPLICIT_DEF
     S_ENDPGM 0, implicit %0
@@ -169,7 +169,7 @@ regBankSelected: true
 body: |
   bb.0:
     ; GCN-LABEL: name: implicit_def_s1_sgpr
-    ; GCN: [[DEF:%[0-9]+]]:sreg_32_xm0 = IMPLICIT_DEF
+    ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN: S_ENDPGM 0, implicit [[DEF]]
     %0:sgpr(s1) = G_IMPLICIT_DEF
     S_ENDPGM 0, implicit %0
@@ -184,7 +184,7 @@ regBankSelected: true
 body: |
   bb.0:
     ; GCN-LABEL: name: implicit_def_s1_scc
-    ; GCN: [[DEF:%[0-9]+]]:sreg_32_xm0 = IMPLICIT_DEF
+    ; GCN: [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
     ; GCN: S_ENDPGM 0, implicit [[DEF]]
     %0:scc(s1) = G_IMPLICIT_DEF
     S_ENDPGM 0, implicit %0

@@ -242,6 +242,7 @@
 
 #ifdef __FreeBSD__
 #  include <sys/endian.h>
+#  include <osreldate.h>
 #  if _BYTE_ORDER == _LITTLE_ENDIAN
 #    define _LIBCPP_LITTLE_ENDIAN
 #  else  // _BYTE_ORDER == _LITTLE_ENDIAN
@@ -963,6 +964,20 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_DEPRECATED_IN_CXX17
 #endif
 
+// Macros to enter and leave a state where deprecation warnings are suppressed.
+#if !defined(_LIBCPP_SUPPRESS_DEPRECATED_PUSH) && \
+    (defined(_LIBCPP_COMPILER_CLANG) || defined(_LIBCPP_COMPILER_GCC))
+#  define _LIBCPP_SUPPRESS_DEPRECATED_PUSH \
+    _Pragma("GCC diagnostic push") \
+    _Pragma("GCC diagnostic ignored \"-Wdeprecated\"")
+#  define _LIBCPP_SUPPRESS_DEPRECATED_POP \
+    _Pragma("GCC diagnostic pop")
+#endif
+#if !defined(_LIBCPP_SUPPRESS_DEPRECATED_PUSH)
+#  define _LIBCPP_SUPPRESS_DEPRECATED_PUSH
+#  define _LIBCPP_SUPPRESS_DEPRECATED_POP
+#endif
+
 #if _LIBCPP_STD_VER <= 11
 #  define _LIBCPP_EXPLICIT_AFTER_CXX11
 #else
@@ -1164,7 +1179,8 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 
 // Some systems do not provide gets() in their C library, for security reasons.
 #ifndef _LIBCPP_C_HAS_NO_GETS
-#  if defined(_LIBCPP_MSVCRT) || (defined(__FreeBSD__) && __FreeBSD__ >= 13)
+#  if defined(_LIBCPP_MSVCRT) || \
+      (defined(__FreeBSD_version) && __FreeBSD_version >= 1300043)
 #    define _LIBCPP_C_HAS_NO_GETS
 #  endif
 #endif

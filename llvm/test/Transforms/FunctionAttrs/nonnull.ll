@@ -220,7 +220,7 @@ bb:
 
 define dso_local noalias i32* @f3(i32* %arg) {
 ; FIXME: missing nonnull. It should be nonnull @f3(i32* nonnull readonly %arg) 
-; ATTRIBUTOR: define dso_local noalias i32* @f3(i32* readonly %arg)
+; ATTRIBUTOR: define dso_local noalias i32* @f3(i32* nocapture readonly %arg)
 bb:
 ; FIXME: missing nonnull. It should be @f1(i32* nonnull readonly %arg) 
 ; ATTRIBUTOR:   %tmp = call i32* @f1(i32* readonly %arg)

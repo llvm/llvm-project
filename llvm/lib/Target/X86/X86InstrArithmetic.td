@@ -1271,22 +1271,22 @@ let isCompare = 1 in {
 // ANDN Instruction
 //
 multiclass bmi_andn<string mnemonic, RegisterClass RC, X86MemOperand x86memop,
-                    PatFrag ld_frag> {
+                    PatFrag ld_frag, X86FoldableSchedWrite sched> {
   def rr : I<0xF2, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, RC:$src2),
             !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
             [(set RC:$dst, EFLAGS, (X86and_flag (not RC:$src1), RC:$src2))]>,
-            Sched<[WriteALU]>;
+            Sched<[sched]>;
   def rm : I<0xF2, MRMSrcMem, (outs RC:$dst), (ins RC:$src1, x86memop:$src2),
             !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
             [(set RC:$dst, EFLAGS,
              (X86and_flag (not RC:$src1), (ld_frag addr:$src2)))]>,
-           Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>;
+           Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
 // Complexity is reduced to give and with immediate a chance to match first.
 let Predicates = [HasBMI], Defs = [EFLAGS], AddedComplexity = -6 in {
-  defm ANDN32 : bmi_andn<"andn{l}", GR32, i32mem, loadi32>, T8PS, VEX_4V;
-  defm ANDN64 : bmi_andn<"andn{q}", GR64, i64mem, loadi64>, T8PS, VEX_4V, VEX_W;
+  defm ANDN32 : bmi_andn<"andn{l}", GR32, i32mem, loadi32, WriteALU>, T8PS, VEX_4V;
+  defm ANDN64 : bmi_andn<"andn{q}", GR64, i64mem, loadi64, WriteALU>, T8PS, VEX_4V, VEX_W;
 }
 
 let Predicates = [HasBMI], AddedComplexity = -6 in {

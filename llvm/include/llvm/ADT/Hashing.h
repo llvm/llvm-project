@@ -45,7 +45,6 @@
 #define LLVM_ADT_HASHING_H
 
 #include "llvm/Support/DataTypes.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/type_traits.h"
 #include <algorithm>

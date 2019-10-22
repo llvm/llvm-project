@@ -35,7 +35,6 @@ private:
   BitVector VGPRPressureSets;
   BitVector AGPRPressureSets;
   bool SpillSGPRToVGPR;
-  bool SpillSGPRToSMEM;
   bool isWave32;
 
   void classifyPressureSet(unsigned PSetID, unsigned Reg,
@@ -45,10 +44,6 @@ public:
 
   bool spillSGPRToVGPR() const {
     return SpillSGPRToVGPR;
-  }
-
-  bool spillSGPRToSMEM() const {
-    return SpillSGPRToSMEM;
   }
 
   /// Return the end register initially reserved for the scratch buffer in case
@@ -268,7 +263,7 @@ public:
                                  const MachineRegisterInfo &MRI) const override;
 
   const TargetRegisterClass *getBoolRC() const {
-    return isWave32 ? &AMDGPU::SReg_32_XM0RegClass
+    return isWave32 ? &AMDGPU::SReg_32RegClass
                     : &AMDGPU::SReg_64RegClass;
   }
 

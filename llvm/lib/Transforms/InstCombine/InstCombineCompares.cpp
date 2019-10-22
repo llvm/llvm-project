@@ -1358,19 +1358,28 @@ Instruction *InstCombiner::foldIRemByPowerOfTwoToBitTest(ICmpInst &I) {
 
 /// Fold equality-comparison between zero and any (maybe truncated) right-shift
 /// by one-less-than-bitwidth into a sign test on the original value.
-Instruction *foldSignBitTest(ICmpInst &I) {
+Instruction *InstCombiner::foldSignBitTest(ICmpInst &I) {
+  Instruction *Val;
   ICmpInst::Predicate Pred;
-  Value *X;
-  Constant *C;
-  if (!I.isEquality() ||
-      !match(&I, m_ICmp(Pred, m_TruncOrSelf(m_Shr(m_Value(X), m_Constant(C))),
-                        m_Zero())))
+  if (!I.isEquality() || !match(&I, m_ICmp(Pred, m_Instruction(Val), m_Zero())))
     return nullptr;
 
-  Type *XTy = X->getType();
-  unsigned XBitWidth = XTy->getScalarSizeInBits();
-  if (!match(C, m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
-                                   APInt(XBitWidth, XBitWidth - 1))))
+  Value *X;
+  Type *XTy;
+
+  Constant *C;
+  if (match(Val, m_TruncOrSelf(m_Shr(m_Value(X), m_Constant(C))))) {
+    XTy = X->getType();
+    unsigned XBitWidth = XTy->getScalarSizeInBits();
+    if (!match(C, m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
+                                     APInt(XBitWidth, XBitWidth - 1))))
+      return nullptr;
+  } else if (isa<BinaryOperator>(Val) &&
+             (X = reassociateShiftAmtsOfTwoSameDirectionShifts(
+                  cast<BinaryOperator>(Val), SQ.getWithInstruction(Val),
+                  /*AnalyzeForSignBitExtraction=*/true))) {
+    XTy = X->getType();
+  } else
     return nullptr;
 
   return ICmpInst::Create(Instruction::ICmp,
@@ -3064,6 +3073,28 @@ Instruction *InstCombiner::foldICmpEqIntrinsicWithConstant(ICmpInst &Cmp,
           IsZero ? Constant::getNullValue(Ty) : Constant::getAllOnesValue(Ty);
       Cmp.setOperand(1, NewOp);
       return &Cmp;
+    }
+    break;
+  }
+
+  case Intrinsic::uadd_sat: {
+    // uadd.sat(a, b) == 0  ->  (a | b) == 0
+    if (C.isNullValue()) {
+      Value *Or = Builder.CreateOr(II->getArgOperand(0), II->getArgOperand(1));
+      return replaceInstUsesWith(Cmp, Builder.CreateICmp(
+          Cmp.getPredicate(), Or, Constant::getNullValue(Ty)));
+
+    }
+    break;
+  }
+
+  case Intrinsic::usub_sat: {
+    // usub.sat(a, b) == 0  ->  a <= b
+    if (C.isNullValue()) {
+      ICmpInst::Predicate NewPred = Cmp.getPredicate() == ICmpInst::ICMP_EQ
+          ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_UGT;
+      return ICmpInst::Create(Instruction::ICmp, NewPred,
+                              II->getArgOperand(0), II->getArgOperand(1));
     }
     break;
   }

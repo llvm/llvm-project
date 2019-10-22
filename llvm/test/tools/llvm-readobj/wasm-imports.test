@@ -9,11 +9,12 @@ Sections:
   - Type:            TYPE
     Signatures:      
       - Index:           0
-        ReturnType:      I32
         ParamTypes:      []
+        ReturnTypes:
+          - I32
       - Index:           1
-        ReturnType:      NORESULT
         ParamTypes:      []
+        ReturnTypes:     []
   - Type:            IMPORT
     Imports:         
       - Module:          env

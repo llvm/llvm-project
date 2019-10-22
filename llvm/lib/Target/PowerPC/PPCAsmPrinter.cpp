@@ -536,6 +536,7 @@ static MCSymbol *getMCSymbolForTOCPseudoMO(const MachineOperand &MO,
 void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   MCInst TmpInst;
   const bool IsDarwin = TM.getTargetTriple().isOSDarwin();
+  const bool IsPPC64 = Subtarget->isPPC64();
   const bool IsAIX = Subtarget->isAIXABI();
   const Module *M = MF->getFunction().getParent();
   PICLevel::Level PL = M->getPICLevel();
@@ -759,8 +760,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
   case PPC::ADDIStocHA: {
-    assert((IsAIX && !Subtarget->isPPC64() &&
-            TM.getCodeModel() == CodeModel::Large) &&
+    assert((IsAIX && !IsPPC64 && TM.getCodeModel() == CodeModel::Large) &&
            "This pseudo should only be selected for 32-bit large code model on"
            " AIX.");
 
@@ -790,8 +790,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
   case PPC::LWZtocL: {
-    assert(IsAIX && !Subtarget->isPPC64() &&
-           TM.getCodeModel() == CodeModel::Large &&
+    assert(IsAIX && !IsPPC64 && TM.getCodeModel() == CodeModel::Large &&
            "This pseudo should only be selected for 32-bit large code model on"
            " AIX.");
 
@@ -921,7 +920,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case PPC::ADDISgotTprelHA: {
     // Transform: %xd = ADDISgotTprelHA %x2, @sym
     // Into:      %xd = ADDIS8 %x2, sym@got@tlsgd@ha
-    assert(Subtarget->isPPC64() && "Not supported for 32-bit PowerPC");
+    assert(IsPPC64 && "Not supported for 32-bit PowerPC");
     const MachineOperand &MO = MI->getOperand(2);
     const GlobalValue *GValue = MO.getGlobal();
     MCSymbol *MOSymbol = getSymbol(GValue);
@@ -940,14 +939,13 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
 
     // Change the opcode to LD.
-    TmpInst.setOpcode(Subtarget->isPPC64() ? PPC::LD : PPC::LWZ);
+    TmpInst.setOpcode(IsPPC64 ? PPC::LD : PPC::LWZ);
     const MachineOperand &MO = MI->getOperand(1);
     const GlobalValue *GValue = MO.getGlobal();
     MCSymbol *MOSymbol = getSymbol(GValue);
     const MCExpr *Exp = MCSymbolRefExpr::create(
-        MOSymbol,
-        Subtarget->isPPC64() ? MCSymbolRefExpr::VK_PPC_GOT_TPREL_LO
-                             : MCSymbolRefExpr::VK_PPC_GOT_TPREL,
+        MOSymbol, IsPPC64 ? MCSymbolRefExpr::VK_PPC_GOT_TPREL_LO
+                          : MCSymbolRefExpr::VK_PPC_GOT_TPREL,
         OutContext);
     TmpInst.getOperand(1) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
@@ -1001,7 +999,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case PPC::ADDIStlsgdHA: {
     // Transform: %xd = ADDIStlsgdHA %x2, @sym
     // Into:      %xd = ADDIS8 %x2, sym@got@tlsgd@ha
-    assert(Subtarget->isPPC64() && "Not supported for 32-bit PowerPC");
+    assert(IsPPC64 && "Not supported for 32-bit PowerPC");
     const MachineOperand &MO = MI->getOperand(2);
     const GlobalValue *GValue = MO.getGlobal();
     MCSymbol *MOSymbol = getSymbol(GValue);
@@ -1024,11 +1022,11 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     const GlobalValue *GValue = MO.getGlobal();
     MCSymbol *MOSymbol = getSymbol(GValue);
     const MCExpr *SymGotTlsGD = MCSymbolRefExpr::create(
-        MOSymbol, Subtarget->isPPC64() ? MCSymbolRefExpr::VK_PPC_GOT_TLSGD_LO
-                                       : MCSymbolRefExpr::VK_PPC_GOT_TLSGD,
+        MOSymbol, IsPPC64 ? MCSymbolRefExpr::VK_PPC_GOT_TLSGD_LO
+                          : MCSymbolRefExpr::VK_PPC_GOT_TLSGD,
         OutContext);
     EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(Subtarget->isPPC64() ? PPC::ADDI8 : PPC::ADDI)
+                   MCInstBuilder(IsPPC64 ? PPC::ADDI8 : PPC::ADDI)
                    .addReg(MI->getOperand(0).getReg())
                    .addReg(MI->getOperand(1).getReg())
                    .addExpr(SymGotTlsGD));
@@ -1046,7 +1044,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case PPC::ADDIStlsldHA: {
     // Transform: %xd = ADDIStlsldHA %x2, @sym
     // Into:      %xd = ADDIS8 %x2, sym@got@tlsld@ha
-    assert(Subtarget->isPPC64() && "Not supported for 32-bit PowerPC");
+    assert(IsPPC64 && "Not supported for 32-bit PowerPC");
     const MachineOperand &MO = MI->getOperand(2);
     const GlobalValue *GValue = MO.getGlobal();
     MCSymbol *MOSymbol = getSymbol(GValue);
@@ -1069,11 +1067,11 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     const GlobalValue *GValue = MO.getGlobal();
     MCSymbol *MOSymbol = getSymbol(GValue);
     const MCExpr *SymGotTlsLD = MCSymbolRefExpr::create(
-        MOSymbol, Subtarget->isPPC64() ? MCSymbolRefExpr::VK_PPC_GOT_TLSLD_LO
-                                       : MCSymbolRefExpr::VK_PPC_GOT_TLSLD,
+        MOSymbol, IsPPC64 ? MCSymbolRefExpr::VK_PPC_GOT_TLSLD_LO
+                          : MCSymbolRefExpr::VK_PPC_GOT_TLSLD,
         OutContext);
     EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(Subtarget->isPPC64() ? PPC::ADDI8 : PPC::ADDI)
+                   MCInstBuilder(IsPPC64 ? PPC::ADDI8 : PPC::ADDI)
                        .addReg(MI->getOperand(0).getReg())
                        .addReg(MI->getOperand(1).getReg())
                        .addExpr(SymGotTlsLD));
@@ -1102,7 +1100,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
                               OutContext);
     EmitToStreamer(
         *OutStreamer,
-        MCInstBuilder(Subtarget->isPPC64() ? PPC::ADDIS8 : PPC::ADDIS)
+        MCInstBuilder(IsPPC64 ? PPC::ADDIS8 : PPC::ADDIS)
             .addReg(MI->getOperand(0).getReg())
             .addReg(MI->getOperand(1).getReg())
             .addExpr(SymDtprel));
@@ -1121,7 +1119,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       MCSymbolRefExpr::create(MOSymbol, MCSymbolRefExpr::VK_PPC_DTPREL_LO,
                               OutContext);
     EmitToStreamer(*OutStreamer,
-                   MCInstBuilder(Subtarget->isPPC64() ? PPC::ADDI8 : PPC::ADDI)
+                   MCInstBuilder(IsPPC64 ? PPC::ADDI8 : PPC::ADDI)
                        .addReg(MI->getOperand(0).getReg())
                        .addReg(MI->getOperand(1).getReg())
                        .addExpr(SymDtprel));
@@ -1168,7 +1166,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     // suite shows a handful of test cases that fail this check for
     // Darwin.  Those need to be investigated before this sanity test
     // can be enabled for those subtargets.
-    if (!Subtarget->isDarwin()) {
+    if (!IsDarwin) {
       unsigned OpNum = (MI->getOpcode() == PPC::STD) ? 2 : 1;
       const MachineOperand &MO = MI->getOperand(OpNum);
       if (MO.isGlobal() && MO.getGlobal()->getAlignment() < 4)

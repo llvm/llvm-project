@@ -538,10 +538,10 @@ void DFAPacketizerEmitter::emitForItineraries(
   OS << "DFAPacketizer *" << SubTargetClassName << "::"
      << "create" << DFAName
      << "DFAPacketizer(const InstrItineraryData *IID) const {\n"
-     << "  Automaton<uint64_t> A(ArrayRef<" << TargetAndDFAName
+     << "  static Automaton<uint64_t> A(ArrayRef<" << TargetAndDFAName
      << "Transition>(" << TargetAndDFAName << "Transitions), "
      << TargetAndDFAName << "TransitionInfo);\n"
-     << "  return new DFAPacketizer(IID, std::move(A));\n"
+     << "  return new DFAPacketizer(IID, A);\n"
      << "\n}\n\n";
 }
 

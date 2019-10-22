@@ -64,6 +64,8 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
   switch (MI.getOpcode()) {
   case TargetOpcode::G_CONCAT_VECTORS:
     return Helper.tryCombineConcatVectors(MI);
+  case TargetOpcode::G_SHUFFLE_VECTOR:
+    return Helper.tryCombineShuffleVector(MI);
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD: {

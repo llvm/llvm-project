@@ -15,7 +15,7 @@ body: |
     ; GCN: S_CMP_EQ_U32 [[COPY]], [[COPY]], implicit-def $scc
     ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY $scc
     ; GCN: $scc = COPY [[COPY1]]
-    ; GCN: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0 = S_CSELECT_B32 0, 1, implicit $scc
+    ; GCN: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 0, 1, implicit $scc
     ; GCN: $sgpr0 = COPY [[S_CSELECT_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:scc(s1) = G_ICMP intpred(eq), %0, %0
@@ -55,7 +55,7 @@ body: |
     liveins: $sgpr0
 
     ; GCN-LABEL: name: anyext_sgpr_s1_to_sgpr_s32
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: $sgpr0 = COPY [[COPY]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s1) = G_TRUNC %0
@@ -73,7 +73,7 @@ body: |
     liveins: $sgpr0
 
     ; GCN-LABEL: name: anyext_sgpr_s1_to_sgpr_s64
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY [[COPY]]
     ; GCN: $sgpr0_sgpr1 = COPY [[COPY1]]
     %0:sgpr(s32) = COPY $sgpr0
@@ -92,7 +92,7 @@ body: |
     liveins: $sgpr0
 
     ; GCN-LABEL: name: anyext_sgpr_s8_to_sgpr_s32
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: $sgpr0 = COPY [[COPY]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s8) = G_TRUNC %0
@@ -111,7 +111,7 @@ body: |
     liveins: $sgpr0
 
     ; GCN-LABEL: name: anyext_sgpr_s16_to_sgpr_s32
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: $sgpr0 = COPY [[COPY]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s16) = G_TRUNC %0
@@ -130,7 +130,7 @@ body: |
     liveins: $sgpr0
 
     ; GCN-LABEL: name: anyext_sgpr_s16_to_sgpr_s64
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY [[COPY]]
     ; GCN: $sgpr0_sgpr1 = COPY [[COPY1]]
     %0:sgpr(s32) = COPY $sgpr0

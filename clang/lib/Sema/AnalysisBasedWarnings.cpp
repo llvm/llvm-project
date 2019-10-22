@@ -159,6 +159,20 @@ public:
     S.Diag(B->getExprLoc(), diag::warn_comparison_bitwise_always)
         << DiagRange << isAlwaysTrue;
   }
+
+  void compareBitwiseOr(const BinaryOperator *B) override {
+    if (HasMacroID(B))
+      return;
+
+    SourceRange DiagRange = B->getSourceRange();
+    S.Diag(B->getExprLoc(), diag::warn_comparison_bitwise_or) << DiagRange;
+  }
+
+  static bool hasActiveDiagnostics(DiagnosticsEngine &Diags,
+                                   SourceLocation Loc) {
+    return !Diags.isIgnored(diag::warn_tautological_overlap_comparison, Loc) ||
+           !Diags.isIgnored(diag::warn_comparison_bitwise_or, Loc);
+  }
 };
 } // anonymous namespace
 
@@ -2070,10 +2084,9 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
       .setAlwaysAdd(Stmt::AttributedStmtClass);
   }
 
-  // Install the logical handler for -Wtautological-overlap-compare
+  // Install the logical handler.
   llvm::Optional<LogicalErrorHandler> LEH;
-  if (!Diags.isIgnored(diag::warn_tautological_overlap_comparison,
-                       D->getBeginLoc())) {
+  if (LogicalErrorHandler::hasActiveDiagnostics(Diags, D->getBeginLoc())) {
     LEH.emplace(S);
     AC.getCFGBuildOptions().Observer = &*LEH;
   }
@@ -2222,9 +2235,8 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
         checkThrowInNonThrowingFunc(S, FD, AC);
 
   // If none of the previous checks caused a CFG build, trigger one here
-  // for -Wtautological-overlap-compare
-  if (!Diags.isIgnored(diag::warn_tautological_overlap_comparison,
-                       D->getBeginLoc())) {
+  // for the logical error handler.
+  if (LogicalErrorHandler::hasActiveDiagnostics(Diags, D->getBeginLoc())) {
     AC.getCFG();
   }
 

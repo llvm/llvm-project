@@ -114,6 +114,7 @@ def GNUNullExpr : DStmt<Expr>;
 // C++ Expressions.
 def CXXOperatorCallExpr : DStmt<CallExpr>;
 def CXXMemberCallExpr : DStmt<CallExpr>;
+def CXXRewrittenBinaryOperator : DStmt<Expr>;
 def CXXNamedCastExpr : DStmt<ExplicitCastExpr, 1>;
 def CXXStaticCastExpr : DStmt<CXXNamedCastExpr>;
 def CXXDynamicCastExpr : DStmt<CXXNamedCastExpr>;
@@ -246,6 +247,7 @@ def OMPCancelDirective : DStmt<OMPExecutableDirective>;
 def OMPTaskLoopDirective : DStmt<OMPLoopDirective>;
 def OMPTaskLoopSimdDirective : DStmt<OMPLoopDirective>;
 def OMPMasterTaskLoopDirective : DStmt<OMPLoopDirective>;
+def OMPMasterTaskLoopSimdDirective : DStmt<OMPLoopDirective>;
 def OMPParallelMasterTaskLoopDirective : DStmt<OMPLoopDirective>;
 def OMPDistributeDirective : DStmt<OMPLoopDirective>;
 def OMPDistributeParallelForDirective : DStmt<OMPLoopDirective>;

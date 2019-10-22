@@ -114,7 +114,7 @@ define amdgpu_kernel void @gws_init_vgpr_offset_add(i32 %val) #0 {
 ; LOOP: s_mov_b32 m0, -1
 ; LOOP: ds_write_b32
 define amdgpu_kernel void @gws_init_save_m0_init_constant_offset(i32 %val) #0 {
-  store i32 1, i32 addrspace(3)* @lds
+  store volatile i32 1, i32 addrspace(3)* @lds
   call void @llvm.amdgcn.ds.gws.init(i32 %val, i32 10)
   store i32 2, i32 addrspace(3)* @lds
   ret void

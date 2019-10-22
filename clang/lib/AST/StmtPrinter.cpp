@@ -829,6 +829,12 @@ void StmtPrinter::VisitOMPMasterTaskLoopDirective(
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPMasterTaskLoopSimdDirective(
+    OMPMasterTaskLoopSimdDirective *Node) {
+  Indent() << "#pragma omp master taskloop simd";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPParallelMasterTaskLoopDirective(
     OMPParallelMasterTaskLoopDirective *Node) {
   Indent() << "#pragma omp parallel master taskloop";
@@ -1689,6 +1695,15 @@ void StmtPrinter::VisitCUDAKernelCallExpr(CUDAKernelCallExpr *Node) {
   OS << ">>>(";
   PrintCallArgs(Node);
   OS << ")";
+}
+
+void StmtPrinter::VisitCXXRewrittenBinaryOperator(
+    CXXRewrittenBinaryOperator *Node) {
+  CXXRewrittenBinaryOperator::DecomposedForm Decomposed =
+      Node->getDecomposedForm();
+  PrintExpr(const_cast<Expr*>(Decomposed.LHS));
+  OS << ' ' << BinaryOperator::getOpcodeStr(Decomposed.Opcode) << ' ';
+  PrintExpr(const_cast<Expr*>(Decomposed.RHS));
 }
 
 void StmtPrinter::VisitCXXNamedCastExpr(CXXNamedCastExpr *Node) {

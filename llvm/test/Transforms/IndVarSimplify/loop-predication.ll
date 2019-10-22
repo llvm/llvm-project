@@ -464,7 +464,6 @@ define i32 @duplicate_checks(i32* %array.1, i32* %array.2, i32* %array.3, i32 %l
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[LENGTH:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP2]], i32 [[LENGTH]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[LENGTH]], [[UMIN]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[LENGTH]], [[UMIN]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED1:%.*]] ], [ 0, [[LOOP_PREHEADER:%.*]] ]
@@ -478,7 +477,7 @@ define i32 @duplicate_checks(i32* %array.1, i32* %array.2, i32* %array.3, i32 %l
 ; CHECK-NEXT:    [[ARRAY_1_I_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARRAY_1:%.*]], i64 [[I_I64]]
 ; CHECK-NEXT:    [[ARRAY_1_I:%.*]] = load i32, i32* [[ARRAY_1_I_PTR]], align 4
 ; CHECK-NEXT:    [[LOOP_ACC_1:%.*]] = add i32 [[LOOP_ACC]], [[ARRAY_1_I]]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[GUARDED1]], label [[DEOPT2:%.*]], !prof !0
+; CHECK-NEXT:    br i1 true, label [[GUARDED1]], label [[DEOPT2:%.*]], !prof !0
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void @prevent_merging()
 ; CHECK-NEXT:    ret i32 -1
@@ -784,7 +783,7 @@ exit:
 ; If we have a dominating exit (exit1) which can't be itself rewritten, we
 ; can't rewrite a later exit (exit2).  Doing so would cause the loop to exit
 ; from the exit2 when it should have exited from exit1.
-define i32 @neg_dominating_exit(i32* %array, i32 %length, i32 %n) {
+define i32 @neg_dominating_exit(i32* %array, i32 %length, i32 %length2, i32 %n) {
 ; CHECK-LABEL: @neg_dominating_exit(
 ; CHECK-NEXT:  loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -798,7 +797,7 @@ define i32 @neg_dominating_exit(i32* %array, i32 %length, i32 %n) {
 ; CHECK-NEXT:    call void @prevent_merging()
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[WITHIN_BOUNDS2:%.*]] = icmp ult i32 [[I]], [[LENGTH]]
+; CHECK-NEXT:    [[WITHIN_BOUNDS2:%.*]] = icmp ult i32 [[I]], [[LENGTH2:%.*]]
 ; CHECK-NEXT:    br i1 [[WITHIN_BOUNDS2]], label [[GUARDED2]], label [[DEOPT2:%.*]], !prof !0
 ; CHECK:       deopt2:
 ; CHECK-NEXT:    call void @prevent_merging()
@@ -830,7 +829,7 @@ deopt:                                            ; preds = %loop
   ret i32 %result
 
 guarded:                                          ; preds = %loop
-  %within.bounds2 = icmp ult i32 %i, %length
+  %within.bounds2 = icmp ult i32 %i, %length2
   br i1 %within.bounds2, label %guarded2, label %deopt2, !prof !0
 
 deopt2:                                            ; preds = %loop

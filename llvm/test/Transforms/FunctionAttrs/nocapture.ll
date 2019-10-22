@@ -39,6 +39,20 @@ l1:
 	ret i1 1 ; escaping value not caught by def-use chaining.
 }
 
+; c4b is c4 but without the escaping part
+; FNATTR: define i1 @c4b(i32* %q, i32 %bitno)
+; ATTRIBUTOR: define i1 @c4b(i32* nocapture readnone %q, i32 %bitno)
+define i1 @c4b(i32* %q, i32 %bitno) {
+	%tmp = ptrtoint i32* %q to i32
+	%tmp2 = lshr i32 %tmp, %bitno
+	%bit = trunc i32 %tmp2 to i1
+	br i1 %bit, label %l1, label %l0
+l0:
+	ret i1 0 ; not escaping!
+l1:
+	ret i1 0 ; not escaping!
+}
+
 @lookup_table = global [2 x i1] [ i1 0, i1 1 ]
 
 ; FNATTR: define i1 @c5(i32* %q, i32 %bitno)
@@ -329,6 +343,21 @@ entry:
 ; ATTRIBUTOR: call void @unknown(i8* noalias null)
   call void @unknown(i8* null)
   ret void
+}
+
+declare i8* @unknownpi8pi8(i8*,i8* returned)
+define i8* @test_returned1(i8* %A, i8* returned %B) nounwind readonly {
+; ATTRIBUTOR: define i8* @test_returned1(i8* nocapture readonly %A, i8* readonly returned %B)
+entry:
+  %p = call i8* @unknownpi8pi8(i8* %A, i8* %B)
+  ret i8* %p
+}
+
+define i8* @test_returned2(i8* %A, i8* %B) {
+; ATTRIBUTOR: define i8* @test_returned2(i8* nocapture readonly %A, i8* readonly returned %B)
+entry:
+  %p = call i8* @unknownpi8pi8(i8* %A, i8* %B) nounwind readonly
+  ret i8* %p
 }
 
 declare i8* @llvm.launder.invariant.group.p0i8(i8*)

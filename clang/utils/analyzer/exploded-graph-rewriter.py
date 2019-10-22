@@ -273,6 +273,16 @@ class ProgramState(object):
         super(ProgramState, self).__init__()
         logging.debug('Adding ProgramState ' + str(state_id))
 
+        if json_ps is None:
+            json_ps = {
+                'store': None,
+                'environment': None,
+                'constraints': None,
+                'dynamic_types': None,
+                'constructing_objects': None,
+                'checker_messages': None
+            }
+
         self.state_id = state_id
 
         self.store = Store(json_ps['store']) \
@@ -316,8 +326,8 @@ class ExplodedNode(object):
         self.points = [ProgramPoint(p) for p in json_node['program_points']]
         self.node_id = self.points[-1].node_id
         self.state = ProgramState(json_node['state_id'],
-                                  json_node['program_state']) \
-            if json_node['program_state'] is not None else None
+                                  json_node['program_state']
+            if json_node['program_state'] is not None else None);
 
         assert self.node_name() == node_id
 
@@ -782,7 +792,7 @@ class DotDumpVisitor(object):
 
     def visit_state(self, s, prev_s):
         self.visit_store_in_state(s, prev_s)
-        self.visit_environment_in_state('environment', 'Environment',
+        self.visit_environment_in_state('environment', 'Expressions',
                                         s, prev_s)
         self.visit_generic_map_in_state('constraints', 'Ranges',
                                         s, prev_s)

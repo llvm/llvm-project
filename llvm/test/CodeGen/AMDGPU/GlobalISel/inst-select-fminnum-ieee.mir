@@ -14,7 +14,7 @@ body: |
   bb.0:
     liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr3_vgpr4, $sgpr10_sgpr11, $vgpr10_vgpr11, $vgpr12_vgpr13
     ; GFX7-LABEL: name: fminnum_ieee_f32_f64_ieee_mode_on
-    ; GFX7: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GFX7: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX7: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX7: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX7: [[COPY3:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
@@ -82,7 +82,7 @@ body: |
   bb.0:
     liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr3_vgpr4, $sgpr10_sgpr11, $vgpr10_vgpr11, $vgpr12_vgpr13
     ; GFX7-LABEL: name: fminnum_ieee_f32_f64_ieee_mode_off
-    ; GFX7: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GFX7: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX7: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX7: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX7: [[COPY3:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4

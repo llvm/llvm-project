@@ -6,8 +6,8 @@ Sections:
   - Type:            TYPE
     Signatures:
       - Index:           0
-        ReturnType:      NORESULT
         ParamTypes:
+        ReturnTypes:     []
   - Type:            FUNCTION
     FunctionTypes: [ 0, 0 ]
   - Type:            GLOBAL
@@ -25,7 +25,7 @@ Sections:
           Opcode:          I64_CONST
           Value:           64
   - Type:            EXPORT
-    Exports:         
+    Exports:
       - Name:            function_export
         Kind:            FUNCTION
         Index:           1
@@ -52,7 +52,7 @@ Sections:
 # CHECK:   Version:           0x00000001
 # CHECK: Sections:
 # CHECK:   - Type:            EXPORT
-# CHECK:     Exports:         
+# CHECK:     Exports:
 # CHECK:       - Name:            function_export
 # CHECK:         Kind:            FUNCTION
 # CHECK:         Index:           1

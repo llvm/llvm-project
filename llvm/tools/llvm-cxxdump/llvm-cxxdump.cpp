@@ -174,7 +174,11 @@ static void dumpCXXData(const ObjectFile *Obj) {
 
   SectionRelocMap.clear();
   for (const SectionRef &Section : Obj->sections()) {
-    section_iterator Sec2 = Section.getRelocatedSection();
+    Expected<section_iterator> ErrOrSec = Section.getRelocatedSection();
+    if (!ErrOrSec)
+      error(ErrOrSec.takeError());
+
+    section_iterator Sec2 = *ErrOrSec;
     if (Sec2 != Obj->section_end())
       SectionRelocMap[*Sec2].push_back(Section);
   }

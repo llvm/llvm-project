@@ -18,7 +18,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -532,7 +531,7 @@ void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
 
 /// Returns true if MI is an instruction we are unable to reason about
 /// (like a call or something with unmodeled side effects).
-static inline bool isGlobalMemoryObject(AliasAnalysis *AA, MachineInstr *MI) {
+static inline bool isGlobalMemoryObject(AAResults *AA, MachineInstr *MI) {
   return MI->isCall() || MI->hasUnmodeledSideEffects() ||
          (MI->hasOrderedMemoryRef() && !MI->isDereferenceableInvariantLoad(AA));
 }
@@ -719,7 +718,7 @@ void ScheduleDAGInstrs::insertBarrierChain(Value2SUsMap &map) {
   map.reComputeSize();
 }
 
-void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
+void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
                                         RegPressureTracker *RPTracker,
                                         PressureDiffs *PDiffs,
                                         LiveIntervals *LIS,

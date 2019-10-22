@@ -22,6 +22,23 @@
 
 using namespace lldb_private;
 
+static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
+                                       lldb::ModuleSP module_sp = {},
+                                       DWARFUnit *unit = nullptr) {
+  DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
+                          /*addr_size*/ 4);
+  Value result;
+  Status status;
+  if (!DWARFExpression::Evaluate(
+          /*exe_ctx*/ nullptr, /*reg_ctx*/ nullptr, module_sp, extractor, unit,
+          lldb::eRegisterKindLLDB,
+          /*initial_value_ptr*/ nullptr,
+          /*object_address_ptr*/ nullptr, result, &status))
+    return status.ToError();
+
+  return result.GetScalar();
+}
+
 /// A mock module holding an object file parsed from YAML.
 class YAMLModule : public lldb_private::Module {
 public:
@@ -99,22 +116,51 @@ public:
   /// \}
 };
 
-static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
-                                       lldb::ModuleSP module_sp = {},
-                                       DWARFUnit *unit = nullptr) {
-  DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
-                          /*addr_size*/ 4);
-  Value result;
-  Status status;
-  if (!DWARFExpression::Evaluate(
-          /*exe_ctx*/ nullptr, /*reg_ctx*/ nullptr, module_sp, extractor, unit,
-          lldb::eRegisterKindLLDB,
-          /*initial_value_ptr*/ nullptr,
-          /*object_address_ptr*/ nullptr, result, &status))
-    return status.ToError();
+/// Helper class that can construct a module from YAML and evaluate
+/// DWARF expressions on it.
+class YAMLModuleTester {
+  llvm::StringMap<std::unique_ptr<llvm::MemoryBuffer>> m_sections_map;
+  lldb::ModuleSP m_module_sp;
+  lldb::ObjectFileSP m_objfile_sp;
+  DWARFUnitSP m_dwarf_unit;
+  std::unique_ptr<SymbolFileDWARF> m_symfile_dwarf;
 
-  return result.GetScalar();
-}
+public:
+  /// Parse the debug info sections from the YAML description.
+  YAMLModuleTester(llvm::StringRef yaml_data, llvm::StringRef triple) {
+    FileSystem::Initialize();
+
+    auto sections_map = llvm::DWARFYAML::EmitDebugSections(yaml_data, true);
+    if (!sections_map)
+      return;
+    m_sections_map = std::move(*sections_map);
+    ArchSpec arch(triple);
+    m_module_sp = std::make_shared<YAMLModule>(arch);
+    m_objfile_sp = std::make_shared<YAMLObjectFile>(m_module_sp, m_sections_map);
+    static_cast<YAMLModule *>(m_module_sp.get())->SetObjectFile(m_objfile_sp);
+
+    lldb::user_id_t uid = 0;
+    llvm::StringRef raw_debug_info = m_sections_map["debug_info"]->getBuffer();
+    lldb_private::DataExtractor debug_info(
+        raw_debug_info.data(), raw_debug_info.size(),
+        m_objfile_sp->GetByteOrder(), m_objfile_sp->GetAddressByteSize());
+    lldb::offset_t offset_ptr = 0;
+    m_symfile_dwarf = std::make_unique<SymbolFileDWARF>(m_objfile_sp, nullptr);
+    llvm::Expected<DWARFUnitSP> dwarf_unit = DWARFUnit::extract(
+        *m_symfile_dwarf, uid,
+        *static_cast<lldb_private::DWARFDataExtractor *>(&debug_info),
+        DIERef::DebugInfo, &offset_ptr);
+    if (dwarf_unit)
+      m_dwarf_unit = dwarf_unit.get();
+  }
+  ~YAMLModuleTester() { FileSystem::Terminate(); }
+  DWARFUnitSP GetDwarfUnit() { return m_dwarf_unit; }
+
+  // Evaluate a raw DWARF expression.
+  llvm::Expected<Scalar> Eval(llvm::ArrayRef<uint8_t> expr) {
+    return ::Evaluate(expr, m_module_sp, m_dwarf_unit.get());
+  }
+};
 
 /// Unfortunately Scalar's operator==() is really picky.
 static Scalar GetScalar(unsigned bits, uint64_t value, bool sign) {
@@ -226,78 +272,49 @@ TEST(DWARFExpression, DW_OP_convert) {
   uint8_t offs_uchar = 0x00000017;
   uint8_t offs_schar = 0x0000001a;
 
-  //
-  // Setup. Parse the debug info sections from the YAML description.
-  //
-  auto sections_map = llvm::DWARFYAML::EmitDebugSections(yamldata, true);
-  ASSERT_TRUE((bool)sections_map);
-  ArchSpec arch("i386-unknown-linux");
-  FileSystem::Initialize();
-  auto module_sp = std::make_shared<YAMLModule>(arch);
-  lldb::ObjectFileSP objfile_sp =
-      std::make_shared<YAMLObjectFile>(module_sp, *sections_map);
-  module_sp->SetObjectFile(objfile_sp);
-  SymbolFileDWARF symfile_dwarf(objfile_sp, nullptr);
-
-  lldb::user_id_t uid = 0;
-  llvm::StringRef raw_debug_info = (*sections_map)["debug_info"]->getBuffer();
-  lldb_private::DataExtractor debug_info(
-      raw_debug_info.data(), raw_debug_info.size(), objfile_sp->GetByteOrder(),
-      objfile_sp->GetAddressByteSize());
-  lldb::offset_t offset_ptr = 0;
-  llvm::Expected<DWARFUnitSP> dwarf_unit = DWARFUnit::extract(
-      symfile_dwarf, uid,
-      *static_cast<lldb_private::DWARFDataExtractor *>(&debug_info),
-      DIERef::DebugInfo, &offset_ptr);
-  ASSERT_TRUE((bool)dwarf_unit);
-
-  //
-  // Actual tests.
-  //
+  YAMLModuleTester t(yamldata, "i386-unknown-linux");
+  ASSERT_TRUE((bool)t.GetDwarfUnit());
 
   // Constant is given as little-endian.
   bool is_signed = true;
   bool not_signed = false;
 
+  //
+  // Positive tests.
+  //
+
   // Truncate to default unspecified (pointer-sized) type.
-  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const8u, 0x11, 0x22, 0x33, 0x44, 0x55,
-                                 0x66, 0x77, 0x88, DW_OP_convert, 0x00},
-                                module_sp, dwarf_unit->get()),
-                       llvm::HasValue(GetScalar(32, 0x44332211, not_signed)));
-  // Truncate to 32 bits.
   EXPECT_THAT_EXPECTED(
-      Evaluate({DW_OP_const8u, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
-                DW_OP_convert, offs_uint32_t},
-               module_sp, dwarf_unit->get()),
+      t.Eval({DW_OP_const8u, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, //
+              DW_OP_convert, 0x00}),
       llvm::HasValue(GetScalar(32, 0x44332211, not_signed)));
+  // Truncate to 32 bits.
+  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const8u, //
+                               0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,//
+                               DW_OP_convert, offs_uint32_t}),
+                       llvm::HasValue(GetScalar(32, 0x44332211, not_signed)));
 
   // Leave as is.
   EXPECT_THAT_EXPECTED(
-      Evaluate({DW_OP_const8u, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
-                DW_OP_convert, offs_uint64_t},
-               module_sp, dwarf_unit->get()),
+      t.Eval({DW_OP_const8u, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, //
+              DW_OP_convert, offs_uint64_t}),
       llvm::HasValue(GetScalar(64, 0x8877665544332211, not_signed)));
 
   // Sign-extend to 64 bits.
   EXPECT_THAT_EXPECTED(
-      Evaluate({DW_OP_const4s, 0xcc, 0xdd, 0xee, 0xff, //
-                DW_OP_convert, offs_sint64_t},
-               module_sp, dwarf_unit->get()),
+      t.Eval({DW_OP_const4s, 0xcc, 0xdd, 0xee, 0xff, //
+              DW_OP_convert, offs_sint64_t}),
       llvm::HasValue(GetScalar(64, 0xffffffffffeeddcc, is_signed)));
 
   // Truncate to 8 bits.
-  EXPECT_THAT_EXPECTED(
-      Evaluate({DW_OP_const4s, 'A', 'B', 'C', 'D', 0xee, 0xff, //
-                DW_OP_convert, offs_uchar},
-               module_sp, dwarf_unit->get()),
-      llvm::HasValue(GetScalar(8, 'A', not_signed)));
+  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4s, 'A', 'B', 'C', 'D', 0xee, 0xff, //
+                               DW_OP_convert, offs_uchar}),
+                       llvm::HasValue(GetScalar(8, 'A', not_signed)));
 
   // Also truncate to 8 bits.
-  EXPECT_THAT_EXPECTED(
-      Evaluate({DW_OP_const4s, 'A', 'B', 'C', 'D', 0xee, 0xff, //
-                DW_OP_convert, offs_schar},
-               module_sp, dwarf_unit->get()),
-      llvm::HasValue(GetScalar(8, 'A', is_signed)));
+  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4s, 'A', 'B', 'C', 'D', 0xee, 0xff, //
+                               DW_OP_convert, offs_schar}),
+                       llvm::HasValue(GetScalar(8, 'A', is_signed)));
 
   //
   // Errors.
@@ -305,24 +322,17 @@ TEST(DWARFExpression, DW_OP_convert) {
 
   // No Module.
   EXPECT_THAT_ERROR(Evaluate({DW_OP_const1s, 'X', DW_OP_convert, 0x00}, nullptr,
-                             dwarf_unit->get())
+                             t.GetDwarfUnit().get())
                         .takeError(),
                     llvm::Failed());
 
   // No DIE.
-  EXPECT_THAT_ERROR(Evaluate({DW_OP_const1s, 'X', DW_OP_convert, 0x01},
-                             module_sp, dwarf_unit->get())
-                        .takeError(),
-                    llvm::Failed());
+  EXPECT_THAT_ERROR(
+      t.Eval({DW_OP_const1s, 'X', DW_OP_convert, 0x01}).takeError(),
+      llvm::Failed());
 
   // Unsupported.
-  EXPECT_THAT_ERROR(Evaluate({DW_OP_const1s, 'X', DW_OP_convert, 0x1d}, nullptr,
-                             dwarf_unit->get())
-                        .takeError(),
-                    llvm::Failed());
-
-  //
-  // Tear down.
-  //
-  FileSystem::Terminate();
+  EXPECT_THAT_ERROR(
+      t.Eval({DW_OP_const1s, 'X', DW_OP_convert, 0x1d}).takeError(),
+      llvm::Failed());
 }

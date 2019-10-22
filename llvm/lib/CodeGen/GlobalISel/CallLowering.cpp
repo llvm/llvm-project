@@ -106,11 +106,11 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
       FrameAlign = FuncInfo.getParamAlignment(OpIdx - 2);
     else
       FrameAlign = getTLI()->getByValTypeAlignment(ElementTy, DL);
-    Flags.setByValAlign(FrameAlign);
+    Flags.setByValAlign(Align(FrameAlign));
   }
   if (Attrs.hasAttribute(OpIdx, Attribute::Nest))
     Flags.setNest();
-  Flags.setOrigAlign(DL.getABITypeAlignment(Arg.Ty));
+  Flags.setOrigAlign(Align(DL.getABITypeAlignment(Arg.Ty)));
 }
 
 template void
@@ -235,7 +235,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
             if (Part == 0) {
               Flags.setSplit();
             } else {
-              Flags.setOrigAlign(1);
+              Flags.setOrigAlign(Align::None());
               if (Part == NumParts - 1)
                 Flags.setSplitEnd();
             }
@@ -268,7 +268,7 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
           if (PartIdx == 0) {
             Flags.setSplit();
           } else {
-            Flags.setOrigAlign(1);
+            Flags.setOrigAlign(Align::None());
             if (PartIdx == NumParts - 1)
               Flags.setSplitEnd();
           }

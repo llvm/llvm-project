@@ -21,14 +21,15 @@
 
 using namespace lldb_private;
 using namespace lldb_private::python;
+using llvm::Error;
+using llvm::Expected;
 
 class PythonDataObjectsTest : public PythonTestSuite {
 public:
   void SetUp() override {
     PythonTestSuite::SetUp();
 
-    PythonString sys_module("sys");
-    m_sys_module.Reset(PyRefType::Owned, PyImport_Import(sys_module.get()));
+    m_sys_module = unwrapIgnoringErrors(PythonModule::Import("sys"));
     m_main_module = PythonModule::MainModule();
     m_builtins_module = PythonModule::BuiltinsModule();
   }
@@ -70,13 +71,10 @@ TEST_F(PythonDataObjectsTest, TestResetting) {
   PythonDictionary dict(PyInitialValue::Empty);
 
   PyObject *new_dict = PyDict_New();
-  dict.Reset(PyRefType::Owned, new_dict);
+  dict = Take<PythonDictionary>(new_dict);
   EXPECT_EQ(new_dict, dict.get());
 
-  dict.Reset(PyRefType::Owned, nullptr);
-  EXPECT_EQ(nullptr, dict.get());
-
-  dict.Reset(PyRefType::Owned, PyDict_New());
+  dict = Take<PythonDictionary>(PyDict_New());
   EXPECT_NE(nullptr, dict.get());
   dict.Reset();
   EXPECT_EQ(nullptr, dict.get());
@@ -643,8 +641,8 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
     auto arginfo = lambda.GetArgInfo();
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().count, 1);
+    EXPECT_EQ(arginfo.get().max_positional_args, 1u);
     EXPECT_EQ(arginfo.get().has_varargs, false);
-    EXPECT_EQ(arginfo.get().is_bound_method, false);
   }
 
   {
@@ -655,8 +653,8 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
     auto arginfo = lambda.GetArgInfo();
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().count, 2);
+    EXPECT_EQ(arginfo.get().max_positional_args, 2u);
     EXPECT_EQ(arginfo.get().has_varargs, false);
-    EXPECT_EQ(arginfo.get().is_bound_method, false);
   }
 
   {
@@ -667,6 +665,7 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
     auto arginfo = lambda.GetArgInfo();
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().count, 2);
+    EXPECT_EQ(arginfo.get().max_positional_args, 2u);
     EXPECT_EQ(arginfo.get().has_varargs, false);
   }
 
@@ -678,8 +677,9 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
     auto arginfo = lambda.GetArgInfo();
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().count, 2);
+    EXPECT_EQ(arginfo.get().max_positional_args,
+              PythonCallable::ArgInfo::UNBOUNDED);
     EXPECT_EQ(arginfo.get().has_varargs, true);
-    EXPECT_EQ(arginfo.get().is_bound_method, false);
   }
 
   {
@@ -690,6 +690,8 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
     auto arginfo = lambda.GetArgInfo();
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().count, 2);
+    EXPECT_EQ(arginfo.get().max_positional_args,
+              PythonCallable::ArgInfo::UNBOUNDED);
     EXPECT_EQ(arginfo.get().has_varargs, true);
   }
 
@@ -698,7 +700,18 @@ TEST_F(PythonDataObjectsTest, TestCallable) {
 class Foo:
   def bar(self, x):
      return x
+  @classmethod
+  def classbar(cls, x):
+     return x
+  @staticmethod
+  def staticbar(x):
+     return x
+  def __call__(self, x):
+     return x
+obj = Foo()
 bar_bound   = Foo().bar
+bar_class   = Foo().classbar
+bar_static  = Foo().staticbar
 bar_unbound = Foo.bar
 )";
     PyObject *o =
@@ -711,16 +724,37 @@ bar_unbound = Foo.bar
     auto arginfo = bar_bound.get().GetArgInfo();
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().count, 2); // FIXME, wrong
+    EXPECT_EQ(arginfo.get().max_positional_args, 1u);
     EXPECT_EQ(arginfo.get().has_varargs, false);
-    EXPECT_EQ(arginfo.get().is_bound_method, true);
 
     auto bar_unbound = As<PythonCallable>(globals.GetItem("bar_unbound"));
     ASSERT_THAT_EXPECTED(bar_unbound, llvm::Succeeded());
     arginfo = bar_unbound.get().GetArgInfo();
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().count, 2);
+    EXPECT_EQ(arginfo.get().max_positional_args, 2u);
     EXPECT_EQ(arginfo.get().has_varargs, false);
-    EXPECT_EQ(arginfo.get().is_bound_method, false);
+
+    auto bar_class = As<PythonCallable>(globals.GetItem("bar_class"));
+    ASSERT_THAT_EXPECTED(bar_class, llvm::Succeeded());
+    arginfo = bar_class.get().GetArgInfo();
+    ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
+    EXPECT_EQ(arginfo.get().max_positional_args, 1u);
+    EXPECT_EQ(arginfo.get().has_varargs, false);
+
+    auto bar_static = As<PythonCallable>(globals.GetItem("bar_static"));
+    ASSERT_THAT_EXPECTED(bar_static, llvm::Succeeded());
+    arginfo = bar_static.get().GetArgInfo();
+    ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
+    EXPECT_EQ(arginfo.get().max_positional_args, 1u);
+    EXPECT_EQ(arginfo.get().has_varargs, false);
+
+    auto obj = As<PythonCallable>(globals.GetItem("obj"));
+    ASSERT_THAT_EXPECTED(obj, llvm::Succeeded());
+    arginfo = obj.get().GetArgInfo();
+    ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
+    EXPECT_EQ(arginfo.get().max_positional_args, 1u);
+    EXPECT_EQ(arginfo.get().has_varargs, false);
   }
 
 #if PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 3
@@ -734,9 +768,91 @@ bar_unbound = Foo.bar
     auto arginfo = hex.get().GetArgInfo();
     ASSERT_THAT_EXPECTED(arginfo, llvm::Succeeded());
     EXPECT_EQ(arginfo.get().count, 1);
+    EXPECT_EQ(arginfo.get().max_positional_args, 1u);
     EXPECT_EQ(arginfo.get().has_varargs, false);
-    EXPECT_EQ(arginfo.get().is_bound_method, false);
   }
 
 #endif
+}
+
+TEST_F(PythonDataObjectsTest, TestScript) {
+
+  static const char script[] = R"(
+def factorial(n):
+  if n > 1:
+    return n * factorial(n-1)
+  else:
+    return 1;
+main = factorial
+)";
+
+  PythonScript factorial(script);
+
+  EXPECT_THAT_EXPECTED(As<long long>(factorial(5ll)), llvm::HasValue(120));
+}
+
+TEST_F(PythonDataObjectsTest, TestExceptions) {
+
+  static const char script[] = R"(
+def foo():
+  return bar()
+def bar():
+  return baz()
+def baz():
+  return 1 / 0
+main = foo
+)";
+
+  PythonScript foo(script);
+
+  EXPECT_THAT_EXPECTED(
+      foo(), llvm::Failed<PythonException>(testing::Property(
+                 &PythonException::ReadBacktrace,
+                 testing::AllOf(testing::ContainsRegex("line 3, in foo"),
+                                testing::ContainsRegex("line 5, in bar"),
+                                testing::ContainsRegex("line 7, in baz"),
+                                testing::ContainsRegex("ZeroDivisionError")))));
+
+  static const char script2[] = R"(
+class MyError(Exception):
+  def __str__(self):
+    return self.my_message
+
+def main():
+  raise MyError("lol")
+
+)";
+
+  PythonScript lol(script2);
+
+  EXPECT_THAT_EXPECTED(lol(),
+                       llvm::Failed<PythonException>(testing::Property(
+                           &PythonException::ReadBacktrace,
+                           testing::ContainsRegex("unprintable MyError"))));
+}
+
+TEST_F(PythonDataObjectsTest, TestRun) {
+
+  PythonDictionary globals(PyInitialValue::Empty);
+
+  auto x = As<long long>(runStringOneLine("40 + 2", globals, globals));
+  ASSERT_THAT_EXPECTED(x, llvm::Succeeded());
+  EXPECT_EQ(x.get(), 42l);
+
+  Expected<PythonObject> r = runStringOneLine("n = 42", globals, globals);
+  ASSERT_THAT_EXPECTED(r, llvm::Succeeded());
+  auto y = As<long long>(globals.GetItem("n"));
+  ASSERT_THAT_EXPECTED(y, llvm::Succeeded());
+  EXPECT_EQ(y.get(), 42l);
+
+  const char script[] = R"(
+def foobar():
+  return "foo" + "bar" + "baz"
+g = foobar()
+)";
+
+  r = runStringMultiLine(script, globals, globals);
+  ASSERT_THAT_EXPECTED(r, llvm::Succeeded());
+  auto g = As<std::string>(globals.GetItem("g"));
+  ASSERT_THAT_EXPECTED(g, llvm::HasValue("foobarbaz"));
 }

@@ -22,7 +22,7 @@ Sections:
     Flags:           [ SHF_ALLOC ]
     Content:        "37373737"
 
-# CHECK: SectionHeaderCount: 7
+# CHECK: SectionHeaderCount: 6
 
 # CHECK: Name: .test2
 # CHECK: SectionData (
@@ -36,6 +36,5 @@ Sections:
 # CHECK: SectionData (
 # CHECK-NEXT:   0000: 37373737
 # CHECK-NEXT: )
-# CHECK: Name: .symtab
 # CHECK: Name: .strtab
 # CHECK: Name: .shstrtab

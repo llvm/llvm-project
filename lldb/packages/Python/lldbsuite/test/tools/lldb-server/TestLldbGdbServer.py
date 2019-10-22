@@ -639,7 +639,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.run_process_then_stop(run_seconds=1)
 
         # Wait at most x seconds for 3 threads to be present.
-        threads = self.wait_for_thread_count(3, timeout_seconds=5)
+        threads = self.wait_for_thread_count(3, timeout_seconds=self._WAIT_TIMEOUT)
         self.assertEqual(len(threads), 3)
 
         # verify we can $H to each thead, and $qC matches the thread we set.
@@ -735,7 +735,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
                                                             2: "thread_id"}}],
                                              True)
 
-            context = self.expect_gdbremote_sequence(timeout_seconds=10)
+            context = self.expect_gdbremote_sequence(timeout_seconds=self._DEFAULT_TIMEOUT)
             self.assertIsNotNone(context)
             signo = context.get("signo")
             self.assertEqual(int(signo, 16), segfault_signo)
@@ -771,7 +771,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
                 True)
 
             # Run the sequence.
-            context = self.expect_gdbremote_sequence(timeout_seconds=10)
+            context = self.expect_gdbremote_sequence(
+                timeout_seconds=self._DEFAULT_TIMEOUT)
             self.assertIsNotNone(context)
 
             # Ensure the stop signal is the signal we delivered.
@@ -1485,7 +1486,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertIsNotNone(context)
 
         # Wait for 3 threads to be present.
-        threads = self.wait_for_thread_count(3, timeout_seconds=5)
+        threads = self.wait_for_thread_count(3, timeout_seconds=self._WAIT_TIMEOUT)
         self.assertEqual(len(threads), 3)
 
         expected_reg_values = []

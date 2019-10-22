@@ -84,6 +84,16 @@ void CompilerInstance::setDiagnostics(DiagnosticsEngine *Value) {
   Diagnostics = Value;
 }
 
+void CompilerInstance::setVerboseOutputStream(raw_ostream &Value) {
+  OwnedVerboseOutputStream.release();
+  VerboseOutputStream = &Value;
+}
+
+void CompilerInstance::setVerboseOutputStream(std::unique_ptr<raw_ostream> Value) {
+  OwnedVerboseOutputStream.swap(Value);
+  VerboseOutputStream = OwnedVerboseOutputStream.get();
+}
+
 void CompilerInstance::setTarget(TargetInfo *Value) { Target = Value; }
 void CompilerInstance::setAuxTarget(TargetInfo *Value) { AuxTarget = Value; }
 
@@ -896,9 +906,7 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
   // DesiredStackSpace available.
   noteBottomOfStack();
 
-  // FIXME: Take this as an argument, once all the APIs we used have moved to
-  // taking it as an input instead of hard-coding llvm::errs.
-  raw_ostream &OS = llvm::errs();
+  raw_ostream &OS = getVerboseOutputStream();
 
   if (!Act.PrepareToExecute(*this))
     return false;

@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,debug.ExprInspection %s -analyzer-config eagerly-assume=false -verify
+// RUN: %clang_analyze_cc1 -std=c++14 -analyzer-checker=core,unix.Malloc,debug.ExprInspection %s -analyzer-config eagerly-assume=false -verify
 
 extern void clang_analyzer_eval(bool);
 extern void clang_analyzer_warnIfReached();

@@ -881,12 +881,9 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
       Sig.Params.push_back(wasm::ValType(ParamType));
     }
     uint32_t ReturnCount = readVaruint32(Ctx);
-    if (ReturnCount) {
-      if (ReturnCount != 1) {
-        return make_error<GenericBinaryError>(
-            "Multiple return types not supported", object_error::parse_failed);
-      }
-      Sig.Returns.push_back(wasm::ValType(readUint8(Ctx)));
+    while (ReturnCount--) {
+      uint32_t ReturnType = readUint8(Ctx);
+      Sig.Returns.push_back(wasm::ValType(ReturnType));
     }
     Signatures.push_back(std::move(Sig));
   }

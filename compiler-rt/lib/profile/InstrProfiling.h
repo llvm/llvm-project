@@ -155,6 +155,10 @@ int __llvm_orderfile_dump(void);
  *
  * \c Name is not copied, so it must remain valid.  Passing NULL resets the
  * filename logic to the default behaviour.
+ *
+ * Note: There may be multiple copies of the profile runtime (one for each
+ * instrumented image/DSO). This API only modifies the filename within the
+ * copy of the runtime available to the calling image.
  */
 void __llvm_profile_set_filename(const char *Name);
 
@@ -173,6 +177,10 @@ void __llvm_profile_set_filename(const char *Name);
  * with the contents of the profiling file. If EnableMerge is zero, the runtime
  * may still merge the data if it would have merged for another reason (for
  * example, because of a %m specifier in the file name).
+ *
+ * Note: There may be multiple copies of the profile runtime (one for each
+ * instrumented image/DSO). This API only modifies the file object within the
+ * copy of the runtime available to the calling image.
  */
 void __llvm_profile_set_file_object(FILE *File, int EnableMerge);
 
@@ -196,7 +204,12 @@ const char *__llvm_profile_get_path_prefix();
  * \brief Return filename (including path) of the profile data. Note that if the
  * user calls __llvm_profile_set_filename later after invoking this interface,
  * the actual file name may differ from what is returned here.
- * Side-effect: this API call will invoke malloc with dynamic memory allocation.
+ * Side-effect: this API call will invoke malloc with dynamic memory allocation
+ * (the returned pointer must be passed to `free` to avoid a leak).
+ *
+ * Note: There may be multiple copies of the profile runtime (one for each
+ * instrumented image/DSO). This API only retrieves the filename from the copy
+ * of the runtime available to the calling image.
  */
 const char *__llvm_profile_get_filename();
 

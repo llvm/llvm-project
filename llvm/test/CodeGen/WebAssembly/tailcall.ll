@@ -215,12 +215,13 @@ define i1 @mismatched_return_trunc() {
 ; return-called functions include the proper return types
 
 ; YAML-LABEL: - Index:           8
-; YAML-NEXT:    ReturnType:      I32
 ; YAML-NEXT:    ParamTypes:
 ; YAML-NEXT:      - I32
 ; YAML-NEXT:      - F32
 ; YAML-NEXT:      - I64
 ; YAML-NEXT:      - F64
+; YAML-NEXT:    ReturnTypes:
+; YAML-NEXT:      - I32
 define i32 @unique_caller(i32 (i32, float, i64, double)** %p) {
   %f = load i32 (i32, float, i64, double)*, i32 (i32, float, i64, double)** %p
   %v = tail call i32 %f(i32 0, float 0., i64 0, double 0.)

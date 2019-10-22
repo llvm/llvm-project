@@ -1074,7 +1074,7 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       MRI.constrainRegClass(SrcReg, &AMDGPU::SReg_32_XM0RegClass);
     }
 
-    MachineInstrBuilder Spill = BuildMI(MBB, MI, DL, OpDesc)
+    BuildMI(MBB, MI, DL, OpDesc)
       .addReg(SrcReg, getKillRegState(isKill)) // data
       .addFrameIndex(FrameIndex)               // addr
       .addMemOperand(MMO)
@@ -1085,11 +1085,6 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     // correctly handled.
     if (RI.spillSGPRToVGPR())
       FrameInfo.setStackID(FrameIndex, TargetStackID::SGPRSpill);
-    if (ST.hasScalarStores()) {
-      // m0 is used for offset to scalar stores if used to spill.
-      Spill.addReg(AMDGPU::M0, RegState::ImplicitDefine | RegState::Dead);
-    }
-
     return;
   }
 
@@ -1206,17 +1201,11 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
     if (RI.spillSGPRToVGPR())
       FrameInfo.setStackID(FrameIndex, TargetStackID::SGPRSpill);
-    MachineInstrBuilder Spill = BuildMI(MBB, MI, DL, OpDesc, DestReg)
+    BuildMI(MBB, MI, DL, OpDesc, DestReg)
       .addFrameIndex(FrameIndex) // addr
       .addMemOperand(MMO)
       .addReg(MFI->getScratchRSrcReg(), RegState::Implicit)
       .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
-
-    if (ST.hasScalarStores()) {
-      // m0 is used for offset to scalar stores if used to spill.
-      Spill.addReg(AMDGPU::M0, RegState::ImplicitDefine | RegState::Dead);
-    }
-
     return;
   }
 
@@ -4576,6 +4565,10 @@ void SIInstrInfo::legalizeOperands(MachineInstr &MI,
           VRC = RI.hasAGPRs(getOpRegClass(MI, 0))
                     ? RI.getEquivalentAGPRClass(SRC)
                     : RI.getEquivalentVGPRClass(SRC);
+      } else {
+          VRC = RI.hasAGPRs(getOpRegClass(MI, 0))
+                    ? RI.getEquivalentAGPRClass(VRC)
+                    : RI.getEquivalentVGPRClass(VRC);
       }
       RC = VRC;
     } else {
@@ -5201,8 +5194,8 @@ void SIInstrInfo::lowerScalarXnor(SetVectorType &Worklist,
     bool Src1IsSGPR = Src1.isReg() &&
                       RI.isSGPRClass(MRI.getRegClass(Src1.getReg()));
     MachineInstr *Xor;
-    Register Temp = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
-    Register NewDest = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+    Register Temp = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    Register NewDest = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
     // Build a pair of scalar instructions and add them to the work list.
     // The next iteration over the work list will lower these to the vector
@@ -5246,8 +5239,8 @@ void SIInstrInfo::splitScalarNotBinop(SetVectorType &Worklist,
   MachineOperand &Src0 = Inst.getOperand(1);
   MachineOperand &Src1 = Inst.getOperand(2);
 
-  Register NewDest = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
-  Register Interm = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+  Register NewDest = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  Register Interm = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
   MachineInstr &Op = *BuildMI(MBB, MII, DL, get(Opcode), Interm)
     .add(Src0)
@@ -6273,6 +6266,20 @@ bool SIInstrInfo::isBufferSMRD(const MachineInstr &MI) const {
 
   const auto RCID = MI.getDesc().OpInfo[Idx].RegClass;
   return RI.getRegClass(RCID)->hasSubClassEq(&AMDGPU::SGPR_128RegClass);
+}
+
+unsigned SIInstrInfo::getNumFlatOffsetBits(unsigned AddrSpace,
+                                           bool Signed) const {
+  if (!ST.hasFlatInstOffsets())
+    return 0;
+
+  if (ST.hasFlatSegmentOffsetBug() && AddrSpace == AMDGPUAS::FLAT_ADDRESS)
+    return 0;
+
+  if (ST.getGeneration() >= AMDGPUSubtarget::GFX10)
+    return Signed ? 12 : 11;
+
+  return Signed ? 13 : 12;
 }
 
 bool SIInstrInfo::isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,

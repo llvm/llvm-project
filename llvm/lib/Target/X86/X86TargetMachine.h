@@ -16,7 +16,6 @@
 #include "X86Subtarget.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 #include <memory>
@@ -26,6 +25,7 @@ namespace llvm {
 class StringRef;
 class X86Subtarget;
 class X86RegisterBankInfo;
+class TargetTransformInfo;
 
 class X86TargetMachine final : public LLVMTargetMachine {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;

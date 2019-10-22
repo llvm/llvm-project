@@ -20,6 +20,6 @@ extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) { return 0; }
 
 extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   std::string s((const char *)data, size);
-  HandleCXX(s, {"-O2"});
+  HandleCXX(s, "./test.cc", {"-O2"});
   return 0;
 }

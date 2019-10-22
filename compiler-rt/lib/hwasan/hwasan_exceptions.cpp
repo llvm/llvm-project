@@ -32,10 +32,13 @@ typedef _Unwind_Reason_Code PersonalityFn(int version, _Unwind_Action actions,
 typedef _Unwind_Word GetGRFn(_Unwind_Context* context, int index);
 typedef _Unwind_Word GetCFAFn(_Unwind_Context* context);
 
-extern "C" _Unwind_Reason_Code __hwasan_personality_wrapper(
-    int version, _Unwind_Action actions, uint64_t exception_class,
-    _Unwind_Exception* unwind_exception, _Unwind_Context* context,
-    PersonalityFn* real_personality, GetGRFn* get_gr, GetCFAFn* get_cfa) {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE _Unwind_Reason_Code
+__hwasan_personality_wrapper(int version, _Unwind_Action actions,
+                             uint64_t exception_class,
+                             _Unwind_Exception* unwind_exception,
+                             _Unwind_Context* context,
+                             PersonalityFn* real_personality, GetGRFn* get_gr,
+                             GetCFAFn* get_cfa) {
   _Unwind_Reason_Code rc;
   if (real_personality)
     rc = real_personality(version, actions, exception_class, unwind_exception,

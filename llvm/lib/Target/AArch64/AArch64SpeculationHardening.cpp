@@ -106,6 +106,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
 

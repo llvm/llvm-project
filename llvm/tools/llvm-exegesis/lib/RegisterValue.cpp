@@ -8,6 +8,7 @@
 
 #include "RegisterValue.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 namespace exegesis {

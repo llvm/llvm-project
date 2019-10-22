@@ -9,6 +9,7 @@ FileHeader:
   Data:            ELFDATA2LSB
   Type:            ET_REL
   Machine:         EM_X86_64
+Symbols: []
 
 # ERR1: error: '[[INPUT]]': string table '.strtab' cannot be removed because it is referenced by the symbol table '.symtab'
 # ERR2: error: '[[INPUT]]': string table '.strtab' cannot be removed because it is referenced by the symbol table '.symtab'

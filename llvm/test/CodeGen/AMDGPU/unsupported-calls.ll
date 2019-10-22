@@ -74,3 +74,13 @@ define amdgpu_ps i32 @test_call_from_shader() {
   %call = call i32 @defined_function(i32 0)
   ret i32 %call
 }
+
+; FIXME: Bad error message
+; GCN: error: <unknown>:0:0: in function test_call_absolute void (): unsupported indirect call to function <unknown>
+; R600: error: <unknown>:0:0: in function test_call_absolute void (): unsupported call to function <unknown>
+define amdgpu_kernel void @test_call_absolute() #0 {
+  %val = call i32 inttoptr (i64 1234 to i32(i32)*) (i32 1)
+  %op = add i32 %val, 1
+  store volatile i32 %op, i32 addrspace(1)* undef
+  ret void
+}

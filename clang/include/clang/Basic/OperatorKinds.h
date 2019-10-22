@@ -30,6 +30,25 @@ enum OverloadedOperatorKind : int {
 /// the preceding "operator" keyword.
 const char *getOperatorSpelling(OverloadedOperatorKind Operator);
 
+/// Get the other overloaded operator that the given operator can be rewritten
+/// into, if any such operator exists.
+inline OverloadedOperatorKind
+getRewrittenOverloadedOperator(OverloadedOperatorKind Kind) {
+  switch (Kind) {
+  case OO_Less:
+  case OO_LessEqual:
+  case OO_Greater:
+  case OO_GreaterEqual:
+    return OO_Spaceship;
+
+  case OO_ExclaimEqual:
+    return OO_EqualEqual;
+
+  default:
+    return OO_None;
+  }
+}
+
 } // end namespace clang
 
 #endif

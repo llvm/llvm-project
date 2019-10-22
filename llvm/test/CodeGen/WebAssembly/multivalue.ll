@@ -1,4 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+multivalue | FileCheck %s
+; RUN: llc < %s --filetype=obj -mattr=+multivalue | obj2yaml | FileCheck %s --check-prefix OBJ
 
 ; Test that the multivalue returns, function types, and block types
 ; work as expected.
@@ -42,3 +43,19 @@ loop:
 ; CHECK-NEXT: .int8 43
 ; CHECK-NEXT: .int8 10
 ; CHECK-NEXT: .ascii "multivalue"
+
+; OBJ-LABEL:  - Type:            TYPE
+; OBJ-NEXT:     Signatures:
+; OBJ-NEXT:       - Index:           0
+; OBJ-NEXT:         ParamTypes:
+; OBJ-NEXT:           - I32
+; OBJ-NEXT:           - I32
+; OBJ-NEXT:         ReturnTypes:
+; OBJ-NEXT:           - I32
+; OBJ-NEXT:           - I32
+; OBJ-NEXT:       - Index:           1
+; OBJ-NEXT:         ParamTypes:
+; OBJ-NEXT:           - I32
+; OBJ-NEXT:         ReturnTypes:
+; OBJ-NEXT:           - I32
+; OBJ-NEXT:           - I64

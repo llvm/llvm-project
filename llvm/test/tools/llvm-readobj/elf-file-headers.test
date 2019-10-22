@@ -21,15 +21,15 @@
 # I386-NEXT:  Version: 1
 # I386-NEXT:  Entry: 0x0
 # I386-NEXT:  ProgramHeaderOffset: 0x0
-# I386-NEXT:  SectionHeaderOffset: 0x64
+# I386-NEXT:  SectionHeaderOffset: 0x48
 # I386-NEXT:  Flags [ (0x0)
 # I386-NEXT:  ]
 # I386-NEXT:  HeaderSize: 52
 # I386-NEXT:  ProgramHeaderEntrySize: 0
 # I386-NEXT:  ProgramHeaderCount: 0
 # I386-NEXT:  SectionHeaderEntrySize: 40
-# I386-NEXT:  SectionHeaderCount: 4
-# I386-NEXT:  StringTableSectionIndex: 3
+# I386-NEXT:  SectionHeaderCount: 3
+# I386-NEXT:  StringTableSectionIndex: 2
 # I386-NEXT:}
 # I386-NOT:{{.}}
 
@@ -65,15 +65,15 @@ FileHeader:
 # X86-64-NEXT:  Version: 1
 # X86-64-NEXT:  Entry: 0x0
 # X86-64-NEXT:  ProgramHeaderOffset: 0x0
-# X86-64-NEXT:  SectionHeaderOffset: 0x78
+# X86-64-NEXT:  SectionHeaderOffset: 0x58
 # X86-64-NEXT:  Flags [ (0x0)
 # X86-64-NEXT:  ]
 # X86-64-NEXT:  HeaderSize: 64
 # X86-64-NEXT:  ProgramHeaderEntrySize: 0
 # X86-64-NEXT:  ProgramHeaderCount: 0
 # X86-64-NEXT:  SectionHeaderEntrySize: 64
-# X86-64-NEXT:  SectionHeaderCount: 4
-# X86-64-NEXT:  StringTableSectionIndex: 3
+# X86-64-NEXT:  SectionHeaderCount: 3
+# X86-64-NEXT:  StringTableSectionIndex: 2
 # X86-64-NEXT:}
 # X86-64-NOT:{{.}}
 
@@ -116,14 +116,14 @@ FileHeader:
 # LANAI-NEXT:  Version: 1
 # LANAI-NEXT:  Entry: 0x0
 # LANAI-NEXT:  ProgramHeaderOffset: 0x0
-# LANAI-NEXT:  SectionHeaderOffset: 0x64
+# LANAI-NEXT:  SectionHeaderOffset: 0x48
 # LANAI-NEXT:  Flags [ (0x0)
 # LANAI-NEXT:  ]
 # LANAI-NEXT:  HeaderSize: 52
 # LANAI-NEXT:  ProgramHeaderEntrySize: 0
 # LANAI-NEXT:  ProgramHeaderCount: 0
 # LANAI-NEXT:  SectionHeaderEntrySize: 40
-# LANAI-NEXT:  SectionHeaderCount: 4
-# LANAI-NEXT:  StringTableSectionIndex: 3
+# LANAI-NEXT:  SectionHeaderCount: 3
+# LANAI-NEXT:  StringTableSectionIndex: 2
 # LANAI-NEXT:}
 # LANAI-NOT:{{.}}

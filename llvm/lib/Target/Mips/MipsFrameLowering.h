@@ -25,8 +25,8 @@ protected:
 
 public:
   explicit MipsFrameLowering(const MipsSubtarget &sti, Align Alignment)
-      : TargetFrameLowering(StackGrowsDown, Alignment, 0, Alignment.value()),
-        STI(sti) {}
+      : TargetFrameLowering(StackGrowsDown, Alignment, 0, Alignment), STI(sti) {
+  }
 
   static const MipsFrameLowering *create(const MipsSubtarget &ST);
 

@@ -52,8 +52,9 @@ hidden_func:
 # CHECK-NEXT:   - Type:            TYPE
 # CHECK-NEXT:     Signatures:
 # CHECK-NEXT:       - Index:           0
-# CHECK-NEXT:         ReturnType:      I32
 # CHECK-NEXT:         ParamTypes:      []
+# CHECK-NEXT:         ReturnTypes:
+# CHECK-NEXT:           - I32
 # CHECK-NEXT:   - Type:            IMPORT
 # CHECK-NEXT:     Imports:
 # CHECK-NEXT:       - Module:          env

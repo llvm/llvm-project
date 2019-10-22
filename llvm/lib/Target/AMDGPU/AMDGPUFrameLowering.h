@@ -26,7 +26,7 @@ namespace llvm {
 class AMDGPUFrameLowering : public TargetFrameLowering {
 public:
   AMDGPUFrameLowering(StackDirection D, Align StackAl, int LAO,
-                      unsigned TransAl = 1);
+                      Align TransAl = Align::None());
   ~AMDGPUFrameLowering() override;
 
   /// \returns The number of 32-bit sub-registers that are used when storing

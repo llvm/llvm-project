@@ -334,12 +334,9 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
     encodeULEB128(Sig.ParamTypes.size(), OS);
     for (auto ParamType : Sig.ParamTypes)
       writeUint8(OS, ParamType);
-    if (Sig.ReturnType == wasm::WASM_TYPE_NORESULT) {
-      encodeULEB128(0, OS);
-    } else {
-      encodeULEB128(1, OS);
-      writeUint8(OS, Sig.ReturnType);
-    }
+    encodeULEB128(Sig.ReturnTypes.size(), OS);
+    for (auto ReturnType : Sig.ReturnTypes)
+      writeUint8(OS, ReturnType);
   }
 }
 

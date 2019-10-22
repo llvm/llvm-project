@@ -29,7 +29,7 @@ body: |
   bb.0:
     liveins: $sgpr0, $vgpr0
     ; GCN-LABEL: name: mul_s32_sv
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN: [[V_MUL_LO_U32_:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32 [[COPY]], [[COPY1]], implicit $exec
     ; GCN: S_ENDPGM 0, implicit [[V_MUL_LO_U32_]]
@@ -49,7 +49,7 @@ body: |
     liveins: $sgpr0, $vgpr0
     ; GCN-LABEL: name: mul_s32_vs
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[COPY1:%[0-9]+]]:sreg_32_xm0 = COPY $sgpr0
+    ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN: [[V_MUL_LO_U32_:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32 [[COPY]], [[COPY1]], implicit $exec
     ; GCN: S_ENDPGM 0, implicit [[V_MUL_LO_U32_]]
     %0:vgpr(s32) = COPY $vgpr0

@@ -489,10 +489,23 @@ SanitizerMask NetBSD::getSupportedSanitizers() const {
   return Res;
 }
 
-void NetBSD::addClangTargetOptions(const ArgList &,
+void NetBSD::addClangTargetOptions(const ArgList &DriverArgs,
                                    ArgStringList &CC1Args,
                                    Action::OffloadKind) const {
   const SanitizerArgs &SanArgs = getSanitizerArgs();
   if (SanArgs.hasAnySanitizer())
     CC1Args.push_back("-D_REENTRANT");
+
+  unsigned Major, Minor, Micro;
+  getTriple().getOSVersion(Major, Minor, Micro);
+  bool UseInitArrayDefault =
+    Major >= 9 || Major == 0 ||
+    getTriple().getArch() == llvm::Triple::aarch64 ||
+    getTriple().getArch() == llvm::Triple::aarch64_be ||
+    getTriple().getArch() == llvm::Triple::arm ||
+    getTriple().getArch() == llvm::Triple::armeb;
+
+  if (DriverArgs.hasFlag(options::OPT_fuse_init_array,
+                         options::OPT_fno_use_init_array, UseInitArrayDefault))
+    CC1Args.push_back("-fuse-init-array");
 }

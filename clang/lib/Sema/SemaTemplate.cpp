@@ -24,6 +24,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Overload.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaInternal.h"
@@ -8488,7 +8489,7 @@ bool Sema::CheckFunctionTemplateSpecialization(
     // candidates at once, to get proper sorting and limiting.
     for (auto *OldND : Previous) {
       if (auto *OldFD = dyn_cast<FunctionDecl>(OldND->getUnderlyingDecl()))
-        NoteOverloadCandidate(OldND, OldFD, FD->getType(), false);
+        NoteOverloadCandidate(OldND, OldFD, CRK_None, FD->getType(), false);
     }
     FailedCandidates.NoteCandidates(*this, FD->getLocation());
     return true;

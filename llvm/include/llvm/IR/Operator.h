@@ -379,6 +379,12 @@ public:
       return false;
 
     switch (Opcode) {
+    case Instruction::FNeg:
+    case Instruction::FAdd:
+    case Instruction::FSub:
+    case Instruction::FMul:
+    case Instruction::FDiv:
+    case Instruction::FRem:
     // FIXME: To clean up and correct the semantics of fast-math-flags, FCmp
     //        should not be treated as a math op, but the other opcodes should.
     //        This would make things consistent with Select/PHI (FP value type
@@ -386,13 +392,12 @@ public:
     //        having fast-math-flags).
     case Instruction::FCmp:
       return true;
-    // non math FP Operators (no FMF)
-    case Instruction::ExtractElement:
-    case Instruction::ShuffleVector:
-    case Instruction::InsertElement:
-      return false;
-    default:
+    case Instruction::PHI:
+    case Instruction::Select:
+    case Instruction::Call:
       return V->getType()->isFPOrFPVectorTy();
+    default:
+      return false;
     }
   }
 };

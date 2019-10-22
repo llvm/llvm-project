@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
   CodeGen
   Core
   MC
+  MIRParser
   SelectionDAG
   Support
   Target
