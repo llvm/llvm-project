@@ -12,7 +12,7 @@
 #include <__threading_support>
 #include <unistd.h>
 
-#include "../src/cxa_exception.h"
+#include "../src/cxa_exception.hpp"
 
 typedef __cxxabiv1::__cxa_eh_globals globals_t ;
 

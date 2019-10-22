@@ -19,44 +19,44 @@ namespace coff {
 
 class TypeMerger {
 public:
-  TypeMerger(llvm::BumpPtrAllocator &alloc)
-      : typeTable(alloc), iDTable(alloc), globalTypeTable(alloc),
-        globalIDTable(alloc) {}
+  TypeMerger(llvm::BumpPtrAllocator &Alloc)
+      : TypeTable(Alloc), IDTable(Alloc), GlobalTypeTable(Alloc),
+        GlobalIDTable(Alloc) {}
 
   /// Get the type table or the global type table if /DEBUG:GHASH is enabled.
   inline llvm::codeview::TypeCollection &getTypeTable() {
-    if (config->debugGHashes)
-      return globalTypeTable;
-    return typeTable;
+    if (Config->DebugGHashes)
+      return GlobalTypeTable;
+    return TypeTable;
   }
 
   /// Get the ID table or the global ID table if /DEBUG:GHASH is enabled.
   inline llvm::codeview::TypeCollection &getIDTable() {
-    if (config->debugGHashes)
-      return globalIDTable;
-    return iDTable;
+    if (Config->DebugGHashes)
+      return GlobalIDTable;
+    return IDTable;
   }
 
   /// Type records that will go into the PDB TPI stream.
-  llvm::codeview::MergingTypeTableBuilder typeTable;
+  llvm::codeview::MergingTypeTableBuilder TypeTable;
 
   /// Item records that will go into the PDB IPI stream.
-  llvm::codeview::MergingTypeTableBuilder iDTable;
+  llvm::codeview::MergingTypeTableBuilder IDTable;
 
   /// Type records that will go into the PDB TPI stream (for /DEBUG:GHASH)
-  llvm::codeview::GlobalTypeTableBuilder globalTypeTable;
+  llvm::codeview::GlobalTypeTableBuilder GlobalTypeTable;
 
   /// Item records that will go into the PDB IPI stream (for /DEBUG:GHASH)
-  llvm::codeview::GlobalTypeTableBuilder globalIDTable;
+  llvm::codeview::GlobalTypeTableBuilder GlobalIDTable;
 };
 
 /// Map from type index and item index in a type server PDB to the
 /// corresponding index in the destination PDB.
 struct CVIndexMap {
-  llvm::SmallVector<llvm::codeview::TypeIndex, 0> tpiMap;
-  llvm::SmallVector<llvm::codeview::TypeIndex, 0> ipiMap;
-  bool isTypeServerMap = false;
-  bool isPrecompiledTypeMap = false;
+  llvm::SmallVector<llvm::codeview::TypeIndex, 0> TPIMap;
+  llvm::SmallVector<llvm::codeview::TypeIndex, 0> IPIMap;
+  bool IsTypeServerMap = false;
+  bool IsPrecompiledTypeMap = false;
 };
 
 } // namespace coff

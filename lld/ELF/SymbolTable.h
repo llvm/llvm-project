@@ -33,40 +33,41 @@ namespace elf {
 // is one add* function per symbol type.
 class SymbolTable {
 public:
-  void wrap(Symbol *sym, Symbol *real, Symbol *wrap);
+  void wrap(Symbol *Sym, Symbol *Real, Symbol *Wrap);
 
-  void forEachSymbol(llvm::function_ref<void(Symbol *)> fn) {
-    for (Symbol *sym : symVector)
-      if (!sym->isPlaceholder())
-        fn(sym);
+  void forEachSymbol(llvm::function_ref<void(Symbol *)> Fn) {
+    for (Symbol *Sym : SymVector)
+      if (!Sym->isPlaceholder())
+        Fn(Sym);
   }
 
-  Symbol *insert(StringRef name);
+  Symbol *insert(StringRef Name);
 
-  Symbol *addSymbol(const Symbol &newSym);
+  Symbol *addSymbol(const Symbol &New);
 
   void scanVersionScript();
 
-  Symbol *find(StringRef name);
+  Symbol *find(StringRef Name);
 
   void handleDynamicList();
 
   // Set of .so files to not link the same shared object file more than once.
-  llvm::DenseMap<StringRef, SharedFile *> soNames;
+  llvm::DenseMap<StringRef, SharedFile *> SoNames;
 
   // Comdat groups define "link once" sections. If two comdat groups have the
   // same name, only one of them is linked, and the other is ignored. This map
   // is used to uniquify them.
-  llvm::DenseMap<llvm::CachedHashStringRef, const InputFile *> comdatGroups;
+  llvm::DenseMap<llvm::CachedHashStringRef, const InputFile *> ComdatGroups;
 
 private:
-  std::vector<Symbol *> findByVersion(SymbolVersion ver);
-  std::vector<Symbol *> findAllByVersion(SymbolVersion ver);
+  std::vector<Symbol *> findByVersion(SymbolVersion Ver);
+  std::vector<Symbol *> findAllByVersion(SymbolVersion Ver);
 
   llvm::StringMap<std::vector<Symbol *>> &getDemangledSyms();
-  void assignExactVersion(SymbolVersion ver, uint16_t versionId,
-                          StringRef versionName);
-  void assignWildcardVersion(SymbolVersion ver, uint16_t versionId);
+  void handleAnonymousVersion();
+  void assignExactVersion(SymbolVersion Ver, uint16_t VersionId,
+                          StringRef VersionName);
+  void assignWildcardVersion(SymbolVersion Ver, uint16_t VersionId);
 
   // The order the global symbols are in is not defined. We can use an arbitrary
   // order, but it has to be reproducible. That is true even when cross linking.
@@ -75,17 +76,17 @@ private:
   // but a bit inefficient.
   // FIXME: Experiment with passing in a custom hashing or sorting the symbols
   // once symbol resolution is finished.
-  llvm::DenseMap<llvm::CachedHashStringRef, int> symMap;
-  std::vector<Symbol *> symVector;
+  llvm::DenseMap<llvm::CachedHashStringRef, int> SymMap;
+  std::vector<Symbol *> SymVector;
 
   // A map from demangled symbol names to their symbol objects.
   // This mapping is 1:N because two symbols with different versions
   // can have the same name. We use this map to handle "extern C++ {}"
   // directive in version scripts.
-  llvm::Optional<llvm::StringMap<std::vector<Symbol *>>> demangledSyms;
+  llvm::Optional<llvm::StringMap<std::vector<Symbol *>>> DemangledSyms;
 };
 
-extern SymbolTable *symtab;
+extern SymbolTable *Symtab;
 
 } // namespace elf
 } // namespace lld

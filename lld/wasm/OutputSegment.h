@@ -20,30 +20,29 @@ class InputSegment;
 
 class OutputSegment {
 public:
-  OutputSegment(StringRef n, uint32_t index) : name(n), index(index) {}
+  OutputSegment(StringRef N, uint32_t Index) : Name(N), Index(Index) {}
 
-  void addInputSegment(InputSegment *inSeg) {
-    alignment = std::max(alignment, inSeg->getAlignment());
-    inputSegments.push_back(inSeg);
-    size = llvm::alignTo(size, 1ULL << inSeg->getAlignment());
-    inSeg->outputSeg = this;
-    inSeg->outputSegmentOffset = size;
-    size += inSeg->getSize();
+  void addInputSegment(InputSegment *InSeg) {
+    Alignment = std::max(Alignment, InSeg->getAlignment());
+    InputSegments.push_back(InSeg);
+    Size = llvm::alignTo(Size, 1ULL << InSeg->getAlignment());
+    InSeg->OutputSeg = this;
+    InSeg->OutputSegmentOffset = Size;
+    Size += InSeg->getSize();
   }
 
-  StringRef name;
-  const uint32_t index;
-  uint32_t initFlags = 0;
-  uint32_t sectionOffset = 0;
-  uint32_t alignment = 0;
-  uint32_t startVA = 0;
-  std::vector<InputSegment *> inputSegments;
+  StringRef Name;
+  const uint32_t Index;
+  uint32_t SectionOffset = 0;
+  uint32_t Alignment = 0;
+  uint32_t StartVA = 0;
+  std::vector<InputSegment *> InputSegments;
 
   // Sum of the size of the all the input segments
-  uint32_t size = 0;
+  uint32_t Size = 0;
 
   // Segment header
-  std::string header;
+  std::string Header;
 };
 
 } // namespace wasm

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cassert>
-#include "support/timer.h"
+#include "support/timer.hpp"
 
 namespace t1
 {

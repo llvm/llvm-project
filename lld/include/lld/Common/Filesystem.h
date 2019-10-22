@@ -13,8 +13,8 @@
 #include <system_error>
 
 namespace lld {
-void unlinkAsync(StringRef path);
-std::error_code tryCreateFile(StringRef path);
+void unlinkAsync(StringRef Path);
+std::error_code tryCreateFile(StringRef Path);
 } // namespace lld
 
 #endif

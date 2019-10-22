@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "omptarget-nvptx.h"
-#include "target_impl.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // KMP Ordered calls
@@ -63,9 +62,6 @@ EXTERN void __kmpc_barrier(kmp_Ident *loc_ref, int32_t tid) {
         // Barrier #1 is for synchronization among active threads.
         named_sync(L1_BARRIER, threads);
       }
-    } else {
-      // Still need to flush the memory per the standard.
-      __kmpc_flush(loc_ref);
     } // numberOfActiveOMPThreads > 1
     PRINT0(LD_SYNC, "completed kmpc_barrier\n");
   }
@@ -75,7 +71,8 @@ EXTERN void __kmpc_barrier(kmp_Ident *loc_ref, int32_t tid) {
 // parallel region and that all worker threads participate.
 EXTERN void __kmpc_barrier_simple_spmd(kmp_Ident *loc_ref, int32_t tid) {
   PRINT0(LD_SYNC, "call kmpc_barrier_simple_spmd\n");
-  __kmpc_impl_syncthreads();
+  // FIXME: use __syncthreads instead when the function copy is fixed in LLVM.
+  __SYNCTHREADS();
   PRINT0(LD_SYNC, "completed kmpc_barrier_simple_spmd\n");
 }
 
@@ -133,7 +130,7 @@ EXTERN void __kmpc_end_single(kmp_Ident *loc, int32_t global_tid) {
 
 EXTERN void __kmpc_flush(kmp_Ident *loc) {
   PRINT0(LD_IO, "call kmpc_flush\n");
-  __threadfence();
+  __threadfence_system();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -142,14 +139,5 @@ EXTERN void __kmpc_flush(kmp_Ident *loc) {
 
 EXTERN int32_t __kmpc_warp_active_thread_mask() {
   PRINT0(LD_IO, "call __kmpc_warp_active_thread_mask\n");
-  return __kmpc_impl_activemask();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Syncwarp
-////////////////////////////////////////////////////////////////////////////////
-
-EXTERN void __kmpc_syncwarp(int32_t Mask) {
-  PRINT0(LD_IO, "call __kmpc_syncwarp\n");
-  __kmpc_impl_syncwarp(Mask);
+  return __ACTIVEMASK();
 }

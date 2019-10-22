@@ -88,7 +88,7 @@ struct test_non_const
     }
 };
 
-int
+int32_t
 main()
 {
     test<int32_t>();

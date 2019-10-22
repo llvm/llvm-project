@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 #include "omptarget-nvptx.h"
-#include "target_impl.h"
 #include <stdio.h>
 
 // Warp ID in the CUDA block
@@ -20,7 +19,7 @@ INLINE static unsigned getLaneId() { return threadIdx.x % WARPSIZE; }
 
 // Return true if this is the first active thread in the warp.
 INLINE static bool IsWarpMasterActiveThread() {
-  unsigned long long Mask = __kmpc_impl_activemask();
+  unsigned long long Mask = __ACTIVEMASK();
   unsigned long long ShNum = WARPSIZE - (GetThreadIdInBlock() % WARPSIZE);
   unsigned long long Sh = Mask << ShNum;
   // Truncate Sh to the 32 lower bits
@@ -112,7 +111,7 @@ EXTERN void *__kmpc_data_sharing_environment_begin(
           (unsigned long long)SharingDefaultDataSize);
 
   unsigned WID = getWarpId();
-  __kmpc_impl_lanemask_t CurActiveThreads = __kmpc_impl_activemask();
+  unsigned CurActiveThreads = __ACTIVEMASK();
 
   __kmpc_data_sharing_slot *&SlotP = DataSharingState.SlotPtr[WID];
   void *&StackP = DataSharingState.StackPtr[WID];
@@ -252,7 +251,7 @@ EXTERN void __kmpc_data_sharing_environment_end(
     return;
   }
 
-  __kmpc_impl_lanemask_t CurActive = __kmpc_impl_activemask();
+  int32_t CurActive = __ACTIVEMASK();
 
   // Only the warp master can restore the stack and frame information, and only
   // if there are no other threads left behind in this environment (i.e. the
@@ -378,7 +377,7 @@ INLINE static void* data_sharing_push_stack_common(size_t PushSize) {
   // Frame pointer must be visible to all workers in the same warp.
   const unsigned WID = getWarpId();
   void *FrameP = 0;
-  __kmpc_impl_lanemask_t CurActive = __kmpc_impl_activemask();
+  int32_t CurActive = __ACTIVEMASK();
 
   if (IsWarpMaster) {
     // SlotP will point to either the shared memory slot or an existing
@@ -431,10 +430,9 @@ INLINE static void* data_sharing_push_stack_common(size_t PushSize) {
     }
   }
   // Get address from lane 0.
-  int *FP = (int *)&FrameP;
-  FP[0] = __kmpc_impl_shfl_sync(CurActive, FP[0], 0);
+  ((int *)&FrameP)[0] = __SHFL_SYNC(CurActive, ((int *)&FrameP)[0], 0);
   if (sizeof(FrameP) == 8)
-    FP[1] = __kmpc_impl_shfl_sync(CurActive, FP[1], 0);
+    ((int *)&FrameP)[1] = __SHFL_SYNC(CurActive, ((int *)&FrameP)[1], 0);
 
   return FrameP;
 }
@@ -553,7 +551,8 @@ EXTERN void __kmpc_get_team_static_memory(int16_t isSPMDExecutionMode,
     if (GetThreadIdInBlock() == 0) {
       *frame = omptarget_nvptx_simpleMemoryManager.Acquire(buf, size);
     }
-    __kmpc_impl_syncthreads();
+    // FIXME: use __syncthreads instead when the function copy is fixed in LLVM.
+    __SYNCTHREADS();
     return;
   }
   ASSERT0(LT_FUSSY, GetThreadIdInBlock() == GetMasterThreadID(),
@@ -567,7 +566,8 @@ EXTERN void __kmpc_restore_team_static_memory(int16_t isSPMDExecutionMode,
   if (is_shared)
     return;
   if (isSPMDExecutionMode) {
-    __kmpc_impl_syncthreads();
+    // FIXME: use __syncthreads instead when the function copy is fixed in LLVM.
+    __SYNCTHREADS();
     if (GetThreadIdInBlock() == 0) {
       omptarget_nvptx_simpleMemoryManager.Release();
     }

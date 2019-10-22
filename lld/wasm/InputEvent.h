@@ -28,33 +28,33 @@ namespace wasm {
 // form the final EVENTS section.
 class InputEvent {
 public:
-  InputEvent(const WasmSignature &s, const WasmEvent &e, ObjFile *f)
-      : file(f), event(e), signature(s), live(!config->gcSections) {}
+  InputEvent(const WasmSignature &S, const WasmEvent &E, ObjFile *F)
+      : File(F), Event(E), Signature(S), Live(!Config->GcSections) {}
 
-  StringRef getName() const { return event.SymbolName; }
-  const WasmEventType &getType() const { return event.Type; }
+  StringRef getName() const { return Event.SymbolName; }
+  const WasmEventType &getType() const { return Event.Type; }
 
-  uint32_t getEventIndex() const { return eventIndex.getValue(); }
-  bool hasEventIndex() const { return eventIndex.hasValue(); }
-  void setEventIndex(uint32_t index) {
+  uint32_t getEventIndex() const { return EventIndex.getValue(); }
+  bool hasEventIndex() const { return EventIndex.hasValue(); }
+  void setEventIndex(uint32_t Index) {
     assert(!hasEventIndex());
-    eventIndex = index;
+    EventIndex = Index;
   }
 
-  ObjFile *file;
-  WasmEvent event;
-  const WasmSignature &signature;
+  ObjFile *File;
+  WasmEvent Event;
+  const WasmSignature &Signature;
 
-  bool live = false;
+  bool Live = false;
 
 protected:
-  llvm::Optional<uint32_t> eventIndex;
+  llvm::Optional<uint32_t> EventIndex;
 };
 
 } // namespace wasm
 
-inline std::string toString(const wasm::InputEvent *e) {
-  return (toString(e->file) + ":(" + e->getName() + ")").str();
+inline std::string toString(const wasm::InputEvent *E) {
+  return (toString(E->File) + ":(" + E->getName() + ")").str();
 }
 
 } // namespace lld

@@ -29,43 +29,41 @@ namespace wasm {
 // An init entry to be written to either the synthetic init func or the
 // linking metadata.
 struct WasmInitEntry {
-  const FunctionSymbol *sym;
-  uint32_t priority;
+  const FunctionSymbol *Sym;
+  uint32_t Priority;
 };
 
 class SyntheticSection : public OutputSection {
 public:
-  SyntheticSection(uint32_t type, std::string name = "")
-      : OutputSection(type, name), bodyOutputStream(body) {
-    if (!name.empty())
-      writeStr(bodyOutputStream, name, "section name");
+  SyntheticSection(uint32_t Type, std::string Name = "")
+      : OutputSection(Type, Name), BodyOutputStream(Body) {
+    if (!Name.empty())
+      writeStr(BodyOutputStream, Name, "section name");
   }
 
-  void writeTo(uint8_t *buf) override {
-    assert(offset);
+  void writeTo(uint8_t *Buf) override {
+    assert(Offset);
     log("writing " + toString(*this));
-    memcpy(buf + offset, header.data(), header.size());
-    memcpy(buf + offset + header.size(), body.data(), body.size());
+    memcpy(Buf + Offset, Header.data(), Header.size());
+    memcpy(Buf + Offset + Header.size(), Body.data(), Body.size());
   }
 
-  size_t getSize() const override { return header.size() + body.size(); }
+  size_t getSize() const override { return Header.size() + Body.size(); }
 
   virtual void writeBody() {}
 
-  virtual void assignIndexes() {}
-
   void finalizeContents() override {
     writeBody();
-    bodyOutputStream.flush();
-    createHeader(body.size());
+    BodyOutputStream.flush();
+    createHeader(Body.size());
   }
 
-  raw_ostream &getStream() { return bodyOutputStream; }
+  raw_ostream &getStream() { return BodyOutputStream; }
 
-  std::string body;
+  std::string Body;
 
 protected:
-  llvm::raw_string_ostream bodyOutputStream;
+  llvm::raw_string_ostream BodyOutputStream;
 };
 
 // Create the custom "dylink" section containing information for the dynamic
@@ -75,68 +73,68 @@ protected:
 class DylinkSection : public SyntheticSection {
 public:
   DylinkSection() : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "dylink") {}
-  bool isNeeded() const override { return config->isPic; }
+  bool isNeeded() const override { return Config->Pic; }
   void writeBody() override;
 
-  uint32_t memAlign = 0;
-  uint32_t memSize = 0;
+  uint32_t MemAlign = 0;
+  uint32_t MemSize = 0;
 };
 
 class TypeSection : public SyntheticSection {
 public:
   TypeSection() : SyntheticSection(llvm::wasm::WASM_SEC_TYPE) {}
 
-  bool isNeeded() const override { return types.size() > 0; };
+  bool isNeeded() const override { return Types.size() > 0; };
   void writeBody() override;
-  uint32_t registerType(const WasmSignature &sig);
-  uint32_t lookupType(const WasmSignature &sig);
+  uint32_t registerType(const WasmSignature &Sig);
+  uint32_t lookupType(const WasmSignature &Sig);
 
 protected:
-  std::vector<const WasmSignature *> types;
-  llvm::DenseMap<WasmSignature, int32_t> typeIndices;
+  std::vector<const WasmSignature *> Types;
+  llvm::DenseMap<WasmSignature, int32_t> TypeIndices;
 };
 
 class ImportSection : public SyntheticSection {
 public:
   ImportSection() : SyntheticSection(llvm::wasm::WASM_SEC_IMPORT) {}
-  bool isNeeded() const override { return getNumImports() > 0; }
+  bool isNeeded() const override { return numImports() > 0; }
   void writeBody() override;
-  void addImport(Symbol *sym);
-  void addGOTEntry(Symbol *sym);
-  void seal() { isSealed = true; }
-  uint32_t getNumImports() const;
-  uint32_t getNumImportedGlobals() const {
-    assert(isSealed);
-    return numImportedGlobals;
+  void addImport(Symbol *Sym);
+  void addGOTEntry(Symbol *Sym);
+  void seal() { IsSealed = true; }
+  uint32_t numImports() const;
+  uint32_t numImportedGlobals() const {
+    assert(IsSealed);
+    return NumImportedGlobals;
   }
-  uint32_t getNumImportedFunctions() const {
-    assert(isSealed);
-    return numImportedFunctions;
+  uint32_t numImportedFunctions() const {
+    assert(IsSealed);
+    return NumImportedFunctions;
   }
-  uint32_t getNumImportedEvents() const {
-    assert(isSealed);
-    return numImportedEvents;
+  uint32_t numImportedEvents() const {
+    assert(IsSealed);
+    return NumImportedEvents;
   }
 
-  std::vector<const Symbol *> importedSymbols;
+  std::vector<const Symbol *> ImportedSymbols;
 
 protected:
-  bool isSealed = false;
-  unsigned numImportedGlobals = 0;
-  unsigned numImportedFunctions = 0;
-  unsigned numImportedEvents = 0;
-  std::vector<const Symbol *> gotSymbols;
+  bool IsSealed = false;
+  unsigned NumImportedGlobals = 0;
+  unsigned NumImportedFunctions = 0;
+  unsigned NumImportedEvents = 0;
+  std::vector<const Symbol *> GOTSymbols;
 };
 
 class FunctionSection : public SyntheticSection {
 public:
   FunctionSection() : SyntheticSection(llvm::wasm::WASM_SEC_FUNCTION) {}
 
-  bool isNeeded() const override { return inputFunctions.size() > 0; };
+  bool isNeeded() const override { return InputFunctions.size() > 0; };
   void writeBody() override;
-  void addFunction(InputFunction *func);
+  void addFunction(InputFunction *Func);
 
-  std::vector<InputFunction *> inputFunctions;
+  std::vector<InputFunction *> InputFunctions;
 
 protected:
 };
@@ -145,11 +143,11 @@ class MemorySection : public SyntheticSection {
 public:
   MemorySection() : SyntheticSection(llvm::wasm::WASM_SEC_MEMORY) {}
 
-  bool isNeeded() const override { return !config->importMemory; }
+  bool isNeeded() const override { return !Config->ImportMemory; }
   void writeBody() override;
 
-  uint32_t numMemoryPages = 0;
-  uint32_t maxMemoryPages = 0;
+  uint32_t NumMemoryPages = 0;
+  uint32_t MaxMemoryPages = 0;
 };
 
 class TableSection : public SyntheticSection {
@@ -165,7 +163,7 @@ public:
     //     no address-taken function will fail at validation time since it is
     //     a validation error to include a call_indirect instruction if there
     //     is not table.
-    return !config->importTable;
+    return !Config->ImportTable;
   }
 
   void writeBody() override;
@@ -175,17 +173,14 @@ class GlobalSection : public SyntheticSection {
 public:
   GlobalSection() : SyntheticSection(llvm::wasm::WASM_SEC_GLOBAL) {}
   uint32_t numGlobals() const {
-    return inputGlobals.size() + definedFakeGlobals.size() + gotSymbols.size();
+    return InputGlobals.size() + DefinedFakeGlobals.size();
   }
   bool isNeeded() const override { return numGlobals() > 0; }
-  void assignIndexes() override;
   void writeBody() override;
-  void addGlobal(InputGlobal *global);
-  void addDummyGOTEntry(Symbol *sym);
+  void addGlobal(InputGlobal *Global);
 
-  std::vector<const DefinedData *> definedFakeGlobals;
-  std::vector<InputGlobal *> inputGlobals;
-  std::vector<Symbol *> gotSymbols;
+  std::vector<const DefinedData *> DefinedFakeGlobals;
+  std::vector<InputGlobal *> InputGlobals;
 };
 
 // The event section contains a list of declared wasm events associated with the
@@ -202,77 +197,66 @@ class EventSection : public SyntheticSection {
 public:
   EventSection() : SyntheticSection(llvm::wasm::WASM_SEC_EVENT) {}
   void writeBody() override;
-  bool isNeeded() const override { return inputEvents.size() > 0; }
-  void addEvent(InputEvent *event);
+  bool isNeeded() const override { return InputEvents.size() > 0; }
+  void addEvent(InputEvent *Event);
 
-  std::vector<InputEvent *> inputEvents;
+  std::vector<InputEvent *> InputEvents;
 };
 
 class ExportSection : public SyntheticSection {
 public:
   ExportSection() : SyntheticSection(llvm::wasm::WASM_SEC_EXPORT) {}
-  bool isNeeded() const override { return exports.size() > 0; }
+  bool isNeeded() const override { return Exports.size() > 0; }
   void writeBody() override;
 
-  std::vector<llvm::wasm::WasmExport> exports;
-};
-
-class StartSection : public SyntheticSection {
-public:
-  StartSection(uint32_t numSegments)
-      : SyntheticSection(llvm::wasm::WASM_SEC_START), numSegments(numSegments) {
-  }
-  bool isNeeded() const override;
-  void writeBody() override;
-
-protected:
-  uint32_t numSegments;
+  std::vector<llvm::wasm::WasmExport> Exports;
 };
 
 class ElemSection : public SyntheticSection {
 public:
-  ElemSection()
-      : SyntheticSection(llvm::wasm::WASM_SEC_ELEM) {}
-  bool isNeeded() const override { return indirectFunctions.size() > 0; };
+  ElemSection(uint32_t Offset)
+      : SyntheticSection(llvm::wasm::WASM_SEC_ELEM), ElemOffset(Offset) {}
+  bool isNeeded() const override { return IndirectFunctions.size() > 0; };
   void writeBody() override;
-  void addEntry(FunctionSymbol *sym);
-  uint32_t numEntries() const { return indirectFunctions.size(); }
+  void addEntry(FunctionSymbol *Sym);
+  uint32_t numEntries() const { return IndirectFunctions.size(); }
+  uint32_t ElemOffset;
 
 protected:
-  std::vector<const FunctionSymbol *> indirectFunctions;
+  std::vector<const FunctionSymbol *> IndirectFunctions;
 };
 
 class DataCountSection : public SyntheticSection {
 public:
-  DataCountSection(uint32_t numSegments)
+  DataCountSection(uint32_t NumSegments)
       : SyntheticSection(llvm::wasm::WASM_SEC_DATACOUNT),
-        numSegments(numSegments) {}
+        NumSegments(NumSegments) {}
   bool isNeeded() const override;
   void writeBody() override;
 
 protected:
-  uint32_t numSegments;
+  uint32_t NumSegments;
 };
 
 // Create the custom "linking" section containing linker metadata.
 // This is only created when relocatable output is requested.
 class LinkingSection : public SyntheticSection {
 public:
-  LinkingSection(const std::vector<WasmInitEntry> &initFunctions,
-                 const std::vector<OutputSegment *> &dataSegments)
+  LinkingSection(const std::vector<WasmInitEntry> &InitFunctions,
+                 const std::vector<OutputSegment *> &DataSegments)
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "linking"),
-        initFunctions(initFunctions), dataSegments(dataSegments) {}
+        InitFunctions(InitFunctions), DataSegments(DataSegments) {}
   bool isNeeded() const override {
-    return config->relocatable || config->emitRelocs;
+    return Config->Relocatable || Config->EmitRelocs;
   }
   void writeBody() override;
-  void addToSymtab(Symbol *sym);
+  void addToSymtab(Symbol *Sym);
 
 protected:
-  std::vector<const Symbol *> symtabEntries;
-  llvm::StringMap<uint32_t> sectionSymbolIndices;
-  const std::vector<WasmInitEntry> &initFunctions;
-  const std::vector<OutputSegment *> &dataSegments;
+  std::vector<const Symbol *> SymtabEntries;
+  llvm::StringMap<uint32_t> SectionSymbolIndices;
+  const std::vector<WasmInitEntry> &InitFunctions;
+  const std::vector<OutputSegment *> &DataSegments;
 };
 
 // Create the custom "name" section containing debug symbol names.
@@ -280,7 +264,7 @@ class NameSection : public SyntheticSection {
 public:
   NameSection() : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "name") {}
   bool isNeeded() const override {
-    return !config->stripDebug && !config->stripAll && numNames() > 0;
+    return !Config->StripDebug && !Config->StripAll && numNames() > 0;
   }
   void writeBody() override;
   unsigned numNames() const;
@@ -291,18 +275,18 @@ public:
   ProducersSection()
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "producers") {}
   bool isNeeded() const override {
-    return !config->stripAll && fieldCount() > 0;
+    return !Config->StripAll && fieldCount() > 0;
   }
   void writeBody() override;
-  void addInfo(const llvm::wasm::WasmProducerInfo &info);
+  void addInfo(const llvm::wasm::WasmProducerInfo &Info);
 
 protected:
   int fieldCount() const {
-    return int(!languages.empty()) + int(!tools.empty()) + int(!sDKs.empty());
+    return int(!Languages.empty()) + int(!Tools.empty()) + int(!SDKs.empty());
   }
-  SmallVector<std::pair<std::string, std::string>, 8> languages;
-  SmallVector<std::pair<std::string, std::string>, 8> tools;
-  SmallVector<std::pair<std::string, std::string>, 8> sDKs;
+  SmallVector<std::pair<std::string, std::string>, 8> Languages;
+  SmallVector<std::pair<std::string, std::string>, 8> Tools;
+  SmallVector<std::pair<std::string, std::string>, 8> SDKs;
 };
 
 class TargetFeaturesSection : public SyntheticSection {
@@ -310,45 +294,44 @@ public:
   TargetFeaturesSection()
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "target_features") {}
   bool isNeeded() const override {
-    return !config->stripAll && features.size() > 0;
+    return !Config->StripAll && Features.size() > 0;
   }
   void writeBody() override;
 
-  llvm::SmallSet<std::string, 8> features;
+  llvm::SmallSet<std::string, 8> Features;
 };
 
 class RelocSection : public SyntheticSection {
 public:
-  RelocSection(StringRef name, OutputSection *sec)
-      : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, name), sec(sec) {}
+  RelocSection(StringRef Name, OutputSection *Sec)
+      : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, Name), Sec(Sec) {}
   void writeBody() override;
-  bool isNeeded() const override { return sec->getNumRelocations() > 0; };
+  bool isNeeded() const override { return Sec->numRelocations() > 0; };
 
 protected:
-  OutputSection *sec;
+  OutputSection *Sec;
 };
 
 // Linker generated output sections
 struct OutStruct {
-  DylinkSection *dylinkSec;
-  TypeSection *typeSec;
-  FunctionSection *functionSec;
-  ImportSection *importSec;
-  TableSection *tableSec;
-  MemorySection *memorySec;
-  GlobalSection *globalSec;
-  EventSection *eventSec;
-  ExportSection *exportSec;
-  StartSection *startSec;
-  ElemSection *elemSec;
-  DataCountSection *dataCountSec;
-  LinkingSection *linkingSec;
-  NameSection *nameSec;
-  ProducersSection *producersSec;
-  TargetFeaturesSection *targetFeaturesSec;
+  DylinkSection *DylinkSec;
+  TypeSection *TypeSec;
+  FunctionSection *FunctionSec;
+  ImportSection *ImportSec;
+  TableSection *TableSec;
+  MemorySection *MemorySec;
+  GlobalSection *GlobalSec;
+  EventSection *EventSec;
+  ExportSection *ExportSec;
+  ElemSection *ElemSec;
+  DataCountSection *DataCountSec;
+  LinkingSection *LinkingSec;
+  NameSection *NameSec;
+  ProducersSection *ProducersSec;
+  TargetFeaturesSection *TargetFeaturesSec;
 };
 
-extern OutStruct out;
+extern OutStruct Out;
 
 } // namespace wasm
 } // namespace lld

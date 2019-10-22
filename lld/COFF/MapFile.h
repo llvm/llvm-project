@@ -14,7 +14,7 @@
 namespace lld {
 namespace coff {
 class OutputSection;
-void writeMapFile(llvm::ArrayRef<OutputSection *> outputSections);
+void writeMapFile(llvm::ArrayRef<OutputSection *> OutputSections);
 }
 }
 

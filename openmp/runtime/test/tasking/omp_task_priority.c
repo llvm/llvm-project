@@ -1,4 +1,5 @@
 // RUN: %libomp-compile && env OMP_MAX_TASK_PRIORITY=42 %libomp-run
+// REQUIRES: openmp-4.5
 // Test OMP 4.5 task priorities
 // Currently only API function and envirable parsing implemented.
 // Test environment sets envirable: OMP_MAX_TASK_PRIORITY=42 as tested below.

@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj --arm-add-build-attributes -triple=armv7a-none-linux-gnueabi %s -o %t
-// RUN: ld.lld %t --no-merge-exidx-entries -o %t2 --gc-sections
-// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi --no-show-raw-insn %t2 | FileCheck %s
+// RUN: ld.lld %t --no-merge-exidx-entries -o %t2 --gc-sections 2>&1
+// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t2 | FileCheck %s
 // RUN: llvm-objdump -s -triple=armv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-EXIDX %s
 
 // Test the behavior of .ARM.exidx sections under garbage collection
@@ -93,17 +93,17 @@ _start:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: _start:
-// CHECK-NEXT:   1110c:       bl      #4 <func1>
-// CHECK-NEXT:   11110:       bl      #4 <func2>
-// CHECK-NEXT:   11114:       bx      lr
+// CHECK-NEXT:   11000:       01 00 00 eb     bl      #4 <func1>
+// CHECK-NEXT:   11004:       01 00 00 eb     bl      #4 <func2>
+// CHECK-NEXT:   11008:       1e ff 2f e1     bx      lr
 // CHECK: func1:
-// CHECK-NEXT:   11118:       bx      lr
+// CHECK-NEXT:   1100c:       1e ff 2f e1     bx      lr
 // CHECK: func2:
-// CHECK-NEXT:   1111c:       bx      lr
+// CHECK-NEXT:   11010:       1e ff 2f e1     bx      lr
 // CHECK: __gxx_personality_v0:
-// CHECK-NEXT:   11120:       bx      lr
+// CHECK-NEXT:   11014:       1e ff 2f e1     bx      lr
 // CHECK: __aeabi_unwind_cpp_pr0:
-// CHECK-NEXT:   11124:       bx      lr
+// CHECK-NEXT:   11018:       1e ff 2f e1     bx      lr
 
 // GC should have removed table entries for unusedfunc1, unusedfunc2
 // and __gxx_personality_v1
@@ -112,15 +112,15 @@ _start:
 // CHECK-NOT: __gxx_personality_v1
 
 // CHECK-EXIDX: Contents of section .ARM.exidx:
-// 100d4 + 1038 = 1110c = _start
-// 100dc + 103c = 11118 = func1
-// CHECK-EXIDX-NEXT: 100d4 38100000 01000000 3c100000 08849780
-// 100e4 + 1038 = 1111c = func2 (100e8 + 1c = 10104 = .ARM.extab)
-// 100ec + 1034 = 11120 = __gxx_personality_v0
-// CHECK-EXIDX-NEXT: 100e4 38100000 1c000000 34100000 01000000
-// 100f4 + 1030 = 11018 = __aeabi_unwind_cpp_pr0
-// 100fc + 102c = 1101c = __aeabi_unwind_cpp_pr0 + sizeof(__aeabi_unwind_cpp_pr0)
-// CHECK-EXIDX-NEXT: 100f4 30100000 01000000 2c100000 01000000
+// 100d4 + f2c = 11000
+// 100dc + f30 = 1100c = func1
+// CHECK-EXIDX-NEXT: 100d4 2c0f0000 01000000 300f0000 08849780
+// 100e4 + f2c = 11010 = func2 (100e8 + 1c = 10104 = .ARM.extab)
+// 100ec + f28 = 11014 = __gxx_personality_v0
+// CHECK-EXIDX-NEXT: 100e4 2c0f0000 1c000000 280f0000 01000000
+// 100f4 + f24 = 11018 = __aeabi_unwind_cpp_pr0
+// 100fc + f20 = 1101c = __aeabi_unwind_cpp_pr0 + sizeof(__aeabi_unwind_cpp_pr0)
+// CHECK-EXIDX-NEXT: 100f4 240f0000 01000000 200f0000 01000000
 // CHECK-EXIDX-NEXT: Contents of section .ARM.extab:
-// 10104 + 101c = 11120 = __gxx_personality_v0
-// CHECK-EXIDX-NEXT: 10104 1c100000 b0b0b000
+// 10104 + f10 = 11014 = __gxx_personality_v0
+// CHECK-EXIDX-NEXT: 10104 100f0000 b0b0b000

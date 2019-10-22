@@ -10,7 +10,7 @@
 
 #include <cassert>
 #include <tuple>
-#include "support/timer.h"
+#include "support/timer.hpp"
 
 template <std::size_t Indx, std::size_t Depth>
 struct C

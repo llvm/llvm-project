@@ -5,10 +5,10 @@
 
 # CHECK:      Type: PT_GNU_RELRO
 # CHECK-NEXT: Offset:
-# CHECK-NEXT: VirtualAddress: 0x220190
+# CHECK-NEXT: VirtualAddress:
 # CHECK-NEXT: PhysicalAddress:
 # CHECK-NEXT: FileSize:
-# CHECK-NEXT: MemSize: 3696
+# CHECK-NEXT: MemSize: 4096
 
 .section .data.rel.ro,"aw",%progbits
 .byte 1

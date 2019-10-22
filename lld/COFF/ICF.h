@@ -17,7 +17,7 @@ namespace coff {
 
 class Chunk;
 
-void doICF(ArrayRef<Chunk *> chunks);
+void doICF(ArrayRef<Chunk *> Chunks);
 
 } // namespace coff
 } // namespace lld

@@ -8,120 +8,40 @@ target triple = "wasm32-unknown-unknown"
 @e = private constant [9 x i8] c"constant\00", align 1
 @f = private constant i8 43, align 4
 
-; RUN: llc -mattr=+bulk-memory,+atomics -filetype=obj %s -o %t.passive.o
-; RUN: llc -filetype=obj %s -o %t.o
+; RUN: llc -filetype=obj %s -o %t.data-segment-merging.o
 
-; RUN: wasm-ld -no-gc-sections --no-entry -o %t.merged.wasm %t.o
+; RUN: wasm-ld -no-gc-sections --no-entry -o %t.merged.wasm %t.data-segment-merging.o
 ; RUN: obj2yaml %t.merged.wasm | FileCheck %s --check-prefix=MERGE
 
-; MERGE-LABEL: - Type:            DATA
-; MERGE-NEXT:    Segments:
-; MERGE-NEXT:      - SectionOffset:   7
-; MERGE-NEXT:        InitFlags:       0
-; MERGE-NEXT:        Offset:
-; MERGE:             Content:         68656C6C6F00676F6F6462796500776861746576657200002A000000
-; MERGE-NEXT:      - SectionOffset:   41
-; MERGE-NEXT:        InitFlags:       0
-; MERGE-NEXT:        Offset:
-; MERGE:             Content:         636F6E7374616E74000000002B
-; MERGE-NEXT:  - Type:            CUSTOM
-; MERGE-NEXT:    Name:            name
-; MERGE-NEXT:    FunctionNames:
-; MERGE-NEXT:      - Index:           0
-; MERGE-NEXT:        Name:            __wasm_call_ctors
-; MERGE-NOT:       - Index:
+; MERGE-NOT:                  DATACOUNT
+; MERGE:   - Type:            DATA
+; MERGE:     Segments:
+; MERGE:        Content:         68656C6C6F00676F6F6462796500776861746576657200002A000000
+; MERGE:        Content:         636F6E7374616E74000000002B
+; MERGE-NOT:    Content:
 
-; RUN: wasm-ld -no-gc-sections --no-entry --no-merge-data-segments -o %t.separate.wasm %t.o
+; RUN: wasm-ld -no-gc-sections --no-entry --no-merge-data-segments -o %t.separate.wasm %t.data-segment-merging.o
 ; RUN: obj2yaml %t.separate.wasm | FileCheck %s --check-prefix=SEPARATE
 
 ; SEPARATE-NOT:                  DATACOUNT
-; SEPARATE-LABEL: - Type:            DATA
-; SEPARATE-NEXT:    Segments:
-; SEPARATE-NEXT:      - SectionOffset:   7
-; SEPARATE-NEXT:        InitFlags:       0
-; SEPARATE-NEXT:        Offset:
-; SEPARATE:             Content:         68656C6C6F00
-; SEPARATE-NEXT:      - SectionOffset:   19
-; SEPARATE-NEXT:        InitFlags:       0
-; SEPARATE-NEXT:        Offset:
-; SEPARATE:             Content:         676F6F6462796500
-; SEPARATE-NEXT:      - SectionOffset:   33
-; SEPARATE-NEXT:        InitFlags:       0
-; SEPARATE-NEXT:        Offset:
-; SEPARATE:             Content:         '776861746576657200'
-; SEPARATE-NEXT:      - SectionOffset:   48
-; SEPARATE-NEXT:        InitFlags:       0
-; SEPARATE-NEXT:        Offset:
-; SEPARATE:             Content:         2A000000
-; SEPARATE-NEXT:      - SectionOffset:   58
-; SEPARATE-NEXT:        InitFlags:       0
-; SEPARATE-NEXT:        Offset:
-; SEPARATE:             Content:         636F6E7374616E7400
-; SEPARATE-NEXT:      - SectionOffset:   73
-; SEPARATE-NEXT:        InitFlags:       0
-; SEPARATE-NEXT:        Offset:
-; SEPARATE:             Content:         2B
-; SEPARATE-NEXT:  - Type:            CUSTOM
-; SEPARATE-NEXT:    Name:            name
-; SEPARATE-NEXT:    FunctionNames:
-; SEPARATE-NEXT:      - Index:           0
-; SEPARATE-NEXT:        Name:            __wasm_call_ctors
-; SEPARATE-NOT:       - Index:
+; SEPARATE:   - Type:            DATA
+; SEPARATE:     Segments:
+; SEPARATE:        Content:         68656C6C6F00
+; SEPARATE:        Content:         676F6F6462796500
+; SEPARATE:        Content:         '776861746576657200'
+; SEPARATE:        Content:         2A000000
+; SEPARATE:        Content:         636F6E7374616E7400
+; SEPARATE:        Content:         2B
+; SEPARATE-NOT:    Content:
 
-; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 -o %t.merged.passive.wasm %t.passive.o
-; RUN: obj2yaml %t.merged.passive.wasm | FileCheck %s --check-prefix=PASSIVE-MERGE
+; RUN: llc -filetype=obj %s -mattr=+bulk-memory -o %t.data-segment-merging.bulk-memory.o
+; RUN: wasm-ld -no-gc-sections --no-entry -o %t.merged.bulk-memory.wasm %t.data-segment-merging.bulk-memory.o
+; RUN: obj2yaml %t.merged.bulk-memory.wasm | FileCheck %s --check-prefix=BULK-MEMORY
 
-; PASSIVE-MERGE-LABEL: - Type:            DATACOUNT
-; PASSIVE-MERGE-NEXT:    Count:           2
-; PASSIVE-MERGE-LABEL: - Type:            DATA
-; PASSIVE-MERGE-NEXT:    Segments:
-; PASSIVE-MERGE-NEXT:      - SectionOffset:   3
-; PASSIVE-MERGE-NEXT:        InitFlags:       1
-; PASSIVE-MERGE-NEXT:        Content:         68656C6C6F00676F6F6462796500776861746576657200002A000000
-; PASSIVE-MERGE-NEXT:      - SectionOffset:   33
-; PASSIVE-MERGE-NEXT:        InitFlags:       1
-; PASSIVE-MERGE-NEXT:        Content:         636F6E7374616E74000000002B
-; PASSIVE-MERGE-NEXT:  - Type:            CUSTOM
-; PASSIVE-MERGE-NEXT:    Name:            name
-; PASSIVE-MERGE-NEXT:    FunctionNames:
-; PASSIVE-MERGE-NEXT:      - Index:           0
-; PASSIVE-MERGE-NEXT:        Name:            __wasm_call_ctors
-; PASSIVE-MERGE-NEXT:      - Index:           1
-; PASSIVE-MERGE-NEXT:        Name:            __wasm_init_memory
-; PASSIVE-MERGE-NEXT:      - Index:           2
-; PASSIVE-MERGE-NEXT:        Name:            __wasm_init_tls
-
-; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 -no-merge-data-segments -o %t.separate.passive.wasm %t.passive.o
-; RUN: obj2yaml %t.separate.passive.wasm | FileCheck %s --check-prefix=PASSIVE-SEPARATE
-
-; PASSIVE-SEPARATE-LABEL: - Type:            DATACOUNT
-; PASSIVE-SEPARATE-NEXT:    Count:           6
-; PASSIVE-SEPARATE-LABEL: - Type:            DATA
-; PASSIVE-SEPARATE-NEXT:    Segments:
-; PASSIVE-SEPARATE-NEXT:      - SectionOffset:   3
-; PASSIVE-SEPARATE-NEXT:        InitFlags:       1
-; PASSIVE-SEPARATE-NEXT:        Content:         68656C6C6F00
-; PASSIVE-SEPARATE-NEXT:      - SectionOffset:   11
-; PASSIVE-SEPARATE-NEXT:        InitFlags:       1
-; PASSIVE-SEPARATE-NEXT:        Content:         676F6F6462796500
-; PASSIVE-SEPARATE-NEXT:      - SectionOffset:   21
-; PASSIVE-SEPARATE-NEXT:        InitFlags:       1
-; PASSIVE-SEPARATE-NEXT:        Content:         '776861746576657200'
-; PASSIVE-SEPARATE-NEXT:      - SectionOffset:   32
-; PASSIVE-SEPARATE-NEXT:        InitFlags:       1
-; PASSIVE-SEPARATE-NEXT:        Content:         2A000000
-; PASSIVE-SEPARATE-NEXT:      - SectionOffset:   38
-; PASSIVE-SEPARATE-NEXT:        InitFlags:       1
-; PASSIVE-SEPARATE-NEXT:        Content:         636F6E7374616E7400
-; PASSIVE-SEPARATE-NEXT:      - SectionOffset:   49
-; PASSIVE-SEPARATE-NEXT:        InitFlags:       1
-; PASSIVE-SEPARATE-NEXT:        Content:         2B
-; PASSIVE-SEPARATE-NEXT:    - Type:            CUSTOM
-; PASSIVE-SEPARATE-NEXT:      Name:            name
-; PASSIVE-SEPARATE-NEXT:      FunctionNames:
-; PASSIVE-SEPARATE-NEXT:        - Index:           0
-; PASSIVE-SEPARATE-NEXT:          Name:            __wasm_call_ctors
-; PASSIVE-SEPARATE-NEXT:        - Index:           1
-; PASSIVE-SEPARATE-NEXT:          Name:            __wasm_init_memory
-; PASSIVE-SEPARATE-NEXT:        - Index:           2
-; PASSIVE-SEPARATE-NEXT:          Name:            __wasm_init_tls
+; BULK-MEMORY:   - Type:            DATACOUNT
+; BULK-MEMORY:     Count:           2
+; BULK-MEMORY:   - Type:            DATA
+; BULK-MEMORY:     Segments:
+; BULK-MEMORY:        Content:         68656C6C6F00676F6F6462796500776861746576657200002A000000
+; BULK-MEMORY:        Content:         636F6E7374616E74000000002B
+; BULK-MEMORY-NOT:    Content:

@@ -65,7 +65,7 @@ enum {
 #undef PREFIX
 
 // Create table mapping all options defined in Options.td
-static const opt::OptTable::Info infoTable[] = {
+static const opt::OptTable::Info InfoTable[] = {
 #define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
   {X1, X2, X10,         X11,         OPT_##ID, opt::Option::KIND##Class,       \
    X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
@@ -76,14 +76,14 @@ static const opt::OptTable::Info infoTable[] = {
 namespace {
 class MinGWOptTable : public opt::OptTable {
 public:
-  MinGWOptTable() : OptTable(infoTable, false) {}
-  opt::InputArgList parse(ArrayRef<const char *> argv);
+  MinGWOptTable() : OptTable(InfoTable, false) {}
+  opt::InputArgList parse(ArrayRef<const char *> Argv);
 };
 } // namespace
 
-static void printHelp(const char *argv0) {
+static void printHelp(const char *Argv0) {
   MinGWOptTable().PrintHelp(
-      outs(), (std::string(argv0) + " [options] file...").c_str(), "lld",
+      outs(), (std::string(Argv0) + " [options] file...").c_str(), "lld",
       false /*ShowHidden*/, true /*ShowAllAliases*/);
   outs() << "\n";
 }
@@ -94,58 +94,58 @@ static cl::TokenizerCallback getQuotingStyle() {
   return cl::TokenizeGNUCommandLine;
 }
 
-opt::InputArgList MinGWOptTable::parse(ArrayRef<const char *> argv) {
-  unsigned missingIndex;
-  unsigned missingCount;
+opt::InputArgList MinGWOptTable::parse(ArrayRef<const char *> Argv) {
+  unsigned MissingIndex;
+  unsigned MissingCount;
 
-  SmallVector<const char *, 256> vec(argv.data(), argv.data() + argv.size());
-  cl::ExpandResponseFiles(saver, getQuotingStyle(), vec);
-  opt::InputArgList args = this->ParseArgs(vec, missingIndex, missingCount);
+  SmallVector<const char *, 256> Vec(Argv.data(), Argv.data() + Argv.size());
+  cl::ExpandResponseFiles(Saver, getQuotingStyle(), Vec);
+  opt::InputArgList Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
 
-  if (missingCount)
-    fatal(StringRef(args.getArgString(missingIndex)) + ": missing argument");
-  for (auto *arg : args.filtered(OPT_UNKNOWN))
-    fatal("unknown argument: " + arg->getAsString(args));
-  return args;
+  if (MissingCount)
+    fatal(StringRef(Args.getArgString(MissingIndex)) + ": missing argument");
+  for (auto *Arg : Args.filtered(OPT_UNKNOWN))
+    fatal("unknown argument: " + Arg->getSpelling());
+  return Args;
 }
 
 // Find a file by concatenating given paths.
-static Optional<std::string> findFile(StringRef path1, const Twine &path2) {
-  SmallString<128> s;
-  sys::path::append(s, path1, path2);
-  if (sys::fs::exists(s))
-    return s.str().str();
+static Optional<std::string> findFile(StringRef Path1, const Twine &Path2) {
+  SmallString<128> S;
+  sys::path::append(S, Path1, Path2);
+  if (sys::fs::exists(S))
+    return S.str().str();
   return None;
 }
 
 // This is for -lfoo. We'll look for libfoo.dll.a or libfoo.a from search paths.
 static std::string
-searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
-  if (name.startswith(":")) {
-    for (StringRef dir : searchPaths)
-      if (Optional<std::string> s = findFile(dir, name.substr(1)))
-        return *s;
-    fatal("unable to find library -l" + name);
+searchLibrary(StringRef Name, ArrayRef<StringRef> SearchPaths, bool BStatic) {
+  if (Name.startswith(":")) {
+    for (StringRef Dir : SearchPaths)
+      if (Optional<std::string> S = findFile(Dir, Name.substr(1)))
+        return *S;
+    fatal("unable to find library -l" + Name);
   }
 
-  for (StringRef dir : searchPaths) {
-    if (!bStatic)
-      if (Optional<std::string> s = findFile(dir, "lib" + name + ".dll.a"))
-        return *s;
-    if (Optional<std::string> s = findFile(dir, "lib" + name + ".a"))
-      return *s;
+  for (StringRef Dir : SearchPaths) {
+    if (!BStatic)
+      if (Optional<std::string> S = findFile(Dir, "lib" + Name + ".dll.a"))
+        return *S;
+    if (Optional<std::string> S = findFile(Dir, "lib" + Name + ".a"))
+      return *S;
   }
-  fatal("unable to find library -l" + name);
+  fatal("unable to find library -l" + Name);
 }
 
 // Convert Unix-ish command line arguments to Windows-ish ones and
 // then call coff::link.
-bool mingw::link(ArrayRef<const char *> argsArr, raw_ostream &diag) {
-  MinGWOptTable parser;
-  opt::InputArgList args = parser.parse(argsArr.slice(1));
+bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
+  MinGWOptTable Parser;
+  opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
 
-  if (args.hasArg(OPT_help)) {
-    printHelp(argsArr[0]);
+  if (Args.hasArg(OPT_help)) {
+    printHelp(ArgsArr[0]);
     return true;
   }
 
@@ -154,201 +154,199 @@ bool mingw::link(ArrayRef<const char *> argsArr, raw_ostream &diag) {
   // still the newest version in March 2017) or earlier to recognize LLD as
   // a GNU compatible linker. As long as an output for the -v option
   // contains "GNU" or "with BFD", they recognize us as GNU-compatible.
-  if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
+  if (Args.hasArg(OPT_v) || Args.hasArg(OPT_version))
     message(getLLDVersion() + " (compatible with GNU linkers)");
 
   // The behavior of -v or --version is a bit strange, but this is
   // needed for compatibility with GNU linkers.
-  if (args.hasArg(OPT_v) && !args.hasArg(OPT_INPUT) && !args.hasArg(OPT_l))
+  if (Args.hasArg(OPT_v) && !Args.hasArg(OPT_INPUT) && !Args.hasArg(OPT_l))
     return true;
-  if (args.hasArg(OPT_version))
+  if (Args.hasArg(OPT_version))
     return true;
 
-  if (!args.hasArg(OPT_INPUT) && !args.hasArg(OPT_l))
+  if (!Args.hasArg(OPT_INPUT) && !Args.hasArg(OPT_l))
     fatal("no input files");
 
-  std::vector<std::string> linkArgs;
-  auto add = [&](const Twine &s) { linkArgs.push_back(s.str()); };
+  std::vector<std::string> LinkArgs;
+  auto Add = [&](const Twine &S) { LinkArgs.push_back(S.str()); };
 
-  add("lld-link");
-  add("-lldmingw");
+  Add("lld-link");
+  Add("-lldmingw");
 
-  if (auto *a = args.getLastArg(OPT_entry)) {
-    StringRef s = a->getValue();
-    if (args.getLastArgValue(OPT_m) == "i386pe" && s.startswith("_"))
-      add("-entry:" + s.substr(1));
+  if (auto *A = Args.getLastArg(OPT_entry)) {
+    StringRef S = A->getValue();
+    if (Args.getLastArgValue(OPT_m) == "i386pe" && S.startswith("_"))
+      Add("-entry:" + S.substr(1));
     else
-      add("-entry:" + s);
+      Add("-entry:" + S);
   }
 
-  if (args.hasArg(OPT_major_os_version, OPT_minor_os_version,
+  if (Args.hasArg(OPT_major_os_version, OPT_minor_os_version,
                   OPT_major_subsystem_version, OPT_minor_subsystem_version)) {
-    auto *majOSVer = args.getLastArg(OPT_major_os_version);
-    auto *minOSVer = args.getLastArg(OPT_minor_os_version);
-    auto *majSubSysVer = args.getLastArg(OPT_major_subsystem_version);
-    auto *minSubSysVer = args.getLastArg(OPT_minor_subsystem_version);
-    if (majOSVer && majSubSysVer &&
-        StringRef(majOSVer->getValue()) != StringRef(majSubSysVer->getValue()))
+    auto *MajOSVer = Args.getLastArg(OPT_major_os_version);
+    auto *MinOSVer = Args.getLastArg(OPT_minor_os_version);
+    auto *MajSubSysVer = Args.getLastArg(OPT_major_subsystem_version);
+    auto *MinSubSysVer = Args.getLastArg(OPT_minor_subsystem_version);
+    if (MajOSVer && MajSubSysVer &&
+        StringRef(MajOSVer->getValue()) != StringRef(MajSubSysVer->getValue()))
       warn("--major-os-version and --major-subsystem-version set to differing "
            "versions, not supported");
-    if (minOSVer && minSubSysVer &&
-        StringRef(minOSVer->getValue()) != StringRef(minSubSysVer->getValue()))
+    if (MinOSVer && MinSubSysVer &&
+        StringRef(MinOSVer->getValue()) != StringRef(MinSubSysVer->getValue()))
       warn("--minor-os-version and --minor-subsystem-version set to differing "
            "versions, not supported");
-    StringRef subSys = args.getLastArgValue(OPT_subs, "default");
-    StringRef major = majOSVer ? majOSVer->getValue()
-                               : majSubSysVer ? majSubSysVer->getValue() : "6";
-    StringRef minor = minOSVer ? minOSVer->getValue()
-                               : minSubSysVer ? minSubSysVer->getValue() : "";
-    StringRef sep = minor.empty() ? "" : ".";
-    add("-subsystem:" + subSys + "," + major + sep + minor);
-  } else if (auto *a = args.getLastArg(OPT_subs)) {
-    add("-subsystem:" + StringRef(a->getValue()));
+    StringRef SubSys = Args.getLastArgValue(OPT_subs, "default");
+    StringRef Major = MajOSVer ? MajOSVer->getValue()
+                               : MajSubSysVer ? MajSubSysVer->getValue() : "6";
+    StringRef Minor = MinOSVer ? MinOSVer->getValue()
+                               : MinSubSysVer ? MinSubSysVer->getValue() : "";
+    StringRef Sep = Minor.empty() ? "" : ".";
+    Add("-subsystem:" + SubSys + "," + Major + Sep + Minor);
+  } else if (auto *A = Args.getLastArg(OPT_subs)) {
+    Add("-subsystem:" + StringRef(A->getValue()));
   }
 
-  if (auto *a = args.getLastArg(OPT_out_implib))
-    add("-implib:" + StringRef(a->getValue()));
-  if (auto *a = args.getLastArg(OPT_stack))
-    add("-stack:" + StringRef(a->getValue()));
-  if (auto *a = args.getLastArg(OPT_output_def))
-    add("-output-def:" + StringRef(a->getValue()));
-  if (auto *a = args.getLastArg(OPT_image_base))
-    add("-base:" + StringRef(a->getValue()));
-  if (auto *a = args.getLastArg(OPT_map))
-    add("-lldmap:" + StringRef(a->getValue()));
+  if (auto *A = Args.getLastArg(OPT_out_implib))
+    Add("-implib:" + StringRef(A->getValue()));
+  if (auto *A = Args.getLastArg(OPT_stack))
+    Add("-stack:" + StringRef(A->getValue()));
+  if (auto *A = Args.getLastArg(OPT_output_def))
+    Add("-output-def:" + StringRef(A->getValue()));
+  if (auto *A = Args.getLastArg(OPT_image_base))
+    Add("-base:" + StringRef(A->getValue()));
+  if (auto *A = Args.getLastArg(OPT_map))
+    Add("-lldmap:" + StringRef(A->getValue()));
 
-  if (auto *a = args.getLastArg(OPT_o))
-    add("-out:" + StringRef(a->getValue()));
-  else if (args.hasArg(OPT_shared))
-    add("-out:a.dll");
+  if (auto *A = Args.getLastArg(OPT_o))
+    Add("-out:" + StringRef(A->getValue()));
+  else if (Args.hasArg(OPT_shared))
+    Add("-out:a.dll");
   else
-    add("-out:a.exe");
+    Add("-out:a.exe");
 
-  if (auto *a = args.getLastArg(OPT_pdb)) {
-    add("-debug");
-    StringRef v = a->getValue();
-    if (!v.empty())
-      add("-pdb:" + v);
-  } else if (args.hasArg(OPT_strip_debug)) {
-    add("-debug:symtab");
-  } else if (!args.hasArg(OPT_strip_all)) {
-    add("-debug:dwarf");
+  if (auto *A = Args.getLastArg(OPT_pdb)) {
+    Add("-debug");
+    StringRef V = A->getValue();
+    if (!V.empty())
+      Add("-pdb:" + V);
+  } else if (Args.hasArg(OPT_strip_debug)) {
+    Add("-debug:symtab");
+  } else if (!Args.hasArg(OPT_strip_all)) {
+    Add("-debug:dwarf");
   }
 
-  if (args.hasArg(OPT_shared))
-    add("-dll");
-  if (args.hasArg(OPT_verbose))
-    add("-verbose");
-  if (args.hasArg(OPT_exclude_all_symbols))
-    add("-exclude-all-symbols");
-  if (args.hasArg(OPT_export_all_symbols))
-    add("-export-all-symbols");
-  if (args.hasArg(OPT_large_address_aware))
-    add("-largeaddressaware");
-  if (args.hasArg(OPT_kill_at))
-    add("-kill-at");
-  if (args.hasArg(OPT_appcontainer))
-    add("-appcontainer");
+  if (Args.hasArg(OPT_shared))
+    Add("-dll");
+  if (Args.hasArg(OPT_verbose))
+    Add("-verbose");
+  if (Args.hasArg(OPT_exclude_all_symbols))
+    Add("-exclude-all-symbols");
+  if (Args.hasArg(OPT_export_all_symbols))
+    Add("-export-all-symbols");
+  if (Args.hasArg(OPT_large_address_aware))
+    Add("-largeaddressaware");
+  if (Args.hasArg(OPT_kill_at))
+    Add("-kill-at");
+  if (Args.hasArg(OPT_appcontainer))
+    Add("-appcontainer");
 
-  if (args.getLastArgValue(OPT_m) != "thumb2pe" &&
-      args.getLastArgValue(OPT_m) != "arm64pe" && !args.hasArg(OPT_dynamicbase))
-    add("-dynamicbase:no");
+  if (Args.getLastArgValue(OPT_m) != "thumb2pe" &&
+      Args.getLastArgValue(OPT_m) != "arm64pe" && !Args.hasArg(OPT_dynamicbase))
+    Add("-dynamicbase:no");
 
-  if (args.hasFlag(OPT_no_insert_timestamp, OPT_insert_timestamp, false))
-    add("-timestamp:0");
+  if (Args.hasFlag(OPT_no_insert_timestamp, OPT_insert_timestamp, false))
+    Add("-timestamp:0");
 
-  if (args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false))
-    add("-opt:ref");
+  if (Args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false))
+    Add("-opt:ref");
   else
-    add("-opt:noref");
+    Add("-opt:noref");
 
-  if (auto *a = args.getLastArg(OPT_icf)) {
-    StringRef s = a->getValue();
-    if (s == "all")
-      add("-opt:icf");
-    else if (s == "safe" || s == "none")
-      add("-opt:noicf");
+  if (auto *A = Args.getLastArg(OPT_icf)) {
+    StringRef S = A->getValue();
+    if (S == "all")
+      Add("-opt:icf");
+    else if (S == "safe" || S == "none")
+      Add("-opt:noicf");
     else
-      fatal("unknown parameter: --icf=" + s);
+      fatal("unknown parameter: --icf=" + S);
   } else {
-    add("-opt:noicf");
+    Add("-opt:noicf");
   }
 
-  if (auto *a = args.getLastArg(OPT_m)) {
-    StringRef s = a->getValue();
-    if (s == "i386pe")
-      add("-machine:x86");
-    else if (s == "i386pep")
-      add("-machine:x64");
-    else if (s == "thumb2pe")
-      add("-machine:arm");
-    else if (s == "arm64pe")
-      add("-machine:arm64");
+  if (auto *A = Args.getLastArg(OPT_m)) {
+    StringRef S = A->getValue();
+    if (S == "i386pe")
+      Add("-machine:x86");
+    else if (S == "i386pep")
+      Add("-machine:x64");
+    else if (S == "thumb2pe")
+      Add("-machine:arm");
+    else if (S == "arm64pe")
+      Add("-machine:arm64");
     else
-      fatal("unknown parameter: -m" + s);
+      fatal("unknown parameter: -m" + S);
   }
 
-  for (auto *a : args.filtered(OPT_mllvm))
-    add("-mllvm:" + StringRef(a->getValue()));
+  for (auto *A : Args.filtered(OPT_mllvm))
+    Add("-mllvm:" + StringRef(A->getValue()));
 
-  for (auto *a : args.filtered(OPT_Xlink))
-    add(a->getValue());
+  for (auto *A : Args.filtered(OPT_Xlink))
+    Add(A->getValue());
 
-  if (args.getLastArgValue(OPT_m) == "i386pe")
-    add("-alternatename:__image_base__=___ImageBase");
+  if (Args.getLastArgValue(OPT_m) == "i386pe")
+    Add("-alternatename:__image_base__=___ImageBase");
   else
-    add("-alternatename:__image_base__=__ImageBase");
+    Add("-alternatename:__image_base__=__ImageBase");
 
-  for (auto *a : args.filtered(OPT_require_defined))
-    add("-include:" + StringRef(a->getValue()));
-  for (auto *a : args.filtered(OPT_undefined))
-    add("-includeoptional:" + StringRef(a->getValue()));
-  for (auto *a : args.filtered(OPT_delayload))
-    add("-delayload:" + StringRef(a->getValue()));
+  for (auto *A : Args.filtered(OPT_require_defined))
+    Add("-include:" + StringRef(A->getValue()));
+  for (auto *A : Args.filtered(OPT_undefined))
+    Add("-includeoptional:" + StringRef(A->getValue()));
 
-  std::vector<StringRef> searchPaths;
-  for (auto *a : args.filtered(OPT_L)) {
-    searchPaths.push_back(a->getValue());
-    add("-libpath:" + StringRef(a->getValue()));
+  std::vector<StringRef> SearchPaths;
+  for (auto *A : Args.filtered(OPT_L)) {
+    SearchPaths.push_back(A->getValue());
+    Add("-libpath:" + StringRef(A->getValue()));
   }
 
-  StringRef prefix = "";
-  bool isStatic = false;
-  for (auto *a : args) {
-    switch (a->getOption().getID()) {
+  StringRef Prefix = "";
+  bool Static = false;
+  for (auto *A : Args) {
+    switch (A->getOption().getUnaliasedOption().getID()) {
     case OPT_INPUT:
-      if (StringRef(a->getValue()).endswith_lower(".def"))
-        add("-def:" + StringRef(a->getValue()));
+      if (StringRef(A->getValue()).endswith_lower(".def"))
+        Add("-def:" + StringRef(A->getValue()));
       else
-        add(prefix + StringRef(a->getValue()));
+        Add(Prefix + StringRef(A->getValue()));
       break;
     case OPT_l:
-      add(prefix + searchLibrary(a->getValue(), searchPaths, isStatic));
+      Add(Prefix + searchLibrary(A->getValue(), SearchPaths, Static));
       break;
     case OPT_whole_archive:
-      prefix = "-wholearchive:";
+      Prefix = "-wholearchive:";
       break;
     case OPT_no_whole_archive:
-      prefix = "";
+      Prefix = "";
       break;
     case OPT_Bstatic:
-      isStatic = true;
+      Static = true;
       break;
     case OPT_Bdynamic:
-      isStatic = false;
+      Static = false;
       break;
     }
   }
 
-  if (args.hasArg(OPT_verbose) || args.hasArg(OPT__HASH_HASH_HASH))
-    outs() << llvm::join(linkArgs, " ") << "\n";
+  if (Args.hasArg(OPT_verbose) || Args.hasArg(OPT__HASH_HASH_HASH))
+    outs() << llvm::join(LinkArgs, " ") << "\n";
 
-  if (args.hasArg(OPT__HASH_HASH_HASH))
+  if (Args.hasArg(OPT__HASH_HASH_HASH))
     return true;
 
   // Repack vector of strings to vector of const char pointers for coff::link.
-  std::vector<const char *> vec;
-  for (const std::string &s : linkArgs)
-    vec.push_back(s.c_str());
-  return coff::link(vec, true);
+  std::vector<const char *> Vec;
+  for (const std::string &S : LinkArgs)
+    Vec.push_back(S.c_str());
+  return coff::link(Vec, true);
 }

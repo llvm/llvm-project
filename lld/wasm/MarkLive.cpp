@@ -32,69 +32,66 @@ using namespace llvm;
 using namespace llvm::wasm;
 
 void lld::wasm::markLive() {
-  if (!config->gcSections)
+  if (!Config->GcSections)
     return;
 
   LLVM_DEBUG(dbgs() << "markLive\n");
-  SmallVector<InputChunk *, 256> q;
+  SmallVector<InputChunk *, 256> Q;
 
-  std::function<void(Symbol*)> enqueue = [&](Symbol *sym) {
-    if (!sym || sym->isLive())
+  std::function<void(Symbol*)> Enqueue = [&](Symbol *Sym) {
+    if (!Sym || Sym->isLive())
       return;
-    LLVM_DEBUG(dbgs() << "markLive: " << sym->getName() << "\n");
-    sym->markLive();
-    if (InputChunk *chunk = sym->getChunk())
-      q.push_back(chunk);
+    LLVM_DEBUG(dbgs() << "markLive: " << Sym->getName() << "\n");
+    Sym->markLive();
+    if (InputChunk *Chunk = Sym->getChunk())
+      Q.push_back(Chunk);
 
-    // The ctor functions are all referenced by the synthetic callCtors
+    // The ctor functions are all referenced by the synthetic CallCtors
     // function.  However, this function does not contain relocations so we
-    // have to manually mark the ctors as live if callCtors itself is live.
-    if (sym == WasmSym::callCtors) {
-      if (config->isPic)
-        enqueue(WasmSym::applyRelocs);
-      for (const ObjFile *obj : symtab->objectFiles) {
-        const WasmLinkingData &l = obj->getWasmObj()->linkingData();
-        for (const WasmInitFunc &f : l.InitFunctions) {
-          auto* initSym = obj->getFunctionSymbol(f.Symbol);
-          if (!initSym->isDiscarded())
-            enqueue(initSym);
+    // have to manually mark the ctors as live if CallCtors itself is live.
+    if (Sym == WasmSym::CallCtors) {
+      for (const ObjFile *Obj : Symtab->ObjectFiles) {
+        const WasmLinkingData &L = Obj->getWasmObj()->linkingData();
+        for (const WasmInitFunc &F : L.InitFunctions) {
+          auto* InitSym = Obj->getFunctionSymbol(F.Symbol);
+          if (!InitSym->isDiscarded())
+            Enqueue(InitSym);
         }
       }
     }
   };
 
   // Add GC root symbols.
-  if (!config->entry.empty())
-    enqueue(symtab->find(config->entry));
+  if (!Config->Entry.empty())
+    Enqueue(Symtab->find(Config->Entry));
 
-  // We need to preserve any no-strip or exported symbol
-  for (Symbol *sym : symtab->getSymbols())
-    if (sym->isNoStrip() || sym->isExported())
-      enqueue(sym);
+  // We need to preserve any exported symbol
+  for (Symbol *Sym : Symtab->getSymbols())
+    if (Sym->isExported())
+      Enqueue(Sym);
 
   // For relocatable output, we need to preserve all the ctor functions
-  if (config->relocatable) {
-    for (const ObjFile *obj : symtab->objectFiles) {
-      const WasmLinkingData &l = obj->getWasmObj()->linkingData();
-      for (const WasmInitFunc &f : l.InitFunctions)
-        enqueue(obj->getFunctionSymbol(f.Symbol));
+  if (Config->Relocatable) {
+    for (const ObjFile *Obj : Symtab->ObjectFiles) {
+      const WasmLinkingData &L = Obj->getWasmObj()->linkingData();
+      for (const WasmInitFunc &F : L.InitFunctions)
+        Enqueue(Obj->getFunctionSymbol(F.Symbol));
     }
   }
 
-  if (config->isPic)
-    enqueue(WasmSym::callCtors);
-
-  if (config->sharedMemory && !config->shared)
-    enqueue(WasmSym::initMemory);
+  if (Config->Pic) {
+    Enqueue(WasmSym::CallCtors);
+    Enqueue(WasmSym::ApplyRelocs);
+  }
 
   // Follow relocations to mark all reachable chunks.
-  while (!q.empty()) {
-    InputChunk *c = q.pop_back_val();
+  while (!Q.empty()) {
+    InputChunk *C = Q.pop_back_val();
 
-    for (const WasmRelocation reloc : c->getRelocations()) {
-      if (reloc.Type == R_WASM_TYPE_INDEX_LEB)
+    for (const WasmRelocation Reloc : C->getRelocations()) {
+      if (Reloc.Type == R_WASM_TYPE_INDEX_LEB)
         continue;
-      Symbol *sym = c->file->getSymbol(reloc.Index);
+      Symbol *Sym = C->File->getSymbol(Reloc.Index);
 
       // If the function has been assigned the special index zero in the table,
       // the relocation doesn't pull in the function body, since the function
@@ -103,38 +100,38 @@ void lld::wasm::markLive() {
       // zero is only reachable via "call", not via "call_indirect".  The stub
       // functions used for weak-undefined symbols have this behaviour (compare
       // equal to null pointer, only reachable via direct call).
-      if (reloc.Type == R_WASM_TABLE_INDEX_SLEB ||
-          reloc.Type == R_WASM_TABLE_INDEX_I32) {
-        auto *funcSym = cast<FunctionSymbol>(sym);
-        if (funcSym->hasTableIndex() && funcSym->getTableIndex() == 0)
+      if (Reloc.Type == R_WASM_TABLE_INDEX_SLEB ||
+          Reloc.Type == R_WASM_TABLE_INDEX_I32) {
+        auto *FuncSym = cast<FunctionSymbol>(Sym);
+        if (FuncSym->hasTableIndex() && FuncSym->getTableIndex() == 0)
           continue;
       }
 
-      enqueue(sym);
+      Enqueue(Sym);
     }
   }
 
   // Report garbage-collected sections.
-  if (config->printGcSections) {
-    for (const ObjFile *obj : symtab->objectFiles) {
-      for (InputChunk *c : obj->functions)
-        if (!c->live)
-          message("removing unused section " + toString(c));
-      for (InputChunk *c : obj->segments)
-        if (!c->live)
-          message("removing unused section " + toString(c));
-      for (InputGlobal *g : obj->globals)
-        if (!g->live)
-          message("removing unused section " + toString(g));
-      for (InputEvent *e : obj->events)
-        if (!e->live)
-          message("removing unused section " + toString(e));
+  if (Config->PrintGcSections) {
+    for (const ObjFile *Obj : Symtab->ObjectFiles) {
+      for (InputChunk *C : Obj->Functions)
+        if (!C->Live)
+          message("removing unused section " + toString(C));
+      for (InputChunk *C : Obj->Segments)
+        if (!C->Live)
+          message("removing unused section " + toString(C));
+      for (InputGlobal *G : Obj->Globals)
+        if (!G->Live)
+          message("removing unused section " + toString(G));
+      for (InputEvent *E : Obj->Events)
+        if (!E->Live)
+          message("removing unused section " + toString(E));
     }
-    for (InputChunk *c : symtab->syntheticFunctions)
-      if (!c->live)
-        message("removing unused section " + toString(c));
-    for (InputGlobal *g : symtab->syntheticGlobals)
-      if (!g->live)
-        message("removing unused section " + toString(g));
+    for (InputChunk *C : Symtab->SyntheticFunctions)
+      if (!C->Live)
+        message("removing unused section " + toString(C));
+    for (InputGlobal *G : Symtab->SyntheticGlobals)
+      if (!G->Live)
+        message("removing unused section " + toString(G));
   }
 }

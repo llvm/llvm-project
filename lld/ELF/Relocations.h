@@ -82,6 +82,7 @@ enum RelExpr {
   R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
   R_AARCH64_TLSDESC_PAGE,
   R_ARM_SBREL,
+  R_HEXAGON_GOT,
   R_MIPS_GOTREL,
   R_MIPS_GOT_GP,
   R_MIPS_GOT_GP_PC,
@@ -101,11 +102,11 @@ enum RelExpr {
 
 // Architecture-neutral representation of relocation.
 struct Relocation {
-  RelExpr expr;
-  RelType type;
-  uint64_t offset;
-  int64_t addend;
-  Symbol *sym;
+  RelExpr Expr;
+  RelType Type;
+  uint64_t Offset;
+  int64_t Addend;
+  Symbol *Sym;
 };
 
 // This function writes undefined symbol diagnostics to an internal buffer.
@@ -124,57 +125,57 @@ struct InputSectionDescription;
 class ThunkCreator {
 public:
   // Return true if Thunks have been added to OutputSections
-  bool createThunks(ArrayRef<OutputSection *> outputSections);
+  bool createThunks(ArrayRef<OutputSection *> OutputSections);
 
   // The number of completed passes of createThunks this permits us
   // to do one time initialization on Pass 0 and put a limit on the
   // number of times it can be called to prevent infinite loops.
-  uint32_t pass = 0;
+  uint32_t Pass = 0;
 
 private:
-  void mergeThunks(ArrayRef<OutputSection *> outputSections);
+  void mergeThunks(ArrayRef<OutputSection *> OutputSections);
 
-  ThunkSection *getISDThunkSec(OutputSection *os, InputSection *isec,
-                               InputSectionDescription *isd, uint32_t type,
-                               uint64_t src);
+  ThunkSection *getISDThunkSec(OutputSection *OS, InputSection *IS,
+                               InputSectionDescription *ISD, uint32_t Type,
+                               uint64_t Src);
 
-  ThunkSection *getISThunkSec(InputSection *isec);
+  ThunkSection *getISThunkSec(InputSection *IS);
 
-  void createInitialThunkSections(ArrayRef<OutputSection *> outputSections);
+  void createInitialThunkSections(ArrayRef<OutputSection *> OutputSections);
 
-  std::pair<Thunk *, bool> getThunk(InputSection *isec, Relocation &rel,
-                                    uint64_t src);
+  std::pair<Thunk *, bool> getThunk(InputSection *IS, Relocation &Rel,
+                                    uint64_t Src);
 
-  ThunkSection *addThunkSection(OutputSection *os, InputSectionDescription *,
-                                uint64_t off);
+  ThunkSection *addThunkSection(OutputSection *OS, InputSectionDescription *,
+                                uint64_t Off);
 
-  bool normalizeExistingThunk(Relocation &rel, uint64_t src);
+  bool normalizeExistingThunk(Relocation &Rel, uint64_t Src);
 
   // Record all the available Thunks for a Symbol
   llvm::DenseMap<std::pair<SectionBase *, uint64_t>, std::vector<Thunk *>>
-      thunkedSymbolsBySection;
-  llvm::DenseMap<Symbol *, std::vector<Thunk *>> thunkedSymbols;
+      ThunkedSymbolsBySection;
+  llvm::DenseMap<Symbol *, std::vector<Thunk *>> ThunkedSymbols;
 
   // Find a Thunk from the Thunks symbol definition, we can use this to find
   // the Thunk from a relocation to the Thunks symbol definition.
-  llvm::DenseMap<Symbol *, Thunk *> thunks;
+  llvm::DenseMap<Symbol *, Thunk *> Thunks;
 
   // Track InputSections that have an inline ThunkSection placed in front
   // an inline ThunkSection may have control fall through to the section below
   // so we need to make sure that there is only one of them.
   // The Mips LA25 Thunk is an example of an inline ThunkSection.
-  llvm::DenseMap<InputSection *, ThunkSection *> thunkedSections;
+  llvm::DenseMap<InputSection *, ThunkSection *> ThunkedSections;
 };
 
 // Return a int64_t to make sure we get the sign extension out of the way as
 // early as possible.
 template <class ELFT>
-static inline int64_t getAddend(const typename ELFT::Rel &rel) {
+static inline int64_t getAddend(const typename ELFT::Rel &Rel) {
   return 0;
 }
 template <class ELFT>
-static inline int64_t getAddend(const typename ELFT::Rela &rel) {
-  return rel.r_addend;
+static inline int64_t getAddend(const typename ELFT::Rela &Rel) {
+  return Rel.r_addend;
 }
 } // namespace elf
 } // namespace lld

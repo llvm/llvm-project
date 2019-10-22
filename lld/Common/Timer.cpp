@@ -13,43 +13,43 @@
 using namespace lld;
 using namespace llvm;
 
-ScopedTimer::ScopedTimer(Timer &t) : t(&t) { t.start(); }
+ScopedTimer::ScopedTimer(Timer &T) : T(&T) { T.start(); }
 
 void ScopedTimer::stop() {
-  if (!t)
+  if (!T)
     return;
-  t->stop();
-  t = nullptr;
+  T->stop();
+  T = nullptr;
 }
 
 ScopedTimer::~ScopedTimer() { stop(); }
 
-Timer::Timer(llvm::StringRef name) : name(name), parent(nullptr) {}
-Timer::Timer(llvm::StringRef name, Timer &parent)
-    : name(name), parent(&parent) {}
+Timer::Timer(llvm::StringRef Name) : Name(Name), Parent(nullptr) {}
+Timer::Timer(llvm::StringRef Name, Timer &Parent)
+    : Name(Name), Parent(&Parent) {}
 
 void Timer::start() {
-  if (parent && total.count() == 0)
-    parent->children.push_back(this);
-  startTime = std::chrono::high_resolution_clock::now();
+  if (Parent && Total.count() == 0)
+    Parent->Children.push_back(this);
+  StartTime = std::chrono::high_resolution_clock::now();
 }
 
 void Timer::stop() {
-  total += (std::chrono::high_resolution_clock::now() - startTime);
+  Total += (std::chrono::high_resolution_clock::now() - StartTime);
 }
 
 Timer &Timer::root() {
-  static Timer rootTimer("Total Link Time");
-  return rootTimer;
+  static Timer RootTimer("Total Link Time");
+  return RootTimer;
 }
 
 void Timer::print() {
-  double totalDuration = static_cast<double>(root().millis());
+  double TotalDuration = static_cast<double>(root().millis());
 
   // We want to print the grand total under all the intermediate phases, so we
   // print all children first, then print the total under that.
-  for (const auto &child : children)
-    child->print(1, totalDuration);
+  for (const auto &Child : Children)
+    Child->print(1, TotalDuration);
 
   message(std::string(49, '-'));
 
@@ -58,22 +58,22 @@ void Timer::print() {
 
 double Timer::millis() const {
   return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(
-             total)
+             Total)
       .count();
 }
 
-void Timer::print(int depth, double totalDuration, bool recurse) const {
-  double p = 100.0 * millis() / totalDuration;
+void Timer::print(int Depth, double TotalDuration, bool Recurse) const {
+  double P = 100.0 * millis() / TotalDuration;
 
-  SmallString<32> str;
-  llvm::raw_svector_ostream stream(str);
-  std::string s = std::string(depth * 2, ' ') + name + std::string(":");
-  stream << format("%-30s%5d ms (%5.1f%%)", s.c_str(), (int)millis(), p);
+  SmallString<32> Str;
+  llvm::raw_svector_ostream Stream(Str);
+  std::string S = std::string(Depth * 2, ' ') + Name + std::string(":");
+  Stream << format("%-30s%5d ms (%5.1f%%)", S.c_str(), (int)millis(), P);
 
-  message(str);
+  message(Str);
 
-  if (recurse) {
-    for (const auto &child : children)
-      child->print(depth + 1, totalDuration);
+  if (Recurse) {
+    for (const auto &Child : Children)
+      Child->print(Depth + 1, TotalDuration);
   }
 }

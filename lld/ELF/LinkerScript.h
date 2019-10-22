@@ -38,29 +38,29 @@ class ThunkSection;
 
 // This represents an r-value in the linker script.
 struct ExprValue {
-  ExprValue(SectionBase *sec, bool forceAbsolute, uint64_t val,
-            const Twine &loc)
-      : sec(sec), forceAbsolute(forceAbsolute), val(val), loc(loc.str()) {}
+  ExprValue(SectionBase *Sec, bool ForceAbsolute, uint64_t Val,
+            const Twine &Loc)
+      : Sec(Sec), ForceAbsolute(ForceAbsolute), Val(Val), Loc(Loc.str()) {}
 
-  ExprValue(uint64_t val) : ExprValue(nullptr, false, val, "") {}
+  ExprValue(uint64_t Val) : ExprValue(nullptr, false, Val, "") {}
 
-  bool isAbsolute() const { return forceAbsolute || sec == nullptr; }
+  bool isAbsolute() const { return ForceAbsolute || Sec == nullptr; }
   uint64_t getValue() const;
   uint64_t getSecAddr() const;
   uint64_t getSectionOffset() const;
 
   // If a value is relative to a section, it has a non-null Sec.
-  SectionBase *sec;
+  SectionBase *Sec;
 
   // True if this expression is enclosed in ABSOLUTE().
   // This flag affects the return value of getValue().
-  bool forceAbsolute;
+  bool ForceAbsolute;
 
-  uint64_t val;
-  uint64_t alignment = 1;
+  uint64_t Val;
+  uint64_t Alignment = 1;
 
   // Original source location. Used for error messages.
-  std::string loc;
+  std::string Loc;
 };
 
 // This represents an expression in the linker script.
@@ -78,42 +78,42 @@ enum SectionsCommandKind {
 };
 
 struct BaseCommand {
-  BaseCommand(int k) : kind(k) {}
-  int kind;
+  BaseCommand(int K) : Kind(K) {}
+  int Kind;
 };
 
 // This represents ". = <expr>" or "<symbol> = <expr>".
 struct SymbolAssignment : BaseCommand {
-  SymbolAssignment(StringRef name, Expr e, std::string loc)
-      : BaseCommand(AssignmentKind), name(name), expression(e), location(loc) {}
+  SymbolAssignment(StringRef Name, Expr E, std::string Loc)
+      : BaseCommand(AssignmentKind), Name(Name), Expression(E), Location(Loc) {}
 
-  static bool classof(const BaseCommand *c) {
-    return c->kind == AssignmentKind;
+  static bool classof(const BaseCommand *C) {
+    return C->Kind == AssignmentKind;
   }
 
   // The LHS of an expression. Name is either a symbol name or ".".
-  StringRef name;
-  Defined *sym = nullptr;
+  StringRef Name;
+  Defined *Sym = nullptr;
 
   // The RHS of an expression.
-  Expr expression;
+  Expr Expression;
 
   // Command attributes for PROVIDE, HIDDEN and PROVIDE_HIDDEN.
-  bool provide = false;
-  bool hidden = false;
+  bool Provide = false;
+  bool Hidden = false;
 
   // Holds file name and line number for error reporting.
-  std::string location;
+  std::string Location;
 
   // A string representation of this command. We use this for -Map.
-  std::string commandString;
+  std::string CommandString;
 
   // Address of this assignment command.
-  unsigned addr;
+  unsigned Addr;
 
   // Size of this assignment command. This is usually 0, but if
   // you move '.' this may be greater than 0.
-  unsigned size;
+  unsigned Size;
 };
 
 // Linker scripts allow additional constraints to be put on ouput sections.
@@ -126,83 +126,83 @@ enum class ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
 // target memory. Instances of the struct are created by parsing the
 // MEMORY command.
 struct MemoryRegion {
-  MemoryRegion(StringRef name, uint64_t origin, uint64_t length, uint32_t flags,
-               uint32_t negFlags)
-      : name(name), origin(origin), length(length), flags(flags),
-        negFlags(negFlags) {}
+  MemoryRegion(StringRef Name, uint64_t Origin, uint64_t Length, uint32_t Flags,
+               uint32_t NegFlags)
+      : Name(Name), Origin(Origin), Length(Length), Flags(Flags),
+        NegFlags(NegFlags) {}
 
-  std::string name;
-  uint64_t origin;
-  uint64_t length;
-  uint32_t flags;
-  uint32_t negFlags;
-  uint64_t curPos = 0;
+  std::string Name;
+  uint64_t Origin;
+  uint64_t Length;
+  uint32_t Flags;
+  uint32_t NegFlags;
+  uint64_t CurPos = 0;
 };
 
 // This struct represents one section match pattern in SECTIONS() command.
 // It can optionally have negative match pattern for EXCLUDED_FILE command.
 // Also it may be surrounded with SORT() command, so contains sorting rules.
 struct SectionPattern {
-  SectionPattern(StringMatcher &&pat1, StringMatcher &&pat2)
-      : excludedFilePat(pat1), sectionPat(pat2),
-        sortOuter(SortSectionPolicy::Default),
-        sortInner(SortSectionPolicy::Default) {}
+  SectionPattern(StringMatcher &&Pat1, StringMatcher &&Pat2)
+      : ExcludedFilePat(Pat1), SectionPat(Pat2),
+        SortOuter(SortSectionPolicy::Default),
+        SortInner(SortSectionPolicy::Default) {}
 
-  StringMatcher excludedFilePat;
-  StringMatcher sectionPat;
-  SortSectionPolicy sortOuter;
-  SortSectionPolicy sortInner;
+  StringMatcher ExcludedFilePat;
+  StringMatcher SectionPat;
+  SortSectionPolicy SortOuter;
+  SortSectionPolicy SortInner;
 };
 
 struct InputSectionDescription : BaseCommand {
-  InputSectionDescription(StringRef filePattern)
-      : BaseCommand(InputSectionKind), filePat(filePattern) {}
+  InputSectionDescription(StringRef FilePattern)
+      : BaseCommand(InputSectionKind), FilePat(FilePattern) {}
 
-  static bool classof(const BaseCommand *c) {
-    return c->kind == InputSectionKind;
+  static bool classof(const BaseCommand *C) {
+    return C->Kind == InputSectionKind;
   }
 
-  StringMatcher filePat;
+  StringMatcher FilePat;
 
   // Input sections that matches at least one of SectionPatterns
   // will be associated with this InputSectionDescription.
-  std::vector<SectionPattern> sectionPatterns;
+  std::vector<SectionPattern> SectionPatterns;
 
-  std::vector<InputSection *> sections;
+  std::vector<InputSection *> Sections;
 
   // Temporary record of synthetic ThunkSection instances and the pass that
   // they were created in. This is used to insert newly created ThunkSections
   // into Sections at the end of a createThunks() pass.
-  std::vector<std::pair<ThunkSection *, uint32_t>> thunkSections;
+  std::vector<std::pair<ThunkSection *, uint32_t>> ThunkSections;
 };
 
 // Represents BYTE(), SHORT(), LONG(), or QUAD().
 struct ByteCommand : BaseCommand {
-  ByteCommand(Expr e, unsigned size, std::string commandString)
-      : BaseCommand(ByteKind), commandString(commandString), expression(e),
-        size(size) {}
+  ByteCommand(Expr E, unsigned Size, std::string CommandString)
+      : BaseCommand(ByteKind), CommandString(CommandString), Expression(E),
+        Size(Size) {}
 
-  static bool classof(const BaseCommand *c) { return c->kind == ByteKind; }
+  static bool classof(const BaseCommand *C) { return C->Kind == ByteKind; }
 
   // Keeps string representing the command. Used for -Map" is perhaps better.
-  std::string commandString;
+  std::string CommandString;
 
-  Expr expression;
+  Expr Expression;
 
   // This is just an offset of this assignment command in the output section.
-  unsigned offset;
+  unsigned Offset;
 
   // Size of this data command.
-  unsigned size;
+  unsigned Size;
 };
 
 struct PhdrsCommand {
-  StringRef name;
-  unsigned type = llvm::ELF::PT_NULL;
-  bool hasFilehdr = false;
-  bool hasPhdrs = false;
-  llvm::Optional<unsigned> flags;
-  Expr lmaExpr = nullptr;
+  StringRef Name;
+  unsigned Type = llvm::ELF::PT_NULL;
+  bool HasFilehdr = false;
+  bool HasPhdrs = false;
+  llvm::Optional<unsigned> Flags;
+  Expr LMAExpr = nullptr;
 };
 
 class LinkerScript final {
@@ -211,35 +211,35 @@ class LinkerScript final {
   // not be used outside of the scope of a call to the above functions.
   struct AddressState {
     AddressState();
-    uint64_t threadBssOffset = 0;
-    OutputSection *outSec = nullptr;
-    MemoryRegion *memRegion = nullptr;
-    MemoryRegion *lmaRegion = nullptr;
-    uint64_t lmaOffset = 0;
+    uint64_t ThreadBssOffset = 0;
+    OutputSection *OutSec = nullptr;
+    MemoryRegion *MemRegion = nullptr;
+    MemoryRegion *LMARegion = nullptr;
+    uint64_t LMAOffset = 0;
   };
 
-  llvm::DenseMap<StringRef, OutputSection *> nameToOutputSection;
+  llvm::DenseMap<StringRef, OutputSection *> NameToOutputSection;
 
-  void addSymbol(SymbolAssignment *cmd);
-  void assignSymbol(SymbolAssignment *cmd, bool inSec);
-  void setDot(Expr e, const Twine &loc, bool inSec);
-  void expandOutputSection(uint64_t size);
-  void expandMemoryRegions(uint64_t size);
+  void addSymbol(SymbolAssignment *Cmd);
+  void assignSymbol(SymbolAssignment *Cmd, bool InSec);
+  void setDot(Expr E, const Twine &Loc, bool InSec);
+  void expandOutputSection(uint64_t Size);
+  void expandMemoryRegions(uint64_t Size);
 
   std::vector<InputSection *>
   computeInputSections(const InputSectionDescription *);
 
-  std::vector<InputSection *> createInputSectionList(OutputSection &cmd);
+  std::vector<InputSection *> createInputSectionList(OutputSection &Cmd);
 
-  std::vector<size_t> getPhdrIndices(OutputSection *sec);
+  std::vector<size_t> getPhdrIndices(OutputSection *Sec);
 
-  MemoryRegion *findMemoryRegion(OutputSection *sec);
+  MemoryRegion *findMemoryRegion(OutputSection *Sec);
 
-  void switchTo(OutputSection *sec);
-  uint64_t advance(uint64_t size, unsigned align);
-  void output(InputSection *sec);
+  void switchTo(OutputSection *Sec);
+  uint64_t advance(uint64_t Size, unsigned Align);
+  void output(InputSection *Sec);
 
-  void assignOffsets(OutputSection *sec);
+  void assignOffsets(OutputSection *Sec);
 
   // Ctx captures the local AddressState and makes it accessible
   // deliberately. This is needed as there are some cases where we cannot just
@@ -247,21 +247,21 @@ class LinkerScript final {
   // script parser.
   // This should remain a plain pointer as its lifetime is smaller than
   // LinkerScript.
-  AddressState *ctx = nullptr;
+  AddressState *Ctx = nullptr;
 
-  OutputSection *aether;
+  OutputSection *Aether;
 
-  uint64_t dot;
+  uint64_t Dot;
 
 public:
-  OutputSection *createOutputSection(StringRef name, StringRef location);
-  OutputSection *getOrCreateOutputSection(StringRef name);
+  OutputSection *createOutputSection(StringRef Name, StringRef Location);
+  OutputSection *getOrCreateOutputSection(StringRef Name);
 
-  bool hasPhdrsCommands() { return !phdrsCommands.empty(); }
-  uint64_t getDot() { return dot; }
-  void discard(ArrayRef<InputSection *> v);
+  bool hasPhdrsCommands() { return !PhdrsCommands.empty(); }
+  uint64_t getDot() { return Dot; }
+  void discard(ArrayRef<InputSection *> V);
 
-  ExprValue getSymbolValue(StringRef name, const Twine &loc);
+  ExprValue getSymbolValue(StringRef Name, const Twine &Loc);
 
   void addOrphanSections();
   void adjustSectionsBeforeSorting();
@@ -270,42 +270,41 @@ public:
   std::vector<PhdrEntry *> createPhdrs();
   bool needsInterpSection();
 
-  bool shouldKeep(InputSectionBase *s);
-  const Defined *assignAddresses();
-  void allocateHeaders(std::vector<PhdrEntry *> &phdrs);
+  bool shouldKeep(InputSectionBase *S);
+  void assignAddresses();
+  void allocateHeaders(std::vector<PhdrEntry *> &Phdrs);
   void processSectionCommands();
-  void processSymbolAssignments();
   void declareSymbols();
 
   // Used to handle INSERT AFTER statements.
   void processInsertCommands();
 
   // SECTIONS command list.
-  std::vector<BaseCommand *> sectionCommands;
+  std::vector<BaseCommand *> SectionCommands;
 
   // PHDRS command list.
-  std::vector<PhdrsCommand> phdrsCommands;
+  std::vector<PhdrsCommand> PhdrsCommands;
 
-  bool hasSectionsCommand = false;
-  bool errorOnMissingSection = false;
+  bool HasSectionsCommand = false;
+  bool ErrorOnMissingSection = false;
 
   // List of section patterns specified with KEEP commands. They will
   // be kept even if they are unused and --gc-sections is specified.
-  std::vector<InputSectionDescription *> keptSections;
+  std::vector<InputSectionDescription *> KeptSections;
 
   // A map from memory region name to a memory region descriptor.
-  llvm::MapVector<llvm::StringRef, MemoryRegion *> memoryRegions;
+  llvm::MapVector<llvm::StringRef, MemoryRegion *> MemoryRegions;
 
   // A list of symbols referenced by the script.
-  std::vector<llvm::StringRef> referencedSymbols;
+  std::vector<llvm::StringRef> ReferencedSymbols;
 
   // Used to implement INSERT [AFTER|BEFORE]. Contains commands that need
   // to be inserted into SECTIONS commands list.
-  llvm::DenseMap<StringRef, std::vector<BaseCommand *>> insertAfterCommands;
-  llvm::DenseMap<StringRef, std::vector<BaseCommand *>> insertBeforeCommands;
+  llvm::DenseMap<StringRef, std::vector<BaseCommand *>> InsertAfterCommands;
+  llvm::DenseMap<StringRef, std::vector<BaseCommand *>> InsertBeforeCommands;
 };
 
-extern LinkerScript *script;
+extern LinkerScript *Script;
 
 } // end namespace elf
 } // end namespace lld

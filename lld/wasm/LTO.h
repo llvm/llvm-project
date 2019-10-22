@@ -43,13 +43,13 @@ public:
   BitcodeCompiler();
   ~BitcodeCompiler();
 
-  void add(BitcodeFile &f);
+  void add(BitcodeFile &F);
   std::vector<StringRef> compile();
 
 private:
-  std::unique_ptr<llvm::lto::LTO> ltoObj;
-  std::vector<SmallString<0>> buf;
-  std::vector<std::unique_ptr<MemoryBuffer>> files;
+  std::unique_ptr<llvm::lto::LTO> LTOObj;
+  std::vector<SmallString<0>> Buf;
+  std::vector<std::unique_ptr<MemoryBuffer>> Files;
 };
 } // namespace wasm
 } // namespace lld

@@ -35,7 +35,7 @@ class InputSection;
 
 // If --reproduce option is given, all input files are written
 // to this tar archive.
-extern std::unique_ptr<llvm::TarWriter> tar;
+extern std::unique_ptr<llvm::TarWriter> Tar;
 
 class InputFile {
 public:
@@ -49,129 +49,129 @@ public:
   virtual ~InputFile() {}
 
   // Returns the filename.
-  StringRef getName() const { return mb.getBufferIdentifier(); }
+  StringRef getName() const { return MB.getBufferIdentifier(); }
 
-  Kind kind() const { return fileKind; }
+  Kind kind() const { return FileKind; }
 
   // An archive file name if this file is created from an archive.
-  StringRef archiveName;
+  StringRef ArchiveName;
 
-  ArrayRef<Symbol *> getSymbols() const { return symbols; }
+  ArrayRef<Symbol *> getSymbols() const { return Symbols; }
 
-  MutableArrayRef<Symbol *> getMutableSymbols() { return symbols; }
+  MutableArrayRef<Symbol *> getMutableSymbols() { return Symbols; }
 
 protected:
-  InputFile(Kind k, MemoryBufferRef m) : mb(m), fileKind(k) {}
-  MemoryBufferRef mb;
+  InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {}
+  MemoryBufferRef MB;
 
   // List of all symbols referenced or defined by this file.
-  std::vector<Symbol *> symbols;
+  std::vector<Symbol *> Symbols;
 
 private:
-  const Kind fileKind;
+  const Kind FileKind;
 };
 
 // .a file (ar archive)
 class ArchiveFile : public InputFile {
 public:
-  explicit ArchiveFile(MemoryBufferRef m) : InputFile(ArchiveKind, m) {}
-  static bool classof(const InputFile *f) { return f->kind() == ArchiveKind; }
+  explicit ArchiveFile(MemoryBufferRef M) : InputFile(ArchiveKind, M) {}
+  static bool classof(const InputFile *F) { return F->kind() == ArchiveKind; }
 
-  void addMember(const llvm::object::Archive::Symbol *sym);
+  void addMember(const llvm::object::Archive::Symbol *Sym);
 
   void parse();
 
 private:
-  std::unique_ptr<llvm::object::Archive> file;
-  llvm::DenseSet<uint64_t> seen;
+  std::unique_ptr<llvm::object::Archive> File;
+  llvm::DenseSet<uint64_t> Seen;
 };
 
 // .o file (wasm object file)
 class ObjFile : public InputFile {
 public:
-  explicit ObjFile(MemoryBufferRef m, StringRef archiveName)
-      : InputFile(ObjectKind, m) {
-    this->archiveName = archiveName;
+  explicit ObjFile(MemoryBufferRef M, StringRef ArchiveName)
+      : InputFile(ObjectKind, M) {
+    this->ArchiveName = ArchiveName;
   }
-  static bool classof(const InputFile *f) { return f->kind() == ObjectKind; }
+  static bool classof(const InputFile *F) { return F->kind() == ObjectKind; }
 
-  void parse(bool ignoreComdats = false);
+  void parse(bool IgnoreComdats = false);
 
   // Returns the underlying wasm file.
-  const WasmObjectFile *getWasmObj() const { return wasmObj.get(); }
+  const WasmObjectFile *getWasmObj() const { return WasmObj.get(); }
 
   void dumpInfo() const;
 
-  uint32_t calcNewIndex(const WasmRelocation &reloc) const;
-  uint32_t calcNewValue(const WasmRelocation &reloc) const;
-  uint32_t calcNewAddend(const WasmRelocation &reloc) const;
-  uint32_t calcExpectedValue(const WasmRelocation &reloc) const;
-  Symbol *getSymbol(const WasmRelocation &reloc) const {
-    return symbols[reloc.Index];
+  uint32_t calcNewIndex(const WasmRelocation &Reloc) const;
+  uint32_t calcNewValue(const WasmRelocation &Reloc) const;
+  uint32_t calcNewAddend(const WasmRelocation &Reloc) const;
+  uint32_t calcExpectedValue(const WasmRelocation &Reloc) const;
+  Symbol *getSymbol(const WasmRelocation &Reloc) const {
+    return Symbols[Reloc.Index];
   };
 
-  const WasmSection *codeSection = nullptr;
-  const WasmSection *dataSection = nullptr;
+  const WasmSection *CodeSection = nullptr;
+  const WasmSection *DataSection = nullptr;
 
   // Maps input type indices to output type indices
-  std::vector<uint32_t> typeMap;
-  std::vector<bool> typeIsUsed;
+  std::vector<uint32_t> TypeMap;
+  std::vector<bool> TypeIsUsed;
   // Maps function indices to table indices
-  std::vector<uint32_t> tableEntries;
-  std::vector<bool> keptComdats;
-  std::vector<InputSegment *> segments;
-  std::vector<InputFunction *> functions;
-  std::vector<InputGlobal *> globals;
-  std::vector<InputEvent *> events;
-  std::vector<InputSection *> customSections;
-  llvm::DenseMap<uint32_t, InputSection *> customSectionsByIndex;
+  std::vector<uint32_t> TableEntries;
+  std::vector<bool> KeptComdats;
+  std::vector<InputSegment *> Segments;
+  std::vector<InputFunction *> Functions;
+  std::vector<InputGlobal *> Globals;
+  std::vector<InputEvent *> Events;
+  std::vector<InputSection *> CustomSections;
+  llvm::DenseMap<uint32_t, InputSection *> CustomSectionsByIndex;
 
-  Symbol *getSymbol(uint32_t index) const { return symbols[index]; }
-  FunctionSymbol *getFunctionSymbol(uint32_t index) const;
-  DataSymbol *getDataSymbol(uint32_t index) const;
-  GlobalSymbol *getGlobalSymbol(uint32_t index) const;
-  SectionSymbol *getSectionSymbol(uint32_t index) const;
-  EventSymbol *getEventSymbol(uint32_t index) const;
+  Symbol *getSymbol(uint32_t Index) const { return Symbols[Index]; }
+  FunctionSymbol *getFunctionSymbol(uint32_t Index) const;
+  DataSymbol *getDataSymbol(uint32_t Index) const;
+  GlobalSymbol *getGlobalSymbol(uint32_t Index) const;
+  SectionSymbol *getSectionSymbol(uint32_t Index) const;
+  EventSymbol *getEventSymbol(uint32_t Index) const;
 
 private:
-  Symbol *createDefined(const WasmSymbol &sym);
-  Symbol *createUndefined(const WasmSymbol &sym, bool isCalledDirectly);
+  Symbol *createDefined(const WasmSymbol &Sym);
+  Symbol *createUndefined(const WasmSymbol &Sym, bool IsCalledDirectly);
 
-  bool isExcludedByComdat(InputChunk *chunk) const;
+  bool isExcludedByComdat(InputChunk *Chunk) const;
 
-  std::unique_ptr<WasmObjectFile> wasmObj;
+  std::unique_ptr<WasmObjectFile> WasmObj;
 };
 
 // .so file.
 class SharedFile : public InputFile {
 public:
-  explicit SharedFile(MemoryBufferRef m) : InputFile(SharedKind, m) {}
-  static bool classof(const InputFile *f) { return f->kind() == SharedKind; }
+  explicit SharedFile(MemoryBufferRef M) : InputFile(SharedKind, M) {}
+  static bool classof(const InputFile *F) { return F->kind() == SharedKind; }
 };
 
 // .bc file
 class BitcodeFile : public InputFile {
 public:
-  explicit BitcodeFile(MemoryBufferRef m, StringRef archiveName)
-      : InputFile(BitcodeKind, m) {
-    this->archiveName = archiveName;
+  explicit BitcodeFile(MemoryBufferRef M, StringRef ArchiveName)
+      : InputFile(BitcodeKind, M) {
+    this->ArchiveName = ArchiveName;
   }
-  static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
+  static bool classof(const InputFile *F) { return F->kind() == BitcodeKind; }
 
   void parse();
-  std::unique_ptr<llvm::lto::InputFile> obj;
+  std::unique_ptr<llvm::lto::InputFile> Obj;
 };
 
 // Will report a fatal() error if the input buffer is not a valid bitcode
 // or wasm object file.
-InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName = "");
+InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "");
 
 // Opens a given file.
-llvm::Optional<MemoryBufferRef> readFile(StringRef path);
+llvm::Optional<MemoryBufferRef> readFile(StringRef Path);
 
 } // namespace wasm
 
-std::string toString(const wasm::InputFile *file);
+std::string toString(const wasm::InputFile *File);
 
 } // namespace lld
 

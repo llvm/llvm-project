@@ -77,7 +77,7 @@ test_uninitialized_fill_destroy_by_type()
     }
 }
 
-int
+int32_t
 main()
 {
     // for trivial types

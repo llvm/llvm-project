@@ -1,8 +1,8 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
-// RUN: ld.lld %t -o %t2
+// RUN: ld.lld %t -o %t2 2>&1
 // RUN: llvm-readobj --symbols %t2 | FileCheck %s
-// RUN: ld.lld --shared %t -o %t3
+// RUN: ld.lld --shared %t -o %t3 2>&1
 // RUN: llvm-readobj --symbols %t3 | FileCheck -check-prefix=CHECK-PI %s
 
 // Check that the symbols generated for Thunks have the correct symbol type
@@ -25,18 +25,18 @@ arm_fn:
  b thumb_fn
 
 // CHECK:     Name: __Thumbv7ABSLongThunk_arm_fn
-// CHECK-NEXT:     Value: 0x13005
+// CHECK-NEXT:     Value: 0x12005
 // CHECK-NEXT:     Size: 10
 // CHECK-NEXT:    Binding: Local (0x0)
 // CHECK-NEXT:    Type: Function (0x2)
 // CHECK:     Name: __ARMv7ABSLongThunk_thumb_fn
-// CHECK-NEXT:     Value: 0x13010
+// CHECK-NEXT:     Value: 0x12010
 // CHECK-NEXT:     Size: 12
 // CHECK-NEXT:    Binding: Local (0x0)
 // CHECK-NEXT:    Type: Function (0x2)
 
 // CHECK-PI:     Name: __ThumbV7PILongThunk_arm_fn
-// CHECK-PI-NEXT:     Value: 0x3005
+// CHECK-PI-NEXT:     Value: 0x2005
 // CHECK-PI-NEXT:     Size: 12
 // CHECK-PI-NEXT:    Binding: Local (0x0)
 // CHECK-PI-NEXT:    Type: Function (0x2)

@@ -45,16 +45,16 @@ public:
   BitcodeCompiler();
   ~BitcodeCompiler();
 
-  void add(BitcodeFile &f);
+  void add(BitcodeFile &F);
   std::vector<InputFile *> compile();
 
 private:
-  std::unique_ptr<llvm::lto::LTO> ltoObj;
-  std::vector<SmallString<0>> buf;
-  std::vector<std::unique_ptr<MemoryBuffer>> files;
-  llvm::DenseSet<StringRef> usedStartStop;
-  std::unique_ptr<llvm::raw_fd_ostream> indexFile;
-  llvm::DenseSet<StringRef> thinIndices;
+  std::unique_ptr<llvm::lto::LTO> LTOObj;
+  std::vector<SmallString<0>> Buf;
+  std::vector<std::unique_ptr<MemoryBuffer>> Files;
+  llvm::DenseSet<StringRef> UsedStartStop;
+  std::unique_ptr<llvm::raw_fd_ostream> IndexFile;
+  llvm::DenseSet<StringRef> ThinIndices;
 };
 } // namespace elf
 } // namespace lld

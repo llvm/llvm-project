@@ -8,9 +8,9 @@
 
 include(CMakeFindDependencyMacro)
 
-set(PSTL_PARALLEL_BACKEND "@PSTL_PARALLEL_BACKEND@")
+set(PARALLELSTL_BACKEND "@PARALLELSTL_BACKEND@")
 
-if (PSTL_PARALLEL_BACKEND STREQUAL "tbb")
+if (PARALLELSTL_BACKEND STREQUAL "tbb")
     find_dependency(TBB REQUIRED tbb)
 endif()
 

@@ -51,24 +51,24 @@ using namespace lld::elf;
 
 namespace {
 struct Edge {
-  int from;
-  uint64_t weight;
+  int From;
+  uint64_t Weight;
 };
 
 struct Cluster {
-  Cluster(int sec, size_t s) : sections{sec}, size(s) {}
+  Cluster(int Sec, size_t S) : Sections{Sec}, Size(S) {}
 
   double getDensity() const {
-    if (size == 0)
+    if (Size == 0)
       return 0;
-    return double(weight) / double(size);
+    return double(Weight) / double(Size);
   }
 
-  std::vector<int> sections;
-  size_t size = 0;
-  uint64_t weight = 0;
-  uint64_t initialWeight = 0;
-  Edge bestPred = {-1, 0};
+  std::vector<int> Sections;
+  size_t Size = 0;
+  uint64_t Weight = 0;
+  uint64_t InitialWeight = 0;
+  Edge BestPred = {-1, 0};
 };
 
 class CallGraphSort {
@@ -78,8 +78,8 @@ public:
   DenseMap<const InputSectionBase *, int> run();
 
 private:
-  std::vector<Cluster> clusters;
-  std::vector<const InputSectionBase *> sections;
+  std::vector<Cluster> Clusters;
+  std::vector<const InputSectionBase *> Sections;
 
   void groupClusters();
 };
@@ -99,23 +99,23 @@ using SectionPair =
 // Symbols, and generate a graph between InputSections with the provided
 // weights.
 CallGraphSort::CallGraphSort() {
-  MapVector<SectionPair, uint64_t> &profile = config->callGraphProfile;
-  DenseMap<const InputSectionBase *, int> secToCluster;
+  MapVector<SectionPair, uint64_t> &Profile = Config->CallGraphProfile;
+  DenseMap<const InputSectionBase *, int> SecToCluster;
 
-  auto getOrCreateNode = [&](const InputSectionBase *isec) -> int {
-    auto res = secToCluster.insert(std::make_pair(isec, clusters.size()));
-    if (res.second) {
-      sections.push_back(isec);
-      clusters.emplace_back(clusters.size(), isec->getSize());
+  auto GetOrCreateNode = [&](const InputSectionBase *IS) -> int {
+    auto Res = SecToCluster.insert(std::make_pair(IS, Clusters.size()));
+    if (Res.second) {
+      Sections.push_back(IS);
+      Clusters.emplace_back(Clusters.size(), IS->getSize());
     }
-    return res.first->second;
+    return Res.first->second;
   };
 
   // Create the graph.
-  for (std::pair<SectionPair, uint64_t> &c : profile) {
-    const auto *fromSB = cast<InputSectionBase>(c.first.first->repl);
-    const auto *toSB = cast<InputSectionBase>(c.first.second->repl);
-    uint64_t weight = c.second;
+  for (std::pair<SectionPair, uint64_t> &C : Profile) {
+    const auto *FromSB = cast<InputSectionBase>(C.first.first->Repl);
+    const auto *ToSB = cast<InputSectionBase>(C.first.second->Repl);
+    uint64_t Weight = C.second;
 
     // Ignore edges between input sections belonging to different output
     // sections.  This is done because otherwise we would end up with clusters
@@ -123,94 +123,94 @@ CallGraphSort::CallGraphSort() {
     // output.  This messes with the cluster size and density calculations.  We
     // would also end up moving input sections in other output sections without
     // moving them closer to what calls them.
-    if (fromSB->getOutputSection() != toSB->getOutputSection())
+    if (FromSB->getOutputSection() != ToSB->getOutputSection())
       continue;
 
-    int from = getOrCreateNode(fromSB);
-    int to = getOrCreateNode(toSB);
+    int From = GetOrCreateNode(FromSB);
+    int To = GetOrCreateNode(ToSB);
 
-    clusters[to].weight += weight;
+    Clusters[To].Weight += Weight;
 
-    if (from == to)
+    if (From == To)
       continue;
 
     // Remember the best edge.
-    Cluster &toC = clusters[to];
-    if (toC.bestPred.from == -1 || toC.bestPred.weight < weight) {
-      toC.bestPred.from = from;
-      toC.bestPred.weight = weight;
+    Cluster &ToC = Clusters[To];
+    if (ToC.BestPred.From == -1 || ToC.BestPred.Weight < Weight) {
+      ToC.BestPred.From = From;
+      ToC.BestPred.Weight = Weight;
     }
   }
-  for (Cluster &c : clusters)
-    c.initialWeight = c.weight;
+  for (Cluster &C : Clusters)
+    C.InitialWeight = C.Weight;
 }
 
 // It's bad to merge clusters which would degrade the density too much.
-static bool isNewDensityBad(Cluster &a, Cluster &b) {
-  double newDensity = double(a.weight + b.weight) / double(a.size + b.size);
-  return newDensity < a.getDensity() / MAX_DENSITY_DEGRADATION;
+static bool isNewDensityBad(Cluster &A, Cluster &B) {
+  double NewDensity = double(A.Weight + B.Weight) / double(A.Size + B.Size);
+  return NewDensity < A.getDensity() / MAX_DENSITY_DEGRADATION;
 }
 
-static void mergeClusters(Cluster &into, Cluster &from) {
-  into.sections.insert(into.sections.end(), from.sections.begin(),
-                       from.sections.end());
-  into.size += from.size;
-  into.weight += from.weight;
-  from.sections.clear();
-  from.size = 0;
-  from.weight = 0;
+static void mergeClusters(Cluster &Into, Cluster &From) {
+  Into.Sections.insert(Into.Sections.end(), From.Sections.begin(),
+                       From.Sections.end());
+  Into.Size += From.Size;
+  Into.Weight += From.Weight;
+  From.Sections.clear();
+  From.Size = 0;
+  From.Weight = 0;
 }
 
 // Group InputSections into clusters using the Call-Chain Clustering heuristic
 // then sort the clusters by density.
 void CallGraphSort::groupClusters() {
-  std::vector<int> sortedSecs(clusters.size());
-  std::vector<Cluster *> secToCluster(clusters.size());
+  std::vector<int> SortedSecs(Clusters.size());
+  std::vector<Cluster *> SecToCluster(Clusters.size());
 
-  for (size_t i = 0; i < clusters.size(); ++i) {
-    sortedSecs[i] = i;
-    secToCluster[i] = &clusters[i];
+  for (size_t I = 0; I < Clusters.size(); ++I) {
+    SortedSecs[I] = I;
+    SecToCluster[I] = &Clusters[I];
   }
 
-  llvm::stable_sort(sortedSecs, [&](int a, int b) {
-    return clusters[a].getDensity() > clusters[b].getDensity();
+  llvm::stable_sort(SortedSecs, [&](int A, int B) {
+    return Clusters[A].getDensity() > Clusters[B].getDensity();
   });
 
-  for (int si : sortedSecs) {
-    // clusters[si] is the same as secToClusters[si] here because it has not
+  for (int SI : SortedSecs) {
+    // Clusters[SI] is the same as SecToClusters[SI] here because it has not
     // been merged into another cluster yet.
-    Cluster &c = clusters[si];
+    Cluster &C = Clusters[SI];
 
     // Don't consider merging if the edge is unlikely.
-    if (c.bestPred.from == -1 || c.bestPred.weight * 10 <= c.initialWeight)
+    if (C.BestPred.From == -1 || C.BestPred.Weight * 10 <= C.InitialWeight)
       continue;
 
-    Cluster *predC = secToCluster[c.bestPred.from];
-    if (predC == &c)
+    Cluster *PredC = SecToCluster[C.BestPred.From];
+    if (PredC == &C)
       continue;
 
-    if (c.size + predC->size > MAX_CLUSTER_SIZE)
+    if (C.Size + PredC->Size > MAX_CLUSTER_SIZE)
       continue;
 
-    if (isNewDensityBad(*predC, c))
+    if (isNewDensityBad(*PredC, C))
       continue;
 
     // NOTE: Consider using a disjoint-set to track section -> cluster mapping
     // if this is ever slow.
-    for (int si : c.sections)
-      secToCluster[si] = predC;
+    for (int SI : C.Sections)
+      SecToCluster[SI] = PredC;
 
-    mergeClusters(*predC, c);
+    mergeClusters(*PredC, C);
   }
 
   // Remove empty or dead nodes. Invalidates all cluster indices.
-  llvm::erase_if(clusters, [](const Cluster &c) {
-    return c.size == 0 || c.sections.empty();
+  llvm::erase_if(Clusters, [](const Cluster &C) {
+    return C.Size == 0 || C.Sections.empty();
   });
 
   // Sort by density.
-  llvm::stable_sort(clusters, [](const Cluster &a, const Cluster &b) {
-    return a.getDensity() > b.getDensity();
+  llvm::stable_sort(Clusters, [](const Cluster &A, const Cluster &B) {
+    return A.getDensity() > B.getDensity();
   });
 }
 
@@ -218,35 +218,35 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
   groupClusters();
 
   // Generate order.
-  DenseMap<const InputSectionBase *, int> orderMap;
-  ssize_t curOrder = 1;
+  DenseMap<const InputSectionBase *, int> OrderMap;
+  ssize_t CurOrder = 1;
 
-  for (const Cluster &c : clusters)
-    for (int secIndex : c.sections)
-      orderMap[sections[secIndex]] = curOrder++;
+  for (const Cluster &C : Clusters)
+    for (int SecIndex : C.Sections)
+      OrderMap[Sections[SecIndex]] = CurOrder++;
 
-  if (!config->printSymbolOrder.empty()) {
-    std::error_code ec;
-    raw_fd_ostream os(config->printSymbolOrder, ec, sys::fs::OF_None);
-    if (ec) {
-      error("cannot open " + config->printSymbolOrder + ": " + ec.message());
-      return orderMap;
+  if (!Config->PrintSymbolOrder.empty()) {
+    std::error_code EC;
+    raw_fd_ostream OS(Config->PrintSymbolOrder, EC, sys::fs::F_None);
+    if (EC) {
+      error("cannot open " + Config->PrintSymbolOrder + ": " + EC.message());
+      return OrderMap;
     }
 
-    // Print the symbols ordered by C3, in the order of increasing curOrder
-    // Instead of sorting all the orderMap, just repeat the loops above.
-    for (const Cluster &c : clusters)
-      for (int secIndex : c.sections)
+    // Print the symbols ordered by C3, in the order of increasing CurOrder
+    // Instead of sorting all the OrderMap, just repeat the loops above.
+    for (const Cluster &C : Clusters)
+      for (int SecIndex : C.Sections)
         // Search all the symbols in the file of the section
         // and find out a Defined symbol with name that is within the section.
-        for (Symbol *sym: sections[secIndex]->file->getSymbols())
-          if (!sym->isSection()) // Filter out section-type symbols here.
-            if (auto *d = dyn_cast<Defined>(sym))
-              if (sections[secIndex] == d->section)
-                os << sym->getName() << "\n";
+        for (Symbol *Sym: Sections[SecIndex]->File->getSymbols())
+          if (!Sym->isSection()) // Filter out section-type symbols here.
+            if (auto *D = dyn_cast<Defined>(Sym))
+              if (Sections[SecIndex] == D->Section)
+                OS << Sym->getName() << "\n";
   }
 
-  return orderMap;
+  return OrderMap;
 }
 
 // Sort sections by the profile data provided by -callgraph-profile-file

@@ -32,40 +32,40 @@ namespace {
 // before any dependent OBJ.
 class TypeServerSource : public TpiSource {
 public:
-  explicit TypeServerSource(MemoryBufferRef m, llvm::pdb::NativeSession *s)
-      : TpiSource(PDB, nullptr), session(s), mb(m) {}
+  explicit TypeServerSource(MemoryBufferRef M, llvm::pdb::NativeSession *S)
+      : TpiSource(PDB, nullptr), Session(S), MB(M) {}
 
   // Queue a PDB type server for loading in the COFF Driver
-  static void enqueue(const ObjFile *dependentFile,
-                      const TypeServer2Record &ts);
+  static void enqueue(const ObjFile *DependentFile,
+                      const TypeServer2Record &TS);
 
   // Create an instance
-  static Expected<TypeServerSource *> getInstance(MemoryBufferRef m);
+  static Expected<TypeServerSource *> getInstance(MemoryBufferRef M);
 
   // Fetch the PDB instance loaded for a corresponding dependent OBJ.
   static Expected<TypeServerSource *>
-  findFromFile(const ObjFile *dependentFile);
+  findFromFile(const ObjFile *DependentFile);
 
   static std::map<std::string, std::pair<std::string, TypeServerSource *>>
-      instances;
+      Instances;
 
   // The interface to the PDB (if it was opened successfully)
-  std::unique_ptr<llvm::pdb::NativeSession> session;
+  std::unique_ptr<llvm::pdb::NativeSession> Session;
 
 private:
-  MemoryBufferRef mb;
+  MemoryBufferRef MB;
 };
 
 // This class represents the debug type stream of an OBJ file that depends on a
 // PDB type server (see TypeServerSource).
 class UseTypeServerSource : public TpiSource {
 public:
-  UseTypeServerSource(const ObjFile *f, const TypeServer2Record *ts)
-      : TpiSource(UsingPDB, f), typeServerDependency(*ts) {}
+  UseTypeServerSource(const ObjFile *F, const TypeServer2Record *TS)
+      : TpiSource(UsingPDB, F), TypeServerDependency(*TS) {}
 
   // Information about the PDB type server dependency, that needs to be loaded
   // in before merging this OBJ.
-  TypeServer2Record typeServerDependency;
+  TypeServer2Record TypeServerDependency;
 };
 
 // This class represents the debug type stream of a Microsoft precompiled
@@ -74,76 +74,76 @@ public:
 // such files, clang does not.
 class PrecompSource : public TpiSource {
 public:
-  PrecompSource(const ObjFile *f) : TpiSource(PCH, f) {}
+  PrecompSource(const ObjFile *F) : TpiSource(PCH, F) {}
 };
 
 // This class represents the debug type stream of an OBJ file that depends on a
 // Microsoft precompiled headers OBJ (see PrecompSource).
 class UsePrecompSource : public TpiSource {
 public:
-  UsePrecompSource(const ObjFile *f, const PrecompRecord *precomp)
-      : TpiSource(UsingPCH, f), precompDependency(*precomp) {}
+  UsePrecompSource(const ObjFile *F, const PrecompRecord *Precomp)
+      : TpiSource(UsingPCH, F), PrecompDependency(*Precomp) {}
 
   // Information about the Precomp OBJ dependency, that needs to be loaded in
   // before merging this OBJ.
-  PrecompRecord precompDependency;
+  PrecompRecord PrecompDependency;
 };
 } // namespace
 
 static std::vector<std::unique_ptr<TpiSource>> GC;
 
-TpiSource::TpiSource(TpiKind k, const ObjFile *f) : kind(k), file(f) {
+TpiSource::TpiSource(TpiKind K, const ObjFile *F) : Kind(K), File(F) {
   GC.push_back(std::unique_ptr<TpiSource>(this));
 }
 
-TpiSource *lld::coff::makeTpiSource(const ObjFile *f) {
-  return new TpiSource(TpiSource::Regular, f);
+TpiSource *lld::coff::makeTpiSource(const ObjFile *F) {
+  return new TpiSource(TpiSource::Regular, F);
 }
 
-TpiSource *lld::coff::makeUseTypeServerSource(const ObjFile *f,
-                                              const TypeServer2Record *ts) {
-  TypeServerSource::enqueue(f, *ts);
-  return new UseTypeServerSource(f, ts);
+TpiSource *lld::coff::makeUseTypeServerSource(const ObjFile *F,
+                                              const TypeServer2Record *TS) {
+  TypeServerSource::enqueue(F, *TS);
+  return new UseTypeServerSource(F, TS);
 }
 
-TpiSource *lld::coff::makePrecompSource(const ObjFile *f) {
-  return new PrecompSource(f);
+TpiSource *lld::coff::makePrecompSource(const ObjFile *F) {
+  return new PrecompSource(F);
 }
 
-TpiSource *lld::coff::makeUsePrecompSource(const ObjFile *f,
-                                           const PrecompRecord *precomp) {
-  return new UsePrecompSource(f, precomp);
+TpiSource *lld::coff::makeUsePrecompSource(const ObjFile *F,
+                                           const PrecompRecord *Precomp) {
+  return new UsePrecompSource(F, Precomp);
 }
 
 namespace lld {
 namespace coff {
 template <>
-const PrecompRecord &retrieveDependencyInfo(const TpiSource *source) {
-  assert(source->kind == TpiSource::UsingPCH);
-  return ((const UsePrecompSource *)source)->precompDependency;
+const PrecompRecord &retrieveDependencyInfo(const TpiSource *Source) {
+  assert(Source->Kind == TpiSource::UsingPCH);
+  return ((const UsePrecompSource *)Source)->PrecompDependency;
 }
 
 template <>
-const TypeServer2Record &retrieveDependencyInfo(const TpiSource *source) {
-  assert(source->kind == TpiSource::UsingPDB);
-  return ((const UseTypeServerSource *)source)->typeServerDependency;
+const TypeServer2Record &retrieveDependencyInfo(const TpiSource *Source) {
+  assert(Source->Kind == TpiSource::UsingPDB);
+  return ((const UseTypeServerSource *)Source)->TypeServerDependency;
 }
 } // namespace coff
 } // namespace lld
 
 std::map<std::string, std::pair<std::string, TypeServerSource *>>
-    TypeServerSource::instances;
+    TypeServerSource::Instances;
 
 // Make a PDB path assuming the PDB is in the same folder as the OBJ
-static std::string getPdbBaseName(const ObjFile *file, StringRef tSPath) {
-  StringRef localPath =
-      !file->parentName.empty() ? file->parentName : file->getName();
-  SmallString<128> path = sys::path::parent_path(localPath);
+static std::string getPdbBaseName(const ObjFile *File, StringRef TSPath) {
+  StringRef LocalPath =
+      !File->ParentName.empty() ? File->ParentName : File->getName();
+  SmallString<128> Path = sys::path::parent_path(LocalPath);
 
   // Currently, type server PDBs are only created by MSVC cl, which only runs
   // on Windows, so we can assume type server paths are Windows style.
-  sys::path::append(path, sys::path::filename(tSPath, sys::path::Style::windows));
-  return path.str();
+  sys::path::append(Path, sys::path::filename(TSPath, sys::path::Style::windows));
+  return Path.str();
 }
 
 // The casing of the PDB path stamped in the OBJ can differ from the actual path
@@ -158,80 +158,80 @@ static std::string normalizePdbPath(StringRef path) {
 }
 
 // If existing, return the actual PDB path on disk.
-static Optional<std::string> findPdbPath(StringRef pdbPath,
-                                         const ObjFile *dependentFile) {
+static Optional<std::string> findPdbPath(StringRef PDBPath,
+                                         const ObjFile *DependentFile) {
   // Ensure the file exists before anything else. In some cases, if the path
   // points to a removable device, Driver::enqueuePath() would fail with an
   // error (EAGAIN, "resource unavailable try again") which we want to skip
   // silently.
-  if (llvm::sys::fs::exists(pdbPath))
-    return normalizePdbPath(pdbPath);
-  std::string ret = getPdbBaseName(dependentFile, pdbPath);
-  if (llvm::sys::fs::exists(ret))
-    return normalizePdbPath(ret);
+  if (llvm::sys::fs::exists(PDBPath))
+    return normalizePdbPath(PDBPath);
+  std::string Ret = getPdbBaseName(DependentFile, PDBPath);
+  if (llvm::sys::fs::exists(Ret))
+    return normalizePdbPath(Ret);
   return None;
 }
 
 // Fetch the PDB instance that was already loaded by the COFF Driver.
 Expected<TypeServerSource *>
-TypeServerSource::findFromFile(const ObjFile *dependentFile) {
-  const TypeServer2Record &ts =
-      retrieveDependencyInfo<TypeServer2Record>(dependentFile->debugTypesObj);
+TypeServerSource::findFromFile(const ObjFile *DependentFile) {
+  const TypeServer2Record &TS =
+      retrieveDependencyInfo<TypeServer2Record>(DependentFile->DebugTypesObj);
 
-  Optional<std::string> p = findPdbPath(ts.Name, dependentFile);
-  if (!p)
-    return createFileError(ts.Name, errorCodeToError(std::error_code(
+  Optional<std::string> P = findPdbPath(TS.Name, DependentFile);
+  if (!P)
+    return createFileError(TS.Name, errorCodeToError(std::error_code(
                                         ENOENT, std::generic_category())));
 
-  auto it = TypeServerSource::instances.find(*p);
+  auto It = TypeServerSource::Instances.find(*P);
   // The PDB file exists on disk, at this point we expect it to have been
   // inserted in the map by TypeServerSource::loadPDB()
-  assert(it != TypeServerSource::instances.end());
+  assert(It != TypeServerSource::Instances.end());
 
-  std::pair<std::string, TypeServerSource *> &pdb = it->second;
+  std::pair<std::string, TypeServerSource *> &PDB = It->second;
 
-  if (!pdb.second)
+  if (!PDB.second)
     return createFileError(
-        *p, createStringError(inconvertibleErrorCode(), pdb.first.c_str()));
+        *P, createStringError(inconvertibleErrorCode(), PDB.first.c_str()));
 
-  pdb::PDBFile &pdbFile = (pdb.second)->session->getPDBFile();
-  pdb::InfoStream &info = cantFail(pdbFile.getPDBInfoStream());
+  pdb::PDBFile &PDBFile = (PDB.second)->Session->getPDBFile();
+  pdb::InfoStream &Info = cantFail(PDBFile.getPDBInfoStream());
 
   // Just because a file with a matching name was found doesn't mean it can be
   // used. The GUID must match between the PDB header and the OBJ
   // TypeServer2 record. The 'Age' is used by MSVC incremental compilation.
-  if (info.getGuid() != ts.getGuid())
+  if (Info.getGuid() != TS.getGuid())
     return createFileError(
-        ts.Name,
+        TS.Name,
         make_error<pdb::PDBError>(pdb::pdb_error_code::signature_out_of_date));
 
-  return pdb.second;
+  return PDB.second;
 }
 
 // FIXME: Temporary interface until PDBLinker::maybeMergeTypeServerPDB() is
 // moved here.
 Expected<llvm::pdb::NativeSession *>
-lld::coff::findTypeServerSource(const ObjFile *f) {
-  Expected<TypeServerSource *> ts = TypeServerSource::findFromFile(f);
-  if (!ts)
-    return ts.takeError();
-  return ts.get()->session.get();
+lld::coff::findTypeServerSource(const ObjFile *F) {
+  Expected<TypeServerSource *> TS = TypeServerSource::findFromFile(F);
+  if (!TS)
+    return TS.takeError();
+  return TS.get()->Session.get();
 }
 
 // Queue a PDB type server for loading in the COFF Driver
-void TypeServerSource::enqueue(const ObjFile *dependentFile,
-                               const TypeServer2Record &ts) {
+void TypeServerSource::enqueue(const ObjFile *DependentFile,
+                               const TypeServer2Record &TS) {
   // Start by finding where the PDB is located (either the record path or next
   // to the OBJ file)
-  Optional<std::string> p = findPdbPath(ts.Name, dependentFile);
-  if (!p)
+  Optional<std::string> P = findPdbPath(TS.Name, DependentFile);
+  if (!P)
     return;
-  auto it = TypeServerSource::instances.emplace(
-      *p, std::pair<std::string, TypeServerSource *>{});
-  if (!it.second)
+  auto It = TypeServerSource::Instances.emplace(
+      *P, std::pair<std::string, TypeServerSource *>{});
+  if (!It.second)
     return; // another OBJ already scheduled this PDB for load
 
-  driver->enqueuePath(*p, false, false);
+  Driver->enqueuePath(*P, false);
 }
 
 // Create an instance of TypeServerSource or an error string if the PDB couldn't
@@ -239,30 +239,30 @@ void TypeServerSource::enqueue(const ObjFile *dependentFile,
 // will be merged in. NOTE - a PDB load failure is not a link error: some
 // debug info will simply be missing from the final PDB - that is the default
 // accepted behavior.
-void lld::coff::loadTypeServerSource(llvm::MemoryBufferRef m) {
-  std::string path = normalizePdbPath(m.getBufferIdentifier());
+void lld::coff::loadTypeServerSource(llvm::MemoryBufferRef M) {
+  std::string Path = normalizePdbPath(M.getBufferIdentifier());
 
-  Expected<TypeServerSource *> ts = TypeServerSource::getInstance(m);
-  if (!ts)
-    TypeServerSource::instances[path] = {toString(ts.takeError()), nullptr};
+  Expected<TypeServerSource *> TS = TypeServerSource::getInstance(M);
+  if (!TS)
+    TypeServerSource::Instances[Path] = {toString(TS.takeError()), nullptr};
   else
-    TypeServerSource::instances[path] = {{}, *ts};
+    TypeServerSource::Instances[Path] = {{}, *TS};
 }
 
-Expected<TypeServerSource *> TypeServerSource::getInstance(MemoryBufferRef m) {
-  std::unique_ptr<llvm::pdb::IPDBSession> iSession;
-  Error err = pdb::NativeSession::createFromPdb(
-      MemoryBuffer::getMemBuffer(m, false), iSession);
-  if (err)
-    return std::move(err);
+Expected<TypeServerSource *> TypeServerSource::getInstance(MemoryBufferRef M) {
+  std::unique_ptr<llvm::pdb::IPDBSession> ISession;
+  Error Err = pdb::NativeSession::createFromPdb(
+      MemoryBuffer::getMemBuffer(M, false), ISession);
+  if (Err)
+    return std::move(Err);
 
-  std::unique_ptr<llvm::pdb::NativeSession> session(
-      static_cast<pdb::NativeSession *>(iSession.release()));
+  std::unique_ptr<llvm::pdb::NativeSession> Session(
+      static_cast<pdb::NativeSession *>(ISession.release()));
 
-  pdb::PDBFile &pdbFile = session->getPDBFile();
-  Expected<pdb::InfoStream &> info = pdbFile.getPDBInfoStream();
+  pdb::PDBFile &PDBFile = Session->getPDBFile();
+  Expected<pdb::InfoStream &> Info = PDBFile.getPDBInfoStream();
   // All PDB Files should have an Info stream.
-  if (!info)
-    return info.takeError();
-  return new TypeServerSource(m, session.release());
+  if (!Info)
+    return Info.takeError();
+  return new TypeServerSource(M, Session.release());
 }

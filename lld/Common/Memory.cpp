@@ -11,12 +11,12 @@
 using namespace llvm;
 using namespace lld;
 
-BumpPtrAllocator lld::bAlloc;
-StringSaver lld::saver{bAlloc};
-std::vector<SpecificAllocBase *> lld::SpecificAllocBase::instances;
+BumpPtrAllocator lld::BAlloc;
+StringSaver lld::Saver{BAlloc};
+std::vector<SpecificAllocBase *> lld::SpecificAllocBase::Instances;
 
 void lld::freeArena() {
-  for (SpecificAllocBase *alloc : SpecificAllocBase::instances)
-    alloc->reset();
-  bAlloc.Reset();
+  for (SpecificAllocBase *Alloc : SpecificAllocBase::Instances)
+    Alloc->reset();
+  BAlloc.Reset();
 }
