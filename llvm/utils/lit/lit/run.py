@@ -109,6 +109,8 @@ class ParallelRun(Run):
             multiprocessing.BoundedSemaphore(v) for k, v in
             self.lit_config.parallelism_groups.items()}
 
+        self._increase_process_limit()
+
         # Start a process pool. Copy over the data shared between all test runs.
         # FIXME: Find a way to capture the worker process stderr. If the user
         # interrupts the workers before we make it into our task callback, they
@@ -144,3 +146,25 @@ class ParallelRun(Run):
             if self.hit_max_failures:
                 pool.terminate()
                 break
+
+    # Some tests use threads internally, and at least on Linux each of these
+    # threads counts toward the current process limit. Try to raise the (soft)
+    # process limit so that tests don't fail due to resource exhaustion.
+    def _increase_process_limit(self):
+        ncpus = lit.util.detectCPUs()
+        desired_limit = self.workers * ncpus * 2 # the 2 is a safety factor
+
+        # Importing the resource module will likely fail on Windows.
+        try:
+            import resource
+            NPROC = resource.RLIMIT_NPROC
+
+            soft_limit, hard_limit = resource.getrlimit(NPROC)
+            desired_limit = min(desired_limit, hard_limit)
+
+            if soft_limit < desired_limit:
+                resource.setrlimit(NPROC, (desired_limit, hard_limit))
+                self.lit_config.note('Raised process limit from %d to %d' % \
+                                        (soft_limit, desired_limit))
+        except Exception as ex:
+            self.lit_config.warning('Failed to raise process limit: %s' % ex)
