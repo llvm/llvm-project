@@ -774,12 +774,10 @@ public:
   bool hasAlignmentAttr() const;
 
   /// Retrieve the alignment attribute, if it exists.
-  uint64_t getAlignment() const { return Alignment ? Alignment->value() : 0; }
+  MaybeAlign getAlignment() const { return Alignment; }
 
   /// Retrieve the stack alignment attribute, if it exists.
-  uint64_t getStackAlignment() const {
-    return StackAlignment ? StackAlignment->value() : 0;
-  }
+  MaybeAlign getStackAlignment() const { return StackAlignment; }
 
   /// Retrieve the number of dereferenceable bytes, if the
   /// dereferenceable attribute exists (zero is returned otherwise).
