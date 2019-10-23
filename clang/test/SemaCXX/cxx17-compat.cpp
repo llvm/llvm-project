@@ -88,3 +88,36 @@ void f() {
     // expected-warning@-4 {{decomposition declaration declared with 'static thread_local' specifiers is incompatible with C++ standards before C++2a}}
 #endif
 }
+
+struct DefaultedComparisons {
+  bool operator==(const DefaultedComparisons&) const = default;
+  bool operator!=(const DefaultedComparisons&) const = default;
+#if __cplusplus <= 201703L
+  // expected-warning@-3 {{defaulted comparison operators are a C++20 extension}}
+  // expected-warning@-3 {{defaulted comparison operators are a C++20 extension}}
+#else
+  // expected-warning@-6 {{defaulted comparison operators are incompatible with C++ standards before C++20}}
+  // expected-warning@-6 {{defaulted comparison operators are incompatible with C++ standards before C++20}}
+#endif
+  bool operator<=>(const DefaultedComparisons&) const = default;
+#if __cplusplus <= 201703L
+  // expected-error@-2 {{'operator<=' cannot be the name of a variable or data member}} expected-error@-2 0+{{}} expected-warning@-2 {{}}
+#else
+  // expected-warning@-4 {{'<=>' operator is incompatible with C++ standards before C++2a}}
+#endif
+  bool operator<(const DefaultedComparisons&) const = default;
+  bool operator<=(const DefaultedComparisons&) const = default;
+  bool operator>(const DefaultedComparisons&) const = default;
+  bool operator>=(const DefaultedComparisons&) const = default;
+#if __cplusplus <= 201703L
+  // expected-error@-5 {{only special member functions}}
+  // expected-error@-5 {{only special member functions}}
+  // expected-error@-5 {{only special member functions}}
+  // expected-error@-5 {{only special member functions}}
+#else
+  // expected-warning@-10 {{defaulted comparison operators are incompatible with C++ standards before C++20}}
+  // expected-warning@-10 {{defaulted comparison operators are incompatible with C++ standards before C++20}}
+  // expected-warning@-10 {{defaulted comparison operators are incompatible with C++ standards before C++20}}
+  // expected-warning@-10 {{defaulted comparison operators are incompatible with C++ standards before C++20}}
+#endif
+};

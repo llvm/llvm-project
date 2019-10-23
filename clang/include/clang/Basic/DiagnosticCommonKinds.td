@@ -87,7 +87,8 @@ def warn_cxx98_compat_variadic_templates :
   Warning<"variadic templates are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def err_default_special_members : Error<
-  "only special member functions may be defaulted">;
+  "only special member functions %select{|and comparison operators }0"
+  "may be defaulted">;
 def err_deleted_non_function : Error<
   "only functions can have deleted definitions">;
 def err_module_not_found : Error<"module '%0' not found">, DefaultFatal;
