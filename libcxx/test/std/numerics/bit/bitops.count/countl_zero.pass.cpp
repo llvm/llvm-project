@@ -53,7 +53,7 @@ void runtime_test()
 	ASSERT_SAME_TYPE(int, decltype(std::countl_zero(T(0))));
 	ASSERT_NOEXCEPT(               std::countl_zero(T(0)));
 	const int dig = std::numeric_limits<T>::digits;
-	
+
 	assert( std::countl_zero(T(121)) == dig - 7);
 	assert( std::countl_zero(T(122)) == dig - 7);
 	assert( std::countl_zero(T(123)) == dig - 7);
@@ -68,7 +68,7 @@ void runtime_test()
 
 int main()
 {
-	
+
     {
     auto lambda = [](auto x) -> decltype(std::countl_zero(x)) {};
     using L = decltype(lambda);

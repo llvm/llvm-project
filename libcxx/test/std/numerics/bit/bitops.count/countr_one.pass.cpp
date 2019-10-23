@@ -52,7 +52,7 @@ void runtime_test()
 {
 	ASSERT_SAME_TYPE(int, decltype(std::countr_one(T(0))));
 	ASSERT_NOEXCEPT(               std::countr_one(T(0)));
-	
+
 	assert( std::countr_one(T(121)) == 1);
 	assert( std::countr_one(T(122)) == 0);
 	assert( std::countr_one(T(123)) == 2);
@@ -67,7 +67,7 @@ void runtime_test()
 
 int main()
 {
-	
+
     {
     auto lambda = [](auto x) -> decltype(std::countr_one(x)) {};
     using L = decltype(lambda);
