@@ -124,6 +124,30 @@ define amdgpu_kernel void @no_fold_tied_subregister() {
   ret void
 }
 
+; There should be exact one folding on the same operand.
+; CHECK-LABEL: {{^}}no_extra_fold_on_same_opnd
+; CHECK: v_xor_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
+; CHECK: v_xor_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+define void @no_extra_fold_on_same_opnd() {
+entry:
+  %s0 = load i32, i32 addrspace(5)* undef, align 4
+  %s0.i64= zext i32 %s0 to i64
+  br label %for.body.i.i
+
+for.body.i.i:
+  %s1 = load i32, i32 addrspace(1)* undef, align 8
+  %s1.i64 = sext i32 %s1 to i64
+  %xor = xor i64 %s1.i64, %s0.i64
+  %flag = icmp ult i64 %xor, 8
+  br i1 %flag, label %if.then, label %if.else
+
+if.then:
+  unreachable
+
+if.else:
+  unreachable
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 attributes #0 = { nounwind readnone }
