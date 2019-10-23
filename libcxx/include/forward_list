@@ -1525,7 +1525,7 @@ forward_list<_Tp, _Alloc>::remove(const value_type& __v)
         else
             ++__i;
     }
-    
+
     return (__remove_return_type) __count_removed;
 }
 
@@ -1553,7 +1553,7 @@ forward_list<_Tp, _Alloc>::remove_if(_Predicate __pred)
         else
             ++__i;
     }
-    
+
     return (__remove_return_type) __count_removed;
 }
 
@@ -1573,7 +1573,7 @@ forward_list<_Tp, _Alloc>::unique(_BinaryPredicate __binary_pred)
             __deleted_nodes.splice_after(__deleted_nodes.before_begin(), *this, __i, __j);
         __i = __j;
     }
-    
+
     return (__remove_return_type) __count_removed;
 }
 

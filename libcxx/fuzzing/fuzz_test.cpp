@@ -155,7 +155,7 @@ void test_one(const char *filename, FuzzProc fp)
             std::cout << "Execution time: "
                 << std::chrono::duration_cast<std::chrono::milliseconds>(finish_time - start_time).count()
                 << " milliseconds" << std::endl;
-            std::cout << "Memory: " 
+            std::cout << "Memory: "
                       << mc.totalBytesAllocated  << " bytes allocated ("
                       << mc.totalAllocationCount << " allocations); "
                       << mc.netAllocationCount   << " allocations remain" << std::endl;

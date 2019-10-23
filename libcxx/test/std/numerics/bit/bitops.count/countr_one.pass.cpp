@@ -6,7 +6,7 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // template <class T>
 //   constexpr int countr_one(T x) noexcept;
@@ -14,7 +14,7 @@
 // Returns: The number of consecutive 1 bits, starting from the least significant bit.
 //   [ Note: Returns N if x == std::numeric_limits<T>::max(). ]
 //
-// Remarks: This function shall not participate in overload resolution unless 
+// Remarks: This function shall not participate in overload resolution unless
 //	T is an unsigned integer type
 
 #include <bit>
@@ -71,7 +71,7 @@ int main()
     {
     auto lambda = [](auto x) -> decltype(std::countr_one(x)) {};
     using L = decltype(lambda);
-    
+
     static_assert( std::is_invocable_v<L, unsigned char>, "");
     static_assert( std::is_invocable_v<L, unsigned int>, "");
     static_assert( std::is_invocable_v<L, unsigned long>, "");
@@ -107,7 +107,7 @@ int main()
     static_assert( std::is_invocable_v<L, __uint128_t>, "");
     static_assert(!std::is_invocable_v<L, __int128_t>, "");
 #endif
- 
+
     static_assert(!std::is_invocable_v<L, A>, "");
     static_assert(!std::is_invocable_v<L, E1>, "");
     static_assert(!std::is_invocable_v<L, E2>, "");

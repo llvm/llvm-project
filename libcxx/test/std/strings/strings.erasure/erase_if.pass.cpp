@@ -10,7 +10,7 @@
 // <string>
 
 // template <class charT, class traits, class Allocator, class Predicate>
-//   void erase_if(basic_string<charT, traits, Allocator>& c, Predicate pred);  
+//   void erase_if(basic_string<charT, traits, Allocator>& c, Predicate pred);
 
 #include <string>
 
@@ -37,7 +37,7 @@ void test()
     auto isD = [](auto ch) { return ch == 'd';};
     auto True  = [](auto) { return true; };
     auto False = [](auto) { return false; };
-    
+
     test0(S(""), isA, S(""));
 
     test0(S("a"), isA, S(""));

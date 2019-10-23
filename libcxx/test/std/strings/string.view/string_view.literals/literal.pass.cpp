@@ -39,7 +39,7 @@ int main(int, char**)
     std::u16string_view ufoo;
     std::u32string_view Ufoo;
 
-    
+
     foo  =    ""sv;     assert(  foo.size() == 0);
     u8foo = u8""sv;     assert(u8foo.size() == 0);
     Lfoo  =  L""sv;     assert( Lfoo.size() == 0);

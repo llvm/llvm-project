@@ -11,7 +11,7 @@
 
 // template <class charT, class traits, class Allocator, class U>
 //   void erase(basic_string<charT, traits, Allocator>& c, const U& value);
-  
+
 
 #include <string>
 #include <optional>

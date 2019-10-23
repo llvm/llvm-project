@@ -54,6 +54,6 @@ int main(int, char**) {
     { exper::ostream_joiner<std::wstring, wchar_t> oj(std::wcout, ten); }
     { exper::ostream_joiner<int, wchar_t>          oj(std::wcout, eleven); }
 
-    
+
   return 0;
 }

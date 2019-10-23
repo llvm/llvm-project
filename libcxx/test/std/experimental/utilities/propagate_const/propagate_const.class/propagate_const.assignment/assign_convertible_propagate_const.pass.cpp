@@ -22,6 +22,6 @@ using std::experimental::propagate_const;
 typedef propagate_const<X> PX;
 typedef propagate_const<CopyConstructibleFromX> PY;
 
-int main(int, char**) { static_assert(!std::is_assignable<PY, const PX &>::value, ""); 
+int main(int, char**) { static_assert(!std::is_assignable<PY, const PX &>::value, "");
   return 0;
 }

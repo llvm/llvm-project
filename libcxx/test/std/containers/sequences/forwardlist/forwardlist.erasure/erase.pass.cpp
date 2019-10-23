@@ -11,7 +11,7 @@
 
 // template <class T, class Allocator, class U>
 //   void erase(forward_list<T, Allocator>& c, const U& value);
-  
+
 
 #include <forward_list>
 #include <optional>
