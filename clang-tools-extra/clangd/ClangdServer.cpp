@@ -119,7 +119,8 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                      : nullptr),
       GetClangTidyOptions(Opts.GetClangTidyOptions),
       SuggestMissingIncludes(Opts.SuggestMissingIncludes),
-      TweakFilter(Opts.TweakFilter), WorkspaceRoot(Opts.WorkspaceRoot),
+      CrossFileRename(Opts.CrossFileRename), TweakFilter(Opts.TweakFilter),
+      WorkspaceRoot(Opts.WorkspaceRoot),
       // Pass a callback into `WorkScheduler` to extract symbols from a newly
       // parsed file and rebuild the file index synchronously each time an AST
       // is parsed.
@@ -308,54 +309,68 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
     if (!InpAST)
       return CB(InpAST.takeError());
     auto &AST = InpAST->AST;
-    // Performing the rename isn't substantially more expensive than doing an
-    // AST-based check, so we just rename and throw away the results. We may
-    // have to revisit this when we support cross-file rename.
-    auto Changes = renameWithinFile(AST, File, Pos, "dummy", Index);
+    const auto &SM = AST.getSourceManager();
+    SourceLocation Loc =
+        SM.getMacroArgExpandedLocation(getBeginningOfIdentifier(
+            Pos, AST.getSourceManager(), AST.getASTContext().getLangOpts()));
+    auto Range = getTokenRange(SM, AST.getASTContext().getLangOpts(), Loc);
+    if (!Range)
+      return CB(llvm::None); // "rename" is not valid at the position.
+
+    if (CrossFileRename)
+      // FIXME: we now assume cross-file rename always succeeds, revisit this.
+      return CB(*Range);
+
+    // Performing the local rename isn't substantially more expensive than
+    // doing an AST-based check, so we just rename and throw away the results.
+    auto Changes = clangd::rename({Pos, "dummy", AST, File, Index,
+                                   /*AllowCrossFile=*/false,
+                                   /*GetDirtyBuffer=*/nullptr});
     if (!Changes) {
       // LSP says to return null on failure, but that will result in a generic
       // failure message. If we send an LSP error response, clients can surface
       // the message to users (VSCode does).
       return CB(Changes.takeError());
     }
-    SourceLocation Loc = getBeginningOfIdentifier(
-        Pos, AST.getSourceManager(), AST.getASTContext().getLangOpts());
-    if (auto Range = getTokenRange(AST.getSourceManager(),
-                                   AST.getASTContext().getLangOpts(), Loc))
-      return CB(*Range);
-    // Return null if the "rename" is not valid at the position.
-    CB(llvm::None);
+    return CB(*Range);
   };
   WorkScheduler.runWithAST("PrepareRename", File, std::move(Action));
 }
 
 void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
-                          bool WantFormat, Callback<std::vector<TextEdit>> CB) {
+                          bool WantFormat, Callback<FileEdits> CB) {
+  // A snapshot of all file dirty buffers.
+  llvm::StringMap<std::string> Snapshot = WorkScheduler.getAllFileContents();
   auto Action = [File = File.str(), NewName = NewName.str(), Pos, WantFormat,
-                 CB = std::move(CB),
+                 CB = std::move(CB), Snapshot = std::move(Snapshot),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
-    auto Changes = renameWithinFile(InpAST->AST, File, Pos, NewName, Index);
-    if (!Changes)
-      return CB(Changes.takeError());
+    auto GetDirtyBuffer =
+        [&Snapshot](PathRef AbsPath) -> llvm::Optional<std::string> {
+      auto It = Snapshot.find(AbsPath);
+      if (It == Snapshot.end())
+        return llvm::None;
+      return It->second;
+    };
+    auto Edits = clangd::rename({Pos, NewName, InpAST->AST, File, Index,
+                                 CrossFileRename, GetDirtyBuffer});
+    if (!Edits)
+      return CB(Edits.takeError());
 
     if (WantFormat) {
       auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
                                          InpAST->Inputs.FS.get());
-      if (auto Formatted =
-              cleanupAndFormat(InpAST->Inputs.Contents, *Changes, Style))
-        *Changes = std::move(*Formatted);
-      else
-        elog("Failed to format replacements: {0}", Formatted.takeError());
+      llvm::Error Err = llvm::Error::success();
+      for (auto &E : *Edits)
+        Err =
+            llvm::joinErrors(reformatEdit(E.getValue(), Style), std::move(Err));
+
+      if (Err)
+        return CB(std::move(Err));
     }
-
-    std::vector<TextEdit> Edits;
-    for (const auto &Rep : *Changes)
-      Edits.push_back(replacementToEdit(InpAST->Inputs.Contents, Rep));
-    return CB(std::move(Edits));
+    return CB(std::move(*Edits));
   };
-
   WorkScheduler.runWithAST("Rename", File, std::move(Action));
 }
 
