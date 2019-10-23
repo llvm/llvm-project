@@ -44,19 +44,19 @@ doxygen markup, but cannot yet generate documentation from it.</li>
 Clang is built as a set of libraries, which means that it is possible to
 implement capabilities similar to other source language tools, improving them
 in various ways.  Three examples are <a
-href="http://distcc.samba.org/">distcc</a>, the <a
+href="https://github.com/distcc">distcc</a>, the <a
 href="http://delta.tigris.org/">delta testcase reduction tool</a>, and the
 "indent" source reformatting tool.
 distcc can be improved to scale better and be more efficient.  Delta could be
 faster and more efficient at reducing C-family programs if built on the clang
 preprocessor. The clang-based indent replacement,
-<a href="http://clang.llvm.org/docs/ClangFormat.html">clang-format</a>,
+<a href="https://clang.llvm.org/docs/ClangFormat.html">clang-format</a>,
 could be taught to handle simple structural rules like those in <a
-href="http://llvm.org/docs/CodingStandards.html#hl_earlyexit">the LLVM coding
+href="https://llvm.org/docs/CodingStandards.html#use-early-exits-and-continue-to-simplify-code">the LLVM coding
 standards</a>.</li>
 
-<li><b>Use clang libraries to extend Ragel with a JIT</b>: <a 
-href="http://research.cs.queensu.ca/~thurston/ragel/">Ragel</a> is a state
+<li><b>Use clang libraries to extend Ragel with a JIT</b>: <a
+href="https://www.colm.net/open-source/ragel/">Ragel</a> is a state
 machine compiler that lets you embed C code into state machines and generate
 C code.  It would be relatively easy to turn this into a JIT compiler using
 LLVM.</li>

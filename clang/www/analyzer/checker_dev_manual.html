@@ -18,17 +18,17 @@
 
 <h1>Checker Developer Manual</h1>
 
-<p>The static analyzer engine performs path-sensitive exploration of the program and 
-relies on a set of checkers to implement the logic for detecting and 
-constructing specific bug reports. Anyone who is interested in implementing their own 
-checker, should check out the Building a Checker in 24 Hours talk 
-(<a href="http://llvm.org/devmtg/2012-11/Zaks-Rose-Checker24Hours.pdf">slides</a>
+<p>The static analyzer engine performs path-sensitive exploration of the program and
+relies on a set of checkers to implement the logic for detecting and
+constructing specific bug reports. Anyone who is interested in implementing their own
+checker, should check out the Building a Checker in 24 Hours talk
+(<a href="https://llvm.org/devmtg/2012-11/Zaks-Rose-Checker24Hours.pdf">slides</a>
  <a href="https://youtu.be/kdxlsP5QVPw">video</a>)
-and refer to this page for additional information on writing a checker. The static analyzer is a 
-part of the Clang project, so consult <a href="http://clang.llvm.org/hacking.html">Hacking on Clang</a> 
-and <a href="http://llvm.org/docs/ProgrammersManual.html">LLVM Programmer's Manual</a> 
-for developer guidelines and send your questions and proposals to 
-<a href=http://lists.llvm.org/mailman/listinfo/cfe-dev>cfe-dev mailing list</a>. 
+and refer to this page for additional information on writing a checker. The static analyzer is a
+part of the Clang project, so consult <a href="https://clang.llvm.org/hacking.html">Hacking on Clang</a>
+and <a href="https://llvm.org/docs/ProgrammersManual.html">LLVM Programmer's Manual</a>
+for developer guidelines and send your questions and proposals to
+<a href=https://lists.llvm.org/mailman/listinfo/cfe-dev>cfe-dev mailing list</a>.
 </p>
 
     <ul>
@@ -58,8 +58,8 @@ for developer guidelines and send your questions and proposals to
 
 <h2 id=start>Getting Started</h2>
   <ul>
-    <li>To check out the source code and build the project, follow steps 1-4 of 
-    the <a href="http://clang.llvm.org/get_started.html">Clang Getting Started</a> 
+    <li>To check out the source code and build the project, follow steps 1-4 of
+    the <a href="https://clang.llvm.org/get_started.html">Clang Getting Started</a>
   page.</li>
 
     <li>The analyzer source code is located under the Clang source tree:
@@ -69,12 +69,12 @@ for developer guidelines and send your questions and proposals to
     <br>See: <tt>include/clang/StaticAnalyzer</tt>, <tt>lib/StaticAnalyzer</tt>,
      <tt>test/Analysis</tt>.</li>
 
-    <li>The analyzer regression tests can be executed from the Clang's build 
+    <li>The analyzer regression tests can be executed from the Clang's build
     directory:
     <br><tt>
     $ <b>cd ../../../; cd build/tools/clang; TESTDIRS=Analysis make test</b>
     </tt></li>
-    
+
     <li>Analyze a file with the specified checker:
     <br><tt>
     $ <b>clang -cc1 -analyze -analyzer-checker=core.DivideZero test.c</b>
@@ -85,99 +85,99 @@ for developer guidelines and send your questions and proposals to
     $ <b>clang -cc1 -analyzer-checker-help</b>
     </tt></li>
 
-    <li>See the analyzer help for different output formats, fine tuning, and 
+    <li>See the analyzer help for different output formats, fine tuning, and
     debug options:
     <br><tt>
     $ <b>clang -cc1 -help | grep "analyzer"</b>
     </tt></li>
 
   </ul>
- 
+
 <h2 id=analyzer>Static Analyzer Overview</h2>
-  The analyzer core performs symbolic execution of the given program. All the 
-  input values are represented with symbolic values; further, the engine deduces 
-  the values of all the expressions in the program based on the input symbols  
-  and the path. The execution is path sensitive and every possible path through 
-  the program is explored. The explored execution traces are represented with 
-  <a href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1ExplodedGraph.html">ExplodedGraph</a> object.
-  Each node of the graph is 
-  <a href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1ExplodedNode.html">ExplodedNode</a>, 
+  The analyzer core performs symbolic execution of the given program. All the
+  input values are represented with symbolic values; further, the engine deduces
+  the values of all the expressions in the program based on the input symbols
+  and the path. The execution is path sensitive and every possible path through
+  the program is explored. The explored execution traces are represented with
+  <a href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1ExplodedGraph.html">ExplodedGraph</a> object.
+  Each node of the graph is
+  <a href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1ExplodedNode.html">ExplodedNode</a>,
   which consists of a <tt>ProgramPoint</tt> and a <tt>ProgramState</tt>.
   <p>
-  <a href="http://clang.llvm.org/doxygen/classclang_1_1ProgramPoint.html">ProgramPoint</a> 
-  represents the corresponding location in the program (or the CFG). 
-  <tt>ProgramPoint</tt> is also used to record additional information on 
-  when/how the state was added. For example, <tt>PostPurgeDeadSymbolsKind</tt> 
-  kind means that the state is the result of purging dead symbols - the 
-  analyzer's equivalent of garbage collection. 
+  <a href="https://clang.llvm.org/doxygen/classclang_1_1ProgramPoint.html">ProgramPoint</a>
+  represents the corresponding location in the program (or the CFG).
+  <tt>ProgramPoint</tt> is also used to record additional information on
+  when/how the state was added. For example, <tt>PostPurgeDeadSymbolsKind</tt>
+  kind means that the state is the result of purging dead symbols - the
+  analyzer's equivalent of garbage collection.
   <p>
-  <a href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1ProgramState.html">ProgramState</a> 
+  <a href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1ProgramState.html">ProgramState</a>
   represents abstract state of the program. It consists of:
   <ul>
-    <li><tt>Environment</tt> - a mapping from source code expressions to symbolic 
+    <li><tt>Environment</tt> - a mapping from source code expressions to symbolic
     values
     <li><tt>Store</tt> - a mapping from memory locations to symbolic values
     <li><tt>GenericDataMap</tt> - constraints on symbolic values
   </ul>
-  
+
   <h3 id=interaction>Interaction with Checkers</h3>
 
   <p>
-  Checkers are not merely passive receivers of the analyzer core changes - they 
+  Checkers are not merely passive receivers of the analyzer core changes - they
   actively participate in the <tt>ProgramState</tt> construction through the
-  <tt>GenericDataMap</tt> which can be used to store the checker-defined part 
-  of the state. Each time the analyzer engine explores a new statement, it 
-  notifies each checker registered to listen for that statement, giving it an 
-  opportunity to either report a bug or modify the state. (As a rule of thumb, 
-  the checker itself should be stateless.) The checkers are called one after another 
-  in the predefined order; thus, calling all the checkers adds a chain to the 
+  <tt>GenericDataMap</tt> which can be used to store the checker-defined part
+  of the state. Each time the analyzer engine explores a new statement, it
+  notifies each checker registered to listen for that statement, giving it an
+  opportunity to either report a bug or modify the state. (As a rule of thumb,
+  the checker itself should be stateless.) The checkers are called one after another
+  in the predefined order; thus, calling all the checkers adds a chain to the
   <tt>ExplodedGraph</tt>.
   </p>
-  
+
   <h3 id=values>Representing Values</h3>
 
   <p>
-  During symbolic execution, <a href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1SVal.html">SVal</a> 
-  objects are used to represent the semantic evaluation of expressions. 
-  They can represent things like concrete 
-  integers, symbolic values, or memory locations (which are memory regions). 
-  They are a discriminated union of "values", symbolic and otherwise. 
-  If a value isn't symbolic, usually that means there is no symbolic 
-  information to track. For example, if the value was an integer, such as 
-  <tt>42</tt>, it would be a <a href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1nonloc_1_1ConcreteInt.html">ConcreteInt</a>, 
-  and the checker doesn't usually need to track any state with the concrete 
-  number. In some cases, <tt>SVal</tt> is not a symbol, but it really should be 
-  a symbolic value. This happens when the analyzer cannot reason about something 
-  (yet). An example is floating point numbers. In such cases, the 
-  <tt>SVal</tt> will evaluate to <a href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1UnknownVal.html">UnknownVal</a>.
-  This represents a case that is outside the realm of the analyzer's reasoning 
-  capabilities. <tt>SVals</tt> are value objects and their values can be viewed 
-  using the <tt>.dump()</tt> method. Often they wrap persistent objects such as 
+  During symbolic execution, <a href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1SVal.html">SVal</a>
+  objects are used to represent the semantic evaluation of expressions.
+  They can represent things like concrete
+  integers, symbolic values, or memory locations (which are memory regions).
+  They are a discriminated union of "values", symbolic and otherwise.
+  If a value isn't symbolic, usually that means there is no symbolic
+  information to track. For example, if the value was an integer, such as
+  <tt>42</tt>, it would be a <a href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1nonloc_1_1ConcreteInt.html">ConcreteInt</a>,
+  and the checker doesn't usually need to track any state with the concrete
+  number. In some cases, <tt>SVal</tt> is not a symbol, but it really should be
+  a symbolic value. This happens when the analyzer cannot reason about something
+  (yet). An example is floating point numbers. In such cases, the
+  <tt>SVal</tt> will evaluate to <a href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1UnknownVal.html">UnknownVal</a>.
+  This represents a case that is outside the realm of the analyzer's reasoning
+  capabilities. <tt>SVals</tt> are value objects and their values can be viewed
+  using the <tt>.dump()</tt> method. Often they wrap persistent objects such as
   symbols or regions.
   </p>
 
   <p>
-  <a href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1SymExpr.html">SymExpr</a> (symbol) 
-  is meant to represent abstract, but named, symbolic value. Symbols represent 
-  an actual (immutable) value. We might not know what its specific value is, but 
-  we can associate constraints with that value as we analyze a path. For 
-  example, we might record that the value of a symbol is greater than 
+  <a href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1SymExpr.html">SymExpr</a> (symbol)
+  is meant to represent abstract, but named, symbolic value. Symbols represent
+  an actual (immutable) value. We might not know what its specific value is, but
+  we can associate constraints with that value as we analyze a path. For
+  example, we might record that the value of a symbol is greater than
   <tt>0</tt>, etc.
   </p>
 
   <p>
-  <a href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1MemRegion.html">MemRegion</a> is similar to a symbol.  
-  It is used to provide a lexicon of how to describe abstract memory. Regions can 
-  layer on top of other regions, providing a layered approach to representing memory. 
-  For example, a struct object on the stack might be represented by a <tt>VarRegion</tt>, 
-  but a <tt>FieldRegion</tt> which is a subregion of the <tt>VarRegion</tt> could 
+  <a href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1MemRegion.html">MemRegion</a> is similar to a symbol.
+  It is used to provide a lexicon of how to describe abstract memory. Regions can
+  layer on top of other regions, providing a layered approach to representing memory.
+  For example, a struct object on the stack might be represented by a <tt>VarRegion</tt>,
+  but a <tt>FieldRegion</tt> which is a subregion of the <tt>VarRegion</tt> could
   be used to represent the memory associated with a specific field of that object.
-  So how do we represent symbolic memory regions? That's what 
-  <a href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1SymbolicRegion.html">SymbolicRegion</a> 
-  is for. It is a <tt>MemRegion</tt> that has an associated symbol. Since the 
+  So how do we represent symbolic memory regions? That's what
+  <a href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1SymbolicRegion.html">SymbolicRegion</a>
+  is for. It is a <tt>MemRegion</tt> that has an associated symbol. Since the
   symbol is unique and has a unique name; that symbol names the region.
   </p>
-  
+
   <p>
   Let's see how the analyzer processes the expressions in the following example:
   </p>
@@ -193,60 +193,60 @@ for developer guidelines and send your questions and proposals to
   </p>
 
   <p>
-Let's look at how <tt>x*2</tt> gets evaluated. When <tt>x</tt> is evaluated, 
-we first construct an <tt>SVal</tt> that represents the lvalue of <tt>x</tt>, in 
-this case it is an <tt>SVal</tt> that references the <tt>MemRegion</tt> for <tt>x</tt>. 
-Afterwards, when we do the lvalue-to-rvalue conversion, we get a new <tt>SVal</tt>, 
-which references the value <b>currently bound</b> to <tt>x</tt>. That value is 
-symbolic; it's whatever <tt>x</tt> was bound to at the start of the function. 
-Let's call that symbol <tt>$0</tt>. Similarly, we evaluate the expression for <tt>2</tt>, 
-and get an <tt>SVal</tt> that references the concrete number <tt>2</tt>. When 
-we evaluate <tt>x*2</tt>, we take the two <tt>SVals</tt> of the subexpressions, 
-and create a new <tt>SVal</tt> that represents their multiplication (which in 
-this case is a new symbolic expression, which we might call <tt>$1</tt>). When we 
-evaluate the assignment to <tt>y</tt>, we again compute its lvalue (a <tt>MemRegion</tt>), 
-and then bind the <tt>SVal</tt> for the RHS (which references the symbolic value <tt>$1</tt>) 
+Let's look at how <tt>x*2</tt> gets evaluated. When <tt>x</tt> is evaluated,
+we first construct an <tt>SVal</tt> that represents the lvalue of <tt>x</tt>, in
+this case it is an <tt>SVal</tt> that references the <tt>MemRegion</tt> for <tt>x</tt>.
+Afterwards, when we do the lvalue-to-rvalue conversion, we get a new <tt>SVal</tt>,
+which references the value <b>currently bound</b> to <tt>x</tt>. That value is
+symbolic; it's whatever <tt>x</tt> was bound to at the start of the function.
+Let's call that symbol <tt>$0</tt>. Similarly, we evaluate the expression for <tt>2</tt>,
+and get an <tt>SVal</tt> that references the concrete number <tt>2</tt>. When
+we evaluate <tt>x*2</tt>, we take the two <tt>SVals</tt> of the subexpressions,
+and create a new <tt>SVal</tt> that represents their multiplication (which in
+this case is a new symbolic expression, which we might call <tt>$1</tt>). When we
+evaluate the assignment to <tt>y</tt>, we again compute its lvalue (a <tt>MemRegion</tt>),
+and then bind the <tt>SVal</tt> for the RHS (which references the symbolic value <tt>$1</tt>)
 to the <tt>MemRegion</tt> in the symbolic store.
 <br>
-The second line is similar. When we evaluate <tt>x</tt> again, we do the same 
-dance, and create an <tt>SVal</tt> that references the symbol <tt>$0</tt>. Note, two <tt>SVals</tt> 
+The second line is similar. When we evaluate <tt>x</tt> again, we do the same
+dance, and create an <tt>SVal</tt> that references the symbol <tt>$0</tt>. Note, two <tt>SVals</tt>
 might reference the same underlying values.
   </p>
 
 <p>
-To summarize, MemRegions are unique names for blocks of memory. Symbols are 
-unique names for abstract symbolic values. Some MemRegions represents abstract 
-symbolic chunks of memory, and thus are also based on symbols. SVals are just 
-references to values, and can reference either MemRegions, Symbols, or concrete 
+To summarize, MemRegions are unique names for blocks of memory. Symbols are
+unique names for abstract symbolic values. Some MemRegions represents abstract
+symbolic chunks of memory, and thus are also based on symbols. SVals are just
+references to values, and can reference either MemRegions, Symbols, or concrete
 values (e.g., the number 1).
 </p>
 
-  <!-- 
+  <!--
   TODO: Add a picture.
   <br>
   Symbols<br>
-  FunctionalObjects are used throughout.  
+  FunctionalObjects are used throughout.
   -->
 
 <h2 id=idea>Idea for a Checker</h2>
-  Here are several questions which you should consider when evaluating your 
+  Here are several questions which you should consider when evaluating your
   checker idea:
   <ul>
-    <li>Can the check be effectively implemented without path-sensitive 
+    <li>Can the check be effectively implemented without path-sensitive
     analysis? See <a href="#ast">AST Visitors</a>.</li>
-    
-    <li>How high the false positive rate is going to be? Looking at the occurrences 
-    of the issue you want to write a checker for in the existing code bases might 
+
+    <li>How high the false positive rate is going to be? Looking at the occurrences
+    of the issue you want to write a checker for in the existing code bases might
     give you some ideas. </li>
-    
-    <li>How the current limitations of the analysis will effect the false alarm 
-    rate? Currently, the analyzer only reasons about one procedure at a time (no 
-    inter-procedural analysis). Also, it uses a simple range tracking based 
+
+    <li>How the current limitations of the analysis will effect the false alarm
+    rate? Currently, the analyzer only reasons about one procedure at a time (no
+    inter-procedural analysis). Also, it uses a simple range tracking based
     solver to model symbolic execution.</li>
-    
+
     <li>Consult the <a
-    href="http://llvm.org/bugs/buglist.cgi?query_format=advanced&amp;bug_status=NEW&amp;bug_status=REOPENED&amp;version=trunk&amp;component=Static%20Analyzer&amp;product=clang">Bugzilla database</a> 
-    to get some ideas for new checkers and consider starting with improving/fixing  
+    href="https://bugs.llvm.org/buglist.cgi?query_format=advanced&amp;bug_status=NEW&amp;bug_status=REOPENED&amp;version=trunk&amp;component=Static%20Analyzer&amp;product=clang">Bugzilla database</a>
+    to get some ideas for new checkers and consider starting with improving/fixing
     bugs in the existing checkers.</li>
   </ul>
 
@@ -266,7 +266,7 @@ need to be made:
 <h2 id=registration>Checker Registration</h2>
   All checker implementation files are located in
   <tt>clang/lib/StaticAnalyzer/Checkers</tt> folder. The steps below describe
-  how the checker <tt>SimpleStreamChecker</tt>, which checks for misuses of 
+  how the checker <tt>SimpleStreamChecker</tt>, which checks for misuses of
   stream APIs, was registered with the analyzer.
   Similar steps should be followed for a new checker.
 <ol>
@@ -305,16 +305,16 @@ was successfully added by seeing if it appears in the list of available checkers
 <h2 id=events_callbacks>Events, Callbacks, and Checker Class Structure</h2>
 
 <p> All checkers inherit from the <tt><a
-href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1Checker.html">
+href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1Checker.html">
 Checker</a></tt> template class; the template parameter(s) describe the type of
 events that the checker is interested in processing. The various types of events
 that are available are described in the file <a
-href="http://clang.llvm.org/doxygen/CheckerDocumentation_8cpp_source.html">
+href="https://clang.llvm.org/doxygen/CheckerDocumentation_8cpp_source.html">
 CheckerDocumentation.cpp</a>
 
 <p> For each event type requested, a corresponding callback function must be
 defined in the checker class (<a
-href="http://clang.llvm.org/doxygen/CheckerDocumentation_8cpp_source.html">
+href="https://clang.llvm.org/doxygen/CheckerDocumentation_8cpp_source.html">
 CheckerDocumentation.cpp</a> shows the
 correct function name and signature for each event type).
 
@@ -335,13 +335,13 @@ the analyzer cannot be sure whether the file was closed or not.
 </ul>
 
 <p>These events that will be used for each of these actions are, respectively, <a
-href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1check_1_1PreCall.html">PreCall</a>,
+href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1check_1_1PreCall.html">PreCall</a>,
 <a
-href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1check_1_1PostCall.html">PostCall</a>,
+href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1check_1_1PostCall.html">PostCall</a>,
 <a
-href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1check_1_1DeadSymbols.html">DeadSymbols</a>,
+href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1check_1_1DeadSymbols.html">DeadSymbols</a>,
 and <a
-href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1check_1_1PointerEscape.html">PointerEscape</a>.
+href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1check_1_1PointerEscape.html">PointerEscape</a>.
 The high-level structure of the checker's class is thus:
 
 <pre class="code_example">
@@ -376,22 +376,22 @@ several macros designed for this purpose. They are:
 
 <ul>
 <li><a
-href="http://clang.llvm.org/doxygen/ProgramStateTrait_8h.html#ae4cddb54383cd702a045d7c61b009147">REGISTER_TRAIT_WITH_PROGRAMSTATE</a>:
+href="https://clang.llvm.org/doxygen/ProgramStateTrait_8h.html#ae4cddb54383cd702a045d7c61b009147">REGISTER_TRAIT_WITH_PROGRAMSTATE</a>:
 Used when the state information is a single value. The methods available for
 state types declared with this macro are <tt>get</tt>, <tt>set</tt>, and
 <tt>remove</tt>.
 <li><a
-href="http://clang.llvm.org/doxygen/CheckerContext_8h.html#aa27656fa0ce65b0d9ba12eb3c02e8be9">REGISTER_LIST_WITH_PROGRAMSTATE</a>:
+href="https://clang.llvm.org/doxygen/CheckerContext_8h.html#aa27656fa0ce65b0d9ba12eb3c02e8be9">REGISTER_LIST_WITH_PROGRAMSTATE</a>:
 Used when the state information is a list of values. The methods available for
 state types declared with this macro are <tt>add</tt>, <tt>get</tt>,
 <tt>remove</tt>, and <tt>contains</tt>.
 <li><a
-href="http://clang.llvm.org/doxygen/CheckerContext_8h.html#ad90f9387b94b344eaaf499afec05f4d1">REGISTER_SET_WITH_PROGRAMSTATE</a>:
+href="https://clang.llvm.org/doxygen/CheckerContext_8h.html#ad90f9387b94b344eaaf499afec05f4d1">REGISTER_SET_WITH_PROGRAMSTATE</a>:
 Used when the state information is a set of values. The methods available for
 state types declared with this macro are <tt>add</tt>, <tt>get</tt>,
 <tt>remove</tt>, and <tt>contains</tt>.
 <li><a
-href="http://clang.llvm.org/doxygen/CheckerContext_8h.html#a6d1893bb8c18543337b6c363c1319fcf">REGISTER_MAP_WITH_PROGRAMSTATE</a>:
+href="https://clang.llvm.org/doxygen/CheckerContext_8h.html#a6d1893bb8c18543337b6c363c1319fcf">REGISTER_MAP_WITH_PROGRAMSTATE</a>:
 Used when the state information is a map from a key to a value. The methods
 available for state types declared with this macro are <tt>add</tt>,
 <tt>set</tt>, <tt>get</tt>, <tt>remove</tt>, and <tt>contains</tt>.
@@ -438,11 +438,11 @@ new data category; the name of this type is the name of the data category with
 "Ty" appended. For <tt>REGISTER_TRAIT_WITH_PROGRAMSTATE</tt>, this will simply
 be passed data type; for the other three macros, this will be a specialized
 version of the <a
-href="http://llvm.org/doxygen/classllvm_1_1ImmutableList.html">llvm::ImmutableList</a>,
+href="https://llvm.org/doxygen/classllvm_1_1ImmutableList.html">llvm::ImmutableList</a>,
 <a
-href="http://llvm.org/doxygen/classllvm_1_1ImmutableSet.html">llvm::ImmutableSet</a>,
+href="https://llvm.org/doxygen/classllvm_1_1ImmutableSet.html">llvm::ImmutableSet</a>,
 or <a
-href="http://llvm.org/doxygen/classllvm_1_1ImmutableMap.html">llvm::ImmutableMap</a>
+href="https://llvm.org/doxygen/classllvm_1_1ImmutableMap.html">llvm::ImmutableMap</a>
 templated class. For the <tt>ExampleDataType</tt> example above, the type
 created would be equivalent to writing the declaration:
 
@@ -465,9 +465,9 @@ analyzer core by calling the <tt>CheckerContext::addTransition</tt> function.
 <p> When a checker detects a mistake in the analyzed code, it needs a way to
 report it to the analyzer core so that it can be displayed. The two classes used
 to construct this report are <tt><a
-href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1BugType.html">BugType</a></tt>
+href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1BugType.html">BugType</a></tt>
 and <tt><a
-href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1BugReport.html">
+href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1BugReport.html">
 BugReport</a></tt>.
 
 <p>
@@ -496,39 +496,39 @@ analysis, as the program can continue to run after the leak. Dereferencing a
 null pointer, on the other hand, should stop analysis, as there is no way for
 the program to meaningfully continue after such an error.
 
-<p>If analysis can continue, then the most recent <tt>ExplodedNode</tt> 
-generated by the checker can be passed to the <tt>BugReport</tt> constructor 
-without additional modification. This <tt>ExplodedNode</tt> will be the one 
+<p>If analysis can continue, then the most recent <tt>ExplodedNode</tt>
+generated by the checker can be passed to the <tt>BugReport</tt> constructor
+without additional modification. This <tt>ExplodedNode</tt> will be the one
 returned by the most recent call to <a
-href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1CheckerContext.html#a264f48d97809707049689c37aa35af78">CheckerContext::addTransition</a>.
+href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1CheckerContext.html#a264f48d97809707049689c37aa35af78">CheckerContext::addTransition</a>.
 If no transition has been performed during the current callback, the checker should call <a
-href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1CheckerContext.html#a264f48d97809707049689c37aa35af78">CheckerContext::addTransition()</a> 
+href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1CheckerContext.html#a264f48d97809707049689c37aa35af78">CheckerContext::addTransition()</a>
 and use the returned node for bug reporting.
 
 <p>If analysis can not continue, then the current state should be transitioned
 into a so-called <i>sink node</i>, a node from which no further analysis will be
 performed. This is done by calling the <a
-href="http://clang.llvm.org/doxygen/classclang_1_1ento_1_1CheckerContext.html#adeea33a5a2bed190210c4a2bb807a6f0">
+href="https://clang.llvm.org/doxygen/classclang_1_1ento_1_1CheckerContext.html#adeea33a5a2bed190210c4a2bb807a6f0">
 CheckerContext::generateSink</a> function; this function is the same as the
 <tt>addTransition</tt> function, but marks the state as a sink node. Like
 <tt>addTransition</tt>, this returns an <tt>ExplodedNode</tt> with the updated
 state, which can then be passed to the <tt>BugReport</tt> constructor.
 
 <p>
-After a <tt>BugReport</tt> is created, it should be passed to the analyzer core 
-by calling <a href = "http://clang.llvm.org/doxygen/classclang_1_1ento_1_1CheckerContext.html#ae7738af2cbfd1d713edec33d3203dff5">CheckerContext::emitReport</a>.
+After a <tt>BugReport</tt> is created, it should be passed to the analyzer core
+by calling <a href = "https://clang.llvm.org/doxygen/classclang_1_1ento_1_1CheckerContext.html#ae7738af2cbfd1d713edec33d3203dff5">CheckerContext::emitReport</a>.
 
 <h2 id=ast>AST Visitors</h2>
-  Some checks might not require path-sensitivity to be effective. Simple AST walk 
-  might be sufficient. If that is the case, consider implementing a Clang 
-  compiler warning. On the other hand, a check might not be acceptable as a compiler 
-  warning; for example, because of a relatively high false positive rate. In this 
-  situation, AST callbacks <tt><b>checkASTDecl</b></tt> and 
-  <tt><b>checkASTCodeBody</b></tt> are your best friends. 
+  Some checks might not require path-sensitivity to be effective. Simple AST walk
+  might be sufficient. If that is the case, consider implementing a Clang
+  compiler warning. On the other hand, a check might not be acceptable as a compiler
+  warning; for example, because of a relatively high false positive rate. In this
+  situation, AST callbacks <tt><b>checkASTDecl</b></tt> and
+  <tt><b>checkASTCodeBody</b></tt> are your best friends.
 
 <h2 id=testing>Testing</h2>
-  Every patch should be well tested with Clang regression tests. The checker tests 
-  live in <tt>clang/test/Analysis</tt> folder. To run all of the analyzer tests, 
+  Every patch should be well tested with Clang regression tests. The checker tests
+  live in <tt>clang/test/Analysis</tt> folder. To run all of the analyzer tests,
   execute the following from the <tt>clang</tt> build directory:
     <pre class="code">
     $ <b>bin/llvm-lit -sv ../llvm/tools/clang/test/Analysis</b>
@@ -796,9 +796,9 @@ Documentation for how the Store works</a></li>
 <li><a href="https://github.com/llvm/llvm-project/blob/master/clang/docs/analyzer/IPA.txt">
 Documentation about inlining</a></li>
 <li> The "Building a Checker in 24 hours" presentation given at the <a
-href="http://llvm.org/devmtg/2012-11">November 2012 LLVM Developer's
+href="https://llvm.org/devmtg/2012-11">November 2012 LLVM Developer's
 meeting</a>. Describes the construction of SimpleStreamChecker. <a
-href="http://llvm.org/devmtg/2012-11/Zaks-Rose-Checker24Hours.pdf">Slides</a>
+href="https://llvm.org/devmtg/2012-11/Zaks-Rose-Checker24Hours.pdf">Slides</a>
 and <a
 href="https://youtu.be/kdxlsP5QVPw">video</a>
 are available.</li>
@@ -807,15 +807,15 @@ are available.</li>
 Artem Degrachev: Clang Static Analyzer: A Checker Developer's Guide
 </a> (reading the previous items first might be a good idea)</li>
 <li>The list of <a href="implicit_checks.html">Implicit Checkers</a></li>
-<li> <a href="http://clang.llvm.org/doxygen">Clang doxygen</a>. Contains
+<li> <a href="https://clang.llvm.org/doxygen">Clang doxygen</a>. Contains
 up-to-date documentation about the APIs available in Clang. Relevant entries
 have been linked throughout this page. Also of use is the
-<a href="http://llvm.org/doxygen">LLVM doxygen</a>, when dealing with classes
+<a href="https://llvm.org/doxygen">LLVM doxygen</a>, when dealing with classes
 from LLVM.</li>
-<li> The <a href="http://lists.llvm.org/mailman/listinfo/cfe-dev">
+<li> The <a href="https://lists.llvm.org/mailman/listinfo/cfe-dev">
 cfe-dev mailing list</a>. This is the primary mailing list used for
 discussion of Clang development (including static code analysis). The
-<a href="http://lists.llvm.org/pipermail/cfe-dev">archive</a> also contains
+<a href="https://lists.llvm.org/pipermail/cfe-dev">archive</a> also contains
 a lot of information.</li>
 </ul>
 
