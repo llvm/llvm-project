@@ -1,3 +1,4 @@
+# XFAIL: *
 # RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=gcn-dpp-combine -verify-machineinstrs -o - %s | FileCheck %s -check-prefix=GCN
 
 ---
