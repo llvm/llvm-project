@@ -288,12 +288,6 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   }
 
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
-  // This is a workaround for HIP to get things going until
-  // https://reviews.llvm.org/D57831 is committed.
-#if _WIN32
-  WCharType = UnsignedShort;
-  WIntType = UnsignedShort;
-#endif
 }
 
 void AMDGPUTargetInfo::adjust(LangOptions &Opts) {
