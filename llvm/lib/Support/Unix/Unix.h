@@ -21,7 +21,6 @@
 #include "llvm/Config/config.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Errno.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <assert.h>
 #include <cerrno>
@@ -68,14 +67,6 @@ static inline bool MakeErrMsg(
     errnum = errno;
   *ErrMsg = prefix + ": " + llvm::sys::StrError(errnum);
   return true;
-}
-
-// Include StrError(errnum) in a fatal error message.
-LLVM_ATTRIBUTE_NORETURN static inline void ReportErrnumFatal(const char *Msg,
-                                                             int errnum) {
-  std::string ErrMsg;
-  MakeErrMsg(&ErrMsg, Msg, errnum);
-  llvm::report_fatal_error(ErrMsg);
 }
 
 namespace llvm {
