@@ -107,7 +107,7 @@ struct GenericDeleter {
 template <class T>
 void test_sfinae() {
 #if TEST_STD_VER >= 11
-  { // the constructor does not participate in overload resultion when
+  { // the constructor does not participate in overload resolution when
     // the deleter is a pointer type
     using U = std::unique_ptr<T, void (*)(void*)>;
     static_assert(!std::is_constructible<U, T*>::value, "");

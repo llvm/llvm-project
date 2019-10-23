@@ -437,9 +437,6 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   switch (Opc) {
   case G_TRUNC:
-  case G_ADD:
-  case G_SUB:
-  case G_MUL:
   case G_UMULH:
   case G_ZEXTLOAD:
   case G_SEXTLOAD:
@@ -459,6 +456,13 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_BRINDIRECT:
   case G_VASTART:
     OperandsMapping = &Mips::ValueMappings[Mips::GPRIdx];
+    break;
+  case G_ADD:
+  case G_SUB:
+  case G_MUL:
+    OperandsMapping = &Mips::ValueMappings[Mips::GPRIdx];
+    if (Op0Size == 128)
+      OperandsMapping = getMSAMapping(MF);
     break;
   case G_STORE:
   case G_LOAD:

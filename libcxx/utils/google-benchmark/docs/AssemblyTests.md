@@ -144,4 +144,3 @@ tests to other architectures and compilers (using `CHECK` prefixes).
 
 Furthermore, the tests fail for builds which specify additional flags
 that modify code generation, including `--coverage` or `-fsanitize=`.
-

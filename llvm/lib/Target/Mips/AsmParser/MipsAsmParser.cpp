@@ -2033,56 +2033,15 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
 
     // FIXME: Add support for label+offset operands (currently causes an error).
     // FIXME: Add support for forward-declared local symbols.
-    // FIXME: Add expansion for when the LargeGOT option is enabled.
-    if (JalSym->isInSection() || JalSym->isTemporary() ||
-        (JalSym->isELF() &&
-         cast<MCSymbolELF>(JalSym)->getBinding() == ELF::STB_LOCAL)) {
-      if (isABI_O32()) {
-        // If it's a local symbol and the O32 ABI is being used, we expand to:
-        //  lw $25, 0($gp)
-        //    R_(MICRO)MIPS_GOT16  label
-        //  addiu $25, $25, 0
-        //    R_(MICRO)MIPS_LO16   label
-        //  jalr  $25
-        const MCExpr *Got16RelocExpr =
-            MipsMCExpr::create(MipsMCExpr::MEK_GOT, JalExpr, getContext());
-        const MCExpr *Lo16RelocExpr =
-            MipsMCExpr::create(MipsMCExpr::MEK_LO, JalExpr, getContext());
-
-        TOut.emitRRX(Mips::LW, Mips::T9, GPReg,
-                     MCOperand::createExpr(Got16RelocExpr), IDLoc, STI);
-        TOut.emitRRX(Mips::ADDiu, Mips::T9, Mips::T9,
-                     MCOperand::createExpr(Lo16RelocExpr), IDLoc, STI);
-      } else if (isABI_N32() || isABI_N64()) {
-        // If it's a local symbol and the N32/N64 ABIs are being used,
-        // we expand to:
-        //  lw/ld $25, 0($gp)
-        //    R_(MICRO)MIPS_GOT_DISP  label
-        //  jalr  $25
-        const MCExpr *GotDispRelocExpr =
-            MipsMCExpr::create(MipsMCExpr::MEK_GOT_DISP, JalExpr, getContext());
-
-        TOut.emitRRX(ABI.ArePtrs64bit() ? Mips::LD : Mips::LW, Mips::T9,
-                     GPReg, MCOperand::createExpr(GotDispRelocExpr), IDLoc,
-                     STI);
-      }
-    } else {
-      // If it's an external/weak symbol, we expand to:
-      //  lw/ld    $25, 0($gp)
-      //    R_(MICRO)MIPS_CALL16  label
-      //  jalr  $25
-      const MCExpr *Call16RelocExpr =
-          MipsMCExpr::create(MipsMCExpr::MEK_GOT_CALL, JalExpr, getContext());
-
-      TOut.emitRRX(ABI.ArePtrs64bit() ? Mips::LD : Mips::LW, Mips::T9, GPReg,
-                   MCOperand::createExpr(Call16RelocExpr), IDLoc, STI);
-    }
+    if (expandLoadAddress(Mips::T9, Mips::NoRegister, Inst.getOperand(0),
+                          !isGP64bit(), IDLoc, Out, STI))
+      return true;
 
     MCInst JalrInst;
-    if (IsCpRestoreSet && inMicroMipsMode())
-      JalrInst.setOpcode(Mips::JALRS_MM);
+    if (inMicroMipsMode())
+      JalrInst.setOpcode(IsCpRestoreSet ? Mips::JALRS_MM : Mips::JALR_MM);
     else
-      JalrInst.setOpcode(inMicroMipsMode() ? Mips::JALR_MM : Mips::JALR);
+      JalrInst.setOpcode(Mips::JALR);
     JalrInst.addOperand(MCOperand::createReg(Mips::RA));
     JalrInst.addOperand(MCOperand::createReg(Mips::T9));
 
@@ -2933,6 +2892,9 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
       TmpReg = ATReg;
     }
 
+    // FIXME: In case of N32 / N64 ABI and emabled XGOT, local addresses
+    // loaded using R_MIPS_GOT_PAGE / R_MIPS_GOT_OFST pair of relocations.
+    // FIXME: Implement XGOT for microMIPS.
     if (UseXGOT) {
       // Loading address from XGOT
       //   External GOT: lui $tmp, %got_hi(symbol)($gp)
@@ -2969,7 +2931,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
 
     const MipsMCExpr *GotExpr = nullptr;
     const MCExpr *LoExpr = nullptr;
-    if (IsPtr64) {
+    if (ABI.IsN32() || ABI.IsN64()) {
       // The remaining cases are:
       //   Small offset: ld $tmp, %got_disp(symbol)($gp)
       //                >daddiu $tmp, $tmp, offset

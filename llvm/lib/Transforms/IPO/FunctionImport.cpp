@@ -952,6 +952,10 @@ void llvm::thinLTOResolvePrevailingInModule(
     if (NewLinkage == GV.getLinkage())
       return;
     if (GlobalValue::isLocalLinkage(GV.getLinkage()) ||
+        // Don't internalize anything here, because the code below
+        // lacks necessary correctness checks. Leave this job to
+        // LLVM 'internalize' pass.
+        GlobalValue::isLocalLinkage(NewLinkage) ||
         // In case it was dead and already converted to declaration.
         GV.isDeclaration())
       return;

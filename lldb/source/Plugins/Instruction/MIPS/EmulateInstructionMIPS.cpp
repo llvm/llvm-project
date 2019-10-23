@@ -28,6 +28,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 
@@ -149,7 +150,9 @@ EmulateInstructionMIPS::EmulateInstructionMIPS(
   m_insn_info.reset(target->createMCInstrInfo());
   assert(m_insn_info.get());
 
-  m_asm_info.reset(target->createMCAsmInfo(*m_reg_info, triple.getTriple()));
+  llvm::MCTargetOptions MCOptions;
+  m_asm_info.reset(
+      target->createMCAsmInfo(*m_reg_info, triple.getTriple(), MCOptions));
   m_subtype_info.reset(
       target->createMCSubtargetInfo(triple.getTriple(), cpu, features));
   assert(m_asm_info.get() && m_subtype_info.get());

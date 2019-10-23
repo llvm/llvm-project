@@ -49,7 +49,7 @@ int main()
 #if !defined(_WIN32)
     uint8_t *execution_buffer = mmap(0, kSize,
                                      PROT_READ | PROT_WRITE | PROT_EXEC,
-                                     MAP_ANON | MAP_PRIVATE, 0, 0);
+                                     MAP_ANON | MAP_PRIVATE, -1, 0);
     if (execution_buffer == MAP_FAILED)
       return 1;
 #else

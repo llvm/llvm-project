@@ -26,4 +26,3 @@
 #include "is_convertible.pass.cpp"
 
 #include "test_macros.h"
-

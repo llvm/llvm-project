@@ -58,6 +58,7 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamShared) {
   std::string VerboseBuffer;
   raw_string_ostream VerboseStream(VerboseBuffer);
 
+  Compiler.setOutputStream(std::make_unique<raw_null_ostream>());
   Compiler.setInvocation(std::move(Invocation));
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   Compiler.createDiagnostics(
@@ -86,6 +87,7 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamOwned) {
     std::unique_ptr<raw_ostream> VerboseStream =
         std::make_unique<raw_string_ostream>(VerboseBuffer);
 
+    Compiler.setOutputStream(std::make_unique<raw_null_ostream>());
     Compiler.setInvocation(std::move(Invocation));
     IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
     Compiler.createDiagnostics(

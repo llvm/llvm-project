@@ -22,7 +22,8 @@ class Triple;
 
 class WebAssemblyMCAsmInfo final : public MCAsmInfoWasm {
 public:
-  explicit WebAssemblyMCAsmInfo(const Triple &T);
+  explicit WebAssemblyMCAsmInfo(const Triple &T,
+                                const MCTargetOptions &Options);
   ~WebAssemblyMCAsmInfo() override;
 };
 

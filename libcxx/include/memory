@@ -3871,10 +3871,16 @@ public:
                       : nullptr);}
 #endif  // _LIBCPP_NO_RTTI
 
-    template<class ..._Args>
-        static
-        shared_ptr<_Tp>
-        make_shared(_Args&& ...__args);
+    template<class _Yp, class _CntrlBlk>
+    static shared_ptr<_Tp>
+    __create_with_control_block(_Yp* __p, _CntrlBlk* __cntrl)
+    {
+        shared_ptr<_Tp> __r;
+        __r.__ptr_ = __p;
+        __r.__cntrl_ = __cntrl;
+        __r.__enable_weak_this(__r.__ptr_, __r.__ptr_);
+        return __r;
+    }
 
     template<class _Alloc, class ..._Args>
         static
@@ -4194,25 +4200,6 @@ shared_ptr<_Tp>::shared_ptr(unique_ptr<_Yp, _Dp> __r,
 }
 
 template<class _Tp>
-template<class ..._Args>
-shared_ptr<_Tp>
-shared_ptr<_Tp>::make_shared(_Args&& ...__args)
-{
-    static_assert( is_constructible<_Tp, _Args...>::value, "Can't construct object in make_shared" );
-    typedef __shared_ptr_emplace<_Tp, allocator<_Tp> > _CntrlBlk;
-    typedef allocator<_CntrlBlk> _A2;
-    typedef __allocator_destructor<_A2> _D2;
-    _A2 __a2;
-    unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
-    ::new(__hold2.get()) _CntrlBlk(__a2, _VSTD::forward<_Args>(__args)...);
-    shared_ptr<_Tp> __r;
-    __r.__ptr_ = __hold2.get()->get();
-    __r.__cntrl_ = __hold2.release();
-    __r.__enable_weak_this(__r.__ptr_, __r.__ptr_);
-    return __r;
-}
-
-template<class _Tp>
 template<class _Alloc, class ..._Args>
 shared_ptr<_Tp>
 shared_ptr<_Tp>::allocate_shared(const _Alloc& __a, _Args&& ...__args)
@@ -4422,7 +4409,17 @@ typename enable_if
 >::type
 make_shared(_Args&& ...__args)
 {
-    return shared_ptr<_Tp>::make_shared(_VSTD::forward<_Args>(__args)...);
+    static_assert(is_constructible<_Tp, _Args...>::value, "Can't construct object in make_shared");
+    typedef __shared_ptr_emplace<_Tp, allocator<_Tp> > _CntrlBlk;
+    typedef allocator<_CntrlBlk> _A2;
+    typedef __allocator_destructor<_A2> _D2;
+
+    _A2 __a2;
+    unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
+    ::new(__hold2.get()) _CntrlBlk(__a2, _VSTD::forward<_Args>(__args)...);
+
+    _Tp *__ptr = __hold2.get()->get();
+    return shared_ptr<_Tp>::__create_with_control_block(__ptr, __hold2.release());
 }
 
 template<class _Tp, class _Alloc, class ..._Args>

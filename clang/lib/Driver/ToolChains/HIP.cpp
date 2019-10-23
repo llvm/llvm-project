@@ -292,6 +292,10 @@ void HIPToolChain::addClangTargetOptions(
                          false))
     CC1Args.push_back("-fgpu-rdc");
 
+  if (DriverArgs.hasFlag(options::OPT_fgpu_allow_device_init,
+                         options::OPT_fno_gpu_allow_device_init, false))
+    CC1Args.push_back("-fgpu-allow-device-init");
+
   CC1Args.push_back("-fcuda-allow-variadic-functions");
 
   // Default to "hidden" visibility, as object level linking will not be

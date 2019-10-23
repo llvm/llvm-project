@@ -239,7 +239,9 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
     return true;
   }
 
-  if (I.getOpcode() == Mips::G_MUL) {
+  if (I.getOpcode() == Mips::G_MUL &&
+      (RBI.getRegBank(I.getOperand(0).getReg(), MRI, TRI)->getID() ==
+       Mips::GPRBRegBankID)) {
     MachineInstr *Mul = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::MUL))
                             .add(I.getOperand(0))
                             .add(I.getOperand(1))

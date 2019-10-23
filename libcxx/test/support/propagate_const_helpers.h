@@ -116,4 +116,3 @@ struct ExplicitCopyConstructibleFromX
     constexpr ExplicitCopyConstructibleFromX(int i) : i_(i) {}
     constexpr explicit ExplicitCopyConstructibleFromX(const X& x) : i_(x.i_) {}
 };
-

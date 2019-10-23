@@ -2004,6 +2004,71 @@ static Instruction *moveAddAfterMinMax(SelectPatternFlavor SPF, Value *X,
   return nullptr;
 }
 
+/// Match a sadd_sat or ssub_sat which is using min/max to clamp the value.
+Instruction *InstCombiner::matchSAddSubSat(SelectInst &MinMax1) {
+  Type *Ty = MinMax1.getType();
+
+  // We are looking for a tree of:
+  // max(INT_MIN, min(INT_MAX, add(sext(A), sext(B))))
+  // Where the min and max could be reversed
+  Instruction *MinMax2;
+  BinaryOperator *AddSub;
+  const APInt *MinValue, *MaxValue;
+  if (match(&MinMax1, m_SMin(m_Instruction(MinMax2), m_APInt(MaxValue)))) {
+    if (!match(MinMax2, m_SMax(m_BinOp(AddSub), m_APInt(MinValue))))
+      return nullptr;
+  } else if (match(&MinMax1,
+                   m_SMax(m_Instruction(MinMax2), m_APInt(MinValue)))) {
+    if (!match(MinMax2, m_SMin(m_BinOp(AddSub), m_APInt(MaxValue))))
+      return nullptr;
+  } else
+    return nullptr;
+
+  // Check that the constants clamp a saturate, and that the new type would be
+  // sensible to convert to.
+  if (!(*MaxValue + 1).isPowerOf2() || -*MinValue != *MaxValue + 1)
+    return nullptr;
+  // In what bitwidth can this be treated as saturating arithmetics?
+  unsigned NewBitWidth = (*MaxValue + 1).logBase2() + 1;
+  // FIXME: This isn't quite right for vectors, but using the scalar type is a
+  // good first approximation for what should be done there.
+  if (!shouldChangeType(Ty->getScalarType()->getIntegerBitWidth(), NewBitWidth))
+    return nullptr;
+
+  // Also make sure that the number of uses is as expected. The "3"s are for the
+  // the two items of min/max (the compare and the select).
+  if (MinMax2->hasNUsesOrMore(3) || AddSub->hasNUsesOrMore(3))
+    return nullptr;
+
+  // Create the new type (which can be a vector type)
+  Type *NewTy = Ty->getWithNewBitWidth(NewBitWidth);
+  // Match the two extends from the add/sub
+  Value *A, *B;
+  if(!match(AddSub, m_BinOp(m_SExt(m_Value(A)), m_SExt(m_Value(B)))))
+    return nullptr;
+  // And check the incoming values are of a type smaller than or equal to the
+  // size of the saturation. Otherwise the higher bits can cause different
+  // results.
+  if (A->getType()->getScalarSizeInBits() > NewBitWidth ||
+      B->getType()->getScalarSizeInBits() > NewBitWidth)
+    return nullptr;
+
+  Intrinsic::ID IntrinsicID;
+  if (AddSub->getOpcode() == Instruction::Add)
+    IntrinsicID = Intrinsic::sadd_sat;
+  else if (AddSub->getOpcode() == Instruction::Sub)
+    IntrinsicID = Intrinsic::ssub_sat;
+  else
+    return nullptr;
+
+  // Finally create and return the sat intrinsic, truncated to the new type
+  Function *F = Intrinsic::getDeclaration(MinMax1.getModule(), IntrinsicID, NewTy);
+  Value *AT = Builder.CreateSExt(A, NewTy);
+  Value *BT = Builder.CreateSExt(B, NewTy);
+  Value *Sat = Builder.CreateCall(F, {AT, BT});
+  return CastInst::Create(Instruction::SExt, Sat, Ty);
+}
+
 /// Reduce a sequence of min/max with a common operand.
 static Instruction *factorizeMinMaxTree(SelectPatternFlavor SPF, Value *LHS,
                                         Value *RHS,
@@ -2429,6 +2494,8 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
         return I;
 
       if (Instruction *I = factorizeMinMaxTree(SPF, LHS, RHS, Builder))
+        return I;
+      if (Instruction *I = matchSAddSubSat(SI))
         return I;
     }
   }

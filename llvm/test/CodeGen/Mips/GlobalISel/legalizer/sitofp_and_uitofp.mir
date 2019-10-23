@@ -343,10 +343,9 @@ body:             |
 
     ; FP32-LABEL: name: u32tof32
     ; FP32: liveins: $a0
-    ; FP32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+    ; FP32: [[COPY:%[0-9]+]]:gpr32(s32) = COPY $a0
     ; FP32: [[C:%[0-9]+]]:gpr32(s32) = G_CONSTANT i32 1127219200
-    ; FP32: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]](s32)
-    ; FP32: [[BuildPairF64_:%[0-9]+]]:afgr64(s64) = BuildPairF64 [[COPY1]], [[C]](s32)
+    ; FP32: [[BuildPairF64_:%[0-9]+]]:afgr64(s64) = BuildPairF64 [[COPY]](s32), [[C]](s32)
     ; FP32: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x4330000000000000
     ; FP32: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[BuildPairF64_]], [[C1]]
     ; FP32: [[FPTRUNC:%[0-9]+]]:_(s32) = G_FPTRUNC [[FSUB]](s64)
@@ -354,10 +353,9 @@ body:             |
     ; FP32: RetRA implicit $f0
     ; FP64-LABEL: name: u32tof32
     ; FP64: liveins: $a0
-    ; FP64: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+    ; FP64: [[COPY:%[0-9]+]]:gpr32(s32) = COPY $a0
     ; FP64: [[C:%[0-9]+]]:gpr32(s32) = G_CONSTANT i32 1127219200
-    ; FP64: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]](s32)
-    ; FP64: [[BuildPairF64_64_:%[0-9]+]]:fgr64(s64) = BuildPairF64_64 [[COPY1]], [[C]](s32)
+    ; FP64: [[BuildPairF64_64_:%[0-9]+]]:fgr64(s64) = BuildPairF64_64 [[COPY]](s32), [[C]](s32)
     ; FP64: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x4330000000000000
     ; FP64: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[BuildPairF64_64_]], [[C1]]
     ; FP64: [[FPTRUNC:%[0-9]+]]:_(s32) = G_FPTRUNC [[FSUB]](s64)
@@ -501,20 +499,18 @@ body:             |
 
     ; FP32-LABEL: name: u32tof64
     ; FP32: liveins: $a0
-    ; FP32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+    ; FP32: [[COPY:%[0-9]+]]:gpr32(s32) = COPY $a0
     ; FP32: [[C:%[0-9]+]]:gpr32(s32) = G_CONSTANT i32 1127219200
-    ; FP32: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]](s32)
-    ; FP32: [[BuildPairF64_:%[0-9]+]]:afgr64(s64) = BuildPairF64 [[COPY1]], [[C]](s32)
+    ; FP32: [[BuildPairF64_:%[0-9]+]]:afgr64(s64) = BuildPairF64 [[COPY]](s32), [[C]](s32)
     ; FP32: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x4330000000000000
     ; FP32: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[BuildPairF64_]], [[C1]]
     ; FP32: $d0 = COPY [[FSUB]](s64)
     ; FP32: RetRA implicit $d0
     ; FP64-LABEL: name: u32tof64
     ; FP64: liveins: $a0
-    ; FP64: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+    ; FP64: [[COPY:%[0-9]+]]:gpr32(s32) = COPY $a0
     ; FP64: [[C:%[0-9]+]]:gpr32(s32) = G_CONSTANT i32 1127219200
-    ; FP64: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]](s32)
-    ; FP64: [[BuildPairF64_64_:%[0-9]+]]:fgr64(s64) = BuildPairF64_64 [[COPY1]], [[C]](s32)
+    ; FP64: [[BuildPairF64_64_:%[0-9]+]]:fgr64(s64) = BuildPairF64_64 [[COPY]](s32), [[C]](s32)
     ; FP64: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x4330000000000000
     ; FP64: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[BuildPairF64_64_]], [[C1]]
     ; FP64: $d0 = COPY [[FSUB]](s64)

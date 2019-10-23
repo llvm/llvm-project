@@ -78,7 +78,7 @@ int main(int, char**) {
     const fs::path proximate_output = p.lexically_proximate(TC.base);
     // [path.gen] lexically_proximate
     // Returns: If the value of lexically_relative(base) is not an empty path,
-    // return it.Otherwise return *this.
+    // return it. Otherwise return *this.
     const fs::path proximate_expected = output.native().empty() ? p
         : output;
     if (!PathEq(proximate_expected, proximate_output))

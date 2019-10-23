@@ -128,7 +128,7 @@ void test_sfinae() {
     static_assert(std::is_nothrow_constructible<U1C, U1&&>::value, "");
   }
   { // Test that non-reference destination deleters can be constructed
-    // from any source deleter type with a sutible conversion. Including
+    // from any source deleter type with a suitable conversion. Including
     // reference types.
     using U1 = std::unique_ptr<VT, GenericConvertingDeleter<0> >;
     using U2 = std::unique_ptr<VT, GenericConvertingDeleter<0> &>;

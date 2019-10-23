@@ -2247,6 +2247,16 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     Glue = Chain.getValue(1);
   }
 
+  // Validate that none of the argument registers have been marked as
+  // reserved, if so report an error. Do the same for the return address if this
+  // is not a tailcall.
+  validateCCReservedRegs(RegsToPass, MF);
+  if (!IsTailCall &&
+      MF.getSubtarget<RISCVSubtarget>().isRegisterReservedByUser(RISCV::X1))
+    MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported{
+        MF.getFunction(),
+        "Return address register required, but has been reserved."});
+
   // If the callee is a GlobalAddress/ExternalSymbol node, turn it into a
   // TargetGlobalAddress/TargetExternalSymbol node so that legalize won't
   // split it and then direct call can be matched by PseudoCALL.
@@ -2362,6 +2372,9 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                  const SmallVectorImpl<ISD::OutputArg> &Outs,
                                  const SmallVectorImpl<SDValue> &OutVals,
                                  const SDLoc &DL, SelectionDAG &DAG) const {
+  const MachineFunction &MF = DAG.getMachineFunction();
+  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
+
   // Stores the assignment of the return value to a location.
   SmallVector<CCValAssign, 16> RVLocs;
 
@@ -2391,6 +2404,13 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       Register RegLo = VA.getLocReg();
       assert(RegLo < RISCV::X31 && "Invalid register pair");
       Register RegHi = RegLo + 1;
+
+      if (STI.isRegisterReservedByUser(RegLo) ||
+          STI.isRegisterReservedByUser(RegHi))
+        MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported{
+            MF.getFunction(),
+            "Return value register required, but has been reserved."});
+
       Chain = DAG.getCopyToReg(Chain, DL, RegLo, Lo, Glue);
       Glue = Chain.getValue(1);
       RetOps.push_back(DAG.getRegister(RegLo, MVT::i32));
@@ -2401,6 +2421,11 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       // Handle a 'normal' return.
       Val = convertValVTToLocVT(DAG, Val, VA, DL);
       Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), Val, Glue);
+
+      if (STI.isRegisterReservedByUser(VA.getLocReg()))
+        MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported{
+            MF.getFunction(),
+            "Return value register required, but has been reserved."});
 
       // Guarantee that all emitted copies are stuck together.
       Glue = Chain.getValue(1);
@@ -2438,6 +2463,19 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   }
 
   return DAG.getNode(RISCVISD::RET_FLAG, DL, MVT::Other, RetOps);
+}
+
+void RISCVTargetLowering::validateCCReservedRegs(
+    const SmallVectorImpl<std::pair<llvm::Register, llvm::SDValue>> &Regs,
+    MachineFunction &MF) const {
+  const Function &F = MF.getFunction();
+  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
+
+  if (std::any_of(std::begin(Regs), std::end(Regs), [&STI](auto Reg) {
+        return STI.isRegisterReservedByUser(Reg.first);
+      }))
+    F.getContext().diagnose(DiagnosticInfoUnsupported{
+        F, "Argument register required, but has been reserved."});
 }
 
 const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {

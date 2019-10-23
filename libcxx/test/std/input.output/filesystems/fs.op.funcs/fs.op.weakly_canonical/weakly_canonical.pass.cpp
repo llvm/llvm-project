@@ -45,7 +45,7 @@ int main(int, char**) {
       {StaticEnv::SymlinkToDir, StaticEnv::Dir},
       {StaticEnv::SymlinkToDir / "dir2/.", StaticEnv::Dir / "dir2"},
       // FIXME? If the trailing separator occurs in a part of the path that exists,
-      // it is ommitted. Otherwise it is added to the end of the result.
+      // it is omitted. Otherwise it is added to the end of the result.
       {StaticEnv::SymlinkToDir / "dir2/./", StaticEnv::Dir / "dir2"},
       {StaticEnv::SymlinkToDir / "dir2/DNE/./", StaticEnv::Dir / "dir2/DNE/"},
       {StaticEnv::SymlinkToDir / "dir2", StaticEnv::Dir2},

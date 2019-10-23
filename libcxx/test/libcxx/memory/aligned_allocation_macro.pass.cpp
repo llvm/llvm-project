@@ -29,6 +29,6 @@
 #   error "libc++ should have aligned allocation in C++17 and up when targeting a platform that supports it"
 #endif
 
-int main(int, char**) { 
+int main(int, char**) {
   return 0;
 }

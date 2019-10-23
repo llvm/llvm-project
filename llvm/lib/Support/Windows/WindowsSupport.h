@@ -41,6 +41,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/VersionTuple.h"
 #include <cassert>
 #include <string>
@@ -65,6 +66,13 @@ bool RunningWindows8OrGreater();
 llvm::VersionTuple GetWindowsOSVersion();
 
 bool MakeErrMsg(std::string *ErrMsg, const std::string &prefix);
+
+// Include GetLastError() in a fatal error message.
+LLVM_ATTRIBUTE_NORETURN inline void ReportLastErrorFatal(const char *Msg) {
+  std::string ErrMsg;
+  MakeErrMsg(&ErrMsg, Msg);
+  llvm::report_fatal_error(ErrMsg);
+}
 
 template <typename HandleTraits>
 class ScopedHandle {

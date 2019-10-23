@@ -1473,12 +1473,11 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
         // Just print .param .align <a> .b8 .param[size];
         // <a> = PAL.getparamalignment
         // size = typeallocsize of element type
-        unsigned align = PAL.getParamAlignment(paramIndex);
-        if (align == 0)
-          align = DL.getABITypeAlignment(Ty);
+        const Align align = DL.getValueOrABITypeAlignment(
+            PAL.getParamAlignment(paramIndex), Ty);
 
         unsigned sz = DL.getTypeAllocSize(Ty);
-        O << "\t.param .align " << align << " .b8 ";
+        O << "\t.param .align " << align.value() << " .b8 ";
         printParamName(I, paramIndex, O);
         O << "[" << sz << "]";
 
@@ -1559,9 +1558,8 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       // Just print .param .align <a> .b8 .param[size];
       // <a> = PAL.getparamalignment
       // size = typeallocsize of element type
-      unsigned align = PAL.getParamAlignment(paramIndex);
-      if (align == 0)
-        align = DL.getABITypeAlignment(ETy);
+      Align align =
+          DL.getValueOrABITypeAlignment(PAL.getParamAlignment(paramIndex), ETy);
       // Work around a bug in ptxas. When PTX code takes address of
       // byval parameter with alignment < 4, ptxas generates code to
       // spill argument into memory. Alas on sm_50+ ptxas generates
@@ -1573,10 +1571,10 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       // TODO: this will need to be undone when we get to support multi-TU
       // device-side compilation as it breaks ABI compatibility with nvcc.
       // Hopefully ptxas bug is fixed by then.
-      if (!isKernelFunc && align < 4)
-        align = 4;
+      if (!isKernelFunc && align < Align(4))
+        align = Align(4);
       unsigned sz = DL.getTypeAllocSize(ETy);
-      O << "\t.param .align " << align << " .b8 ";
+      O << "\t.param .align " << align.value() << " .b8 ";
       printParamName(I, paramIndex, O);
       O << "[" << sz << "]";
       continue;

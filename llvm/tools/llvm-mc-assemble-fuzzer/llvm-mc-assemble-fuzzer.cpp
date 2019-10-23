@@ -161,7 +161,9 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
     abort();
   }
 
-  std::unique_ptr<MCAsmInfo> MAI(TheTarget->createMCAsmInfo(*MRI, TripleName));
+  MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
+  std::unique_ptr<MCAsmInfo> MAI(
+      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   if (!MAI) {
     errs() << "Unable to create target asm info!";
     abort();
@@ -192,8 +194,6 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
       TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
   std::unique_ptr<MCCodeEmitter> CE = nullptr;
   std::unique_ptr<MCAsmBackend> MAB = nullptr;
-
-  MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
 
   std::string OutputString;
   raw_string_ostream Out(OutputString);

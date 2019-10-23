@@ -242,4 +242,136 @@ out:
   ret i1 %ret
 }
 
+define i1 @test7(i32 %a, i32 %b) {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:  begin:
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp sge i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[BR:%.*]] = and i1 [[CMP0]], [[CMP1]]
+; CHECK-NEXT:    br i1 [[BR]], label [[BB:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A]], [[B]]
+; CHECK-NEXT:    br label [[CONT:%.*]]
+; CHECK:       cont:
+; CHECK-NEXT:    [[RES:%.*]] = icmp sge i32 [[ADD]], 0
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV:%.*]] = phi i1 [ true, [[BEGIN:%.*]] ], [ [[RES]], [[CONT]] ]
+; CHECK-NEXT:    ret i1 [[IV]]
+;
+begin:
+  %cmp0 = icmp sge i32 %a, 0
+  %cmp1 = icmp sge i32 %b, 0
+  %br = and i1 %cmp0, %cmp1
+  br i1 %br, label %bb, label %exit
+
+bb:
+  %add = add i32 %a, %b
+  br label %cont
+
+cont:
+  %res = icmp sge i32 %add, 0
+  br label %exit
+
+exit:
+  %iv = phi i1 [ true, %begin ], [ %res, %cont ]
+  ret i1 %iv
+}
+
+define i1 @test8(i32 %a, i32 %b) {
+; CHECK-LABEL: @test8(
+; CHECK-NEXT:  begin:
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp sge i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[B:%.*]], 0
+; CHECK-NEXT:    [[BR:%.*]] = and i1 [[CMP0]], [[CMP1]]
+; CHECK-NEXT:    br i1 [[BR]], label [[BB:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[A]], [[B]]
+; CHECK-NEXT:    br label [[CONT:%.*]]
+; CHECK:       cont:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 true
+;
+begin:
+  %cmp0 = icmp sge i32 %a, 0
+  %cmp1 = icmp sge i32 %b, 0
+  %br = and i1 %cmp0, %cmp1
+  br i1 %br, label %bb, label %exit
+
+bb:
+  %add = add nsw i32 %a, %b
+  br label %cont
+
+cont:
+  %res = icmp sge i32 %add, 0
+  br label %exit
+
+exit:
+  %iv = phi i1 [ true, %begin ], [ %res, %cont ]
+  ret i1 %iv
+}
+
+define i1 @test10(i32 %a, i32 %b) {
+; CHECK-LABEL: @test10(
+; CHECK-NEXT:  begin:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[A:%.*]], -256
+; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], [[B:%.*]]
+; CHECK-NEXT:    br label [[CONT:%.*]]
+; CHECK:       cont:
+; CHECK-NEXT:    [[RES:%.*]] = icmp uge i32 [[ADD]], -256
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV:%.*]] = phi i1 [ true, [[BEGIN:%.*]] ], [ [[RES]], [[CONT]] ]
+; CHECK-NEXT:    ret i1 [[IV]]
+;
+begin:
+  %cmp = icmp uge i32 %a, 4294967040
+  br i1 %cmp, label %bb, label %exit
+
+bb:
+  %add = add i32 %a, %b
+  br label %cont
+
+cont:
+  %res = icmp uge i32 %add, 4294967040
+  br label %exit
+
+exit:
+  %iv = phi i1 [ true, %begin ], [ %res, %cont ]
+  ret i1 %iv
+}
+
+define i1 @test11(i32 %a, i32 %b) {
+; CHECK-LABEL: @test11(
+; CHECK-NEXT:  begin:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[A:%.*]], -256
+; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A]], [[B:%.*]]
+; CHECK-NEXT:    br label [[CONT:%.*]]
+; CHECK:       cont:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 true
+;
+begin:
+  %cmp = icmp uge i32 %a, 4294967040
+  br i1 %cmp, label %bb, label %exit
+
+bb:
+  %add = add nuw i32 %a, %b
+  br label %cont
+
+cont:
+  %res = icmp uge i32 %add, 4294967040
+  br label %exit
+
+exit:
+  %iv = phi i1 [ true, %begin ], [ %res, %cont ]
+  ret i1 %iv
+}
+
 attributes #4 = { noreturn }

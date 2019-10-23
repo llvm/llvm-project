@@ -22,7 +22,8 @@ class MipsMCAsmInfo : public MCAsmInfoELF {
   void anchor() override;
 
 public:
-  explicit MipsMCAsmInfo(const Triple &TheTriple);
+  explicit MipsMCAsmInfo(const Triple &TheTriple,
+                         const MCTargetOptions &Options);
 };
 
 } // namespace llvm

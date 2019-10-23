@@ -81,8 +81,9 @@ static MCSubtargetInfo *createMipsMCSubtargetInfo(const Triple &TT,
 }
 
 static MCAsmInfo *createMipsMCAsmInfo(const MCRegisterInfo &MRI,
-                                      const Triple &TT) {
-  MCAsmInfo *MAI = new MipsMCAsmInfo(TT);
+                                      const Triple &TT,
+                                      const MCTargetOptions &Options) {
+  MCAsmInfo *MAI = new MipsMCAsmInfo(TT, Options);
 
   unsigned SP = MRI.getDwarfRegNum(Mips::SP, true);
   MCCFIInstruction Inst = MCCFIInstruction::createDefCfaRegister(nullptr, SP);

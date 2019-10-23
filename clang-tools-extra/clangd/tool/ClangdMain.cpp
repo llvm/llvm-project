@@ -27,6 +27,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -670,6 +671,24 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
       /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs,
       OffsetEncodingFromFlag, Opts);
   llvm::set_thread_name("clangd.main");
-  return LSPServer.run() ? 0
-                         : static_cast<int>(ErrorResultCode::NoShutdownRequest);
+  int ExitCode = LSPServer.run()
+                     ? 0
+                     : static_cast<int>(ErrorResultCode::NoShutdownRequest);
+  log("LSP finished, exiting with status {0}", ExitCode);
+
+  // There may still be lingering background threads (e.g. slow requests
+  // whose results will be dropped, background index shutting down).
+  //
+  // These should terminate quickly, and ~ClangdLSPServer blocks on them.
+  // However if a bug causes them to run forever, we want to ensure the process
+  // eventually exits. As clangd isn't directly user-facing, an editor can
+  // "leak" clangd processes. Crashing in this case contains the damage.
+  //
+  // This is more portable than sys::WatchDog, and yields a stack trace.
+  std::thread([] {
+    std::this_thread::sleep_for(std::chrono::minutes(5));
+    std::abort();
+  }).detach();
+
+  return ExitCode;
 }
