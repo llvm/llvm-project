@@ -86,13 +86,9 @@ static bool foldImmediates(MachineInstr &MI, const SIInstrInfo *TII,
 
         if (MovSrc.isImm() && (isInt<32>(MovSrc.getImm()) ||
                                isUInt<32>(MovSrc.getImm()))) {
-          // It's possible to have only one component of a super-reg defined by
-          // a single mov, so we need to clear any subregister flag.
-          Src0.setSubReg(0);
           Src0.ChangeToImmediate(MovSrc.getImm());
           ConstantFolded = true;
         } else if (MovSrc.isFI()) {
-          Src0.setSubReg(0);
           Src0.ChangeToFrameIndex(MovSrc.getIndex());
           ConstantFolded = true;
         } else if (MovSrc.isGlobal()) {
