@@ -1231,3 +1231,19 @@ S bar3(int coin) {
   return coin ? S() : foo(); // no-warning
 }
 } // namespace return_from_top_frame
+
+#if __cplusplus >= 201103L
+namespace arguments_of_operators {
+struct S {
+  S() {}
+  S(const S &) {}
+};
+
+void test() {
+  int x = 0;
+  auto foo = [](S s, int &y) { y = 1; };
+  foo(S(), x);
+  clang_analyzer_eval(x == 1); // expected-warning{{TRUE}}
+}
+} // namespace arguments_of_operators
+#endif // __cplusplus >= 201103L
