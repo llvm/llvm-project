@@ -7,4 +7,3 @@ int main() {
        std::regex_constants::extended | std::regex_constants::nosubs);
   return std::regex_search(str, re) ? 0 : -1;
 }
-

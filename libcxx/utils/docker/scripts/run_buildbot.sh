@@ -100,4 +100,3 @@ done
 sleep 72000
 while pkill -SIGHUP buildslave; do sleep 5; done;
 shutdown now
-
