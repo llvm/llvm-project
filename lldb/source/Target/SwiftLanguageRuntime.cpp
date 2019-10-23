@@ -1983,13 +1983,6 @@ Value::ValueType SwiftLanguageRuntime::GetValueType(
                                       eTypeInstanceIsPointer))
         return Value::eValueTypeLoadAddress;
     }
-
-    if (static_type_flags.AllSet(eTypeIsSwift | eTypeIsPointer) &&
-        static_type_flags.AllClear(eTypeIsGenericTypeParam)) {
-      // FIXME: This branch is not covered by any testcases in the test suite.
-      if (is_indirect_enum_case || static_type_flags.AllClear(eTypeIsBuiltIn))
-        return Value::eValueTypeLoadAddress;
-    }
   }
 
   // Enabling this makes the inout_variables test hang.
