@@ -816,6 +816,21 @@ ConstantRange ConstantRange::binaryOp(Instruction::BinaryOps BinOp,
   }
 }
 
+ConstantRange ConstantRange::overflowingBinaryOp(Instruction::BinaryOps BinOp,
+                                                 const ConstantRange &Other,
+                                                 unsigned NoWrapKind) const {
+  assert(Instruction::isBinaryOp(BinOp) && "Binary operators only!");
+
+  switch (BinOp) {
+  case Instruction::Add:
+    return addWithNoWrap(Other, NoWrapKind);
+  default:
+    // Don't know about this Overflowing Binary Operation.
+    // Conservatively fallback to plain binop handling.
+    return binaryOp(BinOp, Other);
+  }
+}
+
 ConstantRange
 ConstantRange::add(const ConstantRange &Other) const {
   if (isEmptySet() || Other.isEmptySet())
