@@ -323,7 +323,8 @@ static MCRegisterInfo *createX86MCRegisterInfo(const Triple &TT) {
 }
 
 static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
-                                     const Triple &TheTriple) {
+                                     const Triple &TheTriple,
+                                     const MCTargetOptions &Options) {
   bool is64Bit = TheTriple.getArch() == Triple::x86_64;
 
   MCAsmInfo *MAI;

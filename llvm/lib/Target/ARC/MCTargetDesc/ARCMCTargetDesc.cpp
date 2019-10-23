@@ -52,7 +52,8 @@ static MCSubtargetInfo *createARCMCSubtargetInfo(const Triple &TT,
 }
 
 static MCAsmInfo *createARCMCAsmInfo(const MCRegisterInfo &MRI,
-                                     const Triple &TT) {
+                                     const Triple &TT,
+                                     const MCTargetOptions &Options) {
   MCAsmInfo *MAI = new ARCMCAsmInfo(TT);
 
   // Initial state of the frame pointer is SP.

@@ -21,6 +21,7 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
@@ -717,8 +718,9 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
       TheTarget->createMCRegInfo(TripleName));
   failIfEmpty(MRI, "no register info for target " + TripleName);
 
+  MCTargetOptions MCOptions;
   std::unique_ptr<const MCAsmInfo> AsmInfo(
-      TheTarget->createMCAsmInfo(*MRI, TripleName));
+      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   failIfEmpty(AsmInfo, "no asm info for target " + TripleName);
 
   std::unique_ptr<const MCObjectFileInfo> MOFI(new MCObjectFileInfo);

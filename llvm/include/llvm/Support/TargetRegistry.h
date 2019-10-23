@@ -128,7 +128,8 @@ public:
   using ArchMatchFnTy = bool (*)(Triple::ArchType Arch);
 
   using MCAsmInfoCtorFnTy = MCAsmInfo *(*)(const MCRegisterInfo &MRI,
-                                           const Triple &TT);
+                                           const Triple &TT,
+                                           const MCTargetOptions &Options);
   using MCInstrInfoCtorFnTy = MCInstrInfo *(*)();
   using MCInstrAnalysisCtorFnTy = MCInstrAnalysis *(*)(const MCInstrInfo *Info);
   using MCRegInfoCtorFnTy = MCRegisterInfo *(*)(const Triple &TT);
@@ -335,11 +336,11 @@ public:
   /// feature set; it should always be provided. Generally this should be
   /// either the target triple from the module, or the target triple of the
   /// host if that does not exist.
-  MCAsmInfo *createMCAsmInfo(const MCRegisterInfo &MRI,
-                             StringRef TheTriple) const {
+  MCAsmInfo *createMCAsmInfo(const MCRegisterInfo &MRI, StringRef TheTriple,
+                             const MCTargetOptions &Options) const {
     if (!MCAsmInfoCtorFn)
       return nullptr;
-    return MCAsmInfoCtorFn(MRI, Triple(TheTriple));
+    return MCAsmInfoCtorFn(MRI, Triple(TheTriple), Options);
   }
 
   /// createMCInstrInfo - Create a MCInstrInfo implementation.
@@ -948,9 +949,9 @@ template <class MCAsmInfoImpl> struct RegisterMCAsmInfo {
   }
 
 private:
-  static MCAsmInfo *Allocator(const MCRegisterInfo & /*MRI*/,
-                              const Triple &TT) {
-    return new MCAsmInfoImpl(TT);
+  static MCAsmInfo *Allocator(const MCRegisterInfo & /*MRI*/, const Triple &TT,
+                              const MCTargetOptions &Options) {
+    return new MCAsmInfoImpl(TT, Options);
   }
 };
 
