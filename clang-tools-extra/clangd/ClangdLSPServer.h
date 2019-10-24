@@ -44,6 +44,7 @@ public:
                   llvm::Optional<Path> CompileCommandsDir, bool UseDirBasedCDB,
                   llvm::Optional<OffsetEncoding> ForcedOffsetEncoding,
                   const ClangdServer::Options &Opts);
+  /// The destructor blocks on any outstanding background tasks.
   ~ClangdLSPServer();
 
   /// Run LSP server loop, communicating with the Transport provided in the
@@ -211,11 +212,10 @@ private:
   std::unique_ptr<GlobalCompilationDatabase> BaseCDB;
   // CDB is BaseCDB plus any comands overridden via LSP extensions.
   llvm::Optional<OverlayCDB> CDB;
-  // The ClangdServer is created by the "initialize" LSP method.
-  // It is destroyed before run() returns, to ensure worker threads exit.
   ClangdServer::Options ClangdServerOpts;
-  llvm::Optional<ClangdServer> Server;
   llvm::Optional<OffsetEncoding> NegotiatedOffsetEncoding;
+  // The ClangdServer is created by the "initialize" LSP method.
+  llvm::Optional<ClangdServer> Server;
 };
 } // namespace clangd
 } // namespace clang
