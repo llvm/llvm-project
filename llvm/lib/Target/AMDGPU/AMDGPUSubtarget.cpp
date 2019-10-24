@@ -773,6 +773,11 @@ struct FillMFMAShadowMutation : ScheduleDAGMutation {
     return MI && TII->isSALU(*MI) && !MI->isTerminator();
   }
 
+  bool isVALU(const SUnit *SU) const {
+    const MachineInstr *MI = SU->getInstr();
+    return MI && TII->isVALU(*MI);
+  }
+
   bool canAddEdge(const SUnit *Succ, const SUnit *Pred) const {
     if (Pred->NodeNum < Succ->NodeNum)
       return true;
@@ -821,7 +826,7 @@ struct FillMFMAShadowMutation : ScheduleDAGMutation {
 
       for (SDep &SI : From->Succs) {
         SUnit *SUv = SI.getSUnit();
-        if (SUv != From && TII->isVALU(*SUv->getInstr()) && canAddEdge(SUv, SU))
+        if (SUv != From && isVALU(SUv) && canAddEdge(SUv, SU))
           SUv->addPred(SDep(SU, SDep::Artificial), false);
       }
 
