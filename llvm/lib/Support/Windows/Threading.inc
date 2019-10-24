@@ -21,36 +21,36 @@
 #undef MemoryFence
 #endif
 
-namespace {
-  struct ThreadInfo {
-    void(*func)(void*);
-    void *param;
-  };
-}
-
-static unsigned __stdcall ThreadCallback(void *param) {
-  struct ThreadInfo *info = reinterpret_cast<struct ThreadInfo *>(param);
-  info->func(info->param);
-
+static unsigned __stdcall threadFuncSync(void *Arg) {
+  SyncThreadInfo *TI = static_cast<SyncThreadInfo *>(Arg);
+  TI->UserFn(TI->UserData);
   return 0;
 }
 
-void llvm::llvm_execute_on_thread(void(*Fn)(void*), void *UserData,
-  unsigned RequestedStackSize) {
-  struct ThreadInfo param = { Fn, UserData };
+static unsigned __stdcall threadFuncAsync(void *Arg) {
+  std::unique_ptr<AsyncThreadInfo> Info(static_cast<AsyncThreadInfo *>(Arg));
+  (*Info)();
+  return 0;
+}
 
-  HANDLE hThread = (HANDLE)::_beginthreadex(NULL,
-    RequestedStackSize, ThreadCallback,
-    &param, 0, NULL);
+static void
+llvm_execute_on_thread_impl(_beginthreadex_proc_type ThreadFunc, void *Arg,
+                            llvm::Optional<unsigned> StackSizeInBytes,
+                            JoiningPolicy JP) {
+  HANDLE hThread = (HANDLE)::_beginthreadex(
+      NULL, StackSizeInBytes.getValueOr(0), ThreadFunc, Arg, 0, NULL);
 
-  if (hThread) {
-    // We actually don't care whether the wait succeeds or fails, in
-    // the same way we don't care whether the pthread_join call succeeds
-    // or fails.  There's not much we could do if this were to fail. But
-    // on success, this call will wait until the thread finishes executing
-    // before returning.
-    (void)::WaitForSingleObject(hThread, INFINITE);
-    ::CloseHandle(hThread);
+  if (!hThread) {
+    ReportLastErrorFatal("_beginthreadex failed");
+  }
+
+  if (JP == JoiningPolicy::Join) {
+    if (::WaitForSingleObject(hThread, INFINITE) == WAIT_FAILED) {
+      ReportLastErrorFatal("WaitForSingleObject failed");
+    }
+  }
+  if (::CloseHandle(hThread) == FALSE) {
+    ReportLastErrorFatal("CloseHandle failed");
   }
 }
 
