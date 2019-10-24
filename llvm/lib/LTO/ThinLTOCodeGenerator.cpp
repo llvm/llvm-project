@@ -611,7 +611,7 @@ struct IsPrevailing {
     return Prevailing->second == S;
   };
 };
-}; // namespace
+} // namespace
 
 static void computeDeadSymbolsInIndex(
     ModuleSummaryIndex &Index,
