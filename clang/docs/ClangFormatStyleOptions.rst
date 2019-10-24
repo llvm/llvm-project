@@ -1321,6 +1321,17 @@ the configuration (without a prefix: ``Auto``).
 **BreakStringLiterals** (``bool``)
   Allow breaking string literals when formatting.
 
+  .. code-block:: c++
+
+     true:
+     const char* x = "veryVeryVeryVeryVeryVe"
+                     "ryVeryVeryVeryVeryVery"
+                     "VeryLongString";
+
+     false:
+     const char* x =
+       "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+
 **ColumnLimit** (``unsigned``)
   The column limit.
 
