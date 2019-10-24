@@ -25,7 +25,7 @@ public:
     /// Normal symbols must be resolved at build time
     canBeNullNever,
 
-    /// This symbol can be missing at runtime and will evalute to nullptr.
+    /// This symbol can be missing at runtime and will evaluate to nullptr.
     /// That is, the static linker still must find a definition (usually
     /// is some shared library), but at runtime, the dynamic loader
     /// will allow the symbol to be missing and resolved to nullptr.
