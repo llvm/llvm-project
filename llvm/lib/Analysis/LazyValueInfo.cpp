@@ -432,6 +432,8 @@ namespace {
                            BasicBlock *BB);
   bool solveBlockValueOverflowIntrinsic(
       ValueLatticeElement &BBLV, WithOverflowInst *WO, BasicBlock *BB);
+  bool solveBlockValueSaturatingIntrinsic(ValueLatticeElement &BBLV,
+                                          SaturatingInst *SI, BasicBlock *BB);
   bool solveBlockValueIntrinsic(ValueLatticeElement &BBLV, IntrinsicInst *II,
                                 BasicBlock *BB);
   bool solveBlockValueExtractValue(ValueLatticeElement &BBLV,
@@ -1118,29 +1120,41 @@ bool LazyValueInfoImpl::solveBlockValueOverflowIntrinsic(
       });
 }
 
-bool LazyValueInfoImpl::solveBlockValueIntrinsic(
-    ValueLatticeElement &BBLV, IntrinsicInst *II, BasicBlock *BB) {
-  switch (II->getIntrinsicID()) {
+bool LazyValueInfoImpl::solveBlockValueSaturatingIntrinsic(
+    ValueLatticeElement &BBLV, SaturatingInst *SI, BasicBlock *BB) {
+  switch (SI->getIntrinsicID()) {
   case Intrinsic::uadd_sat:
-    return solveBlockValueBinaryOpImpl(BBLV, II, BB,
-        [](const ConstantRange &CR1, const ConstantRange &CR2) {
+    return solveBlockValueBinaryOpImpl(
+        BBLV, SI, BB, [](const ConstantRange &CR1, const ConstantRange &CR2) {
           return CR1.uadd_sat(CR2);
         });
   case Intrinsic::usub_sat:
-    return solveBlockValueBinaryOpImpl(BBLV, II, BB,
-        [](const ConstantRange &CR1, const ConstantRange &CR2) {
+    return solveBlockValueBinaryOpImpl(
+        BBLV, SI, BB, [](const ConstantRange &CR1, const ConstantRange &CR2) {
           return CR1.usub_sat(CR2);
         });
   case Intrinsic::sadd_sat:
-    return solveBlockValueBinaryOpImpl(BBLV, II, BB,
-        [](const ConstantRange &CR1, const ConstantRange &CR2) {
+    return solveBlockValueBinaryOpImpl(
+        BBLV, SI, BB, [](const ConstantRange &CR1, const ConstantRange &CR2) {
           return CR1.sadd_sat(CR2);
         });
   case Intrinsic::ssub_sat:
-    return solveBlockValueBinaryOpImpl(BBLV, II, BB,
-        [](const ConstantRange &CR1, const ConstantRange &CR2) {
+    return solveBlockValueBinaryOpImpl(
+        BBLV, SI, BB, [](const ConstantRange &CR1, const ConstantRange &CR2) {
           return CR1.ssub_sat(CR2);
         });
+  default:
+    llvm_unreachable("All llvm.sat intrinsic are handled.");
+  }
+}
+
+bool LazyValueInfoImpl::solveBlockValueIntrinsic(ValueLatticeElement &BBLV,
+                                                 IntrinsicInst *II,
+                                                 BasicBlock *BB) {
+  if (auto *SI = dyn_cast<SaturatingInst>(II))
+    return solveBlockValueSaturatingIntrinsic(BBLV, SI, BB);
+
+  switch (II->getIntrinsicID()) {
   default:
     LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
                       << "' - overdefined (unknown intrinsic).\n");
