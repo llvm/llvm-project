@@ -12,9 +12,9 @@ void test_f(int iv, float fv) {
 }
 
 int* g(int, float, int); // expected-note {{candidate function}}
-float* g(int, int, int); // expected-note {{candidate function}}
+float* g(int, int, int);
 double* g(int, float, float); // expected-note {{candidate function}}
-char* g(int, float, ...); // expected-note {{candidate function}}
+char* g(int, float, ...);
 void g();
 
 void test_g(int iv, float fv) {

@@ -11,7 +11,7 @@ template <typename T> struct is_same<T, T> { static constexpr bool value = true;
 
 
 struct S {
-  // The only numeric types S can be converted to is __int128 and __float128.
+  // The only numeric types S can be converted to are [unsigned] __int128 and __float128.
   template <typename T, typename = typename enable_if<
                             !((__is_integral(T) && sizeof(T) != 16) ||
                               is_same<T, float>::value ||
@@ -29,6 +29,8 @@ void f() {
   double d = S() + 1.0;
 #ifndef MS
   // expected-error@-2{{use of overloaded operator '+' is ambiguous}}
-  // expected-note@-3 36{{built-in candidate operator+}}
+  // expected-note@-3 {{built-in candidate operator+(__float128, double)}}
+  // expected-note@-4 {{built-in candidate operator+(__int128, double)}}
+  // expected-note@-5 {{built-in candidate operator+(unsigned __int128, double)}}
 #endif
 }

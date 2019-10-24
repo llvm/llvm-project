@@ -68,7 +68,10 @@ class Sema;
     OCD_AllCandidates,
 
     /// Requests that only viable candidates be shown.
-    OCD_ViableCandidates
+    OCD_ViableCandidates,
+
+    /// Requests that only tied-for-best candidates be shown.
+    OCD_AmbiguousCandidates
   };
 
   /// The parameter ordering that will be used for the candidate. This is
@@ -790,6 +793,15 @@ class Sema;
 
     /// Viable - True to indicate that this overload candidate is viable.
     bool Viable : 1;
+
+    /// Whether this candidate is the best viable function, or tied for being
+    /// the best viable function.
+    ///
+    /// For an ambiguous overload resolution, indicates whether this candidate
+    /// was part of the ambiguity kernel: the minimal non-empty set of viable
+    /// candidates such that all elements of the ambiguity kernel are better
+    /// than all viable candidates not in the ambiguity kernel.
+    bool Best : 1;
 
     /// IsSurrogate - True to indicate that this candidate is a
     /// surrogate for a conversion to a function pointer or reference
