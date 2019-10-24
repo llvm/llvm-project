@@ -18,6 +18,7 @@
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Endian.h"
@@ -31,10 +32,12 @@ typedef MCDisassembler::DecodeStatus DecodeStatus;
 
 namespace {
 class RISCVDisassembler : public MCDisassembler {
+  std::unique_ptr<MCInstrInfo const> const MCII;
 
 public:
-  RISCVDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
-      : MCDisassembler(STI, Ctx) {}
+  RISCVDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
+                    MCInstrInfo const *MCII)
+      : MCDisassembler(STI, Ctx), MCII(MCII) {}
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -45,7 +48,7 @@ public:
 static MCDisassembler *createRISCVDisassembler(const Target &T,
                                                const MCSubtargetInfo &STI,
                                                MCContext &Ctx) {
-  return new RISCVDisassembler(STI, Ctx);
+  return new RISCVDisassembler(STI, Ctx, T.createMCInstrInfo());
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVDisassembler() {
@@ -144,6 +147,33 @@ static DecodeStatus DecodeGPRCRegisterClass(MCInst &Inst, uint64_t RegNo,
     return MCDisassembler::Fail;
 
   Register Reg = RISCV::X8 + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeVRRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                          uint64_t Address,
+                                          const void *Decoder) {
+  if (RegNo >= 32)
+    return MCDisassembler::Fail;
+
+  Register Reg = RISCV::V0 + RegNo;
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeVMaskReg(MCInst &Inst, uint64_t RegNo,
+                                   uint64_t Address, const void *Decoder) {
+  Register Reg = RISCV::NoRegister;
+  switch (RegNo) {
+  default:
+    return MCDisassembler::Fail;
+  case 0:
+    Reg = RISCV::V0;
+    break;
+  case 1:
+    break;
+  }
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
