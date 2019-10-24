@@ -1393,7 +1393,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #43
+  ; CHECK: call void @f.nobuiltin() #44
 
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
@@ -1406,13 +1406,6 @@ exit:
 define void @instructions.call_musttail(i8* inalloca %val) {
   musttail call void @f.param.inalloca(i8* inalloca %val)
   ; CHECK: musttail call void @f.param.inalloca(i8* inalloca %val)
-
-  ret void
-}
-
-define void @instructions.strictfp() #44 {
-  call void @f.strictfp() strictfp
-  ; CHECK: call void @f.strictfp() #44
 
   ret void
 }
@@ -1777,6 +1770,13 @@ define i8** @constexpr() {
   ret i8** getelementptr inbounds ({ [4 x i8*], [4 x i8*] }, { [4 x i8*], [4 x i8*] }* null, i32 0, inrange i32 1, i32 2)
 }
 
+define void @instructions.strictfp() strictfp {
+  call void @f.strictfp() strictfp
+  ; CHECK: call void @f.strictfp() #43
+
+  ret void
+}
+
 ; immarg attribute
 declare void @llvm.test.immarg.intrinsic(i32 immarg)
 ; CHECK: declare void @llvm.test.immarg.intrinsic(i32 immarg)
@@ -1833,8 +1833,8 @@ declare void @byval_named_type(%named_type* byval(%named_type))
 ; CHECK: attributes #40 = { inaccessiblemem_or_argmemonly nounwind willreturn }
 ; CHECK: attributes #41 = { writeonly }
 ; CHECK: attributes #42 = { speculatable }
-; CHECK: attributes #43 = { builtin }
-; CHECK: attributes #44 = { strictfp }
+; CHECK: attributes #43 = { strictfp }
+; CHECK: attributes #44 = { builtin }
 
 ;; Metadata
 
