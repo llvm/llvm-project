@@ -226,6 +226,10 @@ namespace SrcMgr {
     bool shouldFreeBuffer() const {
       return (Buffer.getInt() & DoNotFreeFlag) == 0;
     }
+
+    // If BufStr has an invalid BOM, returns the BOM name; otherwise, returns
+    // nullptr
+    static const char *getInvalidBOM(StringRef BufStr);
   };
 
   // Assert that the \c ContentCache objects will always be 8-byte aligned so
