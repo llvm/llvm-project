@@ -25,13 +25,14 @@ class SourceMgr;
 class MCContext;
 class MCSubtargetInfo;
 class MCStreamer;
+class MCTargetOptions;
 
 class Disassembler {
 public:
   static int disassemble(const Target &T, const std::string &Triple,
                          MCSubtargetInfo &STI, MCStreamer &Streamer,
                          MemoryBuffer &Buffer, SourceMgr &SM, MCContext &Ctx,
-                         raw_ostream &Out);
+                         raw_ostream &Out, const MCTargetOptions &MCOptions);
 };
 
 } // namespace llvm

@@ -25,7 +25,7 @@ class Triple;
 // with 'L' as a local symbol.
 class AMDGPUMCAsmInfo : public MCAsmInfoELF {
 public:
-  explicit AMDGPUMCAsmInfo(const Triple &TT);
+  explicit AMDGPUMCAsmInfo(const Triple &TT, const MCTargetOptions &Options);
   bool shouldOmitSectionDirective(StringRef SectionName) const override;
   unsigned getMaxInstLength(const MCSubtargetInfo *STI) const override;
 };

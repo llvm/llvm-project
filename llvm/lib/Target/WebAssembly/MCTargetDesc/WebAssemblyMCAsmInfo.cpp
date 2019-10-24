@@ -21,7 +21,8 @@ using namespace llvm;
 
 WebAssemblyMCAsmInfo::~WebAssemblyMCAsmInfo() = default; // anchor.
 
-WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T) {
+WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T,
+                                           const MCTargetOptions &Options) {
   CodePointerSize = CalleeSaveStackSlotSize = T.isArch64Bit() ? 8 : 4;
 
   // TODO: What should MaxInstLength be?

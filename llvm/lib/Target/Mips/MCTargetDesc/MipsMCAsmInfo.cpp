@@ -11,25 +11,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsMCAsmInfo.h"
+#include "MipsABIInfo.h"
 #include "llvm/ADT/Triple.h"
 
 using namespace llvm;
 
 void MipsMCAsmInfo::anchor() { }
 
-MipsMCAsmInfo::MipsMCAsmInfo(const Triple &TheTriple) {
+MipsMCAsmInfo::MipsMCAsmInfo(const Triple &TheTriple,
+                             const MCTargetOptions &Options) {
   IsLittleEndian = TheTriple.isLittleEndian();
 
-  if (TheTriple.isMIPS64() && TheTriple.getEnvironment() != Triple::GNUABIN32)
+  MipsABIInfo ABI = MipsABIInfo::computeTargetABI(TheTriple, "", Options);
+
+  if (TheTriple.isMIPS64() && !ABI.IsN32())
     CodePointerSize = CalleeSaveStackSlotSize = 8;
 
-  // FIXME: This condition isn't quite right but it's the best we can do until
-  //        this object can identify the ABI. It will misbehave when using O32
-  //        on a mips64*-* triple.
-  if (TheTriple.isMIPS32()) {
+  if (ABI.IsO32())
     PrivateGlobalPrefix = "$";
-    PrivateLabelPrefix = "$";
-  }
+  else if (ABI.IsN32() || ABI.IsN64())
+    PrivateGlobalPrefix = ".L";
+  PrivateLabelPrefix = PrivateGlobalPrefix;
 
   AlignmentIsInBytes          = false;
   Data16bitsDirective         = "\t.2byte\t";
