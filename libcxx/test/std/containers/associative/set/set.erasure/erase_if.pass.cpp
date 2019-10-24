@@ -36,7 +36,7 @@ void test()
     auto is4 = [](auto v) { return v == 4;};
     auto True  = [](auto) { return true; };
     auto False = [](auto) { return false; };
-    
+
     test0(S(), is1, S());
 
     test0(S({1}), is1, S());

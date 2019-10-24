@@ -26,7 +26,7 @@ int main(int, char**)
     static_assert(!std::chrono::is_pm(hours(11)), "");
     static_assert( std::chrono::is_pm(hours(12)), "");
     static_assert( std::chrono::is_pm(hours(23)), "");
-    
+
     for (int i = 0; i < 12; ++i)
         assert(!std::chrono::is_pm(hours(i)));
     for (int i = 12; i < 24; ++i)

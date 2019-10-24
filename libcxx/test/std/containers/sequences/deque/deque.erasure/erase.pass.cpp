@@ -11,7 +11,7 @@
 
 // template <class T, class Allocator, class U>
 //   void erase(deque<T, Allocator>& c, const U& value);
-  
+
 
 #include <deque>
 #include <optional>

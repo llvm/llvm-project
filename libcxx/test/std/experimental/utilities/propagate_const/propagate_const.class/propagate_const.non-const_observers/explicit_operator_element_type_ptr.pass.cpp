@@ -21,6 +21,6 @@ using std::experimental::propagate_const;
 
 typedef propagate_const<X> P;
 
-int main(int, char**) { static_assert(!std::is_convertible<P, int *>::value, ""); 
+int main(int, char**) { static_assert(!std::is_convertible<P, int *>::value, "");
   return 0;
 }

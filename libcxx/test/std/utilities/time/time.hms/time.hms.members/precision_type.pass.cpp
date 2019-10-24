@@ -15,9 +15,9 @@
 //     static unsigned constexpr fractional_width = see below;
 //     using precision                            = see below;
 //
-//   precision is duration<common_type_t<Duration::rep, seconds::rep>, 
+//   precision is duration<common_type_t<Duration::rep, seconds::rep>,
 //                                 ratio<1, 10^^fractional_width>>
-   
+
 #include <chrono>
 #include <cassert>
 

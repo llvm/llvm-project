@@ -10,7 +10,7 @@
 
 // template <class Duration>
 // class hh_mm_ss
-// 
+//
 // constexpr chrono::minutes minutes() const noexcept;
 //
 // See the table in hours.pass.cpp for correspondence between the magic values used below
@@ -32,10 +32,10 @@ constexpr long check_minutes(Duration d)
 int main(int, char**)
 {
     using microfortnights = std::chrono::duration<int, std::ratio<756, 625>>;
-    
+
     static_assert( check_minutes(std::chrono::minutes( 1)) == 1, "");
     static_assert( check_minutes(std::chrono::minutes(-1)) == 1, "");
-    
+
     assert( check_minutes(std::chrono::seconds( 5000)) == 23);
     assert( check_minutes(std::chrono::seconds(-5000)) == 23);
     assert( check_minutes(std::chrono::minutes( 5000)) == 20);

@@ -10,7 +10,7 @@
 // <forward_list>
 
 // template <class T, class Allocator, class Predicate>
-//   void erase_if(forward_list<T, Allocator>& c, Predicate pred);  
+//   void erase_if(forward_list<T, Allocator>& c, Predicate pred);
 
 #include <forward_list>
 
@@ -36,7 +36,7 @@ void test()
     auto is4 = [](auto v) { return v == 4;};
     auto True  = [](auto) { return true; };
     auto False = [](auto) { return false; };
-    
+
     test0(S(), is1, S());
 
     test0(S({1}), is1, S());
@@ -61,7 +61,7 @@ void test()
     test0(S({1,2,2}), is1, S({2,2}));
     test0(S({1,2,2}), is2, S({1}));
     test0(S({1,2,2}), is3, S({1,2,2}));
-    
+
     test0(S({1,2,3}), True,  S());
     test0(S({1,2,3}), False, S({1,2,3}));
 }
