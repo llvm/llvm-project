@@ -277,6 +277,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i64, Custom);
   }
 
+  // Handle address space casts between mixed sized pointers.
+  setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
+  setOperationAction(ISD::ADDRSPACECAST, MVT::i64, Custom);
+
   // TODO: when we have SSE, these could be more efficient, by using movd/movq.
   if (!X86ScalarSSEf64) {
     setOperationAction(ISD::BITCAST        , MVT::f32  , Expand);
@@ -2442,6 +2446,10 @@ Value *X86TargetLowering::getSafeStackPointerLocation(IRBuilder<> &IRB) const {
 bool X86TargetLowering::isNoopAddrSpaceCast(unsigned SrcAS,
                                             unsigned DestAS) const {
   assert(SrcAS != DestAS && "Expected different address spaces!");
+
+  const TargetMachine &TM = getTargetMachine();
+  if (TM.getPointerSize(SrcAS) != TM.getPointerSize(DestAS))
+    return false;
 
   return SrcAS < 256 && DestAS < 256;
 }
@@ -27762,6 +27770,29 @@ static SDValue LowerMGATHER(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getMergeValues({Extract, NewGather.getValue(2)}, dl);
 }
 
+static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
+  SDLoc dl(Op);
+  SDValue Src = Op.getOperand(0);
+  MVT DstVT = Op.getSimpleValueType();
+
+  AddrSpaceCastSDNode *N = cast<AddrSpaceCastSDNode>(Op.getNode());
+  unsigned SrcAS = N->getSrcAddressSpace();
+
+  assert(SrcAS != N->getDestAddressSpace() &&
+         "addrspacecast must be between different address spaces");
+
+  if (SrcAS == X86AS::PTR32_UPTR && DstVT == MVT::i64) {
+    Op = DAG.getNode(ISD::ZERO_EXTEND, dl, DstVT, Src);
+  } else if (DstVT == MVT::i64) {
+    Op = DAG.getNode(ISD::SIGN_EXTEND, dl, DstVT, Src);
+  } else if (DstVT == MVT::i32) {
+    Op = DAG.getNode(ISD::TRUNCATE, dl, DstVT, Src);
+  } else {
+    report_fatal_error("Bad address space in addrspacecast");
+  }
+  return Op;
+}
+
 SDValue X86TargetLowering::LowerGC_TRANSITION_START(SDValue Op,
                                                     SelectionDAG &DAG) const {
   // TODO: Eventually, the lowering of these nodes should be informed by or
@@ -27948,6 +27979,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::GC_TRANSITION_START:
                                 return LowerGC_TRANSITION_START(Op, DAG);
   case ISD::GC_TRANSITION_END:  return LowerGC_TRANSITION_END(Op, DAG);
+  case ISD::ADDRSPACECAST:
+    return LowerADDRSPACECAST(Op, DAG);
   }
 }
 
@@ -28735,6 +28768,28 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                                           MVT::i64, Ld->getMemOperand());
     Results.push_back(Res);
     Results.push_back(Res.getValue(1));
+    return;
+  }
+  case ISD::ADDRSPACECAST: {
+    SDValue Src = N->getOperand(0);
+    EVT DstVT = N->getValueType(0);
+    AddrSpaceCastSDNode *CastN = cast<AddrSpaceCastSDNode>(N);
+    unsigned SrcAS = CastN->getSrcAddressSpace();
+
+    assert(SrcAS != CastN->getDestAddressSpace() &&
+           "addrspacecast must be between different address spaces");
+
+    SDValue Res;
+    if (SrcAS == X86AS::PTR32_UPTR && DstVT == MVT::i64)
+      Res = DAG.getNode(ISD::ZERO_EXTEND, dl, DstVT, Src);
+    else if (DstVT == MVT::i64)
+      Res = DAG.getNode(ISD::SIGN_EXTEND, dl, DstVT, Src);
+    else if (DstVT == MVT::i32)
+      Res = DAG.getNode(ISD::TRUNCATE, dl, DstVT, Src);
+    else
+      report_fatal_error("Unrecognized addrspacecast type legalization");
+
+    Results.push_back(Res);
     return;
   }
   }
