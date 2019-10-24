@@ -83,28 +83,6 @@ option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests." ${LL
 if(LLDB_INCLUDE_TESTS)
   set(LLDB_TEST_BUILD_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lldb-test-build.noindex" CACHE PATH "The build root for building tests.")
 
-  # Set the path to the default lldb test executable.
-  set(LLDB_DEFAULT_TEST_EXECUTABLE "${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb${CMAKE_EXECUTABLE_SUFFIX}")
-
-  # Set the paths to default llvm tools.
-  set(LLDB_DEFAULT_TEST_DSYMUTIL "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/dsymutil${CMAKE_EXECUTABLE_SUFFIX}")
-  set(LLDB_DEFAULT_TEST_FILECHECK "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/FileCheck${CMAKE_EXECUTABLE_SUFFIX}")
-
-  if (TARGET clang)
-    set(LLDB_DEFAULT_TEST_COMPILER "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
-  else()
-    set(LLDB_DEFAULT_TEST_COMPILER "")
-  endif()
-
-  set(LLDB_TEST_EXECUTABLE "${LLDB_DEFAULT_TEST_EXECUTABLE}" CACHE PATH "lldb executable used for testing")
-  set(LLDB_TEST_COMPILER "${LLDB_DEFAULT_TEST_COMPILER}" CACHE PATH "C Compiler to use for building LLDB test inferiors")
-  set(LLDB_TEST_DSYMUTIL "${LLDB_DEFAULT_TEST_DSYMUTIL}" CACHE PATH "dsymutil used for generating dSYM bundles")
-  set(LLDB_TEST_FILECHECK "${LLDB_DEFAULT_TEST_FILECHECK}" CACHE PATH "FileCheck used for testing purposes")
-
-  if ("${LLDB_TEST_COMPILER}" STREQUAL "")
-    message(FATAL_ERROR "LLDB test compiler not specified. Tests will not run.")
-  endif()
-
   add_custom_target(lldb-test-deps)
   set_target_properties(lldb-test-deps PROPERTIES FOLDER "lldb misc")
   add_lldb_test_dependency(lldb)
