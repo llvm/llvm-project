@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // <optional>
 
-// T shall be an object type other than cv in_place_t or cv nullopt_t 
+// T shall be an object type other than cv in_place_t or cv nullopt_t
 //   and shall satisfy the Cpp17Destructible requirements.
 // Note: array types do not satisfy the Cpp17Destructible requirements.
 

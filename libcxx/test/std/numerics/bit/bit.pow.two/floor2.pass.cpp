@@ -6,13 +6,13 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // template <class T>
 //   constexpr T floor2(T x) noexcept;
 
 // Returns: If x == 0, 0; otherwise the maximal value y such that floor2(y) is true and y <= x.
-// Remarks: This function shall not participate in overload resolution unless 
+// Remarks: This function shall not participate in overload resolution unless
 //	T is an unsigned integer type
 
 #include <bit>
@@ -67,7 +67,7 @@ int main()
     {
     auto lambda = [](auto x) -> decltype(std::floor2(x)) {};
     using L = decltype(lambda);
-    
+
     static_assert( std::is_invocable_v<L, unsigned char>, "");
     static_assert( std::is_invocable_v<L, unsigned int>, "");
     static_assert( std::is_invocable_v<L, unsigned long>, "");
@@ -103,7 +103,7 @@ int main()
     static_assert( std::is_invocable_v<L, __uint128_t>, "");
     static_assert(!std::is_invocable_v<L, __int128_t>, "");
 #endif
- 
+
     static_assert(!std::is_invocable_v<L, A>, "");
     static_assert(!std::is_invocable_v<L, E1>, "");
     static_assert(!std::is_invocable_v<L, E2>, "");

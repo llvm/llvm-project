@@ -10,7 +10,7 @@
 
 // template <class Duration>
 // class hh_mm_ss
-// 
+//
 // constexpr bool is_negative() const noexcept;
 
 #include <chrono>

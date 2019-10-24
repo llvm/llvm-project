@@ -394,10 +394,10 @@ public:
         return __t;
     }
 
-    friend _LIBCPP_INLINE_VISIBILITY 
+    friend _LIBCPP_INLINE_VISIBILITY
     bool operator==(const __hash_map_iterator& __x, const __hash_map_iterator& __y)
         {return __x.__i_ == __y.__i_;}
-    friend _LIBCPP_INLINE_VISIBILITY 
+    friend _LIBCPP_INLINE_VISIBILITY
     bool operator!=(const __hash_map_iterator& __x, const __hash_map_iterator& __y)
         {return __x.__i_ != __y.__i_;}
 

@@ -15,8 +15,8 @@
 // using local_seconds = sys_time<seconds>;
 // using local_days    = sys_time<days>;
 
-// [Example: 
-//   sys_seconds{sys_days{1970y/January/1}}.time_since_epoch() is 0s. 
+// [Example:
+//   sys_seconds{sys_days{1970y/January/1}}.time_since_epoch() is 0s.
 //   sys_seconds{sys_days{2000y/January/1}}.time_since_epoch() is 946’684’800s, which is 10’957 * 86’400s.
 // —end example]
 
@@ -34,7 +34,7 @@ int main(int, char**)
     using seconds = std::chrono::seconds;
     using minutes = std::chrono::minutes;
     using days    = std::chrono::days;
-    
+
     using local_seconds = std::chrono::local_seconds;
     using local_minutes = std::chrono::local_time<minutes>;
     using local_days    = std::chrono::local_days;
@@ -48,7 +48,7 @@ int main(int, char**)
     ASSERT_SAME_TYPE(std::chrono::time_point<local_t, seconds>, local_seconds);
     ASSERT_SAME_TYPE(std::chrono::time_point<local_t, minutes>, local_minutes);
     ASSERT_SAME_TYPE(std::chrono::time_point<local_t, days>,    local_days);
-    
+
 //  Test some well known values
     local_days d0 = local_days{year{1970}/January/1};
     local_days d1 = local_days{year{2000}/January/1};

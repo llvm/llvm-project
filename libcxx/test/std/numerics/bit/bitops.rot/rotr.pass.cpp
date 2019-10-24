@@ -6,12 +6,12 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // template <class T>
 //   constexpr int rotr(T x, unsigned int s) noexcept;
 
-// Remarks: This function shall not participate in overload resolution unless 
+// Remarks: This function shall not participate in overload resolution unless
 //  T is an unsigned integer type
 
 #include <bit>
@@ -69,7 +69,7 @@ void runtime_test()
         max - (max >> 6), // FC0 .. 0
         max - (max >> 7), // FE0 .. 0
         };
-    
+
     assert( std::rotr(val, 0) == val);
     assert( std::rotr(val, 1) == T((val >> 1) +  uppers[1]));
     assert( std::rotr(val, 2) == T((val >> 2) +  uppers[2]));
@@ -82,11 +82,11 @@ void runtime_test()
 
 int main()
 {
-    
+
     {
     auto lambda = [](auto x) -> decltype(std::rotr(x, 1U)) {};
     using L = decltype(lambda);
-    
+
     static_assert( std::is_invocable_v<L, unsigned char>, "");
     static_assert( std::is_invocable_v<L, unsigned int>, "");
     static_assert( std::is_invocable_v<L, unsigned long>, "");
@@ -122,7 +122,7 @@ int main()
     static_assert( std::is_invocable_v<L, __uint128_t>, "");
     static_assert(!std::is_invocable_v<L,  __int128_t>, "");
 #endif
- 
+
     static_assert(!std::is_invocable_v<L, A, unsigned>, "");
     static_assert(!std::is_invocable_v<L, E1, unsigned>, "");
     static_assert(!std::is_invocable_v<L, E2, unsigned>, "");

@@ -96,7 +96,7 @@ int main(int, char**)
     IsAContainer<const          int> c;
     IsAContainer<const volatile int> cv;
     IsAContainer<      volatile int> v;
-    
+
     std::span<               int> s1{c};    // expected-error {{no matching constructor for initialization of 'std::span<int>'}}
     std::span<               int> s2{v};    // expected-error {{no matching constructor for initialization of 'std::span<int>'}}
     std::span<               int> s3{cv};   // expected-error {{no matching constructor for initialization of 'std::span<int>'}}
