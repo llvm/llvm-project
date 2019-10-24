@@ -45,8 +45,7 @@ define i64 @add_nsw_sext_lsh_add(i32 %i, i64 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addl $-5, %edi
 ; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    movq $3, %rcx
-; CHECK-NEXT:    shlq %cl, %rax
+; CHECK-NEXT:    shlq $3, %rax
 ; CHECK-NEXT:    addq %rsi, %rax
 ; CHECK-NEXT:    retq
 

@@ -804,11 +804,10 @@ body: |
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: test_extract_s8_s64_offset2
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY]], [[TRUNC]](s32)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
-    ; CHECK: $vgpr0 = COPY [[TRUNC1]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY]], [[C]](s32)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
+    ; CHECK: $vgpr0 = COPY [[TRUNC]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s8) = G_EXTRACT %0, 2
     %2:_(s32) = G_ANYEXT %1
@@ -841,11 +840,10 @@ body: |
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: test_extract_s8_s64_offset16
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY]], [[TRUNC]](s32)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
-    ; CHECK: $vgpr0 = COPY [[TRUNC1]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY]], [[C]](s32)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
+    ; CHECK: $vgpr0 = COPY [[TRUNC]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s8) = G_EXTRACT %0, 16
     %2:_(s32) = G_ANYEXT %1
