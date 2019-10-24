@@ -3312,8 +3312,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::arm_mve_vadc_predicated: {
     unsigned CarryOp =
         (II->getIntrinsicID() == Intrinsic::arm_mve_vadc_predicated) ? 3 : 2;
-    Value *CarryArg = II->getArgOperand(CarryOp);
-    assert(CarryArg->getType()->getScalarSizeInBits() == 32 &&
+    assert(II->getArgOperand(CarryOp)->getType()->getScalarSizeInBits() == 32 &&
            "Bad type for intrinsic!");
 
     KnownBits CarryKnown(32);
