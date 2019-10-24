@@ -404,7 +404,10 @@ bool CrashRecoveryContext::RunSafelyOnThread(function_ref<void()> Fn,
                                              unsigned RequestedStackSize) {
   bool UseBackgroundPriority = hasThreadBackgroundPriority();
   RunSafelyOnThreadInfo Info = { Fn, this, UseBackgroundPriority, false };
-  llvm_execute_on_thread(RunSafelyOnThread_Dispatch, &Info, RequestedStackSize);
+  llvm_execute_on_thread(RunSafelyOnThread_Dispatch, &Info,
+                         RequestedStackSize == 0
+                             ? llvm::None
+                             : llvm::Optional<unsigned>(RequestedStackSize));
   if (CrashRecoveryContextImpl *CRC = (CrashRecoveryContextImpl *)Impl)
     CRC->setSwitchedThread();
   return Info.Result;
