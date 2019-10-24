@@ -54,7 +54,7 @@ option(LLDB_USE_SYSTEM_DEBUGSERVER "Use the system's debugserver for testing (Da
 
 # BEGIN SWIFT MOD
 option(LLDB_ENABLE_SWIFT_SUPPORT "Enable swift support" ON)
-option(LLDB_ALLOW_STATIC_BINDINGS "Enable using static/baked language bindings if swig is not present." OFF)
+option(LLDB_USE_STATIC_BINDINGS "Use the static Python bindings." OFF)
 # END SWIFT CODE
 
 if(LLDB_BUILD_FRAMEWORK)
