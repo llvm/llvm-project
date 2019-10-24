@@ -5,7 +5,7 @@
 define hidden <4 x float> @split_v4f32_arg(<4 x float> returned %arg) local_unnamed_addr #0 !dbg !7 {
 ; GCN-LABEL: split_v4f32_arg:
 ; GCN:       .Lfunc_begin0:
-; GCN-NEXT:    .file 0
+; GCN-NEXT:    .file 0 "/tmp/dbg.cl" md5 0x0f834f91e91489a5ff6308040ddbd175
 ; GCN-NEXT:    .loc 0 3 0 ; /tmp/dbg.cl:3:0
 ; GCN-NEXT:  ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

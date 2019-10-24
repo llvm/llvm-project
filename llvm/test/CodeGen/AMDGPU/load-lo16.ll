@@ -994,13 +994,14 @@ define void @load_flat_lo_v2f16_reghi_vreg(half* %in, i32 %reg) #0 {
 ; GFX803:       ; %bb.0: ; %entry
 ; GFX803-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX803-NEXT:    flat_load_ushort v0, v[0:1]
-; FIXME: and should be removable
 ; GFX803-NEXT:    v_and_b32_e32 v1, 0xffff0000, v2
 ; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
 ; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
+
+; FIXME: the and above should be removable
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
   %load = load half, half* %in
