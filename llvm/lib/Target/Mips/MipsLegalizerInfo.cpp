@@ -61,11 +61,7 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   const LLT v2s64 = LLT::vector(2, 64);
   const LLT p0 = LLT::pointer(0, 32);
 
-  getActionDefinitionsBuilder(G_MUL)
-      .legalFor({s32})
-      .clampScalar(0, s32, s32);
-
-  getActionDefinitionsBuilder({G_ADD, G_SUB})
+  getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL})
       .legalIf([=, &ST](const LegalityQuery &Query) {
         if (CheckTyN(0, Query, {s32}))
           return true;
@@ -377,6 +373,11 @@ bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     return SelectMSA3OpIntrinsic(MI, Mips::SUBVI_W, MIRBuilder, ST);
   case Intrinsic::mips_subvi_d:
     return SelectMSA3OpIntrinsic(MI, Mips::SUBVI_D, MIRBuilder, ST);
+  case Intrinsic::mips_mulv_b:
+  case Intrinsic::mips_mulv_h:
+  case Intrinsic::mips_mulv_w:
+  case Intrinsic::mips_mulv_d:
+    return MSA3OpIntrinsicToGeneric(MI, TargetOpcode::G_MUL, MIRBuilder, ST);
   default:
     break;
   }
