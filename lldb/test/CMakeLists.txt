@@ -17,6 +17,94 @@ endif ()
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_LIBS_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_TOOLS_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
 
+# Create a custom target to track test dependencies.
+add_custom_target(lldb-test-deps)
+set_target_properties(lldb-test-deps PROPERTIES FOLDER "lldb misc")
+
+function(add_lldb_test_dependency)
+  foreach(dependency ${ARGN})
+    add_dependencies(lldb-test-deps ${dependency})
+  endforeach()
+endfunction(add_lldb_test_dependency)
+
+# lldb itself and lldb-test is an hard dependency for the testsuites.
+add_lldb_test_dependency(lldb)
+add_lldb_test_dependency(lldb-test)
+
+# On Darwin, darwin-debug is an hard dependency for the testsuites.
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  add_lldb_test_dependency(darwin-debug)
+endif()
+
+if(TARGET lldb-server)
+  add_lldb_test_dependency(lldb-server)
+endif()
+
+if(TARGET lldb-vscode)
+  add_lldb_test_dependency(lldb-vscode)
+endif()
+
+if(TARGET lldb-instr)
+  add_lldb_test_dependency(lldb-instr)
+endif()
+
+if(TARGET liblldb)
+  add_lldb_test_dependency(liblldb)
+endif()
+
+if(TARGET lldb-framework)
+  add_lldb_test_dependency(lldb-framework)
+endif()
+
+# Add dependencies that are not exported targets when building standalone.
+if(NOT LLDB_BUILT_STANDALONE)
+  add_lldb_test_dependency(
+    FileCheck
+    count
+    dsymutil
+    llvm-strip
+    not
+    yaml2obj
+  )
+endif()
+
+# Add dependencies if we test with the in-tree clang.
+# This works with standalone builds as they import the clang target.
+if(TARGET clang)
+  add_lldb_test_dependency(clang)
+  if(APPLE)
+    # If we build clang, we should build libcxx.
+    # FIXME: Standalone builds should import the cxx target as well.
+    if(LLDB_BUILT_STANDALONE)
+      # For now check that the include directory exists.
+      set(cxx_dir "${LLVM_BINARY_DIR}/include/c++")
+      if(NOT EXISTS ${cxx_dir})
+        message(WARNING "LLDB test suite requires libc++ in llvm/projects/libcxx or an existing build symlinked to ${cxx_dir}")
+      endif()
+    else()
+      # We require libcxx for the test suite, so if we aren't building it,
+      # try to provide a helpful error about how to resolve the situation.
+      if(NOT TARGET cxx)
+        if(LLVM_ENABLE_PROJECTS STREQUAL "")
+          # If `LLVM_ENABLE_PROJECTS` is not being used (implying that we are
+          # using the old layout), suggest checking it out.
+          message(FATAL_ERROR
+            "LLDB test suite requires libc++, but it is currently disabled. "
+            "Please checkout `libcxx` in `llvm/projects` or disable tests "
+            "via `LLDB_INCLUDE_TESTS=OFF`.")
+        else()
+          # If `LLVM_ENABLE_PROJECTS` is being used, suggest adding it.
+          message(FATAL_ERROR
+            "LLDB test suite requires libc++, but it is currently disabled. "
+            "Please add `libcxx` to `LLVM_ENABLE_PROJECTS` or disable tests "
+            "via `LLDB_INCLUDE_TESTS=OFF`.")
+        endif()
+      endif()
+      add_lldb_test_dependency(cxx)
+    endif()
+  endif()
+endif()
+
 add_lldb_test_dependency(
   lit-cpuid
   llc
@@ -28,17 +116,6 @@ add_lldb_test_dependency(
   llvm-objcopy
   llvm-readobj
   )
-
-if(NOT LLDB_BUILT_STANDALONE)
-  # Since llvm-strip is a symlink created by add_custom_target, it doesn't
-  # expose an export target when building standalone.
-  add_lldb_test_dependency(
-    llvm-strip
-    FileCheck
-    count
-    not
-  )
-endif()
 
 if(TARGET lld)
   add_lldb_test_dependency(lld)
