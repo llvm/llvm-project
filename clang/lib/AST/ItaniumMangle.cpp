@@ -2301,6 +2301,16 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
       case LangAS::cuda_device:     ASString = "CUdevice";   break;
       case LangAS::cuda_constant:   ASString = "CUconstant"; break;
       case LangAS::cuda_shared:     ASString = "CUshared";   break;
+      //  <ptrsize-addrspace> ::= [ "ptr32_sptr" | "ptr32_uptr" | "ptr64" ]
+      case LangAS::ptr32_sptr:
+        ASString = "ptr32_sptr";
+        break;
+      case LangAS::ptr32_uptr:
+        ASString = "ptr32_uptr";
+        break;
+      case LangAS::ptr64:
+        ASString = "ptr64";
+        break;
       }
     }
     if (!ASString.empty())

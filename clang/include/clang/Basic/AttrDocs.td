@@ -3139,6 +3139,44 @@ Since it is not widely used and has been removed from OpenCL 2.1, it is ignored
 by Clang.
   }];
 }
+
+def Ptr32Docs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``__ptr32`` qualifier represents a native pointer on a 32-bit system. On a
+64-bit system, a pointer with ``__ptr32`` is extended to a 64-bit pointer. The
+``__sptr`` and ``__uptr`` qualifiers can be used to specify whether the pointer
+is sign extended or zero extended. This qualifier is enabled under
+``-fms-extensions``.
+  }];
+}
+
+def Ptr64Docs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``__ptr64`` qualifier represents a native pointer on a 64-bit system. On a
+32-bit system, a ``__ptr64`` pointer is truncated to a 32-bit pointer. This
+qualifier is enabled under ``-fms-extensions``.
+  }];
+}
+
+def SPtrDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``__sptr`` qualifier specifies that a 32-bit pointer should be sign
+extended when converted to a 64-bit pointer.
+  }];
+}
+
+def UPtrDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``__uptr`` qualifier specifies that a 32-bit pointer should be zero
+extended when converted to a 64-bit pointer.
+  }];
+}
+
+
 def NullabilityDocs : DocumentationCategory<"Nullability Attributes"> {
   let Content = [{
 Whether a particular pointer may be "null" is an important concern when working with pointers in the C family of languages. The various nullability attributes indicate whether a particular pointer can be null or not, which makes APIs more expressive and can help static analysis tools identify bugs involving null pointers. Clang supports several kinds of nullability attributes: the ``nonnull`` and ``returns_nonnull`` attributes indicate which function or method parameters and result types can never be null, while nullability type qualifiers indicate which pointer types can be null (``_Nullable``) or cannot be null (``_Nonnull``).

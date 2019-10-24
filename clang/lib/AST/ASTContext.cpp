@@ -825,15 +825,18 @@ static const LangASMap *getAddressSpaceMap(const TargetInfo &T,
     // The fake address space map must have a distinct entry for each
     // language-specific address space.
     static const unsigned FakeAddrSpaceMap[] = {
-      0, // Default
-      1, // opencl_global
-      3, // opencl_local
-      2, // opencl_constant
-      0, // opencl_private
-      4, // opencl_generic
-      5, // cuda_device
-      6, // cuda_constant
-      7  // cuda_shared
+        0, // Default
+        1, // opencl_global
+        3, // opencl_local
+        2, // opencl_constant
+        0, // opencl_private
+        4, // opencl_generic
+        5, // cuda_device
+        6, // cuda_constant
+        7, // cuda_shared
+        8, // ptr32_sptr
+        9, // ptr32_uptr
+        10 // ptr64
     };
     return &FakeAddrSpaceMap;
   } else {
@@ -2832,6 +2835,16 @@ QualType ASTContext::getObjCGCQualType(QualType T,
   return getExtQualType(TypeNode, Quals);
 }
 
+QualType ASTContext::removePtrSizeAddrSpace(QualType T) const {
+  if (const PointerType *Ptr = T->getAs<PointerType>()) {
+    QualType Pointee = Ptr->getPointeeType();
+    if (isPtrSizeAddressSpace(Pointee.getAddressSpace())) {
+      return getPointerType(removeAddrSpaceQualType(Pointee));
+    }
+  }
+  return T;
+}
+
 const FunctionType *ASTContext::adjustFunctionType(const FunctionType *T,
                                                    FunctionType::ExtInfo Info) {
   if (T->getExtInfo() == Info)
@@ -2904,6 +2917,29 @@ bool ASTContext::hasSameFunctionTypeIgnoringExceptionSpec(QualType T,
          (getLangOpts().CPlusPlus17 &&
           hasSameType(getFunctionTypeWithExceptionSpec(T, EST_None),
                       getFunctionTypeWithExceptionSpec(U, EST_None)));
+}
+
+QualType ASTContext::getFunctionTypeWithoutPtrSizes(QualType T) {
+  if (const auto *Proto = T->getAs<FunctionProtoType>()) {
+    QualType RetTy = removePtrSizeAddrSpace(Proto->getReturnType());
+    SmallVector<QualType, 16> Args(Proto->param_types());
+    for (unsigned i = 0, n = Args.size(); i != n; ++i)
+      Args[i] = removePtrSizeAddrSpace(Args[i]);
+    return getFunctionType(RetTy, Args, Proto->getExtProtoInfo());
+  }
+
+  if (const FunctionNoProtoType *Proto = T->getAs<FunctionNoProtoType>()) {
+    QualType RetTy = removePtrSizeAddrSpace(Proto->getReturnType());
+    return getFunctionNoProtoType(RetTy, Proto->getExtInfo());
+  }
+
+  return T;
+}
+
+bool ASTContext::hasSameFunctionTypeIgnoringPtrSizes(QualType T, QualType U) {
+  return hasSameType(T, U) ||
+         hasSameType(getFunctionTypeWithoutPtrSizes(T),
+                     getFunctionTypeWithoutPtrSizes(U));
 }
 
 void ASTContext::adjustExceptionSpec(

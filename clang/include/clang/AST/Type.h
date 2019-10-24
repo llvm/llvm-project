@@ -477,7 +477,10 @@ public:
     return A == B ||
            // Otherwise in OpenCLC v2.0 s6.5.5: every address space except
            // for __constant can be used as __generic.
-           (A == LangAS::opencl_generic && B != LangAS::opencl_constant);
+           (A == LangAS::opencl_generic && B != LangAS::opencl_constant) ||
+           // Consider pointer size address spaces to be equivalent to default.
+           ((isPtrSizeAddressSpace(A) || A == LangAS::Default) &&
+            (isPtrSizeAddressSpace(B) || B == LangAS::Default));
   }
 
   /// Returns true if the address space in these qualifiers is equal to or

@@ -1155,6 +1155,10 @@ public:
   /// attribute.
   QualType getObjCGCQualType(QualType T, Qualifiers::GC gcAttr) const;
 
+  /// Remove the existing address space on the type if it is a pointer size
+  /// address space and return the type with qualifiers intact.
+  QualType removePtrSizeAddrSpace(QualType T) const;
+
   /// Return the uniqued reference to the type for a \c restrict
   /// qualified type.
   ///
@@ -1208,6 +1212,15 @@ public:
   void adjustExceptionSpec(FunctionDecl *FD,
                            const FunctionProtoType::ExceptionSpecInfo &ESI,
                            bool AsWritten = false);
+
+  /// Get a function type and produce the equivalent function type where
+  /// pointer size address spaces in the return type and parameter tyeps are
+  /// replaced with the default address space.
+  QualType getFunctionTypeWithoutPtrSizes(QualType T);
+
+  /// Determine whether two function types are the same, ignoring pointer sizes
+  /// in the return type and parameter types.
+  bool hasSameFunctionTypeIgnoringPtrSizes(QualType T, QualType U);
 
   /// Return the uniqued reference to the type for a complex
   /// number with the specified element type.
