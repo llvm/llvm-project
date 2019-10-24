@@ -6873,9 +6873,6 @@ Value *CodeGenFunction::EmitARMMVEBuiltinExpr(unsigned BuiltinID,
     }
     return ToReturn;
   }
-
-  default:
-    llvm_unreachable("bad CustomCodegen enum value");
   }
 }
 
