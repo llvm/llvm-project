@@ -486,10 +486,8 @@ private:
                           VarLocInMBB &OutLocs, const VarLocMap &VarLocIDs);
 
   void process(MachineInstr &MI, OpenRangesSet &OpenRanges,
-               VarLocInMBB &OutLocs, VarLocMap &VarLocIDs,
-               TransferMap &Transfers, DebugParamMap &DebugEntryVals,
-               OverlapMap &OverlapFragments,
-               VarToFragments &SeenFragments);
+               VarLocMap &VarLocIDs, TransferMap &Transfers,
+               DebugParamMap &DebugEntryVals);
 
   void accumulateFragmentMap(MachineInstr &MI, VarToFragments &SeenFragments,
                              OverlapMap &OLapMap);
@@ -788,8 +786,6 @@ void LiveDebugValues::insertTransferDebugPair(
   case TransferKind::TransferRestore: {
     assert(NewReg &&
            "No register supplied when handling a restore of a debug value");
-    MachineFunction *MF = MI.getMF();
-    DIBuilder DIB(*const_cast<Function &>(MF->getFunction()).getParent());
     // DebugInstr refers to the pre-spill location, therefore we can reuse
     // its expression.
     VarLoc VL = VarLoc::CreateCopyLoc(*DebugInstr, LS, NewReg);
@@ -1117,13 +1113,10 @@ void LiveDebugValues::accumulateFragmentMap(MachineInstr &MI,
   AllSeenFragments.insert(ThisFragment);
 }
 
-/// This routine creates OpenRanges and OutLocs.
+/// This routine creates OpenRanges.
 void LiveDebugValues::process(MachineInstr &MI, OpenRangesSet &OpenRanges,
-                              VarLocInMBB &OutLocs, VarLocMap &VarLocIDs,
-                              TransferMap &Transfers,
-                              DebugParamMap &DebugEntryVals,
-                              OverlapMap &OverlapFragments,
-                              VarToFragments &SeenFragments) {
+                              VarLocMap &VarLocIDs, TransferMap &Transfers,
+                              DebugParamMap &DebugEntryVals) {
   transferDebugValue(MI, OpenRanges, VarLocIDs);
   transferRegisterDef(MI, OpenRanges, VarLocIDs, Transfers,
                       DebugEntryVals);
@@ -1266,12 +1259,13 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
   bool MBBJoined = false;
 
   VarLocMap VarLocIDs;         // Map VarLoc<>unique ID for use in bitvectors.
-  OverlapMap OverlapFragments; // Map of overlapping variable fragments
+  OverlapMap OverlapFragments; // Map of overlapping variable fragments.
   OpenRangesSet OpenRanges(OverlapFragments);
                               // Ranges that are open until end of bb.
   VarLocInMBB OutLocs;        // Ranges that exist beyond bb.
   VarLocInMBB InLocs;         // Ranges that are incoming after joining.
-  TransferMap Transfers;      // DBG_VALUEs associated with spills.
+  TransferMap Transfers;      // DBG_VALUEs associated with transfers (such as
+                              // spills, copies and restores).
   VarLocInMBB PendingInLocs;  // Ranges that are incoming after joining, but
                               // that we have deferred creating DBG_VALUE insts
                               // for immediately.
@@ -1379,13 +1373,12 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
         MBBJoined = false;
         Changed = true;
         // Now that we have started to extend ranges across BBs we need to
-        // examine spill instructions to see whether they spill registers that
-        // correspond to user variables.
+        // examine spill, copy and restore instructions to see whether they
+        // operate with registers that correspond to user variables.
         // First load any pending inlocs.
         OpenRanges.insertFromLocSet(PendingInLocs[MBB], VarLocIDs);
         for (auto &MI : *MBB)
-              process(MI, OpenRanges, OutLocs, VarLocIDs, Transfers,
-                      DebugEntryVals, OverlapFragments, SeenFragments);
+          process(MI, OpenRanges, VarLocIDs, Transfers, DebugEntryVals);
         OLChanged |= transferTerminator(MBB, OpenRanges, OutLocs, VarLocIDs);
 
         LLVM_DEBUG(printVarLocInMBB(MF, OutLocs, VarLocIDs,
