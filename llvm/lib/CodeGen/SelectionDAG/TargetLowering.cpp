@@ -3052,6 +3052,10 @@ SDValue TargetLowering::optimizeSetCCToComparisonWithZero(
   assert((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
          "Only for equality-comparisons.");
 
+  // The constant we are comparing with must be a non-zero, non-opaque constant.
+  if (N1C->isNullValue() || N1C->isOpaque())
+    return SDValue();
+
   // LHS should not be used elsewhere, to avoid creating an extra node.
   if (!N0.hasOneUse())
     return SDValue();
@@ -3072,9 +3076,9 @@ SDValue TargetLowering::optimizeSetCCToComparisonWithZero(
     break;
   }
 
-  // Second operand must be a constant.
+  // Second operand must be a non-opaque constant.
   ConstantSDNode *N01C = isConstOrConstSplat(N0.getOperand(1));
-  if (!N01C)
+  if (!N01C || N01C->isOpaque())
     return SDValue();
 
   // And let's be even more specific for now, it must be a zero constant.
