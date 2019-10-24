@@ -90,4 +90,3 @@ wcsnrtombs_l(char * __restrict dst, const wchar_t ** __restrict src,
   *src = s;
   return (nbytes);
 }
-
