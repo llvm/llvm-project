@@ -6,8 +6,7 @@
 @x = dso_local local_unnamed_addr global <{ i32, i32, i32, i32, [1020 x i32] }> <{ i32 1, i32 2, i32 3, i32 4, [1020 x i32] zeroinitializer }>, align 4
 @y = dso_local global [1024 x i32] zeroinitializer, align 4
 
-; Function Attrs: norecurse nounwind
-define dso_local i32* @foo() local_unnamed_addr #0 {
+define dso_local i32* @foo() local_unnamed_addr {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, x@toc@ha
@@ -27,7 +26,8 @@ define dso_local i32* @foo() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lwz r7, 8(r5)
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %for.body
-; CHECK:         maddld r7, r7, r7, r6
+; CHECK-NEXT:    #
+; CHECK-NEXT:    maddld r7, r7, r7, r6
 ; CHECK-NEXT:    lwzu r8, 12(r5)
 ; CHECK-NEXT:    maddld r8, r8, r8, r7
 ; CHECK-NEXT:    stw r6, 4(r4)
