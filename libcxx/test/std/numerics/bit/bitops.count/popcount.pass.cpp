@@ -50,7 +50,7 @@ void runtime_test()
 {
 	ASSERT_SAME_TYPE(int, decltype(std::popcount(T(0))));
 	ASSERT_NOEXCEPT(               std::popcount(T(0)));
-	
+
 	assert( std::popcount(T(121)) == 5);
 	assert( std::popcount(T(122)) == 5);
 	assert( std::popcount(T(123)) == 6);
@@ -65,7 +65,7 @@ void runtime_test()
 
 int main()
 {
-	
+
     {
     auto lambda = [](auto x) -> decltype(std::popcount(x)) {};
     using L = decltype(lambda);

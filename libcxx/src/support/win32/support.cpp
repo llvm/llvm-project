@@ -40,13 +40,13 @@ int __libcpp_vasprintf( char **sptr, const char *__restrict format, va_list ap )
     return count;
 }
 
-// Returns >= 0: the number of wide characters found in the 
-// multi byte sequence src (of src_size_bytes), that fit in the buffer dst 
+// Returns >= 0: the number of wide characters found in the
+// multi byte sequence src (of src_size_bytes), that fit in the buffer dst
 // (of max_dest_chars elements size). The count returned excludes the
-// null terminator. When dst is NULL, no characters are copied 
+// null terminator. When dst is NULL, no characters are copied
 // and no "out" parameters are updated.
 // Returns (size_t) -1: an incomplete sequence encountered.
-// Leaves *src pointing the next character to convert or NULL 
+// Leaves *src pointing the next character to convert or NULL
 // if a null character was converted from *src.
 size_t mbsnrtowcs( wchar_t *__restrict dst, const char **__restrict src,
                    size_t src_size_bytes, size_t max_dest_chars, mbstate_t *__restrict ps )
@@ -103,7 +103,7 @@ size_t mbsnrtowcs( wchar_t *__restrict dst, const char **__restrict src,
 // Returns >= 0: the number of bytes in the sequence
 // converted from *src, excluding the null terminator.
 // Returns size_t(-1) if an error occurs, also sets errno.
-// If dst is NULL dst_size_bytes is ignored and no bytes are copied to dst 
+// If dst is NULL dst_size_bytes is ignored and no bytes are copied to dst
 // and no "out" parameters are updated.
 size_t wcsnrtombs( char *__restrict dst, const wchar_t **__restrict src,
                    size_t max_source_chars, size_t dst_size_bytes, mbstate_t *__restrict ps )
@@ -132,7 +132,7 @@ size_t wcsnrtombs( char *__restrict dst, const wchar_t **__restrict src,
             result = wcrtomb_s( &char_size, dst + dest_converted, dest_remaining, c, ps);
         else
             result = wcrtomb_s( &char_size, NULL, 0, c, ps);
-        // If result is zero there is no error and char_size contains the 
+        // If result is zero there is no error and char_size contains the
         // size of the multi-byte-sequence converted.
         // Otherwise result indicates an errno type error.
         if ( result == no_error ) {

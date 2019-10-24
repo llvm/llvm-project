@@ -48,7 +48,7 @@ void runtime_test()
 {
 	ASSERT_SAME_TYPE(T, decltype(std::floor2(T(0))));
 	ASSERT_NOEXCEPT(             std::floor2(T(0)));
-	
+
 	assert( std::floor2(T(121)) == T(64));
 	assert( std::floor2(T(122)) == T(64));
 	assert( std::floor2(T(123)) == T(64));
@@ -63,7 +63,7 @@ void runtime_test()
 
 int main()
 {
-	
+
     {
     auto lambda = [](auto x) -> decltype(std::floor2(x)) {};
     using L = decltype(lambda);

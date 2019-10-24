@@ -1592,7 +1592,7 @@ static int CompareRootDir(PathParser *LHS, PathParser *RHS) {
 static int CompareRelative(PathParser *LHSPtr, PathParser *RHSPtr) {
   auto &LHS = *LHSPtr;
   auto &RHS = *RHSPtr;
-  
+
   int res;
   while (LHS && RHS) {
     if ((res = (*LHS).compare(*RHS)) != 0)

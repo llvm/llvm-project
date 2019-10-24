@@ -53,7 +53,7 @@ void runtime_test()
 	ASSERT_SAME_TYPE(int, decltype(std::countl_one(T(0))));
 	ASSERT_NOEXCEPT(               std::countl_one(T(0)));
 	const int dig = std::numeric_limits<T>::digits;
-	
+
 	assert( std::countl_one(T(~121)) == dig - 7);
 	assert( std::countl_one(T(~122)) == dig - 7);
 	assert( std::countl_one(T(~123)) == dig - 7);
