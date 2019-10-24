@@ -82,18 +82,12 @@ using namespace llvm;
 static RETSIGTYPE SignalHandler(int Sig);  // defined below.
 static RETSIGTYPE InfoSignalHandler(int Sig);  // defined below.
 
-static void DefaultPipeSignalFunction() {
-  exit(EX_IOERR);
-}
-
 using SignalHandlerFunctionType = void (*)();
 /// The function to call if ctrl-c is pressed.
 static std::atomic<SignalHandlerFunctionType> InterruptFunction =
     ATOMIC_VAR_INIT(nullptr);
 static std::atomic<SignalHandlerFunctionType> InfoSignalFunction =
     ATOMIC_VAR_INIT(nullptr);
-static std::atomic<SignalHandlerFunctionType> PipeSignalFunction =
-    ATOMIC_VAR_INIT(DefaultPipeSignalFunction);
 
 namespace {
 /// Signal-safe removal of files.
@@ -369,8 +363,7 @@ static RETSIGTYPE SignalHandler(int Sig) {
 
       // Send a special return code that drivers can check for, from sysexits.h.
       if (Sig == SIGPIPE)
-        if (SignalHandlerFunctionType CurrentPipeFunction = PipeSignalFunction)
-          CurrentPipeFunction();
+        exit(EX_IOERR);
 
       raise(Sig);   // Execute the default handler.
       return;
@@ -407,11 +400,6 @@ void llvm::sys::SetInterruptFunction(void (*IF)()) {
 
 void llvm::sys::SetInfoSignalFunction(void (*Handler)()) {
   InfoSignalFunction.exchange(Handler);
-  RegisterHandlers();
-}
-
-void llvm::sys::SetPipeSignalFunction(void (*Handler)()) {
-  PipeSignalFunction.exchange(Handler);
   RegisterHandlers();
 }
 
