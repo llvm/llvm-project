@@ -135,12 +135,12 @@ __hwasan_tag_mismatch_v2:
   stp     x4,  x5,  [sp, #32]
   stp     x2,  x3,  [sp, #16]
 
-  // Pass the address of the frame to __hwasan_tag_mismatch4, so that it can
+  // Pass the address of the frame to __hwasan_tag_mismatch_stub, so that it can
   // extract the saved registers from this frame without having to worry about
   // finding this frame.
   mov x2, sp
 
-  bl __hwasan_tag_mismatch4
+  bl __hwasan_tag_mismatch_stub
   CFI_ENDPROC
 
 .Lfunc_end0:
