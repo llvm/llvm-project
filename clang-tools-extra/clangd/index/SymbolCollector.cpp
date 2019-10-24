@@ -263,10 +263,6 @@ bool SymbolCollector::handleDeclOccurence(
        Decl::FriendObjectKind::FOK_None) &&
       !(Roles & static_cast<unsigned>(index::SymbolRole::Definition)))
     return true;
-  // Skip non-semantic references, we should start processing these when we
-  // decide to implement renaming with index support.
-  if ((Roles & static_cast<unsigned>(index::SymbolRole::NameReference)))
-    return true;
   // A declaration created for a friend declaration should not be used as the
   // canonical declaration in the index. Use OrigD instead, unless we've already
   // picked a replacement for D
