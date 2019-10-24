@@ -1200,8 +1200,9 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
                  "no register info for target " + TripleName);
 
   // Set up disassembler.
+  llvm::MCTargetOptions MCOptions;
   std::unique_ptr<const MCAsmInfo> AsmInfo(
-      TheTarget->createMCAsmInfo(*MRI, TripleName));
+      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   if (!AsmInfo)
     report_error(Obj->getFileName(),
                  "no assembly info for target " + TripleName);

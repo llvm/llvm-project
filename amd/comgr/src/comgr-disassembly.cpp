@@ -76,7 +76,9 @@ DisassemblyInfo::create(const TargetIdentifier &Ident,
   if (!MRI)
     return AMD_COMGR_STATUS_ERROR;
 
-  std::unique_ptr<const MCAsmInfo> MAI(TheTarget->createMCAsmInfo(*MRI, TT));
+  llvm::MCTargetOptions MCOptions;
+  std::unique_ptr<const MCAsmInfo> MAI(
+      TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
   if (!MAI)
     return AMD_COMGR_STATUS_ERROR;
 
