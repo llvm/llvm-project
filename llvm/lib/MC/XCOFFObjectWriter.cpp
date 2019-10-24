@@ -165,7 +165,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
 
   // All the XCOFF sections, in the order they will appear in the section header
   // table.
-  std::array<Section *const, 2> Sections = {&Text, &BSS};
+  std::array<Section *const, 2> Sections{{&Text, &BSS}};
 
   CsectGroup &getCsectGroup(const MCSectionXCOFF *MCSec);
 
