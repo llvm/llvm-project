@@ -230,7 +230,7 @@ namespace __sanitizer {
   // has been removed from glibc 2.28.
 #if defined(__aarch64__) || defined(__s390x__) || defined (__mips64) \
   || defined(__powerpc64__) || defined(__arch64__) || defined(__sparcv9) \
-  || defined(__x86_64__)
+  || defined(__x86_64__) || (defined(__riscv) && __riscv_xlen == 64)
 #define SIZEOF_STRUCT_USTAT 32
 #elif defined(__arm__) || defined(__i386__) || defined(__mips__) \
   || defined(__powerpc__) || defined(__s390__) || defined(__sparc__)
