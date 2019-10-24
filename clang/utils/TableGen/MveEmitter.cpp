@@ -157,8 +157,6 @@ inline std::string toLetter(ScalarTypeKind kind) {
     return "u";
   case ScalarTypeKind::Float:
     return "f";
-  default:
-    llvm_unreachable("bad scalar type kind");
   }
 }
 inline std::string toCPrefix(ScalarTypeKind kind) {
@@ -169,8 +167,6 @@ inline std::string toCPrefix(ScalarTypeKind kind) {
     return "uint";
   case ScalarTypeKind::Float:
     return "float";
-  default:
-    llvm_unreachable("bad scalar type kind");
   }
 }
 
@@ -538,7 +534,7 @@ public:
     OS << (AddressType ? "EmitPointerWithAlignment" : "EmitScalarExpr")
        << "(E->getArg(" << ArgNum << "))";
   }
-  virtual std::string typeName() const {
+  std::string typeName() const override {
     return AddressType ? "Address" : Result::typeName();
   }
 };
