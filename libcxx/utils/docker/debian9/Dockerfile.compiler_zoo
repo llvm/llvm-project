@@ -31,5 +31,3 @@ COPY --from=ericwf/compilers:latest /opt/llvm-6.0 /opt/llvm-6.0
 COPY --from=ericwf/compilers:latest /opt/llvm-7.0 /opt/llvm-7.0
 COPY --from=ericwf/compilers:latest /opt/llvm-8.0 /opt/llvm-8.0
 COPY --from=ericwf/compilers_tot:latest /opt/llvm-tot /opt/llvm-tot
-
-
