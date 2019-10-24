@@ -58,7 +58,7 @@ void test_basic() {
 template <class VT>
 void test_sfinae() {
 #if TEST_STD_VER >= 11
-  { // the constructor does not participate in overload resultion when
+  { // the constructor does not participate in overload resolution when
     // the deleter is a pointer type
     using U = std::unique_ptr<VT, void (*)(void*)>;
     static_assert(!std::is_constructible<U, decltype(nullptr)>::value, "");
