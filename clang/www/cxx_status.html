@@ -56,13 +56,13 @@ each language mode.</p>
 <h2 id="cxx11">C++11 implementation status</h2>
 
 <p>Clang 3.3 and later implement all of the <a
-  href="http://www.iso.org/standard/50372.html">ISO
+  href="https://www.iso.org/standard/50372.html">ISO
   C++ 2011 standard</a>.
 
 <p>By default, Clang builds C++ code according to the C++98 standard, with many
 C++11 features accepted as extensions. You can use Clang in C++11 mode with the
 <code>-std=c++11</code> option. Clang's C++11 mode can be used
-with <a href="http://libcxx.llvm.org/">libc++</a> or with gcc's libstdc++.
+with <a href="https://libcxx.llvm.org/">libc++</a> or with gcc's libstdc++.
 
 <details>
 <summary>List of features and minimum Clang version with support</summary>
@@ -75,283 +75,283 @@ with <a href="http://libcxx.llvm.org/">libc++</a> or with gcc's libstdc++.
  </tr>
      <tr>
       <td rowspan="2">Rvalue references</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2118.html">N2118</a></td>
+      <td><a href="https://wg21.link/n2118">N2118</a></td>
       <td class="full" align="center">Clang 2.9</td>
       <tr> <!-- from Kona 2019-->
-        <td><a href="http://wg21.link/p1825r0">P1825R0</a> (<a href="#dr">DR</a>)</td>
+        <td><a href="https://wg21.link/p1825r0">P1825R0</a> (<a href="#dr">DR</a>)</td>
         <td class="none" align="center">No</td>
       </tr>
     </tr>
     <tr>
       <td>&nbsp;&nbsp;&nbsp;&nbsp;Rvalue references for <code>*this</code></td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2439.htm">N2439</a></td>
+      <td><a href="https://wg21.link/n2439">N2439</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>Initialization of class objects by rvalues</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1610.html">N1610</a></td>
+      <td><a href="https://wg21.link/n1610">N1610</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>Non-static data member initializers</td>
-      <td><a href="http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2008/n2756.htm">N2756</a></td>
+      <td><a href="https://wg21.link/n2756">N2756</a></td>
       <td class="full" align="center">Clang 3.0</td>
     </tr>
     <tr>
       <td>Variadic templates</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2242.pdf">N2242</a></td>
+      <td><a href="https://wg21.link/n2242">N2242</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>&nbsp;&nbsp;&nbsp;&nbsp;Extending variadic template template parameters</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2555.pdf">N2555</a></td>
+      <td><a href="https://wg21.link/n2555">N2555</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td rowspan="2">Initializer lists</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2672.htm">N2672</a></td>
+      <td><a href="https://wg21.link/n2672">N2672</a></td>
       <td class="full" align="center">Clang 3.1</td>
     </tr>
       <tr> <!-- from Kona 2019-->
-        <td><a href="http://wg21.link/p1009r2">P1009R2</a> (<a href="#dr">DR</a>)</td>
+        <td><a href="https://wg21.link/p1009r2">P1009R2</a> (<a href="#dr">DR</a>)</td>
         <td class="full" align="center">Clang 9</td>
       </tr>
     <tr>
       <td>Static assertions</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1720.html">N1720</a></td>
+      <td><a href="https://wg21.link/n1720">N1720</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td><code>auto</code>-typed variables</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1984.pdf">N1984</a></td>
+      <td><a href="https://wg21.link/n1984">N1984</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>&nbsp;&nbsp;&nbsp;&nbsp;Multi-declarator <code>auto</code></td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1737.pdf">N1737</a></td>
+      <td><a href="https://wg21.link/n1737">N1737</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>&nbsp;&nbsp;&nbsp;&nbsp;Removal of auto as a storage-class specifier</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2546.htm">N2546</a></td>
+      <td><a href="https://wg21.link/n2546">N2546</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>&nbsp;&nbsp;&nbsp;&nbsp;New function declarator syntax</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2541.htm">N2541</a></td>
+      <td><a href="https://wg21.link/n2541">N2541</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td rowspan="2">Lambda expressions</td>
-      <td><a href="http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2009/n2927.pdf">N2927</a></td>
+      <td><a href="https://wg21.link/n2927">N2927</a></td>
       <td class="full" align="center">Clang 3.1</td>
     </tr>
       <tr>
         <!-- from Albuquerque 2017 -->
-        <td><a href="http://wg21.link/p0588r1">P0588R1</a> (<a href="#dr">DR</a>)</td>
+        <td><a href="https://wg21.link/p0588r1">P0588R1</a> (<a href="#dr">DR</a>)</td>
         <td class="none" align="center">No</td>
       </tr>
     <tr>
       <td>Declared type of an expression</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2343.pdf">N2343</a></td>
+      <td><a href="https://wg21.link/n2343">N2343</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>&nbsp;&nbsp;&nbsp;&nbsp;Incomplete return types</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2011/n3276.pdf">N3276</a></td>
+      <td><a href="https://wg21.link/n3276">N3276</a></td>
       <td class="full" align="center">Clang 3.1</td>
     </tr>
     <tr>
       <td>Right angle brackets</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1757.html">N1757</a></td>
+      <td><a href="https://wg21.link/n1757">N1757</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>Default template arguments for function templates</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#226">DR226</a></td>
+      <td><a href="https://wg21.link/cwg226">DR226</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>Solving the SFINAE problem for expressions</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2634.html">DR339</a></td>
+      <td><a href="https://wg21.link/n2634">DR339</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>Alias templates</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2258.pdf">N2258</a></td>
+      <td><a href="https://wg21.link/n2258">N2258</a></td>
       <td class="full" align="center">Clang 3.0</td>
     </tr>
     <tr>
       <td>Extern templates</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1987.htm">N1987</a></td>
+      <td><a href="https://wg21.link/n1987">N1987</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>Null pointer constant</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2431.pdf">N2431</a></td>
+      <td><a href="https://wg21.link/n2431">N2431</a></td>
       <td class="full" align="center">Clang 3.0</td>
     </tr>
     <tr>
       <td>Strongly-typed enums</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2347.pdf">N2347</a></td>
+      <td><a href="https://wg21.link/n2347">N2347</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>Forward declarations for enums</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2764.pdf">N2764</a>
-      <br><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#1206">DR1206</a></td>
+      <td><a href="https://wg21.link/n2764">N2764</a>
+      <br><a href="https://wg21.link/cwg1206">DR1206</a></td>
       <td class="full" align="center">Clang 3.1</td>
     </tr>
     <tr>
       <td>Standardized attribute syntax</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2761.pdf">N2761</a></td>
+      <td><a href="https://wg21.link/n2761">N2761</a></td>
       <td class="full" align="center">Clang 3.3 <a href="#n2761">(1)</a></td>
     </tr>
     <tr>
       <td rowspan="2">Generalized constant expressions</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2235.pdf">N2235</a></td>
+      <td><a href="https://wg21.link/n2235">N2235</a></td>
       <td class="full" align="center">Clang 3.1</td>
     </tr>
       <tr>
         <!-- from Albuquerque 2017 -->
-        <td><a href="http://wg21.link/p0859r0">P0859R0</a> (<a href="#dr">DR</a>)</td>
+        <td><a href="https://wg21.link/p0859r0">P0859R0</a> (<a href="#dr">DR</a>)</td>
         <td class="full" align="center">Clang 8</td>
       </tr>
     <tr>
       <td>Alignment support</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2341.pdf">N2341</a></td>
+      <td><a href="https://wg21.link/n2341">N2341</a></td>
       <td class="full" align="center">Clang 3.3</td>
     </tr>
     <tr>
       <td>Conditionally-support behavior</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1627.pdf">N1627</a></td>
+      <td><a href="https://wg21.link/n1627">N1627</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>Changing undefined behavior into diagnosable errors</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1727.pdf">N1727</a></td>
+      <td><a href="https://wg21.link/n1727">N1727</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>Delegating constructors</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1986.pdf">N1986</a></td>
+      <td><a href="https://wg21.link/n1986">N1986</a></td>
       <td class="full" align="center">Clang 3.0</td>
     </tr>
     <tr>
       <td rowspan="2">Inheriting constructors</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2540.htm">N2540</a></td>
+      <td><a href="https://wg21.link/n2540">N2540</a></td>
       <td class="full" align="center">Clang 3.3</td>
     </tr>
       <tr>
         <!-- from Kona 2015 -->
-        <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0136r1.html">P0136R1</a> (<a href="#dr">DR</a>)</td>
+        <td><a href="https://wg21.link/p0136r1">P0136R1</a> (<a href="#dr">DR</a>)</td>
         <td class="full" align="center">Clang 3.9</td>
       </tr>
     <tr>
       <td>Explicit conversion operators</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2437.pdf">N2437</a></td>
+      <td><a href="https://wg21.link/n2437">N2437</a></td>
       <td class="full" align="center">Clang 3.0</td>
     </tr>
     <tr>
       <td>New character types</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2249.html">N2249</a></td>
+      <td><a href="https://wg21.link/n2249">N2249</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>Unicode string literals</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2442.htm">N2442</a></td>
+      <td><a href="https://wg21.link/n2442">N2442</a></td>
       <td class="full" align="center">Clang 3.0</td>
     </tr>
     <tr>
       <td>Raw string literals</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2442.htm">N2442</a></td>
+      <td><a href="https://wg21.link/n2442">N2442</a></td>
       <td class="full" align="center">Clang 3.0</td>
     </tr>
     <tr>
       <td>Universal character names in literals</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2170.html">N2170</a></td>
+      <td><a href="https://wg21.link/n2170">N2170</a></td>
       <td class="full" align="center">Clang 3.1</td>
     </tr>
     <tr>
       <td>User-defined literals</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2765.pdf">N2765</a></td>
+      <td><a href="https://wg21.link/n2765">N2765</a></td>
       <td class="full" align="center">Clang 3.1</td>
     </tr>
     <tr>
       <td>Standard Layout Types</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2342.htm">N2342</a></td>
+      <td><a href="https://wg21.link/n2342">N2342</a></td>
       <td class="full" align="center">Clang 3.0</td>
     </tr>
     <tr>
       <td rowspan="2">Defaulted functions</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2346.htm">N2346</a></td>
+      <td><a href="https://wg21.link/n2346">N2346</a></td>
       <td class="full" align="center">Clang 3.0</td>
     </tr>
       <tr> <!-- from Kona 2019-->
-        <td><a href="http://wg21.link/p1286r2">P1286R2</a> (<a href="#dr">DR</a>)</td>
+        <td><a href="https://wg21.link/p1286r2">P1286R2</a> (<a href="#dr">DR</a>)</td>
         <td class="full" align="center">Clang 9</td>
       </tr>
     <tr>
       <td>Deleted functions</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2346.htm">N2346</a></td>
+      <td><a href="https://wg21.link/n2346">N2346</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>Extended friend declarations</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1791.pdf">N1791</a></td>
+      <td><a href="https://wg21.link/n1791">N1791</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>Extending <code>sizeof</code></td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2253.html">N2253</a>
-      <br><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#850">DR850</a></td>
+      <td><a href="https://wg21.link/n2253">N2253</a>
+      <br><a href="https://wg21.link/cwg850">DR850</a></td>
       <td class="full" align="center">Clang 3.1</td>
     </tr>
     <tr>
       <td>Inline namespaces</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2535.htm">N2535</a></td>
+      <td><a href="https://wg21.link/n2535">N2535</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>Unrestricted unions</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2544.pdf">N2544</a></td>
+      <td><a href="https://wg21.link/n2544">N2544</a></td>
       <td class="full" align="center">Clang 3.1</td>
     </tr>
     <tr>
       <td>Local and unnamed types as template arguments</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2657.htm">N2657</a></td>
+      <td><a href="https://wg21.link/n2657">N2657</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td rowspan="2">Range-based for</td>
-      <td><a href="http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2009/n2930.html">N2930</a></td>
+      <td><a href="https://wg21.link/n2930">N2930</a></td>
       <td class="full" align="center">Clang 3.0</td>
     </tr>
       <tr>
         <!-- from Jacksonville 2018 -->
-        <td><a href="http://wg21.link/p0962r1">P0962R1</a> (<a href="#dr">DR</a>)</td>
+        <td><a href="https://wg21.link/p0962r1">P0962R1</a> (<a href="#dr">DR</a>)</td>
         <td class="full" align="center">Clang 8</td>
       </tr>
     <tr>
       <td>Explicit virtual overrides</td>
-      <td><a href="http://www.open-std.org/JTC1/SC22/WG21/docs/papers/2009/n2928.htm">N2928</a>
-      <br><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2010/n3206.htm">N3206</a>
-      <br><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2011/n3272.htm">N3272</a></td>
+      <td><a href="https://wg21.link/n2928">N2928</a>
+      <br><a href="https://wg21.link/n3206">N3206</a>
+      <br><a href="https://wg21.link/n3272">N3272</a></td>
       <td class="full" align="center">Clang 3.0</td>
     </tr>
     <tr>
       <td>Minimal support for garbage collection and reachability-based leak detection</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2670.htm">N2670</a></td>
+      <td><a href="https://wg21.link/n2670">N2670</a></td>
       <td class="na" align="center">N/A <a href="#n2670">(2)</a></td>
     </tr>
     <tr>
       <td>Allowing move constructors to throw [noexcept]</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2010/n3050.html">N3050</a></td>
+      <td><a href="https://wg21.link/n3050">N3050</a></td>
       <td class="full" align="center">Clang 3.0</td>
     </tr>
     <tr>
       <td>Defining move special member functions</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2010/n3053.html">N3053</a></td>
+      <td><a href="https://wg21.link/n3053">N3053</a></td>
       <td class="full" align="center">Clang 3.0</td>
     </tr>
 
@@ -360,53 +360,53 @@ with <a href="http://libcxx.llvm.org/">libc++</a> or with gcc's libstdc++.
     </tr>
     <tr>
       <td>Sequence points</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2239.html">N2239</a></td>
+      <td><a href="https://wg21.link/n2239">N2239</a></td>
       <td class="full" align="center">Clang 3.3</td>
     </tr>
     <tr>
       <td>Atomic operations</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2427.html">N2427</a></td>
+      <td><a href="https://wg21.link/n2427">N2427</a></td>
       <td class="full" align="center">Clang 3.1</td>
     </tr>
     <tr>
       <td>Strong Compare and Exchange</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2748.html">N2748</a></td>
+      <td><a href="https://wg21.link/n2748">N2748</a></td>
       <td class="full" align="center">Clang 3.1 <a href="#n2748">(3)</a></td>
     </tr>
     <tr>
       <td>Bidirectional Fences</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2752.htm">N2752</a></td>
+      <td><a href="https://wg21.link/n2752">N2752</a></td>
       <td class="full" align="center">Clang 3.1</td>
     </tr>
 
     <tr>
       <td>Memory model</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2429.htm">N2429</a></td>
+      <td><a href="https://wg21.link/n2429">N2429</a></td>
       <td class="full" align="center">Clang 3.2</td>
     </tr>
     <tr>
       <td>Data-dependency ordering: atomics and memory model</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2664.htm">N2664</a></td>
+      <td><a href="https://wg21.link/n2664">N2664</a></td>
       <td class="full" align="center">Clang 3.2 <a href="#n2664">(4)</a></td>
     </tr>
     <tr>
       <td>Propagating exceptions</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2179.html">N2179</a></td>
+      <td><a href="https://wg21.link/n2179">N2179</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>Allow atomics use in signal handlers</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2547.htm">N2547</a></td>
+      <td><a href="https://wg21.link/n2547">N2547</a></td>
       <td class="full" align="center">Clang 3.1</td>
     </tr>
     <tr>
       <td>Thread-local storage</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2659.htm">N2659</a></td>
+      <td><a href="https://wg21.link/n2659">N2659</a></td>
       <td class="full" align="center">Clang 3.3 <a href="#n2659">(5)</a></td>
     </tr>
     <tr>
       <td>Dynamic initialization and destruction with concurrency</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2660.htm">N2660</a></td>
+      <td><a href="https://wg21.link/n2660">N2660</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
 
@@ -415,22 +415,22 @@ with <a href="http://libcxx.llvm.org/">libc++</a> or with gcc's libstdc++.
     </tr>
     <tr>
       <td><code>__func__</code> predefined identifier</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2340.htm">N2340</a></td>
+      <td><a href="https://wg21.link/n2340">N2340</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>C99 preprocessor</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2004/n1653.htm">N1653</a></td>
+      <td><a href="https://wg21.link/n1653">N1653</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td><code>long long</code></td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2005/n1811.pdf">N1811</a></td>
+      <td><a href="https://wg21.link/n1811">N1811</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>Extended integral types</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1988.pdf">N1988</a></td>
+      <td><a href="https://wg21.link/n1988">N1988</a></td>
       <td class="na" align="center">N/A <a href="#n1988">(6)</a></td>
     </tr>
 </table>
@@ -446,7 +446,7 @@ strong compare-exchanges.</span><br>
 <code>memory_order_acquire</code>.</span><br>
 <span id="n2659">(5): <code>thread_local</code> support
 requires a C++ runtime library providing <code>__cxa_thread_atexit</code>, such
-as <a href="http://libcxxabi.llvm.org">libc++abi</a> 3.6 or later,
+as <a href="https://libcxxabi.llvm.org">libc++abi</a> 3.6 or later,
 or libsupc++ 4.8 or later.</span><br>
 <span id="n1988">(6): No compiler changes are required for an implementation
 such as Clang that does not provide any extended integer types.
@@ -459,7 +459,7 @@ change.</span>
 <h2 id="cxx14">C++14 implementation status</h2>
 
 <p>Clang 3.4 and later implement all of the <a
-    href="http://www.iso.org/standard/64029.html">ISO
+    href="https://www.iso.org/standard/64029.html">ISO
     C++ 2014 standard</a>.
 
 <p>You can use Clang in C++14 mode with the <code>-std=c++14</code> option
@@ -476,17 +476,17 @@ change.</span>
  </tr>
     <tr>
       <td>Tweak to certain C++ contextual conversions</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3323.pdf">N3323</a></td>
+      <td><a href="https://wg21.link/n3323">N3323</a></td>
       <td class="full" align="center">Clang 3.4</td>
     </tr>
     <tr>
       <td>Binary literals</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2012/n3472.pdf">N3472</a></td>
+      <td><a href="https://wg21.link/n3472">N3472</a></td>
       <td class="full" align="center">Clang 2.9</td>
     </tr>
     <tr>
       <td>decltype(auto)</td>
-      <td rowspan=2 style="vertical-align:middle"><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3638.html">N3638</a></td>
+      <td rowspan=2 style="vertical-align:middle"><a href="https://wg21.link/n3638">N3638</a></td>
       <td class="full" align="center">Clang 3.3</td>
     </tr>
     <tr>
@@ -495,47 +495,47 @@ change.</span>
     </tr>
     <tr>
       <td>Initialized lambda captures</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3648.html">N3648</a></td>
+      <td><a href="https://wg21.link/n3648">N3648</a></td>
       <td class="full" align="center">Clang 3.4</td>
     </tr>
     <tr>
       <td>Generic lambdas</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3649.html">N3649</a></td>
+      <td><a href="https://wg21.link/n3649">N3649</a></td>
       <td class="full" align="center">Clang 3.4</td>
     </tr>
     <tr>
       <td>Variable templates</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3651.pdf">N3651</a></td>
+      <td><a href="https://wg21.link/n3651">N3651</a></td>
       <td class="full" align="center">Clang 3.4</td>
     </tr>
     <tr>
       <td>Relaxing requirements on constexpr functions</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3652.html">N3652</a></td>
+      <td><a href="https://wg21.link/n3652">N3652</a></td>
       <td class="full" align="center">Clang 3.4</td>
     </tr>
     <tr>
       <td>Member initializers and aggregates</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3653.html">N3653</a></td>
+      <td><a href="https://wg21.link/n3653">N3653</a></td>
       <td class="full" align="center">Clang 3.3</td>
     </tr>
     <tr>
       <td>Clarifying memory allocation</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3664.html">N3664</a></td>
+      <td><a href="https://wg21.link/n3664">N3664</a></td>
       <td class="full" align="center">Clang 3.4</td>
     </tr>
     <tr>
       <td><tt>[[deprecated]]</tt> attribute</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3760.html">N3760</a></td>
+      <td><a href="https://wg21.link/n3760">N3760</a></td>
       <td class="full" align="center">Clang 3.4</td>
     </tr>
     <tr>
       <td>Single quotation mark as digit separator</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3781.pdf">N3781</a></td>
+      <td><a href="https://wg21.link/n3781">N3781</a></td>
       <td class="full" align="center">Clang 3.4</td>
     </tr>
     <tr>
       <td>C++ Sized Deallocation</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3778.html">N3778</a></td>
+      <td><a href="https://wg21.link/n3778">N3778</a></td>
       <td class="full" align="center">Clang 3.4 <a href="#n3778">(7)</a></td>
     </tr>
 </table>
@@ -571,19 +571,19 @@ version 3.7.
     <!-- Issaquah 2014 papers -->
     <tr>
       <td><tt>static_assert</tt> with no message</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3928.pdf">N3928</a></td>
+      <td><a href="https://wg21.link/n3928">N3928</a></td>
       <td class="full" align="center">Clang 3.5</td>
     </tr>
     <!-- Rapperswil papers -->
     <tr>
       <td>Disabling trigraph expansion by default</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4086.html">N4086</a></td>
+      <td><a href="https://wg21.link/n4086">N4086</a></td>
       <td class="full" align="center">Clang 3.5</td>
     </tr>
     <!--
     <tr>
       <td rowspan="2">Terse range-based for loops (removed from C++17)</td>
-      <td rowspan="2"><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3994.htm">N3994</a></td>
+      <td rowspan="2"><a href="https://wg21.link/n3994">N3994</a></td>
       <td class="none" align="center">Clang 3.5: Yes</td>
     </tr>
     <tr>
@@ -592,211 +592,211 @@ version 3.7.
     -->
     <tr>
       <td><tt>typename</tt> in a template template parameter</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4051.html">N4051</a></td>
+      <td><a href="https://wg21.link/n4051">N4051</a></td>
       <td class="full" align="center">Clang 3.5</td>
     </tr>
     <tr>
       <td>New <tt>auto</tt> rules for direct-list-initialization
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3922.html">N3922</a></td>
+      <td><a href="https://wg21.link/n3922">N3922</a></td>
       <td class="full" align="center">Clang 3.8 <a href="#n3922">(8)</a></td>
     </tr>
     <!-- Urbana papers -->
     <tr>
       <td rowspan="2">Fold expressions</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4295.html">N4295</a></td>
+      <td><a href="https://wg21.link/n4295">N4295</a></td>
       <td class="full" align="center">Clang 3.6</td>
     </tr>
       <tr> <!-- from Jacksonville -->
-        <td><a href="http://wg21.link/p0036r0">P0036R0</a></td>
+        <td><a href="https://wg21.link/p0036r0">P0036R0</a></td>
         <td class="full" align="center">Clang 3.9</td>
       </tr>
     <tr>
       <td><tt>u8</tt> character literals</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4267.html">N4267</a></td>
+      <td><a href="https://wg21.link/n4267">N4267</a></td>
       <td class="full" align="center">Clang 3.6</td>
     </tr>
     <tr>
       <td>Nested namespace definition</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4230.html">N4230</a></td>
+      <td><a href="https://wg21.link/n4230">N4230</a></td>
       <td class="full" align="center">Clang 3.6</td>
     </tr>
     <tr>
       <td>Attributes for namespaces and enumerators</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4266.html">N4266</a></td>
+      <td><a href="https://wg21.link/n4266">N4266</a></td>
       <td class="full" align="center">Clang 3.6</td>
     </tr>
     <tr>
       <td>Allow constant evaluation for all non-type template arguments</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4268.html">N4268</a></td>
+      <td><a href="https://wg21.link/n4268">N4268</a></td>
       <td class="full" align="center">Clang 3.6</td>
     </tr>
     <!-- Kona papers -->
     <tr>
       <td>Remove deprecated <tt>register</tt> storage class</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0001r1.html">P0001R1</a></td>
+      <td><a href="https://wg21.link/p0001r1">P0001R1</a></td>
       <td class="full" align="center">Clang 3.8</td>
     </tr>
     <tr>
       <td>Remove deprecated <tt>bool</tt> increment</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0002r1.html">P0002R1</a></td>
+      <td><a href="https://wg21.link/p0002r1">P0002R1</a></td>
       <td class="full" align="center">Clang 3.8</td>
     </tr>
     <tr>
       <td>Make exception specifications part of the type system</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0012r1.html">P0012R1</a></td>
+      <td><a href="https://wg21.link/p0012r1">P0012R1</a></td>
       <td class="full" align="center">Clang 4</td>
     </tr>
     <tr>
       <td><tt>__has_include</tt> in preprocessor conditionals</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0061.html">P0061R1</a></td>
+      <td><a href="https://wg21.link/p0061r1">P0061R1</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
     <!-- Jacksonville papers -->
     <tr>
       <td><tt>[[fallthrough]]</tt> attribute</td>
-      <td><a href="http://wg21.link/p0188r1">P0188R1</a></td>
+      <td><a href="https://wg21.link/p0188r1">P0188R1</a></td>
       <td class="full" align="center">Clang 3.9</td>
     </tr>
     <tr>
       <td rowspan="2"><tt>[[nodiscard]]</tt> attribute</td>
-      <td><a href="http://wg21.link/p0189r1">P0189R1</a></td>
+      <td><a href="https://wg21.link/p0189r1">P0189R1</a></td>
       <td class="full" align="center">Clang 3.9</td>
     </tr>
       <tr> <!-- from Cologne 2019 -->
-        <td><a href="http://wg21.link/p1771r1">P1771R1</a> (<a href="#dr">DR</a>)</td>
+        <td><a href="https://wg21.link/p1771r1">P1771R1</a> (<a href="#dr">DR</a>)</td>
         <td class="full" align="center">Clang 9</td>
       </tr>
     <tr>
       <td><tt>[[maybe_unused]]</tt> attribute</td>
-      <td><a href="http://wg21.link/p0212r1">P0212R1</a></td>
+      <td><a href="https://wg21.link/p0212r1">P0212R1</a></td>
       <td class="full" align="center">Clang 3.9</td>
     </tr>
     <tr>
       <td>Aggregate initialization of classes with base classes</td>
-      <td><a href="http://wg21.link/p0017r1">P0017R1</a></td>
+      <td><a href="https://wg21.link/p0017r1">P0017R1</a></td>
       <td class="full" align="center">Clang 3.9</td>
     </tr>
     <tr>
       <td><tt>constexpr</tt> lambda expressions</td>
-      <td><a href="http://wg21.link/p0170r1">P0170R1</a></td>
+      <td><a href="https://wg21.link/p0170r1">P0170R1</a></td>
       <td class="full" align="center">Clang 5</td>
     </tr>
     <tr>
       <td>Differing <tt>begin</tt> and <tt>end</tt> types in range-based <tt>for</tt></td>
-      <td><a href="http://wg21.link/p0184r0">P0184R0</a></td>
+      <td><a href="https://wg21.link/p0184r0">P0184R0</a></td>
       <td class="full" align="center">Clang 3.9</td>
     </tr>
     <tr>
       <td>Lambda capture of <tt>*this</tt></td>
-      <td><a href="http://wg21.link/p0018r3">P0018R3</a></td>
+      <td><a href="https://wg21.link/p0018r3">P0018R3</a></td>
       <td class="full" align="center">Clang 3.9</td>
     </tr>
     <tr>
       <td>Direct-list-initialization of <tt>enum</tt>s</td>
-      <td><a href="http://wg21.link/p0138r2">P0138R2</a></td>
+      <td><a href="https://wg21.link/p0138r2">P0138R2</a></td>
       <td class="full" align="center">Clang 3.9</td>
     </tr>
     <tr>
       <td>Hexadecimal floating-point literals</td>
-      <td><a href="http://wg21.link/p0245r1">P0245R1</a></td>
+      <td><a href="https://wg21.link/p0245r1">P0245R1</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
     <!-- Oulu papers -->
     <tr>
       <td>Using attribute namespaces without repetition</td>
-      <td><a href="http://wg21.link/p0028r4">P0028R4</a></td>
+      <td><a href="https://wg21.link/p0028r4">P0028R4</a></td>
       <td class="full" align="center">Clang 3.9</td>
     </tr>
     <tr>
       <td>Dynamic memory allocation for over-aligned data</td>
-      <td><a href="http://wg21.link/p0035r4">P0035R4</a></td>
+      <td><a href="https://wg21.link/p0035r4">P0035R4</a></td>
       <td class="full" align="center">Clang 4</td>
     </tr>
     <tr>
       <td rowspan="4">Template argument deduction for class templates</td>
-      <td><a href="http://wg21.link/p0091r3">P0091R3</a></td>
+      <td><a href="https://wg21.link/p0091r3">P0091R3</a></td>
       <td rowspan="2" class="full" align="center">Clang 5</td>
     </tr>
       <tr> <!-- from Issaquah -->
-        <td><a href="http://wg21.link/p0512r0">P0512R0</a></td>
+        <td><a href="https://wg21.link/p0512r0">P0512R0</a></td>
       </tr>
       <tr>
         <!-- from Kona 2017 -->
-        <td><a href="http://wg21.link/p0620r1">P0620R0</a> (<a href="#dr">DR</a>)</td>
+        <td><a href="https://wg21.link/p0620r1">P0620R0</a> (<a href="#dr">DR</a>)</td>
         <td class="full" align="center">Clang 7</td>
       </tr>
       <tr>
         <!-- from Toronto 2017 -->
-        <td><a href="http://wg21.link/p0702r1">P0702R1</a> (<a href="#dr">DR</a>)</td>
+        <td><a href="https://wg21.link/p0702r1">P0702R1</a> (<a href="#dr">DR</a>)</td>
         <td class="full" align="center">Clang 6</td>
       </tr>
     <tr>
       <td>Non-type template parameters with <tt>auto</tt> type</td>
-      <td><a href="http://wg21.link/p0127r2">P0127R2</a></td>
+      <td><a href="https://wg21.link/p0127r2">P0127R2</a></td>
       <td class="full" align="center">Clang 4</td>
     </tr>
     <tr>
       <td>Guaranteed copy elision</td>
-      <td><a href="http://wg21.link/p0135r1">P0135R1</a></td>
+      <td><a href="https://wg21.link/p0135r1">P0135R1</a></td>
       <td class="full" align="center">Clang 4</td>
     </tr>
     <tr>
       <td rowspan=2>Stricter expression evaluation order</td>
-      <td><a href="http://wg21.link/p0145r3">P0145R3</a></td>
+      <td><a href="https://wg21.link/p0145r3">P0145R3</a></td>
       <td class="full" align="center" rowspan=2>Clang 4 <a href="#p0145">(9)</a></td>
     </tr>
     <tr>
-      <td><a href="http://wg21.link/p0400r0">P0400R0</a></td>
+      <td><a href="https://wg21.link/p0400r0">P0400R0</a></td>
     </tr>
     <tr>
       <td>Requirement to ignore unknown attributes</td>
-      <td><a href="http://wg21.link/p0283r2">P0283R2</a></td>
+      <td><a href="https://wg21.link/p0283r2">P0283R2</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td><tt>constexpr</tt> <em>if-statement</em>s</td>
-      <td><a href="http://wg21.link/p0292r2">P0292R2</a></td>
+      <td><a href="https://wg21.link/p0292r2">P0292R2</a></td>
       <td class="full" align="center">Clang 3.9</td>
     </tr>
     <tr>
       <td>Inline variables</td>
-      <td><a href="http://wg21.link/p0386r2">P0386R2</a></td>
+      <td><a href="https://wg21.link/p0386r2">P0386R2</a></td>
       <td class="full" align="center">Clang 3.9</td>
     </tr>
     <tr>
       <td rowspan="3">Structured bindings</td>
-      <td><a href="http://wg21.link/p0217r3">P0217R3</a></td>
+      <td><a href="https://wg21.link/p0217r3">P0217R3</a></td>
       <td class="full" align="center">Clang 4</td>
     </tr>
       <tr>
         <!-- from Jacksonville 2018 -->
-        <td><a href="http://wg21.link/p0961r1">P0961R1</a> (<a href="#dr">DR</a>)</td>
+        <td><a href="https://wg21.link/p0961r1">P0961R1</a> (<a href="#dr">DR</a>)</td>
         <td class="full" align="center">Clang 8</td>
       </tr>
       <tr>
         <!-- from Jacksonville 2018 -->
-        <td><a href="http://wg21.link/p0969r0">P0969R0</a> (<a href="#dr">DR</a>)</td>
+        <td><a href="https://wg21.link/p0969r0">P0969R0</a> (<a href="#dr">DR</a>)</td>
         <td class="full" align="center">Clang 8</td>
       </tr>
     <tr>
       <td>Separate variable and condition for <tt>if</tt> and <tt>switch</tt></td>
-      <td><a href="http://wg21.link/p0305r1">P0305R1</a></td>
+      <td><a href="https://wg21.link/p0305r1">P0305R1</a></td>
       <td class="full" align="center">Clang 3.9</td>
     </tr>
     <!-- Issaquah 2016 papers -->
     <tr>
       <td>Matching template template parameters to compatible arguments</td>
-      <td><a href="http://wg21.link/p0522r0">P0522R0</a></td>
+      <td><a href="https://wg21.link/p0522r0">P0522R0</a></td>
       <td class="partial" align="center">Partial <a href="#p0522">(10)</a></td>
     </tr>
     <tr>
       <td>Removing deprecated dynamic exception specifications</td>
-      <td><a href="http://wg21.link/p0003r5">P0003R5</a></td>
+      <td><a href="https://wg21.link/p0003r5">P0003R5</a></td>
       <td class="full" align="center">Clang 4</td>
     </tr>
     <tr>
       <td>Pack expansions in <em>using-declarations</em></td>
-      <td><a href="http://wg21.link/p0195r2">P0195R2</a></td>
+      <td><a href="https://wg21.link/p0195r2">P0195R2</a></td>
       <td class="full" align="center">Clang 4</td>
     </tr>
 </table>
@@ -846,296 +846,296 @@ as the draft C++2a standard evolves.
     <!-- Toronto 2017 papers -->
     <tr>
       <td>Default member initializers for bit-fields</td>
-      <td><a href="http://wg21.link/p0683r1">P0683R1</a></td>
+      <td><a href="https://wg21.link/p0683r1">P0683R1</a></td>
       <td class="full" align="center">Clang 6</td>
     </tr>
     <tr>
       <td><tt>const&amp;</tt>-qualified pointers to members</td>
-      <td><a href="http://wg21.link/p0704r1">P0704R1</a></td>
+      <td><a href="https://wg21.link/p0704r1">P0704R1</a></td>
       <td class="full" align="center">Clang 6</td>
     </tr>
     <tr>
       <td>Allow <i>lambda-capture</i> <tt>[=, this]</tt></td>
-      <td><a href="http://wg21.link/p0409r2">P0409R2</a></td>
+      <td><a href="https://wg21.link/p0409r2">P0409R2</a></td>
       <td class="full" align="center">Clang 6</td>
     </tr>
     <tr>
       <td rowspan="2"><tt>__VA_OPT__</tt> for preprocessor comma elision</td>
-      <td><a href="http://wg21.link/p0306r4">P0306R4</a></td>
+      <td><a href="https://wg21.link/p0306r4">P0306R4</a></td>
       <td class="full" align="center">Clang 6</td>
     </tr>
       <tr> <!-- from Rapperswil -->
-        <td><a href="http://wg21.link/p1042r1">P1042R1</a></td>
+        <td><a href="https://wg21.link/p1042r1">P1042R1</a></td>
         <td class="full" align="center">Clang 9</td>
       </tr>
     <tr>
       <td>Designated initializers</td>
-      <td><a href="http://wg21.link/p0329r4">P0329R4</a></td>
+      <td><a href="https://wg21.link/p0329r4">P0329R4</a></td>
       <td class="svn" align="center">SVN</td>
     </tr>
     <tr>
       <td><i>template-parameter-list</i> for generic lambdas</td>
-      <td><a href="http://wg21.link/p0428r2">P0428R2</a></td>
+      <td><a href="https://wg21.link/p0428r2">P0428R2</a></td>
       <td class="full" align="center">Clang 9</td>
     </tr>
     <tr id="p0734">
       <td rowspan="7">Concepts</td>
-      <td><a href="http://wg21.link/p0734r0">P0734R0</a></td>
+      <td><a href="https://wg21.link/p0734r0">P0734R0</a></td>
       <td rowspan="7" class="none" align="center">No</td>
     </tr>
       <tr> <!-- from Albuquerque -->
-        <td><a href="http://wg21.link/p0857r0">P0857R0</a></td>
+        <td><a href="https://wg21.link/p0857r0">P0857R0</a></td>
       </tr>
       <tr> <!-- from San Diego -->
-        <td><a href="http://wg21.link/p1084r2">P1084R2</a></td>
+        <td><a href="https://wg21.link/p1084r2">P1084R2</a></td>
       </tr>
       <tr>
-        <td><a href="http://wg21.link/p1141r2">P1414R2</a></td>
+        <td><a href="https://wg21.link/p1141r2">P1414R2</a></td>
       </tr>
       <tr> <!-- from Cologne -->
-        <td><a href="http://wg21.link/p0848r3">P0848R3</a></td>
+        <td><a href="https://wg21.link/p0848r3">P0848R3</a></td>
       </tr>
       <tr>
-        <td><a href="http://wg21.link/p1616r1">P1616R1</a></td>
+        <td><a href="https://wg21.link/p1616r1">P1616R1</a></td>
       </tr>
       <tr>
-        <td><a href="http://wg21.link/p1452r2">P1452R2</a></td>
+        <td><a href="https://wg21.link/p1452r2">P1452R2</a></td>
       </tr>
     <!-- Albuquerque papers -->
     <tr>
       <td>Range-based for statements with initializer</td>
-      <td><a href="http://wg21.link/p0614r1">P0614R1</a></td>
+      <td><a href="https://wg21.link/p0614r1">P0614R1</a></td>
       <td class="full" align="center">Clang 8</td>
     </tr>
     <tr>
       <td>ADL and function templates that are not visible</td>
-      <td><a href="http://wg21.link/p0846r0">P0846R0</a></td>
+      <td><a href="https://wg21.link/p0846r0">P0846R0</a></td>
       <td class="full" align="center">Clang 9</td>
     </tr>
     <tr>
       <td><tt>const</tt> mismatch with defaulted copy constructor</td>
-      <td><a href="http://wg21.link/p0641r2">P0641R2</a></td>
+      <td><a href="https://wg21.link/p0641r2">P0641R2</a></td>
       <td class="full" align="center">Clang 8</td>
     </tr>
     <tr>
       <td rowspan="6">Consistent comparison (<tt>operator&lt;=&gt;</tt>)</td>
-      <td><a href="http://wg21.link/p0515r3">P0515R3</a></td>
+      <td><a href="https://wg21.link/p0515r3">P0515R3</a></td>
       <td class="partial" align="center">Partial</td>
     </tr>
       <tr> <!-- from Jacksonville -->
-        <td><a href="http://wg21.link/p0905r1">P0905R1</a></td>
+        <td><a href="https://wg21.link/p0905r1">P0905R1</a></td>
         <td class="svn" align="center">Clang 10</td>
       </tr>
       <tr> <!-- from Rapperswil -->
-        <td><a href="http://wg21.link/p1120r0">P1120R0</a></td>
+        <td><a href="https://wg21.link/p1120r0">P1120R0</a></td>
         <td rowspan="2" class="partial" align="center">Partial</td>
       </tr>
       <tr> <!-- from Kona 2019 -->
-        <td><a href="http://wg21.link/p1185r2">P1185R2</a></td>
+        <td><a href="https://wg21.link/p1185r2">P1185R2</a></td>
       </tr>
       <tr> <!-- from Cologne -->
-        <td><a href="http://wg21.link/p1186r3">P1186R3</a></td>
+        <td><a href="https://wg21.link/p1186r3">P1186R3</a></td>
         <td class="none" align="center">No</td>
       </tr>
       <tr>
-        <td><a href="http://wg21.link/p1630r1">P1630R1</a></td>
+        <td><a href="https://wg21.link/p1630r1">P1630R1</a></td>
         <td class="partial" align="center">Partial</td>
       </tr>
     <tr>
       <td>Access checking on specializations</td>
-      <td><a href="http://wg21.link/p0692r1">P0692R1</a></td>
+      <td><a href="https://wg21.link/p0692r1">P0692R1</a></td>
       <td class="partial" align="center">Partial</td>
     </tr>
     <tr>
       <td>Default constructible and assignable stateless lambdas</td>
-      <td><a href="http://wg21.link/p0624r2">P0624R2</a></td>
+      <td><a href="https://wg21.link/p0624r2">P0624R2</a></td>
       <td class="full" align="center">Clang 8</td>
     </tr>
     <tr>
       <td>Lambdas in unevaluated contexts</td>
-      <td><a href="http://wg21.link/p0315r4">P0315R4</a></td>
+      <td><a href="https://wg21.link/p0315r4">P0315R4</a></td>
       <td class="none" align="center">No</td>
     </tr>
     <!-- Jacksonville papers -->
     <tr>
       <td><tt>[[no_unique_address]]</tt> attribute</td>
-      <td><a href="http://wg21.link/p0840r2">P0840R2</a></td>
+      <td><a href="https://wg21.link/p0840r2">P0840R2</a></td>
       <td class="full" align="center">Clang 9</td>
     </tr>
     <tr>
       <td><tt>[[likely]]</tt> and <tt>[[unlikely]]</tt> attributes</td>
-      <td><a href="http://wg21.link/p0479r5">P0479R5</a></td>
+      <td><a href="https://wg21.link/p0479r5">P0479R5</a></td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td><tt>typename</tt> optional in more contexts</td>
-      <td><a href="http://wg21.link/p0634r3">P0634R3</a></td>
+      <td><a href="https://wg21.link/p0634r3">P0634R3</a></td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td>Pack expansion in lambda <i>init-capture</i></td>
-      <td><a href="http://wg21.link/p0780r2">P0780R2</a></td>
+      <td><a href="https://wg21.link/p0780r2">P0780R2</a></td>
       <td class="full" align="center">Clang 9</td>
     </tr>
     <!-- Rapperswil papers -->
     <tr>
       <td>Class types as non-type template parameters</td>
-      <td><a href="http://wg21.link/p0732r2">P0732R2</a></td>
+      <td><a href="https://wg21.link/p0732r2">P0732R2</a></td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td>Destroying operator delete</td>
-      <td><a href="http://wg21.link/p0722r3">P0722R3</a></td>
+      <td><a href="https://wg21.link/p0722r3">P0722R3</a></td>
       <td class="full" align="center">Clang 6</td>
     </tr>
     <tr>
       <td rowspan="7">Relaxations of <tt>constexpr</tt> restrictions</td>
-      <td><a href="http://wg21.link/p1064r0">P1064R0</a></td>
+      <td><a href="https://wg21.link/p1064r0">P1064R0</a></td>
       <td class="full" align="center">Clang 9</td>
     </tr>
       <tr> <!-- from San Diego -->
-        <td><a href="http://wg21.link/p1002r1">P1002R1</a></td>
+        <td><a href="https://wg21.link/p1002r1">P1002R1</a></td>
         <td class="full" align="center">Clang 8</td>
       </tr>
       <tr>
-        <td><a href="http://wg21.link/p1327r1">P1327R1</a></td>
+        <td><a href="https://wg21.link/p1327r1">P1327R1</a></td>
         <td rowspan="2" class="full" align="center">Clang 9</td>
       </tr>
       <tr>
-        <td><a href="http://wg21.link/p1330r0">P1330R0</a></td>
+        <td><a href="https://wg21.link/p1330r0">P1330R0</a></td>
       </tr>
       <tr> <!-- from Cologne -->
-        <td><a href="http://wg21.link/p1331r2">P1331R2</a></td>
+        <td><a href="https://wg21.link/p1331r2">P1331R2</a></td>
         <td rowspan="3" class="svn" align="center">SVN</td>
       </tr>
       <tr>
-        <td><a href="http://wg21.link/p1668r1">P1668R1</a></td>
+        <td><a href="https://wg21.link/p1668r1">P1668R1</a></td>
       </tr>
       <tr>
-        <td><a href="http://wg21.link/p0784r7">P0784R7</a></td>
+        <td><a href="https://wg21.link/p0784r7">P0784R7</a></td>
       </tr>
     <tr>
       <td>Prohibit aggregates with user-declared constructors</td>
-      <td><a href="http://wg21.link/p1008r1">P1008R1</a></td>
+      <td><a href="https://wg21.link/p1008r1">P1008R1</a></td>
       <td class="full" align="center">Clang 8</td>
     </tr>
     <tr>
       <td>Feature test macros</td>
-      <td><a href="http://wg21.link/p0941r2">P0941R2</a></td>
+      <td><a href="https://wg21.link/p0941r2">P0941R2</a></td>
       <td class="full" align="center"><a href="#sd6">(see below)</a></td>
     </tr>
     <tr>
       <td><tt>explicit(bool)</tt></td>
-      <td><a href="http://wg21.link/p0892r2">P0892R2</a></td>
+      <td><a href="https://wg21.link/p0892r2">P0892R2</a></td>
       <td class="full" align="center">Clang 9</td>
     </tr>
     <!-- San Diego papers -->
     <tr>
       <td>Signed integers are two's complement</td>
-      <td><a href="http://wg21.link/p1236r1">P1236R1</a></td>
+      <td><a href="https://wg21.link/p1236r1">P1236R1</a></td>
       <td class="full" align="center">Clang 9</td>
     </tr>
     <tr>
       <td><tt>char8_t</tt></td>
-      <td><a href="http://wg21.link/p0482r6">P0482R6</a></td>
+      <td><a href="https://wg21.link/p0482r6">P0482R6</a></td>
       <td class="full" align="center">Clang 7 <a href="#p0482">(11)</a></td>
     </tr>
     <tr>
       <td>Immediate functions (<tt>consteval</tt>)</td>
-      <td><a href="http://wg21.link/p1073r3">P1073R3</a></td>
+      <td><a href="https://wg21.link/p1073r3">P1073R3</a></td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td><tt>std::is_constant_evaluated</tt></td>
-      <td><a href="http://wg21.link/p0595r2">P0595R2</a></td>
+      <td><a href="https://wg21.link/p0595r2">P0595R2</a></td>
       <td class="full" align="center">Clang 9</td>
     </tr>
     <tr>
       <td>Nested inline namespaces</td>
-      <td><a href="http://wg21.link/p1094r2">P1094R2</a></td>
+      <td><a href="https://wg21.link/p1094r2">P1094R2</a></td>
       <td class="full" align="center">Clang 8</td>
     </tr>
     <!-- Kona 2019 papers -->
     <tr>
       <td rowspan="2">Structured binding extensions</td>
-      <td><a href="http://wg21.link/p1091r3">P1091R3</a></td>
+      <td><a href="https://wg21.link/p1091r3">P1091R3</a></td>
       <td rowspan="2" class="partial" align="center">Partial</td>
     </tr>
       <tr>
-        <td><a href="http://wg21.link/p1381r1">P1381R1</a></td>
+        <td><a href="https://wg21.link/p1381r1">P1381R1</a></td>
       </tr>
     <tr>
       <td rowspan="2">Stronger Unicode requirements</td>
-      <td><a href="http://wg21.link/p1041r4">P1041R4</a></td>
+      <td><a href="https://wg21.link/p1041r4">P1041R4</a></td>
       <td rowspan="2" class="full" align="center">Yes</td>
     </tr>
       <tr>
-        <td><a href="http://wg21.link/p1139r2">P1139R2</a></td>
+        <td><a href="https://wg21.link/p1139r2">P1139R2</a></td>
       </tr>
     <tr>
       <td>Parenthesized initialization of aggregates</td>
-      <td><a href="http://wg21.link/p0960r3">P0960R3</a></td>
+      <td><a href="https://wg21.link/p0960r3">P0960R3</a></td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td rowspan="4">Modules</td>
-      <td><a href="http://wg21.link/p1103r3">P1103R3</a></td>
+      <td><a href="https://wg21.link/p1103r3">P1103R3</a></td>
       <td class="partial" align="center">Partial</td>
     </tr>
       <tr> <!-- from Cologne -->
-        <td><a href="http://wg21.link/p1766r1">P1766R1</a> (<a href="#dr">DR</a>)</td>
+        <td><a href="https://wg21.link/p1766r1">P1766R1</a> (<a href="#dr">DR</a>)</td>
         <td rowspan="3" class="none" align="center">No</td>
       </tr>
       <tr>
-        <td><a href="http://wg21.link/p1811r0">P1811R0</a></td>
+        <td><a href="https://wg21.link/p1811r0">P1811R0</a></td>
       </tr>
       <tr>
-        <td><a href="http://wg21.link/p1703r1">P1703R1</a></td>
+        <td><a href="https://wg21.link/p1703r1">P1703R1</a></td>
       </tr>
     <tr>
       <td>Coroutines</td>
-      <td><a href="http://wg21.link/p0912r5">P0912R5</a></td>
+      <td><a href="https://wg21.link/p0912r5">P0912R5</a></td>
       <td class="partial" align="center">Partial</td>
     </tr>
     <!-- Cologne 2019 papers -->
     <tr>
       <td>Deprecate <tt>a[b,c]</tt></td>
-      <td><a href="http://wg21.link/p1161r3">P1161R3</a></td>
+      <td><a href="https://wg21.link/p1161r3">P1161R3</a></td>
       <td class="full" align="center">Clang 9</td>
     </tr>
     <tr>
       <td>Deprecate some problematic uses of <tt>volatile</tt></td>
-      <td><a href="http://wg21.link/p1152r4">P1152R4</a></td>
+      <td><a href="https://wg21.link/p1152r4">P1152R4</a></td>
       <td class="svn" align="center">SVN</td>
     </tr>
     <tr>
       <td><tt>[[nodiscard("with reason")]]</tt></td>
-      <td><a href="http://wg21.link/p1301r4">P1301R4</a></td>
+      <td><a href="https://wg21.link/p1301r4">P1301R4</a></td>
       <td class="full" align="center">Clang 9</td>
     </tr>
     <tr>
       <td><tt>using enum</tt></td>
-      <td><a href="http://wg21.link/p1099r5">P1099R5</a></td>
+      <td><a href="https://wg21.link/p1099r5">P1099R5</a></td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td>Class template argument deduction for aggregates</td>
-      <td><a href="http://wg21.link/p1816r0">P1816R0</a></td>
+      <td><a href="https://wg21.link/p1816r0">P1816R0</a></td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td>Class template argument deduction for alias templates</td>
-      <td><a href="http://wg21.link/p1814r0">P1814R0</a></td>
+      <td><a href="https://wg21.link/p1814r0">P1814R0</a></td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td>Permit conversions to arrays of unknown bound</td>
-      <td><a href="http://wg21.link/p0388r4">P0388R4</a></td>
+      <td><a href="https://wg21.link/p0388r4">P0388R4</a></td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td><tt>constinit</tt></td>
-      <td><a href="http://wg21.link/p1143r2">P1143R2</a></td>
+      <td><a href="https://wg21.link/p1143r2">P1143R2</a></td>
       <td class="svn" align="center">SVN</td>
     </tr>
 </table>
@@ -1178,41 +1178,41 @@ and library features that are not part of standard C++.</p>
  </tr>
     <tr id="sd6">
       <td rowspan="6">SD-6: SG10 feature test recommendations</td>
-      <td rowspan="6"><a href="http://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations">SD-6</a></td>
+      <td rowspan="6"><a href="https://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations">SD-6</a></td>
       <td rowspan="6">N/A</td>
       <td class="full" align="center">
-        Clang 3.4 (<a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3745">N3745</a>)</br>
+        Clang 3.4 (<a href="https://wg21.link/n3745">N3745</a>)</br>
       </td>
     </tr>
     <tr>
       <td class="full" align="center">
-        Clang 3.6 (<a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4200">N4200</a>)</a>
+        Clang 3.6 (<a href="https://wg21.link/n4200">N4200</a>)</a>
       </td>
     </tr>
     <tr>
       <td class="full" align="center">
-        Clang 4 (<a href="http://wg21.link/p0096r3">P0096R3</a>)</a>
+        Clang 4 (<a href="https://wg21.link/p0096r3">P0096R3</a>)</a>
       </td>
     </tr>
     <tr>
       <td class="full" align="center">
-        Clang 5 (<a href="http://wg21.link/p0096r4">P0096R4</a>)</a>
+        Clang 5 (<a href="https://wg21.link/p0096r4">P0096R4</a>)</a>
       </td>
     </tr>
     <tr>
       <td class="full" align="center">
-        Clang 7 (<a href="http://wg21.link/p0096r5">P0096R5</a>)</a>
+        Clang 7 (<a href="https://wg21.link/p0096r5">P0096R5</a>)</a>
       </td>
     </tr>
     <tr>
       <td class="partial" align="center">
-        WIP (<a href="http://wg21.link/p1353r0">P1353R0</a>)
+        WIP (<a href="https://wg21.link/p1353r0">P1353R0</a>)
       </td>
     </tr>
     <!-- FIXME: Implement latest recommendations.
     <tr>
       <td class="svn" align="center">
-        SVN (<a href="http://wg21.link/p0096r3">P0096R3</a>)</a>
+        SVN (<a href="https://wg21.link/p0096r3">P0096R3</a>)</a>
       </td>
     </tr>
     -->
@@ -1225,7 +1225,7 @@ and library features that are not part of standard C++.</p>
     -->
     <tr>
       <td>[TS] Concepts</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0121r0.pdf">P0121R0</a></td>
+      <td><a href="https://wg21.link/p0121r0">P0121R0</a></td>
       <td></td>
       <td class="na" align="center">Superseded by <a href="#p0734">P0734R0</a></td>
     </tr>
@@ -1242,31 +1242,31 @@ and library features that are not part of standard C++.</p>
     </tr>
     <tr>
       <td>[TS] Library Fundamentals, Version 1 (invocation type traits)</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4480.html">N4480</a></td>
+      <td><a href="https://wg21.link/n4480">N4480</a></td>
       <td>N/A</td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td>[TS] Library Fundamentals, Version 2 (<tt>source_location</tt>)</td>
-     <td><a href="http://wg21.link/n4617">N4617</a></td>
+     <td><a href="https://wg21.link/n4617">N4617</a></td>
       <td>N/A</td>
       <td class="full" align="center">Clang 9 (<a href="docs/LanguageExtensions.html#source-location-builtins">documentation</a>)</td>
     </tr>
     <tr>
       <td>[TS] Modules</td>
-      <td><a href="http://wg21.link/n4720">N4720</a></td>
+      <td><a href="https://wg21.link/n4720">N4720</a></td>
       <td><tt>-fmodules-ts</tt></td>
       <td class="na" align="center">Superseded by <a href="#p1103">P1103R3</a></td>
     </tr>
     <tr>
       <td>[DRAFT TS] Reflection</td>
-      <td><a href="http://wg21.link/n4746">N4746</a></td>
+      <td><a href="https://wg21.link/n4746">N4746</a></td>
       <td></td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td>[TS] Transactional Memory</td>
-      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4514.pdf">N4514</a></td>
+      <td><a href="https://wg21.link/n4514">N4514</a></td>
       <td></td>
       <td class="none" align="center">No</td>
     </tr>

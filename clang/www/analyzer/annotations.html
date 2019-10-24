@@ -17,18 +17,18 @@
 <h1>Source Annotations</h1>
 
 <p>The Clang frontend supports several source-level annotations in the form of
-<a href="http://gcc.gnu.org/onlinedocs/gcc/Attribute-Syntax.html">GCC-style
+<a href="https://gcc.gnu.org/onlinedocs/gcc/Attribute-Syntax.html">GCC-style
 attributes</a> and pragmas that can help make using the Clang Static Analyzer
 more useful. These annotations can both help suppress false positives as well as
 enhance the analyzer's ability to find bugs.</p>
 
 <p>This page gives a practical overview of such annotations. For more technical
 specifics regarding Clang-specific annotations please see the Clang's list of <a
-href="http://clang.llvm.org/docs/LanguageExtensions.html">language
+href="https://clang.llvm.org/docs/LanguageExtensions.html">language
 extensions</a>. Details of &quot;standard&quot; GCC attributes (that Clang also
-supports) can be found in the <a href="http://gcc.gnu.org/onlinedocs/gcc/">GCC
+supports) can be found in the <a href="https://gcc.gnu.org/onlinedocs/gcc/">GCC
 manual</a>, with the majority of the relevant attributes being in the section on
-<a href="http://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html">function
+<a href="https://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html">function
 attributes</a>.</p>
 
 <p>Note that attributes that are labeled <b>Clang-specific</b> are not
@@ -68,7 +68,7 @@ recognized by GCC. Their use can be conditioned using preprocessor macros
         <li><a href="#attr_os_consumes_this">Attribute 'os_consumes_this'</a></li>
         <li><a href="#os_out_parameters">Out Parameters</a></li>
       </ul>
-    
+
     </li>
   </ul>
 </li>
@@ -91,7 +91,7 @@ recognized by GCC. Their use can be conditioned using preprocessor macros
 <p>The analyzer recognizes the GCC attribute 'nonnull', which indicates that a
 function expects that a given function parameter is not a null pointer. Specific
 details of the syntax of using the 'nonnull' attribute can be found in <a
-href="http://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html#index-g_t_0040code_007bnonnull_007d-function-attribute-2263">GCC's
+href="https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html#index-nonnull-function-attribute">GCC's
 documentation</a>.</p>
 
 <p>Both the Clang compiler and GCC will flag warnings for simple cases where a
@@ -108,7 +108,7 @@ parameter.</p>
 int bar(int*p, int q, int *r) __attribute__((nonnull(1,3)));
 
 int foo(int *p, int *q) {
-   return !p ? bar(q, 2, p) 
+   return !p ? bar(q, 2, p)
              : bar(p, 2, q);
 }
 </pre>
@@ -138,8 +138,8 @@ conventions can cause the analyzer to miss bugs or flag false positives.</p>
 <p>One can educate the analyzer (and others who read your code) about methods or
 functions that deviate from the Cocoa and Core Foundation conventions using the
 attributes described here. However, you should consider using proper naming
-conventions or the <a 
-href="http://clang.llvm.org/docs/LanguageExtensions.html#the-objc-method-family-attribute"><tt>objc_method_family</tt></a>
+conventions or the <a
+href="https://clang.llvm.org/docs/LanguageExtensions.html#the-objc-method-family-attribute"><tt>objc_method_family</tt></a>
 attribute, if applicable.</p>
 
 <h4 id="attr_ns_returns_retained">Attribute 'ns_returns_retained'
@@ -236,7 +236,7 @@ its availability, as it is not available in earlier versions of the analyzer:</p
 
 <p>The GCC-style (Clang-specific) attribute 'cf_returns_retained' allows one to
 annotate an Objective-C method or C function as returning a retained Core
-Foundation object that the caller is responsible for releasing. The 
+Foundation object that the caller is responsible for releasing. The
 CoreFoundation framework defines a macro <b><tt>CF_RETURNS_RETAINED</tt></b>
 that is functionally equivalent to the one shown below.</p>
 
@@ -323,7 +323,7 @@ href="#attr_cf_returns_retained">cf_returns_retained</a>'. Where a function or
 method may appear to obey the Core Foundation or Cocoa conventions and return
 a retained Core Foundation object, this attribute can be used to indicate that
 the object reference returned should not be considered as an
-&quot;owning&quot; reference being returned to the caller. The 
+&quot;owning&quot; reference being returned to the caller. The
 CoreFoundation framework defines a macro <b><tt>CF_RETURNS_NOT_RETAINED</tt></b>
 that is functionally equivalent to the one shown below.</p>
 
@@ -353,8 +353,8 @@ its availability, as it is not available in earlier versions of the analyzer:</p
 <p>The 'ns_consumed' attribute can be placed on a specific parameter in either
 the declaration of a function or an Objective-C method. It indicates to the
 static analyzer that a <tt>release</tt> message is implicitly sent to the
-parameter upon completion of the call to the given function or method. The 
-Foundation framework defines a macro <b><tt>NS_RELEASES_ARGUMENT</tt></b> that 
+parameter upon completion of the call to the given function or method. The
+Foundation framework defines a macro <b><tt>NS_RELEASES_ARGUMENT</tt></b> that
 is functionally equivalent to the <tt>NS_CONSUMED</tt> macro shown below.</p>
 
 <p><b>Example</b></p>
@@ -408,7 +408,7 @@ implicitly passed to a call to <tt>CFRelease</tt> upon completion of the call
 to the given function or method. The CoreFoundation framework defines a macro
 <b><tt>CF_RELEASES_ARGUMENT</tt></b> that is functionally equivalent to the
 <tt>CF_CONSUMED</tt> macro shown below.</p>
-    
+
 <p>Operationally this attribute is nearly identical to 'ns_consumed'.</p>
 
 <p><b>Example</b></p>
@@ -438,7 +438,7 @@ void test() {
 void test2() {
   CFDateRef date = CFDateCreate(0, CFAbsoluteTimeGetCurrent());
   consume_CFDate(date); <b><i>// No leak, including under GC!</i></b>
-  
+
 }
 
 @interface Foo : NSObject
@@ -463,7 +463,7 @@ is sent. This matches the semantics of all &quot;init&quot; methods.</p>
 follow the standard Cocoa naming conventions.</p>
 
 <p><b>Example</b></p>
-  
+
 <pre class="code_example">
 #ifndef __has_feature
 #define __has_feature(x) 0 // Compatibility with non-clang compilers.
@@ -573,8 +573,8 @@ class MyClass {
   OSObject *f;
   LIBKERN_RETURNS_NOT_RETAINED OSObject *myFieldGetter();
 }
- 
- 
+
+
 // Note that the annotation only has to be applied to the function declaration.
 OSObject * MyClass::myFieldGetter() {
   return f;
@@ -633,7 +633,7 @@ identified using <tt>LIBKERN_RETURNS_RETAINED</tt>:</p>
 void getterViaOutParam(LIBKERN_RETURNS_NOT_RETAINED OSObject **obj)
 </pre>
 <p>
-In such cases a retained object is written into an out parameter, which the caller has then to release in order to avoid a leak. 
+In such cases a retained object is written into an out parameter, which the caller has then to release in order to avoid a leak.
 </p>
 
 <p>These two cases are simple - but in practice a functions returning an out-parameter usually also return a return code, and then an out parameter may or may not be written, which conditionally depends on the exit code, e.g.:</p>
@@ -718,7 +718,7 @@ some action that depends on that condition (e.g., dereferencing a pointer).</p>
 <p>The analyzer knows about several well-known assertion handlers, but can
 automatically infer if a function should be treated as an assertion handler if
 it is annotated with the 'noreturn' attribute or the (Clang-specific)
-'analyzer_noreturn' attribute. Note that, currently, clang does not support 
+'analyzer_noreturn' attribute. Note that, currently, clang does not support
 these attributes on Objective-C methods and C++ methods.</p>
 
 <h4 id="attr_noreturn">Attribute 'noreturn'</h4>
@@ -729,7 +729,7 @@ with a 'noreturn' attribute should never return.</p>
 
 <p>Specific details of the syntax of using the 'noreturn' attribute can be found
 in <a
-href="http://gcc.gnu.org/onlinedocs/gcc/Function-Attributes.html#index-g_t_0040code_007bnoreturn_007d-function-attribute-2264">GCC's
+href="https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html#index-noreturn-function-attribute">GCC's
 documentation</a>.</p>
 
 <p>Not only does the analyzer exploit this information when pruning false paths,
