@@ -642,6 +642,11 @@ public:
     return RecursiveASTVisitor::TraverseNestedNameSpecifierLoc(L);
   }
 
+  bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+    visitNode(DynTypedNode::create(*Init));
+    return RecursiveASTVisitor::TraverseConstructorInitializer(Init);
+  }
+
 private:
   /// Obtain information about a reference directly defined in \p N. Does not
   /// recurse into child nodes, e.g. do not expect references for constructor
@@ -669,13 +674,14 @@ private:
     if (const TypeLoc *TL = N.get<TypeLoc>())
       return refInTypeLoc(*TL);
     if (const CXXCtorInitializer *CCI = N.get<CXXCtorInitializer>()) {
-      if (CCI->isBaseInitializer())
-        return refInTypeLoc(CCI->getBaseClassLoc());
-      assert(CCI->isAnyMemberInitializer());
-      return {ReferenceLoc{NestedNameSpecifierLoc(),
-                           CCI->getMemberLocation(),
-                           /*IsDecl=*/false,
-                           {CCI->getAnyMember()}}};
+      // Other type initializers (e.g. base initializer) are handled by visiting
+      // the typeLoc.
+      if (CCI->isAnyMemberInitializer()) {
+        return {ReferenceLoc{NestedNameSpecifierLoc(),
+                             CCI->getMemberLocation(),
+                             /*IsDecl=*/false,
+                             {CCI->getAnyMember()}}};
+      }
     }
     // We do not have location information for other nodes (QualType, etc)
     return {};
