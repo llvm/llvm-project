@@ -1154,13 +1154,10 @@ bool LazyValueInfoImpl::solveBlockValueIntrinsic(ValueLatticeElement &BBLV,
   if (auto *SI = dyn_cast<SaturatingInst>(II))
     return solveBlockValueSaturatingIntrinsic(BBLV, SI, BB);
 
-  switch (II->getIntrinsicID()) {
-  default:
-    LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
-                      << "' - overdefined (unknown intrinsic).\n");
-    BBLV = ValueLatticeElement::getOverdefined();
-    return true;
-  }
+  LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
+                    << "' - overdefined (unknown intrinsic).\n");
+  BBLV = ValueLatticeElement::getOverdefined();
+  return true;
 }
 
 bool LazyValueInfoImpl::solveBlockValueExtractValue(
