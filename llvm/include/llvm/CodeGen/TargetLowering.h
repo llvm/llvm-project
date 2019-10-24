@@ -4268,13 +4268,6 @@ private:
   SDValue buildSREMEqFold(EVT SETCCVT, SDValue REMNode, SDValue CompTargetNode,
                           ISD::CondCode Cond, DAGCombinerInfo &DCI,
                           const SDLoc &DL) const;
-
-  /// x ==/!= c  ->  (x - c) ==/!= 0  iff '-c' can be folded into the x node.
-  SDValue optimizeSetCCToComparisonWithZero(EVT SCCVT, SDValue N0,
-                                            ConstantSDNode *N1C,
-                                            ISD::CondCode Cond,
-                                            DAGCombinerInfo &DCI,
-                                            const SDLoc &DL) const;
 };
 
 /// Given an LLVM IR type and return type attributes, compute the return value
