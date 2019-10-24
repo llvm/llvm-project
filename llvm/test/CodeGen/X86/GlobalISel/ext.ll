@@ -89,10 +89,8 @@ define i32 @test_sext_i8(i8 %val) {
 ; X64-LABEL: test_sext_i8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movl $24, %ecx
-; X64-NEXT:    shll %cl, %eax
-; X64-NEXT:    movl $24, %ecx
-; X64-NEXT:    sarl %cl, %eax
+; X64-NEXT:    shll $24, %eax
+; X64-NEXT:    sarl $24, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_sext_i8:
@@ -107,10 +105,8 @@ define i32 @test_sext_i16(i16 %val) {
 ; X64-LABEL: test_sext_i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movl $16, %ecx
-; X64-NEXT:    shll %cl, %eax
-; X64-NEXT:    movl $16, %ecx
-; X64-NEXT:    sarl %cl, %eax
+; X64-NEXT:    shll $16, %eax
+; X64-NEXT:    sarl $16, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_sext_i16:

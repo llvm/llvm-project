@@ -198,17 +198,14 @@ body: |
     ; CHECK-LABEL: name: test_unmerge_s8_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s32)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
-    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]], [[TRUNC]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]], [[C]](s32)
     ; CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[ZEXT]], [[SHL]]
-    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[C1]](s64)
-    ; CHECK: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[OR]], [[TRUNC1]](s32)
+    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[OR]], [[C1]](s32)
     ; CHECK: [[OR1:%[0-9]+]]:_(s64) = G_OR [[OR]], [[SHL1]]
-    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-    ; CHECK: [[TRUNC2:%[0-9]+]]:_(s32) = G_TRUNC [[C2]](s64)
-    ; CHECK: [[SHL2:%[0-9]+]]:_(s64) = G_SHL [[OR1]], [[TRUNC2]](s32)
+    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK: [[SHL2:%[0-9]+]]:_(s64) = G_SHL [[OR1]], [[C2]](s32)
     ; CHECK: [[OR2:%[0-9]+]]:_(s64) = G_OR [[OR1]], [[SHL2]]
     ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[OR2]](s64)
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
