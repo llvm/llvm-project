@@ -1119,7 +1119,7 @@ bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
   std::vector<Elf_Shdr> SHeaders;
   State.initSectionHeaders(SHeaders, CBA);
 
-  // Now we can decide segment offsets
+  // Now we can decide segment offsets.
   State.setProgramHeaderLayout(PHeaders, SHeaders);
 
   if (State.HasError)
