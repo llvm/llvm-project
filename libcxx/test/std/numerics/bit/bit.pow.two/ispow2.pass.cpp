@@ -46,7 +46,7 @@ void runtime_test()
 {
 	ASSERT_SAME_TYPE(bool, decltype(std::ispow2(T(0))));
 	ASSERT_NOEXCEPT(                std::ispow2(T(0)));
-	
+
 	assert(!std::ispow2(T(121)));
 	assert(!std::ispow2(T(122)));
 	assert(!std::ispow2(T(123)));
@@ -61,7 +61,7 @@ void runtime_test()
 
 int main()
 {
-	
+
     {
     auto lambda = [](auto x) -> decltype(std::ispow2(x)) {};
     using L = decltype(lambda);
@@ -158,5 +158,5 @@ int main()
 	assert(!std::ispow2(val+1));
 	}
 #endif
-	
+
 }

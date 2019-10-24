@@ -25,8 +25,8 @@ int main(int, char**)
 {
 	{
 	std::optional<char &> o1;	        // expected-error-re@optional:* {{static_assert failed{{.*}} "instantiation of optional with a reference type is ill-formed"}}
-	std::optional<NonDestructible> o2;  // expected-error-re@optional:* {{static_assert failed{{.*}} "instantiation of optional with a non-destructible type is ill-formed"}}	
-	std::optional<char[20]> o3;	        // expected-error-re@optional:* {{static_assert failed{{.*}} "instantiation of optional with an array type is ill-formed"}}	
+	std::optional<NonDestructible> o2;  // expected-error-re@optional:* {{static_assert failed{{.*}} "instantiation of optional with a non-destructible type is ill-formed"}}
+	std::optional<char[20]> o3;	        // expected-error-re@optional:* {{static_assert failed{{.*}} "instantiation of optional with an array type is ill-formed"}}
 	}
 
 	{

@@ -48,7 +48,7 @@ void runtime_test()
 {
 	ASSERT_SAME_TYPE(T, decltype(std::log2p1(T(0))));
 	ASSERT_NOEXCEPT(             std::log2p1(T(0)));
-	
+
 	assert( std::log2p1(T(0)) == T(0));
 	assert( std::log2p1(T(1)) == T(1));
 	assert( std::log2p1(T(2)) == T(2));
@@ -75,7 +75,7 @@ void runtime_test()
 
 int main()
 {
-	
+
     {
     auto lambda = [](auto x) -> decltype(std::log2p1(x)) {};
     using L = decltype(lambda);
