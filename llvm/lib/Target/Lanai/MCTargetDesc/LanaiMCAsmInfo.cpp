@@ -18,7 +18,8 @@ using namespace llvm;
 
 void LanaiMCAsmInfo::anchor() {}
 
-LanaiMCAsmInfo::LanaiMCAsmInfo(const Triple & /*TheTriple*/) {
+LanaiMCAsmInfo::LanaiMCAsmInfo(const Triple & /*TheTriple*/,
+                               const MCTargetOptions &Options) {
   IsLittleEndian = false;
   PrivateGlobalPrefix = ".L";
   WeakRefDirective = "\t.weak\t";

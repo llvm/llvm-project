@@ -76,7 +76,8 @@ static MCSubtargetInfo *createPPCMCSubtargetInfo(const Triple &TT,
 }
 
 static MCAsmInfo *createPPCMCAsmInfo(const MCRegisterInfo &MRI,
-                                     const Triple &TheTriple) {
+                                     const Triple &TheTriple,
+                                     const MCTargetOptions &Options) {
   bool isPPC64 = (TheTriple.getArch() == Triple::ppc64 ||
                   TheTriple.getArch() == Triple::ppc64le);
 

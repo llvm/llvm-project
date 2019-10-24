@@ -676,7 +676,9 @@ int main(int argc, char **argv) {
   if (!MRI)
     return error(Twine("no register info for target ") + TripleName, Context);
 
-  std::unique_ptr<MCAsmInfo> MAI(TheTarget->createMCAsmInfo(*MRI, TripleName));
+  MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
+  std::unique_ptr<MCAsmInfo> MAI(
+      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   if (!MAI)
     return error("no asm info for target " + TripleName, Context);
 
@@ -716,7 +718,6 @@ int main(int argc, char **argv) {
     OS = BOS.getPointer();
   }
 
-  MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
   std::unique_ptr<MCStreamer> MS(TheTarget->createMCObjectStreamer(
       TheTriple, MC, std::unique_ptr<MCAsmBackend>(MAB),
       MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(MCE), *MSTI,

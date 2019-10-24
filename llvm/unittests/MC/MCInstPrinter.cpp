@@ -9,6 +9,7 @@
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
@@ -40,7 +41,8 @@ public:
       return;
 
     MRI.reset(TheTarget->createMCRegInfo(TripleName));
-    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName));
+    MCTargetOptions MCOptions;
+    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
     MII.reset(TheTarget->createMCInstrInfo());
     Printer.reset(TheTarget->createMCInstPrinter(
         Triple(TripleName), MAI->getAssemblerDialect(), *MAI, *MII, *MRI));

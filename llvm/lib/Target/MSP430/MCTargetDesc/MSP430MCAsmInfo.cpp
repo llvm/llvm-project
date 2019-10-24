@@ -15,7 +15,8 @@ using namespace llvm;
 
 void MSP430MCAsmInfo::anchor() { }
 
-MSP430MCAsmInfo::MSP430MCAsmInfo(const Triple &TT) {
+MSP430MCAsmInfo::MSP430MCAsmInfo(const Triple &TT,
+                                 const MCTargetOptions &Options) {
   CodePointerSize = CalleeSaveStackSlotSize = 2;
 
   CommentString = ";";
