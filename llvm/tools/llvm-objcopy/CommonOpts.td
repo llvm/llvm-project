@@ -86,8 +86,9 @@ def keep_file_symbols : Flag<["--"], "keep-file-symbols">,
 
 def only_keep_debug
     : Flag<["--"], "only-keep-debug">,
-      HelpText<"Clear sections that would not be stripped by --strip-debug. "
-               "Currently only implemented for COFF.">;
+      HelpText<
+          "Produce a debug file as the output that only preserves contents of "
+          "sections useful for debugging purposes">;
 
 def discard_locals : Flag<["--"], "discard-locals">,
                      HelpText<"Remove compiler-generated local symbols, (e.g. "

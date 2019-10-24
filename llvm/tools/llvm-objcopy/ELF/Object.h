@@ -342,9 +342,13 @@ public:
   virtual ~ELFWriter() {}
   bool WriteSectionHeaders;
 
+  // For --only-keep-debug, select an alternative section/segment layout
+  // algorithm.
+  bool OnlyKeepDebug;
+
   Error finalize() override;
   Error write() override;
-  ELFWriter(Object &Obj, Buffer &Buf, bool WSH);
+  ELFWriter(Object &Obj, Buffer &Buf, bool WSH, bool OnlyKeepDebug);
 };
 
 class BinaryWriter : public Writer {
@@ -435,8 +439,6 @@ private:
     }
   };
 
-  std::set<const SectionBase *, SectionCompare> Sections;
-
 public:
   uint32_t Type;
   uint32_t Flags;
@@ -451,6 +453,7 @@ public:
   uint64_t OriginalOffset;
   Segment *ParentSegment = nullptr;
   ArrayRef<uint8_t> Contents;
+  std::set<const SectionBase *, SectionCompare> Sections;
 
   explicit Segment(ArrayRef<uint8_t> Data) : Contents(Data) {}
   Segment() {}
