@@ -1130,9 +1130,6 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI) const {
   if (isCopyInstr(MI, SrcRegOp, DestRegOp)) {
     Op = SrcRegOp;
     return ParamLoadedValue(*Op, Expr);
-  } else if (MI.isMoveImmediate()) {
-    Op = &MI.getOperand(1);
-    return ParamLoadedValue(*Op, Expr);
   }
 
   return None;
