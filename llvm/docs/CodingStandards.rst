@@ -40,8 +40,7 @@ change it in some other way.  Just do the reformatting as a separate commit
 from the functionality change.
   
 The ultimate goal of these guidelines is to increase the readability and
-maintainability of our common source base. If you have suggestions for topics to
-be included, please mail them to `Chris <mailto:sabre@nondot.org>`_.
+maintainability of our common source base.
 
 Languages, Libraries, and Standards
 ===================================
