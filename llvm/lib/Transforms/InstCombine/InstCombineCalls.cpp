@@ -3308,6 +3308,20 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::arm_mve_vadc:
+  case Intrinsic::arm_mve_vadc_predicated: {
+    unsigned CarryOp =
+        (II->getIntrinsicID() == Intrinsic::arm_mve_vadc_predicated) ? 3 : 2;
+    Value *CarryArg = II->getArgOperand(CarryOp);
+    assert(CarryArg->getType()->getScalarSizeInBits() == 32 &&
+           "Bad type for intrinsic!");
+
+    KnownBits CarryKnown(32);
+    if (SimplifyDemandedBits(II, CarryOp, APInt::getOneBitSet(32, 29),
+                             CarryKnown))
+      return II;
+    break;
+  }
   case Intrinsic::amdgcn_rcp: {
     Value *Src = II->getArgOperand(0);
 
