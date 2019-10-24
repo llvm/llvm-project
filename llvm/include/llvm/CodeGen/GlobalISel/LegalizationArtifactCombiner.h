@@ -157,6 +157,32 @@ public:
     return tryFoldImplicitDef(MI, DeadInsts);
   }
 
+  bool tryCombineTrunc(MachineInstr &MI,
+                       SmallVectorImpl<MachineInstr *> &DeadInsts) {
+    assert(MI.getOpcode() == TargetOpcode::G_TRUNC);
+
+    Builder.setInstr(MI);
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
+
+    // Try to fold trunc(g_constant) when the smaller constant type is legal.
+    // Can't use MIPattern because we don't have a specific constant in mind.
+    auto *SrcMI = MRI.getVRegDef(SrcReg);
+    if (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT) {
+      const LLT &DstTy = MRI.getType(DstReg);
+      if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
+        auto &CstVal = SrcMI->getOperand(1);
+        Builder.buildConstant(
+            DstReg, CstVal.getCImm()->getValue().trunc(DstTy.getSizeInBits()));
+        markInstAndDefDead(MI, *SrcMI, DeadInsts);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+
   /// Try to fold G_[ASZ]EXT (G_IMPLICIT_DEF).
   bool tryFoldImplicitDef(MachineInstr &MI,
                           SmallVectorImpl<MachineInstr *> &DeadInsts) {
@@ -420,6 +446,9 @@ public:
     case TargetOpcode::G_EXTRACT:
       return tryCombineExtract(MI, DeadInsts);
     case TargetOpcode::G_TRUNC: {
+      if (tryCombineTrunc(MI, DeadInsts))
+        return true;
+
       bool Changed = false;
       for (auto &Use : MRI.use_instructions(MI.getOperand(0).getReg()))
         Changed |= tryCombineInstruction(Use, DeadInsts, WrapperObserver);
