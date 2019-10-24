@@ -838,6 +838,16 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &sec) {
     if (!target)
       return nullptr;
 
+    // ELF spec allows mergeable sections with relocations, but they are
+    // rare, and it is in practice hard to merge such sections by contents,
+    // because applying relocations at end of linking changes section
+    // contents. So, we simply handle such sections as non-mergeable ones.
+    // Degrading like this is acceptable because section merging is optional.
+    if (auto *ms = dyn_cast<MergeInputSection>(target)) {
+      target = toRegularSection(ms);
+      this->sections[sec.sh_info] = target;
+    }
+
     // This section contains relocation information.
     // If -r is given, we do not interpret or apply relocation
     // but just copy relocation sections to output.
@@ -855,16 +865,6 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &sec) {
     if (target->firstRelocation)
       fatal(toString(this) +
             ": multiple relocation sections to one section are not supported");
-
-    // ELF spec allows mergeable sections with relocations, but they are
-    // rare, and it is in practice hard to merge such sections by contents,
-    // because applying relocations at end of linking changes section
-    // contents. So, we simply handle such sections as non-mergeable ones.
-    // Degrading like this is acceptable because section merging is optional.
-    if (auto *ms = dyn_cast<MergeInputSection>(target)) {
-      target = toRegularSection(ms);
-      this->sections[sec.sh_info] = target;
-    }
 
     if (sec.sh_type == SHT_RELA) {
       ArrayRef<Elf_Rela> rels = CHECK(getObj().relas(&sec), this);
