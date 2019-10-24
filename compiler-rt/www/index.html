@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" 
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
           "http://www.w3.org/TR/html4/strict.dtd">
 <!-- Material used from: HTML 4.01 specs: http://www.w3.org/TR/html401/ -->
 <html>
@@ -15,7 +15,7 @@
   <!--*********************************************************************-->
   <h1>"compiler-rt" runtime libraries</h1>
   <!--*********************************************************************-->
-  
+
   <p>The compiler-rt project consists of:
   <ul>
   <li>
@@ -36,12 +36,12 @@
     <b>sanitizer runtimes</b> - runtime libraries that are required to run
     the code with sanitizer instrumentation. This includes runtimes for:
     <ul>
-    <li><a href="http://clang.llvm.org/docs/AddressSanitizer.html">AddressSanitizer</a></li>
-    <li><a href="http://clang.llvm.org/docs/ThreadSanitizer.html">ThreadSanitizer</a></li>
-    <li><a href="http://clang.llvm.org/docs/UsersManual.html#opt-fsanitize-undefined">UndefinedBehaviorSanitizer</a></li>
-    <li><a href="http://clang.llvm.org/docs/MemorySanitizer.html">MemorySanitizer</a></li>
-    <li><a href="http://clang.llvm.org/docs/LeakSanitizer.html">LeakSanitizer</a></li>
-    <li><a href="http://clang.llvm.org/docs/DataFlowSanitizer.html">DataFlowSanitizer</a></li>
+    <li><a href="https://clang.llvm.org/docs/AddressSanitizer.html">AddressSanitizer</a></li>
+    <li><a href="https://clang.llvm.org/docs/ThreadSanitizer.html">ThreadSanitizer</a></li>
+    <li><a href="https://clang.llvm.org/docs/UsersManual.html#opt-fsanitize-undefined">UndefinedBehaviorSanitizer</a></li>
+    <li><a href="https://clang.llvm.org/docs/MemorySanitizer.html">MemorySanitizer</a></li>
+    <li><a href="https://clang.llvm.org/docs/LeakSanitizer.html">LeakSanitizer</a></li>
+    <li><a href="https://clang.llvm.org/docs/DataFlowSanitizer.html">DataFlowSanitizer</a></li>
     </ul>
   </li>
   <li>
@@ -54,8 +54,8 @@
   </ul>
   </p>
 
-  <p>All of the code in the compiler-rt project is <a 
-     href="http://llvm.org/docs/DeveloperPolicy.html#license">dual licensed</a>
+  <p>All of the code in the compiler-rt project is <a
+     href="https://llvm.org/docs/DeveloperPolicy.html#copyright-license-and-patents">dual licensed</a>
      under the MIT license and the UIUC License (a BSD-like license).</p>
 
   <!--=====================================================================-->
@@ -63,13 +63,13 @@
   <!--=====================================================================-->
 
   <p>Currently compiler-rt is primarily used by
-    the <a href="http://clang.llvm.org">Clang</a>
-    and <a href="http://llvm.org">LLVM</a> projects as the implementation for
+    the <a href="https://clang.llvm.org">Clang</a>
+    and <a href="https://llvm.org">LLVM</a> projects as the implementation for
     the runtime compiler support libraries. For more information on using
     compiler-rt with Clang, please see the Clang
-    <a href="http://clang.llvm.org/get_started.html">Getting Started</a>
+    <a href="https://clang.llvm.org/get_started.html">Getting Started</a>
     page.</p>
-  
+
   <!--=====================================================================-->
   <h2 id="requirements">Platform Support</h2>
   <!--=====================================================================-->
@@ -81,7 +81,7 @@
    </ul>
 
    <p>Most sanitizer runtimes are supported only on Linux x86-64. See tool-specific
-   pages in <a href="http://clang.llvm.org/docs/index.html">Clang docs</a> for more
+   pages in <a href="https://clang.llvm.org/docs/index.html">Clang docs</a> for more
    details.</p>
 
   <!--=====================================================================-->
@@ -104,11 +104,11 @@
          for the supported architectures.</li>
     <li> test/ contains test suites for compiler-rt runtimes.</li>
    </ul>
-    
+
   <!--=====================================================================-->
   <h2>Get it and get involved!</h2>
   <!--=====================================================================-->
-  
+
   <p>Generally, you need to build LLVM/Clang in order to build compiler-rt. You
     can build it either together with llvm and clang, or separately.
 
@@ -116,7 +116,7 @@
     cmake.
 
   <p>To build it separately, first
-  <a href="http://llvm.org/docs/CMake.html#quick-start">build LLVM</a>
+  <a href="https://llvm.org/docs/CMake.html#quick-start">build LLVM</a>
   separately to get llvm-config binary, and then run:
 
   <ul>
@@ -128,7 +128,7 @@
   </ul>
 
   <p>Tests for sanitizer runtimes are ported to
-  <a href="http://llvm.org/docs/CommandGuide/lit.html">llvm-lit</a> and are
+  <a href="https://llvm.org/docs/CommandGuide/lit.html">llvm-lit</a> and are
   run by <b>make check-all</b> command in LLVM/Clang/compiler-rt build tree.</p>
 
   <p>compiler-rt libraries are installed to the system with <b>make install</b>
@@ -137,10 +137,10 @@
 
   <p>compiler-rt doesn't have its own mailing list, if you have questions please
      email the <a
-    href="http://lists.llvm.org/mailman/listinfo/llvm-dev">llvm-dev</a> mailing
+    href="https://lists.llvm.org/mailman/listinfo/llvm-dev">llvm-dev</a> mailing
     list.  Commits to the compiler-rt SVN module are automatically sent to the
-    <a 
-  href="http://lists.llvm.org/mailman/listinfo/llvm-commits">llvm-commits</a>
+    <a
+  href="https://lists.llvm.org/mailman/listinfo/llvm-commits">llvm-commits</a>
     mailing list.</p>
 </div>
 </body>

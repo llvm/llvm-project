@@ -30,7 +30,7 @@
 memory.LeakEvalOrder</span><span class="lang">
 (C, C++)</span><div class="descr">
 Potential memory leaks caused by an undefined argument evaluation order.
-<p>Source: <a href="http://www.boost.org/doc/libs/1_49_0/libs/smart_ptr/shared_ptr.htm#BestPractices">
+<p>Source: <a href="https://www.boost.org/doc/libs/1_49_0/libs/smart_ptr/shared_ptr.htm#BestPractices">
 boost docs: shared_ptr</a>.</p></div></div></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
@@ -92,7 +92,7 @@ memory.NegativeArraySize</span><span class="lang">
 'n' is used to specify the buffer size may be negative.
 <br>Note: possibly an enhancement to <span class="name">
 alpha.security.MallocOverflow</span>.
-<p>Source: <a href="http://cwe.mitre.org/data/definitions/20.html">CWE-20,
+<p>Source: <a href="https://cwe.mitre.org/data/definitions/20.html">CWE-20,
 Example 2</a>.</p></div></div></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
@@ -109,7 +109,7 @@ memory.ZeroAlloc</span><span class="lang">
 (C, C++)</span><div class="descr">
 Allocation of zero bytes.
 <br>Note: an enhancement to <span class="name">unix.Malloc</span>.
-<br>Note: <span class="name">unix.API</span> perform C-checks for zero 
+<br>Note: <span class="name">unix.API</span> perform C-checks for zero
 allocation. This should be moved to <span class="name">unix.Malloc</span>.
 <p>Source: C++03 3.7.3.1p2; C++11 3.7.4.1p2.</p></div></div></td>
 <td><div class="exampleContainer expandable">
@@ -127,7 +127,7 @@ void test() {
   delete[] p;
 }
 </pre></div></div></td>
-<td class="aligned"><a href="http://reviews.llvm.org/D6178">
+<td class="aligned"><a href="https://reviews.llvm.org/D6178">
 D6178</a></td></tr>
 
 </table>
@@ -294,7 +294,7 @@ int test(bool cond) {
   return i;
 }
 </pre></div></div></td>
-<td class="aligned"><a href="http://llvm.org/bugs/show_bug.cgi?id=16890">PR16890</a></td></tr>
+<td class="aligned"><a href="https://bugs.llvm.org/show_bug.cgi?id=16890">PR16890</a></td></tr>
 
 <tr><td><div class="namedescr expandable"><span class="name">
 deadcode.IdempotentOperations</span><span class="lang">
@@ -360,7 +360,7 @@ void use(int fd) {
     print("%d", count); // should not warn
 }
 </pre></div></div></td>
-<td class="aligned"><a href="http://llvm.org/bugs/show_bug.cgi?id=18701">PR18701</a></td></tr>
+<td class="aligned"><a href="https://bugs.llvm.org/show_bug.cgi?id=18701">PR18701</a></td></tr>
 
 </table>
 
@@ -393,9 +393,9 @@ public:
 <tr><td><div class="namedescr expandable"><span class="name">
 undefbehavior.LocalStaticDestroyed</span><span class="lang">
 (C++)</span><div class="descr">
-Undefined behavior: function containing a definition of static local object is 
-called during the destruction of an object with static storage duration so that 
-flow of control passes through the definition of the previously destroyed 
+Undefined behavior: function containing a definition of static local object is
+called during the destruction of an object with static storage duration so that
+flow of control passes through the definition of the previously destroyed
 static local object.
 <p>Source: C++11 3.6.3p2.</p></div></div></td>
 <td><div class="exampleContainer expandable">
@@ -423,7 +423,7 @@ void f() {
 <tr><td><div class="namedescr expandable"><span class="name">
 undefbehavior.ZeroAllocDereference</span><span class="lang">
 (C, C++)</span><div class="descr">
-The effect of dereferencing a pointer returned as a request for zero size is 
+The effect of dereferencing a pointer returned as a request for zero size is
 undefined.<br>
 Note: possibly an enhancement to <span class="name">
 unix.Malloc</span>.
@@ -447,7 +447,7 @@ void test() {
   delete[] p;
 }
 </pre></div></div></td>
-<td class="aligned"><a href="http://reviews.llvm.org/D8273">D8273</a></td></tr>
+<td class="aligned"><a href="https://reviews.llvm.org/D8273">D8273</a></td></tr>
 
 
 <tr><td><div class="namedescr expandable"><span class="name">
@@ -463,7 +463,7 @@ non-static member function of the object</li>
 <li>the pointer is implicitly converted to a pointer to a base class
 type</li>
 <li>the pointer is used as the operand of a <code>static_cast</code> (except
-when the conversion is to <code>void*</code>, or to <code>void*</code> and 
+when the conversion is to <code>void*</code>, or to <code>void*</code> and
 subsequently to <code>char*</code>, or <code>unsigned char*</code>)</li>
 <li>the pointer is used as the operand of a <code>dynamic_cast</code></li></ul>
 <p>Source: C++03 3.8p5, p7; C++11 3.8p5, p7.</p></div></div></td>
@@ -562,7 +562,7 @@ A* test() {
 <tr><td><div class="namedescr expandable"><span class="name">
 undefbehavior.ObjLocChanges</span><span class="lang">
 (C++)</span><div class="descr">
-Undefined behavior: the program must ensure that an object occupies the same 
+Undefined behavior: the program must ensure that an object occupies the same
 storage location when the implicit or explicit destructor call takes place.
 <p>Source: C++11 3.8p8.</p></div></div></td>
 <td><div class="exampleContainer expandable">
@@ -603,7 +603,7 @@ void test() {
 <tr><td><div class="namedescr expandable"><span class="name">
 undefbehavior.ExprEvalOrderUndef</span><span class="lang">
 (C, C++03)</span><div class="descr">
-Undefined behavior: a scalar object shall have its stored value modified at 
+Undefined behavior: a scalar object shall have its stored value modified at
 most once by the evaluation of an expression.<br>
 Note: most cases are currently handled by the Clang core (search for 'multiple
 unsequenced modifications' warning in Clang tests).
@@ -622,7 +622,7 @@ int test () {
 <tr><td><div class="namedescr expandable"><span class="name">
 undefbehavior.StaticInitReentered</span><span class="lang">
 (C++)</span><div class="descr">
-Undefined behavior: static declaration is re-entered while the object is being 
+Undefined behavior: static declaration is re-entered while the object is being
 initialized.
 <p>Source: C++11 6.7p4.</p></div></div></td>
 <td><div class="exampleContainer expandable">
@@ -669,7 +669,7 @@ void test() {
 <tr><td><div class="namedescr expandable"><span class="name">
 undefbehavior.DeadDestructed</span><span class="lang">
 (C++)</span><div class="descr">
-Undefined behavior: the destructor is invoked for an object whose lifetime 
+Undefined behavior: the destructor is invoked for an object whose lifetime
 has ended.
 <p>Source: C++11 12.4p14.</p></div></div></td>
 <td><div class="exampleContainer expandable">
@@ -713,9 +713,9 @@ public :
 <tr><td><div class="namedescr expandable"><span class="name">
 undefbehavior.MemberOrBaseRefBeforeCtor</span><span class="lang">
 (C++)</span><div class="descr">
-C++ Undefined behavior: non-static member or base class of non-POD class type 
+C++ Undefined behavior: non-static member or base class of non-POD class type
 is referred before constructor begins execution.<br>
-C++11 Undefined behavior: non-static member or base class of a class with a 
+C++11 Undefined behavior: non-static member or base class of a class with a
 non-trivial constructor is referred before constructor begins execution.
 <p>Source: C++03 12.7p1; C++11 12.7p1.</p></div></div></td>
 <td><div class="exampleContainer expandable">
@@ -730,8 +730,8 @@ extern non_POD non_pod;
 int *p = &amp;non_pod.i; // warn
 </pre></div>
 <div class="example"><pre>
-struct POD { 
-  int i; 
+struct POD {
+  int i;
 };
 
 struct non_POD : public POD {
@@ -744,7 +744,7 @@ int *p = &amp;non_pod.pod.i; // warn
 </pre></div>
 <div class="example"><pre>
 struct POD {
-  int i; 
+  int i;
 };
 
 struct non_POD : public POD {};
@@ -771,9 +771,9 @@ struct S {
 <tr><td><div class="namedescr expandable"><span class="name">
 undefbehavior.MemberRefAfterDtor</span><span class="lang">
 (C++)</span><div class="descr">
-C++03: Undefined behavior: non-static member of non-POD class type is referred 
+C++03: Undefined behavior: non-static member of non-POD class type is referred
 after destructor ends execution.<br>
-C++11: Undefined behavior: non-static member of a class with a non-trivial 
+C++11: Undefined behavior: non-static member of a class with a non-trivial
 destructor is referred after destructor ends execution.
 <p>Source: C++03 12.7p1; C++11 12.7p1.</p></div></div></td>
 <td><div class="exampleContainer expandable">
@@ -796,7 +796,7 @@ void test() {
 <tr><td><div class="namedescr expandable"><span class="name">
 undefbehavior.CtorForeignCall</span><span class="lang">
 (C++)</span><div class="descr">
-Undefined behavior: call to virtual function of an object under construction 
+Undefined behavior: call to virtual function of an object under construction
 whose type is neither the constructors own class or one of its bases.
 <p>Source: C++11 12.7p4.</p></div></div></td>
 <td><div class="exampleContainer expandable">
@@ -823,7 +823,7 @@ public:
 undefbehavior.CtorForeignTypeid</span><span class="lang">
 (C++)</span><div class="descr">
 Undefined behavior: the operand of <code>typeid</code> is an object under
-construction whose type is neither the constructors own class or one of its 
+construction whose type is neither the constructors own class or one of its
 bases.
 <p>Source: C++11 12.7p5.</p></div></div></td>
 <td><div class="exampleContainer expandable">
@@ -865,7 +865,7 @@ public:
 
 class B {
 public:
-  B(A* a) { 
+  B(A* a) {
     (void)dynamic_cast&lt;B*&gt;(a); //warn
   }
 };
@@ -881,8 +881,8 @@ public:
 <tr><td><div class="namedescr expandable"><span class="name">
 undefbehavior.MemberOrBaseRefInCatch</span><span class="lang">
 (C++)</span><div class="descr">
-Undefined behavior: referring to any non-static member or base class of an 
-object in the handler for a function-try-block of a constructor or destructor 
+Undefined behavior: referring to any non-static member or base class of an
+object in the handler for a function-try-block of a constructor or destructor
 for that object results in undefined behavior.
 <p>Source: C++11 15.3p10.</p></div></div></td>
 <td><div class="exampleContainer expandable">
@@ -925,7 +925,7 @@ public :
 <tr><td><div class="namedescr expandable"><span class="name">
 undefbehavior.ReturnAtCatchEnd</span><span class="lang">
 (C++)</span><div class="descr">
-Undefined behavior: a function returns when control reaches the end of a 
+Undefined behavior: a function returns when control reaches the end of a
 handler. This results in undefined behavior in a value-returning function.
 <p>Source: C++11 15.3p10.</p></div></div></td>
 <td><div class="exampleContainer expandable">
@@ -1011,9 +1011,9 @@ int test() {
 <tr><td><div class="namedescr expandable"><span class="name">
 undefbehavior.QsortNonPODNonTrivial</span><span class="lang">
 (C++)</span><div class="descr">
-C++03: Undefined behavior: the objects in the array passed to qsort are of 
+C++03: Undefined behavior: the objects in the array passed to qsort are of
 non-POD type.<br>
-C++11: Undefined behavior: the objects in the array passed to qsort are of 
+C++11: Undefined behavior: the objects in the array passed to qsort are of
 non-trivial type.
 <p>Source: C++03 25.4p4; C++11 25.5p4.</p></div></div></td>
 <td><div class="exampleContainer expandable">
@@ -1353,7 +1353,7 @@ int test() {
 <tr><td><div class="namedescr expandable"><span class="name">
 different.NullDerefStmtOrder</span><span class="lang">
 (C)</span><div class="descr">
-Dereferencing of the null pointer might take place. Checking the pointer for 
+Dereferencing of the null pointer might take place. Checking the pointer for
 null should be performed first.
 <br>Note: possibly an enhancement to <span class="name">
 core.NullDereference</span>.</div></div></td>
@@ -1380,7 +1380,7 @@ void test() {
 <tr><td><div class="namedescr expandable"><span class="name">
 different.NullDerefCondOrder</span><span class="lang">
 (C)</span><div class="descr">
-Dereferencing of the null pointer might take place. Checking the pointer for 
+Dereferencing of the null pointer might take place. Checking the pointer for
 null should be performed first.
 <br>Note: possibly an enhancement to <span class="name">
 core.NullDereference</span>.</div></div></td>
@@ -1734,7 +1734,7 @@ different.IntegerOverflow</span><span class="lang">
 Integer overflow.
 <br>Note: partially handled by Clang core
 (search for 'overflow in expression' warning in Clang tests).
-<p>Source: <a href="http://cwe.mitre.org/data/definitions/190.html">
+<p>Source: <a href="https://cwe.mitre.org/data/definitions/190.html">
 CWE-190</a>.</p></div></div></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
@@ -1761,7 +1761,7 @@ int test() {
 different.SignExtension</span><span class="lang">
 (C)</span><div class="descr">
 Unexpected sign extension might take place.
-<p>Source: <a href="http://cwe.mitre.org/data/definitions/194.html">
+<p>Source: <a href="https://cwe.mitre.org/data/definitions/194.html">
 CWE-194</a>.</p></div></div></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
@@ -1789,7 +1789,7 @@ unsigned int test(int i) {
 different.NumericTruncation</span><span class="lang">
 (C)</span><div class="descr">
 Numeric truncation might take place.
-<p>Source: <a href="http://cwe.mitre.org/data/definitions/197.html">
+<p>Source: <a href="https://cwe.mitre.org/data/definitions/197.html">
 CWE-197</a>.</p></div></div></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
@@ -1851,7 +1851,7 @@ white space-delimited string pointed to by <code><i>lpCommandLine</code></i>.
 If the executable or path name has a space in it, there is a risk that a
 different executable could be run because of the way the function parses
 spaces.
-<p>Source: <a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms682425%28v=vs.85%29.aspx">
+<p>Source: <a href="https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessa#security-remarks">
 MSDN: CreateProcess function, Security Remarks</a>.</p></div></div></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
@@ -1873,7 +1873,7 @@ WinAPI.LoadLibrary</span><span class="lang">
 (C)</span><div class="descr">
 The <code>SearchPath()</code> function is used to retrieve a path to a DLL for
 a subsequent <code>LoadLibrary()</code> call.
-<p>Source: <a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms684175%28v=vs.85%29.aspx">
+<p>Source: <a href="https://docs.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibrarya#security-remarks">
 MSDN: LoadLibrary function, Security Remarks</a>.</p></div></div></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
@@ -1894,7 +1894,7 @@ WinAPI.WideCharToMultiByte</span><span class="lang">
 Buffer overrun while calling <code>WideCharToMultiByte()</code>. The size of
 the input buffer equals the number of characters in the Unicode string, while
 the size of the output buffer equals the number of bytes.
-<p>Source: <a href="http://msdn.microsoft.com/en-us/library/windows/desktop/dd374130%28v=vs.85%29.aspx">
+<p>Source: <a href="https://docs.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte">
 MSDN: WideCharToMultiByte function</a>.</p></div></div></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
@@ -1947,7 +1947,7 @@ operators.</p></div></div></td>
 void test() {
   std::vector&lt;int&gt; v;
   std::vector&lt;int&gt;::const_iterator it;
-  for(it = v.begin(); 
+  for(it = v.begin();
       it != v.end(); it++) {}; // warn
 }
 </pre></div></div></td>

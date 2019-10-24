@@ -173,13 +173,13 @@ Note that this cast does not affect code generation.
 
 <img src="images/example_use_assert.png" alt="example use assert">
 
-<p> In the contrived example above, the analyzer has detected that the body of 
-the loop is never entered for the case where <tt>length <= 0</tt>. In this 
-particular example, you may know that the loop will always be entered because 
-the input parameter <tt>length</tt> will be greater than zero in all calls to this 
-function. You can teach the analyzer facts about your code as well as document 
-it by using assertions. By adding <tt>assert(length > 0)</tt> in the beginning 
-of the function, you tell the analyzer that your code is never expecting a zero 
+<p> In the contrived example above, the analyzer has detected that the body of
+the loop is never entered for the case where <tt>length <= 0</tt>. In this
+particular example, you may know that the loop will always be entered because
+the input parameter <tt>length</tt> will be greater than zero in all calls to this
+function. You can teach the analyzer facts about your code as well as document
+it by using assertions. By adding <tt>assert(length > 0)</tt> in the beginning
+of the function, you tell the analyzer that your code is never expecting a zero
 or a negative value, so it won't need to test the correctness of those paths.
 </p>
 
@@ -198,15 +198,15 @@ int foo(int length) {
 <p>There is currently no solid mechanism for suppressing an analyzer warning,
 although this is currently being investigated. When you encounter an analyzer
 bug/false positive, check if it's one of the issues discussed above or if the
-analyzer <a href = "annotations.html#custom_assertions" >annotations</a> can 
-resolve the issue. Second, please <a href = "filing_bugs.html">report it</a> to 
+analyzer <a href = "annotations.html#custom_assertions" >annotations</a> can
+resolve the issue. Second, please <a href = "filing_bugs.html">report it</a> to
 help us improve user experience. As the last resort, consider using <tt>__clang_analyzer__</tt> macro
 <a href = "faq.html#exclude_code" >described below</a>.</p>
 
 <h4 id="exclude_code" class="faq">Q: How can I selectively exclude code the analyzer examines?</h4>
 
-<p>When the static analyzer is using clang to parse source files, it implicitly 
-defines the preprocessor macro <tt>__clang_analyzer__</tt>. One can use this 
+<p>When the static analyzer is using clang to parse source files, it implicitly
+defines the preprocessor macro <tt>__clang_analyzer__</tt>. One can use this
 macro to selectively exclude code the analyzer examines. Here is an example:
 
 <pre class="code_example">
@@ -215,8 +215,8 @@ macro to selectively exclude code the analyzer examines. Here is an example:
 #endif
 </pre>
 
-This usage is discouraged because it makes the code dead to the analyzer from 
-now on. Instead, we prefer that users file bugs against the analyzer when it flags 
+This usage is discouraged because it makes the code dead to the analyzer from
+now on. Instead, we prefer that users file bugs against the analyzer when it flags
 false positives.
 </p>
 
@@ -224,4 +224,3 @@ false positives.
 </div>
 </body>
 </html>
-

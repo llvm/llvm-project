@@ -103,7 +103,7 @@ additional memory to hold private data. If memory can not be allocated, call
 <tr>
 <td>
 <p>
-<code>void __cxa_throw(void* thrown_exception, struct std::type_info * tinfo, 
+<code>void __cxa_throw(void* thrown_exception, struct std::type_info * tinfo,
                         void (*dest)(void*));</code>
 </p>
 <blockquote>
@@ -244,7 +244,7 @@ exception (if any) by one.
 </p>
 <p>
 <i>Returns:</i> the type of the currently handled exception, or null if there
-are no caught exceptions.  
+are no caught exceptions.
 </p>
 </blockquote>
 </td>
@@ -452,9 +452,9 @@ throwing an exception.
 <tr>
 <td>
 <p>
-<code>void* __cxa_vec_new(size_t element_count, 
-						   size_t element_size, 
-                           size_t padding_size, 
+<code>void* __cxa_vec_new(size_t element_count,
+						   size_t element_size,
+                           size_t padding_size,
 						   void (*constructor)(void*),
 						   void (*destructor)(void*) );</code>
 </p>
@@ -476,11 +476,11 @@ throwing an exception.
 <td>
 <p>
 <code>void* __cxa_vec_new2(size_t element_count,
- 						    size_t element_size, 
+ 						    size_t element_size,
                             size_t padding_size,
 						    void  (*constructor)(void*),
 						    void  (*destructor)(void*),
-                            void* (*alloc)(size_t), 
+                            void* (*alloc)(size_t),
                             void  (*dealloc)(void*) );</code>
 </p>
 <blockquote>
@@ -501,11 +501,11 @@ throwing an exception.
 <td>
 <p>
 <code>void* __cxa_vec_new3(size_t element_count,
- 						    size_t element_size, 
+ 						    size_t element_size,
                             size_t padding_size,
 						    void  (*constructor)(void*),
 						    void  (*destructor)(void*),
-                            void* (*alloc)(size_t), 
+                            void* (*alloc)(size_t),
                             void  (*dealloc)(void*, size_t) );</code>
 </p>
 <blockquote>
@@ -525,9 +525,9 @@ throwing an exception.
 <tr>
 <td>
 <p>
-<code>void __cxa_vec_ctor(void*  array_address, 
+<code>void __cxa_vec_ctor(void*  array_address,
                            size_t element_count,
-                           size_t element_size, 
+                           size_t element_size,
 						   void (*constructor)(void*),
 						   void (*destructor)(void*) );</code>
 </p>
@@ -545,9 +545,9 @@ throwing an exception.
 <tr>
 <td>
 <p>
-<code>void __cxa_vec_dtor(void*  array_address, 
+<code>void __cxa_vec_dtor(void*  array_address,
                            size_t element_count,
-						   size_t element_size, 
+						   size_t element_size,
 						   void (*destructor)(void*) );</code>
 </p>
 <blockquote>
@@ -564,9 +564,9 @@ throwing an exception.
 <tr>
 <td>
 <p>
-<code>void __cxa_vec_cleanup(void* array_address, 
+<code>void __cxa_vec_cleanup(void* array_address,
                              size_t element_count,
-                             size_t element_size, 
+                             size_t element_size,
 						     void (*destructor)(void*) );</code>
 </p>
 <blockquote>
@@ -583,9 +583,9 @@ throwing an exception.
 <tr>
 <td>
 <p>
-<code>void __cxa_vec_delete(void*  array_address, 
-                             size_t element_size, 
-                             size_t padding_size, 
+<code>void __cxa_vec_delete(void*  array_address,
+                             size_t element_size,
+                             size_t padding_size,
 						     void  (*destructor)(void*) );</code>
 </p>
 <blockquote>
@@ -602,9 +602,9 @@ throwing an exception.
 <tr>
 <td>
 <p>
-<code>void __cxa_vec_delete2(void* array_address, 
-                             size_t element_size, 
-                             size_t padding_size, 
+<code>void __cxa_vec_delete2(void* array_address,
+                             size_t element_size,
+                             size_t padding_size,
 						     void  (*destructor)(void*),
                              void  (*dealloc)(void*) );</code>
 </p>
@@ -622,9 +622,9 @@ throwing an exception.
 <tr>
 <td>
 <p>
-<code>void __cxa_vec_delete3(void* __array_address, 
-                             size_t element_size, 
-                             size_t padding_size, 
+<code>void __cxa_vec_delete3(void* __array_address,
+                             size_t element_size,
+                             size_t padding_size,
 						     void  (*destructor)(void*),
 							 void  (*dealloc) (void*, size_t));</code>
 </p>
@@ -642,11 +642,11 @@ throwing an exception.
 <tr>
 <td>
 <p>
-<code>void __cxa_vec_cctor(void*  dest_array, 
-							void*  src_array, 
-							size_t element_count, 
-							size_t element_size, 
-							void  (*constructor) (void*, void*), 
+<code>void __cxa_vec_cctor(void*  dest_array,
+							void*  src_array,
+							size_t element_count,
+							size_t element_size,
+							void  (*constructor) (void*, void*),
 							void  (*destructor)(void*) );</code>
 </p>
 <blockquote>
@@ -775,7 +775,7 @@ which has undefined behavior according to the C++ Standard. Ends the program.
 <blockquote>
 <p>
 <i>Effects:</i> Handles re-checking the exception specification if
-unexpectedHandler throws, and if <tt>bad_exception</tt> needs to be thrown. 
+unexpectedHandler throws, and if <tt>bad_exception</tt> needs to be thrown.
 Called from the compiler.
 </p>
 </blockquote>
@@ -788,14 +788,14 @@ Called from the compiler.
 <tr>
 <td>
 <p>
-<code>char* __cxa_demangle(const char* mangled_name, 
+<code>char* __cxa_demangle(const char* mangled_name,
 							char*       output_buffer,
-							size_t*     length, 
+							size_t*     length,
 							int*        status);</code>
 </p>
 <blockquote>
 <p>
-<i>Effects:</i> 
+<i>Effects:</i>
 </p>
 <p>
 <i>Returns:</i>
@@ -832,7 +832,7 @@ Called from the compiler.
 
 </table>
 
-<!-- 
+<!--
 000000000000d570 (__DATA,__const) external typeinfo for char32_t
 000000000000cfd0 (__DATA,__const) external typeinfo for std::nullptr_t
 000000000000d520 (__DATA,__const) external typeinfo for char16_t

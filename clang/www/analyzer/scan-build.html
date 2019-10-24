@@ -34,8 +34,8 @@ web browser.</p>
 <p><b>scan-build</b> has little or no knowledge about how you build your code.
 It works by overriding the <tt>CC</tt> and <tt>CXX</tt> environment variables to
 (hopefully) change your build to use a &quot;fake&quot; compiler instead of the
-one that would normally build your project. This fake compiler executes either 
-<tt>clang</tt> or <tt>gcc</tt> (depending on the platform) to compile your 
+one that would normally build your project. This fake compiler executes either
+<tt>clang</tt> or <tt>gcc</tt> (depending on the platform) to compile your
 code and then executes the static analyzer to analyze your code.</p>
 
 <p>This &quot;poor man's interposition&quot; works amazingly well in many cases
@@ -76,7 +76,7 @@ aforementioned hack fails to work.</p>
 <p>The <tt>scan-build</tt> command can be used to analyze an entire project by
 essentially interposing on a project's build process. This means that to run the
 analyzer using <tt>scan-build</tt>, you will use <tt>scan-build</tt> to analyze
-the source files compiled by <tt>gcc</tt>/<tt>clang</tt> during a project build. 
+the source files compiled by <tt>gcc</tt>/<tt>clang</tt> during a project build.
 This means that any files that are not compiled will also not be analyzed.</p>
 
 <h3 id="scanbuild_basicusage">Basic Usage</h3>
@@ -92,7 +92,7 @@ $ <span class="code_highlight">scan-build</span> xcodebuild
 <p>In the first case <tt>scan-build</tt> analyzes the code of a project built
 with <tt>make</tt> and in the second case <tt>scan-build</tt> analyzes a project
 built using <tt>xcodebuild</tt>.<p>
-  
+
 <p>Here is the general format for invoking <tt>scan-build</tt>:</p>
 
 <pre class="code_example">
@@ -135,7 +135,7 @@ your PATH environment variable.</p>
 with MinGW/MSYS the following information may be helpful:</p>
 
 <ul>
- <li> If getting unexpected <tt>"fatal error: no input files"</tt> while 
+ <li> If getting unexpected <tt>"fatal error: no input files"</tt> while
 building with MSYS make from the Windows cmd, try one of these solutions:</li>
  <ul>
  <li> Use MinGW <tt>mingw32-make</tt> instead of MSYS <tt>make</tt> and
@@ -148,7 +148,7 @@ with backslashed quotes may be heavily corrupted when passed for execution.</li>
 $ <span class="code_highlight">scan-build</span> <i>[scan-build options]</i> sh -c "make <i>[make options]</i>"
 </pre></li>
  </ul>
- <li> If getting <tt>"Error : *** target pattern contains no `%'"</tt> while 
+ <li> If getting <tt>"Error : *** target pattern contains no `%'"</tt> while
 using GNU Make 3.81, try to use another version of make.</li>
 </ul>
 
@@ -189,9 +189,9 @@ reports against the analyzer.</td></tr>
 command completes.</td></tr>
 
 <tr><td><b>--use-analyzer Xcode</b><br><i>or</i><br>
-<b>--use-analyzer [path to clang]</b></td><td><tt>scan-build</tt> uses the 
-'clang' executable relative to itself for static analysis. One can override this 
-behavior with this option by using the 'clang' packaged with Xcode (on OS X) or 
+<b>--use-analyzer [path to clang]</b></td><td><tt>scan-build</tt> uses the
+'clang' executable relative to itself for static analysis. One can override this
+behavior with this option by using the 'clang' packaged with Xcode (on OS X) or
 from the PATH.</p></td></tr> </table>
 
 <p>A complete list of options can be obtained by running <tt>scan-build</tt>
@@ -263,7 +263,7 @@ regular compilation and <tt>clang</tt> to perform static analysis.</p>
 paths to the compiler, and by running <tt>configure</tt> through
 <tt>scan-build</tt> that path is set to <tt>ccc-analyzer</tt>.</p>
 
-<!-- 
+<!--
 <h2 id="Debugging">Debugging the Analyzer</h2>
 
 <p>This section provides information on debugging the analyzer, and troubleshooting
@@ -354,12 +354,12 @@ $ scan-build xcodebuild -configuration Debug -sdk iphonesimulator3.0
 <h3>Gotcha: using the right compiler</h3>
 
 <p>Recall that <b>scan-build</b> analyzes your project by using a compiler to
-compile the project and <tt>clang</tt> to analyze your project. The script uses 
-simple heuristics to determine which compiler should be used (it defaults to 
+compile the project and <tt>clang</tt> to analyze your project. The script uses
+simple heuristics to determine which compiler should be used (it defaults to
 <tt>clang</tt> on Darwin and <tt>gcc</tt> on other platforms). When analyzing
 iPhone projects, <b>scan-build</b> may pick the wrong compiler than the one
-Xcode would use to build your project. For example, this could be because 
-multiple versions of a compiler may be installed on your system, especially if 
+Xcode would use to build your project. For example, this could be because
+multiple versions of a compiler may be installed on your system, especially if
 you are developing for the iPhone.</p>
 
 <p>When compiling your application to run on the simulator, it is important that <b>scan-build</b>
@@ -381,4 +381,3 @@ full path to the compiler that Xcode is using, and use that as an argument to
 </div>
 </body>
 </html>
-
