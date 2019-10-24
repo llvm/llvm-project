@@ -188,8 +188,17 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalFor({s32, s64});
 
-  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FABS, G_FSQRT})
+  getActionDefinitionsBuilder({G_FABS, G_FSQRT})
       .legalFor({s32, s64});
+
+  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
+      .legalIf([=, &ST](const LegalityQuery &Query) {
+        if (CheckTyN(0, Query, {s32, s64}))
+          return true;
+        if (ST.hasMSA() && CheckTyN(0, Query, {v16s8, v8s16, v4s32, v2s64}))
+          return true;
+        return false;
+      });
 
   getActionDefinitionsBuilder(G_FCMP)
       .legalFor({{s32, s32}, {s32, s64}})
@@ -404,6 +413,18 @@ bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
   case Intrinsic::mips_mod_u_w:
   case Intrinsic::mips_mod_u_d:
     return MSA3OpIntrinsicToGeneric(MI, TargetOpcode::G_UREM, MIRBuilder, ST);
+  case Intrinsic::mips_fadd_w:
+  case Intrinsic::mips_fadd_d:
+    return MSA3OpIntrinsicToGeneric(MI, TargetOpcode::G_FADD, MIRBuilder, ST);
+  case Intrinsic::mips_fsub_w:
+  case Intrinsic::mips_fsub_d:
+    return MSA3OpIntrinsicToGeneric(MI, TargetOpcode::G_FSUB, MIRBuilder, ST);
+  case Intrinsic::mips_fmul_w:
+  case Intrinsic::mips_fmul_d:
+    return MSA3OpIntrinsicToGeneric(MI, TargetOpcode::G_FMUL, MIRBuilder, ST);
+  case Intrinsic::mips_fdiv_w:
+  case Intrinsic::mips_fdiv_d:
+    return MSA3OpIntrinsicToGeneric(MI, TargetOpcode::G_FDIV, MIRBuilder, ST);
   default:
     break;
   }
