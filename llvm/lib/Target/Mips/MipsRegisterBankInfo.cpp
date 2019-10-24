@@ -437,7 +437,6 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   switch (Opc) {
   case G_TRUNC:
-  case G_SUB:
   case G_MUL:
   case G_UMULH:
   case G_ZEXTLOAD:
@@ -460,6 +459,7 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OperandsMapping = &Mips::ValueMappings[Mips::GPRIdx];
     break;
   case G_ADD:
+  case G_SUB:
     OperandsMapping = &Mips::ValueMappings[Mips::GPRIdx];
     if (Op0Size == 128)
       OperandsMapping = getMSAMapping(MF);
