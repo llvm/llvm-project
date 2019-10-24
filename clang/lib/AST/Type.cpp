@@ -663,10 +663,6 @@ ObjCTypeParamType::ObjCTypeParamType(const ObjCTypeParamDecl *D,
   initialize(protocols);
 }
 
-QualType ObjCTypeParamType::desugar() const {
-  return getDecl()->getUnderlyingType();
-}
-
 ObjCObjectType::ObjCObjectType(QualType Canonical, QualType Base,
                                ArrayRef<QualType> typeArgs,
                                ArrayRef<ObjCProtocolDecl *> protocols,
