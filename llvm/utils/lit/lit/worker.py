@@ -5,6 +5,7 @@ Exception: in single process mode _execute is called directly.
 For efficiency, we copy all data needed to execute all tests into each worker
 and store it in global variables. This reduces the cost of each task.
 """
+import signal
 import time
 import traceback
 
@@ -23,6 +24,11 @@ def initialize(lit_config, parallelism_semaphores):
     _lit_config = lit_config
     _parallelism_semaphores = parallelism_semaphores
 
+    # We use the following strategy for dealing with Ctrl+C/KeyboardInterrupt in
+    # subprocesses created by the multiprocessing.Pool.
+    # https://noswap.com/blog/python-multiprocessing-keyboardinterrupt
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
 
 def execute(test):
     """Run one test in a multiprocessing.Pool
@@ -33,16 +39,10 @@ def execute(test):
     Arguments and results of this function are pickled, so they should be cheap
     to copy.
     """
-    try:
-        result = _execute_in_parallelism_group(test, _lit_config,
-                                               _parallelism_semaphores)
-        test.setResult(result)
-        return test
-    except KeyboardInterrupt:
-        # If a worker process gets an interrupt, abort it immediately.
-        lit.util.abort_now()
-    except:
-        traceback.print_exc()
+    result = _execute_in_parallelism_group(test, _lit_config,
+                                           _parallelism_semaphores)
+    test.setResult(result)
+    return test
 
 
 def _execute_in_parallelism_group(test, lit_config, parallelism_semaphores):
@@ -72,8 +72,6 @@ def _execute_test_handle_errors(test, lit_config):
     try:
         result = test.config.test_format.execute(test, lit_config)
         return _adapt_result(result)
-    except KeyboardInterrupt:
-        raise
     except:
         if lit_config.debug:
             raise
