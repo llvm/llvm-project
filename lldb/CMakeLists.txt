@@ -91,22 +91,18 @@ if(LLDB_INCLUDE_TESTS)
   set(LLDB_DEFAULT_TEST_FILECHECK "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/FileCheck${CMAKE_EXECUTABLE_SUFFIX}")
 
   if (TARGET clang)
-    set(LLDB_DEFAULT_TEST_C_COMPILER "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
-    set(LLDB_DEFAULT_TEST_CXX_COMPILER "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/clang++${CMAKE_EXECUTABLE_SUFFIX}")
+    set(LLDB_DEFAULT_TEST_COMPILER "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
   else()
-    set(LLDB_DEFAULT_TEST_C_COMPILER "")
-    set(LLDB_DEFAULT_TEST_CXX_COMPILER "")
+    set(LLDB_DEFAULT_TEST_COMPILER "")
   endif()
 
   set(LLDB_TEST_EXECUTABLE "${LLDB_DEFAULT_TEST_EXECUTABLE}" CACHE PATH "lldb executable used for testing")
-  set(LLDB_TEST_C_COMPILER "${LLDB_DEFAULT_TEST_C_COMPILER}" CACHE PATH "C Compiler to use for building LLDB test inferiors")
-  set(LLDB_TEST_CXX_COMPILER "${LLDB_DEFAULT_TEST_CXX_COMPILER}" CACHE PATH "C++ Compiler to use for building LLDB test inferiors")
+  set(LLDB_TEST_COMPILER "${LLDB_DEFAULT_TEST_COMPILER}" CACHE PATH "C Compiler to use for building LLDB test inferiors")
   set(LLDB_TEST_DSYMUTIL "${LLDB_DEFAULT_TEST_DSYMUTIL}" CACHE PATH "dsymutil used for generating dSYM bundles")
   set(LLDB_TEST_FILECHECK "${LLDB_DEFAULT_TEST_FILECHECK}" CACHE PATH "FileCheck used for testing purposes")
 
-  if (("${LLDB_TEST_C_COMPILER}" STREQUAL "") OR
-      ("${LLDB_TEST_CXX_COMPILER}" STREQUAL ""))
-    message(FATAL_ERROR "LLDB test compilers not specified. Tests will not run.")
+  if ("${LLDB_TEST_COMPILER}" STREQUAL "")
+    message(FATAL_ERROR "LLDB test compiler not specified. Tests will not run.")
   endif()
 
   add_custom_target(lldb-test-deps)
