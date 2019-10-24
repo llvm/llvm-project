@@ -210,6 +210,7 @@ Sections:
     Type: SHT_GNU_ATTRIBUTES
   - Name: gnu_hash
     Type: SHT_GNU_HASH
+    Content: ""
   - Name: gnu_verdef
     Type: SHT_GNU_verdef
     Info: 0
