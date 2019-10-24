@@ -158,6 +158,7 @@ inline std::string toLetter(ScalarTypeKind kind) {
   case ScalarTypeKind::Float:
     return "f";
   }
+  llvm_unreachable("Unhandled ScalarTypeKind enum");
 }
 inline std::string toCPrefix(ScalarTypeKind kind) {
   switch (kind) {
@@ -168,6 +169,7 @@ inline std::string toCPrefix(ScalarTypeKind kind) {
   case ScalarTypeKind::Float:
     return "float";
   }
+  llvm_unreachable("Unhandled ScalarTypeKind enum");
 }
 
 class VoidType : public Type {
