@@ -4352,6 +4352,29 @@ foreach wb = [MVE_vldst24_writeback<
                      "vst" # n.nvecs # stage # "." # s.lanesize>;
 }
 
+multiclass MVE_vst24_patterns<int lanesize, ValueType VT> {
+  foreach stage = [0,1] in
+    def : Pat<(int_arm_mve_vst2q i32:$addr,
+               (VT MQPR:$v0), (VT MQPR:$v1), (i32 stage)),
+              (!cast<Instruction>("MVE_VST2"#stage#"_"#lanesize)
+               (REG_SEQUENCE QQPR, VT:$v0, qsub_0, VT:$v1, qsub_1),
+               t2_addr_offset_none:$addr)>;
+
+  foreach stage = [0,1,2,3] in
+    def : Pat<(int_arm_mve_vst4q i32:$addr,
+               (VT MQPR:$v0), (VT MQPR:$v1),
+               (VT MQPR:$v2), (VT MQPR:$v3), (i32 stage)),
+              (!cast<Instruction>("MVE_VST4"#stage#"_"#lanesize)
+               (REG_SEQUENCE QQQQPR, VT:$v0, qsub_0, VT:$v1, qsub_1,
+                                     VT:$v2, qsub_2, VT:$v3, qsub_3),
+               t2_addr_offset_none:$addr)>;
+}
+defm : MVE_vst24_patterns<8, v16i8>;
+defm : MVE_vst24_patterns<16, v8i16>;
+defm : MVE_vst24_patterns<32, v4i32>;
+defm : MVE_vst24_patterns<16, v8f16>;
+defm : MVE_vst24_patterns<32, v4f32>;
+
 // end of MVE interleaving load/store
 
 // start of MVE predicable load/store
