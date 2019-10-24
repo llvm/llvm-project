@@ -188,10 +188,10 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalFor({s32, s64});
 
-  getActionDefinitionsBuilder({G_FABS, G_FSQRT})
+  getActionDefinitionsBuilder(G_FSQRT)
       .legalFor({s32, s64});
 
-  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
+  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FABS})
       .legalIf([=, &ST](const LegalityQuery &Query) {
         if (CheckTyN(0, Query, {s32, s64}))
           return true;
@@ -425,6 +425,10 @@ bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
   case Intrinsic::mips_fdiv_w:
   case Intrinsic::mips_fdiv_d:
     return MSA3OpIntrinsicToGeneric(MI, TargetOpcode::G_FDIV, MIRBuilder, ST);
+  case Intrinsic::mips_fmax_a_w:
+    return SelectMSA3OpIntrinsic(MI, Mips::FMAX_A_W, MIRBuilder, ST);
+  case Intrinsic::mips_fmax_a_d:
+    return SelectMSA3OpIntrinsic(MI, Mips::FMAX_A_D, MIRBuilder, ST);
   default:
     break;
   }
