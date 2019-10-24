@@ -627,10 +627,11 @@ void SIFoldOperands::foldOperand(
     CopiesToReplace.push_back(UseMI);
   } else {
     if (UseMI->isCopy() && OpToFold.isReg() &&
-        Register::isVirtualRegister(UseMI->getOperand(0).getReg()) &&
+        UseMI->getOperand(0).getReg().isVirtual() &&
         TRI->isVectorRegister(*MRI, UseMI->getOperand(0).getReg()) &&
-        TRI->isVectorRegister(*MRI, UseMI->getOperand(1).getReg()) &&
         !UseMI->getOperand(1).getSubReg()) {
+      LLVM_DEBUG(dbgs() << "Folding " << OpToFold
+                        << "\n into " << *UseMI << '\n');
       unsigned Size = TII->getOpSize(*UseMI, 1);
       UseMI->getOperand(1).setReg(OpToFold.getReg());
       UseMI->getOperand(1).setSubReg(OpToFold.getSubReg());
