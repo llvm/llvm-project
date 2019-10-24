@@ -13,18 +13,10 @@ define amdgpu_kernel void @foobar(float %a0, float %a1, float addrspace(1)* %out
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-
-; FIXME: The change related to the fact that
-; DetectDeadLanes pass hit "Copy across incompatible class" SGPR -> VGPR in analysis
-; and hence it cannot derive the fact that the vector element is unused.
-; Such a copies appear because the float4 vectors and their elements in the test are uniform
-; but the PHI node in "ife" block is divergent because of the CF dependency (divergent branch in bb0)
-
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s7
-
 ; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; CHECK-NEXT:    ; mask branch BB0_2
 ; CHECK-NEXT:  BB0_1: ; %ift
@@ -38,6 +30,12 @@ define amdgpu_kernel void @foobar(float %a0, float %a1, float addrspace(1)* %out
 ; CHECK-NEXT:    s_mov_b32 s3, 0xf000
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; CHECK-NEXT:    s_endpgm
+
+; FIXME: The change related to the fact that
+; DetectDeadLanes pass hit "Copy across incompatible class" SGPR -> VGPR in analysis
+; and hence it cannot derive the fact that the vector element in the "ift" block is unused.
+; Such a copies appear because the float4 vectors and their elements in the test are uniform
+; but the PHI node in "ife" block is divergent because of the CF dependency (divergent branch in bb0)
 entry:
   %v0 = insertelement <4 x float> undef, float %a0, i32 0
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
