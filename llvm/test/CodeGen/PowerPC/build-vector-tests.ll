@@ -709,7 +709,6 @@
 ;}                                                                            //
 ;/*========================== unsigned long long ==============================*/
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @allZeroi() {
 ; P9BE-LABEL: allZeroi:
 ; P9BE:       # %bb.0: # %entry
@@ -734,7 +733,6 @@ entry:
   ret <4 x i32> zeroinitializer
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @spltConst1i() {
 ; P9BE-LABEL: spltConst1i:
 ; P9BE:       # %bb.0: # %entry
@@ -759,7 +757,6 @@ entry:
   ret <4 x i32> <i32 1, i32 1, i32 1, i32 1>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @spltConst16ki() {
 ; P9BE-LABEL: spltConst16ki:
 ; P9BE:       # %bb.0: # %entry
@@ -788,7 +785,6 @@ entry:
   ret <4 x i32> <i32 32767, i32 32767, i32 32767, i32 32767>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @spltConst32ki() {
 ; P9BE-LABEL: spltConst32ki:
 ; P9BE:       # %bb.0: # %entry
@@ -817,7 +813,6 @@ entry:
   ret <4 x i32> <i32 65535, i32 65535, i32 65535, i32 65535>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @fromRegsi(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d) {
 ; P9BE-LABEL: fromRegsi:
 ; P9BE:       # %bb.0: # %entry
@@ -858,7 +853,6 @@ entry:
   ret <4 x i32> %vecinit3
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @fromDiffConstsi() {
 ; P9BE-LABEL: fromDiffConstsi:
 ; P9BE:       # %bb.0: # %entry
@@ -891,7 +885,6 @@ entry:
   ret <4 x i32> <i32 242, i32 -113, i32 889, i32 19>
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemConsAi(i32* nocapture readonly %arr) {
 ; P9BE-LABEL: fromDiffMemConsAi:
 ; P9BE:       # %bb.0: # %entry
@@ -928,7 +921,6 @@ entry:
   ret <4 x i32> %vecinit6
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemConsDi(i32* nocapture readonly %arr) {
 ; P9BE-LABEL: fromDiffMemConsDi:
 ; P9BE:       # %bb.0: # %entry
@@ -977,7 +969,6 @@ entry:
   ret <4 x i32> %vecinit6
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemVarAi(i32* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAi:
 ; P9BE:       # %bb.0: # %entry
@@ -1026,7 +1017,6 @@ entry:
   ret <4 x i32> %vecinit11
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemVarDi(i32* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDi:
 ; P9BE:       # %bb.0: # %entry
@@ -1099,7 +1089,6 @@ entry:
   ret <4 x i32> %vecinit11
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromRandMemConsi(i32* nocapture readonly %arr) {
 ; P9BE-LABEL: fromRandMemConsi:
 ; P9BE:       # %bb.0: # %entry
@@ -1164,7 +1153,6 @@ entry:
   ret <4 x i32> %vecinit6
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromRandMemVari(i32* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromRandMemVari:
 ; P9BE:       # %bb.0: # %entry
@@ -1245,7 +1233,6 @@ entry:
   ret <4 x i32> %vecinit12
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @spltRegVali(i32 signext %val) {
 ; P9BE-LABEL: spltRegVali:
 ; P9BE:       # %bb.0: # %entry
@@ -1274,7 +1261,6 @@ entry:
   ret <4 x i32> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @spltMemVali(i32* nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemVali:
 ; P9BE:       # %bb.0: # %entry
@@ -1306,7 +1292,6 @@ entry:
   ret <4 x i32> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @spltCnstConvftoi() {
 ; P9BE-LABEL: spltCnstConvftoi:
 ; P9BE:       # %bb.0: # %entry
@@ -1331,7 +1316,6 @@ entry:
   ret <4 x i32> <i32 4, i32 4, i32 4, i32 4>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @fromRegsConvftoi(float %a, float %b, float %c, float %d) {
 ; P9BE-LABEL: fromRegsConvftoi:
 ; P9BE:       # %bb.0: # %entry
@@ -1396,7 +1380,6 @@ entry:
   ret <4 x i32> %vecinit6
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @fromDiffConstsConvftoi() {
 ; P9BE-LABEL: fromDiffConstsConvftoi:
 ; P9BE:       # %bb.0: # %entry
@@ -1429,7 +1412,6 @@ entry:
   ret <4 x i32> <i32 24, i32 234, i32 988, i32 422>
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemConsAConvftoi(float* nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsAConvftoi:
 ; P9BE:       # %bb.0: # %entry
@@ -1462,7 +1444,6 @@ entry:
   ret <4 x i32> %2
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemConsDConvftoi(float* nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsDConvftoi:
 ; P9BE:       # %bb.0: # %entry
@@ -1523,7 +1504,6 @@ entry:
   ret <4 x i32> %vecinit9
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemVarAConvftoi(float* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAConvftoi:
 ; P9BE:       # %bb.0: # %entry
@@ -1609,10 +1589,8 @@ entry:
   %conv13 = fptosi float %3 to i32
   %vecinit14 = insertelement <4 x i32> %vecinit9, i32 %conv13, i32 3
   ret <4 x i32> %vecinit14
-; FIXME: implement finding consecutive loads with pre-inc
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemVarDConvftoi(float* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDConvftoi:
 ; P9BE:       # %bb.0: # %entry
@@ -1701,7 +1679,6 @@ entry:
 ; FIXME: implement finding consecutive loads with pre-inc
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @spltRegValConvftoi(float %val) {
 ; P9BE-LABEL: spltRegValConvftoi:
 ; P9BE:       # %bb.0: # %entry
@@ -1733,7 +1710,6 @@ entry:
   ret <4 x i32> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @spltMemValConvftoi(float* nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValConvftoi:
 ; P9BE:       # %bb.0: # %entry
@@ -1768,7 +1744,6 @@ entry:
   ret <4 x i32> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @spltCnstConvdtoi() {
 ; P9BE-LABEL: spltCnstConvdtoi:
 ; P9BE:       # %bb.0: # %entry
@@ -1793,7 +1768,6 @@ entry:
   ret <4 x i32> <i32 4, i32 4, i32 4, i32 4>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @fromRegsConvdtoi(double %a, double %b, double %c, double %d) {
 ; P9BE-LABEL: fromRegsConvdtoi:
 ; P9BE:       # %bb.0: # %entry
@@ -1858,7 +1832,6 @@ entry:
   ret <4 x i32> %vecinit6
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @fromDiffConstsConvdtoi() {
 ; P9BE-LABEL: fromDiffConstsConvdtoi:
 ; P9BE:       # %bb.0: # %entry
@@ -1891,7 +1864,6 @@ entry:
   ret <4 x i32> <i32 24, i32 234, i32 988, i32 422>
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemConsAConvdtoi(double* nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsAConvdtoi:
 ; P9BE:       # %bb.0: # %entry
@@ -1952,7 +1924,6 @@ entry:
   ret <4 x i32> %vecinit9
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemConsDConvdtoi(double* nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsDConvdtoi:
 ; P9BE:       # %bb.0: # %entry
@@ -2024,7 +1995,6 @@ entry:
   ret <4 x i32> %vecinit9
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemVarAConvdtoi(double* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAConvdtoi:
 ; P9BE:       # %bb.0: # %entry
@@ -2108,7 +2078,6 @@ entry:
   ret <4 x i32> %vecinit14
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemVarDConvdtoi(double* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDConvdtoi:
 ; P9BE:       # %bb.0: # %entry
@@ -2192,7 +2161,6 @@ entry:
   ret <4 x i32> %vecinit14
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @spltRegValConvdtoi(double %val) {
 ; P9BE-LABEL: spltRegValConvdtoi:
 ; P9BE:       # %bb.0: # %entry
@@ -2224,7 +2192,6 @@ entry:
   ret <4 x i32> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @spltMemValConvdtoi(double* nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValConvdtoi:
 ; P9BE:       # %bb.0: # %entry
@@ -2260,7 +2227,7 @@ entry:
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %splat.splat
 }
-; Function Attrs: norecurse nounwind readnone
+
 define <4 x i32> @allZeroui() {
 ; P9BE-LABEL: allZeroui:
 ; P9BE:       # %bb.0: # %entry
@@ -2285,7 +2252,6 @@ entry:
   ret <4 x i32> zeroinitializer
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @spltConst1ui() {
 ; P9BE-LABEL: spltConst1ui:
 ; P9BE:       # %bb.0: # %entry
@@ -2310,7 +2276,6 @@ entry:
   ret <4 x i32> <i32 1, i32 1, i32 1, i32 1>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @spltConst16kui() {
 ; P9BE-LABEL: spltConst16kui:
 ; P9BE:       # %bb.0: # %entry
@@ -2339,7 +2304,6 @@ entry:
   ret <4 x i32> <i32 32767, i32 32767, i32 32767, i32 32767>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @spltConst32kui() {
 ; P9BE-LABEL: spltConst32kui:
 ; P9BE:       # %bb.0: # %entry
@@ -2368,7 +2332,6 @@ entry:
   ret <4 x i32> <i32 65535, i32 65535, i32 65535, i32 65535>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @fromRegsui(i32 zeroext %a, i32 zeroext %b, i32 zeroext %c, i32 zeroext %d) {
 ; P9BE-LABEL: fromRegsui:
 ; P9BE:       # %bb.0: # %entry
@@ -2409,7 +2372,6 @@ entry:
   ret <4 x i32> %vecinit3
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @fromDiffConstsui() {
 ; P9BE-LABEL: fromDiffConstsui:
 ; P9BE:       # %bb.0: # %entry
@@ -2442,7 +2404,6 @@ entry:
   ret <4 x i32> <i32 242, i32 -113, i32 889, i32 19>
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemConsAui(i32* nocapture readonly %arr) {
 ; P9BE-LABEL: fromDiffMemConsAui:
 ; P9BE:       # %bb.0: # %entry
@@ -2479,7 +2440,6 @@ entry:
   ret <4 x i32> %vecinit6
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemConsDui(i32* nocapture readonly %arr) {
 ; P9BE-LABEL: fromDiffMemConsDui:
 ; P9BE:       # %bb.0: # %entry
@@ -2528,7 +2488,6 @@ entry:
   ret <4 x i32> %vecinit6
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemVarAui(i32* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAui:
 ; P9BE:       # %bb.0: # %entry
@@ -2577,7 +2536,6 @@ entry:
   ret <4 x i32> %vecinit11
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemVarDui(i32* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDui:
 ; P9BE:       # %bb.0: # %entry
@@ -2650,7 +2608,6 @@ entry:
   ret <4 x i32> %vecinit11
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromRandMemConsui(i32* nocapture readonly %arr) {
 ; P9BE-LABEL: fromRandMemConsui:
 ; P9BE:       # %bb.0: # %entry
@@ -2715,7 +2672,6 @@ entry:
   ret <4 x i32> %vecinit6
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromRandMemVarui(i32* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromRandMemVarui:
 ; P9BE:       # %bb.0: # %entry
@@ -2796,7 +2752,6 @@ entry:
   ret <4 x i32> %vecinit12
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @spltRegValui(i32 zeroext %val) {
 ; P9BE-LABEL: spltRegValui:
 ; P9BE:       # %bb.0: # %entry
@@ -2825,7 +2780,6 @@ entry:
   ret <4 x i32> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @spltMemValui(i32* nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValui:
 ; P9BE:       # %bb.0: # %entry
@@ -2857,7 +2811,6 @@ entry:
   ret <4 x i32> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @spltCnstConvftoui() {
 ; P9BE-LABEL: spltCnstConvftoui:
 ; P9BE:       # %bb.0: # %entry
@@ -2882,7 +2835,6 @@ entry:
   ret <4 x i32> <i32 4, i32 4, i32 4, i32 4>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @fromRegsConvftoui(float %a, float %b, float %c, float %d) {
 ; P9BE-LABEL: fromRegsConvftoui:
 ; P9BE:       # %bb.0: # %entry
@@ -2947,7 +2899,6 @@ entry:
   ret <4 x i32> %vecinit6
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @fromDiffConstsConvftoui() {
 ; P9BE-LABEL: fromDiffConstsConvftoui:
 ; P9BE:       # %bb.0: # %entry
@@ -2980,7 +2931,6 @@ entry:
   ret <4 x i32> <i32 24, i32 234, i32 988, i32 422>
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemConsAConvftoui(float* nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsAConvftoui:
 ; P9BE:       # %bb.0: # %entry
@@ -3013,7 +2963,6 @@ entry:
   ret <4 x i32> %2
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemConsDConvftoui(float* nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsDConvftoui:
 ; P9BE:       # %bb.0: # %entry
@@ -3074,7 +3023,6 @@ entry:
   ret <4 x i32> %vecinit9
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemVarAConvftoui(float* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAConvftoui:
 ; P9BE:       # %bb.0: # %entry
@@ -3163,7 +3111,6 @@ entry:
 ; FIXME: implement finding consecutive loads with pre-inc
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemVarDConvftoui(float* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDConvftoui:
 ; P9BE:       # %bb.0: # %entry
@@ -3252,7 +3199,6 @@ entry:
 ; FIXME: implement finding consecutive loads with pre-inc
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @spltRegValConvftoui(float %val) {
 ; P9BE-LABEL: spltRegValConvftoui:
 ; P9BE:       # %bb.0: # %entry
@@ -3284,7 +3230,6 @@ entry:
   ret <4 x i32> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @spltMemValConvftoui(float* nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValConvftoui:
 ; P9BE:       # %bb.0: # %entry
@@ -3319,7 +3264,6 @@ entry:
   ret <4 x i32> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @spltCnstConvdtoui() {
 ; P9BE-LABEL: spltCnstConvdtoui:
 ; P9BE:       # %bb.0: # %entry
@@ -3344,7 +3288,6 @@ entry:
   ret <4 x i32> <i32 4, i32 4, i32 4, i32 4>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @fromRegsConvdtoui(double %a, double %b, double %c, double %d) {
 ; P9BE-LABEL: fromRegsConvdtoui:
 ; P9BE:       # %bb.0: # %entry
@@ -3409,7 +3352,6 @@ entry:
   ret <4 x i32> %vecinit6
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @fromDiffConstsConvdtoui() {
 ; P9BE-LABEL: fromDiffConstsConvdtoui:
 ; P9BE:       # %bb.0: # %entry
@@ -3442,7 +3384,6 @@ entry:
   ret <4 x i32> <i32 24, i32 234, i32 988, i32 422>
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemConsAConvdtoui(double* nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsAConvdtoui:
 ; P9BE:       # %bb.0: # %entry
@@ -3503,7 +3444,6 @@ entry:
   ret <4 x i32> %vecinit9
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemConsDConvdtoui(double* nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsDConvdtoui:
 ; P9BE:       # %bb.0: # %entry
@@ -3575,7 +3515,6 @@ entry:
   ret <4 x i32> %vecinit9
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemVarAConvdtoui(double* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAConvdtoui:
 ; P9BE:       # %bb.0: # %entry
@@ -3659,7 +3598,6 @@ entry:
   ret <4 x i32> %vecinit14
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @fromDiffMemVarDConvdtoui(double* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDConvdtoui:
 ; P9BE:       # %bb.0: # %entry
@@ -3743,7 +3681,6 @@ entry:
   ret <4 x i32> %vecinit14
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <4 x i32> @spltRegValConvdtoui(double %val) {
 ; P9BE-LABEL: spltRegValConvdtoui:
 ; P9BE:       # %bb.0: # %entry
@@ -3775,7 +3712,6 @@ entry:
   ret <4 x i32> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <4 x i32> @spltMemValConvdtoui(double* nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValConvdtoui:
 ; P9BE:       # %bb.0: # %entry
@@ -3811,7 +3747,7 @@ entry:
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %splat.splat
 }
-; Function Attrs: norecurse nounwind readnone
+
 define <2 x i64> @allZeroll() {
 ; P9BE-LABEL: allZeroll:
 ; P9BE:       # %bb.0: # %entry
@@ -3836,7 +3772,6 @@ entry:
   ret <2 x i64> zeroinitializer
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @spltConst1ll() {
 ; P9BE-LABEL: spltConst1ll:
 ; P9BE:       # %bb.0: # %entry
@@ -3870,7 +3805,6 @@ entry:
   ret <2 x i64> <i64 1, i64 1>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @spltConst16kll() {
 ; P9BE-LABEL: spltConst16kll:
 ; P9BE:       # %bb.0: # %entry
@@ -3904,7 +3838,6 @@ entry:
   ret <2 x i64> <i64 32767, i64 32767>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @spltConst32kll() {
 ; P9BE-LABEL: spltConst32kll:
 ; P9BE:       # %bb.0: # %entry
@@ -3938,7 +3871,6 @@ entry:
   ret <2 x i64> <i64 65535, i64 65535>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @fromRegsll(i64 %a, i64 %b) {
 ; P9BE-LABEL: fromRegsll:
 ; P9BE:       # %bb.0: # %entry
@@ -3969,7 +3901,6 @@ entry:
   ret <2 x i64> %vecinit1
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @fromDiffConstsll() {
 ; P9BE-LABEL: fromDiffConstsll:
 ; P9BE:       # %bb.0: # %entry
@@ -4003,7 +3934,6 @@ entry:
   ret <2 x i64> <i64 242, i64 -113>
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemConsAll(i64* nocapture readonly %arr) {
 ; P9BE-LABEL: fromDiffMemConsAll:
 ; P9BE:       # %bb.0: # %entry
@@ -4034,7 +3964,6 @@ entry:
   ret <2 x i64> %vecinit2
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemConsDll(i64* nocapture readonly %arr) {
 ; P9BE-LABEL: fromDiffMemConsDll:
 ; P9BE:       # %bb.0: # %entry
@@ -4070,7 +3999,6 @@ entry:
   ret <2 x i64> %vecinit2
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemVarAll(i64* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAll:
 ; P9BE:       # %bb.0: # %entry
@@ -4109,7 +4037,6 @@ entry:
   ret <2 x i64> %vecinit3
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemVarDll(i64* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDll:
 ; P9BE:       # %bb.0: # %entry
@@ -4157,7 +4084,6 @@ entry:
   ret <2 x i64> %vecinit3
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromRandMemConsll(i64* nocapture readonly %arr) {
 ; P9BE-LABEL: fromRandMemConsll:
 ; P9BE:       # %bb.0: # %entry
@@ -4200,7 +4126,6 @@ entry:
   ret <2 x i64> %vecinit2
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromRandMemVarll(i64* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromRandMemVarll:
 ; P9BE:       # %bb.0: # %entry
@@ -4255,7 +4180,6 @@ entry:
   ret <2 x i64> %vecinit4
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @spltRegValll(i64 %val) {
 ; P9BE-LABEL: spltRegValll:
 ; P9BE:       # %bb.0: # %entry
@@ -4284,7 +4208,6 @@ entry:
   ret <2 x i64> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @spltMemValll(i64* nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValll:
 ; P9BE:       # %bb.0: # %entry
@@ -4312,7 +4235,6 @@ entry:
   ret <2 x i64> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @spltCnstConvftoll() {
 ; P9BE-LABEL: spltCnstConvftoll:
 ; P9BE:       # %bb.0: # %entry
@@ -4346,7 +4268,6 @@ entry:
   ret <2 x i64> <i64 4, i64 4>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @fromRegsConvftoll(float %a, float %b) {
 ; P9BE-LABEL: fromRegsConvftoll:
 ; P9BE:       # %bb.0: # %entry
@@ -4387,7 +4308,6 @@ entry:
   ret <2 x i64> %vecinit2
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @fromDiffConstsConvftoll() {
 ; P9BE-LABEL: fromDiffConstsConvftoll:
 ; P9BE:       # %bb.0: # %entry
@@ -4421,7 +4341,6 @@ entry:
   ret <2 x i64> <i64 24, i64 234>
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemConsAConvftoll(float* nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsAConvftoll:
 ; P9BE:       # %bb.0: # %entry
@@ -4465,7 +4384,6 @@ entry:
   ret <2 x i64> %vecinit3
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemConsDConvftoll(float* nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsDConvftoll:
 ; P9BE:       # %bb.0: # %entry
@@ -4510,7 +4428,6 @@ entry:
   ret <2 x i64> %vecinit3
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemVarAConvftoll(float* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAConvftoll:
 ; P9BE:       # %bb.0: # %entry
@@ -4562,7 +4479,6 @@ entry:
   ret <2 x i64> %vecinit4
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemVarDConvftoll(float* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDConvftoll:
 ; P9BE:       # %bb.0: # %entry
@@ -4614,7 +4530,6 @@ entry:
   ret <2 x i64> %vecinit4
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @spltRegValConvftoll(float %val) {
 ; P9BE-LABEL: spltRegValConvftoll:
 ; P9BE:       # %bb.0: # %entry
@@ -4646,7 +4561,6 @@ entry:
   ret <2 x i64> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @spltMemValConvftoll(float* nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValConvftoll:
 ; P9BE:       # %bb.0: # %entry
@@ -4683,7 +4597,6 @@ entry:
   ret <2 x i64> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @spltCnstConvdtoll() {
 ; P9BE-LABEL: spltCnstConvdtoll:
 ; P9BE:       # %bb.0: # %entry
@@ -4717,7 +4630,6 @@ entry:
   ret <2 x i64> <i64 4, i64 4>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @fromRegsConvdtoll(double %a, double %b) {
 ; P9BE-LABEL: fromRegsConvdtoll:
 ; P9BE:       # %bb.0: # %entry
@@ -4758,7 +4670,6 @@ entry:
   ret <2 x i64> %vecinit2
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @fromDiffConstsConvdtoll() {
 ; P9BE-LABEL: fromDiffConstsConvdtoll:
 ; P9BE:       # %bb.0: # %entry
@@ -4792,7 +4703,6 @@ entry:
   ret <2 x i64> <i64 24, i64 234>
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemConsAConvdtoll(double* nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsAConvdtoll:
 ; P9BE:       # %bb.0: # %entry
@@ -4825,7 +4735,6 @@ entry:
   ret <2 x i64> %2
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemConsDConvdtoll(double* nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsDConvdtoll:
 ; P9BE:       # %bb.0: # %entry
@@ -4867,7 +4776,6 @@ entry:
   ret <2 x i64> %vecinit3
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemVarAConvdtoll(double* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAConvdtoll:
 ; P9BE:       # %bb.0: # %entry
@@ -4912,7 +4820,6 @@ entry:
   ret <2 x i64> %vecinit4
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemVarDConvdtoll(double* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDConvdtoll:
 ; P9BE:       # %bb.0: # %entry
@@ -4966,7 +4873,6 @@ entry:
   ret <2 x i64> %vecinit4
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @spltRegValConvdtoll(double %val) {
 ; P9BE-LABEL: spltRegValConvdtoll:
 ; P9BE:       # %bb.0: # %entry
@@ -4998,7 +4904,6 @@ entry:
   ret <2 x i64> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @spltMemValConvdtoll(double* nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValConvdtoll:
 ; P9BE:       # %bb.0: # %entry
@@ -5031,7 +4936,6 @@ entry:
   ret <2 x i64> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @allZeroull() {
 ; P9BE-LABEL: allZeroull:
 ; P9BE:       # %bb.0: # %entry
@@ -5056,7 +4960,6 @@ entry:
   ret <2 x i64> zeroinitializer
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @spltConst1ull() {
 ; P9BE-LABEL: spltConst1ull:
 ; P9BE:       # %bb.0: # %entry
@@ -5090,7 +4993,6 @@ entry:
   ret <2 x i64> <i64 1, i64 1>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @spltConst16kull() {
 ; P9BE-LABEL: spltConst16kull:
 ; P9BE:       # %bb.0: # %entry
@@ -5124,7 +5026,6 @@ entry:
   ret <2 x i64> <i64 32767, i64 32767>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @spltConst32kull() {
 ; P9BE-LABEL: spltConst32kull:
 ; P9BE:       # %bb.0: # %entry
@@ -5158,7 +5059,6 @@ entry:
   ret <2 x i64> <i64 65535, i64 65535>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @fromRegsull(i64 %a, i64 %b) {
 ; P9BE-LABEL: fromRegsull:
 ; P9BE:       # %bb.0: # %entry
@@ -5189,7 +5089,6 @@ entry:
   ret <2 x i64> %vecinit1
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @fromDiffConstsull() {
 ; P9BE-LABEL: fromDiffConstsull:
 ; P9BE:       # %bb.0: # %entry
@@ -5223,7 +5122,6 @@ entry:
   ret <2 x i64> <i64 242, i64 -113>
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemConsAull(i64* nocapture readonly %arr) {
 ; P9BE-LABEL: fromDiffMemConsAull:
 ; P9BE:       # %bb.0: # %entry
@@ -5254,7 +5152,6 @@ entry:
   ret <2 x i64> %vecinit2
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemConsDull(i64* nocapture readonly %arr) {
 ; P9BE-LABEL: fromDiffMemConsDull:
 ; P9BE:       # %bb.0: # %entry
@@ -5290,7 +5187,6 @@ entry:
   ret <2 x i64> %vecinit2
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemVarAull(i64* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAull:
 ; P9BE:       # %bb.0: # %entry
@@ -5329,7 +5225,6 @@ entry:
   ret <2 x i64> %vecinit3
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemVarDull(i64* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDull:
 ; P9BE:       # %bb.0: # %entry
@@ -5377,7 +5272,6 @@ entry:
   ret <2 x i64> %vecinit3
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromRandMemConsull(i64* nocapture readonly %arr) {
 ; P9BE-LABEL: fromRandMemConsull:
 ; P9BE:       # %bb.0: # %entry
@@ -5420,7 +5314,6 @@ entry:
   ret <2 x i64> %vecinit2
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromRandMemVarull(i64* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromRandMemVarull:
 ; P9BE:       # %bb.0: # %entry
@@ -5475,7 +5368,6 @@ entry:
   ret <2 x i64> %vecinit4
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @spltRegValull(i64 %val) {
 ; P9BE-LABEL: spltRegValull:
 ; P9BE:       # %bb.0: # %entry
@@ -5504,7 +5396,6 @@ entry:
   ret <2 x i64> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @spltMemValull(i64* nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValull:
 ; P9BE:       # %bb.0: # %entry
@@ -5532,7 +5423,6 @@ entry:
   ret <2 x i64> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @spltCnstConvftoull() {
 ; P9BE-LABEL: spltCnstConvftoull:
 ; P9BE:       # %bb.0: # %entry
@@ -5566,7 +5456,6 @@ entry:
   ret <2 x i64> <i64 4, i64 4>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @fromRegsConvftoull(float %a, float %b) {
 ; P9BE-LABEL: fromRegsConvftoull:
 ; P9BE:       # %bb.0: # %entry
@@ -5607,7 +5496,6 @@ entry:
   ret <2 x i64> %vecinit2
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @fromDiffConstsConvftoull() {
 ; P9BE-LABEL: fromDiffConstsConvftoull:
 ; P9BE:       # %bb.0: # %entry
@@ -5641,7 +5529,6 @@ entry:
   ret <2 x i64> <i64 24, i64 234>
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemConsAConvftoull(float* nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsAConvftoull:
 ; P9BE:       # %bb.0: # %entry
@@ -5685,7 +5572,6 @@ entry:
   ret <2 x i64> %vecinit3
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemConsDConvftoull(float* nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsDConvftoull:
 ; P9BE:       # %bb.0: # %entry
@@ -5730,7 +5616,6 @@ entry:
   ret <2 x i64> %vecinit3
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemVarAConvftoull(float* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAConvftoull:
 ; P9BE:       # %bb.0: # %entry
@@ -5782,7 +5667,6 @@ entry:
   ret <2 x i64> %vecinit4
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemVarDConvftoull(float* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDConvftoull:
 ; P9BE:       # %bb.0: # %entry
@@ -5834,7 +5718,6 @@ entry:
   ret <2 x i64> %vecinit4
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @spltRegValConvftoull(float %val) {
 ; P9BE-LABEL: spltRegValConvftoull:
 ; P9BE:       # %bb.0: # %entry
@@ -5866,7 +5749,6 @@ entry:
   ret <2 x i64> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @spltMemValConvftoull(float* nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValConvftoull:
 ; P9BE:       # %bb.0: # %entry
@@ -5903,7 +5785,6 @@ entry:
   ret <2 x i64> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @spltCnstConvdtoull() {
 ; P9BE-LABEL: spltCnstConvdtoull:
 ; P9BE:       # %bb.0: # %entry
@@ -5937,7 +5818,6 @@ entry:
   ret <2 x i64> <i64 4, i64 4>
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @fromRegsConvdtoull(double %a, double %b) {
 ; P9BE-LABEL: fromRegsConvdtoull:
 ; P9BE:       # %bb.0: # %entry
@@ -5978,7 +5858,6 @@ entry:
   ret <2 x i64> %vecinit2
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @fromDiffConstsConvdtoull() {
 ; P9BE-LABEL: fromDiffConstsConvdtoull:
 ; P9BE:       # %bb.0: # %entry
@@ -6012,7 +5891,6 @@ entry:
   ret <2 x i64> <i64 24, i64 234>
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemConsAConvdtoull(double* nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsAConvdtoull:
 ; P9BE:       # %bb.0: # %entry
@@ -6045,7 +5923,6 @@ entry:
   ret <2 x i64> %2
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemConsDConvdtoull(double* nocapture readonly %ptr) {
 ; P9BE-LABEL: fromDiffMemConsDConvdtoull:
 ; P9BE:       # %bb.0: # %entry
@@ -6087,7 +5964,6 @@ entry:
   ret <2 x i64> %vecinit3
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemVarAConvdtoull(double* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarAConvdtoull:
 ; P9BE:       # %bb.0: # %entry
@@ -6132,7 +6008,6 @@ entry:
   ret <2 x i64> %vecinit4
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @fromDiffMemVarDConvdtoull(double* nocapture readonly %arr, i32 signext %elem) {
 ; P9BE-LABEL: fromDiffMemVarDConvdtoull:
 ; P9BE:       # %bb.0: # %entry
@@ -6186,7 +6061,6 @@ entry:
   ret <2 x i64> %vecinit4
 }
 
-; Function Attrs: norecurse nounwind readnone
 define <2 x i64> @spltRegValConvdtoull(double %val) {
 ; P9BE-LABEL: spltRegValConvdtoull:
 ; P9BE:       # %bb.0: # %entry
@@ -6218,7 +6092,6 @@ entry:
   ret <2 x i64> %splat.splat
 }
 
-; Function Attrs: norecurse nounwind readonly
 define <2 x i64> @spltMemValConvdtoull(double* nocapture readonly %ptr) {
 ; P9BE-LABEL: spltMemValConvdtoull:
 ; P9BE:       # %bb.0: # %entry
