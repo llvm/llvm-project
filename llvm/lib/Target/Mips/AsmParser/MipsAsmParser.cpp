@@ -2969,7 +2969,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
 
     const MipsMCExpr *GotExpr = nullptr;
     const MCExpr *LoExpr = nullptr;
-    if (IsPtr64) {
+    if (ABI.IsN32() || ABI.IsN64()) {
       // The remaining cases are:
       //   Small offset: ld $tmp, %got_disp(symbol)($gp)
       //                >daddiu $tmp, $tmp, offset
