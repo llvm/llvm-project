@@ -117,6 +117,7 @@ OS                 Arch                  Compilers
 Linux              x86\ :sup:`1`         GCC, Clang
 Linux              amd64                 GCC, Clang
 Linux              ARM                   GCC, Clang
+Linux              Mips                  GCC, Clang
 Linux              PowerPC               GCC, Clang
 Solaris            V9 (Ultrasparc)       GCC
 FreeBSD            x86\ :sup:`1`         GCC, Clang
