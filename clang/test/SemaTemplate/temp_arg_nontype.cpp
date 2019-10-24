@@ -445,10 +445,10 @@ namespace nondependent_default_arg_ordering {
   template<typename A> void f(X<A>); // expected-note {{candidate}}
   template<typename A> void f(X<A, &m>); // expected-note {{candidate}}
   template<typename A, A B> void f(X<A, B>); // expected-note 2{{candidate}}
-  template<template<typename U, U> class T, typename A, int *B> void f(T<A, B>); // expected-note 2{{candidate}}
+  template<template<typename U, U> class T, typename A, int *B> void f(T<A, B>);
   void g() {
     // FIXME: The first and second function templates above should be
-    // considered more specialized than the last two, but during partial
+    // considered more specialized than the third, but during partial
     // ordering we fail to check that we actually deduced template arguments
     // that make the deduced A identical to A.
     X<int *, &n> x; f(x); // expected-error {{ambiguous}}

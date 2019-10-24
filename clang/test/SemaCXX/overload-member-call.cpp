@@ -14,7 +14,7 @@ struct X {
 
   int& g(int) const; // expected-note 2 {{candidate function}}
   float& g(int); // expected-note 2 {{candidate function}}
-  static double& g(double); // expected-note 2 {{candidate function}}
+  static double& g(double);
 
   void h(int);
 

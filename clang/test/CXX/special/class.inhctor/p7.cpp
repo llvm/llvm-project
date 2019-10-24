@@ -9,7 +9,7 @@ struct B1 {
 struct B2 {
   B2(int); // expected-note {{candidate}}
 };
-struct D1 : B1, B2 { // expected-note 2{{candidate}}
+struct D1 : B1, B2 {
   using B1::B1; // expected-note {{inherited here}}
   using B2::B2; // expected-note {{inherited here}}
 };
