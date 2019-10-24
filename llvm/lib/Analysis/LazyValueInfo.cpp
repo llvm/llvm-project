@@ -1090,8 +1090,22 @@ bool LazyValueInfoImpl::solveBlockValueBinaryOp(ValueLatticeElement &BBLV,
     return true;
   }
 
-  return solveBlockValueBinaryOpImpl(BBLV, BO, BB,
-      [BO](const ConstantRange &CR1, const ConstantRange &CR2) {
+  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(BO)) {
+    unsigned NoWrapKind = 0;
+    if (OBO->hasNoUnsignedWrap())
+      NoWrapKind |= OverflowingBinaryOperator::NoUnsignedWrap;
+    if (OBO->hasNoSignedWrap())
+      NoWrapKind |= OverflowingBinaryOperator::NoSignedWrap;
+
+    return solveBlockValueBinaryOpImpl(
+        BBLV, BO, BB,
+        [BO, NoWrapKind](const ConstantRange &CR1, const ConstantRange &CR2) {
+          return CR1.overflowingBinaryOp(BO->getOpcode(), CR2, NoWrapKind);
+        });
+  }
+
+  return solveBlockValueBinaryOpImpl(
+      BBLV, BO, BB, [BO](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.binaryOp(BO->getOpcode(), CR2);
       });
 }
