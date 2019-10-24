@@ -600,6 +600,10 @@ public:
   virtual SanitizerMask getDefaultSanitizers() const {
     return SanitizerMask();
   }
+
+  /// Returns true when it's possible to split LTO unit to use whole
+  /// program devirtualization and CFI santiizers.
+  virtual bool canSplitThinLTOUnit() const { return true; }
 };
 
 /// Set a ToolChain's effective triple. Reset it when the registration object

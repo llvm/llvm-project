@@ -84,6 +84,10 @@ public:
 
   SanitizerMask getSupportedSanitizers() const override;
 
+  // PS4 toolchain uses legacy thin LTO API, which is not
+  // capable of unit splitting.
+  bool canSplitThinLTOUnit() const override { return false; }
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;
