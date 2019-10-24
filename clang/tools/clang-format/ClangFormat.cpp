@@ -289,31 +289,6 @@ static void outputReplacementsXML(const Replacements &Replaces) {
   }
 }
 
-// If BufStr has an invalid BOM, returns the BOM name; otherwise, returns
-// nullptr.
-static const char *getInValidBOM(StringRef BufStr) {
-  // Check to see if the buffer has a UTF Byte Order Mark (BOM).
-  // We only support UTF-8 with and without a BOM right now.  See
-  // https://en.wikipedia.org/wiki/Byte_order_mark#Byte_order_marks_by_encoding
-  // for more information.
-  const char *InvalidBOM =
-      llvm::StringSwitch<const char *>(BufStr)
-          .StartsWith(llvm::StringLiteral::withInnerNUL("\x00\x00\xFE\xFF"),
-                      "UTF-32 (BE)")
-          .StartsWith(llvm::StringLiteral::withInnerNUL("\xFF\xFE\x00\x00"),
-                      "UTF-32 (LE)")
-          .StartsWith("\xFE\xFF", "UTF-16 (BE)")
-          .StartsWith("\xFF\xFE", "UTF-16 (LE)")
-          .StartsWith("\x2B\x2F\x76", "UTF-7")
-          .StartsWith("\xF7\x64\x4C", "UTF-1")
-          .StartsWith("\xDD\x73\x66\x73", "UTF-EBCDIC")
-          .StartsWith("\x0E\xFE\xFF", "SCSU")
-          .StartsWith("\xFB\xEE\x28", "BOCU-1")
-          .StartsWith("\x84\x31\x95\x33", "GB-18030")
-          .Default(nullptr);
-  return InvalidBOM;
-}
-
 static bool
 emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
                         const std::unique_ptr<llvm::MemoryBuffer> &Code) {
@@ -412,7 +387,7 @@ static bool format(StringRef FileName) {
 
   StringRef BufStr = Code->getBuffer();
 
-  const char *InvalidBOM = getInValidBOM(BufStr);
+  const char *InvalidBOM = SrcMgr::ContentCache::getInvalidBOM(BufStr);
 
   if (InvalidBOM) {
     errs() << "error: encoding with unsupported byte order mark \""
