@@ -188,10 +188,7 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalFor({s32, s64});
 
-  getActionDefinitionsBuilder(G_FSQRT)
-      .legalFor({s32, s64});
-
-  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FABS})
+  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FABS, G_FSQRT})
       .legalIf([=, &ST](const LegalityQuery &Query) {
         if (CheckTyN(0, Query, {s32, s64}))
           return true;
@@ -326,6 +323,17 @@ static bool MSA3OpIntrinsicToGeneric(MachineInstr &MI, unsigned Opcode,
   return true;
 }
 
+bool MSA2OpIntrinsicToGeneric(MachineInstr &MI, unsigned Opcode,
+                              MachineIRBuilder &MIRBuilder,
+                              const MipsSubtarget &ST) {
+  assert(ST.hasMSA() && "MSA intrinsic not supported on target without MSA.");
+  MIRBuilder.buildInstr(Opcode)
+      .add(MI.getOperand(0))
+      .add(MI.getOperand(2));
+  MI.eraseFromParent();
+  return true;
+}
+
 bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
                                           MachineRegisterInfo &MRI,
                                           MachineIRBuilder &MIRBuilder) const {
@@ -429,6 +437,10 @@ bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     return SelectMSA3OpIntrinsic(MI, Mips::FMAX_A_W, MIRBuilder, ST);
   case Intrinsic::mips_fmax_a_d:
     return SelectMSA3OpIntrinsic(MI, Mips::FMAX_A_D, MIRBuilder, ST);
+  case Intrinsic::mips_fsqrt_w:
+    return MSA2OpIntrinsicToGeneric(MI, TargetOpcode::G_FSQRT, MIRBuilder, ST);
+  case Intrinsic::mips_fsqrt_d:
+    return MSA2OpIntrinsicToGeneric(MI, TargetOpcode::G_FSQRT, MIRBuilder, ST);
   default:
     break;
   }
