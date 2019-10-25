@@ -1,5 +1,7 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-ALU64 %s
+; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-ALU64 %s
+; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-ALU32 %s
+; RUN: llc -march=bpfeb -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-ALU32 %s
 ; Source code:
 ;   typedef unsigned __uint;
 ;   struct s1 { int a1; __uint a2:9; __uint a3:4; };
@@ -45,11 +47,14 @@ entry:
 
 ; CHECK:             r1 = 1
 ; CHECK:             r0 = 0
-; CHECK:             r0 += r1
+; CHECK-ALU64:       r0 += r1
+; CHECK-ALU32:       w0 += w1
 ; CHECK:             r1 = 1
-; CHECK:             r0 += r1
+; CHECK-ALU64:       r0 += r1
+; CHECK-ALU32:       w0 += w1
 ; CHECK:             r1 = 0
-; CHECK:             r0 += r1
+; CHECK-ALU64:       r0 += r1
+; CHECK-ALU32:       w0 += w1
 ; CHECK:             exit
 
 ; CHECK:             .long   1                       # BTF_KIND_STRUCT(id = 2)
