@@ -16,8 +16,9 @@ namespace dependencies{
 DependencyScanningTool::DependencyScanningTool(DependencyScanningService &Service,
 const tooling::CompilationDatabase &Compilations) : Worker(Service), Compilations(Compilations) {}
 
-llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(const std::string &Input,
-                                              StringRef CWD) {
+llvm::Expected<std::string>
+DependencyScanningTool::getDependencyFile(const std::string &Input,
+                                          StringRef CWD) {
   /// Prints out all of the gathered dependencies into a string.
   class DependencyPrinterConsumer : public DependencyConsumer {
   public:
