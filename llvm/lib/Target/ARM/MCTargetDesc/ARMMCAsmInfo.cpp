@@ -75,6 +75,10 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
   UseParensForSymbolVariant = true;
 
   UseIntegratedAssembler = true;
+
+  // The GNU assembler supports Sun style section switching for Arm targets, and
+  // it is used in projects like the Linux kernel.
+  SunStyleELFSectionSwitchSyntax = true;
 }
 
 void ARMELFMCAsmInfo::setUseIntegratedAssembler(bool Value) {
