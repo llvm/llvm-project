@@ -46,7 +46,6 @@ static void emitProperty(Record *Property, raw_ostream &OS) {
   bool hasDefaultUnsignedValue = Property->getValue("HasDefaultUnsignedValue");
   bool hasDefaultEnumValue = Property->getValue("HasDefaultEnumValue");
   bool hasDefaultStringValue = Property->getValue("HasDefaultStringValue");
-  bool hasDefaultBooleanValue = Property->getValue("HasDefaultBooleanValue");
 
   // Guarantee that every property has a default value.
   assert((hasDefaultUnsignedValue || hasDefaultEnumValue ||
@@ -60,7 +59,7 @@ static void emitProperty(Record *Property, raw_ostream &OS) {
 
   // Guarantee that every boolean property has a boolean default value.
   assert(!(Property->getValueAsString("Type") == "Boolean" &&
-           !hasDefaultBooleanValue) &&
+           !Property->getValue("HasDefaultBooleanValue")) &&
          "Boolean property must have a boolean default value.");
 
   // Guarantee that every string property has a string default value.
