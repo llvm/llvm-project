@@ -18,11 +18,11 @@ body: |
   bb.0.entry:
     liveins: $x3, $x1, $x4, $x6
     $x3 = ADDI8 $x1, -80
-    ; CHECK: $x3 = ADDI8 $x1, -80
+    ; CHECK: $x3 = ADDI8 $x1, -76
     $x4 = ADD8 killed $x3, killed $x4
-    ; CHECK: $x4 = ADD8 killed $x3, killed $x4
+    ; CHECK-NOT: ADD8
     $x6 = LD 4, killed $x4
-    ; CHECK: $x6 = LD 4, killed $x4
+    ; CHECK: $x6 = LDX killed $x4, killed $x3
     BLR8 implicit $lr8, implicit $rm
 ...
 ---
@@ -34,11 +34,11 @@ body: |
   bb.0.entry:
     liveins: $x3, $x1, $x4, $x6
     $x3 = ADDI8 $x1, -80
-    ; CHECK: $x3 = ADDI8 $x1, -80
+    ; CHECK: $x3 = ADDI8 $x1, -76
     $x3 = ADD8 killed $x3, killed $x4
-    ; CHECK: $x3 = ADD8 killed $x3, killed $x4
+    ; CHECK-NOT: ADD8
     $x6 = LD 4, killed $x3
-    ; CHECK: $x6 = LD 4, killed $x3
+    ; CHECK: $x6 = LDX killed $x4, killed $x3
     BLR8 implicit $lr8, implicit $rm
 ...
 ---
@@ -110,5 +110,45 @@ body: |
     $x6 = LD 4, $x4
     ; CHECK: $x6 = LD 4, $x4
     STD killed $x4, killed $x6, 100
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testIndexForm7
+#CHECK : name : testIndexForm7
+# There is other def for ToBeChangedReg between ADD instr and Imm instr
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $x1, $x4, $x5, $x6
+    $x3 = ADDI8 $x1, -80
+    ; CHECK: $x3 = ADDI8 $x1, -80
+    $x4 = ADD8 killed $x3, killed $x5
+    ; CHECK: $x4 = ADD8 killed $x3, killed $x5
+    $x3 = LD 100, $x6
+    ; CHECK: $x3 = LD 100, $x6
+    STD killed $x3, killed $x6, 200
+    ; CHECK: STD killed $x3, killed $x6, 200
+    $x6 = LD 4, killed $x4
+    ; CHECK: $x6 = LD 4, killed $x4
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testIndexForm8
+#CHECK : name : testIndexForm8
+# There is other def for ScaleReg between ADD instr and Imm instr
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $x1, $x4, $x5, $x6
+    $x3 = ADDI8 $x1, -80
+    ; CHECK: $x3 = ADDI8 $x1, -80
+    $x4 = ADD8 killed $x3, killed $x5
+    ; CHECK: $x4 = ADD8 killed $x3, killed $x5
+    $x5 = LD 100, $x6
+    ; CHECK: $x5 = LD 100, $x6
+    STD killed $x5, killed $x6, 200
+    ; CHECK: STD killed $x5, killed $x6, 200
+    $x6 = LD 4, killed $x4
+    ; CHECK: $x6 = LD 4, killed $x4
     BLR8 implicit $lr8, implicit $rm
 ...
