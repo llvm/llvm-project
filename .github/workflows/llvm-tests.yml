@@ -1,0 +1,107 @@
+name: LLVM Tests
+
+env:
+  release_major: 10
+
+on:
+  push:
+    branches:
+      - 'release/**'
+    paths:
+      - 'llvm/**'
+      - '.github/workflows/llvm-tests.yml'
+  pull_request:
+    paths:
+      - 'llvm/**'
+
+jobs:
+  build_llvm:
+    name: llvm check-all
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macOS-latest
+    steps:
+    - name: Setup Windows
+      if: startsWith(matrix.os, 'windows')
+      uses: llvm/actions/setup-windows@master
+      with:
+        arch: amd64
+    - name: Install Ninja
+      uses: llvm/actions/install-ninja@master
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+    - name: Test llvm
+      uses: llvm/actions/build-test-llvm-project@master
+      with:
+        cmake_args: -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+  abi-dump:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        name:
+          - build-baseline
+          - build-latest
+        include:
+          - name: build-baseline
+            # FIXME: Referencing the env context does not work here
+            # ref: llvmorg-${{ env.release_major }}.0.0
+            ref: llvmorg-10.0.0
+            repo: llvm/llvm-project
+          - name: build-latest
+            ref: ${{ github.sha }}
+            repo: ${{ github.repository }}
+    steps:
+    - name: Install Ninja
+      uses: llvm/actions/install-ninja@master
+    - name: Install abi-compliance-checker
+      run: sudo apt-get install abi-dumper
+    - name: Download source code
+      uses: llvm/actions/get-llvm-project-src@master
+      with:
+        ref: ${{ matrix.ref }}
+        repo: ${{ matrix.repo }}
+    - name: Configure
+      run: |
+        mkdir build
+        cd build
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON ../llvm
+    - name: Build
+      run: ninja -C build libLLVM-${{ env.release_major }}.so
+    - name: Dump ABI
+      run: abi-dumper -lver ${{ matrix.ref }} -skip-cxx -public-headers llvm/include -o ${{ matrix.ref }}.abi.tar.gz build/lib/libLLVM-${{ env.release_major }}.so
+    - name: Upload ABI file
+      uses: actions/upload-artifact@v1
+      with:
+        name: ${{ matrix.name }}
+        path: ${{ matrix.ref }}.abi.tar.gz
+
+  abi-compare:
+    runs-on: ubuntu-latest
+    needs:
+      - abi-dump
+    steps:
+      - name: Download baseline
+        uses: actions/download-artifact@v1
+        with:
+          name: build-baseline
+      - name: Download latest
+        uses: actions/download-artifact@v1
+        with:
+          name: build-latest
+      - name: Install abi-compliance-checker
+        run: sudo apt-get install abi-compliance-checker
+      - name: Compare ABI
+        run: abi-compliance-checker -l libLLVM-${{ env.release_major}}.so -old build-baseline/*.tar.gz -new build-latest/*.tar.gz
+      - name: Upload ABI Comparison
+        if: always()
+        uses: actions/upload-artifact@v1
+        with:
+          name: compat-report-${{ github.sha }}
+          path: compat_reports/
