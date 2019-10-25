@@ -316,48 +316,27 @@ void MachineInstr::RemoveOperand(unsigned OpNo) {
   --NumOperands;
 }
 
-void MachineInstr::setExtraInfo(MachineFunction &MF,
-                                ArrayRef<MachineMemOperand *> MMOs,
-                                MCSymbol *PreInstrSymbol,
-                                MCSymbol *PostInstrSymbol,
-                                MDNode *HeapAllocMarker) {
-  bool HasPreInstrSymbol = PreInstrSymbol != nullptr;
-  bool HasPostInstrSymbol = PostInstrSymbol != nullptr;
-  bool HasHeapAllocMarker = HeapAllocMarker != nullptr;
-  int NumPointers =
-      MMOs.size() + HasPreInstrSymbol + HasPostInstrSymbol + HasHeapAllocMarker;
-
-  // Drop all extra info if there is none.
-  if (NumPointers <= 0) {
-    Info.clear();
-    return;
-  }
-
-  // If more than one pointer, then store out of line.
-  // FIXME: Maybe we should make the symbols in the extra info mutable?
-  else if (NumPointers > 1) {
-    Info.set<EIIK_OutOfLine>(MF.createMIExtraInfo(
-        MMOs, PreInstrSymbol, PostInstrSymbol, HeapAllocMarker));
-    return;
-  }
-
-  // Otherwise store the single pointer inline.
-  if (HasPreInstrSymbol)
-    Info.set<EIIK_PreInstrSymbol>(PreInstrSymbol);
-  else if (HasPostInstrSymbol)
-    Info.set<EIIK_PostInstrSymbol>(PostInstrSymbol);
-  else if (HasHeapAllocMarker)
-    Info.set<EIIK_HeapAllocMarker>(HeapAllocMarker);
-  else
-    Info.set<EIIK_MMO>(MMOs[0]);
-}
-
 void MachineInstr::dropMemRefs(MachineFunction &MF) {
   if (memoperands_empty())
     return;
 
-  setExtraInfo(MF, {}, getPreInstrSymbol(), getPostInstrSymbol(),
-               getHeapAllocMarker());
+  // See if we can just drop all of our extra info.
+  if (!getPreInstrSymbol() && !getPostInstrSymbol()) {
+    Info.clear();
+    return;
+  }
+  if (!getPostInstrSymbol()) {
+    Info.set<EIIK_PreInstrSymbol>(getPreInstrSymbol());
+    return;
+  }
+  if (!getPreInstrSymbol()) {
+    Info.set<EIIK_PostInstrSymbol>(getPostInstrSymbol());
+    return;
+  }
+
+  // Otherwise allocate a fresh extra info with just these symbols.
+  Info.set<EIIK_OutOfLine>(
+      MF.createMIExtraInfo({}, getPreInstrSymbol(), getPostInstrSymbol()));
 }
 
 void MachineInstr::setMemRefs(MachineFunction &MF,
@@ -367,8 +346,15 @@ void MachineInstr::setMemRefs(MachineFunction &MF,
     return;
   }
 
-  setExtraInfo(MF, MMOs, getPreInstrSymbol(), getPostInstrSymbol(),
-               getHeapAllocMarker());
+  // Try to store a single MMO inline.
+  if (MMOs.size() == 1 && !getPreInstrSymbol() && !getPostInstrSymbol()) {
+    Info.set<EIIK_MMO>(MMOs[0]);
+    return;
+  }
+
+  // Otherwise create an extra info struct with all of our info.
+  Info.set<EIIK_OutOfLine>(
+      MF.createMIExtraInfo(MMOs, getPreInstrSymbol(), getPostInstrSymbol()));
 }
 
 void MachineInstr::addMemOperand(MachineFunction &MF,
@@ -390,8 +376,7 @@ void MachineInstr::cloneMemRefs(MachineFunction &MF, const MachineInstr &MI) {
   // instruction. We can do this whenever the pre- and post-instruction symbols
   // are the same (including null).
   if (getPreInstrSymbol() == MI.getPreInstrSymbol() &&
-      getPostInstrSymbol() == MI.getPostInstrSymbol() &&
-      getHeapAllocMarker() == MI.getHeapAllocMarker()) {
+      getPostInstrSymbol() == MI.getPostInstrSymbol()) {
     Info = MI.Info;
     return;
   }
@@ -465,48 +450,67 @@ void MachineInstr::cloneMergedMemRefs(MachineFunction &MF,
 }
 
 void MachineInstr::setPreInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
-  // Do nothing if old and new symbols are the same.
-  if (Symbol == getPreInstrSymbol())
+  MCSymbol *OldSymbol = getPreInstrSymbol();
+  if (OldSymbol == Symbol)
     return;
+  if (OldSymbol && !Symbol) {
+    // We're removing a symbol rather than adding one. Try to clean up any
+    // extra info carried around.
+    if (Info.is<EIIK_PreInstrSymbol>()) {
+      Info.clear();
+      return;
+    }
 
-  // If there was only one symbol and we're removing it, just clear info.
-  if (!Symbol && Info.is<EIIK_PreInstrSymbol>()) {
-    Info.clear();
+    if (memoperands_empty()) {
+      assert(getPostInstrSymbol() &&
+             "Should never have only a single symbol allocated out-of-line!");
+      Info.set<EIIK_PostInstrSymbol>(getPostInstrSymbol());
+      return;
+    }
+
+    // Otherwise fallback on the generic update.
+  } else if (!Info || Info.is<EIIK_PreInstrSymbol>()) {
+    // If we don't have any other extra info, we can store this inline.
+    Info.set<EIIK_PreInstrSymbol>(Symbol);
     return;
   }
 
-  setExtraInfo(MF, memoperands(), Symbol, getPostInstrSymbol(),
-               getHeapAllocMarker());
+  // Otherwise, allocate a full new set of extra info.
+  // FIXME: Maybe we should make the symbols in the extra info mutable?
+  Info.set<EIIK_OutOfLine>(
+      MF.createMIExtraInfo(memoperands(), Symbol, getPostInstrSymbol()));
 }
 
 void MachineInstr::setPostInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
-  // Do nothing if old and new symbols are the same.
-  if (Symbol == getPostInstrSymbol())
+  MCSymbol *OldSymbol = getPostInstrSymbol();
+  if (OldSymbol == Symbol)
     return;
+  if (OldSymbol && !Symbol) {
+    // We're removing a symbol rather than adding one. Try to clean up any
+    // extra info carried around.
+    if (Info.is<EIIK_PostInstrSymbol>()) {
+      Info.clear();
+      return;
+    }
 
-  // If there was only one symbol and we're removing it, just clear info.
-  if (!Symbol && Info.is<EIIK_PostInstrSymbol>()) {
-    Info.clear();
+    if (memoperands_empty()) {
+      assert(getPreInstrSymbol() &&
+             "Should never have only a single symbol allocated out-of-line!");
+      Info.set<EIIK_PreInstrSymbol>(getPreInstrSymbol());
+      return;
+    }
+
+    // Otherwise fallback on the generic update.
+  } else if (!Info || Info.is<EIIK_PostInstrSymbol>()) {
+    // If we don't have any other extra info, we can store this inline.
+    Info.set<EIIK_PostInstrSymbol>(Symbol);
     return;
   }
 
-  setExtraInfo(MF, memoperands(), getPreInstrSymbol(), Symbol,
-               getHeapAllocMarker());
-}
-
-void MachineInstr::setHeapAllocMarker(MachineFunction &MF, MDNode *Marker) {
-  // Do nothing if old and new symbols are the same.
-  if (Marker == getHeapAllocMarker())
-    return;
-
-  // If there was only one symbol and we're removing it, just clear info.
-  if (!Marker && Info.is<EIIK_HeapAllocMarker>()) {
-    Info.clear();
-    return;
-  }
-
-  setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
-               Marker);
+  // Otherwise, allocate a full new set of extra info.
+  // FIXME: Maybe we should make the symbols in the extra info mutable?
+  Info.set<EIIK_OutOfLine>(
+      MF.createMIExtraInfo(memoperands(), getPreInstrSymbol(), Symbol));
 }
 
 void MachineInstr::cloneInstrSymbols(MachineFunction &MF,
@@ -520,7 +524,6 @@ void MachineInstr::cloneInstrSymbols(MachineFunction &MF,
 
   setPreInstrSymbol(MF, MI.getPreInstrSymbol());
   setPostInstrSymbol(MF, MI.getPostInstrSymbol());
-  setHeapAllocMarker(MF, MI.getHeapAllocMarker());
 }
 
 uint16_t MachineInstr::mergeFlagsWith(const MachineInstr &Other) const {
@@ -1706,13 +1709,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     }
     OS << " post-instr-symbol ";
     MachineOperand::printSymbol(OS, *PostInstrSymbol);
-  }
-  if (MDNode *HeapAllocMarker = getHeapAllocMarker()) {
-    if (!FirstOp) {
-      FirstOp = false;
-      OS << ',';
-    }
-    OS << " heap-alloc-marker";
   }
 
   if (!SkipDebugLoc) {

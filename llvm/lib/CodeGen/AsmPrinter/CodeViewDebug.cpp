@@ -1100,8 +1100,14 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     }
 
     for (auto HeapAllocSite : FI.HeapAllocSites) {
-      const MCSymbol *BeginLabel = std::get<0>(HeapAllocSite);
-      const MCSymbol *EndLabel = std::get<1>(HeapAllocSite);
+      MCSymbol *BeginLabel = std::get<0>(HeapAllocSite);
+      MCSymbol *EndLabel = std::get<1>(HeapAllocSite);
+
+      // The labels might not be defined if the instruction was replaced
+      // somewhere in the codegen pipeline.
+      if (!BeginLabel->isDefined() || !EndLabel->isDefined())
+        continue;
+
       const DIType *DITy = std::get<2>(HeapAllocSite);
       MCSymbol *HeapAllocEnd = beginSymbolRecord(SymbolKind::S_HEAPALLOCSITE);
       OS.AddComment("Call site offset");
@@ -1420,16 +1426,6 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
   if (PrologEndLoc && !EmptyPrologue) {
     DebugLoc FnStartDL = PrologEndLoc.getFnDebugLoc();
     maybeRecordLocation(FnStartDL, MF);
-  }
-
-  // Find heap alloc sites and emit labels around them.
-  for (const auto &MBB : *MF) {
-    for (const auto &MI : MBB) {
-      if (MI.getHeapAllocMarker()) {
-        requestLabelBeforeInsn(&MI);
-        requestLabelAfterInsn(&MI);
-      }
-    }
   }
 }
 
@@ -2854,18 +2850,8 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
     return;
   }
 
-  // Find heap alloc sites and add to list.
-  for (const auto &MBB : *MF) {
-    for (const auto &MI : MBB) {
-      if (MDNode *MD = MI.getHeapAllocMarker()) {
-        CurFn->HeapAllocSites.push_back(std::make_tuple(getLabelBeforeInsn(&MI),
-                                                        getLabelAfterInsn(&MI),
-                                                        dyn_cast<DIType>(MD)));
-      }
-    }
-  }
-
   CurFn->Annotations = MF->getCodeViewAnnotations();
+  CurFn->HeapAllocSites = MF->getCodeViewHeapAllocSites();
 
   CurFn->End = Asm->getFunctionEnd();
 
