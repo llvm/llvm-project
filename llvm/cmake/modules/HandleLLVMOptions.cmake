@@ -18,17 +18,6 @@ else()
   set(LINKER_IS_LLD_LINK FALSE)
 endif()
 
-set(LLVM_CXX_STD_default "c++14")
-# Preserve behaviour of legacy cache variables
-if (LLVM_ENABLE_CXX1Z)
-  set(LLVM_CXX_STD_default "c++1z")
-endif()
-if (LLVM_CXX_STD STREQUAL "c++11")
-  set(LLVM_CXX_STD_force FORCE)
-endif()
-set(LLVM_CXX_STD ${LLVM_CXX_STD_default}
-    CACHE STRING "C++ standard to use for compilation." ${LLVM_CXX_STD_force})
-
 set(LLVM_ENABLE_LTO OFF CACHE STRING "Build LLVM with LTO. May be specified as Thin or Full to use a particular kind of LTO")
 string(TOUPPER "${LLVM_ENABLE_LTO}" uppercase_LLVM_ENABLE_LTO)
 
@@ -443,23 +432,6 @@ endif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
 if ( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
   add_flag_if_supported("-Werror=date-time" WERROR_DATE_TIME)
   add_flag_if_supported("-Werror=unguarded-availability-new" WERROR_UNGUARDED_AVAILABILITY_NEW)
-endif( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
-
-# C++ language standard selection for compilers accepting the GCC-style option:
-if ( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
-  check_cxx_compiler_flag("-std=${LLVM_CXX_STD}" CXX_SUPPORTS_CXX_STD)
-  if (CXX_SUPPORTS_CXX_STD)
-   if (CYGWIN OR MINGW)
-      # MinGW and Cygwin are a bit stricter and lack things like
-      # 'strdup', 'stricmp', etc in c++11 mode.
-      string(REPLACE "c++" "gnu++" gnu_LLVM_CXX_STD "${LLVM_CXX_STD}")
-      append("-std=${gnu_LLVM_CXX_STD}" CMAKE_CXX_FLAGS)
-    else()
-      append("-std=${LLVM_CXX_STD}" CMAKE_CXX_FLAGS)
-    endif()
-  else()
-    message(FATAL_ERROR "The host compiler does not support '-std=${LLVM_CXX_STD}'.")
-  endif()
 endif( LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL" )
 
 # Modules enablement for GCC-compatible compilers:
