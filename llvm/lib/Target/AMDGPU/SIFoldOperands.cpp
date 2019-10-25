@@ -14,6 +14,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -441,6 +442,42 @@ static bool isUseSafeToFold(const SIInstrInfo *TII,
   //return !MI.hasRegisterImplicitUseOperand(UseMO.getReg());
 }
 
+// Find a def of the UseReg, check if it is a reg_seqence and find initializers
+// for each subreg, tracking it to foldable inline immediate if possible.
+// Returns true on success.
+static bool getRegSeqInit(
+    SmallVectorImpl<std::pair<MachineOperand*, unsigned>> &Defs,
+    Register UseReg, uint8_t OpTy,
+    const SIInstrInfo *TII, const MachineRegisterInfo &MRI) {
+  MachineInstr *Def = MRI.getUniqueVRegDef(UseReg);
+  if (!Def || !Def->isRegSequence())
+    return false;
+
+  for (unsigned I = 1, E = Def->getNumExplicitOperands(); I < E; I += 2) {
+    MachineOperand *Sub = &Def->getOperand(I);
+    assert (Sub->isReg());
+
+    for (MachineInstr *SubDef = MRI.getUniqueVRegDef(Sub->getReg());
+         SubDef && Sub->isReg() && !Sub->getSubReg() &&
+         TII->isFoldableCopy(*SubDef);
+         SubDef = MRI.getUniqueVRegDef(Sub->getReg())) {
+      MachineOperand *Op = &SubDef->getOperand(1);
+      if (Op->isImm()) {
+        if (TII->isInlineConstant(*Op, OpTy))
+          Sub = Op;
+        break;
+      }
+      if (!Op->isReg())
+        break;
+      Sub = Op;
+    }
+
+    Defs.push_back(std::make_pair(Sub, Def->getOperand(I + 1).getImm()));
+  }
+
+  return true;
+}
+
 static bool tryToFoldACImm(const SIInstrInfo *TII,
                            const MachineOperand &OpToFold,
                            MachineInstr *UseMI,
@@ -474,39 +511,30 @@ static bool tryToFoldACImm(const SIInstrInfo *TII,
     return false;
 
   MachineRegisterInfo &MRI = UseMI->getParent()->getParent()->getRegInfo();
-  const MachineInstr *Def = MRI.getUniqueVRegDef(UseReg);
-  if (!Def || !Def->isRegSequence())
+  SmallVector<std::pair<MachineOperand*, unsigned>, 32> Defs;
+  if (!getRegSeqInit(Defs, UseReg, OpTy, TII, MRI))
     return false;
 
-  int64_t Imm;
-  MachineOperand *Op;
-  for (unsigned I = 1, E = Def->getNumExplicitOperands(); I < E; I += 2) {
-    const MachineOperand &Sub = Def->getOperand(I);
-    if (!Sub.isReg() || Sub.getSubReg())
+  int32_t Imm;
+  for (unsigned I = 0, E = Defs.size(); I != E; ++I) {
+    const MachineOperand *Op = Defs[I].first;
+    if (!Op->isImm())
       return false;
-    MachineInstr *SubDef = MRI.getUniqueVRegDef(Sub.getReg());
-    while (SubDef && !SubDef->isMoveImmediate() &&
-           !SubDef->getOperand(1).isImm() && TII->isFoldableCopy(*SubDef))
-      SubDef = MRI.getUniqueVRegDef(SubDef->getOperand(1).getReg());
-    if (!SubDef || !SubDef->isMoveImmediate() || !SubDef->getOperand(1).isImm())
-      return false;
-    Op = &SubDef->getOperand(1);
+
     auto SubImm = Op->getImm();
-    if (I == 1) {
-      if (!TII->isInlineConstant(SubDef->getOperand(1), OpTy))
+    if (!I) {
+      Imm = SubImm;
+      if (!TII->isInlineConstant(*Op, OpTy) ||
+          !TII->isOperandLegal(*UseMI, UseOpIdx, Op))
         return false;
 
-      Imm = SubImm;
       continue;
     }
     if (Imm != SubImm)
       return false; // Can only fold splat constants
   }
 
-  if (!TII->isOperandLegal(*UseMI, UseOpIdx, Op))
-    return false;
-
-  appendFoldCandidate(FoldList, UseMI, UseOpIdx, Op);
+  appendFoldCandidate(FoldList, UseMI, UseOpIdx, Defs[0].first);
   return true;
 }
 
@@ -645,11 +673,92 @@ void SIFoldOperands::foldOperand(
       LLVM_DEBUG(dbgs() << "Folding " << OpToFold
                         << "\n into " << *UseMI << '\n');
       unsigned Size = TII->getOpSize(*UseMI, 1);
-      UseMI->getOperand(1).setReg(OpToFold.getReg());
+      Register UseReg = OpToFold.getReg();
+      UseMI->getOperand(1).setReg(UseReg);
       UseMI->getOperand(1).setSubReg(OpToFold.getSubReg());
       UseMI->getOperand(1).setIsKill(false);
       CopiesToReplace.push_back(UseMI);
       OpToFold.setIsKill(false);
+
+      // That is very tricky to store a value into an AGPR. v_accvgpr_write_b32
+      // can only accept VGPR or inline immediate. Recreate a reg_sequence with
+      // its initializers right here, so we will rematerialize immediates and
+      // avoid copies via different reg classes.
+      SmallVector<std::pair<MachineOperand*, unsigned>, 32> Defs;
+      if (Size > 4 && TRI->isAGPR(*MRI, UseMI->getOperand(0).getReg()) &&
+          getRegSeqInit(Defs, UseReg, AMDGPU::OPERAND_REG_INLINE_C_INT32, TII,
+                        *MRI)) {
+        const DebugLoc &DL = UseMI->getDebugLoc();
+        MachineBasicBlock &MBB = *UseMI->getParent();
+
+        UseMI->setDesc(TII->get(AMDGPU::REG_SEQUENCE));
+        for (unsigned I = UseMI->getNumOperands() - 1; I > 0; --I)
+          UseMI->RemoveOperand(I);
+
+        MachineInstrBuilder B(*MBB.getParent(), UseMI);
+        DenseMap<TargetInstrInfo::RegSubRegPair, Register> VGPRCopies;
+        SmallSetVector<TargetInstrInfo::RegSubRegPair, 32> SeenAGPRs;
+        for (unsigned I = 0; I < Size / 4; ++I) {
+          MachineOperand *Def = Defs[I].first;
+          TargetInstrInfo::RegSubRegPair CopyToVGPR;
+          if (Def->isImm() &&
+              TII->isInlineConstant(*Def, AMDGPU::OPERAND_REG_INLINE_C_INT32)) {
+            int64_t Imm = Def->getImm();
+
+            auto Tmp = MRI->createVirtualRegister(&AMDGPU::AGPR_32RegClass);
+            BuildMI(MBB, UseMI, DL,
+                    TII->get(AMDGPU::V_ACCVGPR_WRITE_B32), Tmp).addImm(Imm);
+            B.addReg(Tmp);
+          } else if (Def->isReg() && TRI->isAGPR(*MRI, Def->getReg())) {
+            auto Src = getRegSubRegPair(*Def);
+            Def->setIsKill(false);
+            if (!SeenAGPRs.insert(Src)) {
+              // We cannot build a reg_sequence out of the same registers, they
+              // must be copied. Better do it here before copyPhysReg() created
+              // several reads to do the AGPR->VGPR->AGPR copy.
+              CopyToVGPR = Src;
+            } else {
+              B.addReg(Src.Reg, Def->isUndef() ? RegState::Undef : 0,
+                       Src.SubReg);
+            }
+          } else {
+            assert(Def->isReg());
+            Def->setIsKill(false);
+            auto Src = getRegSubRegPair(*Def);
+
+            // Direct copy from SGPR to AGPR is not possible. To avoid creation
+            // of exploded copies SGPR->VGPR->AGPR in the copyPhysReg() later,
+            // create a copy here and track if we already have such a copy.
+            if (TRI->isSGPRReg(*MRI, Src.Reg)) {
+              CopyToVGPR = Src;
+            } else {
+              auto Tmp = MRI->createVirtualRegister(&AMDGPU::AGPR_32RegClass);
+              BuildMI(MBB, UseMI, DL, TII->get(AMDGPU::COPY), Tmp).add(*Def);
+              B.addReg(Tmp);
+            }
+          }
+
+          if (CopyToVGPR.Reg) {
+            Register Vgpr;
+            if (VGPRCopies.count(CopyToVGPR)) {
+              Vgpr = VGPRCopies[CopyToVGPR];
+            } else {
+              Vgpr = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+              BuildMI(MBB, UseMI, DL, TII->get(AMDGPU::COPY), Vgpr).add(*Def);
+              VGPRCopies[CopyToVGPR] = Vgpr;
+            }
+            auto Tmp = MRI->createVirtualRegister(&AMDGPU::AGPR_32RegClass);
+            BuildMI(MBB, UseMI, DL,
+                    TII->get(AMDGPU::V_ACCVGPR_WRITE_B32), Tmp).addReg(Vgpr);
+            B.addReg(Tmp);
+          }
+
+          B.addImm(Defs[I].second);
+        }
+        LLVM_DEBUG(dbgs() << "Folded " << *UseMI << '\n');
+        return;
+      }
+
       if (Size != 4)
         return;
       if (TRI->isAGPR(*MRI, UseMI->getOperand(0).getReg()) &&
