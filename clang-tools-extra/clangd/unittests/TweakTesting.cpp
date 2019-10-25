@@ -14,6 +14,7 @@
 #include "refactor/Tweak.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Error.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <string>
 
@@ -62,7 +63,7 @@ std::pair<unsigned, unsigned> rangeOrPoint(const Annotations &A) {
           cantFail(positionToOffset(A.code(), SelectionRng.end))};
 }
 
-MATCHER_P4(TweakIsAvailable, TweakID, Ctx, Header, ExtraFiles,
+MATCHER_P5(TweakIsAvailable, TweakID, Ctx, Header, ExtraFiles, Index,
            (TweakID + (negation ? " is unavailable" : " is available")).str()) {
   std::string WrappedCode = wrap(Ctx, arg);
   Annotations Input(WrappedCode);
@@ -72,7 +73,7 @@ MATCHER_P4(TweakIsAvailable, TweakID, Ctx, Header, ExtraFiles,
   TU.Code = Input.code();
   TU.AdditionalFiles = std::move(ExtraFiles);
   ParsedAST AST = TU.build();
-  Tweak::Selection S(AST, Selection.first, Selection.second);
+  Tweak::Selection S(Index, AST, Selection.first, Selection.second);
   auto PrepareResult = prepareTweak(TweakID, S);
   if (PrepareResult)
     return true;
@@ -94,7 +95,7 @@ std::string TweakTest::apply(llvm::StringRef MarkedCode,
   TU.Code = Input.code();
   TU.ExtraArgs = ExtraArgs;
   ParsedAST AST = TU.build();
-  Tweak::Selection S(AST, Selection.first, Selection.second);
+  Tweak::Selection S(Index.get(), AST, Selection.first, Selection.second);
 
   auto T = prepareTweak(TweakID, S);
   if (!T) {
@@ -129,8 +130,8 @@ std::string TweakTest::apply(llvm::StringRef MarkedCode,
 }
 
 ::testing::Matcher<llvm::StringRef> TweakTest::isAvailable() const {
-  return TweakIsAvailable(llvm::StringRef(TweakID), Context, Header,
-                          ExtraFiles);
+  return TweakIsAvailable(llvm::StringRef(TweakID), Context, Header, ExtraFiles,
+                          Index.get());
 }
 
 std::vector<std::string> TweakTest::expandCases(llvm::StringRef MarkedCode) {
