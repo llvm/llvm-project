@@ -8,6 +8,42 @@
 ; ExtractElement - Constant Index
 ;
 
+define i64 @extract_undef_index_from_zero_vec() nounwind {
+; SSE-LABEL: extract_undef_index_from_zero_vec:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: extract_undef_index_from_zero_vec:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; AVX-NEXT:    retq
+  %E = extractelement <2 x i64> zeroinitializer, i64 undef
+  ret i64 %E
+}
+
+define i64 @extract_undef_index_from_nonzero_vec() nounwind {
+; SSE-LABEL: extract_undef_index_from_nonzero_vec:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
+; SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: extract_undef_index_from_nonzero_vec:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
+; AVX-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; AVX-NEXT:    retq
+  %E = extractelement <2 x i64> <i64 -1, i64 -1>, i64 undef
+  ret i64 %E
+}
+
 define i8 @extractelement_v16i8_1(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: extractelement_v16i8_1:
 ; SSE2:       # %bb.0:
