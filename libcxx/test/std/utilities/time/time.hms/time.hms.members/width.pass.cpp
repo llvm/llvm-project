@@ -15,12 +15,12 @@
 //     static unsigned constexpr fractional_width = see below;
 //     using precision                            = see below;
 //
-//	fractional_width is the number of fractional decimal digits represented by precision. 
-//  fractional_width has the value of the smallest possible integer in the range [0, 18] 
-//    such that precision will exactly represent all values of Duration. 
+//	fractional_width is the number of fractional decimal digits represented by precision.
+//  fractional_width has the value of the smallest possible integer in the range [0, 18]
+//    such that precision will exactly represent all values of Duration.
 //  If no such value of fractional_width exists, then fractional_width is 6.
 
-   
+
 #include <chrono>
 #include <cassert>
 

@@ -35,8 +35,9 @@ using namespace llvm;
 #include "WebAssemblyGenRegisterInfo.inc"
 
 static MCAsmInfo *createMCAsmInfo(const MCRegisterInfo & /*MRI*/,
-                                  const Triple &TT) {
-  return new WebAssemblyMCAsmInfo(TT);
+                                  const Triple &TT,
+                                  const MCTargetOptions &Options) {
+  return new WebAssemblyMCAsmInfo(TT, Options);
 }
 
 static MCInstrInfo *createMCInstrInfo() {

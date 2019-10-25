@@ -3877,14 +3877,35 @@ void llvm::UpgradeARCRuntime(Module &M) {
       FunctionType *NewFuncTy = NewFn->getFunctionType();
       SmallVector<Value *, 2> Args;
 
+      // Don't upgrade the intrinsic if it's not valid to bitcast the return
+      // value to the return type of the old function.
+      if (NewFuncTy->getReturnType() != CI->getType() &&
+          !CastInst::castIsValid(Instruction::BitCast, CI,
+                                 NewFuncTy->getReturnType()))
+        continue;
+
+      bool InvalidCast = false;
+
       for (unsigned I = 0, E = CI->getNumArgOperands(); I != E; ++I) {
         Value *Arg = CI->getArgOperand(I);
+
         // Bitcast argument to the parameter type of the new function if it's
         // not a variadic argument.
-        if (I < NewFuncTy->getNumParams())
+        if (I < NewFuncTy->getNumParams()) {
+          // Don't upgrade the intrinsic if it's not valid to bitcast the argument
+          // to the parameter type of the new function.
+          if (!CastInst::castIsValid(Instruction::BitCast, Arg,
+                                     NewFuncTy->getParamType(I))) {
+            InvalidCast = true;
+            break;
+          }
           Arg = Builder.CreateBitCast(Arg, NewFuncTy->getParamType(I));
+        }
         Args.push_back(Arg);
       }
+
+      if (InvalidCast)
+        continue;
 
       // Create a call instruction that calls the new function.
       CallInst *NewCall = Builder.CreateCall(NewFuncTy, NewFn, Args);

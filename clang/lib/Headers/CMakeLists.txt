@@ -182,6 +182,8 @@ endforeach( f )
 clang_generate_header(-gen-arm-neon arm_neon.td arm_neon.h)
 # Generate arm_fp16.h
 clang_generate_header(-gen-arm-fp16 arm_fp16.td arm_fp16.h)
+# Generate arm_mve.h
+clang_generate_header(-gen-arm-mve-header arm_mve.td arm_mve.h)
 
 add_custom_target(clang-resource-headers ALL DEPENDS ${out_files})
 set_target_properties(clang-resource-headers PROPERTIES

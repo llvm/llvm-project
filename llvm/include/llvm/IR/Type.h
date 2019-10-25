@@ -372,6 +372,7 @@ public:
 
   inline bool getVectorIsScalable() const;
   inline unsigned getVectorNumElements() const;
+  inline ElementCount getVectorElementCount() const;
   Type *getVectorElementType() const {
     assert(getTypeID() == VectorTyID);
     return ContainedTys[0];
@@ -381,6 +382,10 @@ public:
     assert(getTypeID() == PointerTyID);
     return ContainedTys[0];
   }
+
+  /// Given an integer or vector type, change the lane bitwidth to NewBitwidth,
+  /// whilst keeping the old number of lanes.
+  inline Type *getWithNewBitWidth(unsigned NewBitWidth) const;
 
   /// Given scalar/vector integer type, returns a type with elements twice as
   /// wide as in the original type. For vectors, preserves element count.

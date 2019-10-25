@@ -8,6 +8,7 @@
 
 #include "llvm/IR/Module.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "gtest/gtest.h"
 

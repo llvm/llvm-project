@@ -53,5 +53,3 @@ void escape() {
 sink(&x);
 sink(&Foo);
 }
-
-

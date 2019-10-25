@@ -10,6 +10,7 @@
 #include "BenchmarkResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <limits>
 #include <unordered_set>
@@ -163,7 +164,9 @@ Analysis::Analysis(const Target &Target, std::unique_ptr<MCInstrInfo> InstrInfo,
 
   const InstructionBenchmark &FirstPoint = Clustering.getPoints().front();
   RegInfo_.reset(Target.createMCRegInfo(FirstPoint.LLVMTriple));
-  AsmInfo_.reset(Target.createMCAsmInfo(*RegInfo_, FirstPoint.LLVMTriple));
+  MCTargetOptions MCOptions;
+  AsmInfo_.reset(
+      Target.createMCAsmInfo(*RegInfo_, FirstPoint.LLVMTriple, MCOptions));
   SubtargetInfo_.reset(Target.createMCSubtargetInfo(FirstPoint.LLVMTriple,
                                                     FirstPoint.CpuName, ""));
   InstPrinter_.reset(Target.createMCInstPrinter(

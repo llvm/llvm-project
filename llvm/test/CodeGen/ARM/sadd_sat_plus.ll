@@ -42,35 +42,33 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ; CHECK-T1-NEXT:  .LCPI0_0:
 ; CHECK-T1-NEXT:    .long 2147483647 @ 0x7fffffff
 ;
-; CHECK-T2-LABEL: func32:
-; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    mla r2, r1, r2, r0
-; CHECK-T2-NEXT:    movs r3, #0
-; CHECK-T2-NEXT:    mov.w r1, #-2147483648
-; CHECK-T2-NEXT:    cmp r2, #0
-; CHECK-T2-NEXT:    it mi
-; CHECK-T2-NEXT:    movmi r3, #1
-; CHECK-T2-NEXT:    cmp r3, #0
-; CHECK-T2-NEXT:    it ne
-; CHECK-T2-NEXT:    mvnne r1, #-2147483648
-; CHECK-T2-NEXT:    cmp r2, r0
-; CHECK-T2-NEXT:    it vc
-; CHECK-T2-NEXT:    movvc r1, r2
-; CHECK-T2-NEXT:    mov r0, r1
-; CHECK-T2-NEXT:    bx lr
+; CHECK-T2NODSP-LABEL: func32:
+; CHECK-T2NODSP:       @ %bb.0:
+; CHECK-T2NODSP-NEXT:    mla r2, r1, r2, r0
+; CHECK-T2NODSP-NEXT:    movs r3, #0
+; CHECK-T2NODSP-NEXT:    mov.w r1, #-2147483648
+; CHECK-T2NODSP-NEXT:    cmp r2, #0
+; CHECK-T2NODSP-NEXT:    it mi
+; CHECK-T2NODSP-NEXT:    movmi r3, #1
+; CHECK-T2NODSP-NEXT:    cmp r3, #0
+; CHECK-T2NODSP-NEXT:    it ne
+; CHECK-T2NODSP-NEXT:    mvnne r1, #-2147483648
+; CHECK-T2NODSP-NEXT:    cmp r2, r0
+; CHECK-T2NODSP-NEXT:    it vc
+; CHECK-T2NODSP-NEXT:    movvc r1, r2
+; CHECK-T2NODSP-NEXT:    mov r0, r1
+; CHECK-T2NODSP-NEXT:    bx lr
+;
+; CHECK-T2DSP-LABEL: func32:
+; CHECK-T2DSP:       @ %bb.0:
+; CHECK-T2DSP-NEXT:    muls r1, r2, r1
+; CHECK-T2DSP-NEXT:    qadd r0, r0, r1
+; CHECK-T2DSP-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func32:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    mla r2, r1, r2, r0
-; CHECK-ARM-NEXT:    mov r3, #0
-; CHECK-ARM-NEXT:    mov r1, #-2147483648
-; CHECK-ARM-NEXT:    cmp r2, #0
-; CHECK-ARM-NEXT:    movwmi r3, #1
-; CHECK-ARM-NEXT:    cmp r3, #0
-; CHECK-ARM-NEXT:    mvnne r1, #-2147483648
-; CHECK-ARM-NEXT:    cmp r2, r0
-; CHECK-ARM-NEXT:    movvc r1, r2
-; CHECK-ARM-NEXT:    mov r0, r1
+; CHECK-ARM-NEXT:    mul r1, r1, r2
+; CHECK-ARM-NEXT:    qadd r0, r0, r1
 ; CHECK-ARM-NEXT:    bx lr
   %a = mul i32 %y, %z
   %tmp = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %a)
@@ -258,29 +256,15 @@ define signext i16 @func16(i16 signext %x, i16 signext %y, i16 signext %z) nounw
 ; CHECK-T2DSP-LABEL: func16:
 ; CHECK-T2DSP:       @ %bb.0:
 ; CHECK-T2DSP-NEXT:    muls r1, r2, r1
-; CHECK-T2DSP-NEXT:    sxtah r0, r0, r1
-; CHECK-T2DSP-NEXT:    movw r1, #32767
-; CHECK-T2DSP-NEXT:    cmp r0, r1
-; CHECK-T2DSP-NEXT:    it lt
-; CHECK-T2DSP-NEXT:    movlt r1, r0
-; CHECK-T2DSP-NEXT:    movw r0, #32768
-; CHECK-T2DSP-NEXT:    cmn.w r1, #32768
-; CHECK-T2DSP-NEXT:    movt r0, #65535
-; CHECK-T2DSP-NEXT:    it gt
-; CHECK-T2DSP-NEXT:    movgt r0, r1
+; CHECK-T2DSP-NEXT:    qadd16 r0, r0, r1
+; CHECK-T2DSP-NEXT:    sxth r0, r0
 ; CHECK-T2DSP-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func16:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    smulbb r1, r1, r2
-; CHECK-ARM-NEXT:    sxtah r0, r0, r1
-; CHECK-ARM-NEXT:    movw r1, #32767
-; CHECK-ARM-NEXT:    cmp r0, r1
-; CHECK-ARM-NEXT:    movlt r1, r0
-; CHECK-ARM-NEXT:    movw r0, #32768
-; CHECK-ARM-NEXT:    movt r0, #65535
-; CHECK-ARM-NEXT:    cmn r1, #32768
-; CHECK-ARM-NEXT:    movgt r0, r1
+; CHECK-ARM-NEXT:    qadd16 r0, r0, r1
+; CHECK-ARM-NEXT:    sxth r0, r0
 ; CHECK-ARM-NEXT:    bx lr
   %a = mul i16 %y, %z
   %tmp = call i16 @llvm.sadd.sat.i16(i16 %x, i16 %a)
@@ -323,23 +307,15 @@ define signext i8 @func8(i8 signext %x, i8 signext %y, i8 signext %z) nounwind {
 ; CHECK-T2DSP-LABEL: func8:
 ; CHECK-T2DSP:       @ %bb.0:
 ; CHECK-T2DSP-NEXT:    muls r1, r2, r1
-; CHECK-T2DSP-NEXT:    sxtab r0, r0, r1
-; CHECK-T2DSP-NEXT:    cmp r0, #127
-; CHECK-T2DSP-NEXT:    it ge
-; CHECK-T2DSP-NEXT:    movge r0, #127
-; CHECK-T2DSP-NEXT:    cmn.w r0, #128
-; CHECK-T2DSP-NEXT:    it le
-; CHECK-T2DSP-NEXT:    mvnle r0, #127
+; CHECK-T2DSP-NEXT:    qadd8 r0, r0, r1
+; CHECK-T2DSP-NEXT:    sxtb r0, r0
 ; CHECK-T2DSP-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func8:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    smulbb r1, r1, r2
-; CHECK-ARM-NEXT:    sxtab r0, r0, r1
-; CHECK-ARM-NEXT:    cmp r0, #127
-; CHECK-ARM-NEXT:    movge r0, #127
-; CHECK-ARM-NEXT:    cmn r0, #128
-; CHECK-ARM-NEXT:    mvnle r0, #127
+; CHECK-ARM-NEXT:    qadd8 r0, r0, r1
+; CHECK-ARM-NEXT:    sxtb r0, r0
 ; CHECK-ARM-NEXT:    bx lr
   %a = mul i8 %y, %z
   %tmp = call i8 @llvm.sadd.sat.i8(i8 %x, i8 %a)
@@ -367,28 +343,35 @@ define signext i4 @func4(i4 signext %x, i4 signext %y, i4 signext %z) nounwind {
 ; CHECK-T1-NEXT:  .LBB4_4:
 ; CHECK-T1-NEXT:    bx lr
 ;
-; CHECK-T2-LABEL: func4:
-; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    muls r1, r2, r1
-; CHECK-T2-NEXT:    lsls r1, r1, #28
-; CHECK-T2-NEXT:    add.w r0, r0, r1, asr #28
-; CHECK-T2-NEXT:    cmp r0, #7
-; CHECK-T2-NEXT:    it ge
-; CHECK-T2-NEXT:    movge r0, #7
-; CHECK-T2-NEXT:    cmn.w r0, #8
-; CHECK-T2-NEXT:    it le
-; CHECK-T2-NEXT:    mvnle r0, #7
-; CHECK-T2-NEXT:    bx lr
+; CHECK-T2NODSP-LABEL: func4:
+; CHECK-T2NODSP:       @ %bb.0:
+; CHECK-T2NODSP-NEXT:    muls r1, r2, r1
+; CHECK-T2NODSP-NEXT:    lsls r1, r1, #28
+; CHECK-T2NODSP-NEXT:    add.w r0, r0, r1, asr #28
+; CHECK-T2NODSP-NEXT:    cmp r0, #7
+; CHECK-T2NODSP-NEXT:    it ge
+; CHECK-T2NODSP-NEXT:    movge r0, #7
+; CHECK-T2NODSP-NEXT:    cmn.w r0, #8
+; CHECK-T2NODSP-NEXT:    it le
+; CHECK-T2NODSP-NEXT:    mvnle r0, #7
+; CHECK-T2NODSP-NEXT:    bx lr
+;
+; CHECK-T2DSP-LABEL: func4:
+; CHECK-T2DSP:       @ %bb.0:
+; CHECK-T2DSP-NEXT:    muls r1, r2, r1
+; CHECK-T2DSP-NEXT:    lsls r0, r0, #28
+; CHECK-T2DSP-NEXT:    lsls r1, r1, #28
+; CHECK-T2DSP-NEXT:    qadd r0, r0, r1
+; CHECK-T2DSP-NEXT:    asrs r0, r0, #28
+; CHECK-T2DSP-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func4:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    smulbb r1, r1, r2
+; CHECK-ARM-NEXT:    lsl r0, r0, #28
 ; CHECK-ARM-NEXT:    lsl r1, r1, #28
-; CHECK-ARM-NEXT:    add r0, r0, r1, asr #28
-; CHECK-ARM-NEXT:    cmp r0, #7
-; CHECK-ARM-NEXT:    movge r0, #7
-; CHECK-ARM-NEXT:    cmn r0, #8
-; CHECK-ARM-NEXT:    mvnle r0, #7
+; CHECK-ARM-NEXT:    qadd r0, r0, r1
+; CHECK-ARM-NEXT:    asr r0, r0, #28
 ; CHECK-ARM-NEXT:    bx lr
   %a = mul i4 %y, %z
   %tmp = call i4 @llvm.sadd.sat.i4(i4 %x, i4 %a)

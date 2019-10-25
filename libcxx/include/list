@@ -2211,7 +2211,7 @@ list<_Tp, _Alloc>::unique(_BinaryPred __binary_pred)
             __i = __j;
             }
     }
-    
+
     return (__remove_return_type) __deleted_nodes.size();
 }
 

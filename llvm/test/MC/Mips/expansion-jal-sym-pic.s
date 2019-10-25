@@ -1,11 +1,20 @@
 # RUN: llvm-mc %s -triple mips-unknown-linux-gnu -show-encoding |\
 # RUN:   FileCheck %s -check-prefixes=ALL,MIPS,O32
 
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu -mattr=+xgot -show-encoding |\
+# RUN:   FileCheck %s -check-prefixes=ALL,MIPS,XO32
+
 # RUN: llvm-mc %s -triple mips64-unknown-linux-gnuabin32 -show-encoding |\
 # RUN:   FileCheck %s -check-prefixes=ALL,MIPS,N32
 
+# RUN: llvm-mc %s -triple mips64-unknown-linux-gnuabin32 -mattr=+xgot -show-encoding |\
+# RUN:   FileCheck %s -check-prefixes=ALL,MIPS,XN32
+
 # RUN: llvm-mc %s -triple mips64-unknown-linux-gnu -show-encoding |\
 # RUN:   FileCheck %s -check-prefixes=ALL,MIPS,N64
+
+# RUN: llvm-mc %s -triple mips64-unknown-linux-gnu -mattr=+xgot -show-encoding |\
+# RUN:   FileCheck %s -check-prefixes=ALL,MIPS,XN64
 
 # RUN: llvm-mc %s -triple mips-unknown-linux-gnu -mattr=micromips -show-encoding |\
 # RUN:   FileCheck %s -check-prefixes=ALL,MM,O32-MM
@@ -49,6 +58,12 @@ local_label:
 # ELF-O32-NEXT: 03 20 f8 09 jalr $25
 # ELF-O32-NEXT:                 R_MIPS_JALR local_label
 
+# XO32:      lw    $25, %got(local_label)($gp)  # encoding: [0x8f,0x99,A,A]
+# XO32-NEXT:                                    #   fixup A - offset: 0, value: %got(local_label), kind:   fixup_Mips_GOT
+# XO32-NEXT: addiu $25, $25, %lo(local_label)   # encoding: [0x27,0x39,A,A]
+# XO32-NEXT:                                    #   fixup A - offset: 0, value: %lo(local_label), kind:   fixup_Mips_LO16
+# XO32-NEXT: .reloc ($tmp0), R_MIPS_JALR, local_label
+
 # N32: lw  $25, %got_disp(local_label)($gp) # encoding: [0x8f,0x99,A,A]
 # N32:                                      #   fixup A - offset: 0, value: %got_disp(local_label), kind:   fixup_Mips_GOT_DISP
 # N32-NEXT: .reloc .Ltmp0, R_MIPS_JALR, local_label
@@ -58,6 +73,10 @@ local_label:
 # ELF-N32-NEXT: 03 20 f8 09 jalr $25
 # ELF-N32-NEXT:                 R_MIPS_JALR local_label
 
+# XN32:      lw $25, %got_disp(local_label)($gp)  # encoding: [0x8f,0x99,A,A]
+# XN32-NEXT:                                      #   fixup A - offset: 0, value: %got_disp(local_label), kind: fixup_Mips_GOT_DISP
+# XN32-NEXT: .reloc .Ltmp0, R_MIPS_JALR, local_label
+
 # N64: ld  $25, %got_disp(local_label)($gp) # encoding: [0xdf,0x99,A,A]
 # N64:                                      #   fixup A - offset: 0, value: %got_disp(local_label), kind:   fixup_Mips_GOT_DISP
 # N64-NEXT: .reloc .Ltmp0, R_MIPS_JALR, local_label
@@ -66,6 +85,10 @@ local_label:
 # ELF-N64-NEXT:                 R_MIPS_GOT_DISP/R_MIPS_NONE/R_MIPS_NONE local_label
 # ELF-N64-NEXT: 03 20 f8 09 jalr $25
 # ELF-N64-NEXT: R_MIPS_JALR/R_MIPS_NONE/R_MIPS_NONE local_label
+
+# XN64:      ld $25, %got_disp(local_label)($gp)  # encoding: [0xdf,0x99,A,A]
+# XN64-NEXT:                                      #   fixup A - offset: 0, value: %got_disp(local_label), kind: fixup_Mips_GOT_DISP
+# XN64-NEXT: .reloc .Ltmp0, R_MIPS_JALR, local_label
 
 # O32-MM: lw    $25, %got(local_label)($gp)      # encoding: [0xff,0x3c,A,A]
 # O32-MM:                                        #   fixup A - offset: 0, value: %got(local_label), kind:   fixup_MICROMIPS_GOT16
@@ -90,6 +113,13 @@ local_label:
 # ELF-O32-NEXT: 03 20 f8 09 jalr $25
 # ELF-O32-NEXT:                 R_MIPS_JALR weak_label
 
+# XO32:      lui  $25, %call_hi(weak_label)       # encoding: [0x3c,0x19,A,A]
+# XO32-NEXT:                                      #   fixup A - offset: 0, value: %call_hi(weak_label), kind: fixup_Mips_CALL_HI16
+# XO32-NEXT: addu $25, $25, $gp                   # encoding: [0x03,0x3c,0xc8,0x21]
+# XO32-NEXT: lw   $25, %call_lo(weak_label)($25)  # encoding: [0x8f,0x39,A,A]
+# XO32-NEXT:                                      #   fixup A - offset: 0, value: %call_lo(weak_label), kind: fixup_Mips_CALL_LO16
+# XO32-NEXT: .reloc ($tmp1), R_MIPS_JALR, weak_label
+
 # N32: lw  $25, %call16(weak_label)($gp) # encoding: [0x8f,0x99,A,A]
 # N32:                                   #   fixup A - offset: 0, value: %call16(weak_label), kind:   fixup_Mips_CALL16
 # N32-NEXT: .reloc .Ltmp1, R_MIPS_JALR, weak_label
@@ -99,6 +129,13 @@ local_label:
 # ELF-N32-NEXT: 03 20 f8 09 jalr $25
 # ELF-N32-NEXT:                 R_MIPS_JALR weak_label
 
+# XN32:      lui  $25, %call_hi(weak_label)       # encoding: [0x3c,0x19,A,A]
+# XN32-NEXT:                                      #   fixup A - offset: 0, value: %call_hi(weak_label), kind: fixup_Mips_CALL_HI16
+# XN32-NEXT: addu $25, $25, $gp                   # encoding: [0x03,0x3c,0xc8,0x21]
+# XN32-NEXT: lw   $25, %call_lo(weak_label)($25)  # encoding: [0x8f,0x39,A,A]
+# XN32-NEXT:                                      #   fixup A - offset: 0, value: %call_lo(weak_label), kind: fixup_Mips_CALL_LO16
+# XN32-NEXT: .reloc .Ltmp1, R_MIPS_JALR, weak_label
+
 # N64: ld  $25, %call16(weak_label)($gp) # encoding: [0xdf,0x99,A,A]
 # N64:                                   #   fixup A - offset: 0, value: %call16(weak_label), kind:   fixup_Mips_CALL16
 # N64-NEXT: .reloc .Ltmp1, R_MIPS_JALR, weak_label
@@ -107,6 +144,13 @@ local_label:
 # ELF-N64-NEXT:                 R_MIPS_CALL16/R_MIPS_NONE/R_MIPS_NONE weak_label
 # ELF-N64-NEXT: 03 20 f8 09 jalr $25
 # ELF-N64-NEXT:                 R_MIPS_JALR/R_MIPS_NONE/R_MIPS_NONE weak_label
+
+# XN64:      lui   $25, %call_hi(weak_label)      # encoding: [0x3c,0x19,A,A]
+# XN64-NEXT:                                      #   fixup A - offset: 0, value: %call_hi(weak_label), kind: fixup_Mips_CALL_HI16
+# XN64-NEXT: daddu $25, $25, $gp                  # encoding: [0x03,0x3c,0xc8,0x2d]
+# XN64-NEXT: ld    $25, %call_lo(weak_label)($25) # encoding: [0xdf,0x39,A,A]
+# XN64-NEXT:                                      #   fixup A - offset: 0, value: %call_lo(weak_label), kind: fixup_Mips_CALL_LO16
+# XN64-NEXT: .reloc .Ltmp1, R_MIPS_JALR, weak_label
 
 # O32-MM: lw  $25, %call16(weak_label)($gp) # encoding: [0xff,0x3c,A,A]
 # O32-MM:                                   #   fixup A - offset: 0, value: %call16(weak_label), kind:   fixup_MICROMIPS_CALL16
@@ -129,6 +173,13 @@ local_label:
 # ELF-O32-NEXT: 03 20 f8 09 jalr $25
 # ELF-O32-NEXT:                 R_MIPS_JALR global_label
 
+# XO32:      lui  $25, %call_hi(global_label)       # encoding: [0x3c,0x19,A,A]
+# XO32-NEXT:                                        #   fixup A - offset: 0, value: %call_hi(global_label), kind: fixup_Mips_CALL_HI16
+# XO32-NEXT: addu $25, $25, $gp                     # encoding: [0x03,0x3c,0xc8,0x21]
+# XO32-NEXT: lw   $25, %call_lo(global_label)($25)  # encoding: [0x8f,0x39,A,A]
+# XO32-NEXT:                                        #   fixup A - offset: 0, value: %call_lo(global_label), kind: fixup_Mips_CALL_LO16
+# XO32-NEXT: .reloc ($tmp2), R_MIPS_JALR, global_label
+
 # N32: lw  $25, %call16(global_label)($gp) # encoding: [0x8f,0x99,A,A]
 # N32:                                     #   fixup A - offset: 0, value: %call16(global_label), kind:   fixup_Mips_CALL16
 # N32-NEXT: .reloc .Ltmp2, R_MIPS_JALR, global_label
@@ -138,6 +189,13 @@ local_label:
 # ELF-N32-NEXT: 03 20 f8 09 jalr $25
 # ELF-N32-NEXT:                 R_MIPS_JALR global_label
 
+# XN32:      lui  $25, %call_hi(global_label)       # encoding: [0x3c,0x19,A,A]
+# XN32-NEXT:                                        #   fixup A - offset: 0, value: %call_hi(global_label), kind: fixup_Mips_CALL_HI16
+# XN32-NEXT: addu $25, $25, $gp                     # encoding: [0x03,0x3c,0xc8,0x21]
+# XN32-NEXT: lw   $25, %call_lo(global_label)($25)  # encoding: [0x8f,0x39,A,A]
+# XN32-NEXT:                                        #   fixup A - offset: 0, value: %call_lo(global_label), kind: fixup_Mips_CALL_LO16
+# XN32-NEXT: .reloc .Ltmp2, R_MIPS_JALR, global_label
+
 # N64: ld  $25, %call16(global_label)($gp) # encoding: [0xdf,0x99,A,A]
 # N64:                                     #   fixup A - offset: 0, value: %call16(global_label), kind:   fixup_Mips_CALL16
 # N64-NEXT: .reloc .Ltmp2, R_MIPS_JALR, global_label
@@ -146,6 +204,13 @@ local_label:
 # ELF-N64-NEXT:                 R_MIPS_CALL16/R_MIPS_NONE/R_MIPS_NONE global_label
 # ELF-N64-NEXT: 03 20 f8 09 jalr $25
 # ELF-N64-NEXT:                 R_MIPS_JALR/R_MIPS_NONE/R_MIPS_NONE global_label
+
+# XN64:      lui   $25, %call_hi(global_label)      # encoding: [0x3c,0x19,A,A]
+# XN64-NEXT:                                        #   fixup A - offset: 0, value: %call_hi(global_label), kind: fixup_Mips_CALL_HI16
+# XN64-NEXT: daddu $25, $25, $gp                    # encoding: [0x03,0x3c,0xc8,0x2d]
+# XN64-NEXT: ld    $25, %call_lo(global_label)($25) # encoding: [0xdf,0x39,A,A]
+# XN64-NEXT:                                        #   fixup A - offset: 0, value: %call_lo(global_label), kind: fixup_Mips_CALL_LO16
+# XN64-NEXT: .reloc .Ltmp2, R_MIPS_JALR, global_label
 
 # O32-MM: lw  $25, %call16(global_label)($gp) # encoding: [0xff,0x3c,A,A]
 # O32-MM:                                     #   fixup A - offset: 0, value: %call16(global_label), kind: fixup_MICROMIPS_CALL16
@@ -165,17 +230,31 @@ local_label:
 # ELF-O32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-O32-NEXT:                 R_MIPS_GOT16 .text
 
+# XO32:      lw    $25, %got(.text)($gp)  # encoding: [0x8f,0x99,A,A]
+# XO32-NEXT:                              #   fixup A - offset: 0, value: %got(.text), kind: fixup_Mips_GOT
+# XO32-NEXT: addiu $25, $25, %lo(.text)   # encoding: [0x27,0x39,A,A]
+# XO32-NEXT:                              #   fixup A - offset: 0, value: %lo(.text), kind: fixup_Mips_LO16
+# XO32-NEXT: .reloc ($tmp3), R_MIPS_JALR, .text
+
 # N32: lw	$25, %got_disp(.text)($gp) # encoding: [0x8f,0x99,A,A]
 # N32-NEXT:                                       #   fixup A - offset: 0, value: %got_disp(.text), kind: fixup_Mips_GOT_DISP
 
 # ELF-N32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-N32-NEXT:                 R_MIPS_GOT_DISP .text
 
+# XN32:      lw $25, %got_disp(.text)($gp)  # encoding: [0x8f,0x99,A,A]
+# XN32-NEXT:                                #   fixup A - offset: 0, value: %got_disp(.text), kind: fixup_Mips_GOT_DISP
+# XN32-NEXT: .reloc .Ltmp3, R_MIPS_JALR, .text
+
 # N64: ld	$25, %got_disp(.text)($gp) # encoding: [0xdf,0x99,A,A]
 # N64-NEXT:                                       #   fixup A - offset: 0, value: %got_disp(.text), kind: fixup_Mips_GOT_DISP
 
 # ELF-N64:      df 99 00 00 ld $25, 0($gp)
 # ELF-N64-NEXT:                 R_MIPS_GOT_DISP/R_MIPS_NONE/R_MIPS_NONE	.text
+
+# XN64:      ld $25, %got_disp(.text)($gp)  # encoding: [0xdf,0x99,A,A]
+# XN64-NEXT:                                #   fixup A - offset: 0, value: %got_disp(.text), kind: fixup_Mips_GOT_DISP
+# XN64-NEXT: .reloc .Ltmp3, R_MIPS_JALR, .text
 
 # O32-MM: lw    $25, %got(.text)($gp)      # encoding: [0xff,0x3c,A,A]
 # O32-MM-NEXT:                                  #   fixup A - offset: 0, value: %got(.text), kind: fixup_MICROMIPS_GOT16
@@ -205,17 +284,31 @@ local_label:
 # ELF-O32-NEXT: 03 20 f8 09 jalr $25
 # ELF-O32-NEXT:                 R_MIPS_JALR $tmp0
 
+# XO32:      lw    $25, %got($tmp4)($gp)  # encoding: [0x8f,0x99,A,A]
+# XO32-NEXT:                              #   fixup A - offset: 0, value: %got($tmp4), kind: fixup_Mips_GOT
+# XO32-NEXT: addiu $25, $25, %lo($tmp4)   # encoding: [0x27,0x39,A,A]
+# XO32-NEXT:                              #   fixup A - offset: 0, value: %lo($tmp4), kind: fixup_Mips_LO16
+# XO32-NEXT: .reloc ($tmp5), R_MIPS_JALR, ($tmp4)
+
 # N32: lw  $25, %got_disp(.Ltmp4)($gp) # encoding: [0x8f,0x99,A,A]
 # N32:                                #   fixup A - offset: 0, value: %got_disp(.Ltmp4), kind:   fixup_Mips_GOT_DISP
 
 # ELF-N32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-N32-NEXT:                 R_MIPS_GOT_DISP .Ltmp0
 
+# XN32:      lw $25, %got_disp(.Ltmp4)($gp) # encoding: [0x8f,0x99,A,A]
+# XN32-NEXT:                                #   fixup A - offset: 0, value: %got_disp(.Ltmp4), kind: fixup_Mips_GOT_DISP
+# XN32-NEXT: .reloc .Ltmp5, R_MIPS_JALR, .Ltmp4
+
 # N64: ld  $25, %got_disp(.Ltmp4)($gp) # encoding: [0xdf,0x99,A,A]
 # N64:                                 #   fixup A - offset: 0, value: %got_disp(.Ltmp4), kind:   fixup_Mips_GOT_DISP
 
 # ELF-N64:      df 99 00 00 ld $25, 0($gp)
 # ELF-N64-NEXT:                 R_MIPS_GOT_DISP/R_MIPS_NONE/R_MIPS_NONE .Ltmp0
+
+# XN64:      ld $25, %got_disp(.Ltmp4)($gp) # encoding: [0xdf,0x99,A,A]
+# XN64-NEXT:                                #   fixup A - offset: 0, value: %got_disp(.Ltmp4), kind: fixup_Mips_GOT_DISP
+# XN64-NEXT: .reloc .Ltmp5, R_MIPS_JALR, .Ltmp4
 
 # O32-MM: lw    $25, %got($tmp4)($gp)    # encoding: [0xff,0x3c,A,A]
 # O32-MM:                                #   fixup A - offset: 0, value: %got($tmp4), kind: fixup_MICROMIPS_GOT16

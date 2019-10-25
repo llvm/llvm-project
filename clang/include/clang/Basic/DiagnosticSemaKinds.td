@@ -2542,6 +2542,26 @@ def err_non_constant_constraint_expression : Error<
   "expression">;
 def err_non_bool_atomic_constraint : Error<
   "atomic constraint must be of type 'bool' (found %0)">;
+def err_template_arg_list_constraints_not_satisfied : Error<
+  "constraints not satisfied for %select{class template|function template|variable template|alias template|"
+  "template template parameter|template}0 %1%2">;
+def note_constraints_not_satisfied : Note<
+  "constraints not satisfied">;
+def note_substituted_constraint_expr_is_ill_formed : Note<
+  "because substituted constraint expression is ill-formed%0">;
+def note_atomic_constraint_evaluated_to_false : Note<
+  "%select{and |because }0'%1' evaluated to false">;
+def note_concept_specialization_constraint_evaluated_to_false : Note<
+  "%select{and |because }0'%1' evaluated to false">;
+def note_single_arg_concept_specialization_constraint_evaluated_to_false : Note<
+  "%select{and |because }0%1 does not satisfy %2">;
+def note_atomic_constraint_evaluated_to_false_elaborated : Note<
+  "%select{and |because }0'%1' (%2 %3 %4) evaluated to false">;
+def err_could_not_normalize_ill_formed_constraint : Error<
+  "required expansion of concept specialization %0 failed, substituted "
+  "expression would be illegal">;
+def note_could_not_normalize_ill_formed_constraint_reason : Note<
+  "because: %0">;
 
 def err_template_different_requires_clause : Error<
   "requires clause differs in template redeclaration">;
@@ -3820,6 +3840,8 @@ def note_ovl_candidate_inconsistent_deduction_types : Note<
 def note_ovl_candidate_explicit_arg_mismatch_named : Note<
     "candidate template ignored: invalid explicitly-specified argument "
     "for template parameter %0">;
+def note_ovl_candidate_unsatisfied_constraints : Note<
+    "candidate template ignored: constraints not satisfied%0">;
 def note_ovl_candidate_explicit_arg_mismatch_unnamed : Note<
     "candidate template ignored: invalid explicitly-specified argument "
     "for %ordinal0 template parameter">;
@@ -4512,6 +4534,14 @@ def note_template_default_arg_checking : Note<
   "while checking a default template argument used here">;
 def note_concept_specialization_here : Note<
   "while checking the satisfaction of concept '%0' requested here">;
+def note_checking_constraints_for_template_id_here : Note<
+  "while checking constraint satisfaction for template '%0' required here">;
+def note_checking_constraints_for_var_spec_id_here : Note<
+  "while checking constraint satisfaction for variable template "
+  "partial specialization '%0' required here">;
+def note_checking_constraints_for_class_spec_id_here : Note<
+  "while checking constraint satisfaction for class template partial "
+  "specialization '%0' required here">;
 def note_constraint_substitution_here : Note<
   "while substituting template arguments into constraint expression here">;
 def note_instantiation_contexts_suppressed : Note<
@@ -6430,6 +6460,8 @@ def warn_objc_unsafe_perform_selector : Warning<
   InGroup<DiagGroup<"objc-unsafe-perform-selector">>;
 def note_objc_unsafe_perform_selector_method_declared_here :  Note<
   "method %0 that returns %1 declared here">;
+def err_attribute_arm_mve_alias : Error<
+  "'__clang_arm_mve_alias' attribute can only be applied to an ARM MVE builtin">;
 
 def warn_setter_getter_impl_required : Warning<
   "property %0 requires method %1 to be defined - "
@@ -8099,6 +8131,31 @@ def note_vbase_moved_here : Note<
   "%select{%1 is a virtual base class of base class %2 declared here|"
   "virtual base class %1 declared here}0">;
 
+// C++20 defaulted comparisons
+// This corresponds to values of Sema::DefaultedComparisonKind.
+def select_defaulted_comparison_kind : TextSubstitution<
+  "%select{<ERROR>|equality|three-way|equality|relational}0 comparison "
+  "operator">;
+def ext_defaulted_comparison : ExtWarn<
+  "defaulted comparison operators are a C++20 extension">, InGroup<CXX2a>;
+def warn_cxx17_compat_defaulted_comparison : Warning<
+  "defaulted comparison operators are incompatible with C++ standards "
+  "before C++20">, InGroup<CXXPre2aCompat>, DefaultIgnore;
+def err_defaulted_comparison_template : Error<
+  "comparison operator template cannot be defaulted">;
+def err_defaulted_comparison_out_of_class : Error<
+  "%sub{select_defaulted_comparison_kind}0 can only be defaulted in a class "
+  "definition">;
+def err_defaulted_comparison_param : Error<
+  "invalid parameter type for defaulted %sub{select_defaulted_comparison_kind}0"
+  "%diff{; found $, expected $|}1,2">;
+def err_defaulted_comparison_non_const : Error<
+  "defaulted member %sub{select_defaulted_comparison_kind}0 must be "
+  "const-qualified">;
+def err_defaulted_comparison_return_type_not_bool : Error<
+  "return type for defaulted %sub{select_defaulted_comparison_kind}0 "
+  "must be 'bool', not %1">;
+
 def ext_implicit_exception_spec_mismatch : ExtWarn<
   "function previously declared with an %select{explicit|implicit}0 exception "
   "specification redeclared with an %select{implicit|explicit}0 exception "
@@ -8635,6 +8692,12 @@ def warn_argument_invalid_range : Warning<
   InGroup<DiagGroup<"argument-outside-range">>;
 def err_argument_not_multiple : Error<
   "argument should be a multiple of %0">;
+def err_argument_not_power_of_2 : Error<
+  "argument should be a power of 2">;
+def err_argument_not_shifted_byte : Error<
+  "argument should be an 8-bit value shifted by a multiple of 8 bits">;
+def err_argument_not_shifted_byte_or_xxff : Error<
+  "argument should be an 8-bit value shifted by a multiple of 8 bits, or in the form 0x??FF">;
 def warn_neon_vector_initializer_non_portable : Warning<
   "vector initializers are not compatible with NEON intrinsics in big endian "
   "mode">, InGroup<DiagGroup<"nonportable-vector-initialization">>;

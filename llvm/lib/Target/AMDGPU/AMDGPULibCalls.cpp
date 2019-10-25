@@ -1167,8 +1167,6 @@ bool AMDGPULibCalls::fold_rootn(CallInst *CI, IRBuilder<> &B,
     return true;
   }
   if (ci_opr1 == 2) {  // rootn(x, 2) = sqrt(x)
-    std::vector<const Type*> ParamsTys;
-    ParamsTys.push_back(opr0->getType());
     Module *M = CI->getModule();
     if (FunctionCallee FPExpr =
             getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_SQRT, FInfo))) {
@@ -1194,8 +1192,6 @@ bool AMDGPULibCalls::fold_rootn(CallInst *CI, IRBuilder<> &B,
     replaceCall(nval);
     return true;
   } else if (ci_opr1 == -2) {  // rootn(x, -2) = rsqrt(x)
-    std::vector<const Type*> ParamsTys;
-    ParamsTys.push_back(opr0->getType());
     Module *M = CI->getModule();
     if (FunctionCallee FPExpr =
             getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_RSQRT, FInfo))) {

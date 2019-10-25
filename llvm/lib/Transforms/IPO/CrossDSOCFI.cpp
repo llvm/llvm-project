@@ -104,7 +104,7 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
   FunctionCallee C = M.getOrInsertFunction(
       "__cfi_check", Type::getVoidTy(Ctx), Type::getInt64Ty(Ctx),
       Type::getInt8PtrTy(Ctx), Type::getInt8PtrTy(Ctx));
-  Function *F = dyn_cast<Function>(C.getCallee());
+  Function *F = cast<Function>(C.getCallee());
   // Take over the existing function. The frontend emits a weak stub so that the
   // linker knows about the symbol; this pass replaces the function body.
   F->deleteBody();

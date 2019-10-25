@@ -8,35 +8,30 @@ Getting Started with the LLVM System
 Overview
 ========
 
-Welcome to the LLVM project! In order to get started, you first need to know
-some basic information.
+Welcome to the LLVM project!
 
-First, the LLVM project has multiple components. The core of the project is
+The LLVM project has multiple components. The core of the project is
 itself called "LLVM". This contains all of the tools, libraries, and header
-files needed to process an intermediate representation and convert it into
-object files.  It contains an assembler, disassembler, bitcode analyzer and
+files needed to process intermediate representations and converts it into
+object files.  Tools include an assembler, disassembler, bitcode analyzer, and
 bitcode optimizer.  It also contains basic regression tests.
 
-Another piece is the `Clang <http://clang.llvm.org/>`_ front end.  This
+C-like languages use the `Clang <http://clang.llvm.org/>`_ front end.  This
 component compiles C, C++, Objective C, and Objective C++ code into LLVM bitcode
 -- and from there into object files, using LLVM.
 
-There are other components as well:
+Other components include:
 the `libc++ C++ standard library <https://libcxx.llvm.org>`_,
 the `LLD linker <https://lld.llvm.org>`_, and more.
 
-Getting Started Quickly (A Summary)
-===================================
+Getting the Source Code and Building LLVM
+=========================================
 
-The LLVM Getting Started documentation may be out of date.  So, the `Clang
-Getting Started <http://clang.llvm.org/get_started.html>`_ page might also be a
-good place to start.
+The LLVM Getting Started documentation may be out of date.  The `Clang
+Getting Started <http://clang.llvm.org/get_started.html>`_ page might have more
+accurate information.
 
-Here's the short story for getting up and running quickly with LLVM:
-
-#. Read the documentation.
-#. Read the documentation.
-#. Remember that you were warned twice about reading the documentation.
+This is an example workflow and configuration to get and build the LLVM source:
 
 #. Checkout LLVM (including related subprojects like Clang):
 
@@ -90,10 +85,10 @@ Here's the short story for getting up and running quickly with LLVM:
      * CMake will generate build targets for each tool and library, and most
        LLVM sub-projects generate their own ``check-<project>`` target.
 
-     * Running a serial build will be *slow*.  Make sure you run a parallel
-       build. That's already done by default in Ninja; for ``make``, use
-       ``make -j NNN`` (with an appropriate value of NNN, e.g. number of CPUs
-       you have.)
+     * Running a serial build will be *slow*.  To improve speed, try running a
+       parallel build. That's done by default in Ninja; for ``make``, use
+       ``make -j NNN`` (NNN is the number of parallel jobs, use e.g. number of
+       CPUs you have.)
 
    * For more information see `CMake <CMake.html>`__
 
@@ -122,6 +117,7 @@ OS                 Arch                  Compilers
 Linux              x86\ :sup:`1`         GCC, Clang
 Linux              amd64                 GCC, Clang
 Linux              ARM                   GCC, Clang
+Linux              Mips                  GCC, Clang
 Linux              PowerPC               GCC, Clang
 Solaris            V9 (Ultrasparc)       GCC
 FreeBSD            x86\ :sup:`1`         GCC, Clang

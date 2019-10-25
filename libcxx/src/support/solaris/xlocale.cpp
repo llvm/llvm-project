@@ -25,7 +25,7 @@ int iswxdigit_l(wint_t __c, locale_t __l) {
 
 // FIXME: This disregards the locale, which is Very Wrong
 #define vsnprintf_l(__s, __n, __l, __format, __va)  \
-    vsnprintf(__s, __n, __format, __va) 
+    vsnprintf(__s, __n, __format, __va)
 
 int snprintf_l(char *__s, size_t __n, locale_t __l, const char *__format, ...)
 {

@@ -409,7 +409,8 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
                                        TripleName,
                                    inconvertibleErrorCode());
 
-  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName));
+  MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
+  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   if (!MAI)
     return make_error<StringError>("no asm info for target " + TripleName,
                                    inconvertibleErrorCode());
@@ -419,7 +420,6 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
     return make_error<StringError>("no subtarget info for target " + TripleName,
                                    inconvertibleErrorCode());
 
-  MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
   MAB = TheTarget->createMCAsmBackend(*MSTI, *MRI, MCOptions);
   if (!MAB)
     return make_error<StringError>("no asm backend for target " + TripleName,

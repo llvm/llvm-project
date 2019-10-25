@@ -90,7 +90,7 @@
     <li>Accepts <tt>-arch arm64</tt> (which may be passed by Xcode 5.0), but for the time being analyzes code in such cases as <tt>-arch armv7s</tt>.</li>
     <li>Many sundry fixes, improvements to C++ support, etc.</li>
 	</ul>
-  
+
 <h4 id="checker_275">checker-275</h4>
 <p><b>built:</b> May 23, 2013</br>
 	<b>download:</b> <a href="downloads/checker-275.tar.bz2">checker-275.tar.bz2</a></p>
@@ -177,7 +177,7 @@
 <h4 id="checker_268">checker-268</h4>
 <p><b>built:</b> September 11, 2012</p>
 	<p><b>highlights:</b></p>
-	
+
 <ul>
 	<li>Adds initial interprocedural analysis support for C++ and Objective-C. This will greatly improve analysis coverage and find deeper bugs in Objective-C and C++ code.</li>
 	<li>Contains a static analyzer newer than Xcode 4.4.</li>
@@ -203,8 +203,8 @@ these, and any other problems you encounter. When you encounter an issue, please
    <p><b>highlights:</b></p>
 
 <p>This release contains a fix for a major crasher introduced in checker-264, and various refinements to
-improve the precision and reduce the false positive rate of the analyzer. It also enables a new unix.MallocSizeof check, which reports 
-inconsistencies between the casted type of the return value of a 'malloc/calloc/realloc' call and the operand 
+improve the precision and reduce the false positive rate of the analyzer. It also enables a new unix.MallocSizeof check, which reports
+inconsistencies between the casted type of the return value of a 'malloc/calloc/realloc' call and the operand
 of sizeof expressions contained within its argument(s).</p>
 
 <h4 id="checker_264">checker-264</h4>
@@ -290,7 +290,7 @@ of sizeof expressions contained within its argument(s).</p>
   <li>Supports ARC (please file bugs where you see issues)</li>
   <li>Major under-the-cover changes.  This should result in more precise results in some cases, but this is laying the groundwork for major improvements.  Please file bugs where you see regressions or issues.</li>
 </ul>
-    
+
 <h4 id="checker_257">checker-257</h4>
 
 <p><b>built: </b>May 25, 2011<br>
@@ -316,15 +316,15 @@ of sizeof expressions contained within its argument(s).</p>
 <p>This build contains basic support for C++ and Objective-C++ that is ready to be tried out
   by general users.  It is still in its infancy, but establishes a baseline for things to come.  The main hope is that it can find some
   issues and have a reasonable false positive rate.</p>
-  
+
 <p><b>Please</b> <a href="/filing_bugs.html">file bugs</a> when you see issues of any kind so we can assess
   where development on C++ analysis support needs to be focused.</p>
-  
+
 <p>To try out C++ analysis support, it should work out of the box using <tt>scan-build</tt>.  If you are using this checker build
   as a replacement to the analyzer bundled with Xcode, first use the <tt>set-xcode-analyzer</tt> script to <a href="/xcode.html">change Xcode to use
   your version of the analyzer</a>.  You will then need to modify one configuration file in Xcode to enable C++ analysis support.  This can
   be done with the following steps:</p>
-  
+
 <ol>
   <li>Find the clang .xcspec file:
 <pre>$ cd /Developer/Library
@@ -380,4 +380,3 @@ $ find . | grep xcspec | grep Clang
 </div>
 </body>
 </html>
-

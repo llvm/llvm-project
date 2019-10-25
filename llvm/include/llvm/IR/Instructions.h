@@ -184,15 +184,15 @@ public:
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
            BasicBlock *InsertAtEnd);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
-           unsigned Align, Instruction *InsertBefore = nullptr);
+           MaybeAlign Align, Instruction *InsertBefore = nullptr);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
-           unsigned Align, BasicBlock *InsertAtEnd);
+           MaybeAlign Align, BasicBlock *InsertAtEnd);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
-           unsigned Align, AtomicOrdering Order,
+           MaybeAlign Align, AtomicOrdering Order,
            SyncScope::ID SSID = SyncScope::System,
            Instruction *InsertBefore = nullptr);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
-           unsigned Align, AtomicOrdering Order, SyncScope::ID SSID,
+           MaybeAlign Align, AtomicOrdering Order, SyncScope::ID SSID,
            BasicBlock *InsertAtEnd);
 
   // Deprecated [opaque pointer types]
@@ -211,20 +211,20 @@ public:
            BasicBlock *InsertAtEnd)
       : LoadInst(Ptr->getType()->getPointerElementType(), Ptr, NameStr,
                  isVolatile, InsertAtEnd) {}
-  LoadInst(Value *Ptr, const Twine &NameStr, bool isVolatile, unsigned Align,
+  LoadInst(Value *Ptr, const Twine &NameStr, bool isVolatile, MaybeAlign Align,
            Instruction *InsertBefore = nullptr)
       : LoadInst(Ptr->getType()->getPointerElementType(), Ptr, NameStr,
                  isVolatile, Align, InsertBefore) {}
-  LoadInst(Value *Ptr, const Twine &NameStr, bool isVolatile, unsigned Align,
+  LoadInst(Value *Ptr, const Twine &NameStr, bool isVolatile, MaybeAlign Align,
            BasicBlock *InsertAtEnd)
       : LoadInst(Ptr->getType()->getPointerElementType(), Ptr, NameStr,
                  isVolatile, Align, InsertAtEnd) {}
-  LoadInst(Value *Ptr, const Twine &NameStr, bool isVolatile, unsigned Align,
+  LoadInst(Value *Ptr, const Twine &NameStr, bool isVolatile, MaybeAlign Align,
            AtomicOrdering Order, SyncScope::ID SSID = SyncScope::System,
            Instruction *InsertBefore = nullptr)
       : LoadInst(Ptr->getType()->getPointerElementType(), Ptr, NameStr,
                  isVolatile, Align, Order, SSID, InsertBefore) {}
-  LoadInst(Value *Ptr, const Twine &NameStr, bool isVolatile, unsigned Align,
+  LoadInst(Value *Ptr, const Twine &NameStr, bool isVolatile, MaybeAlign Align,
            AtomicOrdering Order, SyncScope::ID SSID, BasicBlock *InsertAtEnd)
       : LoadInst(Ptr->getType()->getPointerElementType(), Ptr, NameStr,
                  isVolatile, Align, Order, SSID, InsertAtEnd) {}
@@ -337,17 +337,15 @@ public:
   StoreInst(Value *Val, Value *Ptr, bool isVolatile = false,
             Instruction *InsertBefore = nullptr);
   StoreInst(Value *Val, Value *Ptr, bool isVolatile, BasicBlock *InsertAtEnd);
-  StoreInst(Value *Val, Value *Ptr, bool isVolatile,
-            unsigned Align, Instruction *InsertBefore = nullptr);
-  StoreInst(Value *Val, Value *Ptr, bool isVolatile,
-            unsigned Align, BasicBlock *InsertAtEnd);
-  StoreInst(Value *Val, Value *Ptr, bool isVolatile,
-            unsigned Align, AtomicOrdering Order,
-            SyncScope::ID SSID = SyncScope::System,
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, MaybeAlign Align,
             Instruction *InsertBefore = nullptr);
-  StoreInst(Value *Val, Value *Ptr, bool isVolatile,
-            unsigned Align, AtomicOrdering Order, SyncScope::ID SSID,
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, MaybeAlign Align,
             BasicBlock *InsertAtEnd);
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, MaybeAlign Align,
+            AtomicOrdering Order, SyncScope::ID SSID = SyncScope::System,
+            Instruction *InsertBefore = nullptr);
+  StoreInst(Value *Val, Value *Ptr, bool isVolatile, MaybeAlign Align,
+            AtomicOrdering Order, SyncScope::ID SSID, BasicBlock *InsertAtEnd);
 
   // allocate space for exactly two operands
   void *operator new(size_t s) {
@@ -5283,12 +5281,12 @@ inline Value *getPointerOperand(Value *V) {
 }
 
 /// A helper function that returns the alignment of load or store instruction.
-inline unsigned getLoadStoreAlignment(Value *I) {
+inline MaybeAlign getLoadStoreAlignment(Value *I) {
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
          "Expected Load or Store instruction");
   if (auto *LI = dyn_cast<LoadInst>(I))
-    return LI->getAlignment();
-  return cast<StoreInst>(I)->getAlignment();
+    return MaybeAlign(LI->getAlignment());
+  return MaybeAlign(cast<StoreInst>(I)->getAlignment());
 }
 
 /// A helper function that returns the address space of the pointer operand of

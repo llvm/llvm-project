@@ -39,7 +39,7 @@
 #include "__undef_macros"
 
 // On Linux, wint_t and wchar_t have different signed-ness, and this causes
-// lots of noise in the build log, but no bugs that I know of. 
+// lots of noise in the build log, but no bugs that I know of.
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wsign-conversion"
 #endif
@@ -770,7 +770,7 @@ const ctype_base::mask ctype_base::xdigit;
 const ctype_base::mask ctype_base::blank;
 const ctype_base::mask ctype_base::alnum;
 const ctype_base::mask ctype_base::graph;
-    
+
 locale::id ctype<wchar_t>::id;
 
 ctype<wchar_t>::~ctype()

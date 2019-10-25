@@ -175,7 +175,7 @@ static bool isDereferenceableForAllocaSize(const Value *V, const AllocaInst *AI,
   uint64_t AllocaSize = DL.getTypeStoreSize(AI->getAllocatedType());
   if (!AllocaSize)
     return false;
-  return isDereferenceableAndAlignedPointer(V, AI->getAlignment(),
+  return isDereferenceableAndAlignedPointer(V, Align(AI->getAlignment()),
                                             APInt(64, AllocaSize), DL);
 }
 
@@ -1020,11 +1020,11 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
     //
     if (SelectInst *SI = dyn_cast<SelectInst>(Op)) {
       // load (select (Cond, &V1, &V2))  --> select(Cond, load &V1, load &V2).
-      unsigned Align = LI.getAlignment();
-      if (isSafeToLoadUnconditionally(SI->getOperand(1), LI.getType(), Align,
-                                      DL, SI) &&
-          isSafeToLoadUnconditionally(SI->getOperand(2), LI.getType(), Align,
-                                      DL, SI)) {
+      const MaybeAlign Alignment(LI.getAlignment());
+      if (isSafeToLoadUnconditionally(SI->getOperand(1), LI.getType(),
+                                      Alignment, DL, SI) &&
+          isSafeToLoadUnconditionally(SI->getOperand(2), LI.getType(),
+                                      Alignment, DL, SI)) {
         LoadInst *V1 =
             Builder.CreateLoad(LI.getType(), SI->getOperand(1),
                                SI->getOperand(1)->getName() + ".val");
@@ -1032,9 +1032,9 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
             Builder.CreateLoad(LI.getType(), SI->getOperand(2),
                                SI->getOperand(2)->getName() + ".val");
         assert(LI.isUnordered() && "implied by above");
-        V1->setAlignment(MaybeAlign(Align));
+        V1->setAlignment(Alignment);
         V1->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
-        V2->setAlignment(MaybeAlign(Align));
+        V2->setAlignment(Alignment);
         V2->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
         return SelectInst::Create(SI->getCondition(), V1, V2);
       }
@@ -1579,8 +1579,8 @@ bool InstCombiner::mergeStoreIntoSuccessor(StoreInst &SI) {
 
   // Advance to a place where it is safe to insert the new store and insert it.
   BBI = DestBB->getFirstInsertionPt();
-  StoreInst *NewSI = new StoreInst(MergedVal, SI.getOperand(1),
-                                   SI.isVolatile(), SI.getAlignment(),
+  StoreInst *NewSI = new StoreInst(MergedVal, SI.getOperand(1), SI.isVolatile(),
+                                   MaybeAlign(SI.getAlignment()),
                                    SI.getOrdering(), SI.getSyncScopeID());
   InsertNewInstBefore(NewSI, *BBI);
   NewSI->setDebugLoc(MergedLoc);

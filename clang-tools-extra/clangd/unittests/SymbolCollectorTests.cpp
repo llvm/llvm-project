@@ -626,6 +626,23 @@ TEST_F(SymbolCollectorTest, Refs) {
   EXPECT_THAT(Refs, Not(Contains(Pair(findSymbol(MainSymbols, "c").ID, _))));
 }
 
+TEST_F(SymbolCollectorTest, NameReferences) {
+  CollectorOpts.RefFilter = RefKind::All;
+  CollectorOpts.RefsInHeaders = true;
+  Annotations Header(R"(
+    class [[Foo]] {
+    public:
+      [[Foo]]() {}
+      ~[[Foo]]() {}
+    };
+  )");
+  CollectorOpts.RefFilter = RefKind::All;
+  runSymbolCollector(Header.code(), "");
+  // When we find references for class Foo, we expect to see all
+  // constructor/destructor references.
+  EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "Foo").ID,
+                                  HaveRanges(Header.ranges()))));
+}
 
 TEST_F(SymbolCollectorTest, HeaderAsMainFile) {
   CollectorOpts.RefFilter = RefKind::All;

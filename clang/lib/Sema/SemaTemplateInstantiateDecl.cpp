@@ -2049,6 +2049,11 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(FunctionDecl *D,
     }
   }
 
+  if (D->isExplicitlyDefaulted())
+    SemaRef.SetDeclDefaulted(Function, D->getLocation());
+  if (D->isDeleted())
+    SemaRef.SetDeclDeleted(Function, D->getLocation());
+
   if (Function->isLocalExternDecl() && !Function->getPreviousDecl())
     DC->makeDeclVisibleInContext(PrincipalDecl);
 
@@ -2056,7 +2061,6 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(FunctionDecl *D,
       PrincipalDecl->isInIdentifierNamespace(Decl::IDNS_Ordinary))
     PrincipalDecl->setNonMemberOperator();
 
-  assert(!D->isDefaulted() && "only methods should be defaulted");
   return Function;
 }
 
@@ -3275,7 +3279,8 @@ TemplateDeclInstantiator::VisitClassTemplateSpecializationDecl(
                                         D->getLocation(),
                                         InstTemplateArgs,
                                         false,
-                                        Converted))
+                                        Converted,
+                                        /*UpdateArgsWithConversion=*/true))
     return nullptr;
 
   // Figure out where to insert this class template explicit specialization
@@ -3396,7 +3401,8 @@ Decl *TemplateDeclInstantiator::VisitVarTemplateSpecializationDecl(
   // Check that the template argument list is well-formed for this template.
   SmallVector<TemplateArgument, 4> Converted;
   if (SemaRef.CheckTemplateArgumentList(InstVarTemplate, D->getLocation(),
-                                        VarTemplateArgsInfo, false, Converted))
+                                        VarTemplateArgsInfo, false, Converted,
+                                        /*UpdateArgsWithConversion=*/true))
     return nullptr;
 
   // Check whether we've already seen a declaration of this specialization.
@@ -4016,9 +4022,6 @@ void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
 bool
 TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
                                                     FunctionDecl *Tmpl) {
-  if (Tmpl->isDeleted())
-    New->setDeletedAsWritten();
-
   New->setImplicit(Tmpl->isImplicit());
 
   // Forward the mangling number from the template to the instantiated decl.

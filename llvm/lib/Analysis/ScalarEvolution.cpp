@@ -6599,12 +6599,16 @@ ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
   return (unsigned)Result->getZExtValue();
 }
 
-/// Get the expression for the number of loop iterations for which this loop is
-/// guaranteed not to exit via ExitingBlock. Otherwise return
-/// SCEVCouldNotCompute.
 const SCEV *ScalarEvolution::getExitCount(const Loop *L,
-                                          BasicBlock *ExitingBlock) {
-  return getBackedgeTakenInfo(L).getExact(ExitingBlock, this);
+                                          BasicBlock *ExitingBlock,
+                                          ExitCountKind Kind) {
+  switch (Kind) {
+  case Exact: 
+    return getBackedgeTakenInfo(L).getExact(ExitingBlock, this);
+  case ConstantMaximum:
+    return getBackedgeTakenInfo(L).getMax(ExitingBlock, this);
+  };
+  llvm_unreachable("Invalid ExitCountKind!");
 }
 
 const SCEV *
@@ -6613,14 +6617,15 @@ ScalarEvolution::getPredicatedBackedgeTakenCount(const Loop *L,
   return getPredicatedBackedgeTakenInfo(L).getExact(L, this, &Preds);
 }
 
-const SCEV *ScalarEvolution::getBackedgeTakenCount(const Loop *L) {
-  return getBackedgeTakenInfo(L).getExact(L, this);
-}
-
-/// Similar to getBackedgeTakenCount, except return the least SCEV value that is
-/// known never to be less than the actual backedge taken count.
-const SCEV *ScalarEvolution::getConstantMaxBackedgeTakenCount(const Loop *L) {
-  return getBackedgeTakenInfo(L).getMax(this);
+const SCEV *ScalarEvolution::getBackedgeTakenCount(const Loop *L,
+                                                   ExitCountKind Kind) {
+  switch (Kind) {
+  case Exact: 
+    return getBackedgeTakenInfo(L).getExact(L, this);
+  case ConstantMaximum:
+    return getBackedgeTakenInfo(L).getMax(this);
+  };
+  llvm_unreachable("Invalid ExitCountKind!");
 }
 
 bool ScalarEvolution::isBackedgeTakenCountMaxOrZero(const Loop *L) {
@@ -6929,6 +6934,16 @@ ScalarEvolution::BackedgeTakenInfo::getExact(BasicBlock *ExitingBlock,
   return SE->getCouldNotCompute();
 }
 
+const SCEV *
+ScalarEvolution::BackedgeTakenInfo::getMax(BasicBlock *ExitingBlock,
+                                           ScalarEvolution *SE) const {
+  for (auto &ENT : ExitNotTaken)
+    if (ENT.ExitingBlock == ExitingBlock && ENT.hasAlwaysTruePredicate())
+      return ENT.MaxNotTaken;
+
+  return SE->getCouldNotCompute();
+}
+
 /// getMax - Get the max backedge taken count for the loop.
 const SCEV *
 ScalarEvolution::BackedgeTakenInfo::getMax(ScalarEvolution *SE) const {
@@ -7020,13 +7035,15 @@ ScalarEvolution::BackedgeTakenInfo::BackedgeTakenInfo(
         BasicBlock *ExitBB = EEI.first;
         const ExitLimit &EL = EEI.second;
         if (EL.Predicates.empty())
-          return ExitNotTakenInfo(ExitBB, EL.ExactNotTaken, nullptr);
+          return ExitNotTakenInfo(ExitBB, EL.ExactNotTaken, EL.MaxNotTaken,
+                                  nullptr);
 
         std::unique_ptr<SCEVUnionPredicate> Predicate(new SCEVUnionPredicate);
         for (auto *Pred : EL.Predicates)
           Predicate->add(Pred);
 
-        return ExitNotTakenInfo(ExitBB, EL.ExactNotTaken, std::move(Predicate));
+        return ExitNotTakenInfo(ExitBB, EL.ExactNotTaken, EL.MaxNotTaken,
+                                std::move(Predicate));
       });
   assert((isa<SCEVCouldNotCompute>(MaxCount) || isa<SCEVConstant>(MaxCount)) &&
          "No point in having a non-constant max backedge taken count!");

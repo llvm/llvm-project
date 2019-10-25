@@ -43,7 +43,7 @@ class TestGdbRemoteThreadsInStopReply(
         hw_info = self.parse_hw_info(context)
 
         # Give threads time to start up, then break.
-        time.sleep(1)
+        time.sleep(self._WAIT_TIMEOUT)
         self.reset_test_sequence()
         self.test_sequence.add_log_lines(
             [
@@ -61,7 +61,8 @@ class TestGdbRemoteThreadsInStopReply(
         self.assertIsNotNone(context)
 
         # Wait until all threads have started.
-        threads = self.wait_for_thread_count(thread_count, timeout_seconds=3)
+        threads = self.wait_for_thread_count(thread_count,
+                                             timeout_seconds=self._WAIT_TIMEOUT)
         self.assertIsNotNone(threads)
         self.assertEqual(len(threads), thread_count)
 

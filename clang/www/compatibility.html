@@ -27,7 +27,7 @@
   compilers allow. This page documents common compatibility and
   portability issues with Clang to help you understand and fix the
   problem in your code when Clang emits an error message.</p>
-  
+
 <ul>
   <li><a href="#c">C compatibility</a>
     <ul>
@@ -153,9 +153,9 @@ in C++ is very different from its meaning in either GNU89 or C99.</p>
 header files, which define a standardized API for accessing vector operations
 on X86 CPUs.  These functions have names like <tt>_mm_xor_ps</tt> and
 <tt>_mm256_addsub_pd</tt>.  Compilers have leeway to implement these functions
-however they want.  Since Clang supports an excellent set of <a 
+however they want.  Since Clang supports an excellent set of <a
 href="../docs/LanguageExtensions.html#vectors">native vector operations</a>,
-the Clang headers implement these interfaces in terms of the native vector 
+the Clang headers implement these interfaces in terms of the native vector
 operations.
 </p>
 
@@ -400,7 +400,7 @@ within these declarations unless they are marked <code>extern</code>.</p>
 @interface XX
 int a;         // not allowed in clang
 int b = 1;     // not allowed in clang
-extern int c;  // allowed 
+extern int c;  // allowed
 @end
 
 </pre>
@@ -784,7 +784,7 @@ void g(X x) {
 </pre>
 
 <p>This affects some early C++11 code, including Boost's popular <a
-href="http://www.boost.org/doc/libs/release/libs/smart_ptr/shared_ptr.htm"><tt>shared_ptr</tt></a>
+href="https://www.boost.org/doc/libs/release/libs/smart_ptr/shared_ptr.htm"><tt>shared_ptr</tt></a>
 up to version 1.47.0. The fix for Boost's <tt>shared_ptr</tt> is
 <a href="https://svn.boost.org/trac/boost/changeset/73202">available here</a>.</p>
 

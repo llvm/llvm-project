@@ -9,6 +9,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
+#include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
 #include "llvm/Support/InitLLVM.h"
@@ -36,101 +37,6 @@ public:
 private:
   std::mutex Lock;
   raw_ostream &OS;
-};
-
-/// The high-level implementation of the dependency discovery tool that runs on
-/// an individual worker thread.
-class DependencyScanningTool {
-public:
-  /// Construct a dependency scanning tool.
-  ///
-  /// \param Compilations     The reference to the compilation database that's
-  /// used by the clang tool.
-  DependencyScanningTool(DependencyScanningService &Service,
-                         const tooling::CompilationDatabase &Compilations,
-                         SharedStream &OS, SharedStream &Errs)
-      : Worker(Service), Compilations(Compilations), OS(OS), Errs(Errs) {}
-
-  /// Print out the dependency information into a string using the dependency
-  /// file format that is specified in the options (-MD is the default) and
-  /// return it.
-  ///
-  /// \returns A \c StringError with the diagnostic output if clang errors
-  /// occurred, dependency file contents otherwise.
-  llvm::Expected<std::string> getDependencyFile(const std::string &Input,
-                                                StringRef CWD) {
-    /// Prints out all of the gathered dependencies into a string.
-    class DependencyPrinterConsumer : public DependencyConsumer {
-    public:
-      void handleFileDependency(const DependencyOutputOptions &Opts,
-                                StringRef File) override {
-        if (!this->Opts)
-          this->Opts = std::make_unique<DependencyOutputOptions>(Opts);
-        Dependencies.push_back(File);
-      }
-
-      void printDependencies(std::string &S) {
-        if (!Opts)
-          return;
-
-        class DependencyPrinter : public DependencyFileGenerator {
-        public:
-          DependencyPrinter(DependencyOutputOptions &Opts,
-                            ArrayRef<std::string> Dependencies)
-              : DependencyFileGenerator(Opts) {
-            for (const auto &Dep : Dependencies)
-              addDependency(Dep);
-          }
-
-          void printDependencies(std::string &S) {
-            llvm::raw_string_ostream OS(S);
-            outputDependencyFile(OS);
-          }
-        };
-
-        DependencyPrinter Generator(*Opts, Dependencies);
-        Generator.printDependencies(S);
-      }
-
-    private:
-      std::unique_ptr<DependencyOutputOptions> Opts;
-      std::vector<std::string> Dependencies;
-    };
-
-    DependencyPrinterConsumer Consumer;
-    auto Result =
-        Worker.computeDependencies(Input, CWD, Compilations, Consumer);
-    if (Result)
-      return std::move(Result);
-    std::string Output;
-    Consumer.printDependencies(Output);
-    return Output;
-  }
-
-  /// Computes the dependencies for the given file and prints them out.
-  ///
-  /// \returns True on error.
-  bool runOnFile(const std::string &Input, StringRef CWD) {
-    auto MaybeFile = getDependencyFile(Input, CWD);
-    if (!MaybeFile) {
-      llvm::handleAllErrors(
-          MaybeFile.takeError(), [this, &Input](llvm::StringError &Err) {
-            Errs.applyLocked([&](raw_ostream &OS) {
-              OS << "Error while scanning dependencies for " << Input << ":\n";
-              OS << Err.getMessage();
-            });
-          });
-      return true;
-    }
-    OS.applyLocked([&](raw_ostream &OS) { OS << *MaybeFile; });
-    return false;
-  }
-
-private:
-  DependencyScanningWorker Worker;
-  const tooling::CompilationDatabase &Compilations;
-  SharedStream &OS;
-  SharedStream &Errs;
 };
 
 llvm::cl::opt<bool> Help("h", llvm::cl::desc("Alias for -help"),
@@ -189,6 +95,27 @@ static std::string getObjFilePath(StringRef SrcFile) {
   SmallString<128> ObjFileName(SrcFile);
   llvm::sys::path::replace_extension(ObjFileName, "o");
   return ObjFileName.str();
+}
+
+/// Takes the result of a dependency scan and prints error / dependency files
+/// based on the result.
+///
+/// \returns True on error.
+static bool handleDependencyToolResult(const std::string &Input,
+                                       llvm::Expected<std::string> &MaybeFile,
+                                       SharedStream &OS, SharedStream &Errs) {
+  if (!MaybeFile) {
+    llvm::handleAllErrors(
+        MaybeFile.takeError(), [&Input, &Errs](llvm::StringError &Err) {
+          Errs.applyLocked([&](raw_ostream &OS) {
+            OS << "Error while scanning dependencies for " << Input << ":\n";
+            OS << Err.getMessage();
+          });
+        });
+    return true;
+  }
+  OS.applyLocked([&](raw_ostream &OS) { OS << *MaybeFile; });
+  return false;
 }
 
 int main(int argc, const char **argv) {
@@ -284,7 +211,7 @@ int main(int argc, const char **argv) {
   std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
   for (unsigned I = 0; I < NumWorkers; ++I)
     WorkerTools.push_back(std::make_unique<DependencyScanningTool>(
-        Service, *AdjustingCompilations, DependencyOS, Errs));
+        Service, *AdjustingCompilations));
 
   std::vector<std::thread> WorkerThreads;
   std::atomic<bool> HadErrors(false);
@@ -296,7 +223,8 @@ int main(int argc, const char **argv) {
                  << " files using " << NumWorkers << " workers\n";
   }
   for (unsigned I = 0; I < NumWorkers; ++I) {
-    auto Worker = [I, &Lock, &Index, &Inputs, &HadErrors, &WorkerTools]() {
+    auto Worker = [I, &Lock, &Index, &Inputs, &HadErrors, &WorkerTools,
+                   &DependencyOS, &Errs]() {
       while (true) {
         std::string Input;
         StringRef CWD;
@@ -310,7 +238,8 @@ int main(int argc, const char **argv) {
           CWD = Compilation.second;
         }
         // Run the tool on it.
-        if (WorkerTools[I]->runOnFile(Input, CWD))
+        auto MaybeFile = WorkerTools[I]->getDependencyFile(Input, CWD);
+        if (handleDependencyToolResult(Input, MaybeFile, DependencyOS, Errs))
           HadErrors = true;
       }
     };

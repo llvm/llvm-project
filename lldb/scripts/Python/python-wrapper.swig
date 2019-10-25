@@ -48,7 +48,6 @@ LLDBSwigPythonBreakpointCallbackFunction
     const lldb::BreakpointLocationSP& bp_loc_sp
 )
 {
-    using namespace lldb_private;
     lldb::SBFrame sb_frame (frame_sp);
     lldb::SBBreakpointLocation sb_bp_loc(bp_loc_sp);
 
@@ -83,7 +82,6 @@ LLDBSwigPythonWatchpointCallbackFunction
     const lldb::WatchpointSP& wp_sp
 )
 {
-    using namespace lldb_private;
     lldb::SBFrame sb_frame (frame_sp);
     lldb::SBWatchpoint sb_wp(wp_sp);
 
@@ -118,7 +116,6 @@ LLDBSwigPythonCallTypeScript
     std::string& retval
 )
 {
-    using namespace lldb_private;
     lldb::SBValue sb_value (valobj_sp);
     lldb::SBTypeSummaryOptions sb_options(options_sp.get());
 
@@ -190,8 +187,6 @@ LLDBSwigPythonCreateSyntheticProvider
     const lldb::ValueObjectSP& valobj_sp
 )
 {
-    using namespace lldb_private;
-
     if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
         Py_RETURN_NONE;
 
@@ -228,8 +223,6 @@ LLDBSwigPythonCreateCommandObject
     const lldb::DebuggerSP debugger_sp
 )
 {
-    using namespace lldb_private;
-
     if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
         Py_RETURN_NONE;
 
@@ -260,8 +253,6 @@ LLDBSwigPythonCreateScriptedThreadPlan
     const lldb::ThreadPlanSP& thread_plan_sp
 )
 {
-    using namespace lldb_private;
-
     if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
         Py_RETURN_NONE;
 
@@ -319,8 +310,6 @@ LLDBSWIGPythonCallThreadPlan
     bool &got_error
 )
 {
-    using namespace lldb_private;
-
     got_error = false;
 
     PyErr_Cleaner py_err_cleaner(false);
@@ -368,8 +357,6 @@ LLDBSwigPythonCreateScriptedBreakpointResolver
     lldb::BreakpointSP &breakpoint_sp
 )
 {
-    using namespace lldb_private;
-
     if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
         Py_RETURN_NONE;
 
@@ -412,8 +399,6 @@ LLDBSwigPythonCallBreakpointResolver
     lldb_private::SymbolContext *sym_ctx
 )
 {
-    using namespace lldb_private;
-
     PyErr_Cleaner py_err_cleaner(false);
     PythonObject self(PyRefType::Borrowed, static_cast<PyObject*>(implementor));
     auto pfunc = self.ResolveName<PythonCallable>(method_name);
@@ -464,8 +449,6 @@ LLDBSwigPython_CallOptionalMember
     bool* was_found = NULL
 )
 {
-    using namespace lldb_private;
-
     PyErr_Cleaner py_err_cleaner(false);
 
     PythonObject self(PyRefType::Borrowed, static_cast<PyObject*>(implementor));
@@ -493,8 +476,6 @@ LLDBSwigPython_CalculateNumChildren
     uint32_t max
 )
 {
-    using namespace lldb_private;
-
     PythonObject self(PyRefType::Borrowed, implementor);
     auto pfunc = self.ResolveName<PythonCallable>("num_children");
 
@@ -536,7 +517,6 @@ LLDBSwigPython_GetChildAtIndex
     uint32_t idx
 )
 {
-    using namespace lldb_private;
     PyErr_Cleaner py_err_cleaner(true);
 
     PythonObject self(PyRefType::Borrowed, implementor);
@@ -567,7 +547,6 @@ LLDBSwigPython_GetIndexOfChildWithName
     const char* child_name
 )
 {
-    using namespace lldb_private;
     PyErr_Cleaner py_err_cleaner(true);
 
     PythonObject self(PyRefType::Borrowed, implementor);
@@ -687,7 +666,6 @@ LLDBSwigPythonCallCommand
     lldb::ExecutionContextRefSP exe_ctx_ref_sp
 )
 {
-    using namespace lldb_private;
     lldb::SBCommandReturnObject cmd_retobj_sb(cmd_retobj);
     lldb::SBDebugger debugger_sb(debugger);
     lldb::SBExecutionContext exe_ctx_sb(exe_ctx_ref_sp);
@@ -728,7 +706,6 @@ LLDBSwigPythonCallCommandObject
     lldb::ExecutionContextRefSP exe_ctx_ref_sp
 )
 {
-    using namespace lldb_private;
     lldb::SBCommandReturnObject cmd_retobj_sb(cmd_retobj);
     lldb::SBDebugger debugger_sb(debugger);
     lldb::SBExecutionContext exe_ctx_sb(exe_ctx_ref_sp);
@@ -760,8 +737,6 @@ LLDBSWIGPythonCreateOSPlugin
     const lldb::ProcessSP& process_sp
 )
 {
-    using namespace lldb_private;
-
     if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
         Py_RETURN_NONE;
 
@@ -795,8 +770,6 @@ LLDBSWIGPython_CreateFrameRecognizer
     const char *session_dictionary_name
 )
 {
-    using namespace lldb_private;
-
     if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
         Py_RETURN_NONE;
 
@@ -823,8 +796,6 @@ LLDBSwigPython_GetRecognizedArguments
     const lldb::StackFrameSP& frame_sp
 )
 {
-    using namespace lldb_private;
-
     static char callee_name[] = "get_recognized_arguments";
 
     lldb::SBFrame frame_sb(frame_sp);
@@ -839,8 +810,6 @@ LLDBSwigPython_GetRecognizedArguments
 SWIGEXPORT void*
 LLDBSWIGPython_GetDynamicSetting (void* module, const char* setting, const lldb::TargetSP& target_sp)
 {
-    using namespace lldb_private;
-
     if (!module || !setting)
         Py_RETURN_NONE;
 
@@ -866,8 +835,6 @@ lldb::ProcessSP& process,
 std::string& output)
 
 {
-    using namespace lldb_private;
-
     if (python_function_name == NULL || python_function_name[0] == '\0' || !session_dictionary_name)
         return false;
 
@@ -896,8 +863,6 @@ lldb::ThreadSP& thread,
 std::string& output)
 
 {
-    using namespace lldb_private;
-
     if (python_function_name == NULL || python_function_name[0] == '\0' || !session_dictionary_name)
         return false;
 
@@ -926,8 +891,6 @@ lldb::TargetSP& target,
 std::string& output)
 
 {
-    using namespace lldb_private;
-
     if (python_function_name == NULL || python_function_name[0] == '\0' || !session_dictionary_name)
         return false;
 
@@ -956,8 +919,6 @@ lldb::StackFrameSP& frame,
 std::string& output)
 
 {
-    using namespace lldb_private;
-
     if (python_function_name == NULL || python_function_name[0] == '\0' || !session_dictionary_name)
         return false;
 
@@ -986,8 +947,6 @@ lldb::ValueObjectSP& value,
 std::string& output)
 
 {
-    using namespace lldb_private;
-
     if (python_function_name == NULL || python_function_name[0] == '\0' || !session_dictionary_name)
         return false;
 
@@ -1016,8 +975,6 @@ LLDBSwigPythonCallModuleInit
     lldb::DebuggerSP& debugger
 )
 {
-    using namespace lldb_private;
-
     std::string python_function_name_string = python_module_name;
     python_function_name_string += ".__lldb_init_module";
     const char* python_function_name = python_function_name_string.c_str();

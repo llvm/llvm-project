@@ -1190,16 +1190,16 @@ public:
 
   /// Returns true if the target machine supports masked store operation
   /// for the given \p DataType and kind of access to \p Ptr.
-  bool isLegalMaskedStore(Type *DataType, Value *Ptr, unsigned Alignment) {
+  bool isLegalMaskedStore(Type *DataType, Value *Ptr, MaybeAlign Alignment) {
     return Legal->isConsecutivePtr(Ptr) &&
-           TTI.isLegalMaskedStore(DataType, MaybeAlign(Alignment));
+           TTI.isLegalMaskedStore(DataType, Alignment);
   }
 
   /// Returns true if the target machine supports masked load operation
   /// for the given \p DataType and kind of access to \p Ptr.
-  bool isLegalMaskedLoad(Type *DataType, Value *Ptr, unsigned Alignment) {
+  bool isLegalMaskedLoad(Type *DataType, Value *Ptr, MaybeAlign Alignment) {
     return Legal->isConsecutivePtr(Ptr) &&
-           TTI.isLegalMaskedLoad(DataType, MaybeAlign(Alignment));
+           TTI.isLegalMaskedLoad(DataType, Alignment);
   }
 
   /// Returns true if the target machine supports masked scatter operation
@@ -2359,12 +2359,11 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
   Type *ScalarDataTy = getMemInstValueType(Instr);
   Type *DataTy = VectorType::get(ScalarDataTy, VF);
   Value *Ptr = getLoadStorePointerOperand(Instr);
-  unsigned Alignment = getLoadStoreAlignment(Instr);
   // An alignment of 0 means target abi alignment. We need to use the scalar's
   // target abi alignment in such a case.
   const DataLayout &DL = Instr->getModule()->getDataLayout();
-  if (!Alignment)
-    Alignment = DL.getABITypeAlignment(ScalarDataTy);
+  const Align Alignment =
+      DL.getValueOrABITypeAlignment(getLoadStoreAlignment(Instr), ScalarDataTy);
   unsigned AddressSpace = getLoadStoreAddressSpace(Instr);
 
   // Determine if the pointer operand of the access is either consecutive or
@@ -2428,8 +2427,8 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
       if (CreateGatherScatter) {
         Value *MaskPart = isMaskRequired ? Mask[Part] : nullptr;
         Value *VectorGep = getOrCreateVectorValue(Ptr, Part);
-        NewSI = Builder.CreateMaskedScatter(StoredVal, VectorGep, Alignment,
-                                            MaskPart);
+        NewSI = Builder.CreateMaskedScatter(StoredVal, VectorGep,
+                                            Alignment.value(), MaskPart);
       } else {
         if (Reverse) {
           // If we store to reverse consecutive memory locations, then we need
@@ -2440,10 +2439,11 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
         }
         auto *VecPtr = CreateVecPtr(Part, Ptr);
         if (isMaskRequired)
-          NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment,
-                                            Mask[Part]);
+          NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr,
+                                            Alignment.value(), Mask[Part]);
         else
-          NewSI = Builder.CreateAlignedStore(StoredVal, VecPtr, Alignment);
+          NewSI =
+              Builder.CreateAlignedStore(StoredVal, VecPtr, Alignment.value());
       }
       addMetadata(NewSI, SI);
     }
@@ -2458,18 +2458,18 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
     if (CreateGatherScatter) {
       Value *MaskPart = isMaskRequired ? Mask[Part] : nullptr;
       Value *VectorGep = getOrCreateVectorValue(Ptr, Part);
-      NewLI = Builder.CreateMaskedGather(VectorGep, Alignment, MaskPart,
+      NewLI = Builder.CreateMaskedGather(VectorGep, Alignment.value(), MaskPart,
                                          nullptr, "wide.masked.gather");
       addMetadata(NewLI, LI);
     } else {
       auto *VecPtr = CreateVecPtr(Part, Ptr);
       if (isMaskRequired)
-        NewLI = Builder.CreateMaskedLoad(VecPtr, Alignment, Mask[Part],
+        NewLI = Builder.CreateMaskedLoad(VecPtr, Alignment.value(), Mask[Part],
                                          UndefValue::get(DataTy),
                                          "wide.masked.load");
       else
-        NewLI =
-            Builder.CreateAlignedLoad(DataTy, VecPtr, Alignment, "wide.load");
+        NewLI = Builder.CreateAlignedLoad(DataTy, VecPtr, Alignment.value(),
+                                          "wide.load");
 
       // Add metadata to the load, but setVectorValue to the reverse shuffle.
       addMetadata(NewLI, LI);
@@ -4553,7 +4553,6 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I, unsigne
       return false;
     auto *Ptr = getLoadStorePointerOperand(I);
     auto *Ty = getMemInstValueType(I);
-    unsigned Alignment = getLoadStoreAlignment(I);
     // We have already decided how to vectorize this instruction, get that
     // result.
     if (VF > 1) {
@@ -4562,6 +4561,7 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I, unsigne
              "Widening decision should be ready at this moment");
       return WideningDecision == CM_Scalarize;
     }
+    const MaybeAlign Alignment = getLoadStoreAlignment(I);
     return isa<LoadInst>(I) ?
         !(isLegalMaskedLoad(Ty, Ptr, Alignment) || isLegalMaskedGather(Ty))
       : !(isLegalMaskedStore(Ty, Ptr, Alignment) || isLegalMaskedScatter(Ty));
@@ -4607,9 +4607,9 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(Instruction *I,
          "Masked interleave-groups for predicated accesses are not enabled.");
 
   auto *Ty = getMemInstValueType(I);
-  unsigned Alignment = getLoadStoreAlignment(I);
-  return isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty, MaybeAlign(Alignment))
-                          : TTI.isLegalMaskedStore(Ty, MaybeAlign(Alignment));
+  const MaybeAlign Alignment = getLoadStoreAlignment(I);
+  return isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty, Alignment)
+                          : TTI.isLegalMaskedStore(Ty, Alignment);
 }
 
 bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(Instruction *I,
@@ -5731,7 +5731,6 @@ unsigned LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   Type *ValTy = getMemInstValueType(I);
   auto SE = PSE.getSE();
 
-  unsigned Alignment = getLoadStoreAlignment(I);
   unsigned AS = getLoadStoreAddressSpace(I);
   Value *Ptr = getLoadStorePointerOperand(I);
   Type *PtrTy = ToVectorTy(Ptr->getType(), VF);
@@ -5745,9 +5744,9 @@ unsigned LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
 
   // Don't pass *I here, since it is scalar but will actually be part of a
   // vectorized loop where the user of it is a vectorized instruction.
-  Cost += VF *
-          TTI.getMemoryOpCost(I->getOpcode(), ValTy->getScalarType(), Alignment,
-                              AS);
+  const MaybeAlign Alignment = getLoadStoreAlignment(I);
+  Cost += VF * TTI.getMemoryOpCost(I->getOpcode(), ValTy->getScalarType(),
+                                   Alignment ? Alignment->value() : 0, AS);
 
   // Get the overhead of the extractelement and insertelement instructions
   // we might create due to scalarization.
@@ -5772,18 +5771,20 @@ unsigned LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
                                                              unsigned VF) {
   Type *ValTy = getMemInstValueType(I);
   Type *VectorTy = ToVectorTy(ValTy, VF);
-  unsigned Alignment = getLoadStoreAlignment(I);
   Value *Ptr = getLoadStorePointerOperand(I);
   unsigned AS = getLoadStoreAddressSpace(I);
   int ConsecutiveStride = Legal->isConsecutivePtr(Ptr);
 
   assert((ConsecutiveStride == 1 || ConsecutiveStride == -1) &&
          "Stride should be 1 or -1 for consecutive memory access");
+  const MaybeAlign Alignment = getLoadStoreAlignment(I);
   unsigned Cost = 0;
   if (Legal->isMaskRequired(I))
-    Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS);
+    Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy,
+                                      Alignment ? Alignment->value() : 0, AS);
   else
-    Cost += TTI.getMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS, I);
+    Cost += TTI.getMemoryOpCost(I->getOpcode(), VectorTy,
+                                Alignment ? Alignment->value() : 0, AS, I);
 
   bool Reverse = ConsecutiveStride < 0;
   if (Reverse)
@@ -5795,33 +5796,37 @@ unsigned LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
                                                          unsigned VF) {
   Type *ValTy = getMemInstValueType(I);
   Type *VectorTy = ToVectorTy(ValTy, VF);
-  unsigned Alignment = getLoadStoreAlignment(I);
+  const MaybeAlign Alignment = getLoadStoreAlignment(I);
   unsigned AS = getLoadStoreAddressSpace(I);
   if (isa<LoadInst>(I)) {
     return TTI.getAddressComputationCost(ValTy) +
-           TTI.getMemoryOpCost(Instruction::Load, ValTy, Alignment, AS) +
+           TTI.getMemoryOpCost(Instruction::Load, ValTy,
+                               Alignment ? Alignment->value() : 0, AS) +
            TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy);
   }
   StoreInst *SI = cast<StoreInst>(I);
 
   bool isLoopInvariantStoreValue = Legal->isUniform(SI->getValueOperand());
   return TTI.getAddressComputationCost(ValTy) +
-         TTI.getMemoryOpCost(Instruction::Store, ValTy, Alignment, AS) +
-         (isLoopInvariantStoreValue ? 0 : TTI.getVectorInstrCost(
-                                               Instruction::ExtractElement,
-                                               VectorTy, VF - 1));
+         TTI.getMemoryOpCost(Instruction::Store, ValTy,
+                             Alignment ? Alignment->value() : 0, AS) +
+         (isLoopInvariantStoreValue
+              ? 0
+              : TTI.getVectorInstrCost(Instruction::ExtractElement, VectorTy,
+                                       VF - 1));
 }
 
 unsigned LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
                                                           unsigned VF) {
   Type *ValTy = getMemInstValueType(I);
   Type *VectorTy = ToVectorTy(ValTy, VF);
-  unsigned Alignment = getLoadStoreAlignment(I);
+  const MaybeAlign Alignment = getLoadStoreAlignment(I);
   Value *Ptr = getLoadStorePointerOperand(I);
 
   return TTI.getAddressComputationCost(VectorTy) +
          TTI.getGatherScatterOpCost(I->getOpcode(), VectorTy, Ptr,
-                                    Legal->isMaskRequired(I), Alignment);
+                                    Legal->isMaskRequired(I),
+                                    Alignment ? Alignment->value() : 0);
 }
 
 unsigned LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
@@ -5868,11 +5873,12 @@ unsigned LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
   // moment.
   if (VF == 1) {
     Type *ValTy = getMemInstValueType(I);
-    unsigned Alignment = getLoadStoreAlignment(I);
+    const MaybeAlign Alignment = getLoadStoreAlignment(I);
     unsigned AS = getLoadStoreAddressSpace(I);
 
     return TTI.getAddressComputationCost(ValTy) +
-           TTI.getMemoryOpCost(I->getOpcode(), ValTy, Alignment, AS, I);
+           TTI.getMemoryOpCost(I->getOpcode(), ValTy,
+                               Alignment ? Alignment->value() : 0, AS, I);
   }
   return getWideningCost(I, VF);
 }

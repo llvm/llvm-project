@@ -1,14 +1,20 @@
-This directory contains two utilities for fuzzing Clang: clang-fuzzer and
-clang-proto-fuzzer.  Both use libFuzzer to generate inputs to clang via
-coverage-guided mutation.
+This directory contains three utilities for fuzzing Clang: clang-fuzzer,
+clang-objc-fuzzer, and clang-proto-fuzzer. All use libFuzzer to generate inputs
+to clang via coverage-guided mutation.
 
-The two utilities differ, however, in how they structure inputs to Clang.
+The three utilities differ, however, in how they structure inputs to Clang.
 clang-fuzzer makes no attempt to generate valid C++ programs and is therefore
 primarily useful for stressing the surface layers of Clang (i.e. lexer, parser).
+
+clang-objc-fuzzer is similar but for Objective-C: it makes no attempt to
+generate a valid Objective-C program.
+
 clang-proto-fuzzer uses a protobuf class to describe a subset of the C++
 language and then uses libprotobuf-mutator to mutate instantiations of that
 class, producing valid C++ programs in the process.  As a result,
 clang-proto-fuzzer is better at stressing deeper layers of Clang and LLVM.
+
+Some of the fuzzers have example corpuses inside the corpus_examples directory.
 
 ===================================
  Building clang-fuzzer
@@ -33,6 +39,35 @@ Example:
  Running clang-fuzzer
 ======================
   bin/clang-fuzzer CORPUS_DIR
+
+
+===================================
+ Building clang-objc-fuzzer
+===================================
+Within your LLVM build directory, run CMake with the following variable
+definitions:
+- CMAKE_C_COMPILER=clang
+- CMAKE_CXX_COMPILER=clang++
+- LLVM_USE_SANITIZE_COVERAGE=YES
+- LLVM_USE_SANITIZER=Address
+
+Then build the clang-objc-fuzzer target.
+
+Example:
+  cd $LLVM_SOURCE_DIR
+  mkdir build && cd build
+  cmake .. -GNinja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+    -DLLVM_USE_SANITIZE_COVERAGE=YES -DLLVM_USE_SANITIZER=Address
+  ninja clang-objc-fuzzer
+
+======================
+ Running clang-objc-fuzzer
+======================
+  bin/clang-objc-fuzzer CORPUS_DIR
+
+e.g. using the example objc corpus,
+
+  bin/clang-objc-fuzzer <path to corpus_examples/objc> <path to new directory to store  corpus findings>
 
 
 =======================================================

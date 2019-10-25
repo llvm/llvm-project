@@ -2237,8 +2237,7 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
     if (!isTypeLegal(ArgTy, ArgVT)) return false;
 
     ISD::ArgFlagsTy Flags;
-    unsigned OriginalAlignment = DL.getABITypeAlignment(ArgTy);
-    Flags.setOrigAlign(OriginalAlignment);
+    Flags.setOrigAlign(Align(DL.getABITypeAlignment(ArgTy)));
 
     Args.push_back(Op);
     ArgRegs.push_back(Arg);
@@ -2371,8 +2370,7 @@ bool ARMFastISel::SelectCall(const Instruction *I,
     if (!Arg.isValid())
       return false;
 
-    unsigned OriginalAlignment = DL.getABITypeAlignment(ArgTy);
-    Flags.setOrigAlign(OriginalAlignment);
+    Flags.setOrigAlign(Align(DL.getABITypeAlignment(ArgTy)));
 
     Args.push_back(*i);
     ArgRegs.push_back(Arg);

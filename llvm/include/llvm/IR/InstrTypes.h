@@ -1567,11 +1567,17 @@ public:
   }
 
   /// Extract the alignment of the return value.
-  unsigned getRetAlignment() const { return Attrs.getRetAlignment(); }
+  unsigned getRetAlignment() const {
+    if (const auto MA = Attrs.getRetAlignment())
+      return MA->value();
+    return 0;
+  }
 
   /// Extract the alignment for a call or parameter (0=unknown).
   unsigned getParamAlignment(unsigned ArgNo) const {
-    return Attrs.getParamAlignment(ArgNo);
+    if (const auto MA = Attrs.getParamAlignment(ArgNo))
+      return MA->value();
+    return 0;
   }
 
   /// Extract the byval type for a call or parameter.

@@ -6,14 +6,14 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // template <class T>
 //   constexpr int popcount(T x) noexcept;
 
 // Returns: The number of bits set to one in the value of x.
 //
-// Remarks: This function shall not participate in overload resolution unless 
+// Remarks: This function shall not participate in overload resolution unless
 //	T is an unsigned integer type
 
 #include <bit>
@@ -50,7 +50,7 @@ void runtime_test()
 {
 	ASSERT_SAME_TYPE(int, decltype(std::popcount(T(0))));
 	ASSERT_NOEXCEPT(               std::popcount(T(0)));
-	
+
 	assert( std::popcount(T(121)) == 5);
 	assert( std::popcount(T(122)) == 5);
 	assert( std::popcount(T(123)) == 6);
@@ -65,11 +65,11 @@ void runtime_test()
 
 int main()
 {
-	
+
     {
     auto lambda = [](auto x) -> decltype(std::popcount(x)) {};
     using L = decltype(lambda);
-    
+
     static_assert( std::is_invocable_v<L, unsigned char>, "");
     static_assert( std::is_invocable_v<L, unsigned int>, "");
     static_assert( std::is_invocable_v<L, unsigned long>, "");
@@ -105,7 +105,7 @@ int main()
     static_assert( std::is_invocable_v<L, __uint128_t>, "");
     static_assert(!std::is_invocable_v<L, __int128_t>, "");
 #endif
- 
+
     static_assert(!std::is_invocable_v<L, A>, "");
     static_assert(!std::is_invocable_v<L, E1>, "");
     static_assert(!std::is_invocable_v<L, E2>, "");

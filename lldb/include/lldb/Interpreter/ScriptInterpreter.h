@@ -65,6 +65,9 @@ public:
 
     bool GetSetLLDBGlobals() const { return m_set_lldb_globals; }
 
+    // If this is true then any exceptions raised by the script will be
+    // cleared with PyErr_Clear().   If false then they will be left for
+    // the caller to clean up
     bool GetMaskoutErrors() const { return m_maskout_errors; }
 
     ExecuteScriptOptions &SetEnableIO(bool enable) {

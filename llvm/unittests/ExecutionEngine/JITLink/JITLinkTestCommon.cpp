@@ -10,6 +10,7 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace llvm::jitlink;
@@ -59,7 +60,8 @@ Error JITLinkTestCommon::TestResources::initializeTripleSpecifics(Triple &TT) {
   if (!MRI)
     report_fatal_error("Could not build MCRegisterInfo for triple");
 
-  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TT.getTriple()));
+  MCTargetOptions MCOptions;
+  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TT.getTriple(), MCOptions));
   if (!MAI)
     report_fatal_error("Could not build MCAsmInfo for triple");
 

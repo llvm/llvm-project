@@ -25,7 +25,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -503,6 +502,13 @@ public:
 
   /// Returns the minimum ABI-required alignment for the specified type.
   unsigned getABITypeAlignment(Type *Ty) const;
+
+  /// Helper function to return `Alignment` if it's set or the result of
+  /// `getABITypeAlignment(Ty)`, in any case the result is a valid alignment.
+  inline Align getValueOrABITypeAlignment(MaybeAlign Alignment,
+                                          Type *Ty) const {
+    return Alignment ? *Alignment : Align(getABITypeAlignment(Ty));
+  }
 
   /// Returns the minimum ABI-required alignment for an integer type of
   /// the specified bitwidth.

@@ -350,7 +350,7 @@ Output
 During operation the fuzzer prints information to ``stderr``, for example::
 
   INFO: Seed: 1523017872
-  INFO: Loaded 1 modules (16 guards): [0x744e60, 0x744ea0), 
+  INFO: Loaded 1 modules (16 guards): [0x744e60, 0x744ea0),
   INFO: -max_len is not provided, using 64
   INFO: A corpus is not provided, starting from an empty corpus
   #0	READ units: 1
@@ -409,8 +409,8 @@ Each output line also reports the following statistics (when non-zero):
 ``rss:``
   Current memory consumption.
 
-For ``NEW`` events, the output line also includes information about the mutation
-operation that produced the new input:
+For ``NEW`` and ``REDUCE`` events, the output line also includes information
+about the mutation operation that produced the new input:
 
 ``L:``
   Size of the new input in bytes.
@@ -449,7 +449,7 @@ A simple function that does something interesting if it receives the input
 You should get an error pretty quickly::
 
   INFO: Seed: 1523017872
-  INFO: Loaded 1 modules (16 guards): [0x744e60, 0x744ea0), 
+  INFO: Loaded 1 modules (16 guards): [0x744e60, 0x744ea0),
   INFO: -max_len is not provided, using 64
   INFO: A corpus is not provided, starting from an empty corpus
   #0	READ units: 1

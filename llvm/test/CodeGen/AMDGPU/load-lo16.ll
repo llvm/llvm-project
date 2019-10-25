@@ -1000,7 +1000,8 @@ define void @load_flat_lo_v2f16_reghi_vreg(half* %in, i32 %reg) #0 {
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
 ; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
-; FIXME: and should be removable
+
+; FIXME: the and above should be removable
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
   %load = load half, half* %in

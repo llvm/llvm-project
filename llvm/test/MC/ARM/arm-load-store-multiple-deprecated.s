@@ -1,5 +1,7 @@
 @ RUN: llvm-mc -triple armv6t2-linux-eabi -filetype asm -o - %s 2>&1 \
 @ RUN:   | FileCheck %s
+@ RUN: not llvm-mc -triple armv6t2-linux-eabi --fatal-warnings -filetype asm -o - %s 2>&1 \
+@ RUN:   | FileCheck -check-prefix CHECK-ERROR %s
 
 @ RUN: not llvm-mc -triple armv7-linux-eabi -filetype asm -o - %s 2>&1 \
 @ RUN:   | FileCheck %s -check-prefix CHECK -check-prefix CHECK-V7
@@ -12,10 +14,12 @@
 stm:
 	stm sp!, {r0, pc}
 @ CHECK: warning: use of SP or PC in the list is deprecated
+@ CHECK-ERROR: error: use of SP or PC in the list is deprecated
 @ CHECK: stm sp!, {r0, pc}
 @ CHECK: ^
 	stm r0!, {r0, sp}
 @ CHECK: warning: use of SP or PC in the list is deprecated
+@ CHECK-ERROR: error: use of SP or PC in the list is deprecated
 @ CHECK: stm r0!, {r0, sp}
 @ CHECK: ^
 	stm r1!, {r0, sp, pc}

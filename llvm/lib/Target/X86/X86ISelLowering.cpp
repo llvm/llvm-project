@@ -19891,8 +19891,8 @@ static SDValue getSETCC(X86::CondCode Cond, SDValue EFLAGS, const SDLoc &dl,
 
 /// Helper for matching OR(EXTRACTELT(X,0),OR(EXTRACTELT(X,1),...))
 /// style scalarized (associative) reduction patterns.
-static bool matchBitOpReduction(SDValue Op, ISD::NodeType BinOp,
-                                SmallVectorImpl<SDValue> &SrcOps) {
+static bool matchScalarReduction(SDValue Op, ISD::NodeType BinOp,
+                                 SmallVectorImpl<SDValue> &SrcOps) {
   SmallVector<SDValue, 8> Opnds;
   DenseMap<SDValue, APInt> SrcOpMap;
   EVT VT = MVT::Other;
@@ -19965,7 +19965,7 @@ static SDValue LowerVectorAllZeroTest(SDValue Op, ISD::CondCode CC,
     return SDValue();
 
   SmallVector<SDValue, 8> VecIns;
-  if (!matchBitOpReduction(Op, ISD::OR, VecIns))
+  if (!matchScalarReduction(Op, ISD::OR, VecIns))
     return SDValue();
 
   // Quit if not 128/256-bit vector.
@@ -33026,6 +33026,9 @@ static SDValue combineX86ShufflesRecursively(
     ArrayRef<int> RootMask, ArrayRef<const SDNode *> SrcNodes, unsigned Depth,
     bool HasVariableMask, bool AllowVariableMask, SelectionDAG &DAG,
     const X86Subtarget &Subtarget) {
+  assert(RootMask.size() > 0 && (RootMask.size() > 1 || RootMask[0] == 0) &&
+         "Illegal shuffle root mask");
+
   // Bound the depth of our recursive combine because this is ultimately
   // quadratic in nature.
   const unsigned MaxRecursionDepth = 8;
@@ -39129,7 +39132,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   // TODO: Support multiple SrcOps.
   if (VT == MVT::i1) {
     SmallVector<SDValue, 2> SrcOps;
-    if (matchBitOpReduction(SDValue(N, 0), ISD::AND, SrcOps) &&
+    if (matchScalarReduction(SDValue(N, 0), ISD::AND, SrcOps) &&
         SrcOps.size() == 1) {
       SDLoc dl(N);
       unsigned NumElts = SrcOps[0].getValueType().getVectorNumElements();
@@ -39525,6 +39528,24 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
                           DAG.getNode(X86ISD::FOR, SDLoc(N), MVT::v4f32,
                                       DAG.getBitcast(MVT::v4f32, N0),
                                       DAG.getBitcast(MVT::v4f32, N1)));
+  }
+
+  // Match any-of bool scalar reductions into a bitcast/movmsk + cmp.
+  // TODO: Support multiple SrcOps.
+  if (VT == MVT::i1) {
+    SmallVector<SDValue, 2> SrcOps;
+    if (matchScalarReduction(SDValue(N, 0), ISD::OR, SrcOps) &&
+        SrcOps.size() == 1) {
+      SDLoc dl(N);
+      unsigned NumElts = SrcOps[0].getValueType().getVectorNumElements();
+      EVT MaskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
+      SDValue Mask = combineBitcastvxi1(DAG, MaskVT, SrcOps[0], dl, Subtarget);
+      if (Mask) {
+        APInt AllBits = APInt::getNullValue(NumElts);
+        return DAG.getSetCC(dl, MVT::i1, Mask,
+                            DAG.getConstant(AllBits, dl, MaskVT), ISD::SETNE);
+      }
+    }
   }
 
   if (DCI.isBeforeLegalizeOps())

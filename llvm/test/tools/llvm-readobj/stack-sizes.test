@@ -641,3 +641,26 @@ Sections:
     Relocations:
       - Offset: 0
         Type:   R_X86_64_64
+
+## Check we report an error when dumping stack sizes if the relocated section
+## identified by the sh_info field is invalid. Here sh_info value is larger than
+## the number of sections.
+
+# RUN: yaml2obj --docnum=13 %s > %t18
+# RUN: not llvm-readelf --stack-sizes %t18 2>&1 | FileCheck %s -DFILE=%t18 --check-prefix=INVALID-TARGET
+# RUN: not llvm-readobj --stack-sizes %t18 2>&1 | FileCheck %s -DFILE=%t18 --check-prefix=INVALID-TARGET
+
+# INVALID-TARGET: error: '[[FILE]]': .rela.stack_sizes: failed to get a relocated section: invalid section index: 255
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .rela.stack_sizes
+    Type: SHT_RELA
+    Link: 0
+    Info: 0xFF
+    Relocations: []

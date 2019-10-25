@@ -88,6 +88,12 @@ void EmitNeon2(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitNeonSema2(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitNeonTest2(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
+void EmitMveHeader(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitMveBuiltinDef(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitMveBuiltinSema(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitMveBuiltinCG(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitMveBuiltinAliases(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+
 void EmitClangAttrDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangDiagDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangOptDocs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);

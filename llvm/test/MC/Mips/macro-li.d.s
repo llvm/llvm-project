@@ -18,7 +18,7 @@ li.d	$4, 0.0
 
 li.d	$4, 1.12345
 # ALL:      .section  .rodata,"a",@progbits
-# ALL-NEXT:  [[LABEL:\$tmp[0-9]+]]:
+# ALL-NEXT:  [[LABEL:((\$)|(\.L))tmp[0-9]+]]:
 # ALL-NEXT:	.p2align 3
 # ALL-NEXT:	.8byte 4607738388174016296
 # ALL-NEXT:	.text
@@ -62,7 +62,7 @@ li.d	$4, 1.0
 
 li.d	$4, 12345678910
 # ALL:      .section  .rodata,"a",@progbits
-# ALL-NEXT:  [[LABEL:\$tmp[0-9]+]]:
+# ALL-NEXT:  [[LABEL:((\$)|(\.L))tmp[0-9]+]]:
 # ALL-NEXT:	.p2align 3
 # ALL-NEXT:	.8byte 4757770298180239360
 # ALL-NEXT:	.text
@@ -94,7 +94,7 @@ li.d	$4, 12345678910
 
 li.d	$4, 12345678910.0
 # ALL:      .section  .rodata,"a",@progbits
-# ALL-NEXT:  [[LABEL:\$tmp[0-9]+]]:
+# ALL-NEXT:  [[LABEL:((\$)|(\.L))tmp[0-9]+]]:
 # ALL-NEXT:	.p2align 3
 # ALL-NEXT:	.8byte 4757770298180239360
 # ALL-NEXT:	.text
@@ -126,7 +126,7 @@ li.d	$4, 12345678910.0
 
 li.d	$4, 0.4
 # ALL:      .section  .rodata,"a",@progbits
-# ALL-NEXT:  [[LABEL:\$tmp[0-9]+]]:
+# ALL-NEXT:  [[LABEL:((\$)|(\.L))tmp[0-9]+]]:
 # ALL-NEXT:	.p2align 3
 # ALL-NEXT:	.8byte 4600877379321698714
 # ALL-NEXT:	.text
@@ -164,7 +164,7 @@ li.d	$4, 1.5
 
 li.d	$4, 12345678910.12345678910
 # ALL:      .section  .rodata,"a",@progbits
-# ALL-NEXT:  [[LABEL:\$tmp[0-9]+]]:
+# ALL-NEXT:  [[LABEL:((\$)|(\.L))tmp[0-9]+]]:
 # ALL-NEXT:	.p2align 3
 # ALL-NEXT:	.8byte 4757770298180304087
 # ALL-NEXT:	.text
@@ -197,7 +197,7 @@ li.d	$4, 12345678910.12345678910
 
 li.d	$4, 12345678910123456789.12345678910
 # ALL:      .section  .rodata,"a",@progbits
-# ALL-NEXT:  [[LABEL:\$tmp[0-9]+]]:
+# ALL-NEXT:  [[LABEL:((\$)|(\.L))tmp[0-9]+]]:
 # ALL-NEXT:	.p2align 3
 # ALL-NEXT:	.8byte 4892433759227321879
 # ALL-NEXT:	.text
@@ -243,7 +243,7 @@ li.d	$f4, 0.0
 
 li.d	$f4, 1.12345
 # ALL:      .section  .rodata,"a",@progbits
-# ALL-NEXT:  [[LABEL:\$tmp[0-9]+]]:
+# ALL-NEXT:  [[LABEL:((\$)|(\.L))tmp[0-9]+]]:
 # ALL-NEXT:	.p2align 3
 # ALL-NEXT:	.8byte 4607738388174016296
 # ALL-NEXT:	.text
@@ -288,7 +288,7 @@ li.d	$f4, 1.0
 
 li.d	$f4, 12345678910
 # ALL:      .section  .rodata,"a",@progbits
-# ALL-NEXT:  [[LABEL:\$tmp[0-9]+]]:
+# ALL-NEXT:  [[LABEL:((\$)|(\.L))tmp[0-9]+]]:
 # ALL-NEXT:	.p2align 3
 # ALL-NEXT:	.8byte 4757770298180239360
 # ALL-NEXT:	.text
@@ -311,7 +311,7 @@ li.d	$f4, 12345678910
 
 li.d	$f4, 12345678910.0
 # ALL:      .section  .rodata,"a",@progbits
-# ALL-NEXT:  [[LABEL:\$tmp[0-9]+]]:
+# ALL-NEXT:  [[LABEL:((\$)|(\.L))tmp[0-9]+]]:
 # ALL-NEXT:	.p2align 3
 # ALL-NEXT:	.8byte 4757770298180239360
 # ALL-NEXT:	.text
@@ -334,7 +334,7 @@ li.d	$f4, 12345678910.0
 
 li.d	$f4, 0.4
 # ALL:      .section  .rodata,"a",@progbits
-# ALL-NEXT:  [[LABEL:\$tmp[0-9]+]]:
+# ALL-NEXT:  [[LABEL:((\$)|(\.L))tmp[0-9]+]]:
 # ALL-NEXT:	.p2align 3
 # ALL-NEXT:	.8byte 4600877379321698714
 # ALL-NEXT:	.text
@@ -379,7 +379,7 @@ li.d	$f4, 2.5
 
 li.d	$f4, 2.515625
 # ALL:      .section  .rodata,"a",@progbits
-# ALL-NEXT:  [[LABEL:\$tmp[0-9]+]]:
+# ALL-NEXT:  [[LABEL:((\$)|(\.L))tmp[0-9]+]]:
 # ALL-NEXT:	.p2align 3
 # ALL-NEXT:	.8byte 4612847102706319360
 # ALL-NEXT:	.text
@@ -402,7 +402,7 @@ li.d	$f4, 2.515625
 
 li.d	$f4, 12345678910.12345678910
 # ALL:      .section  .rodata,"a",@progbits
-# ALL-NEXT:  [[LABEL:\$tmp[0-9]+]]:
+# ALL-NEXT:  [[LABEL:((\$)|(\.L))tmp[0-9]+]]:
 # ALL-NEXT:	.p2align 3
 # ALL-NEXT:	.8byte 4757770298180304087
 # ALL-NEXT:	.text
@@ -425,7 +425,7 @@ li.d	$f4, 12345678910.12345678910
 
 li.d	$f4, 12345678910123456789.12345678910
 # ALL:      .section  .rodata,"a",@progbits
-# ALL-NEXT:  [[LABEL:\$tmp[0-9]+]]:
+# ALL-NEXT:  [[LABEL:((\$)|(\.L))tmp[0-9]+]]:
 # ALL-NEXT:	.p2align 3
 # ALL-NEXT:	.8byte 4892433759227321879
 # ALL-NEXT:	.text

@@ -16,9 +16,9 @@ define i32 @fn() nounwind noinline uwtable "function-instrument"="xray-always" {
     ; CHECK-NEXT:  pushq %rdi
     ; CHECK-NEXT:  pushq %rsi
     ; CHECK-NEXT:  pushq %rdx
-    ; CHECK-NEXT:  movq {{.*}}, %rdi
-    ; CHECK-NEXT:  movq {{.*}}, %rsi
-    ; CHECK-NEXT:  movq {{.*}}, %rdx
+    ; CHECK-NEXT:  movq %dx, %rdi
+    ; CHECK-NEXT:  movq %rcx, %rsi
+    ; CHECK-NEXT:  movq %eax, %rdx
     ; CHECK-NEXT:  callq __xray_TypedEvent
     ; CHECK-NEXT:  popq %rdx
     ; CHECK-NEXT:  popq %rsi
@@ -29,9 +29,9 @@ define i32 @fn() nounwind noinline uwtable "function-instrument"="xray-always" {
     ; PIC-NEXT:  pushq %rdi
     ; PIC-NEXT:  pushq %rsi
     ; PIC-NEXT:  pushq %rdx
-    ; PIC-NEXT:  movq {{.*}}, %rdi
-    ; PIC-NEXT:  movq {{.*}}, %rsi
-    ; PIC-NEXT:  movq {{.*}}, %rdx
+    ; PIC-NEXT:  movq %dx, %rdi
+    ; PIC-NEXT:  movq %rcx, %rsi
+    ; PIC-NEXT:  movq %eax, %rdx
     ; PIC-NEXT:  callq __xray_TypedEvent@PLT
     ; PIC-NEXT:  popq %rdx
     ; PIC-NEXT:  popq %rsi

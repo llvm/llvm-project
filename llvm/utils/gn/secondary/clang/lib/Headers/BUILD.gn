@@ -15,13 +15,22 @@ clang_tablegen("arm_fp16") {
   output_name = "arm_fp16.h"
 }
 
+# Generate arm_mve.h
+clang_tablegen("arm_mve") {
+  args = [ "-gen-arm-mve-header" ]
+  td_file = "//clang/include/clang/Basic/arm_mve.td"
+  output_name = "arm_mve.h"
+}
+
 copy("arm_headers") {
   visibility = [ ":Headers" ]
   deps = [
     ":arm_fp16",
+    ":arm_mve",
     ":arm_neon",
   ]
-  sources = get_target_outputs(":arm_neon") + get_target_outputs(":arm_fp16")
+  sources = get_target_outputs(":arm_neon") + get_target_outputs(":arm_fp16") +
+            get_target_outputs(":arm_mve")
   outputs = [
     "$clang_resource_dir/include/{{source_file_part}}",
   ]

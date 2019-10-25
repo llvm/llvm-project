@@ -363,25 +363,25 @@ public:
     eIOHandlerWatchpoint
   };
 
-  PythonObject &GetMainModule();
+  python::PythonModule &GetMainModule();
 
-  PythonDictionary &GetSessionDictionary();
+  python::PythonDictionary &GetSessionDictionary();
 
-  PythonDictionary &GetSysModuleDictionary();
+  python::PythonDictionary &GetSysModuleDictionary();
 
   bool GetEmbeddedInterpreterModuleObjects();
 
   bool SetStdHandle(lldb::FileSP file, const char *py_name,
-                    PythonObject &save_file, const char *mode);
+                    python::PythonObject &save_file, const char *mode);
 
-  PythonObject m_saved_stdin;
-  PythonObject m_saved_stdout;
-  PythonObject m_saved_stderr;
-  PythonObject m_main_module;
-  PythonDictionary m_session_dict;
-  PythonDictionary m_sys_module_dict;
-  PythonObject m_run_one_line_function;
-  PythonObject m_run_one_line_str_global;
+  python::PythonObject m_saved_stdin;
+  python::PythonObject m_saved_stdout;
+  python::PythonObject m_saved_stderr;
+  python::PythonModule m_main_module;
+  python::PythonDictionary m_session_dict;
+  python::PythonDictionary m_sys_module_dict;
+  python::PythonObject m_run_one_line_function;
+  python::PythonObject m_run_one_line_str_global;
   std::string m_dictionary_name;
   ActiveIOHandler m_active_io_handler;
   bool m_session_is_active;

@@ -69,6 +69,12 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = getFrameLowering(MF);
   BitVector Reserved(getNumRegs());
 
+  // Mark any registers requested to be reserved as such
+  for (size_t Reg = 0; Reg < getNumRegs(); Reg++) {
+    if (MF.getSubtarget<RISCVSubtarget>().isRegisterReservedByUser(Reg))
+      markSuperRegs(Reserved, Reg);
+  }
+
   // Use markSuperRegs to ensure any register aliases are also reserved
   markSuperRegs(Reserved, RISCV::X0); // zero
   markSuperRegs(Reserved, RISCV::X1); // ra
@@ -79,6 +85,11 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     markSuperRegs(Reserved, RISCV::X8); // fp
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
+}
+
+bool RISCVRegisterInfo::isAsmClobberable(const MachineFunction &MF,
+                                         unsigned PhysReg) const {
+  return !MF.getSubtarget<RISCVSubtarget>().isRegisterReservedByUser(PhysReg);
 }
 
 bool RISCVRegisterInfo::isConstantPhysReg(unsigned PhysReg) const {

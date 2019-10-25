@@ -16,7 +16,6 @@
 #include "lldb-python.h"
 
 #include "PythonDataObjects.h"
-#include "PythonExceptionState.h"
 #include "ScriptInterpreterPythonImpl.h"
 
 #include "lldb/API/SBFrame.h"
@@ -56,6 +55,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::python;
+using llvm::Expected;
 
 // Defined in the SWIG source file
 #if PY_MAJOR_VERSION >= 3
@@ -747,9 +747,9 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
   return true;
 }
 
-PythonObject &ScriptInterpreterPythonImpl::GetMainModule() {
+PythonModule &ScriptInterpreterPythonImpl::GetMainModule() {
   if (!m_main_module.IsValid())
-    m_main_module.Reset(PyRefType::Borrowed, PyImport_AddModule("__main__"));
+    m_main_module = unwrapIgnoringErrors(PythonModule::Import("__main__"));
   return m_main_module;
 }
 
@@ -1030,6 +1030,7 @@ bool ScriptInterpreterPythonImpl::Interrupt() {
             "can't interrupt");
   return false;
 }
+
 bool ScriptInterpreterPythonImpl::ExecuteOneLineWithReturn(
     llvm::StringRef in_string, ScriptInterpreter::ScriptReturnType return_type,
     void *ret_value, const ExecuteScriptOptions &options) {
@@ -1040,151 +1041,111 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLineWithReturn(
                     Locker::NoSTDIN,
                 Locker::FreeAcquiredLock | Locker::TearDownSession);
 
-  PythonObject py_return;
-  PythonObject &main_module = GetMainModule();
-  PythonDictionary globals(PyRefType::Borrowed,
-                           PyModule_GetDict(main_module.get()));
-  PythonObject py_error;
-  bool ret_success = false;
-  int success;
+  PythonModule &main_module = GetMainModule();
+  PythonDictionary globals = main_module.GetDictionary();
 
   PythonDictionary locals = GetSessionDictionary();
-
-  if (!locals.IsValid()) {
+  if (!locals.IsValid())
     locals = unwrapIgnoringErrors(
         As<PythonDictionary>(globals.GetAttribute(m_dictionary_name)));
-  }
-
   if (!locals.IsValid())
     locals = globals;
 
-  py_error.Reset(PyRefType::Borrowed, PyErr_Occurred());
-  if (py_error.IsValid())
-    PyErr_Clear();
+  Expected<PythonObject> maybe_py_return =
+      runStringOneLine(in_string, globals, locals);
 
-  std::string as_string = in_string.str();
-  { // scope for PythonInputReaderManager
-    // PythonInputReaderManager py_input(options.GetEnableIO() ? this : NULL);
-    py_return.Reset(PyRefType::Owned,
-                    PyRun_String(as_string.c_str(), Py_eval_input,
-                                 globals.get(), locals.get()));
-    if (!py_return.IsValid()) {
-      py_error.Reset(PyRefType::Borrowed, PyErr_Occurred());
-      if (py_error.IsValid())
-        PyErr_Clear();
-
-      py_return.Reset(PyRefType::Owned,
-                      PyRun_String(as_string.c_str(), Py_single_input,
-                                   globals.get(), locals.get()));
-    }
+  if (!maybe_py_return) {
+    llvm::handleAllErrors(
+        maybe_py_return.takeError(),
+        [&](PythonException &E) {
+          E.Restore();
+          if (options.GetMaskoutErrors()) {
+            if (E.Matches(PyExc_SyntaxError)) {
+              PyErr_Print();
+            }
+            PyErr_Clear();
+          }
+        },
+        [](const llvm::ErrorInfoBase &E) {});
+    return false;
   }
 
-  if (py_return.IsValid()) {
-    switch (return_type) {
-    case eScriptReturnTypeCharPtr: // "char *"
-    {
-      const char format[3] = "s#";
-      success = PyArg_Parse(py_return.get(), format, (char **)ret_value);
-      break;
-    }
-    case eScriptReturnTypeCharStrOrNone: // char* or NULL if py_return ==
-                                         // Py_None
-    {
-      const char format[3] = "z";
-      success = PyArg_Parse(py_return.get(), format, (char **)ret_value);
-      break;
-    }
-    case eScriptReturnTypeBool: {
-      const char format[2] = "b";
-      success = PyArg_Parse(py_return.get(), format, (bool *)ret_value);
-      break;
-    }
-    case eScriptReturnTypeShortInt: {
-      const char format[2] = "h";
-      success = PyArg_Parse(py_return.get(), format, (short *)ret_value);
-      break;
-    }
-    case eScriptReturnTypeShortIntUnsigned: {
-      const char format[2] = "H";
-      success =
-          PyArg_Parse(py_return.get(), format, (unsigned short *)ret_value);
-      break;
-    }
-    case eScriptReturnTypeInt: {
-      const char format[2] = "i";
-      success = PyArg_Parse(py_return.get(), format, (int *)ret_value);
-      break;
-    }
-    case eScriptReturnTypeIntUnsigned: {
-      const char format[2] = "I";
-      success = PyArg_Parse(py_return.get(), format, (unsigned int *)ret_value);
-      break;
-    }
-    case eScriptReturnTypeLongInt: {
-      const char format[2] = "l";
-      success = PyArg_Parse(py_return.get(), format, (long *)ret_value);
-      break;
-    }
-    case eScriptReturnTypeLongIntUnsigned: {
-      const char format[2] = "k";
-      success =
-          PyArg_Parse(py_return.get(), format, (unsigned long *)ret_value);
-      break;
-    }
-    case eScriptReturnTypeLongLong: {
-      const char format[2] = "L";
-      success = PyArg_Parse(py_return.get(), format, (long long *)ret_value);
-      break;
-    }
-    case eScriptReturnTypeLongLongUnsigned: {
-      const char format[2] = "K";
-      success =
-          PyArg_Parse(py_return.get(), format, (unsigned long long *)ret_value);
-      break;
-    }
-    case eScriptReturnTypeFloat: {
-      const char format[2] = "f";
-      success = PyArg_Parse(py_return.get(), format, (float *)ret_value);
-      break;
-    }
-    case eScriptReturnTypeDouble: {
-      const char format[2] = "d";
-      success = PyArg_Parse(py_return.get(), format, (double *)ret_value);
-      break;
-    }
-    case eScriptReturnTypeChar: {
-      const char format[2] = "c";
-      success = PyArg_Parse(py_return.get(), format, (char *)ret_value);
-      break;
-    }
-    case eScriptReturnTypeOpaqueObject: {
-      success = true;
-      PyObject *saved_value = py_return.get();
-      Py_XINCREF(saved_value);
-      *((PyObject **)ret_value) = saved_value;
-      break;
-    }
-    }
+  PythonObject py_return = std::move(maybe_py_return.get());
+  assert(py_return.IsValid());
 
-    ret_success = success;
+  switch (return_type) {
+  case eScriptReturnTypeCharPtr: // "char *"
+  {
+    const char format[3] = "s#";
+    return PyArg_Parse(py_return.get(), format, (char **)ret_value);
   }
-
-  py_error.Reset(PyRefType::Borrowed, PyErr_Occurred());
-  if (py_error.IsValid()) {
-    ret_success = false;
-    if (options.GetMaskoutErrors()) {
-      if (PyErr_GivenExceptionMatches(py_error.get(), PyExc_SyntaxError))
-        PyErr_Print();
-      PyErr_Clear();
-    }
+  case eScriptReturnTypeCharStrOrNone: // char* or NULL if py_return ==
+                                       // Py_None
+  {
+    const char format[3] = "z";
+    return PyArg_Parse(py_return.get(), format, (char **)ret_value);
   }
-
-  return ret_success;
+  case eScriptReturnTypeBool: {
+    const char format[2] = "b";
+    return PyArg_Parse(py_return.get(), format, (bool *)ret_value);
+  }
+  case eScriptReturnTypeShortInt: {
+    const char format[2] = "h";
+    return PyArg_Parse(py_return.get(), format, (short *)ret_value);
+  }
+  case eScriptReturnTypeShortIntUnsigned: {
+    const char format[2] = "H";
+    return PyArg_Parse(py_return.get(), format, (unsigned short *)ret_value);
+  }
+  case eScriptReturnTypeInt: {
+    const char format[2] = "i";
+    return PyArg_Parse(py_return.get(), format, (int *)ret_value);
+  }
+  case eScriptReturnTypeIntUnsigned: {
+    const char format[2] = "I";
+    return PyArg_Parse(py_return.get(), format, (unsigned int *)ret_value);
+  }
+  case eScriptReturnTypeLongInt: {
+    const char format[2] = "l";
+    return PyArg_Parse(py_return.get(), format, (long *)ret_value);
+  }
+  case eScriptReturnTypeLongIntUnsigned: {
+    const char format[2] = "k";
+    return PyArg_Parse(py_return.get(), format, (unsigned long *)ret_value);
+  }
+  case eScriptReturnTypeLongLong: {
+    const char format[2] = "L";
+    return PyArg_Parse(py_return.get(), format, (long long *)ret_value);
+  }
+  case eScriptReturnTypeLongLongUnsigned: {
+    const char format[2] = "K";
+    return PyArg_Parse(py_return.get(), format,
+                       (unsigned long long *)ret_value);
+  }
+  case eScriptReturnTypeFloat: {
+    const char format[2] = "f";
+    return PyArg_Parse(py_return.get(), format, (float *)ret_value);
+  }
+  case eScriptReturnTypeDouble: {
+    const char format[2] = "d";
+    return PyArg_Parse(py_return.get(), format, (double *)ret_value);
+  }
+  case eScriptReturnTypeChar: {
+    const char format[2] = "c";
+    return PyArg_Parse(py_return.get(), format, (char *)ret_value);
+  }
+  case eScriptReturnTypeOpaqueObject: {
+    *((PyObject **)ret_value) = py_return.release();
+    return true;
+  }
+  }
 }
 
 Status ScriptInterpreterPythonImpl::ExecuteMultipleLines(
     const char *in_string, const ExecuteScriptOptions &options) {
-  Status error;
+
+  if (in_string == nullptr)
+    return Status();
 
   Locker locker(this,
                 Locker::AcquireLock | Locker::InitSession |
@@ -1192,51 +1153,32 @@ Status ScriptInterpreterPythonImpl::ExecuteMultipleLines(
                     Locker::NoSTDIN,
                 Locker::FreeAcquiredLock | Locker::TearDownSession);
 
-  PythonObject return_value;
-  PythonObject &main_module = GetMainModule();
-  PythonDictionary globals(PyRefType::Borrowed,
-                           PyModule_GetDict(main_module.get()));
-  PythonObject py_error;
+  PythonModule &main_module = GetMainModule();
+  PythonDictionary globals = main_module.GetDictionary();
 
   PythonDictionary locals = GetSessionDictionary();
-
   if (!locals.IsValid())
     locals = unwrapIgnoringErrors(
         As<PythonDictionary>(globals.GetAttribute(m_dictionary_name)));
-
   if (!locals.IsValid())
     locals = globals;
 
-  py_error.Reset(PyRefType::Borrowed, PyErr_Occurred());
-  if (py_error.IsValid())
-    PyErr_Clear();
+  Expected<PythonObject> return_value =
+      runStringMultiLine(in_string, globals, locals);
 
-  if (in_string != nullptr) {
-    PythonObject code_object;
-    code_object.Reset(PyRefType::Owned,
-                      Py_CompileString(in_string, "temp.py", Py_file_input));
-
-    if (code_object.IsValid()) {
-// In Python 2.x, PyEval_EvalCode takes a PyCodeObject, but in Python 3.x, it
-// takes a PyObject.  They are convertible (hence the function
-// PyCode_Check(PyObject*), so we have to do the cast for Python 2.x
-#if PY_MAJOR_VERSION >= 3
-      PyObject *py_code_obj = code_object.get();
-#else
-      PyCodeObject *py_code_obj =
-          reinterpret_cast<PyCodeObject *>(code_object.get());
-#endif
-      return_value.Reset(
-          PyRefType::Owned,
-          PyEval_EvalCode(py_code_obj, globals.get(), locals.get()));
-    }
+  if (!return_value) {
+    llvm::Error error =
+        llvm::handleErrors(return_value.takeError(), [&](PythonException &E) {
+          llvm::Error error = llvm::createStringError(
+              llvm::inconvertibleErrorCode(), E.ReadBacktrace());
+          if (!options.GetMaskoutErrors())
+            E.Restore();
+          return error;
+        });
+    return Status(std::move(error));
   }
 
-  PythonExceptionState exception_state(!options.GetMaskoutErrors());
-  if (exception_state.IsError())
-    error.SetErrorString(exception_state.Format().c_str());
-
-  return error;
+  return Status();
 }
 
 void ScriptInterpreterPythonImpl::CollectDataForBreakpointCommandCallback(
@@ -2030,15 +1972,22 @@ StructuredData::DictionarySP ScriptInterpreterPythonImpl::GetDynamicSettings(
   if (!generic)
     return StructuredData::DictionarySP();
 
-  PythonObject reply_pyobj;
   Locker py_lock(this,
                  Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
   TargetSP target_sp(target->shared_from_this());
-  reply_pyobj.Reset(PyRefType::Owned,
-                    (PyObject *)LLDBSWIGPython_GetDynamicSetting(
-                        generic->GetValue(), setting_name, target_sp));
 
-  PythonDictionary py_dict(PyRefType::Borrowed, reply_pyobj.get());
+  auto setting = (PyObject *)LLDBSWIGPython_GetDynamicSetting(
+      generic->GetValue(), setting_name, target_sp);
+
+  if (!setting)
+    return StructuredData::DictionarySP();
+
+  PythonDictionary py_dict =
+      unwrapIgnoringErrors(As<PythonDictionary>(Take<PythonObject>(setting)));
+
+  if (!py_dict)
+    return StructuredData::DictionarySP();
+
   return py_dict.CreateStructuredDictionary();
 }
 

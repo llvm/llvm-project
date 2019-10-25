@@ -460,21 +460,6 @@ static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
   return true;
 }
 
-// Entry point stub for interoperability between __hwasan_tag_mismatch (ASM) and
-// the rest of the mismatch handling code (C++).
-extern "C" void __hwasan_tag_mismatch_stub(uptr addr, uptr access_info,
-                                           uptr *registers_frame) {
-  AccessInfo ai;
-  ai.is_store = access_info & 0x10;
-  ai.recover = false;
-  ai.addr = addr;
-  ai.size = 1 << (access_info & 0xf);
-
-  HandleTagMismatch(ai, (uptr)__builtin_return_address(0),
-                    (uptr)__builtin_frame_address(0), nullptr, registers_frame);
-  __builtin_unreachable();
-}
-
 static void OnStackUnwind(const SignalContext &sig, const void *,
                           BufferedStackTrace *stack) {
   stack->Unwind(StackTrace::GetNextInstructionPc(sig.pc), sig.bp, sig.context,
@@ -492,5 +477,25 @@ void HwasanOnDeadlySignal(int signo, void *info, void *context) {
 
 
 } // namespace __hwasan
+
+// Entry point for interoperability between __hwasan_tag_mismatch (ASM) and the
+// rest of the mismatch handling code (C++).
+void __hwasan_tag_mismatch4(uptr addr, uptr access_info, uptr *registers_frame,
+                            size_t outsize) {
+  __hwasan::AccessInfo ai;
+  ai.is_store = access_info & 0x10;
+  ai.is_load = !ai.is_store;
+  ai.recover = access_info & 0x20;
+  ai.addr = addr;
+  if ((access_info & 0xf) == 0xf)
+    ai.size = outsize;
+  else
+    ai.size = 1 << (access_info & 0xf);
+
+  __hwasan::HandleTagMismatch(ai, (uptr)__builtin_return_address(0),
+                              (uptr)__builtin_frame_address(0), nullptr,
+                              registers_frame);
+  __builtin_unreachable();
+}
 
 #endif // SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD

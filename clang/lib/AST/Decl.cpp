@@ -3115,10 +3115,17 @@ FunctionDecl *FunctionDecl::getCanonicalDecl() { return getFirstDecl(); }
 /// functions as their wrapped builtins. This shouldn't be done in general, but
 /// it's useful in Sema to diagnose calls to wrappers based on their semantics.
 unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
-  if (!getIdentifier())
-    return 0;
+  unsigned BuiltinID;
 
-  unsigned BuiltinID = getIdentifier()->getBuiltinID();
+  if (const auto *AMAA = getAttr<ArmMveAliasAttr>()) {
+    BuiltinID = AMAA->getBuiltinName()->getBuiltinID();
+  } else {
+    if (!getIdentifier())
+      return 0;
+
+    BuiltinID = getIdentifier()->getBuiltinID();
+  }
+
   if (!BuiltinID)
     return 0;
 
@@ -3142,7 +3149,8 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
 
   // If the function is marked "overloadable", it has a different mangled name
   // and is not the C library function.
-  if (!ConsiderWrapperFunctions && hasAttr<OverloadableAttr>())
+  if (!ConsiderWrapperFunctions && hasAttr<OverloadableAttr>() &&
+      !hasAttr<ArmMveAliasAttr>())
     return 0;
 
   if (!Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID))
@@ -3322,12 +3330,14 @@ bool FunctionDecl::doesDeclarationForceExternallyVisibleDefinition() const {
   return FoundBody;
 }
 
-SourceRange FunctionDecl::getReturnTypeSourceRange() const {
+FunctionTypeLoc FunctionDecl::getFunctionTypeLoc() const {
   const TypeSourceInfo *TSI = getTypeSourceInfo();
-  if (!TSI)
-    return SourceRange();
-  FunctionTypeLoc FTL =
-      TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
+  return TSI ? TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>()
+             : FunctionTypeLoc();
+}
+
+SourceRange FunctionDecl::getReturnTypeSourceRange() const {
+  FunctionTypeLoc FTL = getFunctionTypeLoc();
   if (!FTL)
     return SourceRange();
 
@@ -3343,15 +3353,8 @@ SourceRange FunctionDecl::getReturnTypeSourceRange() const {
 }
 
 SourceRange FunctionDecl::getExceptionSpecSourceRange() const {
-  const TypeSourceInfo *TSI = getTypeSourceInfo();
-  if (!TSI)
-    return SourceRange();
-  FunctionTypeLoc FTL =
-    TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
-  if (!FTL)
-    return SourceRange();
-
-  return FTL.getExceptionSpecRange();
+  FunctionTypeLoc FTL = getFunctionTypeLoc();
+  return FTL ? FTL.getExceptionSpecRange() : SourceRange();
 }
 
 /// For an inline function definition in C, or for a gnu_inline function
@@ -4582,7 +4585,7 @@ LabelDecl *LabelDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
 }
 
 void LabelDecl::setMSAsmLabel(StringRef Name) {
-  char *Buffer = new (getASTContext(), 1) char[Name.size() + 1];
+char *Buffer = new (getASTContext(), 1) char[Name.size() + 1];
   memcpy(Buffer, Name.data(), Name.size());
   Buffer[Name.size()] = '\0';
   MSAsmName = Buffer;

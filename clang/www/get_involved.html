@@ -28,15 +28,15 @@ to author patches.
 
 <h2>Follow what's going on</h2>
 
-<p>Clang is a subproject of the <a href="http://llvm.org">LLVM Project</a>, but
+<p>Clang is a subproject of the <a href="https://llvm.org">LLVM Project</a>, but
 has its own mailing lists because the communities have people with different
 interests.  The two clang lists are:</p>
 
 <ul>
-<li><a href="http://lists.llvm.org/mailman/listinfo/cfe-commits">cfe-commits
+<li><a href="https://lists.llvm.org/mailman/listinfo/cfe-commits">cfe-commits
 </a> - This list is for patch submission/discussion.</li>
 
-<li><a href="http://lists.llvm.org/mailman/listinfo/cfe-dev">cfe-dev</a> - 
+<li><a href="https://lists.llvm.org/mailman/listinfo/cfe-dev">cfe-dev</a> -
 This list is for everything else Clang related (questions and answers, design
 discussions, etc).</li>
 
@@ -44,18 +44,18 @@ discussions, etc).</li>
 
 <p>If you are interested in clang only, these two lists should be all
 you need.  If you are interested in the LLVM optimizer and code generator,
-please consider signing up for <a 
-href="http://lists.llvm.org/mailman/listinfo/llvm-dev">llvm-dev</a> and <a
-href="http://lists.llvm.org/mailman/listinfo/llvm-commits">llvm-commits</a>
+please consider signing up for <a
+href="https://lists.llvm.org/mailman/listinfo/llvm-dev">llvm-dev</a> and <a
+href="https://lists.llvm.org/mailman/listinfo/llvm-commits">llvm-commits</a>
 as well.</p>
 
 
-<p>The best way to talk with other developers on the project is through the <a
-href="http://lists.llvm.org/mailman/listinfo/cfe-dev">cfe-dev mailing
+<p>The most common way to talk with other developers on the project is through
+the <a href="https://lists.llvm.org/mailman/listinfo/cfe-dev">cfe-dev mailing
 list</a>.  The clang mailing list is a very friendly place and we welcome
 newcomers.  In addition to the cfe-dev list, a significant amount of design
-discussion takes place on the <a 
-href="http://lists.llvm.org/mailman/listinfo/cfe-commits">cfe-commits mailing
+discussion takes place on the <a
+href="https://lists.llvm.org/mailman/listinfo/cfe-commits">cfe-commits mailing
 list</a>.  All of these lists have archives, so you can browse through previous
 discussions or follow the list development on the web if you prefer.</p>
 
@@ -69,31 +69,58 @@ href="https://bugs.llvm.org/">Bugzilla bug database</a>.</p>
 
 <h2 id="criteria">Contributing Extensions to Clang</h2>
 
-<p>Clang has always been designed as a platform for experimentation,
+<p>Clang is designed to support experimentation,
 allowing programmers to easily extend the compiler to support great
 new language features and tools. At some point, the authors of these
 extensions may propose that the extensions become a part of Clang
-itself, to benefit the whole Clang community. But not every idea--not
-even every great idea--should become part of Clang. Extensions
-(particularly language extensions) pose a long-term maintenance burden
-on Clang, and therefore the benefits of the extension must outweigh
-those costs. Hence, these are the seven criteria used to evaluate the
-merits of a proposed extension:</p>
+itself, to benefit the whole Clang community. However, extensions
+(particularly language extensions) have long-term maintenance costs
+for Clang. The benefits of the extension need to be evaluated against
+these costs. The Clang project uses the following criteria for this
+evaluation:</p>
 
 <ol>
-  <li>Evidence of a significant user community: This is based on a number of factors, including an actual, existing user community, the perceived likelihood that users would adopt such a feature if it were available, and any "trickle-down" effects that come from, e.g., a library adopting the feature and providing benefits to its users.</li>
+  <li>Evidence of a significant user community: This is based on a number of
+  factors, including an existing user community, the perceived likelihood that
+  users would adopt such a feature if it were available, and any secondary
+  effects that come from, e.g., a library adopting the feature and providing
+  benefits to its users.</li>
 
-  <li>A specific need to reside within the Clang tree: There are some extensions that would be better expressed as a separate tool, and should remain as separate tools even if they end up being hosted as part of the LLVM umbrella project.</li>
+  <li>A specific need to reside within the Clang tree: There are some extensions
+  that would be better expressed as a separate tool, and should remain as
+  separate tools even if they end up being hosted as part of the LLVM umbrella
+  project.</li>
 
-  <li>A complete specification: The specification must be sufficient to understand the design of the feature as well as interpret the meaning of specific examples. The specification should be detailed enough that another compiler vendor could conceivably implement the feature.</li>
+  <li>A specification: The specification must be sufficient to understand the
+  design of the feature as well as interpret the meaning of specific examples.
+  The specification should be detailed enough that another compiler vendor
+  could implement the feature.</li>
 
-  <li>Representation within the appropriate governing organization: For extensions to a language governed by a standards committee (C, C++, OpenCL), the extension itself must have an active proposal and proponent within that committee and have a reasonable chance of acceptance. Clang should drive the standard, not diverge from it. This criterion does not apply to all extensions, since some extensions fall outside of the realm of the standards bodies.</li>
+  <li>Representation within the appropriate governing organization: For
+  extensions to a language governed by a standards committee (C, C++, OpenCL),
+  the extension itself must have an active proposal and proponent within that
+  committee and have a reasonable chance of acceptance. Clang should drive the
+  standard, not diverge from it. This criterion does not apply to all
+  extensions, since some extensions fall outside of the realm of the standards
+  bodies.</li>
 
-  <li>A long-term support plan: Contributing a non-trivial extension to Clang implies a commitment to supporting that extension, improving the implementation and specification as Clang evolves. The capacity of the contributor to make that commitment is as important as the commitment itself.</li>
+  <li>A long-term support plan: increasingly large or complex extensions to
+  Clang need matching commitments to supporting them over time, including
+  improving their implementation and specification as Clang evolves. The
+  capacity of the contributor to make that commitment is as important as the
+  commitment itself.</li>
 
-  <li>A high-quality implementation: The implementation must fit well into Clang's architecture, follow LLVM's coding conventions, and meet Clang's quality standards, including high-quality diagnostics and rich AST representations. This is particularly important for language extensions, because users will learn how those extensions work through the behavior of the compiler.</li>
+  <li>A high-quality implementation: The implementation must fit well into
+  Clang's architecture, follow LLVM's coding conventions, and meet Clang's
+  quality standards, including diagnostics and complete AST
+  representations. This is particularly important for language extensions,
+  because users will learn how those extensions work through the behavior of the
+  compiler.</li>
 
-  <li>A proper test suite: Extensive testing is crucial to ensure that the language extension is not broken by ongoing maintenance in Clang. The test suite should be complete enough that another compiler vendor could conceivably validate their implementation of the feature against it.</li>
+  <li>A test suite: Extensive testing is crucial to ensure that the language
+  extension is not broken by ongoing maintenance in Clang. The test suite
+  should be complete enough that another compiler vendor could conceivably
+  validate their implementation of the feature against it.</li>
 </ol>
 
 </div>

@@ -87,7 +87,8 @@ def warn_cxx98_compat_variadic_templates :
   Warning<"variadic templates are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def err_default_special_members : Error<
-  "only special member functions may be defaulted">;
+  "only special member functions %select{|and comparison operators }0"
+  "may be defaulted">;
 def err_deleted_non_function : Error<
   "only functions can have deleted definitions">;
 def err_module_not_found : Error<"module '%0' not found">, DefaultFatal;
@@ -303,6 +304,11 @@ def err_arcmt_nsinvocation_ownership : Error<"NSInvocation's %0 is not safe to b
 // C++ for OpenCL.
 def err_openclcxx_not_supported : Error<
   "'%0' is not supported in C++ for OpenCL">;
+
+// HIP
+def warn_ignored_hip_only_option : Warning<
+  "'%0' is ignored since it is only supported for HIP">,
+  InGroup<HIPOnly>;
 
 // OpenMP
 def err_omp_more_one_clause : Error<

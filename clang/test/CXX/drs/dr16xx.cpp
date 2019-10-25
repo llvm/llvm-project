@@ -111,13 +111,13 @@ namespace dr1638 { // dr1638: yes
 namespace dr1645 { // dr1645: 3.9
 #if __cplusplus >= 201103L
   struct A {
-    constexpr A(int, float = 0); // expected-note 2{{candidate}}
+    constexpr A(int, float = 0); // expected-note {{candidate}}
     explicit A(int, int = 0); // expected-note 2{{candidate}}
     A(int, int, int = 0) = delete; // expected-note {{candidate}}
   };
 
-  struct B : A { // expected-note 2{{candidate}}
-    using A::A; // expected-note 5{{inherited here}}
+  struct B : A {
+    using A::A; // expected-note 4{{inherited here}}
   };
 
   constexpr B a(0); // expected-error {{ambiguous}}

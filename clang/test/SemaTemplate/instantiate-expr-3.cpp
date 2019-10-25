@@ -23,7 +23,7 @@ namespace N1 {
 }
 
 namespace N2 {
-  long& operator+=(N1::X&, long); // expected-note{{candidate}}
+  long& operator+=(N1::X&, long);
 
   template<typename T, typename U, typename Result>
   struct PlusEquals0 {

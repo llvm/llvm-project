@@ -582,7 +582,10 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
       llvm::join(TO.Features.begin(), TO.Features.end(), ",");
 
   std::unique_ptr<llvm::MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
-  std::unique_ptr<llvm::MCAsmInfo> MAI(TheTarget->createMCAsmInfo(*MRI, TT));
+  // FIXME: init MCOptions from sanitizer flags here.
+  llvm::MCTargetOptions MCOptions;
+  std::unique_ptr<llvm::MCAsmInfo> MAI(
+      TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
   // Get the instruction descriptor.
   std::unique_ptr<llvm::MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   std::unique_ptr<llvm::MCObjectFileInfo> MOFI(new llvm::MCObjectFileInfo());
@@ -602,8 +605,6 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   std::unique_ptr<llvm::MCAsmParser> Parser(
       createMCAsmParser(TempSrcMgr, Ctx, *Str.get(), *MAI));
 
-  // FIXME: init MCOptions from sanitizer flags here.
-  llvm::MCTargetOptions MCOptions;
   std::unique_ptr<llvm::MCTargetAsmParser> TargetParser(
       TheTarget->createMCAsmParser(*STI, *Parser, *MII, MCOptions));
 

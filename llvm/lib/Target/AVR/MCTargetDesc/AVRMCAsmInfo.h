@@ -22,7 +22,7 @@ class Triple;
 /// Specifies the format of AVR assembly files.
 class AVRMCAsmInfo : public MCAsmInfo {
 public:
-  explicit AVRMCAsmInfo(const Triple &TT);
+  explicit AVRMCAsmInfo(const Triple &TT, const MCTargetOptions &Options);
 };
 
 } // end namespace llvm

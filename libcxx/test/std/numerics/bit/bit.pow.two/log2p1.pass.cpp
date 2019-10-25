@@ -6,14 +6,14 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // template <class T>
 //   constexpr T log2p1(T x) noexcept;
 
 // If x == 0, 0; otherwise one plus the base-2 logarithm of x, with any fractional part discarded.
 
-// Remarks: This function shall not participate in overload resolution unless 
+// Remarks: This function shall not participate in overload resolution unless
 //	T is an unsigned integer type
 
 #include <bit>
@@ -48,7 +48,7 @@ void runtime_test()
 {
 	ASSERT_SAME_TYPE(T, decltype(std::log2p1(T(0))));
 	ASSERT_NOEXCEPT(             std::log2p1(T(0)));
-	
+
 	assert( std::log2p1(T(0)) == T(0));
 	assert( std::log2p1(T(1)) == T(1));
 	assert( std::log2p1(T(2)) == T(2));
@@ -75,11 +75,11 @@ void runtime_test()
 
 int main()
 {
-	
+
     {
     auto lambda = [](auto x) -> decltype(std::log2p1(x)) {};
     using L = decltype(lambda);
-    
+
     static_assert( std::is_invocable_v<L, unsigned char>, "");
     static_assert( std::is_invocable_v<L, unsigned int>, "");
     static_assert( std::is_invocable_v<L, unsigned long>, "");
@@ -115,7 +115,7 @@ int main()
     static_assert( std::is_invocable_v<L, __uint128_t>, "");
     static_assert(!std::is_invocable_v<L, __int128_t>, "");
 #endif
- 
+
     static_assert(!std::is_invocable_v<L, A>, "");
     static_assert(!std::is_invocable_v<L, E1>, "");
     static_assert(!std::is_invocable_v<L, E2>, "");

@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // <optional>
 
-// T shall be an object type other than cv in_place_t or cv nullopt_t 
+// T shall be an object type other than cv in_place_t or cv nullopt_t
 //   and shall satisfy the Cpp17Destructible requirements.
 // Note: array types do not satisfy the Cpp17Destructible requirements.
 
@@ -25,8 +25,8 @@ int main(int, char**)
 {
 	{
 	std::optional<char &> o1;	        // expected-error-re@optional:* {{static_assert failed{{.*}} "instantiation of optional with a reference type is ill-formed"}}
-	std::optional<NonDestructible> o2;  // expected-error-re@optional:* {{static_assert failed{{.*}} "instantiation of optional with a non-destructible type is ill-formed"}}	
-	std::optional<char[20]> o3;	        // expected-error-re@optional:* {{static_assert failed{{.*}} "instantiation of optional with an array type is ill-formed"}}	
+	std::optional<NonDestructible> o2;  // expected-error-re@optional:* {{static_assert failed{{.*}} "instantiation of optional with a non-destructible type is ill-formed"}}
+	std::optional<char[20]> o3;	        // expected-error-re@optional:* {{static_assert failed{{.*}} "instantiation of optional with an array type is ill-formed"}}
 	}
 
 	{

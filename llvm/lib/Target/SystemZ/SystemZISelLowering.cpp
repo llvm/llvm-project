@@ -847,7 +847,7 @@ supportedAddressingMode(Instruction *I, bool HasVector) {
   }
 
   if (isa<LoadInst>(I) && I->hasOneUse()) {
-    auto *SingleUser = dyn_cast<Instruction>(*I->user_begin());
+    auto *SingleUser = cast<Instruction>(*I->user_begin());
     if (SingleUser->getParent() == I->getParent()) {
       if (isa<ICmpInst>(SingleUser)) {
         if (auto *C = dyn_cast<ConstantInt>(SingleUser->getOperand(1)))

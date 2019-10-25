@@ -571,6 +571,10 @@ bool Type::getVectorIsScalable() const {
   return cast<VectorType>(this)->isScalable();
 }
 
+ElementCount Type::getVectorElementCount() const {
+  return cast<VectorType>(this)->getElementCount();
+}
+
 /// Class to represent pointers.
 class PointerType : public Type {
   explicit PointerType(Type *ElType, unsigned AddrSpace);
@@ -616,6 +620,16 @@ Type *Type::getExtendedType() const {
     return VectorType::getExtendedElementVectorType(
         const_cast<VectorType *>(VTy));
   return cast<IntegerType>(this)->getExtendedType();
+}
+
+Type *Type::getWithNewBitWidth(unsigned NewBitWidth) const {
+  assert(
+      isIntOrIntVectorTy() &&
+      "Original type expected to be a vector of integers or a scalar integer.");
+  Type *NewType = getIntNTy(getContext(), NewBitWidth);
+  if (isVectorTy())
+    NewType = VectorType::get(NewType, getVectorElementCount());
+  return NewType;
 }
 
 unsigned Type::getPointerAddressSpace() const {

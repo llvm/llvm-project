@@ -312,6 +312,19 @@ static bool isUseMIInFoldList(ArrayRef<FoldCandidate> FoldList,
   return false;
 }
 
+static void appendFoldCandidate(SmallVectorImpl<FoldCandidate> &FoldList,
+                                MachineInstr *MI, unsigned OpNo,
+                                MachineOperand *FoldOp, bool Commuted = false,
+                                int ShrinkOp = -1) {
+  // Skip additional folding on the same operand.
+  for (FoldCandidate &Fold : FoldList)
+    if (Fold.UseMI == MI && Fold.UseOpNo == OpNo)
+      return;
+  LLVM_DEBUG(dbgs() << "Append " << (Commuted ? "commuted" : "normal")
+                    << " operand " << OpNo << "\n  " << *MI << '\n');
+  FoldList.push_back(FoldCandidate(MI, OpNo, FoldOp, Commuted, ShrinkOp));
+}
+
 static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
                              MachineInstr *MI, unsigned OpNo,
                              MachineOperand *OpToFold,
@@ -344,7 +357,7 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
     // Special case for s_setreg_b32
     if (Opc == AMDGPU::S_SETREG_B32 && OpToFold->isImm()) {
       MI->setDesc(TII->get(AMDGPU::S_SETREG_IMM32_B32));
-      FoldList.push_back(FoldCandidate(MI, OpNo, OpToFold));
+      appendFoldCandidate(FoldList, MI, OpNo, OpToFold);
       return true;
     }
 
@@ -403,8 +416,7 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
         unsigned MaybeCommutedOpc = MI->getOpcode();
         int Op32 = AMDGPU::getVOPe32(MaybeCommutedOpc);
 
-        FoldList.push_back(FoldCandidate(MI, CommuteOpNo, OpToFold, true,
-                                         Op32));
+        appendFoldCandidate(FoldList, MI, CommuteOpNo, OpToFold, true, Op32);
         return true;
       }
 
@@ -412,11 +424,11 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
       return false;
     }
 
-    FoldList.push_back(FoldCandidate(MI, CommuteOpNo, OpToFold, true));
+    appendFoldCandidate(FoldList, MI, CommuteOpNo, OpToFold, true);
     return true;
   }
 
-  FoldList.push_back(FoldCandidate(MI, OpNo, OpToFold));
+  appendFoldCandidate(FoldList, MI, OpNo, OpToFold);
   return true;
 }
 
@@ -494,7 +506,7 @@ static bool tryToFoldACImm(const SIInstrInfo *TII,
   if (!TII->isOperandLegal(*UseMI, UseOpIdx, Op))
     return false;
 
-  FoldList.push_back(FoldCandidate(UseMI, UseOpIdx, Op));
+  appendFoldCandidate(FoldList, UseMI, UseOpIdx, Op);
   return true;
 }
 
@@ -512,18 +524,6 @@ void SIFoldOperands::foldOperand(
   // FIXME: Fold operands with subregs.
   if (UseOp.isReg() && OpToFold.isReg()) {
     if (UseOp.isImplicit() || UseOp.getSubReg() != AMDGPU::NoSubRegister)
-      return;
-
-    // Don't fold subregister extracts into tied operands, only if it is a full
-    // copy since a subregister use tied to a full register def doesn't really
-    // make sense. e.g. don't fold:
-    //
-    // %1 = COPY %0:sub1
-    // %2<tied3> = V_MAC_{F16, F32} %3, %4, %1<tied0>
-    //
-    //  into
-    // %2<tied3> = V_MAC_{F16, F32} %3, %4, %0:sub1<tied0>
-    if (UseOp.isTied() && OpToFold.getSubReg() != AMDGPU::NoSubRegister)
       return;
   }
 
@@ -639,10 +639,11 @@ void SIFoldOperands::foldOperand(
     CopiesToReplace.push_back(UseMI);
   } else {
     if (UseMI->isCopy() && OpToFold.isReg() &&
-        Register::isVirtualRegister(UseMI->getOperand(0).getReg()) &&
+        UseMI->getOperand(0).getReg().isVirtual() &&
         TRI->isVectorRegister(*MRI, UseMI->getOperand(0).getReg()) &&
-        TRI->isVectorRegister(*MRI, UseMI->getOperand(1).getReg()) &&
         !UseMI->getOperand(1).getSubReg()) {
+      LLVM_DEBUG(dbgs() << "Folding " << OpToFold
+                        << "\n into " << *UseMI << '\n');
       unsigned Size = TII->getOpSize(*UseMI, 1);
       UseMI->getOperand(1).setReg(OpToFold.getReg());
       UseMI->getOperand(1).setSubReg(OpToFold.getSubReg());
@@ -1349,6 +1350,8 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
 
   for (MachineBasicBlock *MBB : depth_first(&MF)) {
     MachineBasicBlock::iterator I, Next;
+
+    MachineOperand *CurrentKnownM0Val = nullptr;
     for (I = MBB->begin(); I != MBB->end(); I = Next) {
       Next = std::next(I);
       MachineInstr &MI = *I;
@@ -1361,6 +1364,25 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
         if (IsIEEEMode || (!HasNSZ && !MI.getFlag(MachineInstr::FmNsz)) ||
             !tryFoldOMod(MI))
           tryFoldClamp(MI);
+
+        // Saw an unknown clobber of m0, so we no longer know what it is.
+        if (CurrentKnownM0Val && MI.modifiesRegister(AMDGPU::M0, TRI))
+          CurrentKnownM0Val = nullptr;
+        continue;
+      }
+
+      // Specially track simple redefs of m0 to the same value in a block, so we
+      // can erase the later ones.
+      if (MI.getOperand(0).getReg() == AMDGPU::M0) {
+        MachineOperand &NewM0Val = MI.getOperand(1);
+        if (CurrentKnownM0Val && CurrentKnownM0Val->isIdenticalTo(NewM0Val)) {
+          MI.eraseFromParent();
+          continue;
+        }
+
+        // We aren't tracking other physical registers
+        CurrentKnownM0Val = (NewM0Val.isReg() && NewM0Val.getReg().isPhysical()) ?
+          nullptr : &NewM0Val;
         continue;
       }
 
@@ -1388,5 +1410,5 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
       foldInstOperand(MI, OpToFold);
     }
   }
-  return false;
+  return true;
 }

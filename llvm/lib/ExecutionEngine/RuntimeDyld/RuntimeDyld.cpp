@@ -348,8 +348,12 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
   for (section_iterator SI = Obj.section_begin(), SE = Obj.section_end();
        SI != SE; ++SI) {
     StubMap Stubs;
-    section_iterator RelocatedSection = SI->getRelocatedSection();
 
+    Expected<section_iterator> RelSecOrErr = SI->getRelocatedSection();
+    if (!RelSecOrErr)
+      return RelSecOrErr.takeError();
+
+    section_iterator RelocatedSection = *RelSecOrErr;
     if (RelocatedSection == SE)
       continue;
 
@@ -648,7 +652,12 @@ unsigned RuntimeDyldImpl::computeSectionStubBufSize(const ObjectFile &Obj,
   unsigned StubBufSize = 0;
   for (section_iterator SI = Obj.section_begin(), SE = Obj.section_end();
        SI != SE; ++SI) {
-    section_iterator RelSecI = SI->getRelocatedSection();
+
+    Expected<section_iterator> RelSecOrErr = SI->getRelocatedSection();
+    if (!RelSecOrErr)
+      report_fatal_error(toString(RelSecOrErr.takeError()));
+
+    section_iterator RelSecI = *RelSecOrErr;
     if (!(RelSecI == Section))
       continue;
 

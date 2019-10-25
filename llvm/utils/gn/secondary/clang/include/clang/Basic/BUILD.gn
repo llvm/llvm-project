@@ -89,7 +89,7 @@ clang_tablegen("AttrHasAttributeImpl") {
   td_file = "Attr.td"
 }
 
-# Misc
+# ARM NEON and MVE
 
 clang_tablegen("arm_neon") {
   args = [ "-gen-arm-neon-sema" ]
@@ -97,4 +97,24 @@ clang_tablegen("arm_neon") {
 
 clang_tablegen("arm_fp16") {
   args = [ "-gen-arm-neon-sema" ]
+}
+
+clang_tablegen("arm_mve_builtins") {
+  args = [ "-gen-arm-mve-builtin-def" ]
+  td_file = "arm_mve.td"
+}
+
+clang_tablegen("arm_mve_builtin_cg") {
+  args = [ "-gen-arm-mve-builtin-codegen" ]
+  td_file = "arm_mve.td"
+}
+
+clang_tablegen("arm_mve_builtin_sema") {
+  args = [ "-gen-arm-mve-builtin-sema" ]
+  td_file = "arm_mve.td"
+}
+
+clang_tablegen("arm_mve_builtin_aliases") {
+  args = [ "-gen-arm-mve-builtin-aliases" ]
+  td_file = "arm_mve.td"
 }

@@ -187,7 +187,8 @@ static MCRegisterInfo *createARMMCRegisterInfo(const Triple &Triple) {
 }
 
 static MCAsmInfo *createARMMCAsmInfo(const MCRegisterInfo &MRI,
-                                     const Triple &TheTriple) {
+                                     const Triple &TheTriple,
+                                     const MCTargetOptions &Options) {
   MCAsmInfo *MAI;
   if (TheTriple.isOSDarwin() || TheTriple.isOSBinFormatMachO())
     MAI = new ARMMCAsmInfoDarwin(TheTriple);

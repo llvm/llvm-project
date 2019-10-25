@@ -1,12 +1,28 @@
-// RUN: %clang_cc1 -verify %s -std=c++11
-// RUN: %clang_cc1 -verify %s -std=c++17
-// RUN: %clang_cc1 -verify %s -std=c++2a
+// RUN: %clang_cc1 -verify=expected,pre2a %s -std=c++11
+// RUN: %clang_cc1 -verify=expected,pre2a %s -std=c++17
+// RUN: %clang_cc1 -verify=expected %s -std=c++2a
 
 // A function that is explicitly defaulted shall
 struct A {
-  // -- be a special member function,
-  A(int) = default; // expected-error {{only special member functions may be defaulted}}
+  // -- be a special member function [C++2a: or a comparison operator function],
+  A(int) = default;
+#if __cplusplus <= 201703L
+  // expected-error@-2 {{only special member functions may be defaulted}}
+#else
+  // expected-error@-4 {{only special member functions and comparison operators may be defaulted}}
+#endif
   A(A) = default; // expected-error {{must pass its first argument by reference}}
+  void f(A) = default; // expected-error-re {{only special member functions{{( and comparison operators)?}} may be defaulted}}
+
+  bool operator==(const A&) const = default; // pre2a-warning {{defaulted comparison operators are a C++20 extension}}
+  bool operator!=(const A&) const = default; // pre2a-warning {{defaulted comparison operators are a C++20 extension}}
+  bool operator<(const A&) const = default; // pre2a-error {{only special member functions may be defaulted}}
+  bool operator>(const A&) const = default; // pre2a-error {{only special member functions may be defaulted}}
+  bool operator<=(const A&) const = default; // pre2a-error {{only special member functions may be defaulted}}
+  bool operator>=(const A&) const = default; // pre2a-error {{only special member functions may be defaulted}}
+  bool operator<=>(const A&) const = default; // pre2a-error 1+{{}} pre2a-warning {{'<=>' is a single token in C++2a}}
+
+  A operator+(const A&) const = default; // expected-error-re {{only special member functions{{( and comparison operators)?}} may be defaulted}}
 
   // -- have the same declared function type as if it had been implicitly
   //    declared

@@ -128,7 +128,6 @@ static cl::opt<bool>
 LoopPredication("indvars-predicate-loops", cl::Hidden, cl::init(false),
                 cl::desc("Predicate conditions in read only loops"));
 
-
 namespace {
 
 struct RewritePhi;
@@ -2268,8 +2267,8 @@ static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
     if (BECount->getType()->isPointerTy() && !Phi->getType()->isPointerTy())
       continue;
 
-    const auto *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Phi));
-    
+    const auto *AR = cast<SCEVAddRecExpr>(SE->getSCEV(Phi));
+
     // AR may be a pointer type, while BECount is an integer type.
     // AR may be wider than BECount. With eq/ne tests overflow is immaterial.
     // AR may not be a narrower type, or we may never exit.
@@ -2663,11 +2662,11 @@ static const SCEV* getMaxBackedgeTakenCount(ScalarEvolution &SE,
   // merge the max and exact information to approximate a version of
   // getConstantMaxBackedgeTakenCount which isn't restricted to just constants.
   SmallVector<const SCEV*, 4> ExitCounts;
-  const SCEV *MaxConstEC = SE.getConstantMaxBackedgeTakenCount(L);
-  if (!isa<SCEVCouldNotCompute>(MaxConstEC))
-    ExitCounts.push_back(MaxConstEC);
   for (BasicBlock *ExitingBB : ExitingBlocks) {
     const SCEV *ExitCount = SE.getExitCount(L, ExitingBB);
+    if (isa<SCEVCouldNotCompute>(ExitCount))
+      ExitCount = SE.getExitCount(L, ExitingBB,
+                                  ScalarEvolution::ConstantMaximum);
     if (!isa<SCEVCouldNotCompute>(ExitCount)) {
       assert(DT.dominates(ExitingBB, L->getLoopLatch()) &&
              "We should only have known counts for exiting blocks that "

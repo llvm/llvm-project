@@ -6607,7 +6607,9 @@ void clang_enableStackTraces(void) {
 
 void clang_executeOnThread(void (*fn)(void*), void *user_data,
                            unsigned stack_size) {
-  llvm::llvm_execute_on_thread(fn, user_data, stack_size);
+  llvm::llvm_execute_on_thread(
+      fn, user_data,
+      stack_size == 0 ? llvm::None : llvm::Optional<unsigned>(stack_size));
 }
 
 //===----------------------------------------------------------------------===//

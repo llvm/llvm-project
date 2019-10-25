@@ -16,6 +16,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Tooling/Tooling.h"
 #include "gtest/gtest.h"
+#include "llvm/IR/DataLayout.h"
 
 using namespace clang::ast_matchers;
 using namespace clang::tooling;

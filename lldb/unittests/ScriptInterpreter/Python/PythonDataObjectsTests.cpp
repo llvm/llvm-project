@@ -21,6 +21,8 @@
 
 using namespace lldb_private;
 using namespace lldb_private::python;
+using llvm::Error;
+using llvm::Expected;
 
 class PythonDataObjectsTest : public PythonTestSuite {
 public:
@@ -771,4 +773,86 @@ bar_unbound = Foo.bar
   }
 
 #endif
+}
+
+TEST_F(PythonDataObjectsTest, TestScript) {
+
+  static const char script[] = R"(
+def factorial(n):
+  if n > 1:
+    return n * factorial(n-1)
+  else:
+    return 1;
+main = factorial
+)";
+
+  PythonScript factorial(script);
+
+  EXPECT_THAT_EXPECTED(As<long long>(factorial(5ll)), llvm::HasValue(120));
+}
+
+TEST_F(PythonDataObjectsTest, TestExceptions) {
+
+  static const char script[] = R"(
+def foo():
+  return bar()
+def bar():
+  return baz()
+def baz():
+  return 1 / 0
+main = foo
+)";
+
+  PythonScript foo(script);
+
+  EXPECT_THAT_EXPECTED(
+      foo(), llvm::Failed<PythonException>(testing::Property(
+                 &PythonException::ReadBacktrace,
+                 testing::AllOf(testing::ContainsRegex("line 3, in foo"),
+                                testing::ContainsRegex("line 5, in bar"),
+                                testing::ContainsRegex("line 7, in baz"),
+                                testing::ContainsRegex("ZeroDivisionError")))));
+
+  static const char script2[] = R"(
+class MyError(Exception):
+  def __str__(self):
+    return self.my_message
+
+def main():
+  raise MyError("lol")
+
+)";
+
+  PythonScript lol(script2);
+
+  EXPECT_THAT_EXPECTED(lol(),
+                       llvm::Failed<PythonException>(testing::Property(
+                           &PythonException::ReadBacktrace,
+                           testing::ContainsRegex("unprintable MyError"))));
+}
+
+TEST_F(PythonDataObjectsTest, TestRun) {
+
+  PythonDictionary globals(PyInitialValue::Empty);
+
+  auto x = As<long long>(runStringOneLine("40 + 2", globals, globals));
+  ASSERT_THAT_EXPECTED(x, llvm::Succeeded());
+  EXPECT_EQ(x.get(), 42l);
+
+  Expected<PythonObject> r = runStringOneLine("n = 42", globals, globals);
+  ASSERT_THAT_EXPECTED(r, llvm::Succeeded());
+  auto y = As<long long>(globals.GetItem("n"));
+  ASSERT_THAT_EXPECTED(y, llvm::Succeeded());
+  EXPECT_EQ(y.get(), 42l);
+
+  const char script[] = R"(
+def foobar():
+  return "foo" + "bar" + "baz"
+g = foobar()
+)";
+
+  r = runStringMultiLine(script, globals, globals);
+  ASSERT_THAT_EXPECTED(r, llvm::Succeeded());
+  auto g = As<std::string>(globals.GetItem("g"));
+  ASSERT_THAT_EXPECTED(g, llvm::HasValue("foobarbaz"));
 }

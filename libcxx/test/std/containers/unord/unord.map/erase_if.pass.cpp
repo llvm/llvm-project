@@ -48,7 +48,7 @@ void test()
     auto is4 = [](auto v) { return v.first == 4;};
     auto True  = [](auto) { return true; };
     auto False = [](auto) { return false; };
-    
+
     test0<S>({}, is1, {});
 
     test0<S>({1}, is1, {});
@@ -78,4 +78,3 @@ int main(int, char**)
 
   return 0;
 }
-

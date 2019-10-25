@@ -103,7 +103,7 @@ define i64 @f5(i64 %a, i64 %b) {
 
 define i32 @f6(i32 %a) {
 ; CHECK-LABEL: f6:
-; CHECK: beqzc ${{[0-9]+}}, $BB
+; CHECK: beqzc ${{[0-9]+}}, {{((\$)|(\.L))}}BB
 
   %cmp = icmp eq i32 %a, 0
   br i1 %cmp, label %if.then, label %if.end
@@ -117,7 +117,7 @@ define i32 @f6(i32 %a) {
 
 define i32 @f7(i32 %a) {
 ; CHECK-LABEL: f7:
-; CHECK: bnezc ${{[0-9]+}}, $BB
+; CHECK: bnezc ${{[0-9]+}}, {{((\$)|(\.L))}}BB
 
   %cmp = icmp eq i32 0, %a
   br i1 %cmp, label %if.then, label %if.end

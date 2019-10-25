@@ -453,7 +453,7 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     void __reset() { __id_ = 0; }
-    
+
     template<class _CharT, class _Traits>
     friend
     _LIBCPP_INLINE_VISIBILITY

@@ -44,11 +44,33 @@ set(LLDB_TEST_COMMON_ARGS
   -u CFLAGS
   )
 
+# Set the path to the default lldb test executable.
+set(LLDB_DEFAULT_TEST_EXECUTABLE "${LLVM_RUNTIME_OUTPUT_INTDIR}/lldb${CMAKE_EXECUTABLE_SUFFIX}")
+
+# Set the paths to default llvm tools.
+set(LLDB_DEFAULT_TEST_DSYMUTIL "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/dsymutil${CMAKE_EXECUTABLE_SUFFIX}")
+set(LLDB_DEFAULT_TEST_FILECHECK "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/FileCheck${CMAKE_EXECUTABLE_SUFFIX}")
+
+if (TARGET clang)
+  set(LLDB_DEFAULT_TEST_COMPILER "${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin/clang${CMAKE_EXECUTABLE_SUFFIX}")
+else()
+  set(LLDB_DEFAULT_TEST_COMPILER "")
+endif()
+
+set(LLDB_TEST_EXECUTABLE "${LLDB_DEFAULT_TEST_EXECUTABLE}" CACHE PATH "lldb executable used for testing")
+set(LLDB_TEST_COMPILER "${LLDB_DEFAULT_TEST_COMPILER}" CACHE PATH "C Compiler to use for building LLDB test inferiors")
+set(LLDB_TEST_DSYMUTIL "${LLDB_DEFAULT_TEST_DSYMUTIL}" CACHE PATH "dsymutil used for generating dSYM bundles")
+set(LLDB_TEST_FILECHECK "${LLDB_DEFAULT_TEST_FILECHECK}" CACHE PATH "FileCheck used for testing purposes")
+
+if ("${LLDB_TEST_COMPILER}" STREQUAL "")
+  message(FATAL_ERROR "LLDB test compiler not specified. Tests will not run.")
+endif()
+
 list(APPEND LLDB_TEST_COMMON_ARGS
   --executable ${LLDB_TEST_EXECUTABLE}
+  --compiler ${LLDB_TEST_COMPILER}
   --dsymutil ${LLDB_TEST_DSYMUTIL}
   --filecheck ${LLDB_TEST_FILECHECK}
-  -C ${LLDB_TEST_C_COMPILER}
   )
 
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
@@ -125,9 +147,38 @@ if(CMAKE_HOST_APPLE)
   endif()
 endif()
 
-set(LLDB_DOTEST_ARGS ${LLDB_TEST_COMMON_ARGS};${LLDB_TEST_USER_ARGS})
-set_property(GLOBAL PROPERTY LLDB_DOTEST_ARGS_PROPERTY ${LLDB_DOTEST_ARGS})
+set(LLDB_DOTEST_ARGS ${LLDB_TEST_COMMON_ARGS};${LLDB_TEST_USER_ARGS} CACHE INTERNAL STRING)
+set(dotest_args_replacement ${LLVM_BUILD_MODE})
 
-# This will add LLDB's test dependencies to the dependencies for check-all and
-# include them in the test-depends target.
-set_property(GLOBAL APPEND PROPERTY LLVM_LIT_DEPENDS ${ARG_DEPENDS})
+if(LLDB_BUILT_STANDALONE)
+  # In paths to our build-tree, replace CMAKE_CFG_INTDIR with our configuration name placeholder.
+  string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} config_runtime_output_dir ${LLVM_RUNTIME_OUTPUT_INTDIR})
+  string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_DOTEST_ARGS "${LLDB_DOTEST_ARGS}")
+
+  # Remaining ones must be paths to the provided LLVM build-tree.
+  if(LLVM_CONFIGURATION_TYPES)
+    # LLDB uses single-config; LLVM multi-config; pick one and prefer Release types.
+    # Otherwise, if both use multi-config the default is fine.
+    if(NOT CMAKE_CONFIGURATION_TYPES)
+      if(RelWithDebInfo IN_LIST LLVM_CONFIGURATION_TYPES)
+        set(dotest_args_replacement RelWithDebInfo)
+      elseif(Release IN_LIST LLVM_CONFIGURATION_TYPES)
+        set(dotest_args_replacement Release)
+      else()
+        list(GET LLVM_CONFIGURATION_TYPES 0 dotest_args_replacement)
+      endif()
+    endif()
+  else()
+    # Common case: LLVM used a single-configuration generator like Ninja.
+    set(dotest_args_replacement ".")
+  endif()
+endif()
+
+string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_DOTEST_ARGS "${LLDB_DOTEST_ARGS}")
+
+# Configure the API test suite.
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
+  MAIN_CONFIG
+  ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py)

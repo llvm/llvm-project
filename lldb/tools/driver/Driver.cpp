@@ -853,16 +853,6 @@ int main(int argc, char const *argv[])
   signal(SIGCONT, sigcont_handler);
 #endif
 
-  // Occasionally, during test teardown, LLDB writes to a closed pipe.
-  // Sometimes the communication is inherently unreliable, so LLDB tries to
-  // avoid being killed due to SIGPIPE. However, LLVM's default SIGPIPE behavior
-  // is to exit with IO_ERR. Opt LLDB out of that.
-  //
-  // We don't disable LLVM's signal handling entirely because we still want
-  // pretty stack traces, and file cleanup (for when, say, the clang embedded
-  // in LLDB leaves behind temporary objects).
-  llvm::sys::SetPipeSignalFunction(nullptr);
-
   int exit_code = 0;
   // Create a scope for driver so that the driver object will destroy itself
   // before SBDebugger::Terminate() is called.

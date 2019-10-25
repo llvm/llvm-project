@@ -437,9 +437,6 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   switch (Opc) {
   case G_TRUNC:
-  case G_ADD:
-  case G_SUB:
-  case G_MUL:
   case G_UMULH:
   case G_ZEXTLOAD:
   case G_SEXTLOAD:
@@ -452,13 +449,20 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_SHL:
   case G_ASHR:
   case G_LSHR:
-  case G_SDIV:
-  case G_UDIV:
-  case G_SREM:
-  case G_UREM:
   case G_BRINDIRECT:
   case G_VASTART:
     OperandsMapping = &Mips::ValueMappings[Mips::GPRIdx];
+    break;
+  case G_ADD:
+  case G_SUB:
+  case G_MUL:
+  case G_SDIV:
+  case G_SREM:
+  case G_UDIV:
+  case G_UREM:
+    OperandsMapping = &Mips::ValueMappings[Mips::GPRIdx];
+    if (Op0Size == 128)
+      OperandsMapping = getMSAMapping(MF);
     break;
   case G_STORE:
   case G_LOAD:
@@ -535,13 +539,17 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                                           &Mips::ValueMappings[Mips::GPRIdx]});
     MappingID = CustomMappingID;
     break;
+  case G_FSQRT:
+    OperandsMapping = getFprbMapping(Op0Size);
+    break;
   case G_FADD:
   case G_FSUB:
   case G_FMUL:
   case G_FDIV:
   case G_FABS:
-  case G_FSQRT:
     OperandsMapping = getFprbMapping(Op0Size);
+    if (Op0Size == 128)
+      OperandsMapping = getMSAMapping(MF);
     break;
   case G_FCONSTANT:
     OperandsMapping = getOperandsMapping({getFprbMapping(Op0Size), nullptr});

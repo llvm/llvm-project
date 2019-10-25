@@ -18,8 +18,8 @@
 
 <div id="content">
 <h1>Implicit Checkers</h1>
-Even though the implicit checkers do not produce any warnings, they are used to 
-support the analyzer core and model known APIs. See also 
+Even though the implicit checkers do not produce any warnings, they are used to
+support the analyzer core and model known APIs. See also
 <a href = "available_checks.html">Default Checkers</a>
 and <a href = "alpha_checks.html">Experimental (Alpha) Checkers</a>.
 <ul>
@@ -50,10 +50,10 @@ public:
 class B: public A {
 public:
   B()
-  :A(foo()) 
+  :A(foo())
   // DynamicTypeInfo for 'this' rigion will wrap type 'A'
   // unless the base constructor call expression is processed
-  {} 
+  {}
   virtual int foo();
 };
 </pre></div><div class="separator"></div>
@@ -112,10 +112,10 @@ void test() {
 
 @implementation MyObj
 - (void)foo {
-  [[NSAssertionHandler currentHandler] handleFailureInMethod:_cmd 
-                                       object:self 
-                                       file:(@"somefile.m") 
-                                       lineNumber:1 
+  [[NSAssertionHandler currentHandler] handleFailureInMethod:_cmd
+                                       object:self
+                                       file:(@"somefile.m")
+                                       lineNumber:1
                                        description:(@"some text")];
     // generate sink
 }
@@ -139,7 +139,7 @@ Improved modeling of loops using Cocoa collection types.</div></div></td>
 <div class="example"><pre>
 void test() {
   id x;
-  for (x in [NSArray testObject]) { 
+  for (x in [NSArray testObject]) {
     // assume the value of 'x' is non-nil
   }
 }

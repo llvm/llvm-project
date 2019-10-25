@@ -1059,9 +1059,9 @@ Value *InstCombiner::simplifyMaskedLoad(IntrinsicInst &II) {
 
   // If we can unconditionally load from this address, replace with a
   // load/select idiom. TODO: use DT for context sensitive query
-  if (isDereferenceableAndAlignedPointer(LoadPtr, II.getType(), Alignment,
-                                         II.getModule()->getDataLayout(),
-                                         &II, nullptr)) {
+  if (isDereferenceableAndAlignedPointer(
+          LoadPtr, II.getType(), MaybeAlign(Alignment),
+          II.getModule()->getDataLayout(), &II, nullptr)) {
     Value *LI = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
                                          "unmaskedload");
     return Builder.CreateSelect(II.getArgOperand(2), LI, II.getArgOperand(3));
@@ -1085,7 +1085,8 @@ Instruction *InstCombiner::simplifyMaskedStore(IntrinsicInst &II) {
   // If the mask is all ones, this is a plain vector store of the 1st argument.
   if (ConstMask->isAllOnesValue()) {
     Value *StorePtr = II.getArgOperand(1);
-    unsigned Alignment = cast<ConstantInt>(II.getArgOperand(2))->getZExtValue();
+    MaybeAlign Alignment(
+        cast<ConstantInt>(II.getArgOperand(2))->getZExtValue());
     return new StoreInst(II.getArgOperand(0), StorePtr, false, Alignment);
   }
 
@@ -2342,7 +2343,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // Turn PPC VSX loads into normal loads.
     Value *Ptr = Builder.CreateBitCast(II->getArgOperand(0),
                                        PointerType::getUnqual(II->getType()));
-    return new LoadInst(II->getType(), Ptr, Twine(""), false, 1);
+    return new LoadInst(II->getType(), Ptr, Twine(""), false, Align::None());
   }
   case Intrinsic::ppc_altivec_stvx:
   case Intrinsic::ppc_altivec_stvxl:
@@ -2360,7 +2361,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // Turn PPC VSX stores into normal stores.
     Type *OpPtrTy = PointerType::getUnqual(II->getArgOperand(0)->getType());
     Value *Ptr = Builder.CreateBitCast(II->getArgOperand(1), OpPtrTy);
-    return new StoreInst(II->getArgOperand(0), Ptr, false, 1);
+    return new StoreInst(II->getArgOperand(0), Ptr, false, Align::None());
   }
   case Intrinsic::ppc_qpx_qvlfs:
     // Turn PPC QPX qvlfs -> load if the pointer is known aligned.
@@ -3305,6 +3306,19 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       II->setArgOperand(1, Key);
       return II;
     }
+    break;
+  }
+  case Intrinsic::arm_mve_vadc:
+  case Intrinsic::arm_mve_vadc_predicated: {
+    unsigned CarryOp =
+        (II->getIntrinsicID() == Intrinsic::arm_mve_vadc_predicated) ? 3 : 2;
+    assert(II->getArgOperand(CarryOp)->getType()->getScalarSizeInBits() == 32 &&
+           "Bad type for intrinsic!");
+
+    KnownBits CarryKnown(32);
+    if (SimplifyDemandedBits(II, CarryOp, APInt::getOneBitSet(32, 29),
+                             CarryKnown))
+      return II;
     break;
   }
   case Intrinsic::amdgcn_rcp: {

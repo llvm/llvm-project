@@ -327,6 +327,14 @@ public:
                          const ConstantRange &Other) const;
 
   /// Return a new range representing the possible values resulting
+  /// from an application of the specified overflowing binary operator to a
+  /// left hand side of this range and a right hand side of \p Other given
+  /// the provided knowledge about lack of wrapping \p NoWrapKind.
+  ConstantRange overflowingBinaryOp(Instruction::BinaryOps BinOp,
+                                    const ConstantRange &Other,
+                                    unsigned NoWrapKind) const;
+
+  /// Return a new range representing the possible values resulting
   /// from an addition of a value in this range and a value in \p Other.
   ConstantRange add(const ConstantRange &Other) const;
 
