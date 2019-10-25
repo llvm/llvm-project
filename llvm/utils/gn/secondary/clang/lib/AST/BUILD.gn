@@ -37,6 +37,7 @@ static_library("AST") {
   ]
   sources = [
     "APValue.cpp",
+    "ASTConcept.cpp",
     "ASTConsumer.cpp",
     "ASTContext.cpp",
     "ASTDiagnostic.cpp",
