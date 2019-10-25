@@ -1,0 +1,3 @@
+#!/bin/bash
+DPU_CLANG_DIR="$(dirname "$0")"
+"${DPU_CLANG_DIR}/clang" --target=dpu-upmem-dpurte "$@"
