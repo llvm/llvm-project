@@ -307,6 +307,7 @@ if __name__ == '__main__':
         'branch',
         metavar='GIT_BRANCH',
         type=str,
+        default='master',
         nargs='?',
         help="branch to push (default: everything not in the branch's "
         'upstream)')
