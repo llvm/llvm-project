@@ -297,8 +297,46 @@ define i64 @popz_i32_i64(i32 %x) {
   ret i64 %z
 }
 
+define i64 @popa_i16_i64(i16 %x) {
+; FAST-LABEL: popa_i16_i64:
+; FAST:       # %bb.0:
+; FAST-NEXT:    rlwinm 3, 3, 0, 16, 31
+; FAST-NEXT:    popcntw 3, 3
+; FAST-NEXT:    andi. 3, 3, 16
+; FAST-NEXT:    blr
+;
+; SLOW-LABEL: popa_i16_i64:
+; SLOW:       # %bb.0:
+; SLOW-NEXT:    clrlwi 5, 3, 16
+; SLOW-NEXT:    rlwinm 3, 3, 31, 0, 31
+; SLOW-NEXT:    andi. 3, 3, 21845
+; SLOW-NEXT:    lis 4, 13107
+; SLOW-NEXT:    subf 3, 3, 5
+; SLOW-NEXT:    ori 4, 4, 13107
+; SLOW-NEXT:    rotlwi 5, 3, 30
+; SLOW-NEXT:    and 3, 3, 4
+; SLOW-NEXT:    andis. 4, 5, 13107
+; SLOW-NEXT:    andi. 5, 5, 13107
+; SLOW-NEXT:    or 4, 5, 4
+; SLOW-NEXT:    add 3, 3, 4
+; SLOW-NEXT:    lis 5, 3855
+; SLOW-NEXT:    srwi 4, 3, 4
+; SLOW-NEXT:    add 3, 3, 4
+; SLOW-NEXT:    lis 4, 257
+; SLOW-NEXT:    ori 5, 5, 3855
+; SLOW-NEXT:    and 3, 3, 5
+; SLOW-NEXT:    ori 4, 4, 257
+; SLOW-NEXT:    mullw 3, 3, 4
+; SLOW-NEXT:    srwi 3, 3, 24
+; SLOW-NEXT:    andi. 3, 3, 16
+; SLOW-NEXT:    blr
+  %pop = call i16 @llvm.ctpop.i16(i16 %x)
+  %z = zext i16 %pop to i64 ; SimplifyDemandedBits may turn zext (or sext) into aext
+  %a = and i64 %z, 16
+  ret i64 %a
+}
+
 declare i8 @llvm.ctpop.i8(i8) nounwind readnone
 declare i16 @llvm.ctpop.i16(i16) nounwind readnone
 declare i32 @llvm.ctpop.i32(i32) nounwind readnone
 declare i64 @llvm.ctpop.i64(i64) nounwind readnone
-
