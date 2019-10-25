@@ -215,7 +215,7 @@ protected:
   const char *TPRel64Directive = nullptr;
 
   /// This is true if this target uses "Sun Style" syntax for section switching
-  /// ("#alloc,#write" etc) instead of the normal ELF syntax (,"a,w") in
+  /// ("#alloc,#write" etc) alongside the normal ELF syntax (,"a,w") in
   /// .section directives.  Defaults to false.
   bool SunStyleELFSectionSwitchSyntax = false;
 
