@@ -367,7 +367,7 @@ tweakSelection(const Range &Sel, const InputsAndAST &AST) {
   auto End = positionToOffset(AST.Inputs.Contents, Sel.end);
   if (!End)
     return End.takeError();
-  return Tweak::Selection(AST.Inputs.Index, AST.AST, *Begin, *End);
+  return Tweak::Selection(AST.AST, *Begin, *End);
 }
 
 void ClangdServer::enumerateTweaks(PathRef File, Range Sel,
