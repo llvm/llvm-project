@@ -323,7 +323,11 @@ public:
   SetBreakpointCommandCallbackFunction(
       BreakpointOptions *bp_options,
       const char *function_name,
-      StructuredData::ObjectSP extra_args_sp) {}
+      StructuredData::ObjectSP extra_args_sp) {
+    Status error;
+    error.SetErrorString("unimplemented");
+    return error;
+  }
 
   /// Set a one-liner as the callback for the watchpoint.
   virtual void SetWatchpointCommandCallback(WatchpointOptions *wp_options,
