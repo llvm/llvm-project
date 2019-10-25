@@ -315,17 +315,40 @@ unsigned DwarfTypeUnit::getOrCreateSourceID(const DIFile *File) {
       Asm->OutContext.getDwarfVersion(), File->getSource());
 }
 
+void DwarfUnit::addPoolOpAddress(DIEValueList &Die, const MCSymbol *Label) {
+  const MCSymbol *Base = nullptr;
+  if (Label->isInSection() && DD->useAddrOffsetExpressions())
+    Base = DD->getSectionLabel(&Label->getSection());
+  if (!Base) {
+    uint32_t Index = DD->getAddressPool().getIndex(Label);
+    if (DD->getDwarfVersion() >= 5) {
+      addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_addrx);
+      addUInt(Die, dwarf::DW_FORM_addrx, Index);
+    } else {
+      addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_GNU_addr_index);
+      addUInt(Die, dwarf::DW_FORM_GNU_addr_index, Index);
+    }
+    return;
+  }
+
+  addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_GNU_addr_index);
+  addUInt(Die, dwarf::DW_FORM_GNU_addr_index,
+          DD->getAddressPool().getIndex(Base));
+  if (Base != Label) {
+    addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_const4u);
+    addLabelDelta(Die, (dwarf::Attribute)0, Label, Base);
+    addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_plus);
+  }
+}
+
 void DwarfUnit::addOpAddress(DIELoc &Die, const MCSymbol *Sym) {
   if (DD->getDwarfVersion() >= 5) {
-    addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_addrx);
-    addUInt(Die, dwarf::DW_FORM_addrx, DD->getAddressPool().getIndex(Sym));
+    addPoolOpAddress(Die, Sym);
     return;
   }
 
   if (DD->useSplitDwarf()) {
-    addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_GNU_addr_index);
-    addUInt(Die, dwarf::DW_FORM_GNU_addr_index,
-            DD->getAddressPool().getIndex(Sym));
+    addPoolOpAddress(Die, Sym);
     return;
   }
 
@@ -333,7 +356,7 @@ void DwarfUnit::addOpAddress(DIELoc &Die, const MCSymbol *Sym) {
   addLabel(Die, dwarf::DW_FORM_addr, Sym);
 }
 
-void DwarfUnit::addLabelDelta(DIE &Die, dwarf::Attribute Attribute,
+void DwarfUnit::addLabelDelta(DIEValueList &Die, dwarf::Attribute Attribute,
                               const MCSymbol *Hi, const MCSymbol *Lo) {
   Die.addValue(DIEValueAllocator, Attribute, dwarf::DW_FORM_data4,
                new (DIEValueAllocator) DIEDelta(Hi, Lo));
@@ -382,11 +405,16 @@ void DwarfUnit::addBlock(DIE &Die, dwarf::Attribute Attribute, DIELoc *Loc) {
                Loc->BestForm(DD->getDwarfVersion()), Loc);
 }
 
-void DwarfUnit::addBlock(DIE &Die, dwarf::Attribute Attribute,
+void DwarfUnit::addBlock(DIE &Die, dwarf::Attribute Attribute, dwarf::Form Form,
                          DIEBlock *Block) {
   Block->ComputeSize(Asm);
   DIEBlocks.push_back(Block); // Memoize so we can call the destructor later on.
-  Die.addValue(DIEValueAllocator, Attribute, Block->BestForm(), Block);
+  Die.addValue(DIEValueAllocator, Attribute, Form, Block);
+}
+
+void DwarfUnit::addBlock(DIE &Die, dwarf::Attribute Attribute,
+                         DIEBlock *Block) {
+  addBlock(Die, Attribute, Block->BestForm(), Block);
 }
 
 void DwarfUnit::addSourceLine(DIE &Die, unsigned Line, const DIFile *File) {
