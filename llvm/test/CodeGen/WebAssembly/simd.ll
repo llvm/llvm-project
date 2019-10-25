@@ -584,13 +584,13 @@ define i32 @extract_var_v4i32(<4 x i32> %v, i32 %i) {
   ret i32 %elem
 }
 
-; CHECK-LABEL: extract_undef_v4i32:
+; CHECK-LABEL: extract_zero_v4i32:
 ; NO-SIMD128-NOT: i32x4
-; SIMD128-NEXT: .functype extract_undef_v4i32 (v128) -> (i32){{$}}
+; SIMD128-NEXT: .functype extract_zero_v4i32 (v128) -> (i32){{$}}
 ; SIMD128-NEXT: i32x4.extract_lane $push[[R:[0-9]+]]=, $0, 0{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
-define i32 @extract_undef_v4i32(<4 x i32> %v) {
-  %elem = extractelement <4 x i32> %v, i32 undef
+define i32 @extract_zero_v4i32(<4 x i32> %v) {
+  %elem = extractelement <4 x i32> %v, i32 0
   ret i32 %elem
 }
 
@@ -737,14 +737,14 @@ define i64 @extract_var_v2i64(<2 x i64> %v, i32 %i) {
   ret i64 %elem
 }
 
-; CHECK-LABEL: extract_undef_v2i64:
+; CHECK-LABEL: extract_zero_v2i64:
 ; NO-SIMD128-NOT: i64x2
 ; SIMD128-VM-NOT: i64x2
-; SIMD128-NEXT: .functype extract_undef_v2i64 (v128) -> (i64){{$}}
+; SIMD128-NEXT: .functype extract_zero_v2i64 (v128) -> (i64){{$}}
 ; SIMD128-NEXT: i64x2.extract_lane $push[[R:[0-9]+]]=, $0, 0{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
-define i64 @extract_undef_v2i64(<2 x i64> %v) {
-  %elem = extractelement <2 x i64> %v, i64 undef
+define i64 @extract_zero_v2i64(<2 x i64> %v) {
+  %elem = extractelement <2 x i64> %v, i64 0
   ret i64 %elem
 }
 
@@ -890,13 +890,13 @@ define float @extract_var_v4f32(<4 x float> %v, i32 %i) {
   ret float %elem
 }
 
-; CHECK-LABEL: extract_undef_v4f32:
+; CHECK-LABEL: extract_zero_v4f32:
 ; NO-SIMD128-NOT: f32x4
-; SIMD128-NEXT: .functype extract_undef_v4f32 (v128) -> (f32){{$}}
+; SIMD128-NEXT: .functype extract_zero_v4f32 (v128) -> (f32){{$}}
 ; SIMD128-NEXT: f32x4.extract_lane $push[[R:[0-9]+]]=, $0, 0{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
-define float @extract_undef_v4f32(<4 x float> %v) {
-  %elem = extractelement <4 x float> %v, i32 undef
+define float @extract_zero_v4f32(<4 x float> %v) {
+  %elem = extractelement <4 x float> %v, i32 0
   ret float %elem
 }
 
@@ -1042,14 +1042,14 @@ define double @extract_var_v2f64(<2 x double> %v, i32 %i) {
   ret double %elem
 }
 
-; CHECK-LABEL: extract_undef_v2f64:
+; CHECK-LABEL: extract_zero_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2
-; SIMD128-NEXT: .functype extract_undef_v2f64 (v128) -> (f64){{$}}
+; SIMD128-NEXT: .functype extract_zero_v2f64 (v128) -> (f64){{$}}
 ; SIMD128-NEXT: f64x2.extract_lane $push[[R:[0-9]+]]=, $0, 0{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
-define double @extract_undef_v2f64(<2 x double> %v) {
-  %elem = extractelement <2 x double> %v, i32 undef
+define double @extract_zero_v2f64(<2 x double> %v) {
+  %elem = extractelement <2 x double> %v, i32 0
   ret double %elem
 }
 
