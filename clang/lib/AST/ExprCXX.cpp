@@ -1205,11 +1205,6 @@ CXXMethodDecl *LambdaExpr::getCallOperator() const {
   return Record->getLambdaCallOperator();
 }
 
-FunctionTemplateDecl *LambdaExpr::getDependentCallOperator() const {
-  CXXRecordDecl *Record = getLambdaClass();
-  return Record->getDependentLambdaCallOperator();
-}
-
 TemplateParameterList *LambdaExpr::getTemplateParameterList() const {
   CXXRecordDecl *Record = getLambdaClass();
   return Record->getGenericLambdaTemplateParameterList();

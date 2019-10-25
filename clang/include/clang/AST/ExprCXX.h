@@ -1902,10 +1902,6 @@ public:
   /// lambda expression.
   CXXMethodDecl *getCallOperator() const;
 
-  /// Retrieve the function template call operator associated with this
-  /// lambda expression.
-  FunctionTemplateDecl *getDependentCallOperator() const;
-
   /// If this is a generic lambda expression, retrieve the template
   /// parameter list associated with it, or else return null.
   TemplateParameterList *getTemplateParameterList() const;
