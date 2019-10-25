@@ -413,5 +413,17 @@
 # CHECK: PASS: shtest-shell :: rm-unicode-0.txt
 # CHECK: PASS: shtest-shell :: sequencing-0.txt
 # CHECK: XFAIL: shtest-shell :: sequencing-1.txt
+
+# CHECK: FAIL: shtest-shell :: stdout-encoding.txt
+# CHECK: *** TEST 'shtest-shell :: stdout-encoding.txt' FAILED ***
+# CHECK: $ "cat" "diff-in.bin"
+# CHECK: # command output:
+# CHECK-NEXT: {{^.f.o.o.$}}
+# CHECK-NEXT: {{^.b.a.r..}}
+# CHECK-NEXT: {{^.b.a.z.$}}
+# CHECK-NOT: error
+# CHECK: $ "false"
+# CHECK: ***
+
 # CHECK: PASS: shtest-shell :: valid-shell.txt
-# CHECK: Failing Tests (32)
+# CHECK: Failing Tests (33)
