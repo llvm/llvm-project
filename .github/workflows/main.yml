@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+    types:  
+
+jobs:
+  build:
+    runs-on: macOS-latest
+    
+    steps:
+    - uses: actions/checkout@v1
+    - name: Create build directory
+      run: mkdir build
+    - name: Configure llvm
+      working-directory: build
+      run: cmake ../llvm -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_LLVM_DYLIB=ON -DLLVM_LINK_LLVM_DYLIB=ON -DLLVM_ENABLE_BINDINGS=OFF
+    - name: Build and test llvm
+      run: make check-all -C build
