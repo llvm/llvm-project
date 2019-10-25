@@ -8,7 +8,8 @@
 ;     f2();
 ; }
 
-; In this case, block placement duplicates the heap allocation site.
+; In this case, block placement duplicates the heap allocation site. For now,
+; LLVM drops the labels from one call site. Eventually, we should track both.
 
 ; ModuleID = 't.cpp'
 source_filename = "t.cpp"
@@ -36,24 +37,14 @@ cond.end:                                         ; preds = %entry, %cond.true
 ; CHECK-LABEL: taildupit: # @taildupit
 ; CHECK: testq
 ; CHECK: je
+; CHECK: .Lheapallocsite0:
 ; CHECK: callq alloc
-; CHECK-NEXT: [[L1:.Ltmp[0-9]+]]
+; CHECK: .Lheapallocsite1:
 ; CHECK: jmp f2 # TAILCALL
+; CHECK-NOT: Lheapallocsite
 ; CHECK: callq alloc
-; CHECK-NEXT: [[L3:.Ltmp[0-9]+]]
+; CHECK-NOT: Lheapallocsite
 ; CHECK: jmp f2 # TAILCALL
-
-; CHECK-LABEL: .short 4423                    # Record kind: S_GPROC32_ID
-; CHECK:       .short 4446                    # Record kind: S_HEAPALLOCSITE
-; CHECK-NEXT:  .secrel32 [[L0:.Ltmp[0-9]+]]
-; CHECK-NEXT:  .secidx [[L0]]
-; CHECK-NEXT:  .short [[L1]]-[[L0]]
-; CHECK-NEXT:  .long 3
-; CHECK:       .short 4446                    # Record kind: S_HEAPALLOCSITE
-; CHECK-NEXT:  .secrel32 [[L2:.Ltmp[0-9]+]]
-; CHECK-NEXT:  .secidx [[L2]]
-; CHECK-NEXT:  .short [[L3]]-[[L2]]
-; CHECK-NEXT:  .long 3
 
 declare dso_local i8* @alloc(i32)
 

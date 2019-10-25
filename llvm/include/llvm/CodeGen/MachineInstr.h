@@ -136,23 +136,19 @@ private:
   /// This has to be defined eagerly due to the implementation constraints of
   /// `PointerSumType` where it is used.
   class ExtraInfo final
-      : TrailingObjects<ExtraInfo, MachineMemOperand *, MCSymbol *, MDNode *> {
+      : TrailingObjects<ExtraInfo, MachineMemOperand *, MCSymbol *> {
   public:
     static ExtraInfo *create(BumpPtrAllocator &Allocator,
                              ArrayRef<MachineMemOperand *> MMOs,
                              MCSymbol *PreInstrSymbol = nullptr,
-                             MCSymbol *PostInstrSymbol = nullptr,
-                             MDNode *HeapAllocMarker = nullptr) {
+                             MCSymbol *PostInstrSymbol = nullptr) {
       bool HasPreInstrSymbol = PreInstrSymbol != nullptr;
       bool HasPostInstrSymbol = PostInstrSymbol != nullptr;
-      bool HasHeapAllocMarker = HeapAllocMarker != nullptr;
       auto *Result = new (Allocator.Allocate(
-          totalSizeToAlloc<MachineMemOperand *, MCSymbol *, MDNode *>(
-              MMOs.size(), HasPreInstrSymbol + HasPostInstrSymbol,
-              HasHeapAllocMarker),
+          totalSizeToAlloc<MachineMemOperand *, MCSymbol *>(
+              MMOs.size(), HasPreInstrSymbol + HasPostInstrSymbol),
           alignof(ExtraInfo)))
-          ExtraInfo(MMOs.size(), HasPreInstrSymbol, HasPostInstrSymbol,
-                    HasHeapAllocMarker);
+          ExtraInfo(MMOs.size(), HasPreInstrSymbol, HasPostInstrSymbol);
 
       // Copy the actual data into the trailing objects.
       std::copy(MMOs.begin(), MMOs.end(),
@@ -163,10 +159,6 @@ private:
       if (HasPostInstrSymbol)
         Result->getTrailingObjects<MCSymbol *>()[HasPreInstrSymbol] =
             PostInstrSymbol;
-      if (HasHeapAllocMarker)
-        Result->getTrailingObjects<MDNode *>()[HasPreInstrSymbol +
-                                               HasPostInstrSymbol] =
-            HeapAllocMarker;
 
       return Result;
     }
@@ -185,13 +177,6 @@ private:
                  : nullptr;
     }
 
-    MDNode *getHeapAllocMarker() const {
-      return HasHeapAllocMarker
-                 ? getTrailingObjects<MDNode *>()[HasPreInstrSymbol +
-                                                  HasPostInstrSymbol]
-                 : nullptr;
-    }
-
   private:
     friend TrailingObjects;
 
@@ -203,7 +188,6 @@ private:
     const int NumMMOs;
     const bool HasPreInstrSymbol;
     const bool HasPostInstrSymbol;
-    const bool HasHeapAllocMarker;
 
     // Implement the `TrailingObjects` internal API.
     size_t numTrailingObjects(OverloadToken<MachineMemOperand *>) const {
@@ -212,17 +196,12 @@ private:
     size_t numTrailingObjects(OverloadToken<MCSymbol *>) const {
       return HasPreInstrSymbol + HasPostInstrSymbol;
     }
-    size_t numTrailingObjects(OverloadToken<MDNode *>) const {
-      return HasHeapAllocMarker;
-    }
 
     // Just a boring constructor to allow us to initialize the sizes. Always use
     // the `create` routine above.
-    ExtraInfo(int NumMMOs, bool HasPreInstrSymbol, bool HasPostInstrSymbol,
-              bool HasHeapAllocMarker)
+    ExtraInfo(int NumMMOs, bool HasPreInstrSymbol, bool HasPostInstrSymbol)
         : NumMMOs(NumMMOs), HasPreInstrSymbol(HasPreInstrSymbol),
-          HasPostInstrSymbol(HasPostInstrSymbol),
-          HasHeapAllocMarker(HasHeapAllocMarker) {}
+          HasPostInstrSymbol(HasPostInstrSymbol) {}
   };
 
   /// Enumeration of the kinds of inline extra info available. It is important
@@ -232,8 +211,7 @@ private:
     EIIK_MMO = 0,
     EIIK_PreInstrSymbol,
     EIIK_PostInstrSymbol,
-    EIIK_HeapAllocMarker,
-    EIIK_OutOfLine,
+    EIIK_OutOfLine
   };
 
   // We store extra information about the instruction here. The common case is
@@ -245,7 +223,6 @@ private:
                  PointerSumTypeMember<EIIK_MMO, MachineMemOperand *>,
                  PointerSumTypeMember<EIIK_PreInstrSymbol, MCSymbol *>,
                  PointerSumTypeMember<EIIK_PostInstrSymbol, MCSymbol *>,
-                 PointerSumTypeMember<EIIK_HeapAllocMarker, MDNode *>,
                  PointerSumTypeMember<EIIK_OutOfLine, ExtraInfo *>>
       Info;
 
@@ -611,17 +588,6 @@ public:
       return S;
     if (ExtraInfo *EI = Info.get<EIIK_OutOfLine>())
       return EI->getPostInstrSymbol();
-
-    return nullptr;
-  }
-
-  MDNode *getHeapAllocMarker() const {
-    if (!Info)
-      return nullptr;
-    if (MDNode *S = Info.get<EIIK_HeapAllocMarker>())
-      return S;
-    if (ExtraInfo *EI = Info.get<EIIK_OutOfLine>())
-      return EI->getHeapAllocMarker();
 
     return nullptr;
   }
@@ -1631,12 +1597,6 @@ public:
   /// replace ours with it.
   void cloneInstrSymbols(MachineFunction &MF, const MachineInstr &MI);
 
-  /// Set a marker on instructions that denotes where we should create and emit
-  /// heap alloc site labels. This waits until after instruction selection and
-  /// optimizations to create the label, so it should still work if the
-  /// instruction is removed or duplicated.
-  void setHeapAllocMarker(MachineFunction &MF, MDNode *DI);
-
   /// Return the MIFlags which represent both MachineInstrs. This
   /// should be used when merging two MachineInstrs into one. This routine does
   /// not modify the MIFlags of this MachineInstr.
@@ -1697,12 +1657,6 @@ private:
   const TargetRegisterClass *getRegClassConstraintEffectForVRegImpl(
       unsigned OpIdx, Register Reg, const TargetRegisterClass *CurRC,
       const TargetInstrInfo *TII, const TargetRegisterInfo *TRI) const;
-
-  /// Stores extra instruction information inline or allocates as ExtraInfo
-  /// based on the number of pointers.
-  void setExtraInfo(MachineFunction &MF, ArrayRef<MachineMemOperand *> MMOs,
-                    MCSymbol *PreInstrSymbol, MCSymbol *PostInstrSymbol,
-                    MDNode *HeapAllocMarker);
 };
 
 /// Special DenseMapInfo traits to compare MachineInstr* by *value* of the
