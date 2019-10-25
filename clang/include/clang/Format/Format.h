@@ -706,6 +706,32 @@ struct FormatStyle {
     ///   };
     /// \endcode
     BS_Allman,
+    /// Like ``Allman`` but always indent braces and line up code with braces.
+    /// \code
+    ///    try
+    ///     {
+    ///     foo();
+    ///     }
+    ///   catch ()
+    ///     {
+    ///     }
+    ///   void foo() { bar(); }
+    ///   class foo
+    ///     {
+    ///     };
+    ///   if (foo())
+    ///     {
+    ///     }
+    ///   else
+    ///     {
+    ///     }
+    ///   enum X : int
+    ///     {
+    ///     A,
+    ///     B
+    ///     };
+    /// \endcode
+    BS_Whitesmiths,
     /// Always break before braces and add an extra level of indentation to
     /// braces of control statements, not to those of class, function
     /// or other definitions.
@@ -732,32 +758,6 @@ struct FormatStyle {
     ///     A,
     ///     B
     ///   };
-    /// \endcode
-    BS_Whitesmiths,
-    /// Like ``Allman`` but always indent braces and line up code with braces.
-    /// \code
-    ///    try
-    ///     {
-    ///     foo();
-    ///     }
-    ///   catch ()
-    ///     {
-    ///     }
-    ///   void foo() { bar(); }
-    ///   class foo
-    ///     {
-    ///     };
-    ///   if (foo())
-    ///     {
-    ///     }
-    ///   else
-    ///     {
-    ///     }
-    ///   enum X : int
-    ///     {
-    ///     A,
-    ///     B
-    ///     };
     /// \endcode
     BS_GNU,
     /// Like ``Attach``, but break before functions.
