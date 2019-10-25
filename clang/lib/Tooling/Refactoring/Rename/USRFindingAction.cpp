@@ -39,6 +39,8 @@ namespace clang {
 namespace tooling {
 
 const NamedDecl *getCanonicalSymbolDeclaration(const NamedDecl *FoundDecl) {
+  if (!FoundDecl)
+    return nullptr;
   // If FoundDecl is a constructor or destructor, we want to instead take
   // the Decl of the corresponding class.
   if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(FoundDecl))
