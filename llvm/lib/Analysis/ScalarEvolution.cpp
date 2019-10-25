@@ -6607,10 +6607,8 @@ const SCEV *ScalarEvolution::getExitCount(const Loop *L,
     return getBackedgeTakenInfo(L).getExact(ExitingBlock, this);
   case ConstantMaximum:
     return getCouldNotCompute();
-  default:
-    llvm_unreachable("Impossible case!");
   };
-  
+  llvm_unreachable("Invalid ExitCountKind!");
 }
 
 const SCEV *
@@ -6626,9 +6624,8 @@ const SCEV *ScalarEvolution::getBackedgeTakenCount(const Loop *L,
     return getBackedgeTakenInfo(L).getExact(L, this);
   case ConstantMaximum:
     return getBackedgeTakenInfo(L).getMax(this);
-  default:
-    llvm_unreachable("Impossible case!");
   };
+  llvm_unreachable("Invalid ExitCountKind!");
 }
 
 bool ScalarEvolution::isBackedgeTakenCountMaxOrZero(const Loop *L) {
