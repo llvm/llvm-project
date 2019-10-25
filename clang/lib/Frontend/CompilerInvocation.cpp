@@ -3273,6 +3273,8 @@ static void ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
   // "editor placeholder in source file" error in PP only mode.
   if (isStrictlyPreprocessorAction(Action))
     Opts.LexEditorPlaceholders = false;
+
+  Opts.SetUpStaticAnalyzer = Args.hasArg(OPT_setup_static_analyzer);
 }
 
 static void ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
