@@ -83,6 +83,8 @@ public:
 
   bool legalizeFDIV(MachineInstr &MI, MachineRegisterInfo &MRI,
                     MachineIRBuilder &B) const;
+  bool legalizeFDIV16(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      MachineIRBuilder &B) const;
   bool legalizeFastUnsafeFDIV(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B) const;
   bool legalizeFDIVFastIntrin(MachineInstr &MI, MachineRegisterInfo &MRI,

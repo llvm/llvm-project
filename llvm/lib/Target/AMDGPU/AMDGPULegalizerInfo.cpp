@@ -1823,9 +1823,15 @@ bool AMDGPULegalizerInfo::legalizeFDIV(MachineInstr &MI,
                                        MachineRegisterInfo &MRI,
                                        MachineIRBuilder &B) const {
   B.setInstr(MI);
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT S16 = LLT::scalar(16);
 
   if (legalizeFastUnsafeFDIV(MI, MRI, B))
     return true;
+
+  if (DstTy == S16)
+    return legalizeFDIV16(MI, MRI, B);
 
   return false;
 }
@@ -1888,6 +1894,39 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
   }
 
   return false;
+}
+
+bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
+                                         MachineRegisterInfo &MRI,
+                                         MachineIRBuilder &B) const {
+  B.setInstr(MI);
+  Register Res = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+
+  uint16_t Flags = MI.getFlags();
+
+  LLT S16 = LLT::scalar(16);
+  LLT S32 = LLT::scalar(32);
+
+  auto LHSExt = B.buildFPExt(S32, LHS, Flags);
+  auto RHSExt = B.buildFPExt(S32, RHS, Flags);
+
+  auto RCP = B.buildIntrinsic(Intrinsic::amdgcn_rcp, {S32}, false)
+    .addUse(RHSExt.getReg(0))
+    .setMIFlags(Flags);
+
+  auto QUOT = B.buildFMul(S32, LHSExt, RCP, Flags);
+  auto RDst = B.buildFPTrunc(S16, QUOT, Flags);
+
+  B.buildIntrinsic(Intrinsic::amdgcn_div_fixup, Res, false)
+    .addUse(RDst.getReg(0))
+    .addUse(RHS)
+    .addUse(LHS)
+    .setMIFlags(Flags);
+
+  MI.eraseFromParent();
+  return true;
 }
 
 bool AMDGPULegalizerInfo::legalizeFDIVFastIntrin(MachineInstr &MI,
