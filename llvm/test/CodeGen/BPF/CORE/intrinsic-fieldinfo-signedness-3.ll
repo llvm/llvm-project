@@ -1,5 +1,7 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-ALU64 %s
+; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-ALU64 %s
+; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-ALU32 %s
+; RUN: llc -march=bpfeb -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-ALU32 %s
 ; Source code:
 ;   enum A { AA = -1, AB = 0, };
 ;   enum B { BA = 0, BB = 1, };
@@ -41,7 +43,8 @@ entry:
 
 ; CHECK:             r1 = 1
 ; CHECK:             r0 = 0
-; CHECK:             r0 += r1
+; CHECK-ALU64:       r0 += r1
+; CHECK-ALU32:       w0 += w1
 ; CHECK:             exit
 
 ; CHECK:             .long   1                       # BTF_KIND_UNION(id = 2)
