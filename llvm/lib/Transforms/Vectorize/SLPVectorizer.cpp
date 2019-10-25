@@ -3397,7 +3397,7 @@ int BoUpSLP::getSpillCost() const {
         continue;
       }
 
-      // Debug informations don't impact spill cost.
+      // Debug information does not impact spill cost.
       if ((isa<CallInst>(&*PrevInstIt) &&
            !isa<DbgInfoIntrinsic>(&*PrevInstIt)) &&
           &*PrevInstIt != PrevInst)
