@@ -3540,6 +3540,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
 
   // Set up the required state for the evaluator in the TypeChecker.
   (void)swift::createTypeChecker(*m_ast_context_ap);
+  registerIDERequestFunctions(m_ast_context_ap->evaluator);
   registerParseRequestFunctions(m_ast_context_ap->evaluator);
   registerTypeCheckerRequestFunctions(m_ast_context_ap->evaluator);
 

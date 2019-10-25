@@ -553,10 +553,6 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
         llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
     if (target_swift_ast)
       m_swift_ast_sp.reset(new SwiftASTContext(*target_swift_ast));
-    auto &ctx = *m_swift_ast_sp.get()->GetASTContext();
-    swift::registerIDERequestFunctions(ctx.evaluator);
-    swift::registerTypeCheckerRequestFunctions(ctx.evaluator);
-    swift::createTypeChecker(ctx);
   }
   SwiftASTContext *swift_ast = m_swift_ast_sp.get();
 
