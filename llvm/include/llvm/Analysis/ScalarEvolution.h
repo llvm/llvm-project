@@ -1244,13 +1244,15 @@ private:
   struct ExitNotTakenInfo {
     PoisoningVH<BasicBlock> ExitingBlock;
     const SCEV *ExactNotTaken;
+    const SCEV *MaxNotTaken;
     std::unique_ptr<SCEVUnionPredicate> Predicate;
 
     explicit ExitNotTakenInfo(PoisoningVH<BasicBlock> ExitingBlock,
                               const SCEV *ExactNotTaken,
+                              const SCEV *MaxNotTaken,
                               std::unique_ptr<SCEVUnionPredicate> Predicate)
-        : ExitingBlock(ExitingBlock), ExactNotTaken(ExactNotTaken),
-          Predicate(std::move(Predicate)) {}
+      : ExitingBlock(ExitingBlock), ExactNotTaken(ExactNotTaken),
+        MaxNotTaken(ExactNotTaken), Predicate(std::move(Predicate)) {}
 
     bool hasAlwaysTruePredicate() const {
       return !Predicate || Predicate->isAlwaysTrue();
@@ -1332,6 +1334,9 @@ private:
 
     /// Get the max backedge taken count for the loop.
     const SCEV *getMax(ScalarEvolution *SE) const;
+
+    /// Get the max backedge taken count for the particular loop exit.
+    const SCEV *getMax(BasicBlock *ExitingBlock, ScalarEvolution *SE) const;
 
     /// Return true if the number of times this backedge is taken is either the
     /// value returned by getMax or zero.
