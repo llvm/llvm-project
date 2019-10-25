@@ -68,24 +68,12 @@ def main(builtinParameters = {}):
     if opts.filter:
         tests = [t for t in tests if opts.filter.search(t.getFullName())]
 
-    order_tests(tests, opts)
+    determine_order(tests, opts)
 
     # Then optionally restrict our attention to a shard of the tests.
-    if (opts.numShards is not None) or (opts.runShard is not None):
-        num_tests = len(tests)
-        # Note: user views tests and shard numbers counting from 1.
-        test_ixs = range(opts.runShard - 1, num_tests, opts.numShards)
-        tests = [tests[i] for i in test_ixs]
-        # Generate a preview of the first few test indices in the shard
-        # to accompany the arithmetic expression, for clarity.
-        preview_len = 3
-        ix_preview = ", ".join([str(i+1) for i in test_ixs[:preview_len]])
-        if len(test_ixs) > preview_len:
-            ix_preview += ", ..."
-        litConfig.note('Selecting shard %d/%d = size %d/%d = tests #(%d*k)+%d = [%s]' %
-                       (opts.runShard, opts.numShards,
-                        len(tests), num_tests,
-                        opts.numShards, opts.runShard, ix_preview))
+    if opts.shard:
+        (run, shards) = opts.shard
+        tests = filter_by_shard(tests, run, shards, litConfig)
 
     # Finally limit the number of tests, if desired.
     if opts.maxTests is not None:
@@ -96,6 +84,7 @@ def main(builtinParameters = {}):
 
     testing_time = run_tests(tests, litConfig, opts, numTotalTests)
 
+    # move into print_summary
     if not opts.quiet:
         print('Testing Time: %.2fs' % (testing_time,))
 
@@ -160,21 +149,37 @@ def print_suites_or_tests(tests, opts):
             for test in ts_tests:
                 print('  %s' % (test.getFullName(),))
 
-def order_tests(tests, opts):
+def determine_order(tests, opts):
     if opts.shuffle:
         import random
         random.shuffle(tests)
     elif opts.incremental:
+        def by_mtime(test):
+            try:
+                return os.path.getmtime(test.getFilePath())
+            except:
+                return 0
         tests.sort(key=by_mtime, reverse=True)
     else:
         tests.sort(key=lambda t: (not t.isEarlyTest(), t.getFullName()))
 
-def by_mtime(test):
-    fname = test.getFilePath()
-    try:
-        return os.path.getmtime(fname)
-    except:
-        return 0
+def filter_by_shard(tests, run, shards, litConfig):
+    test_ixs = range(run - 1, len(tests), shards)
+    selected_tests = [tests[i] for i in test_ixs]
+
+    # For clarity, generate a preview of the first few test indices in the shard
+    # to accompany the arithmetic expression.
+    preview_len = 3
+    preview = ", ".join([str(i + 1) for i in test_ixs[:preview_len]])
+    if len(test_ixs) > preview_len:
+        preview += ", ..."
+    # TODO(python3): string interpolation
+    msg = 'Selecting shard {run}/{shards} = size {sel_tests}/{total_tests} = ' \
+          'tests #({shards}*k)+{run} = [{preview}]'.format(
+              run=run, shards=shards, sel_tests=len(selected_tests),
+              total_tests=len(tests), preview=preview)
+    litConfig.note(msg)
+    return selected_tests
 
 def update_incremental_cache(test):
     if not test.result.code.isFailure:
