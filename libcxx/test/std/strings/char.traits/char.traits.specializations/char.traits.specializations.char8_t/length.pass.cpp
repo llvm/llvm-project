@@ -37,7 +37,7 @@ int main(int, char**)
     return 0;
 }
 #else
-int main(int, char**) { 
+int main(int, char**) {
   return 0;
 }
 #endif

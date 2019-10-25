@@ -31,7 +31,7 @@ struct char_traits
 
     static constexpr int    compare(const char_type* s1, const char_type* s2, size_t n);
     static constexpr size_t length(const char_type* s);
-    static constexpr const char_type* 
+    static constexpr const char_type*
                             find(const char_type* s, size_t n, const char_type& a);
     static char_type*       move(char_type* s1, const char_type* s2, size_t n);
     static char_type*       copy(char_type* s1, const char_type* s2, size_t n);
@@ -424,19 +424,19 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
 
     static constexpr
     size_t           length(const char_type* __s) _NOEXCEPT;
- 
+
     _LIBCPP_INLINE_VISIBILITY static constexpr
     const char_type* find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT;
- 
+
     static char_type*       move(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT
         {return __n == 0 ? __s1 : (char_type*) memmove(__s1, __s2, __n);}
- 
+
     static char_type*       copy(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT
        {
             _LIBCPP_ASSERT(__s2 < __s1 || __s2 >= __s1+__n, "char_traits::copy overlapped range");
             return __n == 0 ? __s1 : (char_type*)memcpy(__s1, __s2, __n);
        }
- 
+
     static char_type*       assign(char_type* __s, size_t __n, char_type __a) _NOEXCEPT
         {return __n == 0 ? __s : (char_type*)memset(__s, to_int_type(__a), __n);}
 
@@ -744,7 +744,7 @@ char_traits<char32_t>::assign(char_type* __s, size_t __n, char_type __a) _NOEXCE
 // __str_find
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
 inline _SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-__str_find(const _CharT *__p, _SizeT __sz, 
+__str_find(const _CharT *__p, _SizeT __sz,
              _CharT __c, _SizeT __pos) _NOEXCEPT
 {
     if (__pos >= __sz)
@@ -796,7 +796,7 @@ __search_substring(const _CharT *__first1, const _CharT *__last1,
 
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
 inline _SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-__str_find(const _CharT *__p, _SizeT __sz, 
+__str_find(const _CharT *__p, _SizeT __sz,
        const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT
 {
     if (__pos > __sz)
@@ -818,7 +818,7 @@ __str_find(const _CharT *__p, _SizeT __sz,
 
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
 inline _SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-__str_rfind(const _CharT *__p, _SizeT __sz, 
+__str_rfind(const _CharT *__p, _SizeT __sz,
               _CharT __c, _SizeT __pos) _NOEXCEPT
 {
     if (__sz < 1)
@@ -837,7 +837,7 @@ __str_rfind(const _CharT *__p, _SizeT __sz,
 
 template<class _CharT, class _SizeT, class _Traits, _SizeT __npos>
 inline _SizeT _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-__str_rfind(const _CharT *__p, _SizeT __sz, 
+__str_rfind(const _CharT *__p, _SizeT __sz,
         const _CharT* __s, _SizeT __pos, _SizeT __n) _NOEXCEPT
 {
     __pos = _VSTD::min(__pos, __sz);
@@ -846,7 +846,7 @@ __str_rfind(const _CharT *__p, _SizeT __sz,
     else
         __pos = __sz;
     const _CharT* __r = _VSTD::__find_end(
-                  __p, __p + __pos, __s, __s + __n, _Traits::eq, 
+                  __p, __p + __pos, __s, __s + __n, _Traits::eq,
                         random_access_iterator_tag(), random_access_iterator_tag());
     if (__n > 0 && __r == __p + __pos)
         return __npos;
@@ -975,7 +975,7 @@ struct __quoted_output_proxy
 
     __quoted_output_proxy(_Iter __f, _Iter __l, _CharT __d, _CharT __e)
     : __first(__f), __last(__l), __delim(__d), __escape(__e) {}
-    //  This would be a nice place for a string_ref 
+    //  This would be a nice place for a string_ref
 };
 
 _LIBCPP_END_NAMESPACE_STD

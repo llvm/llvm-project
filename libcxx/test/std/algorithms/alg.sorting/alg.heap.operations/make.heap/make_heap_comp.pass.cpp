@@ -43,7 +43,7 @@ void test(int N)
     assert(std::is_heap(ia, ia+N, std::greater<int>()));
 
     std::shuffle(ia, ia+N, randomness);
-    std::make_heap(random_access_iterator<int *>(ia), 
+    std::make_heap(random_access_iterator<int *>(ia),
                    random_access_iterator<int *>(ia+N), std::greater<int>());
     assert(std::is_heap(ia, ia+N, std::greater<int>()));
     }

@@ -41,7 +41,7 @@
   <!--=====================================================================-->
 
   <p>Clang follows the
-  LLVM <a href="http://llvm.org/docs/CodingStandards.html">Coding
+  LLVM <a href="https://llvm.org/docs/CodingStandards.html">Coding
   Standards</a>. When submitting patches, please take care to follow these standards
   and to match the style of the code to that present in Clang (for example, in
   terms of indentation, bracing, and statement spacing).</p>
@@ -53,7 +53,7 @@
       use <tt>llvm::errs()</tt>. Other uses of <tt>cstdio</tt> impose behavior
       upon clients and block integrating Clang as a library. Libraries should
       support <tt>raw_ostream</tt> based interfaces for textual
-      output. See <a href="http://llvm.org/docs/CodingStandards.html#ll_raw_ostream">Coding
+      output. See <a href="https://llvm.org/docs/CodingStandards.html#use-raw-ostream">Coding
       Standards</a>.</li>
   </ul>
 
@@ -64,12 +64,12 @@
   <p>Both Clang and LLVM use doxygen to provide API documentation. Their
   respective web pages (generated nightly) are here:</p>
     <ul>
-      <li><a href="http://clang.llvm.org/doxygen">Clang</a></li>
-      <li><a href="http://llvm.org/doxygen">LLVM</a></li>
+      <li><a href="https://clang.llvm.org/doxygen">Clang</a></li>
+      <li><a href="https://llvm.org/doxygen">LLVM</a></li>
     </ul>
 
   <p>For work on the LLVM IR generation, the LLVM assembly language
-  <a href="http://llvm.org/docs/LangRef.html">reference manual</a> is
+  <a href="https://llvm.org/docs/LangRef.html">reference manual</a> is
   also useful.</p>
 
   <!--=====================================================================-->
@@ -87,7 +87,7 @@
       the <tt>isConstQualified()</tt>, for example, to get one of the
       qualifiers, and the <tt>getTypePtr()</tt> method to get the
       wrapped <tt>Type*</tt> which you can then dump.</li>
-      <li>For <a href="http://lldb.llvm.org"> <tt>LLDB</tt></a> users there are
+      <li>For <a href="https://lldb.llvm.org"> <tt>LLDB</tt></a> users there are
       data formatters for clang data structures in
       <a href="https://github.com/llvm/llvm-project/blob/master/clang/utils/ClangDataFormat.py">
       <tt>clang/utils/ClangDataFormat.py</tt></a>.</li>
@@ -164,7 +164,7 @@
   <tt>make test VG=1</tt> in the top-level clang directory.</p>
 
   <p>For more intensive changes, running
-  the <a href="http://llvm.org/docs/TestingGuide.html#testsuiterun">LLVM
+  the <a href="https://llvm.org/docs/TestingGuide.html#quick-start">LLVM
   Test Suite</a> with clang is recommended. Currently the best way to
   override LLVMGCC, as in: <tt>make LLVMGCC="clang -std=gnu89"
   TEST=nightly report</tt> (make sure <tt>clang</tt> is in your PATH or use the
@@ -179,7 +179,7 @@
 
   <p>Note that the test runner is based on
   Python, which must be installed.  Find Python at:
-  <a href="http://www.python.org/download/">http://www.python.org/download/</a>.
+  <a href="https://www.python.org/downloads/">https://www.python.org/downloads/</a>.
   Download the latest stable version.</p>
 
   <p>The GnuWin32 tools are also necessary for running the tests.
@@ -197,9 +197,9 @@
 
   <p>
     Please see also
-    <a href="http://llvm.org/docs/GettingStartedVS.html">Getting Started
+    <a href="https://llvm.org/docs/GettingStartedVS.html">Getting Started
     with the LLVM System using Microsoft Visual Studio</a> and
-    <a href="http://llvm.org/docs/CMake.html">Building LLVM with CMake</a>.
+    <a href="https://llvm.org/docs/CMake.html">Building LLVM with CMake</a>.
   </p>
 
   <!--=====================================================================-->
@@ -278,7 +278,7 @@ Testing Time: 81.52s
   <p>To return changes to the Clang team, unless you have checkin
   privileges, the preferred way is to send patch files
   <a href="https://llvm.org/docs/Contributing.html#how-to-submit-a-patch">using LLVM's Phabricator</a> with an explanation of what the patch is for. Clang follows <a
-  href="http://llvm.org/docs/DeveloperPolicy.html">LLVM's developer policy</a>.
+  href="https://llvm.org/docs/DeveloperPolicy.html">LLVM's developer policy</a>.
   If your patch requires a wider discussion (for example, because it is an
   architectural change), you can use the cfe-dev mailing list.</p>
 
@@ -315,7 +315,7 @@ Testing Time: 81.52s
     can also use <tt>-emit-llvm-bc</tt> to write an LLVM bitcode file
     which can be processed by the suite of LLVM tools
     like <tt>llvm-dis</tt>, <tt>llvm-nm</tt>, etc. See the LLVM
-    <a href="http://llvm.org/docs/CommandGuide/">Command Guide</a>
+    <a href="https://llvm.org/docs/CommandGuide/">Command Guide</a>
     for more information.</p>
 
 </div>

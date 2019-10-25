@@ -27,7 +27,7 @@
 int main(int, char**)
 {
     int a[] = {1, 2, 3};
-    
+
     bidirectional_iterator<int *> bidi(a+1);
 	std::advance(bidi,  1);  // should work fine
 	std::advance(bidi,  0);  // should work fine

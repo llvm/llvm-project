@@ -2,7 +2,7 @@
 
 namespace std_example {
   template <class T> struct A {
-    explicit A(const T &, ...) noexcept; // expected-note {{explicit}} expected-note 2{{candidate}}
+    explicit A(const T &, ...) noexcept; // expected-note {{explicit}}
     A(T &&, ...); // expected-note 2{{candidate}}
   };
 

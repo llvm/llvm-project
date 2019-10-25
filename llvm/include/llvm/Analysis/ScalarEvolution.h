@@ -435,35 +435,6 @@ public:
   }
 };
 
-struct ExitLimitQuery {
-  ExitLimitQuery(const Loop *L, BasicBlock *ExitingBlock, bool AllowPredicates)
-      : L(L), ExitingBlock(ExitingBlock), AllowPredicates(AllowPredicates) {}
-
-  const Loop *L;
-  BasicBlock *ExitingBlock;
-  bool AllowPredicates;
-};
-
-template <> struct DenseMapInfo<ExitLimitQuery> {
-  static inline ExitLimitQuery getEmptyKey() {
-    return ExitLimitQuery(nullptr, nullptr, true);
-  }
-
-  static inline ExitLimitQuery getTombstoneKey() {
-    return ExitLimitQuery(nullptr, nullptr, false);
-  }
-
-  static unsigned getHashValue(ExitLimitQuery Val) {
-    return hash_combine(hash_combine(Val.L, Val.ExitingBlock),
-                        Val.AllowPredicates);
-  }
-
-  static bool isEqual(ExitLimitQuery LHS, ExitLimitQuery RHS) {
-    return LHS.L == RHS.L && LHS.ExitingBlock == RHS.ExitingBlock &&
-           LHS.AllowPredicates == RHS.AllowPredicates;
-  }
-};
-
 /// The main scalar evolution driver. Because client code (intentionally)
 /// can't do much with the SCEV objects directly, they must ask this class
 /// for services.
@@ -748,13 +719,26 @@ public:
   unsigned getSmallConstantTripMultiple(const Loop *L,
                                         BasicBlock *ExitingBlock);
 
+
+  /// The terms "backedge taken count" and "exit count" are used
+  /// interchangeably to refer to the number of times the backedge of a loop 
+  /// has executed before the loop is exited.
+  enum ExitCountKind {
+    /// An expression exactly describing the number of times the backedge has
+    /// executed when a loop is exited.
+    Exact,
+    /// A constant which provides an upper bound on the exact trip count.
+    ConstantMaximum,
+  };
+
   /// Return the number of times the backedge executes before the given exit
   /// would be taken; if not exactly computable, return SCEVCouldNotCompute. 
   /// For a single exit loop, this value is equivelent to the result of
   /// getBackedgeTakenCount.  The loop is guaranteed to exit (via *some* exit)
   /// before the backedge is executed (ExitCount + 1) times.  Note that there
   /// is no guarantee about *which* exit is taken on the exiting iteration.  
-  const SCEV *getExitCount(const Loop *L, BasicBlock *ExitingBlock);
+  const SCEV *getExitCount(const Loop *L, BasicBlock *ExitingBlock,
+                           ExitCountKind Kind = Exact);
 
   /// If the specified loop has a predictable backedge-taken count, return it,
   /// otherwise return a SCEVCouldNotCompute object. The backedge-taken count is
@@ -766,7 +750,7 @@ public:
   /// Note that it is not valid to call this method on a loop without a
   /// loop-invariant backedge-taken count (see
   /// hasLoopInvariantBackedgeTakenCount).
-  const SCEV *getBackedgeTakenCount(const Loop *L);
+  const SCEV *getBackedgeTakenCount(const Loop *L, ExitCountKind Kind = Exact);
 
   /// Similar to getBackedgeTakenCount, except it will add a set of
   /// SCEV predicates to Predicates that are required to be true in order for
@@ -779,7 +763,9 @@ public:
   /// to (i.e. a "conservative over-approximation") of the value returend by
   /// getBackedgeTakenCount.  If such a value cannot be computed, it returns the
   /// SCEVCouldNotCompute object.
-  const SCEV *getConstantMaxBackedgeTakenCount(const Loop *L);
+  const SCEV *getConstantMaxBackedgeTakenCount(const Loop *L) {
+    return getBackedgeTakenCount(L, ConstantMaximum);
+  } 
 
   /// Return true if the backedge taken count is either the value returned by
   /// getConstantMaxBackedgeTakenCount or zero.
@@ -1258,13 +1244,15 @@ private:
   struct ExitNotTakenInfo {
     PoisoningVH<BasicBlock> ExitingBlock;
     const SCEV *ExactNotTaken;
+    const SCEV *MaxNotTaken;
     std::unique_ptr<SCEVUnionPredicate> Predicate;
 
     explicit ExitNotTakenInfo(PoisoningVH<BasicBlock> ExitingBlock,
                               const SCEV *ExactNotTaken,
+                              const SCEV *MaxNotTaken,
                               std::unique_ptr<SCEVUnionPredicate> Predicate)
-        : ExitingBlock(ExitingBlock), ExactNotTaken(ExactNotTaken),
-          Predicate(std::move(Predicate)) {}
+      : ExitingBlock(ExitingBlock), ExactNotTaken(ExactNotTaken),
+        MaxNotTaken(ExactNotTaken), Predicate(std::move(Predicate)) {}
 
     bool hasAlwaysTruePredicate() const {
       return !Predicate || Predicate->isAlwaysTrue();
@@ -1346,6 +1334,9 @@ private:
 
     /// Get the max backedge taken count for the loop.
     const SCEV *getMax(ScalarEvolution *SE) const;
+
+    /// Get the max backedge taken count for the particular loop exit.
+    const SCEV *getMax(BasicBlock *ExitingBlock, ScalarEvolution *SE) const;
 
     /// Return true if the number of times this backedge is taken is either the
     /// value returned by getMax or zero.

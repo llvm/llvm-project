@@ -1385,11 +1385,13 @@ llvm::Expected<FileSP> PythonFile::ConvertToFile(bool borrowed) {
   if (!options)
     return options.takeError();
 
-  // LLDB and python will not share I/O buffers.  We should probably
-  // flush the python buffers now.
-  auto r = CallMethod("flush");
-  if (!r)
-    return r.takeError();
+  if (options.get() & File::eOpenOptionWrite) {
+    // LLDB and python will not share I/O buffers.  We should probably
+    // flush the python buffers now.
+    auto r = CallMethod("flush");
+    if (!r)
+      return r.takeError();
+  }
 
   FileSP file_sp;
   if (borrowed) {

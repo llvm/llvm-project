@@ -22,3 +22,21 @@ body:             |
     %9:vgpr_32 = COPY %8
     %10:vgpr_32 = V_AND_B32_e32 %7, %9, implicit $exec
 ...
+
+---
+# GCN-LABEL:       name: no_extra_fold_on_same_opnd
+# The first XOR needs commuting to fold that immediate operand.
+# GCN:             V_XOR_B32_e32 {{.*}} 0, %1
+# GCN:             V_XOR_B32_e32 %2, %4.sub0
+name: no_extra_fold_on_same_opnd
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:vgpr_32  = IMPLICIT_DEF
+    %1:vgpr_32  = IMPLICIT_DEF
+    %2:vgpr_32  = IMPLICIT_DEF
+    %3:vgpr_32  = V_MOV_B32_e32 0, implicit $exec
+    %4:vreg_64  = REG_SEQUENCE killed %0, %subreg.sub0, killed %3, %subreg.sub1
+    %5:vgpr_32  = V_XOR_B32_e32 %1, %4.sub1, implicit $exec
+    %6:vgpr_32  = V_XOR_B32_e32 %2, %4.sub0, implicit $exec
+...

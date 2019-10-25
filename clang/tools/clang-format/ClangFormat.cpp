@@ -18,7 +18,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
 #include "clang/Format/Format.h"
-#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -290,31 +289,6 @@ static void outputReplacementsXML(const Replacements &Replaces) {
   }
 }
 
-// If BufStr has an invalid BOM, returns the BOM name; otherwise, returns
-// nullptr.
-static const char *getInValidBOM(StringRef BufStr) {
-  // Check to see if the buffer has a UTF Byte Order Mark (BOM).
-  // We only support UTF-8 with and without a BOM right now.  See
-  // https://en.wikipedia.org/wiki/Byte_order_mark#Byte_order_marks_by_encoding
-  // for more information.
-  const char *InvalidBOM =
-      llvm::StringSwitch<const char *>(BufStr)
-          .StartsWith(llvm::StringLiteral::withInnerNUL("\x00\x00\xFE\xFF"),
-                      "UTF-32 (BE)")
-          .StartsWith(llvm::StringLiteral::withInnerNUL("\xFF\xFE\x00\x00"),
-                      "UTF-32 (LE)")
-          .StartsWith("\xFE\xFF", "UTF-16 (BE)")
-          .StartsWith("\xFF\xFE", "UTF-16 (LE)")
-          .StartsWith("\x2B\x2F\x76", "UTF-7")
-          .StartsWith("\xF7\x64\x4C", "UTF-1")
-          .StartsWith("\xDD\x73\x66\x73", "UTF-EBCDIC")
-          .StartsWith("\x0E\xFE\xFF", "SCSU")
-          .StartsWith("\xFB\xEE\x28", "BOCU-1")
-          .StartsWith("\x84\x31\x95\x33", "GB-18030")
-          .Default(nullptr);
-  return InvalidBOM;
-}
-
 static bool
 emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
                         const std::unique_ptr<llvm::MemoryBuffer> &Code) {
@@ -325,12 +299,9 @@ emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   DiagOpts->ShowColors = (ShowColors && !NoShowColors);
 
-  TextDiagnosticPrinter *DiagsBuffer =
-      new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts, false);
-
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      new DiagnosticsEngine(DiagID, &*DiagOpts, DiagsBuffer));
+      new DiagnosticsEngine(DiagID, &*DiagOpts));
 
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
@@ -339,24 +310,40 @@ emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
   FileID FileID = createInMemoryFile(AssumedFileName, Code.get(), Sources,
                                      Files, InMemoryFileSystem.get());
 
-  const unsigned ID = Diags->getCustomDiagID(
-      WarningsAsErrors ? clang::DiagnosticsEngine::Error
-                       : clang::DiagnosticsEngine::Warning,
-      "code should be clang-formatted [-Wclang-format-violations]");
+  FileManager &FileMgr = Sources.getFileManager();
+  llvm::ErrorOr<const FileEntry *> FileEntryPtr =
+      FileMgr.getFile(AssumedFileName);
 
   unsigned Errors = 0;
-  DiagsBuffer->BeginSourceFile(LangOptions(), nullptr);
   if (WarnFormat && !NoWarnFormat) {
     for (const auto &R : Replaces) {
-      Diags->Report(
-          Sources.getLocForStartOfFile(FileID).getLocWithOffset(R.getOffset()),
-          ID);
+      PresumedLoc PLoc = Sources.getPresumedLoc(
+          Sources.getLocForStartOfFile(FileID).getLocWithOffset(R.getOffset()));
+
+      SourceLocation LineBegin =
+          Sources.translateFileLineCol(FileEntryPtr.get(), PLoc.getLine(), 1);
+      SourceLocation NextLineBegin = Sources.translateFileLineCol(
+          FileEntryPtr.get(), PLoc.getLine() + 1, 1);
+
+      const char *StartBuf = Sources.getCharacterData(LineBegin);
+      const char *EndBuf = Sources.getCharacterData(NextLineBegin);
+
+      StringRef Line(StartBuf, (EndBuf - StartBuf) - 1);
+
+      SMDiagnostic Diags(
+          llvm::SourceMgr(), SMLoc(), AssumedFileName, PLoc.getLine(),
+          PLoc.getColumn(),
+          WarningsAsErrors ? SourceMgr::DiagKind::DK_Error
+                           : SourceMgr::DiagKind::DK_Warning,
+          "code should be clang-formatted [-Wclang-format-violations]", Line,
+          ArrayRef<std::pair<unsigned, unsigned>>());
+
+      Diags.print(nullptr, llvm::errs(), (ShowColors && !NoShowColors));
       Errors++;
       if (ErrorLimit && Errors >= ErrorLimit)
         break;
     }
   }
-  DiagsBuffer->EndSourceFile();
   return WarningsAsErrors;
 }
 
@@ -400,7 +387,7 @@ static bool format(StringRef FileName) {
 
   StringRef BufStr = Code->getBuffer();
 
-  const char *InvalidBOM = getInValidBOM(BufStr);
+  const char *InvalidBOM = SrcMgr::ContentCache::getInvalidBOM(BufStr);
 
   if (InvalidBOM) {
     errs() << "error: encoding with unsupported byte order mark \""

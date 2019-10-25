@@ -312,6 +312,19 @@ static bool isUseMIInFoldList(ArrayRef<FoldCandidate> FoldList,
   return false;
 }
 
+static void appendFoldCandidate(SmallVectorImpl<FoldCandidate> &FoldList,
+                                MachineInstr *MI, unsigned OpNo,
+                                MachineOperand *FoldOp, bool Commuted = false,
+                                int ShrinkOp = -1) {
+  // Skip additional folding on the same operand.
+  for (FoldCandidate &Fold : FoldList)
+    if (Fold.UseMI == MI && Fold.UseOpNo == OpNo)
+      return;
+  LLVM_DEBUG(dbgs() << "Append " << (Commuted ? "commuted" : "normal")
+                    << " operand " << OpNo << "\n  " << *MI << '\n');
+  FoldList.push_back(FoldCandidate(MI, OpNo, FoldOp, Commuted, ShrinkOp));
+}
+
 static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
                              MachineInstr *MI, unsigned OpNo,
                              MachineOperand *OpToFold,
@@ -344,7 +357,7 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
     // Special case for s_setreg_b32
     if (Opc == AMDGPU::S_SETREG_B32 && OpToFold->isImm()) {
       MI->setDesc(TII->get(AMDGPU::S_SETREG_IMM32_B32));
-      FoldList.push_back(FoldCandidate(MI, OpNo, OpToFold));
+      appendFoldCandidate(FoldList, MI, OpNo, OpToFold);
       return true;
     }
 
@@ -403,8 +416,7 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
         unsigned MaybeCommutedOpc = MI->getOpcode();
         int Op32 = AMDGPU::getVOPe32(MaybeCommutedOpc);
 
-        FoldList.push_back(FoldCandidate(MI, CommuteOpNo, OpToFold, true,
-                                         Op32));
+        appendFoldCandidate(FoldList, MI, CommuteOpNo, OpToFold, true, Op32);
         return true;
       }
 
@@ -412,11 +424,11 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
       return false;
     }
 
-    FoldList.push_back(FoldCandidate(MI, CommuteOpNo, OpToFold, true));
+    appendFoldCandidate(FoldList, MI, CommuteOpNo, OpToFold, true);
     return true;
   }
 
-  FoldList.push_back(FoldCandidate(MI, OpNo, OpToFold));
+  appendFoldCandidate(FoldList, MI, OpNo, OpToFold);
   return true;
 }
 
@@ -494,7 +506,7 @@ static bool tryToFoldACImm(const SIInstrInfo *TII,
   if (!TII->isOperandLegal(*UseMI, UseOpIdx, Op))
     return false;
 
-  FoldList.push_back(FoldCandidate(UseMI, UseOpIdx, Op));
+  appendFoldCandidate(FoldList, UseMI, UseOpIdx, Op);
   return true;
 }
 
@@ -627,10 +639,11 @@ void SIFoldOperands::foldOperand(
     CopiesToReplace.push_back(UseMI);
   } else {
     if (UseMI->isCopy() && OpToFold.isReg() &&
-        Register::isVirtualRegister(UseMI->getOperand(0).getReg()) &&
+        UseMI->getOperand(0).getReg().isVirtual() &&
         TRI->isVectorRegister(*MRI, UseMI->getOperand(0).getReg()) &&
-        TRI->isVectorRegister(*MRI, UseMI->getOperand(1).getReg()) &&
         !UseMI->getOperand(1).getSubReg()) {
+      LLVM_DEBUG(dbgs() << "Folding " << OpToFold
+                        << "\n into " << *UseMI << '\n');
       unsigned Size = TII->getOpSize(*UseMI, 1);
       UseMI->getOperand(1).setReg(OpToFold.getReg());
       UseMI->getOperand(1).setSubReg(OpToFold.getSubReg());
@@ -1397,5 +1410,5 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
       foldInstOperand(MI, OpToFold);
     }
   }
-  return false;
+  return true;
 }

@@ -385,6 +385,7 @@ int writeIfso(const IFSStub &Stub, bool IsWriteIfs, raw_ostream &Out) {
   return -1;
 }
 
+// TODO: Drop ObjectFileFormat, it can be subsumed from the triple.
 // New Interface Stubs Yaml Format:
 // --- !experimental-ifs-v1
 // IfsVersion:      1.0

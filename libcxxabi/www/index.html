@@ -12,7 +12,7 @@
 <body>
 <div id="menu">
   <div>
-    <a href="http://llvm.org/">LLVM Home</a>
+    <a href="https://llvm.org/">LLVM Home</a>
   </div>
 
   <div class="submenu">
@@ -23,9 +23,9 @@
   <div class="submenu">
     <label>Quick Links</label>
     <a href="https://libcxx.llvm.org/">libc++</a>
-    <a href="http://lists.llvm.org/mailman/listinfo/libcxx-dev">libcxx-dev</a>
-    <a href="http://lists.llvm.org/mailman/listinfo/libcxx-commits">libcxx-commits</a>
-    <a href="http://llvm.org/bugs/">Bug Reports</a>
+    <a href="https://lists.llvm.org/mailman/listinfo/libcxx-dev">libcxx-dev</a>
+    <a href="https://lists.llvm.org/mailman/listinfo/libcxx-commits">libcxx-commits</a>
+    <a href="https://bugs.llvm.org/">Bug Reports</a>
     <a href="https://github.com/llvm/llvm-project/tree/master/libcxxabi/">Browse Sources</a>
   </div>
 </div>
@@ -39,7 +39,7 @@
      C++ library.</p>
 
   <p>All of the code in libc++abi is <a
-     href="http://llvm.org/docs/DeveloperPolicy.html#license">dual licensed</a>
+     href="https://llvm.org/docs/DeveloperPolicy.html#copyright-license-and-patents">dual licensed</a>
      under the MIT license and the UIUC License (a BSD-like license).</p>
 
   <!--=====================================================================-->
@@ -48,7 +48,7 @@
 
     <ul>
         <li>Correctness as defined by the C++11 standard.</li>
-        <li>Provide a portable sublayer to ease the porting of <a href="http://libcxx.llvm.org/">libc++</a></li>
+        <li>Provide a portable sublayer to ease the porting of <a href="https://libcxx.llvm.org/">libc++</a></li>
         <li>On Mac OS X, be ABI compatible with the existing low-level support.</li>
     </ul>
 
@@ -118,7 +118,7 @@
   a different ABI library), this may interfere with test results.</p>
 
   <p>Send discussions to the
-  (<a href="http://lists.llvm.org/mailman/listinfo/libcxx-dev">libcxx-dev mailing list</a>).</p>
+  (<a href="https://lists.llvm.org/mailman/listinfo/libcxx-dev">libcxx-dev mailing list</a>).</p>
 
   <!--=====================================================================-->
   <h2>Frequently asked questions</h2>
@@ -132,7 +132,7 @@
      And in libc++ types are the same type if and only if they have the same <code>type_info</code>
      (as in there must be only one type info per type in the entire application).
      And on OS X, libstdc++ and libc++ share these exception types.
-     So to be able to throw in one dylib and catch in another (a <code>std::exception</code> for example), 
+     So to be able to throw in one dylib and catch in another (a <code>std::exception</code> for example),
      there must be only one <code>std::exception type_info</code> in the entire app.
      That typeinfo gets laid down beside <code>~exception()</code> in libc++abi (for both libstdc++ and libc++).</p>
      <p>--Howard Hinnant</p>

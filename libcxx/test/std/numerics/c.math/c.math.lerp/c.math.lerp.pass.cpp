@@ -45,7 +45,7 @@ void test()
     assert((std::lerp(T( 0), T(12), T(1)) == T(12)));
     assert((std::lerp(T(12), T( 0), T(0)) == T(12)));
     assert((std::lerp(T(12), T( 0), T(1)) == T(0)));
-    
+
     assert((std::lerp(T( 0), T(12), T(0.5)) == T(6)));
     assert((std::lerp(T(12), T( 0), T(0.5)) == T(6)));
     assert((std::lerp(T( 0), T(12), T(2))   == T(24)));
@@ -66,10 +66,10 @@ int main(int, char**)
     static_assert(constexpr_test<float>(), "");
     static_assert(constexpr_test<double>(), "");
     static_assert(constexpr_test<long double>(), "");
-    
+
     test<float>();
     test<double>();
     test<long double>();
-    
+
     return 0;
 }

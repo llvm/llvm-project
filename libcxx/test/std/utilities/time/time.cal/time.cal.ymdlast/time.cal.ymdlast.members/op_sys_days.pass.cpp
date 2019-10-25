@@ -33,7 +33,7 @@ int main(int, char**)
     { // Last day in Jan 1970 was the 31st
     constexpr year_month_day_last ymdl{year{1970}, month_day_last{std::chrono::January}};
     constexpr sys_days sd{ymdl};
-    
+
     static_assert(sd.time_since_epoch() == days{30}, "");
     }
 

@@ -580,6 +580,7 @@ std::unique_ptr<ModuleSummaryIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
   return CombinedIndex;
 }
 
+namespace {
 struct IsExported {
   const StringMap<FunctionImporter::ExportSetTy> &ExportLists;
   const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols;
@@ -610,6 +611,7 @@ struct IsPrevailing {
     return Prevailing->second == S;
   };
 };
+} // namespace
 
 static void computeDeadSymbolsInIndex(
     ModuleSummaryIndex &Index,

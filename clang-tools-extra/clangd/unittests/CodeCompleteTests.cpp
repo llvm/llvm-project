@@ -97,7 +97,7 @@ std::unique_ptr<SymbolIndex> memIndex(std::vector<Symbol> Symbols) {
 }
 
 CodeCompleteResult completions(ClangdServer &Server, llvm::StringRef TestCode,
-                               Position point,
+                               Position Point,
                                std::vector<Symbol> IndexSymbols = {},
                                clangd::CodeCompleteOptions Opts = {}) {
   std::unique_ptr<SymbolIndex> OverrideIndex;
@@ -110,7 +110,7 @@ CodeCompleteResult completions(ClangdServer &Server, llvm::StringRef TestCode,
   auto File = testPath("foo.cpp");
   runAddDocument(Server, File, TestCode);
   auto CompletionList =
-      llvm::cantFail(runCodeComplete(Server, File, point, Opts));
+      llvm::cantFail(runCodeComplete(Server, File, Point, Opts));
   return CompletionList;
 }
 
@@ -209,7 +209,7 @@ TEST(CompletionTest, Filter) {
               AllOf(Has("Car"), Not(Has("MotorCar"))));
 }
 
-void TestAfterDotCompletion(clangd::CodeCompleteOptions Opts) {
+void testAfterDotCompletion(clangd::CodeCompleteOptions Opts) {
   auto Results = completions(
       R"cpp(
       int global_var;
@@ -264,7 +264,7 @@ void TestAfterDotCompletion(clangd::CodeCompleteOptions Opts) {
              Contains(IsDocumented()));
 }
 
-void TestGlobalScopeCompletion(clangd::CodeCompleteOptions Opts) {
+void testGlobalScopeCompletion(clangd::CodeCompleteOptions Opts) {
   auto Results = completions(
       R"cpp(
       int global_var;
@@ -313,8 +313,8 @@ void TestGlobalScopeCompletion(clangd::CodeCompleteOptions Opts) {
 
 TEST(CompletionTest, CompletionOptions) {
   auto Test = [&](const clangd::CodeCompleteOptions &Opts) {
-    TestAfterDotCompletion(Opts);
-    TestGlobalScopeCompletion(Opts);
+    testAfterDotCompletion(Opts);
+    testGlobalScopeCompletion(Opts);
   };
   // We used to test every combination of options, but that got too slow (2^N).
   auto Flags = {
@@ -2131,12 +2131,12 @@ TEST(CompletionTest, EnableSpeculativeIndexRequest) {
 
 TEST(CompletionTest, InsertTheMostPopularHeader) {
   std::string DeclFile = URI::create(testPath("foo")).toString();
-  Symbol sym = func("Func");
-  sym.CanonicalDeclaration.FileURI = DeclFile.c_str();
-  sym.IncludeHeaders.emplace_back("\"foo.h\"", 2);
-  sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000);
+  Symbol Sym = func("Func");
+  Sym.CanonicalDeclaration.FileURI = DeclFile.c_str();
+  Sym.IncludeHeaders.emplace_back("\"foo.h\"", 2);
+  Sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000);
 
-  auto Results = completions("Fun^", {sym}).Completions;
+  auto Results = completions("Fun^", {Sym}).Completions;
   assert(!Results.empty());
   EXPECT_THAT(Results[0], AllOf(Named("Func"), InsertInclude("\"bar.h\"")));
   EXPECT_EQ(Results[0].Includes.size(), 2u);
@@ -2153,13 +2153,13 @@ TEST(CompletionTest, NoInsertIncludeIfOnePresent) {
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
 
   std::string DeclFile = URI::create(testPath("foo")).toString();
-  Symbol sym = func("Func");
-  sym.CanonicalDeclaration.FileURI = DeclFile.c_str();
-  sym.IncludeHeaders.emplace_back("\"foo.h\"", 2);
-  sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000);
+  Symbol Sym = func("Func");
+  Sym.CanonicalDeclaration.FileURI = DeclFile.c_str();
+  Sym.IncludeHeaders.emplace_back("\"foo.h\"", 2);
+  Sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000);
 
   EXPECT_THAT(
-      completions(Server, "#include \"foo.h\"\nFun^", {sym}).Completions,
+      completions(Server, "#include \"foo.h\"\nFun^", {Sym}).Completions,
       UnorderedElementsAre(
           AllOf(Named("Func"), HasInclude("\"foo.h\""), Not(InsertInclude()))));
 }

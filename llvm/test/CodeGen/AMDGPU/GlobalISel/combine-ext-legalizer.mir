@@ -10,11 +10,10 @@ body: |
     ; CHECK-LABEL: name: test_sext_trunc_i64_i32_i64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
-    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY1]], [[TRUNC]](s32)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
-    ; CHECK: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[TRUNC1]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY1]], [[C]](s32)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C]](s32)
+    ; CHECK: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[COPY2]](s32)
     ; CHECK: $vgpr0_vgpr1 = COPY [[ASHR]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_TRUNC %0

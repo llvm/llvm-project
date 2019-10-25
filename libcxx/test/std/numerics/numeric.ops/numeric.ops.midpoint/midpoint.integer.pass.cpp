@@ -31,7 +31,7 @@ void signed_test()
     ASSERT_SAME_TYPE(decltype(std::midpoint(T(), T())), T);
     ASSERT_NOEXCEPT(          std::midpoint(T(), T()));
     using limits = std::numeric_limits<T>;
-    
+
     static_assert(std::midpoint(one, three) == two, "");
     static_assert(std::midpoint(three, one) == two, "");
 
@@ -53,7 +53,7 @@ void signed_test()
     assert(std::midpoint(T( 4), T(-3)) == T(1));
     assert(std::midpoint(T(-3), T(-4)) == T(-3));
     assert(std::midpoint(T(-4), T(-3)) == T(-4));
-    
+
     static_assert(std::midpoint(limits::min(), limits::max()) == T(-1), "");
     static_assert(std::midpoint(limits::max(), limits::min()) == T( 0), "");
 
@@ -81,7 +81,7 @@ void unsigned_test()
     ASSERT_NOEXCEPT(          std::midpoint(T(), T()));
     using limits = std::numeric_limits<T>;
     const T half_way = (limits::max() - limits::min())/2;
-    
+
     static_assert(std::midpoint(one, three) == two, "");
     static_assert(std::midpoint(three, one) == two, "");
 
@@ -94,7 +94,7 @@ void unsigned_test()
     assert(std::midpoint(four, one)    == three);
     assert(std::midpoint(three, four)  == three);
     assert(std::midpoint(four, three)  == four);
-    
+
     assert(std::midpoint(limits::min(), limits::max()) == T(half_way));
     assert(std::midpoint(limits::max(), limits::min()) == T(half_way + 1));
 

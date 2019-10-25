@@ -1,4 +1,4 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" 
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
           "http://www.w3.org/TR/html4/strict.dtd">
 <!-- Material used from: HTML 4.01 specs: http://www.w3.org/TR/html401/ -->
 <html>
@@ -12,16 +12,16 @@
   <!--#include virtual="menu.html.incl"-->
   <div id="content">
     <h1>Clang vs Other Open Source Compilers</h1>
-    
+
     <p>Building an entirely new compiler front-end is a big task, and it isn't
        always clear to people why we decided to do this.  Here we compare Clang
        and its goals to other open source compiler front-ends that are
        available.  We restrict the discussion to very specific objective points
        to avoid controversy where possible.  Also, software is infinitely
-       mutable, so we don't talk about little details that can be fixed with 
-       a reasonable amount of effort: we'll talk about issues that are 
+       mutable, so we don't talk about little details that can be fixed with
+       a reasonable amount of effort: we'll talk about issues that are
        difficult to fix for architectural or political reasons.</p>
-       
+
     <p>The goal of this list is to describe how differences in goals lead to
        different strengths and weaknesses, not to make some compiler look bad.
        This will hopefully help you to evaluate whether using Clang is a good
@@ -30,39 +30,39 @@
        terms of <em>our</em> goals: if you are only interested in static
        analysis, you may not care that something lacks codegen support, for
        example.</p>
-       
+
     <p>Please email <a href="get_involved.html">cfe-dev</a> if you think we should add another compiler to this
        list or if you think some characterization is unfair here.</p>
-    
+
     <ul>
     <li><a href="#gcc">Clang vs GCC</a> (GNU Compiler Collection)</li>
     <li><a href="#elsa">Clang vs Elsa</a> (Elkhound-based C++ Parser)</li>
     <li><a href="#pcc">Clang vs PCC</a> (Portable C Compiler)</li>
     </ul>
-    
-    
+
+
     <!--=====================================================================-->
     <h2><a name="gcc">Clang vs GCC (GNU Compiler Collection)</a></h2>
     <!--=====================================================================-->
-    
+
     <p>Pro's of GCC vs Clang:</p>
-    
+
     <ul>
     <li>GCC supports languages that Clang does not aim to, such as Java, Ada,
         FORTRAN, Go, etc.</li>
     <li>GCC supports more targets than LLVM.</li>
     <li>GCC supports many language extensions, some of which are not implemented
     by Clang. For instance, in C mode, GCC supports
-    <a href="http://gcc.gnu.org/onlinedocs/gcc/Nested-Functions.html">nested
+    <a href="https://gcc.gnu.org/onlinedocs/gcc/Nested-Functions.html">nested
     functions</a> and has an
     <a href="https://gcc.gnu.org/onlinedocs/gcc/Variable-Length.html">extension
     allowing VLAs in structs</a>.
     </ul>
 
     <p>Pro's of Clang vs GCC:</p>
-    
+
     <ul>
-    <li>The Clang ASTs and design are intended to be <a 
+    <li>The Clang ASTs and design are intended to be <a
         href="features.html#simplecode">easily understandable</a> by
         anyone who is familiar with the languages involved and who has a basic
         understanding of how a compiler works.  GCC has a very old codebase
@@ -71,9 +71,9 @@
         by source analysis tools, refactoring, IDEs (etc) as well as for code
         generation.  GCC is built as a monolithic static compiler, which makes
         it extremely difficult to use as an API and integrate into other tools.
-        Further, its historic design and <a 
-        href="http://gcc.gnu.org/ml/gcc/2007-11/msg00460.html">current</a>
-        <a href="http://gcc.gnu.org/ml/gcc/2004-12/msg00888.html">policy</a> 
+        Further, its historic design and <a
+        href="https://gcc.gnu.org/ml/gcc/2007-11/msg00460.html">current</a>
+        <a href="https://gcc.gnu.org/ml/gcc/2004-12/msg00888.html">policy</a>
         makes it difficult to decouple the front-end from the rest of the
         compiler. </li>
     <li>Various GCC design decisions make it very difficult to reuse: its build
@@ -87,11 +87,11 @@
         example, if you write "x-x" in your source code, the GCC AST will
         contain "0", with no mention of 'x'.  This is extremely bad for a
         refactoring tool that wants to rename 'x'.</li>
-    <li>Clang can serialize its AST out to disk and read it back into another 
+    <li>Clang can serialize its AST out to disk and read it back into another
         program, which is useful for whole program analysis.  GCC does not have
-        this.  GCC's PCH mechanism (which is just a dump of the compiler 
-        memory image) is related, but is architecturally only 
-        able to read the dump back into the exact same executable as the one 
+        this.  GCC's PCH mechanism (which is just a dump of the compiler
+        memory image) is related, but is architecturally only
+        able to read the dump back into the exact same executable as the one
         that produced it (it is not a structured format).</li>
     <li>Clang is <a href="features.html#performance">much faster and uses far
         less memory</a> than GCC.</li>
@@ -112,7 +112,7 @@
     <li><a href="compatibility.html#cxx">Clang's support for C++</a> is more
         compliant than GCC's in many ways.</li>
     <li>Clang supports
-        <a href="http://clang.llvm.org/docs/LanguageExtensions.html">many language
+        <a href="https://clang.llvm.org/docs/LanguageExtensions.html">many language
         extensions</a>, some of which are not implemented by GCC. For instance,
         Clang provides attributes for checking thread safety and extended vector
         types.</li>
@@ -121,22 +121,22 @@
     <!--=====================================================================-->
     <h2><a name="elsa">Clang vs Elsa (Elkhound-based C++ Parser)</a></h2>
     <!--=====================================================================-->
-    
+
     <p>Pro's of Elsa vs Clang:</p>
-    
+
     <ul>
     <li>Elsa's parser and AST is designed to be easily extensible by adding
         grammar rules.  Clang has a very simple and easily hackable parser,
         but requires you to write C++ code to do it.</li>
     </ul>
-    
+
     <p>Pro's of Clang vs Elsa:</p>
-    
+
     <ul>
     <li>Clang's C and C++ support is far more mature and practically useful than
         Elsa's, and includes many C++'11 features.</li>
     <li>The Elsa community is extremely small and major development work seems
-        to have ceased in 2005. Work continued to be used by other small 
+        to have ceased in 2005. Work continued to be used by other small
         projects (e.g. Oink), but Oink is apparently dead now too.  Clang has a
         vibrant community including developers that
         are paid to work on it full time.  In practice this means that you can
@@ -152,7 +152,7 @@
         difficult to accurately map from a source location in the AST back to
         its original position before preprocessing.  Like GCC, it does not keep
         track of macro expansions.</li>
-    <li>Elsa is even slower and uses more memory than GCC, which itself requires 
+    <li>Elsa is even slower and uses more memory than GCC, which itself requires
         far more space and time than Clang.</li>
     <li>Elsa only does partial semantic analysis.  It is intended to work on
         code that is already validated by GCC, so it does not do many semantic
@@ -160,21 +160,21 @@
     <li>Elsa does not support Objective-C.</li>
     <li>Elsa does not support native code generation.</li>
     </ul>
-    
-    
+
+
     <!--=====================================================================-->
     <h2><a name="pcc">Clang vs PCC (Portable C Compiler)</a></h2>
     <!--=====================================================================-->
-    
+
     <p>Pro's of PCC vs Clang:</p>
-    
+
     <ul>
     <li>The PCC source base is very small and builds quickly with just a C
         compiler.</li>
     </ul>
-    
+
     <p>Pro's of Clang vs PCC:</p>
-    
+
     <ul>
     <li>PCC dates from the 1970's and has been dormant for most of that time.
         The Clang and LLVM communities are very active.</li>

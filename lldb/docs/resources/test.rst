@@ -42,8 +42,7 @@ target.
 
 By default, the ``check-lldb`` target builds the test programs with the same
 compiler that was used to build LLDB. To build the tests with a different
-compiler, you can set the ``LLDB_TEST_C_COMPILER`` or the
-``LLDB_TEST_CXX_COMPILER`` CMake variables.
+compiler, you can set the ``LLDB_TEST_COMPILER`` CMake variable.
 
 It is possible to customize the architecture of the test binaries and compiler
 used by appending ``-A`` and ``-C`` options respectively to the CMake variable

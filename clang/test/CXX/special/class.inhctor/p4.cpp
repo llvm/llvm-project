@@ -60,13 +60,13 @@ H h2("foo"); // expected-error {{call to deleted constructor of 'H'}}
 // same signature.
 namespace DRnnnn {
   struct A {
-    constexpr A(int, float = 0) {} // expected-note {{candidate}}
+    constexpr A(int, float = 0) {}
     explicit A(int, int = 0) {} // expected-note {{candidate}}
 
     A(int, int, int = 0) = delete; // expected-note {{deleted}}
   };
   struct B : A {
-    using A::A; // expected-note 3{{inherited here}}
+    using A::A; // expected-note 2{{inherited here}}
   };
 
   constexpr B b0(0, 0.0f); // ok, constexpr

@@ -10,9 +10,9 @@
 
 // template <class Duration>
 // class hh_mm_ss
-// 
+//
 // constexpr chrono::hours hours() const noexcept;
-   
+
 // Test values
 // duration     hours   minutes seconds fractional
 // 5000s            1       23      20      0
@@ -41,10 +41,10 @@ constexpr long check_hours(Duration d)
 int main(int, char**)
 {
     using microfortnights = std::chrono::duration<int, std::ratio<756, 625>>;
-    
+
     static_assert( check_hours(std::chrono::minutes( 1)) == 0, "");
     static_assert( check_hours(std::chrono::minutes(-1)) == 0, "");
-    
+
     assert( check_hours(std::chrono::seconds( 5000)) == 1);
     assert( check_hours(std::chrono::seconds(-5000)) == 1);
     assert( check_hours(std::chrono::minutes( 5000)) == 83);

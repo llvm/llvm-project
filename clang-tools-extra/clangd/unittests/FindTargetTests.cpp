@@ -812,6 +812,7 @@ TEST_F(FindExplicitReferencesTest, All) {
            "1: targets = {func}\n"
            "2: targets = {w}, decl\n"
            "3: targets = {FuncParam}\n"},
+          // declaration references.
           {R"cpp(
              namespace ns {}
              class S {};
@@ -835,6 +836,44 @@ TEST_F(FindExplicitReferencesTest, All) {
            "8: targets = {INT2}, decl\n"
            "9: targets = {NS}, decl\n"
            "10: targets = {ns}\n"},
+          // cxx constructor initializer.
+          {R"cpp(
+             class Base {};
+             void foo() {
+               // member initializer
+               class $0^X {
+                 int $1^abc;
+                 $2^X(): $3^abc() {}
+               };
+               // base initializer
+               class $4^Derived : public $5^Base {
+                 $6^Base $7^B;
+                 $8^Derived() : $9^Base() {}
+               };
+               // delegating initializer
+               class $10^Foo {
+                 $11^Foo(int$12^);
+                 $13^Foo(): $14^Foo(111) {}
+               };
+             }
+           )cpp",
+           "0: targets = {X}, decl\n"
+           "1: targets = {foo()::X::abc}, decl\n"
+           "2: targets = {foo()::X::X}, decl\n"
+           "3: targets = {foo()::X::abc}\n"
+           "4: targets = {Derived}, decl\n"
+           "5: targets = {Base}\n"
+           "6: targets = {Base}\n"
+           "7: targets = {foo()::Derived::B}, decl\n"
+           "8: targets = {foo()::Derived::Derived}, decl\n"
+           "9: targets = {Base}\n"
+           "10: targets = {Foo}, decl\n"
+           "11: targets = {foo()::Foo::Foo}, decl\n"
+           // FIXME: we should exclude the built-in type.
+           "12: targets = {}, decl\n"
+           "13: targets = {foo()::Foo::Foo}, decl\n"
+           "14: targets = {Foo}\n"},
+
       };
 
   for (const auto &C : Cases) {

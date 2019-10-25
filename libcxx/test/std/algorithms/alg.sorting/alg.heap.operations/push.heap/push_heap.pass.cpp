@@ -42,7 +42,7 @@ void test(int N)
         std::push_heap(RI(ia), RI(ia+i));
         assert(std::is_heap(RI(ia), RI(ia+i)));
     }
-    
+
     delete [] ia;
 }
 

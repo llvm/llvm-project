@@ -11,7 +11,7 @@
 
 // template <class T, class Allocator, class U>
 //   void erase(list<T, Allocator>& c, const U& value);
-  
+
 
 #include <list>
 #include <optional>
