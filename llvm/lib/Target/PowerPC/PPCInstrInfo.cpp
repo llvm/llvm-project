@@ -2527,6 +2527,225 @@ void PPCInstrInfo::fixupIsDeadOrKill(MachineInstr &StartMI, MachineInstr &EndMI,
          "RegNo should be killed or dead");
 }
 
+// This opt tries to convert the following imm form to an index form to save an
+// add for stack variables.
+// Return false if no such pattern found.
+//
+// ADDI instr: ToBeChangedReg = ADDI FrameBaseReg, OffsetAddi
+// ADD instr:  ToBeDeletedReg = ADD ToBeChangedReg(killed), ScaleReg
+// Imm instr:  Reg            = op OffsetImm, ToBeDeletedReg(killed)
+//
+// can be converted to:
+//
+// new ADDI instr: ToBeChangedReg = ADDI FrameBaseReg, (OffsetAddi + OffsetImm)
+// Index instr:    Reg            = opx ScaleReg, ToBeChangedReg(killed)
+//
+// In order to eliminate ADD instr, make sure that:
+// 1: (OffsetAddi + OffsetImm) must be int16 since this offset will be used in
+//    new ADDI instr and ADDI can only take int16 Imm.
+// 2: ToBeChangedReg must be killed in ADD instr and there is no other use
+//    between ADDI and ADD instr since its original def in ADDI will be changed
+//    in new ADDI instr. And also there should be no new def for it between
+//    ADD and Imm instr as ToBeChangedReg will be used in Index instr.
+// 3: ToBeDeletedReg must be killed in Imm instr and there is no other use
+//    between ADD and Imm instr since ADD instr will be eliminated.
+// 4: ScaleReg must not be redefined between ADD and Imm instr since it will be
+//    moved to Index instr.
+bool PPCInstrInfo::foldFrameOffset(MachineInstr &MI) const {
+  MachineFunction *MF = MI.getParent()->getParent();
+  MachineRegisterInfo *MRI = &MF->getRegInfo();
+  bool PostRA = !MRI->isSSA();
+  // Do this opt after PEI which is after RA. The reason is stack slot expansion
+  // in PEI may expose such opportunities since in PEI, stack slot offsets to
+  // frame base(OffsetAddi) are determined.
+  if (!PostRA)
+    return false;
+  unsigned ToBeDeletedReg = 0;
+  int64_t OffsetImm = 0;
+  unsigned XFormOpcode = 0;
+  ImmInstrInfo III;
+
+  // Check if Imm instr meets requirement.
+  if (!isImmInstrEligibleForFolding(MI, ToBeDeletedReg, XFormOpcode, OffsetImm,
+                                    III))
+    return false;
+
+  bool OtherIntermediateUse = false;
+  MachineInstr *ADDMI = getDefMIPostRA(ToBeDeletedReg, MI, OtherIntermediateUse);
+
+  // Exit if there is other use between ADD and Imm instr or no def found.
+  if (OtherIntermediateUse || !ADDMI)
+    return false;
+
+  // Check if ADD instr meets requirement.
+  if (!isADDInstrEligibleForFolding(*ADDMI))
+    return false;
+
+  unsigned ScaleRegIdx = 0;
+  int64_t OffsetAddi = 0;
+  MachineInstr *ADDIMI = nullptr;
+
+  // Check if there is a valid ToBeChangedReg in ADDMI.
+  // 1: It must be killed.
+  // 2: Its definition must be a valid ADDIMI.
+  // 3: It must satify int16 offset requirement.
+  if (isValidToBeChangedReg(ADDMI, 1, ADDIMI, OffsetAddi, OffsetImm))
+    ScaleRegIdx = 2;
+  else if (isValidToBeChangedReg(ADDMI, 2, ADDIMI, OffsetAddi, OffsetImm))
+    ScaleRegIdx = 1;
+  else
+    return false;
+
+  assert(ADDIMI && "There should be ADDIMI for valid ToBeChangedReg.");
+  unsigned ToBeChangedReg = ADDIMI->getOperand(0).getReg();
+  unsigned ScaleReg = ADDMI->getOperand(ScaleRegIdx).getReg();
+  auto NewDefFor = [&](unsigned Reg, MachineBasicBlock::iterator Start,
+                       MachineBasicBlock::iterator End) {
+    for (auto It = ++Start; It != End; It++)
+      if (It->modifiesRegister(Reg, &getRegisterInfo()))
+        return true;
+    return false;
+  };
+  // Make sure no other def for ToBeChangedReg and ScaleReg between ADD Instr
+  // and Imm Instr.
+  if (NewDefFor(ToBeChangedReg, *ADDMI, MI) || NewDefFor(ScaleReg, *ADDMI, MI))
+    return false;
+
+  // Now start to do the transformation.
+  LLVM_DEBUG(dbgs() << "Replace instruction: "
+                    << "\n");
+  LLVM_DEBUG(ADDIMI->dump());
+  LLVM_DEBUG(ADDMI->dump());
+  LLVM_DEBUG(MI.dump());
+  LLVM_DEBUG(dbgs() << "with: "
+                    << "\n");
+
+  // Update ADDI instr.
+  ADDIMI->getOperand(2).setImm(OffsetAddi + OffsetImm);
+
+  // Update Imm instr.
+  MI.setDesc(get(XFormOpcode));
+  MI.getOperand(III.ImmOpNo)
+      .ChangeToRegister(ScaleReg, false, false,
+                        ADDMI->getOperand(ScaleRegIdx).isKill());
+
+  MI.getOperand(III.OpNoForForwarding)
+      .ChangeToRegister(ToBeChangedReg, false, false, true);
+
+  // Eliminate ADD instr.
+  ADDMI->eraseFromParent();
+
+  LLVM_DEBUG(ADDIMI->dump());
+  LLVM_DEBUG(MI.dump());
+
+  return true;
+}
+
+bool PPCInstrInfo::isADDIInstrEligibleForFolding(MachineInstr &ADDIMI,
+                                                 int64_t &Imm) const {
+  unsigned Opc = ADDIMI.getOpcode();
+
+  // Exit if the instruction is not ADDI.
+  if (Opc != PPC::ADDI && Opc != PPC::ADDI8)
+    return false;
+
+  Imm = ADDIMI.getOperand(2).getImm();
+
+  return true;
+}
+
+bool PPCInstrInfo::isADDInstrEligibleForFolding(MachineInstr &ADDMI) const {
+  unsigned Opc = ADDMI.getOpcode();
+
+  // Exit if the instruction is not ADD.
+  return Opc == PPC::ADD4 || Opc == PPC::ADD8;
+}
+
+bool PPCInstrInfo::isImmInstrEligibleForFolding(MachineInstr &MI,
+                                                unsigned &ToBeDeletedReg,
+                                                unsigned &XFormOpcode,
+                                                int64_t &OffsetImm,
+                                                ImmInstrInfo &III) const {
+  // Only handle load/store.
+  if (!MI.mayLoadOrStore())
+    return false;
+
+  unsigned Opc = MI.getOpcode();
+
+  XFormOpcode = RI.getMappedIdxOpcForImmOpc(Opc);
+
+  // Exit if instruction has no index form.
+  if (XFormOpcode == PPC::INSTRUCTION_LIST_END)
+    return false;
+
+  // TODO: sync the logic between instrHasImmForm() and ImmToIdxMap.
+  if (!instrHasImmForm(XFormOpcode, isVFRegister(MI.getOperand(0).getReg()),
+                       III, true))
+    return false;
+
+  if (!III.IsSummingOperands)
+    return false;
+
+  MachineOperand ImmOperand = MI.getOperand(III.ImmOpNo);
+  MachineOperand RegOperand = MI.getOperand(III.OpNoForForwarding);
+  // Only support imm operands, not relocation slots or others.
+  if (!ImmOperand.isImm())
+    return false;
+
+  assert(RegOperand.isReg() && "Instruction format is not right");
+
+  // There are other use for ToBeDeletedReg after Imm instr, can not delete it.
+  if (!RegOperand.isKill())
+    return false;
+
+  ToBeDeletedReg = RegOperand.getReg();
+  OffsetImm = ImmOperand.getImm();
+
+  return true;
+}
+
+bool PPCInstrInfo::isValidToBeChangedReg(MachineInstr *ADDMI, unsigned Index,
+                                         MachineInstr *&ADDIMI,
+                                         int64_t &OffsetAddi,
+                                         int64_t OffsetImm) const {
+  assert((Index == 1 || Index == 2) && "Invalid operand index for add.");
+  MachineOperand &MO = ADDMI->getOperand(Index);
+
+  if (!MO.isKill())
+    return false;
+
+  bool OtherIntermediateUse = false;
+
+  ADDIMI = getDefMIPostRA(MO.getReg(), *ADDMI, OtherIntermediateUse);
+  // Currently handle only one "add + Imminstr" pair case, exit if other
+  // intermediate use for ToBeChangedReg found.
+  // TODO: handle the cases where there are other "add + Imminstr" pairs
+  // with same offset in Imminstr which is like:
+  //
+  // ADDI instr: ToBeChangedReg  = ADDI FrameBaseReg, OffsetAddi
+  // ADD instr1: ToBeDeletedReg1 = ADD ToBeChangedReg, ScaleReg1
+  // Imm instr1: Reg1            = op1 OffsetImm, ToBeDeletedReg1(killed)
+  // ADD instr2: ToBeDeletedReg2 = ADD ToBeChangedReg(killed), ScaleReg2
+  // Imm instr2: Reg2            = op2 OffsetImm, ToBeDeletedReg2(killed)
+  //
+  // can be converted to:
+  //
+  // new ADDI instr: ToBeChangedReg = ADDI FrameBaseReg,
+  //                                       (OffsetAddi + OffsetImm)
+  // Index instr1:   Reg1           = opx1 ScaleReg1, ToBeChangedReg
+  // Index instr2:   Reg2           = opx2 ScaleReg2, ToBeChangedReg(killed)
+
+  if (OtherIntermediateUse || !ADDIMI)
+    return false;
+  // Check if ADDI instr meets requirement.
+  if (!isADDIInstrEligibleForFolding(*ADDIMI, OffsetAddi))
+    return false;
+
+  if (isInt<16>(OffsetAddi + OffsetImm))
+    return true;
+  return false;
+}
+
 // If this instruction has an immediate form and one of its operands is a
 // result of a load-immediate or an add-immediate, convert it to
 // the immediate form if the constant is in range.
