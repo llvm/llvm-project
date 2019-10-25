@@ -1468,15 +1468,16 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
       tryFoldInst(TII, &MI);
 
       if (!TII->isFoldableCopy(MI)) {
+        // Saw an unknown clobber of m0, so we no longer know what it is.
+        if (CurrentKnownM0Val && MI.modifiesRegister(AMDGPU::M0, TRI))
+          CurrentKnownM0Val = nullptr;
+
         // TODO: Omod might be OK if there is NSZ only on the source
         // instruction, and not the omod multiply.
         if (IsIEEEMode || (!HasNSZ && !MI.getFlag(MachineInstr::FmNsz)) ||
             !tryFoldOMod(MI))
           tryFoldClamp(MI);
 
-        // Saw an unknown clobber of m0, so we no longer know what it is.
-        if (CurrentKnownM0Val && MI.modifiesRegister(AMDGPU::M0, TRI))
-          CurrentKnownM0Val = nullptr;
         continue;
       }
 
