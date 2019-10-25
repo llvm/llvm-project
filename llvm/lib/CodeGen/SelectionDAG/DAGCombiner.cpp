@@ -9921,6 +9921,18 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   if (SDValue NewVSel = matchVSelectOpSizesWithSetCC(N))
     return NewVSel;
 
+  // If the target does not support a pop-count in the narrow source type but
+  // does support it in the destination type, widen the pop-count to this type:
+  // zext (ctpop X) --> ctpop (zext X)
+  // TODO: Generalize this to handle starting from anyext.
+  if (N0.getOpcode() == ISD::CTPOP && N0.hasOneUse() &&
+      !TLI.isOperationLegalOrCustom(ISD::CTPOP, N0.getValueType()) &&
+      TLI.isOperationLegalOrCustom(ISD::CTPOP, VT)) {
+    SDLoc DL(N);
+    SDValue NewZext = DAG.getZExtOrTrunc(N0.getOperand(0), DL, VT);
+    return DAG.getNode(ISD::CTPOP, DL, VT, NewZext);
+  }
+
   return SDValue();
 }
 
