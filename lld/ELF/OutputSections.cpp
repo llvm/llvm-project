@@ -20,6 +20,7 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SHA1.h"
+#include <regex>
 
 using namespace llvm;
 using namespace llvm::dwarf;
@@ -384,18 +385,23 @@ void OutputSection::finalize() {
   flags |= SHF_INFO_LINK;
 }
 
-// Returns true if S matches /Filename.?\.o$/.
-static bool isCrtBeginEnd(StringRef s, StringRef filename) {
-  if (!s.endswith(".o"))
-    return false;
-  s = s.drop_back(2);
-  if (s.endswith(filename))
-    return true;
-  return !s.empty() && s.drop_back().endswith(filename);
+// Returns true if S is in one of the many forms the compiler driver may pass
+// crtbegin files.
+//
+// Gcc uses any of crtbegin[<empty>|S|T].o.
+// Clang uses Gcc's plus clang_rt.crtbegin[<empty>|S|T][-<arch>|<empty>].o.
+
+static bool isCrtbegin(StringRef s) {
+  static std::regex re(R"((clang_rt\.)?crtbegin[ST]?(-.*)?\.o)");
+  s = sys::path::filename(s);
+  return std::regex_match(s.begin(), s.end(), re);
 }
 
-static bool isCrtbegin(StringRef s) { return isCrtBeginEnd(s, "crtbegin"); }
-static bool isCrtend(StringRef s) { return isCrtBeginEnd(s, "crtend"); }
+static bool isCrtend(StringRef s) {
+  static std::regex re(R"((clang_rt\.)?crtend[ST]?(-.*)?\.o)");
+  s = sys::path::filename(s);
+  return std::regex_match(s.begin(), s.end(), re);
+}
 
 // .ctors and .dtors are sorted by this priority from highest to lowest.
 //
