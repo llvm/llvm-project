@@ -1003,7 +1003,7 @@ void LiveDebugValues::transferRegisterCopy(MachineInstr &MI,
       !DestRegOp->isDef())
     return;
 
-  auto isCalleSavedReg = [&](unsigned Reg) {
+  auto isCalleeSavedReg = [&](unsigned Reg) {
     for (MCRegAliasIterator RAI(Reg, TRI, true); RAI.isValid(); ++RAI)
       if (CalleeSavedRegs.test(*RAI))
         return true;
@@ -1018,7 +1018,7 @@ void LiveDebugValues::transferRegisterCopy(MachineInstr &MI,
   // included, there would be a great chance that it is going to be clobbered
   // soon. It is more likely that previous register location, which is callee
   // saved, is going to stay unclobbered longer, even if it is killed.
-  if (!isCalleSavedReg(DestReg))
+  if (!isCalleeSavedReg(DestReg))
     return;
 
   for (unsigned ID : OpenRanges.getVarLocs()) {
