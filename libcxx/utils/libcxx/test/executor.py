@@ -135,10 +135,18 @@ class RemoteExecutor(Executor):
                 srcs.extend(file_deps)
                 dsts.extend(dev_paths)
             self.copy_in(srcs, dsts)
+
+            # When testing executables that were cross-compiled on Windows for
+            # Linux, we may need to explicitly set the execution permission to
+            # avoid the 'Permission denied' error:
+            chmod_cmd = ['chmod', '+x', target_exe_path]
+
             # TODO(jroelofs): capture the copy_in and delete_remote commands,
             # and conjugate them with '&&'s around the first tuple element
             # returned here:
-            return self._execute_command_remote(cmd, target_cwd, env)
+            return self._execute_command_remote(chmod_cmd + ['&&'] + cmd,
+                                                target_cwd,
+                                                env)
         finally:
             if target_cwd:
                 self.delete_remote(target_cwd)
@@ -187,10 +195,14 @@ class SSHExecutor(RemoteExecutor):
         remote = self.user_prefix + self.host
         ssh_cmd = [self.ssh_command, '-oBatchMode=yes', remote]
         if env:
-            env_cmd = ['env'] + ['%s="%s"' % (k, v) for k, v in env.items()]
+            export_cmd = \
+                ['export'] + ['"%s"="%s"' % (k, v) for k, v in env.items()]
         else:
-            env_cmd = []
-        remote_cmd = ' '.join(env_cmd + cmd)
+            export_cmd = []
+
+        remote_cmd = ' '.join(cmd)
+        if export_cmd:
+            remote_cmd = ' '.join(export_cmd) + ' && ' + remote_cmd
         if remote_work_dir != '.':
             remote_cmd = 'cd ' + remote_work_dir + ' && ' + remote_cmd
         out, err, rc = self.local_run(ssh_cmd + [remote_cmd])
