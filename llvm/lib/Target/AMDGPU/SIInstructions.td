@@ -2018,3 +2018,14 @@ def G_AMDGPU_FFBH_U32 : AMDGPUGenericInstruction {
   let InOperandList = (ins type1:$src);
   let hasSideEffects = 0;
 }
+
+// Atomic cmpxchg. $cmpval ad $newval are packed in a single vector
+// operand Expects a MachineMemOperand in addition to explicit
+// operands.
+def G_AMDGPU_ATOMIC_CMPXCHG : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$oldval);
+  let InOperandList = (ins ptype1:$addr, type0:$cmpval_nnenwval);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+}

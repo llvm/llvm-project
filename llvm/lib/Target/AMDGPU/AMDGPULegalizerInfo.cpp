@@ -848,7 +848,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     {G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB,
      G_ATOMICRMW_AND, G_ATOMICRMW_OR, G_ATOMICRMW_XOR,
      G_ATOMICRMW_MAX, G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX,
-     G_ATOMICRMW_UMIN, G_ATOMIC_CMPXCHG})
+     G_ATOMICRMW_UMIN})
     .legalFor({{S32, GlobalPtr}, {S32, LocalPtr},
                {S64, GlobalPtr}, {S64, LocalPtr}});
   if (ST.hasFlatAddressSpace()) {
@@ -857,6 +857,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder(G_ATOMICRMW_FADD)
     .legalFor({{S32, LocalPtr}});
+
+  // BUFFER/FLAT_ATOMIC_CMP_SWAP on GCN GPUs needs input marshalling, and output
+  // demarshalling
+  getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG)
+    .customFor({{S32, GlobalPtr}, {S64, GlobalPtr},
+                {S32, FlatPtr}, {S64, FlatPtr}})
+    .legalFor({{S32, LocalPtr}, {S64, LocalPtr},
+               {S32, RegionPtr}, {S64, RegionPtr}});
 
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG_WITH_SUCCESS)
     .lower();
@@ -1116,6 +1124,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeFMad(MI, MRI, B);
   case TargetOpcode::G_FDIV:
     return legalizeFDIV(MI, MRI, B);
+  case TargetOpcode::G_ATOMIC_CMPXCHG:
+    return legalizeAtomicCmpXChg(MI, MRI, B);
   default:
     return false;
   }
@@ -1722,6 +1732,33 @@ bool AMDGPULegalizerInfo::legalizeFMad(
   LegalizerHelper Helper(MF, DummyObserver, HelperBuilder);
   HelperBuilder.setMBB(*MI.getParent());
   return Helper.lowerFMad(MI) == LegalizerHelper::Legalized;
+}
+
+bool AMDGPULegalizerInfo::legalizeAtomicCmpXChg(
+  MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register PtrReg = MI.getOperand(1).getReg();
+  Register CmpVal = MI.getOperand(2).getReg();
+  Register NewVal = MI.getOperand(3).getReg();
+
+  assert(SITargetLowering::isFlatGlobalAddrSpace(
+           MRI.getType(PtrReg).getAddressSpace()) &&
+         "this should not have been custom lowered");
+
+  LLT ValTy = MRI.getType(CmpVal);
+  LLT VecTy = LLT::vector(2, ValTy);
+
+  B.setInstr(MI);
+  Register PackedVal = B.buildBuildVector(VecTy, { NewVal, CmpVal }).getReg(0);
+
+  B.buildInstr(AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG)
+    .addDef(DstReg)
+    .addUse(PtrReg)
+    .addUse(PackedVal)
+    .setMemRefs(MI.memoperands());
+
+  MI.eraseFromParent();
+  return true;
 }
 
 // Return the use branch instruction, otherwise null if the usage is invalid.
