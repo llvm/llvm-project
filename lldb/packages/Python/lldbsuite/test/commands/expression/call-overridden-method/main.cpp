@@ -1,12 +1,12 @@
 class Base {
 public:
   virtual ~Base() {}
-  virtual void foo() {}
+  virtual int foo() { return 1; }
 };
 
 class Derived : public Base {
 public:
-  virtual void foo() {}
+  virtual int foo() { return 2; }
 };
 
 int main() {

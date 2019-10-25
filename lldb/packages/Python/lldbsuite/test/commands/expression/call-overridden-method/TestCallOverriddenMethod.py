@@ -41,7 +41,7 @@ class ExprCommandCallOverriddenMethod(TestBase):
 
         # Test call to method in base class (this should always work as the base
         # class method is never an override).
-        self.expect("expr b->foo()")
+        self.expect("expr b->foo()", substrs=["2"])
 
         # Test call to overridden method in derived class (this will fail if the
         # overrides table is not correctly set up, as Derived::foo will be assigned
