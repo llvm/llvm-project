@@ -26,6 +26,7 @@ class TestIndirectEnumVariables(TestBase):
 
     @swiftTest
     @skipIf(bugnumber='rdar://27568868', oslist=['linux'])
+    @expectedFailureAll(bugnumber="rdar://56620009", oslist=["macosx"])
     def test_indirect_cases_variables(self):
         """Tests that indirect Enum variables display correctly when cases are indirect"""
         self.build()
@@ -33,6 +34,7 @@ class TestIndirectEnumVariables(TestBase):
 
     @swiftTest
     @skipIf(bugnumber='rdar://27568868', oslist=['linux'])
+    @expectedFailureAll(bugnumber="rdar://56620009", oslist=["macosx"])
     def test_indirect_enum_variables(self):
         """Tests that indirect Enum variables display correctly when enum is indirect"""
         self.build()
