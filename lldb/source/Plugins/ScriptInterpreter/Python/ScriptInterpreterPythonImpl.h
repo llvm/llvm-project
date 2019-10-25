@@ -179,8 +179,10 @@ public:
   Status GenerateFunction(const char *signature,
                           const StringList &input) override;
 
-  Status GenerateBreakpointCommandCallbackData(StringList &input,
-                                               std::string &output) override;
+  Status GenerateBreakpointCommandCallbackData(
+      StringList &input,
+      std::string &output,
+      bool has_extra_args) override;
 
   bool GenerateWatchpointCommandCallbackData(StringList &input,
                                              std::string &output) override;
@@ -244,13 +246,21 @@ public:
   Status SetBreakpointCommandCallback(BreakpointOptions *bp_options,
                                       const char *callback_body) override;
 
-  void SetBreakpointCommandCallbackFunction(BreakpointOptions *bp_options,
-                                            const char *function_name) override;
+  Status SetBreakpointCommandCallbackFunction(
+      BreakpointOptions *bp_options,
+      const char *function_name,
+      StructuredData::ObjectSP extra_args_sp) override;
 
   /// This one is for deserialization:
   Status SetBreakpointCommandCallback(
       BreakpointOptions *bp_options,
       std::unique_ptr<BreakpointOptions::CommandData> &data_up) override;
+
+  Status SetBreakpointCommandCallback(
+      BreakpointOptions *bp_options, 
+       const char *command_body_text,
+       StructuredData::ObjectSP extra_args_sp,
+       bool uses_extra_args);
 
   /// Set a one-liner as the callback for the watchpoint.
   void SetWatchpointCommandCallback(WatchpointOptions *wp_options,
@@ -368,6 +378,10 @@ public:
   python::PythonDictionary &GetSessionDictionary();
 
   python::PythonDictionary &GetSysModuleDictionary();
+  
+  llvm::Expected<size_t> 
+  GetNumFixedArgumentsForCallable(const llvm::StringRef &callable_name) 
+      override;
 
   bool GetEmbeddedInterpreterModuleObjects();
 

@@ -17,6 +17,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
+#include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/State.h"
@@ -66,7 +67,7 @@ public:
                             nullptr),
         IOHandlerDelegateMultiline("DONE",
                                    IOHandlerDelegate::Completion::LLDBCommand),
-        m_options() {
+        m_options(), m_func_options("breakpoint command", false, 'F') {
     SetHelpLong(
         R"(
 General information about entering breakpoint commands
@@ -201,6 +202,11 @@ LLDB to stop."
         "Final Note: A warning that no breakpoint command was generated when there \
 are no syntax errors may indicate that a function was declared but never called.");
 
+    m_all_options.Append(&m_options);
+    m_all_options.Append(&m_func_options, LLDB_OPT_SET_2 | LLDB_OPT_SET_3, 
+                         LLDB_OPT_SET_2);
+    m_all_options.Finalize();
+    
     CommandArgumentEntry arg;
     CommandArgumentData bp_id_arg;
 
@@ -218,7 +224,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
   ~CommandObjectBreakpointCommandAdd() override = default;
 
-  Options *GetOptions() override { return &m_options; }
+  Options *GetOptions() override { return &m_all_options; }
 
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
     StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
@@ -269,19 +275,20 @@ are no syntax errors may indicate that a function was declared but never called.
     }
   }
 
-  class CommandOptions : public Options {
+  class CommandOptions : public OptionGroup {
   public:
     CommandOptions()
-        : Options(), m_use_commands(false), m_use_script_language(false),
+        : OptionGroup(), m_use_commands(false), m_use_script_language(false),
           m_script_language(eScriptLanguageNone), m_use_one_liner(false),
-          m_one_liner(), m_function_name() {}
+          m_one_liner() {}
 
     ~CommandOptions() override = default;
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                           ExecutionContext *execution_context) override {
       Status error;
-      const int short_option = m_getopt_table[option_idx].val;
+      const int short_option 
+          = g_breakpoint_command_add_options[option_idx].short_option;
 
       switch (short_option) {
       case 'o':
@@ -313,12 +320,6 @@ are no syntax errors may indicate that a function was declared but never called.
               option_arg.str().c_str());
       } break;
 
-      case 'F':
-        m_use_one_liner = false;
-        m_use_script_language = true;
-        m_function_name.assign(option_arg);
-        break;
-
       case 'D':
         m_use_dummy = true;
         break;
@@ -337,7 +338,6 @@ are no syntax errors may indicate that a function was declared but never called.
       m_use_one_liner = false;
       m_stop_on_error = true;
       m_one_liner.clear();
-      m_function_name.clear();
       m_use_dummy = false;
     }
 
@@ -355,7 +355,6 @@ are no syntax errors may indicate that a function was declared but never called.
     bool m_use_one_liner;
     std::string m_one_liner;
     bool m_stop_on_error;
-    std::string m_function_name;
     bool m_use_dummy;
   };
 
@@ -372,12 +371,9 @@ protected:
       return false;
     }
 
-    if (!m_options.m_use_script_language &&
-        !m_options.m_function_name.empty()) {
-      result.AppendError("need to enable scripting to have a function run as a "
-                         "breakpoint command");
-      result.SetStatus(eReturnStatusFailed);
-      return false;
+    if (!m_func_options.GetName().empty()) {
+      m_options.m_use_one_liner = false;
+      m_options.m_use_script_language = true;
     }
 
     BreakpointIDList valid_bp_ids;
@@ -421,9 +417,12 @@ protected:
         if (m_options.m_use_one_liner) {
           script_interp->SetBreakpointCommandCallback(
               m_bp_options_vec, m_options.m_one_liner.c_str());
-        } else if (!m_options.m_function_name.empty()) {
-          script_interp->SetBreakpointCommandCallbackFunction(
-              m_bp_options_vec, m_options.m_function_name.c_str());
+        } else if (!m_func_options.GetName().empty()) {
+          Status error = script_interp->SetBreakpointCommandCallbackFunction(
+              m_bp_options_vec, m_func_options.GetName().c_str(),
+              m_func_options.GetStructuredData());
+            if (!error.Success())
+              result.SetError(error);
         } else {
           script_interp->CollectDataForBreakpointCommandCallback(
               m_bp_options_vec, result);
@@ -443,6 +442,9 @@ protected:
 
 private:
   CommandOptions m_options;
+  OptionGroupPythonClassWithDict m_func_options;
+  OptionGroupOptions m_all_options;
+
   std::vector<BreakpointOptions *> m_bp_options_vec; // This stores the
                                                      // breakpoint options that
                                                      // we are currently
