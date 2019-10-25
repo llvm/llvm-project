@@ -841,6 +841,12 @@ void StmtPrinter::VisitOMPParallelMasterTaskLoopDirective(
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPParallelMasterTaskLoopSimdDirective(
+    OMPParallelMasterTaskLoopSimdDirective *Node) {
+  Indent() << "#pragma omp parallel master taskloop simd";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPDistributeDirective(OMPDistributeDirective *Node) {
   Indent() << "#pragma omp distribute";
   PrintOMPExecutableDirective(Node);
