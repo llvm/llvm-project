@@ -45,6 +45,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ClangASTEmitters.h"
+#include "TableGenBackends.h"
+
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -52,7 +55,6 @@
 #include <set>
 #include <string>
 #include <vector>
-#include "TableGenBackends.h"
 
 using namespace llvm;
 
@@ -66,16 +68,7 @@ using namespace llvm;
 #define LastTypeMacroName "LAST_TYPE"
 #define LeafTypeMacroName "LEAF_TYPE"
 
-// These are spellings in the tblgen file.
-// (Type is also used for the spelling of the AST class.)
 #define TypeClassName "Type"
-#define DerivedTypeClassName "DerivedType"
-#define AlwaysDependentClassName "AlwaysDependent"
-#define NeverCanonicalClassName "NeverCanonical"
-#define NeverCanonicalUnlessDependentClassName "NeverCanonicalUnlessDependent"
-#define LeafTypeClassName "LeafType"
-#define AbstractFieldName "Abstract"
-#define BaseFieldName "Base"
 
 static StringRef getIdForType(Record *type) {
 	// The record name is expected to be the full C++ class name,
@@ -96,7 +89,7 @@ class TypeNodeEmitter {
 public:
 	TypeNodeEmitter(RecordKeeper &records, raw_ostream &out)
 		: Records(records), Out(out),
-			Types(Records.getAllDerivedDefinitions("Type")) {
+			Types(Records.getAllDerivedDefinitions(TypeNodeClassName)) {
 	}
 
 	void emit();
@@ -151,8 +144,11 @@ void TypeNodeEmitter::emitFallbackDefine(StringRef macroName,
 
 void TypeNodeEmitter::emitNodeInvocations() {
 	for (auto type : Types) {
-		// The name with the Type suffix.
+		// The name without the Type suffix.
 		StringRef id = getIdForType(type);
+
+		// If this is the Type node itself, skip it.
+		if (id.empty()) continue;
 
 		// Figure out which macro to use.
 		StringRef macroName;
@@ -177,8 +173,8 @@ void TypeNodeEmitter::emitNodeInvocations() {
 
 		// Compute the base class.
 		StringRef baseName = TypeClassName;
-		if (type->isSubClassOf(DerivedTypeClassName))
-			baseName = type->getValueAsDef(BaseFieldName)->getName();
+		if (auto base = type->getValueAsOptionalDef(BaseFieldName))
+			baseName = base->getName();
 
 		// Generate the invocation line.
 		Out << macroName << "(" << id << ", " << baseName << ")\n";
