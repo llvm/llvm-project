@@ -1111,6 +1111,8 @@ public:
   APInt usub_sat(const APInt &RHS) const;
   APInt smul_sat(const APInt &RHS) const;
   APInt umul_sat(const APInt &RHS) const;
+  APInt sshl_sat(const APInt &RHS) const;
+  APInt ushl_sat(const APInt &RHS) const;
 
   /// Array-indexing support.
   ///
