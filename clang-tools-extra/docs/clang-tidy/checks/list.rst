@@ -342,6 +342,7 @@ Clang-Tidy Checks
    performance-move-const-arg
    performance-move-constructor-init
    performance-noexcept-move-constructor
+   performance-trivially-destructible
    performance-type-promotion-in-math-fn
    performance-unnecessary-copy-initialization
    performance-unnecessary-value-param
