@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AST.h"
+#include "FindTarget.h"
 #include "Logger.h"
 #include "Selection.h"
 #include "SourceCode.h"
@@ -42,22 +43,41 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace clang {
 namespace clangd {
 namespace {
+
+// Returns semicolon location for the given FD. Since AST doesn't contain that
+// information, searches for a semicolon by lexing from end of function decl
+// while skipping comments.
+llvm::Optional<SourceLocation> getSemicolonForDecl(const FunctionDecl *FD) {
+  const SourceManager &SM = FD->getASTContext().getSourceManager();
+  const LangOptions &LangOpts = FD->getASTContext().getLangOpts();
+
+  SourceLocation CurLoc = FD->getEndLoc();
+  auto NextTok = Lexer::findNextToken(CurLoc, SM, LangOpts);
+  if (!NextTok || !NextTok->is(tok::semi))
+    return llvm::None;
+  return NextTok->getLocation();
+}
 
 // Deduces the FunctionDecl from a selection. Requires either the function body
 // or the function decl to be selected. Returns null if none of the above
@@ -75,7 +95,7 @@ const FunctionDecl *getSelectedFunction(const SelectionTree::Node *SelNode) {
 }
 
 // Checks the decls mentioned in Source are visible in the context of Target.
-// Achives that by checking declarations occur before target location in
+// Achives that by checking declaraions occur before target location in
 // translation unit or declared in the same class.
 bool checkDeclsAreVisible(const llvm::DenseSet<const Decl *> &DeclRefs,
                           const FunctionDecl *Target, const SourceManager &SM) {
@@ -115,6 +135,97 @@ bool checkDeclsAreVisible(const llvm::DenseSet<const Decl *> &DeclRefs,
   return true;
 }
 
+// Rewrites body of FD to fully-qualify all of the decls inside.
+llvm::Expected<std::string> qualifyAllDecls(const FunctionDecl *FD) {
+  // There are three types of spellings that needs to be qualified in a function
+  // body:
+  // - Types:       Foo                 -> ns::Foo
+  // - DeclRefExpr: ns2::foo()          -> ns1::ns2::foo();
+  // - UsingDecls:
+  //    using ns2::foo      -> using ns1::ns2::foo
+  //    using namespace ns2 -> using namespace ns1::ns2
+  //    using ns3 = ns2     -> using ns3 = ns1::ns2
+  //
+  // Go over all references inside a function body to generate replacements that
+  // will fully qualify those. So that body can be moved into an arbitrary file.
+  // We perform the qualification by qualyfying the first type/decl in a
+  // (un)qualified name. e.g:
+  //    namespace a { namespace b { class Bar{}; void foo(); } }
+  //    b::Bar x; -> a::b::Bar x;
+  //    foo(); -> a::b::foo();
+  // FIXME: Instead of fully qualyfying we should try deducing visible scopes at
+  // target location and generate minimal edits.
+
+  const SourceManager &SM = FD->getASTContext().getSourceManager();
+  tooling::Replacements Replacements;
+  bool HadErrors = false;
+  findExplicitReferences(FD->getBody(), [&](ReferenceLoc Ref) {
+    // Since we want to qualify only the first qualifier, skip names with a
+    // qualifier.
+    if (Ref.Qualifier)
+      return;
+    // There might be no decl in dependent contexts, there's nothing much we can
+    // do in such cases.
+    if (Ref.Targets.empty())
+      return;
+    // Do not qualify names introduced by macro expansions.
+    if (Ref.NameLoc.isMacroID())
+      return;
+
+    for (const NamedDecl *ND : Ref.Targets) {
+      if (ND->getDeclContext() != Ref.Targets.front()->getDeclContext()) {
+        elog("define inline: Targets from multiple contexts: {0}, {1}",
+             printQualifiedName(*Ref.Targets.front()), printQualifiedName(*ND));
+        HadErrors = true;
+        return;
+      }
+    }
+    // All Targets are in the same scope, so we can safely chose first one.
+    const NamedDecl *ND = Ref.Targets.front();
+    // Skip anything from a non-namespace scope, these can be:
+    // - Function or Method scopes, which means decl is local and doesn't need
+    //   qualification.
+    // - From Class/Struct/Union scope, which again doesn't need any qualifiers,
+    //   rather the left side of it requires qualification, like:
+    //   namespace a { class Bar { public: static int x; } }
+    //   void foo() { Bar::x; }
+    //                ~~~~~ -> we need to qualify Bar not x.
+    if (!ND->getDeclContext()->isNamespace())
+      return;
+
+    std::string Qualifier = printNamespaceScope(*ND->getDeclContext());
+    if (auto Err = Replacements.add(
+            tooling::Replacement(SM, Ref.NameLoc, 0, Qualifier))) {
+      HadErrors = true;
+      elog("define inline: Failed to add quals: {0}", std::move(Err));
+    }
+  });
+
+  if (HadErrors) {
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "define inline: Failed to compute qualifiers see logs for details.");
+  }
+
+  // Get new begin and end positions for the qualified body.
+  auto OrigBodyRange = toHalfOpenFileRange(
+      SM, FD->getASTContext().getLangOpts(), FD->getBody()->getSourceRange());
+  if (!OrigBodyRange)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Couldn't get range func body.");
+
+  unsigned BodyBegin = SM.getFileOffset(OrigBodyRange->getBegin());
+  unsigned BodyEnd = Replacements.getShiftedCodePosition(
+      SM.getFileOffset(OrigBodyRange->getEnd()));
+
+  // Trim the result to function body.
+  auto QualifiedFunc = tooling::applyAllReplacements(
+      SM.getBufferData(SM.getFileID(OrigBodyRange->getBegin())), Replacements);
+  if (!QualifiedFunc)
+    return QualifiedFunc.takeError();
+  return QualifiedFunc->substr(BodyBegin, BodyEnd - BodyBegin + 1);
+}
+
 // Returns the canonical declaration for the given FunctionDecl. This will
 // usually be the first declaration in current translation unit with the
 // exception of template specialization.
@@ -134,6 +245,15 @@ const FunctionDecl *findTarget(const FunctionDecl *FD) {
     assert(PrevDecl && "Found specialization without template decl");
   }
   return PrevDecl;
+}
+
+// Returns the begining location for a FunctionDecl. Returns location of
+// template keyword for templated functions.
+const SourceLocation getBeginLoc(const FunctionDecl *FD) {
+  // Include template parameter list.
+  if (auto *FTD = FD->getDescribedFunctionTemplate())
+    return FTD->getBeginLoc();
+  return FD->getBeginLoc();
 }
 
 /// Moves definition of a function/method to its declaration location.
@@ -159,7 +279,6 @@ public:
   std::string title() const override {
     return "Move function body to declaration";
   }
-  bool hidden() const override { return true; }
 
   // Returns true when selection is on a function definition that does not
   // make use of any internal symbols.
@@ -177,6 +296,11 @@ public:
       if (MD->getParent()->isTemplated())
         return false;
     }
+    // If function body starts or ends inside a macro, we refuse to move it into
+    // declaration location.
+    if (Source->getBody()->getBeginLoc().isMacroID() ||
+        Source->getBody()->getEndLoc().isMacroID())
+      return false;
 
     Target = findTarget(Source);
     if (Target == Source) {
@@ -198,8 +322,63 @@ public:
   }
 
   Expected<Effect> apply(const Selection &Sel) override {
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Not implemented yet");
+    const auto &AST = Sel.AST.getASTContext();
+    const auto &SM = AST.getSourceManager();
+
+    auto Semicolon = getSemicolonForDecl(Target);
+    if (!Semicolon) {
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Couldn't find semicolon for target declaration.");
+    }
+
+    auto QualifiedBody = qualifyAllDecls(Source);
+    if (!QualifiedBody)
+      return QualifiedBody.takeError();
+
+    const tooling::Replacement SemicolonToFuncBody(SM, *Semicolon, 1,
+                                                   *QualifiedBody);
+    auto DefRange = toHalfOpenFileRange(
+        SM, AST.getLangOpts(),
+        SM.getExpansionRange(CharSourceRange::getCharRange(getBeginLoc(Source),
+                                                           Source->getEndLoc()))
+            .getAsRange());
+    if (!DefRange) {
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Couldn't get range for the source.");
+    }
+    unsigned int SourceLen = SM.getFileOffset(DefRange->getEnd()) -
+                             SM.getFileOffset(DefRange->getBegin());
+    const tooling::Replacement DeleteFuncBody(SM, DefRange->getBegin(),
+                                              SourceLen, "");
+
+    llvm::SmallVector<std::pair<std::string, Edit>, 2> Edits;
+    // Edit for Target.
+    auto FE = Effect::fileEdit(SM, SM.getFileID(*Semicolon),
+                               tooling::Replacements(SemicolonToFuncBody));
+    if (!FE)
+      return FE.takeError();
+    Edits.push_back(std::move(*FE));
+
+    // Edit for Source.
+    if (!SM.isWrittenInSameFile(DefRange->getBegin(),
+                                SM.getExpansionLoc(Target->getBeginLoc()))) {
+      // Generate a new edit if the Source and Target are in different files.
+      auto FE = Effect::fileEdit(SM, SM.getFileID(Sel.Cursor),
+                                 tooling::Replacements(DeleteFuncBody));
+      if (!FE)
+        return FE.takeError();
+      Edits.push_back(std::move(*FE));
+    } else {
+      // Merge with previous edit if they are in the same file.
+      if (auto Err = Edits.front().second.Replacements.add(DeleteFuncBody))
+        return std::move(Err);
+    }
+
+    Effect E;
+    for (auto &Pair : Edits)
+      E.ApplyEdits.try_emplace(std::move(Pair.first), std::move(Pair.second));
+    return E;
   }
 
 private:

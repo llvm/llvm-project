@@ -68,13 +68,19 @@ protected:
 
   // Apply the current tweak to the range (or point) in MarkedCode.
   // MarkedCode will be wrapped according to the Context.
-  //  - if the tweak produces edits, returns the edited code (without markings).
+  //  - if the tweak produces edits, returns the edited code (without markings)
+  //    for the main file.
+  //    Populates \p EditedFiles if there were changes to other files whenever
+  //    it is non-null. It is a mapping from absolute path of the edited file to
+  //    its new contents. Passing a nullptr to \p EditedFiles when there are
+  //    changes, will result in a failure.
   //    The context added to MarkedCode will be stripped away before returning,
   //    unless the tweak edited it.
   //  - if the tweak produces a message, returns "message:\n<message>"
   //  - if prepare() returns false, returns "unavailable"
   //  - if apply() returns an error, returns "fail: <message>"
-  std::string apply(llvm::StringRef MarkedCode) const;
+  std::string apply(llvm::StringRef MarkedCode,
+                    llvm::StringMap<std::string> *EditedFiles = nullptr) const;
 
   // Accepts a code snippet with many ranges (or points) marked, and returns a
   // list of snippets with one range marked each.
