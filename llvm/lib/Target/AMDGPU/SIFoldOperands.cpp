@@ -668,7 +668,6 @@ void SIFoldOperands::foldOperand(
   } else {
     if (UseMI->isCopy() && OpToFold.isReg() &&
         UseMI->getOperand(0).getReg().isVirtual() &&
-        TRI->isVectorRegister(*MRI, UseMI->getOperand(0).getReg()) &&
         !UseMI->getOperand(1).getSubReg()) {
       LLVM_DEBUG(dbgs() << "Folding " << OpToFold
                         << "\n into " << *UseMI << '\n');
