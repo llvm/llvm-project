@@ -15,30 +15,29 @@ using namespace lldb_private;
 
 OptionGroupPythonClassWithDict::OptionGroupPythonClassWithDict
     (const char *class_use,
+     bool is_class,
      int class_option,
      int key_option, 
-     int value_option,
-     const char *class_long_option,
-     const char *key_long_option,
-     const char *value_long_option,
-     bool required) {
-  m_key_usage_text.assign("The key for a key/value pair passed to the class"
-                            " that implements a ");
+     int value_option) : OptionGroup(), m_is_class(is_class) {
+  m_key_usage_text.assign("The key for a key/value pair passed to the "
+                          "implementation of a ");
   m_key_usage_text.append(class_use);
   m_key_usage_text.append(".  Pairs can be specified more than once.");
   
-  m_value_usage_text.assign("The value for a previous key in the pair passed to"
-                            " the class that implements a ");
+  m_value_usage_text.assign("The value for the previous key in the pair passed "
+                            "to the implementation of a ");
   m_value_usage_text.append(class_use);
   m_value_usage_text.append(".  Pairs can be specified more than once.");
   
-  m_class_usage_text.assign("The name of the class that will manage a ");
+  m_class_usage_text.assign("The name of the ");
+  m_class_usage_text.append(m_is_class ? "class" : "function");
+  m_class_usage_text.append(" that will manage a ");
   m_class_usage_text.append(class_use);
   m_class_usage_text.append(".");
   
   m_option_definition[0].usage_mask = LLDB_OPT_SET_1;
-  m_option_definition[0].required = required;
-  m_option_definition[0].long_option = class_long_option;
+  m_option_definition[0].required = true;
+  m_option_definition[0].long_option = "script-class";
   m_option_definition[0].short_option = class_option;
   m_option_definition[0].validator = nullptr;
   m_option_definition[0].option_has_arg = OptionParser::eRequiredArgument;
@@ -47,9 +46,9 @@ OptionGroupPythonClassWithDict::OptionGroupPythonClassWithDict
   m_option_definition[0].argument_type = eArgTypePythonClass;
   m_option_definition[0].usage_text = m_class_usage_text.data();
 
-  m_option_definition[1].usage_mask = LLDB_OPT_SET_1;
-  m_option_definition[1].required = required;
-  m_option_definition[1].long_option = key_long_option;
+  m_option_definition[1].usage_mask = LLDB_OPT_SET_2;
+  m_option_definition[1].required = false;
+  m_option_definition[1].long_option = "structured-data-key";
   m_option_definition[1].short_option = key_option;
   m_option_definition[1].validator = nullptr;
   m_option_definition[1].option_has_arg = OptionParser::eRequiredArgument;
@@ -58,9 +57,9 @@ OptionGroupPythonClassWithDict::OptionGroupPythonClassWithDict
   m_option_definition[1].argument_type = eArgTypeNone;
   m_option_definition[1].usage_text = m_key_usage_text.data();
 
-  m_option_definition[2].usage_mask = LLDB_OPT_SET_1;
-  m_option_definition[2].required = required;
-  m_option_definition[2].long_option = value_long_option;
+  m_option_definition[2].usage_mask = LLDB_OPT_SET_2;
+  m_option_definition[2].required = false;
+  m_option_definition[2].long_option = "structured-data-value";
   m_option_definition[2].short_option = value_option;
   m_option_definition[2].validator = nullptr;
   m_option_definition[2].option_has_arg = OptionParser::eRequiredArgument;
@@ -68,6 +67,18 @@ OptionGroupPythonClassWithDict::OptionGroupPythonClassWithDict
   m_option_definition[2].completion_type = 0;
   m_option_definition[2].argument_type = eArgTypeNone;
   m_option_definition[2].usage_text = m_value_usage_text.data();
+  
+  m_option_definition[3].usage_mask = LLDB_OPT_SET_3;
+  m_option_definition[3].required = true;
+  m_option_definition[3].long_option = "python-function";
+  m_option_definition[3].short_option = class_option;
+  m_option_definition[3].validator = nullptr;
+  m_option_definition[3].option_has_arg = OptionParser::eRequiredArgument;
+  m_option_definition[3].enum_values = {};
+  m_option_definition[3].completion_type = 0;
+  m_option_definition[3].argument_type = eArgTypePythonFunction;
+  m_option_definition[3].usage_text = m_class_usage_text.data();
+
 }
 
 OptionGroupPythonClassWithDict::~OptionGroupPythonClassWithDict() {}
@@ -78,10 +89,13 @@ Status OptionGroupPythonClassWithDict::SetOptionValue(
     ExecutionContext *execution_context) {
   Status error;
   switch (option_idx) {
-  case 0: {
-    m_class_name.assign(option_arg);
+  case 0:
+  case 3: {
+    m_name.assign(option_arg);
   } break;
   case 1: {
+      if (!m_dict_sp)
+        m_dict_sp = std::make_shared<StructuredData::Dictionary>();
       if (m_current_key.empty())
         m_current_key.assign(option_arg);
       else
@@ -90,6 +104,8 @@ Status OptionGroupPythonClassWithDict::SetOptionValue(
     
   } break;
   case 2: {
+      if (!m_dict_sp)
+        m_dict_sp = std::make_shared<StructuredData::Dictionary>();
       if (!m_current_key.empty()) {
           m_dict_sp->AddStringItem(m_current_key, option_arg);
           m_current_key.clear();
@@ -107,7 +123,10 @@ Status OptionGroupPythonClassWithDict::SetOptionValue(
 void OptionGroupPythonClassWithDict::OptionParsingStarting(
   ExecutionContext *execution_context) {
   m_current_key.erase();
-  m_dict_sp = std::make_shared<StructuredData::Dictionary>();
+  // Leave the dictionary shared pointer unset.  That way you can tell that
+  // the user didn't pass any -k -v pairs.  We want to be able to warn if these
+  // were passed when the function they passed won't use them.
+  m_dict_sp.reset();
 }
 
 Status OptionGroupPythonClassWithDict::OptionParsingFinished(
