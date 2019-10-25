@@ -790,13 +790,15 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
-    SectionSP image_sp = std::make_shared<Section>(
-        module_sp, this, ~user_id_t(0), ConstString(), eSectionTypeContainer,
-        m_coff_header_opt.image_base, m_coff_header_opt.image_size,
-        /*file_offset*/ 0, /*file_size*/ 0, m_coff_header_opt.sect_alignment,
+    SectionSP header_sp = std::make_shared<Section>(
+        module_sp, this, ~user_id_t(0), ConstString("PECOFF header"),
+        eSectionTypeOther, m_coff_header_opt.image_base,
+        m_coff_header_opt.header_size,
+        /*file_offset*/ 0, m_coff_header_opt.header_size,
+        m_coff_header_opt.sect_alignment,
         /*flags*/ 0);
-    m_sections_up->AddSection(image_sp);
-    unified_section_list.AddSection(image_sp);
+    m_sections_up->AddSection(header_sp);
+    unified_section_list.AddSection(header_sp);
 
     const uint32_t nsects = m_sect_headers.size();
     ModuleSP module_sp(GetModule());
@@ -901,15 +903,15 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
       }
 
       SectionSP section_sp(new Section(
-          image_sp,        // Parent section
           module_sp,       // Module to which this section belongs
           this,            // Object file to which this section belongs
           idx + 1,         // Section ID is the 1 based section index.
           const_sect_name, // Name of this section
           section_type,
-          m_sect_headers[idx].vmaddr, // File VM address == addresses as
-                                      // they are found in the object file
-          m_sect_headers[idx].vmsize, // VM size in bytes of this section
+          m_coff_header_opt.image_base +
+              m_sect_headers[idx].vmaddr, // File VM address == addresses as
+                                          // they are found in the object file
+          m_sect_headers[idx].vmsize,     // VM size in bytes of this section
           m_sect_headers[idx]
               .offset, // Offset to the data for this section in the file
           m_sect_headers[idx]
@@ -917,7 +919,8 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
           m_coff_header_opt.sect_alignment, // Section alignment
           m_sect_headers[idx].flags));      // Flags for this section
 
-      image_sp->GetChildren().AddSection(std::move(section_sp));
+      m_sections_up->AddSection(section_sp);
+      unified_section_list.AddSection(section_sp);
     }
   }
 }
