@@ -332,34 +332,6 @@ TEST_F(MinidumpParserTest, FindMemoryRangeWithFullMemoryMinidump) {
   EXPECT_FALSE(parser->FindMemoryRange(0x7ffe0000 + 4096).hasValue());
 }
 
-void check_region(MinidumpParser &parser, lldb::addr_t addr, lldb::addr_t start,
-                  lldb::addr_t end, MemoryRegionInfo::OptionalBool read,
-                  MemoryRegionInfo::OptionalBool write,
-                  MemoryRegionInfo::OptionalBool exec,
-                  MemoryRegionInfo::OptionalBool mapped,
-                  ConstString name = ConstString()) {
-  SCOPED_TRACE(addr);
-  auto range_info = parser.GetMemoryRegionInfo(addr);
-  EXPECT_EQ(start, range_info.GetRange().GetRangeBase());
-  EXPECT_EQ(end, range_info.GetRange().GetRangeEnd());
-  EXPECT_EQ(read, range_info.GetReadable());
-  EXPECT_EQ(write, range_info.GetWritable());
-  EXPECT_EQ(exec, range_info.GetExecutable());
-  EXPECT_EQ(mapped, range_info.GetMapped());
-  EXPECT_EQ(name, range_info.GetName());
-}
-
-// Same as above function where addr == start
-void check_region(MinidumpParser &parser, lldb::addr_t start, lldb::addr_t end,
-                  MemoryRegionInfo::OptionalBool read,
-                  MemoryRegionInfo::OptionalBool write,
-                  MemoryRegionInfo::OptionalBool exec,
-                  MemoryRegionInfo::OptionalBool mapped,
-                  ConstString name = ConstString()) {
-  check_region(parser, start, start, end, read, write, exec, mapped, name);
-}
-
-
 constexpr auto yes = MemoryRegionInfo::eYes;
 constexpr auto no = MemoryRegionInfo::eNo;
 constexpr auto unknown = MemoryRegionInfo::eDontKnow;
@@ -378,17 +350,7 @@ Streams:
         Type:            [  ]
       - Base Address:    0x0000000000010000
         Allocation Protect: [ PAGE_READ_WRITE ]
-        Region Size:     0x0000000000010000
-        State:           [ MEM_COMMIT ]
-        Type:            [ MEM_MAPPED ]
-      - Base Address:    0x0000000000020000
-        Allocation Protect: [ PAGE_READ_WRITE ]
-        Region Size:     0x0000000000010000
-        State:           [ MEM_COMMIT ]
-        Type:            [ MEM_MAPPED ]
-      - Base Address:    0x0000000000030000
-        Allocation Protect: [ PAGE_READ_WRITE ]
-        Region Size:     0x0000000000001000
+        Region Size:     0x0000000000021000
         State:           [ MEM_COMMIT ]
         Type:            [ MEM_MAPPED ]
       - Base Address:    0x0000000000040000
@@ -413,21 +375,20 @@ Streams:
 )"),
                     llvm::Succeeded());
 
-  check_region(*parser, 0x00000000, 0x00010000, no, no, no, no);
-  check_region(*parser, 0x00010000, 0x00020000, yes, yes, no, yes);
-  check_region(*parser, 0x00020000, 0x00030000, yes, yes, no, yes);
-  check_region(*parser, 0x00030000, 0x00031000, yes, yes, no, yes);
-  check_region(*parser, 0x00031000, 0x00040000, no, no, no, no);
-  check_region(*parser, 0x00040000, 0x00041000, yes, no, no, yes);
-
-  // Check addresses contained inside ranges
-  check_region(*parser, 0x00000001, 0x00000000, 0x00010000, no, no, no, no);
-  check_region(*parser, 0x0000ffff, 0x00000000, 0x00010000, no, no, no, no);
-  check_region(*parser, 0x00010001, 0x00010000, 0x00020000, yes, yes, no, yes);
-  check_region(*parser, 0x0001ffff, 0x00010000, 0x00020000, yes, yes, no, yes);
-
-  // Test that an address after the last entry maps to rest of the memory space
-  check_region(*parser, 0x7fff0000, 0x7fff0000, UINT64_MAX, no, no, no, no);
+  EXPECT_THAT(
+      parser->BuildMemoryRegions(),
+      testing::Pair(testing::ElementsAre(
+                        MemoryRegionInfo({0x0, 0x10000}, no, no, no, no,
+                                         ConstString(), unknown, 0),
+                        MemoryRegionInfo({0x10000, 0x21000}, yes, yes, no, yes,
+                                         ConstString(), unknown, 0),
+                        MemoryRegionInfo({0x40000, 0x1000}, yes, no, no, yes,
+                                         ConstString(), unknown, 0),
+                        MemoryRegionInfo({0x7ffe0000, 0x1000}, yes, no, no, yes,
+                                         ConstString(), unknown, 0),
+                        MemoryRegionInfo({0x7ffe1000, 0xf000}, no, no, no, yes,
+                                         ConstString(), unknown, 0)),
+                    true));
 }
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfoFromMemoryList) {
@@ -443,30 +404,33 @@ Streams:
 ...
 )"),
                     llvm::Succeeded());
+
   // Test we can get memory regions from the MINIDUMP_MEMORY_LIST stream when
   // we don't have a MemoryInfoListStream.
 
-  // Test addres before the first entry comes back with nothing mapped up
-  // to first valid region info
-  check_region(*parser, 0x00000000, 0x00001000, no, no, no, no);
-  check_region(*parser, 0x00001000, 0x00001010, yes, unknown, unknown, yes);
-  check_region(*parser, 0x00001010, 0x00002000, no, no, no, no);
-  check_region(*parser, 0x00002000, 0x00002020, yes, unknown, unknown, yes);
-  check_region(*parser, 0x00002020, UINT64_MAX, no, no, no, no);
+  EXPECT_THAT(
+      parser->BuildMemoryRegions(),
+      testing::Pair(testing::ElementsAre(
+                        MemoryRegionInfo({0x1000, 0x10}, yes, unknown, unknown,
+                                         yes, ConstString(), unknown, 0),
+                        MemoryRegionInfo({0x2000, 0x20}, yes, unknown, unknown,
+                                         yes, ConstString(), unknown, 0)),
+                    false));
 }
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfoFromMemory64List) {
   SetUpData("regions-memlist64.dmp");
+
   // Test we can get memory regions from the MINIDUMP_MEMORY64_LIST stream when
   // we don't have a MemoryInfoListStream.
-
-  // Test addres before the first entry comes back with nothing mapped up
-  // to first valid region info
-  check_region(*parser, 0x00000000, 0x00001000, no, no, no, no);
-  check_region(*parser, 0x00001000, 0x00001010, yes, unknown, unknown, yes);
-  check_region(*parser, 0x00001010, 0x00002000, no, no, no, no);
-  check_region(*parser, 0x00002000, 0x00002020, yes, unknown, unknown, yes);
-  check_region(*parser, 0x00002020, UINT64_MAX, no, no, no, no);
+  EXPECT_THAT(
+      parser->BuildMemoryRegions(),
+      testing::Pair(testing::ElementsAre(
+                        MemoryRegionInfo({0x1000, 0x10}, yes, unknown, unknown,
+                                         yes, ConstString(), unknown, 0),
+                        MemoryRegionInfo({0x2000, 0x20}, yes, unknown, unknown,
+                                         yes, ConstString(), unknown, 0)),
+                    false));
 }
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfoLinuxMaps) {
@@ -478,57 +442,34 @@ Streams:
       400d9000-400db000 r-xp 00000000 b3:04 227        /system/bin/app_process
       400db000-400dc000 r--p 00001000 b3:04 227        /system/bin/app_process
       400dc000-400dd000 rw-p 00000000 00:00 0
-      400dd000-400ec000 r-xp 00000000 b3:04 300        /system/bin/linker
       400ec000-400ed000 r--p 00000000 00:00 0
-      400ed000-400ee000 r--p 0000f000 b3:04 300        /system/bin/linker
       400ee000-400ef000 rw-p 00010000 b3:04 300        /system/bin/linker
-      400ef000-400fb000 rw-p 00000000 00:00 0
-      400fb000-400fc000 r-xp 00000000 b3:04 1096       /system/lib/liblog.so
       400fc000-400fd000 rwxp 00001000 b3:04 1096       /system/lib/liblog.so
-      400fd000-400ff000 r-xp 00002000 b3:04 1096       /system/lib/liblog.so
-      400ff000-40100000 r--p 00003000 b3:04 1096       /system/lib/liblog.so
-      40100000-40101000 rw-p 00004000 b3:04 1096       /system/lib/liblog.so
-      40101000-40122000 r-xp 00000000 b3:04 955        /system/lib/libc.so
-      40122000-40123000 rwxp 00021000 b3:04 955        /system/lib/libc.so
-      40123000-40167000 r-xp 00022000 b3:04 955        /system/lib/libc.so
-      40167000-40169000 r--p 00065000 b3:04 955        /system/lib/libc.so
-      40169000-4016b000 rw-p 00067000 b3:04 955        /system/lib/libc.so
-      4016b000-40176000 rw-p 00000000 00:00 0
 
 ...
 )"),
                     llvm::Succeeded());
   // Test we can get memory regions from the linux /proc/<pid>/maps stream when
   // we don't have a MemoryInfoListStream.
-
-  // Test addres before the first entry comes back with nothing mapped up
-  // to first valid region info
-  ConstString a("/system/bin/app_process");
-  ConstString b("/system/bin/linker");
-  ConstString c("/system/lib/liblog.so");
-  ConstString d("/system/lib/libc.so");
-  ConstString n;
-  check_region(*parser, 0x00000000, 0x400d9000, no, no, no, no, n);
-  check_region(*parser, 0x400d9000, 0x400db000, yes, no, yes, yes, a);
-  check_region(*parser, 0x400db000, 0x400dc000, yes, no, no, yes, a);
-  check_region(*parser, 0x400dc000, 0x400dd000, yes, yes, no, yes, n);
-  check_region(*parser, 0x400dd000, 0x400ec000, yes, no, yes, yes, b);
-  check_region(*parser, 0x400ec000, 0x400ed000, yes, no, no, yes, n);
-  check_region(*parser, 0x400ed000, 0x400ee000, yes, no, no, yes, b);
-  check_region(*parser, 0x400ee000, 0x400ef000, yes, yes, no, yes, b);
-  check_region(*parser, 0x400ef000, 0x400fb000, yes, yes, no, yes, n);
-  check_region(*parser, 0x400fb000, 0x400fc000, yes, no, yes, yes, c);
-  check_region(*parser, 0x400fc000, 0x400fd000, yes, yes, yes, yes, c);
-  check_region(*parser, 0x400fd000, 0x400ff000, yes, no, yes, yes, c);
-  check_region(*parser, 0x400ff000, 0x40100000, yes, no, no, yes, c);
-  check_region(*parser, 0x40100000, 0x40101000, yes, yes, no, yes, c);
-  check_region(*parser, 0x40101000, 0x40122000, yes, no, yes, yes, d);
-  check_region(*parser, 0x40122000, 0x40123000, yes, yes, yes, yes, d);
-  check_region(*parser, 0x40123000, 0x40167000, yes, no, yes, yes, d);
-  check_region(*parser, 0x40167000, 0x40169000, yes, no, no, yes, d);
-  check_region(*parser, 0x40169000, 0x4016b000, yes, yes, no, yes, d);
-  check_region(*parser, 0x4016b000, 0x40176000, yes, yes, no, yes, n);
-  check_region(*parser, 0x40176000, UINT64_MAX, no, no, no, no, n);
+  ConstString app_process("/system/bin/app_process");
+  ConstString linker("/system/bin/linker");
+  ConstString liblog("/system/lib/liblog.so");
+  EXPECT_THAT(
+      parser->BuildMemoryRegions(),
+      testing::Pair(testing::ElementsAre(
+                        MemoryRegionInfo({0x400d9000, 0x2000}, yes, no, yes,
+                                         yes, app_process, unknown, 0),
+                        MemoryRegionInfo({0x400db000, 0x1000}, yes, no, no, yes,
+                                         app_process, unknown, 0),
+                        MemoryRegionInfo({0x400dc000, 0x1000}, yes, yes, no,
+                                         yes, ConstString(), unknown, 0),
+                        MemoryRegionInfo({0x400ec000, 0x1000}, yes, no, no, yes,
+                                         ConstString(), unknown, 0),
+                        MemoryRegionInfo({0x400ee000, 0x1000}, yes, yes, no,
+                                         yes, linker, unknown, 0),
+                        MemoryRegionInfo({0x400fc000, 0x1000}, yes, yes, yes,
+                                         yes, liblog, unknown, 0)),
+                    true));
 }
 
 // Windows Minidump tests
