@@ -1,10 +1,7 @@
-class Type<bit abstract = 0> {
+class TypeNode<TypeNode base, bit abstract = 0> {
+	TypeNode Base = base;
   bit Abstract = abstract;
 } 
-
-class DerivedType<Type base, bit abstract = 0> : Type<abstract> {
-	Type Base = base;
-}
 
 /// A type node that is only used to represent dependent types in C++.  For
 /// example, DependentTemplateSpecializationType is used to represent types
@@ -51,56 +48,57 @@ class NeverCanonicalUnlessDependent {}
 /// to types that may not be leaves should not declare this.
 class LeafType {}
 
-def BuiltinType : Type, LeafType;
-def ComplexType : Type;
-def PointerType : Type;
-def BlockPointerType : Type;
-def ReferenceType : Type<1>;
-def LValueReferenceType : DerivedType<ReferenceType>;
-def RValueReferenceType : DerivedType<ReferenceType>;
-def MemberPointerType : Type;
-def ArrayType : Type<1>;
-def ConstantArrayType : DerivedType<ArrayType>;
-def IncompleteArrayType : DerivedType<ArrayType>;
-def VariableArrayType : DerivedType<ArrayType>;
-def DependentSizedArrayType : DerivedType<ArrayType>, AlwaysDependent;
-def DependentSizedExtVectorType : Type, AlwaysDependent;
-def DependentAddressSpaceType : Type, AlwaysDependent;
-def VectorType : Type;
-def DependentVectorType : Type, AlwaysDependent;
-def ExtVectorType : DerivedType<VectorType>;
-def FunctionType : Type<1>;
-def FunctionProtoType : DerivedType<FunctionType>;
-def FunctionNoProtoType : DerivedType<FunctionType>;
-def UnresolvedUsingType : Type, AlwaysDependent;
-def ParenType : Type, NeverCanonical;
-def TypedefType : Type, NeverCanonical;
-def MacroQualifiedType : Type, NeverCanonical;
-def AdjustedType : Type, NeverCanonical;
-def DecayedType : DerivedType<AdjustedType>, NeverCanonical;
-def TypeOfExprType : Type, NeverCanonicalUnlessDependent;
-def TypeOfType : Type, NeverCanonicalUnlessDependent;
-def DecltypeType : Type, NeverCanonicalUnlessDependent;
-def UnaryTransformType : Type, NeverCanonicalUnlessDependent;
-def TagType : Type<1>;
-def RecordType : DerivedType<TagType>, LeafType;
-def EnumType : DerivedType<TagType>, LeafType;
-def ElaboratedType : Type, NeverCanonical;
-def AttributedType : Type, NeverCanonical;
-def TemplateTypeParmType : Type, AlwaysDependent, LeafType;
-def SubstTemplateTypeParmType : Type, NeverCanonical;
-def SubstTemplateTypeParmPackType : Type, AlwaysDependent;
-def TemplateSpecializationType : Type, NeverCanonicalUnlessDependent;
-def DeducedType : Type<1>;
-def AutoType : DerivedType<DeducedType>;
-def DeducedTemplateSpecializationType : DerivedType<DeducedType>;
-def InjectedClassNameType : Type, AlwaysDependent, LeafType;
-def DependentNameType : Type, AlwaysDependent;
-def DependentTemplateSpecializationType : Type, AlwaysDependent;
-def PackExpansionType : Type, NeverCanonicalUnlessDependent;
-def ObjCTypeParamType : Type, NeverCanonical;
-def ObjCObjectType : Type;
-def ObjCInterfaceType : DerivedType<ObjCObjectType>, LeafType;
-def ObjCObjectPointerType : Type;
-def PipeType : Type;
-def AtomicType : Type;
+def Type : TypeNode<?, 1>;
+def BuiltinType : TypeNode<Type>, LeafType;
+def ComplexType : TypeNode<Type>;
+def PointerType : TypeNode<Type>;
+def BlockPointerType : TypeNode<Type>;
+def ReferenceType : TypeNode<Type, 1>;
+def LValueReferenceType : TypeNode<ReferenceType>;
+def RValueReferenceType : TypeNode<ReferenceType>;
+def MemberPointerType : TypeNode<Type>;
+def ArrayType : TypeNode<Type, 1>;
+def ConstantArrayType : TypeNode<ArrayType>;
+def IncompleteArrayType : TypeNode<ArrayType>;
+def VariableArrayType : TypeNode<ArrayType>;
+def DependentSizedArrayType : TypeNode<ArrayType>, AlwaysDependent;
+def DependentSizedExtVectorType : TypeNode<Type>, AlwaysDependent;
+def DependentAddressSpaceType : TypeNode<Type>, AlwaysDependent;
+def VectorType : TypeNode<Type>;
+def DependentVectorType : TypeNode<Type>, AlwaysDependent;
+def ExtVectorType : TypeNode<VectorType>;
+def FunctionType : TypeNode<Type, 1>;
+def FunctionProtoType : TypeNode<FunctionType>;
+def FunctionNoProtoType : TypeNode<FunctionType>;
+def UnresolvedUsingType : TypeNode<Type>, AlwaysDependent;
+def ParenType : TypeNode<Type>, NeverCanonical;
+def TypedefType : TypeNode<Type>, NeverCanonical;
+def MacroQualifiedType : TypeNode<Type>, NeverCanonical;
+def AdjustedType : TypeNode<Type>, NeverCanonical;
+def DecayedType : TypeNode<AdjustedType>, NeverCanonical;
+def TypeOfExprType : TypeNode<Type>, NeverCanonicalUnlessDependent;
+def TypeOfType : TypeNode<Type>, NeverCanonicalUnlessDependent;
+def DecltypeType : TypeNode<Type>, NeverCanonicalUnlessDependent;
+def UnaryTransformType : TypeNode<Type>, NeverCanonicalUnlessDependent;
+def TagType : TypeNode<Type, 1>;
+def RecordType : TypeNode<TagType>, LeafType;
+def EnumType : TypeNode<TagType>, LeafType;
+def ElaboratedType : TypeNode<Type>, NeverCanonical;
+def AttributedType : TypeNode<Type>, NeverCanonical;
+def TemplateTypeParmType : TypeNode<Type>, AlwaysDependent, LeafType;
+def SubstTemplateTypeParmType : TypeNode<Type>, NeverCanonical;
+def SubstTemplateTypeParmPackType : TypeNode<Type>, AlwaysDependent;
+def TemplateSpecializationType : TypeNode<Type>, NeverCanonicalUnlessDependent;
+def DeducedType : TypeNode<Type, 1>;
+def AutoType : TypeNode<DeducedType>;
+def DeducedTemplateSpecializationType : TypeNode<DeducedType>;
+def InjectedClassNameType : TypeNode<Type>, AlwaysDependent, LeafType;
+def DependentNameType : TypeNode<Type>, AlwaysDependent;
+def DependentTemplateSpecializationType : TypeNode<Type>, AlwaysDependent;
+def PackExpansionType : TypeNode<Type>, NeverCanonicalUnlessDependent;
+def ObjCTypeParamType : TypeNode<Type>, NeverCanonical;
+def ObjCObjectType : TypeNode<Type>;
+def ObjCInterfaceType : TypeNode<ObjCObjectType>, LeafType;
+def ObjCObjectPointerType : TypeNode<Type>;
+def PipeType : TypeNode<Type>;
+def AtomicType : TypeNode<Type>;
