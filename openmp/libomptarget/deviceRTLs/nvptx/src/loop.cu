@@ -170,7 +170,7 @@ public:
       break;
     }
     default: {
-      ASSERT(LT_FUSSY, FALSE, "unknown schedtype %d", (int)schedtype);
+      ASSERT(LT_FUSSY, 0, "unknown schedtype %d", (int)schedtype);
       PRINT(LD_LOOP, "unknown schedtype %d, revert back to static chunk\n",
             (int)schedtype);
       ForStaticChunk(lastiter, lb, ub, stride, chunk, gtid,
