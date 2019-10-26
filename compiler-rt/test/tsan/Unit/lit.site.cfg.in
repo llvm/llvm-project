@@ -21,3 +21,4 @@ if config.host_os == 'Darwin':
     config.environment['TSAN_OPTIONS'] += ':ignore_noninstrumented_modules=0'
   else:
     config.environment['TSAN_OPTIONS'] = 'ignore_noninstrumented_modules=0'
+  config.environment['TSAN_OPTIONS'] += ':ignore_interceptors_accesses=0'
