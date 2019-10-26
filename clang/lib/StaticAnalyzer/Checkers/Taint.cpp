@@ -204,16 +204,16 @@ bool taint::isTainted(ProgramStateRef State, SymbolRef Sym, TaintTagType Kind) {
   return false;
 }
 
-std::shared_ptr<PathDiagnosticPiece>
-TaintBugVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
-                           BugReport &BR) {
+PathDiagnosticPieceRef TaintBugVisitor::VisitNode(const ExplodedNode *N,
+                                                  BugReporterContext &BRC,
+                                                  PathSensitiveBugReport &BR) {
 
   // Find the ExplodedNode where the taint was first introduced
   if (!isTainted(N->getState(), V) ||
       isTainted(N->getFirstPred()->getState(), V))
     return nullptr;
 
-  const Stmt *S = PathDiagnosticLocation::getStmt(N);
+  const Stmt *S = N->getStmtForDiagnostics();
   if (!S)
     return nullptr;
 

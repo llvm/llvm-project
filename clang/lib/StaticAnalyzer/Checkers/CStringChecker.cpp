@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/STLExtras.h"
@@ -47,17 +48,17 @@ public:
     DefaultBool CheckCStringBufferOverlap;
     DefaultBool CheckCStringNotNullTerm;
 
-    CheckName CheckNameCStringNullArg;
-    CheckName CheckNameCStringOutOfBounds;
-    CheckName CheckNameCStringBufferOverlap;
-    CheckName CheckNameCStringNotNullTerm;
+    CheckerNameRef CheckNameCStringNullArg;
+    CheckerNameRef CheckNameCStringOutOfBounds;
+    CheckerNameRef CheckNameCStringBufferOverlap;
+    CheckerNameRef CheckNameCStringNotNullTerm;
   };
 
   CStringChecksFilter Filter;
 
   static void *getTag() { static int tag; return &tag; }
 
-  bool evalCall(const CallExpr *CE, CheckerContext &C) const;
+  bool evalCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPreStmt(const DeclStmt *DS, CheckerContext &C) const;
   void checkLiveSymbols(ProgramStateRef state, SymbolReaper &SR) const;
   void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const;
@@ -72,7 +73,38 @@ public:
 
   typedef void (CStringChecker::*FnCheck)(CheckerContext &,
                                           const CallExpr *) const;
+  CallDescriptionMap<FnCheck> Callbacks = {
+      {{CDF_MaybeBuiltin, "memcpy", 3}, &CStringChecker::evalMemcpy},
+      {{CDF_MaybeBuiltin, "mempcpy", 3}, &CStringChecker::evalMempcpy},
+      {{CDF_MaybeBuiltin, "memcmp", 3}, &CStringChecker::evalMemcmp},
+      {{CDF_MaybeBuiltin, "memmove", 3}, &CStringChecker::evalMemmove},
+      {{CDF_MaybeBuiltin, "memset", 3}, &CStringChecker::evalMemset},
+      {{CDF_MaybeBuiltin, "explicit_memset", 3}, &CStringChecker::evalMemset},
+      {{CDF_MaybeBuiltin, "strcpy", 2}, &CStringChecker::evalStrcpy},
+      {{CDF_MaybeBuiltin, "strncpy", 3}, &CStringChecker::evalStrncpy},
+      {{CDF_MaybeBuiltin, "stpcpy", 2}, &CStringChecker::evalStpcpy},
+      {{CDF_MaybeBuiltin, "strlcpy", 3}, &CStringChecker::evalStrlcpy},
+      {{CDF_MaybeBuiltin, "strcat", 2}, &CStringChecker::evalStrcat},
+      {{CDF_MaybeBuiltin, "strncat", 3}, &CStringChecker::evalStrncat},
+      {{CDF_MaybeBuiltin, "strlcat", 3}, &CStringChecker::evalStrlcat},
+      {{CDF_MaybeBuiltin, "strlen", 1}, &CStringChecker::evalstrLength},
+      {{CDF_MaybeBuiltin, "strnlen", 2}, &CStringChecker::evalstrnLength},
+      {{CDF_MaybeBuiltin, "strcmp", 2}, &CStringChecker::evalStrcmp},
+      {{CDF_MaybeBuiltin, "strncmp", 3}, &CStringChecker::evalStrncmp},
+      {{CDF_MaybeBuiltin, "strcasecmp", 2}, &CStringChecker::evalStrcasecmp},
+      {{CDF_MaybeBuiltin, "strncasecmp", 3}, &CStringChecker::evalStrncasecmp},
+      {{CDF_MaybeBuiltin, "strsep", 2}, &CStringChecker::evalStrsep},
+      {{CDF_MaybeBuiltin, "bcopy", 3}, &CStringChecker::evalBcopy},
+      {{CDF_MaybeBuiltin, "bcmp", 3}, &CStringChecker::evalMemcmp},
+      {{CDF_MaybeBuiltin, "bzero", 2}, &CStringChecker::evalBzero},
+      {{CDF_MaybeBuiltin, "explicit_bzero", 2}, &CStringChecker::evalBzero},
+  };
 
+  // These require a bit of special handling.
+  CallDescription StdCopy{{"std", "copy"}, 3},
+      StdCopyBackward{{"std", "copy_backward"}, 3};
+
+  FnCheck identifyCall(const CallEvent &Call, CheckerContext &C) const;
   void evalMemcpy(CheckerContext &C, const CallExpr *CE) const;
   void evalMempcpy(CheckerContext &C, const CallExpr *CE) const;
   void evalMemmove(CheckerContext &C, const CallExpr *CE) const;
@@ -166,7 +198,8 @@ public:
   ProgramStateRef checkNonNull(CheckerContext &C,
                                    ProgramStateRef state,
                                    const Expr *S,
-                                   SVal l) const;
+                                   SVal l,
+                                   unsigned IdxOfArg) const;
   ProgramStateRef CheckLocation(CheckerContext &C,
                                     ProgramStateRef state,
                                     const Expr *S,
@@ -245,7 +278,8 @@ CStringChecker::assumeZero(CheckerContext &C, ProgramStateRef state, SVal V,
 
 ProgramStateRef CStringChecker::checkNonNull(CheckerContext &C,
                                             ProgramStateRef state,
-                                            const Expr *S, SVal l) const {
+                                            const Expr *S, SVal l,
+                                            unsigned IdxOfArg) const {
   // If a previous check has failed, propagate the failure.
   if (!state)
     return nullptr;
@@ -256,11 +290,13 @@ ProgramStateRef CStringChecker::checkNonNull(CheckerContext &C,
   if (stateNull && !stateNonNull) {
     if (Filter.CheckCStringNullArg) {
       SmallString<80> buf;
-      llvm::raw_svector_ostream os(buf);
+      llvm::raw_svector_ostream OS(buf);
       assert(CurrentFunctionDescription);
-      os << "Null pointer argument in call to " << CurrentFunctionDescription;
+      OS << "Null pointer argument in call to " << CurrentFunctionDescription
+         << ' ' << IdxOfArg << llvm::getOrdinalSuffix(IdxOfArg)
+         << " parameter";
 
-      emitNullArgBug(C, stateNull, S, os.str());
+      emitNullArgBug(C, stateNull, S, OS.str());
     }
     return nullptr;
   }
@@ -352,7 +388,7 @@ ProgramStateRef CStringChecker::CheckBufferAccess(CheckerContext &C,
 
   // Check that the first buffer is non-null.
   SVal BufVal = C.getSVal(FirstBuf);
-  state = checkNonNull(C, state, FirstBuf, BufVal);
+  state = checkNonNull(C, state, FirstBuf, BufVal, 1);
   if (!state)
     return nullptr;
 
@@ -392,7 +428,7 @@ ProgramStateRef CStringChecker::CheckBufferAccess(CheckerContext &C,
   // If there's a second buffer, check it as well.
   if (SecondBuf) {
     BufVal = state->getSVal(SecondBuf, LCtx);
-    state = checkNonNull(C, state, SecondBuf, BufVal);
+    state = checkNonNull(C, state, SecondBuf, BufVal, 2);
     if (!state)
       return nullptr;
 
@@ -534,7 +570,7 @@ void CStringChecker::emitOverlapBug(CheckerContext &C, ProgramStateRef state,
                                  categories::UnixAPI, "Improper arguments"));
 
   // Generate a report for this bug.
-  auto report = llvm::make_unique<BugReport>(
+  auto report = llvm::make_unique<PathSensitiveBugReport>(
       *BT_Overlap, "Arguments must not be overlapping buffers", N);
   report->addRange(First->getSourceRange());
   report->addRange(Second->getSourceRange());
@@ -551,7 +587,7 @@ void CStringChecker::emitNullArgBug(CheckerContext &C, ProgramStateRef State,
           "Null pointer argument in call to byte string function"));
 
     BuiltinBug *BT = static_cast<BuiltinBug *>(BT_Null.get());
-    auto Report = llvm::make_unique<BugReport>(*BT, WarningMsg, N);
+    auto Report = llvm::make_unique<PathSensitiveBugReport>(*BT, WarningMsg, N);
     Report->addRange(S->getSourceRange());
     if (const auto *Ex = dyn_cast<Expr>(S))
       bugreporter::trackExpressionValue(N, Ex, *Report);
@@ -575,7 +611,7 @@ void CStringChecker::emitOutOfBoundsBug(CheckerContext &C,
     // FIXME: It would be nice to eventually make this diagnostic more clear,
     // e.g., by referencing the original declaration or by saying *why* this
     // reference is outside the range.
-    auto Report = llvm::make_unique<BugReport>(*BT, WarningMsg, N);
+    auto Report = llvm::make_unique<PathSensitiveBugReport>(*BT, WarningMsg, N);
     Report->addRange(S->getSourceRange());
     C.emitReport(std::move(Report));
   }
@@ -590,7 +626,8 @@ void CStringChecker::emitNotCStringBug(CheckerContext &C, ProgramStateRef State,
           Filter.CheckNameCStringNotNullTerm, categories::UnixAPI,
           "Argument is not a null-terminated string."));
 
-    auto Report = llvm::make_unique<BugReport>(*BT_NotCString, WarningMsg, N);
+    auto Report =
+        llvm::make_unique<PathSensitiveBugReport>(*BT_NotCString, WarningMsg, N);
 
     Report->addRange(S->getSourceRange());
     C.emitReport(std::move(Report));
@@ -612,7 +649,8 @@ void CStringChecker::emitAdditionOverflowBug(CheckerContext &C,
         "This expression will create a string whose length is too big to "
         "be represented as a size_t";
 
-    auto Report = llvm::make_unique<BugReport>(*BT_NotCString, WarningMsg, N);
+    auto Report =
+        llvm::make_unique<PathSensitiveBugReport>(*BT_NotCString, WarningMsg, N);
     C.emitReport(std::move(Report));
   }
 }
@@ -1131,7 +1169,7 @@ void CStringChecker::evalCopyCommon(CheckerContext &C,
 
     // Ensure the destination is not null. If it is NULL there will be a
     // NULL pointer dereference.
-    state = checkNonNull(C, state, Dest, destVal);
+    state = checkNonNull(C, state, Dest, destVal, 1);
     if (!state)
       return;
 
@@ -1140,7 +1178,7 @@ void CStringChecker::evalCopyCommon(CheckerContext &C,
 
     // Ensure the source is not null. If it is NULL there will be a
     // NULL pointer dereference.
-    state = checkNonNull(C, state, Source, srcVal);
+    state = checkNonNull(C, state, Source, srcVal, 2);
     if (!state)
       return;
 
@@ -1200,9 +1238,6 @@ void CStringChecker::evalCopyCommon(CheckerContext &C,
 
 
 void CStringChecker::evalMemcpy(CheckerContext &C, const CallExpr *CE) const {
-  if (CE->getNumArgs() < 3)
-    return;
-
   // void *memcpy(void *restrict dst, const void *restrict src, size_t n);
   // The return value is the address of the destination buffer.
   const Expr *Dest = CE->getArg(0);
@@ -1212,9 +1247,6 @@ void CStringChecker::evalMemcpy(CheckerContext &C, const CallExpr *CE) const {
 }
 
 void CStringChecker::evalMempcpy(CheckerContext &C, const CallExpr *CE) const {
-  if (CE->getNumArgs() < 3)
-    return;
-
   // void *mempcpy(void *restrict dst, const void *restrict src, size_t n);
   // The return value is a pointer to the byte following the last written byte.
   const Expr *Dest = CE->getArg(0);
@@ -1224,9 +1256,6 @@ void CStringChecker::evalMempcpy(CheckerContext &C, const CallExpr *CE) const {
 }
 
 void CStringChecker::evalMemmove(CheckerContext &C, const CallExpr *CE) const {
-  if (CE->getNumArgs() < 3)
-    return;
-
   // void *memmove(void *dst, const void *src, size_t n);
   // The return value is the address of the destination buffer.
   const Expr *Dest = CE->getArg(0);
@@ -1236,18 +1265,12 @@ void CStringChecker::evalMemmove(CheckerContext &C, const CallExpr *CE) const {
 }
 
 void CStringChecker::evalBcopy(CheckerContext &C, const CallExpr *CE) const {
-  if (CE->getNumArgs() < 3)
-    return;
-
   // void bcopy(const void *src, void *dst, size_t n);
   evalCopyCommon(C, CE, C.getState(),
                  CE->getArg(2), CE->getArg(1), CE->getArg(0));
 }
 
 void CStringChecker::evalMemcmp(CheckerContext &C, const CallExpr *CE) const {
-  if (CE->getNumArgs() < 3)
-    return;
-
   // int memcmp(const void *s1, const void *s2, size_t n);
   CurrentFunctionDescription = "memory comparison function";
 
@@ -1322,18 +1345,12 @@ void CStringChecker::evalMemcmp(CheckerContext &C, const CallExpr *CE) const {
 
 void CStringChecker::evalstrLength(CheckerContext &C,
                                    const CallExpr *CE) const {
-  if (CE->getNumArgs() < 1)
-    return;
-
   // size_t strlen(const char *s);
   evalstrLengthCommon(C, CE, /* IsStrnlen = */ false);
 }
 
 void CStringChecker::evalstrnLength(CheckerContext &C,
                                     const CallExpr *CE) const {
-  if (CE->getNumArgs() < 2)
-    return;
-
   // size_t strnlen(const char *s, size_t maxlen);
   evalstrLengthCommon(C, CE, /* IsStrnlen = */ true);
 }
@@ -1372,7 +1389,7 @@ void CStringChecker::evalstrLengthCommon(CheckerContext &C, const CallExpr *CE,
   const Expr *Arg = CE->getArg(0);
   SVal ArgVal = state->getSVal(Arg, LCtx);
 
-  state = checkNonNull(C, state, Arg, ArgVal);
+  state = checkNonNull(C, state, Arg, ArgVal, 1);
 
   if (!state)
     return;
@@ -1458,9 +1475,6 @@ void CStringChecker::evalstrLengthCommon(CheckerContext &C, const CallExpr *CE,
 }
 
 void CStringChecker::evalStrcpy(CheckerContext &C, const CallExpr *CE) const {
-  if (CE->getNumArgs() < 2)
-    return;
-
   // char *strcpy(char *restrict dst, const char *restrict src);
   evalStrcpyCommon(C, CE,
                    /* returnEnd = */ false,
@@ -1469,9 +1483,6 @@ void CStringChecker::evalStrcpy(CheckerContext &C, const CallExpr *CE) const {
 }
 
 void CStringChecker::evalStrncpy(CheckerContext &C, const CallExpr *CE) const {
-  if (CE->getNumArgs() < 3)
-    return;
-
   // char *strncpy(char *restrict dst, const char *restrict src, size_t n);
   evalStrcpyCommon(C, CE,
                    /* returnEnd = */ false,
@@ -1480,9 +1491,6 @@ void CStringChecker::evalStrncpy(CheckerContext &C, const CallExpr *CE) const {
 }
 
 void CStringChecker::evalStpcpy(CheckerContext &C, const CallExpr *CE) const {
-  if (CE->getNumArgs() < 2)
-    return;
-
   // char *stpcpy(char *restrict dst, const char *restrict src);
   evalStrcpyCommon(C, CE,
                    /* returnEnd = */ true,
@@ -1491,9 +1499,6 @@ void CStringChecker::evalStpcpy(CheckerContext &C, const CallExpr *CE) const {
 }
 
 void CStringChecker::evalStrlcpy(CheckerContext &C, const CallExpr *CE) const {
-  if (CE->getNumArgs() < 3)
-    return;
-
   // char *strlcpy(char *dst, const char *src, size_t n);
   evalStrcpyCommon(C, CE,
                    /* returnEnd = */ true,
@@ -1503,9 +1508,6 @@ void CStringChecker::evalStrlcpy(CheckerContext &C, const CallExpr *CE) const {
 }
 
 void CStringChecker::evalStrcat(CheckerContext &C, const CallExpr *CE) const {
-  if (CE->getNumArgs() < 2)
-    return;
-
   //char *strcat(char *restrict s1, const char *restrict s2);
   evalStrcpyCommon(C, CE,
                    /* returnEnd = */ false,
@@ -1514,9 +1516,6 @@ void CStringChecker::evalStrcat(CheckerContext &C, const CallExpr *CE) const {
 }
 
 void CStringChecker::evalStrncat(CheckerContext &C, const CallExpr *CE) const {
-  if (CE->getNumArgs() < 3)
-    return;
-
   //char *strncat(char *restrict s1, const char *restrict s2, size_t n);
   evalStrcpyCommon(C, CE,
                    /* returnEnd = */ false,
@@ -1525,9 +1524,6 @@ void CStringChecker::evalStrncat(CheckerContext &C, const CallExpr *CE) const {
 }
 
 void CStringChecker::evalStrlcat(CheckerContext &C, const CallExpr *CE) const {
-  if (CE->getNumArgs() < 3)
-    return;
-
   // FIXME: strlcat() uses a different rule for bound checking, i.e. 'n' means
   // a different thing as compared to strncat(). This currently causes
   // false positives in the alpha string bound checker.
@@ -1551,14 +1547,14 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
   const Expr *Dst = CE->getArg(0);
   SVal DstVal = state->getSVal(Dst, LCtx);
 
-  state = checkNonNull(C, state, Dst, DstVal);
+  state = checkNonNull(C, state, Dst, DstVal, 1);
   if (!state)
     return;
 
   // Check that the source is non-null.
   const Expr *srcExpr = CE->getArg(1);
   SVal srcVal = state->getSVal(srcExpr, LCtx);
-  state = checkNonNull(C, state, srcExpr, srcVal);
+  state = checkNonNull(C, state, srcExpr, srcVal, 2);
   if (!state)
     return;
 
@@ -1884,35 +1880,23 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
 }
 
 void CStringChecker::evalStrcmp(CheckerContext &C, const CallExpr *CE) const {
-  if (CE->getNumArgs() < 2)
-    return;
-
   //int strcmp(const char *s1, const char *s2);
   evalStrcmpCommon(C, CE, /* isBounded = */ false, /* ignoreCase = */ false);
 }
 
 void CStringChecker::evalStrncmp(CheckerContext &C, const CallExpr *CE) const {
-  if (CE->getNumArgs() < 3)
-    return;
-
   //int strncmp(const char *s1, const char *s2, size_t n);
   evalStrcmpCommon(C, CE, /* isBounded = */ true, /* ignoreCase = */ false);
 }
 
 void CStringChecker::evalStrcasecmp(CheckerContext &C,
     const CallExpr *CE) const {
-  if (CE->getNumArgs() < 2)
-    return;
-
   //int strcasecmp(const char *s1, const char *s2);
   evalStrcmpCommon(C, CE, /* isBounded = */ false, /* ignoreCase = */ true);
 }
 
 void CStringChecker::evalStrncasecmp(CheckerContext &C,
     const CallExpr *CE) const {
-  if (CE->getNumArgs() < 3)
-    return;
-
   //int strncasecmp(const char *s1, const char *s2, size_t n);
   evalStrcmpCommon(C, CE, /* isBounded = */ true, /* ignoreCase = */ true);
 }
@@ -1926,14 +1910,14 @@ void CStringChecker::evalStrcmpCommon(CheckerContext &C, const CallExpr *CE,
   // Check that the first string is non-null
   const Expr *s1 = CE->getArg(0);
   SVal s1Val = state->getSVal(s1, LCtx);
-  state = checkNonNull(C, state, s1, s1Val);
+  state = checkNonNull(C, state, s1, s1Val, 1);
   if (!state)
     return;
 
   // Check that the second string is non-null.
   const Expr *s2 = CE->getArg(1);
   SVal s2Val = state->getSVal(s2, LCtx);
-  state = checkNonNull(C, state, s2, s2Val);
+  state = checkNonNull(C, state, s2, s2Val, 2);
   if (!state)
     return;
 
@@ -2046,9 +2030,6 @@ void CStringChecker::evalStrcmpCommon(CheckerContext &C, const CallExpr *CE,
 
 void CStringChecker::evalStrsep(CheckerContext &C, const CallExpr *CE) const {
   //char *strsep(char **stringp, const char *delim);
-  if (CE->getNumArgs() < 2)
-    return;
-
   // Sanity: does the search string parameter match the return type?
   const Expr *SearchStrPtr = CE->getArg(0);
   QualType CharPtrTy = SearchStrPtr->getType()->getPointeeType();
@@ -2063,14 +2044,14 @@ void CStringChecker::evalStrsep(CheckerContext &C, const CallExpr *CE) const {
   // Check that the search string pointer is non-null (though it may point to
   // a null string).
   SVal SearchStrVal = State->getSVal(SearchStrPtr, LCtx);
-  State = checkNonNull(C, State, SearchStrPtr, SearchStrVal);
+  State = checkNonNull(C, State, SearchStrPtr, SearchStrVal, 1);
   if (!State)
     return;
 
   // Check that the delimiter string is non-null.
   const Expr *DelimStr = CE->getArg(1);
   SVal DelimStrVal = State->getSVal(DelimStr, LCtx);
-  State = checkNonNull(C, State, DelimStr, DelimStrVal);
+  State = checkNonNull(C, State, DelimStr, DelimStrVal, 2);
   if (!State)
     return;
 
@@ -2117,7 +2098,7 @@ void CStringChecker::evalStdCopyBackward(CheckerContext &C,
 
 void CStringChecker::evalStdCopyCommon(CheckerContext &C,
     const CallExpr *CE) const {
-  if (CE->getNumArgs() < 3)
+  if (!CE->getArg(2)->getType()->isPointerType())
     return;
 
   ProgramStateRef State = C.getState();
@@ -2144,9 +2125,6 @@ void CStringChecker::evalStdCopyCommon(CheckerContext &C,
 }
 
 void CStringChecker::evalMemset(CheckerContext &C, const CallExpr *CE) const {
-  if (CE->getNumArgs() != 3)
-    return;
-
   CurrentFunctionDescription = "memory set function";
 
   const Expr *Mem = CE->getArg(0);
@@ -2176,7 +2154,7 @@ void CStringChecker::evalMemset(CheckerContext &C, const CallExpr *CE) const {
 
   // Ensure the memory area is not null.
   // If it is NULL there will be a NULL pointer dereference.
-  State = checkNonNull(C, StateNonZeroSize, Mem, MemVal);
+  State = checkNonNull(C, StateNonZeroSize, Mem, MemVal, 1);
   if (!State)
     return;
 
@@ -2195,9 +2173,6 @@ void CStringChecker::evalMemset(CheckerContext &C, const CallExpr *CE) const {
 }
 
 void CStringChecker::evalBzero(CheckerContext &C, const CallExpr *CE) const {
-  if (CE->getNumArgs() != 2)
-    return;
-
   CurrentFunctionDescription = "memory clearance function";
 
   const Expr *Mem = CE->getArg(0);
@@ -2226,7 +2201,7 @@ void CStringChecker::evalBzero(CheckerContext &C, const CallExpr *CE) const {
 
   // Ensure the memory area is not null.
   // If it is NULL there will be a NULL pointer dereference.
-  State = checkNonNull(C, StateNonZeroSize, Mem, MemVal);
+  State = checkNonNull(C, StateNonZeroSize, Mem, MemVal, 1);
   if (!State)
     return;
 
@@ -2240,110 +2215,53 @@ void CStringChecker::evalBzero(CheckerContext &C, const CallExpr *CE) const {
   C.addTransition(State);
 }
 
-static bool isCPPStdLibraryFunction(const FunctionDecl *FD, StringRef Name) {
-  IdentifierInfo *II = FD->getIdentifier();
-  if (!II)
-    return false;
-
-  if (!AnalysisDeclContext::isInStdNamespace(FD))
-    return false;
-
-  if (II->getName().equals(Name))
-    return true;
-
-  return false;
-}
 //===----------------------------------------------------------------------===//
 // The driver method, and other Checker callbacks.
 //===----------------------------------------------------------------------===//
 
-static CStringChecker::FnCheck identifyCall(const CallExpr *CE,
-                                            CheckerContext &C) {
-  const FunctionDecl *FDecl = C.getCalleeDecl(CE);
-  if (!FDecl)
+CStringChecker::FnCheck CStringChecker::identifyCall(const CallEvent &Call,
+                                                     CheckerContext &C) const {
+  const auto *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
+  if (!CE)
     return nullptr;
+
+  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
+  if (!FD)
+    return nullptr;
+
+  if (Call.isCalled(StdCopy)) {
+    return &CStringChecker::evalStdCopy;
+  } else if (Call.isCalled(StdCopyBackward)) {
+    return &CStringChecker::evalStdCopyBackward;
+  }
 
   // Pro-actively check that argument types are safe to do arithmetic upon.
   // We do not want to crash if someone accidentally passes a structure
-  // into, say, a C++ overload of any of these functions.
-  if (isCPPStdLibraryFunction(FDecl, "copy")) {
-    if (CE->getNumArgs() < 3 || !CE->getArg(2)->getType()->isPointerType())
+  // into, say, a C++ overload of any of these functions. We could not check
+  // that for std::copy because they may have arguments of other types.
+  for (auto I : CE->arguments()) {
+    QualType T = I->getType();
+    if (!T->isIntegralOrEnumerationType() && !T->isPointerType())
       return nullptr;
-    return &CStringChecker::evalStdCopy;
-  } else if (isCPPStdLibraryFunction(FDecl, "copy_backward")) {
-    if (CE->getNumArgs() < 3 || !CE->getArg(2)->getType()->isPointerType())
-      return nullptr;
-    return &CStringChecker::evalStdCopyBackward;
-  } else {
-    // An umbrella check for all C library functions.
-    for (auto I: CE->arguments()) {
-      QualType T = I->getType();
-      if (!T->isIntegralOrEnumerationType() && !T->isPointerType())
-        return nullptr;
-    }
   }
 
-  // FIXME: Poorly-factored string switches are slow.
-  if (C.isCLibraryFunction(FDecl, "memcpy"))
-    return &CStringChecker::evalMemcpy;
-  else if (C.isCLibraryFunction(FDecl, "mempcpy"))
-    return &CStringChecker::evalMempcpy;
-  else if (C.isCLibraryFunction(FDecl, "memcmp"))
-    return &CStringChecker::evalMemcmp;
-  else if (C.isCLibraryFunction(FDecl, "memmove"))
-    return &CStringChecker::evalMemmove;
-  else if (C.isCLibraryFunction(FDecl, "memset") ||
-           C.isCLibraryFunction(FDecl, "explicit_memset"))
-    return &CStringChecker::evalMemset;
-  else if (C.isCLibraryFunction(FDecl, "strcpy"))
-    return &CStringChecker::evalStrcpy;
-  else if (C.isCLibraryFunction(FDecl, "strncpy"))
-    return &CStringChecker::evalStrncpy;
-  else if (C.isCLibraryFunction(FDecl, "stpcpy"))
-    return &CStringChecker::evalStpcpy;
-  else if (C.isCLibraryFunction(FDecl, "strlcpy"))
-    return &CStringChecker::evalStrlcpy;
-  else if (C.isCLibraryFunction(FDecl, "strcat"))
-    return &CStringChecker::evalStrcat;
-  else if (C.isCLibraryFunction(FDecl, "strncat"))
-    return &CStringChecker::evalStrncat;
-  else if (C.isCLibraryFunction(FDecl, "strlcat"))
-    return &CStringChecker::evalStrlcat;
-  else if (C.isCLibraryFunction(FDecl, "strlen"))
-    return &CStringChecker::evalstrLength;
-  else if (C.isCLibraryFunction(FDecl, "strnlen"))
-    return &CStringChecker::evalstrnLength;
-  else if (C.isCLibraryFunction(FDecl, "strcmp"))
-    return &CStringChecker::evalStrcmp;
-  else if (C.isCLibraryFunction(FDecl, "strncmp"))
-    return &CStringChecker::evalStrncmp;
-  else if (C.isCLibraryFunction(FDecl, "strcasecmp"))
-    return &CStringChecker::evalStrcasecmp;
-  else if (C.isCLibraryFunction(FDecl, "strncasecmp"))
-    return &CStringChecker::evalStrncasecmp;
-  else if (C.isCLibraryFunction(FDecl, "strsep"))
-    return &CStringChecker::evalStrsep;
-  else if (C.isCLibraryFunction(FDecl, "bcopy"))
-    return &CStringChecker::evalBcopy;
-  else if (C.isCLibraryFunction(FDecl, "bcmp"))
-    return &CStringChecker::evalMemcmp;
-  else if (C.isCLibraryFunction(FDecl, "bzero") ||
-           C.isCLibraryFunction(FDecl, "explicit_bzero"))
-    return &CStringChecker::evalBzero;
+  const FnCheck *Callback = Callbacks.lookup(Call);
+  if (Callback)
+    return *Callback;
 
   return nullptr;
 }
 
-bool CStringChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
-
-  FnCheck evalFunction = identifyCall(CE, C);
+bool CStringChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
+  FnCheck Callback = identifyCall(Call, C);
 
   // If the callee isn't a string function, let another checker handle it.
-  if (!evalFunction)
+  if (!Callback)
     return false;
 
   // Check and evaluate the call.
-  (this->*evalFunction)(C, CE);
+  const auto *CE = cast<CallExpr>(Call.getOriginExpr());
+  (this->*Callback)(C, CE);
 
   // If the evaluate call resulted in no change, chain to the next eval call
   // handler.
@@ -2491,14 +2409,12 @@ bool ento::shouldRegisterCStringModeling(const LangOptions &LO) {
   void ento::register##name(CheckerManager &mgr) {                             \
     CStringChecker *checker = mgr.getChecker<CStringChecker>();                \
     checker->Filter.Check##name = true;                                        \
-    checker->Filter.CheckName##name = mgr.getCurrentCheckName();               \
+    checker->Filter.CheckName##name = mgr.getCurrentCheckerName();             \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##name(const LangOptions &LO) {                     \
-    return true;                                                               \
-  }
+  bool ento::shouldRegister##name(const LangOptions &LO) { return true; }
 
-  REGISTER_CHECKER(CStringNullArg)
-  REGISTER_CHECKER(CStringOutOfBounds)
-  REGISTER_CHECKER(CStringBufferOverlap)
+REGISTER_CHECKER(CStringNullArg)
+REGISTER_CHECKER(CStringOutOfBounds)
+REGISTER_CHECKER(CStringBufferOverlap)
 REGISTER_CHECKER(CStringNotNullTerm)

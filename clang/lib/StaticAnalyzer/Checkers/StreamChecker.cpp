@@ -14,6 +14,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
@@ -71,7 +72,7 @@ public:
       II_fsetpos(nullptr), II_clearerr(nullptr), II_feof(nullptr),
       II_ferror(nullptr), II_fileno(nullptr) {}
 
-  bool evalCall(const CallExpr *CE, CheckerContext &C) const;
+  bool evalCall(const CallEvent &Call, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
 
 private:
@@ -103,9 +104,13 @@ private:
 REGISTER_MAP_WITH_PROGRAMSTATE(StreamMap, SymbolRef, StreamState)
 
 
-bool StreamChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
-  const FunctionDecl *FD = C.getCalleeDecl(CE);
+bool StreamChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
   if (!FD || FD->getKind() != Decl::Function)
+    return false;
+
+  const auto *CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
+  if (!CE)
     return false;
 
   ASTContext &Ctx = C.getASTContext();
@@ -272,7 +277,7 @@ void StreamChecker::Fseek(CheckerContext &C, const CallExpr *CE) const {
           new BuiltinBug(this, "Illegal whence argument",
                          "The whence argument to fseek() should be "
                          "SEEK_SET, SEEK_END, or SEEK_CUR."));
-    C.emitReport(llvm::make_unique<BugReport>(
+    C.emitReport(llvm::make_unique<PathSensitiveBugReport>(
         *BT_illegalwhence, BT_illegalwhence->getDescription(), N));
   }
 }
@@ -340,7 +345,7 @@ ProgramStateRef StreamChecker::CheckNullStream(SVal SV, ProgramStateRef state,
       if (!BT_nullfp)
         BT_nullfp.reset(new BuiltinBug(this, "NULL stream pointer",
                                        "Stream pointer might be NULL."));
-      C.emitReport(llvm::make_unique<BugReport>(
+      C.emitReport(llvm::make_unique<PathSensitiveBugReport>(
           *BT_nullfp, BT_nullfp->getDescription(), N));
     }
     return nullptr;
@@ -370,7 +375,7 @@ ProgramStateRef StreamChecker::CheckDoubleClose(const CallExpr *CE,
         BT_doubleclose.reset(new BuiltinBug(
             this, "Double fclose", "Try to close a file Descriptor already"
                                    " closed. Cause undefined behaviour."));
-      C.emitReport(llvm::make_unique<BugReport>(
+      C.emitReport(llvm::make_unique<PathSensitiveBugReport>(
           *BT_doubleclose, BT_doubleclose->getDescription(), N));
     }
     return nullptr;
@@ -400,7 +405,7 @@ void StreamChecker::checkDeadSymbols(SymbolReaper &SymReaper,
       BT_ResourceLeak.reset(
           new BuiltinBug(this, "Resource Leak",
                          "Opened File never closed. Potential Resource leak."));
-    C.emitReport(llvm::make_unique<BugReport>(
+    C.emitReport(llvm::make_unique<PathSensitiveBugReport>(
         *BT_ResourceLeak, BT_ResourceLeak->getDescription(), N));
   }
 }

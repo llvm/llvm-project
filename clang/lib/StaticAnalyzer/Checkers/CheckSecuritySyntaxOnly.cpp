@@ -50,19 +50,19 @@ struct ChecksFilter {
   DefaultBool check_FloatLoopCounter;
   DefaultBool check_UncheckedReturn;
 
-  CheckName checkName_bcmp;
-  CheckName checkName_bcopy;
-  CheckName checkName_bzero;
-  CheckName checkName_gets;
-  CheckName checkName_getpw;
-  CheckName checkName_mktemp;
-  CheckName checkName_mkstemp;
-  CheckName checkName_strcpy;
-  CheckName checkName_DeprecatedOrUnsafeBufferHandling;
-  CheckName checkName_rand;
-  CheckName checkName_vfork;
-  CheckName checkName_FloatLoopCounter;
-  CheckName checkName_UncheckedReturn;
+  CheckerNameRef checkName_bcmp;
+  CheckerNameRef checkName_bcopy;
+  CheckerNameRef checkName_bzero;
+  CheckerNameRef checkName_gets;
+  CheckerNameRef checkName_getpw;
+  CheckerNameRef checkName_mktemp;
+  CheckerNameRef checkName_mkstemp;
+  CheckerNameRef checkName_strcpy;
+  CheckerNameRef checkName_DeprecatedOrUnsafeBufferHandling;
+  CheckerNameRef checkName_rand;
+  CheckerNameRef checkName_vfork;
+  CheckerNameRef checkName_FloatLoopCounter;
+  CheckerNameRef checkName_UncheckedReturn;
 };
 
 class WalkAST : public StmtVisitor<WalkAST> {
@@ -204,6 +204,8 @@ void WalkAST::VisitForStmt(ForStmt *FS) {
 // Implements: CERT security coding advisory FLP-30.
 //===----------------------------------------------------------------------===//
 
+// Returns either 'x' or 'y', depending on which one of them is incremented
+// in 'expr', or nullptr if none of them is incremented.
 static const DeclRefExpr*
 getIncrementedVar(const Expr *expr, const VarDecl *x, const VarDecl *y) {
   expr = expr->IgnoreParenCasts();
@@ -289,14 +291,15 @@ void WalkAST::checkLoopConditionForFloat(const ForStmt *FS) {
 
   // Does either variable appear in increment?
   const DeclRefExpr *drInc = getIncrementedVar(increment, vdLHS, vdRHS);
-
   if (!drInc)
     return;
 
+  const VarDecl *vdInc = cast<VarDecl>(drInc->getDecl());
+  assert(vdInc && (vdInc == vdLHS || vdInc == vdRHS));
+
   // Emit the error.  First figure out which DeclRefExpr in the condition
   // referenced the compared variable.
-  assert(drInc->getDecl());
-  const DeclRefExpr *drCond = vdLHS == drInc->getDecl() ? drLHS : drRHS;
+  const DeclRefExpr *drCond = vdLHS == vdInc ? drLHS : drRHS;
 
   SmallVector<SourceRange, 2> ranges;
   SmallString<256> sbuf;
@@ -1012,14 +1015,12 @@ bool ento::shouldRegisterSecuritySyntaxChecker(const LangOptions &LO) {
 
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name(CheckerManager &mgr) {                             \
-    SecuritySyntaxChecker *checker =  mgr.getChecker<SecuritySyntaxChecker>(); \
+    SecuritySyntaxChecker *checker = mgr.getChecker<SecuritySyntaxChecker>();  \
     checker->filter.check_##name = true;                                       \
-    checker->filter.checkName_##name = mgr.getCurrentCheckName();              \
+    checker->filter.checkName_##name = mgr.getCurrentCheckerName();            \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##name(const LangOptions &LO) {                     \
-    return true;                                                               \
-  }
+  bool ento::shouldRegister##name(const LangOptions &LO) { return true; }
 
 REGISTER_CHECKER(bcmp)
 REGISTER_CHECKER(bcopy)

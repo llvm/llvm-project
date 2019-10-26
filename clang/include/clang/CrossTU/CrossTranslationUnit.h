@@ -45,7 +45,8 @@ enum class index_error_code {
   failed_to_generate_usr,
   triple_mismatch,
   lang_mismatch,
-  lang_dialect_mismatch
+  lang_dialect_mismatch,
+  load_threshold_reached
 };
 
 class IndexError : public llvm::ErrorInfo<IndexError> {
@@ -134,7 +135,8 @@ public:
   /// A definition with the same declaration will be looked up in the
   /// index file which should be in the \p CrossTUDir directory, called
   /// \p IndexName. In case the declaration is found in the index the
-  /// corresponding AST file will be loaded.
+  /// corresponding AST file will be loaded. If the number of TUs imported
+  /// reaches \p CTULoadTreshold, no loading is performed.
   ///
   /// \return Returns a pointer to the ASTUnit that contains the definition of
   /// the looked up name or an Error.
@@ -151,8 +153,10 @@ public:
   ///        was passed to the constructor.
   ///
   /// \return Returns the resulting definition or an error.
-  llvm::Expected<const FunctionDecl *> importDefinition(const FunctionDecl *FD);
-  llvm::Expected<const VarDecl *> importDefinition(const VarDecl *VD);
+  llvm::Expected<const FunctionDecl *> importDefinition(const FunctionDecl *FD,
+                                                        ASTUnit *Unit);
+  llvm::Expected<const VarDecl *> importDefinition(const VarDecl *VD,
+                                                   ASTUnit *Unit);
 
   /// Get a name to identify a named decl.
   static std::string getLookupName(const NamedDecl *ND);
@@ -160,9 +164,23 @@ public:
   /// Emit diagnostics for the user for potential configuration errors.
   void emitCrossTUDiagnostics(const IndexError &IE);
 
+  /// Determine the original source location in the original TU for an
+  /// imported source location.
+  /// \p ToLoc Source location in the imported-to AST.
+  /// \return Source location in the imported-from AST and the corresponding
+  /// ASTUnit object (the AST was loaded from a file using an internal ASTUnit
+  /// object that is returned here).
+  /// If any error happens (ToLoc is a non-imported source location) empty is
+  /// returned.
+  llvm::Optional<std::pair<SourceLocation /*FromLoc*/, ASTUnit *>>
+  getImportedFromSourceLocation(const clang::SourceLocation &ToLoc) const;
+
 private:
+  using ImportedFileIDMap =
+      llvm::DenseMap<FileID, std::pair<FileID, ASTUnit *>>;
+
   void lazyInitImporterSharedSt(TranslationUnitDecl *ToTU);
-  ASTImporter &getOrCreateASTImporter(ASTContext &From);
+  ASTImporter &getOrCreateASTImporter(ASTUnit *Unit);
   template <typename T>
   llvm::Expected<const T *> getCrossTUDefinitionImpl(const T *D,
                                                      StringRef CrossTUDir,
@@ -172,7 +190,7 @@ private:
   const T *findDefInDeclContext(const DeclContext *DC,
                                 StringRef LookupName);
   template <typename T>
-  llvm::Expected<const T *> importDefinitionImpl(const T *D);
+  llvm::Expected<const T *> importDefinitionImpl(const T *D, ASTUnit *Unit);
 
   llvm::StringMap<std::unique_ptr<clang::ASTUnit>> FileASTUnitMap;
   llvm::StringMap<clang::ASTUnit *> NameASTUnitMap;
@@ -182,6 +200,19 @@ private:
   CompilerInstance &CI;
   ASTContext &Context;
   std::shared_ptr<ASTImporterSharedState> ImporterSharedSt;
+  /// Map of imported FileID's (in "To" context) to FileID in "From" context
+  /// and the ASTUnit for the From context.
+  /// This map is used by getImportedFromSourceLocation to lookup a FileID and
+  /// its Preprocessor when knowing only the FileID in the 'To' context. The
+  /// FileID could be imported by any of multiple 'From' ASTImporter objects.
+  /// we do not want to loop over all ASTImporter's to find the one that
+  /// imported the FileID.
+  ImportedFileIDMap ImportedFileIDs;
+
+  /// \p CTULoadTreshold should serve as an upper limit to the number of TUs
+  /// imported in order to reduce the memory footprint of CTU analysis.
+  const unsigned CTULoadThreshold;
+  unsigned NumASTLoaded{0u};
 };
 
 } // namespace cross_tu

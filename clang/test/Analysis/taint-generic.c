@@ -1,5 +1,49 @@
-// RUN: %clang_analyze_cc1  -analyzer-checker=alpha.security.taint,core,alpha.security.ArrayBoundV2 -Wno-format-security -verify %s
-// RUN: %clang_analyze_cc1  -DFILE_IS_STRUCT -analyzer-checker=alpha.security.taint,core,alpha.security.ArrayBoundV2 -Wno-format-security -verify %s
+// RUN: %clang_analyze_cc1 -Wno-format-security -verify %s \
+// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=alpha.security.ArrayBoundV2 \
+// RUN:   -analyzer-config \
+// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
+
+// RUN: %clang_analyze_cc1 -Wno-format-security -verify %s \
+// RUN:   -DFILE_IS_STRUCT \
+// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=alpha.security.ArrayBoundV2 \
+// RUN:   -analyzer-config \
+// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml
+
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-config \
+// RUN:     alpha.security.taint.TaintPropagation:Config=justguessit \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-FILE
+
+// CHECK-INVALID-FILE: (frontend): invalid input for checker option
+// CHECK-INVALID-FILE-SAME:        'alpha.security.taint.TaintPropagation:Config',
+// CHECK-INVALID-FILE-SAME:        that expects a valid filename instead of
+// CHECK-INVALID-FILE-SAME:        'justguessit'
+
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-config \
+// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-ill-formed.yaml \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-ILL-FORMED
+
+// CHECK-ILL-FORMED: (frontend): invalid input for checker option
+// CHECK-ILL-FORMED-SAME:        'alpha.security.taint.TaintPropagation:Config',
+// CHECK-ILL-FORMED-SAME:        that expects a valid yaml file: {{[Ii]}}nvalid argument
+
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=alpha.security.taint \
+// RUN:   -analyzer-config \
+// RUN:     alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config-invalid-arg.yaml \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-ARG
+
+// CHECK-INVALID-ARG: (frontend): invalid input for checker option
+// CHECK-INVALID-ARG-SAME:        'alpha.security.taint.TaintPropagation:Config',
+// CHECK-INVALID-ARG-SAME:        that expects an argument number for propagation
+// CHECK-INVALID-ARG-SAME:        rules greater or equal to -1
 
 int scanf(const char *restrict format, ...);
 char *gets(char *str);
@@ -293,4 +337,46 @@ void constraintManagerShouldTreatAsOpaque(int rhs) {
     return;
   if (i < rhs)
     *(volatile int *) 0; // no-warning
+}
+
+
+// Test configuration
+int mySource1();
+void mySource2(int*);
+void myScanf(const char*, ...);
+int myPropagator(int, int*);
+int mySnprintf(char*, size_t, const char*, ...);
+void mySink(int, int, int);
+
+void testConfigurationSources1() {
+  int x = mySource1();
+  Buffer[x] = 1; // expected-warning {{Out of bound memory access }}
+}
+
+void testConfigurationSources2() {
+  int x;
+  mySource2(&x);
+  Buffer[x] = 1; // expected-warning {{Out of bound memory access }}
+}
+
+void testConfigurationSources3() {
+  int x, y;
+  myScanf("%d %d", &x, &y);
+  Buffer[y] = 1; // expected-warning {{Out of bound memory access }}
+}
+
+void testConfigurationPropagation() {
+  int x = mySource1();
+  int y;
+  myPropagator(x, &y);
+  Buffer[y] = 1; // expected-warning {{Out of bound memory access }}
+}
+
+void testConfigurationSinks() {
+  int x = mySource1();
+  mySink(x, 1, 2);
+  // expected-warning@-1 {{Untrusted data is passed to a user-defined sink}}
+  mySink(1, x, 2); // no-warning
+  mySink(1, 2, x);
+  // expected-warning@-1 {{Untrusted data is passed to a user-defined sink}}
 }

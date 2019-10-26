@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-config eagerly-assume=false %s -analyzer-checker=osx.cocoa.RetainCount,deadcode.DeadStores,core -analyzer-output=plist -o %t.plist
+// RUN: %clang_analyze_cc1 -analyzer-config eagerly-assume=false %s -analyzer-checker=osx.cocoa.RetainCount,deadcode.DeadStores,core -analyzer-output=plist -analyzer-config deadcode.DeadStores:ShowFixIts=true -o %t.plist
 // RUN: %normalize_plist <%t.plist | diff -ub %S/Inputs/expected-plists/plist-output.m.plist -
 
 void test_null_init(void) {

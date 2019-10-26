@@ -16,6 +16,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   CallAndMessageChecker.cpp
   CastSizeChecker.cpp
   CastToStructChecker.cpp
+  CastValueChecker.cpp
   CheckObjCDealloc.cpp
   CheckObjCInstMethSignature.cpp
   CheckSecuritySyntaxOnly.cpp
@@ -83,6 +84,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   RetainCountChecker/RetainCountDiagnostics.cpp
   ReturnPointerRangeChecker.cpp
   ReturnUndefChecker.cpp
+  ReturnValueChecker.cpp
   RunLoopAutoreleaseLeakChecker.cpp
   SimpleStreamChecker.cpp
   SmartPtrModeling.cpp

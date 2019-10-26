@@ -100,6 +100,10 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       SVal Result = evalBinOp(state, Op, LeftV, RightV, B->getType());
       if (!Result.isUnknown()) {
         state = state->BindExpr(B, LCtx, Result);
+      } else {
+        // If we cannot evaluate the operation escape the operands.
+        state = escapeValue(state, LeftV, PSK_EscapeOther);
+        state = escapeValue(state, RightV, PSK_EscapeOther);
       }
 
       Bldr.generateNode(B, *it, state);
@@ -845,8 +849,7 @@ VisitOffsetOfExpr(const OffsetOfExpr *OOE,
   if (OOE->EvaluateAsInt(Result, getContext())) {
     APSInt IV = Result.Val.getInt();
     assert(IV.getBitWidth() == getContext().getTypeSize(OOE->getType()));
-    assert(OOE->getType()->isBuiltinType());
-    assert(OOE->getType()->getAs<BuiltinType>()->isInteger());
+    assert(OOE->getType()->castAs<BuiltinType>()->isInteger());
     assert(IV.isSigned() == OOE->getType()->isSignedIntegerType());
     SVal X = svalBuilder.makeIntVal(IV);
     B.generateNode(OOE, Pred,

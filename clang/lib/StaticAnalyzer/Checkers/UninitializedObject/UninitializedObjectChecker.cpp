@@ -24,7 +24,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeMap.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
 
 using namespace clang;
 using namespace clang::ento;
@@ -187,7 +187,7 @@ void UninitializedObjectChecker::checkEndFunction(
   if (Opts.ShouldConvertNotesToWarnings) {
     for (const auto &Pair : UninitFields) {
 
-      auto Report = llvm::make_unique<BugReport>(
+      auto Report = llvm::make_unique<PathSensitiveBugReport>(
           *BT_uninitField, Pair.second, Node, LocUsedForUniqueing,
           Node->getLocationContext()->getDecl());
       Context.emitReport(std::move(Report));
@@ -201,7 +201,7 @@ void UninitializedObjectChecker::checkEndFunction(
             << (UninitFields.size() == 1 ? "" : "s")
             << " at the end of the constructor call";
 
-  auto Report = llvm::make_unique<BugReport>(
+  auto Report = llvm::make_unique<PathSensitiveBugReport>(
       *BT_uninitField, WarningOS.str(), Node, LocUsedForUniqueing,
       Node->getLocationContext()->getDecl());
 

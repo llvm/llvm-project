@@ -96,7 +96,8 @@ void UndefBranchChecker::checkBranchCondition(const Stmt *Condition,
       Ex = FindIt.FindExpr(Ex);
 
       // Emit the bug report.
-      auto R = llvm::make_unique<BugReport>(*BT, BT->getDescription(), N);
+      auto R = llvm::make_unique<PathSensitiveBugReport>(
+          *BT, BT->getDescription(), N);
       bugreporter::trackExpressionValue(N, Ex, *R);
       R->addRange(Ex->getSourceRange());
 

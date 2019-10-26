@@ -16,7 +16,7 @@ add_clang_library(clangStaticAnalyzerCore
   CommonBugCategories.cpp
   ConstraintManager.cpp
   CoreEngine.cpp
-  DynamicTypeMap.cpp
+  DynamicType.cpp
   Environment.cpp
   ExplodedGraph.cpp
   ExprEngine.cpp
@@ -30,7 +30,6 @@ add_clang_library(clangStaticAnalyzerCore
   LoopUnrolling.cpp
   LoopWidening.cpp
   MemRegion.cpp
-  PathDiagnostic.cpp
   PlistDiagnostics.cpp
   ProgramState.cpp
   RangeConstraintManager.cpp
@@ -53,6 +52,7 @@ add_clang_library(clangStaticAnalyzerCore
   clangAnalysis
   clangBasic
   clangCrossTU
+  clangFrontend
   clangLex
   clangRewrite
   )

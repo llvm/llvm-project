@@ -1,6 +1,6 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
+// RUN: %clang_analyze_cc1 -std=c++14 -analyzer-checker=core -verify %s
 //
-// RUN: %clang_analyze_cc1 -analyzer-checker=core %s  \
+// RUN: %clang_analyze_cc1 -std=c++14 -analyzer-checker=core %s  \
 // RUN:   -analyzer-output=plist -o %t.plist \
 // RUN:   -analyzer-config expand-macros=true
 //

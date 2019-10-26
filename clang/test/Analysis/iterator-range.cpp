@@ -24,6 +24,7 @@ void simple_good_end_negated(const std::vector<int> &v) {
 void simple_bad_end(const std::vector<int> &v) {
   auto i = v.end();
   *i; // expected-warning{{Past-the-end iterator dereferenced}}
+  clang_analyzer_warnIfReached();
 }
 
 void copy(const std::vector<int> &v) {
@@ -235,4 +236,9 @@ void good_derived(simple_container c) {
     clang_analyzer_warnIfReached();
     *i0; // no-warning
   }
+}
+
+void iter_diff(std::vector<int> &V) {
+  auto i0 = V.begin(), i1 = V.end();
+  ptrdiff_t len = i1 - i0; // no-crash
 }

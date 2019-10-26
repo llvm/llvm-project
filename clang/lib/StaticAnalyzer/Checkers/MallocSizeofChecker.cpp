@@ -183,7 +183,7 @@ public:
       QualType CastedType = i->CastedExpr->getType();
       if (!CastedType->isPointerType())
         continue;
-      QualType PointeeType = CastedType->getAs<PointerType>()->getPointeeType();
+      QualType PointeeType = CastedType->getPointeeType();
       if (PointeeType->isVoidType())
         continue;
 

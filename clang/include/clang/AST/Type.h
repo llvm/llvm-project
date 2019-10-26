@@ -972,6 +972,9 @@ public:
   friend bool operator!=(const QualType &LHS, const QualType &RHS) {
     return LHS.Value != RHS.Value;
   }
+  friend bool operator<(const QualType &LHS, const QualType &RHS) {
+    return LHS.Value < RHS.Value;
+  }
 
   static std::string getAsString(SplitQualType split,
                                  const PrintingPolicy &Policy) {

@@ -112,11 +112,11 @@ public:
     DefaultBool CheckNullablePassedToNonnull;
     DefaultBool CheckNullableReturnedFromNonnull;
 
-    CheckName CheckNameNullPassedToNonnull;
-    CheckName CheckNameNullReturnedFromNonnull;
-    CheckName CheckNameNullableDereferenced;
-    CheckName CheckNameNullablePassedToNonnull;
-    CheckName CheckNameNullableReturnedFromNonnull;
+    CheckerNameRef CheckNameNullPassedToNonnull;
+    CheckerNameRef CheckNameNullReturnedFromNonnull;
+    CheckerNameRef CheckNameNullableDereferenced;
+    CheckerNameRef CheckNameNullablePassedToNonnull;
+    CheckerNameRef CheckNameNullableReturnedFromNonnull;
   };
 
   NullabilityChecksFilter Filter;
@@ -137,9 +137,9 @@ private:
       ID.AddPointer(Region);
     }
 
-    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                   BugReporterContext &BRC,
-                                                   BugReport &BR) override;
+    PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                     BugReporterContext &BRC,
+                                     PathSensitiveBugReport &BR) override;
 
   private:
     // The tracked region.
@@ -163,7 +163,7 @@ private:
     if (!BT)
       BT.reset(new BugType(this, "Nullability", categories::MemoryError));
 
-    auto R = llvm::make_unique<BugReport>(*BT, Msg, N);
+    auto R = llvm::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
     if (Region) {
       R->markInteresting(Region);
       R->addVisitor(llvm::make_unique<NullabilityBugVisitor>(Region));
@@ -290,10 +290,9 @@ NullabilityChecker::getTrackRegion(SVal Val, bool CheckSuperRegion) const {
   return dyn_cast<SymbolicRegion>(Region);
 }
 
-std::shared_ptr<PathDiagnosticPiece>
-NullabilityChecker::NullabilityBugVisitor::VisitNode(const ExplodedNode *N,
-                                                     BugReporterContext &BRC,
-                                                     BugReport &BR) {
+PathDiagnosticPieceRef NullabilityChecker::NullabilityBugVisitor::VisitNode(
+    const ExplodedNode *N, BugReporterContext &BRC,
+    PathSensitiveBugReport &BR) {
   ProgramStateRef State = N->getState();
   ProgramStateRef StatePrev = N->getFirstPred()->getState();
 
@@ -310,7 +309,7 @@ NullabilityChecker::NullabilityBugVisitor::VisitNode(const ExplodedNode *N,
   // Retrieve the associated statement.
   const Stmt *S = TrackedNullab->getNullabilitySource();
   if (!S || S->getBeginLoc().isInvalid()) {
-    S = PathDiagnosticLocation::getStmt(N);
+    S = N->getStmtForDiagnostics();
   }
 
   if (!S)
@@ -324,8 +323,7 @@ NullabilityChecker::NullabilityBugVisitor::VisitNode(const ExplodedNode *N,
   // Generate the extra diagnostic.
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
                              N->getLocationContext());
-  return std::make_shared<PathDiagnosticEventPiece>(Pos, InfoText, true,
-                                                    nullptr);
+  return std::make_shared<PathDiagnosticEventPiece>(Pos, InfoText, true);
 }
 
 /// Returns true when the value stored at the given location has been
@@ -1203,12 +1201,12 @@ bool ento::shouldRegisterNullabilityBase(const LangOptions &LO) {
   void ento::register##name##Checker(CheckerManager &mgr) {                    \
     NullabilityChecker *checker = mgr.getChecker<NullabilityChecker>();        \
     checker->Filter.Check##name = true;                                        \
-    checker->Filter.CheckName##name = mgr.getCurrentCheckName();               \
+    checker->Filter.CheckName##name = mgr.getCurrentCheckerName();             \
     checker->NeedTracking = checker->NeedTracking || trackingRequired;         \
     checker->NoDiagnoseCallsToSystemHeaders =                                  \
         checker->NoDiagnoseCallsToSystemHeaders ||                             \
         mgr.getAnalyzerOptions().getCheckerBooleanOption(                      \
-                      checker, "NoDiagnoseCallsToSystemHeaders", true);        \
+            checker, "NoDiagnoseCallsToSystemHeaders", true);                  \
   }                                                                            \
                                                                                \
   bool ento::shouldRegister##name##Checker(const LangOptions &LO) {            \

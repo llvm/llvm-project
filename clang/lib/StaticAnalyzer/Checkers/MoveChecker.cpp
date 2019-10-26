@@ -169,9 +169,9 @@ private:
       // in the first place.
     }
 
-    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                   BugReporterContext &BRC,
-                                                   BugReport &BR) override;
+    PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                     BugReporterContext &BRC,
+                                     PathSensitiveBugReport &BR) override;
 
   private:
     const MoveChecker &Chk;
@@ -270,9 +270,10 @@ static const MemRegion *unwrapRValueReferenceIndirection(const MemRegion *MR) {
   return MR;
 }
 
-std::shared_ptr<PathDiagnosticPiece>
+PathDiagnosticPieceRef
 MoveChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
-                                        BugReporterContext &BRC, BugReport &BR) {
+                                        BugReporterContext &BRC,
+                                        PathSensitiveBugReport &BR) {
   // We need only the last move of the reported object's region.
   // The visitor walks the ExplodedGraph backwards.
   if (Found)
@@ -288,7 +289,7 @@ MoveChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
     return nullptr;
 
   // Retrieve the associated statement.
-  const Stmt *S = PathDiagnosticLocation::getStmt(N);
+  const Stmt *S = N->getStmtForDiagnostics();
   if (!S)
     return nullptr;
   Found = true;
@@ -400,7 +401,7 @@ ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
     PathDiagnosticLocation LocUsedForUniqueing;
     const ExplodedNode *MoveNode = getMoveLocation(N, Region, C);
 
-    if (const Stmt *MoveStmt = PathDiagnosticLocation::getStmt(MoveNode))
+    if (const Stmt *MoveStmt = MoveNode->getStmtForDiagnostics())
       LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
           MoveStmt, C.getSourceManager(), MoveNode->getLocationContext());
 
@@ -428,9 +429,9 @@ ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
         break;
     }
 
-    auto R =
-        llvm::make_unique<BugReport>(*BT, OS.str(), N, LocUsedForUniqueing,
-                                     MoveNode->getLocationContext()->getDecl());
+    auto R = llvm::make_unique<PathSensitiveBugReport>(
+        *BT, OS.str(), N, LocUsedForUniqueing,
+        MoveNode->getLocationContext()->getDecl());
     R->addVisitor(llvm::make_unique<MovedBugVisitor>(*this, Region, RD, MK));
     C.emitReport(std::move(R));
     return N;

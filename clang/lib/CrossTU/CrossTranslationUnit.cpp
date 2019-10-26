@@ -43,6 +43,8 @@ STATISTIC(NumGetCTUSuccess,
 STATISTIC(NumTripleMismatch, "The # of triple mismatches");
 STATISTIC(NumLangMismatch, "The # of language mismatches");
 STATISTIC(NumLangDialectMismatch, "The # of language dialect mismatches");
+STATISTIC(NumASTLoadThresholdReached,
+          "The # of ASTs not loaded because of threshold");
 
 // Same as Triple's equality operator, but we check a field only if that is
 // known in both instances.
@@ -102,6 +104,8 @@ public:
       return "Language mismatch";
     case index_error_code::lang_dialect_mismatch:
       return "Language dialect mismatch";
+    case index_error_code::load_threshold_reached:
+      return "Load threshold reached";
     }
     llvm_unreachable("Unrecognized index_error_code.");
   }
@@ -180,7 +184,8 @@ template <typename T> static bool hasBodyOrInit(const T *D) {
 }
 
 CrossTranslationUnitContext::CrossTranslationUnitContext(CompilerInstance &CI)
-    : CI(CI), Context(CI.getASTContext()) {}
+    : CI(CI), Context(CI.getASTContext()),
+      CTULoadThreshold(CI.getAnalyzerOpts()->CTUImportThreshold) {}
 
 CrossTranslationUnitContext::~CrossTranslationUnitContext() {}
 
@@ -228,8 +233,8 @@ llvm::Expected<const T *> CrossTranslationUnitContext::getCrossTUDefinitionImpl(
   if (LookupName.empty())
     return llvm::make_error<IndexError>(
         index_error_code::failed_to_generate_usr);
-  llvm::Expected<ASTUnit *> ASTUnitOrError =
-      loadExternalAST(LookupName, CrossTUDir, IndexName, DisplayCTUProgress);
+  llvm::Expected<ASTUnit *> ASTUnitOrError = loadExternalAST(
+      LookupName, CrossTUDir, IndexName, DisplayCTUProgress);
   if (!ASTUnitOrError)
     return ASTUnitOrError.takeError();
   ASTUnit *Unit = *ASTUnitOrError;
@@ -286,7 +291,7 @@ llvm::Expected<const T *> CrossTranslationUnitContext::getCrossTUDefinitionImpl(
 
   TranslationUnitDecl *TU = Unit->getASTContext().getTranslationUnitDecl();
   if (const T *ResultDecl = findDefInDeclContext<T>(TU, LookupName))
-    return importDefinition(ResultDecl);
+    return importDefinition(ResultDecl, Unit);
   return llvm::make_error<IndexError>(index_error_code::failed_import);
 }
 
@@ -338,6 +343,13 @@ llvm::Expected<ASTUnit *> CrossTranslationUnitContext::loadExternalAST(
   //        a lookup name from a single translation unit. If multiple
   //        translation units contains decls with the same lookup name an
   //        error will be returned.
+
+  if (NumASTLoaded >= CTULoadThreshold) {
+    ++NumASTLoadThresholdReached;
+    return llvm::make_error<IndexError>(
+        index_error_code::load_threshold_reached);
+  }
+
   ASTUnit *Unit = nullptr;
   auto NameUnitCacheEntry = NameASTUnitMap.find(LookupName);
   if (NameUnitCacheEntry == NameASTUnitMap.end()) {
@@ -375,6 +387,7 @@ llvm::Expected<ASTUnit *> CrossTranslationUnitContext::loadExternalAST(
           ASTUnit::LoadEverything, Diags, CI.getFileSystemOpts()));
       Unit = LoadedUnit.get();
       FileASTUnitMap[ASTFileName] = std::move(LoadedUnit);
+      ++NumASTLoaded;
       if (DisplayCTUProgress) {
         llvm::errs() << "CTU loaded AST file: "
                      << ASTFileName << "\n";
@@ -394,10 +407,13 @@ llvm::Expected<ASTUnit *> CrossTranslationUnitContext::loadExternalAST(
 
 template <typename T>
 llvm::Expected<const T *>
-CrossTranslationUnitContext::importDefinitionImpl(const T *D) {
+CrossTranslationUnitContext::importDefinitionImpl(const T *D, ASTUnit *Unit) {
   assert(hasBodyOrInit(D) && "Decls to be imported should have body or init.");
 
-  ASTImporter &Importer = getOrCreateASTImporter(D->getASTContext());
+  assert(&D->getASTContext() == &Unit->getASTContext() &&
+         "ASTContext of Decl and the unit should match.");
+  ASTImporter &Importer = getOrCreateASTImporter(Unit);
+
   auto ToDeclOrError = Importer.Import(D);
   if (!ToDeclOrError) {
     handleAllErrors(ToDeclOrError.takeError(),
@@ -424,13 +440,15 @@ CrossTranslationUnitContext::importDefinitionImpl(const T *D) {
 }
 
 llvm::Expected<const FunctionDecl *>
-CrossTranslationUnitContext::importDefinition(const FunctionDecl *FD) {
-  return importDefinitionImpl(FD);
+CrossTranslationUnitContext::importDefinition(const FunctionDecl *FD,
+                                              ASTUnit *Unit) {
+  return importDefinitionImpl(FD, Unit);
 }
 
 llvm::Expected<const VarDecl *>
-CrossTranslationUnitContext::importDefinition(const VarDecl *VD) {
-  return importDefinitionImpl(VD);
+CrossTranslationUnitContext::importDefinition(const VarDecl *VD,
+                                              ASTUnit *Unit) {
+  return importDefinitionImpl(VD, Unit);
 }
 
 void CrossTranslationUnitContext::lazyInitImporterSharedSt(
@@ -440,7 +458,9 @@ void CrossTranslationUnitContext::lazyInitImporterSharedSt(
 }
 
 ASTImporter &
-CrossTranslationUnitContext::getOrCreateASTImporter(ASTContext &From) {
+CrossTranslationUnitContext::getOrCreateASTImporter(ASTUnit *Unit) {
+  ASTContext &From = Unit->getASTContext();
+
   auto I = ASTUnitImporterMap.find(From.getTranslationUnitDecl());
   if (I != ASTUnitImporterMap.end())
     return *I->second;
@@ -448,8 +468,31 @@ CrossTranslationUnitContext::getOrCreateASTImporter(ASTContext &From) {
   ASTImporter *NewImporter = new ASTImporter(
       Context, Context.getSourceManager().getFileManager(), From,
       From.getSourceManager().getFileManager(), false, ImporterSharedSt);
+  NewImporter->setFileIDImportHandler([this, Unit](FileID ToID, FileID FromID) {
+    assert(ImportedFileIDs.find(ToID) == ImportedFileIDs.end() &&
+           "FileID already imported, should not happen.");
+    ImportedFileIDs[ToID] = std::make_pair(FromID, Unit);
+  });
   ASTUnitImporterMap[From.getTranslationUnitDecl()].reset(NewImporter);
   return *NewImporter;
+}
+
+llvm::Optional<std::pair<SourceLocation, ASTUnit *>>
+CrossTranslationUnitContext::getImportedFromSourceLocation(
+    const clang::SourceLocation &ToLoc) const {
+  const SourceManager &SM = Context.getSourceManager();
+  auto DecToLoc = SM.getDecomposedLoc(ToLoc);
+
+  auto I = ImportedFileIDs.find(DecToLoc.first);
+  if (I == ImportedFileIDs.end())
+    return {};
+
+  FileID FromID = I->second.first;
+  clang::ASTUnit *Unit = I->second.second;
+  SourceLocation FromLoc =
+      Unit->getSourceManager().getComposedLoc(FromID, DecToLoc.second);
+
+  return std::make_pair(FromLoc, Unit);
 }
 
 } // namespace cross_tu

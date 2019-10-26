@@ -35,9 +35,9 @@ public:
   void checkASTCodeBody(const Decl *D, AnalysisManager& mgr,
                         BugReporter &BR) const {
     if (AnalysisDeclContext *AC = mgr.getAnalysisDeclContext(D)) {
-      DominatorTree dom;
-      dom.buildDominatorTree(*AC);
-      dom.dump();
+      CFGDomTree Dom;
+      Dom.buildDominatorTree(AC->getCFG());
+      Dom.dump();
     }
   }
 };
@@ -48,6 +48,57 @@ void ento::registerDominatorsTreeDumper(CheckerManager &mgr) {
 }
 
 bool ento::shouldRegisterDominatorsTreeDumper(const LangOptions &LO) {
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
+// PostDominatorsTreeDumper
+//===----------------------------------------------------------------------===//
+
+namespace {
+class PostDominatorsTreeDumper : public Checker<check::ASTCodeBody> {
+public:
+  void checkASTCodeBody(const Decl *D, AnalysisManager& mgr,
+                        BugReporter &BR) const {
+    if (AnalysisDeclContext *AC = mgr.getAnalysisDeclContext(D)) {
+      CFGPostDomTree Dom;
+      Dom.buildDominatorTree(AC->getCFG());
+      Dom.dump();
+    }
+  }
+};
+}
+
+void ento::registerPostDominatorsTreeDumper(CheckerManager &mgr) {
+  mgr.registerChecker<PostDominatorsTreeDumper>();
+}
+
+bool ento::shouldRegisterPostDominatorsTreeDumper(const LangOptions &LO) {
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
+// ControlDependencyTreeDumper
+//===----------------------------------------------------------------------===//
+
+namespace {
+class ControlDependencyTreeDumper : public Checker<check::ASTCodeBody> {
+public:
+  void checkASTCodeBody(const Decl *D, AnalysisManager& mgr,
+                        BugReporter &BR) const {
+    if (AnalysisDeclContext *AC = mgr.getAnalysisDeclContext(D)) {
+      ControlDependencyCalculator Dom(AC->getCFG());
+      Dom.dump();
+    }
+  }
+};
+}
+
+void ento::registerControlDependencyTreeDumper(CheckerManager &mgr) {
+  mgr.registerChecker<ControlDependencyTreeDumper>();
+}
+
+bool ento::shouldRegisterControlDependencyTreeDumper(const LangOptions &LO) {
   return true;
 }
 
@@ -282,7 +333,8 @@ public:
     if (!Node)
       return;
 
-    auto Report = llvm::make_unique<BugReport>(BT_stmtLoc, "Statement", Node);
+    auto Report =
+        llvm::make_unique<PathSensitiveBugReport>(BT_stmtLoc, "Statement", Node);
 
     C.emitReport(std::move(Report));
   }

@@ -22,7 +22,7 @@ extern "C" void block_param();
 void param(ObjTy *p) EXT_RET {
   // CHECK-LABEL: define void @param
   // CHECK-NOT: llvm.objc.
-  // CHECK ret
+  // CHECK: ret
 }
 
 void local() {

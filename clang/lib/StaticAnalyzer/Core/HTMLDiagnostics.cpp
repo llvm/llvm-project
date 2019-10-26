@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Stmt.h"
@@ -23,7 +24,6 @@
 #include "clang/Rewrite/Core/HTMLRewrite.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/IssueHash.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -134,17 +134,17 @@ private:
 
 } // namespace
 
-void ento::createHTMLDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
-                                        PathDiagnosticConsumers &C,
-                                        const std::string& prefix,
-                                        const Preprocessor &PP) {
+void ento::createHTMLDiagnosticConsumer(
+    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
+    const std::string &prefix, const Preprocessor &PP,
+    const cross_tu::CrossTranslationUnitContext &) {
   C.push_back(new HTMLDiagnostics(AnalyzerOpts, prefix, PP, true));
 }
 
-void ento::createHTMLSingleFileDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
-                                                  PathDiagnosticConsumers &C,
-                                                  const std::string& prefix,
-                                                  const Preprocessor &PP) {
+void ento::createHTMLSingleFileDiagnosticConsumer(
+    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
+    const std::string &prefix, const Preprocessor &PP,
+    const cross_tu::CrossTranslationUnitContext &) {
   C.push_back(new HTMLDiagnostics(AnalyzerOpts, prefix, PP, false));
 }
 
@@ -555,8 +555,9 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
     os  << "\n<!-- FUNCTIONNAME " <<  declName << " -->\n";
 
     os << "\n<!-- ISSUEHASHCONTENTOFLINEINCONTEXT "
-       << GetIssueHash(SMgr, L, D.getCheckName(), D.getBugType(), DeclWithIssue,
-                       PP.getLangOpts()) << " -->\n";
+       << GetIssueHash(SMgr, L, D.getCheckerName(), D.getBugType(),
+                       DeclWithIssue, PP.getLangOpts())
+       << " -->\n";
 
     os << "\n<!-- BUGLINE "
        << LineNumber
@@ -612,7 +613,7 @@ HandlePopUpPieceStartTag(Rewriter &R,
   for (const auto &Range : PopUpRanges) {
     html::HighlightRange(R, Range.getBegin(), Range.getEnd(), "",
                          "<table class='variable_popup'><tbody>",
-                         /*IsTokenRange=*/false);
+                         /*IsTokenRange=*/true);
   }
 }
 
@@ -644,12 +645,11 @@ static void HandlePopUpPieceEndTag(Rewriter &R,
     Out << "</tbody></table></span>";
     html::HighlightRange(R, Range.getBegin(), Range.getEnd(),
                          "<span class='variable'>", Buf.c_str(),
-                         /*IsTokenRange=*/false);
-
-  // Otherwise inject just the new row at the end of the range.
+                         /*IsTokenRange=*/true);
   } else {
+    // Otherwise inject just the new row at the end of the range.
     html::HighlightRange(R, Range.getBegin(), Range.getEnd(), "", Buf.c_str(),
-                         /*IsTokenRange=*/false);
+                         /*IsTokenRange=*/true);
   }
 }
 
@@ -658,16 +658,14 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R,
   // Process the path.
   // Maintain the counts of extra note pieces separately.
   unsigned TotalPieces = path.size();
-  unsigned TotalNotePieces =
-      std::count_if(path.begin(), path.end(),
-                    [](const std::shared_ptr<PathDiagnosticPiece> &p) {
-                      return isa<PathDiagnosticNotePiece>(*p);
-                    });
-  unsigned PopUpPieceCount =
-      std::count_if(path.begin(), path.end(),
-                    [](const std::shared_ptr<PathDiagnosticPiece> &p) {
-                      return isa<PathDiagnosticPopUpPiece>(*p);
-                    });
+  unsigned TotalNotePieces = std::count_if(
+      path.begin(), path.end(), [](const PathDiagnosticPieceRef &p) {
+        return isa<PathDiagnosticNotePiece>(*p);
+      });
+  unsigned PopUpPieceCount = std::count_if(
+      path.begin(), path.end(), [](const PathDiagnosticPieceRef &p) {
+        return isa<PathDiagnosticPopUpPiece>(*p);
+      });
 
   unsigned TotalRegularPieces = TotalPieces - TotalNotePieces - PopUpPieceCount;
   unsigned NumRegularPieces = TotalRegularPieces;

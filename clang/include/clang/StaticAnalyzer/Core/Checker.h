@@ -474,8 +474,9 @@ public:
 
 class Call {
   template <typename CHECKER>
-  static bool _evalCall(void *checker, const CallExpr *CE, CheckerContext &C) {
-    return ((const CHECKER *)checker)->evalCall(CE, C);
+  static bool _evalCall(void *checker, const CallEvent &Call,
+                        CheckerContext &C) {
+    return ((const CHECKER *)checker)->evalCall(Call, C);
   }
 
 public:
@@ -489,12 +490,12 @@ public:
 } // end eval namespace
 
 class CheckerBase : public ProgramPointTag {
-  CheckName Name;
+  CheckerNameRef Name;
   friend class ::clang::ento::CheckerManager;
 
 public:
   StringRef getTagDescription() const override;
-  CheckName getCheckName() const;
+  CheckerNameRef getCheckerName() const;
 
   /// See CheckerManager::runCheckersForPrintState.
   virtual void printState(raw_ostream &Out, ProgramStateRef State,

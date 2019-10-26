@@ -72,7 +72,7 @@ void VLASizeChecker::reportBug(
     break;
   }
 
-  auto report = llvm::make_unique<BugReport>(*BT, os.str(), N);
+  auto report = llvm::make_unique<PathSensitiveBugReport>(*BT, os.str(), N);
   report->addVisitor(std::move(Visitor));
   report->addRange(SizeE->getSourceRange());
   bugreporter::trackExpressionValue(N, SizeE, *report);
