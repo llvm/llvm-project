@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangASTEmitters.h"
+#include "ASTTableGen.h"
 #include "TableGenBackends.h"
 
 #include "llvm/TableGen/Error.h"
