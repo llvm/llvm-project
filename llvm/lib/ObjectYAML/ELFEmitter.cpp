@@ -494,7 +494,7 @@ ELFState<ELFT>::toELFSymbols(ArrayRef<ELFYAML::Symbol> Symbols,
   Ret.resize(Symbols.size() + 1);
 
   size_t I = 0;
-  for (const auto &Sym : Symbols) {
+  for (const ELFYAML::Symbol &Sym : Symbols) {
     Elf_Sym &Symbol = Ret[++I];
 
     // If NameIndex, which contains the name offset, is explicitly specified, we
