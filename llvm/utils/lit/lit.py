@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-import sys
 
-from lit.main import main
+import lit.main
 
-if __name__=='__main__':
-    main()
+if __name__ == '__main__':
+    lit.main()

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 lit - LLVM Integrated Tester.
 
@@ -381,6 +379,3 @@ def write_test_results_xunit(tests, opts):
         xunit_output_file.write("</testsuite>\n")
     xunit_output_file.write("</testsuites>")
     xunit_output_file.close()
-
-if __name__=='__main__':
-    main()
