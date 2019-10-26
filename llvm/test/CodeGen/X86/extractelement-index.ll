@@ -8,6 +8,30 @@
 ; ExtractElement - Constant Index
 ;
 
+define i64 @extract_undef_index_from_zero_vec() nounwind {
+; SSE-LABEL: extract_undef_index_from_zero_vec:
+; SSE:       # %bb.0:
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: extract_undef_index_from_zero_vec:
+; AVX:       # %bb.0:
+; AVX-NEXT:    retq
+  %E = extractelement <2 x i64> zeroinitializer, i64 undef
+  ret i64 %E
+}
+
+define i64 @extract_undef_index_from_nonzero_vec() nounwind {
+; SSE-LABEL: extract_undef_index_from_nonzero_vec:
+; SSE:       # %bb.0:
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: extract_undef_index_from_nonzero_vec:
+; AVX:       # %bb.0:
+; AVX-NEXT:    retq
+  %E = extractelement <2 x i64> <i64 -1, i64 -1>, i64 undef
+  ret i64 %E
+}
+
 define i8 @extractelement_v16i8_1(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: extractelement_v16i8_1:
 ; SSE2:       # %bb.0:

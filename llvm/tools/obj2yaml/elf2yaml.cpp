@@ -27,6 +27,8 @@ class ELFDumper {
   typedef typename ELFT::Word Elf_Word;
   typedef typename ELFT::Rel Elf_Rel;
   typedef typename ELFT::Rela Elf_Rela;
+  using Elf_Nhdr = typename ELFT::Nhdr;
+  using Elf_Note = typename ELFT::Note;
 
   ArrayRef<Elf_Shdr> Sections;
   ArrayRef<Elf_Sym> SymTable;
@@ -66,6 +68,7 @@ class ELFDumper {
   dumpSymtabShndxSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::NoBitsSection *> dumpNoBitsSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::HashSection *> dumpHashSection(const Elf_Shdr *Shdr);
+  Expected<ELFYAML::NoteSection *> dumpNoteSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::VerdefSection *> dumpVerdefSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::SymverSection *> dumpSymverSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::VerneedSection *> dumpVerneedSection(const Elf_Shdr *Shdr);
@@ -262,6 +265,13 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
       Y->Sections.emplace_back(*SecOrErr);
       break;
     }
+    case ELF::SHT_NOTE: {
+      Expected<ELFYAML::NoteSection *> SecOrErr = dumpNoteSection(&Sec);
+      if (!SecOrErr)
+        return SecOrErr.takeError();
+      Y->Sections.emplace_back(*SecOrErr);
+      break;
+    }
     case ELF::SHT_HASH: {
       Expected<ELFYAML::HashSection *> SecOrErr = dumpHashSection(&Sec);
       if (!SecOrErr)
@@ -409,27 +419,25 @@ Error ELFDumper<ELFT>::dumpRelocation(const RelT *Rel, const Elf_Shdr *SymTab,
   auto SymOrErr = Obj.getRelocationSymbol(Rel, SymTab);
   if (!SymOrErr)
     return SymOrErr.takeError();
+
+  // We have might have a relocation with symbol index 0,
+  // e.g. R_X86_64_NONE or R_X86_64_GOTPC32.
   const Elf_Sym *Sym = *SymOrErr;
+  if (!Sym)
+    return Error::success();
+
   auto StrTabSec = Obj.getSection(SymTab->sh_link);
   if (!StrTabSec)
     return StrTabSec.takeError();
   auto StrTabOrErr = Obj.getStringTable(*StrTabSec);
   if (!StrTabOrErr)
     return StrTabOrErr.takeError();
-  StringRef StrTab = *StrTabOrErr;
 
-  if (Sym) {
-    Expected<StringRef> NameOrErr = getUniquedSymbolName(Sym, StrTab, SymTab);
-    if (!NameOrErr)
-      return NameOrErr.takeError();
-    R.Symbol = NameOrErr.get();
-  } else {
-    // We have some edge cases of relocations without a symbol associated,
-    // e.g. an object containing the invalid (according to the System V
-    // ABI) R_X86_64_NONE reloc. Create a symbol with an empty name instead
-    // of crashing.
-    R.Symbol = "";
-  }
+  Expected<StringRef> NameOrErr =
+      getUniquedSymbolName(Sym, *StrTabOrErr, SymTab);
+  if (!NameOrErr)
+    return NameOrErr.takeError();
+  R.Symbol = NameOrErr.get();
 
   return Error::success();
 }
@@ -674,6 +682,42 @@ ELFDumper<ELFT>::dumpNoBitsSection(const Elf_Shdr *Shdr) {
     return std::move(E);
   S->Size = Shdr->sh_size;
 
+  return S.release();
+}
+
+template <class ELFT>
+Expected<ELFYAML::NoteSection *>
+ELFDumper<ELFT>::dumpNoteSection(const Elf_Shdr *Shdr) {
+  auto S = std::make_unique<ELFYAML::NoteSection>();
+  if (Error E = dumpCommonSection(Shdr, *S))
+    return std::move(E);
+
+  auto ContentOrErr = Obj.getSectionContents(Shdr);
+  if (!ContentOrErr)
+    return ContentOrErr.takeError();
+
+  std::vector<ELFYAML::NoteEntry> Entries;
+  ArrayRef<uint8_t> Content = *ContentOrErr;
+  while (!Content.empty()) {
+    if (Content.size() < sizeof(Elf_Nhdr)) {
+      S->Content = yaml::BinaryRef(*ContentOrErr);
+      return S.release();
+    }
+
+    const Elf_Nhdr *Header = reinterpret_cast<const Elf_Nhdr *>(Content.data());
+    if (Content.size() < Header->getSize()) {
+      S->Content = yaml::BinaryRef(*ContentOrErr);
+      return S.release();
+    }
+
+    Elf_Note Note(*Header);
+    Entries.push_back(
+        {Note.getName(), Note.getDesc(), (llvm::yaml::Hex32)Note.getType()});
+
+    Content = Content.drop_front(Header->getSize());
+  }
+
+  S->Notes = std::move(Entries);
   return S.release();
 }
 

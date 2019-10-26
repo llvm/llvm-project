@@ -83,7 +83,7 @@ A |LLVM IR fuzzer| aimed at finding bugs in instruction selection.
 
 This fuzzer accepts flags after `ignore_remaining_args=1`. The flags match
 those of :doc:`llc <CommandGuide/llc>` and the triple is required. For example,
-the following command would fuzz AArch64 with :doc:`GlobalISel`:
+the following command would fuzz AArch64 with :doc:`GlobalISel/index`:
 
 .. code-block:: shell
 

@@ -36,6 +36,16 @@ class ContiguousBlobAccumulator {
   SmallVector<char, 128> Buf;
   raw_svector_ostream OS;
 
+public:
+  ContiguousBlobAccumulator(uint64_t InitialOffset_)
+      : InitialOffset(InitialOffset_), Buf(), OS(Buf) {}
+
+  template <class Integer>
+  raw_ostream &getOSAndAlignedOffset(Integer &Offset, unsigned Align) {
+    Offset = padToAlignment(Align);
+    return OS;
+  }
+
   /// \returns The new offset.
   uint64_t padToAlignment(unsigned Align) {
     if (Align == 0)
@@ -46,14 +56,6 @@ class ContiguousBlobAccumulator {
     return AlignedOffset; // == CurrentOffset;
   }
 
-public:
-  ContiguousBlobAccumulator(uint64_t InitialOffset_)
-      : InitialOffset(InitialOffset_), Buf(), OS(Buf) {}
-  template <class Integer>
-  raw_ostream &getOSAndAlignedOffset(Integer &Offset, unsigned Align) {
-    Offset = padToAlignment(Align);
-    return OS;
-  }
   void writeBlobToStream(raw_ostream &Out) { Out << OS.str(); }
 };
 
@@ -176,6 +178,9 @@ template <class ELFT> class ELFState {
                            ContiguousBlobAccumulator &CBA);
   void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::AddrsigSection &Section,
+                           ContiguousBlobAccumulator &CBA);
+  void writeSectionContent(Elf_Shdr &SHeader,
+                           const ELFYAML::NoteSection &Section,
                            ContiguousBlobAccumulator &CBA);
 
   ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH);
@@ -439,6 +444,8 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     } else if (auto S = dyn_cast<ELFYAML::HashSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::AddrsigSection>(Sec)) {
+      writeSectionContent(SHeader, *S, CBA);
+    } else if (auto S = dyn_cast<ELFYAML::NoteSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else {
       llvm_unreachable("Unknown section type");
@@ -1033,6 +1040,55 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                  : (uint32_t)*Sym.Index;
     SHeader.sh_size += encodeULEB128(Val, OS);
   }
+}
+
+template <class ELFT>
+void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
+                                         const ELFYAML::NoteSection &Section,
+                                         ContiguousBlobAccumulator &CBA) {
+  raw_ostream &OS =
+      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+  uint64_t Offset = OS.tell();
+
+  if (Section.Content || Section.Size) {
+    SHeader.sh_size = writeContent(OS, Section.Content, Section.Size);
+    return;
+  }
+
+  for (const ELFYAML::NoteEntry &NE : *Section.Notes) {
+    // Write name size.
+    if (NE.Name.empty())
+      support::endian::write<uint32_t>(OS, 0, ELFT::TargetEndianness);
+    else
+      support::endian::write<uint32_t>(OS, NE.Name.size() + 1,
+                                       ELFT::TargetEndianness);
+
+    // Write description size.
+    if (NE.Desc.binary_size() == 0)
+      support::endian::write<uint32_t>(OS, 0, ELFT::TargetEndianness);
+    else
+      support::endian::write<uint32_t>(OS, NE.Desc.binary_size(),
+                                       ELFT::TargetEndianness);
+
+    // Write type.
+    support::endian::write<uint32_t>(OS, NE.Type, ELFT::TargetEndianness);
+
+    // Write name, null terminator and padding.
+    if (!NE.Name.empty()) {
+      support::endian::write<uint8_t>(OS, arrayRefFromStringRef(NE.Name),
+                                      ELFT::TargetEndianness);
+      support::endian::write<uint8_t>(OS, 0, ELFT::TargetEndianness);
+      CBA.padToAlignment(4);
+    }
+
+    // Write description and padding.
+    if (NE.Desc.binary_size() != 0) {
+      NE.Desc.writeAsBinary(OS);
+      CBA.padToAlignment(4);
+    }
+  }
+
+  SHeader.sh_size = OS.tell() - Offset;
 }
 
 template <class ELFT> void ELFState<ELFT>::buildSectionIndex() {

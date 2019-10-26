@@ -1,4 +1,4 @@
-//===- DependencyScanningTool.cpp - clang-scan-deps service ------------===//
+//===- DependencyScanningTool.cpp - clang-scan-deps service ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,8 +13,10 @@ namespace clang{
 namespace tooling{
 namespace dependencies{
 
-DependencyScanningTool::DependencyScanningTool(DependencyScanningService &Service,
-const tooling::CompilationDatabase &Compilations) : Worker(Service), Compilations(Compilations) {}
+DependencyScanningTool::DependencyScanningTool(
+    DependencyScanningService &Service,
+    const tooling::CompilationDatabase &Compilations)
+    : Worker(Service), Compilations(Compilations) {}
 
 llvm::Expected<std::string>
 DependencyScanningTool::getDependencyFile(const std::string &Input,

@@ -17,6 +17,7 @@
 
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/IOHandler.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/lldb-private.h"
 
@@ -34,6 +35,13 @@ public:
     CommandDataPython() : BreakpointOptions::CommandData() {
       interpreter = lldb::eScriptLanguagePython;
     }
+    CommandDataPython(StructuredData::ObjectSP extra_args_sp) :
+        BreakpointOptions::CommandData(),
+        m_extra_args_up(new StructuredDataImpl()) {
+        interpreter = lldb::eScriptLanguagePython;
+        m_extra_args_up->SetObjectSP(extra_args_sp);
+    }
+    lldb::StructuredDataImplUP m_extra_args_up;
   };
 
   ScriptInterpreterPython(Debugger &debugger)

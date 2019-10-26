@@ -70,7 +70,20 @@ class ProgressDisplay(object):
             if test.result.code.isFailure:
                 print("%s TEST '%s' FAILED %s" % ('*'*20, test.getFullName(),
                                                   '*'*20))
-            print(test.result.output)
+            out = test.result.output
+            # Encode/decode so that, when using Python 3.6.5 in Windows 10,
+            # print(out) doesn't raise UnicodeEncodeError if out contains
+            # special characters.  However, Python 2 might try to decode
+            # as part of the encode call if out is already encoded, so skip
+            # encoding if it raises UnicodeDecodeError.
+            if sys.stdout.encoding:
+                try:
+                    out = out.encode(encoding=sys.stdout.encoding,
+                                     errors="replace")
+                except UnicodeDecodeError:
+                    pass
+                out = out.decode(encoding=sys.stdout.encoding)
+            print(out)
             print("*" * 20)
 
         # Report test metrics, if present.

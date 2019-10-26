@@ -12,9 +12,24 @@
 #ifndef _TARGET_IMPL_H_
 #define _TARGET_IMPL_H_
 
+#include <cuda.h>
 #include <stdint.h>
 
 #include "option.h"
+
+// Data sharing related quantities, need to match what is used in the compiler.
+enum DATA_SHARING_SIZES {
+  // The maximum number of workers in a kernel.
+  DS_Max_Worker_Threads = 992,
+  // The size reserved for data in a shared memory slot.
+  DS_Slot_Size = 256,
+  // The slot size that should be reserved for a working warp.
+  DS_Worker_Warp_Slot_Size = WARPSIZE * DS_Slot_Size,
+  // The maximum number of warps in use
+  DS_Max_Warp_Number = 32,
+  // The size of the preallocated shared memory buffer per team
+  DS_Shared_Memory_Size = 128,
+};
 
 INLINE void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi) {
   asm volatile("mov.b64 {%0,%1}, %2;" : "=r"(lo), "=r"(hi) : "l"(val));

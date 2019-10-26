@@ -78,6 +78,7 @@ static bool GetNetBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
                     match_info_ptr->GetProcessInfo().GetName())))
     return false;
 
+  process_info.SetArg0(cstr);
   Args &proc_args = process_info.GetArguments();
   while (1) {
     const uint8_t *p = data.PeekData(offset, 1);

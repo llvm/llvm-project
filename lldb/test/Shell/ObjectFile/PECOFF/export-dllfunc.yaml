@@ -11,20 +11,24 @@
 # UUID should not be empty if the module is built with debug info.
 # BASIC-CHECK-DAG: UUID: {{[0-9A-F]{7,}[0-9A-F]}}-{{.*}}
 
-# BASIC-CHECK: Showing 3 subsections
+# BASIC-CHECK: Showing 4 sections
+#
 # BASIC-CHECK:  Index: 0
+# BASIC-CHECK:  Name: PECOFF header
+#
+# BASIC-CHECK:  Index: 1
 # BASIC-CHECK:  Name: .text
 # BASIC-CHECK:  Type: code
 # BASIC-CHECK:  VM size: 22
 # BASIC-CHECK:  File size: 512
 #
-# BASIC-CHECK:  Index: 1
+# BASIC-CHECK:  Index: 2
 # BASIC-CHECK:  Name: .rdata
 # BASIC-CHECK:  Type: data
 # BASIC-CHECK:  VM size: {{.}}
 # BASIC-CHECK:  File size: 512
 #
-# BASIC-CHECK:  Index: 2
+# BASIC-CHECK:  Index: 3
 # BASIC-CHECK:  Name: .pdata
 # BASIC-CHECK:  Type: data
 # BASIC-CHECK:  VM size: 12

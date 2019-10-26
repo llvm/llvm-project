@@ -639,7 +639,7 @@ int TargetTransformInfo::getVectorInstrCost(unsigned Opcode, Type *Val,
 }
 
 int TargetTransformInfo::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                         unsigned Alignment,
+                                         MaybeAlign Alignment,
                                          unsigned AddressSpace,
                                          const Instruction *I) const {
   assert ((I == nullptr || I->getOpcode() == Opcode) &&
@@ -1201,14 +1201,14 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
     const StoreInst *SI = cast<StoreInst>(I);
     Type *ValTy = SI->getValueOperand()->getType();
     return getMemoryOpCost(I->getOpcode(), ValTy,
-                                SI->getAlignment(),
-                                SI->getPointerAddressSpace(), I);
+                           MaybeAlign(SI->getAlignment()),
+                           SI->getPointerAddressSpace(), I);
   }
   case Instruction::Load: {
     const LoadInst *LI = cast<LoadInst>(I);
     return getMemoryOpCost(I->getOpcode(), I->getType(),
-                                LI->getAlignment(),
-                                LI->getPointerAddressSpace(), I);
+                           MaybeAlign(LI->getAlignment()),
+                           LI->getPointerAddressSpace(), I);
   }
   case Instruction::ZExt:
   case Instruction::SExt:

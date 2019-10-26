@@ -36,7 +36,6 @@ import subprocess
 import sys
 import time
 import getpass
-import github
 assert sys.version_info >= (2, 7)
 
 try:
@@ -204,12 +203,12 @@ def get_fetch_url():
     return 'https://{}'.format(GIT_URL)
 
 
-def get_push_url(user='', token='', ssh=False):
+def get_push_url(user='', ssh=False):
 
     if ssh:
         return 'ssh://{}'.format(GIT_URL)
 
-    return 'https://{}@{}'.format(token, GIT_URL)
+    return 'https://{}'.format(GIT_URL)
 
 
 def get_revs_to_push(branch):
@@ -222,7 +221,7 @@ def get_revs_to_push(branch):
     return commits
 
 
-def git_push_one_rev(rev, dry_run, branch, github_ctx, github_token):
+def git_push_one_rev(rev, dry_run, branch):
     # Check if this a merge commit by counting the number of parent commits.
     # More than 1 parent commmit means this is a merge.
     num_parents = len(git('show', '--no-patch', '--format="%P"', rev).split())
@@ -238,7 +237,7 @@ def git_push_one_rev(rev, dry_run, branch, github_ctx, github_token):
         return
 
     # Second push to actually push the commit
-    git('push', get_push_url(token = github_token), '{}:{}'.format(rev, branch), print_raw_stderr=True)
+    git('push', get_push_url(), '{}:{}'.format(rev, branch), print_raw_stderr=True)
 
 
 def cmd_push(args):
@@ -261,13 +260,8 @@ def cmd_push(args):
         if not ask_confirm("Are you sure you want to create %d commits?" % len(revs)):
             die("Aborting")
 
-    # FIXME: I'm really trying to avoid prompting twice for the password, the only
-    # way I can see to do that is require an authentication token instead of a
-    # password, because you can embedded authentication tokens into the URL.
-    github_token = getpass.getpass("Auth token for https://github.com':")
-    g = github.Github(github_token)
     for r in revs:
-        git_push_one_rev(r, dry_run, args.branch, g, github_token)
+        git_push_one_rev(r, dry_run, args.branch)
 
 
 if __name__ == '__main__':
@@ -307,6 +301,7 @@ if __name__ == '__main__':
         'branch',
         metavar='GIT_BRANCH',
         type=str,
+        default='master',
         nargs='?',
         help="branch to push (default: everything not in the branch's "
         'upstream)')

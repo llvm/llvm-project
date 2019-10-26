@@ -180,6 +180,14 @@ public:
     SetScriptCallbackFunction (const char *callback_function_name);
 
     %feature("docstring", "
+    Set the name of the script function to be called when the breakpoint is hit.
+    To use this variant, the function should take (frame, bp_loc, extra_args, dict) and
+    when the breakpoint is hit the extra_args will be passed to the callback function.") SetScriptCallbackFunction;
+    SBError
+    SetScriptCallbackFunction (const char *callback_function_name,
+                               SBStructuredData &extra_args);
+
+    %feature("docstring", "
     Provide the body for the script function to be called when the breakpoint is hit.
     The body will be wrapped in a function, which be passed two arguments:
     'frame' - which holds the bottom-most SBFrame of the thread that hit the breakpoint

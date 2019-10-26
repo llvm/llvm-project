@@ -2304,11 +2304,27 @@ void DAGTypeLegalizer::ExpandIntRes_UADDSUBO(SDNode *N,
 
   SDValue Ovf;
 
-  bool HasOpCarry = TLI.isOperationLegalOrCustom(
-      N->getOpcode() == ISD::ADD ? ISD::ADDCARRY : ISD::SUBCARRY,
-      TLI.getTypeToExpandTo(*DAG.getContext(), LHS.getValueType()));
+  unsigned CarryOp, NoCarryOp;
+  ISD::CondCode Cond;
+  switch(N->getOpcode()) {
+    case ISD::UADDO:
+      CarryOp = ISD::ADDCARRY;
+      NoCarryOp = ISD::ADD;
+      Cond = ISD::SETULT;
+      break;
+    case ISD::USUBO:
+      CarryOp = ISD::SUBCARRY;
+      NoCarryOp = ISD::SUB;
+      Cond = ISD::SETUGT;
+      break;
+    default:
+      llvm_unreachable("Node has unexpected Opcode");
+  }
 
-  if (HasOpCarry) {
+  bool HasCarryOp = TLI.isOperationLegalOrCustom(
+      CarryOp, TLI.getTypeToExpandTo(*DAG.getContext(), LHS.getValueType()));
+
+  if (HasCarryOp) {
     // Expand the subcomponents.
     SDValue LHSL, LHSH, RHSL, RHSH;
     GetExpandedInteger(LHS, LHSL, LHSH);
@@ -2317,22 +2333,19 @@ void DAGTypeLegalizer::ExpandIntRes_UADDSUBO(SDNode *N,
     SDValue LoOps[2] = { LHSL, RHSL };
     SDValue HiOps[3] = { LHSH, RHSH };
 
-    unsigned Opc = N->getOpcode() == ISD::UADDO ? ISD::ADDCARRY : ISD::SUBCARRY;
     Lo = DAG.getNode(N->getOpcode(), dl, VTList, LoOps);
     HiOps[2] = Lo.getValue(1);
-    Hi = DAG.getNode(Opc, dl, VTList, HiOps);
+    Hi = DAG.getNode(CarryOp, dl, VTList, HiOps);
 
     Ovf = Hi.getValue(1);
   } else {
     // Expand the result by simply replacing it with the equivalent
     // non-overflow-checking operation.
-    auto Opc = N->getOpcode() == ISD::UADDO ? ISD::ADD : ISD::SUB;
-    SDValue Sum = DAG.getNode(Opc, dl, LHS.getValueType(), LHS, RHS);
+    SDValue Sum = DAG.getNode(NoCarryOp, dl, LHS.getValueType(), LHS, RHS);
     SplitInteger(Sum, Lo, Hi);
 
     // Calculate the overflow: addition overflows iff a + b < a, and subtraction
     // overflows iff a - b > a.
-    auto Cond = N->getOpcode() == ISD::UADDO ? ISD::SETULT : ISD::SETUGT;
     Ovf = DAG.getSetCC(dl, N->getValueType(1), Sum, LHS, Cond);
   }
 

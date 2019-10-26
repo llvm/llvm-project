@@ -40,6 +40,7 @@ static_library("Driver") {
     "SanitizerArgs.cpp",
     "Tool.cpp",
     "ToolChain.cpp",
+    "ToolChains/AIX.cpp",
     "ToolChains/AMDGPU.cpp",
     "ToolChains/AVR.cpp",
     "ToolChains/Ananas.cpp",

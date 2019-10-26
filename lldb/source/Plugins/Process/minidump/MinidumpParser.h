@@ -88,9 +88,9 @@ public:
 
   llvm::ArrayRef<uint8_t> GetMemory(lldb::addr_t addr, size_t size);
 
-  MemoryRegionInfo GetMemoryRegionInfo(lldb::addr_t load_addr);
-
-  const MemoryRegionInfos &GetMemoryRegions();
+  /// Returns a list of memory regions and a flag indicating whether the list is
+  /// complete (includes all regions mapped into the process memory).
+  std::pair<MemoryRegionInfos, bool> BuildMemoryRegions();
 
   static llvm::StringRef GetStreamTypeAsString(StreamType stream_type);
 
@@ -100,14 +100,10 @@ private:
   MinidumpParser(lldb::DataBufferSP data_sp,
                  std::unique_ptr<llvm::object::MinidumpFile> file);
 
-  MemoryRegionInfo FindMemoryRegion(lldb::addr_t load_addr) const;
-
 private:
   lldb::DataBufferSP m_data_sp;
   std::unique_ptr<llvm::object::MinidumpFile> m_file;
   ArchSpec m_arch;
-  MemoryRegionInfos m_regions;
-  bool m_parsed_regions = false;
 };
 
 } // end namespace minidump

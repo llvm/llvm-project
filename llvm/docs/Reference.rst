@@ -23,7 +23,7 @@ LLVM and API reference documentation.
    FuzzingLLVM
    GarbageCollection
    GetElementPtr
-   GlobalISel
+   GlobalISel/index
    GwpAsan
    HowToSetUpLLVMStyleRTTI
    HowToUseAttributes
@@ -125,7 +125,7 @@ LLVM IR
    A reference manual for the MIR serialization format, which is used to test
    LLVM's code generation passes.
 
-:doc:`GlobalISel`
+:doc:`GlobalISel/index`
   This describes the prototype instruction selection replacement, GlobalISel.
 
 =====================

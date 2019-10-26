@@ -124,6 +124,12 @@ struct StackSizeEntry {
   llvm::yaml::Hex64 Size;
 };
 
+struct NoteEntry {
+  StringRef Name;
+  yaml::BinaryRef Desc;
+  llvm::yaml::Hex32 Type;
+};
+
 struct Section {
   enum class SectionKind {
     Dynamic,
@@ -131,6 +137,7 @@ struct Section {
     RawContent,
     Relocation,
     NoBits,
+    Note,
     Hash,
     Verdef,
     Verneed,
@@ -220,6 +227,15 @@ struct NoBitsSection : Section {
   static bool classof(const Section *S) {
     return S->Kind == SectionKind::NoBits;
   }
+};
+
+struct NoteSection : Section {
+  Optional<yaml::BinaryRef> Content;
+  Optional<llvm::yaml::Hex64> Size;
+  Optional<std::vector<ELFYAML::NoteEntry>> Notes;
+
+  NoteSection() : Section(SectionKind::Note) {}
+  static bool classof(const Section *S) { return S->Kind == SectionKind::Note; }
 };
 
 struct HashSection : Section {
@@ -386,6 +402,7 @@ struct Object {
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::AddrsigSymbol)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::StackSizeEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::DynamicEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::NoteEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::ProgramHeader)
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<llvm::ELFYAML::Section>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::Symbol)
@@ -526,6 +543,10 @@ template <> struct MappingTraits<ELFYAML::StackSizeEntry> {
 
 template <> struct MappingTraits<ELFYAML::DynamicEntry> {
   static void mapping(IO &IO, ELFYAML::DynamicEntry &Rel);
+};
+
+template <> struct MappingTraits<ELFYAML::NoteEntry> {
+  static void mapping(IO &IO, ELFYAML::NoteEntry &N);
 };
 
 template <> struct MappingTraits<ELFYAML::VerdefEntry> {

@@ -641,11 +641,12 @@ ELFFile<ELFT>::getSHNDXTable(const Elf_Shdr &Section,
                                                      SymTable.sh_type) +
                        " section (expected SHT_SYMTAB/SHT_DYNSYM)");
 
-  if (V.size() != (SymTable.sh_size / sizeof(Elf_Sym)))
-    return createError("SHT_SYMTAB_SHNDX section has sh_size (" +
-                       Twine(SymTable.sh_size) +
-                       ") which is not equal to the number of symbols (" +
-                       Twine(V.size()) + ")");
+  uint64_t Syms = SymTable.sh_size / sizeof(Elf_Sym);
+  if (V.size() != Syms)
+    return createError("SHT_SYMTAB_SHNDX has " + Twine(V.size()) +
+                       "  entries, but the symbol table associated has " +
+                       Twine(Syms));
+
   return V;
 }
 

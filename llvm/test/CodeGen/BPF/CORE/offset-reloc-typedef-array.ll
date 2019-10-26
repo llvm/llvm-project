@@ -1,5 +1,7 @@
 ; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck %s
 ; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck %s
+; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck %s
+; RUN: llc -march=bpfeb -mattr=+alu32 -filetype=asm -o - %s | FileCheck %s
 ;
 ; Source code:
 ;   typedef const int arr_t[7];

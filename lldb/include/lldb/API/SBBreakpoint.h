@@ -94,6 +94,9 @@ public:
 
   void SetScriptCallbackFunction(const char *callback_function_name);
 
+  SBError SetScriptCallbackFunction(const char *callback_function_name,
+                                 SBStructuredData &extra_args);
+
   void SetCommandLineCommands(SBStringList &commands);
 
   bool GetCommandLineCommands(SBStringList &commands);

@@ -497,6 +497,7 @@ defm atomic_load_umax : ret_noret_binary_atomic_op<atomic_load_umax>;
 defm atomic_load_umin : ret_noret_binary_atomic_op<atomic_load_umin>;
 defm atomic_load_xor : ret_noret_binary_atomic_op<atomic_load_xor>;
 defm atomic_load_fadd : ret_noret_binary_atomic_op<atomic_load_fadd, 0>;
+defm AMDGPUatomic_cmp_swap : ret_noret_binary_atomic_op<AMDGPUatomic_cmp_swap>;
 
 
 def store_hi16_private : StoreHi16 <truncstorei16>, PrivateAddress;
@@ -569,21 +570,7 @@ defm atomic_cmp_swap_region : ternary_atomic_op<atomic_cmp_swap>;
 defm atomic_cmp_swap_region_m0 : ternary_atomic_op<atomic_cmp_swap_glue>;
 }
 
-class global_binary_atomic_op_frag<SDNode atomic_op> : PatFrag<
-    (ops node:$ptr, node:$value),
-    (atomic_op node:$ptr, node:$value),
-    [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;}]>;
-
 // Legacy.
-def AMDGPUatomic_cmp_swap_global : PatFrag<
-  (ops node:$ptr, node:$value),
-  (AMDGPUatomic_cmp_swap node:$ptr, node:$value)>, GlobalAddress;
-
-def atomic_cmp_swap_global : PatFrag<
-  (ops node:$ptr, node:$cmp, node:$value),
-  (atomic_cmp_swap node:$ptr, node:$cmp, node:$value)>, GlobalAddress;
-
-
 def atomic_cmp_swap_global_noret : PatFrag<
   (ops node:$ptr, node:$cmp, node:$value),
   (atomic_cmp_swap node:$ptr, node:$cmp, node:$value),

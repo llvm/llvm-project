@@ -1,4 +1,5 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck %s 
+; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck %s
+; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck %s
 ;
 ; Source Code:
 ;   #define _(x) (__builtin_preserve_access_index(x))

@@ -12,12 +12,14 @@
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBStringList.h"
 
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/Target.h"
@@ -207,23 +209,38 @@ bool SBBreakpointLocation::GetAutoContinue() {
 }
 
 void SBBreakpointLocation::SetScriptCallbackFunction(
-    const char *callback_function_name) {
-  LLDB_RECORD_METHOD(void, SBBreakpointLocation, SetScriptCallbackFunction,
-                     (const char *), callback_function_name);
+  const char *callback_function_name) {
+LLDB_RECORD_METHOD(void, SBBreakpointLocation, SetScriptCallbackFunction,
+                   (const char *), callback_function_name);
+}
 
+SBError SBBreakpointLocation::SetScriptCallbackFunction(
+    const char *callback_function_name,
+    SBStructuredData &extra_args) {
+  LLDB_RECORD_METHOD(SBError, SBBreakpointLocation, SetScriptCallbackFunction,
+                     (const char *, SBStructuredData &), 
+                     callback_function_name, extra_args);
+  SBError sb_error;
   BreakpointLocationSP loc_sp = GetSP();
 
   if (loc_sp) {
+    Status error;
     std::lock_guard<std::recursive_mutex> guard(
         loc_sp->GetTarget().GetAPIMutex());
     BreakpointOptions *bp_options = loc_sp->GetLocationOptions();
-    loc_sp->GetBreakpoint()
+    error = loc_sp->GetBreakpoint()
         .GetTarget()
         .GetDebugger()
         .GetScriptInterpreter()
         ->SetBreakpointCommandCallbackFunction(bp_options,
-                                               callback_function_name);
-  }
+                                               callback_function_name,
+                                               extra_args.m_impl_up
+                                                   ->GetObjectSP());
+      sb_error.SetError(error);
+    } else
+      sb_error.SetErrorString("invalid breakpoint");
+    
+    return LLDB_RECORD_RESULT(sb_error);
 }
 
 SBError
@@ -482,6 +499,8 @@ void RegisterMethods<SBBreakpointLocation>(Registry &R) {
   LLDB_REGISTER_METHOD(bool, SBBreakpointLocation, GetAutoContinue, ());
   LLDB_REGISTER_METHOD(void, SBBreakpointLocation, SetScriptCallbackFunction,
                        (const char *));
+  LLDB_REGISTER_METHOD(SBError, SBBreakpointLocation, SetScriptCallbackFunction,
+                       (const char *, SBStructuredData &));
   LLDB_REGISTER_METHOD(lldb::SBError, SBBreakpointLocation,
                        SetScriptCallbackBody, (const char *));
   LLDB_REGISTER_METHOD(void, SBBreakpointLocation, SetCommandLineCommands,

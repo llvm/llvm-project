@@ -24,6 +24,7 @@ Sections:
   - Name:            .note
     Type:            SHT_NOTE
     Flags:           [ SHF_GROUP ]
+    Content:         ""
   - Name:            .text.foo
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
