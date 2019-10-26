@@ -126,7 +126,7 @@ bool BlockInCriticalSectionChecker::isLockFunction(const CallEvent &Call) const 
 
 bool BlockInCriticalSectionChecker::isUnlockFunction(const CallEvent &Call) const {
   if (const auto *Dtor = dyn_cast<CXXDestructorCall>(&Call)) {
-    const auto *DRecordDecl = dyn_cast<CXXRecordDecl>(Dtor->getDecl()->getParent());
+    const auto *DRecordDecl = cast<CXXRecordDecl>(Dtor->getDecl()->getParent());
     auto IdentifierInfo = DRecordDecl->getIdentifier();
     if (IdentifierInfo == IILockGuard || IdentifierInfo == IIUniqueLock)
       return true;
@@ -173,7 +173,8 @@ void BlockInCriticalSectionChecker::reportBlockInCritSection(
   llvm::raw_string_ostream os(msg);
   os << "Call to blocking function '" << Call.getCalleeIdentifier()->getName()
      << "' inside of critical section";
-  auto R = llvm::make_unique<BugReport>(*BlockInCritSectionBugType, os.str(), ErrNode);
+  auto R = llvm::make_unique<PathSensitiveBugReport>(*BlockInCritSectionBugType,
+                                                    os.str(), ErrNode);
   R->addRange(Call.getSourceRange());
   R->markInteresting(BlockDescSym);
   C.emitReport(std::move(R));

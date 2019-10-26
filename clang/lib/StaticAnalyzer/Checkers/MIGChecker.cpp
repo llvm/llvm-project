@@ -274,7 +274,7 @@ void MIGChecker::checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const {
   if (!N)
     return;
 
-  auto R = llvm::make_unique<BugReport>(
+  auto R = llvm::make_unique<PathSensitiveBugReport>(
       BT,
       "MIG callback fails with error after deallocating argument value. "
       "This is a use-after-free vulnerability because the caller will try to "
@@ -282,7 +282,8 @@ void MIGChecker::checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const {
       N);
 
   R->addRange(RS->getSourceRange());
-  bugreporter::trackExpressionValue(N, RS->getRetValue(), *R, false);
+  bugreporter::trackExpressionValue(N, RS->getRetValue(), *R,
+                                    bugreporter::TrackingKind::Thorough, false);
   C.emitReport(std::move(R));
 }
 

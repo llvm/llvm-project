@@ -830,12 +830,7 @@ void test_ternary_temporary_with_copy(int coin) {
   // On each branch the variable is constructed directly.
   if (coin) {
     clang_analyzer_eval(x == 1); // expected-warning{{TRUE}}
-#if __cplusplus < 201703L
     clang_analyzer_eval(y == 1); // expected-warning{{TRUE}}
-#else
-    // FIXME: Destructor called twice in C++17?
-    clang_analyzer_eval(y == 2); // expected-warning{{TRUE}}
-#endif
     clang_analyzer_eval(z == 0); // expected-warning{{TRUE}}
     clang_analyzer_eval(w == 0); // expected-warning{{TRUE}}
 
@@ -843,12 +838,7 @@ void test_ternary_temporary_with_copy(int coin) {
     clang_analyzer_eval(x == 0); // expected-warning{{TRUE}}
     clang_analyzer_eval(y == 0); // expected-warning{{TRUE}}
     clang_analyzer_eval(z == 1); // expected-warning{{TRUE}}
-#if __cplusplus < 201703L
     clang_analyzer_eval(w == 1); // expected-warning{{TRUE}}
-#else
-    // FIXME: Destructor called twice in C++17?
-    clang_analyzer_eval(w == 2); // expected-warning{{TRUE}}
-#endif
   }
 }
 } // namespace test_match_constructors_and_destructors
@@ -1055,16 +1045,11 @@ void foo(void (*bar4)(S)) {
 #endif
 
   bar2(S(2));
-  // FIXME: Why are we losing information in C++17?
   clang_analyzer_eval(glob == 2);
 #ifdef TEMPORARY_DTORS
-#if __cplusplus < 201703L
-  // expected-warning@-3{{TRUE}}
+  // expected-warning@-2{{TRUE}}
 #else
-  // expected-warning@-5{{UNKNOWN}}
-#endif
-#else
-  // expected-warning@-8{{UNKNOWN}}
+  // expected-warning@-4{{UNKNOWN}}
 #endif
 
   C *c = new D();
@@ -1246,3 +1231,19 @@ S bar3(int coin) {
   return coin ? S() : foo(); // no-warning
 }
 } // namespace return_from_top_frame
+
+#if __cplusplus >= 201103L
+namespace arguments_of_operators {
+struct S {
+  S() {}
+  S(const S &) {}
+};
+
+void test() {
+  int x = 0;
+  auto foo = [](S s, int &y) { y = 1; };
+  foo(S(), x);
+  clang_analyzer_eval(x == 1); // expected-warning{{TRUE}}
+}
+} // namespace arguments_of_operators
+#endif // __cplusplus >= 201103L

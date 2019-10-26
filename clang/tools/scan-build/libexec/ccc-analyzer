@@ -498,7 +498,8 @@ my $HasSDK = 0;
 # Process the arguments.
 foreach (my $i = 0; $i < scalar(@ARGV); ++$i) {
   my $Arg = $ARGV[$i];
-  my ($ArgKey) = split /=/,$Arg,2;
+  my @ArgParts = split /=/,$Arg,2;
+  my $ArgKey = $ArgParts[0];
 
   # Be friendly to "" in the argument list.
   if (!defined($ArgKey)) {
@@ -566,10 +567,12 @@ foreach (my $i = 0; $i < scalar(@ARGV); ++$i) {
     push @CompileOpts,$Arg;
     push @LinkOpts,$Arg;
 
-    while ($Cnt > 0) {
-      ++$i; --$Cnt;
-      push @CompileOpts, $ARGV[$i];
-      push @LinkOpts, $ARGV[$i];
+    if (scalar @ArgParts == 1) {
+      while ($Cnt > 0) {
+        ++$i; --$Cnt;
+        push @CompileOpts, $ARGV[$i];
+        push @LinkOpts, $ARGV[$i];
+      }
     }
     next;
   }
@@ -752,7 +755,7 @@ if ($Action eq 'compile' or $Action eq 'link') {
                                DIR => $HtmlDir);
         $ResultFile = $f;
         # If the HtmlDir is not set, we should clean up the plist files.
-        if (!defined $HtmlDir || -z $HtmlDir) {
+        if (!defined $HtmlDir || $HtmlDir eq "") {
           $CleanupFile = $f;
         }
       }

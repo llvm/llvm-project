@@ -12,16 +12,23 @@
 
 #define OSDynamicCast(type, inst)   \
     ((type *) OSMetaClassBase::safeMetaCast((inst), OSTypeID(type)))
+#define OSRequiredCast(type, inst)   \
+    ((type *) OSMetaClassBase::requiredMetaCast((inst), OSTypeID(type)))
 
 #define OSTypeAlloc(type)   ((type *) ((type::metaClass)->alloc()))
 
 using size_t = decltype(sizeof(int));
+
+typedef int kern_return_t;
+struct IORPC {};
 
 struct OSMetaClass;
 
 struct OSMetaClassBase {
   static OSMetaClassBase *safeMetaCast(const OSMetaClassBase *inst,
                                        const OSMetaClass *meta);
+  static OSMetaClassBase *requiredMetaCast(const OSMetaClassBase *inst,
+                                           const OSMetaClass *meta);
 
   OSMetaClassBase *metaCast(const char *toMeta);
 
@@ -33,7 +40,12 @@ struct OSMetaClassBase {
 
   virtual void free();
   virtual ~OSMetaClassBase(){};
+
+  kern_return_t Invoke(IORPC invoke);
 };
+
+typedef kern_return_t (*OSDispatchMethod)(OSMetaClassBase *self,
+                                          const IORPC rpc);
 
 struct OSObject : public OSMetaClassBase {
   virtual ~OSObject(){}

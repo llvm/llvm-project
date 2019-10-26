@@ -2,13 +2,11 @@
 typedef struct { float b; } c;
 void *a();
 void *d() {
-  return a(); // expected-note{{Returning pointer}}
+  return a();
 }
 
 void no_find_last_store() {
-  c *e = d(); // expected-note{{Calling 'd'}}
-              // expected-note@-1{{Returning from 'd'}}
-              // expected-note@-2{{'e' initialized here}}
+  c *e = d(); // expected-note{{'e' initialized here}}
 
   (void)(e || e->b); // expected-note{{Assuming 'e' is null}}
       // expected-note@-1{{Left side of '||' is false}}

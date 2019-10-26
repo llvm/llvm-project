@@ -69,9 +69,9 @@ public:
     ID.Add(SFC);
   }
 
-  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *Succ,
-                                                 BugReporterContext &BRC,
-                                                 BugReport &BR) override;
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *Succ,
+                                   BugReporterContext &BRC,
+                                   PathSensitiveBugReport &BR) override;
 };
 
 class TestAfterDivZeroChecker
@@ -92,9 +92,9 @@ public:
 
 REGISTER_SET_WITH_PROGRAMSTATE(DivZeroMap, ZeroState)
 
-std::shared_ptr<PathDiagnosticPiece>
-DivisionBRVisitor::VisitNode(const ExplodedNode *Succ, 
-                             BugReporterContext &BRC, BugReport &BR) {
+PathDiagnosticPieceRef
+DivisionBRVisitor::VisitNode(const ExplodedNode *Succ, BugReporterContext &BRC,
+                             PathSensitiveBugReport &BR) {
   if (Satisfied)
     return nullptr;
 
@@ -167,7 +167,7 @@ void TestAfterDivZeroChecker::reportBug(SVal Val, CheckerContext &C) const {
     if (!DivZeroBug)
       DivZeroBug.reset(new BuiltinBug(this, "Division by zero"));
 
-    auto R = llvm::make_unique<BugReport>(
+    auto R = llvm::make_unique<PathSensitiveBugReport>(
         *DivZeroBug, "Value being compared against zero has already been used "
                      "for division",
         N);

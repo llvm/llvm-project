@@ -89,8 +89,8 @@ int main(int argc, const char *argv[]) {
 // Not profiled
 // CHECK-LABEL:  bar:
 // CHECK:         Counters: 1
-// CHECK-NEXT     Function count: 0
-// CHECK-NEXT     Block counts: []
+// CHECK-NEXT:    Function count: 0
+// CHECK-NEXT:    Block counts: []
 
 // Not profiled
 // CHECK-LABEL:  main:

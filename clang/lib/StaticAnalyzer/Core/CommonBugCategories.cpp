@@ -17,4 +17,5 @@ const char * const MemoryRefCount =
   "Memory (Core Foundation/Objective-C/OSObject)";
 const char * const MemoryError = "Memory error";
 const char * const UnixAPI = "Unix API";
+const char * const CXXObjectLifecycle = "C++ object lifecycle";
 }}}

@@ -10,20 +10,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/PlistSupport.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
+#include "clang/CrossTU/CrossTranslationUnit.h"
+#include "clang/Frontend/ASTUnit.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/TokenConcatenation.h"
 #include "clang/Rewrite/Core/HTMLRewrite.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/IssueHash.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 
 using namespace clang;
@@ -39,12 +41,13 @@ namespace {
   class PlistDiagnostics : public PathDiagnosticConsumer {
     const std::string OutputFile;
     const Preprocessor &PP;
+    const cross_tu::CrossTranslationUnitContext &CTU;
     AnalyzerOptions &AnOpts;
     const bool SupportsCrossFileDiagnostics;
   public:
-    PlistDiagnostics(AnalyzerOptions &AnalyzerOpts,
-                     const std::string& prefix,
+    PlistDiagnostics(AnalyzerOptions &AnalyzerOpts, const std::string &prefix,
                      const Preprocessor &PP,
+                     const cross_tu::CrossTranslationUnitContext &CTU,
                      bool supportsMultipleFiles);
 
     ~PlistDiagnostics() override {}
@@ -73,12 +76,14 @@ class PlistPrinter {
   const FIDMap& FM;
   AnalyzerOptions &AnOpts;
   const Preprocessor &PP;
+  const cross_tu::CrossTranslationUnitContext &CTU;
   llvm::SmallVector<const PathDiagnosticMacroPiece *, 0> MacroPieces;
 
 public:
   PlistPrinter(const FIDMap& FM, AnalyzerOptions &AnOpts,
-               const Preprocessor &PP)
-    : FM(FM), AnOpts(AnOpts), PP(PP) {
+               const Preprocessor &PP,
+               const cross_tu::CrossTranslationUnitContext &CTU)
+    : FM(FM), AnOpts(AnOpts), PP(PP), CTU(CTU) {
   }
 
   void ReportDiag(raw_ostream &o, const PathDiagnosticPiece& P) {
@@ -129,6 +134,7 @@ private:
   void EmitRanges(raw_ostream &o, const ArrayRef<SourceRange> Ranges,
                   unsigned indent);
   void EmitMessage(raw_ostream &o, StringRef Message, unsigned indent);
+  void EmitFixits(raw_ostream &o, ArrayRef<FixItHint> fixits, unsigned indent);
 
   void ReportControlFlow(raw_ostream &o,
                          const PathDiagnosticControlFlowPiece& P,
@@ -160,8 +166,8 @@ struct ExpansionInfo {
 } // end of anonymous namespace
 
 static void printBugPath(llvm::raw_ostream &o, const FIDMap& FM,
-                         AnalyzerOptions &AnOpts,
-                         const Preprocessor &PP,
+                         AnalyzerOptions &AnOpts, const Preprocessor &PP,
+                         const cross_tu::CrossTranslationUnitContext &CTU,
                          const PathPieces &Path);
 
 /// Print coverage information to output stream {@code o}.
@@ -172,8 +178,9 @@ static void printCoverage(const PathDiagnostic *D,
                           FIDMap &FM,
                           llvm::raw_fd_ostream &o);
 
-static ExpansionInfo getExpandedMacro(SourceLocation MacroLoc,
-                                      const Preprocessor &PP);
+static ExpansionInfo
+getExpandedMacro(SourceLocation MacroLoc, const Preprocessor &PP,
+                 const cross_tu::CrossTranslationUnitContext &CTU);
 
 //===----------------------------------------------------------------------===//
 // Methods of PlistPrinter.
@@ -214,6 +221,33 @@ void PlistPrinter::EmitMessage(raw_ostream &o, StringRef Message,
   Indent(o, indent) << "<key>message</key>\n";
   Indent(o, indent);
   EmitString(o, Message) << '\n';
+}
+
+void PlistPrinter::EmitFixits(raw_ostream &o, ArrayRef<FixItHint> fixits,
+                              unsigned indent) {
+  if (fixits.size() == 0)
+    return;
+
+  const SourceManager &SM = PP.getSourceManager();
+  const LangOptions &LangOpts = PP.getLangOpts();
+
+  Indent(o, indent) << "<key>fixits</key>\n";
+  Indent(o, indent) << "<array>\n";
+  for (const auto &fixit : fixits) {
+    assert(!fixit.isNull());
+    // FIXME: Add support for InsertFromRange and BeforePreviousInsertion.
+    assert(!fixit.InsertFromRange.isValid() && "Not implemented yet!");
+    assert(!fixit.BeforePreviousInsertions && "Not implemented yet!");
+    Indent(o, indent) << " <dict>\n";
+    Indent(o, indent) << "  <key>remove_range</key>\n";
+    EmitRange(o, SM, Lexer::getAsCharRange(fixit.RemoveRange, SM, LangOpts),
+              FM, indent + 2);
+    Indent(o, indent) << "  <key>insert_string</key>";
+    EmitString(o, fixit.CodeToInsert);
+    o << "\n";
+    Indent(o, indent) << " </dict>\n";
+  }
+  Indent(o, indent) << "</array>\n";
 }
 
 void PlistPrinter::ReportControlFlow(raw_ostream &o,
@@ -266,6 +300,9 @@ void PlistPrinter::ReportControlFlow(raw_ostream &o,
     EmitString(o, s) << '\n';
   }
 
+  assert(P.getFixits().size() == 0 &&
+         "Fixits on constrol flow pieces are not implemented yet!");
+
   --indent;
   Indent(o, indent) << "</dict>\n";
 }
@@ -302,6 +339,9 @@ void PlistPrinter::ReportEvent(raw_ostream &o, const PathDiagnosticEventPiece& P
   // Output the text.
   EmitMessage(o, P.getString(), indent);
 
+  // Output the fixits.
+  EmitFixits(o, P.getFixits(), indent);
+
   // Finish up.
   --indent;
   Indent(o, indent); o << "</dict>\n";
@@ -329,6 +369,9 @@ void PlistPrinter::ReportCall(raw_ostream &o, const PathDiagnosticCallPiece &P,
 
   if (auto callExit = P.getCallExitEvent())
     ReportPiece(o, *callExit, indent, depth, /*includeControlFlow*/ true);
+
+  assert(P.getFixits().size() == 0 &&
+         "Fixits on call pieces are not implemented yet!");
 }
 
 void PlistPrinter::ReportMacroSubPieces(raw_ostream &o,
@@ -341,13 +384,16 @@ void PlistPrinter::ReportMacroSubPieces(raw_ostream &o,
        I != E; ++I) {
     ReportPiece(o, **I, indent, depth, /*includeControlFlow*/ false);
   }
+
+  assert(P.getFixits().size() == 0 &&
+         "Fixits on constrol flow pieces are not implemented yet!");
 }
 
 void PlistPrinter::ReportMacroExpansions(raw_ostream &o, unsigned indent) {
 
   for (const PathDiagnosticMacroPiece *P : MacroPieces) {
     const SourceManager &SM = PP.getSourceManager();
-    ExpansionInfo EI = getExpandedMacro(P->getLocation().asLocation(), PP);
+    ExpansionInfo EI = getExpandedMacro(P->getLocation().asLocation(), PP, CTU);
 
     Indent(o, indent) << "<dict>\n";
     ++indent;
@@ -398,6 +444,9 @@ void PlistPrinter::ReportNote(raw_ostream &o, const PathDiagnosticNotePiece& P,
   // Output the text.
   EmitMessage(o, P.getString(), indent);
 
+  // Output the fixits.
+  EmitFixits(o, P.getFixits(), indent);
+
   // Finish up.
   --indent;
   Indent(o, indent); o << "</dict>\n";
@@ -425,6 +474,9 @@ void PlistPrinter::ReportPopUp(raw_ostream &o,
 
   // Output the text.
   EmitMessage(o, P.getString(), indent);
+
+  assert(P.getFixits().size() == 0 &&
+         "Fixits on pop-up pieces are not implemented yet!");
 
   // Finish up.
   --indent;
@@ -469,20 +521,20 @@ static void printCoverage(const PathDiagnostic *D,
 }
 
 static void printBugPath(llvm::raw_ostream &o, const FIDMap& FM,
-                         AnalyzerOptions &AnOpts,
-                         const Preprocessor &PP,
+                         AnalyzerOptions &AnOpts, const Preprocessor &PP,
+                         const cross_tu::CrossTranslationUnitContext &CTU,
                          const PathPieces &Path) {
-  PlistPrinter Printer(FM, AnOpts, PP);
-  assert(std::is_partitioned(
-           Path.begin(), Path.end(),
-           [](const std::shared_ptr<PathDiagnosticPiece> &E)
-             { return E->getKind() == PathDiagnosticPiece::Note; }) &&
+  PlistPrinter Printer(FM, AnOpts, PP, CTU);
+  assert(std::is_partitioned(Path.begin(), Path.end(),
+                             [](const PathDiagnosticPieceRef &E) {
+                               return E->getKind() == PathDiagnosticPiece::Note;
+                             }) &&
          "PathDiagnostic is not partitioned so that notes precede the rest");
 
   PathPieces::const_iterator FirstNonNote = std::partition_point(
-      Path.begin(), Path.end(),
-      [](const std::shared_ptr<PathDiagnosticPiece> &E)
-        { return E->getKind() == PathDiagnosticPiece::Note; });
+      Path.begin(), Path.end(), [](const PathDiagnosticPieceRef &E) {
+        return E->getKind() == PathDiagnosticPiece::Note;
+      });
 
   PathPieces::const_iterator I = Path.begin();
 
@@ -518,26 +570,29 @@ static void printBugPath(llvm::raw_ostream &o, const FIDMap& FM,
 // Methods of PlistDiagnostics.
 //===----------------------------------------------------------------------===//
 
-PlistDiagnostics::PlistDiagnostics(AnalyzerOptions &AnalyzerOpts,
-                                   const std::string& output,
-                                   const Preprocessor &PP,
-                                   bool supportsMultipleFiles)
-  : OutputFile(output), PP(PP), AnOpts(AnalyzerOpts),
-    SupportsCrossFileDiagnostics(supportsMultipleFiles) {}
+PlistDiagnostics::PlistDiagnostics(
+    AnalyzerOptions &AnalyzerOpts, const std::string &output,
+    const Preprocessor &PP, const cross_tu::CrossTranslationUnitContext &CTU,
+    bool supportsMultipleFiles)
+    : OutputFile(output), PP(PP), CTU(CTU), AnOpts(AnalyzerOpts),
+      SupportsCrossFileDiagnostics(supportsMultipleFiles) {
+  // FIXME: Will be used by a later planned change.
+  (void)this->CTU;
+}
 
-void ento::createPlistDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
-                                         PathDiagnosticConsumers &C,
-                                         const std::string& s,
-                                         const Preprocessor &PP) {
-  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP,
+void ento::createPlistDiagnosticConsumer(
+    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
+    const std::string &s, const Preprocessor &PP,
+    const cross_tu::CrossTranslationUnitContext &CTU) {
+  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP, CTU,
                                    /*supportsMultipleFiles*/ false));
 }
 
-void ento::createPlistMultiFileDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
-                                                  PathDiagnosticConsumers &C,
-                                                  const std::string &s,
-                                                  const Preprocessor &PP) {
-  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP,
+void ento::createPlistMultiFileDiagnosticConsumer(
+    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
+    const std::string &s, const Preprocessor &PP,
+    const cross_tu::CrossTranslationUnitContext &CTU) {
+  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP, CTU,
                                    /*supportsMultipleFiles*/ true));
 }
 void PlistDiagnostics::FlushDiagnosticsImpl(
@@ -614,7 +669,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
     o << "  <dict>\n";
 
     const PathDiagnostic *D = *DI;
-    printBugPath(o, FM, AnOpts, PP, D->path);
+    printBugPath(o, FM, AnOpts, PP, CTU, D->path);
 
     // Output the bug type and bug category.
     o << "   <key>description</key>";
@@ -624,7 +679,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
     o << "   <key>type</key>";
     EmitString(o, D->getBugType()) << '\n';
     o << "   <key>check_name</key>";
-    EmitString(o, D->getCheckName()) << '\n';
+    EmitString(o, D->getCheckerName()) << '\n';
 
     o << "   <!-- This hash is experimental and going to change! -->\n";
     o << "   <key>issue_hash_content_of_line_in_context</key>";
@@ -634,7 +689,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
                                             : D->getLocation().asLocation()),
                     SM);
     const Decl *DeclWithIssue = D->getDeclWithIssue();
-    EmitString(o, GetIssueHash(SM, L, D->getCheckName(), D->getBugType(),
+    EmitString(o, GetIssueHash(SM, L, D->getCheckerName(), D->getBugType(),
                                DeclWithIssue, LangOpts))
         << '\n';
 
@@ -867,17 +922,23 @@ static const MacroInfo *getMacroInfoForLocation(const Preprocessor &PP,
 // Definitions of helper functions and methods for expanding macros.
 //===----------------------------------------------------------------------===//
 
-static ExpansionInfo getExpandedMacro(SourceLocation MacroLoc,
-                                      const Preprocessor &PP) {
+static ExpansionInfo
+getExpandedMacro(SourceLocation MacroLoc, const Preprocessor &PP,
+                 const cross_tu::CrossTranslationUnitContext &CTU) {
+
+  const Preprocessor *PPToUse = &PP;
+  if (auto LocAndUnit = CTU.getImportedFromSourceLocation(MacroLoc)) {
+    MacroLoc = LocAndUnit->first;
+    PPToUse = &LocAndUnit->second->getPreprocessor();
+  }
 
   llvm::SmallString<200> ExpansionBuf;
   llvm::raw_svector_ostream OS(ExpansionBuf);
-  TokenPrinter Printer(OS, PP);
+  TokenPrinter Printer(OS, *PPToUse);
   llvm::SmallPtrSet<IdentifierInfo*, 8> AlreadyProcessedTokens;
 
-  std::string MacroName =
-            getMacroNameAndPrintExpansion(Printer, MacroLoc, PP, MacroArgMap{},
-                                         AlreadyProcessedTokens);
+  std::string MacroName = getMacroNameAndPrintExpansion(
+      Printer, MacroLoc, *PPToUse, MacroArgMap{}, AlreadyProcessedTokens);
   return { MacroName, OS.str() };
 }
 
