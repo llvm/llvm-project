@@ -242,7 +242,7 @@ public:
 /// passes the 'Allow' predicate will be added to the JITDylib.
 class DynamicLibrarySearchGenerator : public JITDylib::DefinitionGenerator {
 public:
-  using SymbolPredicate = std::function<bool(SymbolStringPtr)>;
+  using SymbolPredicate = std::function<bool(const SymbolStringPtr &)>;
 
   /// Create a DynamicLibrarySearchGenerator that searches for symbols in the
   /// given sys::DynamicLibrary.
