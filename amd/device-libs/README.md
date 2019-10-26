@@ -19,25 +19,27 @@ Refer to [LICENSE.TXT](LICENSE.TXT) for license information.
 ## BUILDING
 
 The library sources should be compiled using a clang compiler built from
-sources in the amd-common branch of AMD modified clang, llvm, and lld repositories
-using the following commands:
+sources in the amd-stg-open branch of AMD-modified llvm-project repository.
+Use the following commands:
 
-    git clone git@github.com:RadeonOpenCompute/llvm.git llvm_amd-common
-    cd llvm_amd-common/tools
-    git clone git@github.com:RadeonOpenCompute/lld.git lld
-    git clone git@github.com:RadeonOpenCompute/clang.git clang
-    cd ..
+    git clone https://github.com/RadeonOpenCompute/llvm-project.git -b amd-stg-open llvm_amd
+    cd llvm_amd
     mkdir -p build
     cd build
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/opt/rocm/llvm \
-        -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" \
-        ..
+        -DLLVM_ENABLE_PROJECTS="clang;lld"    \
+        -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86"  \
+        ../llvm
+    make
 
 
-To build the library bitcodes, from the top level of this repository
-run the following commands:
+To build the library bitcodes, clone the amd_stg_open branch of this repository
+
+    git clone https://github.com/RadeonOpenCompute/ROCm-Device-Libs.git -b amd-stg-open
+
+and from its top level run the following commands:
 
     mkdir -p build
     cd build
@@ -70,14 +72,14 @@ To create packages for the library:
    make package
 
 ## USING BITCODE LIBRARIES
- 
+
 The ROCm language runtimes automatically add the required bitcode files during the
 LLVM linking stage invoked during the process of creating a code object.  There are options
 to display the exact commands executed, but an approximation of the command the OpenCL
 runtime might use is as follows:
 
     $LLVM_BUILD/bin/clang -x cl -Xclang -finclude-default-header \
-        -target amdgcn-amd-amdhsa -mcpu=gfx803 \
+        -target amdgcn-amd-amdhsa -mcpu=gfx900 \
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/opencl/opencl.amdgcn.bc \
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/ocml/ocml.amdgcn.bc \
         -Xclang -mlink-bitcode-file -Xclang /srv/git/ROCm-Device-Libs/build/ockl/ockl.amdgcn.bc \
