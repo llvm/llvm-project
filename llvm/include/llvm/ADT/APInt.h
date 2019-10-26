@@ -2220,6 +2220,12 @@ APInt RoundingSDiv(const APInt &A, const APInt &B, APInt::Rounding RM);
 /// coefficients.
 Optional<APInt> SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
                                            unsigned RangeWidth);
+
+/// Compare two values, and if they are different, return the position of the
+/// most significant bit that is different in the values.
+Optional<unsigned> GetMostSignificantDifferentBit(const APInt &A,
+                                                  const APInt &B);
+
 } // End of APIntOps namespace
 
 // See friend declaration above. This additional declaration is required in

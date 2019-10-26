@@ -3027,6 +3027,14 @@ llvm::APIntOps::SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
   return X;
 }
 
+Optional<unsigned>
+llvm::APIntOps::GetMostSignificantDifferentBit(const APInt &A, const APInt &B) {
+  assert(A.getBitWidth() == B.getBitWidth() && "Must have the same bitwidth");
+  if (A == B)
+    return llvm::None;
+  return A.getBitWidth() - ((A ^ B).countLeadingZeros() + 1);
+}
+
 /// StoreIntToMemory - Fills the StoreBytes bytes of memory starting from Dst
 /// with the integer held in IntVal.
 void llvm::StoreIntToMemory(const APInt &IntVal, uint8_t *Dst,
