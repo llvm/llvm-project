@@ -42616,25 +42616,51 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
   SDLoc DL(SetCC);
   bool HasAVX = Subtarget.hasAVX();
 
-  // Use XOR (plus OR) and PTEST after SSE4.1 and before AVX512.
+  // Use XOR (plus OR) and PTEST after SSE4.1 for 128/256-bit operands.
+  // Use PCMPNEQ (plus OR) and KORTEST for 512-bit operands.
   // Otherwise use PCMPEQ (plus AND) and mask testing.
   if ((OpSize == 128 && Subtarget.hasSSE2()) ||
       (OpSize == 256 && HasAVX) ||
       (OpSize == 512 && Subtarget.useAVX512Regs())) {
     bool HasPT = Subtarget.hasSSE41();
+
+    // PTEST and MOVMSK are slow on Knights Landing and Knights Mill and widened
+    // vector registers are essentially free. (Technically, widening registers
+    // prevents load folding, but the tradeoff is worth it.)
+    bool PreferKOT = Subtarget.preferMaskRegisters();
+    bool NeedZExt = PreferKOT && !Subtarget.hasVLX() && OpSize != 512;
+
     EVT VecVT = MVT::v16i8;
-    EVT CmpVT = MVT::v16i8;
-    if (OpSize == 256)
-      VecVT = CmpVT = MVT::v32i8;
-    if (OpSize == 512) {
+    EVT CmpVT = PreferKOT ? MVT::v16i1 : VecVT;
+    if (OpSize == 256) {
+      VecVT = MVT::v32i8;
+      CmpVT = PreferKOT ? MVT::v32i1 : VecVT;
+    }
+    EVT CastVT = VecVT;
+    if (OpSize == 512 || NeedZExt) {
       if (Subtarget.hasBWI()) {
         VecVT = MVT::v64i8;
         CmpVT = MVT::v64i1;
+        if (OpSize == 512)
+          CastVT = VecVT;
       } else {
         VecVT = MVT::v16i32;
         CmpVT = MVT::v16i1;
+        CastVT = OpSize == 512 ? VecVT :
+                 OpSize == 256 ? MVT::v8i32 : MVT::v4i32;
       }
     }
+
+    auto ScalarToVector = [&](SDValue X) -> SDValue {
+      X = DAG.getBitcast(CastVT, X);
+      if (!NeedZExt)
+        return X;
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      MVT VecIdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
+      return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VecVT,
+                         DAG.getConstant(0, DL, VecVT), X,
+                         DAG.getConstant(0, DL, VecIdxVT));
+    };
 
     SDValue Cmp;
     if (IsOrXorXorCCZero) {
@@ -42642,11 +42668,15 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
       // setcc i128 (or (xor A, B), (xor C, D)), 0, eq|ne
       // Use 2 vector equality compares and 'and' the results before doing a
       // MOVMSK.
-      SDValue A = DAG.getBitcast(VecVT, X.getOperand(0).getOperand(0));
-      SDValue B = DAG.getBitcast(VecVT, X.getOperand(0).getOperand(1));
-      SDValue C = DAG.getBitcast(VecVT, X.getOperand(1).getOperand(0));
-      SDValue D = DAG.getBitcast(VecVT, X.getOperand(1).getOperand(1));
-      if (VecVT == CmpVT && HasPT) {
+      SDValue A = ScalarToVector(X.getOperand(0).getOperand(0));
+      SDValue B = ScalarToVector(X.getOperand(0).getOperand(1));
+      SDValue C = ScalarToVector(X.getOperand(1).getOperand(0));
+      SDValue D = ScalarToVector(X.getOperand(1).getOperand(1));
+      if (VecVT != CmpVT) {
+        SDValue Cmp1 = DAG.getSetCC(DL, CmpVT, A, B, ISD::SETNE);
+        SDValue Cmp2 = DAG.getSetCC(DL, CmpVT, C, D, ISD::SETNE);
+        Cmp = DAG.getNode(ISD::OR, DL, CmpVT, Cmp1, Cmp2);
+      } else if (HasPT) {
         SDValue Cmp1 = DAG.getNode(ISD::XOR, DL, VecVT, A, B);
         SDValue Cmp2 = DAG.getNode(ISD::XOR, DL, VecVT, C, D);
         Cmp = DAG.getNode(ISD::OR, DL, VecVT, Cmp1, Cmp2);
@@ -42656,19 +42686,22 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
         Cmp = DAG.getNode(ISD::AND, DL, CmpVT, Cmp1, Cmp2);
       }
     } else {
-      SDValue VecX = DAG.getBitcast(VecVT, X);
-      SDValue VecY = DAG.getBitcast(VecVT, Y);
-      if (VecVT == CmpVT && HasPT) {
+      SDValue VecX = ScalarToVector(X);
+      SDValue VecY = ScalarToVector(Y);
+      if (VecVT != CmpVT) {
+        Cmp = DAG.getSetCC(DL, CmpVT, VecX, VecY, ISD::SETNE);
+      } else if (HasPT) {
         Cmp = DAG.getNode(ISD::XOR, DL, VecVT, VecX, VecY);
       } else {
         Cmp = DAG.getSetCC(DL, CmpVT, VecX, VecY, ISD::SETEQ);
       }
     }
-    // For 512-bits we want to emit a setcc that will lower to kortest.
+    // AVX512 should emit a setcc that will lower to kortest.
     if (VecVT != CmpVT) {
-      EVT KRegVT = CmpVT == MVT::v64i1 ? MVT::i64 : MVT::i16;
-      SDValue Mask = DAG.getAllOnesConstant(DL, KRegVT);
-      return DAG.getSetCC(DL, VT, DAG.getBitcast(KRegVT, Cmp), Mask, CC);
+      EVT KRegVT = CmpVT == MVT::v64i1 ? MVT::i64 :
+                   CmpVT == MVT::v32i1 ? MVT::i32 : MVT::i16;
+      return DAG.getSetCC(DL, VT, DAG.getBitcast(KRegVT, Cmp),
+                          DAG.getConstant(0, DL, KRegVT), CC);
     }
     if (HasPT) {
       SDValue BCCmp = DAG.getBitcast(OpSize == 256 ? MVT::v4i64 : MVT::v2i64,

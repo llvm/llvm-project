@@ -386,6 +386,10 @@ def FeaturePrefer256Bit
     : SubtargetFeature<"prefer-256-bit", "Prefer256Bit", "true",
                        "Prefer 256-bit AVX instructions">;
 
+def FeaturePreferMaskRegisters
+    : SubtargetFeature<"prefer-mask-registers", "PreferMaskRegisters", "true",
+                       "Prefer AVX512 mask registers over PTEST/MOVMSK">;
+
 // Lower indirect calls using a special construct called a `retpoline` to
 // mitigate potential Spectre v2 attacks against them.
 def FeatureRetpolineIndirectCalls
@@ -801,6 +805,7 @@ def ProcessorFeatures {
                                         FeatureBMI2,
                                         FeatureFMA,
                                         FeaturePRFCHW,
+                                        FeaturePreferMaskRegisters,
                                         FeatureSlowTwoMemOps,
                                         FeatureFastPartialYMMorZMMWrite,
                                         FeatureHasFastGather,

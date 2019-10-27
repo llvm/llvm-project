@@ -58,11 +58,5 @@
 
 #define INLINE __forceinline__ __device__
 #define NOINLINE __noinline__ __device__
-#ifndef TRUE
-#define TRUE 1
-#endif
-#ifndef FALSE
-#define FALSE 0
-#endif
 
 #endif
