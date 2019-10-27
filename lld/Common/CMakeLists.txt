@@ -29,6 +29,7 @@ set_property(SOURCE Version.cpp APPEND PROPERTY
 
 add_lld_library(lldCommon
   Args.cpp
+  DWARF.cpp
   ErrorHandler.cpp
   Filesystem.cpp
   Memory.cpp
@@ -46,6 +47,7 @@ add_lld_library(lldCommon
   LINK_COMPONENTS
   Codegen
   Core
+  DebugInfoDWARF
   Demangle
   MC
   Option

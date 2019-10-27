@@ -82,7 +82,7 @@ Optional<RelocAddrEntry>
 LLDDwarfObj<ELFT>::findAux(const InputSectionBase &Sec, uint64_t Pos,
                            ArrayRef<RelTy> Rels) const {
   auto It =
-      llvm::bsearch(Rels, [=](const RelTy &A) { return Pos <= A.r_offset; });
+      partition_point(Rels, [=](const RelTy &A) { return A.r_offset < Pos; });
   if (It == Rels.end() || It->r_offset != Pos)
     return None;
   const RelTy &Rel = *It;
@@ -110,7 +110,8 @@ LLDDwarfObj<ELFT>::findAux(const InputSectionBase &Sec, uint64_t Pos,
   DataRefImpl D;
   D.p = getAddend<ELFT>(Rel);
   return RelocAddrEntry{SecIndex, RelocationRef(D, nullptr),
-                        LLDRelocationResolver<RelTy>::Resolve, Val};
+                        Val,      Optional<object::RelocationRef>(),
+                        0,        LLDRelocationResolver<RelTy>::Resolve};
 }
 
 template <class ELFT>
