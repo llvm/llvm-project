@@ -11,9 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "omptarget-nvptx.h"
+#include "device_environment.h"
 
 ////////////////////////////////////////////////////////////////////////////////
-// global device envrionment
+// global device environment
 ////////////////////////////////////////////////////////////////////////////////
 
 __device__ omptarget_device_environmentTy omptarget_device_environment;
