@@ -1648,7 +1648,7 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
   }
   if (StringTableBegin)
     DynamicStringTable = StringRef(StringTableBegin, StringTableSize);
-  if (SONameOffset && SONameOffset < DynamicStringTable.size())
+  if (SONameOffset < DynamicStringTable.size())
     SOName = DynamicStringTable.data() + SONameOffset;
 }
 
