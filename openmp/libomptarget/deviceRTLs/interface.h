@@ -16,6 +16,7 @@
 #ifndef _INTERFACES_H_
 #define _INTERFACES_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __CUDACC__

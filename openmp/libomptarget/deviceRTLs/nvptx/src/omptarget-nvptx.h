@@ -324,11 +324,6 @@ private:
   uint64_t cnt;
 };
 
-/// Device envrionment data
-struct omptarget_device_environmentTy {
-  int32_t debug_level;
-};
-
 /// Memory manager for statically allocated memory.
 class omptarget_nvptx_SimpleMemoryManager {
 private:
@@ -344,12 +339,6 @@ public:
   INLINE void Release();
   INLINE const void *Acquire(const void *buf, size_t size);
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// global device envrionment
-////////////////////////////////////////////////////////////////////////////////
-
-extern __device__ omptarget_device_environmentTy omptarget_device_environment;
 
 ////////////////////////////////////////////////////////////////////////////////
 
