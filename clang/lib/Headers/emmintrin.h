@@ -2288,7 +2288,7 @@ _mm_adds_epu16(__m128i __a, __m128i __b)
   return (__m128i)__builtin_ia32_paddusw128((__v8hi)__a, (__v8hi)__b);
 }
 
-/// Computes the rounded avarages of corresponding elements of two
+/// Computes the rounded averages of corresponding elements of two
 ///    128-bit unsigned [16 x i8] vectors, saving each result in the
 ///    corresponding element of a 128-bit result vector of [16 x i8].
 ///
@@ -2308,7 +2308,7 @@ _mm_avg_epu8(__m128i __a, __m128i __b)
   return (__m128i)__builtin_ia32_pavgb128((__v16qi)__a, (__v16qi)__b);
 }
 
-/// Computes the rounded avarages of corresponding elements of two
+/// Computes the rounded averages of corresponding elements of two
 ///    128-bit unsigned [8 x i16] vectors, saving each result in the
 ///    corresponding element of a 128-bit result vector of [8 x i16].
 ///
