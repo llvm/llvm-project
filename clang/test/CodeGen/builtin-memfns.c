@@ -4,6 +4,7 @@ typedef __WCHAR_TYPE__ wchar_t;
 typedef __SIZE_TYPE__ size_t;
 
 void *memcpy(void *, void const *, size_t);
+void *memccpy(void *, void const *, int, size_t);
 
 // CHECK: @test1
 // CHECK: call void @llvm.memset.p0i8.i32
@@ -117,4 +118,10 @@ extern char src_array[];
 void test12() {
   // CHECK: call void @llvm.memcpy{{.*}}(
   memcpy(&dest_array, &dest_array, 2);
+}
+
+// CHECK-LABEL: @test13
+void test13(char *d, char *s, int c, size_t n) {
+  // CHECK: call i8* @memccpy
+  memccpy(d, s, c, n);
 }
