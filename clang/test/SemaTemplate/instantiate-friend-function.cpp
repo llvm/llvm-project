@@ -47,3 +47,10 @@ namespace PR10856_Root {
 
 // bool PR10856_Root::g<PR10856_Root::MyClass<int>, void>(PR10856_Root::MyClass<int>)
 // CHECK: call {{.*}} @_ZN12PR10856_Root1gINS_7MyClassIiEEvEEbT_
+
+namespace PR43400 {
+  template<typename T> struct X {
+    friend void f() = delete;
+  };
+  X<int> xi;
+}
