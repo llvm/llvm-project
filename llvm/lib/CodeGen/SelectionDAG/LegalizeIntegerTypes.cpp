@@ -365,15 +365,15 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITCAST(SDNode *N) {
                      CreateStackStoreLoad(InOp, OutVT));
 }
 
-// Helper for BSWAP/BITREVERSE promotion to ensure we can fit the shift amount
+// Helper for BSWAP/BITREVERSE promotion to ensure we can fit any shift amount
 // in the VT returned by getShiftAmountTy and to return a safe VT if we can't.
-static EVT getShiftAmountTyForConstant(unsigned Val, EVT VT,
-                                       const TargetLowering &TLI,
+static EVT getShiftAmountTyForConstant(EVT VT, const TargetLowering &TLI,
                                        SelectionDAG &DAG) {
   EVT ShiftVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
-  // If the value won't fit in the prefered type, just use something safe. It
-  // will be legalized when the shift is expanded.
-  if ((Log2_32(Val) + 1) > ShiftVT.getScalarSizeInBits())
+  // If any possible shift value won't fit in the prefered type, just use
+  // something safe. It will be legalized when the shift is expanded.
+  if (!ShiftVT.isVector() &&
+      ShiftVT.getSizeInBits() < Log2_32_Ceil(VT.getSizeInBits()))
     ShiftVT = MVT::i32;
   return ShiftVT;
 }
@@ -385,7 +385,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BSWAP(SDNode *N) {
   SDLoc dl(N);
 
   unsigned DiffBits = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
-  EVT ShiftVT = getShiftAmountTyForConstant(DiffBits, NVT, TLI, DAG);
+  EVT ShiftVT = getShiftAmountTyForConstant(NVT, TLI, DAG);
   return DAG.getNode(ISD::SRL, dl, NVT, DAG.getNode(ISD::BSWAP, dl, NVT, Op),
                      DAG.getConstant(DiffBits, dl, ShiftVT));
 }
@@ -397,7 +397,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITREVERSE(SDNode *N) {
   SDLoc dl(N);
 
   unsigned DiffBits = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
-  EVT ShiftVT = getShiftAmountTyForConstant(DiffBits, NVT, TLI, DAG);
+  EVT ShiftVT = getShiftAmountTyForConstant(NVT, TLI, DAG);
   return DAG.getNode(ISD::SRL, dl, NVT,
                      DAG.getNode(ISD::BITREVERSE, dl, NVT, Op),
                      DAG.getConstant(DiffBits, dl, ShiftVT));
@@ -1058,8 +1058,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_XMULO(SDNode *N, unsigned ResNo) {
   if (N->getOpcode() == ISD::UMULO) {
     // Unsigned overflow occurred if the high part is non-zero.
     unsigned Shift = SmallVT.getScalarSizeInBits();
-    EVT ShiftTy = getShiftAmountTyForConstant(Shift, Mul.getValueType(),
-                                              TLI, DAG);
+    EVT ShiftTy = getShiftAmountTyForConstant(Mul.getValueType(), TLI, DAG);
     SDValue Hi = DAG.getNode(ISD::SRL, DL, Mul.getValueType(), Mul,
                              DAG.getConstant(Shift, DL, ShiftTy));
     Overflow = DAG.getSetCC(DL, N->getValueType(1), Hi,
