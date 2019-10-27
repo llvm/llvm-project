@@ -23,7 +23,6 @@
 #include "target_impl.h"
 #include "debug.h"     // debug
 #include "interface.h" // interfaces with omp, compiler, and user
-#include "option.h"    // choices we have
 #include "state-queue.h"
 #include "support.h"
 
