@@ -10,9 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdio.h>
-
-#include "omptarget-nvptx.h"
+#include "interface.h"
+#include "debug.h"
 
 EXTERN
 void __kmpc_critical(kmp_Ident *loc, int32_t global_tid,
