@@ -2665,7 +2665,7 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
   };
 
   // Handle bool allof/anyof patterns.
-  if (ValTy->getVectorElementType()->isIntegerTy(1)) {
+  if (!IsPairwise && ValTy->getVectorElementType()->isIntegerTy(1)) {
     if (ST->hasAVX2())
       if (const auto *Entry = CostTableLookup(AVX2BoolReduction, ISD, MTy))
         return LT.first * Entry->Cost;
