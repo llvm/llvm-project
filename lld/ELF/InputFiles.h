@@ -10,13 +10,13 @@
 #define LLD_ELF_INPUT_FILES_H
 
 #include "Config.h"
+#include "lld/Common/DWARF.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Reproduce.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELF.h"
@@ -26,7 +26,6 @@
 
 namespace llvm {
 class TarWriter;
-struct DILineInfo;
 namespace lto {
 class InputFile;
 }
@@ -284,14 +283,7 @@ private:
   // reporting. Linker may find reasonable number of errors in a
   // single object file, so we cache debugging information in order to
   // parse it only once for each object file we link.
-  std::unique_ptr<llvm::DWARFContext> Dwarf;
-  std::vector<const llvm::DWARFDebugLine::LineTable *> LineTables;
-  struct VarLoc {
-    const llvm::DWARFDebugLine::LineTable *LT;
-    unsigned File;
-    unsigned Line;
-  };
-  llvm::DenseMap<StringRef, VarLoc> VariableLoc;
+  DWARFCache *dwarf;
   llvm::once_flag InitDwarfLine;
 };
 

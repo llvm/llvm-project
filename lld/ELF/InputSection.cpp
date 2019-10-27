@@ -1268,8 +1268,8 @@ SectionPiece *MergeInputSection::getSectionPiece(uint64_t Offset) {
 
   // If Offset is not at beginning of a section piece, it is not in the map.
   // In that case we need to  do a binary search of the original section piece vector.
-  auto It = llvm::bsearch(Pieces,
-                          [=](SectionPiece P) { return Offset < P.InputOff; });
+  auto It = partition_point(
+      Pieces, [=](SectionPiece P) { return P.InputOff <= Offset; });
   return &It[-1];
 }
 

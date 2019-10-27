@@ -832,10 +832,10 @@ dataExtractorFromSection(const NormalizedFile &normalizedFile,
 
 // FIXME: Cribbed from llvm-dwp -- should share "lightweight CU DIE
 //        inspection" code if possible.
-static uint32_t getCUAbbrevOffset(llvm::DataExtractor abbrevData,
+static uint64_t getCUAbbrevOffset(llvm::DataExtractor abbrevData,
                                   uint64_t abbrCode) {
   uint64_t curCode;
-  uint32_t offset = 0;
+  uint64_t offset = 0;
   while ((curCode = abbrevData.getULEB128(&offset)) != abbrCode) {
     // Tag
     abbrevData.getULEB128(&offset);
@@ -853,13 +853,13 @@ static uint32_t getCUAbbrevOffset(llvm::DataExtractor abbrevData,
 static Expected<const char *>
 getIndexedString(const NormalizedFile &normalizedFile,
                  llvm::dwarf::Form form, llvm::DataExtractor infoData,
-                 uint32_t &infoOffset, const Section &stringsSection) {
+                 uint64_t &infoOffset, const Section &stringsSection) {
   if (form == llvm::dwarf::DW_FORM_string)
    return infoData.getCStr(&infoOffset);
   if (form != llvm::dwarf::DW_FORM_strp)
     return llvm::make_error<GenericError>(
         "string field encoded without DW_FORM_strp");
-  uint32_t stringOffset = infoData.getU32(&infoOffset);
+  uint64_t stringOffset = infoData.getU32(&infoOffset);
   llvm::DataExtractor stringsData =
     dataExtractorFromSection(normalizedFile, stringsSection);
   return stringsData.getCStr(&stringOffset);
@@ -875,7 +875,7 @@ readCompUnit(const NormalizedFile &normalizedFile,
              StringRef path) {
   // FIXME: Cribbed from llvm-dwp -- should share "lightweight CU DIE
   //        inspection" code if possible.
-  uint32_t offset = 0;
+  uint64_t offset = 0;
   llvm::dwarf::DwarfFormat Format = llvm::dwarf::DwarfFormat::DWARF32;
   auto infoData = dataExtractorFromSection(normalizedFile, info);
   uint32_t length = infoData.getU32(&offset);
@@ -897,7 +897,7 @@ readCompUnit(const NormalizedFile &normalizedFile,
 
   uint32_t abbrCode = infoData.getULEB128(&offset);
   auto abbrevData = dataExtractorFromSection(normalizedFile, abbrev);
-  uint32_t abbrevOffset = getCUAbbrevOffset(abbrevData, abbrCode);
+  uint64_t abbrevOffset = getCUAbbrevOffset(abbrevData, abbrCode);
   uint64_t tag = abbrevData.getULEB128(&abbrevOffset);
   if (tag != llvm::dwarf::DW_TAG_compile_unit)
     return llvm::make_error<GenericError>("top level DIE is not a compile unit");

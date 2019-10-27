@@ -17,7 +17,6 @@
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/Analysis.h"
-#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/LTO/LTO.h"
@@ -252,57 +251,8 @@ std::string InputFile::getSrcMsg(const Symbol &Sym, InputSectionBase &Sec,
 }
 
 template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
-  Dwarf = llvm::make_unique<DWARFContext>(make_unique<LLDDwarfObj<ELFT>>(this));
-  for (std::unique_ptr<DWARFUnit> &CU : Dwarf->compile_units()) {
-    auto Report = [](Error Err) {
-      handleAllErrors(std::move(Err),
-                      [](ErrorInfoBase &Info) { warn(Info.message()); });
-    };
-    Expected<const DWARFDebugLine::LineTable *> ExpectedLT =
-        Dwarf->getLineTableForUnit(CU.get(), Report);
-    const DWARFDebugLine::LineTable *LT = nullptr;
-    if (ExpectedLT)
-      LT = *ExpectedLT;
-    else
-      Report(ExpectedLT.takeError());
-    if (!LT)
-      continue;
-    LineTables.push_back(LT);
-
-    // Loop over variable records and insert them to VariableLoc.
-    for (const auto &Entry : CU->dies()) {
-      DWARFDie Die(CU.get(), &Entry);
-      // Skip all tags that are not variables.
-      if (Die.getTag() != dwarf::DW_TAG_variable)
-        continue;
-
-      // Skip if a local variable because we don't need them for generating
-      // error messages. In general, only non-local symbols can fail to be
-      // linked.
-      if (!dwarf::toUnsigned(Die.find(dwarf::DW_AT_external), 0))
-        continue;
-
-      // Get the source filename index for the variable.
-      unsigned File = dwarf::toUnsigned(Die.find(dwarf::DW_AT_decl_file), 0);
-      if (!LT->hasFileAtIndex(File))
-        continue;
-
-      // Get the line number on which the variable is declared.
-      unsigned Line = dwarf::toUnsigned(Die.find(dwarf::DW_AT_decl_line), 0);
-
-      // Here we want to take the variable name to add it into VariableLoc.
-      // Variable can have regular and linkage name associated. At first, we try
-      // to get linkage name as it can be different, for example when we have
-      // two variables in different namespaces of the same object. Use common
-      // name otherwise, but handle the case when it also absent in case if the
-      // input object file lacks some debug info.
-      StringRef Name =
-          dwarf::toString(Die.find(dwarf::DW_AT_linkage_name),
-                          dwarf::toString(Die.find(dwarf::DW_AT_name), ""));
-      if (!Name.empty())
-        VariableLoc.insert({Name, {LT, File, Line}});
-    }
-  }
+  dwarf = make<DWARFCache>(std::make_unique<DWARFContext>(
+      std::make_unique<LLDDwarfObj<ELFT>>(this)));
 }
 
 // Returns the pair of file name and line number describing location of data
@@ -312,19 +262,7 @@ Optional<std::pair<std::string, unsigned>>
 ObjFile<ELFT>::getVariableLoc(StringRef Name) {
   llvm::call_once(InitDwarfLine, [this]() { initializeDwarf(); });
 
-  // Return if we have no debug information about data object.
-  auto It = VariableLoc.find(Name);
-  if (It == VariableLoc.end())
-    return None;
-
-  // Take file name string from line table.
-  std::string FileName;
-  if (!It->second.LT->getFileNameByIndex(
-          It->second.File, nullptr,
-          DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, FileName))
-    return None;
-
-  return std::make_pair(FileName, It->second.Line);
+  return dwarf->getVariableLoc(Name);
 }
 
 // Returns source line information for a given offset
@@ -346,14 +284,7 @@ Optional<DILineInfo> ObjFile<ELFT>::getDILineInfo(InputSectionBase *S,
 
   // Use fake address calcuated by adding section file offset and offset in
   // section. See comments for ObjectInfo class.
-  DILineInfo Info;
-  for (const llvm::DWARFDebugLine::LineTable *LT : LineTables) {
-    if (LT->getFileLineInfoForAddress(
-            {S->getOffsetInFile() + Offset, SectionIndex}, nullptr,
-            DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, Info))
-      return Info;
-  }
-  return None;
+  return dwarf->getDILineInfo(S->getOffsetInFile() + Offset, SectionIndex);
 }
 
 // Returns "<internal>", "foo.a(bar.o)" or "baz.o".
@@ -466,9 +397,11 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool IgnoreComdats) {
 template <class ELFT>
 StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
                                               const Elf_Shdr &Sec) {
-  const Elf_Sym *Sym =
-      CHECK(object::getSymbol<ELFT>(this->getELFSyms<ELFT>(), Sec.sh_info), this);
-  StringRef Signature = CHECK(Sym->getName(this->StringTable), this);
+  typename ELFT::SymRange Symbols = this->getELFSyms<ELFT>();
+  if (Sec.sh_info >= Symbols.size())
+    fatal(toString(this) + ": invalid symbol index");
+  const typename ELFT::Sym &Sym = Symbols[Sec.sh_info];
+  StringRef Signature = CHECK(Sym.getName(this->StringTable), this);
 
   // As a special case, if a symbol is a section symbol and has no name,
   // we use a section name as a signature.
@@ -477,7 +410,7 @@ StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
   // standard, but GNU gold 1.14 (the newest version as of July 2017) or
   // older produce such sections as outputs for the -r option, so we need
   // a bug-compatibility.
-  if (Signature.empty() && Sym->getType() == STT_SECTION)
+  if (Signature.empty() && Sym.getType() == STT_SECTION)
     return getSectionName(Sec);
   return Signature;
 }
