@@ -302,7 +302,7 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
   unsigned NumVariadicOps = MCI.getNumOperands() - MCDesc.getNumOperands();
   ID.Writes.resize(TotalDefs + NumVariadicOps);
   // Iterate over the operands list, and skip non-register operands.
-  // The first NumExplictDefs register operands are expected to be register
+  // The first NumExplicitDefs register operands are expected to be register
   // definitions.
   unsigned CurrentDef = 0;
   unsigned i = 0;
