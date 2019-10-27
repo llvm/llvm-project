@@ -3,6 +3,22 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx    | FileCheck %s --check-prefixes=ALL,AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx2   | FileCheck %s --check-prefixes=ALL,AVX,AVX2
 
+define <16 x i8> @undef_index(i8 %x) nounwind {
+; ALL-LABEL: undef_index:
+; ALL:       # %bb.0:
+; ALL-NEXT:    retq
+  %ins = insertelement <16 x i8> undef, i8 %x, i64 undef
+  ret <16 x i8> %ins
+}
+
+define <16 x i8> @undef_scalar(<16 x i8> %x, i32 %index) nounwind {
+; ALL-LABEL: undef_scalar:
+; ALL:       # %bb.0:
+; ALL-NEXT:    retq
+  %ins = insertelement <16 x i8> %x, i8 undef, i32 %index
+  ret <16 x i8> %ins
+}
+
 define <16 x i8> @arg_i8_v16i8(i8 %x, i32 %y) nounwind {
 ; SSE-LABEL: arg_i8_v16i8:
 ; SSE:       # %bb.0:
