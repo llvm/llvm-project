@@ -1799,9 +1799,8 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
     llvm::Type *TypeParams[] = {getIdentTyPointerTy(), CGM.Int32Ty};
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, /*Name*/ "__kmpc_barrier");
-    cast<llvm::Function>(RTLFn.getCallee())
-        ->addFnAttr(llvm::Attribute::Convergent);
+    RTLFn =
+        CGM.CreateConvergentRuntimeFunction(FnTy, /*Name*/ "__kmpc_barrier");
     break;
   }
   case OMPRTL__kmpc_barrier_simple_spmd: {
@@ -1810,10 +1809,8 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
     llvm::Type *TypeParams[] = {getIdentTyPointerTy(), CGM.Int32Ty};
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-    RTLFn =
-        CGM.CreateRuntimeFunction(FnTy, /*Name*/ "__kmpc_barrier_simple_spmd");
-    cast<llvm::Function>(RTLFn.getCallee())
-        ->addFnAttr(llvm::Attribute::Convergent);
+    RTLFn = CGM.CreateConvergentRuntimeFunction(
+        FnTy, /*Name*/ "__kmpc_barrier_simple_spmd");
     break;
   }
   case OMPRTL_NVPTX__kmpc_warp_active_thread_mask: {

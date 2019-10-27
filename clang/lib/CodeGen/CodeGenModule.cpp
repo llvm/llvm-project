@@ -3332,8 +3332,14 @@ GetRuntimeFunctionDecl(ASTContext &C, StringRef Name) {
 /// type and name.
 llvm::FunctionCallee
 CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
-                                     llvm::AttributeList ExtraAttrs,
-                                     bool Local) {
+                                     llvm::AttributeList ExtraAttrs, bool Local,
+                                     bool AssumeConvergent) {
+  if (AssumeConvergent) {
+    ExtraAttrs =
+        ExtraAttrs.addAttribute(VMContext, llvm::AttributeList::FunctionIndex,
+                                llvm::Attribute::Convergent);
+  }
+
   llvm::Constant *C =
       GetOrCreateLLVMFunction(Name, FTy, GlobalDecl(), /*ForVTable=*/false,
                               /*DontDefer=*/false, /*IsThunk=*/false,
