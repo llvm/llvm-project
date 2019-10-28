@@ -326,10 +326,6 @@ class MachineFunction {
   /// CodeView label annotations.
   std::vector<std::pair<MCSymbol *, MDNode *>> CodeViewAnnotations;
 
-  /// CodeView heapallocsites.
-  std::vector<std::tuple<MCSymbol *, MCSymbol *, const DIType *>>
-      CodeViewHeapAllocSites;
-
   bool CallsEHReturn = false;
   bool CallsUnwindInit = false;
   bool HasEHScopes = false;
@@ -804,10 +800,9 @@ public:
   ///
   /// This is allocated on the function's allocator and so lives the life of
   /// the function.
-  MachineInstr::ExtraInfo *
-  createMIExtraInfo(ArrayRef<MachineMemOperand *> MMOs,
-                    MCSymbol *PreInstrSymbol = nullptr,
-                    MCSymbol *PostInstrSymbol = nullptr);
+  MachineInstr::ExtraInfo *createMIExtraInfo(
+      ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol = nullptr,
+      MCSymbol *PostInstrSymbol = nullptr, MDNode *HeapAllocMarker = nullptr);
 
   /// Allocate a string and populate it with the given external symbol name.
   const char *createExternalSymbolName(StringRef Name);
@@ -960,14 +955,6 @@ public:
 
   ArrayRef<std::pair<MCSymbol *, MDNode *>> getCodeViewAnnotations() const {
     return CodeViewAnnotations;
-  }
-
-  /// Record heapallocsites
-  void addCodeViewHeapAllocSite(MachineInstr *I, const MDNode *MD);
-
-  ArrayRef<std::tuple<MCSymbol *, MCSymbol *, const DIType *>>
-  getCodeViewHeapAllocSites() const {
-    return CodeViewHeapAllocSites;
   }
 
   /// Return a reference to the C++ typeinfo for the current function.
