@@ -260,8 +260,10 @@ enum NodeType : unsigned {
   STG,
   STZG,
   ST2G,
-  STZ2G
+  STZ2G,
 
+  LDP,
+  STP
 };
 
 } // end namespace AArch64ISD

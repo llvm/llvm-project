@@ -516,6 +516,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i32, Custom);
   setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i64, Custom);
 
+  // 128-bit loads and stores can be done without expanding
+  setOperationAction(ISD::LOAD, MVT::i128, Custom);
+  setOperationAction(ISD::STORE, MVT::i128, Custom);
+
   // Lower READCYCLECOUNTER using an mrs from PMCCNTR_EL0.
   // This requires the Performance Monitors extension.
   if (Subtarget->hasPerfMon())
@@ -1364,6 +1368,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::SST1_SXTW_SCALED:  return "AArch64ISD::SST1_SXTW_SCALED";
   case AArch64ISD::SST1_UXTW_SCALED:  return "AArch64ISD::SST1_UXTW_SCALED";
   case AArch64ISD::SST1_IMM:          return "AArch64ISD::SST1_IMM";
+  case AArch64ISD::LDP:               return "AArch64ISD::LDP";
+  case AArch64ISD::STP:               return "AArch64ISD::STP";
   }
   return nullptr;
 }
@@ -2988,7 +2994,7 @@ static SDValue LowerTruncateVectorStore(SDLoc DL, StoreSDNode *ST,
 
 // Custom lowering for any store, vector or scalar and/or default or with
 // a truncate operations.  Currently only custom lower truncate operation
-// from vector v4i16 to v4i8.
+// from vector v4i16 to v4i8 or volatile stores of i128.
 SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
                                           SelectionDAG &DAG) const {
   SDLoc Dl(Op);
@@ -3000,18 +3006,32 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   EVT VT = Value.getValueType();
   EVT MemVT = StoreNode->getMemoryVT();
 
-  assert (VT.isVector() && "Can only custom lower vector store types");
+  if (VT.isVector()) {
+    unsigned AS = StoreNode->getAddressSpace();
+    unsigned Align = StoreNode->getAlignment();
+    if (Align < MemVT.getStoreSize() &&
+        !allowsMisalignedMemoryAccesses(MemVT, AS, Align,
+                                        StoreNode->getMemOperand()->getFlags(),
+                                        nullptr)) {
+      return scalarizeVectorStore(StoreNode, DAG);
+    }
 
-  unsigned AS = StoreNode->getAddressSpace();
-  unsigned Align = StoreNode->getAlignment();
-  if (Align < MemVT.getStoreSize() &&
-      !allowsMisalignedMemoryAccesses(
-          MemVT, AS, Align, StoreNode->getMemOperand()->getFlags(), nullptr)) {
-    return scalarizeVectorStore(StoreNode, DAG);
-  }
-
-  if (StoreNode->isTruncatingStore()) {
-    return LowerTruncateVectorStore(Dl, StoreNode, VT, MemVT, DAG);
+    if (StoreNode->isTruncatingStore()) {
+      return LowerTruncateVectorStore(Dl, StoreNode, VT, MemVT, DAG);
+    }
+  } else if (MemVT == MVT::i128 && StoreNode->isVolatile()) {
+    assert(StoreNode->getValue()->getValueType(0) == MVT::i128);
+    SDValue Lo =
+        DAG.getNode(ISD::EXTRACT_ELEMENT, Dl, MVT::i64, StoreNode->getValue(),
+                    DAG.getConstant(0, Dl, MVT::i64));
+    SDValue Hi =
+        DAG.getNode(ISD::EXTRACT_ELEMENT, Dl, MVT::i64, StoreNode->getValue(),
+                    DAG.getConstant(1, Dl, MVT::i64));
+    SDValue Result = DAG.getMemIntrinsicNode(
+        AArch64ISD::STP, Dl, DAG.getVTList(MVT::Other),
+        {StoreNode->getChain(), Lo, Hi, StoreNode->getBasePtr()},
+        StoreNode->getMemoryVT(), StoreNode->getMemOperand());
+    return Result;
   }
 
   return SDValue();
@@ -12689,6 +12709,27 @@ void AArch64TargetLowering::ReplaceNodeResults(
   case ISD::ATOMIC_CMP_SWAP:
     ReplaceCMP_SWAP_128Results(N, Results, DAG, Subtarget);
     return;
+  case ISD::LOAD: {
+    assert(SDValue(N, 0).getValueType() == MVT::i128 &&
+           "unexpected load's value type");
+    LoadSDNode *LoadNode = cast<LoadSDNode>(N);
+    if (!LoadNode->isVolatile() || LoadNode->getMemoryVT() != MVT::i128) {
+      // Non-volatile loads are optimized later in AArch64's load/store
+      // optimizer.
+      return;
+    }
+
+    SDValue Result = DAG.getMemIntrinsicNode(
+        AArch64ISD::LDP, SDLoc(N),
+        DAG.getVTList({MVT::i64, MVT::i64, MVT::Other}),
+        {LoadNode->getChain(), LoadNode->getBasePtr()}, LoadNode->getMemoryVT(),
+        LoadNode->getMemOperand());
+
+    SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, SDLoc(N), MVT::i128,
+                               Result.getValue(0), Result.getValue(1));
+    Results.append({Pair, Result.getValue(2) /* Chain */});
+    return;
+  }
   }
 }
 
