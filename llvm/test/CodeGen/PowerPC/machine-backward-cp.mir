@@ -2,6 +2,7 @@
 # RUN: llc -O3 -verify-machineinstrs -mtriple=powerpc64le-unknown-unknown \
 # RUN: -mcpu=pwr9 -simplify-mir -run-pass=machine-cp %s -o - | FileCheck %s
 
+
 # Normal case
 ---
 name: test0
