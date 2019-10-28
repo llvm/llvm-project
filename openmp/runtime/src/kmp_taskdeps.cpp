@@ -85,19 +85,19 @@ static kmp_dephash_t *__kmp_dephash_extend(kmp_info_t *thread,
   h->nelements = current_dephash->nelements;
   h->buckets = (kmp_dephash_entry **)(h + 1);
   h->generation = gen;
-
+  h->nconflicts = 0;
   // insert existing elements in the new table
   for (size_t i = 0; i < current_dephash->size; i++) {
-    kmp_dephash_entry_t *next;
-    for (kmp_dephash_entry_t *entry = current_dephash->buckets[i]; entry; entry = next) {
+    kmp_dephash_entry_t *next, *entry;
+    for (entry = current_dephash->buckets[i]; entry; entry = next) {
       next = entry->next_in_bucket;
       // Compute the new hash using the new size, and insert the entry in
       // the new bucket.
       kmp_int32 new_bucket = __kmp_dephash_hash(entry->addr, h->size);
+      entry->next_in_bucket = h->buckets[new_bucket];
       if (entry->next_in_bucket) {
         h->nconflicts++;
       }
-      entry->next_in_bucket = h->buckets[new_bucket];
       h->buckets[new_bucket] = entry;
     }
   }
