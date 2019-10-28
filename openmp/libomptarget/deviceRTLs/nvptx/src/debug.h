@@ -28,6 +28,8 @@
 #ifndef _OMPTARGET_NVPTX_DEBUG_H_
 #define _OMPTARGET_NVPTX_DEBUG_H_
 
+#include "device_environment.h"
+
 ////////////////////////////////////////////////////////////////////////////////
 // set desired level of debugging
 ////////////////////////////////////////////////////////////////////////////////
@@ -126,7 +128,7 @@
 
 #if OMPTARGET_NVPTX_DEBUG || OMPTARGET_NVPTX_TEST || OMPTARGET_NVPTX_WARNING
 #include <stdio.h>
-#include "option.h"
+#include "target_impl.h"
 
 template <typename... Arguments>
 NOINLINE static void log(const char *fmt, Arguments... parameters) {
@@ -195,7 +197,7 @@ NOINLINE static void check(bool cond) { assert(cond); }
   }
 #else
 
-#define DON(_flag) (FALSE)
+#define DON(_flag) (0)
 #define PRINT0(flag, str)
 #define PRINT(flag, str, _args...)
 
@@ -247,7 +249,7 @@ NOINLINE static void check(bool cond) { assert(cond); }
 
 #else
 
-#define TON(_flag) (FALSE)
+#define TON(_flag) (0)
 #define ASSERT0(_flag, _cond, _str)
 #define ASSERT(_flag, _cond, _str, _args...)
 
@@ -279,7 +281,7 @@ NOINLINE static void check(bool cond) { assert(cond); }
 
 #else
 
-#define WON(_flag) (FALSE)
+#define WON(_flag) (0)
 #define WARNING0(_flag, _str)
 #define WARNING(_flag, _str, _args...)
 

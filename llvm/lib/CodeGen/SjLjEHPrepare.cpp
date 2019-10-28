@@ -175,9 +175,9 @@ Value *SjLjEHPrepare::setupFunctionContext(Function &F,
   // that needs to be restored on all exits from the function. This is an alloca
   // because the value needs to be added to the global context list.
   auto &DL = F.getParent()->getDataLayout();
-  unsigned Align = DL.getPrefTypeAlignment(FunctionContextTy);
-  FuncCtx = new AllocaInst(FunctionContextTy, DL.getAllocaAddrSpace(),
-                           nullptr, Align, "fn_context", &EntryBB->front());
+  const Align Alignment(DL.getPrefTypeAlignment(FunctionContextTy));
+  FuncCtx = new AllocaInst(FunctionContextTy, DL.getAllocaAddrSpace(), nullptr,
+                           Alignment, "fn_context", &EntryBB->front());
 
   // Fill in the function context structure.
   for (LandingPadInst *LPI : LPads) {

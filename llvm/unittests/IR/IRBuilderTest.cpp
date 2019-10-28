@@ -229,6 +229,15 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
   II = cast<IntrinsicInst>(VDouble);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fpext);
 
+  // Verify attributes on the call are created automatically.
+  AttributeSet CallAttrs = II->getAttributes().getFnAttributes();
+  EXPECT_EQ(CallAttrs.hasAttribute(Attribute::StrictFP), true);
+
+  // Verify attributes on the containing function are created automatically.
+  AttributeList Attrs = BB->getParent()->getAttributes();
+  AttributeSet FnAttrs = Attrs.getFnAttributes();
+  EXPECT_EQ(FnAttrs.hasAttribute(Attribute::StrictFP), true);
+
   // Verify the codepaths for setting and overriding the default metadata.
   V = Builder.CreateFAdd(V, V);
   ASSERT_TRUE(isa<ConstrainedFPIntrinsic>(V));

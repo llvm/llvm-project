@@ -5330,18 +5330,21 @@ void Sema::CodeCompleteAfterIf(Scope *S) {
 }
 
 void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
-                                   bool EnteringContext, QualType BaseType,
+                                   bool EnteringContext,
+                                   bool IsUsingDeclaration, QualType BaseType,
                                    QualType PreferredType) {
   if (SS.isEmpty() || !CodeCompleter)
     return;
+
+  CodeCompletionContext CC(CodeCompletionContext::CCC_Symbol, PreferredType);
+  CC.setIsUsingDeclaration(IsUsingDeclaration);
+  CC.setCXXScopeSpecifier(SS);
 
   // We want to keep the scope specifier even if it's invalid (e.g. the scope
   // "a::b::" is not corresponding to any context/namespace in the AST), since
   // it can be useful for global code completion which have information about
   // contexts/symbols that are not in the AST.
   if (SS.isInvalid()) {
-    CodeCompletionContext CC(CodeCompletionContext::CCC_Symbol, PreferredType);
-    CC.setCXXScopeSpecifier(SS);
     // As SS is invalid, we try to collect accessible contexts from the current
     // scope with a dummy lookup so that the completion consumer can try to
     // guess what the specified scope is.
@@ -5371,10 +5374,8 @@ void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
   if (!isDependentScopeSpecifier(SS) && RequireCompleteDeclContext(SS, Ctx))
     return;
 
-  ResultBuilder Results(
-      *this, CodeCompleter->getAllocator(),
-      CodeCompleter->getCodeCompletionTUInfo(),
-      CodeCompletionContext(CodeCompletionContext::CCC_Symbol, PreferredType));
+  ResultBuilder Results(*this, CodeCompleter->getAllocator(),
+                        CodeCompleter->getCodeCompletionTUInfo(), CC);
   if (!PreferredType.isNull())
     Results.setPreferredType(PreferredType);
   Results.EnterNewScope();
@@ -5403,23 +5404,21 @@ void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
                        CodeCompleter->loadExternal());
   }
 
-  auto CC = Results.getCompletionContext();
-  CC.setCXXScopeSpecifier(SS);
-
-  HandleCodeCompleteResults(this, CodeCompleter, CC, Results.data(),
-                            Results.size());
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
 }
 
 void Sema::CodeCompleteUsing(Scope *S) {
   if (!CodeCompleter)
     return;
 
+  // This can be both a using alias or using declaration, in the former we
+  // expect a new name and a symbol in the latter case.
+  CodeCompletionContext Context(CodeCompletionContext::CCC_SymbolOrNewName);
+  Context.setIsUsingDeclaration(true);
+
   ResultBuilder Results(*this, CodeCompleter->getAllocator(),
-                        CodeCompleter->getCodeCompletionTUInfo(),
-                        // This can be both a using alias or using
-                        // declaration, in the former we expect a new name and a
-                        // symbol in the latter case.
-                        CodeCompletionContext::CCC_SymbolOrNewName,
+                        CodeCompleter->getCodeCompletionTUInfo(), Context,
                         &ResultBuilder::IsNestedNameSpecifier);
   Results.EnterNewScope();
 

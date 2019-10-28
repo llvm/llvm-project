@@ -81,12 +81,18 @@ Status ScriptInterpreter::SetBreakpointCommandCallback(
   return return_error;
 }
 
-void ScriptInterpreter::SetBreakpointCommandCallbackFunction(
+Status ScriptInterpreter::SetBreakpointCommandCallbackFunction(
     std::vector<BreakpointOptions *> &bp_options_vec,
-    const char *function_name) {
+    const char *function_name,
+    StructuredData::ObjectSP extra_args_sp) {
+  Status error;
   for (BreakpointOptions *bp_options : bp_options_vec) {
-    SetBreakpointCommandCallbackFunction(bp_options, function_name);
+    error = SetBreakpointCommandCallbackFunction(bp_options, function_name, 
+                                         extra_args_sp);
+    if (!error.Success())
+      return error;
   }
+  return error;
 }
 
 std::unique_ptr<ScriptInterpreterLocker>

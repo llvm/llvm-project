@@ -8155,6 +8155,21 @@ def err_defaulted_comparison_non_const : Error<
 def err_defaulted_comparison_return_type_not_bool : Error<
   "return type for defaulted %sub{select_defaulted_comparison_kind}0 "
   "must be 'bool', not %1">;
+def err_defaulted_comparison_reference_member : Error<
+  "cannot default %0 in class %1 with reference member">;
+def ext_defaulted_comparison_reference_member : ExtWarn<
+  "ISO C++2a does not allow defaulting %0 in class %1 with reference member">,
+  InGroup<DefaultedComparison>;
+def note_reference_member : Note<"reference member %0 declared here">;
+def err_defaulted_comparison_union : Error<
+  "cannot default %0 in %select{union-like class|union}1 %2">;
+def ext_defaulted_comparison_union : ExtWarn<
+  "ISO C++2a does not allow defaulting %0 in "
+  "%select{union-like class|union}1 %2">, InGroup<DefaultedComparison>;
+def ext_defaulted_comparison_empty_union : ExtWarn<
+  "ISO C++2a does not allow defaulting %0 in "
+  "%select{union-like class|union}1 %2 despite it having no variant members">,
+  InGroup<DefaultedComparison>;
 
 def ext_implicit_exception_spec_mismatch : ExtWarn<
   "function previously declared with an %select{explicit|implicit}0 exception "

@@ -242,10 +242,10 @@ public:
             interpreter, "breakpoint set",
             "Sets a breakpoint or set of breakpoints in the executable.",
             "breakpoint set <cmd-options>"),
-        m_bp_opts(), m_python_class_options("scripted breakpoint", 'P'),
+        m_bp_opts(), m_python_class_options("scripted breakpoint", true, 'P'),
         m_options() {
     // We're picking up all the normal options, commands and disable.
-    m_all_options.Append(&m_python_class_options, LLDB_OPT_SET_1,
+    m_all_options.Append(&m_python_class_options, LLDB_OPT_SET_1|LLDB_OPT_SET_2,
                          LLDB_OPT_SET_11);
     m_all_options.Append(&m_bp_opts,
                          LLDB_OPT_SET_1 | LLDB_OPT_SET_3 | LLDB_OPT_SET_4,
@@ -543,7 +543,7 @@ protected:
 
     BreakpointSetType break_type = eSetTypeInvalid;
 
-    if (!m_python_class_options.GetClassName().empty())
+    if (!m_python_class_options.GetName().empty())
       break_type = eSetTypeScripted;
     else if (m_options.m_line_num != 0)
       break_type = eSetTypeFileAndLine;
@@ -699,7 +699,7 @@ protected:
 
       Status error;
       bp_sp = target.CreateScriptedBreakpoint(
-          m_python_class_options.GetClassName().c_str(), &(m_options.m_modules),
+          m_python_class_options.GetName().c_str(), &(m_options.m_modules),
           &(m_options.m_filenames), false, m_options.m_hardware,
           m_python_class_options.GetStructuredData(), &error);
       if (error.Fail()) {

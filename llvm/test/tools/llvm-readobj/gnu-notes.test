@@ -119,6 +119,7 @@ FileHeader:
 Sections:
   - Name:     .note
     Type:     SHT_NOTE
+    Notes:    []
     ShOffset: 0xffff0000
 
 ## Test tools report an error if a note section has invalid size
@@ -140,6 +141,7 @@ Sections:
   - Name:   .note
     Type:   SHT_NOTE
     ShSize: 0xffff0000
+    Notes:  []
 
 ## Test tools report an error if a note program header has an invalid offset that
 ## goes past the end of file.
@@ -157,8 +159,9 @@ FileHeader:
   Type:    ET_CORE
   Machine: EM_X86_64
 Sections:
-  - Name: .note
-    Type: SHT_NOTE
+  - Name:  .note
+    Type:  SHT_NOTE
+    Notes: []
 ProgramHeaders:
   - Type: PT_NOTE
     Offset: 0xffff0000
@@ -181,8 +184,9 @@ FileHeader:
   Type:    ET_CORE
   Machine: EM_X86_64
 Sections:
-  - Name: .note
-    Type: SHT_NOTE
+  - Name:  .note
+    Type:  SHT_NOTE
+    Notes: []
 ProgramHeaders:
   - Type: PT_NOTE
     FileSize: 0xffff0000

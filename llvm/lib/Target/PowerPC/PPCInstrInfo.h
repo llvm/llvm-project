@@ -422,6 +422,16 @@ public:
 
   bool convertToImmediateForm(MachineInstr &MI,
                               MachineInstr **KilledDef = nullptr) const;
+  bool foldFrameOffset(MachineInstr &MI) const;
+  bool isADDIInstrEligibleForFolding(MachineInstr &ADDIMI, int64_t &Imm) const;
+  bool isADDInstrEligibleForFolding(MachineInstr &ADDMI) const;
+  bool isImmInstrEligibleForFolding(MachineInstr &MI, unsigned &BaseReg,
+                                    unsigned &XFormOpcode,
+                                    int64_t &OffsetOfImmInstr,
+                                    ImmInstrInfo &III) const;
+  bool isValidToBeChangedReg(MachineInstr *ADDMI, unsigned Index,
+                             MachineInstr *&ADDIMI, int64_t &OffsetAddi,
+                             int64_t OffsetImm) const;
 
   /// Fixup killed/dead flag for register \p RegNo between instructions [\p
   /// StartMI, \p EndMI]. Some PostRA transformations may violate register

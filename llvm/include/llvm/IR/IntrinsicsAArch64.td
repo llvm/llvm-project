@@ -33,6 +33,9 @@ def int_aarch64_udiv : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>,
 
 def int_aarch64_fjcvtzs : Intrinsic<[llvm_i32_ty], [llvm_double_ty], [IntrNoMem]>;
 
+def int_aarch64_cls: Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
+def int_aarch64_cls64: Intrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem]>;
+
 //===----------------------------------------------------------------------===//
 // HINT
 

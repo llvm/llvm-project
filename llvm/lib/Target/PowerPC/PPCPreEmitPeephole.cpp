@@ -35,6 +35,8 @@ STATISTIC(NumRemovedInPreEmit,
           "Number of instructions deleted in pre-emit peephole");
 STATISTIC(NumberOfSelfCopies,
           "Number of self copy instructions eliminated");
+STATISTIC(NumFrameOffFoldInPreEmit,
+          "Number of folding frame offset by using r+r in pre-emit peephole");
 
 static cl::opt<bool>
 RunPreEmitPeephole("ppc-late-peephole", cl::Hidden, cl::init(true),
@@ -201,6 +203,12 @@ namespace {
             if (DefMIToErase) {
               InstrsToErase.push_back(DefMIToErase);
             }
+          }
+          if (TII->foldFrameOffset(MI)) {
+            Changed = true;
+            NumFrameOffFoldInPreEmit++;
+            LLVM_DEBUG(dbgs() << "Frame offset folding by using index form: ");
+            LLVM_DEBUG(MI.dump());
           }
         }
 

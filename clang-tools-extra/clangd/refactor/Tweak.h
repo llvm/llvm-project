@@ -24,6 +24,7 @@
 #include "Protocol.h"
 #include "Selection.h"
 #include "SourceCode.h"
+#include "index/Index.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
@@ -46,9 +47,12 @@ class Tweak {
 public:
   /// Input to prepare and apply tweaks.
   struct Selection {
-    Selection(ParsedAST &AST, unsigned RangeBegin, unsigned RangeEnd);
+    Selection(const SymbolIndex *Index, ParsedAST &AST, unsigned RangeBegin,
+              unsigned RangeEnd);
     /// The text of the active document.
     llvm::StringRef Code;
+    /// The Index for handling codebase related queries.
+    const SymbolIndex *Index = nullptr;
     /// Parsed AST of the active file.
     ParsedAST &AST;
     /// A location of the cursor in the editor.

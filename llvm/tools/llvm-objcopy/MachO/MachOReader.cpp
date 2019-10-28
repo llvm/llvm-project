@@ -35,6 +35,7 @@ Section constructSectionCommon(SectionType Sec) {
           .str();
   S.Segname =
       StringRef(Sec.segname, strnlen(Sec.segname, sizeof(Sec.sectname))).str();
+  S.CanonicalName = (Twine(S.Segname) + "," + S.Sectname).str();
   S.Addr = Sec.addr;
   S.Size = Sec.size;
   S.Offset = Sec.offset;

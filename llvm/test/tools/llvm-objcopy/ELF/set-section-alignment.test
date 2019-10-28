@@ -52,3 +52,4 @@ Sections:
   - Name:         .baz
     Type:         SHT_NOTE
     AddressAlign: 4
+    Notes:        []

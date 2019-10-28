@@ -134,7 +134,7 @@ public:
   TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
                                                     bool IsZeroCmp) const;
 
-  int getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
+  int getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
                       unsigned AddressSpace, const Instruction *I = nullptr);
 
   int getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys);
@@ -146,6 +146,21 @@ public:
                                            Type *ExpectedType);
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info);
+
+  bool isLegalMaskedLoad(Type *DataType, MaybeAlign Alignment) {
+    if (!isa<VectorType>(DataType) || !ST->hasSVE())
+      return false;
+
+    Type *Ty = DataType->getVectorElementType();
+    if (Ty->isHalfTy() || Ty->isFloatTy() || Ty->isDoubleTy())
+      return true;
+
+    if (Ty->isIntegerTy(8) || Ty->isIntegerTy(16) ||
+        Ty->isIntegerTy(32) || Ty->isIntegerTy(64))
+      return true;
+
+    return false;
+  }
 
   int getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy, unsigned Factor,
                                  ArrayRef<unsigned> Indices, unsigned Alignment,

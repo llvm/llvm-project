@@ -286,7 +286,7 @@ EXTERN void omp_get_partition_place_nums(int *place_nums) {
 }
 
 EXTERN int omp_get_cancellation(void) {
-  int rc = FALSE; // currently false only
+  int rc = 0;
   PRINT(LD_IO, "call omp_get_cancellation() returns %d\n", rc);
   return rc;
 }

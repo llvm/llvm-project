@@ -155,6 +155,7 @@ Sections:
     Type: SHT_DYNAMIC
   - Name: note
     Type: SHT_NOTE
+    Notes: []
   - Name: nobits
     Type: SHT_NOBITS
   - Name: rel

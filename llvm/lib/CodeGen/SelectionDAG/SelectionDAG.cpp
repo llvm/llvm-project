@@ -1279,7 +1279,9 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
   }
 
   SDValue Result(N, 0);
-  if (VT.isVector())
+  if (VT.isScalableVector())
+    Result = getSplatVector(VT, DL, Result);
+  else if (VT.isVector())
     Result = getSplatBuildVector(VT, DL, Result);
 
   return Result;
@@ -5228,8 +5230,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "The result of EXTRACT_VECTOR_ELT must be at least as wide as the \
              element type of the vector.");
 
-    // EXTRACT_VECTOR_ELT of an UNDEF is an UNDEF.
-    if (N1.isUndef())
+    // Extract from an undefined value or using an undefined index is undefined.
+    if (N1.isUndef() || N2.isUndef())
       return getUNDEF(VT);
 
     // EXTRACT_VECTOR_ELT of out-of-bounds element is an UNDEF
@@ -5506,6 +5508,15 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // INSERT_VECTOR_ELT into out-of-bounds element is an UNDEF
     if (N3C && N3C->getZExtValue() >= N1.getValueType().getVectorNumElements())
       return getUNDEF(VT);
+
+    // Undefined index can be assumed out-of-bounds, so that's UNDEF too.
+    if (N3.isUndef())
+      return getUNDEF(VT);
+
+    // If the inserted element is an UNDEF, just use the input vector.
+    if (N2.isUndef())
+      return N1;
+
     break;
   }
   case ISD::INSERT_SUBVECTOR: {

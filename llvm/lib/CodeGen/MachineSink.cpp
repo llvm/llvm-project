@@ -736,6 +736,9 @@ static bool SinkingPreventsImplicitNullCheck(MachineInstr &MI,
 static void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
                         MachineBasicBlock::iterator InsertPos,
                         SmallVectorImpl<MachineInstr *> *DbgVals = nullptr) {
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  const TargetInstrInfo &TII = *MI.getMF()->getSubtarget().getInstrInfo();
+
   // If debug values are provided use those, otherwise call collectDebugValues.
   SmallVector<MachineInstr *, 2> DbgValuesToSink;
   if (DbgVals)
@@ -758,13 +761,57 @@ static void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
   SuccToSinkTo.splice(InsertPos, ParentBlock, MI,
                       ++MachineBasicBlock::iterator(MI));
 
-  // Move previously adjacent debug value instructions to the insert position.
+  // Sink a copy of debug users to the insert position. Mark the original
+  // DBG_VALUE location as 'undef', indicating that any earlier variable
+  // location should be terminated as we've optimised away the value at this
+  // point.
+  // If the sunk instruction is a copy, try to forward the copy instead of
+  // leaving an 'undef' DBG_VALUE in the original location. Don't do this if
+  // there's any subregister weirdness involved.
   for (SmallVectorImpl<MachineInstr *>::iterator DBI = DbgValuesToSink.begin(),
                                                  DBE = DbgValuesToSink.end();
        DBI != DBE; ++DBI) {
     MachineInstr *DbgMI = *DBI;
-    SuccToSinkTo.splice(InsertPos, ParentBlock, DbgMI,
-                        ++MachineBasicBlock::iterator(DbgMI));
+    MachineInstr *NewDbgMI = DbgMI->getMF()->CloneMachineInstr(*DBI);
+    SuccToSinkTo.insert(InsertPos, NewDbgMI);
+
+    // Copy DBG_VALUE operand and set the original to undef. We then check to
+    // see whether this is something that can be copy-forwarded. If it isn't,
+    // continue around the loop.
+    MachineOperand DbgMO = DbgMI->getOperand(0);
+    DbgMI->getOperand(0).setReg(0);
+
+    const MachineOperand *SrcMO = nullptr, *DstMO = nullptr;
+    if (!TII.isCopyInstr(MI, SrcMO, DstMO))
+      continue;
+
+    // Check validity of forwarding this copy.
+    bool PostRA = MRI.getNumVirtRegs() == 0;
+
+    // Trying to forward between physical and virtual registers is too hard.
+    if (DbgMO.getReg().isVirtual() != SrcMO->getReg().isVirtual())
+      continue;
+
+    // Only try virtual register copy-forwarding before regalloc, and physical
+    // register copy-forwarding after regalloc.
+    bool arePhysRegs = !DbgMO.getReg().isVirtual();
+    if (arePhysRegs != PostRA)
+      continue;
+
+    // Pre-regalloc, only forward if all subregisters agree (or there are no
+    // subregs at all). More analysis might recover some forwardable copies.
+    if (!PostRA && (DbgMO.getSubReg() != SrcMO->getSubReg() ||
+                    DbgMO.getSubReg() != DstMO->getSubReg()))
+      continue;
+
+    // Post-regalloc, we may be sinking a DBG_VALUE of a sub or super-register
+    // of this copy. Only forward the copy if the DBG_VALUE operand exactly
+    // matches the copy destination.
+    if (PostRA && DbgMO.getReg() != DstMO->getReg())
+      continue;
+
+    DbgMI->getOperand(0).setReg(SrcMO->getReg());
+    DbgMI->getOperand(0).setSubReg(SrcMO->getSubReg());
   }
 }
 

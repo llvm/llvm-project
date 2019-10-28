@@ -73,9 +73,18 @@ public:
     void SetAutoContinue(bool auto_continue);
 
     %feature("docstring", "
-    Set the callback to the given Python function name.") SetScriptCallbackFunction;
+    Set the callback to the given Python function name.
+    The function takes three arguments (frame, bp_loc, dict).") SetScriptCallbackFunction;
     void
     SetScriptCallbackFunction (const char *callback_function_name);
+
+    %feature("docstring", "
+    Set the name of the script function to be called when the breakpoint is hit.
+    To use this variant, the function should take (frame, bp_loc, extra_args, dict) and
+    when the breakpoint is hit the extra_args will be passed to the callback function.") SetScriptCallbackFunction;
+    SBError
+    SetScriptCallbackFunction (const char *callback_function_name,
+                               SBStructuredData &extra_args);
 
     %feature("docstring", "
     Provide the body for the script function to be called when the breakpoint location is hit.

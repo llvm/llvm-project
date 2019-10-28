@@ -260,6 +260,14 @@ public:
 
   bool isMemOpUniform(const SDNode *N) const;
   bool isMemOpHasNoClobberedMemOperand(const SDNode *N) const;
+
+  static bool isFlatGlobalAddrSpace(unsigned AS) {
+    return AS == AMDGPUAS::GLOBAL_ADDRESS ||
+           AS == AMDGPUAS::FLAT_ADDRESS ||
+           AS == AMDGPUAS::CONSTANT_ADDRESS ||
+           AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
+  }
+
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
   bool isFreeAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
 

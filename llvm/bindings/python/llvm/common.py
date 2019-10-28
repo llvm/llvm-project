@@ -13,9 +13,9 @@ from ctypes import cdll
 import ctypes.util
 import platform
 
-# LLVM_VERSION: sync with PACKAGE_VERSION in autoconf/configure.ac and CMakeLists.txt
+# LLVM_VERSION: sync with PACKAGE_VERSION in CMakeLists.txt
 #               but leave out the 'svn' suffix.
-LLVM_VERSION = '3.4'
+LLVM_VERSION = '10.0.0'
 
 __all__ = [
     'c_object_p',

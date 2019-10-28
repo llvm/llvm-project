@@ -117,6 +117,8 @@ def : GINodeEquiv<G_ATOMICRMW_UMAX, atomic_load_umax_glue>;
 def : GINodeEquiv<G_ATOMICRMW_FADD, atomic_load_fadd_glue>;
 
 def : GINodeEquiv<G_AMDGPU_FFBH_U32, AMDGPUffbh_u32>;
+def : GINodeEquiv<G_AMDGPU_ATOMIC_CMPXCHG, AMDGPUatomic_cmp_swap>;
+
 
 class GISelSop2Pat <
   SDPatternOperator node,

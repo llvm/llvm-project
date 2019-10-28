@@ -175,6 +175,24 @@ uint64_t test_clzll(uint64_t t) {
   return __clzll(t);
 }
 
+// ARM-LABEL: test_cls
+// ARM: call i32 @llvm.arm.cls(i32 %t)
+unsigned test_cls(uint32_t t) {
+  return __cls(t);
+}
+
+// ARM-LABEL: test_clsl
+// AArch32: call i32 @llvm.arm.cls(i32 %t)
+// AArch64: call i32 @llvm.arm.cls64(i64 %t)
+unsigned test_clsl(unsigned long t) {
+  return __clsl(t);
+}
+// ARM-LABEL: test_clsll
+// ARM: call i32 @llvm.arm.cls64(i64 %t)
+unsigned test_clsll(uint64_t t) {
+  return __clsll(t);
+}
+
 // ARM-LABEL: test_rev
 // ARM: call i32 @llvm.bswap.i32(i32 %t)
 uint32_t test_rev(uint32_t t) {
@@ -820,6 +838,55 @@ void test_wsr64(uint64_t v) {
 // AArch32: call void @llvm.write_register.i32(metadata ![[M4:[0-9]]], i32 %{{.*}})
 void test_wsrp(void *v) {
   __arm_wsrp("sysreg", v);
+}
+
+// ARM-LABEL: test_rsrf
+// AArch64: call i64 @llvm.read_register.i64(metadata ![[M0:[0-9]]])
+// AArch32: call i32 @llvm.read_register.i32(metadata ![[M2:[0-9]]])
+// ARM-NOT: uitofp
+// ARM: bitcast
+float test_rsrf() {
+#ifdef __ARM_32BIT_STATE
+  return __arm_rsrf("cp1:2:c3:c4:5");
+#else
+  return __arm_rsrf("1:2:3:4:5");
+#endif
+}
+// ARM-LABEL: test_rsrf64
+// AArch64: call i64 @llvm.read_register.i64(metadata ![[M0:[0-9]]])
+// AArch32: call i64 @llvm.read_register.i64(metadata ![[M3:[0-9]]])
+// ARM-NOT: uitofp
+// ARM: bitcast
+double test_rsrf64() {
+#ifdef __ARM_32BIT_STATE
+  return __arm_rsrf64("cp1:2:c3");
+#else
+  return __arm_rsrf64("1:2:3:4:5");
+#endif
+}
+// ARM-LABEL: test_wsrf
+// ARM-NOT: fptoui
+// ARM: bitcast
+// AArch64: call void @llvm.write_register.i64(metadata ![[M0:[0-9]]], i64 %{{.*}})
+// AArch32: call void @llvm.write_register.i32(metadata ![[M2:[0-9]]], i32 %{{.*}})
+void test_wsrf(float v) {
+#ifdef __ARM_32BIT_STATE
+  __arm_wsrf("cp1:2:c3:c4:5", v);
+#else
+  __arm_wsrf("1:2:3:4:5", v);
+#endif
+}
+// ARM-LABEL: test_wsrf64
+// ARM-NOT: fptoui
+// ARM: bitcast
+// AArch64: call void @llvm.write_register.i64(metadata ![[M0:[0-9]]], i64 %{{.*}})
+// AArch32: call void @llvm.write_register.i64(metadata ![[M3:[0-9]]], i64 %{{.*}})
+void test_wsrf64(double v) {
+#ifdef __ARM_32BIT_STATE
+  __arm_wsrf64("cp1:2:c3", v);
+#else
+  __arm_wsrf64("1:2:3:4:5", v);
+#endif
 }
 
 // AArch32: ![[M2]] = !{!"cp1:2:c3:c4:5"}

@@ -5746,7 +5746,7 @@ unsigned LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   // vectorized loop where the user of it is a vectorized instruction.
   const MaybeAlign Alignment = getLoadStoreAlignment(I);
   Cost += VF * TTI.getMemoryOpCost(I->getOpcode(), ValTy->getScalarType(),
-                                   Alignment ? Alignment->value() : 0, AS);
+                                   Alignment, AS);
 
   // Get the overhead of the extractelement and insertelement instructions
   // we might create due to scalarization.
@@ -5783,8 +5783,7 @@ unsigned LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
     Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy,
                                       Alignment ? Alignment->value() : 0, AS);
   else
-    Cost += TTI.getMemoryOpCost(I->getOpcode(), VectorTy,
-                                Alignment ? Alignment->value() : 0, AS, I);
+    Cost += TTI.getMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS, I);
 
   bool Reverse = ConsecutiveStride < 0;
   if (Reverse)
@@ -5800,16 +5799,14 @@ unsigned LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
   unsigned AS = getLoadStoreAddressSpace(I);
   if (isa<LoadInst>(I)) {
     return TTI.getAddressComputationCost(ValTy) +
-           TTI.getMemoryOpCost(Instruction::Load, ValTy,
-                               Alignment ? Alignment->value() : 0, AS) +
+           TTI.getMemoryOpCost(Instruction::Load, ValTy, Alignment, AS) +
            TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy);
   }
   StoreInst *SI = cast<StoreInst>(I);
 
   bool isLoopInvariantStoreValue = Legal->isUniform(SI->getValueOperand());
   return TTI.getAddressComputationCost(ValTy) +
-         TTI.getMemoryOpCost(Instruction::Store, ValTy,
-                             Alignment ? Alignment->value() : 0, AS) +
+         TTI.getMemoryOpCost(Instruction::Store, ValTy, Alignment, AS) +
          (isLoopInvariantStoreValue
               ? 0
               : TTI.getVectorInstrCost(Instruction::ExtractElement, VectorTy,
@@ -5877,8 +5874,7 @@ unsigned LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
     unsigned AS = getLoadStoreAddressSpace(I);
 
     return TTI.getAddressComputationCost(ValTy) +
-           TTI.getMemoryOpCost(I->getOpcode(), ValTy,
-                               Alignment ? Alignment->value() : 0, AS, I);
+           TTI.getMemoryOpCost(I->getOpcode(), ValTy, Alignment, AS, I);
   }
   return getWideningCost(I, VF);
 }

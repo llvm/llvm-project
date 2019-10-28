@@ -1197,6 +1197,41 @@ TEST(APIntTest, SaturatingMath) {
   EXPECT_EQ(APInt(8, 127), AP_100.ssub_sat(-AP_100));
   EXPECT_EQ(APInt(8, -128), (-AP_100).ssub_sat(AP_100));
   EXPECT_EQ(APInt(8, -128), APInt(8, -128).ssub_sat(APInt(8, 127)));
+
+  EXPECT_EQ(APInt(8, 250), APInt(8, 50).umul_sat(APInt(8, 5)));
+  EXPECT_EQ(APInt(8, 255), APInt(8, 50).umul_sat(APInt(8, 6)));
+  EXPECT_EQ(APInt(8, 255), APInt(8, -128).umul_sat(APInt(8, 3)));
+  EXPECT_EQ(APInt(8, 255), APInt(8, 3).umul_sat(APInt(8, -128)));
+  EXPECT_EQ(APInt(8, 255), APInt(8, -128).umul_sat(APInt(8, -128)));
+
+  EXPECT_EQ(APInt(8, 125), APInt(8, 25).smul_sat(APInt(8, 5)));
+  EXPECT_EQ(APInt(8, 127), APInt(8, 25).smul_sat(APInt(8, 6)));
+  EXPECT_EQ(APInt(8, 127), APInt(8, 127).smul_sat(APInt(8, 127)));
+  EXPECT_EQ(APInt(8, -125), APInt(8, -25).smul_sat(APInt(8, 5)));
+  EXPECT_EQ(APInt(8, -125), APInt(8, 25).smul_sat(APInt(8, -5)));
+  EXPECT_EQ(APInt(8, 125), APInt(8, -25).smul_sat(APInt(8, -5)));
+  EXPECT_EQ(APInt(8, 125), APInt(8, 25).smul_sat(APInt(8, 5)));
+  EXPECT_EQ(APInt(8, -128), APInt(8, -25).smul_sat(APInt(8, 6)));
+  EXPECT_EQ(APInt(8, -128), APInt(8, 25).smul_sat(APInt(8, -6)));
+  EXPECT_EQ(APInt(8, 127), APInt(8, -25).smul_sat(APInt(8, -6)));
+  EXPECT_EQ(APInt(8, 127), APInt(8, 25).smul_sat(APInt(8, 6)));
+
+  EXPECT_EQ(APInt(8, 128), APInt(8, 4).ushl_sat(APInt(8, 5)));
+  EXPECT_EQ(APInt(8, 255), APInt(8, 4).ushl_sat(APInt(8, 6)));
+  EXPECT_EQ(APInt(8, 128), APInt(8, 1).ushl_sat(APInt(8, 7)));
+  EXPECT_EQ(APInt(8, 255), APInt(8, 1).ushl_sat(APInt(8, 8)));
+  EXPECT_EQ(APInt(8, 255), APInt(8, -128).ushl_sat(APInt(8, 2)));
+  EXPECT_EQ(APInt(8, 255), APInt(8, 64).ushl_sat(APInt(8, 2)));
+  EXPECT_EQ(APInt(8, 255), APInt(8, 64).ushl_sat(APInt(8, -2)));
+
+  EXPECT_EQ(APInt(8, 64), APInt(8, 4).sshl_sat(APInt(8, 4)));
+  EXPECT_EQ(APInt(8, 127), APInt(8, 4).sshl_sat(APInt(8, 5)));
+  EXPECT_EQ(APInt(8, 127), APInt(8, 1).sshl_sat(APInt(8, 8)));
+  EXPECT_EQ(APInt(8, -64), APInt(8, -4).sshl_sat(APInt(8, 4)));
+  EXPECT_EQ(APInt(8, -128), APInt(8, -4).sshl_sat(APInt(8, 5)));
+  EXPECT_EQ(APInt(8, -128), APInt(8, -4).sshl_sat(APInt(8, 6)));
+  EXPECT_EQ(APInt(8, -128), APInt(8, -1).sshl_sat(APInt(8, 7)));
+  EXPECT_EQ(APInt(8, -128), APInt(8, -1).sshl_sat(APInt(8, 8)));
 }
 
 TEST(APIntTest, FromArray) {
@@ -2683,6 +2718,77 @@ TEST(APIntTest, MultiplicativeInverseExaustive) {
       } else {
         // Multiplicative inverse does not exist for even numbers (and 0).
         EXPECT_TRUE(MulInv.isNullValue());
+      }
+    }
+  }
+}
+
+TEST(APIntTest, GetMostSignificantDifferentBit) {
+  EXPECT_EQ(APIntOps::GetMostSignificantDifferentBit(APInt(8, 0), APInt(8, 0)),
+            llvm::None);
+  EXPECT_EQ(
+      APIntOps::GetMostSignificantDifferentBit(APInt(8, 42), APInt(8, 42)),
+      llvm::None);
+  EXPECT_EQ(*APIntOps::GetMostSignificantDifferentBit(APInt(8, 0), APInt(8, 1)),
+            0u);
+  EXPECT_EQ(*APIntOps::GetMostSignificantDifferentBit(APInt(8, 0), APInt(8, 2)),
+            1u);
+  EXPECT_EQ(*APIntOps::GetMostSignificantDifferentBit(APInt(8, 0), APInt(8, 3)),
+            1u);
+  EXPECT_EQ(*APIntOps::GetMostSignificantDifferentBit(APInt(8, 1), APInt(8, 0)),
+            0u);
+  EXPECT_EQ(APIntOps::GetMostSignificantDifferentBit(APInt(8, 1), APInt(8, 1)),
+            llvm::None);
+  EXPECT_EQ(*APIntOps::GetMostSignificantDifferentBit(APInt(8, 1), APInt(8, 2)),
+            1u);
+  EXPECT_EQ(*APIntOps::GetMostSignificantDifferentBit(APInt(8, 1), APInt(8, 3)),
+            1u);
+  EXPECT_EQ(
+      *APIntOps::GetMostSignificantDifferentBit(APInt(8, 42), APInt(8, 112)),
+      6u);
+}
+
+TEST(APIntTest, GetMostSignificantDifferentBitExaustive) {
+  auto GetHighestDifferentBitBruteforce =
+      [](const APInt &V0, const APInt &V1) -> llvm::Optional<unsigned> {
+    assert(V0.getBitWidth() == V1.getBitWidth() && "Must have same bitwidth");
+    if (V0 == V1)
+      return llvm::None; // Bitwise identical.
+    // There is a mismatch. Let's find the most significant different bit.
+    for (int Bit = V0.getBitWidth() - 1; Bit >= 0; --Bit) {
+      if (V0[Bit] == V1[Bit])
+        continue;
+      return Bit;
+    }
+    llvm_unreachable("Must have found bit mismatch.");
+  };
+
+  for (unsigned BitWidth = 1; BitWidth <= 8; ++BitWidth) {
+    for (unsigned V0 = 0; V0 < (1u << BitWidth); ++V0) {
+      for (unsigned V1 = 0; V1 < (1u << BitWidth); ++V1) {
+        APInt A = APInt(BitWidth, V0);
+        APInt B = APInt(BitWidth, V1);
+
+        auto Bit = APIntOps::GetMostSignificantDifferentBit(A, B);
+        EXPECT_EQ(Bit, GetHighestDifferentBitBruteforce(A, B));
+
+        if (!Bit.hasValue())
+          EXPECT_EQ(A, B);
+        else {
+          EXPECT_NE(A, B);
+          for (unsigned NumLowBits = 0; NumLowBits <= BitWidth; ++NumLowBits) {
+            APInt Adash = A;
+            Adash.clearLowBits(NumLowBits);
+            APInt Bdash = B;
+            Bdash.clearLowBits(NumLowBits);
+            // Clearing only low bits up to and including *Bit is sufficient
+            // to make values equal.
+            if (NumLowBits >= 1 + *Bit)
+              EXPECT_EQ(Adash, Bdash);
+            else
+              EXPECT_NE(Adash, Bdash);
+          }
+        }
       }
     }
   }

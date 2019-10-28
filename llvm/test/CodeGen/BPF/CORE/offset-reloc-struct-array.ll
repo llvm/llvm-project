@@ -1,5 +1,7 @@
 ; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
 ; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -march=bpfeb -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
 ; Source code:
 ;   struct net_device {
 ;     int dev_id;
@@ -128,8 +130,8 @@ define dso_local i32 @bpf_prog(%struct.sk_buff*) local_unnamed_addr #0 !dbg !15 
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   20
 ; CHECK-NEXT:        .long   20
-; CHECK-NEXT:        .long   76
-; CHECK-NEXT:        .long   96
+; CHECK-NEXT:        .long   {{[0-9]+}}
+; CHECK-NEXT:        .long   {{[0-9]+}}
 ; CHECK-NEXT:        .long   28
 ; CHECK-NEXT:        .long   8                       # FuncInfo
 

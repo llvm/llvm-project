@@ -57,6 +57,21 @@ static void emitProperty(Record *Property, raw_ostream &OS) {
   assert(!(hasDefaultUnsignedValue && hasDefaultEnumValue) &&
          "Property cannot have both a unsigned and enum default value.");
 
+  // Guarantee that every boolean property has a boolean default value.
+  assert(!(Property->getValueAsString("Type") == "Boolean" &&
+           !Property->getValue("HasDefaultBooleanValue")) &&
+         "Boolean property must have a boolean default value.");
+
+  // Guarantee that every string property has a string default value.
+  assert(!(Property->getValueAsString("Type") == "String" &&
+           !hasDefaultStringValue) &&
+         "String property must have a string default value.");
+
+  // Guarantee that every enum property has an enum default value.
+  assert(
+      !(Property->getValueAsString("Type") == "Enum" && !hasDefaultEnumValue) &&
+      "Enum property must have a enum default value.");
+
   // Emit the default uint value.
   if (hasDefaultUnsignedValue) {
     OS << std::to_string(Property->getValueAsInt("DefaultUnsignedValue"));

@@ -88,7 +88,7 @@ int bar(int n){
 // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
 //
 // CHECK: [[AWAIT_WORK]]
-// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0) #[[#BARRIER_ATTRS:]]
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0) #[[#CONVERGENT:]]
 // CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]]
 // CHECK: [[KPRB:%.+]] = zext i1 [[KPR]] to i8
 // store i8 [[KPRB]], i8* [[OMP_EXEC_STATUS]], align 1
@@ -318,10 +318,10 @@ int bar(int n){
 // CHECK: define internal void [[PARALLEL_FN4]](
 // CHECK: [[A:%.+]] = alloca i[[SZ:32|64]],
 // CHECK: store i[[SZ]] 45, i[[SZ]]* %a,
-// CHECK: call void @__kmpc_barrier(%struct.ident_t* @{{.+}}, i32 %{{.+}}) #[[#BARRIER_ATTRS]]
+// CHECK: call void @__kmpc_barrier(%struct.ident_t* @{{.+}}, i32 %{{.+}}) #[[#CONVERGENT:]]
 // CHECK: ret void
 
-// CHECK: declare void @__kmpc_barrier(%struct.ident_t*, i32) #[[#BARRIER_ATTRS]]
+// CHECK: declare void @__kmpc_barrier(%struct.ident_t*, i32) #[[#CONVERGENT]]
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l55}}_worker()
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l55}}(
@@ -343,7 +343,7 @@ int bar(int n){
 
 // CHECK-LABEL: define internal void @{{.+}}(i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable{{.*}})
 // CHECK:  [[CC:%.+]] = alloca i32,
-// CHECK:  [[MASK:%.+]] = call i32 @__kmpc_warp_active_thread_mask()
+// CHECK:  [[MASK:%.+]] = call i32 @__kmpc_warp_active_thread_mask(){{$}}
 // CHECK:  [[TID:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 // CHECK:  [[NUM_THREADS:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK:  store i32 0, i32* [[CC]],
@@ -363,11 +363,15 @@ int bar(int n){
 // CHECK:  store i32
 // CHECK:  call void @__kmpc_end_critical(
 
-// CHECK:  call void @__kmpc_syncwarp(i32 [[MASK]])
+// CHECK:  call void @__kmpc_syncwarp(i32 [[MASK]]){{$}}
 // CHECK:  [[NEW_CC_VAL:%.+]] = add nsw i32 [[CC_VAL]], 1
 // CHECK:  store i32 [[NEW_CC_VAL]], i32* [[CC]],
 // CHECK:  br label
 
-// CHECK: attributes #[[#BARRIER_ATTRS]] = {{.*}} convergent {{.*}}
+
+// CHECK: declare i32 @__kmpc_warp_active_thread_mask() #[[#CONVERGENT:]]
+// CHECK: declare void @__kmpc_syncwarp(i32) #[[#CONVERGENT:]]
+
+// CHECK: attributes #[[#CONVERGENT]] = {{.*}} convergent {{.*}}
 
 #endif

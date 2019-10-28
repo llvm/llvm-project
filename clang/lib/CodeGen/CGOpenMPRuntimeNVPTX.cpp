@@ -1799,9 +1799,8 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
     llvm::Type *TypeParams[] = {getIdentTyPointerTy(), CGM.Int32Ty};
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, /*Name*/ "__kmpc_barrier");
-    cast<llvm::Function>(RTLFn.getCallee())
-        ->addFnAttr(llvm::Attribute::Convergent);
+    RTLFn =
+        CGM.CreateConvergentRuntimeFunction(FnTy, /*Name*/ "__kmpc_barrier");
     break;
   }
   case OMPRTL__kmpc_barrier_simple_spmd: {
@@ -1810,24 +1809,22 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
     llvm::Type *TypeParams[] = {getIdentTyPointerTy(), CGM.Int32Ty};
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
-    RTLFn =
-        CGM.CreateRuntimeFunction(FnTy, /*Name*/ "__kmpc_barrier_simple_spmd");
-    cast<llvm::Function>(RTLFn.getCallee())
-        ->addFnAttr(llvm::Attribute::Convergent);
+    RTLFn = CGM.CreateConvergentRuntimeFunction(
+        FnTy, /*Name*/ "__kmpc_barrier_simple_spmd");
     break;
   }
   case OMPRTL_NVPTX__kmpc_warp_active_thread_mask: {
     // Build int32_t __kmpc_warp_active_thread_mask(void);
     auto *FnTy =
         llvm::FunctionType::get(CGM.Int32Ty, llvm::None, /*isVarArg=*/false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_warp_active_thread_mask");
+    RTLFn = CGM.CreateConvergentRuntimeFunction(FnTy, "__kmpc_warp_active_thread_mask");
     break;
   }
   case OMPRTL_NVPTX__kmpc_syncwarp: {
     // Build void __kmpc_syncwarp(kmp_int32 Mask);
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, CGM.Int32Ty, /*isVarArg=*/false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_syncwarp");
+    RTLFn = CGM.CreateConvergentRuntimeFunction(FnTy, "__kmpc_syncwarp");
     break;
   }
   }

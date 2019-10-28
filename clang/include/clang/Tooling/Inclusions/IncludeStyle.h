@@ -84,18 +84,27 @@ struct IncludeStyle {
   /// (https://llvm.org/docs/CodingStandards.html#include-style). However, you
   /// can also assign negative priorities if you have certain headers that
   /// always need to be first.
+  /// 
+  /// There is a third and optional field ``SortPriority`` which can used while
+  /// ``IncludeBloks = IBS_Regroup`` to define the priority in which ``#includes``
+  /// should be ordered, and value of ``Priority`` defines the order of
+  /// ``#include blocks`` and also enables to group ``#includes`` of different
+  /// priority for order.``SortPriority`` is set to the value of ``Priority``
+  /// as default if it is not assigned.
   ///
   /// To configure this in the .clang-format file, use:
   /// \code{.yaml}
   ///   IncludeCategories:
   ///     - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
   ///       Priority:        2
+  ///       SortPriority:    2
   ///     - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
   ///       Priority:        3
   ///     - Regex:           '<[[:alnum:].]+>'
   ///       Priority:        4
   ///     - Regex:           '.*'
   ///       Priority:        1
+  ///       SortPriority:    0
   /// \endcode
   std::vector<IncludeCategory> IncludeCategories;
 

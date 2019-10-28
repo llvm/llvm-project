@@ -85,9 +85,12 @@ public:
 
   void SetScriptCallbackFunction(const char *callback_function_name);
 
-  void SetCommandLineCommands(SBStringList &commands);
+  SBError SetScriptCallbackFunction(const char *callback_function_name,
+                                    SBStructuredData &extra_args);
 
-  bool GetCommandLineCommands(SBStringList &commands);
+  void SetCommandLineCommands(lldb::SBStringList &commands);
+
+  bool GetCommandLineCommands(lldb::SBStringList &commands);
 
   SBError SetScriptCallbackBody(const char *script_body_text);
   

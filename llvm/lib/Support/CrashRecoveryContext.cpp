@@ -280,7 +280,7 @@ static void uninstallExceptionOrSignalHandlers() {
 // crash recovery context, and install signal handlers to invoke HandleCrash on
 // the active object.
 //
-// This implementation does not to attempt to chain signal handlers in any
+// This implementation does not attempt to chain signal handlers in any
 // reliable fashion -- if we get a signal outside of a crash recovery context we
 // simply disable crash recovery and raise the signal again.
 

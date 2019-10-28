@@ -198,6 +198,9 @@ def parse_args():
             parser.error("--num-shards and --run-shard must be used together")
         if opts.runShard > opts.numShards:
             parser.error("--run-shard must be between 1 and --num-shards (inclusive)")
+        opts.shard = (opts.runShard, opts.numShards)
+    else:
+      opts.shard = None
 
     return opts
 
