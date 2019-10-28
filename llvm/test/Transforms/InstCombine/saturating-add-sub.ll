@@ -1486,10 +1486,8 @@ define i32 @uadd_sat_constant_commute(i32 %x) {
 
 define i32 @uadd_sat_canon(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_canon(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 -1, i32 [[A]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %a = add i32 %x, %y
   %c = icmp ult i32 %a, %x
@@ -1499,10 +1497,8 @@ define i32 @uadd_sat_canon(i32 %x, i32 %y) {
 
 define i32 @uadd_sat_canon_y(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_sat_canon_y(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 -1, i32 [[A]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %a = add i32 %x, %y
   %c = icmp ult i32 %a, %y
