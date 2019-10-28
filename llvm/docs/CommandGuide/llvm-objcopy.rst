@@ -72,6 +72,9 @@ multiple file formats.
  Remove all sections from the output, except for sections named ``<section>``.
  Can be specified multiple times to keep multiple sections.
 
+ For MachO objects, ``<section>`` must be formatted as
+ ``<segment name>,<section name>``.
+
 .. option:: --regex
 
  If specified, symbol and section names specified by other switches are treated
