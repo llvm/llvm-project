@@ -146,7 +146,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::SETGE,  ISD::SETNE};
 
   ISD::NodeType FPOpToExtend[] = {
-      ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOW, ISD::FREM};
+      ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOW, ISD::FREM, ISD::FP16_TO_FP,
+      ISD::FP_TO_FP16};
 
   if (Subtarget.hasStdExtF()) {
     setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
@@ -158,6 +159,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BR_CC, MVT::f32, Expand);
     for (auto Op : FPOpToExtend)
       setOperationAction(Op, MVT::f32, Expand);
+    setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
+    setTruncStoreAction(MVT::f32, MVT::f16, Expand);
   }
 
   if (Subtarget.hasStdExtF() && Subtarget.is64Bit())
@@ -175,6 +178,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTruncStoreAction(MVT::f64, MVT::f32, Expand);
     for (auto Op : FPOpToExtend)
       setOperationAction(Op, MVT::f64, Expand);
+    setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
+    setTruncStoreAction(MVT::f64, MVT::f16, Expand);
   }
 
   setOperationAction(ISD::GlobalAddress, XLenVT, Custom);
