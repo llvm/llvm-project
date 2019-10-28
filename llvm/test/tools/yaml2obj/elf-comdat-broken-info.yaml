@@ -42,13 +42,11 @@ FileHeader:
 Sections:
   - Name: .group1
     Type: SHT_GROUP
-    Link: .symtab
     Info: foo
     Members:
       - SectionOrType: GRP_COMDAT
   - Name: .group2
     Type: SHT_GROUP
-    Link: .symtab
     Info: bar
     Members:
       - SectionOrType: GRP_COMDAT

@@ -63,7 +63,6 @@ Sections:
     ShName: 0x000000005
   - Name: .group
     Type: SHT_GROUP
-    Info: 0
     ShName: 0x000000006
     Members:
   - Name: .gnu.version
