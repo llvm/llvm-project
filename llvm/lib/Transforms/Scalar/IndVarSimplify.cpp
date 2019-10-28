@@ -128,7 +128,6 @@ static cl::opt<bool>
 LoopPredication("indvars-predicate-loops", cl::Hidden, cl::init(false),
                 cl::desc("Predicate conditions in read only loops"));
 
-
 namespace {
 
 struct RewritePhi;
