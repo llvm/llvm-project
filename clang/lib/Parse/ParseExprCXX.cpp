@@ -143,13 +143,10 @@ void Parser::CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectType,
 /// \param OnlyNamespace If true, only considers namespaces in lookup.
 ///
 /// \returns true if there was an error parsing a scope specifier
-bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
-                                            ParsedType ObjectType,
-                                            bool EnteringContext,
-                                            bool *MayBePseudoDestructor,
-                                            bool IsTypename,
-                                            IdentifierInfo **LastII,
-                                            bool OnlyNamespace) {
+bool Parser::ParseOptionalCXXScopeSpecifier(
+    CXXScopeSpec &SS, ParsedType ObjectType, bool EnteringContext,
+    bool *MayBePseudoDestructor, bool IsTypename, IdentifierInfo **LastII,
+    bool OnlyNamespace, bool InUsingDeclaration) {
   assert(getLangOpts().CPlusPlus &&
          "Call sites of this function should be guarded by checking for C++");
 
@@ -240,7 +237,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
         // Code completion for a nested-name-specifier, where the code
         // completion token follows the '::'.
         Actions.CodeCompleteQualifiedId(getCurScope(), SS, EnteringContext,
-                                        ObjectType.get(),
+                                        InUsingDeclaration, ObjectType.get(),
                                         SavedType.get(SS.getBeginLoc()));
         // Include code completion token into the range of the scope otherwise
         // when we try to annotate the scope tokens the dangling code completion

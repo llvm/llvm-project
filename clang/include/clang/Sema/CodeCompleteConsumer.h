@@ -339,6 +339,11 @@ public:
 private:
   Kind CCKind;
 
+  /// Indicates whether we are completing a name of a using declaration, e.g.
+  ///     using ^;
+  ///     using a::^;
+  bool IsUsingDeclaration;
+
   /// The type that would prefer to see at this point (e.g., the type
   /// of an initializer or function parameter).
   QualType PreferredType;
@@ -359,12 +364,13 @@ private:
 
 public:
   /// Construct a new code-completion context of the given kind.
-  CodeCompletionContext(Kind CCKind) : CCKind(CCKind), SelIdents(None) {}
+  CodeCompletionContext(Kind CCKind)
+      : CCKind(CCKind), IsUsingDeclaration(false), SelIdents(None) {}
 
   /// Construct a new code-completion context of the given kind.
   CodeCompletionContext(Kind CCKind, QualType T,
                         ArrayRef<IdentifierInfo *> SelIdents = None)
-      : CCKind(CCKind), SelIdents(SelIdents) {
+      : CCKind(CCKind), IsUsingDeclaration(false), SelIdents(SelIdents) {
     if (CCKind == CCC_DotMemberAccess || CCKind == CCC_ArrowMemberAccess ||
         CCKind == CCC_ObjCPropertyAccess || CCKind == CCC_ObjCClassMessage ||
         CCKind == CCC_ObjCInstanceMessage)
@@ -372,6 +378,9 @@ public:
     else
       PreferredType = T;
   }
+
+  bool isUsingDeclaration() const { return IsUsingDeclaration; }
+  void setIsUsingDeclaration(bool V) { IsUsingDeclaration = V; }
 
   /// Retrieve the kind of code-completion context.
   Kind getKind() const { return CCKind; }
