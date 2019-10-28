@@ -1097,6 +1097,16 @@ let Predicates = [IsRV32], usesCustomInserter = 1, hasSideEffects = 0,
 mayLoad = 0, mayStore = 0, hasNoSchedulingInfo = 1 in
 def ReadCycleWide : Pseudo<(outs GPR:$lo, GPR:$hi), (ins), [], "", "">;
 
+/// traps
+
+// We lower `trap` to `unimp`, as this causes a hard exception on nearly all
+// systems.
+def : Pat<(trap), (UNIMP)>;
+
+// We lower `debugtrap` to `ebreak`, as this will get the attention of the
+// debugger if possible.
+def : Pat<(debugtrap), (EBREAK)>;
+
 //===----------------------------------------------------------------------===//
 // Standard extensions
 //===----------------------------------------------------------------------===//
