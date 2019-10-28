@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -cfguard -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -cfguard-no-checks -emit-llvm %s -o - | FileCheck %s -check-prefix=CFGUARDNOCHECKS
+// RUN: %clang_cc1 -cfguard -emit-llvm %s -o - | FileCheck %s -check-prefix=CFGUARD
 
 void f() {}
 
-// Check that the cfguardtable metadata flag gets set on the module.
-// CHECK: !"cfguardtable", i32 1}
+// Check that the cfguard metadata flag gets correctly set on the module.
+// CFGUARDNOCHECKS: !"cfguard", i32 1}
+// CFGUARD: !"cfguard", i32 2}

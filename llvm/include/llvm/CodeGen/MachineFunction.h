@@ -304,6 +304,10 @@ class MachineFunction {
   /// by debug and exception handling consumers.
   std::vector<MCCFIInstruction> FrameInstructions;
 
+  /// List of basic blocks immediately following calls to _setjmp. Used to
+  /// construct a table of valid longjmp targets for Windows Control Flow Guard.
+  std::vector<MCSymbol *> LongjmpTargets;
+
   /// \name Exception Handling
   /// \{
 
@@ -829,6 +833,17 @@ public:
   }
 
   LLVM_NODISCARD unsigned addFrameInst(const MCCFIInstruction &Inst);
+
+  /// Returns a reference to a list of symbols immediately following calls to
+  /// _setjmp in the function. Used to construct the longjmp target table used
+  /// by Windows Control Flow Guard.
+  const std::vector<MCSymbol *> &getLongjmpTargets() const {
+    return LongjmpTargets;
+  }
+
+  /// Add the specified symbol to the list of valid longjmp targets for Windows
+  /// Control Flow Guard.
+  void addLongjmpTarget(MCSymbol *Target) { LongjmpTargets.push_back(Target); }
 
   /// \name Exception Handling
   /// \{
