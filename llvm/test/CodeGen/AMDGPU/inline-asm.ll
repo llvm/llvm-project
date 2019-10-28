@@ -198,8 +198,7 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}i1_imm_input_phys_vgpr:
-; CHECK: s_mov_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], -1
-; CHECK-NEXT: v_cndmask_b32_e64 v0, 0, -1, [[MASK]]
+; CHECK: v_mov_b32_e32 v0, 1{{$}}
 ; CHECK: ; use v0
 define amdgpu_kernel void @i1_imm_input_phys_vgpr() {
 entry:
@@ -207,14 +206,14 @@ entry:
   ret void
 }
 
+
+; FIXME: This behavior is nonsense. We should probably disallow i1 asm
+
 ; CHECK-LABEL: {{^}}i1_input_phys_vgpr:
 ; CHECK: {{buffer|flat}}_load_ubyte [[LOAD:v[0-9]+]]
-; CHECK: v_and_b32_e32 [[LOAD]], 1, [[LOAD]]
-; CHECK-NEXT: v_cmp_eq_u32_e32 vcc, 1, [[LOAD]]
-; CHECK-NEXT: v_cndmask_b32_e64 v0, 0, -1, vcc
+; CHECK-NOT: [[LOAD]]
 ; CHECK: ; use v0
-; CHECK: v_cmp_ne_u32_e32 vcc, 0, v1
-; CHECK: v_cndmask_b32_e64 [[STORE:v[0-9]+]], 0, 1, vcc
+; CHECK: v_and_b32_e32 [[STORE:v[0-9]+]], 1, v1
 ; CHECK: {{buffer|flat}}_store_byte [[STORE]],
 define amdgpu_kernel void @i1_input_phys_vgpr() {
 entry:
@@ -224,12 +223,12 @@ entry:
   ret void
 }
 
-; FIXME: Should be scheduled to shrink vcc
+; FIXME: Should prodbably be masking high bits of load.
 ; CHECK-LABEL: {{^}}i1_input_phys_vgpr_x2:
-; CHECK: v_cmp_eq_u32_e32 vcc, 1, v0
-; CHECK: v_cndmask_b32_e64 v0, 0, -1, vcc
-; CHECK: v_cmp_eq_u32_e32 vcc, 1, v1
-; CHECK: v_cndmask_b32_e64 v1, 0, -1, vcc
+; CHECK: buffer_load_ubyte v0
+; CHECK-NEXT: buffer_load_ubyte v1
+; CHECK-NEXT: s_waitcnt
+; CHECK-NEXT: ASMSTART
 define amdgpu_kernel void @i1_input_phys_vgpr_x2() {
 entry:
   %val0 = load volatile i1, i1 addrspace(1)* undef
