@@ -719,13 +719,26 @@ public:
   unsigned getSmallConstantTripMultiple(const Loop *L,
                                         BasicBlock *ExitingBlock);
 
+
+  /// The terms "backedge taken count" and "exit count" are used
+  /// interchangeably to refer to the number of times the backedge of a loop 
+  /// has executed before the loop is exited.
+  enum ExitCountKind {
+    /// An expression exactly describing the number of times the backedge has
+    /// executed when a loop is exited.
+    Exact,
+    /// A constant which provides an upper bound on the exact trip count.
+    ConstantMaximum,
+  };
+
   /// Return the number of times the backedge executes before the given exit
   /// would be taken; if not exactly computable, return SCEVCouldNotCompute. 
   /// For a single exit loop, this value is equivelent to the result of
   /// getBackedgeTakenCount.  The loop is guaranteed to exit (via *some* exit)
   /// before the backedge is executed (ExitCount + 1) times.  Note that there
   /// is no guarantee about *which* exit is taken on the exiting iteration.  
-  const SCEV *getExitCount(const Loop *L, BasicBlock *ExitingBlock);
+  const SCEV *getExitCount(const Loop *L, BasicBlock *ExitingBlock,
+                           ExitCountKind Kind = Exact);
 
   /// If the specified loop has a predictable backedge-taken count, return it,
   /// otherwise return a SCEVCouldNotCompute object. The backedge-taken count is
@@ -737,7 +750,7 @@ public:
   /// Note that it is not valid to call this method on a loop without a
   /// loop-invariant backedge-taken count (see
   /// hasLoopInvariantBackedgeTakenCount).
-  const SCEV *getBackedgeTakenCount(const Loop *L);
+  const SCEV *getBackedgeTakenCount(const Loop *L, ExitCountKind Kind = Exact);
 
   /// Similar to getBackedgeTakenCount, except it will add a set of
   /// SCEV predicates to Predicates that are required to be true in order for
@@ -750,7 +763,9 @@ public:
   /// to (i.e. a "conservative over-approximation") of the value returend by
   /// getBackedgeTakenCount.  If such a value cannot be computed, it returns the
   /// SCEVCouldNotCompute object.
-  const SCEV *getConstantMaxBackedgeTakenCount(const Loop *L);
+  const SCEV *getConstantMaxBackedgeTakenCount(const Loop *L) {
+    return getBackedgeTakenCount(L, ConstantMaximum);
+  } 
 
   /// Return true if the backedge taken count is either the value returned by
   /// getConstantMaxBackedgeTakenCount or zero.
