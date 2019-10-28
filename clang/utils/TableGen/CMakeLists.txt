@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS Support)
 
 add_tablegen(clang-tblgen CLANG
+  ASTTableGen.cpp
   ClangASTNodesEmitter.cpp
   ClangAttrEmitter.cpp
   ClangCommentCommandInfoEmitter.cpp
