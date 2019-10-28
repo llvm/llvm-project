@@ -2070,6 +2070,25 @@ APInt APInt::umul_sat(const APInt &RHS) const {
   return APInt::getMaxValue(BitWidth);
 }
 
+APInt APInt::sshl_sat(const APInt &RHS) const {
+  bool Overflow;
+  APInt Res = sshl_ov(RHS, Overflow);
+  if (!Overflow)
+    return Res;
+
+  return isNegative() ? APInt::getSignedMinValue(BitWidth)
+                      : APInt::getSignedMaxValue(BitWidth);
+}
+
+APInt APInt::ushl_sat(const APInt &RHS) const {
+  bool Overflow;
+  APInt Res = ushl_ov(RHS, Overflow);
+  if (!Overflow)
+    return Res;
+
+  return APInt::getMaxValue(BitWidth);
+}
+
 void APInt::fromString(unsigned numbits, StringRef str, uint8_t radix) {
   // Check our assumptions here
   assert(!str.empty() && "Invalid string length");
