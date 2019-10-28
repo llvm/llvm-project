@@ -4462,12 +4462,15 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   const MDNode *Ranges = I.getMetadata(LLVMContext::MD_range);
 
   // Do not serialize masked loads of constant memory with anything.
-  bool AddToChain =
-      !AA || !AA->pointsToConstantMemory(MemoryLocation(
-                 PtrOperand,
-                 LocationSize::precise(
-                     DAG.getDataLayout().getTypeStoreSize(I.getType())),
-                 AAInfo));
+  MemoryLocation ML;
+  if (VT.isScalableVector())
+    ML = MemoryLocation(PtrOperand);
+  else
+    ML = MemoryLocation(PtrOperand, LocationSize::precise(
+                           DAG.getDataLayout().getTypeStoreSize(I.getType())),
+                           AAInfo);
+  bool AddToChain = !AA || !AA->pointsToConstantMemory(ML);
+
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
 
   MachineMemOperand *MMO =

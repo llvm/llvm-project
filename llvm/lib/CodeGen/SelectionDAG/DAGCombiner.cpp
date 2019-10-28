@@ -9108,6 +9108,8 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
   if (!TLI.isLoadExtLegalOrCustom(ExtType, SplitDstVT, SplitSrcVT))
     return SDValue();
 
+  assert(!DstVT.isScalableVector() && "Unexpected scalable vector type");
+
   SDLoc DL(N);
   const unsigned NumSplits =
       DstVT.getVectorNumElements() / SplitDstVT.getVectorNumElements();

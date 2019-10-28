@@ -802,6 +802,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget->hasSVE()) {
+    // FIXME: Add custom lowering of MLOAD to handle different passthrus (not a
+    // splat of 0 or undef) once vector selects supported in SVE codegen. See
+    // D68877 for more details.
     for (MVT VT : MVT::integer_scalable_vector_valuetypes()) {
       if (isTypeLegal(VT) && VT.getVectorElementType() != MVT::i1)
         setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
@@ -2884,6 +2887,10 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return IncomingFPOp;
   }
   }
+}
+
+bool AArch64TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
+  return ExtVal.getValueType().isScalableVector();
 }
 
 // Custom lower trunc store for v4i8 vectors, since it is promoted to v4i16.
