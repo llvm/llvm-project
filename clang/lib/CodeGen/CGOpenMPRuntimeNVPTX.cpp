@@ -1817,14 +1817,14 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
     // Build int32_t __kmpc_warp_active_thread_mask(void);
     auto *FnTy =
         llvm::FunctionType::get(CGM.Int32Ty, llvm::None, /*isVarArg=*/false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_warp_active_thread_mask");
+    RTLFn = CGM.CreateConvergentRuntimeFunction(FnTy, "__kmpc_warp_active_thread_mask");
     break;
   }
   case OMPRTL_NVPTX__kmpc_syncwarp: {
     // Build void __kmpc_syncwarp(kmp_int32 Mask);
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, CGM.Int32Ty, /*isVarArg=*/false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_syncwarp");
+    RTLFn = CGM.CreateConvergentRuntimeFunction(FnTy, "__kmpc_syncwarp");
     break;
   }
   }
