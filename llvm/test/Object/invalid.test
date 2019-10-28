@@ -333,6 +333,7 @@ Sections:
       - Offset: 0x0
         Type:   R_X86_64_64
         Symbol: 0xFFFFFF
+Symbols: []
 
 ## Check llvm-readobj does not crash on a truncated ELF.
 

@@ -205,16 +205,9 @@ template <class ELFT>
 ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
     : Doc(D), ErrHandler(EH) {
   StringSet<> DocSections;
-  for (std::unique_ptr<ELFYAML::Section> &D : Doc.Sections) {
+  for (std::unique_ptr<ELFYAML::Section> &D : Doc.Sections)
     if (!D->Name.empty())
       DocSections.insert(D->Name);
-
-    // Some sections wants to link to .symtab by default.
-    // That means we want to create the symbol table for them.
-    if (D->Type == llvm::ELF::SHT_REL || D->Type == llvm::ELF::SHT_RELA)
-      if (!Doc.Symbols && D->Link.empty())
-        Doc.Symbols.emplace();
-  }
 
   // Insert SHT_NULL section implicitly when it is not defined in YAML.
   if (Doc.Sections.empty() || Doc.Sections.front()->Type != ELF::SHT_NULL)
@@ -742,8 +735,9 @@ void ELFState<ELFT>::writeSectionContent(
   SHeader.sh_size = SHeader.sh_entsize * Section.Relocations.size();
 
   // For relocation section set link to .symtab by default.
-  if (Section.Link.empty())
-    SHeader.sh_link = SN2I.get(".symtab");
+  unsigned Link = 0;
+  if (Section.Link.empty() && SN2I.lookup(".symtab", Link))
+    SHeader.sh_link = Link;
 
   if (!Section.RelocatableSec.empty())
     SHeader.sh_info = toSectionIndex(Section.RelocatableSec, Section.Name);

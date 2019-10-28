@@ -16,7 +16,6 @@
 # CHECK-NEXT:     Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
 # CHECK-NEXT:   - Name:    .rela.text
 # CHECK-NEXT:     Type:    SHT_RELA
-# CHECK-NEXT:     Link:    .symtab
 # CHECK-NEXT:     EntSize: 0x0000000000000018
 # CHECK-NEXT:     Info:    .text
 # CHECK-NEXT:     Relocations:
@@ -24,7 +23,6 @@
 # CHECK-NEXT:         Type:   R_X86_64_NONE
 # CHECK-NEXT:       - Offset: 0x0000000000000004
 # CHECK-NEXT:         Type:   R_X86_64_NONE
-# CHECK-NEXT: Symbols: []
 # CHECK-NEXT: ...
 
 --- !ELF

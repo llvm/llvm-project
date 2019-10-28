@@ -39,3 +39,4 @@ Sections:
     Address: 0x0000000000000038
     Info:    .text
     Relocations:
+Symbols: []
