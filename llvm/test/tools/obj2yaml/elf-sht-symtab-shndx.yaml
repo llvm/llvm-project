@@ -98,8 +98,7 @@ Symbols:
 # RUN: yaml2obj --docnum=4 %s -o %t4
 # RUN: not obj2yaml %t4 2>&1 | FileCheck %s -DFILE=%t4 --check-prefix=CASE4
 
-## FIXME: The error message below needs rewording. Size should not be equal to the number of symbols.
-## CASE4: Error reading file: [[FILE]]: SHT_SYMTAB_SHNDX section has sh_size (48) which is not equal to the number of symbols (3)
+## CASE4: Error reading file: [[FILE]]: SHT_SYMTAB_SHNDX has 3 entries, but the symbol table associated has 2
 
 --- !ELF
 FileHeader:
