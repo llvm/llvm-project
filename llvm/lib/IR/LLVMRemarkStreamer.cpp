@@ -1,4 +1,4 @@
-//===- llvm/IR/RemarkStreamer.cpp - Remark Streamer -*- C++ -------------*-===//
+//===- llvm/IR/LLVMRemarkStreamer.cpp - Remark Streamer -*- C++ ---------*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,44 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the implementation of the remark outputting as part of
-// LLVMContext.
+// This file contains the implementation of the conversion between IR
+// Diagnostics and serializable remarks::Remark objects.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/RemarkStreamer.h"
+#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/Remarks/BitstreamRemarkSerializer.h"
-#include "llvm/Remarks/RemarkFormat.h"
-#include "llvm/Remarks/RemarkSerializer.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
-
-static cl::opt<cl::boolOrDefault> EnableRemarksSection(
-    "remarks-section",
-    cl::desc(
-        "Emit a section containing remark diagnostics metadata. By default, "
-        "this is enabled for the following formats: yaml-strtab, bitstream."),
-    cl::init(cl::BOU_UNSET), cl::Hidden);
-
-RemarkStreamer::RemarkStreamer(
-    std::unique_ptr<remarks::RemarkSerializer> RemarkSerializer,
-    Optional<StringRef> FilenameIn)
-    : PassFilter(), RemarkSerializer(std::move(RemarkSerializer)),
-      Filename(FilenameIn ? Optional<std::string>(FilenameIn->str()) : None) {}
-
-Error RemarkStreamer::setFilter(StringRef Filter) {
-  Regex R = Regex(Filter);
-  std::string RegexError;
-  if (!R.isValid(RegexError))
-    return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             RegexError.data());
-  PassFilter = std::move(R);
-  return Error::success();
-}
 
 /// DiagnosticKind -> remarks::Type
 static remarks::Type toRemarkType(enum DiagnosticKind Kind) {
@@ -81,7 +54,7 @@ toRemarkLocation(const DiagnosticLocation &DL) {
 
 /// LLVM Diagnostic -> Remark
 remarks::Remark
-RemarkStreamer::toRemark(const DiagnosticInfoOptimizationBase &Diag) {
+LLVMRemarkStreamer::toRemark(const DiagnosticInfoOptimizationBase &Diag) const {
   remarks::Remark R; // The result.
   R.RemarkType = toRemarkType(static_cast<DiagnosticKind>(Diag.getKind()));
   R.PassName = Diag.getPassName();
@@ -101,51 +74,24 @@ RemarkStreamer::toRemark(const DiagnosticInfoOptimizationBase &Diag) {
   return R;
 }
 
-void RemarkStreamer::emit(const DiagnosticInfoOptimizationBase &Diag) {
-  if (Optional<Regex> &Filter = PassFilter)
-    if (!Filter->match(Diag.getPassName()))
+void LLVMRemarkStreamer::emit(const DiagnosticInfoOptimizationBase &Diag) {
+  if (!RS.matchesFilter(Diag.getPassName()))
       return;
 
   // First, convert the diagnostic to a remark.
   remarks::Remark R = toRemark(Diag);
   // Then, emit the remark through the serializer.
-  RemarkSerializer->emit(R);
+  RS.getSerializer().emit(R);
 }
 
-bool RemarkStreamer::needsSection() const {
-  if (EnableRemarksSection == cl::BOU_TRUE)
-    return true;
+char LLVMRemarkSetupFileError::ID = 0;
+char LLVMRemarkSetupPatternError::ID = 0;
+char LLVMRemarkSetupFormatError::ID = 0;
 
-  if (EnableRemarksSection == cl::BOU_FALSE)
-    return false;
-
-  assert(EnableRemarksSection == cl::BOU_UNSET);
-
-  // We only need a section if we're in separate mode.
-  if (RemarkSerializer->Mode != remarks::SerializerMode::Separate)
-    return false;
-
-  // Only some formats need a section:
-  // * bitstream
-  // * yaml-strtab
-  switch (RemarkSerializer->SerializerFormat) {
-  case remarks::Format::YAMLStrTab:
-  case remarks::Format::Bitstream:
-    return true;
-  default:
-    return false;
-  }
-}
-
-char RemarkSetupFileError::ID = 0;
-char RemarkSetupPatternError::ID = 0;
-char RemarkSetupFormatError::ID = 0;
-
-Expected<std::unique_ptr<ToolOutputFile>>
-llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
-                               StringRef RemarksPasses, StringRef RemarksFormat,
-                               bool RemarksWithHotness,
-                               unsigned RemarksHotnessThreshold) {
+Expected<std::unique_ptr<ToolOutputFile>> llvm::setupLLVMOptimizationRemarks(
+    LLVMContext &Context, StringRef RemarksFilename, StringRef RemarksPasses,
+    StringRef RemarksFormat, bool RemarksWithHotness,
+    unsigned RemarksHotnessThreshold) {
   if (RemarksWithHotness)
     Context.setDiagnosticsHotnessRequested(true);
 
@@ -157,7 +103,7 @@ llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
 
   Expected<remarks::Format> Format = remarks::parseFormat(RemarksFormat);
   if (Error E = Format.takeError())
-    return make_error<RemarkSetupFormatError>(std::move(E));
+    return make_error<LLVMRemarkSetupFormatError>(std::move(E));
 
   std::error_code EC;
   auto Flags = *Format == remarks::Format::YAML ? sys::fs::OF_Text
@@ -167,29 +113,34 @@ llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
   // We don't use llvm::FileError here because some diagnostics want the file
   // name separately.
   if (EC)
-    return make_error<RemarkSetupFileError>(errorCodeToError(EC));
+    return make_error<LLVMRemarkSetupFileError>(errorCodeToError(EC));
 
   Expected<std::unique_ptr<remarks::RemarkSerializer>> RemarkSerializer =
       remarks::createRemarkSerializer(
           *Format, remarks::SerializerMode::Separate, RemarksFile->os());
   if (Error E = RemarkSerializer.takeError())
-    return make_error<RemarkSetupFormatError>(std::move(E));
+    return make_error<LLVMRemarkSetupFormatError>(std::move(E));
 
-  Context.setRemarkStreamer(std::make_unique<RemarkStreamer>(
+  // Create the main remark streamer.
+  Context.setMainRemarkStreamer(std::make_unique<remarks::RemarkStreamer>(
       std::move(*RemarkSerializer), RemarksFilename));
 
+  // Create LLVM's optimization remarks streamer.
+  Context.setLLVMRemarkStreamer(
+      std::make_unique<LLVMRemarkStreamer>(*Context.getMainRemarkStreamer()));
+
   if (!RemarksPasses.empty())
-    if (Error E = Context.getRemarkStreamer()->setFilter(RemarksPasses))
-      return make_error<RemarkSetupPatternError>(std::move(E));
+    if (Error E = Context.getMainRemarkStreamer()->setFilter(RemarksPasses))
+      return make_error<LLVMRemarkSetupPatternError>(std::move(E));
 
   return std::move(RemarksFile);
 }
 
-Error llvm::setupOptimizationRemarks(LLVMContext &Context, raw_ostream &OS,
-                                     StringRef RemarksPasses,
-                                     StringRef RemarksFormat,
-                                     bool RemarksWithHotness,
-                                     unsigned RemarksHotnessThreshold) {
+Error llvm::setupLLVMOptimizationRemarks(LLVMContext &Context, raw_ostream &OS,
+                                         StringRef RemarksPasses,
+                                         StringRef RemarksFormat,
+                                         bool RemarksWithHotness,
+                                         unsigned RemarksHotnessThreshold) {
   if (RemarksWithHotness)
     Context.setDiagnosticsHotnessRequested(true);
 
@@ -198,20 +149,25 @@ Error llvm::setupOptimizationRemarks(LLVMContext &Context, raw_ostream &OS,
 
   Expected<remarks::Format> Format = remarks::parseFormat(RemarksFormat);
   if (Error E = Format.takeError())
-    return make_error<RemarkSetupFormatError>(std::move(E));
+    return make_error<LLVMRemarkSetupFormatError>(std::move(E));
 
   Expected<std::unique_ptr<remarks::RemarkSerializer>> RemarkSerializer =
       remarks::createRemarkSerializer(*Format,
                                       remarks::SerializerMode::Separate, OS);
   if (Error E = RemarkSerializer.takeError())
-    return make_error<RemarkSetupFormatError>(std::move(E));
+    return make_error<LLVMRemarkSetupFormatError>(std::move(E));
 
-  Context.setRemarkStreamer(
-      std::make_unique<RemarkStreamer>(std::move(*RemarkSerializer)));
+  // Create the main remark streamer.
+  Context.setMainRemarkStreamer(
+      std::make_unique<remarks::RemarkStreamer>(std::move(*RemarkSerializer)));
+
+  // Create LLVM's optimization remarks streamer.
+  Context.setLLVMRemarkStreamer(
+      std::make_unique<LLVMRemarkStreamer>(*Context.getMainRemarkStreamer()));
 
   if (!RemarksPasses.empty())
-    if (Error E = Context.getRemarkStreamer()->setFilter(RemarksPasses))
-      return make_error<RemarkSetupPatternError>(std::move(E));
+    if (Error E = Context.getMainRemarkStreamer()->setFilter(RemarksPasses))
+      return make_error<LLVMRemarkSetupPatternError>(std::move(E));
 
   return Error::success();
 }

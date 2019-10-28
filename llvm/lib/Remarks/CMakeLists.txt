@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMRemarks
   RemarkLinker.cpp
   RemarkParser.cpp
   RemarkSerializer.cpp
+  RemarkStreamer.cpp
   RemarkStringTable.cpp
   YAMLRemarkParser.cpp
   YAMLRemarkSerializer.cpp
