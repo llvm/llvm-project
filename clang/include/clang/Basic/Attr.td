@@ -3427,10 +3427,3 @@ def ObjCExternallyRetained : InheritableAttr {
   let Subjects = SubjectList<[NonParmVar, Function, Block, ObjCMethod]>;
   let Documentation = [ObjCExternallyRetainedDocs];
 }
-
-def NoBuiltin : Attr {
-  let Spellings = [Clang<"no_builtin">];
-  let Args = [VariadicStringArgument<"BuiltinNames">];
-  let Subjects = SubjectList<[Function]>;
-  let Documentation = [NoBuiltinDocs];
-}
