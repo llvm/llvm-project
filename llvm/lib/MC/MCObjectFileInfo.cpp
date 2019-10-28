@@ -715,6 +715,11 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
                                          COFF::IMAGE_SCN_MEM_READ,
                                      SectionKind::getMetadata());
 
+  GLJMPSection = Ctx->getCOFFSection(".gljmp$y",
+                                     COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                                         COFF::IMAGE_SCN_MEM_READ,
+                                     SectionKind::getMetadata());
+
   TLSDataSection = Ctx->getCOFFSection(
       ".tls$", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ |
                    COFF::IMAGE_SCN_MEM_WRITE,

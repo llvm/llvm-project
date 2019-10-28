@@ -434,6 +434,7 @@ def RetCC_X86_32 : CallingConv<[
   // If FastCC, use RetCC_X86_32_Fast.
   CCIfCC<"CallingConv::Fast", CCDelegateTo<RetCC_X86_32_Fast>>,
   CCIfCC<"CallingConv::Tail", CCDelegateTo<RetCC_X86_32_Fast>>,
+  // CFGuard_Check never returns a value so does not need a RetCC.
   // If HiPE, use RetCC_X86_32_HiPE.
   CCIfCC<"CallingConv::HiPE", CCDelegateTo<RetCC_X86_32_HiPE>>,
   CCIfCC<"CallingConv::X86_VectorCall", CCDelegateTo<RetCC_X86_32_VectorCall>>,
@@ -605,6 +606,9 @@ def CC_X86_Win64_C : CallingConv<[
 
   // A SwiftError is passed in R12.
   CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R12]>>>,
+
+  // The 'CFGuardTarget' parameter, if any, is passed in RAX.
+  CCIfCFGuardTarget<CCAssignToReg<[RAX]>>,
 
   // 128 bit vectors are passed by pointer
   CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64], CCPassIndirect<i64>>,
@@ -936,6 +940,12 @@ def CC_X86_32_FastCC : CallingConv<[
   CCDelegateTo<CC_X86_32_Common>
 ]>;
 
+def CC_X86_Win32_CFGuard_Check : CallingConv<[
+  // The CFGuard check call takes exactly one integer argument
+  // (i.e. the target function address), which is passed in ECX.
+  CCIfType<[i32], CCAssignToReg<[ECX]>>
+]>;
+
 def CC_X86_32_GHC : CallingConv<[
   // Promote i8/i16 arguments to i32.
   CCIfType<[i8, i16], CCPromoteToType<i32>>,
@@ -1000,6 +1010,7 @@ def CC_X86_32 : CallingConv<[
   CCIfCC<"CallingConv::X86_FastCall", CCDelegateTo<CC_X86_32_FastCall>>,
   CCIfCC<"CallingConv::X86_VectorCall", CCDelegateTo<CC_X86_Win32_VectorCall>>,
   CCIfCC<"CallingConv::X86_ThisCall", CCDelegateTo<CC_X86_32_ThisCall>>,
+  CCIfCC<"CallingConv::CFGuard_Check", CCDelegateTo<CC_X86_Win32_CFGuard_Check>>,
   CCIfCC<"CallingConv::Fast", CCDelegateTo<CC_X86_32_FastCC>>,
   CCIfCC<"CallingConv::Tail", CCDelegateTo<CC_X86_32_FastCC>>,
   CCIfCC<"CallingConv::GHC", CCDelegateTo<CC_X86_32_GHC>>,
@@ -1136,7 +1147,9 @@ def CSR_64_HHVM : CalleeSavedRegs<(add R12)>;
 // Register calling convention preserves few GPR and XMM8-15
 def CSR_32_RegCall_NoSSE : CalleeSavedRegs<(add ESI, EDI, EBX, EBP, ESP)>;
 def CSR_32_RegCall       : CalleeSavedRegs<(add CSR_32_RegCall_NoSSE,
-                                           (sequence "XMM%u", 4, 7))>;                                            
+                                           (sequence "XMM%u", 4, 7))>;
+def CSR_Win32_CFGuard_Check_NoSSE : CalleeSavedRegs<(add CSR_32_RegCall_NoSSE, ECX)>;
+def CSR_Win32_CFGuard_Check       : CalleeSavedRegs<(add CSR_32_RegCall, ECX)>;
 def CSR_Win64_RegCall_NoSSE : CalleeSavedRegs<(add RBX, RBP, RSP,
                                               (sequence "R%u", 10, 15))>;
 def CSR_Win64_RegCall       : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE,                                  

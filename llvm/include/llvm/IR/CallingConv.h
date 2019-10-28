@@ -80,6 +80,12 @@ namespace CallingConv {
     /// be performed.
     Tail = 18,
 
+    /// Special calling convention on Windows for calling the Control
+    /// Guard Check ICall funtion. The function takes exactly one argument
+    /// (address of the target function) passed in the first argument register,
+    /// and has no return value. All register values are preserved.
+    CFGuard_Check = 19,
+
     // Target - This is the start of the target-specific calling conventions,
     // e.g. fastcall and thiscall on X86.
     FirstTargetCC = 64,

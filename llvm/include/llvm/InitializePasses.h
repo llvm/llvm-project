@@ -91,6 +91,8 @@ void initializeCFGOnlyPrinterLegacyPassPass(PassRegistry&);
 void initializeCFGOnlyViewerLegacyPassPass(PassRegistry&);
 void initializeCFGPrinterLegacyPassPass(PassRegistry&);
 void initializeCFGSimplifyPassPass(PassRegistry&);
+void initializeCFGuardPass(PassRegistry&);
+void initializeCFGuardLongjmpPass(PassRegistry&);
 void initializeCFGViewerLegacyPassPass(PassRegistry&);
 void initializeCFIInstrInserterPass(PassRegistry&);
 void initializeCFLAndersAAWrapperPassPass(PassRegistry&);

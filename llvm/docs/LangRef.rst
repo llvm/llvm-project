@@ -444,6 +444,17 @@ added in the future:
     the GHC or the HiPE convention is used. <CodeGenerator.html#id80>`_ This
     calling convention does not support varargs and requires the prototype of
     all callees to exactly match the prototype of the function definition.
+"``cfguard_checkcc``" - Windows Control Flow Guard (Check mechanism)
+    This calling convention is used for the Control Flow Guard check function,
+    calls to which can be inserted before indirect calls to check that the call
+    target is a valid function address. The check function has no return value,
+    but it will trigger an OS-level error if the address is not a valid target.
+    The set of registers preserved by the check function, and the register
+    containing the target address are architecture-specific.
+
+    - On X86 the target address is passed in ECX.
+    - On ARM the target address is passed in R0.
+    - On AArch64 the target address is passed in X15.
 "``cc <n>``" - Numbered convention
     Any calling convention may be specified by number, allowing
     target-specific calling conventions to be used. Target specific

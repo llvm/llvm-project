@@ -422,6 +422,17 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddAllArgValues(CmdArgs, options::OPT__SLASH_link);
 
+  // Control Flow Guard checks
+  if (Arg *A = Args.getLastArg(options::OPT__SLASH_guard)) {
+    StringRef GuardArgs = A->getValue();
+    if (GuardArgs.equals_lower("cf") || GuardArgs.equals_lower("cf,nochecks")) {
+      // MSVC doesn't yet support the "nochecks" modifier.
+      CmdArgs.push_back("-guard:cf");
+    } else if (GuardArgs.equals_lower("cf-")) {
+      CmdArgs.push_back("-guard:cf-");
+    }
+  }
+
   if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
                    options::OPT_fno_openmp, false)) {
     CmdArgs.push_back("-nodefaultlib:vcomp.lib");
@@ -677,6 +688,17 @@ std::unique_ptr<Command> visualstudio::Compiler::GetCommand(
     CmdArgs.push_back(A->getOption().getID() == options::OPT_fthreadsafe_statics
                           ? "/Zc:threadSafeInit"
                           : "/Zc:threadSafeInit-");
+  }
+
+  // Control Flow Guard checks
+  if (Arg *A = Args.getLastArg(options::OPT__SLASH_guard)) {
+    StringRef GuardArgs = A->getValue();
+    if (GuardArgs.equals_lower("cf") || GuardArgs.equals_lower("cf,nochecks")) {
+      // MSVC doesn't yet support the "nochecks" modifier.
+      CmdArgs.push_back("/guard:cf");
+    } else if (GuardArgs.equals_lower("cf-")) {
+      CmdArgs.push_back("/guard:cf-");
+    }
   }
 
   // Pass through all unknown arguments so that the fallback command can see

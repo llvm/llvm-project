@@ -1,4 +1,5 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s
+; Control Flow Guard is currently only available on Windows
 
 ; CHECK: .set @feat.00, 2048
 
@@ -159,6 +160,6 @@ attributes #2 = { nounwind }
 !llvm.module.flags = !{!0, !1}
 !llvm.ident = !{!2}
 
-!0 = !{i32 2, !"cfguardtable", i32 1}
+!0 = !{i32 2, !"cfguard", i32 1}
 !1 = !{i32 1, !"wchar_size", i32 2}
 !2 = !{!"clang version 6.0.0 "}

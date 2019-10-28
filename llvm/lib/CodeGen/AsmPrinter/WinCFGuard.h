@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains support for writing windows exception info into asm files.
+// This file contains support for writing the metadata for Windows Control Flow
+// Guard, including address-taken functions, and valid longjmp targets.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,12 +16,14 @@
 
 #include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/Support/Compiler.h"
+#include <vector>
 
 namespace llvm {
 
 class LLVM_LIBRARY_VISIBILITY WinCFGuard : public AsmPrinterHandler {
   /// Target of directive emission.
   AsmPrinter *Asm;
+  std::vector<const MCSymbol *> LongjmpTargets;
 
 public:
   WinCFGuard(AsmPrinter *A);
@@ -28,7 +31,7 @@ public:
 
   void setSymbolSize(const MCSymbol *Sym, uint64_t Size) override {}
 
-  /// Emit the Control Flow Guard function ID table
+  /// Emit the Control Flow Guard function ID table.
   void endModule() override;
 
   /// Gather pre-function debug information.
@@ -39,7 +42,7 @@ public:
   /// Gather post-function debug information.
   /// Please note that some AsmPrinter implementations may not call
   /// beginFunction at all.
-  void endFunction(const MachineFunction *MF) override {}
+  void endFunction(const MachineFunction *MF) override;
 
   /// Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override {}
