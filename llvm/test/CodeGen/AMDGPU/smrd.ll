@@ -345,6 +345,7 @@ main_body:
 ; SICIVI_DAG: v_interp_p2_f32
 ;
 ; extractelement does not result in movrels anymore for vectors gitting 8 dwords
+; SICIVI-NOT: s_mov_b32 m0
 ; SICIVI-NOT: v_movrels_b32_e32
 ; v_cndmask_b32_e32
 ; v_cndmask_b32_e32
