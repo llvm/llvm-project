@@ -331,8 +331,12 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB,
           case Intrinsic::ceil:               Opcode = ISD::FCEIL;      break;
           case Intrinsic::trunc:              Opcode = ISD::FTRUNC;     break;
           case Intrinsic::rint:               Opcode = ISD::FRINT;      break;
+          case Intrinsic::lrint:              Opcode = ISD::LRINT;      break;
+          case Intrinsic::llrint:             Opcode = ISD::LLRINT;     break;
           case Intrinsic::nearbyint:          Opcode = ISD::FNEARBYINT; break;
           case Intrinsic::round:              Opcode = ISD::FROUND;     break;
+          case Intrinsic::lround:             Opcode = ISD::LROUND;     break;
+          case Intrinsic::llround:            Opcode = ISD::LLROUND;    break;
           case Intrinsic::minnum:             Opcode = ISD::FMINNUM;    break;
           case Intrinsic::maxnum:             Opcode = ISD::FMAXNUM;    break;
           case Intrinsic::umul_with_overflow: Opcode = ISD::UMULO;      break;
