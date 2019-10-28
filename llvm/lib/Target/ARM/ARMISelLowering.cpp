@@ -3629,6 +3629,49 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
     EVT PtrVT = getPointerTy(DAG.getDataLayout());
     return DAG.getNode(ARMISD::THREAD_POINTER, dl, PtrVT);
   }
+  case Intrinsic::arm_cls: {
+    const SDValue &Operand = Op.getOperand(1);
+    const EVT VTy = Op.getValueType();
+    SDValue SRA =
+        DAG.getNode(ISD::SRA, dl, VTy, Operand, DAG.getConstant(31, dl, VTy));
+    SDValue XOR = DAG.getNode(ISD::XOR, dl, VTy, SRA, Operand);
+    SDValue SHL =
+        DAG.getNode(ISD::SHL, dl, VTy, XOR, DAG.getConstant(1, dl, VTy));
+    SDValue OR =
+        DAG.getNode(ISD::OR, dl, VTy, SHL, DAG.getConstant(1, dl, VTy));
+    SDValue Result = DAG.getNode(ISD::CTLZ, dl, VTy, OR);
+    return Result;
+  }
+  case Intrinsic::arm_cls64: {
+    // cls(x) = if cls(hi(x)) != 31 then cls(hi(x))
+    //          else 31 + clz(if hi(x) == 0 then lo(x) else not(lo(x)))
+    const SDValue &Operand = Op.getOperand(1);
+    const EVT VTy = Op.getValueType();
+
+    SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, VTy, Operand,
+                             DAG.getConstant(1, dl, VTy));
+    SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, VTy, Operand,
+                             DAG.getConstant(0, dl, VTy));
+    SDValue Constant0 = DAG.getConstant(0, dl, VTy);
+    SDValue Constant1 = DAG.getConstant(1, dl, VTy);
+    SDValue Constant31 = DAG.getConstant(31, dl, VTy);
+    SDValue SRAHi = DAG.getNode(ISD::SRA, dl, VTy, Hi, Constant31);
+    SDValue XORHi = DAG.getNode(ISD::XOR, dl, VTy, SRAHi, Hi);
+    SDValue SHLHi = DAG.getNode(ISD::SHL, dl, VTy, XORHi, Constant1);
+    SDValue ORHi = DAG.getNode(ISD::OR, dl, VTy, SHLHi, Constant1);
+    SDValue CLSHi = DAG.getNode(ISD::CTLZ, dl, VTy, ORHi);
+    SDValue CheckLo =
+        DAG.getSetCC(dl, MVT::i1, CLSHi, Constant31, ISD::CondCode::SETEQ);
+    SDValue HiIsZero =
+        DAG.getSetCC(dl, MVT::i1, Hi, Constant0, ISD::CondCode::SETEQ);
+    SDValue AdjustedLo =
+        DAG.getSelect(dl, VTy, HiIsZero, Lo, DAG.getNOT(dl, Lo, VTy));
+    SDValue CLZAdjustedLo = DAG.getNode(ISD::CTLZ, dl, VTy, AdjustedLo);
+    SDValue Result =
+        DAG.getSelect(dl, VTy, CheckLo,
+                      DAG.getNode(ISD::ADD, dl, VTy, CLZAdjustedLo, Constant31), CLSHi);
+    return Result;
+  }
   case Intrinsic::eh_sjlj_lsda: {
     MachineFunction &MF = DAG.getMachineFunction();
     ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();

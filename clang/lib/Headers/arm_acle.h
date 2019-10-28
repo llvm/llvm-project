@@ -139,6 +139,26 @@ __clzll(uint64_t __t) {
   return __builtin_clzll(__t);
 }
 
+/* CLS */
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__cls(uint32_t __t) {
+  return __builtin_arm_cls(__t);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__clsl(unsigned long __t) {
+#if __SIZEOF_LONG__ == 4
+  return __builtin_arm_cls(__t);
+#else
+  return __builtin_arm_cls64(__t);
+#endif
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__clsll(uint64_t __t) {
+  return __builtin_arm_cls64(__t);
+}
+
 /* REV */
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __rev(uint32_t __t) {

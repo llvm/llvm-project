@@ -33,6 +33,8 @@ BUILTIN(__builtin_arm_clrex, "v", "")
 // Bit manipulation
 BUILTIN(__builtin_arm_rbit, "UiUi", "nc")
 BUILTIN(__builtin_arm_rbit64, "WUiWUi", "nc")
+BUILTIN(__builtin_arm_cls, "UiZUi", "nc")
+BUILTIN(__builtin_arm_cls64, "UiWUi", "nc")
 
 // HINT
 BUILTIN(__builtin_arm_nop, "v", "")
