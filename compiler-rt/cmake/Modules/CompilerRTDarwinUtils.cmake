@@ -1,5 +1,6 @@
 include(CMakeParseArguments)
 include(CompilerRTUtils)
+include(BuiltinTests)
 
 set(CMAKE_LIPO "lipo" CACHE PATH "path to the lipo tool")
 
