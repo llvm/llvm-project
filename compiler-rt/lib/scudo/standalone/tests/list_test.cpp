@@ -11,24 +11,34 @@
 
 struct ListItem {
   ListItem *Next;
+  ListItem *Prev;
 };
 
-typedef scudo::IntrusiveList<ListItem> List;
+static ListItem Items[6];
+static ListItem *X = &Items[0];
+static ListItem *Y = &Items[1];
+static ListItem *Z = &Items[2];
+static ListItem *A = &Items[3];
+static ListItem *B = &Items[4];
+static ListItem *C = &Items[5];
 
-static List StaticList;
+typedef scudo::SinglyLinkedList<ListItem> SLList;
+typedef scudo::DoublyLinkedList<ListItem> DLList;
 
-static void setList(List *L, ListItem *X = nullptr, ListItem *Y = nullptr,
-                    ListItem *Z = nullptr) {
+template <typename ListT>
+static void setList(ListT *L, ListItem *I1 = nullptr, ListItem *I2 = nullptr,
+                    ListItem *I3 = nullptr) {
   L->clear();
-  if (X)
-    L->push_back(X);
-  if (Y)
-    L->push_back(Y);
-  if (Z)
-    L->push_back(Z);
+  if (I1)
+    L->push_back(I1);
+  if (I2)
+    L->push_back(I2);
+  if (I3)
+    L->push_back(I3);
 }
 
-static void checkList(List *L, ListItem *I1, ListItem *I2 = nullptr,
+template <typename ListT>
+static void checkList(ListT *L, ListItem *I1, ListItem *I2 = nullptr,
                       ListItem *I3 = nullptr, ListItem *I4 = nullptr,
                       ListItem *I5 = nullptr, ListItem *I6 = nullptr) {
   if (I1) {
@@ -58,19 +68,9 @@ static void checkList(List *L, ListItem *I1, ListItem *I2 = nullptr,
   EXPECT_TRUE(L->empty());
 }
 
-TEST(ScudoListTest, IntrusiveList) {
-  ListItem Items[6];
-  EXPECT_EQ(StaticList.size(), 0U);
-
-  List L;
+template <typename ListT> static void testListCommon(void) {
+  ListT L;
   L.clear();
-
-  ListItem *X = &Items[0];
-  ListItem *Y = &Items[1];
-  ListItem *Z = &Items[2];
-  ListItem *A = &Items[3];
-  ListItem *B = &Items[4];
-  ListItem *C = &Items[5];
 
   EXPECT_EQ(L.size(), 0U);
   L.push_back(X);
@@ -122,6 +122,16 @@ TEST(ScudoListTest, IntrusiveList) {
   L.pop_front();
   EXPECT_TRUE(L.empty());
   L.checkConsistency();
+}
+
+TEST(ScudoListTest, LinkedListCommon) {
+  testListCommon<SLList>();
+  testListCommon<DLList>();
+}
+
+TEST(ScudoListTest, SinglyLinkedList) {
+  SLList L;
+  L.clear();
 
   L.push_back(X);
   L.push_back(Y);
@@ -139,13 +149,9 @@ TEST(ScudoListTest, IntrusiveList) {
   L.pop_front();
   EXPECT_TRUE(L.empty());
 
-  List L1, L2;
+  SLList L1, L2;
   L1.clear();
   L2.clear();
-
-  L1.append_front(&L2);
-  EXPECT_TRUE(L1.empty());
-  EXPECT_TRUE(L2.empty());
 
   L1.append_back(&L2);
   EXPECT_TRUE(L1.empty());
@@ -160,26 +166,32 @@ TEST(ScudoListTest, IntrusiveList) {
   checkList(&L1, X, Y, Z, A, B, C);
   EXPECT_TRUE(L2.empty());
 
-  setList(&L1, X, Y);
-  setList(&L2);
-  L1.append_front(&L2);
-  checkList(&L1, X, Y);
-  EXPECT_TRUE(L2.empty());
+  L1.clear();
+  L2.clear();
+  L1.push_back(X);
+  L1.append_back(&L2);
+  EXPECT_EQ(L1.back(), X);
+  EXPECT_EQ(L1.front(), X);
+  EXPECT_EQ(L1.size(), 1U);
 }
 
-TEST(ScudoListTest, IntrusiveListAppendEmpty) {
-  ListItem I;
-  List L;
+TEST(ScudoListTest, DoublyLinkedList) {
+  DLList L;
   L.clear();
-  L.push_back(&I);
-  List L2;
-  L2.clear();
-  L.append_back(&L2);
-  EXPECT_EQ(L.back(), &I);
-  EXPECT_EQ(L.front(), &I);
+
+  L.push_back(X);
+  L.push_back(Y);
+  L.push_back(Z);
+  L.remove(Y);
+  EXPECT_EQ(L.size(), 2U);
+  EXPECT_EQ(L.front(), X);
+  EXPECT_EQ(L.back(), Z);
+  L.checkConsistency();
+  L.remove(Z);
   EXPECT_EQ(L.size(), 1U);
-  L.append_front(&L2);
-  EXPECT_EQ(L.back(), &I);
-  EXPECT_EQ(L.front(), &I);
-  EXPECT_EQ(L.size(), 1U);
+  EXPECT_EQ(L.front(), X);
+  EXPECT_EQ(L.back(), X);
+  L.checkConsistency();
+  L.pop_front();
+  EXPECT_TRUE(L.empty());
 }
