@@ -10,8 +10,10 @@
 #define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TWEAKTESTING_H
 
 #include "TestTU.h"
-#include "gtest/gtest.h"
+#include "llvm/ADT/StringMap.h"
 #include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -46,6 +48,9 @@ public:
     // Snippet is an expression.
     Expression,
   };
+
+  // Mapping from file name to contents.
+  llvm::StringMap<std::string> ExtraFiles;
 
 protected:
   TweakTest(const char *TweakID) : TweakID(TweakID) {}
