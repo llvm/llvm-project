@@ -15,6 +15,14 @@ public:
         TASK_TYPE_1,
         TASK_TYPE_2
     } type;
+    // This struct is anonymous b/c it does not have a name
+    // and it is not unnamed class.
+    // Anonymous classes are a GNU extension.
+    struct {
+      int y;
+    };
+    // This struct is an unnamed class see [class.pre]p1
+    // http://eel.is/c++draft/class#pre-1.sentence-6
     struct {
       int x;
     } my_type_is_nameless;
