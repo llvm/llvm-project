@@ -194,4 +194,18 @@ TEST(ScudoListTest, DoublyLinkedList) {
   L.checkConsistency();
   L.pop_front();
   EXPECT_TRUE(L.empty());
+
+  L.push_back(X);
+  L.insert(Y, X);
+  EXPECT_EQ(L.size(), 2U);
+  EXPECT_EQ(L.front(), Y);
+  EXPECT_EQ(L.back(), X);
+  L.checkConsistency();
+  L.remove(Y);
+  EXPECT_EQ(L.size(), 1U);
+  EXPECT_EQ(L.front(), X);
+  EXPECT_EQ(L.back(), X);
+  L.checkConsistency();
+  L.pop_front();
+  EXPECT_TRUE(L.empty());
 }
