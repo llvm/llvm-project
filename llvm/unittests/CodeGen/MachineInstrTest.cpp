@@ -9,6 +9,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -16,6 +17,8 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/ModuleSlotTracker.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
@@ -125,6 +128,7 @@ public:
       : LLVMTargetMachine(Target(), "", Triple(""), "", "", TargetOptions(),
                           Reloc::Static, CodeModel::Small, CodeGenOpt::Default),
         ST(*this) {}
+
   ~BogusTargetMachine() override {}
 
   const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override {
@@ -134,6 +138,17 @@ public:
 private:
   BogusSubtarget ST;
 };
+
+class BogusMCContext : public MCContext {
+public:
+  BogusMCContext(MCAsmInfo *mai)
+      : MCContext(mai, nullptr, nullptr, nullptr, nullptr, false) {}
+};
+
+std::unique_ptr<BogusMCContext> createMCContext() {
+  MCAsmInfo mai = MCAsmInfo();
+  return std::make_unique<BogusMCContext>(&mai);
+}
 
 std::unique_ptr<BogusTargetMachine> createTargetMachine() {
   return std::make_unique<BogusTargetMachine>();
@@ -359,6 +374,135 @@ TEST(MachineInstrSpan, DistanceEnd) {
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
   MBB->insert(MII, MI);
   ASSERT_TRUE(std::distance(MIS.begin(), MII) == 1);
+}
+
+TEST(MachineInstrExtraInfo, AddExtraInfo) {
+  auto MF = createMachineFunction();
+  MCInstrDesc MCID = {0, 0,       0,       0,       0, 0,
+                      0, nullptr, nullptr, nullptr, 0, nullptr};
+
+  auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
+  auto MC = createMCContext();
+  auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
+                                      MachineMemOperand::MOLoad, 8, 8);
+  SmallVector<MachineMemOperand *, 2> MMOs;
+  MMOs.push_back(MMO);
+  MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
+  MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
+  LLVMContext Ctx;
+  MDNode *MDN = MDNode::getDistinct(Ctx, None);
+
+  ASSERT_TRUE(MI->memoperands_empty());
+  ASSERT_FALSE(MI->getPreInstrSymbol());
+  ASSERT_FALSE(MI->getPostInstrSymbol());
+  ASSERT_FALSE(MI->getHeapAllocMarker());
+
+  MI->setMemRefs(*MF, MMOs);
+  ASSERT_TRUE(MI->memoperands().size() == 1);
+  ASSERT_FALSE(MI->getPreInstrSymbol());
+  ASSERT_FALSE(MI->getPostInstrSymbol());
+  ASSERT_FALSE(MI->getHeapAllocMarker());
+
+  MI->setPreInstrSymbol(*MF, Sym1);
+  ASSERT_TRUE(MI->memoperands().size() == 1);
+  ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
+  ASSERT_FALSE(MI->getPostInstrSymbol());
+  ASSERT_FALSE(MI->getHeapAllocMarker());
+
+  MI->setPostInstrSymbol(*MF, Sym2);
+  ASSERT_TRUE(MI->memoperands().size() == 1);
+  ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
+  ASSERT_TRUE(MI->getPostInstrSymbol() == Sym2);
+  ASSERT_FALSE(MI->getHeapAllocMarker());
+
+  MI->setHeapAllocMarker(*MF, MDN);
+  ASSERT_TRUE(MI->memoperands().size() == 1);
+  ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
+  ASSERT_TRUE(MI->getPostInstrSymbol() == Sym2);
+  ASSERT_TRUE(MI->getHeapAllocMarker() == MDN);
+}
+
+TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
+  auto MF = createMachineFunction();
+  MCInstrDesc MCID = {0, 0,       0,       0,       0, 0,
+                      0, nullptr, nullptr, nullptr, 0, nullptr};
+
+  auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
+  auto MC = createMCContext();
+  auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
+                                      MachineMemOperand::MOLoad, 8, 8);
+  SmallVector<MachineMemOperand *, 2> MMOs;
+  MMOs.push_back(MMO);
+  MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
+  MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
+  LLVMContext Ctx;
+  MDNode *MDN = MDNode::getDistinct(Ctx, None);
+
+  MI->setMemRefs(*MF, MMOs);
+  MI->setPreInstrSymbol(*MF, Sym1);
+  MI->setPostInstrSymbol(*MF, Sym2);
+  MI->setHeapAllocMarker(*MF, MDN);
+
+  MMOs.push_back(MMO);
+
+  MI->setMemRefs(*MF, MMOs);
+  ASSERT_TRUE(MI->memoperands().size() == 2);
+  ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
+  ASSERT_TRUE(MI->getPostInstrSymbol() == Sym2);
+  ASSERT_TRUE(MI->getHeapAllocMarker() == MDN);
+
+  MI->setPostInstrSymbol(*MF, Sym1);
+  ASSERT_TRUE(MI->memoperands().size() == 2);
+  ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
+  ASSERT_TRUE(MI->getPostInstrSymbol() == Sym1);
+  ASSERT_TRUE(MI->getHeapAllocMarker() == MDN);
+}
+
+TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
+  auto MF = createMachineFunction();
+  MCInstrDesc MCID = {0, 0,       0,       0,       0, 0,
+                      0, nullptr, nullptr, nullptr, 0, nullptr};
+
+  auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
+  auto MC = createMCContext();
+  auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
+                                      MachineMemOperand::MOLoad, 8, 8);
+  SmallVector<MachineMemOperand *, 2> MMOs;
+  MMOs.push_back(MMO);
+  MMOs.push_back(MMO);
+  MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
+  MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
+  LLVMContext Ctx;
+  MDNode *MDN = MDNode::getDistinct(Ctx, None);
+
+  MI->setMemRefs(*MF, MMOs);
+  MI->setPreInstrSymbol(*MF, Sym1);
+  MI->setPostInstrSymbol(*MF, Sym2);
+  MI->setHeapAllocMarker(*MF, MDN);
+
+  MI->setPostInstrSymbol(*MF, nullptr);
+  ASSERT_TRUE(MI->memoperands().size() == 2);
+  ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
+  ASSERT_FALSE(MI->getPostInstrSymbol());
+  ASSERT_TRUE(MI->getHeapAllocMarker() == MDN);
+
+  MI->setHeapAllocMarker(*MF, nullptr);
+  ASSERT_TRUE(MI->memoperands().size() == 2);
+  ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
+  ASSERT_FALSE(MI->getPostInstrSymbol());
+  ASSERT_FALSE(MI->getHeapAllocMarker());
+
+  MI->setPreInstrSymbol(*MF, nullptr);
+  ASSERT_TRUE(MI->memoperands().size() == 2);
+  ASSERT_FALSE(MI->getPreInstrSymbol());
+  ASSERT_FALSE(MI->getPostInstrSymbol());
+  ASSERT_FALSE(MI->getHeapAllocMarker());
+
+  MI->setMemRefs(*MF, {});
+  ASSERT_TRUE(MI->memoperands_empty());
+  ASSERT_FALSE(MI->getPreInstrSymbol());
+  ASSERT_FALSE(MI->getPostInstrSymbol());
+  ASSERT_FALSE(MI->getHeapAllocMarker());
 }
 
 static_assert(is_trivially_copyable<MCOperand>::value, "trivially copyable");
