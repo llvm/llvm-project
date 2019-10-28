@@ -888,16 +888,20 @@ struct MachineOutliner : public ModulePass {
   /// \param FunctionList A list of functions to be inserted into the module.
   /// \param Mapper Contains the instruction mappings for the module.
   bool outline(Module &M, std::vector<OutlinedFunction> &FunctionList,
-               InstructionMapper &Mapper);
+               InstructionMapper &Mapper,
+               unsigned &OutlinedFunctionNum);
 
   /// Creates a function for \p OF and inserts it into the module.
   MachineFunction *createOutlinedFunction(Module &M, OutlinedFunction &OF,
                                           InstructionMapper &Mapper,
                                           unsigned Name);
 
+  /// Calls 'doOutline()'.
+  bool runOnModule(Module &M) override;
+
   /// Construct a suffix tree on the instructions in \p M and outline repeated
   /// strings from that tree.
-  bool runOnModule(Module &M) override;
+  bool doOutline(Module &M, unsigned &OutlinedFunctionNum);
 
   /// Return a DISubprogram for OF if one exists, and null otherwise. Helper
   /// function for remark emission.
@@ -1190,12 +1194,10 @@ MachineOutliner::createOutlinedFunction(Module &M, OutlinedFunction &OF,
 
 bool MachineOutliner::outline(Module &M,
                               std::vector<OutlinedFunction> &FunctionList,
-                              InstructionMapper &Mapper) {
+                              InstructionMapper &Mapper,
+                              unsigned &OutlinedFunctionNum) {
 
   bool OutlinedSomething = false;
-
-  // Number to append to the current outlined function.
-  unsigned OutlinedFunctionNum = 0;
 
   // Sort by benefit. The most beneficial functions should be outlined first.
   llvm::stable_sort(FunctionList, [](const OutlinedFunction &LHS,
@@ -1427,6 +1429,15 @@ bool MachineOutliner::runOnModule(Module &M) {
   if (M.empty())
     return false;
 
+  // Number to append to the current outlined function.
+  unsigned OutlinedFunctionNum = 0;
+
+  if (!doOutline(M, OutlinedFunctionNum))
+    return false;
+  return true;
+}
+
+bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
   MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
 
   // If the user passed -enable-machine-outliner=always or
@@ -1470,7 +1481,8 @@ bool MachineOutliner::runOnModule(Module &M) {
     initSizeRemarkInfo(M, MMI, FunctionToInstrCount);
 
   // Outline each of the candidates and return true if something was outlined.
-  bool OutlinedSomething = outline(M, FunctionList, Mapper);
+  bool OutlinedSomething =
+      outline(M, FunctionList, Mapper, OutlinedFunctionNum);
 
   // If we outlined something, we definitely changed the MI count of the
   // module. If we've asked for size remarks, then output them.
