@@ -3939,6 +3939,19 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
   return false;
 }
 
+bool SITargetLowering::isFMADLegalForFAddFSub(const SelectionDAG &DAG,
+                                              const SDNode *N) const {
+  // TODO: Check future ftz flag
+  // v_mad_f32/v_mac_f32 do not support denormals.
+  EVT VT = N->getValueType(0);
+  if (VT == MVT::f32)
+    return !Subtarget->hasFP32Denormals();
+  if (VT == MVT::f16)
+    return !Subtarget->hasFP16Denormals() && Subtarget->hasMadF16();
+
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // Custom DAG Lowering Operations
 //===----------------------------------------------------------------------===//
