@@ -1347,11 +1347,9 @@ CompilerType ClangASTContext::GetTypeForDecl(ObjCInterfaceDecl *decl) {
 
 #pragma mark Structure, Unions, Classes
 
-CompilerType ClangASTContext::CreateRecordType(DeclContext *decl_ctx,
-                                               AccessType access_type,
-                                               const char *name, int kind,
-                                               LanguageType language,
-                                               ClangASTMetadata *metadata) {
+CompilerType ClangASTContext::CreateRecordType(
+    DeclContext *decl_ctx, AccessType access_type, const char *name, int kind,
+    LanguageType language, ClangASTMetadata *metadata, bool exports_symbols) {
   ASTContext *ast = getASTContext();
   assert(ast != nullptr);
 
@@ -1402,10 +1400,7 @@ CompilerType ClangASTContext::CreateRecordType(DeclContext *decl_ctx,
     // Anonymous classes is a GNU/MSVC extension that clang supports. It
     // requires the anonymous class be embedded within a class. So the new
     // heuristic verifies this condition.
-    //
-    // FIXME: An unnamed class within a class is also wrongly recognized as an
-    // anonymous struct.
-    if (isa<CXXRecordDecl>(decl_ctx))
+    if (isa<CXXRecordDecl>(decl_ctx) && exports_symbols)
       decl->setAnonymousStructOrUnion(true);
   }
 
@@ -8989,7 +8984,7 @@ void ClangASTContext::DumpFromSymbolFile(Stream &s,
     TypeSP type = type_list.GetTypeAtIndex(i);
 
     if (!symbol_name.empty())
-      if (symbol_name.compare(type->GetName().GetStringRef()) != 0)
+      if (symbol_name != type->GetName().GetStringRef())
         continue;
 
     s << type->GetName().AsCString() << "\n";
