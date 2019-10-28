@@ -409,27 +409,25 @@ Error ELFDumper<ELFT>::dumpRelocation(const RelT *Rel, const Elf_Shdr *SymTab,
   auto SymOrErr = Obj.getRelocationSymbol(Rel, SymTab);
   if (!SymOrErr)
     return SymOrErr.takeError();
+
+  // We have might have a relocation with symbol index 0,
+  // e.g. R_X86_64_NONE or R_X86_64_GOTPC32.
   const Elf_Sym *Sym = *SymOrErr;
+  if (!Sym)
+    return Error::success();
+
   auto StrTabSec = Obj.getSection(SymTab->sh_link);
   if (!StrTabSec)
     return StrTabSec.takeError();
   auto StrTabOrErr = Obj.getStringTable(*StrTabSec);
   if (!StrTabOrErr)
     return StrTabOrErr.takeError();
-  StringRef StrTab = *StrTabOrErr;
 
-  if (Sym) {
-    Expected<StringRef> NameOrErr = getUniquedSymbolName(Sym, StrTab, SymTab);
-    if (!NameOrErr)
-      return NameOrErr.takeError();
-    R.Symbol = NameOrErr.get();
-  } else {
-    // We have some edge cases of relocations without a symbol associated,
-    // e.g. an object containing the invalid (according to the System V
-    // ABI) R_X86_64_NONE reloc. Create a symbol with an empty name instead
-    // of crashing.
-    R.Symbol = "";
-  }
+  Expected<StringRef> NameOrErr =
+      getUniquedSymbolName(Sym, *StrTabOrErr, SymTab);
+  if (!NameOrErr)
+    return NameOrErr.takeError();
+  R.Symbol = NameOrErr.get();
 
   return Error::success();
 }

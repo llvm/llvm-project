@@ -16,10 +16,8 @@
 # CHECK-NEXT:     EntSize: 0x0000000000000018
 # CHECK-NEXT:     Relocations:
 # CHECK-NEXT:       - Offset: 0x0000000000000001
-# CHECK-NEXT:         Symbol: ''
 # CHECK-NEXT:         Type:   0x00000002
 # CHECK-NEXT:       - Offset: 0x0000000000000003
-# CHECK-NEXT:         Symbol: ''
 # CHECK-NEXT:         Type:   0x00000004
 
 --- !ELF
