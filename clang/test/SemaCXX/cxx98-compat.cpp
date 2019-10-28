@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wc++98-compat -verify %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++14 -Wc++98-compat -verify %s -DCXX14COMPAT
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++98-compat -verify %s -DCXX14COMPAT -DCXX17COMPAT
 
 namespace std {
   struct type_info;
@@ -180,12 +181,16 @@ void LocalTemplateArg() {
 struct {} obj_of_unnamed_type; // expected-note {{here}}
 int UnnamedTemplateArg = TemplateFn(obj_of_unnamed_type); // expected-warning {{unnamed type as template argument is incompatible with C++98}}
 
+// FIXME: We do not implement C++98 compatibility warnings for the C++17
+// template argument evaluation rules.
+#ifndef CXX17COMPAT
 namespace RedundantParensInAddressTemplateParam {
   int n;
   template<int*p> struct S {};
   S<(&n)> s; // expected-warning {{redundant parentheses surrounding address non-type template argument are incompatible with C++98}}
   S<(((&n)))> t; // expected-warning {{redundant parentheses surrounding address non-type template argument are incompatible with C++98}}
 }
+#endif
 
 namespace TemplateSpecOutOfScopeNs {
   template<typename T> struct S {};
@@ -299,6 +304,9 @@ namespace LiteralUCNs {
   const wchar_t *s2 = L"bar\u0085"; // expected-warning {{universal character name referring to a control character is incompatible with C++98}}
 }
 
+// FIXME: We do not implement C++98 compatibility warnings for the C++17
+// template argument evaluation rules.
+#ifndef CXX17COMPAT
 namespace NonTypeTemplateArgs {
   template<typename T, T v> struct S {};
   const int k = 5; // expected-note {{here}}
@@ -314,6 +322,7 @@ namespace NullPointerTemplateArg {
   X<(int*)0> x; // expected-warning {{use of null pointer as non-type template argument is incompatible with C++98}}
   Y<(int A::*)0> y; // expected-warning {{use of null pointer as non-type template argument is incompatible with C++98}}
 }
+#endif
 
 namespace PR13480 {
   struct basic_iterator {
@@ -399,4 +408,12 @@ float fsvar = B::v<float>;
 
 #ifdef CXX14COMPAT
 int digit_seps = 123'456; // expected-warning {{digit separators are incompatible with C++ standards before C++14}}
+#endif
+
+#ifdef CXX17COMPAT
+template<class T> struct CTAD {};
+void ctad_test() {
+  CTAD<int> s;
+  CTAD t = s; // expected-warning {{class template argument deduction is incompatible with C++ standards before C++17}}
+}
 #endif
