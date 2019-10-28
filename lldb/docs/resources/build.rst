@@ -1,8 +1,18 @@
-Build
-=====
+Building
+========
 
 .. contents::
    :local:
+
+Getting the Sources
+-------------------
+
+Please refer to the `LLVM Getting Started Guide
+<https://llvm.org/docs/GettingStarted.html#getting-started-with-llvm>`_ for
+general instructions on how to check out the LLVM monorepo, which contains the
+LLDB sources.
+
+Git browser: https://github.com/llvm/llvm-project/tree/master/lldb
 
 Preliminaries
 -------------
