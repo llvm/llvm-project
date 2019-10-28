@@ -600,7 +600,10 @@ bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
   if (ParseOptionalCXXScopeSpecifier(D.SS, nullptr, /*EnteringContext=*/false,
                                      /*MayBePseudoDtor=*/nullptr,
                                      /*IsTypename=*/false,
-                                     /*LastII=*/&LastII))
+                                     /*LastII=*/&LastII,
+                                     /*OnlyNamespace=*/false,
+                                     /*InUsingDeclaration=*/true))
+
     return true;
   if (D.SS.isInvalid())
     return true;

@@ -428,6 +428,48 @@ TEST(CompletionTest, Snippets) {
                      SnippetSuffix("(${1:int i}, ${2:const float f})")));
 }
 
+TEST(CompletionTest, NoSnippetsInUsings) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableSnippets = true;
+  auto Results = completions(
+      R"cpp(
+      namespace ns {
+        int func(int a, int b);
+      }
+
+      using ns::^;
+      )cpp",
+      /*IndexSymbols=*/{}, Opts);
+  EXPECT_THAT(Results.Completions,
+              ElementsAre(AllOf(Named("func"), Labeled("func(int a, int b)"),
+                                SnippetSuffix(""))));
+
+  // Check index completions too.
+  auto Func = func("ns::func");
+  Func.CompletionSnippetSuffix = "(${1:int a}, ${2: int b})";
+  Func.Signature = "(int a, int b)";
+  Func.ReturnType = "void";
+
+  Results = completions(R"cpp(
+      namespace ns {}
+      using ns::^;
+  )cpp",
+                        /*IndexSymbols=*/{Func}, Opts);
+  EXPECT_THAT(Results.Completions,
+              ElementsAre(AllOf(Named("func"), Labeled("func(int a, int b)"),
+                                SnippetSuffix(""))));
+
+  // Check all-scopes completions too.
+  Opts.AllScopes = true;
+  Results = completions(R"cpp(
+      using ^;
+  )cpp",
+                        /*IndexSymbols=*/{Func}, Opts);
+  EXPECT_THAT(Results.Completions,
+              Contains(AllOf(Named("func"), Labeled("ns::func(int a, int b)"),
+                             SnippetSuffix(""))));
+}
+
 TEST(CompletionTest, Kinds) {
   auto Results = completions(
       R"cpp(
