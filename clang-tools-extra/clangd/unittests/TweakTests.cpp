@@ -36,6 +36,7 @@
 #include "gtest/gtest.h"
 #include <cassert>
 #include <string>
+#include <utility>
 #include <vector>
 
 using ::testing::AllOf;
@@ -1054,455 +1055,475 @@ TEST_F(DefineInlineTest, UsingShadowDecls) {
 }
 
 TEST_F(DefineInlineTest, TransformNestedNamespaces) {
-  EXPECT_EQ(apply(R"cpp(
-  namespace a {
-    void bar();
-    namespace b {
-      void baz();
-      namespace c {
-        void aux();
+  auto Test = R"cpp(
+    namespace a {
+      void bar();
+      namespace b {
+        void baz();
+        namespace c {
+          void aux();
+        }
       }
     }
-  }
 
-  void foo();
-  using namespace a;
-  using namespace b;
-  using namespace c;
-  void f^oo() {
-    bar();
-    a::bar();
-
-    baz();
-    b::baz();
-    a::b::baz();
-
-    aux();
-    c::aux();
-    b::c::aux();
-    a::b::c::aux();
-  })cpp"), R"cpp(
-  namespace a {
-    void bar();
-    namespace b {
-      void baz();
-      namespace c {
-        void aux();
-      }
-    }
-  }
-
-  void foo(){
-    a::bar();
-    a::bar();
-
-    a::b::baz();
-    a::b::baz();
-    a::b::baz();
-
-    a::b::c::aux();
-    a::b::c::aux();
-    a::b::c::aux();
-    a::b::c::aux();
-  }
-  using namespace a;
-  using namespace b;
-  using namespace c;
-  )cpp");
-}
-
-TEST_F(DefineInlineTest, TransformUsings) {
-  EXPECT_EQ(apply(R"cpp(
-  namespace a { namespace b { namespace c { void aux(); } } }
-
-  void foo();
-  void f^oo() {
+    void foo();
     using namespace a;
     using namespace b;
     using namespace c;
-    using c::aux;
-    namespace d = c;
-  })cpp"),
-            R"cpp(
-  namespace a { namespace b { namespace c { void aux(); } } }
+    void f^oo() {
+      bar();
+      a::bar();
 
-  void foo(){
+      baz();
+      b::baz();
+      a::b::baz();
+
+      aux();
+      c::aux();
+      b::c::aux();
+      a::b::c::aux();
+    })cpp";
+  auto Expected = R"cpp(
+    namespace a {
+      void bar();
+      namespace b {
+        void baz();
+        namespace c {
+          void aux();
+        }
+      }
+    }
+
+    void foo(){
+      a::bar();
+      a::bar();
+
+      a::b::baz();
+      a::b::baz();
+      a::b::baz();
+
+      a::b::c::aux();
+      a::b::c::aux();
+      a::b::c::aux();
+      a::b::c::aux();
+    }
     using namespace a;
-    using namespace a::b;
-    using namespace a::b::c;
-    using a::b::c::aux;
-    namespace d = a::b::c;
-  }
-  )cpp");
+    using namespace b;
+    using namespace c;
+    )cpp";
+  EXPECT_EQ(apply(Test), Expected);
+}
+
+TEST_F(DefineInlineTest, TransformUsings) {
+  auto Test = R"cpp(
+    namespace a { namespace b { namespace c { void aux(); } } }
+
+    void foo();
+    void f^oo() {
+      using namespace a;
+      using namespace b;
+      using namespace c;
+      using c::aux;
+      namespace d = c;
+    })cpp";
+  auto Expected = R"cpp(
+    namespace a { namespace b { namespace c { void aux(); } } }
+
+    void foo(){
+      using namespace a;
+      using namespace a::b;
+      using namespace a::b::c;
+      using a::b::c::aux;
+      namespace d = a::b::c;
+    }
+    )cpp";
+  EXPECT_EQ(apply(Test), Expected);
 }
 
 TEST_F(DefineInlineTest, TransformDecls) {
-  EXPECT_EQ(apply(R"cpp(
-  void foo();
-  void f^oo() {
-    class Foo {
-    public:
-      void foo();
-      int x;
-      static int y;
-    };
-    Foo::y = 0;
+  auto Test = R"cpp(
+    void foo();
+    void f^oo() {
+      class Foo {
+      public:
+        void foo();
+        int x;
+        static int y;
+      };
+      Foo::y = 0;
 
-    enum En { Zero, One };
-    En x = Zero;
+      enum En { Zero, One };
+      En x = Zero;
 
-    enum class EnClass { Zero, One };
-    EnClass y = EnClass::Zero;
-  })cpp"),
-            R"cpp(
-  void foo(){
-    class Foo {
-    public:
-      void foo();
-      int x;
-      static int y;
-    };
-    Foo::y = 0;
+      enum class EnClass { Zero, One };
+      EnClass y = EnClass::Zero;
+    })cpp";
+  auto Expected = R"cpp(
+    void foo(){
+      class Foo {
+      public:
+        void foo();
+        int x;
+        static int y;
+      };
+      Foo::y = 0;
 
-    enum En { Zero, One };
-    En x = Zero;
+      enum En { Zero, One };
+      En x = Zero;
 
-    enum class EnClass { Zero, One };
-    EnClass y = EnClass::Zero;
-  }
-  )cpp");
+      enum class EnClass { Zero, One };
+      EnClass y = EnClass::Zero;
+    }
+    )cpp";
+  EXPECT_EQ(apply(Test), Expected);
 }
 
 TEST_F(DefineInlineTest, TransformTemplDecls) {
-  EXPECT_EQ(apply(R"cpp(
-  namespace a {
-    template <typename T> class Bar {
-    public:
-      void bar();
-    };
-    template <typename T> T bar;
-    template <typename T> void aux() {}
-  }
+  auto Test = R"cpp(
+    namespace a {
+      template <typename T> class Bar {
+      public:
+        void bar();
+      };
+      template <typename T> T bar;
+      template <typename T> void aux() {}
+    }
 
-  void foo();
+    void foo();
 
-  using namespace a;
-  void f^oo() {
-    bar<Bar<int>>.bar();
-    aux<Bar<int>>();
-  })cpp"),
-            R"cpp(
-  namespace a {
-    template <typename T> class Bar {
-    public:
-      void bar();
-    };
-    template <typename T> T bar;
-    template <typename T> void aux() {}
-  }
+    using namespace a;
+    void f^oo() {
+      bar<Bar<int>>.bar();
+      aux<Bar<int>>();
+    })cpp";
+  auto Expected = R"cpp(
+    namespace a {
+      template <typename T> class Bar {
+      public:
+        void bar();
+      };
+      template <typename T> T bar;
+      template <typename T> void aux() {}
+    }
 
-  void foo(){
-    a::bar<a::Bar<int>>.bar();
-    a::aux<a::Bar<int>>();
-  }
+    void foo(){
+      a::bar<a::Bar<int>>.bar();
+      a::aux<a::Bar<int>>();
+    }
 
-  using namespace a;
-  )cpp");
+    using namespace a;
+    )cpp";
+  EXPECT_EQ(apply(Test), Expected);
 }
 
 TEST_F(DefineInlineTest, TransformMembers) {
-  EXPECT_EQ(apply(R"cpp(
-  class Foo {
-    void foo();
-  };
+  auto Test = R"cpp(
+    class Foo {
+      void foo();
+    };
 
-  void Foo::f^oo() {
-    return;
-  })cpp"),
-            R"cpp(
-  class Foo {
-    void foo(){
-    return;
-  }
-  };
+    void Foo::f^oo() {
+      return;
+    })cpp";
+  auto Expected = R"cpp(
+    class Foo {
+      void foo(){
+      return;
+    }
+    };
 
-  )cpp");
+    )cpp";
+  EXPECT_EQ(apply(Test), Expected);
 
   ExtraFiles["a.h"] = R"cpp(
-  class Foo {
-    void foo();
-  };)cpp";
+    class Foo {
+      void foo();
+    };)cpp";
 
   llvm::StringMap<std::string> EditedFiles;
-  EXPECT_EQ(apply(R"cpp(
-  #include "a.h"
-  void Foo::f^oo() {
-    return;
-  })cpp",
-                  &EditedFiles),
-            R"cpp(
-  #include "a.h"
-  )cpp");
+  Test = R"cpp(
+    #include "a.h"
+    void Foo::f^oo() {
+      return;
+    })cpp";
+  Expected = R"cpp(
+    #include "a.h"
+    )cpp";
+  EXPECT_EQ(apply(Test, &EditedFiles), Expected);
+
+  Expected = R"cpp(
+    class Foo {
+      void foo(){
+      return;
+    }
+    };)cpp";
   EXPECT_THAT(EditedFiles,
-              ElementsAre(FileWithContents(testPath("a.h"),
-                                                    R"cpp(
-  class Foo {
-    void foo(){
-    return;
-  }
-  };)cpp")));
+              ElementsAre(FileWithContents(testPath("a.h"), Expected)));
 }
 
 TEST_F(DefineInlineTest, TransformDependentTypes) {
-  EXPECT_EQ(apply(R"cpp(
-  namespace a {
-    template <typename T> class Bar {};
-  }
+  auto Test = R"cpp(
+    namespace a {
+      template <typename T> class Bar {};
+    }
 
-  template <typename T>
-  void foo();
+    template <typename T>
+    void foo();
 
-  using namespace a;
-  template <typename T>
-  void f^oo() {
-    Bar<T> B;
-    Bar<Bar<T>> q;
-  })cpp"),
-            R"cpp(
-  namespace a {
-    template <typename T> class Bar {};
-  }
+    using namespace a;
+    template <typename T>
+    void f^oo() {
+      Bar<T> B;
+      Bar<Bar<T>> q;
+    })cpp";
+  auto Expected = R"cpp(
+    namespace a {
+      template <typename T> class Bar {};
+    }
 
-  template <typename T>
-  void foo(){
-    a::Bar<T> B;
-    a::Bar<a::Bar<T>> q;
-  }
+    template <typename T>
+    void foo(){
+      a::Bar<T> B;
+      a::Bar<a::Bar<T>> q;
+    }
 
-  using namespace a;
-  )cpp");
+    using namespace a;
+    )cpp";
+  EXPECT_EQ(apply(Test), Expected);
 }
 
 TEST_F(DefineInlineTest, TransformFunctionTempls) {
   // Check we select correct specialization decl.
-  EXPECT_EQ(apply(R"cpp(
-  template <typename T>
-  void foo(T p);
+  std::pair<llvm::StringRef, llvm::StringRef> Cases[] = {
+      {R"cpp(
+          template <typename T>
+          void foo(T p);
 
-  template <>
-  void foo<int>(int p);
+          template <>
+          void foo<int>(int p);
 
-  template <>
-  void foo<char>(char p);
+          template <>
+          void foo<char>(char p);
 
-  template <>
-  void fo^o<int>(int p) {
-    return;
-  })cpp"),
-            R"cpp(
-  template <typename T>
-  void foo(T p);
+          template <>
+          void fo^o<int>(int p) {
+            return;
+          })cpp",
+       R"cpp(
+          template <typename T>
+          void foo(T p);
 
-  template <>
-  void foo<int>(int p){
-    return;
-  }
+          template <>
+          void foo<int>(int p){
+            return;
+          }
 
-  template <>
-  void foo<char>(char p);
+          template <>
+          void foo<char>(char p);
 
-  )cpp");
+          )cpp"},
+      {// Make sure we are not selecting the first specialization all the time.
+       R"cpp(
+          template <typename T>
+          void foo(T p);
 
-  // Make sure we are not selecting the first specialization all the time.
-  EXPECT_EQ(apply(R"cpp(
-  template <typename T>
-  void foo(T p);
+          template <>
+          void foo<int>(int p);
 
-  template <>
-  void foo<int>(int p);
+          template <>
+          void foo<char>(char p);
 
-  template <>
-  void foo<char>(char p);
+          template <>
+          void fo^o<char>(char p) {
+            return;
+          })cpp",
+       R"cpp(
+          template <typename T>
+          void foo(T p);
 
-  template <>
-  void fo^o<char>(char p) {
-    return;
-  })cpp"),
-            R"cpp(
-  template <typename T>
-  void foo(T p);
+          template <>
+          void foo<int>(int p);
 
-  template <>
-  void foo<int>(int p);
+          template <>
+          void foo<char>(char p){
+            return;
+          }
 
-  template <>
-  void foo<char>(char p){
-    return;
-  }
+          )cpp"},
+      {R"cpp(
+          template <typename T>
+          void foo(T p);
 
-  )cpp");
+          template <>
+          void foo<int>(int p);
 
-  EXPECT_EQ(apply(R"cpp(
-  template <typename T>
-  void foo(T p);
+          template <typename T>
+          void fo^o(T p) {
+            return;
+          })cpp",
+       R"cpp(
+          template <typename T>
+          void foo(T p){
+            return;
+          }
 
-  template <>
-  void foo<int>(int p);
+          template <>
+          void foo<int>(int p);
 
-  template <typename T>
-  void fo^o(T p) {
-    return;
-  })cpp"),
-            R"cpp(
-  template <typename T>
-  void foo(T p){
-    return;
-  }
-
-  template <>
-  void foo<int>(int p);
-
-  )cpp");
+          )cpp"},
+  };
+  for(const auto &Case : Cases)
+    EXPECT_EQ(apply(Case.first), Case.second) << Case.first;
 }
 
 TEST_F(DefineInlineTest, TransformTypeLocs) {
-  EXPECT_EQ(apply(R"cpp(
-  namespace a {
-    template <typename T> class Bar {
-    public:
-      template <typename Q> class Baz {};
-    };
-    class Foo{};
-  }
+  auto Test = R"cpp(
+    namespace a {
+      template <typename T> class Bar {
+      public:
+        template <typename Q> class Baz {};
+      };
+      class Foo{};
+    }
 
-  void foo();
+    void foo();
 
-  using namespace a;
-  void f^oo() {
-    Bar<int> B;
-    Foo foo;
-    a::Bar<Bar<int>>::Baz<Bar<int>> q;
-  })cpp"),
-            R"cpp(
-  namespace a {
-    template <typename T> class Bar {
-    public:
-      template <typename Q> class Baz {};
-    };
-    class Foo{};
-  }
+    using namespace a;
+    void f^oo() {
+      Bar<int> B;
+      Foo foo;
+      a::Bar<Bar<int>>::Baz<Bar<int>> q;
+    })cpp";
+  auto Expected = R"cpp(
+    namespace a {
+      template <typename T> class Bar {
+      public:
+        template <typename Q> class Baz {};
+      };
+      class Foo{};
+    }
 
-  void foo(){
-    a::Bar<int> B;
-    a::Foo foo;
-    a::Bar<a::Bar<int>>::Baz<a::Bar<int>> q;
-  }
+    void foo(){
+      a::Bar<int> B;
+      a::Foo foo;
+      a::Bar<a::Bar<int>>::Baz<a::Bar<int>> q;
+    }
 
-  using namespace a;
-  )cpp");
+    using namespace a;
+    )cpp";
+  EXPECT_EQ(apply(Test), Expected);
 }
 
 TEST_F(DefineInlineTest, TransformDeclRefs) {
-  EXPECT_EQ(apply(R"cpp(
-  namespace a {
-    template <typename T> class Bar {
-    public:
-      void foo();
-      static void bar();
-      int x;
-      static int y;
-    };
-    void bar();
-    void test();
-  }
+  auto Test =R"cpp(
+    namespace a {
+      template <typename T> class Bar {
+      public:
+        void foo();
+        static void bar();
+        int x;
+        static int y;
+      };
+      void bar();
+      void test();
+    }
 
-  void foo();
-  using namespace a;
-  void f^oo() {
-    a::Bar<int> B;
-    B.foo();
-    a::bar();
-    Bar<Bar<int>>::bar();
-    a::Bar<int>::bar();
-    B.x = Bar<int>::y;
-    Bar<int>::y = 3;
-    bar();
-    a::test();
-  })cpp"),
-            R"cpp(
-  namespace a {
-    template <typename T> class Bar {
-    public:
-      void foo();
-      static void bar();
-      int x;
-      static int y;
-    };
-    void bar();
-    void test();
-  }
+    void foo();
+    using namespace a;
+    void f^oo() {
+      a::Bar<int> B;
+      B.foo();
+      a::bar();
+      Bar<Bar<int>>::bar();
+      a::Bar<int>::bar();
+      B.x = Bar<int>::y;
+      Bar<int>::y = 3;
+      bar();
+      a::test();
+    })cpp";
+  auto Expected = R"cpp(
+    namespace a {
+      template <typename T> class Bar {
+      public:
+        void foo();
+        static void bar();
+        int x;
+        static int y;
+      };
+      void bar();
+      void test();
+    }
 
-  void foo(){
-    a::Bar<int> B;
-    B.foo();
-    a::bar();
-    a::Bar<a::Bar<int>>::bar();
-    a::Bar<int>::bar();
-    B.x = a::Bar<int>::y;
-    a::Bar<int>::y = 3;
-    a::bar();
-    a::test();
-  }
-  using namespace a;
-  )cpp");
+    void foo(){
+      a::Bar<int> B;
+      B.foo();
+      a::bar();
+      a::Bar<a::Bar<int>>::bar();
+      a::Bar<int>::bar();
+      B.x = a::Bar<int>::y;
+      a::Bar<int>::y = 3;
+      a::bar();
+      a::test();
+    }
+    using namespace a;
+    )cpp";
+  EXPECT_EQ(apply(Test), Expected);
 }
 
 TEST_F(DefineInlineTest, StaticMembers) {
-  EXPECT_EQ(apply(R"cpp(
+  auto Test = R"cpp(
     namespace ns { class X { static void foo(); void bar(); }; }
     void ns::X::b^ar() {
       foo();
-    })cpp"), R"cpp(
+    })cpp";
+  auto Expected = R"cpp(
     namespace ns { class X { static void foo(); void bar(){
       foo();
     } }; }
-    )cpp");
+    )cpp";
+  EXPECT_EQ(apply(Test), Expected);
 }
 
 TEST_F(DefineInlineTest, TransformInlineNamespaces) {
-  EXPECT_EQ(apply(R"cpp(
+  auto Test = R"cpp(
     namespace a { inline namespace b { namespace { struct Foo{}; } } }
     void foo();
 
     using namespace a;
-    void ^foo() {Foo foo;})cpp"), R"cpp(
+    void ^foo() {Foo foo;})cpp";
+  auto Expected = R"cpp(
     namespace a { inline namespace b { namespace { struct Foo{}; } } }
     void foo(){a::Foo foo;}
 
     using namespace a;
-    )cpp");
+    )cpp";
+  EXPECT_EQ(apply(Test), Expected);
 }
 
 TEST_F(DefineInlineTest, TokensBeforeSemicolon) {
-  EXPECT_EQ(apply(R"cpp(
-  void foo()    /*Comment -_-*/ /*Com 2*/ ;
-  void fo^o() { return ; })cpp"),
-            R"cpp(
-  void foo()    /*Comment -_-*/ /*Com 2*/ { return ; }
-  )cpp");
+  std::pair<llvm::StringRef, llvm::StringRef> Cases[] = {
+      {R"cpp(
+          void foo()    /*Comment -_-*/ /*Com 2*/ ;
+          void fo^o() { return ; })cpp",
+       R"cpp(
+          void foo()    /*Comment -_-*/ /*Com 2*/ { return ; }
+          )cpp"},
 
-  EXPECT_EQ(apply(R"cpp(
-  void foo();
-  void fo^o() { return ; })cpp"),
-            R"cpp(
-  void foo(){ return ; }
-  )cpp");
+      {R"cpp(
+          void foo();
+          void fo^o() { return ; })cpp",
+       R"cpp(
+          void foo(){ return ; }
+          )cpp"},
 
-  EXPECT_EQ(apply(R"cpp(
-  #define SEMI ;
-  void foo() SEMI
-  void fo^o() { return ; })cpp"),
-            "fail: Couldn't find semicolon for target declaration.");
+      {R"cpp(
+          #define SEMI ;
+          void foo() SEMI
+          void fo^o() { return ; })cpp",
+       "fail: Couldn't find semicolon for target declaration."},
+  };
+  for(const auto& Case: Cases)
+    EXPECT_EQ(apply(Case.first), Case.second) << Case.first;
 }
 
 TEST_F(DefineInlineTest, HandleMacros) {
@@ -1516,47 +1537,51 @@ TEST_F(DefineInlineTest, HandleMacros) {
     void foo();
     [[BODY]])cpp");
 
-  // We don't qualify declarations coming from macros.
-  EXPECT_EQ(apply(R"cpp(
-    #define BODY Foo
-    namespace a { class Foo{}; }
-    void foo();
-    using namespace a;
-    void f^oo(){BODY})cpp"),
-            R"cpp(
-    #define BODY Foo
-    namespace a { class Foo{}; }
-    void foo(){BODY}
-    using namespace a;
-    )cpp");
+  std::pair<llvm::StringRef, llvm::StringRef> Cases[] = {
+      // We don't qualify declarations coming from macros.
+      {R"cpp(
+          #define BODY Foo
+          namespace a { class Foo{}; }
+          void foo();
+          using namespace a;
+          void f^oo(){BODY})cpp",
+       R"cpp(
+          #define BODY Foo
+          namespace a { class Foo{}; }
+          void foo(){BODY}
+          using namespace a;
+          )cpp"},
 
-  // Macro is not visible at declaration location, but we proceed.
-  EXPECT_EQ(apply(R"cpp(
-    void foo();
-    #define BODY return;
-    void f^oo(){BODY})cpp"),
-            R"cpp(
-    void foo(){BODY}
-    #define BODY return;
-    )cpp");
+      // Macro is not visible at declaration location, but we proceed.
+      {R"cpp(
+          void foo();
+          #define BODY return;
+          void f^oo(){BODY})cpp",
+       R"cpp(
+          void foo(){BODY}
+          #define BODY return;
+          )cpp"},
 
-  EXPECT_EQ(apply(R"cpp(
-    #define TARGET void foo()
-    TARGET;
-    void f^oo(){ return; })cpp"),
-            R"cpp(
-    #define TARGET void foo()
-    TARGET{ return; }
-    )cpp");
+      {R"cpp(
+          #define TARGET void foo()
+          TARGET;
+          void f^oo(){ return; })cpp",
+       R"cpp(
+          #define TARGET void foo()
+          TARGET{ return; }
+          )cpp"},
 
-  EXPECT_EQ(apply(R"cpp(
-    #define TARGET foo
-    void TARGET();
-    void f^oo(){ return; })cpp"),
-            R"cpp(
-    #define TARGET foo
-    void TARGET(){ return; }
-    )cpp");
+      {R"cpp(
+          #define TARGET foo
+          void TARGET();
+          void f^oo(){ return; })cpp",
+       R"cpp(
+          #define TARGET foo
+          void TARGET(){ return; }
+          )cpp"},
+  };
+  for(const auto& Case: Cases)
+    EXPECT_EQ(apply(Case.first), Case.second) << Case.first;
 }
 
 } // namespace
