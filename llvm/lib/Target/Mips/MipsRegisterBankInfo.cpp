@@ -539,14 +539,12 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                                           &Mips::ValueMappings[Mips::GPRIdx]});
     MappingID = CustomMappingID;
     break;
-  case G_FSQRT:
-    OperandsMapping = getFprbMapping(Op0Size);
-    break;
   case G_FADD:
   case G_FSUB:
   case G_FMUL:
   case G_FDIV:
   case G_FABS:
+  case G_FSQRT:
     OperandsMapping = getFprbMapping(Op0Size);
     if (Op0Size == 128)
       OperandsMapping = getMSAMapping(MF);
