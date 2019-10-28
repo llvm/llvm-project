@@ -37,6 +37,10 @@ bool canHighlightName(DeclarationName Name) {
 
 llvm::Optional<HighlightingKind> kindForType(const Type *TP);
 llvm::Optional<HighlightingKind> kindForDecl(const NamedDecl *D) {
+  if (auto *USD = dyn_cast<UsingShadowDecl>(D)) {
+    if (auto *Target = USD->getTargetDecl())
+      D = Target;
+  }
   if (auto *TD = dyn_cast<TemplateDecl>(D)) {
     if (auto *Templated = TD->getTemplatedDecl())
       D = Templated;
@@ -99,11 +103,10 @@ llvm::Optional<HighlightingKind> kindForType(const Type *TP) {
     return kindForDecl(TD);
   return llvm::None;
 }
-// Given a set of candidate declarations for an unresolved name,
-// if the declarations all have the same highlighting kind, return
-// that highlighting kind, otherwise return None.
-llvm::Optional<HighlightingKind>
-kindForCandidateDecls(llvm::iterator_range<UnresolvedSetIterator> Decls) {
+// Given a set of candidate declarations, if the declarations all have the same
+// highlighting kind, return that highlighting kind, otherwise return None.
+template <typename IteratorRange>
+llvm::Optional<HighlightingKind> kindForCandidateDecls(IteratorRange Decls) {
   llvm::Optional<HighlightingKind> Result;
   for (NamedDecl *Decl : Decls) {
     auto Kind = kindForDecl(Decl);
@@ -193,6 +196,12 @@ public:
   bool VisitNamedDecl(NamedDecl *ND) {
     if (canHighlightName(ND->getDeclName()))
       addToken(ND->getLocation(), ND);
+    return true;
+  }
+
+  bool VisitUsingDecl(UsingDecl *UD) {
+    if (auto K = kindForCandidateDecls(UD->shadows()))
+      addToken(UD->getLocation(), *K);
     return true;
   }
 
