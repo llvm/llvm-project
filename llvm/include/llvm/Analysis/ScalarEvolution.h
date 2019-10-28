@@ -1213,6 +1213,9 @@ private:
       Predicates.insert(P);
     }
 
+    /// Construct either an exact exit limit from a constant, or an unknown
+    /// one from a SCEVCouldNotCompute.  No other types of SCEVs are allowed
+    /// as arguments and asserts enforce that internally.
     /*implicit*/ ExitLimit(const SCEV *E);
 
     ExitLimit(
