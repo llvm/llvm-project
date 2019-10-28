@@ -435,35 +435,6 @@ public:
   }
 };
 
-struct ExitLimitQuery {
-  ExitLimitQuery(const Loop *L, BasicBlock *ExitingBlock, bool AllowPredicates)
-      : L(L), ExitingBlock(ExitingBlock), AllowPredicates(AllowPredicates) {}
-
-  const Loop *L;
-  BasicBlock *ExitingBlock;
-  bool AllowPredicates;
-};
-
-template <> struct DenseMapInfo<ExitLimitQuery> {
-  static inline ExitLimitQuery getEmptyKey() {
-    return ExitLimitQuery(nullptr, nullptr, true);
-  }
-
-  static inline ExitLimitQuery getTombstoneKey() {
-    return ExitLimitQuery(nullptr, nullptr, false);
-  }
-
-  static unsigned getHashValue(ExitLimitQuery Val) {
-    return hash_combine(hash_combine(Val.L, Val.ExitingBlock),
-                        Val.AllowPredicates);
-  }
-
-  static bool isEqual(ExitLimitQuery LHS, ExitLimitQuery RHS) {
-    return LHS.L == RHS.L && LHS.ExitingBlock == RHS.ExitingBlock &&
-           LHS.AllowPredicates == RHS.AllowPredicates;
-  }
-};
-
 /// The main scalar evolution driver. Because client code (intentionally)
 /// can't do much with the SCEV objects directly, they must ask this class
 /// for services.
