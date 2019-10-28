@@ -1,4 +1,3 @@
-; RUN: llc < %s -mtriple=x86_64-linux -remarks-section -pass-remarks-output=%/t.yaml | FileCheck -DPATH=%/t.yaml %s
 ; RUN: llc < %s -mtriple=x86_64-darwin -remarks-section -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN -DPATH=%/t.yaml %s
 ; RUN: llc < %s -mtriple=x86_64-darwin --pass-remarks-format=yaml-strtab -remarks-section -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN-STRTAB -DPATH=%/t.yaml %s
 
@@ -7,11 +6,6 @@
 ; RUN: llc < %s -mtriple=x86_64-darwin --pass-remarks-format=bitstream -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN-DEFAULT-BITSTREAM %s
 ; RUN: llc < %s -mtriple=x86_64-darwin --pass-remarks-format=bitstream -remarks-section=false -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN-OVERRIDE-BITSTREAM %s
 ; RUN: llc < %s -mtriple=x86_64-darwin --pass-remarks-format=yaml -remarks-section=true -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN-OVERRIDE-YAML %s
-
-; CHECK-LABEL: func1:
-
-; CHECK: .section .remarks,"e",@progbits
-; CHECK-NEXT: .byte
 
 ; CHECK-DARWIN: .section __LLVM,__remarks,regular,debug
 ; CHECK-DARWIN-NEXT: .byte
