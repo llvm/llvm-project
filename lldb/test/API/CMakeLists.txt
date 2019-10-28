@@ -65,7 +65,7 @@ list(APPEND LLDB_TEST_COMMON_ARGS
   --executable ${LLDB_TEST_EXECUTABLE}
   --dsymutil ${LLDB_TEST_DSYMUTIL}
   --filecheck ${LLDB_TEST_FILECHECK}
-  -C ${LLDB_TEST_C_COMPILER}
+  --compiler ${LLDB_TEST_COMPILER}
   ${SWIFT_TEST_ARGS}
   )
 

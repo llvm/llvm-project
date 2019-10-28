@@ -186,8 +186,7 @@ suite.
 ::
 
   > cmake -G Ninja \
-      -DLLDB_TEST_C_COMPILER=<path to C compiler> \
-      -DLLDB_TEST_CXX_COMPILER=<path to C++ compiler> \
+      -DLLDB_TEST_COMPILER=<path to C compiler> \
       <path to root of llvm source tree>
 
 It is strongly recommend to use a release build for the compiler to speed up
@@ -227,7 +226,7 @@ Sample command line:
   > cmake -G Ninja^
       -DLLDB_TEST_DEBUG_TEST_CRASHES=1^
       -DPYTHON_HOME=C:\Python35^
-      -DLLDB_TEST_C_COMPILER=d:\src\llvmbuild\ninja_release\bin\clang.exe^
+      -DLLDB_TEST_COMPILER=d:\src\llvmbuild\ninja_release\bin\clang.exe^
       <path to root of llvm source tree>
 
 
