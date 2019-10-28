@@ -49,11 +49,15 @@ void MachineDominatorTree::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool MachineDominatorTree::runOnMachineFunction(MachineFunction &F) {
+  calculate(F);
+  return false;
+}
+
+void MachineDominatorTree::calculate(MachineFunction &F) {
   CriticalEdgesToSplit.clear();
   NewBBs.clear();
   DT.reset(new DomTreeBase<MachineBasicBlock>());
   DT->recalculate(F);
-  return false;
 }
 
 MachineDominatorTree::MachineDominatorTree()
