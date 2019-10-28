@@ -13,7 +13,7 @@
 #define _TARGET_IMPL_H_
 
 #include <cuda.h>
-#include <stdint.h>
+#include "nvptx_interface.h"
 
 #define INLINE __forceinline__ __device__
 #define NOINLINE __noinline__ __device__
