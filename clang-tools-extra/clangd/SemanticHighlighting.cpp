@@ -49,7 +49,7 @@ llvm::Optional<HighlightingKind> kindForDecl(const NamedDecl *D) {
     return HighlightingKind::Typedef;
   }
   // We highlight class decls, constructor decls and destructor decls as
-  // `Class` type. The destructor decls are handled in `VisitTypeLoc` (we
+  // `Class` type. The destructor decls are handled in `VisitTagTypeLoc` (we
   // will visit a TypeLoc where the underlying Type is a CXXRecordDecl).
   if (auto *RD = llvm::dyn_cast<RecordDecl>(D)) {
     // We don't want to highlight lambdas like classes.
@@ -214,25 +214,27 @@ public:
     return true;
   }
 
-  bool WalkUpFromTagTypeLoc(TagTypeLoc L) {
+  bool VisitTagTypeLoc(TagTypeLoc L) {
     if (L.isDefinition())
       return true; // Definition will be highligthed by VisitNamedDecl.
-    return RecursiveASTVisitor::WalkUpFromTagTypeLoc(L);
-  }
-
-  bool WalkUpFromElaboratedTypeLoc(ElaboratedTypeLoc L) {
-    // Avoid highlighting 'struct' or 'enum' keywords.
+    if (auto K = kindForType(L.getTypePtr()))
+      addToken(L.getBeginLoc(), *K);
     return true;
   }
 
-  bool WalkUpFromDependentNameTypeLoc(DependentNameTypeLoc L) {
+  bool VisitDecltypeTypeLoc(DecltypeTypeLoc L) {
+    if (auto K = kindForType(L.getTypePtr()))
+      addToken(L.getBeginLoc(), *K);
+    return true;
+  }
+
+  bool VisitDependentNameTypeLoc(DependentNameTypeLoc L) {
     addToken(L.getNameLoc(), HighlightingKind::DependentType);
     return true;
   }
 
-  bool VisitTypeLoc(TypeLoc TL) {
-    if (auto K = kindForType(TL.getTypePtr()))
-      addToken(TL.getBeginLoc(), *K);
+  bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
+    addToken(TL.getBeginLoc(), HighlightingKind::TemplateParameter);
     return true;
   }
 
