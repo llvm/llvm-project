@@ -7096,8 +7096,40 @@ bool Sema::CheckExplicitlyDefaultedComparison(FunctionDecl *FD,
   //   A defaulted comparison operator function for class C is defined as
   //   deleted if any non-static data member of C is of reference type or C is
   //   a union-like class.
-  // FIXME: Applying this to cases other than == and <=> is unreasonable.
-  // FIXME: Implement.
+  llvm::SmallVector<CXXRecordDecl*, 4> Classes(1, RD);
+  FieldDecl *ReferenceMember = nullptr;
+  bool UnionLike = RD->isUnion();
+  while (!Classes.empty()) {
+    if (Classes.back()->isUnion())
+      UnionLike = true;
+    for (FieldDecl *FD : Classes.pop_back_val()->fields()) {
+      if (FD->getType()->isReferenceType())
+        ReferenceMember = FD;
+      if (FD->isAnonymousStructOrUnion())
+        Classes.push_back(FD->getType()->getAsCXXRecordDecl());
+    }
+  }
+  // For non-memberwise comparisons, this rule is unjustified, so we permit
+  // those cases as an extension.
+  bool Memberwise = DCK == DefaultedComparisonKind::Equal ||
+                    DCK == DefaultedComparisonKind::ThreeWay;
+  if (ReferenceMember) {
+    Diag(FD->getLocation(),
+         Memberwise ? diag::err_defaulted_comparison_reference_member
+                    : diag::ext_defaulted_comparison_reference_member)
+        << FD << RD;
+    Diag(ReferenceMember->getLocation(), diag::note_reference_member)
+        << ReferenceMember;
+  } else if (UnionLike) {
+    // If the class actually has no variant members, this rule similarly
+    // is unjustified, so we permit those cases too.
+    Diag(FD->getLocation(),
+         !Memberwise ? diag::ext_defaulted_comparison_union
+                     : !RD->hasVariantMembers()
+                           ? diag::ext_defaulted_comparison_empty_union
+                           : diag::err_defaulted_comparison_union)
+        << FD << RD->isUnion() << RD;
+  }
 
   // C++2a [class.eq]p1, [class.rel]p1:
   //   A [defaulted comparison other than <=>] shall have a declared return
@@ -7122,7 +7154,8 @@ bool Sema::CheckExplicitlyDefaultedComparison(FunctionDecl *FD,
   //   the requirements for a constexpr function.
   // FIXME: Apply this rule to all defaulted comparisons. The only way this
   // can fail is if the return type of a defaulted operator<=> is not a literal
-  // type.
+  // type. We should additionally consider whether any of the operations
+  // performed by the comparison invokes a non-constexpr function.
   return false;
 }
 
