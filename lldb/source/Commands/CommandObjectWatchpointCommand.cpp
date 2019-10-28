@@ -43,12 +43,8 @@ static constexpr OptionEnumValues ScriptOptionEnum() {
 }
 
 static constexpr OptionDefinition g_watchpoint_command_add_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1,   false, "one-liner",       'o', OptionParser::eRequiredArgument, nullptr, {},                 0, eArgTypeOneLiner,       "Specify a one-line watchpoint command inline. Be sure to surround it with quotes." },
-  { LLDB_OPT_SET_ALL, false, "stop-on-error",   'e', OptionParser::eRequiredArgument, nullptr, {},                 0, eArgTypeBoolean,        "Specify whether watchpoint command execution should terminate on error." },
-  { LLDB_OPT_SET_ALL, false, "script-type",     's', OptionParser::eRequiredArgument, nullptr, ScriptOptionEnum(), 0, eArgTypeNone,           "Specify the language for the commands - if none is specified, the lldb command interpreter will be used." },
-  { LLDB_OPT_SET_2,   false, "python-function", 'F', OptionParser::eRequiredArgument, nullptr, {},                 0, eArgTypePythonFunction, "Give the name of a Python function to run as command for this watchpoint. Be sure to give a module name if appropriate." }
-    // clang-format on
+#define LLDB_OPTIONS_watchpoint_command_add
+#include "CommandOptions.inc"
 };
 
 class CommandObjectWatchpointCommandAdd : public CommandObjectParsed,
