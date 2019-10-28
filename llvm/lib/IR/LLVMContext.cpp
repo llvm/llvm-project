@@ -19,9 +19,10 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/RemarkStreamer.h"
+#include "llvm/Remarks/RemarkStreamer.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -142,15 +143,26 @@ uint64_t LLVMContext::getDiagnosticsHotnessThreshold() const {
   return pImpl->DiagnosticsHotnessThreshold;
 }
 
-RemarkStreamer *LLVMContext::getRemarkStreamer() {
-  return pImpl->RemarkDiagStreamer.get();
+remarks::RemarkStreamer *LLVMContext::getMainRemarkStreamer() {
+  return pImpl->MainRemarkStreamer.get();
 }
-const RemarkStreamer *LLVMContext::getRemarkStreamer() const {
-  return const_cast<LLVMContext *>(this)->getRemarkStreamer();
+const remarks::RemarkStreamer *LLVMContext::getMainRemarkStreamer() const {
+  return const_cast<LLVMContext *>(this)->getMainRemarkStreamer();
 }
-void LLVMContext::setRemarkStreamer(
-    std::unique_ptr<RemarkStreamer> RemarkStreamer) {
-  pImpl->RemarkDiagStreamer = std::move(RemarkStreamer);
+void LLVMContext::setMainRemarkStreamer(
+    std::unique_ptr<remarks::RemarkStreamer> RemarkStreamer) {
+  pImpl->MainRemarkStreamer = std::move(RemarkStreamer);
+}
+
+LLVMRemarkStreamer *LLVMContext::getLLVMRemarkStreamer() {
+  return pImpl->LLVMRemarkStreamer.get();
+}
+const LLVMRemarkStreamer *LLVMContext::getLLVMRemarkStreamer() const {
+  return const_cast<LLVMContext *>(this)->getLLVMRemarkStreamer();
+}
+void LLVMContext::setLLVMRemarkStreamer(
+    std::unique_ptr<LLVMRemarkStreamer> RemarkStreamer) {
+  pImpl->LLVMRemarkStreamer = std::move(RemarkStreamer);
 }
 
 DiagnosticHandler::DiagnosticHandlerTy
@@ -214,7 +226,7 @@ LLVMContext::getDiagnosticMessagePrefix(DiagnosticSeverity Severity) {
 
 void LLVMContext::diagnose(const DiagnosticInfo &DI) {
   if (auto *OptDiagBase = dyn_cast<DiagnosticInfoOptimizationBase>(&DI))
-    if (RemarkStreamer *RS = getRemarkStreamer())
+    if (LLVMRemarkStreamer *RS = getLLVMRemarkStreamer())
       RS->emit(*OptDiagBase);
 
   // If there is a report handler, use it.

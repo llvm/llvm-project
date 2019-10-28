@@ -35,8 +35,8 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/RemarkStreamer.h"
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
@@ -1245,11 +1245,17 @@ public:
   LLVMContext::InlineAsmDiagHandlerTy InlineAsmDiagHandler = nullptr;
   void *InlineAsmDiagContext = nullptr;
 
+  /// The main remark streamer used by all the other streamers (e.g. IR, MIR,
+  /// frontends, etc.). This should only be used by the specific streamers, and
+  /// never directly.
+  std::unique_ptr<remarks::RemarkStreamer> MainRemarkStreamer;
+
   std::unique_ptr<DiagnosticHandler> DiagHandler;
   bool RespectDiagnosticFilters = false;
   bool DiagnosticsHotnessRequested = false;
   uint64_t DiagnosticsHotnessThreshold = 0;
-  std::unique_ptr<RemarkStreamer> RemarkDiagStreamer;
+  /// The specialized remark streamer used by LLVM's OptimizationRemarkEmitter.
+  std::unique_ptr<LLVMRemarkStreamer> LLVMRemarkStreamer;
 
   LLVMContext::YieldCallbackTy YieldCallback = nullptr;
   void *YieldOpaqueHandle = nullptr;

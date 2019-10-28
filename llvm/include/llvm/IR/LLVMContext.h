@@ -34,8 +34,12 @@ template <typename T> class SmallVectorImpl;
 class SMDiagnostic;
 class StringRef;
 class Twine;
-class RemarkStreamer;
+class LLVMRemarkStreamer;
 class raw_ostream;
+
+namespace remarks {
+class RemarkStreamer;
+};
 
 namespace SyncScope {
 
@@ -218,23 +222,27 @@ public:
   /// included in optimization diagnostics.
   void setDiagnosticsHotnessThreshold(uint64_t Threshold);
 
-  /// Return the streamer used by the backend to save remark diagnostics. If it
-  /// does not exist, diagnostics are not saved in a file but only emitted via
-  /// the diagnostic handler.
-  RemarkStreamer *getRemarkStreamer();
-  const RemarkStreamer *getRemarkStreamer() const;
+  /// The "main remark streamer" used by all the specialized remark streamers.
+  /// This streamer keeps generic remark metadata in memory throughout the life
+  /// of the LLVMContext. This metadata may be emitted in a section in object
+  /// files depending on the format requirements.
+  ///
+  /// All specialized remark streamers should convert remarks to
+  /// llvm::remarks::Remark and emit them through this streamer.
+  remarks::RemarkStreamer *getMainRemarkStreamer();
+  const remarks::RemarkStreamer *getMainRemarkStreamer() const;
+  void setMainRemarkStreamer(
+      std::unique_ptr<remarks::RemarkStreamer> LLVMRemarkStreamer);
 
-  /// Set the diagnostics output used for optimization diagnostics.
-  /// This filename may be embedded in a section for tools to find the
-  /// diagnostics whenever they're needed.
+  /// The "LLVM remark streamer" used by LLVM to serialize remark diagnostics
+  /// comming from IR and MIR passes.
   ///
-  /// If a remark streamer is already set, it will be replaced with
-  /// \p RemarkStreamer.
-  ///
-  /// By default, diagnostics are not saved in a file but only emitted via the
-  /// diagnostic handler.  Even if an output file is set, the handler is invoked
-  /// for each diagnostic message.
-  void setRemarkStreamer(std::unique_ptr<RemarkStreamer> RemarkStreamer);
+  /// If it does not exist, diagnostics are not saved in a file but only emitted
+  /// via the diagnostic handler.
+  LLVMRemarkStreamer *getLLVMRemarkStreamer();
+  const LLVMRemarkStreamer *getLLVMRemarkStreamer() const;
+  void
+  setLLVMRemarkStreamer(std::unique_ptr<LLVMRemarkStreamer> LLVMRemarkStreamer);
 
   /// Get the prefix that should be printed in front of a diagnostic of
   ///        the given \p Severity
