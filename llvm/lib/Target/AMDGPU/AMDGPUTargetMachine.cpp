@@ -1151,6 +1151,8 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
 
   MFI->Mode.IEEE = YamlMFI.Mode.IEEE;
   MFI->Mode.DX10Clamp = YamlMFI.Mode.DX10Clamp;
+  MFI->Mode.FP32Denormals = YamlMFI.Mode.FP32Denormals;
+  MFI->Mode.FP64FP16Denormals = YamlMFI.Mode.FP64FP16Denormals;
 
   return false;
 }
