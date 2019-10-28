@@ -168,51 +168,6 @@ bool ValueObjectVariable::UpdateValue() {
 
       Process *process = exe_ctx.GetProcessPtr();
       const bool process_is_alive = process && process->IsAlive();
-      const uint32_t type_info = compiler_type.GetTypeInfo();
-      const bool is_pointer_or_ref =
-          (type_info & (lldb::eTypeIsPointer | lldb::eTypeIsReference)) != 0;
-
-      switch (value_type) {
-      case Value::eValueTypeFileAddress:
-        // If this type is a pointer, then its children will be considered load
-        // addresses if the pointer or reference is dereferenced, but only if
-        // the process is alive.
-        //
-        // There could be global variables like in the following code:
-        // struct LinkedListNode { Foo* foo; LinkedListNode* next; };
-        // Foo g_foo1;
-        // Foo g_foo2;
-        // LinkedListNode g_second_node = { &g_foo2, NULL };
-        // LinkedListNode g_first_node = { &g_foo1, &g_second_node };
-        //
-        // When we aren't running, we should be able to look at these variables
-        // using the "target variable" command. Children of the "g_first_node"
-        // always will be of the same address type as the parent. But children
-        // of the "next" member of LinkedListNode will become load addresses if
-        // we have a live process, or remain what a file address if it what a
-        // file address.
-        if (process_is_alive && is_pointer_or_ref)
-          SetAddressTypeOfChildren(eAddressTypeLoad);
-        else
-          SetAddressTypeOfChildren(eAddressTypeFile);
-        break;
-      case Value::eValueTypeHostAddress:
-        // Same as above for load addresses, except children of pointer or refs
-        // are always load addresses. Host addresses are used to store freeze
-        // dried variables. If this type is a struct, the entire struct
-        // contents will be copied into the heap of the
-        // LLDB process, but we do not currently follow any pointers.
-        if (is_pointer_or_ref)
-          SetAddressTypeOfChildren(eAddressTypeLoad);
-        else
-          SetAddressTypeOfChildren(eAddressTypeHost);
-        break;
-      case Value::eValueTypeLoadAddress:
-      case Value::eValueTypeScalar:
-      case Value::eValueTypeVector:
-        SetAddressTypeOfChildren(eAddressTypeLoad);
-        break;
-      }
 
       switch (value_type) {
       case Value::eValueTypeVector:
