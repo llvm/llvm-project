@@ -13,7 +13,8 @@
 // CHECK: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
-// CHECK: "-fsanitize=safe-stack"
+// CHECK-AARCH64: "-fsanitize=shadow-call-stack"
+// CHECK-X86_64: "-fsanitize=safe-stack"
 // CHECK: "-stack-protector" "2"
 // CHECK: "-fno-common"
 // CHECK: {{.*}}ld.lld{{.*}}" "-z" "rodynamic" "-z" "separate-loadable-segments"
@@ -102,7 +103,7 @@
 // RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-ASAN-AARCH64
 // CHECK-ASAN-AARCH64: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
-// CHECK-ASAN-AARCH64: "-fsanitize=address"
+// CHECK-ASAN-AARCH64: "-fsanitize=address,shadow-call-stack"
 // CHECK-ASAN-AARCH64: "-fsanitize-address-globals-dead-stripping"
 // CHECK-ASAN-AARCH64: "-dynamic-linker" "asan/ld.so.1"
 // CHECK-ASAN-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}libclang_rt.asan.so"
@@ -134,7 +135,7 @@
 // RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-FUZZER-AARCH64
 // CHECK-FUZZER-AARCH64: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
-// CHECK-FUZZER-AARCH64: "-fsanitize=fuzzer,fuzzer-no-link,safe-stack"
+// CHECK-FUZZER-AARCH64: "-fsanitize=fuzzer,fuzzer-no-link,shadow-call-stack"
 // CHECK-FUZZER-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}libclang_rt.fuzzer.a"
 
 // RUN: %clang %s -### --target=x86_64-fuchsia \
@@ -153,7 +154,7 @@
 // RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-AARCH64
 // CHECK-SCUDO-AARCH64: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
-// CHECK-SCUDO-AARCH64: "-fsanitize=safe-stack,scudo"
+// CHECK-SCUDO-AARCH64: "-fsanitize=shadow-call-stack,scudo"
 // CHECK-SCUDO-AARCH64: "-pie"
 // CHECK-SCUDO-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}libclang_rt.scudo.so"
 
