@@ -58,6 +58,7 @@ void test5(int *List, int Length) {
     List[i] = i * 2;
 }
 
+
 // CHECK:      ![[LOOP0]] = distinct !{![[LOOP0]], !3}
 // CHECK-NEXT: !3 = !{!"llvm.loop.vectorize.enable", i1 true}
 
@@ -69,7 +70,7 @@ void test5(int *List, int Length) {
 
 // CHECK-NEXT: ![[LOOP3]] = distinct !{![[LOOP3]], !5, !3}
 
-// CHECK-NEXT: ![[LOOP4]] = distinct !{![[LOOP4]], !3, !10}
+// CHECK-NEXT: ![[LOOP4]] = distinct !{![[LOOP4]], !10}
 // CHECK-NEXT: !10 = !{!"llvm.loop.vectorize.width", i32 1}
 
-// CHECK-NEXT: ![[LOOP5]] = distinct !{![[LOOP5]], !3, !10}
+// CHECK-NEXT: ![[LOOP5]] = distinct !{![[LOOP5]], !10}
