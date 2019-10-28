@@ -1380,7 +1380,7 @@ void AsmPrinter::emitRemarksSection(RemarkStreamer &RS) {
                : RemarkSerializer.metaSerializer(OS);
   MetaSerializer->emit();
 
-  // Switch to the right section: .remarks/__remarks.
+  // Switch to the remarks section.
   MCSection *RemarksSection =
       OutContext.getObjectFileInfo()->getRemarksSection();
   OutStreamer->SwitchSection(RemarksSection);

@@ -149,8 +149,8 @@ End-user Options
 
 .. option:: -remarks-section
 
- Emit the .remarks (ELF) / __remarks (MachO) section which contains metadata
- about remark diagnostics.
+ Emit the __remarks (MachO) section which contains metadata about remark
+ diagnostics.
 
 Tuning/Configuration Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

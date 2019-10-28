@@ -592,7 +592,6 @@ This can be overridden by using the flag ``-remarks-section=<bool>``.
 The section is named:
 
 * ``__LLVM,__remarks`` (MachO)
-* ``.remarks`` (ELF)
 
 C API
 =====
