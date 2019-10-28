@@ -683,7 +683,7 @@ bool LoopUnswitch::processCurrentLoop() {
     for (auto &I : *BB) {
       auto CS = CallSite(&I);
       if (!CS) continue;
-      if (CS.hasFnAttr(Attribute::Convergent))
+      if (CS.isConvergent())
         return false;
       if (auto *II = dyn_cast<InvokeInst>(&I))
         if (!II->getUnwindDest()->canSplitPredecessors())
