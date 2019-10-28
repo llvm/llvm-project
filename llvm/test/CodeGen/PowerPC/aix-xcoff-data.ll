@@ -21,6 +21,9 @@
 @over_aligned = local_unnamed_addr global double 9.000000e+02, align 32
 @chrarray = local_unnamed_addr global [4 x i8] c"abcd", align 1
 @dblarr = local_unnamed_addr global [4 x double] [double 1.000000e+00, double 2.000000e+00, double 3.000000e+00, double 4.000000e+00], align 8
+@d_0 = global double 0.000000e+00, align 8
+@s_0 = global i16 0, align 2
+@f_0 = global float 0.000000e+00, align 4
 
 @a = common global i32 0, align 4
 @b = common global i64 0, align 8
@@ -84,6 +87,21 @@
 ; CHECK-NEXT: .llong  4613937818241073152
 ; CHECK-NEXT: .llong  4616189618054758400
 
+; CHECK:      .globl  d_0
+; CHECK-NEXT: .align 3
+; CHECK-NEXT: d_0:
+; CHECK-NEXT: .llong 0
+
+; CHECK:      .globl  s_0
+; CHECK-NEXT: .align  1
+; CHECK-NEXT: s_0:
+; CHECK-NEXT: .short 0
+
+; CHECK:      .globl f_0
+; CHECK-NEXT: .align 2
+; CHECK-NEXT: f_0:
+; CHECK-NEXT: .long 0
+
 ; CHECK-NEXT: .comm   a[RW],4,2
 ; CHECK-NEXT: .comm   b[RW],8,3
 ; CHECK-NEXT: .comm   c[RW],2,1
@@ -100,8 +118,8 @@
 ; OBJ-NEXT:   Magic: 0x1DF
 ; OBJ-NEXT:   NumberOfSections: 3
 ; OBJ-NEXT:   TimeStamp:
-; OBJ-NEXT:   SymbolTableOffset: 0xDC
-; OBJ-NEXT:   SymbolTableEntries: 34
+; OBJ-NEXT:   SymbolTableOffset: 0xEC
+; OBJ-NEXT:   SymbolTableEntries: 40
 ; OBJ-NEXT:   OptionalHeaderSize: 0x0
 ; OBJ-NEXT:   Flags: 0x0
 ; OBJ-NEXT: }
@@ -126,7 +144,7 @@
 ; OBJ-NEXT:     Name: .data
 ; OBJ-NEXT:     PhysicalAddress: 0x0
 ; OBJ-NEXT:     VirtualAddress: 0x0
-; OBJ-NEXT:     Size: 0x50
+; OBJ-NEXT:     Size: 0x60
 ; OBJ-NEXT:     RawDataOffset: 0x8C
 ; OBJ-NEXT:     RelocationPointer: 0x0
 ; OBJ-NEXT:     LineNumberPointer: 0x0
@@ -138,9 +156,9 @@
 ; OBJ:        Section {
 ; OBJ-NEXT:     Index: 3
 ; OBJ-NEXT:     Name: .bss
-; OBJ-NEXT:     PhysicalAddress: 0x50
-; OBJ-NEXT:     VirtualAddress: 0x50
-; OBJ-NEXT:     Size: 0x5C
+; OBJ-NEXT:     PhysicalAddress: 0x60
+; OBJ-NEXT:     VirtualAddress: 0x60
+; OBJ-NEXT:     Size: 0x6C
 ; OBJ-NEXT:     RawDataOffset: 0x0
 ; OBJ-NEXT:     RelocationPointer: 0x0
 ; OBJ-NEXT:     LineNumberPointer: 0x0
@@ -186,7 +204,7 @@
 ; SYMS-NEXT:     NumberOfAuxEntries: 1
 ; SYMS-NEXT:     CSECT Auxiliary Entry {
 ; SYMS-NEXT:       Index: [[#INDX+3]]
-; SYMS-NEXT:       SectionLen: 80
+; SYMS-NEXT:       SectionLen: 96
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
 ; SYMS-NEXT:       SymbolAlignmentLog2: 5
@@ -367,14 +385,77 @@
 
 ; SYMS:        Symbol {
 ; SYMS-NEXT:     Index: [[#INDX+20]]
-; SYMS-NEXT:     Name: a
+; SYMS-NEXT:     Name: d_0
 ; SYMS-NEXT:     Value (RelocatableAddress): 0x50
-; SYMS-NEXT:     Section: .bss
+; SYMS-NEXT:     Section: .data
 ; SYMS-NEXT:     Type: 0x0
 ; SYMS-NEXT:     StorageClass: C_EXT (0x2)
 ; SYMS-NEXT:     NumberOfAuxEntries: 1
 ; SYMS-NEXT:     CSECT Auxiliary Entry {
 ; SYMS-NEXT:       Index: [[#INDX+21]]
+; SYMS-NEXT:       ContainingCsectSymbolIndex: [[#INDX+2]]
+; SYMS-NEXT:       ParameterHashIndex: 0x0
+; SYMS-NEXT:       TypeChkSectNum: 0x0
+; SYMS-NEXT:       SymbolAlignmentLog2: 0
+; SYMS-NEXT:       SymbolType: XTY_LD (0x2)
+; SYMS-NEXT:       StorageMappingClass: XMC_RW (0x5)
+; SYMS-NEXT:       StabInfoIndex: 0x0
+; SYMS-NEXT:       StabSectNum: 0x0
+; SYMS-NEXT:     }
+; SYMS-NEXT:   }
+
+; SYMS:        Symbol {
+; SYMS-NEXT:     Index: [[#INDX+22]]
+; SYMS-NEXT:     Name: s_0
+; SYMS-NEXT:     Value (RelocatableAddress): 0x58
+; SYMS-NEXT:     Section: .data
+; SYMS-NEXT:     Type: 0x0
+; SYMS-NEXT:     StorageClass: C_EXT (0x2)
+; SYMS-NEXT:     NumberOfAuxEntries: 1
+; SYMS-NEXT:     CSECT Auxiliary Entry {
+; SYMS-NEXT:       Index: [[#INDX+23]]
+; SYMS-NEXT:       ContainingCsectSymbolIndex: [[#INDX+2]]
+; SYMS-NEXT:       ParameterHashIndex: 0x0
+; SYMS-NEXT:       TypeChkSectNum: 0x0
+; SYMS-NEXT:       SymbolAlignmentLog2: 0
+; SYMS-NEXT:       SymbolType: XTY_LD (0x2)
+; SYMS-NEXT:       StorageMappingClass: XMC_RW (0x5)
+; SYMS-NEXT:       StabInfoIndex: 0x0
+; SYMS-NEXT:       StabSectNum: 0x0
+; SYMS-NEXT:     }
+; SYMS-NEXT:   }
+
+; SYMS:        Symbol {
+; SYMS-NEXT:     Index: [[#INDX+24]]
+; SYMS-NEXT:     Name: f_0
+; SYMS-NEXT:     Value (RelocatableAddress): 0x5C
+; SYMS-NEXT:     Section: .data
+; SYMS-NEXT:     Type: 0x0
+; SYMS-NEXT:     StorageClass: C_EXT (0x2)
+; SYMS-NEXT:     NumberOfAuxEntries: 1
+; SYMS-NEXT:     CSECT Auxiliary Entry {
+; SYMS-NEXT:       Index: [[#INDX+25]]
+; SYMS-NEXT:       ContainingCsectSymbolIndex: [[#INDX+2]]
+; SYMS-NEXT:       ParameterHashIndex: 0x0
+; SYMS-NEXT:       TypeChkSectNum: 0x0
+; SYMS-NEXT:       SymbolAlignmentLog2: 0
+; SYMS-NEXT:       SymbolType: XTY_LD (0x2)
+; SYMS-NEXT:       StorageMappingClass: XMC_RW (0x5)
+; SYMS-NEXT:       StabInfoIndex: 0x0
+; SYMS-NEXT:       StabSectNum: 0x0
+; SYMS-NEXT:     }
+; SYMS-NEXT:   }
+
+; SYMS:        Symbol {
+; SYMS-NEXT:     Index: [[#INDX+26]]
+; SYMS-NEXT:     Name: a
+; SYMS-NEXT:     Value (RelocatableAddress): 0x60
+; SYMS-NEXT:     Section: .bss
+; SYMS-NEXT:     Type: 0x0
+; SYMS-NEXT:     StorageClass: C_EXT (0x2)
+; SYMS-NEXT:     NumberOfAuxEntries: 1
+; SYMS-NEXT:     CSECT Auxiliary Entry {
+; SYMS-NEXT:       Index: [[#INDX+27]]
 ; SYMS-NEXT:       SectionLen: 4
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
@@ -387,15 +468,15 @@
 ; SYMS-NEXT:   }
 
 ; SYMS:        Symbol {
-; SYMS-NEXT:     Index: [[#INDX+22]]
+; SYMS-NEXT:     Index: [[#INDX+28]]
 ; SYMS-NEXT:     Name: b
-; SYMS-NEXT:     Value (RelocatableAddress): 0x58
+; SYMS-NEXT:     Value (RelocatableAddress): 0x68
 ; SYMS-NEXT:     Section: .bss
 ; SYMS-NEXT:     Type: 0x0
 ; SYMS-NEXT:     StorageClass: C_EXT (0x2)
 ; SYMS-NEXT:     NumberOfAuxEntries: 1
 ; SYMS-NEXT:     CSECT Auxiliary Entry {
-; SYMS-NEXT:       Index: [[#INDX+23]]
+; SYMS-NEXT:       Index: [[#INDX+29]]
 ; SYMS-NEXT:       SectionLen: 8
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
@@ -408,15 +489,15 @@
 ; SYMS-NEXT:   }
 
 ; SYMS:        Symbol {
-; SYMS-NEXT:     Index: [[#INDX+24]]
+; SYMS-NEXT:     Index: [[#INDX+30]]
 ; SYMS-NEXT:     Name: c
-; SYMS-NEXT:     Value (RelocatableAddress): 0x60
+; SYMS-NEXT:     Value (RelocatableAddress): 0x70
 ; SYMS-NEXT:     Section: .bss
 ; SYMS-NEXT:     Type: 0x0
 ; SYMS-NEXT:     StorageClass: C_EXT (0x2)
 ; SYMS-NEXT:     NumberOfAuxEntries: 1
 ; SYMS-NEXT:     CSECT Auxiliary Entry {
-; SYMS-NEXT:       Index: [[#INDX+25]]
+; SYMS-NEXT:       Index: [[#INDX+31]]
 ; SYMS-NEXT:       SectionLen: 2
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
@@ -429,15 +510,15 @@
 ; SYMS-NEXT:   }
 
 ; SYMS:        Symbol {
-; SYMS-NEXT:     Index: [[#INDX+26]]
+; SYMS-NEXT:     Index: [[#INDX+32]]
 ; SYMS-NEXT:     Name: d
-; SYMS-NEXT:     Value (RelocatableAddress): 0x68
+; SYMS-NEXT:     Value (RelocatableAddress): 0x78
 ; SYMS-NEXT:     Section: .bss
 ; SYMS-NEXT:     Type: 0x0
 ; SYMS-NEXT:     StorageClass: C_EXT (0x2)
 ; SYMS-NEXT:     NumberOfAuxEntries: 1
 ; SYMS-NEXT:     CSECT Auxiliary Entry {
-; SYMS-NEXT:       Index: [[#INDX+27]]
+; SYMS-NEXT:       Index: [[#INDX+33]]
 ; SYMS-NEXT:       SectionLen: 8
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
@@ -450,15 +531,15 @@
 ; SYMS-NEXT:   }
 
 ; SYMS:        Symbol {
-; SYMS-NEXT:     Index: [[#INDX+28]]
+; SYMS-NEXT:     Index: [[#INDX+34]]
 ; SYMS-NEXT:     Name: f
-; SYMS-NEXT:     Value (RelocatableAddress): 0x70
+; SYMS-NEXT:     Value (RelocatableAddress): 0x80
 ; SYMS-NEXT:     Section: .bss
 ; SYMS-NEXT:     Type: 0x0
 ; SYMS-NEXT:     StorageClass: C_EXT (0x2)
 ; SYMS-NEXT:     NumberOfAuxEntries: 1
 ; SYMS-NEXT:     CSECT Auxiliary Entry {
-; SYMS-NEXT:       Index: [[#INDX+29]]
+; SYMS-NEXT:       Index: [[#INDX+35]]
 ; SYMS-NEXT:       SectionLen: 4
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
@@ -471,15 +552,15 @@
 ; SYMS-NEXT:   }
 
 ; SYMS:        Symbol {
-; SYMS-NEXT:     Index: [[#INDX+30]]
+; SYMS-NEXT:     Index: [[#INDX+36]]
 ; SYMS-NEXT:     Name: over_aligned_comm
-; SYMS-NEXT:     Value (RelocatableAddress): 0x80
+; SYMS-NEXT:     Value (RelocatableAddress): 0xA0
 ; SYMS-NEXT:     Section: .bss
 ; SYMS-NEXT:     Type: 0x0
 ; SYMS-NEXT:     StorageClass: C_EXT (0x2)
 ; SYMS-NEXT:     NumberOfAuxEntries: 1
 ; SYMS-NEXT:     CSECT Auxiliary Entry {
-; SYMS-NEXT:       Index: [[#INDX+31]]
+; SYMS-NEXT:       Index: [[#INDX+37]]
 ; SYMS-NEXT:       SectionLen: 8
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
@@ -492,15 +573,15 @@
 ; SYMS-NEXT:   }
 
 ; SYMS:        Symbol {
-; SYMS-NEXT:     Index: [[#INDX+32]]
+; SYMS-NEXT:     Index: [[#INDX+38]]
 ; SYMS-NEXT:     Name: array
-; SYMS-NEXT:     Value (RelocatableAddress): 0x88
+; SYMS-NEXT:     Value (RelocatableAddress): 0xA8
 ; SYMS-NEXT:     Section: .bss
 ; SYMS-NEXT:     Type: 0x0
 ; SYMS-NEXT:     StorageClass: C_EXT (0x2)
 ; SYMS-NEXT:     NumberOfAuxEntries: 1
 ; SYMS-NEXT:     CSECT Auxiliary Entry {
-; SYMS-NEXT:       Index: [[#INDX+33]]
+; SYMS-NEXT:       Index: [[#INDX+39]]
 ; SYMS-NEXT:       SectionLen: 33
 ; SYMS-NEXT:       ParameterHashIndex: 0x0
 ; SYMS-NEXT:       TypeChkSectNum: 0x0
