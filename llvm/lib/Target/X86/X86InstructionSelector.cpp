@@ -111,8 +111,6 @@ private:
   bool materializeFP(MachineInstr &I, MachineRegisterInfo &MRI,
                      MachineFunction &MF) const;
   bool selectImplicitDefOrPHI(MachineInstr &I, MachineRegisterInfo &MRI) const;
-  bool selectShift(MachineInstr &I, MachineRegisterInfo &MRI,
-                   MachineFunction &MF) const;
   bool selectDivRem(MachineInstr &I, MachineRegisterInfo &MRI,
                     MachineFunction &MF) const;
   bool selectIntrinsicWSideEffects(MachineInstr &I, MachineRegisterInfo &MRI,
@@ -380,10 +378,6 @@ bool X86InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_IMPLICIT_DEF:
   case TargetOpcode::G_PHI:
     return selectImplicitDefOrPHI(I, MRI);
-  case TargetOpcode::G_SHL:
-  case TargetOpcode::G_ASHR:
-  case TargetOpcode::G_LSHR:
-    return selectShift(I, MRI, MF);
   case TargetOpcode::G_SDIV:
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_SREM:
@@ -1516,78 +1510,6 @@ bool X86InstructionSelector::selectImplicitDefOrPHI(
   else
     I.setDesc(TII.get(X86::PHI));
 
-  return true;
-}
-
-// Currently GlobalIsel TableGen generates patterns for shift imm and shift 1,
-// but with shiftCount i8. In G_LSHR/G_ASHR/G_SHL like LLVM-IR both arguments
-// has the same type, so for now only shift i8 can use auto generated
-// TableGen patterns.
-bool X86InstructionSelector::selectShift(MachineInstr &I,
-                                         MachineRegisterInfo &MRI,
-                                         MachineFunction &MF) const {
-
-  assert((I.getOpcode() == TargetOpcode::G_SHL ||
-          I.getOpcode() == TargetOpcode::G_ASHR ||
-          I.getOpcode() == TargetOpcode::G_LSHR) &&
-         "unexpected instruction");
-
-  Register DstReg = I.getOperand(0).getReg();
-  const LLT DstTy = MRI.getType(DstReg);
-  const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
-
-  const static struct ShiftEntry {
-    unsigned SizeInBits;
-    unsigned OpLSHR;
-    unsigned OpASHR;
-    unsigned OpSHL;
-  } OpTable[] = {
-      {8, X86::SHR8rCL, X86::SAR8rCL, X86::SHL8rCL},     // i8
-      {16, X86::SHR16rCL, X86::SAR16rCL, X86::SHL16rCL}, // i16
-      {32, X86::SHR32rCL, X86::SAR32rCL, X86::SHL32rCL}, // i32
-      {64, X86::SHR64rCL, X86::SAR64rCL, X86::SHL64rCL}  // i64
-  };
-
-  if (DstRB.getID() != X86::GPRRegBankID)
-    return false;
-
-  auto ShiftEntryIt = std::find_if(
-      std::begin(OpTable), std::end(OpTable), [DstTy](const ShiftEntry &El) {
-        return El.SizeInBits == DstTy.getSizeInBits();
-      });
-  if (ShiftEntryIt == std::end(OpTable))
-    return false;
-
-  unsigned Opcode = 0;
-  switch (I.getOpcode()) {
-  case TargetOpcode::G_SHL:
-    Opcode = ShiftEntryIt->OpSHL;
-    break;
-  case TargetOpcode::G_ASHR:
-    Opcode = ShiftEntryIt->OpASHR;
-    break;
-  case TargetOpcode::G_LSHR:
-    Opcode = ShiftEntryIt->OpLSHR;
-    break;
-  default:
-    return false;
-  }
-
-  Register Op0Reg = I.getOperand(1).getReg();
-  Register Op1Reg = I.getOperand(2).getReg();
-
-  assert(MRI.getType(Op1Reg).getSizeInBits() == 8);
-
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
-          X86::CL)
-    .addReg(Op1Reg);
-
-  MachineInstr &ShiftInst =
-      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode), DstReg)
-           .addReg(Op0Reg);
-
-  constrainSelectedInstRegOperands(ShiftInst, TII, TRI, RBI);
-  I.eraseFromParent();
   return true;
 }
 
