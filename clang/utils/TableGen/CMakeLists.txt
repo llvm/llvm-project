@@ -13,8 +13,8 @@ add_tablegen(clang-tblgen CLANG
   ClangOptionDocEmitter.cpp
   ClangSACheckersEmitter.cpp
   ClangTypeNodesEmitter.cpp
-  NeonEmitter.cpp
   MveEmitter.cpp
+  NeonEmitter.cpp
   TableGen.cpp
   )
 set_target_properties(clang-tblgen PROPERTIES FOLDER "Clang tablegenning")
