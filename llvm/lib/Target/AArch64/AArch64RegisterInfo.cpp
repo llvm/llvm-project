@@ -43,6 +43,8 @@ AArch64RegisterInfo::AArch64RegisterInfo(const Triple &TT)
 const MCPhysReg *
 AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
+  if (MF->getFunction().getCallingConv() == CallingConv::CFGuard_Check)
+    return CSR_Win_AArch64_CFGuard_Check_SaveList;
   if (MF->getSubtarget<AArch64Subtarget>().isTargetWindows())
     return CSR_Win_AArch64_AAPCS_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::GHC)
@@ -124,6 +126,8 @@ AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return SCS ? CSR_AArch64_AAVPCS_SCS_RegMask : CSR_AArch64_AAVPCS_RegMask;
   if (CC == CallingConv::AArch64_SVE_VectorCall)
     return CSR_AArch64_SVE_AAPCS_RegMask;
+  if (CC == CallingConv::CFGuard_Check)
+    return CSR_Win_AArch64_CFGuard_Check_RegMask;
   if (MF.getSubtarget<AArch64Subtarget>().getTargetLowering()
           ->supportSwiftError() &&
       MF.getFunction().getAttributes().hasAttrSomewhere(Attribute::SwiftError))

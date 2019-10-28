@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains support for writing Win64 exception info into asm files.
+// This file contains support for writing the metadata for Windows Control Flow
+// Guard, including address-taken functions, and valid longjmp targets.
 //
 //===----------------------------------------------------------------------===//
 
@@ -29,16 +30,33 @@ WinCFGuard::WinCFGuard(AsmPrinter *A) : AsmPrinterHandler(), Asm(A) {}
 
 WinCFGuard::~WinCFGuard() {}
 
+void WinCFGuard::endFunction(const MachineFunction *MF) {
+
+  // Skip functions without any longjmp targets.
+  if (MF->getLongjmpTargets().empty())
+    return;
+
+  // Copy the function's longjmp targets to a module-level list.
+  LongjmpTargets.insert(LongjmpTargets.end(), MF->getLongjmpTargets().begin(),
+                        MF->getLongjmpTargets().end());
+}
+
 void WinCFGuard::endModule() {
   const Module *M = Asm->MMI->getModule();
   std::vector<const Function *> Functions;
   for (const Function &F : *M)
     if (F.hasAddressTaken())
       Functions.push_back(&F);
-  if (Functions.empty())
+  if (Functions.empty() && LongjmpTargets.empty())
     return;
   auto &OS = *Asm->OutStreamer;
   OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGFIDsSection());
   for (const Function *F : Functions)
     OS.EmitCOFFSymbolIndex(Asm->getSymbol(F));
+
+  // Emit the symbol index of each longjmp target.
+  OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGLJMPSection());
+  for (const MCSymbol *S : LongjmpTargets) {
+    OS.EmitCOFFSymbolIndex(S);
+  }
 }

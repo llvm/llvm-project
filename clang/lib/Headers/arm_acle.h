@@ -139,6 +139,26 @@ __clzll(uint64_t __t) {
   return __builtin_clzll(__t);
 }
 
+/* CLS */
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__cls(uint32_t __t) {
+  return __builtin_arm_cls(__t);
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__clsl(unsigned long __t) {
+#if __SIZEOF_LONG__ == 4
+  return __builtin_arm_cls(__t);
+#else
+  return __builtin_arm_cls64(__t);
+#endif
+}
+
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+__clsll(uint64_t __t) {
+  return __builtin_arm_cls64(__t);
+}
+
 /* REV */
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __rev(uint32_t __t) {
@@ -609,9 +629,13 @@ __jcvt(double __a) {
 #define __arm_rsr(sysreg) __builtin_arm_rsr(sysreg)
 #define __arm_rsr64(sysreg) __builtin_arm_rsr64(sysreg)
 #define __arm_rsrp(sysreg) __builtin_arm_rsrp(sysreg)
+#define __arm_rsrf(sysreg) __builtin_bit_cast(float, __arm_rsr(sysreg))
+#define __arm_rsrf64(sysreg) __builtin_bit_cast(double, __arm_rsr64(sysreg))
 #define __arm_wsr(sysreg, v) __builtin_arm_wsr(sysreg, v)
 #define __arm_wsr64(sysreg, v) __builtin_arm_wsr64(sysreg, v)
 #define __arm_wsrp(sysreg, v) __builtin_arm_wsrp(sysreg, v)
+#define __arm_wsrf(sysreg, v) __arm_wsr(sysreg, __builtin_bit_cast(uint32_t, v))
+#define __arm_wsrf64(sysreg, v) __arm_wsr64(sysreg, __builtin_bit_cast(uint64_t, v))
 
 /* Memory Tagging Extensions (MTE) Intrinsics */
 #if __ARM_FEATURE_MEMORY_TAGGING

@@ -939,19 +939,33 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     }
 
     if (MI.isCall() && callWaitsOnFunctionEntry(MI)) {
-      // Don't bother waiting on anything except the call address. The function
-      // is going to insert a wait on everything in its prolog. This still needs
-      // to be careful if the call target is a load (e.g. a GOT load).
+      // The function is going to insert a wait on everything in its prolog.
+      // This still needs to be careful if the call target is a load (e.g. a GOT
+      // load). We also need to check WAW depenancy with saved PC.
       Wait = AMDGPU::Waitcnt();
 
       int CallAddrOpIdx =
           AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
-      RegInterval Interval = ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI,
-                                                          CallAddrOpIdx, false);
-      for (signed RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
+      RegInterval CallAddrOpInterval = ScoreBrackets.getRegInterval(
+          &MI, TII, MRI, TRI, CallAddrOpIdx, false);
+
+      for (signed RegNo = CallAddrOpInterval.first;
+           RegNo < CallAddrOpInterval.second; ++RegNo)
         ScoreBrackets.determineWait(
             LGKM_CNT, ScoreBrackets.getRegScore(RegNo, LGKM_CNT), Wait);
+
+      int RtnAddrOpIdx =
+            AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dst);
+      if (RtnAddrOpIdx != -1) {
+        RegInterval RtnAddrOpInterval = ScoreBrackets.getRegInterval(
+            &MI, TII, MRI, TRI, RtnAddrOpIdx, false);
+
+        for (signed RegNo = RtnAddrOpInterval.first;
+             RegNo < RtnAddrOpInterval.second; ++RegNo)
+          ScoreBrackets.determineWait(
+              LGKM_CNT, ScoreBrackets.getRegScore(RegNo, LGKM_CNT), Wait);
       }
+
     } else {
       // FIXME: Should not be relying on memoperands.
       // Look at the source operands of every instruction to see if

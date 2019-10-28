@@ -256,6 +256,21 @@ void wsrp(void *v) {
   __builtin_arm_wsrp("sysreg", v);
 }
 
+unsigned int cls(uint32_t v) {
+  // CHECK: call i32 @llvm.arm.cls(i32 %v)
+  return __builtin_arm_cls(v);
+}
+
+unsigned int clsl(unsigned long v) {
+  // CHECK: call i32 @llvm.arm.cls(i32 %v)
+  return __builtin_arm_cls(v);
+}
+
+unsigned int clsll(uint64_t v) {
+  // CHECK: call i32 @llvm.arm.cls64(i64 %v)
+  return __builtin_arm_cls64(v);
+}
+
 // CHECK: ![[M0]] = !{!"cp1:2:c3:c4:5"}
 // CHECK: ![[M1]] = !{!"cp1:2:c3"}
 // CHECK: ![[M2]] = !{!"sysreg"}

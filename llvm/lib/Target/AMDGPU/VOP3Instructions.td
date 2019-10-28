@@ -497,11 +497,11 @@ def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32
 
 } // End SubtargetPredicate = Has16BitInsts, isCommutable = 1
 
-let SubtargetPredicate = isGFX8GFX9 in {
+let SubtargetPredicate = isGFX8Plus, Uses = [M0, EXEC] in {
 def V_INTERP_P1_F32_e64  : VOP3Interp <"v_interp_p1_f32", VOP3_INTERP>;
 def V_INTERP_P2_F32_e64  : VOP3Interp <"v_interp_p2_f32", VOP3_INTERP>;
 def V_INTERP_MOV_F32_e64 : VOP3Interp <"v_interp_mov_f32", VOP3_INTERP_MOV>;
-} // End SubtargetPredicate = isGFX8GFX9
+} // End SubtargetPredicate = isGFX8Plus, Uses = [M0, EXEC]
 
 let Predicates = [Has16BitInsts, isGFX6GFX7GFX8GFX9] in {
 
@@ -769,6 +769,10 @@ defm V_SUB_NC_I32 :
   VOP3_Real_gfx10_with_name<0x376, "V_SUB_I32_gfx9", "v_sub_nc_i32">;
 defm V_ADD_NC_I32 :
   VOP3_Real_gfx10_with_name<0x37f, "V_ADD_I32_gfx9", "v_add_nc_i32">;
+
+defm V_INTERP_P1_F32_e64  : VOP3Interp_Real_gfx10<0x200>;
+defm V_INTERP_P2_F32_e64  : VOP3Interp_Real_gfx10<0x201>;
+defm V_INTERP_MOV_F32_e64 : VOP3Interp_Real_gfx10<0x202>;
 
 defm V_INTERP_P1LL_F16    : VOP3Interp_Real_gfx10<0x342>;
 defm V_INTERP_P1LV_F16    : VOP3Interp_Real_gfx10<0x343>;

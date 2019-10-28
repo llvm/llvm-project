@@ -13,43 +13,93 @@
 
 namespace scudo {
 
-// Intrusive POD singly-linked list.
+// Intrusive POD singly and doubly linked list.
 // An object with all zero fields should represent a valid empty list. clear()
 // should be called on all non-zero-initialized objects before using.
-template <class Item> struct IntrusiveList {
-  friend class Iterator;
+
+template <class T> class IteratorBase {
+public:
+  explicit IteratorBase(T *CurrentT) : Current(CurrentT) {}
+  IteratorBase &operator++() {
+    Current = Current->Next;
+    return *this;
+  }
+  bool operator!=(IteratorBase Other) const { return Current != Other.Current; }
+  T &operator*() { return *Current; }
+
+private:
+  T *Current;
+};
+
+template <class T> struct IntrusiveList {
+  bool empty() const { return Size == 0; }
+  uptr size() const { return Size; }
+
+  T *front() { return First; }
+  const T *front() const { return First; }
+  T *back() { return Last; }
+  const T *back() const { return Last; }
 
   void clear() {
     First = Last = nullptr;
     Size = 0;
   }
 
-  bool empty() const { return Size == 0; }
-  uptr size() const { return Size; }
+  typedef IteratorBase<T> Iterator;
+  typedef IteratorBase<const T> ConstIterator;
 
-  void push_back(Item *X) {
-    if (empty()) {
-      X->Next = nullptr;
-      First = Last = X;
-      Size = 1;
-    } else {
-      X->Next = nullptr;
-      Last->Next = X;
-      Last = X;
-      Size++;
+  Iterator begin() { return Iterator(First); }
+  Iterator end() { return Iterator(nullptr); }
+
+  ConstIterator begin() const { return ConstIterator(First); }
+  ConstIterator end() const { return ConstIterator(nullptr); }
+
+  void checkConsistency() const;
+
+protected:
+  uptr Size;
+  T *First;
+  T *Last;
+};
+
+template <class T> void IntrusiveList<T>::checkConsistency() const {
+  if (Size == 0) {
+    CHECK_EQ(First, nullptr);
+    CHECK_EQ(Last, nullptr);
+  } else {
+    uptr Count = 0;
+    for (T *I = First;; I = I->Next) {
+      Count++;
+      if (I == Last)
+        break;
     }
+    CHECK_EQ(this->size(), Count);
+    CHECK_EQ(Last->Next, nullptr);
+  }
+}
+
+template <class T> struct SinglyLinkedList : public IntrusiveList<T> {
+  using IntrusiveList<T>::First;
+  using IntrusiveList<T>::Last;
+  using IntrusiveList<T>::Size;
+  using IntrusiveList<T>::empty;
+
+  void push_back(T *X) {
+    X->Next = nullptr;
+    if (empty())
+      First = X;
+    else
+      Last->Next = X;
+    Last = X;
+    Size++;
   }
 
-  void push_front(Item *X) {
-    if (empty()) {
-      X->Next = nullptr;
-      First = Last = X;
-      Size = 1;
-    } else {
-      X->Next = First;
-      First = X;
-      Size++;
-    }
+  void push_front(T *X) {
+    if (empty())
+      Last = X;
+    X->Next = First;
+    First = X;
+    Size++;
   }
 
   void pop_front() {
@@ -60,7 +110,7 @@ template <class Item> struct IntrusiveList {
     Size--;
   }
 
-  void extract(Item *Prev, Item *X) {
+  void extract(T *Prev, T *X) {
     DCHECK(!empty());
     DCHECK_NE(Prev, nullptr);
     DCHECK_NE(X, nullptr);
@@ -71,26 +121,7 @@ template <class Item> struct IntrusiveList {
     Size--;
   }
 
-  Item *front() { return First; }
-  const Item *front() const { return First; }
-  Item *back() { return Last; }
-  const Item *back() const { return Last; }
-
-  void append_front(IntrusiveList<Item> *L) {
-    DCHECK_NE(this, L);
-    if (L->empty())
-      return;
-    if (empty()) {
-      *this = *L;
-    } else if (!L->empty()) {
-      L->Last->Next = First;
-      First = L->First;
-      Size += L->size();
-    }
-    L->clear();
-  }
-
-  void append_back(IntrusiveList<Item> *L) {
+  void append_back(SinglyLinkedList<T> *L) {
     DCHECK_NE(this, L);
     if (L->empty())
       return;
@@ -103,52 +134,92 @@ template <class Item> struct IntrusiveList {
     }
     L->clear();
   }
+};
 
-  void checkConsistency() {
-    if (Size == 0) {
-      CHECK_EQ(First, nullptr);
-      CHECK_EQ(Last, nullptr);
+template <class T> struct DoublyLinkedList : IntrusiveList<T> {
+  using IntrusiveList<T>::First;
+  using IntrusiveList<T>::Last;
+  using IntrusiveList<T>::Size;
+  using IntrusiveList<T>::empty;
+
+  void push_front(T *X) {
+    X->Prev = nullptr;
+    if (empty()) {
+      Last = X;
     } else {
-      uptr Count = 0;
-      for (Item *I = First;; I = I->Next) {
-        Count++;
-        if (I == Last)
-          break;
-      }
-      CHECK_EQ(size(), Count);
-      CHECK_EQ(Last->Next, nullptr);
+      DCHECK_EQ(First->Prev, nullptr);
     }
+    X->Next = First;
+    First = X;
+    Size++;
   }
 
-  template <class ItemT> class IteratorBase {
-  public:
-    explicit IteratorBase(ItemT *CurrentItem) : Current(CurrentItem) {}
-    IteratorBase &operator++() {
-      Current = Current->Next;
-      return *this;
+  // Inserts X before Y.
+  void insert(T *X, T *Y) {
+    if (Y == First)
+      return push_front(X);
+    T *Prev = Y->Prev;
+    // This is a hard CHECK to ensure consistency in the event of an intentional
+    // corruption of Y->Prev, to prevent a potential write-{4,8}.
+    CHECK_EQ(Prev->Next, Y);
+    Prev->Next = X;
+    X->Prev = Prev;
+    X->Next = Y;
+    Y->Prev = X;
+    Size++;
+  }
+
+  void push_back(T *X) {
+    X->Next = nullptr;
+    if (empty()) {
+      First = X;
+    } else {
+      DCHECK_EQ(Last->Next, nullptr);
+      Last->Next = X;
     }
-    bool operator!=(IteratorBase Other) const {
-      return Current != Other.Current;
+    X->Prev = Last;
+    Last = X;
+    Size++;
+  }
+
+  void pop_front() {
+    DCHECK(!empty());
+    First = First->Next;
+    if (!First)
+      Last = nullptr;
+    else
+      First->Prev = nullptr;
+    Size--;
+  }
+
+  // The consistency of the adjacent links is aggressively checked in order to
+  // catch potential corruption attempts, that could yield a mirrored
+  // write-{4,8} primitive. nullptr checks are deemed less vital.
+  void remove(T *X) {
+    T *Prev = X->Prev;
+    T *Next = X->Next;
+    if (Prev) {
+      CHECK_EQ(Prev->Next, X);
+      Prev->Next = Next;
     }
-    ItemT &operator*() { return *Current; }
-
-  private:
-    ItemT *Current;
-  };
-
-  typedef IteratorBase<Item> Iterator;
-  typedef IteratorBase<const Item> ConstIterator;
-
-  Iterator begin() { return Iterator(First); }
-  Iterator end() { return Iterator(nullptr); }
-
-  ConstIterator begin() const { return ConstIterator(First); }
-  ConstIterator end() const { return ConstIterator(nullptr); }
-
-private:
-  uptr Size;
-  Item *First;
-  Item *Last;
+    if (Next) {
+      CHECK_EQ(Next->Prev, X);
+      Next->Prev = Prev;
+    }
+    if (First == X) {
+      DCHECK_EQ(Prev, nullptr);
+      First = Next;
+    } else {
+      DCHECK_NE(Prev, nullptr);
+    }
+    if (Last == X) {
+      DCHECK_EQ(Next, nullptr);
+      Last = Prev;
+    } else {
+      DCHECK_NE(Next, nullptr);
+    }
+    Size--;
+  }
 };
 
 } // namespace scudo

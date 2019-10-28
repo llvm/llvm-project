@@ -1853,11 +1853,27 @@ void CodeGenModule::ConstructAttributeList(
     if (const FunctionDecl *Fn = dyn_cast<FunctionDecl>(TargetDecl)) {
       AddAttributesFromFunctionProtoType(
           getContext(), FuncAttrs, Fn->getType()->getAs<FunctionProtoType>());
-      // Don't use [[noreturn]] or _Noreturn for a call to a virtual function.
-      // These attributes are not inherited by overloads.
       const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Fn);
-      if (Fn->isNoReturn() && !(AttrOnCallSite && MD && MD->isVirtual()))
-        FuncAttrs.addAttribute(llvm::Attribute::NoReturn);
+      const bool IsVirtualCall = MD && MD->isVirtual();
+      // Don't use [[noreturn]], _Noreturn or [[no_builtin]] for a call to a
+      // virtual function. These attributes are not inherited by overloads.
+      if (!(AttrOnCallSite && IsVirtualCall)) {
+        if (Fn->isNoReturn())
+          FuncAttrs.addAttribute(llvm::Attribute::NoReturn);
+
+        if (const auto *NBA = TargetDecl->getAttr<NoBuiltinAttr>()) {
+          bool HasWildcard = llvm::is_contained(NBA->builtinNames(), "*");
+          if (HasWildcard)
+            FuncAttrs.addAttribute("no-builtins");
+          else
+            for (StringRef BuiltinName : NBA->builtinNames()) {
+              SmallString<32> AttributeName;
+              AttributeName += "no-builtin-";
+              AttributeName += BuiltinName;
+              FuncAttrs.addAttribute(AttributeName);
+            }
+        }
+      }
     }
 
     // 'const', 'pure' and 'noalias' attributed functions are also nounwind.

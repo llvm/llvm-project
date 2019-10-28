@@ -123,14 +123,13 @@ return:
   ret i8* %r
 }
 
-; FIXME:
 ; The sub has 'nsw', so it is not safe to propagate that value along
 ; the bb2 edge because that would propagate poison to the return.
 
 define i32 @PR43802(i32 %arg) {
 ; CHECK-LABEL: @PR43802(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[ARG:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[ARG:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG]], -2147483648
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:

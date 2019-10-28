@@ -3624,6 +3624,15 @@ def err_attribute_overloadable_no_prototype : Error<
 def err_attribute_overloadable_multiple_unmarked_overloads : Error<
   "at most one overload for a given name may lack the 'overloadable' "
   "attribute">;
+def warn_attribute_no_builtin_invalid_builtin_name : Warning<
+  "'%0' is not a valid builtin name for %1">,
+  InGroup<DiagGroup<"invalid-no-builtin-names">>;
+def err_attribute_no_builtin_wildcard_or_builtin_name : Error<
+  "empty %0 cannot be composed with named ones">;
+def err_attribute_no_builtin_on_non_definition : Error<
+  "%0 attribute is permitted on definitions only">;
+def err_attribute_no_builtin_on_defaulted_deleted_function : Error<
+  "%0 attribute has no effect on defaulted or deleted functions">;
 def warn_ns_attribute_wrong_return_type : Warning<
   "%0 attribute only applies to %select{functions|methods|properties}1 that "
   "return %select{an Objective-C object|a pointer|a non-retainable pointer}2">,
@@ -8155,6 +8164,21 @@ def err_defaulted_comparison_non_const : Error<
 def err_defaulted_comparison_return_type_not_bool : Error<
   "return type for defaulted %sub{select_defaulted_comparison_kind}0 "
   "must be 'bool', not %1">;
+def err_defaulted_comparison_reference_member : Error<
+  "cannot default %0 in class %1 with reference member">;
+def ext_defaulted_comparison_reference_member : ExtWarn<
+  "ISO C++2a does not allow defaulting %0 in class %1 with reference member">,
+  InGroup<DefaultedComparison>;
+def note_reference_member : Note<"reference member %0 declared here">;
+def err_defaulted_comparison_union : Error<
+  "cannot default %0 in %select{union-like class|union}1 %2">;
+def ext_defaulted_comparison_union : ExtWarn<
+  "ISO C++2a does not allow defaulting %0 in "
+  "%select{union-like class|union}1 %2">, InGroup<DefaultedComparison>;
+def ext_defaulted_comparison_empty_union : ExtWarn<
+  "ISO C++2a does not allow defaulting %0 in "
+  "%select{union-like class|union}1 %2 despite it having no variant members">,
+  InGroup<DefaultedComparison>;
 
 def ext_implicit_exception_spec_mismatch : ExtWarn<
   "function previously declared with an %select{explicit|implicit}0 exception "

@@ -42637,6 +42637,7 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
       CmpVT = PreferKOT ? MVT::v32i1 : VecVT;
     }
     EVT CastVT = VecVT;
+    bool NeedsAVX512FCast = false;
     if (OpSize == 512 || NeedZExt) {
       if (Subtarget.hasBWI()) {
         VecVT = MVT::v64i8;
@@ -42648,12 +42649,30 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
         CmpVT = MVT::v16i1;
         CastVT = OpSize == 512 ? VecVT :
                  OpSize == 256 ? MVT::v8i32 : MVT::v4i32;
+        NeedsAVX512FCast = true;
       }
     }
 
     auto ScalarToVector = [&](SDValue X) -> SDValue {
-      X = DAG.getBitcast(CastVT, X);
-      if (!NeedZExt)
+      bool TmpZext = false;
+      EVT TmpCastVT = CastVT;
+      if (X.getOpcode() == ISD::ZERO_EXTEND) {
+        SDValue OrigX = X.getOperand(0);
+        unsigned OrigSize = OrigX.getScalarValueSizeInBits();
+        if (OrigSize < OpSize) {
+          if (OrigSize == 128) {
+            TmpCastVT = NeedsAVX512FCast ? MVT::v4i32 : MVT::v16i8;
+            X = OrigX;
+            TmpZext = true;
+          } else if (OrigSize == 256) {
+            TmpCastVT = NeedsAVX512FCast ? MVT::v8i32 : MVT::v32i8;
+            X = OrigX;
+            TmpZext = true;
+          }
+        }
+      }
+      X = DAG.getBitcast(TmpCastVT, X);
+      if (!NeedZExt && !TmpZext)
         return X;
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       MVT VecIdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
