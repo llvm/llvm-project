@@ -591,12 +591,6 @@ namespace {
     TemplateArgumentList *TemplateArgs;
     unsigned CallArgIndex;
   };
-  // Structure used by DeductionFailureInfo to store information about
-  // unsatisfied constraints.
-  struct CNSInfo {
-    TemplateArgumentList *TemplateArgs;
-    ConstraintSatisfaction Satisfaction;
-  };
 }
 
 /// Convert from Sema's representation of template deduction information
@@ -667,14 +661,6 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
     }
     break;
 
-  case Sema::TDK_ConstraintsNotSatisfied: {
-    CNSInfo *Saved = new (Context) CNSInfo;
-    Saved->TemplateArgs = Info.take();
-    Saved->Satisfaction = Info.AssociatedConstraintsSatisfaction;
-    Result.Data = Saved;
-    break;
-  }
-
   case Sema::TDK_Success:
   case Sema::TDK_NonDependentConversionFailure:
     llvm_unreachable("not a deduction failure");
@@ -715,15 +701,6 @@ void DeductionFailureInfo::Destroy() {
     }
     break;
 
-  case Sema::TDK_ConstraintsNotSatisfied:
-    // FIXME: Destroy the template argument list?
-    Data = nullptr;
-    if (PartialDiagnosticAt *Diag = getSFINAEDiagnostic()) {
-      Diag->~PartialDiagnosticAt();
-      HasDiagnostic = false;
-    }
-    break;
-
   // Unhandled
   case Sema::TDK_MiscellaneousDeductionFailure:
     break;
@@ -749,7 +726,6 @@ TemplateParameter DeductionFailureInfo::getTemplateParameter() {
   case Sema::TDK_NonDeducedMismatch:
   case Sema::TDK_CUDATargetMismatch:
   case Sema::TDK_NonDependentConversionFailure:
-  case Sema::TDK_ConstraintsNotSatisfied:
     return TemplateParameter();
 
   case Sema::TDK_Incomplete:
@@ -793,9 +769,6 @@ TemplateArgumentList *DeductionFailureInfo::getTemplateArgumentList() {
   case Sema::TDK_SubstitutionFailure:
     return static_cast<TemplateArgumentList*>(Data);
 
-  case Sema::TDK_ConstraintsNotSatisfied:
-    return static_cast<CNSInfo*>(Data)->TemplateArgs;
-
   // Unhandled
   case Sema::TDK_MiscellaneousDeductionFailure:
     break;
@@ -816,7 +789,6 @@ const TemplateArgument *DeductionFailureInfo::getFirstArg() {
   case Sema::TDK_SubstitutionFailure:
   case Sema::TDK_CUDATargetMismatch:
   case Sema::TDK_NonDependentConversionFailure:
-  case Sema::TDK_ConstraintsNotSatisfied:
     return nullptr;
 
   case Sema::TDK_IncompletePack:
@@ -848,7 +820,6 @@ const TemplateArgument *DeductionFailureInfo::getSecondArg() {
   case Sema::TDK_SubstitutionFailure:
   case Sema::TDK_CUDATargetMismatch:
   case Sema::TDK_NonDependentConversionFailure:
-  case Sema::TDK_ConstraintsNotSatisfied:
     return nullptr;
 
   case Sema::TDK_Inconsistent:
@@ -1283,8 +1254,6 @@ bool Sema::IsOverload(FunctionDecl *New, FunctionDecl *Old,
     // target attributes.
     return NewTarget != OldTarget;
   }
-
-  // TODO: Concepts: Check function trailing requires clauses here.
 
   // The signatures match; this is not an overload.
   return false;
@@ -10380,21 +10349,6 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     MaybeEmitInheritedConstructorNote(S, Found);
     return;
 
-  case Sema::TDK_ConstraintsNotSatisfied: {
-    // Format the template argument list into the argument string.
-    SmallString<128> TemplateArgString;
-    TemplateArgumentList *Args = DeductionFailure.getTemplateArgumentList();
-    TemplateArgString = " ";
-    TemplateArgString += S.getTemplateArgumentBindingsText(
-        getDescribedTemplate(Templated)->getTemplateParameters(), *Args);
-    S.Diag(Templated->getLocation(),
-           diag::note_ovl_candidate_unsatisfied_constraints)
-        << TemplateArgString;
-
-    S.DiagnoseUnsatisfiedConstraint(
-        static_cast<CNSInfo*>(DeductionFailure.Data)->Satisfaction);
-    return;
-  }
   case Sema::TDK_TooManyArguments:
   case Sema::TDK_TooFewArguments:
     DiagnoseArityMismatch(S, Found, Templated, NumArgs);
@@ -10847,7 +10801,6 @@ static unsigned RankDeductionFailure(const DeductionFailureInfo &DFI) {
 
   case Sema::TDK_SubstitutionFailure:
   case Sema::TDK_DeducedMismatch:
-  case Sema::TDK_ConstraintsNotSatisfied:
   case Sema::TDK_DeducedMismatchNested:
   case Sema::TDK_NonDeducedMismatch:
   case Sema::TDK_MiscellaneousDeductionFailure:

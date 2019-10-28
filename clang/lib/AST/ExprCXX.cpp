@@ -1755,19 +1755,18 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(ASTContext &C,
     NestedNameSpecifierLoc NNS, SourceLocation TemplateKWLoc,
     SourceLocation ConceptNameLoc, NamedDecl *FoundDecl,
     ConceptDecl *NamedConcept, const ASTTemplateArgumentListInfo *ArgsAsWritten,
-    ArrayRef<TemplateArgument> ConvertedArgs,
-    const ConstraintSatisfaction *Satisfaction)
+    ArrayRef<TemplateArgument> ConvertedArgs, Optional<bool> IsSatisfied)
     : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_RValue, OK_Ordinary,
            /*TypeDependent=*/false,
            // All the flags below are set in setTemplateArguments.
-           /*ValueDependent=*/!Satisfaction, /*InstantiationDependent=*/false,
+           /*ValueDependent=*/!IsSatisfied.hasValue(),
+           /*InstantiationDependent=*/false,
            /*ContainsUnexpandedParameterPacks=*/false),
       NestedNameSpec(NNS), TemplateKWLoc(TemplateKWLoc),
       ConceptNameLoc(ConceptNameLoc), FoundDecl(FoundDecl),
-      NamedConcept(NamedConcept), NumTemplateArgs(ConvertedArgs.size()),
-      Satisfaction(Satisfaction ?
-                   ASTConstraintSatisfaction::Create(C, *Satisfaction) :
-                   nullptr) {
+      NamedConcept(NamedConcept, IsSatisfied ? *IsSatisfied : true),
+      NumTemplateArgs(ConvertedArgs.size()) {
+
   setTemplateArguments(ArgsAsWritten, ConvertedArgs);
 }
 
@@ -1814,13 +1813,13 @@ ConceptSpecializationExpr::Create(ASTContext &C, NestedNameSpecifierLoc NNS,
                                   ConceptDecl *NamedConcept,
                                const ASTTemplateArgumentListInfo *ArgsAsWritten,
                                   ArrayRef<TemplateArgument> ConvertedArgs,
-                                  const ConstraintSatisfaction *Satisfaction) {
+                                  Optional<bool> IsSatisfied) {
   void *Buffer = C.Allocate(totalSizeToAlloc<TemplateArgument>(
                                 ConvertedArgs.size()));
   return new (Buffer) ConceptSpecializationExpr(C, NNS, TemplateKWLoc,
                                                 ConceptNameLoc, FoundDecl,
                                                 NamedConcept, ArgsAsWritten,
-                                                ConvertedArgs, Satisfaction);
+                                                ConvertedArgs, IsSatisfied);
 }
 
 ConceptSpecializationExpr *
