@@ -446,12 +446,11 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
       MMO->getOrdering(), MMO->getFailureOrdering());
 }
 
-MachineInstr::ExtraInfo *
-MachineFunction::createMIExtraInfo(ArrayRef<MachineMemOperand *> MMOs,
-                                   MCSymbol *PreInstrSymbol,
-                                   MCSymbol *PostInstrSymbol) {
+MachineInstr::ExtraInfo *MachineFunction::createMIExtraInfo(
+    ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol,
+    MCSymbol *PostInstrSymbol, MDNode *HeapAllocMarker) {
   return MachineInstr::ExtraInfo::create(Allocator, MMOs, PreInstrSymbol,
-                                         PostInstrSymbol);
+                                         PostInstrSymbol, HeapAllocMarker);
 }
 
 const char *MachineFunction::createExternalSymbolName(StringRef Name) {
@@ -823,19 +822,12 @@ try_next:;
   return FilterID;
 }
 
-void MachineFunction::addCodeViewHeapAllocSite(MachineInstr *I, MDNode *MD) {
-  MCSymbol *BeginLabel = Ctx.createTempSymbol("heapallocsite", true);
-  MCSymbol *EndLabel = Ctx.createTempSymbol("heapallocsite", true);
-  I->setPreInstrSymbol(*this, BeginLabel);
-  I->setPostInstrSymbol(*this, EndLabel);
+void MachineFunction::moveCallSiteInfo(const MachineInstr *Old,
+                                       const MachineInstr *New) {
+  assert(New->isCall() && "Call site info refers only to call instructions!");
 
-  DIType *DI = dyn_cast<DIType>(MD);
-  CodeViewHeapAllocSites.push_back(std::make_tuple(BeginLabel, EndLabel, DI));
-}
-
-void MachineFunction::updateCallSiteInfo(const MachineInstr *Old,
-                                         const MachineInstr *New) {
-  if (!Target.Options.EnableDebugEntryValues || Old == New)
+  CallSiteInfoMap::iterator CSIt = getCallSiteInfo(Old);
+  if (CSIt == CallSitesInfo.end())
     return;
 
   assert(Old->isCall() && (!New || New->isCall()) &&
