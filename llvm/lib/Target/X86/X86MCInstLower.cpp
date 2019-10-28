@@ -1337,10 +1337,10 @@ void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
 
   // The default C calling convention will place two arguments into %rcx and
   // %rdx -- so we only work with those.
-  unsigned DestRegs[] = {X86::RDI, X86::RSI};
+  const Register DestRegs[] = {X86::RDI, X86::RSI};
   bool UsedMask[] = {false, false};
   // Filled out in loop.
-  unsigned SrcRegs[] = {0, 0};
+  Register SrcRegs[] = {0, 0};
 
   // Then we put the operands in the %rdi and %rsi registers. We spill the
   // values in the register before we clobber them, and mark them as used in
@@ -1350,7 +1350,7 @@ void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
   for (unsigned I = 0; I < MI.getNumOperands(); ++I)
     if (auto Op = MCIL.LowerMachineOperand(&MI, MI.getOperand(I))) {
       assert(Op->isReg() && "Only support arguments in registers");
-      SrcRegs[I] = Op->getReg();
+      SrcRegs[I] = getX86SubSuperRegister(Op->getReg(), 64);
       if (SrcRegs[I] != DestRegs[I]) {
         UsedMask[I] = true;
         EmitAndCountInstruction(
@@ -1361,6 +1361,9 @@ void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
     }
 
   // Now that the register values are stashed, mov arguments into place.
+  // FIXME: This doesn't work if one of the later SrcRegs is equal to an
+  // earlier DestReg. We will have already overwritten over the register before
+  // we can copy from it.
   for (unsigned I = 0; I < MI.getNumOperands(); ++I)
     if (SrcRegs[I] != DestRegs[I])
       EmitAndCountInstruction(
@@ -1429,11 +1432,11 @@ void X86AsmPrinter::LowerPATCHABLE_TYPED_EVENT_CALL(const MachineInstr &MI,
   // An x86-64 convention may place three arguments into %rcx, %rdx, and R8,
   // so we'll work with those. Or we may be called via SystemV, in which case
   // we don't have to do any translation.
-  unsigned DestRegs[] = {X86::RDI, X86::RSI, X86::RDX};
+  const Register DestRegs[] = {X86::RDI, X86::RSI, X86::RDX};
   bool UsedMask[] = {false, false, false};
 
   // Will fill out src regs in the loop.
-  unsigned SrcRegs[] = {0, 0, 0};
+  Register SrcRegs[] = {0, 0, 0};
 
   // Then we put the operands in the SystemV registers. We spill the values in
   // the registers before we clobber them, and mark them as used in UsedMask.
@@ -1443,7 +1446,7 @@ void X86AsmPrinter::LowerPATCHABLE_TYPED_EVENT_CALL(const MachineInstr &MI,
     if (auto Op = MCIL.LowerMachineOperand(&MI, MI.getOperand(I))) {
       // TODO: Is register only support adequate?
       assert(Op->isReg() && "Only supports arguments in registers");
-      SrcRegs[I] = Op->getReg();
+      SrcRegs[I] = getX86SubSuperRegister(Op->getReg(), 64);
       if (SrcRegs[I] != DestRegs[I]) {
         UsedMask[I] = true;
         EmitAndCountInstruction(
@@ -1459,6 +1462,9 @@ void X86AsmPrinter::LowerPATCHABLE_TYPED_EVENT_CALL(const MachineInstr &MI,
   // is clobbers. We've already added nops to account for the size of mov and
   // push if the register is in the right place, so we only have to worry about
   // emitting movs.
+  // FIXME: This doesn't work if one of the later SrcRegs is equal to an
+  // earlier DestReg. We will have already overwritten over the register before
+  // we can copy from it.
   for (unsigned I = 0; I < MI.getNumOperands(); ++I)
     if (UsedMask[I])
       EmitAndCountInstruction(

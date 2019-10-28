@@ -13,7 +13,7 @@ define i32 @fn() nounwind noinline uwtable "function-instrument"="xray-always" {
     ; CHECK-NEXT:  pushq %rdi
     ; CHECK-NEXT:  pushq %rsi
     ; CHECK-NEXT:  movq %rcx, %rdi
-    ; CHECK-NEXT:  movq %eax, %rsi
+    ; CHECK-NEXT:  movq %rax, %rsi
     ; CHECK-NEXT:  callq __xray_CustomEvent
     ; CHECK-NEXT:  popq %rsi
     ; CHECK-NEXT:  popq %rdi
@@ -23,7 +23,7 @@ define i32 @fn() nounwind noinline uwtable "function-instrument"="xray-always" {
     ; PIC-NEXT:  pushq %rdi
     ; PIC-NEXT:  pushq %rsi
     ; PIC-NEXT:  movq %rcx, %rdi
-    ; PIC-NEXT:  movq %eax, %rsi
+    ; PIC-NEXT:  movq %rax, %rsi
     ; PIC-NEXT:  callq __xray_CustomEvent@PLT
     ; PIC-NEXT:  popq %rsi
     ; PIC-NEXT:  popq %rdi
