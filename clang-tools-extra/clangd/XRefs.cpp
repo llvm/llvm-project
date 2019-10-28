@@ -500,6 +500,7 @@ static std::string printDefinition(const Decl *D) {
       printingPolicyForDecls(D->getASTContext().getPrintingPolicy());
   Policy.IncludeTagDefinition = false;
   D->print(OS, Policy);
+  OS.flush();
   return Definition;
 }
 
@@ -714,6 +715,7 @@ static HoverInfo getHoverContents(QualType T, const Decl *D, ASTContext &ASTCtx,
   llvm::raw_string_ostream OS(HI.Name);
   PrintingPolicy Policy = printingPolicyForDecls(ASTCtx.getPrintingPolicy());
   T.print(OS, Policy);
+  OS.flush();
 
   if (D) {
     HI.Kind = indexSymbolKindToSymbolKind(index::getSymbolInfo(D).Kind);
