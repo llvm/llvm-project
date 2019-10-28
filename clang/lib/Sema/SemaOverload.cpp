@@ -1357,7 +1357,7 @@ TryUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
     ICS.Ambiguous.setToType(ToType);
     for (OverloadCandidateSet::iterator Cand = Conversions.begin();
          Cand != Conversions.end(); ++Cand)
-      if (Cand->Viable)
+      if (Cand->Best)
         ICS.Ambiguous.addConversion(Cand->FoundDecl, Cand->Function);
     break;
 
@@ -3578,7 +3578,10 @@ Sema::DiagnoseMultipleUserDefinedConversion(Expr *From, QualType ToType) {
         (OvResult == OR_No_Viable_Function && !CandidateSet.empty())))
     return false;
 
-  auto Cands = CandidateSet.CompleteCandidates(*this, OCD_AllCandidates, From);
+  auto Cands = CandidateSet.CompleteCandidates(
+      *this,
+      OvResult == OR_Ambiguous ? OCD_AmbiguousCandidates : OCD_AllCandidates,
+      From);
   if (OvResult == OR_Ambiguous)
     Diag(From->getBeginLoc(), diag::err_typecheck_ambiguous_condition)
         << From->getType() << ToType << From->getSourceRange();
@@ -4602,7 +4605,7 @@ FindConversionForRefInit(Sema &S, ImplicitConversionSequence &ICS,
     ICS.setAmbiguous();
     for (OverloadCandidateSet::iterator Cand = CandidateSet.begin();
          Cand != CandidateSet.end(); ++Cand)
-      if (Cand->Viable)
+      if (Cand->Best)
         ICS.Ambiguous.addConversion(Cand->FoundDecl, Cand->Function);
     return true;
 
@@ -9653,11 +9656,13 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
 
   // Find the best viable function.
   Best = end();
-  for (auto *Cand : Candidates)
+  for (auto *Cand : Candidates) {
+    Cand->Best = false;
     if (Cand->Viable)
       if (Best == end() ||
           isBetterOverloadCandidate(S, *Cand, *Best, Loc, Kind))
         Best = Cand;
+  }
 
   // If we didn't find any viable functions, abort.
   if (Best == end())
@@ -9665,21 +9670,32 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
 
   llvm::SmallVector<const NamedDecl *, 4> EquivalentCands;
 
+  llvm::SmallVector<OverloadCandidate*, 4> PendingBest;
+  PendingBest.push_back(&*Best);
+  Best->Best = true;
+
   // Make sure that this function is better than every other viable
   // function. If not, we have an ambiguity.
-  for (auto *Cand : Candidates) {
-    if (Cand->Viable && Cand != Best &&
-        !isBetterOverloadCandidate(S, *Best, *Cand, Loc, Kind)) {
-      if (S.isEquivalentInternalLinkageDeclaration(Best->Function,
-                                                   Cand->Function)) {
-        EquivalentCands.push_back(Cand->Function);
-        continue;
-      }
+  while (!PendingBest.empty()) {
+    auto *Curr = PendingBest.pop_back_val();
+    for (auto *Cand : Candidates) {
+      if (Cand->Viable && !Cand->Best &&
+          !isBetterOverloadCandidate(S, *Curr, *Cand, Loc, Kind)) {
+        PendingBest.push_back(Cand);
+        Cand->Best = true;
 
-      Best = end();
-      return OR_Ambiguous;
+        if (S.isEquivalentInternalLinkageDeclaration(Cand->Function,
+                                                     Curr->Function))
+          EquivalentCands.push_back(Cand->Function);
+        else
+          Best = end();
+      }
     }
   }
+
+  // If we found more than one best candidate, this is ambiguous.
+  if (Best == end())
+    return OR_Ambiguous;
 
   // Best is the best viable function.
   if (Best->Function && Best->Function->isDeleted())
@@ -11080,15 +11096,30 @@ SmallVector<OverloadCandidate *, 32> OverloadCandidateSet::CompleteCandidates(
   for (iterator Cand = begin(), LastCand = end(); Cand != LastCand; ++Cand) {
     if (!Filter(*Cand))
       continue;
-    if (Cand->Viable)
-      Cands.push_back(Cand);
-    else if (OCD == OCD_AllCandidates) {
-      CompleteNonViableCandidate(S, Cand, Args, Kind);
-      if (Cand->Function || Cand->IsSurrogate)
-        Cands.push_back(Cand);
-      // Otherwise, this a non-viable builtin candidate.  We do not, in general,
-      // want to list every possible builtin candidate.
+    switch (OCD) {
+    case OCD_AllCandidates:
+      if (!Cand->Viable) {
+        if (!Cand->Function && !Cand->IsSurrogate) {
+          // This a non-viable builtin candidate.  We do not, in general,
+          // want to list every possible builtin candidate.
+          continue;
+        }
+        CompleteNonViableCandidate(S, Cand, Args, Kind);
+      }
+      break;
+
+    case OCD_ViableCandidates:
+      if (!Cand->Viable)
+        continue;
+      break;
+
+    case OCD_AmbiguousCandidates:
+      if (!Cand->Best)
+        continue;
+      break;
     }
+
+    Cands.push_back(Cand);
   }
 
   llvm::stable_sort(
@@ -12453,7 +12484,7 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
         PartialDiagnosticAt(Fn->getBeginLoc(),
                             SemaRef.PDiag(diag::err_ovl_ambiguous_call)
                                 << ULE->getName() << Fn->getSourceRange()),
-        SemaRef, OCD_ViableCandidates, Args);
+        SemaRef, OCD_AmbiguousCandidates, Args);
     break;
 
   case OR_Deleted: {
@@ -12699,7 +12730,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
                             PDiag(diag::err_ovl_ambiguous_oper_unary)
                                 << UnaryOperator::getOpcodeStr(Opc)
                                 << Input->getType() << Input->getSourceRange()),
-        *this, OCD_ViableCandidates, ArgsArray,
+        *this, OCD_AmbiguousCandidates, ArgsArray,
         UnaryOperator::getOpcodeStr(Opc), OpLoc);
     return ExprError();
 
@@ -13108,7 +13139,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
                                          << Args[1]->getType()
                                          << Args[0]->getSourceRange()
                                          << Args[1]->getSourceRange()),
-          *this, OCD_ViableCandidates, Args, BinaryOperator::getOpcodeStr(Opc),
+          *this, OCD_AmbiguousCandidates, Args, BinaryOperator::getOpcodeStr(Opc),
           OpLoc);
       return ExprError();
 
@@ -13293,7 +13324,7 @@ Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
                                         << Args[1]->getType()
                                         << Args[0]->getSourceRange()
                                         << Args[1]->getSourceRange()),
-          *this, OCD_ViableCandidates, Args, "[]", LLoc);
+          *this, OCD_AmbiguousCandidates, Args, "[]", LLoc);
       return ExprError();
 
     case OR_Deleted:
@@ -13485,7 +13516,7 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
           PartialDiagnosticAt(UnresExpr->getMemberLoc(),
                               PDiag(diag::err_ovl_ambiguous_member_call)
                                   << DeclName << MemExprE->getSourceRange()),
-          *this, OCD_AllCandidates, Args);
+          *this, OCD_AmbiguousCandidates, Args);
       // FIXME: Leaking incoming expressions!
       return ExprError();
 
@@ -13717,7 +13748,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
                             PDiag(diag::err_ovl_ambiguous_object_call)
                                 << Object.get()->getType()
                                 << Object.get()->getSourceRange()),
-        *this, OCD_ViableCandidates, Args);
+        *this, OCD_AmbiguousCandidates, Args);
     break;
 
   case OR_Deleted:
@@ -13952,7 +13983,7 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
         PartialDiagnosticAt(OpLoc, PDiag(diag::err_ovl_ambiguous_oper_unary)
                                        << "->" << Base->getType()
                                        << Base->getSourceRange()),
-        *this, OCD_ViableCandidates, Base);
+        *this, OCD_AmbiguousCandidates, Base);
     return ExprError();
 
   case OR_Deleted:
@@ -14032,7 +14063,7 @@ ExprResult Sema::BuildLiteralOperatorCall(LookupResult &R,
     CandidateSet.NoteCandidates(
         PartialDiagnosticAt(R.getNameLoc(), PDiag(diag::err_ovl_ambiguous_call)
                                                 << R.getLookupName()),
-        *this, OCD_ViableCandidates, Args);
+        *this, OCD_AmbiguousCandidates, Args);
     return ExprError();
   }
 

@@ -2323,7 +2323,7 @@ static bool resolveAllocationOverload(
           PartialDiagnosticAt(R.getNameLoc(),
                               S.PDiag(diag::err_ovl_ambiguous_call)
                                   << R.getLookupName() << Range),
-          S, OCD_ViableCandidates, Args);
+          S, OCD_AmbiguousCandidates, Args);
     }
     return true;
 
@@ -3513,7 +3513,7 @@ static bool resolveBuiltinNewDeleteOverload(Sema &S, CallExpr *TheCall,
         PartialDiagnosticAt(R.getNameLoc(),
                             S.PDiag(diag::err_ovl_ambiguous_call)
                                 << R.getLookupName() << Range),
-        S, OCD_ViableCandidates, Args);
+        S, OCD_AmbiguousCandidates, Args);
     return true;
 
   case OR_Deleted: {

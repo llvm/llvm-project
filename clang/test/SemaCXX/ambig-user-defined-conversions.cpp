@@ -13,7 +13,7 @@ namespace test0 {
   extern B f(); 
   B b1;
 
-  void func(const int ci, const char cc); // expected-note {{candidate function}}
+  void func(const int ci, const char cc);
   void func(const char ci, const B b); // expected-note {{candidate function}}
   void func(const B b, const int ci); // expected-note {{candidate function}}
 

@@ -8,7 +8,7 @@ struct B2 {
   B2(int); // expected-note {{candidate}}
 };
 
-struct D1 : B1, B2 { // expected-note 2{{candidate}}
+struct D1 : B1, B2 {
   using B1::B1; // expected-note {{inherited here}}
   using B2::B2; // expected-note {{inherited here}}
 };
@@ -35,11 +35,11 @@ namespace default_ctor {
     operator D&&();
   };
 
-  struct A { // expected-note 2{{candidate}}
+  struct A {
     A(); // expected-note {{candidate}}
 
-    A(C &&); // expected-note {{candidate}}
-    C &operator=(C&&); // expected-note {{candidate}}
+    A(C &&);
+    C &operator=(C&&);
 
     A(D &&);
     D &operator=(D&&); // expected-note {{candidate}}
@@ -47,11 +47,11 @@ namespace default_ctor {
     A(convert_to_D2); // expected-note {{candidate}}
   };
 
-  struct B { // expected-note 2{{candidate}}
+  struct B {
     B(); // expected-note {{candidate}}
 
-    B(C &&); // expected-note {{candidate}}
-    C &operator=(C&&); // expected-note {{candidate}}
+    B(C &&);
+    C &operator=(C&&);
 
     B(D &&);
     D &operator=(D&&); // expected-note {{candidate}}
@@ -66,14 +66,14 @@ namespace default_ctor {
     using B::operator=;
   };
   struct D : A, B {
-    using A::A; // expected-note 3{{inherited here}}
+    using A::A; // expected-note 2{{inherited here}}
     using A::operator=;
-    using B::B; // expected-note 3{{inherited here}}
+    using B::B; // expected-note 2{{inherited here}}
     using B::operator=;
 
     D(int);
-    D(const D&); // expected-note {{candidate}}
-    D &operator=(const D&); // expected-note {{candidate}}
+    D(const D&);
+    D &operator=(const D&);
   };
 
   C c;
