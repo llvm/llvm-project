@@ -74,6 +74,7 @@ Sections:
     Type:    SHT_NOTE
     ShSize:  0x100
     Address: 0x4000
+    Notes:   []
   - Name:    .nobits
     Type:    SHT_NOBITS
     ShSize:  0x200

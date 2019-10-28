@@ -1032,6 +1032,13 @@ static void sectionMapping(IO &IO, ELFYAML::HashSection &Section) {
   IO.mapOptional("Size", Section.Size);
 }
 
+static void sectionMapping(IO &IO, ELFYAML::NoteSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapOptional("Content", Section.Content);
+  IO.mapOptional("Size", Section.Size);
+  IO.mapOptional("Notes", Section.Notes);
+}
+
 static void sectionMapping(IO &IO, ELFYAML::NoBitsSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Size", Section.Size, Hex64(0));
@@ -1142,6 +1149,11 @@ void MappingTraits<std::unique_ptr<ELFYAML::Section>>::mapping(
     if (!IO.outputting())
       Section.reset(new ELFYAML::HashSection());
     sectionMapping(IO, *cast<ELFYAML::HashSection>(Section.get()));
+    break;
+  case ELF::SHT_NOTE:
+    if (!IO.outputting())
+      Section.reset(new ELFYAML::NoteSection());
+    sectionMapping(IO, *cast<ELFYAML::NoteSection>(Section.get()));
     break;
   case ELF::SHT_MIPS_ABIFLAGS:
     if (!IO.outputting())
@@ -1270,6 +1282,24 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Section>>::validate(
     return {};
   }
 
+  if (const auto *NS = dyn_cast<ELFYAML::NoteSection>(Section.get())) {
+    if (!NS->Content && !NS->Size && !NS->Notes)
+      return "one of \"Content\", \"Size\" or \"Notes\" must be "
+             "specified";
+
+    if (!NS->Content && !NS->Size)
+      return {};
+
+    if (NS->Size && NS->Content &&
+        (uint64_t)*NS->Size < NS->Content->binary_size())
+      return "\"Size\" must be greater than or equal to the content "
+             "size";
+
+    if (NS->Notes)
+      return "\"Notes\" cannot be used with \"Content\" or \"Size\"";
+    return {};
+  }
+
   return {};
 }
 
@@ -1311,6 +1341,14 @@ void MappingTraits<ELFYAML::DynamicEntry>::mapping(IO &IO,
 
   IO.mapRequired("Tag", Rel.Tag);
   IO.mapRequired("Value", Rel.Val);
+}
+
+void MappingTraits<ELFYAML::NoteEntry>::mapping(IO &IO, ELFYAML::NoteEntry &N) {
+  assert(IO.getContext() && "The IO context is not initialized");
+
+  IO.mapOptional("Name", N.Name);
+  IO.mapOptional("Desc", N.Desc);
+  IO.mapRequired("Type", N.Type);
 }
 
 void MappingTraits<ELFYAML::VerdefEntry>::mapping(IO &IO,

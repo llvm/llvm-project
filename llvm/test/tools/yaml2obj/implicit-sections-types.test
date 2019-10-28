@@ -63,6 +63,7 @@ Sections:
     Type: SHT_PROGBITS
   - Name: .dynsym
     Type: SHT_NOTE
+    Size: 0
   - Name: .dynstr
     Type: SHT_NOBITS
 ## Needed to set the proper content size for .symtab, so
