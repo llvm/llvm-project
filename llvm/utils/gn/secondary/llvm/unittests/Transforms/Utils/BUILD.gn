@@ -16,7 +16,7 @@ unittest("UtilsTests") {
     "FunctionComparatorTest.cpp",
     "IntegerDivisionTest.cpp",
     "LocalTest.cpp",
-    "SizeOptsTests.cpp",
+    "SizeOptsTest.cpp",
     "SSAUpdaterBulkTest.cpp",
     "UnrollLoopTest.cpp",
     "ValueMapperTest.cpp",
