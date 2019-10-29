@@ -1370,7 +1370,7 @@ static void handleUndefined(Symbol *sym) {
     sym->fetch();
 }
 
-// As an extention to GNU linkers, lld supports a variant of `-u`
+// As an extension to GNU linkers, lld supports a variant of `-u`
 // which accepts wildcard patterns. All symbols that match a given
 // pattern are handled as if they were given by `-u`.
 static void handleUndefinedGlob(StringRef arg) {

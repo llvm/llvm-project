@@ -239,7 +239,7 @@ struct Configuration {
   int32_t splitStackAdjustSize;
 
   // The following config options do not directly correspond to any
-  // particualr command line options.
+  // particular command line options.
 
   // True if we need to pass through relocations in input files to the
   // output file. Usually false because we consume relocations.

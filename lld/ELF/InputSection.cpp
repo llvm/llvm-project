@@ -72,7 +72,7 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
   areRelocsRela = false;
 
   // The ELF spec states that a value of 0 means the section has
-  // no alignment constraits.
+  // no alignment constraints.
   uint32_t v = std::max<uint32_t>(alignment, 1);
   if (!isPowerOf2_64(v))
     fatal(toString(this) + ": sh_addralign is not a power of 2");
@@ -469,7 +469,7 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
           target->getRelExpr(type, sym, bufLoc) == R_MIPS_GOTREL) {
         // Some MIPS relocations depend on "gp" value. By default,
         // this value has 0x7ff0 offset from a .got section. But
-        // relocatable files produced by a complier or a linker
+        // relocatable files produced by a compiler or a linker
         // might redefine this default value and we must use it
         // for a calculation of the relocation result. When we
         // generate EXE or DSO it's trivial. Generating a relocatable
@@ -757,7 +757,7 @@ static uint64_t getRelocTargetVA(const InputFile *file, RelType type, int64_t a,
   case R_PPC32_PLTREL:
     // R_PPC_PLTREL24 uses the addend (usually 0 or 0x8000) to indicate r30
     // stores _GLOBAL_OFFSET_TABLE_ or .got2+0x8000. The addend is ignored for
-    // target VA compuation.
+    // target VA computation.
     return sym.getPltVA() - p;
   case R_PPC64_CALL: {
     uint64_t symVA = sym.getVA(a);

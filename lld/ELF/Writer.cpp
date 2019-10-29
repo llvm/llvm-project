@@ -283,7 +283,7 @@ void addReservedSymbols() {
   // different in different DSOs, so we chose the start address of the DSO.
   addOptionalRegular("__dso_handle", Out::elfHeader, 0, STV_HIDDEN);
 
-  // If linker script do layout we do not need to create any standart symbols.
+  // If linker script do layout we do not need to create any standard symbols.
   if (script->hasSectionsCommand)
     return;
 
@@ -1757,7 +1757,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   if (!config->allowShlibUndefined) {
     // Error on undefined symbols in a shared object, if all of its DT_NEEDED
-    // entires are seen. These cases would otherwise lead to runtime errors
+    // entries are seen. These cases would otherwise lead to runtime errors
     // reported by the dynamic linker.
     //
     // ld.bfd traces all DT_NEEDED to emulate the logic of the dynamic linker to
@@ -1979,7 +1979,7 @@ template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
   // program text is above 2 GiB. We use the address of the .text
   // section instead to prevent that failure.
   //
-  // In a rare sitaution, .text section may not exist. If that's the
+  // In rare situations, the .text section may not exist. If that's the
   // case, use the image base address as a last resort.
   OutputSection *Default = findSection(".text");
   if (!Default)
@@ -2085,7 +2085,7 @@ std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs(Partition &part) {
   }
 
   // PT_GNU_RELRO includes all sections that should be marked as
-  // read-only by dynamic linker after proccessing relocations.
+  // read-only by dynamic linker after processing relocations.
   // Current dynamic loaders only support one PT_GNU_RELRO PHDR, give
   // an error message if more than one PT_GNU_RELRO PHDR is required.
   PhdrEntry *relRo = make<PhdrEntry>(PT_GNU_RELRO, PF_R);
@@ -2423,7 +2423,7 @@ struct SectionOffset {
 } // namespace
 
 // Check whether sections overlap for a specific address range (file offsets,
-// load and virtual adresses).
+// load and virtual addresses).
 static void checkOverlap(StringRef name, std::vector<SectionOffset> &sections,
                          bool isVirtualAddr) {
   llvm::sort(sections, [=](const SectionOffset &a, const SectionOffset &b) {
