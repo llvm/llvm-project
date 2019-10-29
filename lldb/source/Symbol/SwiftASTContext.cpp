@@ -2089,7 +2089,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
                 std::string parent_path =
                     module_path.substr(0, framework_offset);
 
-                if (!StringRef(parent_path).equals("/System/Library") &&
+                // Never add framework paths pointing into the
+                // system. These modules must be imported from the
+                // SDK instead.
+                if (!StringRef(parent_path).startswith("/System/Library") &&
                     !IsDeviceSupport(parent_path.c_str()))
                   framework_search_paths.push_back(
                       {std::move(parent_path), /*system*/ false});
