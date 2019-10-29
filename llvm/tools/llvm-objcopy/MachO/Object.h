@@ -38,6 +38,8 @@ struct RelocationInfo;
 struct Section {
   std::string Sectname;
   std::string Segname;
+  // CanonicalName is a string formatted as “<Segname>,<Sectname>".
+  std::string CanonicalName;
   uint64_t Addr;
   uint64_t Size;
   uint32_t Offset;
@@ -250,6 +252,8 @@ struct Object {
   Optional<size_t> DataInCodeCommandIndex;
   /// The index LC_FUNCTION_STARTS load comamnd if present.
   Optional<size_t> FunctionStartsCommandIndex;
+
+  void removeSections(function_ref<bool(const Section &)> ToRemove);
 };
 
 } // end namespace macho
