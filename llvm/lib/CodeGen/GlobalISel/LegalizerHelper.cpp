@@ -3377,7 +3377,7 @@ void LegalizerHelper::multiplyRegisters(SmallVectorImpl<Register> &DstRegs,
           B.buildUMulH(NarrowTy, Src1Regs[DstIdx - 1 - i], Src2Regs[i]);
       Factors.push_back(Umulh.getReg(0));
     }
-    // Add CarrySum from additons calculated for previous DstIdx.
+    // Add CarrySum from additions calculated for previous DstIdx.
     if (DstIdx != 1) {
       Factors.push_back(CarrySumPrevDstIdx);
     }
