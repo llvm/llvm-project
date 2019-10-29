@@ -44,3 +44,53 @@ Sections:
   - Name: .bar
     Type: SHT_PROGBITS
     Link: .unknown2
+
+## Check we link SHT_GROUP to a symbol table by default if it exists.
+## Also, check we can set an arbitrary value for sh_link.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readobj --sections %t3 | FileCheck %s --check-prefix=GROUP-LINK
+
+# GROUP-LINK:      Name: .group1
+# GROUP-LINK:      Link:
+# GROUP-LINK-SAME:       3
+
+# GROUP-LINK:      Name: .group2
+# GROUP-LINK:      Link:
+# GROUP-LINK-SAME:       255
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .group1
+    Type: SHT_GROUP
+    Members:
+  - Name: .group2
+    Type: SHT_GROUP
+    Link: 0xFF
+    Members:
+Symbols: []
+
+## Check we set SHT_GROUP's link value to 0 when there is no symbol table.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-readobj --sections %t4 | FileCheck %s --check-prefix=GROUP-LINK-NOSYMTAB
+
+# GROUP-LINK-NOSYMTAB:      Name: .group
+# GROUP-LINK-NOSYMTAB:      Link:
+# GROUP-LINK-NOSYMTAB-SAME:       0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .group
+    Type: SHT_GROUP
+    Members:

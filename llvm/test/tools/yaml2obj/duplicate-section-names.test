@@ -150,7 +150,6 @@ FileHeader:
 Sections:
   - Name: .group
     Type: SHT_GROUP
-    Link: .symtab
     Info: foo
     Members:
       - SectionOrType: GRP_COMDAT
@@ -159,7 +158,6 @@ Sections:
     Type: SHT_PROGBITS
   - Name: '.group [1]'
     Type: SHT_GROUP
-    Link: .symtab
     Info: 'foo [1]'
     Members:         
       - SectionOrType: GRP_COMDAT
