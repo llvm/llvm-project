@@ -2591,23 +2591,6 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
   return ConvertArg(Arg, 0);
 }
 
-template<typename TemplateDeclT>
-static Sema::TemplateDeductionResult
-CheckDeducedArgumentConstraints(Sema& S, TemplateDeclT *Template,
-                                ArrayRef<TemplateArgument> DeducedArgs,
-                                TemplateDeductionInfo &Info) {
-  llvm::SmallVector<const Expr *, 3> AssociatedConstraints;
-  Template->getAssociatedConstraints(AssociatedConstraints);
-  if (S.CheckConstraintSatisfaction(Template, AssociatedConstraints,
-                                    DeducedArgs, Info.getLocation(),
-                                    Info.AssociatedConstraintsSatisfaction) ||
-      !Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
-    Info.reset(TemplateArgumentList::CreateCopy(S.Context, DeducedArgs));
-    return Sema::TDK_ConstraintsNotSatisfied;
-  }
-  return Sema::TDK_Success;
-}
-
 // FIXME: This should not be a template, but
 // ClassTemplatePartialSpecializationDecl sadly does not derive from
 // TemplateDecl.
@@ -2705,10 +2688,6 @@ static Sema::TemplateDeductionResult ConvertDeducedTemplateArguments(
     // If we get here, we successfully used the default template argument.
   }
 
-  if (Sema::TemplateDeductionResult Result
-        = CheckDeducedArgumentConstraints(S, Template, Builder, Info))
-    return Result;
-
   return Sema::TDK_Success;
 }
 
@@ -2788,14 +2767,10 @@ FinishTemplateArgumentDeduction(
     return Sema::TDK_SubstitutionFailure;
   }
 
-  bool ConstraintsNotSatisfied;
   SmallVector<TemplateArgument, 4> ConvertedInstArgs;
   if (S.CheckTemplateArgumentList(Template, Partial->getLocation(), InstArgs,
-                                  false, ConvertedInstArgs,
-                                  /*UpdateArgsWithConversions=*/true,
-                                  &ConstraintsNotSatisfied))
-    return ConstraintsNotSatisfied ? Sema::TDK_ConstraintsNotSatisfied :
-                                     Sema::TDK_SubstitutionFailure;
+                                  false, ConvertedInstArgs))
+    return Sema::TDK_SubstitutionFailure;
 
   TemplateParameterList *TemplateParams = Template->getTemplateParameters();
   for (unsigned I = 0, E = TemplateParams->size(); I != E; ++I) {
@@ -2855,6 +2830,7 @@ static Sema::TemplateDeductionResult FinishTemplateArgumentDeduction(
 
   return Sema::TDK_Success;
 }
+
 
 /// Perform template argument deduction to determine whether
 /// the given template arguments match the given class template
@@ -5073,7 +5049,6 @@ template<typename TemplateLikeDecl>
 static bool isAtLeastAsSpecializedAs(Sema &S, QualType T1, QualType T2,
                                      TemplateLikeDecl *P2,
                                      TemplateDeductionInfo &Info) {
-  // TODO: Concepts: Regard constraints
   // C++ [temp.class.order]p1:
   //   For two class template partial specializations, the first is at least as
   //   specialized as the second if, given the following rewrite to two
