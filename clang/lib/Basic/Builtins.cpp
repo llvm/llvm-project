@@ -47,8 +47,7 @@ void Builtin::Context::InitializeTarget(const TargetInfo &Target,
     AuxTSRecords = AuxTarget->getTargetBuiltins();
 }
 
-bool Builtin::Context::isBuiltinFunc(const char *Name) {
-  StringRef FuncName(Name);
+bool Builtin::Context::isBuiltinFunc(llvm::StringRef FuncName) {
   for (unsigned i = Builtin::NotBuiltin + 1; i != Builtin::FirstTSBuiltin; ++i)
     if (FuncName.equals(BuiltinInfo[i].Name))
       return strchr(BuiltinInfo[i].Attributes, 'f') != nullptr;

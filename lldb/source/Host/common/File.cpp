@@ -310,7 +310,7 @@ Status NativeFile::Close() {
     if (m_own_stream) {
       if (::fclose(m_stream) == EOF)
         error.SetErrorToErrno();
-    } else {
+    } else if (m_options & eOpenOptionWrite) {
       if (::fflush(m_stream) == EOF)
         error.SetErrorToErrno();
     }

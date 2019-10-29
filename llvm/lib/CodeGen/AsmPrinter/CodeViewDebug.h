@@ -148,7 +148,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
     SmallVector<LexicalBlock *, 1> ChildBlocks;
 
     std::vector<std::pair<MCSymbol *, MDNode *>> Annotations;
-    std::vector<std::tuple<MCSymbol *, MCSymbol *, const DIType *>>
+    std::vector<std::tuple<const MCSymbol *, const MCSymbol *, const DIType *>>
         HeapAllocSites;
 
     const MCSymbol *Begin = nullptr;

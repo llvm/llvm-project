@@ -72,7 +72,8 @@
 // - Define a class (transitively) inheriting from AbstractAttribute and one
 //   (which could be the same) that (transitively) inherits from AbstractState.
 //   For the latter, consider the already available BooleanState and
-//   IntegerState if they fit your needs, e.g., you require only a bit-encoding.
+//   {Inc,Dec,Bit}IntegerState if they fit your needs, e.g., you require only a
+//   number tracking or bit-encoding.
 // - Implement all pure methods. Also use overloading if the attribute is not
 //   conforming with the "default" behavior: A (set of) LLVM-IR attribute(s) for
 //   an argument, call site argument, function return value, or function. See
@@ -1027,9 +1028,10 @@ private:
 ///
 /// All methods need to be implemented by the subclass. For the common use case,
 /// a single boolean state or a bit-encoded state, the BooleanState and
-/// IntegerState classes are already provided. An abstract attribute can inherit
-/// from them to get the abstract state interface and additional methods to
-/// directly modify the state based if needed. See the class comments for help.
+/// {Inc,Dec,Bit}IntegerState classes are already provided. An abstract
+/// attribute can inherit from them to get the abstract state interface and
+/// additional methods to directly modify the state based if needed. See the
+/// class comments for help.
 struct AbstractState {
   virtual ~AbstractState() {}
 
@@ -1068,15 +1070,15 @@ struct AbstractState {
 /// force/inidicate a fixpoint. If an optimistic one is indicated, the known
 /// state will catch up with the assumed one, for a pessimistic fixpoint it is
 /// the other way around.
-struct IntegerState : public AbstractState {
-  /// Underlying integer type, we assume 32 bits to be enough.
-  using base_t = uint32_t;
+template <typename base_ty, base_ty BestState, base_ty WorstState>
+struct IntegerStateBase : public AbstractState {
+  using base_t = base_ty;
 
-  /// Initialize the (best) state.
-  IntegerState(base_t BestState = ~0) : Assumed(BestState) {}
+  /// Return the best possible representable state.
+  static constexpr base_t getBestState() { return BestState; }
 
   /// Return the worst possible representable state.
-  static constexpr base_t getWorstState() { return 0; }
+  static constexpr base_t getWorstState() { return WorstState; }
 
   /// See AbstractState::isValidState()
   /// NOTE: For now we simply pretend that the worst possible state is invalid.
@@ -1103,6 +1105,58 @@ struct IntegerState : public AbstractState {
   /// Return the assumed state encoding.
   base_t getAssumed() const { return Assumed; }
 
+  /// Equality for IntegerStateBase.
+  bool
+  operator==(const IntegerStateBase<base_t, BestState, WorstState> &R) const {
+    return this->getAssumed() == R.getAssumed() &&
+           this->getKnown() == R.getKnown();
+  }
+
+  /// Inequality for IntegerStateBase.
+  bool
+  operator!=(const IntegerStateBase<base_t, BestState, WorstState> &R) const {
+    return !(*this == R);
+  }
+
+  /// "Clamp" this state with \p R. The result is subtype dependent but it is
+  /// intended that only information assumed in both states will be assumed in
+  /// this one afterwards.
+  void operator^=(const IntegerStateBase<base_t, BestState, WorstState> &R) {
+    handleNewAssumedValue(R.getAssumed());
+  }
+
+  void operator|=(const IntegerStateBase<base_t, BestState, WorstState> &R) {
+    joinOR(R.getAssumed(), R.getKnown());
+  }
+
+  void operator&=(const IntegerStateBase<base_t, BestState, WorstState> &R) {
+    joinAND(R.getAssumed(), R.getKnown());
+  }
+
+protected:
+  /// Handle a new assumed value \p Value. Subtype dependent.
+  virtual void handleNewAssumedValue(base_t Value) = 0;
+
+  /// Handle a new known value \p Value. Subtype dependent.
+  virtual void handleNewKnownValue(base_t Value) = 0;
+
+  /// Handle a  value \p Value. Subtype dependent.
+  virtual void joinOR(base_t AssumedValue, base_t KnownValue) = 0;
+
+  /// Handle a new assumed value \p Value. Subtype dependent.
+  virtual void joinAND(base_t AssumedValue, base_t KnownValue) = 0;
+
+  /// The known state encoding in an integer of type base_t.
+  base_t Known = getWorstState();
+
+  /// The assumed state encoding in an integer of type base_t.
+  base_t Assumed = getBestState();
+};
+
+/// Specialization of the integer state for a bit-wise encoding.
+struct BitIntegerState : public IntegerStateBase<uint32_t, ~0u, 0> {
+  using base_t = IntegerStateBase::base_t;
+
   /// Return true if the bits set in \p BitsEncoding are "known bits".
   bool isKnown(base_t BitsEncoding) const {
     return (Known & BitsEncoding) == BitsEncoding;
@@ -1114,7 +1168,7 @@ struct IntegerState : public AbstractState {
   }
 
   /// Add the bits in \p BitsEncoding to the "known bits".
-  IntegerState &addKnownBits(base_t Bits) {
+  BitIntegerState &addKnownBits(base_t Bits) {
     // Make sure we never miss any "known bits".
     Assumed |= Bits;
     Known |= Bits;
@@ -1122,92 +1176,145 @@ struct IntegerState : public AbstractState {
   }
 
   /// Remove the bits in \p BitsEncoding from the "assumed bits" if not known.
-  IntegerState &removeAssumedBits(base_t BitsEncoding) {
-    // Make sure we never loose any "known bits".
-    Assumed = (Assumed & ~BitsEncoding) | Known;
-    return *this;
+  BitIntegerState &removeAssumedBits(base_t BitsEncoding) {
+    return intersectAssumedBits(~BitsEncoding);
   }
 
   /// Remove the bits in \p BitsEncoding from the "known bits".
-  IntegerState &removeKnownBits(base_t BitsEncoding) {
+  BitIntegerState &removeKnownBits(base_t BitsEncoding) {
     Known = (Known & ~BitsEncoding);
     return *this;
   }
 
   /// Keep only "assumed bits" also set in \p BitsEncoding but all known ones.
-  IntegerState &intersectAssumedBits(base_t BitsEncoding) {
+  BitIntegerState &intersectAssumedBits(base_t BitsEncoding) {
     // Make sure we never loose any "known bits".
     Assumed = (Assumed & BitsEncoding) | Known;
     return *this;
   }
 
+private:
+  void handleNewAssumedValue(base_t Value) override {
+    intersectAssumedBits(Value);
+  }
+  void handleNewKnownValue(base_t Value) override { addKnownBits(Value); }
+  void joinOR(base_t AssumedValue, base_t KnownValue) override {
+    Known |= KnownValue;
+    Assumed |= AssumedValue;
+  }
+  void joinAND(base_t AssumedValue, base_t KnownValue) override {
+    Known &= KnownValue;
+    Assumed &= AssumedValue;
+  }
+};
+
+/// Specialization of the integer state for an increasing value, hence ~0u is
+/// the best state and 0 the worst.
+struct IncIntegerState : public IntegerStateBase<uint32_t, ~0u, 0> {
+  using base_t = IntegerStateBase::base_t;
+
   /// Take minimum of assumed and \p Value.
-  IntegerState &takeAssumedMinimum(base_t Value) {
+  IncIntegerState &takeAssumedMinimum(base_t Value) {
     // Make sure we never loose "known value".
     Assumed = std::max(std::min(Assumed, Value), Known);
     return *this;
   }
 
   /// Take maximum of known and \p Value.
-  IntegerState &takeKnownMaximum(base_t Value) {
+  IncIntegerState &takeKnownMaximum(base_t Value) {
     // Make sure we never loose "known value".
     Assumed = std::max(Value, Assumed);
     Known = std::max(Value, Known);
     return *this;
   }
 
-  /// Equality for IntegerState.
-  bool operator==(const IntegerState &R) const {
-    return this->getAssumed() == R.getAssumed() &&
-           this->getKnown() == R.getKnown();
+private:
+  void handleNewAssumedValue(base_t Value) override {
+    takeAssumedMinimum(Value);
   }
+  void handleNewKnownValue(base_t Value) override { takeKnownMaximum(Value); }
+  void joinOR(base_t AssumedValue, base_t KnownValue) override {
+    Known = std::max(Known, KnownValue);
+    Assumed = std::max(Assumed, AssumedValue);
+  }
+  void joinAND(base_t AssumedValue, base_t KnownValue) override {
+    Known = std::min(Known, KnownValue);
+    Assumed = std::min(Assumed, AssumedValue);
+  }
+};
 
-  /// Inequality for IntegerState.
-  bool operator!=(const IntegerState &R) const { return !(*this == R); }
+/// Specialization of the integer state for a decreasing value, hence 0 is the
+/// best state and ~0u the worst.
+template <typename base_ty = uint32_t>
+struct DecIntegerState : public IntegerStateBase<base_ty, 0, ~base_ty(0)> {
+  using base_t = base_ty;
 
-  /// "Clamp" this state with \p R. The result is the minimum of the assumed
-  /// information but not less than what was known before.
-  ///
-  /// TODO: Consider replacing the operator with a call or using it only when
-  ///       we can also take the maximum of the known information, thus when
-  ///       \p R is not dependent on additional assumed state.
-  IntegerState operator^=(const IntegerState &R) {
-    takeAssumedMinimum(R.Assumed);
+  /// Take maximum of assumed and \p Value.
+  DecIntegerState &takeAssumedMaximum(base_t Value) {
+    // Make sure we never loose "known value".
+    this->Assumed = std::min(std::max(this->Assumed, Value), this->Known);
     return *this;
   }
 
-  /// "Clamp" this state with \p R. The result is the maximum of the known
-  /// information but not more than what was assumed before.
-  IntegerState operator+=(const IntegerState &R) {
-    takeKnownMaximum(R.Known);
-    return *this;
-  }
-
-  /// Make this the minimum, known and assumed, of this state and \p R.
-  IntegerState operator&=(const IntegerState &R) {
-    Known = std::min(Known, R.Known);
-    Assumed = std::min(Assumed, R.Assumed);
-    return *this;
-  }
-
-  /// Make this the maximum, known and assumed, of this state and \p R.
-  IntegerState operator|=(const IntegerState &R) {
-    Known = std::max(Known, R.Known);
-    Assumed = std::max(Assumed, R.Assumed);
+  /// Take minimum of known and \p Value.
+  DecIntegerState &takeKnownMinimum(base_t Value) {
+    // Make sure we never loose "known value".
+    this->Assumed = std::min(Value, this->Assumed);
+    this->Known = std::min(Value, this->Known);
     return *this;
   }
 
 private:
-  /// The known state encoding in an integer of type base_t.
-  base_t Known = getWorstState();
-
-  /// The assumed state encoding in an integer of type base_t.
-  base_t Assumed;
+  void handleNewAssumedValue(base_t Value) override {
+    takeAssumedMaximum(Value);
+  }
+  void handleNewKnownValue(base_t Value) override { takeKnownMinimum(Value); }
+  void joinOR(base_t AssumedValue, base_t KnownValue) override {
+    this->Assumed = std::min(this->Assumed, KnownValue);
+    this->Assumed = std::min(this->Assumed, AssumedValue);
+  }
+  void joinAND(base_t AssumedValue, base_t KnownValue) override {
+    this->Assumed = std::max(this->Assumed, KnownValue);
+    this->Assumed = std::max(this->Assumed, AssumedValue);
+  }
 };
 
 /// Simple wrapper for a single bit (boolean) state.
-struct BooleanState : public IntegerState {
-  BooleanState() : IntegerState(1){};
+struct BooleanState : public IntegerStateBase<bool, 1, 0> {
+  using base_t = IntegerStateBase::base_t;
+
+  /// Set the assumed value to \p Value but never below the known one.
+  void setAssumed(bool Value) { Assumed &= (Known | Value); }
+
+  /// Set the known and asssumed value to \p Value.
+  void setKnown(bool Value) {
+    Known |= Value;
+    Assumed |= Value;
+  }
+
+  /// Return true if the state is assumed to hold.
+  bool isAssumed() const { return getAssumed(); }
+
+  /// Return true if the state is known to hold.
+  bool isKnown() const { return getKnown(); }
+
+private:
+  void handleNewAssumedValue(base_t Value) override {
+    if (!Value)
+      Assumed = Known;
+  }
+  void handleNewKnownValue(base_t Value) override {
+    if (Value)
+      Known = (Assumed = Value);
+  }
+  void joinOR(base_t AssumedValue, base_t KnownValue) override {
+    Known |= KnownValue;
+    Assumed |= AssumedValue;
+  }
+  void joinAND(base_t AssumedValue, base_t KnownValue) override {
+    Known &= KnownValue;
+    Assumed &= AssumedValue;
+  }
 };
 
 /// Helper struct necessary as the modular build fails if the virtual method
@@ -1404,7 +1511,10 @@ raw_ostream &operator<<(raw_ostream &OS, ChangeStatus S);
 raw_ostream &operator<<(raw_ostream &OS, IRPosition::Kind);
 raw_ostream &operator<<(raw_ostream &OS, const IRPosition &);
 raw_ostream &operator<<(raw_ostream &OS, const AbstractState &State);
-raw_ostream &operator<<(raw_ostream &OS, const IntegerState &S);
+template <typename base_ty, base_ty BestState, base_ty WorstState>
+raw_ostream &
+operator<<(raw_ostream &OS,
+           const IntegerStateBase<base_ty, BestState, WorstState> &State);
 ///}
 
 struct AttributorPass : public PassInfoMixin<AttributorPass> {
@@ -1656,7 +1766,7 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
 struct DerefState : AbstractState {
 
   /// State representing for dereferenceable bytes.
-  IntegerState DerefBytesState;
+  IncIntegerState DerefBytesState;
 
   /// State representing that whether the value is globaly dereferenceable.
   BooleanState GlobalState;
@@ -1700,31 +1810,24 @@ struct DerefState : AbstractState {
            this->GlobalState == R.GlobalState;
   }
 
-  /// Inequality for IntegerState.
+  /// Inequality for DerefState.
   bool operator!=(const DerefState &R) { return !(*this == R); }
 
-  /// See IntegerState::operator^=
+  /// See IntegerStateBase::operator^=
   DerefState operator^=(const DerefState &R) {
     DerefBytesState ^= R.DerefBytesState;
     GlobalState ^= R.GlobalState;
     return *this;
   }
 
-  /// See IntegerState::operator+=
-  DerefState operator+=(const DerefState &R) {
-    DerefBytesState += R.DerefBytesState;
-    GlobalState += R.GlobalState;
-    return *this;
-  }
-
-  /// See IntegerState::operator&=
+  /// See IntegerStateBase::operator&=
   DerefState operator&=(const DerefState &R) {
     DerefBytesState &= R.DerefBytesState;
     GlobalState &= R.GlobalState;
     return *this;
   }
 
-  /// See IntegerState::operator|=
+  /// See IntegerStateBase::operator|=
   DerefState operator|=(const DerefState &R) {
     DerefBytesState |= R.DerefBytesState;
     GlobalState |= R.GlobalState;
@@ -1780,7 +1883,7 @@ struct AADereferenceable
 /// An abstract interface for all align attributes.
 struct AAAlign
     : public IRAttribute<Attribute::Alignment,
-                         StateWrapper<IntegerState, AbstractAttribute>> {
+                         StateWrapper<IncIntegerState, AbstractAttribute>> {
   AAAlign(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// Return assumed alignment.
@@ -1799,7 +1902,7 @@ struct AAAlign
 /// An abstract interface for all nocapture attributes.
 struct AANoCapture
     : public IRAttribute<Attribute::NoCapture,
-                         StateWrapper<IntegerState, AbstractAttribute>> {
+                         StateWrapper<BitIntegerState, AbstractAttribute>> {
   AANoCapture(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// State encoding bits. A set bit in the state means the property holds.
@@ -1898,7 +2001,7 @@ struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute>,
 /// An abstract interface for all memory related attributes.
 struct AAMemoryBehavior
     : public IRAttribute<Attribute::ReadNone,
-                         StateWrapper<IntegerState, AbstractAttribute>> {
+                         StateWrapper<BitIntegerState, AbstractAttribute>> {
   AAMemoryBehavior(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// State encoding bits. A set bit in the state means the property holds.

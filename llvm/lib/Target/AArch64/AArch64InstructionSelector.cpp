@@ -2065,14 +2065,15 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     unsigned DstSize = DstTy.getSizeInBits();
     unsigned SrcSize = SrcTy.getSizeInBits();
 
+    if (DstTy.isVector())
+      return false; // Should be handled by imported patterns.
+
     assert((*RBI.getRegBank(DefReg, MRI, TRI)).getID() ==
                AArch64::GPRRegBankID &&
            "Unexpected ext regbank");
 
     MachineIRBuilder MIB(I);
     MachineInstr *ExtI;
-    if (DstTy.isVector())
-      return false; // Should be handled by imported patterns.
 
     // First check if we're extending the result of a load which has a dest type
     // smaller than 32 bits, then this zext is redundant. GPR32 is the smallest

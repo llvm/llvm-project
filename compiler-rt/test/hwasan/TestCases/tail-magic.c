@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
   sink = UNTAG(p);
   overwrite_tail();
   free(p);
-// CHECK: ERROR: HWAddressSanitizer: alocation-tail-overwritten; heap object [{{.*}}) of size 20
+// CHECK: ERROR: HWAddressSanitizer: allocation-tail-overwritten; heap object [{{.*}}) of size 20
 // CHECK: in main {{.*}}tail-magic.c:[[@LINE-2]]
 // CHECK: allocated here:
 // CHECK: in main {{.*}}tail-magic.c:[[@LINE-7]]

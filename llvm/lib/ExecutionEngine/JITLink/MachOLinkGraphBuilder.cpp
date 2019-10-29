@@ -179,7 +179,9 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
   llvm::sort(Sections,
              [](const NormalizedSection *LHS, const NormalizedSection *RHS) {
                assert(LHS && RHS && "Null section?");
-               return LHS->Address < RHS->Address;
+               if (LHS->Address != RHS->Address)
+                 return LHS->Address < RHS->Address;
+               return LHS->Size < RHS->Size;
              });
 
   for (unsigned I = 0, E = Sections.size() - 1; I != E; ++I) {

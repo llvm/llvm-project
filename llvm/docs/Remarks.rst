@@ -581,14 +581,17 @@ This diff file can be displayed using :ref:`opt-viewer.py <optviewerpy>`.
 Emitting remark diagnostics in the object file
 ==============================================
 
-A section containing metadata on remark diagnostics will be emitted when
--remarks-section is passed. The section contains the metadata associated to the
-format used to serialize the remarks.
+A section containing metadata on remark diagnostics will be emitted for the
+following formats:
+
+* ``yaml-strtab``
+* ``bitstream``
+
+This can be overridden by using the flag ``-remarks-section=<bool>``.
 
 The section is named:
 
 * ``__LLVM,__remarks`` (MachO)
-* ``.remarks`` (ELF)
 
 C API
 =====

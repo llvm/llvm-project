@@ -10,7 +10,6 @@ FileHeader:
 Sections:
   - Name:              .group
     Type:              SHT_GROUP
-    Link:              .symtab
     Info:              foo
     Members:
       - SectionOrType: 0xFF

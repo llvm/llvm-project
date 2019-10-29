@@ -1069,7 +1069,7 @@ static void sectionMapping(IO &IO, ELFYAML::RelocationSection &Section) {
 
 static void groupSectionMapping(IO &IO, ELFYAML::Group &Group) {
   commonSectionMapping(IO, Group);
-  IO.mapOptional("Info", Group.Signature, StringRef());
+  IO.mapOptional("Info", Group.Signature);
   IO.mapRequired("Members", Group.Members);
 }
 

@@ -685,7 +685,7 @@ Symtab *ObjectFilePECOFF::GetSymtab() {
             symbol.naux = symtab_data.GetU8(&offset);
             symbols[i].GetMangled().SetValue(ConstString(symbol_name.c_str()));
             if ((int16_t)symbol.sect >= 1) {
-              Address symbol_addr(sect_list->GetSectionAtIndex(symbol.sect - 1),
+              Address symbol_addr(sect_list->FindSectionByID(symbol.sect),
                                   symbol.value);
               symbols[i].GetAddressRef() = symbol_addr;
               symbols[i].SetType(MapSymbolType(symbol.type));

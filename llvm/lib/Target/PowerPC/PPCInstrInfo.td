@@ -117,6 +117,10 @@ def SDT_PPCextswsli : SDTypeProfile<1, 2, [  // extswsli
   SDTCisInt<0>, SDTCisInt<1>, SDTCisOpSmallerThanOp<1, 0>, SDTCisInt<2>
 ]>;
 
+def SDT_PPCFPMinMax : SDTypeProfile<1, 2, [
+  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisFP<0>
+]>;
+
 //===----------------------------------------------------------------------===//
 // PowerPC specific DAG Nodes.
 //
@@ -165,7 +169,8 @@ def PPCfsel   : SDNode<"PPCISD::FSEL",
    // Type constraint for fsel.
    SDTypeProfile<1, 3, [SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, 
                         SDTCisFP<0>, SDTCisVT<1, f64>]>, []>;
-
+def PPCxsmaxc : SDNode<"PPCISD::XSMAXCDP", SDT_PPCFPMinMax, []>;
+def PPCxsminc : SDNode<"PPCISD::XSMINCDP", SDT_PPCFPMinMax, []>;
 def PPChi       : SDNode<"PPCISD::Hi", SDTIntBinOp, []>;
 def PPClo       : SDNode<"PPCISD::Lo", SDTIntBinOp, []>;
 def PPCtoc_entry: SDNode<"PPCISD::TOC_ENTRY", SDTIntBinOp,

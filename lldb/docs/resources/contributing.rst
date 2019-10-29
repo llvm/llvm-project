@@ -1,17 +1,14 @@
-Getting the Sources
-===================
+Contributing
+============
 
-Refer to the `LLVM Getting Started Guide
-<https://llvm.org/docs/GettingStarted.html#getting-started-with-llvm>`_
-for general instructions on how to check out source. Note that LLDB
-depends on having a working checkout of LLVM and Clang, so the first
-step is to download and build as described at the above URL. The same
-repository also contains LLDB.
+Getting Started
+---------------
 
-Git browser: https://github.com/llvm/llvm-project/tree/master/lldb
-
-Refer to the `Build Instructions <build.html>`_ for more detailed instructions
-on how to build for a particular platform / build system combination.
+Please refer to the `LLVM Getting Started Guide
+<https://llvm.org/docs/GettingStarted.html>`_ for general information on how to
+get started on the LLVM project. A detailed explanation on how to build and
+test LLDB can be found in the `build instructions <build.html>`_ and `test
+instructions <test.html>`_ respecitvely.
 
 Contributing to LLDB
 --------------------
@@ -21,10 +18,16 @@ Please refer to the `LLVM Developer Policy
 authoring and uploading a patch. LLDB differs from the LLVM Developer
 Policy in the following respects.
 
-Test infrastructure. It is still important to submit tests with your
-patches, but LLDB uses a different system for tests. Refer to the
-`lldb/test` folder on disk for examples of how to write tests.  For
-anything not explicitly listed here, assume that LLDB follows the LLVM
+ - **Test infrastructure**: Like LLVM it is  important to submit tests with your
+   patches, but note that LLDB uses a different system for tests. Refer to the
+   `test documentation <test.html>`_ for more details and the `lldb/test`
+   folder on disk for examples.
+
+ - **Coding Style**: LLDB's code style differs from LLVM's coding style.
+   Unfortunately there is no document describing the different. Please be
+   consistent with the existing code.
+
+For anything not explicitly listed here, assume that LLDB follows the LLVM
 policy.
 
 

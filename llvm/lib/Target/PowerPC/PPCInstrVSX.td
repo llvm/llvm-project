@@ -1255,6 +1255,55 @@ def : Pat<(f64 (PPCfcfidu (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
 } // AddedComplexity
 } // HasVSX
 
+def FpMinMax {
+  dag F32Min = (COPY_TO_REGCLASS (XSMINDP (COPY_TO_REGCLASS $A, VSFRC),
+                                          (COPY_TO_REGCLASS $B, VSFRC)),
+                                 VSSRC);
+  dag F32Max = (COPY_TO_REGCLASS (XSMAXDP (COPY_TO_REGCLASS $A, VSFRC),
+                                          (COPY_TO_REGCLASS $B, VSFRC)),
+                                 VSSRC);
+}
+
+let AddedComplexity = 400, Predicates = [HasVSX] in {
+  // f32 Min.
+  def : Pat<(f32 (fminnum_ieee f32:$A, f32:$B)),
+            (f32 FpMinMax.F32Min)>;
+  def : Pat<(f32 (fminnum_ieee (fcanonicalize f32:$A), f32:$B)),
+            (f32 FpMinMax.F32Min)>;
+  def : Pat<(f32 (fminnum_ieee f32:$A, (fcanonicalize f32:$B))),
+            (f32 FpMinMax.F32Min)>;
+  def : Pat<(f32 (fminnum_ieee (fcanonicalize f32:$A), (fcanonicalize f32:$B))),
+            (f32 FpMinMax.F32Min)>;
+  // F32 Max.
+  def : Pat<(f32 (fmaxnum_ieee f32:$A, f32:$B)),
+            (f32 FpMinMax.F32Max)>;
+  def : Pat<(f32 (fmaxnum_ieee (fcanonicalize f32:$A), f32:$B)),
+            (f32 FpMinMax.F32Max)>;
+  def : Pat<(f32 (fmaxnum_ieee f32:$A, (fcanonicalize f32:$B))),
+            (f32 FpMinMax.F32Max)>;
+  def : Pat<(f32 (fmaxnum_ieee (fcanonicalize f32:$A), (fcanonicalize f32:$B))),
+            (f32 FpMinMax.F32Max)>;
+
+  // f64 Min.
+  def : Pat<(f64 (fminnum_ieee f64:$A, f64:$B)),
+            (f64 (XSMINDP $A, $B))>;
+  def : Pat<(f64 (fminnum_ieee (fcanonicalize f64:$A), f64:$B)),
+            (f64 (XSMINDP $A, $B))>;
+  def : Pat<(f64 (fminnum_ieee f64:$A, (fcanonicalize f64:$B))),
+            (f64 (XSMINDP $A, $B))>;
+  def : Pat<(f64 (fminnum_ieee (fcanonicalize f64:$A), (fcanonicalize f64:$B))),
+            (f64 (XSMINDP $A, $B))>;
+  // f64 Max.
+  def : Pat<(f64 (fmaxnum_ieee f64:$A, f64:$B)),
+            (f64 (XSMAXDP $A, $B))>;
+  def : Pat<(f64 (fmaxnum_ieee (fcanonicalize f64:$A), f64:$B)),
+            (f64 (XSMAXDP $A, $B))>;
+  def : Pat<(f64 (fmaxnum_ieee f64:$A, (fcanonicalize f64:$B))),
+            (f64 (XSMAXDP $A, $B))>;
+  def : Pat<(f64 (fmaxnum_ieee (fcanonicalize f64:$A), (fcanonicalize f64:$B))),
+            (f64 (XSMAXDP $A, $B))>;
+}
+
 def ScalarLoads {
   dag Li8 =       (i32 (extloadi8 xoaddr:$src));
   dag ZELi8 =     (i32 (zextloadi8 xoaddr:$src));
@@ -2884,13 +2933,14 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   //===--------------------------------------------------------------------===//
 
   // Maximum/Minimum Type-C/Type-J DP
-  // XT.dword[1] = 0xUUUU_UUUU_UUUU_UUUU, so we use vsrc for XT
-  def XSMAXCDP : XX3_XT5_XA5_XB5<60, 128, "xsmaxcdp", vsrc, vsfrc, vsfrc,
-                                 IIC_VecFP, []>;
+  def XSMAXCDP : XX3_XT5_XA5_XB5<60, 128, "xsmaxcdp", vsfrc, vsfrc, vsfrc,
+                                 IIC_VecFP,
+                                 [(set f64:$XT, (PPCxsmaxc f64:$XA, f64:$XB))]>;
   def XSMAXJDP : XX3_XT5_XA5_XB5<60, 144, "xsmaxjdp", vsrc, vsfrc, vsfrc,
                                  IIC_VecFP, []>;
-  def XSMINCDP : XX3_XT5_XA5_XB5<60, 136, "xsmincdp", vsrc, vsfrc, vsfrc,
-                                 IIC_VecFP, []>;
+  def XSMINCDP : XX3_XT5_XA5_XB5<60, 136, "xsmincdp", vsfrc, vsfrc, vsfrc,
+                                 IIC_VecFP,
+                                 [(set f64:$XT, (PPCxsminc f64:$XA, f64:$XB))]>;
   def XSMINJDP : XX3_XT5_XA5_XB5<60, 152, "xsminjdp", vsrc, vsfrc, vsfrc,
                                  IIC_VecFP, []>;
 
@@ -3696,6 +3746,15 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   // Convert SP -> QP
   def : Pat<(f128 (fpextend f32:$src)),
             (f128 (XSCVDPQP (COPY_TO_REGCLASS $src, VFRC)))>;
+
+  def : Pat<(f32 (PPCxsmaxc f32:$XA, f32:$XB)),
+            (f32 (COPY_TO_REGCLASS (XSMAXCDP (COPY_TO_REGCLASS $XA, VSSRC),
+                                             (COPY_TO_REGCLASS $XB, VSSRC)),
+                                   VSSRC))>;
+  def : Pat<(f32 (PPCxsminc f32:$XA, f32:$XB)),
+            (f32 (COPY_TO_REGCLASS (XSMINCDP (COPY_TO_REGCLASS $XA, VSSRC),
+                                             (COPY_TO_REGCLASS $XB, VSSRC)),
+                                   VSSRC))>;
 
 } // end HasP9Vector, AddedComplexity
 

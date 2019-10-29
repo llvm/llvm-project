@@ -158,7 +158,7 @@ struct SS{
   // CK3: define {{.*}}i32 @{{.+}}foo{{.+}}(
   int foo(void) {
 
-  // CK3: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 1, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* {{.+}}@{{[^,]+}}, i32 0, i32 0), i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 0)
+  // CK3: call i32 @__tgt_target_teams(i64 -1, i8* @{{[^,]+}}, i32 2, i8** %{{[^,]+}}, i8** %{{[^,]+}}, i{{64|32}}* %{{.+}}, i64* {{.+}}@{{[^,]+}}, i32 0, i32 0), i32 0, i32 0)
   // CK3: call void @[[OFFL1:.+]]([[SSI]]* %{{.+}})
     #pragma omp target
     #pragma omp teams distribute
@@ -174,7 +174,7 @@ struct SS{
   // CK3: define internal void @[[OUTL1]]({{.+}})
   // CK3: call void @__kmpc_for_static_init_4(
   // CK3: call void @__kmpc_for_static_fini(
-  // CK3: ret void  
+  // CK3: ret void
 
     return a[0];
   }

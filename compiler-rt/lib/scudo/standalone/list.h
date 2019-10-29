@@ -148,6 +148,7 @@ template <class T> struct DoublyLinkedList : IntrusiveList<T> {
       Last = X;
     } else {
       DCHECK_EQ(First->Prev, nullptr);
+      First->Prev = X;
     }
     X->Next = First;
     First = X;

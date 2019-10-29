@@ -388,10 +388,8 @@ negativeOffsetOpcode(unsigned opcode)
     return opcode;
 
   default:
-    break;
+    llvm_unreachable("unknown thumb2 opcode.");
   }
-
-  return 0;
 }
 
 static unsigned
@@ -420,10 +418,8 @@ positiveOffsetOpcode(unsigned opcode)
     return opcode;
 
   default:
-    break;
+    llvm_unreachable("unknown thumb2 opcode.");
   }
-
-  return 0;
 }
 
 static unsigned
@@ -461,10 +457,8 @@ immediateOffsetOpcode(unsigned opcode)
     return opcode;
 
   default:
-    break;
+    llvm_unreachable("unknown thumb2 opcode.");
   }
-
-  return 0;
 }
 
 bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,

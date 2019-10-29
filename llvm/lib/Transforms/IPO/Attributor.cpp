@@ -517,29 +517,16 @@ void IRPosition::verify() {
 }
 
 namespace {
-/// Helper functions to clamp a state \p S of type \p StateType with the
+/// Helper function to clamp a state \p S of type \p StateType with the
 /// information in \p R and indicate/return if \p S did change (as-in update is
 /// required to be run again).
-///
-///{
 template <typename StateType>
-ChangeStatus clampStateAndIndicateChange(StateType &S, const StateType &R);
-
-template <>
-ChangeStatus clampStateAndIndicateChange<IntegerState>(IntegerState &S,
-                                                       const IntegerState &R) {
+ChangeStatus clampStateAndIndicateChange(StateType &S, const StateType &R) {
   auto Assumed = S.getAssumed();
   S ^= R;
   return Assumed == S.getAssumed() ? ChangeStatus::UNCHANGED
                                    : ChangeStatus::CHANGED;
 }
-
-template <>
-ChangeStatus clampStateAndIndicateChange<BooleanState>(BooleanState &S,
-                                                       const BooleanState &R) {
-  return clampStateAndIndicateChange<IntegerState>(S, R);
-}
-///}
 
 /// Clamp the information known for all returned values of a function
 /// (identified by \p QueryingAA) into \p S.
@@ -1609,7 +1596,7 @@ struct AANonNullImpl : AANonNull {
     bool TrackUse = false;
     getKnownNonNullAndDerefBytesForUse(A, *this, getAssociatedValue(), U, I,
                                        IsNonNull, TrackUse);
-    takeKnownMaximum(IsNonNull);
+    setKnown(IsNonNull);
     return TrackUse;
   }
 
@@ -1661,7 +1648,7 @@ struct AANonNullFloating
 
     const DataLayout &DL = A.getDataLayout();
 
-    auto VisitValueCB = [&](Value &V, AAAlign::StateType &T,
+    auto VisitValueCB = [&](Value &V, AANonNull::StateType &T,
                             bool Stripped) -> bool {
       const auto &AA = A.getAAFor<AANonNull>(*this, IRPosition::value(V));
       if (!Stripped && this == &AA) {
@@ -2463,10 +2450,10 @@ struct AAIsDeadCallSite final : AAIsDeadImpl {
 template <>
 ChangeStatus clampStateAndIndicateChange<DerefState>(DerefState &S,
                                                      const DerefState &R) {
-  ChangeStatus CS0 = clampStateAndIndicateChange<IntegerState>(
+  ChangeStatus CS0 = clampStateAndIndicateChange<IncIntegerState>(
       S.DerefBytesState, R.DerefBytesState);
   ChangeStatus CS1 =
-      clampStateAndIndicateChange<IntegerState>(S.GlobalState, R.GlobalState);
+      clampStateAndIndicateChange<BooleanState>(S.GlobalState, R.GlobalState);
   return CS0 | CS1;
 }
 
@@ -2967,7 +2954,7 @@ struct AANoCaptureImpl : public AANoCapture {
   /// state in memory and through "returning/throwing", respectively.
   static void determineFunctionCaptureCapabilities(const IRPosition &IRP,
                                                    const Function &F,
-                                                   IntegerState &State) {
+                                                   BitIntegerState &State) {
     // TODO: Once we have memory behavior attributes we should use them here.
 
     // If we know we cannot communicate or write to memory, we do not care about
@@ -3036,7 +3023,7 @@ struct AACaptureUseTracker final : public CaptureTracker {
   /// the search is stopped with \p CapturedInMemory and \p CapturedInInteger
   /// conservatively set to true.
   AACaptureUseTracker(Attributor &A, AANoCapture &NoCaptureAA,
-                      const AAIsDead &IsDeadAA, IntegerState &State,
+                      const AAIsDead &IsDeadAA, BitIntegerState &State,
                       SmallVectorImpl<const Value *> &PotentialCopies,
                       unsigned &RemainingUsesToExplore)
       : A(A), NoCaptureAA(NoCaptureAA), IsDeadAA(IsDeadAA), State(State),
@@ -3155,7 +3142,7 @@ private:
   const AAIsDead &IsDeadAA;
 
   /// The state currently updated.
-  IntegerState &State;
+  BitIntegerState &State;
 
   /// Set of potential copies of the tracked value.
   SmallVectorImpl<const Value *> &PotentialCopies;
@@ -3238,7 +3225,7 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
   while (T.isAssumed(NO_CAPTURE_MAYBE_RETURNED) && Idx < PotentialCopies.size())
     Tracker.valueMayBeCaptured(PotentialCopies[Idx++]);
 
-  AAAlign::StateType &S = getState();
+  AANoCapture::StateType &S = getState();
   auto Assumed = S.getAssumed();
   S.intersectAssumedBits(T.getAssumed());
   return Assumed == S.getAssumed() ? ChangeStatus::UNCHANGED
@@ -3787,7 +3774,7 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
 
   /// Return the memory behavior information encoded in the IR for \p IRP.
   static void getKnownStateFromValue(const IRPosition &IRP,
-                                     IntegerState &State) {
+                                     BitIntegerState &State) {
     SmallVector<Attribute, 2> Attrs;
     IRP.getAttrs(AttrKinds, Attrs);
     for (const Attribute &Attr : Attrs) {
@@ -4036,7 +4023,8 @@ struct AAMemoryBehaviorCallSite final : AAMemoryBehaviorImpl {
     const IRPosition &FnPos = IRPosition::function(*F);
     auto &FnAA = A.getAAFor<AAMemoryBehavior>(*this, FnPos);
     return clampStateAndIndicateChange(
-        getState(), static_cast<const AAAlign::StateType &>(FnAA.getState()));
+        getState(),
+        static_cast<const AAMemoryBehavior::StateType &>(FnAA.getState()));
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -4903,7 +4891,10 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const IRPosition &Pos) {
             << Pos.getAnchorValue().getName() << "@" << Pos.getArgNo() << "]}";
 }
 
-raw_ostream &llvm::operator<<(raw_ostream &OS, const IntegerState &S) {
+template <typename base_ty, base_ty BestState, base_ty WorstState>
+raw_ostream &llvm::
+operator<<(raw_ostream &OS,
+           const IntegerStateBase<base_ty, BestState, WorstState> &S) {
   return OS << "(" << S.getKnown() << "-" << S.getAssumed() << ")"
             << static_cast<const AbstractState &>(S);
 }

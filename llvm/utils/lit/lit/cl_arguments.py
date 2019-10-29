@@ -28,7 +28,7 @@ def parse_args():
             help="Prefix for 'lit' config files",
             default=None)
     parser.add_argument("-D", "--param",
-            dest="userParameters",
+            dest="user_params",
             metavar="NAME=VAL",
             help="Add 'NAME' = 'VAL' to the user defined parameters",
             type=str,

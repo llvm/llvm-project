@@ -1349,8 +1349,9 @@ struct __tuple_cat<tuple<_Types...>, __tuple_indices<_I0...>, __tuple_indices<_J
     typename __tuple_cat_return_ref<tuple<_Types...>&&, _Tuple0&&>::type
     operator()(tuple<_Types...> __t, _Tuple0&& __t0)
     {
-        return forward_as_tuple(_VSTD::forward<_Types>(_VSTD::get<_I0>(__t))...,
-                                      _VSTD::get<_J0>(_VSTD::forward<_Tuple0>(__t0))...);
+        return _VSTD::forward_as_tuple(
+            _VSTD::forward<_Types>(_VSTD::get<_I0>(__t))...,
+            _VSTD::get<_J0>(_VSTD::forward<_Tuple0>(__t0))...);
     }
 
     template <class _Tuple0, class _Tuple1, class ..._Tuples>
@@ -1361,15 +1362,16 @@ struct __tuple_cat<tuple<_Types...>, __tuple_indices<_I0...>, __tuple_indices<_J
         typedef _LIBCPP_NODEBUG_TYPE typename remove_reference<_Tuple0>::type _T0;
         typedef _LIBCPP_NODEBUG_TYPE typename remove_reference<_Tuple1>::type _T1;
         return __tuple_cat<
-           tuple<_Types..., typename __apply_cv<_Tuple0, typename tuple_element<_J0, _T0>::type>::type&&...>,
-           typename __make_tuple_indices<sizeof ...(_Types) + tuple_size<_T0>::value>::type,
-           typename __make_tuple_indices<tuple_size<_T1>::value>::type>()
-                           (forward_as_tuple(
-                              _VSTD::forward<_Types>(_VSTD::get<_I0>(__t))...,
-                              _VSTD::get<_J0>(_VSTD::forward<_Tuple0>(__t0))...
-                            ),
-                            _VSTD::forward<_Tuple1>(__t1),
-                            _VSTD::forward<_Tuples>(__tpls)...);
+            tuple<_Types...,
+                  typename __apply_cv<_Tuple0, typename tuple_element<
+                                                   _J0, _T0>::type>::type&&...>,
+            typename __make_tuple_indices<sizeof...(_Types) +
+                                          tuple_size<_T0>::value>::type,
+            typename __make_tuple_indices<tuple_size<_T1>::value>::type>()(
+            _VSTD::forward_as_tuple(
+                _VSTD::forward<_Types>(_VSTD::get<_I0>(__t))...,
+                _VSTD::get<_J0>(_VSTD::forward<_Tuple0>(__t0))...),
+            _VSTD::forward<_Tuple1>(__t1), _VSTD::forward<_Tuples>(__tpls)...);
     }
 };
 

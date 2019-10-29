@@ -39101,6 +39101,71 @@ static SDValue combineParity(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ZERO_EXTEND, DL, N->getValueType(0), Setnp);
 }
 
+
+// Look for (and (bitcast (vXi1 (concat_vectors (vYi1 setcc), undef,))), C)
+// Where C is a mask containing the same number of bits as the setcc and
+// where the setcc will freely 0 upper bits of k-register. We can replace the
+// undef in the concat with 0s and remove the AND. This mainly helps with
+// v2i1/v4i1 setcc being casted to scalar.
+static SDValue combineScalarAndWithMaskSetcc(SDNode *N, SelectionDAG &DAG,
+                                             const X86Subtarget &Subtarget) {
+  assert(N->getOpcode() == ISD::AND && "Unexpected opcode!");
+
+  EVT VT = N->getValueType(0);
+
+  // Make sure this is an AND with constant. We will check the value of the
+  // constant later.
+  if (!isa<ConstantSDNode>(N->getOperand(1)))
+    return SDValue();
+
+  // This is implied by the ConstantSDNode.
+  assert(!VT.isVector() && "Expected scalar VT!");
+
+  if (N->getOperand(0).getOpcode() != ISD::BITCAST ||
+      !N->getOperand(0).hasOneUse() ||
+      !N->getOperand(0).getOperand(0).hasOneUse())
+    return SDValue();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDValue Src = N->getOperand(0).getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  if (!SrcVT.isVector() || SrcVT.getVectorElementType() != MVT::i1 ||
+      !TLI.isTypeLegal(SrcVT))
+    return SDValue();
+
+  if (Src.getOpcode() != ISD::CONCAT_VECTORS)
+    return SDValue();
+
+  // We only care about the first subvector of the concat, we expect the
+  // other subvectors to be ignored due to the AND if we make the change.
+  SDValue SubVec = Src.getOperand(0);
+  EVT SubVecVT = SubVec.getValueType();
+
+  // First subvector should be a setcc with a legal result type. The RHS of the
+  // AND should be a mask with this many bits.
+  if (SubVec.getOpcode() != ISD::SETCC || !TLI.isTypeLegal(SubVecVT) ||
+      !N->getConstantOperandAPInt(1).isMask(SubVecVT.getVectorNumElements()))
+    return SDValue();
+
+  EVT SetccVT = SubVec.getOperand(0).getValueType();
+  if (!TLI.isTypeLegal(SetccVT) ||
+      !(Subtarget.hasVLX() || SetccVT.is512BitVector()))
+    return SDValue();
+
+  if (!(Subtarget.hasBWI() || SetccVT.getScalarSizeInBits() >= 32))
+    return SDValue();
+
+  // We passed all the checks. Rebuild the concat_vectors with zeroes
+  // and cast it back to VT.
+  SDLoc dl(N);
+  SmallVector<SDValue, 4> Ops(Src.getNumOperands(),
+                              DAG.getConstant(0, dl, SubVecVT));
+  Ops[0] = SubVec;
+  SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, dl, SrcVT,
+                               Ops);
+  return DAG.getBitcast(VT, Concat);
+}
+
 static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -39149,6 +39214,9 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
       }
     }
   }
+
+  if (SDValue V = combineScalarAndWithMaskSetcc(N, DAG, Subtarget))
+    return V;
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
@@ -39519,60 +39587,12 @@ static SDValue combineOrCmpEqZeroToCtlzSrl(SDNode *N, SelectionDAG &DAG,
   return Ret;
 }
 
-static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
-                         TargetLowering::DAGCombinerInfo &DCI,
-                         const X86Subtarget &Subtarget) {
+static SDValue combineOrShiftToFunnelShift(SDNode *N, SelectionDAG &DAG,
+                                           const X86Subtarget &Subtarget) {
+  assert(N->getOpcode() == ISD::OR && "Expected ISD::OR node");
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
-
-  // If this is SSE1 only convert to FOR to avoid scalarization.
-  if (Subtarget.hasSSE1() && !Subtarget.hasSSE2() && VT == MVT::v4i32) {
-    return DAG.getBitcast(MVT::v4i32,
-                          DAG.getNode(X86ISD::FOR, SDLoc(N), MVT::v4f32,
-                                      DAG.getBitcast(MVT::v4f32, N0),
-                                      DAG.getBitcast(MVT::v4f32, N1)));
-  }
-
-  // Match any-of bool scalar reductions into a bitcast/movmsk + cmp.
-  // TODO: Support multiple SrcOps.
-  if (VT == MVT::i1) {
-    SmallVector<SDValue, 2> SrcOps;
-    if (matchScalarReduction(SDValue(N, 0), ISD::OR, SrcOps) &&
-        SrcOps.size() == 1) {
-      SDLoc dl(N);
-      unsigned NumElts = SrcOps[0].getValueType().getVectorNumElements();
-      EVT MaskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
-      SDValue Mask = combineBitcastvxi1(DAG, MaskVT, SrcOps[0], dl, Subtarget);
-      if (Mask) {
-        APInt AllBits = APInt::getNullValue(NumElts);
-        return DAG.getSetCC(dl, MVT::i1, Mask,
-                            DAG.getConstant(AllBits, dl, MaskVT), ISD::SETNE);
-      }
-    }
-  }
-
-  if (DCI.isBeforeLegalizeOps())
-    return SDValue();
-
-  if (SDValue R = combineCompareEqual(N, DAG, DCI, Subtarget))
-    return R;
-
-  if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, Subtarget))
-    return FPLogic;
-
-  if (SDValue R = canonicalizeBitSelect(N, DAG, Subtarget))
-    return R;
-
-  if (SDValue R = combineLogicBlendIntoPBLENDV(N, DAG, Subtarget))
-    return R;
-
-  // Attempt to recursively combine an OR of shuffles.
-  if (VT.isVector() && (VT.getScalarSizeInBits() % 8) == 0) {
-    SDValue Op(N, 0);
-    if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
-      return Res;
-  }
 
   if (VT != MVT::i16 && VT != MVT::i32 && VT != MVT::i64)
     return SDValue();
@@ -39691,6 +39711,67 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
         }
       }
     }
+  }
+
+  return SDValue();
+}
+
+static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
+                         TargetLowering::DAGCombinerInfo &DCI,
+                         const X86Subtarget &Subtarget) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+
+  // If this is SSE1 only convert to FOR to avoid scalarization.
+  if (Subtarget.hasSSE1() && !Subtarget.hasSSE2() && VT == MVT::v4i32) {
+    return DAG.getBitcast(MVT::v4i32,
+                          DAG.getNode(X86ISD::FOR, SDLoc(N), MVT::v4f32,
+                                      DAG.getBitcast(MVT::v4f32, N0),
+                                      DAG.getBitcast(MVT::v4f32, N1)));
+  }
+
+  // Match any-of bool scalar reductions into a bitcast/movmsk + cmp.
+  // TODO: Support multiple SrcOps.
+  if (VT == MVT::i1) {
+    SmallVector<SDValue, 2> SrcOps;
+    if (matchScalarReduction(SDValue(N, 0), ISD::OR, SrcOps) &&
+        SrcOps.size() == 1) {
+      SDLoc dl(N);
+      unsigned NumElts = SrcOps[0].getValueType().getVectorNumElements();
+      EVT MaskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
+      SDValue Mask = combineBitcastvxi1(DAG, MaskVT, SrcOps[0], dl, Subtarget);
+      if (Mask) {
+        APInt AllBits = APInt::getNullValue(NumElts);
+        return DAG.getSetCC(dl, MVT::i1, Mask,
+                            DAG.getConstant(AllBits, dl, MaskVT), ISD::SETNE);
+      }
+    }
+  }
+
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  if (SDValue R = combineCompareEqual(N, DAG, DCI, Subtarget))
+    return R;
+
+  if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, Subtarget))
+    return FPLogic;
+
+  if (SDValue R = canonicalizeBitSelect(N, DAG, Subtarget))
+    return R;
+
+  if (SDValue R = combineLogicBlendIntoPBLENDV(N, DAG, Subtarget))
+    return R;
+
+  if (SDValue R = combineOrShiftToFunnelShift(N, DAG, Subtarget))
+    return R;
+
+  // Attempt to recursively combine an OR of shuffles.
+  if (VT.isVector() && (VT.getScalarSizeInBits() % 8) == 0) {
+    SDValue Op(N, 0);
+    if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
+      return Res;
   }
 
   return SDValue();

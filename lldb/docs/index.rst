@@ -138,12 +138,12 @@ interesting areas to contribute to lldb.
    :maxdepth: 1
    :caption: Resources
 
-   resources/download
-   resources/source
+   resources/contributing
    resources/build
    resources/test
    resources/bots
    resources/sbapi
+   resources/download
 
 .. toctree::
    :hidden:
@@ -159,6 +159,6 @@ interesting areas to contribute to lldb.
    :maxdepth: 1
    :caption: External Links
 
-   Source Code <https://llvm.org/viewvc/llvm-project/lldb/trunk/>
+   Source Code <https://github.com/llvm/llvm-project>
    Code Reviews <https://reviews.llvm.org>
    Bug Reports <https://bugs.llvm.org/>

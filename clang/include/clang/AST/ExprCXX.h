@@ -14,7 +14,6 @@
 #ifndef LLVM_CLANG_AST_EXPRCXX_H
 #define LLVM_CLANG_AST_EXPRCXX_H
 
-#include "clang/AST/ASTConcept.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -4852,10 +4851,6 @@ class ConceptSpecializationExpr final : public Expr,
                                     TemplateArgument> {
   friend class ASTStmtReader;
   friend TrailingObjects;
-public:
-  using SubstitutionDiagnostic = std::pair<SourceLocation, std::string>;
-
-protected:
 
   // \brief The optional nested name specifier used when naming the concept.
   NestedNameSpecifierLoc NestedNameSpec;
@@ -4873,8 +4868,11 @@ protected:
   /// through a UsingShadowDecl.
   NamedDecl *FoundDecl;
 
-  /// \brief The concept named.
-  ConceptDecl *NamedConcept;
+  /// \brief The concept named, and whether or not the concept with the given
+  /// arguments was satisfied when the expression was created.
+  /// If any of the template arguments are dependent (this expr would then be
+  /// isValueDependent()), this bit is to be ignored.
+  llvm::PointerIntPair<ConceptDecl *, 1, bool> NamedConcept;
 
   /// \brief The template argument list source info used to specialize the
   /// concept.
@@ -4884,18 +4882,13 @@ protected:
   /// converted template arguments.
   unsigned NumTemplateArgs;
 
-  /// \brief Information about the satisfaction of the named concept with the
-  /// given arguments. If this expression is value dependent, this is to be
-  /// ignored.
-  ASTConstraintSatisfaction *Satisfaction;
-
   ConceptSpecializationExpr(ASTContext &C, NestedNameSpecifierLoc NNS,
                             SourceLocation TemplateKWLoc,
                             SourceLocation ConceptNameLoc, NamedDecl *FoundDecl,
                             ConceptDecl *NamedConcept,
                             const ASTTemplateArgumentListInfo *ArgsAsWritten,
                             ArrayRef<TemplateArgument> ConvertedArgs,
-                            const ConstraintSatisfaction *Satisfaction);
+                            Optional<bool> IsSatisfied);
 
   ConceptSpecializationExpr(EmptyShell Empty, unsigned NumTemplateArgs);
 
@@ -4906,8 +4899,7 @@ public:
          SourceLocation TemplateKWLoc, SourceLocation ConceptNameLoc,
          NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
          const ASTTemplateArgumentListInfo *ArgsAsWritten,
-         ArrayRef<TemplateArgument> ConvertedArgs,
-         const ConstraintSatisfaction *Satisfaction);
+         ArrayRef<TemplateArgument> ConvertedArgs, Optional<bool> IsSatisfied);
 
   static ConceptSpecializationExpr *
   Create(ASTContext &C, EmptyShell Empty, unsigned NumTemplateArgs);
@@ -4921,7 +4913,7 @@ public:
   }
 
   ConceptDecl *getNamedConcept() const {
-    return NamedConcept;
+    return NamedConcept.getPointer();
   }
 
   ArrayRef<TemplateArgument> getTemplateArguments() const {
@@ -4938,21 +4930,12 @@ public:
                             ArrayRef<TemplateArgument> Converted);
 
   /// \brief Whether or not the concept with the given arguments was satisfied
-  /// when the expression was created.
-  /// The expression must not be dependent.
+  /// when the expression was created. This method assumes that the expression
+  /// is not dependent!
   bool isSatisfied() const {
     assert(!isValueDependent()
            && "isSatisfied called on a dependent ConceptSpecializationExpr");
-    return Satisfaction->IsSatisfied;
-  }
-
-  /// \brief Get elaborated satisfaction info about the template arguments'
-  /// satisfaction of the named concept.
-  /// The expression must not be dependent.
-  const ASTConstraintSatisfaction &getSatisfaction() const {
-    assert(!isValueDependent()
-           && "getSatisfaction called on dependent ConceptSpecializationExpr");
-    return *Satisfaction;
+    return NamedConcept.getInt();
   }
 
   SourceLocation getConceptNameLoc() const { return ConceptNameLoc; }

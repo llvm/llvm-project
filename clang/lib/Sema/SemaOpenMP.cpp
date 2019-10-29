@@ -1894,6 +1894,11 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
   D = getCanonicalDecl(D);
 
+  auto *VD = dyn_cast<VarDecl>(D);
+  // Do not capture constexpr variables.
+  if (VD && VD->isConstexpr())
+    return nullptr;
+
   // If we want to determine whether the variable should be captured from the
   // perspective of the current capturing scope, and we've already left all the
   // capturing scopes of the top directive on the stack, check from the
@@ -1904,7 +1909,6 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
   // If we are attempting to capture a global variable in a directive with
   // 'target' we return true so that this global is also mapped to the device.
   //
-  auto *VD = dyn_cast<VarDecl>(D);
   if (VD && !VD->hasLocalStorage() &&
       (getCurCapturedRegion() || getCurBlock() || getCurLambda())) {
     if (isInOpenMPDeclareTargetContext()) {
@@ -2764,6 +2768,7 @@ class DSAAttrChecker final : public StmtVisitor<DSAAttrChecker, void> {
   DSAStackTy *Stack;
   Sema &SemaRef;
   bool ErrorFound = false;
+  bool TryCaptureCXXThisMembers = false;
   CapturedStmt *CS = nullptr;
   llvm::SmallVector<Expr *, 4> ImplicitFirstprivate;
   llvm::SmallVector<Expr *, 4> ImplicitMap;
@@ -2775,12 +2780,26 @@ class DSAAttrChecker final : public StmtVisitor<DSAAttrChecker, void> {
     if (!S->hasAssociatedStmt() || !S->getAssociatedStmt())
       return;
     visitSubCaptures(S->getInnermostCapturedStmt());
+    // Try to capture inner this->member references to generate correct mappings
+    // and diagnostics.
+    if (TryCaptureCXXThisMembers ||
+        (isOpenMPTargetExecutionDirective(Stack->getCurrentDirective()) &&
+         llvm::any_of(S->getInnermostCapturedStmt()->captures(),
+                      [](const CapturedStmt::Capture &C) {
+                        return C.capturesThis();
+                      }))) {
+      bool SavedTryCaptureCXXThisMembers = TryCaptureCXXThisMembers;
+      TryCaptureCXXThisMembers = true;
+      Visit(S->getInnermostCapturedStmt()->getCapturedStmt());
+      TryCaptureCXXThisMembers = SavedTryCaptureCXXThisMembers;
+    }
   }
 
 public:
   void VisitDeclRefExpr(DeclRefExpr *E) {
-    if (E->isTypeDependent() || E->isValueDependent() ||
-        E->containsUnexpandedParameterPack() || E->isInstantiationDependent())
+    if (TryCaptureCXXThisMembers || E->isTypeDependent() ||
+        E->isValueDependent() || E->containsUnexpandedParameterPack() ||
+        E->isInstantiationDependent())
       return;
     if (auto *VD = dyn_cast<VarDecl>(E->getDecl())) {
       // Check the datasharing rules for the expressions in the clauses.
@@ -3014,7 +3033,7 @@ public:
               })) {
         Visit(E->getBase());
       }
-    } else {
+    } else if (!TryCaptureCXXThisMembers) {
       Visit(E->getBase());
     }
   }

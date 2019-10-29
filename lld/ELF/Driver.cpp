@@ -394,6 +394,19 @@ static SeparateSegmentKind getZSeparate(opt::InputArgList &args) {
   return SeparateSegmentKind::None;
 }
 
+static GnuStackKind getZGnuStack(opt::InputArgList &args) {
+  for (auto *arg : args.filtered_reverse(OPT_z)) {
+    if (StringRef("execstack") == arg->getValue())
+      return GnuStackKind::Exec;
+    if (StringRef("noexecstack") == arg->getValue())
+      return GnuStackKind::NoExec;
+    if (StringRef("nognustack") == arg->getValue())
+      return GnuStackKind::None;
+  }
+
+  return GnuStackKind::NoExec;
+}
+
 static bool isKnownZFlag(StringRef s) {
   return s == "combreloc" || s == "copyreloc" || s == "defs" ||
          s == "execstack" || s == "global" || s == "hazardplt" ||
@@ -402,6 +415,7 @@ static bool isKnownZFlag(StringRef s) {
          s == "separate-code" || s == "separate-loadable-segments" ||
          s == "nocombreloc" || s == "nocopyreloc" || s == "nodefaultlib" ||
          s == "nodelete" || s == "nodlopen" || s == "noexecstack" ||
+         s == "nognustack" ||
          s == "nokeep-text-section-prefix" || s == "norelro" ||
          s == "noseparate-code" || s == "notext" || s == "now" ||
          s == "origin" || s == "relro" || s == "retpolineplt" ||
@@ -951,6 +965,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->zCopyreloc = getZFlag(args, "copyreloc", "nocopyreloc", true);
   config->zExecstack = getZFlag(args, "execstack", "noexecstack", false);
   config->zGlobal = hasZOption(args, "global");
+  config->zGnustack = getZGnuStack(args);
   config->zHazardplt = hasZOption(args, "hazardplt");
   config->zIfuncNoplt = hasZOption(args, "ifunc-noplt");
   config->zInitfirst = hasZOption(args, "initfirst");
@@ -1370,7 +1385,7 @@ static void handleUndefined(Symbol *sym) {
     sym->fetch();
 }
 
-// As an extention to GNU linkers, lld supports a variant of `-u`
+// As an extension to GNU linkers, lld supports a variant of `-u`
 // which accepts wildcard patterns. All symbols that match a given
 // pattern are handled as if they were given by `-u`.
 static void handleUndefinedGlob(StringRef arg) {

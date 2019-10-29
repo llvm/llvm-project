@@ -548,6 +548,13 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::SRL_PARTS, MVT::i32, Custom);
   }
 
+  if (Subtarget.hasVSX()) {
+    setOperationAction(ISD::FMAXNUM_IEEE, MVT::f64, Legal);
+    setOperationAction(ISD::FMAXNUM_IEEE, MVT::f32, Legal);
+    setOperationAction(ISD::FMINNUM_IEEE, MVT::f64, Legal);
+    setOperationAction(ISD::FMINNUM_IEEE, MVT::f32, Legal);
+  }
+
   if (Subtarget.hasAltivec()) {
     // First set operation action for all vector types to expand. Then we
     // will selectively turn on ones that can be effectively codegen'd.
@@ -1294,6 +1301,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((PPCISD::NodeType)Opcode) {
   case PPCISD::FIRST_NUMBER:    break;
   case PPCISD::FSEL:            return "PPCISD::FSEL";
+  case PPCISD::XSMAXCDP:        return "PPCISD::XSMAXCDP";
+  case PPCISD::XSMINCDP:        return "PPCISD::XSMINCDP";
   case PPCISD::FCFID:           return "PPCISD::FCFID";
   case PPCISD::FCFIDU:          return "PPCISD::FCFIDU";
   case PPCISD::FCFIDS:          return "PPCISD::FCFIDS";
@@ -7214,17 +7223,15 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
       !Op.getOperand(2).getValueType().isFloatingPoint())
     return Op;
 
+  bool HasNoInfs = DAG.getTarget().Options.NoInfsFPMath;
+  bool HasNoNaNs = DAG.getTarget().Options.NoNaNsFPMath;
   // We might be able to do better than this under some circumstances, but in
   // general, fsel-based lowering of select is a finite-math-only optimization.
   // For more information, see section F.3 of the 2.06 ISA specification.
-  if (!DAG.getTarget().Options.NoInfsFPMath ||
-      !DAG.getTarget().Options.NoNaNsFPMath)
+  // With ISA 3.0, we have xsmaxcdp/xsmincdp which are OK to emit even in the
+  // presence of infinities.
+  if (!Subtarget.hasP9Vector() && (!HasNoInfs || !HasNoNaNs))
     return Op;
-  // TODO: Propagate flags from the select rather than global settings.
-  SDNodeFlags Flags;
-  Flags.setNoInfs(true);
-  Flags.setNoNaNs(true);
-
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
 
   EVT ResVT = Op.getValueType();
@@ -7232,6 +7239,27 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue LHS = Op.getOperand(0), RHS = Op.getOperand(1);
   SDValue TV  = Op.getOperand(2), FV  = Op.getOperand(3);
   SDLoc dl(Op);
+
+  if (Subtarget.hasP9Vector() && LHS == TV && RHS == FV) {
+    switch (CC) {
+    default:
+      // Not a min/max but with finite math, we may still be able to use fsel.
+      if (HasNoInfs && HasNoNaNs)
+        break;
+      return Op;
+    case ISD::SETOGT:
+    case ISD::SETGT:
+      return DAG.getNode(PPCISD::XSMAXCDP, dl, Op.getValueType(), LHS, RHS);
+    case ISD::SETOLT:
+    case ISD::SETLT:
+      return DAG.getNode(PPCISD::XSMINCDP, dl, Op.getValueType(), LHS, RHS);
+    }
+  }
+
+  // TODO: Propagate flags from the select rather than global settings.
+  SDNodeFlags Flags;
+  Flags.setNoInfs(true);
+  Flags.setNoNaNs(true);
 
   // If the RHS of the comparison is a 0.0, we don't need to do the
   // subtraction at all.
