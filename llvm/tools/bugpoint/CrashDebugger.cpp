@@ -1289,7 +1289,21 @@ Error BugDriver::debugOptimizerCrash(const std::string &ID) {
 
   EmitProgressBitcode(*Program, ID);
 
-  return DebugACrash(*this, TestForOptimizerCrash);
+  auto Res = DebugACrash(*this, TestForOptimizerCrash);
+  if (Res || DontReducePassList)
+    return Res;
+  // Try to reduce the pass list again. This covers additional cases
+  // we failed to reduce earlier, because of more complex pass dependencies
+  // triggering the crash.
+  auto SecondRes = ReducePassList(*this).reduceList(PassesToRun);
+  if (Error E = SecondRes.takeError())
+    return E;
+  outs() << "\n*** Found crashing pass"
+         << (PassesToRun.size() == 1 ? ": " : "es: ")
+         << getPassesString(PassesToRun) << '\n';
+
+  EmitProgressBitcode(getProgram(), "reduced-simplified");
+  return Res;
 }
 
 static bool TestForCodeGenCrash(const BugDriver &BD, Module *M) {
