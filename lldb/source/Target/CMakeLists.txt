@@ -17,6 +17,7 @@ add_lldb_library(lldbTarget
   LanguageRuntime.cpp
   Memory.cpp
   MemoryHistory.cpp
+  MemoryRegionInfo.cpp
   ModuleCache.cpp
   OperatingSystem.cpp
   PathMappingList.cpp
