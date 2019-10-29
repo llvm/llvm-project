@@ -3,8 +3,6 @@
 from __future__ import print_function
 
 
-import os
-import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -31,6 +29,7 @@ class ConstVariableTestCase(TestBase):
         archs=[
             'arm',
             'aarch64'],
+        triple=no_match(".*-android"),
         bugnumber="llvm.org/pr27883")
     @expectedFailureAll(
         oslist=["windows"],

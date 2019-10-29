@@ -9,14 +9,9 @@ add_lldb_unittest(LLDBCoreTests
     lldbHost
     lldbSymbol
     lldbPluginObjectFileELF
-    lldbPluginSymbolVendorELF
+    lldbPluginSymbolFileSymtab
     lldbUtilityHelpers
     LLVMTestingSupport
   LINK_COMPONENTS
     Support
   )
-
-set(test_inputs
-  mangled-function-names.yaml
-  )
-add_unittest_inputs(LLDBCoreTests "${test_inputs}")

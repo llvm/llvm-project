@@ -2,8 +2,6 @@
 Test regression for Bug 25251.
 """
 
-import os
-import time
 import unittest2
 import lldb
 from lldbsuite.test.decorators import *
@@ -11,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class BreakpointAfterJoinTestCase(TestBase):
+class BacktraceAllTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 

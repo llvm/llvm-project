@@ -11,6 +11,14 @@ from lldbsuite.test import lldbutil
 class TestPlatformProcessConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
+    def setUp(self):
+        super(TestPlatformProcessConnect, self).setUp()
+        self._initial_platform = lldb.DBG.GetSelectedPlatform()
+
+    def tearDown(self):
+        lldb.DBG.SetSelectedPlatform(self._initial_platform)
+        super(TestPlatformProcessConnect, self).tearDown()
+
     @llgs_test
     @no_debug_info_test
     @skipIf(remote=False)

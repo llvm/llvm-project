@@ -51,11 +51,12 @@ struct DeclStatus {
 class PdbAstBuilder {
 public:
   // Constructors and Destructors
-  PdbAstBuilder(ObjectFile &obj, PdbIndex &index);
+  PdbAstBuilder(ObjectFile &obj, PdbIndex &index, ClangASTContext &clang);
 
-  clang::DeclContext &GetTranslationUnitDecl();
+  lldb_private::CompilerDeclContext GetTranslationUnitDecl();
 
-  clang::Decl *GetOrCreateDeclForUid(PdbSymUid uid);
+  llvm::Optional<lldb_private::CompilerDecl>
+  GetOrCreateDeclForUid(PdbSymUid uid);
   clang::DeclContext *GetOrCreateDeclContextForUid(PdbSymUid uid);
   clang::DeclContext *GetParentDeclContext(PdbSymUid uid);
 
@@ -76,6 +77,7 @@ public:
   CompilerDecl ToCompilerDecl(clang::Decl &decl);
   CompilerType ToCompilerType(clang::QualType qt);
   CompilerDeclContext ToCompilerDeclContext(clang::DeclContext &context);
+  clang::Decl *FromCompilerDecl(CompilerDecl decl);
   clang::DeclContext *FromCompilerDeclContext(CompilerDeclContext context);
 
   ClangASTContext &clang() { return m_clang; }

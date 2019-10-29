@@ -5,6 +5,7 @@
 #include "llvm/Support/Path.h"
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
+#include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -69,12 +70,14 @@ void ModuleCacheTest::SetUpTestCase() {
   FileSystem::Initialize();
   HostInfo::Initialize();
   ObjectFileELF::Initialize();
+  SymbolFileSymtab::Initialize();
 
   s_cache_dir = HostInfo::GetProcessTempDir();
   s_test_executable = GetInputFilePath(module_name);
 }
 
 void ModuleCacheTest::TearDownTestCase() {
+  SymbolFileSymtab::Terminate();
   ObjectFileELF::Terminate();
   HostInfo::Terminate();
   FileSystem::Terminate();

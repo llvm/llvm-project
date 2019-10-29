@@ -10,6 +10,7 @@
 #ifndef liblldb_IRForTarget_h_
 #define liblldb_IRForTarget_h_
 
+#include "lldb/Core/ClangForward.h"
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
@@ -331,27 +332,6 @@ private:
   /// a call to a function pointer whose value is the address of the function
   /// in the target process.
 
-  /// Write an initializer to a memory array of assumed sufficient size.
-  ///
-  /// \param[in] data
-  ///     A pointer to the data to write to.
-  ///
-  /// \param[in] initializer
-  ///     The initializer itself.
-  ///
-  /// \return
-  ///     True on success; false otherwise
-  bool MaterializeInitializer(uint8_t *data, llvm::Constant *initializer);
-
-  /// Move an internal variable into the static allocation section.
-  ///
-  /// \param[in] global_variable
-  ///     The variable.
-  ///
-  /// \return
-  ///     True on success; false otherwise
-  bool MaterializeInternalVariable(llvm::GlobalVariable *global_variable);
-
   /// Handle a single externally-defined variable
   ///
   /// \param[in] value
@@ -538,20 +518,6 @@ private:
                              FunctionValueCache &value_maker,
                              FunctionValueCache &entry_instruction_finder,
                              lldb_private::Stream &error_stream);
-
-  /// Construct a reference to m_reloc_placeholder with a given type and
-  /// offset.  This typically happens after inserting data into
-  /// m_data_allocator.
-  ///
-  /// \param[in] type
-  ///     The type of the value being loaded.
-  ///
-  /// \param[in] offset
-  ///     The offset of the value from the base of m_data_allocator.
-  ///
-  /// \return
-  ///     The Constant for the reference, usually a ConstantExpr.
-  llvm::Constant *BuildRelocation(llvm::Type *type, uint64_t offset);
 
   /// Commit the allocation in m_data_allocator and use its final location to
   /// replace m_reloc_placeholder.

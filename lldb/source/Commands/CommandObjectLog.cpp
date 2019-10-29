@@ -31,10 +31,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static constexpr OptionDefinition g_log_options[] = {
 #define LLDB_OPTIONS_log
 #include "CommandOptions.inc"
-};
 
 class CommandObjectLogEnable : public CommandObjectParsed {
 public:
@@ -115,9 +113,7 @@ public:
         log_options |= LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION;
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -144,6 +140,7 @@ protected:
       result.AppendErrorWithFormat(
           "%s takes a log channel and one or more log types.\n",
           m_cmd_name.c_str());
+      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -211,6 +208,7 @@ protected:
       result.AppendErrorWithFormat(
           "%s takes a log channel and one or more log types.\n",
           m_cmd_name.c_str());
+      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 

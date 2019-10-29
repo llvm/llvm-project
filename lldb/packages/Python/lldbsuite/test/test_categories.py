@@ -34,7 +34,6 @@ all_categories = {
     'dyntype': 'Tests related to dynamic type support',
     'stresstest': 'Tests related to stressing lldb limits',
     'flakey': 'Flakey test cases, i.e. tests that do not reliably pass at each execution',
-    'lldb-mi': 'lldb-mi tests',
     'darwin-log': 'Darwin log tests',
     'watchpoint': 'Watchpoint-related tests',
 }

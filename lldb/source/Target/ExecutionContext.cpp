@@ -183,9 +183,9 @@ uint32_t ExecutionContext::GetAddressByteSize() const {
 
 lldb::ByteOrder ExecutionContext::GetByteOrder() const {
   if (m_target_sp && m_target_sp->GetArchitecture().IsValid())
-    m_target_sp->GetArchitecture().GetByteOrder();
+    return m_target_sp->GetArchitecture().GetByteOrder();
   if (m_process_sp)
-    m_process_sp->GetByteOrder();
+    return m_process_sp->GetByteOrder();
   return endian::InlHostByteOrder();
 }
 

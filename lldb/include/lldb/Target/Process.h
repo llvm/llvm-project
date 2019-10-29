@@ -50,6 +50,7 @@
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
 
 namespace lldb_private {
@@ -680,10 +681,19 @@ public:
   /// shared library load state.
   ///
   /// \return
-  ///    The number of shared libraries that were loaded
-  virtual size_t LoadModules() { return 0; }
+  ///    A status object indicating if the operation was sucessful or not.
+  virtual llvm::Error LoadModules() {
+    return llvm::make_error<llvm::StringError>("Not implemented.",
+                                               llvm::inconvertibleErrorCode());
+  }
 
-  virtual size_t LoadModules(LoadedModuleInfoList &) { return 0; }
+  /// Query remote GDBServer for a detailed loaded library list
+  /// \return
+  ///    The list of modules currently loaded by the process, or an error.
+  virtual llvm::Expected<LoadedModuleInfoList> GetLoadedModuleList() {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Not implemented");
+  }
 
 protected:
   virtual JITLoaderList &GetJITLoaders();
@@ -1185,6 +1195,9 @@ public:
   ///     Returns the version tuple of the host OS. In case of failure an empty
   ///     VersionTuple is returner.
   virtual llvm::VersionTuple GetHostOSVersion() { return llvm::VersionTuple(); }
+
+  /// \return the macCatalyst version of the host OS.
+  virtual llvm::VersionTuple GetHostMacCatalystVersion() { return {}; }
 
   /// Get the target object pointer for this module.
   ///
@@ -2732,7 +2745,7 @@ protected:
   enum { eCanJITDontKnow = 0, eCanJITYes, eCanJITNo } m_can_jit;
   
   std::unique_ptr<UtilityFunction> m_dlopen_utility_func_up;
-  std::once_flag m_dlopen_utility_func_flag_once;
+  llvm::once_flag m_dlopen_utility_func_flag_once;
 
   size_t RemoveBreakpointOpcodesFromBuffer(lldb::addr_t addr, size_t size,
                                            uint8_t *buf) const;

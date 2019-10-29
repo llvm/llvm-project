@@ -123,11 +123,6 @@ bool DWARFDebugRanges::FindRanges(const DWARFUnit *cu,
   return false;
 }
 
-uint64_t DWARFDebugRanges::GetOffset(size_t Index) const {
-  lldbassert(false && "DW_FORM_rnglistx is not present before DWARF5");
-  return 0;
-}
-
 bool DWARFDebugRngLists::ExtractRangeList(
     const DWARFDataExtractor &data, uint8_t addrSize,
     lldb::offset_t *offset_ptr, std::vector<RngListEntry> &rangeList) {

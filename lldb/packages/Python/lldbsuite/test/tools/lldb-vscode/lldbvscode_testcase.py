@@ -11,7 +11,8 @@ class VSCodeTestCaseBase(TestBase):
         '''Create the Visual Studio Code debug adaptor'''
         self.assertTrue(os.path.exists(self.lldbVSCodeExec),
                         'lldb-vscode must exist')
-        self.vscode = vscode.DebugAdaptor(executable=self.lldbVSCodeExec)
+        self.vscode = vscode.DebugAdaptor(
+            executable=self.lldbVSCodeExec, init_commands=Base.setUpCommands())
 
     def build_and_create_debug_adaptor(self):
         self.build()
@@ -244,20 +245,17 @@ class VSCodeTestCaseBase(TestBase):
             self.assertTrue(response['success'],
                             'attach failed (%s)' % (response['message']))
 
-    def build_and_launch(self, program, args=None, cwd=None, env=None,
-                         stopOnEntry=False, disableASLR=True,
-                         disableSTDIO=False, shellExpandArguments=False,
-                         trace=False, initCommands=None, preRunCommands=None,
-                         stopCommands=None, exitCommands=None,
-                         sourcePath=None, debuggerRoot=None):
-        '''Build the default Makefile target, create the VSCode debug adaptor,
-           and launch the process.
+    def launch(self, program=None, args=None, cwd=None, env=None,
+               stopOnEntry=False, disableASLR=True,
+               disableSTDIO=False, shellExpandArguments=False,
+               trace=False, initCommands=None, preRunCommands=None,
+               stopCommands=None, exitCommands=None,sourcePath= None,
+               debuggerRoot=None, launchCommands=None):
+        '''Sending launch request to vscode
         '''
-        self.build_and_create_debug_adaptor()
-        self.assertTrue(os.path.exists(program), 'executable must exist')
 
-        # Make sure we disconnect and terminate the VSCode debug adaptor even
-        # if we throw an exception during the test case.
+        # Make sure we disconnet and terminate the VSCode debug adaptor,
+        # if we throw an exception during the test case
         def cleanup():
             self.vscode.request_disconnect(terminateDebuggee=True)
             self.vscode.terminate()
@@ -282,7 +280,25 @@ class VSCodeTestCaseBase(TestBase):
             stopCommands=stopCommands,
             exitCommands=exitCommands,
             sourcePath=sourcePath,
-            debuggerRoot=debuggerRoot)
+            debuggerRoot=debuggerRoot,
+            launchCommands=launchCommands)
         if not (response and response['success']):
             self.assertTrue(response['success'],
                             'launch failed (%s)' % (response['message']))
+
+    def build_and_launch(self, program, args=None, cwd=None, env=None,
+                         stopOnEntry=False, disableASLR=True,
+                         disableSTDIO=False, shellExpandArguments=False,
+                         trace=False, initCommands=None, preRunCommands=None,
+                         stopCommands=None, exitCommands=None,
+                         sourcePath=None, debuggerRoot=None):
+        '''Build the default Makefile target, create the VSCode debug adaptor,
+           and launch the process.
+        '''
+        self.build_and_create_debug_adaptor()
+        self.assertTrue(os.path.exists(program), 'executable must exist')
+
+        self.launch(program, args, cwd, env, stopOnEntry, disableASLR,
+                    disableSTDIO, shellExpandArguments, trace,
+                    initCommands, preRunCommands, stopCommands, exitCommands,
+                    sourcePath, debuggerRoot)

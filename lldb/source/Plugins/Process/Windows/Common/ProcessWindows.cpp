@@ -188,7 +188,7 @@ Status
 ProcessWindows::DoAttachToProcessWithID(lldb::pid_t pid,
                                         const ProcessAttachInfo &attach_info) {
   DebugDelegateSP delegate(new LocalDebugDelegate(shared_from_this()));
-  Status error = AttachProcess(attach_info, delegate);
+  Status error = AttachProcess(pid, attach_info, delegate);
   if (error.Success())
     SetID(GetDebuggedProcessId());
   return error;
@@ -204,16 +204,6 @@ Status ProcessWindows::DoResume() {
     LLDB_LOG(log, "process {0} is in state {1}.  Resuming...",
              m_session_data->m_debugger->GetProcess().GetProcessId(),
              GetPrivateState());
-
-    ExceptionRecordSP active_exception =
-        m_session_data->m_debugger->GetActiveException().lock();
-    if (active_exception) {
-      // Resume the process and continue processing debug events.  Mask the
-      // exception so that from the process's view, there is no indication that
-      // anything happened.
-      m_session_data->m_debugger->ContinueAsyncException(
-          ExceptionResult::MaskException);
-    }
 
     LLDB_LOG(log, "resuming {0} threads.", m_thread_list.GetSize());
 
@@ -233,9 +223,18 @@ Status ProcessWindows::DoResume() {
 
     if (failed) {
       error.SetErrorString("ProcessWindows::DoResume failed");
-      return error;
     } else {
       SetPrivateState(eStateRunning);
+    }
+
+    ExceptionRecordSP active_exception =
+        m_session_data->m_debugger->GetActiveException().lock();
+    if (active_exception) {
+      // Resume the process and continue processing debug events.  Mask the
+      // exception so that from the process's view, there is no indication that
+      // anything happened.
+      m_session_data->m_debugger->ContinueAsyncException(
+          ExceptionResult::MaskException);
     }
   } else {
     LLDB_LOG(log, "error: process {0} is in state {1}.  Returning...",
@@ -246,17 +245,8 @@ Status ProcessWindows::DoResume() {
 }
 
 Status ProcessWindows::DoDestroy() {
-  Status error;
-  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
   StateType private_state = GetPrivateState();
-  if (private_state != eStateExited && private_state != eStateDetached)
-    return DestroyProcess();
-  else {
-    error.SetErrorStringWithFormat(
-        "cannot destroy process {0} while state = {1}", GetID(), private_state);
-    LLDB_LOG(log, "error: {0}", error);
-  }
-  return error;
+  return DestroyProcess(private_state);
 }
 
 Status ProcessWindows::DoHalt(bool &caused_stop) {
@@ -605,6 +595,9 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
     Status error(exit_code, eErrorTypeWin32);
     OnDebuggerError(error, 0);
   }
+
+  // Reset the session.
+  m_session_data.reset();
 }
 
 void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {

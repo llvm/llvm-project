@@ -4,10 +4,6 @@ from __future__ import print_function
 
 
 import unittest2
-import os
-import time
-import platform
-from distutils.version import StrictVersion
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -59,6 +55,10 @@ class ObjCModulesTestCase(TestBase):
             substrs=[
                 "int",
                 "4"])
+
+        # Type lookup should still work and print something reasonable
+        # for types from the module.
+        self.expect("type lookup NSObject", substrs=["instanceMethod"])
 
         self.expect("expr string.length", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=["NSUInteger", "5"])

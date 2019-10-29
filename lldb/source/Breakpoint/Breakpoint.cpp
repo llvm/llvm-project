@@ -496,10 +496,10 @@ void Breakpoint::ClearAllBreakpointSites() {
 void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
                                 bool delete_locations) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
-  if (log)
-    log->Printf("Breakpoint::ModulesChanged: num_modules: %zu load: %i "
-                "delete_locations: %i\n",
-                module_list.GetSize(), load, delete_locations);
+  LLDB_LOGF(log,
+            "Breakpoint::ModulesChanged: num_modules: %zu load: %i "
+            "delete_locations: %i\n",
+            module_list.GetSize(), load, delete_locations);
 
   std::lock_guard<std::recursive_mutex> guard(module_list.GetMutex());
   if (load) {
@@ -550,10 +550,10 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
             seen = true;
 
           if (!break_loc_sp->ResolveBreakpointSite()) {
-            if (log)
-              log->Printf("Warning: could not set breakpoint site for "
-                          "breakpoint location %d of breakpoint %d.\n",
-                          break_loc_sp->GetID(), GetID());
+            LLDB_LOGF(log,
+                      "Warning: could not set breakpoint site for "
+                      "breakpoint location %d of breakpoint %d.\n",
+                      break_loc_sp->GetID(), GetID());
           }
         }
       }
@@ -659,9 +659,8 @@ static bool SymbolContextsMightBeEquivalent(SymbolContext &old_sc,
 void Breakpoint::ModuleReplaced(ModuleSP old_module_sp,
                                 ModuleSP new_module_sp) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
-  if (log)
-    log->Printf("Breakpoint::ModulesReplaced for %s\n",
-                old_module_sp->GetSpecificationDescription().c_str());
+  LLDB_LOGF(log, "Breakpoint::ModulesReplaced for %s\n",
+            old_module_sp->GetSpecificationDescription().c_str());
   // First find all the locations that are in the old module
 
   BreakpointLocationCollection old_break_locs;

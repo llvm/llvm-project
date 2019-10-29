@@ -14,6 +14,11 @@ if(LLDB_BUILD_FRAMEWORK)
 endif()
 
 find_package(SWIG REQUIRED)
+set(SWIG_MIN_VERSION "2.0.0")
+if (${SWIG_VERSION} VERSION_LESS ${SWIG_MIN_VERSION})
+  message(FATAL_ERROR "LLDB requires swig ${SWIG_MIN_VERSION}, your version is ${SWIG_VERSION}.")
+endif()
+
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/LLDBWrapPython.cpp
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lldb.py

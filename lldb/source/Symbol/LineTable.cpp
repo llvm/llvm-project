@@ -241,33 +241,47 @@ bool LineTable::FindLineEntryByAddress(const Address &so_addr,
 
 bool LineTable::ConvertEntryAtIndexToLineEntry(uint32_t idx,
                                                LineEntry &line_entry) {
-  if (idx < m_entries.size()) {
-    const Entry &entry = m_entries[idx];
-    ModuleSP module_sp(m_comp_unit->GetModule());
-    if (module_sp &&
-        module_sp->ResolveFileAddress(entry.file_addr,
-                                      line_entry.range.GetBaseAddress())) {
-      if (!entry.is_terminal_entry && idx + 1 < m_entries.size())
-        line_entry.range.SetByteSize(m_entries[idx + 1].file_addr -
-                                     entry.file_addr);
-      else
-        line_entry.range.SetByteSize(0);
+  if (idx >= m_entries.size())
+    return false;
 
-      line_entry.file =
-          m_comp_unit->GetSupportFiles().GetFileSpecAtIndex(entry.file_idx);
-      line_entry.original_file =
-          m_comp_unit->GetSupportFiles().GetFileSpecAtIndex(entry.file_idx);
-      line_entry.line = entry.line;
-      line_entry.column = entry.column;
-      line_entry.is_start_of_statement = entry.is_start_of_statement;
-      line_entry.is_start_of_basic_block = entry.is_start_of_basic_block;
-      line_entry.is_prologue_end = entry.is_prologue_end;
-      line_entry.is_epilogue_begin = entry.is_epilogue_begin;
-      line_entry.is_terminal_entry = entry.is_terminal_entry;
-      return true;
-    }
-  }
-  return false;
+  const Entry &entry = m_entries[idx];
+  ModuleSP module_sp(m_comp_unit->GetModule());
+  if (!module_sp)
+    return false;
+
+  addr_t file_addr = entry.file_addr;
+
+  // A terminal entry can point outside of a module or a section. Decrement the
+  // address to ensure it resolves correctly.
+  if (entry.is_terminal_entry)
+    --file_addr;
+
+  if (!module_sp->ResolveFileAddress(file_addr,
+                                     line_entry.range.GetBaseAddress()))
+    return false;
+
+  // Now undo the decrement above.
+  if (entry.is_terminal_entry)
+    line_entry.range.GetBaseAddress().Slide(1);
+
+  if (!entry.is_terminal_entry && idx + 1 < m_entries.size())
+    line_entry.range.SetByteSize(m_entries[idx + 1].file_addr -
+                                 entry.file_addr);
+  else
+    line_entry.range.SetByteSize(0);
+
+  line_entry.file =
+      m_comp_unit->GetSupportFiles().GetFileSpecAtIndex(entry.file_idx);
+  line_entry.original_file =
+      m_comp_unit->GetSupportFiles().GetFileSpecAtIndex(entry.file_idx);
+  line_entry.line = entry.line;
+  line_entry.column = entry.column;
+  line_entry.is_start_of_statement = entry.is_start_of_statement;
+  line_entry.is_start_of_basic_block = entry.is_start_of_basic_block;
+  line_entry.is_prologue_end = entry.is_prologue_end;
+  line_entry.is_epilogue_begin = entry.is_epilogue_begin;
+  line_entry.is_terminal_entry = entry.is_terminal_entry;
+  return true;
 }
 
 uint32_t LineTable::FindLineEntryIndexByFileIndex(

@@ -26,28 +26,33 @@
 using namespace lldb;
 using namespace lldb_private;
 
-// CommandObjectBreakpointCommandAdd
-
 // FIXME: "script-type" needs to have its contents determined dynamically, so
-// somebody can add a new scripting
-// language to lldb and have it pickable here without having to change this
-// enumeration by hand and rebuild lldb proper.
-
+// somebody can add a new scripting language to lldb and have it pickable here
+// without having to change this enumeration by hand and rebuild lldb proper.
 static constexpr OptionEnumValueElement g_script_option_enumeration[] = {
-    {eScriptLanguageNone, "command",
-     "Commands are in the lldb command interpreter language"},
-    {eScriptLanguagePython, "python", "Commands are in the Python language."},
-    {eSortOrderByName, "default-script",
-     "Commands are in the default scripting language."} };
+    {
+        eScriptLanguageNone,
+        "command",
+        "Commands are in the lldb command interpreter language",
+    },
+    {
+        eScriptLanguagePython,
+        "python",
+        "Commands are in the Python language.",
+    },
+    {
+        eSortOrderByName,
+        "default-script",
+        "Commands are in the default scripting language.",
+    },
+};
 
 static constexpr OptionEnumValues ScriptOptionEnum() {
   return OptionEnumValues(g_script_option_enumeration);
 }
 
-static constexpr OptionDefinition g_breakpoint_add_options[] = {
 #define LLDB_OPTIONS_breakpoint_command_add
 #include "CommandOptions.inc"
-};
 
 class CommandObjectBreakpointCommandAdd : public CommandObjectParsed,
                                           public IOHandlerDelegateMultiline {
@@ -286,7 +291,8 @@ are no syntax errors may indicate that a function was declared but never called.
 
       case 's':
         m_script_language = (lldb::ScriptLanguage)OptionArgParser::ToOptionEnum(
-            option_arg, g_breakpoint_add_options[option_idx].enum_values,
+            option_arg,
+            g_breakpoint_command_add_options[option_idx].enum_values,
             eScriptLanguageNone, error);
 
         if (m_script_language == eScriptLanguagePython ||
@@ -318,7 +324,7 @@ are no syntax errors may indicate that a function was declared but never called.
         break;
 
       default:
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -336,7 +342,7 @@ are no syntax errors may indicate that a function was declared but never called.
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_breakpoint_add_options);
+      return llvm::makeArrayRef(g_breakpoint_command_add_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -355,16 +361,9 @@ are no syntax errors may indicate that a function was declared but never called.
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetSelectedOrDummyTarget(m_options.m_use_dummy);
+    Target &target = GetSelectedOrDummyTarget(m_options.m_use_dummy);
 
-    if (target == nullptr) {
-      result.AppendError("There is not a current executable; there are no "
-                         "breakpoints to which to add commands");
-      result.SetStatus(eReturnStatusFailed);
-      return false;
-    }
-
-    const BreakpointList &breakpoints = target->GetBreakpointList();
+    const BreakpointList &breakpoints = target.GetBreakpointList();
     size_t num_breakpoints = breakpoints.GetSize();
 
     if (num_breakpoints == 0) {
@@ -383,7 +382,7 @@ protected:
 
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, target, result, &valid_bp_ids,
+        command, &target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     m_bp_options_vec.clear();
@@ -395,7 +394,7 @@ protected:
         BreakpointID cur_bp_id = valid_bp_ids.GetBreakpointIDAtIndex(i);
         if (cur_bp_id.GetBreakpointID() != LLDB_INVALID_BREAK_ID) {
           Breakpoint *bp =
-              target->GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
+              target.GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
           BreakpointOptions *bp_options = nullptr;
           if (cur_bp_id.GetLocationID() == LLDB_INVALID_BREAK_ID) {
             // This breakpoint does not have an associated location.
@@ -464,10 +463,8 @@ const char *CommandObjectBreakpointCommandAdd::g_reader_instructions =
 
 // CommandObjectBreakpointCommandDelete
 
-static constexpr OptionDefinition g_breakpoint_delete_options[] = {
 #define LLDB_OPTIONS_breakpoint_command_delete
 #include "CommandOptions.inc"
-};
 
 class CommandObjectBreakpointCommandDelete : public CommandObjectParsed {
 public:
@@ -512,9 +509,7 @@ public:
         break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -525,7 +520,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_breakpoint_delete_options);
+      return llvm::makeArrayRef(g_breakpoint_command_delete_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -534,16 +529,9 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetSelectedOrDummyTarget(m_options.m_use_dummy);
+    Target &target = GetSelectedOrDummyTarget(m_options.m_use_dummy);
 
-    if (target == nullptr) {
-      result.AppendError("There is not a current executable; there are no "
-                         "breakpoints from which to delete commands");
-      result.SetStatus(eReturnStatusFailed);
-      return false;
-    }
-
-    const BreakpointList &breakpoints = target->GetBreakpointList();
+    const BreakpointList &breakpoints = target.GetBreakpointList();
     size_t num_breakpoints = breakpoints.GetSize();
 
     if (num_breakpoints == 0) {
@@ -561,7 +549,7 @@ protected:
 
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, target, result, &valid_bp_ids, 
+        command, &target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     if (result.Succeeded()) {
@@ -570,7 +558,7 @@ protected:
         BreakpointID cur_bp_id = valid_bp_ids.GetBreakpointIDAtIndex(i);
         if (cur_bp_id.GetBreakpointID() != LLDB_INVALID_BREAK_ID) {
           Breakpoint *bp =
-              target->GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
+              target.GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
           if (cur_bp_id.GetLocationID() != LLDB_INVALID_BREAK_ID) {
             BreakpointLocationSP bp_loc_sp(
                 bp->FindLocationByID(cur_bp_id.GetLocationID()));
@@ -601,10 +589,10 @@ private:
 class CommandObjectBreakpointCommandList : public CommandObjectParsed {
 public:
   CommandObjectBreakpointCommandList(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "list", "List the script or set of "
-                                                 "commands to be executed when "
-                                                 "the breakpoint is hit.",
-                            nullptr) {
+      : CommandObjectParsed(interpreter, "list",
+                            "List the script or set of commands to be "
+                            "executed when the breakpoint is hit.",
+                            nullptr, eCommandRequiresTarget) {
     CommandArgumentEntry arg;
     CommandArgumentData bp_id_arg;
 
@@ -624,14 +612,7 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = GetDebugger().GetSelectedTarget().get();
-
-    if (target == nullptr) {
-      result.AppendError("There is not a current executable; there are no "
-                         "breakpoints for which to list commands");
-      result.SetStatus(eReturnStatusFailed);
-      return false;
-    }
+    Target *target = &GetSelectedTarget();
 
     const BreakpointList &breakpoints = target->GetBreakpointList();
     size_t num_breakpoints = breakpoints.GetSize();
@@ -651,7 +632,7 @@ protected:
 
     BreakpointIDList valid_bp_ids;
     CommandObjectMultiwordBreakpoint::VerifyBreakpointOrLocationIDs(
-        command, target, result, &valid_bp_ids, 
+        command, target, result, &valid_bp_ids,
         BreakpointName::Permissions::PermissionKinds::listPerm);
 
     if (result.Succeeded()) {

@@ -16,9 +16,10 @@
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/Type.h"
-#include "lldb/Target/CPPLanguageRuntime.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/lldb-private.h"
+
+#include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 
 namespace lldb_private {
 
@@ -45,8 +46,6 @@ public:
   static bool classof(const LanguageRuntime *runtime) {
     return runtime->isA(&ID);
   }
-
-  bool IsVTableName(const char *name) override;
 
   bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                 lldb::DynamicValueType use_dynamic,

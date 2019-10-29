@@ -68,8 +68,8 @@ PlatformSP PlatformRemoteAppleBridge::CreateInstance(bool force,
     const char *triple_cstr =
         arch ? arch->GetTriple().getTriple().c_str() : "<null>";
 
-    log->Printf("PlatformRemoteAppleBridge::%s(force=%s, arch={%s,%s})",
-                __FUNCTION__, force ? "true" : "false", arch_name, triple_cstr);
+    LLDB_LOGF(log, "PlatformRemoteAppleBridge::%s(force=%s, arch={%s,%s})",
+              __FUNCTION__, force ? "true" : "false", arch_name, triple_cstr);
   }
 
   bool create = force;
@@ -112,16 +112,15 @@ PlatformSP PlatformRemoteAppleBridge::CreateInstance(bool force,
   }
 
   if (create) {
-    if (log)
-      log->Printf("PlatformRemoteAppleBridge::%s() creating platform",
-                  __FUNCTION__);
+    LLDB_LOGF(log, "PlatformRemoteAppleBridge::%s() creating platform",
+              __FUNCTION__);
 
     return lldb::PlatformSP(new PlatformRemoteAppleBridge());
   }
 
-  if (log)
-    log->Printf("PlatformRemoteAppleBridge::%s() aborting creation of platform",
-                __FUNCTION__);
+  LLDB_LOGF(log,
+            "PlatformRemoteAppleBridge::%s() aborting creation of platform",
+            __FUNCTION__);
 
   return lldb::PlatformSP();
 }

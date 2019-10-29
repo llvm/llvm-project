@@ -66,10 +66,10 @@ protected:
   Status LaunchProcess(ProcessLaunchInfo &launch_info,
                        DebugDelegateSP delegate);
 
-  Status AttachProcess(const ProcessAttachInfo &attach_info,
+  Status AttachProcess(lldb::pid_t pid, const ProcessAttachInfo &attach_info,
                        DebugDelegateSP delegate);
 
-  Status DestroyProcess();
+  Status DestroyProcess(lldb::StateType process_state);
 
   Status HaltProcess(bool &caused_stop);
 

@@ -93,15 +93,20 @@ Disassembler *ThreadPlanAssemblyTracer::GetDisassembler() {
 
 TypeFromUser ThreadPlanAssemblyTracer::GetIntPointerType() {
   if (!m_intptr_type.IsValid()) {
-    TargetSP target_sp(m_thread.CalculateTarget());
-    if (target_sp) {
-      TypeSystem *type_system =
-          target_sp->GetScratchTypeSystemForLanguage(nullptr, eLanguageTypeC);
-      if (type_system)
-        m_intptr_type =
-            TypeFromUser(type_system->GetBuiltinTypeForEncodingAndBitSize(
+    if (auto target_sp = m_thread.CalculateTarget()) {
+      auto type_system_or_err =
+          target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
+      if (auto err = type_system_or_err.takeError()) {
+        LLDB_LOG_ERROR(
+            lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES),
+            std::move(err),
+            "Unable to get integer pointer type from TypeSystem");
+      } else {
+        m_intptr_type = TypeFromUser(
+            type_system_or_err->GetBuiltinTypeForEncodingAndBitSize(
                 eEncodingUint,
                 target_sp->GetArchitecture().GetAddressByteSize() * 8));
+      }
     }
   }
   return m_intptr_type;
@@ -187,8 +192,6 @@ void ThreadPlanAssemblyTracer::Log() {
     for (int arg_index = 0; arg_index < num_args; ++arg_index) {
       Value value;
       value.SetValueType(Value::eValueTypeScalar);
-      //            value.SetContext (Value::eContextTypeClangType,
-      //            intptr_type.GetOpaqueQualType());
       value.SetCompilerType(intptr_type);
       value_list.PushValue(value);
     }

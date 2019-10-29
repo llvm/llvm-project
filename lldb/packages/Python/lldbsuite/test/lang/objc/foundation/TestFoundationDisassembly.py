@@ -2,12 +2,8 @@
 Test the lldb disassemble command on foundation framework.
 """
 
-from __future__ import print_function
-
-
 import unittest2
 import os
-import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -19,11 +15,6 @@ class FoundationDisassembleTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # rdar://problem/8504895
-    # Crash while doing 'disassemble -n "-[NSNumber descriptionWithLocale:]"
-    @unittest2.skipIf(
-        TestBase.skipLongRunningTest(),
-        "Skip this long running test")
     def test_foundation_disasm(self):
         """Do 'disassemble -n func' on each and every 'Code' symbol entry from the Foundation.framework."""
         self.build()
@@ -42,7 +33,6 @@ class FoundationDisassembleTestCase(TestBase):
 
         foundation_framework = None
         for module in target.modules:
-            print(module)
             if module.file.basename == "Foundation":
                 foundation_framework = module.file.fullpath
                 break
@@ -67,8 +57,7 @@ class FoundationDisassembleTestCase(TestBase):
             match = codeRE.search(line)
             if match:
                 func = match.group(1)
-                #print("line:", line)
-                #print("func:", func)
+                self.runCmd('image lookup -s "%s"' % func)
                 self.runCmd('disassemble -n "%s"' % func)
 
     def test_simple_disasm(self):
@@ -78,10 +67,6 @@ class FoundationDisassembleTestCase(TestBase):
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
-
-        print(target)
-        for module in target.modules:
-            print(module)
 
         # Stop at +[NSString stringWithFormat:].
         symbol_name = "+[NSString stringWithFormat:]"

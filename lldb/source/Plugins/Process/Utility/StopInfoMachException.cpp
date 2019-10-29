@@ -313,6 +313,8 @@ const char *StopInfoMachException::GetDescription() {
           subcode_desc = nullptr;
           subcode_label = "unused";
           break;
+#if defined(RESOURCE_TYPE_IO)
+        // RESOURCE_TYPE_IO is introduced in macOS SDK 10.12.
         case RESOURCE_TYPE_IO:
           exc_desc = "EXC_RESOURCE RESOURCE_TYPE_IO";
           snprintf(code_desc_buf, sizeof(code_desc_buf), "%d MB",
@@ -320,6 +322,7 @@ const char *StopInfoMachException::GetDescription() {
           snprintf(subcode_desc_buf, sizeof(subcode_desc_buf), "%d MB",
             (int)EXC_RESOURCE_IO_OBSERVED(m_exc_subcode));;
           break;
+#endif
         }
       }
 #endif

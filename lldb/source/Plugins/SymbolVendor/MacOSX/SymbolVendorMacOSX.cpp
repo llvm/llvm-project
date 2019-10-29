@@ -10,6 +10,7 @@
 
 #include <string.h>
 
+#include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -97,13 +98,9 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
   if (!module_sp)
     return NULL;
 
-  ObjectFile *obj_file = module_sp->GetObjectFile();
+  ObjectFile *obj_file =
+      llvm::dyn_cast_or_null<ObjectFileMachO>(module_sp->GetObjectFile());
   if (!obj_file)
-    return NULL;
-
-  static ConstString obj_file_macho("mach-o");
-  ConstString obj_name = obj_file->GetPluginName();
-  if (obj_name != obj_file_macho)
     return NULL;
 
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);

@@ -199,11 +199,6 @@ int strncasecmp(const char *s1, const char *s2, size_t n) {
   return strnicmp(s1, s2, n);
 }
 
-int usleep(uint32_t useconds) {
-  Sleep(useconds / 1000);
-  return 0;
-}
-
 #if _MSC_VER < 1900
 namespace lldb_private {
 int vsnprintf(char *buffer, size_t count, const char *format, va_list argptr) {

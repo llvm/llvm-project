@@ -237,11 +237,8 @@ protected:
 };
 
 // CommandObjectThreadBacktrace
-
-static constexpr OptionDefinition g_thread_backtrace_options[] = {
 #define LLDB_OPTIONS_thread_backtrace
 #include "CommandOptions.inc"
-};
 
 class CommandObjectThreadBacktrace : public CommandObjectIterateOverThreads {
 public:
@@ -284,9 +281,7 @@ public:
               "invalid boolean value for option '%c'", short_option);
       } break;
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -403,10 +398,8 @@ static constexpr OptionEnumValues TriRunningModes() {
   return OptionEnumValues(g_tri_running_mode);
 }
 
-static constexpr OptionDefinition g_thread_step_scope_options[] = {
 #define LLDB_OPTIONS_thread_step_scope
 #include "CommandOptions.inc"
-};
 
 class CommandObjectThreadStepWithTypeAndScope : public CommandObjectParsed {
 public:
@@ -490,9 +483,7 @@ public:
         break;
 
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -828,13 +819,6 @@ public:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     bool synchronous_execution = m_interpreter.GetSynchronous();
 
-    if (!GetDebugger().GetSelectedTarget()) {
-      result.AppendError("invalid target, create a debug target using the "
-                         "'target create' command");
-      result.SetStatus(eReturnStatusFailed);
-      return false;
-    }
-
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
       result.AppendError("no process exists. Cannot continue");
@@ -983,10 +967,8 @@ static constexpr OptionEnumValues DuoRunningModes() {
   return OptionEnumValues(g_duo_running_mode);
 }
 
-static constexpr OptionDefinition g_thread_until_options[] = {
 #define LLDB_OPTIONS_thread_until
 #include "CommandOptions.inc"
-};
 
 class CommandObjectThreadUntil : public CommandObjectParsed {
 public:
@@ -1044,9 +1026,7 @@ public:
         }
       } break;
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -1104,13 +1084,7 @@ protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     bool synchronous_execution = m_interpreter.GetSynchronous();
 
-    Target *target = GetDebugger().GetSelectedTarget().get();
-    if (target == nullptr) {
-      result.AppendError("invalid target, create a debug target using the "
-                         "'target create' command");
-      result.SetStatus(eReturnStatusFailed);
-      return false;
-    }
+    Target *target = &GetSelectedTarget();
 
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
@@ -1402,11 +1376,8 @@ protected:
 };
 
 // CommandObjectThreadInfo
-
-static constexpr OptionDefinition g_thread_info_options[] = {
 #define LLDB_OPTIONS_thread_info
 #include "CommandOptions.inc"
-};
 
 class CommandObjectThreadInfo : public CommandObjectIterateOverThreads {
 public:
@@ -1436,7 +1407,7 @@ public:
         break;
 
       default:
-        return Status("invalid short option character '%c'", short_option);
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -1536,11 +1507,8 @@ class CommandObjectThreadException : public CommandObjectIterateOverThreads {
 };
 
 // CommandObjectThreadReturn
-
-static constexpr OptionDefinition g_thread_return_options[] = {
 #define LLDB_OPTIONS_thread_return
 #include "CommandOptions.inc"
-};
 
 class CommandObjectThreadReturn : public CommandObjectRaw {
 public:
@@ -1573,9 +1541,7 @@ public:
         }
       } break;
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -1711,11 +1677,8 @@ protected:
 };
 
 // CommandObjectThreadJump
-
-static constexpr OptionDefinition g_thread_jump_options[] = {
 #define LLDB_OPTIONS_thread_jump
 #include "CommandOptions.inc"
-};
 
 class CommandObjectThreadJump : public CommandObjectParsed {
 public:
@@ -1760,7 +1723,7 @@ public:
         m_force = true;
         break;
       default:
-        return Status("invalid short option character '%c'", short_option);
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -1854,11 +1817,8 @@ protected:
 // Next are the subcommands of CommandObjectMultiwordThreadPlan
 
 // CommandObjectThreadPlanList
-
-static constexpr OptionDefinition g_thread_plan_list_options[] = {
 #define LLDB_OPTIONS_thread_plan_list
 #include "CommandOptions.inc"
-};
 
 class CommandObjectThreadPlanList : public CommandObjectIterateOverThreads {
 public:
@@ -1885,9 +1845,7 @@ public:
         m_verbose = true;
         break;
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }

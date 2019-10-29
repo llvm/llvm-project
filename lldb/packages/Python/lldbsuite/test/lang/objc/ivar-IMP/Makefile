@@ -1,5 +1,3 @@
-LEVEL = ../../../make
-
 CC ?= clang
 ifeq "$(ARCH)" ""
         ARCH = x86_64
@@ -25,4 +23,4 @@ aout:
 clean::
 	rm -f myclass.o
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules

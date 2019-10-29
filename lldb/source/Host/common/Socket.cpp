@@ -149,9 +149,8 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
 Status Socket::TcpConnect(llvm::StringRef host_and_port,
                           bool child_processes_inherit, Socket *&socket) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_COMMUNICATION));
-  if (log)
-    log->Printf("Socket::%s (host/port = %s)", __FUNCTION__,
-                host_and_port.str().c_str());
+  LLDB_LOGF(log, "Socket::%s (host/port = %s)", __FUNCTION__,
+            host_and_port.str().c_str());
 
   Status error;
   std::unique_ptr<Socket> connect_socket(
@@ -170,8 +169,7 @@ Status Socket::TcpListen(llvm::StringRef host_and_port,
                          bool child_processes_inherit, Socket *&socket,
                          Predicate<uint16_t> *predicate, int backlog) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
-  if (log)
-    log->Printf("Socket::%s (%s)", __FUNCTION__, host_and_port.str().c_str());
+  LLDB_LOGF(log, "Socket::%s (%s)", __FUNCTION__, host_and_port.str().c_str());
 
   Status error;
   std::string host_str;
@@ -209,9 +207,8 @@ Status Socket::TcpListen(llvm::StringRef host_and_port,
 Status Socket::UdpConnect(llvm::StringRef host_and_port,
                           bool child_processes_inherit, Socket *&socket) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
-  if (log)
-    log->Printf("Socket::%s (host/port = %s)", __FUNCTION__,
-                host_and_port.str().c_str());
+  LLDB_LOGF(log, "Socket::%s (host/port = %s)", __FUNCTION__,
+            host_and_port.str().c_str());
 
   return UDPSocket::Connect(host_and_port, child_processes_inherit, socket);
 }
@@ -285,27 +282,25 @@ bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
                                int32_t &port, Status *error_ptr) {
   static RegularExpression g_regex(
       llvm::StringRef("([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+)"));
-  RegularExpression::Match regex_match(2);
-  if (g_regex.Execute(host_and_port, &regex_match)) {
-    if (regex_match.GetMatchAtIndex(host_and_port, 1, host_str) &&
-        regex_match.GetMatchAtIndex(host_and_port, 2, port_str)) {
-      // IPv6 addresses are wrapped in [] when specified with ports
-      if (host_str.front() == '[' && host_str.back() == ']')
-        host_str = host_str.substr(1, host_str.size() - 2);
-      bool ok = false;
-      port = StringConvert::ToUInt32(port_str.c_str(), UINT32_MAX, 10, &ok);
-      if (ok && port <= UINT16_MAX) {
-        if (error_ptr)
-          error_ptr->Clear();
-        return true;
-      }
-      // port is too large
+  llvm::SmallVector<llvm::StringRef, 3> matches;
+  if (g_regex.Execute(host_and_port, &matches)) {
+    host_str = matches[1].str();
+    port_str = matches[2].str();
+    // IPv6 addresses are wrapped in [] when specified with ports
+    if (host_str.front() == '[' && host_str.back() == ']')
+      host_str = host_str.substr(1, host_str.size() - 2);
+    bool ok = false;
+    port = StringConvert::ToUInt32(port_str.c_str(), UINT32_MAX, 10, &ok);
+    if (ok && port <= UINT16_MAX) {
       if (error_ptr)
-        error_ptr->SetErrorStringWithFormat(
-            "invalid host:port specification: '%s'",
-            host_and_port.str().c_str());
-      return false;
+        error_ptr->Clear();
+      return true;
     }
+    // port is too large
+    if (error_ptr)
+      error_ptr->SetErrorStringWithFormat(
+          "invalid host:port specification: '%s'", host_and_port.str().c_str());
+    return false;
   }
 
   // If this was unsuccessful, then check if it's simply a signed 32-bit
@@ -345,18 +340,20 @@ Status Socket::Read(void *buf, size_t &num_bytes) {
 
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_COMMUNICATION));
   if (log) {
-    log->Printf("%p Socket::Read() (socket = %" PRIu64
-                ", src = %p, src_len = %" PRIu64 ", flags = 0) => %" PRIi64
-                " (error = %s)",
-                static_cast<void *>(this), static_cast<uint64_t>(m_socket), buf,
-                static_cast<uint64_t>(num_bytes),
-                static_cast<int64_t>(bytes_received), error.AsCString());
+    LLDB_LOGF(log,
+              "%p Socket::Read() (socket = %" PRIu64
+              ", src = %p, src_len = %" PRIu64 ", flags = 0) => %" PRIi64
+              " (error = %s)",
+              static_cast<void *>(this), static_cast<uint64_t>(m_socket), buf,
+              static_cast<uint64_t>(num_bytes),
+              static_cast<int64_t>(bytes_received), error.AsCString());
   }
 
   return error;
 }
 
 Status Socket::Write(const void *buf, size_t &num_bytes) {
+  const size_t src_len = num_bytes;
   Status error;
   int bytes_sent = 0;
   do {
@@ -371,12 +368,13 @@ Status Socket::Write(const void *buf, size_t &num_bytes) {
 
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_COMMUNICATION));
   if (log) {
-    log->Printf("%p Socket::Write() (socket = %" PRIu64
-                ", src = %p, src_len = %" PRIu64 ", flags = 0) => %" PRIi64
-                " (error = %s)",
-                static_cast<void *>(this), static_cast<uint64_t>(m_socket), buf,
-                static_cast<uint64_t>(num_bytes),
-                static_cast<int64_t>(bytes_sent), error.AsCString());
+    LLDB_LOGF(log,
+              "%p Socket::Write() (socket = %" PRIu64
+              ", src = %p, src_len = %" PRIu64 ", flags = 0) => %" PRIi64
+              " (error = %s)",
+              static_cast<void *>(this), static_cast<uint64_t>(m_socket), buf,
+              static_cast<uint64_t>(src_len),
+              static_cast<int64_t>(bytes_sent), error.AsCString());
   }
 
   return error;
@@ -393,9 +391,8 @@ Status Socket::Close() {
     return error;
 
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
-  if (log)
-    log->Printf("%p Socket::Close (fd = %" PRIu64 ")",
-                static_cast<void *>(this), static_cast<uint64_t>(m_socket));
+  LLDB_LOGF(log, "%p Socket::Close (fd = %" PRIu64 ")",
+            static_cast<void *>(this), static_cast<uint64_t>(m_socket));
 
 #if defined(_WIN32)
   bool success = !!closesocket(m_socket);

@@ -29,7 +29,6 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
-#include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/FileSpec.h"
@@ -75,10 +74,8 @@ TEST_F(SymbolFileDWARFTests, TestAbilitiesForDWARF) {
   ArchSpec aspec("i686-pc-windows");
   lldb::ModuleSP module = std::make_shared<Module>(fspec, aspec);
 
-  SymbolVendor *plugin = module->GetSymbolVendor();
-  EXPECT_NE(nullptr, plugin);
-  SymbolFile *symfile = plugin->GetSymbolFile();
-  EXPECT_NE(nullptr, symfile);
+  SymbolFile *symfile = module->GetSymbolFile();
+  ASSERT_NE(nullptr, symfile);
   EXPECT_EQ(symfile->GetPluginName(), SymbolFileDWARF::GetPluginNameStatic());
 
   uint32_t expected_abilities = SymbolFile::kAllAbilities;

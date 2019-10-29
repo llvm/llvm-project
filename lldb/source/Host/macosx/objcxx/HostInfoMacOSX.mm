@@ -71,22 +71,31 @@ bool HostInfoMacOSX::GetOSKernelDescription(std::string &s) {
   return false;
 }
 
+static void ParseOSVersion(llvm::VersionTuple &version, NSString *Key) {
+  @autoreleasepool {
+    NSDictionary *version_info =
+      [NSDictionary dictionaryWithContentsOfFile:
+       @"/System/Library/CoreServices/SystemVersion.plist"];
+    NSString *version_value = [version_info objectForKey: Key];
+    const char *version_str = [version_value UTF8String];
+    version.tryParse(version_str);
+  }
+}
+
 llvm::VersionTuple HostInfoMacOSX::GetOSVersion() {
   static llvm::VersionTuple g_version;
-
-  if (g_version.empty()) {
-    @autoreleasepool {
-      NSDictionary *version_info = [NSDictionary
-          dictionaryWithContentsOfFile:
-              @"/System/Library/CoreServices/SystemVersion.plist"];
-      NSString *version_value = [version_info objectForKey:@"ProductVersion"];
-      const char *version_str = [version_value UTF8String];
-      g_version.tryParse(version_str);
-    }
-  }
-
+  if (g_version.empty())
+    ParseOSVersion(g_version, @"ProductVersion");
   return g_version;
 }
+
+llvm::VersionTuple HostInfoMacOSX::GetMacCatalystVersion() {
+  static llvm::VersionTuple g_version;
+  if (g_version.empty())
+    ParseOSVersion(g_version, @"iOSSupportVersion");
+  return g_version;
+}
+
 
 FileSpec HostInfoMacOSX::GetProgramFileSpec() {
   static FileSpec g_program_filespec;
@@ -142,9 +151,8 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
     FileSystem::Instance().Resolve(support_dir_spec);
     if (!FileSystem::Instance().IsDirectory(support_dir_spec)) {
       Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
-      if (log)
-        log->Printf("HostInfoMacOSX::%s(): failed to find support directory",
-                    __FUNCTION__);
+      LLDB_LOGF(log, "HostInfoMacOSX::%s(): failed to find support directory",
+                __FUNCTION__);
       return false;
     }
 

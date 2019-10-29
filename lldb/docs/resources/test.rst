@@ -30,9 +30,7 @@ target.
 By default, the ``check-lldb`` target builds the test programs with the same
 compiler that was used to build LLDB. To build the tests with a different
 compiler, you can set the ``LLDB_TEST_C_COMPILER`` or the
-``LLDB_TEST_CXX_COMPILER`` CMake variables. These variables are ignored unless
-the respective ``LLDB_TEST_USE_CUSTOM_C_COMPILER`` and
-``LLDB_TEST_USE_CUSTOM_CXX_COMPILER`` are set to ``ON``.
+``LLDB_TEST_CXX_COMPILER`` CMake variables.
 
 It is possible to customize the architecture of the test binaries and compiler
 used by appending ``-A`` and ``-C`` options respectively to the CMake variable
@@ -88,22 +86,6 @@ Many more options that are available. To see a list of all of them, run:
 
    > python dotest.py -h
 
-The ``dotest.py`` script runs tests in parallel by default. To disable the
-parallel test running feature, use the ``--no-multiprocess`` flag. The number
-of concurrent tests is controlled by the ``LLDB_TEST_THREADS`` environment
-variable or the ``--threads command`` line parameter. The default value is the
-number of CPU cores on your system.
-
-The parallel test running feature will handle an additional ``--test-subdir
-SUBDIR`` arg. When specified, ``SUBDIR`` is relative to the root test directory
-and will limit all parallel test running to that subdirectory's tree of tests.
-
-The parallel test runner will run all tests within a given directory serially,
-but will run multiple directories concurrently. Thus, as a test writer, we
-provide serialized test run semantics within a directory. Note child
-directories are considered entirely separate, so two child directories could be
-running in parallel with a parent directory.
-
 Running the Test Suite Remotely
 -------------------------------
 
@@ -157,13 +139,11 @@ A quick guide to getting started with PTVS is as follows:
     #. If you want to enabled mixed mode debugging, check Enable native code debugging (this slows down debugging, so enable it only on an as-needed basis.)
 #. Set the command line for the test suite to run.
     #. Right click the project in solution explorer and choose the Debug tab.
-    #. Enter the arguments to dotest.py. Note you must add --no-multiprocess
+    #. Enter the arguments to dotest.py.
     #. Example command options:
 
 ::
 
-   # quiet mode
-   -q
    --arch=i686
    # Path to debug lldb.exe
    --executable D:/src/llvmbuild/ninja/bin/lldb.exe
@@ -178,12 +158,10 @@ A quick guide to getting started with PTVS is as follows:
    -p TestPaths.py
    # Root of test tree
    D:\src\llvm\tools\lldb\packages\Python\lldbsuite\test
-   # Required in order to be able to debug the test.
-   --no-multiprocess
 
 ::
 
-   -q --arch=i686 --executable D:/src/llvmbuild/ninja/bin/lldb.exe -s D:/src/llvmbuild/ninja/lldb-test-traces -u CXXFLAGS -u CFLAGS --enable-crash-dialog -C d:\src\llvmbuild\ninja_release\bin\clang.exe -p TestPaths.py D:\src\llvm\tools\lldb\packages\Python\lldbsuite\test --no-multiprocess
+   --arch=i686 --executable D:/src/llvmbuild/ninja/bin/lldb.exe -s D:/src/llvmbuild/ninja/lldb-test-traces -u CXXFLAGS -u CFLAGS --enable-crash-dialog -C d:\src\llvmbuild\ninja_release\bin\clang.exe -p TestPaths.py D:\src\llvm\tools\lldb\packages\Python\lldbsuite\test --no-multiprocess
 
 
 

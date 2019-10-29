@@ -59,46 +59,21 @@ bool ThreadPlanCallFunction::ConstructorSetup(
     m_constructor_errors.Printf(
         "Trying to put the stack in unreadable memory at: 0x%" PRIx64 ".",
         m_function_sp);
-    if (log)
-      log->Printf("ThreadPlanCallFunction(%p): %s.", static_cast<void *>(this),
-                  m_constructor_errors.GetData());
+    LLDB_LOGF(log, "ThreadPlanCallFunction(%p): %s.", static_cast<void *>(this),
+              m_constructor_errors.GetData());
     return false;
   }
 
-  Module *exe_module = GetTarget().GetExecutableModulePointer();
-
-  if (exe_module == nullptr) {
+  llvm::Expected<Address> start_address = GetTarget().GetEntryPointAddress();
+  if (!start_address) {
     m_constructor_errors.Printf(
-        "Can't execute code without an executable module.");
-    if (log)
-      log->Printf("ThreadPlanCallFunction(%p): %s.", static_cast<void *>(this),
-                  m_constructor_errors.GetData());
+        "%s", llvm::toString(start_address.takeError()).c_str());
+    LLDB_LOGF(log, "ThreadPlanCallFunction(%p): %s.", static_cast<void *>(this),
+              m_constructor_errors.GetData());
     return false;
-  } else {
-    ObjectFile *objectFile = exe_module->GetObjectFile();
-    if (!objectFile) {
-      m_constructor_errors.Printf(
-          "Could not find object file for module \"%s\".",
-          exe_module->GetFileSpec().GetFilename().AsCString());
-
-      if (log)
-        log->Printf("ThreadPlanCallFunction(%p): %s.",
-                    static_cast<void *>(this), m_constructor_errors.GetData());
-      return false;
-    }
-
-    m_start_addr = objectFile->GetEntryPointAddress();
-    if (!m_start_addr.IsValid()) {
-      m_constructor_errors.Printf(
-          "Could not find entry point address for executable module \"%s\".",
-          exe_module->GetFileSpec().GetFilename().AsCString());
-      if (log)
-        log->Printf("ThreadPlanCallFunction(%p): %s.",
-                    static_cast<void *>(this), m_constructor_errors.GetData());
-      return false;
-    }
   }
 
+  m_start_addr = *start_address;
   start_load_addr = m_start_addr.GetLoadAddress(&GetTarget());
 
   // Checkpoint the thread state so we can restore it later.
@@ -109,9 +84,8 @@ bool ThreadPlanCallFunction::ConstructorSetup(
   if (!thread.CheckpointThreadState(m_stored_thread_state)) {
     m_constructor_errors.Printf("Setting up ThreadPlanCallFunction, failed to "
                                 "checkpoint thread state.");
-    if (log)
-      log->Printf("ThreadPlanCallFunction(%p): %s.", static_cast<void *>(this),
-                  m_constructor_errors.GetData());
+    LLDB_LOGF(log, "ThreadPlanCallFunction(%p): %s.", static_cast<void *>(this),
+              m_constructor_errors.GetData());
     return false;
   }
   function_load_addr = m_function_addr.GetLoadAddress(&GetTarget());
@@ -196,10 +170,10 @@ void ThreadPlanCallFunction::DoTakedown(bool success) {
 
   if (!m_valid) {
     // Don't call DoTakedown if we were never valid to begin with.
-    if (log)
-      log->Printf("ThreadPlanCallFunction(%p): Log called on "
-                  "ThreadPlanCallFunction that was never valid.",
-                  static_cast<void *>(this));
+    LLDB_LOGF(log,
+              "ThreadPlanCallFunction(%p): Log called on "
+              "ThreadPlanCallFunction that was never valid.",
+              static_cast<void *>(this));
     return;
   }
 
@@ -207,20 +181,20 @@ void ThreadPlanCallFunction::DoTakedown(bool success) {
     if (success) {
       SetReturnValue();
     }
-    if (log)
-      log->Printf("ThreadPlanCallFunction(%p): DoTakedown called for thread "
-                  "0x%4.4" PRIx64 ", m_valid: %d complete: %d.\n",
-                  static_cast<void *>(this), m_thread.GetID(), m_valid,
-                  IsPlanComplete());
+    LLDB_LOGF(log,
+              "ThreadPlanCallFunction(%p): DoTakedown called for thread "
+              "0x%4.4" PRIx64 ", m_valid: %d complete: %d.\n",
+              static_cast<void *>(this), m_thread.GetID(), m_valid,
+              IsPlanComplete());
     m_takedown_done = true;
     m_stop_address =
         m_thread.GetStackFrameAtIndex(0)->GetRegisterContext()->GetPC();
     m_real_stop_info_sp = GetPrivateStopInfo();
     if (!m_thread.RestoreRegisterStateFromCheckpoint(m_stored_thread_state)) {
-      if (log)
-        log->Printf("ThreadPlanCallFunction(%p): DoTakedown failed to restore "
-                    "register state",
-                    static_cast<void *>(this));
+      LLDB_LOGF(log,
+                "ThreadPlanCallFunction(%p): DoTakedown failed to restore "
+                "register state",
+                static_cast<void *>(this));
     }
     SetPlanComplete(success);
     ClearBreakpoints();
@@ -228,11 +202,11 @@ void ThreadPlanCallFunction::DoTakedown(bool success) {
       ReportRegisterState("Restoring thread state after function call.  "
                           "Restored register state:");
   } else {
-    if (log)
-      log->Printf("ThreadPlanCallFunction(%p): DoTakedown called as no-op for "
-                  "thread 0x%4.4" PRIx64 ", m_valid: %d complete: %d.\n",
-                  static_cast<void *>(this), m_thread.GetID(), m_valid,
-                  IsPlanComplete());
+    LLDB_LOGF(log,
+              "ThreadPlanCallFunction(%p): DoTakedown called as no-op for "
+              "thread 0x%4.4" PRIx64 ", m_valid: %d complete: %d.\n",
+              static_cast<void *>(this), m_thread.GetID(), m_valid,
+              IsPlanComplete());
   }
 }
 
@@ -288,10 +262,9 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
     stop_reason = eStopReasonNone;
   else
     stop_reason = m_real_stop_info_sp->GetStopReason();
-  if (log)
-    log->Printf(
-        "ThreadPlanCallFunction::PlanExplainsStop: Got stop reason - %s.",
-        Thread::StopReasonAsCString(stop_reason));
+  LLDB_LOGF(log,
+            "ThreadPlanCallFunction::PlanExplainsStop: Got stop reason - %s.",
+            Thread::StopReasonAsCString(stop_reason));
 
   if (stop_reason == eStopReasonBreakpoint && BreakpointsExplainStop())
     return true;
@@ -300,9 +273,8 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
   // then we should not consider ourselves complete.  Return true to
   // acknowledge the stop.
   if (Process::ProcessEventData::GetInterruptedFromEvent(event_ptr)) {
-    if (log)
-      log->Printf("ThreadPlanCallFunction::PlanExplainsStop: The event is an "
-                  "Interrupt, returning true.");
+    LLDB_LOGF(log, "ThreadPlanCallFunction::PlanExplainsStop: The event is an "
+                   "Interrupt, returning true.");
     return true;
   }
   // We control breakpoints separately from other "stop reasons."  So first,
@@ -321,10 +293,10 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
       bool is_internal = true;
       for (uint32_t i = 0; i < num_owners; i++) {
         Breakpoint &bp = bp_site_sp->GetOwnerAtIndex(i)->GetBreakpoint();
-        if (log)
-          log->Printf("ThreadPlanCallFunction::PlanExplainsStop: hit "
-                      "breakpoint %d while calling function",
-                      bp.GetID());
+        LLDB_LOGF(log,
+                  "ThreadPlanCallFunction::PlanExplainsStop: hit "
+                  "breakpoint %d while calling function",
+                  bp.GetID());
 
         if (!bp.IsInternal()) {
           is_internal = false;
@@ -332,25 +304,23 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
         }
       }
       if (is_internal) {
-        if (log)
-          log->Printf("ThreadPlanCallFunction::PlanExplainsStop hit an "
-                      "internal breakpoint, not stopping.");
+        LLDB_LOGF(log, "ThreadPlanCallFunction::PlanExplainsStop hit an "
+                       "internal breakpoint, not stopping.");
         return false;
       }
     }
 
     if (m_ignore_breakpoints) {
-      if (log)
-        log->Printf("ThreadPlanCallFunction::PlanExplainsStop: we are ignoring "
-                    "breakpoints, overriding breakpoint stop info ShouldStop, "
-                    "returning true");
+      LLDB_LOGF(log,
+                "ThreadPlanCallFunction::PlanExplainsStop: we are ignoring "
+                "breakpoints, overriding breakpoint stop info ShouldStop, "
+                "returning true");
       m_real_stop_info_sp->OverrideShouldStop(false);
       return true;
     } else {
-      if (log)
-        log->Printf("ThreadPlanCallFunction::PlanExplainsStop: we are not "
-                    "ignoring breakpoints, overriding breakpoint stop info "
-                    "ShouldStop, returning true");
+      LLDB_LOGF(log, "ThreadPlanCallFunction::PlanExplainsStop: we are not "
+                     "ignoring breakpoints, overriding breakpoint stop info "
+                     "ShouldStop, returning true");
       m_real_stop_info_sp->OverrideShouldStop(true);
       return false;
     }
@@ -418,9 +388,8 @@ bool ThreadPlanCallFunction::MischiefManaged() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
 
   if (IsPlanComplete()) {
-    if (log)
-      log->Printf("ThreadPlanCallFunction(%p): Completed call function plan.",
-                  static_cast<void *>(this));
+    LLDB_LOGF(log, "ThreadPlanCallFunction(%p): Completed call function plan.",
+              static_cast<void *>(this));
 
     ThreadPlan::MischiefManaged();
     return true;
@@ -469,9 +438,8 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
          m_objc_language_runtime->ExceptionBreakpointsExplainStop(
              stop_info_sp))) {
       Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STEP));
-      if (log)
-        log->Printf("ThreadPlanCallFunction::BreakpointsExplainStop - Hit an "
-                    "exception breakpoint, setting plan complete.");
+      LLDB_LOGF(log, "ThreadPlanCallFunction::BreakpointsExplainStop - Hit an "
+                     "exception breakpoint, setting plan complete.");
 
       SetPlanComplete(false);
 

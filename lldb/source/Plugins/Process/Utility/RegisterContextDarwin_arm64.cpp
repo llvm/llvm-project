@@ -285,10 +285,11 @@ int RegisterContextDarwin_arm64::WriteRegisterSet(uint32_t set) {
 void RegisterContextDarwin_arm64::LogDBGRegisters(Log *log, const DBG &dbg) {
   if (log) {
     for (uint32_t i = 0; i < 16; i++)
-      log->Printf("BVR%-2u/BCR%-2u = { 0x%8.8" PRIu64 ", 0x%8.8" PRIu64
-                  " } WVR%-2u/WCR%-2u "
-                  "= { 0x%8.8" PRIu64 ", 0x%8.8" PRIu64 " }",
-                  i, i, dbg.bvr[i], dbg.bcr[i], i, i, dbg.wvr[i], dbg.wcr[i]);
+      LLDB_LOGF(log,
+                "BVR%-2u/BCR%-2u = { 0x%8.8" PRIu64 ", 0x%8.8" PRIu64
+                " } WVR%-2u/WCR%-2u "
+                "= { 0x%8.8" PRIu64 ", 0x%8.8" PRIu64 " }",
+                i, i, dbg.bvr[i], dbg.bcr[i], i, i, dbg.wvr[i], dbg.wcr[i]);
   }
 }
 
@@ -423,7 +424,7 @@ bool RegisterContextDarwin_arm64::ReadRegister(const RegisterInfo *reg_info,
   case fpu_v29:
   case fpu_v30:
   case fpu_v31:
-    value.SetBytes(fpu.v[reg - fpu_v0].bytes.buffer, reg_info->byte_size,
+    value.SetBytes(fpu.v[reg - fpu_v0].bytes, reg_info->byte_size,
                    endian::InlHostByteOrder());
     break;
 
@@ -615,7 +616,7 @@ bool RegisterContextDarwin_arm64::WriteRegister(const RegisterInfo *reg_info,
   case fpu_v29:
   case fpu_v30:
   case fpu_v31:
-    ::memcpy(fpu.v[reg - fpu_v0].bytes.buffer, value.GetBytes(),
+    ::memcpy(fpu.v[reg - fpu_v0].bytes, value.GetBytes(),
              value.GetByteSize());
     break;
 
@@ -646,8 +647,8 @@ bool RegisterContextDarwin_arm64::WriteRegister(const RegisterInfo *reg_info,
 bool RegisterContextDarwin_arm64::ReadAllRegisterValues(
     lldb::DataBufferSP &data_sp) {
   data_sp = std::make_shared<DataBufferHeap>(REG_CONTEXT_SIZE, 0);
-  if (data_sp && ReadGPR(false) == KERN_SUCCESS &&
-      ReadFPU(false) == KERN_SUCCESS && ReadEXC(false) == KERN_SUCCESS) {
+  if (ReadGPR(false) == KERN_SUCCESS && ReadFPU(false) == KERN_SUCCESS &&
+      ReadEXC(false) == KERN_SUCCESS) {
     uint8_t *dst = data_sp->GetBytes();
     ::memcpy(dst, &gpr, sizeof(gpr));
     dst += sizeof(gpr);

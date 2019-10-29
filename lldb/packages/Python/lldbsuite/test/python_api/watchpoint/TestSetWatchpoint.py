@@ -5,9 +5,6 @@ Use lldb Python SBValue API to create a watchpoint for read_write of 'globl' var
 from __future__ import print_function
 
 
-import os
-import time
-import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -33,7 +30,6 @@ class SetWatchpointAPITestCase(TestBase):
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
-    @expectedFailureNetBSD
     def test_watch_val(self):
         """Exercise SBValue.Watch() API to set a watchpoint."""
         self.build()

@@ -6,7 +6,6 @@ from __future__ import print_function
 
 
 import os
-import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
@@ -92,6 +91,13 @@ class LoadUnloadTestCase(TestBase):
                     raise RuntimeError(
                         "Unable copy 'libloadunload_d.so' to '%s'.\n>>> %s" %
                         (wd, err.GetCString()))
+
+    def setSvr4Support(self, enabled):
+        self.runCmd(
+            "settings set plugin.process.gdb-remote.use-libraries-svr4 {enabled}".format(
+                enabled="true" if enabled else "false"
+            )
+        )
 
     # libloadunload_d.so does not appear in the image list because executable
     # dependencies are resolved relative to the debuggers PWD. Bug?
@@ -224,6 +230,20 @@ class LoadUnloadTestCase(TestBase):
     @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     def test_lldb_process_load_and_unload_commands(self):
+        self.setSvr4Support(False)
+        self.run_lldb_process_load_and_unload_commands()
+
+    @expectedFailureAll(
+        bugnumber="llvm.org/pr25805",
+        hostoslist=["windows"],
+        triple='.*-android')
+    @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
+    @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
+    def test_lldb_process_load_and_unload_commands_with_svr4(self):
+        self.setSvr4Support(True)
+        self.run_lldb_process_load_and_unload_commands()
+
+    def run_lldb_process_load_and_unload_commands(self):
         """Test that lldb process load/unload command work correctly."""
         self.copy_shlibs_to_remote()
 
@@ -260,7 +280,7 @@ class LoadUnloadTestCase(TestBase):
             "process load %s --install=%s" % (localDylibPath, remoteDylibPath),
             "%s loaded correctly" % dylibName,
             patterns=[
-                'Loading "%s".*ok' % localDylibPath,
+                'Loading "%s".*ok' % re.escape(localDylibPath),
                 'Image [0-9]+ loaded'])
 
         # Search for and match the "Image ([0-9]+) loaded" pattern.
@@ -295,6 +315,15 @@ class LoadUnloadTestCase(TestBase):
 
     @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     def test_load_unload(self):
+        self.setSvr4Support(False)
+        self.run_load_unload()
+
+    @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
+    def test_load_unload_with_svr4(self):
+        self.setSvr4Support(True)
+        self.run_load_unload()
+
+    def run_load_unload(self):
         """Test breakpoint by name works correctly with dlopen'ing."""
         self.copy_shlibs_to_remote()
 
@@ -335,6 +364,16 @@ class LoadUnloadTestCase(TestBase):
     @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     def test_step_over_load(self):
+        self.setSvr4Support(False)
+        self.run_step_over_load()
+
+    @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
+    @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
+    def test_step_over_load_with_svr4(self):
+        self.setSvr4Support(True)
+        self.run_step_over_load()
+
+    def run_step_over_load(self):
         """Test stepping over code that loads a shared library works correctly."""
         self.copy_shlibs_to_remote()
 
@@ -363,7 +402,7 @@ class LoadUnloadTestCase(TestBase):
 
     # We can't find a breakpoint location for d_init before launching because
     # executable dependencies are resolved relative to the debuggers PWD. Bug?
-    @expectedFailureAll(oslist=["linux"])
+    @expectedFailureAll(oslist=["linux"], triple=no_match('aarch64-.*-android'))
     @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     @expectedFailureNetBSD

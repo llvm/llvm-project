@@ -36,7 +36,8 @@ AddressResolverName::AddressResolverName(const char *func_name,
     : AddressResolver(), m_func_name(func_name), m_class_name(nullptr),
       m_regex(), m_match_type(type) {
   if (m_match_type == AddressResolver::Regexp) {
-    if (!m_regex.Compile(m_func_name.GetStringRef())) {
+    m_regex = RegularExpression(m_func_name.GetStringRef());
+    if (!m_regex.IsValid()) {
       Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
 
       if (log)
@@ -46,9 +47,9 @@ AddressResolverName::AddressResolverName(const char *func_name,
   }
 }
 
-AddressResolverName::AddressResolverName(RegularExpression &func_regex)
+AddressResolverName::AddressResolverName(RegularExpression func_regex)
     : AddressResolver(), m_func_name(nullptr), m_class_name(nullptr),
-      m_regex(func_regex), m_match_type(AddressResolver::Regexp) {}
+      m_regex(std::move(func_regex)), m_match_type(AddressResolver::Regexp) {}
 
 AddressResolverName::AddressResolverName(const char *class_name,
                                          const char *method,

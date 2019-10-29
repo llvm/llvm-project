@@ -243,7 +243,7 @@ void ArchSpec::ListSupportedArchNames(StringList &list) {
     list.AppendString(g_core_definitions[i].name);
 }
 
-size_t ArchSpec::AutoComplete(CompletionRequest &request) {
+void ArchSpec::AutoComplete(CompletionRequest &request) {
   if (!request.GetCursorArgumentPrefix().empty()) {
     for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i) {
       if (NameMatches(g_core_definitions[i].name, NameMatch::StartsWith,
@@ -255,7 +255,6 @@ size_t ArchSpec::AutoComplete(CompletionRequest &request) {
     ListSupportedArchNames(matches);
     request.AddCompletions(matches);
   }
-  return request.GetNumberOfMatches();
 }
 
 #define CPU_ANY (UINT32_MAX)
@@ -946,8 +945,10 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
       }
     } else {
       Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET | LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_PLATFORM));
-      if (log)
-        log->Printf("Unable to find a core definition for cpu 0x%" PRIx32 " sub %" PRId32, cpu, sub);
+      LLDB_LOGF(log,
+                "Unable to find a core definition for cpu 0x%" PRIx32
+                " sub %" PRId32,
+                cpu, sub);
     }
   }
   CoreUpdated(update_triple);

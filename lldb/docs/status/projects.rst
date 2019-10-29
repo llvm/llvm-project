@@ -185,12 +185,6 @@ threads lazily but keep "unseen" threads in a holding area, and only retire
 them when we know we've fetched the whole thread list and ensured they are no
 longer alive.
 
-Add an extension point in the breakpoint search machinery
----------------------------------------------------------
-
-This would allow highly customizable, algorithmic breakpoint types, like "break
-on every use of some particular instruction, or instruction pattern, etc."
-
 Make Python-backed commands first class citizens
 ------------------------------------------------
 
@@ -297,21 +291,6 @@ state at StopPoint 0, StopPoint 1, etc. These could then be used for testing
 reactions to complex threading problems & the like, and also for simulating
 hard-to-test environments (like bare board debugging).
 
-A Bug-Trapper infrastructure
-----------------------------
-
-We very often have bugs that can't be reproduced locally. So having a
-bug-report-trapper that can gather enough information from the surroundings of
-a bug so that we can replay the session locally would be a big help tracking
-down issues in this situation. This is tricky because you can't necessarily
-require folks to leak information about their code in order to file bug
-reports. So not only will you have to figure out what state to gather, you're
-also going to have to anonymize it somehow. But we very often have bugs from
-people that can't reduce the problem to a simple test case and can't give us
-our code, and we often just can't help them as things stand now. Note that
-adding the ProcessMock would be a good first stage towards this, since you
-could make a ProcessMock creator/serializer from the current lldb state.
-
 Expression parser needs syntax for "{symbol,type} A in CU B.cpp"
 ----------------------------------------------------------------
 
@@ -399,19 +378,33 @@ Teach lldb to predict exception propagation at the throw site
 -------------------------------------------------------------
 
 There are a bunch of places in lldb where we need to know at the point where an
-exception is thrown, what frame will catch the exception.  
+exception is thrown, what frame will catch the exception.
 
-For instance, if an expression throws an exception, we need to know whether the 
-exception will be caught in the course of the expression evaluation.  If so it 
-would be safe to let the expression continue.  But since we would destroy the 
-state of the thread if we let the exception escape the expression, we currently 
+For instance, if an expression throws an exception, we need to know whether the
+exception will be caught in the course of the expression evaluation.  If so it
+would be safe to let the expression continue.  But since we would destroy the
+state of the thread if we let the exception escape the expression, we currently
 stop the expression evaluation if we see a throw.  If we knew where it would be
 caught we could distinguish these two cases.
 
-Similarly, when you step over a call that throws, you want to stop at the throw 
+Similarly, when you step over a call that throws, you want to stop at the throw
 point if you know the exception will unwind past the frame you were stepping in,
 but it would annoying to have the step abort every time an exception was thrown.
 If we could predict the catching frame, we could do this right.
 
-And of course, this would be a useful piece of information to display when stopped 
+And of course, this would be a useful piece of information to display when stopped
 at a throw point.
+
+Add predicates to the nodes of settings
+---------------------------------------
+
+It would be very useful to be able to give values to settings that are dependent
+on the triple, or executable name, for targets, or on whether a process is local
+or remote, or on the name of a thread, etc.  The original intent (and there is
+a sketch of this in the settings parsing code) was to be able to say:
+
+::
+
+  (lldb) settings set target{arch=x86_64}.process.thread{name=foo}...
+
+The exact details are still to be worked out, however.

@@ -68,14 +68,6 @@ public:
   bool WatchpointIsEnabled(uint32_t wp_index);
 
 protected:
-  Status DoReadGPR(void *buf, size_t buf_size) override;
-
-  Status DoWriteGPR(void *buf, size_t buf_size) override;
-
-  Status DoReadFPR(void *buf, size_t buf_size) override;
-
-  Status DoWriteFPR(void *buf, size_t buf_size) override;
-
   bool IsVMX(unsigned reg);
 
   bool IsVSX(unsigned reg);

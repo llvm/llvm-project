@@ -80,8 +80,8 @@ PlatformSP PlatformDarwinKernel::CreateInstance(bool force,
     const char *triple_cstr =
         arch ? arch->GetTriple().getTriple().c_str() : "<null>";
 
-    log->Printf("PlatformDarwinKernel::%s(force=%s, arch={%s,%s})",
-                __FUNCTION__, force ? "true" : "false", arch_name, triple_cstr);
+    LLDB_LOGF(log, "PlatformDarwinKernel::%s(force=%s, arch={%s,%s})",
+              __FUNCTION__, force ? "true" : "false", arch_name, triple_cstr);
   }
 
   // This is a special plugin that we don't want to activate just based on an
@@ -89,10 +89,10 @@ PlatformSP PlatformDarwinKernel::CreateInstance(bool force,
   // sessions and the DynamicLoaderDarwinPlugin (or a user doing 'platform
   // select') will force the creation of this Platform plugin.
   if (!force) {
-    if (log)
-      log->Printf("PlatformDarwinKernel::%s() aborting creation of platform "
-                  "because force == false",
-                  __FUNCTION__);
+    LLDB_LOGF(log,
+              "PlatformDarwinKernel::%s() aborting creation of platform "
+              "because force == false",
+              __FUNCTION__);
     return PlatformSP();
   }
 
@@ -154,15 +154,14 @@ PlatformSP PlatformDarwinKernel::CreateInstance(bool force,
     }
   }
   if (create) {
-    if (log)
-      log->Printf("PlatformDarwinKernel::%s() creating platform", __FUNCTION__);
+    LLDB_LOGF(log, "PlatformDarwinKernel::%s() creating platform",
+              __FUNCTION__);
 
     return PlatformSP(new PlatformDarwinKernel(is_ios_debug_session));
   }
 
-  if (log)
-    log->Printf("PlatformDarwinKernel::%s() aborting creation of platform",
-                __FUNCTION__);
+  LLDB_LOGF(log, "PlatformDarwinKernel::%s() aborting creation of platform",
+            __FUNCTION__);
 
   return PlatformSP();
 }
@@ -178,15 +177,13 @@ const char *PlatformDarwinKernel::GetDescriptionStatic() {
 
 /// Code to handle the PlatformDarwinKernel settings
 
-static constexpr PropertyDefinition g_properties[] = {
-    {"search-locally-for-kexts", OptionValue::eTypeBoolean, true, true, NULL,
-     {}, "Automatically search for kexts on the local system when doing "
-           "kernel debugging."},
-    {"kext-directories", OptionValue::eTypeFileSpecList, false, 0, NULL, {},
-     "Directories/KDKs to search for kexts in when starting a kernel debug "
-     "session."}};
+#define LLDB_PROPERTIES_platformdarwinkernel
+#include "PlatformMacOSXProperties.inc"
 
-enum { ePropertySearchForKexts = 0, ePropertyKextDirectories };
+enum {
+#define LLDB_PROPERTIES_platformdarwinkernel
+#include "PlatformMacOSXPropertiesEnum.inc"
+};
 
 class PlatformDarwinKernelProperties : public Properties {
 public:
@@ -197,7 +194,7 @@ public:
 
   PlatformDarwinKernelProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_properties);
+    m_collection_sp->Initialize(g_platformdarwinkernel_properties);
   }
 
   virtual ~PlatformDarwinKernelProperties() {}
@@ -205,7 +202,8 @@ public:
   bool GetSearchForKexts() const {
     const uint32_t idx = ePropertySearchForKexts;
     return m_collection_sp->GetPropertyAtIndexAsBoolean(
-        NULL, idx, g_properties[idx].default_uint_value != 0);
+        NULL, idx,
+        g_platformdarwinkernel_properties[idx].default_uint_value != 0);
   }
 
   FileSpecList GetKextDirectories() const {
@@ -298,24 +296,24 @@ void PlatformDarwinKernel::GetStatus(Stream &strm) {
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
   if (log) {
-    log->Printf("\nkexts with dSYMs");
+    LLDB_LOGF(log, "\nkexts with dSYMs");
     for (auto pos : m_name_to_kext_path_map_with_dsyms) {
-      log->Printf("%s", pos.second.GetPath().c_str());
+      LLDB_LOGF(log, "%s", pos.second.GetPath().c_str());
     }
-    log->Printf("\nkexts without dSYMs");
+    LLDB_LOGF(log, "\nkexts without dSYMs");
 
     for (auto pos : m_name_to_kext_path_map_without_dsyms) {
-      log->Printf("%s", pos.second.GetPath().c_str());
+      LLDB_LOGF(log, "%s", pos.second.GetPath().c_str());
     }
-    log->Printf("\nkernels with dSYMS");
+    LLDB_LOGF(log, "\nkernels with dSYMS");
     for (auto fs : m_kernel_binaries_with_dsyms) {
-      log->Printf("%s", fs.GetPath().c_str());
+      LLDB_LOGF(log, "%s", fs.GetPath().c_str());
     }
-    log->Printf("\nkernels without dSYMS");
+    LLDB_LOGF(log, "\nkernels without dSYMS");
     for (auto fs : m_kernel_binaries_without_dsyms) {
-      log->Printf("%s", fs.GetPath().c_str());
+      LLDB_LOGF(log, "%s", fs.GetPath().c_str());
     }
-    log->Printf("\n");
+    LLDB_LOGF(log, "\n");
   }
 }
 
@@ -495,8 +493,8 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
   Log *log_verbose(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM | LLDB_LOG_OPTION_VERBOSE));
 
-  if (log_verbose)
-      log_verbose->Printf ("PlatformDarwinKernel examining '%s'", file_spec.GetPath().c_str());
+  LLDB_LOGF(log_verbose, "PlatformDarwinKernel examining '%s'",
+            file_spec.GetPath().c_str());
 
   PlatformDarwinKernel *thisp = (PlatformDarwinKernel *)baton;
   if (ft == llvm::sys::fs::file_type::regular_file ||
@@ -507,18 +505,17 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
         file_spec_extension != g_dsym_suffix) {
       if (KernelHasdSYMSibling(file_spec))
       {
-        if (log)
-        {
-            log->Printf ("PlatformDarwinKernel registering kernel binary '%s' with dSYM sibling", file_spec.GetPath().c_str());
-        }
+        LLDB_LOGF(log,
+                  "PlatformDarwinKernel registering kernel binary '%s' with "
+                  "dSYM sibling",
+                  file_spec.GetPath().c_str());
         thisp->m_kernel_binaries_with_dsyms.push_back(file_spec);
       }
       else
       {
-        if (log)
-        {
-            log->Printf ("PlatformDarwinKernel registering kernel binary '%s', no dSYM", file_spec.GetPath().c_str());
-        }
+        LLDB_LOGF(
+            log, "PlatformDarwinKernel registering kernel binary '%s', no dSYM",
+            file_spec.GetPath().c_str());
         thisp->m_kernel_binaries_without_dsyms.push_back(file_spec);
       }
       return FileSystem::eEnumerateDirectoryResultNext;
@@ -554,8 +551,9 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
   if (recurse && file_spec_extension != g_dsym_suffix &&
       file_spec_extension != g_kext_suffix &&
       file_spec_extension != g_bundle_suffix) {
-    if (log_verbose)
-        log_verbose->Printf ("PlatformDarwinKernel descending into directory '%s'", file_spec.GetPath().c_str());
+    LLDB_LOGF(log_verbose,
+              "PlatformDarwinKernel descending into directory '%s'",
+              file_spec.GetPath().c_str());
     return FileSystem::eEnumerateDirectoryResultEnter;
   } else {
     return FileSystem::eEnumerateDirectoryResultNext;
@@ -574,19 +572,18 @@ void PlatformDarwinKernel::AddKextToMap(PlatformDarwinKernel *thisp,
       ConstString bundle_conststr(bundle_id_buf);
       if (KextHasdSYMSibling(file_spec))
       {
-        if (log)
-        {
-            log->Printf ("PlatformDarwinKernel registering kext binary '%s' with dSYM sibling", file_spec.GetPath().c_str());
-        }
+        LLDB_LOGF(log,
+                  "PlatformDarwinKernel registering kext binary '%s' with dSYM "
+                  "sibling",
+                  file_spec.GetPath().c_str());
         thisp->m_name_to_kext_path_map_with_dsyms.insert(
             std::pair<ConstString, FileSpec>(bundle_conststr, file_spec));
       }
       else
       {
-        if (log)
-        {
-            log->Printf ("PlatformDarwinKernel registering kext binary '%s', no dSYM", file_spec.GetPath().c_str());
-        }
+        LLDB_LOGF(log,
+                  "PlatformDarwinKernel registering kext binary '%s', no dSYM",
+                  file_spec.GetPath().c_str());
         thisp->m_name_to_kext_path_map_without_dsyms.insert(
             std::pair<ConstString, FileSpec>(bundle_conststr, file_spec));
       }

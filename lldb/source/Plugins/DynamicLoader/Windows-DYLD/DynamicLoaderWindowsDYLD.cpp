@@ -122,38 +122,37 @@ lldb::addr_t DynamicLoaderWindowsDYLD::GetLoadAddress(ModuleSP executable) {
 
 void DynamicLoaderWindowsDYLD::DidAttach() {
     Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
-  if (log)
-    log->Printf("DynamicLoaderWindowsDYLD::%s()", __FUNCTION__);
+    LLDB_LOGF(log, "DynamicLoaderWindowsDYLD::%s()", __FUNCTION__);
 
-  ModuleSP executable = GetTargetExecutable();
+    ModuleSP executable = GetTargetExecutable();
 
-  if (!executable.get())
-    return;
+    if (!executable.get())
+      return;
 
-  // Try to fetch the load address of the file from the process, since there
-  // could be randomization of the load address.
-  lldb::addr_t load_addr = GetLoadAddress(executable);
-  if (load_addr == LLDB_INVALID_ADDRESS)
-    return;
+    // Try to fetch the load address of the file from the process, since there
+    // could be randomization of the load address.
+    lldb::addr_t load_addr = GetLoadAddress(executable);
+    if (load_addr == LLDB_INVALID_ADDRESS)
+      return;
 
-  // Request the process base address.
-  lldb::addr_t image_base = m_process->GetImageInfoAddress();
-  if (image_base == load_addr)
-    return;
+    // Request the process base address.
+    lldb::addr_t image_base = m_process->GetImageInfoAddress();
+    if (image_base == load_addr)
+      return;
 
-  // Rebase the process's modules if there is a mismatch.
-  UpdateLoadedSections(executable, LLDB_INVALID_ADDRESS, load_addr, false);
+    // Rebase the process's modules if there is a mismatch.
+    UpdateLoadedSections(executable, LLDB_INVALID_ADDRESS, load_addr, false);
 
-  ModuleList module_list;
-  module_list.Append(executable);
-  m_process->GetTarget().ModulesDidLoad(module_list);
-  m_process->LoadModules();
+    ModuleList module_list;
+    module_list.Append(executable);
+    m_process->GetTarget().ModulesDidLoad(module_list);
+    auto error = m_process->LoadModules();
+    LLDB_LOG_ERROR(log, std::move(error), "failed to load modules: {0}");
 }
 
 void DynamicLoaderWindowsDYLD::DidLaunch() {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
-  if (log)
-    log->Printf("DynamicLoaderWindowsDYLD::%s()", __FUNCTION__);
+  LLDB_LOGF(log, "DynamicLoaderWindowsDYLD::%s()", __FUNCTION__);
 
   ModuleSP executable = GetTargetExecutable();
   if (!executable.get())
@@ -167,7 +166,8 @@ void DynamicLoaderWindowsDYLD::DidLaunch() {
     ModuleList module_list;
     module_list.Append(executable);
     m_process->GetTarget().ModulesDidLoad(module_list);
-    m_process->LoadModules();
+    auto error = m_process->LoadModules();
+    LLDB_LOG_ERROR(log, std::move(error), "failed to load modules: {0}");
   }
 }
 

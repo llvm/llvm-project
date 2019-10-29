@@ -286,26 +286,12 @@ public:
             object.'''
             return self.GetNumLocations()
 
-        __swig_getmethods__["locations"] = get_breakpoint_location_list
-        if _newclass: locations = property(get_breakpoint_location_list, None, doc='''A read only property that returns a list() of lldb.SBBreakpointLocation objects for this breakpoint.''')
-
-        __swig_getmethods__["location"] = get_locations_access_object
-        if _newclass: location = property(get_locations_access_object, None, doc='''A read only property that returns an object that can access locations by index (not location ID) (location = bkpt.location[12]).''')
-
-        __swig_getmethods__["id"] = GetID
-        if _newclass: id = property(GetID, None, doc='''A read only property that returns the ID of this breakpoint.''')
-
-        __swig_getmethods__["enabled"] = IsEnabled
-        __swig_setmethods__["enabled"] = SetEnabled
-        if _newclass: enabled = property(IsEnabled, SetEnabled, doc='''A read/write property that configures whether this breakpoint is enabled or not.''')
-
-        __swig_getmethods__["one_shot"] = IsOneShot
-        __swig_setmethods__["one_shot"] = SetOneShot
-        if _newclass: one_shot = property(IsOneShot, SetOneShot, doc='''A read/write property that configures whether this breakpoint is one-shot (deleted when hit) or not.''')
-
-        __swig_getmethods__["num_locations"] = GetNumLocations
-        if _newclass: num_locations = property(GetNumLocations, None, doc='''A read only property that returns the count of locations of this breakpoint.''')
-
+        locations = property(get_breakpoint_location_list, None, doc='''A read only property that returns a list() of lldb.SBBreakpointLocation objects for this breakpoint.''')
+        location = property(get_locations_access_object, None, doc='''A read only property that returns an object that can access locations by index (not location ID) (location = bkpt.location[12]).''')
+        id = property(GetID, None, doc='''A read only property that returns the ID of this breakpoint.''')
+        enabled = property(IsEnabled, SetEnabled, doc='''A read/write property that configures whether this breakpoint is enabled or not.''')
+        one_shot = property(IsOneShot, SetOneShot, doc='''A read/write property that configures whether this breakpoint is one-shot (deleted when hit) or not.''')
+        num_locations = property(GetNumLocations, None, doc='''A read only property that returns the count of locations of this breakpoint.''')
     %}
 
 

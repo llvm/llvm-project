@@ -101,7 +101,7 @@ public:
 
   lldb::ModuleSP GetJITModule();
 
-  lldb::addr_t FindSymbol(ConstString name);
+  lldb::addr_t FindSymbol(ConstString name, bool &missing_weak);
 
   void GetStaticInitializers(std::vector<lldb::addr_t> &static_initializers);
 
@@ -226,7 +226,8 @@ private:
                             const std::vector<SearchSpec> &C_specs);
 
   lldb::addr_t FindInSymbols(const std::vector<SearchSpec> &specs,
-                             const lldb_private::SymbolContext &sc);
+                             const lldb_private::SymbolContext &sc,
+                             bool &symbol_was_missing_weak);
 
   lldb::addr_t FindInRuntimes(const std::vector<SearchSpec> &specs,
                               const lldb_private::SymbolContext &sc);
@@ -301,6 +302,13 @@ private:
                           size_t Size) override {}
 
     uint64_t getSymbolAddress(const std::string &Name) override;
+    
+    // Find the address of the symbol Name.  If Name is a missing weak symbol
+    // then missing_weak will be true.
+    uint64_t GetSymbolAddressAndPresence(const std::string &Name, 
+                                         bool &missing_weak);
+    
+    llvm::JITSymbol findSymbol(const std::string &Name) override;
 
     void *getPointerToNamedFunction(const std::string &Name,
                                     bool AbortOnFailure = true) override;

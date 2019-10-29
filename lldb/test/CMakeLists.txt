@@ -39,8 +39,6 @@ set(LLDB_TEST_COMMON_ARGS
   --arch=${LLDB_TEST_ARCH}
   -s
   ${CMAKE_BINARY_DIR}/lldb-test-traces
-  --build-dir
-  ${CMAKE_BINARY_DIR}/lldb-test-build.noindex
   -S nm
   -u CXXFLAGS
   -u CFLAGS
@@ -74,15 +72,6 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   endif()
 endif()
 
-if(LLDB_CODESIGN_IDENTITY_USED)
-  list(APPEND LLDB_TEST_COMMON_ARGS --codesign-identity "${LLDB_CODESIGN_IDENTITY_USED}")
-endif()
-
-if(LLDB_BUILD_FRAMEWORK)
-  get_target_property(framework_target_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
-  list(APPEND LLDB_TEST_COMMON_ARGS --framework ${framework_target_dir}/LLDB.framework)
-endif()
-
 if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows|Darwin")
   list(APPEND LLDB_TEST_COMMON_ARGS
     --env ARCHIVER=${CMAKE_AR} --env OBJCOPY=${CMAKE_OBJCOPY})
@@ -94,23 +83,32 @@ if (NOT "${LLDB_LIT_TOOLS_DIR}" STREQUAL "")
   endif()
 endif()
 
-if(CMAKE_HOST_APPLE AND DEBUGSERVER_PATH)
-  list(APPEND LLDB_TEST_COMMON_ARGS --server ${DEBUGSERVER_PATH})
-endif()
+if(CMAKE_HOST_APPLE)
+  if(LLDB_BUILD_FRAMEWORK)
+    get_target_property(framework_build_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
+    list(APPEND LLDB_TEST_COMMON_ARGS --framework ${framework_build_dir}/LLDB.framework)
+  endif()
 
-if(SKIP_TEST_DEBUGSERVER)
-  list(APPEND LLDB_TEST_COMMON_ARGS --out-of-tree-debugserver)
+  # Use the same identity for testing
+  get_property(code_sign_identity_used GLOBAL PROPERTY LLDB_DEBUGSERVER_CODESIGN_IDENTITY)
+  if(code_sign_identity_used)
+    list(APPEND LLDB_TEST_COMMON_ARGS --codesign-identity "${code_sign_identity_used}")
+  endif()
+
+  if(LLDB_USE_SYSTEM_DEBUGSERVER)
+    lldb_find_system_debugserver(system_debugserver_path)
+    message(STATUS "LLDB tests use out-of-tree debugserver: ${system_debugserver_path}")
+    list(APPEND LLDB_TEST_COMMON_ARGS --out-of-tree-debugserver)
+  else()
+    set(debugserver_path ${LLVM_RUNTIME_OUTPUT_INTDIR}/debugserver)
+    message(STATUS "LLDB Tests use just-built debugserver: ${debugserver_path}")
+    list(APPEND LLDB_TEST_COMMON_ARGS --server ${debugserver_path})
+    add_dependencies(lldb-test-deps debugserver)
+  endif()
 endif()
 
 set(LLDB_DOTEST_ARGS ${LLDB_TEST_COMMON_ARGS};${LLDB_TEST_USER_ARGS})
 set_property(GLOBAL PROPERTY LLDB_DOTEST_ARGS_PROPERTY ${LLDB_DOTEST_ARGS})
-
-add_python_test_target(check-lldb-single
-  ${LLDB_SOURCE_DIR}/test/dotest.py
-  "--no-multiprocess;${LLDB_DOTEST_ARGS}"
-  "Testing LLDB with args: ${LLDB_DOTEST_ARGS}"
-  )
-set_target_properties(check-lldb-single PROPERTIES FOLDER "lldb misc")
 
 # If tests crash cause LLDB to crash, or things are otherwise unstable, or if machine-parsable
 # output is desired (i.e. in continuous integration contexts) check-lldb-single is a better target.

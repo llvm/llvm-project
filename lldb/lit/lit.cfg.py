@@ -1,6 +1,7 @@
 # -*- Python -*-
 
 import os
+import platform
 import re
 import shutil
 import site
@@ -63,25 +64,23 @@ llvm_config.feature_config(
      ('--targets-built', calculate_arch_features)
      ])
 
-# Clean the module caches in the test build directory.  This is
-# necessary in an incremental build whenever clang changes underneath,
-# so doing it once per lit.py invocation is close enough.
-
-for i in ['module-cache-clang', 'module-cache-lldb']:
-    cachedir = os.path.join(config.lldb_libs_dir, '..',
-                            'lldb-test-build.noindex', i)
+# Clean the module caches in the test build directory. This is necessary in an
+# incremental build whenever clang changes underneath, so doing it once per
+# lit.py invocation is close enough.
+for cachedir in [config.clang_module_cache, config.lldb_module_cache]:
     if os.path.isdir(cachedir):
         print("Deleting module cache at %s."%cachedir)
         shutil.rmtree(cachedir)
 
 # Set a default per-test timeout of 10 minutes. Setting a timeout per test
-# requires the psutil module and lit complains if the value is set but the
-# module can't be found.
-try:
-    import psutil  # noqa: F401
+# requires that killProcessAndChildren() is supported on the platform and
+# lit complains if the value is set but it is not supported.
+supported, errormsg = lit_config.maxIndividualTestTimeIsSupported
+if supported:
     lit_config.maxIndividualTestTime = 600
-except ImportError:
-    pass
+else:
+    lit_config.warning("Could not set a default per-test timeout. " + errormsg)
+
 
 # If running tests natively, check for CPU features needed for some tests.
 

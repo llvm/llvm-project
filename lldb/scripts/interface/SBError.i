@@ -106,21 +106,11 @@ public:
     GetDescription (lldb::SBStream &description);
 
     %pythoncode %{
-        __swig_getmethods__["value"] = GetError
-        if _newclass: value = property(GetError, None, doc='''A read only property that returns the same result as GetError().''')
-
-        __swig_getmethods__["fail"] = Fail
-        if _newclass: fail = property(Fail, None, doc='''A read only property that returns the same result as Fail().''')
-
-        __swig_getmethods__["success"] = Success
-        if _newclass: success = property(Success, None, doc='''A read only property that returns the same result as Success().''')
-
-        __swig_getmethods__["description"] = GetCString
-        if _newclass: description = property(GetCString, None, doc='''A read only property that returns the same result as GetCString().''')
-
-        __swig_getmethods__["type"] = GetType
-        if _newclass: type = property(GetType, None, doc='''A read only property that returns the same result as GetType().''')
-
+        value = property(GetError, None, doc='''A read only property that returns the same result as GetError().''')
+        fail = property(Fail, None, doc='''A read only property that returns the same result as Fail().''')
+        success = property(Success, None, doc='''A read only property that returns the same result as Success().''')
+        description = property(GetCString, None, doc='''A read only property that returns the same result as GetCString().''')
+        type = property(GetType, None, doc='''A read only property that returns the same result as GetType().''')
     %}
 
 };

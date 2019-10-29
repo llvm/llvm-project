@@ -33,13 +33,7 @@ using namespace lldb;
 
 class LineEntryTest : public testing::Test {
 public:
-  void SetUp() override {
-    FileSystem::Initialize();
-    HostInfo::Initialize();
-    ObjectFileMachO::Initialize();
-    SymbolFileDWARF::Initialize();
-    ClangASTContext::Initialize();
-  }
+  void SetUp() override;
 
   void TearDown() override {
     ClangASTContext::Terminate();
@@ -50,44 +44,32 @@ public:
   }
 
 protected:
-  llvm::Expected<ModuleSP> GetModule();
   llvm::Expected<LineEntry> GetLineEntryForLine(uint32_t line);
+  llvm::Optional<TestFile> m_file;
   ModuleSP m_module_sp;
 };
 
-llvm::Expected<ModuleSP> LineEntryTest::GetModule() {
-  if (m_module_sp)
-    return m_module_sp;
-
-  llvm::SmallString<128> obj;
-  if (auto ec = llvm::sys::fs::createTemporaryFile("source-%%%%%%", "obj", obj))
-    return llvm::errorCodeToError(ec);
-  llvm::FileRemover obj_remover(obj);
-  if (auto error = ReadYAMLObjectFile("inlined-functions.yaml", obj))
-    return llvm::Error(std::move(error));
-
-  m_module_sp = std::make_shared<Module>(ModuleSpec(FileSpec(obj)));
-  // Preload because the temporary file will be gone once we exit this function.
-  m_module_sp->PreloadSymbols();
-  return m_module_sp;
+void LineEntryTest::SetUp() {
+  FileSystem::Initialize();
+  HostInfo::Initialize();
+  ObjectFileMachO::Initialize();
+  SymbolFileDWARF::Initialize();
+  ClangASTContext::Initialize();
+  auto ExpectedFile = TestFile::fromYamlFile("inlined-functions.yaml");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+  m_file.emplace(std::move(*ExpectedFile));
+  m_module_sp = std::make_shared<Module>(ModuleSpec(FileSpec(m_file->name())));
 }
 
 llvm::Expected<LineEntry> LineEntryTest::GetLineEntryForLine(uint32_t line) {
-  auto expected_module_so = GetModule();
-
-  if (!expected_module_so)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Not able to get module for test object.");
-
-  auto module = expected_module_so->get();
   bool check_inlines = true;
   bool exact = true;
   SymbolContextList sc_comp_units;
   SymbolContextList sc_line_entries;
   FileSpec file_spec("inlined-functions.cpp");
-  module->ResolveSymbolContextsForFileSpec(file_spec, line, check_inlines,
-                                           lldb::eSymbolContextCompUnit,
-                                           sc_comp_units);
+  m_module_sp->ResolveSymbolContextsForFileSpec(file_spec, line, check_inlines,
+                                                lldb::eSymbolContextCompUnit,
+                                                sc_comp_units);
   if (sc_comp_units.GetSize() == 0)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "No comp unit found on the test object.");

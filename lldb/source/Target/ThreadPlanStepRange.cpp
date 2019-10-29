@@ -68,9 +68,8 @@ Vote ThreadPlanStepRange::ShouldReportStop(Event *event_ptr) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
 
   const Vote vote = IsPlanComplete() ? eVoteYes : eVoteNo;
-  if (log)
-    log->Printf("ThreadPlanStepRange::ShouldReportStop() returning vote %i\n",
-                vote);
+  LLDB_LOGF(log, "ThreadPlanStepRange::ShouldReportStop() returning vote %i\n",
+            vote);
   return vote;
 }
 
@@ -137,7 +136,8 @@ bool ThreadPlanStepRange::InRange() {
                                            true, Address::DumpStyleLoadAddress,
                                            Address::DumpStyleLoadAddress, true);
 
-            log->Printf(
+            LLDB_LOGF(
+                log,
                 "Step range plan stepped to another range of same line: %s",
                 s.GetData());
           }
@@ -155,9 +155,10 @@ bool ThreadPlanStepRange::InRange() {
                                            true, Address::DumpStyleLoadAddress,
                                            Address::DumpStyleLoadAddress, true);
 
-            log->Printf("Step range plan stepped to a range at linenumber 0 "
-                        "stepping through that range: %s",
-                        s.GetData());
+            LLDB_LOGF(log,
+                      "Step range plan stepped to a range at linenumber 0 "
+                      "stepping through that range: %s",
+                      s.GetData());
           }
         } else if (new_context.line_entry.range.GetBaseAddress().GetLoadAddress(
                        m_thread.CalculateTarget().get()) != pc_load_addr) {
@@ -177,9 +178,10 @@ bool ThreadPlanStepRange::InRange() {
                                            true, Address::DumpStyleLoadAddress,
                                            Address::DumpStyleLoadAddress, true);
 
-            log->Printf("Step range plan stepped to the middle of new "
-                        "line(%d): %s, continuing to clear this line.",
-                        new_context.line_entry.line, s.GetData());
+            LLDB_LOGF(log,
+                      "Step range plan stepped to the middle of new "
+                      "line(%d): %s, continuing to clear this line.",
+                      new_context.line_entry.line, s.GetData());
           }
         }
       }
@@ -187,7 +189,7 @@ bool ThreadPlanStepRange::InRange() {
   }
 
   if (!ret_value && log)
-    log->Printf("Step range plan out of range to 0x%" PRIx64, pc_load_addr);
+    LLDB_LOGF(log, "Step range plan out of range to 0x%" PRIx64, pc_load_addr);
 
   return ret_value;
 }
@@ -285,9 +287,8 @@ InstructionList *ThreadPlanStepRange::GetInstructionsForAddress(
 void ThreadPlanStepRange::ClearNextBranchBreakpoint() {
   if (m_next_branch_bp_sp) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
-    if (log)
-      log->Printf("Removing next branch breakpoint: %d.",
-                  m_next_branch_bp_sp->GetID());
+    LLDB_LOGF(log, "Removing next branch breakpoint: %d.",
+              m_next_branch_bp_sp->GetID());
     GetTarget().RemoveBreakpointByID(m_next_branch_bp_sp->GetID());
     m_next_branch_bp_sp.reset();
     m_could_not_resolve_hw_bp = false;
@@ -357,11 +358,12 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
               bp_site_id = bp_site->GetID();
             }
           }
-          log->Printf("ThreadPlanStepRange::SetNextBranchBreakpoint - Setting "
-                      "breakpoint %d (site %d) to run to address 0x%" PRIx64,
-                      m_next_branch_bp_sp->GetID(), bp_site_id,
-                      run_to_address.GetLoadAddress(
-                          &m_thread.GetProcess()->GetTarget()));
+          LLDB_LOGF(log,
+                    "ThreadPlanStepRange::SetNextBranchBreakpoint - Setting "
+                    "breakpoint %d (site %d) to run to address 0x%" PRIx64,
+                    m_next_branch_bp_sp->GetID(), bp_site_id,
+                    run_to_address.GetLoadAddress(
+                        &m_thread.GetProcess()->GetTarget()));
         }
 
         m_next_branch_bp_sp->SetThreadID(m_thread.GetID());
@@ -402,11 +404,11 @@ bool ThreadPlanStepRange::NextRangeBreakpointExplainsStop(
         break;
       }
     }
-    if (log)
-      log->Printf("ThreadPlanStepRange::NextRangeBreakpointExplainsStop - Hit "
-                  "next range breakpoint which has %" PRIu64
-                  " owners - explains stop: %u.",
-                  (uint64_t)num_owners, explains_stop);
+    LLDB_LOGF(log,
+              "ThreadPlanStepRange::NextRangeBreakpointExplainsStop - Hit "
+              "next range breakpoint which has %" PRIu64
+              " owners - explains stop: %u.",
+              (uint64_t)num_owners, explains_stop);
     ClearNextBranchBreakpoint();
     return explains_stop;
   }
@@ -445,8 +447,7 @@ bool ThreadPlanStepRange::MischiefManaged() {
 
   if (done) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
-    if (log)
-      log->Printf("Completed step through range plan.");
+    LLDB_LOGF(log, "Completed step through range plan.");
     ClearNextBranchBreakpoint();
     ThreadPlan::MischiefManaged();
     return true;
@@ -461,8 +462,8 @@ bool ThreadPlanStepRange::IsPlanStale() {
 
   if (frame_order == eFrameCompareOlder) {
     if (log) {
-      log->Printf("ThreadPlanStepRange::IsPlanStale returning true, we've "
-                  "stepped out.");
+      LLDB_LOGF(log, "ThreadPlanStepRange::IsPlanStale returning true, we've "
+                     "stepped out.");
     }
     return true;
   } else if (frame_order == eFrameCompareEqual && InSymbol()) {

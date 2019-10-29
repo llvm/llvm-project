@@ -1,5 +1,3 @@
-LEVEL = ../../make
-
 C_SOURCES := main.c
 
 ifeq "$(OS)" ""
@@ -15,4 +13,4 @@ endif
 
 MAKE_DSYM := NO
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules

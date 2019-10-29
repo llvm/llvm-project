@@ -686,7 +686,7 @@ public:
 
     %feature("docstring", "
     Create a breakpoint using a scripted resolver.
-  
+
     @param[in] class_name
        This is the name of the class that implements a scripted resolver.
        The class should have the following signature:
@@ -699,7 +699,7 @@ public:
                # extra_args - an SBStructuredData that can be used to
                # parametrize this instance.  Same as the extra_args passed
                # to BreakpointCreateFromScript.
-  
+
            def __get_depth__ (self):
                # This is optional, but if defined, you should return the
                # depth at which you want the callback to be called.  The
@@ -708,7 +708,7 @@ public:
                #    lldb.eSearchDepthCompUnit
                # The default if you don't implement this method is
                # eSearchDepthModule.
-  
+
            def __callback__(self, sym_ctx):
                # sym_ctx - an SBSymbolContext that is the cursor in the
                # search through the program to resolve breakpoints.
@@ -719,26 +719,26 @@ public:
                # Note, you will only get called for modules/compile_units that
                # pass the SearchFilter provided by the module_list & file_list
                # passed into BreakpointCreateFromScript.
-  
+
            def get_short_help(self):
                # Optional, but if implemented return a short string that will
                # be printed at the beginning of the break list output for the
                # breakpoint.
-  
+
     @param[in] extra_args
        This is an SBStructuredData object that will get passed to the
        constructor of the class in class_name.  You can use this to
        reuse the same class, parametrizing it with entries from this
        dictionary.
-  
+
     @param module_list
        If this is non-empty, this will be used as the module filter in the
        SearchFilter created for this breakpoint.
-  
+
     @param file_list
        If this is non-empty, this will be used as the comp unit filter in the
        SearchFilter created for this breakpoint.
-  
+
     @return
         An SBBreakpoint that will set locations based on the logic in the
         resolver's search callback.") BreakpointCreateFromScript;
@@ -1051,49 +1051,20 @@ public:
             object.'''
             return lldb_iter(self, 'GetNumWatchpoints', 'GetWatchpointAtIndex')
 
-        __swig_getmethods__["modules"] = get_modules_array
-        if _newclass: modules = property(get_modules_array, None, doc='''A read only property that returns a list() of lldb.SBModule objects contained in this target. This list is a list all modules that the target currently is tracking (the main executable and all dependent shared libraries).''')
-
-        __swig_getmethods__["module"] = get_modules_access_object
-        if _newclass: module = property(get_modules_access_object, None, doc=r'''A read only property that returns an object that implements python operator overloading with the square brackets().\n    target.module[<int>] allows array access to any modules.\n    target.module[<str>] allows access to modules by basename, full path, or uuid string value.\n    target.module[uuid.UUID()] allows module access by UUID.\n    target.module[re] allows module access using a regular expression that matches the module full path.''')
-
-        __swig_getmethods__["process"] = GetProcess
-        if _newclass: process = property(GetProcess, None, doc='''A read only property that returns an lldb object that represents the process (lldb.SBProcess) that this target owns.''')
-
-        __swig_getmethods__["executable"] = GetExecutable
-        if _newclass: executable = property(GetExecutable, None, doc='''A read only property that returns an lldb object that represents the main executable module (lldb.SBModule) for this target.''')
-
-        __swig_getmethods__["debugger"] = GetDebugger
-        if _newclass: debugger = property(GetDebugger, None, doc='''A read only property that returns an lldb object that represents the debugger (lldb.SBDebugger) that owns this target.''')
-
-        __swig_getmethods__["num_breakpoints"] = GetNumBreakpoints
-        if _newclass: num_breakpoints = property(GetNumBreakpoints, None, doc='''A read only property that returns the number of breakpoints that this target has as an integer.''')
-
-        __swig_getmethods__["num_watchpoints"] = GetNumWatchpoints
-        if _newclass: num_watchpoints = property(GetNumWatchpoints, None, doc='''A read only property that returns the number of watchpoints that this target has as an integer.''')
-
-        __swig_getmethods__["broadcaster"] = GetBroadcaster
-        if _newclass: broadcaster = property(GetBroadcaster, None, doc='''A read only property that an lldb object that represents the broadcaster (lldb.SBBroadcaster) for this target.''')
-
-        __swig_getmethods__["byte_order"] = GetByteOrder
-        if _newclass: byte_order = property(GetByteOrder, None, doc='''A read only property that returns an lldb enumeration value (lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that represents the byte order for this target.''')
-
-        __swig_getmethods__["addr_size"] = GetAddressByteSize
-        if _newclass: addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this target.''')
-
-        __swig_getmethods__["triple"] = GetTriple
-        if _newclass: triple = property(GetTriple, None, doc='''A read only property that returns the target triple (arch-vendor-os) for this target as a string.''')
-
-        __swig_getmethods__["data_byte_size"] = GetDataByteSize
-        if _newclass: data_byte_size = property(GetDataByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the data address space for this target.''')
-
-        __swig_getmethods__["code_byte_size"] = GetCodeByteSize
-        if _newclass: code_byte_size = property(GetCodeByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the code address space for this target.''')
-
-        __swig_getmethods__["platform"] = GetPlatform
-        if _newclass: platform = property(GetPlatform, None, doc='''A read only property that returns the platform associated with with this target.''')
+        modules = property(get_modules_array, None, doc='''A read only property that returns a list() of lldb.SBModule objects contained in this target. This list is a list all modules that the target currently is tracking (the main executable and all dependent shared libraries).''')
+        module = property(get_modules_access_object, None, doc=r'''A read only property that returns an object that implements python operator overloading with the square brackets().\n    target.module[<int>] allows array access to any modules.\n    target.module[<str>] allows access to modules by basename, full path, or uuid string value.\n    target.module[uuid.UUID()] allows module access by UUID.\n    target.module[re] allows module access using a regular expression that matches the module full path.''')
+        process = property(GetProcess, None, doc='''A read only property that returns an lldb object that represents the process (lldb.SBProcess) that this target owns.''')
+        executable = property(GetExecutable, None, doc='''A read only property that returns an lldb object that represents the main executable module (lldb.SBModule) for this target.''')
+        debugger = property(GetDebugger, None, doc='''A read only property that returns an lldb object that represents the debugger (lldb.SBDebugger) that owns this target.''')
+        num_breakpoints = property(GetNumBreakpoints, None, doc='''A read only property that returns the number of breakpoints that this target has as an integer.''')
+        num_watchpoints = property(GetNumWatchpoints, None, doc='''A read only property that returns the number of watchpoints that this target has as an integer.''')
+        broadcaster = property(GetBroadcaster, None, doc='''A read only property that an lldb object that represents the broadcaster (lldb.SBBroadcaster) for this target.''')
+        byte_order = property(GetByteOrder, None, doc='''A read only property that returns an lldb enumeration value (lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that represents the byte order for this target.''')
+        addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this target.''')
+        triple = property(GetTriple, None, doc='''A read only property that returns the target triple (arch-vendor-os) for this target as a string.''')
+        data_byte_size = property(GetDataByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the data address space for this target.''')
+        code_byte_size = property(GetCodeByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the code address space for this target.''')
+        platform = property(GetPlatform, None, doc='''A read only property that returns the platform associated with with this target.''')
     %}
-
 };
-
 } // namespace lldb

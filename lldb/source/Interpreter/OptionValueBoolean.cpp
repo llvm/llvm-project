@@ -71,9 +71,8 @@ lldb::OptionValueSP OptionValueBoolean::DeepCopy() const {
   return OptionValueSP(new OptionValueBoolean(*this));
 }
 
-size_t OptionValueBoolean::AutoComplete(CommandInterpreter &interpreter,
-                                        CompletionRequest &request) {
-  request.SetWordComplete(false);
+void OptionValueBoolean::AutoComplete(CommandInterpreter &interpreter,
+                                      CompletionRequest &request) {
   static const llvm::StringRef g_autocomplete_entries[] = {
       "true", "false", "on", "off", "yes", "no", "1", "0"};
 
@@ -87,5 +86,4 @@ size_t OptionValueBoolean::AutoComplete(CommandInterpreter &interpreter,
     if (entry.startswith_lower(request.GetCursorArgumentPrefix()))
       request.AddCompletion(entry);
   }
-  return request.GetNumberOfMatches();
 }

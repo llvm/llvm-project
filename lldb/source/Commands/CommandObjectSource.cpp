@@ -33,11 +33,8 @@ using namespace lldb_private;
 
 #pragma mark CommandObjectSourceInfo
 // CommandObjectSourceInfo - debug line entries dumping command
-
-static constexpr OptionDefinition g_source_info_options[] = {
 #define LLDB_OPTIONS_source_info
 #include "CommandOptions.inc"
-};
 
 class CommandObjectSourceInfo : public CommandObjectParsed {
   class CommandOptions : public Options {
@@ -85,9 +82,7 @@ class CommandObjectSourceInfo : public CommandObjectParsed {
         modules.push_back(std::string(option_arg));
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -636,11 +631,8 @@ protected:
 
 #pragma mark CommandObjectSourceList
 // CommandObjectSourceList
-
-static constexpr OptionDefinition g_source_list_options[] = {
 #define LLDB_OPTIONS_source_list
 #include "CommandOptions.inc"
-};
 
 class CommandObjectSourceList : public CommandObjectParsed {
   class CommandOptions : public Options {
@@ -689,9 +681,7 @@ class CommandObjectSourceList : public CommandObjectParsed {
         reverse = true;
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;

@@ -31,12 +31,13 @@ public:
     return "Breakpad debug symbol file reader.";
   }
 
-  static SymbolFile *CreateInstance(ObjectFile *obj_file) {
-    return new SymbolFileBreakpad(obj_file);
+  static SymbolFile *CreateInstance(lldb::ObjectFileSP objfile_sp) {
+    return new SymbolFileBreakpad(std::move(objfile_sp));
   }
 
   // Constructors and Destructors
-  SymbolFileBreakpad(ObjectFile *object_file) : SymbolFile(object_file) {}
+  SymbolFileBreakpad(lldb::ObjectFileSP objfile_sp)
+      : SymbolFile(std::move(objfile_sp)) {}
 
   ~SymbolFileBreakpad() override {}
 
@@ -45,10 +46,6 @@ public:
   void InitializeObject() override {}
 
   // Compile Unit function calls
-
-  uint32_t GetNumCompileUnits() override;
-
-  lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
 
   lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) override {
     return lldb::eLanguageTypeUnknown;
@@ -119,11 +116,14 @@ public:
                      llvm::DenseSet<SymbolFile *> &searched_symbol_files,
                      TypeMap &types) override;
 
-  size_t FindTypes(const std::vector<CompilerContext> &context, bool append,
-                   TypeMap &types) override;
+  size_t FindTypes(llvm::ArrayRef<CompilerContext> pattern,
+                   LanguageSet languages, bool append, TypeMap &types) override;
 
-  TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language) override {
-    return nullptr;
+  llvm::Expected<TypeSystem &>
+  GetTypeSystemForLanguage(lldb::LanguageType language) override {
+    return llvm::make_error<llvm::StringError>(
+        "SymbolFileBreakpad does not support GetTypeSystemForLanguage",
+        llvm::inconvertibleErrorCode());
   }
 
   CompilerDeclContext
@@ -196,7 +196,9 @@ private:
 
   };
 
-  SymbolVendor &GetSymbolVendor();
+  uint32_t CalculateNumCompileUnits() override;
+  lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
+
   lldb::addr_t GetBaseFileAddress();
   void ParseFileRecords();
   void ParseCUData();

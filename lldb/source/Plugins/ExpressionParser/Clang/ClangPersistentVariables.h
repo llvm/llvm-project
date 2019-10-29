@@ -45,8 +45,8 @@ public:
       uint32_t addr_byte_size) override;
 
   void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
-  llvm::StringRef
-  GetPersistentVariablePrefix(bool is_error) const override {
+
+  llvm::StringRef GetPersistentVariablePrefix(bool is_error) const override {
     return "$";
   }
 
@@ -66,8 +66,8 @@ public:
   }
 
 private:
-  uint32_t m_next_persistent_variable_id; ///< The counter used by
-                                          ///GetNextResultName().
+  // The counter used by GetNextPersistentVariableName
+  uint32_t m_next_persistent_variable_id = 0;
 
   typedef llvm::DenseMap<const char *, clang::NamedDecl *> PersistentDeclMap;
   PersistentDeclMap

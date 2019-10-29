@@ -1,5 +1,4 @@
 SRCDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/
-
 CC ?= clang
 
 ifeq "$(ARCH)" ""

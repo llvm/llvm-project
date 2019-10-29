@@ -11,20 +11,10 @@
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "llvm/BinaryFormat/ELF.h"
 
 namespace lldb_private {
 /// Core files PT_NOTE segment descriptor types
-
-namespace FREEBSD {
-enum {
-  NT_PRSTATUS = 1,
-  NT_FPREGSET,
-  NT_PRPSINFO,
-  NT_THRMISC = 7,
-  NT_PROCSTAT_AUXV = 16,
-  NT_PPC_VMX = 0x100
-};
-}
 
 namespace NETBSD {
 enum { NT_PROCINFO = 1, NT_AUXV = 2 };
@@ -76,22 +66,6 @@ enum {
 };
 }
 
-namespace LINUX {
-enum {
-  NT_PRSTATUS = 1,
-  NT_FPREGSET,
-  NT_PRPSINFO,
-  NT_TASKSTRUCT,
-  NT_PLATFORM,
-  NT_AUXV,
-  NT_FILE = 0x46494c45,
-  NT_SIGINFO = 0x53494749,
-  NT_PPC_VMX = 0x100,
-  NT_PPC_VSX = 0x102,
-  NT_PRXFPREG = 0x46e62b7f,
-};
-}
-
 struct CoreNote {
   ELFNote info;
   DataExtractor data;
@@ -122,24 +96,24 @@ DataExtractor getRegset(llvm::ArrayRef<CoreNote> Notes,
                         llvm::ArrayRef<RegsetDesc> RegsetDescs);
 
 constexpr RegsetDesc FPR_Desc[] = {
-    {llvm::Triple::FreeBSD, llvm::Triple::UnknownArch, FREEBSD::NT_FPREGSET},
+    {llvm::Triple::FreeBSD, llvm::Triple::UnknownArch, llvm::ELF::NT_FPREGSET},
     // In a i386 core file NT_FPREGSET is present, but it's not the result
     // of the FXSAVE instruction like in 64 bit files.
     // The result from FXSAVE is in NT_PRXFPREG for i386 core files
-    {llvm::Triple::Linux, llvm::Triple::x86, LINUX::NT_PRXFPREG},
-    {llvm::Triple::Linux, llvm::Triple::UnknownArch, LINUX::NT_FPREGSET},
+    {llvm::Triple::Linux, llvm::Triple::x86, llvm::ELF::NT_PRXFPREG},
+    {llvm::Triple::Linux, llvm::Triple::UnknownArch, llvm::ELF::NT_FPREGSET},
     {llvm::Triple::NetBSD, llvm::Triple::aarch64, NETBSD::AARCH64::NT_FPREGS},
     {llvm::Triple::NetBSD, llvm::Triple::x86_64, NETBSD::AMD64::NT_FPREGS},
     {llvm::Triple::OpenBSD, llvm::Triple::UnknownArch, OPENBSD::NT_FPREGS},
 };
 
 constexpr RegsetDesc PPC_VMX_Desc[] = {
-    {llvm::Triple::FreeBSD, llvm::Triple::UnknownArch, FREEBSD::NT_PPC_VMX},
-    {llvm::Triple::Linux, llvm::Triple::UnknownArch, LINUX::NT_PPC_VMX},
+    {llvm::Triple::FreeBSD, llvm::Triple::UnknownArch, llvm::ELF::NT_PPC_VMX},
+    {llvm::Triple::Linux, llvm::Triple::UnknownArch, llvm::ELF::NT_PPC_VMX},
 };
 
 constexpr RegsetDesc PPC_VSX_Desc[] = {
-    {llvm::Triple::Linux, llvm::Triple::UnknownArch, LINUX::NT_PPC_VSX},
+    {llvm::Triple::Linux, llvm::Triple::UnknownArch, llvm::ELF::NT_PPC_VSX},
 };
 
 } // namespace lldb_private

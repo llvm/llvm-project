@@ -13,10 +13,11 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Expression/UserExpression.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadSpec.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -30,14 +31,22 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
       m_watch_write(0), m_watch_was_read(0), m_watch_was_written(0),
       m_ignore_count(0), m_false_alarms(0), m_decl_str(), m_watch_spec_str(),
       m_type(), m_error(), m_options(), m_being_created(true) {
+
   if (type && type->IsValid())
     m_type = *type;
   else {
     // If we don't have a known type, then we force it to unsigned int of the
     // right size.
-    ClangASTContext *ast_context = target.GetScratchClangASTContext();
-    m_type = ast_context->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint,
-                                                              8 * size);
+    auto type_system_or_err =
+        target.GetScratchTypeSystemForLanguage(eLanguageTypeC);
+    if (auto err = type_system_or_err.takeError()) {
+      LLDB_LOG_ERROR(
+          lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_WATCHPOINTS),
+          std::move(err), "Failed to set type.");
+    } else {
+      m_type = type_system_or_err->GetBuiltinTypeForEncodingAndBitSize(
+          eEncodingUint, 8 * size);
+    }
   }
 
   // Set the initial value of the watched variable:

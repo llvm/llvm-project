@@ -38,6 +38,11 @@ public:
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
 
+  const_iterator begin() const { return m_sections.begin(); }
+  const_iterator end() const { return m_sections.end(); }
+  const_iterator begin() { return m_sections.begin(); }
+  const_iterator end() { return m_sections.end(); }
+
   SectionList();
 
   ~SectionList();

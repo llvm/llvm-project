@@ -12,8 +12,9 @@
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Utility/Stream.h"
+
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
 namespace lldb_private {
 namespace formatters {

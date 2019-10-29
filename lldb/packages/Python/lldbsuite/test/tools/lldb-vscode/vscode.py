@@ -99,7 +99,7 @@ def read_packet_thread(vs_comm):
 
 class DebugCommunication(object):
 
-    def __init__(self, recv, send):
+    def __init__(self, recv, send, init_commands):
         self.trace_file = None
         self.send = send
         self.recv = recv
@@ -118,6 +118,7 @@ class DebugCommunication(object):
         self.output = {}
         self.configuration_done_sent = False
         self.frame_scopes = {}
+        self.init_commands = init_commands
 
     @classmethod
     def encode_content(cls, s):
@@ -447,8 +448,7 @@ class DebugCommunication(object):
             args_dict['waitFor'] = waitFor
         if trace:
             args_dict['trace'] = trace
-        args_dict['initCommands'] = [
-            'settings set symbols.enable-external-lookup false']
+        args_dict['initCommands'] = self.init_commands
         if initCommands:
             args_dict['initCommands'].extend(initCommands)
         if preRunCommands:
@@ -498,13 +498,7 @@ class DebugCommunication(object):
             'arguments': args_dict
         }
         response = self.send_recv(command_dict)
-        recv_packets = []
-        self.recv_condition.acquire()
-        for event in self.recv_packets:
-            if event['event'] != 'stopped':
-                recv_packets.append(event)
-        self.recv_packets = recv_packets
-        self.recv_condition.release()
+        # Caller must still call wait_for_stopped.
         return response
 
     def request_disconnect(self, terminateDebuggee=None):
@@ -564,7 +558,7 @@ class DebugCommunication(object):
                        disableSTDIO=False, shellExpandArguments=False,
                        trace=False, initCommands=None, preRunCommands=None,
                        stopCommands=None, exitCommands=None, sourcePath=None,
-                       debuggerRoot=None):
+                       debuggerRoot=None, launchCommands=None):
         args_dict = {
             'program': program
         }
@@ -584,8 +578,7 @@ class DebugCommunication(object):
             args_dict['shellExpandArguments'] = shellExpandArguments
         if trace:
             args_dict['trace'] = trace
-        args_dict['initCommands'] = [
-            'settings set symbols.enable-external-lookup false']
+        args_dict['initCommands'] = self.init_commands
         if initCommands:
             args_dict['initCommands'].extend(initCommands)
         if preRunCommands:
@@ -598,6 +591,8 @@ class DebugCommunication(object):
             args_dict['sourcePath'] = sourcePath
         if debuggerRoot:
             args_dict['debuggerRoot'] = debuggerRoot
+        if launchCommands:
+            args_dict['launchCommands'] = launchCommands
         command_dict = {
             'command': 'launch',
             'type': 'request',
@@ -828,7 +823,7 @@ class DebugCommunication(object):
 
 
 class DebugAdaptor(DebugCommunication):
-    def __init__(self, executable=None, port=None):
+    def __init__(self, executable=None, port=None, init_commands=[]):
         self.process = None
         if executable is not None:
             self.process = subprocess.Popen([executable],
@@ -836,11 +831,12 @@ class DebugAdaptor(DebugCommunication):
                                             stdout=subprocess.PIPE,
                                             stderr=subprocess.PIPE)
             DebugCommunication.__init__(self, self.process.stdout,
-                                        self.process.stdin)
+                                        self.process.stdin, init_commands)
         elif port is not None:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(('127.0.0.1', port))
-            DebugCommunication.__init__(self, s.makefile('r'), s.makefile('w'))
+            DebugCommunication.__init__(self, s.makefile('r'), s.makefile('w'),
+                init_commands)
 
     def get_pid(self):
         if self.process:

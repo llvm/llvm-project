@@ -63,6 +63,13 @@ public:
   static bool MagicBytesMatch(lldb::DataBufferSP &data_sp, lldb::addr_t offset,
                               lldb::addr_t length);
 
+  // LLVM RTTI support
+  static char ID;
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || ObjectFile::isA(ClassID);
+  }
+  static bool classof(const ObjectFile *obj) { return obj->isA(&ID); }
+
   // Member Functions
   bool ParseHeader() override;
 
@@ -72,6 +79,8 @@ public:
   lldb::ByteOrder GetByteOrder() const override;
 
   bool IsExecutable() const override;
+
+  bool IsDynamicLoader() const;
 
   uint32_t GetAddressByteSize() const override;
 
@@ -116,7 +125,7 @@ public:
 
   llvm::VersionTuple GetMinimumOSVersion() override;
 
-  uint32_t GetSDKVersion(uint32_t *versions, uint32_t num_versions) override;
+  llvm::VersionTuple GetSDKVersion() override;
 
   bool GetIsDynamicLinkEditor() override;
 
@@ -137,23 +146,37 @@ protected:
           const lldb_private::DataExtractor &data,
           lldb::offset_t lc_offset); // Offset to the first load command
 
-  static lldb_private::ArchSpec
-  GetArchitecture(const llvm::MachO::mach_header &header,
-                  const lldb_private::DataExtractor &data,
-                  lldb::offset_t lc_offset);
+  static lldb_private::ArchSpec GetArchitecture(
+      lldb::ModuleSP module_sp, const llvm::MachO::mach_header &header,
+      const lldb_private::DataExtractor &data, lldb::offset_t lc_offset);
 
-  // Intended for same-host arm device debugging where lldb needs to
-  // detect libraries in the shared cache and augment the nlist entries
-  // with an on-disk dyld_shared_cache file.  The process will record
-  // the shared cache UUID so the on-disk cache can be matched or rejected
-  // correctly.
-  void GetProcessSharedCacheUUID(lldb_private::Process *, lldb::addr_t &base_addr, lldb_private::UUID &uuid);
+  /// Enumerate all ArchSpecs supported by this Mach-O file.
+  ///
+  /// On macOS one Mach-O slice can contain multiple load commands:
+  /// One load command for being loaded into a macOS process and one
+  /// load command for being loaded into a macCatalyst process. In
+  /// contrast to ObjectContainerUniversalMachO, this is the same
+  /// binary that can be loaded into different contexts.
+  static void GetAllArchSpecs(const llvm::MachO::mach_header &header,
+                              const lldb_private::DataExtractor &data,
+                              lldb::offset_t lc_offset,
+                              lldb_private::ModuleSpec &base_spec,
+                              lldb_private::ModuleSpecList &all_specs);
 
-  // Intended for same-host arm device debugging where lldb will read
-  // shared cache libraries out of its own memory instead of the remote
-  // process' memory as an optimization.  If lldb's shared cache UUID
-  // does not match the process' shared cache UUID, this optimization
-  // should not be used.
+  /// Intended for same-host arm device debugging where lldb needs to
+  /// detect libraries in the shared cache and augment the nlist entries
+  /// with an on-disk dyld_shared_cache file.  The process will record
+  /// the shared cache UUID so the on-disk cache can be matched or rejected
+  /// correctly.
+  void GetProcessSharedCacheUUID(lldb_private::Process *,
+                                 lldb::addr_t &base_addr,
+                                 lldb_private::UUID &uuid);
+
+  /// Intended for same-host arm device debugging where lldb will read
+  /// shared cache libraries out of its own memory instead of the remote
+  /// process' memory as an optimization.  If lldb's shared cache UUID
+  /// does not match the process' shared cache UUID, this optimization
+  /// should not be used.
   void GetLLDBSharedCacheUUID(lldb::addr_t &base_addir, lldb_private::UUID &uuid);
 
   lldb_private::Section *GetMachHeaderSection();
@@ -198,7 +221,7 @@ protected:
   std::vector<llvm::MachO::segment_command_64> m_mach_segments;
   std::vector<llvm::MachO::section_64> m_mach_sections;
   llvm::Optional<llvm::VersionTuple> m_min_os_version;
-  std::vector<uint32_t> m_sdk_versions;
+  llvm::Optional<llvm::VersionTuple> m_sdk_versions;
   typedef lldb_private::RangeVector<uint32_t, uint32_t> FileRangeArray;
   lldb_private::Address m_entry_point_address;
   FileRangeArray m_thread_context_offsets;

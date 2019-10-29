@@ -137,76 +137,67 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
         // ends at
         static RegularExpression g_bitfield_regex(
             llvm::StringRef("([A-Za-z_][A-Za-z0-9_]*)\\[([0-9]+):([0-9]+)\\]"));
-        RegularExpression::Match regex_match(3);
-        if (g_bitfield_regex.Execute(slice_str, &regex_match)) {
-          llvm::StringRef reg_name_str;
-          std::string msbit_str;
-          std::string lsbit_str;
-          if (regex_match.GetMatchAtIndex(slice_str, 1, reg_name_str) &&
-              regex_match.GetMatchAtIndex(slice_str, 2, msbit_str) &&
-              regex_match.GetMatchAtIndex(slice_str, 3, lsbit_str)) {
-            const uint32_t msbit =
-                StringConvert::ToUInt32(msbit_str.c_str(), UINT32_MAX);
-            const uint32_t lsbit =
-                StringConvert::ToUInt32(lsbit_str.c_str(), UINT32_MAX);
-            if (msbit != UINT32_MAX && lsbit != UINT32_MAX) {
-              if (msbit > lsbit) {
-                const uint32_t msbyte = msbit / 8;
-                const uint32_t lsbyte = lsbit / 8;
+        llvm::SmallVector<llvm::StringRef, 4> matches;
+        if (g_bitfield_regex.Execute(slice_str, &matches)) {
+          std::string reg_name_str = matches[1].str();
+          std::string msbit_str = matches[2].str();
+          std::string lsbit_str = matches[3].str();
+          const uint32_t msbit =
+              StringConvert::ToUInt32(msbit_str.c_str(), UINT32_MAX);
+          const uint32_t lsbit =
+              StringConvert::ToUInt32(lsbit_str.c_str(), UINT32_MAX);
+          if (msbit != UINT32_MAX && lsbit != UINT32_MAX) {
+            if (msbit > lsbit) {
+              const uint32_t msbyte = msbit / 8;
+              const uint32_t lsbyte = lsbit / 8;
 
-                ConstString containing_reg_name(reg_name_str);
+              ConstString containing_reg_name(reg_name_str);
 
-                const RegisterInfo *containing_reg_info =
-                    GetRegisterInfo(containing_reg_name);
-                if (containing_reg_info) {
-                  const uint32_t max_bit = containing_reg_info->byte_size * 8;
-                  if (msbit < max_bit && lsbit < max_bit) {
-                    m_invalidate_regs_map[containing_reg_info
-                                              ->kinds[eRegisterKindLLDB]]
-                        .push_back(i);
-                    m_value_regs_map[i].push_back(
-                        containing_reg_info->kinds[eRegisterKindLLDB]);
-                    m_invalidate_regs_map[i].push_back(
-                        containing_reg_info->kinds[eRegisterKindLLDB]);
+              const RegisterInfo *containing_reg_info =
+                  GetRegisterInfo(containing_reg_name);
+              if (containing_reg_info) {
+                const uint32_t max_bit = containing_reg_info->byte_size * 8;
+                if (msbit < max_bit && lsbit < max_bit) {
+                  m_invalidate_regs_map[containing_reg_info
+                                            ->kinds[eRegisterKindLLDB]]
+                      .push_back(i);
+                  m_value_regs_map[i].push_back(
+                      containing_reg_info->kinds[eRegisterKindLLDB]);
+                  m_invalidate_regs_map[i].push_back(
+                      containing_reg_info->kinds[eRegisterKindLLDB]);
 
-                    if (byte_order == eByteOrderLittle) {
-                      success = true;
-                      reg_info.byte_offset =
-                          containing_reg_info->byte_offset + lsbyte;
-                    } else if (byte_order == eByteOrderBig) {
-                      success = true;
-                      reg_info.byte_offset =
-                          containing_reg_info->byte_offset + msbyte;
-                    } else {
-                      llvm_unreachable("Invalid byte order");
-                    }
+                  if (byte_order == eByteOrderLittle) {
+                    success = true;
+                    reg_info.byte_offset =
+                        containing_reg_info->byte_offset + lsbyte;
+                  } else if (byte_order == eByteOrderBig) {
+                    success = true;
+                    reg_info.byte_offset =
+                        containing_reg_info->byte_offset + msbyte;
                   } else {
-                    if (msbit > max_bit)
-                      printf("error: msbit (%u) must be less than the bitsize "
-                             "of the register (%u)\n",
-                             msbit, max_bit);
-                    else
-                      printf("error: lsbit (%u) must be less than the bitsize "
-                             "of the register (%u)\n",
-                             lsbit, max_bit);
+                    llvm_unreachable("Invalid byte order");
                   }
                 } else {
-                  printf("error: invalid concrete register \"%s\"\n",
-                         containing_reg_name.GetCString());
+                  if (msbit > max_bit)
+                    printf("error: msbit (%u) must be less than the bitsize "
+                           "of the register (%u)\n",
+                           msbit, max_bit);
+                  else
+                    printf("error: lsbit (%u) must be less than the bitsize "
+                           "of the register (%u)\n",
+                           lsbit, max_bit);
                 }
               } else {
-                printf("error: msbit (%u) must be greater than lsbit (%u)\n",
-                       msbit, lsbit);
+                printf("error: invalid concrete register \"%s\"\n",
+                       containing_reg_name.GetCString());
               }
             } else {
-              printf("error: msbit (%u) and lsbit (%u) must be valid\n", msbit,
-                     lsbit);
+              printf("error: msbit (%u) must be greater than lsbit (%u)\n",
+                     msbit, lsbit);
             }
           } else {
-            // TODO: print error invalid slice string that doesn't follow the
-            // format
-            printf("error: failed to extract regex matches for parsing the "
-                   "register bitfield regex\n");
+            printf("error: msbit (%u) and lsbit (%u) must be valid\n", msbit,
+                   lsbit);
           }
         } else {
           // TODO: print error invalid slice string that doesn't follow the

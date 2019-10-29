@@ -181,9 +181,8 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
     }
 
     if (!reg_interface) {
-      if (log)
-        log->Printf("elf-core::%s:: Architecture(%d) or OS(%d) not supported",
-                    __FUNCTION__, arch.GetMachine(), arch.GetTriple().getOS());
+      LLDB_LOGF(log, "elf-core::%s:: Architecture(%d) or OS(%d) not supported",
+                __FUNCTION__, arch.GetMachine(), arch.GetTriple().getOS());
       assert(false && "Architecture or OS not supported");
     }
 

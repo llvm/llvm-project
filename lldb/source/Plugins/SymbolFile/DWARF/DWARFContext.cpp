@@ -100,3 +100,39 @@ const DWARFDataExtractor &DWARFContext::getOrLoadDebugTypesData() {
   return LoadOrGetSection(eSectionTypeDWARFDebugTypes,
                           eSectionTypeDWARFDebugTypesDwo, m_data_debug_types);
 }
+
+llvm::DWARFContext &DWARFContext::GetAsLLVM() {
+  if (!m_llvm_context) {
+    llvm::StringMap<std::unique_ptr<llvm::MemoryBuffer>> section_map;
+    uint8_t addr_size = 0;
+
+    auto AddSection = [&](Section &section) {
+      DataExtractor section_data;
+      section.GetSectionData(section_data);
+
+      // Set the address size the first time we see it.
+      if (addr_size == 0)
+        addr_size = section_data.GetByteSize();
+
+      llvm::StringRef data = llvm::toStringRef(section_data.GetData());
+      llvm::StringRef name = section.GetName().GetStringRef();
+      if (name.startswith("."))
+        name = name.drop_front();
+      section_map.try_emplace(
+          name, llvm::MemoryBuffer::getMemBuffer(data, name, false));
+    };
+
+    if (m_main_section_list) {
+      for (auto &section : *m_main_section_list)
+        AddSection(*section);
+    }
+
+    if (m_dwo_section_list) {
+      for (auto &section : *m_dwo_section_list)
+        AddSection(*section);
+    }
+
+    m_llvm_context = llvm::DWARFContext::create(section_map, addr_size);
+  }
+  return *m_llvm_context;
+}

@@ -50,7 +50,7 @@ public:
 
   bool WantsRawCommandString() override { return false; }
 
-  int HandleCompletion(CompletionRequest &request) override;
+  void HandleCompletion(CompletionRequest &request) override;
 
   const char *GetRepeatCommand(Args &current_command_args,
                                uint32_t index) override;
@@ -112,11 +112,11 @@ public:
 
   Options *GetOptions() override;
 
-  int HandleCompletion(CompletionRequest &request) override;
+  void HandleCompletion(CompletionRequest &request) override;
 
-  int HandleArgumentCompletion(
-      CompletionRequest &request,
-      OptionElementVector &opt_element_vector) override;
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override;
 
   const char *GetRepeatCommand(Args &current_command_args,
                                uint32_t index) override;

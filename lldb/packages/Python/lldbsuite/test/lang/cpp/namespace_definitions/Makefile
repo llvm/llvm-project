@@ -1,9 +1,7 @@
-LEVEL := ../../../make
-
 LD_EXTRAS := -L. -l$(LIB_PREFIX)a -l$(LIB_PREFIX)b
 CXX_SOURCES := main.cpp
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 .PHONY:
 a.out: lib_a lib_b

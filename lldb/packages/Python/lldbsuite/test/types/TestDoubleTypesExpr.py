@@ -6,7 +6,6 @@ from __future__ import print_function
 
 
 import AbstractBase
-import sys
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -21,14 +20,6 @@ class DoubleTypesExprTestCase(AbstractBase.GenericTester):
     # rdar://problem/8493023
     # test/types failures for Test*TypesExpr.py: element offset computed wrong
     # and sign error?
-
-    def setUp(self):
-        # Call super's setUp().
-        AbstractBase.GenericTester.setUp(self)
-        # disable "There is a running process, kill it and restart?" prompt
-        self.runCmd("settings set auto-confirm true")
-        self.addTearDownHook(
-            lambda: self.runCmd("settings clear auto-confirm"))
 
     def test_double_type(self):
         """Test that double-type variable expressions are evaluated correctly."""

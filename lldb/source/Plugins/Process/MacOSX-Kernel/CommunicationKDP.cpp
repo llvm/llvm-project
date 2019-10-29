@@ -70,8 +70,8 @@ bool CommunicationKDP::SendRequestAndGetReply(
     if (log) {
       PacketStreamType log_strm;
       DumpPacket(log_strm, request_packet.GetData(), request_packet.GetSize());
-      log->Printf("error: kdp running, not sending packet: %.*s",
-                  (uint32_t)log_strm.GetSize(), log_strm.GetData());
+      LLDB_LOGF(log, "error: kdp running, not sending packet: %.*s",
+                (uint32_t)log_strm.GetSize(), log_strm.GetData());
     }
     return false;
   }
@@ -140,7 +140,7 @@ bool CommunicationKDP::SendRequestPacketNoLock(
     if (log) {
       PacketStreamType log_strm;
       DumpPacket(log_strm, packet_data, packet_size);
-      log->Printf("%.*s", (uint32_t)log_strm.GetSize(), log_strm.GetData());
+      LLDB_LOGF(log, "%.*s", (uint32_t)log_strm.GetSize(), log_strm.GetData());
     }
     ConnectionStatus status = eConnectionStatusSuccess;
 
@@ -149,10 +149,10 @@ bool CommunicationKDP::SendRequestPacketNoLock(
     if (bytes_written == packet_size)
       return true;
 
-    if (log)
-      log->Printf("error: failed to send packet entire packet %" PRIu64
-                  " of %" PRIu64 " bytes sent",
-                  (uint64_t)bytes_written, (uint64_t)packet_size);
+    LLDB_LOGF(log,
+              "error: failed to send packet entire packet %" PRIu64
+              " of %" PRIu64 " bytes sent",
+              (uint64_t)bytes_written, (uint64_t)packet_size);
   }
   return false;
 }
@@ -241,8 +241,8 @@ bool CommunicationKDP::CheckForPacket(const uint8_t *src, size_t src_len,
     if (log && log->GetVerbose()) {
       PacketStreamType log_strm;
       DumpHexBytes(&log_strm, src, src_len, UINT32_MAX, LLDB_INVALID_ADDRESS);
-      log->Printf("CommunicationKDP::%s adding %u bytes: %s", __FUNCTION__,
-                  (uint32_t)src_len, log_strm.GetData());
+      LLDB_LOGF(log, "CommunicationKDP::%s adding %u bytes: %s", __FUNCTION__,
+                (uint32_t)src_len, log_strm.GetData());
     }
     m_bytes.append((const char *)src, src_len);
   }
@@ -314,7 +314,8 @@ bool CommunicationKDP::CheckForPacket(const uint8_t *src, size_t src_len,
           PacketStreamType log_strm;
           DumpPacket(log_strm, packet);
 
-          log->Printf("%.*s", (uint32_t)log_strm.GetSize(), log_strm.GetData());
+          LLDB_LOGF(log, "%.*s", (uint32_t)log_strm.GetSize(),
+                    log_strm.GetData());
         }
         return true;
       }
@@ -323,9 +324,8 @@ bool CommunicationKDP::CheckForPacket(const uint8_t *src, size_t src_len,
     default:
       // Unrecognized reply command byte, erase this byte and try to get back
       // on track
-      if (log)
-        log->Printf("CommunicationKDP::%s: tossing junk byte: 0x%2.2x",
-                    __FUNCTION__, (uint8_t)m_bytes[0]);
+      LLDB_LOGF(log, "CommunicationKDP::%s: tossing junk byte: 0x%2.2x",
+                __FUNCTION__, (uint8_t)m_bytes[0]);
       m_bytes.erase(0, 1);
       break;
     }

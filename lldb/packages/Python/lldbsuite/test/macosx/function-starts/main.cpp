@@ -2,6 +2,7 @@
 #include <fcntl.h>
 
 #include <chrono>
+#include <fstream>
 #include <thread>
 
 extern void dont_strip_me()
@@ -21,6 +22,11 @@ static void *a_function()
 
 int main(int argc, char const *argv[])
 {
+    {
+        // Create file to signal that this process has started up.
+        std::ofstream f;
+        f.open(argv[1]);
+    }
     a_function();
     return 0;
 }

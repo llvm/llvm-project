@@ -600,9 +600,8 @@ bool ABISysV_mips::PrepareTrivialCall(Thread &thread, addr_t sp,
 
     reg_info = reg_ctx->GetRegisterInfo(eRegisterKindGeneric,
                                         LLDB_REGNUM_GENERIC_ARG1 + i);
-    if (log)
-      log->Printf("About to write arg%zd (0x%" PRIx64 ") into %s", i + 1,
-                  args[i], reg_info->name);
+    LLDB_LOGF(log, "About to write arg%zd (0x%" PRIx64 ") into %s", i + 1,
+              args[i], reg_info->name);
 
     if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, args[i]))
       return false;
@@ -630,9 +629,8 @@ bool ABISysV_mips::PrepareTrivialCall(Thread &thread, addr_t sp,
     size_t i = 4;
     for (; ai != ae; ++ai) {
       reg_value.SetUInt32(*ai);
-      if (log)
-        log->Printf("About to write arg%zd (0x%" PRIx64 ") at  0x%" PRIx64 "",
-                    i + 1, args[i], arg_pos);
+      LLDB_LOGF(log, "About to write arg%zd (0x%" PRIx64 ") at  0x%" PRIx64 "",
+                i + 1, args[i], arg_pos);
 
       if (reg_ctx
               ->WriteRegisterValueToMemory(reg_info, arg_pos,
@@ -654,8 +652,7 @@ bool ABISysV_mips::PrepareTrivialCall(Thread &thread, addr_t sp,
   const RegisterInfo *r25_info = reg_ctx->GetRegisterInfoByName("r25", 0);
   const RegisterInfo *r0_info = reg_ctx->GetRegisterInfoByName("zero", 0);
 
-  if (log)
-    log->Printf("Writing R0: 0x%" PRIx64, (uint64_t)0);
+  LLDB_LOGF(log, "Writing R0: 0x%" PRIx64, (uint64_t)0);
 
   /* Write r0 with 0, in case we are stopped in syscall,
    * such setting prevents automatic decrement of the PC.
@@ -664,29 +661,25 @@ bool ABISysV_mips::PrepareTrivialCall(Thread &thread, addr_t sp,
   if (!reg_ctx->WriteRegisterFromUnsigned(r0_info, (uint64_t)0))
     return false;
 
-  if (log)
-    log->Printf("Writing SP: 0x%" PRIx64, (uint64_t)sp);
+  LLDB_LOGF(log, "Writing SP: 0x%" PRIx64, (uint64_t)sp);
 
   // Set "sp" to the requested value
   if (!reg_ctx->WriteRegisterFromUnsigned(sp_reg_info, sp))
     return false;
 
-  if (log)
-    log->Printf("Writing RA: 0x%" PRIx64, (uint64_t)return_addr);
+  LLDB_LOGF(log, "Writing RA: 0x%" PRIx64, (uint64_t)return_addr);
 
   // Set "ra" to the return address
   if (!reg_ctx->WriteRegisterFromUnsigned(ra_reg_info, return_addr))
     return false;
 
-  if (log)
-    log->Printf("Writing PC: 0x%" PRIx64, (uint64_t)func_addr);
+  LLDB_LOGF(log, "Writing PC: 0x%" PRIx64, (uint64_t)func_addr);
 
   // Set pc to the address of the called function.
   if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_info, func_addr))
     return false;
 
-  if (log)
-    log->Printf("Writing r25: 0x%" PRIx64, (uint64_t)func_addr);
+  LLDB_LOGF(log, "Writing r25: 0x%" PRIx64, (uint64_t)func_addr);
 
   // All callers of position independent functions must place the address of
   // the called function in t9 (r25)
@@ -997,6 +990,7 @@ bool ABISysV_mips::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   unwind_plan.SetSourceName("mips default unwind plan");
   unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
   return true;
 }
 

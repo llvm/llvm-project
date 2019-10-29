@@ -1,14 +1,22 @@
+# Test debug_loc parsing, including the cases of invalid input. The exact
+# behavior in the invalid cases is not particularly important, but it should be
+# "reasonable".
+
 # REQUIRES: x86
 
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj %s > %t
-# RUN: lldb %t -o "image lookup -v -a 0" -o "image lookup -v -a 2" -o exit \
+# RUN: %lldb %t -o "image lookup -v -a 0" -o "image lookup -v -a 2" -o exit \
 # RUN:   | FileCheck %s
 
 # CHECK-LABEL: image lookup -v -a 0
-# CHECK: Variable: {{.*}}, name = "x", type = "int", location = rdi,
+# CHECK: Variable: {{.*}}, name = "x0", type = "int", location = rdi,
+# CHECK: Variable: {{.*}}, name = "x1", type = "int", location = ,
+# CHECK: Variable: {{.*}}, name = "x2", type = "int", location = ,
 
 # CHECK-LABEL: image lookup -v -a 2
-# CHECK: Variable: {{.*}}, name = "x", type = "int", location = rax,
+# CHECK: Variable: {{.*}}, name = "x0", type = "int", location = rax,
+# CHECK: Variable: {{.*}}, name = "x1", type = "int", location = ,
+# CHECK: Variable: {{.*}}, name = "x2", type = "int", location = ,
 
         .type   f,@function
 f:                                      # @f
@@ -27,8 +35,12 @@ f:                                      # @f
         .asciz  "f"
 .Linfo_string4:
         .asciz  "int"
-.Linfo_string5:
-        .asciz  "x"
+.Lx0:
+        .asciz  "x0"
+.Lx1:
+        .asciz  "x1"
+.Lx2:
+        .asciz  "x2"
 
         .section        .debug_loc,"",@progbits
 .Ldebug_loc0:
@@ -42,6 +54,10 @@ f:                                      # @f
         .byte   80                      # super-register DW_OP_reg0
         .quad   0
         .quad   0
+.Ldebug_loc2:
+        .quad   .Lfunc_begin0-.Lfunc_begin0
+        .quad   .Lfunc_end0-.Lfunc_begin0
+        .short  0xdead                  # Loc expr size
 
         .section        .debug_abbrev,"",@progbits
         .byte   1                       # Abbreviation Code
@@ -104,10 +120,18 @@ f:                                      # @f
         .quad   .Lfunc_begin0           # DW_AT_low_pc
         .long   .Lfunc_end0-.Lfunc_begin0 # DW_AT_high_pc
         .long   .Linfo_string3          # DW_AT_name
-        .long   83                      # DW_AT_type
-        .byte   3                       # Abbrev [3] 0x43:0xf DW_TAG_formal_parameter
+        .long   .Lint                   # DW_AT_type
+        .byte   3                       # Abbrev [3] DW_TAG_formal_parameter
         .long   .Ldebug_loc0            # DW_AT_location
-        .long   .Linfo_string5          # DW_AT_name
+        .long   .Lx0                    # DW_AT_name
+        .long   .Lint-.Lcu_begin0       # DW_AT_type
+        .byte   3                       # Abbrev [3] DW_TAG_formal_parameter
+        .long   0xdeadbeef              # DW_AT_location
+        .long   .Lx1                    # DW_AT_name
+        .long   .Lint-.Lcu_begin0       # DW_AT_type
+        .byte   3                       # Abbrev [3] DW_TAG_formal_parameter
+        .long   .Ldebug_loc2            # DW_AT_location
+        .long   .Lx2                    # DW_AT_name
         .long   .Lint-.Lcu_begin0       # DW_AT_type
         .byte   0                       # End Of Children Mark
 .Lint:

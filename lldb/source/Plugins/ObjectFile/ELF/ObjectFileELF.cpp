@@ -29,12 +29,13 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
-
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/JamCRC.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MipsABIFlags.h"
@@ -79,41 +80,6 @@ const elf_word LLDB_NT_NETBSD_PROCINFO = 1;
 const elf_word LLDB_NT_GNU_ABI_OS_LINUX = 0x00;
 const elf_word LLDB_NT_GNU_ABI_OS_HURD = 0x01;
 const elf_word LLDB_NT_GNU_ABI_OS_SOLARIS = 0x02;
-
-// LLDB_NT_OWNER_CORE and LLDB_NT_OWNER_LINUX note contants
-#define NT_PRSTATUS 1
-#define NT_PRFPREG 2
-#define NT_PRPSINFO 3
-#define NT_TASKSTRUCT 4
-#define NT_AUXV 6
-#define NT_SIGINFO 0x53494749
-#define NT_FILE 0x46494c45
-#define NT_PRXFPREG 0x46e62b7f
-#define NT_PPC_VMX 0x100
-#define NT_PPC_SPE 0x101
-#define NT_PPC_VSX 0x102
-#define NT_386_TLS 0x200
-#define NT_386_IOPERM 0x201
-#define NT_X86_XSTATE 0x202
-#define NT_S390_HIGH_GPRS 0x300
-#define NT_S390_TIMER 0x301
-#define NT_S390_TODCMP 0x302
-#define NT_S390_TODPREG 0x303
-#define NT_S390_CTRS 0x304
-#define NT_S390_PREFIX 0x305
-#define NT_S390_LAST_BREAK 0x306
-#define NT_S390_SYSTEM_CALL 0x307
-#define NT_S390_TDB 0x308
-#define NT_S390_VXRS_LOW 0x309
-#define NT_S390_VXRS_HIGH 0x30a
-#define NT_ARM_VFP 0x400
-#define NT_ARM_TLS 0x401
-#define NT_ARM_HW_BREAK 0x402
-#define NT_ARM_HW_WATCH 0x403
-#define NT_ARM_SYSTEM_CALL 0x404
-#define NT_METAG_CBUF 0x500
-#define NT_METAG_RPIPE 0x501
-#define NT_METAG_TLS 0x502
 
 //===----------------------------------------------------------------------===//
 /// \class ELFRelocation
@@ -264,8 +230,7 @@ bool ELFNote::Parse(const DataExtractor &data, lldb::offset_t *offset) {
   const char *cstr = data.GetCStr(offset, llvm::alignTo(n_namesz, 4));
   if (cstr == nullptr) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS));
-    if (log)
-      log->Printf("Failed to parse note name lacking nul terminator");
+    LLDB_LOGF(log, "Failed to parse note name lacking nul terminator");
 
     return false;
   }
@@ -332,6 +297,8 @@ static uint32_t subTypeFromElfHeader(const elf::ELFHeader &header) {
 
   return LLDB_INVALID_CPUTYPE;
 }
+
+char ObjectFileELF::ID;
 
 // Arbitrary constant used as UUID prefix for core files.
 const uint32_t ObjectFileELF::g_core_uuid_magic(0xE210C);
@@ -429,67 +396,11 @@ bool ObjectFileELF::MagicBytesMatch(DataBufferSP &data_sp,
   return false;
 }
 
-/*
- * crc function from http://svnweb.freebsd.org/base/head/sys/libkern/crc32.c
- *
- *   COPYRIGHT (C) 1986 Gary S. Brown. You may use this program, or
- *   code or tables extracted from it, as desired without restriction.
- */
-static uint32_t calc_crc32(uint32_t crc, const void *buf, size_t size) {
-  static const uint32_t g_crc32_tab[] = {
-      0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
-      0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988,
-      0x09b64c2b, 0x7eb17cbd, 0xe7b82d07, 0x90bf1d91, 0x1db71064, 0x6ab020f2,
-      0xf3b97148, 0x84be41de, 0x1adad47d, 0x6ddde4eb, 0xf4d4b551, 0x83d385c7,
-      0x136c9856, 0x646ba8c0, 0xfd62f97a, 0x8a65c9ec, 0x14015c4f, 0x63066cd9,
-      0xfa0f3d63, 0x8d080df5, 0x3b6e20c8, 0x4c69105e, 0xd56041e4, 0xa2677172,
-      0x3c03e4d1, 0x4b04d447, 0xd20d85fd, 0xa50ab56b, 0x35b5a8fa, 0x42b2986c,
-      0xdbbbc9d6, 0xacbcf940, 0x32d86ce3, 0x45df5c75, 0xdcd60dcf, 0xabd13d59,
-      0x26d930ac, 0x51de003a, 0xc8d75180, 0xbfd06116, 0x21b4f4b5, 0x56b3c423,
-      0xcfba9599, 0xb8bda50f, 0x2802b89e, 0x5f058808, 0xc60cd9b2, 0xb10be924,
-      0x2f6f7c87, 0x58684c11, 0xc1611dab, 0xb6662d3d, 0x76dc4190, 0x01db7106,
-      0x98d220bc, 0xefd5102a, 0x71b18589, 0x06b6b51f, 0x9fbfe4a5, 0xe8b8d433,
-      0x7807c9a2, 0x0f00f934, 0x9609a88e, 0xe10e9818, 0x7f6a0dbb, 0x086d3d2d,
-      0x91646c97, 0xe6635c01, 0x6b6b51f4, 0x1c6c6162, 0x856530d8, 0xf262004e,
-      0x6c0695ed, 0x1b01a57b, 0x8208f4c1, 0xf50fc457, 0x65b0d9c6, 0x12b7e950,
-      0x8bbeb8ea, 0xfcb9887c, 0x62dd1ddf, 0x15da2d49, 0x8cd37cf3, 0xfbd44c65,
-      0x4db26158, 0x3ab551ce, 0xa3bc0074, 0xd4bb30e2, 0x4adfa541, 0x3dd895d7,
-      0xa4d1c46d, 0xd3d6f4fb, 0x4369e96a, 0x346ed9fc, 0xad678846, 0xda60b8d0,
-      0x44042d73, 0x33031de5, 0xaa0a4c5f, 0xdd0d7cc9, 0x5005713c, 0x270241aa,
-      0xbe0b1010, 0xc90c2086, 0x5768b525, 0x206f85b3, 0xb966d409, 0xce61e49f,
-      0x5edef90e, 0x29d9c998, 0xb0d09822, 0xc7d7a8b4, 0x59b33d17, 0x2eb40d81,
-      0xb7bd5c3b, 0xc0ba6cad, 0xedb88320, 0x9abfb3b6, 0x03b6e20c, 0x74b1d29a,
-      0xead54739, 0x9dd277af, 0x04db2615, 0x73dc1683, 0xe3630b12, 0x94643b84,
-      0x0d6d6a3e, 0x7a6a5aa8, 0xe40ecf0b, 0x9309ff9d, 0x0a00ae27, 0x7d079eb1,
-      0xf00f9344, 0x8708a3d2, 0x1e01f268, 0x6906c2fe, 0xf762575d, 0x806567cb,
-      0x196c3671, 0x6e6b06e7, 0xfed41b76, 0x89d32be0, 0x10da7a5a, 0x67dd4acc,
-      0xf9b9df6f, 0x8ebeeff9, 0x17b7be43, 0x60b08ed5, 0xd6d6a3e8, 0xa1d1937e,
-      0x38d8c2c4, 0x4fdff252, 0xd1bb67f1, 0xa6bc5767, 0x3fb506dd, 0x48b2364b,
-      0xd80d2bda, 0xaf0a1b4c, 0x36034af6, 0x41047a60, 0xdf60efc3, 0xa867df55,
-      0x316e8eef, 0x4669be79, 0xcb61b38c, 0xbc66831a, 0x256fd2a0, 0x5268e236,
-      0xcc0c7795, 0xbb0b4703, 0x220216b9, 0x5505262f, 0xc5ba3bbe, 0xb2bd0b28,
-      0x2bb45a92, 0x5cb36a04, 0xc2d7ffa7, 0xb5d0cf31, 0x2cd99e8b, 0x5bdeae1d,
-      0x9b64c2b0, 0xec63f226, 0x756aa39c, 0x026d930a, 0x9c0906a9, 0xeb0e363f,
-      0x72076785, 0x05005713, 0x95bf4a82, 0xe2b87a14, 0x7bb12bae, 0x0cb61b38,
-      0x92d28e9b, 0xe5d5be0d, 0x7cdcefb7, 0x0bdbdf21, 0x86d3d2d4, 0xf1d4e242,
-      0x68ddb3f8, 0x1fda836e, 0x81be16cd, 0xf6b9265b, 0x6fb077e1, 0x18b74777,
-      0x88085ae6, 0xff0f6a70, 0x66063bca, 0x11010b5c, 0x8f659eff, 0xf862ae69,
-      0x616bffd3, 0x166ccf45, 0xa00ae278, 0xd70dd2ee, 0x4e048354, 0x3903b3c2,
-      0xa7672661, 0xd06016f7, 0x4969474d, 0x3e6e77db, 0xaed16a4a, 0xd9d65adc,
-      0x40df0b66, 0x37d83bf0, 0xa9bcae53, 0xdebb9ec5, 0x47b2cf7f, 0x30b5ffe9,
-      0xbdbdf21c, 0xcabac28a, 0x53b39330, 0x24b4a3a6, 0xbad03605, 0xcdd70693,
-      0x54de5729, 0x23d967bf, 0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94,
-      0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d};
-  const uint8_t *p = (const uint8_t *)buf;
-
-  crc = crc ^ ~0U;
-  while (size--)
-    crc = g_crc32_tab[(crc ^ *p++) & 0xFF] ^ (crc >> 8);
-  return crc ^ ~0U;
-}
-
-static uint32_t calc_gnu_debuglink_crc32(const void *buf, size_t size) {
-  return calc_crc32(0U, buf, size);
+static uint32_t calc_crc32(uint32_t init, const DataExtractor &data) {
+  llvm::JamCRC crc(~init);
+  crc.update(llvm::makeArrayRef(
+      reinterpret_cast<const char *>(data.GetDataStart()), data.GetByteSize()));
+  return ~crc.getCRC();
 }
 
 uint32_t ObjectFileELF::CalculateELFNotesSegmentsCRC32(
@@ -509,8 +420,7 @@ uint32_t ObjectFileELF::CalculateELFNotesSegmentsCRC32(
         break;
       }
 
-      core_notes_crc = calc_crc32(core_notes_crc, segment_data.GetDataStart(),
-                                  segment_data.GetByteSize());
+      core_notes_crc = calc_crc32(core_notes_crc, segment_data);
     }
   }
 
@@ -608,10 +518,9 @@ size_t ObjectFileELF::GetModuleSpecifications(
           llvm::Triple::OSType spec_ostype =
               spec.GetArchitecture().GetTriple().getOS();
 
-          if (log)
-            log->Printf("ObjectFileELF::%s file '%s' module OSABI: %s",
-                        __FUNCTION__, file.GetPath().c_str(),
-                        OSABIAsCString(header.e_ident[EI_OSABI]));
+          LLDB_LOGF(log, "ObjectFileELF::%s file '%s' module OSABI: %s",
+                    __FUNCTION__, file.GetPath().c_str(),
+                    OSABIAsCString(header.e_ident[EI_OSABI]));
 
           // SetArchitecture should have set the vendor to unknown
           vendor = spec.GetArchitecture().GetTriple().getVendor();
@@ -623,10 +532,10 @@ size_t ObjectFileELF::GetModuleSpecifications(
           GetOsFromOSABI(header.e_ident[EI_OSABI], ostype);
           assert(spec_ostype == ostype);
           if (spec_ostype != llvm::Triple::OSType::UnknownOS) {
-            if (log)
-              log->Printf("ObjectFileELF::%s file '%s' set ELF module OS type "
-                          "from ELF header OSABI.",
-                          __FUNCTION__, file.GetPath().c_str());
+            LLDB_LOGF(log,
+                      "ObjectFileELF::%s file '%s' set ELF module OS type "
+                      "from ELF header OSABI.",
+                      __FUNCTION__, file.GetPath().c_str());
           }
 
           data_sp = MapFileData(file, -1, file_offset);
@@ -652,12 +561,12 @@ size_t ObjectFileELF::GetModuleSpecifications(
 
           llvm::Triple &spec_triple = spec.GetArchitecture().GetTriple();
 
-          if (log)
-            log->Printf("ObjectFileELF::%s file '%s' module set to triple: %s "
-                        "(architecture %s)",
-                        __FUNCTION__, file.GetPath().c_str(),
-                        spec_triple.getTriple().c_str(),
-                        spec.GetArchitecture().GetArchitectureName());
+          LLDB_LOGF(log,
+                    "ObjectFileELF::%s file '%s' module set to triple: %s "
+                    "(architecture %s)",
+                    __FUNCTION__, file.GetPath().c_str(),
+                    spec_triple.getTriple().c_str(),
+                    spec.GetArchitecture().GetArchitectureName());
 
           if (!uuid.IsValid()) {
             uint32_t core_notes_crc = 0;
@@ -682,8 +591,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
                 core_notes_crc =
                     CalculateELFNotesSegmentsCRC32(program_headers, data);
               } else {
-                gnu_debuglink_crc = calc_gnu_debuglink_crc32(
-                    data.GetDataStart(), data.GetByteSize());
+                gnu_debuglink_crc = calc_crc32(0, data);
               }
             }
             using u32le = llvm::support::ulittle32_t;
@@ -721,27 +629,16 @@ ObjectFileELF::ObjectFileELF(const lldb::ModuleSP &module_sp,
                              DataBufferSP &data_sp, lldb::offset_t data_offset,
                              const FileSpec *file, lldb::offset_t file_offset,
                              lldb::offset_t length)
-    : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
-      m_header(), m_uuid(), m_gnu_debuglink_file(), m_gnu_debuglink_crc(0),
-      m_program_headers(), m_section_headers(), m_dynamic_symbols(),
-      m_filespec_up(), m_entry_point_address(), m_arch_spec() {
+    : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset) {
   if (file)
     m_file = *file;
-  ::memset(&m_header, 0, sizeof(m_header));
 }
 
 ObjectFileELF::ObjectFileELF(const lldb::ModuleSP &module_sp,
                              DataBufferSP &header_data_sp,
                              const lldb::ProcessSP &process_sp,
                              addr_t header_addr)
-    : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
-      m_header(), m_uuid(), m_gnu_debuglink_file(), m_gnu_debuglink_crc(0),
-      m_program_headers(), m_section_headers(), m_dynamic_symbols(),
-      m_filespec_up(), m_entry_point_address(), m_arch_spec() {
-  ::memset(&m_header, 0, sizeof(m_header));
-}
-
-ObjectFileELF::~ObjectFileELF() {}
+    : ObjectFile(module_sp, process_sp, header_addr, header_data_sp) {}
 
 bool ObjectFileELF::IsExecutable() const {
   return ((m_header.e_type & ET_EXEC) != 0) || (m_header.e_entry != 0);
@@ -872,8 +769,7 @@ UUID ObjectFileELF::GetUUID() {
       }
     } else {
       if (!m_gnu_debuglink_crc)
-        m_gnu_debuglink_crc = calc_gnu_debuglink_crc32(m_data.GetDataStart(),
-                                                       m_data.GetByteSize());
+        m_gnu_debuglink_crc = calc_crc32(0, m_data);
       if (m_gnu_debuglink_crc) {
         // Use 4 bytes of crc from the .gnu_debuglink section.
         u32le data(m_gnu_debuglink_crc);
@@ -885,14 +781,10 @@ UUID ObjectFileELF::GetUUID() {
   return m_uuid;
 }
 
-lldb_private::FileSpecList ObjectFileELF::GetDebugSymbolFilePaths() {
-  FileSpecList file_spec_list;
-
-  if (!m_gnu_debuglink_file.empty()) {
-    FileSpec file_spec(m_gnu_debuglink_file);
-    file_spec_list.Append(file_spec);
-  }
-  return file_spec_list;
+llvm::Optional<FileSpec> ObjectFileELF::GetDebugLink() {
+  if (m_gnu_debuglink_file.empty())
+    return llvm::None;
+  return FileSpec(m_gnu_debuglink_file);
 }
 
 uint32_t ObjectFileELF::GetDependentModules(FileSpecList &files) {
@@ -1120,9 +1012,8 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
       return error;
     }
 
-    if (log)
-      log->Printf("ObjectFileELF::%s parsing note name='%s', type=%" PRIu32,
-                  __FUNCTION__, note.n_name.c_str(), note.n_type);
+    LLDB_LOGF(log, "ObjectFileELF::%s parsing note name='%s', type=%" PRIu32,
+              __FUNCTION__, note.n_name.c_str(), note.n_type);
 
     // Process FreeBSD ELF notes.
     if ((note.n_name == LLDB_NT_OWNER_FREEBSD) &&
@@ -1147,11 +1038,11 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
       arch_spec.GetTriple().setOSName(os_name);
       arch_spec.GetTriple().setVendor(llvm::Triple::VendorType::UnknownVendor);
 
-      if (log)
-        log->Printf("ObjectFileELF::%s detected FreeBSD %" PRIu32 ".%" PRIu32
-                    ".%" PRIu32,
-                    __FUNCTION__, version_major, version_minor,
-                    static_cast<uint32_t>(version_info % 1000));
+      LLDB_LOGF(log,
+                "ObjectFileELF::%s detected FreeBSD %" PRIu32 ".%" PRIu32
+                ".%" PRIu32,
+                __FUNCTION__, version_major, version_minor,
+                static_cast<uint32_t>(version_info % 1000));
     }
     // Process GNU ELF notes.
     else if (note.n_name == LLDB_NT_OWNER_GNU) {
@@ -1172,12 +1063,11 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
             arch_spec.GetTriple().setOS(llvm::Triple::OSType::Linux);
             arch_spec.GetTriple().setVendor(
                 llvm::Triple::VendorType::UnknownVendor);
-            if (log)
-              log->Printf(
-                  "ObjectFileELF::%s detected Linux, min version %" PRIu32
-                  ".%" PRIu32 ".%" PRIu32,
-                  __FUNCTION__, version_info[1], version_info[2],
-                  version_info[3]);
+            LLDB_LOGF(log,
+                      "ObjectFileELF::%s detected Linux, min version %" PRIu32
+                      ".%" PRIu32 ".%" PRIu32,
+                      __FUNCTION__, version_info[1], version_info[2],
+                      version_info[3]);
             // FIXME we have the minimal version number, we could be propagating
             // that.  version_info[1] = OS Major, version_info[2] = OS Minor,
             // version_info[3] = Revision.
@@ -1186,30 +1076,28 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
             arch_spec.GetTriple().setOS(llvm::Triple::OSType::UnknownOS);
             arch_spec.GetTriple().setVendor(
                 llvm::Triple::VendorType::UnknownVendor);
-            if (log)
-              log->Printf("ObjectFileELF::%s detected Hurd (unsupported), min "
-                          "version %" PRIu32 ".%" PRIu32 ".%" PRIu32,
-                          __FUNCTION__, version_info[1], version_info[2],
-                          version_info[3]);
+            LLDB_LOGF(log,
+                      "ObjectFileELF::%s detected Hurd (unsupported), min "
+                      "version %" PRIu32 ".%" PRIu32 ".%" PRIu32,
+                      __FUNCTION__, version_info[1], version_info[2],
+                      version_info[3]);
             break;
           case LLDB_NT_GNU_ABI_OS_SOLARIS:
             arch_spec.GetTriple().setOS(llvm::Triple::OSType::Solaris);
             arch_spec.GetTriple().setVendor(
                 llvm::Triple::VendorType::UnknownVendor);
-            if (log)
-              log->Printf(
-                  "ObjectFileELF::%s detected Solaris, min version %" PRIu32
-                  ".%" PRIu32 ".%" PRIu32,
-                  __FUNCTION__, version_info[1], version_info[2],
-                  version_info[3]);
+            LLDB_LOGF(log,
+                      "ObjectFileELF::%s detected Solaris, min version %" PRIu32
+                      ".%" PRIu32 ".%" PRIu32,
+                      __FUNCTION__, version_info[1], version_info[2],
+                      version_info[3]);
             break;
           default:
-            if (log)
-              log->Printf(
-                  "ObjectFileELF::%s unrecognized OS in note, id %" PRIu32
-                  ", min version %" PRIu32 ".%" PRIu32 ".%" PRIu32,
-                  __FUNCTION__, version_info[0], version_info[1],
-                  version_info[2], version_info[3]);
+            LLDB_LOGF(log,
+                      "ObjectFileELF::%s unrecognized OS in note, id %" PRIu32
+                      ", min version %" PRIu32 ".%" PRIu32 ".%" PRIu32,
+                      __FUNCTION__, version_info[0], version_info[1],
+                      version_info[2], version_info[3]);
             break;
           }
         }
@@ -1618,9 +1506,8 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
                                             section_size) == section_size)) {
             Status error = RefineModuleDetailsFromNote(data, arch_spec, uuid);
             if (error.Fail()) {
-              if (log)
-                log->Printf("ObjectFileELF::%s ELF note processing failed: %s",
-                            __FUNCTION__, error.AsCString());
+              LLDB_LOGF(log, "ObjectFileELF::%s ELF note processing failed: %s",
+                        __FUNCTION__, error.AsCString());
             }
           }
         }
@@ -1674,38 +1561,40 @@ lldb::user_id_t ObjectFileELF::GetSectionIndexByName(const char *name) {
 }
 
 static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
+  if (Name.consume_front(".debug_") || Name.consume_front(".zdebug_")) {
+    return llvm::StringSwitch<SectionType>(Name)
+        .Case("abbrev", eSectionTypeDWARFDebugAbbrev)
+        .Case("abbrev.dwo", eSectionTypeDWARFDebugAbbrevDwo)
+        .Case("addr", eSectionTypeDWARFDebugAddr)
+        .Case("aranges", eSectionTypeDWARFDebugAranges)
+        .Case("cu_index", eSectionTypeDWARFDebugCuIndex)
+        .Case("frame", eSectionTypeDWARFDebugFrame)
+        .Case("info", eSectionTypeDWARFDebugInfo)
+        .Case("info.dwo", eSectionTypeDWARFDebugInfoDwo)
+        .Cases("line", "line.dwo", eSectionTypeDWARFDebugLine)
+        .Cases("line_str", "line_str.dwo", eSectionTypeDWARFDebugLineStr)
+        .Cases("loc", "loc.dwo", eSectionTypeDWARFDebugLoc)
+        .Cases("loclists", "loclists.dwo", eSectionTypeDWARFDebugLocLists)
+        .Case("macinfo", eSectionTypeDWARFDebugMacInfo)
+        .Cases("macro", "macro.dwo", eSectionTypeDWARFDebugMacro)
+        .Case("names", eSectionTypeDWARFDebugNames)
+        .Case("pubnames", eSectionTypeDWARFDebugPubNames)
+        .Case("pubtypes", eSectionTypeDWARFDebugPubTypes)
+        .Case("ranges", eSectionTypeDWARFDebugRanges)
+        .Case("rnglists", eSectionTypeDWARFDebugRngLists)
+        .Case("str", eSectionTypeDWARFDebugStr)
+        .Case("str.dwo", eSectionTypeDWARFDebugStrDwo)
+        .Case("str_offsets", eSectionTypeDWARFDebugStrOffsets)
+        .Case("str_offsets.dwo", eSectionTypeDWARFDebugStrOffsetsDwo)
+        .Case("types", eSectionTypeDWARFDebugTypes)
+        .Case("types.dwo", eSectionTypeDWARFDebugTypesDwo)
+        .Default(eSectionTypeOther);
+  }
   return llvm::StringSwitch<SectionType>(Name)
       .Case(".ARM.exidx", eSectionTypeARMexidx)
       .Case(".ARM.extab", eSectionTypeARMextab)
       .Cases(".bss", ".tbss", eSectionTypeZeroFill)
       .Cases(".data", ".tdata", eSectionTypeData)
-      .Case(".debug_abbrev", eSectionTypeDWARFDebugAbbrev)
-      .Case(".debug_abbrev.dwo", eSectionTypeDWARFDebugAbbrevDwo)
-      .Case(".debug_addr", eSectionTypeDWARFDebugAddr)
-      .Case(".debug_aranges", eSectionTypeDWARFDebugAranges)
-      .Case(".debug_cu_index", eSectionTypeDWARFDebugCuIndex)
-      .Case(".debug_frame", eSectionTypeDWARFDebugFrame)
-      .Case(".debug_info", eSectionTypeDWARFDebugInfo)
-      .Case(".debug_info.dwo", eSectionTypeDWARFDebugInfoDwo)
-      .Cases(".debug_line", ".debug_line.dwo", eSectionTypeDWARFDebugLine)
-      .Cases(".debug_line_str", ".debug_line_str.dwo",
-             eSectionTypeDWARFDebugLineStr)
-      .Cases(".debug_loc", ".debug_loc.dwo", eSectionTypeDWARFDebugLoc)
-      .Cases(".debug_loclists", ".debug_loclists.dwo",
-             eSectionTypeDWARFDebugLocLists)
-      .Case(".debug_macinfo", eSectionTypeDWARFDebugMacInfo)
-      .Cases(".debug_macro", ".debug_macro.dwo", eSectionTypeDWARFDebugMacro)
-      .Case(".debug_names", eSectionTypeDWARFDebugNames)
-      .Case(".debug_pubnames", eSectionTypeDWARFDebugPubNames)
-      .Case(".debug_pubtypes", eSectionTypeDWARFDebugPubTypes)
-      .Case(".debug_ranges", eSectionTypeDWARFDebugRanges)
-      .Case(".debug_rnglists", eSectionTypeDWARFDebugRngLists)
-      .Case(".debug_str", eSectionTypeDWARFDebugStr)
-      .Case(".debug_str.dwo", eSectionTypeDWARFDebugStrDwo)
-      .Case(".debug_str_offsets", eSectionTypeDWARFDebugStrOffsets)
-      .Case(".debug_str_offsets.dwo", eSectionTypeDWARFDebugStrOffsetsDwo)
-      .Case(".debug_types", eSectionTypeDWARFDebugTypes)
-      .Case(".debug_types.dwo", eSectionTypeDWARFDebugTypesDwo)
       .Case(".eh_frame", eSectionTypeEHFrame)
       .Case(".gnu_debugaltlink", eSectionTypeDWARFGNUDebugAltLink)
       .Case(".gosymtab", eSectionTypeGoSymtab)
@@ -1788,6 +1677,8 @@ class VMAddressProvider {
   VMMap Segments = VMMap(Alloc);
   VMMap Sections = VMMap(Alloc);
   lldb_private::Log *Log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES);
+  size_t SegmentCount = 0;
+  std::string SegmentName;
 
   VMRange GetVMRange(const ELFSectionHeader &H) {
     addr_t Address = H.sh_addr;
@@ -1802,18 +1693,23 @@ class VMAddressProvider {
   }
 
 public:
-  VMAddressProvider(ObjectFile::Type Type) : ObjectType(Type) {}
+  VMAddressProvider(ObjectFile::Type Type, llvm::StringRef SegmentName)
+      : ObjectType(Type), SegmentName(SegmentName) {}
+
+  std::string GetNextSegmentName() const {
+    return llvm::formatv("{0}[{1}]", SegmentName, SegmentCount).str();
+  }
 
   llvm::Optional<VMRange> GetAddressInfo(const ELFProgramHeader &H) {
     if (H.p_memsz == 0) {
-      LLDB_LOG(Log,
-               "Ignoring zero-sized PT_LOAD segment. Corrupt object file?");
+      LLDB_LOG(Log, "Ignoring zero-sized {0} segment. Corrupt object file?",
+               SegmentName);
       return llvm::None;
     }
 
     if (Segments.overlaps(H.p_vaddr, H.p_vaddr + H.p_memsz)) {
-      LLDB_LOG(Log,
-               "Ignoring overlapping PT_LOAD segment. Corrupt object file?");
+      LLDB_LOG(Log, "Ignoring overlapping {0} segment. Corrupt object file?",
+               SegmentName);
       return llvm::None;
     }
     return VMRange(H.p_vaddr, H.p_memsz);
@@ -1848,6 +1744,7 @@ public:
 
   void AddSegment(const VMRange &Range, SectionSP Seg) {
     Segments.insert(Range.GetRangeBase(), Range.GetRangeEnd(), std::move(Seg));
+    ++SegmentCount;
   }
 
   void AddSection(SectionAddressInfo Info, SectionSP Sect) {
@@ -1866,28 +1763,31 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     return;
 
   m_sections_up = llvm::make_unique<SectionList>();
-  VMAddressProvider address_provider(GetType());
+  VMAddressProvider regular_provider(GetType(), "PT_LOAD");
+  VMAddressProvider tls_provider(GetType(), "PT_TLS");
 
-  size_t LoadID = 0;
   for (const auto &EnumPHdr : llvm::enumerate(ProgramHeaders())) {
     const ELFProgramHeader &PHdr = EnumPHdr.value();
-    if (PHdr.p_type != PT_LOAD)
+    if (PHdr.p_type != PT_LOAD && PHdr.p_type != PT_TLS)
       continue;
 
-    auto InfoOr = address_provider.GetAddressInfo(PHdr);
+    VMAddressProvider &provider =
+        PHdr.p_type == PT_TLS ? tls_provider : regular_provider;
+    auto InfoOr = provider.GetAddressInfo(PHdr);
     if (!InfoOr)
       continue;
 
-    ConstString Name(("PT_LOAD[" + llvm::Twine(LoadID++) + "]").str());
     uint32_t Log2Align = llvm::Log2_64(std::max<elf_xword>(PHdr.p_align, 1));
     SectionSP Segment = std::make_shared<Section>(
-        GetModule(), this, SegmentID(EnumPHdr.index()), Name,
-        eSectionTypeContainer, InfoOr->GetRangeBase(), InfoOr->GetByteSize(),
-        PHdr.p_offset, PHdr.p_filesz, Log2Align, /*flags*/ 0);
+        GetModule(), this, SegmentID(EnumPHdr.index()),
+        ConstString(provider.GetNextSegmentName()), eSectionTypeContainer,
+        InfoOr->GetRangeBase(), InfoOr->GetByteSize(), PHdr.p_offset,
+        PHdr.p_filesz, Log2Align, /*flags*/ 0);
     Segment->SetPermissions(GetPermissions(PHdr));
+    Segment->SetIsThreadSpecific(PHdr.p_type == PT_TLS);
     m_sections_up->AddSection(Segment);
 
-    address_provider.AddSegment(*InfoOr, std::move(Segment));
+    provider.AddSegment(*InfoOr, std::move(Segment));
   }
 
   ParseSectionHeaders();
@@ -1902,7 +1802,9 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     const uint64_t file_size =
         header.sh_type == SHT_NOBITS ? 0 : header.sh_size;
 
-    auto InfoOr = address_provider.GetAddressInfo(header);
+    VMAddressProvider &provider =
+        header.sh_flags & SHF_TLS ? tls_provider : regular_provider;
+    auto InfoOr = provider.GetAddressInfo(header);
     if (!InfoOr)
       continue;
 
@@ -1933,7 +1835,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     section_sp->SetIsThreadSpecific(header.sh_flags & SHF_TLS);
     (InfoOr->Segment ? InfoOr->Segment->GetChildren() : *m_sections_up)
         .AddSection(section_sp);
-    address_provider.AddSection(std::move(*InfoOr), std::move(section_sp));
+    provider.AddSection(std::move(*InfoOr), std::move(section_sp));
   }
 
   // For eTypeDebugInfo files, the Symbol Vendor will take care of updating the
@@ -2652,7 +2554,7 @@ unsigned ObjectFileELF::ApplyRelocations(
                ((int64_t)value > INT32_MAX && (int64_t)value < INT32_MIN))) {
             Log *log =
                 lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES);
-            log->Printf("Failed to apply debug info relocations");
+            LLDB_LOGF(log, "Failed to apply debug info relocations");
             break;
           }
           uint32_t truncated_addr = (value & 0xFFFFFFFF);
@@ -3302,7 +3204,8 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
     return section->GetObjectFile()->ReadSectionData(section, section_data);
 
   size_t result = ObjectFile::ReadSectionData(section, section_data);
-  if (result == 0 || !section->Test(SHF_COMPRESSED))
+  if (result == 0 || !llvm::object::Decompressor::isCompressedELFSection(
+                         section->Get(), section->GetName().GetStringRef()))
     return result;
 
   auto Decompressor = llvm::object::Decompressor::create(

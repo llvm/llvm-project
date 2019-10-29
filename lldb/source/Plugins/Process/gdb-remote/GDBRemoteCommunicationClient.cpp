@@ -36,10 +36,7 @@
 
 #include "llvm/ADT/StringSwitch.h"
 
-#if defined(__APPLE__)
-#ifndef HAVE_LIBCOMPRESSION
-#define HAVE_LIBCOMPRESSION
-#endif
+#if defined(HAVE_LIBCOMPRESSION)
 #include <compression.h>
 #endif
 
@@ -439,8 +436,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_max_packet_size = UINT64_MAX; // Must have been a garbled response
         Log *log(
             ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
-        if (log)
-          log->Printf("Garbled PacketSize spec in qSupported response");
+        LLDB_LOGF(log, "Garbled PacketSize spec in qSupported response");
       }
     }
   }
@@ -525,9 +521,10 @@ GDBRemoteCommunicationClient::SendThreadSpecificPacketAndWaitForResponse(
   if (!lock) {
     if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(
             GDBR_LOG_PROCESS | GDBR_LOG_PACKETS))
-      log->Printf("GDBRemoteCommunicationClient::%s: Didn't get sequence mutex "
-                  "for %s packet.",
-                  __FUNCTION__, payload.GetData());
+      LLDB_LOGF(log,
+                "GDBRemoteCommunicationClient::%s: Didn't get sequence mutex "
+                "for %s packet.",
+                __FUNCTION__, payload.GetData());
     return PacketResult::ErrorNoSequenceLock;
   }
 
@@ -660,10 +657,10 @@ GDBRemoteCommunicationClient::SendPacketsAndConcatenateResponses(
   if (!lock) {
     Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS |
                                                            GDBR_LOG_PACKETS));
-    if (log)
-      log->Printf("error: failed to get packet sequence mutex, not sending "
-                  "packets with prefix '%s'",
-                  payload_prefix);
+    LLDB_LOGF(log,
+              "error: failed to get packet sequence mutex, not sending "
+              "packets with prefix '%s'",
+              payload_prefix);
     return PacketResult::ErrorNoSequenceLock;
   }
 
@@ -934,6 +931,11 @@ llvm::VersionTuple GDBRemoteCommunicationClient::GetOSVersion() {
   return m_os_version;
 }
 
+llvm::VersionTuple GDBRemoteCommunicationClient::GetMacCatalystVersion() {
+  GetHostInfo();
+  return m_maccatalyst_version;
+}
+
 bool GDBRemoteCommunicationClient::GetOSBuildString(std::string &s) {
   if (GetHostInfo()) {
     if (!m_os_build.empty()) {
@@ -1136,6 +1138,7 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
         uint32_t sub = 0;
         std::string arch_name;
         std::string os_name;
+        std::string environment;
         std::string vendor_name;
         std::string triple;
         std::string distribution_id;
@@ -1175,7 +1178,11 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
             extractor.GetHexByteString(m_os_kernel);
             ++num_keys_decoded;
           } else if (name.equals("ostype")) {
-            os_name = value;
+            if (value.equals("maccatalyst")) {
+              os_name = "ios";
+              environment = "macabi";
+            } else
+              os_name = value;
             ++num_keys_decoded;
           } else if (name.equals("vendor")) {
             vendor_name = value;
@@ -1198,6 +1205,9 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
                                      // "os_version"...
           {
             if (!m_os_version.tryParse(value))
+              ++num_keys_decoded;
+          } else if (name.equals("maccatalyst_version")) {
+            if (!m_maccatalyst_version.tryParse(value))
               ++num_keys_decoded;
           } else if (name.equals("watchpoint_exceptions_received")) {
             m_watchpoints_trigger_after_instruction =
@@ -1236,6 +1246,8 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
                     llvm::StringRef(vendor_name));
               if (!os_name.empty())
                 m_host_arch.GetTriple().setOSName(llvm::StringRef(os_name));
+              if (!environment.empty())
+                m_host_arch.GetTriple().setEnvironmentName(environment);
             }
           } else {
             std::string triple;
@@ -1284,14 +1296,15 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
             assert(byte_order == m_host_arch.GetByteOrder());
           }
 
-          if (log)
-            log->Printf("GDBRemoteCommunicationClient::%s parsed host "
-                        "architecture as %s, triple as %s from triple text %s",
-                        __FUNCTION__, m_host_arch.GetArchitectureName()
-                                          ? m_host_arch.GetArchitectureName()
-                                          : "<null-arch-name>",
-                        m_host_arch.GetTriple().getTriple().c_str(),
-                        triple.c_str());
+          LLDB_LOGF(log,
+                    "GDBRemoteCommunicationClient::%s parsed host "
+                    "architecture as %s, triple as %s from triple text %s",
+                    __FUNCTION__,
+                    m_host_arch.GetArchitectureName()
+                        ? m_host_arch.GetArchitectureName()
+                        : "<null-arch-name>",
+                    m_host_arch.GetTriple().getTriple().c_str(),
+                    triple.c_str());
         }
         if (!distribution_id.empty())
           m_host_arch.SetDistributionId(distribution_id.c_str());
@@ -1987,6 +2000,7 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
       uint32_t sub = 0;
       std::string arch_name;
       std::string os_name;
+      std::string environment;
       std::string vendor_name;
       std::string triple;
       std::string elf_abi;
@@ -2007,7 +2021,11 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
           extractor.GetHexByteString(triple);
           ++num_keys_decoded;
         } else if (name.equals("ostype")) {
-          os_name = value;
+          if (value.equals("maccatalyst")) {
+            os_name = "ios";
+            environment = "macabi";
+          } else
+            os_name = value;
           ++num_keys_decoded;
         } else if (name.equals("vendor")) {
           vendor_name = value;
@@ -2048,6 +2066,8 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
       } else if (cpu != LLDB_INVALID_CPUTYPE && !os_name.empty() &&
                  !vendor_name.empty()) {
         llvm::Triple triple(llvm::Twine("-") + vendor_name + "-" + os_name);
+        if (!environment.empty())
+            triple.setEnvironmentName(environment);
 
         assert(triple.getObjectFormat() != llvm::Triple::UnknownObjectFormat);
         assert(triple.getObjectFormat() != llvm::Triple::Wasm);
@@ -2064,12 +2084,10 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
           break;
         case llvm::Triple::Wasm:
         case llvm::Triple::XCOFF:
-          if (log)
-            log->Printf("error: not supported target architecture");
+          LLDB_LOGF(log, "error: not supported target architecture");
           return false;
         case llvm::Triple::UnknownObjectFormat:
-          if (log)
-            log->Printf("error: failed to determine target architecture");
+          LLDB_LOGF(log, "error: failed to determine target architecture");
           return false;
         }
 
@@ -2081,8 +2099,10 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
         }
         m_process_arch.GetTriple().setVendorName(llvm::StringRef(vendor_name));
         m_process_arch.GetTriple().setOSName(llvm::StringRef(os_name));
+        m_process_arch.GetTriple().setEnvironmentName(llvm::StringRef(environment));
         m_host_arch.GetTriple().setVendorName(llvm::StringRef(vendor_name));
         m_host_arch.GetTriple().setOSName(llvm::StringRef(os_name));
+        m_host_arch.GetTriple().setEnvironmentName(llvm::StringRef(environment));
       }
       return true;
     }
@@ -2641,9 +2661,8 @@ bool GDBRemoteCommunicationClient::GetThreadStopInfo(
 uint8_t GDBRemoteCommunicationClient::SendGDBStoppointTypePacket(
     GDBStoppointType type, bool insert, addr_t addr, uint32_t length) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
-  if (log)
-    log->Printf("GDBRemoteCommunicationClient::%s() %s at addr = 0x%" PRIx64,
-                __FUNCTION__, insert ? "add" : "remove", addr);
+  LLDB_LOGF(log, "GDBRemoteCommunicationClient::%s() %s at addr = 0x%" PRIx64,
+            __FUNCTION__, insert ? "add" : "remove", addr);
 
   // Check if the stub is known not to support this breakpoint type
   if (!SupportsGDBStoppointPacket(type))
@@ -2745,9 +2764,8 @@ size_t GDBRemoteCommunicationClient::GetCurrentThreadIDs(
 #if !defined(LLDB_CONFIGURATION_DEBUG)
     Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS |
                                                            GDBR_LOG_PACKETS));
-    if (log)
-      log->Printf("error: failed to get packet sequence mutex, not sending "
-                  "packet 'qfThreadInfo'");
+    LLDB_LOGF(log, "error: failed to get packet sequence mutex, not sending "
+                   "packet 'qfThreadInfo'");
 #endif
     sequence_mutex_unavailable = true;
   }
@@ -3873,9 +3891,9 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
 
     } else if (Log *log = ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(
                    GDBR_LOG_PROCESS | GDBR_LOG_PACKETS)) {
-      log->Printf(
-          "GDBRemoteCommunicationClient::%s: Didn't get sequence mutex.",
-          __FUNCTION__);
+      LLDB_LOGF(log,
+                "GDBRemoteCommunicationClient::%s: Didn't get sequence mutex.",
+                __FUNCTION__);
     }
   }
 }
@@ -3899,26 +3917,27 @@ GDBRemoteCommunicationClient::GetSupportedStructuredDataPlugins() {
           !m_supported_async_json_packets_sp->GetAsArray()) {
         // We were returned something other than a JSON array.  This is
         // invalid.  Clear it out.
-        if (log)
-          log->Printf("GDBRemoteCommunicationClient::%s(): "
-                      "QSupportedAsyncJSONPackets returned invalid "
-                      "result: %s",
-                      __FUNCTION__, response.GetStringRef().c_str());
+        LLDB_LOGF(log,
+                  "GDBRemoteCommunicationClient::%s(): "
+                  "QSupportedAsyncJSONPackets returned invalid "
+                  "result: %s",
+                  __FUNCTION__, response.GetStringRef().c_str());
         m_supported_async_json_packets_sp.reset();
       }
     } else {
-      if (log)
-        log->Printf("GDBRemoteCommunicationClient::%s(): "
-                    "QSupportedAsyncJSONPackets unsupported",
-                    __FUNCTION__);
+      LLDB_LOGF(log,
+                "GDBRemoteCommunicationClient::%s(): "
+                "QSupportedAsyncJSONPackets unsupported",
+                __FUNCTION__);
     }
 
     if (log && m_supported_async_json_packets_sp) {
       StreamString stream;
       m_supported_async_json_packets_sp->Dump(stream);
-      log->Printf("GDBRemoteCommunicationClient::%s(): supported async "
-                  "JSON packets: %s",
-                  __FUNCTION__, stream.GetData());
+      LLDB_LOGF(log,
+                "GDBRemoteCommunicationClient::%s(): supported async "
+                "JSON packets: %s",
+                __FUNCTION__, stream.GetData());
     }
   }
 

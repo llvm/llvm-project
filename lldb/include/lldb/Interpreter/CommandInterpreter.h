@@ -308,31 +308,12 @@ public:
 
   CommandObject *GetCommandObjectForCommand(llvm::StringRef &command_line);
 
-  // This handles command line completion.  You are given a pointer to the
-  // command string buffer, to the current cursor, and to the end of the string
-  // (in case it is not NULL terminated). You also passed in an StringList
-  // object to fill with the returns. The first element of the array will be
-  // filled with the string that you would need to insert at the cursor point
-  // to complete the cursor point to the longest common matching prefix. If you
-  // want to limit the number of elements returned, set max_return_elements to
-  // the number of elements you want returned.  Otherwise set
-  // max_return_elements to -1. If you want to start some way into the match
-  // list, then set match_start_point to the desired start point. Returns: -1
-  // if the completion character should be inserted -2 if the entire command
-  // line should be deleted and replaced with matches.GetStringAtIndex(0)
-  // INT_MAX if the number of matches is > max_return_elements, but it is
-  // expensive to compute. Otherwise, returns the number of matches.
-  //
-  // FIXME: Only max_return_elements == -1 is supported at present.
-  int HandleCompletion(const char *current_line, const char *cursor,
-                       const char *last_char, int match_start_point,
-                       int max_return_elements, StringList &matches,
-                       StringList &descriptions);
+  // This handles command line completion.
+  void HandleCompletion(CompletionRequest &request);
 
-  // This version just returns matches, and doesn't compute the substring.  It
-  // is here so the Help command can call it for the first argument. It uses
-  // a CompletionRequest for simplicity reasons.
-  int HandleCompletionMatches(CompletionRequest &request);
+  // This version just returns matches, and doesn't compute the substring. It
+  // is here so the Help command can call it for the first argument.
+  void HandleCompletionMatches(CompletionRequest &request);
 
   int GetCommandNamesMatchingPartialString(const char *cmd_cstr,
                                            bool include_aliases,
@@ -519,7 +500,7 @@ protected:
 
   bool IOHandlerInterrupt(IOHandler &io_handler) override;
 
-  size_t GetProcessOutput();
+  void GetProcessOutput();
 
   void SetSynchronous(bool value);
 

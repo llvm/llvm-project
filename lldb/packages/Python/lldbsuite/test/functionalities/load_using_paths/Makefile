@@ -1,9 +1,7 @@
-LEVEL := ../../make
-
 CXX_SOURCES := main.cpp
 USE_LIBDL := 1
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 all: hidden_lib a.out
 

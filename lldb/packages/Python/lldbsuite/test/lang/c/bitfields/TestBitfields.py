@@ -3,8 +3,6 @@
 from __future__ import print_function
 
 
-import os
-import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -147,6 +145,9 @@ class BitfieldsTestCase(TestBase):
                 '(uint8_t:1) b16 = \'\\0\'',
                 '(uint8_t:1) b17 = \'\\0\'',
                 ])
+
+        self.expect("v/x large_packed", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=["a = 0x0000000cbbbbaaaa", "b = 0x0000000dffffeee"])
 
 
     @add_test_categories(['pyapi'])

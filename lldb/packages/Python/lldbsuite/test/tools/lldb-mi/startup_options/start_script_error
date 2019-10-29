@@ -1,3 +1,0 @@
-settings set symbols.enable-external-lookup false
--file-exec-and-symbols a.out
--break-ins -f main

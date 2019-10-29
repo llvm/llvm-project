@@ -1,10 +1,10 @@
 #include <cstdint>
 
-struct alignas(16) xmm_t {
-  uint64_t a, b;
-};
-
 int main() {
+#if defined(__x86_64__)
+  struct alignas(16) xmm_t {
+    uint64_t a, b;
+  };
   uint64_t r8 = 0x0102030405060708;
   uint64_t r9 = 0x1112131415161718;
   uint64_t r10 = 0x2122232425262728;
@@ -49,6 +49,6 @@ int main() {
                : "%r8", "%r9", "%r10", "%r11", "%r12", "%r13", "%r14", "%r15",
                  "%xmm8", "%xmm9", "%xmm10", "%xmm11", "%xmm12", "%xmm13",
                  "%xmm14", "%xmm15");
-
+#endif
   return 0;
 }

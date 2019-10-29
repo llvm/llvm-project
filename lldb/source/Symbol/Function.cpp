@@ -16,7 +16,6 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/SymbolFile.h"
-#include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/Support/Casting.h"
@@ -281,7 +280,7 @@ Block &Function::GetBlock(bool can_create) {
   if (!m_block.BlockInfoHasBeenParsed() && can_create) {
     ModuleSP module_sp = CalculateSymbolContextModule();
     if (module_sp) {
-      module_sp->GetSymbolVendor()->ParseBlocksRecursive(*this);
+      module_sp->GetSymbolFile()->ParseBlocksRecursive(*this);
     } else {
       Host::SystemLog(Host::eSystemLogError,
                       "error: unable to find module "
@@ -428,14 +427,8 @@ CompilerDeclContext Function::GetDeclContext() {
   ModuleSP module_sp = CalculateSymbolContextModule();
 
   if (module_sp) {
-    SymbolVendor *sym_vendor = module_sp->GetSymbolVendor();
-
-    if (sym_vendor) {
-      SymbolFile *sym_file = sym_vendor->GetSymbolFile();
-
-      if (sym_file)
-        return sym_file->GetDeclContextForUID(GetID());
-    }
+    if (SymbolFile *sym_file = module_sp->GetSymbolFile())
+      return sym_file->GetDeclContextForUID(GetID());
   }
   return CompilerDeclContext();
 }
@@ -449,12 +442,7 @@ Type *Function::GetType() {
     if (!sc.module_sp)
       return nullptr;
 
-    SymbolVendor *sym_vendor = sc.module_sp->GetSymbolVendor();
-
-    if (sym_vendor == nullptr)
-      return nullptr;
-
-    SymbolFile *sym_file = sym_vendor->GetSymbolFile();
+    SymbolFile *sym_file = sc.module_sp->GetSymbolFile();
 
     if (sym_file == nullptr)
       return nullptr;
@@ -589,10 +577,14 @@ uint32_t Function::GetPrologueByteSize() {
 }
 
 lldb::LanguageType Function::GetLanguage() const {
+  lldb::LanguageType lang = m_mangled.GuessLanguage();
+  if (lang != lldb::eLanguageTypeUnknown)
+    return lang;
+
   if (m_comp_unit)
     return m_comp_unit->GetLanguage();
-  else
-    return lldb::eLanguageTypeUnknown;
+
+  return lldb::eLanguageTypeUnknown;
 }
 
 ConstString Function::GetName() const {

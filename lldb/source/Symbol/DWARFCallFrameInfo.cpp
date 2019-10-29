@@ -19,6 +19,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
 #include <list>
+#include <cstring>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -601,6 +602,9 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
     }
     offset += aug_data_len;
   }
+  unwind_plan.SetUnwindPlanForSignalTrap(
+    strchr(cie->augmentation, 'S') ? eLazyBoolYes : eLazyBoolNo);
+
   Address lsda_data;
   Address personality_function_ptr;
 
@@ -769,13 +773,12 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // useful for compilers that move epilogue code into the body of a
           // function.)
           if (stack.empty()) {
-            if (log)
-              log->Printf("DWARFCallFrameInfo::%s(dwarf_offset: %" PRIx32
-                          ", startaddr: %" PRIx64
-                          " encountered DW_CFA_restore_state but state stack "
-                          "is empty. Corrupt unwind info?",
-                          __FUNCTION__, dwarf_offset,
-                          startaddr.GetFileAddress());
+            LLDB_LOGF(log,
+                      "DWARFCallFrameInfo::%s(dwarf_offset: %" PRIx32
+                      ", startaddr: %" PRIx64
+                      " encountered DW_CFA_restore_state but state stack "
+                      "is empty. Corrupt unwind info?",
+                      __FUNCTION__, dwarf_offset, startaddr.GetFileAddress());
             break;
           }
           lldb::addr_t offset = row->GetOffset();

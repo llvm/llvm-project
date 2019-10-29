@@ -64,15 +64,9 @@ namespace lldb {
         operator != (lldb::SBTypeSynthetic &rhs);
 
         %pythoncode %{
-            __swig_getmethods__["options"] = GetOptions
-            __swig_setmethods__["options"] = SetOptions
-            if _newclass: options = property(GetOptions, SetOptions)
-
-            __swig_getmethods__["contains_code"] = IsClassCode
-            if _newclass: contains_code = property(IsClassCode, None)
-
-            __swig_getmethods__["synthetic_data"] = GetData
-            if _newclass: synthetic_data = property(GetData, None)
+            options = property(GetOptions, SetOptions)
+            contains_code = property(IsClassCode, None)
+            synthetic_data = property(GetData, None)
         %}
 
     };

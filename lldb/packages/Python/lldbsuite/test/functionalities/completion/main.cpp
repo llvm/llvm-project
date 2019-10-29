@@ -7,6 +7,8 @@ public:
     }
 };
 
+namespace { int Quux (void) { return 0; } }
+
 struct Container { int MemberVar; };
 
 int main()
@@ -17,5 +19,6 @@ int main()
 
     Container container;
     Container *ptr_container = &container;
+    int q = Quux();
     return container.MemberVar = 3; // Break here
 }

@@ -9,7 +9,6 @@ import itertools
 import six
 
 # LLDB modules
-import use_lldb_suite
 import lldb
 
 windows, linux, macosx, darwin, ios, tvos, watchos, bridgeos, darwin_all, darwin_embedded, freebsd, netbsd, bsd_all, android = range(

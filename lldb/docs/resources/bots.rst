@@ -9,7 +9,6 @@ build slaves. Everyone can `add a buildbot for LLDB
 <https://llvm.org/docs/HowToAddABuilder.html>`_.
 
 
-* `lldb-amd64-ninja-freebsd11 <http://lab.llvm.org:8011/builders/lldb-amd64-ninja-freebsd11>`_
 * `lldb-x64-windows-ninja <http://lab.llvm.org:8011/builders/lldb-x64-windows-ninja>`_
 * `lldb-x86_64-debian <http://lab.llvm.org:8011/builders/lldb-x86_64-debian>`_
 * `lldb-x86_64-fedora <http://lab.llvm.org:8011/builders/lldb-x86_64-fedora>`_

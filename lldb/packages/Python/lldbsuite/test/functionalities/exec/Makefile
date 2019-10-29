@@ -1,10 +1,8 @@
-LEVEL = ../../make
-
 CXX_SOURCES := main.cpp
 
 all: a.out secondprog
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 secondprog:
 	$(MAKE) VPATH=$(VPATH) -f $(SRCDIR)/secondprog.mk

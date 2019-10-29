@@ -10,7 +10,7 @@
 
 #include "lldb/Utility/AnsiTerminal.h"
 
-using namespace lldb_utility;
+using namespace lldb_private;
 
 TEST(AnsiTerminal, Empty) { EXPECT_EQ("", ansi::FormatAnsiTerminalCodes("")); }
 

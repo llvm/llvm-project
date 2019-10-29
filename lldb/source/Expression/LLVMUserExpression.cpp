@@ -12,12 +12,12 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/DiagnosticManager.h"
+#include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/Block.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -48,9 +48,7 @@ LLVMUserExpression::LLVMUserExpression(ExecutionContextScope &exe_scope,
       m_stack_frame_bottom(LLDB_INVALID_ADDRESS),
       m_stack_frame_top(LLDB_INVALID_ADDRESS), m_allow_cxx(false),
       m_allow_objc(false), m_transformed_text(), m_execution_unit_sp(),
-      m_materializer_up(), m_jit_module_wp(), m_enforce_valid_object(true),
-      m_in_cplusplus_method(false), m_in_objectivec_method(false),
-      m_in_static_method(false), m_needs_object_ptr(false), m_target(nullptr),
+      m_materializer_up(), m_jit_module_wp(),
       m_can_interpret(false), m_materialized_address(LLDB_INVALID_ADDRESS) {}
 
 LLVMUserExpression::~LLVMUserExpression() {
@@ -161,9 +159,9 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
       function_stack_bottom = function_stack_pointer - HostInfo::GetPageSize();
       function_stack_top = function_stack_pointer;
 
-      if (log)
-        log->Printf(
-            "-- [UserExpression::Execute] Execution of expression begins --");
+      LLDB_LOGF(
+          log,
+          "-- [UserExpression::Execute] Execution of expression begins --");
 
       if (exe_ctx.GetProcessPtr())
         exe_ctx.GetProcessPtr()->SetRunningUserExpression(true);
@@ -175,9 +173,8 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
       if (exe_ctx.GetProcessPtr())
         exe_ctx.GetProcessPtr()->SetRunningUserExpression(false);
 
-      if (log)
-        log->Printf("-- [UserExpression::Execute] Execution of expression "
-                    "completed --");
+      LLDB_LOGF(log, "-- [UserExpression::Execute] Execution of expression "
+                     "completed --");
 
       if (execution_result == lldb::eExpressionInterrupted ||
           execution_result == lldb::eExpressionHitBreakpoint) {
@@ -251,9 +248,8 @@ bool LLVMUserExpression::FinalizeJITExecution(
     lldb::addr_t function_stack_top) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  if (log)
-    log->Printf("-- [UserExpression::FinalizeJITExecution] Dematerializing "
-                "after execution --");
+  LLDB_LOGF(log, "-- [UserExpression::FinalizeJITExecution] Dematerializing "
+                 "after execution --");
 
   if (!m_dematerializer_sp) {
     diagnostic_manager.Printf(eDiagnosticSeverityError,

@@ -69,8 +69,8 @@ PlatformSP PlatformAppleWatchSimulator::CreateInstance(bool force,
     const char *triple_cstr =
         arch ? arch->GetTriple().getTriple().c_str() : "<null>";
 
-    log->Printf("PlatformAppleWatchSimulator::%s(force=%s, arch={%s,%s})",
-                __FUNCTION__, force ? "true" : "false", arch_name, triple_cstr);
+    LLDB_LOGF(log, "PlatformAppleWatchSimulator::%s(force=%s, arch={%s,%s})",
+              __FUNCTION__, force ? "true" : "false", arch_name, triple_cstr);
   }
 
   bool create = force;
@@ -119,17 +119,15 @@ PlatformSP PlatformAppleWatchSimulator::CreateInstance(bool force,
     }
   }
   if (create) {
-    if (log)
-      log->Printf("PlatformAppleWatchSimulator::%s() creating platform",
-                  __FUNCTION__);
+    LLDB_LOGF(log, "PlatformAppleWatchSimulator::%s() creating platform",
+              __FUNCTION__);
 
     return PlatformSP(new PlatformAppleWatchSimulator());
   }
 
-  if (log)
-    log->Printf(
-        "PlatformAppleWatchSimulator::%s() aborting creation of platform",
-        __FUNCTION__);
+  LLDB_LOGF(log,
+            "PlatformAppleWatchSimulator::%s() aborting creation of platform",
+            __FUNCTION__);
 
   return PlatformSP();
 }

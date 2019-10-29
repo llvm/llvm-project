@@ -198,45 +198,20 @@ namespace lldb {
                     filters.append(self.GetFilterAtIndex(idx))
                 return filters
 
-            __swig_getmethods__["formats"] = get_formats_array
-            if _newclass: formats = property(get_formats_array, None, doc='''A read only property that returns a list() of lldb.SBTypeFormat objects contained in this category''')
-
-            __swig_getmethods__["format"] = get_formats_access_object
-            if _newclass: format = property(get_formats_access_object, None, doc=r'''A read only property that returns an object that you can use to look for formats by index or type name.''')
-
-            __swig_getmethods__["summaries"] = get_summaries_array
-            if _newclass: summaries = property(get_summaries_array, None, doc='''A read only property that returns a list() of lldb.SBTypeSummary objects contained in this category''')
-
-            __swig_getmethods__["summary"] = get_summaries_access_object
-            if _newclass: summary = property(get_summaries_access_object, None, doc=r'''A read only property that returns an object that you can use to look for summaries by index or type name or regular expression.''')
-
-            __swig_getmethods__["filters"] = get_filters_array
-            if _newclass: filters = property(get_filters_array, None, doc='''A read only property that returns a list() of lldb.SBTypeFilter objects contained in this category''')
-
-            __swig_getmethods__["filter"] = get_filters_access_object
-            if _newclass: filter = property(get_filters_access_object, None, doc=r'''A read only property that returns an object that you can use to look for filters by index or type name or regular expression.''')
-
-            __swig_getmethods__["synthetics"] = get_synthetics_array
-            if _newclass: synthetics = property(get_synthetics_array, None, doc='''A read only property that returns a list() of lldb.SBTypeSynthetic objects contained in this category''')
-
-            __swig_getmethods__["synthetic"] = get_synthetics_access_object
-            if _newclass: synthetic = property(get_synthetics_access_object, None, doc=r'''A read only property that returns an object that you can use to look for synthetic children provider by index or type name or regular expression.''')
-
-            __swig_getmethods__["num_formats"] = GetNumFormats
-            if _newclass: num_formats = property(GetNumFormats, None)
-            __swig_getmethods__["num_summaries"] = GetNumSummaries
-            if _newclass: num_summaries = property(GetNumSummaries, None)
-            __swig_getmethods__["num_filters"] = GetNumFilters
-            if _newclass: num_filters = property(GetNumFilters, None)
-            __swig_getmethods__["num_synthetics"] = GetNumSynthetics
-            if _newclass: num_synthetics = property(GetNumSynthetics, None)
-
-            __swig_getmethods__["name"] = GetName
-            if _newclass: name = property(GetName, None)
-
-            __swig_getmethods__["enabled"] = GetEnabled
-            __swig_setmethods__["enabled"] = SetEnabled
-            if _newclass: enabled = property(GetEnabled, SetEnabled)
+            formats = property(get_formats_array, None, doc='''A read only property that returns a list() of lldb.SBTypeFormat objects contained in this category''')
+            format = property(get_formats_access_object, None, doc=r'''A read only property that returns an object that you can use to look for formats by index or type name.''')
+            summaries = property(get_summaries_array, None, doc='''A read only property that returns a list() of lldb.SBTypeSummary objects contained in this category''')
+            summary = property(get_summaries_access_object, None, doc=r'''A read only property that returns an object that you can use to look for summaries by index or type name or regular expression.''')
+            filters = property(get_filters_array, None, doc='''A read only property that returns a list() of lldb.SBTypeFilter objects contained in this category''')
+            filter = property(get_filters_access_object, None, doc=r'''A read only property that returns an object that you can use to look for filters by index or type name or regular expression.''')
+            synthetics = property(get_synthetics_array, None, doc='''A read only property that returns a list() of lldb.SBTypeSynthetic objects contained in this category''')
+            synthetic = property(get_synthetics_access_object, None, doc=r'''A read only property that returns an object that you can use to look for synthetic children provider by index or type name or regular expression.''')
+            num_formats = property(GetNumFormats, None)
+            num_summaries = property(GetNumSummaries, None)
+            num_filters = property(GetNumFilters, None)
+            num_synthetics = property(GetNumSynthetics, None)
+            name = property(GetName, None)
+            enabled = property(GetEnabled, SetEnabled)
         %}
 
     };

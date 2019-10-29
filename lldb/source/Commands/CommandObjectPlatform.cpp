@@ -58,10 +58,8 @@ static mode_t ParsePermissionString(llvm::StringRef permissions) {
   return user | group | world;
 }
 
-static constexpr OptionDefinition g_permissions_options[] = {
 #define LLDB_OPTIONS_permissions
 #include "CommandOptions.inc"
-};
 
 class OptionPermissions : public OptionGroup {
 public:
@@ -119,8 +117,7 @@ public:
       m_permissions |= lldb::eFilePermissionsWorldExecute;
       break;
     default:
-      error.SetErrorStringWithFormat("unrecognized option '%c'", short_option);
-      break;
+      llvm_unreachable("Unimplemented option");
     }
 
     return error;
@@ -160,10 +157,9 @@ public:
 
   ~CommandObjectPlatformSelect() override = default;
 
-  int HandleCompletion(CompletionRequest &request) override {
+  void HandleCompletion(CompletionRequest &request) override {
     CommandCompletions::PlatformPluginNames(GetCommandInterpreter(), request,
                                             nullptr);
-    return request.GetNumberOfMatches();
   }
 
   Options *GetOptions() override { return &m_option_group; }
@@ -574,10 +570,8 @@ public:
 
 // "platform fread"
 
-static constexpr OptionDefinition g_platform_fread_options[] = {
 #define LLDB_OPTIONS_platform_fread
 #include "CommandOptions.inc"
-};
 
 class CommandObjectPlatformFRead : public CommandObjectParsed {
 public:
@@ -637,9 +631,7 @@ protected:
                                          option_arg.str().c_str());
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -665,10 +657,8 @@ protected:
 
 // "platform fwrite"
 
-static constexpr OptionDefinition g_platform_fwrite_options[] = {
 #define LLDB_OPTIONS_platform_fwrite
 #include "CommandOptions.inc"
-};
 
 class CommandObjectPlatformFWrite : public CommandObjectParsed {
 public:
@@ -725,9 +715,7 @@ protected:
         m_data.assign(option_arg);
         break;
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1041,10 +1029,9 @@ protected:
 
 // "platform process list"
 
-static OptionDefinition g_platform_process_list_options[] = {
+static PosixPlatformCommandOptionValidator posix_validator;
 #define LLDB_OPTIONS_platform_process_list
 #include "CommandOptions.inc"
-};
 
 class CommandObjectPlatformProcessList : public CommandObjectParsed {
 public:
@@ -1166,23 +1153,6 @@ protected:
   public:
     CommandOptions()
         : Options(), match_info(), show_args(false), verbose(false) {
-      static llvm::once_flag g_once_flag;
-      llvm::call_once(g_once_flag, []() {
-        PosixPlatformCommandOptionValidator *posix_validator =
-            new PosixPlatformCommandOptionValidator();
-        for (auto &Option : g_platform_process_list_options) {
-          switch (Option.short_option) {
-          case 'u':
-          case 'U':
-          case 'g':
-          case 'G':
-            Option.validator = posix_validator;
-            break;
-          default:
-            break;
-          }
-        }
-      });
     }
 
     ~CommandOptions() override = default;
@@ -1295,9 +1265,7 @@ protected:
         break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;
@@ -1407,10 +1375,8 @@ protected:
   }
 };
 
-static constexpr OptionDefinition g_platform_process_attach_options[] = {
 #define LLDB_OPTIONS_platform_process_attach
 #include "CommandOptions.inc"
-};
 
 class CommandObjectPlatformProcessAttach : public CommandObjectParsed {
 public:
@@ -1453,9 +1419,7 @@ public:
         break;
 
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -1468,7 +1432,7 @@ public:
       return llvm::makeArrayRef(g_platform_process_attach_options);
     }
 
-    bool HandleOptionArgumentCompletion(
+    void HandleOptionArgumentCompletion(
         CompletionRequest &request, OptionElementVector &opt_element_vector,
         int opt_element_index, CommandInterpreter &interpreter) override {
       int opt_arg_pos = opt_element_vector[opt_element_index].opt_arg_pos;
@@ -1476,37 +1440,36 @@ public:
 
       // We are only completing the name option for now...
 
-      if (GetDefinitions()[opt_defs_index].short_option == 'n') {
-        // Are we in the name?
+      // Are we in the name?
+      if (GetDefinitions()[opt_defs_index].short_option != 'n')
+        return;
 
-        // Look to see if there is a -P argument provided, and if so use that
-        // plugin, otherwise use the default plugin.
+      // Look to see if there is a -P argument provided, and if so use that
+      // plugin, otherwise use the default plugin.
 
-        const char *partial_name = nullptr;
-        partial_name = request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos);
+      const char *partial_name = nullptr;
+      partial_name = request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos);
 
-        PlatformSP platform_sp(interpreter.GetPlatform(true));
-        if (platform_sp) {
-          ProcessInstanceInfoList process_infos;
-          ProcessInstanceInfoMatch match_info;
-          if (partial_name) {
-            match_info.GetProcessInfo().GetExecutableFile().SetFile(
-                partial_name, FileSpec::Style::native);
-            match_info.SetNameMatchType(NameMatch::StartsWith);
-          }
-          platform_sp->FindProcesses(match_info, process_infos);
-          const uint32_t num_matches = process_infos.GetSize();
-          if (num_matches > 0) {
-            for (uint32_t i = 0; i < num_matches; ++i) {
-              request.AddCompletion(llvm::StringRef(
-                  process_infos.GetProcessNameAtIndex(i),
-                  process_infos.GetProcessNameLengthAtIndex(i)));
-            }
-          }
-        }
+      PlatformSP platform_sp(interpreter.GetPlatform(true));
+      if (!platform_sp)
+        return;
+
+      ProcessInstanceInfoList process_infos;
+      ProcessInstanceInfoMatch match_info;
+      if (partial_name) {
+        match_info.GetProcessInfo().GetExecutableFile().SetFile(
+            partial_name, FileSpec::Style::native);
+        match_info.SetNameMatchType(NameMatch::StartsWith);
       }
+      platform_sp->FindProcesses(match_info, process_infos);
+      const uint32_t num_matches = process_infos.GetSize();
+      if (num_matches == 0)
+        return;
 
-      return false;
+      for (uint32_t i = 0; i < num_matches; ++i) {
+        request.AddCompletion(process_infos.GetProcessNameAtIndex(i));
+      }
+      return;
     }
 
     // Options table: Required for subclasses of Options.
@@ -1582,10 +1545,8 @@ private:
 };
 
 // "platform shell"
-static constexpr OptionDefinition g_platform_shell_options[] = {
 #define LLDB_OPTIONS_platform_shell
 #include "CommandOptions.inc"
-};
 
 class CommandObjectPlatformShell : public CommandObjectRaw {
 public:
@@ -1616,9 +1577,7 @@ public:
           timeout = std::chrono::seconds(timeout_sec);
         break;
       default:
-        error.SetErrorStringWithFormat("invalid short option character '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
 
       return error;

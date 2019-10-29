@@ -1,8 +1,6 @@
-LEVEL = ../../../make
-
 OBJC_SOURCES := main.m
 
-include $(LEVEL)/Makefile.rules
+include Makefile.rules
 
 ifneq (,$(findstring arm,$(ARCH)))
     LD_EXTRAS = -framework Foundation -framework UIKit

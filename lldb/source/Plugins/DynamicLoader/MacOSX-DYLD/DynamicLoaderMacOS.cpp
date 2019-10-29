@@ -173,9 +173,8 @@ void DynamicLoaderMacOS::DoInitialImageFetch() {
           ->GetAsArray()) {
     if (JSONImageInformationIntoImageInfo(all_image_info_json_sp,
                                           image_infos)) {
-      if (log)
-        log->Printf("Initial module fetch:  Adding %" PRId64 " modules.\n",
-                    (uint64_t)image_infos.size());
+      LLDB_LOGF(log, "Initial module fetch:  Adding %" PRId64 " modules.\n",
+                (uint64_t)image_infos.size());
 
       UpdateSpecialBinariesFromNewImageInfos(image_infos);
       AddModulesUsingImageInfos(image_infos);
@@ -310,8 +309,8 @@ void DynamicLoaderMacOS::AddBinaries(
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
   ImageInfo::collection image_infos;
 
-  if (log)
-    log->Printf("Adding %" PRId64 " modules.", (uint64_t)load_addresses.size());
+  LLDB_LOGF(log, "Adding %" PRId64 " modules.",
+            (uint64_t)load_addresses.size());
   StructuredData::ObjectSP binaries_info_sp =
       m_process->GetLoadedDynamicLibrariesInfos(load_addresses);
   if (binaries_info_sp.get() && binaries_info_sp->GetAsDictionary() &&
@@ -371,22 +370,18 @@ bool DynamicLoaderMacOS::SetNotificationBreakpoint() {
 addr_t
 DynamicLoaderMacOS::GetDyldLockVariableAddressFromModule(Module *module) {
   SymbolContext sc;
-  SymbolVendor *sym_vendor = module->GetSymbolVendor();
   Target &target = m_process->GetTarget();
-  if (sym_vendor) {
-    Symtab *symtab = sym_vendor->GetSymtab();
-    if (symtab) {
-      std::vector<uint32_t> match_indexes;
-      ConstString g_symbol_name("_dyld_global_lock_held");
-      uint32_t num_matches = 0;
-      num_matches =
-          symtab->AppendSymbolIndexesWithName(g_symbol_name, match_indexes);
-      if (num_matches == 1) {
-        Symbol *symbol = symtab->SymbolAtIndex(match_indexes[0]);
-        if (symbol &&
-            (symbol->ValueIsAddress() || symbol->GetAddressRef().IsValid())) {
-          return symbol->GetAddressRef().GetOpcodeLoadAddress(&target);
-        }
+  if (Symtab *symtab = module->GetSymtab()) {
+    std::vector<uint32_t> match_indexes;
+    ConstString g_symbol_name("_dyld_global_lock_held");
+    uint32_t num_matches = 0;
+    num_matches =
+        symtab->AppendSymbolIndexesWithName(g_symbol_name, match_indexes);
+    if (num_matches == 1) {
+      Symbol *symbol = symtab->SymbolAtIndex(match_indexes[0]);
+      if (symbol &&
+          (symbol->ValueIsAddress() || symbol->GetAddressRef().IsValid())) {
+        return symbol->GetAddressRef().GetOpcodeLoadAddress(&target);
       }
     }
   }

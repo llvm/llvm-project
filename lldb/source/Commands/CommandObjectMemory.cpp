@@ -46,10 +46,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static constexpr OptionDefinition g_read_memory_options[] = {
 #define LLDB_OPTIONS_memory_read
 #include "CommandOptions.inc"
-};
 
 class OptionGroupReadMemory : public OptionGroup {
 public:
@@ -60,13 +58,13 @@ public:
   ~OptionGroupReadMemory() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-    return llvm::makeArrayRef(g_read_memory_options);
+    return llvm::makeArrayRef(g_memory_read_options);
   }
 
   Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                         ExecutionContext *execution_context) override {
     Status error;
-    const int short_option = g_read_memory_options[option_idx].short_option;
+    const int short_option = g_memory_read_options[option_idx].short_option;
 
     switch (short_option) {
     case 'l':
@@ -98,9 +96,7 @@ public:
       break;
 
     default:
-      error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                     short_option);
-      break;
+      llvm_unreachable("Unimplemented option");
     }
     return error;
   }
@@ -165,6 +161,7 @@ public:
     case eFormatOctal:
     case eFormatDecimal:
     case eFormatEnum:
+    case eFormatUnicode8:
     case eFormatUnicode16:
     case eFormatUnicode32:
     case eFormatUnsigned:
@@ -896,10 +893,8 @@ protected:
   CompilerType m_prev_compiler_type;
 };
 
-static constexpr OptionDefinition g_memory_find_option_table[] = {
 #define LLDB_OPTIONS_memory_find
 #include "CommandOptions.inc"
-};
 
 // Find the specified data in memory
 class CommandObjectMemoryFind : public CommandObjectParsed {
@@ -911,14 +906,13 @@ public:
     ~OptionGroupFindMemory() override = default;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_memory_find_option_table);
+      return llvm::makeArrayRef(g_memory_find_options);
     }
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                           ExecutionContext *execution_context) override {
       Status error;
-      const int short_option =
-          g_memory_find_option_table[option_idx].short_option;
+      const int short_option = g_memory_find_options[option_idx].short_option;
 
       switch (short_option) {
       case 'e':
@@ -940,9 +934,7 @@ public:
         break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -1189,10 +1181,8 @@ protected:
   OptionGroupFindMemory m_memory_options;
 };
 
-static constexpr OptionDefinition g_memory_write_option_table[] = {
 #define LLDB_OPTIONS_memory_write
 #include "CommandOptions.inc"
-};
 
 // Write memory to the inferior process
 class CommandObjectMemoryWrite : public CommandObjectParsed {
@@ -1204,14 +1194,13 @@ public:
     ~OptionGroupWriteMemory() override = default;
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_memory_write_option_table);
+      return llvm::makeArrayRef(g_memory_write_options);
     }
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                           ExecutionContext *execution_context) override {
       Status error;
-      const int short_option =
-          g_memory_write_option_table[option_idx].short_option;
+      const int short_option = g_memory_write_options[option_idx].short_option;
 
       switch (short_option) {
       case 'i':
@@ -1233,9 +1222,7 @@ public:
       } break;
 
       default:
-        error.SetErrorStringWithFormat("unrecognized short option '%c'",
-                                       short_option);
-        break;
+        llvm_unreachable("Unimplemented option");
       }
       return error;
     }
@@ -1419,6 +1406,7 @@ protected:
       case eFormatBytesWithASCII:
       case eFormatComplex:
       case eFormatEnum:
+      case eFormatUnicode8:
       case eFormatUnicode16:
       case eFormatUnicode32:
       case eFormatVectorOfChar:

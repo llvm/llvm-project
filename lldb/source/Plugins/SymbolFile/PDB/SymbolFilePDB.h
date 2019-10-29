@@ -35,10 +35,10 @@ public:
   static const char *GetPluginDescriptionStatic();
 
   static lldb_private::SymbolFile *
-  CreateInstance(lldb_private::ObjectFile *obj_file);
+  CreateInstance(lldb::ObjectFileSP objfile_sp);
 
   // Constructors and Destructors
-  SymbolFilePDB(lldb_private::ObjectFile *ofile);
+  SymbolFilePDB(lldb::ObjectFileSP objfile_sp);
 
   ~SymbolFilePDB() override;
 
@@ -47,10 +47,6 @@ public:
   void InitializeObject() override;
 
   // Compile Unit function calls
-
-  uint32_t GetNumCompileUnits() override;
-
-  lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
 
   lldb::LanguageType
   ParseLanguage(lldb_private::CompileUnit &comp_unit) override;
@@ -136,19 +132,18 @@ public:
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             lldb_private::TypeMap &types) override;
 
-  size_t FindTypes(const std::vector<lldb_private::CompilerContext> &context,
-                   bool append, lldb_private::TypeMap &types) override;
+  size_t FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> pattern,
+                   lldb_private::LanguageSet languages, bool append,
+                   lldb_private::TypeMap &types) override;
 
   void FindTypesByRegex(const lldb_private::RegularExpression &regex,
                         uint32_t max_matches, lldb_private::TypeMap &types);
-
-  lldb_private::TypeList *GetTypeList() override;
 
   size_t GetTypes(lldb_private::SymbolContextScope *sc_scope,
                   lldb::TypeClass type_mask,
                   lldb_private::TypeList &type_list) override;
 
-  lldb_private::TypeSystem *
+  llvm::Expected<lldb_private::TypeSystem &>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
   lldb_private::CompilerDeclContext FindNamespace(
@@ -172,6 +167,10 @@ private:
     uint32_t CompilandId;
   };
   using SecContribsMap = std::map<uint32_t, std::vector<SecContribInfo>>;
+
+  uint32_t CalculateNumCompileUnits() override;
+
+  lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
 
   lldb::CompUnitSP ParseCompileUnitForUID(uint32_t id,
                                           uint32_t index = UINT32_MAX);
@@ -245,7 +244,6 @@ private:
   std::vector<lldb::TypeSP> m_builtin_types;
   std::unique_ptr<llvm::pdb::IPDBSession> m_session_up;
   std::unique_ptr<llvm::pdb::PDBSymbolExe> m_global_scope_up;
-  uint32_t m_cached_compile_unit_count;
 
   lldb_private::UniqueCStringMap<uint32_t> m_func_full_names;
   lldb_private::UniqueCStringMap<uint32_t> m_func_base_names;

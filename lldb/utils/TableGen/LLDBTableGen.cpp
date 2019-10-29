@@ -1,4 +1,4 @@
-//===- TableGen.cpp - Top-Level TableGen implementation for Clang ---------===//
+//===- LLDBTableGen.cpp - Top-Level TableGen implementation for LLDB ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the main function for Clang's TableGen.
+// This file contains the main function for LLDB's TableGen.
 //
 //===----------------------------------------------------------------------===//
 
@@ -25,16 +25,22 @@ enum ActionType {
   PrintRecords,
   DumpJSON,
   GenOptionDefs,
+  GenPropertyDefs,
+  GenPropertyEnumDefs,
 };
 
-static cl::opt<ActionType>
-    Action(cl::desc("Action to perform:"),
-           cl::values(clEnumValN(PrintRecords, "print-records",
-                                 "Print all records to stdout (default)"),
-                      clEnumValN(DumpJSON, "dump-json",
-                                 "Dump all records as machine-readable JSON"),
-                      clEnumValN(GenOptionDefs, "gen-lldb-option-defs",
-                                 "Generate clang attribute clases")));
+static cl::opt<ActionType> Action(
+    cl::desc("Action to perform:"),
+    cl::values(clEnumValN(PrintRecords, "print-records",
+                          "Print all records to stdout (default)"),
+               clEnumValN(DumpJSON, "dump-json",
+                          "Dump all records as machine-readable JSON"),
+               clEnumValN(GenOptionDefs, "gen-lldb-option-defs",
+                          "Generate lldb option definitions"),
+               clEnumValN(GenPropertyDefs, "gen-lldb-property-defs",
+                          "Generate lldb property definitions"),
+               clEnumValN(GenPropertyEnumDefs, "gen-lldb-property-enum-defs",
+                          "Generate lldb property enum definitions")));
 
 static bool LLDBTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
   switch (Action) {
@@ -46,6 +52,12 @@ static bool LLDBTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenOptionDefs:
     EmitOptionDefs(Records, OS);
+    break;
+  case GenPropertyDefs:
+    EmitPropertyDefs(Records, OS);
+    break;
+  case GenPropertyEnumDefs:
+    EmitPropertyEnumDefs(Records, OS);
     break;
   }
   return false;

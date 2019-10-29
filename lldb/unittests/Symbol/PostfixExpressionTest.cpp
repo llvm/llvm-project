@@ -12,6 +12,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
@@ -71,40 +72,66 @@ public:
   }
 };
 
-static std::string ParseAndStringify(llvm::StringRef expr) {
+static std::string ParseOneAndStringify(llvm::StringRef expr) {
   llvm::BumpPtrAllocator alloc;
-  return ASTPrinter::Print(Parse(expr, alloc));
+  return ASTPrinter::Print(ParseOneExpression(expr, alloc));
 }
 
-TEST(PostfixExpression, Parse) {
-  EXPECT_EQ("int(47)", ParseAndStringify("47"));
-  EXPECT_EQ("$foo", ParseAndStringify("$foo"));
-  EXPECT_EQ("+(int(1), int(2))", ParseAndStringify("1 2 +"));
-  EXPECT_EQ("-(int(1), int(2))", ParseAndStringify("1 2 -"));
-  EXPECT_EQ("@(int(1), int(2))", ParseAndStringify("1 2 @"));
-  EXPECT_EQ("+(int(1), +(int(2), int(3)))", ParseAndStringify("1 2 3 + +"));
-  EXPECT_EQ("+(+(int(1), int(2)), int(3))", ParseAndStringify("1 2 + 3 +"));
-  EXPECT_EQ("^(int(1))", ParseAndStringify("1 ^"));
-  EXPECT_EQ("^(^(int(1)))", ParseAndStringify("1 ^ ^"));
-  EXPECT_EQ("^(+(int(1), ^(int(2))))", ParseAndStringify("1 2 ^ + ^"));
-  EXPECT_EQ("-($foo, int(47))", ParseAndStringify("$foo 47 -"));
-  EXPECT_EQ("+(int(47), int(-42))", ParseAndStringify("47 -42 +"));
+TEST(PostfixExpression, ParseOneExpression) {
+  EXPECT_EQ("int(47)", ParseOneAndStringify("47"));
+  EXPECT_EQ("$foo", ParseOneAndStringify("$foo"));
+  EXPECT_EQ("+(int(1), int(2))", ParseOneAndStringify("1 2 +"));
+  EXPECT_EQ("-(int(1), int(2))", ParseOneAndStringify("1 2 -"));
+  EXPECT_EQ("@(int(1), int(2))", ParseOneAndStringify("1 2 @"));
+  EXPECT_EQ("+(int(1), +(int(2), int(3)))", ParseOneAndStringify("1 2 3 + +"));
+  EXPECT_EQ("+(+(int(1), int(2)), int(3))", ParseOneAndStringify("1 2 + 3 +"));
+  EXPECT_EQ("^(int(1))", ParseOneAndStringify("1 ^"));
+  EXPECT_EQ("^(^(int(1)))", ParseOneAndStringify("1 ^ ^"));
+  EXPECT_EQ("^(+(int(1), ^(int(2))))", ParseOneAndStringify("1 2 ^ + ^"));
+  EXPECT_EQ("-($foo, int(47))", ParseOneAndStringify("$foo 47 -"));
+  EXPECT_EQ("+(int(47), int(-42))", ParseOneAndStringify("47 -42 +"));
 
-  EXPECT_EQ("nullptr", ParseAndStringify("+"));
-  EXPECT_EQ("nullptr", ParseAndStringify("^"));
-  EXPECT_EQ("nullptr", ParseAndStringify("1 +"));
-  EXPECT_EQ("nullptr", ParseAndStringify("1 2 ^"));
-  EXPECT_EQ("nullptr", ParseAndStringify("1 2 3 +"));
-  EXPECT_EQ("nullptr", ParseAndStringify("^ 1"));
-  EXPECT_EQ("nullptr", ParseAndStringify("+ 1 2"));
-  EXPECT_EQ("nullptr", ParseAndStringify("1 + 2"));
-  EXPECT_EQ("nullptr", ParseAndStringify("1 2"));
-  EXPECT_EQ("nullptr", ParseAndStringify(""));
+  EXPECT_EQ("nullptr", ParseOneAndStringify("+"));
+  EXPECT_EQ("nullptr", ParseOneAndStringify("^"));
+  EXPECT_EQ("nullptr", ParseOneAndStringify("1 +"));
+  EXPECT_EQ("nullptr", ParseOneAndStringify("1 2 ^"));
+  EXPECT_EQ("nullptr", ParseOneAndStringify("1 2 3 +"));
+  EXPECT_EQ("nullptr", ParseOneAndStringify("^ 1"));
+  EXPECT_EQ("nullptr", ParseOneAndStringify("+ 1 2"));
+  EXPECT_EQ("nullptr", ParseOneAndStringify("1 + 2"));
+  EXPECT_EQ("nullptr", ParseOneAndStringify("1 2"));
+  EXPECT_EQ("nullptr", ParseOneAndStringify(""));
+}
+
+static std::vector<std::pair<std::string, std::string>>
+ParseFPOAndStringify(llvm::StringRef prog) {
+  llvm::BumpPtrAllocator alloc;
+  std::vector<std::pair<llvm::StringRef, Node *>> parsed =
+      ParseFPOProgram(prog, alloc);
+  std::vector<std::pair<std::string, std::string>> result;
+  for (const auto &p : parsed)
+    result.emplace_back(p.first, ASTPrinter::Print(p.second));
+  return result;
+}
+
+TEST(PostfixExpression, ParseFPOProgram) {
+  EXPECT_THAT(ParseFPOAndStringify("a 1 ="),
+              testing::ElementsAre(std::make_pair("a", "int(1)")));
+  EXPECT_THAT(ParseFPOAndStringify("a 1 = b 2 3 + ="),
+              testing::ElementsAre(std::make_pair("a", "int(1)"),
+                                   std::make_pair("b", "+(int(2), int(3))")));
+
+  EXPECT_THAT(ParseFPOAndStringify(""), testing::IsEmpty());
+  EXPECT_THAT(ParseFPOAndStringify("="), testing::IsEmpty());
+  EXPECT_THAT(ParseFPOAndStringify("a 1"), testing::IsEmpty());
+  EXPECT_THAT(ParseFPOAndStringify("a 1 = ="), testing::IsEmpty());
+  EXPECT_THAT(ParseFPOAndStringify("a 1 + ="), testing::IsEmpty());
+  EXPECT_THAT(ParseFPOAndStringify("= a 1 ="), testing::IsEmpty());
 }
 
 static std::string ParseAndGenerateDWARF(llvm::StringRef expr) {
   llvm::BumpPtrAllocator alloc;
-  Node *ast = Parse(expr, alloc);
+  Node *ast = ParseOneExpression(expr, alloc);
   if (!ast)
     return "Parse failed.";
   if (!ResolveSymbols(ast, [&](SymbolNode &symbol) -> Node * {

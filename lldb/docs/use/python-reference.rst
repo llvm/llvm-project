@@ -494,10 +494,9 @@ Optionally, you can also provide a Python docstring, and LLDB will use it when p
       """This command takes a lot of options and does many fancy things"""
       # Your code goes here
 
-Starting with SVN revision 218834, LLDB Python commands can also take an
-SBExecutionContext as an argument. This is useful in cases where the command's
-notion of where to act is independent of the currently-selected entities in the
-debugger.
+Since lldb 3.5.2, LLDB Python commands can also take an SBExecutionContext as an
+argument. This is useful in cases where the command's notion of where to act is
+independent of the currently-selected entities in the debugger.
 
 This feature is enabled if the command-implementing function can be recognized
 as taking 5 arguments, or a variable number of arguments, and it alters the
@@ -519,7 +518,7 @@ signature as such:
 +-------------------+--------------------------------+----------------------------------------------------------------------------------------------------------------------------------+
 | **exe_ctx**       | **lldb.SBExecutionContext**    | An execution context object carrying around information on the inferior process' context in which the command is expected to act |
 |                   |                                |                                                                                                                                  |
-|                   |                                | *Optional since SVN r218834, unavailable before*                                                                                 |
+|                   |                                | *Optional since lldb 3.5.2, unavailable before*                                                                                  |
 +-------------------+--------------------------------+----------------------------------------------------------------------------------------------------------------------------------+
 | **result**        | **lldb.SBCommandReturnObject** | A return object which encapsulates success/failure information for the command and output text                                   |
 |                   |                                | that needs to be printed as a result of the command. The plain Python "print" command also works but                             |
@@ -529,8 +528,8 @@ signature as such:
 |                   |                                | and functions.                                                                                                                   |
 +-------------------+--------------------------------+----------------------------------------------------------------------------------------------------------------------------------+
 
-Starting with SVN revision 232224, Python commands can also be implemented by
-means of a class which should implement the following interface:
+Since lldb 3.7, Python commands can also be implemented by means of a class
+which should implement the following interface:
 
 ::
 

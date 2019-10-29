@@ -8,9 +8,7 @@ from __future__ import print_function
 
 import os
 import os.path
-import time
 import lldb
-import string
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil

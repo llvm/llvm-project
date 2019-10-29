@@ -84,6 +84,73 @@ class CommandLineCompletionTestCase(TestBase):
             'process attach --con',
             'process attach --continue ')
 
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_process_launch_arch(self):
+        self.complete_from_to('process launch --arch ',
+                              ['mips',
+                               'arm64'])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_ambiguous_long_opt(self):
+        self.completions_match('breakpoint modify --th',
+                               ['--thread-id',
+                                '--thread-index',
+                                '--thread-name'])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_plugin_load(self):
+        self.complete_from_to('plugin load ', [])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_quoted_command(self):
+        self.complete_from_to('"set',
+                              ['"settings" '])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_quoted_arg_with_quoted_command(self):
+        self.complete_from_to('"settings" "repl',
+                              ['"replace" '])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_quoted_arg_without_quoted_command(self):
+        self.complete_from_to('settings "repl',
+                              ['"replace" '])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_single_quote_command(self):
+        self.complete_from_to("'set",
+                              ["'settings' "])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_terminated_quote_command(self):
+        # This should not crash, but we don't get any
+        # reasonable completions from this.
+        self.complete_from_to("'settings'", [])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_process_launch_arch_arm(self):
+        self.complete_from_to('process launch --arch arm',
+                              ['arm64'])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_target_symbols_add_shlib(self):
+        # Doesn't seem to work, but at least it shouldn't crash.
+        self.complete_from_to('target symbols add --shlib ', [])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_log_file(self):
+        # Complete in our source directory which contains a 'main.cpp' file.
+        src_dir =  os.path.dirname(os.path.realpath(__file__)) + '/'
+        self.complete_from_to('log enable lldb expr -f ' + src_dir,
+                              ['main.cpp'])
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_log_dir(self):
+        # Complete our source directory.
+        src_dir =  os.path.dirname(os.path.realpath(__file__))
+        self.complete_from_to('log enable lldb expr -f ' + src_dir,
+                              [src_dir + os.sep], turn_off_re_match=True)
+
     # <rdar://problem/11052829>
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     def test_infinite_loop_while_completing(self):
@@ -161,6 +228,24 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to(
             'settings replace target.ru',
             'settings replace target.run-args')
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_settings_show_term(self):
+        self.complete_from_to(
+            'settings show term-',
+            'settings show term-width')
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_settings_list_term(self):
+        self.complete_from_to(
+            'settings list term-',
+            'settings list term-width')
+
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
+    def test_settings_remove_term(self):
+        self.complete_from_to(
+            'settings remove term-',
+            'settings remove term-width')
 
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     def test_settings_s(self):
@@ -290,6 +375,30 @@ class CommandLineCompletionTestCase(TestBase):
         self.check_completion_with_desc("comman", [])
         self.check_completion_with_desc("non-existent-command", [])
 
+    def test_completion_description_command_options(self):
+        """Test descriptions of command options"""
+        # Short options
+        self.check_completion_with_desc("breakpoint set -", [
+            ["-h", "Set the breakpoint on exception catcH."],
+            ["-w", "Set the breakpoint on exception throW."]
+        ])
+
+        # Long options.
+        self.check_completion_with_desc("breakpoint set --", [
+            ["--on-catch", "Set the breakpoint on exception catcH."],
+            ["--on-throw", "Set the breakpoint on exception throW."]
+        ])
+
+        # Ambiguous long options.
+        self.check_completion_with_desc("breakpoint set --on-", [
+            ["--on-catch", "Set the breakpoint on exception catcH."],
+            ["--on-throw", "Set the breakpoint on exception throW."]
+        ])
+
+        # Unknown long option.
+        self.check_completion_with_desc("breakpoint set --Z", [
+        ])
+
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
     def test_symbol_name(self):
         self.build()
@@ -297,3 +406,6 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('breakpoint set -n Fo',
                               'breakpoint set -n Foo::Bar(int,\\ int)',
                               turn_off_re_match=True)
+        # No completion for Qu because the candidate is
+        # (anonymous namespace)::Quux().
+        self.complete_from_to('breakpoint set -n Qu', '')

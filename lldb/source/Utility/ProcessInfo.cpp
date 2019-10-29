@@ -42,8 +42,8 @@ const char *ProcessInfo::GetName() const {
   return m_executable.GetFilename().GetCString();
 }
 
-size_t ProcessInfo::GetNameLength() const {
-  return m_executable.GetFilename().GetLength();
+llvm::StringRef ProcessInfo::GetNameAsStringRef() const {
+  return m_executable.GetFilename().GetStringRef();
 }
 
 void ProcessInfo::Dump(Stream &s, Platform *platform) const {
@@ -189,24 +189,39 @@ void ProcessInstanceInfo::DumpAsTableRow(Stream &s, UserIDResolver &resolver,
     if (m_arch.IsValid())
       m_arch.DumpTriple(arch_strm);
 
-    auto print = [&](UserIDResolver::id_t id,
-                     llvm::Optional<llvm::StringRef> (UserIDResolver::*get)(
+    auto print = [&](bool (ProcessInstanceInfo::*isValid)() const,
+                     uint32_t (ProcessInstanceInfo::*getID)() const,
+                     llvm::Optional<llvm::StringRef> (UserIDResolver::*getName)(
                          UserIDResolver::id_t id)) {
-      if (auto name = (resolver.*get)(id))
-        s.Format("{0,-10} ", *name);
+      const char *format = "{0,-10} ";
+      if (!(this->*isValid)()) {
+        s.Format(format, "");
+        return;
+      }
+      uint32_t id = (this->*getID)();
+      if (auto name = (resolver.*getName)(id))
+        s.Format(format, *name);
       else
-        s.Format("{0,-10} ", id);
+        s.Format(format, id);
     };
     if (verbose) {
-      print(m_uid, &UserIDResolver::GetUserName);
-      print(m_gid, &UserIDResolver::GetGroupName);
-      print(m_euid, &UserIDResolver::GetUserName);
-      print(m_egid, &UserIDResolver::GetGroupName);
+      print(&ProcessInstanceInfo::UserIDIsValid,
+            &ProcessInstanceInfo::GetUserID, &UserIDResolver::GetUserName);
+      print(&ProcessInstanceInfo::GroupIDIsValid,
+            &ProcessInstanceInfo::GetGroupID, &UserIDResolver::GetGroupName);
+      print(&ProcessInstanceInfo::EffectiveUserIDIsValid,
+            &ProcessInstanceInfo::GetEffectiveUserID,
+            &UserIDResolver::GetUserName);
+      print(&ProcessInstanceInfo::EffectiveGroupIDIsValid,
+            &ProcessInstanceInfo::GetEffectiveGroupID,
+            &UserIDResolver::GetGroupName);
 
       s.Printf("%-24s ", arch_strm.GetData());
     } else {
-      print(m_euid, &UserIDResolver::GetUserName);
-      s.Printf(" %-24s ", arch_strm.GetData());
+      print(&ProcessInstanceInfo::EffectiveUserIDIsValid,
+            &ProcessInstanceInfo::GetEffectiveUserID,
+            &UserIDResolver::GetUserName);
+      s.Printf("%-24s ", arch_strm.GetData());
     }
 
     if (verbose || show_args) {

@@ -62,8 +62,7 @@ HostNativeThreadBase::ThreadCreateTrampoline(lldb::thread_arg_t arg) {
   thread_arg_t thread_arg = info->thread_arg;
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
-  if (log)
-    log->Printf("thread created");
+  LLDB_LOGF(log, "thread created");
 
   delete info;
   return thread_fptr(thread_arg);

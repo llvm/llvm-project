@@ -75,8 +75,6 @@ ASTDumper::ASTDumper(const CompilerType &compiler_type) {
 
 const char *ASTDumper::GetCString() { return m_dump.c_str(); }
 
-void ASTDumper::ToSTDERR() { fprintf(stderr, "%s\n", m_dump.c_str()); }
-
 void ASTDumper::ToLog(Log *log, const char *prefix) {
   size_t len = m_dump.length() + 1;
 
@@ -92,7 +90,7 @@ void ASTDumper::ToLog(Log *log, const char *prefix) {
   while (end) {
     *end = '\0';
 
-    log->Printf("%s%s", prefix, str);
+    LLDB_LOGF(log, "%s%s", prefix, str);
 
     *end = '\n';
 
@@ -100,9 +98,7 @@ void ASTDumper::ToLog(Log *log, const char *prefix) {
     end = strchr(str, '\n');
   }
 
-  log->Printf("%s%s", prefix, str);
+  LLDB_LOGF(log, "%s%s", prefix, str);
 
   free(alloc);
 }
-
-void ASTDumper::ToStream(lldb::StreamSP &stream) { stream->PutCString(m_dump); }

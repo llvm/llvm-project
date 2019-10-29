@@ -170,18 +170,11 @@ IOHandlerConfirm::IOHandlerConfirm(Debugger &debugger, llvm::StringRef prompt,
 
 IOHandlerConfirm::~IOHandlerConfirm() = default;
 
-int IOHandlerConfirm::IOHandlerComplete(
-    IOHandler &io_handler, const char *current_line, const char *cursor,
-    const char *last_char, int skip_first_n_matches, int max_matches,
-    StringList &matches, StringList &descriptions) {
-  if (current_line == cursor) {
-    if (m_default_response) {
-      matches.AppendString("y");
-    } else {
-      matches.AppendString("n");
-    }
-  }
-  return matches.GetSize();
+void IOHandlerConfirm::IOHandlerComplete(IOHandler &io_handler,
+                                         CompletionRequest &request) {
+  if (request.GetRawCursorPos() != 0)
+    return;
+  request.AddCompletion(m_default_response ? "y" : "n");
 }
 
 void IOHandlerConfirm::IOHandlerInputComplete(IOHandler &io_handler,
@@ -219,47 +212,20 @@ void IOHandlerConfirm::IOHandlerInputComplete(IOHandler &io_handler,
   }
 }
 
-int IOHandlerDelegate::IOHandlerComplete(
-    IOHandler &io_handler, const char *current_line, const char *cursor,
-    const char *last_char, int skip_first_n_matches, int max_matches,
-    StringList &matches, StringList &descriptions) {
+void IOHandlerDelegate::IOHandlerComplete(IOHandler &io_handler,
+                                          CompletionRequest &request) {
   switch (m_completion) {
   case Completion::None:
     break;
-
   case Completion::LLDBCommand:
-    return io_handler.GetDebugger().GetCommandInterpreter().HandleCompletion(
-        current_line, cursor, last_char, skip_first_n_matches, max_matches,
-        matches, descriptions);
-  case Completion::Expression: {
-    CompletionResult result;
-    CompletionRequest request(current_line, current_line - cursor,
-                              skip_first_n_matches, max_matches, result);
+    io_handler.GetDebugger().GetCommandInterpreter().HandleCompletion(request);
+    break;
+  case Completion::Expression:
     CommandCompletions::InvokeCommonCompletionCallbacks(
         io_handler.GetDebugger().GetCommandInterpreter(),
         CommandCompletions::eVariablePathCompletion, request, nullptr);
-    result.GetMatches(matches);
-    result.GetDescriptions(descriptions);
-
-    size_t num_matches = request.GetNumberOfMatches();
-    if (num_matches > 0) {
-      std::string common_prefix;
-      matches.LongestCommonPrefix(common_prefix);
-      const size_t partial_name_len = request.GetCursorArgumentPrefix().size();
-
-      // If we matched a unique single command, add a space... Only do this if
-      // the completer told us this was a complete word, however...
-      if (num_matches == 1 && request.GetWordComplete()) {
-        common_prefix.push_back(' ');
-      }
-      common_prefix.erase(0, partial_name_len);
-      matches.InsertStringAtIndex(0, std::move(common_prefix));
-    }
-    return num_matches;
-  } break;
+    break;
   }
-
-  return 0;
 }
 
 IOHandlerEditline::IOHandlerEditline(
@@ -374,7 +340,21 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
       bool got_line = false;
       m_editing = true;
       while (!done) {
-        if (fgets(buffer, sizeof(buffer), in) == nullptr) {
+#ifdef _WIN32
+        // ReadFile on Windows is supposed to set ERROR_OPERATION_ABORTED
+        // according to the docs on MSDN. However, this has evidently been a
+        // known bug since Windows 8. Therefore, we can't detect if a signal
+        // interrupted in the fgets. So pressing ctrl-c causes the repl to end
+        // and the process to exit. A temporary workaround is just to attempt to
+        // fgets twice until this bug is fixed.
+        if (fgets(buffer, sizeof(buffer), in) == nullptr &&
+            fgets(buffer, sizeof(buffer), in) == nullptr) {
+          // this is the equivalent of EINTR for Windows
+          if (GetLastError() == ERROR_OPERATION_ABORTED)
+            continue;
+#else
+      if (fgets(buffer, sizeof(buffer), in) == nullptr) {
+#endif
           const int saved_errno = errno;
           if (feof(in))
             done = true;
@@ -434,16 +414,11 @@ int IOHandlerEditline::FixIndentationCallback(Editline *editline,
       *editline_reader, lines, cursor_position);
 }
 
-int IOHandlerEditline::AutoCompleteCallback(
-    const char *current_line, const char *cursor, const char *last_char,
-    int skip_first_n_matches, int max_matches, StringList &matches,
-    StringList &descriptions, void *baton) {
+void IOHandlerEditline::AutoCompleteCallback(CompletionRequest &request,
+                                             void *baton) {
   IOHandlerEditline *editline_reader = (IOHandlerEditline *)baton;
   if (editline_reader)
-    return editline_reader->m_delegate.IOHandlerComplete(
-        *editline_reader, current_line, cursor, last_char, skip_first_n_matches,
-        max_matches, matches, descriptions);
-  return 0;
+    editline_reader->m_delegate.IOHandlerComplete(*editline_reader, request);
 }
 #endif
 
@@ -941,16 +916,9 @@ public:
   }
   void PutChar(int ch) { ::waddch(m_window, ch); }
   void PutCString(const char *s, int len = -1) { ::waddnstr(m_window, s, len); }
-  void Refresh() { ::wrefresh(m_window); }
-  void DeferredRefresh() {
-    // We are using panels, so we don't need to call this...
-    //::wnoutrefresh(m_window);
-  }
   void SetBackground(int color_pair_idx) {
     ::wbkgd(m_window, COLOR_PAIR(color_pair_idx));
   }
-  void UnderlineOn() { AttributeOn(A_UNDERLINE); }
-  void UnderlineOff() { AttributeOff(A_UNDERLINE); }
 
   void PutCStringTruncated(const char *s, int right_pad) {
     int bytes_left = GetWidth() - GetCursorX();
@@ -1202,19 +1170,6 @@ public:
     return eKeyNotHandled;
   }
 
-  bool SetActiveWindow(Window *window) {
-    const size_t num_subwindows = m_subwindows.size();
-    for (size_t i = 0; i < num_subwindows; ++i) {
-      if (m_subwindows[i].get() == window) {
-        m_prev_active_window_idx = m_curr_active_window_idx;
-        ::top_panel(window->m_panel);
-        m_curr_active_window_idx = i;
-        return true;
-      }
-    }
-    return false;
-  }
-
   WindowSP GetActiveWindow() {
     if (!m_subwindows.empty()) {
       if (m_curr_active_window_idx >= m_subwindows.size()) {
@@ -1245,8 +1200,6 @@ public:
   bool GetCanBeActive() const { return m_can_activate; }
 
   void SetCanBeActive(bool b) { m_can_activate = b; }
-
-  const WindowDelegateSP &GetDelegate() const { return m_delegate_sp; }
 
   void SetDelegate(const WindowDelegateSP &delegate_sp) {
     m_delegate_sp = delegate_sp;
@@ -1399,11 +1352,7 @@ public:
 
   int GetKeyValue() const { return m_key_value; }
 
-  void SetKeyValue(int key_value) { m_key_value = key_value; }
-
   std::string &GetName() { return m_name; }
-
-  std::string &GetKeyName() { return m_key_name; }
 
   int GetDrawWidth() const {
     return m_max_submenu_name_length + m_max_submenu_key_name_length + 8;
@@ -1558,7 +1507,6 @@ bool Menu::WindowDelegateDraw(Window &window, bool force) {
       menu->DrawMenuTitle(window, false);
     }
     window.PutCString(" |");
-    window.DeferredRefresh();
   } break;
 
   case Menu::Type::Item: {
@@ -1581,7 +1529,6 @@ bool Menu::WindowDelegateDraw(Window &window, bool force) {
       submenus[i]->DrawMenuTitle(window, is_selected);
     }
     window.MoveCursor(cursor_x, cursor_y);
-    window.DeferredRefresh();
   } break;
 
   default:
@@ -1887,8 +1834,6 @@ public:
     return m_window_sp;
   }
 
-  WindowDelegates &GetWindowDelegates() { return m_window_delegates; }
-
 protected:
   WindowSP m_window_sp;
   WindowDelegates m_window_delegates;
@@ -1925,9 +1870,7 @@ struct Row {
     return 0;
   }
 
-  void Expand() {
-    expanded = true;
-  }
+  void Expand() { expanded = true; }
 
   std::vector<Row> &GetChildren() {
     ProcessSP process_sp = value.GetProcessSP();
@@ -2282,8 +2225,6 @@ public:
       m_selected_item = nullptr;
     }
 
-    window.DeferredRefresh();
-
     return true; // Drawing handled
   }
 
@@ -2633,14 +2574,12 @@ protected:
 class ValueObjectListDelegate : public WindowDelegate {
 public:
   ValueObjectListDelegate()
-      : m_rows(), m_selected_row(nullptr),
-        m_selected_row_idx(0), m_first_visible_row(0), m_num_rows(0),
-        m_max_x(0), m_max_y(0) {}
+      : m_rows(), m_selected_row(nullptr), m_selected_row_idx(0),
+        m_first_visible_row(0), m_num_rows(0), m_max_x(0), m_max_y(0) {}
 
   ValueObjectListDelegate(ValueObjectList &valobj_list)
-      : m_rows(), m_selected_row(nullptr),
-        m_selected_row_idx(0), m_first_visible_row(0), m_num_rows(0),
-        m_max_x(0), m_max_y(0) {
+      : m_rows(), m_selected_row(nullptr), m_selected_row_idx(0),
+        m_first_visible_row(0), m_num_rows(0), m_max_x(0), m_max_y(0) {
     SetValues(valobj_list);
   }
 
@@ -2682,8 +2621,6 @@ public:
       m_first_visible_row = m_selected_row_idx - num_visible_rows + 1;
 
     DisplayRows(window, m_rows, g_options);
-
-    window.DeferredRefresh();
 
     // Get the selected row
     m_selected_row = GetRowForRowIndex(m_selected_row_idx);
@@ -3789,7 +3726,6 @@ public:
           window.Printf(" with status = %i", exit_status);
       }
     }
-    window.DeferredRefresh();
     return true;
   }
 
@@ -4247,7 +4183,6 @@ public:
         }
       }
     }
-    window.DeferredRefresh();
     return true; // Drawing handled
   }
 

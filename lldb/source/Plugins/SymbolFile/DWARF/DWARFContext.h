@@ -12,6 +12,7 @@
 #include "DWARFDataExtractor.h"
 #include "lldb/Core/Section.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Support/Threading.h"
 #include <memory>
 
@@ -20,6 +21,7 @@ class DWARFContext {
 private:
   SectionList *m_main_section_list;
   SectionList *m_dwo_section_list;
+  mutable std::unique_ptr<llvm::DWARFContext> m_llvm_context;
 
   struct SectionData {
     llvm::once_flag flag;
@@ -64,6 +66,8 @@ public:
   const DWARFDataExtractor &getOrLoadStrData();
   const DWARFDataExtractor &getOrLoadStrOffsetsData();
   const DWARFDataExtractor &getOrLoadDebugTypesData();
+
+  llvm::DWARFContext &GetAsLLVM();
 };
 } // namespace lldb_private
 

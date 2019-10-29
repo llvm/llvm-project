@@ -166,7 +166,8 @@ Status ProcessDebugger::LaunchProcess(ProcessLaunchInfo &launch_info,
   return result;
 }
 
-Status ProcessDebugger::AttachProcess(const ProcessAttachInfo &attach_info,
+Status ProcessDebugger::AttachProcess(lldb::pid_t pid,
+                                      const ProcessAttachInfo &attach_info,
                                       DebugDelegateSP delegate) {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
   m_session_data.reset(
@@ -175,7 +176,7 @@ Status ProcessDebugger::AttachProcess(const ProcessAttachInfo &attach_info,
 
   m_session_data->m_debugger = debugger;
 
-  DWORD process_id = static_cast<DWORD>(attach_info.GetProcessID());
+  DWORD process_id = static_cast<DWORD>(pid);
   Status error = debugger->DebugAttach(process_id, attach_info);
   if (error.Fail()) {
     LLDB_LOG(
@@ -205,7 +206,7 @@ Status ProcessDebugger::AttachProcess(const ProcessAttachInfo &attach_info,
   return error;
 }
 
-Status ProcessDebugger::DestroyProcess() {
+Status ProcessDebugger::DestroyProcess(const lldb::StateType state) {
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_PROCESS);
   DebuggerThreadSP debugger_thread;
   {
@@ -216,21 +217,30 @@ Status ProcessDebugger::DestroyProcess() {
     llvm::sys::ScopedLock lock(m_mutex);
 
     if (!m_session_data) {
-      LLDB_LOG(log, "warning: there is no active session.");
+      LLDB_LOG(log, "warning: state = {0}, but there is no active session.",
+               state);
       return Status();
     }
 
     debugger_thread = m_session_data->m_debugger;
   }
 
-  LLDB_LOG(log, "Shutting down process {0}.",
-           debugger_thread->GetProcess().GetNativeProcess().GetSystemHandle());
-  Status error = debugger_thread->StopDebugging(true);
+  Status error;
+  if (state != eStateExited && state != eStateDetached) {
+    LLDB_LOG(
+        log, "Shutting down process {0}.",
+        debugger_thread->GetProcess().GetNativeProcess().GetSystemHandle());
+    error = debugger_thread->StopDebugging(true);
 
-  // By the time StopDebugging returns, there is no more debugger thread, so
-  // we can be assured that no other thread will race for the session data.
-  m_session_data.reset();
-
+    // By the time StopDebugging returns, there is no more debugger thread, so
+    // we can be assured that no other thread will race for the session data.
+    m_session_data.reset();
+  } else {
+    error.SetErrorStringWithFormat("cannot destroy process %" PRIx64
+                                   " while state = %d",
+                                   GetDebuggedProcessId(), state);
+    LLDB_LOG(log, "error: {0}", error);
+  }
   return error;
 }
 

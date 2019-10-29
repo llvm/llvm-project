@@ -396,6 +396,8 @@ PlatformLinux::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
 
 void PlatformLinux::CalculateTrapHandlerSymbolNames() {
   m_trap_handlers.push_back(ConstString("_sigtramp"));
+  m_trap_handlers.push_back(ConstString("__kernel_rt_sigreturn"));
+  m_trap_handlers.push_back(ConstString("__restore_rt"));
 }
 
 MmapArgList PlatformLinux::GetMmapArgumentList(const ArchSpec &arch,

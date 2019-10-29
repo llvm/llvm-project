@@ -140,10 +140,10 @@ bool RenderScriptRuntimeModulePass::runOnModule(llvm::Module &module) {
     // We've been using a triple and datalayout of some ARM variant all along,
     // so we need to let the backend know that this is no longer the case.
     if (log) {
-      log->Printf("%s - Changing RS target triple to '%s'", __FUNCTION__,
-                  real_triple.str().c_str());
-      log->Printf(
-          "%s - Changing RS datalayout to '%s'", __FUNCTION__,
+      LLDB_LOGF(log, "%s - Changing RS target triple to '%s'", __FUNCTION__,
+                real_triple.str().c_str());
+      LLDB_LOGF(
+          log, "%s - Changing RS datalayout to '%s'", __FUNCTION__,
           target_machine->createDataLayout().getStringRepresentation().c_str());
     }
     module.setTargetTriple(real_triple);

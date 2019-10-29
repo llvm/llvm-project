@@ -6,7 +6,6 @@ from __future__ import print_function
 
 import lldb
 import os
-import time
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -38,7 +37,6 @@ class TestPaths(TestBase):
         current_directory_spec = lldb.SBFileSpec(os.path.curdir)
         current_directory_string = current_directory_spec.GetDirectory()
         self.assertNotEqual(current_directory_string[-1:], '/')
-        pass
 
     @skipUnlessPlatform(["windows"])
     @no_debug_info_test

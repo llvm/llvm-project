@@ -1,3 +1,11 @@
+lldb_tablegen(SymbolFileDWARFProperties.inc -gen-lldb-property-defs
+  SOURCE SymbolFileDWARFProperties.td
+  TARGET LLDBPluginSymbolFileDWARFPropertiesGen)
+
+lldb_tablegen(SymbolFileDWARFPropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE SymbolFileDWARFProperties.td
+  TARGET LLDBPluginSymbolFileDWARFPropertiesEnumGen)
+
 add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   AppleDWARFIndex.cpp
   DebugNamesDWARFIndex.cpp
@@ -14,7 +22,6 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   DWARFDebugArangeSet.cpp
   DWARFDebugInfo.cpp
   DWARFDebugInfoEntry.cpp
-  DWARFDebugLine.cpp
   DWARFDebugMacro.cpp
   DWARFDebugRanges.cpp
   DWARFDeclContext.cpp
@@ -52,3 +59,7 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
     DebugInfoDWARF
     Support
   )
+
+add_dependencies(lldbPluginSymbolFileDWARF
+  LLDBPluginSymbolFileDWARFPropertiesGen
+  LLDBPluginSymbolFileDWARFPropertiesEnumGen)

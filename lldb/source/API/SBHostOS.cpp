@@ -107,10 +107,17 @@ lldb::thread_t SBHostOS::ThreadCreate(const char *name,
   LLDB_RECORD_DUMMY(lldb::thread_t, SBHostOS, ThreadCreate,
                     (lldb::thread_func_t, void *, SBError *), name,
                     thread_function, thread_arg, error_ptr);
-  HostThread thread(
-      ThreadLauncher::LaunchThread(name, thread_function, thread_arg,
-                                   error_ptr ? error_ptr->get() : nullptr));
-  return thread.Release();
+  llvm::Expected<HostThread> thread =
+      ThreadLauncher::LaunchThread(name, thread_function, thread_arg);
+  if (!thread) {
+    if (error_ptr)
+      error_ptr->SetError(Status(thread.takeError()));
+    else
+      llvm::consumeError(thread.takeError());
+    return LLDB_INVALID_HOST_THREAD;
+  }
+
+  return thread->Release();
 }
 
 void SBHostOS::ThreadCreated(const char *name) {

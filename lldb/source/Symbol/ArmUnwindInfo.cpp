@@ -344,6 +344,7 @@ bool ArmUnwindInfo::GetUnwindPlan(Target &target, const Address &addr,
   unwind_plan.SetSourceName("ARM.exidx unwind info");
   unwind_plan.SetSourcedFromCompiler(eLazyBoolYes);
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
   unwind_plan.SetRegisterKind(eRegisterKindDWARF);
 
   return true;
