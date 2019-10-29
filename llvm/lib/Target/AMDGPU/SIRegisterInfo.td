@@ -682,7 +682,21 @@ def AReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32,
   let AllocationPriority = 8;
 }
 
-def VReg_1 : RegisterClass<"AMDGPU", [i1], 32, (add VGPR_32)> {
+
+// This is not a real register. This is just to have a register to add
+// to VReg_1 that does not alias any real register that would
+// introduce inferred register classess.
+def ARTIFICIAL_VGPR : SIReg <"invalid vgpr", 0> {
+  let isArtificial = 1;
+}
+
+// FIXME: Should specify an empty set for this. No register should
+// ever be allocated using VReg_1. This is a hack for SelectionDAG
+// that should always be lowered by SILowerI1Copies. TableGen crashes
+// on an empty register set, but also sorts register classes based on
+// the number of registerss in them. Add only one register so this is
+// sorted to the end and not preferred over VGPR_32.
+def VReg_1 : RegisterClass<"AMDGPU", [i1], 32, (add ARTIFICIAL_VGPR)> {
   let Size = 1;
 }
 
