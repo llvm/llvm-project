@@ -11001,7 +11001,8 @@ CompleteNonViableCandidate(Sema &S, OverloadCandidate *Cand,
         !isa<CXXConstructorDecl>(Cand->Function)) {
       // Conversion 0 is 'this', which doesn't have a corresponding parameter.
       ConvIdx = 1;
-      if (CSK == OverloadCandidateSet::CSK_Operator)
+      if (CSK == OverloadCandidateSet::CSK_Operator &&
+          Cand->Function->getDeclName().getCXXOverloadedOperator() != OO_Call)
         // Argument 0 is 'this', which doesn't have a corresponding parameter.
         ArgIdx = 1;
     }
@@ -11016,9 +11017,10 @@ CompleteNonViableCandidate(Sema &S, OverloadCandidate *Cand,
   for (unsigned ParamIdx = Reversed ? ParamTypes.size() - 1 : 0;
        ConvIdx != ConvCount;
        ++ConvIdx, ++ArgIdx, ParamIdx += (Reversed ? -1 : 1)) {
+    assert(ArgIdx < Args.size() && "no argument for this arg conversion");
     if (Cand->Conversions[ConvIdx].isInitialized()) {
       // We've already checked this conversion.
-    } else if (ArgIdx < ParamTypes.size()) {
+    } else if (ParamIdx < ParamTypes.size()) {
       if (ParamTypes[ParamIdx]->isDependentType())
         Cand->Conversions[ConvIdx].setAsIdentityConversion(
             Args[ArgIdx]->getType());
