@@ -5,5 +5,11 @@
 # RUN: diff -u diff-in.utf8 diff-in.bin && false || true
 # RUN: diff -u diff-in.bin diff-in.utf8 && false || true
 
+# RUN: cat diff-in.bin | diff -u - diff-in.bin
+# RUN: cat diff-in.bin | diff -u diff-in.bin -
+# RUN: cat diff-in.bin | diff -u diff-in.utf16 - && false || true
+# RUN: cat diff-in.bin | diff -u diff-in.utf8 - && false || true
+# RUN: cat diff-in.bin | diff -u - diff-in.utf8 && false || true
+
 # Fail so lit will print output.
 # RUN: false
