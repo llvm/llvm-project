@@ -495,11 +495,17 @@ LLDBSwigPython_CalculateNumChildren
     if (!pfunc.IsAllocated())
         return 0;
 
+    auto arg_info = pfunc.GetArgInfo();
+    if (!arg_info) {
+        llvm::consumeError(arg_info.takeError());
+        return 0;
+    }
+
     PythonObject result;
-    auto argc = pfunc.GetNumArguments();
-    if (argc.count == 1)
+
+    if (arg_info.get().max_positional_args < 1)
         result = pfunc();
-    else if (argc.count == 2)
+    else
         result = pfunc(PythonInteger(max));
 
     if (!result.IsAllocated())
@@ -511,13 +517,13 @@ LLDBSwigPython_CalculateNumChildren
 
     size_t ret_val = int_result.GetInteger();
 
-    if (PyErr_Occurred())
+    if (PyErr_Occurred()) //FIXME use Expected to catch python exceptions
     {
         PyErr_Print();
         PyErr_Clear();
     }
 
-    if (argc.count == 1)
+    if (arg_info.get().max_positional_args < 1)
         ret_val = std::min(ret_val, static_cast<size_t>(max));
 
     return ret_val;
