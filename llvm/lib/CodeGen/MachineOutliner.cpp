@@ -91,8 +91,7 @@ STATISTIC(FunctionsCreated, "Number of functions created");
 // this is off by default. It should, however, be the default behaviour in
 // LTO.
 static cl::opt<bool> EnableLinkOnceODROutlining(
-    "enable-linkonceodr-outlining",
-    cl::Hidden,
+    "enable-linkonceodr-outlining", cl::Hidden,
     cl::desc("Enable the machine outliner on linkonceodr functions"),
     cl::init(false));
 
@@ -301,8 +300,8 @@ private:
            "Non-root internal nodes must have parents!");
 
     unsigned *E = new (InternalEndIdxAllocator) unsigned(EndIdx);
-    SuffixTreeNode *N = new (NodeAllocator.Allocate())
-        SuffixTreeNode(StartIdx, E, Root);
+    SuffixTreeNode *N =
+        new (NodeAllocator.Allocate()) SuffixTreeNode(StartIdx, E, Root);
     if (Parent)
       Parent->Children[Edge] = N;
 
@@ -490,10 +489,9 @@ public:
     setSuffixIndices(*Root, 0);
   }
 
-
   /// Iterator for finding all repeated substrings in the suffix tree.
   struct RepeatedSubstringIterator {
-    private:
+  private:
     /// The current node we're visiting.
     SuffixTreeNode *N = nullptr;
 
@@ -595,7 +593,7 @@ public:
         advance();
       }
     }
-};
+  };
 
   typedef RepeatedSubstringIterator iterator;
   iterator begin() { return iterator(Root); }
@@ -694,9 +692,10 @@ struct InstructionMapper {
   /// IllegalInstrNumber.
   ///
   /// \returns The integer that \p *It was mapped to.
-  unsigned mapToIllegalUnsigned(MachineBasicBlock::iterator &It,
-  bool &CanOutlineWithPrevInstr, std::vector<unsigned> &UnsignedVecForMBB,
-  std::vector<MachineBasicBlock::iterator> &InstrListForMBB) {
+  unsigned mapToIllegalUnsigned(
+      MachineBasicBlock::iterator &It, bool &CanOutlineWithPrevInstr,
+      std::vector<unsigned> &UnsignedVecForMBB,
+      std::vector<MachineBasicBlock::iterator> &InstrListForMBB) {
     // Can't outline an illegal instruction. Set the flag.
     CanOutlineWithPrevInstr = false;
 
@@ -768,8 +767,8 @@ struct InstructionMapper {
       // Keep track of where this instruction is in the module.
       switch (TII.getOutliningType(It, Flags)) {
       case InstrType::Illegal:
-        mapToIllegalUnsigned(It, CanOutlineWithPrevInstr,
-                             UnsignedVecForMBB, InstrListForMBB);
+        mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
+                             InstrListForMBB);
         break;
 
       case InstrType::Legal:
@@ -783,7 +782,7 @@ struct InstructionMapper {
         // The instruction also acts as a terminator, so we have to record that
         // in the string.
         mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
-        InstrListForMBB);
+                             InstrListForMBB);
         break;
 
       case InstrType::Invisible:
@@ -802,7 +801,7 @@ struct InstructionMapper {
       // boundaries since the "end" is encoded uniquely and thus appears in no
       // repeated substring.
       mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
-      InstrListForMBB);
+                           InstrListForMBB);
       InstrList.insert(InstrList.end(), InstrListForMBB.begin(),
                        InstrListForMBB.end());
       UnsignedVec.insert(UnsignedVec.end(), UnsignedVecForMBB.begin(),
@@ -888,8 +887,7 @@ struct MachineOutliner : public ModulePass {
   /// \param FunctionList A list of functions to be inserted into the module.
   /// \param Mapper Contains the instruction mappings for the module.
   bool outline(Module &M, std::vector<OutlinedFunction> &FunctionList,
-               InstructionMapper &Mapper,
-               unsigned &OutlinedFunctionNum);
+               InstructionMapper &Mapper, unsigned &OutlinedFunctionNum);
 
   /// Creates a function for \p OF and inserts it into the module.
   MachineFunction *createOutlinedFunction(Module &M, OutlinedFunction &OF,
@@ -922,15 +920,14 @@ struct MachineOutliner : public ModulePass {
   /// FIXME: This should be handled by the pass manager, not the outliner.
   /// FIXME: This is nearly identical to the initSizeRemarkInfo in the legacy
   /// pass manager.
-  void initSizeRemarkInfo(
-      const Module &M, const MachineModuleInfo &MMI,
-      StringMap<unsigned> &FunctionToInstrCount);
+  void initSizeRemarkInfo(const Module &M, const MachineModuleInfo &MMI,
+                          StringMap<unsigned> &FunctionToInstrCount);
 
   /// Emit the remark.
   // FIXME: This should be handled by the pass manager, not the outliner.
-  void emitInstrCountChangedRemark(
-      const Module &M, const MachineModuleInfo &MMI,
-      const StringMap<unsigned> &FunctionToInstrCount);
+  void
+  emitInstrCountChangedRemark(const Module &M, const MachineModuleInfo &MMI,
+                              const StringMap<unsigned> &FunctionToInstrCount);
 };
 } // Anonymous namespace.
 
@@ -1007,9 +1004,8 @@ void MachineOutliner::emitOutlinedFunctionRemark(OutlinedFunction &OF) {
   MORE.emit(R);
 }
 
-void
-MachineOutliner::findCandidates(InstructionMapper &Mapper,
-                                std::vector<OutlinedFunction> &FunctionList) {
+void MachineOutliner::findCandidates(
+    InstructionMapper &Mapper, std::vector<OutlinedFunction> &FunctionList) {
   FunctionList.clear();
   SuffixTree ST(Mapper.UnsignedVec);
 
@@ -1091,10 +1087,8 @@ MachineOutliner::findCandidates(InstructionMapper &Mapper,
   }
 }
 
-MachineFunction *
-MachineOutliner::createOutlinedFunction(Module &M, OutlinedFunction &OF,
-                                        InstructionMapper &Mapper,
-                                        unsigned Name) {
+MachineFunction *MachineOutliner::createOutlinedFunction(
+    Module &M, OutlinedFunction &OF, InstructionMapper &Mapper, unsigned Name) {
 
   // Create the function name. This should be unique.
   // FIXME: We should have a better naming scheme. This should be stable,
@@ -1405,8 +1399,7 @@ void MachineOutliner::emitInstrCountChangedRemark(
     MachineOptimizationRemarkEmitter MORE(*MF, nullptr);
     MORE.emit([&]() {
       MachineOptimizationRemarkAnalysis R("size-info", "FunctionMISizeChange",
-                                          DiagnosticLocation(),
-                                          &MF->front());
+                                          DiagnosticLocation(), &MF->front());
       R << DiagnosticInfoOptimizationBase::Argument("Pass", "Machine Outliner")
         << ": Function: "
         << DiagnosticInfoOptimizationBase::Argument("Function", F.getName())
@@ -1445,14 +1438,14 @@ bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
   // Otherwise, if the target supports default outlining, it will run on all
   // functions deemed by the target to be worth outlining from by default. Tell
   // the user how the outliner is running.
-  LLVM_DEBUG(
+  LLVM_DEBUG({
     dbgs() << "Machine Outliner: Running on ";
     if (RunOnAllFunctions)
       dbgs() << "all functions";
     else
       dbgs() << "target-default functions";
-    dbgs() << "\n"
-  );
+    dbgs() << "\n";
+  });
 
   // If the user specifies that they want to outline from linkonceodrs, set
   // it here.
