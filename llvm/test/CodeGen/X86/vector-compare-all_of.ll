@@ -937,7 +937,6 @@ define i1 @bool_reduction_v2f64(<2 x double> %x, <2 x double> %y) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpltpd %xmm0, %xmm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    andb $3, %al
 ; AVX512-NEXT:    cmpb $3, %al
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    retq
@@ -969,7 +968,6 @@ define i1 @bool_reduction_v4f32(<4 x float> %x, <4 x float> %y) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmpeqps %xmm1, %xmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    andb $15, %al
 ; AVX512-NEXT:    cmpb $15, %al
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    retq
@@ -1006,7 +1004,6 @@ define i1 @bool_reduction_v4f64(<4 x double> %x, <4 x double> %y) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcmplepd %ymm0, %ymm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    andb $15, %al
 ; AVX512-NEXT:    cmpb $15, %al
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
@@ -1087,7 +1084,6 @@ define i1 @bool_reduction_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpnleuq %xmm1, %xmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    andb $3, %al
 ; AVX512-NEXT:    cmpb $3, %al
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    retq
@@ -1121,7 +1117,6 @@ define i1 @bool_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpneqd %xmm1, %xmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    andb $15, %al
 ; AVX512-NEXT:    cmpb $15, %al
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    retq
@@ -1244,7 +1239,6 @@ define i1 @bool_reduction_v4i64(<4 x i64> %x, <4 x i64> %y) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpgtq %ymm0, %ymm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    andb $15, %al
 ; AVX512-NEXT:    cmpb $15, %al
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
