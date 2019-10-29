@@ -8,8 +8,8 @@ define i8 @cnt8(i8 %x) nounwind readnone {
   %cnt = tail call i8 @llvm.ctpop.i8(i8 %x)
   ret i8 %cnt
 ; CHECK-LABEL: @cnt8
-; CHECK: rlwinm
-; CHECK: popcntw
+; CHECK: clrldi
+; CHECK: popcntd
 ; CHECK: blr
 
 ; SLOWPC-LABEL: @cnt8
@@ -20,8 +20,8 @@ define i16 @cnt16(i16 %x) nounwind readnone {
   %cnt = tail call i16 @llvm.ctpop.i16(i16 %x)
   ret i16 %cnt
 ; CHECK-LABEL: @cnt16
-; CHECK: rlwinm
-; CHECK: popcntw
+; CHECK: clrldi
+; CHECK: popcntd
 ; CHECK: blr
 
 ; SLOWPC-LABEL: @cnt16
