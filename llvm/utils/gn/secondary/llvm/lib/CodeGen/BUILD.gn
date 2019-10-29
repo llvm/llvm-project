@@ -117,6 +117,7 @@ static_library("CodeGen") {
     "MachineSSAUpdater.cpp",
     "MachineScheduler.cpp",
     "MachineSink.cpp",
+    "MachineSizeOpts.cpp",
     "MachineTraceMetrics.cpp",
     "MachineVerifier.cpp",
     "MacroFusion.cpp",

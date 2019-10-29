@@ -71,7 +71,10 @@ group("unittests") {
     deps += [ "Target/WebAssembly:WebAssemblyTests" ]
   }
   if (llvm_build_X86) {
-    deps += [ "tools/llvm-exegesis/X86:LLVMExegesisX86Tests" ]
+    deps += [
+      "Target/X86:X86Tests",
+      "tools/llvm-exegesis/X86:LLVMExegesisX86Tests",
+    ]
   }
 
   testonly = true
