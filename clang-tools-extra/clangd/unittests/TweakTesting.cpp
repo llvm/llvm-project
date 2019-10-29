@@ -63,7 +63,7 @@ std::pair<unsigned, unsigned> rangeOrPoint(const Annotations &A) {
           cantFail(positionToOffset(A.code(), SelectionRng.end))};
 }
 
-MATCHER_P5(TweakIsAvailable, TweakID, Ctx, Header, ExtraArgs, ExtraFiles,
+MATCHER_P6(TweakIsAvailable, TweakID, Ctx, Header, ExtraArgs, ExtraFiles, Index,
            (TweakID + (negation ? " is unavailable" : " is available")).str()) {
   std::string WrappedCode = wrap(Ctx, arg);
   Annotations Input(WrappedCode);
@@ -74,7 +74,7 @@ MATCHER_P5(TweakIsAvailable, TweakID, Ctx, Header, ExtraArgs, ExtraFiles,
   TU.ExtraArgs = ExtraArgs;
   TU.AdditionalFiles = std::move(ExtraFiles);
   ParsedAST AST = TU.build();
-  Tweak::Selection S(AST, Selection.first, Selection.second);
+  Tweak::Selection S(Index, AST, Selection.first, Selection.second);
   auto PrepareResult = prepareTweak(TweakID, S);
   if (PrepareResult)
     return true;
@@ -96,7 +96,7 @@ std::string TweakTest::apply(llvm::StringRef MarkedCode,
   TU.Code = Input.code();
   TU.ExtraArgs = ExtraArgs;
   ParsedAST AST = TU.build();
-  Tweak::Selection S(AST, Selection.first, Selection.second);
+  Tweak::Selection S(Index.get(), AST, Selection.first, Selection.second);
 
   auto T = prepareTweak(TweakID, S);
   if (!T) {
@@ -132,7 +132,7 @@ std::string TweakTest::apply(llvm::StringRef MarkedCode,
 
 ::testing::Matcher<llvm::StringRef> TweakTest::isAvailable() const {
   return TweakIsAvailable(llvm::StringRef(TweakID), Context, Header, ExtraArgs,
-                          ExtraFiles);
+                          ExtraFiles, Index.get());
 }
 
 std::vector<std::string> TweakTest::expandCases(llvm::StringRef MarkedCode) {

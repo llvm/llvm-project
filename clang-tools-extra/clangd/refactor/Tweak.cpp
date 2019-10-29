@@ -9,6 +9,7 @@
 #include "Logger.h"
 #include "Path.h"
 #include "SourceCode.h"
+#include "index/Index.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -44,9 +45,10 @@ void validateRegistry() {
 }
 } // namespace
 
-Tweak::Selection::Selection(ParsedAST &AST, unsigned RangeBegin,
-                            unsigned RangeEnd)
-    : AST(AST), SelectionBegin(RangeBegin), SelectionEnd(RangeEnd),
+Tweak::Selection::Selection(const SymbolIndex *Index, ParsedAST &AST,
+                            unsigned RangeBegin, unsigned RangeEnd)
+    : Index(Index), AST(AST), SelectionBegin(RangeBegin),
+      SelectionEnd(RangeEnd),
       ASTSelection(AST.getASTContext(), AST.getTokens(), RangeBegin, RangeEnd) {
   auto &SM = AST.getSourceManager();
   Code = SM.getBufferData(SM.getMainFileID());
