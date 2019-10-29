@@ -2031,10 +2031,6 @@ public:
   ///
   /// This does not determine whether the function has been defined (e.g., in a
   /// previous definition); for that information, use isDefined.
-  ///
-  /// Note: the function declaration does not become a definition until the
-  /// parser reaches the definition, if called before, this function will return
-  /// `false`.
   bool isThisDeclarationADefinition() const {
     return isDeletedAsWritten() || isDefaulted() || Body || hasSkippedBody() ||
            isLateTemplateParsed() || willHaveBody() || hasDefiningAttr();
