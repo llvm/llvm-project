@@ -442,7 +442,7 @@ void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
   Decorator d;
   uptr untagged_addr = UntagAddr(tagged_addr);
   Printf("%s", d.Error());
-  const char *bug_type = "alocation-tail-overwritten";
+  const char *bug_type = "allocation-tail-overwritten";
   Report("ERROR: %s: %s; heap object [%p,%p) of size %zd\n", SanitizerToolName,
          bug_type, untagged_addr, untagged_addr + orig_size, orig_size);
   Printf("\n%s", d.Default());
