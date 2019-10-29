@@ -16574,10 +16574,6 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
   SDValue EltNo = N->getOperand(2);
   SDLoc DL(N);
 
-  // If the inserted element is an UNDEF, just use the input vector.
-  if (InVal.isUndef())
-    return InVec;
-
   EVT VT = InVec.getValueType();
   unsigned NumElts = VT.getVectorNumElements();
 
