@@ -30,7 +30,6 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -51,6 +50,10 @@
 #include "lldb/API/SBVariablesOptions.h"
 
 #include "llvm/Support/PrettyStackTrace.h"
+
+// BEGIN SWIFT
+#include "lldb/Target/LanguageRuntime.h"
+// END SWIFT
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1205,6 +1208,7 @@ lldb::LanguageType SBFrame::GuessLanguage() const {
   return eLanguageTypeUnknown;
 }
 
+// BEGIN SWIFT
 bool SBFrame::IsSwiftThunk() const {
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -1229,6 +1233,7 @@ bool SBFrame::IsSwiftThunk() const {
     return false;
   return runtime->IsSymbolARuntimeThunk(*sc.symbol);
 }
+// END SWIFT
 
 const char *SBFrame::GetFunctionName() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBFrame, GetFunctionName);
