@@ -116,7 +116,7 @@ struct SymbolAssignment : BaseCommand {
   unsigned size;
 };
 
-// Linker scripts allow additional constraints to be put on ouput sections.
+// Linker scripts allow additional constraints to be put on output sections.
 // If an output section is marked as ONLY_IF_RO, the section is created
 // only if its input sections are read-only. Likewise, an output section
 // with ONLY_IF_RW is created if all input sections are RW.

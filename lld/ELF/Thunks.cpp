@@ -265,7 +265,7 @@ private:
 // 2) Loading the target functions address from the procedure linkage table into
 //    r12 for use by the target functions global entry point, and into the count
 //    register.
-// 3) Transfering control to the target function through an indirect branch.
+// 3) Transferring control to the target function through an indirect branch.
 class PPC64PltCallStub final : public Thunk {
 public:
   PPC64PltCallStub(Symbol &dest) : Thunk(dest) {}

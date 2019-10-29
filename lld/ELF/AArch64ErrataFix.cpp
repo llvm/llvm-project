@@ -61,7 +61,7 @@ static bool isADRP(uint32_t instr) {
 // Instructions appear in order of appearance starting from table in
 // C4.1.3 Loads and Stores.
 
-// All loads and stores have 1 (at bit postion 27), (0 at bit position 25).
+// All loads and stores have 1 (at bit position 27), (0 at bit position 25).
 // | op0 x op1 (2) | 1 op2 0 op3 (2) | x | op4 (5) | xxxx | op5 (2) | x (10) |
 static bool isLoadStoreClass(uint32_t instr) {
   return (instr & 0x0a000000) == 0x08000000;
@@ -619,7 +619,7 @@ AArch64Err843419Patcher::patchInputSectionDescription(
 //
 // PostConditions:
 // Returns true if at least one patch was added. The addresses of the
-// Ouptut and Input Sections may have been changed.
+// Output and Input Sections may have been changed.
 // Returns false if no patches were required and no changes were made.
 bool AArch64Err843419Patcher::createFixes() {
   if (!initialized)
