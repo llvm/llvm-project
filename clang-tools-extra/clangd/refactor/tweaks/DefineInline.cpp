@@ -386,7 +386,7 @@ private:
   const FunctionDecl *Target = nullptr;
 };
 
-REGISTER_TWEAK(DefineInline);
+REGISTER_TWEAK(DefineInline)
 
 } // namespace
 } // namespace clangd
