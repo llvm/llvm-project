@@ -11,7 +11,6 @@
 
 #include "lldb/Utility/FileCollector.h"
 #include "lldb/Utility/FileSpec.h"
-
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -130,6 +129,27 @@ public:
   static char ID;
 };
 
+/// Provider for the LLDB current working directroy.
+///
+/// When the reproducer is kept, it writes lldb's current working directory to
+/// a file named cwd.txt in the reproducer root.
+class WorkingDirectoryProvider : public Provider<WorkingDirectoryProvider> {
+public:
+  WorkingDirectoryProvider(const FileSpec &directory) : Provider(directory) {
+    llvm::SmallString<128> cwd;
+    if (std::error_code EC = llvm::sys::fs::current_path(cwd))
+      return;
+    m_cwd = cwd.str();
+  }
+  struct Info {
+    static const char *name;
+    static const char *file;
+  };
+  void Keep() override;
+  std::string m_cwd;
+  static char ID;
+};
+
 class DataRecorder {
 public:
   DataRecorder(const FileSpec &filename, std::error_code &ec)
@@ -181,12 +201,39 @@ private:
   std::vector<std::unique_ptr<DataRecorder>> m_data_recorders;
 };
 
+class ProcessGDBRemoteProvider
+    : public repro::Provider<ProcessGDBRemoteProvider> {
+public:
+  struct Info {
+    static const char *name;
+    static const char *file;
+  };
+
+  ProcessGDBRemoteProvider(const FileSpec &directory) : Provider(directory) {}
+
+  llvm::raw_ostream *GetHistoryStream();
+
+  void SetCallback(std::function<void()> callback) {
+    m_callback = std::move(callback);
+  }
+
+  void Keep() override { m_callback(); }
+  void Discard() override { m_callback(); }
+
+  static char ID;
+
+private:
+  std::function<void()> m_callback;
+  std::unique_ptr<llvm::raw_fd_ostream> m_stream_up;
+};
+
 /// The generator is responsible for the logic needed to generate a
 /// reproducer. For doing so it relies on providers, who serialize data that
 /// is necessary for reproducing  a failure.
 class Generator final {
+
 public:
-  Generator(const FileSpec &root);
+  Generator(FileSpec root);
   ~Generator();
 
   /// Method to indicate we want to keep the reproducer. If reproducer
@@ -243,13 +290,22 @@ private:
 
 class Loader final {
 public:
-  Loader(const FileSpec &root);
+  Loader(FileSpec root);
 
   template <typename T> FileSpec GetFile() {
     if (!HasFile(T::file))
       return {};
 
     return GetRoot().CopyByAppendingPathComponent(T::file);
+  }
+
+  template <typename T> llvm::Expected<std::string> LoadBuffer() {
+    FileSpec file = GetFile<typename T::Info>();
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> buffer =
+        llvm::vfs::getRealFileSystem()->getBufferForFile(file.GetPath());
+    if (!buffer)
+      return llvm::errorCodeToError(buffer.getError());
+    return (*buffer)->getBuffer().str();
   }
 
   llvm::Error LoadIndex();
@@ -284,6 +340,9 @@ public:
 
   FileSpec GetReproducerPath() const;
 
+  bool IsCapturing() { return static_cast<bool>(m_generator); };
+  bool IsReplaying() { return static_cast<bool>(m_loader); };
+
 protected:
   llvm::Error SetCapture(llvm::Optional<FileSpec> root);
   llvm::Error SetReplay(llvm::Optional<FileSpec> root);
@@ -295,6 +354,19 @@ private:
   llvm::Optional<Loader> m_loader;
 
   mutable std::mutex m_mutex;
+};
+
+/// Helper class for replaying commands through the reproducer.
+class CommandLoader {
+public:
+  CommandLoader(std::vector<std::string> files) : m_files(files) {}
+
+  static std::unique_ptr<CommandLoader> Create(Loader *loader);
+  llvm::Optional<std::string> GetNextFile();
+
+private:
+  std::vector<std::string> m_files;
+  unsigned m_index = 0;
 };
 
 } // namespace repro
