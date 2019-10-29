@@ -66,6 +66,8 @@ class Run(object):
 
         return end - start
 
+    # TODO(yln): as the comment says.. this is racing with the main thread waiting
+    # for results
     def _process_result(self, test, result):
         # Don't add any more test results after we've hit the maximum failure
         # count.  Otherwise we're racing with the main thread, which is going
@@ -147,6 +149,7 @@ class ParallelRun(Run):
                 pool.terminate()
                 break
 
+    # TODO(yln): interferes with progress bar
     # Some tests use threads internally, and at least on Linux each of these
     # threads counts toward the current process limit. Try to raise the (soft)
     # process limit so that tests don't fail due to resource exhaustion.
