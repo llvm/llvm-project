@@ -204,6 +204,17 @@ CMake manual, or execute ``cmake --help-variable VARIABLE_NAME``.
 **CMAKE_CXX_FLAGS**:STRING
   Extra flags to use when compiling C++ source files.
 
+Rarely-used CMake variables
+---------------------------
+
+Here are some of the CMake variables that are rarely used, along with a brief
+explanation and LLVM-specific notes.  For full documentation, consult the CMake
+manual, or execute ``cmake --help-variable VARIABLE_NAME``.
+
+**CMAKE_CXX_STANDARD**:STRING
+  Sets the C++ standard to conform to when building LLVM.  Possible values are
+  14, 17, 20.  LLVM Requires C++ 14 or higher.  This defaults to 14.
+
 .. _LLVM-specific variables:
 
 LLVM-specific variables
@@ -273,9 +284,6 @@ LLVM-specific variables
 **LLVM_ENABLE_UNWIND_TABLES**:BOOL
   Enable unwind tables in the binary.  Disabling unwind tables can reduce the
   size of the libraries.  Defaults to ON.
-
-**LLVM_CXX_STD**:STRING
-  Build with the specified C++ standard. Defaults to "c++11".
 
 **LLVM_ENABLE_ASSERTIONS**:BOOL
   Enables code assertions. Defaults to ON if and only if ``CMAKE_BUILD_TYPE``
