@@ -6695,6 +6695,79 @@ SDValue PPCTargetLowering::LowerCall_Darwin(
                     NumBytes, Ins, InVals, CS);
 }
 
+static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
+                   CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                   CCState &State) {
+
+  if (ValVT == MVT::f128)
+    report_fatal_error("f128 is unimplemented on AIX.");
+
+  if (ArgFlags.isByVal())
+    report_fatal_error("Passing structure by value is unimplemented.");
+
+  if (ArgFlags.isSRet())
+    report_fatal_error("Struct return arguments are unimplemented.");
+
+  if (ArgFlags.isNest())
+    report_fatal_error("Nest arguments are unimplemented.");
+
+  const PPCSubtarget &Subtarget = static_cast<const PPCSubtarget &>(
+      State.getMachineFunction().getSubtarget());
+  const bool IsPPC64 = Subtarget.isPPC64();
+  const unsigned PtrByteSize = IsPPC64 ? 8 : 4;
+
+  static const MCPhysReg GPR_32[] = {// 32-bit registers.
+                                     PPC::R3, PPC::R4, PPC::R5, PPC::R6,
+                                     PPC::R7, PPC::R8, PPC::R9, PPC::R10};
+  static const MCPhysReg GPR_64[] = {// 64-bit registers.
+                                     PPC::X3, PPC::X4, PPC::X5, PPC::X6,
+                                     PPC::X7, PPC::X8, PPC::X9, PPC::X10};
+
+  // Arguments always reserve parameter save area.
+  switch (ValVT.SimpleTy) {
+  default:
+    report_fatal_error("Unhandled value type for argument.");
+  case MVT::i64:
+    // i64 arguments should have been split to i32 for PPC32.
+    assert(IsPPC64 && "PPC32 should have split i64 values.");
+    LLVM_FALLTHROUGH;
+  case MVT::i1:
+  case MVT::i32:
+    State.AllocateStack(PtrByteSize, PtrByteSize);
+    if (unsigned Reg = State.AllocateReg(IsPPC64 ? GPR_64 : GPR_32)) {
+      MVT RegVT = IsPPC64 ? MVT::i64 : MVT::i32;
+      // Promote integers if needed.
+      if (ValVT.getSizeInBits() < RegVT.getSizeInBits())
+        LocInfo = ArgFlags.isSExt() ? CCValAssign::LocInfo::SExt
+                                    : CCValAssign::LocInfo::ZExt;
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, RegVT, LocInfo));
+    }
+    else
+      report_fatal_error("Handling of placing parameters on the stack is "
+                         "unimplemented!");
+    return false;
+
+  case MVT::f32:
+  case MVT::f64: {
+    // Parameter save area (PSA) is reserved even if the float passes in fpr.
+    const unsigned StoreSize = LocVT.getStoreSize();
+    // Floats are always 4-byte aligned in the PSA on AIX.
+    // This includes f64 in 64-bit mode for ABI compatibility.
+    State.AllocateStack(IsPPC64 ? 8 : StoreSize, 4);
+    if (unsigned Reg = State.AllocateReg(FPR))
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, MVT::f64, LocInfo));
+    else
+      report_fatal_error("Handling of placing parameters on the stack is "
+                         "unimplemented!");
+
+    // f32 reserves 1 GPR in both PPC32 and PPC64.
+    // f64 reserves 2 GPRs in PPC32 and 1 GPR in PPC64.
+    for (unsigned i = 0; i < StoreSize; i += PtrByteSize)
+      State.AllocateReg(IsPPC64 ? GPR_64 : GPR_32);
+    return false;
+  }
+  }
+}
 
 SDValue PPCTargetLowering::LowerCall_AIX(
     SDValue Chain, SDValue Callee, CallingConv::ID CallConv, bool isVarArg,
@@ -6705,22 +6778,35 @@ SDValue PPCTargetLowering::LowerCall_AIX(
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
     ImmutableCallSite CS) const {
 
-  assert((CallConv == CallingConv::C || CallConv == CallingConv::Fast) &&
-         "Unimplemented calling convention!");
+  assert((CallConv == CallingConv::C ||
+          CallConv == CallingConv::Cold ||
+          CallConv == CallingConv::Fast) && "Unexpected calling convention!");
+
   if (isVarArg || isPatchPoint)
     report_fatal_error("This call type is unimplemented on AIX.");
 
-  EVT PtrVT = getPointerTy(DAG.getDataLayout());
-  bool isPPC64 = PtrVT == MVT::i64;
-  unsigned PtrByteSize = isPPC64 ? 8 : 4;
-  unsigned NumOps = Outs.size();
+  if (!isFunctionGlobalAddress(Callee) && !isa<ExternalSymbolSDNode>(Callee))
+    report_fatal_error("Handling of indirect call is unimplemented!");
 
+  const PPCSubtarget& Subtarget =
+      static_cast<const PPCSubtarget&>(DAG.getSubtarget());
+  if (Subtarget.hasQPX())
+    report_fatal_error("QPX is not supported on AIX.");
+  if (Subtarget.hasAltivec())
+    report_fatal_error("Altivec support is unimplemented on AIX.");
 
-  // Count how many bytes are to be pushed on the stack, including the linkage
-  // area, parameter list area.
-  // On XCOFF, we start with 24/48, which is reserved space for
-  // [SP][CR][LR][2 x reserved][TOC].
-  unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
+  MachineFunction &MF = DAG.getMachineFunction();
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CallConv, isVarArg, MF, ArgLocs, *DAG.getContext());
+
+  // Reserve space for the linkage save area (LSA) on the stack.
+  // In both PPC32 and PPC64 there are 6 reserved slots in the LSA:
+  //   [SP][CR][LR][2 x reserved][TOC].
+  // The LSA is 24 bytes (6x4) in PPC32 and 48 bytes (6x8) in PPC64.
+  const unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
+  const unsigned PtrByteSize = Subtarget.isPPC64() ? 8 : 4;
+  CCInfo.AllocateStack(LinkageSize, PtrByteSize);
+  CCInfo.AnalyzeCallOperands(Outs, CC_AIX);
 
   // The prolog code of the callee may store up to 8 GPR argument registers to
   // the stack, allowing va_start to index over them in memory if the callee
@@ -6728,98 +6814,37 @@ SDValue PPCTargetLowering::LowerCall_AIX(
   // Because we cannot tell if this is needed on the caller side, we have to
   // conservatively assume that it is needed.  As such, make sure we have at
   // least enough stack space for the caller to store the 8 GPRs.
-  unsigned NumBytes = LinkageSize + 8 * PtrByteSize;
+  const unsigned MinParameterSaveAreaSize = 8 * PtrByteSize;
+  const unsigned NumBytes = LinkageSize + MinParameterSaveAreaSize;
 
   // Adjust the stack pointer for the new arguments...
-  // These operations are automatically eliminated by the prolog/epilog
-  // inserter pass.
+  // These operations are automatically eliminated by the prolog/epilog pass.
   Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
   SDValue CallSeqStart = Chain;
 
-  static const MCPhysReg GPR_32[] = {           // 32-bit registers.
-    PPC::R3, PPC::R4, PPC::R5, PPC::R6,
-    PPC::R7, PPC::R8, PPC::R9, PPC::R10
-  };
-  static const MCPhysReg GPR_64[] = {           // 64-bit registers.
-    PPC::X3, PPC::X4, PPC::X5, PPC::X6,
-    PPC::X7, PPC::X8, PPC::X9, PPC::X10
-  };
-
-  const unsigned NumGPRs = isPPC64 ? array_lengthof(GPR_64)
-                                   : array_lengthof(GPR_32);
-  const unsigned NumFPRs = array_lengthof(FPR);
-  assert(NumFPRs == 13 && "Only FPR 1-13 could be used for parameter passing "
-                          "on AIX");
-
-  const MCPhysReg *GPR = isPPC64 ? GPR_64 : GPR_32;
-  unsigned GPR_idx = 0, FPR_idx = 0;
-
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
 
-  if (isTailCall)
-    report_fatal_error("Handling of tail call is unimplemented!");
-  int SPDiff = 0;
+  for (CCValAssign &VA : ArgLocs) {
+    SDValue Arg = OutVals[VA.getValNo()];
 
-  for (unsigned i = 0; i != NumOps; ++i) {
-    SDValue Arg = OutVals[i];
-    ISD::ArgFlagsTy Flags = Outs[i].Flags;
-
-    // Promote integers if needed.
-    if (Arg.getValueType() == MVT::i1 ||
-        (isPPC64 && Arg.getValueType() == MVT::i32)) {
-      unsigned ExtOp = Flags.isSExt() ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-      Arg = DAG.getNode(ExtOp, dl, PtrVT, Arg);
+    switch (VA.getLocInfo()) {
+    default: report_fatal_error("Unexpected argument extension type.");
+    case CCValAssign::Full: break;
+    case CCValAssign::ZExt:
+      Arg = DAG.getNode(ISD::ZERO_EXTEND, dl, VA.getLocVT(), Arg);
+      break;
+    case CCValAssign::SExt:
+      Arg = DAG.getNode(ISD::SIGN_EXTEND, dl, VA.getLocVT(), Arg);
+      break;
     }
 
-    // Note: "by value" is code for passing a structure by value, not
-    // basic types.
-    if (Flags.isByVal())
-      report_fatal_error("Passing structure by value is unimplemented!");
+    if (VA.isRegLoc())
+      RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
 
-    switch (Arg.getSimpleValueType().SimpleTy) {
-    default: llvm_unreachable("Unexpected ValueType for argument!");
-    case MVT::i1:
-    case MVT::i32:
-    case MVT::i64:
-      if (GPR_idx != NumGPRs)
-        RegsToPass.push_back(std::make_pair(GPR[GPR_idx++], Arg));
-      else
-        report_fatal_error("Handling of placing parameters on the stack is "
-                           "unimplemented!");
-      break;
-    case MVT::f32:
-    case MVT::f64:
-      if (FPR_idx != NumFPRs) {
-        RegsToPass.push_back(std::make_pair(FPR[FPR_idx++], Arg));
-
-        // If we have any FPRs remaining, we may also have GPRs remaining.
-        // Args passed in FPRs consume 1 or 2 (f64 in 32 bit mode) available
-        // GPRs.
-        if (GPR_idx != NumGPRs)
-          ++GPR_idx;
-        if (GPR_idx != NumGPRs && Arg.getValueType() == MVT::f64 && !isPPC64)
-          ++GPR_idx;
-      } else
-        report_fatal_error("Handling of placing parameters on the stack is "
-                           "unimplemented!");
-      break;
-    case MVT::v4f32:
-    case MVT::v4i32:
-    case MVT::v8i16:
-    case MVT::v16i8:
-    case MVT::v2f64:
-    case MVT::v2i64:
-    case MVT::v1i128:
-    case MVT::f128:
-    case MVT::v4f64:
-    case MVT::v4i1:
-      report_fatal_error("Handling of this parameter type is unimplemented!");
-    }
+    if (VA.isMemLoc())
+      report_fatal_error("Handling of placing parameters on the stack is "
+                         "unimplemented!");
   }
-
-  if (!isFunctionGlobalAddress(Callee) &&
-      !isa<ExternalSymbolSDNode>(Callee))
-    report_fatal_error("Handling of indirect call is unimplemented!");
 
   // Build a sequence of copy-to-reg nodes chained together with token chain
   // and flag operands which copy the outgoing args into the appropriate regs.
@@ -6829,10 +6854,11 @@ SDValue PPCTargetLowering::LowerCall_AIX(
     InFlag = Chain.getValue(1);
   }
 
+  const int SPDiff = 0;
   return FinishCall(CallConv, dl, isTailCall, isVarArg, isPatchPoint,
-                    /* unused except on PPC64 ELFv1 */ false, DAG,
-                    RegsToPass, InFlag, Chain, CallSeqStart, Callee, SPDiff,
-                    NumBytes, Ins, InVals, CS);
+                    /* unused except on PPC64 ELFv1 */ false, DAG, RegsToPass,
+                    InFlag, Chain, CallSeqStart, Callee, SPDiff, NumBytes, Ins,
+                    InVals, CS);
 }
 
 bool
