@@ -326,7 +326,7 @@ struct Group : Section {
   // Members of a group contain a flag and a list of section indices
   // that are part of the group.
   std::vector<SectionOrType> Members;
-  StringRef Signature; /* Info */
+  Optional<StringRef> Signature; /* Info */
 
   Group() : Section(SectionKind::Group) {}
 

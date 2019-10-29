@@ -791,10 +791,16 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   assert(Section.Type == llvm::ELF::SHT_GROUP &&
          "Section type is not SHT_GROUP");
 
+  unsigned Link = 0;
+  if (Section.Link.empty() && SN2I.lookup(".symtab", Link))
+    SHeader.sh_link = Link;
+
   SHeader.sh_entsize = 4;
   SHeader.sh_size = SHeader.sh_entsize * Section.Members.size();
-  SHeader.sh_info =
-      toSymbolIndex(Section.Signature, Section.Name, /*IsDynamic=*/false);
+
+  if (Section.Signature)
+    SHeader.sh_info =
+        toSymbolIndex(*Section.Signature, Section.Name, /*IsDynamic=*/false);
 
   raw_ostream &OS =
       CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);

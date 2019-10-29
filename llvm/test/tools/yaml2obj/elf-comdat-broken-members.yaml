@@ -14,8 +14,6 @@ FileHeader:
 Sections:
   - Name: .group
     Type: SHT_GROUP
-    Link: .symtab
-    Info: 0
     Members:
       - SectionOrType: GRP_COMDAT
       - SectionOrType: .foo
