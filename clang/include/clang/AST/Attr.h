@@ -32,83 +32,83 @@
 #include <cassert>
 
 namespace clang {
-  class ASTContext;
-  class AttributeCommonInfo;
-  class IdentifierInfo;
-  class ObjCInterfaceDecl;
-  class Expr;
-  class QualType;
-  class FunctionDecl;
-  class TypeSourceInfo;
+class ASTContext;
+class AttributeCommonInfo;
+class IdentifierInfo;
+class ObjCInterfaceDecl;
+class Expr;
+class QualType;
+class FunctionDecl;
+class TypeSourceInfo;
 
 /// Attr - This represents one attribute.
-  class Attr : public AttributeCommonInfo {
-  private:
-    unsigned AttrKind : 16;
+class Attr : public AttributeCommonInfo {
+private:
+  unsigned AttrKind : 16;
 
-  protected:
-    /// An index into the spelling list of an
-    /// attribute defined in Attr.td file.
-    unsigned Inherited : 1;
-    unsigned IsPackExpansion : 1;
-    unsigned Implicit : 1;
-    // FIXME: These are properties of the attribute kind, not state for this
-    // instance of the attribute.
-    unsigned IsLateParsed : 1;
-    unsigned InheritEvenIfAlreadyPresent : 1;
+protected:
+  /// An index into the spelling list of an
+  /// attribute defined in Attr.td file.
+  unsigned Inherited : 1;
+  unsigned IsPackExpansion : 1;
+  unsigned Implicit : 1;
+  // FIXME: These are properties of the attribute kind, not state for this
+  // instance of the attribute.
+  unsigned IsLateParsed : 1;
+  unsigned InheritEvenIfAlreadyPresent : 1;
 
-    void *operator new(size_t bytes) noexcept {
-      llvm_unreachable("Attrs cannot be allocated with regular 'new'.");
-    }
-    void operator delete(void *data) noexcept {
-      llvm_unreachable("Attrs cannot be released with regular 'delete'.");
-    }
+  void *operator new(size_t bytes) noexcept {
+    llvm_unreachable("Attrs cannot be allocated with regular 'new'.");
+  }
+  void operator delete(void *data) noexcept {
+    llvm_unreachable("Attrs cannot be released with regular 'delete'.");
+  }
 
-  public:
-    // Forward so that the regular new and delete do not hide global ones.
-    void *operator new(size_t Bytes, ASTContext &C,
-                       size_t Alignment = 8) noexcept {
-      return ::operator new(Bytes, C, Alignment);
-    }
-    void operator delete(void *Ptr, ASTContext &C, size_t Alignment) noexcept {
-      return ::operator delete(Ptr, C, Alignment);
-    }
+public:
+  // Forward so that the regular new and delete do not hide global ones.
+  void *operator new(size_t Bytes, ASTContext &C,
+                     size_t Alignment = 8) noexcept {
+    return ::operator new(Bytes, C, Alignment);
+  }
+  void operator delete(void *Ptr, ASTContext &C, size_t Alignment) noexcept {
+    return ::operator delete(Ptr, C, Alignment);
+  }
 
-  protected:
-    Attr(ASTContext &Context, const AttributeCommonInfo &CommonInfo,
-         attr::Kind AK, bool IsLateParsed)
-        : AttributeCommonInfo(CommonInfo), AttrKind(AK), Inherited(false),
-          IsPackExpansion(false), Implicit(false), IsLateParsed(IsLateParsed),
-          InheritEvenIfAlreadyPresent(false) {}
+protected:
+  Attr(ASTContext &Context, const AttributeCommonInfo &CommonInfo,
+       attr::Kind AK, bool IsLateParsed)
+      : AttributeCommonInfo(CommonInfo), AttrKind(AK), Inherited(false),
+        IsPackExpansion(false), Implicit(false), IsLateParsed(IsLateParsed),
+        InheritEvenIfAlreadyPresent(false) {}
 
-  public:
-    attr::Kind getKind() const { return static_cast<attr::Kind>(AttrKind); }
+public:
+  attr::Kind getKind() const { return static_cast<attr::Kind>(AttrKind); }
 
-    unsigned getSpellingListIndex() const {
-      return getAttributeSpellingListIndex();
-    }
-    const char *getSpelling() const;
+  unsigned getSpellingListIndex() const {
+    return getAttributeSpellingListIndex();
+  }
+  const char *getSpelling() const;
 
-    SourceLocation getLocation() const { return getRange().getBegin(); }
+  SourceLocation getLocation() const { return getRange().getBegin(); }
 
-    bool isInherited() const { return Inherited; }
+  bool isInherited() const { return Inherited; }
 
-    /// Returns true if the attribute has been implicitly created instead
-    /// of explicitly written by the user.
-    bool isImplicit() const { return Implicit; }
-    void setImplicit(bool I) { Implicit = I; }
+  /// Returns true if the attribute has been implicitly created instead
+  /// of explicitly written by the user.
+  bool isImplicit() const { return Implicit; }
+  void setImplicit(bool I) { Implicit = I; }
 
-    void setPackExpansion(bool PE) { IsPackExpansion = PE; }
-    bool isPackExpansion() const { return IsPackExpansion; }
+  void setPackExpansion(bool PE) { IsPackExpansion = PE; }
+  bool isPackExpansion() const { return IsPackExpansion; }
 
-    // Clone this attribute.
-    Attr *clone(ASTContext &C) const;
+  // Clone this attribute.
+  Attr *clone(ASTContext &C) const;
 
-    bool isLateParsed() const { return IsLateParsed; }
+  bool isLateParsed() const { return IsLateParsed; }
 
-    // Pretty print this attribute.
-    void printPretty(raw_ostream &OS, const PrintingPolicy &Policy) const;
-  };
+  // Pretty print this attribute.
+  void printPretty(raw_ostream &OS, const PrintingPolicy &Policy) const;
+};
 
 class TypeAttr : public Attr {
 protected:
