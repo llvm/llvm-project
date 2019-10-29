@@ -402,11 +402,12 @@ SkipTopCFIAndReturn:
   // the CFI instruction. Later on, this leads to BB2 being 'hacked off' at the
   // wrong place (in ReplaceTailWithBranchTo()) which results in losing this CFI
   // instruction.
-  while (I1 != MBB1->end() && I1->isCFIInstruction()) {
+  // Skip CFI_INSTRUCTION and debugging instruction; necessary to avoid changing the code.
+  while (I1 != MBB1->end() && !countsAsInstruction(*I1)) {
     ++I1;
   }
 
-  while (I2 != MBB2->end() && I2->isCFIInstruction()) {
+  while (I2 != MBB2->end() && !countsAsInstruction(*I2)) {
     ++I2;
   }
 
