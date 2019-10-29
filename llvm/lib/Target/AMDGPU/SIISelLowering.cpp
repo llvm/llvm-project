@@ -1326,13 +1326,6 @@ EVT SITargetLowering::getOptimalMemOpType(
   return MVT::Other;
 }
 
-static bool isFlatGlobalAddrSpace(unsigned AS) {
-  return AS == AMDGPUAS::GLOBAL_ADDRESS ||
-         AS == AMDGPUAS::FLAT_ADDRESS ||
-         AS == AMDGPUAS::CONSTANT_ADDRESS ||
-         AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
-}
-
 bool SITargetLowering::isNoopAddrSpaceCast(unsigned SrcAS,
                                            unsigned DestAS) const {
   return isFlatGlobalAddrSpace(SrcAS) && isFlatGlobalAddrSpace(DestAS);
