@@ -6055,6 +6055,16 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::bitreverse, Arg->getType()), Arg, "rbit");
   }
 
+  if (BuiltinID == ARM::BI__builtin_arm_cls) {
+    llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::arm_cls), Arg, "cls");
+  }
+  if (BuiltinID == ARM::BI__builtin_arm_cls64) {
+    llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::arm_cls64), Arg,
+                              "cls");
+  }
+
   if (BuiltinID == ARM::BI__clear_cache) {
     assert(E->getNumArgs() == 2 && "__clear_cache takes 2 arguments");
     const FunctionDecl *FD = E->getDirectCallee();
@@ -7106,6 +7116,17 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
     return Builder.CreateCall(
         CGM.getIntrinsic(Intrinsic::bitreverse, Arg->getType()), Arg, "rbit");
+  }
+
+  if (BuiltinID == AArch64::BI__builtin_arm_cls) {
+    llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_cls), Arg,
+                              "cls");
+  }
+  if (BuiltinID == AArch64::BI__builtin_arm_cls64) {
+    llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_cls64), Arg,
+                              "cls");
   }
 
   if (BuiltinID == AArch64::BI__builtin_arm_jcvt) {

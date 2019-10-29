@@ -175,6 +175,24 @@ uint64_t test_clzll(uint64_t t) {
   return __clzll(t);
 }
 
+// ARM-LABEL: test_cls
+// ARM: call i32 @llvm.arm.cls(i32 %t)
+unsigned test_cls(uint32_t t) {
+  return __cls(t);
+}
+
+// ARM-LABEL: test_clsl
+// AArch32: call i32 @llvm.arm.cls(i32 %t)
+// AArch64: call i32 @llvm.arm.cls64(i64 %t)
+unsigned test_clsl(unsigned long t) {
+  return __clsl(t);
+}
+// ARM-LABEL: test_clsll
+// ARM: call i32 @llvm.arm.cls64(i64 %t)
+unsigned test_clsll(uint64_t t) {
+  return __clsll(t);
+}
+
 // ARM-LABEL: test_rev
 // ARM: call i32 @llvm.bswap.i32(i32 %t)
 uint32_t test_rev(uint32_t t) {
