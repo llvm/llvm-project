@@ -6,11 +6,7 @@ include_directories(
 set(LLVM_LINK_COMPONENTS
   Analysis
   CodeGen
-  Core
-  GlobalISel
-  MC
   MIRParser
-  SelectionDAG
   Support
   Target
   X86CodeGen
