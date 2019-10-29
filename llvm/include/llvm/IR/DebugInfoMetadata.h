@@ -1759,6 +1759,12 @@ public:
   bool isElemental() const { return getSPFlags() & SPFlagElemental; }
   bool isRecursive() const { return getSPFlags() & SPFlagRecursive; }
 
+  /// Check if this is deleted member function.
+  ///
+  /// Return true if this subprogram is a C++11 special
+  /// member function declared deleted.
+  bool isDeleted() const { return getSPFlags() & SPFlagDeleted; }
+
   /// Check if this is reference-qualified.
   ///
   /// Return true if this subprogram is a C++11 reference-qualified non-static
