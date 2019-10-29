@@ -235,7 +235,8 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     }
 
     if (auto *Src2 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src2)) {
-      if (!TII->isOperandLegal(*DPPInst.getInstr(), NumOperands, Src2)) {
+      if (!TII->getNamedOperand(*DPPInst.getInstr(), AMDGPU::OpName::src2) ||
+          !TII->isOperandLegal(*DPPInst.getInstr(), NumOperands, Src2)) {
         LLVM_DEBUG(dbgs() << "  failed: src2 is illegal\n");
         Fail = true;
         break;
