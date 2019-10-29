@@ -139,7 +139,7 @@ static const char *const DbgTimerDescription = "Debug Info Emission";
 static const char *const EHTimerName = "write_exception";
 static const char *const EHTimerDescription = "DWARF Exception Writer";
 static const char *const CFGuardName = "Control Flow Guard";
-static const char *const CFGuardDescription = "Control Flow Guard Tables";
+static const char *const CFGuardDescription = "Control Flow Guard";
 static const char *const CodeViewLineTablesGroupName = "linetables";
 static const char *const CodeViewLineTablesGroupDescription =
   "CodeView Line Tables";
@@ -381,12 +381,12 @@ bool AsmPrinter::doInitialization(Module &M) {
                           EHTimerDescription, DWARFGroupName,
                           DWARFGroupDescription);
 
+  // Emit tables for any value of cfguard flag (i.e. cfguard=1 or cfguard=2).
   if (mdconst::extract_or_null<ConstantInt>(
-          MMI->getModule()->getModuleFlag("cfguardtable")))
+          MMI->getModule()->getModuleFlag("cfguard")))
     Handlers.emplace_back(std::make_unique<WinCFGuard>(this), CFGuardName,
                           CFGuardDescription, DWARFGroupName,
                           DWARFGroupDescription);
-
   return false;
 }
 

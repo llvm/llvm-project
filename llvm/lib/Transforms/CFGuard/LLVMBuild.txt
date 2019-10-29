@@ -1,4 +1,4 @@
-;===- ./lib/Target/AArch64/LLVMBuild.txt -------------------------*- Conf -*--===;
+;===- ./lib/Transforms/CFGuard/LLVMBuild.txt -------------------*- Conf -*--===;
 ;
 ; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ; See https://llvm.org/LICENSE.txt for license information.
@@ -14,21 +14,8 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories = AsmParser Disassembler MCTargetDesc TargetInfo Utils
-
 [component_0]
-type = TargetGroup
-name = AArch64
-parent = Target
-has_asmparser = 1
-has_asmprinter = 1
-has_disassembler = 1
-has_jit = 1
-
-[component_1]
 type = Library
-name = AArch64CodeGen
-parent = AArch64
-required_libraries = AArch64Desc AArch64Info AArch64Utils Analysis AsmPrinter CodeGen Core MC Scalar SelectionDAG Support Target TransformUtils GlobalISel CFGuard
-add_to_library_groups = AArch64
+name = CFGuard
+parent = Transforms
+required_libraries = Core Support

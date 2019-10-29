@@ -3118,8 +3118,10 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
                                       : CC_AArch64_DarwinPCS_VarArg;
    case CallingConv::Win64:
     return IsVarArg ? CC_AArch64_Win64_VarArg : CC_AArch64_AAPCS;
-  case CallingConv::AArch64_VectorCall:
-    return CC_AArch64_AAPCS;
+   case CallingConv::CFGuard_Check:
+     return CC_AArch64_Win64_CFGuard_Check;
+   case CallingConv::AArch64_VectorCall:
+     return CC_AArch64_AAPCS;
   }
 }
 
