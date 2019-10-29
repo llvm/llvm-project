@@ -1,5 +1,5 @@
-; RUN: llc < %s | FileCheck --check-prefixes=DAG,CHECK %s
-; RUN: llc -O0 < %s | FileCheck --check-prefixes=FAST,CHECK %s
+; RUN: llc < %s | FileCheck --check-prefixes=CHECK %s
+; RUN: llc -O0 < %s | FileCheck --check-prefixes=CHECK %s
 
 ; Source to regenerate:
 ; $ clang -cc1 -triple x86_64-windows-msvc t.cpp -debug-info-kind=limited \
@@ -71,42 +71,33 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 ; Don't emit metadata for tail calls.
 ; CHECK-LABEL: call_tail:         # @call_tail
-; CHECK-NOT: .Lheapallocsite
 ; CHECK: jmp alloc_foo
 
 ; CHECK-LABEL: call_virtual:      # @call_virtual
-; CHECK: .Lheapallocsite0:
-; CHECK: callq *{{.*}}%rax{{.*}}
-; CHECK: .Lheapallocsite1:
+; CHECK:       callq *{{.*}}%rax{{.*}}
+; CHECK-NEXT:  [[LABEL1:.Ltmp[0-9]+]]:
 
 ; CHECK-LABEL: call_multiple:     # @call_multiple
-; FastISel emits instructions in a different order.
-; DAG:   .Lheapallocsite2:
-; FAST:  .Lheapallocsite4:
-; CHECK: callq alloc_foo
-; DAG:   .Lheapallocsite3:
-; FAST:  .Lheapallocsite5:
-; DAG:   .Lheapallocsite4:
-; FAST:  .Lheapallocsite2:
-; CHECK: callq alloc_foo
-; DAG:   .Lheapallocsite5:
-; FAST:  .Lheapallocsite3:
+; CHECK:       callq alloc_foo
+; CHECK-NEXT:  [[LABEL3:.Ltmp[0-9]+]]:
+; CHECK:       callq alloc_foo
+; CHECK-NEXT:  [[LABEL5:.Ltmp[0-9]+]]:
 
 ; CHECK-LABEL: .short  4423                    # Record kind: S_GPROC32_ID
 ; CHECK:       .short  4446                    # Record kind: S_HEAPALLOCSITE
-; CHECK-NEXT:  .secrel32 .Lheapallocsite0
-; CHECK-NEXT:  .secidx .Lheapallocsite0
-; CHECK-NEXT:  .short .Lheapallocsite1-.Lheapallocsite0
+; CHECK-NEXT:  .secrel32 [[LABEL0:.Ltmp[0-9]+]]
+; CHECK-NEXT:  .secidx [[LABEL0]]
+; CHECK-NEXT:  .short [[LABEL1]]-[[LABEL0]]
 ; CHECK-NEXT:  .long 3
 ; CHECK:       .short  4446                    # Record kind: S_HEAPALLOCSITE
-; CHECK-NEXT:  .secrel32 .Lheapallocsite2
-; CHECK-NEXT:  .secidx .Lheapallocsite2
-; CHECK-NEXT:  .short .Lheapallocsite3-.Lheapallocsite2
+; CHECK-NEXT:  .secrel32 [[LABEL2:.Ltmp[0-9]+]]
+; CHECK-NEXT:  .secidx [[LABEL2]]
+; CHECK-NEXT:  .short [[LABEL3]]-[[LABEL2]]
 ; CHECK-NEXT:  .long 4096
 ; CHECK:       .short  4446                    # Record kind: S_HEAPALLOCSITE
-; CHECK-NEXT:  .secrel32 .Lheapallocsite4
-; CHECK-NEXT:  .secidx .Lheapallocsite4
-; CHECK-NEXT:  .short .Lheapallocsite5-.Lheapallocsite4
+; CHECK-NEXT:  .secrel32 [[LABEL4:.Ltmp[0-9]+]]
+; CHECK-NEXT:  .secidx [[LABEL4]]
+; CHECK-NEXT:  .short [[LABEL5]]-[[LABEL4]]
 ; CHECK-NEXT:  .long 4096
 
 attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
