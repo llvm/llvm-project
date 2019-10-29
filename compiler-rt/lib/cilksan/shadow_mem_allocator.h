@@ -7,6 +7,7 @@
 #include <iostream>
 #include <inttypes.h>
 
+#include "aligned_alloc.h"
 #include "dictionary.h"
 
 // The memory-access-line allocator is dedicated to allocating specific

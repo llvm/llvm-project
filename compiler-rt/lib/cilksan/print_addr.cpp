@@ -7,7 +7,6 @@
 #include <memory>
 
 #include <execinfo.h>
-#include <malloc.h>
 #include <inttypes.h>
 #include <unistd.h>
 #include <signal.h>
