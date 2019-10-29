@@ -106,7 +106,7 @@ define <2 x i32> @p7_vec_splat_sgt(<2 x i32> %x, <2 x i32> %y) {
 
 define <2 x i32> @p8_vec_nonsplat_undef0(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p8_vec_nonsplat_undef0(
-; CHECK-NEXT:    [[T_INV:%.*]] = icmp ugt <2 x i32> [[X:%.*]], <i32 65535, i32 undef>
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp ugt <2 x i32> [[X:%.*]], <i32 65535, i32 65535>
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T_INV]], <2 x i32> <i32 65535, i32 65535>, <2 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -126,7 +126,7 @@ define <2 x i32> @p9_vec_nonsplat_undef1(<2 x i32> %x, <2 x i32> %y) {
 }
 define <2 x i32> @p10_vec_nonsplat_undef2(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p10_vec_nonsplat_undef2(
-; CHECK-NEXT:    [[T_INV:%.*]] = icmp ugt <2 x i32> [[X:%.*]], <i32 65535, i32 undef>
+; CHECK-NEXT:    [[T_INV:%.*]] = icmp ugt <2 x i32> [[X:%.*]], <i32 65535, i32 65535>
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[T_INV]], <2 x i32> <i32 65535, i32 undef>, <2 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
