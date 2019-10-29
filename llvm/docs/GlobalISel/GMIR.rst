@@ -90,9 +90,9 @@ definition is rather loose so let's talk about what they can achieve.
 Suppose we have a processor that has two register files, A and B. These are
 equal in every way and support the same instructions for the same cost. They're
 just physically stored apart and each instruction can only access registers from
-A or register B but never a mix of the two. If we want to perform an operation
-on data that's in split between the two register files, we must first copy all
-the data into a single register file.
+A or B but never a mix of the two. If we want to perform an operation on data
+that's in split between the two register files, we must first copy all the data
+into a single register file.
 
 Given a processor like this, we would benefit from clustering related data
 together into one register file so that we minimize the cost of copying data
