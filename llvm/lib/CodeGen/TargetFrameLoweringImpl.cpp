@@ -60,19 +60,6 @@ bool TargetFrameLowering::needsFrameIndexResolution(
   return MF.getFrameInfo().hasStackObjects();
 }
 
-void TargetFrameLowering::getCalleeSaves(const MachineFunction &MF,
-                                         BitVector &CalleeSaves) const {
-  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
-  CalleeSaves.resize(TRI.getNumRegs());
-
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (!MFI.isCalleeSavedInfoValid())
-    return;
-
-  for (const CalleeSavedInfo &Info : MFI.getCalleeSavedInfo())
-    CalleeSaves.set(Info.getReg());
-}
-
 void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                BitVector &SavedRegs,
                                                RegScavenger *RS) const {

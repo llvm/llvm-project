@@ -55,7 +55,6 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   /// Amount of stack frame size used for saving callee-saved registers.
   unsigned CalleeSavedStackSize;
-  bool HasCalleeSavedStackSize = false;
 
   /// Number of TLS accesses using the special (combinable)
   /// _TLS_MODULE_BASE_ symbol.
@@ -168,55 +167,8 @@ public:
   void setLocalStackSize(unsigned Size) { LocalStackSize = Size; }
   unsigned getLocalStackSize() const { return LocalStackSize; }
 
-  void setCalleeSavedStackSize(unsigned Size) {
-    CalleeSavedStackSize = Size;
-    HasCalleeSavedStackSize = true;
-  }
-
-  // When CalleeSavedStackSize has not been set (for example when
-  // some MachineIR pass is run in isolation), then recalculate
-  // the CalleeSavedStackSize directly from the CalleeSavedInfo.
-  // Note: This information can only be recalculated after PEI
-  // has assigned offsets to the callee save objects.
-  unsigned getCalleeSavedStackSize(const MachineFrameInfo &MFI) const {
-    bool ValidateCalleeSavedStackSize = false;
-
-#ifndef NDEBUG
-    // Make sure the calculated size derived from the CalleeSavedInfo
-    // equals the cached size that was calculated elsewhere (e.g. in
-    // determineCalleeSaves).
-    ValidateCalleeSavedStackSize = HasCalleeSavedStackSize;
-#endif
-
-    if (!HasCalleeSavedStackSize || ValidateCalleeSavedStackSize) {
-      assert(MFI.isCalleeSavedInfoValid() && "CalleeSavedInfo not calculated");
-      if (MFI.getCalleeSavedInfo().empty())
-        return 0;
-
-      int64_t MinOffset = std::numeric_limits<int64_t>::max();
-      int64_t MaxOffset = std::numeric_limits<int64_t>::min();
-      for (const auto &Info : MFI.getCalleeSavedInfo()) {
-        int FrameIdx = Info.getFrameIdx();
-        int64_t Offset = MFI.getObjectOffset(FrameIdx);
-        int64_t ObjSize = MFI.getObjectSize(FrameIdx);
-        MinOffset = std::min<int64_t>(Offset, MinOffset);
-        MaxOffset = std::max<int64_t>(Offset + ObjSize, MaxOffset);
-      }
-
-      unsigned Size = alignTo(MaxOffset - MinOffset, 16);
-      assert((!HasCalleeSavedStackSize || getCalleeSavedStackSize() == Size) &&
-             "Invalid size calculated for callee saves");
-      return Size;
-    }
-
-    return getCalleeSavedStackSize();
-  }
-
-  unsigned getCalleeSavedStackSize() const {
-    assert(HasCalleeSavedStackSize &&
-           "CalleeSavedStackSize has not been calculated");
-    return CalleeSavedStackSize;
-  }
+  void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
+  unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
 
   void incNumLocalDynamicTLSAccesses() { ++NumLocalDynamicTLSAccesses; }
   unsigned getNumLocalDynamicTLSAccesses() const {
