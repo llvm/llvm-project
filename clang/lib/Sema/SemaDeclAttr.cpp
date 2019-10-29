@@ -1096,7 +1096,7 @@ static void handleNoBuiltinAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       if (!S.checkStringLiteralArgumentAttr(AL, I, BuiltinName, &LiteralLoc))
         return;
 
-      if (Builtin::Context::isBuiltinFunc(BuiltinName.data()))
+      if (Builtin::Context::isBuiltinFunc(BuiltinName))
         AddBuiltinName(BuiltinName);
       else
         S.Diag(LiteralLoc, diag::warn_attribute_no_builtin_invalid_builtin_name)

@@ -224,7 +224,7 @@ public:
 
   /// Returns true if this is a libc/libm function without the '__builtin_'
   /// prefix.
-  static bool isBuiltinFunc(const char *Name);
+  static bool isBuiltinFunc(llvm::StringRef Name);
 
   /// Returns true if this is a builtin that can be redeclared.  Returns true
   /// for non-builtins.
