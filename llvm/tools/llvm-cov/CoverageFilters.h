@@ -152,6 +152,22 @@ public:
                const coverage::FunctionRecord &Function) const override;
 };
 
+/// A collection of filters.
+/// Matches filenames that are whitelisted and not blacklisted.
+class FilenameCoverageFilters : public CoverageFilter {
+protected:
+  CoverageFilters Whitelist;
+  CoverageFilters Blacklist;
+
+public:
+
+  void whitelist(std::unique_ptr<CoverageFilter> Filter);
+  void blacklist(std::unique_ptr<CoverageFilter> Filter);
+
+  bool matchesFilename(StringRef Filename) const override;
+};
+
+
 } // namespace llvm
 
 #endif // LLVM_COV_COVERAGEFILTERS_H
