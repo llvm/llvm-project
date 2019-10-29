@@ -1188,6 +1188,8 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
         config->warnDebugInfoUnusable = false;
       else if (s == "4217")
         config->warnLocallyDefinedImported = false;
+      else if (s == "longsections")
+        config->warnLongSectionNames = false;
       // Other warning numbers are ignored.
     }
   }
@@ -1526,6 +1528,11 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   config->debugDwarf = debug == DebugKind::Dwarf;
   config->debugGHashes = debug == DebugKind::GHash;
   config->debugSymtab = debug == DebugKind::Symtab;
+
+  // Don't warn about long section names, such as .debug_info, for mingw or when
+  // -debug:dwarf is requested.
+  if (config->mingw || config->debugDwarf)
+    config->warnLongSectionNames = false;
 
   config->mapFile = getMapFile(args);
 
