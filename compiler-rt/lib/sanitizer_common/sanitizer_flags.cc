@@ -75,11 +75,13 @@ void SubstituteForFlagValue(const char *s, char *out, uptr out_size) {
 class FlagHandlerInclude : public FlagHandlerBase {
   FlagParser *parser_;
   bool ignore_missing_;
+  const char *original_path_;
 
  public:
   explicit FlagHandlerInclude(FlagParser *parser, bool ignore_missing)
-      : parser_(parser), ignore_missing_(ignore_missing) {}
+      : parser_(parser), ignore_missing_(ignore_missing), original_path_("") {}
   bool Parse(const char *value) final {
+    original_path_ = value;
     if (internal_strchr(value, '%')) {
       char *buf = (char *)MmapOrDie(kMaxPathLength, "FlagHandlerInclude");
       SubstituteForFlagValue(value, buf, kMaxPathLength);
@@ -88,6 +90,12 @@ class FlagHandlerInclude : public FlagHandlerBase {
       return res;
     }
     return parser_->ParseFile(value, ignore_missing_);
+  }
+  bool Format(char *buffer, uptr size) {
+    // Note `original_path_` isn't actually what's parsed due to `%`
+    // substitutions. Printing the substituted path would require holding onto
+    // mmap'ed memory.
+    return FormatString(buffer, size, original_path_);
   }
 };
 

@@ -56,9 +56,16 @@ char *FlagParser::ll_strndup(const char *s, uptr n) {
 }
 
 void FlagParser::PrintFlagDescriptions() {
+  char buffer[128];
+  buffer[sizeof(buffer) - 1] = '\0';
   Printf("Available flags for %s:\n", SanitizerToolName);
-  for (int i = 0; i < n_flags_; ++i)
-    Printf("\t%s\n\t\t- %s\n", flags_[i].name, flags_[i].desc);
+  for (int i = 0; i < n_flags_; ++i) {
+    bool truncated = !(flags_[i].handler->Format(buffer, sizeof(buffer)));
+    CHECK_EQ(buffer[sizeof(buffer) - 1], '\0');
+    const char *truncation_str = truncated ? " Truncated" : "";
+    Printf("\t%s\n\t\t- %s (Current Value%s: %s)\n", flags_[i].name,
+           flags_[i].desc, truncation_str, buffer);
+  }
 }
 
 void FlagParser::fatal_error(const char *err) {
