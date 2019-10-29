@@ -315,8 +315,7 @@ public:
 
   Status SetBreakpointCommandCallbackFunction(
       std::vector<BreakpointOptions *> &bp_options_vec,
-      const char *function_name, 
-      StructuredData::ObjectSP extra_args_sp);
+      const char *function_name, StructuredData::ObjectSP extra_args_sp);
 
   /// Set a script function as the callback for the breakpoint.
   virtual Status
@@ -472,9 +471,9 @@ public:
   const char *GetScriptInterpreterPtyName();
 
   int GetMasterFileDescriptor();
-  
-  virtual llvm::Expected<size_t> 
-  GetNumFixedArgumentsForCallable(const llvm::StringRef &callable_name) { 
+
+  virtual llvm::Expected<unsigned>
+  GetMaxPositionalArgumentsForCallable(const llvm::StringRef &callable_name) {
     return llvm::createStringError(
     llvm::inconvertibleErrorCode(), "Unimplemented function");
   }

@@ -59,7 +59,7 @@ extern "C" void init_lldb(void) {}
 #define LLDBSwigPyInit init_lldb
 #endif
 
-extern "C" bool LLDBSwigPythonBreakpointCallbackFunction(
+extern "C" llvm::Expected<bool> LLDBSwigPythonBreakpointCallbackFunction(
     const char *python_function_name, const char *session_dictionary_name,
     const lldb::StackFrameSP &sb_frame,
     const lldb::BreakpointLocationSP &sb_bp_loc,
