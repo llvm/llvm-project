@@ -404,7 +404,6 @@ static GnuStackKind getZGnuStack(opt::InputArgList &args) {
       return GnuStackKind::None;
   }
 
-  // default
   return GnuStackKind::NoExec;
 }
 
