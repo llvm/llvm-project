@@ -138,12 +138,12 @@ interesting areas to contribute to lldb.
    :maxdepth: 1
    :caption: Resources
 
-   resources/download
-   resources/source
+   resources/contributing
    resources/build
    resources/test
    resources/bots
    resources/sbapi
+   resources/download
 
 .. toctree::
    :hidden:
