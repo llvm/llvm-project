@@ -8546,11 +8546,12 @@ bool AArch64TargetLowering::isProfitableToHoist(Instruction *I) const {
     return true;
 
   const TargetOptions &Options = getTargetMachine().Options;
-  const DataLayout &DL = I->getModule()->getDataLayout();
-  EVT VT = getValueType(DL, User->getOperand(0)->getType());
+  const Function *F = I->getFunction();
+  const DataLayout &DL = F->getParent()->getDataLayout();
+  Type *Ty = User->getOperand(0)->getType();
 
-  return !(isFMAFasterThanFMulAndFAdd(VT) &&
-           isOperationLegalOrCustom(ISD::FMA, VT) &&
+  return !(isFMAFasterThanFMulAndFAdd(*F, Ty) &&
+           isOperationLegalOrCustom(ISD::FMA, getValueType(DL, Ty)) &&
            (Options.AllowFPOpFusion == FPOpFusion::Fast ||
             Options.UnsafeFPMath));
 }
@@ -9207,7 +9208,8 @@ int AArch64TargetLowering::getScalingFactorCost(const DataLayout &DL,
   return -1;
 }
 
-bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
+bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
+    const MachineFunction &MF, EVT VT) const {
   VT = VT.getScalarType();
 
   if (!VT.isSimple())
@@ -9222,6 +9224,17 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
   }
 
   return false;
+}
+
+bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(const Function &F,
+                                                       Type *Ty) const {
+  switch (Ty->getScalarType()->getTypeID()) {
+  case Type::FloatTyID:
+  case Type::DoubleTyID:
+    return true;
+  default:
+    return false;
+  }
 }
 
 const MCPhysReg *

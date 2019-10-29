@@ -3920,7 +3920,8 @@ MVT SITargetLowering::getScalarShiftAmountTy(const DataLayout &, EVT VT) const {
 // however does not support denormals, so we do report fma as faster if we have
 // a fast fma device and require denormals.
 //
-bool SITargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
+bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                                  EVT VT) const {
   VT = VT.getScalarType();
 
   switch (VT.getSimpleVT().SimpleTy) {
@@ -9461,7 +9462,7 @@ unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
   if ((Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath ||
        (N0->getFlags().hasAllowContract() &&
         N1->getFlags().hasAllowContract())) &&
-      isFMAFasterThanFMulAndFAdd(VT)) {
+      isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
     return ISD::FMA;
   }
 

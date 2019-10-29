@@ -14826,7 +14826,8 @@ int ARMTargetLowering::getScalingFactorCost(const DataLayout &DL,
 ///
 /// For MVE, we set this to true as it helps simplify the need for some
 /// patterns (and we don't have the non-fused floating point instruction).
-bool ARMTargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
+bool ARMTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                                   EVT VT) const {
   if (!Subtarget->hasMVEFloatOps())
     return false;
 
