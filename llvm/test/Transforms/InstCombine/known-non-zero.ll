@@ -13,7 +13,7 @@ define i32 @test0(i64 %x) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[NON_ZERO:%.*]]
 ; CHECK:       non_zero:
-; CHECK-NEXT:    [[CTZ:%.*]] = call i64 @llvm.cttz.i64(i64 [[X]], i1 false), !range !0
+; CHECK-NEXT:    [[CTZ:%.*]] = call i64 @llvm.cttz.i64(i64 [[X]], i1 true), !range !0
 ; CHECK-NEXT:    [[CTZ32:%.*]] = trunc i64 [[CTZ]] to i32
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -40,7 +40,7 @@ define i32 @test1(i64 %x) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[NON_ZERO:%.*]]
 ; CHECK:       non_zero:
-; CHECK-NEXT:    [[CTZ:%.*]] = call i64 @llvm.ctlz.i64(i64 [[X]], i1 false), !range !0
+; CHECK-NEXT:    [[CTZ:%.*]] = call i64 @llvm.ctlz.i64(i64 [[X]], i1 true), !range !0
 ; CHECK-NEXT:    [[CTZ32:%.*]] = trunc i64 [[CTZ]] to i32
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
