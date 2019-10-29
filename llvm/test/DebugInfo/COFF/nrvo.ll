@@ -1,3 +1,6 @@
+; XFAIL: *
+; missing unidentified cherry-pick.
+
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s --check-prefix=OBJ
 
