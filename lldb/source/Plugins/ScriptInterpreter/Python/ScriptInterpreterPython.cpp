@@ -1257,7 +1257,7 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(
     oneliner += "(frame, bp_loc, internal_dict)";
   } else {
     error.SetErrorStringWithFormat("expected 3 or 4 argument "
-                                   "function, %s has %d",
+                                   "function, %s has %zu",
                                    function_name, num_args);
     return error;
   }
