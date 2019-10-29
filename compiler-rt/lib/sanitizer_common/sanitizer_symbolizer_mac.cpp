@@ -31,6 +31,9 @@ bool DlAddrSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
   Dl_info info;
   int result = dladdr((const void *)addr, &info);
   if (!result) return false;
+
+  CHECK(addr >= reinterpret_cast<uptr>(info.dli_saddr));
+  stack->info.function_offset = addr - reinterpret_cast<uptr>(info.dli_saddr);
   const char *demangled = DemangleSwiftAndCXX(info.dli_sname);
   if (!demangled) return false;
   stack->info.function = internal_strdup(demangled);
@@ -145,12 +148,29 @@ bool AtosSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
   const char *buf = process_->SendCommand(command);
   if (!buf) return false;
   uptr line;
+  uptr start_address = AddressInfo::kUnknown;
   if (!ParseCommandOutput(buf, addr, &stack->info.function, &stack->info.module,
-                          &stack->info.file, &line, nullptr)) {
+                          &stack->info.file, &line, &start_address)) {
     process_ = nullptr;
     return false;
   }
   stack->info.line = (int)line;
+
+  if (start_address == AddressInfo::kUnknown) {
+    // Fallback to dladdr() to get function start address if atos doesn't report
+    // it.
+    Dl_info info;
+    int result = dladdr((const void *)addr, &info);
+    if (result)
+      start_address = reinterpret_cast<uptr>(info.dli_saddr);
+  }
+
+  // Only assig to `function_offset` if we were able to get the function's
+  // start address.
+  if (start_address != AddressInfo::kUnknown) {
+    CHECK(addr >= start_address);
+    stack->info.function_offset = addr - start_address;
+  }
   return true;
 }
 

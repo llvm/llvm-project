@@ -17,8 +17,8 @@
 // source location is not and instead module name and offset are
 // printed.
 // CHECK-PS: WRITE of size 4
-// CHECK-PS: #0 0x{{.+}} in foo ({{.+}}.executable:{{.+}}+0x{{.+}})
-// CHECK-PS: #1 0x{{.+}} in main ({{.+}}.executable:{{.+}}+0x{{.+}})
+// CHECK-PS: #0 0x{{.+}} in foo{{(\+0x[0-9a-f]+)?}} ({{.+}}.executable:{{.+}}+0x{{.+}})
+// CHECK-PS: #1 0x{{.+}} in main{{(\+0x[0-9a-f]+)?}} ({{.+}}.executable:{{.+}}+0x{{.+}})
 
 // CHECK-FS: WRITE of size 4
 
