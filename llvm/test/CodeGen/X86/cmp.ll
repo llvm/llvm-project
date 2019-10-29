@@ -184,7 +184,7 @@ define i32 @test8(i64 %res) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    shrq $32, %rdi # encoding: [0x48,0xc1,0xef,0x20]
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    cmpq $3, %rdi # encoding: [0x48,0x83,0xff,0x03]
+; CHECK-NEXT:    cmpl $3, %edi # encoding: [0x83,0xff,0x03]
 ; CHECK-NEXT:    setb %al # encoding: [0x0f,0x92,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -224,7 +224,7 @@ define i32 @test11(i64 %l) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    shrq $47, %rdi # encoding: [0x48,0xc1,0xef,0x2f]
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    cmpq $1, %rdi # encoding: [0x48,0x83,0xff,0x01]
+; CHECK-NEXT:    cmpl $1, %edi # encoding: [0x83,0xff,0x01]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
