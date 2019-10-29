@@ -116,7 +116,7 @@ define i32 @ctpop_eq_one(i64 %x) nounwind readnone {
 ; POPCOUNT:       # %bb.0:
 ; POPCOUNT-NEXT:    popcntq %rdi, %rcx
 ; POPCOUNT-NEXT:    xorl %eax, %eax
-; POPCOUNT-NEXT:    cmpq $1, %rcx
+; POPCOUNT-NEXT:    cmpl $1, %ecx
 ; POPCOUNT-NEXT:    sete %al
 ; POPCOUNT-NEXT:    retq
 ;
@@ -141,7 +141,7 @@ define i32 @ctpop_ne_one(i64 %x) nounwind readnone {
 ; POPCOUNT:       # %bb.0:
 ; POPCOUNT-NEXT:    popcntq %rdi, %rcx
 ; POPCOUNT-NEXT:    xorl %eax, %eax
-; POPCOUNT-NEXT:    cmpq $1, %rcx
+; POPCOUNT-NEXT:    cmpl $1, %ecx
 ; POPCOUNT-NEXT:    setne %al
 ; POPCOUNT-NEXT:    retq
 ;

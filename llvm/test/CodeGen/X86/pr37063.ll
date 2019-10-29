@@ -6,9 +6,9 @@ declare void @bar()
 define void @foo(i64*) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %start
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    andl $-2, %eax
-; CHECK-NEXT:    cmpq $4, %rax
+; CHECK-NEXT:    movl (%rdi), %eax
+; CHECK-NEXT:    andl $6, %eax
+; CHECK-NEXT:    cmpl $4, %eax
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    retq
