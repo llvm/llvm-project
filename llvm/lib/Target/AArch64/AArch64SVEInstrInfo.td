@@ -139,11 +139,11 @@ let Predicates = [HasSVE] in {
   defm FDIV_ZPmZ   : sve_fp_2op_p_zds<0b1101, "fdiv">;
 
   defm FADD_ZZZ    : sve_fp_3op_u_zd<0b000, "fadd", fadd>;
-  defm FSUB_ZZZ    : sve_fp_3op_u_zd<0b001, "fsub", null_frag>;
-  defm FMUL_ZZZ    : sve_fp_3op_u_zd<0b010, "fmul", null_frag>;
+  defm FSUB_ZZZ    : sve_fp_3op_u_zd<0b001, "fsub", fsub>;
+  defm FMUL_ZZZ    : sve_fp_3op_u_zd<0b010, "fmul", fmul>;
   defm FTSMUL_ZZZ  : sve_fp_3op_u_zd<0b011, "ftsmul", null_frag>;
-  defm FRECPS_ZZZ  : sve_fp_3op_u_zd<0b110, "frecps", null_frag>;
-  defm FRSQRTS_ZZZ : sve_fp_3op_u_zd<0b111, "frsqrts", null_frag>;
+  defm FRECPS_ZZZ  : sve_fp_3op_u_zd<0b110, "frecps", int_aarch64_sve_frecps_x>;
+  defm FRSQRTS_ZZZ : sve_fp_3op_u_zd<0b111, "frsqrts", int_aarch64_sve_frsqrts_x>;
 
   defm FTSSEL_ZZZ : sve_int_bin_cons_misc_0_b<"ftssel">;
 
