@@ -845,11 +845,16 @@ class FileHandleTestCase(lldbtest.TestBase):
             def i(sbf):
                 for i in range(10):
                     f = sbf.GetFile()
+                    self.assertEqual(f.mode, "w")
                     yield f
                     sbf = lldb.SBFile.Create(f, borrow=True)
                     yield sbf
                     sbf.Write(str(i).encode('ascii') + b"\n")
             files = list(i(sbf))
+            # delete them in reverse order, again because each is a borrow
+            # of the previous.
+            while files:
+                files.pop()
         with open(self.out_filename, 'r') as f:
             self.assertEqual(list(range(10)), list(map(int, f.read().strip().split())))
 
