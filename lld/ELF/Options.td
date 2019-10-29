@@ -232,6 +232,10 @@ defm merge_exidx_entries: B<"merge-exidx-entries",
     "Enable merging .ARM.exidx entries (default)",
     "Disable merging .ARM.exidx entries">;
 
+defm mmap_output_file: B<"mmap-output-file",
+    "Mmap the output file for writing (default)",
+    "Do not mmap the output file for writing">;
+
 def nmagic: F<"nmagic">, MetaVarName<"<magic>">,
   HelpText<"Do not page align sections, link against static libraries.">;
 
@@ -566,7 +570,6 @@ def: F<"no-add-needed">;
 def: F<"no-copy-dt-needed-entries">;
 def: F<"no-ctors-in-init-array">;
 def: F<"no-keep-memory">;
-def: F<"no-mmap-output-file">;
 def: F<"no-pipeline-knowledge">;
 def: F<"no-warn-mismatch">;
 def: Flag<["-"], "p">;

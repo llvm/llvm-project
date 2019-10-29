@@ -168,6 +168,7 @@ struct Configuration {
   bool ltoNewPassManager;
   bool mergeArmExidx;
   bool mipsN32Abi = false;
+  bool mmapOutputFile;
   bool nmagic;
   bool noinhibitExec;
   bool nostdlib;
