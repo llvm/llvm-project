@@ -239,10 +239,10 @@ class MALineAllocator {
 public:
   MALineAllocator() {
     // Initialize the allocator with 1 page of each type of line.
-    MA1Lines = new (aligned_alloc(SYS_PAGE_SIZE, sizeof(Slab1_t))) Slab1_t;
-    MA2Lines = new (aligned_alloc(SYS_PAGE_SIZE, sizeof(Slab2_t))) Slab2_t;
-    MA4Lines = new (aligned_alloc(SYS_PAGE_SIZE, sizeof(Slab4_t))) Slab4_t;
-    MA8Lines = new (aligned_alloc(SYS_PAGE_SIZE, sizeof(Slab8_t))) Slab8_t;
+    MA1Lines = new (my_aligned_alloc(SYS_PAGE_SIZE, sizeof(Slab1_t))) Slab1_t;
+    MA2Lines = new (my_aligned_alloc(SYS_PAGE_SIZE, sizeof(Slab2_t))) Slab2_t;
+    MA4Lines = new (my_aligned_alloc(SYS_PAGE_SIZE, sizeof(Slab4_t))) Slab4_t;
+    MA8Lines = new (my_aligned_alloc(SYS_PAGE_SIZE, sizeof(Slab8_t))) Slab8_t;
   }
 
   // Free the slabs back to system memory.
@@ -362,7 +362,7 @@ public:
     // If Slab is now full, move it to the Full list.
     if (Slab->isFull()) {
       if (!Slab->Head.getNext())
-        List = new (aligned_alloc(SYS_PAGE_SIZE, sizeof(ST))) ST;
+        List = new (my_aligned_alloc(SYS_PAGE_SIZE, sizeof(ST))) ST;
       else {
         Slab->Head.getNext()->Back = nullptr;
         List = Slab->Head.getNext();

@@ -6,6 +6,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <stdint.h>
+
+#include "aligned_alloc.h"
 #include "list.h"
 #include "debug_util.h"
 #include "spbag.h"
@@ -359,7 +361,8 @@ public:
   public:
     DJSAllocator() {
       FreeSlabs =
-        new (aligned_alloc(DJSlab_t::SYS_PAGE_SIZE, sizeof(DJSlab_t))) DJSlab_t;
+        new (my_aligned_alloc(DJSlab_t::SYS_PAGE_SIZE,
+                              sizeof(DJSlab_t))) DJSlab_t;
     }
 
     ~DJSAllocator() {
@@ -384,8 +387,8 @@ public:
       if (Slab->isFull()) {
         if (!Slab->Next)
           // Allocate a new slab if necessary.
-          FreeSlabs = new (aligned_alloc(DJSlab_t::SYS_PAGE_SIZE,
-                                         sizeof(DJSlab_t))) DJSlab_t;
+          FreeSlabs = new (my_aligned_alloc(DJSlab_t::SYS_PAGE_SIZE,
+                                            sizeof(DJSlab_t))) DJSlab_t;
         else {
           Slab->Next->Prev = nullptr;
           FreeSlabs = Slab->Next;

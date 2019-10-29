@@ -610,7 +610,7 @@ void RaceInfo_t::print(const AccessLoc_t &first_inst,
 // Log the race detected
 void CilkSanImpl_t::report_race(
     const AccessLoc_t &first_inst, const AccessLoc_t &second_inst,
-    const AccessLoc_t &alloc_inst, uint64_t addr,
+    const AccessLoc_t &alloc_inst, uintptr_t addr,
     enum RaceType_t race_type) {
   bool found = false;
   // TODO: Make the key computation consistent with is_equivalent_race().
@@ -643,7 +643,7 @@ void CilkSanImpl_t::report_race(
 
 void CilkSanImpl_t::report_race(
     const AccessLoc_t &first_inst, const AccessLoc_t &second_inst,
-    uint64_t addr, enum RaceType_t race_type) {
+    uintptr_t addr, enum RaceType_t race_type) {
   report_race(first_inst, second_inst, AccessLoc_t(), addr, race_type);
 }
 

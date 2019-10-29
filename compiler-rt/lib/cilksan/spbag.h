@@ -24,8 +24,8 @@ public:
   virtual bool is_SBag() const = 0;
   virtual bool is_PBag() const = 0;
   virtual uint64_t get_func_id() const = 0;
-  virtual uint64_t get_rsp() const = 0;
-  virtual void set_rsp(uint64_t stack_ptr) = 0;
+  virtual uintptr_t get_rsp() const = 0;
+  virtual void set_rsp(uintptr_t stack_ptr) = 0;
   virtual uint16_t get_version() const = 0;
   virtual bool inc_version() = 0;
   // virtual std::string get_call_context() = 0;
@@ -72,7 +72,7 @@ public:
 
   uint64_t get_func_id() const { return _func_id; }
 
-  uint64_t get_rsp() const {
+  uintptr_t get_rsp() const {
     cilksan_assert((_ver_stack_ptr & STACK_PTR_MASK) != UNINIT_STACK_PTR);
     return (_ver_stack_ptr & STACK_PTR_MASK);
   }
@@ -184,8 +184,8 @@ public:
   bool is_SBag() const { return false; }
   bool is_PBag() const { return true; }
   uint64_t get_func_id() const { return _sib_sbag->get_func_id(); }
-  uint64_t get_rsp() const { return _sib_sbag->get_rsp(); }
-  void set_rsp(uint64_t stack_ptr) {
+  uintptr_t get_rsp() const { return _sib_sbag->get_rsp(); }
+  void set_rsp(uintptr_t stack_ptr) {
      /* Should never happen; */
     cilksan_assert(0 && "Called set_rsp on a Pbag");
   }

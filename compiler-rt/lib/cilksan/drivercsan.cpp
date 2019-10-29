@@ -5,7 +5,6 @@
 #include <cstdarg>
 #include <execinfo.h>
 // #include <internal/abi.h>
-#include <malloc.h>
 #include <unistd.h>
 #include <map>
 #include <unordered_map>
@@ -896,13 +895,15 @@ static free_t real_free = NULL;
 typedef void*(*mmap_t)(void*, size_t, int, int, int, off_t);
 static mmap_t real_mmap = NULL;
 
+#if defined(_LARGEFILE64_SOURCE)
 typedef void*(*mmap64_t)(void*, size_t, int, int, int, off64_t);
 static mmap64_t real_mmap64 = NULL;
+#endif // defined(_LARGEFILE64_SOURCE)
 
 typedef int(*munmap_t)(void*, size_t);
 static munmap_t real_munmap = NULL;
 
-typedef void*(*mremap_t)(void*, size_t, size_t, int, void*);
+typedef void*(*mremap_t)(void*, size_t, size_t, int, ...);
 static mremap_t real_mremap = NULL;
 
 // Helper function to get real implementations of memory functions via dlsym.
@@ -935,10 +936,12 @@ static void initialize_memory_functions() {
   if (error != NULL)
     goto error_exit;
 
+#if defined(_LARGEFILE64_SOURCE)
   real_mmap64 = (mmap64_t)dlsym(RTLD_NEXT, "mmap64");
   error = dlerror();
   if (error != NULL)
     goto error_exit;
+#endif // defined(_LARGEFILE64_SOURCE)
 
   real_munmap = (munmap_t)dlsym(RTLD_NEXT, "munmap");
   error = dlerror();
@@ -1097,6 +1100,7 @@ void *mmap(void *start, size_t len, int prot, int flags, int fd, off_t offset) {
   return r;
 }
 
+#if defined(_LARGEFILE64_SOURCE)
 CILKSAN_API
 void *mmap64(void *start, size_t len, int prot, int flags, int fd, off64_t offset) {
   if (__builtin_expect(real_mmap64 == NULL, 0)) {
@@ -1122,6 +1126,7 @@ void *mmap64(void *start, size_t len, int prot, int flags, int fd, off64_t offse
 
   return r;
 }
+#endif // defined(_LARGEFILE64_SOURCE)
 
 CILKSAN_API
 int munmap(void *start, size_t len) {
@@ -1156,10 +1161,12 @@ int munmap(void *start, size_t len) {
 
 CILKSAN_API
 void *mremap(void *start, size_t old_len, size_t len, int flags, ...) {
+#if defined(MREMAP_FIXED)
   va_list ap;
   va_start (ap, flags);
   void *newaddr = (flags & MREMAP_FIXED) ? va_arg (ap, void *) : NULL;
   va_end (ap);
+#endif // defined(MREMAP_FIXED)
 
   if (__builtin_expect(real_mremap == NULL, 0)) {
     if (-1 == mem_initialized)
@@ -1168,7 +1175,11 @@ void *mremap(void *start, size_t old_len, size_t len, int flags, ...) {
   }
 
   disable_checking();
+#if defined(MREMAP_FIXED)
   void *r = real_mremap(start, old_len, len, flags, newaddr);
+#else
+  void *r = real_mremap(start, old_len, len, flags);
+#endif // defined(MREMAP_FIXED)
   enable_checking();
 
   if (TOOL_INITIALIZED && should_check()) {
