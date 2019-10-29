@@ -10,6 +10,7 @@
 #define SCUDO_SECONDARY_H_
 
 #include "common.h"
+#include "list.h"
 #include "mutex.h"
 #include "stats.h"
 #include "string_utils.h"
@@ -78,13 +79,13 @@ public:
   void enable() { Mutex.unlock(); }
 
   template <typename F> void iterateOverBlocks(F Callback) const {
-    for (LargeBlock::Header *H = Tail; H != nullptr; H = H->Prev)
-      Callback(reinterpret_cast<uptr>(H) + LargeBlock::getHeaderSize());
+    for (const auto &H : InUseBlocks)
+      Callback(reinterpret_cast<uptr>(&H) + LargeBlock::getHeaderSize());
   }
 
 private:
   HybridMutex Mutex;
-  LargeBlock::Header *Tail;
+  DoublyLinkedList<LargeBlock::Header> InUseBlocks;
   uptr AllocatedBytes;
   uptr FreedBytes;
   uptr LargestSize;

@@ -73,11 +73,7 @@ void *MapAllocator::allocate(uptr Size, uptr AlignmentHint, uptr *BlockEnd) {
   H->Data = Data;
   {
     ScopedLock L(Mutex);
-    if (LIKELY(Tail)) {
-      Tail->Next = H;
-      H->Prev = Tail;
-    }
-    Tail = H;
+    InUseBlocks.push_back(H);
     AllocatedBytes += CommitSize;
     if (LargestSize < CommitSize)
       LargestSize = CommitSize;
@@ -94,22 +90,7 @@ void MapAllocator::deallocate(void *Ptr) {
   LargeBlock::Header *H = LargeBlock::getHeader(Ptr);
   {
     ScopedLock L(Mutex);
-    LargeBlock::Header *Prev = H->Prev;
-    LargeBlock::Header *Next = H->Next;
-    if (Prev) {
-      CHECK_EQ(Prev->Next, H);
-      Prev->Next = Next;
-    }
-    if (Next) {
-      CHECK_EQ(Next->Prev, H);
-      Next->Prev = Prev;
-    }
-    if (UNLIKELY(Tail == H)) {
-      CHECK(!Next);
-      Tail = Prev;
-    } else {
-      CHECK(Next);
-    }
+    InUseBlocks.remove(H);
     const uptr CommitSize = H->BlockEnd - reinterpret_cast<uptr>(H);
     FreedBytes += CommitSize;
     NumberOfFrees++;
