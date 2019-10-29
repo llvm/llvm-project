@@ -53,6 +53,8 @@ public:
   Error setFilter(StringRef Filter);
   /// Emit a diagnostic through the streamer.
   void emit(const DiagnosticInfoOptimizationBase &Diag);
+  /// Check if the remarks also need to have associated metadata in a section.
+  bool needsSection() const;
 };
 
 template <typename ThisError>
