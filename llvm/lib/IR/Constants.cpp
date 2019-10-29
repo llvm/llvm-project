@@ -31,6 +31,7 @@
 #include <algorithm>
 
 using namespace llvm;
+using namespace PatternMatch;
 
 //===----------------------------------------------------------------------===//
 //                              Constant Class
@@ -259,10 +260,9 @@ bool Constant::isElementWiseEqual(Value *Y) const {
   auto *Cy = dyn_cast<Constant>(Y);
   if (!Cy)
     return false;
-  return PatternMatch::match(ConstantExpr::getICmp(ICmpInst::Predicate::ICMP_EQ,
-                                                   const_cast<Constant *>(this),
-                                                   Cy),
-                             PatternMatch::m_One());
+  return match(ConstantExpr::getICmp(ICmpInst::Predicate::ICMP_EQ,
+                                     const_cast<Constant *>(this), Cy),
+               m_One());
 }
 
 bool Constant::containsUndefElement() const {
@@ -595,6 +595,27 @@ void Constant::removeDeadConstantUsers() const {
   }
 }
 
+Constant *Constant::replaceUndefsWith(Constant *C, Constant *Replacement) {
+  Type *Ty = C->getType();
+  if (C && match(C, m_Undef())) {
+    assert(Ty == Replacement->getType() && "Expected matching types");
+    return Replacement;
+  }
+
+  // Don't know how to deal with this constant.
+  if (!Ty->isVectorTy())
+    return C;
+
+  unsigned NumElts = Ty->getVectorNumElements();
+  SmallVector<Constant *, 32> NewC(NumElts);
+  for (unsigned i = 0; i != NumElts; ++i) {
+    Constant *EltC = C->getAggregateElement(i);
+    assert(EltC->getType() == Replacement->getType() &&
+           "Expected matching types");
+    NewC[i] = EltC && match(EltC, m_Undef()) ? Replacement : EltC;
+  }
+  return ConstantVector::get(NewC);
+}
 
 
 //===----------------------------------------------------------------------===//

@@ -188,6 +188,10 @@ public:
     return const_cast<Constant*>(
                       static_cast<const Constant *>(this)->stripPointerCasts());
   }
+
+  /// Try to replace undefined constant C or undefined elements in C with
+  /// Replacement. If no changes are made, the constant C is returned.
+  static Constant *replaceUndefsWith(Constant *C, Constant *Replacement);
 };
 
 } // end namespace llvm
