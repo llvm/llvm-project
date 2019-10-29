@@ -12,7 +12,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
-#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
