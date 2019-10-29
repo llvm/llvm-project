@@ -26,6 +26,22 @@ define double @pow_f64_one_fourth_fmf(double %x) nounwind {
   ret double %r
 }
 
+define float @pow_f32_one_third_fmf(float %x) nounwind {
+; ANY-LABEL: pow_f32_one_third_fmf:
+; SOFTFLOAT:    bl cbrtf
+; HARDFLOAT:    b cbrtf
+  %r = call fast float @llvm.pow.f32(float %x, float 0x3FD5555560000000)
+  ret float %r
+}
+
+define double @pow_f64_one_third_fmf(double %x) nounwind {
+; ANY-LABEL: pow_f64_one_third_fmf:
+; SOFTFLOAT:    bl cbrt
+; HARDFLOAT:    b cbrt
+  %r = call fast double @llvm.pow.f64(double %x, double 0x3FD5555555555555)
+  ret double %r
+}
+
 define <4 x float> @pow_v4f32_one_fourth_fmf(<4 x float> %x) nounwind {
 ; ANY-LABEL: pow_v4f32_one_fourth_fmf:
 ; SOFTFLOAT:    bl powf

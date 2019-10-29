@@ -497,6 +497,21 @@ define void @test_pow(half* %p, half* %q) #0 {
   ret void
 }
 
+; CHECK-FP16-LABEL: test_cbrt:
+; CHECK-FP16: vcvtb.f32.f16
+; CHECK-FP16: bl powf
+; CHECK-FP16: vcvtb.f16.f32
+; CHECK-LIBCALL-LABEL: test_cbrt:
+; CHECK-LIBCALL: bl __aeabi_h2f
+; CHECK-LIBCALL: bl powf
+; CHECK-LIBCALL: bl __aeabi_f2h
+define void @test_cbrt(half* %p) #0 {
+  %a = load half, half* %p, align 2
+  %r = call half @llvm.pow.f16(half %a, half 0x3FD5540000000000)
+  store half %r, half* %p
+  ret void
+}
+
 ; CHECK-FP16-LABEL: test_exp:
 ; CHECK-FP16: vcvtb.f32.f16
 ; CHECK-FP16: bl expf
