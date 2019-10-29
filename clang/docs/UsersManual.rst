@@ -339,6 +339,8 @@ output format of the diagnostics that it generates.
    -  .. _opt_fsave_optimization_record_yaml:
 
       ``-fsave-optimization-record=yaml``: A structured YAML format.
+      ``-fsave-optimization-record=bitstream``: A binary format based on LLVM
+      Bitstream.
 
 .. _opt_foptimization-record-file:
 
