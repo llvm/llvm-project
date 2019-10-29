@@ -67,7 +67,7 @@
 # CHECK-NEXT:    "lines": [
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "line": 0,
-# CHECK-NEXT:        "tokens": "AAAAAAADABAAAAAEAAEAAA=="
+# CHECK-NEXT:        "tokens": "AAAABAABAAA="
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "textDocument": {
@@ -82,11 +82,11 @@
 # CHECK-NEXT:    "lines": [
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "line": 0,
-# CHECK-NEXT:        "tokens": "AAAAAAADABAAAAAEAAEAAA=="
+# CHECK-NEXT:        "tokens": "AAAABAABAAA="
 # CHECK-NEXT:      }
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "line": 1,
-# CHECK-NEXT:        "tokens": "AAAAAAADABAAAAAEAAEAAA=="
+# CHECK-NEXT:        "tokens": "AAAABAABAAA="
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "textDocument": {
@@ -101,7 +101,7 @@
 # CHECK-NEXT:    "lines": [
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "line": 1,
-# CHECK-NEXT:        "tokens": "AAAAAAADABAAAAAEAAEAAA=="
+# CHECK-NEXT:        "tokens": "AAAABAABAAA="
 # CHECK-NEXT:      }
 # CHECK-NEXT:   ],
 # CHECK-NEXT:    "textDocument": {
