@@ -466,7 +466,7 @@ bool IRTranslator::translateSwitch(const User &U, MachineIRBuilder &MIB) {
     return true;
   }
 
-  SL->findJumpTables(Clusters, &SI, DefaultMBB);
+  SL->findJumpTables(Clusters, &SI, DefaultMBB, nullptr, nullptr);
 
   LLVM_DEBUG({
     dbgs() << "Case clusters: ";
