@@ -15,16 +15,12 @@
 #define __OMPTARGET_NVPTX_H
 
 // std includes
-#include <stdint.h>
+#include <inttypes.h>
+#include <math.h>
 #include <stdlib.h>
 
-#include <inttypes.h>
-
-// cuda includes
-#include <cuda.h>
-#include <math.h>
-
 // local includes
+#include "target_impl.h"
 #include "debug.h"     // debug
 #include "interface.h" // interfaces with omp, compiler, and user
 #include "option.h"    // choices we have
@@ -85,20 +81,6 @@ private:
 
 extern __device__ __shared__ omptarget_nvptx_SharedArgs
     omptarget_nvptx_globalArgs;
-
-// Data sharing related quantities, need to match what is used in the compiler.
-enum DATA_SHARING_SIZES {
-  // The maximum number of workers in a kernel.
-  DS_Max_Worker_Threads = 992,
-  // The size reserved for data in a shared memory slot.
-  DS_Slot_Size = 256,
-  // The slot size that should be reserved for a working warp.
-  DS_Worker_Warp_Slot_Size = WARPSIZE * DS_Slot_Size,
-  // The maximum number of warps in use
-  DS_Max_Warp_Number = 32,
-  // The size of the preallocated shared memory buffer per team
-  DS_Shared_Memory_Size = 128,
-};
 
 // Data structure to keep in shared memory that traces the current slot, stack,
 // and frame pointer as well as the active threads that didn't exit the current
