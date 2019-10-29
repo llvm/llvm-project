@@ -21,7 +21,7 @@
 
 #include <stdint.h>
 
-#include "option.h" // choices we have
+#include "target_impl.h"
 
 template <typename ElementType, uint32_t SIZE> class omptarget_nvptx_Queue {
 private:
