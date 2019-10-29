@@ -524,6 +524,8 @@ TYPE_TRAIT_2(__is_same, IsSame, KEYCXX)
 TYPE_TRAIT_2(__is_convertible, IsConvertible, KEYCXX)
 KEYWORD(__array_rank                , KEYCXX)
 KEYWORD(__array_extent              , KEYCXX)
+// Name for GCC 6 compatibility.
+ALIAS("__is_same_as", __is_same, KEYCXX)
 
 // Apple Extension.
 KEYWORD(__private_extern__          , KEYALL)

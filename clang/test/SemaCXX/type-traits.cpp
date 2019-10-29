@@ -1960,6 +1960,10 @@ void is_same()
   int t10[F(__is_same(Base, const Base))];
   int t11[F(__is_same(Base, Base&))];
   int t12[F(__is_same(Base, Derived))];
+
+  // __is_same_as is a GCC compatibility synonym for __is_same.
+  int t20[T(__is_same_as(int, int))];
+  int t21[F(__is_same_as(int, float))];
 }
 
 struct IntWrapper
