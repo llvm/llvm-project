@@ -337,6 +337,9 @@ void GICombinerEmitter::generateCodeForRule(raw_ostream &OS,
 
 void GICombinerEmitter::run(raw_ostream &OS) {
   gatherRules(Rules, Combiner->getValueAsListOfDefs("Rules"));
+  if (ErrorsPrinted)
+    PrintFatalError(Combiner->getLoc(), "Failed to parse one or more rules");
+
   NamedRegionTimer T("Emit", "Time spent emitting the combiner",
                      "Code Generation", "Time spent generating code",
                      TimeRegions);
