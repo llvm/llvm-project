@@ -114,3 +114,10 @@ namespace b7398190 {
   const S *p;
   int k = p->f(); // expected-error {{no matching member function for call to 'f'}}
 }
+
+void member_call_op_template(int *p) {
+  // Ensure that we don't get confused about relative parameter / argument
+  // indexing here.
+  [](int, int, auto...){}(p, p); // expected-error {{no matching function}} expected-note {{no known conversion}}
+}
+
