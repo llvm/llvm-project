@@ -94,8 +94,6 @@ int DuplicateFile(int Fd);
 void RemoveFile(const std::string &Path);
 void RenameFile(const std::string &OldPath, const std::string &NewPath);
 
-void DiscardOutput(int Fd);
-
 intptr_t GetHandleFromFd(int fd);
 
 void MkDir(const std::string &Path);

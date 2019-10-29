@@ -16,6 +16,7 @@
 #include <chrono>
 #include <cstring>
 #include <errno.h>
+#include <io.h>
 #include <iomanip>
 #include <signal.h>
 #include <stdio.h>
@@ -188,6 +189,14 @@ std::string DisassembleCmd(const std::string &FileName) {
 
 std::string SearchRegexCmd(const std::string &Regex) {
   return "findstr /r \"" + Regex + "\"";
+}
+
+void DiscardOutput(int Fd) {
+  FILE* Temp = fopen("nul", "w");
+  if (!Temp)
+    return;
+  _dup2(_fileno(Temp), Fd);
+  fclose(Temp);
 }
 
 } // namespace fuzzer
