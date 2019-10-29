@@ -2,7 +2,7 @@
 // RUN: %clang_cpp_csi_toolc %tooldir/function-call-count-tool.c -o %t-tool.o
 // RUN: %link_csi %t-tool.o %t-null-tool.o -o %t-tool.o
 // RUN: %clang_cpp_csi_c %s -o %t.o
-// RUN: %clang_cpp_csi %t.o %t-tool.o %csirtlib -o %t
+// RUN: %clang_cpp_csi %t.o %t-tool.o -o %t
 // RUN: %run %t | FileCheck %s
 
 // In this test, the TIX uses the STL, but the tool does not.

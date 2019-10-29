@@ -4,7 +4,7 @@
 // RUN: %clang_csi_c %s -o %t.o
 // RUN: %clang_csi_c %supportdir/a.c -o %t.a.o
 // RUN: %clang_csi_c %supportdir/b.c -o %t.b.o
-// RUN: %clang_csi %t.o %t.a.o %t.b.o %t-tool.o %csirtlib -o %t
+// RUN: %clang_csi %t.o %t.a.o %t.b.o %t-tool.o -o %t
 // RUN: %run %t | FileCheck %s
 
 #include <stdio.h>

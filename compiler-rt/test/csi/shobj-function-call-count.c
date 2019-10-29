@@ -4,7 +4,7 @@
 // RUN: %clang_csi_c -fPIC %supportdir/libtest.c -o %t-libtest.o
 // RUN: %clang_csi -Wl,-soname,libtest.so -shared %t-libtest.o %t-tool.o -o %T/libtest.so
 // RUN: %clang_csi_c %s -o %t.o
-// RUN: %clang_csi -Wl,-rpath,%T -L %T %t.o %t-tool.o -ltest %csirtlib -o %t
+// RUN: %clang_csi -Wl,-rpath,%T -L %T %t.o %t-tool.o -ltest -o %t
 // RUN: LD_LIBRARY_PATH=%T:$LD_LIBRARY_PATH %run %t | FileCheck %s
 
 #include <stdio.h>
