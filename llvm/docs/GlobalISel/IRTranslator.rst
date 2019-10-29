@@ -16,7 +16,7 @@ occasionally get a bit more involved. For example:
 
 becomes:
 
-.. code-block:: mir
+.. code-block:: none
 
   %2:_(s32) = G_ADD %0:_(s32), %1:_(s32)
 
