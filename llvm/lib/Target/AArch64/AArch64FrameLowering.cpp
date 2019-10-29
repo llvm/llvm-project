@@ -1588,8 +1588,7 @@ static StackOffset getFPOffset(const MachineFunction &MF, int ObjectOffset) {
   bool IsWin64 =
       Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
   unsigned FixedObject = IsWin64 ? alignTo(AFI->getVarArgsGPRSize(), 16) : 0;
-  unsigned FPAdjust = isTargetDarwin(MF)
-                        ? 16 : AFI->getCalleeSavedStackSize(MF.getFrameInfo());
+  unsigned FPAdjust = isTargetDarwin(MF) ? 16 : AFI->getCalleeSavedStackSize();
   return {ObjectOffset + FixedObject + FPAdjust, MVT::i8};
 }
 
@@ -1631,7 +1630,7 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
   int FPOffset = getFPOffset(MF, ObjectOffset).getBytes();
   int Offset = getStackOffset(MF, ObjectOffset).getBytes();
   bool isCSR =
-      !isFixed && ObjectOffset >= -((int)AFI->getCalleeSavedStackSize(MFI));
+      !isFixed && ObjectOffset >= -((int)AFI->getCalleeSavedStackSize());
 
   const StackOffset &SVEStackSize = getSVEStackSize(MF);
 
@@ -2304,10 +2303,6 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   LLVM_DEBUG(dbgs() << "Estimated stack frame size: "
                << EstimatedStackSize + AlignedCSStackSize
                << " bytes.\n");
-
-  assert((!MFI.isCalleeSavedInfoValid() ||
-          AFI->getCalleeSavedStackSize() == AlignedCSStackSize) &&
-         "Should not invalidate callee saved info");
 
   // Round up to register pair alignment to avoid additional SP adjustment
   // instructions.
