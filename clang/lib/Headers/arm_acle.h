@@ -90,9 +90,11 @@ __swp(uint32_t __x, volatile uint32_t *__p) {
 #endif
 
 /* 8.7 NOP */
+#if !defined(_MSC_VER) || !defined(__aarch64__)
 static __inline__ void __attribute__((__always_inline__, __nodebug__)) __nop(void) {
   __builtin_arm_nop();
 }
+#endif
 
 /* 9 DATA-PROCESSING INTRINSICS */
 /* 9.2 Miscellaneous data-processing intrinsics */
