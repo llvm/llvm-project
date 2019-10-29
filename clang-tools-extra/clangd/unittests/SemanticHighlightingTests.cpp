@@ -584,6 +584,11 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
           return $TemplateParameter[[T]]::$DependentName[[Field]];
         }
       };
+    )cpp",
+      // Highlighting the using decl as the underlying using shadow decl.
+      R"cpp(
+      void $Function[[foo]]();
+      using ::$Function[[foo]];
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);
