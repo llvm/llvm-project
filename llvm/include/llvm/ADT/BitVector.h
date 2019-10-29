@@ -71,7 +71,7 @@ public:
 };
 
 class BitVector {
-  typedef unsigned long BitWord;
+  typedef uintptr_t BitWord;
 
   enum { BITWORD_SIZE = (unsigned)sizeof(BitWord) * CHAR_BIT };
 
