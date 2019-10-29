@@ -5334,8 +5334,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 
 bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
                                             unsigned Idx) {
-  const unsigned ChainLen = Chain.size();
-  LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length " << ChainLen
+  LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length " << Chain.size()
                     << "\n");
   const unsigned Sz = R.getVectorElementSize(Chain[0]);
   const unsigned MinVF = R.getMinVecRegSize() / Sz;
