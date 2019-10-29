@@ -596,8 +596,9 @@ void Constant::removeDeadConstantUsers() const {
 }
 
 Constant *Constant::replaceUndefsWith(Constant *C, Constant *Replacement) {
+  assert(C && Replacement && "Expected non-nullptr constant arguments");
   Type *Ty = C->getType();
-  if (C && match(C, m_Undef())) {
+  if (match(C, m_Undef())) {
     assert(Ty == Replacement->getType() && "Expected matching types");
     return Replacement;
   }
