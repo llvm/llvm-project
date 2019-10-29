@@ -13,6 +13,7 @@
 #include "refactor/Tweak.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Error.h"
+#include "gmock/gmock.h"
 
 namespace clang {
 namespace clangd {
@@ -59,7 +60,7 @@ std::pair<unsigned, unsigned> rangeOrPoint(const Annotations &A) {
           cantFail(positionToOffset(A.code(), SelectionRng.end))};
 }
 
-MATCHER_P3(TweakIsAvailable, TweakID, Ctx, Header,
+MATCHER_P4(TweakIsAvailable, TweakID, Ctx, Header, ExtraArgs,
            (TweakID + (negation ? " is unavailable" : " is available")).str()) {
   std::string WrappedCode = wrap(Ctx, arg);
   Annotations Input(WrappedCode);
@@ -67,6 +68,7 @@ MATCHER_P3(TweakIsAvailable, TweakID, Ctx, Header,
   TestTU TU;
   TU.HeaderCode = Header;
   TU.Code = Input.code();
+  TU.ExtraArgs = ExtraArgs;
   ParsedAST AST = TU.build();
   Tweak::Selection S(AST, Selection.first, Selection.second);
   auto PrepareResult = prepareTweak(TweakID, S);
@@ -113,7 +115,7 @@ std::string TweakTest::apply(llvm::StringRef MarkedCode) const {
 }
 
 ::testing::Matcher<llvm::StringRef> TweakTest::isAvailable() const {
-  return TweakIsAvailable(llvm::StringRef(TweakID), Context, Header); 
+  return TweakIsAvailable(llvm::StringRef(TweakID), Context, Header, ExtraArgs);
 }
 
 std::vector<std::string> TweakTest::expandCases(llvm::StringRef MarkedCode) {
