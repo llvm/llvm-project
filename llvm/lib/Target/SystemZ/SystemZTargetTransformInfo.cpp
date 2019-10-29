@@ -259,7 +259,7 @@ void SystemZTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
       }
       if (isa<StoreInst>(&I)) {
         Type *MemAccessTy = I.getOperand(0)->getType();
-        NumStores += getMemoryOpCost(Instruction::Store, MemAccessTy, 0, 0);
+        NumStores += getMemoryOpCost(Instruction::Store, MemAccessTy, None, 0);
       }
     }
 
@@ -995,7 +995,7 @@ static bool isBswapIntrinsicCall(const Value *V) {
 }
 
 int SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                    unsigned Alignment, unsigned AddressSpace,
+                                    MaybeAlign Alignment, unsigned AddressSpace,
                                     const Instruction *I) {
   assert(!Src->isVoidTy() && "Invalid type");
 
