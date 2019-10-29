@@ -122,6 +122,10 @@ class FlagHandlerKeepGoing : public FlagHandlerBase {
     *halt_on_error_ = !tmp;
     return true;
   }
+  bool Format(char *buffer, uptr size) final {
+    const char *keep_going_str = (*halt_on_error_) ? "false" : "true";
+    return FormatString(buffer, size, keep_going_str);
+  }
 };
 
 static void RegisterMsanFlags(FlagParser *parser, Flags *f) {
