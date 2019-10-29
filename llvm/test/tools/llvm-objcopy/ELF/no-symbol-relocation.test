@@ -21,6 +21,8 @@ Sections:
     Relocations:
       - Offset: 0x1000
         Type:   R_X86_64_RELATIVE
+## TODO: llvm-objcopy crashes without the following line.
+Symbols: []
 
 # CHECK:     Relocations [
 # CHECK-NEXT:  Section (2) .rel.text {

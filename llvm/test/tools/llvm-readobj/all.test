@@ -110,3 +110,4 @@ ProgramHeaders:
   - Type: PT_NOTE
     Sections:
       - Section: .note.gnu.build-id
+Symbols: []
