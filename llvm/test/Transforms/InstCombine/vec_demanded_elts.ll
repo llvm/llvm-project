@@ -569,7 +569,7 @@ define i32* @gep_cvbase_w_s_idx(<2 x i32*> %base, i64 %raw_addr) {
 
 define i32* @gep_cvbase_w_cv_idx(<2 x i32*> %base, i64 %raw_addr) {
 ; CHECK-LABEL: @gep_cvbase_w_cv_idx(
-; CHECK-NEXT:    ret i32* extractelement (<2 x i32*> getelementptr (i32, <2 x i32*> <i32* @GLOBAL, i32* @GLOBAL>, <2 x i64> <i64 0, i64 1>), i32 1)
+; CHECK-NEXT:    ret i32* getelementptr inbounds (i32, i32* @GLOBAL, i64 1)
 ;
   %gep = getelementptr i32, <2 x i32*> <i32* @GLOBAL, i32* @GLOBAL>, <2 x i64> <i64 0, i64 1>
   %ee = extractelement <2 x i32*> %gep, i32 1
