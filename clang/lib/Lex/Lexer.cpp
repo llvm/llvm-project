@@ -2685,6 +2685,7 @@ void Lexer::ReadToEndOfLine(SmallVectorImpl<char> *Result) {
   assert(ParsingPreprocessorDirective && ParsingFilename == false &&
          "Must be in a preprocessing directive!");
   Token Tmp;
+  Tmp.startToken();
 
   // CurPtr - Cache BufferPtr in an automatic variable.
   const char *CurPtr = BufferPtr;
