@@ -4,6 +4,22 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5 %s -Wuninitialized
 
+class S5 {
+  int a;
+  S5() : a(0) {}
+
+public:
+  S5(int v) : a(v) {}
+  S5 &operator=(S5 &s) {
+#pragma omp target
+#pragma omp teams
+#pragma omp distribute simd
+    for (int k = 0; k < s.a; ++k) // expected-warning {{Non-trivial type 'S5' is mapped, only trivial types are guaranteed to be mapped correctly}}
+      ++s.a;
+    return *this;
+  }
+};
+
 static int sii;
 // expected-note@+1 {{defined as threadprivate or thread local}}
 #pragma omp threadprivate(sii)
