@@ -10593,8 +10593,24 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return false;
   }
 
-  case Builtin::BI__builtin_is_constant_evaluated:
+  case Builtin::BI__builtin_is_constant_evaluated: {
+    const auto *Callee = Info.CurrentCall->getCallee();
+    if (Info.InConstantContext && !Info.CheckingPotentialConstantExpression &&
+        (Info.CallStackDepth == 1 ||
+         (Info.CallStackDepth == 2 && Callee->isInStdNamespace() &&
+          Callee->getIdentifier() &&
+          Callee->getIdentifier()->isStr("is_constant_evaluated")))) {
+      // FIXME: Find a better way to avoid duplicated diagnostics.
+      if (Info.EvalStatus.Diag)
+        Info.report((Info.CallStackDepth == 1) ? E->getExprLoc()
+                                               : Info.CurrentCall->CallLoc,
+                    diag::warn_is_constant_evaluated_always_true_constexpr)
+            << (Info.CallStackDepth == 1 ? "__builtin_is_constant_evaluated"
+                                         : "std::is_constant_evaluated");
+    }
+
     return Success(Info.InConstantContext, E);
+  }
 
   case Builtin::BI__builtin_ctz:
   case Builtin::BI__builtin_ctzl:
