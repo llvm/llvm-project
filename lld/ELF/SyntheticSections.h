@@ -1055,9 +1055,9 @@ public:
 };
 
 // This section is used to store the addresses of functions that are called
-// in range-extending thunks on PowerPC64. When producing position dependant
+// in range-extending thunks on PowerPC64. When producing position dependent
 // code the addresses are link-time constants and the table is written out to
-// the binary. When producing position-dependant code the table is allocated and
+// the binary. When producing position-dependent code the table is allocated and
 // filled in by the dynamic linker.
 class PPC64LongBranchTargetSection final : public SyntheticSection {
 public:

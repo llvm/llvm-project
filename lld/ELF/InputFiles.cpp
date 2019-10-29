@@ -741,7 +741,7 @@ static uint32_t readAndFeatures(ObjFile<ELFT> *obj, ArrayRef<uint8_t> data) {
 
       if (type == featureAndType) {
         // We found a FEATURE_1_AND field. There may be more than one of these
-        // in a .note.gnu.propery section, for a relocatable object we
+        // in a .note.gnu.property section, for a relocatable object we
         // accumulate the bits set.
         featuresSet |= read32le(desc.data() + 8);
       }

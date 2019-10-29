@@ -310,7 +310,7 @@ public:
 // definitions for this particular case.
 //
 // Common symbols represent variable definitions without initializations.
-// The compiler creates common symbols when it sees varaible definitions
+// The compiler creates common symbols when it sees variable definitions
 // without initialization (you can suppress this behavior and let the
 // compiler create a regular defined symbol by -fno-common).
 //

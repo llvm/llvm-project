@@ -332,7 +332,7 @@ template <class ELFT> void markLive() {
     return;
   }
 
-  // Otheriwse, do mark-sweep GC.
+  // Otherwise, do mark-sweep GC.
   //
   // The -gc-sections option works only for SHF_ALLOC sections
   // (sections that are memory-mapped at runtime). So we can
