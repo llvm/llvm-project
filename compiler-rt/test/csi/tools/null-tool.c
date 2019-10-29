@@ -93,23 +93,23 @@ WEAK void __csi_after_sync(const csi_id_t sync_id, const int32_t *has_spawned)
 
 __attribute__((always_inline))
 WEAK void __csi_before_alloca(const csi_id_t alloca_id,
-                              uint64_t num_bytes,
+                              size_t num_bytes,
                               const alloca_prop_t prop) {}
 
 __attribute__((always_inline))
 WEAK void __csi_after_alloca(const csi_id_t alloca_id,
                              const void *addr,
-                             uint64_t num_bytes,
+                             size_t num_bytes,
                              const alloca_prop_t prop) {}
 
 __attribute__((always_inline))
 WEAK void __csi_before_allocfn(const csi_id_t allocfn_id,
-                               uint64_t size, uint64_t num, uint64_t alignment,
+                               size_t size, size_t num, size_t alignment,
                                const void *oldaddr, const allocfn_prop_t prop) {}
 
 __attribute__((always_inline))
 WEAK void __csi_after_allocfn(const csi_id_t allocfn_id, const void *addr,
-                              uint64_t size, uint64_t num, uint64_t alignment,
+                              size_t size, size_t num, size_t alignment,
                               const void *oldaddr, const allocfn_prop_t prop)
 {}
 

@@ -1,6 +1,7 @@
 #pragma once 
 
 #include <stdint.h>
+#include <stdlib.h>
 
 #ifdef __cplusplus
 #define EXTERN_C extern "C" {
@@ -243,18 +244,18 @@ WEAK void __csi_after_sync(const csi_id_t sync_id, const int32_t *has_spawned);
 
 ///-----------------------------------------------------------------------------
 /// Hooks for memory allocation
-WEAK void __csi_before_alloca(const csi_id_t alloca_id, uint64_t num_bytes,
+WEAK void __csi_before_alloca(const csi_id_t alloca_id, size_t num_bytes,
                               const alloca_prop_t prop);
 
 WEAK void __csi_after_alloca(const csi_id_t alloca_id, const void *addr,
-                             uint64_t num_bytes, const alloca_prop_t prop);
+                             size_t num_bytes, const alloca_prop_t prop);
 
-WEAK void __csi_before_allocfn(const csi_id_t allocfn_id, uint64_t size,
-                               uint64_t num, uint64_t alignment,
+WEAK void __csi_before_allocfn(const csi_id_t allocfn_id, size_t size,
+                               size_t num, size_t alignment,
                                const void *oldaddr, const allocfn_prop_t prop);
 
 WEAK void __csi_after_allocfn(const csi_id_t alloca_id, const void *addr,
-                              uint64_t size, uint64_t num, uint64_t alignment,
+                              size_t size, size_t num, size_t alignment,
                               const void *oldaddr, const allocfn_prop_t prop);
 
 WEAK void __csi_before_free(const csi_id_t free_id, const void *ptr,
