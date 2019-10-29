@@ -45,6 +45,7 @@
 #define LLVM_ADT_HASHING_H
 
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/type_traits.h"
 #include <algorithm>
@@ -539,7 +540,7 @@ public:
       // store types smaller than the buffer.
       if (!store_and_advance(buffer_ptr, buffer_end, data,
                              partial_store_size))
-        abort();
+        llvm_unreachable("buffer smaller than stored type");
     }
     return buffer_ptr;
   }
