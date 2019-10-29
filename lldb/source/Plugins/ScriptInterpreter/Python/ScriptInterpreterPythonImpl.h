@@ -256,11 +256,10 @@ public:
       BreakpointOptions *bp_options,
       std::unique_ptr<BreakpointOptions::CommandData> &data_up) override;
 
-  Status SetBreakpointCommandCallback(
-      BreakpointOptions *bp_options, 
-       const char *command_body_text,
-       StructuredData::ObjectSP extra_args_sp,
-       bool uses_extra_args);
+  Status SetBreakpointCommandCallback(BreakpointOptions *bp_options,
+                                      const char *command_body_text,
+                                      StructuredData::ObjectSP extra_args_sp,
+                                      bool uses_extra_args);
 
   /// Set a one-liner as the callback for the watchpoint.
   void SetWatchpointCommandCallback(WatchpointOptions *wp_options,
@@ -378,10 +377,9 @@ public:
   python::PythonDictionary &GetSessionDictionary();
 
   python::PythonDictionary &GetSysModuleDictionary();
-  
-  llvm::Expected<size_t> 
-  GetNumFixedArgumentsForCallable(const llvm::StringRef &callable_name) 
-      override;
+
+  llvm::Expected<unsigned> GetMaxPositionalArgumentsForCallable(
+      const llvm::StringRef &callable_name) override;
 
   bool GetEmbeddedInterpreterModuleObjects();
 
