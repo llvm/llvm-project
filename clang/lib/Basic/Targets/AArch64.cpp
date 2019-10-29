@@ -13,6 +13,7 @@
 #include "AArch64.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 
@@ -91,6 +92,9 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   else if (Triple.getOS() == llvm::Triple::UnknownOS)
     this->MCountName =
         Opts.EABIVersion == llvm::EABI::GNU ? "\01_mcount" : "mcount";
+
+  if (Triple.getArchName() == "arm64e")
+    PointerAuthSupported = true;
 }
 
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
@@ -506,6 +510,11 @@ int AArch64TargetInfo::getEHDataRegisterNumber(unsigned RegNo) const {
   return -1;
 }
 
+bool AArch64TargetInfo::validatePointerAuthKey(
+    const llvm::APSInt &value) const {
+  return 0 <= value && value <= 3;
+}
+
 AArch64leTargetInfo::AArch64leTargetInfo(const llvm::Triple &Triple,
                                          const TargetOptions &Opts)
     : AArch64TargetInfo(Triple, Opts) {}
@@ -649,6 +658,9 @@ void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
   Builder.defineMacro("__REGISTER_PREFIX__", "");
   Builder.defineMacro("__arm64", "1");
   Builder.defineMacro("__arm64__", "1");
+
+  if (Triple.getArchName() == "arm64e")
+    Builder.defineMacro("__arm64e__", "1");
 
   getDarwinDefines(Builder, Opts, Triple, PlatformName, PlatformMinVersion);
 }

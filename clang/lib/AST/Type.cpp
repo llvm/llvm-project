@@ -2365,6 +2365,8 @@ QualType::PrimitiveCopyKind QualType::isNonTrivialToPrimitiveCopy() const {
   case Qualifiers::OCL_Weak:
     return PCK_ARCWeak;
   default:
+    if (hasAddressDiscriminatedPointerAuth())
+      return PCK_PtrAuth;
     return Qs.hasVolatile() ? PCK_VolatileTrivial : PCK_Trivial;
   }
 }

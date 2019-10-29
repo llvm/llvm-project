@@ -448,6 +448,7 @@ struct FormatToken {
     case tok::kw_noexcept:
     case tok::kw_static_assert:
     case tok::kw___attribute:
+    case tok::kw___ptrauth:
       return true;
     default:
       return false;

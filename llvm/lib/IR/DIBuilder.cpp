@@ -266,19 +266,28 @@ DIBasicType *DIBuilder::createBasicType(StringRef Name, uint64_t SizeInBits,
 
 DIDerivedType *DIBuilder::createQualifiedType(unsigned Tag, DIType *FromTy) {
   return DIDerivedType::get(VMContext, Tag, "", nullptr, 0, nullptr, FromTy, 0,
-                            0, 0, None, DINode::FlagZero);
+                            0, 0, None, None, DINode::FlagZero);
+}
+
+DIDerivedType *
+DIBuilder::createPtrAuthQualifiedType(DIType *FromTy, unsigned Key,
+                                      bool IsAddressDiscriminated,
+                                      unsigned ExtraDiscriminator) {
+  return DIDerivedType::get(
+      VMContext, dwarf::DW_TAG_APPLE_ptrauth_type, "", nullptr, 0, nullptr,
+      FromTy, 0, 0, 0, None,
+      Optional<DIDerivedType::PtrAuthData>(
+          {Key, IsAddressDiscriminated, ExtraDiscriminator}),
+      DINode::FlagZero);
 }
 
 DIDerivedType *DIBuilder::createPointerType(
-    DIType *PointeeTy,
-    uint64_t SizeInBits,
-    uint32_t AlignInBits,
-    Optional<unsigned> DWARFAddressSpace,
-    StringRef Name) {
+    DIType *PointeeTy, uint64_t SizeInBits, uint32_t AlignInBits,
+    Optional<unsigned> DWARFAddressSpace, StringRef Name) {
   // FIXME: Why is there a name here?
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_pointer_type, Name,
                             nullptr, 0, nullptr, PointeeTy, SizeInBits,
-                            AlignInBits, 0, DWARFAddressSpace,
+                            AlignInBits, 0, DWARFAddressSpace, None,
                             DINode::FlagZero);
 }
 
@@ -289,7 +298,7 @@ DIDerivedType *DIBuilder::createMemberPointerType(DIType *PointeeTy,
                                                   DINode::DIFlags Flags) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_ptr_to_member_type, "",
                             nullptr, 0, nullptr, PointeeTy, SizeInBits,
-                            AlignInBits, 0, None, Flags, Base);
+                            AlignInBits, 0, None, None, Flags, Base);
 }
 
 DIDerivedType *DIBuilder::createReferenceType(
@@ -299,7 +308,7 @@ DIDerivedType *DIBuilder::createReferenceType(
     Optional<unsigned> DWARFAddressSpace) {
   assert(RTy && "Unable to create reference type");
   return DIDerivedType::get(VMContext, Tag, "", nullptr, 0, nullptr, RTy,
-                            SizeInBits, AlignInBits, 0, DWARFAddressSpace,
+                            SizeInBits, AlignInBits, 0, DWARFAddressSpace, {},
                             DINode::FlagZero);
 }
 
@@ -308,14 +317,14 @@ DIDerivedType *DIBuilder::createTypedef(DIType *Ty, StringRef Name,
                                         DIScope *Context) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_typedef, Name, File,
                             LineNo, getNonCompileUnitScope(Context), Ty, 0, 0,
-                            0, None, DINode::FlagZero);
+                            0, None, None, DINode::FlagZero);
 }
 
 DIDerivedType *DIBuilder::createFriend(DIType *Ty, DIType *FriendTy) {
   assert(Ty && "Invalid type!");
   assert(FriendTy && "Invalid friend type!");
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_friend, "", nullptr, 0, Ty,
-                            FriendTy, 0, 0, 0, None, DINode::FlagZero);
+                            FriendTy, 0, 0, 0, None, None, DINode::FlagZero);
 }
 
 DIDerivedType *DIBuilder::createInheritance(DIType *Ty, DIType *BaseTy,
@@ -326,7 +335,7 @@ DIDerivedType *DIBuilder::createInheritance(DIType *Ty, DIType *BaseTy,
   Metadata *ExtraData = ConstantAsMetadata::get(
       ConstantInt::get(IntegerType::get(VMContext, 32), VBPtrOffset));
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_inheritance, "", nullptr,
-                            0, Ty, BaseTy, 0, 0, BaseOffset, None,
+                            0, Ty, BaseTy, 0, 0, BaseOffset, None, None,
                             Flags, ExtraData);
 }
 
@@ -338,7 +347,8 @@ DIDerivedType *DIBuilder::createMemberType(DIScope *Scope, StringRef Name,
                                            DINode::DIFlags Flags, DIType *Ty) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_member, Name, File,
                             LineNumber, getNonCompileUnitScope(Scope), Ty,
-                            SizeInBits, AlignInBits, OffsetInBits, None, Flags);
+                            SizeInBits, AlignInBits, OffsetInBits, None, None,
+                            Flags);
 }
 
 static ConstantAsMetadata *getConstantOrNull(Constant *C) {
@@ -353,8 +363,8 @@ DIDerivedType *DIBuilder::createVariantMemberType(
     Constant *Discriminant, DINode::DIFlags Flags, DIType *Ty) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_member, Name, File,
                             LineNumber, getNonCompileUnitScope(Scope), Ty,
-                            SizeInBits, AlignInBits, OffsetInBits, None, Flags,
-                            getConstantOrNull(Discriminant));
+                            SizeInBits, AlignInBits, OffsetInBits, None, None,
+                            Flags, getConstantOrNull(Discriminant));
 }
 
 DIDerivedType *DIBuilder::createBitFieldMemberType(
@@ -365,7 +375,7 @@ DIDerivedType *DIBuilder::createBitFieldMemberType(
   return DIDerivedType::get(
       VMContext, dwarf::DW_TAG_member, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), Ty, SizeInBits, /* AlignInBits */ 0,
-      OffsetInBits, None, Flags,
+      OffsetInBits, None, None, Flags,
       ConstantAsMetadata::get(ConstantInt::get(IntegerType::get(VMContext, 64),
                                                StorageOffsetInBits)));
 }
@@ -378,7 +388,7 @@ DIBuilder::createStaticMemberType(DIScope *Scope, StringRef Name, DIFile *File,
   Flags |= DINode::FlagStaticMember;
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_member, Name, File,
                             LineNumber, getNonCompileUnitScope(Scope), Ty, 0,
-                            AlignInBits, 0, None, Flags,
+                            AlignInBits, 0, None, None, Flags,
                             getConstantOrNull(Val));
 }
 
@@ -389,8 +399,8 @@ DIBuilder::createObjCIVar(StringRef Name, DIFile *File, unsigned LineNumber,
                           DIType *Ty, MDNode *PropertyNode) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_member, Name, File,
                             LineNumber, getNonCompileUnitScope(File), Ty,
-                            SizeInBits, AlignInBits, OffsetInBits, None, Flags,
-                            PropertyNode);
+                            SizeInBits, AlignInBits, OffsetInBits, None, None,
+                            Flags, PropertyNode);
 }
 
 DIObjCProperty *

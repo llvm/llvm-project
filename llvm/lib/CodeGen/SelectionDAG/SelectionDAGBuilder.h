@@ -538,7 +538,8 @@ public:
   void CopyToExportRegsIfNeeded(const Value *V);
   void ExportFromCurrentBlock(const Value *V);
   void LowerCallTo(ImmutableCallSite CS, SDValue Callee, bool IsTailCall,
-                   const BasicBlock *EHPadBB = nullptr);
+                   const BasicBlock *EHPadBB = nullptr,
+                   const TargetLowering::PtrAuthInfo *PAI = nullptr);
 
   // Lower range metadata from 0 to N to assert zext to an integer of nearest
   // floor power of two.
@@ -620,6 +621,9 @@ public:
                                         const BasicBlock *EHPadBB,
                                         bool VarArgDisallowed,
                                         bool ForceVoidReturnTy);
+
+  void LowerCallSiteWithPtrAuthBundle(ImmutableCallSite CS,
+                                      const BasicBlock *EHPadBB);
 
   /// Returns the type of FrameIndex and TargetFrameIndex nodes.
   MVT getFrameIndexTy() {

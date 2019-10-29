@@ -1780,6 +1780,14 @@ void CodeGenModule::ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
       FuncAttrs.addAttribute("stackrealign");
     if (CodeGenOpts.Backchain)
       FuncAttrs.addAttribute("backchain");
+    if (CodeGenOpts.PointerAuth.ReturnAddresses)
+      FuncAttrs.addAttribute("ptrauth-returns");
+    if (CodeGenOpts.PointerAuth.FunctionPointers)
+      FuncAttrs.addAttribute("ptrauth-calls");
+    if (CodeGenOpts.PointerAuth.IndirectGotos)
+      FuncAttrs.addAttribute("ptrauth-indirect-gotos");
+    if (CodeGenOpts.PointerAuth.AuthTraps)
+      FuncAttrs.addAttribute("ptrauth-auth-traps");
 
     if (CodeGenOpts.SpeculativeLoadHardening)
       FuncAttrs.addAttribute(llvm::Attribute::SpeculativeLoadHardening);
@@ -3629,7 +3637,8 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   }
 
   if (HasAggregateEvalKind && isa<ImplicitCastExpr>(E) &&
-      cast<CastExpr>(E)->getCastKind() == CK_LValueToRValue) {
+      cast<CastExpr>(E)->getCastKind() == CK_LValueToRValue &&
+      !type.isNonTrivialToPrimitiveCopy()) {
     LValue L = EmitLValue(cast<CastExpr>(E)->getSubExpr());
     assert(L.isSimple());
     args.addUncopiedAggregate(L, type);
@@ -3797,7 +3806,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                                  ReturnValueSlot ReturnValue,
                                  const CallArgList &CallArgs,
                                  llvm::CallBase **callOrInvoke,
-                                 SourceLocation Loc) {
+                                 SourceLocation Loc,
+                                 bool IsVirtualFunctionPointerThunk) {
   // FIXME: We no longer need the types from CallArgs; lift up and simplify.
 
   assert(Callee.isOrdinary() || Callee.isVirtual());
@@ -3872,7 +3882,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   Address SRetAlloca = Address::invalid();
   llvm::Value *UnusedReturnSizePtr = nullptr;
   if (RetAI.isIndirect() || RetAI.isInAlloca() || RetAI.isCoerceAndExpand()) {
-    if (!ReturnValue.isNull()) {
+    if (IsVirtualFunctionPointerThunk && RetAI.isIndirect()) {
+      SRetPtr = Address(CurFn->arg_begin() + IRFunctionArgs.getSRetArgNo(),
+                        CharUnits::fromQuantity(1));
+    } else if (!ReturnValue.isNull()) {
       SRetPtr = ReturnValue.getValue();
     } else {
       SRetPtr = CreateMemTemp(RetTy, "tmp", &SRetAlloca);
@@ -4370,6 +4383,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   SmallVector<llvm::OperandBundleDef, 1> BundleList =
       getBundlesForFunclet(CalleePtr);
 
+  // Add the pointer-authentication bundle.
+  EmitPointerAuthOperandBundle(ConcreteCallee.getPointerAuthInfo(), BundleList);
+
   // Emit the actual call/invoke instruction.
   llvm::CallBase *CI;
   if (!InvokeDest) {
@@ -4480,7 +4496,14 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   CallArgs.freeArgumentMemory(*this);
 
   // Extract the return value.
-  RValue Ret = [&] {
+  RValue Ret;
+
+  // If the current function is a virtual function pointer thunk, avoid copying
+  // the return value of the musttail call to a temporary.
+  if (IsVirtualFunctionPointerThunk)
+    Ret = RValue::get(CI);
+  else
+    Ret = [&] {
     switch (RetAI.getKind()) {
     case ABIArgInfo::CoerceAndExpand: {
       auto coercionType = RetAI.getCoerceAndExpandType();

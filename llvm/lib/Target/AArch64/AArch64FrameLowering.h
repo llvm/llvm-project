@@ -102,6 +102,7 @@ private:
   bool shouldCombineCSRLocalStackBump(MachineFunction &MF,
                                       unsigned StackBumpBytes) const;
   int64_t determineSVEStackSize(MachineFrameInfo &MF, unsigned &MaxAlign) const;
+  bool shouldAuthenticateLR(const MachineFunction &MF) const;
 };
 
 } // End llvm namespace

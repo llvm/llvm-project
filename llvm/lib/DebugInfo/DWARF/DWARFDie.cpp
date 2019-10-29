@@ -210,6 +210,7 @@ static void dumpTypeName(raw_ostream &OS, const DWARFDie &D) {
   case DW_TAG_reference_type:
   case DW_TAG_rvalue_reference_type:
   case DW_TAG_subroutine_type:
+  case DW_TAG_APPLE_ptrauth_type:
     break;
   default:
     dumpTypeTagName(OS, T);
@@ -257,6 +258,18 @@ static void dumpTypeName(raw_ostream &OS, const DWARFDie &D) {
   case DW_TAG_rvalue_reference_type:
     OS << "&&";
     break;
+  case DW_TAG_APPLE_ptrauth_type: {
+    auto getValOrNull = [&](dwarf::Attribute Attr) -> uint64_t {
+      if (auto Form = D.find(Attr))
+        return *Form->getAsUnsignedConstant();
+      return 0;
+    };
+    OS << "__ptrauth(" << getValOrNull(DW_AT_APPLE_ptrauth_key) << ", "
+       << getValOrNull(DW_AT_APPLE_ptrauth_address_discriminated) << ", 0x0"
+       << utohexstr(getValOrNull(DW_AT_APPLE_ptrauth_extra_discriminator), true)
+       << ")";
+    break;
+  }
   default:
     break;
   }

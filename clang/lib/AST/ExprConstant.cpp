@@ -48,6 +48,7 @@
 #include "clang/AST/OSLog.h"
 #include "clang/AST/OptionalDiagnostic.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/StableHash.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
@@ -1853,6 +1854,19 @@ static bool IsStringLiteralCall(const CallExpr *E) {
           Builtin == Builtin::BI__builtin___NSStringMakeConstantString);
 }
 
+static bool isGlobalCallLValue(const CallExpr *E) {
+  if (IsStringLiteralCall(E))
+    return true;
+
+  switch (E->getBuiltinCallee()) {
+  case Builtin::BI__builtin_ptrauth_sign_constant:
+    return true;
+
+  default:
+    return false;
+  }
+}
+
 static bool IsGlobalLValue(APValue::LValueBase B) {
   // C++11 [expr.const]p3 An address constant expression is a prvalue core
   // constant expression of pointer type that evaluates to...
@@ -1894,7 +1908,7 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   case Expr::ObjCBoxedExprClass:
     return cast<ObjCBoxedExpr>(E)->isExpressibleAsConstantInitializer();
   case Expr::CallExprClass:
-    return IsStringLiteralCall(cast<CallExpr>(E));
+    return isGlobalCallLValue(cast<CallExpr>(E));
   // For GCC compatibility, &&label has static storage duration.
   case Expr::AddrLabelExprClass:
     return true;
@@ -8202,6 +8216,8 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
   case Builtin::BI__builtin_operator_new:
     return HandleOperatorNewCall(Info, E, Result);
+  case Builtin::BI__builtin_ptrauth_sign_constant:
+    return Success(E);
   case Builtin::BI__builtin_launder:
     return evaluatePointer(E->getArg(0), Result);
   case Builtin::BIstrchr:
@@ -10615,6 +10631,13 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_expect:
     return Visit(E->getArg(0));
 
+  case Builtin::BI__builtin_ptrauth_string_discriminator: {
+    auto literal = cast<StringLiteral>(E->getArg(0)->IgnoreParenImpCasts());
+    auto result = getPointerAuthStringDiscriminator(Info.Ctx,
+                                                    literal->getString());
+    return Success(result, E);
+  }
+
   case Builtin::BI__builtin_ffs:
   case Builtin::BI__builtin_ffsl:
   case Builtin::BI__builtin_ffsll: {
@@ -11908,6 +11931,12 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
                      E);
   }
 
+  case UETT_PtrAuthTypeDiscriminator: {
+    if (E->getArgumentType()->isDependentType())
+      return false;
+    return Success(
+        Info.Ctx.getPointerAuthTypeDiscriminator(E->getArgumentType()), E);
+  }
   case UETT_VecStep: {
     QualType Ty = E->getTypeOfArgument();
 

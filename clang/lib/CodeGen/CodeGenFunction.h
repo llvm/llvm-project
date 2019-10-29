@@ -3598,7 +3598,8 @@ public:
   /// LLVM arguments and the types they were derived from.
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
-                  llvm::CallBase **callOrInvoke, SourceLocation Loc);
+                  llvm::CallBase **callOrInvoke, SourceLocation Loc,
+                  bool IsVirtualFunctionPointerThunk = false);
   RValue EmitCall(const CGFunctionInfo &CallInfo, const CGCallee &Callee,
                   ReturnValueSlot ReturnValue, const CallArgList &Args,
                   llvm::CallBase **callOrInvoke = nullptr) {
@@ -3647,6 +3648,51 @@ public:
   CGCallee BuildAppleKextVirtualDestructorCall(const CXXDestructorDecl *DD,
                                                CXXDtorType Type,
                                                const CXXRecordDecl *RD);
+
+  /// Create the discriminator from the storage address and the entity hash.
+  llvm::Value *EmitPointerAuthBlendDiscriminator(llvm::Value *storageAddress,
+                                                 llvm::Value *discriminator);
+
+  CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &schema,
+                                        llvm::Value *storageAddress,
+                                        GlobalDecl calleeDecl,
+                                        QualType calleeType);
+  llvm::Value *EmitPointerAuthSign(const CGPointerAuthInfo &info,
+                                   llvm::Value *pointer);
+  llvm::Value *EmitPointerAuthAuth(const CGPointerAuthInfo &info,
+                                   llvm::Value *pointer);
+  llvm::Value *EmitPointerAuthResign(llvm::Value *pointer,
+                                     QualType pointerType,
+                                     const CGPointerAuthInfo &curAuthInfo,
+                                     const CGPointerAuthInfo &newAuthInfo,
+                                     bool isKnownNonNull);
+  llvm::Value *EmitPointerAuthResignCall(llvm::Value *pointer,
+                                         const CGPointerAuthInfo &curInfo,
+                                         const CGPointerAuthInfo &newInfo);
+  void EmitPointerAuthOperandBundle(const CGPointerAuthInfo &info,
+                          SmallVectorImpl<llvm::OperandBundleDef> &bundles);
+
+  CGPointerAuthInfo EmitPointerAuthInfo(PointerAuthQualifier qualifier,
+                                        Address storageAddress);
+  llvm::Value *EmitPointerAuthQualify(PointerAuthQualifier qualifier,
+                                      llvm::Value *pointer,
+                                      QualType valueType,
+                                      Address storageAddress,
+                                      bool isKnownNonNull);
+  llvm::Value *EmitPointerAuthQualify(PointerAuthQualifier qualifier,
+                                      const Expr *pointerExpr,
+                                      Address storageAddress);
+  llvm::Value *EmitPointerAuthUnqualify(PointerAuthQualifier qualifier,
+                                        llvm::Value *pointer,
+                                        QualType pointerType,
+                                        Address storageAddress,
+                                        bool isKnownNonNull);
+  void EmitPointerAuthCopy(PointerAuthQualifier qualifier, QualType type,
+                           Address destField, Address srcField);
+
+  std::pair<llvm::Value *, CGPointerAuthInfo>
+  EmitOrigPointerRValue(const Expr *E);
+  bool isPointerKnownNonNull(const Expr *E);
 
   // Return the copy constructor name with the prefix "__copy_constructor_"
   // removed.
@@ -3945,7 +3991,7 @@ public:
   void EmitCXXGlobalVarDeclInit(const VarDecl &D, llvm::Constant *DeclPtr,
                                 bool PerformInit);
 
-  llvm::Function *createAtExitStub(const VarDecl &VD, llvm::FunctionCallee Dtor,
+  llvm::Constant *createAtExitStub(const VarDecl &VD, llvm::FunctionCallee Dtor,
                                    llvm::Constant *Addr);
 
   /// Call atexit() with a function that passes the given argument to

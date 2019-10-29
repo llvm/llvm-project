@@ -1020,9 +1020,9 @@ LLVMMetadataRef LLVMDIBuilderCreatePointerType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef PointeeTy,
     uint64_t SizeInBits, uint32_t AlignInBits, unsigned AddressSpace,
     const char *Name, size_t NameLen) {
-  return wrap(unwrap(Builder)->createPointerType(unwrapDI<DIType>(PointeeTy),
-                                         SizeInBits, AlignInBits,
-                                         AddressSpace, {Name, NameLen}));
+  return wrap(unwrap(Builder)->createPointerType(
+      unwrapDI<DIType>(PointeeTy), SizeInBits, AlignInBits, AddressSpace,
+      {Name, NameLen}));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateStructType(

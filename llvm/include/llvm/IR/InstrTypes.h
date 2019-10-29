@@ -1868,9 +1868,9 @@ public:
   /// may read from the heap.
   bool hasReadingOperandBundles() const {
     // Implementation note: this is a conservative implementation of operand
-    // bundle semantics, where *any* operand bundle forces a callsite to be at
-    // least readonly.
-    return hasOperandBundles();
+    // bundle semantics, where any operand bundle (other than ptrauth) forces
+    // a callsite to be at least readonly.
+    return hasOperandBundlesOtherThan(LLVMContext::OB_ptrauth);
   }
 
   /// Return true if this operand bundle user has operand bundles that
@@ -1878,7 +1878,8 @@ public:
   bool hasClobberingOperandBundles() const {
     for (auto &BOI : bundle_op_infos()) {
       if (BOI.Tag->second == LLVMContext::OB_deopt ||
-          BOI.Tag->second == LLVMContext::OB_funclet)
+          BOI.Tag->second == LLVMContext::OB_funclet ||
+          BOI.Tag->second == LLVMContext::OB_ptrauth)
         continue;
 
       // This instruction has an operand bundle that is not known to us.

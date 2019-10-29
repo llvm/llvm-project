@@ -181,6 +181,11 @@ struct SanitizerCoverageOptions {
   SanitizerCoverageOptions() = default;
 };
 
+// SoftPointerAuth - This pass lowers the llvm.ptrauth intrinsics to use
+// runtime function calls instead of relying on support from the
+// backend, toolchain, loader, or hardware.
+ModulePass *createSoftPointerAuthPass();
+
 /// Calculate what to divide by to scale counts.
 ///
 /// Given the maximum count, calculate a divisor that will scale all the

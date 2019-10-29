@@ -694,6 +694,13 @@ def i64_imm0_65535 : Operand<i64>, TImmLeaf<i64, [{
 }]>;
 }
 
+def imm64_0_65535 : Operand<i64>, ImmLeaf<i64, [{
+  return Imm < 65536;
+}]> {
+  let ParserMatchClass = AsmImmRange<0, 65535>;
+  let PrintMethod = "printImmHex";
+}
+
 // imm0_255 predicate - True if the immediate is in the range [0,255].
 def Imm0_255Operand : AsmImmRange<0,255>;
 
@@ -1427,6 +1434,7 @@ class AuthOneOperand<bits<3> opc, bits<1> M, string asm>
   let Inst{9-5} = Rn;
 }
 
+let Uses = [LR,SP] in
 class AuthReturn<bits<3> op, bits<1> M, string asm>
   : AuthBase<M, (outs), (ins), asm, "", []> {
   let Inst{24} = 0;
@@ -1463,6 +1471,9 @@ multiclass AuthLoad<bit M, string asm, Operand opr> {
 
   def : InstAlias<asm # "\t$Rt, [$Rn]",
                   (!cast<Instruction>(NAME # "indexed") GPR64:$Rt, GPR64sp:$Rn, 0)>;
+
+  def : InstAlias<asm # "\t$Rt, [$wback]!",
+                  (!cast<Instruction>(NAME # "writeback") GPR64sp:$wback, GPR64:$Rt, 0)>;
 }
 
 //---
@@ -1692,9 +1703,10 @@ class OneXRegData<bits<3> opc, string asm, SDPatternOperator node>
   let Inst{31} = 1;
 }
 
-class SignAuthOneData<bits<3> opcode_prefix, bits<2> opcode, string asm>
-  : I<(outs GPR64:$Rd), (ins GPR64sp:$Rn), asm, "\t$Rd, $Rn", "",
-      []>,
+class SignAuthOneData<bits<3> opcode_prefix, bits<2> opcode, string asm,
+                      Intrinsic op>
+  : I<(outs GPR64:$dst), (ins GPR64:$Rd, GPR64sp:$Rn), asm, "\t$Rd, $Rn",
+      "$dst = $Rd", [(set GPR64:$dst, (op GPR64:$Rd, opcode, GPR64sp:$Rn))]>,
     Sched<[WriteI, ReadI]> {
   bits<5> Rd;
   bits<5> Rn;
@@ -1705,8 +1717,11 @@ class SignAuthOneData<bits<3> opcode_prefix, bits<2> opcode, string asm>
   let Inst{4-0} = Rd;
 }
 
-class SignAuthZero<bits<3> opcode_prefix, bits<2> opcode, string asm>
-  : I<(outs GPR64:$Rd), (ins), asm, "\t$Rd", "", []>, Sched<[]> {
+class SignAuthZero<bits<3> opcode_prefix, bits<2> opcode, string asm,
+                   SDPatternOperator op>
+  : I<(outs GPR64:$dst), (ins GPR64:$Rd), asm, "\t$Rd", "$dst = $Rd",
+      [(set GPR64:$dst, (op GPR64:$Rd, opcode, (i64 0)))]>,
+    Sched<[]> {
   bits<5> Rd;
   let Inst{31-15} = 0b11011010110000010;
   let Inst{14-12} = opcode_prefix;

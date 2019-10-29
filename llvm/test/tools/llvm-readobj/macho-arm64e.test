@@ -1,0 +1,5 @@
+RUN: llvm-readobj -h %p/Inputs/trivial.obj.macho-arm64e | FileCheck %s
+
+CHECK: Magic: Magic64 (0xFEEDFACF)
+CHECK: CpuType: Arm64 (0x100000C)
+CHECK: CpuSubType: CPU_SUBTYPE_ARM64E (0x2)

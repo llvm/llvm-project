@@ -24,6 +24,7 @@ add_llvm_library(LLVMCore
   Dominators.cpp
   Function.cpp
   GVMaterializer.cpp
+  GlobalPtrAuthInfo.cpp
   Globals.cpp
   IRBuilder.cpp
   IRPrintingPasses.cpp

@@ -4505,7 +4505,9 @@ bool LLParser::ParseDIBasicType(MDNode *&Result, bool IsDistinct) {
 ///   ::= !DIDerivedType(tag: DW_TAG_pointer_type, name: "int", file: !0,
 ///                      line: 7, scope: !1, baseType: !2, size: 32,
 ///                      align: 32, offset: 0, flags: 0, extraData: !3,
-///                      dwarfAddressSpace: 3)
+///                      dwarfAddressSpace: 3, ptrAuthKey: 1,
+///                      ptrAuthIsAddressDiscriminated: true,
+///                      ptrAuthExtraDiscriminator: 0x1234)
 bool LLParser::ParseDIDerivedType(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(tag, DwarfTagField, );                                              \
@@ -4519,19 +4521,27 @@ bool LLParser::ParseDIDerivedType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(offset, MDUnsignedField, (0, UINT64_MAX));                          \
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(extraData, MDField, );                                              \
-  OPTIONAL(dwarfAddressSpace, MDUnsignedField, (UINT32_MAX, UINT32_MAX));
+  OPTIONAL(dwarfAddressSpace, MDUnsignedField, (UINT32_MAX, UINT32_MAX));      \
+  OPTIONAL(ptrAuthKey, MDUnsignedField, (0, 7));                               \
+  OPTIONAL(ptrAuthIsAddressDiscriminated, MDBoolField, );                      \
+  OPTIONAL(ptrAuthExtraDiscriminator, MDUnsignedField, (0, 0xffff));
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
   Optional<unsigned> DWARFAddressSpace;
   if (dwarfAddressSpace.Val != UINT32_MAX)
     DWARFAddressSpace = dwarfAddressSpace.Val;
+  Optional<DIDerivedType::PtrAuthData> PtrAuthData;
+  if (ptrAuthKey.Val)
+    PtrAuthData = DIDerivedType::PtrAuthData(
+        (unsigned)ptrAuthKey.Val, ptrAuthIsAddressDiscriminated.Val,
+        (unsigned)ptrAuthExtraDiscriminator.Val);
 
   Result = GET_OR_DISTINCT(DIDerivedType,
                            (Context, tag.Val, name.Val, file.Val, line.Val,
                             scope.Val, baseType.Val, size.Val, align.Val,
-                            offset.Val, DWARFAddressSpace, flags.Val,
-                            extraData.Val));
+                            offset.Val, DWARFAddressSpace, PtrAuthData,
+                            flags.Val, extraData.Val));
   return false;
 }
 

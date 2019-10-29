@@ -70,6 +70,7 @@
 #include "llvm/IR/GlobalIFunc.h"
 #include "llvm/IR/GlobalIndirectSymbol.h"
 #include "llvm/IR/GlobalObject.h"
+#include "llvm/IR/GlobalPtrAuthInfo.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
@@ -1936,6 +1937,10 @@ bool AsmPrinter::EmitSpecialLLVMGlobal(const GlobalVariable *GV) {
       GV->hasAvailableExternallyLinkage())
     return true;
 
+  // Ignore ptrauth globals: they only represent references to other globals.
+  if (GV->getSection() == "llvm.ptrauth")
+    return true;
+
   if (!GV->hasAppendingLinkage()) return false;
 
   assert(GV->hasInitializer() && "Not a special LLVM global!");
@@ -2171,11 +2176,20 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV))
     return MCConstantExpr::create(CI->getZExtValue(), Ctx);
 
-  if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV))
+  if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
+    // llvm.ptrauth globals should have been handled in emitGlobalConstantImpl,
+    // where we still had the offset of the reference.  If we see them here, it
+    // means that they were obfuscated enough that we didn't detect them.
+    if (auto *GVB = dyn_cast<GlobalVariable>(GV))
+      if (GVB->getSection() == "llvm.ptrauth")
+        report_fatal_error("Unsupported usage of llvm.ptrauth global '" +
+                           GV->getName() + "'");
+
     return MCSymbolRefExpr::create(getSymbol(GV), Ctx);
+  }
 
   if (const BlockAddress *BA = dyn_cast<BlockAddress>(CV))
-    return MCSymbolRefExpr::create(GetBlockAddressSymbol(BA), Ctx);
+    return lowerBlockAddressConstant(BA);
 
   const ConstantExpr *CE = dyn_cast<ConstantExpr>(CV);
   if (!CE) {
@@ -2665,6 +2679,70 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
     AP.GlobalGOTEquivs[GOTEquivSym] = std::make_pair(GV, NumUses);
 }
 
+static const GlobalVariable *
+stripPtrAuthGlobalVariableCasts(const DataLayout &DL, const Value *V) {
+  bool FoundInvalidCast = false;
+  while (true) {
+    if (auto *CE = dyn_cast<ConstantExpr>(V)) {
+      if (CE->getOpcode() == Instruction::PtrToInt ||
+          CE->getOpcode() == Instruction::IntToPtr) {
+        // If we found a size-changing cast, report it later, if we did find an
+        // llvm.ptrauth global.
+        if (DL.getTypeAllocSize(CE->getType()) !=
+            DL.getTypeAllocSize(CE->getOperand(0)->getType()))
+          FoundInvalidCast = true;
+        V = CE->getOperand(0);
+      }
+    }
+
+    if (auto *GV = dyn_cast<GlobalVariable>(V)) {
+      if (GV->getSection() != "llvm.ptrauth")
+        return nullptr;
+      if (FoundInvalidCast)
+        report_fatal_error("Invalid size-changing cast of llvm.ptrauth global");
+      return GV;
+    }
+
+    // If all else failed, and there are still casts to strip, try again.
+    // Otherwise, there's nothing else we can look through.
+    auto *Stripped = V->stripPointerCasts();
+    if (Stripped != V)
+      V = Stripped;
+    else
+      return nullptr;
+  }
+
+  llvm_unreachable("failed to strip ptrauth global casts");
+}
+
+static void emitPtrAuthGlobalConstant(const DataLayout &DL,
+                                      const GlobalVariable *GV, AsmPrinter &AP,
+                                      const Constant *BaseCV, uint64_t Offset,
+                                      uint64_t Size) {
+  auto PAI = *GlobalPtrAuthInfo::analyze(GV);
+
+  // Check that the address discriminator matches.
+  // NOTE: This could in principle be a verifier, but for now this
+  // always-enabled very conservative check is preferable.
+  if (PAI.hasAddressDiversity()) {
+    APInt ComputedOffset(DL.getPointerSizeInBits(), 0);
+    const GlobalVariable *BaseGV = nullptr;
+
+    auto *BaseCast = dyn_cast<PtrToIntOperator>(PAI.getAddrDiscriminator());
+    if (BaseCast)
+      BaseGV = dyn_cast<GlobalVariable>(
+          BaseCast->getPointerOperand()
+              ->stripAndAccumulateInBoundsConstantOffsets(DL, ComputedOffset));
+    if (!BaseGV || BaseCV != BaseGV || Offset != ComputedOffset.getZExtValue())
+      GV->getContext().emitError(
+          "Mismatched address discriminator in llvm.ptrauth global '" +
+          GV->getName() + "'");
+  }
+
+  auto *ME = AP.lowerPtrAuthGlobalConstant(PAI);
+  AP.OutStreamer->EmitValue(ME, Size);
+}
+
 static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
                                    AsmPrinter &AP, const Constant *BaseCV,
                                    uint64_t Offset) {
@@ -2714,6 +2792,25 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
     return emitGlobalConstantStruct(DL, CVS, AP, BaseCV, Offset);
 
   if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(CV)) {
+
+    // Lower "llvm.ptrauth" global references directly, so that we can check
+    // the address discriminator ourselves, while we still have the offset of
+    // the constant into the global that contains the reference.
+    // Only pointer-sized constants could contain an authenticated pointer.
+    if (Size == DL.getPointerSize()) {
+      if (auto *GV = stripPtrAuthGlobalVariableCasts(DL, CE)) {
+        return emitPtrAuthGlobalConstant(DL, GV, AP, BaseCV, Offset, Size);
+      }
+    }
+#ifndef NDEBUG
+    // But in asserts builds, check that we didn't let a ptrauth reference slip
+    // through in a non-pointer-sized constant.
+    else {
+      auto *GV = stripPtrAuthGlobalVariableCasts(DL, CE);
+      assert(!GV && "Invalid non-pointer-sized llvm.ptrauth global reference");
+    }
+#endif
+
     // Look through bitcasts, which might not be able to be MCExpr'ized (e.g. of
     // vectors).
     if (CE->getOpcode() == Instruction::BitCast)
@@ -2783,6 +2880,10 @@ MCSymbol *AsmPrinter::GetBlockAddressSymbol(const BlockAddress *BA) const {
 
 MCSymbol *AsmPrinter::GetBlockAddressSymbol(const BasicBlock *BB) const {
   return MMI->getAddrLabelSymbol(BB);
+}
+
+const MCExpr *AsmPrinter::lowerBlockAddressConstant(const BlockAddress *BA) {
+  return MCSymbolRefExpr::create(GetBlockAddressSymbol(BA), OutContext);
 }
 
 /// GetCPISymbol - Return the symbol for the specified constant pool entry.

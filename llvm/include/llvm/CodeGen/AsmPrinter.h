@@ -75,6 +75,8 @@ class StackMaps;
 class TargetLoweringObjectFile;
 class TargetMachine;
 
+class GlobalPtrAuthInfo;
+
 /// This class is intended to be used as a driving class for all asm writers.
 class AsmPrinter : public MachineFunctionPass {
 public:
@@ -440,6 +442,16 @@ public:
   /// Targets can override this to customize the output of IMPLICIT_DEF
   /// instructions in verbose mode.
   virtual void emitImplicitDef(const MachineInstr *MI) const;
+
+  /// Lower the specified "llvm.ptrauth" GlobalVariable to an MCExpr.
+  virtual const MCExpr *
+  lowerPtrAuthGlobalConstant(const GlobalPtrAuthInfo &PAI) {
+    report_fatal_error("llvm.ptrauth global lowering not implemented");
+  }
+
+  /// Lower the specified "llvm.ptrauth" GlobalVariable to an MCExpr.
+  virtual const MCExpr *
+  lowerBlockAddressConstant(const BlockAddress *BA);
 
   //===------------------------------------------------------------------===//
   // Symbol Lowering Routines.

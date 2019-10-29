@@ -264,7 +264,16 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
     CGF.Builder.CreateConstInBoundsGEP1_64(VTable, VTableIndex, "vfnkxt");
   llvm::Value *VFunc =
     CGF.Builder.CreateAlignedLoad(VFuncPtr, CGF.PointerAlignInBytes);
-  CGCallee Callee(GD, VFunc);
+
+  CGPointerAuthInfo PointerAuth;
+  if (auto &Schema =
+          CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers) {
+    auto OrigMD =
+      CGM.getItaniumVTableContext().findOriginalMethod(GD.getCanonicalDecl());
+    PointerAuth = CGF.EmitPointerAuthInfo(Schema, VFuncPtr, OrigMD, QualType());
+  }
+
+  CGCallee Callee(GD, VFunc, PointerAuth);
   return Callee;
 }
 

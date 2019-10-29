@@ -261,6 +261,13 @@ struct GenBinaryFuncName : CopyStructVisitor<GenBinaryFuncName<IsMove>, IsMove>,
     this->appendStr("_tv" + llvm::to_string(OffsetInBits) + "w" +
                     llvm::to_string(getFieldSize(FD, FT, this->Ctx)));
   }
+
+  void visitPtrAuth(QualType FT, const FieldDecl *FD,
+                    CharUnits CurStructOffset) {
+    this->appendStr("_pa");
+    CharUnits FieldOffset = CurStructOffset + this->getFieldOffset(FD);
+    this->appendStr(llvm::to_string(FieldOffset.getQuantity()));
+  }
 };
 
 struct GenDefaultInitializeFuncName
@@ -562,6 +569,14 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
     }
     RValue SrcVal = this->CGF->EmitLoadOfLValue(SrcLV, SourceLocation());
     this->CGF->EmitStoreThroughLValue(SrcVal, DstLV);
+  }
+
+  void visitPtrAuth(QualType FT, const FieldDecl *FD, CharUnits CurStackOffset,
+                    std::array<Address, 2> Addrs) {
+    PointerAuthQualifier PtrAuth = FT.getPointerAuth();
+    Addrs[DstIdx] = this->getAddrWithOffset(Addrs[DstIdx], CurStackOffset, FD);
+    Addrs[SrcIdx] = this->getAddrWithOffset(Addrs[SrcIdx], CurStackOffset, FD);
+    this->CGF->EmitPointerAuthCopy(PtrAuth, FT, Addrs[DstIdx], Addrs[SrcIdx]);
   }
 };
 

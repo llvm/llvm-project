@@ -48,6 +48,7 @@ FunctionPass *createAArch64A53Fix835769();
 FunctionPass *createFalkorHWPFFixPass();
 FunctionPass *createFalkorMarkStridedAccessesPass();
 FunctionPass *createAArch64BranchTargetsPass();
+FunctionPass *createAArch64ExpandHardenedPseudosPass();
 
 FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 
@@ -69,6 +70,7 @@ void initializeAArch64CompressJumpTablesPass(PassRegistry&);
 void initializeAArch64ConditionalComparesPass(PassRegistry&);
 void initializeAArch64ConditionOptimizerPass(PassRegistry&);
 void initializeAArch64DeadRegisterDefinitionsPass(PassRegistry&);
+void initializeAArch64ExpandHardenedPseudosPass(PassRegistry&);
 void initializeAArch64ExpandPseudoPass(PassRegistry&);
 void initializeAArch64SpeculationHardeningPass(PassRegistry&);
 void initializeAArch64LoadStoreOptPass(PassRegistry&);

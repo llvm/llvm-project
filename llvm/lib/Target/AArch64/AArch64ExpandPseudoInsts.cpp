@@ -662,6 +662,37 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     MI.eraseFromParent();
     return true;
    }
+   case AArch64::XPACIuntied: {
+     const MachineOperand &LHS = MI.getOperand(0);
+     const MachineOperand &RHS = MI.getOperand(1);
+     // If the registrs are the same, just lower to the "tied" version.
+     // $x0 = XPACIuntied $x0 -> $x0 = XPACI $x0.
+     if (LHS.getReg() == RHS.getReg()) {
+       MachineInstrBuilder DefMIB =
+           BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::XPACI))
+               .add(LHS)
+               .add(RHS);
+       transferImpOps(MI, DefMIB, DefMIB);
+     } else {
+       // $x0 = XPACIuntied $x1
+       // ->
+       // mov $x0, $x1
+       // XPACI $x0.
+       MachineInstrBuilder DefMIB =
+           BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
+               .addReg(LHS.getReg())
+               .addReg(AArch64::XZR)
+               .add(RHS)
+               .addImm(0);
+       MachineInstrBuilder UseMIB =
+           BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::XPACI),
+                   LHS.getReg())
+               .addReg(LHS.getReg());
+       transferImpOps(MI, UseMIB, DefMIB);
+     }
+     MI.eraseFromParent();
+     return true;
+   }
    case AArch64::IRGstack: {
      MachineFunction &MF = *MBB.getParent();
      const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();

@@ -143,6 +143,9 @@ static bool canGoAfterDWARF(const MCSectionMachO &MSec) {
                               SecName == "__thread_ptr"))
     return true;
 
+  if (SegName == "__DATA" && SecName == "__auth_ptr")
+    return true;
+
   return false;
 }
 

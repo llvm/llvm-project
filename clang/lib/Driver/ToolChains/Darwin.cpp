@@ -56,7 +56,7 @@ llvm::Triple::ArchType darwin::getArchTypeForMachOArchName(StringRef Str) {
       .Cases("arm", "armv4t", "armv5", "armv6", "armv6m", llvm::Triple::arm)
       .Cases("armv7", "armv7em", "armv7k", "armv7m", llvm::Triple::arm)
       .Cases("armv7s", "xscale", llvm::Triple::arm)
-      .Case("arm64", llvm::Triple::aarch64)
+      .Cases("arm64", "arm64e", llvm::Triple::aarch64)
       .Case("r600", llvm::Triple::r600)
       .Case("amdgcn", llvm::Triple::amdgcn)
       .Case("nvptx", llvm::Triple::nvptx)
@@ -71,8 +71,13 @@ void darwin::setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str) {
   llvm::ARM::ArchKind ArchKind = llvm::ARM::parseArch(Str);
   T.setArch(Arch);
 
-  if (Str == "x86_64h")
+  // Preserve the original string for those -arch options that aren't
+  // reflected in ArchKind but still affect code generation.  It's not
+  // clear why these aren't just reflected in ArchKind, though.
+  if (Str == "x86_64h" || Str == "arm64e")
     T.setArchName(Str);
+
+  // These arches aren't really Darwin even if we're using a Darwin toolchain.
   else if (ArchKind == llvm::ARM::ArchKind::ARMV6M ||
            ArchKind == llvm::ARM::ArchKind::ARMV7M ||
            ArchKind == llvm::ARM::ArchKind::ARMV7EM) {
@@ -835,8 +840,11 @@ StringRef MachO::getMachOArchName(const ArgList &Args) const {
   default:
     return getDefaultUniversalArchName();
 
-  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64: {
+    if (getTriple().getArchName() == "arm64e")
+      return "arm64e";
     return "arm64";
+  }
 
   case llvm::Triple::thumb:
   case llvm::Triple::arm:
@@ -921,6 +929,37 @@ void DarwinClang::addClangWarningOptions(ArgStringList &CC1Args) const {
     // as that can impact calling conventions.
     if (!isTargetMacOS())
       CC1Args.push_back("-Werror=implicit-function-declaration");
+  }
+}
+
+void DarwinClang::addClangTargetOptions(
+  const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+  Action::OffloadKind DeviceOffloadKind) const{
+
+  Darwin::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+
+  // On arm64e, enable pointer authentication (for the return address and
+  // indirect calls), as well as usage of the intrinsics.
+  if (getArchName() == "arm64e") {
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
+                           options::OPT_fno_ptrauth_returns))
+      CC1Args.push_back("-fptrauth-returns");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
+                           options::OPT_fno_ptrauth_intrinsics))
+      CC1Args.push_back("-fptrauth-intrinsics");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_calls,
+                           options::OPT_fno_ptrauth_calls))
+      CC1Args.push_back("-fptrauth-calls");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_indirect_gotos,
+                           options::OPT_fno_ptrauth_indirect_gotos))
+      CC1Args.push_back("-fptrauth-indirect-gotos");
+
+    if (!DriverArgs.hasArg(options::OPT_fptrauth_auth_traps,
+                           options::OPT_fno_ptrauth_auth_traps))
+      CC1Args.push_back("-fptrauth-auth-traps");
   }
 }
 
@@ -1609,7 +1648,7 @@ inferDeploymentTargetFromArch(DerivedArgList &Args, const Darwin &Toolchain,
 
   StringRef MachOArchName = Toolchain.getMachOArchName(Args);
   if (MachOArchName == "armv7" || MachOArchName == "armv7s" ||
-      MachOArchName == "arm64")
+      MachOArchName == "arm64" || MachOArchName == "arm64e")
     OSTy = llvm::Triple::IOS;
   else if (MachOArchName == "armv7k")
     OSTy = llvm::Triple::WatchOS;

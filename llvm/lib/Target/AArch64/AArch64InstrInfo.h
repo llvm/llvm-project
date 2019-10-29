@@ -360,6 +360,34 @@ static inline bool isIndirectBranchOpcode(int Opc) {
   return Opc == AArch64::BR;
 }
 
+static inline unsigned getXPACOpcodeForKey(AArch64PACKey::ID K) {
+  using namespace AArch64PACKey;
+  switch (K) {
+  case IA: case IB: return AArch64::XPACI;
+  case DA: case DB: return AArch64::XPACD;
+  }
+}
+
+static inline unsigned getAUTOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
+  using namespace AArch64PACKey;
+  switch (K) {
+  case IA: return Zero ? AArch64::AUTIZA : AArch64::AUTIA;
+  case IB: return Zero ? AArch64::AUTIZB : AArch64::AUTIB;
+  case DA: return Zero ? AArch64::AUTDZA : AArch64::AUTDA;
+  case DB: return Zero ? AArch64::AUTDZB : AArch64::AUTDB;
+  }
+}
+
+static inline unsigned getPACOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
+  using namespace AArch64PACKey;
+  switch (K) {
+  case IA: return Zero ? AArch64::PACIZA : AArch64::PACIA;
+  case IB: return Zero ? AArch64::PACIZB : AArch64::PACIB;
+  case DA: return Zero ? AArch64::PACDZA : AArch64::PACDA;
+  case DB: return Zero ? AArch64::PACDZB : AArch64::PACDB;
+  }
+}
+
 // struct TSFlags {
 #define TSFLAG_ELEMENT_SIZE_TYPE(X)      (X)       // 3-bits
 #define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3) // 1-bit
