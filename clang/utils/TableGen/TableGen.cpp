@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h" // Declares all backends.
+#include "ClangASTEmitters.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
@@ -263,14 +264,14 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     EmitClangDiagsIndexName(Records, OS);
     break;
   case GenClangCommentNodes:
-    EmitClangASTNodes(Records, OS, "Comment", "");
+    EmitClangASTNodes(Records, OS, CommentNodeClassName, "");
     break;
   case GenClangDeclNodes:
-    EmitClangASTNodes(Records, OS, "Decl", "Decl");
+    EmitClangASTNodes(Records, OS, DeclNodeClassName, "Decl");
     EmitClangDeclContext(Records, OS);
     break;
   case GenClangStmtNodes:
-    EmitClangASTNodes(Records, OS, "Stmt", "");
+    EmitClangASTNodes(Records, OS, StmtNodeClassName, "");
     break;
   case GenClangTypeNodes:
     EmitClangTypeNodes(Records, OS);
