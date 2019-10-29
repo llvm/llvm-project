@@ -808,7 +808,7 @@ Constant *llvm::ConstantFoldExtractElementInstruction(Constant *Val,
       for (unsigned i = 0, e = CE->getNumOperands(); i != e; ++i) {
         Constant *Op = CE->getOperand(i);
         if (Op->getType()->isVectorTy()) {
-          Constant *ScalarOp = ConstantFoldExtractElementInstruction(Op, Idx);
+          Constant *ScalarOp = ConstantExpr::getExtractElement(Op, Idx);
           if (!ScalarOp)
             return  nullptr;
           Ops.push_back(ScalarOp);
