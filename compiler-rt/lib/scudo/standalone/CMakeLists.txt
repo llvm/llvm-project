@@ -77,7 +77,6 @@ set(SCUDO_SOURCES
   fuchsia.cpp
   linux.cpp
   report.cpp
-  secondary.cpp
   string_utils.cpp
   )
 
