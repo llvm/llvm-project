@@ -181,6 +181,7 @@ struct ParsedDWARFTypeAttributes {
   bool is_scoped_enum = false;
   bool is_vector = false;
   bool is_virtual = false;
+  bool exports_symbols = false;
   clang::StorageClass storage = clang::SC_None;
   const char *mangled_name = nullptr;
   lldb_private::ConstString name;
