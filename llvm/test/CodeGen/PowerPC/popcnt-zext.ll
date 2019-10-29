@@ -41,9 +41,8 @@ define i16 @zpop_i8_i16(i8 %x) {
 define i16 @popz_i8_i16(i8 %x) {
 ; FAST-LABEL: popz_i8_i16:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    rlwinm 3, 3, 0, 24, 31
-; FAST-NEXT:    popcntw 3, 3
-; FAST-NEXT:    clrldi 3, 3, 32
+; FAST-NEXT:    clrldi 3, 3, 56
+; FAST-NEXT:    popcntd 3, 3
 ; FAST-NEXT:    blr
 ;
 ; SLOW-LABEL: popz_i8_i16:
@@ -114,9 +113,8 @@ define i32 @zpop_i8_i32(i8 %x) {
 define i32 @popz_i8_32(i8 %x) {
 ; FAST-LABEL: popz_i8_32:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    rlwinm 3, 3, 0, 24, 31
-; FAST-NEXT:    popcntw 3, 3
-; FAST-NEXT:    clrldi 3, 3, 32
+; FAST-NEXT:    clrldi 3, 3, 56
+; FAST-NEXT:    popcntd 3, 3
 ; FAST-NEXT:    blr
 ;
 ; SLOW-LABEL: popz_i8_32:
@@ -187,9 +185,8 @@ define i32 @zpop_i16_i32(i16 %x) {
 define i32 @popz_i16_32(i16 %x) {
 ; FAST-LABEL: popz_i16_32:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    rlwinm 3, 3, 0, 16, 31
-; FAST-NEXT:    popcntw 3, 3
-; FAST-NEXT:    clrldi 3, 3, 32
+; FAST-NEXT:    clrldi 3, 3, 48
+; FAST-NEXT:    popcntd 3, 3
 ; FAST-NEXT:    blr
 ;
 ; SLOW-LABEL: popz_i16_32:
