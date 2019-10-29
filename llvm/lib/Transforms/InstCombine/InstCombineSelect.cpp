@@ -781,6 +781,13 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
     return Builder.CreateBinaryIntrinsic(
         Intrinsic::uadd_sat, BO->getOperand(0), BO->getOperand(1));
   }
+  // The overflow may be detected via the add wrapping round.
+  if (match(Cmp0, m_c_Add(m_Specific(Cmp1), m_Value(Y))) &&
+      match(FVal, m_c_Add(m_Specific(Cmp1), m_Specific(Y)))) {
+    // ((X + Y) u< X) ? -1 : (X + Y) --> uadd.sat(X, Y)
+    // ((X + Y) u< Y) ? -1 : (X + Y) --> uadd.sat(X, Y)
+    return Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, Cmp1, Y);
+  }
 
   return nullptr;
 }
