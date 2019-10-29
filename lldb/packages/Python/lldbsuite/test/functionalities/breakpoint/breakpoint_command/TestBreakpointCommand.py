@@ -18,7 +18,7 @@ class BreakpointCommandTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
-    def test_breakpoint_command_sequence(self):
+    def not_test_breakpoint_command_sequence(self):
         """Test a sequence of breakpoint command add, list, and delete."""
         self.build()
         self.breakpoint_command_sequence()
@@ -107,6 +107,10 @@ class BreakpointCommandTestCase(TestBase):
             "breakpoint command add -s command -o 'frame variable --show-types --scope' 1 4")
         self.runCmd(
             "breakpoint command add -s python -o 'import side_effect; side_effect.one_liner = \"one liner was here\"' 2")
+
+        import side_effect
+        self.runCmd("command script import --allow-reload ./bktptcmd.py")
+
         self.runCmd(
             "breakpoint command add --python-function bktptcmd.function 3")
 
@@ -150,8 +154,6 @@ class BreakpointCommandTestCase(TestBase):
                              "frame variable --show-types --scope"])
 
         self.runCmd("breakpoint delete 4")
-
-        self.runCmd("command script import --allow-reload ./bktptcmd.py")
 
         # Next lets try some other breakpoint kinds.  First break with a regular expression
         # and then specify only one file.  The first time we should get two locations,

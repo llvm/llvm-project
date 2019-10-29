@@ -45,7 +45,8 @@ LLDBSwigPythonBreakpointCallbackFunction
     const char *python_function_name,
     const char *session_dictionary_name,
     const lldb::StackFrameSP& frame_sp,
-    const lldb::BreakpointLocationSP& bp_loc_sp
+    const lldb::BreakpointLocationSP& bp_loc_sp,
+    lldb_private::StructuredDataImpl *args_impl
 )
 {
     lldb::SBFrame sb_frame (frame_sp);
@@ -62,7 +63,19 @@ LLDBSwigPythonBreakpointCallbackFunction
 
     PythonObject frame_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_frame));
     PythonObject bp_loc_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_bp_loc));
-    PythonObject result = pfunc(frame_arg, bp_loc_arg, dict);
+
+    PythonObject result;
+    // If the called function doesn't take extra_args, drop them here:
+    auto arg_info = pfunc.GetNumArguments();
+    if (arg_info.count == 3)
+      result = pfunc(frame_arg, bp_loc_arg, dict);
+    else if (arg_info.count == 4) {
+        lldb::SBStructuredData *args_value = new lldb::SBStructuredData(args_impl);
+        PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(args_value));
+        result = pfunc(frame_arg, bp_loc_arg, args_arg, dict);      
+    } else {
+      return stop_at_breakpoint;
+    }
 
     if (result.get() == Py_False)
         stop_at_breakpoint = false;

@@ -546,7 +546,9 @@ public:
     m_arguments.push_back(arg);
     
     if (step_type == eStepTypeScripted) {
-      m_all_options.Append(&m_class_options, LLDB_OPT_SET_1, LLDB_OPT_SET_1);
+      m_all_options.Append(&m_class_options, 
+                           LLDB_OPT_SET_1 | LLDB_OPT_SET_2, 
+                           LLDB_OPT_SET_1);
     }
     m_all_options.Append(&m_options);
     m_all_options.Finalize();
@@ -596,15 +598,15 @@ protected:
     }
 
     if (m_step_type == eStepTypeScripted) {
-      if (m_class_options.GetClassName().empty()) {
+      if (m_class_options.GetName().empty()) {
         result.AppendErrorWithFormat("empty class name for scripted step.");
         result.SetStatus(eReturnStatusFailed);
         return false;
       } else if (!GetDebugger().GetScriptInterpreter()->CheckObjectExists(
-                     m_class_options.GetClassName().c_str())) {
+                     m_class_options.GetName().c_str())) {
         result.AppendErrorWithFormat(
             "class for scripted step: \"%s\" does not exist.",
-            m_class_options.GetClassName().c_str());
+            m_class_options.GetName().c_str());
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
@@ -720,7 +722,7 @@ protected:
           m_options.m_step_out_avoid_no_debug);
     } else if (m_step_type == eStepTypeScripted) {
       new_plan_sp = thread->QueueThreadPlanForStepScripted(
-          abort_other_plans, m_class_options.GetClassName().c_str(), 
+          abort_other_plans, m_class_options.GetName().c_str(), 
           m_class_options.GetStructuredData(),
           bool_stop_other_threads, new_plan_status);
     } else {
