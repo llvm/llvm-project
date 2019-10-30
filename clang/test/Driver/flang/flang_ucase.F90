@@ -48,4 +48,4 @@
 ! CHECK-EMIT-OBJ-DAG: "-o" "{{[^"]*}}.o"
 
 ! Should end in the input file.
-! ALL: "{{.*}}flang.F90"{{$}}
+! ALL: "{{.*}}flang_ucase.F90"{{$}}
