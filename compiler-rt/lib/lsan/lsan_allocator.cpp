@@ -36,10 +36,17 @@ static const uptr kMaxAllowedMallocSize = 8UL << 30;
 
 static Allocator allocator;
 
+static uptr max_malloc_size;
+
 void InitializeAllocator() {
   SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
   allocator.InitLinkerInitialized(
       common_flags()->allocator_release_to_os_interval_ms);
+  if (common_flags()->max_allocation_size_mb)
+    max_malloc_size = Min(common_flags()->max_allocation_size_mb << 20,
+                          kMaxAllowedMallocSize);
+  else
+    max_malloc_size = kMaxAllowedMallocSize;
 }
 
 void AllocatorThreadFinish() {
@@ -72,14 +79,14 @@ static void *ReportAllocationSizeTooBig(uptr size, const StackTrace &stack) {
     Report("WARNING: LeakSanitizer failed to allocate 0x%zx bytes\n", size);
     return nullptr;
   }
-  ReportAllocationSizeTooBig(size, kMaxAllowedMallocSize, &stack);
+  ReportAllocationSizeTooBig(size, max_malloc_size, &stack);
 }
 
 void *Allocate(const StackTrace &stack, uptr size, uptr alignment,
                bool cleared) {
   if (size == 0)
     size = 1;
-  if (size > kMaxAllowedMallocSize)
+  if (size > max_malloc_size)
     return ReportAllocationSizeTooBig(size, stack);
   void *p = allocator.Allocate(GetAllocatorCache(), size, alignment);
   if (UNLIKELY(!p)) {
@@ -117,7 +124,7 @@ void Deallocate(void *p) {
 void *Reallocate(const StackTrace &stack, void *p, uptr new_size,
                  uptr alignment) {
   RegisterDeallocation(p);
-  if (new_size > kMaxAllowedMallocSize) {
+  if (new_size > max_malloc_size) {
     allocator.Deallocate(GetAllocatorCache(), p);
     return ReportAllocationSizeTooBig(new_size, stack);
   }
