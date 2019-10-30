@@ -267,8 +267,7 @@ LinkEditData:
 #CHECK:   LazyBindOpcodes: 
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ULEBExtraData:   
-#CHECK:         - 0x0000000000000028
+#CHECK:       ULEBExtraData:   [ 0x0000000000000028 ]
 #CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
 #CHECK:       Imm:             1
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
@@ -280,8 +279,7 @@ LinkEditData:
 #CHECK:       Imm:             0
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ULEBExtraData:   
-#CHECK:         - 0x0000000000000030
+#CHECK:       ULEBExtraData:   [ 0x0000000000000030 ]
 #CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
 #CHECK:       Imm:             1
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
@@ -293,8 +291,7 @@ LinkEditData:
 #CHECK:       Imm:             0
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ULEBExtraData:   
-#CHECK:         - 0x0000000000000038
+#CHECK:       ULEBExtraData:   [ 0x0000000000000038 ]
 #CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
 #CHECK:       Imm:             1
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
@@ -306,8 +303,7 @@ LinkEditData:
 #CHECK:       Imm:             0
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ULEBExtraData:   
-#CHECK:         - 0x0000000000000040
+#CHECK:       ULEBExtraData:   [ 0x0000000000000040 ]
 #CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
 #CHECK:       Imm:             1
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
@@ -319,8 +315,7 @@ LinkEditData:
 #CHECK:       Imm:             0
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ULEBExtraData:   
-#CHECK:         - 0x0000000000000048
+#CHECK:       ULEBExtraData:   [ 0x0000000000000048 ]
 #CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
 #CHECK:       Imm:             1
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
@@ -332,8 +327,7 @@ LinkEditData:
 #CHECK:       Imm:             0
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ULEBExtraData:   
-#CHECK:         - 0x0000000000000050
+#CHECK:       ULEBExtraData:   [ 0x0000000000000050 ]
 #CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
 #CHECK:       Imm:             1
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
@@ -345,8 +339,7 @@ LinkEditData:
 #CHECK:       Imm:             0
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ULEBExtraData:   
-#CHECK:         - 0x0000000000000058
+#CHECK:       ULEBExtraData:   [ 0x0000000000000058 ]
 #CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
 #CHECK:       Imm:             1
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
@@ -358,8 +351,7 @@ LinkEditData:
 #CHECK:       Imm:             0
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ULEBExtraData:   
-#CHECK:         - 0x0000000000000060
+#CHECK:       ULEBExtraData:   [ 0x0000000000000060 ]
 #CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
 #CHECK:       Imm:             1
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
@@ -371,8 +363,7 @@ LinkEditData:
 #CHECK:       Imm:             0
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ULEBExtraData:   
-#CHECK:         - 0x0000000000000068
+#CHECK:       ULEBExtraData:   [ 0x0000000000000068 ]
 #CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
 #CHECK:       Imm:             1
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
@@ -384,8 +375,7 @@ LinkEditData:
 #CHECK:       Imm:             0
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ULEBExtraData:   
-#CHECK:         - 0x0000000000000070
+#CHECK:       ULEBExtraData:   [ 0x0000000000000070 ]
 #CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
 #CHECK:       Imm:             1
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
@@ -397,8 +387,7 @@ LinkEditData:
 #CHECK:       Imm:             0
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ULEBExtraData:   
-#CHECK:         - 0x0000000000000078
+#CHECK:       ULEBExtraData:   [ 0x0000000000000078 ]
 #CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
 #CHECK:       Imm:             1
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
@@ -410,8 +399,7 @@ LinkEditData:
 #CHECK:       Imm:             0
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ULEBExtraData:   
-#CHECK:         - 0x0000000000000080
+#CHECK:       ULEBExtraData:   [ 0x0000000000000080 ]
 #CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
 #CHECK:       Imm:             1
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
@@ -423,8 +411,7 @@ LinkEditData:
 #CHECK:       Imm:             0
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ULEBExtraData:   
-#CHECK:         - 0x0000000000000088
+#CHECK:       ULEBExtraData:   [ 0x0000000000000088 ]
 #CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
 #CHECK:       Imm:             2
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
@@ -436,8 +423,7 @@ LinkEditData:
 #CHECK:       Imm:             0
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ULEBExtraData:   
-#CHECK:         - 0x0000000000000090
+#CHECK:       ULEBExtraData:   [ 0x0000000000000090 ]
 #CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
 #CHECK:       Imm:             2
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
@@ -449,8 +435,7 @@ LinkEditData:
 #CHECK:       Imm:             0
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ULEBExtraData:   
-#CHECK:         - 0x0000000000000098
+#CHECK:       ULEBExtraData:   [ 0x0000000000000098 ]
 #CHECK:     - Opcode:          BIND_OPCODE_SET_DYLIB_ORDINAL_IMM
 #CHECK:       Imm:             2
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM

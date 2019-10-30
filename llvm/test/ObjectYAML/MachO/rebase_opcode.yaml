@@ -82,11 +82,9 @@ LinkEditData:
 #CHECK:       Imm:             1
 #CHECK:     - Opcode:          REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ExtraData:       
-#CHECK:         - 0x0000000000000028
+#CHECK:       ExtraData:       [ 0x0000000000000028 ]
 #CHECK:     - Opcode:          REBASE_OPCODE_DO_REBASE_ULEB_TIMES
 #CHECK:       Imm:             0
-#CHECK:       ExtraData:       
-#CHECK:         - 0x000000000000000F
+#CHECK:       ExtraData:       [ 0x000000000000000F ]
 #CHECK:     - Opcode:          REBASE_OPCODE_DONE
 #CHECK:       Imm:             0

@@ -161,8 +161,6 @@ struct Data {
 } // end namespace DWARFYAML
 } // end namespace llvm
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::Hex64)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::Hex8)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::AttributeAbbrev)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::Abbrev)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::ARangeDescriptor)
