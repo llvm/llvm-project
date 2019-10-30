@@ -114,7 +114,7 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &O) const {
     llvm::Error err = OptLineTable->encode(O, Range.Start);
     if (err)
       return std::move(err);
-    const off_t Length = O.tell() - StartOffset;
+    const auto Length = O.tell() - StartOffset;
     if (Length > UINT32_MAX)
         return createStringError(std::errc::invalid_argument,
             "LineTable length is greater than UINT32_MAX");
@@ -132,7 +132,7 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &O) const {
     llvm::Error err = Inline->encode(O, Range.Start);
     if (err)
       return std::move(err);
-    const off_t Length = O.tell() - StartOffset;
+    const auto Length = O.tell() - StartOffset;
     if (Length > UINT32_MAX)
         return createStringError(std::errc::invalid_argument,
             "InlineInfo length is greater than UINT32_MAX");
