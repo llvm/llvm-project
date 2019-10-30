@@ -5,15 +5,16 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t.s -o %t.o
 
 ## Empty include file.
-# RUN: echo "" > %t.inc
-# RUN: ld.lld -o %t.elf --script %s %t.o -L %T
+# RUN: rm -rf %t.dir && mkdir -p %t.dir
+# RUN: echo "" > %t.dir/inc.script
+# RUN: ld.lld -o %t.elf --script %s %t.o -L %t.dir
 # RUN: llvm-objdump -section-headers %t.elf | FileCheck %s --check-prefix=CHECK1
 # CHECK1:      .data         00000008 0000000000002000 DATA
 # CHECK1-NEXT: .data3        00000008 0000000000002008 DATA
 
 ## Non-empty include file.
-# RUN: echo ".data2 : { QUAD(0) } > RAM" > %t.inc
-# RUN: ld.lld -o %t.elf --script %s %t.o -L %T
+# RUN: echo ".data2 : { QUAD(0) } > RAM" > %t.dir/inc.script
+# RUN: ld.lld -o %t.elf --script %s %t.o -L %t.dir
 # RUN: llvm-objdump -section-headers %t.elf | FileCheck %s --check-prefix=CHECK2
 # CHECK2:      .data         00000008 0000000000002000 DATA
 # CHECK2-NEXT: .data2        00000008 0000000000002008 DATA
@@ -27,6 +28,6 @@ MEMORY {
 SECTIONS {
   .text : { *(.text*) } > ROM
   .data : { *(.data*) } > RAM
-  INCLUDE "section-include.test.tmp.inc"
+  INCLUDE "inc.script"
   .data3 : { QUAD(0) } > RAM
 }

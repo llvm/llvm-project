@@ -1,11 +1,11 @@
 ; REQUIRES: x86
 
 ; RUN: opt %s -o %t1.o
-; RUN: rm -rf %T/dwo
+; RUN: rm -rf %t.dir
 
 ; Test to ensure that --plugin-opt=dwo_dir=$DIR creates .dwo files under $DIR
-; RUN: ld.lld --plugin-opt=dwo_dir=%T/dwo -shared %t1.o -o /dev/null
-; RUN: llvm-readobj -h %T/dwo/0.dwo | FileCheck %s
+; RUN: ld.lld --plugin-opt=dwo_dir=%t.dir -shared %t1.o -o /dev/null
+; RUN: llvm-readobj -h %t.dir/0.dwo | FileCheck %s
 
 ; CHECK: Format: ELF64-x86-64
 
