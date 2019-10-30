@@ -55,6 +55,8 @@ Non-comprehensive list of changes in this release
   AliasSetTracker usage with MemorySSA without any performance penalties.
   The fact that MemorySSA is now preserved by and available in a series of loop
   passes, also opens up opportunities for its use in those respective passes.
+* The BasicBlockPass, BBPassManager and all their uses were deleted in
+  `this revision <https://reviews.llvm.org/rG9f0ff0b2634bab6a5be8dace005c9eb24d386dd1>`_.
 
 .. NOTE
    If you would like to document a larger change, then you can add a
