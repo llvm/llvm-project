@@ -5,8 +5,8 @@ Porting GlobalISel to A New Target
 
 There are four major classes to implement by the target:
 
-* :ref:`CallLowering <api-calllowering>` --- lower calls, returns, and arguments
-  according to the ABI.
+* :ref:`CallLowering <translator-call-lower>` --- lower calls, returns, and
+  arguments according to the ABI.
 * :ref:`RegisterBankInfo <api-registerbankinfo>` --- describe
   :ref:`gmir-regbank` coverage, cross-bank copy cost, and the mapping of
   operands onto banks for each instruction.
