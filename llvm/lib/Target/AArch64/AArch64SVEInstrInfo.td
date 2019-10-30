@@ -88,20 +88,20 @@ let Predicates = [HasSVE] in {
   defm SDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b0, "sdot", int_aarch64_sve_sdot_lane>;
   defm UDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b1, "udot", int_aarch64_sve_udot_lane>;
 
-  defm SXTB_ZPmZ : sve_int_un_pred_arit_0_h<0b000, "sxtb">;
-  defm UXTB_ZPmZ : sve_int_un_pred_arit_0_h<0b001, "uxtb">;
-  defm SXTH_ZPmZ : sve_int_un_pred_arit_0_w<0b010, "sxth">;
-  defm UXTH_ZPmZ : sve_int_un_pred_arit_0_w<0b011, "uxth">;
-  defm SXTW_ZPmZ : sve_int_un_pred_arit_0_d<0b100, "sxtw">;
-  defm UXTW_ZPmZ : sve_int_un_pred_arit_0_d<0b101, "uxtw">;
-  defm ABS_ZPmZ  : sve_int_un_pred_arit_0<  0b110, "abs", int_aarch64_sve_abs>;
-  defm NEG_ZPmZ  : sve_int_un_pred_arit_0<  0b111, "neg", int_aarch64_sve_neg>;
+  defm SXTB_ZPmZ : sve_int_un_pred_arit_0_h<0b000, "sxtb", int_aarch64_sve_sxtb>;
+  defm UXTB_ZPmZ : sve_int_un_pred_arit_0_h<0b001, "uxtb", int_aarch64_sve_uxtb>;
+  defm SXTH_ZPmZ : sve_int_un_pred_arit_0_w<0b010, "sxth", int_aarch64_sve_sxth>;
+  defm UXTH_ZPmZ : sve_int_un_pred_arit_0_w<0b011, "uxth", int_aarch64_sve_uxth>;
+  defm SXTW_ZPmZ : sve_int_un_pred_arit_0_d<0b100, "sxtw", int_aarch64_sve_sxtw>;
+  defm UXTW_ZPmZ : sve_int_un_pred_arit_0_d<0b101, "uxtw", int_aarch64_sve_uxtw>;
+  defm ABS_ZPmZ  : sve_int_un_pred_arit_0<  0b110, "abs",  int_aarch64_sve_abs>;
+  defm NEG_ZPmZ  : sve_int_un_pred_arit_0<  0b111, "neg",  int_aarch64_sve_neg>;
 
-  defm CLS_ZPmZ  : sve_int_un_pred_arit_1<   0b000, "cls",  null_frag>;
-  defm CLZ_ZPmZ  : sve_int_un_pred_arit_1<   0b001, "clz",  null_frag>;
+  defm CLS_ZPmZ  : sve_int_un_pred_arit_1<   0b000, "cls",  int_aarch64_sve_cls>;
+  defm CLZ_ZPmZ  : sve_int_un_pred_arit_1<   0b001, "clz",  int_aarch64_sve_clz>;
   defm CNT_ZPmZ  : sve_int_un_pred_arit_1<   0b010, "cnt",  int_aarch64_sve_cnt>;
-  defm CNOT_ZPmZ : sve_int_un_pred_arit_1<   0b011, "cnot", null_frag>;
-  defm NOT_ZPmZ  : sve_int_un_pred_arit_1<   0b110, "not",  null_frag>;
+  defm CNOT_ZPmZ : sve_int_un_pred_arit_1<   0b011, "cnot", int_aarch64_sve_cnot>;
+  defm NOT_ZPmZ  : sve_int_un_pred_arit_1<   0b110, "not",  int_aarch64_sve_not>;
   defm FABS_ZPmZ : sve_int_un_pred_arit_1_fp<0b100, "fabs">;
   defm FNEG_ZPmZ : sve_int_un_pred_arit_1_fp<0b101, "fneg">;
 
