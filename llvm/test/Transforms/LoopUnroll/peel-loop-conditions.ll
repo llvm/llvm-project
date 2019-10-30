@@ -644,3 +644,234 @@ for.end:
   ret void
 }
 ; CHECK-NOT: llvm.loop.unroll.disable
+
+define void @test_10__peel_first_iter_via_slt_pred(i32 %len) {
+; CHECK-LABEL: @test_10__peel_first_iter_via_slt_pred(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[LEN:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL_BEGIN:%.*]]
+; CHECK:       for.body.peel.begin:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL:%.*]]
+; CHECK:       for.body.peel:
+; CHECK-NEXT:    [[CMP1_PEEL:%.*]] = icmp slt i32 0, 1
+; CHECK-NEXT:    br i1 [[CMP1_PEEL]], label [[IF_THEN_PEEL:%.*]], label [[IF_END_PEEL:%.*]]
+; CHECK:       if.then.peel:
+; CHECK-NEXT:    call void @init()
+; CHECK-NEXT:    br label [[IF_END_PEEL]]
+; CHECK:       if.end.peel:
+; CHECK-NEXT:    call void @sink()
+; CHECK-NEXT:    [[INC_PEEL:%.*]] = add nuw nsw i32 0, 1
+; CHECK-NEXT:    [[EXITCOND_PEEL:%.*]] = icmp eq i32 [[INC_PEEL]], [[LEN]]
+; CHECK-NEXT:    br i1 [[EXITCOND_PEEL]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY_PEEL_NEXT:%.*]]
+; CHECK:       for.body.peel.next:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL_NEXT1:%.*]]
+; CHECK:       for.body.peel.next1:
+; CHECK-NEXT:    br label [[FOR_BODY_PREHEADER_PEEL_NEWPH:%.*]]
+; CHECK:       for.body.preheader.peel.newph:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[INC:%.*]], [[IF_END:%.*]] ], [ [[INC_PEEL]], [[FOR_BODY_PREHEADER_PEEL_NEWPH]] ]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN:%.*]], label [[IF_END]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @init()
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sink()
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_06]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[LEN]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], label [[FOR_BODY]], !llvm.loop !6
+;
+entry:
+  %cmp5 = icmp sgt i32 %len, 0
+  br i1 %cmp5, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %if.end, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %if.end
+  %i.06 = phi i32 [ %inc, %if.end ], [ 0, %entry ]
+  %cmp1 = icmp slt i32 %i.06, 1
+  br i1 %cmp1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %for.body
+  call void @init()
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %for.body
+  call void @sink()
+  %inc = add nuw nsw i32 %i.06, 1
+  %exitcond = icmp eq i32 %inc, %len
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+define void @test_11__peel_first_iter_via_sgt_pred(i32 %len) {
+; CHECK-LABEL: @test_11__peel_first_iter_via_sgt_pred(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[LEN:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL_BEGIN:%.*]]
+; CHECK:       for.body.peel.begin:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL:%.*]]
+; CHECK:       for.body.peel:
+; CHECK-NEXT:    [[CMP1_PEEL:%.*]] = icmp sgt i32 0, 0
+; CHECK-NEXT:    br i1 [[CMP1_PEEL]], label [[IF_END_PEEL:%.*]], label [[IF_THEN_PEEL:%.*]]
+; CHECK:       if.then.peel:
+; CHECK-NEXT:    call void @init()
+; CHECK-NEXT:    br label [[IF_END_PEEL]]
+; CHECK:       if.end.peel:
+; CHECK-NEXT:    call void @sink()
+; CHECK-NEXT:    [[INC_PEEL:%.*]] = add nuw nsw i32 0, 1
+; CHECK-NEXT:    [[EXITCOND_PEEL:%.*]] = icmp eq i32 [[INC_PEEL]], [[LEN]]
+; CHECK-NEXT:    br i1 [[EXITCOND_PEEL]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY_PEEL_NEXT:%.*]]
+; CHECK:       for.body.peel.next:
+; CHECK-NEXT:    br label [[FOR_BODY_PEEL_NEXT1:%.*]]
+; CHECK:       for.body.peel.next1:
+; CHECK-NEXT:    br label [[FOR_BODY_PREHEADER_PEEL_NEWPH:%.*]]
+; CHECK:       for.body.preheader.peel.newph:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[INC:%.*]], [[IF_END:%.*]] ], [ [[INC_PEEL]], [[FOR_BODY_PREHEADER_PEEL_NEWPH]] ]
+; CHECK-NEXT:    br i1 true, label [[IF_END]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @init()
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sink()
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_06]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[LEN]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:%.*]], label [[FOR_BODY]], !llvm.loop !8
+;
+entry:
+  %cmp5 = icmp sgt i32 %len, 0
+  br i1 %cmp5, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %if.end, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %if.end
+  %i.06 = phi i32 [ %inc, %if.end ], [ 0, %entry ]
+  %cmp1 = icmp sgt i32 %i.06, 0
+  br i1 %cmp1, label %if.end, label %if.then
+
+if.then:                                          ; preds = %for.body
+  call void @init()
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %for.body
+  call void @sink()
+  %inc = add nuw nsw i32 %i.06, 1
+  %exitcond = icmp eq i32 %inc, %len
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+define void @test12__peel_first_iter_via_eq_pred(i32 %len) {
+; CHECK-LABEL: @test12__peel_first_iter_via_eq_pred(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[LEN:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[INC:%.*]], [[IF_END:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[I_06]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_END]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @init()
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sink()
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_06]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[LEN]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+;
+entry:
+  %cmp5 = icmp sgt i32 %len, 0
+  br i1 %cmp5, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %if.end, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %if.end
+  %i.06 = phi i32 [ %inc, %if.end ], [ 0, %entry ]
+  %cmp1 = icmp eq i32 %i.06, 0
+  br i1 %cmp1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %for.body
+  call void @init()
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %for.body
+  call void @sink()
+  %inc = add nuw nsw i32 %i.06, 1
+  %exitcond = icmp eq i32 %inc, %len
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+define void @test13__peel_first_iter_via_ne_pred(i32 %len) {
+; CHECK-LABEL: @test13__peel_first_iter_via_ne_pred(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[LEN:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[INC:%.*]], [[IF_END:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[I_06]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_END]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @init()
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sink()
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_06]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[LEN]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+;
+entry:
+  %cmp5 = icmp sgt i32 %len, 0
+  br i1 %cmp5, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %if.end, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %if.end
+  %i.06 = phi i32 [ %inc, %if.end ], [ 0, %entry ]
+  %cmp1 = icmp ne i32 %i.06, 0
+  br i1 %cmp1, label %if.end, label %if.then
+
+if.then:                                          ; preds = %for.body
+  call void @init()
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %for.body
+  call void @sink()
+  %inc = add nuw nsw i32 %i.06, 1
+  %exitcond = icmp eq i32 %inc, %len
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+declare void @init()
+declare void @sink()
