@@ -10,7 +10,11 @@
 # CFLAGS etc explicitly. Switching on LLVM_HOST_TRIPLE is also an option,
 # but it breaks down when cross-compiling.
 
-string(REGEX MATCH "^[^-]*" LLDB_DEBUGSERVER_ARCH "${LLVM_DEFAULT_TARGET_TRIPLE}")
+if(LLVM_DEFAULT_TARGET_TRIPLE)
+  string(REGEX MATCH "^[^-]*" LLDB_DEBUGSERVER_ARCH ${LLVM_DEFAULT_TARGET_TRIPLE})
+else()
+  set(LLDB_DEBUGSERVER_ARCH ${CMAKE_OSX_ARCHITECTURES})
+endif()
 
 if("${LLDB_DEBUGSERVER_ARCH}" MATCHES ".*arm.*")
   list(APPEND SOURCES arm/DNBArchImpl.cpp arm64/DNBArchImplARM64.cpp)
