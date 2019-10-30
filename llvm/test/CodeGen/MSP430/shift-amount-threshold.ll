@@ -35,8 +35,8 @@ entry:
 
 ; Check the following conversion in DAGCombiner::SimplifySelectCC
 ; (select_cc seteq (and x, y), 0, 0, A) -> (and (shr (shl x)) A)
-define i16 @testSiymplifySelectCC_0(i16 %x, i16 %a) {
-; CHECK-LABEL: testSiymplifySelectCC_0:
+define i16 @testSimplifySelectCC_0(i16 %x, i16 %a) {
+; CHECK-LABEL: testSimplifySelectCC_0:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov r12, r14
 ; CHECK-NEXT:    clr r12
