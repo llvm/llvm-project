@@ -85,7 +85,7 @@ DependencyScanningTool::getDependencyFile(const std::string &Input,
     }
 
     void handleModuleDependency(ModuleDeps MD) override {
-      ModuleDeps[MD.ContextHash + MD.ModuleName] = std::move(MD);
+      ClangModuleDeps[MD.ContextHash + MD.ModuleName] = std::move(MD);
     }
 
     void handleContextHash(std::string Hash) override {
@@ -95,7 +95,7 @@ DependencyScanningTool::getDependencyFile(const std::string &Input,
     void printDependencies(std::string &S, StringRef MainFile) {
       // Sort the modules by name to get a deterministic order.
       std::vector<StringRef> Modules;
-      for (auto &&Dep : ModuleDeps)
+      for (auto &&Dep : ClangModuleDeps)
         Modules.push_back(Dep.first);
       std::sort(Modules.begin(), Modules.end());
 
@@ -105,14 +105,14 @@ DependencyScanningTool::getDependencyFile(const std::string &Input,
 
       Array Imports;
       for (auto &&ModName : Modules) {
-        auto &MD = ModuleDeps[ModName];
+        auto &MD = ClangModuleDeps[ModName];
         if (MD.ImportedByMainFile)
           Imports.push_back(MD.ModuleName);
       }
 
       Array Mods;
       for (auto &&ModName : Modules) {
-        auto &MD = ModuleDeps[ModName];
+        auto &MD = ClangModuleDeps[ModName];
         Object Mod{
             {"name", MD.ModuleName},
             {"file-deps", toJSONSorted(MD.FileDeps)},
@@ -136,7 +136,7 @@ DependencyScanningTool::getDependencyFile(const std::string &Input,
 
   private:
     std::vector<std::string> Dependencies;
-    std::unordered_map<std::string, ModuleDeps> ModuleDeps;
+    std::unordered_map<std::string, ModuleDeps> ClangModuleDeps;
     std::string ContextHash;
   };
 
