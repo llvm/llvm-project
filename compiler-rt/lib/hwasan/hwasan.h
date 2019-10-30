@@ -172,4 +172,24 @@ void AndroidTestTlsSlot();
     RunFreeHooks(ptr);            \
   } while (false)
 
+#if HWASAN_WITH_INTERCEPTORS && defined(__aarch64__)
+// For both bionic and glibc __sigset_t is an unsigned long.
+typedef unsigned long __hw_sigset_t;
+// Setjmp and longjmp implementations are platform specific, and hence the
+// interception code is platform specific too.  As yet we've only implemented
+// the interception for AArch64.
+typedef unsigned long long __hw_register_buf[22];
+struct __hw_jmp_buf_struct {
+  // NOTE: The machine-dependent definition of `__sigsetjmp'
+  // assume that a `__hw_jmp_buf' begins with a `__hw_register_buf' and that
+  // `__mask_was_saved' follows it.  Do not move these members or add others
+  // before it.
+  __hw_register_buf __jmpbuf; // Calling environment.
+  int __mask_was_saved;       // Saved the signal mask?
+  __hw_sigset_t __saved_mask; // Saved signal mask.
+};
+typedef struct __hw_jmp_buf_struct __hw_jmp_buf[1];
+typedef struct __hw_jmp_buf_struct __hw_sigjmp_buf[1];
+#endif // HWASAN_WITH_INTERCEPTORS && __aarch64__
+
 #endif  // HWASAN_H
