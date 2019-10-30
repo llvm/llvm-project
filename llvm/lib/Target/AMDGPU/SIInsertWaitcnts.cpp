@@ -1393,7 +1393,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       if (ScoreBrackets.getScoreLB(LGKM_CNT) <
               ScoreBrackets.getScoreUB(LGKM_CNT) &&
           ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
-        if (ST->getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS)
+        if (ST->hasReadVCCZBug())
           VCCZBugWorkAround = true;
       }
     }
