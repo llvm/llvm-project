@@ -1,10 +1,10 @@
 # RUN: llc < %s -run-pass=wasm-reg-stackify -x=mir 2>&1 | FileCheck %s
 
 # CHECK: body:
-# CHECK: %1:i32 = I32_WRAP_I64 %0,
-# CHECK-NEXT: DBG_VALUE %1,
-# CHECK-NEXT: %1:i32 = CALL_i32 @bar,
-# CHECK-NEXT: DBG_VALUE %1,
+# CHECK: dead %3:i32 = I32_WRAP_I64 %0,
+# CHECK-NEXT: DBG_VALUE %1:i32
+# CHECK-NEXT: dead %2:i32 = CALL_i32 @bar,
+# CHECK-NEXT: DBG_VALUE %1:i32,
 # CHECK-NEXT: %[[NEWREG:.*]]:i32 = CALL_i32 @bar,
 # CHECK-NEXT: DBG_VALUE %[[NEWREG]],
 # CHECK-NEXT: CALL_VOID @foo, %[[NEWREG]],

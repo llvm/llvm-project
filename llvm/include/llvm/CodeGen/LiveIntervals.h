@@ -469,7 +469,7 @@ class VirtRegMap;
 
     void computeLiveInRegUnits();
     void computeRegUnitRange(LiveRange&, unsigned Unit);
-    void computeVirtRegInterval(LiveInterval&);
+    bool computeVirtRegInterval(LiveInterval&);
 
     using ShrinkToUsesWorkList = SmallVector<std::pair<SlotIndex, VNInfo*>, 16>;
     void extendSegmentsToUses(LiveRange &Segments,
