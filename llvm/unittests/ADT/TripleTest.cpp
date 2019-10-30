@@ -1497,5 +1497,10 @@ TEST(TripleTest, ParseARMArch) {
     Triple T = Triple("aarch64_be");
     EXPECT_EQ(Triple::aarch64_be, T.getArch());
   }
+  {
+    Triple T = Triple("arm64e");
+    EXPECT_EQ(Triple::aarch64, T.getArch());
+    EXPECT_EQ(Triple::AArch64SubArch_E, T.getSubArch());
+  }
 }
 } // end anonymous namespace

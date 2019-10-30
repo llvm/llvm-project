@@ -106,6 +106,10 @@ public:
            LHS.MultiVersionIndex == RHS.MultiVersionIndex;
   }
 
+  bool operator!=(const GlobalDecl &Other) const {
+    return !(*this == Other);
+  }
+
   void *getAsOpaquePtr() const { return Value.getOpaqueValue(); }
 
   static GlobalDecl getFromOpaquePtr(void *P) {

@@ -813,6 +813,9 @@ void TextNodeDumper::VisitUnaryExprOrTypeTraitExpr(
   case UETT_AlignOf:
     OS << " alignof";
     break;
+  case UETT_PtrAuthTypeDiscriminator:
+    OS << "__builtin_ptrauth_type_discriminator";
+    break;
   case UETT_VecStep:
     OS << " vec_step";
     break;

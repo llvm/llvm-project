@@ -2406,6 +2406,14 @@ def ObjCRequiresPropertyDefs : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def PointerAuth : TypeAttr {
+  let Spellings = [Keyword<"__ptrauth">];
+  let Args = [IntArgument<"Key">,
+              BoolArgument<"AddressDiscriminated", 1>,
+              IntArgument<"ExtraDiscriminator", 1>];
+  let Documentation = [PtrAuthDocs];
+}
+
 def Unused : InheritableAttr {
   let Spellings = [CXX11<"", "maybe_unused", 201603>, GCC<"unused">,
                    C2x<"", "maybe_unused">];

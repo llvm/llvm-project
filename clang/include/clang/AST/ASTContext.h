@@ -1147,6 +1147,9 @@ public:
   /// space.
   QualType removeAddrSpaceQualType(QualType T) const;
 
+  /// Return the "other" type-specific discriminator for the given type.
+  uint16_t getPointerAuthTypeDiscriminator(QualType T);
+
   /// Apply Objective-C protocol qualifiers to the given type.
   /// \param allowOnPointerType specifies if we can apply protocol
   /// qualifiers on ObjCObjectPointerType. It can be set to true when
@@ -1981,6 +1984,16 @@ public:
     Qualifiers Qs = type.getQualifiers();
     Qs.removeObjCLifetime();
     return getQualifiedType(type.getUnqualifiedType(), Qs);
+  }
+
+  /// \brief Return a type with the given __ptrauth qualifier.
+  QualType getPointerAuthType(QualType type, PointerAuthQualifier pointerAuth) {
+    assert(!type.getPointerAuth());
+    assert(pointerAuth);
+
+    Qualifiers qs;
+    qs.setPointerAuth(pointerAuth);
+    return getQualifiedType(type, qs);
   }
 
   unsigned char getFixedPointScale(QualType Ty) const;

@@ -86,6 +86,7 @@ public:
     OB_funclet = 1,       // "funclet"
     OB_gc_transition = 2, // "gc-transition"
     OB_cfguardtarget = 3, // "cfguardtarget"
+    OB_ptrauth = 4,       // "ptrauth"
   };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.

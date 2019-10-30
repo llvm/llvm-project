@@ -400,6 +400,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
     .Case("arc", Triple::arc)
     .Case("arm64", Triple::aarch64)
     .Case("arm64_32", Triple::aarch64_32)
+    .Case("arm64e", Triple::aarch64)
     .Case("arm", Triple::arm)
     .Case("armeb", Triple::armeb)
     .Case("thumb", Triple::thumb)
@@ -564,6 +565,9 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
     return Triple::MipsSubArch_r6;
 
   StringRef ARMSubArch = ARM::getCanonicalArchName(SubArchName);
+
+  if (SubArchName == "arm64e")
+    return Triple::AArch64SubArch_E;
 
   // For now, this is the small part. Early return.
   if (ARMSubArch.empty())

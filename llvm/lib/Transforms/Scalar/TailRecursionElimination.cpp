@@ -240,7 +240,8 @@ static bool markTails(Function &F, bool &AllCallsAreTailCalls,
       if (!CI || CI->isTailCall() || isa<DbgInfoIntrinsic>(&I))
         continue;
 
-      bool IsNoTail = CI->isNoTailCall() || CI->hasOperandBundles();
+      bool IsNoTail = CI->isNoTailCall() ||
+        CI->hasOperandBundlesOtherThan({LLVMContext::OB_ptrauth});
 
       if (!IsNoTail && CI->doesNotAccessMemory()) {
         // A call to a readnone function whose arguments are all things computed

@@ -614,6 +614,10 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
     if (!Triple.isOSBinFormatMachO())
       return getTripleString();
 
+    StringRef Arch = Triple.getArchName();
+    if (Arch == "arm64e")
+      return Triple.getTriple();
+
     // FIXME: older versions of ld64 expect the "arm64" component in the actual
     // triple string and query it to determine whether an LTO file can be
     // handled. Remove this when we don't care any more.

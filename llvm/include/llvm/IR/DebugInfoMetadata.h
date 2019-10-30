@@ -754,6 +754,35 @@ public:
 ///
 /// TODO: Split out members (inheritance, fields, methods, etc.).
 class DIDerivedType : public DIType {
+public:
+  /// Pointer authentication (__ptrauth) metadata.
+  struct PtrAuthData {
+    union {
+      struct {
+        unsigned Key : 3;
+        unsigned IsAddressDiscriminated : 1;
+        unsigned ExtraDiscriminator : 16;
+      } Data;
+      unsigned RawData;
+    } Payload;
+
+    PtrAuthData(unsigned FromRawData) { Payload.RawData = FromRawData; }
+    PtrAuthData(const PtrAuthData &Copy) {
+      Payload.RawData = Copy.Payload.RawData;
+    }
+    PtrAuthData(unsigned Key, bool IsDiscr, unsigned Discriminator) {
+      assert(Key < 8);
+      assert(Discriminator <= 0xffff);
+      Payload.Data.Key = Key;
+      Payload.Data.IsAddressDiscriminated = IsDiscr;
+      Payload.Data.ExtraDiscriminator = Discriminator;
+    }
+    bool operator==(struct PtrAuthData Other) const {
+      return Payload.RawData == Other.Payload.RawData;
+    }
+  };
+
+private:
   friend class LLVMContextImpl;
   friend class MDNode;
 
@@ -764,58 +793,63 @@ class DIDerivedType : public DIType {
   DIDerivedType(LLVMContext &C, StorageType Storage, unsigned Tag,
                 unsigned Line, uint64_t SizeInBits, uint32_t AlignInBits,
                 uint64_t OffsetInBits, Optional<unsigned> DWARFAddressSpace,
-                DIFlags Flags, ArrayRef<Metadata *> Ops)
+                Optional<PtrAuthData> PtrAuthData, DIFlags Flags,
+                ArrayRef<Metadata *> Ops)
       : DIType(C, DIDerivedTypeKind, Storage, Tag, Line, SizeInBits,
                AlignInBits, OffsetInBits, Flags, Ops),
-        DWARFAddressSpace(DWARFAddressSpace) {}
+        DWARFAddressSpace(DWARFAddressSpace) {
+    if (PtrAuthData)
+      SubclassData32 = PtrAuthData->Payload.RawData;
+  }
   ~DIDerivedType() = default;
 
   static DIDerivedType *
   getImpl(LLVMContext &Context, unsigned Tag, StringRef Name, DIFile *File,
           unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
           uint32_t AlignInBits, uint64_t OffsetInBits,
-          Optional<unsigned> DWARFAddressSpace, DIFlags Flags,
-          Metadata *ExtraData, StorageType Storage, bool ShouldCreate = true) {
+          Optional<unsigned> DWARFAddressSpace,
+          Optional<PtrAuthData> PtrAuthData, DIFlags Flags, Metadata *ExtraData,
+          StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name), File,
                    Line, Scope, BaseType, SizeInBits, AlignInBits, OffsetInBits,
-                   DWARFAddressSpace, Flags, ExtraData, Storage, ShouldCreate);
+                   DWARFAddressSpace, PtrAuthData, Flags, ExtraData, Storage,
+                   ShouldCreate);
   }
-  static DIDerivedType *getImpl(LLVMContext &Context, unsigned Tag,
-                                MDString *Name, Metadata *File, unsigned Line,
-                                Metadata *Scope, Metadata *BaseType,
-                                uint64_t SizeInBits, uint32_t AlignInBits,
-                                uint64_t OffsetInBits,
-                                Optional<unsigned> DWARFAddressSpace,
-                                DIFlags Flags, Metadata *ExtraData,
-                                StorageType Storage, bool ShouldCreate = true);
+  static DIDerivedType *
+  getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
+          unsigned Line, Metadata *Scope, Metadata *BaseType,
+          uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
+          Optional<unsigned> DWARFAddressSpace,
+          Optional<PtrAuthData> PtrAuthData, DIFlags Flags, Metadata *ExtraData,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDIDerivedType cloneImpl() const {
-    return getTemporary(getContext(), getTag(), getName(), getFile(), getLine(),
-                        getScope(), getBaseType(), getSizeInBits(),
-                        getAlignInBits(), getOffsetInBits(),
-                        getDWARFAddressSpace(), getFlags(), getExtraData());
+    return getTemporary(
+        getContext(), getTag(), getName(), getFile(), getLine(), getScope(),
+        getBaseType(), getSizeInBits(), getAlignInBits(), getOffsetInBits(),
+        getDWARFAddressSpace(), getPtrAuthData(), getFlags(), getExtraData());
   }
 
 public:
-  DEFINE_MDNODE_GET(DIDerivedType,
-                    (unsigned Tag, MDString *Name, Metadata *File,
-                     unsigned Line, Metadata *Scope, Metadata *BaseType,
-                     uint64_t SizeInBits, uint32_t AlignInBits,
-                     uint64_t OffsetInBits,
-                     Optional<unsigned> DWARFAddressSpace, DIFlags Flags,
-                     Metadata *ExtraData = nullptr),
-                    (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                     AlignInBits, OffsetInBits, DWARFAddressSpace, Flags,
-                     ExtraData))
+  DEFINE_MDNODE_GET(
+      DIDerivedType,
+      (unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
+       Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
+       uint32_t AlignInBits, uint64_t OffsetInBits,
+       Optional<unsigned> DWARFAddressSpace, Optional<PtrAuthData> PtrAuthData,
+       DIFlags Flags, Metadata *ExtraData = nullptr),
+      (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+       OffsetInBits, DWARFAddressSpace, PtrAuthData, Flags, ExtraData))
   DEFINE_MDNODE_GET(DIDerivedType,
                     (unsigned Tag, StringRef Name, DIFile *File, unsigned Line,
                      DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
                      uint32_t AlignInBits, uint64_t OffsetInBits,
-                     Optional<unsigned> DWARFAddressSpace, DIFlags Flags,
+                     Optional<unsigned> DWARFAddressSpace,
+                     Optional<PtrAuthData> PtrAuthData, DIFlags Flags,
                      Metadata *ExtraData = nullptr),
                     (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                     AlignInBits, OffsetInBits, DWARFAddressSpace, Flags,
-                     ExtraData))
+                     AlignInBits, OffsetInBits, DWARFAddressSpace, PtrAuthData,
+                     Flags, ExtraData))
 
   TempDIDerivedType clone() const { return cloneImpl(); }
 
@@ -826,6 +860,31 @@ public:
   /// \returns The DWARF address space of the memory pointed to or referenced by
   /// a pointer or reference type respectively.
   Optional<unsigned> getDWARFAddressSpace() const { return DWARFAddressSpace; }
+
+  Optional<PtrAuthData> getPtrAuthData() const {
+    return getTag() == dwarf::DW_TAG_APPLE_ptrauth_type
+               ? Optional<PtrAuthData>(PtrAuthData(SubclassData32))
+               : None;
+  }
+
+  /// \returns The PointerAuth key.
+  Optional<unsigned> getPtrAuthKey() const {
+    if (auto PtrAuthData = getPtrAuthData())
+      return PtrAuthData->Payload.Data.Key;
+    else return None;
+  }
+  /// \returns The PointerAuth address discrimination bit.
+  Optional<bool> isPtrAuthAddressDiscriminated() const {
+    if (auto PtrAuthData = getPtrAuthData())
+      return PtrAuthData->Payload.Data.IsAddressDiscriminated;
+    else return None;
+  }
+  /// \returns The PointerAuth extra discriminator.
+  Optional<unsigned> getPtrAuthExtraDiscriminator() const {
+    if (auto PtrAuthData = getPtrAuthData())
+      return PtrAuthData->Payload.Data.ExtraDiscriminator;
+    else return None;
+  }
 
   /// Get extra data associated with this derived type.
   ///

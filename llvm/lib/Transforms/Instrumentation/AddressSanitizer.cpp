@@ -1848,6 +1848,8 @@ bool ModuleAddressSanitizer::ShouldInstrumentGlobal(GlobalVariable *G) {
 
     // Globals from llvm.metadata aren't emitted, do not instrument them.
     if (Section == "llvm.metadata") return false;
+    // Same for globals in llvm.ptrauth.
+    if (Section == "llvm.ptrauth") return false;
     // Do not instrument globals from special LLVM sections.
     if (Section.find("__llvm") != StringRef::npos || Section.find("__LLVM") != StringRef::npos) return false;
 

@@ -52,6 +52,7 @@ public:
     ExynosM3,
     Falkor,
     Kryo,
+    Lightning,
     NeoverseE1,
     NeoverseN1,
     Saphira,
@@ -60,7 +61,8 @@ public:
     ThunderXT81,
     ThunderXT83,
     ThunderXT88,
-    TSV110
+    TSV110,
+    Vortex
   };
 
 protected:

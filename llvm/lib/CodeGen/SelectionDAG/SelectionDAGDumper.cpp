@@ -120,6 +120,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::GlobalTLSAddress:           return "GlobalTLSAddress";
   case ISD::FrameIndex:                 return "FrameIndex";
   case ISD::JumpTable:                  return "JumpTable";
+  case ISD::PtrAuthGlobalAddress:       return "PtrAuthGlobalAddress";
   case ISD::GLOBAL_OFFSET_TABLE:        return "GLOBAL_OFFSET_TABLE";
   case ISD::RETURNADDR:                 return "RETURNADDR";
   case ISD::ADDROFRETURNADDR:           return "ADDROFRETURNADDR";

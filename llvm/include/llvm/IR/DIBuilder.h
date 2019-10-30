@@ -207,11 +207,14 @@ namespace llvm {
     /// \param AlignInBits       Alignment. (optional)
     /// \param DWARFAddressSpace DWARF address space. (optional)
     /// \param Name              Pointer type name. (optional)
-    DIDerivedType *createPointerType(DIType *PointeeTy, uint64_t SizeInBits,
-                                     uint32_t AlignInBits = 0,
-                                     Optional<unsigned> DWARFAddressSpace =
-                                         None,
-                                     StringRef Name = "");
+    DIDerivedType *createPointerType(
+        DIType *PointeeTy, uint64_t SizeInBits, uint32_t AlignInBits = 0,
+        Optional<unsigned> DWARFAddressSpace = None, StringRef Name = "");
+
+    /// Create a __ptrauth qualifier.
+    DIDerivedType *createPtrAuthQualifiedType(DIType *FromTy, unsigned Key,
+                                              bool IsAddressDiscriminated,
+                                              unsigned ExtraDiscriminator);
 
     /// Create debugging information entry for a pointer to member.
     /// \param PointeeTy Type pointed to by this pointer.

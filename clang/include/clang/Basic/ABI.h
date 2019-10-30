@@ -184,7 +184,10 @@ struct ThunkInfo {
 
   /// Holds a pointer to the overridden method this thunk is for,
   /// if needed by the ABI to distinguish different thunks with equal
-  /// adjustments. Otherwise, null.
+  /// adjustments.
+  /// In the Itanium ABI, this field can hold the method that created the
+  /// vtable entry for this thunk.
+  /// Otherwise, null.
   /// CAUTION: In the unlikely event you need to sort ThunkInfos, consider using
   /// an ABI-specific comparator.
   const CXXMethodDecl *Method;

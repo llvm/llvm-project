@@ -443,9 +443,7 @@ public:
   bool hasInternalLinkage() const { return isInternalLinkage(getLinkage()); }
   bool hasPrivateLinkage() const { return isPrivateLinkage(getLinkage()); }
   bool hasLocalLinkage() const { return isLocalLinkage(getLinkage()); }
-  bool hasExternalWeakLinkage() const {
-    return isExternalWeakLinkage(getLinkage());
-  }
+  bool hasExternalWeakLinkage() const;
   bool hasCommonLinkage() const { return isCommonLinkage(getLinkage()); }
   bool hasValidDeclarationLinkage() const {
     return isValidDeclarationLinkage(getLinkage());

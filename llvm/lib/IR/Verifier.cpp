@@ -77,6 +77,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalPtrAuthInfo.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InlineAsm.h"
@@ -684,6 +685,14 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
     }
   }
 
+  if (GV.getSection() == "llvm.ptrauth") {
+    if (auto Err = GlobalPtrAuthInfo::tryAnalyze(&GV).takeError()) {
+      CheckFailed("invalid llvm.ptrauth global: " + toString(std::move(Err)),
+             &GV);
+      return;
+    }
+  }
+
   // Visit any debug info attachments.
   SmallVector<MDNode *, 1> MDs;
   GV.getMetadata(LLVMContext::MD_dbg, MDs);
@@ -922,6 +931,7 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
                N.getTag() == dwarf::DW_TAG_volatile_type ||
                N.getTag() == dwarf::DW_TAG_restrict_type ||
                N.getTag() == dwarf::DW_TAG_atomic_type ||
+               N.getTag() == dwarf::DW_TAG_APPLE_ptrauth_type ||
                N.getTag() == dwarf::DW_TAG_member ||
                N.getTag() == dwarf::DW_TAG_inheritance ||
                N.getTag() == dwarf::DW_TAG_friend,
@@ -2976,9 +2986,11 @@ void Verifier::visitCallBase(CallBase &Call) {
       visitIntrinsicCall(ID, Call);
 
   // Verify that a callsite has at most one "deopt", at most one "funclet", at
-  // most one "gc-transition", and at most one "cfguardtarget" operand bundle.
+  // most one "gc-transition", at most one "cfguardtarget", and at most one
+  // "ptrauth" operand bundle.
   bool FoundDeoptBundle = false, FoundFuncletBundle = false,
-       FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false;
+       FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
+       FoundPtrauthBundle = false;
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
     uint32_t Tag = BU.getTagID();
@@ -3003,6 +3015,16 @@ void Verifier::visitCallBase(CallBase &Call) {
       FoundCFGuardTargetBundle = true;
       Assert(BU.Inputs.size() == 1,
              "Expected exactly one cfguardtarget bundle operand", Call);
+    } else if (Tag == LLVMContext::OB_ptrauth) {
+      Assert(!FoundPtrauthBundle, "Multiple ptrauth operand bundles", Call);
+      FoundPtrauthBundle = true;
+      Assert(BU.Inputs.size() == 2,
+             "Expected exactly two ptrauth bundle operands", Call);
+      Assert(isa<ConstantInt>(BU.Inputs[0]) &&
+             BU.Inputs[0]->getType()->isIntegerTy(32),
+             "Ptrauth bundle key operand must be an i32 constant", Call);
+      Assert(BU.Inputs[1]->getType()->isIntegerTy(64),
+             "Ptrauth bundle discriminator operand must be an i64", Call);
     }
   }
 

@@ -184,6 +184,7 @@ extern "C" void LLVMInitializeAArch64Target() {
   initializeAArch64SpeculationHardeningPass(*PR);
   initializeAArch64StackTaggingPass(*PR);
   initializeAArch64StackTaggingPreRAPass(*PR);
+  initializeAArch64ExpandHardenedPseudosPass(*PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -214,6 +215,12 @@ static std::string computeDataLayout(const Triple &TT,
   if (LittleEndian)
     return "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128";
   return "E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128";
+}
+
+static StringRef computeDefaultCPU(const Triple &TT, StringRef CPU) {
+  if (CPU.empty() && TT.getArchName() == "arm64e")
+    return "vortex";
+  return CPU;
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
@@ -264,7 +271,8 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
                                            bool LittleEndian)
     : LLVMTargetMachine(T,
                         computeDataLayout(TT, Options.MCOptions, LittleEndian),
-                        TT, CPU, FS, Options, getEffectiveRelocModel(TT, RM),
+                        TT, computeDefaultCPU(TT, CPU), FS, Options,
+                        getEffectiveRelocModel(TT, RM),
                         getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
   initAsmInfo();
@@ -288,6 +296,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
   // MachO/CodeModel::Large, which GlobalISel does not support.
   if (getOptLevel() <= EnableGlobalISelAtO &&
       TT.getArch() != Triple::aarch64_32 &&
+      TT.getArchName() != "arm64e" &&
       !(getCodeModel() == CodeModel::Large && TT.isOSBinFormatMachO())) {
     setGlobalISel(true);
     setGlobalISelAbort(GlobalISelAbortMode::Disable);
@@ -628,6 +637,10 @@ void AArch64PassConfig::addPreEmitPass() {
 
   if (TM->getOptLevel() != CodeGenOpt::None && EnableCompressJumpTables)
     addPass(createAArch64CompressJumpTablesPass());
+
+  // Expand hardened pseudo-instructions.
+  // Do this now to enable LOH emission.
+  addPass(createAArch64ExpandHardenedPseudosPass());
 
   if (TM->getOptLevel() != CodeGenOpt::None && EnableCollectLOH &&
       TM->getTargetTriple().isOSBinFormatMachO())

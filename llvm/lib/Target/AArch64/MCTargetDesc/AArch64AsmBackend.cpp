@@ -529,6 +529,7 @@ enum CompactUnwindEncodings {
 class DarwinAArch64AsmBackend : public AArch64AsmBackend {
   const MCRegisterInfo &MRI;
   bool IsILP32;
+  bool IsARM64E;
 
   /// Encode compact unwind stack adjustment for frameless functions.
   /// See UNWIND_ARM64_FRAMELESS_STACK_SIZE_MASK in compact_unwind_encoding.h.
@@ -539,18 +540,22 @@ class DarwinAArch64AsmBackend : public AArch64AsmBackend {
 
 public:
   DarwinAArch64AsmBackend(const Target &T, const Triple &TT,
-                          const MCRegisterInfo &MRI, bool IsILP32)
+                          const MCRegisterInfo &MRI,
+                          bool IsILP32, bool IsARM64E)
       : AArch64AsmBackend(T, TT, /*IsLittleEndian*/ true), MRI(MRI),
-        IsILP32(IsILP32) {}
+        IsILP32(IsILP32), IsARM64E(IsARM64E) {}
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
     if (IsILP32)
       return createAArch64MachObjectWriter(
           MachO::CPU_TYPE_ARM64_32, MachO::CPU_SUBTYPE_ARM64_32_V8, true);
+    else if (IsARM64E)
+      return createAArch64MachObjectWriter(
+          MachO::CPU_TYPE_ARM64, MachO::CPU_SUBTYPE_ARM64E, false);
     else
-      return createAArch64MachObjectWriter(MachO::CPU_TYPE_ARM64,
-                                           MachO::CPU_SUBTYPE_ARM64_ALL, false);
+      return createAArch64MachObjectWriter(
+          MachO::CPU_TYPE_ARM64, MachO::CPU_SUBTYPE_ARM64_ALL, false);
   }
 
   /// Generate the compact unwind encoding from the CFI directives.
@@ -734,7 +739,8 @@ MCAsmBackend *llvm::createAArch64leAsmBackend(const Target &T,
   const Triple &TheTriple = STI.getTargetTriple();
   if (TheTriple.isOSBinFormatMachO()) {
     const bool IsILP32 = TheTriple.isArch32Bit();
-    return new DarwinAArch64AsmBackend(T, TheTriple, MRI, IsILP32);
+    const bool IsARM64E = TheTriple.getArchName() == "arm64e";
+    return new DarwinAArch64AsmBackend(T, TheTriple, MRI, IsILP32, IsARM64E);
   }
 
   if (TheTriple.isOSBinFormatCOFF())

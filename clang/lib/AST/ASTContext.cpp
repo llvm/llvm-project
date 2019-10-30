@@ -37,6 +37,7 @@
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/StableHash.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
@@ -2779,6 +2780,16 @@ QualType ASTContext::removeAddrSpaceQualType(QualType T) const {
     return getExtQualType(TypeNode, Quals);
   else
     return QualType(TypeNode, Quals.getFastQualifiers());
+}
+
+uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) {
+  assert(!T->isDependentType() &&
+         "cannot compute type discriminator of a dependent type");
+  SmallString<256> Str;
+  llvm::raw_svector_ostream Out(Str);
+  std::unique_ptr<MangleContext> MC(createMangleContext());
+  MC->mangleTypeName(T, Out);
+  return getPointerAuthStringDiscriminator(*this, Str.c_str());
 }
 
 QualType ASTContext::getObjCGCQualType(QualType T,
@@ -6193,6 +6204,9 @@ bool ASTContext::BlockRequiresCopying(QualType Ty,
     return true;
   }
 
+  if (Ty.hasAddressDiscriminatedPointerAuth())
+    return true;
+
   // The block needs copy/destroy helpers if Ty is non-trivial to destructively
   // move or destroy.
   if (Ty.isNonTrivialToPrimitiveDestructiveMove() || Ty.isDestructedType())
@@ -8869,6 +8883,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
     if (LQuals.getCVRQualifiers() != RQuals.getCVRQualifiers() ||
         LQuals.getAddressSpace() != RQuals.getAddressSpace() ||
         LQuals.getObjCLifetime() != RQuals.getObjCLifetime() ||
+        LQuals.getPointerAuth() != RQuals.getPointerAuth() ||
         LQuals.hasUnaligned() != RQuals.hasUnaligned())
       return {};
 
