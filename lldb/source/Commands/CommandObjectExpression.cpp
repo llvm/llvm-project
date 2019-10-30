@@ -205,11 +205,12 @@ CommandObjectExpression::CommandOptions::GetDefinitions() {
 
 CommandObjectExpression::CommandObjectExpression(
     CommandInterpreter &interpreter)
-    : CommandObjectRaw(
-          interpreter, "expression", "Evaluate an expression on the current "
-                                     "thread.  Displays any returned value "
-                                     "with LLDB's default formatting.",
-          "", eCommandProcessMustBePaused | eCommandTryTargetAPILock),
+    : CommandObjectRaw(interpreter, "expression",
+                       "Evaluate an expression on the current "
+                       "thread.  Displays any returned value "
+                       "with LLDB's default formatting.",
+                       "",
+                       eCommandProcessMustBePaused | eCommandTryTargetAPILock),
       IOHandlerDelegate(IOHandlerDelegate::Completion::Expression),
       m_option_group(), m_format_options(eFormatDefault),
       m_repl_option(LLDB_OPT_SET_1, false, "repl", 'r', "Drop into Swift REPL",
@@ -348,9 +349,9 @@ void CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
   auto language = exe_ctx.GetFrameRef().GetLanguage();
 
   Status error;
-  lldb::UserExpressionSP expr(target->GetUserExpressionForLanguage(exe_ctx,
-      code, llvm::StringRef(), language, UserExpression::eResultTypeAny,
-      options, nullptr, error));
+  lldb::UserExpressionSP expr(target->GetUserExpressionForLanguage(
+      exe_ctx, code, llvm::StringRef(), language,
+      UserExpression::eResultTypeAny, options, nullptr, error));
   if (error.Fail())
     return;
 
@@ -483,8 +484,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
         const char *error_cstr = expr_error.AsCString();
         if (error_cstr && error_cstr[0]) {
           const size_t error_cstr_len = strlen(error_cstr);
-          const bool ends_with_newline =
-              error_cstr[error_cstr_len - 1] == '\n';
+          const bool ends_with_newline = error_cstr[error_cstr_len - 1] == '\n';
           if (strstr(error_cstr, "error:") != error_cstr)
             error_stream->PutCString("error: ");
           error_stream->Write(error_cstr, error_cstr_len);
@@ -559,14 +559,14 @@ void CommandObjectExpression::GetMultilineExpression() {
       m_command_options.language == lldb::eLanguageTypeSwift ? "lldb-swift"
                                                              : "lldb-expr";
 
-  IOHandlerSP io_handler_sp(
-      new IOHandlerEditline(debugger, IOHandler::Type::Expression,
-                            input_reader_name, // Name of input reader for history
-                            llvm::StringRef(), // No prompt
-                            llvm::StringRef(), // Continuation prompt
-                            multiple_lines, color_prompt,
-                            1, // Show line numbers starting at 1
-                            *this, nullptr));
+  IOHandlerSP io_handler_sp(new IOHandlerEditline(
+      debugger, IOHandler::Type::Expression,
+      input_reader_name, // Name of input reader for history
+      llvm::StringRef(), // No prompt
+      llvm::StringRef(), // Continuation prompt
+      multiple_lines, color_prompt,
+      1, // Show line numbers starting at 1
+      *this, nullptr));
 
   StreamFileSP output_sp = io_handler_sp->GetOutputStreamFileSP();
   if (output_sp) {
@@ -646,8 +646,8 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
           // interpreter, so just push one
           bool initialize = false;
           Status repl_error;
-          REPLSP repl_sp(target->GetREPL(
-              repl_error, m_command_options.language, nullptr, false));
+          REPLSP repl_sp(target->GetREPL(repl_error, m_command_options.language,
+                                         nullptr, false));
 
           if (!repl_sp) {
             initialize = true;
