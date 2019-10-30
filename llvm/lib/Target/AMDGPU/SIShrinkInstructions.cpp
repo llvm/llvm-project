@@ -603,8 +603,10 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       //  =>
       // s_nop (N + M)
       if (MI.getOpcode() == AMDGPU::S_NOP &&
+          MI.getNumOperands() == 1 && // Don't merge with implicit operands
           Next != MBB.end() &&
-          (*Next).getOpcode() == AMDGPU::S_NOP) {
+          (*Next).getOpcode() == AMDGPU::S_NOP &&
+          (*Next).getNumOperands() == 1) {
 
         MachineInstr &NextMI = *Next;
         // The instruction encodes the amount to wait with an offset of 1,
