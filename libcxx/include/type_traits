@@ -1418,8 +1418,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_base_of_v
 #if __has_feature(is_convertible_to) && !defined(_LIBCPP_USE_IS_CONVERTIBLE_FALLBACK)
 
 template <class _T1, class _T2> struct _LIBCPP_TEMPLATE_VIS is_convertible
-    : public integral_constant<bool, __is_convertible_to(_T1, _T2) &&
-                                     !is_abstract<_T2>::value> {};
+    : public integral_constant<bool, __is_convertible_to(_T1, _T2)> {};
 
 #else  // __has_feature(is_convertible_to)
 
