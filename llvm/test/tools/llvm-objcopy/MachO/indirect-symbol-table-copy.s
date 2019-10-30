@@ -1,3 +1,5 @@
+# REQUIRES: x86-registered-target
+
 ## Show that llvm-objcopy copies the indirect symbol table properly.
 # RUN: llvm-mc -assemble -triple x86_64-apple-darwin9 -filetype=obj %s -o %t
 # RUN: llvm-objcopy %t %t.copy
