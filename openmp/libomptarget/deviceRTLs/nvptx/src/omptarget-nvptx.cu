@@ -25,12 +25,6 @@ extern __device__
 // init entry points
 ////////////////////////////////////////////////////////////////////////////////
 
-INLINE static unsigned smid() {
-  unsigned id;
-  asm("mov.u32 %0, %%smid;" : "=r"(id));
-  return id;
-}
-
 EXTERN void __kmpc_kernel_init_params(void *Ptr) {
   PRINT(LD_IO, "call to __kmpc_kernel_init_params with version %f\n",
         OMPTARGET_NVPTX_VERSION);
@@ -53,7 +47,7 @@ EXTERN void __kmpc_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
   PRINT0(LD_IO, "call to __kmpc_kernel_init for master\n");
 
   // Get a state object from the queue.
-  int slot = smid() % MAX_SM;
+  int slot = __kmpc_impl_smid() % MAX_SM;
   usedSlotIdx = slot;
   omptarget_nvptx_threadPrivateContext =
       omptarget_nvptx_device_State[slot].Dequeue();
@@ -98,7 +92,7 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
                                                   : RuntimeUninitialized);
   int threadId = GetThreadIdInBlock();
   if (threadId == 0) {
-    usedSlotIdx = smid() % MAX_SM;
+    usedSlotIdx = __kmpc_impl_smid() % MAX_SM;
     parallelLevel[0] =
         1 + (GetNumberOfThreadsInBlock() > 1 ? OMP_ACTIVE_PARALLEL_LEVEL : 0);
   } else if (GetLaneId() == 0) {
