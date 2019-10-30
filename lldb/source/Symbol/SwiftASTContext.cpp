@@ -2856,13 +2856,8 @@ public:
     m_ast_context.GetDiagnosticEngine().takeConsumers();
   }
 
-  virtual void
-  handleDiagnostic(swift::SourceManager &source_mgr,
-                   swift::SourceLoc source_loc, swift::DiagnosticKind kind,
-                   llvm::StringRef formatString,
-                   llvm::ArrayRef<swift::DiagnosticArgument> formatArgs,
-                   const swift::DiagnosticInfo &info,
-                   const swift::SourceLoc bufferIndirectlyCausingDiagnostic) {
+  virtual void handleDiagnostic(swift::SourceManager &source_mgr,
+                                const swift::DiagnosticInfo &info) {
     llvm::StringRef bufferName = "<anonymous>";
     unsigned bufferID = 0;
     std::pair<unsigned, unsigned> line_col = {0, 0};
@@ -2870,10 +2865,11 @@ public:
     llvm::SmallString<256> text;
     {
       llvm::raw_svector_ostream out(text);
-      swift::DiagnosticEngine::formatDiagnosticText(out, formatString,
-                                                    formatArgs);
+      swift::DiagnosticEngine::formatDiagnosticText(out, info.FormatString,
+                                                    info.FormatArgs);
     }
 
+    swift::SourceLoc source_loc = info.Loc;
     if (source_loc.isValid()) {
       bufferID = source_mgr.findBufferContainingLoc(source_loc);
       bufferName = source_mgr.getDisplayNameForLoc(source_loc);
@@ -2887,7 +2883,7 @@ public:
       // we want to use its fixits:
       bool use_fixits = false;
       llvm::SourceMgr::DiagKind source_mgr_kind;
-      switch (kind) {
+      switch (info.Kind) {
       default:
       case swift::DiagnosticKind::Error:
         source_mgr_kind = llvm::SourceMgr::DK_Error;
@@ -2924,23 +2920,23 @@ public:
 
       if (message_ref.empty())
         m_diagnostics.push_back(RawDiagnostic(
-            text.str(), kind, bufferName, bufferID, line_col.first,
+            text.str(), info.Kind, bufferName, bufferID, line_col.first,
             line_col.second,
             use_fixits ? info.FixIts
                        : llvm::ArrayRef<swift::Diagnostic::FixIt>()));
       else
         m_diagnostics.push_back(RawDiagnostic(
-            message_ref, kind, bufferName, bufferID, line_col.first,
+            message_ref, info.Kind, bufferName, bufferID, line_col.first,
             line_col.second,
             use_fixits ? info.FixIts
                        : llvm::ArrayRef<swift::Diagnostic::FixIt>()));
     } else {
       m_diagnostics.push_back(RawDiagnostic(
-          text.str(), kind, bufferName, bufferID, line_col.first,
+          text.str(), info.Kind, bufferName, bufferID, line_col.first,
           line_col.second, llvm::ArrayRef<swift::Diagnostic::FixIt>()));
     }
 
-    if (kind == swift::DiagnosticKind::Error)
+    if (info.Kind == swift::DiagnosticKind::Error)
       m_num_errors++;
   }
 
