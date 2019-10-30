@@ -2708,9 +2708,9 @@ SDValue PPCTargetLowering::LowerConstantPool(SDValue Op,
   ConstantPoolSDNode *CP = cast<ConstantPoolSDNode>(Op);
   const Constant *C = CP->getConstVal();
 
-  // 64-bit SVR4 ABI code is always position-independent.
+  // 64-bit SVR4 ABI and AIX ABI code are always position-independent.
   // The actual address of the GlobalValue is stored in the TOC.
-  if (Subtarget.is64BitELFABI()) {
+  if (Subtarget.is64BitELFABI() || Subtarget.isAIXABI()) {
     setUsesTOCBasePtr(DAG);
     SDValue GA = DAG.getTargetConstantPool(C, PtrVT, CP->getAlignment(), 0);
     return getTOCEntry(DAG, SDLoc(CP), GA);
@@ -2784,9 +2784,9 @@ SDValue PPCTargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   EVT PtrVT = Op.getValueType();
   JumpTableSDNode *JT = cast<JumpTableSDNode>(Op);
 
-  // 64-bit SVR4 ABI code is always position-independent.
+  // 64-bit SVR4 ABI and AIX ABI code are always position-independent.
   // The actual address of the GlobalValue is stored in the TOC.
-  if (Subtarget.is64BitELFABI()) {
+  if (Subtarget.is64BitELFABI() || Subtarget.isAIXABI()) {
     setUsesTOCBasePtr(DAG);
     SDValue GA = DAG.getTargetJumpTable(JT->getIndex(), PtrVT);
     return getTOCEntry(DAG, SDLoc(JT), GA);
@@ -2813,9 +2813,9 @@ SDValue PPCTargetLowering::LowerBlockAddress(SDValue Op,
   BlockAddressSDNode *BASDN = cast<BlockAddressSDNode>(Op);
   const BlockAddress *BA = BASDN->getBlockAddress();
 
-  // 64-bit SVR4 ABI code is always position-independent.
+  // 64-bit SVR4 ABI and AIX ABI code are always position-independent.
   // The actual BlockAddress is stored in the TOC.
-  if (Subtarget.is64BitELFABI()) {
+  if (Subtarget.is64BitELFABI() || Subtarget.isAIXABI()) {
     setUsesTOCBasePtr(DAG);
     SDValue GA = DAG.getTargetBlockAddress(BA, PtrVT, BASDN->getOffset());
     return getTOCEntry(DAG, SDLoc(BASDN), GA);
