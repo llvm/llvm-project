@@ -292,6 +292,10 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     EmitOMPParallelMasterTaskLoopDirective(
         cast<OMPParallelMasterTaskLoopDirective>(*S));
     break;
+  case Stmt::OMPParallelMasterTaskLoopSimdDirectiveClass:
+    EmitOMPParallelMasterTaskLoopSimdDirective(
+        cast<OMPParallelMasterTaskLoopSimdDirective>(*S));
+    break;
   case Stmt::OMPDistributeDirectiveClass:
     EmitOMPDistributeDirective(cast<OMPDistributeDirective>(*S));
     break;

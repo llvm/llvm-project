@@ -3160,6 +3160,8 @@ public:
   EmitOMPMasterTaskLoopSimdDirective(const OMPMasterTaskLoopSimdDirective &S);
   void EmitOMPParallelMasterTaskLoopDirective(
       const OMPParallelMasterTaskLoopDirective &S);
+  void EmitOMPParallelMasterTaskLoopSimdDirective(
+      const OMPParallelMasterTaskLoopSimdDirective &S);
   void EmitOMPDistributeDirective(const OMPDistributeDirective &S);
   void EmitOMPDistributeParallelForDirective(
       const OMPDistributeParallelForDirective &S);
