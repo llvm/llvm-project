@@ -1238,7 +1238,7 @@ public:
   llvm::SmallPtrSet<SpecialMemberDecl, 4> SpecialMembersBeingDeclared;
 
   /// Kinds of defaulted comparison operator functions.
-  enum class DefaultedComparisonKind {
+  enum class DefaultedComparisonKind : unsigned char {
     /// This is not a defaultable comparison operator.
     None,
     /// This is an operator== that should be implemented as a series of
