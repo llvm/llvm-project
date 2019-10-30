@@ -40,7 +40,7 @@ public:
   virtual ~CoverageExporter(){};
 
   /// Render the CoverageMapping object.
-  virtual void renderRoot(const FilenameCoverageFilters &FilenameFilters) = 0;
+  virtual void renderRoot(const CoverageFilters &IgnoreFilters) = 0;
 
   /// Render the CoverageMapping object for specified source files.
   virtual void renderRoot(ArrayRef<std::string> SourceFiles) = 0;
