@@ -18,26 +18,26 @@ let Predicates = [HasSVE] in {
   def SETFFR     : sve_int_setffr<"setffr">;
   def WRFFR      : sve_int_wrffr<"wrffr">;
 
-  defm ADD_ZZZ   : sve_int_bin_cons_arit_0<0b000, "add">;
-  defm SUB_ZZZ   : sve_int_bin_cons_arit_0<0b001, "sub">;
-  defm SQADD_ZZZ : sve_int_bin_cons_arit_0<0b100, "sqadd">;
-  defm UQADD_ZZZ : sve_int_bin_cons_arit_0<0b101, "uqadd">;
-  defm SQSUB_ZZZ : sve_int_bin_cons_arit_0<0b110, "sqsub">;
-  defm UQSUB_ZZZ : sve_int_bin_cons_arit_0<0b111, "uqsub">;
+  defm ADD_ZZZ   : sve_int_bin_cons_arit_0<0b000, "add", add>;
+  defm SUB_ZZZ   : sve_int_bin_cons_arit_0<0b001, "sub", sub>;
+  defm SQADD_ZZZ : sve_int_bin_cons_arit_0<0b100, "sqadd", saddsat>;
+  defm UQADD_ZZZ : sve_int_bin_cons_arit_0<0b101, "uqadd", uaddsat>;
+  defm SQSUB_ZZZ : sve_int_bin_cons_arit_0<0b110, "sqsub", ssubsat>;
+  defm UQSUB_ZZZ : sve_int_bin_cons_arit_0<0b111, "uqsub", usubsat>;
 
-  defm AND_ZZZ : sve_int_bin_cons_log<0b00, "and">;
-  defm ORR_ZZZ : sve_int_bin_cons_log<0b01, "orr">;
-  defm EOR_ZZZ : sve_int_bin_cons_log<0b10, "eor">;
-  defm BIC_ZZZ : sve_int_bin_cons_log<0b11, "bic">;
+  defm AND_ZZZ : sve_int_bin_cons_log<0b00, "and", and>;
+  defm ORR_ZZZ : sve_int_bin_cons_log<0b01, "orr", or>;
+  defm EOR_ZZZ : sve_int_bin_cons_log<0b10, "eor", xor>;
+  defm BIC_ZZZ : sve_int_bin_cons_log<0b11, "bic", int_aarch64_sve_bic>;
 
-  defm ADD_ZPmZ   : sve_int_bin_pred_arit_0<0b000, "add">;
-  defm SUB_ZPmZ   : sve_int_bin_pred_arit_0<0b001, "sub">;
-  defm SUBR_ZPmZ  : sve_int_bin_pred_arit_0<0b011, "subr">;
+  defm ADD_ZPmZ   : sve_int_bin_pred_arit_0<0b000, "add", int_aarch64_sve_add>;
+  defm SUB_ZPmZ   : sve_int_bin_pred_arit_0<0b001, "sub", int_aarch64_sve_sub>;
+  defm SUBR_ZPmZ  : sve_int_bin_pred_arit_0<0b011, "subr", int_aarch64_sve_subr>;
 
-  defm ORR_ZPmZ : sve_int_bin_pred_log<0b000, "orr">;
-  defm EOR_ZPmZ : sve_int_bin_pred_log<0b001, "eor">;
-  defm AND_ZPmZ : sve_int_bin_pred_log<0b010, "and">;
-  defm BIC_ZPmZ : sve_int_bin_pred_log<0b011, "bic">;
+  defm ORR_ZPmZ : sve_int_bin_pred_log<0b000, "orr", null_frag>;
+  defm EOR_ZPmZ : sve_int_bin_pred_log<0b001, "eor", null_frag>;
+  defm AND_ZPmZ : sve_int_bin_pred_log<0b010, "and", null_frag>;
+  defm BIC_ZPmZ : sve_int_bin_pred_log<0b011, "bic", null_frag>;
 
   defm ADD_ZI   : sve_int_arith_imm0<0b000, "add">;
   defm SUB_ZI   : sve_int_arith_imm0<0b001, "sub">;
@@ -73,14 +73,14 @@ let Predicates = [HasSVE] in {
   defm UMIN_ZI   : sve_int_arith_imm1<0b11, "umin", imm0_255>;
 
   defm MUL_ZI    : sve_int_arith_imm2<"mul">;
-  defm MUL_ZPmZ   : sve_int_bin_pred_arit_2<0b000, "mul">;
-  defm SMULH_ZPmZ : sve_int_bin_pred_arit_2<0b010, "smulh">;
-  defm UMULH_ZPmZ : sve_int_bin_pred_arit_2<0b011, "umulh">;
+  defm MUL_ZPmZ   : sve_int_bin_pred_arit_2<0b000, "mul", null_frag>;
+  defm SMULH_ZPmZ : sve_int_bin_pred_arit_2<0b010, "smulh", null_frag>;
+  defm UMULH_ZPmZ : sve_int_bin_pred_arit_2<0b011, "umulh", null_frag>;
 
-  defm SDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b100, "sdiv">;
-  defm UDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b101, "udiv">;
-  defm SDIVR_ZPmZ : sve_int_bin_pred_arit_2_div<0b110, "sdivr">;
-  defm UDIVR_ZPmZ : sve_int_bin_pred_arit_2_div<0b111, "udivr">;
+  defm SDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b100, "sdiv", null_frag>;
+  defm UDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b101, "udiv", null_frag>;
+  defm SDIVR_ZPmZ : sve_int_bin_pred_arit_2_div<0b110, "sdivr", null_frag>;
+  defm UDIVR_ZPmZ : sve_int_bin_pred_arit_2_div<0b111, "udivr", null_frag>;
 
   defm SDOT_ZZZ : sve_intx_dot<0b0, "sdot", int_aarch64_sve_sdot>;
   defm UDOT_ZZZ : sve_intx_dot<0b1, "udot", int_aarch64_sve_udot>;
@@ -105,12 +105,12 @@ let Predicates = [HasSVE] in {
   defm FABS_ZPmZ : sve_int_un_pred_arit_1_fp<0b100, "fabs">;
   defm FNEG_ZPmZ : sve_int_un_pred_arit_1_fp<0b101, "fneg">;
 
-  defm SMAX_ZPmZ : sve_int_bin_pred_arit_1<0b000, "smax">;
-  defm UMAX_ZPmZ : sve_int_bin_pred_arit_1<0b001, "umax">;
-  defm SMIN_ZPmZ : sve_int_bin_pred_arit_1<0b010, "smin">;
-  defm UMIN_ZPmZ : sve_int_bin_pred_arit_1<0b011, "umin">;
-  defm SABD_ZPmZ : sve_int_bin_pred_arit_1<0b100, "sabd">;
-  defm UABD_ZPmZ : sve_int_bin_pred_arit_1<0b101, "uabd">;
+  defm SMAX_ZPmZ : sve_int_bin_pred_arit_1<0b000, "smax", null_frag>;
+  defm UMAX_ZPmZ : sve_int_bin_pred_arit_1<0b001, "umax", null_frag>;
+  defm SMIN_ZPmZ : sve_int_bin_pred_arit_1<0b010, "smin", null_frag>;
+  defm UMIN_ZPmZ : sve_int_bin_pred_arit_1<0b011, "umin", null_frag>;
+  defm SABD_ZPmZ : sve_int_bin_pred_arit_1<0b100, "sabd", null_frag>;
+  defm UABD_ZPmZ : sve_int_bin_pred_arit_1<0b101, "uabd", null_frag>;
 
   defm FRECPE_ZZ  : sve_fp_2op_u_zd<0b110, "frecpe">;
   defm FRSQRTE_ZZ : sve_fp_2op_u_zd<0b111, "frsqrte">;
