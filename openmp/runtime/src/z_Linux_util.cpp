@@ -1287,7 +1287,7 @@ static void __kmp_atfork_child(void) {
   ++__kmp_fork_count;
 
 #if KMP_AFFINITY_SUPPORTED
-#if KMP_OS_LINUX
+#if KMP_OS_LINUX || KMP_OS_FREEBSD
   // reset the affinity in the child to the initial thread
   // affinity in the parent
   kmp_set_thread_affinity_mask_initial();
