@@ -12,6 +12,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(JITLinkTests
     JITLinkTestCommon.cpp
+    LinkGraphTests.cpp
     MachO_x86_64_Tests.cpp
   )
 

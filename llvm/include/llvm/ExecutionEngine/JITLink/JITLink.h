@@ -72,6 +72,7 @@ public:
       : Target(&Target), Offset(Offset), Addend(Addend), K(K) {}
 
   OffsetT getOffset() const { return Offset; }
+  void setOffset(OffsetT Offset) { this->Offset = Offset; }
   Kind getKind() const { return K; }
   void setKind(Kind K) { this->K = K; }
   bool isRelocation() const { return K >= FirstRelocation; }
@@ -208,14 +209,31 @@ public:
   /// Get the alignment for this content.
   uint64_t getAlignment() const { return 1ull << P2Align; }
 
+  /// Set the alignment for this content.
+  void setAlignment(uint64_t Alignment) {
+    assert(isPowerOf2_64(Alignment) && "Alignment must be a power of two");
+    P2Align = Alignment ? countTrailingZeros(Alignment) : 0;
+  }
+
   /// Get the alignment offset for this content.
   uint64_t getAlignmentOffset() const { return AlignmentOffset; }
+
+  /// Set the alignment offset for this content.
+  void setAlignmentOffset(uint64_t AlignmentOffset) {
+    assert(AlignmentOffset < (1ull << P2Align) &&
+           "Alignment offset can't exceed alignment");
+    this->AlignmentOffset = AlignmentOffset;
+  }
 
   /// Add an edge to this block.
   void addEdge(Edge::Kind K, Edge::OffsetT Offset, Symbol &Target,
                Edge::AddendT Addend) {
     Edges.push_back(Edge(K, Offset, Target, Addend));
   }
+
+  /// Add an edge by copying an existing one. This is typically used when
+  /// moving edges between blocks.
+  void addEdge(const Edge &E) { Edges.push_back(E); }
 
   /// Return the list of edges attached to this content.
   iterator_range<edge_iterator> edges() {
@@ -232,6 +250,10 @@ public:
 
   /// Returns true if the list of edges is empty.
   bool edges_empty() const { return Edges.empty(); }
+
+  /// Remove the edge pointed to by the given iterator.
+  /// Invalidates all iterators that point to or past the given one.
+  void removeEdge(const_edge_iterator I) { Edges.erase(I); }
 
 private:
   static constexpr uint64_t MaxAlignmentOffset = (1ULL << 57) - 1;
@@ -287,6 +309,7 @@ private:
          JITTargetAddress Size, Linkage L, Scope S, bool IsLive,
          bool IsCallable)
       : Name(Name), Base(&Base), Offset(Offset), Size(Size) {
+    assert(Offset <= MaxOffset && "Offset out of range");
     setLinkage(L);
     setScope(S);
     setLive(IsLive);
@@ -482,6 +505,13 @@ private:
     setScope(Scope::Default);
     IsLive = 0;
     // note: Size and IsCallable fields left unchanged.
+  }
+
+  void setBlock(Block &B) { Base = &B; }
+
+  void setOffset(uint64_t NewOffset) {
+    assert(NewOffset <= MaxOffset && "Offset out of range");
+    Offset = NewOffset;
   }
 
   static constexpr uint64_t MaxOffset = (1ULL << 59) - 1;
@@ -742,6 +772,29 @@ public:
     return createBlock(Parent, Parent.getNextBlockOrdinal(), Size, Address,
                        Alignment, AlignmentOffset);
   }
+
+  /// Cache type for the splitBlock function.
+  using SplitBlockCache = Optional<SmallVector<Symbol *, 8>>;
+
+  /// Splits block B at the given index which must be greater than zero.
+  /// If SplitIndex == B.getSize() then this function is a no-op and returns B.
+  /// If SplitIndex < B.getSize() then this function returns a new block
+  /// covering the range [ 0, SplitIndex ), and B is modified to cover the range
+  /// [ SplitIndex, B.size() ).
+  ///
+  /// The optional Cache parameter can be used to speed up repeated calls to
+  /// splitBlock for a single block. If the value is None the cache will be
+  /// treated as uninitialized and splitBlock will populate it. Otherwise it
+  /// is assumed to contain the list of Symbols pointing at B, sorted in
+  /// descending order of offset.
+  ///
+  /// Note: The cache is not automatically updated if new symbols are introduced
+  ///       between calls to splitBlock. Any newly introduced symbols may be
+  ///       added to the cache manually (descending offset order must be
+  ///       preserved), or the cache can be set to None and rebuilt by
+  ///       splitBlock on the next call.
+  Block &splitBlock(Block &B, size_t SplitIndex,
+                    SplitBlockCache *Cache = nullptr);
 
   /// Add an external symbol.
   /// Some formats (e.g. ELF) allow Symbols to have sizes. For Symbols whose
