@@ -59,6 +59,9 @@ extern "C" void init_lldb(void) {}
 #define LLDBSwigPyInit init_lldb
 #endif
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
+
 extern "C" llvm::Expected<bool> LLDBSwigPythonBreakpointCallbackFunction(
     const char *python_function_name, const char *session_dictionary_name,
     const lldb::StackFrameSP &sb_frame,
@@ -66,6 +69,8 @@ extern "C" llvm::Expected<bool> LLDBSwigPythonBreakpointCallbackFunction(
     StructuredDataImpl *args_impl) {
   return false;
 }
+
+#pragma clang diagnostic pop
 
 extern "C" bool LLDBSwigPythonWatchpointCallbackFunction(
     const char *python_function_name, const char *session_dictionary_name,
