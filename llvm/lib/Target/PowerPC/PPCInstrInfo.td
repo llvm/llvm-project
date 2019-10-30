@@ -2039,6 +2039,7 @@ def LFIWZX : XForm_25_memOp<31, 887, (outs f8rc:$frD), (ins memrr:$src),
 }
 
 // Load Multiple
+let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in 
 def LMW : DForm_1<46, (outs gprc:$rD), (ins memri:$src),
                   "lmw $rD, $src", IIC_LdStLMW, []>;
 
@@ -2193,6 +2194,7 @@ def : Pat<(pre_store f64:$rS, iPTR:$ptrreg, iPTR:$ptroff),
 }
 
 // Store Multiple
+let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
 def STMW : DForm_1<47, (outs), (ins gprc:$rS, memri:$dst),
                    "stmw $rS, $dst", IIC_LdStLMW, []>;
 
