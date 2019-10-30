@@ -832,6 +832,8 @@ def int_aarch64_sve_udot_lane : AdvSIMD_SVE_DOT_Indexed_Intrinsic;
 // Counting bits
 //
 
+def int_aarch64_sve_cls : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_clz : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_cnt : AdvSIMD_SVE_CNT_Intrinsic;
 
 //
@@ -843,6 +845,24 @@ def int_aarch64_sve_sunpklo   : AdvSIMD_SVE_Unpack_Intrinsic;
 
 def int_aarch64_sve_uunpkhi   : AdvSIMD_SVE_Unpack_Intrinsic;
 def int_aarch64_sve_uunpklo   : AdvSIMD_SVE_Unpack_Intrinsic;
+
+//
+// Logical operations
+//
+
+def int_aarch64_sve_cnot : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_not  : AdvSIMD_Merged1VectorArg_Intrinsic;
+
+//
+// Conversion
+//
+
+def int_aarch64_sve_sxtb : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_sxth : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_sxtw : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_uxtb : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_uxth : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_uxtw : AdvSIMD_Merged1VectorArg_Intrinsic;
 
 //
 // Floating-point comparisons
