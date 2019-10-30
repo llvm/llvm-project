@@ -59,6 +59,17 @@ static llvm::cl::opt<ScanningMode> ScanMode(
     llvm::cl::init(ScanningMode::MinimizedSourcePreprocessing),
     llvm::cl::cat(DependencyScannerCategory));
 
+static llvm::cl::opt<ScanningOutputFormat> Format(
+    "format", llvm::cl::desc("The output format for the dependencies"),
+    llvm::cl::values(clEnumValN(ScanningOutputFormat::Make, "make",
+                                "Makefile compatible dep file"),
+                     clEnumValN(ScanningOutputFormat::Full, "experimental-full",
+                                "Full dependency graph suitable"
+                                " for explicitly building modules. This format "
+                                "is experimental and will change.")),
+    llvm::cl::init(ScanningOutputFormat::Make),
+    llvm::cl::cat(DependencyScannerCategory));
+
 llvm::cl::opt<unsigned>
     NumThreads("j", llvm::cl::Optional,
                llvm::cl::desc("Number of worker threads to use (default: use "
@@ -200,7 +211,7 @@ int main(int argc, const char **argv) {
   // Print out the dependency results to STDOUT by default.
   SharedStream DependencyOS(llvm::outs());
 
-  DependencyScanningService Service(ScanMode, ReuseFileManager,
+  DependencyScanningService Service(ScanMode, Format, ReuseFileManager,
                                     SkipExcludedPPRanges);
 #if LLVM_ENABLE_THREADS
   unsigned NumWorkers =
