@@ -153,4 +153,11 @@ INLINE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t Mask) {
 #endif // CUDA_VERSION
 }
 
+INLINE void __kmpc_impl_named_sync(int barrier, uint32_t num_threads) {
+  asm volatile("bar.sync %0, %1;"
+               :
+               : "r"(barrier), "r"(num_threads)
+               : "memory");
+}
+
 #endif
