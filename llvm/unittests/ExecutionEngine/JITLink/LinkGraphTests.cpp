@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Memory.h"
@@ -20,10 +21,10 @@ TEST(LinkGraphTest, Construction) {
   EXPECT_EQ(G.getName(), "foo");
   EXPECT_EQ(G.getPointerSize(), 8U);
   EXPECT_EQ(G.getEndianness(), support::little);
-  EXPECT_TRUE(empty(G.external_symbols()));
-  EXPECT_TRUE(empty(G.absolute_symbols()));
-  EXPECT_TRUE(empty(G.defined_symbols()));
-  EXPECT_TRUE(empty(G.blocks()));
+  EXPECT_TRUE(llvm::empty(G.external_symbols()));
+  EXPECT_TRUE(llvm::empty(G.absolute_symbols()));
+  EXPECT_TRUE(llvm::empty(G.defined_symbols()));
+  EXPECT_TRUE(llvm::empty(G.blocks()));
 }
 
 TEST(LinkGraphTest, SplitBlock) {
@@ -98,7 +99,7 @@ TEST(LinkGraphTest, SplitBlock) {
 
   // Check that edges in B1 have been transferred as expected:
   // Both blocks should now have two edges each at offsets 0 and 4.
-  EXPECT_EQ(size(B1.edges()), 2);
+  EXPECT_EQ(llvm::size(B1.edges()), 2);
   if (size(B1.edges()) == 2) {
     auto *E1 = &*B1.edges().begin();
     auto *E2 = &*(B1.edges().begin() + 1);
@@ -108,7 +109,7 @@ TEST(LinkGraphTest, SplitBlock) {
     EXPECT_EQ(E2->getOffset(), 4U);
   }
 
-  EXPECT_EQ(size(B2.edges()), 2);
+  EXPECT_EQ(llvm::size(B2.edges()), 2);
   if (size(B2.edges()) == 2) {
     auto *E1 = &*B2.edges().begin();
     auto *E2 = &*(B2.edges().begin() + 1);
