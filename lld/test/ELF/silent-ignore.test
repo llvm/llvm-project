@@ -6,7 +6,6 @@ RUN:   -no-add-needed \
 RUN:   -no-copy-dt-needed-entries \
 RUN:   -no-ctors-in-init-array \
 RUN:   -no-keep-memory \
-RUN:   -no-mmap-output-file \
 RUN:   -no-pipeline-knowledge \
 RUN:   -no-warn-mismatch \
 RUN:   -p \
