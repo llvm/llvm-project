@@ -8,7 +8,9 @@ This pass transforms the generic machine instructions such that they are legal.
 A legal instruction is defined as:
 
 * **selectable** --- the target will later be able to select it to a
-  target-specific (non-generic) instruction.
+  target-specific (non-generic) instruction. This doesn't necessarily mean that
+  :doc:`InstructionSelect` has to handle it though. It just means that
+  **something** must handle it.
 
 * operating on **vregs that can be loaded and stored** -- if necessary, the
   target can select a ``G_LOAD``/``G_STORE`` of each gvreg operand.
@@ -80,6 +82,20 @@ legality contains:
 * The type of each type index (see ``type0``, ``type1``, etc.)
 
 * The size in bytes and atomic ordering for each MachineMemOperand
+
+.. note::
+
+  An alternative worth investigating is to generalize the API to represent
+  actions using ``std::function`` that implements the action, instead of explicit
+  enum tokens (``Legal``, ``WidenScalar``, ...) that instruct it to call a
+  function. This would have some benefits, most notable being that Custom could
+  be removed.
+
+.. rubric:: Footnotes
+
+.. [#legalizer-legacy-footnote] An API is broadly similar to
+   SelectionDAG/TargetLowering is available but is not recommended as a more
+   powerful API is available.
 
 Rule Processing and Declaring Rules
 """""""""""""""""""""""""""""""""""
@@ -231,26 +247,6 @@ There are some composite rules for common situations built out of the above faci
 
 * ``moreElementsToNextMultiple()`` is like ``moreElementsToNextPow2()`` but is based on
   multiples of X rather than powers of 2.
-
-Other Information
-"""""""""""""""""
-
-``TODO``:
-An alternative worth investigating is to generalize the API to represent
-actions using ``std::function`` that implements the action, instead of explicit
-enum tokens (``Legal``, ``WidenScalar``, ...).
-
-``TODO``:
-Moreover, we could use TableGen to initially infer legality of operation from
-existing patterns (as any pattern we can select is by definition legal).
-Expanding that to describe legalization actions is a much larger but
-potentially useful project.
-
-.. rubric:: Footnotes
-
-.. [#legalizer-legacy-footnote] An API is broadly similar to
-   SelectionDAG/TargetLowering is available but is not recommended as a more
-   powerful API is available.
 
 .. _min-legalizerinfo:
 
