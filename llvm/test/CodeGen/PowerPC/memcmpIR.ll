@@ -19,9 +19,9 @@ entry:
   ; CHECK-LABEL: loadbb1:{{.*}}
   ; CHECK: [[BCC1:%[0-9]+]] = bitcast i32* {{.*}} to i8*
   ; CHECK-NEXT: [[BCC2:%[0-9]+]] = bitcast i32* {{.*}} to i8*
-  ; CHECK-NEXT: [[GEP1:%[0-9]+]] = getelementptr i8, i8* [[BCC2]], i8 8
+  ; CHECK-NEXT: [[GEP1:%[0-9]+]] = getelementptr i8, i8* [[BCC2]], i64 8
   ; CHECK-NEXT: [[BCL1:%[0-9]+]] = bitcast i8* [[GEP1]] to i64*
-  ; CHECK-NEXT: [[GEP2:%[0-9]+]] = getelementptr i8, i8* [[BCC1]], i8 8
+  ; CHECK-NEXT: [[GEP2:%[0-9]+]] = getelementptr i8, i8* [[BCC1]], i64 8
   ; CHECK-NEXT: [[BCL2:%[0-9]+]] = bitcast i8* [[GEP2]] to i64*
   ; CHECK-NEXT: [[LOAD1:%[0-9]+]] = load i64, i64* [[BCL1]]
   ; CHECK-NEXT: [[LOAD2:%[0-9]+]] = load i64, i64* [[BCL2]]
@@ -44,9 +44,9 @@ entry:
   ; CHECK-BE-LABEL: loadbb1:{{.*}}
   ; CHECK-BE: [[BCC1:%[0-9]+]] = bitcast i32* {{.*}} to i8*
   ; CHECK-BE-NEXT: [[BCC2:%[0-9]+]] = bitcast i32* {{.*}} to i8*
-  ; CHECK-BE-NEXT: [[GEP1:%[0-9]+]] = getelementptr i8, i8* [[BCC2]], i8 8
+  ; CHECK-BE-NEXT: [[GEP1:%[0-9]+]] = getelementptr i8, i8* [[BCC2]], i64 8
   ; CHECK-BE-NEXT: [[BCL1:%[0-9]+]] = bitcast i8* [[GEP1]] to i64*
-  ; CHECK-BE-NEXT: [[GEP2:%[0-9]+]] = getelementptr i8, i8* [[BCC1]], i8 8
+  ; CHECK-BE-NEXT: [[GEP2:%[0-9]+]] = getelementptr i8, i8* [[BCC1]], i64 8
   ; CHECK-BE-NEXT: [[BCL2:%[0-9]+]] = bitcast i8* [[GEP2]] to i64*
   ; CHECK-BE-NEXT: [[LOAD1:%[0-9]+]] = load i64, i64* [[BCL1]]
   ; CHECK-BE-NEXT: [[LOAD2:%[0-9]+]] = load i64, i64* [[BCL2]]
