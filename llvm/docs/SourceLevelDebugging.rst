@@ -989,6 +989,39 @@ a C/C++ front-end would generate the following descriptors:
   ...
   }
 
+C++ specific debug information
+==============================
+
+C++ special member functions information
+----------------------------------------
+
+DWARF v5 introduces attributes defined to enhance debugging information of C++ programs. LLVM can generate (or omit) these appropriate DWARF attributes. In C++ a special member function Ctors, Dtors, Copy/Move Ctors, assignment operators can be declared with C++11 keyword deleted. This is represented in LLVM using spFlags value DISPFlagDeleted.
+
+Given a class declaration with copy constructor declared as deleted:
+
+.. code-block:: c
+
+  class foo {
+   public:
+     foo(const foo&) = deleted;
+  };
+
+A C++ frontend would generate follwing:
+
+.. code-block:: text
+
+  !17 = !DISubprogram(name: "foo", scope: !11, file: !1, line: 5, type: !18, scopeLine: 5, flags: DIFlagPublic | DIFlagPrototyped, spFlags: DISPFlagDeleted)
+
+and this will produce an additional DWARF attibute as:
+
+.. code-block:: text
+
+  DW_TAG_subprogram [7] *
+    DW_AT_name [DW_FORM_strx1]    (indexed (00000006) string = "foo")
+    DW_AT_decl_line [DW_FORM_data1]       (5)
+    ...
+    DW_AT_deleted [DW_FORM_flag_present]  (true)
+
 Fortran specific debug information
 ==================================
 

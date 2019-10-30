@@ -1607,8 +1607,31 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     ContainingType = RecordTy;
   }
 
+  // We're checking for deleted C++ special member functions
+  // [Ctors,Dtors, Copy/Move]
+  auto checkAttrDeleted = [&SPFlags](const auto *Method) {
+    if (Method->getCanonicalDecl()->isDeleted())
+      SPFlags |= llvm::DISubprogram::SPFlagDeleted;
+  };
+
+  switch (Method->getKind()) {
+
+  case Decl::CXXConstructor:
+  case Decl::CXXDestructor:
+    checkAttrDeleted(Method);
+    break;
+  case Decl::CXXMethod:
+    if (Method->isCopyAssignmentOperator() ||
+        Method->isMoveAssignmentOperator())
+      checkAttrDeleted(Method);
+    break;
+  default:
+    break;
+  }
+
   if (Method->isNoReturn())
     Flags |= llvm::DINode::FlagNoReturn;
+
   if (Method->isStatic())
     Flags |= llvm::DINode::FlagStaticMember;
   if (Method->isImplicit())
