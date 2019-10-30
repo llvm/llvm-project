@@ -815,7 +815,8 @@ Error RelocationSection::removeSectionReferences(
   }
 
   for (const Relocation &R : Relocations) {
-    if (!R.RelocSymbol->DefinedIn || !ToRemove(R.RelocSymbol->DefinedIn))
+    if (!R.RelocSymbol || !R.RelocSymbol->DefinedIn ||
+        !ToRemove(R.RelocSymbol->DefinedIn))
       continue;
     return createStringError(llvm::errc::invalid_argument,
                              "section '%s' cannot be removed: (%s+0x%" PRIx64
@@ -868,7 +869,8 @@ static void writeRel(const RelRange &Relocations, T *Buf) {
   for (const auto &Reloc : Relocations) {
     Buf->r_offset = Reloc.Offset;
     setAddend(*Buf, Reloc.Addend);
-    Buf->setSymbolAndType(Reloc.RelocSymbol->Index, Reloc.Type, false);
+    Buf->setSymbolAndType(Reloc.RelocSymbol ? Reloc.RelocSymbol->Index : 0,
+                          Reloc.Type, false);
     ++Buf;
   }
 }
@@ -893,7 +895,7 @@ void RelocationSection::accept(MutableSectionVisitor &Visitor) {
 Error RelocationSection::removeSymbols(
     function_ref<bool(const Symbol &)> ToRemove) {
   for (const Relocation &Reloc : Relocations)
-    if (ToRemove(*Reloc.RelocSymbol))
+    if (Reloc.RelocSymbol && ToRemove(*Reloc.RelocSymbol))
       return createStringError(
           llvm::errc::invalid_argument,
           "not stripping symbol '%s' because it is named in a relocation",
@@ -903,7 +905,8 @@ Error RelocationSection::removeSymbols(
 
 void RelocationSection::markSymbols() {
   for (const Relocation &Reloc : Relocations)
-    Reloc.RelocSymbol->Referenced = true;
+    if (Reloc.RelocSymbol)
+      Reloc.RelocSymbol->Referenced = true;
 }
 
 void RelocationSection::replaceSectionReferences(
@@ -1418,7 +1421,15 @@ static void initRelocations(RelocationSection *Relocs,
     ToAdd.Offset = Rel.r_offset;
     getAddend(ToAdd.Addend, Rel);
     ToAdd.Type = Rel.getType(false);
-    ToAdd.RelocSymbol = SymbolTable->getSymbolByIndex(Rel.getSymbol(false));
+
+    if (uint32_t Sym = Rel.getSymbol(false)) {
+      if (!SymbolTable)
+        error("'" + Relocs->Name +
+              "': relocation references symbol with index " + Twine(Sym) +
+              ", but there is no symbol table");
+      ToAdd.RelocSymbol = SymbolTable->getSymbolByIndex(Sym);
+    }
+
     Relocs->addRelocation(ToAdd);
   }
 }
