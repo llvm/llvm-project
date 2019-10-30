@@ -17,7 +17,6 @@ import sys
 
 # LLDB modules:
 import use_lldb_suite
-from lldbsuite.support import fs
 
 
 def prepare_binding_for_language(scripts_dir, script_lang, options):
