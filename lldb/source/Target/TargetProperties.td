@@ -170,8 +170,8 @@ let Definition = "target" in {
     DefaultStringValue<"">,
     Desc<"Additional -Xcc flags to be passed to the Swift ClangImporter.">;
   def UseAllCompilerFlags: Property<"use-all-compiler-flags", "Boolean">,
-    DefaultStringValue<"">,
-    Desc<"The path to the SDK used to build the current target.">;
+    DefaultTrue,
+    Desc<"Try to use compiler flags for all modules when setting up the Swift expression parser, not just the main executable.">;
   def SDKPath: Property<"sdk-path", "FileSpec">,
     DefaultStringValue<"">,
     Desc<"The path to the SDK used to build the current target.">;
