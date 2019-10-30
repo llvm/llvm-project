@@ -104,6 +104,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/PassManager.h"
@@ -950,6 +951,16 @@ struct Attributor {
     /// Allow access to the private members from the Attributor.
     friend struct Attributor;
   };
+
+  /// Check if we can rewrite a function signature.
+  ///
+  /// The argument \p Arg is replaced with new ones defined by the number,
+  /// order, and types in \p ReplacementTypes.
+  ///
+  /// \returns True, if the replacement can be registered, via
+  /// registerFunctionSignatureRewrite, false otherwise.
+  bool isValidFunctionSignatureRewrite(Argument &Arg,
+                                       ArrayRef<Type *> ReplacementTypes);
 
   /// Register a rewrite for a function signature.
   ///
@@ -2397,6 +2408,45 @@ struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute>,
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAHeapToStack &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+/// An abstract interface for privatizability.
+///
+/// A pointer is privatizable if it can be replaced by a new, private one.
+/// Privatizing pointer reduces the use count, interaction between unrelated
+/// code parts.
+///
+/// In order for a pointer to be privatizable its value cannot be observed
+/// (=nocapture), it is (for now) not written (=readonly & noalias), we know
+/// what values are necessary to make the private copy look like the original
+/// one, and the values we need can be loaded (=dereferenceable).
+struct AAPrivatizablePtr : public StateWrapper<BooleanState, AbstractAttribute>,
+                           public IRPosition {
+  AAPrivatizablePtr(const IRPosition &IRP) : IRPosition(IRP) {}
+
+  /// Returns true if pointer privatization is assumed to be possible.
+  bool isAssumedPrivatizablePtr() const { return getAssumed(); }
+
+  /// Returns true if pointer privatization is known to be possible.
+  bool isKnownPrivatizablePtr() const { return getKnown(); }
+
+  /// Return the type we can choose for a private copy of the underlying
+  /// value. None means it is not clear yet, nullptr means there is none.
+  virtual Optional<Type *> getPrivatizableType() const = 0;
+
+  /// Return an IR position, see struct IRPosition.
+  ///
+  ///{
+  IRPosition &getIRPosition() { return *this; }
+  const IRPosition &getIRPosition() const { return *this; }
+  ///}
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAPrivatizablePtr &createForPosition(const IRPosition &IRP,
+                                              Attributor &A);
 
   /// Unique ID (due to the unique address)
   static const char ID;

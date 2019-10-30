@@ -774,8 +774,7 @@ static bool isSafeToPromoteArgument(Argument *Arg, Type *ByValTy, AAResults &AAR
   return true;
 }
 
-/// Checks if a type could have padding bytes.
-static bool isDenselyPacked(Type *type, const DataLayout &DL) {
+bool ArgumentPromotionPass::isDenselyPacked(Type *type, const DataLayout &DL) {
   // There is no size information, so be conservative.
   if (!type->isSized())
     return false;
@@ -844,12 +843,14 @@ static bool canPaddingBeAccessed(Argument *arg) {
   return false;
 }
 
-static bool areFunctionArgsABICompatible(
+bool ArgumentPromotionPass::areFunctionArgsABICompatible(
     const Function &F, const TargetTransformInfo &TTI,
     SmallPtrSetImpl<Argument *> &ArgsToPromote,
     SmallPtrSetImpl<Argument *> &ByValArgsToTransform) {
   for (const Use &U : F.uses()) {
     CallSite CS(U.getUser());
+    if (!CS)
+      return false;
     const Function *Caller = CS.getCaller();
     const Function *Callee = CS.getCalledFunction();
     if (!TTI.areFunctionArgsABICompatible(Caller, Callee, ArgsToPromote) ||
@@ -951,9 +952,9 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
     // If this is a byval argument, and if the aggregate type is small, just
     // pass the elements, which is always safe, if the passed value is densely
     // packed or if we can prove the padding bytes are never accessed.
-    bool isSafeToPromote =
-        PtrArg->hasByValAttr() &&
-        (isDenselyPacked(AgTy, DL) || !canPaddingBeAccessed(PtrArg));
+    bool isSafeToPromote = PtrArg->hasByValAttr() &&
+                           (ArgumentPromotionPass::isDenselyPacked(AgTy, DL) ||
+                            !canPaddingBeAccessed(PtrArg));
     if (isSafeToPromote) {
       if (StructType *STy = dyn_cast<StructType>(AgTy)) {
         if (MaxElements > 0 && STy->getNumElements() > MaxElements) {
@@ -1011,8 +1012,8 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
   if (ArgsToPromote.empty() && ByValArgsToTransform.empty())
     return nullptr;
 
-  if (!areFunctionArgsABICompatible(*F, TTI, ArgsToPromote,
-                                    ByValArgsToTransform))
+  if (!ArgumentPromotionPass::areFunctionArgsABICompatible(
+          *F, TTI, ArgsToPromote, ByValArgsToTransform))
     return nullptr;
 
   return doPromotion(F, ArgsToPromote, ByValArgsToTransform, ReplaceCallSite);
