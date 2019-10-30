@@ -39599,7 +39599,8 @@ static SDValue combineOrShiftToFunnelShift(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
-  if (VT != MVT::i16 && VT != MVT::i32 && VT != MVT::i64)
+  if (!TLI.isOperationLegalOrCustom(ISD::FSHL, VT) ||
+      !TLI.isOperationLegalOrCustom(ISD::FSHR, VT))
     return SDValue();
 
   // fold (or (x << c) | (y >> (64 - c))) ==> (shld64 x, y, c)
