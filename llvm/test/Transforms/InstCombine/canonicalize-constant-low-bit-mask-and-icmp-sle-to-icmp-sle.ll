@@ -76,7 +76,7 @@ define <2 x i1> @p2_vec_nonsplat_edgecase() {
 define <3 x i1> @p3_vec_splat_undef() {
 ; CHECK-LABEL: @p3_vec_splat_undef(
 ; CHECK-NEXT:    [[X:%.*]] = call <3 x i8> @gen3x8()
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <3 x i8> [[X]], <i8 4, i8 undef, i8 4>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <3 x i8> [[X]], <i8 4, i8 4, i8 4>
 ; CHECK-NEXT:    ret <3 x i1> [[TMP1]]
 ;
   %x = call <3 x i8> @gen3x8()
