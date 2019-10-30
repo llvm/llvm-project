@@ -14,6 +14,7 @@
 #include "flags.h"
 #include "primary32.h"
 #include "primary64.h"
+#include "secondary.h"
 #include "size_class_map.h"
 #include "tsd_exclusive.h"
 #include "tsd_shared.h"
@@ -31,6 +32,7 @@ struct DefaultConfig {
   // 512KB regions
   typedef SizeClassAllocator32<SizeClassMap, 19U> Primary;
 #endif
+  typedef MapAllocator<> Secondary;
   template <class A> using TSDRegistryT = TSDRegistryExT<A>; // Exclusive
 };
 
@@ -43,6 +45,7 @@ struct AndroidConfig {
   // 512KB regions
   typedef SizeClassAllocator32<SizeClassMap, 19U> Primary;
 #endif
+  typedef MapAllocator<> Secondary;
   template <class A>
   using TSDRegistryT = TSDRegistrySharedT<A, 2U>; // Shared, max 2 TSDs.
 };
@@ -56,6 +59,7 @@ struct AndroidSvelteConfig {
   // 64KB regions
   typedef SizeClassAllocator32<SizeClassMap, 16U> Primary;
 #endif
+  typedef MapAllocator<0U> Secondary;
   template <class A>
   using TSDRegistryT = TSDRegistrySharedT<A, 1U>; // Shared, only 1 TSD.
 };
@@ -63,6 +67,7 @@ struct AndroidSvelteConfig {
 struct FuchsiaConfig {
   // 1GB Regions
   typedef SizeClassAllocator64<DefaultSizeClassMap, 30U> Primary;
+  typedef MapAllocator<> Secondary;
   template <class A>
   using TSDRegistryT = TSDRegistrySharedT<A, 8U>; // Shared, max 8 TSDs.
 };

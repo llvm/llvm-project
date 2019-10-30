@@ -449,7 +449,7 @@ public:
   }
 
 private:
-  typedef MapAllocator SecondaryT;
+  using SecondaryT = typename Params::Secondary;
   typedef typename PrimaryT::SizeClassMap SizeClassMap;
 
   static const uptr MinAlignmentLog = SCUDO_MIN_ALIGNMENT_LOG;
