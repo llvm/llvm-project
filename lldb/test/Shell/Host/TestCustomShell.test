@@ -1,8 +1,11 @@
 # This test applies to POSIX.
 # UNSUPPORTED: system-windows
 
-# FIXME: ShellExpandArguments is unimplemented on Linux.
+# FIXME: ShellExpandArguments is unimplemented on the following targets.
 # UNSUPPORTED: system-linux
+# XFAIL: system-freebsd
+# XFAIL: system-netbsd
+# XFAIL: system-openbsd
 
 # RUN: %clang %S/Inputs/simple.c -g -o %t.out
 # RUN: SHELL=bogus %lldb %t.out -b -o 'run' 2>&1 | FileCheck %s --check-prefix ERROR
