@@ -1517,25 +1517,6 @@ def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^MOVIv")>;
 // ASIMD move, FP immed
 def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^FMOVv")>;
 
-// ASIMD table lookup, D-form
-def : InstRW<[THX2T99Write_7Cyc_F01], (instregex "^TB[LX]v8i8One")>;
-def : InstRW<[THX2T99Write_7Cyc_F01], (instregex "^TB[LX]v8i8Two")>;
-def : InstRW<[THX2T99Write_7Cyc_F01], (instregex "^TB[LX]v8i8Three")>;
-def : InstRW<[THX2T99Write_7Cyc_F01], (instregex "^TB[LX]v8i8Four")>;
-
-// ASIMD table lookup, Q-form
-def : InstRW<[THX2T99Write_7Cyc_F01], (instregex "^TB[LX]v16i8One")>;
-def : InstRW<[THX2T99Write_7Cyc_F01], (instregex "^TB[LX]v16i8Two")>;
-def : InstRW<[THX2T99Write_7Cyc_F01], (instregex "^TB[LX]v16i8Three")>;
-def : InstRW<[THX2T99Write_7Cyc_F01], (instregex "^TB[LX]v16i8Four")>;
-
-// ASIMD transpose
-def : InstRW<[THX2T99Write_5Cyc_F01], (instregex "^TRN1", "^TRN2")>;
-
-// ASIMD unzip/zip
-def : InstRW<[THX2T99Write_5Cyc_F01],
-            (instregex "^UZP1", "^UZP2", "^ZIP1", "^ZIP2")>;
-
 // ASIMD reciprocal estimate, D-form
 // ASIMD reciprocal estimate, Q-form
 def : InstRW<[THX2T99Write_5Cyc_F01],
