@@ -4643,8 +4643,8 @@ bool X86::isCalleePop(CallingConv::ID CallingConv,
   }
 }
 
-/// Return true if the condition is an unsigned comparison operation.
-static bool isX86CCUnsigned(unsigned X86CC) {
+/// Return true if the condition is an signed comparison operation.
+static bool isX86CCSigned(unsigned X86CC) {
   switch (X86CC) {
   default:
     llvm_unreachable("Invalid integer condition!");
@@ -4654,12 +4654,12 @@ static bool isX86CCUnsigned(unsigned X86CC) {
   case X86::COND_A:
   case X86::COND_BE:
   case X86::COND_AE:
-    return true;
+    return false;
   case X86::COND_G:
   case X86::COND_GE:
   case X86::COND_L:
   case X86::COND_LE:
-    return false;
+    return true;
   }
 }
 
@@ -20154,7 +20154,7 @@ SDValue X86TargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
     if ((COp0 && !COp0->getAPIntValue().isSignedIntN(8)) ||
         (COp1 && !COp1->getAPIntValue().isSignedIntN(8))) {
       unsigned ExtendOp =
-          isX86CCUnsigned(X86CC) ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
+          isX86CCSigned(X86CC) ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
       if (X86CC == X86::COND_E || X86CC == X86::COND_NE) {
         // For equality comparisons try to use SIGN_EXTEND if the input was
         // truncate from something with enough sign bits.
@@ -20178,6 +20178,18 @@ SDValue X86TargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
       Op1 = DAG.getNode(ExtendOp, dl, CmpVT, Op1);
     }
   }
+
+  // Try to shrink i64 compares if the input has enough zero bits.
+  // FIXME: Do this for non-constant compares for constant on LHS?
+  if (CmpVT == MVT::i64 && isa<ConstantSDNode>(Op1) && !isX86CCSigned(X86CC) &&
+      Op0.hasOneUse() && // Hacky way to not break CSE opportunities with sub.
+      cast<ConstantSDNode>(Op1)->getAPIntValue().getActiveBits() <= 32 &&
+      DAG.MaskedValueIsZero(Op0, APInt::getHighBitsSet(64, 32))) {
+    CmpVT = MVT::i32;
+    Op0 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op0);
+    Op1 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op1);
+  }
+
   // Use SUB instead of CMP to enable CSE between SUB and CMP.
   SDVTList VTs = DAG.getVTList(CmpVT, MVT::i32);
   SDValue Sub = DAG.getNode(X86ISD::SUB, dl, VTs, Op0, Op1);
