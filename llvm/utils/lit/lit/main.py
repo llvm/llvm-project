@@ -90,7 +90,7 @@ def main(builtin_params = {}):
     if litConfig.numWarnings:
         sys.stderr.write('\n%d warning(s) in tests.\n' % litConfig.numWarnings)
 
-    has_failure = any(t.result.code.isFailure for t in tests)
+    has_failure = any(t.isFailure() for t in tests)
     if has_failure:
         sys.exit(1)
 
@@ -147,7 +147,7 @@ def determine_order(tests, order):
 
 
 def touch_file(test):
-    if test.result.code.isFailure:
+    if test.isFailure():
         os.utime(test.getFilePath(), None)
 
 def filter_by_shard(tests, run, shards, litConfig):
@@ -341,7 +341,7 @@ def write_test_results_xunit(tests, opts):
                                 'skipped': 0,
                                 'tests'    : [] }
         by_suite[suite]['tests'].append(result_test)
-        if result_test.result.code.isFailure:
+        if result_test.isFailure():
             by_suite[suite]['failures'] += 1
         elif result_test.result.code == lit.Test.UNSUPPORTED:
             by_suite[suite]['skipped'] += 1
