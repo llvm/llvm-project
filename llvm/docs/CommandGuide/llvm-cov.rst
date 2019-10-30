@@ -259,6 +259,10 @@ OPTIONS
 
  Skip source code files with file paths that match the given regular expression.
 
+.. option:: -whitelist-filename-regex=<PATTERN>
+
+ Show code coverage only for files that match the given regular expression.
+
 .. option:: -format=<FORMAT>
 
  Use the specified output format. The supported formats are: "text", "html".

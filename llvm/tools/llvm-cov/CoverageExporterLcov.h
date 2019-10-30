@@ -24,7 +24,7 @@ public:
       : CoverageExporter(CoverageMapping, Options, OS) {}
 
   /// Render the CoverageMapping object.
-  void renderRoot(const CoverageFilters &IgnoreFilters) override;
+  void renderRoot(const FilenameCoverageFilters &FilenameFilters) override;
 
   /// Render the CoverageMapping object for specified source files.
   void renderRoot(ArrayRef<std::string> SourceFiles) override;

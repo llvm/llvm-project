@@ -83,3 +83,20 @@ bool CoverageFiltersMatchAll::matches(
   }
   return true;
 }
+
+bool FilenameCoverageFilters::matchesFilename(StringRef Filename) const {
+  if (!Whitelist.empty() && !Whitelist.matchesFilename(Filename)) {
+    return false;
+  }
+  return !Blacklist.matchesFilename(Filename);
+}
+
+void FilenameCoverageFilters::whitelist(
+    std::unique_ptr<CoverageFilter> Filter) {
+  Whitelist.push_back(std::move(Filter));
+}
+
+void FilenameCoverageFilters::blacklist(
+    std::unique_ptr<CoverageFilter> Filter) {
+  Blacklist.push_back(std::move(Filter));
+}
