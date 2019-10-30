@@ -861,6 +861,14 @@ define void @fastmathflags_vector_select(<2 x i1> %cond, <2 x double> %op1, <2 x
   ret void
 }
 
+define void @fastmathflags_array_select(i1 %cond, [2 x double] %op1, [2 x double] %op2) {
+  %f.nnan.nsz = select nnan nsz i1 %cond, [2 x double] %op1, [2 x double] %op2
+  ; CHECK: %f.nnan.nsz = select nnan nsz i1 %cond, [2 x double] %op1, [2 x double] %op2
+  %f.fast = select fast i1 %cond, [2 x double] %op1, [2 x double] %op2
+  ; CHECK: %f.fast = select fast i1 %cond, [2 x double] %op1, [2 x double] %op2
+  ret void
+}
+
 define void @fastmathflags_phi(i1 %cond, float %f1, float %f2, double %d1, double %d2, half %h1, half %h2) {
 entry:
   br i1 %cond, label %L1, label %L2
@@ -903,24 +911,65 @@ exit:
   ret void
 }
 
+define void @fastmathflags_array_phi(i1 %cond, [4 x float] %f1, [4 x float] %f2, [2 x double] %d1, [2 x double] %d2, [8 x half] %h1, [8 x half] %h2) {
+entry:
+  br i1 %cond, label %L1, label %L2
+L1:
+  br label %exit
+L2:
+  br label %exit
+exit:
+  %p.nnan = phi nnan [4 x float] [ %f1, %L1 ], [ %f2, %L2 ]
+  ; CHECK: %p.nnan = phi nnan [4 x float] [ %f1, %L1 ], [ %f2, %L2 ]
+  %p.ninf = phi ninf [2 x double] [ %d1, %L1 ], [ %d2, %L2 ]
+  ; CHECK: %p.ninf = phi ninf [2 x double] [ %d1, %L1 ], [ %d2, %L2 ]
+  %p.contract = phi contract [8 x half] [ %h1, %L1 ], [ %h2, %L2 ]
+  ; CHECK: %p.contract = phi contract [8 x half] [ %h1, %L1 ], [ %h2, %L2 ]
+  %p.nsz.reassoc = phi reassoc nsz [4 x float] [ %f1, %L1 ], [ %f2, %L2 ]
+  ; CHECK: %p.nsz.reassoc = phi reassoc nsz [4 x float] [ %f1, %L1 ], [ %f2, %L2 ]
+  %p.fast = phi fast [8 x half] [ %h2, %L1 ], [ %h1, %L2 ]
+  ; CHECK: %p.fast = phi fast [8 x half] [ %h2, %L1 ], [ %h1, %L2 ]
+  ret void
+}
+
 ; Check various fast math flags and floating-point types on calls.
 
-declare float @fmf1()
-declare double @fmf2()
-declare <4 x double> @fmf3()
+declare float @fmf_f32()
+declare double @fmf_f64()
+declare <4 x double> @fmf_v4f64()
 
 ; CHECK-LABEL: fastMathFlagsForCalls(
 define void @fastMathFlagsForCalls(float %f, double %d1, <4 x double> %d2) {
-  %call.fast = call fast float @fmf1()
-  ; CHECK: %call.fast = call fast float @fmf1()
+  %call.fast = call fast float @fmf_f32()
+  ; CHECK: %call.fast = call fast float @fmf_f32()
 
   ; Throw in some other attributes to make sure those stay in the right places.
 
-  %call.nsz.arcp = notail call nsz arcp double @fmf2()
-  ; CHECK: %call.nsz.arcp = notail call nsz arcp double @fmf2()
+  %call.nsz.arcp = notail call nsz arcp double @fmf_f64()
+  ; CHECK: %call.nsz.arcp = notail call nsz arcp double @fmf_f64()
 
-  %call.nnan.ninf = tail call nnan ninf fastcc <4 x double> @fmf3()
-  ; CHECK: %call.nnan.ninf = tail call nnan ninf fastcc <4 x double> @fmf3()
+  %call.nnan.ninf = tail call nnan ninf fastcc <4 x double> @fmf_v4f64()
+  ; CHECK: %call.nnan.ninf = tail call nnan ninf fastcc <4 x double> @fmf_v4f64()
+
+  ret void
+}
+
+declare [2 x float] @fmf_a2f32()
+declare [2 x double] @fmf_a2f64()
+declare [2 x <4 x double>] @fmf_a2v4f64()
+
+; CHECK-LABEL: fastMathFlagsForArrayCalls(
+define void @fastMathFlagsForArrayCalls([2 x float] %f, [2 x double] %d1, [2 x <4 x double>] %d2) {
+  %call.fast = call fast [2 x float] @fmf_a2f32()
+  ; CHECK: %call.fast = call fast [2 x float] @fmf_a2f32()
+
+  ; Throw in some other attributes to make sure those stay in the right places.
+
+  %call.nsz.arcp = notail call nsz arcp [2 x double] @fmf_a2f64()
+  ; CHECK: %call.nsz.arcp = notail call nsz arcp [2 x double] @fmf_a2f64()
+
+  %call.nnan.ninf = tail call nnan ninf fastcc [2 x <4 x double>] @fmf_a2v4f64()
+  ; CHECK: %call.nnan.ninf = tail call nnan ninf fastcc [2 x <4 x double>] @fmf_a2v4f64()
 
   ret void
 }
