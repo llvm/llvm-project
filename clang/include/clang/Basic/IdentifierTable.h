@@ -581,6 +581,8 @@ public:
   iterator end() const   { return HashTable.end(); }
   unsigned size() const  { return HashTable.size(); }
 
+  iterator find(StringRef Name) const { return HashTable.find(Name); }
+
   /// Print some statistics to stderr that indicate how well the
   /// hashing is doing.
   void PrintStats() const;
