@@ -6,11 +6,12 @@ import os
 import unittest2
 
 
-class TestSwiftAnyType(lldbtest.TestBase):
+class TestSwiftSystemFramework(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
+    @skipIf(oslist=no_match(["macosx"]))
     def test_system_framework(self):
         """Make sure no framework paths into /System/Library are added"""
         self.build()
