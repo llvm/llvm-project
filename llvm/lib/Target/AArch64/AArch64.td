@@ -448,7 +448,6 @@ include "AArch64SchedA57.td"
 include "AArch64SchedCyclone.td"
 include "AArch64SchedFalkor.td"
 include "AArch64SchedKryo.td"
-include "AArch64SchedExynosM1.td"
 include "AArch64SchedExynosM3.td"
 include "AArch64SchedExynosM4.td"
 include "AArch64SchedThunderX.td"
@@ -618,33 +617,6 @@ def ProcLightning : SubtargetFeature<"lightning", "ARMProcFamily", "Lightning",
                                      FeatureZCZeroing,
                                      HasV8_4aOps
                                      ]>;
-
-def ProcExynosM1 : SubtargetFeature<"exynosm1", "ARMProcFamily", "ExynosM1",
-                                    "Samsung Exynos-M1 processors",
-                                    [FeatureSlowPaired128,
-                                     FeatureCRC,
-                                     FeatureCrypto,
-                                     FeatureExynosCheapAsMoveHandling,
-                                     FeatureForce32BitJumpTables,
-                                     FeatureFuseAES,
-                                     FeaturePerfMon,
-                                     FeaturePostRAScheduler,
-                                     FeatureSlowMisaligned128Store,
-                                     FeatureUseRSqrt,
-                                     FeatureZCZeroingFP]>;
-
-def ProcExynosM2 : SubtargetFeature<"exynosm2", "ARMProcFamily", "ExynosM1",
-                                    "Samsung Exynos-M2 processors",
-                                    [FeatureSlowPaired128,
-                                     FeatureCRC,
-                                     FeatureCrypto,
-                                     FeatureExynosCheapAsMoveHandling,
-                                     FeatureForce32BitJumpTables,
-                                     FeatureFuseAES,
-                                     FeaturePerfMon,
-                                     FeaturePostRAScheduler,
-                                     FeatureSlowMisaligned128Store,
-                                     FeatureZCZeroingFP]>;
 
 def ProcExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
@@ -855,8 +827,6 @@ def : ProcessorModel<"neoverse-n1", CortexA57Model, [ProcNeoverseN1]>;
 def : ProcessorModel<"cyclone", CycloneModel, [ProcCyclone]>;
 def : ProcessorModel<"vortex", CycloneModel, [ProcVortex]>;
 def : ProcessorModel<"lightning", CycloneModel, [ProcLightning]>;
-def : ProcessorModel<"exynos-m1", ExynosM1Model, [ProcExynosM1]>;
-def : ProcessorModel<"exynos-m2", ExynosM1Model, [ProcExynosM2]>;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, [ProcExynosM3]>;
 def : ProcessorModel<"exynos-m4", ExynosM4Model, [ProcExynosM4]>;
 def : ProcessorModel<"exynos-m5", ExynosM4Model, [ProcExynosM4]>;

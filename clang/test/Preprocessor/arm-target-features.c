@@ -528,10 +528,6 @@
 // RUN: %clang -target armv8 -mcpu=cortex-a73 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
 // RUN: %clang -target armv8 -mthumb -mcpu=cortex-a73 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
 //
-// RUN: %clang -target armv8 -mcpu=exynos-m1 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
-// RUN: %clang -target armv8 -mthumb -mcpu=exynos-m1 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
-// RUN: %clang -target armv8 -mcpu=exynos-m2 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
-// RUN: %clang -target armv8 -mthumb -mcpu=exynos-m2 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
 // RUN: %clang -target armv8 -mcpu=exynos-m3 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
 // RUN: %clang -target armv8 -mthumb -mcpu=exynos-m3 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
 // RUN: %clang -target armv8 -mcpu=exynos-m4 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8 %s
@@ -556,10 +552,6 @@
 // RUN: %clang -target armv8-eabi -mcpu=cortex-a73 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
 // RUN: %clang -target armv8-eabi -mthumb -mcpu=cortex-a73 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
 //
-// RUN: %clang -target armv8-eabi -mcpu=exynos-m1 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
-// RUN: %clang -target armv8-eabi -mthumb -mcpu=exynos-m1 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
-// RUN: %clang -target armv8-eabi -mcpu=exynos-m2 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
-// RUN: %clang -target armv8-eabi -mthumb -mcpu=exynos-m2 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
 // RUN: %clang -target armv8-eabi -mcpu=exynos-m3 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
 // RUN: %clang -target armv8-eabi -mthumb -mcpu=exynos-m3 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s
 // RUN: %clang -target armv8-eabi -mcpu=exynos-m4 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=ARMV8-ALLOW-FP-INSTR %s

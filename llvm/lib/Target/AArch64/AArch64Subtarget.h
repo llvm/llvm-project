@@ -48,7 +48,6 @@ public:
     CortexA75,
     CortexA76,
     Cyclone,
-    ExynosM1,
     ExynosM3,
     Falkor,
     Kryo,

@@ -1,6 +1,6 @@
 # RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=cortex-a57 -enable-unsafe-fp-math -machine-combiner-verify-pattern-order=true %s | FileCheck --check-prefixes=UNPROFITABLE,ALL %s
 # RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=falkor -enable-unsafe-fp-math %s -machine-combiner-verify-pattern-order=true | FileCheck --check-prefixes=PROFITABLE,ALL %s
-# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=exynos-m1 -enable-unsafe-fp-math -machine-combiner-verify-pattern-order=true %s | FileCheck --check-prefixes=PROFITABLE,ALL %s
+# RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=exynos-m3 -enable-unsafe-fp-math -machine-combiner-verify-pattern-order=true %s | FileCheck --check-prefixes=PROFITABLE,ALL %s
 # RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=thunderx2t99 -enable-unsafe-fp-math -machine-combiner-verify-pattern-order=true %s | FileCheck --check-prefixes=PROFITABLE,ALL %s
 #
 name:            f1_2s

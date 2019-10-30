@@ -18,8 +18,6 @@
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=thunderxt83 < %s | FileCheck --check-prefixes=ALIGN3,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=thunderxt88 < %s | FileCheck --check-prefixes=ALIGN3,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=thunderx2t99 < %s | FileCheck --check-prefixes=ALIGN3,CHECK %s
-; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=exynos-m1 < %s | FileCheck --check-prefixes=ALIGN4,CHECK %s
-; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=exynos-m2 < %s | FileCheck --check-prefixes=ALIGN4,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=exynos-m3 < %s | FileCheck --check-prefixes=ALIGN5,CHECK %s
 
 define void @test() {
