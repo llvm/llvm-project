@@ -47,6 +47,7 @@ VSCode::VSCode()
   int result = _setmode(fileno(stdout), _O_BINARY);
   assert(result);
   result = _setmode(fileno(stdin), _O_BINARY);
+  (void)result;
   assert(result);
 #endif
   if (log_file_path)
