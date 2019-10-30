@@ -190,11 +190,10 @@ json::Array renderFunctions(
 
 } // end anonymous namespace
 
-void CoverageExporterJson::renderRoot(
-    const FilenameCoverageFilters &FilenameFilters) {
+void CoverageExporterJson::renderRoot(const CoverageFilters &IgnoreFilters) {
   std::vector<std::string> SourceFiles;
   for (StringRef SF : Coverage.getUniqueSourceFiles()) {
-    if (FilenameFilters.matchesFilename(SF))
+    if (!IgnoreFilters.matchesFilename(SF))
       SourceFiles.emplace_back(SF);
   }
   renderRoot(SourceFiles);

@@ -106,11 +106,10 @@ void renderFiles(raw_ostream &OS, const coverage::CoverageMapping &Coverage,
 
 } // end anonymous namespace
 
-void CoverageExporterLcov::renderRoot(
-    const FilenameCoverageFilters &FilenameFilters) {
+void CoverageExporterLcov::renderRoot(const CoverageFilters &IgnoreFilters) {
   std::vector<std::string> SourceFiles;
   for (StringRef SF : Coverage.getUniqueSourceFiles()) {
-    if (FilenameFilters.matchesFilename(SF))
+    if (!IgnoreFilters.matchesFilename(SF))
       SourceFiles.emplace_back(SF);
   }
   renderRoot(SourceFiles);
