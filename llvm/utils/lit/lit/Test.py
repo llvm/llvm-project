@@ -224,12 +224,13 @@ class Test:
         self.result = None
 
     def setResult(self, result):
-        if self.result is not None:
-            raise ValueError("test result already set")
-        if not isinstance(result, Result):
-            raise ValueError("unexpected result type")
-
+        assert self.result is None, "result already set"
+        assert isinstance(result, Result), "unexpected result type"
         self.result = result
+
+    def isFailure(self):
+        assert self.result
+        return self.result.code.isFailure
 
     def getFullName(self):
         return self.suite.config.name + ' :: ' + '/'.join(self.path_in_suite)
@@ -364,7 +365,7 @@ class Test:
         elapsed_time = self.result.elapsed if self.result.elapsed is not None else 0.0
         testcase_xml = testcase_template.format(class_name=class_name, test_name=test_name, time=elapsed_time)
         fil.write(testcase_xml)
-        if self.result.code.isFailure:
+        if self.isFailure():
             fil.write(">\n\t<failure ><![CDATA[")
             # In Python2, 'str' and 'unicode' are distinct types, but in Python3, the type 'unicode' does not exist
             # and instead 'bytes' is distinct
