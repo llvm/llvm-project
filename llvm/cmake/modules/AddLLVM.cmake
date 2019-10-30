@@ -228,7 +228,7 @@ function(add_link_opts target_name)
       # to enable. See https://sourceware.org/bugzilla/show_bug.cgi?id=17704.
     endif()
 
-    if(NOT LLVM_SUPPORT_PLUGINS)
+    if(NOT LLVM_NO_DEAD_STRIP)
       if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         # ld64's implementation of -dead_strip breaks tools that use plugins.
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
@@ -245,7 +245,7 @@ function(add_link_opts target_name)
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                      LINK_FLAGS " -Wl,--gc-sections")
       endif()
-    else() #LLVM_SUPPORT_PLUGINS
+    else() #LLVM_NO_DEAD_STRIP
       if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                      LINK_FLAGS " -Wl,-bnogc")
