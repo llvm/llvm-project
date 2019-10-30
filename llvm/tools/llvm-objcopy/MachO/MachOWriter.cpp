@@ -369,11 +369,14 @@ void MachOWriter::writeIndirectSymbolTable() {
       O.LoadCommands[*O.DySymTabCommandIndex]
           .MachOLoadCommand.dysymtab_command_data;
 
-  char *Out = (char *)B.getBufferStart() + DySymTabCommand.indirectsymoff;
-  assert((DySymTabCommand.nindirectsyms == O.IndirectSymTable.Symbols.size()) &&
-         "Incorrect indirect symbol table size");
-  memcpy(Out, O.IndirectSymTable.Symbols.data(),
-         sizeof(uint32_t) * O.IndirectSymTable.Symbols.size());
+  uint32_t *Out =
+      (uint32_t *)(B.getBufferStart() + DySymTabCommand.indirectsymoff);
+  for (const IndirectSymbolEntry &Sym : O.IndirectSymTable.Symbols) {
+    uint32_t Entry = (Sym.Symbol) ? (*Sym.Symbol)->Index : Sym.OriginalIndex;
+    if (IsLittleEndian != sys::IsLittleEndianHost)
+      sys::swapByteOrder(Entry);
+    *Out++ = Entry;
+  }
 }
 
 void MachOWriter::writeDataInCodeData() {
