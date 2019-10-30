@@ -158,6 +158,9 @@ bool SBType::IsReferenceType() {
 
   if (!IsValid())
     return false;
+
+  // BEGIN SWIFT
+
   // FIXME: Swift class types are really like references, they are
   // accessed by the same operator as Values, but their value is the
   // location of the type.  But reporting true from the Compiler Type
@@ -169,6 +172,8 @@ bool SBType::IsReferenceType() {
   uint32_t flags = type.GetTypeInfo();
   if (flags & eTypeIsSwift)
     return flags & eTypeHasValue;
+
+  // END SWIFT
 
   return m_opaque_sp->GetCompilerType(true).IsReferenceType();
 }

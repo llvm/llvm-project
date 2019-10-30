@@ -80,8 +80,10 @@ SBFileSpec SBHostOS::GetLLDBPath(lldb::PathType path_type) {
     fspec = GetClangResourceDir();
     break;
 
+  // BEGIN SWIFT
   case ePathTypeSwiftDir:
     break;
+  // END SWIFT
   }
 
   SBFileSpec sb_fspec;

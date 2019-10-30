@@ -25,12 +25,10 @@
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBSymbolContextList.h"
-#include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointID.h"
 #include "lldb/Breakpoint/BreakpointIDList.h"
 #include "lldb/Breakpoint/BreakpointList.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
-#include "lldb/Breakpoint/BreakpointPrecondition.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressResolver.h"
 #include "lldb/Core/AddressResolverName.h"
@@ -70,6 +68,10 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
+
+// BEGIN SWIFT
+#include "lldb/Breakpoint/BreakpointPrecondition.h"
+// END SWIFT
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1078,11 +1080,14 @@ SBTarget::BreakpointCreateForException(lldb::LanguageType language,
                      (lldb::LanguageType, bool, bool), language, catch_bp,
                      throw_bp);
 
+  // BEGIN SWIFT
   SBStringList no_extra_args;
   return BreakpointCreateForException(language, catch_bp, throw_bp,
                                       no_extra_args);
+  // END SWIFT
 }
 
+// BEGIN SWIFT
 lldb::SBBreakpoint
 SBTarget::BreakpointCreateForException(lldb::LanguageType language,
                                        bool catch_bp, bool throw_bp,
@@ -1118,6 +1123,7 @@ SBTarget::BreakpointCreateForException(lldb::LanguageType language,
 
   return LLDB_RECORD_RESULT(sb_bp);
 }
+// END SWIFT
 
 lldb::SBBreakpoint SBTarget::BreakpointCreateFromScript(
     const char *class_name, SBStructuredData &extra_args,
@@ -1874,6 +1880,7 @@ lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {
     }
 
     // Didn't find the type in the symbols; Try the loaded language runtimes
+    // BEGIN SWIFT
     // FIXME: This depends on clang, but should be able to support any
     // TypeSystem/compiler.
     if (auto process_sp = target_sp->GetProcessSP()) {
@@ -1892,6 +1899,7 @@ lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {
         }
       }
     }
+    // END SWIFT
 
     // No matches, search for basic typename matches
     for (auto *type_system : target_sp->GetScratchTypeSystems())
@@ -1937,6 +1945,7 @@ lldb::SBTypeList SBTarget::FindTypes(const char *typename_cstr) {
     }
 
     // Try the loaded language runtimes
+    // BEGIN SWIFT
     // FIXME: This depends on clang, but should be able to support any
     // TypeSystem/compiler.
     if (auto process_sp = target_sp->GetProcessSP()) {
@@ -1956,6 +1965,7 @@ lldb::SBTypeList SBTarget::FindTypes(const char *typename_cstr) {
         }
       }
     }
+    // END SWIFT
 
     if (sb_type_list.GetSize() == 0) {
       // No matches, search for basic typename matches

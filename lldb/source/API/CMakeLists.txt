@@ -1,3 +1,4 @@
+## BEGIN SWIFT
 set(LLVM_NO_RTTI 1)
 
 include(AddLLVM)
@@ -5,6 +6,7 @@ include(AddLLVM)
 if (LLDB_ENABLE_SWIFT_SUPPORT)
   include(SwiftAddCustomCommandTarget)
 endif()
+## END SWIFT
 
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   add_definitions( -DEXPORT_LIBLLDB )
@@ -106,7 +108,9 @@ add_lldb_library(liblldb SHARED
     lldbTarget
     lldbUtility
     ${LLDB_ALL_PLUGINS}
+## BEGIN SWIFT
     ${SWIFT_ALL_LIBS}
+## END SWIFT
   LINK_COMPONENTS
     Support
 
@@ -180,6 +184,7 @@ if(LLDB_BUILD_FRAMEWORK)
   include(LLDBFramework)
 endif()
 
+## BEGIN SWIFT
 set(lib_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX}")
 
 if(EXISTS ${SWIFT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/swift/clang)
@@ -241,3 +246,4 @@ if(LLDB_BUILT_STANDALONE)
     DESTINATION lib${LLVM_LIBDIR_SUFFIX}/lldb/)
 endif()
 endif()
+## END SWIFT

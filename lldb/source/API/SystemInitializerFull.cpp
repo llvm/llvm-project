@@ -19,7 +19,6 @@
 #include "lldb/Initialization/SystemInitializerCommon.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/ClangASTContext.h"
-#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Utility/Timer.h"
 
 #include "Plugins/ABI/MacOSX-arm/ABIMacOSX_arm.h"
@@ -55,7 +54,6 @@
 #include "Plugins/InstrumentationRuntime/MainThreadChecker/MainThreadCheckerRuntime.h"
 #include "Plugins/InstrumentationRuntime/TSan/TSanRuntime.h"
 #include "Plugins/InstrumentationRuntime/UBSan/UBSanRuntime.h"
-#include "Plugins/InstrumentationRuntime/SwiftRuntimeReporting/SwiftRuntimeReporting.h"
 #include "Plugins/JITLoader/GDB/JITLoaderGDB.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
@@ -119,11 +117,13 @@
 #include "lldb/Host/windows/windows.h"
 #endif
 
-#if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
+// BEGIN SWIFT
 #include "Plugins/ExpressionParser/Swift/SwiftREPL.h"
+#include "Plugins/InstrumentationRuntime/SwiftRuntimeReporting/SwiftRuntimeReporting.h"
 #include "Plugins/Language/Swift/SwiftLanguage.h"
+#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
-#endif
+// END SWIFT
 
 #include "llvm/Support/TargetSelect.h"
 
@@ -140,6 +140,7 @@ SystemInitializerFull::SystemInitializerFull() {}
 
 SystemInitializerFull::~SystemInitializerFull() {}
 
+// BEGIN SWIFT
 static void SwiftInitialize() {
 #if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
   SwiftLanguage::Initialize();
@@ -155,6 +156,7 @@ static void SwiftTerminate() {
   SwiftREPL::Terminate();
 #endif
 }
+// END SWIFT
 
 #define LLDB_PROCESS_AArch64(op)                                               \
   ABIMacOSX_arm64::op();                                                       \
@@ -231,7 +233,9 @@ llvm::Error SystemInitializerFull::Initialize() {
   llvm::InitializeAllDisassemblers();
 
   ClangASTContext::Initialize();
+  // BEGIN SWIFT
   SwiftASTContext::Initialize();
+  // END SWIFT
 
 #define LLVM_TARGET(t) LLDB_PROCESS_ ## t(Initialize)
 #include "llvm/Config/Targets.def"
@@ -251,7 +255,9 @@ llvm::Error SystemInitializerFull::Initialize() {
   ThreadSanitizerRuntime::Initialize();
   UndefinedBehaviorSanitizerRuntime::Initialize();
   MainThreadCheckerRuntime::Initialize();
+  // BEGIN SWIFT
   SwiftRuntimeReporting::Initialize();
+  // END SWIFT
 
   SymbolVendorELF::Initialize();
   breakpad::SymbolFileBreakpad::Initialize();
@@ -277,7 +283,9 @@ llvm::Error SystemInitializerFull::Initialize() {
   CPlusPlusLanguage::Initialize();
   ObjCLanguage::Initialize();
   ObjCPlusPlusLanguage::Initialize();
+  // BEGIN SWIFT
   ::SwiftInitialize();
+  // END SWIFT
 
 #if defined(_WIN32)
   ProcessWindows::Initialize();
@@ -332,7 +340,9 @@ void SystemInitializerFull::Terminate() {
   PluginManager::Terminate();
 
   ClangASTContext::Terminate();
+  // BEGIN SWIFT
   SwiftASTContext::Terminate();
+  // END SWIFT
 
   ArchitectureArm::Terminate();
   ArchitectureMips::Terminate();
@@ -352,7 +362,9 @@ void SystemInitializerFull::Terminate() {
   ThreadSanitizerRuntime::Terminate();
   UndefinedBehaviorSanitizerRuntime::Terminate();
   MainThreadCheckerRuntime::Terminate();
+  // BEGIN SWIFT
   SwiftRuntimeReporting::Terminate();
+  // END SWIFT
   SymbolVendorELF::Terminate();
   breakpad::SymbolFileBreakpad::Terminate();
   SymbolFileDWARF::Terminate();
@@ -374,7 +386,9 @@ void SystemInitializerFull::Terminate() {
   SystemRuntimeMacOSX::Terminate();
   RenderScriptRuntime::Terminate();
 
+  // BEGIN SWIFT
   ::SwiftTerminate();
+  // END SWIFT
 
   CPlusPlusLanguage::Terminate();
   ObjCLanguage::Terminate();

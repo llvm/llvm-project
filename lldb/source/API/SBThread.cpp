@@ -412,14 +412,17 @@ size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
 SBValue SBThread::GetStopReturnValue() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBValue, SBThread, GetStopReturnValue);
 
+  // BEGIN SWIFT
   bool is_swift_error_value = false;
   SBValue return_value = GetStopReturnOrErrorValue(is_swift_error_value);
   if (is_swift_error_value)
     return SBValue();
   else
     return return_value;
+  // END SWIFT
 }
 
+// BEGIN SWIFT
 SBValue SBThread::GetStopErrorValue() {
   bool is_swift_error_value = false;
   SBValue return_value = GetStopReturnOrErrorValue(is_swift_error_value);
@@ -448,6 +451,7 @@ SBValue SBThread::GetStopReturnOrErrorValue(bool &is_swift_error_value) {
 
   return LLDB_RECORD_RESULT(SBValue(return_valobj_sp));
 }
+// END SWIFT
 
 void SBThread::SetThread(const ThreadSP &lldb_object_sp) {
   m_opaque_sp->SetThreadSP(lldb_object_sp);

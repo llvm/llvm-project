@@ -185,6 +185,8 @@ void SBExpressionOptions::SetCancelCallback(
   m_opaque_up->SetCancelCallback(callback, baton);
 }
 
+// BEGIN SWIFT
+
 bool SBExpressionOptions::GetPlaygroundTransformEnabled() const {
   return m_opaque_up->GetPlaygroundTransformEnabled();
 }
@@ -205,6 +207,8 @@ void SBExpressionOptions::SetREPLMode(bool enable_repl_mode) {
   if (enable_repl_mode == true)
     SetTrapExceptions(false);
 }
+
+// END SWIFT
 
 bool SBExpressionOptions::GetGenerateDebugInfo() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBExpressionOptions, GetGenerateDebugInfo);
