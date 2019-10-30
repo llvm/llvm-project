@@ -52,6 +52,8 @@ class ProgressDisplay(object):
             self.print_result(test)
 
         if self.progressBar:
+            if test.isFailure():
+                self.progressBar.barColor = 'RED'
             percent = float(self.completed) / self.numTests
             self.progressBar.update(percent, test.getFullName())
 
