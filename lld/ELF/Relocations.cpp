@@ -697,11 +697,26 @@ struct UndefinedDiag {
 
 static std::vector<UndefinedDiag> undefs;
 
+// Check whether the definition name def is a mangled function name that matches
+// the reference name ref.
+static bool canSuggestExternCForCXX(StringRef ref, StringRef def) {
+  llvm::ItaniumPartialDemangler d;
+  if (d.partialDemangle(def.str().c_str()))
+    return false;
+  char *buf = d.getFunctionName(nullptr, nullptr);
+  if (!buf)
+    return false;
+  bool ret = ref == buf;
+  free(buf);
+  return ret;
+}
+
 // Suggest an alternative spelling of an "undefined symbol" diagnostic. Returns
 // the suggested symbol, which is either in the symbol table, or in the same
 // file of sym.
 static const Symbol *getAlternativeSpelling(const Undefined &sym,
-                                            std::string &pre_hint) {
+                                            std::string &pre_hint,
+                                            std::string &post_hint) {
   // Build a map of local defined symbols.
   DenseMap<StringRef, const Symbol *> map;
   if (sym.file && !isa<SharedFile>(sym.file)) {
@@ -774,6 +789,23 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
           return s;
         }
       }
+  } else {
+    const Symbol *s = nullptr;
+    for (auto &it : map)
+      if (canSuggestExternCForCXX(name, it.first)) {
+        s = it.second;
+        break;
+      }
+    if (!s)
+      symtab->forEachSymbol([&](Symbol *sym) {
+        if (!s && canSuggestExternCForCXX(name, sym->getName()))
+          s = sym;
+      });
+    if (s) {
+      pre_hint = " to declare ";
+      post_hint = " as extern \"C\"?";
+      return s;
+    }
   }
 
   return nullptr;
@@ -822,10 +854,10 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
                .str();
 
   if (correctSpelling) {
-    std::string pre_hint = ": ";
+    std::string pre_hint = ": ", post_hint;
     if (const Symbol *corrected =
-            getAlternativeSpelling(cast<Undefined>(sym), pre_hint)) {
-      msg += "\n>>> did you mean" + pre_hint + toString(*corrected);
+            getAlternativeSpelling(cast<Undefined>(sym), pre_hint, post_hint)) {
+      msg += "\n>>> did you mean" + pre_hint + toString(*corrected) + post_hint;
       if (corrected->file)
         msg += "\n>>> defined in: " + toString(corrected->file);
     }
