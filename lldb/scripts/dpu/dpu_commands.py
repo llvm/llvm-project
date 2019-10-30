@@ -414,8 +414,8 @@ def dpu_list(debugger, command, result, internal_dict):
             if dpu is None:
                 return None
 
-        print_list(result_list, result)
-        return result_list
+    print_list(result_list, result)
+    return result_list
 
 
 def dpu_detach(debugger, command, result, internal_dict):
