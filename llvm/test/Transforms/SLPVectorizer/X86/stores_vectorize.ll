@@ -92,15 +92,14 @@ define void @store_reverse(i64* %p3) {
 ; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[P3]] to <4 x i64>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* [[TMP0]], align 8
-; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 11
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[ARRAYIDX1]] to <4 x i64>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 8
-; CHECK-NEXT:    [[REORDER_SHUFFLE1:%.*]] = shufflevector <4 x i64> [[TMP3]], <4 x i64> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = shl <4 x i64> [[REORDER_SHUFFLE]], [[REORDER_SHUFFLE1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl <4 x i64> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 4
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64* [[ARRAYIDX14]] to <4 x i64>*
-; CHECK-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64* [[ARRAYIDX14]] to <4 x i64>*
+; CHECK-NEXT:    store <4 x i64> [[TMP5]], <4 x i64>* [[TMP6]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

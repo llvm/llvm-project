@@ -11,21 +11,20 @@ define i32 @jumbled-load(i32* noalias nocapture %in, i32* noalias nocapture %inn
 ; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i32, i32* [[IN_ADDR]], i64 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[IN_ADDR]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 4
-; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> <i32 1, i32 3, i32 0, i32 2>
 ; CHECK-NEXT:    [[INN_ADDR:%.*]] = getelementptr inbounds i32, i32* [[INN:%.*]], i64 0
 ; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i32, i32* [[INN_ADDR]], i64 1
 ; CHECK-NEXT:    [[GEP_5:%.*]] = getelementptr inbounds i32, i32* [[INN_ADDR]], i64 2
 ; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds i32, i32* [[INN_ADDR]], i64 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[INN_ADDR]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4
-; CHECK-NEXT:    [[REORDER_SHUFFLE1:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> undef, <4 x i32> <i32 1, i32 3, i32 0, i32 2>
-; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> [[REORDER_SHUFFLE]], [[REORDER_SHUFFLE1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[GEP_7:%.*]] = getelementptr inbounds i32, i32* [[OUT:%.*]], i64 0
 ; CHECK-NEXT:    [[GEP_8:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 1
 ; CHECK-NEXT:    [[GEP_9:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 2
 ; CHECK-NEXT:    [[GEP_10:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 3
+; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> undef, <4 x i32> <i32 1, i32 3, i32 0, i32 2>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[GEP_7]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* [[TMP6]], align 4
+; CHECK-NEXT:    store <4 x i32> [[REORDER_SHUFFLE]], <4 x i32>* [[TMP6]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
   %in.addr = getelementptr inbounds i32, i32* %in, i64 0
