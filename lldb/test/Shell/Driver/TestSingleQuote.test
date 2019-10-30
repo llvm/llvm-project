@@ -1,5 +1,5 @@
 # Make sure lldb can handle filenames with single quotes in them.
-# RUN: %clang %p/Inputs/hello.c -g -o "%t-'pat"
+# RUN: %clang_host %p/Inputs/hello.c -g -o "%t-'pat"
 # RUN: %lldb -s %s "%t-'pat" | FileCheck %s
 
 br set -p return

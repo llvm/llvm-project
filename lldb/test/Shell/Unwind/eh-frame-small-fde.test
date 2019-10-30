@@ -3,7 +3,7 @@
 
 # REQUIRES: target-x86_64, system-linux, native
 
-# RUN: %clang %p/Inputs/eh-frame-small-fde.s -o %t
+# RUN: %clang_host %p/Inputs/eh-frame-small-fde.s -o %t
 # RUN: %lldb %t -s %s -o exit | FileCheck %s
 
 breakpoint set -n bar

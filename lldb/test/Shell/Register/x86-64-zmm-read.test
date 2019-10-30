@@ -3,7 +3,7 @@
 # XFAIL: system-netbsd
 # XFAIL: system-windows
 # REQUIRES: native && target-x86_64 && native-cpu-avx512f
-# RUN: %clangxx %p/Inputs/x86-zmm-read.cpp -o %t
+# RUN: %clangxx_host %p/Inputs/x86-zmm-read.cpp -o %t
 # RUN: %lldb -b -s %s %t | FileCheck %s
 process launch
 

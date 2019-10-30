@@ -3,7 +3,7 @@
 # This tests that stepping continues to work when replaying a reproducer.
 
 # RUN: rm -rf %t.repro
-# RUN: %clang %S/Inputs/stepping.c -O0 -g -o %t.out
+# RUN: %clang_host %S/Inputs/stepping.c -O0 -g -o %t.out
 # RUN: grep -v '#' %s > %t.in
 
 # RUN: %lldb -x -b -s %t.in --capture --capture-path %t.repro %t.out | FileCheck %s --check-prefix CHECK

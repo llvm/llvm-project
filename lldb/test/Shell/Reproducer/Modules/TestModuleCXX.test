@@ -16,7 +16,7 @@
 # RUN: cp %S/Inputs/module.modulemap %t.root
 
 # Compile the test case form the temporary root.
-# RUN: %clang %t.root/main.cpp -g -fmodules -fcxx-modules -fmodules-cache-path=%t.clang-cache -o %t.root/a.out
+# RUN: %clang_host %t.root/main.cpp -g -fmodules -fcxx-modules -fmodules-cache-path=%t.clang-cache -o %t.root/a.out
 
 # Capture the debug session.
 # RUN: %lldb -x -b -o 'settings set symbols.clang-modules-cache-path %t.lldb-cache' -s %S/Inputs/ModuleCXX.in --capture --capture-path %t.repro %t.root/a.out | FileCheck %s --check-prefix CAPTURE
