@@ -81,30 +81,30 @@ define <4 x float> @qux(<4 x float> %t, <4 x float> %u) nounwind {
 ; CHECK-LABEL: qux:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $72, %rsp
-; CHECK-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1,2,3]
 ; CHECK-NEXT:    callq fmodf
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
 ; CHECK-NEXT:    callq fmodf
 ; CHECK-NEXT:    unpcklps (%rsp), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    callq fmodf
-; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
 ; CHECK-NEXT:    callq fmodf
-; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; CHECK-NEXT:    unpcklpd (%rsp), %xmm1 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm1 = xmm1[0],mem[0]
