@@ -118,4 +118,4 @@ entry:
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
-; CHECK-NEXT:           Value:           1024
+; CHECK-NEXT:           Value:           0
