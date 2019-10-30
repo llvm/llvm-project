@@ -58,7 +58,7 @@ General improvements
   value of threads or as specified by the `thread_limit` clause if
   present). For the `for` construct, the schedule is static with chunk
   size of one.
-  
+
 - Simplified SPMD code generation for `distribute parallel for` when
   the new default schedules are applicable.
 
@@ -185,7 +185,7 @@ implementation.
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | task extension               | master taskloop simd                                         | :none:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| task extension               | parallel master taskloop simd                                | :none:`unclaimed`        |                                                                       |
+| task extension               | parallel master taskloop simd                                | :none:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | SIMD extension               | atomic and critical constructs inside SIMD code              | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
