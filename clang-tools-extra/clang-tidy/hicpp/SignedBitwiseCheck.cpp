@@ -17,9 +17,24 @@ namespace clang {
 namespace tidy {
 namespace hicpp {
 
+SignedBitwiseCheck::SignedBitwiseCheck(StringRef Name,
+                                       ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnorePositiveIntegerLiterals(
+          Options.get("IgnorePositiveIntegerLiterals", false)) {}
+
+void SignedBitwiseCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnorePositiveIntegerLiterals",
+                IgnorePositiveIntegerLiterals);
+}
+
 void SignedBitwiseCheck::registerMatchers(MatchFinder *Finder) {
   const auto SignedIntegerOperand =
-      expr(ignoringImpCasts(hasType(isSignedInteger()))).bind("signed-operand");
+      (IgnorePositiveIntegerLiterals
+           ? expr(ignoringImpCasts(hasType(isSignedInteger())),
+                  unless(integerLiteral()))
+           : expr(ignoringImpCasts(hasType(isSignedInteger()))))
+          .bind("signed-operand");
 
   // The standard [bitmask.types] allows some integral types to be implemented
   // as signed types. Exclude these types from diagnosing for bitwise or(|) and
