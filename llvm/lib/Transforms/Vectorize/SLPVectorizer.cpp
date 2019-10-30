@@ -2449,7 +2449,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
             dyn_cast<SCEVConstant>(SE->getMinusSCEV(ScevN, Scev0));
         uint64_t Size = DL->getTypeAllocSize(ScalarTy);
         // Check that the sorted loads are consecutive.
-        if (Diff && Diff->getAPInt().getZExtValue() == (VL.size() - 1) * Size) {
+        if (Diff && Diff->getAPInt() == (VL.size() - 1) * Size) {
           if (CurrentOrder.empty()) {
             // Original loads are consecutive and does not require reordering.
             ++NumOpsWantToKeepOriginalOrder;
