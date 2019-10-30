@@ -131,6 +131,20 @@ static bool areEquivalentExpr(const Expr *Left, const Expr *Right) {
   case Stmt::BinaryOperatorClass:
     return cast<BinaryOperator>(Left)->getOpcode() ==
            cast<BinaryOperator>(Right)->getOpcode();
+  case Stmt::UnaryExprOrTypeTraitExprClass:
+    const auto *LeftUnaryExpr =
+        cast<UnaryExprOrTypeTraitExpr>(Left);
+    const auto *RightUnaryExpr =
+        cast<UnaryExprOrTypeTraitExpr>(Right);
+    if (LeftUnaryExpr->isArgumentType() && RightUnaryExpr->isArgumentType())
+      return LeftUnaryExpr->getArgumentType() ==
+             RightUnaryExpr->getArgumentType();
+    else if (!LeftUnaryExpr->isArgumentType() &&
+             !RightUnaryExpr->isArgumentType())
+      return areEquivalentExpr(LeftUnaryExpr->getArgumentExpr(),
+                               RightUnaryExpr->getArgumentExpr());
+
+    return false;
   }
 }
 
@@ -604,23 +618,62 @@ static bool retrieveConstExprFromBothSides(const BinaryOperator *&BinOp,
   return true;
 }
 
+static bool isSameRawIdentifierToken(const Token &T1, const Token &T2,
+                        const SourceManager &SM) {
+  if (T1.getKind() != T2.getKind())
+    return false;
+  if (T1.isNot(tok::raw_identifier))
+    return true;
+  if (T1.getLength() != T2.getLength())
+    return false;
+  return StringRef(SM.getCharacterData(T1.getLocation()), T1.getLength()) ==
+         StringRef(SM.getCharacterData(T2.getLocation()), T2.getLength());
+}
+
+bool isTokAtEndOfExpr(SourceRange ExprSR, Token T, const SourceManager &SM) {
+  return SM.getExpansionLoc(ExprSR.getEnd()) == T.getLocation();
+}
+
+/// Returns true if both LhsEpxr and RhsExpr are
+/// macro expressions and they are expanded
+/// from different macros.
 static bool areExprsFromDifferentMacros(const Expr *LhsExpr,
                                         const Expr *RhsExpr,
                                         const ASTContext *AstCtx) {
   if (!LhsExpr || !RhsExpr)
     return false;
-
-  SourceLocation LhsLoc = LhsExpr->getExprLoc();
-  SourceLocation RhsLoc = RhsExpr->getExprLoc();
-
-  if (!LhsLoc.isMacroID() || !RhsLoc.isMacroID())
+  SourceRange Lsr = LhsExpr->getSourceRange();
+  SourceRange Rsr = RhsExpr->getSourceRange();
+  if (!Lsr.getBegin().isMacroID() || !Rsr.getBegin().isMacroID())
     return false;
 
   const SourceManager &SM = AstCtx->getSourceManager();
   const LangOptions &LO = AstCtx->getLangOpts();
 
-  return !(Lexer::getImmediateMacroName(LhsLoc, SM, LO) ==
-          Lexer::getImmediateMacroName(RhsLoc, SM, LO));
+  std::pair<FileID, unsigned> LsrLocInfo =
+      SM.getDecomposedLoc(SM.getExpansionLoc(Lsr.getBegin()));
+  std::pair<FileID, unsigned> RsrLocInfo =
+      SM.getDecomposedLoc(SM.getExpansionLoc(Rsr.getBegin()));
+  const llvm::MemoryBuffer *MB = SM.getBuffer(LsrLocInfo.first);
+
+  const char *LTokenPos = MB->getBufferStart() + LsrLocInfo.second;
+  const char *RTokenPos = MB->getBufferStart() + RsrLocInfo.second;
+  Lexer LRawLex(SM.getLocForStartOfFile(LsrLocInfo.first), LO,
+                MB->getBufferStart(), LTokenPos, MB->getBufferEnd());
+  Lexer RRawLex(SM.getLocForStartOfFile(RsrLocInfo.first), LO,
+                MB->getBufferStart(), RTokenPos, MB->getBufferEnd());
+
+  Token LTok, RTok;
+  do { // Compare the expressions token-by-token.
+    LRawLex.LexFromRawLexer(LTok);
+    RRawLex.LexFromRawLexer(RTok);
+  } while (!LTok.is(tok::eof) && !RTok.is(tok::eof) &&
+           isSameRawIdentifierToken(LTok, RTok, SM) &&
+           !isTokAtEndOfExpr(Lsr, LTok, SM) &&
+           !isTokAtEndOfExpr(Rsr, RTok, SM));
+  return (!isTokAtEndOfExpr(Lsr, LTok, SM) ||
+          !isTokAtEndOfExpr(Rsr, RTok, SM)) ||
+         !isSameRawIdentifierToken(LTok, RTok, SM);
 }
 
 static bool areExprsMacroAndNonMacro(const Expr *&LhsExpr,
