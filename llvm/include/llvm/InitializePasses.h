@@ -334,7 +334,6 @@ void initializePostRAMachineSinkingPass(PassRegistry&);
 void initializePostRASchedulerPass(PassRegistry&);
 void initializePreISelIntrinsicLoweringLegacyPassPass(PassRegistry&);
 void initializePredicateInfoPrinterLegacyPassPass(PassRegistry&);
-void initializePrintBasicBlockPassPass(PassRegistry&);
 void initializePrintFunctionPassWrapperPass(PassRegistry&);
 void initializePrintModulePassWrapperPass(PassRegistry&);
 void initializeProcessImplicitDefsPass(PassRegistry&);

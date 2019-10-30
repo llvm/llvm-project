@@ -38,7 +38,6 @@ namespace llvm {
   void initializeFPassPass(PassRegistry&);
   void initializeCGPassPass(PassRegistry&);
   void initializeLPassPass(PassRegistry&);
-  void initializeBPassPass(PassRegistry&);
 
   namespace {
     // ND = no deps
@@ -219,47 +218,6 @@ namespace llvm {
     int LPass::initcount=0;
     int LPass::fincount=0;
 
-    struct BPass : public PassTestBase<BasicBlockPass> {
-    private:
-      static int inited;
-      static int fin;
-    public:
-      static void finishedOK(int run, int N) {
-        PassTestBase<BasicBlockPass>::finishedOK(run);
-        EXPECT_EQ(inited, N);
-        EXPECT_EQ(fin, N);
-      }
-      BPass() {
-        inited = 0;
-        fin = 0;
-      }
-      bool doInitialization(Module &M) override {
-        EXPECT_FALSE(initialized);
-        initialized = true;
-        return false;
-      }
-      bool doInitialization(Function &F) override {
-        inited++;
-        return false;
-      }
-      bool runOnBasicBlock(BasicBlock &BB) override {
-        run();
-        return false;
-      }
-      bool doFinalization(Function &F) override {
-        fin++;
-        return false;
-      }
-      bool doFinalization(Module &M) override {
-        EXPECT_FALSE(finalized);
-        finalized = true;
-        EXPECT_EQ(0, allocated);
-        return false;
-      }
-    };
-    int BPass::inited=0;
-    int BPass::fin=0;
-
     struct OnTheFlyTest: public ModulePass {
     public:
       static char ID;
@@ -373,10 +331,6 @@ namespace llvm {
       {
         SCOPED_TRACE("Loop pass");
         MemoryTestHelper<LPass>(2, 1); //2 loops, 1 function
-      }
-      {
-        SCOPED_TRACE("Basic block pass");
-        MemoryTestHelper<BPass>(7, 4); //9 basic blocks
       }
 
     }
@@ -616,4 +570,3 @@ INITIALIZE_PASS(FPass, "fp","fp", false, false)
 INITIALIZE_PASS_BEGIN(LPass, "lp","lp", false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(LPass, "lp","lp", false, false)
-INITIALIZE_PASS(BPass, "bp","bp", false, false)

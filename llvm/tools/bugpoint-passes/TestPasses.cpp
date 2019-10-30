@@ -25,25 +25,27 @@ using namespace llvm::PatternMatch;
 using namespace llvm;
 
 namespace {
-  /// CrashOnCalls - This pass is used to test bugpoint.  It intentionally
-  /// crashes on any call instructions.
-  class CrashOnCalls : public BasicBlockPass {
-  public:
-    static char ID; // Pass ID, replacement for typeid
-    CrashOnCalls() : BasicBlockPass(ID) {}
-  private:
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesAll();
-    }
+/// CrashOnCalls - This pass is used to test bugpoint.  It intentionally
+/// crashes on any call instructions.
+class CrashOnCalls : public FunctionPass {
+public:
+  static char ID; // Pass ID, replacement for typeid
+  CrashOnCalls() : FunctionPass(ID) {}
 
-    bool runOnBasicBlock(BasicBlock &BB) override {
+private:
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+
+  bool runOnFunction(Function &F) override {
+    for (auto &BB : F)
       for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E; ++I)
         if (isa<CallInst>(*I))
           abort();
 
-      return false;
-    }
-  };
+    return false;
+  }
+};
 }
 
 char CrashOnCalls::ID = 0;
@@ -52,14 +54,16 @@ static RegisterPass<CrashOnCalls>
     "BugPoint Test Pass - Intentionally crash on CallInsts");
 
 namespace {
-  /// DeleteCalls - This pass is used to test bugpoint.  It intentionally
-  /// deletes some call instructions, "misoptimizing" the program.
-  class DeleteCalls : public BasicBlockPass {
-  public:
-    static char ID; // Pass ID, replacement for typeid
-    DeleteCalls() : BasicBlockPass(ID) {}
-  private:
-    bool runOnBasicBlock(BasicBlock &BB) override {
+/// DeleteCalls - This pass is used to test bugpoint.  It intentionally
+/// deletes some call instructions, "misoptimizing" the program.
+class DeleteCalls : public FunctionPass {
+public:
+  static char ID; // Pass ID, replacement for typeid
+  DeleteCalls() : FunctionPass(ID) {}
+
+private:
+  bool runOnFunction(Function &F) override {
+    for (auto &BB : F)
       for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E; ++I)
         if (CallInst *CI = dyn_cast<CallInst>(I)) {
           if (!CI->use_empty())
@@ -67,9 +71,9 @@ namespace {
           CI->getParent()->getInstList().erase(CI);
           break;
         }
-      return false;
-    }
-  };
+    return false;
+  }
+};
 }
 
 char DeleteCalls::ID = 0;
