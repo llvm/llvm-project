@@ -27,25 +27,27 @@ void CommandObjectHelp::GenerateAdditionalHelpAvenuesMessage(
   std::string command_str = command.str();
   std::string prefix_str = prefix.str();
   std::string subcommand_str = subcommand.str();
-  const std::string &lookup_str = !subcommand_str.empty() ? subcommand_str : command_str;
+  const std::string &lookup_str =
+      !subcommand_str.empty() ? subcommand_str : command_str;
   s->Printf("'%s' is not a known command.\n", command_str.c_str());
   s->Printf("Try '%shelp' to see a current list of commands.\n",
             prefix.str().c_str());
   if (include_upropos) {
     s->Printf("Try '%sapropos %s' for a list of related commands.\n",
-      prefix_str.c_str(), lookup_str.c_str());
+              prefix_str.c_str(), lookup_str.c_str());
   }
   if (include_type_lookup) {
     s->Printf("Try '%stype lookup %s' for information on types, methods, "
               "functions, modules, etc.",
-      prefix_str.c_str(), lookup_str.c_str());
+              prefix_str.c_str(), lookup_str.c_str());
   }
 }
 
 CommandObjectHelp::CommandObjectHelp(CommandInterpreter &interpreter)
-    : CommandObjectParsed(interpreter, "help", "Show a list of all debugger "
-                                               "commands, or give details "
-                                               "about a specific command.",
+    : CommandObjectParsed(interpreter, "help",
+                          "Show a list of all debugger "
+                          "commands, or give details "
+                          "about a specific command.",
                           "help [<cmd-name>]"),
       m_options() {
   CommandArgumentEntry arg;
