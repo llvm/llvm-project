@@ -365,6 +365,7 @@ Clang-Tidy Checks
    readability-misplaced-array-index
    readability-named-parameter
    readability-non-const-parameter
+   readability-redundant-access-specifiers
    readability-redundant-control-flow
    readability-redundant-declaration
    readability-redundant-function-ptr-dereference

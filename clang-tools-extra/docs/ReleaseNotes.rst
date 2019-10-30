@@ -135,6 +135,12 @@ Improvements to include-fixer
 
 The improvements are...
 
+- New :doc:`readability-redundant-access-specifiers
+  <clang-tidy/checks/readability-redundant-access-specifiers>` check.
+
+  Finds classes, structs, and unions that contain redundant member
+  access specifiers.
+
 Improvements to clang-include-fixer
 -----------------------------------
 
