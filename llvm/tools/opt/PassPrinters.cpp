@@ -198,40 +198,6 @@ struct RegionPassPrinter : public RegionPass {
 
 char RegionPassPrinter::ID = 0;
 
-struct BasicBlockPassPrinter : public BasicBlockPass {
-  const PassInfo *PassToPrint;
-  raw_ostream &Out;
-  static char ID;
-  std::string PassName;
-  bool QuietPass;
-
-  BasicBlockPassPrinter(const PassInfo *PI, raw_ostream &out, bool Quiet)
-      : BasicBlockPass(ID), PassToPrint(PI), Out(out), QuietPass(Quiet) {
-    std::string PassToPrintName = PassToPrint->getPassName();
-    PassName = "BasicBlockPass Printer: " + PassToPrintName;
-  }
-
-  bool runOnBasicBlock(BasicBlock &BB) override {
-    if (!QuietPass)
-      Out << "Printing Analysis info for BasicBlock '" << BB.getName()
-          << "': Pass " << PassToPrint->getPassName() << ":\n";
-
-    // Get and print pass...
-    getAnalysisID<Pass>(PassToPrint->getTypeInfo())
-        .print(Out, BB.getParent()->getParent());
-    return false;
-  }
-
-  StringRef getPassName() const override { return PassName; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequiredID(PassToPrint->getTypeInfo());
-    AU.setPreservesAll();
-  }
-};
-
-char BasicBlockPassPrinter::ID = 0;
-
 } // end anonymous namespace
 
 FunctionPass *llvm::createFunctionPassPrinter(const PassInfo *PI,
@@ -260,7 +226,3 @@ RegionPass *llvm::createRegionPassPrinter(const PassInfo *PI, raw_ostream &OS,
   return new RegionPassPrinter(PI, OS, Quiet);
 }
 
-BasicBlockPass *llvm::createBasicBlockPassPrinter(const PassInfo *PI,
-                                                  raw_ostream &OS, bool Quiet) {
-  return new BasicBlockPassPrinter(PI, OS, Quiet);
-}

@@ -16,7 +16,6 @@
 
 namespace llvm {
 class BasicBlock;
-class BasicBlockPass;
 class Pass;
 
 //===----------------------------------------------------------------------===//
