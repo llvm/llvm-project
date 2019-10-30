@@ -134,6 +134,7 @@ private:
   path_list ProgramPaths;
 
   mutable std::unique_ptr<Tool> Clang;
+  mutable std::unique_ptr<Tool> Flang;
   mutable std::unique_ptr<Tool> Assemble;
   mutable std::unique_ptr<Tool> Link;
   mutable std::unique_ptr<Tool> IfsMerge;
@@ -141,6 +142,7 @@ private:
   mutable std::unique_ptr<Tool> OffloadWrapper;
 
   Tool *getClang() const;
+  Tool *getFlang() const;
   Tool *getAssemble() const;
   Tool *getLink() const;
   Tool *getIfsMerge() const;

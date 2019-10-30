@@ -2035,4 +2035,9 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
   }                                                                            \
   }
 
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(llvm::yaml::Hex64)
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(llvm::yaml::Hex32)
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(llvm::yaml::Hex16)
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(llvm::yaml::Hex8)
+
 #endif // LLVM_SUPPORT_YAMLTRAITS_H

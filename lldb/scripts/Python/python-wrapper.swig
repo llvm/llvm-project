@@ -39,7 +39,7 @@ private:
 // This function is called by lldb_private::ScriptInterpreterPython::BreakpointCallbackFunction(...)
 // and is used when a script command is attached to a breakpoint for execution.
 
-SWIGEXPORT bool
+SWIGEXPORT llvm::Expected<bool>
 LLDBSwigPythonBreakpointCallbackFunction
 (
     const char *python_function_name,
@@ -49,38 +49,40 @@ LLDBSwigPythonBreakpointCallbackFunction
     lldb_private::StructuredDataImpl *args_impl
 )
 {
+    using namespace llvm;
+
     lldb::SBFrame sb_frame (frame_sp);
     lldb::SBBreakpointLocation sb_bp_loc(bp_loc_sp);
-
-    bool stop_at_breakpoint = true;
 
     PyErr_Cleaner py_err_cleaner(true);
     auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
     auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_function_name, dict);
 
-    if (!pfunc.IsAllocated())
-        return stop_at_breakpoint;
+    unsigned max_positional_args;
+    if (auto arg_info = pfunc.GetArgInfo())
+        max_positional_args = arg_info.get().max_positional_args;
+    else
+        return arg_info.takeError();
 
     PythonObject frame_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_frame));
     PythonObject bp_loc_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_bp_loc));
 
-    PythonObject result;
-    // If the called function doesn't take extra_args, drop them here:
-    auto arg_info = pfunc.GetNumArguments();
-    if (arg_info.count == 3)
-      result = pfunc(frame_arg, bp_loc_arg, dict);
-    else if (arg_info.count == 4) {
-        lldb::SBStructuredData *args_value = new lldb::SBStructuredData(args_impl);
-        PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(args_value));
-        result = pfunc(frame_arg, bp_loc_arg, args_arg, dict);      
-    } else {
-      return stop_at_breakpoint;
-    }
+    auto result = [&] () -> Expected<PythonObject> {
+        // If the called function doesn't take extra_args, drop them here:
+        if (max_positional_args < 4) {
+            return pfunc.Call(frame_arg, bp_loc_arg, dict);
+        } else {
+            lldb::SBStructuredData *args_value = new lldb::SBStructuredData(args_impl);
+            PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(args_value));
+            return pfunc.Call(frame_arg, bp_loc_arg, args_arg, dict);
+        }
+    } ();
 
-    if (result.get() == Py_False)
-        stop_at_breakpoint = false;
+    if (!result)
+        return result.takeError();
 
-    return stop_at_breakpoint;
+    // Only False counts as false!
+    return result.get().get() != Py_False;
 }
 
 // This function is called by lldb_private::ScriptInterpreterPython::WatchpointCallbackFunction(...)

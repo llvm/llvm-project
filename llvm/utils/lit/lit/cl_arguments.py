@@ -9,13 +9,13 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('test_paths',
             nargs='+',
-            help='Files or paths to include in the test suite')
+            metavar="TEST_PATH",
+            help='File or path to include in the test suite')
 
     parser.add_argument("--version",
             dest="show_version",
             help="Show version and exit",
-            action="store_true",
-            default=False)
+            action="store_true")
     parser.add_argument("-j", "--threads", "--workers",
             dest="numWorkers",
             metavar="N",
@@ -25,13 +25,11 @@ def parse_args():
     parser.add_argument("--config-prefix",
             dest="configPrefix",
             metavar="NAME",
-            help="Prefix for 'lit' config files",
-            default=None)
+            help="Prefix for 'lit' config files")
     parser.add_argument("-D", "--param",
             dest="user_params",
             metavar="NAME=VAL",
             help="Add 'NAME' = 'VAL' to the user defined parameters",
-            type=str,
             action="append",
             default=[])
 
@@ -40,28 +38,23 @@ def parse_args():
     # functionality.
     format_group.add_argument("-q", "--quiet",
             help="Suppress no error output",
-            action="store_true",
-            default=False)
+            action="store_true")
     format_group.add_argument("-s", "--succinct",
             help="Reduce amount of output",
-            action="store_true",
-            default=False)
+            action="store_true")
     format_group.add_argument("-v", "--verbose",
             dest="showOutput",
             help="Show test output for failures",
-            action="store_true",
-            default=False)
+            action="store_true")
     format_group.add_argument("-vv", "--echo-all-commands",
             dest="echoAllCommands",
             action="store_true",
-            default=False,
             help="Echo all commands as they are executed to stdout. In case of "
                  "failure, last command shown will be the failing one.")
     format_group.add_argument("-a", "--show-all",
             dest="showAllOutput",
             help="Display all commandlines and output",
-            action="store_true",
-            default=False)
+            action="store_true")
     format_group.add_argument("-o", "--output",
             dest="output_path",
             help="Write test results to the provided path",
@@ -69,93 +62,77 @@ def parse_args():
     format_group.add_argument("--no-progress-bar",
             dest="useProgressBar",
             help="Do not use curses based progress bar",
-            action="store_false",
-            default=True)
+            action="store_false")
     format_group.add_argument("--show-unsupported",
             help="Show unsupported tests",
-            action="store_true",
-            default=False)
+            action="store_true")
     format_group.add_argument("--show-xfail",
             help="Show tests that were expected to fail",
-            action="store_true",
-            default=False)
+            action="store_true")
 
     execution_group = parser.add_argument_group("Test Execution")
     execution_group.add_argument("--path",
             help="Additional paths to add to testing environment",
             action="append",
-            type=str,
             default=[])
     execution_group.add_argument("--vg",
             dest="useValgrind",
             help="Run tests under valgrind",
-            action="store_true",
-            default=False)
+            action="store_true")
     execution_group.add_argument("--vg-leak",
             dest="valgrindLeakCheck",
             help="Check for memory leaks under valgrind",
-            action="store_true",
-            default=False)
+            action="store_true")
     execution_group.add_argument("--vg-arg",
             dest="valgrindArgs",
             metavar="ARG",
             help="Specify an extra argument for valgrind",
-            type=str,
             action="append",
             default=[])
     execution_group.add_argument("--time-tests",
             dest="timeTests",
             help="Track elapsed wall time for each test",
-            action="store_true",
-            default=False)
+            action="store_true")
     execution_group.add_argument("--no-execute",
             dest="noExecute",
             help="Don't execute any tests (assume PASS)",
-            action="store_true",
-            default=False)
+            action="store_true")
     execution_group.add_argument("--xunit-xml-output",
             dest="xunit_output_file",
-            help="Write XUnit-compatible XML test reports to the specified file",
-            default=None)
+            help="Write XUnit-compatible XML test reports to the specified file")
     execution_group.add_argument("--timeout",
             dest="maxIndividualTestTime",
             help="Maximum time to spend running a single test (in seconds). "
                  "0 means no time limit. [Default: 0]",
-            type=_non_negative_int,
-            default=None)
+            type=_non_negative_int) # TODO(yln): --[no-]test-timeout, instead of 0 allowed
     execution_group.add_argument("--max-failures",
             dest="maxFailures",
             help="Stop execution after the given number of failures.",
-            type=_positive_int,
-            default=None)
+            type=_positive_int)
 
     selection_group = parser.add_argument_group("Test Selection")
     selection_group.add_argument("--max-tests",
-            dest="maxTests",
+            dest="max_tests",
             metavar="N",
             help="Maximum number of tests to run",
-            type=int,
-            default=None)
-    selection_group.add_argument("--max-time",
-            dest="maxTime",
+            type=_positive_int)
+    selection_group.add_argument("--max-time", #TODO(yln): --timeout
+            dest="timeout",
             metavar="N",
             help="Maximum time to spend testing (in seconds)",
-            type=float,
-            default=None)
-    selection_group.add_argument("--shuffle",
-            help="Run tests in random order",
-            action="store_true",
-            default=False)
-    selection_group.add_argument("-i", "--incremental",
+            type=_positive_int)
+    selection_group.add_argument("--shuffle",   # TODO(yln): --order=random
+            help="Run tests in random order",   # default or 'by-path' (+ isEarlyTest())
+            action="store_true")
+    selection_group.add_argument("-i", "--incremental",  # TODO(yln): --order=failing-first
             help="Run modified and failing tests first (updates mtimes)",
-            action="store_true",
-            default=False)
+            action="store_true")
     selection_group.add_argument("--filter",
             metavar="REGEX",
             type=_case_insensitive_regex,
             help="Only run tests with paths matching the given regular expression",
             default=os.environ.get("LIT_FILTER"))
-    selection_group.add_argument("--num-shards",
+    selection_group.add_argument("--num-shards", # TODO(yln): --shards N/M
             dest="numShards",
             metavar="M",
             help="Split testsuite into M pieces and only run one",
@@ -171,18 +148,15 @@ def parse_args():
     debug_group = parser.add_argument_group("Debug and Experimental Options")
     debug_group.add_argument("--debug",
             help="Enable debugging (for 'lit' development)",
-            action="store_true",
-            default=False)
+            action="store_true")
     debug_group.add_argument("--show-suites",
             dest="showSuites",
             help="Show discovered test suites",
-            action="store_true",
-            default=False)
+            action="store_true")
     debug_group.add_argument("--show-tests",
             dest="showTests",
             help="Show all discovered tests",
-            action="store_true",
-            default=False)
+            action="store_true")
 
     # LIT is special: environment variables override command line arguments.
     env_args = shlex.split(os.environ.get("LIT_OPTS", ""))
@@ -193,6 +167,14 @@ def parse_args():
     if opts.echoAllCommands:
         opts.showOutput = True
 
+    # TODO(python3): Could be enum
+    if opts.shuffle:
+        opts.order = 'random'
+    elif opts.incremental:
+        opts.order = 'failing-first'
+    else:
+        opts.order = 'default'
+
     if opts.numShards or opts.runShard:
         if not opts.numShards or not opts.runShard:
             parser.error("--num-shards and --run-shard must be used together")
@@ -200,7 +182,7 @@ def parse_args():
             parser.error("--run-shard must be between 1 and --num-shards (inclusive)")
         opts.shard = (opts.runShard, opts.numShards)
     else:
-      opts.shard = None
+        opts.shard = None
 
     return opts
 

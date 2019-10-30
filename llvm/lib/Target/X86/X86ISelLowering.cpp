@@ -87,7 +87,7 @@ static cl::opt<bool> MulConstantOptimization(
     cl::Hidden);
 
 static cl::opt<bool> ExperimentalUnorderedISEL(
-    "x86-experimental-unordered-atomic-isel", cl::init(false),
+    "x86-experimental-unordered-atomic-isel", cl::init(true),
     cl::desc("Use LoadSDNode and StoreSDNode instead of "
              "AtomicSDNode for unordered atomic loads and "
              "stores respectively."),
@@ -4183,23 +4183,13 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 /// Make the stack size align e.g 16n + 12 aligned for a 16-byte align
 /// requirement.
 unsigned
-X86TargetLowering::GetAlignedArgumentStackSize(unsigned StackSize,
-                                               SelectionDAG& DAG) const {
-  const X86RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
-  const TargetFrameLowering &TFI = *Subtarget.getFrameLowering();
-  unsigned StackAlignment = TFI.getStackAlignment();
-  uint64_t AlignMask = StackAlignment - 1;
-  int64_t Offset = StackSize;
-  unsigned SlotSize = RegInfo->getSlotSize();
-  if ( (Offset & AlignMask) <= (StackAlignment - SlotSize) ) {
-    // Number smaller than 12 so just add the difference.
-    Offset += ((StackAlignment - SlotSize) - (Offset & AlignMask));
-  } else {
-    // Mask out lower bits, add stackalignment once plus the 12 bytes.
-    Offset = ((~AlignMask) & Offset) + StackAlignment +
-      (StackAlignment-SlotSize);
-  }
-  return Offset;
+X86TargetLowering::GetAlignedArgumentStackSize(const unsigned StackSize,
+                                               SelectionDAG &DAG) const {
+  const Align StackAlignment(Subtarget.getFrameLowering()->getStackAlignment());
+  const uint64_t SlotSize = Subtarget.getRegisterInfo()->getSlotSize();
+  assert(StackSize % SlotSize == 0 &&
+         "StackSize must be a multiple of SlotSize");
+  return alignTo(StackSize + SlotSize, StackAlignment) - SlotSize;
 }
 
 /// Return true if the given stack call argument is already available in the
@@ -4643,8 +4633,8 @@ bool X86::isCalleePop(CallingConv::ID CallingConv,
   }
 }
 
-/// Return true if the condition is an unsigned comparison operation.
-static bool isX86CCUnsigned(unsigned X86CC) {
+/// Return true if the condition is an signed comparison operation.
+static bool isX86CCSigned(unsigned X86CC) {
   switch (X86CC) {
   default:
     llvm_unreachable("Invalid integer condition!");
@@ -4654,12 +4644,12 @@ static bool isX86CCUnsigned(unsigned X86CC) {
   case X86::COND_A:
   case X86::COND_BE:
   case X86::COND_AE:
-    return true;
+    return false;
   case X86::COND_G:
   case X86::COND_GE:
   case X86::COND_L:
   case X86::COND_LE:
-    return false;
+    return true;
   }
 }
 
@@ -20154,7 +20144,7 @@ SDValue X86TargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
     if ((COp0 && !COp0->getAPIntValue().isSignedIntN(8)) ||
         (COp1 && !COp1->getAPIntValue().isSignedIntN(8))) {
       unsigned ExtendOp =
-          isX86CCUnsigned(X86CC) ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
+          isX86CCSigned(X86CC) ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
       if (X86CC == X86::COND_E || X86CC == X86::COND_NE) {
         // For equality comparisons try to use SIGN_EXTEND if the input was
         // truncate from something with enough sign bits.
@@ -20178,6 +20168,18 @@ SDValue X86TargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
       Op1 = DAG.getNode(ExtendOp, dl, CmpVT, Op1);
     }
   }
+
+  // Try to shrink i64 compares if the input has enough zero bits.
+  // FIXME: Do this for non-constant compares for constant on LHS?
+  if (CmpVT == MVT::i64 && isa<ConstantSDNode>(Op1) && !isX86CCSigned(X86CC) &&
+      Op0.hasOneUse() && // Hacky way to not break CSE opportunities with sub.
+      cast<ConstantSDNode>(Op1)->getAPIntValue().getActiveBits() <= 32 &&
+      DAG.MaskedValueIsZero(Op0, APInt::getHighBitsSet(64, 32))) {
+    CmpVT = MVT::i32;
+    Op0 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op0);
+    Op1 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op1);
+  }
+
   // Use SUB instead of CMP to enable CSE between SUB and CMP.
   SDVTList VTs = DAG.getVTList(CmpVT, MVT::i32);
   SDValue Sub = DAG.getNode(X86ISD::SUB, dl, VTs, Op0, Op1);
@@ -22201,7 +22203,7 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   SDNode *Node = Op.getNode();
   SDValue Chain = Op.getOperand(0);
   SDValue Size  = Op.getOperand(1);
-  unsigned Align = Op.getConstantOperandVal(2);
+  MaybeAlign Alignment(Op.getConstantOperandVal(2));
   EVT VT = Node->getValueType(0);
 
   // Chain the dynamic stack allocation so that it doesn't modify the stack
@@ -22221,11 +22223,12 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
     Chain = SP.getValue(1);
     const TargetFrameLowering &TFI = *Subtarget.getFrameLowering();
-    unsigned StackAlign = TFI.getStackAlignment();
+    const Align StackAlign(TFI.getStackAlignment());
     Result = DAG.getNode(ISD::SUB, dl, VT, SP, Size); // Value
-    if (Align > StackAlign)
-      Result = DAG.getNode(ISD::AND, dl, VT, Result,
-                         DAG.getConstant(-(uint64_t)Align, dl, VT));
+    if (Alignment && Alignment > StackAlign)
+      Result =
+          DAG.getNode(ISD::AND, dl, VT, Result,
+                      DAG.getConstant(~(Alignment->value() - 1ULL), dl, VT));
     Chain = DAG.getCopyToReg(Chain, dl, SPReg, Result); // Output chain
   } else if (SplitStack) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -22256,9 +22259,9 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, SPTy);
     Chain = SP.getValue(1);
 
-    if (Align) {
+    if (Alignment) {
       SP = DAG.getNode(ISD::AND, dl, VT, SP.getValue(0),
-                       DAG.getConstant(-(uint64_t)Align, dl, VT));
+                       DAG.getConstant(~(Alignment->value() - 1ULL), dl, VT));
       Chain = DAG.getCopyToReg(Chain, dl, SPReg, SP);
     }
 
@@ -24538,12 +24541,13 @@ SDValue X86TargetLowering::LowerFLT_ROUNDS_(SDValue Op,
 
   MachineFunction &MF = DAG.getMachineFunction();
   const TargetFrameLowering &TFI = *Subtarget.getFrameLowering();
-  unsigned StackAlignment = TFI.getStackAlignment();
+  const Align StackAlignment(TFI.getStackAlignment());
   MVT VT = Op.getSimpleValueType();
   SDLoc DL(Op);
 
   // Save FP Control Word to stack slot
-  int SSFI = MF.getFrameInfo().CreateStackObject(2, StackAlignment, false);
+  int SSFI =
+      MF.getFrameInfo().CreateStackObject(2, StackAlignment.value(), false);
   SDValue StackSlot =
       DAG.getFrameIndex(SSFI, getPointerTy(DAG.getDataLayout()));
 
@@ -39593,8 +39597,10 @@ static SDValue combineOrShiftToFunnelShift(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
-  if (VT != MVT::i16 && VT != MVT::i32 && VT != MVT::i64)
+  if (!TLI.isOperationLegalOrCustom(ISD::FSHL, VT) ||
+      !TLI.isOperationLegalOrCustom(ISD::FSHR, VT))
     return SDValue();
 
   // fold (or (x << c) | (y >> (64 - c))) ==> (shld64 x, y, c)
@@ -39616,11 +39622,13 @@ static SDValue combineOrShiftToFunnelShift(SDNode *N, SelectionDAG &DAG,
   if (!N0.hasOneUse() || !N1.hasOneUse())
     return SDValue();
 
+  EVT ShiftVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
+
   SDValue ShAmt0 = N0.getOperand(1);
-  if (ShAmt0.getValueType() != MVT::i8)
+  if (ShAmt0.getValueType() != ShiftVT)
     return SDValue();
   SDValue ShAmt1 = N1.getOperand(1);
-  if (ShAmt1.getValueType() != MVT::i8)
+  if (ShAmt1.getValueType() != ShiftVT)
     return SDValue();
 
   // Peek through any modulo shift masks.
@@ -39655,12 +39663,12 @@ static SDValue combineOrShiftToFunnelShift(SDNode *N, SelectionDAG &DAG,
     std::swap(ShMsk0, ShMsk1);
   }
 
-  auto GetFunnelShift = [&DAG, &DL, VT, Opc](SDValue Op0, SDValue Op1,
-                                             SDValue Amt) {
+  auto GetFunnelShift = [&DAG, &DL, VT, Opc, &ShiftVT](SDValue Op0, SDValue Op1,
+                                                       SDValue Amt) {
     if (Opc == ISD::FSHR)
       std::swap(Op0, Op1);
     return DAG.getNode(Opc, DL, VT, Op0, Op1,
-                       DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, Amt));
+                       DAG.getNode(ISD::TRUNCATE, DL, ShiftVT, Amt));
   };
 
   // OR( SHL( X, C ), SRL( Y, 32 - C ) ) -> FSHL( X, Y, C )
@@ -42657,6 +42665,44 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+/// Recursive helper for combineVectorSizedSetCCEquality() to see if we have a
+/// recognizable memcmp expansion.
+static bool isOrXorXorTree(SDValue X, bool Root = true) {
+  if (X.getOpcode() == ISD::OR)
+    return isOrXorXorTree(X.getOperand(0), false) &&
+           isOrXorXorTree(X.getOperand(1), false);
+  if (Root)
+    return false;
+  return X.getOpcode() == ISD::XOR;
+}
+
+/// Recursive helper for combineVectorSizedSetCCEquality() to emit the memcmp
+/// expansion.
+template<typename F>
+static SDValue emitOrXorXorTree(SDValue X, SDLoc &DL, SelectionDAG &DAG,
+                                EVT VecVT, EVT CmpVT, bool HasPT, F SToV) {
+  SDValue Op0 = X.getOperand(0);
+  SDValue Op1 = X.getOperand(1);
+  if (X.getOpcode() == ISD::OR) {
+    SDValue A = emitOrXorXorTree(Op0, DL, DAG, VecVT, CmpVT, HasPT, SToV);
+    SDValue B = emitOrXorXorTree(Op1, DL, DAG, VecVT, CmpVT, HasPT, SToV);
+    if (VecVT != CmpVT)
+      return DAG.getNode(ISD::OR, DL, CmpVT, A, B);
+    if (HasPT)
+      return DAG.getNode(ISD::OR, DL, VecVT, A, B);
+    return DAG.getNode(ISD::AND, DL, CmpVT, A, B);
+  } else if (X.getOpcode() == ISD::XOR) {
+    SDValue A = SToV(Op0);
+    SDValue B = SToV(Op1);
+    if (VecVT != CmpVT)
+      return DAG.getSetCC(DL, CmpVT, A, B, ISD::SETNE);
+    if (HasPT)
+      return DAG.getNode(ISD::XOR, DL, VecVT, A, B);
+    return DAG.getSetCC(DL, CmpVT, A, B, ISD::SETEQ);
+  }
+  llvm_unreachable("Impossible");
+}
+
 /// Try to map a 128-bit or larger integer comparison to vector instructions
 /// before type legalization splits it up into chunks.
 static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
@@ -42677,10 +42723,8 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
   // logically-combined vector-sized operands compared to zero. This pattern may
   // be generated by the memcmp expansion pass with oversized integer compares
   // (see PR33325).
-  bool IsOrXorXorCCZero = isNullConstant(Y) && X.getOpcode() == ISD::OR &&
-                          X.getOperand(0).getOpcode() == ISD::XOR &&
-                          X.getOperand(1).getOpcode() == ISD::XOR;
-  if (isNullConstant(Y) && !IsOrXorXorCCZero)
+  bool IsOrXorXorTreeCCZero = isNullConstant(Y) && isOrXorXorTree(X);
+  if (isNullConstant(Y) && !IsOrXorXorTreeCCZero)
     return SDValue();
 
   // Don't perform this combine if constructing the vector will be expensive.
@@ -42690,7 +42734,7 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
            X.getOpcode() == ISD::LOAD;
   };
   if ((!IsVectorBitCastCheap(X) || !IsVectorBitCastCheap(Y)) &&
-      !IsOrXorXorCCZero)
+      !IsOrXorXorTreeCCZero)
     return SDValue();
 
   EVT VT = SetCC->getValueType(0);
@@ -42763,28 +42807,12 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
     };
 
     SDValue Cmp;
-    if (IsOrXorXorCCZero) {
+    if (IsOrXorXorTreeCCZero) {
       // This is a bitwise-combined equality comparison of 2 pairs of vectors:
       // setcc i128 (or (xor A, B), (xor C, D)), 0, eq|ne
       // Use 2 vector equality compares and 'and' the results before doing a
       // MOVMSK.
-      SDValue A = ScalarToVector(X.getOperand(0).getOperand(0));
-      SDValue B = ScalarToVector(X.getOperand(0).getOperand(1));
-      SDValue C = ScalarToVector(X.getOperand(1).getOperand(0));
-      SDValue D = ScalarToVector(X.getOperand(1).getOperand(1));
-      if (VecVT != CmpVT) {
-        SDValue Cmp1 = DAG.getSetCC(DL, CmpVT, A, B, ISD::SETNE);
-        SDValue Cmp2 = DAG.getSetCC(DL, CmpVT, C, D, ISD::SETNE);
-        Cmp = DAG.getNode(ISD::OR, DL, CmpVT, Cmp1, Cmp2);
-      } else if (HasPT) {
-        SDValue Cmp1 = DAG.getNode(ISD::XOR, DL, VecVT, A, B);
-        SDValue Cmp2 = DAG.getNode(ISD::XOR, DL, VecVT, C, D);
-        Cmp = DAG.getNode(ISD::OR, DL, VecVT, Cmp1, Cmp2);
-      } else {
-        SDValue Cmp1 = DAG.getSetCC(DL, CmpVT, A, B, ISD::SETEQ);
-        SDValue Cmp2 = DAG.getSetCC(DL, CmpVT, C, D, ISD::SETEQ);
-        Cmp = DAG.getNode(ISD::AND, DL, CmpVT, Cmp1, Cmp2);
-      }
+      Cmp = emitOrXorXorTree(X, DL, DAG, VecVT, CmpVT, HasPT, ScalarToVector);
     } else {
       SDValue VecX = ScalarToVector(X);
       SDValue VecY = ScalarToVector(Y);

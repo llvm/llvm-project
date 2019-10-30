@@ -91,6 +91,12 @@ INLINE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt() {
   return res;
 }
 
+INLINE uint32_t __kmpc_impl_smid() {
+  uint32_t id;
+  asm("mov.u32 %0, %%smid;" : "=r"(id));
+  return id;
+}
+
 INLINE uint32_t __kmpc_impl_ffs(uint32_t x) { return __ffs(x); }
 
 INLINE uint32_t __kmpc_impl_popc(uint32_t x) { return __popc(x); }
@@ -145,6 +151,13 @@ INLINE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t Mask) {
 #else
   // In Cuda < 9.0 no need to sync threads in warps.
 #endif // CUDA_VERSION
+}
+
+INLINE void __kmpc_impl_named_sync(int barrier, uint32_t num_threads) {
+  asm volatile("bar.sync %0, %1;"
+               :
+               : "r"(barrier), "r"(num_threads)
+               : "memory");
 }
 
 #endif

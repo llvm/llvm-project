@@ -118,6 +118,28 @@ TEST(FileOutputBuffer, Test) {
   EXPECT_TRUE(IsExecutable);
   ASSERT_NO_ERROR(fs::remove(File4.str()));
 
+  // TEST 5: In-memory buffer works as expected.
+  SmallString<128> File5(TestDirectory);
+  File5.append("/file5");
+  {
+    Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
+        FileOutputBuffer::create(File5, 8000, FileOutputBuffer::F_no_mmap);
+    ASSERT_NO_ERROR(errorToErrorCode(BufferOrErr.takeError()));
+    std::unique_ptr<FileOutputBuffer> &Buffer = *BufferOrErr;
+    // Start buffer with special header.
+    memcpy(Buffer->getBufferStart(), "AABBCCDDEEFFGGHHIIJJ", 20);
+    ASSERT_NO_ERROR(errorToErrorCode(Buffer->commit()));
+    // Write to end of buffer to verify it is writable.
+    memcpy(Buffer->getBufferEnd() - 20, "AABBCCDDEEFFGGHHIIJJ", 20);
+    // Commit buffer.
+    ASSERT_NO_ERROR(errorToErrorCode(Buffer->commit()));
+  }
+
+  // Verify file is correct size.
+  uint64_t File5Size;
+  ASSERT_NO_ERROR(fs::file_size(Twine(File5), File5Size));
+  ASSERT_EQ(File5Size, 8000ULL);
+  ASSERT_NO_ERROR(fs::remove(File5.str()));
   // Clean up.
   ASSERT_NO_ERROR(fs::remove(TestDirectory.str()));
 }

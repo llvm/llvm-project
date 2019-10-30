@@ -5799,7 +5799,7 @@ int LLParser::ParseInstruction(Instruction *&Inst, BasicBlock *BB,
     if (Res != 0)
       return Res;
     if (FMF.any()) {
-      if (!Inst->getType()->isFPOrFPVectorTy())
+      if (!isa<FPMathOperator>(Inst))
         return Error(Loc, "fast-math-flags specified for select without "
                           "floating-point scalar or vector return type");
       Inst->setFastMathFlags(FMF);
@@ -5816,7 +5816,7 @@ int LLParser::ParseInstruction(Instruction *&Inst, BasicBlock *BB,
     if (Res != 0)
       return Res;
     if (FMF.any()) {
-      if (!Inst->getType()->isFPOrFPVectorTy())
+      if (!isa<FPMathOperator>(Inst))
         return Error(Loc, "fast-math-flags specified for phi without "
                           "floating-point scalar or vector return type");
       Inst->setFastMathFlags(FMF);
@@ -6787,10 +6787,6 @@ bool LLParser::ParseCall(Instruction *&Inst, PerFunctionState &PFS,
       ParseOptionalOperandBundles(BundleList, PFS))
     return true;
 
-  if (FMF.any() && !RetType->isFPOrFPVectorTy())
-    return Error(CallLoc, "fast-math-flags specified for call without "
-                          "floating-point scalar or vector return type");
-
   // If RetType is a non-function pointer type, then this is the short syntax
   // for the call, which means that RetType is just the return type.  Infer the
   // rest of the function argument types from the arguments that are present.
@@ -6853,8 +6849,12 @@ bool LLParser::ParseCall(Instruction *&Inst, PerFunctionState &PFS,
   CallInst *CI = CallInst::Create(Ty, Callee, Args, BundleList);
   CI->setTailCallKind(TCK);
   CI->setCallingConv(CC);
-  if (FMF.any())
+  if (FMF.any()) {
+    if (!isa<FPMathOperator>(CI))
+      return Error(CallLoc, "fast-math-flags specified for call without "
+                   "floating-point scalar or vector return type");
     CI->setFastMathFlags(FMF);
+  }
   CI->setAttributes(PAL);
   ForwardRefAttrGroups[CI] = FwdRefAttrGrps;
   Inst = CI;

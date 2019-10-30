@@ -17,23 +17,6 @@
 OpenMP Support
 ==================
 
-Clang supports the following OpenMP 5.0 features (see also `OpenMP implementation details`_):
-
-* The `reduction`-based clauses in the `task` and `target`-based directives.
-
-* Support relational-op != (not-equal) as one of the canonical forms of random
-  access iterator.
-
-* Support for mapping of the lambdas in target regions.
-
-* Parsing/sema analysis for the requires directive.
-
-* Nested declare target directives.
-
-* Make the `this` pointer implicitly mapped as `map(this[:1])`.
-
-* The `close` *map-type-modifier*.
-
 Clang fully supports OpenMP 4.5. Clang supports offloading to X86_64, AArch64,
 PPC64[LE] and has `basic support for Cuda devices`_.
 
@@ -43,6 +26,8 @@ PPC64[LE] and has `basic support for Cuda devices`_.
 
 In addition, the LLVM OpenMP runtime `libomp` supports the OpenMP Tools
 Interface (OMPT) on x86, x86_64, AArch64, and PPC64 on Linux, Windows, and macOS.
+
+For the list of supported features from OpenMP 5.0 see `OpenMP implementation details`_.
 
 General improvements
 --------------------
@@ -58,7 +43,7 @@ General improvements
   value of threads or as specified by the `thread_limit` clause if
   present). For the `for` construct, the schedule is static with chunk
   size of one.
-  
+
 - Simplified SPMD code generation for `distribute parallel for` when
   the new default schedules are applicable.
 
@@ -77,12 +62,6 @@ simplified set of runtime functions thus increasing performance at the cost of
 supporting some OpenMP features. The non-SPMD mode is the most generic mode and
 supports all currently available OpenMP features. The compiler will always
 attempt to use the SPMD mode wherever possible. SPMD mode will not be used if:
-
-   - The target region contains an `if()` clause that refers to a `parallel`
-     directive.
-
-   - The target region contains a `parallel` directive with a `num_threads()`
-     clause.
 
    - The target region contains user code (other than OpenMP-specific
      directives) in between the `target` and the `parallel` directives.
@@ -185,7 +164,7 @@ implementation.
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | task extension               | master taskloop simd                                         | :none:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| task extension               | parallel master taskloop simd                                | :none:`unclaimed`        |                                                                       |
+| task extension               | parallel master taskloop simd                                | :none:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | SIMD extension               | atomic and critical constructs inside SIMD code              | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+

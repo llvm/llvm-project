@@ -112,8 +112,21 @@ struct SymbolTable {
   const SymbolEntry *getSymbolByIndex(uint32_t Index) const;
 };
 
+struct IndirectSymbolEntry {
+  // The original value in an indirect symbol table. Higher bits encode extra
+  // information (INDIRECT_SYMBOL_LOCAL and INDIRECT_SYMBOL_ABS).
+  uint32_t OriginalIndex;
+  /// The Symbol referenced by this entry. It's None if the index is
+  /// INDIRECT_SYMBOL_LOCAL or INDIRECT_SYMBOL_ABS.
+  Optional<const SymbolEntry *> Symbol;
+
+  IndirectSymbolEntry(uint32_t OriginalIndex,
+                      Optional<const SymbolEntry *> Symbol)
+      : OriginalIndex(OriginalIndex), Symbol(Symbol) {}
+};
+
 struct IndirectSymbolTable {
-  std::vector<uint32_t> Symbols;
+  std::vector<IndirectSymbolEntry> Symbols;
 };
 
 /// The location of the string table inside the binary is described by LC_SYMTAB

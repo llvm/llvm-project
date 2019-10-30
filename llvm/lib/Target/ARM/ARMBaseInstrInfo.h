@@ -455,6 +455,11 @@ public:
     // 3 - predicate reg
     return MI.getOperand(3).getReg();
   }
+
+  bool isAddImmediate(const MachineInstr &MI,
+                      const MachineOperand *&Destination,
+                      const MachineOperand *&Source,
+                      int64_t &Offset) const override;
 };
 
 /// Get the operands corresponding to the given \p Pred value. By default, the

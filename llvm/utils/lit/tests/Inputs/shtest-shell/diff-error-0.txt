@@ -1,3 +1,0 @@
-# Check error on a unsupported diff (cannot be part of a pipeline).
-#
-# RUN: diff diff-error-0.txt diff-error-0.txt | echo Output

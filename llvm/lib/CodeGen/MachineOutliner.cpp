@@ -1009,7 +1009,7 @@ void MachineOutliner::findCandidates(
   FunctionList.clear();
   SuffixTree ST(Mapper.UnsignedVec);
 
-  // First, find dall of the repeated substrings in the tree of minimum length
+  // First, find all of the repeated substrings in the tree of minimum length
   // 2.
   std::vector<Candidate> CandidatesForRepeatedSeq;
   for (auto It = ST.begin(), Et = ST.end(); It != Et; ++It) {

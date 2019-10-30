@@ -1238,7 +1238,7 @@ public:
   llvm::SmallPtrSet<SpecialMemberDecl, 4> SpecialMembersBeingDeclared;
 
   /// Kinds of defaulted comparison operator functions.
-  enum class DefaultedComparisonKind {
+  enum class DefaultedComparisonKind : unsigned char {
     /// This is not a defaultable comparison operator.
     None,
     /// This is an operator== that should be implemented as a series of
@@ -9673,6 +9673,11 @@ public:
   /// Called on well-formed '\#pragma omp parallel master taskloop' after
   /// parsing of the associated statement.
   StmtResult ActOnOpenMPParallelMasterTaskLoopDirective(
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
+  /// Called on well-formed '\#pragma omp parallel master taskloop simd' after
+  /// parsing of the associated statement.
+  StmtResult ActOnOpenMPParallelMasterTaskLoopSimdDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
   /// Called on well-formed '\#pragma omp distribute' after parsing

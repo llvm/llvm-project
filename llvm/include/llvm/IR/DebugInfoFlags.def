@@ -88,11 +88,14 @@ HANDLE_DISP_FLAG((1u << 5), Pure)
 HANDLE_DISP_FLAG((1u << 6), Elemental)
 HANDLE_DISP_FLAG((1u << 7), Recursive)
 HANDLE_DISP_FLAG((1u << 8), MainSubprogram)
+// May also utilize this Flag in future, when adding support
+// for defaulted functions
+HANDLE_DISP_FLAG((1u << 9), Deleted)
 
 #ifdef DISP_FLAG_LARGEST_NEEDED
 // Intended to be used with ADT/BitmaskEnum.h.
 // NOTE: Always must be equal to largest flag, check this when adding new flags.
-HANDLE_DISP_FLAG((1 << 8), Largest)
+HANDLE_DISP_FLAG((1 << 9), Largest)
 #undef DISP_FLAG_LARGEST_NEEDED
 #endif
 

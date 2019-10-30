@@ -1157,6 +1157,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_reference`` (C++, Embarcadero)
 * ``__is_rvalue_reference`` (C++, Embarcadero)
 * ``__is_same`` (C++, Embarcadero)
+* ``__is_same_as`` (GCC): Synonym for ``__is_same``.
 * ``__is_scalar`` (C++, Embarcadero)
 * ``__is_sealed`` (Microsoft):
   Synonym for ``__is_final``.

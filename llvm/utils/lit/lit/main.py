@@ -63,14 +63,14 @@ def main(builtin_params = {}):
     if opts.filter:
         tests = [t for t in tests if opts.filter.search(t.getFullName())]
 
-    determine_order(tests, opts)
+    determine_order(tests, opts.order)
 
     if opts.shard:
         (run, shards) = opts.shard
         tests = filter_by_shard(tests, run, shards, litConfig)
 
-    if opts.maxTests is not None:
-        tests = tests[:opts.maxTests]
+    if opts.max_tests:
+        tests = tests[:opts.max_tests]
 
     opts.numWorkers = min(len(tests), opts.numWorkers)
 
@@ -132,19 +132,23 @@ def print_suites_or_tests(tests, opts):
             for test in ts_tests:
                 print('  %s' % (test.getFullName(),))
 
-def determine_order(tests, opts):
-    if opts.shuffle:
+
+def determine_order(tests, order):
+    assert order in ['default', 'random', 'failing-first']
+    if order == 'default':
+        tests.sort(key=lambda t: (not t.isEarlyTest(), t.getFullName()))
+    elif order == 'random':
         import random
         random.shuffle(tests)
-    elif opts.incremental:
-        def by_mtime(test):
-            try:
-                return os.path.getmtime(test.getFilePath())
-            except:
-                return 0
-        tests.sort(key=by_mtime, reverse=True)
     else:
-        tests.sort(key=lambda t: (not t.isEarlyTest(), t.getFullName()))
+        def by_mtime(test):
+            return os.path.getmtime(test.getFilePath())
+        tests.sort(key=by_mtime, reverse=True)
+
+
+def touch_file(test):
+    if test.result.code.isFailure:
+        os.utime(test.getFilePath(), None)
 
 def filter_by_shard(tests, run, shards, litConfig):
     test_ixs = range(run - 1, len(tests), shards)
@@ -164,22 +168,16 @@ def filter_by_shard(tests, run, shards, litConfig):
     litConfig.note(msg)
     return selected_tests
 
-def update_incremental_cache(test):
-    if not test.result.code.isFailure:
-        return
-    fname = test.getFilePath()
-    os.utime(fname, None)
-
 def run_tests(tests, litConfig, opts, numTotalTests):
     display = lit.display.create_display(opts, len(tests), numTotalTests,
                                          opts.numWorkers)
     def progress_callback(test):
         display.update(test)
-        if opts.incremental:
-            update_incremental_cache(test)
+        if opts.order == 'failing-first':
+            touch_file(test)
 
     run = lit.run.create_run(tests, litConfig, opts.numWorkers,
-                             progress_callback, opts.maxTime)
+                             progress_callback, opts.timeout)
 
     try:
         elapsed = execute_in_tmp_dir(run, litConfig)

@@ -1,7 +1,7 @@
 --- !minidump
 Streams:         
   - Type:            SystemInfo
-    Processor Arch:  ARM64
+    Processor Arch:  BP_ARM64
     Platform ID:     MacOSX
     CSD Version:     '15E216'
     CPU:             

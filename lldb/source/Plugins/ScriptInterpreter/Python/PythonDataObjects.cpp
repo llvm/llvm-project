@@ -1500,21 +1500,23 @@ Expected<PythonFile> PythonFile::FromFile(File &file, const char *mode) {
   PyObject *file_obj;
 #if PY_MAJOR_VERSION >= 3
   file_obj = PyFile_FromFd(file.GetDescriptor(), nullptr, mode, -1, nullptr,
-                           "ignore", nullptr, 0);
+                           "ignore", nullptr, /*closefd=*/0);
 #else
-  // We pass ::flush instead of ::fclose here so we borrow the FILE* --
-  // the lldb_private::File still owns it.   NetBSD does not allow
-  // input files to be flushed, so we have to check for that case too.
-  int (*closer)(FILE *);
-  auto opts = file.GetOptions();
-  if (!opts)
-    return opts.takeError();
-  if (opts.get() & File::eOpenOptionWrite)
-    closer = ::fflush;
-  else
-    closer = [](FILE *) { return 0; };
+  // I'd like to pass ::fflush here if the file is writable,  so that
+  // when the python side destructs the file object it will be flushed.
+  // However, this would be dangerous.    It can cause fflush to be called
+  // after fclose if the python program keeps a reference to the file after
+  // the original lldb_private::File has been destructed.
+  //
+  // It's all well and good to ask a python program not to use a closed file
+  // but asking a python program to make sure objects get released in a
+  // particular order is not safe.
+  //
+  // The tradeoff here is that if a python 2 program wants to make sure this
+  // file gets flushed, they'll have to do it explicitly or wait untill the
+  // original lldb File itself gets flushed.
   file_obj = PyFile_FromFile(file.GetStream(), py2_const_cast(""),
-                             py2_const_cast(mode), closer);
+                             py2_const_cast(mode), [](FILE *) { return 0; });
 #endif
 
   if (!file_obj)

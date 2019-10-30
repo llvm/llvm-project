@@ -1,3 +1,5 @@
+; UNSUPPORTED: system-windows
+;
 ; This test verifies that we do the right thing with DIFlagExportSymbols which is the new
 ; behavioir and without the DIFlagExportSymbols which is the old behavior for the given
 ; definitions below.

@@ -44,8 +44,11 @@ VSCode::VSCode()
 // Windows opens stdout and stdin in text mode which converts \n to 13,10
 // while the value is just 10 on Darwin/Linux. Setting the file mode to binary
 // fixes this.
-  assert(_setmode(fileno(stdout), _O_BINARY));
-  assert(_setmode(fileno(stdin), _O_BINARY));
+  int result = _setmode(fileno(stdout), _O_BINARY);
+  assert(result);
+  result = _setmode(fileno(stdin), _O_BINARY);
+  (void)result;
+  assert(result);
 #endif
   if (log_file_path)
     log.reset(new std::ofstream(log_file_path));
@@ -301,4 +304,3 @@ void VSCode::RunExitCommands() {
 }
 
 } // namespace lldb_vscode
-

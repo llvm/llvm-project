@@ -191,12 +191,12 @@ LiveInterval* LiveIntervals::createInterval(unsigned reg) {
 }
 
 /// Compute the live interval of a virtual register, based on defs and uses.
-void LiveIntervals::computeVirtRegInterval(LiveInterval &LI) {
+bool LiveIntervals::computeVirtRegInterval(LiveInterval &LI) {
   assert(LRCalc && "LRCalc not initialized.");
   assert(LI.empty() && "Should only compute empty intervals.");
   LRCalc->reset(MF, getSlotIndexes(), DomTree, &getVNInfoAllocator());
   LRCalc->calculate(LI, MRI->shouldTrackSubRegLiveness(LI.reg));
-  computeDeadValues(LI, nullptr);
+  return computeDeadValues(LI, nullptr);
 }
 
 void LiveIntervals::computeVirtRegs() {
@@ -204,7 +204,12 @@ void LiveIntervals::computeVirtRegs() {
     unsigned Reg = Register::index2VirtReg(i);
     if (MRI->reg_nodbg_empty(Reg))
       continue;
-    createAndComputeVirtRegInterval(Reg);
+    LiveInterval &LI = createEmptyInterval(Reg);
+    bool NeedSplit = computeVirtRegInterval(LI);
+    if (NeedSplit) {
+      SmallVector<LiveInterval*, 8> SplitLIs;
+      splitSeparateComponents(LI, SplitLIs);
+    }
   }
 }
 
@@ -500,6 +505,8 @@ bool LiveIntervals::shrinkToUses(LiveInterval *li,
 bool LiveIntervals::computeDeadValues(LiveInterval &LI,
                                       SmallVectorImpl<MachineInstr*> *dead) {
   bool MayHaveSplitComponents = false;
+  bool HaveDeadDef = false;
+
   for (VNInfo *VNI : LI.valnos) {
     if (VNI->isUnused())
       continue;
@@ -530,6 +537,10 @@ bool LiveIntervals::computeDeadValues(LiveInterval &LI,
       MachineInstr *MI = getInstructionFromIndex(Def);
       assert(MI && "No instruction defining live value");
       MI->addRegisterDead(LI.reg, TRI);
+      if (HaveDeadDef)
+        MayHaveSplitComponents = true;
+      HaveDeadDef = true;
+
       if (dead && MI->allDefsAreDead()) {
         LLVM_DEBUG(dbgs() << "All defs dead: " << Def << '\t' << *MI);
         dead->push_back(MI);

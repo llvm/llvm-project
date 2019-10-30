@@ -1,5 +1,4 @@
-# FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39481.
-# RUN: llc -mtriple=x86_64-linux-gnu -start-before greedy -stop-after virtregrewriter -o - -verify-machineinstrs=0 %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-linux-gnu -start-before greedy -stop-after virtregrewriter -o - -verify-machineinstrs %s | FileCheck %s
 
 --- |
   ; ModuleID = '<stdin>'
@@ -115,7 +114,7 @@ body:             |
 # CHECK-NEXT:   dead renamable $rcx = IMPLICIT_DEF
 # CHECK-NEXT:   dead renamable $rcx = IMPLICIT_DEF
 # CHECK-NEXT:   dead renamable $rcx = IMPLICIT_DEF
-# CHECK-NEXT:   DBG_VALUE $rcx, $noreg, !18, !DIExpression()
+# CHECK-NEXT:   DBG_VALUE $noreg, $noreg, !18, !DIExpression()
 
 # CHECK-LABEL: bb.3:
 # CHECK:        dead renamable $rcx = IMPLICIT_DEF

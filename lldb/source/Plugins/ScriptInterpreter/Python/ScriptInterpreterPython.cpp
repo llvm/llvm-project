@@ -72,11 +72,16 @@ extern "C" void init_lldb(void);
 // These prototypes are the Pythonic implementations of the required callbacks.
 // Although these are scripting-language specific, their definition depends on
 // the public API.
-extern "C" bool LLDBSwigPythonBreakpointCallbackFunction(
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
+
+extern "C" llvm::Expected<bool> LLDBSwigPythonBreakpointCallbackFunction(
     const char *python_function_name, const char *session_dictionary_name,
     const lldb::StackFrameSP &sb_frame,
-    const lldb::BreakpointLocationSP &sb_bp_loc,
-    StructuredDataImpl *args_impl);
+    const lldb::BreakpointLocationSP &sb_bp_loc, StructuredDataImpl *args_impl);
+
+#pragma clang diagnostic pop
 
 extern "C" bool LLDBSwigPythonWatchpointCallbackFunction(
     const char *python_function_name, const char *session_dictionary_name,
@@ -782,10 +787,9 @@ PythonDictionary &ScriptInterpreterPythonImpl::GetSysModuleDictionary() {
   return m_sys_module_dict;
 }
 
-llvm::Expected<size_t>
-ScriptInterpreterPythonImpl::GetNumFixedArgumentsForCallable(
-    const llvm::StringRef &callable_name)
-{
+llvm::Expected<unsigned>
+ScriptInterpreterPythonImpl::GetMaxPositionalArgumentsForCallable(
+    const llvm::StringRef &callable_name) {
   if (callable_name.empty()) {
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
@@ -796,16 +800,15 @@ ScriptInterpreterPythonImpl::GetNumFixedArgumentsForCallable(
                  Locker::NoSTDIN);
   auto dict = PythonModule::MainModule()
       .ResolveName<PythonDictionary>(m_dictionary_name);
-  auto pfunc 
-     = PythonObject::ResolveNameWithDictionary<PythonCallable>(callable_name, 
-                                                               dict);
+  auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
+      callable_name, dict);
   if (!pfunc.IsAllocated()) {
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
         "can't find callable: %s", callable_name.str().c_str());
   }
   PythonCallable::ArgInfo arg_info = pfunc.GetNumArguments();
-  return arg_info.count;
+  return arg_info.max_positional_args;
 }
 
 static std::string GenerateUniqueName(const char *base_name_wanted,
@@ -1232,22 +1235,22 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(
   // For now just cons up a oneliner that calls the provided function.
   std::string oneliner("return ");
   oneliner += function_name;
-  
-  llvm::Expected<size_t> maybe_args 
-      = GetNumFixedArgumentsForCallable(function_name);
+
+  llvm::Expected<unsigned> maybe_args =
+      GetMaxPositionalArgumentsForCallable(function_name);
   if (!maybe_args) {
-    error.SetErrorStringWithFormat("could not get num args: %s", 
+    error.SetErrorStringWithFormat(
+        "could not get num args: %s",
         llvm::toString(maybe_args.takeError()).c_str());
     return error;
   }
-  size_t num_args = *maybe_args;
-  
+  size_t max_args = *maybe_args;
+
   bool uses_extra_args = false;
-  if (num_args == 4) {
+  if (max_args >= 4) {
     uses_extra_args = true;
     oneliner += "(frame, bp_loc, extra_args, internal_dict)";
-  }
-  else if (num_args == 3) {
+  } else if (max_args >= 3) {
     if (extra_args_sp) {
       error.SetErrorString("cannot pass extra_args to a three argument callback"
                           );
@@ -1257,12 +1260,12 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(
     oneliner += "(frame, bp_loc, internal_dict)";
   } else {
     error.SetErrorStringWithFormat("expected 3 or 4 argument "
-                                   "function, %s has %zu",
-                                   function_name, num_args);
+                                   "function, %s can only take %zu",
+                                   function_name, max_args);
     return error;
   }
-  
-  SetBreakpointCommandCallback(bp_options, oneliner.c_str(), extra_args_sp, 
+
+  SetBreakpointCommandCallback(bp_options, oneliner.c_str(), extra_args_sp,
                                uses_extra_args);
   return error;
 }
@@ -1840,8 +1843,7 @@ StructuredData::DictionarySP ScriptInterpreterPythonImpl::OSPlugin_CreateThread(
 
 StructuredData::ObjectSP ScriptInterpreterPythonImpl::CreateScriptedThreadPlan(
     const char *class_name, StructuredDataImpl *args_data,
-    std::string &error_str, 
-    lldb::ThreadPlanSP thread_plan_sp) {
+    std::string &error_str, lldb::ThreadPlanSP thread_plan_sp) {
   if (class_name == nullptr || class_name[0] == '\0')
     return StructuredData::ObjectSP();
 
@@ -2145,7 +2147,7 @@ Status ScriptInterpreterPythonImpl::GenerateBreakpointCommandCallbackData(
 
   std::string auto_generated_function_name(GenerateUniqueName(
       "lldb_autogen_python_bp_callback_func_", num_created_functions));
-  if (has_extra_args) 
+  if (has_extra_args)
     sstr.Printf("def %s (frame, bp_loc, extra_args, internal_dict):",
                 auto_generated_function_name.c_str());
   else
@@ -2267,11 +2269,26 @@ bool ScriptInterpreterPythonImpl::BreakpointCallbackFunction(
           Locker py_lock(python_interpreter, Locker::AcquireLock |
                                                  Locker::InitSession |
                                                  Locker::NoSTDIN);
-          ret_val = LLDBSwigPythonBreakpointCallbackFunction(
-              python_function_name,
-              python_interpreter->m_dictionary_name.c_str(), stop_frame_sp,
-              bp_loc_sp,
-              bp_option_data->m_extra_args_up.get());
+          Expected<bool> maybe_ret_val =
+              LLDBSwigPythonBreakpointCallbackFunction(
+                  python_function_name,
+                  python_interpreter->m_dictionary_name.c_str(), stop_frame_sp,
+                  bp_loc_sp, bp_option_data->m_extra_args_up.get());
+
+          if (!maybe_ret_val) {
+
+            llvm::handleAllErrors(
+                maybe_ret_val.takeError(),
+                [&](PythonException &E) {
+                  debugger.GetErrorStream() << E.ReadBacktrace();
+                },
+                [&](const llvm::ErrorInfoBase &E) {
+                  debugger.GetErrorStream() << E.message();
+                });
+
+          } else {
+            ret_val = maybe_ret_val.get();
+          }
         }
         return ret_val;
       }
