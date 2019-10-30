@@ -126,7 +126,7 @@ private:
   std::vector<StringRef> ObjectFilenames;
   CoverageViewOptions ViewOpts;
   CoverageFiltersMatchAll Filters;
-  FilenameCoverageFilters FilenameFilters;
+  CoverageFilters IgnoreFilenameFilters;
 
   /// The path to the indexed profile.
   std::string PGOFilename;
@@ -190,7 +190,7 @@ void CodeCoverageTool::addCollectedPath(const std::string &Path) {
     return;
   }
   sys::path::remove_dots(EffectivePath, /*remove_dot_dots=*/true);
-  if (FilenameFilters.matchesFilename(EffectivePath))
+  if (!IgnoreFilenameFilters.matchesFilename(EffectivePath))
     SourceFiles.emplace_back(EffectivePath.str());
 }
 
@@ -595,12 +595,6 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
                "regular expression"),
       cl::ZeroOrMore, cl::cat(FilteringCategory));
 
-  cl::list<std::string> WhitelistFilenameRegexFilters(
-      "whitelist-filename-regex", cl::Optional,
-      cl::desc("Show code coverage only for file paths that match the given "
-               "regular expression"),
-      cl::ZeroOrMore, cl::cat(FilteringCategory));
-
   cl::list<std::string> IgnoreFilenameRegexFilters(
       "ignore-filename-regex", cl::Optional,
       cl::desc("Skip source code files with file paths that match the given "
@@ -750,11 +744,10 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       Filters.push_back(std::move(StatFilterer));
     }
 
-    // Create the filename filters.
+    // Create the ignore filename filters.
     for (const auto &RE : IgnoreFilenameRegexFilters)
-      FilenameFilters.blacklist(std::make_unique<NameRegexCoverageFilter>(RE));
-    for (const auto &RE : WhitelistFilenameRegexFilters)
-      FilenameFilters.whitelist(std::make_unique<NameRegexCoverageFilter>(RE));
+      IgnoreFilenameFilters.push_back(
+          std::make_unique<NameRegexCoverageFilter>(RE));
 
     if (!Arches.empty()) {
       for (const std::string &Arch : Arches) {
@@ -770,7 +763,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       }
     }
 
-    // FilenameFilters are applied even when InputSourceFiles specified.
+    // IgnoreFilenameFilters are applied even when InputSourceFiles specified.
     for (const std::string &File : InputSourceFiles)
       collectPaths(File);
 
@@ -891,7 +884,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   if (SourceFiles.empty())
     // Get the source files from the function coverage mapping.
     for (StringRef Filename : Coverage->getUniqueSourceFiles()) {
-      if (FilenameFilters.matchesFilename(Filename))
+      if (!IgnoreFilenameFilters.matchesFilename(Filename))
         SourceFiles.push_back(Filename);
     }
 
@@ -995,7 +988,7 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
   CoverageReport Report(ViewOpts, *Coverage.get());
   if (!ShowFunctionSummaries) {
     if (SourceFiles.empty())
-      Report.renderFileReports(llvm::outs(), FilenameFilters);
+      Report.renderFileReports(llvm::outs(), IgnoreFilenameFilters);
     else
       Report.renderFileReports(llvm::outs(), SourceFiles);
   } else {
@@ -1061,7 +1054,7 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
   }
 
   if (SourceFiles.empty())
-    Exporter->renderRoot(FilenameFilters);
+    Exporter->renderRoot(IgnoreFilenameFilters);
   else
     Exporter->renderRoot(SourceFiles);
 
