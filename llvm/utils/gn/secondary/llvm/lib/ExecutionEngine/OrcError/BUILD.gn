@@ -1,0 +1,10 @@
+static_library("OrcError") {
+  output_name = "LLVMOrcError"
+  deps = [
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "OrcError.cpp",
+    "RPCError.cpp",
+  ]
+}
