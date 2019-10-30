@@ -372,7 +372,6 @@ private:
   AMDGPU::IsaVersion IV;
 
   DenseSet<MachineInstr *> TrackedWaitcntSet;
-  DenseSet<MachineInstr *> VCCZBugHandledSet;
 
   struct BlockInfo {
     MachineBasicBlock *MBB;
@@ -1388,8 +1387,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     }
 
     bool VCCZBugWorkAround = false;
-    if (readsVCCZ(Inst) &&
-        (!VCCZBugHandledSet.count(&Inst))) {
+    if (readsVCCZ(Inst)) {
       if (ScoreBrackets.getScoreLB(LGKM_CNT) <
               ScoreBrackets.getScoreUB(LGKM_CNT) &&
           ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
@@ -1431,7 +1429,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
               TII->get(ST->isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64),
               TRI->getVCC())
           .addReg(TRI->getVCC());
-      VCCZBugHandledSet.insert(&Inst);
       Modified = true;
     }
 
@@ -1471,7 +1468,6 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       RegisterEncoding.SGPR0 + HardwareLimits.NumSGPRsMax - 1;
 
   TrackedWaitcntSet.clear();
-  VCCZBugHandledSet.clear();
   RpotIdxMap.clear();
   BlockInfos.clear();
 
