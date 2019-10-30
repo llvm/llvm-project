@@ -45,8 +45,8 @@ def invoke_tool(exe, cmd_args, ir):
 
 ##### LLVM IR parser
 
-RUN_LINE_RE = re.compile('^\s*[;#]\s*RUN:\s*(.*)$')
-CHECK_PREFIX_RE = re.compile('--?check-prefix(?:es)?[= ](\S+)')
+RUN_LINE_RE = re.compile(r'^\s*[;#]\s*RUN:\s*(.*)$')
+CHECK_PREFIX_RE = re.compile(r'--?check-prefix(?:es)?[= ](\S+)')
 PREFIX_RE = re.compile('^[a-zA-Z0-9_-]+$')
 CHECK_RE = re.compile(r'^\s*[;#]\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')
 
@@ -60,7 +60,7 @@ ANALYZE_FUNCTION_RE = re.compile(
     r'\s*\n(?P<body>.*)$',
     flags=(re.X | re.S))
 
-IR_FUNCTION_RE = re.compile('^\s*define\s+(?:internal\s+)?[^@]*@(\w+)\s*\(')
+IR_FUNCTION_RE = re.compile(r'^\s*define\s+(?:internal\s+)?[^@]*@(\w+)\s*\(')
 TRIPLE_IR_RE = re.compile(r'^\s*target\s+triple\s*=\s*"([^"]+)"$')
 TRIPLE_ARG_RE = re.compile(r'-mtriple[= ]([^ ]+)')
 MARCH_ARG_RE = re.compile(r'-march[= ]([^ ]+)')
