@@ -20,7 +20,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 # Support plugins.
-set(LLVM_SUPPORT_PLUGINS 1)
+set(LLVM_NO_DEAD_STRIP 1)
 
 add_llvm_tool(llc
   llc.cpp
