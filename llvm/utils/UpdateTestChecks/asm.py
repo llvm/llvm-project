@@ -53,7 +53,8 @@ ASM_FUNCTION_MIPS_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n[^:]*?' # f: (name of func)
     r'(?:^[ \t]+\.(frame|f?mask|set).*?\n)+'  # Mips+LLVM standard asm prologue
     r'(?P<body>.*?)\n'                        # (body of the function)
-    r'(?:^[ \t]+\.(set|end).*?\n)+'           # Mips+LLVM standard asm epilogue
+    # Mips+LLVM standard asm epilogue
+    r'(?:(^[ \t]+\.set[^\n]*?\n)*^[ \t]+\.end.*?\n)'
     r'(\$|\.L)func_end[0-9]+:\n',             # $func_end0: (mips32 - O32) or
                                               # .Lfunc_end0: (mips64 - NewABI)
     flags=(re.M | re.S))

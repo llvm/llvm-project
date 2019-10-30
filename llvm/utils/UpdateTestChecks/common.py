@@ -260,7 +260,10 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
       if is_asm:
         output_lines.append('%s %s:       %s' % (comment_marker, checkprefix, func_body[0]))
         for func_line in func_body[1:]:
-          output_lines.append('%s %s-NEXT:  %s' % (comment_marker, checkprefix, func_line))
+          if func_line.strip() == '':
+            output_lines.append('%s %s-EMPTY:' % (comment_marker, checkprefix))
+          else:
+            output_lines.append('%s %s-NEXT:  %s' % (comment_marker, checkprefix, func_line))
         break
 
       # For IR output, change all defs to FileCheck variables, so we're immune
