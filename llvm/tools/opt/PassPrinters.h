@@ -18,7 +18,6 @@
 
 namespace llvm {
 
-class BasicBlockPass;
 class CallGraphSCCPass;
 class FunctionPass;
 class ModulePass;
@@ -42,9 +41,6 @@ LoopPass *createLoopPassPrinter(const PassInfo *PI, raw_ostream &out,
 
 RegionPass *createRegionPassPrinter(const PassInfo *PI, raw_ostream &out,
                                     bool Quiet);
-
-BasicBlockPass *createBasicBlockPassPrinter(const PassInfo *PI,
-                                            raw_ostream &out, bool Quiet);
 
 } // end namespace llvm
 

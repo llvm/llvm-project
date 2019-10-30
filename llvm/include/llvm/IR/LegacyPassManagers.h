@@ -53,10 +53,6 @@
 // a place to implement common pass manager APIs. All pass managers derive from
 // PMDataManager.
 //
-// [o] class BBPassManager : public FunctionPass, public PMDataManager;
-//
-// BBPassManager manages BasicBlockPasses.
-//
 // [o] class FunctionPassManager;
 //
 // This is a external interface used to manage FunctionPasses. This
@@ -103,7 +99,6 @@ enum PassDebuggingString {
   EXECUTION_MSG, // "Executing Pass '" + PassName
   MODIFICATION_MSG, // "Made Modification '" + PassName
   FREEING_MSG, // " Freeing Pass '" + PassName
-  ON_BASICBLOCK_MSG, // "' on BasicBlock '" + InstructionName + "'...\n"
   ON_FUNCTION_MSG, // "' on Function '" + FunctionName + "'...\n"
   ON_MODULE_MSG, // "' on Module '" + ModuleName + "'...\n"
   ON_REGION_MSG, // "' on Region '" + Msg + "'...\n'"
