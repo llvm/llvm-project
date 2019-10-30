@@ -5,7 +5,6 @@
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+zcz-fp                 | FileCheck %s -check-prefixes=ALL,NONEGP,ZEROFP
 ; RUN: llc < %s -mtriple=arm64-apple-ios   -mcpu=cyclone                  | FileCheck %s -check-prefixes=ALL,ZEROGP,NONEFP
 ; RUN: llc < %s -mtriple=arm64-apple-ios   -mcpu=cyclone -mattr=+fullfp16 | FileCheck %s -check-prefixes=ALL,ZEROGP,NONE16
-; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=exynos-m1                | FileCheck %s -check-prefixes=ALL,NONEGP,ZEROFP
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=exynos-m3                | FileCheck %s -check-prefixes=ALL,NONEGP,ZEROFP
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=kryo                     | FileCheck %s -check-prefixes=ALL,ZEROGP,ZEROFP
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=falkor                   | FileCheck %s -check-prefixes=ALL,ZEROGP,ZEROFP
