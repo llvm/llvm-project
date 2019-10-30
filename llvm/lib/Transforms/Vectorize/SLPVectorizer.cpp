@@ -26,6 +26,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -5332,125 +5333,127 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 }
 
 bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
-                                            unsigned VecRegSize) {
+                                            unsigned Idx) {
   const unsigned ChainLen = Chain.size();
   LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length " << ChainLen
                     << "\n");
   const unsigned Sz = R.getVectorElementSize(Chain[0]);
-  const unsigned VF = VecRegSize / Sz;
+  const unsigned MinVF = R.getMinVecRegSize() / Sz;
+  unsigned VF = Chain.size();
 
-  if (!isPowerOf2_32(Sz) || VF < 2)
+  if (!isPowerOf2_32(Sz) || !isPowerOf2_32(VF) || VF < 2 || VF < MinVF)
     return false;
 
-  bool Changed = false;
-  // Look for profitable vectorizable trees at all offsets, starting at zero.
-  for (unsigned i = 0, e = ChainLen; i + VF <= e; ++i) {
+  LLVM_DEBUG(dbgs() << "SLP: Analyzing " << VF << " stores at offset " << Idx
+                    << "\n");
 
-    ArrayRef<Value *> Operands = Chain.slice(i, VF);
-    // Check that a previous iteration of this loop did not delete the Value.
-    if (llvm::any_of(Operands, [&R](Value *V) {
-          auto *I = dyn_cast<Instruction>(V);
-          return I && R.isDeleted(I);
-        }))
-      continue;
+  R.buildTree(Chain);
+  if (R.isTreeTinyAndNotFullyVectorizable())
+    return false;
 
-    LLVM_DEBUG(dbgs() << "SLP: Analyzing " << VF << " stores at offset " << i
-                      << "\n");
+  R.computeMinimumValueSizes();
 
-    R.buildTree(Operands);
-    if (R.isTreeTinyAndNotFullyVectorizable())
-      continue;
+  int Cost = R.getTreeCost();
 
-    R.computeMinimumValueSizes();
+  LLVM_DEBUG(dbgs() << "SLP: Found cost=" << Cost << " for VF=" << VF << "\n");
+  if (Cost < -SLPCostThreshold) {
+    LLVM_DEBUG(dbgs() << "SLP: Decided to vectorize cost=" << Cost << "\n");
 
-    int Cost = R.getTreeCost();
+    using namespace ore;
 
-    LLVM_DEBUG(dbgs() << "SLP: Found cost=" << Cost << " for VF=" << VF
-                      << "\n");
-    if (Cost < -SLPCostThreshold) {
-      LLVM_DEBUG(dbgs() << "SLP: Decided to vectorize cost=" << Cost << "\n");
+    R.getORE()->emit(OptimizationRemark(SV_NAME, "StoresVectorized",
+                                        cast<StoreInst>(Chain[0]))
+                     << "Stores SLP vectorized with cost " << NV("Cost", Cost)
+                     << " and with tree size "
+                     << NV("TreeSize", R.getTreeSize()));
 
-      using namespace ore;
-
-      R.getORE()->emit(OptimizationRemark(SV_NAME, "StoresVectorized",
-                                          cast<StoreInst>(Chain[i]))
-                       << "Stores SLP vectorized with cost " << NV("Cost", Cost)
-                       << " and with tree size "
-                       << NV("TreeSize", R.getTreeSize()));
-
-      R.vectorizeTree();
-
-      // Move to the next bundle.
-      i += VF - 1;
-      Changed = true;
-    }
+    R.vectorizeTree();
+    return true;
   }
 
-  return Changed;
+  return false;
 }
 
 bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
                                         BoUpSLP &R) {
-  SetVector<StoreInst *> Heads;
-  SmallDenseSet<StoreInst *> Tails;
-  SmallDenseMap<StoreInst *, StoreInst *> ConsecutiveChain;
-
   // We may run into multiple chains that merge into a single chain. We mark the
   // stores that we vectorized so that we don't visit the same store twice.
   BoUpSLP::ValueSet VectorizedStores;
   bool Changed = false;
 
-  auto &&FindConsecutiveAccess =
-      [this, &Stores, &Heads, &Tails, &ConsecutiveChain] (int K, int Idx) {
-        if (!isConsecutiveAccess(Stores[K], Stores[Idx], *DL, *SE))
-          return false;
+  int E = Stores.size();
+  SmallBitVector Tails(E, false);
+  SmallVector<int, 16> ConsecutiveChain(E, E + 1);
+  auto &&FindConsecutiveAccess = [this, &Stores, &Tails,
+                                  &ConsecutiveChain](int K, int Idx) {
+    if (!isConsecutiveAccess(Stores[K], Stores[Idx], *DL, *SE))
+      return false;
 
-        Tails.insert(Stores[Idx]);
-        Heads.insert(Stores[K]);
-        ConsecutiveChain[Stores[K]] = Stores[Idx];
-        return true;
-      };
-
+    Tails.set(Idx);
+    ConsecutiveChain[K] = Idx;
+    return true;
+  };
   // Do a quadratic search on all of the given stores in reverse order and find
   // all of the pairs of stores that follow each other.
-  int E = Stores.size();
   for (int Idx = E - 1; Idx >= 0; --Idx) {
     // If a store has multiple consecutive store candidates, search according
     // to the sequence: Idx-1, Idx+1, Idx-2, Idx+2, ...
     // This is because usually pairing with immediate succeeding or preceding
     // candidate create the best chance to find slp vectorization opportunity.
-    for (int Offset = 1, F = std::max(E - Idx, Idx + 1); Offset < F; ++Offset)
+    const int MaxLookDepth = std::min(E - Idx, 16);
+    for (int Offset = 1, F = std::max(MaxLookDepth, Idx + 1); Offset < F;
+         ++Offset)
       if ((Idx >= Offset && FindConsecutiveAccess(Idx - Offset, Idx)) ||
           (Idx + Offset < E && FindConsecutiveAccess(Idx + Offset, Idx)))
         break;
   }
 
   // For stores that start but don't end a link in the chain:
-  for (auto *SI : llvm::reverse(Heads)) {
-    if (Tails.count(SI))
+  for (int Cnt = E; Cnt > 0; --Cnt) {
+    int I = Cnt - 1;
+    if (ConsecutiveChain[I] == E + 1 || Tails.test(I))
       continue;
-
     // We found a store instr that starts a chain. Now follow the chain and try
     // to vectorize it.
     BoUpSLP::ValueList Operands;
-    StoreInst *I = SI;
     // Collect the chain into a list.
-    while ((Tails.count(I) || Heads.count(I)) && !VectorizedStores.count(I)) {
-      Operands.push_back(I);
+    while (I != E + 1 && !VectorizedStores.count(Stores[I])) {
+      Operands.push_back(Stores[I]);
       // Move to the next value in the chain.
       I = ConsecutiveChain[I];
     }
 
+    // If a vector register can't hold 1 element, we are done.
+    unsigned MaxVecRegSize = R.getMaxVecRegSize();
+    unsigned EltSize = R.getVectorElementSize(Stores[0]);
+    if (MaxVecRegSize % EltSize != 0)
+      continue;
+
+    unsigned MaxElts = MaxVecRegSize / EltSize;
     // FIXME: Is division-by-2 the correct step? Should we assert that the
     // register size is a power-of-2?
-    for (unsigned Size = R.getMaxVecRegSize(); Size >= R.getMinVecRegSize();
-         Size /= 2) {
-      if (vectorizeStoreChain(Operands, R, Size)) {
-        // Mark the vectorized stores so that we don't vectorize them again.
-        VectorizedStores.insert(Operands.begin(), Operands.end());
-        Changed = true;
-        break;
+    unsigned StartIdx = 0;
+    for (unsigned Size = llvm::PowerOf2Ceil(MaxElts); Size >= 2; Size /= 2) {
+      for (unsigned Cnt = StartIdx, E = Operands.size(); Cnt + Size <= E;) {
+        ArrayRef<Value *> Slice = makeArrayRef(Operands).slice(Cnt, Size);
+        if (!VectorizedStores.count(Slice.front()) &&
+            !VectorizedStores.count(Slice.back()) &&
+            vectorizeStoreChain(Slice, R, Cnt)) {
+          // Mark the vectorized stores so that we don't vectorize them again.
+          VectorizedStores.insert(Slice.begin(), Slice.end());
+          Changed = true;
+          // If we vectorized initial block, no need to try to vectorize it
+          // again.
+          if (Cnt == StartIdx)
+            StartIdx += Size;
+          Cnt += Size;
+          continue;
+        }
+        ++Cnt;
       }
+      // Check if the whole array was vectorized already - exit.
+      if (StartIdx >= Operands.size())
+        break;
     }
   }
 
@@ -7118,14 +7121,7 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length "
                       << it->second.size() << ".\n");
 
-    // Process the stores in chunks of 16.
-    // TODO: The limit of 16 inhibits greater vectorization factors.
-    //       For example, AVX2 supports v32i8. Increasing this limit, however,
-    //       may cause a significant compile-time increase.
-    for (unsigned CI = 0, CE = it->second.size(); CI < CE; CI += 16) {
-      unsigned Len = std::min<unsigned>(CE - CI, 16);
-      Changed |= vectorizeStores(makeArrayRef(&it->second[CI], Len), R);
-    }
+    Changed |= vectorizeStores(it->second, R);
   }
   return Changed;
 }
