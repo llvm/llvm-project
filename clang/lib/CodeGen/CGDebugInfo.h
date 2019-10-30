@@ -89,6 +89,18 @@ class CGDebugInfo {
   /// represented by instantiated Metadata nodes.
   llvm::SmallDenseMap<QualType, llvm::Metadata *> SizeExprCache;
 
+  /// Callbacks to use when printing names and types.
+  class PrintingCallbacks final : public clang::PrintingCallbacks {
+    const CGDebugInfo &Self;
+
+  public:
+    PrintingCallbacks(const CGDebugInfo &Self) : Self(Self) {}
+    std::string remapPath(StringRef Path) const override {
+      return Self.remapDIPath(Path);
+    }
+  };
+  PrintingCallbacks PrintCB = {*this};
+
   struct ObjCInterfaceCacheEntry {
     const ObjCInterfaceType *Type;
     llvm::DIType *Decl;
