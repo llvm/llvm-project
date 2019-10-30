@@ -1367,6 +1367,10 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     ScoreBrackets.dump();
   });
 
+  // Assume VCCZ is correct at basic block boundaries, unless and until we need
+  // to handle cases where that is not true.
+  bool VCCZCorrect = true;
+
   // Walk over the instructions.
   MachineInstr *OldWaitcntInstr = nullptr;
 
@@ -1386,13 +1390,32 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       continue;
     }
 
-    bool VCCZBugWorkAround = false;
+    bool RestoreVCCZ = false;
     if (readsVCCZ(Inst)) {
-      if (ScoreBrackets.getScoreLB(LGKM_CNT) <
-              ScoreBrackets.getScoreUB(LGKM_CNT) &&
-          ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
-        if (ST->hasReadVCCZBug())
-          VCCZBugWorkAround = true;
+      if (!VCCZCorrect)
+        RestoreVCCZ = true;
+      else if (ST->hasReadVCCZBug()) {
+        if (ScoreBrackets.getScoreLB(LGKM_CNT) <
+            ScoreBrackets.getScoreUB(LGKM_CNT) &&
+            ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
+          RestoreVCCZ = true;
+        }
+      }
+    }
+
+    if (!ST->partialVCCWritesUpdateVCCZ()) {
+      // Up to gfx9, writes to vcc_lo and vcc_hi don't update vccz.
+      // Writes to vcc will fix it. Only examine explicit defs.
+      for (auto &Op : Inst.defs()) {
+        switch (Op.getReg()) {
+        case AMDGPU::VCC:
+          VCCZCorrect = true;
+          break;
+        case AMDGPU::VCC_LO:
+        case AMDGPU::VCC_HI:
+          VCCZCorrect = false;
+          break;
+        }
       }
     }
 
@@ -1421,7 +1444,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     // TODO: Remove this work-around after fixing the scheduler and enable the
     // assert above.
-    if (VCCZBugWorkAround) {
+    if (RestoreVCCZ) {
       // Restore the vccz bit.  Any time a value is written to vcc, the vcc
       // bit is updated, so we can restore the bit by reading the value of
       // vcc and then writing it back to the register.
@@ -1429,6 +1452,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
               TII->get(ST->isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64),
               TRI->getVCC())
           .addReg(TRI->getVCC());
+      VCCZCorrect = true;
       Modified = true;
     }
 
