@@ -48,13 +48,10 @@ static void AddBreakpointDescription(Stream *s, Breakpoint *bp,
 #define LLDB_OPTIONS_breakpoint_modify
 #include "CommandOptions.inc"
 
-class lldb_private::BreakpointOptionGroup : public OptionGroup
-{
+class lldb_private::BreakpointOptionGroup : public OptionGroup {
 public:
-  BreakpointOptionGroup() :
-          OptionGroup(),
-          m_bp_opts(false) {}
-  
+  BreakpointOptionGroup() : OptionGroup(), m_bp_opts(false) {}
+
   ~BreakpointOptionGroup() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -62,9 +59,10 @@ public:
   }
 
   Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
+                        ExecutionContext *execution_context) override {
     Status error;
-    const int short_option = g_breakpoint_modify_options[option_idx].short_option;
+    const int short_option =
+        g_breakpoint_modify_options[option_idx].short_option;
 
     switch (short_option) {
     case 'c':
@@ -91,18 +89,15 @@ public:
         error.SetErrorStringWithFormat(
             "invalid boolean value '%s' passed for -G option",
             option_arg.str().c_str());
-    }
-    break;
-    case 'i':
-    {
+    } break;
+    case 'i': {
       uint32_t ignore_count;
       if (option_arg.getAsInteger(0, ignore_count))
         error.SetErrorStringWithFormat("invalid ignore count '%s'",
                                        option_arg.str().c_str());
       else
         m_bp_opts.SetIgnoreCount(ignore_count);
-    }
-    break;
+    } break;
     case 'o': {
       bool value, success;
       value = OptionArgParser::ToBoolean(option_arg, false, &success);
@@ -113,8 +108,7 @@ public:
             "invalid boolean value '%s' passed for -o option",
             option_arg.str().c_str());
     } break;
-    case 't':
-    {
+    case 't': {
       lldb::tid_t thread_id = LLDB_INVALID_THREAD_ID;
       if (option_arg[0] != '\0') {
         if (option_arg.getAsInteger(0, thread_id))
@@ -122,16 +116,14 @@ public:
                                          option_arg.str().c_str());
       }
       m_bp_opts.SetThreadID(thread_id);
-    }
-    break;
+    } break;
     case 'T':
       m_bp_opts.GetThreadSpec()->SetName(option_arg.str().c_str());
       break;
     case 'q':
       m_bp_opts.GetThreadSpec()->SetQueueName(option_arg.str().c_str());
       break;
-    case 'x':
-    {
+    case 'x': {
       uint32_t thread_index = UINT32_MAX;
       if (option_arg[0] != '\n') {
         if (option_arg.getAsInteger(0, thread_index))
@@ -139,8 +131,7 @@ public:
                                          option_arg.str().c_str());
       }
       m_bp_opts.GetThreadSpec()->SetIndex(thread_index);
-    }
-    break;
+    } break;
     default:
       llvm_unreachable("Unimplemented option");
     }
@@ -152,43 +143,35 @@ public:
     m_bp_opts.Clear();
     m_commands.clear();
   }
-  
-  Status OptionParsingFinished(ExecutionContext *execution_context) override {
-    if (!m_commands.empty())
-    {
-      if (!m_commands.empty())
-      {
-          auto cmd_data = std::make_unique<BreakpointOptions::CommandData>();
-        
-          for (std::string &str : m_commands)
-            cmd_data->user_source.AppendString(str); 
 
-          cmd_data->stop_on_error = true;
-          m_bp_opts.SetCommandDataCallback(cmd_data);
+  Status OptionParsingFinished(ExecutionContext *execution_context) override {
+    if (!m_commands.empty()) {
+      if (!m_commands.empty()) {
+        auto cmd_data = std::make_unique<BreakpointOptions::CommandData>();
+
+        for (std::string &str : m_commands)
+          cmd_data->user_source.AppendString(str);
+
+        cmd_data->stop_on_error = true;
+        m_bp_opts.SetCommandDataCallback(cmd_data);
       }
     }
     return Status();
   }
-  
-  const BreakpointOptions &GetBreakpointOptions()
-  {
-    return m_bp_opts;
-  }
+
+  const BreakpointOptions &GetBreakpointOptions() { return m_bp_opts; }
 
   std::vector<std::string> m_commands;
   BreakpointOptions m_bp_opts;
-
 };
 
 #define LLDB_OPTIONS_breakpoint_dummy
 #include "CommandOptions.inc"
 
-class BreakpointDummyOptionGroup : public OptionGroup
-{
+class BreakpointDummyOptionGroup : public OptionGroup {
 public:
-  BreakpointDummyOptionGroup() :
-          OptionGroup() {}
-  
+  BreakpointDummyOptionGroup() : OptionGroup() {}
+
   ~BreakpointDummyOptionGroup() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -196,14 +179,15 @@ public:
   }
 
   Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
+                        ExecutionContext *execution_context) override {
     Status error;
-    const int short_option = g_breakpoint_modify_options[option_idx].short_option;
+    const int short_option =
+        g_breakpoint_modify_options[option_idx].short_option;
 
     switch (short_option) {
-      case 'D':
-        m_use_dummy = true;
-        break;
+    case 'D':
+      m_use_dummy = true;
+      break;
     default:
       llvm_unreachable("Unimplemented option");
     }
@@ -216,7 +200,6 @@ public:
   }
 
   bool m_use_dummy;
-
 };
 
 #define LLDB_OPTIONS_breakpoint_set
@@ -245,8 +228,8 @@ public:
         m_bp_opts(), m_python_class_options("scripted breakpoint", true, 'P'),
         m_options() {
     // We're picking up all the normal options, commands and disable.
-    m_all_options.Append(&m_python_class_options, LLDB_OPT_SET_1|LLDB_OPT_SET_2,
-                         LLDB_OPT_SET_11);
+    m_all_options.Append(&m_python_class_options,
+                         LLDB_OPT_SET_1 | LLDB_OPT_SET_2, LLDB_OPT_SET_11);
     m_all_options.Append(&m_bp_opts,
                          LLDB_OPT_SET_1 | LLDB_OPT_SET_3 | LLDB_OPT_SET_4,
                          LLDB_OPT_SET_ALL);
@@ -262,21 +245,23 @@ public:
   class CommandOptions : public OptionGroup {
   public:
     CommandOptions()
-        : OptionGroup(), m_condition(), m_filenames(), m_line_num(0), m_column(0),
-          m_func_names(), m_func_name_type_mask(eFunctionNameTypeNone),
-          m_func_regexp(), m_source_text_regexp(), m_modules(), m_load_addr(),
-          m_catch_bp(false), m_throw_bp(true), m_hardware(false),
+        : OptionGroup(), m_condition(), m_filenames(), m_line_num(0),
+          m_column(0), m_func_names(),
+          m_func_name_type_mask(eFunctionNameTypeNone), m_func_regexp(),
+          m_source_text_regexp(), m_modules(), m_load_addr(), m_catch_bp(false),
+          m_throw_bp(true), m_hardware(false),
           m_exception_language(eLanguageTypeUnknown),
           m_language(lldb::eLanguageTypeUnknown),
-          m_skip_prologue(eLazyBoolCalculate),
-          m_all_files(false), m_move_to_nearest_code(eLazyBoolCalculate) {}
+          m_skip_prologue(eLazyBoolCalculate), m_all_files(false),
+          m_move_to_nearest_code(eLazyBoolCalculate) {}
 
     ~CommandOptions() override = default;
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                           ExecutionContext *execution_context) override {
       Status error;
-      const int short_option = g_breakpoint_set_options[option_idx].short_option;
+      const int short_option =
+          g_breakpoint_set_options[option_idx].short_option;
 
       switch (short_option) {
       case 'a': {
@@ -342,7 +327,7 @@ public:
         m_func_names.push_back(option_arg);
         m_func_name_type_mask |= eFunctionNameTypeFull;
         break;
-        
+
       case 'h': {
         bool success;
         m_catch_bp = OptionArgParser::ToBoolean(option_arg, true, &success);
@@ -355,7 +340,7 @@ public:
       case 'H':
         m_hardware = true;
         break;
-        
+
       case 'K': {
         bool success;
         bool value;
@@ -436,7 +421,7 @@ public:
       case 'p':
         m_source_text_regexp.assign(option_arg);
         break;
-        
+
       case 'r':
         m_func_regexp.assign(option_arg);
         break;
@@ -635,22 +620,21 @@ protected:
 
     case eSetTypeFunctionRegexp: // Breakpoint by regular expression function
                                  // name
-      {
-        RegularExpression regexp(m_options.m_func_regexp);
-        if (llvm::Error err = regexp.GetError()) {
-          result.AppendErrorWithFormat(
-              "Function name regular expression could not be compiled: \"%s\"",
-              llvm::toString(std::move(err)).c_str());
-          result.SetStatus(eReturnStatusFailed);
-          return false;
-        }
-
-        bp_sp = target.CreateFuncRegexBreakpoint(
-            &(m_options.m_modules), &(m_options.m_filenames), std::move(regexp),
-            m_options.m_language, m_options.m_skip_prologue, internal,
-            m_options.m_hardware);
+    {
+      RegularExpression regexp(m_options.m_func_regexp);
+      if (llvm::Error err = regexp.GetError()) {
+        result.AppendErrorWithFormat(
+            "Function name regular expression could not be compiled: \"%s\"",
+            llvm::toString(std::move(err)).c_str());
+        result.SetStatus(eReturnStatusFailed);
+        return false;
       }
-      break;
+
+      bp_sp = target.CreateFuncRegexBreakpoint(
+          &(m_options.m_modules), &(m_options.m_filenames), std::move(regexp),
+          m_options.m_language, m_options.m_skip_prologue, internal,
+          m_options.m_hardware);
+    } break;
     case eSetTypeSourceRegexp: // Breakpoint by regexp on source text.
     {
       const size_t num_files = m_options.m_filenames.GetSize();
@@ -704,8 +688,7 @@ protected:
           m_python_class_options.GetStructuredData(), &error);
       if (error.Fail()) {
         result.AppendErrorWithFormat(
-            "Error setting extra exception arguments: %s",
-            error.AsCString());
+            "Error setting extra exception arguments: %s", error.AsCString());
         target.RemoveBreakpointByID(bp_sp->GetID());
         result.SetStatus(eReturnStatusFailed);
         return false;
@@ -733,12 +716,12 @@ protected:
         }
       }
     }
-    
+
     if (bp_sp) {
       Stream &output_stream = result.GetOutputStream();
       const bool show_locations = false;
       bp_sp->GetDescription(&output_stream, lldb::eDescriptionLevelInitial,
-                         show_locations);
+                            show_locations);
       if (&target == &GetDummyTarget())
         output_stream.Printf("Breakpoint set in dummy target, will get copied "
                              "into future targets.\n");
@@ -822,9 +805,9 @@ public:
     // Add the entry for the first argument for this command to the object's
     // arguments vector.
     m_arguments.push_back(arg);
-    
-    m_options.Append(&m_bp_opts, 
-                     LLDB_OPT_SET_1 | LLDB_OPT_SET_2 | LLDB_OPT_SET_3, 
+
+    m_options.Append(&m_bp_opts,
+                     LLDB_OPT_SET_1 | LLDB_OPT_SET_2 | LLDB_OPT_SET_3,
                      LLDB_OPT_SET_ALL);
     m_options.Append(&m_dummy_opts, LLDB_OPT_SET_1, LLDB_OPT_SET_ALL);
     m_options.Finalize();
@@ -859,11 +842,11 @@ protected:
             BreakpointLocation *location =
                 bp->FindLocationByID(cur_bp_id.GetLocationID()).get();
             if (location)
-              location->GetLocationOptions()
-                  ->CopyOverSetOptions(m_bp_opts.GetBreakpointOptions());
+              location->GetLocationOptions()->CopyOverSetOptions(
+                  m_bp_opts.GetBreakpointOptions());
           } else {
-            bp->GetOptions()
-                ->CopyOverSetOptions(m_bp_opts.GetBreakpointOptions());
+            bp->GetOptions()->CopyOverSetOptions(
+                m_bp_opts.GetBreakpointOptions());
           }
         }
       }
@@ -1183,7 +1166,7 @@ protected:
       for (size_t i = 0; i < num_breakpoints; ++i) {
         Breakpoint *breakpoint = breakpoints.GetBreakpointAtIndex(i).get();
         if (breakpoint->AllowList())
-          AddBreakpointDescription(&output_stream, breakpoint, 
+          AddBreakpointDescription(&output_stream, breakpoint,
                                    m_options.m_level);
       }
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -1580,62 +1563,61 @@ public:
   Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                         ExecutionContext *execution_context) override {
     Status error;
-    const int short_option 
-        = g_breakpoint_access_options[option_idx].short_option;
+    const int short_option =
+        g_breakpoint_access_options[option_idx].short_option;
 
     switch (short_option) {
-      case 'L': {
-        bool value, success;
-        value = OptionArgParser::ToBoolean(option_arg, false, &success);
-        if (success) {
-          m_permissions.SetAllowList(value);
-        } else
-          error.SetErrorStringWithFormat(
-              "invalid boolean value '%s' passed for -L option",
-              option_arg.str().c_str());
-      } break;
-      case 'A': {
-        bool value, success;
-        value = OptionArgParser::ToBoolean(option_arg, false, &success);
-        if (success) {
-          m_permissions.SetAllowDisable(value);
-        } else
-          error.SetErrorStringWithFormat(
-              "invalid boolean value '%s' passed for -L option",
-              option_arg.str().c_str());
-      } break;
-      case 'D': {
-        bool value, success;
-        value = OptionArgParser::ToBoolean(option_arg, false, &success);
-        if (success) {
-          m_permissions.SetAllowDelete(value);
-        } else
-          error.SetErrorStringWithFormat(
-              "invalid boolean value '%s' passed for -L option",
-              option_arg.str().c_str());
-      } break;
-      default:
-        llvm_unreachable("Unimplemented option");
+    case 'L': {
+      bool value, success;
+      value = OptionArgParser::ToBoolean(option_arg, false, &success);
+      if (success) {
+        m_permissions.SetAllowList(value);
+      } else
+        error.SetErrorStringWithFormat(
+            "invalid boolean value '%s' passed for -L option",
+            option_arg.str().c_str());
+    } break;
+    case 'A': {
+      bool value, success;
+      value = OptionArgParser::ToBoolean(option_arg, false, &success);
+      if (success) {
+        m_permissions.SetAllowDisable(value);
+      } else
+        error.SetErrorStringWithFormat(
+            "invalid boolean value '%s' passed for -L option",
+            option_arg.str().c_str());
+    } break;
+    case 'D': {
+      bool value, success;
+      value = OptionArgParser::ToBoolean(option_arg, false, &success);
+      if (success) {
+        m_permissions.SetAllowDelete(value);
+      } else
+        error.SetErrorStringWithFormat(
+            "invalid boolean value '%s' passed for -L option",
+            option_arg.str().c_str());
+    } break;
+    default:
+      llvm_unreachable("Unimplemented option");
     }
-    
+
     return error;
   }
-  
-  void OptionParsingStarting(ExecutionContext *execution_context) override {
-  }
-  
-  const BreakpointName::Permissions &GetPermissions() const
-  {
+
+  void OptionParsingStarting(ExecutionContext *execution_context) override {}
+
+  const BreakpointName::Permissions &GetPermissions() const {
     return m_permissions;
   }
-  BreakpointName::Permissions m_permissions;  
+  BreakpointName::Permissions m_permissions;
 };
 
 class CommandObjectBreakpointNameConfigure : public CommandObjectParsed {
 public:
   CommandObjectBreakpointNameConfigure(CommandInterpreter &interpreter)
       : CommandObjectParsed(
-            interpreter, "configure", "Configure the options for the breakpoint"
+            interpreter, "configure",
+            "Configure the options for the breakpoint"
             " name provided.  "
             "If you provide a breakpoint id, the options will be copied from "
             "the breakpoint, otherwise only the options specified will be set "
@@ -1652,14 +1634,10 @@ public:
     arg1.push_back(id_arg);
     m_arguments.push_back(arg1);
 
-    m_option_group.Append(&m_bp_opts, 
-                          LLDB_OPT_SET_ALL, 
-                          LLDB_OPT_SET_1);
-    m_option_group.Append(&m_access_options, 
-                          LLDB_OPT_SET_ALL, 
+    m_option_group.Append(&m_bp_opts, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
+    m_option_group.Append(&m_access_options, LLDB_OPT_SET_ALL,
                           LLDB_OPT_SET_ALL);
-    m_option_group.Append(&m_bp_id, 
-                          LLDB_OPT_SET_2|LLDB_OPT_SET_4, 
+    m_option_group.Append(&m_bp_id, LLDB_OPT_SET_2 | LLDB_OPT_SET_4,
                           LLDB_OPT_SET_ALL);
     m_option_group.Finalize();
   }
@@ -1686,8 +1664,7 @@ protected:
     // Make a pass through first to see that all the names are legal.
     for (auto &entry : command.entries()) {
       Status error;
-      if (!BreakpointID::StringIsBreakpointName(entry.ref(), error))
-      {
+      if (!BreakpointID::StringIsBreakpointName(entry.ref(), error)) {
         result.AppendErrorWithFormat("Invalid breakpoint name: %s - %s",
                                      entry.c_str(), error.AsCString());
         result.SetStatus(eReturnStatusFailed);
@@ -1697,14 +1674,12 @@ protected:
     // Now configure them, we already pre-checked the names so we don't need to
     // check the error:
     BreakpointSP bp_sp;
-    if (m_bp_id.m_breakpoint.OptionWasSet())
-    {
+    if (m_bp_id.m_breakpoint.OptionWasSet()) {
       lldb::break_id_t bp_id = m_bp_id.m_breakpoint.GetUInt64Value();
       bp_sp = target.GetBreakpointByID(bp_id);
-      if (!bp_sp)
-      {
+      if (!bp_sp) {
         result.AppendErrorWithFormatv("Could not find specified breakpoint {0}",
-                           bp_id);
+                                      bp_id);
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
@@ -1718,7 +1693,7 @@ protected:
         continue;
       if (m_bp_id.m_help_string.OptionWasSet())
         bp_name->SetHelp(m_bp_id.m_help_string.GetStringValue().str().c_str());
-      
+
       if (bp_sp)
         target.ConfigureBreakpointName(*bp_name, *bp_sp->GetOptions(),
                                        m_access_options.GetPermissions());
@@ -1797,7 +1772,7 @@ protected:
       }
       size_t num_valid_ids = valid_bp_ids.GetSize();
       const char *bp_name = m_name_options.m_name.GetCurrentValue();
-      Status error; // This error reports illegal names, but we've already 
+      Status error; // This error reports illegal names, but we've already
                     // checked that, so we don't need to check it again here.
       for (size_t index = 0; index < num_valid_ids; index++) {
         lldb::break_id_t bp_id =
@@ -1918,12 +1893,11 @@ protected:
     if (command.empty()) {
       target.GetBreakpointNames(name_list);
     } else {
-      for (const Args::ArgEntry &arg : command)
-      {
+      for (const Args::ArgEntry &arg : command) {
         name_list.push_back(arg.c_str());
       }
     }
-    
+
     if (name_list.empty()) {
       result.AppendMessage("No breakpoint names found.");
     } else {
@@ -1933,15 +1907,13 @@ protected:
         Status error;
         BreakpointName *bp_name =
             target.FindBreakpointName(ConstString(name), false, error);
-        if (bp_name)
-        {
+        if (bp_name) {
           StreamString s;
           result.AppendMessageWithFormat("Name: %s\n", name);
-          if (bp_name->GetDescription(&s, eDescriptionLevelFull))
-          {
+          if (bp_name->GetDescription(&s, eDescriptionLevelFull)) {
             result.AppendMessage(s.GetString());
           }
-        
+
           std::unique_lock<std::recursive_mutex> lock;
           target.GetBreakpointList().GetListMutex(lock);
 
@@ -2274,13 +2246,10 @@ CommandObjectMultiwordBreakpoint::CommandObjectMultiwordBreakpoint(
 
 CommandObjectMultiwordBreakpoint::~CommandObjectMultiwordBreakpoint() = default;
 
-void CommandObjectMultiwordBreakpoint::VerifyIDs(Args &args, Target *target,
-                                                 bool allow_locations,
-                                                 CommandReturnObject &result,
-                                                 BreakpointIDList *valid_ids,
-                                                 BreakpointName::Permissions
-                                                     ::PermissionKinds 
-                                                     purpose) {
+void CommandObjectMultiwordBreakpoint::VerifyIDs(
+    Args &args, Target *target, bool allow_locations,
+    CommandReturnObject &result, BreakpointIDList *valid_ids,
+    BreakpointName::Permissions ::PermissionKinds purpose) {
   // args can be strings representing 1). integers (for breakpoint ids)
   //                                  2). the full breakpoint & location
   //                                  canonical representation
@@ -2313,7 +2282,7 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(Args &args, Target *target,
   // breakpoint ids in the range, and shove all of those breakpoint id strings
   // into TEMP_ARGS.
 
-  BreakpointIDList::FindAndReplaceIDRanges(args, target, allow_locations, 
+  BreakpointIDList::FindAndReplaceIDRanges(args, target, allow_locations,
                                            purpose, result, temp_args);
 
   // NOW, convert the list of breakpoint id strings in TEMP_ARGS into an actual
