@@ -121,15 +121,7 @@ class ParallelRun(Run):
         pool = multiprocessing.Pool(self.workers, lit.worker.initialize,
                                     (self.lit_config, semaphores))
 
-        # Install a console-control signal handler on Windows.
-        if lit.util.win32api is not None:
-            def console_ctrl_handler(type):
-                print('\nCtrl-C detected, terminating.')
-                pool.terminate()
-                pool.join()
-                lit.util.abort_now()
-                return True
-            lit.util.win32api.SetConsoleCtrlHandler(console_ctrl_handler, True)
+        self._install_win32_signal_handler(pool)
 
         async_results = [
             pool.apply_async(lit.worker.execute, args=[test],
@@ -148,6 +140,7 @@ class ParallelRun(Run):
             if self.hit_max_failures:
                 pool.terminate()
                 break
+        pool.join()
 
     # TODO(yln): interferes with progress bar
     # Some tests use threads internally, and at least on Linux each of these
@@ -171,3 +164,13 @@ class ParallelRun(Run):
                                         (soft_limit, desired_limit))
         except Exception as ex:
             self.lit_config.warning('Failed to raise process limit: %s' % ex)
+
+    def _install_win32_signal_handler(self, pool):
+        if lit.util.win32api is not None:
+            def console_ctrl_handler(type):
+                print('\nCtrl-C detected, terminating.')
+                pool.terminate()
+                pool.join()
+                lit.util.abort_now()
+                return True
+            lit.util.win32api.SetConsoleCtrlHandler(console_ctrl_handler, True)
