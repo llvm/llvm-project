@@ -3,7 +3,7 @@
 --- !minidump
 Streams:
   - Type:            SystemInfo
-    Processor Arch:  ARM64
+    Processor Arch:  BP_ARM64
     Platform ID:     Linux
     CSD Version:     Linux 3.13.0-91-generic
     CPU:
@@ -92,7 +92,7 @@ Streams:
 # CHECK:      --- !minidump
 # CHECK-NEXT: Streams:
 # CHECK-NEXT:   - Type:            SystemInfo
-# CHECK-NEXT:     Processor Arch:  ARM64
+# CHECK-NEXT:     Processor Arch:  BP_ARM64
 # CHECK-NEXT:     Platform ID:     Linux
 # CHECK-NEXT:     CSD Version:     Linux 3.13.0-91-generic
 # CHECK-NEXT:     CPU:
