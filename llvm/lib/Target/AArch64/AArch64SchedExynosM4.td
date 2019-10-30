@@ -156,8 +156,10 @@ def M4WriteAU : SchedWriteVariant<[SchedVar<IsCopyIdiomPred,   [M4WriteZ0]>,
                                    SchedVar<ExynosArithPred,   [M4WriteA1]>,
                                    SchedVar<ExynosLogicExPred, [M4WriteA1]>,
                                    SchedVar<NoSchedPred,       [M4WriteAA]>]>;
-def M4WriteAV : SchedWriteVariant<[SchedVar<ExynosResetPred, [M4WriteZ0]>,
-                                   SchedVar<NoSchedPred,     [M4WriteAA]>]>;
+def M4WriteAV : SchedWriteVariant<[SchedVar<ExynosResetPred,   [M4WriteZ0]>,
+                                   SchedVar<ExynosArithPred,   [M4WriteA1]>,
+                                   SchedVar<ExynosLogicExPred, [M4WriteA1]>,
+                                   SchedVar<NoSchedPred,       [M4WriteAA]>]>;
 def M4WriteAX : SchedWriteVariant<[SchedVar<ExynosArithPred,   [M4WriteA1]>,
                                    SchedVar<ExynosLogicExPred, [M4WriteA1]>,
                                    SchedVar<NoSchedPred,       [M4WriteAA]>]>;
