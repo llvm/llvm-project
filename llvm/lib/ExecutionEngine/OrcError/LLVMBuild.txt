@@ -1,4 +1,4 @@
-;===- ./lib/ExecutionEngine/Orc/LLVMBuild.txt ----------------*- Conf -*--===;
+;===- ./lib/ExecutionEngine/OrcError/LLVMBuild.txt -------------*- Conf -*--===;
 ;
 ; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ; See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,6 @@
 
 [component_0]
 type = Library
-name = OrcJIT
+name = OrcError
 parent = ExecutionEngine
-required_libraries = Core ExecutionEngine JITLink Object OrcError MC Passes
-                     RuntimeDyld Support Target TransformUtils
+required_libraries = Support

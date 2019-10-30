@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/RPCUtils.h"
+#include "llvm/ExecutionEngine/Orc/RPC/RPCUtils.h"
 #include "QueueChannel.h"
 #include "gtest/gtest.h"
 

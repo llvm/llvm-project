@@ -9,7 +9,7 @@
 #ifndef LLVM_UNITTESTS_EXECUTIONENGINE_ORC_QUEUECHANNEL_H
 #define LLVM_UNITTESTS_EXECUTIONENGINE_ORC_QUEUECHANNEL_H
 
-#include "llvm/ExecutionEngine/Orc/RawByteChannel.h"
+#include "llvm/ExecutionEngine/Orc/RPC/RawByteChannel.h"
 #include "llvm/Support/Error.h"
 
 #include <atomic>
