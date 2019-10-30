@@ -1,4 +1,4 @@
-//===--------------- RPCUtils.cpp - RPCUtils implementation ---------------===//
+//===--------------- RPCError.cpp - RPCERror implementation ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// RPCUtils implementation.
+// RPC Error type implmentations.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/RPCUtils.h"
+#include "llvm/ExecutionEngine/Orc/RPC/RPCUtils.h"
 
 char llvm::orc::rpc::RPCFatalError::ID = 0;
 char llvm::orc::rpc::ConnectionClosed::ID = 0;
