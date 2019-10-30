@@ -100,7 +100,9 @@ void UseNodiscardCheck::registerMatchers(MatchFinder *Finder) {
       cxxMethodDecl(
           allOf(isConst(), isDefinitionOrInline(),
                 unless(anyOf(
-                    returns(voidType()), isNoReturn(), isOverloadedOperator(),
+                    returns(voidType()),
+                    returns(hasDeclaration(decl(hasAttr(clang::attr::WarnUnusedResult)))),
+                    isNoReturn(), isOverloadedOperator(),
                     isVariadic(), hasTemplateReturnType(),
                     hasClassMutableFields(), isConversionOperator(),
                     hasAttr(clang::attr::WarnUnusedResult),
