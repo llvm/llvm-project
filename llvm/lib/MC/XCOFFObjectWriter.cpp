@@ -158,15 +158,17 @@ class XCOFFObjectWriter : public MCObjectWriter {
   // the sections. Should have one for each set of csects that get mapped into
   // the same section and get handled in a 'similar' way.
   CsectGroup ProgramCodeCsects{CsectGroup::LabelDefSupported, {}};
+  CsectGroup DataCsects{CsectGroup::LabelDefSupported, {}};
   CsectGroup BSSCsects{CsectGroup::LabelDefUnsupported, {}};
 
   // The Predefined sections.
   Section Text;
+  Section Data;
   Section BSS;
 
   // All the XCOFF sections, in the order they will appear in the section header
   // table.
-  std::array<Section *const, 2> Sections{{&Text, &BSS}};
+  std::array<Section *const, 3> Sections{{&Text, &Data, &BSS}};
 
   CsectGroup &getCsectGroup(const MCSectionXCOFF *MCSec);
 
@@ -224,6 +226,8 @@ XCOFFObjectWriter::XCOFFObjectWriter(
       Strings(StringTableBuilder::XCOFF),
       Text(".text", XCOFF::STYP_TEXT, /* IsVirtual */ false,
            CsectGroups{&ProgramCodeCsects}),
+      Data(".data", XCOFF::STYP_DATA, /* IsVirtual */ false,
+           CsectGroups{&DataCsects}),
       BSS(".bss", XCOFF::STYP_BSS, /* IsVirtual */ true,
           CsectGroups{&BSSCsects}) {}
 
@@ -250,6 +254,9 @@ CsectGroup &XCOFFObjectWriter::getCsectGroup(const MCSectionXCOFF *MCSec) {
   case XCOFF::XMC_RW:
     if (XCOFF::XTY_CM == MCSec->getCSectType())
       return BSSCsects;
+
+    if (XCOFF::XTY_SD == MCSec->getCSectType())
+      return DataCsects;
 
     report_fatal_error("Unhandled mapping of read-write csect to section.");
   case XCOFF::XMC_BS:
