@@ -90,6 +90,7 @@ private:
 class Stencil {
 public:
   Stencil() = default;
+  Stencil(std::vector<StencilPart> Parts) : Parts(std::move(Parts)) {}
 
   /// Composes a stencil from a series of parts.
   template <typename... Ts> static Stencil cat(Ts &&... Parts) {
@@ -139,6 +140,12 @@ private:
 /// Convenience wrapper for Stencil::cat that can be imported with a using decl.
 template <typename... Ts> Stencil cat(Ts &&... Parts) {
   return Stencil::cat(std::forward<Ts>(Parts)...);
+}
+/// Convenience wrapper for Stencil constructor of the same type. Declaration
+/// outside of the class supports transition of `Stencil` type to an alias
+/// rather than a class.
+inline Stencil catVector(std::vector<StencilPart> Parts) {
+  return Stencil(std::move(Parts));
 }
 
 /// \returns exactly the text provided.
