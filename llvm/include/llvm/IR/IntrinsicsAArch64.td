@@ -851,6 +851,12 @@ def int_aarch64_sve_uunpklo   : AdvSIMD_SVE_Unpack_Intrinsic;
 def int_aarch64_sve_fcvtzs_i32f16 : Builtin_SVCVT<"svcvt_s32_f16_m", llvm_nxv4i32_ty, llvm_nxv8f16_ty>;
 
 //
+// Floating-point arithmetic
+//
+def int_aarch64_sve_frecps_x: AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_frsqrts_x: AdvSIMD_2VectorArg_Intrinsic;
+
+//
 // Predicate operations
 //
 
