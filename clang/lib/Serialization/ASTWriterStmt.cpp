@@ -2267,6 +2267,12 @@ void ASTStmtWriter::VisitOMPParallelMasterTaskLoopDirective(
   Code = serialization::STMT_OMP_PARALLEL_MASTER_TASKLOOP_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPParallelMasterTaskLoopSimdDirective(
+    OMPParallelMasterTaskLoopSimdDirective *D) {
+  VisitOMPLoopDirective(D);
+  Code = serialization::STMT_OMP_PARALLEL_MASTER_TASKLOOP_SIMD_DIRECTIVE;
+}
+
 void ASTStmtWriter::VisitOMPDistributeDirective(OMPDistributeDirective *D) {
   VisitOMPLoopDirective(D);
   Code = serialization::STMT_OMP_DISTRIBUTE_DIRECTIVE;
