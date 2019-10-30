@@ -1383,6 +1383,10 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     ScoreBrackets.dump();
   });
 
+  // Assume VCCZ is correct at basic block boundaries, unless and until we need
+  // to handle cases where that is not true.
+  bool VCCZCorrect = true;
+
   // Walk over the instructions.
   MachineInstr *OldWaitcntInstr = nullptr;
 
@@ -1402,13 +1406,26 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       continue;
     }
 
-    bool VCCZBugWorkAround = false;
+    // We might need to restore vccz to its correct value for either of two
+    // different reasons; see ST->hasReadVCCZBug() and
+    // ST->partialVCCWritesUpdateVCCZ().
+    bool RestoreVCCZ = false;
     if (readsVCCZ(Inst)) {
-      if (ScoreBrackets.getScoreLB(LGKM_CNT) <
-              ScoreBrackets.getScoreUB(LGKM_CNT) &&
-          ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
-        if (ST->hasReadVCCZBug())
-          VCCZBugWorkAround = true;
+      if (!VCCZCorrect)
+        RestoreVCCZ = true;
+      else if (ST->hasReadVCCZBug()) {
+        // There is a hardware bug on CI/SI where SMRD instruction may corrupt
+        // vccz bit, so when we detect that an instruction may read from a
+        // corrupt vccz bit, we need to:
+        // 1. Insert s_waitcnt lgkm(0) to wait for all outstanding SMRD
+        //    operations to complete.
+        // 2. Restore the correct value of vccz by writing the current value
+        //    of vcc back to vcc.
+        if (ScoreBrackets.getScoreLB(LGKM_CNT) <
+            ScoreBrackets.getScoreUB(LGKM_CNT) &&
+            ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
+          RestoreVCCZ = true;
+        }
       }
     }
 
@@ -1417,6 +1434,16 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
         const Value *Ptr = Memop->getValue();
         SLoadAddresses.insert(std::make_pair(Ptr, Inst.getParent()));
       }
+    }
+
+    if (!ST->partialVCCWritesUpdateVCCZ()) {
+      // Up to gfx9, writes to vcc_lo and vcc_hi don't update vccz.
+      // Writes to vcc will fix it.
+      if (Inst.definesRegister(AMDGPU::VCC_LO) ||
+          Inst.definesRegister(AMDGPU::VCC_HI))
+        VCCZCorrect = false;
+      else if (Inst.definesRegister(AMDGPU::VCC))
+        VCCZCorrect = true;
     }
 
     // Generate an s_waitcnt instruction to be placed before
@@ -1444,7 +1471,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     // TODO: Remove this work-around after fixing the scheduler and enable the
     // assert above.
-    if (VCCZBugWorkAround) {
+    if (RestoreVCCZ) {
       // Restore the vccz bit.  Any time a value is written to vcc, the vcc
       // bit is updated, so we can restore the bit by reading the value of
       // vcc and then writing it back to the register.
@@ -1452,6 +1479,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
               TII->get(ST->isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64),
               TRI->getVCC())
           .addReg(TRI->getVCC());
+      VCCZCorrect = true;
       Modified = true;
     }
 
