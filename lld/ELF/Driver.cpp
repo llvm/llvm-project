@@ -900,6 +900,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->mipsGotSize = args::getInteger(args, OPT_mips_got_size, 0xfff0);
   config->mergeArmExidx =
       args.hasFlag(OPT_merge_exidx_entries, OPT_no_merge_exidx_entries, true);
+  config->mmapOutputFile =
+      args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, true);
   config->nmagic = args.hasFlag(OPT_nmagic, OPT_no_nmagic, false);
   config->noinhibitExec = args.hasArg(OPT_noinhibit_exec);
   config->nostdlib = args.hasArg(OPT_nostdlib);
