@@ -1817,9 +1817,9 @@ def: Pat<(i1 (seteq (and I64:$Rs, IsPow2_64L:$u6), 0)),
 def: Pat<(i1 (seteq (and I64:$Rs, IsPow2_64H:$u6), 0)),
          (S4_ntstbit_i (HiReg $Rs), (UDEC32 (i32 (Log2_64 $u6))))>;
 def: Pat<(i1 (setne (and I64:$Rs, IsPow2_64L:$u6), 0)),
-         (S2_tstbit_i (LoReg $Rs), (Log2_32 imm:$u6))>;
+         (S2_tstbit_i (LoReg $Rs), (Log2_64 imm:$u6))>;
 def: Pat<(i1 (setne (and I64:$Rs, IsPow2_64H:$u6), 0)),
-         (S2_tstbit_i (HiReg $Rs), (UDEC32 (i32 (Log2_32 imm:$u6))))>;
+         (S2_tstbit_i (HiReg $Rs), (UDEC32 (i32 (Log2_64 imm:$u6))))>;
 
 // Do not increase complexity of these patterns. In the DAG, "cmp i8" may be
 // represented as a compare against "value & 0xFF", which is an exact match
