@@ -30,8 +30,8 @@ define i32* @test3_1(i32* dereferenceable(8) %0) local_unnamed_addr {
 }
 
 define i32* @test3_2(i32* dereferenceable_or_null(32) %0) local_unnamed_addr {
-; FIXME: Argument should be mark dereferenceable because of GEP `inbounds`.
-; ATTRIBUTOR: define nonnull dereferenceable(16) i32* @test3_2(i32* readnone dereferenceable_or_null(32) "no-capture-maybe-returned" %0)
+; FIXME: We should not have both deref(x) and deref_or_null(y) with x >= y.
+; ATTRIBUTOR: define nonnull dereferenceable(16) i32* @test3_2(i32* nonnull readnone dereferenceable(32) dereferenceable_or_null(32) "no-capture-maybe-returned" %0)
   %ret = getelementptr inbounds i32, i32* %0, i64 4
   ret i32* %ret
 }
@@ -196,8 +196,8 @@ define i32* @f7_3() {
 }
 
 define i32* @test_for_minus_index(i32* %p) {
-; FIXME: This should be define nonnull dereferenceable(8) i32* @test_for_minus_index(i32* nonnull %p)
-; ATTRIBUTOR: define nonnull dereferenceable(8) i32* @test_for_minus_index(i32* writeonly "no-capture-maybe-returned" %p)
+; FIXME: This should have a return dereferenceable(8) but we need to make sure it will work in loops as well.
+; ATTRIBUTOR: define nonnull i32* @test_for_minus_index(i32* nonnull writeonly "no-capture-maybe-returned" %p)
   %q = getelementptr inbounds i32, i32* %p, i32 -2
   store i32 1, i32* %q
   ret i32* %q
