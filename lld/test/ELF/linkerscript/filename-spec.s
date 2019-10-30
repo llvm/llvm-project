@@ -25,18 +25,19 @@
 # RUN: ld.lld -o %t4 --script %t4.script %tx.o %ty.o
 # RUN: llvm-objdump -s %t4 | FileCheck --check-prefix=SECONDFIRST %s
 
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %T/filename-spec1.o
+# RUN: rm -rf %t.dir && mkdir -p %t.dir
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.dir/filename-spec1.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux \
-# RUN:   %p/Inputs/filename-spec.s -o %T/filename-spec2.o
+# RUN:   %p/Inputs/filename-spec.s -o %t.dir/filename-spec2.o
 
-# RUN: echo "SECTIONS{.foo :{ %/T/filename-spec2.o(.foo) %/T/filename-spec1.o(.foo) }}" > %t5.script
+# RUN: echo "SECTIONS{.foo :{ %/t.dir/filename-spec2.o(.foo) %/t.dir/filename-spec1.o(.foo) }}" > %t5.script
 # RUN: ld.lld -o %t5 --script %t5.script \
-# RUN:   %/T/filename-spec1.o %/T/filename-spec2.o
+# RUN:   %/t.dir/filename-spec1.o %/t.dir/filename-spec2.o
 # RUN: llvm-objdump -s %t5 | FileCheck --check-prefix=SECONDFIRST %s
 
-# RUN: echo "SECTIONS{.foo :{ %/T/filename-spec1.o(.foo) %/T/filename-spec2.o(.foo) }}" > %t6.script
+# RUN: echo "SECTIONS{.foo :{ %/t.dir/filename-spec1.o(.foo) %/t.dir/filename-spec2.o(.foo) }}" > %t6.script
 # RUN: ld.lld -o %t6 --script %t6.script \
-# RUN:   %/T/filename-spec1.o %/T/filename-spec2.o
+# RUN:   %/t.dir/filename-spec1.o %/t.dir/filename-spec2.o
 # RUN: llvm-objdump -s %t6 | FileCheck --check-prefix=FIRSTY %s
 
 # RUN: mkdir -p %t.testdir1 %t.testdir2
