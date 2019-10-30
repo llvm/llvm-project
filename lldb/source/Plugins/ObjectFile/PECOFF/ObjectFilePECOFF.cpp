@@ -797,6 +797,7 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
         /*file_offset*/ 0, m_coff_header_opt.header_size,
         m_coff_header_opt.sect_alignment,
         /*flags*/ 0);
+    header_sp->SetPermissions(ePermissionsReadable);
     m_sections_up->AddSection(header_sp);
     unified_section_list.AddSection(header_sp);
 
@@ -918,6 +919,15 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
               .size, // Size in bytes of this section as found in the file
           m_coff_header_opt.sect_alignment, // Section alignment
           m_sect_headers[idx].flags));      // Flags for this section
+
+      uint32_t permissions = 0;
+      if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_MEM_EXECUTE)
+        permissions |= ePermissionsExecutable;
+      if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_MEM_READ)
+        permissions |= ePermissionsReadable;
+      if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_MEM_WRITE)
+        permissions |= ePermissionsWritable;
+      section_sp->SetPermissions(permissions);
 
       m_sections_up->AddSection(section_sp);
       unified_section_list.AddSection(section_sp);
