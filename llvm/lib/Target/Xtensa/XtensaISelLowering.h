@@ -34,7 +34,14 @@ enum {
 
   // Wraps a TargetGlobalAddress that should be loaded using PC-relative
   // accesses.  Operand 0 is the address.
-  PCREL_WRAPPER
+  PCREL_WRAPPER,
+
+  // Selects between operand 0 and operand 1.  Operand 2 is the
+  // mask of condition-code values for which operand 0 should be
+  // chosen over operand 1; it has the same form as BR_CCMASK.
+  // Operand 3 is the flag operand.
+  SELECT,
+  SELECT_CC
 };
 }
 
@@ -60,12 +67,23 @@ public:
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
 
+  SDValue lowerSETCC(SDValue Op, SelectionDAG &DAG)const;
+  SDValue lowerSELECT_CC(SDValue Op, SelectionDAG &DAG)const;
+  
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *BB) const override;
+
 private:
   const XtensaSubtarget &Subtarget;
 
   SDValue getAddrPCRel(SDValue Op, SelectionDAG &DAG) const;
 
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool isVarArg) const;
+
+  // Implement EmitInstrWithCustomInserter for individual operation types.
+  MachineBasicBlock *emitSelectCC(MachineInstr &MI,
+                                  MachineBasicBlock *BB) const;
 };
 
 } // end namespace llvm

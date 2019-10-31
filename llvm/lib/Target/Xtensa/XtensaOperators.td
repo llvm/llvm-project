@@ -18,7 +18,10 @@ def SDT_XtensaCall                : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
 def SDT_XtensaWrapPtr             : SDTypeProfile<1, 1,
                                                  [SDTCisSameAs<0, 1>,
                                                   SDTCisPtrTy<0>]>;
-
+def SDT_XtensaSelectCC            : SDTypeProfile<1, 5,
+                                                 [SDTCisSameAs<0, 1>,
+                                                  SDTCisSameAs<2, 3>, 
+                                                  SDTCisVT<5, i32>]>;
 //===-------------------------------------------------------------------===//
 // Node definitions
 //===-------------------------------------------------------------------===//
@@ -37,4 +40,8 @@ def Xtensa_callseq_end  : SDNode<"ISD::CALLSEQ_END",   SDT_XtensaCallSeqEnd,
                                  SDNPOutGlue]>;
 
 def Xtensa_pcrel_wrapper: SDNode<"XtensaISD::PCREL_WRAPPER", SDT_XtensaWrapPtr, []>;
+
+def Xtensa_select : SDNode<"XtensaISD::SELECT", SDTSelect>;
+def Xtensa_select_cc: SDNode<"XtensaISD::SELECT_CC", SDT_XtensaSelectCC,
+                            [SDNPInGlue]>;
 
