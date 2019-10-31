@@ -1,6 +1,6 @@
 # The LLVM Compiler Infrastructure
 
-This directory and its subdirectories contain source code for LLVM,
+This directory and its subdirectories contain the source code for LLVM,
 a toolkit for the construction of highly optimized compilers,
 optimizers, and runtime environments.
 
@@ -15,8 +15,7 @@ Welcome to the LLVM project!
 The LLVM project has multiple components. The core of the project is
 itself called "LLVM". This contains all of the tools, libraries, and header
 files needed to process intermediate representations and converts it into
-object files.  Tools include an assembler, disassembler, bitcode analyzer, and
-bitcode optimizer.  It also contains basic regression tests.
+object files.  Tools include an assembler, disassembler, bitcode analyzer, bitcode optimizer and also basic regression tests.
 
 C-like languages use the [Clang](http://clang.llvm.org/) front end.  This
 component compiles C, C++, Objective C, and Objective C++ code into LLVM bitcode
