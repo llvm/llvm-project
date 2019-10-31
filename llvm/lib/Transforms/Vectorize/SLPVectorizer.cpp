@@ -2666,24 +2666,74 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     }
     case Instruction::Store: {
       // Check if the stores are consecutive or if we need to swizzle them.
-      for (unsigned i = 0, e = VL.size() - 1; i < e; ++i)
-        if (!isConsecutiveAccess(VL[i], VL[i + 1], *DL, *SE)) {
+      llvm::Type *ScalarTy = cast<StoreInst>(VL0)->getValueOperand()->getType();
+      // Make sure all stores in the bundle are simple - we can't vectorize
+      // atomic or volatile stores.
+      SmallVector<Value *, 4> PointerOps(VL.size());
+      ValueList Operands(VL.size());
+      auto POIter = PointerOps.begin();
+      auto OIter = Operands.begin();
+      for (Value *V : VL) {
+        auto *SI = cast<StoreInst>(V);
+        if (!SI->isSimple()) {
           BS.cancelScheduling(VL, VL0);
           newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx,
                        ReuseShuffleIndicies);
-          LLVM_DEBUG(dbgs() << "SLP: Non-consecutive store.\n");
+          LLVM_DEBUG(dbgs() << "SLP: Gathering non-simple stores.\n");
           return;
         }
+        *POIter = SI->getPointerOperand();
+        *OIter = SI->getValueOperand();
+        ++POIter;
+        ++OIter;
+      }
 
-      TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
-                                   ReuseShuffleIndicies);
-      LLVM_DEBUG(dbgs() << "SLP: added a vector of stores.\n");
+      OrdersType CurrentOrder;
+      // Check the order of pointer operands.
+      if (llvm::sortPtrAccesses(PointerOps, *DL, *SE, CurrentOrder)) {
+        Value *Ptr0;
+        Value *PtrN;
+        if (CurrentOrder.empty()) {
+          Ptr0 = PointerOps.front();
+          PtrN = PointerOps.back();
+        } else {
+          Ptr0 = PointerOps[CurrentOrder.front()];
+          PtrN = PointerOps[CurrentOrder.back()];
+        }
+        const SCEV *Scev0 = SE->getSCEV(Ptr0);
+        const SCEV *ScevN = SE->getSCEV(PtrN);
+        const auto *Diff =
+            dyn_cast<SCEVConstant>(SE->getMinusSCEV(ScevN, Scev0));
+        uint64_t Size = DL->getTypeAllocSize(ScalarTy);
+        // Check that the sorted pointer operands are consecutive.
+        if (Diff && Diff->getAPInt() == (VL.size() - 1) * Size) {
+          if (CurrentOrder.empty()) {
+            // Original stores are consecutive and does not require reordering.
+            ++NumOpsWantToKeepOriginalOrder;
+            TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S,
+                                         UserTreeIdx, ReuseShuffleIndicies);
+            TE->setOperandsInOrder();
+            buildTree_rec(Operands, Depth + 1, {TE, 0});
+            LLVM_DEBUG(dbgs() << "SLP: added a vector of stores.\n");
+          } else {
+            // Need to reorder.
+            auto I = NumOpsWantToKeepOrder.try_emplace(CurrentOrder).first;
+            ++(I->getSecond());
+            TreeEntry *TE =
+                newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
+                             ReuseShuffleIndicies, I->getFirst());
+            TE->setOperandsInOrder();
+            buildTree_rec(Operands, Depth + 1, {TE, 0});
+            LLVM_DEBUG(dbgs() << "SLP: added a vector of jumbled stores.\n");
+          }
+          return;
+        }
+      }
 
-      ValueList Operands;
-      for (Value *V : VL)
-        Operands.push_back(cast<Instruction>(V)->getOperand(0));
-      TE->setOperandsInOrder();
-      buildTree_rec(Operands, Depth + 1, {TE, 0});
+      BS.cancelScheduling(VL, VL0);
+      newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx,
+                   ReuseShuffleIndicies);
+      LLVM_DEBUG(dbgs() << "SLP: Non-consecutive store.\n");
       return;
     }
     case Instruction::Call: {
@@ -3181,15 +3231,22 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     }
     case Instruction::Store: {
       // We know that we can merge the stores. Calculate the cost.
-      MaybeAlign alignment(cast<StoreInst>(VL0)->getAlignment());
+      bool IsReorder = !E->ReorderIndices.empty();
+      auto *SI =
+          cast<StoreInst>(IsReorder ? VL[E->ReorderIndices.front()] : VL0);
+      MaybeAlign Alignment(SI->getAlignment());
       int ScalarEltCost =
-          TTI->getMemoryOpCost(Instruction::Store, ScalarTy, alignment, 0, VL0);
-      if (NeedToShuffleReuses) {
-        ReuseShuffleCost -= (ReuseShuffleNumbers - VL.size()) * ScalarEltCost;
-      }
+          TTI->getMemoryOpCost(Instruction::Store, ScalarTy, Alignment, 0, VL0);
+      if (NeedToShuffleReuses)
+        ReuseShuffleCost = -(ReuseShuffleNumbers - VL.size()) * ScalarEltCost;
       int ScalarStCost = VecTy->getNumElements() * ScalarEltCost;
-      int VecStCost =
-          TTI->getMemoryOpCost(Instruction::Store, VecTy, alignment, 0, VL0);
+      int VecStCost = TTI->getMemoryOpCost(Instruction::Store,
+                                           VecTy, Alignment, 0, VL0);
+      if (IsReorder) {
+        // TODO: Merge this shuffle with the ReuseShuffleCost.
+        VecStCost += TTI->getShuffleCost(
+            TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
+      }
       return ReuseShuffleCost + VecStCost - ScalarStCost;
     }
     case Instruction::Call: {
@@ -4051,15 +4108,25 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       return V;
     }
     case Instruction::Store: {
-      StoreInst *SI = cast<StoreInst>(VL0);
+      bool IsReorder = !E->ReorderIndices.empty();
+      auto *SI = cast<StoreInst>(
+          IsReorder ? E->Scalars[E->ReorderIndices.front()] : VL0);
       unsigned Alignment = SI->getAlignment();
       unsigned AS = SI->getPointerAddressSpace();
 
       setInsertPointAfterBundle(E);
 
       Value *VecValue = vectorizeTree(E->getOperand(0));
+      if (IsReorder) {
+        OrdersType Mask;
+        inversePermutation(E->ReorderIndices, Mask);
+        VecValue = Builder.CreateShuffleVector(
+            VecValue, UndefValue::get(VecValue->getType()), E->ReorderIndices,
+            "reorder_shuffle");
+      }
       Value *ScalarPtr = SI->getPointerOperand();
-      Value *VecPtr = Builder.CreateBitCast(ScalarPtr, VecTy->getPointerTo(AS));
+      Value *VecPtr = Builder.CreateBitCast(
+          ScalarPtr, VecValue->getType()->getPointerTo(AS));
       StoreInst *ST = Builder.CreateStore(VecValue, VecPtr);
 
       // The pointer operand uses an in-tree scalar, so add the new BitCast to
@@ -5347,6 +5414,15 @@ bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
                     << "\n");
 
   R.buildTree(Chain);
+  Optional<ArrayRef<unsigned>> Order = R.bestOrder();
+  // TODO: Handle orders of size less than number of elements in the vector.
+  if (Order && Order->size() == Chain.size()) {
+    // TODO: reorder tree nodes without tree rebuilding.
+    SmallVector<Value *, 4> ReorderedOps(Chain.rbegin(), Chain.rend());
+    llvm::transform(*Order, ReorderedOps.begin(),
+                    [Chain](const unsigned Idx) { return Chain[Idx]; });
+    R.buildTree(ReorderedOps);
+  }
   if (R.isTreeTinyAndNotFullyVectorizable())
     return false;
 
