@@ -246,7 +246,7 @@ template <> struct MappingTraits<const InterfaceFile *> {
     NormalizedTBD(IO &IO, const InterfaceFile *&File) {
       Architectures = File->getArchitectures();
       UUIDs = File->uuids();
-      Platforms = File->getPlatforms();
+      Platform = File->getPlatform();
       InstallName = File->getInstallName();
       CurrentVersion = PackedVersion(File->getCurrentVersion());
       CompatibilityVersion = PackedVersion(File->getCompatibilityVersion());
@@ -263,10 +263,7 @@ template <> struct MappingTraits<const InterfaceFile *> {
       if (File->isInstallAPI())
         Flags |= TBDFlags::InstallAPI;
 
-      for (const auto &Iter : File->umbrellas()) {
-        ParentUmbrella = Iter.second;
-        break;
-      }
+      ParentUmbrella = File->getParentUmbrella();
 
       std::set<ArchitectureSet> ArchSet;
       for (const auto &Library : File->allowableClients())
@@ -399,17 +396,6 @@ template <> struct MappingTraits<const InterfaceFile *> {
       }
     }
 
-    TargetList synthesizeTargets(ArchitectureSet Architectures,
-                                 const PlatformSet &Platforms) {
-      TargetList Targets;
-
-      for (auto Platform : Platforms) {
-        for (const auto &&Architecture : Architectures)
-          Targets.emplace_back(Architecture, Platform);
-      }
-      return Targets;
-    }
-
     const InterfaceFile *denormalize(IO &IO) {
       auto Ctx = reinterpret_cast<TextAPIContext *>(IO.getContext());
       assert(Ctx);
@@ -417,16 +403,16 @@ template <> struct MappingTraits<const InterfaceFile *> {
       auto *File = new InterfaceFile;
       File->setPath(Ctx->Path);
       File->setFileType(Ctx->FileKind);
-      File->addTargets(synthesizeTargets(Architectures, Platforms));
       for (auto &ID : UUIDs)
         File->addUUID(ID.first, ID.second);
+      File->setPlatform(Platform);
+      File->setArchitectures(Architectures);
       File->setInstallName(InstallName);
       File->setCurrentVersion(CurrentVersion);
       File->setCompatibilityVersion(CompatibilityVersion);
       File->setSwiftABIVersion(SwiftABIVersion);
       File->setObjCConstraint(ObjCConstraint);
-      for (const auto &Target : File->targets())
-        File->addParentUmbrella(Target, ParentUmbrella);
+      File->setParentUmbrella(ParentUmbrella);
 
       if (Ctx->FileKind == FileType::TBD_V1) {
         File->setTwoLevelNamespace();
@@ -439,80 +425,76 @@ template <> struct MappingTraits<const InterfaceFile *> {
       }
 
       for (const auto &Section : Exports) {
-        const auto Targets =
-            synthesizeTargets(Section.Architectures, Platforms);
-
-        for (const auto &Lib : Section.AllowableClients)
-          for (const auto &Target : Targets)
-            File->addAllowableClient(Lib, Target);
-
-        for (const auto &Lib : Section.ReexportedLibraries)
-          for (const auto &Target : Targets)
-            File->addReexportedLibrary(Lib, Target);
+        for (const auto &Library : Section.AllowableClients)
+          File->addAllowableClient(Library, Section.Architectures);
+        for (const auto &Library : Section.ReexportedLibraries)
+          File->addReexportedLibrary(Library, Section.Architectures);
 
         for (const auto &Symbol : Section.Symbols) {
           if (Ctx->FileKind != FileType::TBD_V3 &&
               Symbol.value.startswith("_OBJC_EHTYPE_$_"))
             File->addSymbol(SymbolKind::ObjectiveCClassEHType,
-                            Symbol.value.drop_front(15), Targets);
+                            Symbol.value.drop_front(15), Section.Architectures);
           else
-            File->addSymbol(SymbolKind::GlobalSymbol, Symbol, Targets);
+            File->addSymbol(SymbolKind::GlobalSymbol, Symbol,
+                            Section.Architectures);
         }
         for (auto &Symbol : Section.Classes) {
           auto Name = Symbol.value;
           if (Ctx->FileKind != FileType::TBD_V3)
             Name = Name.drop_front();
-          File->addSymbol(SymbolKind::ObjectiveCClass, Name, Targets);
+          File->addSymbol(SymbolKind::ObjectiveCClass, Name,
+                          Section.Architectures);
         }
         for (auto &Symbol : Section.ClassEHs)
-          File->addSymbol(SymbolKind::ObjectiveCClassEHType, Symbol, Targets);
+          File->addSymbol(SymbolKind::ObjectiveCClassEHType, Symbol,
+                          Section.Architectures);
         for (auto &Symbol : Section.IVars) {
           auto Name = Symbol.value;
           if (Ctx->FileKind != FileType::TBD_V3)
             Name = Name.drop_front();
           File->addSymbol(SymbolKind::ObjectiveCInstanceVariable, Name,
-                          Targets);
+                          Section.Architectures);
         }
         for (auto &Symbol : Section.WeakDefSymbols)
-          File->addSymbol(SymbolKind::GlobalSymbol, Symbol, Targets,
-                          SymbolFlags::WeakDefined);
+          File->addSymbol(SymbolKind::GlobalSymbol, Symbol,
+                          Section.Architectures, SymbolFlags::WeakDefined);
         for (auto &Symbol : Section.TLVSymbols)
-          File->addSymbol(SymbolKind::GlobalSymbol, Symbol, Targets,
-                          SymbolFlags::ThreadLocalValue);
+          File->addSymbol(SymbolKind::GlobalSymbol, Symbol,
+                          Section.Architectures, SymbolFlags::ThreadLocalValue);
       }
 
       for (const auto &Section : Undefineds) {
-        const auto Targets =
-            synthesizeTargets(Section.Architectures, Platforms);
         for (auto &Symbol : Section.Symbols) {
           if (Ctx->FileKind != FileType::TBD_V3 &&
               Symbol.value.startswith("_OBJC_EHTYPE_$_"))
             File->addSymbol(SymbolKind::ObjectiveCClassEHType,
-                            Symbol.value.drop_front(15), Targets,
+                            Symbol.value.drop_front(15), Section.Architectures,
                             SymbolFlags::Undefined);
           else
-            File->addSymbol(SymbolKind::GlobalSymbol, Symbol, Targets,
-                            SymbolFlags::Undefined);
+            File->addSymbol(SymbolKind::GlobalSymbol, Symbol,
+                            Section.Architectures, SymbolFlags::Undefined);
         }
         for (auto &Symbol : Section.Classes) {
           auto Name = Symbol.value;
           if (Ctx->FileKind != FileType::TBD_V3)
             Name = Name.drop_front();
-          File->addSymbol(SymbolKind::ObjectiveCClass, Name, Targets,
-                          SymbolFlags::Undefined);
+          File->addSymbol(SymbolKind::ObjectiveCClass, Name,
+                          Section.Architectures, SymbolFlags::Undefined);
         }
         for (auto &Symbol : Section.ClassEHs)
-          File->addSymbol(SymbolKind::ObjectiveCClassEHType, Symbol, Targets,
-                          SymbolFlags::Undefined);
+          File->addSymbol(SymbolKind::ObjectiveCClassEHType, Symbol,
+                          Section.Architectures, SymbolFlags::Undefined);
         for (auto &Symbol : Section.IVars) {
           auto Name = Symbol.value;
           if (Ctx->FileKind != FileType::TBD_V3)
             Name = Name.drop_front();
-          File->addSymbol(SymbolKind::ObjectiveCInstanceVariable, Name, Targets,
-                          SymbolFlags::Undefined);
+          File->addSymbol(SymbolKind::ObjectiveCInstanceVariable, Name,
+                          Section.Architectures, SymbolFlags::Undefined);
         }
         for (auto &Symbol : Section.WeakRefSymbols)
-          File->addSymbol(SymbolKind::GlobalSymbol, Symbol, Targets,
+          File->addSymbol(SymbolKind::GlobalSymbol, Symbol,
+                          Section.Architectures,
                           SymbolFlags::Undefined | SymbolFlags::WeakReferenced);
       }
 
@@ -531,7 +513,7 @@ template <> struct MappingTraits<const InterfaceFile *> {
 
     std::vector<Architecture> Architectures;
     std::vector<UUID> UUIDs;
-    PlatformSet Platforms;
+    PlatformKind Platform{PlatformKind::unknown};
     StringRef InstallName;
     PackedVersion CurrentVersion;
     PackedVersion CompatibilityVersion;
@@ -585,7 +567,7 @@ template <> struct MappingTraits<const InterfaceFile *> {
     IO.mapRequired("archs", Keys->Architectures);
     if (Ctx->FileKind != FileType::TBD_V1)
       IO.mapOptional("uuids", Keys->UUIDs);
-    IO.mapRequired("platform", Keys->Platforms);
+    IO.mapRequired("platform", Keys->Platform);
     if (Ctx->FileKind != FileType::TBD_V1)
       IO.mapOptional("flags", Keys->Flags, TBDFlags::None);
     IO.mapRequired("install-name", Keys->InstallName);

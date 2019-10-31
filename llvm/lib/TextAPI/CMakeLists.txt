@@ -5,9 +5,7 @@ add_llvm_library(LLVMTextAPI
   MachO/ArchitectureSet.cpp
   MachO/InterfaceFile.cpp
   MachO/PackedVersion.cpp
-  MachO/Platform.cpp
   MachO/Symbol.cpp
-  MachO/Target.cpp
   MachO/TextStub.cpp
   MachO/TextStubCommon.cpp
 
