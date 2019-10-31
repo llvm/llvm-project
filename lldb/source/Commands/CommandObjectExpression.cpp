@@ -8,8 +8,6 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Support/MemoryBuffer.h"
 
 #include "CommandObjectExpression.h"
 #include "lldb/Core/Debugger.h"
@@ -24,7 +22,6 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
-#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Language.h"
@@ -32,6 +29,10 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+
+// BEGIN SWIFT
+#include "lldb/Symbol/CompileUnit.h"
+// END SWIFT
 
 using namespace lldb;
 using namespace lldb_private;
@@ -213,8 +214,10 @@ CommandObjectExpression::CommandObjectExpression(
                        eCommandProcessMustBePaused | eCommandTryTargetAPILock),
       IOHandlerDelegate(IOHandlerDelegate::Completion::Expression),
       m_option_group(), m_format_options(eFormatDefault),
+      // BEGIN SWIFT
       m_repl_option(LLDB_OPT_SET_1, false, "repl", 'r', "Drop into Swift REPL",
                     false, true),
+      // END SWIFT
       m_command_options(), m_expr_line_count(0), m_expr_lines() {
   SetHelpLong(
       R"(
@@ -350,8 +353,11 @@ void CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
 
   Status error;
   lldb::UserExpressionSP expr(target->GetUserExpressionForLanguage(
-      exe_ctx, code, llvm::StringRef(), language,
-      UserExpression::eResultTypeAny, options, nullptr, error));
+      // BEGIN SWIFT
+      exe_ctx,
+      // END SWIFT
+      code, llvm::StringRef(), language, UserExpression::eResultTypeAny,
+      options, nullptr, error));
   if (error.Fail())
     return;
 
@@ -396,11 +402,16 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
   options.SetTryAllThreads(m_command_options.try_all_threads);
   options.SetDebug(m_command_options.debug);
 
+  // BEGIN SWIFT
   // If the language was not specified in the expression command,
   // set it to the language in the target's properties if
   // specified, else default to the language for the frame.
-  if (m_command_options.language != eLanguageTypeUnknown)
-    options.SetLanguage(m_command_options.language);
+  if (m_command_options.language != eLanguageTypeUnknown) {
+  // END SWIFT   
+  options.SetLanguage(m_command_options.language);
+  // BEGIN SWIFT
+  }
+  // END SWIFT
 
   options.SetExecutionPolicy(
       m_command_options.allow_jit
@@ -480,8 +491,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
         if (result)
           result->SetStatus(eReturnStatusSuccessFinishResult);
       } else {
-        const Status &expr_error = result_valobj_sp->GetError();
-        const char *error_cstr = expr_error.AsCString();
+        const char *error_cstr = result_valobj_sp->GetError().AsCString();
         if (error_cstr && error_cstr[0]) {
           const size_t error_cstr_len = strlen(error_cstr);
           const bool ends_with_newline = error_cstr[error_cstr_len - 1] == '\n';
@@ -536,6 +546,7 @@ void CommandObjectExpression::GetMultilineExpression() {
   m_expr_lines.clear();
   m_expr_line_count = 0;
 
+  // BEGIN SWIFT
   // If we didn't set the language, make sure we get the Swift language right
   // if we are stopped in a swift compile unit. This will help us use the
   // correct input reader name so our C/C++/ObjC expression history will be
@@ -550,23 +561,28 @@ void CommandObjectExpression::GetMultilineExpression() {
         m_command_options.language = lldb::eLanguageTypeSwift;
     }
   }
-
+  // END SWIFT
+  
   Debugger &debugger = GetCommandInterpreter().GetDebugger();
   bool color_prompt = debugger.GetUseColor();
   const bool multiple_lines = true; // Get multiple lines
 
+  // BEGIN SWIFT
   const char *input_reader_name =
       m_command_options.language == lldb::eLanguageTypeSwift ? "lldb-swift"
+  // END SWIFT
                                                              : "lldb-expr";
 
-  IOHandlerSP io_handler_sp(new IOHandlerEditline(
-      debugger, IOHandler::Type::Expression,
-      input_reader_name, // Name of input reader for history
-      llvm::StringRef(), // No prompt
-      llvm::StringRef(), // Continuation prompt
-      multiple_lines, color_prompt,
-      1, // Show line numbers starting at 1
-      *this, nullptr));
+  IOHandlerSP io_handler_sp(
+      new IOHandlerEditline(debugger, IOHandler::Type::Expression,
+                            // BEGIN SWIFT
+                            input_reader_name, // Name of input reader for history
+                            // END SWIFT
+                            llvm::StringRef(), // No prompt
+                            llvm::StringRef(), // Continuation prompt
+                            multiple_lines, color_prompt,
+                            1, // Show line numbers starting at 1
+                            *this, nullptr));
 
   StreamFileSP output_sp = io_handler_sp->GetOutputStreamFileSP();
   if (output_sp) {
@@ -621,10 +637,12 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
     if (m_repl_option.GetOptionValue().GetCurrentValue()) {
       Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
 
+      // BEGIN SWIFT
       // If we weren't passed in a target, let's see if the dummy target can
       // make a REPL:
       if (!target)
         target = &GetDummyTarget();
+      // END SWIFT
 
       if (target) {
         // Drop into REPL

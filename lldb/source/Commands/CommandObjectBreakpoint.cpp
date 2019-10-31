@@ -305,9 +305,11 @@ public:
           error.SetErrorStringWithFormat(
               "Set exception breakpoints separately for c++ and objective-c");
           break;
+        // BEGIN SWIFT
         case eLanguageTypeSwift:
           m_exception_language = eLanguageTypeSwift;
           break;
+        // END SWIFT
         case eLanguageTypeUnknown:
           error.SetErrorStringWithFormat(
               "Unknown language type: '%s' for exception breakpoint",
@@ -470,7 +472,6 @@ public:
       m_catch_bp = false;
       m_throw_bp = true;
       m_hardware = false;
-      m_language = eLanguageTypeUnknown;
       m_exception_language = eLanguageTypeUnknown;
       m_language = lldb::eLanguageTypeUnknown;
       m_skip_prologue = eLazyBoolCalculate;
@@ -1657,6 +1658,7 @@ protected:
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
+
     Target &target = GetSelectedOrDummyTarget(false);
 
     std::unique_lock<std::recursive_mutex> lock;
