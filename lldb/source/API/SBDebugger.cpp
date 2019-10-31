@@ -57,51 +57,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-/// Helper class for replaying commands through the reproducer.
-class CommandLoader {
-public:
-  CommandLoader(std::vector<std::string> files) : m_files(files) {}
-
-  static std::unique_ptr<CommandLoader> Create() {
-    repro::Loader *loader = repro::Reproducer::Instance().GetLoader();
-    if (!loader)
-      return {};
-
-    FileSpec file = loader->GetFile<repro::CommandProvider::Info>();
-    if (!file)
-      return {};
-
-    auto error_or_file = llvm::MemoryBuffer::getFile(file.GetPath());
-    if (auto err = error_or_file.getError())
-      return {};
-
-    std::vector<std::string> files;
-    llvm::yaml::Input yin((*error_or_file)->getBuffer());
-    yin >> files;
-
-    if (auto err = yin.error())
-      return {};
-
-    for (auto &file : files) {
-      FileSpec absolute_path =
-          loader->GetRoot().CopyByAppendingPathComponent(file);
-      file = absolute_path.GetPath();
-    }
-
-    return std::make_unique<CommandLoader>(std::move(files));
-  }
-
-  FILE *GetNextFile() {
-    if (m_index >= m_files.size())
-      return nullptr;
-    return FileSystem::Instance().Fopen(m_files[m_index++].c_str(), "r");
-  }
-
-private:
-  std::vector<std::string> m_files;
-  unsigned m_index = 0;
-};
-
 static llvm::sys::DynamicLibrary LoadPlugin(const lldb::DebuggerSP &debugger_sp,
                                             const FileSpec &spec,
                                             Status &error) {
@@ -349,9 +304,12 @@ void SBDebugger::SetInputFileHandle(FILE *fh, bool transfer_ownership) {
   if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator())
     recorder = g->GetOrCreate<repro::CommandProvider>().GetNewDataRecorder();
 
-  static std::unique_ptr<CommandLoader> loader = CommandLoader::Create();
-  if (loader)
-    fh = loader->GetNextFile();
+  static std::unique_ptr<repro::CommandLoader> loader =
+      repro::CommandLoader::Create(repro::Reproducer::Instance().GetLoader());
+  if (loader) {
+    llvm::Optional<std::string> file = loader->GetNextFile();
+    fh = file ? FileSystem::Instance().Fopen(file->c_str(), "r") : nullptr;
+  }
 
   m_opaque_sp->SetInputFileHandle(fh, transfer_ownership, recorder);
 }
