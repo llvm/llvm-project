@@ -105,16 +105,17 @@ private:
   bool IsLittleEndian;
 
 public:
-  void parse(DataExtractor data, uint64_t Offset, uint64_t EndOffset, uint16_t Version);
+  void parse(const DWARFDataExtractor &data, uint64_t Offset,
+             uint64_t EndOffset, uint16_t Version);
   void dump(raw_ostream &OS, uint64_t BaseAddr, const MCRegisterInfo *RegInfo,
             DIDumpOptions DumpOpts, Optional<uint64_t> Offset) const;
 
   /// Return the location list at the given offset or nullptr.
   LocationList const *getLocationListAtOffset(uint64_t Offset) const;
 
-  static Expected<LocationList> parseOneLocationList(const DataExtractor &Data,
-                                                     uint64_t *Offset,
-                                                     unsigned Version);
+  static Expected<LocationList>
+  parseOneLocationList(const DWARFDataExtractor &Data, uint64_t *Offset,
+                       unsigned Version);
 };
 
 } // end namespace llvm
