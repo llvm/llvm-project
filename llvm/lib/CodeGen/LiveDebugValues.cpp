@@ -997,14 +997,10 @@ void LiveDebugValues::transferRegisterCopy(MachineInstr &MI,
                                            OpenRangesSet &OpenRanges,
                                            VarLocMap &VarLocIDs,
                                            TransferMap &Transfers) {
+  const MachineOperand *SrcRegOp, *DestRegOp;
 
-  auto DestSrc = TII->isCopyInstr(MI);
-  if (!DestSrc)
-    return;
-
-  const MachineOperand &DestRegOp = DestSrc->Destination;
-  const MachineOperand &SrcRegOp = DestSrc->Source;
-  if (!SrcRegOp.isKill() || !DestRegOp.isDef())
+  if (!TII->isCopyInstr(MI, SrcRegOp, DestRegOp) || !SrcRegOp->isKill() ||
+      !DestRegOp->isDef())
     return;
 
   auto isCalleeSavedReg = [&](unsigned Reg) {
@@ -1014,8 +1010,8 @@ void LiveDebugValues::transferRegisterCopy(MachineInstr &MI,
     return false;
   };
 
-  Register SrcReg = SrcRegOp.getReg();
-  Register DestReg = DestRegOp.getReg();
+  Register SrcReg = SrcRegOp->getReg();
+  Register DestReg = DestRegOp->getReg();
 
   // We want to recognize instructions where destination register is callee
   // saved register. If register that could be clobbered by the call is
