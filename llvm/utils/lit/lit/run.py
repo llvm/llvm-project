@@ -163,7 +163,9 @@ class ParallelRun(Run):
                 self.lit_config.note('Raised process limit from %d to %d' % \
                                         (soft_limit, desired_limit))
         except Exception as ex:
-            self.lit_config.warning('Failed to raise process limit: %s' % ex)
+            # Warn, unless this is Windows, in which case this is expected.
+            if os.name != 'nt':
+                self.lit_config.warning('Failed to raise process limit: %s' % ex)
 
     def _install_win32_signal_handler(self, pool):
         if lit.util.win32api is not None:
