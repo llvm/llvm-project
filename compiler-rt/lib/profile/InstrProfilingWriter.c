@@ -261,7 +261,7 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
 
   /* Enough zeroes for padding. */
   unsigned PageSize = getpagesize();
-  char Zeroes[PageSize];
+  char *Zeroes = (char *)COMPILER_RT_ALLOCA(PageSize);
   memset(Zeroes, 0, PageSize);
 
   /* Create the header. */
