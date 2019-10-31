@@ -99,7 +99,7 @@ if lldb_path is not None:
 # Produce dexter path, lldb path, and combine into the %dexter substitution
 dexter_path = os.path.join(config.debuginfo_tests_src_root,
                            'dexter', 'dexter.py')
-dexter_cmd = '{} {} test'.format(config.python3_executable, dexter_path)
+dexter_cmd = '"{}" "{}" test'.format(config.python3_executable, dexter_path)
 if lldb_path is not None:
   dexter_cmd += ' --lldb-executable {}'.format(lldb_path)
 
