@@ -15,6 +15,9 @@
 // RUN:   -mode preprocess-minimized-sources -format experimental-full >> %t.result
 // RUN: cat %t.result | FileCheck --check-prefixes=CHECK %s
 
+// FIXME: Backslash issues.
+// XFAIL: system-windows
+
 #include "header.h"
 
 // CHECK: [[PREFIX:(.*[/\\])+[a-zA-Z0-9.-]+]]
