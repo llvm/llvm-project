@@ -87,6 +87,7 @@ struct LoadCommand {
 // nlist.
 struct SymbolEntry {
   std::string Name;
+  bool Referenced = false;
   uint32_t Index;
   uint8_t n_type;
   uint8_t n_sect;
@@ -110,6 +111,9 @@ struct SymbolTable {
   std::vector<std::unique_ptr<SymbolEntry>> Symbols;
 
   const SymbolEntry *getSymbolByIndex(uint32_t Index) const;
+  SymbolEntry *getSymbolByIndex(uint32_t Index);
+  void removeSymbols(
+      function_ref<bool(const std::unique_ptr<SymbolEntry> &)> ToRemove);
 };
 
 struct IndirectSymbolEntry {
@@ -118,10 +122,9 @@ struct IndirectSymbolEntry {
   uint32_t OriginalIndex;
   /// The Symbol referenced by this entry. It's None if the index is
   /// INDIRECT_SYMBOL_LOCAL or INDIRECT_SYMBOL_ABS.
-  Optional<const SymbolEntry *> Symbol;
+  Optional<SymbolEntry *> Symbol;
 
-  IndirectSymbolEntry(uint32_t OriginalIndex,
-                      Optional<const SymbolEntry *> Symbol)
+  IndirectSymbolEntry(uint32_t OriginalIndex, Optional<SymbolEntry *> Symbol)
       : OriginalIndex(OriginalIndex), Symbol(Symbol) {}
 };
 
