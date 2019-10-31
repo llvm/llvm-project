@@ -1420,13 +1420,18 @@ static size_t DumpModuleObjfileHeaders(Stream &strm, ModuleList &module_list) {
 }
 
 static void DumpModuleSymtab(CommandInterpreter &interpreter, Stream &strm,
-                             Module *module, SortOrder sort_order,
-                             Mangled::NamePreference name_preference) {
+                             Module *module, SortOrder sort_order
+                             // BEGIN SWIFT
+                             , Mangled::NamePreference name_preference) {
+                             // END SWIFT)
   if (!module)
     return;
   if (Symtab *symtab = module->GetSymtab())
     symtab->Dump(&strm, interpreter.GetExecutionContext().GetTargetPtr(),
-                 sort_order, name_preference);
+                 sort_order
+                 // BEGIN SWIFT
+                 , name_preference);
+                 // END SWIFT
 }
 
 static void DumpModuleSections(CommandInterpreter &interpreter, Stream &strm,
@@ -1961,9 +1966,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions()
-        : Options(), m_sort_order(eSortOrderNone),
-          m_prefer_mangled(false, false) {}
+    CommandOptions() : Options(), m_sort_order(eSortOrderNone) {}
 
     ~CommandOptions() override = default;
 
@@ -1973,10 +1976,12 @@ public:
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
+      // BEGIN SWIFT
       case 'm':
         m_prefer_mangled.SetCurrentValue(true);
         m_prefer_mangled.SetOptionWasSet();
         break;
+      // END SWIFT        
 
       case 's':
         m_sort_order = (SortOrder)OptionArgParser::ToOptionEnum(
@@ -1992,7 +1997,9 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_sort_order = eSortOrderNone;
+      // BEGIN SWIFT
       m_prefer_mangled.Clear();
+      // END SWIFT
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -2000,7 +2007,7 @@ public:
     }
 
     SortOrder m_sort_order;
-    OptionValueBoolean m_prefer_mangled;
+    OptionValueBoolean m_prefer_mangled = { false, false };
   };
 
 protected:
@@ -2008,9 +2015,11 @@ protected:
     Target *target = &GetSelectedTarget();
     uint32_t num_dumped = 0;
 
+    // BEGIN SWIFT
     Mangled::NamePreference preference =
         (m_options.m_prefer_mangled ? Mangled::ePreferMangled
                                     : Mangled::ePreferDemangled);
+    // END SWIFT
 
     uint32_t addr_byte_size = target->GetArchitecture().GetAddressByteSize();
     result.GetOutputStream().SetAddressByteSize(addr_byte_size);
@@ -2036,7 +2045,10 @@ protected:
           DumpModuleSymtab(
               m_interpreter, result.GetOutputStream(),
               target->GetImages().GetModulePointerAtIndexUnlocked(image_idx),
-              m_options.m_sort_order, preference);
+              m_options.m_sort_order,
+              // BEGIN SWIFT
+              preference);
+             // END SWIFT
         }
       } else {
         result.AppendError("the target has no associated executable images");
