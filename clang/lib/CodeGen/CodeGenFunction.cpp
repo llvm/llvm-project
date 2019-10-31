@@ -764,10 +764,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD,
   Fn->addFnAttr("no-jump-tables",
                 llvm::toStringRef(CGM.getCodeGenOpts().NoUseJumpTables));
 
-  // Add no-inline-line-tables value.
-  if (CGM.getCodeGenOpts().NoInlineLineTables)
-    Fn->addFnAttr("no-inline-line-tables");
-
   // Add profile-sample-accurate value.
   if (CGM.getCodeGenOpts().ProfileSampleAccurate)
     Fn->addFnAttr("profile-sample-accurate");
