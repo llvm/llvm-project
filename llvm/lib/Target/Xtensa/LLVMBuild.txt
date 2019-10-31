@@ -29,5 +29,5 @@ has_disassembler = 1
 type = Library
 name = XtensaCodeGen
 parent = Xtensa
-required_libraries = AsmPrinter CodeGen Core MC XtensaDesc XtensaInfo Support Target
+required_libraries = AsmPrinter CodeGen Core MC SelectionDAG XtensaDesc XtensaInfo Support Target
 add_to_library_groups = Xtensa

@@ -53,7 +53,8 @@ XtensaTargetMachine::XtensaTargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options, isLittle), TT,
                         CPU, FS, Options, getEffectiveRelocModel(JIT, RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TLOF(make_unique<TargetLoweringObjectFileELF>()) {
+      TLOF(make_unique<TargetLoweringObjectFileELF>()),
+      Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();
 }
 
@@ -65,6 +66,31 @@ XtensaTargetMachine::XtensaTargetMachine(const Target &T, const Triple &TT,
                                          CodeGenOpt::Level OL, bool JIT)
     : XtensaTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, true) {}
 
+const XtensaSubtarget *
+XtensaTargetMachine::getSubtargetImpl(const Function &F) const {
+  return &Subtarget;
+}
+
+namespace {
+/// Xtensa Code Generator Pass Configuration Options.
+class XtensaPassConfig : public TargetPassConfig {
+public:
+  XtensaPassConfig(XtensaTargetMachine &TM, PassManagerBase &PM)
+      : TargetPassConfig(TM, PM) {}
+
+  XtensaTargetMachine &getXtensaTargetMachine() const {
+    return getTM<XtensaTargetMachine>();
+  }
+
+  bool addInstSelector() override;
+};
+} // end anonymous namespace
+
+bool XtensaPassConfig::addInstSelector() {
+  addPass(createXtensaISelDag(getXtensaTargetMachine(), getOptLevel()));
+  return false;
+}
+
 TargetPassConfig *XtensaTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new TargetPassConfig(*this, PM);
+  return new XtensaPassConfig(*this, PM);
 }
