@@ -14,6 +14,7 @@ add_public_tablegen_target(XtensaCommonTableGen)
 
 add_llvm_target(XtensaCodeGen
   XtensaAsmPrinter.cpp
+  XtensaConstantPoolValue.cpp
   XtensaFrameLowering.cpp
   XtensaInstrInfo.cpp
   XtensaISelDAGToDAG.cpp
