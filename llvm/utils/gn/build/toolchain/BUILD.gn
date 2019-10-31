@@ -207,6 +207,15 @@ if (android_ndk_path != "") {
       use_lld = true
     }
   }
+
+  stage2_unix_toolchain("stage2_android_arm") {
+    toolchain_args = {
+      current_os = "android"
+      current_cpu = "arm"
+      is_clang = true
+      use_lld = true
+    }
+  }
 }
 
 toolchain("win") {
