@@ -504,6 +504,12 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
         return false;
       if (StringRef(Sec.Name).startswith(".gnu.warning"))
         return false;
+      // We keep the .ARM.attribute section to maintain compatibility
+      // with Debian derived distributions. This is a bug in their
+      // patchset as documented here:
+      // https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=943798
+      if (Sec.Type == SHT_ARM_ATTRIBUTES)
+        return false;
       if (Sec.ParentSegment != nullptr)
         return false;
       return (Sec.Flags & SHF_ALLOC) == 0;

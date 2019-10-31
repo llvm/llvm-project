@@ -40,7 +40,8 @@ def p : Flag<["-"], "p">, Alias<preserve_dates>;
 
 def strip_all : Flag<["--"], "strip-all">,
                 HelpText<"Remove non-allocated sections outside segments. "
-                         ".gnu.warning* sections are not removed">;
+                          ".gnu.warning* and .ARM.attribute sections are not "
+                          "removed">;
 def s : Flag<["-"], "s">, Alias<strip_all>;
 def no_strip_all : Flag<["--"], "no-strip-all">,
                    HelpText<"Disable --strip-all">;

@@ -112,7 +112,8 @@ defm set_section_flags
 
 def strip_all : Flag<["--"], "strip-all">,
                 HelpText<"Remove non-allocated sections outside segments. "
-                         ".gnu.warning* sections are not removed">;
+                         ".gnu.warning* and .ARM.attribute sections are not "
+                         "removed">;
 def S : Flag<["-"], "S">, Alias<strip_all>;
 def strip_all_gnu : Flag<["--"], "strip-all-gnu">,
                     HelpText<"Compatible with GNU objcopy's --strip-all">;
