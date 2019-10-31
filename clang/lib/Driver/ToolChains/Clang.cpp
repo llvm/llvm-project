@@ -3312,6 +3312,12 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
     }
   }
 
+  // Omit inline line tables if requested.
+  if (Args.hasFlag(options::OPT_gno_inline_line_tables,
+                   options::OPT_ginline_line_tables, false)) {
+    CmdArgs.push_back("-gno-inline-line-tables");
+  }
+
   // Adjust the debug info kind for the given toolchain.
   TC.adjustDebugInfoKind(DebugInfoKind, Args);
 
