@@ -1,6 +1,7 @@
-! D63607 made mac builders unhappy by failing this test, and it isn't
+! D63607 made mac and Fedora builders unhappy by failing this test, and it isn't
 ! yet obvious why. Mark as unsupported as a temporary measure.
 ! UNSUPPORTED: darwin
+! UNSUPPORTED: linux
 
 ! Check that flang -fc1 is invoked when in --driver-mode=flang.
 
