@@ -27,10 +27,11 @@ using namespace llvm;
 namespace {
 
 class XtensaDAGToDAGISel : public SelectionDAGISel {
+  const XtensaSubtarget *Subtarget;
 
 public:
   XtensaDAGToDAGISel(XtensaTargetMachine &TM, CodeGenOpt::Level OptLevel)
-      : SelectionDAGISel(TM, OptLevel) {}
+      : SelectionDAGISel(TM, OptLevel), Subtarget(TM.getSubtargetImpl()) {}
 
   // Override MachineFunctionPass.
   StringRef getPassName() const override {

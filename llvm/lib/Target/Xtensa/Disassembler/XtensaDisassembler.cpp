@@ -190,6 +190,25 @@ static DecodeStatus decodeImm1_16Operand(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeImm1n_15Operand(MCInst &Inst, uint64_t Imm,
+                                          int64_t Address,
+                                          const void *Decoder) {
+  assert(isUInt<4>(Imm) && "Invalid immediate");
+  if (!Imm)
+    Inst.addOperand(MCOperand::createImm(-1));
+  else
+    Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeImm32n_95Operand(MCInst &Inst, uint64_t Imm,
+                                           int64_t Address,
+                                           const void *Decoder) {
+  assert(isUInt<7>(Imm) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(Imm - 32));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeShimm1_31Operand(MCInst &Inst, uint64_t Imm,
                                            int64_t Address,
                                            const void *Decoder) {
@@ -243,6 +262,34 @@ static DecodeStatus decodeMem32Operand(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeMem32nOperand(MCInst &Inst, uint64_t Imm,
+                                        int64_t Address, const void *Decoder) {
+  assert(isUInt<8>(Imm) && "Invalid immediate");
+  DecodeARRegisterClass(Inst, Imm & 0xf, Address, Decoder);
+  Inst.addOperand(MCOperand::createImm((Imm >> 2) & 0x3c));
+  return MCDisassembler::Success;
+}
+
+/// Read two bytes from the ArrayRef and return 16 bit data sorted
+/// according to the given endianness.
+static DecodeStatus readInstruction16(ArrayRef<uint8_t> Bytes, uint64_t Address,
+                                      uint64_t &Size, uint32_t &Insn,
+                                      bool IsLittleEndian) {
+  // We want to read exactly 2 Bytes of data.
+  if (Bytes.size() < 2) {
+    Size = 0;
+    return MCDisassembler::Fail;
+  }
+
+  if (!IsLittleEndian) {
+    llvm_unreachable("Big-endian mode currently is not supported!");
+  } else {
+    Insn = (Bytes[1] << 8) | Bytes[0];
+  }
+
+  return MCDisassembler::Success;
+}
+
 /// Read four bytes from the ArrayRef and return 24 bit data sorted
 /// according to the given endianness.
 static DecodeStatus readInstruction24(ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -272,6 +319,18 @@ DecodeStatus XtensaDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                 raw_ostream &CS) const {
   uint32_t Insn;
   DecodeStatus Result;
+
+  if (hasDensity()) {
+    Result = readInstruction16(Bytes, Address, Size, Insn, IsLittleEndian);
+    if (Result == MCDisassembler::Fail)
+      return MCDisassembler::Fail;
+    LLVM_DEBUG(dbgs() << "Trying Xtensa 16-bit instruction table :\n");
+    Result = decodeInstruction(DecoderTable16, MI, Insn, Address, this, STI);
+    if (Result != MCDisassembler::Fail) {
+      Size = 2;
+      return Result;
+    }
+  }
 
   Result = readInstruction24(Bytes, Address, Size, Insn, IsLittleEndian);
   if (Result == MCDisassembler::Fail)

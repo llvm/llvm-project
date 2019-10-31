@@ -623,3 +623,170 @@ let usesCustomInserter = 1 in
                     "!select $dst, $lhs, $rhs, $t, $f, $cond",
                     [(set AR:$dst, (Xtensa_select_cc AR:$lhs, AR:$rhs, AR:$t, AR:$f, imm:$cond))]>;
 }
+
+//===----------------------------------------------------------------------===//
+// Code Density instructions
+//===----------------------------------------------------------------------===//
+
+class ArithLogic_RRRN<bits<4> oper0, string instrAsm, 
+      SDPatternOperator opNode, bit isComm = 0>
+  : RRRN_Inst<oper0, (outs AR:$r), (ins AR:$s, AR:$t),
+              instrAsm#"\t$r, $s, $t",
+             [(set AR:$r, (opNode AR:$s, AR:$t))]> 
+{
+  let isCommutable = isComm;
+  let isReMaterializable = 0;
+}
+
+def ADD_N: ArithLogic_RRRN<0x0a, "add.n", add, 1>;
+
+def ADDI_N: RRRN_Inst<0x0B, (outs AR:$r), (ins AR:$s, imm1n_15:$imm),
+                     "addi.n\t$r, $s, $imm",
+                     [(set AR:$r, (add AR:$s, imm1n_15:$imm))]> 
+{
+  bits<4> imm;
+
+  let t = imm;
+}
+
+def MOV_N: RRRN_Inst<0x0D, (outs AR:$t), (ins AR:$s),
+                    "mov.n\t$t, $s",
+                    []>
+{
+  let r = 0;
+}
+
+def MOVI_N: RI7_Inst<0xc, 0x0, (outs AR:$s), (ins imm32n_95:$imm7),
+                    "movi.n\t$s, $imm7",
+                    [(set AR:$s, imm32n_95:$imm7)]>;
+
+// Load instruction
+let mayLoad = 1, usesCustomInserter = 1 in
+{
+  def L32I_N: RRRN_Inst<0x8, (outs AR:$t), (ins mem32n:$addr), 
+                       "l32i.n\t$t, $addr", []>
+  {
+    bits<8> addr;
+
+    let r{3-0} = addr{7-4};
+    let s{3-0} = addr{3-0};
+  }
+}
+
+// Store instruction
+let mayStore = 1, usesCustomInserter = 1 in
+{
+  def S32I_N: RRRN_Inst<0x9, (outs), (ins  AR:$t, mem32n:$addr),
+                       "s32i.n\t$t, $addr", []>
+  {
+    bits<8> addr;
+
+    let r{3-0} = addr{7-4};
+    let s{3-0} = addr{3-0};
+  }
+}
+
+//Return instruction
+let isReturn = 1, isTerminator = 1,
+    isBarrier = 1, hasCtrlDep = 1, Uses = [A0] in
+{
+  def RET_N: RRRN_Inst<0x0D, (outs), (ins),
+                "ret.n", [(Xtensa_retflag)]>
+  {
+    let r = 0x0F;
+    let s = 0;
+    let t = 0;
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Windowed instructions
+//===----------------------------------------------------------------------===//
+
+def ENTRY: BRI12_Inst<0x06, 0x3, 0x0, (outs), (ins AR:$s, entry_imm12:$imm), 
+                     "entry\t$s, $imm", []>, Requires<[HasWindowed]>
+{
+  bits<15> imm;
+
+  let imm12{11-0} = imm{14-3};
+  let Defs = [SP];
+}
+
+//Call instructions
+let isCall = 1, Defs = [A0] in 
+{
+  def CALL4: CALL_Inst<0x05, (outs), (ins pcrel32call:$offset),
+                      "call4\t$offset", []>, Requires<[HasWindowed]>
+  {
+    let n = 1;
+  }
+
+  def CALL8: CALL_Inst<0x05, (outs), (ins pcrel32call:$offset),
+                      "call8\t$offset", []>, Requires<[HasWindowed]>
+  {
+    let n = 2;
+  }
+
+  def CALL12: CALL_Inst<0x05, (outs), (ins pcrel32call:$offset),
+                       "call12\t$offset", []>, Requires<[HasWindowed]>
+  {
+    let n = 3;
+  }
+
+  let isIndirectBranch = 1 in
+  {
+    def CALLX4: CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins AR:$s), 
+                          "callx4\t$s", []>, Requires<[HasWindowed]>
+    {
+      let m = 0x3;
+      let n = 0x1;
+      let r = 0;
+    }
+
+    def CALLX8: CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins AR:$s), 
+                          "callx8\t$s", []>, Requires<[HasWindowed]>
+    {
+      let m = 0x3;
+      let n = 0x2;
+      let r = 0;
+    }
+
+    def CALLX12: CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins AR:$s), 
+                           "callx12\t$s", []>, Requires<[HasWindowed]>
+    {
+      let m = 0x3;
+      let n = 0x3;
+      let r = 0;
+    }
+  }
+}
+
+def MOVSP: RRR_Inst<0x00, 0x00, 0x00, (outs AR:$t), (ins AR:$s),
+                   "movsp\t$t, $s",
+                   [(set AR:$t, (Xtensa_movsp AR:$s))]>, Requires<[HasWindowed]>
+{
+  let r = 0x01;
+}
+
+//Return instructions
+let isReturn = 1, isTerminator = 1,
+    isBarrier = 1, hasCtrlDep = 1, Uses = [A0] in
+{
+  def RETW_N: RRRN_Inst<0x0D, (outs), (ins),
+                "retw.n", [(Xtensa_retWflag)]>, Requires<[HasWindowed]>
+  {
+    let r = 0x0F;
+    let s = 0;
+    let t = 1;
+  }
+
+  def RETW: CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins), 
+            "retw", [(Xtensa_retWflag)]>, Requires<[HasWindowed]>
+  {
+    let m = 0x2;
+    let n = 0x1;
+    let s = 0;
+    let r = 0;
+  }
+}
+

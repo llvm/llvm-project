@@ -33,6 +33,18 @@ XtensaSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   }
 
   HasDensity = false;
+  HasSingleFloat = false;
+  HasLoop = false;
+  HasMAC16 = false;
+  HasWindowed = false;
+  HasBoolean = false;
+  HasSEXT = false;
+  HasNSA = false;
+  HasMul32 = false;
+  HasMul32High = false;
+  HasDiv32 = false;
+  HasS32C1I = false;
+  HasTHREADPTR = false;
 
   // Parse features string.
   ParseSubtargetFeatures(CPUName, FS);

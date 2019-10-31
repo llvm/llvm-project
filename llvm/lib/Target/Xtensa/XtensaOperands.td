@@ -73,6 +73,20 @@ def imm1_16: Immediate<i32, [{ return Imm >= 1 && Imm <= 16; }], "Imm1_16_AsmOpe
   let DecoderMethod = "decodeImm1_16Operand";
 }  
 
+// imm1n_15 predicate - Immediate in the range [-1,15], except 0
+def Imm1n_15_AsmOperand: ImmAsmOperand<"Imm1n_15">;
+def imm1n_15: Immediate<i32, [{ return Imm >= -1 && Imm <= 15 && Imm != 0; }], "Imm1n_15_AsmOperand"> {
+  let EncoderMethod = "getImm1n_15OpValue";
+  let DecoderMethod = "decodeImm1n_15Operand";
+}  
+
+// imm32n_95 predicate - Immediate in the range [-32,95]
+def Imm32n_95_AsmOperand: ImmAsmOperand<"Imm32n_95">;
+def imm32n_95: Immediate<i32, [{ return Imm >= -32 && Imm <= 95; }], "Imm32n_95_AsmOperand"> {
+  let EncoderMethod = "getImm32n_95OpValue";
+  let DecoderMethod = "decodeImm32n_95Operand";
+}  
+
 // shimm1_31 predicate - Immediate in the range [1,31]
 def Shimm1_31_AsmOperand: ImmAsmOperand<"Shimm1_31">;
 def shimm1_31: Immediate<i32, [{ return Imm >= 1 && Imm <= 31; }], "Shimm1_31_AsmOperand"> {
@@ -103,6 +117,12 @@ def Offset4m32_AsmOperand: ImmAsmOperand<"Offset4m32">;
 def offset4m32: Immediate<i32, 
     [{ return Imm >= 0 && Imm <= 60 && (Imm & 0x3 == 0); }], 
     "Offset4m32_AsmOperand">;
+
+// entry_imm12 predicate - Immediate in the range [0,32760], ENTRY parameter
+def Entry_Imm12_AsmOperand: ImmAsmOperand<"entry_imm12">;
+def entry_imm12: Immediate<i32, [{ return Imm >= 0 && Imm <= 32760 && (Imm & 0x3 == 0); }], "Entry_Imm12_AsmOperand"> {
+  let EncoderMethod = "getEntry_Imm12OpValue";
+}
 
 // b4const predicate - Branch Immediate 4-bit signed operand
 def B4const_AsmOperand: ImmAsmOperand<"B4const">;

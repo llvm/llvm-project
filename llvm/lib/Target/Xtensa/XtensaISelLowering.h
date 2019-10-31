@@ -24,17 +24,23 @@ namespace llvm {
 namespace XtensaISD {
 enum {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
-  // Return with a flag operand.  Operand 0 is the chain operand.
-  RET_FLAG,
-
   // Calls a function.  Operand 0 is the chain operand and operand 1
   // is the target address.  The arguments start at operand 2.
   // There is an optional glue operand at the end.
   CALL,
+  // WinABI Call version
+  CALLW,
+
+  MOVSP,
 
   // Wraps a TargetGlobalAddress that should be loaded using PC-relative
   // accesses.  Operand 0 is the address.
   PCREL_WRAPPER,
+
+  // Return with a flag operand.  Operand 0 is the chain operand.
+  RET_FLAG,
+  // WinABI Return
+  RETW_FLAG,
 
   // Selects between operand 0 and operand 1.  Operand 2 is the
   // mask of condition-code values for which operand 0 should be
