@@ -147,7 +147,7 @@ public:
       break;
     }
 
-    Consumer.handleContextHash(Compiler.getInvocation().getModuleHash());
+    Consumer.handleContextHash(Compiler.getInvocation().getModuleHash(Compiler.getDiagnostics()));
 
     auto Action = std::make_unique<PreprocessOnlyAction>();
     const bool Result = Compiler.ExecuteAction(*Action);
