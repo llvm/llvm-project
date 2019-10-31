@@ -14,6 +14,7 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
+#include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/Tooling.h"
 
 using namespace clang;
@@ -72,9 +73,11 @@ public:
   DependencyScanningAction(
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
-      ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings)
+      ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings,
+      ScanningOutputFormat Format)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
-        DepFS(std::move(DepFS)), PPSkipMappings(PPSkipMappings) {}
+        DepFS(std::move(DepFS)), PPSkipMappings(PPSkipMappings),
+        Format(Format) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *FileMgr,
@@ -131,9 +134,20 @@ public:
     // We need at least one -MT equivalent for the generator to work.
     if (Opts->Targets.empty())
       Opts->Targets = {"clang-scan-deps dependency"};
-    Compiler.addDependencyCollector(
-        std::make_shared<DependencyConsumerForwarder>(std::move(Opts),
-                                                      Consumer));
+
+    switch (Format) {
+    case ScanningOutputFormat::Make:
+      Compiler.addDependencyCollector(
+          std::make_shared<DependencyConsumerForwarder>(std::move(Opts),
+                                                        Consumer));
+      break;
+    case ScanningOutputFormat::Full:
+      Compiler.addDependencyCollector(
+          std::make_shared<ModuleDepCollector>(Compiler, Consumer));
+      break;
+    }
+
+    Consumer.handleContextHash(Compiler.getInvocation().getModuleHash());
 
     auto Action = std::make_unique<PreprocessOnlyAction>();
     const bool Result = Compiler.ExecuteAction(*Action);
@@ -147,12 +161,14 @@ private:
   DependencyConsumer &Consumer;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings;
+  ScanningOutputFormat Format;
 };
 
 } // end anonymous namespace
 
 DependencyScanningWorker::DependencyScanningWorker(
-    DependencyScanningService &Service) {
+    DependencyScanningService &Service)
+    : Format(Service.getFormat()) {
   DiagOpts = new DiagnosticOptions();
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   RealFS = new ProxyFileSystemWithoutChdir(llvm::vfs::getRealFileSystem());
@@ -195,7 +211,7 @@ llvm::Error DependencyScanningWorker::computeDependencies(
     Tool.setPrintErrorMessage(false);
     Tool.setDiagnosticConsumer(&DC);
     DependencyScanningAction Action(WorkingDirectory, Consumer, DepFS,
-                                    PPSkipMappings.get());
+                                    PPSkipMappings.get(), Format);
     return !Tool.run(&Action);
   });
 }
