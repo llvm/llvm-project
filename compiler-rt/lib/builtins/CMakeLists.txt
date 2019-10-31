@@ -586,15 +586,6 @@ else ()
 
   foreach (arch ${BUILTIN_SUPPORTED_ARCH})
     if (CAN_TARGET_${arch})
-      # NOTE: some architectures (e.g. i386) have multiple names.  Ensure that
-      # we catch them all.
-      set(_arch ${arch})
-      if("${arch}" STREQUAL "armv6m")
-        set(_arch "arm|armv6m")
-      elseif("${arch}" MATCHES "^(armhf|armv7|armv7s|armv7k|armv7m|armv7em)$")
-        set(_arch "arm")
-      endif()
-
       # For ARM archs, exclude any VFP builtins if VFP is not supported
       if (${arch} MATCHES "^(arm|armhf|armv7|armv7s|armv7k|armv7m|armv7em)$")
         string(REPLACE ";" " " _TARGET_${arch}_CFLAGS "${TARGET_${arch}_CFLAGS}")
@@ -608,10 +599,19 @@ else ()
       # architecture specific manner.  This prevents multiple definitions of the
       # same symbols, making the symbol selection non-deterministic.
       foreach (_file ${${arch}_SOURCES})
-        if (${_file} MATCHES ${_arch}/*)
+        get_filename_component(_file_dir "${_file}" DIRECTORY)
+        if (NOT "${_file_dir}" STREQUAL "")
+          # Architecture specific file. We follow the convention that a source
+          # file that exists in a sub-directory (e.g. `ppc/divtc3.c`) is
+          # architecture specific and that if a generic implementation exists
+          # it will be a top-level source file with the same name modulo the
+          # file extension (e.g. `divtc3.c`).
           get_filename_component(_name ${_file} NAME)
           string(REPLACE ".S" ".c" _cname "${_name}")
-          list(REMOVE_ITEM ${arch}_SOURCES ${_cname})
+          if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_cname}")
+            message(STATUS "For ${arch} builtins preferring ${_file} to ${_cname}")
+            list(REMOVE_ITEM ${arch}_SOURCES ${_cname})
+          endif()
         endif ()
       endforeach ()
 
