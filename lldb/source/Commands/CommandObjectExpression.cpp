@@ -202,11 +202,12 @@ CommandObjectExpression::CommandOptions::GetDefinitions() {
 
 CommandObjectExpression::CommandObjectExpression(
     CommandInterpreter &interpreter)
-    : CommandObjectRaw(
-          interpreter, "expression", "Evaluate an expression on the current "
-                                     "thread.  Displays any returned value "
-                                     "with LLDB's default formatting.",
-          "", eCommandProcessMustBePaused | eCommandTryTargetAPILock),
+    : CommandObjectRaw(interpreter, "expression",
+                       "Evaluate an expression on the current "
+                       "thread.  Displays any returned value "
+                       "with LLDB's default formatting.",
+                       "",
+                       eCommandProcessMustBePaused | eCommandTryTargetAPILock),
       IOHandlerDelegate(IOHandlerDelegate::Completion::Expression),
       m_option_group(), m_format_options(eFormatDefault),
       m_repl_option(LLDB_OPT_SET_1, false, "repl", 'r', "Drop into REPL", false,

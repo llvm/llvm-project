@@ -1440,8 +1440,7 @@ protected:
       case eFormatBytes:
       case eFormatHex:
       case eFormatHexUppercase:
-      case eFormatPointer:
-      {
+      case eFormatPointer: {
         // Decode hex bytes
         // Be careful, getAsInteger with a radix of 16 rejects "0xab" so we
         // have to special case that:
@@ -1597,13 +1596,14 @@ protected:
 class CommandObjectMemoryHistory : public CommandObjectParsed {
 public:
   CommandObjectMemoryHistory(CommandInterpreter &interpreter)
-      : CommandObjectParsed(
-            interpreter, "memory history", "Print recorded stack traces for "
-                                           "allocation/deallocation events "
-                                           "associated with an address.",
-            nullptr,
-            eCommandRequiresTarget | eCommandRequiresProcess |
-                eCommandProcessMustBePaused | eCommandProcessMustBeLaunched) {
+      : CommandObjectParsed(interpreter, "memory history",
+                            "Print recorded stack traces for "
+                            "allocation/deallocation events "
+                            "associated with an address.",
+                            nullptr,
+                            eCommandRequiresTarget | eCommandRequiresProcess |
+                                eCommandProcessMustBePaused |
+                                eCommandProcessMustBeLaunched) {
     CommandArgumentEntry arg1;
     CommandArgumentData addr_arg;
 
@@ -1736,9 +1736,9 @@ protected:
               range_info.GetRange().GetRangeEnd(),
               range_info.GetReadable() ? 'r' : '-',
               range_info.GetWritable() ? 'w' : '-',
-              range_info.GetExecutable() ? 'x' : '-',
-              name ? " " : "", name.AsCString(""),
-              section_name ? " " : "", section_name.AsCString(""));
+              range_info.GetExecutable() ? 'x' : '-', name ? " " : "",
+              name.AsCString(""), section_name ? " " : "",
+              section_name.AsCString(""));
           m_prev_end_addr = range_info.GetRange().GetRangeEnd();
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
