@@ -9636,6 +9636,186 @@ public:
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// Xtensa ABI Implementation
+//===----------------------------------------------------------------------===//
+
+namespace {
+class XtensaABIInfo : public DefaultABIInfo {
+private:
+  static const int NumArgGPRs = 6;
+  static const int MAX_ARG_IN_REGS_SIZE = 4 * 32;
+  static const int MAX_ARG_DIRECT_SIZE = MAX_ARG_IN_REGS_SIZE;
+  static const int MAX_RET_IN_REGS_SIZE = 2 * 32;
+
+public:
+  XtensaABIInfo(CodeGen::CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
+
+  // DefaultABIInfo's classifyReturnType and classifyArgumentType are
+  // non-virtual, but computeInfo is virtual, so we overload it.
+  void computeInfo(CGFunctionInfo &FI) const override;
+
+  ABIArgInfo classifyArgumentType(QualType Ty, bool IsFixed,
+                                  int &ArgGPRsLeft) const;
+  ABIArgInfo classifyReturnType(QualType RetTy) const;
+
+  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                    QualType Ty) const override;
+
+  ABIArgInfo extendType(QualType Ty) const;
+};
+} // end anonymous namespace
+
+void XtensaABIInfo::computeInfo(CGFunctionInfo &FI) const {
+  QualType RetTy = FI.getReturnType();
+  if (!getCXXABI().classifyReturnType(FI))
+    FI.getReturnInfo() = classifyReturnType(RetTy);
+  // IsRetIndirect is true if classifyArgumentType indicated the value should
+  // be passed indirect or if the type size is greater than 2*32.
+  // is passed direct in LLVM IR, relying on the backend lowering code to
+  // rewrite the argument list and pass indirectly on RV32.
+  bool IsRetIndirect = FI.getReturnInfo().getKind() == ABIArgInfo::Indirect ||
+                       getContext().getTypeSize(RetTy) > MAX_RET_IN_REGS_SIZE;
+  // We must track the number of GPRs used in order to conform to the Xtensa
+  // ABI, as integer scalars passed in registers should have signext/zeroext
+  // when promoted, but are anyext if passed on the stack. As GPR usage is
+  // different for variadic arguments, we must also track whether we are
+  // examining a vararg or not.
+  int ArgGPRsLeft = IsRetIndirect ? NumArgGPRs - 1 : NumArgGPRs;
+  int NumFixedArgs = FI.getNumRequiredArgs();
+  int ArgNum = 0;
+  for (auto &ArgInfo : FI.arguments()) {
+    bool IsFixed = ArgNum < NumFixedArgs;
+    ArgInfo.info = classifyArgumentType(ArgInfo.type, IsFixed, ArgGPRsLeft);
+    ArgNum++;
+  }
+}
+
+ABIArgInfo XtensaABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
+                                               int &ArgGPRsLeft) const {
+  assert(ArgGPRsLeft <= NumArgGPRs && "Arg GPR tracking underflow");
+
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+  // Structures with either a non-trivial destructor or a non-trivial
+  // copy constructor are always passed indirectly.
+  if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
+    if (ArgGPRsLeft)
+      ArgGPRsLeft -= 1;
+    return getNaturalAlignIndirect(Ty, /*ByVal=*/RAA ==
+                                           CGCXXABI::RAA_DirectInMemory);
+  }
+  // Ignore empty structs/unions.
+  if (isEmptyRecord(getContext(), Ty, true))
+    return ABIArgInfo::getIgnore();
+  uint64_t Size = getContext().getTypeSize(Ty);
+  uint64_t NeededAlign = getContext().getTypeAlign(Ty);
+  bool MustUseStack = false;
+  // Determine the number of GPRs needed to pass the current argument
+  // according to the ABI. 2*XLen-aligned varargs are passed in "aligned"
+  // register pairs, so may consume 3 registers.
+  int NeededArgGPRs = 1;
+  if (!IsFixed && NeededAlign == 2 * 32)
+    NeededArgGPRs = 2 + (ArgGPRsLeft % 2);
+  else if (Size > 32 && Size <= MAX_ARG_IN_REGS_SIZE)
+    NeededArgGPRs = (Size + 31) / 32;
+  if (NeededArgGPRs > ArgGPRsLeft) {
+    MustUseStack = true;
+    NeededArgGPRs = ArgGPRsLeft;
+  }
+  ArgGPRsLeft -= NeededArgGPRs;
+  if (!isAggregateTypeForABI(Ty) && !Ty->isVectorType()) {
+    // Treat an enum type as its underlying type.
+    if (const EnumType *EnumTy = Ty->getAs<EnumType>())
+      Ty = EnumTy->getDecl()->getIntegerType();
+    // All integral types are promoted to XLen width, unless passed on the
+    // stack.
+    if (Size < 32 && Ty->isIntegralOrEnumerationType() && !MustUseStack) {
+      return extendType(Ty);
+    }
+    return ABIArgInfo::getDirect();
+  }
+
+  // Aggregates which are <= 4*32 will be passed in registers if possible,
+  // so coerce to integers.
+  if (Size <= MAX_ARG_IN_REGS_SIZE) {
+    unsigned Alignment = getContext().getTypeAlign(Ty);
+    // Use a single XLen int if possible, 2*XLen if 2*XLen alignment is
+    // required, and a 2-element XLen array if only XLen alignment is
+    // required.
+    if (Size <= 32) {
+      return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), 32));
+    }
+
+    else if (Alignment == 2 * 32) {
+      return ABIArgInfo::getDirect(
+          llvm::IntegerType::get(getVMContext(), 2 * 32));
+    } else {
+      return ABIArgInfo::getDirect(llvm::ArrayType::get(
+          llvm::IntegerType::get(getVMContext(), 32), (Size + 31) / 32));
+    }
+  }
+#undef MAX_STRUCT_IN_REGS_SIZE
+  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+}
+
+ABIArgInfo XtensaABIInfo::classifyReturnType(QualType RetTy) const {
+  if (RetTy->isVoidType())
+    return ABIArgInfo::getIgnore();
+  int ArgGPRsLeft = 2;
+  // The rules for return and argument types are the same, so defer to
+  // classifyArgumentType.
+  return classifyArgumentType(RetTy, /*IsFixed=*/true, ArgGPRsLeft);
+}
+
+Address XtensaABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                 QualType Ty) const {
+  CharUnits SlotSize = CharUnits::fromQuantity(32 / 8);
+  // Empty records are ignored for parameter passing purposes.
+  if (isEmptyRecord(getContext(), Ty, true)) {
+    // We try to return some dummy value which will be
+    // removed by backend
+
+    auto TypeInfo = getContext().getTypeInfoInChars(Ty);
+    return emitVoidPtrVAArg(CGF, VAListAddr, Ty, false, TypeInfo, SlotSize,
+                            /*AllowHigherAlign=*/false);
+  }
+
+  std::pair<CharUnits, CharUnits> SizeAndAlign =
+      getContext().getTypeInfoInChars(Ty);
+  // Arguments bigger than MAX_STRUCT_DIRECT_SIZE indirectly.
+  CharUnits DirectSize = CharUnits::fromQuantity(MAX_ARG_DIRECT_SIZE / 8);
+  bool IsIndirect = SizeAndAlign.first > DirectSize;
+
+  if (IsIndirect) {
+    auto TyInfo = CGF.getContext().getTypeInfoInChars(Ty);
+    CharUnits TyAlignForABI = TyInfo.second;
+
+    llvm::Type *BaseTy =
+        llvm::PointerType::getUnqual(CGF.ConvertTypeForMem(Ty));
+    llvm::Value *Addr =
+        CGF.Builder.CreateVAArg(VAListAddr.getPointer(), BaseTy);
+    return Address(Addr, TyAlignForABI);
+  } else {
+    Address Temp = CGF.CreateMemTemp(Ty, "varet");
+    llvm::Value *Val =
+        CGF.Builder.CreateVAArg(VAListAddr.getPointer(), CGF.ConvertType(Ty));
+    CGF.Builder.CreateStore(Val, Temp);
+    return Temp;
+  }
+}
+
+ABIArgInfo XtensaABIInfo::extendType(QualType Ty) const {
+  return ABIArgInfo::getExtend(Ty);
+}
+
+namespace {
+class XtensaTargetCodeGenInfo : public TargetCodeGenInfo {
+public:
+  XtensaTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
+      : TargetCodeGenInfo(new XtensaABIInfo(CGT)) {}
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // Driver code
 //===----------------------------------------------------------------------===//
 
@@ -9820,6 +10000,8 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   case llvm::Triple::spir:
   case llvm::Triple::spir64:
     return SetCGInfo(new SPIRTargetCodeGenInfo(Types));
+  case llvm::Triple::xtensa:
+    return SetCGInfo(new XtensaTargetCodeGenInfo(Types));
   }
 }
 
