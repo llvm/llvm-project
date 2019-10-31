@@ -737,7 +737,7 @@ Darwin::Darwin(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
       CudaInstallation(D, Triple, Args) {}
 
 types::ID MachO::LookupTypeForExtension(StringRef Ext) const {
-  types::ID Ty = ToolChain::lookupTypeForExtension(Ext);
+  types::ID Ty = ToolChain::LookupTypeForExtension(Ext);
 
   // Darwin always preprocesses assembly files (unless -x is used explicitly).
   if (Ty == types::TY_PP_Asm)
