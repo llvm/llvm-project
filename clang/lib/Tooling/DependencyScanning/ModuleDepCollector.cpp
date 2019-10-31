@@ -126,7 +126,7 @@ void ModuleDepCollectorPP::addModuleDep(const Module *M, ModuleDeps &MD) {
 
 ModuleDepCollector::ModuleDepCollector(CompilerInstance &I,
                                        DependencyConsumer &C)
-    : Instance(I), Consumer(C), ContextHash(I.getInvocation().getModuleHash()) {
+    : Instance(I), Consumer(C), ContextHash(I.getInvocation().getModuleHash(I.getDiagnostics())) {
 }
 
 void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
