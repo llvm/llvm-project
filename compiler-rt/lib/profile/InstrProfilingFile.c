@@ -337,6 +337,8 @@ static int writeOrderFile(const char *OutputName) {
   return RetVal;
 }
 
+#define LPROF_INIT_ONCE_ENV "__LLVM_PROFILE_RT_INIT_ONCE"
+
 static void truncateCurrentFile(void) {
   const char *Filename;
   char *FilenameBuf;
@@ -357,11 +359,14 @@ static void truncateCurrentFile(void) {
   /* Only create the profile directory and truncate an existing profile once.
    * In continuous mode, this is necessary, as the profile is written-to by the
    * runtime initializer. */
-  const char *lprofInitOnceEnv = "__LLVM_PROFILE_RT_INIT_ONCE";
-  int initialized = getenv(lprofInitOnceEnv) != NULL;
+  int initialized = getenv(LPROF_INIT_ONCE_ENV) != NULL;
   if (initialized)
     return;
-  setenv(lprofInitOnceEnv, lprofInitOnceEnv, 1);
+#if defined(_WIN32)
+  _putenv(LPROF_INIT_ONCE_ENV "=" LPROF_INIT_ONCE_ENV);
+#else
+  setenv(LPROF_INIT_ONCE_ENV, LPROF_INIT_ONCE_ENV, 1);
+#endif
 
   createProfileDir(Filename);
 
