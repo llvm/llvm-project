@@ -86,10 +86,8 @@ TEST(LICMTest, TestSCEVInvalidationOnHoisting) {
   // If LICM have properly invalidated SCEV,
   //   1. SCEV of <load i64, i64* %ptr> should properly dominate the "loop" BB,
   //   2. extra invalidation shouldn't change result of the query.
-  // FIXME: these values should be equal!
-  EXPECT_NE(DispositionBeforeInvalidation,
+  EXPECT_EQ(DispositionBeforeInvalidation,
             ScalarEvolution::BlockDisposition::ProperlyDominatesBlock);
-  // FIXME: these values should be equal!
-  EXPECT_NE(DispositionBeforeInvalidation, DispositionAfterInvalidation);
+  EXPECT_EQ(DispositionBeforeInvalidation, DispositionAfterInvalidation);
 }
 }
