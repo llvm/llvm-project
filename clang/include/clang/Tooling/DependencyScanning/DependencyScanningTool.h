@@ -40,6 +40,7 @@ public:
                                                 StringRef CWD);
 
 private:
+  const ScanningOutputFormat Format;
   DependencyScanningWorker Worker;
   const tooling::CompilationDatabase &Compilations;
 };
