@@ -211,7 +211,9 @@ TEST(Remarks, LinkingError) {
                   40),
         remarks::Format::YAMLStrTab);
     EXPECT_TRUE(static_cast<bool>(E));
-    EXPECT_EQ(toString(std::move(E)),
-              "'/baddir/badfile.opt.yaml': No such file or directory");
+    std::string ErrorMessage = toString(std::move(E));
+    EXPECT_EQ(StringRef(ErrorMessage).lower(),
+              StringRef("'/baddir/badfile.opt.yaml': No such file or directory")
+                  .lower());
   }
 }
