@@ -105,6 +105,7 @@ static inline size_t getpagesize() {
   GetNativeSystemInfo(&S);
   return S.dwPageSize;
 }
+#define setenv _putenv
 #else /* defined(_WIN32) */
 #include <unistd.h>
 #endif /* defined(_WIN32) */
