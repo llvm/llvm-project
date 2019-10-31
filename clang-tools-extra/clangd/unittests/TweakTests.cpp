@@ -1529,6 +1529,7 @@ est);
         void foo(PARAM, TYPE b, TYPE c, TYPE d = BODY(x)){}
         )cpp"},
   };
+  ExtraArgs.push_back("-fno-delayed-template-parsing");
   for (const auto &Case : Cases)
     EXPECT_EQ(apply(Case.first), Case.second) << Case.first;
 }
@@ -1559,6 +1560,7 @@ TEST_F(DefineInlineTest, TransformTemplParamNames) {
     };
 
     )cpp";
+  ExtraArgs.push_back("-fno-delayed-template-parsing");
   EXPECT_EQ(apply(Test), Expected);
 }
 
