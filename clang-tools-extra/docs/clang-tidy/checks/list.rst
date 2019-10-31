@@ -4,7 +4,6 @@ Clang-Tidy Checks
 =================
 
 .. toctree::
-
    abseil-duration-addition
    abseil-duration-comparison
    abseil-duration-conversion-cast
@@ -106,87 +105,87 @@ Clang-Tidy Checks
    cert-msc51-cpp
    cert-oop11-cpp (redirects to performance-move-constructor-init) <cert-oop11-cpp>
    cert-oop54-cpp (redirects to bugprone-unhandled-self-assignment) <cert-oop54-cpp>
-   clang-analyzer-core.CallAndMessage
-   clang-analyzer-core.DivideZero
+   clang-analyzer-core.CallAndMessage (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-core.CallAndMessage>
+   clang-analyzer-core.DivideZero (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-core.DivideZero>
    clang-analyzer-core.DynamicTypePropagation
-   clang-analyzer-core.NonNullParamChecker
-   clang-analyzer-core.NullDereference
-   clang-analyzer-core.StackAddressEscape
-   clang-analyzer-core.UndefinedBinaryOperatorResult
-   clang-analyzer-core.VLASize
-   clang-analyzer-core.uninitialized.ArraySubscript
-   clang-analyzer-core.uninitialized.Assign
-   clang-analyzer-core.uninitialized.Branch
+   clang-analyzer-core.NonNullParamChecker (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-core.NonNullParamChecker>
+   clang-analyzer-core.NullDereference (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-core.NullDereference>
+   clang-analyzer-core.StackAddressEscape (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-core.StackAddressEscape>
+   clang-analyzer-core.UndefinedBinaryOperatorResult (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-core.UndefinedBinaryOperatorResult>
+   clang-analyzer-core.VLASize (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-core.VLASize>
+   clang-analyzer-core.uninitialized.ArraySubscript (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-core.uninitialized.ArraySubscript>
+   clang-analyzer-core.uninitialized.Assign (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-core.uninitialized.Assign>
+   clang-analyzer-core.uninitialized.Branch (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-core.uninitialized.Branch>
    clang-analyzer-core.uninitialized.CapturedBlockVariable
-   clang-analyzer-core.uninitialized.UndefReturn
+   clang-analyzer-core.uninitialized.UndefReturn (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-core.uninitialized.UndefReturn>
    clang-analyzer-cplusplus.InnerPointer
-   clang-analyzer-cplusplus.Move
-   clang-analyzer-cplusplus.NewDelete
-   clang-analyzer-cplusplus.NewDeleteLeaks
-   clang-analyzer-deadcode.DeadStores
-   clang-analyzer-nullability.NullPassedToNonnull
-   clang-analyzer-nullability.NullReturnedFromNonnull
-   clang-analyzer-nullability.NullableDereferenced
-   clang-analyzer-nullability.NullablePassedToNonnull
+   clang-analyzer-cplusplus.Move (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-cplusplus.Move>
+   clang-analyzer-cplusplus.NewDelete (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-cplusplus.NewDelete>
+   clang-analyzer-cplusplus.NewDeleteLeaks (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-cplusplus.NewDeleteLeaks>
+   clang-analyzer-deadcode.DeadStores (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-deadcode.DeadStores>
+   clang-analyzer-nullability.NullPassedToNonnull (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-nullability.NullPassedToNonnull>
+   clang-analyzer-nullability.NullReturnedFromNonnull (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-nullability.NullReturnedFromNonnull>
+   clang-analyzer-nullability.NullableDereferenced (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-nullability.NullableDereferenced>
+   clang-analyzer-nullability.NullablePassedToNonnull (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-nullability.NullablePassedToNonnull>
    clang-analyzer-nullability.NullableReturnedFromNonnull
-   clang-analyzer-optin.cplusplus.UninitializedObject
-   clang-analyzer-optin.cplusplus.VirtualCall
-   clang-analyzer-optin.mpi.MPI-Checker
+   clang-analyzer-optin.cplusplus.UninitializedObject (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-optin.cplusplus.UninitializedObject>
+   clang-analyzer-optin.cplusplus.VirtualCall (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-optin.cplusplus.VirtualCall>
+   clang-analyzer-optin.mpi.MPI-Checker (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-optin.mpi.MPI-Checker>
    clang-analyzer-optin.osx.OSObjectCStyleCast
-   clang-analyzer-optin.osx.cocoa.localizability.EmptyLocalizationContextChecker
-   clang-analyzer-optin.osx.cocoa.localizability.NonLocalizedStringChecker
+   clang-analyzer-optin.osx.cocoa.localizability.EmptyLocalizationContextChecker (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-optin.osx.cocoa.localizability.EmptyLocalizationContextChecker>
+   clang-analyzer-optin.osx.cocoa.localizability.NonLocalizedStringChecker (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-optin.osx.cocoa.localizability.NonLocalizedStringChecker>
    clang-analyzer-optin.performance.GCDAntipattern
    clang-analyzer-optin.performance.Padding
    clang-analyzer-optin.portability.UnixAPI
-   clang-analyzer-osx.API
+   clang-analyzer-osx.API (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.API>
    clang-analyzer-osx.MIG
    clang-analyzer-osx.NumberObjectConversion
    clang-analyzer-osx.OSObjectRetainCount
    clang-analyzer-osx.ObjCProperty
-   clang-analyzer-osx.SecKeychainAPI
-   clang-analyzer-osx.cocoa.AtSync
+   clang-analyzer-osx.SecKeychainAPI (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.SecKeychainAPI>
+   clang-analyzer-osx.cocoa.AtSync (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.cocoa.AtSync>
    clang-analyzer-osx.cocoa.AutoreleaseWrite
-   clang-analyzer-osx.cocoa.ClassRelease
-   clang-analyzer-osx.cocoa.Dealloc
-   clang-analyzer-osx.cocoa.IncompatibleMethodTypes
+   clang-analyzer-osx.cocoa.ClassRelease (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.cocoa.ClassRelease>
+   clang-analyzer-osx.cocoa.Dealloc (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.cocoa.Dealloc>
+   clang-analyzer-osx.cocoa.IncompatibleMethodTypes (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.cocoa.IncompatibleMethodTypes>
    clang-analyzer-osx.cocoa.Loops
    clang-analyzer-osx.cocoa.MissingSuperCall
-   clang-analyzer-osx.cocoa.NSAutoreleasePool
-   clang-analyzer-osx.cocoa.NSError
-   clang-analyzer-osx.cocoa.NilArg
+   clang-analyzer-osx.cocoa.NSAutoreleasePool (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.cocoa.NSAutoreleasePool>
+   clang-analyzer-osx.cocoa.NSError (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.cocoa.NSError>
+   clang-analyzer-osx.cocoa.NilArg (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.cocoa.NilArg>
    clang-analyzer-osx.cocoa.NonNilReturnValue
-   clang-analyzer-osx.cocoa.ObjCGenerics
-   clang-analyzer-osx.cocoa.RetainCount
+   clang-analyzer-osx.cocoa.ObjCGenerics (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.cocoa.ObjCGenerics>
+   clang-analyzer-osx.cocoa.RetainCount (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.cocoa.RetainCount>
    clang-analyzer-osx.cocoa.RunLoopAutoreleaseLeak
-   clang-analyzer-osx.cocoa.SelfInit
-   clang-analyzer-osx.cocoa.SuperDealloc
-   clang-analyzer-osx.cocoa.UnusedIvars
-   clang-analyzer-osx.cocoa.VariadicMethodTypes
-   clang-analyzer-osx.coreFoundation.CFError
-   clang-analyzer-osx.coreFoundation.CFNumber
-   clang-analyzer-osx.coreFoundation.CFRetainRelease
-   clang-analyzer-osx.coreFoundation.containers.OutOfBounds
-   clang-analyzer-osx.coreFoundation.containers.PointerSizedValues
-   clang-analyzer-security.FloatLoopCounter
-   clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
-   clang-analyzer-security.insecureAPI.UncheckedReturn
-   clang-analyzer-security.insecureAPI.bcmp
-   clang-analyzer-security.insecureAPI.bcopy
-   clang-analyzer-security.insecureAPI.bzero
-   clang-analyzer-security.insecureAPI.getpw
-   clang-analyzer-security.insecureAPI.gets
-   clang-analyzer-security.insecureAPI.mkstemp
-   clang-analyzer-security.insecureAPI.mktemp
-   clang-analyzer-security.insecureAPI.rand
-   clang-analyzer-security.insecureAPI.strcpy
-   clang-analyzer-security.insecureAPI.vfork
-   clang-analyzer-unix.API
-   clang-analyzer-unix.Malloc
-   clang-analyzer-unix.MallocSizeof
-   clang-analyzer-unix.MismatchedDeallocator
-   clang-analyzer-unix.Vfork
-   clang-analyzer-unix.cstring.BadSizeArg
-   clang-analyzer-unix.cstring.NullArg
+   clang-analyzer-osx.cocoa.SelfInit (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.cocoa.SelfInit>
+   clang-analyzer-osx.cocoa.SuperDealloc (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.cocoa.SuperDealloc>
+   clang-analyzer-osx.cocoa.UnusedIvars (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.cocoa.UnusedIvars>
+   clang-analyzer-osx.cocoa.VariadicMethodTypes (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.cocoa.VariadicMethodTypes>
+   clang-analyzer-osx.coreFoundation.CFError (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.coreFoundation.CFError>
+   clang-analyzer-osx.coreFoundation.CFNumber (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.coreFoundation.CFNumber>
+   clang-analyzer-osx.coreFoundation.CFRetainRelease (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.coreFoundation.CFRetainRelease>
+   clang-analyzer-osx.coreFoundation.containers.OutOfBounds (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.coreFoundation.containers.OutOfBounds>
+   clang-analyzer-osx.coreFoundation.containers.PointerSizedValues (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-osx.coreFoundation.containers.PointerSizedValues>
+   clang-analyzer-security.FloatLoopCounter (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-security.FloatLoopCounter>
+   clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling>
+   clang-analyzer-security.insecureAPI.UncheckedReturn (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-security.insecureAPI.UncheckedReturn>
+   clang-analyzer-security.insecureAPI.bcmp (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-security.insecureAPI.bcmp>
+   clang-analyzer-security.insecureAPI.bcopy (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-security.insecureAPI.bcopy>
+   clang-analyzer-security.insecureAPI.bzero (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-security.insecureAPI.bzero>
+   clang-analyzer-security.insecureAPI.getpw (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-security.insecureAPI.getpw>
+   clang-analyzer-security.insecureAPI.gets (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-security.insecureAPI.gets>
+   clang-analyzer-security.insecureAPI.mkstemp (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-security.insecureAPI.mkstemp>
+   clang-analyzer-security.insecureAPI.mktemp (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-security.insecureAPI.mktemp>
+   clang-analyzer-security.insecureAPI.rand (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-security.insecureAPI.rand>
+   clang-analyzer-security.insecureAPI.strcpy (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-security.insecureAPI.strcpy>
+   clang-analyzer-security.insecureAPI.vfork (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-security.insecureAPI.vfork>
+   clang-analyzer-unix.API (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-unix.API>
+   clang-analyzer-unix.Malloc (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-unix.Malloc>
+   clang-analyzer-unix.MallocSizeof (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-unix.MallocSizeof>
+   clang-analyzer-unix.MismatchedDeallocator (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-unix.MismatchedDeallocator>
+   clang-analyzer-unix.Vfork (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-unix.Vfork>
+   clang-analyzer-unix.cstring.BadSizeArg (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-unix.cstring.BadSizeArg>
+   clang-analyzer-unix.cstring.NullArg (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-unix.cstring.NullArg>
    clang-analyzer-valist.CopyToSelf
    clang-analyzer-valist.Uninitialized
    clang-analyzer-valist.Unterminated
