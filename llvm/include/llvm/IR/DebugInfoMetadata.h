@@ -2464,6 +2464,10 @@ public:
   /// Return whether this is an implicit location description.
   bool isImplicit() const;
 
+  /// Return whether the location is computed on the expression stack, meaning
+  /// it cannot be a simple register location.
+  bool isComplex() const;
+
   /// Append \p Ops with operations to apply the \p Offset.
   static void appendOffset(SmallVectorImpl<uint64_t> &Ops, int64_t Offset);
 
