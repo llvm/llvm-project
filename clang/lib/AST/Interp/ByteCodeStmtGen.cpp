@@ -14,12 +14,10 @@
 #include "PrimType.h"
 #include "Program.h"
 #include "State.h"
+#include "clang/Basic/LLVM.h"
 
 using namespace clang;
 using namespace clang::interp;
-
-template <typename T> using Expected = llvm::Expected<T>;
-template <typename T> using Optional = llvm::Optional<T>;
 
 namespace clang {
 namespace interp {
