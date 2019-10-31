@@ -601,8 +601,20 @@ const char *XtensaTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case XtensaISD::NAME:                                                        \
     return "XtensaISD::" #NAME
   switch (Opcode) {
+    OPCODE(BR_CC_T);
+    OPCODE(BR_CC_F);
     OPCODE(CALL);
     OPCODE(CALLW);
+    OPCODE(CMPUO);
+    OPCODE(CMPUEQ);
+    OPCODE(CMPULE);
+    OPCODE(CMPULT);
+    OPCODE(CMPOEQ);
+    OPCODE(CMPOLE);
+    OPCODE(CMPOLT);
+    OPCODE(MADD);
+    OPCODE(MSUB);
+    OPCODE(MOVS);
     OPCODE(MOVSP);
     OPCODE(PCREL_WRAPPER);
     OPCODE(RET_FLAG);

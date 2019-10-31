@@ -24,12 +24,31 @@ namespace llvm {
 namespace XtensaISD {
 enum {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
+
+  BR_CC_T,
+  BR_CC_F,
+
   // Calls a function.  Operand 0 is the chain operand and operand 1
   // is the target address.  The arguments start at operand 2.
   // There is an optional glue operand at the end.
   CALL,
   // WinABI Call version
   CALLW,
+
+  // Floating point unordered compare conditions
+  CMPUEQ,
+  CMPULE,
+  CMPULT,
+  CMPUO,
+  // Floating point compare conditions
+  CMPOEQ,
+  CMPOLE,
+  CMPOLT,
+  // FP multipy-add/sub
+  MADD,
+  MSUB,
+  // FP move
+  MOVS,
 
   MOVSP,
 
