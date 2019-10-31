@@ -852,8 +852,8 @@ TEST_F(FindExplicitReferencesTest, All) {
                };
                // delegating initializer
                class $10^Foo {
-                 $11^Foo(int$12^);
-                 $13^Foo(): $14^Foo(111) {}
+                 $11^Foo(int);
+                 $12^Foo(): $13^Foo(111) {}
                };
              }
            )cpp",
@@ -869,11 +869,19 @@ TEST_F(FindExplicitReferencesTest, All) {
            "9: targets = {Base}\n"
            "10: targets = {Foo}, decl\n"
            "11: targets = {foo()::Foo::Foo}, decl\n"
-           // FIXME: we should exclude the built-in type.
-           "12: targets = {}, decl\n"
-           "13: targets = {foo()::Foo::Foo}, decl\n"
-           "14: targets = {Foo}\n"},
-
+           "12: targets = {foo()::Foo::Foo}, decl\n"
+           "13: targets = {Foo}\n"},
+          // Anonymous entities should not be reported.
+          {
+              R"cpp(
+             void foo() {
+              class {} $0^x;
+              int (*$1^fptr)(int $2^a, int) = nullptr;
+             }
+           )cpp",
+              "0: targets = {x}, decl\n"
+              "1: targets = {fptr}, decl\n"
+              "2: targets = {a}, decl\n"},
       };
 
   for (const auto &C : Cases) {

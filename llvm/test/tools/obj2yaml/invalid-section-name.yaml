@@ -1,7 +1,7 @@
 ## Check we do not crash/assert when dumping a broken section name.
-## Here we replace "foo" name with a sequence of characters that
+## Here we replace the section name with a sequence of characters that
 ## are not representable as unsigned char.
-## We used to have an assert for this case before. 
+## We used to assert for this case before. 
 
 # RUN: yaml2obj %s -o %t
 # RUN: obj2yaml %t | FileCheck %s

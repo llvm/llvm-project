@@ -1,6 +1,94 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
 
 ;
+; CLS
+;
+
+define <vscale x 16 x i8> @cls_i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: cls_i8:
+; CHECK: cls z0.b, p0/m, z1.b
+; CHECK-NEXT: ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.cls.nxv16i8(<vscale x 16 x i8> %a,
+                                                               <vscale x 16 x i1> %pg,
+                                                               <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @cls_i16(<vscale x 8 x i16> %a, <vscale x 8 x i1> %pg, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: cls_i16:
+; CHECK: cls z0.h, p0/m, z1.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.cls.nxv8i16(<vscale x 8 x i16> %a,
+                                                               <vscale x 8 x i1> %pg,
+                                                               <vscale x 8 x i16> %b)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @cls_i32(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: cls_i32:
+; CHECK: cls z0.s, p0/m, z1.s
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.cls.nxv4i32(<vscale x 4 x i32> %a,
+                                                               <vscale x 4 x i1> %pg,
+                                                               <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @cls_i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: cls_i64:
+; CHECK: cls z0.d, p0/m, z1.d
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.cls.nxv2i64(<vscale x 2 x i64> %a,
+                                                               <vscale x 2 x i1> %pg,
+                                                               <vscale x 2 x i64> %b)
+  ret <vscale x 2 x i64> %out
+}
+
+;
+; CLZ
+;
+
+define <vscale x 16 x i8> @clz_i8(<vscale x 16 x i8> %a, <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: clz_i8:
+; CHECK: clz z0.b, p0/m, z1.b
+; CHECK-NEXT: ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.clz.nxv16i8(<vscale x 16 x i8> %a,
+                                                               <vscale x 16 x i1> %pg,
+                                                               <vscale x 16 x i8> %b)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @clz_i16(<vscale x 8 x i16> %a, <vscale x 8 x i1> %pg, <vscale x 8 x i16> %b) {
+; CHECK-LABEL: clz_i16:
+; CHECK: clz z0.h, p0/m, z1.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.clz.nxv8i16(<vscale x 8 x i16> %a,
+                                                               <vscale x 8 x i1> %pg,
+                                                               <vscale x 8 x i16> %b)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @clz_i32(<vscale x 4 x i32> %a, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: clz_i32:
+; CHECK: clz z0.s, p0/m, z1.s
+; CHECK-NEXT: ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.clz.nxv4i32(<vscale x 4 x i32> %a,
+                                                               <vscale x 4 x i1> %pg,
+                                                               <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @clz_i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %pg, <vscale x 2 x i64> %b) {
+; CHECK-LABEL: clz_i64:
+; CHECK: clz z0.d, p0/m, z1.d
+; CHECK-NEXT: ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.clz.nxv2i64(<vscale x 2 x i64> %a,
+                                                               <vscale x 2 x i1> %pg,
+                                                               <vscale x 2 x i64> %b)
+  ret <vscale x 2 x i64> %out
+}
+
+;
 ; CNT
 ;
 
@@ -73,6 +161,16 @@ define <vscale x 2 x i64> @cnt_f64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %pg,
                                                                <vscale x 2 x double> %b)
   ret <vscale x 2 x i64> %out
 }
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.cls.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, <vscale x 16 x i8>)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.cls.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, <vscale x 8 x i16>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.cls.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x i32>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.cls.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>, <vscale x 2 x i64>)
+
+declare <vscale x 16 x i8> @llvm.aarch64.sve.clz.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, <vscale x 16 x i8>)
+declare <vscale x 8 x i16> @llvm.aarch64.sve.clz.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, <vscale x 8 x i16>)
+declare <vscale x 4 x i32> @llvm.aarch64.sve.clz.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x i32>)
+declare <vscale x 2 x i64> @llvm.aarch64.sve.clz.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>, <vscale x 2 x i64>)
 
 declare <vscale x 16 x i8> @llvm.aarch64.sve.cnt.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, <vscale x 16 x i8>)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.cnt.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, <vscale x 8 x i16>)

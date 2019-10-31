@@ -30,6 +30,16 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f32(<2 x float> addrspace(1)* %out
   ret void
 }
 
+; FUNC-LABEL: {{^}}fptrunc_v3f64_to_v3f32:
+; GCN: v_cvt_f32_f64_e32
+; GCN: v_cvt_f32_f64_e32
+; GCN: v_cvt_f32_f64_e32
+define amdgpu_kernel void @fptrunc_v3f64_to_v3f32(<3 x float> addrspace(1)* %out, <3 x double> %in) {
+  %result = fptrunc <3 x double> %in to <3 x float>
+  store <3 x float> %result, <3 x float> addrspace(1)* %out
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}fptrunc_v4f64_to_v4f32:
 ; GCN: v_cvt_f32_f64_e32
 ; GCN: v_cvt_f32_f64_e32

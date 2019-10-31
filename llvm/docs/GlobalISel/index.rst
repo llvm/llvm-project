@@ -54,6 +54,15 @@ the following sections.
   Porting
   Resources
 
+More information on specific passes can be found in the following sections:
+
+.. toctree::
+  :maxdepth: 1
+
+  IRTranslator
+  Legalizer
+  RegBankSelect
+  InstructionSelect
 
 .. _progress:
 

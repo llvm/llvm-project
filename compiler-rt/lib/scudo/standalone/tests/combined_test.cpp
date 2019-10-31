@@ -223,6 +223,7 @@ struct DeathConfig {
   // Tiny allocator, its Primary only serves chunks of 1024 bytes.
   using DeathSizeClassMap = scudo::SizeClassMap<1U, 10U, 10U, 10U, 1U, 10U>;
   typedef scudo::SizeClassAllocator32<DeathSizeClassMap, 18U> Primary;
+  typedef scudo::MapAllocator<0U> Secondary;
   template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U>;
 };
 

@@ -226,8 +226,6 @@ void Writer::layoutMemory() {
 
   if (WasmSym::globalBase)
     WasmSym::globalBase->setVirtualAddress(memoryPtr);
-  if (WasmSym::definedMemoryBase)
-    WasmSym::definedMemoryBase->setVirtualAddress(memoryPtr);
 
   uint32_t dataStart = memoryPtr;
 

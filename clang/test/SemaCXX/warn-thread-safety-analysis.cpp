@@ -3051,6 +3051,20 @@ void Foo::test() {
   int b = a;  // expected-warning {{reading variable 'a' requires holding mutex 'getMutexPtr()'}}
 }
 
+#ifdef __cpp_guaranteed_copy_elision
+
+void guaranteed_copy_elision() {
+  MutexLock lock = MutexLock{&sls_mu};
+  sls_guard_var = 0;
+}
+
+void guaranteed_copy_elision_const() {
+  const MutexLock lock = MutexLock{&sls_mu};
+  sls_guard_var = 0;
+}
+
+#endif
+
 } // end namespace TemporaryCleanupExpr
 
 

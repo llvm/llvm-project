@@ -147,7 +147,7 @@ Features        : fp asimd evtstrm aes pmull sha1 sha2 crc32
 CPU implementer : 0x41
 CPU architecture: 8
 CPU variant     : 0x0
-CPU part        : 0xd03
+CPU part        : 0xd05
 
 processor       : 1
 Features        : fp asimd evtstrm aes pmull sha1 sha2 crc32
@@ -159,17 +159,17 @@ CPU architecture: 8
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(ExynosProcCpuInfo +
                                               "CPU variant     : 0xc\n"
                                               "CPU part        : 0xafe"),
-            "exynos-m1");
-  // Verify Exynos M1.
+            "exynos-m3");
+  // Verify Exynos M3.
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(ExynosProcCpuInfo +
                                               "CPU variant     : 0x1\n"
-                                              "CPU part        : 0x001"),
-            "exynos-m1");
-  // Verify Exynos M2.
+                                              "CPU part        : 0x002"),
+            "exynos-m3");
+  // Verify Exynos M4.
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(ExynosProcCpuInfo +
-                                              "CPU variant     : 0x4\n"
-                                              "CPU part        : 0x001"),
-            "exynos-m2");
+                                              "CPU variant     : 0x1\n"
+                                              "CPU part        : 0x003"),
+            "exynos-m4");
 
   const std::string ThunderX2T99ProcCpuInfo = R"(
 processor	: 0

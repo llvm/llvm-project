@@ -1879,6 +1879,8 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
       report_fatal_error("Can't return in GHC call convention");
     else
       return CC_ARM_APCS_GHC;
+  case CallingConv::CFGuard_Check:
+    return (Return ? RetCC_ARM_AAPCS : CC_ARM_Win32_CFGuard_Check);
   }
 }
 

@@ -274,6 +274,19 @@ StringRef llvm::dwarf::AccessibilityString(unsigned Access) {
   return StringRef();
 }
 
+StringRef llvm::dwarf::DefaultedMemberString(unsigned DefaultedEncodings) {
+  switch (DefaultedEncodings) {
+  // Defaulted Member Encodings codes
+  case DW_DEFAULTED_no:
+    return "DW_DEFAULTED_no";
+  case DW_DEFAULTED_in_class:
+    return "DW_DEFAULTED_in_class";
+  case DW_DEFAULTED_out_of_class:
+    return "DW_DEFAULTED_out_of_class";
+  }
+  return StringRef();
+}
+
 StringRef llvm::dwarf::VisibilityString(unsigned Visibility) {
   switch (Visibility) {
   case DW_VIS_local:
@@ -615,6 +628,8 @@ StringRef llvm::dwarf::AttributeValueString(uint16_t Attr, unsigned Val) {
     return ArrayOrderString(Val);
   case DW_AT_APPLE_runtime_class:
     return LanguageString(Val);
+  case DW_AT_defaulted:
+    return DefaultedMemberString(Val);
   }
 
   return StringRef();

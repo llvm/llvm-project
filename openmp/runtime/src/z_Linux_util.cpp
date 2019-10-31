@@ -54,7 +54,7 @@
 #include <sys/sysctl.h>
 #include <sys/user.h>
 #include <pthread_np.h>
-#elif KMP_OS_NETBSD
+#elif KMP_OS_NETBSD || KMP_OS_OPENBSD
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #endif
@@ -1287,7 +1287,7 @@ static void __kmp_atfork_child(void) {
   ++__kmp_fork_count;
 
 #if KMP_AFFINITY_SUPPORTED
-#if KMP_OS_LINUX
+#if KMP_OS_LINUX || KMP_OS_FREEBSD
   // reset the affinity in the child to the initial thread
   // affinity in the parent
   kmp_set_thread_affinity_mask_initial();
@@ -2130,9 +2130,36 @@ int __kmp_is_address_mapped(void *addr) {
     }
   }
   KMP_INTERNAL_FREE(kiv);
-#elif KMP_OS_DRAGONFLY || KMP_OS_OPENBSD
+#elif KMP_OS_OPENBSD
 
-  // FIXME(DragonFly, OpenBSD): Implement this
+  int mib[3];
+  mib[0] = CTL_KERN;
+  mib[1] = KERN_PROC_VMMAP;
+  mib[2] = getpid();
+
+  size_t size;
+  uint64_t end;
+  rc = sysctl(mib, 3, NULL, &size, NULL, 0);
+  KMP_ASSERT(!rc);
+  KMP_ASSERT(size);
+  end = size;
+
+  struct kinfo_vmentry kiv = {.kve_start = 0};
+
+  while ((rc = sysctl(mib, 3, &kiv, &size, NULL, 0)) == 0) {
+    KMP_ASSERT(size);
+    if (kiv.kve_end == end)
+      break;
+
+    if (kiv.kve_start >= (uint64_t)addr && kiv.kve_end <= (uint64_t)addr) {
+      found = 1;
+      break;
+    }
+    kiv.kve_start += 1;
+  }
+#elif KMP_OS_DRAGONFLY
+
+  // FIXME(DragonFly): Implement this
   found = 1;
 
 #else

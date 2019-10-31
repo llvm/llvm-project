@@ -97,7 +97,7 @@ public:
 
 // Return true if the half-word, when taken as the first of a pair of halfwords
 // is the first half of a 32-bit instruction.
-// Reference from ARM Architecure Reference Manual ARMv7-A and ARMv7-R edition
+// Reference from ARM Architecture Reference Manual ARMv7-A and ARMv7-R edition
 // section A6.3: 32-bit Thumb instruction encoding
 // |             HW1                   |               HW2                |
 // | 1 1 1 | op1 (2) | op2 (7) | x (4) |op|           x (15)              |
@@ -108,7 +108,7 @@ static bool is32bitInstruction(uint16_t hw) {
   return (hw & 0xe000) == 0xe000 && (hw & 0x1800) != 0x0000;
 }
 
-// Reference from ARM Architecure Reference Manual ARMv7-A and ARMv7-R edition
+// Reference from ARM Architecture Reference Manual ARMv7-A and ARMv7-R edition
 // section A6.3.4 Branches and miscellaneous control.
 // |             HW1              |               HW2                |
 // | 1 1 1 | 1 0 | op (7) | x (4) | 1 | op1 (3) | op2 (4) | imm8 (8) |

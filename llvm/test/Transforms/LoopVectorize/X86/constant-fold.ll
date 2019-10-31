@@ -27,7 +27,7 @@ define void @f1() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [2 x i16*], [2 x i16*]* @b, i16 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16*, i16** [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16** [[TMP3]] to <2 x i16*>*
-; CHECK-NEXT:    store <2 x i16*> <i16* getelementptr inbounds (%rec8, %rec8* extractelement (<2 x %rec8*> getelementptr ([1 x %rec8], [1 x %rec8]* @a, <2 x i16> zeroinitializer, <2 x i64> zeroinitializer), i32 0), i32 0, i32 0), i16* getelementptr inbounds (%rec8, %rec8* extractelement (<2 x %rec8*> getelementptr ([1 x %rec8], [1 x %rec8]* @a, <2 x i16> zeroinitializer, <2 x i64> zeroinitializer), i32 1), i32 0, i32 0)>, <2 x i16*>* [[TMP4]], align 8
+; CHECK-NEXT:    store <2 x i16*> <i16* getelementptr inbounds ([1 x %rec8], [1 x %rec8]* @a, i32 0, i32 0, i32 0), i16* getelementptr inbounds ([1 x %rec8], [1 x %rec8]* @a, i32 0, i32 0, i32 0)>, <2 x i16*>* [[TMP4]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 2
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0

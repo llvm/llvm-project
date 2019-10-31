@@ -70,6 +70,7 @@ class MCTargetOptions;
 class MDNode;
 class Module;
 class raw_ostream;
+class RemarkStreamer;
 class StackMaps;
 class TargetLoweringObjectFile;
 class TargetMachine;
@@ -319,7 +320,7 @@ public:
 
   void emitStackSizeSection(const MachineFunction &MF);
 
-  void emitRemarksSection(Module &M);
+  void emitRemarksSection(RemarkStreamer &RS);
 
   enum CFIMoveType { CFI_M_None, CFI_M_EH, CFI_M_Debug };
   CFIMoveType needsCFIMoves() const;

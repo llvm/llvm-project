@@ -256,7 +256,7 @@ static int32_t nvptx_teams_reduce_nowait(int32_t global_tid, int32_t num_vars,
   // If we guard this barrier as follows it leads to deadlock, probably
   // because of a compiler bug: if (!IsGenericMode()) __syncthreads();
   uint16_t SyncWarps = (NumThreads + WARPSIZE - 1) / WARPSIZE;
-  named_sync(L1_BARRIER, SyncWarps * WARPSIZE);
+  __kmpc_impl_named_sync(L1_BARRIER, SyncWarps * WARPSIZE);
 
   // If this team is not the last, quit.
   if (/* Volatile read by all threads */ !IsLastTeam)

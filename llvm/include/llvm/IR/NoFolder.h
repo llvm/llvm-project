@@ -196,7 +196,7 @@ public:
   }
 
   Instruction *CreateFNeg(Constant *C) const {
-    return BinaryOperator::CreateFNeg(C);
+    return UnaryOperator::CreateFNeg(C);
   }
 
   Instruction *CreateNot(Constant *C) const {

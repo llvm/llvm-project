@@ -5167,6 +5167,7 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
     return WillIncrement ? !C->isMaxValue(IsSigned) : !C->isMinValue(IsSigned);
   };
 
+  Constant *SafeReplacementConstant = nullptr;
   if (auto *CI = dyn_cast<ConstantInt>(C)) {
     // Bail out if the constant can't be safely incremented/decremented.
     if (!ConstantIsOk(CI))
@@ -5186,10 +5187,21 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpInst::Predicate Pred,
       auto *CI = dyn_cast<ConstantInt>(Elt);
       if (!CI || !ConstantIsOk(CI))
         return llvm::None;
+
+      if (!SafeReplacementConstant)
+        SafeReplacementConstant = CI;
     }
   } else {
     // ConstantExpr?
     return llvm::None;
+  }
+
+  // It may not be safe to change a compare predicate in the presence of
+  // undefined elements, so replace those elements with the first safe constant
+  // that we found.
+  if (C->containsUndefElement()) {
+    assert(SafeReplacementConstant && "Replacement constant not set");
+    C = Constant::replaceUndefsWith(C, SafeReplacementConstant);
   }
 
   CmpInst::Predicate NewPred = CmpInst::getFlippedStrictnessPredicate(Pred);

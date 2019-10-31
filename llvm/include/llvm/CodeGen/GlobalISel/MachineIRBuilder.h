@@ -1382,8 +1382,9 @@ public:
 
   /// Build and insert \p Res = G_FMA \p Op0, \p Op1, \p Op2
   MachineInstrBuilder buildFMA(const DstOp &Dst, const SrcOp &Src0,
-                               const SrcOp &Src1, const SrcOp &Src2) {
-    return buildInstr(TargetOpcode::G_FMA, {Dst}, {Src0, Src1, Src2});
+                               const SrcOp &Src1, const SrcOp &Src2,
+                               Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_FMA, {Dst}, {Src0, Src1, Src2}, Flags);
   }
 
   /// Build and insert \p Res = G_FMAD \p Op0, \p Op1, \p Op2

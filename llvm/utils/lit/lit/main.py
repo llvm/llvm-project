@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 lit - LLVM Integrated Tester.
 
@@ -18,17 +16,16 @@ import lit.run
 import lit.Test
 import lit.util
 
-def main(builtinParameters = {}):
+def main(builtin_params = {}):
     opts = lit.cl_arguments.parse_args()
 
     if opts.show_version:
         print("lit %s" % (lit.__version__,))
         return
 
-    userParams = create_user_parameters(builtinParameters, opts)
+    params = create_params(builtin_params, opts.user_params)
     isWindows = platform.system() == 'Windows'
 
-    # Create the global config object.
     litConfig = lit.LitConfig.LitConfig(
         progname = os.path.basename(sys.argv[0]),
         path = opts.path,
@@ -39,12 +36,11 @@ def main(builtinParameters = {}):
         noExecute = opts.noExecute,
         debug = opts.debug,
         isWindows = isWindows,
-        params = userParams,
+        params = params,
         config_prefix = opts.configPrefix,
         maxFailures = opts.maxFailures,
         echo_all_commands = opts.echoAllCommands)
 
-    # Perform test discovery.
     tests = lit.discovery.find_tests_for_inputs(litConfig, opts.test_paths)
 
     # Command line overrides configuration for maxIndividualTestTime.
@@ -62,63 +58,50 @@ def main(builtinParameters = {}):
         print_suites_or_tests(tests, opts)
         return
 
-    # Select and order the tests.
     numTotalTests = len(tests)
 
     if opts.filter:
         tests = [t for t in tests if opts.filter.search(t.getFullName())]
 
-    determine_order(tests, opts)
+    determine_order(tests, opts.order)
 
-    # Then optionally restrict our attention to a shard of the tests.
     if opts.shard:
         (run, shards) = opts.shard
         tests = filter_by_shard(tests, run, shards, litConfig)
 
-    # Finally limit the number of tests, if desired.
-    if opts.maxTests is not None:
-        tests = tests[:opts.maxTests]
+    if opts.max_tests:
+        tests = tests[:opts.max_tests]
 
-    # Don't create more workers than tests.
     opts.numWorkers = min(len(tests), opts.numWorkers)
 
-    testing_time = run_tests(tests, litConfig, opts, numTotalTests)
+    elapsed = run_tests(tests, litConfig, opts, numTotalTests)
 
-    # move into print_summary
-    if not opts.quiet:
-        print('Testing Time: %.2fs' % (testing_time,))
+    print_summary(tests, elapsed, opts)
 
-    print_summary(tests, opts)
-
-    # Write out the test data, if requested.
     if opts.output_path:
-        write_test_results(tests, litConfig, testing_time, opts.output_path)
+        write_test_results(tests, litConfig, elapsed, opts.output_path)
     if opts.xunit_output_file:
         write_test_results_xunit(tests, opts)
 
-    # If we encountered any additional errors, exit abnormally.
     if litConfig.numErrors:
         sys.stderr.write('\n%d error(s), exiting.\n' % litConfig.numErrors)
         sys.exit(2)
 
-    # Warn about warnings.
     if litConfig.numWarnings:
         sys.stderr.write('\n%d warning(s) in tests.\n' % litConfig.numWarnings)
 
-    has_failure = any(t.result.code.isFailure for t in tests)
+    has_failure = any(t.isFailure() for t in tests)
     if has_failure:
         sys.exit(1)
 
 
-def create_user_parameters(builtinParameters, opts):
-    userParams = dict(builtinParameters)
-    for entry in opts.userParameters:
-        if '=' not in entry:
-            name,val = entry,''
-        else:
-            name,val = entry.split('=', 1)
-        userParams[name] = val
-    return userParams
+def create_params(builtin_params, user_params):
+    def parse(p):
+        return p.split('=', 1) if '=' in p else (p, '')
+
+    params = dict(builtin_params)
+    params.update([parse(p) for p in user_params])
+    return params
 
 def print_suites_or_tests(tests, opts):
     # Aggregate the tests by suite.
@@ -149,19 +132,23 @@ def print_suites_or_tests(tests, opts):
             for test in ts_tests:
                 print('  %s' % (test.getFullName(),))
 
-def determine_order(tests, opts):
-    if opts.shuffle:
+
+def determine_order(tests, order):
+    assert order in ['default', 'random', 'failing-first']
+    if order == 'default':
+        tests.sort(key=lambda t: (not t.isEarlyTest(), t.getFullName()))
+    elif order == 'random':
         import random
         random.shuffle(tests)
-    elif opts.incremental:
-        def by_mtime(test):
-            try:
-                return os.path.getmtime(test.getFilePath())
-            except:
-                return 0
-        tests.sort(key=by_mtime, reverse=True)
     else:
-        tests.sort(key=lambda t: (not t.isEarlyTest(), t.getFullName()))
+        def by_mtime(test):
+            return os.path.getmtime(test.getFilePath())
+        tests.sort(key=by_mtime, reverse=True)
+
+
+def touch_file(test):
+    if test.isFailure():
+        os.utime(test.getFilePath(), None)
 
 def filter_by_shard(tests, run, shards, litConfig):
     test_ixs = range(run - 1, len(tests), shards)
@@ -181,25 +168,19 @@ def filter_by_shard(tests, run, shards, litConfig):
     litConfig.note(msg)
     return selected_tests
 
-def update_incremental_cache(test):
-    if not test.result.code.isFailure:
-        return
-    fname = test.getFilePath()
-    os.utime(fname, None)
-
 def run_tests(tests, litConfig, opts, numTotalTests):
     display = lit.display.create_display(opts, len(tests), numTotalTests,
                                          opts.numWorkers)
     def progress_callback(test):
         display.update(test)
-        if opts.incremental:
-            update_incremental_cache(test)
+        if opts.order == 'failing-first':
+            touch_file(test)
 
     run = lit.run.create_run(tests, litConfig, opts.numWorkers,
-                             progress_callback, opts.maxTime)
+                             progress_callback, opts.timeout)
 
     try:
-        elapsed = run_tests_in_tmp_dir(run.execute, litConfig)
+        elapsed = execute_in_tmp_dir(run, litConfig)
     except KeyboardInterrupt:
         #TODO(yln): should we attempt to cleanup the progress bar here?
         sys.exit(2)
@@ -212,7 +193,7 @@ def run_tests(tests, litConfig, opts, numTotalTests):
     display.finish()
     return elapsed
 
-def run_tests_in_tmp_dir(run_callback, litConfig):
+def execute_in_tmp_dir(run, litConfig):
     # Create a temp directory inside the normal temp directory so that we can
     # try to avoid temporary test file leaks. The user can avoid this behavior
     # by setting LIT_PRESERVES_TMP in the environment, so they can easily use
@@ -233,7 +214,7 @@ def run_tests_in_tmp_dir(run_callback, litConfig):
     # scanning for stale temp directories, and deleting temp directories whose
     # lit process has died.
     try:
-        return run_callback()
+        return run.execute()
     finally:
         if tmp_dir:
             try:
@@ -243,7 +224,10 @@ def run_tests_in_tmp_dir(run_callback, litConfig):
                 # FIXME: Re-try after timeout on Windows.
                 litConfig.warning("Failed to delete temp directory '%s'" % tmp_dir)
 
-def print_summary(tests, opts):
+def print_summary(tests, elapsed, opts):
+    if not opts.quiet:
+        print('Testing Time: %.2fs' % elapsed)
+
     byCode = {}
     for test in tests:
         if test.result.code not in byCode:
@@ -290,12 +274,12 @@ def print_summary(tests, opts):
         if N:
             print('  %s: %d' % (name,N))
 
-def write_test_results(tests, lit_config, testing_time, output_path):
+def write_test_results(tests, lit_config, elapsed, output_path):
     # Construct the data we will write.
     data = {}
     # Encode the current lit version as a schema version.
     data['__version__'] = lit.__versioninfo__
-    data['elapsed'] = testing_time
+    data['elapsed'] = elapsed
     # FIXME: Record some information on the lit configuration used?
     # FIXME: Record information from the individual test suites?
 
@@ -357,7 +341,7 @@ def write_test_results_xunit(tests, opts):
                                 'skipped': 0,
                                 'tests'    : [] }
         by_suite[suite]['tests'].append(result_test)
-        if result_test.result.code.isFailure:
+        if result_test.isFailure():
             by_suite[suite]['failures'] += 1
         elif result_test.result.code == lit.Test.UNSUPPORTED:
             by_suite[suite]['skipped'] += 1
@@ -381,6 +365,3 @@ def write_test_results_xunit(tests, opts):
         xunit_output_file.write("</testsuite>\n")
     xunit_output_file.write("</testsuites>")
     xunit_output_file.close()
-
-if __name__=='__main__':
-    main()

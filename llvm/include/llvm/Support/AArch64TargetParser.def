@@ -120,10 +120,6 @@ AARCH64_CPU_NAME("neoverse-n1", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,
                   AArch64::AEK_SSBS))
 AARCH64_CPU_NAME("cyclone", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_NONE))
-AARCH64_CPU_NAME("exynos-m1", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                 (AArch64::AEK_CRC))
-AARCH64_CPU_NAME("exynos-m2", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
-                 (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("exynos-m3", ARMV8A, FK_CRYPTO_NEON_FP_ARMV8, false,
                  (AArch64::AEK_CRC))
 AARCH64_CPU_NAME("exynos-m4", ARMV8_2A, FK_CRYPTO_NEON_FP_ARMV8, false,

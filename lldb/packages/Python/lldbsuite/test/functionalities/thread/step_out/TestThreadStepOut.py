@@ -68,7 +68,9 @@ class ThreadStepOutTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number for our breakpoint.
-        self.breakpoint = line_number('main.cpp', '// Set breakpoint here')
+        self.bkpt_string = '// Set breakpoint here'
+        self.breakpoint = line_number('main.cpp', self.bkpt_string)       
+
         if "gcc" in self.getCompiler() or self.isIntelCompiler():
             self.step_out_destination = line_number(
                 'main.cpp', '// Expect to stop here after step-out (icc and gcc)')
@@ -129,56 +131,27 @@ class ThreadStepOutTestCase(TestBase):
 
     def step_out_test(self, step_out_func):
         """Test single thread step out of a function."""
-        exe = self.getBuildArtifact("a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+        (self.inferior_target, self.inferior_process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, self.bkpt_string, lldb.SBFileSpec('main.cpp'), only_one_thread = False)
 
-        # This should create a breakpoint in the main thread.
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.breakpoint, num_expected_locations=1)
-
-        # The breakpoint list should show 1 location.
-        self.expect(
-            "breakpoint list -f",
-            "Breakpoint location shown correctly",
-            substrs=[
-                "1: file = 'main.cpp', line = %d, exact_match = 0, locations = 1" %
-                self.breakpoint])
-
-        # Run the program.
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        # Get the target process
-        self.inferior_target = self.dbg.GetSelectedTarget()
-        self.inferior_process = self.inferior_target.GetProcess()
-
-        # Get the number of threads, ensure we see all three.
-        num_threads = self.inferior_process.GetNumThreads()
-        self.assertEqual(
-            num_threads,
-            3,
-            'Number of expected threads and actual threads do not match.')
+        # We hit the breakpoint on at least one thread.  If we hit it on both threads
+        # simultaneously, we can try the step out.  Otherwise, suspend the thread
+        # that hit the breakpoint, and continue till the second thread hits
+        # the breakpoint:
 
         (breakpoint_threads, other_threads) = ([], [])
         lldbutil.sort_stopped_threads(self.inferior_process,
                                       breakpoint_threads=breakpoint_threads,
                                       other_threads=other_threads)
-
-        while len(breakpoint_threads) < 2:
-            self.runCmd("thread continue %s" %
-                        " ".join([str(x.GetIndexID()) for x in other_threads]))
-            lldbutil.sort_stopped_threads(
-                self.inferior_process,
-                breakpoint_threads=breakpoint_threads,
-                other_threads=other_threads)
+        if len(breakpoint_threads) == 1:
+            success = thread.Suspend()
+            self.assertTrue(success, "Couldn't suspend a thread")
+            bkpt_threads = lldbutil.continue_to_breakpoint(bkpt)
+            self.assertEqual(len(bkpt_threads), 1, "Second thread stopped")
+            success = thread.Resume()
+            self.assertTrue(success, "Couldn't resume a thread")
 
         self.step_out_thread = breakpoint_threads[0]
 
         # Step out of thread stopped at breakpoint
         step_out_func()
-
-        # Run to completion
-        self.runCmd("continue")
-
-        # At this point, the inferior process should have exited.
-        self.assertTrue(self.inferior_process.GetState() ==
-                        lldb.eStateExited, PROCESS_EXITED)

@@ -202,7 +202,7 @@ private:
 
   struct ALIGNED(SCUDO_CACHE_LINE_SIZE) RegionInfo {
     HybridMutex Mutex;
-    IntrusiveList<TransferBatch> FreeList;
+    SinglyLinkedList<TransferBatch> FreeList;
     RegionStats Stats;
     bool CanRelease;
     bool Exhausted;
@@ -372,7 +372,7 @@ private:
     }
 
     ReleaseRecorder Recorder(Region->RegionBeg, &Region->Data);
-    releaseFreeMemoryToOS(&Region->FreeList, Region->RegionBeg,
+    releaseFreeMemoryToOS(Region->FreeList, Region->RegionBeg,
                           roundUpTo(Region->AllocatedUser, PageSize) / PageSize,
                           BlockSize, &Recorder);
 

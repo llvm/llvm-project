@@ -246,6 +246,16 @@ def RetCC_ARM_AAPCS_VFP : CallingConv<[
   CCDelegateTo<RetCC_ARM_AAPCS_Common>
 ]>;
 
+
+// Windows Control Flow Guard checks take a single argument (the target function
+// address) and have no return value.
+let Entry = 1 in
+def CC_ARM_Win32_CFGuard_Check : CallingConv<[
+  CCIfType<[i32], CCAssignToReg<[R0]>>
+]>;
+
+
+
 //===----------------------------------------------------------------------===//
 // Callee-saved register lists.
 //===----------------------------------------------------------------------===//
@@ -255,6 +265,11 @@ def CSR_FPRegs : CalleeSavedRegs<(add (sequence "D%u", 0, 31))>;
 
 def CSR_AAPCS : CalleeSavedRegs<(add LR, R11, R10, R9, R8, R7, R6, R5, R4,
                                      (sequence "D%u", 15, 8))>;
+
+// The Windows Control Flow Guard Check function preserves the same registers as
+// AAPCS, and also preserves all floating point registers.
+def CSR_Win_AAPCS_CFGuard_Check : CalleeSavedRegs<(add LR, R11, R10, R9, R8, R7,
+                                     R6, R5, R4, (sequence "D%u", 15, 0))>;
 
 // R8 is used to pass swifterror, remove it from CSR.
 def CSR_AAPCS_SwiftError : CalleeSavedRegs<(sub CSR_AAPCS, R8)>;

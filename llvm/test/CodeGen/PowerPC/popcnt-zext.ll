@@ -5,8 +5,8 @@
 define i16 @zpop_i8_i16(i8 %x) {
 ; FAST-LABEL: zpop_i8_i16:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    rlwinm 3, 3, 0, 24, 31
-; FAST-NEXT:    popcntw 3, 3
+; FAST-NEXT:    clrldi 3, 3, 56
+; FAST-NEXT:    popcntd 3, 3
 ; FAST-NEXT:    blr
 ;
 ; SLOW-LABEL: zpop_i8_i16:
@@ -297,8 +297,8 @@ define i64 @popz_i32_i64(i32 %x) {
 define i64 @popa_i16_i64(i16 %x) {
 ; FAST-LABEL: popa_i16_i64:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    rlwinm 3, 3, 0, 16, 31
-; FAST-NEXT:    popcntw 3, 3
+; FAST-NEXT:    clrldi 3, 3, 48
+; FAST-NEXT:    popcntd 3, 3
 ; FAST-NEXT:    andi. 3, 3, 16
 ; FAST-NEXT:    blr
 ;

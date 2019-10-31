@@ -183,6 +183,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::nxv4f32, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv1f64, &AArch64::ZPRRegClass);
     addRegisterClass(MVT::nxv2f64, &AArch64::ZPRRegClass);
+
+    for (auto VT : { MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64 }) {
+      setOperationAction(ISD::SADDSAT, VT, Legal);
+      setOperationAction(ISD::UADDSAT, VT, Legal);
+      setOperationAction(ISD::SSUBSAT, VT, Legal);
+      setOperationAction(ISD::USUBSAT, VT, Legal);
+    }
   }
 
   // Compute derived properties from the register classes
@@ -3118,8 +3125,10 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
                                       : CC_AArch64_DarwinPCS_VarArg;
    case CallingConv::Win64:
     return IsVarArg ? CC_AArch64_Win64_VarArg : CC_AArch64_AAPCS;
-  case CallingConv::AArch64_VectorCall:
-    return CC_AArch64_AAPCS;
+   case CallingConv::CFGuard_Check:
+     return CC_AArch64_Win64_CFGuard_Check;
+   case CallingConv::AArch64_VectorCall:
+     return CC_AArch64_AAPCS;
   }
 }
 

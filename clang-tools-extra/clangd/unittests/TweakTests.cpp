@@ -133,6 +133,15 @@ TEST_F(DumpASTTest, Test) {
                     HasSubstr("<col:13> 'int' 2")));
 }
 
+TWEAK_TEST(DumpSymbol);
+TEST_F(DumpSymbolTest, Test) {
+  std::string ID = R"("id":"CA2EBE44A1D76D2A")";
+  std::string USR = R"("usr":"c:@F@foo#")";
+  EXPECT_THAT(apply("void f^oo();"),
+              AllOf(StartsWith("message:"), testing::HasSubstr(ID),
+                    testing::HasSubstr(USR)));
+}
+
 TWEAK_TEST(ShowSelectionTree);
 TEST_F(ShowSelectionTreeTest, Test) {
   EXPECT_AVAILABLE("^int f^oo() { re^turn 2 ^+ 2; }");

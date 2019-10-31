@@ -2,7 +2,7 @@
 // command-line option, e.g. on Mac where %s is commonly under /Users.
 
 // RUN: %clang_cl --target=i686-pc-win32 /fallback /Dfoo=bar /Ubaz /Ifoo /O0 /Ox /GR /GR- /GS /GS- /Gy /Gy- \
-// RUN:   /Gw /Gw- /LD /LDd /EHs /EHs- /Zl /MD /MDd /MTd /MT /FImyheader.h /Zi \
+// RUN:   /Gw /Gw- /LD /LDd /EHs /EHs- /Zl /MD /MDd /MTd /MT /guard:cf /guard:cf- /FImyheader.h /Zi \
 // RUN:   -garbage -moregarbage \
 // RUN:   -### -- %s 2>&1 \
 // RUN:   | FileCheck %s
@@ -33,6 +33,7 @@
 // CHECK: "/EHs-"
 // CHECK: "/Zl"
 // CHECK: "/MT"
+// CHECK: "/guard:cf-"
 // CHECK: "-garbage"
 // CHECK: "-moregarbage"
 // CHECK: "/Tc" "{{.*cl-fallback.c}}"

@@ -148,6 +148,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
 
   uint32_t SymbolTableEntryCount = 0;
   uint32_t SymbolTableOffset = 0;
+  uint16_t SectionCount = 0;
 
   support::endian::Writer W;
   std::unique_ptr<MCXCOFFObjectTargetWriter> TargetObjectWriter;
@@ -157,15 +158,17 @@ class XCOFFObjectWriter : public MCObjectWriter {
   // the sections. Should have one for each set of csects that get mapped into
   // the same section and get handled in a 'similar' way.
   CsectGroup ProgramCodeCsects{CsectGroup::LabelDefSupported, {}};
+  CsectGroup DataCsects{CsectGroup::LabelDefSupported, {}};
   CsectGroup BSSCsects{CsectGroup::LabelDefUnsupported, {}};
 
   // The Predefined sections.
   Section Text;
+  Section Data;
   Section BSS;
 
   // All the XCOFF sections, in the order they will appear in the section header
   // table.
-  std::array<Section *const, 2> Sections{{&Text, &BSS}};
+  std::array<Section *const, 3> Sections{{&Text, &Data, &BSS}};
 
   CsectGroup &getCsectGroup(const MCSectionXCOFF *MCSec);
 
@@ -223,6 +226,8 @@ XCOFFObjectWriter::XCOFFObjectWriter(
       Strings(StringTableBuilder::XCOFF),
       Text(".text", XCOFF::STYP_TEXT, /* IsVirtual */ false,
            CsectGroups{&ProgramCodeCsects}),
+      Data(".data", XCOFF::STYP_DATA, /* IsVirtual */ false,
+           CsectGroups{&DataCsects}),
       BSS(".bss", XCOFF::STYP_BSS, /* IsVirtual */ true,
           CsectGroups{&BSSCsects}) {}
 
@@ -234,6 +239,7 @@ void XCOFFObjectWriter::reset() {
   // Reset the symbol table and string table.
   SymbolTableEntryCount = 0;
   SymbolTableOffset = 0;
+  SectionCount = 0;
   Strings.clear();
 
   MCObjectWriter::reset();
@@ -248,6 +254,9 @@ CsectGroup &XCOFFObjectWriter::getCsectGroup(const MCSectionXCOFF *MCSec) {
   case XCOFF::XMC_RW:
     if (XCOFF::XTY_CM == MCSec->getCSectType())
       return BSSCsects;
+
+    if (XCOFF::XTY_SD == MCSec->getCSectType())
+      return DataCsects;
 
     report_fatal_error("Unhandled mapping of read-write csect to section.");
   case XCOFF::XMC_BS:
@@ -467,7 +476,7 @@ void XCOFFObjectWriter::writeFileHeader() {
   // Magic.
   W.write<uint16_t>(0x01df);
   // Number of sections.
-  W.write<uint16_t>(Sections.size());
+  W.write<uint16_t>(SectionCount);
   // Timestamp field. For reproducible output we write a 0, which represents no
   // timestamp.
   W.write<int32_t>(0);
@@ -483,6 +492,10 @@ void XCOFFObjectWriter::writeFileHeader() {
 
 void XCOFFObjectWriter::writeSectionHeaderTable() {
   for (const auto *Sec : Sections) {
+    // Nothing to write for this Section.
+    if (Sec->Index == Section::UninitializedIndex)
+      continue;
+
     // Write Name.
     ArrayRef<char> NameRef(Sec->Name, XCOFF::NameSize);
     W.write(NameRef);
@@ -509,6 +522,10 @@ void XCOFFObjectWriter::writeSectionHeaderTable() {
 
 void XCOFFObjectWriter::writeSymbolTable(const MCAsmLayout &Layout) {
   for (const auto *Section : Sections) {
+    // Nothing to write for this Section.
+    if (Section->Index == Section::UninitializedIndex)
+      continue;
+
     for (const auto *Group : Section->Groups) {
       if (Group->Csects.empty())
         continue;
@@ -555,6 +572,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
     if (SectionIndex > MaxSectionIndex)
       report_fatal_error("Section index overflow!");
     Section->Index = SectionIndex++;
+    SectionCount++;
 
     bool SectionAddressSet = false;
     for (auto *Group : Section->Groups) {
@@ -598,12 +616,13 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
 
   // Calculate the RawPointer value for each section.
   uint64_t RawPointer = sizeof(XCOFF::FileHeader32) + auxiliaryHeaderSize() +
-                        Sections.size() * sizeof(XCOFF::SectionHeader32);
+                        SectionCount * sizeof(XCOFF::SectionHeader32);
   for (auto *Sec : Sections) {
-    if (!Sec->IsVirtual) {
-      Sec->FileOffsetToData = RawPointer;
-      RawPointer += Sec->Size;
-    }
+    if (Sec->Index == Section::UninitializedIndex || Sec->IsVirtual)
+      continue;
+
+    Sec->FileOffsetToData = RawPointer;
+    RawPointer += Sec->Size;
   }
 
   // TODO Add in Relocation storage to the RawPointer Calculation.

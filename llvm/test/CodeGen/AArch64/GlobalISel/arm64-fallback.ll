@@ -200,3 +200,12 @@ entry:
   call void @use_s128(i128 %p2, i128 %p6)
   ret i32 0
 }
+
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: %2:fpr(<4 x s16>) = G_ZEXT %0:fpr(<4 x s8>) (in function: zext_v4s8)
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for zext_v4s8
+; FALLBACK-WITH-REPORT-OUT-LABEL: zext_v4s8
+define <4 x i16> @zext_v4s8(<4 x i8> %in) {
+  %ext = zext <4 x i8> %in to <4 x i16>
+  ret <4 x i16> %ext
+}
+

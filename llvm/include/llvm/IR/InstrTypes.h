@@ -1039,6 +1039,11 @@ struct OperandBundleUse {
     return getTagID() == LLVMContext::OB_funclet;
   }
 
+  /// Return true if this is a "cfguardtarget" operand bundle.
+  bool isCFGuardTargetOperandBundle() const {
+    return getTagID() == LLVMContext::OB_cfguardtarget;
+  }
+
 private:
   /// Pointer to an entry in LLVMContextImpl::getOrInsertBundleTag.
   StringMapEntry<uint32_t> *Tag;

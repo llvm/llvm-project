@@ -2189,7 +2189,6 @@ TEST(YAMLIO, TestReadBuiltInTypesDoubleError) {
 //
 // Test error handling reading built-in Hex8 type
 //
-LLVM_YAML_IS_SEQUENCE_VECTOR(Hex8)
 TEST(YAMLIO, TestReadBuiltInTypesHex8Error) {
   std::vector<Hex8> seq;
   Input yin("---\n"
@@ -2200,15 +2199,26 @@ TEST(YAMLIO, TestReadBuiltInTypesHex8Error) {
             /*Ctxt=*/nullptr,
             suppressErrorMessages);
   yin >> seq;
-
   EXPECT_TRUE(!!yin.error());
+
+  std::vector<Hex8> seq2;
+  Input yin2("---\n"
+             "[ 0x12, 0xFE, 0x123 ]\n"
+             "...\n",
+             /*Ctxt=*/nullptr, suppressErrorMessages);
+  yin2 >> seq2;
+  EXPECT_TRUE(!!yin2.error());
+
+  EXPECT_TRUE(seq.size() == 3);
+  EXPECT_TRUE(seq.size() == seq2.size());
+  for (size_t i = 0; i < seq.size(); ++i)
+    EXPECT_TRUE(seq[i] == seq2[i]);
 }
 
 
 //
 // Test error handling reading built-in Hex16 type
 //
-LLVM_YAML_IS_SEQUENCE_VECTOR(Hex16)
 TEST(YAMLIO, TestReadBuiltInTypesHex16Error) {
   std::vector<Hex16> seq;
   Input yin("---\n"
@@ -2219,14 +2229,25 @@ TEST(YAMLIO, TestReadBuiltInTypesHex16Error) {
             /*Ctxt=*/nullptr,
             suppressErrorMessages);
   yin >> seq;
-
   EXPECT_TRUE(!!yin.error());
+
+  std::vector<Hex16> seq2;
+  Input yin2("---\n"
+             "[ 0x0012, 0xFEFF, 0x12345 ]\n"
+             "...\n",
+             /*Ctxt=*/nullptr, suppressErrorMessages);
+  yin2 >> seq2;
+  EXPECT_TRUE(!!yin2.error());
+
+  EXPECT_TRUE(seq.size() == 3);
+  EXPECT_TRUE(seq.size() == seq2.size());
+  for (size_t i = 0; i < seq.size(); ++i)
+    EXPECT_TRUE(seq[i] == seq2[i]);
 }
 
 //
 // Test error handling reading built-in Hex32 type
 //
-LLVM_YAML_IS_SEQUENCE_VECTOR(Hex32)
 TEST(YAMLIO, TestReadBuiltInTypesHex32Error) {
   std::vector<Hex32> seq;
   Input yin("---\n"
@@ -2239,12 +2260,24 @@ TEST(YAMLIO, TestReadBuiltInTypesHex32Error) {
   yin >> seq;
 
   EXPECT_TRUE(!!yin.error());
+
+  std::vector<Hex32> seq2;
+  Input yin2("---\n"
+             "[ 0x0012, 0xFEFF0000, 0x1234556789 ]\n"
+             "...\n",
+             /*Ctxt=*/nullptr, suppressErrorMessages);
+  yin2 >> seq2;
+  EXPECT_TRUE(!!yin2.error());
+
+  EXPECT_TRUE(seq.size() == 3);
+  EXPECT_TRUE(seq.size() == seq2.size());
+  for (size_t i = 0; i < seq.size(); ++i)
+    EXPECT_TRUE(seq[i] == seq2[i]);
 }
 
 //
 // Test error handling reading built-in Hex64 type
 //
-LLVM_YAML_IS_SEQUENCE_VECTOR(Hex64)
 TEST(YAMLIO, TestReadBuiltInTypesHex64Error) {
   std::vector<Hex64> seq;
   Input yin("---\n"
@@ -2255,8 +2288,20 @@ TEST(YAMLIO, TestReadBuiltInTypesHex64Error) {
             /*Ctxt=*/nullptr,
             suppressErrorMessages);
   yin >> seq;
-
   EXPECT_TRUE(!!yin.error());
+
+  std::vector<Hex64> seq2;
+  Input yin2("---\n"
+             "[ 0x0012, 0xFFEEDDCCBBAA9988, 0x12345567890ABCDEF0 ]\n"
+             "...\n",
+             /*Ctxt=*/nullptr, suppressErrorMessages);
+  yin2 >> seq2;
+  EXPECT_TRUE(!!yin2.error());
+
+  EXPECT_TRUE(seq.size() == 3);
+  EXPECT_TRUE(seq.size() == seq2.size());
+  for (size_t i = 0; i < seq.size(); ++i)
+    EXPECT_TRUE(seq[i] == seq2[i]);
 }
 
 TEST(YAMLIO, TestMalformedMapFailsGracefully) {

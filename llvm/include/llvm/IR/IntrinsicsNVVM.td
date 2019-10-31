@@ -53,6 +53,10 @@ class WMMA_REGS<string Geom, string Frag, string PtxEltType> {
   string gft = Geom#":"#Frag#":"#ptx_elt_type;
   string ft = frag#":"#ptx_elt_type;
   list<LLVMType> regs = !cond(
+    // mma.sync.m8n8k4 uses smaller a/b fragments than wmma fp ops
+    !eq(gft,"m8n8k4:a:f16") : RepLLVMType<2, llvm_v2f16_ty>.ret,
+    !eq(gft,"m8n8k4:b:f16") : RepLLVMType<2, llvm_v2f16_ty>.ret,
+
     // fp16 -> fp16/fp32 @  m16n16k16/m8n32k16/m32n8k16
     // All currently supported geometries use the same fragment format,
     // so we only need to consider {fragment, type}.
@@ -137,13 +141,19 @@ class MMA_SIGNATURE<WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
 class WMMA_NAME_MMA<string ALayout, string BLayout, int Satfinite,
                     WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
   string signature = MMA_SIGNATURE<A, B, C, D>.ret;
-  string llvm = "llvm.nvvm.wmma."
-                # A.geom
-                # ".mma"
-                # "." # ALayout
-                # "." # BLayout
-                # signature
-                # !if(Satfinite, ".satfinite", "");
+  string llvm = !if(
+    !eq(A.geom, "m8n8k4"),
+        "llvm.nvvm.mma.m8n8k4"
+           # "." # ALayout
+           # "." # BLayout
+           # signature,
+        "llvm.nvvm.wmma."
+           # A.geom
+           # ".mma"
+           # "." # ALayout
+           # "." # BLayout
+           # signature
+           # !if(Satfinite, ".satfinite", ""));
 
   string record = !subst(".", "_",
                   !subst("llvm.", "int_", llvm));
@@ -160,7 +170,7 @@ class MMA_OPS<list<string> Geom, list<string> TypeA, list<string> TypeB,
      !foldl([]<list<WMMA_REGS>>, TypeA, t2, type_a, !listconcat(t2,
      !foldl([]<list<WMMA_REGS>>, !if(!size(TypeB), TypeB, [type_a]), t3, type_b, !listconcat(t3,
      !foldl([]<list<WMMA_REGS>>, TypeC, t4, type_c, !listconcat(t4,
-     !foldl([]<list<WMMA_REGS>>, !if(!size(TypeC), TypeC, [type_c]), t5, type_d, !listconcat(t5,
+     !foldl([]<list<WMMA_REGS>>, !if(!size(TypeD), TypeD, [type_c]), t5, type_d, !listconcat(t5,
             [[WMMA_REGS<geom, "a", type_a>,
               WMMA_REGS<geom, "b", type_b>,
               WMMA_REGS<geom, "c", type_c>,
@@ -185,19 +195,23 @@ class MMA_LDST_OPS<list<string> Geom, list<string> Frags, list<string> Types> {
 // drives generation of corresponding intrinsics and instructions.
 class NVVM_MMA_OPS<int _ = 0> {
   list<list<WMMA_REGS>> fp_mma_ops = MMA_OPS<
+            ["m8n8k4"],
+            ["f16"], [], ["f16", "f32"], ["f16", "f32"]>.ret;
+  list<list<WMMA_REGS>> fp_wmma_ops = MMA_OPS<
             ["m16n16k16", "m32n8k16", "m8n32k16"],
             ["f16"], [], ["f16", "f32"], ["f16", "f32"]>.ret;
-  list<list<WMMA_REGS>> int_mma_ops = MMA_OPS<
+  list<list<WMMA_REGS>> int_wmma_ops = MMA_OPS<
             ["m16n16k16", "m32n8k16", "m8n32k16"],
             ["s8", "u8"], [], ["s32"], []>.ret;
-  list<list<WMMA_REGS>> subint_mma_ops = MMA_OPS<
+  list<list<WMMA_REGS>> subint_wmma_ops = MMA_OPS<
             ["m8n8k32"],
             ["s4", "u4"], [], ["s32"], []>.ret;
-  list<list<WMMA_REGS>> bit_mma_ops = MMA_OPS<
+  list<list<WMMA_REGS>> bit_wmma_ops = MMA_OPS<
             ["m8n8k128"],
             ["b1"], [], ["s32"], []>.ret;
-  list<list<WMMA_REGS>> all_mma_ops = !listconcat(fp_mma_ops, int_mma_ops,
-                                                  subint_mma_ops, bit_mma_ops);
+  list<list<WMMA_REGS>> all_mma_ops = !listconcat(
+            fp_mma_ops, fp_wmma_ops, int_wmma_ops,
+            subint_wmma_ops, bit_wmma_ops);
 
   list<WMMA_REGS> ldst_ab_ops = MMA_LDST_OPS<
             ["m16n16k16", "m32n8k16", "m8n32k16"],
@@ -245,10 +259,25 @@ class NVVM_MMA_SUPPORTED<list<WMMA_REGS> frags, string layout_a, string layout_b
                # ":" # frags[0].frag
                ;
   string t = frags[0].ptx_elt_type;
+
+  // gcd is a shortcut used to identify instructions that depend on
+  // geom+frag_c+frag_d.  Not all instances of this class have all fragments
+  // specified. If there are not enough fragments, the tail evaluates to '?'.
+  string gcd = frags[0].geom
+               # ":"
+               # !if(!eq(!size(frags), 4),
+                     frags[2].ptx_elt_type # frags[3].ptx_elt_type,
+                     "?");
   list<int> ret = !cond(
     // Sub-int MMA only supports fixed A/B layout.
     // b1 does not support .satf.
     !eq(mma#":"#satf, "b1:row:col:0") : [1],
+    // mma.m8n8k4 has no .satf modifier.
+    !and(!eq(frags[0].geom, "m8n8k4"),
+         !ne(satf, 0)): [],
+
+    // mma.m8n8k4 has no C=f32 D=f16 variant.
+    !eq(gcd, "m8n8k4:f32f16"): [],
     !eq(mma, "s4:row:col") : [1],
     !eq(mma, "u4:row:col") : [1],
     !eq(mma, "s4:row:col") : [1],
@@ -4094,7 +4123,7 @@ class NVVM_WMMA_ST<WMMA_REGS Frag, string Layout, int WithStride>
               [IntrWriteMem, IntrArgMemOnly, WriteOnly<0>, NoCapture<0>],
               WMMA_NAME_LDST<"store", Frag, Layout, WithStride>.intr>;
 
-// Create all load/store variants 
+// Create all load/store variants
 foreach layout = ["row", "col"] in {
   foreach stride = [0, 1] in {
     foreach frag = NVVM_MMA_OPS.all_ld_ops in

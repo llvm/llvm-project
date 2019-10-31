@@ -538,7 +538,7 @@ static void replaceWithDefined(Symbol &sym, SectionBase *sec, uint64_t value,
 //
 // As you can see in this function, we create a copy relocation for the
 // dynamic linker, and the relocation contains not only symbol name but
-// various other informtion about the symbol. So, such attributes become a
+// various other information about the symbol. So, such attributes become a
 // part of the ABI.
 //
 // Note for application developers: I can give you a piece of advice if
@@ -553,7 +553,7 @@ static void replaceWithDefined(Symbol &sym, SectionBase *sec, uint64_t value,
 // reserved in .bss unless you recompile the main program. That means they
 // are likely to overlap with other data that happens to be laid out next
 // to the variable in .bss. This kind of issue is sometimes very hard to
-// debug. What's a solution? Instead of exporting a varaible V from a DSO,
+// debug. What's a solution? Instead of exporting a variable V from a DSO,
 // define an accessor getV().
 template <class ELFT> static void addCopyRelSymbol(SharedSymbol &ss) {
   // Copy relocation against zero-sized symbol doesn't make sense.
@@ -1222,9 +1222,9 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
   //
   // If we know that a PLT entry will be resolved within the same ELF module, we
   // can skip PLT access and directly jump to the destination function. For
-  // example, if we are linking a main exectuable, all dynamic symbols that can
+  // example, if we are linking a main executable, all dynamic symbols that can
   // be resolved within the executable will actually be resolved that way at
-  // runtime, because the main exectuable is always at the beginning of a search
+  // runtime, because the main executable is always at the beginning of a search
   // list. We can leverage that fact.
   if (!sym.isPreemptible && (!sym.isGnuIFunc() || config->zIfuncNoplt)) {
     if (expr == R_GOT_PC && !isAbsoluteValue(sym)) {

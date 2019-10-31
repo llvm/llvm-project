@@ -197,7 +197,7 @@ private:
 
   struct ALIGNED(SCUDO_CACHE_LINE_SIZE) SizeClassInfo {
     HybridMutex Mutex;
-    IntrusiveList<TransferBatch> FreeList;
+    SinglyLinkedList<TransferBatch> FreeList;
     SizeClassStats Stats;
     bool CanRelease;
     u32 RandState;
@@ -376,7 +376,7 @@ private:
     for (uptr I = MinRegionIndex; I <= MaxRegionIndex; I++) {
       if (PossibleRegions[I] == ClassId) {
         ReleaseRecorder Recorder(I * RegionSize);
-        releaseFreeMemoryToOS(&Sci->FreeList, I * RegionSize,
+        releaseFreeMemoryToOS(Sci->FreeList, I * RegionSize,
                               RegionSize / PageSize, BlockSize, &Recorder);
         if (Recorder.getReleasedRangesCount() > 0) {
           Sci->ReleaseInfo.PushedBlocksAtLastRelease = Sci->Stats.PushedBlocks;

@@ -943,7 +943,7 @@ def LWAX : XForm_1_memOp<31, 341, (outs g8rc:$rD), (ins memrr:$src),
                         [(set i64:$rD, (sextloadi32 xaddrX4:$src))]>, isPPC64,
                         PPC970_DGroup_Cracked;
 // For fast-isel:
-let isCodeGenOnly = 1, mayLoad = 1 in {
+let isCodeGenOnly = 1, mayLoad = 1, hasSideEffects = 0 in {
 def LWA_32  : DSForm_1<58, 2, (outs gprc:$rD), (ins memrix:$src),
                       "lwa $rD, $src", IIC_LdStLWA, []>, isPPC64,
                       PPC970_DGroup_Cracked;

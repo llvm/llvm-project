@@ -21,6 +21,13 @@
 
 using namespace llvm;
 
+static cl::opt<cl::boolOrDefault> EnableRemarksSection(
+    "remarks-section",
+    cl::desc(
+        "Emit a section containing remark diagnostics metadata. By default, "
+        "this is enabled for the following formats: yaml-strtab, bitstream."),
+    cl::init(cl::BOU_UNSET), cl::Hidden);
+
 RemarkStreamer::RemarkStreamer(
     std::unique_ptr<remarks::RemarkSerializer> RemarkSerializer,
     Optional<StringRef> FilenameIn)
@@ -102,6 +109,31 @@ void RemarkStreamer::emit(const DiagnosticInfoOptimizationBase &Diag) {
   remarks::Remark R = toRemark(Diag);
   // Then, emit the remark through the serializer.
   RemarkSerializer->emit(R);
+}
+
+bool RemarkStreamer::needsSection() const {
+  if (EnableRemarksSection == cl::BOU_TRUE)
+    return true;
+
+  if (EnableRemarksSection == cl::BOU_FALSE)
+    return false;
+
+  assert(EnableRemarksSection == cl::BOU_UNSET);
+
+  // We only need a section if we're in separate mode.
+  if (RemarkSerializer->Mode != remarks::SerializerMode::Separate)
+    return false;
+
+  // Only some formats need a section:
+  // * bitstream
+  // * yaml-strtab
+  switch (RemarkSerializer->SerializerFormat) {
+  case remarks::Format::YAMLStrTab:
+  case remarks::Format::Bitstream:
+    return true;
+  default:
+    return false;
+  }
 }
 
 char RemarkSetupFileError::ID = 0;

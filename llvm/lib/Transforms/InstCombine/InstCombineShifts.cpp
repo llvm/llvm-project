@@ -138,24 +138,6 @@ Value *InstCombiner::reassociateShiftAmtsOfTwoSameDirectionShifts(
   return Ret;
 }
 
-// Try to replace `undef` constants in C with Replacement.
-static Constant *replaceUndefsWith(Constant *C, Constant *Replacement) {
-  if (C && match(C, m_Undef()))
-    return Replacement;
-
-  if (auto *CV = dyn_cast<ConstantVector>(C)) {
-    llvm::SmallVector<Constant *, 32> NewOps(CV->getNumOperands());
-    for (unsigned i = 0, NumElts = NewOps.size(); i != NumElts; ++i) {
-      Constant *EltC = CV->getOperand(i);
-      NewOps[i] = EltC && match(EltC, m_Undef()) ? Replacement : EltC;
-    }
-    return ConstantVector::get(NewOps);
-  }
-
-  // Don't know how to deal with this constant.
-  return C;
-}
-
 // If we have some pattern that leaves only some low bits set, and then performs
 // left-shift of those bits, if none of the bits that are left after the final
 // shift are modified by the mask, we can omit the mask.
@@ -216,7 +198,7 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
     // completely unknown. Replace the the `undef` shift amounts with final
     // shift bitwidth to ensure that the value remains undef when creating the
     // subsequent shift op.
-    SumOfShAmts = replaceUndefsWith(
+    SumOfShAmts = Constant::replaceUndefsWith(
         SumOfShAmts, ConstantInt::get(SumOfShAmts->getType()->getScalarType(),
                                       ExtendedTy->getScalarSizeInBits()));
     auto *ExtendedSumOfShAmts = ConstantExpr::getZExt(SumOfShAmts, ExtendedTy);
@@ -241,7 +223,7 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
     // bitwidth of innermost shift to ensure that the value remains undef when
     // creating the subsequent shift op.
     unsigned WidestTyBitWidth = WidestTy->getScalarSizeInBits();
-    ShAmtsDiff = replaceUndefsWith(
+    ShAmtsDiff = Constant::replaceUndefsWith(
         ShAmtsDiff, ConstantInt::get(ShAmtsDiff->getType()->getScalarType(),
                                      -WidestTyBitWidth));
     auto *ExtendedNumHighBitsToClear = ConstantExpr::getZExt(

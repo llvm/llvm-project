@@ -121,6 +121,8 @@ reverse_iterator rend(StringRef path);
 
 /// Remove the last component from \a path unless it is the root dir.
 ///
+/// Similar to the POSIX "dirname" utility.
+///
 /// @code
 ///   directory/filename.cpp => directory/
 ///   directory/             => directory
@@ -295,7 +297,7 @@ StringRef parent_path(StringRef path, Style style = Style::native);
 ///
 /// @param path Input path.
 /// @result The filename part of \a path. This is defined as the last component
-///         of \a path.
+///         of \a path. Similar to the POSIX "basename" utility.
 StringRef filename(StringRef path, Style style = Style::native);
 
 /// Get stem.

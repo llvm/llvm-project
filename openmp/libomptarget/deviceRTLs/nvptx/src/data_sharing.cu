@@ -180,13 +180,14 @@ EXTERN void *__kmpc_data_sharing_environment_begin(
         } else {
           DSPRINT(DSFLAG, "Cleaning up -failed reuse - %016llx\n",
                   (unsigned long long)SlotP->Next);
-          free(ExistingSlot);
+          SafeFree(ExistingSlot, "Failed reuse");
         }
       }
 
       if (!NewSlot) {
-        NewSlot = (__kmpc_data_sharing_slot *)malloc(
-            sizeof(__kmpc_data_sharing_slot) + NewSize);
+        NewSlot = (__kmpc_data_sharing_slot *)SafeMalloc(
+            sizeof(__kmpc_data_sharing_slot) + NewSize,
+            "Warp master slot allocation");
         DSPRINT(DSFLAG, "New slot allocated %016llx (data size=%016llx)\n",
                 (unsigned long long)NewSlot, NewSize);
       }
@@ -205,7 +206,7 @@ EXTERN void *__kmpc_data_sharing_environment_begin(
       if (SlotP->Next) {
         DSPRINT(DSFLAG, "Cleaning up - old not required - %016llx\n",
                 (unsigned long long)SlotP->Next);
-        free(SlotP->Next);
+        SafeFree(SlotP->Next, "Old slot not required");
         SlotP->Next = 0;
       }
 
@@ -243,7 +244,7 @@ EXTERN void __kmpc_data_sharing_environment_end(
                                         : DataSharingState.SlotPtr[WID];
 
       if (S->Next) {
-        free(S->Next);
+        SafeFree(S->Next, "Sharing environment end");
         S->Next = 0;
       }
     }

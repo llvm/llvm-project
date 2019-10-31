@@ -1190,6 +1190,8 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
       Flags.setSwiftSelf();
     if (Arg.IsSwiftError)
       Flags.setSwiftError();
+    if (Arg.IsCFGuardTarget)
+      Flags.setCFGuardTarget();
     if (Arg.IsByVal)
       Flags.setByVal();
     if (Arg.IsInAlloca) {
@@ -1236,10 +1238,9 @@ bool FastISel::lowerCallTo(CallLoweringInfo &CLI) {
     updateValueMap(CLI.CS->getInstruction(), CLI.ResultReg, CLI.NumResultRegs);
 
   // Set labels for heapallocsite call.
-  if (CLI.CS && CLI.CS->getInstruction()->hasMetadata("heapallocsite")) {
-    const MDNode *MD = CLI.CS->getInstruction()->getMetadata("heapallocsite");
-    MF->addCodeViewHeapAllocSite(CLI.Call, MD);
-  }
+  if (CLI.CS)
+    if (MDNode *MD = CLI.CS->getInstruction()->getMetadata("heapallocsite"))
+      CLI.Call->setHeapAllocMarker(*MF, MD);
 
   return true;
 }

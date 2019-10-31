@@ -26,6 +26,9 @@ declare spir_func void @spir_func()
 declare intel_ocl_bicc void @intel_ocl_bicc()
 ; CHECK: declare intel_ocl_bicc void @intel_ocl_bicc
 
+declare cfguard_checkcc void @cfguard_checkcc()
+; CHECK: declare cfguard_checkcc void @cfguard_checkcc
+
 declare x86_stdcallcc void @x86_stdcallcc()
 ; CHECK: declare x86_stdcallcc void @x86_stdcallcc 
 
@@ -92,6 +95,12 @@ define void @call_spir_func() {
 define void @call_intel_ocl_bicc() { 
 ; CHECK: call intel_ocl_bicc void @intel_ocl_bicc 
   call intel_ocl_bicc void @intel_ocl_bicc()
+  ret void
+}
+
+define void @call_cfguard_checkcc() {
+; CHECK: call cfguard_checkcc void @cfguard_checkcc
+  call cfguard_checkcc void @cfguard_checkcc()
   ret void
 }
 

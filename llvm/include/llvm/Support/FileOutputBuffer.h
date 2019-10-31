@@ -32,6 +32,10 @@ public:
   enum {
     /// set the 'x' bit on the resulting file
     F_executable = 1,
+
+    /// Don't use mmap and instead write an in-memory buffer to a file when this
+    /// buffer is closed.
+    F_no_mmap = 2,
   };
 
   /// Factory method to create an OutputBuffer object which manages a read/write

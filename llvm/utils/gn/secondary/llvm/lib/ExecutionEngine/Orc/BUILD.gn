@@ -2,6 +2,7 @@ static_library("Orc") {
   output_name = "LLVMOrcJIT"
   deps = [
     "//llvm/lib/ExecutionEngine",
+    "//llvm/lib/ExecutionEngine/OrcError",
     "//llvm/lib/ExecutionEngine/RuntimeDyld",
     "//llvm/lib/IR",
     "//llvm/lib/Object",
@@ -26,9 +27,7 @@ static_library("Orc") {
     "ObjectTransformLayer.cpp",
     "OrcABISupport.cpp",
     "OrcCBindings.cpp",
-    "OrcError.cpp",
     "OrcMCJITReplacement.cpp",
-    "RPCUtils.cpp",
     "RTDyldObjectLinkingLayer.cpp",
     "SpeculateAnalyses.cpp",
     "Speculation.cpp",

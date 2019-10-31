@@ -71,7 +71,7 @@ public:
 };
 
 class BitVector {
-  typedef unsigned long BitWord;
+  typedef uintptr_t BitWord;
 
   enum { BITWORD_SIZE = (unsigned)sizeof(BitWord) * CHAR_BIT };
 
@@ -187,12 +187,12 @@ public:
   /// all - Returns true if all bits are set.
   bool all() const {
     for (unsigned i = 0; i < Size / BITWORD_SIZE; ++i)
-      if (Bits[i] != ~0UL)
+      if (Bits[i] != ~BitWord(0))
         return false;
 
     // If bits remain check that they are ones. The unused bits are always zero.
     if (unsigned Remainder = Size % BITWORD_SIZE)
-      return Bits[Size / BITWORD_SIZE] == (1UL << Remainder) - 1;
+      return Bits[Size / BITWORD_SIZE] == (BitWord(1) << Remainder) - 1;
 
     return true;
   }
@@ -285,7 +285,7 @@ public:
         unsigned LastBit = (End - 1) % BITWORD_SIZE;
         Copy |= maskTrailingZeros<BitWord>(LastBit + 1);
       }
-      if (Copy != ~0UL) {
+      if (Copy != ~BitWord(0)) {
         unsigned Result = i * BITWORD_SIZE + countTrailingOnes(Copy);
         return Result < size() ? Result : -1;
       }
@@ -317,7 +317,7 @@ public:
         Copy |= maskTrailingOnes<BitWord>(FirstBit);
       }
 
-      if (Copy != ~0UL) {
+      if (Copy != ~BitWord(0)) {
         unsigned Result =
             (CurrentWord + 1) * BITWORD_SIZE - countLeadingOnes(Copy) - 1;
         return Result < Size ? Result : -1;
@@ -414,21 +414,21 @@ public:
     if (I == E) return *this;
 
     if (I / BITWORD_SIZE == E / BITWORD_SIZE) {
-      BitWord EMask = 1UL << (E % BITWORD_SIZE);
-      BitWord IMask = 1UL << (I % BITWORD_SIZE);
+      BitWord EMask = BitWord(1) << (E % BITWORD_SIZE);
+      BitWord IMask = BitWord(1) << (I % BITWORD_SIZE);
       BitWord Mask = EMask - IMask;
       Bits[I / BITWORD_SIZE] |= Mask;
       return *this;
     }
 
-    BitWord PrefixMask = ~0UL << (I % BITWORD_SIZE);
+    BitWord PrefixMask = ~BitWord(0) << (I % BITWORD_SIZE);
     Bits[I / BITWORD_SIZE] |= PrefixMask;
     I = alignTo(I, BITWORD_SIZE);
 
     for (; I + BITWORD_SIZE <= E; I += BITWORD_SIZE)
-      Bits[I / BITWORD_SIZE] = ~0UL;
+      Bits[I / BITWORD_SIZE] = ~BitWord(0);
 
-    BitWord PostfixMask = (1UL << (E % BITWORD_SIZE)) - 1;
+    BitWord PostfixMask = (BitWord(1) << (E % BITWORD_SIZE)) - 1;
     if (I < E)
       Bits[I / BITWORD_SIZE] |= PostfixMask;
 
@@ -453,21 +453,21 @@ public:
     if (I == E) return *this;
 
     if (I / BITWORD_SIZE == E / BITWORD_SIZE) {
-      BitWord EMask = 1UL << (E % BITWORD_SIZE);
-      BitWord IMask = 1UL << (I % BITWORD_SIZE);
+      BitWord EMask = BitWord(1) << (E % BITWORD_SIZE);
+      BitWord IMask = BitWord(1) << (I % BITWORD_SIZE);
       BitWord Mask = EMask - IMask;
       Bits[I / BITWORD_SIZE] &= ~Mask;
       return *this;
     }
 
-    BitWord PrefixMask = ~0UL << (I % BITWORD_SIZE);
+    BitWord PrefixMask = ~BitWord(0) << (I % BITWORD_SIZE);
     Bits[I / BITWORD_SIZE] &= ~PrefixMask;
     I = alignTo(I, BITWORD_SIZE);
 
     for (; I + BITWORD_SIZE <= E; I += BITWORD_SIZE)
-      Bits[I / BITWORD_SIZE] = 0UL;
+      Bits[I / BITWORD_SIZE] = BitWord(0);
 
-    BitWord PostfixMask = (1UL << (E % BITWORD_SIZE)) - 1;
+    BitWord PostfixMask = (BitWord(1) << (E % BITWORD_SIZE)) - 1;
     if (I < E)
       Bits[I / BITWORD_SIZE] &= ~PostfixMask;
 
@@ -868,7 +868,7 @@ private:
     //  Then set any stray high bits of the last used word.
     unsigned ExtraBits = Size % BITWORD_SIZE;
     if (ExtraBits) {
-      BitWord ExtraBitMask = ~0UL << ExtraBits;
+      BitWord ExtraBitMask = ~BitWord(0) << ExtraBits;
       if (t)
         Bits[UsedWords-1] |= ExtraBitMask;
       else

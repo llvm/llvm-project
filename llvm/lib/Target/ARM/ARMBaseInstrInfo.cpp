@@ -5350,6 +5350,32 @@ ARMBaseInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   return makeArrayRef(TargetFlags);
 }
 
+bool ARMBaseInstrInfo::isAddImmediate(const MachineInstr &MI,
+                                      const MachineOperand *&Destination,
+                                      const MachineOperand *&Source,
+                                      int64_t &Offset) const {
+  int Sign = 1;
+  unsigned Opcode = MI.getOpcode();
+
+  // We describe SUBri or ADDri instructions.
+  if (Opcode == ARM::SUBri)
+    Sign = -1;
+  else if (Opcode != ARM::ADDri)
+    return false;
+
+  // TODO: Third operand can be global address (usually some string). Since
+  //       strings can be relocated we cannot calculate their offsets for
+  //       now.
+  if (!MI.getOperand(0).isReg() || !MI.getOperand(1).isReg() ||
+      !MI.getOperand(2).isImm())
+    return false;
+
+  Destination = &MI.getOperand(0);
+  Source = &MI.getOperand(1);
+  Offset = MI.getOperand(2).getImm() * Sign;
+  return true;
+}
+
 bool llvm::registerDefinedBetween(unsigned Reg,
                                   MachineBasicBlock::iterator From,
                                   MachineBasicBlock::iterator To,

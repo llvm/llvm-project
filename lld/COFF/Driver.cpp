@@ -104,10 +104,7 @@ static std::pair<StringRef, StringRef> getOldNewOptions(opt::InputArgList &args,
 
 // Drop directory components and replace extension with ".exe" or ".dll".
 static std::string getOutputPath(StringRef path) {
-  auto p = path.find_last_of("\\/");
-  StringRef s = (p == StringRef::npos) ? path : path.substr(p + 1);
-  const char* e = config->dll ? ".dll" : ".exe";
-  return (s.substr(0, s.rfind('.')) + e).str();
+  return (sys::path::stem(path) + (config->dll ? ".dll" : ".exe")).str();
 }
 
 // Returns true if S matches /crtend.?\.o$/.

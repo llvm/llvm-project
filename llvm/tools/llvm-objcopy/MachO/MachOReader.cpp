@@ -256,9 +256,16 @@ void MachOReader::readFunctionStartsData(Object &O) const {
 
 void MachOReader::readIndirectSymbolTable(Object &O) const {
   MachO::dysymtab_command DySymTab = MachOObj.getDysymtabLoadCommand();
-  for (uint32_t i = 0; i < DySymTab.nindirectsyms; ++i)
-    O.IndirectSymTable.Symbols.push_back(
-        MachOObj.getIndirectSymbolTableEntry(DySymTab, i));
+  constexpr uint32_t AbsOrLocalMask =
+      MachO::INDIRECT_SYMBOL_LOCAL | MachO::INDIRECT_SYMBOL_ABS;
+  for (uint32_t i = 0; i < DySymTab.nindirectsyms; ++i) {
+    uint32_t Index = MachOObj.getIndirectSymbolTableEntry(DySymTab, i);
+    if ((Index & AbsOrLocalMask) != 0)
+      O.IndirectSymTable.Symbols.emplace_back(Index, None);
+    else
+      O.IndirectSymTable.Symbols.emplace_back(
+          Index, O.SymTable.getSymbolByIndex(Index));
+  }
 }
 
 std::unique_ptr<Object> MachOReader::create() const {

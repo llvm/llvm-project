@@ -1255,6 +1255,55 @@ def : Pat<(f64 (PPCfcfidu (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
 } // AddedComplexity
 } // HasVSX
 
+def FpMinMax {
+  dag F32Min = (COPY_TO_REGCLASS (XSMINDP (COPY_TO_REGCLASS $A, VSFRC),
+                                          (COPY_TO_REGCLASS $B, VSFRC)),
+                                 VSSRC);
+  dag F32Max = (COPY_TO_REGCLASS (XSMAXDP (COPY_TO_REGCLASS $A, VSFRC),
+                                          (COPY_TO_REGCLASS $B, VSFRC)),
+                                 VSSRC);
+}
+
+let AddedComplexity = 400, Predicates = [HasVSX] in {
+  // f32 Min.
+  def : Pat<(f32 (fminnum_ieee f32:$A, f32:$B)),
+            (f32 FpMinMax.F32Min)>;
+  def : Pat<(f32 (fminnum_ieee (fcanonicalize f32:$A), f32:$B)),
+            (f32 FpMinMax.F32Min)>;
+  def : Pat<(f32 (fminnum_ieee f32:$A, (fcanonicalize f32:$B))),
+            (f32 FpMinMax.F32Min)>;
+  def : Pat<(f32 (fminnum_ieee (fcanonicalize f32:$A), (fcanonicalize f32:$B))),
+            (f32 FpMinMax.F32Min)>;
+  // F32 Max.
+  def : Pat<(f32 (fmaxnum_ieee f32:$A, f32:$B)),
+            (f32 FpMinMax.F32Max)>;
+  def : Pat<(f32 (fmaxnum_ieee (fcanonicalize f32:$A), f32:$B)),
+            (f32 FpMinMax.F32Max)>;
+  def : Pat<(f32 (fmaxnum_ieee f32:$A, (fcanonicalize f32:$B))),
+            (f32 FpMinMax.F32Max)>;
+  def : Pat<(f32 (fmaxnum_ieee (fcanonicalize f32:$A), (fcanonicalize f32:$B))),
+            (f32 FpMinMax.F32Max)>;
+
+  // f64 Min.
+  def : Pat<(f64 (fminnum_ieee f64:$A, f64:$B)),
+            (f64 (XSMINDP $A, $B))>;
+  def : Pat<(f64 (fminnum_ieee (fcanonicalize f64:$A), f64:$B)),
+            (f64 (XSMINDP $A, $B))>;
+  def : Pat<(f64 (fminnum_ieee f64:$A, (fcanonicalize f64:$B))),
+            (f64 (XSMINDP $A, $B))>;
+  def : Pat<(f64 (fminnum_ieee (fcanonicalize f64:$A), (fcanonicalize f64:$B))),
+            (f64 (XSMINDP $A, $B))>;
+  // f64 Max.
+  def : Pat<(f64 (fmaxnum_ieee f64:$A, f64:$B)),
+            (f64 (XSMAXDP $A, $B))>;
+  def : Pat<(f64 (fmaxnum_ieee (fcanonicalize f64:$A), f64:$B)),
+            (f64 (XSMAXDP $A, $B))>;
+  def : Pat<(f64 (fmaxnum_ieee f64:$A, (fcanonicalize f64:$B))),
+            (f64 (XSMAXDP $A, $B))>;
+  def : Pat<(f64 (fmaxnum_ieee (fcanonicalize f64:$A), (fcanonicalize f64:$B))),
+            (f64 (XSMAXDP $A, $B))>;
+}
+
 def ScalarLoads {
   dag Li8 =       (i32 (extloadi8 xoaddr:$src));
   dag ZELi8 =     (i32 (zextloadi8 xoaddr:$src));
@@ -1330,7 +1379,7 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
                        [(set v4i32:$XT, (or v4i32:$XA, (vnot_ppc v4i32:$XB)))]>;
 
   // VSX scalar loads introduced in ISA 2.07
-  let mayLoad = 1, mayStore = 0 in {
+  let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
     let CodeSize = 3 in
     def LXSSPX : XX1Form_memOp<31, 524, (outs vssrc:$XT), (ins memrr:$src),
                          "lxsspx $XT, $src", IIC_LdStLFD, []>;
@@ -1355,7 +1404,7 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
   } // mayLoad
 
   // VSX scalar stores introduced in ISA 2.07
-  let mayStore = 1, mayLoad = 0 in {
+  let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in {
     let CodeSize = 3 in
     def STXSSPX : XX1Form_memOp<31, 652, (outs), (ins vssrc:$XT, memrr:$dst),
                           "stxsspx $XT, $dst", IIC_LdStSTFD, []>;
@@ -2884,13 +2933,14 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   //===--------------------------------------------------------------------===//
 
   // Maximum/Minimum Type-C/Type-J DP
-  // XT.dword[1] = 0xUUUU_UUUU_UUUU_UUUU, so we use vsrc for XT
-  def XSMAXCDP : XX3_XT5_XA5_XB5<60, 128, "xsmaxcdp", vsrc, vsfrc, vsfrc,
-                                 IIC_VecFP, []>;
+  def XSMAXCDP : XX3_XT5_XA5_XB5<60, 128, "xsmaxcdp", vsfrc, vsfrc, vsfrc,
+                                 IIC_VecFP,
+                                 [(set f64:$XT, (PPCxsmaxc f64:$XA, f64:$XB))]>;
   def XSMAXJDP : XX3_XT5_XA5_XB5<60, 144, "xsmaxjdp", vsrc, vsfrc, vsfrc,
                                  IIC_VecFP, []>;
-  def XSMINCDP : XX3_XT5_XA5_XB5<60, 136, "xsmincdp", vsrc, vsfrc, vsfrc,
-                                 IIC_VecFP, []>;
+  def XSMINCDP : XX3_XT5_XA5_XB5<60, 136, "xsmincdp", vsfrc, vsfrc, vsfrc,
+                                 IIC_VecFP,
+                                 [(set f64:$XT, (PPCxsminc f64:$XA, f64:$XB))]>;
   def XSMINJDP : XX3_XT5_XA5_XB5<60, 152, "xsminjdp", vsrc, vsfrc, vsfrc,
                                  IIC_VecFP, []>;
 
@@ -2927,7 +2977,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
 
   // When adding new D-Form loads/stores, be sure to update the ImmToIdxMap in
   // PPCRegisterInfo::PPCRegisterInfo and maybe save yourself some debugging.
-  let mayLoad = 1, mayStore = 0 in {
+  let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
   // Load Vector
   def LXV : DQ_RD6_RS5_DQ12<61, 1, (outs vsrc:$XT), (ins memrix16:$src),
                             "lxv $XT, $src", IIC_LdStLFD, []>;
@@ -2972,7 +3022,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
 
   // When adding new D-Form loads/stores, be sure to update the ImmToIdxMap in
   // PPCRegisterInfo::PPCRegisterInfo and maybe save yourself some debugging.
-  let mayStore = 1, mayLoad = 0 in {
+  let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in {
   // Store Vector
   def STXV : DQ_RD6_RS5_DQ12<61, 5, (outs), (ins vsrc:$XT, memrix16:$dst),
                              "stxv $XT, $dst", IIC_LdStSTFD, []>;
@@ -3697,6 +3747,15 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   def : Pat<(f128 (fpextend f32:$src)),
             (f128 (XSCVDPQP (COPY_TO_REGCLASS $src, VFRC)))>;
 
+  def : Pat<(f32 (PPCxsmaxc f32:$XA, f32:$XB)),
+            (f32 (COPY_TO_REGCLASS (XSMAXCDP (COPY_TO_REGCLASS $XA, VSSRC),
+                                             (COPY_TO_REGCLASS $XB, VSSRC)),
+                                   VSSRC))>;
+  def : Pat<(f32 (PPCxsminc f32:$XA, f32:$XB)),
+            (f32 (COPY_TO_REGCLASS (XSMINCDP (COPY_TO_REGCLASS $XA, VSSRC),
+                                             (COPY_TO_REGCLASS $XB, VSSRC)),
+                                   VSSRC))>;
+
 } // end HasP9Vector, AddedComplexity
 
 let AddedComplexity = 400 in {
@@ -3710,7 +3769,7 @@ let AddedComplexity = 400 in {
   }
 }
 
-let Predicates = [HasP9Vector] in {
+let Predicates = [HasP9Vector], hasSideEffects = 0 in {
   let mayStore = 1 in {
     def SPILLTOVSR_STX : PseudoXFormMemOp<(outs),
                                           (ins spilltovsrrc:$XT, memrr:$dst),

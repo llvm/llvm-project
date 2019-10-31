@@ -1,3 +1,0 @@
-# Check bad -U argument.
-# RUN: echo foo > %t
-# RUN: diff -U-1 %t %t

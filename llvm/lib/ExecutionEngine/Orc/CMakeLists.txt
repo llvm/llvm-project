@@ -16,9 +16,7 @@ add_llvm_library(LLVMOrcJIT
   ObjectTransformLayer.cpp
   OrcABISupport.cpp
   OrcCBindings.cpp
-  OrcError.cpp
   OrcMCJITReplacement.cpp
-  RPCUtils.cpp
   RTDyldObjectLinkingLayer.cpp
   ThreadSafeModule.cpp
   Speculation.cpp

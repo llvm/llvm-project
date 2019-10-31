@@ -218,7 +218,7 @@ class ProgressBar:
     The progress bar is colored, if the terminal supports color
     output; and adjusts to the width of the terminal.
     """
-    BAR = '%s${GREEN}[${BOLD}%s%s${NORMAL}${GREEN}]${NORMAL}%s'
+    BAR = '%s${%s}[${BOLD}%s%s${NORMAL}${%s}]${NORMAL}%s'
     HEADER = '${BOLD}${CYAN}%s${NORMAL}\n\n'
         
     def __init__(self, term, header, useETA=True):
@@ -235,7 +235,7 @@ class ProgressBar:
                 self.XNL = "" # Cursor must be fed to the next line
         else:
             self.width = 75
-        self.bar = term.render(self.BAR)
+        self.barColor = 'GREEN'
         self.header = self.term.render(self.HEADER % header.center(self.width))
         self.cleared = 1 #: true if we haven't drawn the bar yet.
         self.useETA = useETA
@@ -264,9 +264,12 @@ class ProgressBar:
             message = message + ' '*(self.width - len(message))
         else:
             message = '... ' + message[-(self.width-4):]
+        bc = self.barColor
+        bar = self.BAR % (prefix, bc, '='*n, '-'*(barWidth-n), bc, suffix)
+        bar = self.term.render(bar)
         sys.stdout.write(
             self.BOL + self.term.UP + self.term.CLEAR_EOL +
-            (self.bar % (prefix, '='*n, '-'*(barWidth-n), suffix)) +
+            bar +
             self.XNL +
             self.term.CLEAR_EOL + message)
         if not self.term.XN:

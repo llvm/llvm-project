@@ -30,14 +30,29 @@ enum class ScanningMode {
   MinimizedSourcePreprocessing
 };
 
+/// The format that is output by the dependency scanner.
+enum class ScanningOutputFormat {
+  /// This is the Makefile compatible dep format. This will include all of the
+  /// deps necessary for an implicit modules build, but won't include any
+  /// intermodule dependency information.
+  Make,
+
+  /// This outputs the full module dependency graph suitable for use for
+  /// explicitly building modules.
+  Full,
+};
+
 /// The dependency scanning service contains the shared state that is used by
 /// the invidual dependency scanning workers.
 class DependencyScanningService {
 public:
-  DependencyScanningService(ScanningMode Mode, bool ReuseFileManager = true,
+  DependencyScanningService(ScanningMode Mode, ScanningOutputFormat Format,
+                            bool ReuseFileManager = true,
                             bool SkipExcludedPPRanges = true);
 
   ScanningMode getMode() const { return Mode; }
+
+  ScanningOutputFormat getFormat() const { return Format; }
 
   bool canReuseFileManager() const { return ReuseFileManager; }
 
@@ -49,6 +64,7 @@ public:
 
 private:
   const ScanningMode Mode;
+  const ScanningOutputFormat Format;
   const bool ReuseFileManager;
   /// Set to true to use the preprocessor optimization that skips excluded PP
   /// ranges by bumping the buffer pointer in the lexer instead of lexing the

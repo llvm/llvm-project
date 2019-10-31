@@ -132,7 +132,7 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
         # Now finish, and make sure the return value is correct.
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             self.process, body_bkpt)
-        self.assertTrue(len(threads) == 1, "Stopped at inner breakpoint.")
+        self.assertEquals(len(threads), 1, "Stopped at inner breakpoint.")
         self.thread = threads[0]
 
         self.assertEquals("callback was here", side_effect.callback)

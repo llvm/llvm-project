@@ -845,6 +845,7 @@ class FileHandleTestCase(lldbtest.TestBase):
             def i(sbf):
                 for i in range(10):
                     f = sbf.GetFile()
+                    self.assertEqual(f.mode, "w")
                     yield f
                     sbf = lldb.SBFile.Create(f, borrow=True)
                     yield sbf

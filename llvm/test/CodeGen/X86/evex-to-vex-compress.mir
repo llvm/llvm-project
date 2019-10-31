@@ -2314,38 +2314,38 @@ body: |
   $xmm0 = VMOVQI2PQIZrm                        $rip, 1, $rax, 0, $noreg
   ; CHECK: $xmm0 = VMOVZPQILo2PQIrr            $xmm0                                               
   $xmm0 = VMOVZPQILo2PQIZrr                    $xmm0                                                   
-  ; CHECK: VCOMISDrm_Int                       $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  VCOMISDZrm_Int                               $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  ; CHECK: VCOMISDrr_Int                       $xmm0, $xmm1, implicit-def $eflags  
-  VCOMISDZrr_Int                               $xmm0, $xmm1, implicit-def $eflags                      
-  ; CHECK: VCOMISSrm_Int                       $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  VCOMISSZrm_Int                               $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  ; CHECK: VCOMISSrr_Int                       $xmm0, $xmm1, implicit-def $eflags 
-  VCOMISSZrr_Int                               $xmm0, $xmm1, implicit-def $eflags                      
-  ; CHECK: VUCOMISDrm_Int                      $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  VUCOMISDZrm_Int                              $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  ; CHECK: VUCOMISDrr_Int                      $xmm0, $xmm1, implicit-def $eflags
-  VUCOMISDZrr_Int                              $xmm0, $xmm1, implicit-def $eflags                      
-  ; CHECK: VUCOMISSrm_Int                      $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  VUCOMISSZrm_Int                              $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  ; CHECK: VUCOMISSrr_Int                      $xmm0, $xmm1, implicit-def $eflags 
-  VUCOMISSZrr_Int                              $xmm0, $xmm1, implicit-def $eflags                      
-  ; CHECK: VCOMISDrm                           $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  VCOMISDZrm                                   $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  ; CHECK: VCOMISDrr                           $xmm0, $xmm1, implicit-def $eflags 
-  VCOMISDZrr                                   $xmm0, $xmm1, implicit-def $eflags                      
-  ; CHECK: VCOMISSrm                           $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  VCOMISSZrm                                   $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  ; CHECK: VCOMISSrr                           $xmm0, $xmm1, implicit-def $eflags 
-  VCOMISSZrr                                   $xmm0, $xmm1, implicit-def $eflags                      
-  ; CHECK: VUCOMISDrm                          $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  VUCOMISDZrm                                  $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  ; CHECK: VUCOMISDrr                          $xmm0, $xmm1, implicit-def $eflags 
-  VUCOMISDZrr                                  $xmm0, $xmm1, implicit-def $eflags                      
-  ; CHECK: VUCOMISSrm                          $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  VUCOMISSZrm                                  $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  ; CHECK: VUCOMISSrr                          $xmm0, $xmm1, implicit-def $eflags 
-  VUCOMISSZrr                                  $xmm0, $xmm1, implicit-def $eflags 
+  ; CHECK: VCOMISDrm_Int                       $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  VCOMISDZrm_Int                               $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VCOMISDrr_Int                       $xmm0, $xmm1, implicit-def $eflags, implicit $mxcsr
+  VCOMISDZrr_Int                               $xmm0, $xmm1, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VCOMISSrm_Int                       $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  VCOMISSZrm_Int                               $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VCOMISSrr_Int                       $xmm0, $xmm1, implicit-def $eflags, implicit $mxcsr
+  VCOMISSZrr_Int                               $xmm0, $xmm1, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VUCOMISDrm_Int                      $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  VUCOMISDZrm_Int                              $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VUCOMISDrr_Int                      $xmm0, $xmm1, implicit-def $eflags, implicit $mxcsr
+  VUCOMISDZrr_Int                              $xmm0, $xmm1, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VUCOMISSrm_Int                      $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  VUCOMISSZrm_Int                              $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VUCOMISSrr_Int                      $xmm0, $xmm1, implicit-def $eflags, implicit $mxcsr
+  VUCOMISSZrr_Int                              $xmm0, $xmm1, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VCOMISDrm                           $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  VCOMISDZrm                                   $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VCOMISDrr                           $xmm0, $xmm1, implicit-def $eflags, implicit $mxcsr
+  VCOMISDZrr                                   $xmm0, $xmm1, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VCOMISSrm                           $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  VCOMISSZrm                                   $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VCOMISSrr                           $xmm0, $xmm1, implicit-def $eflags, implicit $mxcsr
+  VCOMISSZrr                                   $xmm0, $xmm1, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VUCOMISDrm                          $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  VUCOMISDZrm                                  $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VUCOMISDrr                          $xmm0, $xmm1, implicit-def $eflags, implicit $mxcsr
+  VUCOMISDZrr                                  $xmm0, $xmm1, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VUCOMISSrm                          $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  VUCOMISSZrm                                  $xmm0, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VUCOMISSrr                          $xmm0, $xmm1, implicit-def $eflags, implicit $mxcsr
+  VUCOMISSZrr                                  $xmm0, $xmm1, implicit-def $eflags, implicit $mxcsr
   ; CHECK: VEXTRACTPSmr                        $rdi, 1, $noreg, 0, $noreg, $xmm0, 1
   VEXTRACTPSZmr                                $rdi, 1, $noreg, 0, $noreg, $xmm0, 1
   ; CHECK: $eax = VEXTRACTPSrr                 $xmm0, 1
@@ -4696,38 +4696,38 @@ body: |
   $xmm16 = VMOVQI2PQIZrm                       $rip, 1, $rax, 0, $noreg
   ; CHECK: $xmm16 = VMOVZPQILo2PQIZrr          $xmm16
   $xmm16 = VMOVZPQILo2PQIZrr                   $xmm16                                                     
-  ; CHECK: VCOMISDZrm_Int                      $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  VCOMISDZrm_Int                               $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  ; CHECK: VCOMISDZrr_Int                      $xmm16, $xmm1, implicit-def $eflags  
-  VCOMISDZrr_Int                               $xmm16, $xmm1, implicit-def $eflags                        
-  ; CHECK: VCOMISSZrm_Int                      $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  VCOMISSZrm_Int                               $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  ; CHECK: VCOMISSZrr_Int                      $xmm16, $xmm1, implicit-def $eflags 
-  VCOMISSZrr_Int                               $xmm16, $xmm1, implicit-def $eflags                        
-  ; CHECK: VUCOMISDZrm_Int                     $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  VUCOMISDZrm_Int                              $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  ; CHECK: VUCOMISDZrr_Int                     $xmm16, $xmm1, implicit-def $eflags
-  VUCOMISDZrr_Int                              $xmm16, $xmm1, implicit-def $eflags                        
-  ; CHECK: VUCOMISSZrm_Int                     $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  VUCOMISSZrm_Int                              $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  ; CHECK: VUCOMISSZrr_Int                     $xmm16, $xmm1, implicit-def $eflags 
-  VUCOMISSZrr_Int                              $xmm16, $xmm1, implicit-def $eflags                        
-  ; CHECK: VCOMISDZrm                          $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  VCOMISDZrm                                   $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  ; CHECK: VCOMISDZrr                          $xmm16, $xmm1, implicit-def $eflags 
-  VCOMISDZrr                                   $xmm16, $xmm1, implicit-def $eflags                        
-  ; CHECK: VCOMISSZrm                          $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  VCOMISSZrm                                   $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  ; CHECK: VCOMISSZrr                          $xmm16, $xmm1, implicit-def $eflags 
-  VCOMISSZrr                                   $xmm16, $xmm1, implicit-def $eflags                        
-  ; CHECK: VUCOMISDZrm                         $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  VUCOMISDZrm                                  $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  ; CHECK: VUCOMISDZrr                         $xmm16, $xmm1, implicit-def $eflags 
-  VUCOMISDZrr                                  $xmm16, $xmm1, implicit-def $eflags                        
-  ; CHECK: VUCOMISSZrm                         $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  VUCOMISSZrm                                  $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
-  ; CHECK: VUCOMISSZrr                         $xmm16, $xmm1, implicit-def $eflags 
-  VUCOMISSZrr                                  $xmm16, $xmm1, implicit-def $eflags 
+  ; CHECK: VCOMISDZrm_Int                      $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  VCOMISDZrm_Int                               $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VCOMISDZrr_Int                      $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
+  VCOMISDZrr_Int                               $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VCOMISSZrm_Int                      $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  VCOMISSZrm_Int                               $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VCOMISSZrr_Int                      $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
+  VCOMISSZrr_Int                               $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VUCOMISDZrm_Int                     $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  VUCOMISDZrm_Int                              $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VUCOMISDZrr_Int                     $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
+  VUCOMISDZrr_Int                              $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VUCOMISSZrm_Int                     $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  VUCOMISSZrm_Int                              $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VUCOMISSZrr_Int                     $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
+  VUCOMISSZrr_Int                              $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VCOMISDZrm                          $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  VCOMISDZrm                                   $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VCOMISDZrr                          $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
+  VCOMISDZrr                                   $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VCOMISSZrm                          $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  VCOMISSZrm                                   $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VCOMISSZrr                          $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
+  VCOMISSZrr                                   $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VUCOMISDZrm                         $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  VUCOMISDZrm                                  $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VUCOMISDZrr                         $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
+  VUCOMISDZrr                                  $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VUCOMISSZrm                         $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  VUCOMISSZrm                                  $xmm16, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags, implicit $mxcsr
+  ; CHECK: VUCOMISSZrr                         $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
+  VUCOMISSZrr                                  $xmm16, $xmm1, implicit-def $eflags, implicit $mxcsr
   ; CHECK: $xmm16 = VRNDSCALESDZm              $xmm16, $rip, 1, $rax, 0, $noreg, 15
   $xmm16 = VRNDSCALESDZm                       $xmm16, $rip, 1, $rax, 0, $noreg, 15
   ; CHECK: $xmm16 = VRNDSCALESDZr              $xmm16, $xmm1, 15

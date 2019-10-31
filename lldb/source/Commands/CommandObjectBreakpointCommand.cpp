@@ -203,10 +203,10 @@ LLDB to stop."
 are no syntax errors may indicate that a function was declared but never called.");
 
     m_all_options.Append(&m_options);
-    m_all_options.Append(&m_func_options, LLDB_OPT_SET_2 | LLDB_OPT_SET_3, 
+    m_all_options.Append(&m_func_options, LLDB_OPT_SET_2 | LLDB_OPT_SET_3,
                          LLDB_OPT_SET_2);
     m_all_options.Finalize();
-    
+
     CommandArgumentEntry arg;
     CommandArgumentData bp_id_arg;
 
@@ -287,8 +287,8 @@ are no syntax errors may indicate that a function was declared but never called.
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
                           ExecutionContext *execution_context) override {
       Status error;
-      const int short_option 
-          = g_breakpoint_command_add_options[option_idx].short_option;
+      const int short_option =
+          g_breakpoint_command_add_options[option_idx].short_option;
 
       switch (short_option) {
       case 'o':
@@ -421,8 +421,8 @@ protected:
           Status error = script_interp->SetBreakpointCommandCallbackFunction(
               m_bp_options_vec, m_func_options.GetName().c_str(),
               m_func_options.GetStructuredData());
-            if (!error.Success())
-              result.SetError(error);
+          if (!error.Success())
+            result.SetError(error);
         } else {
           script_interp->CollectDataForBreakpointCommandCallback(
               m_bp_options_vec, result);
@@ -648,9 +648,8 @@ protected:
           if (bp) {
             BreakpointLocationSP bp_loc_sp;
             if (cur_bp_id.GetLocationID() != LLDB_INVALID_BREAK_ID) {
-                  bp_loc_sp = bp->FindLocationByID(cur_bp_id.GetLocationID());
-              if (!bp_loc_sp)
-              {
+              bp_loc_sp = bp->FindLocationByID(cur_bp_id.GetLocationID());
+              if (!bp_loc_sp) {
                 result.AppendErrorWithFormat("Invalid breakpoint ID: %u.%u.\n",
                                              cur_bp_id.GetBreakpointID(),
                                              cur_bp_id.GetLocationID());
@@ -665,9 +664,10 @@ protected:
                                                 cur_bp_id.GetLocationID());
             const Baton *baton = nullptr;
             if (bp_loc_sp)
-              baton = bp_loc_sp
-               ->GetOptionsSpecifyingKind(BreakpointOptions::eCallback)
-               ->GetBaton();
+              baton =
+                  bp_loc_sp
+                      ->GetOptionsSpecifyingKind(BreakpointOptions::eCallback)
+                      ->GetBaton();
             else
               baton = bp->GetOptions()->GetBaton();
 
@@ -702,9 +702,10 @@ protected:
 CommandObjectBreakpointCommand::CommandObjectBreakpointCommand(
     CommandInterpreter &interpreter)
     : CommandObjectMultiword(
-          interpreter, "command", "Commands for adding, removing and listing "
-                                  "LLDB commands executed when a breakpoint is "
-                                  "hit.",
+          interpreter, "command",
+          "Commands for adding, removing and listing "
+          "LLDB commands executed when a breakpoint is "
+          "hit.",
           "command <sub-command> [<sub-command-options>] <breakpoint-id>") {
   CommandObjectSP add_command_object(
       new CommandObjectBreakpointCommandAdd(interpreter));

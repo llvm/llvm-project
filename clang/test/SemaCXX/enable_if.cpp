@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -verify %s
-
+// RUN: %clang_cc1 -std=c++2a -verify %s
 typedef int (*fp)(int);
 int surrogate(int);
 struct Incomplete;  // expected-note{{forward declaration of 'Incomplete'}} \
@@ -533,3 +533,31 @@ namespace StringLiteralDetector {
   }
 }
 
+namespace IgnoreUnusedArgSideEffects {
+  struct A { ~A(); };
+  void f(A a, bool b) __attribute__((enable_if(b, ""))); // expected-note 2-3{{disabled}}
+  void test() {
+    f(A(), true);
+    f(A(), false); // expected-error {{no matching function}}
+    int n;
+    f((n = 1, A()), true);
+    f(A(), (n = 1, true)); // expected-error {{no matching function}}
+    f(A(), (A(), true));
+  }
+
+#if __cplusplus > 201702L
+  struct B { constexpr ~B() {} bool b; };
+  void g(B b) __attribute__((enable_if(b.b, ""))); // expected-note {{disabled}}
+  void test2() {
+    g(B{true});
+    g(B{false}); // expected-error {{no matching function}}
+    f(A(), B{true}.b);
+    f(A(), B{false}.b); // expected-error {{no matching function}}
+  }
+
+  // First condition is non-constant due to non-constexpr destructor of A.
+  int &h() __attribute__((enable_if((A(), true), "")));
+  float &h() __attribute__((enable_if((B(), true), "")));
+  float &x = h();
+#endif
+}

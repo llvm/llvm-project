@@ -24,8 +24,7 @@ on how your pass works, you should inherit from the :ref:`ModulePass
 <writing-an-llvm-pass-CallGraphSCCPass>`, :ref:`FunctionPass
 <writing-an-llvm-pass-FunctionPass>` , or :ref:`LoopPass
 <writing-an-llvm-pass-LoopPass>`, or :ref:`RegionPass
-<writing-an-llvm-pass-RegionPass>`, or :ref:`BasicBlockPass
-<writing-an-llvm-pass-BasicBlockPass>` classes, which gives the system more
+<writing-an-llvm-pass-RegionPass>` classes, which gives the system more
 information about what your pass does, and how it can be combined with other
 passes.  One of the main features of the LLVM Pass Framework is that it
 schedules passes to run in an efficient way based on the constraints that your
@@ -395,8 +394,7 @@ before callers).  Deriving from ``CallGraphSCCPass`` provides some mechanics
 for building and traversing the ``CallGraph``, but also allows the system to
 optimize execution of ``CallGraphSCCPass``\ es.  If your pass meets the
 requirements outlined below, and doesn't meet the requirements of a
-:ref:`FunctionPass <writing-an-llvm-pass-FunctionPass>` or :ref:`BasicBlockPass
-<writing-an-llvm-pass-BasicBlockPass>`, you should derive from
+:ref:`FunctionPass <writing-an-llvm-pass-FunctionPass>`, you should derive from
 ``CallGraphSCCPass``.
 
 ``TODO``: explain briefly what SCC, Tarjan's algo, and B-U mean.
@@ -648,69 +646,6 @@ when the pass framework has finished calling :ref:`runOnRegion
 <writing-an-llvm-pass-runOnRegion>` for every region in the program being
 compiled.
 
-.. _writing-an-llvm-pass-BasicBlockPass:
-
-The ``BasicBlockPass`` class
-----------------------------
-
-``BasicBlockPass``\ es are just like :ref:`FunctionPass's
-<writing-an-llvm-pass-FunctionPass>` , except that they must limit their scope
-of inspection and modification to a single basic block at a time.  As such,
-they are **not** allowed to do any of the following:
-
-#. Modify or inspect any basic blocks outside of the current one.
-#. Maintain state across invocations of :ref:`runOnBasicBlock
-   <writing-an-llvm-pass-runOnBasicBlock>`.
-#. Modify the control flow graph (by altering terminator instructions)
-#. Any of the things forbidden for :ref:`FunctionPasses
-   <writing-an-llvm-pass-FunctionPass>`.
-
-``BasicBlockPass``\ es are useful for traditional local and "peephole"
-optimizations.  They may override the same :ref:`doInitialization(Module &)
-<writing-an-llvm-pass-doInitialization-mod>` and :ref:`doFinalization(Module &)
-<writing-an-llvm-pass-doFinalization-mod>` methods that :ref:`FunctionPass's
-<writing-an-llvm-pass-FunctionPass>` have, but also have the following virtual
-methods that may also be implemented:
-
-The ``doInitialization(Function &)`` method
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: c++
-
-  virtual bool doInitialization(Function &F);
-
-The ``doInitialization`` method is allowed to do most of the things that
-``BasicBlockPass``\ es are not allowed to do, but that ``FunctionPass``\ es
-can.  The ``doInitialization`` method is designed to do simple initialization
-that does not depend on the ``BasicBlock``\ s being processed.  The
-``doInitialization`` method call is not scheduled to overlap with any other
-pass executions (thus it should be very fast).
-
-.. _writing-an-llvm-pass-runOnBasicBlock:
-
-The ``runOnBasicBlock`` method
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: c++
-
-  virtual bool runOnBasicBlock(BasicBlock &BB) = 0;
-
-Override this function to do the work of the ``BasicBlockPass``.  This function
-is not allowed to inspect or modify basic blocks other than the parameter, and
-are not allowed to modify the CFG.  A ``true`` value must be returned if the
-basic block is modified.
-
-The ``doFinalization(Function &)`` method
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: c++
-
-    virtual bool doFinalization(Function &F);
-
-The ``doFinalization`` method is an infrequently used method that is called
-when the pass framework has finished calling :ref:`runOnBasicBlock
-<writing-an-llvm-pass-runOnBasicBlock>` for every ``BasicBlock`` in the program
-being compiled.  This can be used to perform per-function finalization.
 
 The ``MachineFunctionPass`` class
 ---------------------------------
@@ -864,8 +799,7 @@ certain circumstances that are related to ``addPreserved``.  In particular, the
 modify the LLVM program at all (which is true for analyses), and the
 ``setPreservesCFG`` method can be used by transformations that change
 instructions in the program but do not modify the CFG or terminator
-instructions (note that this property is implicitly set for
-:ref:`BasicBlockPass <writing-an-llvm-pass-BasicBlockPass>`\ es).
+instructions.
 
 ``addPreserved`` is particularly useful for transformations like
 ``BreakCriticalEdges``.  This pass knows how to update a small set of loop and

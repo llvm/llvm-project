@@ -12,7 +12,6 @@
 # CHECK-NEXT: Sections:
 # CHECK-NEXT:   - Name:    .rela.text
 # CHECK-NEXT:     Type:    SHT_RELA
-# CHECK-NEXT:     Link:    .symtab
 # CHECK-NEXT:     EntSize: 0x0000000000000018
 # CHECK-NEXT:     Relocations:
 # CHECK-NEXT:       - Offset: 0x0000000000000001

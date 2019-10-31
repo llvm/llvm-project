@@ -264,9 +264,9 @@ Value *MemCmpExpansion::getPtrToElementAtOffset(Value *Source,
                                                 uint64_t OffsetBytes) {
   if (OffsetBytes > 0) {
     auto *ByteType = Type::getInt8Ty(CI->getContext());
-    Source = Builder.CreateGEP(
+    Source = Builder.CreateConstGEP1_64(
         ByteType, Builder.CreateBitCast(Source, ByteType->getPointerTo()),
-        ConstantInt::get(ByteType, OffsetBytes));
+        OffsetBytes);
   }
   return Builder.CreateBitCast(Source, LoadSizeType->getPointerTo());
 }

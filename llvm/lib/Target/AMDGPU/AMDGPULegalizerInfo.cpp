@@ -1863,12 +1863,15 @@ bool AMDGPULegalizerInfo::legalizeFDIV(MachineInstr &MI,
   Register Dst = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(Dst);
   LLT S16 = LLT::scalar(16);
+  LLT S32 = LLT::scalar(32);
 
   if (legalizeFastUnsafeFDIV(MI, MRI, B))
     return true;
 
   if (DstTy == S16)
     return legalizeFDIV16(MI, MRI, B);
+  if (DstTy == S32)
+    return legalizeFDIV32(MI, MRI, B);
 
   return false;
 }
@@ -1958,6 +1961,102 @@ bool AMDGPULegalizerInfo::legalizeFDIV16(MachineInstr &MI,
 
   B.buildIntrinsic(Intrinsic::amdgcn_div_fixup, Res, false)
     .addUse(RDst.getReg(0))
+    .addUse(RHS)
+    .addUse(LHS)
+    .setMIFlags(Flags);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+// Enable or disable FP32 denorm mode. When 'Enable' is true, emit instructions
+// to enable denorm mode. When 'Enable' is false, disable denorm mode.
+static void toggleSPDenormMode(bool Enable,
+                               const GCNSubtarget &ST,
+                               MachineIRBuilder &B) {
+  // Set SP denorm mode to this value.
+  unsigned SPDenormMode =
+    Enable ? FP_DENORM_FLUSH_NONE : FP_DENORM_FLUSH_IN_FLUSH_OUT;
+
+  if (ST.hasDenormModeInst()) {
+    // Preserve default FP64FP16 denorm mode while updating FP32 mode.
+    unsigned DPDenormModeDefault = ST.hasFP64Denormals()
+                                   ? FP_DENORM_FLUSH_NONE
+                                   : FP_DENORM_FLUSH_IN_FLUSH_OUT;
+
+    unsigned NewDenormModeValue = SPDenormMode | (DPDenormModeDefault << 2);
+    B.buildInstr(AMDGPU::S_DENORM_MODE)
+      .addImm(NewDenormModeValue);
+
+  } else {
+    // Select FP32 bit field in mode register.
+    unsigned SPDenormModeBitField = AMDGPU::Hwreg::ID_MODE |
+                                    (4 << AMDGPU::Hwreg::OFFSET_SHIFT_) |
+                                    (1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_);
+
+    B.buildInstr(AMDGPU::S_SETREG_IMM32_B32)
+      .addImm(SPDenormMode)
+      .addImm(SPDenormModeBitField);
+  }
+}
+
+bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
+                                         MachineRegisterInfo &MRI,
+                                         MachineIRBuilder &B) const {
+  B.setInstr(MI);
+  Register Res = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+
+  uint16_t Flags = MI.getFlags();
+
+  LLT S32 = LLT::scalar(32);
+  LLT S1 = LLT::scalar(1);
+
+  auto One = B.buildFConstant(S32, 1.0f);
+
+  auto DenominatorScaled =
+    B.buildIntrinsic(Intrinsic::amdgcn_div_scale, {S32, S1}, false)
+      .addUse(RHS)
+      .addUse(RHS)
+      .addUse(LHS)
+      .setMIFlags(Flags);
+  auto NumeratorScaled =
+    B.buildIntrinsic(Intrinsic::amdgcn_div_scale, {S32, S1}, false)
+      .addUse(LHS)
+      .addUse(RHS)
+      .addUse(LHS)
+      .setMIFlags(Flags);
+
+  auto ApproxRcp = B.buildIntrinsic(Intrinsic::amdgcn_rcp, {S32}, false)
+    .addUse(DenominatorScaled.getReg(0))
+    .setMIFlags(Flags);
+  auto NegDivScale0 = B.buildFNeg(S32, DenominatorScaled, Flags);
+
+  // FIXME: Doesn't correctly model the FP mode switch, and the FP operations
+  // aren't modeled as reading it.
+  if (!ST.hasFP32Denormals())
+    toggleSPDenormMode(true, ST, B);
+
+  auto Fma0 = B.buildFMA(S32, NegDivScale0, ApproxRcp, One, Flags);
+  auto Fma1 = B.buildFMA(S32, Fma0, ApproxRcp, ApproxRcp, Flags);
+  auto Mul = B.buildFMul(S32, NumeratorScaled, Fma1, Flags);
+  auto Fma2 = B.buildFMA(S32, NegDivScale0, Mul, NumeratorScaled, Flags);
+  auto Fma3 = B.buildFMA(S32, Fma2, Fma1, Mul, Flags);
+  auto Fma4 = B.buildFMA(S32, NegDivScale0, Fma3, NumeratorScaled, Flags);
+
+  if (!ST.hasFP32Denormals())
+    toggleSPDenormMode(false, ST, B);
+
+  auto Fmas = B.buildIntrinsic(Intrinsic::amdgcn_div_fmas, {S32}, false)
+    .addUse(Fma4.getReg(0))
+    .addUse(Fma1.getReg(0))
+    .addUse(Fma3.getReg(0))
+    .addUse(NumeratorScaled.getReg(1))
+    .setMIFlags(Flags);
+
+  B.buildIntrinsic(Intrinsic::amdgcn_div_fixup, Res, false)
+    .addUse(Fmas.getReg(0))
     .addUse(RHS)
     .addUse(LHS)
     .setMIFlags(Flags);

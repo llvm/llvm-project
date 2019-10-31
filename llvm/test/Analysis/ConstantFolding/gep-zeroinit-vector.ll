@@ -9,7 +9,7 @@
 
 define <2 x i16*> @test_gep() {
 ; CHECK-LABEL: @test_gep(
-; CHECK-NEXT:    ret <2 x i16*> <i16* getelementptr inbounds (%rec8, %rec8* extractelement (<2 x %rec8*> getelementptr ([1 x %rec8], [1 x %rec8]* @a, <2 x i64> zeroinitializer, <2 x i64> zeroinitializer), i32 0), i32 0, i32 0), i16* getelementptr inbounds (%rec8, %rec8* extractelement (<2 x %rec8*> getelementptr ([1 x %rec8], [1 x %rec8]* @a, <2 x i64> zeroinitializer, <2 x i64> zeroinitializer), i32 1), i32 0, i32 0)>
+; CHECK-NEXT:    ret <2 x i16*> <i16* getelementptr inbounds ([1 x %rec8], [1 x %rec8]* @a, i32 0, i32 0, i32 0), i16* getelementptr inbounds ([1 x %rec8], [1 x %rec8]* @a, i32 0, i32 0, i32 0)>
 ;
   %A = getelementptr [1 x %rec8], [1 x %rec8]* @a, <2 x i16> zeroinitializer, <2 x i64> zeroinitializer
   %B = bitcast <2 x %rec8*> %A to <2 x i16*>

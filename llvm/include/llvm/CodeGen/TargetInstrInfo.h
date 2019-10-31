@@ -944,6 +944,17 @@ public:
     return isCopyInstrImpl(MI, Source, Destination);
   }
 
+  /// If the specific machine instruction is an instruction that adds an
+  /// immediate value to its \c Source operand and stores it in \c Destination,
+  /// return true along with \c Destination and \c Source machine operand to
+  /// which \c Offset has been added.
+  virtual bool isAddImmediate(const MachineInstr &MI,
+                              const MachineOperand *&Destination,
+                              const MachineOperand *&Source,
+                              int64_t &Offset) const {
+    return false;
+  }
+
   /// Store the specified register of the given register class to the specified
   /// stack frame index. The store instruction is to be added to the given
   /// machine basic block before the specified machine instruction. If isKill

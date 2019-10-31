@@ -341,6 +341,10 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return (HasSSE ? CSR_32_RegCall_SaveList :
                        CSR_32_RegCall_NoSSE_SaveList);
     }
+  case CallingConv::CFGuard_Check:
+    assert(!Is64Bit && "CFGuard check mechanism only used on 32-bit X86");
+    return (HasSSE ? CSR_Win32_CFGuard_Check_SaveList
+                   : CSR_Win32_CFGuard_Check_NoSSE_SaveList);
   case CallingConv::Cold:
     if (Is64Bit)
       return CSR_64_MostRegs_SaveList;
@@ -455,6 +459,10 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
       return (HasSSE ? CSR_32_RegCall_RegMask :
                        CSR_32_RegCall_NoSSE_RegMask);
     }
+  case CallingConv::CFGuard_Check:
+    assert(!Is64Bit && "CFGuard check mechanism only used on 32-bit X86");
+    return (HasSSE ? CSR_Win32_CFGuard_Check_RegMask
+                   : CSR_Win32_CFGuard_Check_NoSSE_RegMask);
   case CallingConv::Cold:
     if (Is64Bit)
       return CSR_64_MostRegs_RegMask;
@@ -514,6 +522,9 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // Set the floating point control register as reserved.
   Reserved.set(X86::FPCW);
+
+  // Set the SIMD floating point control register as reserved.
+  Reserved.set(X86::MXCSR);
 
   // Set the stack-pointer register and its aliases as reserved.
   for (MCSubRegIterator I(X86::RSP, this, /*IncludeSelf=*/true); I.isValid();

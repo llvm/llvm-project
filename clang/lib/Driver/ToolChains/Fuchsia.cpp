@@ -343,5 +343,10 @@ SanitizerMask Fuchsia::getSupportedSanitizers() const {
 }
 
 SanitizerMask Fuchsia::getDefaultSanitizers() const {
-  return SanitizerKind::SafeStack;
+  SanitizerMask Res;
+  if (getTriple().getArch() == llvm::Triple::aarch64)
+    Res |= SanitizerKind::ShadowCallStack;
+  else
+    Res |= SanitizerKind::SafeStack;
+  return Res;
 }

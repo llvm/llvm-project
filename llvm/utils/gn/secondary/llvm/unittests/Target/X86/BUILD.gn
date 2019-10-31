@@ -1,0 +1,22 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("X86Tests") {
+  deps = [
+    "//llvm/lib/Analysis",
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/CodeGen/GlobalISel",
+    "//llvm/lib/CodeGen/MIRParser",
+    "//llvm/lib/CodeGen/SelectionDAG",
+    "//llvm/lib/IR",
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+    "//llvm/lib/Target/X86:LLVMX86CodeGen",
+    "//llvm/lib/Target/X86/MCTargetDesc",
+    "//llvm/lib/Target/X86/TargetInfo",
+  ]
+  include_dirs = [ "//llvm/lib/Target/X86" ]
+  sources = [
+    "MachineSizeOptsTest.cpp",
+  ]
+}

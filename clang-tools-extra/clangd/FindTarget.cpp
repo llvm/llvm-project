@@ -448,8 +448,15 @@ llvm::SmallVector<ReferenceLoc, 2> refInDecl(const Decl *D) {
       // FIXME: decide on how to surface destructors when we need them.
       if (llvm::isa<CXXDestructorDecl>(ND))
         return;
-      Refs.push_back(ReferenceLoc{
-          getQualifierLoc(*ND), ND->getLocation(), /*IsDecl=*/true, {ND}});
+      // Filter anonymous decls, name location will point outside the name token
+      // and the clients are not prepared to handle that.
+      if (ND->getDeclName().isIdentifier() &&
+          !ND->getDeclName().getAsIdentifierInfo())
+        return;
+      Refs.push_back(ReferenceLoc{getQualifierLoc(*ND),
+                                  ND->getLocation(),
+                                  /*IsDecl=*/true,
+                                  {ND}});
     }
   };
 

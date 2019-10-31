@@ -173,7 +173,7 @@ template <class SizeClassMap> void testReleaseFreeMemoryToOS() {
     std::shuffle(FreeArray.begin(), FreeArray.end(), R);
 
     // Build the FreeList from the FreeArray.
-    scudo::IntrusiveList<Batch> FreeList;
+    scudo::SinglyLinkedList<Batch> FreeList;
     FreeList.clear();
     Batch *CurrentBatch = nullptr;
     for (auto const &Block : FreeArray) {
@@ -189,7 +189,7 @@ template <class SizeClassMap> void testReleaseFreeMemoryToOS() {
 
     // Release the memory.
     ReleasedPagesRecorder Recorder;
-    releaseFreeMemoryToOS(&FreeList, 0, AllocatedPagesCount, BlockSize,
+    releaseFreeMemoryToOS(FreeList, 0, AllocatedPagesCount, BlockSize,
                           &Recorder);
 
     // Verify that there are no released pages touched by used chunks and all

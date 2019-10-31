@@ -189,6 +189,14 @@ inline llvm::Error keyError() {
                                  "key not in dict");
 }
 
+#if PY_MAJOR_VERSION < 3
+// The python 2 API declares some arguments as char* that should
+// be const char *, but it doesn't actually modify them.
+inline char *py2_const_cast(const char *s) { return const_cast<char *>(s); }
+#else
+inline const char *py2_const_cast(const char *s) { return s; }
+#endif
+
 enum class PyInitialValue { Invalid, Empty };
 
 template <typename T, typename Enable = void> struct PythonFormat;
@@ -308,16 +316,6 @@ public:
   }
 
   StructuredData::ObjectSP CreateStructuredObject() const;
-
-protected:
-
-#if PY_MAJOR_VERSION < 3
-  // The python 2 API declares some arguments as char* that should
-  // be const char *, but it doesn't actually modify them.
-  static char *py2_const_cast(const char *s) { return const_cast<char *>(s); }
-#else
-  static const char *py2_const_cast(const char *s) { return s; }
-#endif
 
 public:
   template <typename... T>

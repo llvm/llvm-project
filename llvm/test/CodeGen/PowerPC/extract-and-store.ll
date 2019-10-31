@@ -794,8 +794,6 @@ define void @test_13_consecutive_stores_of_bytes(<16 x i8> %a, i8* nocapture %b)
 ;
 ; CHECK-P9-LABEL: test_13_consecutive_stores_of_bytes:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    vsldoi v3, v2, v2, 4
-; CHECK-P9-NEXT:    stxsibx vs35, 0, r5
 ; CHECK-P9-NEXT:    vsldoi v3, v2, v2, 12
 ; CHECK-P9-NEXT:    li r3, 1
 ; CHECK-P9-NEXT:    stxsibx vs35, r5, r3
@@ -808,6 +806,8 @@ define void @test_13_consecutive_stores_of_bytes(<16 x i8> %a, i8* nocapture %b)
 ; CHECK-P9-NEXT:    vsldoi v3, v2, v2, 2
 ; CHECK-P9-NEXT:    li r3, 4
 ; CHECK-P9-NEXT:    stxsibx vs35, r5, r3
+; CHECK-P9-NEXT:    vsldoi v3, v2, v2, 4
+; CHECK-P9-NEXT:    stxsibx vs35, 0, r5
 ; CHECK-P9-NEXT:    vsldoi v3, v2, v2, 8
 ; CHECK-P9-NEXT:    li r3, 5
 ; CHECK-P9-NEXT:    stxsibx vs35, r5, r3
@@ -836,19 +836,19 @@ define void @test_13_consecutive_stores_of_bytes(<16 x i8> %a, i8* nocapture %b)
 ;
 ; CHECK-P9-BE-LABEL: test_13_consecutive_stores_of_bytes:
 ; CHECK-P9-BE:       # %bb.0: # %entry
-; CHECK-P9-BE-NEXT:    vsldoi v3, v2, v2, 13
-; CHECK-P9-BE-NEXT:    stxsibx vs35, 0, r5
+; CHECK-P9-BE-NEXT:    li r3, 3
 ; CHECK-P9-BE-NEXT:    vsldoi v3, v2, v2, 5
+; CHECK-P9-BE-NEXT:    stxsibx vs34, r5, r3
 ; CHECK-P9-BE-NEXT:    li r3, 1
 ; CHECK-P9-BE-NEXT:    stxsibx vs35, r5, r3
 ; CHECK-P9-BE-NEXT:    vsldoi v3, v2, v2, 2
 ; CHECK-P9-BE-NEXT:    li r3, 2
 ; CHECK-P9-BE-NEXT:    stxsibx vs35, r5, r3
-; CHECK-P9-BE-NEXT:    li r3, 3
 ; CHECK-P9-BE-NEXT:    vsldoi v3, v2, v2, 15
-; CHECK-P9-BE-NEXT:    stxsibx vs34, r5, r3
 ; CHECK-P9-BE-NEXT:    li r3, 4
 ; CHECK-P9-BE-NEXT:    stxsibx vs35, r5, r3
+; CHECK-P9-BE-NEXT:    vsldoi v3, v2, v2, 13
+; CHECK-P9-BE-NEXT:    stxsibx vs35, 0, r5
 ; CHECK-P9-BE-NEXT:    vsldoi v3, v2, v2, 9
 ; CHECK-P9-BE-NEXT:    li r3, 5
 ; CHECK-P9-BE-NEXT:    stxsibx vs35, r5, r3

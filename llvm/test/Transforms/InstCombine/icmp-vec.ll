@@ -179,13 +179,22 @@ define <2 x i1> @PR27756_1(<2 x i8> %a) {
 
 ; Undef elements don't prevent the transform of the comparison.
 
-define <2 x i1> @PR27756_2(<2 x i8> %a) {
+define <3 x i1> @PR27756_2(<3 x i8> %a) {
 ; CHECK-LABEL: @PR27756_2(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i8> [[A:%.*]], <i8 undef, i8 1>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <3 x i8> [[A:%.*]], <i8 43, i8 43, i8 1>
+; CHECK-NEXT:    ret <3 x i1> [[CMP]]
 ;
-  %cmp = icmp sle <2 x i8> %a, <i8 undef, i8 0>
-  ret <2 x i1> %cmp
+  %cmp = icmp sle <3 x i8> %a, <i8 42, i8 undef, i8 0>
+  ret <3 x i1> %cmp
+}
+
+define <3 x i1> @PR27756_3(<3 x i8> %a) {
+; CHECK-LABEL: @PR27756_3(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <3 x i8> [[A:%.*]], <i8 0, i8 0, i8 41>
+; CHECK-NEXT:    ret <3 x i1> [[CMP]]
+;
+  %cmp = icmp sge <3 x i8> %a, <i8 undef, i8 1, i8 42>
+  ret <3 x i1> %cmp
 }
 
 @someglobal = global i32 0

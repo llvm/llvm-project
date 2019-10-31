@@ -1023,9 +1023,9 @@ output file:
 .. code-block:: shell
 
   $ <src>/utils/schedcover.py <build>/lib/Target/AArch64/tblGenSubtarget.with
-  instruction, default, CortexA53Model, CortexA57Model, CycloneModel, ExynosM1Model, FalkorModel, KryoModel, ThunderX2T99Model, ThunderXT8XModel
-  ABSv16i8, WriteV, , , CyWriteV3, M1WriteNMISC1, FalkorWr_2VXVY_2cyc, KryoWrite_2cyc_XY_XY_150ln, , 
-  ABSv1i64, WriteV, , , CyWriteV3, M1WriteNMISC1, FalkorWr_1VXVY_2cyc, KryoWrite_2cyc_XY_noRSV_67ln, , 
+  instruction, default, CortexA53Model, CortexA57Model, CycloneModel, ExynosM3Model, FalkorModel, KryoModel, ThunderX2T99Model, ThunderXT8XModel
+  ABSv16i8, WriteV, , , CyWriteV3, M3WriteNMISC1, FalkorWr_2VXVY_2cyc, KryoWrite_2cyc_XY_XY_150ln, ,
+  ABSv1i64, WriteV, , , CyWriteV3, M3WriteNMISC1, FalkorWr_1VXVY_2cyc, KryoWrite_2cyc_XY_noRSV_67ln, ,
   ...
 
 To capture the debug output from generating a schedule model, change to the

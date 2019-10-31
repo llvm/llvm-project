@@ -66,6 +66,8 @@ def main():
                       help='Only update test if it was already autogened')
   parser.add_argument('-p', '--preserve-names', action='store_true',
                       help='Do not scrub IR names')
+  parser.add_argument('--function-signature', action='store_true',
+                      help='Keep function signature information around for the check line')
   parser.add_argument('tests', nargs='+')
   args = parser.parse_args()
 
@@ -155,7 +157,8 @@ def main():
       raw_tool_output = common.invoke_tool(args.opt_binary, opt_args, test)
       common.build_function_body_dictionary(
               common.OPT_FUNCTION_RE, common.scrub_body, [],
-              raw_tool_output, prefixes, func_dict, args.verbose)
+              raw_tool_output, prefixes, func_dict, args.verbose,
+              args.function_signature)
 
     is_in_function = False
     is_in_function_start = False

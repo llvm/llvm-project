@@ -232,6 +232,10 @@ defm merge_exidx_entries: B<"merge-exidx-entries",
     "Enable merging .ARM.exidx entries (default)",
     "Disable merging .ARM.exidx entries">;
 
+defm mmap_output_file: B<"mmap-output-file",
+    "Mmap the output file for writing (default)",
+    "Do not mmap the output file for writing">;
+
 def nmagic: F<"nmagic">, MetaVarName<"<magic>">,
   HelpText<"Do not page align sections, link against static libraries.">;
 
@@ -298,7 +302,7 @@ defm print_icf_sections: B<"print-icf-sections",
     "Do not list identical folded sections (default)">;
 
 defm print_symbol_order: Eq<"print-symbol-order",
-  "Print a symbol order specified by --call-graph-ordering-file into the speficied file">;
+  "Print a symbol order specified by --call-graph-ordering-file into the specified file">;
 
 def pop_state: F<"pop-state">,
   HelpText<"Undo the effect of -push-state">;
@@ -420,7 +424,7 @@ def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
   HelpText<"Linker option extensions">;
 
 def visual_studio_diagnostics_format : F<"vs-diagnostics">,
-HelpText<"Format diagnostics for Visual Studio compatiblity">;
+HelpText<"Format diagnostics for Visual Studio compatibility">;
 
 // Aliases
 def: Separate<["-"], "f">, Alias<auxiliary>, HelpText<"Alias for --auxiliary">;
@@ -478,7 +482,7 @@ def lto_O: J<"lto-O">, MetaVarName<"<opt-level>">,
 def lto_partitions: J<"lto-partitions=">,
   HelpText<"Number of LTO codegen partitions">;
 def lto_cs_profile_generate: F<"lto-cs-profile-generate">,
-  HelpText<"Perform context senstive PGO instrumentation">;
+  HelpText<"Perform context sensitive PGO instrumentation">;
 def lto_cs_profile_file: J<"lto-cs-profile-file=">,
   HelpText<"Context sensitive profile file path">;
 def lto_obj_path_eq: J<"lto-obj-path=">;
@@ -566,7 +570,6 @@ def: F<"no-add-needed">;
 def: F<"no-copy-dt-needed-entries">;
 def: F<"no-ctors-in-init-array">;
 def: F<"no-keep-memory">;
-def: F<"no-mmap-output-file">;
 def: F<"no-pipeline-knowledge">;
 def: F<"no-warn-mismatch">;
 def: Flag<["-"], "p">;

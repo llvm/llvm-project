@@ -145,12 +145,87 @@ void printEdge(raw_ostream &OS, const Block &B, const Edge &E,
 Section::~Section() {
   for (auto *Sym : Symbols)
     Sym->~Symbol();
-}
-
-LinkGraph::~LinkGraph() {
-  // Destroy blocks.
   for (auto *B : Blocks)
     B->~Block();
+}
+
+Block &LinkGraph::splitBlock(Block &B, size_t SplitIndex,
+                             SplitBlockCache *Cache) {
+
+  assert(SplitIndex > 0 && "splitBlock can not be called with SplitIndex == 0");
+
+  // If the split point covers all of B then just return B.
+  if (SplitIndex == B.getSize())
+    return B;
+
+  assert(SplitIndex < B.getSize() && "SplitIndex out of range");
+
+  // Create the new block covering [ 0, SplitIndex ).
+  auto &NewBlock =
+      B.isZeroFill()
+          ? createZeroFillBlock(B.getSection(), SplitIndex, B.getAddress(),
+                                B.getAlignment(), B.getAlignmentOffset())
+          : createContentBlock(
+                B.getSection(), B.getContent().substr(0, SplitIndex),
+                B.getAddress(), B.getAlignment(), B.getAlignmentOffset());
+
+  // Modify B to cover [ SplitIndex, B.size() ).
+  B.setAddress(B.getAddress() + SplitIndex);
+  B.setContent(B.getContent().substr(SplitIndex));
+  B.setAlignmentOffset((B.getAlignmentOffset() + SplitIndex) %
+                       B.getAlignment());
+
+  // Handle edge transfer/update.
+  {
+    // Copy edges to NewBlock (recording their iterators so that we can remove
+    // them from B), and update of Edges remaining on B.
+    std::vector<Block::edge_iterator> EdgesToRemove;
+    for (auto I = B.edges().begin(), E = B.edges().end(); I != E; ++I) {
+      if (I->getOffset() < SplitIndex) {
+        NewBlock.addEdge(*I);
+        EdgesToRemove.push_back(I);
+      } else
+        I->setOffset(I->getOffset() - SplitIndex);
+    }
+
+    // Remove edges that were transfered to NewBlock from B.
+    while (!EdgesToRemove.empty()) {
+      B.removeEdge(EdgesToRemove.back());
+      EdgesToRemove.pop_back();
+    }
+  }
+
+  // Handle symbol transfer/update.
+  {
+    // Initialize the symbols cache if necessary.
+    SplitBlockCache LocalBlockSymbolsCache;
+    if (!Cache)
+      Cache = &LocalBlockSymbolsCache;
+    if (*Cache == None) {
+      *Cache = SplitBlockCache::value_type();
+      for (auto *Sym : B.getSection().symbols())
+        if (&Sym->getBlock() == &B)
+          (*Cache)->push_back(Sym);
+
+      llvm::sort(**Cache, [](const Symbol *LHS, const Symbol *RHS) {
+        return LHS->getOffset() > RHS->getOffset();
+      });
+    }
+    auto &BlockSymbols = **Cache;
+
+    // Transfer all symbols with offset less than SplitIndex to NewBlock.
+    while (!BlockSymbols.empty() &&
+           BlockSymbols.back()->getOffset() < SplitIndex) {
+      BlockSymbols.back()->setBlock(NewBlock);
+      BlockSymbols.pop_back();
+    }
+
+    // Update offsets for all remaining symbols in B.
+    for (auto *Sym : BlockSymbols)
+      Sym->setOffset(Sym->getOffset() - SplitIndex);
+  }
+
+  return NewBlock;
 }
 
 void LinkGraph::dump(raw_ostream &OS,

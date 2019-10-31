@@ -43,7 +43,6 @@ Sections:
     ShOffset: 0x000000005
   - Name: .group
     Type: SHT_GROUP
-    Info: 0
     ShOffset: 0x000000006
     Members:
   - Name: .gnu.version

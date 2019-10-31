@@ -29,7 +29,6 @@ Sections:
     Size: 0x10
   - Name: .rela.text
     Type: SHT_RELA
-    Link: .symtab
     Info: .text
     Relocations:
       - Offset: 0

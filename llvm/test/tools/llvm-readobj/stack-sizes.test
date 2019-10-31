@@ -643,7 +643,7 @@ Sections:
         Type:   R_X86_64_64
 
 ## Check we report an error when dumping stack sizes if the relocated section
-## identified by the sh_info field is invalid. Here sh_info value is larger than
+## identified by the sh_info field is invalid. Here the sh_info value is larger than
 ## the number of sections.
 
 # RUN: yaml2obj --docnum=13 %s > %t18

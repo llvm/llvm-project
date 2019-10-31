@@ -1,5 +1,6 @@
 //===- TestPasses.cpp - "buggy" passes used to test bugpoint --------------===//
 //
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -13,33 +14,38 @@
 
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
 
+#include "llvm/IR/PatternMatch.h"
+using namespace llvm::PatternMatch;
 using namespace llvm;
 
 namespace {
-  /// CrashOnCalls - This pass is used to test bugpoint.  It intentionally
-  /// crashes on any call instructions.
-  class CrashOnCalls : public BasicBlockPass {
-  public:
-    static char ID; // Pass ID, replacement for typeid
-    CrashOnCalls() : BasicBlockPass(ID) {}
-  private:
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesAll();
-    }
+/// CrashOnCalls - This pass is used to test bugpoint.  It intentionally
+/// crashes on any call instructions.
+class CrashOnCalls : public FunctionPass {
+public:
+  static char ID; // Pass ID, replacement for typeid
+  CrashOnCalls() : FunctionPass(ID) {}
 
-    bool runOnBasicBlock(BasicBlock &BB) override {
+private:
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+
+  bool runOnFunction(Function &F) override {
+    for (auto &BB : F)
       for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E; ++I)
         if (isa<CallInst>(*I))
           abort();
 
-      return false;
-    }
-  };
+    return false;
+  }
+};
 }
 
 char CrashOnCalls::ID = 0;
@@ -48,14 +54,16 @@ static RegisterPass<CrashOnCalls>
     "BugPoint Test Pass - Intentionally crash on CallInsts");
 
 namespace {
-  /// DeleteCalls - This pass is used to test bugpoint.  It intentionally
-  /// deletes some call instructions, "misoptimizing" the program.
-  class DeleteCalls : public BasicBlockPass {
-  public:
-    static char ID; // Pass ID, replacement for typeid
-    DeleteCalls() : BasicBlockPass(ID) {}
-  private:
-    bool runOnBasicBlock(BasicBlock &BB) override {
+/// DeleteCalls - This pass is used to test bugpoint.  It intentionally
+/// deletes some call instructions, "misoptimizing" the program.
+class DeleteCalls : public FunctionPass {
+public:
+  static char ID; // Pass ID, replacement for typeid
+  DeleteCalls() : FunctionPass(ID) {}
+
+private:
+  bool runOnFunction(Function &F) override {
+    for (auto &BB : F)
       for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E; ++I)
         if (CallInst *CI = dyn_cast<CallInst>(I)) {
           if (!CI->use_empty())
@@ -63,9 +71,9 @@ namespace {
           CI->getParent()->getInstList().erase(CI);
           break;
         }
-      return false;
-    }
-  };
+    return false;
+  }
+};
 }
 
 char DeleteCalls::ID = 0;
@@ -147,3 +155,33 @@ char CrashOnFunctionAttribute::ID = 0;
 static RegisterPass<CrashOnFunctionAttribute>
     B("bugpoint-crashfuncattr", "BugPoint Test Pass - Intentionally crash on "
                                 "function attribute 'bugpoint-crash'");
+
+namespace {
+class CrashOnMetadata : public FunctionPass {
+public:
+  static char ID; // Pass ID, replacement for typeid
+  CrashOnMetadata() : FunctionPass(ID) {}
+
+private:
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+
+  // Crash on fabs calls with fpmath metdata and an fadd as argument. This
+  // ensures the fadd instruction sticks around and we can check that the
+  // metadata there is dropped correctly.
+  bool runOnFunction(Function &F) override {
+    for (Instruction &I : instructions(F))
+      if (match(&I, m_FAbs(m_FAdd(m_Value(), m_Value()))) &&
+          I.hasMetadata("fpmath"))
+        abort();
+    return false;
+  }
+};
+} // namespace
+
+char CrashOnMetadata::ID = 0;
+static RegisterPass<CrashOnMetadata>
+    C("bugpoint-crashmetadata",
+      "BugPoint Test Pass - Intentionally crash on "
+      "fabs calls with fpmath metadata and an fadd as argument");

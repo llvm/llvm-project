@@ -16,11 +16,11 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -32,6 +32,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <set>
 using namespace llvm;
 
@@ -806,6 +807,78 @@ bool ReduceCrashingInstructions::TestInsts(
 }
 
 namespace {
+/// ReduceCrashingMetadata reducer - This works by removing all metadata from
+/// the specified instructions.
+///
+class ReduceCrashingMetadata : public ListReducer<Instruction *> {
+  BugDriver &BD;
+  BugTester TestFn;
+
+public:
+  ReduceCrashingMetadata(BugDriver &bd, BugTester testFn)
+      : BD(bd), TestFn(testFn) {}
+
+  Expected<TestResult> doTest(std::vector<Instruction *> &Prefix,
+                              std::vector<Instruction *> &Kept) override {
+    if (!Kept.empty() && TestInsts(Kept))
+      return KeepSuffix;
+    if (!Prefix.empty() && TestInsts(Prefix))
+      return KeepPrefix;
+    return NoFailure;
+  }
+
+  bool TestInsts(std::vector<Instruction *> &Prefix);
+};
+} // namespace
+
+bool ReduceCrashingMetadata::TestInsts(std::vector<Instruction *> &Insts) {
+  // Clone the program to try hacking it apart...
+  ValueToValueMapTy VMap;
+  std::unique_ptr<Module> M = CloneModule(BD.getProgram(), VMap);
+
+  // Convert list to set for fast lookup...
+  SmallPtrSet<Instruction *, 32> Instructions;
+  for (Instruction *I : Insts)
+    Instructions.insert(cast<Instruction>(VMap[I]));
+
+  outs() << "Checking for crash with metadata retained from "
+         << Instructions.size();
+  if (Instructions.size() == 1)
+    outs() << " instruction: ";
+  else
+    outs() << " instructions: ";
+
+  // Try to drop instruction metadata from all instructions, except the ones
+  // selected in Instructions.
+  for (Function &F : *M)
+    for (Instruction &Inst : instructions(F)) {
+      if (Instructions.find(&Inst) == Instructions.end()) {
+        Inst.dropUnknownNonDebugMetadata();
+        Inst.setDebugLoc({});
+      }
+    }
+
+  // Verify that this is still valid.
+  legacy::PassManager Passes;
+  Passes.add(createVerifierPass(/*FatalErrors=*/false));
+  Passes.run(*M);
+
+  // Try running on the hacked up program...
+  if (TestFn(BD, M.get())) {
+    BD.setNewProgram(std::move(M)); // It crashed, keep the trimmed version...
+
+    // Make sure to use instruction pointers that point into the now-current
+    // module, and that they don't include any deleted blocks.
+    Insts.clear();
+    for (Instruction *I : Instructions)
+      Insts.push_back(I);
+    return true;
+  }
+  // It didn't crash, try something else.
+  return false;
+}
+
+namespace {
 // Reduce the list of Named Metadata nodes. We keep this as a list of
 // names to avoid having to convert back and forth every time.
 class ReduceCrashingNamedMD : public ListReducer<std::string> {
@@ -1081,6 +1154,21 @@ static Error ReduceInsts(BugDriver &BD, BugTester TestFn) {
     }
 
   } while (Simplification);
+
+  // Attempt to drop metadata from instructions that does not contribute to the
+  // crash.
+  if (!BugpointIsInterrupted) {
+    std::vector<Instruction *> Insts;
+    for (Function &F : BD.getProgram())
+      for (Instruction &I : instructions(F))
+        Insts.push_back(&I);
+
+    Expected<bool> Result =
+        ReduceCrashingMetadata(BD, TestFn).reduceList(Insts);
+    if (Error E = Result.takeError())
+      return E;
+  }
+
   BD.EmitProgressBitcode(BD.getProgram(), "reduced-instructions");
   return Error::success();
 }
@@ -1289,7 +1377,21 @@ Error BugDriver::debugOptimizerCrash(const std::string &ID) {
 
   EmitProgressBitcode(*Program, ID);
 
-  return DebugACrash(*this, TestForOptimizerCrash);
+  auto Res = DebugACrash(*this, TestForOptimizerCrash);
+  if (Res || DontReducePassList)
+    return Res;
+  // Try to reduce the pass list again. This covers additional cases
+  // we failed to reduce earlier, because of more complex pass dependencies
+  // triggering the crash.
+  auto SecondRes = ReducePassList(*this).reduceList(PassesToRun);
+  if (Error E = SecondRes.takeError())
+    return E;
+  outs() << "\n*** Found crashing pass"
+         << (PassesToRun.size() == 1 ? ": " : "es: ")
+         << getPassesString(PassesToRun) << '\n';
+
+  EmitProgressBitcode(getProgram(), "reduced-simplified");
+  return Res;
 }
 
 static bool TestForCodeGenCrash(const BugDriver &BD, Module *M) {

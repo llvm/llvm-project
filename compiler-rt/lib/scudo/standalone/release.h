@@ -149,7 +149,7 @@ private:
 
 template <class TransferBatchT, class ReleaseRecorderT>
 NOINLINE void
-releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> *FreeList, uptr Base,
+releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList, uptr Base,
                       uptr AllocatedPagesCount, uptr BlockSize,
                       ReleaseRecorderT *Recorder) {
   const uptr PageSize = getPageSizeCached();
@@ -199,18 +199,18 @@ releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> *FreeList, uptr Base,
   // allocated page.
   if (BlockSize <= PageSize && PageSize % BlockSize == 0) {
     // Each chunk affects one page only.
-    for (auto It = FreeList->begin(); It != FreeList->end(); ++It) {
-      for (u32 I = 0; I < (*It).getCount(); I++) {
-        const uptr P = reinterpret_cast<uptr>((*It).get(I));
+    for (const auto &It : FreeList) {
+      for (u32 I = 0; I < It.getCount(); I++) {
+        const uptr P = reinterpret_cast<uptr>(It.get(I));
         if (P >= Base && P < End)
           Counters.inc((P - Base) >> PageSizeLog);
       }
     }
   } else {
     // In all other cases chunks might affect more than one page.
-    for (auto It = FreeList->begin(); It != FreeList->end(); ++It) {
-      for (u32 I = 0; I < (*It).getCount(); I++) {
-        const uptr P = reinterpret_cast<uptr>((*It).get(I));
+    for (const auto &It : FreeList) {
+      for (u32 I = 0; I < It.getCount(); I++) {
+        const uptr P = reinterpret_cast<uptr>(It.get(I));
         if (P >= Base && P < End)
           Counters.incRange((P - Base) >> PageSizeLog,
                             (P - Base + BlockSize - 1) >> PageSizeLog);

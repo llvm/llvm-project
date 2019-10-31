@@ -87,6 +87,7 @@ struct LoadCommand {
 // nlist.
 struct SymbolEntry {
   std::string Name;
+  bool Referenced = false;
   uint32_t Index;
   uint8_t n_type;
   uint8_t n_sect;
@@ -110,10 +111,25 @@ struct SymbolTable {
   std::vector<std::unique_ptr<SymbolEntry>> Symbols;
 
   const SymbolEntry *getSymbolByIndex(uint32_t Index) const;
+  SymbolEntry *getSymbolByIndex(uint32_t Index);
+  void removeSymbols(
+      function_ref<bool(const std::unique_ptr<SymbolEntry> &)> ToRemove);
+};
+
+struct IndirectSymbolEntry {
+  // The original value in an indirect symbol table. Higher bits encode extra
+  // information (INDIRECT_SYMBOL_LOCAL and INDIRECT_SYMBOL_ABS).
+  uint32_t OriginalIndex;
+  /// The Symbol referenced by this entry. It's None if the index is
+  /// INDIRECT_SYMBOL_LOCAL or INDIRECT_SYMBOL_ABS.
+  Optional<SymbolEntry *> Symbol;
+
+  IndirectSymbolEntry(uint32_t OriginalIndex, Optional<SymbolEntry *> Symbol)
+      : OriginalIndex(OriginalIndex), Symbol(Symbol) {}
 };
 
 struct IndirectSymbolTable {
-  std::vector<uint32_t> Symbols;
+  std::vector<IndirectSymbolEntry> Symbols;
 };
 
 /// The location of the string table inside the binary is described by LC_SYMTAB
