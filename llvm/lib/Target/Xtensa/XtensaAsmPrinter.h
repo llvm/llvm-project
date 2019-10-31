@@ -35,6 +35,8 @@ public:
   // Override AsmPrinter.
   StringRef getPassName() const override { return "Xtensa Assembly Printer"; }
   void EmitInstruction(const MachineInstr *MI) override;
+  void EmitConstantPool() override;
+  void EmitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
 };
 } // end namespace llvm
 
