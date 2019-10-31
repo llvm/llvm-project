@@ -12,8 +12,8 @@ using namespace clang;
 using namespace tooling;
 using namespace dependencies;
 
-DependencyScanningService::DependencyScanningService(ScanningMode Mode,
-                                                     bool ReuseFileManager,
-                                                     bool SkipExcludedPPRanges)
-    : Mode(Mode), ReuseFileManager(ReuseFileManager),
+DependencyScanningService::DependencyScanningService(
+    ScanningMode Mode, ScanningOutputFormat Format, bool ReuseFileManager,
+    bool SkipExcludedPPRanges)
+    : Mode(Mode), Format(Format), ReuseFileManager(ReuseFileManager),
       SkipExcludedPPRanges(SkipExcludedPPRanges) {}

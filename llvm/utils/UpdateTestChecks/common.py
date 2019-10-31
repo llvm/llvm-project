@@ -48,11 +48,11 @@ def invoke_tool(exe, cmd_args, ir):
 RUN_LINE_RE = re.compile(r'^\s*[;#]\s*RUN:\s*(.*)$')
 CHECK_PREFIX_RE = re.compile(r'--?check-prefix(?:es)?[= ](\S+)')
 PREFIX_RE = re.compile('^[a-zA-Z0-9_-]+$')
-CHECK_RE = re.compile(r'^\s*[;#]\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL)?:')
+CHECK_RE = re.compile(r'^\s*[;#]\s*([^:]+?)(?:-NEXT|-NOT|-DAG|-LABEL|-SAME)?:')
 
 OPT_FUNCTION_RE = re.compile(
-    r'^\s*define\s+(?:internal\s+)?[^@]*@(?P<func>[\w-]+?)\s*\('
-    r'(\s+)?[^)]*[^{]*\{\n(?P<body>.*?)^\}$',
+    r'^\s*define\s+(?:internal\s+)?[^@]*@(?P<func>[\w-]+?)\s*'
+    r'(?P<args_and_sig>\((\)|(.*?[\w\.\-]+?)\))[^{]*)\{\n(?P<body>.*?)^\}$',
     flags=(re.M | re.S))
 
 ANALYZE_FUNCTION_RE = re.compile(
@@ -102,18 +102,45 @@ def do_scrub(body, scrubber, scrubber_args, extra):
 
 # Build up a dictionary of all the function bodies.
 class function_body(object):
-  def __init__(self, string, extra):
+  def __init__(self, string, extra, args_and_sig):
     self.scrub = string
     self.extrascrub = extra
+    self.args_and_sig = args_and_sig
+  def is_same_except_arg_names(self, extrascrub, args_and_sig):
+    arg_names = set()
+    def drop_arg_names(match):
+        arg_names.add(match.group(2))
+        return match.group(1) + match.group(3)
+    def repl_arg_names(match):
+        if match.group(2) in arg_names:
+            return match.group(1) + match.group(3)
+        return match.group(1) + match.group(2) + match.group(3)
+    ans0 = IR_VALUE_RE.sub(drop_arg_names, self.args_and_sig)
+    ans1 = IR_VALUE_RE.sub(drop_arg_names, args_and_sig)
+    if ans0 != ans1:
+        return False
+    es0 = IR_VALUE_RE.sub(repl_arg_names, self.extrascrub)
+    es1 = IR_VALUE_RE.sub(repl_arg_names, extrascrub)
+    es0 = SCRUB_IR_COMMENT_RE.sub(r'', es0)
+    es1 = SCRUB_IR_COMMENT_RE.sub(r'', es1)
+    return es0 == es1
+
   def __str__(self):
     return self.scrub
 
-def build_function_body_dictionary(function_re, scrubber, scrubber_args, raw_tool_output, prefixes, func_dict, verbose):
+def build_function_body_dictionary(function_re, scrubber, scrubber_args, raw_tool_output, prefixes, func_dict, verbose, record_args):
   for m in function_re.finditer(raw_tool_output):
     if not m:
       continue
     func = m.group('func')
     body = m.group('body')
+    # Determine if we print arguments, the opening brace, or nothing after the function name
+    if record_args and 'args_and_sig' in m.groupdict():
+        args_and_sig = scrub_body(m.group('args_and_sig').strip())
+    elif 'args_and_sig' in m.groupdict():
+        args_and_sig = '('
+    else:
+        args_and_sig = ''
     scrubbed_body = do_scrub(body, scrubber, scrubber_args, extra = False)
     scrubbed_extra = do_scrub(body, scrubber, scrubber_args, extra = True)
     if 'analysis' in m.groupdict():
@@ -128,9 +155,10 @@ def build_function_body_dictionary(function_re, scrubber, scrubber_args, raw_too
       for l in scrubbed_body.splitlines():
         print('  ' + l, file=sys.stderr)
     for prefix in prefixes:
-      if func in func_dict[prefix] and str(func_dict[prefix][func]) != scrubbed_body:
-        if func_dict[prefix][func] and func_dict[prefix][func].extrascrub == scrubbed_extra:
+      if func in func_dict[prefix] and (str(func_dict[prefix][func]) != scrubbed_body or (func_dict[prefix][func] and func_dict[prefix][func].args_and_sig != args_and_sig)):
+        if func_dict[prefix][func] and func_dict[prefix][func].is_same_except_arg_names(scrubbed_extra, args_and_sig):
           func_dict[prefix][func].scrub = scrubbed_extra
+          func_dict[prefix][func].args_and_sig = args_and_sig
           continue
         else:
           if prefix == prefixes[-1]:
@@ -139,7 +167,7 @@ def build_function_body_dictionary(function_re, scrubber, scrubber_args, raw_too
             func_dict[prefix][func] = None
             continue
 
-      func_dict[prefix][func] = function_body(scrubbed_body, scrubbed_extra)
+      func_dict[prefix][func] = function_body(scrubbed_body, scrubbed_extra, args_and_sig)
 
 ##### Generator of LLVM IR CHECK lines
 
@@ -219,7 +247,13 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
           output_lines.append(comment_marker)
 
       printed_prefixes.append(checkprefix)
-      output_lines.append(check_label_format % (checkprefix, func_name))
+      args_and_sig = str(func_dict[checkprefix][func_name].args_and_sig)
+      args_and_sig = genericize_check_lines([args_and_sig], is_analyze)[0]
+      if '[[' in args_and_sig:
+        output_lines.append(check_label_format % (checkprefix, func_name, ''))
+        output_lines.append('%s %s-SAME: %s' % (comment_marker, checkprefix, args_and_sig))
+      else:
+        output_lines.append(check_label_format % (checkprefix, func_name, args_and_sig))
       func_body = str(func_dict[checkprefix][func_name]).splitlines()
 
       # For ASM output, just emit the check lines.
@@ -270,12 +304,13 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
 def add_ir_checks(output_lines, comment_marker, prefix_list, func_dict,
                   func_name, preserve_names):
   # Label format is based on IR string.
-  check_label_format = '{} %s-LABEL: @%s('.format(comment_marker)
+  function_def_regex = 'define {{[^@]+}}'
+  check_label_format = '{} %s-LABEL: {}@%s%s'.format(comment_marker, function_def_regex)
   add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name,
              check_label_format, False, preserve_names)
 
 def add_analyze_checks(output_lines, comment_marker, prefix_list, func_dict, func_name):
-  check_label_format = '{} %s-LABEL: \'%s\''.format(comment_marker)
+  check_label_format = '{} %s-LABEL: \'%s%s\''.format(comment_marker)
   add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, False, True)
 
 

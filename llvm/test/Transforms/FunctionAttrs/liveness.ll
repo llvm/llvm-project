@@ -56,7 +56,6 @@ entry:
   call void @no_return_call()
   ; CHECK: call void @no_return_call()
   ; CHECK-NEXT: unreachable
-  ; CHECK-NEXT: }
   call i32 @dead_internal_func(i32 10)
   %cmp = icmp eq i32 %a, 0
   br i1 %cmp, label %cond.true, label %cond.false
@@ -130,7 +129,6 @@ cond.false:                                       ; preds = %entry
   ; CHECK: call void @no_return_call()
   ; CHECK-NEXT: unreachable
   call i32 @dead_internal_func(i32 10)
-  ; CHECK-NEXT: }
   %call1 = call i32 @bar()
   br label %cond.end
 
@@ -526,7 +524,6 @@ define linkonce_odr void @non_exact3() {
 ; CHECK-NEXT:   call void @non_dead_d15()
 ; CHECK-NEXT:   %nr = call i32 @foo_noreturn()
 ; CHECK-NEXT:   unreachable
-; CHECK-NEXT: }
 
 define internal void @non_dead_a0() { ret void }
 define internal void @non_dead_a1() { ret void }

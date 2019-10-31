@@ -45,13 +45,15 @@ class ProgressDisplay(object):
     def update(self, test):
         self.completed += 1
 
-        show_result = test.result.code.isFailure or \
+        show_result = test.isFailure() or \
                 self.opts.showAllOutput or \
                 (not self.opts.quiet and not self.opts.succinct)
         if show_result:
             self.print_result(test)
 
         if self.progressBar:
+            if test.isFailure():
+                self.progressBar.barColor = 'RED'
             percent = float(self.completed) / self.numTests
             self.progressBar.update(percent, test.getFullName())
 
@@ -65,9 +67,9 @@ class ProgressDisplay(object):
                                      self.completed, self.numTests))
 
         # Show the test failure output, if requested.
-        if (test.result.code.isFailure and self.opts.showOutput) or \
+        if (test.isFailure() and self.opts.showOutput) or \
            self.opts.showAllOutput:
-            if test.result.code.isFailure:
+            if test.isFailure():
                 print("%s TEST '%s' FAILED %s" % ('*'*20, test.getFullName(),
                                                   '*'*20))
             out = test.result.output

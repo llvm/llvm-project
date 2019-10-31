@@ -267,16 +267,6 @@ TEST(TargetParserTest, testARMCPU) {
                              ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
                              ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "8-A"));
-  EXPECT_TRUE(testARMCPU("exynos-m1", "armv8-a", "crypto-neon-fp-armv8",
-                         ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
-                         ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                         ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
-                         "8-A"));
-  EXPECT_TRUE(testARMCPU("exynos-m2", "armv8-a", "crypto-neon-fp-armv8",
-                         ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
-                         ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                         ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
-                         "8-A"));
   EXPECT_TRUE(testARMCPU("exynos-m3", "armv8-a", "crypto-neon-fp-armv8",
                          ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
                          ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
@@ -309,7 +299,7 @@ TEST(TargetParserTest, testARMCPU) {
                          "7-S"));
 }
 
-static constexpr unsigned NumARMCPUArchs = 87;
+static constexpr unsigned NumARMCPUArchs = 85;
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;
@@ -830,14 +820,6 @@ TEST(TargetParserTest, testAArch64CPU) {
       "cyclone", "armv8-a", "crypto-neon-fp-armv8",
       AArch64::AEK_CRYPTO | AArch64::AEK_FP | AArch64::AEK_SIMD, "8-A"));
   EXPECT_TRUE(testAArch64CPU(
-      "exynos-m1", "armv8-a", "crypto-neon-fp-armv8",
-      AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
-      AArch64::AEK_SIMD, "8-A"));
-  EXPECT_TRUE(testAArch64CPU(
-      "exynos-m2", "armv8-a", "crypto-neon-fp-armv8",
-      AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
-      AArch64::AEK_SIMD, "8-A"));
-  EXPECT_TRUE(testAArch64CPU(
       "exynos-m3", "armv8-a", "crypto-neon-fp-armv8",
       AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
       AArch64::AEK_SIMD, "8-A"));
@@ -908,7 +890,7 @@ TEST(TargetParserTest, testAArch64CPU) {
       "8.2-A"));
 }
 
-static constexpr unsigned NumAArch64CPUArchs = 28;
+static constexpr unsigned NumAArch64CPUArchs = 26;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -968,10 +950,6 @@ TEST(TargetParserTest, testAArch64Extension) {
   EXPECT_TRUE(testAArch64Extension("cortex-a75",
                                     AArch64::ArchKind::INVALID, "ras"));
   EXPECT_FALSE(testAArch64Extension("cyclone",
-                                    AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_FALSE(testAArch64Extension("exynos-m1",
-                                    AArch64::ArchKind::INVALID, "ras"));
-  EXPECT_FALSE(testAArch64Extension("exynos-m2",
                                     AArch64::ArchKind::INVALID, "ras"));
   EXPECT_FALSE(testAArch64Extension("exynos-m3",
                                     AArch64::ArchKind::INVALID, "ras"));

@@ -33,8 +33,13 @@
 
 namespace llvm {
 
+namespace {
+template <typename T> using GetterTy = std::function<T *(const Function &F)>;
+}
+
 class Instruction;
 class DominatorTree;
+class PostDominatorTree;
 class Loop;
 
 /// Captures loop safety information.
@@ -374,8 +379,14 @@ struct MustBeExecutedContextExplorer {
   /// \param ExploreInterBlock    Flag to indicate if instructions in blocks
   ///                             other than the parent of PP should be
   ///                             explored.
-  MustBeExecutedContextExplorer(bool ExploreInterBlock)
-      : ExploreInterBlock(ExploreInterBlock), EndIterator(*this, nullptr) {}
+  MustBeExecutedContextExplorer(
+      bool ExploreInterBlock,
+      GetterTy<const LoopInfo> LIGetter =
+          [](const Function &) { return nullptr; },
+      GetterTy<const PostDominatorTree> PDTGetter =
+          [](const Function &) { return nullptr; })
+      : ExploreInterBlock(ExploreInterBlock), LIGetter(LIGetter),
+        PDTGetter(PDTGetter), EndIterator(*this, nullptr) {}
 
   /// Clean up the dynamically allocated iterators.
   ~MustBeExecutedContextExplorer() {
@@ -420,6 +431,30 @@ struct MustBeExecutedContextExplorer {
   }
   ///}
 
+  /// Helper to look for \p I in the context of \p PP.
+  ///
+  /// The context is expanded until \p I was found or no more expansion is
+  /// possible.
+  ///
+  /// \returns True, iff \p I was found.
+  bool findInContextOf(const Instruction *I, const Instruction *PP) {
+    auto EIt = begin(PP), EEnd = end(PP);
+    return findInContextOf(I, EIt, EEnd);
+  }
+
+  /// Helper to look for \p I in the context defined by \p EIt and \p EEnd.
+  ///
+  /// The context is expanded until \p I was found or no more expansion is
+  /// possible.
+  ///
+  /// \returns True, iff \p I was found.
+  bool findInContextOf(const Instruction *I, iterator &EIt, iterator &EEnd) {
+    bool Found = EIt.count(I);
+    while (!Found && EIt != EEnd)
+      Found = (++EIt).getCurrentInst() == I;
+    return Found;
+  }
+
   /// Return the next instruction that is guaranteed to be executed after \p PP.
   ///
   /// \param It              The iterator that is used to traverse the must be
@@ -430,6 +465,9 @@ struct MustBeExecutedContextExplorer {
   getMustBeExecutedNextInstruction(MustBeExecutedIterator &It,
                                    const Instruction *PP);
 
+  /// Find the next join point from \p InitBB in forward direction.
+  const BasicBlock *findForwardJoinPoint(const BasicBlock *InitBB);
+
   /// Parameter that limit the performed exploration. See the constructor for
   /// their meaning.
   ///{
@@ -437,6 +475,19 @@ struct MustBeExecutedContextExplorer {
   ///}
 
 private:
+  /// Getters for common CFG analyses: LoopInfo, DominatorTree, and
+  /// PostDominatorTree.
+  ///{
+  GetterTy<const LoopInfo> LIGetter;
+  GetterTy<const PostDominatorTree> PDTGetter;
+  ///}
+
+  /// Map to cache isGuaranteedToTransferExecutionToSuccessor results.
+  DenseMap<const BasicBlock *, Optional<bool>> BlockTransferMap;
+
+  /// Map to cache containsIrreducibleCFG results.
+  DenseMap<const Function*, Optional<bool>> IrreducibleControlMap;
+
   /// Map from instructions to associated must be executed iterators.
   DenseMap<const Instruction *, MustBeExecutedIterator *>
       InstructionIteratorMap;

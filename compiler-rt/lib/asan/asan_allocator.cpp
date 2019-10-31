@@ -246,6 +246,7 @@ struct Allocator {
   AllocatorCache fallback_allocator_cache;
   QuarantineCache fallback_quarantine_cache;
 
+  uptr max_user_defined_malloc_size;
   atomic_uint8_t rss_limit_exceeded;
 
   // ------------------- Options --------------------------
@@ -280,6 +281,10 @@ struct Allocator {
     SetAllocatorMayReturnNull(options.may_return_null);
     allocator.InitLinkerInitialized(options.release_to_os_interval_ms);
     SharedInitCode(options);
+    max_user_defined_malloc_size = common_flags()->max_allocation_size_mb
+                                       ? common_flags()->max_allocation_size_mb
+                                             << 20
+                                       : kMaxAllowedMallocSize;
   }
 
   bool RssLimitExceeded() {
@@ -435,14 +440,16 @@ struct Allocator {
       using_primary_allocator = false;
     }
     CHECK(IsAligned(needed_size, min_alignment));
-    if (size > kMaxAllowedMallocSize || needed_size > kMaxAllowedMallocSize) {
+    if (size > kMaxAllowedMallocSize || needed_size > kMaxAllowedMallocSize ||
+        size > max_user_defined_malloc_size) {
       if (AllocatorMayReturnNull()) {
         Report("WARNING: AddressSanitizer failed to allocate 0x%zx bytes\n",
                (void*)size);
         return nullptr;
       }
-      ReportAllocationSizeTooBig(size, needed_size, kMaxAllowedMallocSize,
-                                 stack);
+      uptr malloc_limit =
+          Min(kMaxAllowedMallocSize, max_user_defined_malloc_size);
+      ReportAllocationSizeTooBig(size, needed_size, malloc_limit, stack);
     }
 
     AsanThread *t = GetCurrentThread();

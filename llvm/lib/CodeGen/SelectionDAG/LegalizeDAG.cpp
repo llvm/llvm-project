@@ -1013,6 +1013,16 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
+  case ISD::STRICT_LRINT:
+  case ISD::STRICT_LLRINT:
+  case ISD::STRICT_LROUND:
+  case ISD::STRICT_LLROUND:
+    // These pseudo-ops are the same as the other STRICT_ ops except
+    // they are registered with setOperationAction() using the input type
+    // instead of the output type.
+    Action = TLI.getStrictFPOperationAction(Node->getOpcode(),
+                                            Node->getOperand(1).getValueType());
+    break;
   case ISD::SIGN_EXTEND_INREG: {
     EVT InnerType = cast<VTSDNode>(Node->getOperand(1))->getVT();
     Action = TLI.getOperationAction(Node->getOpcode(), InnerType);
@@ -1104,16 +1114,6 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
       LegalizeOp(NewVal.getNode());
       return;
     }
-    break;
-  case ISD::STRICT_LRINT:
-  case ISD::STRICT_LLRINT:
-  case ISD::STRICT_LROUND:
-  case ISD::STRICT_LLROUND:
-    // These pseudo-ops are the same as the other STRICT_ ops except
-    // they are registered with setOperationAction() using the input type
-    // instead of the output type.
-    Action = TLI.getStrictFPOperationAction(Node->getOpcode(),
-                                            Node->getOperand(1).getValueType());
     break;
   case ISD::SADDSAT:
   case ISD::UADDSAT:

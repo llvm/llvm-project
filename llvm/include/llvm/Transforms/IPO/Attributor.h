@@ -252,22 +252,14 @@ struct IRPosition {
   /// sufficient to determine where arguments will be manifested. This is, so
   /// far, only the case for call site arguments as the value is not sufficient
   /// to pinpoint them. Instead, we can use the call site as an anchor.
-  ///
-  ///{
-  Value &getAnchorValue() {
+  Value &getAnchorValue() const {
     assert(KindOrArgNo != IRP_INVALID &&
            "Invalid position does not have an anchor value!");
     return *AnchorVal;
   }
-  const Value &getAnchorValue() const {
-    return const_cast<IRPosition *>(this)->getAnchorValue();
-  }
-  ///}
 
   /// Return the associated function, if any.
-  ///
-  ///{
-  Function *getAssociatedFunction() {
+  Function *getAssociatedFunction() const {
     if (auto *CB = dyn_cast<CallBase>(AnchorVal))
       return CB->getCalledFunction();
     assert(KindOrArgNo != IRP_INVALID &&
@@ -281,15 +273,9 @@ struct IRPosition {
       return cast<Instruction>(V).getFunction();
     return nullptr;
   }
-  const Function *getAssociatedFunction() const {
-    return const_cast<IRPosition *>(this)->getAssociatedFunction();
-  }
-  ///}
 
   /// Return the associated argument, if any.
-  ///
-  ///{
-  Argument *getAssociatedArgument() {
+  Argument *getAssociatedArgument() const {
     if (auto *Arg = dyn_cast<Argument>(&getAnchorValue()))
       return Arg;
     int ArgNo = getArgNo();
@@ -300,10 +286,6 @@ struct IRPosition {
       return nullptr;
     return AssociatedFn->arg_begin() + ArgNo;
   }
-  const Argument *getAssociatedArgument() const {
-    return const_cast<IRPosition *>(this)->getAssociatedArgument();
-  }
-  ///}
 
   /// Return true if the position refers to a function interface, that is the
   /// function scope, the function return, or an argumnt.
@@ -319,9 +301,7 @@ struct IRPosition {
   }
 
   /// Return the Function surrounding the anchor value.
-  ///
-  ///{
-  Function *getAnchorScope() {
+  Function *getAnchorScope() const {
     Value &V = getAnchorValue();
     if (isa<Function>(V))
       return &cast<Function>(V);
@@ -331,15 +311,9 @@ struct IRPosition {
       return cast<Instruction>(V).getFunction();
     return nullptr;
   }
-  const Function *getAnchorScope() const {
-    return const_cast<IRPosition *>(this)->getAnchorScope();
-  }
-  ///}
 
   /// Return the context instruction, if any.
-  ///
-  ///{
-  Instruction *getCtxI() {
+  Instruction *getCtxI() const {
     Value &V = getAnchorValue();
     if (auto *I = dyn_cast<Instruction>(&V))
       return I;
@@ -351,15 +325,9 @@ struct IRPosition {
         return &(F->getEntryBlock().front());
     return nullptr;
   }
-  const Instruction *getCtxI() const {
-    return const_cast<IRPosition *>(this)->getCtxI();
-  }
-  ///}
 
   /// Return the value this abstract attribute is associated with.
-  ///
-  ///{
-  Value &getAssociatedValue() {
+  Value &getAssociatedValue() const {
     assert(KindOrArgNo != IRP_INVALID &&
            "Invalid position does not have an associated value!");
     if (getArgNo() < 0 || isa<Argument>(AnchorVal))
@@ -367,10 +335,6 @@ struct IRPosition {
     assert(isa<CallBase>(AnchorVal) && "Expected a call base!");
     return *cast<CallBase>(AnchorVal)->getArgOperand(getArgNo());
   }
-  const Value &getAssociatedValue() const {
-    return const_cast<IRPosition *>(this)->getAssociatedValue();
-  }
-  ///}
 
   /// Return the argument number of the associated value if it is an argument or
   /// call site argument, otherwise a negative value.
@@ -449,7 +413,7 @@ struct IRPosition {
   }
 
   /// Remove the attribute of kind \p AKs existing in the IR at this position.
-  void removeAttrs(ArrayRef<Attribute::AttrKind> AKs) {
+  void removeAttrs(ArrayRef<Attribute::AttrKind> AKs) const {
     if (getPositionKind() == IRP_INVALID || getPositionKind() == IRP_FLOAT)
       return;
 
@@ -502,6 +466,7 @@ private:
   /// Verify internal invariants.
   void verify();
 
+protected:
   /// The value this position is anchored at.
   Value *AnchorVal;
 
@@ -768,9 +733,7 @@ struct Attributor {
   /// be beneficial to avoid false dependences but it requires the users of
   /// `getAAFor` to explicitly record true dependences through this method.
   void recordDependence(const AbstractAttribute &FromAA,
-                        const AbstractAttribute &ToAA) {
-    QueryMap[&FromAA].insert(const_cast<AbstractAttribute *>(&ToAA));
-  }
+                        const AbstractAttribute &ToAA);
 
   /// Introduce a new abstract attribute into the fixpoint analysis.
   ///
@@ -785,7 +748,7 @@ struct Attributor {
                   "'AbstractAttribute'!");
     // Put the attribute in the lookup map structure and the container we use to
     // keep track of all attributes.
-    IRPosition &IRP = AA.getIRPosition();
+    const IRPosition &IRP = AA.getIRPosition();
     auto &KindToAbstractAttributeMap = AAMap[IRP];
     assert(!KindToAbstractAttributeMap.count(&AAType::ID) &&
            "Attribute already in map!");
@@ -942,7 +905,7 @@ private:
     AA.update(*this);
 
     if (TrackDependence && AA.getState().isValidState())
-      QueryMap[&AA].insert(const_cast<AbstractAttribute *>(QueryingAA));
+      recordDependence(AA, const_cast<AbstractAttribute &>(*QueryingAA));
     return AA;
   }
 
@@ -964,7 +927,7 @@ private:
             KindToAbstractAttributeMap.lookup(&AAType::ID))) {
       // Do not register a dependence on an attribute with an invalid state.
       if (TrackDependence && AA->getState().isValidState())
-        QueryMap[AA].insert(const_cast<AbstractAttribute *>(QueryingAA));
+        recordDependence(*AA, const_cast<AbstractAttribute &>(*QueryingAA));
       return AA;
     }
     return nullptr;
@@ -995,6 +958,9 @@ private:
 
   /// The information cache that holds pre-processed (LLVM-IR) information.
   InformationCache &InfoCache;
+
+  /// Set if the attribute currently updated did query a non-fix attribute.
+  bool QueriedNonFixAA;
 
   /// Number of iterations until the dependences between abstract attributes are
   /// recomputed.
@@ -1320,7 +1286,7 @@ private:
 /// Helper struct necessary as the modular build fails if the virtual method
 /// IRAttribute::manifest is defined in the Attributor.cpp.
 struct IRAttributeManifest {
-  static ChangeStatus manifestAttrs(Attributor &A, IRPosition &IRP,
+  static ChangeStatus manifestAttrs(Attributor &A, const IRPosition &IRP,
                                     const ArrayRef<Attribute> &DeducedAttrs);
 };
 
@@ -1345,12 +1311,12 @@ struct IRAttribute : public IRPosition, public Base {
 
   /// See AbstractAttribute::initialize(...).
   virtual void initialize(Attributor &A) override {
-    if (hasAttr(getAttrKind())) {
+    const IRPosition &IRP = this->getIRPosition();
+    if (isa<UndefValue>(IRP.getAssociatedValue()) || hasAttr(getAttrKind())) {
       this->getState().indicateOptimisticFixpoint();
       return;
     }
 
-    const IRPosition &IRP = this->getIRPosition();
     bool IsFnInterface = IRP.isFnInterfaceKind();
     const Function *FnScope = IRP.getAnchorScope();
     // TODO: Not all attributes require an exact definition. Find a way to
@@ -1366,6 +1332,8 @@ struct IRAttribute : public IRPosition, public Base {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
+    if (isa<UndefValue>(getIRPosition().getAssociatedValue()))
+      return ChangeStatus::UNCHANGED;
     SmallVector<Attribute, 4> DeducedAttrs;
     getDeducedAttributes(getAnchorValue().getContext(), DeducedAttrs);
     return IRAttributeManifest::manifestAttrs(A, getIRPosition(), DeducedAttrs);
@@ -1381,11 +1349,7 @@ struct IRAttribute : public IRPosition, public Base {
   }
 
   /// Return an IR position, see struct IRPosition.
-  ///
-  ///{
-  IRPosition &getIRPosition() override { return *this; }
   const IRPosition &getIRPosition() const override { return *this; }
-  ///}
 };
 
 /// Base struct for all "concrete attribute" deductions.
@@ -1489,9 +1453,6 @@ protected:
   /// We require subclasses to provide an implementation so we remember to
   /// add statistics for them.
   virtual void trackStatistics() const = 0;
-
-  /// Return an IR position, see struct IRPosition.
-  virtual IRPosition &getIRPosition() = 0;
 
   /// The actual update/transfer function which has to be implemented by the
   /// derived classes.
@@ -1749,11 +1710,7 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
   }
 
   /// Return an IR position, see struct IRPosition.
-  ///
-  ///{
-  IRPosition &getIRPosition() override { return *this; }
   const IRPosition &getIRPosition() const override { return *this; }
-  ///}
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAIsDead &createForPosition(const IRPosition &IRP, Attributor &A);
@@ -1955,11 +1912,7 @@ struct AAValueSimplify : public StateWrapper<BooleanState, AbstractAttribute>,
   AAValueSimplify(const IRPosition &IRP) : IRPosition(IRP) {}
 
   /// Return an IR position, see struct IRPosition.
-  ///
-  ///{
-  IRPosition &getIRPosition() { return *this; }
   const IRPosition &getIRPosition() const { return *this; }
-  ///}
 
   /// Return an assumed simplified value if a single candidate is found. If
   /// there cannot be one, return original value. If it is not clear yet, return
@@ -1985,11 +1938,7 @@ struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute>,
   bool isKnownHeapToStack() const { return getKnown(); }
 
   /// Return an IR position, see struct IRPosition.
-  ///
-  ///{
-  IRPosition &getIRPosition() { return *this; }
   const IRPosition &getIRPosition() const { return *this; }
-  ///}
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAHeapToStack &createForPosition(const IRPosition &IRP, Attributor &A);

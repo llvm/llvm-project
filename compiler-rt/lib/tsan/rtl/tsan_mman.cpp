@@ -113,9 +113,16 @@ ScopedGlobalProcessor::~ScopedGlobalProcessor() {
   gp->mtx.Unlock();
 }
 
+static constexpr uptr kMaxAllowedMallocSize = 1ull << 40;
+static uptr max_user_defined_malloc_size;
+
 void InitializeAllocator() {
   SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
   allocator()->Init(common_flags()->allocator_release_to_os_interval_ms);
+  max_user_defined_malloc_size = common_flags()->max_allocation_size_mb
+                                     ? common_flags()->max_allocation_size_mb
+                                           << 20
+                                     : kMaxAllowedMallocSize;
 }
 
 void InitializeAllocatorLate() {
@@ -150,15 +157,17 @@ static void SignalUnsafeCall(ThreadState *thr, uptr pc) {
   OutputReport(thr, rep);
 }
 
-static constexpr uptr kMaxAllowedMallocSize = 1ull << 40;
 
 void *user_alloc_internal(ThreadState *thr, uptr pc, uptr sz, uptr align,
                           bool signal) {
-  if (sz >= kMaxAllowedMallocSize || align >= kMaxAllowedMallocSize) {
+  if (sz >= kMaxAllowedMallocSize || align >= kMaxAllowedMallocSize ||
+      sz > max_user_defined_malloc_size) {
     if (AllocatorMayReturnNull())
       return nullptr;
+    uptr malloc_limit =
+        Min(kMaxAllowedMallocSize, max_user_defined_malloc_size);
     GET_STACK_TRACE_FATAL(thr, pc);
-    ReportAllocationSizeTooBig(sz, kMaxAllowedMallocSize, &stack);
+    ReportAllocationSizeTooBig(sz, malloc_limit, &stack);
   }
   void *p = allocator()->Allocate(&thr->proc()->alloc_cache, sz, align);
   if (UNLIKELY(!p)) {

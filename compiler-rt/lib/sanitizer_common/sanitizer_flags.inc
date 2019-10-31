@@ -132,6 +132,9 @@ COMMON_FLAG(uptr, soft_rss_limit_mb, 0,
             " until the RSS goes below the soft limit."
             " This limit does not affect memory allocations other than"
             " malloc/new.")
+COMMON_FLAG(uptr, max_allocation_size_mb, 0,
+            "If non-zero, malloc/new calls larger than this size will return "
+            "nullptr (or crash if allocator_may_return_null=false).")
 COMMON_FLAG(bool, heap_profile, false, "Experimental heap profiler, asan-only")
 COMMON_FLAG(s32, allocator_release_to_os_interval_ms,
             ((bool)SANITIZER_FUCHSIA || (bool)SANITIZER_WINDOWS) ? -1 : 5000,

@@ -9,8 +9,6 @@
 #ifndef liblldb_CommandObjectLanguage_h_
 #define liblldb_CommandObjectLanguage_h_
 
-
-
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/lldb-types.h"
 

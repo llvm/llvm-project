@@ -691,10 +691,11 @@ static void addUsage(IdentifierNamingCheck::NamingCheckFailureMap &Failures,
   if (!Failure.RawUsageLocs.insert(FixLocation.getRawEncoding()).second)
     return;
 
-  if (!Failure.ShouldFix)
+  if (!Failure.ShouldFix())
     return;
 
-  Failure.ShouldFix = utils::rangeCanBeFixed(Range, SourceMgr);
+  if (!utils::rangeCanBeFixed(Range, SourceMgr))
+    Failure.FixStatus = IdentifierNamingCheck::ShouldFixStatus::InsideMacro;
 }
 
 /// Convenience method when the usage to be added is a NamedDecl
@@ -873,6 +874,16 @@ void IdentifierNamingCheck::check(const MatchFinder::MatchResult &Result) {
           DeclarationNameInfo(Decl->getDeclName(), Decl->getLocation())
               .getSourceRange();
 
+      const IdentifierTable &Idents = Decl->getASTContext().Idents;
+      auto CheckNewIdentifier = Idents.find(Fixup);
+      if (CheckNewIdentifier != Idents.end()) {
+        const IdentifierInfo *Ident = CheckNewIdentifier->second;
+        if (Ident->isKeyword(getLangOpts()))
+          Failure.FixStatus = ShouldFixStatus::ConflictsWithKeyword;
+        else if (Ident->hasMacroDefinition())
+          Failure.FixStatus = ShouldFixStatus::ConflictsWithMacroDefinition;
+      }
+
       Failure.Fixup = std::move(Fixup);
       Failure.KindName = std::move(KindName);
       addUsage(NamingCheckFailures, Decl, Range);
@@ -935,24 +946,35 @@ void IdentifierNamingCheck::onEndOfTranslationUnit() {
     if (Failure.KindName.empty())
       continue;
 
-    if (Failure.ShouldFix) {
-      auto Diag = diag(Decl.first, "invalid case style for %0 '%1'")
-                  << Failure.KindName << Decl.second;
+    if (Failure.ShouldNotify()) {
+      auto Diag =
+          diag(Decl.first,
+               "invalid case style for %0 '%1'%select{|" // Case 0 is empty on
+                                                         // purpose, because we
+                                                         // intent to provide a
+                                                         // fix
+               "; cannot be fixed because '%3' would conflict with a keyword|"
+               "; cannot be fixed because '%3' would conflict with a macro "
+               "definition}2")
+          << Failure.KindName << Decl.second
+          << static_cast<int>(Failure.FixStatus) << Failure.Fixup;
 
-      for (const auto &Loc : Failure.RawUsageLocs) {
-        // We assume that the identifier name is made of one token only. This is
-        // always the case as we ignore usages in macros that could build
-        // identifier names by combining multiple tokens.
-        //
-        // For destructors, we alread take care of it by remembering the
-        // location of the start of the identifier and not the start of the
-        // tilde.
-        //
-        // Other multi-token identifiers, such as operators are not checked at
-        // all.
-        Diag << FixItHint::CreateReplacement(
-            SourceRange(SourceLocation::getFromRawEncoding(Loc)),
-            Failure.Fixup);
+      if (Failure.ShouldFix()) {
+        for (const auto &Loc : Failure.RawUsageLocs) {
+          // We assume that the identifier name is made of one token only. This
+          // is always the case as we ignore usages in macros that could build
+          // identifier names by combining multiple tokens.
+          //
+          // For destructors, we already take care of it by remembering the
+          // location of the start of the identifier and not the start of the
+          // tilde.
+          //
+          // Other multi-token identifiers, such as operators are not checked at
+          // all.
+          Diag << FixItHint::CreateReplacement(
+              SourceRange(SourceLocation::getFromRawEncoding(Loc)),
+              Failure.Fixup);
+        }
       }
     }
   }

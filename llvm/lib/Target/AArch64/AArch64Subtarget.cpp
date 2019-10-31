@@ -94,12 +94,6 @@ void AArch64Subtarget::initializeProperties() {
     MinPrefetchStride = 2048;
     MaxPrefetchIterationsAhead = 3;
     break;
-  case ExynosM1:
-    MaxInterleaveFactor = 4;
-    MaxJumpTableSize = 8;
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 3;
-    break;
   case ExynosM3:
     MaxInterleaveFactor = 4;
     MaxJumpTableSize = 20;

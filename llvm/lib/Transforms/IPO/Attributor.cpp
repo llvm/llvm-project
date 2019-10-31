@@ -328,7 +328,7 @@ ChangeStatus AbstractAttribute::update(Attributor &A) {
 }
 
 ChangeStatus
-IRAttributeManifest::manifestAttrs(Attributor &A, IRPosition &IRP,
+IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
                                    const ArrayRef<Attribute> &DeducedAttrs) {
   Function *ScopeFn = IRP.getAssociatedFunction();
   IRPosition::Kind PK = IRP.getPositionKind();
@@ -705,7 +705,7 @@ struct AAFromMustBeExecutedContext : public Base {
 
   void initialize(Attributor &A) override {
     Base::initialize(A);
-    IRPosition &IRP = this->getIRPosition();
+    const IRPosition &IRP = this->getIRPosition();
     Instruction *CtxI = IRP.getCtxI();
 
     if (!CtxI)
@@ -728,12 +728,10 @@ struct AAFromMustBeExecutedContext : public Base {
 
     SetVector<const Use *> NextUses;
 
+    auto EIt = Explorer.begin(CtxI), EEnd = Explorer.end(CtxI);
     for (const Use *U : Uses) {
       if (const Instruction *UserI = dyn_cast<Instruction>(U->getUser())) {
-        auto EIt = Explorer.begin(CtxI), EEnd = Explorer.end(CtxI);
-        bool Found = EIt.count(UserI);
-        while (!Found && ++EIt != EEnd)
-          Found = EIt.getCurrentInst() == UserI;
+        bool Found = Explorer.findInContextOf(UserI, EIt, EEnd);
         if (Found && Base::followUse(A, U, UserI))
           for (const Use &Us : UserI->uses())
             NextUses.insert(&Us);
@@ -987,7 +985,9 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
 
   // If the assumed unique return value is an argument, annotate it.
   if (auto *UniqueRVArg = dyn_cast<Argument>(UniqueRV.getValue())) {
-    getIRPosition() = IRPosition::argument(*UniqueRVArg);
+    // TODO: This should be handled differently!
+    this->AnchorVal = UniqueRVArg;
+    this->KindOrArgNo = UniqueRVArg->getArgNo();
     Changed = IRAttribute::manifest(A);
   } else if (auto *RVC = dyn_cast<Constant>(UniqueRV.getValue())) {
     // We can replace the returned value with the unique returned constant.
@@ -3632,7 +3632,21 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
   const Function *F = getAssociatedFunction();
   const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
 
+  MustBeExecutedContextExplorer &Explorer =
+      A.getInfoCache().getMustBeExecutedContextExplorer();
+
+  auto FreeCheck = [&](Instruction &I) {
+    const auto &Frees = FreesForMalloc.lookup(&I);
+    if (Frees.size() != 1)
+      return false;
+    Instruction *UniqueFree = *Frees.begin();
+    return Explorer.findInContextOf(UniqueFree, I.getNextNode());
+  };
+
   auto UsesCheck = [&](Instruction &I) {
+    bool ValidUsesOnly = true;
+    bool MustUse = true;
+
     SmallPtrSet<const Use *, 8> Visited;
     SmallVector<const Use *, 8> Worklist;
 
@@ -3650,10 +3664,12 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
         continue;
       if (auto *SI = dyn_cast<StoreInst>(UserI)) {
         if (SI->getValueOperand() == U->get()) {
-          LLVM_DEBUG(dbgs() << "[H2S] escaping store to memory: " << *UserI << "\n");
-          return false;
+          LLVM_DEBUG(dbgs()
+                     << "[H2S] escaping store to memory: " << *UserI << "\n");
+          ValidUsesOnly = false;
+        } else {
+          // A store into the malloc'ed memory is fine.
         }
-        // A store into the malloc'ed memory is fine.
         continue;
       }
 
@@ -3671,8 +3687,14 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
 
         // Record malloc.
         if (isFreeCall(UserI, TLI)) {
-          FreesForMalloc[&I].insert(
-              cast<Instruction>(const_cast<User *>(UserI)));
+          if (MustUse) {
+            FreesForMalloc[&I].insert(
+                cast<Instruction>(const_cast<User *>(UserI)));
+          } else {
+            LLVM_DEBUG(dbgs() << "[H2S] free potentially on different mallocs: "
+                              << *UserI << "\n");
+            ValidUsesOnly = false;
+          }
           continue;
         }
 
@@ -3686,22 +3708,25 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
 
         if (!NoCaptureAA.isAssumedNoCapture() || !NoFreeAA.isAssumedNoFree()) {
           LLVM_DEBUG(dbgs() << "[H2S] Bad user: " << *UserI << "\n");
-          return false;
+          ValidUsesOnly = false;
         }
         continue;
       }
 
-      if (isa<GetElementPtrInst>(UserI) || isa<BitCastInst>(UserI)) {
+      if (isa<GetElementPtrInst>(UserI) || isa<BitCastInst>(UserI) ||
+          isa<PHINode>(UserI) || isa<SelectInst>(UserI)) {
+        MustUse &= !(isa<PHINode>(UserI) || isa<SelectInst>(UserI));
         for (Use &U : UserI->uses())
           Worklist.push_back(&U);
         continue;
       }
 
-      // Unknown user.
+      // Unknown user for which we can not track uses further (in a way that
+      // makes sense).
       LLVM_DEBUG(dbgs() << "[H2S] Unknown user: " << *UserI << "\n");
-      return false;
+      ValidUsesOnly = false;
     }
-    return true;
+    return ValidUsesOnly;
   };
 
   auto MallocCallocCheck = [&](Instruction &I) {
@@ -3718,7 +3743,7 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
     if (IsMalloc) {
       if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(0)))
         if (Size->getValue().sle(MaxHeapToStackSize))
-          if (UsesCheck(I)) {
+          if (UsesCheck(I) || FreeCheck(I)) {
             MallocCalls.insert(&I);
             return true;
           }
@@ -3728,7 +3753,7 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
         if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(1)))
           if ((Size->getValue().umul_ov(Num->getValue(), Overflow))
                    .sle(MaxHeapToStackSize))
-            if (!Overflow && UsesCheck(I)) {
+            if (!Overflow && (UsesCheck(I) || FreeCheck(I))) {
               MallocCalls.insert(&I);
               return true;
             }
@@ -3754,8 +3779,10 @@ struct AAHeapToStackFunction final : public AAHeapToStackImpl {
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECL(MallocCalls, Function,
-               "Number of MallocCalls converted to allocas");
-    BUILD_STAT_NAME(MallocCalls, Function) += MallocCalls.size();
+               "Number of malloc calls converted to allocas");
+    for (auto *C : MallocCalls)
+      if (!BadMallocCalls.count(C))
+        ++BUILD_STAT_NAME(MallocCalls, Function);
   }
 };
 
@@ -3816,7 +3843,7 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
-    IRPosition &IRP = getIRPosition();
+    const IRPosition &IRP = getIRPosition();
 
     // Check if we would improve the existing attributes first.
     SmallVector<Attribute, 4> DeducedAttrs;
@@ -4494,9 +4521,16 @@ ChangeStatus Attributor::run(Module &M) {
     // Update all abstract attribute in the work list and record the ones that
     // changed.
     for (AbstractAttribute *AA : Worklist)
-      if (!isAssumedDead(*AA, nullptr))
-        if (AA->update(*this) == ChangeStatus::CHANGED)
+      if (!AA->getState().isAtFixpoint() && !isAssumedDead(*AA, nullptr)) {
+        QueriedNonFixAA = false;
+        if (AA->update(*this) == ChangeStatus::CHANGED) {
           ChangedAAs.push_back(AA);
+        } else if (!QueriedNonFixAA) {
+          // If the attribute did not query any non-fix information, the state
+          // will not change and we can indicate that right away.
+          AA->getState().indicateOptimisticFixpoint();
+        }
+      }
 
     // Check if we recompute the dependences in the next iteration.
     RecomputeDependences = (DepRecomputeInterval > 0 &&
@@ -4610,9 +4644,12 @@ ChangeStatus Attributor::run(Module &M) {
       SmallVector<BasicBlock *, 8> ToBeDeletedBBs;
       ToBeDeletedBBs.reserve(NumDeadBlocks);
       ToBeDeletedBBs.append(ToBeDeletedBlocks.begin(), ToBeDeletedBlocks.end());
-      DeleteDeadBlocks(ToBeDeletedBBs);
-      STATS_DECLTRACK(AAIsDead, BasicBlock,
-                      "Number of dead basic blocks deleted.");
+      // Actually we do not delete the blocks but squash them into a single
+      // unreachable but untangling branches that jump here is something we need
+      // to do in a more generic way.
+      DetatchDeadBlocks(ToBeDeletedBBs, nullptr);
+      STATS_DECL(AAIsDead, BasicBlock, "Number of dead basic blocks deleted.");
+      BUILD_STAT_NAME(AAIsDead, BasicBlock) += ToBeDeletedBlocks.size();
     }
 
     STATS_DECL(AAIsDead, Function, "Number of dead functions deleted.");
@@ -4707,6 +4744,15 @@ void Attributor::initializeInformationCache(Function &F) {
     if (I.mayReadOrWriteMemory())
       ReadOrWriteInsts.push_back(&I);
   }
+}
+
+void Attributor::recordDependence(const AbstractAttribute &FromAA,
+                                  const AbstractAttribute &ToAA) {
+  if (FromAA.getState().isAtFixpoint())
+    return;
+
+  QueryMap[&FromAA].insert(const_cast<AbstractAttribute *>(&ToAA));
+  QueriedNonFixAA = true;
 }
 
 void Attributor::identifyDefaultAbstractAttributes(Function &F) {

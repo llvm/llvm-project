@@ -1039,10 +1039,13 @@ namespace {
     /// cleanups would have had a side-effect, note that as an unmodeled
     /// side-effect and return false. Otherwise, return true.
     bool discardCleanups() {
-      for (Cleanup &C : CleanupStack)
-        if (C.hasSideEffect())
-          if (!noteSideEffect())
-            return false;
+      for (Cleanup &C : CleanupStack) {
+        if (C.hasSideEffect() && !noteSideEffect()) {
+          CleanupStack.clear();
+          return false;
+        }
+      }
+      CleanupStack.clear();
       return true;
     }
 
@@ -14340,27 +14343,41 @@ bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
     assert(MD && "Don't provide `this` for non-methods.");
     assert(!MD->isStatic() && "Don't provide `this` for static methods.");
 #endif
-    if (EvaluateObjectArgument(Info, This, ThisVal))
+    if (!This->isValueDependent() &&
+        EvaluateObjectArgument(Info, This, ThisVal) &&
+        !Info.EvalStatus.HasSideEffects)
       ThisPtr = &ThisVal;
-    if (Info.EvalStatus.HasSideEffects)
-      return false;
+
+    // Ignore any side-effects from a failed evaluation. This is safe because
+    // they can't interfere with any other argument evaluation.
+    Info.EvalStatus.HasSideEffects = false;
   }
 
   ArgVector ArgValues(Args.size());
   for (ArrayRef<const Expr*>::iterator I = Args.begin(), E = Args.end();
        I != E; ++I) {
     if ((*I)->isValueDependent() ||
-        !Evaluate(ArgValues[I - Args.begin()], Info, *I))
+        !Evaluate(ArgValues[I - Args.begin()], Info, *I) ||
+        Info.EvalStatus.HasSideEffects)
       // If evaluation fails, throw away the argument entirely.
       ArgValues[I - Args.begin()] = APValue();
-    if (Info.EvalStatus.HasSideEffects)
-      return false;
+
+    // Ignore any side-effects from a failed evaluation. This is safe because
+    // they can't interfere with any other argument evaluation.
+    Info.EvalStatus.HasSideEffects = false;
   }
+
+  // Parameter cleanups happen in the caller and are not part of this
+  // evaluation.
+  Info.discardCleanups();
+  Info.EvalStatus.HasSideEffects = false;
 
   // Build fake call to Callee.
   CallStackFrame Frame(Info, Callee->getLocation(), Callee, ThisPtr,
                        ArgValues.data());
-  return Evaluate(Value, Info, this) && Info.discardCleanups() &&
+  // FIXME: Missing ExprWithCleanups in enable_if conditions?
+  FullExpressionRAII Scope(Info);
+  return Evaluate(Value, Info, this) && Scope.destroy() &&
          !Info.EvalStatus.HasSideEffects;
 }
 

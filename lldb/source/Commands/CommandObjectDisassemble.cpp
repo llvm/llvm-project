@@ -249,9 +249,8 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
           m_options.arch.GetArchitectureName());
     result.SetStatus(eReturnStatusFailed);
     return false;
-  } else if (flavor_string != nullptr &&
-             !disassembler->FlavorValidForArchSpec(m_options.arch,
-                                                   flavor_string))
+  } else if (flavor_string != nullptr && !disassembler->FlavorValidForArchSpec(
+                                             m_options.arch, flavor_string))
     result.AppendWarningWithFormat(
         "invalid disassembler flavor \"%s\", using default.\n", flavor_string);
 
