@@ -52,10 +52,10 @@
 # M3-NEXT:   1      0     0.17                        mov	sp, x0
 # M3-NEXT:   1      0     0.17                        mov	w0, #12816
 # M3-NEXT:   1      1     0.25                        add	w0, w1, #0
-# M3-NEXT:   1      0     0.17                        adr	x0, .Ltmp0
+# M3-NEXT:   1      0     0.17                        adr	x0, {{\.?}}Ltmp0
 # M3-NEXT:   1      4     0.50    *                   ldr	x0, [x0]
-# M3-NEXT:   1      0     0.17                        adrp	x0, .Ltmp0
-# M3-NEXT:   1      1     0.25                        add	x0, x0, :lo12:.Ltmp0
+# M3-NEXT:   1      0     0.17                        adrp	x0, {{\.?}}Ltmp0
+# M3-NEXT:   1      1     0.25                        add	x0, x0, :lo12:{{\.?}}Ltmp0
 # M3-NEXT:   1      1     0.33                        fmov	s0, s1
 # M3-NEXT:   1      0     0.17                        movi	d0, #0000000000000000
 
@@ -63,9 +63,9 @@
 # M4-NEXT:   1      0     0.17                        mov	sp, x0
 # M4-NEXT:   1      0     0.17                        mov	w0, #12816
 # M4-NEXT:   1      1     0.25                        add	w0, w1, #0
-# M4-NEXT:   1      0     0.17                        adr	x0, .Ltmp0
+# M4-NEXT:   1      0     0.17                        adr	x0, {{\.?}}Ltmp0
 # M4-NEXT:   1      4     0.50    *                   ldr	x0, [x0]
-# M4-NEXT:   1      0     0.17                        adrp	x0, .Ltmp0
-# M4-NEXT:   1      1     0.25                        add	x0, x0, :lo12:.Ltmp0
+# M4-NEXT:   1      0     0.17                        adrp	x0, {{\.?}}Ltmp0
+# M4-NEXT:   1      1     0.25                        add	x0, x0, :lo12:{{\.?}}Ltmp0
 # M4-NEXT:   1      1     0.33                        fmov	s0, s1
 # M4-NEXT:   1      0     0.17                        movi	d0, #0000000000000000
