@@ -146,15 +146,13 @@ public:
 
   Status OptionParsingFinished(ExecutionContext *execution_context) override {
     if (!m_commands.empty()) {
-      if (!m_commands.empty()) {
-        auto cmd_data = std::make_unique<BreakpointOptions::CommandData>();
+      auto cmd_data = std::make_unique<BreakpointOptions::CommandData>();
 
-        for (std::string &str : m_commands)
-          cmd_data->user_source.AppendString(str);
+      for (std::string &str : m_commands)
+        cmd_data->user_source.AppendString(str);
 
-        cmd_data->stop_on_error = true;
-        m_bp_opts.SetCommandDataCallback(cmd_data);
-      }
+      cmd_data->stop_on_error = true;
+      m_bp_opts.SetCommandDataCallback(cmd_data);
     }
     return Status();
   }
