@@ -18,7 +18,7 @@
 
 include "arm_mve_defs.td"
 
-let params = T.All in
+let params = T.Usual in
 foreach n = [ 2, 4 ] in {
   def "vst"#n#"q": Intrinsic<Void, (args Ptr<Scalar>, MultiVector<n>),
                              (CustomCodegen<"VST24"> n:$NumVectors,
