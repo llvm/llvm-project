@@ -111,9 +111,7 @@ for builtin_source_feature in builtins_source_features:
     builtins_source_feature_duplicates.append(builtin_source_feature)
 
 if len(builtins_source_feature_duplicates) > 0:
-  # FIXME(dliew): There's a bug in the build system for powerpc where two definitions of the same
-  # function are present in the library. So just downgrade this to a warning until this is fixed.
-  lit_config.warning(
+  lit_config.fatal(
     'builtins_source_features contains duplicates: {}'.format(
       builtins_source_feature_duplicates)
   )
