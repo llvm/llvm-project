@@ -25,7 +25,16 @@ namespace XtensaISD {
 enum {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
   // Return with a flag operand.  Operand 0 is the chain operand.
-  RET_FLAG
+  RET_FLAG,
+
+  // Calls a function.  Operand 0 is the chain operand and operand 1
+  // is the target address.  The arguments start at operand 2.
+  // There is an optional glue operand at the end.
+  CALL,
+
+  // Wraps a TargetGlobalAddress that should be loaded using PC-relative
+  // accesses.  Operand 0 is the address.
+  PCREL_WRAPPER
 };
 }
 
@@ -43,6 +52,8 @@ public:
                                const SmallVectorImpl<ISD::InputArg> &Ins,
                                const SDLoc &DL, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
+  SDValue LowerCall(CallLoweringInfo &CLI,
+                    SmallVectorImpl<SDValue> &InVals) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -51,6 +62,8 @@ public:
 
 private:
   const XtensaSubtarget &Subtarget;
+
+  SDValue getAddrPCRel(SDValue Op, SelectionDAG &DAG) const;
 
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool isVarArg) const;
 };

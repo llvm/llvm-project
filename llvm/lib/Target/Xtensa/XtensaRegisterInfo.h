@@ -48,6 +48,11 @@ public:
                            unsigned FIOperandNum,
                            RegScavenger *RS) const override;
   Register getFrameRegister(const MachineFunction &MF) const override;
+
+private:
+  void eliminateFI(MachineBasicBlock::iterator II, unsigned OpNo,
+                           int FrameIndex, uint64_t StackSize,
+                           int64_t SPOffset) const;
 };
 
 } // end namespace llvm

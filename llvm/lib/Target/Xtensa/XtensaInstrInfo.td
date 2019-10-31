@@ -265,6 +265,9 @@ def L32R: RI16_Inst<0x01,
   let imm16 = label;
 }
 
+//pcrel addr loading using L32R
+def : Pat<(Xtensa_pcrel_wrapper tconstpool:$in), (L32R tconstpool:$in)>;
+
 //===----------------------------------------------------------------------===//
 // Conditional branch instructions
 //===----------------------------------------------------------------------===//
@@ -462,7 +465,7 @@ let isCall = 1, Defs = [A0] in
   let isIndirectBranch = 1 in
   {
     def CALLX0: CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins AR:$s), 
-                          "callx0\t$s", []>
+                          "callx0\t$s", [(Xtensa_call AR:$s)]>
     {
       let m = 0x3;
       let n = 0x0;
@@ -484,6 +487,10 @@ let isReturn = 1, isTerminator = 1,
     let r = 0;
   } 
 }
+
+// calls
+def : Pat<(Xtensa_call AR:$dst),
+          (CALLX0 AR:$dst)>;
 
 //===----------------------------------------------------------------------===//
 // Mem barrier instructions
@@ -560,3 +567,19 @@ def RSR: RSR_Inst<0x00, 0x03, 0x00, (outs AR:$t), (ins SR:$sr),
 def XSR: RSR_Inst<0x00, 0x01, 0x06, (outs), (ins AR:$t, SR:$sr),
                  "xsr\t$t, $sr", []>;
 
+//===----------------------------------------------------------------------===//
+// Stack allocation
+//===----------------------------------------------------------------------===//
+
+// ADJCALLSTACKDOWN/UP implicitly use/def SP because they may be expanded into
+// a stack adjustment and the codegen must know that they may modify the stack
+// pointer before prolog-epilog rewriting occurs.
+let Defs = [SP], Uses = [SP] in 
+{
+  def ADJCALLSTACKDOWN: Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2), 
+                              "#ADJCALLSTACKDOWN",
+                              [(Xtensa_callseq_start timm:$amt1, timm:$amt2)]>;
+  def ADJCALLSTACKUP  : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
+                              "#ADJCALLSTACKUP",
+                              [(Xtensa_callseq_end timm:$amt1, timm:$amt2)]>;
+}
