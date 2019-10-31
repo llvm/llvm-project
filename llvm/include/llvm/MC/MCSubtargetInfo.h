@@ -263,10 +263,17 @@ public:
   ///
   virtual unsigned getMaxPrefetchIterationsAhead() const;
 
+  /// \return True if prefetching should also be done for writes.
+  ///
+  virtual bool enableWritePrefetching() const;
+
   /// Return the minimum stride necessary to trigger software
   /// prefetching.
   ///
-  virtual unsigned getMinPrefetchStride() const;
+  virtual unsigned getMinPrefetchStride(unsigned NumMemAccesses,
+                                        unsigned NumStridedMemAccesses,
+                                        unsigned NumPrefetches,
+                                        bool HasCall) const;
 };
 
 } // end namespace llvm
