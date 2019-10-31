@@ -75,6 +75,8 @@ protected:
 
   Status WriteFPR() override;
 
+  uint32_t GetPtraceOffset(uint32_t reg_index) override;
+
 private:
   // Private member types.
   enum class XStateType { Invalid, FXSAVE, XSAVE };
