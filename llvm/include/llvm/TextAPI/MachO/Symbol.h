@@ -14,6 +14,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TextAPI/MachO/ArchitectureSet.h"
+#include "llvm/TextAPI/MachO/Target.h"
 
 namespace llvm {
 namespace MachO {
@@ -49,16 +50,18 @@ enum class SymbolKind : uint8_t {
   ObjectiveCInstanceVariable,
 };
 
+using TargetList = SmallVector<Target, 20>;
 class Symbol {
 public:
-  constexpr Symbol(SymbolKind Kind, StringRef Name,
-                   ArchitectureSet Architectures, SymbolFlags Flags)
-      : Name(Name), Architectures(Architectures), Kind(Kind), Flags(Flags) {}
+  Symbol(SymbolKind Kind, StringRef Name, TargetList Targets, SymbolFlags Flags)
+      : Name(Name), Targets(std::move(Targets)), Kind(Kind), Flags(Flags) {}
 
+  void addTarget(Target target) { Targets.emplace_back(target); }
   SymbolKind getKind() const { return Kind; }
   StringRef getName() const { return Name; }
-  ArchitectureSet getArchitectures() const { return Architectures; }
-  void addArchitectures(ArchitectureSet Archs) { Architectures |= Archs; }
+  ArchitectureSet getArchitectures() const {
+    return mapToArchitectureSet(Targets);
+  }
   SymbolFlags getFlags() const { return Flags; }
 
   bool isWeakDefined() const {
@@ -78,6 +81,17 @@ public:
     return (Flags & SymbolFlags::Undefined) == SymbolFlags::Undefined;
   }
 
+  using const_target_iterator = TargetList::const_iterator;
+  using const_target_range = llvm::iterator_range<const_target_iterator>;
+  const_target_range targets() const { return {Targets}; }
+
+  using const_filtered_target_iterator =
+      llvm::filter_iterator<const_target_iterator,
+                            std::function<bool(const Target &)>>;
+  using const_filtered_target_range =
+      llvm::iterator_range<const_filtered_target_iterator>;
+  const_filtered_target_range targets(ArchitectureSet architectures) const;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump(raw_ostream &OS) const;
   void dump() const { dump(llvm::errs()); }
@@ -85,7 +99,7 @@ public:
 
 private:
   StringRef Name;
-  ArchitectureSet Architectures;
+  TargetList Targets;
   SymbolKind Kind;
   SymbolFlags Flags;
 };
