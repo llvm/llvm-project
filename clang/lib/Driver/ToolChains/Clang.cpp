@@ -3339,6 +3339,10 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
     CmdArgs.push_back("-generate-arange-section");
   }
 
+  if (Args.hasFlag(options::OPT_fforce_dwarf_frame,
+                   options::OPT_fno_force_dwarf_frame, false))
+    CmdArgs.push_back("-fforce-dwarf-frame");
+
   if (Args.hasFlag(options::OPT_fdebug_types_section,
                    options::OPT_fno_debug_types_section, false)) {
     if (!T.isOSBinFormatELF()) {

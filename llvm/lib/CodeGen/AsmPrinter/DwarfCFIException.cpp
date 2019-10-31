@@ -29,6 +29,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 using namespace llvm;
 
@@ -133,6 +134,8 @@ void DwarfCFIException::beginFragment(const MachineBasicBlock *MBB,
   if (!hasEmittedCFISections) {
     if (Asm->needsOnlyDebugCFIMoves())
       Asm->OutStreamer->EmitCFISections(false, true);
+    else if (Asm->TM.Options.ForceDwarfFrameSection)
+      Asm->OutStreamer->EmitCFISections(true, true);
     hasEmittedCFISections = true;
   }
 
