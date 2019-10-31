@@ -5066,6 +5066,24 @@ multiclass SIMDThreeSameVector<bit U, bits<5> opc, string asm,
          [(set (v2i64 V128:$Rd), (OpNode (v2i64 V128:$Rn), (v2i64 V128:$Rm)))]>;
 }
 
+multiclass SIMDThreeSameVectorExtraPatterns<string inst, SDPatternOperator OpNode> {
+  def : Pat<(v8i8 (OpNode V64:$LHS, V64:$RHS)),
+          (!cast<Instruction>(inst#"v8i8") V64:$LHS, V64:$RHS)>;
+  def : Pat<(v4i16 (OpNode V64:$LHS, V64:$RHS)),
+          (!cast<Instruction>(inst#"v4i16") V64:$LHS, V64:$RHS)>;
+  def : Pat<(v2i32 (OpNode V64:$LHS, V64:$RHS)),
+          (!cast<Instruction>(inst#"v2i32") V64:$LHS, V64:$RHS)>;
+
+  def : Pat<(v16i8 (OpNode V128:$LHS, V128:$RHS)),
+          (!cast<Instruction>(inst#"v16i8") V128:$LHS, V128:$RHS)>;
+  def : Pat<(v8i16 (OpNode V128:$LHS, V128:$RHS)),
+          (!cast<Instruction>(inst#"v8i16") V128:$LHS, V128:$RHS)>;
+  def : Pat<(v4i32 (OpNode V128:$LHS, V128:$RHS)),
+          (!cast<Instruction>(inst#"v4i32") V128:$LHS, V128:$RHS)>;
+  def : Pat<(v2i64 (OpNode V128:$LHS, V128:$RHS)),
+          (!cast<Instruction>(inst#"v2i64") V128:$LHS, V128:$RHS)>;
+}
+
 // As above, but D sized elements unsupported.
 multiclass SIMDThreeSameVectorBHS<bit U, bits<5> opc, string asm,
                                   SDPatternOperator OpNode> {
