@@ -1,4 +1,5 @@
-// REQUIRES: system-linux, lldb
+// REQUIRES: lldb
+// UNSUPPORTED: system-windows
 //
 // This test case checks debug info during register moves for an argument.
 // RUN: %dexter --fail-lt 1.0 -w \

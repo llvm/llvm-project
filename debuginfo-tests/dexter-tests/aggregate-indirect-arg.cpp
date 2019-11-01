@@ -1,4 +1,5 @@
-// REQUIRES: system-linux, lldb
+// REQUIRES: lldb
+// UNSUPPORTED: system-windows
 //
 // RUN: %dexter --fail-lt 1.0 -w \
 // RUN:     --builder 'clang' --debugger 'lldb' --cflags "-O0 -g" \
