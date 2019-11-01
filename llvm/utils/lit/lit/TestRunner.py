@@ -234,7 +234,9 @@ def quote_windows_command(seq):
     return ''.join(result)
 
 # args are from 'export' or 'env' command.
-# Returns copy of args without those commands or their arguments.
+# Skips the command, and parses its arguments.
+# Modifies env accordingly.
+# Returns copy of args without the command or its arguments.
 def updateEnv(env, args):
     arg_idx_next = len(args)
     unset_next_env_var = False
@@ -625,12 +627,16 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # Reference the global environment by default.
         cmd_shenv = shenv
         args = list(j.args)
-        if j.args[0] == 'env':
+        while args[0] == 'env':
             # Create a copy of the global environment and modify it for this one
-            # command. There might be multiple envs in a pipeline:
+            # command. There might be multiple envs in a pipeline, and
+            # there might be multiple envs in a command (usually when one comes
+            # from a substitution):
             #   env FOO=1 llc < %s | env BAR=2 llvm-mc | FileCheck %s
-            cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env)
-            args = updateEnv(cmd_shenv, j.args)
+            #   env FOO=1 %{another_env_plus_cmd} | FileCheck %s
+            if cmd_shenv is shenv:
+                cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env)
+            args = updateEnv(cmd_shenv, args)
             if not args:
                 raise InternalShellError(j,
                                          "Error: 'env' requires a subcommand")
