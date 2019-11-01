@@ -10615,7 +10615,7 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
     return;
   }
 
-  SL->findJumpTables(Clusters, &SI, DefaultMBB);
+  SL->findJumpTables(Clusters, &SI, DefaultMBB, nullptr, nullptr);
   SL->findBitTestClusters(Clusters, &SI);
 
   LLVM_DEBUG({
