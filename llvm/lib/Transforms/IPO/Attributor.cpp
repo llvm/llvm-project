@@ -1616,24 +1616,6 @@ struct AANonNullFloating
   using Base = AAFromMustBeExecutedContext<AANonNull, AANonNullImpl>;
   AANonNullFloating(const IRPosition &IRP) : Base(IRP) {}
 
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override {
-    Base::initialize(A);
-
-    if (isAtFixpoint())
-      return;
-
-    const IRPosition &IRP = getIRPosition();
-    const Value &V = IRP.getAssociatedValue();
-    const DataLayout &DL = A.getDataLayout();
-
-    // TODO: This context sensitive query should be removed once we can do
-    // context sensitive queries in the genericValueTraversal below.
-    if (isKnownNonZero(&V, DL, 0, /* TODO: AC */ nullptr, IRP.getCtxI(),
-                       /* TODO: DT */ nullptr))
-      indicateOptimisticFixpoint();
-  }
-
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     ChangeStatus Change = Base::updateImpl(A);
@@ -1648,13 +1630,16 @@ struct AANonNullFloating
 
     const DataLayout &DL = A.getDataLayout();
 
+    DominatorTree *DT = nullptr;
+    InformationCache &InfoCache = A.getInfoCache();
+    if (const Function *Fn = getAnchorScope())
+      DT = InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(*Fn);
+
     auto VisitValueCB = [&](Value &V, AANonNull::StateType &T,
                             bool Stripped) -> bool {
       const auto &AA = A.getAAFor<AANonNull>(*this, IRPosition::value(V));
       if (!Stripped && this == &AA) {
-        if (!isKnownNonZero(&V, DL, 0, /* TODO: AC */ nullptr,
-                            /* CtxI */ getCtxI(),
-                            /* TODO: DT */ nullptr))
+        if (!isKnownNonZero(&V, DL, 0, /* TODO: AC */ nullptr, getCtxI(), DT))
           T.indicatePessimisticFixpoint();
       } else {
         // Use abstract attribute information.

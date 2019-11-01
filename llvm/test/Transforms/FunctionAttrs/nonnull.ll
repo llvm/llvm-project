@@ -207,7 +207,7 @@ bb1:                                              ; preds = %bb
 
 bb4:                                              ; preds = %bb1
   %tmp5 = getelementptr inbounds i32, i32* %arg, i64 1
-; ATTRIBUTOR: %tmp5b = tail call i32* @f3(i32* nonnull %tmp5)
+; ATTRIBUTOR: %tmp5b = tail call nonnull i32* @f3(i32* nonnull %tmp5)
   %tmp5b = tail call i32* @f3(i32* %tmp5)
   %tmp5c = getelementptr inbounds i32, i32* %tmp5b, i64 -1
   br label %bb9
@@ -801,6 +801,99 @@ hd2:
   %tmp8 = add nuw i32 %tmp7, 1
   %tmp9 = icmp eq i32 %tmp8, %b
   br i1 %tmp9, label %ex, label %hd
+}
+
+; Original from PR43833
+declare void @sink(i32*)
+
+; FIXME: the sink argument should be marked nonnull as in @PR43833_simple.
+define void @PR43833(i32* %0, i32 %1) {
+; BOTH-LABEL: @PR43833(
+; BOTH-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP1:%.*]], 1
+; BOTH-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP7:%.*]]
+; BOTH:       4:
+; BOTH-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP1]] to i64
+; BOTH-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0:%.*]], i64 [[TMP5]]
+; BOTH-NEXT:    br label [[TMP8:%.*]]
+; BOTH:       7:
+; BOTH-NEXT:    ret void
+; BOTH:       8:
+; BOTH-NEXT:    [[TMP9:%.*]] = phi i32 [ 1, [[TMP4]] ], [ [[TMP10:%.*]], [[TMP8]] ]
+; BOTH-NEXT:    tail call void @sink(i32* [[TMP6]])
+; BOTH-NEXT:    [[TMP10]] = add nuw nsw i32 [[TMP9]], 1
+; BOTH-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP1]]
+; BOTH-NEXT:    br i1 [[TMP11]], label [[TMP7]], label [[TMP8]]
+;
+  %3 = icmp sgt i32 %1, 1
+  br i1 %3, label %4, label %7
+
+4:                                                ; preds = %2
+  %5 = zext i32 %1 to i64
+  %6 = getelementptr inbounds i32, i32* %0, i64 %5
+  br label %8
+
+7:                                                ; preds = %8, %2
+  ret void
+
+8:                                                ; preds = %8, %4
+  %9 = phi i32 [ 1, %4 ], [ %10, %8 ]
+  tail call void @sink(i32* %6)
+  %10 = add nuw nsw i32 %9, 1
+  %11 = icmp eq i32 %10, %1
+  br i1 %11, label %7, label %8
+}
+
+; Adjusted from PR43833
+define void @PR43833_simple(i32* %0, i32 %1) {
+; OLD-LABEL: @PR43833_simple(
+; OLD-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP1:%.*]], 0
+; OLD-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP7:%.*]]
+; OLD:       4:
+; OLD-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP1]] to i64
+; OLD-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0:%.*]], i64 [[TMP5]]
+; OLD-NEXT:    br label [[TMP8:%.*]]
+; OLD:       7:
+; OLD-NEXT:    ret void
+; OLD:       8:
+; OLD-NEXT:    [[TMP9:%.*]] = phi i32 [ 1, [[TMP4]] ], [ [[TMP10:%.*]], [[TMP8]] ]
+; OLD-NEXT:    tail call void @sink(i32* [[TMP6]])
+; OLD-NEXT:    [[TMP10]] = add nuw nsw i32 [[TMP9]], 1
+; OLD-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP1]]
+; OLD-NEXT:    br i1 [[TMP11]], label [[TMP7]], label [[TMP8]]
+;
+; ATTRIBUTOR_NPM-LABEL: @PR43833_simple(
+; ATTRIBUTOR_NPM-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP1:%.*]], 0
+; ATTRIBUTOR_NPM-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP7:%.*]]
+; ATTRIBUTOR_NPM:       4:
+; ATTRIBUTOR_NPM-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP1]] to i64
+; ATTRIBUTOR_NPM-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0:%.*]], i64 [[TMP5]]
+; ATTRIBUTOR_NPM-NEXT:    br label [[TMP8:%.*]]
+; ATTRIBUTOR_NPM:       7:
+; ATTRIBUTOR_NPM-NEXT:    ret void
+; ATTRIBUTOR_NPM:       8:
+; ATTRIBUTOR_NPM-NEXT:    [[TMP9:%.*]] = phi i32 [ 1, [[TMP4]] ], [ [[TMP10:%.*]], [[TMP8]] ]
+; ATTRIBUTOR_NPM-NEXT:    tail call void @sink(i32* nonnull [[TMP6]])
+; ATTRIBUTOR_NPM-NEXT:    [[TMP10]] = add nuw nsw i32 [[TMP9]], 1
+; ATTRIBUTOR_NPM-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP1]]
+; ATTRIBUTOR_NPM-NEXT:    br i1 [[TMP11]], label [[TMP7]], label [[TMP8]]
+;
+  %3 = icmp ne i32 %1, 0
+  br i1 %3, label %4, label %7
+
+4:                                                ; preds = %2
+  %5 = zext i32 %1 to i64
+  %6 = getelementptr inbounds i32, i32* %0, i64 %5
+  br label %8
+
+7:                                                ; preds = %8, %2
+  ret void
+
+8:                                                ; preds = %8, %4
+  %9 = phi i32 [ 1, %4 ], [ %10, %8 ]
+  tail call void @sink(i32* %6)
+  %10 = add nuw nsw i32 %9, 1
+  %11 = icmp eq i32 %10, %1
+  br i1 %11, label %7, label %8
 }
 
 attributes #0 = { "null-pointer-is-valid"="true" }

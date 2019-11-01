@@ -608,6 +608,12 @@ struct InformationCache {
     return AG.getAnalysis<AAManager>(F);
   }
 
+  /// Return the analysis result from a pass \p AP for function \p F.
+  template <typename AP>
+  typename AP::Result *getAnalysisResultForFunction(const Function &F) {
+    return AG.getAnalysis<AP>(F);
+  }
+
   /// Return SCC size on call graph for function \p F.
   unsigned getSccSize(const Function &F) {
     if (!SccSizeOpt.hasValue())
