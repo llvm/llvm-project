@@ -815,9 +815,22 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
 
 let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
 
+
+class AdvSIMD_Pred2VectorArg_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+             [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>, LLVMMatchType<0>],
+             [IntrNoMem]>;
+
+
 //
 // Integer arithmetic
 //
+
+def int_aarch64_sve_add   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_sub   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_subr  : AdvSIMD_Pred2VectorArg_Intrinsic;
+
+def int_aarch64_sve_bic  : AdvSIMD_2VectorArg_Intrinsic;
 
 def int_aarch64_sve_abs : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_neg : AdvSIMD_Merged1VectorArg_Intrinsic;
