@@ -3,11 +3,11 @@
 //
 // REQUIRES: system-linux, lldb
 //
-// RUN: %dexter test --fail-lt 1.0 -w \
+// RUN: %dexter_base test --fail-lt 1.0 -w \
 // RUN:    --builder 'clang' --debugger 'lldb' --cflags "-O0 -g" \
 // RUN:    --results %t -- %s
 //
-// RUN: %dexter view %t/view.cpp.dextIR | FileCheck %s
+// RUN: %dexter_base view %t/view.cpp.dextIR | FileCheck %s
 // CHECK: ## BEGIN
 // CHECK: ## END
 //

@@ -4,7 +4,7 @@
 //
 // REQUIRES: system-linux, lldb
 //
-// RUN: %dexter test --fail-lt 1.0 -w \
+// RUN: %dexter_base test --fail-lt 1.0 -w \
 // RUN:     --builder 'clang' --debugger 'lldb' --cflags "-O0 -glldb" -- %s \
 // RUN:     | FileCheck %s
 // CHECK: expect_program_state.cpp:
