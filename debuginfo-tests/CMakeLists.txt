@@ -13,15 +13,47 @@ set(DEBUGINFO_TEST_DEPS
   not
   )
 
-configure_lit_site_cfg(
-  ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
-  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
-  MAIN_CONFIG
-  ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
-  )
+# Wipe, uh, previous results
+unset(PYTHONINTERP_FOUND CACHE)
+unset(PYTHON_EXECUTABLE CACHE)
+unset(PYTHON_LIBRARY CACHE)
+unset(PYTHON_DLL CACHE)
+unset(PYTHON_INCLUDE_DIR CACHE)
+unset(PYTHON_VERSION_STRING CACHE)
+unset(PYTHON_VERSION_MAJOR CACHE)
+unset(PYTHON_VERSION_MINOR CACHE)
+unset(PYTHON_VERSION_PATCH CACHE)
+unset(PYTHONLIBS_VERSION_STRING CACHE)
 
-add_lit_testsuite(check-debuginfo "Running debug info integration tests"
-  ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS ${DEBUGINFO_TEST_DEPS}
-  )
-set_target_properties(check-debuginfo PROPERTIES FOLDER "Debug info tests")
+# Try to find python3. If it doesn't exist, dexter tests can't run.
+find_package(PythonInterp "3")
+if (NOT DEFINED PYTHON_EXECUTABLE)
+  message(FATAL_ERROR "Cannot run debuginfo-tests without python")
+elseif(PYTHON_VERSION_MAJOR LESS 3)
+  message(FATAL_ERROR "Cannot run debuginfo-tests without python 3")
+else()
+   configure_lit_site_cfg(
+    ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
+    MAIN_CONFIG
+    ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
+    )
+
+  add_lit_testsuite(check-debuginfo "Running debug info integration tests"
+    ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS ${DEBUGINFO_TEST_DEPS}
+    )
+  set_target_properties(check-debuginfo PROPERTIES FOLDER "Debug info tests") 
+endif()
+
+# Prevent the rest of llvm observing our secret python3-ness
+unset(PYTHONINTERP_FOUND CACHE)
+unset(PYTHON_EXECUTABLE CACHE)
+unset(PYTHON_LIBRARY CACHE)
+unset(PYTHON_DLL CACHE)
+unset(PYTHON_INCLUDE_DIR CACHE)
+unset(PYTHON_VERSION_STRING CACHE)
+unset(PYTHON_VERSION_MAJOR CACHE)
+unset(PYTHON_VERSION_MINOR CACHE)
+unset(PYTHON_VERSION_PATCH CACHE)
+unset(PYTHONLIBS_VERSION_STRING CACHE)
