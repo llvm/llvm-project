@@ -1,16 +1,16 @@
 import sys
 
-import lit.ProgressBar
 
 def create_display(opts, tests, total_tests, workers):
     if opts.quiet:
-        return NopProgressDisplay()
+        return NopDisplay()
 
     of_total = (' of %d' % total_tests) if (tests != total_tests) else ''
     header = '-- Testing: %d%s tests, %d workers --' % (tests, of_total, workers)
 
     progress_bar = None
     if opts.succinct and opts.useProgressBar:
+        import lit.ProgressBar
         try:
             tc = lit.ProgressBar.TerminalController()
             progress_bar = lit.ProgressBar.ProgressBar(tc, header)
@@ -23,24 +23,20 @@ def create_display(opts, tests, total_tests, workers):
     if progress_bar:
         progress_bar.update(0, '')
 
-    return ProgressDisplay(opts, tests, progress_bar)
+    return Display(opts, tests, progress_bar)
 
-class NopProgressDisplay(object):
+
+class NopDisplay(object):
     def update(self, test): pass
     def finish(self): pass
 
-class ProgressDisplay(object):
-    def __init__(self, opts, numTests, progressBar):
-        self.opts = opts
-        self.numTests = numTests
-        self.progressBar = progressBar
-        self.completed = 0
 
-    def finish(self):
-        if self.progressBar:
-            self.progressBar.clear()
-        elif self.opts.succinct:
-            sys.stdout.write('\n')
+class Display(object):
+    def __init__(self, opts, tests, progress_bar):
+        self.opts = opts
+        self.tests = tests
+        self.progress_bar = progress_bar
+        self.completed = 0
 
     def update(self, test):
         self.completed += 1
@@ -51,20 +47,26 @@ class ProgressDisplay(object):
         if show_result:
             self.print_result(test)
 
-        if self.progressBar:
+        if self.progress_bar:
             if test.isFailure():
-                self.progressBar.barColor = 'RED'
-            percent = float(self.completed) / self.numTests
-            self.progressBar.update(percent, test.getFullName())
+                self.progress_bar.barColor = 'RED'
+            percent = float(self.completed) / self.tests
+            self.progress_bar.update(percent, test.getFullName())
+
+    def finish(self):
+        if self.progress_bar:
+            self.progress_bar.clear()
+        elif self.opts.succinct:
+            sys.stdout.write('\n')
 
     def print_result(self, test):
-        if self.progressBar:
-            self.progressBar.clear()
+        if self.progress_bar:
+            self.progress_bar.clear()
 
         # Show the test result line.
         test_name = test.getFullName()
         print('%s: %s (%d of %d)' % (test.result.code.name, test_name,
-                                     self.completed, self.numTests))
+                                     self.completed, self.tests))
 
         # Show the test failure output, if requested.
         if (test.isFailure() and self.opts.showOutput) or \
