@@ -2567,7 +2567,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return Left.Tok.isLiteral() || (Left.is(tok::identifier) && Left.Previous &&
                                     Left.Previous->is(tok::kw_case));
   if (Left.is(tok::l_square) && Right.is(tok::amp))
-    return false;
+    return Style.SpacesInSquareBrackets;
   if (Right.is(TT_PointerOrReference)) {
     if (Left.is(tok::r_paren) && Line.MightBeFunctionDecl) {
       if (!Left.MatchingParen)

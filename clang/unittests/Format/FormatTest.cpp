@@ -10572,6 +10572,10 @@ TEST_F(FormatTest, ConfigurableSpacesInSquareBrackets) {
   // Lambdas.
   verifyFormat("int c = []() -> int { return 2; }();\n", Spaces);
   verifyFormat("return [ i, args... ] {};", Spaces);
+  verifyFormat("int foo = [ &bar ]() {};", Spaces);
+  verifyFormat("int foo = [ = ]() {};", Spaces);
+  verifyFormat("int foo = [ =, &bar ]() {};", Spaces);
+  verifyFormat("int foo = [ &bar, = ]() {};", Spaces);
 }
 
 TEST_F(FormatTest, ConfigurableSpaceBeforeAssignmentOperators) {
