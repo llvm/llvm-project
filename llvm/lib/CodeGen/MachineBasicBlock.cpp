@@ -1462,6 +1462,11 @@ MachineBasicBlock::computeRegisterLiveness(const TargetRegisterInfo *TRI,
     } while (I != begin() && N > 0);
   }
 
+  // If all the instructions before this in the block are debug instructions,
+  // skip over them.
+  while (I != begin() && std::prev(I)->isDebugInstr())
+    --I;
+
   // Did we get to the start of the block?
   if (I == begin()) {
     // If so, the register's state is definitely defined by the live-in state.
