@@ -97,13 +97,18 @@ if lldb_path is not None:
     config.available_features.add('lldb')
 
 # Produce dexter path, lldb path, and combine into the %dexter substitution
+# for running a test.
 dexter_path = os.path.join(config.debuginfo_tests_src_root,
                            'dexter', 'dexter.py')
-dexter_cmd = '"{}" "{}" test'.format(config.python3_executable, dexter_path)
+dexter_test_cmd = '"{}" "{}" test'.format(config.python3_executable, dexter_path)
 if lldb_path is not None:
-  dexter_cmd += ' --lldb-executable {}'.format(lldb_path)
+  dexter_test_cmd += ' --lldb-executable {}'.format(lldb_path)
+tools.append(ToolSubst('%dexter', dexter_test_cmd))
 
-tools.append(ToolSubst('%dexter', dexter_cmd))
+# For testing other bits of dexter that aren't under the "test" subcommand,
+# have a %dexter_base substitution.
+dexter_base_cmd = '"{}" "{}"'.format(config.python3_executable, dexter_path)
+tools.append(ToolSubst('%dexter_base', dexter_base_cmd))
 
 tool_dirs = [config.llvm_tools_dir]
 
