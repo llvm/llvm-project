@@ -355,15 +355,21 @@ ModulePass *llvm::createMustBeExecutedContextPrinter() {
 
 bool MustBeExecutedContextPrinter::runOnModule(Module &M) {
   // We provide non-PM analysis here because the old PM doesn't like to query
-  // function passes from a module pass. Given that this is a printer, we don't
-  // care much about memory leaks.
-  GetterTy<LoopInfo> LIGetter = [](const Function &F) {
+  // function passes from a module pass.
+  SmallVector<PostDominatorTree *, 8> PDTs;
+  SmallVector<DominatorTree *, 8> DTs;
+  SmallVector<LoopInfo *, 8> LIs;
+
+  GetterTy<LoopInfo> LIGetter = [&](const Function &F) {
     DominatorTree *DT = new DominatorTree(const_cast<Function &>(F));
     LoopInfo *LI = new LoopInfo(*DT);
+    DTs.push_back(DT);
+    LIs.push_back(LI);
     return LI;
   };
-  GetterTy<PostDominatorTree> PDTGetter = [](const Function &F) {
+  GetterTy<PostDominatorTree> PDTGetter = [&](const Function &F) {
     PostDominatorTree *PDT = new PostDominatorTree(const_cast<Function &>(F));
+    PDTs.push_back(PDT);
     return PDT;
   };
   MustBeExecutedContextExplorer Explorer(true, LIGetter, PDTGetter);
@@ -376,6 +382,9 @@ bool MustBeExecutedContextPrinter::runOnModule(Module &M) {
     }
   }
 
+  DeleteContainerPointers(PDTs);
+  DeleteContainerPointers(LIs);
+  DeleteContainerPointers(DTs);
   return false;
 }
 
