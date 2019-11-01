@@ -7,55 +7,21 @@
 ; with various folding thresholds
 
 define i32 @test(i1 %a, i1 %b, i32 %i, i32 %j, i32 %k) {
-; CHECK-ONE-LABEL: @test(
-; CHECK-ONE-NEXT:  entry:
-; CHECK-ONE-NEXT:    br i1 [[A:%.*]], label [[M:%.*]], label [[O:%.*]]
-; CHECK-ONE:       O:
-; CHECK-ONE-NEXT:    br i1 [[B:%.*]], label [[P:%.*]], label [[Q:%.*]]
-; CHECK-ONE:       P:
-; CHECK-ONE-NEXT:    [[IAJ:%.*]] = add i32 [[I:%.*]], [[J:%.*]]
-; CHECK-ONE-NEXT:    [[IAJAK:%.*]] = add i32 [[IAJ]], [[K:%.*]]
-; CHECK-ONE-NEXT:    br label [[N:%.*]]
-; CHECK-ONE:       Q:
-; CHECK-ONE-NEXT:    [[IXJ:%.*]] = xor i32 [[I]], [[J]]
-; CHECK-ONE-NEXT:    [[IXJXK:%.*]] = xor i32 [[IXJ]], [[K]]
-; CHECK-ONE-NEXT:    br label [[N]]
-; CHECK-ONE:       N:
-; CHECK-ONE-NEXT:    [[WP:%.*]] = phi i32 [ [[IAJAK]], [[P]] ], [ [[IXJXK]], [[Q]] ]
-; CHECK-ONE-NEXT:    [[WP2:%.*]] = add i32 [[WP]], [[WP]]
-; CHECK-ONE-NEXT:    br label [[M]]
-; CHECK-ONE:       M:
-; CHECK-ONE-NEXT:    [[W:%.*]] = phi i32 [ [[WP2]], [[N]] ], [ 2, [[ENTRY:%.*]] ]
-; CHECK-ONE-NEXT:    [[R:%.*]] = add i32 [[W]], 1
-; CHECK-ONE-NEXT:    ret i32 [[R]]
-;
-; CHECK-TWO-LABEL: @test(
-; CHECK-TWO-NEXT:  entry:
-; CHECK-TWO-NEXT:    br i1 [[A:%.*]], label [[M:%.*]], label [[O:%.*]]
-; CHECK-TWO:       O:
-; CHECK-TWO-NEXT:    [[IAJ:%.*]] = add i32 [[I:%.*]], [[J:%.*]]
-; CHECK-TWO-NEXT:    [[IAJAK:%.*]] = add i32 [[IAJ]], [[K:%.*]]
-; CHECK-TWO-NEXT:    [[IXJ:%.*]] = xor i32 [[I]], [[J]]
-; CHECK-TWO-NEXT:    [[IXJXK:%.*]] = xor i32 [[IXJ]], [[K]]
-; CHECK-TWO-NEXT:    [[WP:%.*]] = select i1 [[B:%.*]], i32 [[IAJAK]], i32 [[IXJXK]]
-; CHECK-TWO-NEXT:    [[WP2:%.*]] = add i32 [[WP]], [[WP]]
-; CHECK-TWO-NEXT:    br label [[M]]
-; CHECK-TWO:       M:
-; CHECK-TWO-NEXT:    [[W:%.*]] = phi i32 [ [[WP2]], [[O]] ], [ 2, [[ENTRY:%.*]] ]
-; CHECK-TWO-NEXT:    [[R:%.*]] = add i32 [[W]], 1
-; CHECK-TWO-NEXT:    ret i32 [[R]]
-;
-; CHECK-SEVEN-LABEL: @test(
-; CHECK-SEVEN-NEXT:  entry:
-; CHECK-SEVEN-NEXT:    [[IAJ:%.*]] = add i32 [[I:%.*]], [[J:%.*]]
-; CHECK-SEVEN-NEXT:    [[IAJAK:%.*]] = add i32 [[IAJ]], [[K:%.*]]
-; CHECK-SEVEN-NEXT:    [[IXJ:%.*]] = xor i32 [[I]], [[J]]
-; CHECK-SEVEN-NEXT:    [[IXJXK:%.*]] = xor i32 [[IXJ]], [[K]]
-; CHECK-SEVEN-NEXT:    [[WP:%.*]] = select i1 [[B:%.*]], i32 [[IAJAK]], i32 [[IXJXK]]
-; CHECK-SEVEN-NEXT:    [[WP2:%.*]] = add i32 [[WP]], [[WP]]
-; CHECK-SEVEN-NEXT:    [[W:%.*]] = select i1 [[A:%.*]], i32 2, i32 [[WP2]]
-; CHECK-SEVEN-NEXT:    [[R:%.*]] = add i32 [[W]], 1
-; CHECK-SEVEN-NEXT:    ret i32 [[R]]
+; ALL-LABEL: @test(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    br i1 [[A:%.*]], label [[M:%.*]], label [[O:%.*]]
+; ALL:       O:
+; ALL-NEXT:    [[IAJ:%.*]] = add i32 [[I:%.*]], [[J:%.*]]
+; ALL-NEXT:    [[IAJAK:%.*]] = add i32 [[IAJ]], [[K:%.*]]
+; ALL-NEXT:    [[IXJ:%.*]] = xor i32 [[I]], [[J]]
+; ALL-NEXT:    [[IXJXK:%.*]] = xor i32 [[IXJ]], [[K]]
+; ALL-NEXT:    [[WP:%.*]] = select i1 [[B:%.*]], i32 [[IAJAK]], i32 [[IXJXK]]
+; ALL-NEXT:    [[WP2:%.*]] = add i32 [[WP]], [[WP]]
+; ALL-NEXT:    br label [[M]]
+; ALL:       M:
+; ALL-NEXT:    [[W:%.*]] = phi i32 [ [[WP2]], [[O]] ], [ 2, [[ENTRY:%.*]] ]
+; ALL-NEXT:    [[R:%.*]] = add i32 [[W]], 1
+; ALL-NEXT:    ret i32 [[R]]
 ;
 entry:
   br i1 %a, label %M, label %O

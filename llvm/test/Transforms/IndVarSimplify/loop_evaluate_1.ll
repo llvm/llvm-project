@@ -28,14 +28,10 @@ define i32 @test2(i32 %arg) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = icmp ugt i32 [[ARG:%.*]], 10
-; CHECK-NEXT:    br i1 [[TMP]], label [[BB1_PREHEADER:%.*]], label [[BB7:%.*]]
-; CHECK:       bb1.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[ARG]], -11
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i32 [[TMP1]], 1
-; CHECK-NEXT:    br label [[BB7]]
-; CHECK:       bb7:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ 0, [[BB:%.*]] ], [ [[TMP2]], [[BB1_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP]], i32 [[TMP2]], i32 0
 ; CHECK-NEXT:    ret i32 [[TMP8]]
 ;
 bb:

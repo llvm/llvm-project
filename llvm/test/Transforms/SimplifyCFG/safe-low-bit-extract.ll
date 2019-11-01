@@ -9,14 +9,10 @@ define i32 @extract_low_bits(i32 %input, i32 %nbits) {
 ; CHECK-LABEL: @extract_low_bits(
 ; CHECK-NEXT:  begin:
 ; CHECK-NEXT:    [[SHOULD_MASK:%.*]] = icmp ult i32 [[NBITS:%.*]], 32
-; CHECK-NEXT:    br i1 [[SHOULD_MASK]], label [[PERFORM_MASKING:%.*]], label [[END:%.*]]
-; CHECK:       perform_masking:
 ; CHECK-NEXT:    [[MASK_NOT:%.*]] = shl nsw i32 -1, [[NBITS]]
 ; CHECK-NEXT:    [[MASK:%.*]] = xor i32 [[MASK_NOT]], -1
 ; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[MASK]], [[INPUT:%.*]]
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       end:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[MASKED]], [[PERFORM_MASKING]] ], [ [[INPUT]], [[BEGIN:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[SHOULD_MASK]], i32 [[MASKED]], i32 [[INPUT]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 begin:

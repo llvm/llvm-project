@@ -12,23 +12,12 @@ declare float @llvm.minimum.f32(float, float) nounwind readonly
 declare float @llvm.maximum.f32(float, float) nounwind readonly
 
 define double @fdiv_test(double %a, double %b) {
-; EXPENSIVE-LABEL: @fdiv_test(
-; EXPENSIVE-NEXT:  entry:
-; EXPENSIVE-NEXT:    [[CMP:%.*]] = fcmp ogt double [[A:%.*]], 0.000000e+00
-; EXPENSIVE-NEXT:    [[DIV:%.*]] = fdiv double [[B:%.*]], [[A]]
-; EXPENSIVE-NEXT:    [[COND:%.*]] = select i1 [[CMP]], double [[DIV]], double 0.000000e+00
-; EXPENSIVE-NEXT:    ret double [[COND]]
-;
-; CHEAP-LABEL: @fdiv_test(
-; CHEAP-NEXT:  entry:
-; CHEAP-NEXT:    [[CMP:%.*]] = fcmp ogt double [[A:%.*]], 0.000000e+00
-; CHEAP-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
-; CHEAP:       cond.true:
-; CHEAP-NEXT:    [[DIV:%.*]] = fdiv double [[B:%.*]], [[A]]
-; CHEAP-NEXT:    br label [[COND_END]]
-; CHEAP:       cond.end:
-; CHEAP-NEXT:    [[COND:%.*]] = phi double [ [[DIV]], [[COND_TRUE]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-; CHEAP-NEXT:    ret double [[COND]]
+; ALL-LABEL: @fdiv_test(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[CMP:%.*]] = fcmp ogt double [[A:%.*]], 0.000000e+00
+; ALL-NEXT:    [[DIV:%.*]] = fdiv double [[B:%.*]], [[A]]
+; ALL-NEXT:    [[COND:%.*]] = select i1 [[CMP]], double [[DIV]], double 0.000000e+00
+; ALL-NEXT:    ret double [[COND]]
 ;
 entry:
   %cmp = fcmp ogt double %a, 0.0
