@@ -112,6 +112,13 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
     }
   }
 
+  if (!name && !mangled_name && die.Tag() == DW_TAG_structure_type) {
+    DWARFDIE type_die =
+      die.GetFirstChild().GetAttributeValueAsReferenceDIE(DW_AT_type);
+    // This is a sized container for a bound generic.
+    return ParseTypeFromDWARF(sc, type_die, log, type_is_new_ptr);
+  }
+
   if (!mangled_name && name) {
     if (name.GetStringRef().equals("$swift.fixedbuffer")) {
       DWARFDIE type_die =
