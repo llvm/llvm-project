@@ -2655,10 +2655,23 @@ static void emitRangeList(DwarfDebug &DD, AsmPrinter *Asm,
                 [](auto) {});
 }
 
-static void emitDebugRangesImpl(DwarfDebug &DD, AsmPrinter *Asm,
-                                const DwarfFile &Holder, MCSymbol *TableEnd) {
+void DwarfDebug::emitDebugRangesImpl(const DwarfFile &Holder, MCSection *Section) {
+  if (Holder.getRangeLists().empty())
+    return;
+
+  assert(useRangesSection());
+  assert(!CUMap.empty());
+  assert(llvm::any_of(CUMap, [](const decltype(CUMap)::value_type &Pair) {
+    return !Pair.second->getCUNode()->isDebugDirectivesOnly();
+  }));
+
+  Asm->OutStreamer->SwitchSection(Section);
+
+  MCSymbol *TableEnd =
+      getDwarfVersion() < 5 ? nullptr : emitRnglistsTableHeader(Asm, Holder);
+
   for (const RangeSpanList &List : Holder.getRangeLists())
-    emitRangeList(DD, Asm, List);
+    emitRangeList(*this, Asm, List);
 
   if (TableEnd)
     Asm->OutStreamer->EmitLabel(TableEnd);
@@ -2667,55 +2680,17 @@ static void emitDebugRangesImpl(DwarfDebug &DD, AsmPrinter *Asm,
 /// Emit address ranges into the .debug_ranges section or into the DWARF v5
 /// .debug_rnglists section.
 void DwarfDebug::emitDebugRanges() {
-  if (CUMap.empty())
-    return;
-
   const auto &Holder = useSplitDwarf() ? SkeletonHolder : InfoHolder;
 
-  if (Holder.getRangeLists().empty())
-    return;
-
-  assert(useRangesSection());
-  assert(llvm::none_of(CUMap, [](const decltype(CUMap)::value_type &Pair) {
-    return Pair.second->getCUNode()->isDebugDirectivesOnly();
-  }));
-
-  // Start the dwarf ranges section.
-  MCSymbol *TableEnd = nullptr;
-  if (getDwarfVersion() >= 5) {
-    Asm->OutStreamer->SwitchSection(
-        Asm->getObjFileLowering().getDwarfRnglistsSection());
-    TableEnd = emitRnglistsTableHeader(Asm, Holder);
-  } else
-    Asm->OutStreamer->SwitchSection(
-        Asm->getObjFileLowering().getDwarfRangesSection());
-
-  emitDebugRangesImpl(*this, Asm, Holder, TableEnd);
+  emitDebugRangesImpl(Holder,
+                      getDwarfVersion() >= 5
+                          ? Asm->getObjFileLowering().getDwarfRnglistsSection()
+                          : Asm->getObjFileLowering().getDwarfRangesSection());
 }
 
 void DwarfDebug::emitDebugRangesDWO() {
-  assert(useSplitDwarf());
-
-  if (CUMap.empty())
-    return;
-
-  const auto &Holder = InfoHolder;
-
-  if (Holder.getRangeLists().empty())
-    return;
-
-  assert(getDwarfVersion() >= 5);
-  assert(useRangesSection());
-  assert(llvm::none_of(CUMap, [](const decltype(CUMap)::value_type &Pair) {
-    return Pair.second->getCUNode()->isDebugDirectivesOnly();
-  }));
-
-  // Start the dwarf ranges section.
-  Asm->OutStreamer->SwitchSection(
-      Asm->getObjFileLowering().getDwarfRnglistsDWOSection());
-  MCSymbol *TableEnd = emitRnglistsTableHeader(Asm, Holder);
-
-  emitDebugRangesImpl(*this, Asm, Holder, TableEnd);
+  emitDebugRangesImpl(InfoHolder,
+                      Asm->getObjFileLowering().getDwarfRnglistsDWOSection());
 }
 
 void DwarfDebug::handleMacroNodes(DIMacroNodeArray Nodes, DwarfCompileUnit &U) {
