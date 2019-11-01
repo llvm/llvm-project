@@ -1,7 +1,7 @@
 # XFAIL: system-darwin
 # XFAIL: system-windows
 # REQUIRES: native && (target-x86 || target-x86_64) && native-cpu-sse
-# RUN: %clangxx %p/Inputs/x86-mm-xmm-write.cpp -o %t
+# RUN: %clangxx_host %p/Inputs/x86-mm-xmm-write.cpp -o %t
 # RUN: %lldb -b -s %s %t | FileCheck %s
 process launch
 

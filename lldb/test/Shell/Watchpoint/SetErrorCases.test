@@ -1,4 +1,4 @@
-# RUN: %clangxx %p/Inputs/main.cpp -g -o %t.out
+# RUN: %clangxx_host %p/Inputs/main.cpp -g -o %t.out
 # RUN: %lldb -b -o 'settings set interpreter.stop-command-source-on-error false' -s %s %t.out 2>&1 | FileCheck %s
 
 settings show interpreter.stop-command-source-on-error

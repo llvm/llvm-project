@@ -18,7 +18,7 @@
 ; } a;
 ;```
 ;
-; RUN: %clang++ -g -c -o %t.o %s
+; RUN: %clangxx_host -g -c -o %t.o %s
 ; RUN: lldb-test symbols -dump-clang-ast %t.o | FileCheck %s
 ; RUN: llvm-dwarfdump %t.o | FileCheck %s --check-prefix DWARFDUMP
 

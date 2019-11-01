@@ -11,7 +11,7 @@
 # RUN: mkdir -p %t
 # RUN: mkdir -p %t/binary
 # RUN: cd %t
-# RUN: %clang %S/Inputs/simple.c -g -o binary/reproducer.out
+# RUN: %clang_host %S/Inputs/simple.c -g -o binary/reproducer.out
 # RUN: %lldb -x -b -s %S/Inputs/WorkingDir.in --capture --capture-path %t.repro binary/reproducer.out
 # RUN: rm -rf %t/binary
 
