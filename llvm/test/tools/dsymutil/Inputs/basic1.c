@@ -19,6 +19,13 @@
    Archive compilation (after basic compilation):
       ar -q libbasic.a basic2.macho.x86_64.o basic3.macho.x86_64.o
       clang basic1.macho.x86_64.o -lbasic -o basic-archive.macho.x86_64 -Wl,-dead_strip -L.
+
+   Remarks compilation:
+      for FILE in basic1.c basic2.c basic3.c; do
+         clang -gline-tables-only -c $FILE -fsave-optimization-record=bitstream -foptimization-remarks-file=/tmp/${FILE%.c}.macho.remarks.x86_64.opt.bitstream -mllvm -remarks-section -o ${FILE%.c}.macho.remarks.x86_64.o
+      done
+      clang basic1.macho.remarks.x86_64.o basic2.macho.remarks.x86_64.o basic3.macho.remarks.x86_64.o -o basic.macho.remarks.x86_64 -Wl,-dead_strip
+
 */
 
 int foo(int);

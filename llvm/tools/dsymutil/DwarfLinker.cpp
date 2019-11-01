@@ -63,6 +63,8 @@
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
+#include "llvm/Remarks/RemarkFormat.h"
+#include "llvm/Remarks/RemarkLinker.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -2540,6 +2542,42 @@ static Error copySwiftInterfaces(
   return Error::success();
 }
 
+static Error emitRemarks(const LinkOptions &Options, StringRef BinaryPath,
+                         StringRef ArchName,
+                         const remarks::RemarkLinker &RL) {
+  // Make sure we don't create the directories and the file if there is nothing
+  // to serialize.
+  if (RL.empty())
+    return Error::success();
+
+  SmallString<128> InputPath;
+  SmallString<128> Path;
+  // Create the "Remarks" directory in the "Resources" directory.
+  sys::path::append(Path, *Options.ResourceDir, "Remarks");
+  if (std::error_code EC = sys::fs::create_directories(Path.str(), true,
+                                                       sys::fs::perms::all_all))
+    return errorCodeToError(EC);
+
+  // Append the file name.
+  // For fat binaries, also append a dash and the architecture name.
+  sys::path::append(Path, sys::path::filename(BinaryPath));
+  if (Options.NumDebugMaps > 1) {
+    // More than one debug map means we have a fat binary.
+    Path += '-';
+    Path += ArchName;
+  }
+
+  std::error_code EC;
+  raw_fd_ostream OS(Options.NoOutput ? "-" : Path.str(), EC, sys::fs::OF_None);
+  if (EC)
+    return errorCodeToError(EC);
+
+  if (Error E = RL.serialize(OS, Options.RemarksFormat))
+    return E;
+
+  return Error::success();
+}
+
 bool DwarfLinker::link(const DebugMap &Map) {
   if (!createStreamer(Map.getTriple(), OutFile))
     return false;
@@ -2803,6 +2841,18 @@ bool DwarfLinker::link(const DebugMap &Map) {
     }
   };
 
+  remarks::RemarkLinker RL;
+  if (!Options.RemarksPrependPath.empty())
+    RL.setExternalFilePrependPath(Options.RemarksPrependPath);
+  auto RemarkLinkLambda = [&](size_t i) {
+    // Link remarks from one object file.
+    auto &LinkContext = ObjectContexts[i];
+    if (const object::ObjectFile *Obj = LinkContext.ObjectFile)
+      if (Error E = RL.link(*Obj))
+        return E;
+    return Error(Error::success());
+  };
+
   auto AnalyzeAll = [&]() {
     for (unsigned i = 0, e = NumObjects; i != e; ++i) {
       AnalyzeLambda(i);
@@ -2828,6 +2878,26 @@ bool DwarfLinker::link(const DebugMap &Map) {
     EmitLambda();
   };
 
+  auto EmitRemarksLambda = [&]() {
+    StringRef ArchName = Map.getTriple().getArchName();
+    return emitRemarks(Options, Map.getBinaryPath(), ArchName, RL);
+  };
+
+  // Instead of making error handling a lot more complicated using futures,
+  // write to one llvm::Error instance if something went wrong.
+  // We're assuming RemarkLinkAllError is alive longer than the thread
+  // executing RemarkLinkAll.
+  auto RemarkLinkAll = [&](Error &RemarkLinkAllError) {
+    // Allow assigning to the error only within the lambda.
+    ErrorAsOutParameter EAO(&RemarkLinkAllError);
+    for (unsigned i = 0, e = NumObjects; i != e; ++i)
+      if ((RemarkLinkAllError = RemarkLinkLambda(i)))
+        return;
+
+    if ((RemarkLinkAllError = EmitRemarksLambda()))
+      return;
+  };
+
   // To limit memory usage in the single threaded case, analyze and clone are
   // run sequentially so the LinkContext is freed after processing each object
   // in endDebugObject.
@@ -2835,13 +2905,29 @@ bool DwarfLinker::link(const DebugMap &Map) {
     for (unsigned i = 0, e = NumObjects; i != e; ++i) {
       AnalyzeLambda(i);
       CloneLambda(i);
+
+      if (Error E = RemarkLinkLambda(i))
+        return error(toString(std::move(E)));
     }
     EmitLambda();
+
+    if (Error E = EmitRemarksLambda())
+      return error(toString(std::move(E)));
+
   } else {
-    ThreadPool pool(2);
+    // This should not be constructed on the single-threaded path to avoid fatal
+    // errors from unchecked llvm::Error objects.
+    Error RemarkLinkAllError = Error::success();
+
+    ThreadPool pool(3);
     pool.async(AnalyzeAll);
     pool.async(CloneAll);
+    pool.async(RemarkLinkAll, std::ref(RemarkLinkAllError));
     pool.wait();
+
+    // Report errors from RemarkLinkAll, if any.
+    if (Error E = std::move(RemarkLinkAllError))
+      return error(toString(std::move(E)));
   }
 
   if (Options.NoOutput)
