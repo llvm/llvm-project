@@ -10,9 +10,11 @@
 // INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 
 RUN: printf '\201rforpl\377' > %t.profraw
-RUN: printf '\4\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\5\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\2\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\10\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\6\0\1\0\0\0' >> %t.profraw
 RUN: printf '\0\0\6\0\2\0\0\0' >> %t.profraw

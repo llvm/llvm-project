@@ -362,7 +362,9 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   CountersDelta = swap(Header.CountersDelta);
   NamesDelta = swap(Header.NamesDelta);
   auto DataSize = swap(Header.DataSize);
+  auto PaddingBytesBeforeCounters = swap(Header.PaddingBytesBeforeCounters);
   auto CountersSize = swap(Header.CountersSize);
+  auto PaddingBytesAfterCounters = swap(Header.PaddingBytesAfterCounters);
   NamesSize = swap(Header.NamesSize);
   ValueKindLast = swap(Header.ValueKindLast);
 
@@ -370,8 +372,10 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   auto PaddingSize = getNumPaddingBytes(NamesSize);
 
   ptrdiff_t DataOffset = sizeof(RawInstrProf::Header);
-  ptrdiff_t CountersOffset = DataOffset + DataSizeInBytes;
-  ptrdiff_t NamesOffset = CountersOffset + sizeof(uint64_t) * CountersSize;
+  ptrdiff_t CountersOffset =
+      DataOffset + DataSizeInBytes + PaddingBytesBeforeCounters;
+  ptrdiff_t NamesOffset = CountersOffset + (sizeof(uint64_t) * CountersSize) +
+                          PaddingBytesAfterCounters;
   ptrdiff_t ValueDataOffset = NamesOffset + NamesSize + PaddingSize;
 
   auto *Start = reinterpret_cast<const char *>(&Header);

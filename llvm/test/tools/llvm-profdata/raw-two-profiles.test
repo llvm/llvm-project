@@ -1,7 +1,9 @@
 RUN: printf '\201rforpl\377' > %t-foo.profraw
-RUN: printf '\4\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\5\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\10\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\4\0\2\0\0\0' >> %t-foo.profraw
@@ -18,9 +20,11 @@ RUN: printf '\023\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\3\0foo\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\201rforpl\377' > %t-bar.profraw
-RUN: printf '\4\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\5\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\2\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\10\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\6\0\1\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\6\0\2\0\0\0' >> %t-bar.profraw
