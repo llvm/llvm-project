@@ -221,7 +221,7 @@ protected:
 
 private:
   DISALLOW_COPY_AND_ASSIGN(LanguageRuntime);
-  };
+};
 
 } // namespace lldb_private
 
