@@ -2541,6 +2541,14 @@ public:
     return false;
   }
 
+  /// Returns true if the FADD or FSUB node passed could legally be combined with
+  /// an fmul to form an ISD::FMAD.
+  virtual bool isFMADLegalForFAddFSub(const SelectionDAG &DAG,
+                                      const SDNode *N) const {
+    assert(N->getOpcode() == ISD::FADD || N->getOpcode() == ISD::FSUB);
+    return isOperationLegal(ISD::FMAD, N->getValueType(0));
+  }
+
   /// Return true if it's profitable to narrow operations of type VT1 to
   /// VT2. e.g. on x86, it's profitable to narrow from i32 to i8 but not from
   /// i32 to i16.
