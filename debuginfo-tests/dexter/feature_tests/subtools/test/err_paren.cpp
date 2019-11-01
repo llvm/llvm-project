@@ -1,3 +1,4 @@
+// XFAIL: darwin
 // Purpose:
 //      Check that parsing bad commands gives a useful error.
 //          - Unbalanced parenthesis
