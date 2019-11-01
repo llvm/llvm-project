@@ -1,0 +1,43 @@
+## Show that llvm-objcopy/llvm-strip removes all symbols and debug sections.
+
+# RUN: yaml2obj %p/Inputs/strip-all.yaml > %t.exec
+# RUN: yaml2obj %p/Inputs/strip-all-with-dwarf.yaml > %t.dwarf
+
+# RUN: llvm-objcopy --strip-all %t.exec %t.exec.stripped
+# RUN: llvm-readobj --sections --relocations --symbols %t.exec.stripped \
+# RUN:   | FileCheck --check-prefixes=COMMON,EXEC %s
+
+# RUN: llvm-objcopy --strip-all %t.dwarf %t.dwarf.stripped
+# RUN: llvm-readobj --sections --relocations --symbols %t.dwarf.stripped \
+# RUN:   | FileCheck --check-prefixes=COMMON,DWARF %s
+
+## The output of "llvm-strip" should be identical with that of
+## "llvm-strip --strip-all" and "llvm-objcopy --strip-all".
+# RUN: llvm-strip %t.exec -o %t2
+# RUN: llvm-strip --strip-all %t.exec -o %t3
+# cmp %t2 %t.exec.stripped
+# cmp %t3 %t.exec.stripped
+
+# RUN: llvm-strip %t.dwarf -o %t4
+# RUN: llvm-strip --strip-all %t.dwarf -o %t5
+# cmp %t4 %t.dwarf.stripped
+# cmp %t5 %t.dwarf.stripped
+
+## Make sure that debug sections are removed.
+# DWARF:       Sections [
+# DWARF-NOT:     Name: __debug_str
+# DWARF-NOT:     Name: __debug_abbrev
+# DWARF-NOT:     Name: __debug_info
+# DWARF-NOT:     Name: __debug_macinfo
+# DWARF-NOT:     Name: __apple_names
+# DWARF-NOT:     Name: __apple_objc
+# DWARF-NOT:     Name: __apple_namespac
+# DWARF-NOT:     Name: __apple_types
+# DWARF-NOT:     Name: __debug_line
+# DWARF:       ]
+
+## Make sure that all relocations and symbols are removed.
+# COMMON:      Relocations [
+# COMMON-NEXT: ]
+# COMMON:      Symbols [
+# COMMON-NEXT: ]
