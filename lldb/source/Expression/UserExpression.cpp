@@ -230,7 +230,7 @@ lldb::ExpressionResults UserExpression::Evaluate(
   }
 
   lldb::UserExpressionSP user_expression_sp(
-      target->GetUserExpressionForLanguage(exe_ctx, expr, full_prefix, language,
+      target->GetUserExpressionForLanguage(expr, full_prefix, language,
                                            desired_type, options, ctx_obj,
                                            error));
   if (error.Fail()) {
@@ -280,8 +280,7 @@ lldb::ExpressionResults UserExpression::Evaluate(
         user_expression_sp = nullptr;
 
       lldb::UserExpressionSP fixed_expression_sp(
-          target->GetUserExpressionForLanguage(exe_ctx,
-                                               fixed_expression->c_str(),
+          target->GetUserExpressionForLanguage(fixed_expression->c_str(),
                                                full_prefix, language,
                                                desired_type, options, ctx_obj,
                                                error));

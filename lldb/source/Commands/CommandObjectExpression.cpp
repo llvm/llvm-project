@@ -348,7 +348,7 @@ void CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
   auto language = exe_ctx.GetFrameRef().GetLanguage();
 
   Status error;
-  lldb::UserExpressionSP expr(target->GetUserExpressionForLanguage(exe_ctx,
+  lldb::UserExpressionSP expr(target->GetUserExpressionForLanguage(
       code, llvm::StringRef(), language, UserExpression::eResultTypeAny,
       options, nullptr, error));
   if (error.Fail())
