@@ -936,7 +936,7 @@ AsmPrinter::CFIMoveType AsmPrinter::needsCFIMoves() const {
       MF->getFunction().needsUnwindTableEntry())
     return CFI_M_EH;
 
-  if (MMI->hasDebugInfo())
+  if (MMI->hasDebugInfo() || MF->getTarget().Options.ForceDwarfFrameSection)
     return CFI_M_Debug;
 
   return CFI_M_None;

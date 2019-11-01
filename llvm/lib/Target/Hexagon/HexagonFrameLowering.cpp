@@ -223,8 +223,7 @@ namespace {
 
 bool HexagonCallFrameInformation::runOnMachineFunction(MachineFunction &MF) {
   auto &HFI = *MF.getSubtarget<HexagonSubtarget>().getFrameLowering();
-  bool NeedCFI = MF.getMMI().hasDebugInfo() ||
-                 MF.getFunction().needsUnwindTableEntry();
+  bool NeedCFI = MF.needsFrameMoves();
 
   if (!NeedCFI)
     return false;
