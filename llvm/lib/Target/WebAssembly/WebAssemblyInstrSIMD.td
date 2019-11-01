@@ -738,6 +738,13 @@ defm MAX_S : SIMDBinaryIntNoI64x2<int_wasm_max_signed, "max_s", 96>;
 defm MAX_U : SIMDBinaryIntNoI64x2<int_wasm_max_unsigned, "max_u", 97>;
 } // isCommutable = 1
 
+// Widening dot product: i32x4.dot_i16x8_s
+let isCommutable = 1 in
+defm DOT : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs), (outs), (ins),
+                  [(set V128:$dst, (int_wasm_dot V128:$lhs, V128:$rhs))],
+                  "i32x4.dot_i16x8_s\t$dst, $lhs, $rhs", "i32x4.dot_i16x8_s",
+                  217>;
+
 //===----------------------------------------------------------------------===//
 // Floating-point unary arithmetic
 //===----------------------------------------------------------------------===//

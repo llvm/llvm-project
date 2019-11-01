@@ -387,6 +387,16 @@ define <4 x i32> @max_u_v4i32(<4 x i32> %x, <4 x i32> %y) {
   ret <4 x i32> %a
 }
 
+; CHECK-LABEL: dot:
+; SIMD128-NEXT: .functype dot (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i32x4.dot_i16x8_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <4 x i32> @llvm.wasm.dot(<8 x i16>, <8 x i16>)
+define <4 x i32> @dot(<8 x i16> %x, <8 x i16> %y) {
+  %a = call <4 x i32> @llvm.wasm.dot(<8 x i16> %x, <8 x i16> %y)
+  ret <4 x i32> %a
+}
+
 ; CHECK-LABEL: any_v4i32:
 ; SIMD128-NEXT: .functype any_v4i32 (v128) -> (i32){{$}}
 ; SIMD128-NEXT: i32x4.any_true $push[[R:[0-9]+]]=, $0{{$}}
