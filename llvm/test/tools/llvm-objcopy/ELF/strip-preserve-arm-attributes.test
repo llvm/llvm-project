@@ -1,0 +1,25 @@
+## This test makes sure that --strip-all and --strip-all-gnu preserve
+## .ARM.attributes sections in ELF files. This is needed to maintain
+## compatibility for Ubuntu/Debian distributions on ARM.
+
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objcopy --strip-all %t %t2
+# RUN: llvm-readobj --sections %t2 | FileCheck %s
+# RUN: llvm-objcopy --strip-all-gnu %t %t3
+# RUN: llvm-readobj --sections %t3 | FileCheck %s
+# RUN: llvm-strip %t -o %t4
+# RUN: cmp %t4 %t2
+# RUN: llvm-strip --strip-all-gnu %t -o %t5
+# RUN: cmp %t5 %t3
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_ARM
+Sections:
+  - Name:            .ARM.attributes
+    Type:            SHT_ARM_ATTRIBUTES
+
+# CHECK: Name: .ARM.attributes
