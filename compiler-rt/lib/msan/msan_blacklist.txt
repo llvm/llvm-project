@@ -5,3 +5,6 @@
 # Example usage:
 # fun:*bad_function_name*
 # src:file_with_tricky_code.cc
+
+# https://bugs.llvm.org/show_bug.cgi?id=31877
+fun:__gxx_personality_*

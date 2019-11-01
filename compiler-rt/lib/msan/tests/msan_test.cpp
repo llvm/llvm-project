@@ -4798,3 +4798,32 @@ TEST(MemorySanitizer, Bmi) {
   }
 }
 #endif // defined(__x86_64__)
+
+namespace {
+volatile long z;
+
+__attribute__((noinline,optnone)) void f(long a, long b, long c, long d, long e, long f) {
+  z = a + b + c + d + e + f;
+}
+
+__attribute__((noinline,optnone)) void throw_stuff() {
+  throw 5;
+}
+
+TEST(MemorySanitizer, throw_catch) {
+  long x;
+  // Poison __msan_param_tls.
+  __msan_poison(&x, sizeof(x));
+  f(x, x, x, x, x, x);
+  try {
+    // This calls __gxx_personality_v0 through some libgcc_s function.
+    // __gxx_personality_v0 is instrumented, libgcc_s is not; as a result,
+    // __msan_param_tls is not updated and __gxx_personality_v0 can find
+    // leftover poison from the previous call.
+    // A suppression in msan_blacklist.txt makes it work.
+    throw_stuff();
+  } catch (const int &e) {
+    // pass
+  }
+}
+} // namespace
