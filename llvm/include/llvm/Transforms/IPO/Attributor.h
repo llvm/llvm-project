@@ -733,9 +733,7 @@ struct Attributor {
   /// be beneficial to avoid false dependences but it requires the users of
   /// `getAAFor` to explicitly record true dependences through this method.
   void recordDependence(const AbstractAttribute &FromAA,
-                        const AbstractAttribute &ToAA) {
-    QueryMap[&FromAA].insert(const_cast<AbstractAttribute *>(&ToAA));
-  }
+                        const AbstractAttribute &ToAA);
 
   /// Introduce a new abstract attribute into the fixpoint analysis.
   ///
@@ -907,7 +905,7 @@ private:
     AA.update(*this);
 
     if (TrackDependence && AA.getState().isValidState())
-      QueryMap[&AA].insert(const_cast<AbstractAttribute *>(QueryingAA));
+      recordDependence(AA, const_cast<AbstractAttribute &>(*QueryingAA));
     return AA;
   }
 
@@ -929,7 +927,7 @@ private:
             KindToAbstractAttributeMap.lookup(&AAType::ID))) {
       // Do not register a dependence on an attribute with an invalid state.
       if (TrackDependence && AA->getState().isValidState())
-        QueryMap[AA].insert(const_cast<AbstractAttribute *>(QueryingAA));
+        recordDependence(*AA, const_cast<AbstractAttribute &>(*QueryingAA));
       return AA;
     }
     return nullptr;

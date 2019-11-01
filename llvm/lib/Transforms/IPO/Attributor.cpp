@@ -4711,6 +4711,12 @@ void Attributor::initializeInformationCache(Function &F) {
   }
 }
 
+void Attributor::recordDependence(const AbstractAttribute &FromAA,
+                                  const AbstractAttribute &ToAA) {
+  if (!FromAA.getState().isAtFixpoint())
+    QueryMap[&FromAA].insert(const_cast<AbstractAttribute *>(&ToAA));
+}
+
 void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   if (!VisitedFunctions.insert(&F).second)
     return;
