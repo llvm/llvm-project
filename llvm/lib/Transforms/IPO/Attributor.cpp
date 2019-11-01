@@ -2576,23 +2576,23 @@ static bool
 identifyAliveSuccessors(Attributor &A, const SwitchInst &SI,
                         AbstractAttribute &AA,
                         SmallVectorImpl<const Instruction *> &AliveSuccessors) {
-  bool UsedAssumedInformation = false;
-    Optional<ConstantInt *> CI = getAssumedConstant(A, *SI.getCondition(), AA);
+  Optional<ConstantInt *> CI = getAssumedConstant(A, *SI.getCondition(), AA);
   if (!CI.hasValue()) {
     // No value yet, assume all edges are dead.
   } else if (CI.getValue()) {
     for (auto &CaseIt : SI.cases()) {
       if (CaseIt.getCaseValue() == CI.getValue()) {
         AliveSuccessors.push_back(&CaseIt.getCaseSuccessor()->front());
-        UsedAssumedInformation = true;
-        break;
+        return true;
       }
     }
+    AliveSuccessors.push_back(&SI.getDefaultDest()->front());
+    return true;
   } else {
     for (const BasicBlock *SuccBB : successors(SI.getParent()))
       AliveSuccessors.push_back(&SuccBB->front());
   }
-  return UsedAssumedInformation;
+  return false;
 }
 
 ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
