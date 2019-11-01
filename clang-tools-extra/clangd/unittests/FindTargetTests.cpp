@@ -882,6 +882,28 @@ TEST_F(FindExplicitReferencesTest, All) {
               "0: targets = {x}, decl\n"
               "1: targets = {fptr}, decl\n"
               "2: targets = {a}, decl\n"},
+          // Namespace aliases should be handled properly.
+          {
+              R"cpp(
+                namespace ns { struct Type {} }
+                namespace alias = ns;
+                namespace rec_alias = alias;
+
+                void foo() {
+                  $0^ns::$1^Type $2^a;
+                  $3^alias::$4^Type $5^b;
+                  $6^rec_alias::$7^Type $8^c;
+                }
+           )cpp",
+              "0: targets = {ns}\n"
+              "1: targets = {ns::Type}, qualifier = 'ns::'\n"
+              "2: targets = {a}, decl\n"
+              "3: targets = {alias}\n"
+              "4: targets = {ns::Type}, qualifier = 'alias::'\n"
+              "5: targets = {b}, decl\n"
+              "6: targets = {rec_alias}\n"
+              "7: targets = {ns::Type}, qualifier = 'rec_alias::'\n"
+              "8: targets = {c}, decl\n"},
       };
 
   for (const auto &C : Cases) {
