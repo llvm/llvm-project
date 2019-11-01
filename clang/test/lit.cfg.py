@@ -151,6 +151,9 @@ if not re.match(r'.*-(cygwin)$', config.target_triple):
 if platform.system() not in ['Windows']:
     config.available_features.add('can-remove-opened-file')
 
+# *-apple-macosx should also be XFAILED when 'darwin' is XFAILED.
+if lit.util.isMacOSTriple(config.target_triple):
+   config.available_features.add('darwin')
 
 def calculate_arch_features(arch_string):
     features = []
