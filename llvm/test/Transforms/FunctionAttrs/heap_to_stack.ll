@@ -1,4 +1,4 @@
-; RUN: opt -passes=attributor --attributor-disable=false -S < %s | FileCheck %s
+; RUN: opt -passes=attributor --attributor-disable=false -attributor-annotate-decl-cs -S < %s | FileCheck %s
 
 declare noalias i8* @malloc(i64)
 

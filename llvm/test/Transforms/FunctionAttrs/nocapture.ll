@@ -1,7 +1,7 @@
 ; RUN: opt -functionattrs -S < %s | FileCheck %s --check-prefixes=FNATTR,EITHER
 ; RUN: opt -passes=function-attrs -S < %s | FileCheck %s --check-prefixes=FNATTR,EITHER
-; RUN: opt -attributor -attributor-manifest-internal -attributor-disable=false -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR,EITHER
-; RUN: opt -passes=attributor -attributor-manifest-internal -attributor-disable=false -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR,EITHER
+; RUN: opt -attributor -attributor-manifest-internal -attributor-disable=false -S -attributor-annotate-decl-cs < %s | FileCheck %s --check-prefixes=ATTRIBUTOR,EITHER
+; RUN: opt -passes=attributor -attributor-manifest-internal -attributor-disable=false -S -attributor-annotate-decl-cs < %s | FileCheck %s --check-prefixes=ATTRIBUTOR,EITHER
 
 @g = global i32* null		; <i32**> [#uses=1]
 
