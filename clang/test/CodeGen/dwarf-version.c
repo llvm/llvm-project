@@ -14,6 +14,7 @@
 // RUN: %clang -target powerpc-unknown-openbsd -g -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER2
 // RUN: %clang -target powerpc-unknown-freebsd -g -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER2
 // RUN: %clang -target i386-pc-solaris -g -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER2
+// RUN: %clang -target i386-pc-solaris -gdwarf -S -emit-llvm -o - %s | FileCheck %s --check-prefix=VER2
 
 // Check which debug info formats we use on Windows. By default, in an MSVC
 // environment, we should use codeview. You can enable dwarf, which implicitly
