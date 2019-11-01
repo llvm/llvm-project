@@ -959,6 +959,9 @@ private:
   /// The information cache that holds pre-processed (LLVM-IR) information.
   InformationCache &InfoCache;
 
+  /// Set if the attribute currently updated did query a non-fix attribute.
+  bool QueriedNonFixAA;
+
   /// Number of iterations until the dependences between abstract attributes are
   /// recomputed.
   const unsigned DepRecomputeInterval;
