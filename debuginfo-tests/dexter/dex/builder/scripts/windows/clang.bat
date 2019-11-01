@@ -1,4 +1,4 @@
-setlocal EnableDelayedExpansion
+@setlocal EnableDelayedExpansion
 
 for %%I in (%SOURCE_INDEXES%) do (
   %PATHTOCLANGPP% -fuse-ld=lld -c !COMPILER_OPTIONS_%%I! !SOURCE_FILE_%%I! -o !OBJECT_FILE_%%I!
