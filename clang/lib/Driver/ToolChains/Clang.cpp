@@ -3198,11 +3198,16 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
   }
 
   // If a -gdwarf argument appeared, remember it.
-  if (const Arg *A =
+  const Arg *GDwarfN =
           Args.getLastArg(options::OPT_gdwarf_2, options::OPT_gdwarf_3,
-                          options::OPT_gdwarf_4, options::OPT_gdwarf_5))
-    if (checkDebugInfoOption(A, Args, D, TC))
-      DWARFVersion = DwarfVersionNum(A->getSpelling());
+                          options::OPT_gdwarf_4, options::OPT_gdwarf_5);
+  bool EmitDwarf = false;
+  if (GDwarfN) {
+    if (checkDebugInfoOption(GDwarfN, Args, D, TC))
+      EmitDwarf = true;
+    else
+      GDwarfN = nullptr;
+  }
 
   if (const Arg *A = Args.getLastArg(options::OPT_gcodeview)) {
     if (checkDebugInfoOption(A, Args, D, TC))
@@ -3211,16 +3216,26 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
 
   // If the user asked for debug info but did not explicitly specify -gcodeview
   // or -gdwarf, ask the toolchain for the default format.
-  if (!EmitCodeView && DWARFVersion == 0 &&
+  if (!EmitCodeView && !EmitDwarf &&
       DebugInfoKind != codegenoptions::NoDebugInfo) {
     switch (TC.getDefaultDebugFormat()) {
     case codegenoptions::DIF_CodeView:
       EmitCodeView = true;
       break;
     case codegenoptions::DIF_DWARF:
-      DWARFVersion = TC.GetDefaultDwarfVersion();
+      EmitDwarf = true;
       break;
     }
+  }
+
+  if (EmitDwarf) {
+    // Start with the platform default DWARF version
+    DWARFVersion = TC.GetDefaultDwarfVersion();
+
+    // Override with a user-specified DWARF version
+    if (GDwarfN)
+      if (auto ExplicitVersion = DwarfVersionNum(GDwarfN->getSpelling()))
+        DWARFVersion = ExplicitVersion;
   }
 
   // -gline-directives-only supported only for the DWARF debug info.
