@@ -8,7 +8,7 @@
 # XFAIL: system-darwin
 # REQUIRES: target-x86_64, native
 
-# RUN: %clang -g %p/Inputs/call-asm.c %p/Inputs/prefer-debug-over-eh-frame.s -o %t
+# RUN: %clang_host -g %p/Inputs/call-asm.c %p/Inputs/prefer-debug-over-eh-frame.s -o %t
 # RUN: %lldb %t -s %s -o exit | FileCheck %s
 
 breakpoint set -n bar

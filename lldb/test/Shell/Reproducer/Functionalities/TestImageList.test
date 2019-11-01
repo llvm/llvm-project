@@ -3,7 +3,7 @@
 # This tests that image list works when replaying. We arbitrarily assume
 # there's at least two entries and compare that they're identical.
 
-# RUN: %clang %S/Inputs/stepping.c -g -o %t.out
+# RUN: %clang_host %S/Inputs/stepping.c -g -o %t.out
 
 # RUN: rm -rf %t.txt
 
