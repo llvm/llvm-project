@@ -420,6 +420,30 @@ struct MustBeExecutedContextExplorer {
   }
   ///}
 
+  /// Helper to look for \p I in the context of \p PP.
+  ///
+  /// The context is expanded until \p I was found or no more expansion is
+  /// possible.
+  ///
+  /// \returns True, iff \p I was found.
+  bool findInContextOf(const Instruction *I, const Instruction *PP) {
+    auto EIt = begin(PP), EEnd = end(PP);
+    return findInContextOf(I, EIt, EEnd);
+  }
+
+  /// Helper to look for \p I in the context defined by \p EIt and \p EEnd.
+  ///
+  /// The context is expanded until \p I was found or no more expansion is
+  /// possible.
+  ///
+  /// \returns True, iff \p I was found.
+  bool findInContextOf(const Instruction *I, iterator &EIt, iterator &EEnd) {
+    bool Found = EIt.count(I);
+    while (!Found && EIt != EEnd)
+      Found = (++EIt).getCurrentInst() == I;
+    return Found;
+  }
+
   /// Return the next instruction that is guaranteed to be executed after \p PP.
   ///
   /// \param It              The iterator that is used to traverse the must be
