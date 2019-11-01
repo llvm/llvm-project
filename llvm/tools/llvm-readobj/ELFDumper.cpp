@@ -667,6 +667,13 @@ void ELFDumper<ELFT>::LoadVersionNeeds(const Elf_Shdr *Sec) const {
       if (VernauxBuf + sizeof(Elf_Vernaux) > VerneedEnd)
         report_fatal_error("Section ended unexpected while scanning auxiliary "
                            "version needed records.");
+      if ((ptrdiff_t)VernauxBuf % sizeof(uint32_t) != 0)
+        reportError(createError("SHT_GNU_verneed: the vn_aux field of the "
+                                "entry with index " +
+                                Twine(VerneedIndex) +
+                                " references a misaligned auxiliary record"),
+                    ObjF->getFileName());
+
       const Elf_Vernaux *Vernaux =
           reinterpret_cast<const Elf_Vernaux *>(VernauxBuf);
       size_t Index = Vernaux->vna_other & ELF::VERSYM_VERSION;
@@ -3921,10 +3928,13 @@ void GNUStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
     const Elf_Verneed *Verneed =
         reinterpret_cast<const Elf_Verneed *>(VerneedBuf);
 
+    StringRef File = StringTable.size() > Verneed->vn_file
+                         ? StringTable.drop_front(Verneed->vn_file)
+                         : "<invalid>";
+
     OS << format("  0x%04x: Version: %u  File: %s  Cnt: %u\n",
                  reinterpret_cast<const uint8_t *>(Verneed) - SecData.begin(),
-                 (unsigned)Verneed->vn_version,
-                 StringTable.drop_front(Verneed->vn_file).data(),
+                 (unsigned)Verneed->vn_version, File.data(),
                  (unsigned)Verneed->vn_cnt);
 
     const uint8_t *VernauxBuf = VerneedBuf + Verneed->vn_aux;
@@ -3932,10 +3942,13 @@ void GNUStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
       const Elf_Vernaux *Vernaux =
           reinterpret_cast<const Elf_Vernaux *>(VernauxBuf);
 
+      StringRef Name = StringTable.size() > Vernaux->vna_name
+                           ? StringTable.drop_front(Vernaux->vna_name)
+                           : "<invalid>";
+
       OS << format("  0x%04x:   Name: %s  Flags: %s  Version: %u\n",
                    reinterpret_cast<const uint8_t *>(Vernaux) - SecData.begin(),
-                   StringTable.drop_front(Vernaux->vna_name).data(),
-                   versionFlagToString(Vernaux->vna_flags).c_str(),
+                   Name.data(), versionFlagToString(Vernaux->vna_flags).c_str(),
                    (unsigned)Vernaux->vna_other);
       VernauxBuf += Vernaux->vna_next;
     }
@@ -5693,8 +5706,11 @@ void LLVMStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
 
   const uint8_t *SecData =
       reinterpret_cast<const uint8_t *>(Obj->base() + Sec->sh_offset);
-  const Elf_Shdr *StrTab =
+  const Elf_Shdr *StrTabSec =
       unwrapOrError(this->FileName, Obj->getSection(Sec->sh_link));
+  StringRef StringTable = {
+      reinterpret_cast<const char *>(Obj->base() + StrTabSec->sh_offset),
+      (size_t)StrTabSec->sh_size};
 
   const uint8_t *VerneedBuf = SecData;
   unsigned VerneedNum = Sec->sh_info;
@@ -5704,9 +5720,11 @@ void LLVMStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
     DictScope Entry(W, "Dependency");
     W.printNumber("Version", Verneed->vn_version);
     W.printNumber("Count", Verneed->vn_cnt);
-    W.printString("FileName",
-                  StringRef(reinterpret_cast<const char *>(
-                      Obj->base() + StrTab->sh_offset + Verneed->vn_file)));
+
+    StringRef FileName = StringTable.size() > Verneed->vn_file
+                             ? StringTable.drop_front(Verneed->vn_file)
+                             : "<invalid>";
+    W.printString("FileName", FileName.data());
 
     const uint8_t *VernauxBuf = VerneedBuf + Verneed->vn_aux;
     ListScope L(W, "Entries");
@@ -5717,9 +5735,11 @@ void LLVMStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
       W.printNumber("Hash", Vernaux->vna_hash);
       W.printEnum("Flags", Vernaux->vna_flags, makeArrayRef(SymVersionFlags));
       W.printNumber("Index", Vernaux->vna_other);
-      W.printString("Name",
-                    StringRef(reinterpret_cast<const char *>(
-                        Obj->base() + StrTab->sh_offset + Vernaux->vna_name)));
+
+      StringRef Name = StringTable.size() > Vernaux->vna_name
+                           ? StringTable.drop_front(Vernaux->vna_name)
+                           : "<invalid>";
+      W.printString("Name", Name.data());
       VernauxBuf += Vernaux->vna_next;
     }
     VerneedBuf += Verneed->vn_next;
