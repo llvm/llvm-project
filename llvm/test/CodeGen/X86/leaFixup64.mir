@@ -1169,7 +1169,7 @@ body:             |
     ; CHECK: NOOP
     ; CHECK: NOOP
     ; CHECK: NOOP
-    ; CHECK: $ebp = LEA64_32r killed $rbp, 1, killed $rax, 0, $noreg
+    ; CHECK: $ebp = ADD32rr $ebp, $eax, implicit-def $eflags, implicit $rbp, implicit $rax
     ; CHECK: NOOP
     ; CHECK: NOOP
     ; CHECK: NOOP
