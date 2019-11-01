@@ -1213,4 +1213,11 @@ uint32_t NativeRegisterContextLinux_x86_64::NumSupportedHardwareWatchpoints() {
   return 4;
 }
 
+uint32_t
+NativeRegisterContextLinux_x86_64::GetPtraceOffset(uint32_t reg_index) {
+  // If register is MPX, remove extra factor from gdb offset
+  return GetRegisterInfoAtIndex(reg_index)->byte_offset -
+         (IsMPX(reg_index) ? 128 : 0);
+}
+
 #endif // defined(__i386__) || defined(__x86_64__)
