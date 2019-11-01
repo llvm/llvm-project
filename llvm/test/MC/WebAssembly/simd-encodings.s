@@ -571,4 +571,7 @@ main:
     # CHECK: v128.andnot # encoding: [0xfd,0xd8,0x01]
     v128.andnot
 
+    # CHECK: i32x4.dot_i16x8_s # encoding: [0xfd,0xd9,0x01]
+    i32x4.dot_i16x8_s
+
     end_function
