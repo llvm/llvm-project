@@ -2,7 +2,7 @@
 ; RUN: opt -S < %s -jump-threading | FileCheck %s
 
 define void @foo() {
-; CHECK-LABEL: define {{[^@]+}}@foo(
+; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  exit2:
 ; CHECK-NEXT:    ret void
 ;
