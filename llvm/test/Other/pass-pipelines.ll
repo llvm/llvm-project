@@ -28,7 +28,7 @@
 ; CHECK-O2: ModulePass Manager
 ; CHECK-O2-NOT: Manager
 ; First function pass pipeline just does early opts.
-; CHECK-O2: FunctionPass Manager
+; CHECK-O2-COUNT-3: FunctionPass Manager
 ; CHECK-O2-NOT: Manager
 ; FIXME: It's a bit odd to do dead arg elim in the middle of early opts...
 ; CHECK-O2: Dead Argument Elimination
