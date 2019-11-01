@@ -6,6 +6,8 @@ include_directories(
 set(LLVM_LINK_COMPONENTS
   Analysis
   CodeGen
+  Core
+  MC
   MIRParser
   Support
   Target
