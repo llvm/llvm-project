@@ -40,7 +40,8 @@ def p : Flag<["-"], "p">,
 
 def strip_all : Flag<["--"], "strip-all">,
                 HelpText<"Remove non-allocated sections outside segments. "
-                         ".gnu.warning* sections are not removed">;
+                         ".gnu.warning* and .ARM.attribute sections are not "
+                         "removed">;
 
 def strip_all_gnu
     : Flag<["--"], "strip-all-gnu">,
