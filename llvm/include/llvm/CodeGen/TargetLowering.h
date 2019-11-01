@@ -28,6 +28,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
@@ -53,6 +54,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Utils/SizeOpts.h"
 #include <algorithm>
 #include <cassert>
 #include <climits>
@@ -1030,13 +1032,16 @@ public:
   /// Return true if lowering to a jump table is suitable for a set of case
   /// clusters which may contain \p NumCases cases, \p Range range of values.
   virtual bool isSuitableForJumpTable(const SwitchInst *SI, uint64_t NumCases,
-                                      uint64_t Range) const {
+                                      uint64_t Range, ProfileSummaryInfo* PSI,
+                                      BlockFrequencyInfo *BFI) const {
     // FIXME: This function check the maximum table size and density, but the
     // minimum size is not checked. It would be nice if the minimum size is
     // also combined within this function. Currently, the minimum size check is
     // performed in findJumpTable() in SelectionDAGBuiler and
     // getEstimatedNumberOfCaseClusters() in BasicTTIImpl.
-    const bool OptForSize = SI->getParent()->getParent()->hasOptSize();
+    const bool OptForSize = SI->getParent()->getParent()->hasOptSize() ||
+                            llvm::shouldOptimizeForSize(SI->getParent(), PSI,
+                                                        BFI);
     const unsigned MinDensity = getMinimumJumpTableDensity(OptForSize);
     const unsigned MaxJumpTableSize = getMaximumJumpTableSize();
     
