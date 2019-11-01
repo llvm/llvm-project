@@ -117,6 +117,18 @@ def config():
     print('Please specify --llvm-bin or --clang', file=sys.stderr)
     sys.exit(1)
 
+  # Determine the builtin includes directory so that we can update tests that
+  # depend on the builtin headers. See get_clang_builtin_include_dir() and
+  # use_clang() in llvm/utils/lit/lit/llvm/config.py.
+  try:
+    builtin_include_dir = subprocess.check_output(
+      [args.clang, '-print-file-name=include']).decode().strip()
+    SUBST['%clang_cc1'] = ['-cc1', '-internal-isystem', builtin_include_dir,
+                           '-nostdsysteminc']
+  except subprocess.CalledProcessError:
+    common.warn('Could not determine clang builtins directory, some tests '
+                'might not update correctly.')
+
   if args.opt is None:
     if args.llvm_bin is None:
       args.opt = 'opt'
