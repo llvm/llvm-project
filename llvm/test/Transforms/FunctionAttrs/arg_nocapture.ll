@@ -90,8 +90,8 @@ entry:
 define i32* @srec16(i32* %a) #0 {
 entry:
   %call = call i32* @srec16(i32* %a)
-; CHECK:      %call
-; CHECK-NEXT: unreachable
+; CHECK-NOT:      %call
+; CHECK: unreachable
   %call1 = call i32* @srec16(i32* %call)
   %call2 = call i32* @srec16(i32* %call1)
   %call3 = call i32* @srec16(i32* %call2)
