@@ -1,5 +1,6 @@
 @LIT_SITE_CFG_IN_HEADER@
 
+import sys
 import lit.util
 
 config.test_exec_root = "@CMAKE_BINARY_DIR@"
@@ -20,6 +21,18 @@ config.host_arch = "@HOST_ARCH@"
 config.is_msvc = lit.util.pythonize_bool("@MSVC@")
 
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
+
+config.python3_executable = "@PYTHON_EXECUTABLE@"
+
+# Support substitution of the tools_dir with user parameters. This is
+# used when we can't determine the tool dir at configuration time.
+try:
+    config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
+    config.llvm_shlib_dir = config.llvm_shlib_dir % lit_config.params
+except KeyError:
+    e = sys.exc_info()[1]
+    key, = e.args
+    lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
