@@ -69,6 +69,7 @@ class ELFDumper {
   Expected<ELFYAML::NoBitsSection *> dumpNoBitsSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::HashSection *> dumpHashSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::NoteSection *> dumpNoteSection(const Elf_Shdr *Shdr);
+  Expected<ELFYAML::GnuHashSection *> dumpGnuHashSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::VerdefSection *> dumpVerdefSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::SymverSection *> dumpSymverSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::VerneedSection *> dumpVerneedSection(const Elf_Shdr *Shdr);
@@ -274,6 +275,13 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     }
     case ELF::SHT_HASH: {
       Expected<ELFYAML::HashSection *> SecOrErr = dumpHashSection(&Sec);
+      if (!SecOrErr)
+        return SecOrErr.takeError();
+      Y->Sections.emplace_back(*SecOrErr);
+      break;
+    }
+    case ELF::SHT_GNU_HASH: {
+      Expected<ELFYAML::GnuHashSection *> SecOrErr = dumpGnuHashSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
       Y->Sections.emplace_back(*SecOrErr);
@@ -760,6 +768,57 @@ ELFDumper<ELFT>::dumpHashSection(const Elf_Shdr *Shdr) {
   if (Cur)
     return S.release();
   llvm_unreachable("entries were not read correctly");
+}
+
+template <class ELFT>
+Expected<ELFYAML::GnuHashSection *>
+ELFDumper<ELFT>::dumpGnuHashSection(const Elf_Shdr *Shdr) {
+  auto S = std::make_unique<ELFYAML::GnuHashSection>();
+  if (Error E = dumpCommonSection(Shdr, *S))
+    return std::move(E);
+
+  auto ContentOrErr = Obj.getSectionContents(Shdr);
+  if (!ContentOrErr)
+    return ContentOrErr.takeError();
+
+  unsigned AddrSize = ELFT::Is64Bits ? 8 : 4;
+  ArrayRef<uint8_t> Content = *ContentOrErr;
+  DataExtractor Data(Content, Obj.isLE(), AddrSize);
+
+  ELFYAML::GnuHashHeader Header;
+  DataExtractor::Cursor Cur(0);
+  uint32_t NBuckets = Data.getU32(Cur);
+  Header.SymNdx = Data.getU32(Cur);
+  uint32_t MaskWords = Data.getU32(Cur);
+  Header.Shift2 = Data.getU32(Cur);
+
+  // Set just the raw binary content if we were unable to read the header
+  // or when the section data is truncated or malformed.
+  uint64_t Size = Data.getData().size() - Cur.tell();
+  if (!Cur || (Size < MaskWords * AddrSize + NBuckets * 4) ||
+      (Size % 4 != 0)) {
+    consumeError(Cur.takeError());
+    S->Content = yaml::BinaryRef(Content);
+    return S.release();
+  }
+
+  S->Header = Header;
+
+  S->BloomFilter.emplace(MaskWords);
+  for (llvm::yaml::Hex64 &Val : *S->BloomFilter)
+    Val = Data.getAddress(Cur);
+
+  S->HashBuckets.emplace(NBuckets);
+  for (llvm::yaml::Hex32 &Val : *S->HashBuckets)
+    Val = Data.getU32(Cur);
+
+  S->HashValues.emplace((Data.getData().size() - Cur.tell()) / 4);
+  for (llvm::yaml::Hex32 &Val : *S->HashValues)
+    Val = Data.getU32(Cur);
+
+  if (Cur)
+    return S.release();
+  llvm_unreachable("GnuHashSection was not read correctly");
 }
 
 template <class ELFT>

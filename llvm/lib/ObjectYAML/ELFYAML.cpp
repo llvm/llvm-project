@@ -1039,6 +1039,15 @@ static void sectionMapping(IO &IO, ELFYAML::NoteSection &Section) {
   IO.mapOptional("Notes", Section.Notes);
 }
 
+
+static void sectionMapping(IO &IO, ELFYAML::GnuHashSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapOptional("Content", Section.Content);
+  IO.mapOptional("Header", Section.Header);
+  IO.mapOptional("BloomFilter", Section.BloomFilter);
+  IO.mapOptional("HashBuckets", Section.HashBuckets);
+  IO.mapOptional("HashValues", Section.HashValues);
+}
 static void sectionMapping(IO &IO, ELFYAML::NoBitsSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Size", Section.Size, Hex64(0));
@@ -1154,6 +1163,11 @@ void MappingTraits<std::unique_ptr<ELFYAML::Section>>::mapping(
     if (!IO.outputting())
       Section.reset(new ELFYAML::NoteSection());
     sectionMapping(IO, *cast<ELFYAML::NoteSection>(Section.get()));
+    break;
+ case ELF::SHT_GNU_HASH:
+    if (!IO.outputting())
+      Section.reset(new ELFYAML::GnuHashSection());
+    sectionMapping(IO, *cast<ELFYAML::GnuHashSection>(Section.get()));
     break;
   case ELF::SHT_MIPS_ABIFLAGS:
     if (!IO.outputting())
@@ -1300,6 +1314,29 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Section>>::validate(
     return {};
   }
 
+  if (const auto *Sec = dyn_cast<ELFYAML::GnuHashSection>(Section.get())) {
+    if (!Sec->Content && !Sec->Header && !Sec->BloomFilter &&
+        !Sec->HashBuckets && !Sec->HashValues)
+      return "either \"Content\" or \"Header\", \"BloomFilter\", "
+             "\"HashBuckets\" and \"HashBuckets\" must be specified";
+
+    if (Sec->Header || Sec->BloomFilter || Sec->HashBuckets ||
+        Sec->HashValues) {
+      if (!Sec->Header || !Sec->BloomFilter || !Sec->HashBuckets ||
+          !Sec->HashValues)
+        return "\"Header\", \"BloomFilter\", "
+               "\"HashBuckets\" and \"HashValues\" must be used together";
+      if (Sec->Content)
+        return "\"Header\", \"BloomFilter\", "
+               "\"HashBuckets\" and \"HashValues\" can't be used together with "
+               "\"Content\"";
+      return {};
+    }
+
+    // Only Content is specified.
+    return {};
+  }
+
   return {};
 }
 
@@ -1333,6 +1370,15 @@ void MappingTraits<ELFYAML::StackSizeEntry>::mapping(
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapOptional("Address", E.Address, Hex64(0));
   IO.mapRequired("Size", E.Size);
+}
+
+void MappingTraits<ELFYAML::GnuHashHeader>::mapping(IO &IO,
+                                                    ELFYAML::GnuHashHeader &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapOptional("NBuckets", E.NBuckets);
+  IO.mapRequired("SymNdx", E.SymNdx);
+  IO.mapOptional("MaskWords", E.MaskWords);
+  IO.mapRequired("Shift2", E.Shift2);
 }
 
 void MappingTraits<ELFYAML::DynamicEntry>::mapping(IO &IO,
