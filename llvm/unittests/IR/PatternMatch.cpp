@@ -1109,6 +1109,30 @@ TEST_F(PatternMatchTest, CondBranchTest) {
   EXPECT_TRUE(match(Br2, m_Br(m_Value(), m_BasicBlock(A), m_Deferred(A))));
 }
 
+TEST_F(PatternMatchTest, WithOverflowInst) {
+  Value *Add = IRB.CreateBinaryIntrinsic(Intrinsic::uadd_with_overflow,
+                                         IRB.getInt32(0), IRB.getInt32(0));
+  Value *Add0 = IRB.CreateExtractValue(Add, 0);
+  Value *Add1 = IRB.CreateExtractValue(Add, 1);
+
+  EXPECT_TRUE(match(Add0, m_ExtractValue<0>(m_Value())));
+  EXPECT_FALSE(match(Add0, m_ExtractValue<1>(m_Value())));
+  EXPECT_FALSE(match(Add1, m_ExtractValue<0>(m_Value())));
+  EXPECT_TRUE(match(Add1, m_ExtractValue<1>(m_Value())));
+  EXPECT_FALSE(match(Add, m_ExtractValue<1>(m_Value())));
+  EXPECT_FALSE(match(Add, m_ExtractValue<1>(m_Value())));
+
+  WithOverflowInst *WOI;
+  EXPECT_FALSE(match(Add0, m_WithOverflowInst(WOI)));
+  EXPECT_FALSE(match(Add1, m_WithOverflowInst(WOI)));
+  EXPECT_TRUE(match(Add, m_WithOverflowInst(WOI)));
+
+  EXPECT_TRUE(match(Add0, m_ExtractValue<0>(m_WithOverflowInst(WOI))));
+  EXPECT_EQ(Add, WOI);
+  EXPECT_TRUE(match(Add1, m_ExtractValue<1>(m_WithOverflowInst(WOI))));
+  EXPECT_EQ(Add, WOI);
+}
+
 template <typename T> struct MutableConstTest : PatternMatchTest { };
 
 typedef ::testing::Types<std::tuple<Value*, Instruction*>,
