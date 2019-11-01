@@ -41459,23 +41459,25 @@ static SDValue isFNEG(SelectionDAG &DAG, SDNode *N, unsigned Depth = 0) {
 
   SDValue Op = peekThroughBitcasts(SDValue(N, 0));
   EVT VT = Op->getValueType(0);
-  // Make sure the element size does't change.
+
+  // Make sure the element size doesn't change.
   if (VT.getScalarSizeInBits() != ScalarSize)
     return SDValue();
 
-  if (auto SVOp = dyn_cast<ShuffleVectorSDNode>(Op.getNode())) {
+  unsigned Opc = Op.getOpcode();
+  switch (Opc) {
+  case ISD::VECTOR_SHUFFLE: {
     // For a VECTOR_SHUFFLE(VEC1, VEC2), if the VEC2 is undef, then the negate
     // of this is VECTOR_SHUFFLE(-VEC1, UNDEF).  The mask can be anything here.
-    if (!SVOp->getOperand(1).isUndef())
+    if (!Op.getOperand(1).isUndef())
       return SDValue();
-    if (SDValue NegOp0 = isFNEG(DAG, SVOp->getOperand(0).getNode(), Depth + 1))
+    if (SDValue NegOp0 = isFNEG(DAG, Op.getOperand(0).getNode(), Depth + 1))
       if (NegOp0.getValueType() == VT) // FIXME: Can we do better?
-        return DAG.getVectorShuffle(VT, SDLoc(SVOp), NegOp0, DAG.getUNDEF(VT),
-                                    SVOp->getMask());
-    return SDValue();
+        return DAG.getVectorShuffle(VT, SDLoc(Op), NegOp0, DAG.getUNDEF(VT),
+                                    cast<ShuffleVectorSDNode>(Op)->getMask());
+    break;
   }
-  unsigned Opc = Op.getOpcode();
-  if (Opc == ISD::INSERT_VECTOR_ELT) {
+  case ISD::INSERT_VECTOR_ELT: {
     // Negate of INSERT_VECTOR_ELT(UNDEF, V, INDEX) is INSERT_VECTOR_ELT(UNDEF,
     // -V, INDEX).
     SDValue InsVector = Op.getOperand(0);
@@ -41486,34 +41488,35 @@ static SDValue isFNEG(SelectionDAG &DAG, SDNode *N, unsigned Depth = 0) {
       if (NegInsVal.getValueType() == VT.getVectorElementType()) // FIXME
         return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(Op), VT, InsVector,
                            NegInsVal, Op.getOperand(2));
-    return SDValue();
+    break;
   }
+  case ISD::FSUB:
+  case ISD::XOR:
+  case X86ISD::FXOR: {
+    SDValue Op1 = Op.getOperand(1);
+    SDValue Op0 = Op.getOperand(0);
 
-  if (Opc != X86ISD::FXOR && Opc != ISD::XOR && Opc != ISD::FSUB)
-    return SDValue();
+    // For XOR and FXOR, we want to check if constant
+    // bits of Op1 are sign bit masks. For FSUB, we
+    // have to check if constant bits of Op0 are sign
+    // bit masks and hence we swap the operands.
+    if (Opc == ISD::FSUB)
+      std::swap(Op0, Op1);
 
-  SDValue Op1 = Op.getOperand(1);
-  SDValue Op0 = Op.getOperand(0);
+    APInt UndefElts;
+    SmallVector<APInt, 16> EltBits;
+    // Extract constant bits and see if they are all
+    // sign bit masks. Ignore the undef elements.
+    if (getTargetConstantBitsFromNode(Op1, ScalarSize, UndefElts, EltBits,
+                                      /* AllowWholeUndefs */ true,
+                                      /* AllowPartialUndefs */ false)) {
+      for (unsigned I = 0, E = EltBits.size(); I < E; I++)
+        if (!UndefElts[I] && !EltBits[I].isSignMask())
+          return SDValue();
 
-  // For XOR and FXOR, we want to check if constant bits of Op1 are sign bit
-  // masks. For FSUB, we have to check if constant bits of Op0 are sign bit
-  // masks and hence we swap the operands.
-  if (Opc == ISD::FSUB)
-    std::swap(Op0, Op1);
-
-  APInt UndefElts;
-  SmallVector<APInt, 16> EltBits;
-  // Extract constant bits and see if they are all sign bit masks. Ignore the
-  // undef elements.
-  if (getTargetConstantBitsFromNode(Op1, ScalarSize,
-                                    UndefElts, EltBits,
-                                    /* AllowWholeUndefs */ true,
-                                    /* AllowPartialUndefs */ false)) {
-    for (unsigned I = 0, E = EltBits.size(); I < E; I++)
-      if (!UndefElts[I] && !EltBits[I].isSignMask())
-        return SDValue();
-
-    return peekThroughBitcasts(Op0);
+      return peekThroughBitcasts(Op0);
+    }
+  }
   }
 
   return SDValue();
