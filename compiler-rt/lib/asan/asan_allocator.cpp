@@ -399,6 +399,16 @@ struct Allocator {
     return right_chunk;
   }
 
+  bool UpdateAllocationStack(uptr addr, BufferedStackTrace *stack) {
+    AsanChunk *m = GetAsanChunkByAddr(addr);
+    if (!m) return false;
+    if (m->chunk_state != CHUNK_ALLOCATED) return false;
+    if (m->Beg() != addr) return false;
+    atomic_store((atomic_uint32_t *)&m->alloc_context_id, StackDepotPut(*stack),
+                 memory_order_relaxed);
+    return true;
+  }
+
   // -------------------- Allocation/Deallocation routines ---------------
   void *Allocate(uptr size, uptr alignment, BufferedStackTrace *stack,
                  AllocType alloc_type, bool can_fill) {
@@ -1110,6 +1120,11 @@ uptr __sanitizer_get_allocated_size(const void *p) {
 void __sanitizer_purge_allocator() {
   GET_STACK_TRACE_MALLOC;
   instance.Purge(&stack);
+}
+
+int __asan_update_allocation_context(void* addr) {
+  GET_STACK_TRACE_MALLOC;
+  return instance.UpdateAllocationStack((uptr)addr, &stack);
 }
 
 #if !SANITIZER_SUPPORTS_WEAK_HOOKS
