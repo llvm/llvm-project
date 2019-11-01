@@ -13,6 +13,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstIterator.h"
@@ -353,7 +354,19 @@ ModulePass *llvm::createMustBeExecutedContextPrinter() {
 }
 
 bool MustBeExecutedContextPrinter::runOnModule(Module &M) {
-  MustBeExecutedContextExplorer Explorer(true);
+  // We provide non-PM analysis here because the old PM doesn't like to query
+  // function passes from a module pass. Given that this is a printer, we don't
+  // care much about memory leaks.
+  GetterTy<LoopInfo> LIGetter = [this](const Function &F) {
+    DominatorTree *DT = new DominatorTree(const_cast<Function &>(F));
+    LoopInfo *LI = new LoopInfo(*DT);
+    return LI;
+  };
+  GetterTy<PostDominatorTree> PDTGetter = [this](const Function &F) {
+    PostDominatorTree *PDT = new PostDominatorTree(const_cast<Function &>(F));
+    return PDT;
+  };
+  MustBeExecutedContextExplorer Explorer(true, LIGetter, PDTGetter);
   for (Function &F : M) {
     for (Instruction &I : instructions(F)) {
       dbgs() << "-- Explore context of: " << I << "\n";
@@ -443,6 +456,173 @@ bool MustExecutePrinter::runOnFunction(Function &F) {
   return false;
 }
 
+/// Return true if \p L might be an endless loop.
+static bool maybeEndlessLoop(const Loop &L) {
+  if (L.getHeader()->getParent()->hasFnAttribute(Attribute::WillReturn))
+    return false;
+  // TODO: Actually try to prove it is not.
+  // TODO: If maybeEndlessLoop is going to be expensive, cache it.
+  return true;
+}
+
+static bool mayContainIrreducibleControl(const Function &F, const LoopInfo *LI) {
+  if (!LI)
+    return false;
+  using RPOTraversal = ReversePostOrderTraversal<const Function *>;
+  RPOTraversal FuncRPOT(&F);
+  return !containsIrreducibleCFG<const BasicBlock *, const RPOTraversal,
+                                 const LoopInfo>(FuncRPOT, *LI);
+}
+
+/// Lookup \p Key in \p Map and return the result, potentially after
+/// initializing the optional through \p Fn(\p args).
+template <typename K, typename V, typename FnTy, typename... ArgsTy>
+static V getOrCreateCachedOptional(K Key, DenseMap<K, Optional<V>> &Map,
+                                   FnTy &&Fn, ArgsTy&&... args) {
+  Optional<V> &OptVal = Map[Key];
+  if (!OptVal.hasValue())
+    OptVal = Fn(std::forward<ArgsTy>(args)...);
+  return OptVal.getValue();
+}
+
+const BasicBlock *
+MustBeExecutedContextExplorer::findForwardJoinPoint(const BasicBlock *InitBB) {
+  const LoopInfo *LI = LIGetter(*InitBB->getParent());
+  const PostDominatorTree *PDT = PDTGetter(*InitBB->getParent());
+
+  LLVM_DEBUG(dbgs() << "\tFind forward join point for " << InitBB->getName()
+                    << (LI ? " [LI]" : "") << (PDT ? " [PDT]" : ""));
+
+  const Function &F = *InitBB->getParent();
+  const Loop *L = LI ? LI->getLoopFor(InitBB) : nullptr;
+  const BasicBlock *HeaderBB = L ? L->getHeader() : InitBB;
+  bool WillReturnAndNoThrow = (F.hasFnAttribute(Attribute::WillReturn) ||
+                               (L && !maybeEndlessLoop(*L))) &&
+                              F.doesNotThrow();
+  LLVM_DEBUG(dbgs() << (L ? " [in loop]" : "")
+                    << (WillReturnAndNoThrow ? " [WillReturn] [NoUnwind]" : "")
+                    << "\n");
+
+  // Determine the adjacent blocks in the given direction but exclude (self)
+  // loops under certain circumstances.
+  SmallVector<const BasicBlock *, 8> Worklist;
+  for (const BasicBlock *SuccBB : successors(InitBB)) {
+    bool IsLatch = SuccBB == HeaderBB;
+    // Loop latches are ignored in forward propagation if the loop cannot be
+    // endless and may not throw: control has to go somewhere.
+    if (!WillReturnAndNoThrow || !IsLatch)
+      Worklist.push_back(SuccBB);
+  }
+  LLVM_DEBUG(dbgs() << "\t\t#Worklist: " << Worklist.size() << "\n");
+
+  // If there are no other adjacent blocks, there is no join point.
+  if (Worklist.empty())
+    return nullptr;
+
+  // If there is one adjacent block, it is the join point.
+  if (Worklist.size() == 1)
+    return Worklist[0];
+
+  // Try to determine a join block through the help of the post-dominance
+  // tree. If no tree was provided, we perform simple pattern matching for one
+  // block conditionals and one block loops only.
+  const BasicBlock *JoinBB = nullptr;
+  if (PDT)
+    if (const auto *InitNode = PDT->getNode(InitBB))
+      if (const auto *IDomNode = InitNode->getIDom())
+        JoinBB = IDomNode->getBlock();
+
+  if (!JoinBB && Worklist.size() == 2) {
+    const BasicBlock *Succ0 = Worklist[0];
+    const BasicBlock *Succ1 = Worklist[1];
+    const BasicBlock *Succ0UniqueSucc = Succ0->getUniqueSuccessor();
+    const BasicBlock *Succ1UniqueSucc = Succ1->getUniqueSuccessor();
+    if (Succ0UniqueSucc == InitBB) {
+      // InitBB -> Succ0 -> InitBB
+      // InitBB -> Succ1  = JoinBB
+      JoinBB = Succ1;
+    } else if (Succ1UniqueSucc == InitBB) {
+      // InitBB -> Succ1 -> InitBB
+      // InitBB -> Succ0  = JoinBB
+      JoinBB = Succ0;
+    } else if (Succ0 == Succ1UniqueSucc) {
+      // InitBB ->          Succ0 = JoinBB
+      // InitBB -> Succ1 -> Succ0 = JoinBB
+      JoinBB = Succ0;
+    } else if (Succ1 == Succ0UniqueSucc) {
+      // InitBB -> Succ0 -> Succ1 = JoinBB
+      // InitBB ->          Succ1 = JoinBB
+      JoinBB = Succ1;
+    } else if (Succ0UniqueSucc == Succ1UniqueSucc) {
+      // InitBB -> Succ0 -> JoinBB
+      // InitBB -> Succ1 -> JoinBB
+      JoinBB = Succ0UniqueSucc;
+    }
+  }
+
+  if (!JoinBB && L)
+    JoinBB = L->getUniqueExitBlock();
+
+  if (!JoinBB)
+    return nullptr;
+
+  LLVM_DEBUG(dbgs() << "\t\tJoin block candidate: " << JoinBB->getName() << "\n");
+
+  // In forward direction we check if control will for sure reach JoinBB from
+  // InitBB, thus it can not be "stopped" along the way. Ways to "stop" control
+  // are: infinite loops and instructions that do not necessarily transfer
+  // execution to their successor. To check for them we traverse the CFG from
+  // the adjacent blocks to the JoinBB, looking at all intermediate blocks.
+
+  // If we know the function is "will-return" and "no-throw" there is no need
+  // for futher checks.
+  if (!F.hasFnAttribute(Attribute::WillReturn) || !F.doesNotThrow()) {
+
+    auto BlockTransfersExecutionToSuccessor = [](const BasicBlock *BB) {
+      return isGuaranteedToTransferExecutionToSuccessor(BB);
+    };
+
+    SmallPtrSet<const BasicBlock *, 16> Visited;
+    while (!Worklist.empty()) {
+      const BasicBlock *ToBB = Worklist.pop_back_val();
+      if (ToBB == JoinBB)
+        continue;
+
+      // Make sure all loops in-between are finite.
+      if (!Visited.insert(ToBB).second) {
+        if (!F.hasFnAttribute(Attribute::WillReturn)) {
+          if (!LI)
+            return nullptr;
+
+          bool MayContainIrreducibleControl = getOrCreateCachedOptional(
+              &F, IrreducibleControlMap, mayContainIrreducibleControl, F, LI);
+          if (MayContainIrreducibleControl)
+            return nullptr;
+
+          const Loop *L = LI->getLoopFor(ToBB);
+          if (L && maybeEndlessLoop(*L))
+            return nullptr;
+        }
+
+        continue;
+      }
+
+      // Make sure the block has no instructions that could stop control
+      // transfer.
+      bool TransfersExecution = getOrCreateCachedOptional(
+          ToBB, BlockTransferMap, BlockTransfersExecutionToSuccessor, ToBB);
+      if (!TransfersExecution)
+        return nullptr;
+
+      for (const BasicBlock *AdjacentBB : successors(ToBB))
+        Worklist.push_back(AdjacentBB);
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "\tJoin block: " << JoinBB->getName() << "\n");
+  return JoinBB;
+}
+
 const Instruction *
 MustBeExecutedContextExplorer::getMustBeExecutedNextInstruction(
     MustBeExecutedIterator &It, const Instruction *PP) {
@@ -489,6 +669,12 @@ MustBeExecutedContextExplorer::getMustBeExecutedNextInstruction(
         dbgs() << "\tUnconditional terminator, continue with successor\n");
     return &PP->getSuccessor(0)->front();
   }
+
+  // Multiple successors mean we need to find the join point where control flow
+  // converges again. We use the findForwardJoinPoint helper function with
+  // information about the function and helper analyses, if available.
+  if (const BasicBlock *JoinBB = findForwardJoinPoint(PP->getParent()))
+    return &JoinBB->front();
 
   LLVM_DEBUG(dbgs() << "\tNo join point found\n");
   return nullptr;
