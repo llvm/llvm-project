@@ -12,6 +12,7 @@ tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
+    fp32-denormals: false
 
 body:             |
   bb.0:
@@ -33,6 +34,7 @@ tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
+    fp32-denormals: false
 
 body:             |
   bb.0:
@@ -54,6 +56,7 @@ tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
+    fp32-denormals: false
 
 body:             |
   bb.0:
