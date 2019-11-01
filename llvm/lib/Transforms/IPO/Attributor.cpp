@@ -4496,9 +4496,16 @@ ChangeStatus Attributor::run(Module &M) {
     // Update all abstract attribute in the work list and record the ones that
     // changed.
     for (AbstractAttribute *AA : Worklist)
-      if (!isAssumedDead(*AA, nullptr))
-        if (AA->update(*this) == ChangeStatus::CHANGED)
+      if (!AA->getState().isAtFixpoint() && !isAssumedDead(*AA, nullptr)) {
+        QueriedNonFixAA = false;
+        if (AA->update(*this) == ChangeStatus::CHANGED) {
           ChangedAAs.push_back(AA);
+        } else if (!QueriedNonFixAA) {
+          // If the attribute did not query any non-fix information, the state
+          // will not change and we can indicate that right away.
+          AA->getState().indicateOptimisticFixpoint();
+        }
+      }
 
     // Check if we recompute the dependences in the next iteration.
     RecomputeDependences = (DepRecomputeInterval > 0 &&
@@ -4713,8 +4720,11 @@ void Attributor::initializeInformationCache(Function &F) {
 
 void Attributor::recordDependence(const AbstractAttribute &FromAA,
                                   const AbstractAttribute &ToAA) {
-  if (!FromAA.getState().isAtFixpoint())
-    QueryMap[&FromAA].insert(const_cast<AbstractAttribute *>(&ToAA));
+  if (FromAA.getState().isAtFixpoint())
+    return;
+
+  QueryMap[&FromAA].insert(const_cast<AbstractAttribute *>(&ToAA));
+  QueriedNonFixAA = true;
 }
 
 void Attributor::identifyDefaultAbstractAttributes(Function &F) {
