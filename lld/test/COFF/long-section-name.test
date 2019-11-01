@@ -1,8 +1,18 @@
 # RUN: yaml2obj < %s > %t.obj
-# RUN: lld-link /out:%t.exe /entry:main %t.obj
+# RUN: lld-link /out:%t.exe /entry:main %t.obj 2>&1 | FileCheck %s --check-prefix=WARN
 # RUN: llvm-readobj --sections %t.exe | FileCheck %s
-# RUN: lld-link /debug /out:%t2.exe /entry:main %t.obj
+# RUN: lld-link /debug /out:%t2.exe /entry:main %t.obj 2>&1 | FileCheck %s --check-prefix=WARN
 # RUN: llvm-readobj --sections %t2.exe | FileCheck %s
+#
+# No warnings in mingw mode or with ignore flag.
+# RUN: lld-link /out:%t.exe /entry:main %t.obj /ignore:longsections 2>&1 | FileCheck %s --check-prefix=IGNORE --allow-empty
+# RUN: lld-link /out:%t.exe /entry:main %t.obj -lldmingw 2>&1 | FileCheck %s --check-prefix=IGNORE --allow-empty
+# RUN: lld-link /out:%t.exe /entry:main %t.obj -debug:dwarf 2>&1 | FileCheck %s --check-prefix=IGNORE --allow-empty
+
+# WARN: warning: section name .data_long_section_name is longer than 8 characters and will use a non-standard string table
+# WARN: warning: section name .text_long_section_name is longer than 8 characters and will use a non-standard string table
+
+# IGNORE-NOT: warning:
 
 # CHECK: Name: .eh_fram (
 # CHECK: Name: .data_long_section_name

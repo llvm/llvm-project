@@ -1148,6 +1148,11 @@ void Writer::createSymbolAndStringTable() {
       continue;
     if ((sec->header.Characteristics & IMAGE_SCN_MEM_DISCARDABLE) == 0)
       continue;
+    if (config->warnLongSectionNames) {
+      warn("section name " + sec->name +
+           " is longer than 8 characters and will use a non-standard string "
+           "table");
+    }
     sec->setStringTableOff(addEntryToStringTable(sec->name));
   }
 

@@ -218,6 +218,7 @@ struct Configuration {
   bool warnMissingOrderSymbol = true;
   bool warnLocallyDefinedImported = true;
   bool warnDebugInfoUnusable = true;
+  bool warnLongSectionNames = true;
   bool incremental = true;
   bool integrityCheck = false;
   bool killAt = false;
