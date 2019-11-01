@@ -1616,7 +1616,7 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
 
   // We're checking for deleted C++ special member functions
   // [Ctors,Dtors, Copy/Move]
-  auto checkAttrDeleted = [&SPFlags](const auto *Method) {
+  auto checkAttrDeleted = [&](const auto *Method) {
     if (Method->getCanonicalDecl()->isDeleted())
       SPFlags |= llvm::DISubprogram::SPFlagDeleted;
   };
