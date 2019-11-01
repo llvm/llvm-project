@@ -100,6 +100,7 @@ set(ENTRYPOINT_OBJ_TARGET_TYPE "ENTRYPOINT_OBJ")
 # Usage:
 #     add_entrypoint_object(
 #       <target_name>
+#       [REDIRECTED] # Specified if the entrypoint is redirected.
 #       SRCS <list of .cpp files>
 #       HDRS <list of .h files>
 #       DEPENDS <list of dependencies>
@@ -107,7 +108,7 @@ set(ENTRYPOINT_OBJ_TARGET_TYPE "ENTRYPOINT_OBJ")
 function(add_entrypoint_object target_name)
   cmake_parse_arguments(
     "ADD_ENTRYPOINT_OBJ"
-    "" # No optional arguments
+    "REDIRECTED" # Optional argument
     "" # No single value arguments
     "SRCS;HDRS;DEPENDS"  # Multi value arguments
     ${ARGN}
@@ -131,7 +132,7 @@ function(add_entrypoint_object target_name)
     ${target_name}_objects
     BEFORE
     PRIVATE
-      -fpie -std=${LLVM_CXX_STD_default}
+      -fpie ${LLVM_CXX_STD_default}
   )
   target_include_directories(
     ${target_name}_objects
@@ -158,10 +159,16 @@ function(add_entrypoint_object target_name)
     COMMAND ${CMAKE_LINKER} -r $<TARGET_OBJECTS:${target_name}_objects> -o ${object_file_raw}
   )
 
+  set(alias_attributes "0,function,global")
+  if(ADD_ENTRYPOINT_OBJ_REDIRECTED)
+    set(alias_attributes "${alias_attributes},hidden")
+  endif()
+
   add_custom_command(
     OUTPUT ${object_file}
-    DEPENDS ${object_file_raw}
-    COMMAND ${CMAKE_OBJCOPY} --add-symbol "${target_name}=.llvm.libc.entrypoint.${target_name}:0,function,weak,global" ${object_file_raw} ${object_file}
+    # We llvm-objcopy here as GNU-binutils objcopy does not support the 'hidden' flag.
+    DEPENDS ${object_file_raw} ${llvm-objcopy}
+    COMMAND $<TARGET_FILE:llvm-objcopy> --add-symbol "${target_name}=.llvm.libc.entrypoint.${target_name}:${alias_attributes}" ${object_file_raw} ${object_file}
   )
 
   add_custom_target(
@@ -218,6 +225,67 @@ function(add_entrypoint_library target_name)
     DEPENDS ${library_file}
   )
 endfunction(add_entrypoint_library)
+
+# Rule build a redirector object file.
+function(add_redirector_object target_name)
+  cmake_parse_arguments(
+    "REDIRECTOR_OBJECT"
+    "" # No optional arguments
+    "SRC" # The cpp file in which the redirector is defined.
+    "" # No multivalue arguments
+    ${ARGN}
+  )
+  if(NOT REDIRECTOR_OBJECT_SRC)
+    message(FATAL_ERROR "'add_redirector_object' rule requires SRC option listing one source file.")
+  endif()
+
+  add_library(
+    ${target_name}
+    OBJECT
+    ${REDIRECTOR_OBJECT_SRC}
+  )
+  target_compile_options(
+    ${target_name}
+    BEFORE PRIVATE -fPIC
+  )
+endfunction(add_redirector_object)
+
+# Rule to build a shared library of redirector objects
+function(add_redirector_library target_name)
+  cmake_parse_arguments(
+    "REDIRECTOR_LIBRARY"
+    ""
+    ""
+    "DEPENDS"
+    ${ARGN}
+  )
+
+  set(obj_files "")
+  foreach(dep IN LISTS REDIRECTOR_LIBRARY_DEPENDS)
+    # TODO: Ensure that each dep is actually a add_redirector_object target.
+    list(APPEND obj_files $<TARGET_OBJECTS:${dep}>)
+  endforeach(dep)
+
+  # TODO: Call the linker explicitly instead of calling the compiler driver to
+  # prevent DT_NEEDED on C++ runtime.
+  add_library(
+    ${target_name}
+    SHARED
+    ${obj_files}
+  )
+  set_target_properties(${target_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+  target_link_libraries(
+    ${target_name}
+    -nostdlib -lc -lm
+  )
+
+  set_target_properties(
+    ${target_name}
+    PROPERTIES
+      LINKER_LANGUAGE "C"
+  )
+endfunction(add_redirector_library)
 
 function(add_libc_unittest target_name)
   if(NOT LLVM_INCLUDE_TESTS)
