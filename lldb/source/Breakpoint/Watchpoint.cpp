@@ -286,13 +286,7 @@ void Watchpoint::SetCondition(const char *condition) {
   } else {
     // Pass nullptr for expr_prefix (no translation-unit level definitions).
     Status error;
-    // BEGIN SWIFT
-    ExecutionContext exe_scope(m_target);
-    // END SWIFT
     m_condition_up.reset(m_target.GetUserExpressionForLanguage(
-        // BEGIN SWIFT
-        exe_scope,
-        // END SWIFT
         condition, llvm::StringRef(), lldb::eLanguageTypeUnknown,
         UserExpression::eResultTypeAny, EvaluateExpressionOptions(), nullptr,
         error));

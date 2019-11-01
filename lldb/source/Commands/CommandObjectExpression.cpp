@@ -353,9 +353,6 @@ void CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
 
   Status error;
   lldb::UserExpressionSP expr(target->GetUserExpressionForLanguage(
-      // BEGIN SWIFT
-      exe_ctx,
-      // END SWIFT
       code, llvm::StringRef(), language, UserExpression::eResultTypeAny,
       options, nullptr, error));
   if (error.Fail())
