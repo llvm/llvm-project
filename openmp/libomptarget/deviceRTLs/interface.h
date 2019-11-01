@@ -19,6 +19,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef __AMDGCN__
+#include "amdgcn/src/amdgcn_interface.h"
+#endif
 #ifdef __CUDACC__
 #include "nvptx/src/nvptx_interface.h"
 #endif
