@@ -37,6 +37,7 @@ LLVM and API reference documentation.
    PDB/index
    PointerAuth
    ScudoHardenedAllocator
+   MemTagSanitizer
    SegmentedStacks
    StackMaps
    SpeculativeLoadHardening
@@ -187,6 +188,10 @@ Additional Topics
 
 :doc:`ScudoHardenedAllocator`
   A library that implements a security-hardened `malloc()`.
+
+:doc:`MemTagSanitizer`
+  Security hardening for production code aiming to mitigate memory
+  related vulnerabilities. Based on ARMv9 Memory Tagging Extension.
 
 :doc:`Dependence Graphs <DependenceGraphs/index>`
   A description of the design of the various dependence graphs such as
