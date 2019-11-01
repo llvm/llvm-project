@@ -44,7 +44,7 @@
 
 #ifndef CPU_TYPE_ARM64_32
 #define CPU_ARCH_ABI64_32 0x02000000
-#define (CPU_TYPE_ARM | CPU_ARCH_ABI64_32)
+#define CPU_TYPE_ARM64_32 (CPU_TYPE_ARM | CPU_ARCH_ABI64_32)
 #endif
 
 #include <TargetConditionals.h> // for TARGET_OS_TV, TARGET_OS_WATCH
