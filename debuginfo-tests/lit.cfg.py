@@ -87,6 +87,7 @@ llvm_config.with_environment('PATHTOCLANGCL', llvm_config.use_llvm_tool('clang-c
 
 # Check which debuggers are available:
 built_lldb = llvm_config.use_llvm_tool('lldb', search_env='CLANG')
+lldb_path = None
 if built_lldb is not None:
     lldb_path = built_lldb
 elif lit.util.which('lldb') is not None:
