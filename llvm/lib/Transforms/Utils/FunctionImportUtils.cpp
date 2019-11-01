@@ -239,11 +239,22 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
   // propagateConstants hasn't been run. We can't internalize GV
   // in such case.
   if (!GV.isDeclaration() && VI && ImportIndex.withGlobalValueDeadStripping()) {
-    const auto &SL = VI.getSummaryList();
-    auto *GVS = SL.empty() ? nullptr : dyn_cast<GlobalVarSummary>(SL[0].get());
-    // At this stage "maybe" is "definitely"
-    if (GVS && (GVS->maybeReadOnly() || GVS->maybeWriteOnly()))
-      cast<GlobalVariable>(&GV)->addAttribute("thinlto-internalize");
+    if (GlobalVariable *V = dyn_cast<GlobalVariable>(&GV)) {
+      // We can have more than one local with the same GUID, in the case of
+      // same-named locals in different but same-named source files that were
+      // compiled in their respective directories (so the source file name
+      // and resulting GUID is the same). Find the one in this module.
+      // Handle the case where there is no summary found in this module. That
+      // can happen in the distributed ThinLTO backend, because the index only
+      // contains summaries from the source modules if they are being imported.
+      // We might have a non-null VI and get here even in that case if the name
+      // matches one in this module (e.g. weak or appending linkage).
+      auto* GVS = dyn_cast_or_null<GlobalVarSummary>(
+          ImportIndex.findSummaryInModule(VI, M.getModuleIdentifier()));
+      // At this stage "maybe" is "definitely"
+      if (GVS && (GVS->maybeReadOnly() || GVS->maybeWriteOnly()))
+        V->addAttribute("thinlto-internalize");
+    }
   }
 
   bool DoPromote = false;
