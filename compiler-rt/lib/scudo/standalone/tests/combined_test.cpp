@@ -65,6 +65,20 @@ template <class Config> static void testAllocator() {
   }
   Allocator->releaseToOS();
 
+  // Ensure that specifying ZeroContents returns a zero'd out block.
+  for (scudo::uptr SizeLog = 0U; SizeLog <= 20U; SizeLog++) {
+    for (scudo::uptr Delta = 0U; Delta <= 4U; Delta++) {
+      const scudo::uptr Size = (1U << SizeLog) + Delta * 128U;
+      void *P = Allocator->allocate(Size, Origin, 1U << MinAlignLog, true);
+      EXPECT_NE(P, nullptr);
+      for (scudo::uptr I = 0; I < Size; I++)
+        EXPECT_EQ((reinterpret_cast<char *>(P))[I], 0);
+      memset(P, 0xaa, Size);
+      Allocator->deallocate(P, Origin, Size);
+    }
+  }
+  Allocator->releaseToOS();
+
   // Verify that a chunk will end up being reused, at some point.
   const scudo::uptr NeedleSize = 1024U;
   void *NeedleP = Allocator->allocate(NeedleSize, Origin);
