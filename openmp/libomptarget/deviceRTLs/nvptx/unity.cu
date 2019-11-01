@@ -21,5 +21,6 @@
 #include "src/omptarget-nvptx.cu"
 #include "src/parallel.cu"
 #include "src/reduction.cu"
+#include "src/support.cu"
 #include "src/sync.cu"
 #include "src/task.cu"

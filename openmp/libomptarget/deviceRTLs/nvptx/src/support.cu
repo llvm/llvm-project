@@ -1,4 +1,4 @@
-//===--------- supporti.h - NVPTX OpenMP support functions ------- CUDA -*-===//
+//===--------- support.cu - NVPTX OpenMP support functions ------- CUDA -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,11 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "support.h"
+#include "debug.h"
+#include "omptarget-nvptx.h"
+
 ////////////////////////////////////////////////////////////////////////////////
 // Execution Parameters
 ////////////////////////////////////////////////////////////////////////////////
-
-#include "target_impl.h"
 
 INLINE void setExecutionParameters(ExecutionMode EMode, RuntimeMode RMode) {
   execution_param = EMode;
