@@ -1539,6 +1539,21 @@ template <class ELFT> void ELFBuilder<ELFT>::readSectionHeaders() {
 }
 
 template <class ELFT> void ELFBuilder<ELFT>::readSections(bool EnsureSymtab) {
+  uint32_t ShstrIndex = ElfFile.getHeader()->e_shstrndx;
+  if (ShstrIndex == SHN_XINDEX)
+    ShstrIndex = unwrapOrError(ElfFile.getSection(0))->sh_link;
+
+  if (ShstrIndex == SHN_UNDEF)
+    Obj.HadShdrs = false;
+  else
+    Obj.SectionNames =
+        Obj.sections().template getSectionOfType<StringTableSection>(
+            ShstrIndex,
+            "e_shstrndx field value " + Twine(ShstrIndex) + " in elf header " +
+                " is invalid",
+            "e_shstrndx field value " + Twine(ShstrIndex) + " in elf header " +
+                " does not reference a string table");
+
   // If a section index table exists we'll need to initialize it before we
   // initialize the symbol table because the symbol table might need to
   // reference it.
@@ -1552,13 +1567,14 @@ template <class ELFT> void ELFBuilder<ELFT>::readSections(bool EnsureSymtab) {
     Obj.SymbolTable->initialize(Obj.sections());
     initSymbolTable(Obj.SymbolTable);
   } else if (EnsureSymtab) {
-    // Reuse the existing SHT_STRTAB section if exists.
+    // Reuse an existing SHT_STRTAB section if it exists.
     StringTableSection *StrTab = nullptr;
     for (auto &Sec : Obj.sections()) {
       if (Sec.Type == ELF::SHT_STRTAB && !(Sec.Flags & SHF_ALLOC)) {
         StrTab = static_cast<StringTableSection *>(&Sec);
 
-        // Prefer .strtab to .shstrtab.
+        // Prefer a string table that is not the section header string table, if
+        // such a table exists.
         if (Obj.SectionNames != &Sec)
           break;
       }
@@ -1593,21 +1609,6 @@ template <class ELFT> void ELFBuilder<ELFT>::readSections(bool EnsureSymtab) {
       initGroupSection(GroupSec);
     }
   }
-
-  uint32_t ShstrIndex = ElfFile.getHeader()->e_shstrndx;
-  if (ShstrIndex == SHN_XINDEX)
-    ShstrIndex = unwrapOrError(ElfFile.getSection(0))->sh_link;
-
-  if (ShstrIndex == SHN_UNDEF)
-    Obj.HadShdrs = false;
-  else
-    Obj.SectionNames =
-        Obj.sections().template getSectionOfType<StringTableSection>(
-            ShstrIndex,
-            "e_shstrndx field value " + Twine(ShstrIndex) + " in elf header " +
-                " is invalid",
-            "e_shstrndx field value " + Twine(ShstrIndex) + " in elf header " +
-                " is not a string table");
 }
 
 template <class ELFT> void ELFBuilder<ELFT>::build(bool EnsureSymtab) {
