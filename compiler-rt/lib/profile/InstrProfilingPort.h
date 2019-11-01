@@ -100,6 +100,7 @@
 #endif /* DIR_SEPARATOR_2 */
 
 #if defined(_WIN32)
+#include <windows.h>
 static inline size_t getpagesize() {
   SYSTEM_INFO S;
   GetNativeSystemInfo(&S);
