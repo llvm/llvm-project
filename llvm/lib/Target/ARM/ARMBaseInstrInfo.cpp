@@ -993,9 +993,8 @@ void ARMBaseInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Mov->addRegisterKilled(SrcReg, TRI);
 }
 
-bool ARMBaseInstrInfo::isCopyInstrImpl(const MachineInstr &MI,
-                                       const MachineOperand *&Src,
-                                       const MachineOperand *&Dest) const {
+Optional<DestSourcePair>
+ARMBaseInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   // VMOVRRD is also a copy instruction but it requires
   // special way of handling. It is more complex copy version
   // and since that we are not considering it. For recognition
@@ -1006,10 +1005,8 @@ bool ARMBaseInstrInfo::isCopyInstrImpl(const MachineInstr &MI,
   if (!MI.isMoveReg() ||
       (MI.getOpcode() == ARM::VORRq &&
        MI.getOperand(1).getReg() != MI.getOperand(2).getReg()))
-    return false;
-  Dest = &MI.getOperand(0);
-  Src = &MI.getOperand(1);
-  return true;
+    return None;
+  return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
 }
 
 const MachineInstrBuilder &
@@ -5350,10 +5347,9 @@ ARMBaseInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   return makeArrayRef(TargetFlags);
 }
 
-bool ARMBaseInstrInfo::isAddImmediate(const MachineInstr &MI,
-                                      const MachineOperand *&Destination,
-                                      const MachineOperand *&Source,
-                                      int64_t &Offset) const {
+Optional<DestSourcePair>
+ARMBaseInstrInfo::isAddImmediate(const MachineInstr &MI,
+                                 int64_t &Offset) const {
   int Sign = 1;
   unsigned Opcode = MI.getOpcode();
 
@@ -5361,19 +5357,17 @@ bool ARMBaseInstrInfo::isAddImmediate(const MachineInstr &MI,
   if (Opcode == ARM::SUBri)
     Sign = -1;
   else if (Opcode != ARM::ADDri)
-    return false;
+    return None;
 
   // TODO: Third operand can be global address (usually some string). Since
   //       strings can be relocated we cannot calculate their offsets for
   //       now.
   if (!MI.getOperand(0).isReg() || !MI.getOperand(1).isReg() ||
       !MI.getOperand(2).isImm())
-    return false;
+    return None;
 
-  Destination = &MI.getOperand(0);
-  Source = &MI.getOperand(1);
   Offset = MI.getOperand(2).getImm() * Sign;
-  return true;
+  return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
 }
 
 bool llvm::registerDefinedBetween(unsigned Reg,
