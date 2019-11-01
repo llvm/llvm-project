@@ -2166,8 +2166,8 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
     Value &V = getAssociatedValue();
     if (auto *I = dyn_cast<Instruction>(&V))
       if (wouldInstructionBeTriviallyDead(I)) {
-          A.deleteAfterManifest(*I);
-          return ChangeStatus::CHANGED;
+        A.deleteAfterManifest(*I);
+        return ChangeStatus::CHANGED;
       }
 
     if (V.use_empty())
@@ -2295,37 +2295,17 @@ struct AAIsDeadFunction : public AAIsDead {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     const Function *F = getAssociatedFunction();
-    if (F && !F->isDeclaration())
-      exploreFromEntry(A, F);
+    if (F && !F->isDeclaration()) {
+      ToBeExploredFrom.insert(&F->getEntryBlock().front());
+      assumeLive(A, F->getEntryBlock());
+    }
   }
-
-  void exploreFromEntry(Attributor &A, const Function *F) {
-    ToBeExploredPaths.insert(&(F->getEntryBlock().front()));
-
-    for (size_t i = 0; i < ToBeExploredPaths.size(); ++i)
-      if (const Instruction *NextNoReturnI =
-              findNextNoReturn(A, ToBeExploredPaths[i]))
-        NoReturnCalls.insert(NextNoReturnI);
-
-    // Mark the block live after we looked for no-return instructions.
-    assumeLive(A, F->getEntryBlock());
-  }
-
-  /// Find the next assumed noreturn instruction in the block of \p I starting
-  /// from, thus including, \p I.
-  ///
-  /// The caller is responsible to monitor the ToBeExploredPaths set as new
-  /// instructions discovered in other basic block will be placed in there.
-  ///
-  /// \returns The next assumed noreturn instructions in the block of \p I
-  ///          starting from, thus including, \p I.
-  const Instruction *findNextNoReturn(Attributor &A, const Instruction *I);
 
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr() const override {
     return "Live[#BB " + std::to_string(AssumedLiveBlocks.size()) + "/" +
-           std::to_string(getAssociatedFunction()->size()) + "][#NRI " +
-           std::to_string(NoReturnCalls.size()) + "]";
+           std::to_string(getAssociatedFunction()->size()) + "][#TBEP " +
+           std::to_string(ToBeExploredFrom.size()) + "]";
   }
 
   /// See AbstractAttribute::manifest(...).
@@ -2346,8 +2326,15 @@ struct AAIsDeadFunction : public AAIsDead {
     // function allows to catch asynchronous exceptions.
     bool Invoke2CallAllowed = !mayCatchAsynchronousExceptions(F);
 
-    for (const Instruction *NRC : NoReturnCalls) {
-      Instruction *I = const_cast<Instruction *>(NRC);
+    for (const Instruction *ExploreEndI : ToBeExploredFrom) {
+      auto *CB = dyn_cast<CallBase>(ExploreEndI);
+      if (!CB)
+        continue;
+      const auto &NoReturnAA =
+          A.getAAFor<AANoReturn>(*this, IRPosition::callsite_function(*CB));
+      if (!NoReturnAA.isAssumedNoReturn())
+        continue;
+      Instruction *I = const_cast<Instruction *>(ExploreEndI);
       BasicBlock *BB = I->getParent();
       Instruction *SplitPos = I->getNextNode();
       // TODO: mark stuff before unreachable instructions as dead.
@@ -2460,17 +2447,20 @@ struct AAIsDeadFunction : public AAIsDead {
     if (!AssumedLiveBlocks.count(I->getParent()))
       return true;
 
-    // If it is not after a noreturn call, than it is live.
-    return isAfterNoReturn(I);
+    // If it is not after a liveness barrier it is live.
+    const Instruction *PrevI = I->getPrevNode();
+    while (PrevI) {
+      if (ToBeExploredFrom.count(PrevI))
+        return true;
+      PrevI = PrevI->getPrevNode();
+    }
+    return false;
   }
 
   /// See AAIsDead::isKnownDead(Instruction *I).
   bool isKnownDead(const Instruction *I) const override {
     return getKnown() && isAssumedDead(I);
   }
-
-  /// Check if instruction is after noreturn call, in other words, assumed dead.
-  bool isAfterNoReturn(const Instruction *I) const;
 
   /// Determine if \p F might catch asynchronous exceptions.
   static bool mayCatchAsynchronousExceptions(const Function &F) {
@@ -2479,9 +2469,9 @@ struct AAIsDeadFunction : public AAIsDead {
 
   /// Assume \p BB is (partially) live now and indicate to the Attributor \p A
   /// that internal function called from \p BB should now be looked at.
-  void assumeLive(Attributor &A, const BasicBlock &BB) {
+  bool assumeLive(Attributor &A, const BasicBlock &BB) {
     if (!AssumedLiveBlocks.insert(&BB).second)
-      return;
+      return false;
 
     // We assume that all of BB is (probably) live now and if there are calls to
     // internal functions we will assume that those are now live as well. This
@@ -2492,124 +2482,194 @@ struct AAIsDeadFunction : public AAIsDead {
         if (const Function *F = ICS.getCalledFunction())
           if (F->hasLocalLinkage())
             A.markLiveInternalFunction(*F);
+    return true;
   }
 
-  /// Collection of to be explored paths.
-  SmallSetVector<const Instruction *, 8> ToBeExploredPaths;
+  /// Collection of instructions that need to be explored again, e.g., we
+  /// did assume they do not transfer control to (one of their) successors.
+  SmallSetVector<const Instruction *, 8> ToBeExploredFrom;
 
   /// Collection of all assumed live BasicBlocks.
   DenseSet<const BasicBlock *> AssumedLiveBlocks;
-
-  /// Collection of calls with noreturn attribute, assumed or knwon.
-  SmallSetVector<const Instruction *, 4> NoReturnCalls;
 };
 
-bool AAIsDeadFunction::isAfterNoReturn(const Instruction *I) const {
-  const Instruction *PrevI = I->getPrevNode();
-  while (PrevI) {
-    if (NoReturnCalls.count(PrevI))
-      return true;
-    PrevI = PrevI->getPrevNode();
-  }
+static bool
+identifyAliveSuccessors(Attributor &A, const CallBase &CB,
+                        AbstractAttribute &AA,
+                        SmallVectorImpl<const Instruction *> &AliveSuccessors) {
+  const IRPosition &IPos = IRPosition::callsite_function(CB);
+
+  const auto &NoReturnAA = A.getAAFor<AANoReturn>(AA, IPos);
+  if (NoReturnAA.isAssumedNoReturn())
+    return true;
+  if (CB.isTerminator())
+    AliveSuccessors.push_back(&CB.getSuccessor(0)->front());
+  else
+    AliveSuccessors.push_back(CB.getNextNode());
   return false;
 }
 
-const Instruction *AAIsDeadFunction::findNextNoReturn(Attributor &A,
-                                                      const Instruction *I) {
-  const BasicBlock *BB = I->getParent();
-  const Function &F = *BB->getParent();
+static bool
+identifyAliveSuccessors(Attributor &A, const InvokeInst &II,
+                        AbstractAttribute &AA,
+                        SmallVectorImpl<const Instruction *> &AliveSuccessors) {
+  bool UsedAssumedInformation =
+      identifyAliveSuccessors(A, cast<CallBase>(II), AA, AliveSuccessors);
 
-  // Flag to determine if we can change an invoke to a call assuming the callee
-  // is nounwind. This is not possible if the personality of the function allows
-  // to catch asynchronous exceptions.
-  bool Invoke2CallAllowed = !mayCatchAsynchronousExceptions(F);
-
-  // TODO: We should have a function that determines if an "edge" is dead.
-  //       Edges could be from an instruction to the next or from a terminator
-  //       to the successor. For now, we need to special case the unwind block
-  //       of InvokeInst below.
-
-  while (I) {
-    ImmutableCallSite ICS(I);
-
-    if (ICS) {
-      const IRPosition &IPos = IRPosition::callsite_function(ICS);
-      // Regarless of the no-return property of an invoke instruction we only
-      // learn that the regular successor is not reachable through this
-      // instruction but the unwind block might still be.
-      if (auto *Invoke = dyn_cast<InvokeInst>(I)) {
-        // Use nounwind to justify the unwind block is dead as well.
-        const auto &AANoUnw = A.getAAFor<AANoUnwind>(*this, IPos);
-        if (!Invoke2CallAllowed || !AANoUnw.isAssumedNoUnwind()) {
-          assumeLive(A, *Invoke->getUnwindDest());
-          ToBeExploredPaths.insert(&Invoke->getUnwindDest()->front());
-        }
-      }
-
-      const auto &NoReturnAA = A.getAAFor<AANoReturn>(*this, IPos);
-      if (NoReturnAA.isAssumedNoReturn())
-        return I;
+  // First, determine if we can change an invoke to a call assuming the
+  // callee is nounwind. This is not possible if the personality of the
+  // function allows to catch asynchronous exceptions.
+  if (AAIsDeadFunction::mayCatchAsynchronousExceptions(*II.getFunction())) {
+    AliveSuccessors.push_back(&II.getUnwindDest()->front());
+  } else {
+    const IRPosition &IPos = IRPosition::callsite_function(II);
+    const auto &AANoUnw = A.getAAFor<AANoUnwind>(AA, IPos);
+    if (!AANoUnw.isAssumedNoUnwind()) {
+      AliveSuccessors.push_back(&II.getUnwindDest()->front());
+      UsedAssumedInformation = true;
     }
-
-    I = I->getNextNode();
   }
+  return UsedAssumedInformation;
+}
 
-  // get new paths (reachable blocks).
-  for (const BasicBlock *SuccBB : successors(BB)) {
-    assumeLive(A, *SuccBB);
-    ToBeExploredPaths.insert(&SuccBB->front());
+static Optional<ConstantInt *> getAssumedConstant(Attributor &A, const Value &V,
+                                                  AbstractAttribute &AA) {
+  const auto &ValueSimplifyAA =
+      A.getAAFor<AAValueSimplify>(AA, IRPosition::value(V));
+  Optional<Value *> SimplifiedV = ValueSimplifyAA.getAssumedSimplifiedValue(A);
+  if (!SimplifiedV.hasValue())
+    return llvm::None;
+  if (isa_and_nonnull<UndefValue>(SimplifiedV.getValue()))
+    return llvm::None;
+  return dyn_cast_or_null<ConstantInt>(SimplifiedV.getValue());
+}
+
+static bool
+identifyAliveSuccessors(Attributor &A, const BranchInst &BI,
+                        AbstractAttribute &AA,
+                        SmallVectorImpl<const Instruction *> &AliveSuccessors) {
+  bool UsedAssumedInformation = false;
+  if (BI.getNumSuccessors() == 1) {
+    AliveSuccessors.push_back(&BI.getSuccessor(0)->front());
+  } else {
+    Optional<ConstantInt *> CI = getAssumedConstant(A, *BI.getCondition(), AA);
+    if (!CI.hasValue()) {
+      // No value yet, assume both edges are dead.
+    } else if (CI.getValue()) {
+      const BasicBlock *SuccBB =
+          BI.getSuccessor(1 - CI.getValue()->getZExtValue());
+      AliveSuccessors.push_back(&SuccBB->front());
+      UsedAssumedInformation = true;
+    } else {
+      AliveSuccessors.push_back(&BI.getSuccessor(0)->front());
+      AliveSuccessors.push_back(&BI.getSuccessor(1)->front());
+    }
   }
+  return UsedAssumedInformation;
+}
 
-  // No noreturn instruction found.
-  return nullptr;
+static bool
+identifyAliveSuccessors(Attributor &A, const SwitchInst &SI,
+                        AbstractAttribute &AA,
+                        SmallVectorImpl<const Instruction *> &AliveSuccessors) {
+  bool UsedAssumedInformation = false;
+    Optional<ConstantInt *> CI = getAssumedConstant(A, *SI.getCondition(), AA);
+  if (!CI.hasValue()) {
+    // No value yet, assume all edges are dead.
+  } else if (CI.getValue()) {
+    for (auto &CaseIt : SI.cases()) {
+      if (CaseIt.getCaseValue() == CI.getValue()) {
+        AliveSuccessors.push_back(&CaseIt.getCaseSuccessor()->front());
+        UsedAssumedInformation = true;
+        break;
+      }
+    }
+  } else {
+    for (const BasicBlock *SuccBB : successors(SI.getParent()))
+      AliveSuccessors.push_back(&SuccBB->front());
+  }
+  return UsedAssumedInformation;
 }
 
 ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
-  ChangeStatus Status = ChangeStatus::UNCHANGED;
+  ChangeStatus Change = ChangeStatus::UNCHANGED;
 
-  // Temporary collection to iterate over existing noreturn instructions. This
-  // will alow easier modification of NoReturnCalls collection
-  SmallVector<const Instruction *, 8> NoReturnChanged;
+  LLVM_DEBUG(dbgs() << "[AAIsDead] Live [" << AssumedLiveBlocks.size() << "/"
+                    << getAssociatedFunction()->size() << "] BBs and "
+                    << ToBeExploredFrom.size() << " exploration points\n");
 
-  for (const Instruction *I : NoReturnCalls)
-    NoReturnChanged.push_back(I);
+  // Copy and clear the list of instructions we need to explore from. It is
+  // refilled with instructions the next update has to look at.
+  SmallVector<const Instruction *, 8> Worklist(ToBeExploredFrom.begin(),
+                                               ToBeExploredFrom.end());
+  decltype(ToBeExploredFrom) NewToBeExploredFrom;
 
-  for (const Instruction *I : NoReturnChanged) {
-    size_t Size = ToBeExploredPaths.size();
+  SmallVector<const Instruction *, 8> AliveSuccessors;
+  while (!Worklist.empty()) {
+    const Instruction *I = Worklist.pop_back_val();
+    LLVM_DEBUG(dbgs() << "[AAIsDead] Exploration inst: " << *I << "\n");
 
-    const Instruction *NextNoReturnI = findNextNoReturn(A, I);
-    if (NextNoReturnI != I) {
-      Status = ChangeStatus::CHANGED;
-      NoReturnCalls.remove(I);
-      if (NextNoReturnI)
-        NoReturnCalls.insert(NextNoReturnI);
+    AliveSuccessors.clear();
+
+    bool UsedAssumedInformation = false;
+    switch (I->getOpcode()) {
+    // TODO: look for (assumed) UB to backwards propagate "deadness".
+    default:
+      if (I->isTerminator()) {
+        for (const BasicBlock *SuccBB : successors(I->getParent()))
+          AliveSuccessors.push_back(&SuccBB->front());
+      } else {
+        AliveSuccessors.push_back(I->getNextNode());
+      }
+      break;
+    case Instruction::Call:
+      UsedAssumedInformation = identifyAliveSuccessors(A, cast<CallInst>(*I),
+                                                       *this, AliveSuccessors);
+      break;
+    case Instruction::Invoke:
+      UsedAssumedInformation = identifyAliveSuccessors(A, cast<InvokeInst>(*I),
+                                                       *this, AliveSuccessors);
+      break;
+    case Instruction::Br:
+      UsedAssumedInformation = identifyAliveSuccessors(A, cast<BranchInst>(*I),
+                                                       *this, AliveSuccessors);
+      break;
+    case Instruction::Switch:
+      UsedAssumedInformation = identifyAliveSuccessors(A, cast<SwitchInst>(*I),
+                                                       *this, AliveSuccessors);
+      break;
     }
 
-    // Explore new paths.
-    while (Size != ToBeExploredPaths.size()) {
-      Status = ChangeStatus::CHANGED;
-      if (const Instruction *NextNoReturnI =
-              findNextNoReturn(A, ToBeExploredPaths[Size++]))
-        NoReturnCalls.insert(NextNoReturnI);
+    if (UsedAssumedInformation)
+      NewToBeExploredFrom.insert(I);
+    else
+      Change = ChangeStatus::CHANGED;
+
+    LLVM_DEBUG(dbgs() << "[AAIsDead] #AliveSuccessors: "
+                      << AliveSuccessors.size() << " UsedAssumedInformation: "
+                      << UsedAssumedInformation << "\n");
+
+    for (const Instruction *AliveSuccessor : AliveSuccessors) {
+      if (!I->isTerminator()) {
+        assert(AliveSuccessors.size() == 1 &&
+               "Non-terminator expected to have a single successor!");
+        Worklist.push_back(AliveSuccessor);
+      } else {
+        if (assumeLive(A, *AliveSuccessor->getParent()))
+          Worklist.push_back(AliveSuccessor);
+      }
     }
   }
 
-  LLVM_DEBUG(dbgs() << "[AAIsDead] AssumedLiveBlocks: "
-                    << AssumedLiveBlocks.size() << " Total number of blocks: "
-                    << getAssociatedFunction()->size() << "\n");
+  ToBeExploredFrom = std::move(NewToBeExploredFrom);
 
   // If we know everything is live there is no need to query for liveness.
-  if (NoReturnCalls.empty() &&
-      getAssociatedFunction()->size() == AssumedLiveBlocks.size()) {
-    // Indicating a pessimistic fixpoint will cause the state to be "invalid"
-    // which will cause the Attributor to not return the AAIsDead on request,
-    // which will prevent us from querying isAssumedDead().
-    indicatePessimisticFixpoint();
-    assert(!isValidState() && "Expected an invalid state!");
-    Status = ChangeStatus::CHANGED;
-  }
-
-  return Status;
+  // Instead, indicating a pessimistic fixpoint will cause the state to be
+  // "invalid" and all queries to be answered conservatively.
+  if (ToBeExploredFrom.empty() &&
+      getAssociatedFunction()->size() == AssumedLiveBlocks.size())
+    return indicatePessimisticFixpoint();
+  return Change;
 }
 
 /// Liveness information for a call sites.
