@@ -28,7 +28,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; FNATTR: Function Attrs: norecurse nounwind optsize readnone ssp uwtable
 ; FNATTR-NEXT: define nonnull i32* @foo(%struct.ST* readnone %s)
 ; ATTRIBUTOR: Function Attrs: nofree nosync nounwind optsize readnone ssp uwtable
-; ATTRIBUTOR-NEXT: define nonnull i32* @foo(%struct.ST* readnone "no-capture-maybe-returned" %s)
+; ATTRIBUTOR-NEXT: define nonnull i32* @foo(%struct.ST* nonnull readnone "no-capture-maybe-returned" %s)
 define i32* @foo(%struct.ST* %s) nounwind uwtable readnone optsize ssp {
 entry:
   %arrayidx = getelementptr inbounds %struct.ST, %struct.ST* %s, i64 1, i32 2, i32 1, i64 5, i64 13
@@ -224,7 +224,7 @@ define void @scc2(i32* %0) noinline nounwind uwtable {
 ; FNATTR: Function Attrs: nofree norecurse nounwind
 ; FNATTR-NEXT: define void @foo1(i32* nocapture %0, %"struct.std::atomic"* nocapture %1)
 ; ATTRIBUTOR-NOT: nosync
-; ATTRIBUTOR: define void @foo1(i32* nocapture nonnull writeonly dereferenceable(4) %0, %"struct.std::atomic"* nocapture writeonly %1)
+; ATTRIBUTOR: define void @foo1(i32* nocapture nonnull writeonly dereferenceable(4) %0, %"struct.std::atomic"* nocapture nonnull writeonly dereferenceable(1) %1)
 
 define void @foo1(i32* %0, %"struct.std::atomic"* %1) {
   store i32 100, i32* %0, align 4
@@ -237,7 +237,7 @@ define void @foo1(i32* %0, %"struct.std::atomic"* %1) {
 ; FNATTR: Function Attrs: nofree norecurse nounwind
 ; FNATTR-NEXT: define void @bar(i32* nocapture readnone %0, %"struct.std::atomic"* nocapture readonly %1)
 ; ATTRIBUTOR-NOT: nosync
-; ATTRIBUTOR: define void @bar(i32* nocapture readnone %0, %"struct.std::atomic"* nocapture readonly %1)
+; ATTRIBUTOR: define void @bar(i32* nocapture readnone %0, %"struct.std::atomic"* nocapture nonnull readonly dereferenceable(1) %1)
 define void @bar(i32* %0, %"struct.std::atomic"* %1) {
   %3 = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* %1, i64 0, i32 0, i32 0
   br label %4
@@ -257,7 +257,7 @@ define void @bar(i32* %0, %"struct.std::atomic"* %1) {
 ; FNATTR: Function Attrs: nofree norecurse nounwind
 ; FNATTR-NEXT: define void @foo1_singlethread(i32* nocapture %0, %"struct.std::atomic"* nocapture %1)
 ; ATTRIBUTOR: Function Attrs: nofree nosync nounwind willreturn
-; ATTRIBUTOR: define void @foo1_singlethread(i32* nocapture nonnull writeonly dereferenceable(4) %0, %"struct.std::atomic"* nocapture writeonly %1)
+; ATTRIBUTOR: define void @foo1_singlethread(i32* nocapture nonnull writeonly dereferenceable(4) %0, %"struct.std::atomic"* nocapture nonnull writeonly dereferenceable(1) %1)
 
 define void @foo1_singlethread(i32* %0, %"struct.std::atomic"* %1) {
   store i32 100, i32* %0, align 4
@@ -270,7 +270,7 @@ define void @foo1_singlethread(i32* %0, %"struct.std::atomic"* %1) {
 ; FNATTR: Function Attrs: nofree norecurse nounwind
 ; FNATTR-NEXT: define void @bar_singlethread(i32* nocapture readnone %0, %"struct.std::atomic"* nocapture readonly %1)
 ; ATTRIBUTOR: Function Attrs: nofree nosync nounwind
-; ATTRIBUTOR: define void @bar_singlethread(i32* nocapture readnone %0, %"struct.std::atomic"* nocapture readonly %1)
+; ATTRIBUTOR: define void @bar_singlethread(i32* nocapture readnone %0, %"struct.std::atomic"* nocapture nonnull readonly dereferenceable(1) %1)
 define void @bar_singlethread(i32* %0, %"struct.std::atomic"* %1) {
   %3 = getelementptr inbounds %"struct.std::atomic", %"struct.std::atomic"* %1, i64 0, i32 0, i32 0
   br label %4
