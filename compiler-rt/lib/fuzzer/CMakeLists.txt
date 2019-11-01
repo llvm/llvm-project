@@ -144,6 +144,7 @@ if(OS_NAME MATCHES "Linux|Fuchsia" AND
       CFLAGS ${TARGET_CFLAGS}
       CMAKE_ARGS -DCMAKE_CXX_COMPILER_WORKS=ON
                  -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+                 -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
                  -DLIBCXX_ABI_NAMESPACE=__Fuzzer)
     target_compile_options(RTfuzzer.${arch} PRIVATE -isystem ${LIBCXX_${arch}_PREFIX}/include/c++/v1)
     add_dependencies(RTfuzzer.${arch} libcxx_fuzzer_${arch}-build)
