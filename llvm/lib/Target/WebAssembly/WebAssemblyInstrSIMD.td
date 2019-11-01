@@ -727,7 +727,16 @@ defm SUB_SAT_U :
   SIMDBinaryIntSmall<int_wasm_sub_saturate_unsigned, "sub_saturate_u", 92>;
 
 // Integer multiplication: mul
+let isCommutable = 1 in
 defm MUL : SIMDBinaryIntNoI64x2<mul, "mul", 93>;
+
+// Integer min_s / min_u / max_s / max_u
+let isCommutable = 1 in {
+defm MIN_S : SIMDBinaryIntNoI64x2<int_wasm_min_signed, "min_s", 94>;
+defm MIN_U : SIMDBinaryIntNoI64x2<int_wasm_min_unsigned, "min_u", 95>;
+defm MAX_S : SIMDBinaryIntNoI64x2<int_wasm_max_signed, "max_s", 96>;
+defm MAX_U : SIMDBinaryIntNoI64x2<int_wasm_max_unsigned, "max_u", 97>;
+} // isCommutable = 1
 
 //===----------------------------------------------------------------------===//
 // Floating-point unary arithmetic

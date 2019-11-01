@@ -283,6 +283,18 @@ main:
     # CHECK: i8x16.mul # encoding: [0xfd,0x5d]
     i8x16.mul
 
+    # CHECK: i8x16.min_s # encoding: [0xfd,0x5e]
+    i8x16.min_s
+
+    # CHECK: i8x16.min_u # encoding: [0xfd,0x5f]
+    i8x16.min_u
+
+    # CHECK: i8x16.max_s # encoding: [0xfd,0x60]
+    i8x16.max_s
+
+    # CHECK: i8x16.max_u # encoding: [0xfd,0x61]
+    i8x16.max_u
+
     # CHECK: i16x8.neg # encoding: [0xfd,0x62]
     i16x8.neg
 
@@ -322,6 +334,18 @@ main:
     # CHECK: i16x8.mul # encoding: [0xfd,0x6e]
     i16x8.mul
 
+    # CHECK: i16x8.min_s # encoding: [0xfd,0x6f]
+    i16x8.min_s
+
+    # CHECK: i16x8.min_u # encoding: [0xfd,0x70]
+    i16x8.min_u
+
+    # CHECK: i16x8.max_s # encoding: [0xfd,0x71]
+    i16x8.max_s
+
+    # CHECK: i16x8.max_u # encoding: [0xfd,0x72]
+    i16x8.max_u
+
     # CHECK: i32x4.neg # encoding: [0xfd,0x73]
     i32x4.neg
 
@@ -348,6 +372,18 @@ main:
 
     # CHECK: i32x4.mul # encoding: [0xfd,0x7f]
     i32x4.mul
+
+    # CHECK: i32x4.min_s # encoding: [0xfd,0x80,0x01]
+    i32x4.min_s
+
+    # CHECK: i32x4.min_u # encoding: [0xfd,0x81,0x01]
+    i32x4.min_u
+
+    # CHECK: i32x4.max_s # encoding: [0xfd,0x82,0x01]
+    i32x4.max_s
+
+    # CHECK: i32x4.max_u # encoding: [0xfd,0x83,0x01]
+    i32x4.max_u
 
     # CHECK: i64x2.neg # encoding: [0xfd,0x84,0x01]
     i64x2.neg
