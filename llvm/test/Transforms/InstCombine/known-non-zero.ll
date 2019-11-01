@@ -91,3 +91,45 @@ exit:
   %res = phi <8 x i64> [ %ctz, %non_zero ], [ zeroinitializer, %start ]
   ret <8 x i64> %res
 }
+
+; Test that exposed a bug in the PHI handling after D60846. No folding should happen here!
+define void @D60846_misompile(i1* %p) {
+; CHECK-LABEL: @D60846_misompile(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[COMMON:%.*]] ]
+; CHECK-NEXT:    [[IS_ZERO:%.*]] = icmp eq i16 [[I]], 0
+; CHECK-NEXT:    br i1 [[IS_ZERO]], label [[COMMON]], label [[NON_ZERO:%.*]]
+; CHECK:       non_zero:
+; CHECK-NEXT:    [[IS_ONE:%.*]] = icmp eq i16 [[I]], 1
+; CHECK-NEXT:    store i1 [[IS_ONE]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[COMMON]]
+; CHECK:       common:
+; CHECK-NEXT:    [[I_INC]] = add i16 [[I]], 1
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i16 [[I_INC]], 2
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:                                             ; preds = %common, %entry
+  %i = phi i16 [ 0, %entry ], [ %i.inc, %common ]
+  %is_zero = icmp eq i16 %i, 0
+  br i1 %is_zero, label %common, label %non_zero
+
+non_zero:                                         ; preds = %loop
+  %is_one = icmp eq i16 %i, 1
+  store i1 %is_one, i1* %p
+  br label %common
+
+common:                                           ; preds = %non_zero, %loop
+  %i.inc = add i16 %i, 1
+  %loop_cond = icmp ult i16 %i.inc, 2
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:                                             ; preds = %common
+  ret void
+}
