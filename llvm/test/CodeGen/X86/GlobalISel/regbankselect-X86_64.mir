@@ -1381,22 +1381,22 @@ body:             |
     ; FAST-LABEL: name: test_gep
     ; FAST: [[DEF:%[0-9]+]]:gpr(p0) = IMPLICIT_DEF
     ; FAST: [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 20
-    ; FAST: [[GEP:%[0-9]+]]:gpr(p0) = G_GEP [[DEF]], [[C]](s32)
+    ; FAST: [[GEP:%[0-9]+]]:gpr(p0) = G_PTR_ADD [[DEF]], [[C]](s32)
     ; FAST: [[C1:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 20
-    ; FAST: [[GEP1:%[0-9]+]]:gpr(p0) = G_GEP [[DEF]], [[C1]](s64)
+    ; FAST: [[GEP1:%[0-9]+]]:gpr(p0) = G_PTR_ADD [[DEF]], [[C1]](s64)
     ; FAST: RET 0
     ; GREEDY-LABEL: name: test_gep
     ; GREEDY: [[DEF:%[0-9]+]]:gpr(p0) = IMPLICIT_DEF
     ; GREEDY: [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 20
-    ; GREEDY: [[GEP:%[0-9]+]]:gpr(p0) = G_GEP [[DEF]], [[C]](s32)
+    ; GREEDY: [[GEP:%[0-9]+]]:gpr(p0) = G_PTR_ADD [[DEF]], [[C]](s32)
     ; GREEDY: [[C1:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 20
-    ; GREEDY: [[GEP1:%[0-9]+]]:gpr(p0) = G_GEP [[DEF]], [[C1]](s64)
+    ; GREEDY: [[GEP1:%[0-9]+]]:gpr(p0) = G_PTR_ADD [[DEF]], [[C1]](s64)
     ; GREEDY: RET 0
     %0(p0) = IMPLICIT_DEF
     %1(s32) = G_CONSTANT i32 20
-    %2(p0) = G_GEP %0, %1(s32)
+    %2(p0) = G_PTR_ADD %0, %1(s32)
     %3(s64) = G_CONSTANT i64 20
-    %4(p0) = G_GEP %0, %3(s64)
+    %4(p0) = G_PTR_ADD %0, %3(s64)
     RET 0
 
 ...

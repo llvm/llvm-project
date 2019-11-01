@@ -779,7 +779,7 @@ body: |
     ; GFX10: $vgpr0 = COPY [[GLOBAL_LOAD_UBYTE]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_CONSTANT i64 2047
-    %2:vgpr(p1) = G_GEP %0, %1
+    %2:vgpr(p1) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 1)
     $vgpr0 = COPY %3
 
@@ -849,7 +849,7 @@ body: |
     ; GFX10: $vgpr0 = COPY [[GLOBAL_LOAD_UBYTE]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_CONSTANT i64 2048
-    %2:vgpr(p1) = G_GEP %0, %1
+    %2:vgpr(p1) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 1)
     $vgpr0 = COPY %3
 
@@ -909,7 +909,7 @@ body: |
     ; GFX10: $vgpr0 = COPY [[GLOBAL_LOAD_UBYTE]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_CONSTANT i64 -2047
-    %2:vgpr(p1) = G_GEP %0, %1
+    %2:vgpr(p1) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 1)
     $vgpr0 = COPY %3
 
@@ -969,7 +969,7 @@ body: |
     ; GFX10: $vgpr0 = COPY [[GLOBAL_LOAD_UBYTE]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_CONSTANT i64 -2048
-    %2:vgpr(p1) = G_GEP %0, %1
+    %2:vgpr(p1) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 1)
     $vgpr0 = COPY %3
 
@@ -1039,7 +1039,7 @@ body: |
     ; GFX10: $vgpr0 = COPY [[GLOBAL_LOAD_UBYTE]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_CONSTANT i64 4095
-    %2:vgpr(p1) = G_GEP %0, %1
+    %2:vgpr(p1) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 1)
     $vgpr0 = COPY %3
 
@@ -1119,7 +1119,7 @@ body: |
     ; GFX10: $vgpr0 = COPY [[GLOBAL_LOAD_UBYTE]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_CONSTANT i64 4096
-    %2:vgpr(p1) = G_GEP %0, %1
+    %2:vgpr(p1) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 1)
     $vgpr0 = COPY %3
 
@@ -1189,7 +1189,7 @@ body: |
     ; GFX10: $vgpr0 = COPY [[GLOBAL_LOAD_UBYTE]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_CONSTANT i64 -4095
-    %2:vgpr(p1) = G_GEP %0, %1
+    %2:vgpr(p1) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 1)
     $vgpr0 = COPY %3
 
@@ -1259,7 +1259,7 @@ body: |
     ; GFX10: $vgpr0 = COPY [[GLOBAL_LOAD_UBYTE]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_CONSTANT i64 -4096
-    %2:vgpr(p1) = G_GEP %0, %1
+    %2:vgpr(p1) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 1)
     $vgpr0 = COPY %3
 
@@ -1339,7 +1339,7 @@ body: |
     ; GFX10: $vgpr0 = COPY [[GLOBAL_LOAD_UBYTE]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_CONSTANT i64 8191
-    %2:vgpr(p1) = G_GEP %0, %1
+    %2:vgpr(p1) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 1)
     $vgpr0 = COPY %3
 
@@ -1419,7 +1419,7 @@ body: |
     ; GFX10: $vgpr0 = COPY [[GLOBAL_LOAD_UBYTE]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_CONSTANT i64 8192
-    %2:vgpr(p1) = G_GEP %0, %1
+    %2:vgpr(p1) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 1)
     $vgpr0 = COPY %3
 
@@ -1499,7 +1499,7 @@ body: |
     ; GFX10: $vgpr0 = COPY [[GLOBAL_LOAD_UBYTE]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_CONSTANT i64 -8191
-    %2:vgpr(p1) = G_GEP %0, %1
+    %2:vgpr(p1) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 1)
     $vgpr0 = COPY %3
 
@@ -1579,7 +1579,7 @@ body: |
     ; GFX10: $vgpr0 = COPY [[GLOBAL_LOAD_UBYTE]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_CONSTANT i64 -8192
-    %2:vgpr(p1) = G_GEP %0, %1
+    %2:vgpr(p1) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 1)
     $vgpr0 = COPY %3
 

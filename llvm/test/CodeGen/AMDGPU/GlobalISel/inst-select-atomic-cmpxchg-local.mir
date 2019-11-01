@@ -84,7 +84,7 @@ body:             |
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s32) = COPY $vgpr2
     %3:vgpr(s32) = G_CONSTANT i32 4
-    %4:vgpr(p3) = G_GEP %0, %3
+    %4:vgpr(p3) = G_PTR_ADD %0, %3
     %5:vgpr(s32) = G_ATOMIC_CMPXCHG %4, %1, %2 :: (load store seq_cst 4, addrspace 3)
     $vgpr0 = COPY %5
 

@@ -15,18 +15,18 @@ body:             |
     %1:_(s64) = G_IMPLICIT_DEF
 
     ; CHECK:  Bad machine code: Type mismatch in generic instruction
-    %2:_(s64) = G_GEP %0, %1
+    %2:_(s64) = G_PTR_ADD %0, %1
 
     ; CHECK:  Bad machine code: Type mismatch in generic instruction
-    %3:_(p0) = G_GEP %1, %1
+    %3:_(p0) = G_PTR_ADD %1, %1
 
     ; CHECK: Bad machine code: gep offset operand must not be a pointer
-    %4:_(p0) = G_GEP %0, %0
+    %4:_(p0) = G_PTR_ADD %0, %0
 
     ; CHECK: Bad machine code: Type mismatch in generic instruction
-    %5:_(p1) = G_GEP %0, %1
+    %5:_(p1) = G_PTR_ADD %0, %1
 
     ; CHECK: Bad machine code: gep first operand must be a pointer
-    %6:_(s64) = G_GEP %1, %1
+    %6:_(s64) = G_PTR_ADD %1, %1
 
 ...

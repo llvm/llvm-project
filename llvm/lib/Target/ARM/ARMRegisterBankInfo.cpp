@@ -249,7 +249,7 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_SEXT:
   case G_ZEXT:
   case G_ANYEXT:
-  case G_GEP:
+  case G_PTR_ADD:
   case G_INTTOPTR:
   case G_PTRTOINT:
   case G_CTLZ:

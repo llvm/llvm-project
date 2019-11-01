@@ -63,7 +63,7 @@ define signext i8 @call_sext_stack_arg_i8(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i8
   ; MIPS32:   $a3 = COPY [[COPY3]](s32)
   ; MIPS32:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY4]], [[C]](s32)
+  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
   ; MIPS32:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s8)
   ; MIPS32:   G_STORE [[SEXT]](s32), [[GEP]](p0) :: (store 4 into stack + 16, align 8)
   ; MIPS32:   JAL @sext_stack_arg_i8, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
@@ -96,7 +96,7 @@ define zeroext i8 @call_zext_stack_arg_i8(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i8
   ; MIPS32:   $a3 = COPY [[COPY3]](s32)
   ; MIPS32:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY4]], [[C]](s32)
+  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
   ; MIPS32:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
   ; MIPS32:   G_STORE [[ZEXT]](s32), [[GEP]](p0) :: (store 4 into stack + 16, align 8)
   ; MIPS32:   JAL @zext_stack_arg_i8, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
@@ -129,7 +129,7 @@ define i8 @call_aext_stack_arg_i8(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i8 %a) {
   ; MIPS32:   $a3 = COPY [[COPY3]](s32)
   ; MIPS32:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY4]], [[C]](s32)
+  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
   ; MIPS32:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
   ; MIPS32:   G_STORE [[ANYEXT]](s32), [[GEP]](p0) :: (store 4 into stack + 16, align 8)
   ; MIPS32:   JAL @aext_stack_arg_i8, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
@@ -206,7 +206,7 @@ define signext i16 @call_sext_stack_arg_i16(i32 %x1, i32 %x2, i32 %x3, i32 %x4, 
   ; MIPS32:   $a3 = COPY [[COPY3]](s32)
   ; MIPS32:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY4]], [[C]](s32)
+  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
   ; MIPS32:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s16)
   ; MIPS32:   G_STORE [[SEXT]](s32), [[GEP]](p0) :: (store 4 into stack + 16, align 8)
   ; MIPS32:   JAL @sext_stack_arg_i16, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
@@ -239,7 +239,7 @@ define zeroext i16 @call_zext_stack_arg_i16(i32 %x1, i32 %x2, i32 %x3, i32 %x4, 
   ; MIPS32:   $a3 = COPY [[COPY3]](s32)
   ; MIPS32:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY4]], [[C]](s32)
+  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
   ; MIPS32:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s16)
   ; MIPS32:   G_STORE [[ZEXT]](s32), [[GEP]](p0) :: (store 4 into stack + 16, align 8)
   ; MIPS32:   JAL @zext_stack_arg_i16, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0
@@ -272,7 +272,7 @@ define i16 @call_aext_stack_arg_i16(i32 %x1, i32 %x2, i32 %x3, i32 %x4, i16 %a) 
   ; MIPS32:   $a3 = COPY [[COPY3]](s32)
   ; MIPS32:   [[COPY4:%[0-9]+]]:_(p0) = COPY $sp
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY4]], [[C]](s32)
+  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s32)
   ; MIPS32:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
   ; MIPS32:   G_STORE [[ANYEXT]](s32), [[GEP]](p0) :: (store 4 into stack + 16, align 8)
   ; MIPS32:   JAL @aext_stack_arg_i16, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2, implicit $a3, implicit-def $v0

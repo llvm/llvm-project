@@ -862,7 +862,7 @@ define {i8, i32} @struct_i8_i32_func_void() #0 {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p1) :: (load 1 from `{ i8, i32 } addrspace(1)* undef`, align 4, addrspace 1)
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; CHECK:   [[GEP:%[0-9]+]]:_(p1) = G_GEP [[DEF]], [[C]](s64)
+  ; CHECK:   [[GEP:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C]](s64)
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[GEP]](p1) :: (load 4 from `{ i8, i32 } addrspace(1)* undef` + 4, addrspace 1)
   %val = load { i8, i32 }, { i8, i32 } addrspace(1)* undef
   ret { i8, i32 } %val
@@ -879,7 +879,7 @@ define void @void_func_sret_struct_i8_i32({ i8, i32 } addrspace(5)* sret %arg0) 
   ; CHECK:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p1) :: (volatile load 1 from `i8 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF1]](p1) :: (volatile load 4 from `i32 addrspace(1)* undef`, addrspace 1)
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK:   [[GEP:%[0-9]+]]:_(p5) = G_GEP [[COPY]], [[C]](s32)
+  ; CHECK:   [[GEP:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C]](s32)
   ; CHECK:   G_STORE [[LOAD]](s8), [[COPY]](p5) :: (store 1 into %ir.gep01, addrspace 5)
   ; CHECK:   G_STORE [[LOAD1]](s32), [[GEP]](p5) :: (store 4 into %ir.gep1, addrspace 5)
   ; CHECK:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY1]]
@@ -924,7 +924,7 @@ define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
   ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile load 8 from `{ <32 x i32>, i32 } addrspace(1)* addrspace(4)* undef`, addrspace 4)
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load 128 from %ir.ptr, addrspace 1)
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
-  ; CHECK:   [[GEP:%[0-9]+]]:_(p1) = G_GEP [[LOAD]], [[C]](s64)
+  ; CHECK:   [[GEP:%[0-9]+]]:_(p1) = G_PTR_ADD [[LOAD]], [[C]](s64)
   ; CHECK:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[GEP]](p1) :: (load 4 from %ir.ptr + 128, align 128, addrspace 1)
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD1]](<32 x s32>)
   %ptr = load volatile { <32 x i32>, i32 } addrspace(1)*, { <32 x i32>, i32 } addrspace(1)* addrspace(4)* undef
@@ -943,7 +943,7 @@ define { i32, <32 x i32> } @struct_i32_v32i32_func_void() #0 {
   ; CHECK:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile load 8 from `{ i32, <32 x i32> } addrspace(1)* addrspace(4)* undef`, addrspace 4)
   ; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[LOAD]](p1) :: (load 4 from %ir.ptr, align 128, addrspace 1)
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 128
-  ; CHECK:   [[GEP:%[0-9]+]]:_(p1) = G_GEP [[LOAD]], [[C]](s64)
+  ; CHECK:   [[GEP:%[0-9]+]]:_(p1) = G_PTR_ADD [[LOAD]], [[C]](s64)
   ; CHECK:   [[LOAD2:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[GEP]](p1) :: (load 128 from %ir.ptr + 128, addrspace 1)
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD2]](<32 x s32>)
   %ptr = load volatile { i32, <32 x i32> } addrspace(1)*, { i32, <32 x i32> } addrspace(1)* addrspace(4)* undef

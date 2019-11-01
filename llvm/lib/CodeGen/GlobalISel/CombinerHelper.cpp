@@ -571,7 +571,7 @@ bool CombinerHelper::findPostIndexCandidate(MachineInstr &MI, Register &Addr,
   LLVM_DEBUG(dbgs() << "Searching for post-indexing opportunity for: " << MI);
 
   for (auto &Use : MRI.use_instructions(Base)) {
-    if (Use.getOpcode() != TargetOpcode::G_GEP)
+    if (Use.getOpcode() != TargetOpcode::G_PTR_ADD)
       continue;
 
     Offset = Use.getOperand(2).getReg();
@@ -597,8 +597,8 @@ bool CombinerHelper::findPostIndexCandidate(MachineInstr &MI, Register &Addr,
     // forming an indexed one.
 
     bool MemOpDominatesAddrUses = true;
-    for (auto &GEPUse : MRI.use_instructions(Use.getOperand(0).getReg())) {
-      if (!dominates(MI, GEPUse)) {
+    for (auto &PtrAddUse : MRI.use_instructions(Use.getOperand(0).getReg())) {
+      if (!dominates(MI, PtrAddUse)) {
         MemOpDominatesAddrUses = false;
         break;
       }
@@ -631,7 +631,7 @@ bool CombinerHelper::findPreIndexCandidate(MachineInstr &MI, Register &Addr,
 #endif
 
   Addr = MI.getOperand(1).getReg();
-  MachineInstr *AddrDef = getOpcodeDef(TargetOpcode::G_GEP, Addr, MRI);
+  MachineInstr *AddrDef = getOpcodeDef(TargetOpcode::G_PTR_ADD, Addr, MRI);
   if (!AddrDef || MRI.hasOneUse(Addr))
     return false;
 
@@ -667,8 +667,8 @@ bool CombinerHelper::findPreIndexCandidate(MachineInstr &MI, Register &Addr,
     }
   }
 
-  // FIXME: check whether all uses of the base pointer are constant GEPs. That
-  // might allow us to end base's liveness here by adjusting the constant.
+  // FIXME: check whether all uses of the base pointer are constant PtrAdds.
+  // That might allow us to end base's liveness here by adjusting the constant.
 
   for (auto &UseMI : MRI.use_instructions(Addr)) {
     if (!dominates(MI, UseMI)) {
@@ -1016,7 +1016,7 @@ bool CombinerHelper::optimizeMemset(MachineInstr &MI, Register Dst, Register Val
     if (DstOff != 0) {
       auto Offset =
           MIB.buildConstant(LLT::scalar(PtrTy.getSizeInBits()), DstOff);
-      Ptr = MIB.buildGEP(PtrTy, Dst, Offset).getReg(0);
+      Ptr = MIB.buildPtrAdd(PtrTy, Dst, Offset).getReg(0);
     }
 
     MIB.buildStore(Value, Ptr, *StoreMMO);
@@ -1121,13 +1121,13 @@ bool CombinerHelper::optimizeMemcpy(MachineInstr &MI, Register Dst,
     if (CurrOffset != 0) {
       Offset = MIB.buildConstant(LLT::scalar(PtrTy.getSizeInBits()), CurrOffset)
                    .getReg(0);
-      LoadPtr = MIB.buildGEP(PtrTy, Src, Offset).getReg(0);
+      LoadPtr = MIB.buildPtrAdd(PtrTy, Src, Offset).getReg(0);
     }
     auto LdVal = MIB.buildLoad(CopyTy, LoadPtr, *LoadMMO);
 
     // Create the store.
     Register StorePtr =
-        CurrOffset == 0 ? Dst : MIB.buildGEP(PtrTy, Dst, Offset).getReg(0);
+        CurrOffset == 0 ? Dst : MIB.buildPtrAdd(PtrTy, Dst, Offset).getReg(0);
     MIB.buildStore(LdVal, StorePtr, *StoreMMO);
     CurrOffset += CopyTy.getSizeInBytes();
     Size -= CopyTy.getSizeInBytes();
@@ -1218,7 +1218,7 @@ bool CombinerHelper::optimizeMemmove(MachineInstr &MI, Register Dst,
     if (CurrOffset != 0) {
       auto Offset =
           MIB.buildConstant(LLT::scalar(PtrTy.getSizeInBits()), CurrOffset);
-      LoadPtr = MIB.buildGEP(PtrTy, Src, Offset).getReg(0);
+      LoadPtr = MIB.buildPtrAdd(PtrTy, Src, Offset).getReg(0);
     }
     LoadVals.push_back(MIB.buildLoad(CopyTy, LoadPtr, *LoadMMO).getReg(0));
     CurrOffset += CopyTy.getSizeInBytes();
@@ -1235,7 +1235,7 @@ bool CombinerHelper::optimizeMemmove(MachineInstr &MI, Register Dst,
     if (CurrOffset != 0) {
       auto Offset =
           MIB.buildConstant(LLT::scalar(PtrTy.getSizeInBits()), CurrOffset);
-      StorePtr = MIB.buildGEP(PtrTy, Dst, Offset).getReg(0);
+      StorePtr = MIB.buildPtrAdd(PtrTy, Dst, Offset).getReg(0);
     }
     MIB.buildStore(LoadVals[I], StorePtr, *StoreMMO);
     CurrOffset += CopyTy.getSizeInBytes();

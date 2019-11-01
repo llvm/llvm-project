@@ -1045,7 +1045,7 @@ body:             |
     %1(s32) = COPY $r1
     ; CHECK: %[[OFF:[0-9]+]]:gpr = COPY $r1
 
-    %2(p0) = G_GEP %0, %1(s32)
+    %2(p0) = G_PTR_ADD %0, %1(s32)
     ; CHECK: %[[GEP:[0-9]+]]:gpr = ADDrr %[[PTR]], %[[OFF]], 14, $noreg, $noreg
 
     $r0 = COPY %2(p0)

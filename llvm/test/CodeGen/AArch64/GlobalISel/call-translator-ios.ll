@@ -22,11 +22,11 @@ define signext i8 @test_stack_slots([8 x i64], i8 signext %lhs, i8 signext %rhs)
 ; CHECK: [[C12:%[0-9]+]]:_(s8) = G_CONSTANT i8 12
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[C42_OFFS:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-; CHECK: [[C42_LOC:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[C42_OFFS]](s64)
+; CHECK: [[C42_LOC:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[C42_OFFS]](s64)
 ; CHECK: G_STORE [[C42]](s8), [[C42_LOC]](p0) :: (store 1 into stack)
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[C12_OFFS:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-; CHECK: [[C12_LOC:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[C12_OFFS]](s64)
+; CHECK: [[C12_LOC:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[C12_OFFS]](s64)
 ; CHECK: G_STORE [[C12]](s8), [[C12_LOC]](p0) :: (store 1 into stack + 1)
 ; CHECK: BL @test_stack_slots
 define void @test_call_stack() {
@@ -57,17 +57,17 @@ define void @take_128bit_struct([2 x i64]* %ptr, [2 x i64] %in) {
 ; CHECK-LABEL: name: test_split_struct
 ; CHECK: [[LD1:%[0-9]+]]:_(s64) = G_LOAD %0(p0) :: (load 8 from %ir.ptr)
 ; CHECK: [[CST:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_GEP %0, [[CST]](s64)
+; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD %0, [[CST]](s64)
 ; CHECK: [[LD2:%[0-9]+]]:_(s64) = G_LOAD %3(p0) :: (load 8 from %ir.ptr + 8)
 
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-; CHECK: [[ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[OFF]](s64)
+; CHECK: [[ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[OFF]](s64)
 ; CHECK: G_STORE [[LD1]](s64), [[ADDR]](p0) :: (store 8 into stack, align 1)
 
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF:%[0-9]+]]:_(s64) = COPY [[CST]]
-; CHECK: [[ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[OFF]]
+; CHECK: [[ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[OFF]]
 ; CHECK: G_STORE [[LD2]](s64), [[ADDR]](p0) :: (store 8 into stack + 8, align 1)
 define void @test_split_struct([2 x i64]* %ptr) {
   %struct = load [2 x i64], [2 x i64]* %ptr

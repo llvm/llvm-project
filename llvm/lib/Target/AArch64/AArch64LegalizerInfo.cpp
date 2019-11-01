@@ -104,7 +104,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
     .moreElementsToNextPow2(0)
     .minScalarSameAs(1, 0);
 
-  getActionDefinitionsBuilder(G_GEP)
+  getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{p0, s64}})
       .clampScalar(1, s64, s64);
 
@@ -743,7 +743,7 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
     // Realign the list to the actual required alignment.
     auto AlignMinus1 = MIRBuilder.buildConstant(IntPtrTy, Align - 1);
 
-    auto ListTmp = MIRBuilder.buildGEP(PtrTy, List, AlignMinus1.getReg(0));
+    auto ListTmp = MIRBuilder.buildPtrAdd(PtrTy, List, AlignMinus1.getReg(0));
 
     DstPtr = MRI.createGenericVirtualRegister(PtrTy);
     MIRBuilder.buildPtrMask(DstPtr, ListTmp, Log2_64(Align));
@@ -758,7 +758,7 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
 
   auto Size = MIRBuilder.buildConstant(IntPtrTy, alignTo(ValSize, PtrSize));
 
-  auto NewList = MIRBuilder.buildGEP(PtrTy, DstPtr, Size.getReg(0));
+  auto NewList = MIRBuilder.buildPtrAdd(PtrTy, DstPtr, Size.getReg(0));
 
   MIRBuilder.buildStore(
       NewList, ListPtr,

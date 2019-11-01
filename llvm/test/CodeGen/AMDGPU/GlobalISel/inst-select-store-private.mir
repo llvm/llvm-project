@@ -215,7 +215,7 @@ body: |
     ; GFX9: BUFFER_STORE_BYTE_OFFEN [[V_MOV_B32_e32_]], %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4095, 0, 0, 0, 0, 0, implicit $exec :: (store 1, addrspace 5)
     %0:vgpr(p5) = G_FRAME_INDEX %stack.0
     %1:vgpr(s32) = G_CONSTANT i32 4095
-    %2:vgpr(p5) = G_GEP %0, %1
+    %2:vgpr(p5) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_CONSTANT i32 0
     G_STORE %3, %2 :: (store 1, align 1, addrspace 5)
 

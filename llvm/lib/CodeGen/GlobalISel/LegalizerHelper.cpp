@@ -1748,8 +1748,8 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
 
-  case TargetOpcode::G_GEP:
-    assert(TypeIdx == 1 && "unable to legalize pointer of GEP");
+  case TargetOpcode::G_PTR_ADD:
+    assert(TypeIdx == 1 && "unable to legalize pointer of G_PTR_ADD");
     Observer.changingInstr(MI);
     widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_SEXT);
     Observer.changedInstr(MI);
@@ -2083,8 +2083,9 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
 
         auto OffsetCst =
             MIRBuilder.buildConstant(LLT::scalar(64), LargeSplitSize / 8);
-        Register GEPReg = MRI.createGenericVirtualRegister(PtrTy);
-        auto SmallPtr = MIRBuilder.buildGEP(GEPReg, PtrReg, OffsetCst.getReg(0));
+        Register PtrAddReg = MRI.createGenericVirtualRegister(PtrTy);
+        auto SmallPtr =
+            MIRBuilder.buildPtrAdd(PtrAddReg, PtrReg, OffsetCst.getReg(0));
         auto SmallLoad = MIRBuilder.buildLoad(SmallLdReg, SmallPtr.getReg(0),
                                               *SmallMMO);
 
@@ -2151,12 +2152,13 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     auto ShiftAmt = MIRBuilder.buildConstant(ExtendTy, LargeSplitSize);
     auto SmallVal = MIRBuilder.buildLShr(ExtendTy, ExtVal, ShiftAmt);
 
-    // Generate the GEP and truncating stores.
+    // Generate the PtrAdd and truncating stores.
     LLT PtrTy = MRI.getType(PtrReg);
     auto OffsetCst =
         MIRBuilder.buildConstant(LLT::scalar(64), LargeSplitSize / 8);
-    Register GEPReg = MRI.createGenericVirtualRegister(PtrTy);
-    auto SmallPtr = MIRBuilder.buildGEP(GEPReg, PtrReg, OffsetCst.getReg(0));
+    Register PtrAddReg = MRI.createGenericVirtualRegister(PtrTy);
+    auto SmallPtr =
+        MIRBuilder.buildPtrAdd(PtrAddReg, PtrReg, OffsetCst.getReg(0));
 
     MachineFunction &MF = MIRBuilder.getMF();
     MachineMemOperand *LargeMMO =
@@ -2908,7 +2910,7 @@ LegalizerHelper::reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx,
       unsigned ByteOffset = Offset / 8;
       Register NewAddrReg;
 
-      MIRBuilder.materializeGEP(NewAddrReg, AddrReg, OffsetTy, ByteOffset);
+      MIRBuilder.materializePtrAdd(NewAddrReg, AddrReg, OffsetTy, ByteOffset);
 
       MachineMemOperand *NewMMO =
         MF.getMachineMemOperand(MMO, ByteOffset, ByteSize);
@@ -4176,7 +4178,7 @@ LegalizerHelper::lowerDynStackAlloc(MachineInstr &MI) {
 
   // Subtract the final alloc from the SP. We use G_PTRTOINT here so we don't
   // have to generate an extra instruction to negate the alloc and then use
-  // G_GEP to add the negative offset.
+  // G_PTR_ADD to add the negative offset.
   auto Alloc = MIRBuilder.buildSub(IntPtrTy, SPTmp, AllocSize);
   if (Align) {
     APInt AlignMask(IntPtrTy.getSizeInBits(), Align, true);
