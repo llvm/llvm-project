@@ -23,14 +23,12 @@ namespace tooling{
 namespace dependencies{
 
 DependencyScanningTool::DependencyScanningTool(
-    DependencyScanningService &Service,
-    const tooling::CompilationDatabase &Compilations)
-    : Format(Service.getFormat()), Worker(Service), Compilations(Compilations) {
+    DependencyScanningService &Service)
+    : Format(Service.getFormat()), Worker(Service) {
 }
 
-llvm::Expected<std::string>
-DependencyScanningTool::getDependencyFile(const std::string &Input,
-                                          StringRef CWD) {
+llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
+    const tooling::CompilationDatabase &Compilations, StringRef CWD) {
   /// Prints out all of the gathered dependencies into a string.
   class MakeDependencyPrinterConsumer : public DependencyConsumer {
   public:
@@ -140,6 +138,16 @@ DependencyScanningTool::getDependencyFile(const std::string &Input,
     std::string ContextHash;
   };
 
+  
+  // We expect a single command here because if a source file occurs multiple
+  // times in the original CDB, then `computeDependencies` would run the
+  // `DependencyScanningAction` once for every time the input occured in the
+  // CDB. Instead we split up the CDB into single command chunks to avoid this
+  // behavior.
+  assert(Compilations.getAllCompileCommands().size() == 1 &&
+         "Expected a compilation database with a single command!");
+  std::string Input = Compilations.getAllCompileCommands().front().Filename;
+  
   if (Format == ScanningOutputFormat::Make) {
     MakeDependencyPrinterConsumer Consumer;
     auto Result =
