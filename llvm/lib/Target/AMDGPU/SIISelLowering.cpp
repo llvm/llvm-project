@@ -761,8 +761,8 @@ const GCNSubtarget *SITargetLowering::getSubtarget() const {
 //
 // There is only one special case when denormals are enabled we don't currently,
 // where this is OK to use.
-bool SITargetLowering::isFPExtFoldable(unsigned Opcode,
-                                           EVT DestVT, EVT SrcVT) const {
+bool SITargetLowering::isFPExtFoldable(const SelectionDAG &DAG, unsigned Opcode,
+                                       EVT DestVT, EVT SrcVT) const {
   return ((Opcode == ISD::FMAD && Subtarget->hasMadMixInsts()) ||
           (Opcode == ISD::FMA && Subtarget->hasFmaMixInsts())) &&
          DestVT.getScalarType() == MVT::f32 && !Subtarget->hasFP32Denormals() &&

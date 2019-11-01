@@ -222,7 +222,8 @@ public:
 
   const GCNSubtarget *getSubtarget() const;
 
-  bool isFPExtFoldable(unsigned Opcode, EVT DestVT, EVT SrcVT) const override;
+  bool isFPExtFoldable(const SelectionDAG &DAG, unsigned Opcode, EVT DestVT,
+                       EVT SrcVT) const override;
 
   bool isShuffleMaskLegal(ArrayRef<int> /*Mask*/, EVT /*VT*/) const override;
 
