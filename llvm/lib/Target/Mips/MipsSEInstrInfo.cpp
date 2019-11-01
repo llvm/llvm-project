@@ -221,29 +221,24 @@ static bool isReadOrWriteToDSPReg(const MachineInstr &MI, bool &isWrite) {
 /// We check for the common case of 'or', as it's MIPS' preferred instruction
 /// for GPRs but we have to check the operands to ensure that is the case.
 /// Other move instructions for MIPS are directly identifiable.
-bool MipsSEInstrInfo::isCopyInstrImpl(const MachineInstr &MI,
-                                      const MachineOperand *&Src,
-                                      const MachineOperand *&Dest) const {
+Optional<DestSourcePair>
+MipsSEInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   bool isDSPControlWrite = false;
   // Condition is made to match the creation of WRDSP/RDDSP copy instruction
   // from copyPhysReg function.
   if (isReadOrWriteToDSPReg(MI, isDSPControlWrite)) {
-    if (!MI.getOperand(1).isImm() || MI.getOperand(1).getImm() != (1<<4))
-      return false;
+    if (!MI.getOperand(1).isImm() || MI.getOperand(1).getImm() != (1 << 4))
+      return None;
     else if (isDSPControlWrite) {
-      Src = &MI.getOperand(0);
-      Dest = &MI.getOperand(2);
+      return DestSourcePair{MI.getOperand(2), MI.getOperand(0)};
+
     } else {
-      Dest = &MI.getOperand(0);
-      Src = &MI.getOperand(2);
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
     }
-    return true;
   } else if (MI.isMoveReg() || isORCopyInst(MI)) {
-    Dest = &MI.getOperand(0);
-    Src = &MI.getOperand(1);
-    return true;
+    return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
   }
-  return false;
+  return None;
 }
 
 void MipsSEInstrInfo::
