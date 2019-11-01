@@ -282,6 +282,12 @@ void AArch64InstPrinter::printInst(const MCInst *MI, raw_ostream &O,
     return;
   }
 
+  if (Opcode == AArch64::SPACE) {
+    O << '\t' << MAI.getCommentString() << " SPACE";
+    printAnnotation(O, Annot);
+    return;
+  }
+
   // Instruction TSB is specified as a one operand instruction, but 'csync' is
   // not encoded, so for printing it is treated as a special case here:
   if (Opcode == AArch64::TSB) {
