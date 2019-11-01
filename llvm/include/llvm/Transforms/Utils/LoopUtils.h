@@ -133,7 +133,7 @@ bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 /// ORE. It returns changed status.
 bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                  TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                 MemorySSAUpdater *, ICFLoopSafetyInfo *,
+                 MemorySSAUpdater *, ScalarEvolution *, ICFLoopSafetyInfo *,
                  SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *);
 
 /// This function deletes dead loops. The caller of this function needs to
