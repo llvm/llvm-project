@@ -328,7 +328,7 @@ ChangeStatus AbstractAttribute::update(Attributor &A) {
 }
 
 ChangeStatus
-IRAttributeManifest::manifestAttrs(Attributor &A, IRPosition &IRP,
+IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
                                    const ArrayRef<Attribute> &DeducedAttrs) {
   Function *ScopeFn = IRP.getAssociatedFunction();
   IRPosition::Kind PK = IRP.getPositionKind();
@@ -705,7 +705,7 @@ struct AAFromMustBeExecutedContext : public Base {
 
   void initialize(Attributor &A) override {
     Base::initialize(A);
-    IRPosition &IRP = this->getIRPosition();
+    const IRPosition &IRP = this->getIRPosition();
     Instruction *CtxI = IRP.getCtxI();
 
     if (!CtxI)
@@ -987,7 +987,9 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
 
   // If the assumed unique return value is an argument, annotate it.
   if (auto *UniqueRVArg = dyn_cast<Argument>(UniqueRV.getValue())) {
-    getIRPosition() = IRPosition::argument(*UniqueRVArg);
+    // TODO: This should be handled differently!
+    this->AnchorVal = UniqueRVArg;
+    this->KindOrArgNo = UniqueRVArg->getArgNo();
     Changed = IRAttribute::manifest(A);
   } else if (auto *RVC = dyn_cast<Constant>(UniqueRV.getValue())) {
     // We can replace the returned value with the unique returned constant.
@@ -3816,7 +3818,7 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
-    IRPosition &IRP = getIRPosition();
+    const IRPosition &IRP = getIRPosition();
 
     // Check if we would improve the existing attributes first.
     SmallVector<Attribute, 4> DeducedAttrs;
