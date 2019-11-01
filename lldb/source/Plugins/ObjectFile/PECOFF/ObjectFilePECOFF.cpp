@@ -564,7 +564,10 @@ DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
 DataExtractor ObjectFilePECOFF::ReadImageDataByRVA(uint32_t rva, size_t size) {
   if (m_file) {
     Address addr = GetAddress(rva);
-    rva = addr.GetSection()->GetFileOffset() + addr.GetOffset();
+    SectionSP sect = addr.GetSection();
+    if (!sect)
+      return {};
+    rva = sect->GetFileOffset() + addr.GetOffset();
   }
 
   return ReadImageData(rva, size);
