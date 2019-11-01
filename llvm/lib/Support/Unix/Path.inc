@@ -203,7 +203,7 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   // If we don't have procfs mounted, fall back to argv[0]
   if (getprogpath(exe_path, argv0) != NULL)
     return exe_path;
-#elif defined(__linux__) || defined(__CYGWIN__)
+#elif defined(__linux__) || defined(__CYGWIN__) || defined(__gnu_hurd__)
   char exe_path[MAXPATHLEN];
   const char *aPath = "/proc/self/exe";
   if (sys::fs::exists(aPath)) {
