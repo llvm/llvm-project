@@ -3198,9 +3198,9 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
   }
 
   // If a -gdwarf argument appeared, remember it.
-  const Arg *GDwarfN =
-          Args.getLastArg(options::OPT_gdwarf_2, options::OPT_gdwarf_3,
-                          options::OPT_gdwarf_4, options::OPT_gdwarf_5);
+  const Arg *GDwarfN = Args.getLastArg(
+      options::OPT_gdwarf_2, options::OPT_gdwarf_3, options::OPT_gdwarf_4,
+      options::OPT_gdwarf_5, options::OPT_gdwarf);
   bool EmitDwarf = false;
   if (GDwarfN) {
     if (checkDebugInfoOption(GDwarfN, Args, D, TC))
@@ -3231,6 +3231,7 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
   if (EmitDwarf) {
     // Start with the platform default DWARF version
     DWARFVersion = TC.GetDefaultDwarfVersion();
+    assert(DWARFVersion && "toolchain default DWARF version must be nonzero");
 
     // Override with a user-specified DWARF version
     if (GDwarfN)
