@@ -4,14 +4,14 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @hoge() {
-; CHECK-LABEL: @hoge(
+; CHECK-LABEL: define {{[^@]+}}@hoge(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP:%.*]] = select i1 undef, i16 undef, i16 15
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i16> undef, i16 [[TMP]], i32 0
+; CHECK-NEXT:    [[T:%.*]] = select i1 undef, i16 undef, i16 15
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i16> undef, i16 [[T]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> [[TMP0]], i16 undef, i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i16> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> undef, <2 x i32> <i32 1, i32 0>
@@ -26,8 +26,8 @@ define void @hoge() {
 ; CHECK-NEXT:    [[RDX_MINMAX_CMP13:%.*]] = icmp sgt <4 x i32> [[RDX_MINMAX_SELECT11]], [[RDX_SHUF12]]
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT14:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP13]], <4 x i32> [[RDX_MINMAX_SELECT11]], <4 x i32> [[RDX_SHUF12]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[RDX_MINMAX_SELECT14]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = select i1 undef, i32 [[TMP6]], i32 undef
-; CHECK-NEXT:    [[TMP20:%.*]] = icmp sgt i32 [[TMP19]], 63
+; CHECK-NEXT:    [[T19:%.*]] = select i1 undef, i32 [[TMP6]], i32 undef
+; CHECK-NEXT:    [[T20:%.*]] = icmp sgt i32 [[T19]], 63
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw <2 x i32> undef, [[TMP2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub <2 x i32> [[TMP7]], undef
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -49,7 +49,7 @@ define void @hoge() {
 ; CHECK-NEXT:    [[OP_EXTRA6:%.*]] = select i1 [[TMP14]], i32 [[OP_EXTRA5]], i32 undef
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp slt i32 [[OP_EXTRA6]], undef
 ; CHECK-NEXT:    [[OP_EXTRA7:%.*]] = select i1 [[TMP15]], i32 [[OP_EXTRA6]], i32 undef
-; CHECK-NEXT:    [[TMP45:%.*]] = icmp sgt i32 undef, [[OP_EXTRA7]]
+; CHECK-NEXT:    [[T45:%.*]] = icmp sgt i32 undef, [[OP_EXTRA7]]
 ; CHECK-NEXT:    unreachable
 ;
 bb:
@@ -59,50 +59,50 @@ bb1:                                              ; preds = %bb
   ret void
 
 bb2:                                              ; preds = %bb
-  %tmp = select i1 undef, i16 undef, i16 15
-  %tmp3 = sext i16 undef to i32
-  %tmp4 = sext i16 %tmp to i32
-  %tmp5 = sub nsw i32 undef, %tmp4
-  %tmp6 = sub i32 %tmp5, undef
-  %tmp7 = sub nsw i32 63, %tmp3
-  %tmp8 = sub i32 %tmp7, undef
-  %tmp9 = add i32 %tmp8, undef
-  %tmp10 = add nsw i32 %tmp6, 15
-  %tmp11 = icmp sgt i32 %tmp9, %tmp10
-  %tmp12 = select i1 %tmp11, i32 %tmp9, i32 %tmp10
-  %tmp13 = add nsw i32 %tmp6, 31
-  %tmp14 = icmp sgt i32 %tmp12, %tmp13
-  %tmp15 = select i1 %tmp14, i32 %tmp12, i32 %tmp13
-  %tmp16 = add nsw i32 %tmp6, 47
-  %tmp17 = icmp sgt i32 %tmp15, %tmp16
-  %tmp18 = select i1 %tmp17, i32 %tmp15, i32 %tmp16
-  %tmp19 = select i1 undef, i32 %tmp18, i32 undef
-  %tmp20 = icmp sgt i32 %tmp19, 63
-  %tmp21 = sub nsw i32 undef, %tmp3
-  %tmp22 = sub i32 %tmp21, undef
-  %tmp23 = sub nsw i32 undef, %tmp4
-  %tmp24 = sub i32 %tmp23, undef
-  %tmp25 = add nsw i32 %tmp24, -49
-  %tmp26 = icmp sgt i32 %tmp25, undef
-  %tmp27 = select i1 %tmp26, i32 undef, i32 %tmp25
-  %tmp28 = icmp sgt i32 %tmp27, undef
-  %tmp29 = select i1 %tmp28, i32 undef, i32 %tmp27
-  %tmp30 = add nsw i32 %tmp22, -33
-  %tmp31 = icmp sgt i32 %tmp30, undef
-  %tmp32 = select i1 %tmp31, i32 undef, i32 %tmp30
-  %tmp33 = icmp sgt i32 %tmp32, %tmp29
-  %tmp34 = select i1 %tmp33, i32 %tmp29, i32 %tmp32
-  %tmp35 = add nsw i32 %tmp24, -33
-  %tmp36 = icmp sgt i32 %tmp35, undef
-  %tmp37 = select i1 %tmp36, i32 undef, i32 %tmp35
-  %tmp38 = icmp sgt i32 %tmp37, %tmp34
-  %tmp39 = select i1 %tmp38, i32 %tmp34, i32 %tmp37
-  %tmp40 = add nsw i32 %tmp22, -17
-  %tmp41 = icmp sgt i32 %tmp40, undef
-  %tmp42 = select i1 %tmp41, i32 undef, i32 %tmp40
-  %tmp43 = icmp sgt i32 %tmp42, %tmp39
-  %tmp44 = select i1 %tmp43, i32 %tmp39, i32 %tmp42
-  %tmp45 = icmp sgt i32 undef, %tmp44
+  %t = select i1 undef, i16 undef, i16 15
+  %t3 = sext i16 undef to i32
+  %t4 = sext i16 %t to i32
+  %t5 = sub nsw i32 undef, %t4
+  %t6 = sub i32 %t5, undef
+  %t7 = sub nsw i32 63, %t3
+  %t8 = sub i32 %t7, undef
+  %t9 = add i32 %t8, undef
+  %t10 = add nsw i32 %t6, 15
+  %t11 = icmp sgt i32 %t9, %t10
+  %t12 = select i1 %t11, i32 %t9, i32 %t10
+  %t13 = add nsw i32 %t6, 31
+  %t14 = icmp sgt i32 %t12, %t13
+  %t15 = select i1 %t14, i32 %t12, i32 %t13
+  %t16 = add nsw i32 %t6, 47
+  %t17 = icmp sgt i32 %t15, %t16
+  %t18 = select i1 %t17, i32 %t15, i32 %t16
+  %t19 = select i1 undef, i32 %t18, i32 undef
+  %t20 = icmp sgt i32 %t19, 63
+  %t21 = sub nsw i32 undef, %t3
+  %t22 = sub i32 %t21, undef
+  %t23 = sub nsw i32 undef, %t4
+  %t24 = sub i32 %t23, undef
+  %t25 = add nsw i32 %t24, -49
+  %t26 = icmp sgt i32 %t25, undef
+  %t27 = select i1 %t26, i32 undef, i32 %t25
+  %t28 = icmp sgt i32 %t27, undef
+  %t29 = select i1 %t28, i32 undef, i32 %t27
+  %t30 = add nsw i32 %t22, -33
+  %t31 = icmp sgt i32 %t30, undef
+  %t32 = select i1 %t31, i32 undef, i32 %t30
+  %t33 = icmp sgt i32 %t32, %t29
+  %t34 = select i1 %t33, i32 %t29, i32 %t32
+  %t35 = add nsw i32 %t24, -33
+  %t36 = icmp sgt i32 %t35, undef
+  %t37 = select i1 %t36, i32 undef, i32 %t35
+  %t38 = icmp sgt i32 %t37, %t34
+  %t39 = select i1 %t38, i32 %t34, i32 %t37
+  %t40 = add nsw i32 %t22, -17
+  %t41 = icmp sgt i32 %t40, undef
+  %t42 = select i1 %t41, i32 undef, i32 %t40
+  %t43 = icmp sgt i32 %t42, %t39
+  %t44 = select i1 %t43, i32 %t39, i32 %t42
+  %t45 = icmp sgt i32 undef, %t44
   unreachable
 }
 
