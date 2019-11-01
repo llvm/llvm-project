@@ -133,7 +133,7 @@
 template <typename... Arguments>
 NOINLINE static void log(const char *fmt, Arguments... parameters) {
   printf(fmt, (int)GetBlockIdInKernel(), (int)GetThreadIdInBlock(),
-         (int)GetWarpId(), (int)GetLaneId, parameters...);
+         (int)GetWarpId(), (int)GetLaneId(), parameters...);
 }
 
 #endif
@@ -145,7 +145,7 @@ NOINLINE static void check(bool cond, const char *fmt,
                            Arguments... parameters) {
   if (!cond)
     printf(fmt, (int)GetBlockIdInKernel(), (int)GetThreadIdInBlock(),
-           (int)GetWarpId(), (int)GetLaneId, parameters...);
+           (int)GetWarpId(), (int)GetLaneId(), parameters...);
   assert(cond);
 }
 
