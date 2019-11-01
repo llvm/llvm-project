@@ -393,7 +393,7 @@ public:
 
   bool isCanonicalized(SelectionDAG &DAG, SDValue Op,
                        unsigned MaxDepth = 5) const;
-  bool denormalsEnabledForType(EVT VT) const;
+  bool denormalsEnabledForType(const SelectionDAG &DAG, EVT VT) const;
 
   bool isKnownNeverNaNForTargetNode(SDValue Op,
                                     const SelectionDAG &DAG,

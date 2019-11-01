@@ -340,9 +340,6 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
 
   AMDGPUFunctionArgInfo ArgInfo;
 
-  // State of MODE register, assumed FP mode.
-  AMDGPU::SIModeRegisterDefaults Mode;
-
   // Graphics info.
   unsigned PSInputAddr = 0;
   unsigned PSInputEnable = 0;
@@ -513,10 +510,6 @@ public:
     auto I = VGPRToAGPRSpills.find(FrameIndex);
     return (I == VGPRToAGPRSpills.end()) ? (MCPhysReg)AMDGPU::NoRegister
                                          : I->second.Lanes[Lane];
-  }
-
-  AMDGPU::SIModeRegisterDefaults getMode() const {
-    return Mode;
   }
 
   bool haveFreeLanesForSGPRSpill(const MachineFunction &MF,
