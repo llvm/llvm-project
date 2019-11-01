@@ -1,3 +1,5 @@
+REQUIRES : system-darwin
+
 RUN: rm -rf %t
 RUN: mkdir -p %t
 RUN: cat %p/../Inputs/remarks/fat.macho.remarks.x86 > %t/fat.macho.remarks.x86
