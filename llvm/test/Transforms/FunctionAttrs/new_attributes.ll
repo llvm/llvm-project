@@ -20,7 +20,7 @@ declare i32 @foo3()
 ; CHECK-NEXT:   %1 = call i32 @foo1()
 ; CHECK-NEXT:   %2 = call i32 @foo2()
 ; CHECK-NEXT:   %3 = call i32 @foo3()
-; CHECK-NEXT:   ret i32 1
+; CHECK-NEXT:   ret i32 undef
 ; CHECK-NEXT: }
 define internal i32 @bar() {
   %1 = call i32 @foo1()

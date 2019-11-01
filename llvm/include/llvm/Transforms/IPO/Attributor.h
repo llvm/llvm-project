@@ -789,10 +789,25 @@ struct Attributor {
     identifyDefaultAbstractAttributes(const_cast<Function &>(F));
   }
 
-  /// Record that \p I is deleted after information was manifested.
+  /// Record that \p U is to be replaces with \p NV after information was
+  /// manifested. This also triggers deletion of trivially dead istructions.
+  bool changeUseAfterManifest(Use &U, Value &NV) {
+    Value *&V = ToBeChangedUses[&U];
+    if (V && (V->stripPointerCasts() == NV.stripPointerCasts() ||
+              isa_and_nonnull<UndefValue>(V)))
+      return false;
+    assert((!V || V == &NV || isa<UndefValue>(NV)) &&
+           "Use was registered twice for replacement with different values!");
+    V = &NV;
+    return true;
+  }
+
+  /// Record that \p I is deleted after information was manifested. This also
+  /// triggers deletion of trivially dead istructions.
   void deleteAfterManifest(Instruction &I) { ToBeDeletedInsts.insert(&I); }
 
-  /// Record that \p BB is deleted after information was manifested.
+  /// Record that \p BB is deleted after information was manifested. This also
+  /// triggers deletion of trivially dead istructions.
   void deleteAfterManifest(BasicBlock &BB) { ToBeDeletedBlocks.insert(&BB); }
 
   /// Record that \p F is deleted after information was manifested.
@@ -802,6 +817,13 @@ struct Attributor {
   ///
   /// If \p LivenessAA is not provided it is queried.
   bool isAssumedDead(const AbstractAttribute &AA, const AAIsDead *LivenessAA);
+
+  /// Check \p Pred on all (transitive) uses of \p V.
+  ///
+  /// This method will evaluate \p Pred on all (transitive) uses of the
+  /// associated value and return true if \p Pred holds every time.
+  bool checkForAllUses(const function_ref<bool(const Use &, bool &)> &Pred,
+                       const AbstractAttribute &QueryingAA, const Value &V);
 
   /// Check \p Pred on all function call sites.
   ///
@@ -971,6 +993,10 @@ private:
 
   /// A set to remember the functions we already assume to be live and visited.
   DenseSet<const Function *> VisitedFunctions;
+
+  /// Uses we replace with a new value after manifest is done. We will remove
+  /// then trivially dead instructions as well.
+  DenseMap<Use *, Value *> ToBeChangedUses;
 
   /// Functions, blocks, and instructions we delete after manifest is done.
   ///
@@ -1682,6 +1708,9 @@ struct AANoReturn
 struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
                   public IRPosition {
   AAIsDead(const IRPosition &IRP) : IRPosition(IRP) {}
+
+  /// Returns true if the underlying value is assumed dead.
+  virtual bool isAssumedDead() const = 0;
 
   /// Returns true if \p BB is assumed dead.
   virtual bool isAssumedDead(const BasicBlock *BB) const = 0;
