@@ -189,6 +189,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         setOperationAction(Op, MVT::v2f64, Expand);
     }
 
+    // Expand operations not supported for i64x2 vectors
+    if (Subtarget->hasUnimplementedSIMD128())
+      for (unsigned CC = 0; CC < ISD::SETCC_INVALID; ++CC)
+        setCondCodeAction(static_cast<ISD::CondCode>(CC), MVT::v2i64, Custom);
+
     // Expand additional SIMD ops that V8 hasn't implemented yet
     if (!Subtarget->hasUnimplementedSIMD128()) {
       setOperationAction(ISD::FSQRT, MVT::v4f32, Expand);
@@ -1011,6 +1016,8 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return LowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::SETCC:
+    return LowerSETCC(Op, DAG);
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:
@@ -1470,6 +1477,29 @@ WebAssemblyTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   }
 
   return DAG.getNode(WebAssemblyISD::SHUFFLE, DL, Op.getValueType(), Ops);
+}
+
+SDValue WebAssemblyTargetLowering::LowerSETCC(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  // The legalizer does not know how to expand the comparison modes of i64x2
+  // vectors because no comparison modes are supported. We could solve this by
+  // expanding all i64x2 SETCC nodes, but that seems to expand f64x2 SETCC nodes
+  // (which return i64x2 results) as well. So instead we manually unroll i64x2
+  // comparisons here.
+  assert(Subtarget->hasUnimplementedSIMD128());
+  assert(Op->getOperand(0)->getSimpleValueType(0) == MVT::v2i64);
+  SmallVector<SDValue, 2> LHS, RHS;
+  DAG.ExtractVectorElements(Op->getOperand(0), LHS);
+  DAG.ExtractVectorElements(Op->getOperand(1), RHS);
+  const SDValue &CC = Op->getOperand(2);
+  auto MakeLane = [&](unsigned I) {
+    return DAG.getNode(ISD::SELECT_CC, DL, MVT::i64, LHS[I], RHS[I],
+                       DAG.getConstant(uint64_t(-1), DL, MVT::i64),
+                       DAG.getConstant(uint64_t(0), DL, MVT::i64), CC);
+  };
+  return DAG.getBuildVector(Op->getValueType(0), DL,
+                            {MakeLane(0), MakeLane(1)});
 }
 
 SDValue
