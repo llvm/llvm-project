@@ -1935,6 +1935,8 @@ void CodeGenModule::AppendLinkerOptions(StringRef Opts) {
 void CodeGenModule::AddDetectMismatch(StringRef Name, StringRef Value) {
   llvm::SmallString<32> Opt;
   getTargetCodeGenInfo().getDetectMismatchOption(Name, Value, Opt);
+  if (Opt.empty())
+    return;
   auto *MDOpts = llvm::MDString::get(getLLVMContext(), Opt);
   LinkerOptionsMetadata.push_back(llvm::MDNode::get(getLLVMContext(), MDOpts));
 }
