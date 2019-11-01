@@ -160,7 +160,7 @@ def get_function_body(args, filename, clang_args, extra_commands, prefixes, trip
   if '-emit-llvm' in clang_args:
     common.build_function_body_dictionary(
             common.OPT_FUNCTION_RE, common.scrub_body, [],
-            raw_tool_output, prefixes, func_dict, args.verbose)
+            raw_tool_output, prefixes, func_dict, args.verbose, False)
   else:
     print('The clang command line should include -emit-llvm as asm tests '
           'are discouraged in Clang testsuite.', file=sys.stderr)
