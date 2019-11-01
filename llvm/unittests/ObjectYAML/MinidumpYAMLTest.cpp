@@ -33,7 +33,7 @@ TEST(MinidumpYAML, Basic) {
 --- !minidump
 Streams:
   - Type:            SystemInfo
-    Processor Arch:  BP_ARM64
+    Processor Arch:  ARM64
     Platform ID:     Linux
     CPU:
       CPUID:           0x05060708
@@ -53,7 +53,7 @@ Streams:
   auto ExpectedSysInfo = File.getSystemInfo();
   ASSERT_THAT_EXPECTED(ExpectedSysInfo, Succeeded());
   const SystemInfo &SysInfo = *ExpectedSysInfo;
-  EXPECT_EQ(ProcessorArchitecture::BP_ARM64, SysInfo.ProcessorArch);
+  EXPECT_EQ(ProcessorArchitecture::ARM64, SysInfo.ProcessorArch);
   EXPECT_EQ(OSPlatform::Linux, SysInfo.PlatformId);
   EXPECT_EQ(0x05060708u, SysInfo.CPU.Arm.CPUID);
 
