@@ -338,7 +338,7 @@ define amdgpu_kernel void @fdiv_fpmath_f32_denormals(float addrspace(1)* %out, f
 }
 
 attributes #0 = { nounwind optnone noinline }
-attributes #1 = { nounwind }
+attributes #1 = { nounwind "target-features"="-fp32-denormals" }
 attributes #2 = { nounwind "target-features"="+fp32-denormals" }
 
 !0 = !{float 2.500000e+00}

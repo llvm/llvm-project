@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mattr=-fp32-denormals -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}rcp_uint:
 ; GCN: v_rcp_iflag_f32_e32

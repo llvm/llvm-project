@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX900
-; RUN: llc -march=amdgcn -mcpu=gfx906 -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX906-DL-UNSAFE
-; RUN: llc -march=amdgcn -mcpu=gfx1011 -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10-CONTRACT
-; RUN: llc -march=amdgcn -mcpu=gfx1012 -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10-CONTRACT
-; RUN: llc -march=amdgcn -mcpu=gfx906 -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX906
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-fp32-denormals -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX900
+; RUN: llc -march=amdgcn -mcpu=gfx906 -mattr=-fp32-denormals -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX906-DL-UNSAFE
+; RUN: llc -march=amdgcn -mcpu=gfx1011 -mattr=-fp32-denormals -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10-CONTRACT
+; RUN: llc -march=amdgcn -mcpu=gfx1012 -mattr=-fp32-denormals -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10-CONTRACT
+; RUN: llc -march=amdgcn -mcpu=gfx906 -mattr=-fp32-denormals -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX906
 ; RUN: llc -march=amdgcn -mcpu=gfx906 -mattr=-fp64-fp16-denormals,-fp32-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX906-CONTRACT
 ; RUN: llc -march=amdgcn -mcpu=gfx906 -mattr=+fp64-fp16-denormals,+fp32-denormals -fp-contract=fast -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX906-DENORM-CONTRACT
 ; (fadd (fmul S1.x, S2.x), (fadd (fmul (S1.y, S2.y), z))) -> (fdot2 S1, S2, z)
