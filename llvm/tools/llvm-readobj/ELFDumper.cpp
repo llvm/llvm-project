@@ -595,6 +595,7 @@ private:
   void printDynamicRelocation(const ELFO *Obj, Elf_Rela Rel);
   void printSymbols(const ELFO *Obj);
   void printDynamicSymbols(const ELFO *Obj);
+  void printSymbolSection(const Elf_Sym *Symbol, const Elf_Sym *First);
   void printSymbol(const ELFO *Obj, const Elf_Sym *Symbol, const Elf_Sym *First,
                    StringRef StrTable, bool IsDynamic,
                    bool /*NonVisibilityBitsUsed*/) override;
@@ -5440,13 +5441,19 @@ void LLVMStyle<ELFT>::printSectionHeaders(const ELFO *Obj) {
 }
 
 template <class ELFT>
+void LLVMStyle<ELFT>::printSymbolSection(const Elf_Sym *Symbol,
+                                         const Elf_Sym *First) {
+  unsigned SectionIndex = 0;
+  StringRef SectionName;
+  this->dumper()->getSectionNameIndex(Symbol, First, SectionName, SectionIndex);
+  W.printHex("Section", SectionName, SectionIndex);
+}
+
+template <class ELFT>
 void LLVMStyle<ELFT>::printSymbol(const ELFO *Obj, const Elf_Sym *Symbol,
                                   const Elf_Sym *First, StringRef StrTable,
                                   bool IsDynamic,
                                   bool /*NonVisibilityBitsUsed*/) {
-  unsigned SectionIndex = 0;
-  StringRef SectionName;
-  this->dumper()->getSectionNameIndex(Symbol, First, SectionName, SectionIndex);
   std::string FullSymbolName =
       this->dumper()->getFullSymbolName(Symbol, StrTable, IsDynamic);
   unsigned char SymbolType = Symbol->getType();
@@ -5483,7 +5490,7 @@ void LLVMStyle<ELFT>::printSymbol(const ELFO *Obj, const Elf_Sym *Symbol,
     }
     W.printFlags("Other", Symbol->st_other, makeArrayRef(SymOtherFlags), 0x3u);
   }
-  W.printHex("Section", SectionName, SectionIndex);
+  printSymbolSection(Symbol, First);
 }
 
 template <class ELFT>
@@ -6036,13 +6043,7 @@ void LLVMStyle<ELFT>::printMipsGOT(const MipsGOTParser<ELFT> &Parser) {
       const Elf_Sym *Sym = Parser.getGotSym(&E);
       W.printHex("Value", Sym->st_value);
       W.printEnum("Type", Sym->getType(), makeArrayRef(ElfSymbolTypes));
-
-      unsigned SectionIndex = 0;
-      StringRef SectionName;
-      this->dumper()->getSectionNameIndex(
-          Sym, this->dumper()->dynamic_symbols().begin(), SectionName,
-          SectionIndex);
-      W.printHex("Section", SectionName, SectionIndex);
+      printSymbolSection(Sym, this->dumper()->dynamic_symbols().begin());
 
       std::string SymName = this->dumper()->getFullSymbolName(
           Sym, this->dumper()->getDynamicStringTable(), true);
@@ -6086,13 +6087,7 @@ void LLVMStyle<ELFT>::printMipsPLT(const MipsGOTParser<ELFT> &Parser) {
       const Elf_Sym *Sym = Parser.getPltSym(&E);
       W.printHex("Value", Sym->st_value);
       W.printEnum("Type", Sym->getType(), makeArrayRef(ElfSymbolTypes));
-
-      unsigned SectionIndex = 0;
-      StringRef SectionName;
-      this->dumper()->getSectionNameIndex(
-          Sym, this->dumper()->dynamic_symbols().begin(), SectionName,
-          SectionIndex);
-      W.printHex("Section", SectionName, SectionIndex);
+      printSymbolSection(Sym, this->dumper()->dynamic_symbols().begin());
 
       std::string SymName =
           this->dumper()->getFullSymbolName(Sym, Parser.getPltStrTable(), true);
