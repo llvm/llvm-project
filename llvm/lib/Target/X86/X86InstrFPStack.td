@@ -369,11 +369,6 @@ defm ABS : FPUnary<fabs, MRM_E1, "fabs">;
 let SchedRW = [WriteFSqrt80] in
 defm SQRT: FPUnary<fsqrt,MRM_FA, "fsqrt">;
 
-let SchedRW = [WriteMicrocoded] in {
-defm SIN : FPUnary<fsin, MRM_FE, "fsin">;
-defm COS : FPUnary<fcos, MRM_FF, "fcos">;
-}
-
 let SchedRW = [WriteFCom] in {
 let hasSideEffects = 0 in {
 def TST_Fp32  : FpIf32<(outs), (ins RFP32:$src), OneArgFP, []>;
@@ -721,6 +716,8 @@ def FDECSTP : I<0xD9, MRM_F6, (outs), (ins), "fdecstp", []>;
 def FINCSTP : I<0xD9, MRM_F7, (outs), (ins), "fincstp", []>;
 def FPREM : I<0xD9, MRM_F8, (outs), (ins), "fprem", []>;
 def FYL2XP1 : I<0xD9, MRM_F9, (outs), (ins), "fyl2xp1", []>;
+def FSIN : I<0xD9, MRM_FE, (outs), (ins), "fsin", []>;
+def FCOS : I<0xD9, MRM_FF, (outs), (ins), "fcos", []>;
 def FSINCOS : I<0xD9, MRM_FB, (outs), (ins), "fsincos", []>;
 def FRNDINT : I<0xD9, MRM_FC, (outs), (ins), "frndint", []>;
 def FSCALE : I<0xD9, MRM_FD, (outs), (ins), "fscale", []>;
