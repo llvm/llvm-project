@@ -426,8 +426,8 @@ static void initializeProfileForContinuousMode(void) {
   off_t OffsetModPage = CurrentFileOffset % PageSize;
   if (OffsetModPage != 0) {
     PROF_ERR("Continuous counter sync mode is enabled, but raw profile is not"
-             "page-aligned. CurrentFileOffset = %lld, pagesz = %u.\n",
-             CurrentFileOffset, PageSize);
+             "page-aligned. CurrentFileOffset = %" PRIu64 ", pagesz = %u.\n",
+             (uint64_t) CurrentFileOffset, PageSize);
     return;
   }
 
@@ -460,9 +460,9 @@ static void initializeProfileForContinuousMode(void) {
     PROF_ERR(
         "Continuous counter sync mode is enabled, but mmap() failed (%s).\n"
         "  - CountersBegin: %p\n"
-        "  - PageAlignedCountersLength: %llu\n"
+        "  - PageAlignedCountersLength: %" PRIu64 "\n"
         "  - Fileno: %d\n"
-        "  - FileOffsetToCounters: %llu\n",
+        "  - FileOffsetToCounters: %" PRIu64 "\n",
         strerror(errno), CountersBegin, PageAlignedCountersLength, Fileno,
         FileOffsetToCounters);
     return;
