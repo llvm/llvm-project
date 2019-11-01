@@ -3046,11 +3046,15 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   report_fatal_error("Cannot emit physreg copy instruction");
 }
 
-Optional<DestSourcePair>
-X86InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
-  if (MI.isMoveReg())
-    return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
-  return None;
+bool X86InstrInfo::isCopyInstrImpl(const MachineInstr &MI,
+                                   const MachineOperand *&Src,
+                                   const MachineOperand *&Dest) const {
+  if (MI.isMoveReg()) {
+    Dest = &MI.getOperand(0);
+    Src = &MI.getOperand(1);
+    return true;
+  }
+  return false;
 }
 
 static unsigned getLoadStoreRegOpcode(unsigned Reg,
