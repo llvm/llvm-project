@@ -1146,24 +1146,27 @@ protected:
 };
 
 /// Specialization of the integer state for a bit-wise encoding.
-struct BitIntegerState : public IntegerStateBase<uint32_t, ~0u, 0> {
-  using base_t = IntegerStateBase::base_t;
+template <typename base_ty = uint32_t, base_ty BestState = ~base_ty(0),
+          base_ty WorstState = 0>
+struct BitIntegerState
+    : public IntegerStateBase<base_ty, BestState, WorstState> {
+  using base_t = base_ty;
 
   /// Return true if the bits set in \p BitsEncoding are "known bits".
   bool isKnown(base_t BitsEncoding) const {
-    return (Known & BitsEncoding) == BitsEncoding;
+    return (this->Known & BitsEncoding) == BitsEncoding;
   }
 
   /// Return true if the bits set in \p BitsEncoding are "assumed bits".
   bool isAssumed(base_t BitsEncoding) const {
-    return (Assumed & BitsEncoding) == BitsEncoding;
+    return (this->Assumed & BitsEncoding) == BitsEncoding;
   }
 
   /// Add the bits in \p BitsEncoding to the "known bits".
   BitIntegerState &addKnownBits(base_t Bits) {
     // Make sure we never miss any "known bits".
-    Assumed |= Bits;
-    Known |= Bits;
+    this->Assumed |= Bits;
+    this->Known |= Bits;
     return *this;
   }
 
@@ -1174,14 +1177,14 @@ struct BitIntegerState : public IntegerStateBase<uint32_t, ~0u, 0> {
 
   /// Remove the bits in \p BitsEncoding from the "known bits".
   BitIntegerState &removeKnownBits(base_t BitsEncoding) {
-    Known = (Known & ~BitsEncoding);
+    this->Known = (this->Known & ~BitsEncoding);
     return *this;
   }
 
   /// Keep only "assumed bits" also set in \p BitsEncoding but all known ones.
   BitIntegerState &intersectAssumedBits(base_t BitsEncoding) {
     // Make sure we never loose any "known bits".
-    Assumed = (Assumed & BitsEncoding) | Known;
+    this->Assumed = (this->Assumed & BitsEncoding) | this->Known;
     return *this;
   }
 
@@ -1191,32 +1194,35 @@ private:
   }
   void handleNewKnownValue(base_t Value) override { addKnownBits(Value); }
   void joinOR(base_t AssumedValue, base_t KnownValue) override {
-    Known |= KnownValue;
-    Assumed |= AssumedValue;
+    this->Known |= KnownValue;
+    this->Assumed |= AssumedValue;
   }
   void joinAND(base_t AssumedValue, base_t KnownValue) override {
-    Known &= KnownValue;
-    Assumed &= AssumedValue;
+    this->Known &= KnownValue;
+    this->Assumed &= AssumedValue;
   }
 };
 
 /// Specialization of the integer state for an increasing value, hence ~0u is
 /// the best state and 0 the worst.
-struct IncIntegerState : public IntegerStateBase<uint32_t, ~0u, 0> {
-  using base_t = IntegerStateBase::base_t;
+template <typename base_ty = uint32_t, base_ty BestState = ~base_ty(0),
+          base_ty WorstState = 0>
+struct IncIntegerState
+    : public IntegerStateBase<base_ty, BestState, WorstState> {
+  using base_t = base_ty;
 
   /// Take minimum of assumed and \p Value.
   IncIntegerState &takeAssumedMinimum(base_t Value) {
     // Make sure we never loose "known value".
-    Assumed = std::max(std::min(Assumed, Value), Known);
+    this->Assumed = std::max(std::min(this->Assumed, Value), this->Known);
     return *this;
   }
 
   /// Take maximum of known and \p Value.
   IncIntegerState &takeKnownMaximum(base_t Value) {
     // Make sure we never loose "known value".
-    Assumed = std::max(Value, Assumed);
-    Known = std::max(Value, Known);
+    this->Assumed = std::max(Value, this->Assumed);
+    this->Known = std::max(Value, this->Known);
     return *this;
   }
 
@@ -1226,12 +1232,12 @@ private:
   }
   void handleNewKnownValue(base_t Value) override { takeKnownMaximum(Value); }
   void joinOR(base_t AssumedValue, base_t KnownValue) override {
-    Known = std::max(Known, KnownValue);
-    Assumed = std::max(Assumed, AssumedValue);
+    this->Known = std::max(this->Known, KnownValue);
+    this->Assumed = std::max(this->Assumed, AssumedValue);
   }
   void joinAND(base_t AssumedValue, base_t KnownValue) override {
-    Known = std::min(Known, KnownValue);
-    Assumed = std::min(Assumed, AssumedValue);
+    this->Known = std::min(this->Known, KnownValue);
+    this->Assumed = std::min(this->Assumed, AssumedValue);
   }
 };
 
@@ -1752,7 +1758,7 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
 struct DerefState : AbstractState {
 
   /// State representing for dereferenceable bytes.
-  IncIntegerState DerefBytesState;
+  IncIntegerState<> DerefBytesState;
 
   /// State representing that whether the value is globaly dereferenceable.
   BooleanState GlobalState;
@@ -1866,10 +1872,12 @@ struct AADereferenceable
   static const char ID;
 };
 
+using AAAlignmentStateType =
+    IncIntegerState<uint32_t, /* maximal alignment */ 1U << 29, 0>;
 /// An abstract interface for all align attributes.
-struct AAAlign
-    : public IRAttribute<Attribute::Alignment,
-                         StateWrapper<IncIntegerState, AbstractAttribute>> {
+struct AAAlign : public IRAttribute<
+                     Attribute::Alignment,
+                     StateWrapper<AAAlignmentStateType, AbstractAttribute>> {
   AAAlign(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// Return assumed alignment.
@@ -1887,8 +1895,9 @@ struct AAAlign
 
 /// An abstract interface for all nocapture attributes.
 struct AANoCapture
-    : public IRAttribute<Attribute::NoCapture,
-                         StateWrapper<BitIntegerState, AbstractAttribute>> {
+    : public IRAttribute<
+          Attribute::NoCapture,
+          StateWrapper<BitIntegerState<uint16_t, 7, 0>, AbstractAttribute>> {
   AANoCapture(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// State encoding bits. A set bit in the state means the property holds.
@@ -1978,8 +1987,9 @@ struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute>,
 
 /// An abstract interface for all memory related attributes.
 struct AAMemoryBehavior
-    : public IRAttribute<Attribute::ReadNone,
-                         StateWrapper<BitIntegerState, AbstractAttribute>> {
+    : public IRAttribute<
+          Attribute::ReadNone,
+          StateWrapper<BitIntegerState<uint8_t, 3>, AbstractAttribute>> {
   AAMemoryBehavior(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// State encoding bits. A set bit in the state means the property holds.

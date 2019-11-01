@@ -2700,10 +2700,9 @@ struct AAIsDeadCallSite final : AAIsDeadFunction {
 template <>
 ChangeStatus clampStateAndIndicateChange<DerefState>(DerefState &S,
                                                      const DerefState &R) {
-  ChangeStatus CS0 = clampStateAndIndicateChange<IncIntegerState>(
-      S.DerefBytesState, R.DerefBytesState);
-  ChangeStatus CS1 =
-      clampStateAndIndicateChange<BooleanState>(S.GlobalState, R.GlobalState);
+  ChangeStatus CS0 =
+      clampStateAndIndicateChange(S.DerefBytesState, R.DerefBytesState);
+  ChangeStatus CS1 = clampStateAndIndicateChange(S.GlobalState, R.GlobalState);
   return CS0 | CS1;
 }
 
@@ -2926,13 +2925,8 @@ struct AADereferenceableCallSiteReturned final
 struct AAAlignImpl : AAAlign {
   AAAlignImpl(const IRPosition &IRP) : AAAlign(IRP) {}
 
-  // Max alignemnt value allowed in IR
-  static const unsigned MAX_ALIGN = 1U << 29;
-
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    takeAssumedMinimum(MAX_ALIGN);
-
     SmallVector<Attribute, 4> Attrs;
     getAttrs({Attribute::Alignment}, Attrs);
     for (const Attribute &Attr : Attrs)
@@ -3273,7 +3267,7 @@ struct AACaptureUseTracker final : public CaptureTracker {
   /// the search is stopped with \p CapturedInMemory and \p CapturedInInteger
   /// conservatively set to true.
   AACaptureUseTracker(Attributor &A, AANoCapture &NoCaptureAA,
-                      const AAIsDead &IsDeadAA, BitIntegerState &State,
+                      const AAIsDead &IsDeadAA, AANoCapture::StateType &State,
                       SmallVectorImpl<const Value *> &PotentialCopies,
                       unsigned &RemainingUsesToExplore)
       : A(A), NoCaptureAA(NoCaptureAA), IsDeadAA(IsDeadAA), State(State),
@@ -3392,7 +3386,7 @@ private:
   const AAIsDead &IsDeadAA;
 
   /// The state currently updated.
-  BitIntegerState &State;
+  AANoCapture::StateType &State;
 
   /// Set of potential copies of the tracked value.
   SmallVectorImpl<const Value *> &PotentialCopies;
@@ -3478,6 +3472,8 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
   AANoCapture::StateType &S = getState();
   auto Assumed = S.getAssumed();
   S.intersectAssumedBits(T.getAssumed());
+  if (!isAssumedNoCaptureMaybeReturned())
+    return indicatePessimisticFixpoint();
   return Assumed == S.getAssumed() ? ChangeStatus::UNCHANGED
                                    : ChangeStatus::CHANGED;
 }
@@ -4220,7 +4216,7 @@ struct AAMemoryBehaviorCallSiteArgument final : AAMemoryBehaviorArgument {
     auto &ArgAA = A.getAAFor<AAMemoryBehavior>(*this, ArgPos);
     return clampStateAndIndicateChange(
         getState(),
-        static_cast<const AANoCapture::StateType &>(ArgAA.getState()));
+        static_cast<const AAMemoryBehavior::StateType &>(ArgAA.getState()));
   }
 
   /// See AbstractAttribute::trackStatistics()
