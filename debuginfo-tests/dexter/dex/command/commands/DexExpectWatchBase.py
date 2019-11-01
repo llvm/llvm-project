@@ -168,7 +168,8 @@ class DexExpectWatchBase(CommandBase):
         for step in step_collection.steps:
             loc = step.current_location
 
-            if (os.path.exists(loc.path) and os.path.exists(self.path) and
+            if (loc and os.path.exists(loc.path) and
+                os.path.exists(self.path) and
                 os.path.samefile(loc.path, self.path) and
                 loc.lineno in self.line_range):
                 try:
