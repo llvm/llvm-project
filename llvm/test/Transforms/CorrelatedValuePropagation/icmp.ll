@@ -11,7 +11,7 @@ declare void @check2(i1) #1
 ; Make sure we propagate the value of %tmp35 to the true/false cases
 
 define void @test1(i64 %tmp35) {
-; CHECK-LABEL: @test1(
+; CHECK-LABEL: define {{[^@]+}}@test1(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP36:%.*]] = icmp sgt i64 [[TMP35:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP36]], label [[BB_TRUE:%.*]], label [[BB_FALSE:%.*]]
@@ -41,7 +41,7 @@ bb_false:
 ; get %tmp36 from both true and false BBs.
 
 define void @test2(i64 %tmp35, i1 %inner_cmp) {
-; CHECK-LABEL: @test2(
+; CHECK-LABEL: define {{[^@]+}}@test2(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP36:%.*]] = icmp sgt i64 [[TMP35:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP36]], label [[BB_TRUE:%.*]], label [[BB_FALSE:%.*]]
@@ -85,7 +85,7 @@ bb_false:
 ; Make sure binary operator transfer functions are run when RHS is non-constant
 
 define i1 @test3(i32 %x, i32 %y) #0 {
-; CHECK-LABEL: @test3(
+; CHECK-LABEL: define {{[^@]+}}@test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[X:%.*]], 10
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[CONT1:%.*]], label [[OUT:%.*]]
@@ -124,7 +124,7 @@ out:
 ; Same as previous but make sure nobody gets over-zealous
 
 define i1 @test4(i32 %x, i32 %y) #0 {
-; CHECK-LABEL: @test4(
+; CHECK-LABEL: define {{[^@]+}}@test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[X:%.*]], 10
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[CONT1:%.*]], label [[OUT:%.*]]
@@ -165,7 +165,7 @@ out:
 ; Make sure binary operator transfer functions are run when RHS is non-constant
 
 define i1 @test5(i32 %x, i32 %y) #0 {
-; CHECK-LABEL: @test5(
+; CHECK-LABEL: define {{[^@]+}}@test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[X:%.*]], 5
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[CONT1:%.*]], label [[OUT:%.*]]
@@ -204,7 +204,7 @@ out:
 ; Same as previous but make sure nobody gets over-zealous
 
 define i1 @test6(i32 %x, i32 %y) #0 {
-; CHECK-LABEL: @test6(
+; CHECK-LABEL: define {{[^@]+}}@test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[X:%.*]], 5
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[CONT1:%.*]], label [[OUT:%.*]]
@@ -243,7 +243,7 @@ out:
 }
 
 define i1 @test7(i32 %a, i32 %b) {
-; CHECK-LABEL: @test7(
+; CHECK-LABEL: define {{[^@]+}}@test7(
 ; CHECK-NEXT:  begin:
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp sge i32 [[A:%.*]], 0
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[B:%.*]], 0
@@ -279,7 +279,7 @@ exit:
 }
 
 define i1 @test8(i32 %a, i32 %b) {
-; CHECK-LABEL: @test8(
+; CHECK-LABEL: define {{[^@]+}}@test8(
 ; CHECK-NEXT:  begin:
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp sge i32 [[A:%.*]], 0
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[B:%.*]], 0
@@ -313,7 +313,7 @@ exit:
 }
 
 define i1 @test10(i32 %a, i32 %b) {
-; CHECK-LABEL: @test10(
+; CHECK-LABEL: define {{[^@]+}}@test10(
 ; CHECK-NEXT:  begin:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[A:%.*]], -256
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
@@ -345,7 +345,7 @@ exit:
 }
 
 define i1 @test11(i32 %a, i32 %b) {
-; CHECK-LABEL: @test11(
+; CHECK-LABEL: define {{[^@]+}}@test11(
 ; CHECK-NEXT:  begin:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[A:%.*]], -256
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
@@ -372,6 +372,39 @@ cont:
 exit:
   %iv = phi i1 [ true, %begin ], [ %res, %cont ]
   ret i1 %iv
+}
+
+define i1 @test12(i32 %x) {
+; CHECK-LABEL: define {{[^@]+}}@test12(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[ZEXT]], 7
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[MUL]], 32
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[SHR]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TRUNC]], 7
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %zext = zext i32 %x to i64
+  %mul = mul nuw i64 %zext, 7
+  %shr = lshr i64 %mul, 32
+  %trunc = trunc i64 %shr to i32
+  %cmp = icmp ult i32 %trunc, 7
+  ret i1 %cmp
+}
+
+define i1 @test13(i8 %x, i64* %p) {
+; CHECK-LABEL: define {{[^@]+}}@test13(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[ZEXT]], 128
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[ADD]], 384
+; CHECK-NEXT:    store i64 [[ADD]], i64* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %zext = zext i8 %x to i64
+  %add = add nuw nsw i64 %zext, 128
+  %cmp = icmp ult i64 %add, 384
+  ; Without this extra use, InstSimplify could handle this
+  store i64 %add, i64* %p
+  ret i1 %cmp
 }
 
 attributes #4 = { noreturn }
