@@ -659,23 +659,40 @@ struct SIModeRegisterDefaults {
   /// clamp NaN to zero; otherwise, pass NaN through.
   bool DX10Clamp : 1;
 
-  // TODO: FP mode fields
+  /// If this is set, neither input or output denormals are flushed for most f32
+  /// instructions.
+  ///
+  /// TODO: Split into separate input and output fields if necessary like the
+  /// control bits really provide?
+  bool FP32Denormals : 1;
+
+  /// If this is set, neither input or output denormals are flushed for both f64
+  /// and f16/v2f16 instructions.
+  bool FP64FP16Denormals : 1;
 
   SIModeRegisterDefaults() :
     IEEE(true),
-    DX10Clamp(true) {}
+    DX10Clamp(true),
+    FP32Denormals(true),
+    FP64FP16Denormals(true) {}
 
   SIModeRegisterDefaults(const Function &F);
 
   static SIModeRegisterDefaults getDefaultForCallingConv(CallingConv::ID CC) {
+    const bool IsCompute = AMDGPU::isCompute(CC);
+
     SIModeRegisterDefaults Mode;
     Mode.DX10Clamp = true;
-    Mode.IEEE = AMDGPU::isCompute(CC);
+    Mode.IEEE = IsCompute;
+    Mode.FP32Denormals = false; // FIXME: Should be on by default.
+    Mode.FP64FP16Denormals = true;
     return Mode;
   }
 
   bool operator ==(const SIModeRegisterDefaults Other) const {
-    return IEEE == Other.IEEE && DX10Clamp == Other.DX10Clamp;
+    return IEEE == Other.IEEE && DX10Clamp == Other.DX10Clamp &&
+           FP32Denormals == Other.FP32Denormals &&
+           FP64FP16Denormals == Other.FP64FP16Denormals;
   }
 
   // FIXME: Inlining should be OK for dx10-clamp, since the caller's mode should

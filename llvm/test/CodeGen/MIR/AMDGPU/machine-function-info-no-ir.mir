@@ -25,6 +25,8 @@
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
+# FULL-NEXT: fp32-denormals: true
+# FULL-NEXT: fp64-fp16-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT: body:
 
@@ -92,6 +94,8 @@ body:             |
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
+# FULL-NEXT: fp32-denormals: true
+# FULL-NEXT: fp64-fp16-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT: body:
 
@@ -129,6 +133,8 @@ body:             |
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
+# FULL-NEXT: fp32-denormals: true
+# FULL-NEXT: fp64-fp16-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT: body:
 
@@ -167,6 +173,8 @@ body:             |
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
+# FULL-NEXT: fp32-denormals: true
+# FULL-NEXT: fp64-fp16-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT: body:
 
@@ -239,11 +247,16 @@ body:             |
 # ALL: mode:
 # ALL-NEXT: ieee: false
 # ALL-NEXT: dx10-clamp: false
+# ALL-NEXT: fp32-denormals: false
+# ALL-NEXT: fp64-fp16-denormals: false
+
 name: parse_mode
 machineFunctionInfo:
   mode:
     ieee: false
     dx10-clamp: false
+    fp32-denormals: false
+    fp64-fp16-denormals: false
 
 body:             |
   bb.0:
