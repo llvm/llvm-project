@@ -644,7 +644,7 @@ ELFFile<ELFT>::getSHNDXTable(const Elf_Shdr &Section,
   uint64_t Syms = SymTable.sh_size / sizeof(Elf_Sym);
   if (V.size() != Syms)
     return createError("SHT_SYMTAB_SHNDX has " + Twine(V.size()) +
-                       "  entries, but the symbol table associated has " +
+                       " entries, but the symbol table associated has " +
                        Twine(Syms));
 
   return V;
