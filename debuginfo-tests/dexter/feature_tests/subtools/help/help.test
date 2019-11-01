@@ -1,8 +1,7 @@
-XFAIL: darwin
 Purpose:
     Check the `help` subtool runs.
 
-RUN: %dexter help | FileCheck %s
+RUN: %dexter_base help | FileCheck %s
 CHECK: The following subtools are available:
 CHECK: clang-opt-bisect
 CHECK: help

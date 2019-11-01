@@ -4,7 +4,7 @@
 //
 // REQUIRES: system-linux, lldb
 //
-// RUN: not %dexter test --fail-lt 1.0 -w \
+// RUN: not %dexter_base test --fail-lt 1.0 -w \
 // RUN:     --builder 'clang' --debugger 'lldb' --cflags "-O0 -g" -- %s \
 // RUN:     | FileCheck %s
 // CHECK: expect_watch_value.cpp:

@@ -2,7 +2,8 @@
 //     This ensures that DW_OP_deref is inserted when necessary, such as when
 //     NRVO of a string object occurs in C++.
 //
-// REQUIRES: !asan, system-linux, lldb
+// REQUIRES: !asan, lldb
+// UNSUPPORTED: system-windows
 //           Zorg configures the ASAN stage2 bots to not build the asan
 //           compiler-rt. Only run this test on non-asanified configurations.
 //

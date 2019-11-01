@@ -31,6 +31,8 @@ class DexTestLoader(unittest.TestLoader):
         else:
             if d == 'windows':
                 return False
+            elif d == 'dbgeng':
+                return False
         return fnmatch(path, pattern)
 
 

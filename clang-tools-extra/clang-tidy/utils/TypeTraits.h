@@ -28,6 +28,9 @@ bool isTriviallyDefaultConstructible(QualType Type, const ASTContext &Context);
 bool recordIsTriviallyDefaultConstructible(const RecordDecl &RecordDecl,
                                            const ASTContext &Context);
 
+/// Returns `true` if `Type` is trivially destructible.
+bool isTriviallyDestructible(QualType Type);
+
 /// Returns true if `Type` has a non-trivial move constructor.
 bool hasNonTrivialMoveConstructor(QualType Type);
 

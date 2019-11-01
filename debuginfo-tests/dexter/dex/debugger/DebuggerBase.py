@@ -153,6 +153,8 @@ class DebuggerBase(object, metaclass=abc.ABCMeta):
     def in_source_file(self, step_info):
         if not step_info.current_frame:
             return False
+        if not step_info.current_location.path:
+            return False
         if not os.path.exists(step_info.current_location.path):
             return False
         return any(os.path.samefile(step_info.current_location.path, f) \
