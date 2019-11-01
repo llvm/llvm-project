@@ -726,19 +726,16 @@ struct AAFromMustBeExecutedContext : public Base {
     MustBeExecutedContextExplorer &Explorer =
         A.getInfoCache().getMustBeExecutedContextExplorer();
 
-    SetVector<const Use *> NextUses;
-
     auto EIt = Explorer.begin(CtxI), EEnd = Explorer.end(CtxI);
-    for (const Use *U : Uses) {
+    for (unsigned u = 0 ; u < Uses.size(); ++u) {
+      const Use *U = Uses[u];
       if (const Instruction *UserI = dyn_cast<Instruction>(U->getUser())) {
         bool Found = Explorer.findInContextOf(UserI, EIt, EEnd);
         if (Found && Base::followUse(A, U, UserI))
           for (const Use &Us : UserI->uses())
-            NextUses.insert(&Us);
+            Uses.insert(&Us);
       }
     }
-    for (const Use *U : NextUses)
-      Uses.insert(U);
 
     return BeforeState == S ? ChangeStatus::UNCHANGED : ChangeStatus::CHANGED;
   }
@@ -1550,25 +1547,41 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
     return DerefAA.getKnownDereferenceableBytes();
   }
 
+  // We need to follow common pointer manipulation uses to the accesses they
+  // feed into. We can try to be smart to avoid looking through things we do not
+  // like for now, e.g., non-inbounds GEPs.
+  if (isa<CastInst>(I)) {
+    TrackUse = true;
+    return 0;
+  }
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
+    if (GEP->hasAllZeroIndices() ||
+        (GEP->isInBounds() && GEP->hasAllConstantIndices())) {
+      TrackUse = true;
+      return 0;
+    }
+
   int64_t Offset;
   if (const Value *Base = getBasePointerOfAccessPointerOperand(I, Offset, DL)) {
     if (Base == &AssociatedValue && getPointerOperand(I) == UseV) {
       int64_t DerefBytes =
-          Offset + (int64_t)DL.getTypeStoreSize(PtrTy->getPointerElementType());
+          (int64_t)DL.getTypeStoreSize(PtrTy->getPointerElementType()) + Offset;
 
       IsNonNull |= !NullPointerIsDefined;
-      return DerefBytes;
+      return std::max(int64_t(0), DerefBytes);
     }
   }
   if (const Value *Base =
           GetPointerBaseWithConstantOffset(UseV, Offset, DL,
                                            /*AllowNonInbounds*/ false)) {
-    auto &DerefAA =
-        A.getAAFor<AADereferenceable>(QueryingAA, IRPosition::value(*Base));
-    IsNonNull |= (!NullPointerIsDefined && DerefAA.isKnownNonNull());
-    IsNonNull |= (!NullPointerIsDefined && (Offset != 0));
-    int64_t DerefBytes = DerefAA.getKnownDereferenceableBytes();
-    return std::max(int64_t(0), DerefBytes - Offset);
+    if (Base == &AssociatedValue) {
+      auto &DerefAA =
+          A.getAAFor<AADereferenceable>(QueryingAA, IRPosition::value(*Base));
+      IsNonNull |= (!NullPointerIsDefined && DerefAA.isKnownNonNull());
+      IsNonNull |= (!NullPointerIsDefined && (Offset != 0));
+      int64_t DerefBytes = DerefAA.getKnownDereferenceableBytes();
+      return std::max(int64_t(0), DerefBytes - std::max(int64_t(0), Offset));
+    }
   }
 
   return 0;
@@ -1586,6 +1599,8 @@ struct AANonNullImpl : AANonNull {
     if (!NullIsDefined &&
         hasAttr({Attribute::NonNull, Attribute::Dereferenceable}))
       indicateOptimisticFixpoint();
+    else if (isa<ConstantPointerNull>(getAssociatedValue()))
+      indicatePessimisticFixpoint();
     else
       AANonNull::initialize(A);
   }

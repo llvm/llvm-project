@@ -116,7 +116,7 @@ entry:
 ;
 ; CHECK: define dereferenceable_or_null(8) i64* @scc_B(double* readnone returned dereferenceable_or_null(8) "no-capture-maybe-returned" %a)
 ;
-; CHECK: define dereferenceable_or_null(2) i8* @scc_C(i16* readnone returned dereferenceable_or_null(2) "no-capture-maybe-returned" %a)
+; CHECK: define dereferenceable_or_null(4) i8* @scc_C(i16* readnone returned dereferenceable_or_null(4) "no-capture-maybe-returned" %a)
 ;
 ; float *scc_A(int *a) {
 ;   return (float*)(a ? (int*)scc_A((int*)scc_B((double*)scc_C((short*)a))) : a);
@@ -260,7 +260,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define nonnull i64* @not_captured_but_returned_1(i64* writeonly "no-capture-maybe-returned" %a)
+; CHECK: define nonnull dereferenceable(8) i64* @not_captured_but_returned_1(i64* nonnull writeonly dereferenceable(16) "no-capture-maybe-returned" %a)
 define i64* @not_captured_but_returned_1(i64* %a) #0 {
 entry:
   %add.ptr = getelementptr inbounds i64, i64* %a, i64 1
@@ -320,7 +320,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define nonnull i64* @negative_test_not_captured_but_returned_call_1a(i64* writeonly "no-capture-maybe-returned" %a)
+; CHECK: define nonnull dereferenceable(8) i64* @negative_test_not_captured_but_returned_call_1a(i64* writeonly "no-capture-maybe-returned" %a)
 define i64* @negative_test_not_captured_but_returned_call_1a(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_1(i64* %a)
