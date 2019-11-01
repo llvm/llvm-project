@@ -357,12 +357,12 @@ bool MustBeExecutedContextPrinter::runOnModule(Module &M) {
   // We provide non-PM analysis here because the old PM doesn't like to query
   // function passes from a module pass. Given that this is a printer, we don't
   // care much about memory leaks.
-  GetterTy<LoopInfo> LIGetter = [this](const Function &F) {
+  GetterTy<LoopInfo> LIGetter = [](const Function &F) {
     DominatorTree *DT = new DominatorTree(const_cast<Function &>(F));
     LoopInfo *LI = new LoopInfo(*DT);
     return LI;
   };
-  GetterTy<PostDominatorTree> PDTGetter = [this](const Function &F) {
+  GetterTy<PostDominatorTree> PDTGetter = [](const Function &F) {
     PostDominatorTree *PDT = new PostDominatorTree(const_cast<Function &>(F));
     return PDT;
   };
