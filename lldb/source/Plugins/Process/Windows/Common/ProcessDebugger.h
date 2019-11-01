@@ -48,6 +48,8 @@ public:
 class ProcessDebugger {
 
 public:
+  virtual ~ProcessDebugger();
+
   virtual void OnExitProcess(uint32_t exit_code);
   virtual void OnDebuggerConnected(lldb::addr_t image_base);
   virtual ExceptionResult OnDebugException(bool first_chance,

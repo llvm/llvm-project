@@ -625,16 +625,7 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   SetProcessExitStatus(GetID(), true, 0, exit_code);
   SetPrivateState(eStateExited);
 
-  // If the process exits before any initial stop then notify the debugger
-  // of the error otherwise WaitForDebuggerConnection() will be blocked.
-  // An example of this issue is when a process fails to load a dependent DLL.
-  if (m_session_data && !m_session_data->m_initial_stop_received) {
-    Status error(exit_code, eErrorTypeWin32);
-    OnDebuggerError(error, 0);
-  }
-
-  // Reset the session.
-  m_session_data.reset();
+  ProcessDebugger::OnExitProcess(exit_code);
 }
 
 void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
