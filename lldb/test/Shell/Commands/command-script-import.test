@@ -3,7 +3,7 @@
 # RUN: echo 'run' >> %t.in
 # RUN: echo 'command script import %S/Inputs/frame.py' >> %t.in
 
-# RUN: %clang -g -O0 %S/Inputs/main.c -o %t.out
+# RUN: %clang_host -g -O0 %S/Inputs/main.c -o %t.out
 # RUN: %lldb -b -s %t.in -o 'script print("script: {}".format(lldb.frame))' %t.out | FileCheck %s
 
 # Make sure that we don't have access to lldb.frame from the Python script.

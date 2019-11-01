@@ -3963,9 +3963,7 @@ static bool ExpandMOVImmSExti8(MachineInstrBuilder &MIB,
   MachineFunction &MF = *MBB.getParent();
   const X86FrameLowering *TFL = Subtarget.getFrameLowering();
   bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
-  bool NeedsDwarfCFI =
-      !IsWin64Prologue &&
-      (MF.getMMI().hasDebugInfo() || MF.getFunction().needsUnwindTableEntry());
+  bool NeedsDwarfCFI = !IsWin64Prologue && MF.needsFrameMoves();
   bool EmitCFI = !TFL->hasFP(MF) && NeedsDwarfCFI;
   if (EmitCFI) {
     TFL->BuildCFI(MBB, I, DL,

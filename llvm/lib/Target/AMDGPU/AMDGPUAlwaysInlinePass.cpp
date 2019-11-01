@@ -118,7 +118,7 @@ bool AMDGPUAlwaysInline::runOnModule(Module &M) {
 
   for (GlobalVariable &GV : M.globals()) {
     // TODO: Region address
-    unsigned AS = GV.getType()->getAddressSpace();
+    unsigned AS = GV.getAddressSpace();
     if (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::REGION_ADDRESS)
       continue;
 

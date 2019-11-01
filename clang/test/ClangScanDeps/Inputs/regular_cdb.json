@@ -8,5 +8,10 @@
   "directory": "DIR",
   "command": "clang -E DIR/regular_cdb_input.cpp -IInputs",
   "file": "DIR/regular_cdb_input.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang -E DIR/regular_cdb_input.cpp -IInputs -o adena.o",
+  "file": "DIR/regular_cdb_input.cpp"
 }
 ]

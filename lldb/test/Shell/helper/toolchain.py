@@ -85,7 +85,7 @@ def use_support_substitutions(config):
     # Set up substitutions for support tools.  These tools can be overridden at the CMake
     # level (by specifying -DLLDB_LIT_TOOLS_DIR), installed, or as a last resort, we can use
     # the just-built version.
-    flags = []
+    host_flags = ['--target=' + config.host_triple]
     if platform.system() in ['Darwin']:
         try:
             out = subprocess.check_output(['xcrun', '--show-sdk-path']).strip()
@@ -95,25 +95,31 @@ def use_support_substitutions(config):
         if res == 0 and out:
             sdk_path = lit.util.to_string(out)
             llvm_config.lit_config.note('using SDKROOT: %r' % sdk_path)
-            flags = ['-isysroot', sdk_path]
+            host_flags += ['-isysroot', sdk_path]
     elif platform.system() in ['NetBSD', 'OpenBSD', 'Linux']:
-        flags = ['-pthread']
+        host_flags += ['-pthread']
 
     if sys.platform.startswith('netbsd'):
         # needed e.g. to use freshly built libc++
-        flags += ['-L' + config.llvm_libs_dir,
+        host_flags += ['-L' + config.llvm_libs_dir,
                   '-Wl,-rpath,' + config.llvm_libs_dir]
 
     # The clang module cache is used for building inferiors.
-    flags += ['-fmodules-cache-path={}'.format(config.clang_module_cache)]
+    host_flags += ['-fmodules-cache-path={}'.format(config.clang_module_cache)]
+
+    host_flags = ' '.join(host_flags)
+    config.substitutions.append(('%clang_host', '%clang ' + host_flags))
+    config.substitutions.append(('%clangxx_host', '%clangxx ' + host_flags))
+    config.substitutions.append(('%clang_cl_host', '%clang_cl --target='+config.host_triple))
 
     additional_tool_dirs=[]
     if config.lldb_lit_tools_dir:
         additional_tool_dirs.append(config.lldb_lit_tools_dir)
 
-    llvm_config.use_clang(additional_flags=flags,
+    llvm_config.use_clang(additional_flags=['--target=specify-a-target-or-use-a-_host-substitution'],
                           additional_tool_dirs=additional_tool_dirs,
                           required=True)
+
 
     if sys.platform == 'win32':
         _use_msvc_substitutions(config)

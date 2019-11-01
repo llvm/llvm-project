@@ -844,8 +844,8 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineModuleInfo &MMI = MF.getMMI();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  bool needsFrameMoves = (MMI.hasDebugInfo() || F.needsUnwindTableEntry()) &&
-                         !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+  bool needsFrameMoves =
+      MF.needsFrameMoves() && !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
   bool HasFP = hasFP(MF);
   bool NeedsWinCFI = needsWinCFI(MF);
   bool HasWinCFI = false;

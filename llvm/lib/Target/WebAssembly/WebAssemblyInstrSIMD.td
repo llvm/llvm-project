@@ -72,35 +72,30 @@ defm "" : SIMDLoadSplat<"v16x8", 195>;
 defm "" : SIMDLoadSplat<"v32x4", 196>;
 defm "" : SIMDLoadSplat<"v64x2", 197>;
 
-def wasm_load_splat_t : SDTypeProfile<1, 1, []>;
-def wasm_load_splat : SDNode<"WebAssemblyISD::LOAD_SPLAT", wasm_load_splat_t>;
-
-foreach args = [["v16i8", "i32", "extloadi8"], ["v8i16", "i32", "extloadi16"],
-                ["v4i32", "i32", "load"], ["v2i64", "i64", "load"],
-                ["v4f32", "f32", "load"], ["v2f64", "f64", "load"]] in
-def load_splat_#args[0] :
-  PatFrag<(ops node:$addr), (wasm_load_splat
-            (!cast<ValueType>(args[1]) (!cast<PatFrag>(args[2]) node:$addr)))>;
+def wasm_load_splat_t : SDTypeProfile<1, 1, [SDTCisPtrTy<1>]>;
+def wasm_load_splat : SDNode<"WebAssemblyISD::LOAD_SPLAT", wasm_load_splat_t,
+                             [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def load_splat : PatFrag<(ops node:$addr), (wasm_load_splat node:$addr)>;
 
 let Predicates = [HasUnimplementedSIMD128] in
 foreach args = [["v16i8", "v8x16"], ["v8i16", "v16x8"], ["v4i32", "v32x4"],
                 ["v2i64", "v64x2"], ["v4f32", "v32x4"], ["v2f64", "v64x2"]] in {
 def : LoadPatNoOffset<!cast<ValueType>(args[0]),
-                      !cast<PatFrag>("load_splat_"#args[0]),
+                      load_splat,
                       !cast<NI>("LOAD_SPLAT_"#args[1])>;
 def : LoadPatImmOff<!cast<ValueType>(args[0]),
-                    !cast<PatFrag>("load_splat_"#args[0]),
+                    load_splat,
                     regPlusImm,
                     !cast<NI>("LOAD_SPLAT_"#args[1])>;
 def : LoadPatImmOff<!cast<ValueType>(args[0]),
-                    !cast<PatFrag>("load_splat_"#args[0]),
+                    load_splat,
                     or_is_add,
                     !cast<NI>("LOAD_SPLAT_"#args[1])>;
 def : LoadPatOffsetOnly<!cast<ValueType>(args[0]),
-                        !cast<PatFrag>("load_splat_"#args[0]),
+                        load_splat,
                         !cast<NI>("LOAD_SPLAT_"#args[1])>;
 def : LoadPatGlobalAddrOffOnly<!cast<ValueType>(args[0]),
-                               !cast<PatFrag>("load_splat_"#args[0]),
+                               load_splat,
                                !cast<NI>("LOAD_SPLAT_"#args[1])>;
 }
 
@@ -732,7 +727,16 @@ defm SUB_SAT_U :
   SIMDBinaryIntSmall<int_wasm_sub_saturate_unsigned, "sub_saturate_u", 92>;
 
 // Integer multiplication: mul
+let isCommutable = 1 in
 defm MUL : SIMDBinaryIntNoI64x2<mul, "mul", 93>;
+
+// Integer min_s / min_u / max_s / max_u
+let isCommutable = 1 in {
+defm MIN_S : SIMDBinaryIntNoI64x2<int_wasm_min_signed, "min_s", 94>;
+defm MIN_U : SIMDBinaryIntNoI64x2<int_wasm_min_unsigned, "min_u", 95>;
+defm MAX_S : SIMDBinaryIntNoI64x2<int_wasm_max_signed, "max_s", 96>;
+defm MAX_U : SIMDBinaryIntNoI64x2<int_wasm_max_unsigned, "max_u", 97>;
+} // isCommutable = 1
 
 //===----------------------------------------------------------------------===//
 // Floating-point unary arithmetic

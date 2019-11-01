@@ -14318,6 +14318,48 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
                                      ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {V1, V2, C});
   }
+  case WebAssembly::BI__builtin_wasm_min_s_i8x16:
+  case WebAssembly::BI__builtin_wasm_min_u_i8x16:
+  case WebAssembly::BI__builtin_wasm_max_s_i8x16:
+  case WebAssembly::BI__builtin_wasm_max_u_i8x16:
+  case WebAssembly::BI__builtin_wasm_min_s_i16x8:
+  case WebAssembly::BI__builtin_wasm_min_u_i16x8:
+  case WebAssembly::BI__builtin_wasm_max_s_i16x8:
+  case WebAssembly::BI__builtin_wasm_max_u_i16x8:
+  case WebAssembly::BI__builtin_wasm_min_s_i32x4:
+  case WebAssembly::BI__builtin_wasm_min_u_i32x4:
+  case WebAssembly::BI__builtin_wasm_max_s_i32x4:
+  case WebAssembly::BI__builtin_wasm_max_u_i32x4: {
+    unsigned IntNo;
+    switch (BuiltinID) {
+    case WebAssembly::BI__builtin_wasm_min_s_i8x16:
+    case WebAssembly::BI__builtin_wasm_min_s_i16x8:
+    case WebAssembly::BI__builtin_wasm_min_s_i32x4:
+      IntNo = Intrinsic::wasm_min_signed;
+      break;
+    case WebAssembly::BI__builtin_wasm_min_u_i8x16:
+    case WebAssembly::BI__builtin_wasm_min_u_i16x8:
+    case WebAssembly::BI__builtin_wasm_min_u_i32x4:
+      IntNo = Intrinsic::wasm_min_unsigned;
+      break;
+    case WebAssembly::BI__builtin_wasm_max_s_i8x16:
+    case WebAssembly::BI__builtin_wasm_max_s_i16x8:
+    case WebAssembly::BI__builtin_wasm_max_s_i32x4:
+      IntNo = Intrinsic::wasm_max_signed;
+      break;
+    case WebAssembly::BI__builtin_wasm_max_u_i8x16:
+    case WebAssembly::BI__builtin_wasm_max_u_i16x8:
+    case WebAssembly::BI__builtin_wasm_max_u_i32x4:
+      IntNo = Intrinsic::wasm_max_unsigned;
+      break;
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    }
+    Value *LHS = EmitScalarExpr(E->getArg(0));
+    Value *RHS = EmitScalarExpr(E->getArg(1));
+    Function *Callee = CGM.getIntrinsic(IntNo, ConvertType(E->getType()));
+    return Builder.CreateCall(Callee, {LHS, RHS});
+  }
   case WebAssembly::BI__builtin_wasm_any_true_i8x16:
   case WebAssembly::BI__builtin_wasm_any_true_i16x8:
   case WebAssembly::BI__builtin_wasm_any_true_i32x4:

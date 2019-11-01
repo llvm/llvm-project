@@ -1,0 +1,10 @@
+XFAIL: darwin
+Purpose:
+    Run DExTer unit tests.
+
+# Dexter returns 1 when no subtools are specified.
+RUN: not %dexter --unittest=show-all 2>&1 | FileCheck %s
+
+CHECK: Ran {{[0-9]+}} tests
+CHECK-EMPTY:
+CHECK-NEXT: OK

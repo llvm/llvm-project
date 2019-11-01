@@ -782,8 +782,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   MachineModuleInfo &MMI = MF.getMMI();
   const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
   DebugLoc dl;
-  bool needsCFI = MMI.hasDebugInfo() ||
-    MF.getFunction().needsUnwindTableEntry();
+  bool needsCFI = MF.needsFrameMoves();
 
   // Get processor type.
   bool isPPC64 = Subtarget.isPPC64();

@@ -4,7 +4,7 @@
 # Generate a reproducer.
 # RUN: mkdir -p %t
 # RUN: rm -rf %t.repro
-# RUN: %clang %S/Inputs/simple.c -g -o %t/reproducer.out
+# RUN: %clang_host %S/Inputs/simple.c -g -o %t/reproducer.out
 # RUN: %lldb -x -b -s %S/Inputs/FileCapture.in -o 'reproducer dump -p files' --capture --capture-path %t.repro %t/reproducer.out
 
 # RUN: %lldb -b -o 'reproducer dump -p files -f %t.repro' | FileCheck %s --check-prefix FILES

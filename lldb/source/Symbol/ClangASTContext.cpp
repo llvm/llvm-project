@@ -3850,20 +3850,20 @@ bool ClangASTContext::SupportsLanguage(lldb::LanguageType language) {
   return ClangASTContextSupportsLanguage(language);
 }
 
-bool ClangASTContext::GetCXXClassName(const CompilerType &type,
-                                      std::string &class_name) {
-  if (type) {
-    clang::QualType qual_type(ClangUtil::GetCanonicalQualType(type));
-    if (!qual_type.isNull()) {
-      clang::CXXRecordDecl *cxx_record_decl = qual_type->getAsCXXRecordDecl();
-      if (cxx_record_decl) {
-        class_name.assign(cxx_record_decl->getIdentifier()->getNameStart());
-        return true;
-      }
-    }
-  }
-  class_name.clear();
-  return false;
+Optional<std::string>
+ClangASTContext::GetCXXClassName(const CompilerType &type) {
+  if (!type)
+    return llvm::None;
+
+  clang::QualType qual_type(ClangUtil::GetCanonicalQualType(type));
+  if (qual_type.isNull())
+    return llvm::None;
+
+  clang::CXXRecordDecl *cxx_record_decl = qual_type->getAsCXXRecordDecl();
+  if (!cxx_record_decl)
+    return llvm::None;
+
+  return std::string(cxx_record_decl->getIdentifier()->getNameStart());
 }
 
 bool ClangASTContext::IsCXXClassType(const CompilerType &type) {

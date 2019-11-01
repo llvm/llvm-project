@@ -40,12 +40,14 @@ enum ID : unsigned;
 }
 
 class AssumptionCache;
+class BlockFrequencyInfo;
 class BranchInst;
 class Function;
 class GlobalValue;
 class IntrinsicInst;
 class LoadInst;
 class Loop;
+class ProfileSummaryInfo;
 class SCEV;
 class ScalarEvolution;
 class StoreInst;
@@ -297,7 +299,9 @@ public:
   /// \p JTSize Set a jump table size only when \p SI is suitable for a jump
   /// table.
   unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
-                                            unsigned &JTSize) const;
+                                            unsigned &JTSize,
+                                            ProfileSummaryInfo *PSI,
+                                            BlockFrequencyInfo *BFI) const;
 
   /// Estimate the cost of a given IR user when lowered.
   ///
@@ -1177,7 +1181,9 @@ public:
                                const User *U) = 0;
   virtual int getMemcpyCost(const Instruction *I) = 0;
   virtual unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
-                                                    unsigned &JTSize) = 0;
+                                                    unsigned &JTSize,
+                                                    ProfileSummaryInfo *PSI,
+                                                    BlockFrequencyInfo *BFI) = 0;
   virtual int
   getUserCost(const User *U, ArrayRef<const Value *> Operands) = 0;
   virtual bool hasBranchDivergence() = 0;
@@ -1678,8 +1684,10 @@ public:
     return Impl.getMaxInterleaveFactor(VF);
   }
   unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
-                                            unsigned &JTSize) override {
-    return Impl.getEstimatedNumberOfCaseClusters(SI, JTSize);
+                                            unsigned &JTSize,
+                                            ProfileSummaryInfo *PSI,
+                                            BlockFrequencyInfo *BFI) override {
+    return Impl.getEstimatedNumberOfCaseClusters(SI, JTSize, PSI, BFI);
   }
   unsigned
   getArithmeticInstrCost(unsigned Opcode, Type *Ty, OperandValueKind Opd1Info,

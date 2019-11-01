@@ -179,6 +179,7 @@ def run_tests(tests, litConfig, opts, numTotalTests):
     run = lit.run.create_run(tests, litConfig, opts.numWorkers,
                              progress_callback, opts.timeout)
 
+    display.print_header()
     try:
         elapsed = execute_in_tmp_dir(run, litConfig)
     except KeyboardInterrupt:
@@ -188,9 +189,9 @@ def run_tests(tests, litConfig, opts, numTotalTests):
     # TODO(yln): change display to update when test starts, not when test completes
     # Ensure everything still works with SimpleProgressBar as well
     # finally:
-    #     display.finish()
+    #     display.clear()
 
-    display.finish()
+    display.clear()
     return elapsed
 
 def execute_in_tmp_dir(run, litConfig):

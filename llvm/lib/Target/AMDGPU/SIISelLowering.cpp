@@ -3939,6 +3939,19 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
   return false;
 }
 
+bool SITargetLowering::isFMADLegalForFAddFSub(const SelectionDAG &DAG,
+                                              const SDNode *N) const {
+  // TODO: Check future ftz flag
+  // v_mad_f32/v_mac_f32 do not support denormals.
+  EVT VT = N->getValueType(0);
+  if (VT == MVT::f32)
+    return !Subtarget->hasFP32Denormals();
+  if (VT == MVT::f16)
+    return !Subtarget->hasFP16Denormals() && Subtarget->hasMadF16();
+
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // Custom DAG Lowering Operations
 //===----------------------------------------------------------------------===//
@@ -4409,8 +4422,8 @@ unsigned SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
 
 bool SITargetLowering::shouldEmitFixup(const GlobalValue *GV) const {
   const Triple &TT = getTargetMachine().getTargetTriple();
-  return (GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
-          GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
+  return (GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
+          GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
          AMDGPU::shouldEmitConstantsToTextSection(TT);
 }
 
@@ -4418,9 +4431,9 @@ bool SITargetLowering::shouldEmitGOTReloc(const GlobalValue *GV) const {
   // FIXME: Either avoid relying on address space here or change the default
   // address space for functions to avoid the explicit check.
   return (GV->getValueType()->isFunctionTy() ||
-          GV->getType()->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
-          GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
-          GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
+          GV->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
+          GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
+          GV->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
          !shouldEmitFixup(GV) &&
          !getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV);
 }

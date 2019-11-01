@@ -135,8 +135,6 @@ static Status SetThreadContextHelper(lldb::thread_t thread_handle,
 std::unique_ptr<NativeRegisterContextWindows>
 NativeRegisterContextWindows::CreateHostNativeRegisterContextWindows(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
-  // TODO: Register context for a WoW64 application?
-
   // Register context for a native 64-bit application.
   return std::make_unique<NativeRegisterContextWindows_arm64>(target_arch,
                                                               native_thread);

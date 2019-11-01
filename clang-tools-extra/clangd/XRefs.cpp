@@ -14,6 +14,7 @@
 #include "Logger.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
+#include "Selection.h"
 #include "SourceCode.h"
 #include "URI.h"
 #include "index/Index.h"
@@ -133,83 +134,18 @@ SymbolLocation getPreferredLocation(const Location &ASTLoc,
   return Merged.CanonicalDeclaration;
 }
 
-/// Finds declarations locations that a given source location refers to.
-class DeclarationFinder : public index::IndexDataConsumer {
-  llvm::DenseSet<const Decl *> Decls;
-  const SourceLocation &SearchedLocation;
-
-public:
-  DeclarationFinder(const SourceLocation &SearchedLocation)
-      : SearchedLocation(SearchedLocation) {}
-
-  // The results are sorted by declaration location.
-  std::vector<const Decl *> getFoundDecls() const {
-    std::vector<const Decl *> Result;
-    for (const Decl *D : Decls)
-      Result.push_back(D);
-
-    llvm::sort(Result, [](const Decl *L, const Decl *R) {
-      return L->getBeginLoc() < R->getBeginLoc();
-    });
-    return Result;
+std::vector<const Decl *> getDeclAtPosition(ParsedAST &AST, SourceLocation Pos,
+                                            DeclRelationSet Relations) {
+  FileID FID;
+  unsigned Offset;
+  std::tie(FID, Offset) = AST.getSourceManager().getDecomposedSpellingLoc(Pos);
+  SelectionTree Selection(AST.getASTContext(), AST.getTokens(), Offset);
+  std::vector<const Decl *> Result;
+  if (const SelectionTree::Node *N = Selection.commonAncestor()) {
+    auto Decls = targetDecl(N->ASTNode, Relations);
+    Result.assign(Decls.begin(), Decls.end());
   }
-
-  bool
-  handleDeclOccurence(const Decl *D, index::SymbolRoleSet Roles,
-                      llvm::ArrayRef<index::SymbolRelation> Relations,
-                      SourceLocation Loc,
-                      index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
-    // Skip non-semantic references.
-    if (Roles & static_cast<unsigned>(index::SymbolRole::NameReference))
-      return true;
-
-    if (Loc == SearchedLocation) {
-      auto IsImplicitExpr = [](const Expr *E) {
-        if (!E)
-          return false;
-        // We assume that a constructor expression is implict (was inserted by
-        // clang) if it has an invalid paren/brace location, since such
-        // experssion is impossible to write down.
-        if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(E))
-          return CtorExpr->getParenOrBraceRange().isInvalid();
-        // Ignore implicit conversion-operator AST node.
-        if (const auto *ME = dyn_cast<MemberExpr>(E)) {
-          if (isa<CXXConversionDecl>(ME->getMemberDecl()))
-            return ME->getMemberLoc().isInvalid();
-        }
-        return isa<ImplicitCastExpr>(E);
-      };
-
-      if (IsImplicitExpr(ASTNode.OrigE))
-        return true;
-      // Find and add definition declarations (for GoToDefinition).
-      // We don't use parameter `D`, as Parameter `D` is the canonical
-      // declaration, which is the first declaration of a redeclarable
-      // declaration, and it could be a forward declaration.
-      if (const auto *Def = getDefinition(D)) {
-        Decls.insert(Def);
-      } else {
-        // Couldn't find a definition, fall back to use `D`.
-        Decls.insert(D);
-      }
-    }
-    return true;
-  }
-};
-
-std::vector<const Decl *> getDeclAtPosition(ParsedAST &AST,
-                                            SourceLocation Pos) {
-  DeclarationFinder Finder(Pos);
-  index::IndexingOptions IndexOpts;
-  IndexOpts.SystemSymbolFilter =
-      index::IndexingOptions::SystemSymbolFilterKind::All;
-  IndexOpts.IndexFunctionLocals = true;
-  IndexOpts.IndexParametersInDeclarations = true;
-  IndexOpts.IndexTemplateParameters = true;
-  indexTopLevelDecls(AST.getASTContext(), AST.getPreprocessor(),
-                     AST.getLocalTopLevelDecls(), Finder, IndexOpts);
-
-  return Finder.getFoundDecls();
+  return Result;
 }
 
 llvm::Optional<Location> makeLocation(ASTContext &AST, SourceLocation TokLoc,
@@ -258,14 +194,13 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     }
   }
 
-  SourceLocation SourceLocationBeg =
-      SM.getMacroArgExpandedLocation(getBeginningOfIdentifier(
-          Pos, AST.getSourceManager(), AST.getASTContext().getLangOpts()));
-
   // Macros are simple: there's no declaration/definition distinction.
   // As a consequence, there's no need to look them up in the index either.
+  SourceLocation MaybeMacroLocation =
+      SM.getMacroArgExpandedLocation(getBeginningOfIdentifier(
+          Pos, AST.getSourceManager(), AST.getASTContext().getLangOpts()));
   std::vector<LocatedSymbol> Result;
-  if (auto M = locateMacroAt(SourceLocationBeg, AST.getPreprocessor())) {
+  if (auto M = locateMacroAt(MaybeMacroLocation, AST.getPreprocessor())) {
     if (auto Loc = makeLocation(AST.getASTContext(),
                                 M->Info->getDefinitionLoc(), *MainFilePath)) {
       LocatedSymbol Macro;
@@ -273,6 +208,11 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
       Macro.PreferredDeclaration = *Loc;
       Macro.Definition = Loc;
       Result.push_back(std::move(Macro));
+
+      // Don't look at the AST or index if we have a macro result.
+      // (We'd just return declarations referenced from the macro's
+      // expansion.)
+      return Result;
     }
   }
 
@@ -285,24 +225,37 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
   // Keep track of SymbolID -> index mapping, to fill in index data later.
   llvm::DenseMap<SymbolID, size_t> ResultIndex;
 
+  SourceLocation SourceLoc;
+  if (auto L = sourceLocationInMainFile(SM, Pos)) {
+    SourceLoc = *L;
+  } else {
+    elog("locateSymbolAt failed to convert position to source location: {0}",
+         L.takeError());
+    return Result;
+  }
+
   // Emit all symbol locations (declaration or definition) from AST.
-  for (const Decl *D : getDeclAtPosition(AST, SourceLocationBeg)) {
-    auto Loc =
-        makeLocation(AST.getASTContext(), spellingLocIfSpelled(findName(D), SM),
-                     *MainFilePath);
+  DeclRelationSet Relations =
+      DeclRelation::TemplatePattern | DeclRelation::Alias;
+  for (const Decl *D : getDeclAtPosition(AST, SourceLoc, Relations)) {
+    const Decl *Def = getDefinition(D);
+    const Decl *Preferred = Def ? Def : D;
+    auto Loc = makeLocation(AST.getASTContext(),
+                            spellingLocIfSpelled(findName(Preferred), SM),
+                            *MainFilePath);
     if (!Loc)
       continue;
 
     Result.emplace_back();
-    if (auto *ND = dyn_cast<NamedDecl>(D))
+    if (auto *ND = dyn_cast<NamedDecl>(Preferred))
       Result.back().Name = printName(AST.getASTContext(), *ND);
     Result.back().PreferredDeclaration = *Loc;
-    // DeclInfo.D is always a definition if possible, so this check works.
-    if (getDefinition(D) == D)
+    // Preferred is always a definition if possible, so this check works.
+    if (Def == Preferred)
       Result.back().Definition = *Loc;
 
     // Record SymbolID for index lookup later.
-    if (auto ID = getSymbolID(D))
+    if (auto ID = getSymbolID(Preferred))
       ResultIndex[*ID] = Result.size() - 1;
   }
 
@@ -413,11 +366,14 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
                                                       Position Pos) {
   const SourceManager &SM = AST.getSourceManager();
   // FIXME: show references to macro within file?
-  auto References =
-      findRefs(getDeclAtPosition(
-                   AST, SM.getMacroArgExpandedLocation(getBeginningOfIdentifier(
-                            Pos, SM, AST.getASTContext().getLangOpts()))),
-               AST);
+  DeclRelationSet Relations =
+      DeclRelation::TemplatePattern | DeclRelation::Alias;
+  auto References = findRefs(
+      getDeclAtPosition(AST,
+                        SM.getMacroArgExpandedLocation(getBeginningOfIdentifier(
+                            Pos, SM, AST.getASTContext().getLangOpts())),
+                        Relations),
+      AST);
 
   // FIXME: we may get multiple DocumentHighlights with the same location and
   // different kinds, deduplicate them.
@@ -887,19 +843,25 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   SourceLocation SourceLocationBeg = SM.getMacroArgExpandedLocation(
       getBeginningOfIdentifier(Pos, SM, AST.getASTContext().getLangOpts()));
 
-  if (auto M = locateMacroAt(SourceLocationBeg, AST.getPreprocessor())) {
-    HI = getHoverContents(*M, AST);
-  } else {
-    auto Decls = getDeclAtPosition(AST, SourceLocationBeg);
-    if (!Decls.empty())
-      HI = getHoverContents(Decls.front(), Index);
-  }
-  if (!HI && hasDeducedType(AST, SourceLocationBeg)) {
+  if (hasDeducedType(AST, SourceLocationBeg)) {
     DeducedTypeVisitor V(SourceLocationBeg);
     V.TraverseAST(AST.getASTContext());
     if (!V.DeducedType.isNull())
       HI = getHoverContents(V.DeducedType, V.D, AST.getASTContext(), Index);
   }
+
+  if (!HI) {
+    if (auto M = locateMacroAt(SourceLocationBeg, AST.getPreprocessor())) {
+      HI = getHoverContents(*M, AST);
+    } else {
+      DeclRelationSet Relations =
+          DeclRelation::TemplatePattern | DeclRelation::Alias;
+      auto Decls = getDeclAtPosition(AST, SourceLocationBeg, Relations);
+      if (!Decls.empty())
+        HI = getHoverContents(Decls.front(), Index);
+    }
+  }
+
   if (!HI)
     return llvm::None;
 
@@ -930,7 +892,11 @@ std::vector<Location> findReferences(ParsedAST &AST, Position Pos,
   auto Loc = SM.getMacroArgExpandedLocation(
       getBeginningOfIdentifier(Pos, SM, AST.getASTContext().getLangOpts()));
   // TODO: should we handle macros, too?
-  auto Decls = getDeclAtPosition(AST, Loc);
+  // We also show references to the targets of using-decls, so we include
+  // DeclRelation::Underlying.
+  DeclRelationSet Relations = DeclRelation::TemplatePattern |
+                              DeclRelation::Alias | DeclRelation::Underlying;
+  auto Decls = getDeclAtPosition(AST, Loc, Relations);
 
   // We traverse the AST to find references in the main file.
   auto MainFileRefs = findRefs(Decls, AST);
@@ -989,7 +955,11 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
 
   std::vector<SymbolDetails> Results;
 
-  for (const Decl *D : getDeclAtPosition(AST, Loc)) {
+  // We also want the targets of using-decls, so we include
+  // DeclRelation::Underlying.
+  DeclRelationSet Relations = DeclRelation::TemplatePattern |
+                              DeclRelation::Alias | DeclRelation::Underlying;
+  for (const Decl *D : getDeclAtPosition(AST, Loc, Relations)) {
     SymbolDetails NewSymbol;
     if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
       std::string QName = printQualifiedName(*ND);
@@ -1158,7 +1128,9 @@ const CXXRecordDecl *findRecordTypeAt(ParsedAST &AST, Position Pos) {
   const SourceManager &SM = AST.getSourceManager();
   SourceLocation SourceLocationBeg = SM.getMacroArgExpandedLocation(
       getBeginningOfIdentifier(Pos, SM, AST.getASTContext().getLangOpts()));
-  auto Decls = getDeclAtPosition(AST, SourceLocationBeg);
+  DeclRelationSet Relations =
+      DeclRelation::TemplatePattern | DeclRelation::Underlying;
+  auto Decls = getDeclAtPosition(AST, SourceLocationBeg, Relations);
   if (Decls.empty())
     return nullptr;
 

@@ -19,8 +19,9 @@ namespace {
 class RegisterRuntime {
 public:
   RegisterRuntime() {
-    __llvm_profile_register_write_file_atexit();
     __llvm_profile_initialize_file();
+    if (!__llvm_profile_is_continuous_mode_enabled())
+      __llvm_profile_register_write_file_atexit();
   }
 };
 

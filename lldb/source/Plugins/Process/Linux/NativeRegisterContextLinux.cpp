@@ -34,7 +34,7 @@ Status NativeRegisterContextLinux::ReadRegisterRaw(uint32_t reg_index,
   if (!reg_info)
     return Status("register %" PRIu32 " not found", reg_index);
 
-  return DoReadRegisterValue(reg_info->byte_offset, reg_info->name,
+  return DoReadRegisterValue(GetPtraceOffset(reg_index), reg_info->name,
                              reg_info->byte_size, reg_value);
 }
 
@@ -91,7 +91,8 @@ NativeRegisterContextLinux::WriteRegisterRaw(uint32_t reg_index,
                   "for write register index %" PRIu32,
                   __FUNCTION__, reg_to_write);
 
-  return DoWriteRegisterValue(reg_info->byte_offset, reg_info->name, reg_value);
+  return DoWriteRegisterValue(GetPtraceOffset(reg_index), reg_info->name,
+                              reg_value);
 }
 
 Status NativeRegisterContextLinux::ReadGPR() {

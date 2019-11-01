@@ -334,32 +334,21 @@ ArchSpec ProcessMinidump::GetArchitecture() {
   return ArchSpec(triple);
 }
 
-void ProcessMinidump::BuildMemoryRegions() {
-  if (m_memory_regions)
-    return;
-  m_memory_regions.emplace();
-  bool is_complete;
-  std::tie(*m_memory_regions, is_complete) =
-      m_minidump_parser->BuildMemoryRegions();
-  // TODO: Use loaded modules to complete the region list.
-}
-
-Status ProcessMinidump::GetMemoryRegionInfo(lldb::addr_t load_addr,
-                                            MemoryRegionInfo &region) {
-  BuildMemoryRegions();
-  auto pos = llvm::upper_bound(*m_memory_regions, load_addr);
-  if (pos != m_memory_regions->begin() &&
+static MemoryRegionInfo GetMemoryRegionInfo(const MemoryRegionInfos &regions,
+                                            lldb::addr_t load_addr) {
+  MemoryRegionInfo region;
+  auto pos = llvm::upper_bound(regions, load_addr);
+  if (pos != regions.begin() &&
       std::prev(pos)->GetRange().Contains(load_addr)) {
-    region = *std::prev(pos);
-    return Status();
+    return *std::prev(pos);
   }
 
-  if (pos == m_memory_regions->begin())
+  if (pos == regions.begin())
     region.GetRange().SetRangeBase(0);
   else
     region.GetRange().SetRangeBase(std::prev(pos)->GetRange().GetRangeEnd());
 
-  if (pos == m_memory_regions->end())
+  if (pos == regions.end())
     region.GetRange().SetRangeEnd(UINT64_MAX);
   else
     region.GetRange().SetRangeEnd(pos->GetRange().GetRangeBase());
@@ -368,6 +357,55 @@ Status ProcessMinidump::GetMemoryRegionInfo(lldb::addr_t load_addr,
   region.SetWritable(MemoryRegionInfo::eNo);
   region.SetExecutable(MemoryRegionInfo::eNo);
   region.SetMapped(MemoryRegionInfo::eNo);
+  return region;
+}
+
+void ProcessMinidump::BuildMemoryRegions() {
+  if (m_memory_regions)
+    return;
+  m_memory_regions.emplace();
+  bool is_complete;
+  std::tie(*m_memory_regions, is_complete) =
+      m_minidump_parser->BuildMemoryRegions();
+
+  if (is_complete)
+    return;
+
+  MemoryRegionInfos to_add;
+  ModuleList &modules = GetTarget().GetImages();
+  SectionLoadList &load_list = GetTarget().GetSectionLoadList();
+  modules.ForEach([&](const ModuleSP &module_sp) {
+    SectionList *sections = module_sp->GetSectionList();
+    for (size_t i = 0; i < sections->GetSize(); ++i) {
+      SectionSP section_sp = sections->GetSectionAtIndex(i);
+      addr_t load_addr = load_list.GetSectionLoadAddress(section_sp);
+      if (load_addr == LLDB_INVALID_ADDRESS)
+        continue;
+      MemoryRegionInfo::RangeType section_range(load_addr,
+                                                section_sp->GetByteSize());
+      MemoryRegionInfo region =
+          ::GetMemoryRegionInfo(*m_memory_regions, load_addr);
+      if (region.GetMapped() != MemoryRegionInfo::eYes &&
+          region.GetRange().GetRangeBase() <= section_range.GetRangeBase() &&
+          section_range.GetRangeEnd() <= region.GetRange().GetRangeEnd()) {
+        to_add.emplace_back();
+        to_add.back().GetRange() = section_range;
+        to_add.back().SetLLDBPermissions(section_sp->GetPermissions());
+        to_add.back().SetMapped(MemoryRegionInfo::eYes);
+        to_add.back().SetName(module_sp->GetFileSpec().GetPath().c_str());
+      }
+    }
+    return true;
+  });
+  m_memory_regions->insert(m_memory_regions->end(), to_add.begin(),
+                           to_add.end());
+  llvm::sort(*m_memory_regions);
+}
+
+Status ProcessMinidump::GetMemoryRegionInfo(lldb::addr_t load_addr,
+                                            MemoryRegionInfo &region) {
+  BuildMemoryRegions();
+  region = ::GetMemoryRegionInfo(*m_memory_regions, load_addr);
   return Status();
 }
 

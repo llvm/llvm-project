@@ -114,7 +114,11 @@ public:
   }
 
   unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
-                                            unsigned &JTSize) {
+                                            unsigned &JTSize,
+                                            ProfileSummaryInfo *PSI,
+                                            BlockFrequencyInfo *BFI) {
+    (void)PSI;
+    (void)BFI;
     JTSize = 0;
     return SI.getNumCases();
   }

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -verify %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++2a -verify %s -fcxx-exceptions -Wno-constant-evaluated -triple=x86_64-linux-gnu
 
 using size_t = decltype(sizeof(int));
 

@@ -993,8 +993,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   bool NeedsWinFPO =
       !IsFunclet && STI.isTargetWin32() && MMI.getModule()->getCodeViewFlag();
   bool NeedsWinCFI = NeedsWin64CFI || NeedsWinFPO;
-  bool NeedsDwarfCFI =
-      !IsWin64Prologue && (MMI.hasDebugInfo() || Fn.needsUnwindTableEntry());
+  bool NeedsDwarfCFI = !IsWin64Prologue && MF.needsFrameMoves();
   Register FramePtr = TRI->getFrameRegister(MF);
   const Register MachineFramePtr =
       STI.isTarget64BitILP32()
@@ -1614,10 +1613,9 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   bool HasFP = hasFP(MF);
   uint64_t NumBytes = 0;
 
-  bool NeedsDwarfCFI =
-      (!MF.getTarget().getTargetTriple().isOSDarwin() &&
-       !MF.getTarget().getTargetTriple().isOSWindows()) &&
-      (MF.getMMI().hasDebugInfo() || MF.getFunction().needsUnwindTableEntry());
+  bool NeedsDwarfCFI = (!MF.getTarget().getTargetTriple().isOSDarwin() &&
+                        !MF.getTarget().getTargetTriple().isOSWindows()) &&
+                       MF.needsFrameMoves();
 
   if (IsFunclet) {
     assert(HasFP && "EH funclets without FP not yet implemented");
@@ -2812,11 +2810,9 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
     unsigned StackAlign = getStackAlignment();
     Amount = alignTo(Amount, StackAlign);
 
-    MachineModuleInfo &MMI = MF.getMMI();
     const Function &F = MF.getFunction();
     bool WindowsCFI = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
-    bool DwarfCFI = !WindowsCFI &&
-                    (MMI.hasDebugInfo() || F.needsUnwindTableEntry());
+    bool DwarfCFI = !WindowsCFI && MF.needsFrameMoves();
 
     // If we have any exception handlers in this function, and we adjust
     // the SP before calls, we may need to indicate this to the unwinder

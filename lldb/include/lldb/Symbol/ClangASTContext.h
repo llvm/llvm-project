@@ -601,8 +601,7 @@ public:
 
   bool SupportsLanguage(lldb::LanguageType language) override;
 
-  static bool GetCXXClassName(const CompilerType &type,
-                              std::string &class_name);
+  static llvm::Optional<std::string> GetCXXClassName(const CompilerType &type);
 
   // Type Completion
 

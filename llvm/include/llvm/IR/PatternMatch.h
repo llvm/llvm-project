@@ -35,6 +35,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Value.h"
@@ -558,6 +559,8 @@ inline bind_ty<const Value> m_Value(const Value *&V) { return V; }
 inline bind_ty<Instruction> m_Instruction(Instruction *&I) { return I; }
 /// Match a binary operator, capturing it if we match.
 inline bind_ty<BinaryOperator> m_BinOp(BinaryOperator *&I) { return I; }
+/// Match a with overflow intrinsic, capturing it if we match.
+inline bind_ty<WithOverflowInst> m_WithOverflowInst(WithOverflowInst *&I) { return I; }
 
 /// Match a ConstantInt, capturing the value if we match.
 inline bind_ty<ConstantInt> m_ConstantInt(ConstantInt *&CI) { return CI; }
@@ -1935,6 +1938,25 @@ template <typename Opnd_t> struct Signum_match {
 ///      x <  0  -> -1
 template <typename Val_t> inline Signum_match<Val_t> m_Signum(const Val_t &V) {
   return Signum_match<Val_t>(V);
+}
+
+template <int Ind, typename Opnd_t> struct ExtractValue_match {
+  Opnd_t Val;
+  ExtractValue_match(const Opnd_t &V) : Val(V) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *I = dyn_cast<ExtractValueInst>(V))
+      return I->getNumIndices() == 1 && I->getIndices()[0] == Ind &&
+             Val.match(I->getAggregateOperand());
+    return false;
+  }
+};
+
+/// Match a single index ExtractValue instruction.
+/// For example m_ExtractValue<1>(...)
+template <int Ind, typename Val_t>
+inline ExtractValue_match<Ind, Val_t> m_ExtractValue(const Val_t &V) {
+  return ExtractValue_match<Ind, Val_t>(V);
 }
 
 } // end namespace PatternMatch

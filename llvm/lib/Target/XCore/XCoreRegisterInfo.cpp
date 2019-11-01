@@ -203,7 +203,7 @@ static void InsertSPConstInst(MachineBasicBlock::iterator II,
 }
 
 bool XCoreRegisterInfo::needsFrameMoves(const MachineFunction &MF) {
-  return MF.getMMI().hasDebugInfo() || MF.getFunction().needsUnwindTableEntry();
+  return MF.needsFrameMoves();
 }
 
 const MCPhysReg *

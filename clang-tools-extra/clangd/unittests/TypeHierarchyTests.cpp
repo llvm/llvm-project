@@ -60,6 +60,8 @@ struct Ch^ild2 {
   int c;
 };
 
+using A^lias = Child2;
+
 int main() {
   Ch^ild2 ch^ild2;
   ch^ild2.c = 1;

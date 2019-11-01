@@ -226,6 +226,107 @@ llvm::Expected<std::string> qualifyAllDecls(const FunctionDecl *FD) {
   return QualifiedFunc->substr(BodyBegin, BodyEnd - BodyBegin + 1);
 }
 
+/// Generates Replacements for changing template and function parameter names in
+/// \p Dest to be the same as in \p Source.
+llvm::Expected<tooling::Replacements>
+renameParameters(const FunctionDecl *Dest, const FunctionDecl *Source) {
+  llvm::DenseMap<const Decl *, std::string> ParamToNewName;
+  llvm::DenseMap<const NamedDecl *, std::vector<SourceLocation>> RefLocs;
+  auto HandleParam = [&](const NamedDecl *DestParam,
+                         const NamedDecl *SourceParam) {
+    // No need to rename if parameters already have the same name.
+    if (DestParam->getName() == SourceParam->getName())
+      return;
+    std::string NewName;
+    // Unnamed parameters won't be visited in findExplicitReferences. So add
+    // them here.
+    if (DestParam->getName().empty()) {
+      RefLocs[DestParam].push_back(DestParam->getLocation());
+      // If decl is unnamed in destination we pad the new name to avoid gluing
+      // with previous token, e.g. foo(int^) shouldn't turn into foo(intx).
+      NewName = " ";
+    }
+    NewName.append(SourceParam->getName());
+    ParamToNewName[DestParam->getCanonicalDecl()] = std::move(NewName);
+  };
+
+  // Populate mapping for template parameters.
+  auto *DestTempl = Dest->getDescribedFunctionTemplate();
+  auto *SourceTempl = Source->getDescribedFunctionTemplate();
+  assert(bool(DestTempl) == bool(SourceTempl));
+  if (DestTempl) {
+    const auto *DestTPL = DestTempl->getTemplateParameters();
+    const auto *SourceTPL = SourceTempl->getTemplateParameters();
+    assert(DestTPL->size() == SourceTPL->size());
+
+    for (size_t I = 0, EP = DestTPL->size(); I != EP; ++I)
+      HandleParam(DestTPL->getParam(I), SourceTPL->getParam(I));
+  }
+
+  // Populate mapping for function params.
+  assert(Dest->param_size() == Source->param_size());
+  for (size_t I = 0, E = Dest->param_size(); I != E; ++I)
+    HandleParam(Dest->getParamDecl(I), Source->getParamDecl(I));
+
+  const SourceManager &SM = Dest->getASTContext().getSourceManager();
+  const LangOptions &LangOpts = Dest->getASTContext().getLangOpts();
+  // Collect other references in function signature, i.e parameter types and
+  // default arguments.
+  findExplicitReferences(
+      // Use function template in case of templated functions to visit template
+      // parameters.
+      DestTempl ? llvm::dyn_cast<Decl>(DestTempl) : llvm::dyn_cast<Decl>(Dest),
+      [&](ReferenceLoc Ref) {
+        if (Ref.Targets.size() != 1)
+          return;
+        const auto *Target =
+            llvm::cast<NamedDecl>(Ref.Targets.front()->getCanonicalDecl());
+        auto It = ParamToNewName.find(Target);
+        if (It == ParamToNewName.end())
+          return;
+        RefLocs[Target].push_back(Ref.NameLoc);
+      });
+
+  // Now try to generate edits for all the refs.
+  tooling::Replacements Replacements;
+  for (auto &Entry : RefLocs) {
+    const auto *OldDecl = Entry.first;
+    llvm::StringRef OldName = OldDecl->getName();
+    llvm::StringRef NewName = ParamToNewName[OldDecl];
+    for (SourceLocation RefLoc : Entry.second) {
+      CharSourceRange ReplaceRange;
+      // In case of unnamed parameters, we have an empty char range, whereas we
+      // have a tokenrange at RefLoc with named parameters.
+      if (OldName.empty())
+        ReplaceRange = CharSourceRange::getCharRange(RefLoc, RefLoc);
+      else
+        ReplaceRange = CharSourceRange::getTokenRange(RefLoc, RefLoc);
+      // If occurence is coming from a macro expansion, try to get back to the
+      // file range.
+      if (RefLoc.isMacroID()) {
+        ReplaceRange = Lexer::makeFileCharRange(ReplaceRange, SM, LangOpts);
+        // Bail out if we need to replace macro bodies.
+        if (ReplaceRange.isInvalid()) {
+          auto Err = llvm::createStringError(
+              llvm::inconvertibleErrorCode(),
+              "Cant rename parameter inside macro body.");
+          elog("define inline: {0}", Err);
+          return std::move(Err);
+        }
+      }
+
+      if (auto Err = Replacements.add(
+              tooling::Replacement(SM, ReplaceRange, NewName))) {
+        elog("define inline: Couldn't replace parameter name for {0} to {1}: "
+             "{2}",
+             OldName, NewName, Err);
+        return std::move(Err);
+      }
+    }
+  }
+  return Replacements;
+}
+
 // Returns the canonical declaration for the given FunctionDecl. This will
 // usually be the first declaration in current translation unit with the
 // exception of template specialization.
@@ -332,6 +433,10 @@ public:
           "Couldn't find semicolon for target declaration.");
     }
 
+    auto ParamReplacements = renameParameters(Target, Source);
+    if (!ParamReplacements)
+      return ParamReplacements.takeError();
+
     auto QualifiedBody = qualifyAllDecls(Source);
     if (!QualifiedBody)
       return QualifiedBody.takeError();
@@ -354,8 +459,9 @@ public:
 
     llvm::SmallVector<std::pair<std::string, Edit>, 2> Edits;
     // Edit for Target.
-    auto FE = Effect::fileEdit(SM, SM.getFileID(*Semicolon),
-                               tooling::Replacements(SemicolonToFuncBody));
+    auto FE = Effect::fileEdit(
+        SM, SM.getFileID(*Semicolon),
+        tooling::Replacements(SemicolonToFuncBody).merge(*ParamReplacements));
     if (!FE)
       return FE.takeError();
     Edits.push_back(std::move(*FE));

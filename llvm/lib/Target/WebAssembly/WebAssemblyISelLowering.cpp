@@ -461,11 +461,14 @@ const char *
 WebAssemblyTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (static_cast<WebAssemblyISD::NodeType>(Opcode)) {
   case WebAssemblyISD::FIRST_NUMBER:
+  case WebAssemblyISD::FIRST_MEM_OPCODE:
     break;
 #define HANDLE_NODETYPE(NODE)                                                  \
   case WebAssemblyISD::NODE:                                                   \
     return "WebAssemblyISD::" #NODE;
+#define HANDLE_MEM_NODETYPE(NODE) HANDLE_NODETYPE(NODE)
 #include "WebAssemblyISD.def"
+#undef HANDLE_MEM_NODETYPE
 #undef HANDLE_NODETYPE
   }
   return nullptr;
@@ -1425,7 +1428,11 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     if (Subtarget->hasUnimplementedSIMD128() &&
         (SplattedLoad = dyn_cast<LoadSDNode>(SplatValue)) &&
         SplattedLoad->getMemoryVT() == VecT.getVectorElementType()) {
-      Result = DAG.getNode(WebAssemblyISD::LOAD_SPLAT, DL, VecT, SplatValue);
+      Result = DAG.getMemIntrinsicNode(
+          WebAssemblyISD::LOAD_SPLAT, DL, DAG.getVTList(VecT),
+          {SplattedLoad->getChain(), SplattedLoad->getBasePtr(),
+           SplattedLoad->getOffset()},
+          SplattedLoad->getMemoryVT(), SplattedLoad->getMemOperand());
     } else {
       Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
     }

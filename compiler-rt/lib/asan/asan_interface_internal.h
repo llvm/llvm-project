@@ -251,6 +251,9 @@ extern "C" {
   const char* __asan_default_suppressions();
 
   SANITIZER_INTERFACE_ATTRIBUTE void __asan_handle_vfork(void *sp);
+
+  SANITIZER_INTERFACE_ATTRIBUTE int __asan_update_allocation_context(
+      void *addr);
 }  // extern "C"
 
 #endif  // ASAN_INTERFACE_INTERNAL_H

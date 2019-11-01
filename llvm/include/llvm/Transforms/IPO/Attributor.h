@@ -608,6 +608,12 @@ struct InformationCache {
     return AG.getAnalysis<AAManager>(F);
   }
 
+  /// Return the analysis result from a pass \p AP for function \p F.
+  template <typename AP>
+  typename AP::Result *getAnalysisResultForFunction(const Function &F) {
+    return AG.getAnalysis<AP>(F);
+  }
+
   /// Return SCC size on call graph for function \p F.
   unsigned getSccSize(const Function &F) {
     if (!SccSizeOpt.hasValue())
@@ -789,10 +795,25 @@ struct Attributor {
     identifyDefaultAbstractAttributes(const_cast<Function &>(F));
   }
 
-  /// Record that \p I is deleted after information was manifested.
+  /// Record that \p U is to be replaces with \p NV after information was
+  /// manifested. This also triggers deletion of trivially dead istructions.
+  bool changeUseAfterManifest(Use &U, Value &NV) {
+    Value *&V = ToBeChangedUses[&U];
+    if (V && (V->stripPointerCasts() == NV.stripPointerCasts() ||
+              isa_and_nonnull<UndefValue>(V)))
+      return false;
+    assert((!V || V == &NV || isa<UndefValue>(NV)) &&
+           "Use was registered twice for replacement with different values!");
+    V = &NV;
+    return true;
+  }
+
+  /// Record that \p I is deleted after information was manifested. This also
+  /// triggers deletion of trivially dead istructions.
   void deleteAfterManifest(Instruction &I) { ToBeDeletedInsts.insert(&I); }
 
-  /// Record that \p BB is deleted after information was manifested.
+  /// Record that \p BB is deleted after information was manifested. This also
+  /// triggers deletion of trivially dead istructions.
   void deleteAfterManifest(BasicBlock &BB) { ToBeDeletedBlocks.insert(&BB); }
 
   /// Record that \p F is deleted after information was manifested.
@@ -802,6 +823,13 @@ struct Attributor {
   ///
   /// If \p LivenessAA is not provided it is queried.
   bool isAssumedDead(const AbstractAttribute &AA, const AAIsDead *LivenessAA);
+
+  /// Check \p Pred on all (transitive) uses of \p V.
+  ///
+  /// This method will evaluate \p Pred on all (transitive) uses of the
+  /// associated value and return true if \p Pred holds every time.
+  bool checkForAllUses(const function_ref<bool(const Use &, bool &)> &Pred,
+                       const AbstractAttribute &QueryingAA, const Value &V);
 
   /// Check \p Pred on all function call sites.
   ///
@@ -972,6 +1000,10 @@ private:
   /// A set to remember the functions we already assume to be live and visited.
   DenseSet<const Function *> VisitedFunctions;
 
+  /// Uses we replace with a new value after manifest is done. We will remove
+  /// then trivially dead instructions as well.
+  DenseMap<Use *, Value *> ToBeChangedUses;
+
   /// Functions, blocks, and instructions we delete after manifest is done.
   ///
   ///{
@@ -1120,24 +1152,27 @@ protected:
 };
 
 /// Specialization of the integer state for a bit-wise encoding.
-struct BitIntegerState : public IntegerStateBase<uint32_t, ~0u, 0> {
-  using base_t = IntegerStateBase::base_t;
+template <typename base_ty = uint32_t, base_ty BestState = ~base_ty(0),
+          base_ty WorstState = 0>
+struct BitIntegerState
+    : public IntegerStateBase<base_ty, BestState, WorstState> {
+  using base_t = base_ty;
 
   /// Return true if the bits set in \p BitsEncoding are "known bits".
   bool isKnown(base_t BitsEncoding) const {
-    return (Known & BitsEncoding) == BitsEncoding;
+    return (this->Known & BitsEncoding) == BitsEncoding;
   }
 
   /// Return true if the bits set in \p BitsEncoding are "assumed bits".
   bool isAssumed(base_t BitsEncoding) const {
-    return (Assumed & BitsEncoding) == BitsEncoding;
+    return (this->Assumed & BitsEncoding) == BitsEncoding;
   }
 
   /// Add the bits in \p BitsEncoding to the "known bits".
   BitIntegerState &addKnownBits(base_t Bits) {
     // Make sure we never miss any "known bits".
-    Assumed |= Bits;
-    Known |= Bits;
+    this->Assumed |= Bits;
+    this->Known |= Bits;
     return *this;
   }
 
@@ -1148,14 +1183,14 @@ struct BitIntegerState : public IntegerStateBase<uint32_t, ~0u, 0> {
 
   /// Remove the bits in \p BitsEncoding from the "known bits".
   BitIntegerState &removeKnownBits(base_t BitsEncoding) {
-    Known = (Known & ~BitsEncoding);
+    this->Known = (this->Known & ~BitsEncoding);
     return *this;
   }
 
   /// Keep only "assumed bits" also set in \p BitsEncoding but all known ones.
   BitIntegerState &intersectAssumedBits(base_t BitsEncoding) {
     // Make sure we never loose any "known bits".
-    Assumed = (Assumed & BitsEncoding) | Known;
+    this->Assumed = (this->Assumed & BitsEncoding) | this->Known;
     return *this;
   }
 
@@ -1165,32 +1200,35 @@ private:
   }
   void handleNewKnownValue(base_t Value) override { addKnownBits(Value); }
   void joinOR(base_t AssumedValue, base_t KnownValue) override {
-    Known |= KnownValue;
-    Assumed |= AssumedValue;
+    this->Known |= KnownValue;
+    this->Assumed |= AssumedValue;
   }
   void joinAND(base_t AssumedValue, base_t KnownValue) override {
-    Known &= KnownValue;
-    Assumed &= AssumedValue;
+    this->Known &= KnownValue;
+    this->Assumed &= AssumedValue;
   }
 };
 
 /// Specialization of the integer state for an increasing value, hence ~0u is
 /// the best state and 0 the worst.
-struct IncIntegerState : public IntegerStateBase<uint32_t, ~0u, 0> {
-  using base_t = IntegerStateBase::base_t;
+template <typename base_ty = uint32_t, base_ty BestState = ~base_ty(0),
+          base_ty WorstState = 0>
+struct IncIntegerState
+    : public IntegerStateBase<base_ty, BestState, WorstState> {
+  using base_t = base_ty;
 
   /// Take minimum of assumed and \p Value.
   IncIntegerState &takeAssumedMinimum(base_t Value) {
     // Make sure we never loose "known value".
-    Assumed = std::max(std::min(Assumed, Value), Known);
+    this->Assumed = std::max(std::min(this->Assumed, Value), this->Known);
     return *this;
   }
 
   /// Take maximum of known and \p Value.
   IncIntegerState &takeKnownMaximum(base_t Value) {
     // Make sure we never loose "known value".
-    Assumed = std::max(Value, Assumed);
-    Known = std::max(Value, Known);
+    this->Assumed = std::max(Value, this->Assumed);
+    this->Known = std::max(Value, this->Known);
     return *this;
   }
 
@@ -1200,12 +1238,12 @@ private:
   }
   void handleNewKnownValue(base_t Value) override { takeKnownMaximum(Value); }
   void joinOR(base_t AssumedValue, base_t KnownValue) override {
-    Known = std::max(Known, KnownValue);
-    Assumed = std::max(Assumed, AssumedValue);
+    this->Known = std::max(this->Known, KnownValue);
+    this->Assumed = std::max(this->Assumed, AssumedValue);
   }
   void joinAND(base_t AssumedValue, base_t KnownValue) override {
-    Known = std::min(Known, KnownValue);
-    Assumed = std::min(Assumed, AssumedValue);
+    this->Known = std::min(this->Known, KnownValue);
+    this->Assumed = std::min(this->Assumed, AssumedValue);
   }
 };
 
@@ -1683,6 +1721,9 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
                   public IRPosition {
   AAIsDead(const IRPosition &IRP) : IRPosition(IRP) {}
 
+  /// Returns true if the underlying value is assumed dead.
+  virtual bool isAssumedDead() const = 0;
+
   /// Returns true if \p BB is assumed dead.
   virtual bool isAssumedDead(const BasicBlock *BB) const = 0;
 
@@ -1723,7 +1764,7 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
 struct DerefState : AbstractState {
 
   /// State representing for dereferenceable bytes.
-  IncIntegerState DerefBytesState;
+  IncIntegerState<> DerefBytesState;
 
   /// State representing that whether the value is globaly dereferenceable.
   BooleanState GlobalState;
@@ -1837,10 +1878,12 @@ struct AADereferenceable
   static const char ID;
 };
 
+using AAAlignmentStateType =
+    IncIntegerState<uint32_t, /* maximal alignment */ 1U << 29, 0>;
 /// An abstract interface for all align attributes.
-struct AAAlign
-    : public IRAttribute<Attribute::Alignment,
-                         StateWrapper<IncIntegerState, AbstractAttribute>> {
+struct AAAlign : public IRAttribute<
+                     Attribute::Alignment,
+                     StateWrapper<AAAlignmentStateType, AbstractAttribute>> {
   AAAlign(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// Return assumed alignment.
@@ -1858,8 +1901,9 @@ struct AAAlign
 
 /// An abstract interface for all nocapture attributes.
 struct AANoCapture
-    : public IRAttribute<Attribute::NoCapture,
-                         StateWrapper<BitIntegerState, AbstractAttribute>> {
+    : public IRAttribute<
+          Attribute::NoCapture,
+          StateWrapper<BitIntegerState<uint16_t, 7, 0>, AbstractAttribute>> {
   AANoCapture(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// State encoding bits. A set bit in the state means the property holds.
@@ -1949,8 +1993,9 @@ struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute>,
 
 /// An abstract interface for all memory related attributes.
 struct AAMemoryBehavior
-    : public IRAttribute<Attribute::ReadNone,
-                         StateWrapper<BitIntegerState, AbstractAttribute>> {
+    : public IRAttribute<
+          Attribute::ReadNone,
+          StateWrapper<BitIntegerState<uint8_t, 3>, AbstractAttribute>> {
   AAMemoryBehavior(const IRPosition &IRP) : IRAttribute(IRP) {}
 
   /// State encoding bits. A set bit in the state means the property holds.

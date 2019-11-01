@@ -88,15 +88,7 @@ define i4 @func3(i4 %x, i4 %y) nounwind {
 define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: vec:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmlt v4.4s, v2.4s, #0
-; CHECK-NEXT:    mvni v3.4s, #128, lsl #24
-; CHECK-NEXT:    cmlt v1.4s, v1.4s, #0
-; CHECK-NEXT:    cmgt v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    mvn v5.16b, v4.16b
-; CHECK-NEXT:    bsl v3.16b, v4.16b, v5.16b
-; CHECK-NEXT:    eor v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    bsl v0.16b, v3.16b, v2.16b
+; CHECK-NEXT:    sqadd v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %tmp = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %x, <4 x i32> %y);
   ret <4 x i32> %tmp;

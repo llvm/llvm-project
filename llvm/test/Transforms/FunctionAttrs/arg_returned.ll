@@ -253,8 +253,8 @@ return:                                           ; preds = %cond.end, %if.then3
 ; }
 ;
 ; FNATTR:  define i32* @rt0(i32* readonly %a)
-; BOTH: Function Attrs: nofree noinline noreturn nosync nounwind readonly uwtable
-; BOTH-NEXT:    define noalias nonnull align 536870912 dereferenceable(4294967295) i32* @rt0(i32* nocapture nonnull readonly dereferenceable(4) %a)
+; BOTH:      Function Attrs: nofree noinline norecurse noreturn nosync nounwind readonly uwtable
+; BOTH-NEXT: define noalias nonnull align 536870912 dereferenceable(4294967295) i32* @rt0(i32* nocapture nonnull readonly dereferenceable(4) %a)
 define i32* @rt0(i32* %a) #0 {
 entry:
   %v = load i32, i32* %a, align 4
@@ -271,7 +271,7 @@ entry:
 ; }
 ;
 ; FNATTR:  define noalias i32* @rt1(i32* nocapture readonly %a)
-; BOTH: Function Attrs: nofree noinline noreturn nosync nounwind readonly uwtable
+; BOTH: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readonly uwtable
 ; BOTH-NEXT:    define noalias nonnull align 536870912 dereferenceable(4294967295) i32* @rt1(i32* nocapture nonnull readonly dereferenceable(4) %a)
 define i32* @rt1(i32* %a) #0 {
 entry:
@@ -837,15 +837,3 @@ define i32* @dont_use_const() #0 {
 }
 
 attributes #0 = { noinline nounwind uwtable }
-
-; BOTH-NOT: attributes #
-; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noinline norecurse nosync nounwind readnone uwtable willreturn }
-; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noinline nosync nounwind readnone uwtable }
-; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noinline noreturn nosync nounwind readonly uwtable }
-; BOTH-DAG: attributes #{{[0-9]*}} = { noinline nounwind uwtable }
-; BOTH-DAG: attributes #{{[0-9]*}} = { noreturn }
-; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noinline norecurse nosync nounwind readnone uwtable }
-; BOTH-DAG: attributes #{{[0-9]*}} = { nofree nosync readnone willreturn }
-; BOTH-DAG: attributes #{{[0-9]*}} = { nofree nosync readnone }
-; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noreturn nosync readonly }
-; BOTH-NOT: attributes #

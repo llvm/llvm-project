@@ -352,6 +352,90 @@ i16x8 sub_saturate_u_i16x8(i16x8 x, i16x8 y) {
   // WEBASSEMBLY-NEXT: ret
 }
 
+i8x16 min_s_i8x16(i8x16 x, i8x16 y) {
+  return __builtin_wasm_min_s_i8x16(x, y);
+  // WEBASSEMBLY: call <16 x i8> @llvm.wasm.min.signed.v16i8(
+  // WEBASSEMBLY-SAME: <16 x i8> %x, <16 x i8> %y)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+i8x16 min_u_i8x16(i8x16 x, i8x16 y) {
+  return __builtin_wasm_min_u_i8x16(x, y);
+  // WEBASSEMBLY: call <16 x i8> @llvm.wasm.min.unsigned.v16i8(
+  // WEBASSEMBLY-SAME: <16 x i8> %x, <16 x i8> %y)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+i8x16 max_s_i8x16(i8x16 x, i8x16 y) {
+  return __builtin_wasm_max_s_i8x16(x, y);
+  // WEBASSEMBLY: call <16 x i8> @llvm.wasm.max.signed.v16i8(
+  // WEBASSEMBLY-SAME: <16 x i8> %x, <16 x i8> %y)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+i8x16 max_u_i8x16(i8x16 x, i8x16 y) {
+  return __builtin_wasm_max_u_i8x16(x, y);
+  // WEBASSEMBLY: call <16 x i8> @llvm.wasm.max.unsigned.v16i8(
+  // WEBASSEMBLY-SAME: <16 x i8> %x, <16 x i8> %y)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+i16x8 min_s_i16x8(i16x8 x, i16x8 y) {
+  return __builtin_wasm_min_s_i16x8(x, y);
+  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.min.signed.v8i16(
+  // WEBASSEMBLY-SAME: <8 x i16> %x, <8 x i16> %y)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+i16x8 min_u_i16x8(i16x8 x, i16x8 y) {
+  return __builtin_wasm_min_u_i16x8(x, y);
+  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.min.unsigned.v8i16(
+  // WEBASSEMBLY-SAME: <8 x i16> %x, <8 x i16> %y)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+i16x8 max_s_i16x8(i16x8 x, i16x8 y) {
+  return __builtin_wasm_max_s_i16x8(x, y);
+  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.max.signed.v8i16(
+  // WEBASSEMBLY-SAME: <8 x i16> %x, <8 x i16> %y)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+i16x8 max_u_i16x8(i16x8 x, i16x8 y) {
+  return __builtin_wasm_max_u_i16x8(x, y);
+  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.max.unsigned.v8i16(
+  // WEBASSEMBLY-SAME: <8 x i16> %x, <8 x i16> %y)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+i32x4 min_s_i32x4(i32x4 x, i32x4 y) {
+  return __builtin_wasm_min_s_i32x4(x, y);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.min.signed.v4i32(
+  // WEBASSEMBLY-SAME: <4 x i32> %x, <4 x i32> %y)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+i32x4 min_u_i32x4(i32x4 x, i32x4 y) {
+  return __builtin_wasm_min_u_i32x4(x, y);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.min.unsigned.v4i32(
+  // WEBASSEMBLY-SAME: <4 x i32> %x, <4 x i32> %y)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+i32x4 max_s_i32x4(i32x4 x, i32x4 y) {
+  return __builtin_wasm_max_s_i32x4(x, y);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.max.signed.v4i32(
+  // WEBASSEMBLY-SAME: <4 x i32> %x, <4 x i32> %y)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+i32x4 max_u_i32x4(i32x4 x, i32x4 y) {
+  return __builtin_wasm_max_u_i32x4(x, y);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.max.unsigned.v4i32(
+  // WEBASSEMBLY-SAME: <4 x i32> %x, <4 x i32> %y)
+  // WEBASSEMBLY-NEXT: ret
+}
+
 i32x4 bitselect(i32x4 x, i32x4 y, i32x4 c) {
   return __builtin_wasm_bitselect(x, y, c);
   // WEBASSEMBLY: call <4 x i32> @llvm.wasm.bitselect.v4i32(

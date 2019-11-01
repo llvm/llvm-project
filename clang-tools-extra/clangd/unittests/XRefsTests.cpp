@@ -490,7 +490,7 @@ TEST(LocateSymbol, Ambiguous) {
     struct Foo {
       Foo();
       Foo(Foo&&);
-      Foo(const char*);
+      $ConstructorLoc[[Foo]](const char*);
     };
 
     Foo f();
@@ -507,6 +507,8 @@ TEST(LocateSymbol, Ambiguous) {
       Foo ab$7^c;
       Foo ab$8^cd("asdf");
       Foo foox = Fo$9^o("asdf");
+      Foo abcde$10^("asdf");
+      Foo foox2 = Foo$11^("asdf");
     }
   )cpp");
   auto AST = TestTU::withCode(T.code()).build();
@@ -517,12 +519,16 @@ TEST(LocateSymbol, Ambiguous) {
   EXPECT_THAT(locateSymbolAt(AST, T.point("4")), ElementsAre(Sym("g")));
   EXPECT_THAT(locateSymbolAt(AST, T.point("5")), ElementsAre(Sym("f")));
   EXPECT_THAT(locateSymbolAt(AST, T.point("6")), ElementsAre(Sym("str")));
+  // FIXME: Target the constructor as well.
   EXPECT_THAT(locateSymbolAt(AST, T.point("7")), ElementsAre(Sym("abc")));
-  EXPECT_THAT(locateSymbolAt(AST, T.point("8")),
-              ElementsAre(Sym("Foo"), Sym("abcd")));
-  EXPECT_THAT(locateSymbolAt(AST, T.point("9")),
-              // First one is class definition, second is the constructor.
-              ElementsAre(Sym("Foo"), Sym("Foo")));
+  // FIXME: Target the constructor as well.
+  EXPECT_THAT(locateSymbolAt(AST, T.point("8")), ElementsAre(Sym("abcd")));
+  // FIXME: Target the constructor as well.
+  EXPECT_THAT(locateSymbolAt(AST, T.point("9")), ElementsAre(Sym("Foo")));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("10")),
+              ElementsAre(Sym("Foo", T.range("ConstructorLoc"))));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("11")),
+              ElementsAre(Sym("Foo", T.range("ConstructorLoc"))));
 }
 
 TEST(LocateSymbol, TemplateTypedefs) {
@@ -2192,7 +2198,7 @@ TEST(GetDeducedType, KwAutoExpansion) {
     const char *DeducedType;
   } Tests[] = {
       {"^auto i = 0;", "int"},
-      {"^auto f(){ return 1;};", "int"}
+      {"^auto f(){ return 1;};", "int"},
   };
   for (Test T : Tests) {
     Annotations File(T.AnnotatedCode);
