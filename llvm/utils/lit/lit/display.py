@@ -14,29 +14,32 @@ def create_display(opts, tests, total_tests, workers):
         try:
             tc = lit.ProgressBar.TerminalController()
             progress_bar = lit.ProgressBar.ProgressBar(tc, header)
+            header = None
         except ValueError:
-            print(header)
             progress_bar = lit.ProgressBar.SimpleProgressBar('Testing: ')
-    else:
-        print(header)
 
-    if progress_bar:
-        progress_bar.update(0, '')
-
-    return Display(opts, tests, progress_bar)
+    return Display(opts, tests, header, progress_bar)
 
 
 class NopDisplay(object):
+    def print_header(self): pass
     def update(self, test): pass
-    def finish(self): pass
+    def clear(self): pass
 
 
 class Display(object):
-    def __init__(self, opts, tests, progress_bar):
+    def __init__(self, opts, tests, header, progress_bar):
         self.opts = opts
         self.tests = tests
+        self.header = header
         self.progress_bar = progress_bar
         self.completed = 0
+
+    def print_header(self):
+        if self.header:
+            print(self.header)
+        if self.progress_bar:
+            self.progress_bar.update(0.0, '')
 
     def update(self, test):
         self.completed += 1
@@ -45,6 +48,8 @@ class Display(object):
                 self.opts.showAllOutput or \
                 (not self.opts.quiet and not self.opts.succinct)
         if show_result:
+            if self.progress_bar:
+                self.progress_bar.clear()
             self.print_result(test)
 
         if self.progress_bar:
@@ -53,15 +58,12 @@ class Display(object):
             percent = float(self.completed) / self.tests
             self.progress_bar.update(percent, test.getFullName())
 
-    def finish(self):
+    def clear(self):
         if self.progress_bar:
             self.progress_bar.clear()
         sys.stdout.write('\n')
 
     def print_result(self, test):
-        if self.progress_bar:
-            self.progress_bar.clear()
-
         # Show the test result line.
         test_name = test.getFullName()
         print('%s: %s (%d of %d)' % (test.result.code.name, test_name,
