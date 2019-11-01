@@ -520,6 +520,13 @@ void MachineFunction::print(raw_ostream &OS, const SlotIndexes *Indexes) const {
   OS << "\n# End machine code for function " << getName() << ".\n\n";
 }
 
+/// True if this function needs frame moves for debug or exceptions.
+bool MachineFunction::needsFrameMoves() const {
+  return getMMI().hasDebugInfo() ||
+         getTarget().Options.ForceDwarfFrameSection ||
+         F.needsUnwindTableEntry();
+}
+
 namespace llvm {
 
   template<>

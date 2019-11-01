@@ -48,8 +48,7 @@ class CFIInstrInserter : public MachineFunctionPass {
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    if (!MF.getMMI().hasDebugInfo() &&
-        !MF.getFunction().needsUnwindTableEntry())
+    if (!MF.needsFrameMoves())
       return false;
 
     MBBVector.resize(MF.getNumBlockIDs());

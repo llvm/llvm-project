@@ -560,6 +560,9 @@ public:
   }
   void setHasWinCFI(bool v) { HasWinCFI = v; }
 
+  /// True if this function needs frame moves for debug or exceptions.
+  bool needsFrameMoves() const;
+
   /// Get the function properties
   const MachineFunctionProperties &getProperties() const { return Properties; }
   MachineFunctionProperties &getProperties() { return Properties; }
