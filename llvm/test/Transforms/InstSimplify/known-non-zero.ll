@@ -7,8 +7,7 @@ define i64 @test0(i64 %x) {
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i64 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[A]], label [[EXIT:%.*]], label [[NON_ZERO:%.*]]
 ; CHECK:       non_zero:
-; CHECK-NEXT:    [[B:%.*]] = icmp eq i64 [[X]], 0
-; CHECK-NEXT:    br i1 [[B]], label [[UNREACHABLE:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br i1 false, label [[UNREACHABLE:%.*]], label [[EXIT]]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -37,8 +36,7 @@ define i64 @test1(i64 %x) {
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i64 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[A]], label [[EXIT:%.*]], label [[NON_ZERO:%.*]]
 ; CHECK:       non_zero:
-; CHECK-NEXT:    [[B:%.*]] = icmp ugt i64 [[X]], 0
-; CHECK-NEXT:    br i1 [[B]], label [[EXIT]], label [[UNREACHABLE:%.*]]
+; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[UNREACHABLE:%.*]]
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -73,11 +71,9 @@ define i1 @test2(i64 %x, i1 %y) {
 ; CHECK:       two:
 ; CHECK-NEXT:    br label [[MAINBLOCK]]
 ; CHECK:       mainblock:
-; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[X]], [[ONE]] ], [ 42, [[TWO]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[P]], 0
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ [[CMP]], [[MAINBLOCK]] ], [ true, [[START:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ false, [[MAINBLOCK]] ], [ true, [[START:%.*]] ]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 start:
