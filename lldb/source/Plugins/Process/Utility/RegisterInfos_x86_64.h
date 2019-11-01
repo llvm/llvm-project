@@ -25,15 +25,18 @@
    LLVM_EXTENSION offsetof(FPR, xsave) +                                       \
    LLVM_EXTENSION offsetof(XSAVE, ymmh[0]) + (32 * reg_index))
 
+// Guarantees BNDR/BNDC offsets do not overlap with YMM offsets.
+#define GDB_REMOTE_OFFSET 128
+
 #define BNDR_OFFSET(reg_index)                                                 \
   (LLVM_EXTENSION offsetof(UserArea, fpr) +                                    \
    LLVM_EXTENSION offsetof(FPR, xsave) +                                       \
-   LLVM_EXTENSION offsetof(XSAVE, mpxr[reg_index]))
+   LLVM_EXTENSION offsetof(XSAVE, mpxr[reg_index]) + GDB_REMOTE_OFFSET)
 
 #define BNDC_OFFSET(reg_index)                                                 \
   (LLVM_EXTENSION offsetof(UserArea, fpr) +                                    \
    LLVM_EXTENSION offsetof(FPR, xsave) +                                       \
-   LLVM_EXTENSION offsetof(XSAVE, mpxc[reg_index]))
+   LLVM_EXTENSION offsetof(XSAVE, mpxc[reg_index]) + GDB_REMOTE_OFFSET)
 
 #ifdef DECLARE_REGISTER_INFOS_X86_64_STRUCT
 
