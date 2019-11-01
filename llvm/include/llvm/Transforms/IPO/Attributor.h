@@ -1345,12 +1345,12 @@ struct IRAttribute : public IRPosition, public Base {
 
   /// See AbstractAttribute::initialize(...).
   virtual void initialize(Attributor &A) override {
-    if (hasAttr(getAttrKind())) {
+    const IRPosition &IRP = this->getIRPosition();
+    if (isa<UndefValue>(IRP.getAssociatedValue()) || hasAttr(getAttrKind())) {
       this->getState().indicateOptimisticFixpoint();
       return;
     }
 
-    const IRPosition &IRP = this->getIRPosition();
     bool IsFnInterface = IRP.isFnInterfaceKind();
     const Function *FnScope = IRP.getAnchorScope();
     // TODO: Not all attributes require an exact definition. Find a way to
@@ -1366,6 +1366,8 @@ struct IRAttribute : public IRPosition, public Base {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
+    if (isa<UndefValue>(getIRPosition().getAssociatedValue()))
+      return ChangeStatus::UNCHANGED;
     SmallVector<Attribute, 4> DeducedAttrs;
     getDeducedAttributes(getAnchorValue().getContext(), DeducedAttrs);
     return IRAttributeManifest::manifestAttrs(A, getIRPosition(), DeducedAttrs);
