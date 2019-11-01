@@ -376,6 +376,11 @@ public:
     FPPassManager *FP = static_cast<FPPassManager *>(PassManagers[N]);
     return FP;
   }
+
+  void dumpPassStructure(unsigned Offset) override {
+    for (unsigned I = 0; I < getNumContainedManagers(); ++I)
+      getContainedManager(I)->dumpPassStructure(Offset);
+  }
 };
 
 void FunctionPassManagerImpl::anchor() {}

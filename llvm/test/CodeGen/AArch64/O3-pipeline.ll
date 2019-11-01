@@ -66,7 +66,8 @@
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Exception handling preparation
 ; CHECK-NEXT:     AArch64 Promote Constant
-; CHECK-NEXT:       Unnamed pass: implement Pass::getPassName()
+; CHECK-NEXT:       FunctionPass Manager
+; CHECK-NEXT:         Dominator Tree Construction
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Merge internal globals
 ; CHECK-NEXT:       Safe Stack instrumentation pass
