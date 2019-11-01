@@ -233,7 +233,7 @@ def get_value_use(var):
   return '[[' + get_value_name(var) + ']]'
 
 # Replace IR value defs and uses with FileCheck variables.
-def genericize_check_lines(lines, is_analyze):
+def genericize_check_lines(lines, is_analyze, vars_seen):
   # This gets called for each match that occurs in
   # a line. We transform variables we haven't seen
   # into defs, and variables we have seen into uses.
@@ -250,7 +250,6 @@ def genericize_check_lines(lines, is_analyze):
     # including the commas and spaces.
     return match.group(1) + rv + match.group(3)
 
-  vars_seen = set()
   lines_with_def = []
 
   for i, line in enumerate(lines):
@@ -283,9 +282,10 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
         if len(printed_prefixes) != 0:
           output_lines.append(comment_marker)
 
+      vars_seen = set()
       printed_prefixes.append(checkprefix)
       args_and_sig = str(func_dict[checkprefix][func_name].args_and_sig)
-      args_and_sig = genericize_check_lines([args_and_sig], is_analyze)[0]
+      args_and_sig = genericize_check_lines([args_and_sig], is_analyze, vars_seen)[0]
       if '[[' in args_and_sig:
         output_lines.append(check_label_format % (checkprefix, func_name, ''))
         output_lines.append('%s %s-SAME: %s' % (comment_marker, checkprefix, args_and_sig))
@@ -305,7 +305,7 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
 
       # For IR output, change all defs to FileCheck variables, so we're immune
       # to variable naming fashions.
-      func_body = genericize_check_lines(func_body, is_analyze)
+      func_body = genericize_check_lines(func_body, is_analyze, vars_seen)
 
       # This could be selectively enabled with an optional invocation argument.
       # Disabled for now: better to check everything. Be safe rather than sorry.
