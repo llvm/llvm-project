@@ -110,7 +110,7 @@ unsigned SIRegisterInfo::reservedPrivateSegmentBufferReg(
   const MachineFunction &MF) const {
   unsigned BaseIdx = alignDown(ST.getMaxNumSGPRs(MF), 4) - 4;
   unsigned BaseReg(AMDGPU::SGPR_32RegClass.getRegister(BaseIdx));
-  return getMatchingSuperReg(BaseReg, AMDGPU::sub0, &AMDGPU::SGPR_128RegClass);
+  return getMatchingSuperReg(BaseReg, AMDGPU::sub0, &AMDGPU::SReg_128RegClass);
 }
 
 static unsigned findPrivateSegmentWaveByteOffsetRegIndex(unsigned RegCount) {
@@ -1387,7 +1387,7 @@ const TargetRegisterClass *SIRegisterInfo::getEquivalentSGPRClass(
   case 96:
     return &AMDGPU::SReg_96RegClass;
   case 128:
-    return &AMDGPU::SGPR_128RegClass;
+    return &AMDGPU::SReg_128RegClass;
   case 160:
     return &AMDGPU::SReg_160RegClass;
   case 256:
@@ -1417,7 +1417,7 @@ const TargetRegisterClass *SIRegisterInfo::getSubRegClass(
     case 3:
       return &AMDGPU::SReg_96RegClass;
     case 4:
-      return &AMDGPU::SGPR_128RegClass;
+      return &AMDGPU::SReg_128RegClass;
     case 5:
       return &AMDGPU::SReg_160RegClass;
     case 8:
@@ -1809,7 +1809,7 @@ SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
                                                  &AMDGPU::SReg_96RegClass;
   case 128:
     return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_128RegClass :
-                                                 &AMDGPU::SGPR_128RegClass;
+                                                 &AMDGPU::SReg_128RegClass;
   case 160:
     return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_160RegClass :
                                                  &AMDGPU::SReg_160RegClass;
@@ -1833,12 +1833,9 @@ SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
 const TargetRegisterClass *
 SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
                                          const MachineRegisterInfo &MRI) const {
-  const RegClassOrRegBank &RCOrRB = MRI.getRegClassOrRegBank(MO.getReg());
-  if (const RegisterBank *RB = RCOrRB.dyn_cast<const RegisterBank*>())
+  if (const RegisterBank *RB = MRI.getRegBankOrNull(MO.getReg()))
     return getRegClassForTypeOnBank(MRI.getType(MO.getReg()), *RB, MRI);
-
-  const TargetRegisterClass *RC = RCOrRB.get<const TargetRegisterClass*>();
-  return getAllocatableClass(RC);
+  return nullptr;
 }
 
 unsigned SIRegisterInfo::getVCC() const {
