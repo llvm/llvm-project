@@ -39,12 +39,13 @@ public:
 
 private:
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
+  bool isRegInGprb(Register Reg, MachineRegisterInfo &MRI) const;
+  bool isRegInFprb(Register Reg, MachineRegisterInfo &MRI) const;
   bool materialize32BitImm(Register DestReg, APInt Imm,
                            MachineIRBuilder &B) const;
   bool selectCopy(MachineInstr &I, MachineRegisterInfo &MRI) const;
   const TargetRegisterClass *
-  getRegClassForTypeOnBank(unsigned OpSize, const RegisterBank &RB,
-                           const RegisterBankInfo &RBI) const;
+  getRegClassForTypeOnBank(Register Reg, MachineRegisterInfo &MRI) const;
   unsigned selectLoadStoreOpCode(MachineInstr &I,
                                  MachineRegisterInfo &MRI) const;
 
@@ -84,24 +85,23 @@ MipsInstructionSelector::MipsInstructionSelector(
 {
 }
 
+bool MipsInstructionSelector::isRegInGprb(Register Reg,
+                                          MachineRegisterInfo &MRI) const {
+  return RBI.getRegBank(Reg, MRI, TRI)->getID() == Mips::GPRBRegBankID;
+}
+
+bool MipsInstructionSelector::isRegInFprb(Register Reg,
+                                          MachineRegisterInfo &MRI) const {
+  return RBI.getRegBank(Reg, MRI, TRI)->getID() == Mips::FPRBRegBankID;
+}
+
 bool MipsInstructionSelector::selectCopy(MachineInstr &I,
                                          MachineRegisterInfo &MRI) const {
   Register DstReg = I.getOperand(0).getReg();
   if (Register::isPhysicalRegister(DstReg))
     return true;
 
-  const RegisterBank *RegBank = RBI.getRegBank(DstReg, MRI, TRI);
-  const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
-
-  const TargetRegisterClass *RC = &Mips::GPR32RegClass;
-  if (RegBank->getID() == Mips::FPRBRegBankID) {
-    if (DstSize == 32)
-      RC = &Mips::FGR32RegClass;
-    else if (DstSize == 64)
-      RC = STI.isFP64bit() ? &Mips::FGR64RegClass : &Mips::AFGR64RegClass;
-    else
-      llvm_unreachable("Unsupported destination size");
-  }
+  const TargetRegisterClass *RC = getRegClassForTypeOnBank(DstReg, MRI);
   if (!RBI.constrainGenericRegister(DstReg, *RC, MRI)) {
     LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
                       << " operand\n");
@@ -111,19 +111,27 @@ bool MipsInstructionSelector::selectCopy(MachineInstr &I,
 }
 
 const TargetRegisterClass *MipsInstructionSelector::getRegClassForTypeOnBank(
-    unsigned OpSize, const RegisterBank &RB,
-    const RegisterBankInfo &RBI) const {
-  if (RB.getID() == Mips::GPRBRegBankID)
+    Register Reg, MachineRegisterInfo &MRI) const {
+  const LLT Ty = MRI.getType(Reg);
+  const unsigned TySize = Ty.getSizeInBits();
+
+  if (isRegInGprb(Reg, MRI)) {
+    assert((Ty.isScalar() || Ty.isPointer()) && TySize == 32 &&
+           "Register class not available for LLT, register bank combination");
     return &Mips::GPR32RegClass;
+  }
 
-  if (RB.getID() == Mips::FPRBRegBankID)
-    return OpSize == 32
-               ? &Mips::FGR32RegClass
-               : STI.hasMips32r6() || STI.isFP64bit() ? &Mips::FGR64RegClass
-                                                      : &Mips::AFGR64RegClass;
+  if (isRegInFprb(Reg, MRI)) {
+    if (Ty.isScalar()) {
+      assert((TySize == 32 || TySize == 64) &&
+             "Register class not available for LLT, register bank combination");
+      if (TySize == 32)
+        return &Mips::FGR32RegClass;
+      return STI.isFP64bit() ? &Mips::FGR64RegClass : &Mips::AFGR64RegClass;
+    }
+  }
 
-  llvm_unreachable("getRegClassForTypeOnBank can't find register class.");
-  return nullptr;
+  llvm_unreachable("Unsupported register bank.");
 }
 
 bool MipsInstructionSelector::materialize32BitImm(Register DestReg, APInt Imm,
@@ -160,17 +168,21 @@ bool MipsInstructionSelector::materialize32BitImm(Register DestReg, APInt Imm,
   return true;
 }
 
-/// Returning Opc indicates that we failed to select MIPS instruction opcode.
+/// When I.getOpcode() is returned, we failed to select MIPS instruction opcode.
 unsigned
 MipsInstructionSelector::selectLoadStoreOpCode(MachineInstr &I,
                                                MachineRegisterInfo &MRI) const {
-  STI.getRegisterInfo();
-  const Register DestReg = I.getOperand(0).getReg();
-  const unsigned RegBank = RBI.getRegBank(DestReg, MRI, TRI)->getID();
+  const Register ValueReg = I.getOperand(0).getReg();
+  const LLT Ty = MRI.getType(ValueReg);
+  const unsigned TySize = Ty.getSizeInBits();
   const unsigned MemSizeInBytes = (*I.memoperands_begin())->getSize();
   unsigned Opc = I.getOpcode();
   const bool isStore = Opc == TargetOpcode::G_STORE;
-  if (RegBank == Mips::GPRBRegBankID) {
+
+  if (isRegInGprb(ValueReg, MRI)) {
+    assert(((Ty.isScalar() && TySize == 32) ||
+            (Ty.isPointer() && TySize == 32 && MemSizeInBytes == 4)) &&
+           "Unsupported register bank, LLT, MemSizeInBytes combination");
     if (isStore)
       switch (MemSizeInBytes) {
       case 4:
@@ -196,33 +208,39 @@ MipsInstructionSelector::selectLoadStoreOpCode(MachineInstr &I,
       }
   }
 
-  if (RegBank == Mips::FPRBRegBankID) {
-    switch (MemSizeInBytes) {
-    case 4:
-      return isStore ? Mips::SWC1 : Mips::LWC1;
-    case 8:
+  if (isRegInFprb(ValueReg, MRI)) {
+    if (Ty.isScalar()) {
+      assert(((TySize == 32 && MemSizeInBytes == 4) ||
+              (TySize == 64 && MemSizeInBytes == 8)) &&
+             "Unsupported register bank, LLT, MemSizeInBytes combination");
+
+      if (MemSizeInBytes == 4)
+        return isStore ? Mips::SWC1 : Mips::LWC1;
+
       if (STI.isFP64bit())
         return isStore ? Mips::SDC164 : Mips::LDC164;
-      else
-        return isStore ? Mips::SDC1 : Mips::LDC1;
-    case 16: {
-      assert(STI.hasMSA() && "Vector instructions require target with MSA.");
-      const unsigned VectorElementSizeInBytes =
-          MRI.getType(DestReg).getElementType().getSizeInBytes();
-      if (VectorElementSizeInBytes == 1)
-        return isStore ? Mips::ST_B : Mips::LD_B;
-      if (VectorElementSizeInBytes == 2)
-        return isStore ? Mips::ST_H : Mips::LD_H;
-      if (VectorElementSizeInBytes == 4)
-        return isStore ? Mips::ST_W : Mips::LD_W;
-      if (VectorElementSizeInBytes == 8)
-        return isStore ? Mips::ST_D : Mips::LD_D;
-      return Opc;
+      return isStore ? Mips::SDC1 : Mips::LDC1;
     }
-    default:
-      return Opc;
+
+    if (Ty.isVector()) {
+      assert(STI.hasMSA() && "Vector instructions require target with MSA.");
+      assert((TySize == 128 && MemSizeInBytes == 16) &&
+             "Unsupported register bank, LLT, MemSizeInBytes combination");
+      switch (Ty.getElementType().getSizeInBits()) {
+      case 8:
+        return isStore ? Mips::ST_B : Mips::LD_B;
+      case 16:
+        return isStore ? Mips::ST_H : Mips::LD_H;
+      case 32:
+        return isStore ? Mips::ST_W : Mips::LD_W;
+      case 64:
+        return isStore ? Mips::ST_D : Mips::LD_D;
+      default:
+        return Opc;
+      }
     }
   }
+
   return Opc;
 }
 
@@ -240,8 +258,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
   }
 
   if (I.getOpcode() == Mips::G_MUL &&
-      (RBI.getRegBank(I.getOperand(0).getReg(), MRI, TRI)->getID() ==
-       Mips::GPRBRegBankID)) {
+      isRegInGprb(I.getOperand(0).getReg(), MRI)) {
     MachineInstr *Mul = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::MUL))
                             .add(I.getOperand(0))
                             .add(I.getOperand(1))
@@ -369,14 +386,12 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
   }
   case G_PHI: {
     const Register DestReg = I.getOperand(0).getReg();
-    const unsigned OpSize = MRI.getType(DestReg).getSizeInBits();
 
     const TargetRegisterClass *DefRC = nullptr;
     if (Register::isPhysicalRegister(DestReg))
       DefRC = TRI.getRegClass(DestReg);
     else
-      DefRC = getRegClassForTypeOnBank(OpSize,
-                                       *RBI.getRegBank(DestReg, MRI, TRI), RBI);
+      DefRC = getRegClassForTypeOnBank(DestReg, MRI);
 
     I.setDesc(TII.get(TargetOpcode::PHI));
     return RBI.constrainGenericRegister(DestReg, *DefRC, MRI);
@@ -454,15 +469,12 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
     break;
   }
   case G_IMPLICIT_DEF: {
+    Register Dst = I.getOperand(0).getReg();
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::IMPLICIT_DEF))
-             .add(I.getOperand(0));
+             .addDef(Dst);
 
     // Set class based on register bank, there can be fpr and gpr implicit def.
-    MRI.setRegClass(MI->getOperand(0).getReg(),
-                    getRegClassForTypeOnBank(
-                        MRI.getType(I.getOperand(0).getReg()).getSizeInBits(),
-                        *RBI.getRegBank(I.getOperand(0).getReg(), MRI, TRI),
-                        RBI));
+    MRI.setRegClass(Dst, getRegClassForTypeOnBank(Dst, MRI));
     break;
   }
   case G_CONSTANT: {
