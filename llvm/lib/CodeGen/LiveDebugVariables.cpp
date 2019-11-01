@@ -255,6 +255,25 @@ public:
     return locations.size() - 1;
   }
 
+  /// Remove (recycle) a location number. If \p LocNo still is used by the
+  /// locInts nothing is done.
+  void removeLocationIfUnused(unsigned LocNo) {
+    // Bail out if LocNo still is used.
+    for (LocMap::const_iterator I = locInts.begin(); I.valid(); ++I) {
+      DbgValueLocation Loc = I.value();
+      if (Loc.locNo() == LocNo)
+        return;
+    }
+    // Remove the entry in the locations vector, and adjust all references to
+    // location numbers above the removed entry.
+    locations.erase(locations.begin() + LocNo);
+    for (LocMap::iterator I = locInts.begin(); I.valid(); ++I) {
+      DbgValueLocation Loc = I.value();
+      if (!Loc.isUndef() && Loc.locNo() > LocNo)
+        I.setValueUnchecked(Loc.changeLocNo(Loc.locNo() - 1));
+    }
+  }
+
   /// Ensure that all virtual register locations are mapped.
   void mapVirtRegs(LDVImpl *LDV);
 
@@ -1073,23 +1092,14 @@ UserValue::splitLocation(unsigned OldLocNo, ArrayRef<unsigned> NewRegs,
     }
   }
 
-  // Finally, remove any remaining OldLocNo intervals and OldLocNo itself.
-  locations.erase(locations.begin() + OldLocNo);
-  LocMapI.goToBegin();
-  while (LocMapI.valid()) {
-    DbgValueLocation v = LocMapI.value();
-    if (v.locNo() == OldLocNo) {
-      LLVM_DEBUG(dbgs() << "Erasing [" << LocMapI.start() << ';'
-                        << LocMapI.stop() << ")\n");
-      LocMapI.erase();
-    } else {
-      // Undef values always have location number UndefLocNo, so don't change
-      // locNo in that case. See getLocationNo().
-      if (!v.isUndef() && v.locNo() > OldLocNo)
-        LocMapI.setValueUnchecked(v.changeLocNo(v.locNo() - 1));
-      ++LocMapI;
-    }
-  }
+  // Finally, remove OldLocNo unless it is still used by some interval in the
+  // locInts map. One case when OldLocNo still is in use is when the register
+  // has been spilled. In such situations the spilled register is kept as a
+  // location until rewriteLocations is called (VirtRegMap is mapping the old
+  // register to the spill slot). So for a while we can have locations that map
+  // to virtual registers that have been removed from both the MachineFunction
+  // and from LiveIntervals.
+  removeLocationIfUnused(OldLocNo);
 
   LLVM_DEBUG({
     dbgs() << "Split result: \t";
