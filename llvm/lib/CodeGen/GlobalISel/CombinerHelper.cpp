@@ -190,7 +190,7 @@ bool CombinerHelper::matchCombineShuffleVector(MachineInstr &MI,
   Register Src1 = MI.getOperand(1).getReg();
   LLT SrcType = MRI.getType(Src1);
   unsigned DstNumElts = DstType.getNumElements();
-  unsigned SrcNumElts = SrcType.getNumElements();
+  unsigned SrcNumElts = SrcType.isVector() ? SrcType.getNumElements() : 1;
 
   // If the resulting vector is smaller than the size of the source
   // vectors being concatenated, we won't be able to replace the
@@ -254,7 +254,7 @@ void CombinerHelper::applyCombineShuffleVector(MachineInstr &MI,
   Builder.setInsertPt(*MI.getParent(), MI);
   Register NewDstReg = MRI.cloneVirtualRegister(DstReg);
 
-  Builder.buildConcatVectors(NewDstReg, Ops);
+  Builder.buildMerge(NewDstReg, Ops);
 
   MI.eraseFromParent();
   replaceRegWith(MRI, DstReg, NewDstReg);
