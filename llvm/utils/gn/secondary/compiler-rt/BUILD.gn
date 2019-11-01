@@ -1,8 +1,19 @@
-group("compiler-rt") {
-  # In the GN build, compiler-rt is always built by just-built clang and lld.
-  # FIXME: For macOS and iOS builds, depend on lib in all needed target arch
-  # toolchains and then lipo them together for the final output.
-  deps = [
-    "//compiler-rt/lib(//llvm/utils/gn/build/toolchain:stage2_unix)",
+import("//llvm/utils/gn/build/toolchain/compiler.gni")
+
+# In the GN build, compiler-rt is always built by just-built clang and lld.
+# FIXME: For macOS and iOS builds, depend on lib in all needed target arch
+# toolchains and then lipo them together for the final output.
+supported_toolchains = [ "//llvm/utils/gn/build/toolchain:stage2_unix" ]
+if (android_ndk_path != "") {
+  supported_toolchains += [
+    "//llvm/utils/gn/build/toolchain:stage2_android_aarch64",
+    "//llvm/utils/gn/build/toolchain:stage2_android_arm",
   ]
+}
+
+group("compiler-rt") {
+  deps = []
+  foreach(toolchain, supported_toolchains) {
+    deps += [ "//compiler-rt/lib($toolchain)" ]
+  }
 }
