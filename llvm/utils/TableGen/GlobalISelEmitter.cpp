@@ -1707,7 +1707,7 @@ public:
   }
 
   StringRef getOpcode() const { return I->TheDef->getName(); }
-  unsigned getNumOperands() const { return I->Operands.size(); }
+  bool isVariadicNumOperands() const { return I->Operands.isVariadic; }
 
   StringRef getOperandType(unsigned OpIdx) const {
     return I->Operands[OpIdx].OperandType;
@@ -2273,7 +2273,7 @@ void InstructionMatcher::optimize() {
 
   Stash.push_back(predicates_pop_front());
   if (Stash.back().get() == &OpcMatcher) {
-    if (NumOperandsCheck && OpcMatcher.getNumOperands() < getNumOperands())
+    if (NumOperandsCheck && OpcMatcher.isVariadicNumOperands())
       Stash.emplace_back(
           new InstructionNumOperandsMatcher(InsnVarID, getNumOperands()));
     NumOperandsCheck = false;
