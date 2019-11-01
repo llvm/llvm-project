@@ -5037,99 +5037,8 @@ AArch64InstrInfo::findRegisterToSaveLRTo(const outliner::Candidate &C) const {
   return 0u;
 }
 
-static bool
-outliningCandidatesSigningScopeConsensus(const outliner::Candidate &a,
-                                         const outliner::Candidate &b) {
-  const Function &Fa = a.getMF()->getFunction();
-  const Function &Fb = b.getMF()->getFunction();
-
-  // If none of the functions have the "sign-return-address" attribute their
-  // signing behaviour is equal
-  if (!Fa.hasFnAttribute("sign-return-address") &&
-      !Fb.hasFnAttribute("sign-return-address")) {
-    return true;
-  }
-
-  // If both functions have the "sign-return-address" attribute their signing
-  // behaviour is equal, if the values of the attributes are equal
-  if (Fa.hasFnAttribute("sign-return-address") &&
-      Fb.hasFnAttribute("sign-return-address")) {
-    StringRef ScopeA =
-        Fa.getFnAttribute("sign-return-address").getValueAsString();
-    StringRef ScopeB =
-        Fb.getFnAttribute("sign-return-address").getValueAsString();
-    return ScopeA.equals(ScopeB);
-  }
-
-  // If function B doesn't have the "sign-return-address" attribute but A does,
-  // the functions' signing behaviour is equal if A's value for
-  // "sign-return-address" is "none" and vice versa.
-  if (Fa.hasFnAttribute("sign-return-address")) {
-    StringRef ScopeA =
-        Fa.getFnAttribute("sign-return-address").getValueAsString();
-    return ScopeA.equals("none");
-  }
-
-  if (Fb.hasFnAttribute("sign-return-address")) {
-    StringRef ScopeB =
-        Fb.getFnAttribute("sign-return-address").getValueAsString();
-    return ScopeB.equals("none");
-  }
-
-  llvm_unreachable("Unkown combination of sign-return-address attributes");
-}
-
-static bool
-outliningCandidatesSigningKeyConsensus(const outliner::Candidate &a,
-                                       const outliner::Candidate &b) {
-  const Function &Fa = a.getMF()->getFunction();
-  const Function &Fb = b.getMF()->getFunction();
-
-  // If none of the functions have the "sign-return-address-key" attribute
-  // their keys are equal
-  if (!Fa.hasFnAttribute("sign-return-address-key") &&
-      !Fb.hasFnAttribute("sign-return-address-key")) {
-    return true;
-  }
-
-  // If both functions have the "sign-return-address-key" attribute their
-  // keys are equal if the values of "sign-return-address-key" are equal
-  if (Fa.hasFnAttribute("sign-return-address-key") &&
-      Fb.hasFnAttribute("sign-return-address-key")) {
-    StringRef KeyA =
-        Fa.getFnAttribute("sign-return-address-key").getValueAsString();
-    StringRef KeyB =
-        Fb.getFnAttribute("sign-return-address-key").getValueAsString();
-    return KeyA.equals(KeyB);
-  }
-
-  // If B doesn't have the "sign-return-address-key" attribute, both keys are
-  // equal, if function a has the default key (a_key)
-  if (Fa.hasFnAttribute("sign-return-address-key")) {
-    StringRef KeyA =
-        Fa.getFnAttribute("sign-return-address-key").getValueAsString();
-    return KeyA.equals_lower("a_key");
-  }
-
-  if (Fb.hasFnAttribute("sign-return-address-key")) {
-    StringRef KeyB =
-        Fb.getFnAttribute("sign-return-address-key").getValueAsString();
-    return KeyB.equals_lower("a_key");
-  }
-
-  llvm_unreachable("Unkown combination of sign-return-address-key attributes");
-}
-
-static bool outliningCandidatesV8_3OpsConsensus(const outliner::Candidate &a,
-                                                const outliner::Candidate &b) {
-  const AArch64Subtarget &SubtargetA =
-      a.getMF()->getSubtarget<AArch64Subtarget>();
-  const AArch64Subtarget &SubtargetB =
-      b.getMF()->getSubtarget<AArch64Subtarget>();
-  return SubtargetA.hasV8_3aOps() == SubtargetB.hasV8_3aOps();
-}
-
-outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
+outliner::OutlinedFunction
+AArch64InstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
   outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
   unsigned SequenceSize =
@@ -5137,47 +5046,6 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
                       [this](unsigned Sum, const MachineInstr &MI) {
                         return Sum + getInstSizeInBytes(MI);
                       });
-  unsigned NumBytesToCreateFrame = 0;
-
-  // We only allow outlining for functions having exactly matching return
-  // address signing attributes, i.e., all share the same value for the
-  // attribute "sign-return-address" and all share the same type of key they
-  // are signed with.
-  // Additionally we require all functions to simultaniously either support
-  // v8.3a features or not. Otherwise an outlined function could get signed
-  // using dedicated v8.3 instructions and a call from a function that doesn't
-  // support v8.3 instructions would therefore be invalid.
-  if (std::adjacent_find(
-          RepeatedSequenceLocs.begin(), RepeatedSequenceLocs.end(),
-
-          [](const outliner::Candidate &a, const outliner::Candidate &b) {
-            // Return true if a and b are non-equal w.r.t. return address
-            // signing or support of v8.3a features
-            if (outliningCandidatesSigningScopeConsensus(a, b) &&
-                outliningCandidatesSigningKeyConsensus(a, b) &&
-                outliningCandidatesV8_3OpsConsensus(a, b)) {
-              return false;
-            }
-            return true;
-          }) != RepeatedSequenceLocs.end()) {
-    return outliner::OutlinedFunction();
-  }
-
-  // Since at this point all candidates agree on their return address signing
-  // picking just one is fine. If the candidate functions potentially sign their
-  // return addresses, the outlined function should do the same. Note that in
-  // the case of "sign-return-address"="non-leaf" this is an assumption: It is
-  // not certainly true that the outlined function will have to sign its return
-  // address but this decision is made later, when the decision to outline
-  // has already been made.
-  // The same holds for the number of additional instructions we need: On
-  // v8.3a RET can be replaced by RETAA/RETAB and no AUT instruction is
-  // necessary. However, at this point we don't know if the outlined function
-  // will have a RET instruction so we assume the worst.
-  const Function &FCF = FirstCand.getMF()->getFunction();
-  if (FCF.hasFnAttribute("sign-return-address"))
-    // One PAC and one AUT instructions
-    NumBytesToCreateFrame += 8;
 
   // Properties about candidate MBBs that hold for all of them.
   unsigned FlagsSetInAll = 0xF;
@@ -5239,7 +5107,7 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
       };
 
   unsigned FrameID = MachineOutlinerDefault;
-  NumBytesToCreateFrame += 4;
+  unsigned NumBytesToCreateFrame = 4;
 
   bool HasBTI = any_of(RepeatedSequenceLocs, [](outliner::Candidate &C) {
     return C.getMF()->getFunction().hasFnAttribute("branch-target-enforcement");
@@ -5508,19 +5376,6 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
   MachineFunction *MF = MBB->getParent();
   AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
 
-  // Don't outline anything used for return address signing. The outlined
-  // function will get signed later if needed
-  switch (MI.getOpcode()) {
-  case AArch64::PACIASP:
-  case AArch64::PACIBSP:
-  case AArch64::AUTIASP:
-  case AArch64::AUTIBSP:
-  case AArch64::RETAA:
-  case AArch64::RETAB:
-  case AArch64::EMITBKEY:
-    return outliner::InstrType::Illegal;
-  }
-
   // Don't outline LOHs.
   if (FuncInfo->getLOHRelated().count(&MI))
     return outliner::InstrType::Illegal;
@@ -5673,59 +5528,6 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
   }
 }
 
-static void signOutlinedFunction(MachineFunction &MF, MachineBasicBlock &MBB,
-                                 bool ShouldSignReturnAddr,
-                                 bool ShouldSignReturnAddrWithAKey) {
-  if (ShouldSignReturnAddr) {
-    MachineBasicBlock::iterator MBBPAC = MBB.begin();
-    MachineBasicBlock::iterator MBBAUT = MBB.getFirstTerminator();
-    const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-    const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-    DebugLoc DL;
-
-    if (MBBAUT != MBB.end())
-      DL = MBBAUT->getDebugLoc();
-
-    // At the very beginning of the basic block we insert the following
-    // depending on the key type
-    //
-    // a_key:                   b_key:
-    //    PACIASP                   EMITBKEY
-    //    CFI_INSTRUCTION           PACIBSP
-    //                              CFI_INSTRUCTION
-    if (ShouldSignReturnAddrWithAKey) {
-      BuildMI(MBB, MBBPAC, DebugLoc(), TII->get(AArch64::PACIASP))
-          .setMIFlag(MachineInstr::FrameSetup);
-    } else {
-      BuildMI(MBB, MBBPAC, DebugLoc(), TII->get(AArch64::EMITBKEY))
-          .setMIFlag(MachineInstr::FrameSetup);
-      BuildMI(MBB, MBBPAC, DebugLoc(), TII->get(AArch64::PACIBSP))
-          .setMIFlag(MachineInstr::FrameSetup);
-    }
-    unsigned CFIIndex =
-        MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
-    BuildMI(MBB, MBBPAC, DebugLoc(), TII->get(AArch64::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex)
-        .setMIFlags(MachineInstr::FrameSetup);
-
-    // If v8.3a features are available we can replace a RET instruction by
-    // RETAA or RETAB and omit the AUT instructions
-    if (Subtarget.hasV8_3aOps() && MBBAUT != MBB.end() &&
-        MBBAUT->getOpcode() == AArch64::RET) {
-      BuildMI(MBB, MBBAUT, DL,
-              TII->get(ShouldSignReturnAddrWithAKey ? AArch64::RETAA
-                                                    : AArch64::RETAB))
-          .copyImplicitOps(*MBBAUT);
-      MBB.erase(MBBAUT);
-    } else {
-      BuildMI(MBB, MBBAUT, DL,
-              TII->get(ShouldSignReturnAddrWithAKey ? AArch64::AUTIASP
-                                                    : AArch64::AUTIBSP))
-          .setMIFlag(MachineInstr::FrameDestroy);
-    }
-  }
-}
-
 void AArch64InstrInfo::buildOutlinedFrame(
     MachineBasicBlock &MBB, MachineFunction &MF,
     const outliner::OutlinedFunction &OF) const {
@@ -5741,27 +5543,22 @@ void AArch64InstrInfo::buildOutlinedFrame(
       TailOpcode = AArch64::TCRETURNriALL;
     }
     MachineInstr *TC = BuildMI(MF, DebugLoc(), get(TailOpcode))
-                           .add(Call->getOperand(0))
-                           .addImm(0);
+                            .add(Call->getOperand(0))
+                            .addImm(0);
     MBB.insert(MBB.end(), TC);
     Call->eraseFromParent();
   }
 
-  bool IsLeafFunction = true;
-
   // Is there a call in the outlined range?
-  auto IsNonTailCall = [](const MachineInstr &MI) {
+  auto IsNonTailCall = [](MachineInstr &MI) {
     return MI.isCall() && !MI.isReturn();
   };
-
   if (std::any_of(MBB.instr_begin(), MBB.instr_end(), IsNonTailCall)) {
     // Fix up the instructions in the range, since we're going to modify the
     // stack.
     assert(OF.FrameConstructionID != MachineOutlinerDefault &&
            "Can only fix up stack references once");
     fixupPostOutline(MBB);
-
-    IsLeafFunction = false;
 
     // LR has to be a live in so that we can save it.
     MBB.addLiveIn(AArch64::LR);
@@ -5809,46 +5606,15 @@ void AArch64InstrInfo::buildOutlinedFrame(
     Et = MBB.insert(Et, LDRXpost);
   }
 
-  // If a bunch of candidates reach this point they must agree on their return
-  // address signing. It is therefore enough to just consider the signing
-  // behaviour of one of them
-  const Function &CF = OF.Candidates.front().getMF()->getFunction();
-  bool ShouldSignReturnAddr = false;
-  if (CF.hasFnAttribute("sign-return-address")) {
-    StringRef Scope =
-        CF.getFnAttribute("sign-return-address").getValueAsString();
-    if (Scope.equals("all"))
-      ShouldSignReturnAddr = true;
-    else if (Scope.equals("non-leaf") && !IsLeafFunction)
-      ShouldSignReturnAddr = true;
-  }
-
-  // a_key is the default
-  bool ShouldSignReturnAddrWithAKey = true;
-  if (CF.hasFnAttribute("sign-return-address-key")) {
-    const StringRef Key =
-        CF.getFnAttribute("sign-return-address-key").getValueAsString();
-    // Key can either be a_key or b_key
-    assert((Key.equals_lower("a_key") || Key.equals_lower("b_key")) &&
-           "Return address signing key must be either a_key or b_key");
-    ShouldSignReturnAddrWithAKey = Key.equals_lower("a_key");
-  }
-
   // If this is a tail call outlined function, then there's already a return.
   if (OF.FrameConstructionID == MachineOutlinerTailCall ||
-      OF.FrameConstructionID == MachineOutlinerThunk) {
-    signOutlinedFunction(MF, MBB, ShouldSignReturnAddr,
-                         ShouldSignReturnAddrWithAKey);
+      OF.FrameConstructionID == MachineOutlinerThunk)
     return;
-  }
 
   // It's not a tail call, so we have to insert the return ourselves.
   MachineInstr *ret = BuildMI(MF, DebugLoc(), get(AArch64::RET))
                           .addReg(AArch64::LR, RegState::Undef);
   MBB.insert(MBB.end(), ret);
-
-  signOutlinedFunction(MF, MBB, ShouldSignReturnAddr,
-                       ShouldSignReturnAddrWithAKey);
 
   // Did we have to modify the stack by saving the link register?
   if (OF.FrameConstructionID != MachineOutlinerDefault)
