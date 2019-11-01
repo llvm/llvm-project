@@ -490,6 +490,9 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(createFunctionToLoopPassAdaptor(
       std::move(LPM2), /*UseMemorySSA=*/false, DebugLogging));
 
+  // Delete small array after loop unroll.
+  FPM.addPass(SROA());
+
   // Eliminate redundancies.
   if (Level != O1) {
     // These passes add substantial compile time so skip them at O1.
