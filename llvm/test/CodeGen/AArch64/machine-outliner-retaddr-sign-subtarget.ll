@@ -3,7 +3,7 @@
 
 ; Check that functions that should sign their return addresses don't get
 ; outlined if not all of the function either support v8.3a features or all of
-; the functions don't!!
+; the functions don't
 
 define void @a() #0 {
 ; CHECK-LABEL:      a:                                     // @a
@@ -25,7 +25,7 @@ define void @a() #0 {
   store i32 5, i32* %5, align 4
   store i32 6, i32* %6, align 4
 ; CHECK:                  retab
-; CHECK-NOT:              auti[a,b]sp
+; CHECK-NOT:              auti{{[a,b]}}sp
   ret void
 }
 
@@ -49,7 +49,7 @@ define void @b() #0 {
   store i32 5, i32* %5, align 4
   store i32 6, i32* %6, align 4
 ; CHECK:                  retab
-; CHECK-NOT:              auti[a,b]sp
+; CHECK-NOT:              auti{{[a,b]}}sp
   ret void
 }
 
