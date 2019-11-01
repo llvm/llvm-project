@@ -152,6 +152,10 @@ def int_wasm_qfms :
   Intrinsic<[llvm_anyvector_ty],
             [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
             [IntrNoMem, IntrSpeculatable]>;
+def int_wasm_dot :
+  Intrinsic<[llvm_v4i32_ty],
+            [llvm_v8i16_ty, llvm_v8i16_ty],
+            [IntrNoMem, IntrSpeculatable]>;
 def int_wasm_narrow_signed :
   Intrinsic<[llvm_anyvector_ty],
             [llvm_anyvector_ty, LLVMMatchType<1>],
