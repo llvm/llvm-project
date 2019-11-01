@@ -183,6 +183,7 @@ MipsInstructionSelector::selectLoadStoreOpCode(MachineInstr &I,
     assert(((Ty.isScalar() && TySize == 32) ||
             (Ty.isPointer() && TySize == 32 && MemSizeInBytes == 4)) &&
            "Unsupported register bank, LLT, MemSizeInBytes combination");
+    (void)TySize;
     if (isStore)
       switch (MemSizeInBytes) {
       case 4:
