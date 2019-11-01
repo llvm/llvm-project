@@ -1,7 +1,9 @@
 RUN: printf '\377lprofR\201' > %t
-RUN: printf '\0\0\0\0\0\0\0\4' >> %t
+RUN: printf '\0\0\0\0\0\0\0\5' >> %t
 RUN: printf '\0\0\0\0\0\0\0\2' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\3' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\20' >> %t
 RUN: printf '\0\0\0\0\1\0\0\0' >> %t
 RUN: printf '\0\0\0\0\2\0\0\0' >> %t

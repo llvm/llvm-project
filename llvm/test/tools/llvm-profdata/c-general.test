@@ -5,7 +5,7 @@ $ SRC=path/to/llvm
 $ CFE=$SRC/tools/clang
 $ TESTDIR=$SRC/test/tools/llvm-profdata
 $ CFE_TESTDIR=$CFE/test/Profile
-$ clang -o a.out -fprofile-instr-generate $CFE_TESTDIR/c-general.c
+$ clang -o a.out -fprofile-instr-generate $CFE_TESTDIR/c-general.c -mllvm -enable-name-compression=false
 $ LLVM_PROFILE_FILE=$TESTDIR/Inputs/c-general.profraw ./a.out
 
 RUN: llvm-profdata show %p/Inputs/c-general.profraw -o - | FileCheck %s
@@ -14,7 +14,7 @@ RUN: llvm-profdata show %p/Inputs/c-general.profraw -o - --function=switches | F
 
 SWITCHES-LABEL: Counters:
 SWITCHES-NEXT:   switches:
-SWITCHES-NEXT:     Hash: 0x2618e4f23f2e8daa
+SWITCHES-NEXT:     Hash: 0xa50a07f391ae4be5
 SWITCHES-NEXT:     Counters: 19
 SWITCHES-NEXT:     Function count: 1
 SWITCHES-LABEL: Functions shown: 1

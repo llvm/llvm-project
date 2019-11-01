@@ -87,6 +87,16 @@ directory structure will be created.  Additionally, the following special
   be between 1 and 9. The merge pool specifier can only occur once per filename
   pattern.
 
+* "%c" expands out to nothing, but enables a mode in which profile counter
+  updates are continuously synced to a file. This means that if the
+  instrumented program crashes, or is killed by a signal, perfect coverage
+  information can still be recovered. Continuous mode is not yet compatible with
+  the "%Nm" merging mode described above, does not support value profiling for
+  PGO, and is only supported on Darwin. Support for Linux may be mostly
+  complete but requires testing, and support for Fuchsia/Windows may require
+  more extensive changes: please get involved if you are interested in porting
+  this feature.
+
 .. code-block:: console
 
     # Step 2: Run the program.
