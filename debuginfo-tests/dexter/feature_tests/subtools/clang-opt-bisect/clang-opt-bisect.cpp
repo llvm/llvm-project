@@ -4,7 +4,7 @@
 // REQUIRES: system-linux, lldb
 //
 // RUN: true
-// RUN: %dexter clang-opt-bisect --debugger 'lldb' --builder 'clang' \
+// RUN: %dexter_base clang-opt-bisect --debugger 'lldb' --builder 'clang' \
 // RUN:     --cflags "-O0 -g" -- %s \
 // RUN:     | FileCheck %s
 // CHECK: running pass 0
