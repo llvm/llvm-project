@@ -260,6 +260,27 @@ def updateEnv(env, args):
         env.env[key] = val
     return args[arg_idx_next:]
 
+def executeBuiltinCd(cmd, shenv):
+    """executeBuiltinCd - Change the current directory."""
+    if len(cmd.args) != 2:
+        raise InternalShellError("'cd' supports only one argument")
+    newdir = cmd.args[1]
+    # Update the cwd in the parent environment.
+    if os.path.isabs(newdir):
+        shenv.cwd = newdir
+    else:
+        shenv.cwd = os.path.realpath(os.path.join(shenv.cwd, newdir))
+    # The cd builtin always succeeds. If the directory does not exist, the
+    # following Popen calls will fail instead.
+    return ShellCommandResult(cmd, "", "", 0, False)
+
+def executeBuiltinExport(cmd, shenv):
+    """executeBuiltinExport - Set an environment variable."""
+    if len(cmd.args) != 2:
+        raise InternalShellError("'export' supports only one argument")
+    updateEnv(shenv, cmd.args)
+    return ShellCommandResult(cmd, "", "", 0, False)
+
 def executeBuiltinEcho(cmd, shenv):
     """Interpret a redirected echo command"""
     opened_files = []
@@ -319,9 +340,8 @@ def executeBuiltinEcho(cmd, shenv):
     for (name, mode, f, path) in opened_files:
         f.close()
 
-    if not is_redirected:
-        return stdout.getvalue()
-    return ""
+    output = "" if is_redirected else stdout.getvalue()
+    return ShellCommandResult(cmd, output, "", 0, False)
 
 def executeBuiltinMkdir(cmd, cmd_shenv):
     """executeBuiltinMkdir - Create new directories."""
@@ -456,6 +476,10 @@ def executeBuiltinRm(cmd, cmd_shenv):
             exitCode = 1
     return ShellCommandResult(cmd, "", stderr.getvalue(), exitCode, False)
 
+def executeBuiltinColon(cmd, cmd_shenv):
+    """executeBuiltinColon - Discard arguments and exit with status 0."""
+    return ShellCommandResult(cmd, "", "", 0, False)
+
 def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
     """Return the standard fds for cmd after applying redirects
 
@@ -581,64 +605,6 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         raise ValueError('Unknown shell command: %r' % cmd.op)
     assert isinstance(cmd, ShUtil.Pipeline)
 
-    # Handle shell builtins first.
-    if cmd.commands[0].args[0] == 'cd':
-        if len(cmd.commands) != 1:
-            raise ValueError("'cd' cannot be part of a pipeline")
-        if len(cmd.commands[0].args) != 2:
-            raise ValueError("'cd' supports only one argument")
-        newdir = cmd.commands[0].args[1]
-        # Update the cwd in the parent environment.
-        if os.path.isabs(newdir):
-            shenv.cwd = newdir
-        else:
-            shenv.cwd = os.path.realpath(os.path.join(shenv.cwd, newdir))
-        # The cd builtin always succeeds. If the directory does not exist, the
-        # following Popen calls will fail instead.
-        return 0
-
-    # Handle "echo" as a builtin if it is not part of a pipeline. This greatly
-    # speeds up tests that construct input files by repeatedly echo-appending to
-    # a file.
-    # FIXME: Standardize on the builtin echo implementation. We can use a
-    # temporary file to sidestep blocking pipe write issues.
-    if cmd.commands[0].args[0] == 'echo' and len(cmd.commands) == 1:
-        output = executeBuiltinEcho(cmd.commands[0], shenv)
-        results.append(ShellCommandResult(cmd.commands[0], output, "", 0,
-                                          False))
-        return 0
-
-    if cmd.commands[0].args[0] == 'export':
-        if len(cmd.commands) != 1:
-            raise ValueError("'export' cannot be part of a pipeline")
-        if len(cmd.commands[0].args) != 2:
-            raise ValueError("'export' supports only one argument")
-        updateEnv(shenv, cmd.commands[0].args)
-        return 0
-
-    if cmd.commands[0].args[0] == 'mkdir':
-        if len(cmd.commands) != 1:
-            raise InternalShellError(cmd.commands[0], "Unsupported: 'mkdir' "
-                                     "cannot be part of a pipeline")
-        cmdResult = executeBuiltinMkdir(cmd.commands[0], shenv)
-        results.append(cmdResult)
-        return cmdResult.exitCode
-
-    if cmd.commands[0].args[0] == 'rm':
-        if len(cmd.commands) != 1:
-            raise InternalShellError(cmd.commands[0], "Unsupported: 'rm' "
-                                     "cannot be part of a pipeline")
-        cmdResult = executeBuiltinRm(cmd.commands[0], shenv)
-        results.append(cmdResult)
-        return cmdResult.exitCode
-
-    if cmd.commands[0].args[0] == ':':
-        if len(cmd.commands) != 1:
-            raise InternalShellError(cmd.commands[0], "Unsupported: ':' "
-                                     "cannot be part of a pipeline")
-        results.append(ShellCommandResult(cmd.commands[0], '', '', 0, False))
-        return 0;
-
     procs = []
     default_stdin = subprocess.PIPE
     stderrTempFiles = []
@@ -646,6 +612,12 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     named_temp_files = []
     builtin_commands = set(['cat', 'diff'])
     builtin_commands_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "builtin_commands")
+    inproc_builtins = {'cd': executeBuiltinCd,
+                       'export': executeBuiltinExport,
+                       'echo': executeBuiltinEcho,
+                       'mkdir': executeBuiltinMkdir,
+                       'rm': executeBuiltinRm,
+                       ':': executeBuiltinColon}
     # To avoid deadlock, we use a single stderr stream for piped
     # output. This is null until we have seen some output using
     # stderr.
@@ -662,6 +634,27 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             if not args:
                 raise InternalShellError(j,
                                          "Error: 'env' requires a subcommand")
+
+        # Handle in-process builtins.
+        #
+        # Handle "echo" as a builtin if it is not part of a pipeline. This
+        # greatly speeds up tests that construct input files by repeatedly
+        # echo-appending to a file.
+        # FIXME: Standardize on the builtin echo implementation. We can use a
+        # temporary file to sidestep blocking pipe write issues.
+        inproc_builtin = inproc_builtins.get(args[0], None)
+        if inproc_builtin and (args[0] != 'echo' or len(cmd.commands) == 1):
+            # env calling an in-process builtin is useless, so we take the safe
+            # approach of complaining.
+            if not cmd_shenv is shenv:
+                raise InternalShellError(j, "Error: 'env' cannot call '{}'"
+                                            .format(args[0]))
+            if len(cmd.commands) != 1:
+                raise InternalShellError(j, "Unsupported: '{}' cannot be part"
+                                            " of a pipeline".format(args[0]))
+            result = inproc_builtin(j, cmd_shenv)
+            results.append(result)
+            return result.exitCode
 
         stdin, stdout, stderr = processRedirects(j, default_stdin, cmd_shenv,
                                                  opened_files)
