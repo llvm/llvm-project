@@ -29,12 +29,9 @@ string(REPLACE ";" " " SYSTEM_LIBS "${SYSTEM_LIBS}")
 # Fetch target specific compile options, e.g. RTTI option
 get_property(COMPILE_FLAGS TARGET llvm-config PROPERTY COMPILE_FLAGS)
 
-# The language standard potentially affects the ABI/API of LLVM, so we want
-# to make sure it is reported by llvm-config.
 # NOTE: We don't want to start extracting any random C/CXX flags that the
 # user may add that could affect the ABI.  We only want to extract flags
 # that have been added by the LLVM build system.
-string(REGEX MATCH "-std=[^ ]+" LLVM_CXX_STD_FLAG ${CMAKE_CXX_FLAGS})
 string(REGEX MATCH "-stdlib=[^ ]+" LLVM_CXX_STDLIB_FLAG ${CMAKE_CXX_FLAGS})
 string(REGEX MATCH "-std=[^ ]+" LLVM_C_STD_FLAG ${CMAKE_C_FLAGS})
 
@@ -43,7 +40,9 @@ set(LLVM_SRC_ROOT ${LLVM_MAIN_SRC_DIR})
 set(LLVM_OBJ_ROOT ${LLVM_BINARY_DIR})
 set(LLVM_CPPFLAGS "${LLVM_DEFINITIONS}")
 set(LLVM_CFLAGS "${LLVM_C_STD_FLAG} ${LLVM_DEFINITIONS}")
-set(LLVM_CXXFLAGS "${LLVM_CXX_STD_FLAG} ${LLVM_CXX_STDLIB_FLAG} ${COMPILE_FLAGS} ${LLVM_DEFINITIONS}")
+# The language standard potentially affects the ABI/API of LLVM, so we want
+# to make sure it is reported by llvm-config.
+set(LLVM_CXXFLAGS "${CMAKE_CXX${CMAKE_CXX_STANDARD}_STANDARD_COMPILE_OPTION} ${LLVM_CXX_STDLIB_FLAG} ${COMPILE_FLAGS} ${LLVM_DEFINITIONS}")
 set(LLVM_BUILD_SYSTEM cmake)
 set(LLVM_HAS_RTTI ${LLVM_CONFIG_HAS_RTTI})
 set(LLVM_DYLIB_VERSION "${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX}")
