@@ -1,4 +1,4 @@
-; RUN: opt -functionattrs -attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=6 -S < %s | FileCheck %s
+; RUN: opt -functionattrs -attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=6 -S < %s | FileCheck %s
 ;
 ; Test cases specifically designed for the "no-capture" argument attribute.
 ; We use FIXME's to indicate problems and missing attributes.
@@ -435,6 +435,37 @@ define i32* @not_captured_by_readonly_call_not_returned_either4(i32* %b, i32* %r
 entry:
   %call = call i32* @readonly_unknown_r1a(i32* %b, i32* %r)
   ret i32* %call
+}
+
+
+declare i32* @unknown_i32p(i32*)
+define void @nocapture_is_not_subsumed_1(i32* nocapture %b) {
+; CHECK-LABEL: define {{[^@]+}}@nocapture_is_not_subsumed_1
+; CHECK-SAME: (i32* nocapture [[B:%.*]])
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @unknown_i32p(i32* [[B:%.*]])
+; CHECK-NEXT:    store i32 0, i32* [[CALL]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %call = call i32* @unknown_i32p(i32* %b)
+  store i32 0, i32* %call
+  ret void
+}
+
+declare i32* @readonly_i32p(i32*) readonly
+define void @nocapture_is_not_subsumed_2(i32* nocapture %b) {
+; CHECK-LABEL: define {{[^@]+}}@nocapture_is_not_subsumed_2
+; CHECK-SAME: (i32* nocapture [[B:%.*]])
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_i32p(i32* readonly [[B:%.*]])
+; CHECK-NEXT:    store i32 0, i32* [[CALL]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %call = call i32* @readonly_i32p(i32* %b)
+  store i32 0, i32* %call
+  ret void
 }
 
 attributes #0 = { noinline nounwind uwtable }

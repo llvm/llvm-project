@@ -1,5 +1,5 @@
 ; RUN: opt -functionattrs -S < %s | FileCheck %s --check-prefix=FNATTR
-; RUN: opt -passes=attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=2 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
+; RUN: opt -passes=attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=2 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
 
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

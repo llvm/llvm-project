@@ -1,6 +1,6 @@
 ; RUN: opt -functionattrs -S < %s | FileCheck %s --check-prefix=FNATTR
-; RUN: opt -attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=7 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
-; RUN: opt -attributor -attributor-manifest-internal -attributor-disable=false -functionattrs -S < %s | FileCheck %s --check-prefix=BOTH
+; RUN: opt -attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=7 -S < %s | FileCheck %s --check-prefix=ATTRIBUTOR
+; RUN: opt -attributor -attributor-manifest-internal -attributor-disable=false -attributor-annotate-decl-cs -functionattrs -S < %s | FileCheck %s --check-prefix=BOTH
 ;
 ; Test cases specifically designed for the "returned" argument attribute.
 ; We use FIXME's to indicate problems and missing attributes.

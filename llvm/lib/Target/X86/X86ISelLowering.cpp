@@ -6712,6 +6712,93 @@ static bool getTargetShuffleMask(SDNode *N, MVT VT, bool AllowSentinelZero,
   return true;
 }
 
+/// Compute whether each element of a shuffle is zeroable.
+///
+/// A "zeroable" vector shuffle element is one which can be lowered to zero.
+/// Either it is an undef element in the shuffle mask, the element of the input
+/// referenced is undef, or the element of the input referenced is known to be
+/// zero. Many x86 shuffles can zero lanes cheaply and we often want to handle
+/// as many lanes with this technique as possible to simplify the remaining
+/// shuffle.
+static void computeZeroableShuffleElements(ArrayRef<int> Mask,
+                                           SDValue V1, SDValue V2,
+                                           APInt &KnownUndef, APInt &KnownZero) {
+  int Size = Mask.size();
+  KnownUndef = KnownZero = APInt::getNullValue(Size);
+
+  V1 = peekThroughBitcasts(V1);
+  V2 = peekThroughBitcasts(V2);
+
+  bool V1IsZero = ISD::isBuildVectorAllZeros(V1.getNode());
+  bool V2IsZero = ISD::isBuildVectorAllZeros(V2.getNode());
+
+  int VectorSizeInBits = V1.getValueSizeInBits();
+  int ScalarSizeInBits = VectorSizeInBits / Size;
+  assert(!(VectorSizeInBits % ScalarSizeInBits) && "Illegal shuffle mask size");
+
+  for (int i = 0; i < Size; ++i) {
+    int M = Mask[i];
+    // Handle the easy cases.
+    if (M < 0) {
+      KnownUndef.setBit(i);
+      continue;
+    }
+    if ((M >= 0 && M < Size && V1IsZero) || (M >= Size && V2IsZero)) {
+      KnownZero.setBit(i);
+      continue;
+    }
+
+    // Determine shuffle input and normalize the mask.
+    SDValue V = M < Size ? V1 : V2;
+    M %= Size;
+
+    // Currently we can only search BUILD_VECTOR for UNDEF/ZERO elements.
+    if (V.getOpcode() != ISD::BUILD_VECTOR)
+      continue;
+
+    // If the BUILD_VECTOR has fewer elements then the bitcasted portion of
+    // the (larger) source element must be UNDEF/ZERO.
+    if ((Size % V.getNumOperands()) == 0) {
+      int Scale = Size / V->getNumOperands();
+      SDValue Op = V.getOperand(M / Scale);
+      if (Op.isUndef())
+        KnownUndef.setBit(i);
+      if (X86::isZeroNode(Op))
+        KnownZero.setBit(i);
+      else if (ConstantSDNode *Cst = dyn_cast<ConstantSDNode>(Op)) {
+        APInt Val = Cst->getAPIntValue();
+        Val = Val.extractBits(ScalarSizeInBits, (M % Scale) * ScalarSizeInBits);
+        if (Val == 0)
+          KnownZero.setBit(i);
+      } else if (ConstantFPSDNode *Cst = dyn_cast<ConstantFPSDNode>(Op)) {
+        APInt Val = Cst->getValueAPF().bitcastToAPInt();
+        Val = Val.extractBits(ScalarSizeInBits, (M % Scale) * ScalarSizeInBits);
+        if (Val == 0)
+          KnownZero.setBit(i);
+      }
+      continue;
+    }
+
+    // If the BUILD_VECTOR has more elements then all the (smaller) source
+    // elements must be UNDEF or ZERO.
+    if ((V.getNumOperands() % Size) == 0) {
+      int Scale = V->getNumOperands() / Size;
+      bool AllUndef = true;
+      bool AllZero = true;
+      for (int j = 0; j < Scale; ++j) {
+        SDValue Op = V.getOperand((M * Scale) + j);
+        AllUndef &= Op.isUndef();
+        AllZero &= X86::isZeroNode(Op);
+      }
+      if (AllUndef)
+        KnownUndef.setBit(i);
+      if (AllZero)
+        KnownZero.setBit(i);
+      continue;
+    }
+  }
+}
+
 /// Decode a target shuffle mask and inputs and see if any values are
 /// known to be undef or zero from their inputs.
 /// Returns true if the target shuffle mask was decoded.
@@ -10416,93 +10503,6 @@ static unsigned getV4X86ShuffleImm(ArrayRef<int> Mask) {
 static SDValue getV4X86ShuffleImm8ForMask(ArrayRef<int> Mask, const SDLoc &DL,
                                           SelectionDAG &DAG) {
   return DAG.getTargetConstant(getV4X86ShuffleImm(Mask), DL, MVT::i8);
-}
-
-/// Compute whether each element of a shuffle is zeroable.
-///
-/// A "zeroable" vector shuffle element is one which can be lowered to zero.
-/// Either it is an undef element in the shuffle mask, the element of the input
-/// referenced is undef, or the element of the input referenced is known to be
-/// zero. Many x86 shuffles can zero lanes cheaply and we often want to handle
-/// as many lanes with this technique as possible to simplify the remaining
-/// shuffle.
-static void computeZeroableShuffleElements(ArrayRef<int> Mask,
-                                           SDValue V1, SDValue V2,
-                                           APInt &KnownUndef, APInt &KnownZero) {
-  int Size = Mask.size();
-  KnownUndef = KnownZero = APInt::getNullValue(Size);
-
-  V1 = peekThroughBitcasts(V1);
-  V2 = peekThroughBitcasts(V2);
-
-  bool V1IsZero = ISD::isBuildVectorAllZeros(V1.getNode());
-  bool V2IsZero = ISD::isBuildVectorAllZeros(V2.getNode());
-
-  int VectorSizeInBits = V1.getValueSizeInBits();
-  int ScalarSizeInBits = VectorSizeInBits / Size;
-  assert(!(VectorSizeInBits % ScalarSizeInBits) && "Illegal shuffle mask size");
-
-  for (int i = 0; i < Size; ++i) {
-    int M = Mask[i];
-    // Handle the easy cases.
-    if (M < 0) {
-      KnownUndef.setBit(i);
-      continue;
-    }
-    if ((M >= 0 && M < Size && V1IsZero) || (M >= Size && V2IsZero)) {
-      KnownZero.setBit(i);
-      continue;
-    }
-
-    // Determine shuffle input and normalize the mask.
-    SDValue V = M < Size ? V1 : V2;
-    M %= Size;
-
-    // Currently we can only search BUILD_VECTOR for UNDEF/ZERO elements.
-    if (V.getOpcode() != ISD::BUILD_VECTOR)
-      continue;
-
-    // If the BUILD_VECTOR has fewer elements then the bitcasted portion of
-    // the (larger) source element must be UNDEF/ZERO.
-    if ((Size % V.getNumOperands()) == 0) {
-      int Scale = Size / V->getNumOperands();
-      SDValue Op = V.getOperand(M / Scale);
-      if (Op.isUndef())
-        KnownUndef.setBit(i);
-      if (X86::isZeroNode(Op))
-        KnownZero.setBit(i);
-      else if (ConstantSDNode *Cst = dyn_cast<ConstantSDNode>(Op)) {
-        APInt Val = Cst->getAPIntValue();
-        Val = Val.extractBits(ScalarSizeInBits, (M % Scale) * ScalarSizeInBits);
-        if (Val == 0)
-          KnownZero.setBit(i);
-      } else if (ConstantFPSDNode *Cst = dyn_cast<ConstantFPSDNode>(Op)) {
-        APInt Val = Cst->getValueAPF().bitcastToAPInt();
-        Val = Val.extractBits(ScalarSizeInBits, (M % Scale) * ScalarSizeInBits);
-        if (Val == 0)
-          KnownZero.setBit(i);
-      }
-      continue;
-    }
-
-    // If the BUILD_VECTOR has more elements then all the (smaller) source
-    // elements must be UNDEF or ZERO.
-    if ((V.getNumOperands() % Size) == 0) {
-      int Scale = V->getNumOperands() / Size;
-      bool AllUndef = true;
-      bool AllZero = true;
-      for (int j = 0; j < Scale; ++j) {
-        SDValue Op = V.getOperand((M * Scale) + j);
-        AllUndef &= Op.isUndef();
-        AllZero &= X86::isZeroNode(Op);
-      }
-      if (AllUndef)
-        KnownUndef.setBit(i);
-      if (AllZero)
-        KnownZero.setBit(i);
-      continue;
-    }
-  }
 }
 
 // The Shuffle result is as follow:
