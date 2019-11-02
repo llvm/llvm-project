@@ -3628,8 +3628,26 @@ protected:
 struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
   AAValueSimplifyArgument(const IRPosition &IRP) : AAValueSimplifyImpl(IRP) {}
 
+  void initialize(Attributor &A) override {
+    AAValueSimplifyImpl::initialize(A);
+    if (!getAssociatedFunction() || getAssociatedFunction()->isDeclaration())
+      indicatePessimisticFixpoint();
+    if (hasAttr({Attribute::InAlloca, Attribute::StructRet, Attribute::Nest},
+                /* IgnoreSubsumingPositions */ true))
+      indicatePessimisticFixpoint();
+  }
+
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
+    // Byval is only replacable if it is readonly otherwise we would write into
+    // the replaced value and not the copy that byval creates implicitly.
+    Argument *Arg = getAssociatedArgument();
+    if (Arg->hasByValAttr()) {
+      const auto &MemAA = A.getAAFor<AAMemoryBehavior>(*this, getIRPosition());
+      if (!MemAA.isAssumedReadOnly())
+        return indicatePessimisticFixpoint();
+    }
+
     bool HasValueBefore = SimplifiedAssociatedValue.hasValue();
 
     auto PredForCallSite = [&](AbstractCallSite ACS) {
