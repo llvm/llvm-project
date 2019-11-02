@@ -850,7 +850,7 @@ public:
   /// callee of this ACS. Only valid for callback calls!
   int getCallArgOperandNoForCallee() const {
     assert(isCallbackCall());
-    assert(CI.ParameterEncoding.size() && CI.ParameterEncoding[0] > 0);
+    assert(CI.ParameterEncoding.size() && CI.ParameterEncoding[0] >= 0);
     return CI.ParameterEncoding[0];
   }
 
