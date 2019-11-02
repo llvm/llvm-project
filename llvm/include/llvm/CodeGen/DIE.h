@@ -93,7 +93,7 @@ class DIEAbbrev : public FoldingSetNode {
   SmallVector<DIEAbbrevData, 12> Data;
 
 public:
-  DIEAbbrev(dwarf::Tag T, bool C) : Tag(T), Children(C) {}
+  DIEAbbrev(dwarf::Tag T, bool C) : Tag(T), Children(C), Number(0) {}
 
   /// Accessors.
   /// @{
