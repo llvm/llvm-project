@@ -12,7 +12,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; }
 ;
 ; FIXME: no-capture missing for %p
-; CHECK: define i32 @is_null_return(i32* readnone %p)
+; CHECK: define i32 @is_null_return(i32* nofree readnone %p)
 define i32 @is_null_return(i32* %p) #0 {
 entry:
   %cmp = icmp eq i32* %p, null
@@ -31,7 +31,7 @@ entry:
 ; }
 ;
 ; FIXME: no-capture missing for %p
-; CHECK: define i32 @is_null_control(i32* readnone %p)
+; CHECK: define i32 @is_null_control(i32* nofree readnone %p)
 define i32 @is_null_control(i32* %p) #0 {
 entry:
   %retval = alloca i32, align 4
@@ -66,7 +66,7 @@ return:                                           ; preds = %if.end3, %if.then2,
 ;   return 0;
 ; }
 ;
-; CHECK: define noalias nonnull align 536870912 dereferenceable(4294967295) double* @srec0(double* nocapture readnone %a)
+; CHECK: define noalias nonnull align 536870912 dereferenceable(4294967295) double* @srec0(double* nocapture nofree readnone %a)
 define double* @srec0(double* %a) #0 {
 entry:
   %call = call double* @srec0(double* %a)
@@ -86,7 +86,7 @@ entry:
 ;
 ; Other arguments are possible here due to the no-return behavior.
 ;
-; CHECK: define noalias nonnull align 536870912 dereferenceable(4294967295) i32* @srec16(i32* nocapture readnone %a)
+; CHECK: define noalias nonnull align 536870912 dereferenceable(4294967295) i32* @srec16(i32* nocapture nofree readnone %a)
 define i32* @srec16(i32* %a) #0 {
 entry:
   %call = call i32* @srec16(i32* %a)
@@ -112,11 +112,11 @@ entry:
 
 ; TEST SCC with various calls, casts, and comparisons agains NULL
 ;
-; CHECK: define dereferenceable_or_null(4) float* @scc_A(i32* readnone returned dereferenceable_or_null(4) "no-capture-maybe-returned" %a)
+; CHECK: define dereferenceable_or_null(4) float* @scc_A(i32* nofree readnone returned dereferenceable_or_null(4) "no-capture-maybe-returned" %a)
 ;
-; CHECK: define dereferenceable_or_null(8) i64* @scc_B(double* readnone returned dereferenceable_or_null(8) "no-capture-maybe-returned" %a)
+; CHECK: define dereferenceable_or_null(8) i64* @scc_B(double* nofree readnone returned dereferenceable_or_null(8) "no-capture-maybe-returned" %a)
 ;
-; CHECK: define dereferenceable_or_null(4) i8* @scc_C(i16* readnone returned dereferenceable_or_null(4) "no-capture-maybe-returned" %a)
+; CHECK: define dereferenceable_or_null(4) i8* @scc_C(i16* nofree readnone returned dereferenceable_or_null(4) "no-capture-maybe-returned" %a)
 ;
 ; float *scc_A(int *a) {
 ;   return (float*)(a ? (int*)scc_A((int*)scc_B((double*)scc_C((short*)a))) : a);
@@ -244,7 +244,7 @@ declare i32 @printf(i8* nocapture, ...)
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define nonnull dereferenceable(8) i64* @not_captured_but_returned_0(i64* nonnull returned writeonly dereferenceable(8) "no-capture-maybe-returned" %a)
+; CHECK: define nonnull dereferenceable(8) i64* @not_captured_but_returned_0(i64* nofree nonnull returned writeonly dereferenceable(8) "no-capture-maybe-returned" %a)
 
 define i64* @not_captured_but_returned_0(i64* %a) #0 {
 entry:
@@ -260,7 +260,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define nonnull dereferenceable(8) i64* @not_captured_but_returned_1(i64* nonnull writeonly dereferenceable(16) "no-capture-maybe-returned" %a)
+; CHECK: define nonnull dereferenceable(8) i64* @not_captured_but_returned_1(i64* nofree nonnull writeonly dereferenceable(16) "no-capture-maybe-returned" %a)
 define i64* @not_captured_but_returned_1(i64* %a) #0 {
 entry:
   %add.ptr = getelementptr inbounds i64, i64* %a, i64 1
@@ -275,7 +275,7 @@ entry:
 ;   not_captured_but_returned_1(a);
 ; }
 ;
-; CHECK: define void @test_not_captured_but_returned_calls(i64* nocapture writeonly %a)
+; CHECK: define void @test_not_captured_but_returned_calls(i64* nocapture nofree writeonly %a)
 define void @test_not_captured_but_returned_calls(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_0(i64* %a)
@@ -290,7 +290,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define i64* @negative_test_not_captured_but_returned_call_0a(i64* returned writeonly "no-capture-maybe-returned" %a)
+; CHECK: define i64* @negative_test_not_captured_but_returned_call_0a(i64* nofree returned writeonly "no-capture-maybe-returned" %a)
 define i64* @negative_test_not_captured_but_returned_call_0a(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_0(i64* %a)
@@ -304,7 +304,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define void @negative_test_not_captured_but_returned_call_0b(i64* writeonly %a)
+; CHECK: define void @negative_test_not_captured_but_returned_call_0b(i64* nofree writeonly %a)
 define void @negative_test_not_captured_but_returned_call_0b(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_0(i64* %a)
@@ -320,7 +320,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define nonnull dereferenceable(8) i64* @negative_test_not_captured_but_returned_call_1a(i64* writeonly "no-capture-maybe-returned" %a)
+; CHECK: define nonnull dereferenceable(8) i64* @negative_test_not_captured_but_returned_call_1a(i64* nofree writeonly "no-capture-maybe-returned" %a)
 define i64* @negative_test_not_captured_but_returned_call_1a(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_1(i64* %a)
@@ -334,7 +334,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define void @negative_test_not_captured_but_returned_call_1b(i64* writeonly %a)
+; CHECK: define void @negative_test_not_captured_but_returned_call_1b(i64* nofree writeonly %a)
 define void @negative_test_not_captured_but_returned_call_1b(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_1(i64* %a)
@@ -456,7 +456,7 @@ entry:
 declare i32* @readonly_i32p(i32*) readonly
 define void @nocapture_is_not_subsumed_2(i32* nocapture %b) {
 ; CHECK-LABEL: define {{[^@]+}}@nocapture_is_not_subsumed_2
-; CHECK-SAME: (i32* nocapture [[B:%.*]])
+; CHECK-SAME: (i32* nocapture nofree [[B:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32* @readonly_i32p(i32* readonly [[B:%.*]])
 ; CHECK-NEXT:    store i32 0, i32* [[CALL]]

@@ -174,7 +174,7 @@ define void @test13_helper() {
   ret void
 }
 define internal void @test13(i8* %a, i8* %b, i8* %c) {
-; ATTRIBUTOR: define internal void @test13(i8* nocapture nonnull readnone %a, i8* nocapture readnone %b, i8* nocapture readnone %c)
+; ATTRIBUTOR: define internal void @test13(i8* nocapture nofree nonnull readnone %a, i8* nocapture nofree readnone %b, i8* nocapture nofree readnone %c)
   ret void
 }
 
@@ -194,7 +194,7 @@ declare nonnull i8* @nonnull()
 
 define internal i32* @f1(i32* %arg) {
 ; FIXME: missing nonnull It should be nonnull @f1(i32* nonnull readonly %arg)
-; ATTRIBUTOR: define internal nonnull i32* @f1(i32* readonly %arg)
+; ATTRIBUTOR: define internal nonnull i32* @f1(i32* nofree readonly %arg)
 
 bb:
   %tmp = icmp eq i32* %arg, null
@@ -207,14 +207,14 @@ bb1:                                              ; preds = %bb
 
 bb4:                                              ; preds = %bb1
   %tmp5 = getelementptr inbounds i32, i32* %arg, i64 1
-; ATTRIBUTOR: %tmp5b = tail call nonnull i32* @f3(i32* nonnull %tmp5)
+; ATTRIBUTOR: %tmp5b = tail call nonnull i32* @f3(i32* nofree nonnull %tmp5)
   %tmp5b = tail call i32* @f3(i32* %tmp5)
   %tmp5c = getelementptr inbounds i32, i32* %tmp5b, i64 -1
   br label %bb9
 
 bb6:                                              ; preds = %bb1
 ; FIXME: missing nonnull. It should be @f2(i32* nonnull %arg)
-; ATTRIBUTOR: %tmp7 = tail call nonnull i32* @f2(i32* %arg)
+; ATTRIBUTOR: %tmp7 = tail call nonnull i32* @f2(i32* nofree %arg)
   %tmp7 = tail call i32* @f2(i32* %arg)
   ret i32* %tmp7
 
@@ -225,21 +225,21 @@ bb9:                                              ; preds = %bb4, %bb
 
 define internal i32* @f2(i32* %arg) {
 ; FIXME: missing nonnull. It should be nonnull @f2(i32* nonnull %arg)
-; ATTRIBUTOR: define internal nonnull i32* @f2(i32* readonly %arg)
+; ATTRIBUTOR: define internal nonnull i32* @f2(i32* nofree readonly %arg)
 bb:
 
 ; FIXME: missing nonnull. It should be @f1(i32* nonnull readonly %arg)
-; ATTRIBUTOR:   %tmp = tail call nonnull i32* @f1(i32* %arg)
+; ATTRIBUTOR:   %tmp = tail call nonnull i32* @f1(i32* nofree %arg)
   %tmp = tail call i32* @f1(i32* %arg)
   ret i32* %tmp
 }
 
 define dso_local noalias i32* @f3(i32* %arg) {
 ; FIXME: missing nonnull. It should be nonnull @f3(i32* nonnull readonly %arg)
-; ATTRIBUTOR: define dso_local noalias nonnull i32* @f3(i32* readonly %arg)
+; ATTRIBUTOR: define dso_local noalias nonnull i32* @f3(i32* nofree readonly %arg)
 bb:
 ; FIXME: missing nonnull. It should be @f1(i32* nonnull readonly %arg)
-; ATTRIBUTOR:   %tmp = call nonnull i32* @f1(i32* %arg)
+; ATTRIBUTOR:   %tmp = call nonnull i32* @f1(i32* nofree %arg)
   %tmp = call i32* @f1(i32* %arg)
   ret i32* %tmp
 }
@@ -491,7 +491,8 @@ define i8 @parent7(i8* %a) {
 declare i32 @esfp(...)
 
 define i1 @parent8(i8* %a, i8* %bogus1, i8* %b) personality i8* bitcast (i32 (...)* @esfp to i8*){
-; BOTH-LABEL: @parent8(i8* nonnull %a, i8* nocapture readnone %bogus1, i8* nonnull %b)
+; FNATTR-LABEL: @parent8(i8* nonnull %a, i8* nocapture readnone %bogus1, i8* nonnull %b)
+; ATTRIBUTOR-LABEL: @parent8(i8* nonnull %a, i8* nocapture nofree readnone %bogus1, i8* nonnull %b)
 ; BOTH-NEXT:  entry:
 ; FNATTR-NEXT:    invoke void @use2nonnull(i8* %a, i8* %b)
 ; ATTRIBUTOR-NEXT:    invoke void @use2nonnull(i8* nonnull %a, i8* nonnull %b)
@@ -539,7 +540,7 @@ define i32 addrspace(3)* @gep2(i32 addrspace(3)* %p) {
 
 ; FNATTR:     define i32 addrspace(3)* @as(i32 addrspace(3)* readnone returned dereferenceable(4) %p)
 ; FIXME: We should propagate dereferenceable here but *not* nonnull
-; ATTRIBUTOR: define dereferenceable_or_null(4) i32 addrspace(3)* @as(i32 addrspace(3)* readnone returned dereferenceable(4) dereferenceable_or_null(4) %p)
+; ATTRIBUTOR: define dereferenceable_or_null(4) i32 addrspace(3)* @as(i32 addrspace(3)* nofree readnone returned dereferenceable(4) dereferenceable_or_null(4) %p)
 define i32 addrspace(3)* @as(i32 addrspace(3)* dereferenceable(4) %p) {
   ret i32 addrspace(3)* %p
 }

@@ -7,7 +7,7 @@ declare void @deref_phi_user(i32* %a);
 ; take mininimum of return values
 ;
 define i32* @test1(i32* dereferenceable(4) %0, double* dereferenceable(8) %1, i1 zeroext %2) local_unnamed_addr {
-; ATTRIBUTOR: define nonnull dereferenceable(4) i32* @test1(i32* nonnull readnone dereferenceable(4) "no-capture-maybe-returned" %0, double* nonnull readnone dereferenceable(8) "no-capture-maybe-returned" %1, i1 zeroext %2)
+; ATTRIBUTOR: define nonnull dereferenceable(4) i32* @test1(i32* nofree nonnull readnone dereferenceable(4) "no-capture-maybe-returned" %0, double* nofree nonnull readnone dereferenceable(8) "no-capture-maybe-returned" %1, i1 zeroext %2)
   %4 = bitcast double* %1 to i32*
   %5 = select i1 %2, i32* %0, i32* %4
   ret i32* %5
@@ -15,7 +15,7 @@ define i32* @test1(i32* dereferenceable(4) %0, double* dereferenceable(8) %1, i1
 
 ; TEST 2
 define i32* @test2(i32* dereferenceable_or_null(4) %0, double* dereferenceable(8) %1, i1 zeroext %2) local_unnamed_addr {
-; ATTRIBUTOR: define dereferenceable_or_null(4) i32* @test2(i32* readnone dereferenceable_or_null(4) "no-capture-maybe-returned" %0, double* nonnull readnone dereferenceable(8) "no-capture-maybe-returned" %1, i1 zeroext %2)
+; ATTRIBUTOR: define dereferenceable_or_null(4) i32* @test2(i32* nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" %0, double* nofree nonnull readnone dereferenceable(8) "no-capture-maybe-returned" %1, i1 zeroext %2)
   %4 = bitcast double* %1 to i32*
   %5 = select i1 %2, i32* %0, i32* %4
   ret i32* %5
@@ -24,20 +24,20 @@ define i32* @test2(i32* dereferenceable_or_null(4) %0, double* dereferenceable(8
 ; TEST 3
 ; GEP inbounds
 define i32* @test3_1(i32* dereferenceable(8) %0) local_unnamed_addr {
-; ATTRIBUTOR: define nonnull dereferenceable(4) i32* @test3_1(i32* nonnull readnone dereferenceable(8) "no-capture-maybe-returned" %0)
+; ATTRIBUTOR: define nonnull dereferenceable(4) i32* @test3_1(i32* nofree nonnull readnone dereferenceable(8) "no-capture-maybe-returned" %0)
   %ret = getelementptr inbounds i32, i32* %0, i64 1
   ret i32* %ret
 }
 
 define i32* @test3_2(i32* dereferenceable_or_null(32) %0) local_unnamed_addr {
 ; FIXME: We should not have both deref(x) and deref_or_null(y) with x >= y.
-; ATTRIBUTOR: define nonnull dereferenceable(16) i32* @test3_2(i32* nonnull readnone dereferenceable(32) dereferenceable_or_null(32) "no-capture-maybe-returned" %0)
+; ATTRIBUTOR: define nonnull dereferenceable(16) i32* @test3_2(i32* nofree nonnull readnone dereferenceable(32) dereferenceable_or_null(32) "no-capture-maybe-returned" %0)
   %ret = getelementptr inbounds i32, i32* %0, i64 4
   ret i32* %ret
 }
 
 define i32* @test3_3(i32* dereferenceable(8) %0, i32* dereferenceable(16) %1, i1 %2) local_unnamed_addr {
-; ATTRIBUTOR: define nonnull dereferenceable(4) i32* @test3_3(i32* nonnull readnone dereferenceable(8) "no-capture-maybe-returned" %0, i32* nonnull readnone dereferenceable(16) "no-capture-maybe-returned" %1, i1 %2) local_unnamed_addr
+; ATTRIBUTOR: define nonnull dereferenceable(4) i32* @test3_3(i32* nofree nonnull readnone dereferenceable(8) "no-capture-maybe-returned" %0, i32* nofree nonnull readnone dereferenceable(16) "no-capture-maybe-returned" %1, i1 %2) local_unnamed_addr
   %ret1 = getelementptr inbounds i32, i32* %0, i64 1
   %ret2 = getelementptr inbounds i32, i32* %1, i64 2
   %ret = select i1 %2, i32* %ret1, i32* %ret2
@@ -48,7 +48,7 @@ define i32* @test3_3(i32* dereferenceable(8) %0, i32* dereferenceable(16) %1, i1
 ; Better than known in IR.
 
 define dereferenceable(4) i32* @test4(i32* dereferenceable(8) %0) local_unnamed_addr {
-; ATTRIBUTOR: define nonnull dereferenceable(8) i32* @test4(i32* nonnull readnone returned dereferenceable(8) "no-capture-maybe-returned" %0)
+; ATTRIBUTOR: define nonnull dereferenceable(8) i32* @test4(i32* nofree nonnull readnone returned dereferenceable(8) "no-capture-maybe-returned" %0)
   ret i32* %0
 }
 
@@ -197,7 +197,7 @@ define i32* @f7_3() {
 
 define i32* @test_for_minus_index(i32* %p) {
 ; FIXME: This should have a return dereferenceable(8) but we need to make sure it will work in loops as well.
-; ATTRIBUTOR: define nonnull i32* @test_for_minus_index(i32* nonnull writeonly "no-capture-maybe-returned" %p)
+; ATTRIBUTOR: define nonnull i32* @test_for_minus_index(i32* nofree nonnull writeonly "no-capture-maybe-returned" %p)
   %q = getelementptr inbounds i32, i32* %p, i32 -2
   store i32 1, i32* %q
   ret i32* %q
