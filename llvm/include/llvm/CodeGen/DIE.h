@@ -78,7 +78,7 @@ public:
 /// object.
 class DIEAbbrev : public FoldingSetNode {
   /// Unique number for node.
-  unsigned Number;
+  unsigned Number = 0;
 
   /// Dwarf tag code.
   dwarf::Tag Tag;
@@ -93,7 +93,7 @@ class DIEAbbrev : public FoldingSetNode {
   SmallVector<DIEAbbrevData, 12> Data;
 
 public:
-  DIEAbbrev(dwarf::Tag T, bool C) : Number(0), Tag(T), Children(C) {}
+  DIEAbbrev(dwarf::Tag T, bool C) : Tag(T), Children(C) {}
 
   /// Accessors.
   /// @{
