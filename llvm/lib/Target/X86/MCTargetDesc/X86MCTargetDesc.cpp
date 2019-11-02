@@ -290,12 +290,9 @@ void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
 MCSubtargetInfo *X86_MC::createX86MCSubtargetInfo(const Triple &TT,
                                                   StringRef CPU, StringRef FS) {
   std::string ArchFS = X86_MC::ParseX86Triple(TT);
-  if (!FS.empty()) {
-    if (!ArchFS.empty())
-      ArchFS = (Twine(ArchFS) + "," + FS).str();
-    else
-      ArchFS = FS;
-  }
+  assert(!ArchFS.empty() && "Failed to parse X86 triple");
+  if (!FS.empty())
+    ArchFS = (Twine(ArchFS) + "," + FS).str();
 
   std::string CPUName = CPU;
   if (CPUName.empty())
