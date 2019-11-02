@@ -1685,7 +1685,10 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
 
     unsigned ArgNo = ICS.getArgumentNo(U);
     IRPosition IRP = IRPosition::callsite_argument(ICS, ArgNo);
-    auto &DerefAA = A.getAAFor<AADereferenceable>(QueryingAA, IRP);
+    // As long as we only use known information there is no need to track
+    // dependences here.
+    auto &DerefAA = A.getAAFor<AADereferenceable>(QueryingAA, IRP,
+                                                  /* TrackDependence */ false);
     IsNonNull |= DerefAA.isKnownNonNull();
     return DerefAA.getKnownDereferenceableBytes();
   }
@@ -1718,8 +1721,10 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
           GetPointerBaseWithConstantOffset(UseV, Offset, DL,
                                            /*AllowNonInbounds*/ false)) {
     if (Base == &AssociatedValue) {
-      auto &DerefAA =
-          A.getAAFor<AADereferenceable>(QueryingAA, IRPosition::value(*Base));
+      // As long as we only use known information there is no need to track
+      // dependences here.
+      auto &DerefAA = A.getAAFor<AADereferenceable>(
+          QueryingAA, IRPosition::value(*Base), /* TrackDependence */ false);
       IsNonNull |= (!NullPointerIsDefined && DerefAA.isKnownNonNull());
       IsNonNull |= (!NullPointerIsDefined && (Offset != 0));
       int64_t DerefBytes = DerefAA.getKnownDereferenceableBytes();
