@@ -418,8 +418,9 @@ unsigned Mips16InstrInfo::loadImmediate(unsigned FrameReg, int64_t Imm,
    else
      Available.reset(SpReg);
     copyPhysReg(MBB, II, DL, SpReg, Mips::SP, false);
-    BuildMI(MBB, II, DL, get(Mips::  AdduRxRyRz16), Reg).addReg(SpReg, RegState::Kill)
-      .addReg(Reg);
+    BuildMI(MBB, II, DL, get(Mips::AdduRxRyRz16), Reg)
+        .addReg(SpReg, RegState::Kill)
+        .addReg(Reg);
   }
   else
     BuildMI(MBB, II, DL, get(Mips::  AdduRxRyRz16), Reg).addReg(FrameReg)
