@@ -338,7 +338,7 @@ declare i32 @__gxx_personality_v0(...)
 ; FNATTR: Function Attrs: noinline norecurse nounwind readonly uwtable
 ; FNATTR-NEXT: define i32 @loop_constant_trip_count(i32* nocapture readonly %0)
 ; ATTRIBUTOR: Function Attrs: nofree noinline norecurse nosync nounwind readonly uwtable
-; ATTRIBUTOR-NEXT: define i32 @loop_constant_trip_count(i32* nocapture readonly %0)
+; ATTRIBUTOR-NEXT: define i32 @loop_constant_trip_count(i32* nocapture nofree readonly %0)
 define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
   br label %3
 
@@ -372,7 +372,7 @@ define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
 ; FNATTR-NEXT: define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, i32 %3) local_unnamed_addr
 ; ATTRIBUTOR: Function Attrs: nofree noinline norecurse nosync nounwind readonly uwtable
 ; ATTRIBUTOR-NOT: willreturn
-; ATTRIBUTOR-NEXT: define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, i32 %3) local_unnamed_addr
+; ATTRIBUTOR-NEXT: define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture nofree readonly %2, i32 %3) local_unnamed_addr
 define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, i32 %3) local_unnamed_addr #0 {
   %5 = icmp eq i32 %0, %1
   br i1 %5, label %6, label %8
@@ -409,7 +409,7 @@ define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, 
 ; FNATTR: Function Attrs: noinline norecurse nounwind readonly uwtable
 ; FNATTR-NEXT: define i32 @loop_trip_dec(i32 %0, i32* nocapture readonly %1)
 ; ATTRIBUTOR: Function Attrs: nofree noinline norecurse nosync nounwind readonly uwtable
-; ATTRIBUTOR-NEXT: define i32 @loop_trip_dec(i32 %0, i32* nocapture readonly %1) local_unnamed_addr
+; ATTRIBUTOR-NEXT: define i32 @loop_trip_dec(i32 %0, i32* nocapture nofree readonly %1) local_unnamed_addr
 
 define i32 @loop_trip_dec(i32 %0, i32* nocapture readonly %1) local_unnamed_addr #0 {
   %3 = icmp sgt i32 %0, -1
