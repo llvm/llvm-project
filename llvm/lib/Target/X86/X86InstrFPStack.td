@@ -282,7 +282,7 @@ def _FI32m  : FPI<0xDA, fp, (outs), (ins i32mem:$src),
                   !strconcat("fi", asmstring, "{l}\t$src")>;
 }
 
-let Defs = [FPSW], Uses = [FPCW] in {
+let Uses = [FPCW], mayRaiseFPException = 1 in {
 // FPBinary_rr just defines pseudo-instructions, no need to set a scheduling
 // resources.
 let hasNoSchedulingInfo = 1 in {
@@ -307,7 +307,7 @@ let SchedRW = [WriteFDivLd] in {
 defm DIV : FPBinary<fdiv, MRM6m, "div">;
 defm DIVR: FPBinary<fdiv, MRM7m, "divr", 0>;
 }
-} // Defs = [FPSW]
+} // Uses = [FPCW], mayRaiseFPException = 1
 
 class FPST0rInst<Format fp, string asm>
   : FPI<0xD8, fp, (outs), (ins RSTi:$op), asm>;
@@ -319,7 +319,7 @@ class FPrST0PInst<Format fp, string asm>
 // NOTE: GAS and apparently all other AT&T style assemblers have a broken notion
 // of some of the 'reverse' forms of the fsub and fdiv instructions.  As such,
 // we have to put some 'r's in and take them out of weird places.
-let SchedRW = [WriteFAdd], Defs = [FPSW], Uses = [FPCW] in {
+let SchedRW = [WriteFAdd], Uses = [FPCW], mayRaiseFPException = 1 in {
 def ADD_FST0r   : FPST0rInst <MRM0r, "fadd\t{$op, %st|st, $op}">;
 def ADD_FrST0   : FPrST0Inst <MRM0r, "fadd\t{%st, $op|$op, st}">;
 def ADD_FPrST0  : FPrST0PInst<MRM0r, "faddp\t{%st, $op|$op, st}">;
@@ -330,16 +330,16 @@ def SUB_FST0r   : FPST0rInst <MRM4r, "fsub\t{$op, %st|st, $op}">;
 def SUBR_FrST0  : FPrST0Inst <MRM4r, "fsub{|r}\t{%st, $op|$op, st}">;
 def SUBR_FPrST0 : FPrST0PInst<MRM4r, "fsub{|r}p\t{%st, $op|$op, st}">;
 } // SchedRW
-let SchedRW = [WriteFCom], Defs = [FPSW], Uses = [FPCW] in {
+let SchedRW = [WriteFCom], Uses = [FPCW], mayRaiseFPException = 1 in {
 def COM_FST0r   : FPST0rInst <MRM2r, "fcom\t$op">;
 def COMP_FST0r  : FPST0rInst <MRM3r, "fcomp\t$op">;
 } // SchedRW
-let SchedRW = [WriteFMul], Defs = [FPSW], Uses = [FPCW] in {
+let SchedRW = [WriteFMul], Uses = [FPCW], mayRaiseFPException = 1 in {
 def MUL_FST0r   : FPST0rInst <MRM1r, "fmul\t{$op, %st|st, $op}">;
 def MUL_FrST0   : FPrST0Inst <MRM1r, "fmul\t{%st, $op|$op, st}">;
 def MUL_FPrST0  : FPrST0PInst<MRM1r, "fmulp\t{%st, $op|$op, st}">;
 } // SchedRW
-let SchedRW = [WriteFDiv], Defs = [FPSW], Uses = [FPCW] in {
+let SchedRW = [WriteFDiv], Uses = [FPCW], mayRaiseFPException = 1 in {
 def DIVR_FST0r  : FPST0rInst <MRM7r, "fdivr\t{$op, %st|st, $op}">;
 def DIV_FrST0   : FPrST0Inst <MRM7r, "fdiv{r}\t{%st, $op|$op, st}">;
 def DIV_FPrST0  : FPrST0PInst<MRM7r, "fdiv{r}p\t{%st, $op|$op, st}">;
@@ -359,13 +359,12 @@ def _Fp80  : FpI_<(outs RFP80:$dst), (ins RFP80:$src), OneArgFPRW,
 def _F     : FPI<0xD9, fp, (outs), (ins), asmstring>;
 }
 
-let Defs = [FPSW], Uses = [FPCW] in {
-
 let SchedRW = [WriteFSign] in {
 defm CHS : FPUnary<fneg, MRM_E0, "fchs">;
 defm ABS : FPUnary<fabs, MRM_E1, "fabs">;
 }
 
+let Uses = [FPCW], mayRaiseFPException = 1 in {
 let SchedRW = [WriteFSqrt80] in
 defm SQRT: FPUnary<fsqrt,MRM_FA, "fsqrt">;
 
@@ -378,11 +377,11 @@ def TST_Fp80  : FpI_<(outs), (ins RFP80:$src), OneArgFP, []>;
 
 def TST_F  : FPI<0xD9, MRM_E4, (outs), (ins), "ftst">;
 } // SchedRW
-} // Defs = [FPSW]
+} // Uses = [FPCW], mayRaiseFPException = 1
 
 // Versions of FP instructions that take a single memory operand.  Added for the
 //   disassembler; remove as they are included with patterns elsewhere.
-let SchedRW = [WriteFComLd], Defs = [FPSW], Uses = [FPCW] in {
+let SchedRW = [WriteFComLd], Uses = [FPCW], mayRaiseFPException = 1 in {
 def FCOM32m  : FPI<0xD8, MRM2m, (outs), (ins f32mem:$src), "fcom{s}\t$src">;
 def FCOMP32m : FPI<0xD8, MRM3m, (outs), (ins f32mem:$src), "fcomp{s}\t$src">;
 
@@ -397,14 +396,21 @@ def FICOMP32m: FPI<0xDA, MRM3m, (outs), (ins i32mem:$src), "ficomp{l}\t$src">;
 } // SchedRW
 
 let SchedRW = [WriteMicrocoded] in {
+let Defs = [FPSW, FPCW] in {
 def FLDENVm  : FPI<0xD9, MRM4m, (outs), (ins f32mem:$src), "fldenv\t$src">;
-def FSTENVm  : FPI<0xD9, MRM6m, (outs), (ins f32mem:$dst), "fnstenv\t$dst">;
-
 def FRSTORm  : FPI<0xDD, MRM4m, (outs), (ins f32mem:$dst), "frstor\t$dst">;
+}
+
+let Defs = [FPSW, FPCW], Uses = [FPSW, FPCW] in {
+def FSTENVm  : FPI<0xD9, MRM6m, (outs), (ins f32mem:$dst), "fnstenv\t$dst">;
 def FSAVEm   : FPI<0xDD, MRM6m, (outs), (ins f32mem:$dst), "fnsave\t$dst">;
+}
+
+let Uses = [FPSW] in
 def FNSTSWm  : FPI<0xDD, MRM7m, (outs), (ins i16mem:$dst), "fnstsw\t$dst">;
 
 def FBLDm    : FPI<0xDF, MRM4m, (outs), (ins f80mem:$src), "fbld\t$src">;
+let Uses = [FPCW] ,mayRaiseFPException = 1 in
 def FBSTPm   : FPI<0xDF, MRM6m, (outs), (ins f80mem:$dst), "fbstp\t$dst">;
 } // SchedRW
 
@@ -430,7 +436,6 @@ multiclass FPCMov<PatLeaf cc> {
                                         Requires<[HasCMov]>;
 }
 
-let Defs = [FPSW] in {
 let SchedRW = [WriteFCMOV] in {
 let Uses = [EFLAGS], Constraints = "$src1 = $dst" in {
 defm CMOVB  : FPCMov<X86_COND_B>;
@@ -464,6 +469,7 @@ def CMOVNP_F : FPI<0xDB, MRM3r, (outs), (ins RSTi:$op),
 } // Predicates = [HasCMov]
 } // SchedRW
 
+let mayRaiseFPException = 1 in {
 // Floating point loads & stores.
 let SchedRW = [WriteLoad], Uses = [FPCW] in {
 let canFoldAsLoad = 1 in {
@@ -480,6 +486,7 @@ def LD_Fp64m80 : FpI_<(outs RFP80:$dst), (ins f64mem:$src), ZeroArgFP,
                   [(set RFP80:$dst, (f80 (extloadf64 addr:$src)))]>;
 def LD_Fp32m80 : FpI_<(outs RFP80:$dst), (ins f32mem:$src), ZeroArgFP,
                   [(set RFP80:$dst, (f80 (extloadf32 addr:$src)))]>;
+let mayRaiseFPException = 0 in {
 def ILD_Fp16m32: FpIf32<(outs RFP32:$dst), (ins i16mem:$src), ZeroArgFP,
                   [(set RFP32:$dst, (X86fild16 addr:$src))]>;
 def ILD_Fp32m32: FpIf32<(outs RFP32:$dst), (ins i32mem:$src), ZeroArgFP,
@@ -498,6 +505,7 @@ def ILD_Fp32m80: FpI_<(outs RFP80:$dst), (ins i32mem:$src), ZeroArgFP,
                   [(set RFP80:$dst, (X86fild32 addr:$src))]>;
 def ILD_Fp64m80: FpI_<(outs RFP80:$dst), (ins i64mem:$src), ZeroArgFP,
                   [(set RFP80:$dst, (X86fild64 addr:$src))]>;
+} // mayRaiseFPException = 0
 } // SchedRW
 
 let SchedRW = [WriteStore], Uses = [FPCW] in {
@@ -541,9 +549,11 @@ let mayLoad = 1, SchedRW = [WriteLoad], Uses = [FPCW] in {
 def LD_F32m   : FPI<0xD9, MRM0m, (outs), (ins f32mem:$src), "fld{s}\t$src">;
 def LD_F64m   : FPI<0xDD, MRM0m, (outs), (ins f64mem:$src), "fld{l}\t$src">;
 def LD_F80m   : FPI<0xDB, MRM5m, (outs), (ins f80mem:$src), "fld{t}\t$src">;
+let mayRaiseFPException = 0 in {
 def ILD_F16m  : FPI<0xDF, MRM0m, (outs), (ins i16mem:$src), "fild{s}\t$src">;
 def ILD_F32m  : FPI<0xDB, MRM0m, (outs), (ins i32mem:$src), "fild{l}\t$src">;
 def ILD_F64m  : FPI<0xDF, MRM5m, (outs), (ins i64mem:$src), "fild{ll}\t$src">;
+}
 }
 let mayStore = 1, SchedRW = [WriteStore], Uses = [FPCW] in {
 def ST_F32m   : FPI<0xD9, MRM2m, (outs), (ins f32mem:$dst), "fst{s}\t$dst">;
@@ -616,7 +626,7 @@ def LD_F0 : FPI<0xD9, MRM_EE, (outs), (ins), "fldz">;
 let SchedRW = [WriteFLD1], Uses = [FPCW] in
 def LD_F1 : FPI<0xD9, MRM_E8, (outs), (ins), "fld1">;
 
-let SchedRW = [WriteFLDC], Uses = [FPCW] in {
+let SchedRW = [WriteFLDC], Defs = [FPSW], Uses = [FPCW] in {
 def FLDL2T : I<0xD9, MRM_E9, (outs), (ins), "fldl2t", []>;
 def FLDL2E : I<0xD9, MRM_EA, (outs), (ins), "fldl2e", []>;
 def FLDPI : I<0xD9, MRM_EB, (outs), (ins), "fldpi", []>;
@@ -633,11 +643,11 @@ def UCOM_Fpr64 : FpIf64<(outs), (ins RFP64:$lhs, RFP64:$rhs), CompareFP,
 def UCOM_Fpr80 : FpI_  <(outs), (ins RFP80:$lhs, RFP80:$rhs), CompareFP,
                         [(set FPSW, (trunc (X86cmp RFP80:$lhs, RFP80:$rhs)))]>;
 } // SchedRW
-} // Defs = [FPSW]
+} // mayRaiseFPException = 1
 
-let SchedRW = [WriteFCom] in {
+let SchedRW = [WriteFCom], mayRaiseFPException = 1 in {
 // CC = ST(0) cmp ST(i)
-let Defs = [EFLAGS, FPSW], Uses = [FPCW] in {
+let Defs = [EFLAGS, FPCW], Uses = [FPCW] in {
 def UCOM_FpIr32: FpI_<(outs), (ins RFP32:$lhs, RFP32:$rhs), CompareFP,
                   [(set EFLAGS, (X86cmp RFP32:$lhs, RFP32:$rhs))]>,
                   Requires<[FPStackf32, HasCMov]>;
@@ -649,7 +659,7 @@ def UCOM_FpIr80: FpI_<(outs), (ins RFP80:$lhs, RFP80:$rhs), CompareFP,
                   Requires<[HasCMov]>;
 }
 
-let Defs = [FPSW], Uses = [ST0, FPCW] in {
+let Uses = [ST0, FPCW] in {
 def UCOM_Fr    : FPI<0xDD, MRM4r,    // FPSW = cmp ST(0) with ST(i)
                     (outs), (ins RSTi:$reg), "fucom\t$reg">;
 def UCOM_FPr   : FPI<0xDD, MRM5r,    // FPSW = cmp ST(0) with ST(i), pop
@@ -673,7 +683,7 @@ def COM_FIPr : FPI<0xDF, MRM6r, (outs), (ins RSTi:$reg),
 
 // Floating point flag ops.
 let SchedRW = [WriteALU] in {
-let Defs = [AX], Uses = [FPSW] in
+let Defs = [AX, FPSW], Uses = [FPSW] in
 def FNSTSW16r : I<0xDF, MRM_E0,                  // AX = fp flags
                   (outs), (ins), "fnstsw\t{%ax|ax}",
                   [(set AX, (X86fp_stsw FPSW))]>;
@@ -689,31 +699,33 @@ def FLDCW16m  : I<0xD9, MRM5m,                   // X87 control world = [mem16]
 
 // FPU control instructions
 let SchedRW = [WriteMicrocoded] in {
-let Defs = [FPSW] in {
-def FNINIT : I<0xDB, MRM_E3, (outs), (ins), "fninit", []>;
 def FFREE : FPI<0xDD, MRM0r, (outs), (ins RSTi:$reg), "ffree\t$reg">;
 def FFREEP : FPI<0xDF, MRM0r, (outs), (ins RSTi:$reg), "ffreep\t$reg">;
 
+let Defs = [FPSW, FPCW] in
+def FNINIT : I<0xDB, MRM_E3, (outs), (ins), "fninit", []>;
 // Clear exceptions
+let Defs = [FPSW] in
 def FNCLEX : I<0xDB, MRM_E2, (outs), (ins), "fnclex", []>;
-} // Defs = [FPSW]
 } // SchedRW
 
 // Operand-less floating-point instructions for the disassembler.
+let Defs = [FPSW] in
 def FNOP : I<0xD9, MRM_D0, (outs), (ins), "fnop", []>, Sched<[WriteNop]>;
 
 let SchedRW = [WriteMicrocoded] in {
 let Defs = [FPSW] in {
 def WAIT : I<0x9B, RawFrm, (outs), (ins), "wait", []>;
 def FXAM : I<0xD9, MRM_E5, (outs), (ins), "fxam", []>;
+def FDECSTP : I<0xD9, MRM_F6, (outs), (ins), "fdecstp", []>;
+def FINCSTP : I<0xD9, MRM_F7, (outs), (ins), "fincstp", []>;
+let Uses = [FPCW], mayRaiseFPException = 1 in {
 def F2XM1 : I<0xD9, MRM_F0, (outs), (ins), "f2xm1", []>;
 def FYL2X : I<0xD9, MRM_F1, (outs), (ins), "fyl2x", []>;
 def FPTAN : I<0xD9, MRM_F2, (outs), (ins), "fptan", []>;
 def FPATAN : I<0xD9, MRM_F3, (outs), (ins), "fpatan", []>;
 def FXTRACT : I<0xD9, MRM_F4, (outs), (ins), "fxtract", []>;
 def FPREM1 : I<0xD9, MRM_F5, (outs), (ins), "fprem1", []>;
-def FDECSTP : I<0xD9, MRM_F6, (outs), (ins), "fdecstp", []>;
-def FINCSTP : I<0xD9, MRM_F7, (outs), (ins), "fincstp", []>;
 def FPREM : I<0xD9, MRM_F8, (outs), (ins), "fprem", []>;
 def FYL2XP1 : I<0xD9, MRM_F9, (outs), (ins), "fyl2xp1", []>;
 def FSIN : I<0xD9, MRM_FE, (outs), (ins), "fsin", []>;
@@ -722,20 +734,26 @@ def FSINCOS : I<0xD9, MRM_FB, (outs), (ins), "fsincos", []>;
 def FRNDINT : I<0xD9, MRM_FC, (outs), (ins), "frndint", []>;
 def FSCALE : I<0xD9, MRM_FD, (outs), (ins), "fscale", []>;
 def FCOMPP : I<0xDE, MRM_D9, (outs), (ins), "fcompp", []>;
+} // Uses = [FPCW], mayRaiseFPException = 1
 } // Defs = [FPSW]
 
+let Uses = [FPSW, FPCW] in {
 def FXSAVE : I<0xAE, MRM0m, (outs), (ins opaquemem:$dst),
              "fxsave\t$dst", [(int_x86_fxsave addr:$dst)]>, TB,
              Requires<[HasFXSR]>;
 def FXSAVE64 : RI<0xAE, MRM0m, (outs), (ins opaquemem:$dst),
                "fxsave64\t$dst", [(int_x86_fxsave64 addr:$dst)]>,
                TB, Requires<[HasFXSR, In64BitMode]>;
+} // Uses = [FPSW, FPCW]
+
+let Defs = [FPSW, FPCW] in {
 def FXRSTOR : I<0xAE, MRM1m, (outs), (ins opaquemem:$src),
               "fxrstor\t$src", [(int_x86_fxrstor addr:$src)]>,
               TB, Requires<[HasFXSR]>;
 def FXRSTOR64 : RI<0xAE, MRM1m, (outs), (ins opaquemem:$src),
                 "fxrstor64\t$src", [(int_x86_fxrstor64 addr:$src)]>,
                 TB, Requires<[HasFXSR, In64BitMode]>;
+} // Defs = [FPSW, FPCW]
 } // SchedRW
 
 //===----------------------------------------------------------------------===//
