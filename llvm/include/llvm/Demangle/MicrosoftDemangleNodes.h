@@ -508,7 +508,7 @@ struct CustomTypeNode : public TypeNode {
   void outputPre(OutputStream &OS, OutputFlags Flags) const override;
   void outputPost(OutputStream &OS, OutputFlags Flags) const override;
 
-  IdentifierNode *Identifier;
+  IdentifierNode *Identifier = nullptr;
 };
 
 struct NodeArrayNode : public Node {
@@ -584,7 +584,7 @@ struct SpecialTableSymbolNode : public SymbolNode {
 
   void output(OutputStream &OS, OutputFlags Flags) const override;
   QualifiedNameNode *TargetName = nullptr;
-  Qualifiers Quals;
+  Qualifiers Quals = Qualifiers::Q_None;
 };
 
 struct LocalStaticGuardVariableNode : public SymbolNode {
