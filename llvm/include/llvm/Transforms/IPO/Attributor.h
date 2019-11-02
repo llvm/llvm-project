@@ -115,7 +115,7 @@ struct AAIsDead;
 
 class Function;
 
-/// Simple enum class that forces the status to be spelled out explicitly.
+/// Simple enum classes that forces properties to be spelled out explicitly.
 ///
 ///{
 enum class ChangeStatus {
@@ -125,6 +125,11 @@ enum class ChangeStatus {
 
 ChangeStatus operator|(ChangeStatus l, ChangeStatus r);
 ChangeStatus operator&(ChangeStatus l, ChangeStatus r);
+
+enum class DepClassTy {
+  REQUIRED,
+  OPTIONAL,
+};
 ///}
 
 /// Helper to describe and deal with positions in the LLVM-IR.
@@ -727,8 +732,10 @@ struct Attributor {
   /// the `Attributor::recordDependence` method.
   template <typename AAType>
   const AAType &getAAFor(const AbstractAttribute &QueryingAA,
-                         const IRPosition &IRP, bool TrackDependence = true) {
-    return getOrCreateAAFor<AAType>(IRP, &QueryingAA, TrackDependence);
+                         const IRPosition &IRP, bool TrackDependence = true,
+                         DepClassTy DepClass = DepClassTy::REQUIRED) {
+    return getOrCreateAAFor<AAType>(IRP, &QueryingAA, TrackDependence,
+                                    DepClass);
   }
 
   /// Explicitly record a dependence from \p FromAA to \p ToAA, that is if
@@ -738,8 +745,12 @@ struct Attributor {
   /// with the TrackDependence flag passed to the method set to false. This can
   /// be beneficial to avoid false dependences but it requires the users of
   /// `getAAFor` to explicitly record true dependences through this method.
+  /// The \p DepClass flag indicates if the dependence is striclty necessary.
+  /// That means for required dependences, if \p FromAA changes to an invalid
+  /// state, \p ToAA can be moved to a pessimistic fixpoint because it required
+  /// information from \p FromAA but none are available anymore.
   void recordDependence(const AbstractAttribute &FromAA,
-                        const AbstractAttribute &ToAA);
+                        const AbstractAttribute &ToAA, DepClassTy DepClass);
 
   /// Introduce a new abstract attribute into the fixpoint analysis.
   ///
@@ -905,7 +916,8 @@ private:
   template <typename AAType>
   const AAType &getOrCreateAAFor(const IRPosition &IRP,
                                  const AbstractAttribute *QueryingAA = nullptr,
-                                 bool TrackDependence = false) {
+                                 bool TrackDependence = false,
+                                 DepClassTy DepClass = DepClassTy::OPTIONAL) {
     if (const AAType *AAPtr =
             lookupAAFor<AAType>(IRP, QueryingAA, TrackDependence))
       return *AAPtr;
@@ -933,7 +945,8 @@ private:
     AA.update(*this);
 
     if (TrackDependence && AA.getState().isValidState())
-      recordDependence(AA, const_cast<AbstractAttribute &>(*QueryingAA));
+      recordDependence(AA, const_cast<AbstractAttribute &>(*QueryingAA),
+                       DepClass);
     return AA;
   }
 
@@ -941,7 +954,8 @@ private:
   template <typename AAType>
   const AAType *lookupAAFor(const IRPosition &IRP,
                             const AbstractAttribute *QueryingAA = nullptr,
-                            bool TrackDependence = false) {
+                            bool TrackDependence = false,
+                            DepClassTy DepClass = DepClassTy::OPTIONAL) {
     static_assert(std::is_base_of<AbstractAttribute, AAType>::value,
                   "Cannot query an attribute with a type not derived from "
                   "'AbstractAttribute'!");
@@ -955,7 +969,8 @@ private:
             KindToAbstractAttributeMap.lookup(&AAType::ID))) {
       // Do not register a dependence on an attribute with an invalid state.
       if (TrackDependence && AA->getState().isValidState())
-        recordDependence(*AA, const_cast<AbstractAttribute &>(*QueryingAA));
+        recordDependence(*AA, const_cast<AbstractAttribute &>(*QueryingAA),
+                         DepClass);
       return AA;
     }
     return nullptr;
@@ -979,8 +994,16 @@ private:
   /// A map from abstract attributes to the ones that queried them through calls
   /// to the getAAFor<...>(...) method.
   ///{
-  using QueryMapTy =
-      MapVector<const AbstractAttribute *, SetVector<AbstractAttribute *>>;
+  struct QueryMapValueTy {
+    /// Set of abstract attributes which were used but not necessarily required
+    /// for a potential optimistic state.
+    SetVector<AbstractAttribute *> OptionalAAs;
+
+    /// Set of abstract attributes which were used and which were necessarily
+    /// required for any potential optimistic state.
+    SetVector<AbstractAttribute *> RequiredAAs;
+  };
+  using QueryMapTy = MapVector<const AbstractAttribute *, QueryMapValueTy>;
   QueryMapTy QueryMap;
   ///}
 
