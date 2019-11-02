@@ -5,3 +5,5 @@
 // RUN: diff -u %s.json %t.final.json
 
 @import ModDep;
+
+// REQUIRES: shell
