@@ -128,10 +128,6 @@ class APInt;
 class APSInt;
 class LLVMContext;
 class ExecutionEngine;
-class LLVMContext;
-class MemoryBuffer;
-class Module;
-class SourceMgr;
 class TargetOptions;
 }
 
