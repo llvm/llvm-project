@@ -4142,13 +4142,9 @@ CallBrInst::CallBrInst(FunctionType *Ty, Value *Func, BasicBlock *DefaultDest,
                        ArrayRef<Value *> Args,
                        ArrayRef<OperandBundleDef> Bundles, int NumOperands,
                        const Twine &NameStr, BasicBlock *InsertAtEnd)
-    : CallBase(
-          cast<FunctionType>(
-              cast<PointerType>(Func->getType())->getElementType())
-              ->getReturnType(),
-          Instruction::CallBr,
-          OperandTraits<CallBase>::op_end(this) - NumOperands, NumOperands,
-          InsertAtEnd) {
+    : CallBase(Ty->getReturnType(), Instruction::CallBr,
+               OperandTraits<CallBase>::op_end(this) - NumOperands, NumOperands,
+               InsertAtEnd) {
   init(Ty, Func, DefaultDest, IndirectDests, Args, Bundles, NameStr);
 }
 
