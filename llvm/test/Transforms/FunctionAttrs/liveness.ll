@@ -689,12 +689,12 @@ define void @live_with_dead_entry_lp() personality i8* bitcast (i32 (...)* @__gx
 ; CHECK:      define void @live_with_dead_entry_lp(
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   invoke void @blowup()
-; CHECK-NEXT:           to label %live_with_dead_entry.dead1 unwind label %lp1
+; CHECK-NEXT:           to label %live_with_dead_entry.dead unwind label %lp1
 ; CHECK:      lp1:                                              ; preds = %entry
 ; CHECK-NEXT:   %lp = landingpad { i8*, i32 }
 ; CHECK-NEXT:           catch i8* null
 ; CHECK-NEXT:   invoke void @blowup()
-; CHECK-NEXT:           to label %live_with_dead_entry.dead unwind label %lp2
+; CHECK-NEXT:           to label %live_with_dead_entry.dead1 unwind label %lp2
 ; CHECK:      lp2:                                              ; preds = %lp1
 ; CHECK-NEXT:   %0 = landingpad { i8*, i32 }
 ; CHECK-NEXT:           catch i8* null
