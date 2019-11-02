@@ -50,10 +50,11 @@ define internal i16 @bar(i16 %p1, i16 %p2) {
 ; in argument count due to varargs (as long as all non-variadic arguments have
 ; been provided),
 
-define dso_local void @vararg_tests(i16 %a) {
+define dso_local i16 @vararg_tests(i16 %a) {
   %call1 = call i16 (i16, ...) @vararg_prop(i16 7, i16 8, i16 %a)
   %call2 = call i16 bitcast (i16 (i16, i16, ...) * @vararg_no_prop to i16 (i16) *) (i16 7)
-  ret void
+  %add = add i16 %call1, %call2
+  ret i16 %add
 }
 
 define internal i16 @vararg_prop(i16 %p1, ...) {
