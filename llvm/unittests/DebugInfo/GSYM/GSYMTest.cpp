@@ -853,7 +853,9 @@ TEST(GSYMTest, TestLineTable) {
   // Test that two empty line tables are equal and neither are less than
   // each other.
   ASSERT_EQ(LT1, LT2);
+  ASSERT_FALSE(LT1 < LT1);
   ASSERT_FALSE(LT1 < LT2);
+  ASSERT_FALSE(LT2 < LT1);
   ASSERT_FALSE(LT2 < LT2);
 
   // Test that a line table with less number of line entries is less than a
