@@ -479,7 +479,7 @@ bool TypeInfer::EnforceSmallerThan(TypeSetByHwMode &Small,
     TypeSetByHwMode::SetType &S = Small.get(M);
     TypeSetByHwMode::SetType &B = Big.get(M);
 
-    if (any_of(S, isIntegerOrPtr) && any_of(B, isIntegerOrPtr)) {
+    if (any_of(S, isIntegerOrPtr) && any_of(S, isIntegerOrPtr)) {
       auto NotInt = [](MVT VT) { return !isIntegerOrPtr(VT); };
       Changed |= berase_if(S, NotInt) |
                  berase_if(B, NotInt);
