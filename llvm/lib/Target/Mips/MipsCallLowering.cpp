@@ -655,7 +655,8 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
                        F.getContext());
 
-    CCInfo.AnalyzeCallResult(Ins, TLI.CCAssignFnForReturn(), Info.OrigRet.Ty, Call);
+    CCInfo.AnalyzeCallResult(Ins, TLI.CCAssignFnForReturn(), Info.OrigRet.Ty,
+                             Call);
     setLocInfo(ArgLocs, Ins);
 
     CallReturnHandler Handler(MIRBuilder, MF.getRegInfo(), MIB);

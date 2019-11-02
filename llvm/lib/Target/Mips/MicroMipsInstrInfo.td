@@ -506,7 +506,8 @@ class LoadWordIndexedScaledMM<string opstr, RegisterOperand RO,
 
 class PrefetchIndexed<string opstr> :
   InstSE<(outs), (ins PtrRC:$base, PtrRC:$index, uimm5:$hint),
-         !strconcat(opstr, "\t$hint, ${index}(${base})"), [], II_PREF, FrmOther>;
+         !strconcat(opstr, "\t$hint, ${index}(${base})"),
+         [], II_PREF, FrmOther>;
 
 class AddImmUPC<string opstr, RegisterOperand RO> :
   InstSE<(outs RO:$rs), (ins simm23_lsl2:$imm),

@@ -192,17 +192,18 @@ def FeatureGINV : SubtargetFeature<"ginv", "HasGINV", "true",
 def FeatureMicroMips  : SubtargetFeature<"micromips", "InMicroMipsMode", "true",
                                          "microMips mode">;
 
-def FeatureCnMips     : SubtargetFeature<"cnmips", "HasCnMips",
-                                "true", "Octeon cnMIPS Support",
-                                [FeatureMips64r2]>;
+def FeatureCnMips : SubtargetFeature<"cnmips", "HasCnMips",
+                                     "true", "Octeon cnMIPS Support",
+                                     [FeatureMips64r2]>;
 
 def FeatureUseTCCInDIV : SubtargetFeature<
                                "use-tcc-in-div",
                                "UseTCCInDIV", "false",
                                "Force the assembler to use trapping">;
 
-def FeatureMadd4 : SubtargetFeature<"nomadd4", "DisableMadd4", "true",
-                                    "Disable 4-operand madd.fmt and related instructions">;
+def FeatureMadd4
+    : SubtargetFeature<"nomadd4", "DisableMadd4", "true",
+                       "Disable 4-operand madd.fmt and related instructions">;
 
 def FeatureMT : SubtargetFeature<"mt", "HasMT", "true", "Mips MT ASE">;
 

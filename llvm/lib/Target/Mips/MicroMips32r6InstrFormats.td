@@ -234,7 +234,8 @@ class POOL32A_FM_MMR6<bits<10> funct> : MipsR6Inst {
   let Inst{9-0}   = funct;
 }
 
-class POOL32A_PAUSE_FM_MMR6<string instr_asm, bits<5> op> : MMR6Arch<instr_asm> {
+class POOL32A_PAUSE_FM_MMR6<string instr_asm, bits<5> op>
+    : MMR6Arch<instr_asm> {
   bits<32> Inst;
 
   let Inst{31-26} = 0;
@@ -512,7 +513,8 @@ class BARRIER_MMR6_ENC<string instr_asm, bits<5> op> : MMR6Arch<instr_asm> {
 class POOL32A_EIDI_MMR6_ENC<string instr_asm, bits<10> funct>
     : MMR6Arch<instr_asm> {
   bits<32> Inst;
-  bits<5> rt; // Actually rs but we're sharing code with the standard encodings which call it rt
+  bits<5> rt; // Actually rs but we're sharing code with the standard encodings
+              // which call it rt
 
   let Inst{31-26} = 0x00;
   let Inst{25-21} = 0x00;
@@ -521,7 +523,8 @@ class POOL32A_EIDI_MMR6_ENC<string instr_asm, bits<10> funct>
   let Inst{5-0}   = 0x3c;
 }
 
-class SHIFT_MMR6_ENC<string instr_asm, bits<10> funct, bit rotate> : MMR6Arch<instr_asm> {
+class SHIFT_MMR6_ENC<string instr_asm, bits<10> funct, bit rotate>
+    : MMR6Arch<instr_asm> {
   bits<5> rd;
   bits<5> rt;
   bits<5> shamt;
@@ -809,8 +812,8 @@ class POOL32F_RECIP_ROUND_FM_MMR6<string instr_asm, bits<1> fmt, bits<8> funct>
   let Inst{5-0}   = 0b111011;
 }
 
-class POOL32F_RINT_FM_MMR6<string instr_asm, bits<2> fmt>
-    : MMR6Arch<instr_asm>, MipsR6Inst {
+class POOL32F_RINT_FM_MMR6<string instr_asm, bits<2> fmt> : MMR6Arch<instr_asm>,
+                                                            MipsR6Inst {
   bits<5> fs;
   bits<5> fd;
 
@@ -1012,8 +1015,8 @@ class POOL32B_LDWC2_SDWC2_FM_MMR6<string instr_asm, bits<4> funct>
 }
 
 class POOL32C_LL_E_SC_E_FM_MMR6<string instr_asm, bits<4> majorFunc,
-                                bits<3> minorFunc>
-    : MMR6Arch<instr_asm>, MipsR6Inst {
+                                bits<3> minorFunc> : MMR6Arch<instr_asm>,
+                                                     MipsR6Inst {
   bits<5> rt;
   bits<21> addr;
   bits<5> base = addr{20-16};

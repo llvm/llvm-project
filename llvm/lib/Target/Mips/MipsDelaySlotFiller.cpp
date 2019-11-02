@@ -91,15 +91,14 @@ enum CompactBranchPolicy {
 };
 
 static cl::opt<CompactBranchPolicy> MipsCompactBranchPolicy(
-  "mips-compact-branches",cl::Optional,
-  cl::init(CB_Optimal),
-  cl::desc("MIPS Specific: Compact branch policy."),
-  cl::values(
-    clEnumValN(CB_Never, "never", "Do not use compact branches if possible."),
-    clEnumValN(CB_Optimal, "optimal", "Use compact branches where appropiate (default)."),
-    clEnumValN(CB_Always, "always", "Always use compact branches if possible.")
-  )
-);
+    "mips-compact-branches", cl::Optional, cl::init(CB_Optimal),
+    cl::desc("MIPS Specific: Compact branch policy."),
+    cl::values(clEnumValN(CB_Never, "never",
+                          "Do not use compact branches if possible."),
+               clEnumValN(CB_Optimal, "optimal",
+                          "Use compact branches where appropiate (default)."),
+               clEnumValN(CB_Always, "always",
+                          "Always use compact branches if possible.")));
 
 namespace {
 
@@ -927,4 +926,6 @@ bool MipsDelaySlotFiller::terminateSearch(const MachineInstr &Candidate) const {
 
 /// createMipsDelaySlotFillerPass - Returns a pass that fills in delay
 /// slots in Mips MachineFunctions
-FunctionPass *llvm::createMipsDelaySlotFillerPass() { return new MipsDelaySlotFiller(); }
+FunctionPass *llvm::createMipsDelaySlotFillerPass() {
+  return new MipsDelaySlotFiller();
+}

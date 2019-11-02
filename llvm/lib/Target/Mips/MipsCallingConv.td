@@ -139,7 +139,8 @@ def CC_MipsN : CallingConv<[
   CCIfType<[i8, i16, i32], CCIfOrigArgWasNotFloat<CCPromoteToType<i64>>>,
 
   // The only i32's we have left are soft-float arguments.
-  CCIfSubtarget<"useSoftFloat()", CCIfType<[i32], CCDelegateTo<CC_MipsN_SoftFloat>>>,
+  CCIfSubtarget<"useSoftFloat()", CCIfType<[i32],
+                CCDelegateTo<CC_MipsN_SoftFloat>>>,
 
   // Integer arguments are passed in integer registers.
   CCIfType<[i64], CCAssignToRegWithShadow<[A0_64, A1_64, A2_64, A3_64,
