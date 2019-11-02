@@ -139,8 +139,9 @@ bool MipsInstructionSelector::materialize32BitImm(Register DestReg, APInt Imm,
   assert(Imm.getBitWidth() == 32 && "Unsupported immediate size.");
   // Ori zero extends immediate. Used for values with zeros in high 16 bits.
   if (Imm.getHiBits(16).isNullValue()) {
-    MachineInstr *Inst = B.buildInstr(Mips::ORi, {DestReg}, {Register(Mips::ZERO)})
-                             .addImm(Imm.getLoBits(16).getLimitedValue());
+    MachineInstr *Inst =
+        B.buildInstr(Mips::ORi, {DestReg}, {Register(Mips::ZERO)})
+            .addImm(Imm.getLoBits(16).getLimitedValue());
     return constrainSelectedInstRegOperands(*Inst, TII, TRI, RBI);
   }
   // Lui places immediate in high 16 bits and sets low 16 bits to zero.
@@ -151,8 +152,9 @@ bool MipsInstructionSelector::materialize32BitImm(Register DestReg, APInt Imm,
   }
   // ADDiu sign extends immediate. Used for values with 1s in high 17 bits.
   if (Imm.isSignedIntN(16)) {
-    MachineInstr *Inst = B.buildInstr(Mips::ADDiu, {DestReg}, {Register(Mips::ZERO)})
-                             .addImm(Imm.getLoBits(16).getLimitedValue());
+    MachineInstr *Inst =
+        B.buildInstr(Mips::ADDiu, {DestReg}, {Register(Mips::ZERO)})
+            .addImm(Imm.getLoBits(16).getLimitedValue());
     return constrainSelectedInstRegOperands(*Inst, TII, TRI, RBI);
   }
   // Values that cannot be materialized with single immediate instruction.

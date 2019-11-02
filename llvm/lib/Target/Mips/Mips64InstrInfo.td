@@ -395,11 +395,11 @@ let AdditionalPredicates = [NotInMicroMips] in {
 }
 
 let isCodeGenOnly = 1, AdditionalPredicates = [NotInMicroMips] in {
-  def DEXT64_32 : InstSE<(outs GPR64Opnd:$rt),
-                         (ins GPR32Opnd:$rs, uimm5_report_uimm6:$pos,
-                              uimm5_plus1:$size),
-                         "dext $rt, $rs, $pos, $size", [], II_EXT, FrmR, "dext">,
-                  EXT_FM<3>, ISA_MIPS64R2;
+  def DEXT64_32
+      : InstSE<(outs GPR64Opnd:$rt),
+               (ins GPR32Opnd:$rs, uimm5_report_uimm6:$pos, uimm5_plus1:$size),
+               "dext $rt, $rs, $pos, $size", [], II_EXT, FrmR, "dext">,
+        EXT_FM<3>, ISA_MIPS64R2;
 }
 
 let isCodeGenOnly = 1, rs = 0, shamt = 0 in {
@@ -1027,8 +1027,10 @@ let AdditionalPredicates = [NotInMicroMips] in {
                       (DMTGC0 COP0Opnd:$rd, GPR64Opnd:$rt, 0), 0>,
                       ISA_MIPS64R5, ASE_VIRT;
 }
-def : MipsInstAlias<"dmfc2 $rt, $rd", (DMFC2 GPR64Opnd:$rt, COP2Opnd:$rd, 0), 0>;
-def : MipsInstAlias<"dmtc2 $rt, $rd", (DMTC2 COP2Opnd:$rd, GPR64Opnd:$rt, 0), 0>;
+def : MipsInstAlias<"dmfc2 $rt, $rd",
+                    (DMFC2 GPR64Opnd:$rt, COP2Opnd:$rd, 0), 0>;
+def : MipsInstAlias<"dmtc2 $rt, $rd",
+                    (DMTC2 COP2Opnd:$rd, GPR64Opnd:$rt, 0), 0>;
 
 def : MipsInstAlias<"synciobdma", (SYNC 0x2), 0>, ASE_MIPS64_CNMIPS;
 def : MipsInstAlias<"syncs", (SYNC 0x6), 0>, ASE_MIPS64_CNMIPS;

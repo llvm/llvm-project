@@ -230,7 +230,8 @@ let DecoderNamespace = "MicroMips" in {
   def FSQRT_S_MM : MMRel, ABSS_FT<"sqrt.s", FGR32Opnd, FGR32Opnd, II_SQRT_S,
                                   fsqrt>, ROUND_W_FM_MM<0, 0x28>, ISA_MICROMIPS;
 
-  def MTHC1_D32_MM : MMRel, MTC1_64_FT<"mthc1", AFGR64Opnd, GPR32Opnd, II_MTHC1>,
+  def MTHC1_D32_MM : MMRel,
+                     MTC1_64_FT<"mthc1", AFGR64Opnd, GPR32Opnd, II_MTHC1>,
                      MFC1_FM_MM<0xe0>, ISA_MICROMIPS, FGR_32;
   def MFHC1_D32_MM : MMRel, MFC1_FT<"mfhc1", GPR32Opnd, AFGR64Opnd, II_MFHC1>,
                      MFC1_FM_MM<0xc0>, ISA_MICROMIPS, FGR_32;

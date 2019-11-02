@@ -234,8 +234,8 @@ void MipsSEDAGToDAGISel::selectAddE(SDNode *Node, const SDLoc &DL) const {
 
   SDValue OuFlag = CurDAG->getTargetConstant(20, DL, MVT::i32);
 
-  SDNode *DSPCtrlField =
-      CurDAG->getMachineNode(Mips::RDDSP, DL, MVT::i32, MVT::Glue, CstOne, InFlag);
+  SDNode *DSPCtrlField = CurDAG->getMachineNode(Mips::RDDSP, DL, MVT::i32,
+                                                MVT::Glue, CstOne, InFlag);
 
   SDNode *Carry = CurDAG->getMachineNode(
       Mips::EXT, DL, MVT::i32, SDValue(DSPCtrlField, 0), OuFlag, CstOne);
@@ -253,7 +253,8 @@ void MipsSEDAGToDAGISel::selectAddE(SDNode *Node, const SDLoc &DL) const {
   SDValue Zero = CurDAG->getRegister(Mips::ZERO, MVT::i32);
 
   SDValue InsOps[4] = {Zero, OuFlag, CstOne, SDValue(DSPCFWithCarry, 0)};
-  SDNode *DSPCtrlFinal = CurDAG->getMachineNode(Mips::INS, DL, MVT::i32, InsOps);
+  SDNode *DSPCtrlFinal =
+      CurDAG->getMachineNode(Mips::INS, DL, MVT::i32, InsOps);
 
   SDNode *WrDSP = CurDAG->getMachineNode(Mips::WRDSP, DL, MVT::Glue,
                                          SDValue(DSPCtrlFinal, 0), CstOne);
@@ -1074,7 +1075,8 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
                                      Hi ? SDValue(Res, 0) : ZeroVal, LoVal);
 
       assert((Hi || Lo) && "Zero case reached 32 bit case splat synthesis!");
-      Res = CurDAG->getMachineNode(Mips::FILL_W, DL, MVT::v4i32, SDValue(Res, 0));
+      Res =
+          CurDAG->getMachineNode(Mips::FILL_W, DL, MVT::v4i32, SDValue(Res, 0));
 
     } else if (SplatValue.isSignedIntN(32) && SplatBitSize == 64 &&
                (ABI.IsN32() || ABI.IsN64())) {
@@ -1117,8 +1119,8 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
       //   $res4 = insert.w $res3[1], $res    fill.d $res
       //   splat.d $res4, 0
       //
-      // The ability to use dinsu is guaranteed as MSA requires MIPSR5. This saves
-      // having to materialize the value by shifts and ors.
+      // The ability to use dinsu is guaranteed as MSA requires MIPSR5.
+      // This saves having to materialize the value by shifts and ors.
       //
       // FIXME: Implement the preferred sequence for MIPS64R6:
       //
@@ -1239,7 +1241,8 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
           llvm_unreachable(
               "Zero splat value handled by non-zero 64bit splat synthesis!");
 
-        Res = CurDAG->getMachineNode(Mips::FILL_D, DL, MVT::v2i64, SDValue(Res, 0));
+        Res = CurDAG->getMachineNode(Mips::FILL_D, DL, MVT::v2i64,
+                                     SDValue(Res, 0));
       } else
         llvm_unreachable("Unknown ABI in MipsISelDAGToDAG!");
 

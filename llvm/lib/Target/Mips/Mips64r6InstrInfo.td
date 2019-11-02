@@ -48,7 +48,8 @@ class CRC32CD_ENC : SPECIAL3_2R_SZ_CRC<3,1>;
 //
 //===----------------------------------------------------------------------===//
 
-class AHI_ATI_DESC_BASE<string instr_asm, RegisterOperand GPROpnd, InstrItinClass itin> {
+class AHI_ATI_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
+                        InstrItinClass itin> {
   dag OutOperandList = (outs GPROpnd:$rs);
   dag InOperandList = (ins GPROpnd:$rt, uimm16_altrelaxed:$imm);
   string AsmString = !strconcat(instr_asm, "\t$rs, $rt, $imm");
