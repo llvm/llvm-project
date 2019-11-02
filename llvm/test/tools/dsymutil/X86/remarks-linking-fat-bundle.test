@@ -1,4 +1,4 @@
-REQUIRES : system-darwin
+REQUIRES: system-darwin
 
 RUN: rm -rf %t
 RUN: mkdir -p %t
