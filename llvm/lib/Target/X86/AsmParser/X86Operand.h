@@ -104,8 +104,8 @@ struct X86Operand final : public MCParsedAsmOperand {
       } else if (Val->getKind() == MCExpr::SymbolRef) {
         if (auto *SRE = dyn_cast<MCSymbolRefExpr>(Val)) {
           const MCSymbol &Sym = SRE->getSymbol();
-          if (auto SymName = Sym.getName().data())
-            OS << VName << SymName;
+          if (const char *SymNameStr = Sym.getName().data())
+            OS << VName << SymNameStr;
         }
       }
     };
