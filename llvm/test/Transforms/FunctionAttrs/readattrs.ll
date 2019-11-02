@@ -1,7 +1,7 @@
 ; RUN: opt < %s -functionattrs -S | FileCheck %s --check-prefixes=CHECK,FNATTR
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes='cgscc(function-attrs)' -S | FileCheck %s --check-prefixes=CHECK,FNATTR
-; RUN: opt < %s -attributor -attributor-disable=false -S | FileCheck %s --check-prefixes=CHECK,ATTRIBUTOR
-; RUN: opt < %s -aa-pipeline=basic-aa -passes='attributor' -attributor-disable=false -S | FileCheck %s --check-prefixes=CHECK,ATTRIBUTOR
+; RUN: opt < %s -attributor -attributor-disable=false -S -attributor-annotate-decl-cs | FileCheck %s --check-prefixes=CHECK,ATTRIBUTOR
+; RUN: opt < %s -aa-pipeline=basic-aa -passes='attributor' -attributor-disable=false -S -attributor-annotate-decl-cs | FileCheck %s --check-prefixes=CHECK,ATTRIBUTOR
 
 @x = global i32 0
 
