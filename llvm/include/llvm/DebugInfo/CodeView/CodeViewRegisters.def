@@ -368,6 +368,11 @@ CV_REGISTER(AMD64_K7, 765)
 
 #if defined(CV_REGISTERS_ALL) || defined(CV_REGISTERS_ARM64)
 
+// arm64intr.h from MSVC defines ARM64_FPSR, which conflicts with
+// these declarations.
+#pragma push_macro("ARM64_FPSR")
+#undef ARM64_FPSR
+
 // ARM64 registers
 
 CV_REGISTER(ARM64_NOREG, 0)
@@ -555,5 +560,7 @@ CV_REGISTER(ARM64_Q31, 211)
 // Floating point status register
 
 CV_REGISTER(ARM64_FPSR, 220)
+
+#pragma pop_macro("ARM64_FPSR")
 
 #endif // defined(CV_REGISTERS_ALL) || defined(CV_REGISTERS_ARM64)
