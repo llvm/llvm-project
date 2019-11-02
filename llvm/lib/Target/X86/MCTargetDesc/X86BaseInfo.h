@@ -675,7 +675,7 @@ namespace X86II {
 
   /// isImmPCRel - Return true if the immediate of the specified instruction's
   /// TSFlags indicates that it is pc relative.
-  inline unsigned isImmPCRel(uint64_t TSFlags) {
+  inline bool isImmPCRel(uint64_t TSFlags) {
     switch (TSFlags & X86II::ImmMask) {
     default: llvm_unreachable("Unknown immediate size");
     case X86II::Imm8PCRel:
@@ -694,7 +694,7 @@ namespace X86II {
 
   /// isImmSigned - Return true if the immediate of the specified instruction's
   /// TSFlags indicates that it is signed.
-  inline unsigned isImmSigned(uint64_t TSFlags) {
+  inline bool isImmSigned(uint64_t TSFlags) {
     switch (TSFlags & X86II::ImmMask) {
     default: llvm_unreachable("Unknown immediate signedness");
     case X86II::Imm32S:
