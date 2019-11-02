@@ -81,9 +81,6 @@ Non-comprehensive list of changes in this release
   Undefined Behaviour Sanitizer ``-fsanitize=pointer-overflow`` check
   will now catch such cases.
 
-* The Loop Idiom Recognition (``-loop-idiom``) pass has learned to recognize
-  ``bcmp`` pattern, and convert it into a call to ``bcmp`` (or ``memcmp``)
-  function.
 
 * Windows Control Flow Guard: the ``-cfguard`` option now emits CFG checks on
   indirect function calls. The previous behavior is still available with the 
