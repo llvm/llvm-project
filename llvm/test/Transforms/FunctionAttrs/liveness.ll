@@ -2,6 +2,9 @@
 ; RUN: opt -attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=6 -S < %s | FileCheck %s
 ; UTC_ARGS: --turn off
 
+; CHECK: @dead_with_blockaddress_users.l = constant [2 x i8*] [i8* inttoptr (i32 1 to i8*), i8* inttoptr (i32 1 to i8*)]
+@dead_with_blockaddress_users.l = constant [2 x i8*] [i8* blockaddress(@dead_with_blockaddress_users, %lab0), i8* blockaddress(@dead_with_blockaddress_users, %end)]
+
 declare void @no_return_call() nofree noreturn nounwind readnone
 
 declare void @normal_call() readnone
@@ -830,3 +833,25 @@ define i32 @switch_default_caller() {
   ret i32 %call2
 }
 ; UTC_ARGS: --turn off
+
+; Allow blockaddress users
+; CHECK-NOT @dead_with_blockaddress_users
+define internal void @dead_with_blockaddress_users(i32* nocapture %pc) nounwind readonly {
+entry:
+  br label %indirectgoto
+
+lab0:                                             ; preds = %indirectgoto
+  %indvar.next = add i32 %indvar, 1               ; <i32> [#uses=1]
+  br label %indirectgoto
+
+end:                                              ; preds = %indirectgoto
+  ret void
+
+indirectgoto:                                     ; preds = %lab0, %entry
+  %indvar = phi i32 [ %indvar.next, %lab0 ], [ 0, %entry ] ; <i32> [#uses=2]
+  %pc.addr.0 = getelementptr i32, i32* %pc, i32 %indvar ; <i32*> [#uses=1]
+  %tmp1.pn = load i32, i32* %pc.addr.0                 ; <i32> [#uses=1]
+  %indirect.goto.dest.in = getelementptr inbounds [2 x i8*], [2 x i8*]* @dead_with_blockaddress_users.l, i32 0, i32 %tmp1.pn ; <i8**> [#uses=1]
+  %indirect.goto.dest = load i8*, i8** %indirect.goto.dest.in ; <i8*> [#uses=1]
+  indirectbr i8* %indirect.goto.dest, [label %lab0, label %end]
+}

@@ -4658,6 +4658,9 @@ bool Attributor::checkForAllCallSites(
                         << Fn.getName()
                         << " has non call site use " << *U.get() << " in "
                         << *U.getUser() << "\n");
+      // BlockAddress users are allowed.
+      if (isa<BlockAddress>(U.getUser()))
+        continue;
       return false;
     }
 
@@ -5072,6 +5075,7 @@ ChangeStatus Attributor::run(Module &M) {
 
         STATS_TRACK(AAIsDead, Function);
         ToBeDeletedFunctions.insert(F);
+        F->deleteBody();
         F->replaceAllUsesWith(UndefValue::get(F->getType()));
         F->eraseFromParent();
         InternalFns[u] = nullptr;
