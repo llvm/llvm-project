@@ -120,6 +120,10 @@ static cl::opt<bool> DisableAttributor(
     cl::desc("Disable the attributor inter-procedural deduction pass."),
     cl::init(true));
 
+static cl::opt<bool> AnnotateDeclarationCallSites(
+    "attributor-annotate-decl-cs", cl::Hidden,
+    cl::desc("Annoate call sites of function declarations."), cl::init(false));
+
 static cl::opt<bool> ManifestInternal(
     "attributor-manifest-internal", cl::Hidden,
     cl::desc("Manifest Attributor internal string attributes."),
@@ -5074,6 +5078,8 @@ void Attributor::recordDependence(const AbstractAttribute &FromAA,
 void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   if (!VisitedFunctions.insert(&F).second)
     return;
+  if (F.isDeclaration())
+    return;
 
   IRPosition FPos = IRPosition::function(F);
 
@@ -5170,7 +5176,12 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   auto CallSitePred = [&](Instruction &I) -> bool {
     CallSite CS(&I);
     if (Function *Callee = CS.getCalledFunction()) {
-      if (!Callee->getReturnType()->isVoidTy()) {
+      // Skip declerations except if annotations on their call sites were
+      // explicitly requested.
+      if (!AnnotateDeclarationCallSites && Callee->isDeclaration())
+        return true;
+
+      if (!Callee->getReturnType()->isVoidTy() && !CS->use_empty()) {
         IRPosition CSRetPos = IRPosition::callsite_returned(CS);
 
         // Call site return values might be dead.
