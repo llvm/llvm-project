@@ -36,8 +36,8 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
                              const TargetOptions &Options)
     : TheTarget(T), DL(DataLayoutString), TargetTriple(TT), TargetCPU(CPU),
       TargetFS(FS), AsmInfo(nullptr), MRI(nullptr), MII(nullptr), STI(nullptr),
-      RequireStructuredCFG(false), DefaultOptions(Options), Options(Options) {
-}
+      RequireStructuredCFG(false), O0WantsFastISel(false),
+      DefaultOptions(Options), Options(Options) {}
 
 TargetMachine::~TargetMachine() = default;
 
