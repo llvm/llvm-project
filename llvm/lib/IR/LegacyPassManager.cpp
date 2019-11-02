@@ -1626,13 +1626,12 @@ MPPassManager::runOnModule(Module &M) {
 /// RequiredPass is run on the fly by Pass Manager when P requests it
 /// through getAnalysis interface.
 void MPPassManager::addLowerLevelRequiredPass(Pass *P, Pass *RequiredPass) {
+  assert(RequiredPass && "No required pass?");
   assert(P->getPotentialPassManagerType() == PMT_ModulePassManager &&
          "Unable to handle Pass that requires lower level Analysis pass");
   assert((P->getPotentialPassManagerType() <
           RequiredPass->getPotentialPassManagerType()) &&
          "Unable to handle Pass that requires lower level Analysis pass");
-  if (!RequiredPass)
-    return;
 
   FunctionPassManagerImpl *FPP = OnTheFlyManagers[P];
   if (!FPP) {
