@@ -52,7 +52,7 @@ define void @test2() {
 define void @test3() {
   %1 = tail call noalias i8* @malloc(i64 4)
   ; CHECK: %1 = alloca i8, i64 4
-  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture %1)
+  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture nofree %1)
   tail call void @no_sync_func(i8* %1)
   ; CHECK-NOT: @free(i8* %1)
   tail call void @free(i8* %1)
@@ -66,7 +66,7 @@ define void @test0() {
   ; CHECK: %1 = alloca i8, i64 8
   ; CHECK-NEXT: %calloc_bc = bitcast i8* %1 to i8*
   ; CHECK-NEXT: call void @llvm.memset.p0i8.i64(i8* %calloc_bc, i8 0, i64 8, i1 false)
-  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture %1)
+  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture nofree %1)
   tail call void @no_sync_func(i8* %1)
   ; CHECK-NOT: @free(i8* %1)
   tail call void @free(i8* %1)
@@ -77,7 +77,7 @@ define void @test0() {
 define void @test4() {
   %1 = tail call noalias i8* @malloc(i64 4)
   ; CHECK: %1 = alloca i8, i64 4
-  ; CHECK-NEXT: @nofree_func(i8* noalias nocapture %1)
+  ; CHECK-NEXT: @nofree_func(i8* noalias nocapture nofree %1)
   tail call void @nofree_func(i8* %1)
   ret void
 }
@@ -146,7 +146,7 @@ define void @test7() {
 define void @test8() {
   %1 = tail call noalias i8* @malloc(i64 4)
   ; CHECK: %1 = tail call noalias i8* @malloc(i64 4)
-  ; CHECK-NEXT: @no_sync_func(i8* nocapture %1)
+  ; CHECK-NEXT: @no_sync_func(i8* nocapture nofree %1)
   tail call void @no_sync_func(i8* %1)
   %2 = bitcast i8* %1 to i32*
   store i32 10, i32* %2
@@ -161,7 +161,7 @@ define void @test8() {
 define void @test9() {
   %1 = tail call noalias i8* @malloc(i64 4)
   ; CHECK: %1 = tail call noalias i8* @malloc(i64 4)
-  ; CHECK-NEXT: @no_sync_func(i8* nocapture %1)
+  ; CHECK-NEXT: @no_sync_func(i8* nocapture nofree %1)
   tail call void @no_sync_func(i8* %1)
   %2 = bitcast i8* %1 to i32*
   store i32 10, i32* %2
@@ -177,7 +177,7 @@ define void @test9() {
 define i32 @test10() {
   %1 = tail call noalias i8* @malloc(i64 4)
   ; CHECK: %1 = alloca i8, i64 4
-  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture %1)
+  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture nofree %1)
   tail call void @no_sync_func(i8* %1)
   %2 = bitcast i8* %1 to i32*
   store i32 10, i32* %2
@@ -190,7 +190,7 @@ define i32 @test10() {
 define i32 @test_lifetime() {
   %1 = tail call noalias i8* @malloc(i64 4)
   ; CHECK: %1 = alloca i8, i64 4
-  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture %1)
+  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture nofree %1)
   tail call void @no_sync_func(i8* %1)
   call void @llvm.lifetime.start.p0i8(i64 4, i8* %1)
   %2 = bitcast i8* %1 to i32*
@@ -283,7 +283,7 @@ define i32 @malloc_in_loop(i32 %0) {
 define i32 @test13() {
   %1 = tail call noalias i8* @malloc(i64 256)
   ; CHECK: %1 = tail call noalias i8* @malloc(i64 256)
-  ; CHECK-NEXT: @no_sync_func(i8* noalias %1)
+  ; CHECK-NEXT: @no_sync_func(i8* noalias nofree %1)
   tail call void @no_sync_func(i8* %1)
   %2 = bitcast i8* %1 to i32*
   store i32 10, i32* %2
@@ -296,7 +296,7 @@ define i32 @test13() {
 define void @test14() {
   %1 = tail call noalias i8* @calloc(i64 64, i64 4)
   ; CHECK: %1 = tail call noalias i8* @calloc(i64 64, i64 4)
-  ; CHECK-NEXT: @no_sync_func(i8* noalias %1)
+  ; CHECK-NEXT: @no_sync_func(i8* noalias nofree %1)
   tail call void @no_sync_func(i8* %1)
   tail call void @free(i8* %1)
   ; CHECK: tail call void @free(i8* noalias %1)
@@ -306,7 +306,7 @@ define void @test14() {
 define void @test15(i64 %S) {
   ; CHECK: %1 = tail call noalias i8* @malloc(i64 %S)
   %1 = tail call noalias i8* @malloc(i64 %S)
-  ; CHECK-NEXT: @no_sync_func(i8* noalias %1)
+  ; CHECK-NEXT: @no_sync_func(i8* noalias nofree %1)
   tail call void @no_sync_func(i8* %1)
   ; CHECK-NEXT: @free(i8* noalias %1)
   tail call void @free(i8* %1)
@@ -318,7 +318,7 @@ define void @test16a(i8 %v, i8** %P) {
   %1 = tail call noalias i8* @malloc(i64 4)
   ; CHECK-NEXT: store i8 %v, i8* %1
   store i8 %v, i8* %1
-  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture %1)
+  ; CHECK-NEXT: @no_sync_func(i8* noalias nocapture nofree %1)
   tail call void @no_sync_func(i8* %1)
   ; CHECK-NOT: @free(i8* %1)
   tail call void @free(i8* %1)
@@ -330,7 +330,7 @@ define void @test16b(i8 %v, i8** %P) {
   %1 = tail call noalias i8* @malloc(i64 4)
   ; CHECK-NEXT: store i8* %1, i8** %P
   store i8* %1, i8** %P
-  ; CHECK-NEXT: @no_sync_func(i8* nocapture %1)
+  ; CHECK-NEXT: @no_sync_func(i8* nocapture nofree %1)
   tail call void @no_sync_func(i8* %1)
   ; CHECK-NEXT: @free(i8* %1)
   tail call void @free(i8* %1)
@@ -342,7 +342,7 @@ define void @test16c(i8 %v, i8** %P) {
   %1 = tail call noalias i8* @malloc(i64 4)
   ; CHECK-NEXT: store i8* %1, i8** %P
   store i8* %1, i8** %P
-  ; CHECK-NEXT: @no_sync_func(i8* nocapture %1)
+  ; CHECK-NEXT: @no_sync_func(i8* nocapture nofree %1)
   tail call void @no_sync_func(i8* %1) nounwind
   ; CHECK-NOT: @free
   tail call void @free(i8* %1)

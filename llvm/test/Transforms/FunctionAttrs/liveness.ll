@@ -54,7 +54,7 @@ define internal i32 @internal_load(i32*) norecurse nounwind uwtable {
 ; TEST 1: Only first block is live.
 
 ; CHECK: Function Attrs: nofree noreturn nosync nounwind
-; CHECK-NEXT: define i32 @first_block_no_return(i32 %a, i32* nocapture nonnull readonly %ptr1, i32* nocapture readnone %ptr2)
+; CHECK-NEXT: define i32 @first_block_no_return(i32 %a, i32* nocapture nofree nonnull readonly %ptr1, i32* nocapture nofree readnone %ptr2)
 define i32 @first_block_no_return(i32 %a, i32* nonnull %ptr1, i32* %ptr2) #0 {
 entry:
   call i32 @internal_load(i32* %ptr1)
@@ -88,7 +88,7 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 ; dead block and check if it is deduced.
 
 ; CHECK: Function Attrs: nosync
-; CHECK-NEXT: define i32 @dead_block_present(i32 %a, i32* nocapture readnone %ptr1)
+; CHECK-NEXT: define i32 @dead_block_present(i32 %a, i32* nocapture nofree readnone %ptr1)
 define i32 @dead_block_present(i32 %a, i32* %ptr1) #0 {
 entry:
   %cmp = icmp eq i32 %a, 0
@@ -281,7 +281,7 @@ cleanup:
 ; TEST 6: Undefined behvior, taken from LangRef.
 ; FIXME: Should be able to detect undefined behavior.
 
-; CHECK: define void @ub(i32* nocapture writeonly %0)
+; CHECK: define void @ub(i32* nocapture nofree writeonly %0)
 define void @ub(i32* %0) {
   %poison = sub nuw i32 0, 1           ; Results in a poison value.
   %still_poison = and i32 %poison, 0   ; 0, but also poison.
@@ -761,14 +761,14 @@ live_with_dead_entry:
   ret void
 }
 
-; CHECK: define internal void @useless_arg_sink(i32* nocapture readnone %a)
+; CHECK: define internal void @useless_arg_sink(i32* nocapture nofree readnone %a)
 define internal void @useless_arg_sink(i32* %a) {
   ret void
 }
 
-; CHECK: define internal void @useless_arg_almost_sink(i32* nocapture readnone %a)
+; CHECK: define internal void @useless_arg_almost_sink(i32* nocapture nofree readnone %a)
 define internal void @useless_arg_almost_sink(i32* %a) {
-; CHECK: call void @useless_arg_sink(i32* undef)
+; CHECK: call void @useless_arg_sink(i32* nofree undef)
   call void @useless_arg_sink(i32* %a)
   ret void
 }
@@ -776,7 +776,7 @@ define internal void @useless_arg_almost_sink(i32* %a) {
 ; Check we do not annotate the function interface of this weak function.
 ; CHECK: define weak_odr void @useless_arg_ext(i32* %a)
 define weak_odr void @useless_arg_ext(i32* %a) {
-; CHECK: call void @useless_arg_almost_sink(i32* undef)
+; CHECK: call void @useless_arg_almost_sink(i32* nofree undef)
   call void @useless_arg_almost_sink(i32* %a)
   ret void
 }
