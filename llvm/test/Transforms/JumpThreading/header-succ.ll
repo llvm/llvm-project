@@ -8,7 +8,7 @@
 declare void @opaque_body()
 
 define void @jump_threading_loopheader() {
-; CHECK-LABEL: define {{[^@]+}}@jump_threading_loopheader(
+; CHECK-LABEL: @jump_threading_loopheader(
 ; CHECK-NEXT:  top:
 ; CHECK-NEXT:    br label [[ENTRY:%.*]]
 ; CHECK:       entry:
@@ -53,7 +53,7 @@ exit:
 ; instruction because jump-threading relies on that to decide which edge to
 ; try to thread first.
 define void @jump_threading_loopheader2() {
-; CHECK-LABEL: define {{[^@]+}}@jump_threading_loopheader2(
+; CHECK-LABEL: @jump_threading_loopheader2(
 ; CHECK-NEXT:  top:
 ; CHECK-NEXT:    br label [[ENTRY:%.*]]
 ; CHECK:       entry:
@@ -96,7 +96,7 @@ exit:
 
 ; Check if we can handle undef branch condition.
 define void @jump_threading_loopheader3() {
-; CHECK-LABEL: define {{[^@]+}}@jump_threading_loopheader3(
+; CHECK-LABEL: @jump_threading_loopheader3(
 ; CHECK-NEXT:  top:
 ; CHECK-NEXT:    br label [[ENTRY:%.*]]
 ; CHECK:       entry:

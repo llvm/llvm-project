@@ -2,7 +2,7 @@
 ; RUN: opt -S -jump-threading < %s | FileCheck %s
 
 define i8 @test(i32 %a, i32 %length) {
-; CHECK-LABEL: define {{[^@]+}}@test(
+; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BACKEDGE:%.*]]
 ; CHECK:       backedge:

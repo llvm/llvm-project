@@ -436,6 +436,12 @@ i32x4 max_u_i32x4(i32x4 x, i32x4 y) {
   // WEBASSEMBLY-NEXT: ret
 }
 
+i32x4 dot_i16x8_s(i16x8 x, i16x8 y) {
+  return __builtin_wasm_dot_s_i32x4_i16x8(x, y);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.dot(<8 x i16> %x, <8 x i16> %y)
+  // WEBASSEMBLY-NEXT: ret
+}
+
 i32x4 bitselect(i32x4 x, i32x4 y, i32x4 c) {
   return __builtin_wasm_bitselect(x, y, c);
   // WEBASSEMBLY: call <4 x i32> @llvm.wasm.bitselect.v4i32(

@@ -4435,6 +4435,9 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     unsigned TrailZ = LHSKnown.countMinTrailingZeros() +
                       RHSKnown.countMinTrailingZeros();
     Known.Zero.setLowBits(std::min(TrailZ, 32u));
+    // Skip extra check if all bits are known zeros.
+    if (TrailZ >= 32)
+      break;
 
     // Truncate to 24 bits.
     LHSKnown = LHSKnown.trunc(24);

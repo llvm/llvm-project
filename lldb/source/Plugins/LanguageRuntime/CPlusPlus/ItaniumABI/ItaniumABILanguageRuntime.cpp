@@ -559,6 +559,9 @@ ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
   modules.FindSymbolsWithNameAndType(
       ConstString("__cxa_current_exception_type"), eSymbolTypeCode, contexts);
   contexts.GetContextAtIndex(0, context);
+  if (!context.symbol) {
+    return {};
+  }
   Address addr = context.symbol->GetAddress();
 
   Status error;

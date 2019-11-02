@@ -504,6 +504,7 @@ class DwarfDebug : public DebugHandlerBase {
   /// Emit address ranges into a debug ranges section.
   void emitDebugRanges();
   void emitDebugRangesDWO();
+  void emitDebugRangesImpl(const DwarfFile &Holder, MCSection *Section);
 
   /// Emit macros into a debug macinfo section.
   void emitDebugMacinfo();

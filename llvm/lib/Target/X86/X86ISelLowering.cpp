@@ -5324,15 +5324,18 @@ static bool canWidenShuffleElements(ArrayRef<int> Mask,
 
 static bool canWidenShuffleElements(ArrayRef<int> Mask,
                                     const APInt &Zeroable,
+                                    bool V2IsZero,
                                     SmallVectorImpl<int> &WidenedMask) {
-  SmallVector<int, 32> TargetMask(Mask.begin(), Mask.end());
-  for (int i = 0, Size = TargetMask.size(); i < Size; ++i) {
-    if (TargetMask[i] == SM_SentinelUndef)
-      continue;
-    if (Zeroable[i])
-      TargetMask[i] = SM_SentinelZero;
+  // Create an alternative mask with info about zeroable elements.
+  // Here we do not set undef elements as zeroable.
+  SmallVector<int, 64> ZeroableMask(Mask.begin(), Mask.end());
+  if (V2IsZero) {
+    assert(!Zeroable.isNullValue() && "V2's non-undef elements are used?!");
+    for (int i = 0, Size = Mask.size(); i != Size; ++i)
+      if (Mask[i] != SM_SentinelUndef && Zeroable[i])
+        ZeroableMask[i] = SM_SentinelZero;
   }
-  return canWidenShuffleElements(TargetMask, WidenedMask);
+  return canWidenShuffleElements(ZeroableMask, WidenedMask);
 }
 
 static bool canWidenShuffleElements(ArrayRef<int> Mask) {
@@ -14817,8 +14820,10 @@ static SDValue lowerV2X128Shuffle(const SDLoc &DL, MVT VT, SDValue V1,
   if (Subtarget.hasAVX2() && V2.isUndef())
     return SDValue();
 
+  bool V2IsZero = !V2.isUndef() && ISD::isBuildVectorAllZeros(V2.getNode());
+
   SmallVector<int, 4> WidenedMask;
-  if (!canWidenShuffleElements(Mask, Zeroable, WidenedMask))
+  if (!canWidenShuffleElements(Mask, Zeroable, V2IsZero, WidenedMask))
     return SDValue();
 
   bool IsLowZero = (Zeroable & 0x3) == 0x3;
@@ -17095,23 +17100,13 @@ static SDValue lowerVectorShuffle(SDValue Op, const X86Subtarget &Subtarget,
 
   bool V2IsZero = !V2IsUndef && ISD::isBuildVectorAllZeros(V2.getNode());
 
-  // Create an alternative mask with info about zeroable elements.
-  // Here we do not set undef elements as zeroable.
-  SmallVector<int, 64> ZeroableMask(OrigMask.begin(), OrigMask.end());
-  if (V2IsZero) {
-    assert(!Zeroable.isNullValue() && "V2's non-undef elements are used?!");
-    for (int i = 0; i != NumElements; ++i)
-      if (OrigMask[i] != SM_SentinelUndef && Zeroable[i])
-        ZeroableMask[i] = SM_SentinelZero;
-  }
-
   // Try to collapse shuffles into using a vector type with fewer elements but
   // wider element types. We cap this to not form integers or floating point
   // elements wider than 64 bits, but it might be interesting to form i128
   // integers to handle flipping the low and high halves of AVX 256-bit vectors.
   SmallVector<int, 16> WidenedMask;
   if (VT.getScalarSizeInBits() < 64 && !Is1BitVector &&
-      canWidenShuffleElements(ZeroableMask, WidenedMask)) {
+      canWidenShuffleElements(OrigMask, Zeroable, V2IsZero, WidenedMask)) {
     // Shuffle mask widening should not interfere with a broadcast opportunity
     // by obfuscating the operands with bitcasts.
     // TODO: Avoid lowering directly from this top-level function: make this
@@ -39220,9 +39215,12 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     if (matchScalarReduction(SDValue(N, 0), ISD::AND, SrcOps) &&
         SrcOps.size() == 1) {
       SDLoc dl(N);
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       unsigned NumElts = SrcOps[0].getValueType().getVectorNumElements();
       EVT MaskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
       SDValue Mask = combineBitcastvxi1(DAG, MaskVT, SrcOps[0], dl, Subtarget);
+      if (!Mask && TLI.isTypeLegal(SrcOps[0].getValueType()))
+        Mask = DAG.getBitcast(MaskVT, SrcOps[0]);
       if (Mask) {
         APInt AllBits = APInt::getAllOnesValue(NumElts);
         return DAG.getSetCC(dl, MVT::i1, Mask,
@@ -39758,9 +39756,12 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     if (matchScalarReduction(SDValue(N, 0), ISD::OR, SrcOps) &&
         SrcOps.size() == 1) {
       SDLoc dl(N);
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       unsigned NumElts = SrcOps[0].getValueType().getVectorNumElements();
       EVT MaskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
       SDValue Mask = combineBitcastvxi1(DAG, MaskVT, SrcOps[0], dl, Subtarget);
+      if (!Mask && TLI.isTypeLegal(SrcOps[0].getValueType()))
+        Mask = DAG.getBitcast(MaskVT, SrcOps[0]);
       if (Mask) {
         APInt AllBits = APInt::getNullValue(NumElts);
         return DAG.getSetCC(dl, MVT::i1, Mask,
@@ -41459,23 +41460,25 @@ static SDValue isFNEG(SelectionDAG &DAG, SDNode *N, unsigned Depth = 0) {
 
   SDValue Op = peekThroughBitcasts(SDValue(N, 0));
   EVT VT = Op->getValueType(0);
-  // Make sure the element size does't change.
+
+  // Make sure the element size doesn't change.
   if (VT.getScalarSizeInBits() != ScalarSize)
     return SDValue();
 
-  if (auto SVOp = dyn_cast<ShuffleVectorSDNode>(Op.getNode())) {
+  unsigned Opc = Op.getOpcode();
+  switch (Opc) {
+  case ISD::VECTOR_SHUFFLE: {
     // For a VECTOR_SHUFFLE(VEC1, VEC2), if the VEC2 is undef, then the negate
     // of this is VECTOR_SHUFFLE(-VEC1, UNDEF).  The mask can be anything here.
-    if (!SVOp->getOperand(1).isUndef())
+    if (!Op.getOperand(1).isUndef())
       return SDValue();
-    if (SDValue NegOp0 = isFNEG(DAG, SVOp->getOperand(0).getNode(), Depth + 1))
+    if (SDValue NegOp0 = isFNEG(DAG, Op.getOperand(0).getNode(), Depth + 1))
       if (NegOp0.getValueType() == VT) // FIXME: Can we do better?
-        return DAG.getVectorShuffle(VT, SDLoc(SVOp), NegOp0, DAG.getUNDEF(VT),
-                                    SVOp->getMask());
-    return SDValue();
+        return DAG.getVectorShuffle(VT, SDLoc(Op), NegOp0, DAG.getUNDEF(VT),
+                                    cast<ShuffleVectorSDNode>(Op)->getMask());
+    break;
   }
-  unsigned Opc = Op.getOpcode();
-  if (Opc == ISD::INSERT_VECTOR_ELT) {
+  case ISD::INSERT_VECTOR_ELT: {
     // Negate of INSERT_VECTOR_ELT(UNDEF, V, INDEX) is INSERT_VECTOR_ELT(UNDEF,
     // -V, INDEX).
     SDValue InsVector = Op.getOperand(0);
@@ -41486,34 +41489,35 @@ static SDValue isFNEG(SelectionDAG &DAG, SDNode *N, unsigned Depth = 0) {
       if (NegInsVal.getValueType() == VT.getVectorElementType()) // FIXME
         return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(Op), VT, InsVector,
                            NegInsVal, Op.getOperand(2));
-    return SDValue();
+    break;
   }
+  case ISD::FSUB:
+  case ISD::XOR:
+  case X86ISD::FXOR: {
+    SDValue Op1 = Op.getOperand(1);
+    SDValue Op0 = Op.getOperand(0);
 
-  if (Opc != X86ISD::FXOR && Opc != ISD::XOR && Opc != ISD::FSUB)
-    return SDValue();
+    // For XOR and FXOR, we want to check if constant
+    // bits of Op1 are sign bit masks. For FSUB, we
+    // have to check if constant bits of Op0 are sign
+    // bit masks and hence we swap the operands.
+    if (Opc == ISD::FSUB)
+      std::swap(Op0, Op1);
 
-  SDValue Op1 = Op.getOperand(1);
-  SDValue Op0 = Op.getOperand(0);
+    APInt UndefElts;
+    SmallVector<APInt, 16> EltBits;
+    // Extract constant bits and see if they are all
+    // sign bit masks. Ignore the undef elements.
+    if (getTargetConstantBitsFromNode(Op1, ScalarSize, UndefElts, EltBits,
+                                      /* AllowWholeUndefs */ true,
+                                      /* AllowPartialUndefs */ false)) {
+      for (unsigned I = 0, E = EltBits.size(); I < E; I++)
+        if (!UndefElts[I] && !EltBits[I].isSignMask())
+          return SDValue();
 
-  // For XOR and FXOR, we want to check if constant bits of Op1 are sign bit
-  // masks. For FSUB, we have to check if constant bits of Op0 are sign bit
-  // masks and hence we swap the operands.
-  if (Opc == ISD::FSUB)
-    std::swap(Op0, Op1);
-
-  APInt UndefElts;
-  SmallVector<APInt, 16> EltBits;
-  // Extract constant bits and see if they are all sign bit masks. Ignore the
-  // undef elements.
-  if (getTargetConstantBitsFromNode(Op1, ScalarSize,
-                                    UndefElts, EltBits,
-                                    /* AllowWholeUndefs */ true,
-                                    /* AllowPartialUndefs */ false)) {
-    for (unsigned I = 0, E = EltBits.size(); I < E; I++)
-      if (!UndefElts[I] && !EltBits[I].isSignMask())
-        return SDValue();
-
-    return peekThroughBitcasts(Op0);
+      return peekThroughBitcasts(Op0);
+    }
+  }
   }
 
   return SDValue();
