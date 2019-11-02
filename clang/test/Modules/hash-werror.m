@@ -15,8 +15,8 @@
 // RUN:   -fmodules-hash-error-diagnostics 2>>%t/out
 
 // RUN: FileCheck --check-prefix=CHECKWERROR %s -input-file %t/out
-// CHECKWERROR: remark: building module 'foo' as '/[[PATH:.*]]/foo-
-// CHECKWERROR-NOT: remark: building module 'foo' as '/[[PATH]]/foo-
+// CHECKWERROR: remark: building module 'foo' as '[[PATH:.*]]{{/|\\}}foo-
+// CHECKWERROR-NOT: remark: building module 'foo' as '[[PATH]]{{/|\\}}foo-
 
 // (2) Test -Werror=
 // RUN: rm -rf %t/out %t/cache
@@ -31,8 +31,8 @@
 // RUN:   -fmodules-hash-error-diagnostics 2>>%t/out
 
 // RUN: FileCheck --check-prefix=CHECKWERROREQUALS %s -input-file %t/out
-// CHECKWERROREQUALS: remark: building module 'foo' as '/[[PATH:.*]]/foo-
-// CHECKWERROREQUALS-NOT: remark: building module 'foo' as '/[[PATH]]/foo-
+// CHECKWERROREQUALS: remark: building module 'foo' as '[[PATH:.*]]{{/|\\}}foo-
+// CHECKWERROREQUALS-NOT: remark: building module 'foo' as '[[PATH]]{{/|\\}}foo-
 
 // (3) Test -pedantic-errors
 // RUN: rm -rf %t/out %t/cache
@@ -48,7 +48,7 @@
 // RUN:   -fmodules-hash-error-diagnostics 2>>%t/out
 
 // RUN: FileCheck --check-prefix=CHECKPEDANTICERROR %s -input-file %t/out
-// CHECKPEDANTICERROR: remark: building module 'foo' as '/[[PATH:.*]]/foo-
-// CHECKPEDANTICERROR-NOT: remark: building module 'foo' as '/[[PATH]]/foo-
+// CHECKPEDANTICERROR: remark: building module 'foo' as '[[PATH:.*]]{{/|\\}}foo-
+// CHECKPEDANTICERROR-NOT: remark: building module 'foo' as '[[PATH]]{{/|\\}}foo-
 
 #include "foo.h"
