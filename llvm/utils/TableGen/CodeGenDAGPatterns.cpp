@@ -481,12 +481,12 @@ bool TypeInfer::EnforceSmallerThan(TypeSetByHwMode &Small,
 
     if (any_of(S, isIntegerOrPtr) && any_of(S, isIntegerOrPtr)) {
       auto NotInt = [](MVT VT) { return !isIntegerOrPtr(VT); };
-      Changed |= berase_if(S, NotInt) |
-                 berase_if(B, NotInt);
+      Changed |= berase_if(S, NotInt);
+      Changed |= berase_if(B, NotInt);
     } else if (any_of(S, isFloatingPoint) && any_of(B, isFloatingPoint)) {
       auto NotFP = [](MVT VT) { return !isFloatingPoint(VT); };
-      Changed |= berase_if(S, NotFP) |
-                 berase_if(B, NotFP);
+      Changed |= berase_if(S, NotFP);
+      Changed |= berase_if(B, NotFP);
     } else if (S.empty() || B.empty()) {
       Changed = !S.empty() || !B.empty();
       S.clear();
@@ -497,8 +497,8 @@ bool TypeInfer::EnforceSmallerThan(TypeSetByHwMode &Small,
     }
 
     if (none_of(S, isVector) || none_of(B, isVector)) {
-      Changed |= berase_if(S, isVector) |
-                 berase_if(B, isVector);
+      Changed |= berase_if(S, isVector);
+      Changed |= berase_if(B, isVector);
     }
   }
 
