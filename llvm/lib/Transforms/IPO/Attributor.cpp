@@ -53,6 +53,8 @@ STATISTIC(NumAttributesValidFixpoint,
           "Number of abstract attributes in a valid fixpoint state");
 STATISTIC(NumAttributesManifested,
           "Number of abstract attributes manifested in IR");
+STATISTIC(NumAttributesFixedDueToRequiredDependences,
+          "Number of abstract attributes fixed due to required dependences");
 
 // Some helper macros to deal with statistics tracking.
 //
@@ -238,7 +240,7 @@ static bool genericValueTraversal(
 
   // If we actually used liveness information so we have to record a dependence.
   if (AnyDead)
-    A.recordDependence(*LivenessAA, QueryingAA);
+    A.recordDependence(*LivenessAA, QueryingAA, DepClassTy::OPTIONAL);
 
   // All values have been visited.
   return true;
@@ -4698,7 +4700,7 @@ bool Attributor::isAssumedDead(const AbstractAttribute &AA,
     return false;
 
   // We actually used liveness information so we have to record a dependence.
-  recordDependence(*LivenessAA, AA);
+  recordDependence(*LivenessAA, AA, DepClassTy::OPTIONAL);
 
   return true;
 }
@@ -4750,7 +4752,7 @@ bool Attributor::checkForAllUses(
   }
 
   if (AnyDead)
-    recordDependence(*LivenessAA, QueryingAA);
+    recordDependence(*LivenessAA, QueryingAA, DepClassTy::OPTIONAL);
 
   return true;
 }
@@ -4808,7 +4810,7 @@ bool Attributor::checkForAllCallSites(
       // We actually used liveness information so we have to record a
       // dependence.
       if (QueryingAA)
-        recordDependence(*LivenessAA, *QueryingAA);
+        recordDependence(*LivenessAA, *QueryingAA, DepClassTy::OPTIONAL);
       continue;
     }
 
@@ -4921,7 +4923,7 @@ bool Attributor::checkForAllInstructions(
 
   // If we actually used liveness information so we have to record a dependence.
   if (AnyDead)
-    recordDependence(LivenessAA, QueryingAA);
+    recordDependence(LivenessAA, QueryingAA, DepClassTy::OPTIONAL);
 
   return true;
 }
@@ -4955,7 +4957,7 @@ bool Attributor::checkForAllReadWriteInstructions(
 
   // If we actually used liveness information so we have to record a dependence.
   if (AnyDead)
-    recordDependence(LivenessAA, QueryingAA);
+    recordDependence(LivenessAA, QueryingAA, DepClassTy::OPTIONAL);
 
   return true;
 }
@@ -4971,7 +4973,7 @@ ChangeStatus Attributor::run(Module &M) {
   unsigned IterationCounter = 1;
 
   SmallVector<AbstractAttribute *, 64> ChangedAAs;
-  SetVector<AbstractAttribute *> Worklist;
+  SetVector<AbstractAttribute *> Worklist, InvalidAAs;
   Worklist.insert(AllAbstractAttributes.begin(), AllAbstractAttributes.end());
 
   bool RecomputeDependences = false;
@@ -4981,6 +4983,29 @@ ChangeStatus Attributor::run(Module &M) {
     size_t NumAAs = AllAbstractAttributes.size();
     LLVM_DEBUG(dbgs() << "\n\n[Attributor] #Iteration: " << IterationCounter
                       << ", Worklist size: " << Worklist.size() << "\n");
+
+    // For invalid AAs we can fix dependent AAs that have a required dependence,
+    // thereby folding long dependence chains in a single step without the need
+    // to run updates.
+    for (unsigned u = 0; u < InvalidAAs.size(); ++u) {
+      AbstractAttribute *InvalidAA = InvalidAAs[u];
+      auto &QuerriedAAs = QueryMap[InvalidAA];
+      LLVM_DEBUG(dbgs() << "[Attributor] InvalidAA: " << *InvalidAA << " has "
+                        << QuerriedAAs.RequiredAAs.size() << "/"
+                        << QuerriedAAs.OptionalAAs.size()
+                        << " required/optional dependences\n");
+      for (AbstractAttribute *DepOnInvalidAA : QuerriedAAs.RequiredAAs) {
+        AbstractState &DOIAAState = DepOnInvalidAA->getState();
+        DOIAAState.indicatePessimisticFixpoint();
+        ++NumAttributesFixedDueToRequiredDependences;
+        assert(DOIAAState.isAtFixpoint() && "Expected fixpoint state!");
+        if (!DOIAAState.isValidState())
+          InvalidAAs.insert(DepOnInvalidAA);
+      }
+      if (!RecomputeDependences)
+        Worklist.insert(QuerriedAAs.OptionalAAs.begin(),
+                        QuerriedAAs.OptionalAAs.end());
+    }
 
     // If dependences (=QueryMap) are recomputed we have to look at all abstract
     // attributes again, regardless of what changed in the last iteration.
@@ -4997,15 +5022,19 @@ ChangeStatus Attributor::run(Module &M) {
     // changed to the work list.
     for (AbstractAttribute *ChangedAA : ChangedAAs) {
       auto &QuerriedAAs = QueryMap[ChangedAA];
-      Worklist.insert(QuerriedAAs.begin(), QuerriedAAs.end());
+      Worklist.insert(QuerriedAAs.OptionalAAs.begin(),
+                      QuerriedAAs.OptionalAAs.end());
+      Worklist.insert(QuerriedAAs.RequiredAAs.begin(),
+                      QuerriedAAs.RequiredAAs.end());
     }
 
     LLVM_DEBUG(dbgs() << "[Attributor] #Iteration: " << IterationCounter
                       << ", Worklist+Dependent size: " << Worklist.size()
                       << "\n");
 
-    // Reset the changed set.
+    // Reset the changed and invalid set.
     ChangedAAs.clear();
+    InvalidAAs.clear();
 
     // Update all abstract attribute in the work list and record the ones that
     // changed.
@@ -5014,6 +5043,8 @@ ChangeStatus Attributor::run(Module &M) {
         QueriedNonFixAA = false;
         if (AA->update(*this) == ChangeStatus::CHANGED) {
           ChangedAAs.push_back(AA);
+          if (!AA->getState().isValidState())
+            InvalidAAs.insert(AA);
         } else if (!QueriedNonFixAA) {
           // If the attribute did not query any non-fix information, the state
           // will not change and we can indicate that right away.
@@ -5063,7 +5094,10 @@ ChangeStatus Attributor::run(Module &M) {
     }
 
     auto &QuerriedAAs = QueryMap[ChangedAA];
-    ChangedAAs.append(QuerriedAAs.begin(), QuerriedAAs.end());
+    ChangedAAs.append(QuerriedAAs.OptionalAAs.begin(),
+                      QuerriedAAs.OptionalAAs.end());
+    ChangedAAs.append(QuerriedAAs.RequiredAAs.begin(),
+                      QuerriedAAs.RequiredAAs.end());
   }
 
   LLVM_DEBUG({
@@ -5271,11 +5305,17 @@ void Attributor::initializeInformationCache(Function &F) {
 }
 
 void Attributor::recordDependence(const AbstractAttribute &FromAA,
-                                  const AbstractAttribute &ToAA) {
+                                  const AbstractAttribute &ToAA,
+                                  DepClassTy DepClass) {
   if (FromAA.getState().isAtFixpoint())
     return;
 
-  QueryMap[&FromAA].insert(const_cast<AbstractAttribute *>(&ToAA));
+  if (DepClass == DepClassTy::REQUIRED)
+    QueryMap[&FromAA].RequiredAAs.insert(
+        const_cast<AbstractAttribute *>(&ToAA));
+  else
+    QueryMap[&FromAA].OptionalAAs.insert(
+        const_cast<AbstractAttribute *>(&ToAA));
   QueriedNonFixAA = true;
 }
 

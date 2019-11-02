@@ -1,4 +1,4 @@
-; RUN: opt -functionattrs -enable-nonnull-arg-prop -attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=7 -S < %s | FileCheck %s
+; RUN: opt -functionattrs -enable-nonnull-arg-prop -attributor -attributor-manifest-internal -attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=6 -S < %s | FileCheck %s
 ;
 ; This is an evolved example to stress test SCC parameter attribute propagation.
 ; The SCC in this test is made up of the following six function, three of which
