@@ -1092,7 +1092,7 @@ static int ar_main(int argc, char **argv) {
   cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv);
   for (size_t i = 1; i < Argv.size(); ++i) {
     StringRef Arg = Argv[i];
-    const char *match;
+    const char *match = nullptr;
     auto MatchFlagWithArg = [&](const char *expected) {
       size_t len = strlen(expected);
       if (Arg == expected) {
