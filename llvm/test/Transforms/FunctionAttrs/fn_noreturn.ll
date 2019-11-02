@@ -125,15 +125,25 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 }
 
 
-; TEST 6: willreturn means *not* no-return
-; CHECK:      Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TEST 6a: willreturn means *not* no-return or UB
+; FIXME: we should derive "UB" as an argument and report it to the user on request.
+
+; CHECK:      Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
 ; CHECK-NEXT: define i32 @endless_loop_but_willreturn
-define i32 @endless_loop_but_willreturn(i32 %a) willreturn {
+define i32 @endless_loop_but_willreturn() willreturn {
 entry:
   br label %while.body
 
 while.body:                                       ; preds = %entry, %while.body
   br label %while.body
+}
+
+; TEST 6b: willreturn means *not* no-return or UB
+; CHECK:      Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; CHECK-NEXT: define i32 @UB_and_willreturn
+define i32 @UB_and_willreturn() willreturn {
+entry:
+  unreachable
 }
 
 attributes #0 = { noinline nounwind uwtable }

@@ -3076,7 +3076,7 @@ struct AANoReturnImpl : public AANoReturn {
   void initialize(Attributor &A) override {
     AANoReturn::initialize(A);
     Function *F = getAssociatedFunction();
-    if (!F || F->hasFnAttribute(Attribute::WillReturn))
+    if (!F)
       indicatePessimisticFixpoint();
   }
 
@@ -3087,9 +3087,6 @@ struct AANoReturnImpl : public AANoReturn {
 
   /// See AbstractAttribute::updateImpl(Attributor &A).
   virtual ChangeStatus updateImpl(Attributor &A) override {
-    const auto &WillReturnAA = A.getAAFor<AAWillReturn>(*this, getIRPosition());
-    if (WillReturnAA.isKnownWillReturn())
-      return indicatePessimisticFixpoint();
     auto CheckForNoReturn = [](Instruction &) { return false; };
     if (!A.checkForAllInstructions(CheckForNoReturn, *this,
                                    {(unsigned)Instruction::Ret}))
