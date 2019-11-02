@@ -584,7 +584,8 @@ struct AAComposeTwoGenericDeduction
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    ChangeStatus ChangedF = F<AAType, G<AAType, Base, StateType>, StateType>::updateImpl(A);
+    ChangeStatus ChangedF =
+        F<AAType, G<AAType, Base, StateType>, StateType>::updateImpl(A);
     ChangeStatus ChangedG = G<AAType, Base, StateType>::updateImpl(A);
     return ChangedF | ChangedG;
   }
@@ -731,7 +732,7 @@ struct AAFromMustBeExecutedContext : public Base {
         A.getInfoCache().getMustBeExecutedContextExplorer();
 
     auto EIt = Explorer.begin(CtxI), EEnd = Explorer.end(CtxI);
-    for (unsigned u = 0 ; u < Uses.size(); ++u) {
+    for (unsigned u = 0; u < Uses.size(); ++u) {
       const Use *U = Uses[u];
       if (const Instruction *UserI = dyn_cast<Instruction>(U->getUser())) {
         bool Found = Explorer.findInContextOf(UserI, EIt, EEnd);
@@ -1524,6 +1525,138 @@ struct AANoFreeCallSite final : AANoFreeImpl {
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(nofree); }
 };
 
+/// NoFree attribute for floating values.
+struct AANoFreeFloating : AANoFreeImpl {
+  AANoFreeFloating(const IRPosition &IRP) : AANoFreeImpl(IRP) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override{STATS_DECLTRACK_FLOATING_ATTR(nofree)}
+
+  /// See Abstract Attribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    const IRPosition &IRP = getIRPosition();
+    Function *F = IRP.getAnchorScope();
+
+    const AAIsDead &LivenessAA =
+        A.getAAFor<AAIsDead>(*this, IRPosition::function(*F));
+
+    const auto &NoFreeAA =
+        A.getAAFor<AANoFree>(*this, IRPosition::function_scope(IRP));
+    if (NoFreeAA.isAssumedNoFree())
+      return ChangeStatus::UNCHANGED;
+
+    SmallPtrSet<const Use *, 8> Visited;
+    SmallVector<const Use *, 8> Worklist;
+
+    Value &AssociatedValue = getIRPosition().getAssociatedValue();
+    for (Use &U : AssociatedValue.uses())
+      Worklist.push_back(&U);
+
+    while (!Worklist.empty()) {
+      const Use *U = Worklist.pop_back_val();
+      if (!Visited.insert(U).second)
+        continue;
+
+      auto *UserI = U->getUser();
+      if (!UserI)
+        continue;
+
+      if (LivenessAA.isAssumedDead(cast<Instruction>(UserI)))
+        continue;
+
+      if (auto *CB = dyn_cast<CallBase>(UserI)) {
+        if (CB->isBundleOperand(U))
+          return indicatePessimisticFixpoint();
+        if (!CB->isArgOperand(U))
+          continue;
+
+        unsigned ArgNo = U - CB->arg_begin();
+
+        const auto &NoFreeArg = A.getAAFor<AANoFree>(
+            *this, IRPosition::callsite_argument(*CB, ArgNo));
+
+        if (NoFreeArg.isAssumedNoFree())
+          continue;
+
+        return indicatePessimisticFixpoint();
+      }
+
+      if (isa<GetElementPtrInst>(UserI) || isa<BitCastInst>(UserI) ||
+          isa<PHINode>(UserI) || isa<SelectInst>(UserI)) {
+        for (Use &U : UserI->uses())
+          Worklist.push_back(&U);
+        continue;
+      }
+
+      // Unknown user.
+      return indicatePessimisticFixpoint();
+    }
+    return ChangeStatus::UNCHANGED;
+  }
+};
+
+/// NoFree attribute for a call site argument.
+struct AANoFreeArgument final : AANoFreeFloating {
+  AANoFreeArgument(const IRPosition &IRP) : AANoFreeFloating(IRP) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(nofree) }
+};
+
+/// NoFree attribute for call site arguments.
+struct AANoFreeCallSiteArgument final : AANoFreeFloating {
+  AANoFreeCallSiteArgument(const IRPosition &IRP) : AANoFreeFloating(IRP) {}
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness information and then it makes
+    //       sense to specialize attributes for call sites arguments instead of
+    //       redirecting requests to the callee argument.
+    Argument *Arg = getAssociatedArgument();
+    if (!Arg)
+      return indicatePessimisticFixpoint();
+    const IRPosition &ArgPos = IRPosition::argument(*Arg);
+    auto &ArgAA = A.getAAFor<AANoFree>(*this, ArgPos);
+    return clampStateAndIndicateChange(
+        getState(), static_cast<const AANoFree::StateType &>(ArgAA.getState()));
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override{STATS_DECLTRACK_CSARG_ATTR(nofree)};
+};
+
+/// NoFree attribute for function return value.
+struct AANoFreeReturned final : AANoFreeFloating {
+  AANoFreeReturned(const IRPosition &IRP) : AANoFreeFloating(IRP) {
+    llvm_unreachable("NoFree is not applicable to function returns!");
+  }
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    llvm_unreachable("NoFree is not applicable to function returns!");
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    llvm_unreachable("NoFree is not applicable to function returns!");
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {}
+};
+
+/// NoFree attribute deduction for a call site return value.
+struct AANoFreeCallSiteReturned final : AANoFreeFloating {
+  AANoFreeCallSiteReturned(const IRPosition &IRP) : AANoFreeFloating(IRP) {}
+
+  ChangeStatus manifest(Attributor &A) override {
+    return ChangeStatus::UNCHANGED;
+  }
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(nofree) }
+};
+
 /// ------------------------ NonNull Argument Attribute ------------------------
 static int64_t getKnownNonNullAndDerefBytesForUse(
     Attributor &A, AbstractAttribute &QueryingAA, Value &AssociatedValue,
@@ -1646,7 +1779,8 @@ struct AANonNullFloating
       return Change;
 
     if (!NullIsDefined) {
-      const auto &DerefAA = A.getAAFor<AADereferenceable>(*this, getIRPosition());
+      const auto &DerefAA =
+          A.getAAFor<AADereferenceable>(*this, getIRPosition());
       if (DerefAA.getAssumedDereferenceableBytes())
         return Change;
     }
@@ -3250,7 +3384,7 @@ struct AANoCaptureImpl : public AANoCapture {
     // Check existing "returned" attributes.
     int ArgNo = IRP.getArgNo();
     if (F.doesNotThrow() && ArgNo >= 0) {
-      for (unsigned u = 0, e = F.arg_size(); u< e; ++u)
+      for (unsigned u = 0, e = F.arg_size(); u < e; ++u)
         if (F.hasParamAttribute(u, Attribute::Returned)) {
           if (u == unsigned(ArgNo))
             State.removeAssumedBits(NOT_CAPTURED_IN_RET);
@@ -4053,7 +4187,7 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
       if (auto *Num = dyn_cast<ConstantInt>(I.getOperand(0)))
         if (auto *Size = dyn_cast<ConstantInt>(I.getOperand(1)))
           if ((Size->getValue().umul_ov(Num->getValue(), Overflow))
-                   .sle(MaxHeapToStackSize))
+                  .sle(MaxHeapToStackSize))
             if (!Overflow && (UsesCheck(I) || FreeCheck(I))) {
               MallocCalls.insert(&I);
               return true;
@@ -4243,7 +4377,6 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
     }
     return AAMemoryBehaviorFloating::manifest(A);
   }
-
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -4654,8 +4787,7 @@ bool Attributor::checkForAllCallSites(
   for (const Use &U : Fn.uses()) {
     AbstractCallSite ACS(&U);
     if (!ACS) {
-      LLVM_DEBUG(dbgs() << "[Attributor] Function "
-                        << Fn.getName()
+      LLVM_DEBUG(dbgs() << "[Attributor] Function " << Fn.getName()
                         << " has non call site use " << *U.get() << " in "
                         << *U.getUser() << "\n");
       // BlockAddress users are allowed.
@@ -4669,7 +4801,7 @@ bool Attributor::checkForAllCallSites(
 
     const auto *LivenessAA =
         lookupAAFor<AAIsDead>(IRPosition::function(*Caller), QueryingAA,
-                           /* TrackDependence */ false);
+                              /* TrackDependence */ false);
 
     // Skip dead calls.
     if (LivenessAA && LivenessAA->isAssumedDead(I)) {
@@ -4686,8 +4818,7 @@ bool Attributor::checkForAllCallSites(
       if (!RequireAllCallSites)
         continue;
       LLVM_DEBUG(dbgs() << "[Attributor] User " << EffectiveUse->getUser()
-                        << " is an invalid use of "
-                        << Fn.getName() << "\n");
+                        << " is an invalid use of " << Fn.getName() << "\n");
       return false;
     }
 
@@ -5006,7 +5137,8 @@ ChangeStatus Attributor::run(Module &M) {
                         << " instead of " << *OldV << "\n");
       U->set(NewV);
       if (Instruction *I = dyn_cast<Instruction>(OldV))
-        if (!isa<PHINode>(I) && !ToBeDeletedInsts.count(I) && isInstructionTriviallyDead(I)) {
+        if (!isa<PHINode>(I) && !ToBeDeletedInsts.count(I) &&
+            isInstructionTriviallyDead(I)) {
           DeadInsts.push_back(I);
         }
       if (isa<Constant>(NewV) && isa<BranchInst>(U->getUser())) {
@@ -5242,6 +5374,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       // Every argument with pointer type might be marked
       // "readnone/readonly/writeonly/..."
       getOrCreateAAFor<AAMemoryBehavior>(ArgPos);
+
+      // Every argument with pointer type might be marked nofree.
+      getOrCreateAAFor<AANoFree>(ArgPos);
     }
   }
 
@@ -5284,6 +5419,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
         // Call site argument attribute "align".
         getOrCreateAAFor<AAAlign>(CSArgPos);
+
+	// Call site argument attribute "nofree".
+	getOrCreateAAFor<AANoFree>(CSArgPos);
       }
     }
     return true;
@@ -5564,7 +5702,6 @@ const char AAMemoryBehavior::ID = 0;
 
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoUnwind)
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoSync)
-CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFree)
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoRecurse)
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAWillReturn)
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoReturn)
@@ -5578,6 +5715,7 @@ CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoCapture)
 
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueSimplify)
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAIsDead)
+CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFree)
 
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAHeapToStack)
 

@@ -18,13 +18,14 @@ define void @test1_2(i8* %x1_2, i8* %y1_2, i8* %z1_2) {
 }
 
 ; FNATTR: define i8* @test2(i8* readnone returned %p)
-; ATTRIBUTOR: define i8* @test2(i8* readnone returned %p)
+; ATTRIBUTOR: define i8* @test2(i8* nofree readnone returned %p)
 define i8* @test2(i8* %p) {
   store i32 0, i32* @x
   ret i8* %p
 }
 
-; CHECK: define i1 @test3(i8* readnone %p, i8* readnone %q)
+; FNATTR: define i1 @test3(i8* readnone %p, i8* readnone %q)
+; ATTRIBUTOR: define i1 @test3(i8* nofree readnone %p, i8* nofree readnone %q)
 define i1 @test3(i8* %p, i8* %q) {
   %A = icmp ult i8* %p, %q
   ret i1 %A
@@ -39,7 +40,7 @@ define void @test4_2(i8* %p) {
 }
 
 ; FNATTR: define void @test5(i8** nocapture %p, i8* %q)
-; ATTRIBUTOR: define void @test5(i8** nocapture nonnull writeonly dereferenceable(8) %p, i8* writeonly %q)
+; ATTRIBUTOR: define void @test5(i8** nocapture nofree nonnull writeonly dereferenceable(8) %p, i8* nofree writeonly %q)
 ; Missed optz'n: we could make %q readnone, but don't break test6!
 define void @test5(i8** %p, i8* %q) {
   store i8* %q, i8** %p
@@ -57,21 +58,21 @@ define void @test6_2(i8** %p, i8* %q) {
 }
 
 ; FNATTR: define void @test7_1(i32* inalloca nocapture %a)
-; ATTRIBUTOR: define void @test7_1(i32* inalloca nocapture writeonly %a)
+; ATTRIBUTOR: define void @test7_1(i32* inalloca nocapture nofree writeonly %a)
 ; inalloca parameters are always considered written
 define void @test7_1(i32* inalloca %a) {
   ret void
 }
 
 ; FNATTR: define i32* @test8_1(i32* readnone returned %p)
-; ATTRIBUTOR: define i32* @test8_1(i32* readnone returned %p)
+; ATTRIBUTOR: define i32* @test8_1(i32* nofree readnone returned %p)
 define i32* @test8_1(i32* %p) {
 entry:
   ret i32* %p
 }
 
 ; FNATTR: define void @test8_2(i32* %p)
-; ATTRIBUTOR: define void @test8_2(i32* nocapture writeonly %p)
+; ATTRIBUTOR: define void @test8_2(i32* nocapture nofree writeonly %p)
 define void @test8_2(i32* %p) {
 entry:
   %call = call i32* @test8_1(i32* %p)
@@ -138,8 +139,8 @@ declare void @escape_readonly_ptr(i8** %addr, i8* readonly %ptr)
 ; FNATTR: define void @unsound_readnone(i8* nocapture readnone %ignored, i8* readnone %escaped_then_written)
 ; FNATTR: define void @unsound_readonly(i8* nocapture readnone %ignored, i8* readonly %escaped_then_written)
 ;
-; ATTRIBUTOR: define void @unsound_readnone(i8* nocapture readnone %ignored, i8* %escaped_then_written)
-; ATTRIBUTOR: define void @unsound_readonly(i8* nocapture readnone %ignored, i8* %escaped_then_written)
+; ATTRIBUTOR: define void @unsound_readnone(i8* nocapture nofree readnone %ignored, i8* %escaped_then_written)
+; ATTRIBUTOR: define void @unsound_readonly(i8* nocapture nofree readnone %ignored, i8* %escaped_then_written)
 define void @unsound_readnone(i8* %ignored, i8* %escaped_then_written) {
   %addr = alloca i8*
   call void @escape_readnone_ptr(i8** %addr, i8* %escaped_then_written)

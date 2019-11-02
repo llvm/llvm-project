@@ -1133,6 +1133,10 @@ Currently, only the following parameter attributes are defined:
     attribute for return values.  Addresses used in volatile operations
     are considered to be captured.
 
+``nofree``
+    This indicates that callee does not free the pointer argument. This is not
+    a valid attribute for return values.
+
 .. _nest:
 
 ``nest``
