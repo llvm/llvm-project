@@ -443,7 +443,7 @@ def FeatureFastHorizontalOps
     : SubtargetFeature<
         "fast-hops", "HasFastHorizontalOps", "true",
         "Prefer horizontal vector math instructions (haddp, phsub, etc.) over "
-        "normal vector instructions with shuffles", [FeatureSSE3]>;
+        "normal vector instructions with shuffles">;
 
 def FeatureFastScalarShiftMasks
     : SubtargetFeature<
