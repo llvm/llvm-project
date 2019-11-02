@@ -311,7 +311,7 @@ struct FunctionRecord {
   /// Regions in the function along with their counts.
   std::vector<CountedRegion> CountedRegions;
   /// The number of times this function was executed.
-  uint64_t ExecutionCount;
+  uint64_t ExecutionCount = 0;
 
   FunctionRecord(StringRef Name, ArrayRef<StringRef> Filenames)
       : Name(Name), Filenames(Filenames.begin(), Filenames.end()) {}
