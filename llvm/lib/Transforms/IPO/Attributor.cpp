@@ -2309,7 +2309,8 @@ struct AAIsDeadFunction : public AAIsDead {
   const std::string getAsStr() const override {
     return "Live[#BB " + std::to_string(AssumedLiveBlocks.size()) + "/" +
            std::to_string(getAssociatedFunction()->size()) + "][#TBEP " +
-           std::to_string(ToBeExploredFrom.size()) + "]";
+           std::to_string(ToBeExploredFrom.size()) + "][#KDE " +
+           std::to_string(KnownDeadEnds.size()) + "]";
   }
 
   /// See AbstractAttribute::manifest(...).
@@ -2330,15 +2331,16 @@ struct AAIsDeadFunction : public AAIsDead {
     // function allows to catch asynchronous exceptions.
     bool Invoke2CallAllowed = !mayCatchAsynchronousExceptions(F);
 
-    for (const Instruction *ExploreEndI : ToBeExploredFrom) {
-      auto *CB = dyn_cast<CallBase>(ExploreEndI);
+    KnownDeadEnds.set_union(ToBeExploredFrom);
+    for (const Instruction *DeadEndI : KnownDeadEnds) {
+      auto *CB = dyn_cast<CallBase>(DeadEndI);
       if (!CB)
         continue;
       const auto &NoReturnAA =
           A.getAAFor<AANoReturn>(*this, IRPosition::callsite_function(*CB));
       if (!NoReturnAA.isAssumedNoReturn())
         continue;
-      Instruction *I = const_cast<Instruction *>(ExploreEndI);
+      Instruction *I = const_cast<Instruction *>(DeadEndI);
       BasicBlock *BB = I->getParent();
       Instruction *SplitPos = I->getNextNode();
       // TODO: mark stuff before unreachable instructions as dead.
@@ -2454,7 +2456,7 @@ struct AAIsDeadFunction : public AAIsDead {
     // If it is not after a liveness barrier it is live.
     const Instruction *PrevI = I->getPrevNode();
     while (PrevI) {
-      if (ToBeExploredFrom.count(PrevI))
+      if (KnownDeadEnds.count(PrevI) || ToBeExploredFrom.count(PrevI))
         return true;
       PrevI = PrevI->getPrevNode();
     }
@@ -2493,6 +2495,9 @@ struct AAIsDeadFunction : public AAIsDead {
   /// did assume they do not transfer control to (one of their) successors.
   SmallSetVector<const Instruction *, 8> ToBeExploredFrom;
 
+  /// Collection of instructions that are known to not transfer control.
+  SmallSetVector<const Instruction *, 8> KnownDeadEnds;
+
   /// Collection of all assumed live BasicBlocks.
   DenseSet<const BasicBlock *> AssumedLiveBlocks;
 };
@@ -2505,7 +2510,7 @@ identifyAliveSuccessors(Attributor &A, const CallBase &CB,
 
   const auto &NoReturnAA = A.getAAFor<AANoReturn>(AA, IPos);
   if (NoReturnAA.isAssumedNoReturn())
-    return true;
+    return !NoReturnAA.isKnownNoReturn();
   if (CB.isTerminator())
     AliveSuccessors.push_back(&CB.getSuccessor(0)->front());
   else
@@ -2528,19 +2533,22 @@ identifyAliveSuccessors(Attributor &A, const InvokeInst &II,
   } else {
     const IRPosition &IPos = IRPosition::callsite_function(II);
     const auto &AANoUnw = A.getAAFor<AANoUnwind>(AA, IPos);
-    if (!AANoUnw.isAssumedNoUnwind()) {
+    if (AANoUnw.isAssumedNoUnwind()) {
+      UsedAssumedInformation |= !AANoUnw.isKnownNoUnwind();
+    } else {
       AliveSuccessors.push_back(&II.getUnwindDest()->front());
-      UsedAssumedInformation = true;
     }
   }
   return UsedAssumedInformation;
 }
 
-static Optional<ConstantInt *> getAssumedConstant(Attributor &A, const Value &V,
-                                                  AbstractAttribute &AA) {
+static Optional<ConstantInt *>
+getAssumedConstant(Attributor &A, const Value &V, AbstractAttribute &AA,
+                   bool &UsedAssumedInformation) {
   const auto &ValueSimplifyAA =
       A.getAAFor<AAValueSimplify>(AA, IRPosition::value(V));
   Optional<Value *> SimplifiedV = ValueSimplifyAA.getAssumedSimplifiedValue(A);
+  UsedAssumedInformation |= !ValueSimplifyAA.isKnown();
   if (!SimplifiedV.hasValue())
     return llvm::None;
   if (isa_and_nonnull<UndefValue>(SimplifiedV.getValue()))
@@ -2556,17 +2564,18 @@ identifyAliveSuccessors(Attributor &A, const BranchInst &BI,
   if (BI.getNumSuccessors() == 1) {
     AliveSuccessors.push_back(&BI.getSuccessor(0)->front());
   } else {
-    Optional<ConstantInt *> CI = getAssumedConstant(A, *BI.getCondition(), AA);
+    Optional<ConstantInt *> CI =
+        getAssumedConstant(A, *BI.getCondition(), AA, UsedAssumedInformation);
     if (!CI.hasValue()) {
       // No value yet, assume both edges are dead.
     } else if (CI.getValue()) {
       const BasicBlock *SuccBB =
           BI.getSuccessor(1 - CI.getValue()->getZExtValue());
       AliveSuccessors.push_back(&SuccBB->front());
-      UsedAssumedInformation = true;
     } else {
       AliveSuccessors.push_back(&BI.getSuccessor(0)->front());
       AliveSuccessors.push_back(&BI.getSuccessor(1)->front());
+      UsedAssumedInformation = false;
     }
   }
   return UsedAssumedInformation;
@@ -2576,23 +2585,25 @@ static bool
 identifyAliveSuccessors(Attributor &A, const SwitchInst &SI,
                         AbstractAttribute &AA,
                         SmallVectorImpl<const Instruction *> &AliveSuccessors) {
-  Optional<ConstantInt *> CI = getAssumedConstant(A, *SI.getCondition(), AA);
+  bool UsedAssumedInformation = false;
+  Optional<ConstantInt *> CI =
+      getAssumedConstant(A, *SI.getCondition(), AA, UsedAssumedInformation);
   if (!CI.hasValue()) {
     // No value yet, assume all edges are dead.
   } else if (CI.getValue()) {
     for (auto &CaseIt : SI.cases()) {
       if (CaseIt.getCaseValue() == CI.getValue()) {
         AliveSuccessors.push_back(&CaseIt.getCaseSuccessor()->front());
-        return true;
+        return UsedAssumedInformation;
       }
     }
     AliveSuccessors.push_back(&SI.getDefaultDest()->front());
-    return true;
+    return UsedAssumedInformation;
   } else {
     for (const BasicBlock *SuccBB : successors(SI.getParent()))
       AliveSuccessors.push_back(&SuccBB->front());
   }
-  return false;
+  return UsedAssumedInformation;
 }
 
 ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
@@ -2600,7 +2611,8 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
 
   LLVM_DEBUG(dbgs() << "[AAIsDead] Live [" << AssumedLiveBlocks.size() << "/"
                     << getAssociatedFunction()->size() << "] BBs and "
-                    << ToBeExploredFrom.size() << " exploration points\n");
+                    << ToBeExploredFrom.size() << " exploration points and "
+                    << KnownDeadEnds.size() << " known dead ends\n");
 
   // Copy and clear the list of instructions we need to explore from. It is
   // refilled with instructions the next update has to look at.
@@ -2644,10 +2656,14 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
       break;
     }
 
-    if (UsedAssumedInformation)
+    if (UsedAssumedInformation) {
       NewToBeExploredFrom.insert(I);
-    else
+    } else {
       Change = ChangeStatus::CHANGED;
+      if (AliveSuccessors.empty() ||
+          (I->isTerminator() && AliveSuccessors.size() < I->getNumSuccessors()))
+        KnownDeadEnds.insert(I);
+    }
 
     LLVM_DEBUG(dbgs() << "[AAIsDead] #AliveSuccessors: "
                       << AliveSuccessors.size() << " UsedAssumedInformation: "
@@ -2669,9 +2685,15 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
 
   // If we know everything is live there is no need to query for liveness.
   // Instead, indicating a pessimistic fixpoint will cause the state to be
-  // "invalid" and all queries to be answered conservatively.
+  // "invalid" and all queries to be answered conservatively without lookups.
+  // To be in this state we have to (1) finished the exploration and (3) not
+  // discovered any non-trivial dead end and (2) not ruled unreachable code
+  // dead.
   if (ToBeExploredFrom.empty() &&
-      getAssociatedFunction()->size() == AssumedLiveBlocks.size())
+      getAssociatedFunction()->size() == AssumedLiveBlocks.size() &&
+      llvm::all_of(KnownDeadEnds, [](const Instruction *DeadEndI) {
+        return DeadEndI->isTerminator() && DeadEndI->getNumSuccessors() == 0;
+      }))
     return indicatePessimisticFixpoint();
   return Change;
 }
