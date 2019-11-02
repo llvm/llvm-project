@@ -2338,7 +2338,8 @@ struct AAIsDeadFunction : public AAIsDead {
         continue;
       const auto &NoReturnAA =
           A.getAAFor<AANoReturn>(*this, IRPosition::callsite_function(*CB));
-      if (!NoReturnAA.isAssumedNoReturn())
+      bool MayReturn = !NoReturnAA.isAssumedNoReturn();
+      if (MayReturn && (!Invoke2CallAllowed || !isa<InvokeInst>(CB)))
         continue;
       Instruction *I = const_cast<Instruction *>(DeadEndI);
       BasicBlock *BB = I->getParent();
@@ -2361,6 +2362,26 @@ struct AAIsDeadFunction : public AAIsDead {
             if (AANoUnw.isAssumedNoUnwind()) {
               LLVM_DEBUG(dbgs()
                          << "[AAIsDead] Replace invoke with call inst\n");
+              CallInst *CI = createCallMatchingInvoke(II);
+              CI->insertBefore(II);
+              CI->takeName(II);
+              II->replaceAllUsesWith(CI);
+
+              // If this is a nounwind + mayreturn invoke we only remove the unwind edge.
+              // This is done by moving the invoke into a new and dead block and connecting
+              // the normal destination of the invoke with a branch that follows the call
+              // replacement we created above.
+              if (MayReturn) {
+                BasicBlock *NewDeadBB = SplitBlock(BB, II, nullptr, nullptr, nullptr, ".i2c");
+                assert(isa<BranchInst>(BB->getTerminator()) &&
+                       BB->getTerminator()->getNumSuccessors() == 1 &&
+                       BB->getTerminator()->getSuccessor(0) == NewDeadBB);
+                new UnreachableInst(I->getContext(), NewDeadBB);
+                BB->getTerminator()->setOperand(0, NormalDestBB);
+                A.deleteAfterManifest(*II);
+                continue;
+              }
+
               // We do not need an invoke (II) but instead want a call followed
               // by an unreachable. However, we do not remove II as other
               // abstract attributes might have it cached as part of their
@@ -2370,10 +2391,6 @@ struct AAIsDeadFunction : public AAIsDead {
               // only reached from the current block of II and then not reached
               // at all when we insert the unreachable.
               SplitBlockPredecessors(NormalDestBB, {BB}, ".i2c");
-              CallInst *CI = createCallMatchingInvoke(II);
-              CI->insertBefore(II);
-              CI->takeName(II);
-              II->replaceAllUsesWith(CI);
               SplitPos = CI->getNextNode();
             }
           }
