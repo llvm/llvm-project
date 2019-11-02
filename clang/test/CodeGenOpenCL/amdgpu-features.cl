@@ -14,13 +14,13 @@
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx600 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX600 %s
 // RUN: %clang_cc1 -triple amdgcn -target-cpu gfx601 -S -emit-llvm -o - %s | FileCheck --check-prefix=GFX601 %s
 
-// GFX904: "target-features"="+16-bit-insts,+ci-insts,+dpp,+flat-address-space,+fp32-denormals,+fp64-fp16-denormals,+gfx8-insts,+gfx9-insts,+s-memrealtime"
-// GFX906: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dpp,+flat-address-space,+fp32-denormals,+fp64-fp16-denormals,+gfx8-insts,+gfx9-insts,+s-memrealtime"
-// GFX908: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dpp,+flat-address-space,+fp32-denormals,+fp64-fp16-denormals,+gfx8-insts,+gfx9-insts,+s-memrealtime"
-// GFX1010: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dpp,+flat-address-space,+fp32-denormals,+fp64-fp16-denormals,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime"
-// GFX1011: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dpp,+flat-address-space,+fp32-denormals,+fp64-fp16-denormals,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime"
-// GFX1012: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dpp,+flat-address-space,+fp32-denormals,+fp64-fp16-denormals,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime"
-// GFX801: "target-features"="+16-bit-insts,+ci-insts,+dpp,+flat-address-space,+fp32-denormals,+fp64-fp16-denormals,+gfx8-insts,+s-memrealtime"
+// GFX904: "target-features"="+16-bit-insts,+ci-insts,+dpp,+flat-address-space,+fp64-fp16-denormals,+gfx8-insts,+gfx9-insts,+s-memrealtime,-fp32-denormals"
+// GFX906: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dpp,+flat-address-space,+fp64-fp16-denormals,+gfx8-insts,+gfx9-insts,+s-memrealtime,-fp32-denormals"
+// GFX908: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dpp,+flat-address-space,+fp64-fp16-denormals,+gfx8-insts,+gfx9-insts,+s-memrealtime,-fp32-denormals"
+// GFX1010: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dpp,+flat-address-space,+fp64-fp16-denormals,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,-fp32-denormals"
+// GFX1011: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dpp,+flat-address-space,+fp64-fp16-denormals,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,-fp32-denormals"
+// GFX1012: "target-features"="+16-bit-insts,+ci-insts,+dl-insts,+dot1-insts,+dot2-insts,+dot5-insts,+dot6-insts,+dpp,+flat-address-space,+fp64-fp16-denormals,+gfx10-insts,+gfx8-insts,+gfx9-insts,+s-memrealtime,-fp32-denormals"
+// GFX801: "target-features"="+16-bit-insts,+ci-insts,+dpp,+flat-address-space,+fp64-fp16-denormals,+gfx8-insts,+s-memrealtime,-fp32-denormals"
 // GFX700: "target-features"="+ci-insts,+flat-address-space,+fp64-fp16-denormals,-fp32-denormals"
 // GFX600: "target-features"="+fp64-fp16-denormals,-fp32-denormals"
 // GFX601: "target-features"="+fp64-fp16-denormals,-fp32-denormals"

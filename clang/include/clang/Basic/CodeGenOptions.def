@@ -157,7 +157,6 @@ CODEGENOPT(Reassociate       , 1, 0) ///< Allow reassociation of FP math ops
 CODEGENOPT(ReciprocalMath    , 1, 0) ///< Allow FP divisions to be reassociated.
 CODEGENOPT(NoTrappingMath    , 1, 0) ///< Set when -fno-trapping-math is enabled.
 CODEGENOPT(NoNaNsFPMath      , 1, 0) ///< Assume FP arguments, results not NaN.
-CODEGENOPT(FlushDenorm       , 1, 0) ///< Allow FP denorm numbers to be flushed to zero
 CODEGENOPT(CorrectlyRoundedDivSqrt, 1, 0) ///< -cl-fp32-correctly-rounded-divide-sqrt
 
 /// When false, this attempts to generate code as if the result of an

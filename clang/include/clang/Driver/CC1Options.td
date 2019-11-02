@@ -405,6 +405,9 @@ def cfguard_no_checks : Flag<["-"], "cfguard-no-checks">,
 def cfguard : Flag<["-"], "cfguard">,
     HelpText<"Emit Windows Control Flow Guard tables and checks">;
 
+def fdenormal_fp_math_f32_EQ : Joined<["-"], "fdenormal-fp-math-f32=">,
+   Group<f_Group>;
+
 //===----------------------------------------------------------------------===//
 // Dependency Output Options
 //===----------------------------------------------------------------------===//

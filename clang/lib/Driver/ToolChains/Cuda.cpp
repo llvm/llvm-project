@@ -21,6 +21,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <system_error>
 
@@ -614,10 +615,6 @@ void CudaToolChain::addClangTargetOptions(
   if (DeviceOffloadingKind == Action::OFK_Cuda) {
     CC1Args.push_back("-fcuda-is-device");
 
-    if (DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,
-                           options::OPT_fno_cuda_flush_denormals_to_zero, false))
-      CC1Args.push_back("-fcuda-flush-denormals-to-zero");
-
     if (DriverArgs.hasFlag(options::OPT_fcuda_approx_transcendentals,
                            options::OPT_fno_cuda_approx_transcendentals, false))
       CC1Args.push_back("-fcuda-approx-transcendentals");
@@ -716,6 +713,21 @@ void CudaToolChain::addClangTargetOptions(
       getDriver().Diag(diag::warn_drv_omp_offload_target_missingbcruntime)
           << LibOmpTargetName;
   }
+}
+
+llvm::DenormalMode CudaToolChain::getDefaultDenormalModeForType(
+    const llvm::opt::ArgList &DriverArgs, Action::OffloadKind DeviceOffloadKind,
+    const llvm::fltSemantics *FPType) const {
+  if (DeviceOffloadKind == Action::OFK_Cuda) {
+    if (FPType && FPType == &llvm::APFloat::IEEEsingle() &&
+        DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,
+                           options::OPT_fno_cuda_flush_denormals_to_zero,
+                           false))
+      return llvm::DenormalMode::PreserveSign;
+  }
+
+  assert(DeviceOffloadKind != Action::OFK_Host);
+  return llvm::DenormalMode::IEEE;
 }
 
 bool CudaToolChain::supportsDebugInfoOption(const llvm::opt::Arg *A) const {

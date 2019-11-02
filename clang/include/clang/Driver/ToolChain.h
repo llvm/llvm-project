@@ -16,7 +16,9 @@
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Multilib.h"
 #include "clang/Driver/Types.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
@@ -606,6 +608,17 @@ public:
   /// Returns true when it's possible to split LTO unit to use whole
   /// program devirtualization and CFI santiizers.
   virtual bool canSplitThinLTOUnit() const { return true; }
+
+  /// Returns the output denormal handling type in the default floating point
+  /// environment for the given \p FPType if given. Otherwise, the default
+  /// assumed mode for any floating point type.
+  virtual llvm::DenormalMode getDefaultDenormalModeForType(
+      const llvm::opt::ArgList &DriverArgs,
+      Action::OffloadKind DeviceOffloadKind,
+      const llvm::fltSemantics *FPType = nullptr) const {
+    // FIXME: This should be IEEE when default handling is fixed.
+    return llvm::DenormalMode::Invalid;
+  }
 };
 
 /// Set a ToolChain's effective triple. Reset it when the registration object

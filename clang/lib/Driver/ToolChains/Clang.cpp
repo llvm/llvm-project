@@ -2480,7 +2480,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
 
 static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
                                        bool OFastEnabled, const ArgList &Args,
-                                       ArgStringList &CmdArgs) {
+                                       ArgStringList &CmdArgs,
+                                       Action::OffloadKind DeviceOffloadKind) {
   // Handle various floating point optimization flags, mapping them to the
   // appropriate LLVM code generation flags. This is complicated by several
   // "umbrella" flags, so we do this by stepping through the flags incrementally
@@ -2502,9 +2503,17 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   StringRef FPModel = "";
   // -ffp-exception-behavior options: strict, maytrap, ignore
   StringRef FPExceptionBehavior = "";
-  StringRef DenormalFPMath = "";
+  const llvm::DenormalMode DefaultDenormalFPMath =
+      TC.getDefaultDenormalModeForType(Args, DeviceOffloadKind);
+  const llvm::DenormalMode DefaultDenormalFP32Math =
+    TC.getDefaultDenormalModeForType(Args, DeviceOffloadKind,
+                                     &llvm::APFloat::IEEEsingle());
+
+  llvm::DenormalMode DenormalFPMath = DefaultDenormalFPMath;
+  llvm::DenormalMode DenormalFP32Math = DefaultDenormalFP32Math;
   StringRef FPContract = "";
   bool StrictFPModel = false;
+
 
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
     CmdArgs.push_back("-mlimit-float-precision");
@@ -2527,7 +2536,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       ReciprocalMath = false;
       SignedZeros = true;
       // -fno_fast_math restores default denormal and fpcontract handling
-      DenormalFPMath = "";
+      DenormalFPMath = DefaultDenormalFPMath;
       FPContract = "";
       StringRef Val = A->getValue();
       if (OFastEnabled && !Val.equals("fast")) {
@@ -2621,7 +2630,19 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       break;
 
     case options::OPT_fdenormal_fp_math_EQ:
-      DenormalFPMath = A->getValue();
+      DenormalFPMath = llvm::parseDenormalFPAttribute(A->getValue());
+      if (DenormalFPMath == llvm::DenormalMode::Invalid) {
+        D.Diag(diag::err_drv_invalid_value)
+            << A->getAsString(Args) << A->getValue();
+      }
+      break;
+
+    case options::OPT_fdenormal_fp_math_f32_EQ:
+      DenormalFP32Math = llvm::parseDenormalFPAttribute(A->getValue());
+      if (DenormalFP32Math == llvm::DenormalMode::Invalid) {
+        D.Diag(diag::err_drv_invalid_value)
+            << A->getAsString(Args) << A->getValue();
+      }
       break;
 
     // Validate and pass through -ffp-contract option.
@@ -2691,7 +2712,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       TrappingMath = true;
       FPExceptionBehavior = "strict";
       // -fno_unsafe_math_optimizations restores default denormal handling
-      DenormalFPMath = "";
+      DenormalFPMath = DefaultDenormalFPMath;
+      DenormalFP32Math = DefaultDenormalFP32Math;
       break;
 
     case options::OPT_Ofast:
@@ -2724,17 +2746,20 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       TrappingMath = false;
       RoundingFPMath = false;
       // -fno_fast_math restores default denormal and fpcontract handling
-      DenormalFPMath = "";
+      DenormalFPMath = DefaultDenormalFPMath;
+      DenormalFP32Math = DefaultDenormalFP32Math;
       FPContract = "";
       break;
     }
     if (StrictFPModel) {
       // If -ffp-model=strict has been specified on command line but
       // subsequent options conflict then emit warning diagnostic.
+      // TODO: How should this interact with DenormalFP32Math?
       if (HonorINFs && HonorNaNs &&
         !AssociativeMath && !ReciprocalMath &&
         SignedZeros && TrappingMath && RoundingFPMath &&
-        DenormalFPMath.empty() && FPContract.empty())
+        DenormalFPMath != llvm::DenormalMode::IEEE &&
+        FPContract.empty())
         // OK: Current Arg doesn't conflict with -ffp-model=strict
         ;
       else {
@@ -2780,9 +2805,16 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   } else if (TrappingMathPresent)
     CmdArgs.push_back("-fno-trapping-math");
 
-  if (!DenormalFPMath.empty())
-    CmdArgs.push_back(
-        Args.MakeArgString("-fdenormal-fp-math=" + DenormalFPMath));
+  // TODO: Omit flag for the default IEEE instead
+  if (DenormalFPMath != llvm::DenormalMode::Invalid) {
+    CmdArgs.push_back(Args.MakeArgString(
+        "-fdenormal-fp-math=" + llvm::denormalModeName(DenormalFPMath)));
+  }
+
+  if (DenormalFP32Math != llvm::DenormalMode::Invalid) {
+    CmdArgs.push_back(Args.MakeArgString(
+        "-fdenormal-fp-math-f32=" + llvm::denormalModeName(DenormalFP32Math)));
+  }
 
   if (!FPContract.empty())
     CmdArgs.push_back(Args.MakeArgString("-ffp-contract=" + FPContract));
@@ -3002,6 +3034,8 @@ static void RenderTrivialAutoVarInitOptions(const Driver &D,
 }
 
 static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs) {
+  // cl-denorms-are-zero is not forwarded. It is translated into a generic flag
+  // for denormal flushing handling based on the target.
   const unsigned ForwardedArguments[] = {
       options::OPT_cl_opt_disable,
       options::OPT_cl_strict_aliasing,
@@ -3012,7 +3046,6 @@ static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs) {
       options::OPT_cl_fast_relaxed_math,
       options::OPT_cl_mad_enable,
       options::OPT_cl_no_signed_zeros,
-      options::OPT_cl_denorms_are_zero,
       options::OPT_cl_fp32_correctly_rounded_divide_sqrt,
       options::OPT_cl_uniform_work_group_size
   };
@@ -4195,7 +4228,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-mdisable-tail-calls");
 
     RenderFloatingPointOptions(TC, D, isOptimizationLevelFast(Args), Args,
-                               CmdArgs);
+                               CmdArgs, JA.getOffloadingDeviceKind());
 
     // Render ABI arguments
     switch (TC.getArch()) {
@@ -4495,7 +4528,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_fsplit_stack))
     CmdArgs.push_back("-split-stacks");
 
-  RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs);
+  RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs,
+                             JA.getOffloadingDeviceKind());
 
   if (Arg *A = Args.getLastArg(options::OPT_LongDouble_Group)) {
     if (TC.getTriple().isX86())

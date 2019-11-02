@@ -166,6 +166,9 @@ public:
   /// The floating-point denormal mode to use.
   llvm::DenormalMode FPDenormalMode = llvm::DenormalMode::Invalid;
 
+  /// The floating-point subnormal mode to use, for float.
+  llvm::DenormalMode FP32DenormalMode = llvm::DenormalMode::Invalid;
+
   /// The float precision limit to use, if non-empty.
   std::string LimitFloatPrecision;
 
