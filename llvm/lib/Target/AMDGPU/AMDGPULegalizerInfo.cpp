@@ -244,7 +244,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     S32, S64, S16, V2S16
   };
 
-  setAction({G_BRCOND, S1}, Legal);
+  setAction({G_BRCOND, S1}, Legal); // VCC branches
+  setAction({G_BRCOND, S32}, Legal); // SCC branches
 
   // TODO: All multiples of 32, vectors of pointers, all v2s16 pairs, more
   // elements for v3s16
@@ -296,7 +297,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder({G_UADDO, G_USUBO,
                                G_UADDE, G_SADDE, G_USUBE, G_SSUBE})
-    .legalFor({{S32, S1}})
+    .legalFor({{S32, S1}, {S32, S32}})
     .clampScalar(0, S32, S32)
     .scalarize(0); // TODO: Implement.
 
@@ -505,9 +506,20 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   auto &CmpBuilder =
     getActionDefinitionsBuilder(G_ICMP)
+    // The compare output type differs based on the register bank of the output,
+    // so make both s1 and s32 legal.
+    //
+    // Scalar compares producing output in scc will be promoted to s32, as that
+    // is the allocatable register type that will be needed for the copy from
+    // scc. This will be promoted during RegBankSelect, and we assume something
+    // before that won't try to use s32 result types.
+    //
+    // Vector compares producing an output in vcc/SGPR will use s1 in VCC reg
+    // bank.
     .legalForCartesianProduct(
       {S1}, {S32, S64, GlobalPtr, LocalPtr, ConstantPtr, PrivatePtr, FlatPtr})
-    .legalFor({{S1, S32}, {S1, S64}});
+    .legalForCartesianProduct(
+      {S32}, {S32, S64, GlobalPtr, LocalPtr, ConstantPtr, PrivatePtr, FlatPtr});
   if (ST.has16BitInsts()) {
     CmpBuilder.legalFor({{S1, S16}});
   }
@@ -516,7 +528,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .widenScalarToNextPow2(1)
     .clampScalar(1, S32, S64)
     .scalarize(0)
-    .legalIf(all(typeIs(0, S1), isPointer(1)));
+    .legalIf(all(typeInSet(0, {S1, S32}), isPointer(1)));
 
   getActionDefinitionsBuilder(G_FCMP)
     .legalForCartesianProduct({S1}, ST.has16BitInsts() ? FPTypes16 : FPTypesBase)
@@ -888,10 +900,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .lower();
 
   // TODO: Pointer types, any 32-bit or 64-bit vector
+
+  // Condition should be s32 for scalar, s1 for vector.
   getActionDefinitionsBuilder(G_SELECT)
     .legalForCartesianProduct({S32, S64, S16, V2S32, V2S16, V4S16,
           GlobalPtr, LocalPtr, FlatPtr, PrivatePtr,
-          LLT::vector(2, LocalPtr), LLT::vector(2, PrivatePtr)}, {S1})
+          LLT::vector(2, LocalPtr), LLT::vector(2, PrivatePtr)}, {S1, S32})
     .clampScalar(0, S16, S64)
     .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
     .fewerElementsIf(numElementsNotEven(0), scalarize(0))

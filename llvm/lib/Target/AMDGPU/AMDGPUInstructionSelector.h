@@ -38,6 +38,7 @@ class MachineInstr;
 class MachineIRBuilder;
 class MachineOperand;
 class MachineRegisterInfo;
+class RegisterBank;
 class SIInstrInfo;
 class SIMachineFunctionInfo;
 class SIRegisterInfo;
@@ -68,6 +69,10 @@ private:
 
   bool isInstrUniform(const MachineInstr &MI) const;
   bool isVCC(Register Reg, const MachineRegisterInfo &MRI) const;
+
+  const RegisterBank *getArtifactRegBank(
+    Register Reg, const MachineRegisterInfo &MRI,
+    const TargetRegisterInfo &TRI) const;
 
   /// tblgen-erated 'select' implementation.
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
