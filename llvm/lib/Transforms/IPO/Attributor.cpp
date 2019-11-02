@@ -3653,9 +3653,19 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
     auto PredForCallSite = [&](AbstractCallSite ACS) {
       // Check if we have an associated argument or not (which can happen for
       // callback calls).
-      if (Value *ArgOp = ACS.getCallArgOperand(getArgNo()))
-        return checkAndUpdate(A, *this, *ArgOp, SimplifiedAssociatedValue);
-      return false;
+      Value *ArgOp = ACS.getCallArgOperand(getArgNo());
+      if (!ArgOp)
+       return false;
+      // We can only propagate thread independent values through callbacks.
+      // This is different to direct/indirect call sites because for them we
+      // know the thread executing the caller and callee is the same. For
+      // callbacks this is not guaranteed, thus a thread dependent value could
+      // be different for the caller and callee, making it invalid to propagate.
+      if (ACS.isCallbackCall())
+        if (auto *C =dyn_cast<Constant>(ArgOp))
+          if (C->isThreadDependent())
+            return false;
+      return checkAndUpdate(A, *this, *ArgOp, SimplifiedAssociatedValue);
     };
 
     if (!A.checkForAllCallSites(PredForCallSite, *this, true))
