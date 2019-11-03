@@ -105,6 +105,9 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
       if (!FMF.allowReassoc())
         Rdx = getOrderedReduction(Builder, Acc, Vec, getOpcode(ID), MRK);
       else {
+        if (!isPowerOf2_32(Vec->getType()->getVectorNumElements()))
+          continue;
+
         Rdx = getShuffleReduction(Builder, Vec, getOpcode(ID), MRK);
         Rdx = Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(ID),
                                   Acc, Rdx, "bin.rdx");
@@ -122,6 +125,9 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
     case Intrinsic::experimental_vector_reduce_fmax:
     case Intrinsic::experimental_vector_reduce_fmin: {
       Value *Vec = II->getArgOperand(0);
+      if (!isPowerOf2_32(Vec->getType()->getVectorNumElements()))
+        continue;
+
       Rdx = getShuffleReduction(Builder, Vec, getOpcode(ID), MRK);
     } break;
     default:
