@@ -55,6 +55,10 @@ class SymbolFileDWARFDebugMap;
 class SymbolFileDWARFDwo;
 class SymbolFileDWARFDwp;
 
+namespace lldb_private {
+  class SwiftASTContext;
+}
+
 #define DIE_IS_BEING_PARSED ((lldb_private::Type *)1)
 
 class SymbolFileDWARF : public lldb_private::SymbolFile,
