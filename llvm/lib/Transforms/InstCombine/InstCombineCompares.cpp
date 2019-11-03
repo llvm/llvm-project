@@ -3817,6 +3817,7 @@ Instruction *InstCombiner::foldICmpBinOp(ICmpInst &I, const SimplifyQuery &SQ) {
   // if C2 has greater magnitude than C1:
   //  icmp (A + C1), (C + C2) -> icmp A, (C + C3)
   //  s.t. C3 = C2 - C1
+  assert(BO0 && BO1);
   if (A && C && NoOp0WrapProblem && NoOp1WrapProblem &&
       (BO0->hasOneUse() || BO1->hasOneUse()) && !I.isUnsigned())
     if (ConstantInt *C1 = dyn_cast<ConstantInt>(B))
