@@ -18,6 +18,7 @@ declare i64 @llvm.experimental.vector.reduce.umin.v2i64(<2 x i64>)
 declare double @llvm.experimental.vector.reduce.fmax.v2f64(<2 x double>)
 declare double @llvm.experimental.vector.reduce.fmin.v2f64(<2 x double>)
 
+declare i8 @llvm.experimental.vector.reduce.and.i8.v3i8(<3 x i8>)
 
 define i64 @add_i64(<2 x i64> %vec) {
 ; CHECK-LABEL: @add_i64(
@@ -302,4 +303,16 @@ define double @fmin_f64(<2 x double> %vec) {
 entry:
   %r = call double @llvm.experimental.vector.reduce.fmin.v2f64(<2 x double> %vec)
   ret double %r
+}
+
+; Test when the vector size is not power of two.
+define i8 @test_v3i8(<3 x i8> %a) nounwind {
+; CHECK-LABEL: @test_v3i8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    %b = call i8 @llvm.experimental.vector.reduce.and.v3i8(<3 x i8> %a)
+; CHECK-NEXT:    ret i8 %b
+;
+entry:
+  %b = call i8 @llvm.experimental.vector.reduce.and.i8.v3i8(<3 x i8> %a)
+  ret i8 %b
 }
