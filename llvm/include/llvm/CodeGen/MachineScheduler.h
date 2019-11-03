@@ -1009,7 +1009,7 @@ protected:
 ///   initPolicy -> initialize(DAG) -> registerRoots -> pickNode ...
 class PostGenericScheduler : public GenericSchedulerBase {
 protected:
-  ScheduleDAGMI *DAG;
+  ScheduleDAGMI *DAG = nullptr;
   SchedBoundary Top;
   SmallVector<SUnit*, 8> BotRoots;
 
