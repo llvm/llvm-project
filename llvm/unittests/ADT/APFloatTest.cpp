@@ -530,6 +530,15 @@ TEST(APFloatTest, FMA) {
     EXPECT_FALSE(losesInfo);
     EXPECT_EQ(4.0f, M1.convertToFloat());
   }
+
+  // Regression test that failed an assertion.
+  {
+    APFloat f1(-8.85242279E-41f);
+    APFloat f2(2.0f);
+    APFloat f3(8.85242279E-41f);
+    f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(-8.85242279E-41f, f1.convertToFloat());
+  }
 }
 
 TEST(APFloatTest, MinNum) {
