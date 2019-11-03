@@ -40059,7 +40059,7 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (TLI.isTypeLegal(InVT) && InVT.isVector() && SVT != MVT::i1 &&
       Subtarget.hasAVX512() && (InSVT != MVT::i16 || Subtarget.hasBWI())) {
-    unsigned TruncOpc;
+    unsigned TruncOpc = 0;
     SDValue SatVal;
     if (auto SSatVal = detectSSatPattern(In, VT)) {
       SatVal = SSatVal;
