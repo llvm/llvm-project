@@ -1267,7 +1267,7 @@ class VPlanPrinter {
 private:
   raw_ostream &OS;
   VPlan &Plan;
-  unsigned Depth;
+  unsigned Depth = 0;
   unsigned TabWidth = 2;
   std::string Indent;
   unsigned BID = 0;
