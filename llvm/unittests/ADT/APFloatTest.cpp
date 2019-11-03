@@ -2335,21 +2335,28 @@ TEST(APFloatTest, multiply) {
   APFloat PSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle(), false);
   APFloat MSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle(), true);
   APFloat PSmallestNormalized =
-    APFloat::getSmallestNormalized(APFloat::IEEEsingle(), false);
+      APFloat::getSmallestNormalized(APFloat::IEEEsingle(), false);
   APFloat MSmallestNormalized =
-    APFloat::getSmallestNormalized(APFloat::IEEEsingle(), true);
+      APFloat::getSmallestNormalized(APFloat::IEEEsingle(), true);
+
+  APFloat MaxQuad(APFloat::IEEEquad(),
+                  "0x1.ffffffffffffffffffffffffffffp+16383");
+  APFloat MinQuad(APFloat::IEEEquad(),
+                  "0x0.0000000000000000000000000001p-16382");
+  APFloat NMinQuad(APFloat::IEEEquad(),
+                   "-0x0.0000000000000000000000000001p-16382");
 
   const int OverflowStatus = APFloat::opOverflow | APFloat::opInexact;
   const int UnderflowStatus = APFloat::opUnderflow | APFloat::opInexact;
 
-  const unsigned NumTests = 169;
   struct {
     APFloat x;
     APFloat y;
     const char *result;
     int status;
     int category;
-  } SpecialCaseTests[NumTests] = {
+    APFloat::roundingMode roundingMode = APFloat::rmNearestTiesToEven;
+  } SpecialCaseTests[] = {
     { PInf, PInf, "inf", APFloat::opOK, APFloat::fcInfinity },
     { PInf, MInf, "-inf", APFloat::opOK, APFloat::fcInfinity },
     { PInf, PZero, "nan", APFloat::opInvalidOp, APFloat::fcNaN },
@@ -2587,15 +2594,70 @@ TEST(APFloatTest, multiply) {
     { MSmallestNormalized, PSmallestValue, "-0x0p+0", UnderflowStatus, APFloat::fcZero },
     { MSmallestNormalized, MSmallestValue, "0x0p+0", UnderflowStatus, APFloat::fcZero },
     { MSmallestNormalized, PSmallestNormalized, "-0x0p+0", UnderflowStatus, APFloat::fcZero },
-    { MSmallestNormalized, MSmallestNormalized, "0x0p+0", UnderflowStatus, APFloat::fcZero }
+    { MSmallestNormalized, MSmallestNormalized, "0x0p+0", UnderflowStatus, APFloat::fcZero },
+
+    {MaxQuad, MinQuad, "0x1.ffffffffffffffffffffffffffffp-111", APFloat::opOK,
+     APFloat::fcNormal, APFloat::rmNearestTiesToEven},
+    {MaxQuad, MinQuad, "0x1.ffffffffffffffffffffffffffffp-111", APFloat::opOK,
+     APFloat::fcNormal, APFloat::rmTowardPositive},
+    {MaxQuad, MinQuad, "0x1.ffffffffffffffffffffffffffffp-111", APFloat::opOK,
+     APFloat::fcNormal, APFloat::rmTowardNegative},
+    {MaxQuad, MinQuad, "0x1.ffffffffffffffffffffffffffffp-111", APFloat::opOK,
+     APFloat::fcNormal, APFloat::rmTowardZero},
+    {MaxQuad, MinQuad, "0x1.ffffffffffffffffffffffffffffp-111", APFloat::opOK,
+     APFloat::fcNormal, APFloat::rmNearestTiesToAway},
+
+    {MaxQuad, NMinQuad, "-0x1.ffffffffffffffffffffffffffffp-111", APFloat::opOK,
+     APFloat::fcNormal, APFloat::rmNearestTiesToEven},
+    {MaxQuad, NMinQuad, "-0x1.ffffffffffffffffffffffffffffp-111", APFloat::opOK,
+     APFloat::fcNormal, APFloat::rmTowardPositive},
+    {MaxQuad, NMinQuad, "-0x1.ffffffffffffffffffffffffffffp-111", APFloat::opOK,
+     APFloat::fcNormal, APFloat::rmTowardNegative},
+    {MaxQuad, NMinQuad, "-0x1.ffffffffffffffffffffffffffffp-111", APFloat::opOK,
+     APFloat::fcNormal, APFloat::rmTowardZero},
+    {MaxQuad, NMinQuad, "-0x1.ffffffffffffffffffffffffffffp-111", APFloat::opOK,
+     APFloat::fcNormal, APFloat::rmNearestTiesToAway},
+
+    {MaxQuad, MaxQuad, "inf", OverflowStatus, APFloat::fcInfinity,
+     APFloat::rmNearestTiesToEven},
+    {MaxQuad, MaxQuad, "inf", OverflowStatus, APFloat::fcInfinity,
+     APFloat::rmTowardPositive},
+    {MaxQuad, MaxQuad, "0x1.ffffffffffffffffffffffffffffp+16383",
+     APFloat::opInexact, APFloat::fcNormal, APFloat::rmTowardNegative},
+    {MaxQuad, MaxQuad, "0x1.ffffffffffffffffffffffffffffp+16383",
+     APFloat::opInexact, APFloat::fcNormal, APFloat::rmTowardZero},
+    {MaxQuad, MaxQuad, "inf", OverflowStatus, APFloat::fcInfinity,
+     APFloat::rmNearestTiesToAway},
+
+    {MinQuad, MinQuad, "0", UnderflowStatus, APFloat::fcZero,
+     APFloat::rmNearestTiesToEven},
+    {MinQuad, MinQuad, "0x0.0000000000000000000000000001p-16382",
+     UnderflowStatus, APFloat::fcNormal, APFloat::rmTowardPositive},
+    {MinQuad, MinQuad, "0", UnderflowStatus, APFloat::fcZero,
+     APFloat::rmTowardNegative},
+    {MinQuad, MinQuad, "0", UnderflowStatus, APFloat::fcZero,
+     APFloat::rmTowardZero},
+    {MinQuad, MinQuad, "0", UnderflowStatus, APFloat::fcZero,
+     APFloat::rmNearestTiesToAway},
+
+    {MinQuad, NMinQuad, "-0", UnderflowStatus, APFloat::fcZero,
+     APFloat::rmNearestTiesToEven},
+    {MinQuad, NMinQuad, "-0", UnderflowStatus, APFloat::fcZero,
+     APFloat::rmTowardPositive},
+    {MinQuad, NMinQuad, "-0x0.0000000000000000000000000001p-16382",
+     UnderflowStatus, APFloat::fcNormal, APFloat::rmTowardNegative},
+    {MinQuad, NMinQuad, "-0", UnderflowStatus, APFloat::fcZero,
+     APFloat::rmTowardZero},
+    {MinQuad, NMinQuad, "-0", UnderflowStatus, APFloat::fcZero,
+     APFloat::rmNearestTiesToAway},
   };
 
-  for (size_t i = 0; i < NumTests; ++i) {
+  for (size_t i = 0; i < array_lengthof(SpecialCaseTests); ++i) {
     APFloat x(SpecialCaseTests[i].x);
     APFloat y(SpecialCaseTests[i].y);
-    APFloat::opStatus status = x.multiply(y, APFloat::rmNearestTiesToEven);
+    APFloat::opStatus status = x.multiply(y, SpecialCaseTests[i].roundingMode);
 
-    APFloat result(APFloat::IEEEsingle(), SpecialCaseTests[i].result);
+    APFloat result(x.getSemantics(), SpecialCaseTests[i].result);
 
     EXPECT_TRUE(result.bitwiseIsEqual(x));
     EXPECT_TRUE((int)status == SpecialCaseTests[i].status);
@@ -2624,21 +2686,28 @@ TEST(APFloatTest, divide) {
   APFloat PSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle(), false);
   APFloat MSmallestValue = APFloat::getSmallest(APFloat::IEEEsingle(), true);
   APFloat PSmallestNormalized =
-    APFloat::getSmallestNormalized(APFloat::IEEEsingle(), false);
+      APFloat::getSmallestNormalized(APFloat::IEEEsingle(), false);
   APFloat MSmallestNormalized =
-    APFloat::getSmallestNormalized(APFloat::IEEEsingle(), true);
+      APFloat::getSmallestNormalized(APFloat::IEEEsingle(), true);
+
+  APFloat MaxQuad(APFloat::IEEEquad(),
+                  "0x1.ffffffffffffffffffffffffffffp+16383");
+  APFloat MinQuad(APFloat::IEEEquad(),
+                  "0x0.0000000000000000000000000001p-16382");
+  APFloat NMinQuad(APFloat::IEEEquad(),
+                   "-0x0.0000000000000000000000000001p-16382");
 
   const int OverflowStatus = APFloat::opOverflow | APFloat::opInexact;
   const int UnderflowStatus = APFloat::opUnderflow | APFloat::opInexact;
 
-  const unsigned NumTests = 169;
   struct {
     APFloat x;
     APFloat y;
     const char *result;
     int status;
     int category;
-  } SpecialCaseTests[NumTests] = {
+    APFloat::roundingMode roundingMode = APFloat::rmNearestTiesToEven;
+  } SpecialCaseTests[] = {
     { PInf, PInf, "nan", APFloat::opInvalidOp, APFloat::fcNaN },
     { PInf, MInf, "nan", APFloat::opInvalidOp, APFloat::fcNaN },
     { PInf, PZero, "inf", APFloat::opOK, APFloat::fcInfinity },
@@ -2877,14 +2946,47 @@ TEST(APFloatTest, divide) {
     { MSmallestNormalized, MSmallestValue, "0x1p+23", APFloat::opOK, APFloat::fcNormal },
     { MSmallestNormalized, PSmallestNormalized, "-0x1p+0", APFloat::opOK, APFloat::fcNormal },
     { MSmallestNormalized, MSmallestNormalized, "0x1p+0", APFloat::opOK, APFloat::fcNormal },
+
+    {MaxQuad, NMinQuad, "-inf", OverflowStatus, APFloat::fcInfinity,
+     APFloat::rmNearestTiesToEven},
+    {MaxQuad, NMinQuad, "-0x1.ffffffffffffffffffffffffffffp+16383",
+     APFloat::opInexact, APFloat::fcNormal, APFloat::rmTowardPositive},
+    {MaxQuad, NMinQuad, "-inf", OverflowStatus, APFloat::fcInfinity,
+     APFloat::rmTowardNegative},
+    {MaxQuad, NMinQuad, "-0x1.ffffffffffffffffffffffffffffp+16383",
+     APFloat::opInexact, APFloat::fcNormal, APFloat::rmTowardZero},
+    {MaxQuad, NMinQuad, "-inf", OverflowStatus, APFloat::fcInfinity,
+     APFloat::rmNearestTiesToAway},
+
+    {MinQuad, MaxQuad, "0", UnderflowStatus, APFloat::fcZero,
+     APFloat::rmNearestTiesToEven},
+    {MinQuad, MaxQuad, "0x0.0000000000000000000000000001p-16382",
+     UnderflowStatus, APFloat::fcNormal, APFloat::rmTowardPositive},
+    {MinQuad, MaxQuad, "0", UnderflowStatus, APFloat::fcZero,
+     APFloat::rmTowardNegative},
+    {MinQuad, MaxQuad, "0", UnderflowStatus, APFloat::fcZero,
+     APFloat::rmTowardZero},
+    {MinQuad, MaxQuad, "0", UnderflowStatus, APFloat::fcZero,
+     APFloat::rmNearestTiesToAway},
+
+    {NMinQuad, MaxQuad, "-0", UnderflowStatus, APFloat::fcZero,
+     APFloat::rmNearestTiesToEven},
+    {NMinQuad, MaxQuad, "-0", UnderflowStatus, APFloat::fcZero,
+     APFloat::rmTowardPositive},
+    {NMinQuad, MaxQuad, "-0x0.0000000000000000000000000001p-16382",
+     UnderflowStatus, APFloat::fcNormal, APFloat::rmTowardNegative},
+    {NMinQuad, MaxQuad, "-0", UnderflowStatus, APFloat::fcZero,
+     APFloat::rmTowardZero},
+    {NMinQuad, MaxQuad, "-0", UnderflowStatus, APFloat::fcZero,
+     APFloat::rmNearestTiesToAway},
   };
 
-  for (size_t i = 0; i < NumTests; ++i) {
+  for (size_t i = 0; i < array_lengthof(SpecialCaseTests); ++i) {
     APFloat x(SpecialCaseTests[i].x);
     APFloat y(SpecialCaseTests[i].y);
-    APFloat::opStatus status = x.divide(y, APFloat::rmNearestTiesToEven);
+    APFloat::opStatus status = x.divide(y, SpecialCaseTests[i].roundingMode);
 
-    APFloat result(APFloat::IEEEsingle(), SpecialCaseTests[i].result);
+    APFloat result(x.getSemantics(), SpecialCaseTests[i].result);
 
     EXPECT_TRUE(result.bitwiseIsEqual(x));
     EXPECT_TRUE((int)status == SpecialCaseTests[i].status);

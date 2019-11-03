@@ -143,7 +143,7 @@ struct APFloatBase {
   static const unsigned integerPartWidth = APInt::APINT_BITS_PER_WORD;
 
   /// A signed type to represent a floating point numbers unbiased exponent.
-  typedef signed short ExponentType;
+  typedef int32_t ExponentType;
 
   /// \name Floating Point Semantics.
   /// @{
