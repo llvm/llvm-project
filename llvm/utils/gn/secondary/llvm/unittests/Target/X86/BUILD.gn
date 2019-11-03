@@ -4,9 +4,7 @@ unittest("X86Tests") {
   deps = [
     "//llvm/lib/Analysis",
     "//llvm/lib/CodeGen",
-    "//llvm/lib/CodeGen/GlobalISel",
     "//llvm/lib/CodeGen/MIRParser",
-    "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
