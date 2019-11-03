@@ -1010,15 +1010,16 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
 
   if (D->getStorageDuration() == SD_Static) {
     bool ModulesCodegen = false;
-    if (Writer.WritingModule &&
-        !D->getDescribedVarTemplate() && !D->getMemberSpecializationInfo() &&
+    if (!D->getDescribedVarTemplate() && !D->getMemberSpecializationInfo() &&
         !isa<VarTemplateSpecializationDecl>(D)) {
       // When building a C++ Modules TS module interface unit, a strong
       // definition in the module interface is provided by the compilation of
       // that module interface unit, not by its users. (Inline variables are
       // still emitted in module users.)
       ModulesCodegen =
-          (Writer.WritingModule->Kind == Module::ModuleInterfaceUnit &&
+          (((Writer.WritingModule &&
+             Writer.WritingModule->Kind == Module::ModuleInterfaceUnit) ||
+            Writer.Context->getLangOpts().BuildingPCHWithObjectFile) &&
            Writer.Context->GetGVALinkageForVariable(D) == GVA_StrongExternal);
     }
     Record.push_back(ModulesCodegen);
@@ -2425,9 +2426,11 @@ void ASTRecordWriter::AddFunctionDefinition(const FunctionDecl *FD) {
 
   assert(FD->doesThisDeclarationHaveABody());
   bool ModulesCodegen = false;
-  if (Writer->WritingModule && !FD->isDependentContext()) {
+  if (!FD->isDependentContext()) {
     Optional<GVALinkage> Linkage;
-    if (Writer->WritingModule->Kind == Module::ModuleInterfaceUnit) {
+    if ((Writer->WritingModule &&
+         Writer->WritingModule->Kind == Module::ModuleInterfaceUnit) ||
+        Writer->Context->getLangOpts().BuildingPCHWithObjectFile) {
       // When building a C++ Modules TS module interface unit, a strong
       // definition in the module interface is provided by the compilation of
       // that module interface unit, not by its users. (Inline functions are
