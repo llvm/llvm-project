@@ -929,17 +929,22 @@ bool DIExpression::isValid() const {
 }
 
 bool DIExpression::isImplicit() const {
-  unsigned N = getNumElements();
-  if (isValid() && N > 0) {
-    switch (getElement(N-1)) {
-      case dwarf::DW_OP_stack_value:
-      case dwarf::DW_OP_LLVM_tag_offset:
-        return true;
-      case dwarf::DW_OP_LLVM_fragment:
-        return N > 1 && getElement(N-2) == dwarf::DW_OP_stack_value;
-      default: break;
+  if (!isValid())
+    return false;
+
+  if (getNumElements() == 0)
+    return false;
+
+  for (const auto &It : expr_ops()) {
+    switch (It.getOp()) {
+    default:
+      break;
+    case dwarf::DW_OP_stack_value:
+    case dwarf::DW_OP_LLVM_tag_offset:
+      return true;
     }
   }
+
   return false;
 }
 
@@ -1013,6 +1018,8 @@ bool DIExpression::extractIfOffset(int64_t &Offset) const {
 
 const DIExpression *DIExpression::extractAddressClass(const DIExpression *Expr,
                                                       unsigned &AddrClass) {
+  // FIXME: This seems fragile. Nothing that verifies that these elements
+  // actually map to ops and not operands.
   const unsigned PatternSize = 4;
   if (Expr->Elements.size() >= PatternSize &&
       Expr->Elements[PatternSize - 4] == dwarf::DW_OP_constu &&
