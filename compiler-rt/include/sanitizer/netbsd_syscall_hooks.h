@@ -20,8 +20,8 @@
 // DO NOT EDIT! THIS FILE HAS BEEN GENERATED!
 //
 // Generated with: generate_netbsd_syscalls.awk
-// Generated date: 2018-10-30
-// Generated from: syscalls.master,v 1.293 2018/07/31 13:00:13 rjs Exp
+// Generated date: 2019-11-01
+// Generated from: syscalls.master,v 1.296 2019/09/22 22:59:39 christos Exp
 //
 //===----------------------------------------------------------------------===//
 #ifndef SANITIZER_NETBSD_SYSCALL_HOOKS_H
@@ -1839,23 +1839,24 @@
 #define __sanitizer_syscall_post_uuidgen(res, store, count)                    \
   __sanitizer_syscall_post_impl_uuidgen(res, (long long)(store),               \
                                         (long long)(count))
-#define __sanitizer_syscall_pre_getvfsstat(buf, bufsize, flags)                \
-  __sanitizer_syscall_pre_impl_getvfsstat(                                     \
+#define __sanitizer_syscall_pre_compat_90_getvfsstat(buf, bufsize, flags)      \
+  __sanitizer_syscall_pre_impl_compat_90_getvfsstat(                           \
       (long long)(buf), (long long)(bufsize), (long long)(flags))
-#define __sanitizer_syscall_post_getvfsstat(res, buf, bufsize, flags)          \
-  __sanitizer_syscall_post_impl_getvfsstat(                                    \
+#define __sanitizer_syscall_post_compat_90_getvfsstat(res, buf, bufsize,       \
+                                                      flags)                   \
+  __sanitizer_syscall_post_impl_compat_90_getvfsstat(                          \
       res, (long long)(buf), (long long)(bufsize), (long long)(flags))
-#define __sanitizer_syscall_pre_statvfs1(path, buf, flags)                     \
-  __sanitizer_syscall_pre_impl_statvfs1((long long)(path), (long long)(buf),   \
-                                        (long long)(flags))
-#define __sanitizer_syscall_post_statvfs1(res, path, buf, flags)               \
-  __sanitizer_syscall_post_impl_statvfs1(res, (long long)(path),               \
-                                         (long long)(buf), (long long)(flags))
-#define __sanitizer_syscall_pre_fstatvfs1(fd, buf, flags)                      \
-  __sanitizer_syscall_pre_impl_fstatvfs1((long long)(fd), (long long)(buf),    \
-                                         (long long)(flags))
-#define __sanitizer_syscall_post_fstatvfs1(res, fd, buf, flags)                \
-  __sanitizer_syscall_post_impl_fstatvfs1(                                     \
+#define __sanitizer_syscall_pre_compat_90_statvfs1(path, buf, flags)           \
+  __sanitizer_syscall_pre_impl_compat_90_statvfs1(                             \
+      (long long)(path), (long long)(buf), (long long)(flags))
+#define __sanitizer_syscall_post_compat_90_statvfs1(res, path, buf, flags)     \
+  __sanitizer_syscall_post_impl_compat_90_statvfs1(                            \
+      res, (long long)(path), (long long)(buf), (long long)(flags))
+#define __sanitizer_syscall_pre_compat_90_fstatvfs1(fd, buf, flags)            \
+  __sanitizer_syscall_pre_impl_compat_90_fstatvfs1(                            \
+      (long long)(fd), (long long)(buf), (long long)(flags))
+#define __sanitizer_syscall_post_compat_90_fstatvfs1(res, fd, buf, flags)      \
+  __sanitizer_syscall_post_impl_compat_90_fstatvfs1(                           \
       res, (long long)(fd), (long long)(buf), (long long)(flags))
 #define __sanitizer_syscall_pre_compat_30_fhstatvfs1(fhp, buf, flags)          \
   __sanitizer_syscall_pre_impl_compat_30_fhstatvfs1(                           \
@@ -2143,12 +2144,13 @@
 #define __sanitizer_syscall_post___fhopen40(res, fhp, fh_size, flags)          \
   __sanitizer_syscall_post_impl___fhopen40(                                    \
       res, (long long)(fhp), (long long)(fh_size), (long long)(flags))
-#define __sanitizer_syscall_pre___fhstatvfs140(fhp, fh_size, buf, flags)       \
-  __sanitizer_syscall_pre_impl___fhstatvfs140(                                 \
+#define __sanitizer_syscall_pre_compat_90_fhstatvfs1(fhp, fh_size, buf, flags) \
+  __sanitizer_syscall_pre_impl_compat_90_fhstatvfs1(                           \
       (long long)(fhp), (long long)(fh_size), (long long)(buf),                \
       (long long)(flags))
-#define __sanitizer_syscall_post___fhstatvfs140(res, fhp, fh_size, buf, flags) \
-  __sanitizer_syscall_post_impl___fhstatvfs140(                                \
+#define __sanitizer_syscall_post_compat_90_fhstatvfs1(res, fhp, fh_size, buf,  \
+                                                      flags)                   \
+  __sanitizer_syscall_post_impl_compat_90_fhstatvfs1(                          \
       res, (long long)(fhp), (long long)(fh_size), (long long)(buf),           \
       (long long)(flags))
 #define __sanitizer_syscall_pre_compat_50___fhstat40(fhp, fh_size, sb)         \
@@ -2703,6 +2705,53 @@
                                                       clock_id)                \
   __sanitizer_syscall_post_impl_clock_getcpuclockid2(                          \
       res, (long long)(idtype), (long long)(id), (long long)(clock_id))
+#define __sanitizer_syscall_pre___getvfsstat90(buf, bufsize, flags)            \
+  __sanitizer_syscall_pre_impl___getvfsstat90(                                 \
+      (long long)(buf), (long long)(bufsize), (long long)(flags))
+#define __sanitizer_syscall_post___getvfsstat90(res, buf, bufsize, flags)      \
+  __sanitizer_syscall_post_impl___getvfsstat90(                                \
+      res, (long long)(buf), (long long)(bufsize), (long long)(flags))
+#define __sanitizer_syscall_pre___statvfs190(path, buf, flags)                 \
+  __sanitizer_syscall_pre_impl___statvfs190(                                   \
+      (long long)(path), (long long)(buf), (long long)(flags))
+#define __sanitizer_syscall_post___statvfs190(res, path, buf, flags)           \
+  __sanitizer_syscall_post_impl___statvfs190(                                  \
+      res, (long long)(path), (long long)(buf), (long long)(flags))
+#define __sanitizer_syscall_pre___fstatvfs190(fd, buf, flags)                  \
+  __sanitizer_syscall_pre_impl___fstatvfs190(                                  \
+      (long long)(fd), (long long)(buf), (long long)(flags))
+#define __sanitizer_syscall_post___fstatvfs190(res, fd, buf, flags)            \
+  __sanitizer_syscall_post_impl___fstatvfs190(                                 \
+      res, (long long)(fd), (long long)(buf), (long long)(flags))
+#define __sanitizer_syscall_pre___fhstatvfs190(fhp, fh_size, buf, flags)       \
+  __sanitizer_syscall_pre_impl___fhstatvfs190(                                 \
+      (long long)(fhp), (long long)(fh_size), (long long)(buf),                \
+      (long long)(flags))
+#define __sanitizer_syscall_post___fhstatvfs190(res, fhp, fh_size, buf, flags) \
+  __sanitizer_syscall_post_impl___fhstatvfs190(                                \
+      res, (long long)(fhp), (long long)(fh_size), (long long)(buf),           \
+      (long long)(flags))
+
+/* Compat with older releases */
+#define __sanitizer_syscall_pre_getvfsstat                                     \
+  __sanitizer_syscall_pre_compat_90_getvfsstat
+#define __sanitizer_syscall_post_getvfsstat                                    \
+  __sanitizer_syscall_post_compat_90_getvfsstat
+
+#define __sanitizer_syscall_pre_statvfs1                                       \
+  __sanitizer_syscall_pre_compat_90_statvfs1
+#define __sanitizer_syscall_post_statvfs1                                      \
+  __sanitizer_syscall_post_compat_90_statvfs1
+
+#define __sanitizer_syscall_pre_fstatvfs1                                      \
+  __sanitizer_syscall_pre_compat_90_fstatvfs1
+#define __sanitizer_syscall_post_fstatvfs1                                     \
+  __sanitizer_syscall_post_compat_90_fstatvfs1
+
+#define __sanitizer_syscall_pre___fhstatvfs140                                 \
+  __sanitizer_syscall_pre_compat_90_fhstatvfs1
+#define __sanitizer_syscall_post___fhstatvfs140                                \
+  __sanitizer_syscall_post_compat_90_fhstatvfs1
 
 #ifdef __cplusplus
 extern "C" {
@@ -4066,19 +4115,27 @@ void __sanitizer_syscall_post_impl_fsync_range(long long res, long long fd,
 void __sanitizer_syscall_pre_impl_uuidgen(long long store, long long count);
 void __sanitizer_syscall_post_impl_uuidgen(long long res, long long store,
                                            long long count);
-void __sanitizer_syscall_pre_impl_getvfsstat(long long buf, long long bufsize,
-                                             long long flags);
-void __sanitizer_syscall_post_impl_getvfsstat(long long res, long long buf,
-                                              long long bufsize,
-                                              long long flags);
-void __sanitizer_syscall_pre_impl_statvfs1(long long path, long long buf,
-                                           long long flags);
-void __sanitizer_syscall_post_impl_statvfs1(long long res, long long path,
-                                            long long buf, long long flags);
-void __sanitizer_syscall_pre_impl_fstatvfs1(long long fd, long long buf,
-                                            long long flags);
-void __sanitizer_syscall_post_impl_fstatvfs1(long long res, long long fd,
-                                             long long buf, long long flags);
+void __sanitizer_syscall_pre_impl_compat_90_getvfsstat(long long buf,
+                                                       long long bufsize,
+                                                       long long flags);
+void __sanitizer_syscall_post_impl_compat_90_getvfsstat(long long res,
+                                                        long long buf,
+                                                        long long bufsize,
+                                                        long long flags);
+void __sanitizer_syscall_pre_impl_compat_90_statvfs1(long long path,
+                                                     long long buf,
+                                                     long long flags);
+void __sanitizer_syscall_post_impl_compat_90_statvfs1(long long res,
+                                                      long long path,
+                                                      long long buf,
+                                                      long long flags);
+void __sanitizer_syscall_pre_impl_compat_90_fstatvfs1(long long fd,
+                                                      long long buf,
+                                                      long long flags);
+void __sanitizer_syscall_post_impl_compat_90_fstatvfs1(long long res,
+                                                       long long fd,
+                                                       long long buf,
+                                                       long long flags);
 void __sanitizer_syscall_pre_impl_compat_30_fhstatvfs1(long long fhp,
                                                        long long buf,
                                                        long long flags);
@@ -4304,14 +4361,15 @@ void __sanitizer_syscall_pre_impl___fhopen40(long long fhp, long long fh_size,
 void __sanitizer_syscall_post_impl___fhopen40(long long res, long long fhp,
                                               long long fh_size,
                                               long long flags);
-void __sanitizer_syscall_pre_impl___fhstatvfs140(long long fhp,
-                                                 long long fh_size,
-                                                 long long buf,
-                                                 long long flags);
-void __sanitizer_syscall_post_impl___fhstatvfs140(long long res, long long fhp,
-                                                  long long fh_size,
-                                                  long long buf,
-                                                  long long flags);
+void __sanitizer_syscall_pre_impl_compat_90_fhstatvfs1(long long fhp,
+                                                       long long fh_size,
+                                                       long long buf,
+                                                       long long flags);
+void __sanitizer_syscall_post_impl_compat_90_fhstatvfs1(long long res,
+                                                        long long fhp,
+                                                        long long fh_size,
+                                                        long long buf,
+                                                        long long flags);
 void __sanitizer_syscall_pre_impl_compat_50___fhstat40(long long fhp,
                                                        long long fh_size,
                                                        long long sb);
@@ -4721,6 +4779,29 @@ void __sanitizer_syscall_post_impl_clock_getcpuclockid2(long long res,
                                                         long long idtype,
                                                         long long id,
                                                         long long clock_id);
+void __sanitizer_syscall_pre_impl___getvfsstat90(long long buf,
+                                                 long long bufsize,
+                                                 long long flags);
+void __sanitizer_syscall_post_impl___getvfsstat90(long long res, long long buf,
+                                                  long long bufsize,
+                                                  long long flags);
+void __sanitizer_syscall_pre_impl___statvfs190(long long path, long long buf,
+                                               long long flags);
+void __sanitizer_syscall_post_impl___statvfs190(long long res, long long path,
+                                                long long buf, long long flags);
+void __sanitizer_syscall_pre_impl___fstatvfs190(long long fd, long long buf,
+                                                long long flags);
+void __sanitizer_syscall_post_impl___fstatvfs190(long long res, long long fd,
+                                                 long long buf,
+                                                 long long flags);
+void __sanitizer_syscall_pre_impl___fhstatvfs190(long long fhp,
+                                                 long long fh_size,
+                                                 long long buf,
+                                                 long long flags);
+void __sanitizer_syscall_post_impl___fhstatvfs190(long long res, long long fhp,
+                                                  long long fh_size,
+                                                  long long buf,
+                                                  long long flags);
 
 #ifdef __cplusplus
 } // extern "C"
