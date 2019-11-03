@@ -6891,7 +6891,8 @@ static bool getTargetShuffleAndZeroables(SDValue N, SmallVectorImpl<int> &Mask,
 // Replace target shuffle mask elements with known undef/zero sentinels.
 static void resolveTargetShuffleFromZeroables(SmallVectorImpl<int> &Mask,
                                               const APInt &KnownUndef,
-                                              const APInt &KnownZero) {
+                                              const APInt &KnownZero,
+                                              bool ResolveKnownZeros= true) {
   unsigned NumElts = Mask.size();
   assert(KnownUndef.getBitWidth() == NumElts &&
          KnownZero.getBitWidth() == NumElts && "Shuffle mask size mismatch");
@@ -6899,7 +6900,7 @@ static void resolveTargetShuffleFromZeroables(SmallVectorImpl<int> &Mask,
   for (unsigned i = 0; i != NumElts; ++i) {
     if (KnownUndef[i])
       Mask[i] = SM_SentinelUndef;
-    else if (KnownZero[i])
+    else if (ResolveKnownZeros && KnownZero[i])
       Mask[i] = SM_SentinelZero;
   }
 }
@@ -33071,17 +33072,36 @@ static SDValue combineX86ShufflesRecursively(
                               OpZero, DAG, Depth, false))
     return SDValue();
 
-  resolveTargetShuffleFromZeroables(OpMask, OpUndef, OpZero);
-
   SmallVector<int, 64> Mask;
   SmallVector<SDValue, 16> Ops;
 
   // We don't need to merge masks if the root is empty.
   bool EmptyRoot = (Depth == 0) && (RootMask.size() == 1);
   if (EmptyRoot) {
+    // Only resolve zeros if it will remove an input, otherwise we might end
+    // up in an infinite loop.
+    bool ResolveKnownZeros = true;
+    if (!OpZero.isNullValue()) {
+      APInt UsedInputs = APInt::getNullValue(OpInputs.size());
+      for (int i = 0, e = OpMask.size(); i != e; ++i) {
+        int M = OpMask[i];
+        if (OpUndef[i] || OpZero[i] || isUndefOrZero(M))
+          continue;
+        UsedInputs.setBit(M / OpMask.size());
+        if (UsedInputs.isAllOnesValue()) {
+          ResolveKnownZeros = false;
+          break;
+        }
+      }
+    }
+    resolveTargetShuffleFromZeroables(OpMask, OpUndef, OpZero,
+                                      ResolveKnownZeros);
+
     Mask = OpMask;
     Ops.append(OpInputs.begin(), OpInputs.end());
   } else {
+    resolveTargetShuffleFromZeroables(OpMask, OpUndef, OpZero);
+
     // Add the inputs to the Ops list, avoiding duplicates.
     Ops.append(SrcOps.begin(), SrcOps.end());
 
@@ -33216,13 +33236,18 @@ static SDValue combineX86ShufflesRecursively(
   // the remaining recursion depth.
   if (Ops.size() < (MaxRecursionDepth - Depth)) {
     for (int i = 0, e = Ops.size(); i < e; ++i) {
+      // For empty roots, we need to resolve zeroable elements before combining
+      // them with other shuffles.
+      SmallVector<int, 64> ResolvedMask = Mask;
+      if (EmptyRoot)
+        resolveTargetShuffleFromZeroables(ResolvedMask, OpUndef, OpZero);
       bool AllowVar = false;
       if (Ops[i].getNode()->hasOneUse() ||
           SDNode::areOnlyUsersOf(CombinedNodes, Ops[i].getNode()))
         AllowVar = AllowVariableMask;
       if (SDValue Res = combineX86ShufflesRecursively(
-              Ops, i, Root, Mask, CombinedNodes, Depth + 1, HasVariableMask,
-              AllowVar, DAG, Subtarget))
+              Ops, i, Root, ResolvedMask, CombinedNodes, Depth + 1,
+              HasVariableMask, AllowVar, DAG, Subtarget))
         return Res;
     }
   }
