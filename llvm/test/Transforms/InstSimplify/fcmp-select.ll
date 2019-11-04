@@ -104,9 +104,7 @@ define double @une_zero_swapped(double %x) {
 
 define double @oeq_zero_nsz(double %x) {
 ; CHECK-LABEL: @oeq_zero_nsz(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[COND:%.*]] = select nsz i1 [[CMP]], double [[X]], double 0.000000e+00
-; CHECK-NEXT:    ret double [[COND]]
+; CHECK-NEXT:    ret double 0.000000e+00
 ;
   %cmp = fcmp oeq double %x, 0.0
   %cond = select nsz i1 %cmp, double %x, double 0.0
@@ -117,9 +115,7 @@ define double @oeq_zero_nsz(double %x) {
 
 define float @oeq_zero_swapped_nsz(float %x) {
 ; CHECK-LABEL: @oeq_zero_swapped_nsz(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[COND:%.*]] = select fast i1 [[CMP]], float 0.000000e+00, float [[X]]
-; CHECK-NEXT:    ret float [[COND]]
+; CHECK-NEXT:    ret float [[X:%.*]]
 ;
   %cmp = fcmp oeq float %x, 0.0
   %cond = select fast i1 %cmp, float 0.0, float %x
@@ -130,9 +126,7 @@ define float @oeq_zero_swapped_nsz(float %x) {
 
 define double @une_zero_nsz(double %x) {
 ; CHECK-LABEL: @une_zero_nsz(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[COND:%.*]] = select ninf nsz i1 [[CMP]], double [[X]], double 0.000000e+00
-; CHECK-NEXT:    ret double [[COND]]
+; CHECK-NEXT:    ret double [[X:%.*]]
 ;
   %cmp = fcmp une double %x, 0.0
   %cond = select nsz ninf i1 %cmp, double %x, double 0.0
@@ -143,9 +137,7 @@ define double @une_zero_nsz(double %x) {
 
 define <2 x double> @une_zero_swapped_nsz(<2 x double> %x) {
 ; CHECK-LABEL: @une_zero_swapped_nsz(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <2 x double> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[COND:%.*]] = select nsz <2 x i1> [[CMP]], <2 x double> zeroinitializer, <2 x double> [[X]]
-; CHECK-NEXT:    ret <2 x double> [[COND]]
+; CHECK-NEXT:    ret <2 x double> zeroinitializer
 ;
   %cmp = fcmp une <2 x double> %x, <double 0.0, double 0.0>
   %cond = select nsz <2 x i1> %cmp, <2 x double> <double 0.0, double 0.0>, <2 x double> %x
@@ -156,9 +148,7 @@ define <2 x double> @une_zero_swapped_nsz(<2 x double> %x) {
 
 define double @oeq_nsz(double %x, double %y) {
 ; CHECK-LABEL: @oeq_nsz(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[COND:%.*]] = select fast i1 [[CMP]], double [[X]], double [[Y]]
-; CHECK-NEXT:    ret double [[COND]]
+; CHECK-NEXT:    ret double [[Y:%.*]]
 ;
   %cmp = fcmp oeq double %x, %y
   %cond = select fast i1 %cmp, double %x, double %y
@@ -169,9 +159,7 @@ define double @oeq_nsz(double %x, double %y) {
 
 define <2 x float> @oeq_swapped_nsz(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @oeq_swapped_nsz(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[COND:%.*]] = select nnan nsz <2 x i1> [[CMP]], <2 x float> [[Y]], <2 x float> [[X]]
-; CHECK-NEXT:    ret <2 x float> [[COND]]
+; CHECK-NEXT:    ret <2 x float> [[X:%.*]]
 ;
   %cmp = fcmp oeq <2 x float> %x, %y
   %cond = select nsz nnan <2 x i1> %cmp, <2 x float> %y, <2 x float> %x
@@ -182,9 +170,7 @@ define <2 x float> @oeq_swapped_nsz(<2 x float> %x, <2 x float> %y) {
 
 define double @une_nsz(double %x, double %y) {
 ; CHECK-LABEL: @une_nsz(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[COND:%.*]] = select nsz i1 [[CMP]], double [[X]], double [[Y]]
-; CHECK-NEXT:    ret double [[COND]]
+; CHECK-NEXT:    ret double [[X:%.*]]
 ;
   %cmp = fcmp une double %x, %y
   %cond = select nsz i1 %cmp, double %x, double %y
@@ -195,9 +181,7 @@ define double @une_nsz(double %x, double %y) {
 
 define <2 x double> @une_swapped_nsz(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @une_swapped_nsz(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <2 x double> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[COND:%.*]] = select fast <2 x i1> [[CMP]], <2 x double> [[Y]], <2 x double> [[X]]
-; CHECK-NEXT:    ret <2 x double> [[COND]]
+; CHECK-NEXT:    ret <2 x double> [[Y:%.*]]
 ;
   %cmp = fcmp une <2 x double> %x, %y
   %cond = select fast <2 x i1> %cmp, <2 x double> %y, <2 x double> %x
