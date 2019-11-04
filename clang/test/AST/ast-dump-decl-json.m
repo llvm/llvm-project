@@ -1475,7 +1475,173 @@ void f() {
 // CHECK-NEXT:      "qualType": "int"
 // CHECK-NEXT:     }
 // CHECK-NEXT:    }
-// CHECK-NEXT:   }
+// CHECK-NEXT:   },
+// CHECK-NEXT:   {
+// CHECK-NEXT:     "id": "0x{{.*}}", 
+// CHECK-NEXT:     "kind": "ObjCMethodDecl",
+// CHECK-NEXT:     "loc": {
+// CHECK-NEXT:       "offset": 1109,
+// CHECK-NEXT:       "line": 70,
+// CHECK-NEXT:       "col": 1,
+// CHECK-NEXT:       "tokLen": 1
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "range": {
+// CHECK-NEXT:       "begin": {
+// CHECK-NEXT:         "offset": 1109,
+// CHECK-NEXT:         "col": 1,
+// CHECK-NEXT:         "tokLen": 1
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "end": {
+// CHECK-NEXT:         "offset": 1121,
+// CHECK-NEXT:         "col": 13,
+// CHECK-NEXT:         "tokLen": 3
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "isImplicit": true,
+// CHECK-NEXT:     "name": "getterFoo",
+// CHECK-NEXT:     "returnType": {
+// CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "instance": true
+// CHECK-NEXT:   },
+// CHECK-NEXT:   {
+// CHECK-NEXT:     "id": "0x{{.*}}",
+// CHECK-NEXT:     "kind": "ObjCMethodDecl",
+// CHECK-NEXT:     "loc": {
+// CHECK-NEXT:       "offset": 1109,
+// CHECK-NEXT:       "col": 1,
+// CHECK-NEXT:       "tokLen": 1
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "range": {
+// CHECK-NEXT:       "begin": {
+// CHECK-NEXT:         "offset": 1109,
+// CHECK-NEXT:         "col": 1,
+// CHECK-NEXT:         "tokLen": 1
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "end": {
+// CHECK-NEXT:         "offset": 1121,
+// CHECK-NEXT:         "col": 13,
+// CHECK-NEXT:         "tokLen": 3
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "isImplicit": true,
+// CHECK-NEXT:     "name": "setterFoo:",
+// CHECK-NEXT:     "returnType": {
+// CHECK-NEXT:       "qualType": "void"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "instance": true,
+// CHECK-NEXT:     "inner": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:         "id": "0x{{.*}}",
+// CHECK-NEXT:         "kind": "ParmVarDecl",
+// CHECK-NEXT:         "loc": {
+// CHECK-NEXT:           "offset": 1033,
+// CHECK-NEXT:           "line": 63,
+// CHECK-NEXT:           "col": 52,
+// CHECK-NEXT:           "tokLen": 3
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "range": {
+// CHECK-NEXT:           "begin": {
+// CHECK-NEXT:             "offset": 1033,
+// CHECK-NEXT:             "col": 52,
+// CHECK-NEXT:             "tokLen": 3
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "end": {
+// CHECK-NEXT:             "offset": 1033,
+// CHECK-NEXT:             "col": 52,
+// CHECK-NEXT:             "tokLen": 3
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "name": "foo",
+// CHECK-NEXT:         "type": {
+// CHECK-NEXT:           "qualType": "int"
+// CHECK-NEXT:         }
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "ObjCMethodDecl",
+// CHECK-NEXT:      "loc": {
+// CHECK-NEXT:        "offset": 1128,
+// CHECK-NEXT:        "line": 71,
+// CHECK-NEXT:        "col": 1,
+// CHECK-NEXT:        "tokLen": 1
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:        "begin": {
+// CHECK-NEXT:          "offset": 1128,
+// CHECK-NEXT:          "col": 1,
+// CHECK-NEXT:          "tokLen": 1
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "end": {
+// CHECK-NEXT:          "offset": 1140,
+// CHECK-NEXT:          "col": 13,
+// CHECK-NEXT:          "tokLen": 3
+// CHECK-NEXT:        }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "isImplicit": true,
+// CHECK-NEXT:      "name": "bar",
+// CHECK-NEXT:      "returnType": {
+// CHECK-NEXT:        "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "instance": true
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "ObjCMethodDecl",
+// CHECK-NEXT:      "loc": {
+// CHECK-NEXT:        "offset": 1128,
+// CHECK-NEXT:        "col": 1,
+// CHECK-NEXT:        "tokLen": 1
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:        "begin": {
+// CHECK-NEXT:          "offset": 1128,
+// CHECK-NEXT:          "col": 1,
+// CHECK-NEXT:          "tokLen": 1
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "end": {
+// CHECK-NEXT:          "offset": 1140,
+// CHECK-NEXT:          "col": 13,
+// CHECK-NEXT:          "tokLen": 3
+// CHECK-NEXT:        }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "isImplicit": true,
+// CHECK-NEXT:      "name": "setBar:",
+// CHECK-NEXT:      "returnType": {
+// CHECK-NEXT:        "qualType": "void"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "instance": true,
+// CHECK-NEXT:      "inner": [
+// CHECK-NEXT:        {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "ParmVarDecl",
+// CHECK-NEXT:          "loc": {
+// CHECK-NEXT:            "offset": 1052,
+// CHECK-NEXT:            "line": 64,
+// CHECK-NEXT:            "col": 15,
+// CHECK-NEXT:            "tokLen": 3
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "range": {
+// CHECK-NEXT:            "begin": {
+// CHECK-NEXT:              "offset": 1052,
+// CHECK-NEXT:              "col": 15,
+// CHECK-NEXT:              "tokLen": 3
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "end": {
+// CHECK-NEXT:              "offset": 1052,
+// CHECK-NEXT:              "col": 15,
+// CHECK-NEXT:              "tokLen": 3
+// CHECK-NEXT:            }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "name": "bar",
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:            "qualType": "int"
+// CHECK-NEXT:          }
+// CHECK-NEXT:        }
+// CHECK-NEXT:      ]
+// CHECK-NEXT:    }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
 

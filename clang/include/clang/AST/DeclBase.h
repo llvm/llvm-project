@@ -1590,6 +1590,9 @@ class DeclContext {
     /// True if this method is the getter or setter for an explicit property.
     uint64_t IsPropertyAccessor : 1;
 
+    /// True if this method is a synthesized property accessor stub.
+    uint64_t IsSynthesizedAccessorStub : 1;
+
     /// Method has a definition.
     uint64_t IsDefined : 1;
 
