@@ -45,6 +45,7 @@ static_library("LLVMRISCVCodeGen") {
     ":RISCVGenGlobalISel",
     ":RISCVGenMCPseudoLowering",
     ":RISCVGenRegisterBank",
+    "AsmParser",
     "MCTargetDesc",
     "TargetInfo",
     "Utils",
