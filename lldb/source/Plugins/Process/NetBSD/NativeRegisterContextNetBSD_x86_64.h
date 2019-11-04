@@ -73,7 +73,7 @@ public:
 
 private:
   // Private member types.
-  enum { GPRegSet, FPRegSet, DBRegSet, XStateRegSet };
+  enum { GPRegSet, FPRegSet, XStateRegSet, DBRegSet };
 
   // Private member variables.
   struct reg m_gpr_x86_64;
