@@ -732,4 +732,50 @@ T ftemplate() {
 
 int fint(void) { return ftemplate<int>(); }
 
+// Check for imperfectly loop nests codegen.
+#if _OPENMP == 201811
+void first();
+void last();
+void inner_f();
+void inner_l();
+void body_f();
+
+// OMP5-LABEL: imperfectly_nested_loop
+void imperfectly_nested_loop() {
+  // OMP5: call void @__kmpc_for_static_init_4(
+#pragma omp for collapse(3)
+  for (int i = 0; i < 10; ++i) {
+    {
+      int a, d;
+      // OMP5: invoke void @{{.+}}first{{.+}}()
+      first();
+      // OMP5: load i32
+      // OMP5: store i32
+      a = d;
+      for (int j = 0; j < 10; ++j) {
+        int a, d;
+        // OMP5: invoke void @{{.+}}inner_f{{.+}}()
+        inner_f();
+        // OMP5: load i32
+        // OMP5: store i32
+        a = d;
+        for (int k = 0; k < 10; ++k) {
+          int a, d;
+          // OMP5: invoke void @{{.+}}body_f{{.+}}()
+          body_f();
+          // OMP5: load i32
+          // OMP5: store i32
+          a = d;
+        }
+        // OMP5: invoke void @{{.+}}inner_l{{.+}}()
+        inner_l();
+      }
+      // OMP5: invoke void @{{.+}}last{{.+}}()
+      last();
+    }
+  }
+  // OMP5: call void @__kmpc_for_static_fini(
+}
+#endif
+
 #endif // HEADER
