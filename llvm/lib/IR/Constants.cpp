@@ -611,7 +611,7 @@ Constant *Constant::replaceUndefsWith(Constant *C, Constant *Replacement) {
   SmallVector<Constant *, 32> NewC(NumElts);
   for (unsigned i = 0; i != NumElts; ++i) {
     Constant *EltC = C->getAggregateElement(i);
-    assert(EltC->getType() == Replacement->getType() &&
+    assert((!EltC || EltC->getType() == Replacement->getType()) &&
            "Expected matching types");
     NewC[i] = EltC && match(EltC, m_Undef()) ? Replacement : EltC;
   }
