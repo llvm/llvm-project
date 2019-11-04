@@ -927,7 +927,7 @@ defm V_DIV_SCALE_F64   : VOP3be_Real_gfx6_gfx7_gfx10<0x16e>;
 // GFX8, GFX9 (VI).
 //===----------------------------------------------------------------------===//
 
-let AssemblerPredicates = [isGFX8GFX9], DecoderNamespace = "GFX8" in {
+let AssemblerPredicate = isGFX8GFX9, DecoderNamespace = "GFX8" in {
 
 multiclass VOP3_Real_vi<bits<10> op> {
   def _vi : VOP3_Real<!cast<VOP_Pseudo>(NAME), SIEncodingFamily.VI>,
@@ -949,9 +949,9 @@ multiclass VOP3Interp_Real_vi<bits<10> op> {
             VOP3Interp_vi <op, !cast<VOP_Pseudo>(NAME).Pfl>;
 }
 
-} // End AssemblerPredicates = [isGFX8GFX9], DecoderNamespace = "GFX8"
+} // End AssemblerPredicate = isGFX8GFX9, DecoderNamespace = "GFX8"
 
-let AssemblerPredicates = [isGFX8Only], DecoderNamespace = "GFX8" in {
+let AssemblerPredicate = isGFX8Only, DecoderNamespace = "GFX8" in {
 
 multiclass VOP3_F16_Real_vi<bits<10> op> {
   def _vi : VOP3_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
@@ -963,9 +963,9 @@ multiclass VOP3Interp_F16_Real_vi<bits<10> op> {
             VOP3Interp_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl>;
 }
 
-} // End AssemblerPredicates = [isGFX8Only], DecoderNamespace = "GFX8"
+} // End AssemblerPredicate = isGFX8Only, DecoderNamespace = "GFX8"
 
-let AssemblerPredicates = [isGFX9Only], DecoderNamespace = "GFX9" in {
+let AssemblerPredicate = isGFX9Only, DecoderNamespace = "GFX9" in {
 
 multiclass VOP3_F16_Real_gfx9<bits<10> op, string OpName, string AsmName> {
   def _gfx9 : VOP3_Real<!cast<VOP3_Pseudo>(OpName), SIEncodingFamily.GFX9>,
@@ -999,7 +999,7 @@ multiclass VOP3_Real_gfx9<bits<10> op, string AsmName> {
             }
 }
 
-} // End AssemblerPredicates = [isGFX9Only], DecoderNamespace = "GFX9"
+} // End AssemblerPredicate = isGFX9Only, DecoderNamespace = "GFX9"
 
 defm V_MAD_U64_U32      : VOP3be_Real_vi <0x1E8>;
 defm V_MAD_I64_I32      : VOP3be_Real_vi <0x1E9>;
