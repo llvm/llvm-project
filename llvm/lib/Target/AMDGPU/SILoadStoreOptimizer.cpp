@@ -1229,7 +1229,7 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI) {
 std::pair<unsigned, unsigned>
 SILoadStoreOptimizer::getSubRegIdxs(const CombineInfo &CI) {
 
-  if (CI.Width0 == 0 || CI.Width0 == 0 || CI.Width0 + CI.Width1 > 4)
+  if (CI.Width0 == 0 || CI.Width1 == 0 || CI.Width0 + CI.Width1 > 4)
     return std::make_pair(0, 0);
 
   bool ReverseOrder;
