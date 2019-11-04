@@ -24,7 +24,6 @@
 #include "lldb/Expression/LLVMUserExpression.h"
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/Target.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 
