@@ -113,8 +113,8 @@ public:
 
 private:
   TargetSchedModel TSM;
-  const X86InstrInfo *TII;
-  const X86RegisterInfo *TRI;
+  const X86InstrInfo *TII = nullptr;
+  const X86RegisterInfo *TRI = nullptr;
 };
 }
 

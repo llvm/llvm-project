@@ -294,9 +294,9 @@ private:
 
   DenseMap<const MachineInstr *, unsigned> InstrPos;
 
-  MachineRegisterInfo *MRI;
-  const X86InstrInfo *TII;
-  const X86RegisterInfo *TRI;
+  MachineRegisterInfo *MRI = nullptr;
+  const X86InstrInfo *TII = nullptr;
+  const X86RegisterInfo *TRI = nullptr;
 };
 
 } // end anonymous namespace
