@@ -56,6 +56,8 @@ class PlaygroundREPLTest(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
+        self.registerSharedLibrariesWithTarget(target, ['libPlaygroundsRuntime.dylib'])
+
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
             'Set breakpoint here', self.PlaygroundStub_source_spec)
