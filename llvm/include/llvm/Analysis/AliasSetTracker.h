@@ -344,8 +344,8 @@ class AliasSetTracker {
   struct ASTCallbackVHDenseMapInfo : public DenseMapInfo<Value *> {};
 
   AliasAnalysis &AA;
-  MemorySSA *MSSA;
-  Loop *L;
+  MemorySSA *MSSA = nullptr;
+  Loop *L = nullptr;
   ilist<AliasSet> AliasSets;
 
   using PointerMapType = DenseMap<ASTCallbackVH, AliasSet::PointerRec *,
