@@ -1061,6 +1061,7 @@ static bool shouldSplit(Instruction *InsertPoint,
                         DenseSet<Value *> &ConditionValues,
                         DominatorTree &DT,
                         DenseSet<Instruction *> &Unhoistables) {
+  assert(InsertPoint && "Null InsertPoint");
   CHR_DEBUG(
       dbgs() << "shouldSplit " << *InsertPoint << " PrevConditionValues ";
       for (Value *V : PrevConditionValues) {
@@ -1071,7 +1072,6 @@ static bool shouldSplit(Instruction *InsertPoint,
         dbgs() << *V << ", ";
       }
       dbgs() << "\n");
-  assert(InsertPoint && "Null InsertPoint");
   // If any of Bases isn't hoistable to the hoist point, split.
   for (Value *V : ConditionValues) {
     DenseMap<Instruction *, bool> Visited;
