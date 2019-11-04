@@ -3104,11 +3104,14 @@
 #CHECK: larl	%r0, 1
 #CHECK: error: offset out of range
 #CHECK: larl	%r0, 0x100000000
+#CHECK: error: offset out of range
+#CHECK: larl	%r1, __unnamed_1+3564822854692
 
 	larl	%r0, -0x1000000002
 	larl	%r0, -1
 	larl	%r0, 1
 	larl	%r0, 0x100000000
+	larl	%r1, __unnamed_1+3564822854692
 
 #CHECK: error: invalid use of indexed addressing
 #CHECK: lasp	160(%r1,%r15),160(%r15)
@@ -3840,11 +3843,14 @@
 #CHECK: lrl	%r0, 1
 #CHECK: error: offset out of range
 #CHECK: lrl	%r0, 0x100000000
+#CHECK: error: offset out of range
+#CHECK: lrl	%r1, __unnamed_1+3564822854692
 
 	lrl	%r0, -0x1000000002
 	lrl	%r0, -1
 	lrl	%r0, 1
 	lrl	%r0, 0x100000000
+	lrl	%r1, __unnamed_1+3564822854692
 
 #CHECK: error: invalid operand
 #CHECK: lrv	%r0, -524289
