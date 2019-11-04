@@ -93,6 +93,10 @@ New Compiler Flags
   Clang. Setting the version to zero causes Clang to leave ``__GNUC__`` and
   other GNU-namespaced macros, such as ``__GXX_WEAK__``, undefined.
 
+- vzeroupper insertion on X86 targets can now be disabled with -mno-vzeroupper.
+  You can also force vzeroupper insertion to be used on CPUs that normally
+  wouldn't with -mvzeroupper.
+
 Deprecated Compiler Flags
 -------------------------
 

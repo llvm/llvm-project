@@ -279,7 +279,7 @@ void VZeroUpperInserter::processBasicBlock(MachineBasicBlock &MBB) {
 /// function calls.
 bool VZeroUpperInserter::runOnMachineFunction(MachineFunction &MF) {
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
-  if (!ST.hasAVX() || ST.hasFastPartialYMMorZMMWrite())
+  if (!ST.hasAVX() || !ST.insertVZEROUPPER())
     return false;
   TII = ST.getInstrInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
