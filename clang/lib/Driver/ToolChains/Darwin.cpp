@@ -1527,8 +1527,8 @@ getDeploymentTargetFromEnvironmentVariables(const Driver &TheDriver,
           Targets[Darwin::TvOS] = "";
   } else {
     // Don't allow conflicts in any other platform.
-    int FirstTarget = llvm::array_lengthof(Targets);
-    for (int I = 0; I != llvm::array_lengthof(Targets); ++I) {
+    unsigned FirstTarget = llvm::array_lengthof(Targets);
+    for (unsigned I = 0; I != llvm::array_lengthof(Targets); ++I) {
       if (Targets[I].empty())
         continue;
       if (FirstTarget == llvm::array_lengthof(Targets))
