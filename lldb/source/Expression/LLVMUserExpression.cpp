@@ -161,9 +161,8 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
       function_stack_bottom = function_stack_pointer - HostInfo::GetPageSize();
       function_stack_top = function_stack_pointer;
 
-      LLDB_LOGF(
-          log,
-          "-- [UserExpression::Execute] Execution of expression begins --");
+      LLDB_LOGF(log,
+                "-- [UserExpression::Execute] Execution of expression begins --");
 
       if (exe_ctx.GetProcessPtr())
         exe_ctx.GetProcessPtr()->SetRunningUserExpression(true);
@@ -239,8 +238,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
         }
       } else {
         diagnostic_manager.Printf(
-            eDiagnosticSeverityError,
-            "Couldn't execute function; result was %s",
+            eDiagnosticSeverityError, "Couldn't execute function; result was %s",
             Process::ExecutionResultAsCString(execution_result));
         return execution_result;
       }
