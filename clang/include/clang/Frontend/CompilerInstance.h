@@ -126,10 +126,6 @@ class CompilerInstance : public ModuleLoader {
 
   std::vector<std::shared_ptr<DependencyCollector>> DependencyCollectors;
 
-  /// The set of top-level modules that has already been loaded,
-  /// along with the module map
-  llvm::DenseMap<const IdentifierInfo *, Module *> KnownModules;
-
   /// The set of top-level modules that has already been built on the
   /// fly as part of this overall compilation action.
   std::map<std::string, std::string> BuiltModules;
