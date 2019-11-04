@@ -135,9 +135,9 @@ bool CommandInterpreter::GetPromptOnQuit() const {
       nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
-void CommandInterpreter::SetPromptOnQuit(bool enable) {
+void CommandInterpreter::SetPromptOnQuit(bool b) {
   const uint32_t idx = ePropertyPromptOnQuit;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, enable);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
 }
 
 bool CommandInterpreter::GetEchoCommands() const {
@@ -354,7 +354,6 @@ void CommandInterpreter::Initialize() {
     AddAlias("p", cmd_obj_sp, "--")->SetHelpLong("");
     AddAlias("print", cmd_obj_sp, "--")->SetHelpLong("");
     AddAlias("call", cmd_obj_sp, "--")->SetHelpLong("");
-
     if (auto po = AddAlias("po", cmd_obj_sp, "-O --")) {
       po->SetHelp("Evaluate an expression on the current thread.  Displays any "
                   "returned value with formatting "
