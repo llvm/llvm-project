@@ -128,7 +128,6 @@ class APInt;
 class APSInt;
 class LLVMContext;
 class ExecutionEngine;
-class TargetOptions;
 }
 
 #endif // #if defined(__cplusplus)

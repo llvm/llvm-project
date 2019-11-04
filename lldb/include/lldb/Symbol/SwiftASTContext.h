@@ -27,6 +27,7 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Target/TargetOptions.h"
 
 #include <map>
 #include <set>
