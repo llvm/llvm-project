@@ -22,17 +22,17 @@ struct PolyDerived : Poly
 void basic_bad()
 {
   // ptr -> nonptr
-  (void)dynamic_cast<A>((A*)0); // expected-error {{'A' is not a reference or pointer}}
+  (void)dynamic_cast<A>((A*)0); // expected-error {{invalid target type 'A' for dynamic_cast; target type must be a reference or pointer type to a defined class}}
   // nonptr -> ptr
-  (void)dynamic_cast<A*>(0); // expected-error {{'int' is not a pointer}}
+  (void)dynamic_cast<A*>(0); // expected-error {{cannot use dynamic_cast to convert from 'int' to 'A *'}}
   // ptr -> noncls
-  (void)dynamic_cast<int*>((A*)0); // expected-error {{'int' is not a class}}
+  (void)dynamic_cast<int*>((A*)0); // expected-error {{'int' is not a class type}}
   // noncls -> ptr
-  (void)dynamic_cast<A*>((int*)0); // expected-error {{'int' is not a class}}
+  (void)dynamic_cast<A*>((int*)0); // expected-error {{'int' is not a class type}}
   // ref -> noncls
-  (void)dynamic_cast<int&>(*((A*)0)); // expected-error {{'int' is not a class}}
+  (void)dynamic_cast<int&>(*((A*)0)); // expected-error {{'int' is not a class type}}
   // noncls -> ref
-  (void)dynamic_cast<A&>(*((int*)0)); // expected-error {{'int' is not a class}}
+  (void)dynamic_cast<A&>(*((int*)0)); // expected-error {{'int' is not a class type}}
   // ptr -> incomplete
   (void)dynamic_cast<Incomplete*>((A*)0); // expected-error {{'Incomplete' is an incomplete type}}
   // incomplete -> ptr
