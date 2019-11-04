@@ -15,11 +15,8 @@
 
 
 #include "lldb/Expression/ExpressionTypeSystemHelper.h"
-#include "lldb/Symbol/CompilerType.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
-
-#include "llvm/ADT/SmallVector.h"
 
 namespace lldb_private {
 
