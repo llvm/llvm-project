@@ -63,9 +63,7 @@ public:
 
   bool CanInterpret() override { return m_can_interpret; }
 
-  virtual Materializer *GetMaterializer() override {
-    return m_materializer_up.get();
-  }
+  Materializer *GetMaterializer() override { return m_materializer_up.get(); }
 
   /// Return the string that the parser should parse.  Must be a full
   /// translation unit.
