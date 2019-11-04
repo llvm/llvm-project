@@ -7175,8 +7175,8 @@ bool MipsAsmParser::parseSetArchDirective() {
     return reportParseError("unexpected token, expected equals sign");
 
   Parser.Lex();
-  StringRef Arch;
-  if (Parser.parseIdentifier(Arch))
+  StringRef Arch = getParser().parseStringToEndOfStatement().trim();
+  if (Arch.empty())
     return reportParseError("expected arch identifier");
 
   StringRef ArchFeatureName =
@@ -7197,6 +7197,7 @@ bool MipsAsmParser::parseSetArchDirective() {
           .Case("mips64r5", "mips64r5")
           .Case("mips64r6", "mips64r6")
           .Case("octeon", "cnmips")
+          .Case("octeon+", "cnmipsp")
           .Case("r4000", "mips3") // This is an implementation of Mips3.
           .Default("");
 
