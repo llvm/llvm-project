@@ -64,7 +64,7 @@ enum ExecutionModeType {
   NONE
 };
 
-/// Use a single entity to encode a kernel and a set of flags
+/// Use a single entity to encode a kernel and a set of flags.
 struct KernelTy {
   CUfunction Func;
 
