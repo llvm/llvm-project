@@ -44,7 +44,7 @@ DynamicSymbols:
 ## Check we can use numeric values to refer to sections.
 
 # RUN: yaml2obj --docnum=2 %s -o %t2
-# RUN: not llvm-readobj --dyn-symbols %t2 2>&1 | FileCheck -DFILE=%t2 %s --check-prefix=NUM
+# RUN: llvm-readobj --dyn-symbols %t2 2>&1 | FileCheck -DFILE=%t2 %s --check-prefix=NUM
 
 # NUM:      Name: foo
 # NUM:      Section:
@@ -54,7 +54,10 @@ DynamicSymbols:
 # NUM:      Section: 
 # NUM-SAME: .strtab (0x2)
 
-# NUM: error: '[[FILE]]': invalid section index: 255
+# NUM:      Name: zed
+# NUM: warning: '[[FILE]]': invalid section index: 255
+# NUM:      Section: 
+# NUM-SAME: <?> (0xFF)
 
 --- !ELF
 FileHeader:
