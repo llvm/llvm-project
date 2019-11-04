@@ -417,7 +417,7 @@ class SMRD_Real_si <bits<5> op, SM_Pseudo ps>
   , SIMCInstr<ps.PseudoInstr, SIEncodingFamily.SI>
   , Enc32 {
 
-  let AssemblerPredicates = [isGFX6GFX7];
+  let AssemblerPredicate = isGFX6GFX7;
   let DecoderNamespace = "GFX6GFX7";
 
   let Inst{7-0}   = !if(ps.has_offset, offset{7-0}, ?);
@@ -471,7 +471,7 @@ class SMEM_Real_vi <bits<8> op, SM_Pseudo ps>
   , Enc64 {
   bit glc;
 
-  let AssemblerPredicates = [isGFX8GFX9];
+  let AssemblerPredicate = isGFX8GFX9;
   let DecoderNamespace = "GFX8";
 
   let Inst{5-0}   = !if(ps.has_sbase, sbase{6-1}, ?);
@@ -660,7 +660,7 @@ class SMRD_Real_Load_IMM_ci <bits<5> op, SM_Load_Pseudo ps> :
   SM_Real<ps>,
   Enc64 {
 
-  let AssemblerPredicates = [isGFX7Only];
+  let AssemblerPredicate = isGFX7Only;
   let DecoderNamespace = "GFX7";
   let InOperandList = (ins ps.BaseClass:$sbase, smrd_literal_offset:$offset, GLC:$glc, DLC:$dlc);
 
@@ -697,7 +697,7 @@ class SMRD_Real_ci <bits<5> op, SM_Pseudo ps>
   , SIMCInstr<ps.PseudoInstr, SIEncodingFamily.SI>
   , Enc32 {
 
-  let AssemblerPredicates = [isGFX7Only];
+  let AssemblerPredicate = isGFX7Only;
   let DecoderNamespace = "GFX7";
 
   let Inst{7-0}   = !if(ps.has_offset, offset{7-0}, ?);
@@ -835,7 +835,7 @@ class SMEM_Real_gfx10<bits<8> op, SM_Pseudo ps> :
   bit glc;
   bit dlc;
 
-  let AssemblerPredicates = [isGFX10Plus];
+  let AssemblerPredicate = isGFX10Plus;
   let DecoderNamespace = "GFX10";
 
   let Inst{5-0}   = !if(ps.has_sbase, sbase{6-1}, ?);

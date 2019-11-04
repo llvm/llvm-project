@@ -1218,7 +1218,7 @@ defm V_CMPX_T_U64     : VOPCX_Real_gfx6_gfx7_gfx10<0x0f7>;
 //===----------------------------------------------------------------------===//
 
 multiclass VOPC_Real_vi <bits<10> op> {
-  let AssemblerPredicates = [isGFX8GFX9], DecoderNamespace = "GFX8" in {
+  let AssemblerPredicate = isGFX8GFX9, DecoderNamespace = "GFX8" in {
     def _e32_vi :
       VOPC_Real<!cast<VOPC_Pseudo>(NAME#"_e32"), SIEncodingFamily.VI>,
       VOPCe<op{7-0}>;

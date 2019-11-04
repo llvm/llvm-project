@@ -1503,7 +1503,7 @@ defm S_SETREG_IMM32_B32 : SOPK_Real64_gfx6_gfx7_gfx10<0x015>;
 
 class Select_vi<string opName> :
   SIMCInstr<opName, SIEncodingFamily.VI> {
-  list<Predicate> AssemblerPredicates = [isGFX8GFX9];
+  Predicate AssemblerPredicate = isGFX8GFX9;
   string DecoderNamespace = "GFX8";
 }
 
