@@ -1724,7 +1724,6 @@ Instruction *InstCombiner::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
             // The first two arguments can vary for any GEP, the rest have to be
             // static for struct slots
-            assert(CurTy && "No current type?");
             if (J > 1 && CurTy->isStructTy())
               return nullptr;
 
