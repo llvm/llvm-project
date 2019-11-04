@@ -673,6 +673,7 @@ void ASTDeclWriter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
   Record.push_back(D->isInstanceMethod());
   Record.push_back(D->isVariadic());
   Record.push_back(D->isPropertyAccessor());
+  Record.push_back(D->isSynthesizedAccessorStub());
   Record.push_back(D->isDefined());
   Record.push_back(D->isOverriding());
   Record.push_back(D->hasSkippedBody());
@@ -884,6 +885,8 @@ void ASTDeclWriter::VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *D) {
   Record.AddDeclRef(D->getPropertyDecl());
   Record.AddDeclRef(D->getPropertyIvarDecl());
   Record.AddSourceLocation(D->getPropertyIvarDeclLoc());
+  Record.AddDeclRef(D->getGetterMethodDecl());
+  Record.AddDeclRef(D->getSetterMethodDecl());
   Record.AddStmt(D->getGetterCXXConstructor());
   Record.AddStmt(D->getSetterCXXAssignment());
   Code = serialization::DECL_OBJC_PROPERTY_IMPL;

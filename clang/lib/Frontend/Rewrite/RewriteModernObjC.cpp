@@ -908,9 +908,9 @@ RewriteModernObjC::getIvarAccessString(ObjCIvarDecl *D) {
 static bool mustSynthesizeSetterGetterMethod(ObjCImplementationDecl *IMP,
                                              ObjCPropertyDecl *PD,
                                              bool getter) {
-  return getter ? !IMP->getInstanceMethod(PD->getGetterName())
-                : !IMP->getInstanceMethod(PD->getSetterName());
-
+  auto *OMD = IMP->getInstanceMethod(getter ? PD->getGetterName()
+                                            : PD->getSetterName());
+  return !OMD || OMD->isSynthesizedAccessorStub();
 }
 
 void RewriteModernObjC::RewritePropertyImplDecl(ObjCPropertyImplDecl *PID,
@@ -952,7 +952,7 @@ void RewriteModernObjC::RewritePropertyImplDecl(ObjCPropertyImplDecl *PID,
             "id objc_getProperty(id, SEL, long, bool);\n";
     }
     RewriteObjCMethodDecl(OID->getContainingInterface(),
-                          PD->getGetterMethodDecl(), Getr);
+                          PID->getGetterMethodDecl(), Getr);
     Getr += "{ ";
     // Synthesize an explicit cast to gain access to the ivar.
     // See objc-act.c:objc_synthesize_new_getter() for details.
@@ -960,7 +960,7 @@ void RewriteModernObjC::RewritePropertyImplDecl(ObjCPropertyImplDecl *PID,
       // return objc_getProperty(self, _cmd, offsetof(ClassDecl, OID), 1)
       Getr += "typedef ";
       const FunctionType *FPRetType = nullptr;
-      RewriteTypeIntoString(PD->getGetterMethodDecl()->getReturnType(), Getr,
+      RewriteTypeIntoString(PID->getGetterMethodDecl()->getReturnType(), Getr,
                             FPRetType);
       Getr += " _TYPE";
       if (FPRetType) {
@@ -1012,7 +1012,7 @@ void RewriteModernObjC::RewritePropertyImplDecl(ObjCPropertyImplDecl *PID,
   }
 
   RewriteObjCMethodDecl(OID->getContainingInterface(),
-                        PD->getSetterMethodDecl(), Setr);
+                        PID->getSetterMethodDecl(), Setr);
   Setr += "{ ";
   // Synthesize an explicit cast to initialize the ivar.
   // See objc-act.c:objc_synthesize_new_setter() for details.
@@ -1346,6 +1346,8 @@ void RewriteModernObjC::RewriteImplementationDecl(Decl *OID) {
     InsertText(CID->getBeginLoc(), "// ");
 
   for (auto *OMD : IMD ? IMD->instance_methods() : CID->instance_methods()) {
+    if (!OMD->getBody())
+      continue;
     std::string ResultStr;
     RewriteObjCMethodDecl(OMD->getClassInterface(), OMD, ResultStr);
     SourceLocation LocStart = OMD->getBeginLoc();
@@ -1357,6 +1359,8 @@ void RewriteModernObjC::RewriteImplementationDecl(Decl *OID) {
   }
 
   for (auto *OMD : IMD ? IMD->class_methods() : CID->class_methods()) {
+    if (!OMD->getBody())
+      continue;
     std::string ResultStr;
     RewriteObjCMethodDecl(OMD->getClassInterface(), OMD, ResultStr);
     SourceLocation LocStart = OMD->getBeginLoc();
@@ -7031,12 +7035,12 @@ void RewriteModernObjC::RewriteObjCClassMetaData(ObjCImplementationDecl *IDecl,
     ObjCPropertyDecl *PD = Prop->getPropertyDecl();
     if (!PD)
       continue;
-    if (ObjCMethodDecl *Getter = PD->getGetterMethodDecl())
+    if (ObjCMethodDecl *Getter = Prop->getGetterMethodDecl())
       if (mustSynthesizeSetterGetterMethod(IDecl, PD, true /*getter*/))
         InstanceMethods.push_back(Getter);
     if (PD->isReadOnly())
       continue;
-    if (ObjCMethodDecl *Setter = PD->getSetterMethodDecl())
+    if (ObjCMethodDecl *Setter = Prop->getSetterMethodDecl())
       if (mustSynthesizeSetterGetterMethod(IDecl, PD, false /*setter*/))
         InstanceMethods.push_back(Setter);
   }
@@ -7281,11 +7285,11 @@ void RewriteModernObjC::RewriteObjCCategoryImplDecl(ObjCCategoryImplDecl *IDecl,
     ObjCPropertyDecl *PD = Prop->getPropertyDecl();
     if (!PD)
       continue;
-    if (ObjCMethodDecl *Getter = PD->getGetterMethodDecl())
+    if (ObjCMethodDecl *Getter = Prop->getGetterMethodDecl())
       InstanceMethods.push_back(Getter);
     if (PD->isReadOnly())
       continue;
-    if (ObjCMethodDecl *Setter = PD->getSetterMethodDecl())
+    if (ObjCMethodDecl *Setter = Prop->getSetterMethodDecl())
       InstanceMethods.push_back(Setter);
   }
 

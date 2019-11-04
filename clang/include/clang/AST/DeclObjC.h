@@ -172,6 +172,7 @@ private:
                  Selector SelInfo, QualType T, TypeSourceInfo *ReturnTInfo,
                  DeclContext *contextDecl, bool isInstance = true,
                  bool isVariadic = false, bool isPropertyAccessor = false,
+                 bool isSynthesizedAccessorStub = false, 
                  bool isImplicitlyDeclared = false, bool isDefined = false,
                  ImplementationControl impControl = None,
                  bool HasRelatedResultType = false);
@@ -232,6 +233,7 @@ public:
          Selector SelInfo, QualType T, TypeSourceInfo *ReturnTInfo,
          DeclContext *contextDecl, bool isInstance = true,
          bool isVariadic = false, bool isPropertyAccessor = false,
+         bool isSynthesizedAccessorStub = false,
          bool isImplicitlyDeclared = false, bool isDefined = false,
          ImplementationControl impControl = None,
          bool HasRelatedResultType = false);
@@ -434,6 +436,14 @@ public:
 
   void setPropertyAccessor(bool isAccessor) {
     ObjCMethodDeclBits.IsPropertyAccessor = isAccessor;
+  }
+
+  bool isSynthesizedAccessorStub() const {
+    return ObjCMethodDeclBits.IsSynthesizedAccessorStub;
+  }
+
+  void setSynthesizedAccessorStub(bool isSynthesizedAccessorStub) {
+    ObjCMethodDeclBits.IsSynthesizedAccessorStub = isSynthesizedAccessorStub;
   }
 
   bool isDefined() const { return ObjCMethodDeclBits.IsDefined; }
@@ -2779,6 +2789,11 @@ private:
   /// Null for \@dynamic. Required for \@synthesize.
   ObjCIvarDecl *PropertyIvarDecl;
 
+  /// The getter's definition, which has an empty body if synthesized.
+  ObjCMethodDecl *GetterMethodDecl = nullptr;
+  /// The getter's definition, which has an empty body if synthesized.
+  ObjCMethodDecl *SetterMethodDecl = nullptr;
+
   /// Null for \@dynamic. Non-null if property must be copy-constructed in
   /// getter.
   Expr *GetterCXXConstructor = nullptr;
@@ -2844,6 +2859,12 @@ public:
   bool isIvarNameSpecified() const {
     return IvarLoc.isValid() && IvarLoc != getLocation();
   }
+
+  ObjCMethodDecl *getGetterMethodDecl() const { return GetterMethodDecl; }
+  void setGetterMethodDecl(ObjCMethodDecl *MD) { GetterMethodDecl = MD; }
+
+  ObjCMethodDecl *getSetterMethodDecl() const { return SetterMethodDecl; }
+  void setSetterMethodDecl(ObjCMethodDecl *MD) { SetterMethodDecl = MD; }
 
   Expr *getGetterCXXConstructor() const {
     return GetterCXXConstructor;
