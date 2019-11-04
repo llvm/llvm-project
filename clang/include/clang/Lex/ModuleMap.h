@@ -707,8 +707,11 @@ public:
   }
 
   /// Return a cached module load.
-  Module *getCachedModuleLoad(const IdentifierInfo &II) {
-    return CachedModuleLoads.lookup(&II);
+  llvm::Optional<Module *> getCachedModuleLoad(const IdentifierInfo &II) {
+    auto I = CachedModuleLoads.find(&II);
+    if (I == CachedModuleLoads.end())
+      return None;
+    return I->second;
   }
 };
 
