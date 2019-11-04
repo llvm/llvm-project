@@ -84,7 +84,6 @@ public:
   enum LLVMCastKind {
     eKindClang,
     eKindSwift,
-    eKindOCaml,
     kNumKinds
   };
 
