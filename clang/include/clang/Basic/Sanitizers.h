@@ -52,10 +52,11 @@ public:
 
   /// Create a mask with a bit enabled at position Pos.
   static constexpr SanitizerMask bitPosToMask(const unsigned Pos) {
-    return SanitizerMask((Pos < kNumBitElem) ? 1ULL << Pos % kNumBitElem : 0,
-                         (Pos >= kNumBitElem && Pos < kNumBitElem * 2)
-                             ? 1ULL << Pos % kNumBitElem
-                             : 0);
+    uint64_t mask1 = (Pos < kNumBitElem) ? 1ULL << (Pos % kNumBitElem) : 0;
+    uint64_t mask2 = (Pos >= kNumBitElem && Pos < (kNumBitElem * 2))
+                         ? 1ULL << (Pos % kNumBitElem)
+                         : 0;
+    return SanitizerMask(mask1, mask2);
   }
 
   unsigned countPopulation() const {
