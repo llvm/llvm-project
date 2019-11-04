@@ -54,7 +54,7 @@ struct MCDwarfFile {
   std::string Name;
 
   // The index into the list of directory names for this file name.
-  unsigned DirIndex;
+  unsigned DirIndex = 0;
 
   /// The MD5 checksum, if there is one. Non-owning pointer to data allocated
   /// in MCContext.
