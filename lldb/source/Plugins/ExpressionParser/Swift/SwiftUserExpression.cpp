@@ -377,12 +377,11 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     exe_scope = exe_ctx.GetTargetPtr();
   } while (0);
 
-  m_parser =
-      std::make_unique<SwiftExpressionParser>(exe_scope, *this, m_options);
-
-  unsigned error_code = m_parser->Parse(
+  auto *swift_parser = new SwiftExpressionParser(exe_scope, *this, m_options);
+  unsigned error_code = swift_parser->Parse(
       diagnostic_manager, first_body_line,
       first_body_line + source_code->GetNumBodyLines());
+  m_parser.reset(swift_parser);
 
   if (error_code == 2) {
     m_fixed_text = m_expr_text;
