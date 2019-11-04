@@ -1,7 +1,10 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
 tablegen("RISCVGenAsmMatcher") {
-  visibility = [ ":AsmParser" ]
+  visibility = [
+    ":AsmParser",
+    "//llvm/lib/Target/RISCV:LLVMRISCVCodeGen",
+  ]
   args = [ "-gen-asm-matcher" ]
   td_file = "../RISCV.td"
 }
