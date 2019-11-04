@@ -1084,28 +1084,20 @@ public:
     return const_cast<Expr *>(reinterpret_cast<const Expr *>(
         *std::next(child_begin(), CombinedParForInDistConditionOffset)));
   }
+  /// Try to find the next loop sub-statement in the specified statement \p
+  /// CurStmt.
+  /// \param TryImperfectlyNestedLoops true, if we need to try to look for the
+  /// imperfectly nested loop.
+  static Stmt *tryToFindNextInnerLoop(Stmt *CurStmt,
+                                      bool TryImperfectlyNestedLoops);
+  static const Stmt *tryToFindNextInnerLoop(const Stmt *CurStmt,
+                                            bool TryImperfectlyNestedLoops) {
+    return tryToFindNextInnerLoop(const_cast<Stmt *>(CurStmt),
+                                  TryImperfectlyNestedLoops);
+  }
+  Stmt *getBody();
   const Stmt *getBody() const {
-    // This relies on the loop form is already checked by Sema.
-    const Stmt *Body =
-        getInnermostCapturedStmt()->getCapturedStmt()->IgnoreContainers();
-    if (auto *For = dyn_cast<ForStmt>(Body)) {
-      Body = For->getBody();
-    } else {
-      assert(isa<CXXForRangeStmt>(Body) &&
-             "Expected canonical for loop or range-based for loop.");
-      Body = cast<CXXForRangeStmt>(Body)->getBody();
-    }
-    for (unsigned Cnt = 1; Cnt < CollapsedNum; ++Cnt) {
-      Body = Body->IgnoreContainers();
-      if (auto *For = dyn_cast<ForStmt>(Body)) {
-        Body = For->getBody();
-      } else {
-        assert(isa<CXXForRangeStmt>(Body) &&
-               "Expected canonical for loop or range-based for loop.");
-        Body = cast<CXXForRangeStmt>(Body)->getBody();
-      }
-    }
-    return Body;
+    return const_cast<OMPLoopDirective *>(this)->getBody();
   }
 
   ArrayRef<Expr *> counters() { return getCounters(); }
