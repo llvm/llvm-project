@@ -1,0 +1,4 @@
+# RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s 2>&1 | FileCheck -check-prefix=GCN %s
+
+# GCN: warning: invalid instruction encoding
+0xdf,0x00,0x00,0x02

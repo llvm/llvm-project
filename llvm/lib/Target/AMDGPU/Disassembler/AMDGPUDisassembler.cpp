@@ -73,7 +73,7 @@ addOperand(MCInst &Inst, const MCOperand& Opnd) {
   Inst.addOperand(Opnd);
   return Opnd.isValid() ?
     MCDisassembler::Success :
-    MCDisassembler::SoftFail;
+    MCDisassembler::Fail;
 }
 
 static int insertNamedMCOperand(MCInst &MI, const MCOperand &Op,
