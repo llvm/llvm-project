@@ -9399,10 +9399,15 @@ static SDValue foldExtendedSignBitTest(SDNode *N, SelectionDAG &DAG,
     // sext i1 (setgt iN X, -1) --> sra (not X), (N - 1)
     // zext i1 (setgt iN X, -1) --> srl (not X), (N - 1)
     SDLoc DL(N);
-    SDValue NotX = DAG.getNOT(DL, X, VT);
-    SDValue ShiftAmount = DAG.getConstant(VT.getSizeInBits() - 1, DL, VT);
-    auto ShiftOpcode = N->getOpcode() == ISD::SIGN_EXTEND ? ISD::SRA : ISD::SRL;
-    return DAG.getNode(ShiftOpcode, DL, VT, NotX, ShiftAmount);
+    unsigned ShCt = VT.getSizeInBits() - 1;
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    if (ShCt <= TLI.getShiftAmountThreshold(VT)) {
+      SDValue NotX = DAG.getNOT(DL, X, VT);
+      SDValue ShiftAmount = DAG.getConstant(ShCt, DL, VT);
+      auto ShiftOpcode =
+        N->getOpcode() == ISD::SIGN_EXTEND ? ISD::SRA : ISD::SRL;
+      return DAG.getNode(ShiftOpcode, DL, VT, NotX, ShiftAmount);
+    }
   }
   return SDValue();
 }
@@ -19951,22 +19956,28 @@ SDValue DAGCombiner::foldSelectCCToShiftAnd(const SDLoc &DL, SDValue N0,
   auto *N2C = dyn_cast<ConstantSDNode>(N2.getNode());
   if (N2C && ((N2C->getAPIntValue() & (N2C->getAPIntValue() - 1)) == 0)) {
     unsigned ShCt = XType.getSizeInBits() - N2C->getAPIntValue().logBase2() - 1;
-    SDValue ShiftAmt = DAG.getConstant(ShCt, DL, ShiftAmtTy);
-    SDValue Shift = DAG.getNode(ISD::SRL, DL, XType, N0, ShiftAmt);
-    AddToWorklist(Shift.getNode());
-
-    if (XType.bitsGT(AType)) {
-      Shift = DAG.getNode(ISD::TRUNCATE, DL, AType, Shift);
+    if (ShCt <= TLI.getShiftAmountThreshold(XType)) {
+      SDValue ShiftAmt = DAG.getConstant(ShCt, DL, ShiftAmtTy);
+      SDValue Shift = DAG.getNode(ISD::SRL, DL, XType, N0, ShiftAmt);
       AddToWorklist(Shift.getNode());
+
+      if (XType.bitsGT(AType)) {
+        Shift = DAG.getNode(ISD::TRUNCATE, DL, AType, Shift);
+        AddToWorklist(Shift.getNode());
+      }
+
+      if (CC == ISD::SETGT)
+        Shift = DAG.getNOT(DL, Shift, AType);
+
+      return DAG.getNode(ISD::AND, DL, AType, Shift, N2);
     }
-
-    if (CC == ISD::SETGT)
-      Shift = DAG.getNOT(DL, Shift, AType);
-
-    return DAG.getNode(ISD::AND, DL, AType, Shift, N2);
   }
 
-  SDValue ShiftAmt = DAG.getConstant(XType.getSizeInBits() - 1, DL, ShiftAmtTy);
+  unsigned ShCt = XType.getSizeInBits() - 1;
+  if (ShCt > TLI.getShiftAmountThreshold(XType))
+    return SDValue();
+
+  SDValue ShiftAmt = DAG.getConstant(ShCt, DL, ShiftAmtTy);
   SDValue Shift = DAG.getNode(ISD::SRA, DL, XType, N0, ShiftAmt);
   AddToWorklist(Shift.getNode());
 
@@ -20076,31 +20087,29 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
   // when the condition can be materialized as an all-ones register.  Any
   // single bit-test can be materialized as an all-ones register with
   // shift-left and shift-right-arith.
-  // TODO: The operation legality checks could be loosened to include "custom",
-  //       but that may cause regressions for targets that do not have shift
-  //       instructions.
   if (CC == ISD::SETEQ && N0->getOpcode() == ISD::AND &&
-      N0->getValueType(0) == VT && isNullConstant(N1) && isNullConstant(N2) &&
-      TLI.isOperationLegal(ISD::SHL, VT) &&
-      TLI.isOperationLegal(ISD::SRA, VT)) {
+      N0->getValueType(0) == VT && isNullConstant(N1) && isNullConstant(N2)) {
     SDValue AndLHS = N0->getOperand(0);
     auto *ConstAndRHS = dyn_cast<ConstantSDNode>(N0->getOperand(1));
     if (ConstAndRHS && ConstAndRHS->getAPIntValue().countPopulation() == 1) {
       // Shift the tested bit over the sign bit.
       const APInt &AndMask = ConstAndRHS->getAPIntValue();
-      SDValue ShlAmt =
-        DAG.getConstant(AndMask.countLeadingZeros(), SDLoc(AndLHS),
-                        getShiftAmountTy(AndLHS.getValueType()));
-      SDValue Shl = DAG.getNode(ISD::SHL, SDLoc(N0), VT, AndLHS, ShlAmt);
+      unsigned ShCt = AndMask.getBitWidth() - 1;
+      if (ShCt <= TLI.getShiftAmountThreshold(VT)) {
+        SDValue ShlAmt =
+          DAG.getConstant(AndMask.countLeadingZeros(), SDLoc(AndLHS),
+                          getShiftAmountTy(AndLHS.getValueType()));
+        SDValue Shl = DAG.getNode(ISD::SHL, SDLoc(N0), VT, AndLHS, ShlAmt);
 
-      // Now arithmetic right shift it all the way over, so the result is either
-      // all-ones, or zero.
-      SDValue ShrAmt =
-        DAG.getConstant(AndMask.getBitWidth() - 1, SDLoc(Shl),
-                        getShiftAmountTy(Shl.getValueType()));
-      SDValue Shr = DAG.getNode(ISD::SRA, SDLoc(N0), VT, Shl, ShrAmt);
+        // Now arithmetic right shift it all the way over, so the result is
+        // either all-ones, or zero.
+        SDValue ShrAmt =
+          DAG.getConstant(ShCt, SDLoc(Shl),
+                          getShiftAmountTy(Shl.getValueType()));
+        SDValue Shr = DAG.getNode(ISD::SRA, SDLoc(N0), VT, Shl, ShrAmt);
 
-      return DAG.getNode(ISD::AND, DL, VT, Shr, N3);
+        return DAG.getNode(ISD::AND, DL, VT, Shr, N3);
+      }
     }
   }
 
@@ -20142,10 +20151,13 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
     if (N2C->isOne())
       return Temp;
 
+    unsigned ShCt = N2C->getAPIntValue().logBase2();
+    if (ShCt > TLI.getShiftAmountThreshold(VT))
+      return SDValue();
+
     // shl setcc result by log2 n2c
     return DAG.getNode(ISD::SHL, DL, N2.getValueType(), Temp,
-                       DAG.getConstant(N2C->getAPIntValue().logBase2(),
-                                       SDLoc(Temp),
+                       DAG.getConstant(ShCt, SDLoc(Temp),
                                        getShiftAmountTy(Temp.getValueType())));
   }
 

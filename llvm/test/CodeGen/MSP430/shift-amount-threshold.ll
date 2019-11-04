@@ -58,16 +58,13 @@ entry:
 define i16 @testExtendSignBit_0(i16 %x) {
 ; CHECK-LABEL: testExtendSignBit_0:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    inv r12
-; CHECK-NEXT:    swpb r12
-; CHECK-NEXT:    sxt r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    mov #-1, r12
+; CHECK-NEXT:    tst r13
+; CHECK-NEXT:    jge .LBB3_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    clr r12
+; CHECK-NEXT:  .LBB3_2: ; %entry
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp sgt i16 %x, -1
@@ -80,17 +77,13 @@ entry:
 define i16 @testExtendSignBit_1(i16 %x) {
 ; CHECK-LABEL: testExtendSignBit_1:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    inv r12
-; CHECK-NEXT:    swpb r12
-; CHECK-NEXT:    mov.b r12, r12
-; CHECK-NEXT:    clrc
-; CHECK-NEXT:    rrc r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    mov #1, r12
+; CHECK-NEXT:    tst r13
+; CHECK-NEXT:    jge .LBB4_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    clr r12
+; CHECK-NEXT:  .LBB4_2: ; %entry
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp sgt i16 %x, -1
@@ -103,16 +96,12 @@ entry:
 define i16 @testShiftAnd_0(i16 %x, i16 %a) {
 ; CHECK-LABEL: testShiftAnd_0:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    swpb r12
-; CHECK-NEXT:    sxt r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    and r13, r12
+; CHECK-NEXT:    tst r12
+; CHECK-NEXT:    jl .LBB5_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    clr r13
+; CHECK-NEXT:  .LBB5_2: ; %entry
+; CHECK-NEXT:    mov r13, r12
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp slt i16 %x, 0
@@ -125,16 +114,14 @@ entry:
 define i16 @testShiftAnd_1(i16 %x) {
 ; CHECK-LABEL: testShiftAnd_1:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    swpb r12
-; CHECK-NEXT:    mov.b r12, r12
-; CHECK-NEXT:    clrc
-; CHECK-NEXT:    rrc r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    and #2, r12
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    mov #1, r12
+; CHECK-NEXT:    tst r13
+; CHECK-NEXT:    jl .LBB6_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    clr r12
+; CHECK-NEXT:  .LBB6_2: ; %entry
+; CHECK-NEXT:    add r12, r12
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp slt i16 %x, 0
@@ -148,17 +135,12 @@ define i16 @testSimplifySelectCC_1(i16 %a, i16 %b) {
 ; CHECK-LABEL: testSimplifySelectCC_1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov r12, r14
-; CHECK-NEXT:    mov #1, r12
+; CHECK-NEXT:    mov #32, r12
 ; CHECK-NEXT:    cmp r14, r13
 ; CHECK-NEXT:    jl .LBB7_2
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    clr r12
 ; CHECK-NEXT:  .LBB7_2: ; %entry
-; CHECK-NEXT:    add r12, r12
-; CHECK-NEXT:    add r12, r12
-; CHECK-NEXT:    add r12, r12
-; CHECK-NEXT:    add r12, r12
-; CHECK-NEXT:    add r12, r12
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp sgt i16 %a, %b
