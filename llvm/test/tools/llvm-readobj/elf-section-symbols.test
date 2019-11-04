@@ -1,0 +1,85 @@
+## ELF section symbols use the section names when printing. This test verifies
+## this and also that appropriate things are printed if the section is somehow
+## invalid.
+
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-readobj %t1 --symbols 2> %t.llvm.err1 | FileCheck %s --check-prefix=LLVM1
+# RUN: FileCheck %s --input-file %t.llvm.err1 --check-prefix=WARN1 --implicit-check-not=warning
+# RUN: llvm-readelf %t1 --symbols 2> %t.gnu.err1 | FileCheck %s --check-prefix=GNU1
+# RUN: FileCheck %s --input-file %t.gnu.err1 --check-prefix=WARN1 --implicit-check-not=warning
+
+# LLVM1: Name: (0)
+# LLVM1: Name: .foo (0)
+# LLVM1: Name: <section 67> (0)
+# LLVM1: Name: .bar (0)
+# LLVM1: Name: <section 66> (0)
+
+# GNU1:      Symbol table '.symtab' contains 5 entries:
+# GNU1-NEXT:    Num: {{.*}} Type    {{.*}} Ndx Name
+# GNU1-NEXT:      0: {{.*}} NOTYPE  {{.*}} UND {{$}}
+# GNU1-NEXT:      1: {{.*}} SECTION {{.*}}   1 .foo
+# GNU1-NEXT:      2: {{.*}} SECTION {{.*}}  67 <section 67>
+# GNU1-NEXT:      3: {{.*}} SECTION {{.*}}   2 .bar
+# GNU1-NEXT:      4: {{.*}} SECTION {{.*}}  66 <section 66>
+
+# WARN1: warning: '{{.*}}.tmp1': invalid section index: 67
+# WARN1: warning: '{{.*}}.tmp1': invalid section index: 66
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+  - Name: .bar
+    Type: SHT_PROGBITS
+  - Name: .symtab_shndx
+    Type: SHT_SYMTAB_SHNDX
+    Link: .symtab
+    Entries: [ 0, 0, 0, 2, 0x42 ]
+Symbols:
+  - Name: ""
+    Section: .foo
+    Type: STT_SECTION
+  - Name: ""
+    Index: 0x43
+    Type: STT_SECTION
+  # Section symbol via SHT_SYMTAB_SHNDX.
+  - Name: ""
+    Index: SHN_XINDEX
+    Type: STT_SECTION
+  # Section symbol via SHT_SYMTAB_SHNDX with invalid index.
+  - Name: ""
+    Index: SHN_XINDEX
+    Type: STT_SECTION
+
+# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: llvm-readobj %t2 --symbols 2> %t.llvm.err2 | FileCheck %s --check-prefix=LLVM2
+# RUN: FileCheck %s --input-file %t.llvm.err2 --check-prefix=WARN2 --implicit-check-not=warning
+# RUN: llvm-readelf %t2 --symbols 2> %t.gnu.err2 | FileCheck %s --check-prefix=GNU2
+# RUN: FileCheck %s --input-file %t.gnu.err2 --check-prefix=WARN2 --implicit-check-not=warning
+
+# LLVM2: Name: (0)
+# LLVM2: Name: <?> (0)
+
+# GNU2:      Symbol table '.symtab' contains 2 entries:
+# GNU2-NEXT:    Num: {{.*}} Type    {{.*}} Ndx Name
+# GNU2-NEXT:      0: {{.*}} NOTYPE  {{.*}} UND {{$}}
+# GNU2-NEXT:      1: {{.*}} SECTION {{.*}} RSV[0xffff] <?>
+
+# WARN2: warning: '{{.*}}.tmp2': extended symbol index (1) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Symbols:
+  # Section symbol via SHT_SYMTAB_SHNDX when SHT_SYMTAB_SHNDX is missing.
+  - Name: ""
+    Index: SHN_XINDEX
+    Type: STT_SECTION

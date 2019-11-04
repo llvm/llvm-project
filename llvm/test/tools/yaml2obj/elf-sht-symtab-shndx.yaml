@@ -3,9 +3,9 @@
 ## but no SHT_SYMTAB_SHNDX section is defined.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
-# RUN: not llvm-readobj --symbols 2>&1 %t1 | FileCheck -DFILE=%t1 %s --check-prefix=CASE1
+# RUN: llvm-readobj --symbols 2>&1 %t1 | FileCheck -DFILE=%t1 %s --check-prefix=CASE1
 
-# CASE1: error: '[[FILE]]': extended symbol index (1) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# CASE1: warning: '[[FILE]]': extended symbol index (1) is past the end of the SHT_SYMTAB_SHNDX section of size 0
 
 --- !ELF
 FileHeader:
@@ -71,9 +71,9 @@ Symbols:
 ## which is larger than the total number of sections in the file).
 
 # RUN: yaml2obj --docnum=3 %s -o %t3
-# RUN: not llvm-readobj --symbols 2>&1 %t3 | FileCheck %s -DFILE=%t3 --check-prefix=CASE3
+# RUN: llvm-readobj --symbols 2>&1 %t3 | FileCheck %s -DFILE=%t3 --check-prefix=CASE3
 
-# CASE3: error: '[[FILE]]': invalid section index: 255
+# CASE3: warning: '[[FILE]]': invalid section index: 255
 
 --- !ELF
 FileHeader:
