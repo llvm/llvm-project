@@ -48,6 +48,7 @@ add_llvm_target(PowerPCCodeGen
   PPCVSXSwapRemoval.cpp
   PPCExpandISEL.cpp
   PPCPreEmitPeephole.cpp
+  PPCLowerMASSVEntries.cpp
   )
 
 add_subdirectory(AsmParser)
