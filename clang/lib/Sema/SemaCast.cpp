@@ -763,7 +763,7 @@ void CastOperation::CheckDynamicCast() {
       SrcPointee = SrcPointer->getPointeeType();
     } else {
       Self.Diag(OpRange.getBegin(), diag::err_bad_dynamic_cast_not_ptr)
-        << OrigSrcType << SrcExpr.get()->getSourceRange();
+          << OrigSrcType << this->DestType << SrcExpr.get()->getSourceRange();
       SrcExpr = ExprError();
       return;
     }
