@@ -126,29 +126,29 @@ define float @oeq_zero_swapped_nsz(float %x) {
   ret float %cond
 }
 
-; X != 0.0 ? X : -0.0 --> X
+; X != 0.0 ? X : 0.0 --> X
 
 define double @une_zero_nsz(double %x) {
 ; CHECK-LABEL: @une_zero_nsz(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[COND:%.*]] = select ninf nsz i1 [[CMP]], double [[X]], double -0.000000e+00
+; CHECK-NEXT:    [[COND:%.*]] = select ninf nsz i1 [[CMP]], double [[X]], double 0.000000e+00
 ; CHECK-NEXT:    ret double [[COND]]
 ;
   %cmp = fcmp une double %x, 0.0
-  %cond = select nsz ninf i1 %cmp, double %x, double -0.0
+  %cond = select nsz ninf i1 %cmp, double %x, double 0.0
   ret double %cond
 }
 
-; X != 0.0 ? -0.0 : X --> 0.0
+; X != 0.0 ? 0.0 : X --> 0.0
 
 define <2 x double> @une_zero_swapped_nsz(<2 x double> %x) {
 ; CHECK-LABEL: @une_zero_swapped_nsz(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <2 x double> [[X:%.*]], <double -0.000000e+00, double 0.000000e+00>
-; CHECK-NEXT:    [[COND:%.*]] = select nsz <2 x i1> [[CMP]], <2 x double> <double 0.000000e+00, double -0.000000e+00>, <2 x double> [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <2 x double> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[COND:%.*]] = select nsz <2 x i1> [[CMP]], <2 x double> zeroinitializer, <2 x double> [[X]]
 ; CHECK-NEXT:    ret <2 x double> [[COND]]
 ;
-  %cmp = fcmp une <2 x double> %x, <double -0.0, double 0.0>
-  %cond = select nsz <2 x i1> %cmp, <2 x double> <double 0.0, double -0.0>, <2 x double> %x
+  %cmp = fcmp une <2 x double> %x, <double 0.0, double 0.0>
+  %cond = select nsz <2 x i1> %cmp, <2 x double> <double 0.0, double 0.0>, <2 x double> %x
   ret <2 x double> %cond
 }
 
@@ -201,6 +201,34 @@ define <2 x double> @une_swapped_nsz(<2 x double> %x, <2 x double> %y) {
 ;
   %cmp = fcmp une <2 x double> %x, %y
   %cond = select fast <2 x i1> %cmp, <2 x double> %y, <2 x double> %x
+  ret <2 x double> %cond
+}
+
+; Harder - mismatched zero constants (not typical due to canonicalization):
+; X != 0.0 ? X : -0.0 --> X
+
+define double @une_zero_mismatch_nsz(double %x) {
+; CHECK-LABEL: @une_zero_mismatch_nsz(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[COND:%.*]] = select ninf nsz i1 [[CMP]], double [[X]], double -0.000000e+00
+; CHECK-NEXT:    ret double [[COND]]
+;
+  %cmp = fcmp une double %x, 0.0
+  %cond = select nsz ninf i1 %cmp, double %x, double -0.0
+  ret double %cond
+}
+
+; Even harder - mismatched vector zero constants (not typical due to canonicalization):
+; X != 0.0 ? -0.0 : X --> 0.0
+
+define <2 x double> @une_zero_mismatch_swapped_nsz(<2 x double> %x) {
+; CHECK-LABEL: @une_zero_mismatch_swapped_nsz(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <2 x double> [[X:%.*]], <double -0.000000e+00, double 0.000000e+00>
+; CHECK-NEXT:    [[COND:%.*]] = select nsz <2 x i1> [[CMP]], <2 x double> <double 0.000000e+00, double -0.000000e+00>, <2 x double> [[X]]
+; CHECK-NEXT:    ret <2 x double> [[COND]]
+;
+  %cmp = fcmp une <2 x double> %x, <double -0.0, double 0.0>
+  %cond = select nsz <2 x i1> %cmp, <2 x double> <double 0.0, double -0.0>, <2 x double> %x
   ret <2 x double> %cond
 }
 
