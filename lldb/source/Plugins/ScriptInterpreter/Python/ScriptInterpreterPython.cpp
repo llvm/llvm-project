@@ -807,8 +807,10 @@ ScriptInterpreterPythonImpl::GetMaxPositionalArgumentsForCallable(
         llvm::inconvertibleErrorCode(),
         "can't find callable: %s", callable_name.str().c_str());
   }
-  PythonCallable::ArgInfo arg_info = pfunc.GetNumArguments();
-  return arg_info.max_positional_args;
+  llvm::Expected<PythonCallable::ArgInfo> arg_info = pfunc.GetArgInfo();
+  if (!arg_info)
+    return arg_info.takeError();
+  return arg_info.get().max_positional_args;
 }
 
 static std::string GenerateUniqueName(const char *base_name_wanted,
