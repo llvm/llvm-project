@@ -4566,7 +4566,7 @@ QualType TreeTransform<Derived>::TransformDecayedType(TypeLocBuilder &TLB,
 
 /// Helper to deduce addr space of a pointee type in OpenCL mode.
 /// If the type is updated it will be overwritten in PointeeType param.
-static void deduceOpenCLPointeeAddrSpace(Sema &SemaRef, QualType &PointeeType) {
+inline void deduceOpenCLPointeeAddrSpace(Sema &SemaRef, QualType &PointeeType) {
   if (PointeeType.getAddressSpace() == LangAS::Default)
     PointeeType = SemaRef.Context.getAddrSpaceQualType(PointeeType,
                                                        LangAS::opencl_generic);
