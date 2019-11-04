@@ -793,6 +793,9 @@ ifneq "$(EXCLUDE_WRAPPED_SWIFTMODULE)" ""
 else
 	$(SWIFTC) $(patsubst -g,,$(SWIFTFLAGS)) -emit-library $(DYLIB_SWIFT_FLAGS) -o $@ $^
 endif
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$(DYLIB_FILENAME)"
+endif
 ifneq "$(MAKE_DSYM)" "NO"
 ifneq "$(DS)" ""
 	"$(DS)" $(DSFLAGS) "$(DYLIB_FILENAME)"
