@@ -202,23 +202,33 @@ INTERCEPTOR_ALIAS(__sanitizer_struct_mallinfo, mallinfo);
 INTERCEPTOR_ALIAS(int, mallopt, int cmd, int value);
 INTERCEPTOR_ALIAS(void, malloc_stats, void);
 #endif
-#endif // HWASAN_WITH_INTERCEPTORS
 
+struct ThreadStartArg {
+  thread_callback_t callback;
+  void *param;
+};
 
-#if HWASAN_WITH_INTERCEPTORS && !defined(__aarch64__)
-INTERCEPTOR(int, pthread_create, void *th, void *attr,
-            void *(*callback)(void *), void *param) {
+static void *HwasanThreadStartFunc(void *arg) {
+  __hwasan_thread_enter();
+  ThreadStartArg A = *reinterpret_cast<ThreadStartArg*>(arg);
+  UnmapOrDie(arg, GetPageSizeCached());
+  return A.callback(A.param);
+}
+
+INTERCEPTOR(int, pthread_create, void *th, void *attr, void *(*callback)(void*),
+            void * param) {
   ScopedTaggingDisabler disabler;
+  ThreadStartArg *A = reinterpret_cast<ThreadStartArg *> (MmapOrDie(
+      GetPageSizeCached(), "pthread_create"));
+  *A = {callback, param};
   int res = REAL(pthread_create)(UntagPtr(th), UntagPtr(attr),
-                                 callback, param);
+                                 &HwasanThreadStartFunc, A);
   return res;
 }
-#endif
 
-#if HWASAN_WITH_INTERCEPTORS
 DEFINE_REAL(int, vfork)
 DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork)
-#endif
+#endif // HWASAN_WITH_INTERCEPTORS
 
 #if HWASAN_WITH_INTERCEPTORS && defined(__aarch64__)
 // Get and/or change the set of blocked signals.
@@ -331,9 +341,7 @@ void InitializeInterceptors() {
 #if defined(__linux__)
   INTERCEPT_FUNCTION(vfork);
 #endif  // __linux__
-#if !defined(__aarch64__)
   INTERCEPT_FUNCTION(pthread_create);
-#endif  // __aarch64__
 #endif
 
   inited = 1;
