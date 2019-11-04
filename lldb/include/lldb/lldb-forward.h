@@ -191,9 +191,6 @@ class SectionList;
 class SectionLoadHistory;
 class SectionLoadList;
 class Settings;
-class SwiftASTContext;
-class SwiftLanguageRuntime;
-class SwiftREPL;
 class SourceManager;
 class SourceManagerImpl;
 class StackFrame;
@@ -413,7 +410,6 @@ typedef std::weak_ptr<lldb_private::Section> SectionWP;
 typedef std::shared_ptr<lldb_private::SectionLoadList> SectionLoadListSP;
 typedef std::shared_ptr<lldb_private::SearchFilter> SearchFilterSP;
 typedef std::shared_ptr<lldb_private::Settings> SettingsSP;
-typedef std::shared_ptr<lldb_private::SwiftASTContext> SwiftASTContextSP;
 typedef std::unique_ptr<lldb_private::SourceManager> SourceManagerUP;
 typedef std::shared_ptr<lldb_private::StackFrame> StackFrameSP;
 typedef std::unique_ptr<lldb_private::StackFrame> StackFrameUP;
@@ -490,6 +486,8 @@ struct ItaniumPartialDemangler;
 class StringRef;
 
 } // namespace llvm
+
+#include "swift-lldb-forward.h"
 
 #endif // #if defined(__cplusplus)
 #endif // LLDB_lldb_forward_h_
