@@ -959,9 +959,6 @@ public:
             : persistent_state->GetNextPersistentVariableName(
                   *target_sp, persistent_state->GetPersistentVariablePrefix());
 
-    lldb::ProcessSP process_sp =
-        map.GetBestExecutionContextScope()->CalculateProcess();
-
     lldb::ExpressionVariableSP ret = persistent_state->CreatePersistentVariable(
         exe_scope, name, m_type, map.GetByteOrder(), map.GetAddressByteSize());
 
@@ -971,6 +968,9 @@ public:
                                    name.AsCString());
       return;
     }
+
+    lldb::ProcessSP process_sp =
+        map.GetBestExecutionContextScope()->CalculateProcess();
 
     if (m_delegate) {
       m_delegate->DidDematerialize(ret);
