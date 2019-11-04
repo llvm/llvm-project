@@ -14858,6 +14858,36 @@ int ARMTargetLowering::getScalingFactorCost(const DataLayout &DL,
   return -1;
 }
 
+/// isFMAFasterThanFMulAndFAdd - Return true if an FMA operation is faster
+/// than a pair of fmul and fadd instructions. fmuladd intrinsics will be
+/// expanded to FMAs when this method returns true, otherwise fmuladd is
+/// expanded to fmul + fadd.
+///
+/// ARM supports both fused and unfused multiply-add operations; we already
+/// lower a pair of fmul and fadd to the latter so it's not clear that there
+/// would be a gain or that the gain would be worthwhile enough to risk
+/// correctness bugs.
+///
+/// For MVE, we set this to true as it helps simplify the need for some
+/// patterns (and we don't have the non-fused floating point instruction).
+bool ARMTargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
+  if (!Subtarget->hasMVEFloatOps())
+    return false;
+
+  if (!VT.isSimple())
+    return false;
+
+  switch (VT.getSimpleVT().SimpleTy) {
+  case MVT::v4f32:
+  case MVT::v8f16:
+    return true;
+  default:
+    break;
+  }
+
+  return false;
+}
+
 static bool isLegalT1AddressImmediate(int64_t V, EVT VT) {
   if (V < 0)
     return false;
