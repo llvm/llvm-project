@@ -4441,6 +4441,25 @@ defm : Neon_mul_widen_patterns<AArch64smull, SMULLv8i8_v8i16,
 defm : Neon_mul_widen_patterns<AArch64umull, UMULLv8i8_v8i16,
   UMULLv4i16_v4i32, UMULLv2i32_v2i64>;
 
+// Patterns for smull2/umull2.
+multiclass Neon_mul_high_patterns<SDPatternOperator opnode,
+  Instruction INST8B, Instruction INST4H, Instruction INST2S> {
+  def : Pat<(v8i16 (opnode (extract_high_v16i8 V128:$Rn),
+                           (extract_high_v16i8 V128:$Rm))),
+             (INST8B V128:$Rn, V128:$Rm)>;
+  def : Pat<(v4i32 (opnode (extract_high_v8i16 V128:$Rn),
+                           (extract_high_v8i16 V128:$Rm))),
+             (INST4H V128:$Rn, V128:$Rm)>;
+  def : Pat<(v2i64 (opnode (extract_high_v4i32 V128:$Rn),
+                           (extract_high_v4i32 V128:$Rm))),
+             (INST2S V128:$Rn, V128:$Rm)>;
+}
+
+defm : Neon_mul_high_patterns<AArch64smull, SMULLv16i8_v8i16,
+  SMULLv8i16_v4i32, SMULLv4i32_v2i64>;
+defm : Neon_mul_high_patterns<AArch64umull, UMULLv16i8_v8i16,
+  UMULLv8i16_v4i32, UMULLv4i32_v2i64>;
+
 // Additional patterns for SMLAL/SMLSL and UMLAL/UMLSL
 multiclass Neon_mulacc_widen_patterns<SDPatternOperator opnode,
   Instruction INST8B, Instruction INST4H, Instruction INST2S> {
