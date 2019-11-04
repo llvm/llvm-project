@@ -41,6 +41,74 @@ const Stmt *OMPExecutableDirective::getStructuredBlock() const {
   return getInnermostCapturedStmt()->getCapturedStmt();
 }
 
+Stmt *OMPLoopDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
+                                               bool TryImperfectlyNestedLoops) {
+  Stmt *OrigStmt = CurStmt;
+  CurStmt = CurStmt->IgnoreContainers();
+  // Additional work for imperfectly nested loops, introduced in OpenMP 5.0.
+  if (TryImperfectlyNestedLoops) {
+    if (auto *CS = dyn_cast<CompoundStmt>(CurStmt)) {
+      CurStmt = nullptr;
+      SmallVector<CompoundStmt *, 4> Statements(1, CS);
+      SmallVector<CompoundStmt *, 4> NextStatements;
+      while (!Statements.empty()) {
+        CS = Statements.pop_back_val();
+        if (!CS)
+          continue;
+        for (Stmt *S : CS->body()) {
+          if (!S)
+            continue;
+          if (isa<ForStmt>(S) || isa<CXXForRangeStmt>(S)) {
+            // Only single loop construct is allowed.
+            if (CurStmt) {
+              CurStmt = OrigStmt;
+              break;
+            }
+            CurStmt = S;
+            continue;
+          }
+          S = S->IgnoreContainers();
+          if (auto *InnerCS = dyn_cast_or_null<CompoundStmt>(S))
+            NextStatements.push_back(InnerCS);
+        }
+        if (Statements.empty()) {
+          // Found single inner loop or multiple loops - exit.
+          if (CurStmt)
+            break;
+          Statements.swap(NextStatements);
+        }
+      }
+      if (!CurStmt)
+        CurStmt = OrigStmt;
+    }
+  }
+  return CurStmt;
+}
+
+Stmt *OMPLoopDirective::getBody() {
+  // This relies on the loop form is already checked by Sema.
+  Stmt *Body =
+      getInnermostCapturedStmt()->getCapturedStmt()->IgnoreContainers();
+  if (auto *For = dyn_cast<ForStmt>(Body)) {
+    Body = For->getBody();
+  } else {
+    assert(isa<CXXForRangeStmt>(Body) &&
+           "Expected canonical for loop or range-based for loop.");
+    Body = cast<CXXForRangeStmt>(Body)->getBody();
+  }
+  for (unsigned Cnt = 1; Cnt < CollapsedNum; ++Cnt) {
+    Body = tryToFindNextInnerLoop(Body, /*TryImperfectlyNestedLoops=*/true);
+    if (auto *For = dyn_cast<ForStmt>(Body)) {
+      Body = For->getBody();
+    } else {
+      assert(isa<CXXForRangeStmt>(Body) &&
+             "Expected canonical for loop or range-based for loop.");
+      Body = cast<CXXForRangeStmt>(Body)->getBody();
+    }
+  }
+  return Body;
+}
+
 void OMPLoopDirective::setCounters(ArrayRef<Expr *> A) {
   assert(A.size() == getCollapsedNumber() &&
          "Number of loop counters is not the same as the collapsed number");
