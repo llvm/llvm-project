@@ -2828,17 +2828,26 @@ SDValue SystemZTargetLowering::lowerGlobalAddress(GlobalAddressSDNode *Node,
 
   SDValue Result;
   if (Subtarget.isPC32DBLSymbol(GV, CM)) {
-    // Assign anchors at 1<<12 byte boundaries.
-    uint64_t Anchor = Offset & ~uint64_t(0xfff);
-    Result = DAG.getTargetGlobalAddress(GV, DL, PtrVT, Anchor);
-    Result = DAG.getNode(SystemZISD::PCREL_WRAPPER, DL, PtrVT, Result);
+    if (isInt<32>(Offset)) {
+      // Assign anchors at 1<<12 byte boundaries.
+      uint64_t Anchor = Offset & ~uint64_t(0xfff);
+      Result = DAG.getTargetGlobalAddress(GV, DL, PtrVT, Anchor);
+      Result = DAG.getNode(SystemZISD::PCREL_WRAPPER, DL, PtrVT, Result);
 
-    // The offset can be folded into the address if it is aligned to a halfword.
-    Offset -= Anchor;
-    if (Offset != 0 && (Offset & 1) == 0) {
-      SDValue Full = DAG.getTargetGlobalAddress(GV, DL, PtrVT, Anchor + Offset);
-      Result = DAG.getNode(SystemZISD::PCREL_OFFSET, DL, PtrVT, Full, Result);
-      Offset = 0;
+      // The offset can be folded into the address if it is aligned to a
+      // halfword.
+      Offset -= Anchor;
+      if (Offset != 0 && (Offset & 1) == 0) {
+        SDValue Full =
+          DAG.getTargetGlobalAddress(GV, DL, PtrVT, Anchor + Offset);
+        Result = DAG.getNode(SystemZISD::PCREL_OFFSET, DL, PtrVT, Full, Result);
+        Offset = 0;
+      }
+    } else {
+      // Conservatively load a constant offset greater than 32 bits into a
+      // register below.
+      Result = DAG.getTargetGlobalAddress(GV, DL, PtrVT);
+      Result = DAG.getNode(SystemZISD::PCREL_WRAPPER, DL, PtrVT, Result);
     }
   } else {
     Result = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, SystemZII::MO_GOT);
