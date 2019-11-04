@@ -193,9 +193,6 @@ public:
     return GetTranslationUnitDecl(getASTContext());
   }
 
-  // Copy "src" into this ClangASTContext.
-  CompilerType CopyType(const CompilerType &src);
-
   static clang::Decl *CopyDecl(clang::ASTContext *dest_context,
                                clang::ASTContext *source_context,
                                clang::Decl *source_decl);
