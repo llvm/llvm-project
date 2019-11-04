@@ -61,6 +61,7 @@ static_library("LLVMAArch64CodeGen") {
     ":AArch64GenGlobalISel",
     ":AArch64GenMCPseudoLowering",
     ":AArch64GenRegisterBank",
+    "AsmParser",
     "MCTargetDesc",
     "TargetInfo",
     "Utils",
