@@ -52,68 +52,22 @@ static cl::opt<unsigned> InstrLimit("dfa-instr-limit", cl::Hidden,
 
 static unsigned InstrCount = 0;
 
-// --------------------------------------------------------------------
-// Definitions shared between DFAPacketizer.cpp and DFAPacketizerEmitter.cpp
-
-static DFAInput addDFAFuncUnits(DFAInput Inp, unsigned FuncUnits) {
-  return (Inp << DFA_MAX_RESOURCES) | FuncUnits;
-}
-
-/// Return the DFAInput for an instruction class input vector.
-/// This function is used in both DFAPacketizer.cpp and in
-/// DFAPacketizerEmitter.cpp.
-static DFAInput getDFAInsnInput(const std::vector<unsigned> &InsnClass) {
-  DFAInput InsnInput = 0;
-  assert((InsnClass.size() <= DFA_MAX_RESTERMS) &&
-         "Exceeded maximum number of DFA terms");
-  for (auto U : InsnClass)
-    InsnInput = addDFAFuncUnits(InsnInput, U);
-  return InsnInput;
-}
-
-// --------------------------------------------------------------------
-
-// Make sure DFA types are large enough for the number of terms & resources.
-static_assert((DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) <=
-              (8 * sizeof(DFAInput)),
-              "(DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) too big for DFAInput");
-static_assert(
-    (DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) <= (8 * sizeof(DFAStateInput)),
-    "(DFA_MAX_RESTERMS * DFA_MAX_RESOURCES) too big for DFAStateInput");
-
-// Return the DFAInput for an instruction class.
-DFAInput DFAPacketizer::getInsnInput(unsigned InsnClass) {
-  // Note: this logic must match that in DFAPacketizerDefs.h for input vectors.
-  DFAInput InsnInput = 0;
-  unsigned i = 0;
-  (void)i;
-  for (const InstrStage *IS = InstrItins->beginStage(InsnClass),
-       *IE = InstrItins->endStage(InsnClass); IS != IE; ++IS) {
-    InsnInput = addDFAFuncUnits(InsnInput, IS->getUnits());
-    assert((i++ < DFA_MAX_RESTERMS) && "Exceeded maximum number of DFA inputs");
-  }
-  return InsnInput;
-}
-
-// Return the DFAInput for an instruction class input vector.
-DFAInput DFAPacketizer::getInsnInput(const std::vector<unsigned> &InsnClass) {
-  return getDFAInsnInput(InsnClass);
-}
-
 // Check if the resources occupied by a MCInstrDesc are available in the
 // current state.
 bool DFAPacketizer::canReserveResources(const MCInstrDesc *MID) {
-  unsigned InsnClass = MID->getSchedClass();
-  DFAInput InsnInput = getInsnInput(InsnClass);
-  return A.canAdd(InsnInput);
+  unsigned Action = ItinActions[MID->getSchedClass()];
+  if (MID->getSchedClass() == 0 || Action == 0)
+    return false;
+  return A.canAdd(Action);
 }
 
 // Reserve the resources occupied by a MCInstrDesc and change the current
 // state to reflect that change.
 void DFAPacketizer::reserveResources(const MCInstrDesc *MID) {
-  unsigned InsnClass = MID->getSchedClass();
-  DFAInput InsnInput = getInsnInput(InsnClass);
-  A.add(InsnInput);
+  unsigned Action = ItinActions[MID->getSchedClass()];
+  if (MID->getSchedClass() == 0 || Action == 0)
+    return;
+  A.add(Action);
 }
 
 // Check if the resources occupied by a machine instruction are available
