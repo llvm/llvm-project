@@ -1,16 +1,11 @@
-# Show that llvm-readobj prints symbol shndxes correctly, for valid indexes,
-# invalid indexes (i.e. section indexes that don't correspond to a real
-# section), reserved values and processor/os-specific index values, for both GNU
-# and LLVM styles.
+## Show that llvm-readobj prints symbol shndxes correctly, for valid indexes,
+## invalid indexes (i.e. section indexes that don't correspond to a real
+## section), reserved values and processor/os-specific index values, for both GNU
+## and LLVM styles.
 
 # RUN: yaml2obj --docnum=1 %s > %t1
 # RUN: llvm-readobj --symbols %t1 | FileCheck %s --check-prefix=LLVM1
 # RUN: llvm-readelf --symbols %t1 | FileCheck %s --check-prefix=GNU1
-
-# llvm-readobj doesn't accept shndx values that are not valid section indexes
-# for LLVM style, so only test GNU output in this case.
-# RUN: yaml2obj --docnum=2 %s > %t2
-# RUN: llvm-readelf --symbols %t2 | FileCheck %s --check-prefix=GNU2
 
 # LLVM1: Name:    undef
 # LLVM1: Section:
@@ -48,11 +43,6 @@
 # GNU1-NEXT:     6: {{.*}} OS[0xff21] os
 # GNU1-NEXT:     7: {{.*}} RSV[0xfffe] reserved
 # GNU1-NEXT:     8: {{.*}}   1 xindex
-
-# GNU2:      Symbol table '.symtab' contains 2 entries:
-# GNU2-NEXT:   Num: {{.*}} Ndx Name
-# GNU2-NEXT:     0: {{.*}} UND
-# GNU2-NEXT:     1: {{.*}}  66 bad
 
 --- !ELF
 FileHeader:
@@ -92,6 +82,98 @@ Symbols:
     Index:   SHN_XINDEX
     Binding: STB_GLOBAL
 
+## In this case, the index does not correspond to a real section. Check that GNU
+## style just prints the section index as normal and LLVM style prints a warning
+## (but only once for each warning).
+# RUN: yaml2obj --docnum=2 %s > %t2
+# RUN: llvm-readobj --symbols %t2 2> %t2.llvm.err | FileCheck %s --check-prefix=LLVM2
+# RUN: FileCheck %s --input-file=%t2.llvm.err --check-prefix=BAD-SHNDX --implicit-check-not=warning
+# RUN: llvm-readelf --symbols %t2 2> %t2.gnu.err | FileCheck %s --check-prefix=GNU2
+# RUN: FileCheck %s --input-file=%t2.gnu.err --allow-empty --implicit-check-not={{.}}
+
+# LLVM2: Name: bad
+# LLVM2: Section:
+# LLVM2-SAME:     <?> (0x42)
+# LLVM2: Name: bad2
+# LLVM2: Section:
+# LLVM2-SAME:     <?> (0x42)
+# LLVM2: Name: bad3
+# LLVM2: Section:
+# LLVM2-SAME:     <?> (0x43)
+# LLVM2: Name: invalid_shndx
+# LLVM2: Section:
+# LLVM2-SAME:     <?> (0x9)
+# LLVM2: Name: invalid_shndx2
+# LLVM2: Section:
+# LLVM2-SAME:     <?> (0x9)
+# LLVM2: Name: invalid_shndx3
+# LLVM2: Section:
+# LLVM2-SAME:     <?> (0xA)
+
+# GNU2:      Symbol table '.symtab' contains 7 entries:
+# GNU2-NEXT:   Num: {{.*}} Ndx Name
+# GNU2-NEXT:     0: {{.*}} UND
+# GNU2-NEXT:     1: {{.*}}  66 bad
+# GNU2-NEXT:     2: {{.*}}  66 bad2
+# GNU2-NEXT:     3: {{.*}}  67 bad3
+# GNU2-NEXT:     4: {{.*}}   9 invalid_shndx
+# GNU2-NEXT:     5: {{.*}}   9 invalid_shndx2
+# GNU2-NEXT:     6: {{.*}}  10 invalid_shndx3
+
+# BAD-SHNDX: warning: '{{.*}}tmp2': invalid section index: 66
+# BAD-SHNDX: warning: '{{.*}}tmp2': invalid section index: 67
+# BAD-SHNDX: warning: '{{.*}}tmp2': invalid section index: 9
+# BAD-SHNDX: warning: '{{.*}}tmp2': invalid section index: 10
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .symtab_shndx
+    Type: SHT_SYMTAB_SHNDX
+    Link: .symtab
+    Entries: [ 0, 0, 0, 0, 9, 9, 10 ]
+Symbols:
+  - Name:    bad
+    Index:   0x42
+  - Name:    bad2
+    Index:   0x42
+  - Name:    bad3
+    Index:   0x43
+  - Name:    invalid_shndx
+    Index:   SHN_XINDEX
+  - Name:    invalid_shndx2
+    Index:   SHN_XINDEX
+  - Name:    invalid_shndx3
+    Index:   SHN_XINDEX
+
+## In this case, the symtab shndx section is missing, so symbols with section
+## indexes of SHN_XINDEX print as Reserved symbols.
+# RUN: yaml2obj --docnum=3 %s > %t3
+# RUN: llvm-readobj --symbols %t3 2> %t3.llvm.err | FileCheck %s --check-prefix=LLVM3
+# RUN: FileCheck %s --input-file=%t3.llvm.err --check-prefix=NO-SYMTAB-SHNDX --implicit-check-not=warning
+# RUN: llvm-readelf --symbols %t3 2> %t3.gnu.err | FileCheck %s --check-prefix=GNU3
+# RUN: FileCheck %s --input-file=%t3.gnu.err --check-prefix=NO-SYMTAB-SHNDX --implicit-check-not=warning
+
+# LLVM3: Name: no_shndx
+# LLVM3: Section:
+# LLVM3-SAME:     Reserved (0xFFFF)
+# LLVM3: Name: no_shndx2
+# LLVM3: Section:
+# LLVM3-SAME:     Reserved (0xFFFF)
+
+# GNU3:      Symbol table '.symtab' contains 3 entries:
+# GNU3-NEXT:   Num: {{.*}} Ndx Name
+# GNU3-NEXT:     0: {{.*}} UND
+# GNU3-NEXT:     1: {{.*}} RSV[0xffff] no_shndx
+# GNU3-NEXT:     2: {{.*}} RSV[0xffff] no_shndx2
+
+# NO-SYMTAB-SHNDX: warning: '{{.*}}tmp3': extended symbol index (1) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# NO-SYMTAB-SHNDX: warning: '{{.*}}tmp3': extended symbol index (2) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+
 --- !ELF
 FileHeader:
   Class:   ELFCLASS32
@@ -99,6 +181,7 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_386
 Symbols:
-  - Name:    bad
-    Index:   0x42
-    Binding: STB_GLOBAL
+  - Name:  no_shndx
+    Index: SHN_XINDEX
+  - Name:  no_shndx2
+    Index: SHN_XINDEX

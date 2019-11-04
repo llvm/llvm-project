@@ -433,6 +433,8 @@ public:
   virtual void printMipsABIFlags(const ELFObjectFile<ELFT> *Obj) = 0;
   const ELFDumper<ELFT> *dumper() const { return Dumper; }
 
+  void reportUniqueWarning(Error Err) const;
+
 protected:
   std::function<Error(const Twine &Msg)> WarningHandler;
   StringRef FileName;
@@ -555,6 +557,14 @@ private:
   void printProgramHeaders(const ELFO *Obj);
   void printSectionMapping(const ELFO *Obj);
 };
+
+template <class ELFT>
+void DumpStyle<ELFT>::reportUniqueWarning(Error Err) const {
+  handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
+    cantFail(WarningHandler(EI.message()),
+             "WarningHandler should always return ErrorSuccess");
+  });
+}
 
 template <typename ELFT> class LLVMStyle : public DumpStyle<ELFT> {
 public:
@@ -824,10 +834,18 @@ std::string ELFDumper<ELFT>::getFullSymbolName(const Elf_Sym *Symbol,
   if (SymbolName.empty() && Symbol->getType() == ELF::STT_SECTION) {
     Elf_Sym_Range Syms = unwrapOrError(
         ObjF->getFileName(), ObjF->getELFFile()->symbols(DotSymtabSec));
-    unsigned SectionIndex = unwrapOrError(
-        ObjF->getFileName(), getSymbolSectionIndex(Symbol, Syms.begin()));
-    return unwrapOrError(ObjF->getFileName(),
-                         getSymbolSectionName(Symbol, SectionIndex));
+    Expected<unsigned> SectionIndex =
+        getSymbolSectionIndex(Symbol, Syms.begin());
+    if (!SectionIndex) {
+      ELFDumperStyle->reportUniqueWarning(SectionIndex.takeError());
+      return "<?>";
+    }
+    Expected<StringRef> NameOrErr = getSymbolSectionName(Symbol, *SectionIndex);
+    if (!NameOrErr) {
+      ELFDumperStyle->reportUniqueWarning(NameOrErr.takeError());
+      return ("<section " + Twine(*SectionIndex) + ">").str();
+    }
+    return *NameOrErr;
   }
 
   if (!IsDynamic)
@@ -3298,12 +3316,18 @@ std::string GNUStyle<ELFT>::getSymbolSectionNdx(const ELFO *Obj,
     return "ABS";
   case ELF::SHN_COMMON:
     return "COM";
-  case ELF::SHN_XINDEX:
-    return to_string(format_decimal(
-        unwrapOrError(this->FileName,
-                      object::getExtendedSymbolTableIndex<ELFT>(
-                          Symbol, FirstSym, this->dumper()->getShndxTable())),
-        3));
+  case ELF::SHN_XINDEX: {
+    Expected<uint32_t> IndexOrErr = object::getExtendedSymbolTableIndex<ELFT>(
+        Symbol, FirstSym, this->dumper()->getShndxTable());
+    if (!IndexOrErr) {
+      assert(Symbol->st_shndx == SHN_XINDEX &&
+             "getSymbolSectionIndex should only fail due to an invalid "
+             "SHT_SYMTAB_SHNDX table/reference");
+      this->reportUniqueWarning(IndexOrErr.takeError());
+      return "RSV[0xffff]";
+    }
+    return to_string(format_decimal(*IndexOrErr, 3));
+  }
   default:
     // Find if:
     // Processor specific
@@ -5454,11 +5478,25 @@ void LLVMStyle<ELFT>::printSectionHeaders(const ELFO *Obj) {
 template <class ELFT>
 void LLVMStyle<ELFT>::printSymbolSection(const Elf_Sym *Symbol,
                                          const Elf_Sym *First) {
-  unsigned SectionIndex = unwrapOrError(
-      this->FileName, this->dumper()->getSymbolSectionIndex(Symbol, First));
-  StringRef SectionName = unwrapOrError(
-      this->FileName, this->dumper()->getSymbolSectionName(Symbol, SectionIndex));
-  W.printHex("Section", SectionName, SectionIndex);
+  Expected<unsigned> SectionIndex =
+      this->dumper()->getSymbolSectionIndex(Symbol, First);
+  if (!SectionIndex) {
+    assert(Symbol->st_shndx == SHN_XINDEX &&
+           "getSymbolSectionIndex should only fail due to an invalid "
+           "SHT_SYMTAB_SHNDX table/reference");
+    this->reportUniqueWarning(SectionIndex.takeError());
+    W.printHex("Section", "Reserved", SHN_XINDEX);
+    return;
+  }
+
+  Expected<StringRef> SectionName =
+      this->dumper()->getSymbolSectionName(Symbol, *SectionIndex);
+  if (!SectionName) {
+    this->reportUniqueWarning(SectionName.takeError());
+    W.printHex("Section", "<?>", *SectionIndex);
+  } else {
+    W.printHex("Section", *SectionName, *SectionIndex);
+  }
 }
 
 template <class ELFT>
