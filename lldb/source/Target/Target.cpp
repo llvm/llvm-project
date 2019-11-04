@@ -2318,7 +2318,6 @@ Target::GetSwiftPersistentExpressionState(ExecutionContextScope &exe_scope) {
 }
 
 UserExpression *Target::GetUserExpressionForLanguage(
-    ExecutionContext &exe_ctx,
     llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
     Expression::ResultType desired_type,
     const EvaluateExpressionOptions &options, ValueObject *ctx_obj,
