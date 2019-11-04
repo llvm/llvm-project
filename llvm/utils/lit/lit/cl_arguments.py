@@ -5,6 +5,7 @@ import sys
 
 import lit.util
 
+# TODO(yln): scan dest, to see if is redundant
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('test_paths',
