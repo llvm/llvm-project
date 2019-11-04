@@ -28,7 +28,8 @@ namespace llvm {
   class AsmPrinter;
   class MCInst;
   class MCOperand;
-
+  class ModulePass;
+  
   FunctionPass *createPPCCTRLoops();
 #ifndef NDEBUG
   FunctionPass *createPPCCTRLoopsVerify();
@@ -77,6 +78,10 @@ namespace llvm {
 
   extern char &PPCVSXFMAMutateID;
 
+  ModulePass *createPPCLowerMASSVEntriesPass();
+  void initializePPCLowerMASSVEntriesPass(PassRegistry &);
+  extern char &PPCLowerMASSVEntriesID;
+  
   namespace PPCII {
 
   /// Target Operand Flag enum.
