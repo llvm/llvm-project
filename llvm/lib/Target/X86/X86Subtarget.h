@@ -256,9 +256,9 @@ protected:
   /// mask over multiple fixed shuffles.
   bool HasFastVariableShuffle = false;
 
-  /// True if there is no performance penalty to writing only the lower parts
-  /// of a YMM or ZMM register without clearing the upper part.
-  bool HasFastPartialYMMorZMMWrite = false;
+  /// True if vzeroupper instructions should be inserted after code that uses
+  /// ymm or zmm registers.
+  bool InsertVZEROUPPER = false;
 
   /// True if there is no performance penalty for writing NOPs with up to
   /// 11 bytes.
@@ -658,9 +658,7 @@ public:
   bool hasFastVariableShuffle() const {
     return HasFastVariableShuffle;
   }
-  bool hasFastPartialYMMorZMMWrite() const {
-    return HasFastPartialYMMorZMMWrite;
-  }
+  bool insertVZEROUPPER() const { return InsertVZEROUPPER; }
   bool hasFastGather() const { return HasFastGather; }
   bool hasFastScalarFSQRT() const { return HasFastScalarFSQRT; }
   bool hasFastVectorFSQRT() const { return HasFastVectorFSQRT; }
