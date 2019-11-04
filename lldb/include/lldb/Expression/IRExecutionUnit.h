@@ -307,8 +307,10 @@ private:
       return false;
     }
 
+    // Ignore any EHFrame registration.
     void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr,
                           size_t Size) override {}
+    void deregisterEHFrames() override {}
 
     virtual void deregisterEHFrames() override {
       return;
