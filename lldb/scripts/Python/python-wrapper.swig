@@ -291,20 +291,32 @@ LLDBSwigPythonCreateScriptedThreadPlan
     if (!tp_arg.IsAllocated())
         Py_RETURN_NONE;
 
+    llvm::Expected<PythonCallable::ArgInfo> arg_info = pfunc.GetArgInfo();
+    if (!arg_info) {
+        llvm::handleAllErrors(
+            arg_info.takeError(),
+            [&](PythonException &E) {
+                error_string.append(E.ReadBacktrace());
+            },
+            [&](const llvm::ErrorInfoBase &E) {
+                error_string.append(E.message());
+            });
+        Py_RETURN_NONE;
+    }
+
     PythonObject result = {};
-    size_t init_num_args = pfunc.GetNumInitArguments().count;
-    if (init_num_args == 3) {
+    if (arg_info.get().max_positional_args == 2) {
         if (args_impl != nullptr) {
            error_string.assign("args passed, but __init__ does not take an args dictionary");
            Py_RETURN_NONE;
         }
         result = pfunc(tp_arg, dict);
-    } else if (init_num_args == 4) {
+    } else if (arg_info.get().max_positional_args >= 3) {
         lldb::SBStructuredData *args_value = new lldb::SBStructuredData(args_impl);
         PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(args_value));
         result = pfunc(tp_arg, args_arg, dict);
     } else {
-        error_string.assign("wrong number of arguments in __init__, should be 1 or 2 (not including self & dict)");
+        error_string.assign("wrong number of arguments in __init__, should be 2 or 3 (not including self)");
         Py_RETURN_NONE;
     }
 
