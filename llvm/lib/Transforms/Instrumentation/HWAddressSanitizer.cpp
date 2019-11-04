@@ -284,7 +284,6 @@ private:
 
   FunctionCallee HwasanTagMemoryFunc;
   FunctionCallee HwasanGenerateTagFunc;
-  FunctionCallee HwasanThreadEnterFunc;
 
   Constant *ShadowGlobal;
 
@@ -473,9 +472,6 @@ void HWAddressSanitizer::initializeCallbacks(Module &M) {
 
   HWAsanHandleVfork =
       M.getOrInsertFunction("__hwasan_handle_vfork", IRB.getVoidTy(), IntptrTy);
-
-  HwasanThreadEnterFunc =
-      M.getOrInsertFunction("__hwasan_thread_enter", IRB.getVoidTy());
 }
 
 Value *HWAddressSanitizer::getDynamicShadowIfunc(IRBuilder<> &IRB) {
@@ -934,34 +930,13 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
   Value *SlotPtr = getHwasanThreadSlotPtr(IRB, IntptrTy);
   assert(SlotPtr);
 
-  Instruction *ThreadLong = IRB.CreateLoad(IntptrTy, SlotPtr);
-
-  Function *F = IRB.GetInsertBlock()->getParent();
-  if (F->getFnAttribute("hwasan-abi").getValueAsString() == "interceptor") {
-    Value *ThreadLongEqZero =
-        IRB.CreateICmpEQ(ThreadLong, ConstantInt::get(IntptrTy, 0));
-    auto *Br = cast<BranchInst>(SplitBlockAndInsertIfThen(
-        ThreadLongEqZero, cast<Instruction>(ThreadLongEqZero)->getNextNode(),
-        false, MDBuilder(*C).createBranchWeights(1, 100000)));
-
-    IRB.SetInsertPoint(Br);
-    // FIXME: This should call a new runtime function with a custom calling
-    // convention to avoid needing to spill all arguments here.
-    IRB.CreateCall(HwasanThreadEnterFunc);
-    LoadInst *ReloadThreadLong = IRB.CreateLoad(IntptrTy, SlotPtr);
-
-    IRB.SetInsertPoint(&*Br->getSuccessor(0)->begin());
-    PHINode *ThreadLongPhi = IRB.CreatePHI(IntptrTy, 2);
-    ThreadLongPhi->addIncoming(ThreadLong, ThreadLong->getParent());
-    ThreadLongPhi->addIncoming(ReloadThreadLong, ReloadThreadLong->getParent());
-    ThreadLong = ThreadLongPhi;
-  }
-
+  Value *ThreadLong = IRB.CreateLoad(IntptrTy, SlotPtr);
   // Extract the address field from ThreadLong. Unnecessary on AArch64 with TBI.
   Value *ThreadLongMaybeUntagged =
       TargetTriple.isAArch64() ? ThreadLong : untagPointer(IRB, ThreadLong);
 
   if (WithFrameRecord) {
+    Function *F = IRB.GetInsertBlock()->getParent();
     StackBaseTag = IRB.CreateAShr(ThreadLong, 3);
 
     // Prepare ring buffer data.
