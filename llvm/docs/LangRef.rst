@@ -1456,6 +1456,13 @@ example:
 ``naked``
     This attribute disables prologue / epilogue emission for the
     function. This can have very system-specific consequences.
+``"no-inline-line-tables"``
+    When this attribute is set to true, the inliner discards source locations
+    when inlining code and instead uses the source location of the call site.
+    Breakpoints set on code that was inlined into the current function will
+    not fire during the execution of the inlined call sites. If the debugger
+    stops inside an inlined call site, it will appear to be stopped at the
+    outermost inlined call site.
 ``no-jump-tables``
     When this attribute is set to true, the jump tables and lookup tables that
     can be generated from a switch case lowering are disabled.
