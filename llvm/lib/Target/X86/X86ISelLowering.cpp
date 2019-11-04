@@ -37861,7 +37861,7 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
 }
 
 /// Different mul shrinking modes.
-enum ShrinkMode { MULS8, MULU8, MULS16, MULU16 };
+enum class ShrinkMode { MULS8, MULU8, MULS16, MULU16 };
 
 static bool canReduceVMulWidth(SDNode *N, SelectionDAG &DAG, ShrinkMode &Mode) {
   EVT VT = N->getOperand(0).getValueType();
@@ -37882,16 +37882,16 @@ static bool canReduceVMulWidth(SDNode *N, SelectionDAG &DAG, ShrinkMode &Mode) {
   unsigned MinSignBits = std::min(SignBits[0], SignBits[1]);
   // When ranges are from -128 ~ 127, use MULS8 mode.
   if (MinSignBits >= 25)
-    Mode = MULS8;
+    Mode = ShrinkMode::MULS8;
   // When ranges are from 0 ~ 255, use MULU8 mode.
   else if (AllPositive && MinSignBits >= 24)
-    Mode = MULU8;
+    Mode = ShrinkMode::MULU8;
   // When ranges are from -32768 ~ 32767, use MULS16 mode.
   else if (MinSignBits >= 17)
-    Mode = MULS16;
+    Mode = ShrinkMode::MULS16;
   // When ranges are from 0 ~ 65535, use MULU16 mode.
   else if (AllPositive && MinSignBits >= 16)
-    Mode = MULU16;
+    Mode = ShrinkMode::MULU16;
   else
     return false;
   return true;
@@ -37961,15 +37961,17 @@ static SDValue reduceVMULWidth(SDNode *N, SelectionDAG &DAG,
   // Generate the lower part of mul: pmullw. For MULU8/MULS8, only the
   // lower part is needed.
   SDValue MulLo = DAG.getNode(ISD::MUL, DL, ReducedVT, NewN0, NewN1);
-  if (Mode == MULU8 || Mode == MULS8)
-    return DAG.getNode((Mode == MULU8) ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND,
+  if (Mode == ShrinkMode::MULU8 || Mode == ShrinkMode::MULS8)
+    return DAG.getNode((Mode == ShrinkMode::MULU8) ? ISD::ZERO_EXTEND
+                                                   : ISD::SIGN_EXTEND,
                        DL, VT, MulLo);
 
   MVT ResVT = MVT::getVectorVT(MVT::i32, NumElts / 2);
   // Generate the higher part of mul: pmulhw/pmulhuw. For MULU16/MULS16,
   // the higher part is also needed.
-  SDValue MulHi = DAG.getNode(Mode == MULS16 ? ISD::MULHS : ISD::MULHU, DL,
-                              ReducedVT, NewN0, NewN1);
+  SDValue MulHi =
+      DAG.getNode(Mode == ShrinkMode::MULS16 ? ISD::MULHS : ISD::MULHU, DL,
+                  ReducedVT, NewN0, NewN1);
 
   // Repack the lower part and higher part result of mul into a wider
   // result.
@@ -43818,7 +43820,8 @@ static SDValue combineLoopMAddPattern(SDNode *N, SelectionDAG &DAG,
   auto UsePMADDWD = [&](SDValue Op) {
     ShrinkMode Mode;
     return Op.getOpcode() == ISD::MUL &&
-           canReduceVMulWidth(Op.getNode(), DAG, Mode) && Mode != MULU16 &&
+           canReduceVMulWidth(Op.getNode(), DAG, Mode) &&
+           Mode != ShrinkMode::MULU16 &&
            (!Subtarget.hasSSE41() ||
             (Op->isOnlyUserOf(Op.getOperand(0).getNode()) &&
              Op->isOnlyUserOf(Op.getOperand(1).getNode())));
@@ -44023,7 +44026,8 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDValue Op0, SDValue Op1,
 
   // Check if the Mul source can be safely shrunk.
   ShrinkMode Mode;
-  if (!canReduceVMulWidth(Mul.getNode(), DAG, Mode) || Mode == MULU16)
+  if (!canReduceVMulWidth(Mul.getNode(), DAG, Mode) ||
+      Mode == ShrinkMode::MULU16)
     return SDValue();
 
   auto PMADDBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
