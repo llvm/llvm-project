@@ -507,10 +507,10 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     return error;
   }
 
-  // If we got here, we need to read the value from memory
+  // If we got here, we need to read the value from memory.
   size_t byte_size = GetValueByteSize(&error, exe_ctx);
 
-  // Bail if we encountered any errors getting the byte size
+  // Bail if we encountered any errors getting the byte size.
   if (error.Fail())
     return error;
 
