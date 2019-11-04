@@ -12,7 +12,7 @@
 namespace clang {
 namespace tidy {
 namespace utils {
-using tooling::RewriteRule;
+using transformer::RewriteRule;
 
 #ifndef NDEBUG
 static bool hasExplanation(const RewriteRule::Case &C) {
@@ -62,7 +62,7 @@ void TransformerClangTidyCheck::registerPPCallbacks(
 void TransformerClangTidyCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
   if (Rule)
-    for (auto &Matcher : tooling::detail::buildMatchers(*Rule))
+    for (auto &Matcher : transformer::detail::buildMatchers(*Rule))
       Finder->addDynamicMatcher(Matcher, this);
 }
 
@@ -72,9 +72,9 @@ void TransformerClangTidyCheck::check(
     return;
 
   assert(Rule && "check() should not fire if Rule is None");
-  RewriteRule::Case Case = tooling::detail::findSelectedCase(Result, *Rule);
-  Expected<SmallVector<tooling::detail::Transformation, 1>> Transformations =
-      tooling::detail::translateEdits(Result, Case.Edits);
+  RewriteRule::Case Case = transformer::detail::findSelectedCase(Result, *Rule);
+  Expected<SmallVector<transformer::detail::Transformation, 1>>
+      Transformations = transformer::detail::translateEdits(Result, Case.Edits);
   if (!Transformations) {
     llvm::errs() << "Rewrite failed: "
                  << llvm::toString(Transformations.takeError()) << "\n";
@@ -102,7 +102,7 @@ void TransformerClangTidyCheck::check(
     auto &Header = I.first;
     if (Optional<FixItHint> Fix = Inserter->CreateIncludeInsertion(
             Result.SourceManager->getMainFileID(), Header,
-            /*IsAngled=*/I.second == tooling::IncludeFormat::Angled)) {
+            /*IsAngled=*/I.second == transformer::IncludeFormat::Angled)) {
       Diag << *Fix;
     }
   }
