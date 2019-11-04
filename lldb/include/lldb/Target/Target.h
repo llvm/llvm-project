@@ -1085,8 +1085,7 @@ public:
   // Returns a new-ed object which the caller owns.
 
   UserExpression *
-  GetUserExpressionForLanguage(ExecutionContext &exe_ctx,
-                               llvm::StringRef expr, llvm::StringRef prefix,
+  GetUserExpressionForLanguage(llvm::StringRef expr, llvm::StringRef prefix,
                                lldb::LanguageType language,
                                Expression::ResultType desired_type,
                                const EvaluateExpressionOptions &options,

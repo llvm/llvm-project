@@ -254,7 +254,6 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
       language = comp_unit->GetLanguage();
 
     m_user_expression_sp.reset(GetTarget().GetUserExpressionForLanguage(
-        exe_ctx,
         condition_text, llvm::StringRef(), language, Expression::eResultTypeAny,
         EvaluateExpressionOptions(), nullptr, error));
     if (error.Fail()) {
