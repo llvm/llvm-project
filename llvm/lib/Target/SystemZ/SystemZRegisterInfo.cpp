@@ -195,6 +195,8 @@ SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
 const MCPhysReg *
 SystemZRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
+  if (MF->getFunction().getCallingConv() == CallingConv::GHC)
+    return CSR_SystemZ_NoRegs_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::AnyReg)
     return Subtarget.hasVector()? CSR_SystemZ_AllRegs_Vector_SaveList
                                 : CSR_SystemZ_AllRegs_SaveList;
@@ -209,6 +211,8 @@ const uint32_t *
 SystemZRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                           CallingConv::ID CC) const {
   const SystemZSubtarget &Subtarget = MF.getSubtarget<SystemZSubtarget>();
+  if (CC == CallingConv::GHC)
+    return CSR_SystemZ_NoRegs_RegMask;
   if (CC == CallingConv::AnyReg)
     return Subtarget.hasVector()? CSR_SystemZ_AllRegs_Vector_RegMask
                                 : CSR_SystemZ_AllRegs_RegMask;

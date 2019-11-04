@@ -351,6 +351,23 @@ void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
   const std::vector<CalleeSavedInfo> &CSI = MFFrame.getCalleeSavedInfo();
   bool HasFP = hasFP(MF);
 
+  // In GHC calling convention C stack space, including the ABI-defined
+  // 160-byte base area, is (de)allocated by GHC itself.  This stack space may
+  // be used by LLVM as spill slots for the tail recursive GHC functions.  Thus
+  // do not allocate stack space here, too.
+  if (MF.getFunction().getCallingConv() == CallingConv::GHC) {
+    if (MFFrame.getStackSize() > 2048 * sizeof(long)) {
+      report_fatal_error(
+          "Pre allocated stack space for GHC function is too small");
+    }
+    if (HasFP) {
+      report_fatal_error(
+          "In GHC calling convention a frame pointer is not supported");
+    }
+    MFFrame.setStackSize(MFFrame.getStackSize() + SystemZMC::CallFrameSize);
+    return;
+  }
+
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
   DebugLoc DL;
@@ -477,6 +494,10 @@ void SystemZFrameLowering::emitEpilogue(MachineFunction &MF,
       static_cast<const SystemZInstrInfo *>(MF.getSubtarget().getInstrInfo());
   SystemZMachineFunctionInfo *ZFI = MF.getInfo<SystemZMachineFunctionInfo>();
   MachineFrameInfo &MFFrame = MF.getFrameInfo();
+
+  // See SystemZFrameLowering::emitPrologue
+  if (MF.getFunction().getCallingConv() == CallingConv::GHC)
+    return;
 
   // Skip the return instruction.
   assert(MBBI->isReturn() && "Can only insert epilogue into returning blocks");

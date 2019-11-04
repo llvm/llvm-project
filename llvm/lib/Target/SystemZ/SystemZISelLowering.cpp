@@ -1675,6 +1675,9 @@ SystemZTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   if (RetLocs.empty())
     return DAG.getNode(SystemZISD::RET_FLAG, DL, MVT::Other, Chain);
 
+  if (CallConv == CallingConv::GHC)
+    report_fatal_error("GHC functions return void only");
+
   // Copy the result values into the output registers.
   SDValue Glue;
   SmallVector<SDValue, 4> RetOps;
@@ -2874,6 +2877,10 @@ SDValue SystemZTargetLowering::lowerTLSGetOffset(GlobalAddressSDNode *Node,
   SDValue Chain = DAG.getEntryNode();
   SDValue Glue;
 
+  if (DAG.getMachineFunction().getFunction().getCallingConv() ==
+      CallingConv::GHC)
+    report_fatal_error("In GHC calling convention TLS is not supported");
+
   // __tls_get_offset takes the GOT offset in %r2 and the GOT in %r12.
   SDValue GOT = DAG.getGLOBAL_OFFSET_TABLE(PtrVT);
   Chain = DAG.getCopyToReg(Chain, DL, SystemZ::R12D, GOT, Glue);
@@ -2939,6 +2946,10 @@ SDValue SystemZTargetLowering::lowerGlobalTLSAddress(GlobalAddressSDNode *Node,
   const GlobalValue *GV = Node->getGlobal();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   TLSModel::Model model = DAG.getTarget().getTLSModel(GV);
+
+  if (DAG.getMachineFunction().getFunction().getCallingConv() ==
+      CallingConv::GHC)
+    report_fatal_error("In GHC calling convention TLS is not supported");
 
   SDValue TP = lowerThreadPointer(DL, DAG);
 
@@ -3870,6 +3881,9 @@ SDValue SystemZTargetLowering::lowerSTACKSAVE(SDValue Op,
                                               SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MF.getInfo<SystemZMachineFunctionInfo>()->setManipulatesSP(true);
+  if (MF.getFunction().getCallingConv() == CallingConv::GHC)
+    report_fatal_error("Variable-sized stack allocations are not supported "
+                       "in GHC calling convention");
   return DAG.getCopyFromReg(Op.getOperand(0), SDLoc(Op),
                             SystemZ::R15D, Op.getValueType());
 }
@@ -3879,6 +3893,10 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
   MachineFunction &MF = DAG.getMachineFunction();
   MF.getInfo<SystemZMachineFunctionInfo>()->setManipulatesSP(true);
   bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
+
+  if (MF.getFunction().getCallingConv() == CallingConv::GHC)
+    report_fatal_error("Variable-sized stack allocations are not supported "
+                       "in GHC calling convention");
 
   SDValue Chain = Op.getOperand(0);
   SDValue NewSP = Op.getOperand(1);
