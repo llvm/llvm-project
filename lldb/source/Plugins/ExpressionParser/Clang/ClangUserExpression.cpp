@@ -569,7 +569,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   auto on_exit = llvm::make_scope_exit([this]() { ResetDeclMap(); });
 
-  if (!DeclMap()->WillParse(exe_ctx, m_materializer_up.get())) {
+  if (!DeclMap()->WillParse(exe_ctx, GetMaterializer())) {
     diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "current process state is unsuitable for expression parsing");
@@ -754,7 +754,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
 
   auto on_exit = llvm::make_scope_exit([this]() { ResetDeclMap(); });
 
-  if (!DeclMap()->WillParse(exe_ctx, m_materializer_up.get())) {
+  if (!DeclMap()->WillParse(exe_ctx, GetMaterializer())) {
     diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "current process state is unsuitable for expression parsing");
