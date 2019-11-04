@@ -1381,7 +1381,7 @@ multiclass EXP_m<bit done, SDPatternOperator node> {
       def _si : EXP_Helper<done>,
                 SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.SI>,
                 EXPe {
-        let AssemblerPredicates = [isGFX6GFX7];
+        let AssemblerPredicate = isGFX6GFX7;
         let DecoderNamespace = "GFX6GFX7";
         let DisableDecoder = DisableSIDecoder;
       }
@@ -1389,7 +1389,7 @@ multiclass EXP_m<bit done, SDPatternOperator node> {
       def _vi : EXP_Helper<done>,
                 SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.VI>,
                 EXPe_vi {
-        let AssemblerPredicates = [isGFX8GFX9];
+        let AssemblerPredicate = isGFX8GFX9;
         let DecoderNamespace = "GFX8";
         let DisableDecoder = DisableVIDecoder;
       }
@@ -1397,7 +1397,7 @@ multiclass EXP_m<bit done, SDPatternOperator node> {
       def _gfx10 : EXP_Helper<done>,
                 SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.GFX10>,
                 EXPe {
-        let AssemblerPredicates = [isGFX10Plus];
+        let AssemblerPredicate = isGFX10Plus;
         let DecoderNamespace = "GFX10";
         let DisableDecoder = DisableSIDecoder;
       }
