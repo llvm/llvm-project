@@ -174,7 +174,7 @@ TEST(__local)
 
 TEST(__private)
 
-// CHECK-LABEL: @test__private
+// COMMON-LABEL: @test__private
 
 // Test the address space of 'this' when invoking a constructor for an object in non-default address space
 // EXPL: [[CGEN:%[.a-z0-9]+]] = addrspacecast %class.C* %c to %class.C addrspace(4)*
