@@ -871,12 +871,7 @@ bool ClangExpressionParser::Complete(CompletionRequest &request, unsigned line,
   return true;
 }
 
-// Swift only
-// Extra arguments are only used in Swift. We should get rid of them
-// to avoid clashes when merging from upstream.
-// End Swift only
-unsigned ClangExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
-                                      uint32_t first_line, uint32_t last_line) {
+unsigned ClangExpressionParser::Parse(DiagnosticManager &diagnostic_manager) {
   return ParseInternal(diagnostic_manager);
 }
 
