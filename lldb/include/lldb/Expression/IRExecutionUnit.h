@@ -312,10 +312,6 @@ private:
                           size_t Size) override {}
     void deregisterEHFrames() override {}
 
-    virtual void deregisterEHFrames() override {
-      return;
-    }
-
     uint64_t getSymbolAddress(const std::string &Name) override;
     
     // Find the address of the symbol Name.  If Name is a missing weak symbol
