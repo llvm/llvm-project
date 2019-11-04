@@ -2247,12 +2247,16 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
       }
     } else if (create_on_demand) {
       if (StreamSP error_stream_sp = GetDebugger().GetAsyncErrorStream()) {
+        auto module = GetExecutableModule();
+        const char *module_name = "[no executable module]";
+        if (module)
+          module_name = GetExecutableModule()
+                            ->GetPlatformFileSpec()
+                            .GetFilename()
+                            .AsCString();
         error_stream_sp->Printf(
             "Shared Swift state for %s could not be initialized.\n",
-            GetExecutableModule()
-                ->GetPlatformFileSpec()
-                .GetFilename()
-                .AsCString());
+            module_name);
         error_stream_sp->PutCString(
             "The REPL and expressions are unavailable.\n");
         error_stream_sp->Flush();
