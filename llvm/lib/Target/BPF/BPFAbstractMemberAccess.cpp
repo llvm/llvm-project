@@ -525,7 +525,7 @@ void BPFAbstractMemberAccess::GetStorageBitRange(DICompositeType *CTy,
   uint32_t Index = AccessIndex + 1;
   for (; Index < CTy->getElements().size(); ++Index) {
     auto Member = cast<DIDerivedType>(CTy->getElements()[Index]);
-    if (!Member->getStorageOffsetInBits()) {
+    if (!Member->isBitField()) {
       EndBitOffset = Member->getOffsetInBits();
       break;
     }

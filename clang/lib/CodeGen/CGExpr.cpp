@@ -3438,7 +3438,8 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
     llvm::DIType *DbgInfo = nullptr;
     if (arrayType)
       DbgInfo = CGF.getDebugInfo()->getOrCreateStandaloneType(*arrayType, loc);
-    eltPtr = CGF.Builder.CreatePreserveArrayAccessIndex(addr.getPointer(),
+    eltPtr = CGF.Builder.CreatePreserveArrayAccessIndex(addr.getElementType(),
+                                                        addr.getPointer(),
                                                         indices.size() - 1,
                                                         idx, DbgInfo);
   }

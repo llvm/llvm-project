@@ -127,9 +127,9 @@ static unsigned int longformBranchOpcode(unsigned int Opcode) {
   llvm_unreachable("Unknown branch type");
 }
 
-// FIXME: need to go through this whole constant islands port and check the math
-// for branch ranges and clean this up and make some functions to calculate things
-// that are done many times identically.
+// FIXME: need to go through this whole constant islands port and check
+// the math for branch ranges and clean this up and make some functions
+// to calculate things that are done many times identically.
 // Need to refactor some of the code to call this routine.
 static unsigned int branchMaxOffsets(unsigned int Opcode) {
   unsigned Bits, Scale;
@@ -1519,8 +1519,8 @@ MipsConstantIslands::fixupUnconditionalBr(ImmBranch &Br) {
     // we know that RA is saved because we always save it right now.
     // this requirement will be relaxed later but we also have an alternate
     // way to implement this that I will implement that does not need jal.
-    // We should have a way to back out this alignment restriction if we "can" later.
-    // but it is not harmful.
+    // We should have a way to back out this alignment restriction
+    // if we "can" later. but it is not harmful.
     //
     DestBB->setAlignment(Align(4));
     Br.MaxDisp = ((1<<24)-1) * 2;

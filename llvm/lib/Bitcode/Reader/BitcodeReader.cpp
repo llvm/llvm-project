@@ -3936,6 +3936,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if ((I = UpgradeBitCastInst(Opc, Op, ResTy, Temp))) {
         if (Temp) {
           InstructionList.push_back(Temp);
+          assert(CurBB && "No current BB?");
           CurBB->getInstList().push_back(Temp);
         }
       } else {
@@ -5138,7 +5139,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     }
 
     // Non-void values get registered in the value table for future use.
-    if (I && !I->getType()->isVoidTy()) {
+    if (!I->getType()->isVoidTy()) {
       if (!FullTy) {
         FullTy = I->getType();
         assert(
@@ -5904,11 +5905,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
           std::move(PendingTypeCheckedLoadConstVCalls));
-      PendingTypeTests.clear();
-      PendingTypeTestAssumeVCalls.clear();
-      PendingTypeCheckedLoadVCalls.clear();
-      PendingTypeTestAssumeConstVCalls.clear();
-      PendingTypeCheckedLoadConstVCalls.clear();
       auto VIAndOriginalGUID = getValueInfoFromValueId(ValueID);
       FS->setModulePath(getThisModule()->first());
       FS->setOriginalName(VIAndOriginalGUID.second);
@@ -6049,11 +6045,6 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
           std::move(PendingTypeCheckedLoadConstVCalls));
-      PendingTypeTests.clear();
-      PendingTypeTestAssumeVCalls.clear();
-      PendingTypeCheckedLoadVCalls.clear();
-      PendingTypeTestAssumeConstVCalls.clear();
-      PendingTypeCheckedLoadConstVCalls.clear();
       LastSeenSummary = FS.get();
       LastSeenGUID = VI.getGUID();
       FS->setModulePath(ModuleIdMap[ModuleId]);

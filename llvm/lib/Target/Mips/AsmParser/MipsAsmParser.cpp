@@ -4013,8 +4013,8 @@ bool MipsAsmParser::expandCondBranches(MCInst &Inst, SMLoc IDLoc,
 // D(S)DivMacro.
 
 bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
-                                 const MCSubtargetInfo *STI, const bool IsMips64,
-                                 const bool Signed) {
+                                 const MCSubtargetInfo *STI,
+                                 const bool IsMips64, const bool Signed) {
   MipsTargetStreamer &TOut = getTargetStreamer();
 
   warnIfNoMacro(IDLoc);

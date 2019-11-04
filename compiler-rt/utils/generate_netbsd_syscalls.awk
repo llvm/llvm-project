@@ -15,7 +15,11 @@
 # This script accepts on the input syscalls.master by default located in the
 # /usr/src/sys/kern/syscalls.master path in the NetBSD distribution.
 #
-# NetBSD version 8.0.
+# This script shall be executed only on the newest NetBSD version.
+# This script will emit compat code for the older releases.
+#
+# NetBSD minimal version supported 9.0.
+# NetBSD current version supported 9.99.17.
 #
 #===------------------------------------------------------------------------===#
 
@@ -298,6 +302,20 @@ END {
     pcmd("#define __sanitizer_syscall_post_" sn "(" inargs ") \\")
     pcmd("  __sanitizer_syscall_post_impl_" sn "(" outargs ")")
   }
+
+  pcmd("")
+  pcmd("/* Compat with older releases */")
+  pcmd("#define __sanitizer_syscall_pre_getvfsstat __sanitizer_syscall_pre_compat_90_getvfsstat")
+  pcmd("#define __sanitizer_syscall_post_getvfsstat __sanitizer_syscall_post_compat_90_getvfsstat")
+  pcmd("")
+  pcmd("#define __sanitizer_syscall_pre_statvfs1 __sanitizer_syscall_pre_compat_90_statvfs1")
+  pcmd("#define __sanitizer_syscall_post_statvfs1 __sanitizer_syscall_post_compat_90_statvfs1")
+  pcmd("")
+  pcmd("#define __sanitizer_syscall_pre_fstatvfs1 __sanitizer_syscall_pre_compat_90_fstatvfs1")
+  pcmd("#define __sanitizer_syscall_post_fstatvfs1 __sanitizer_syscall_post_compat_90_fstatvfs1")
+  pcmd("")
+  pcmd("#define __sanitizer_syscall_pre___fhstatvfs140 __sanitizer_syscall_pre_compat_90_fhstatvfs1")
+  pcmd("#define __sanitizer_syscall_post___fhstatvfs140 __sanitizer_syscall_post_compat_90_fhstatvfs1")
 
   pcmd("")
   pcmd("#ifdef __cplusplus")
@@ -2007,9 +2025,9 @@ function syscall_body(syscall, mode)
     pcmd("/* Nothing to do */")
   } else if (syscall == "uuidgen") {
     pcmd("/* Nothing to do */")
-  } else if (syscall == "getvfsstat") {
+  } else if (syscall == "compat_90_getvfsstat") {
     pcmd("/* Nothing to do */")
-  } else if (syscall == "statvfs1") {
+  } else if (syscall == "compat_90_statvfs1") {
     if (mode == "pre") {
       pcmd("const char *path = (const char *)path_;")
       pcmd("if (path) {")
@@ -2021,7 +2039,7 @@ function syscall_body(syscall, mode)
       pcmd("  POST_READ(path, __sanitizer::internal_strlen(path) + 1);")
       pcmd("}")
     }
-  } else if (syscall == "fstatvfs1") {
+  } else if (syscall == "compat_90_fstatvfs1") {
     pcmd("/* Nothing to do */")
   } else if (syscall == "compat_30_fhstatvfs1") {
     pcmd("/* TODO */")
@@ -2285,7 +2303,7 @@ function syscall_body(syscall, mode)
       pcmd("  PRE_READ(fhp_, fh_size_);")
       pcmd("}")
     }
-  } else if (syscall == "__fhstatvfs140") {
+  } else if (syscall == "compat_90_fhstatvfs1") {
     if (mode == "pre") {
       pcmd("if (fhp_) {")
       pcmd("  PRE_READ(fhp_, fh_size_);")
@@ -2971,6 +2989,28 @@ function syscall_body(syscall, mode)
     pcmd("/* Nothing to do */")
   } else if (syscall == "clock_getcpuclockid2") {
     pcmd("/* Nothing to do */")
+  } else if (syscall == "__getvfsstat90") {
+    pcmd("/* Nothing to do */")
+  } else if (syscall == "__statvfs190") {
+    if (mode == "pre") {
+      pcmd("const char *path = (const char *)path_;")
+      pcmd("if (path) {")
+      pcmd("  PRE_READ(path, __sanitizer::internal_strlen(path) + 1);")
+      pcmd("}")
+    } else {
+      pcmd("const char *path = (const char *)path_;")
+      pcmd("if (path) {")
+      pcmd("  POST_READ(path, __sanitizer::internal_strlen(path) + 1);")
+      pcmd("}")
+    }
+  } else if (syscall == "__fstatvfs190") {
+    pcmd("/* Nothing to do */")
+  } else if (syscall == "__fhstatvfs190") {
+    if (mode == "pre") {
+      pcmd("if (fhp_) {")
+      pcmd("  PRE_READ(fhp_, fh_size_);")
+      pcmd("}")
+    }
   } else {
     print "Unrecognized syscall: " syscall
     abnormal_exit = 1

@@ -322,10 +322,11 @@ TEST(TargetParserTest, testInvalidARMArch) {
 bool testARMArch(StringRef Arch, StringRef DefaultCPU, StringRef SubArch,
                  unsigned ArchAttr) {
   ARM::ArchKind AK = ARM::parseArch(Arch);
-  return (AK!= ARM::ArchKind::INVALID) &
-         ARM::getDefaultCPU(Arch).equals(DefaultCPU) &
-         ARM::getSubArch(AK).equals(SubArch) &
-         (ARM::getArchAttr(AK) == ArchAttr);
+  bool Result = (AK != ARM::ArchKind::INVALID);
+  Result &= ARM::getDefaultCPU(Arch).equals(DefaultCPU);
+  Result &= ARM::getSubArch(AK).equals(SubArch);
+  Result &= (ARM::getArchAttr(AK) == ArchAttr);
+  return Result;
 }
 
 TEST(TargetParserTest, testARMArch) {

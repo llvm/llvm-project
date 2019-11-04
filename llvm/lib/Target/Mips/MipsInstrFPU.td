@@ -129,8 +129,9 @@ class ABSS_FT<string opstr, RegisterOperand DstRC, RegisterOperand SrcRC,
   HARDFLOAT,
   NeverHasSideEffects;
 
-class CVT_PS_S_FT<string opstr, RegisterOperand DstRC, RegisterOperand SrcRC, InstrItinClass Itin, bit IsComm,
-              SDPatternOperator OpNode= null_frag> :
+class CVT_PS_S_FT<string opstr, RegisterOperand DstRC, RegisterOperand SrcRC,
+                  InstrItinClass Itin, bit IsComm,
+                  SDPatternOperator OpNode = null_frag> :
   InstSE<(outs DstRC:$fd), (ins SrcRC:$fs, SrcRC:$ft),
          !strconcat(opstr, "\t$fd, $fs, $ft"),
          [(set DstRC:$fd, (OpNode SrcRC:$fs, SrcRC:$ft))], Itin, FrmFR, opstr>,
@@ -142,7 +143,8 @@ multiclass ABSS_M<string opstr, InstrItinClass Itin,
                   SDPatternOperator OpNode= null_frag> {
   def _D32 : MMRel, ABSS_FT<opstr, AFGR64Opnd, AFGR64Opnd, Itin, OpNode>,
              FGR_32;
-  def _D64 : StdMMR6Rel, ABSS_FT<opstr, FGR64Opnd, FGR64Opnd, Itin, OpNode>, FGR_64 {
+  def _D64 : StdMMR6Rel, ABSS_FT<opstr, FGR64Opnd, FGR64Opnd, Itin, OpNode>,
+             FGR_64 {
     string DecoderNamespace = "MipsFP64";
   }
 }
@@ -362,17 +364,21 @@ defm D64 : C_COND_M<"d", FGR64Opnd, 17, II_C_CC_D>, ISA_MIPS1_NOT_32R6_64R6,
 // Floating Point Instructions
 //===----------------------------------------------------------------------===//
 let AdditionalPredicates = [NotInMicroMips] in {
-  def ROUND_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"round.w.s", FGR32Opnd, FGR32Opnd, II_ROUND>,
-                   ABSS_FM<0xc, 16>, ISA_MIPS2;
-  defm ROUND_W : ROUND_M<"round.w.d", II_ROUND>, ABSS_FM<0xc, 17>, ISA_MIPS2;
-  def TRUNC_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"trunc.w.s", FGR32Opnd, FGR32Opnd, II_TRUNC>,
-                   ABSS_FM<0xd, 16>, ISA_MIPS2;
-  def CEIL_W_S   : MMRel, StdMMR6Rel, ABSS_FT<"ceil.w.s", FGR32Opnd, FGR32Opnd, II_CEIL>,
-                   ABSS_FM<0xe, 16>, ISA_MIPS2;
-  def FLOOR_W_S  : MMRel, StdMMR6Rel, ABSS_FT<"floor.w.s", FGR32Opnd, FGR32Opnd, II_FLOOR>,
-                   ABSS_FM<0xf, 16>, ISA_MIPS2;
-  def CVT_W_S    : MMRel, ABSS_FT<"cvt.w.s", FGR32Opnd, FGR32Opnd, II_CVT>,
-                   ABSS_FM<0x24, 16>, ISA_MIPS1;
+  def ROUND_W_S : MMRel, StdMMR6Rel,
+                  ABSS_FT<"round.w.s", FGR32Opnd, FGR32Opnd, II_ROUND>,
+                  ABSS_FM<0xc, 16>, ISA_MIPS2;
+  defm ROUND_W  : ROUND_M<"round.w.d", II_ROUND>, ABSS_FM<0xc, 17>, ISA_MIPS2;
+  def TRUNC_W_S : MMRel, StdMMR6Rel,
+                  ABSS_FT<"trunc.w.s", FGR32Opnd, FGR32Opnd, II_TRUNC>,
+                  ABSS_FM<0xd, 16>, ISA_MIPS2;
+  def CEIL_W_S  : MMRel, StdMMR6Rel,
+                  ABSS_FT<"ceil.w.s", FGR32Opnd, FGR32Opnd, II_CEIL>,
+                  ABSS_FM<0xe, 16>, ISA_MIPS2;
+  def FLOOR_W_S : MMRel, StdMMR6Rel,
+                  ABSS_FT<"floor.w.s", FGR32Opnd, FGR32Opnd, II_FLOOR>,
+                  ABSS_FM<0xf, 16>, ISA_MIPS2;
+  def CVT_W_S   : MMRel, ABSS_FT<"cvt.w.s", FGR32Opnd, FGR32Opnd, II_CVT>,
+                  ABSS_FM<0x24, 16>, ISA_MIPS1;
 
   defm TRUNC_W : ROUND_M<"trunc.w.d", II_TRUNC>, ABSS_FM<0xd, 17>, ISA_MIPS2;
   defm CEIL_W  : ROUND_M<"ceil.w.d", II_CEIL>, ABSS_FM<0xe, 17>, ISA_MIPS2;
@@ -536,7 +542,8 @@ let AdditionalPredicates = [NotInMicroMips] in {
     let DecoderNamespace = "MipsFP64";
   }
 
-  def MTHC1_D32 : MMRel, StdMMR6Rel, MTC1_64_FT<"mthc1", AFGR64Opnd, GPR32Opnd, II_MTHC1>,
+  def MTHC1_D32 : MMRel, StdMMR6Rel,
+                  MTC1_64_FT<"mthc1", AFGR64Opnd, GPR32Opnd, II_MTHC1>,
                   MFC1_FM<7>, ISA_MIPS32R2, FGR_32;
   def MTHC1_D64 : MTC1_64_FT<"mthc1", FGR64Opnd, GPR32Opnd, II_MTHC1>,
                   MFC1_FM<7>, ISA_MIPS32R2, FGR_64 {
@@ -950,9 +957,12 @@ multiclass NMADD_NMSUB<Instruction Nmadd, Instruction Nmsub, RegisterOperand RC>
 }
 
 let AdditionalPredicates = [NoNaNsFPMath, HasMadd4, NotInMicroMips] in {
-  defm : NMADD_NMSUB<NMADD_S, NMSUB_S, FGR32Opnd>, INSN_MIPS4_32R2_NOT_32R6_64R6;
-  defm : NMADD_NMSUB<NMADD_D32, NMSUB_D32, AFGR64Opnd>, FGR_32, INSN_MIPS4_32R2_NOT_32R6_64R6;
-  defm : NMADD_NMSUB<NMADD_D64, NMSUB_D64, FGR64Opnd>, FGR_64, INSN_MIPS4_32R2_NOT_32R6_64R6;
+  defm : NMADD_NMSUB<NMADD_S, NMSUB_S, FGR32Opnd>,
+         INSN_MIPS4_32R2_NOT_32R6_64R6;
+  defm : NMADD_NMSUB<NMADD_D32, NMSUB_D32, AFGR64Opnd>,
+         FGR_32, INSN_MIPS4_32R2_NOT_32R6_64R6;
+  defm : NMADD_NMSUB<NMADD_D64, NMSUB_D64, FGR64Opnd>,
+         FGR_64, INSN_MIPS4_32R2_NOT_32R6_64R6;
 }
 
 // Patterns for loads/stores with a reg+imm operand.

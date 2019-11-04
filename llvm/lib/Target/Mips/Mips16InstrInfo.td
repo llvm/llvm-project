@@ -67,7 +67,7 @@ class FI816_ins_base<bits<3> _func, string asmstr,
 class FI816_ins<bits<3> _func, string asmstr,
                 InstrItinClass itin>:
   FI816_ins_base<_func, asmstr, "\t$imm  # 16 bit inst", itin>;
- 
+
 class FI816_SP_ins<bits<3> _func, string asmstr,
                    InstrItinClass itin>:
   FI816_ins_base<_func, asmstr, "\t$$sp, $imm # 16 bit inst", itin>;
@@ -90,7 +90,7 @@ class FRI16_TCP_ins<bits<5> _op, string asmstr,
                     InstrItinClass itin>:
   FRI16<_op, (outs CPU16Regs:$rx), (ins pcrel16:$imm, i32imm:$size),
             !strconcat(asmstr, "\t$rx, $imm\t# 16 bit inst"), [], itin>;
-            
+
 class FRI16R_ins_base<bits<5> op, string asmstr, string asmstr2,
                      InstrItinClass itin>:
   FRI16<op, (outs), (ins CPU16Regs:$rx, simm16:$imm),
@@ -983,7 +983,7 @@ def RestoreX16:
 // To set up a stack frame on entry to a subroutine,
 // saving return address and static registers, and adjusting stack
 //
-def Save16: 
+def Save16:
   FI8_SVRS16<0b1, (outs), (ins variable_ops),
              "", [], II_SAVE >, MayStore {
   let isCodeGenOnly = 1;
@@ -1883,7 +1883,7 @@ def : Mips16Pat<(sext_inreg CPU16Regs:$val, i8),
 def : Mips16Pat<(sext_inreg CPU16Regs:$val, i16),
                 (SehRx16 CPU16Regs:$val)>;
 
-def GotPrologue16:   
+def GotPrologue16:
   MipsPseudo16<
     (outs CPU16Regs:$rh, CPU16Regs:$rl),
     (ins simm16:$immHi, simm16:$immLo),

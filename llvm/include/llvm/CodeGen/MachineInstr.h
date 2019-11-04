@@ -718,7 +718,7 @@ public:
   /// block.  The TargetInstrInfo::AnalyzeBranch method can be used to get more
   /// information about this branch.
   bool isConditionalBranch(QueryType Type = AnyInBundle) const {
-    return isBranch(Type) & !isBarrier(Type) & !isIndirectBranch(Type);
+    return isBranch(Type) && !isBarrier(Type) && !isIndirectBranch(Type);
   }
 
   /// Return true if this is a branch which always
@@ -726,7 +726,7 @@ public:
   /// TargetInstrInfo::AnalyzeBranch method can be used to get more information
   /// about this branch.
   bool isUnconditionalBranch(QueryType Type = AnyInBundle) const {
-    return isBranch(Type) & isBarrier(Type) & !isIndirectBranch(Type);
+    return isBranch(Type) && isBarrier(Type) && !isIndirectBranch(Type);
   }
 
   /// Return true if this instruction has a predicate operand that

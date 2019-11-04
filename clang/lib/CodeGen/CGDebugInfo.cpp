@@ -46,6 +46,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 using namespace clang;
 using namespace clang::CodeGen;
 
@@ -2968,6 +2969,13 @@ llvm::DIType *CGDebugInfo::getOrCreateType(QualType Ty, llvm::DIFile *Unit) {
   if (Ty.isNull())
     return nullptr;
 
+  llvm::TimeTraceScope TimeScope("DebugType", [&]() {
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    Ty.print(OS, getPrintingPolicy());
+    return Name;
+  });
+
   // Unwrap the type as needed for debug information.
   Ty = UnwrapTypeForDebugInfo(Ty, CGM.getContext());
 
@@ -3685,6 +3693,15 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   const Decl *D = GD.getDecl();
   if (!D)
     return;
+
+  llvm::TimeTraceScope TimeScope("DebugFunction", [&]() {
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
+      ND->getNameForDiagnostic(OS, getPrintingPolicy(),
+                               /*Qualified=*/true);
+    return Name;
+  });
 
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   llvm::DIFile *Unit = getOrCreateFile(Loc);
@@ -4406,6 +4423,14 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
   if (D->hasAttr<NoDebugAttr>())
     return;
 
+  llvm::TimeTraceScope TimeScope("DebugGlobalVariable", [&]() {
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    D->getNameForDiagnostic(OS, getPrintingPolicy(),
+                            /*Qualified=*/true);
+    return Name;
+  });
+
   // If we already created a DIGlobalVariable for this declaration, just attach
   // it to the llvm::GlobalVariable.
   auto Cached = DeclCache.find(D->getCanonicalDecl());
@@ -4466,6 +4491,14 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
   assert(DebugKind >= codegenoptions::LimitedDebugInfo);
   if (VD->hasAttr<NoDebugAttr>())
     return;
+  llvm::TimeTraceScope TimeScope("DebugConstGlobalVariable", [&]() {
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    VD->getNameForDiagnostic(OS, getPrintingPolicy(),
+                             /*Qualified=*/true);
+    return Name;
+  });
+
   auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
   // Create the descriptor for the variable.
   llvm::DIFile *Unit = getOrCreateFile(VD->getLocation());
