@@ -681,6 +681,7 @@ void ALWAYS_INLINE StatSet(ThreadState *thr, StatType typ, u64 n) {
 void MapShadow(uptr addr, uptr size);
 void MapThreadTrace(uptr addr, uptr size, const char *name);
 void DontNeedShadowFor(uptr addr, uptr size);
+void UnmapShadow(ThreadState *thr, uptr addr, uptr size);
 void InitializeShadowMemory();
 void InitializeInterceptors();
 void InitializeLibIgnore();
@@ -760,6 +761,8 @@ void ALWAYS_INLINE MemoryWriteAtomic(ThreadState *thr, uptr pc,
 void MemoryResetRange(ThreadState *thr, uptr pc, uptr addr, uptr size);
 void MemoryRangeFreed(ThreadState *thr, uptr pc, uptr addr, uptr size);
 void MemoryRangeImitateWrite(ThreadState *thr, uptr pc, uptr addr, uptr size);
+void MemoryRangeImitateWriteOrResetRange(ThreadState *thr, uptr pc, uptr addr,
+                                         uptr size);
 
 void ThreadIgnoreBegin(ThreadState *thr, uptr pc, bool save_stack = true);
 void ThreadIgnoreEnd(ThreadState *thr, uptr pc);
