@@ -147,6 +147,13 @@ public:
 
   bool shouldExtendTypeInLibCall(EVT Type) const override;
 
+  /// Returns the register with the specified architectural or ABI name. This
+  /// method is necessary to lower the llvm.read_register.* and
+  /// llvm.write_register.* intrinsics. Allocatable registers must be reserved
+  /// with the clang -ffixed-xX flag for access to be allowed.
+  Register getRegisterByName(const char *RegName, EVT VT,
+                             const MachineFunction &MF) const override;
+
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins,
