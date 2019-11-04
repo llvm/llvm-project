@@ -64,6 +64,10 @@ public:
   /// default, return eLanguageTypeUnknown.
   virtual lldb::LanguageType Language() { return lldb::eLanguageTypeUnknown; }
 
+  /// Return the Materializer that the parser should use when registering
+  /// external values.
+  virtual Materializer *GetMaterializer() { return nullptr; }
+
   /// Return the desired result type of the function, or eResultTypeAny if
   /// indifferent.
   virtual ResultType DesiredResultType() { return eResultTypeAny; }
