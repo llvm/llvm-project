@@ -87,12 +87,12 @@ public:
   static char ID;
 
 private:
-  MachineRegisterInfo *MRI;
-  const X86Subtarget *Subtarget;
-  const X86InstrInfo *TII;
-  const TargetRegisterInfo *TRI;
-  const TargetRegisterClass *PromoteRC;
-  MachineDominatorTree *MDT;
+  MachineRegisterInfo *MRI = nullptr;
+  const X86Subtarget *Subtarget = nullptr;
+  const X86InstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
+  const TargetRegisterClass *PromoteRC = nullptr;
+  MachineDominatorTree *MDT = nullptr;
 
   CondRegArray collectCondsInRegs(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator CopyDefI);
@@ -779,10 +779,10 @@ void X86FlagsCopyLoweringPass::rewriteArithmetic(
     CondRegArray &CondRegs) {
   // Arithmetic is either reading CF or OF. Figure out which condition we need
   // to preserve in a register.
-  X86::CondCode Cond;
+  X86::CondCode Cond = X86::COND_INVALID;
 
   // The addend to use to reset CF or OF when added to the flag value.
-  int Addend;
+  int Addend = 0;
 
   switch (getMnemonicFromOpcode(MI.getOpcode())) {
   case FlagArithMnemonic::ADC:

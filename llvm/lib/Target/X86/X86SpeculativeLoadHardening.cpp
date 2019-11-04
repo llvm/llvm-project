@@ -148,8 +148,8 @@ private:
 
   /// Manages the predicate state traced through the program.
   struct PredState {
-    unsigned InitialReg;
-    unsigned PoisonReg;
+    unsigned InitialReg = 0;
+    unsigned PoisonReg = 0;
 
     const TargetRegisterClass *RC;
     MachineSSAUpdater SSA;
@@ -158,10 +158,10 @@ private:
         : RC(RC), SSA(MF) {}
   };
 
-  const X86Subtarget *Subtarget;
-  MachineRegisterInfo *MRI;
-  const X86InstrInfo *TII;
-  const TargetRegisterInfo *TRI;
+  const X86Subtarget *Subtarget = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
+  const X86InstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
 
   Optional<PredState> PS;
 
