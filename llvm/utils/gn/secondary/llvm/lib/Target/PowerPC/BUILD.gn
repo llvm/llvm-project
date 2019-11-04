@@ -54,6 +54,7 @@ static_library("LLVMPowerPCCodeGen") {
     "PPCISelLowering.cpp",
     "PPCInstrInfo.cpp",
     "PPCLoopPreIncPrep.cpp",
+    "PPCLowerMASSVEntries.cpp",
     "PPCMCInstLower.cpp",
     "PPCMIPeephole.cpp",
     "PPCMachineFunctionInfo.cpp",
