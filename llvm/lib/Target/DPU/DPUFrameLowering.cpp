@@ -52,10 +52,11 @@ void DPUFrameLowering::emitPrologue(MachineFunction &MF,
   const DPUInstrInfo &TII =
       *static_cast<const DPUInstrInfo *>(STI.getInstrInfo());
   DebugLoc DL;
-  unsigned CFIIndex, StackSize;
+  unsigned CFIIndex, StackSize, ActualStackSize;
 
   if (!MFI.hasCalls()) {
     StackSize = 0;
+    ActualStackSize = MFI.getStackSize();
   } else {
     // We reserve manually 8 bytes to store d22 (r22r23) at the end of the stack
     // for debug purpose. Not at the beginning because we do not have a frame
@@ -63,8 +64,9 @@ void DPUFrameLowering::emitPrologue(MachineFunction &MF,
     // (pointing at the end of the stack)
     StackSize =
         alignTo(MFI.getStackSize() + STACK_SIZE_FOR_D22, getStackAlignment());
+    ActualStackSize = StackSize;
   }
-  MFI.setStackSize(StackSize);
+  MFI.setStackSize(ActualStackSize);
 
   CFIIndex =
       MF.addFrameInst(MCCFIInstruction::createDefCfaOffset(nullptr, StackSize));

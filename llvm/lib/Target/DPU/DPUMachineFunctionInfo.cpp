@@ -22,7 +22,9 @@ int DPUMachineFunctionInfo::getOffsetFromFrameIndex(int FrameIndex) {
   frameIndexOffsetSet.insert(FrameIndex);
   if (FrameIndex < 0)
     Offset -= STACK_SIZE_FOR_D22;
-  Offset -= MFI.getStackSize();
+  if (MFI.hasCalls()) {
+    Offset -= MFI.getStackSize();
+  }
   MFI.setObjectOffset(FrameIndex, Offset);
   return Offset;
 }
