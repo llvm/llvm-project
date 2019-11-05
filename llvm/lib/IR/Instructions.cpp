@@ -2232,6 +2232,9 @@ void UnaryOperator::AssertOK() {
            "Tried to create a floating-point operation on a "
            "non-floating-point type!");
     break;
+  case Freeze:
+    // Freeze can take any type as an argument.
+    break;
   default: llvm_unreachable("Invalid opcode provided");
   }
 #endif
