@@ -179,8 +179,6 @@ def SAFE_REG   : RegisterClass<"DPU", [i32], 32, (add (sequence "S%u", 0, 23))>;
 def SAFE_OP_REG: RegisterClass<"DPU", [i32], 32, (add SAFE_REG, CST_REG)>;
 def NZ_OP_REG: RegisterClass<"DPU", [i32], 32, (add GP_REG, ID_REG, ONE, LNEG, MNEG)>;
 
-// todo end JORDI
-
 class DPUAsmRegOperand<RegisterClass regs> : AsmOperandClass {
   let ParserMethod = "parseAnyRegister";
   let RenderMethod = "addRegOperands";
