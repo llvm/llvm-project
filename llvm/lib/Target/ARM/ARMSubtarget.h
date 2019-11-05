@@ -223,9 +223,6 @@ protected:
   /// register allocation.
   bool DisablePostRAScheduler = false;
 
-  /// UseAA - True if using AA during codegen (DAGCombine, MISched, etc)
-  bool UseAA = false;
-
   /// HasThumb2 - True if Thumb2 instructions are supported.
   bool HasThumb2 = false;
 
@@ -811,7 +808,7 @@ public:
 
   /// Enable use of alias analysis during code generation (during MI
   /// scheduling, DAGCombine, etc.).
-  bool useAA() const override { return UseAA; }
+  bool useAA() const override { return true; }
 
   // enableAtomicExpand- True if we need to expand our atomics.
   bool enableAtomicExpand() const override;
