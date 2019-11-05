@@ -48,25 +48,28 @@ bool PhiValues::invalidate(Function &, const PreservedAnalyses &PA,
 //    we're ultimately interested in, and all of the reachable values, i.e.
 //    including phis, as that makes invalidateValue easier.
 void PhiValues::processPhi(const PHINode *Phi,
-                           SmallVector<const PHINode *, 8> &Stack) {
+                           SmallVectorImpl<const PHINode *> &Stack) {
   // Initialize the phi with the next depth number.
   assert(DepthMap.lookup(Phi) == 0);
   assert(NextDepthNumber != UINT_MAX);
-  unsigned int DepthNumber = ++NextDepthNumber;
-  DepthMap[Phi] = DepthNumber;
+  unsigned int RootDepthNumber = ++NextDepthNumber;
+  DepthMap[Phi] = RootDepthNumber;
 
   // Recursively process the incoming phis of this phi.
   TrackedValues.insert(PhiValuesCallbackVH(const_cast<PHINode *>(Phi), this));
   for (Value *PhiOp : Phi->incoming_values()) {
     if (PHINode *PhiPhiOp = dyn_cast<PHINode>(PhiOp)) {
       // Recurse if the phi has not yet been visited.
-      if (DepthMap.lookup(PhiPhiOp) == 0)
+      unsigned int OpDepthNumber = DepthMap.lookup(PhiPhiOp);
+      if (OpDepthNumber == 0) {
         processPhi(PhiPhiOp, Stack);
-      assert(DepthMap.lookup(PhiPhiOp) != 0);
+        OpDepthNumber = DepthMap.lookup(PhiPhiOp);
+        assert(OpDepthNumber != 0);
+      }
       // If the phi did not become part of a component then this phi and that
       // phi are part of the same component, so adjust the depth number.
-      if (!ReachableMap.count(DepthMap[PhiPhiOp]))
-        DepthMap[Phi] = std::min(DepthMap[Phi], DepthMap[PhiPhiOp]);
+      if (!ReachableMap.count(OpDepthNumber))
+        DepthMap[Phi] = std::min(DepthMap[Phi], OpDepthNumber);
     } else {
       TrackedValues.insert(PhiValuesCallbackVH(PhiOp, this));
     }
@@ -77,48 +80,59 @@ void PhiValues::processPhi(const PHINode *Phi,
 
   // If the depth number has not changed then we've finished collecting the phis
   // of a strongly connected component.
-  if (DepthMap[Phi] == DepthNumber) {
+  if (DepthMap[Phi] == RootDepthNumber) {
     // Collect the reachable values for this component. The phis of this
-    // component will be those on top of the depth stach with the same or
+    // component will be those on top of the depth stack with the same or
     // greater depth number.
-    ConstValueSet Reachable;
-    while (!Stack.empty() && DepthMap[Stack.back()] >= DepthNumber) {
+    ConstValueSet &Reachable = ReachableMap[RootDepthNumber];
+    while (true) {
       const PHINode *ComponentPhi = Stack.pop_back_val();
       Reachable.insert(ComponentPhi);
-      DepthMap[ComponentPhi] = DepthNumber;
+
       for (Value *Op : ComponentPhi->incoming_values()) {
         if (PHINode *PhiOp = dyn_cast<PHINode>(Op)) {
           // If this phi is not part of the same component then that component
           // is guaranteed to have been completed before this one. Therefore we
           // can just add its reachable values to the reachable values of this
           // component.
-          auto It = ReachableMap.find(DepthMap[PhiOp]);
-          if (It != ReachableMap.end())
-            Reachable.insert(It->second.begin(), It->second.end());
-        } else {
+          unsigned int OpDepthNumber = DepthMap[PhiOp];
+          if (OpDepthNumber != RootDepthNumber) {
+            auto It = ReachableMap.find(OpDepthNumber);
+            if (It != ReachableMap.end())
+              Reachable.insert(It->second.begin(), It->second.end());
+          }
+        } else
           Reachable.insert(Op);
-        }
       }
+
+      if (Stack.empty())
+        break;
+
+      unsigned int &ComponentDepthNumber = DepthMap[Stack.back()];
+      if (ComponentDepthNumber < RootDepthNumber)
+        break;
+
+      ComponentDepthNumber = RootDepthNumber;
     }
-    ReachableMap.insert({DepthNumber,Reachable});
 
     // Filter out phis to get the non-phi reachable values.
-    ValueSet NonPhi;
+    ValueSet &NonPhi = NonPhiReachableMap[RootDepthNumber];
     for (const Value *V : Reachable)
       if (!isa<PHINode>(V))
-        NonPhi.insert(const_cast<Value*>(V));
-    NonPhiReachableMap.insert({DepthNumber,NonPhi});
+        NonPhi.insert(const_cast<Value *>(V));
   }
 }
 
 const PhiValues::ValueSet &PhiValues::getValuesForPhi(const PHINode *PN) {
-  if (DepthMap.count(PN) == 0) {
+  unsigned int DepthNumber = DepthMap.lookup(PN);
+  if (DepthNumber == 0) {
     SmallVector<const PHINode *, 8> Stack;
     processPhi(PN, Stack);
+    DepthNumber = DepthMap.lookup(PN);
     assert(Stack.empty());
+    assert(DepthNumber != 0);
   }
-  assert(DepthMap.lookup(PN) != 0);
-  return NonPhiReachableMap[DepthMap[PN]];
+  return NonPhiReachableMap[DepthNumber];
 }
 
 void PhiValues::invalidateValue(const Value *V) {
