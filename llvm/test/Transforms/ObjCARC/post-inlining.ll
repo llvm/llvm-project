@@ -76,9 +76,7 @@ declare void @llvm.lifetime.end.p0i8(i64, i8*)
 ; CHECK: entry:
 ; CHECK-NEXT: %obj = alloca i8
 ; CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* %obj)
-; CHECK-NEXT: %0 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %call.i)
 ; CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* %obj)
-; CHECK-NEXT: %1 = tail call i8* @llvm.objc.retain(i8* %call.i)
 ; CHECK-NEXT: ret i8* %call.i
 ; CHECK-NEXT: }
 define i8* @testLifetime(i8* %call.i) {
@@ -100,9 +98,7 @@ declare void @llvm.stackrestore(i8*)
 ; CHECK: entry:
 ; CHECK-NEXT: %save = tail call i8* @llvm.stacksave()
 ; CHECK-NEXT: %obj = alloca i8, i8 %arg
-; CHECK-NEXT: %0 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %call.i)
 ; CHECK-NEXT: call void @llvm.stackrestore(i8* %save)
-; CHECK-NEXT: %1 = tail call i8* @llvm.objc.retain(i8* %call.i)
 ; CHECK-NEXT: ret i8* %call.i
 ; CHECK-NEXT: }
 define i8* @testStack(i8* %call.i, i8 %arg) {
