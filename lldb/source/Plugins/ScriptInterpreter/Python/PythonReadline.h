@@ -9,7 +9,7 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONREADLINE_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_PYTHONREADLINE_H
 
-#if !defined(LLDB_DISABLE_LIBEDIT) && !defined(__APPLE__)
+#if !defined(LLDB_DISABLE_LIBEDIT) && defined(__linux__)
 // NOTE: Since Python may define some pre-processor definitions which affect the
 // standard headers on some systems, you must include Python.h before any
 // standard headers are included.
