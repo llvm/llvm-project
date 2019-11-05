@@ -16,7 +16,7 @@ int bar(void);
 
 // CHECK:      int foo();
 // CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(score(5):ibm, xxx)})
-// CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(unknown)})
-// CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(llvm)})
-// CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(llvm)})
+// CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(score(0):unknown)})
+// CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(score(0):llvm)})
+// CHECK-NEXT: #pragma omp declare variant(foo) match(implementation={vendor(score(0):llvm)})
 // CHECK-NEXT: int bar();
