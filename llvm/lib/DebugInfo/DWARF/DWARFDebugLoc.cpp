@@ -140,7 +140,7 @@ void DWARFDebugLoc::parse(const DWARFDataExtractor &data) {
 }
 
 Expected<DWARFDebugLoclists::LocationList>
-DWARFDebugLoclists::parseOneLocationList(const DataExtractor &Data,
+DWARFDebugLoclists::parseOneLocationList(const DWARFDataExtractor &Data,
                                          uint64_t *Offset, unsigned Version) {
   LocationList LL;
   LL.Offset = *Offset;
@@ -165,7 +165,7 @@ DWARFDebugLoclists::parseOneLocationList(const DataExtractor &Data,
         E.Value1 = Data.getULEB128(C);
       break;
     case dwarf::DW_LLE_start_length:
-      E.Value0 = Data.getAddress(C);
+      E.Value0 = Data.getRelocatedAddress(C);
       E.Value1 = Data.getULEB128(C);
       break;
     case dwarf::DW_LLE_offset_pair:
@@ -173,7 +173,7 @@ DWARFDebugLoclists::parseOneLocationList(const DataExtractor &Data,
       E.Value1 = Data.getULEB128(C);
       break;
     case dwarf::DW_LLE_base_address:
-      E.Value0 = Data.getAddress(C);
+      E.Value0 = Data.getRelocatedAddress(C);
       break;
     default:
       cantFail(C.takeError());
@@ -200,7 +200,8 @@ DWARFDebugLoclists::parseOneLocationList(const DataExtractor &Data,
   return LL;
 }
 
-void DWARFDebugLoclists::parse(DataExtractor data, uint64_t Offset, uint64_t EndOffset, uint16_t Version) {
+void DWARFDebugLoclists::parse(const DWARFDataExtractor &data, uint64_t Offset,
+                               uint64_t EndOffset, uint16_t Version) {
   IsLittleEndian = data.isLittleEndian();
   AddressSize = data.getAddressSize();
 
