@@ -7685,6 +7685,42 @@ private:
   bool isHomogeneousAggregateSmallEnough(const Type *Base,
                                          uint64_t Members) const override;
 
+  // Coerce HIP pointer arguments from generic pointers to global ones.
+  llvm::Type *coerceKernelArgumentType(llvm::Type *Ty, unsigned FromAS,
+                                       unsigned ToAS) const {
+    // Structure types.
+    if (auto STy = dyn_cast<llvm::StructType>(Ty)) {
+      SmallVector<llvm::Type *, 8> EltTys;
+      bool Changed = false;
+      for (auto T : STy->elements()) {
+        auto NT = coerceKernelArgumentType(T, FromAS, ToAS);
+        EltTys.push_back(NT);
+        Changed |= (NT != T);
+      }
+      // Skip if there is no change in element types.
+      if (!Changed)
+        return STy;
+      if (STy->hasName())
+        return llvm::StructType::create(
+            EltTys, (STy->getName() + ".coerce").str(), STy->isPacked());
+      return llvm::StructType::get(getVMContext(), EltTys, STy->isPacked());
+    }
+    // Arrary types.
+    if (auto ATy = dyn_cast<llvm::ArrayType>(Ty)) {
+      auto T = ATy->getElementType();
+      auto NT = coerceKernelArgumentType(T, FromAS, ToAS);
+      // Skip if there is no change in that element type.
+      if (NT == T)
+        return ATy;
+      return llvm::ArrayType::get(NT, ATy->getNumElements());
+    }
+    // Single value types.
+    if (Ty->isPointerTy() && Ty->getPointerAddressSpace() == FromAS)
+      return llvm::PointerType::get(
+          cast<llvm::PointerType>(Ty)->getElementType(), ToAS);
+    return Ty;
+  }
+
 public:
   explicit AMDGPUABIInfo(CodeGen::CodeGenTypes &CGT) :
     DefaultABIInfo(CGT) {}
@@ -7812,14 +7848,22 @@ ABIArgInfo AMDGPUABIInfo::classifyKernelArgumentType(QualType Ty) const {
 
   // TODO: Can we omit empty structs?
 
-  // Coerce single element structs to its element.
+  llvm::Type *LTy = nullptr;
   if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
-    return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
+    LTy = CGT.ConvertType(QualType(SeltTy, 0));
+
+  if (getContext().getLangOpts().HIP) {
+    if (!LTy)
+      LTy = CGT.ConvertType(Ty);
+    LTy = coerceKernelArgumentType(
+        LTy, /*FromAS=*/getContext().getTargetAddressSpace(LangAS::Default),
+        /*ToAS=*/getContext().getTargetAddressSpace(LangAS::cuda_device));
+  }
 
   // If we set CanBeFlattened to true, CodeGen will expand the struct to its
   // individual elements, which confuses the Clover OpenCL backend; therefore we
   // have to set it to false here. Other args of getDirect() are just defaults.
-  return ABIArgInfo::getDirect(nullptr, 0, nullptr, false);
+  return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
 }
 
 ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty,
