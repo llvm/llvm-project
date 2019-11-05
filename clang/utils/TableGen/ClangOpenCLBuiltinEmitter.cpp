@@ -271,6 +271,12 @@ struct OpenCLBuiltinStruct {
   // the SignatureTable represent the complete signature.  The first type at
   // index SigTableIndex is the return type.
   const unsigned NumTypes;
+  // Function attribute __attribute__((pure))
+  const bool IsPure;
+  // Function attribute __attribute__((const))
+  const bool IsConst;
+  // Function attribute __attribute__((convergent))
+  const bool IsConv;
   // First OpenCL version in which this overload was introduced (e.g. CL20).
   const unsigned short MinVersion;
   // First OpenCL version in which this overload was removed (e.g. CL20).
@@ -409,6 +415,9 @@ void BuiltinNameEmitter::EmitBuiltinTable() {
     for (const auto &Overload : FOM.second) {
       OS << "  { " << Overload.second << ", "
          << Overload.first->getValueAsListOfDefs("Signature").size() << ", "
+         << (Overload.first->getValueAsBit("IsPure")) << ", "
+         << (Overload.first->getValueAsBit("IsConst")) << ", "
+         << (Overload.first->getValueAsBit("IsConv")) << ", "
          << Overload.first->getValueAsDef("MinVersion")->getValueAsInt("ID")
          << ", "
          << Overload.first->getValueAsDef("MaxVersion")->getValueAsInt("ID")
