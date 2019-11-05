@@ -52,7 +52,7 @@ bool CSEConfigFull::shouldCSEOpc(unsigned Opc) {
   case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_UNMERGE_VALUES:
   case TargetOpcode::G_TRUNC:
-  case TargetOpcode::G_GEP:
+  case TargetOpcode::G_PTR_ADD:
     return true;
   }
   return false;

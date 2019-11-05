@@ -943,7 +943,7 @@ body: |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK:   [[GEP:%[0-9]+]]:_(p3) = G_GEP [[COPY]], [[C1]](s32)
+  ; CHECK:   [[GEP:%[0-9]+]]:_(p3) = G_PTR_ADD [[COPY]], [[C1]](s32)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
   ; CHECK:   [[PHI:%[0-9]+]]:_(p3) = G_PHI [[COPY]](p3), %bb.0, [[GEP]](p3), %bb.1
@@ -964,7 +964,7 @@ body: |
     successors: %bb.2
 
     %4:_(s32) = G_CONSTANT i32 8
-    %5:_(p3) = G_GEP %0, %4
+    %5:_(p3) = G_PTR_ADD %0, %4
     G_BR %bb.2
 
   bb.2:
@@ -991,7 +991,7 @@ body: |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK:   [[GEP:%[0-9]+]]:_(p5) = G_GEP [[COPY]], [[C1]](s32)
+  ; CHECK:   [[GEP:%[0-9]+]]:_(p5) = G_PTR_ADD [[COPY]], [[C1]](s32)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
   ; CHECK:   [[PHI:%[0-9]+]]:_(p5) = G_PHI [[COPY]](p5), %bb.0, [[GEP]](p5), %bb.1
@@ -1012,7 +1012,7 @@ body: |
     successors: %bb.2
 
     %4:_(s32) = G_CONSTANT i32 8
-    %5:_(p5) = G_GEP %0, %4
+    %5:_(p5) = G_PTR_ADD %0, %4
     G_BR %bb.2
 
   bb.2:
@@ -1039,7 +1039,7 @@ body: |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY]], [[C1]](s64)
+  ; CHECK:   [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
   ; CHECK:   [[PHI:%[0-9]+]]:_(p0) = G_PHI [[COPY]](p0), %bb.0, [[GEP]](p0), %bb.1
@@ -1060,7 +1060,7 @@ body: |
     successors: %bb.2
 
     %4:_(s64) = G_CONSTANT i64 8
-    %5:_(p0) = G_GEP %0, %4
+    %5:_(p0) = G_PTR_ADD %0, %4
     G_BR %bb.2
 
   bb.2:
@@ -1087,7 +1087,7 @@ body: |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK:   [[GEP:%[0-9]+]]:_(p1) = G_GEP [[COPY]], [[C1]](s64)
+  ; CHECK:   [[GEP:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
   ; CHECK:   [[PHI:%[0-9]+]]:_(p1) = G_PHI [[COPY]](p1), %bb.0, [[GEP]](p1), %bb.1
@@ -1108,7 +1108,7 @@ body: |
     successors: %bb.2
 
     %4:_(s64) = G_CONSTANT i64 8
-    %5:_(p1) = G_GEP %0, %4
+    %5:_(p1) = G_PTR_ADD %0, %4
     G_BR %bb.2
 
   bb.2:
@@ -1135,7 +1135,7 @@ body: |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
+  ; CHECK:   [[GEP:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C1]](s64)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
   ; CHECK:   [[PHI:%[0-9]+]]:_(p4) = G_PHI [[COPY]](p4), %bb.0, [[GEP]](p4), %bb.1
@@ -1156,7 +1156,7 @@ body: |
     successors: %bb.2
 
     %4:_(s64) = G_CONSTANT i64 8
-    %5:_(p4) = G_GEP %0, %4
+    %5:_(p4) = G_PTR_ADD %0, %4
     G_BR %bb.2
 
   bb.2:

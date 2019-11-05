@@ -478,7 +478,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0);
   }
 
-  getActionDefinitionsBuilder(G_GEP)
+  getActionDefinitionsBuilder(G_PTR_ADD)
     .legalForCartesianProduct(AddrSpaces64, {S64})
     .legalForCartesianProduct(AddrSpaces32, {S32})
     .scalarize(0);
@@ -1202,7 +1202,7 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
   Register LoadResult = MRI.createGenericVirtualRegister(S32);
   Register LoadAddr;
 
-  B.materializeGEP(LoadAddr, QueuePtr, LLT::scalar(64), StructOffset);
+  B.materializePtrAdd(LoadAddr, QueuePtr, LLT::scalar(64), StructOffset);
   B.buildLoad(LoadResult, LoadAddr, *MMO);
   return LoadResult;
 }
@@ -2130,7 +2130,7 @@ bool AMDGPULegalizerInfo::legalizeImplicitArgPtr(MachineInstr &MI,
   if (!loadInputValue(KernargPtrReg, B, Arg))
     return false;
 
-  B.buildGEP(DstReg, KernargPtrReg, B.buildConstant(IdxTy, Offset).getReg(0));
+  B.buildPtrAdd(DstReg, KernargPtrReg, B.buildConstant(IdxTy, Offset).getReg(0));
   MI.eraseFromParent();
   return true;
 }

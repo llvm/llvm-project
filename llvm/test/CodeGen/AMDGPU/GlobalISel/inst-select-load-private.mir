@@ -217,7 +217,7 @@ body: |
     ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
     %0:vgpr(p5) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 2047
-    %2:vgpr(p5) = G_GEP %0, %1
+    %2:vgpr(p5) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 5)
     $vgpr0 = COPY %3
 
@@ -257,7 +257,7 @@ body: |
     %2:vgpr(s32) = G_AND %0, %1
     %3:vgpr(p5) = G_INTTOPTR %2
     %4:vgpr(s32) = G_CONSTANT i32 2047
-    %5:vgpr(p5) = G_GEP %3, %4
+    %5:vgpr(p5) = G_PTR_ADD %3, %4
     %6:vgpr(s32) = G_LOAD %5 :: (load 1, align 1, addrspace 5)
     $vgpr0 = COPY %6
 
@@ -292,7 +292,7 @@ body: |
     ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
     %0:vgpr(p5) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 2048
-    %2:vgpr(p5) = G_GEP %0, %1
+    %2:vgpr(p5) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 5)
     $vgpr0 = COPY %3
 
@@ -329,7 +329,7 @@ body: |
     ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
     %0:vgpr(p5) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 -2047
-    %2:vgpr(p5) = G_GEP %0, %1
+    %2:vgpr(p5) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 5)
     $vgpr0 = COPY %3
 
@@ -366,7 +366,7 @@ body: |
     ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
     %0:vgpr(p5) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 -2048
-    %2:vgpr(p5) = G_GEP %0, %1
+    %2:vgpr(p5) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 5)
     $vgpr0 = COPY %3
 
@@ -401,7 +401,7 @@ body: |
     ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
     %0:vgpr(p5) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 4095
-    %2:vgpr(p5) = G_GEP %0, %1
+    %2:vgpr(p5) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 5)
     $vgpr0 = COPY %3
 
@@ -438,7 +438,7 @@ body: |
     ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
     %0:vgpr(p5) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 4096
-    %2:vgpr(p5) = G_GEP %0, %1
+    %2:vgpr(p5) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 5)
     $vgpr0 = COPY %3
 
@@ -475,7 +475,7 @@ body: |
     ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
     %0:vgpr(p5) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 -4095
-    %2:vgpr(p5) = G_GEP %0, %1
+    %2:vgpr(p5) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 5)
     $vgpr0 = COPY %3
 
@@ -512,7 +512,7 @@ body: |
     ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
     %0:vgpr(p5) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 -4096
-    %2:vgpr(p5) = G_GEP %0, %1
+    %2:vgpr(p5) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 5)
     $vgpr0 = COPY %3
 
@@ -549,7 +549,7 @@ body: |
     ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
     %0:vgpr(p5) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 8191
-    %2:vgpr(p5) = G_GEP %0, %1
+    %2:vgpr(p5) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 5)
     $vgpr0 = COPY %3
 
@@ -586,7 +586,7 @@ body: |
     ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
     %0:vgpr(p5) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 8192
-    %2:vgpr(p5) = G_GEP %0, %1
+    %2:vgpr(p5) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 5)
     $vgpr0 = COPY %3
 
@@ -623,7 +623,7 @@ body: |
     ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
     %0:vgpr(p5) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 -8191
-    %2:vgpr(p5) = G_GEP %0, %1
+    %2:vgpr(p5) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 5)
     $vgpr0 = COPY %3
 
@@ -660,7 +660,7 @@ body: |
     ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
     %0:vgpr(p5) = COPY $vgpr0
     %1:vgpr(s32) = G_CONSTANT i32 -8192
-    %2:vgpr(p5) = G_GEP %0, %1
+    %2:vgpr(p5) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 5)
     $vgpr0 = COPY %3
 
@@ -827,7 +827,7 @@ body: |
     ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
     %0:vgpr(p5) = G_FRAME_INDEX %stack.0
     %1:vgpr(s32) = G_CONSTANT i32 4095
-    %2:vgpr(p5) = G_GEP %0, %1
+    %2:vgpr(p5) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 5)
     $vgpr0 = COPY %3
 
@@ -863,7 +863,7 @@ body: |
     ; GFX9: $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
     %0:vgpr(p5) = G_FRAME_INDEX %stack.0
     %1:vgpr(s32) = G_CONSTANT i32 4096
-    %2:vgpr(p5) = G_GEP %0, %1
+    %2:vgpr(p5) = G_PTR_ADD %0, %1
     %3:vgpr(s32) = G_LOAD %2 :: (load 1, align 1, addrspace 5)
     $vgpr0 = COPY %3
 

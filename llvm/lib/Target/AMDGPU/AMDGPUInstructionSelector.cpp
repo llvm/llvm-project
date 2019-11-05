@@ -538,7 +538,7 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
   return true;
 }
 
-bool AMDGPUInstructionSelector::selectG_GEP(MachineInstr &I) const {
+bool AMDGPUInstructionSelector::selectG_PTR_ADD(MachineInstr &I) const {
   return selectG_ADD_SUB(I);
 }
 
@@ -1478,7 +1478,7 @@ void AMDGPUInstructionSelector::getAddrModeInfo(const MachineInstr &Load,
 
   assert(PtrMI);
 
-  if (PtrMI->getOpcode() != TargetOpcode::G_GEP)
+  if (PtrMI->getOpcode() != TargetOpcode::G_PTR_ADD)
     return;
 
   GEPInfo GEPInfo(*PtrMI);
@@ -1710,8 +1710,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectG_MERGE_VALUES(I);
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectG_UNMERGE_VALUES(I);
-  case TargetOpcode::G_GEP:
-    return selectG_GEP(I);
+  case TargetOpcode::G_PTR_ADD:
+    return selectG_PTR_ADD(I);
   case TargetOpcode::G_IMPLICIT_DEF:
     return selectG_IMPLICIT_DEF(I);
   case TargetOpcode::G_INSERT:
@@ -1961,7 +1961,7 @@ AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root) const {
     return Default;
 
   const MachineInstr *OpDef = MRI->getVRegDef(Root.getReg());
-  if (!OpDef || OpDef->getOpcode() != AMDGPU::G_GEP)
+  if (!OpDef || OpDef->getOpcode() != AMDGPU::G_PTR_ADD)
     return Default;
 
   Optional<int64_t> Offset =

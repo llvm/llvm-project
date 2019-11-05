@@ -404,9 +404,9 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildGlobalValue(const DstOp &Res, const GlobalValue *GV);
 
-  /// Build and insert \p Res = G_GEP \p Op0, \p Op1
+  /// Build and insert \p Res = G_PTR_ADD \p Op0, \p Op1
   ///
-  /// G_GEP adds \p Op1 bytes to the pointer specified by \p Op0,
+  /// G_PTR_ADD adds \p Op1 bytes to the pointer specified by \p Op0,
   /// storing the resulting pointer in \p Res.
   ///
   /// \pre setBasicBlock or setMI must have been called.
@@ -415,28 +415,28 @@ public:
   /// \pre \p Op1 must be a generic virtual register with scalar type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildGEP(const DstOp &Res, const SrcOp &Op0,
-                               const SrcOp &Op1);
+  MachineInstrBuilder buildPtrAdd(const DstOp &Res, const SrcOp &Op0,
+                                  const SrcOp &Op1);
 
-  /// Materialize and insert \p Res = G_GEP \p Op0, (G_CONSTANT \p Value)
+  /// Materialize and insert \p Res = G_PTR_ADD \p Op0, (G_CONSTANT \p Value)
   ///
-  /// G_GEP adds \p Value bytes to the pointer specified by \p Op0,
+  /// G_PTR_ADD adds \p Value bytes to the pointer specified by \p Op0,
   /// storing the resulting pointer in \p Res. If \p Value is zero then no
-  /// G_GEP or G_CONSTANT will be created and \pre Op0 will be assigned to
+  /// G_PTR_ADD or G_CONSTANT will be created and \pre Op0 will be assigned to
   /// \p Res.
   ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre \p Op0 must be a generic virtual register with pointer type.
   /// \pre \p ValueTy must be a scalar type.
   /// \pre \p Res must be 0. This is to detect confusion between
-  ///      materializeGEP() and buildGEP().
+  ///      materializePtrAdd() and buildPtrAdd().
   /// \post \p Res will either be a new generic virtual register of the same
   ///       type as \p Op0 or \p Op0 itself.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  Optional<MachineInstrBuilder> materializeGEP(Register &Res, Register Op0,
-                                               const LLT &ValueTy,
-                                               uint64_t Value);
+  Optional<MachineInstrBuilder> materializePtrAdd(Register &Res, Register Op0,
+                                                  const LLT &ValueTy,
+                                                  uint64_t Value);
 
   /// Build and insert \p Res = G_PTR_MASK \p Op0, \p NumBits
   ///

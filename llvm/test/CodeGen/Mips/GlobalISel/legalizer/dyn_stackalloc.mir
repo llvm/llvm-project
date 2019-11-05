@@ -52,7 +52,7 @@ body:             |
     ; MIPS32: $a2 = COPY [[COPY1]](s32)
     ; MIPS32: JAL &memset, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2
     ; MIPS32: ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
-    ; MIPS32: [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY3]], [[COPY1]](s32)
+    ; MIPS32: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY3]], [[COPY1]](s32)
     ; MIPS32: [[COPY5:%[0-9]+]]:_(p0) = COPY [[GEP]](p0)
     ; MIPS32: [[COPY6:%[0-9]+]]:_(s32) = COPY [[C1]](s32)
     ; MIPS32: G_STORE [[COPY6]](s32), [[COPY5]](p0) :: (store 1 into %ir.arrayidx)
@@ -74,7 +74,7 @@ body:             |
     %9:_(s32) = G_AND %7, %8
     %10:_(p0) = G_DYN_STACKALLOC %9(s32), 0
     G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memset), %10(p0), %0(s8), %1(s32), 0 :: (store 1 into %ir.vla)
-    %11:_(p0) = G_GEP %10, %1(s32)
+    %11:_(p0) = G_PTR_ADD %10, %1(s32)
     %12:_(p0) = COPY %11(p0)
     G_STORE %13(s8), %12(p0) :: (store 1 into %ir.arrayidx)
     ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp

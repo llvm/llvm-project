@@ -2268,7 +2268,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     LLVM_FALLTHROUGH;
   }
-  case AMDGPU::G_GEP:
+  case AMDGPU::G_PTR_ADD:
   case AMDGPU::G_ADD:
   case AMDGPU::G_SUB:
   case AMDGPU::G_MUL:

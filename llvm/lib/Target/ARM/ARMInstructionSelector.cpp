@@ -1061,7 +1061,7 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
   case G_SHL: {
     return selectShift(ARM_AM::ShiftOpc::lsl, MIB);
   }
-  case G_GEP:
+  case G_PTR_ADD:
     I.setDesc(TII.get(Opcodes.ADDrr));
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
     break;
