@@ -492,7 +492,7 @@ let Predicates = [FeatureMiscellaneousExtensions3], Uses = [CC] in {
   let isCommutable = 1 in {
     // Expands to SELR or SELFHR or a branch-and-move sequence,
     // depending on the choice of registers.
-    def  SELRMux : CondBinaryRRFaPseudo<"selrmux", GRX32, GRX32, GRX32>;
+    def  SELRMux : CondBinaryRRFaPseudo<"MUXselr", GRX32, GRX32, GRX32>;
     defm SELFHR  : CondBinaryRRFaPair<"selfhr", 0xB9C0, GRH32, GRH32, GRH32>;
     defm SELR    : CondBinaryRRFaPair<"selr",   0xB9F0, GR32, GR32, GR32>;
     defm SELGR   : CondBinaryRRFaPair<"selgr",  0xB9E3, GR64, GR64, GR64>;
@@ -525,13 +525,13 @@ let Predicates = [FeatureLoadStoreOnCond2], Uses = [CC] in {
   let isCommutable = 1 in {
     // Expands to LOCR or LOCFHR or a branch-and-move sequence,
     // depending on the choice of registers.
-    def LOCRMux : CondBinaryRRFPseudo<"locrmux", GRX32, GRX32>;
+    def LOCRMux : CondBinaryRRFPseudo<"MUXlocr", GRX32, GRX32>;
     defm LOCFHR : CondBinaryRRFPair<"locfhr", 0xB9E0, GRH32, GRH32>;
   }
 
   // Load on condition.  Matched via DAG pattern.
   // Expands to LOC or LOCFH, depending on the choice of register.
-  def LOCMux : CondUnaryRSYPseudo<simple_load, GRX32, 4>;
+  defm LOCMux : CondUnaryRSYPseudoAndMemFold<"MUXloc", simple_load, GRX32, 4>;
   defm LOCFH : CondUnaryRSYPair<"locfh", 0xEBE0, simple_load, GRH32, 4>;
 
   // Store on condition.  Expanded from CondStore* pseudos.
@@ -564,7 +564,7 @@ let Predicates = [FeatureLoadStoreOnCond], Uses = [CC] in {
 
   // Load on condition.  Matched via DAG pattern.
   defm LOC  : CondUnaryRSYPair<"loc",  0xEBF2, simple_load, GR32, 4>;
-  defm LOCG : CondUnaryRSYPair<"locg", 0xEBE2, simple_load, GR64, 8>;
+  defm LOCG : CondUnaryRSYPairAndMemFold<"locg", 0xEBE2, simple_load, GR64, 8>;
 
   // Store on condition.  Expanded from CondStore* pseudos.
   defm STOC  : CondStoreRSYPair<"stoc",  0xEBF3, GR32, 4>;
