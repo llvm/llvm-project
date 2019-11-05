@@ -942,8 +942,6 @@ Constant *llvm::ConstantFoldUnaryInstruction(unsigned Opcode, Constant *C) {
   assert(Instruction::isUnaryOp(Opcode) && "Non-unary instruction detected");
 
   switch (static_cast<Instruction::UnaryOps>(Opcode)) {
-  default:
-    break;
   case Instruction::FNeg: {
     // Handle scalar UndefValue. Vectors are always evaluated per element.
     bool HasScalarUndef = !C->getType()->isVectorTy() && isa<UndefValue>(C);
