@@ -130,6 +130,8 @@ private:
     BPFPreserveFieldInfoAI = 4,
   };
 
+  const DataLayout *DL;
+
   std::map<std::string, GlobalVariable *> GEPGlobals;
   // A map to link preserve_*_access_index instrinsic calls.
   std::map<CallInst *, std::pair<CallInst *, CallInfo>> AIChain;
@@ -154,11 +156,11 @@ private:
   void replaceWithGEP(std::vector<CallInst *> &CallList,
                       uint32_t NumOfZerosIndex, uint32_t DIIndex);
   bool HasPreserveFieldInfoCall(CallInfoStack &CallStack);
-  void GetStorageBitRange(DICompositeType *CTy, DIDerivedType *MemberTy,
-                          uint32_t AccessIndex, uint32_t &StartBitOffset,
-                          uint32_t &EndBitOffset);
+  void GetStorageBitRange(DIDerivedType *MemberTy, uint32_t RecordAlignment,
+                          uint32_t &StartBitOffset, uint32_t &EndBitOffset);
   uint32_t GetFieldInfo(uint32_t InfoKind, DICompositeType *CTy,
-                        uint32_t AccessIndex, uint32_t PatchImm);
+                        uint32_t AccessIndex, uint32_t PatchImm,
+                        uint32_t RecordAlignment);
 
   Value *computeBaseAndAccessKey(CallInst *Call, CallInfo &CInfo,
                                  std::string &AccessKey, MDNode *&BaseMeta);
@@ -182,6 +184,7 @@ bool BPFAbstractMemberAccess::runOnModule(Module &M) {
   if (M.debug_compile_units().empty())
     return false;
 
+  DL = &M.getDataLayout();
   return doTransformation(M);
 }
 
@@ -509,40 +512,29 @@ uint64_t BPFAbstractMemberAccess::getConstant(const Value *IndexValue) {
 }
 
 /// Get the start and the end of storage offset for \p MemberTy.
-/// The storage bits are corresponding to the LLVM internal types,
-/// and the storage bits for the member determines what load width
-/// to use in order to extract the bitfield value.
-void BPFAbstractMemberAccess::GetStorageBitRange(DICompositeType *CTy,
-                                                 DIDerivedType *MemberTy,
-                                                 uint32_t AccessIndex,
+void BPFAbstractMemberAccess::GetStorageBitRange(DIDerivedType *MemberTy,
+                                                 uint32_t RecordAlignment,
                                                  uint32_t &StartBitOffset,
                                                  uint32_t &EndBitOffset) {
-  auto SOff = dyn_cast<ConstantInt>(MemberTy->getStorageOffsetInBits());
-  assert(SOff);
-  StartBitOffset = SOff->getZExtValue();
+  uint32_t MemberBitSize = MemberTy->getSizeInBits();
+  uint32_t MemberBitOffset = MemberTy->getOffsetInBits();
+  uint32_t AlignBits = RecordAlignment * 8;
+  if (RecordAlignment > 8 || MemberBitSize > AlignBits)
+    report_fatal_error("Unsupported field expression for llvm.bpf.preserve.field.info, "
+                       "requiring too big alignment");
 
-  EndBitOffset = CTy->getSizeInBits();
-  uint32_t Index = AccessIndex + 1;
-  for (; Index < CTy->getElements().size(); ++Index) {
-    auto Member = cast<DIDerivedType>(CTy->getElements()[Index]);
-    if (!Member->isBitField()) {
-      EndBitOffset = Member->getOffsetInBits();
-      break;
-    }
-    SOff = dyn_cast<ConstantInt>(Member->getStorageOffsetInBits());
-    assert(SOff);
-    unsigned BitOffset = SOff->getZExtValue();
-    if (BitOffset != StartBitOffset) {
-      EndBitOffset = BitOffset;
-      break;
-    }
-  }
+  StartBitOffset = MemberBitOffset & ~(AlignBits - 1);
+  if ((StartBitOffset + AlignBits) < (MemberBitOffset + MemberBitSize))
+    report_fatal_error("Unsupported field expression for llvm.bpf.preserve.field.info, "
+                       "cross alignment boundary");
+  EndBitOffset = StartBitOffset + AlignBits;
 }
 
 uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
                                                DICompositeType *CTy,
                                                uint32_t AccessIndex,
-                                               uint32_t PatchImm) {
+                                               uint32_t PatchImm,
+                                               uint32_t RecordAlignment) {
   if (InfoKind == BPFCoreSharedInfo::FIELD_EXISTENCE)
       return 1;
 
@@ -557,9 +549,10 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
       if (!MemberTy->isBitField()) {
         PatchImm += MemberTy->getOffsetInBits() >> 3;
       } else {
-        auto SOffset = dyn_cast<ConstantInt>(MemberTy->getStorageOffsetInBits());
-        assert(SOffset);
-        PatchImm += SOffset->getZExtValue() >> 3;
+        unsigned SBitOffset, NextSBitOffset;
+        GetStorageBitRange(MemberTy, RecordAlignment, SBitOffset,
+                           NextSBitOffset);
+        PatchImm += SBitOffset >> 3;
       }
     }
     return PatchImm;
@@ -576,7 +569,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
         return SizeInBits >> 3;
 
       unsigned SBitOffset, NextSBitOffset;
-      GetStorageBitRange(CTy, MemberTy, AccessIndex, SBitOffset, NextSBitOffset);
+      GetStorageBitRange(MemberTy, RecordAlignment, SBitOffset, NextSBitOffset);
       SizeInBits = NextSBitOffset - SBitOffset;
       if (SizeInBits & (SizeInBits - 1))
         report_fatal_error("Unsupported field expression for llvm.bpf.preserve.field.info");
@@ -636,7 +629,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
     }
 
     unsigned SBitOffset, NextSBitOffset;
-    GetStorageBitRange(CTy, MemberTy, AccessIndex, SBitOffset, NextSBitOffset);
+    GetStorageBitRange(MemberTy, RecordAlignment, SBitOffset, NextSBitOffset);
     if (NextSBitOffset - SBitOffset > 64)
       report_fatal_error("too big field size for llvm.bpf.preserve.field.info");
 
@@ -667,7 +660,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
     }
 
     unsigned SBitOffset, NextSBitOffset;
-    GetStorageBitRange(CTy, MemberTy, AccessIndex, SBitOffset, NextSBitOffset);
+    GetStorageBitRange(MemberTy, RecordAlignment, SBitOffset, NextSBitOffset);
     if (NextSBitOffset - SBitOffset > 64)
       report_fatal_error("too big field size for llvm.bpf.preserve.field.info");
 
@@ -822,9 +815,12 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
     AccessKey += ":" + std::to_string(AccessIndex);
 
     MDNode *MDN = CInfo.Metadata;
+    uint32_t RecordAlignment =
+        DL->getABITypeAlignment(CInfo.Base->getType()->getPointerElementType());
     // At this stage, it cannot be pointer type.
     auto *CTy = cast<DICompositeType>(stripQualifiers(cast<DIType>(MDN)));
-    PatchImm = GetFieldInfo(InfoKind, CTy, AccessIndex, PatchImm);
+    PatchImm = GetFieldInfo(InfoKind, CTy, AccessIndex, PatchImm,
+                            RecordAlignment);
   }
 
   // Access key is the type name + reloc type + patched imm + access string,
