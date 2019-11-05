@@ -299,35 +299,35 @@ define i32 @reduce_i1(i32 %arg) {
 ;
 ; AVX512F-LABEL: 'reduce_i1'
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1 = call i1 @llvm.experimental.vector.reduce.or.v1i1(<1 x i1> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2 = call i1 @llvm.experimental.vector.reduce.or.v2i1(<2 x i1> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V4 = call i1 @llvm.experimental.vector.reduce.or.v4i1(<4 x i1> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %V8 = call i1 @llvm.experimental.vector.reduce.or.v8i1(<8 x i1> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 133 for instruction: %V16 = call i1 @llvm.experimental.vector.reduce.or.v16i1(<16 x i1> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %V32 = call i1 @llvm.experimental.vector.reduce.or.v32i1(<32 x i1> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %V64 = call i1 @llvm.experimental.vector.reduce.or.v64i1(<64 x i1> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %V128 = call i1 @llvm.experimental.vector.reduce.or.v128i1(<128 x i1> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = call i1 @llvm.experimental.vector.reduce.or.v2i1(<2 x i1> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4 = call i1 @llvm.experimental.vector.reduce.or.v4i1(<4 x i1> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8 = call i1 @llvm.experimental.vector.reduce.or.v8i1(<8 x i1> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V16 = call i1 @llvm.experimental.vector.reduce.or.v16i1(<16 x i1> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V32 = call i1 @llvm.experimental.vector.reduce.or.v32i1(<32 x i1> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V64 = call i1 @llvm.experimental.vector.reduce.or.v64i1(<64 x i1> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V128 = call i1 @llvm.experimental.vector.reduce.or.v128i1(<128 x i1> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'reduce_i1'
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1 = call i1 @llvm.experimental.vector.reduce.or.v1i1(<1 x i1> undef)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2 = call i1 @llvm.experimental.vector.reduce.or.v2i1(<2 x i1> undef)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V4 = call i1 @llvm.experimental.vector.reduce.or.v4i1(<4 x i1> undef)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %V8 = call i1 @llvm.experimental.vector.reduce.or.v8i1(<8 x i1> undef)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 133 for instruction: %V16 = call i1 @llvm.experimental.vector.reduce.or.v16i1(<16 x i1> undef)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 326 for instruction: %V32 = call i1 @llvm.experimental.vector.reduce.or.v32i1(<32 x i1> undef)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 775 for instruction: %V64 = call i1 @llvm.experimental.vector.reduce.or.v64i1(<64 x i1> undef)
-; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 776 for instruction: %V128 = call i1 @llvm.experimental.vector.reduce.or.v128i1(<128 x i1> undef)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = call i1 @llvm.experimental.vector.reduce.or.v2i1(<2 x i1> undef)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4 = call i1 @llvm.experimental.vector.reduce.or.v4i1(<4 x i1> undef)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8 = call i1 @llvm.experimental.vector.reduce.or.v8i1(<8 x i1> undef)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V16 = call i1 @llvm.experimental.vector.reduce.or.v16i1(<16 x i1> undef)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V32 = call i1 @llvm.experimental.vector.reduce.or.v32i1(<32 x i1> undef)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V64 = call i1 @llvm.experimental.vector.reduce.or.v64i1(<64 x i1> undef)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V128 = call i1 @llvm.experimental.vector.reduce.or.v128i1(<128 x i1> undef)
 ; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512DQ-LABEL: 'reduce_i1'
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1 = call i1 @llvm.experimental.vector.reduce.or.v1i1(<1 x i1> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2 = call i1 @llvm.experimental.vector.reduce.or.v2i1(<2 x i1> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V4 = call i1 @llvm.experimental.vector.reduce.or.v4i1(<4 x i1> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %V8 = call i1 @llvm.experimental.vector.reduce.or.v8i1(<8 x i1> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 133 for instruction: %V16 = call i1 @llvm.experimental.vector.reduce.or.v16i1(<16 x i1> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 134 for instruction: %V32 = call i1 @llvm.experimental.vector.reduce.or.v32i1(<32 x i1> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %V64 = call i1 @llvm.experimental.vector.reduce.or.v64i1(<64 x i1> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 140 for instruction: %V128 = call i1 @llvm.experimental.vector.reduce.or.v128i1(<128 x i1> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = call i1 @llvm.experimental.vector.reduce.or.v2i1(<2 x i1> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4 = call i1 @llvm.experimental.vector.reduce.or.v4i1(<4 x i1> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8 = call i1 @llvm.experimental.vector.reduce.or.v8i1(<8 x i1> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V16 = call i1 @llvm.experimental.vector.reduce.or.v16i1(<16 x i1> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V32 = call i1 @llvm.experimental.vector.reduce.or.v32i1(<32 x i1> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V64 = call i1 @llvm.experimental.vector.reduce.or.v64i1(<64 x i1> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V128 = call i1 @llvm.experimental.vector.reduce.or.v128i1(<128 x i1> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %V1   = call i1 @llvm.experimental.vector.reduce.or.v1i1(<1 x i1> undef)

@@ -2635,6 +2635,24 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
         return LT.first * Entry->Cost;
   }
 
+  // FIXME: These assume a naive kshift+binop lowering, which is probably
+  // conservative in most cases.
+  // FIXME: This doesn't cost large types like v128i1 correctly.
+  static const CostTblEntry AVX512BoolReduction[] = {
+    { ISD::AND,  MVT::v2i1,   3 },
+    { ISD::AND,  MVT::v4i1,   5 },
+    { ISD::AND,  MVT::v8i1,   7 },
+    { ISD::AND,  MVT::v16i1,  9 },
+    { ISD::AND,  MVT::v32i1, 11 },
+    { ISD::AND,  MVT::v64i1, 13 },
+    { ISD::OR,   MVT::v2i1,   3 },
+    { ISD::OR,   MVT::v4i1,   5 },
+    { ISD::OR,   MVT::v8i1,   7 },
+    { ISD::OR,   MVT::v16i1,  9 },
+    { ISD::OR,   MVT::v32i1, 11 },
+    { ISD::OR,   MVT::v64i1, 13 },
+  };
+
   static const CostTblEntry AVX2BoolReduction[] = {
     { ISD::AND,  MVT::v16i16,  2 }, // vpmovmskb + cmp
     { ISD::AND,  MVT::v32i8,   2 }, // vpmovmskb + cmp
@@ -2666,6 +2684,9 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
 
   // Handle bool allof/anyof patterns.
   if (!IsPairwise && ValTy->getVectorElementType()->isIntegerTy(1)) {
+    if (ST->hasAVX512())
+      if (const auto *Entry = CostTableLookup(AVX512BoolReduction, ISD, MTy))
+        return LT.first * Entry->Cost;
     if (ST->hasAVX2())
       if (const auto *Entry = CostTableLookup(AVX2BoolReduction, ISD, MTy))
         return LT.first * Entry->Cost;
