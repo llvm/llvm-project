@@ -1355,14 +1355,21 @@ private:
       for (Value *V : Scalars)
         dbgs().indent(2) << *V << "\n";
       dbgs() << "NeedToGather: " << NeedToGather << "\n";
-      dbgs() << "MainOp: " << *MainOp << "\n";
-      dbgs() << "AltOp: " << *AltOp << "\n";
+      dbgs() << "MainOp: ";
+      if (MainOp)
+        dbgs() << *MainOp << "\n";
+      else
+        dbgs() << "NULL\n";
+      dbgs() << "AltOp: ";
+      if (AltOp)
+        dbgs() << *AltOp << "\n";
+      else
+        dbgs() << "NULL\n";
       dbgs() << "VectorizedValue: ";
       if (VectorizedValue)
-        dbgs() << *VectorizedValue;
+        dbgs() << *VectorizedValue << "\n";
       else
-        dbgs() << "NULL";
-      dbgs() << "\n";
+        dbgs() << "NULL\n";
       dbgs() << "ReuseShuffleIndices: ";
       if (ReuseShuffleIndices.empty())
         dbgs() << "Emtpy";
