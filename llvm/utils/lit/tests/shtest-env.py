@@ -7,7 +7,7 @@
 
 # Make sure env commands are included in printed commands.
 
-# CHECK: -- Testing: 15 tests{{.*}}
+# CHECK: -- Testing: 16 tests{{.*}}
 
 # CHECK: FAIL: shtest-env :: env-args-last-is-assign.txt ({{[^)]*}})
 # CHECK: $ "env" "FOO=1"
@@ -67,6 +67,11 @@
 # CHECK: Error: 'env' cannot call 'mkdir'
 # CHECK: error: command failed with exit status: {{.*}}
 
+# CHECK: FAIL: shtest-env :: env-calls-not-builtin.txt ({{[^)]*}})
+# CHECK: $ "env" "-u" "FOO" "BAR=3" "not" "rm" "{{.*}}.no-such-file"
+# CHECK: Error: 'env' cannot call 'rm'
+# CHECK: error: command failed with exit status: {{.*}}
+
 # CHECK: FAIL: shtest-env :: env-calls-rm.txt ({{[^)]*}})
 # CHECK: $ "env" "-u" "FOO" "BAR=3" "rm" "foobar"
 # CHECK: Error: 'env' cannot call 'rm'
@@ -89,5 +94,5 @@
 # CHECK-NOT: ${{.*}}print_environment.py
 
 # CHECK: Expected Passes : 4
-# CHECK: Unexpected Failures: 11
+# CHECK: Unexpected Failures: 12
 # CHECK-NOT: {{.}}
