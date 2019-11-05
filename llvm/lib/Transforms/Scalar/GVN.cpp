@@ -364,6 +364,7 @@ GVN::ValueTable::ValueTable() = default;
 GVN::ValueTable::ValueTable(const ValueTable &) = default;
 GVN::ValueTable::ValueTable(ValueTable &&) = default;
 GVN::ValueTable::~ValueTable() = default;
+GVN::ValueTable &GVN::ValueTable::operator=(const GVN::ValueTable &Arg) = default;
 
 /// add - Insert a value into the table with a specified value number.
 void GVN::ValueTable::add(Value *V, uint32_t num) {

@@ -130,6 +130,7 @@ public:
     ValueTable(const ValueTable &Arg);
     ValueTable(ValueTable &&Arg);
     ~ValueTable();
+    ValueTable &operator=(const ValueTable &Arg);
 
     uint32_t lookupOrAdd(Value *V);
     uint32_t lookup(Value *V, bool Verify = true) const;
