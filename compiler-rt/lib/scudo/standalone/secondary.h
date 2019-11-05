@@ -60,7 +60,8 @@ public:
     initLinkerInitialized(S);
   }
 
-  void *allocate(uptr Size, uptr AlignmentHint = 0, uptr *BlockEnd = nullptr);
+  void *allocate(uptr Size, uptr AlignmentHint = 0, uptr *BlockEnd = nullptr,
+                 bool ZeroContents = false);
 
   void deallocate(void *Ptr);
 
@@ -111,7 +112,8 @@ private:
 // (pending rounding and headers).
 template <uptr MaxFreeListSize>
 void *MapAllocator<MaxFreeListSize>::allocate(uptr Size, uptr AlignmentHint,
-                                              uptr *BlockEnd) {
+                                              uptr *BlockEnd,
+                                              bool ZeroContents) {
   DCHECK_GT(Size, AlignmentHint);
   const uptr PageSize = getPageSizeCached();
   const uptr RoundedSize =
@@ -133,8 +135,11 @@ void *MapAllocator<MaxFreeListSize>::allocate(uptr Size, uptr AlignmentHint,
       Stats.add(StatAllocated, FreeBlockSize);
       if (BlockEnd)
         *BlockEnd = H.BlockEnd;
-      return reinterpret_cast<void *>(reinterpret_cast<uptr>(&H) +
-                                      LargeBlock::getHeaderSize());
+      void *Ptr = reinterpret_cast<void *>(reinterpret_cast<uptr>(&H) +
+                                           LargeBlock::getHeaderSize());
+      if (ZeroContents)
+        memset(Ptr, 0, H.BlockEnd - reinterpret_cast<uptr>(Ptr));
+      return Ptr;
     }
   }
 

@@ -699,7 +699,7 @@ class VOP1_DPPe <bits<8> op, VOP1_DPP_Pseudo ps, VOPProfile P = ps.Pfl> :
 }
 
 multiclass VOP1Only_Real_vi <bits<10> op> {
-  let AssemblerPredicates = [isGFX8GFX9], DecoderNamespace = "GFX8" in {
+  let AssemblerPredicate = isGFX8GFX9, DecoderNamespace = "GFX8" in {
     def _vi :
       VOP1_Real<!cast<VOP1_Pseudo>(NAME), SIEncodingFamily.VI>,
       VOP1e<op{7-0}, !cast<VOP1_Pseudo>(NAME).Pfl>;
@@ -707,7 +707,7 @@ multiclass VOP1Only_Real_vi <bits<10> op> {
 }
 
 multiclass VOP1_Real_e32e64_vi <bits<10> op> {
-  let AssemblerPredicates = [isGFX8GFX9], DecoderNamespace = "GFX8" in {
+  let AssemblerPredicate = isGFX8GFX9, DecoderNamespace = "GFX8" in {
     def _e32_vi :
       VOP1_Real<!cast<VOP1_Pseudo>(NAME#"_e32"), SIEncodingFamily.VI>,
       VOP1e<op{7-0}, !cast<VOP1_Pseudo>(NAME#"_e32").Pfl>;
@@ -899,7 +899,7 @@ def : GCNPat <
 //===----------------------------------------------------------------------===//
 
 multiclass VOP1_Real_gfx9 <bits<10> op> {
-  let AssemblerPredicates = [isGFX9Only], DecoderNamespace = "GFX9" in {
+  let AssemblerPredicate = isGFX9Only, DecoderNamespace = "GFX9" in {
     defm NAME : VOP1_Real_e32e64_vi <op>;
   }
 

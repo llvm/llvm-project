@@ -24,7 +24,7 @@ static_library("builtins") {
     "-fPIC",
     "-fno-builtin",
   ]
-  if (target_os != "android") {
+  if (current_os != "android") {
     cflags += [ "-fvisibility=hidden" ]
   }
   if (!is_debug) {
@@ -164,7 +164,7 @@ static_library("builtins") {
     "gcc_personality_v0.c",
   ]
 
-  if (target_os != "fuchsia") {
+  if (current_os != "fuchsia") {
     sources += [
       "emutls.c",
       "enable_execute_stack.c",
@@ -172,7 +172,7 @@ static_library("builtins") {
     ]
   }
 
-  if (target_os != "fuchsia" && !compiler_rt_baremetal_build) {
+  if (current_os != "fuchsia" && !compiler_rt_baremetal_build) {
     sources += [
       # This comment prevents `gn format` from putting the file on the same line
       # as `sources +=`, for sync_source_lists_from_cmake.py.
@@ -180,7 +180,7 @@ static_library("builtins") {
     ]
   }
 
-  if (target_os == "mac") {
+  if (current_os == "mac") {
     sources += [
       "atomic_flag_clear.c",
       "atomic_flag_clear_explicit.c",
@@ -191,7 +191,7 @@ static_library("builtins") {
     ]
   }
 
-  if ((target_cpu == "x64" && target_os != "win") || target_cpu == "arm64") {
+  if ((current_cpu == "x64" && current_os != "win") || current_cpu == "arm64") {
     # GENERIC_TF_SOURCES
     sources += [
       "comparetf2.c",
@@ -215,7 +215,7 @@ static_library("builtins") {
     ]
   }
 
-  if (target_cpu == "x86" || target_cpu == "x64") {
+  if (current_cpu == "x86" || current_cpu == "x64") {
     sources += [
       "cpu_model.c",
       "divxc3.c",
@@ -232,7 +232,7 @@ static_library("builtins") {
       "powixf2.c",
     ]
   }
-  if (target_cpu == "x86") {
+  if (current_cpu == "x86") {
     sources -= [
       "ashldi3.c",
       "ashrdi3.c",
@@ -265,13 +265,13 @@ static_library("builtins") {
       "i386/udivdi3.S",
       "i386/umoddi3.S",
     ]
-    if (target_os == "win") {
+    if (current_os == "win") {
       sources += [
         "i386/chkstk.S",
         "i386/chkstk2.S",
       ]
     }
-  } else if (target_cpu == "x64") {
+  } else if (current_cpu == "x64") {
     sources -= [
       "floatdidf.c",
       "floatdisf.c",
@@ -288,7 +288,7 @@ static_library("builtins") {
       "x86_64/floatundisf.S",
       "x86_64/floatundixf.S",
     ]
-    if (target_os == "win") {
+    if (current_os == "win") {
       sources += [
         "x86_64/chkstk.S",
         "x86_64/chkstk2.S",
@@ -296,8 +296,8 @@ static_library("builtins") {
     }
   }
 
-  if (target_cpu == "arm") {
-    if (target_os != "mingw") {
+  if (current_cpu == "arm") {
+    if (current_os != "mingw") {
       sources -= [
         "bswapdi2.c",
         "bswapsi2.c",
@@ -306,12 +306,30 @@ static_library("builtins") {
         "comparesf2.c",
         "divmodsi4.c",
         "divsi3.c",
+        "fp_mode.c",
         "modsi3.c",
         "udivmodsi4.c",
         "udivsi3.c",
         "umodsi3.c",
       ]
       sources += [
+        "arm/aeabi_cdcmp.S",
+        "arm/aeabi_cdcmpeq_check_nan.c",
+        "arm/aeabi_cfcmp.S",
+        "arm/aeabi_cfcmpeq_check_nan.c",
+        "arm/aeabi_dcmp.S",
+        "arm/aeabi_div0.c",
+        "arm/aeabi_drsub.c",
+        "arm/aeabi_fcmp.S",
+        "arm/aeabi_frsub.c",
+        "arm/aeabi_idivmod.S",
+        "arm/aeabi_ldivmod.S",
+        "arm/aeabi_memcmp.S",
+        "arm/aeabi_memcpy.S",
+        "arm/aeabi_memmove.S",
+        "arm/aeabi_memset.S",
+        "arm/aeabi_uidivmod.S",
+        "arm/aeabi_uldivmod.S",
         "arm/bswapdi2.S",
         "arm/bswapsi2.S",
         "arm/clzdi2.S",
@@ -321,6 +339,10 @@ static_library("builtins") {
         "arm/divsi3.S",
         "arm/fp_mode.c",
         "arm/modsi3.S",
+        "arm/switch16.S",
+        "arm/switch32.S",
+        "arm/switch8.S",
+        "arm/switchu8.S",
         "arm/sync_fetch_and_add_4.S",
         "arm/sync_fetch_and_add_8.S",
         "arm/sync_fetch_and_and_4.S",
@@ -341,10 +363,52 @@ static_library("builtins") {
         "arm/sync_fetch_and_umin_8.S",
         "arm/sync_fetch_and_xor_4.S",
         "arm/sync_fetch_and_xor_8.S",
+        "arm/sync_synchronize.S",
         "arm/udivmodsi4.S",
         "arm/udivsi3.S",
         "arm/umodsi3.S",
       ]
+
+      if (current_os == "android") {
+        sources += [
+          "arm/adddf3vfp.S",
+          "arm/addsf3vfp.S",
+          "arm/divdf3vfp.S",
+          "arm/divsf3vfp.S",
+          "arm/eqdf2vfp.S",
+          "arm/eqsf2vfp.S",
+          "arm/extendsfdf2vfp.S",
+          "arm/fixdfsivfp.S",
+          "arm/fixsfsivfp.S",
+          "arm/fixunsdfsivfp.S",
+          "arm/fixunssfsivfp.S",
+          "arm/floatsidfvfp.S",
+          "arm/floatsisfvfp.S",
+          "arm/floatunssidfvfp.S",
+          "arm/floatunssisfvfp.S",
+          "arm/gedf2vfp.S",
+          "arm/gesf2vfp.S",
+          "arm/gtdf2vfp.S",
+          "arm/gtsf2vfp.S",
+          "arm/ledf2vfp.S",
+          "arm/lesf2vfp.S",
+          "arm/ltdf2vfp.S",
+          "arm/ltsf2vfp.S",
+          "arm/muldf3vfp.S",
+          "arm/mulsf3vfp.S",
+          "arm/nedf2vfp.S",
+          "arm/negdf2vfp.S",
+          "arm/negsf2vfp.S",
+          "arm/nesf2vfp.S",
+          "arm/restore_vfp_d8_d15_regs.S",
+          "arm/save_vfp_d8_d15_regs.S",
+          "arm/subdf3vfp.S",
+          "arm/subsf3vfp.S",
+          "arm/truncdfsf2vfp.S",
+          "arm/unorddf2vfp.S",
+          "arm/unordsf2vfp.S",
+        ]
+      }
     } else {
       sources += [
         "arm/aeabi_idivmod.S",
@@ -357,13 +421,13 @@ static_library("builtins") {
     }
   }
 
-  if (target_cpu == "arm64") {
+  if (current_cpu == "arm64") {
     sources += [
       # This comment prevents `gn format` from putting the file on the same line
       # as `sources +=`, for sync_source_lists_from_cmake.py.
       "aarch64/fp_mode.c",
     ]
-    if (target_os == "mingw") {
+    if (current_os == "mingw") {
       sources += [
         # This comment prevents `gn format` from putting the file on the same
         # line as `sources +=`, for sync_source_lists_from_cmake.py.
@@ -372,7 +436,7 @@ static_library("builtins") {
     }
   }
 
-  if (target_cpu == "hexagon") {
+  if (current_cpu == "hexagon") {
     sources += [
       "hexagon/common_entry_exit_abi1.S",
       "hexagon/common_entry_exit_abi2.S",
@@ -407,7 +471,7 @@ static_library("builtins") {
     ]
   }
 
-  if (target_cpu == "ppc64") {
+  if (current_cpu == "ppc64") {
     sources += [
       "ppc/divtc3.c",
       "ppc/fixtfdi.c",
@@ -424,7 +488,7 @@ static_library("builtins") {
     ]
   }
 
-  if (target_cpu == "riscv") {
+  if (current_cpu == "riscv") {
     sources += [
       # This comment prevents `gn format` from putting the file on the same line
       # as `sources +=`, for sync_source_lists_from_cmake.py.
@@ -450,73 +514,5 @@ source_set("_unused") {
     "arm/comparesf2.S",
     "arm/divsi3.S",
     "arm/udivsi3.S",
-
-    # EABI
-    "arm/aeabi_cdcmp.S",
-    "arm/aeabi_cdcmpeq_check_nan.c",
-    "arm/aeabi_cfcmp.S",
-    "arm/aeabi_cfcmpeq_check_nan.c",
-    "arm/aeabi_dcmp.S",
-    "arm/aeabi_div0.c",
-    "arm/aeabi_drsub.c",
-    "arm/aeabi_fcmp.S",
-    "arm/aeabi_frsub.c",
-    "arm/aeabi_idivmod.S",
-    "arm/aeabi_ldivmod.S",
-    "arm/aeabi_memcmp.S",
-    "arm/aeabi_memcpy.S",
-    "arm/aeabi_memmove.S",
-    "arm/aeabi_memset.S",
-    "arm/aeabi_uidivmod.S",
-    "arm/aeabi_uldivmod.S",
-
-    # Thumb1 JT
-    "arm/switch16.S",
-    "arm/switch32.S",
-    "arm/switch8.S",
-    "arm/switchu8.S",
-
-    # Thumb1 SjLj
-    "arm/restore_vfp_d8_d15_regs.S",
-    "arm/save_vfp_d8_d15_regs.S",
-
-    # Thumb1 VFPv2
-    "arm/adddf3vfp.S",
-    "arm/addsf3vfp.S",
-    "arm/divdf3vfp.S",
-    "arm/divsf3vfp.S",
-    "arm/eqdf2vfp.S",
-    "arm/eqsf2vfp.S",
-    "arm/extendsfdf2vfp.S",
-    "arm/fixdfsivfp.S",
-    "arm/fixsfsivfp.S",
-    "arm/fixunsdfsivfp.S",
-    "arm/fixunssfsivfp.S",
-    "arm/floatsidfvfp.S",
-    "arm/floatsisfvfp.S",
-    "arm/floatunssidfvfp.S",
-    "arm/floatunssisfvfp.S",
-    "arm/gedf2vfp.S",
-    "arm/gesf2vfp.S",
-    "arm/gtdf2vfp.S",
-    "arm/gtsf2vfp.S",
-    "arm/ledf2vfp.S",
-    "arm/lesf2vfp.S",
-    "arm/ltdf2vfp.S",
-    "arm/ltsf2vfp.S",
-    "arm/muldf3vfp.S",
-    "arm/mulsf3vfp.S",
-    "arm/nedf2vfp.S",
-    "arm/negdf2vfp.S",
-    "arm/negsf2vfp.S",
-    "arm/nesf2vfp.S",
-    "arm/subdf3vfp.S",
-    "arm/subsf3vfp.S",
-    "arm/truncdfsf2vfp.S",
-    "arm/unorddf2vfp.S",
-    "arm/unordsf2vfp.S",
-
-    # Thumb1 icache
-    "arm/sync_synchronize.S",
   ]
 }

@@ -1,6 +1,6 @@
 ; RUN: opt < %s -basicaa -functionattrs -rpo-functionattrs -S | FileCheck %s --check-prefixes=CHECK,BOTH
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes='cgscc(function-attrs),rpo-functionattrs' -S | FileCheck %s --check-prefixes=CHECK,BOTH
-; RUN: opt -passes=attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-max-iterations=4 -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR,BOTH
+; RUN: opt -passes=attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=2 -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR,BOTH
 
 ; CHECK: Function Attrs
 ; CHECK-SAME: norecurse nounwind readnone
@@ -130,14 +130,14 @@ define linkonce_odr i32 @leaf_redefinable() {
 
 ; Call through a function pointer
 ; ATTRIBUTOR-NOT: Function Attrs
-; ATTRIBUTOR: define i32 @eval_func1(i32 (i32)* nocapture nonnull %0, i32 %1)
+; ATTRIBUTOR: define i32 @eval_func1(i32 (i32)* nocapture nofree nonnull %0, i32 %1)
 define i32 @eval_func1(i32 (i32)* , i32) local_unnamed_addr {
   %3 = tail call i32 %0(i32 %1) #2
   ret i32 %3
 }
 
 ; ATTRIBUTOR-NOT: Function Attrs
-; ATTRIBUTOR: define i32 @eval_func2(i32 (i32)* nocapture %0, i32 %1)
+; ATTRIBUTOR: define i32 @eval_func2(i32 (i32)* nocapture nofree %0, i32 %1)
 define i32 @eval_func2(i32 (i32)* , i32) local_unnamed_addr "null-pointer-is-valid"="true"{
   %3 = tail call i32 %0(i32 %1) #2
   ret i32 %3

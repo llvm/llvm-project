@@ -99,6 +99,17 @@
   (((ch) == DIR_SEPARATOR) || ((ch) == DIR_SEPARATOR_2))
 #endif /* DIR_SEPARATOR_2 */
 
+#if defined(_WIN32)
+#include <windows.h>
+static inline size_t getpagesize() {
+  SYSTEM_INFO S;
+  GetNativeSystemInfo(&S);
+  return S.dwPageSize;
+}
+#else /* defined(_WIN32) */
+#include <unistd.h>
+#endif /* defined(_WIN32) */
+
 #define PROF_ERR(Format, ...)                                                  \
   fprintf(stderr, "LLVM Profile Error: " Format, __VA_ARGS__);
 

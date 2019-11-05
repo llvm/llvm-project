@@ -402,7 +402,7 @@ values through compilation, when objects are promoted to SSA values an
 ``llvm.dbg.value`` intrinsic is created for each assignment, recording the
 variable's new location. Compared with the ``llvm.dbg.declare`` intrinsic:
 
-* A dbg.value terminates the effect of any preceeding dbg.values for (any
+* A dbg.value terminates the effect of any preceding dbg.values for (any
   overlapping fragments of) the specified variable.
 * The dbg.value's position in the IR defines where in the instruction stream
   the variable's value changes.
@@ -714,7 +714,7 @@ Imagine that the SUB32rr were moved forward to give us the following MIR:
 
 In this circumstance LLVM would leave the MIR as shown above. Were we to move
 the DBG_VALUE of virtual register %7 upwards with the SUB32rr, we would re-order
-assignments and introduce a new state of the program. Wheras with the solution
+assignments and introduce a new state of the program. Whereas with the solution
 above, the debugger will see one fewer combination of variable values, because
 ``!3`` and ``!5`` will change value at the same time. This is preferred over
 misrepresenting the original program.
@@ -747,7 +747,7 @@ To avoid debug instructions interfering with the register allocator, the
 LiveDebugVariables pass extracts variable locations from a MIR function and
 deletes the corresponding DBG_VALUE instructions. Some localized copy
 propagation is performed within blocks. After register allocation, the
-VirtRegRewriter pass re-inserts DBG_VALUE instructions in their orignal
+VirtRegRewriter pass re-inserts DBG_VALUE instructions in their original
 positions, translating virtual register references into their physical
 machine locations. To avoid encoding incorrect variable locations, in this
 pass any DBG_VALUE of a virtual register that is not live, is replaced by
@@ -767,7 +767,7 @@ corresponding to a source-level assignment where the variable may change value,
 it asserts the location of a variable in a block, and loses effect outside the
 block. Propagating variable locations through copies and spills is
 straightforwards: determining the variable location in every basic block
-requries the consideraton of control flow. Consider the following IR, which
+requires the consideration of control flow. Consider the following IR, which
 presents several difficulties:
 
 .. code-block:: text
@@ -1154,7 +1154,7 @@ directly.
 
 Also, it is common practice in ObjC to have different property declarations in
 the @interface and @implementation - e.g. to provide a read-only property in
-the interface,and a read-write interface in the implementation.  In that case,
+the interface, and a read-write interface in the implementation.  In that case,
 the compiler should emit whichever property declaration will be in force in the
 current translation unit.
 

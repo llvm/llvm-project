@@ -177,6 +177,7 @@ LoopUnrollResult llvm::UnrollAndJamLoop(
 
   // When we enter here we should have already checked that it is safe
   BasicBlock *Header = L->getHeader();
+  assert(Header && "No header.");
   assert(L->getSubLoops().size() == 1);
   Loop *SubLoop = *L->begin();
 
@@ -247,8 +248,9 @@ LoopUnrollResult llvm::UnrollAndJamLoop(
 
   BasicBlock *Preheader = L->getLoopPreheader();
   BasicBlock *LatchBlock = L->getLoopLatch();
+  assert(Preheader && "No preheader");
+  assert(LatchBlock && "No latch block");
   BranchInst *BI = dyn_cast<BranchInst>(LatchBlock->getTerminator());
-  assert(Preheader && LatchBlock && Header);
   assert(BI && !BI->isUnconditional());
   bool ContinueOnTrue = L->contains(BI->getSuccessor(0));
   BasicBlock *LoopExit = BI->getSuccessor(ContinueOnTrue);

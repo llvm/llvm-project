@@ -4,7 +4,7 @@
 # UNSUPPORTED: system-windows
 # REQUIRES: target-x86_64, native
 
-# RUN: %clang %p/Inputs/call-asm.c %p/Inputs/trap_frame_sym_ctx.s -o %t
+# RUN: %clang_host %p/Inputs/call-asm.c %p/Inputs/trap_frame_sym_ctx.s -o %t
 # RUN: %lldb %t -s %s -o exit | FileCheck %s
 
 settings append target.trap-handler-names tramp

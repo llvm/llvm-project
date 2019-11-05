@@ -116,8 +116,8 @@ let AdditionalPredicates = [NotInMicroMips] in {
                        ADD_FM<0, 0xa>, INSN_MIPS4_32_NOT_32R6_64R6, GPR_64;
   }
 
-  def MOVN_I_I       : MMRel, CMov_I_I_FT<"movn", GPR32Opnd, GPR32Opnd, II_MOVN>,
-                       ADD_FM<0, 0xb>, INSN_MIPS4_32_NOT_32R6_64R6;
+  def MOVN_I_I     : MMRel, CMov_I_I_FT<"movn", GPR32Opnd, GPR32Opnd, II_MOVN>,
+                     ADD_FM<0, 0xb>, INSN_MIPS4_32_NOT_32R6_64R6;
 
   let isCodeGenOnly = 1 in {
     def MOVN_I_I64   : CMov_I_I_FT<"movn", GPR32Opnd, GPR64Opnd, II_MOVN>,
@@ -226,8 +226,8 @@ let AdditionalPredicates = [NotInMicroMips] in {
          GPR_64;
   defm : MovnPats<GPR64, GPR32, MOVN_I64_I, XOR64>, INSN_MIPS4_32_NOT_32R6_64R6,
          GPR_64;
-  defm : MovnPats<GPR64, GPR64, MOVN_I64_I64, XOR64>, INSN_MIPS4_32_NOT_32R6_64R6,
-         GPR_64;
+  defm : MovnPats<GPR64, GPR64, MOVN_I64_I64, XOR64>,
+         INSN_MIPS4_32_NOT_32R6_64R6, GPR_64;
 
   defm : MovzPats0<GPR32, FGR32, MOVZ_I_S, SLT, SLTu, SLTi, SLTiu>,
          INSN_MIPS4_32_NOT_32R6_64R6;
@@ -236,8 +236,8 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
   defm : MovzPats0<GPR64, FGR32, MOVZ_I_S, SLT64, SLTu64, SLTi64, SLTiu64>,
          INSN_MIPS4_32_NOT_32R6_64R6, GPR_64;
-  defm : MovzPats1<GPR64, FGR32, MOVZ_I64_S, XOR64>, INSN_MIPS4_32_NOT_32R6_64R6,
-         GPR_64;
+  defm : MovzPats1<GPR64, FGR32, MOVZ_I64_S, XOR64>,
+         INSN_MIPS4_32_NOT_32R6_64R6, GPR_64;
   defm : MovnPats<GPR64, FGR32, MOVN_I64_S, XOR64>, INSN_MIPS4_32_NOT_32R6_64R6,
          GPR_64;
 
@@ -258,8 +258,8 @@ let AdditionalPredicates = [NotInMicroMips] in {
          INSN_MIPS4_32_NOT_32R6_64R6, FGR_64;
   defm : MovnPats<GPR32, FGR64, MOVN_I_D64, XOR>, INSN_MIPS4_32_NOT_32R6_64R6,
          FGR_64;
-  defm : MovnPats<GPR64, FGR64, MOVN_I64_D64, XOR64>, INSN_MIPS4_32_NOT_32R6_64R6,
-         FGR_64;
+  defm : MovnPats<GPR64, FGR64, MOVN_I64_D64, XOR64>,
+         INSN_MIPS4_32_NOT_32R6_64R6, FGR_64;
 }
 // For targets that don't have conditional-move instructions
 // we have to match SELECT nodes with pseudo instructions.

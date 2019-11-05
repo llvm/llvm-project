@@ -180,7 +180,7 @@ def main():
 
         # Print out the various check lines here.
         common.add_ir_checks(output_lines, ';', prefix_list, func_dict,
-                             func_name, args.preserve_names)
+                             func_name, args.preserve_names, args.function_signature)
         is_in_function_start = False
 
       if is_in_function:

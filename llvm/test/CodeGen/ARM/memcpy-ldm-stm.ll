@@ -36,10 +36,10 @@ entry:
 ; CHECKV6-NEXT: ldr [[SB:r[0-7]]],
 ; CHECKV6-NEXT: ldm{{(\.w)?}} [[LB]]!,
 ; CHECKV6-NEXT: stm{{(\.w)?}} [[SB]]!,
-; CHECKV6-NEXT: ldrh{{(\.w)?}} {{.*}}, {{\[}}[[LB]]]
-; CHECKV6-NEXT: ldrb{{(\.w)?}} {{.*}}, {{\[}}[[LB]], #2]
-; CHECKV6-NEXT: strb{{(\.w)?}} {{.*}}, {{\[}}[[SB]], #2]
-; CHECKV6-NEXT: strh{{(\.w)?}} {{.*}}, {{\[}}[[SB]]]
+; CHECKV6-DAG: ldrh{{(\.w)?}} {{.*}}, {{\[}}[[LB]]]
+; CHECKV6-DAG: ldrb{{(\.w)?}} {{.*}}, {{\[}}[[LB]], #2]
+; CHECKV6-DAG: strb{{(\.w)?}} {{.*}}, {{\[}}[[SB]], #2]
+; CHECKV6-DAG: strh{{(\.w)?}} {{.*}}, {{\[}}[[SB]]]
 ; CHECKV7: movt [[LB:[rl0-9]+]], :upper16:d
 ; CHECKV7-NEXT: movt [[SB:[rl0-9]+]], :upper16:s
 ; CHECKV7: ldr{{(\.w)?}} {{.*}}, {{\[}}[[LB]], #11]

@@ -26,9 +26,7 @@ public:
   ///
   /// \param Compilations     The reference to the compilation database that's
   /// used by the clang tool.
-  DependencyScanningTool(
-      DependencyScanningService &Service,
-      const clang::tooling::CompilationDatabase &Compilations);
+  DependencyScanningTool(DependencyScanningService &Service);
 
   /// Print out the dependency information into a string using the dependency
   /// file format that is specified in the options (-MD is the default) and
@@ -36,13 +34,13 @@ public:
   ///
   /// \returns A \c StringError with the diagnostic output if clang errors
   /// occurred, dependency file contents otherwise.
-  llvm::Expected<std::string> getDependencyFile(const std::string &Input,
-                                                StringRef CWD);
+  llvm::Expected<std::string>
+  getDependencyFile(const tooling::CompilationDatabase &Compilations,
+                    StringRef CWD);
 
 private:
   const ScanningOutputFormat Format;
   DependencyScanningWorker Worker;
-  const tooling::CompilationDatabase &Compilations;
 };
 
 } // end namespace dependencies

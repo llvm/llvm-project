@@ -36,17 +36,6 @@ struct FoldingSetNodeIDBuilder {
   operator()(T V) {
     ID.AddInteger((unsigned long long)V);
   }
-  void operator()(itanium_demangle::NodeOrString NS) {
-    if (NS.isNode()) {
-      ID.AddInteger(0);
-      (*this)(NS.asNode());
-    } else if (NS.isString()) {
-      ID.AddInteger(1);
-      (*this)(NS.asString());
-    } else {
-      ID.AddInteger(2);
-    }
-  }
   void operator()(itanium_demangle::NodeArray A) {
     ID.AddInteger(A.size());
     for (const Node *N : A)

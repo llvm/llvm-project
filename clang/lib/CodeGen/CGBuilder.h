@@ -309,7 +309,7 @@ public:
     const llvm::StructLayout *Layout = DL.getStructLayout(ElTy);
     auto Offset = CharUnits::fromQuantity(Layout->getElementOffset(Index));
 
-    return Address(CreatePreserveStructAccessIndex(Addr.getPointer(),
+    return Address(CreatePreserveStructAccessIndex(ElTy, Addr.getPointer(),
                                                    Index, FieldIndex, DbgInfo),
                    Addr.getAlignment().alignmentAtOffset(Offset));
   }

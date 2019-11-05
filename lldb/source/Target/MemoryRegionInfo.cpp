@@ -8,13 +8,33 @@
 
 #include "lldb/Target/MemoryRegionInfo.h"
 
+using namespace lldb_private;
+
 llvm::raw_ostream &lldb_private::operator<<(llvm::raw_ostream &OS,
                                             const MemoryRegionInfo &Info) {
-  return OS << llvm::formatv("MemoryRegionInfo([{0}, {1}), {2}, {3}, {4}, {5}, "
-                             "`{6}`, {7}, {8})",
+  return OS << llvm::formatv("MemoryRegionInfo([{0}, {1}), {2:r}{3:w}{4:x}, "
+                             "{5}, `{6}`, {7}, {8})",
                              Info.GetRange().GetRangeBase(),
                              Info.GetRange().GetRangeEnd(), Info.GetReadable(),
                              Info.GetWritable(), Info.GetExecutable(),
                              Info.GetMapped(), Info.GetName(), Info.GetFlash(),
                              Info.GetBlocksize());
+}
+
+void llvm::format_provider<MemoryRegionInfo::OptionalBool>::format(
+    const MemoryRegionInfo::OptionalBool &B, raw_ostream &OS,
+    StringRef Options) {
+  assert(Options.size() <= 1);
+  bool Empty = Options.empty();
+  switch (B) {
+  case lldb_private::MemoryRegionInfo::eNo:
+    OS << (Empty ? "no" : "-");
+    return;
+  case lldb_private::MemoryRegionInfo::eYes:
+    OS << (Empty ? "yes" : Options);
+    return;
+  case lldb_private::MemoryRegionInfo::eDontKnow:
+    OS << (Empty ? "don't know" : "?");
+    return;
+  }
 }

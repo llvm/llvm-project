@@ -1,0 +1,19 @@
+REQUIRES: system-darwin
+
+RUN: %scan-build -h | FileCheck %s
+RUN: %scan-build --help | FileCheck %s
+
+Test for help output from scan-build.
+
+
+CHECK: USAGE: scan-build [options] <build command> [build options]
+
+...
+
+CHECK: AVAILABLE CHECKERS:
+...
+CHECK:    optin.performance.GCDAntipattern
+...
+
+
+

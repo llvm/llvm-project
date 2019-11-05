@@ -77,7 +77,7 @@ public:
   /// \return
   ///     The number of errors encountered during parsing.  0 means
   ///     success.
-  unsigned Parse(DiagnosticManager &diagnostic_manager) override;
+  unsigned Parse(DiagnosticManager &diagnostic_manager);
 
   bool RewriteExpression(DiagnosticManager &diagnostic_manager) override;
 

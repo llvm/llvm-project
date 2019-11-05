@@ -128,12 +128,12 @@
 
 #if OMPTARGET_NVPTX_DEBUG || OMPTARGET_NVPTX_TEST || OMPTARGET_NVPTX_WARNING
 #include <stdio.h>
-#include "target_impl.h"
+#include "support.h"
 
 template <typename... Arguments>
 NOINLINE static void log(const char *fmt, Arguments... parameters) {
-  printf(fmt, (int)blockIdx.x, (int)threadIdx.x, (int)(threadIdx.x / WARPSIZE),
-         (int)(threadIdx.x & 0x1F), parameters...);
+  printf(fmt, (int)GetBlockIdInKernel(), (int)GetThreadIdInBlock(),
+         (int)GetWarpId(), (int)GetLaneId(), parameters...);
 }
 
 #endif
@@ -144,9 +144,8 @@ template <typename... Arguments>
 NOINLINE static void check(bool cond, const char *fmt,
                            Arguments... parameters) {
   if (!cond)
-    printf(fmt, (int)blockIdx.x, (int)threadIdx.x,
-           (int)(threadIdx.x / WARPSIZE), (int)(threadIdx.x & 0x1F),
-           parameters...);
+    printf(fmt, (int)GetBlockIdInKernel(), (int)GetThreadIdInBlock(),
+           (int)GetWarpId(), (int)GetLaneId(), parameters...);
   assert(cond);
 }
 

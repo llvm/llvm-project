@@ -167,9 +167,15 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
   if (!data_sp || !ObjectFilePECOFF::MagicBytesMatch(data_sp))
     return initial_count;
 
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+
   auto binary = llvm::object::createBinary(file.GetPath());
-  if (!binary)
+
+  if (!binary) {
+    LLDB_LOG_ERROR(log, binary.takeError(),
+                   "Failed to create binary for file ({1}): {0}", file);
     return initial_count;
+  }
 
   if (!binary->getBinary()->isCOFF() &&
       !binary->getBinary()->isCOFFImportFile())
@@ -242,11 +248,8 @@ bool ObjectFilePECOFF::CreateBinary() {
 
   auto binary = llvm::object::createBinary(m_file.GetPath());
   if (!binary) {
-    LLDB_LOGF(log,
-              "ObjectFilePECOFF::CreateBinary() - failed to create binary "
-              "for file (%s): %s",
-              m_file ? m_file.GetPath().c_str() : "<NULL>",
-              errorToErrorCode(binary.takeError()).message().c_str());
+    LLDB_LOG_ERROR(log, binary.takeError(),
+                   "Failed to create binary for file ({1}): {0}", m_file);
     return false;
   }
 
@@ -564,7 +567,10 @@ DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
 DataExtractor ObjectFilePECOFF::ReadImageDataByRVA(uint32_t rva, size_t size) {
   if (m_file) {
     Address addr = GetAddress(rva);
-    rva = addr.GetSection()->GetFileOffset() + addr.GetOffset();
+    SectionSP sect = addr.GetSection();
+    if (!sect)
+      return {};
+    rva = sect->GetFileOffset() + addr.GetOffset();
   }
 
   return ReadImageData(rva, size);

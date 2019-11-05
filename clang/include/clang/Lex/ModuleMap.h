@@ -14,17 +14,18 @@
 #ifndef LLVM_CLANG_LEX_MODULEMAP_H
 #define LLVM_CLANG_LEX_MODULEMAP_H
 
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/Twine.h"
 #include <ctime>
@@ -99,6 +100,10 @@ class ModuleMap {
 
   /// The top-level modules that are known.
   llvm::StringMap<Module *> Modules;
+
+  /// Module loading cache that includes submodules, indexed by IdentifierInfo.
+  /// nullptr is stored for modules that are known to fail to load.
+  llvm::DenseMap<const IdentifierInfo *, Module *> CachedModuleLoads;
 
   /// Shadow modules created while building this module map.
   llvm::SmallVector<Module*, 2> ShadowModules;
@@ -684,6 +689,19 @@ public:
 
   module_iterator module_begin() const { return Modules.begin(); }
   module_iterator module_end()   const { return Modules.end(); }
+
+  /// Cache a module load.  M might be nullptr.
+  void cacheModuleLoad(const IdentifierInfo &II, Module *M) {
+    CachedModuleLoads[&II] = M;
+  }
+
+  /// Return a cached module load.
+  llvm::Optional<Module *> getCachedModuleLoad(const IdentifierInfo &II) {
+    auto I = CachedModuleLoads.find(&II);
+    if (I == CachedModuleLoads.end())
+      return None;
+    return I->second;
+  }
 };
 
 } // namespace clang

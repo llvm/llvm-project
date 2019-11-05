@@ -94,7 +94,7 @@ public:
     // value number to the index of Expression in Expressions. We use it
     // instead of a DenseMap because filling such mapping is faster than
     // filling a DenseMap and the compile time is a little better.
-    uint32_t nextExprNumber;
+    uint32_t nextExprNumber = 0;
 
     std::vector<Expression> Expressions;
     std::vector<uint32_t> ExprIdx;
@@ -107,9 +107,9 @@ public:
         DenseMap<std::pair<uint32_t, const BasicBlock *>, uint32_t>;
     PhiTranslateMap PhiTranslateTable;
 
-    AliasAnalysis *AA;
-    MemoryDependenceResults *MD;
-    DominatorTree *DT;
+    AliasAnalysis *AA = nullptr;
+    MemoryDependenceResults *MD = nullptr;
+    DominatorTree *DT = nullptr;
 
     uint32_t nextValueNumber = 1;
 
@@ -130,6 +130,7 @@ public:
     ValueTable(const ValueTable &Arg);
     ValueTable(ValueTable &&Arg);
     ~ValueTable();
+    ValueTable &operator=(const ValueTable &Arg);
 
     uint32_t lookupOrAdd(Value *V);
     uint32_t lookup(Value *V, bool Verify = true) const;
@@ -154,14 +155,14 @@ private:
   friend class gvn::GVNLegacyPass;
   friend struct DenseMapInfo<Expression>;
 
-  MemoryDependenceResults *MD;
-  DominatorTree *DT;
-  const TargetLibraryInfo *TLI;
-  AssumptionCache *AC;
+  MemoryDependenceResults *MD = nullptr;
+  DominatorTree *DT = nullptr;
+  const TargetLibraryInfo *TLI = nullptr;
+  AssumptionCache *AC = nullptr;
   SetVector<BasicBlock *> DeadBlocks;
-  OptimizationRemarkEmitter *ORE;
-  ImplicitControlFlowTracking *ICF;
-  LoopInfo *LI;
+  OptimizationRemarkEmitter *ORE = nullptr;
+  ImplicitControlFlowTracking *ICF = nullptr;
+  LoopInfo *LI = nullptr;
 
   ValueTable VN;
 

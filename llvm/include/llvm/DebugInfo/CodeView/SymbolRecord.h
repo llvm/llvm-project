@@ -79,7 +79,7 @@ public:
   uint32_t Offset = 0;
   uint16_t Segment = 0;
   uint16_t Length = 0;
-  ThunkOrdinal Thunk;
+  ThunkOrdinal Thunk = ThunkOrdinal::Standard;
   StringRef Name;
   ArrayRef<uint8_t> VariantData;
 
@@ -159,7 +159,7 @@ public:
 struct DecodedAnnotation {
   StringRef Name;
   ArrayRef<uint8_t> Bytes;
-  BinaryAnnotationsOpCode OpCode;
+  BinaryAnnotationsOpCode OpCode = BinaryAnnotationsOpCode::Invalid;
   uint32_t U1 = 0;
   uint32_t U2 = 0;
   int32_t S1 = 0;
@@ -407,21 +407,21 @@ public:
       : SymbolRecord(SymbolRecordKind::LocalSym), RecordOffset(RecordOffset) {}
 
   TypeIndex Type;
-  LocalSymFlags Flags;
+  LocalSymFlags Flags = LocalSymFlags::None;
   StringRef Name;
 
   uint32_t RecordOffset = 0;
 };
 
 struct LocalVariableAddrRange {
-  uint32_t OffsetStart;
-  uint16_t ISectStart;
-  uint16_t Range;
+  uint32_t OffsetStart = 0;
+  uint16_t ISectStart = 0;
+  uint16_t Range = 0;
 };
 
 struct LocalVariableAddrGap {
-  uint16_t GapStartOffset;
-  uint16_t Range;
+  uint16_t GapStartOffset = 0;
+  uint16_t Range = 0;
 };
 
 enum : uint16_t { MaxDefRange = 0xf000 };
@@ -628,7 +628,7 @@ public:
 
   uint32_t CodeOffset = 0;
   uint16_t Segment = 0;
-  ProcSymFlags Flags;
+  ProcSymFlags Flags = ProcSymFlags::None;
   StringRef Name;
 
   uint32_t RecordOffset = 0;
@@ -670,7 +670,7 @@ public:
       : SymbolRecord(SymbolRecordKind::ExportSym), RecordOffset(RecordOffset) {}
 
   uint16_t Ordinal = 0;
-  ExportFlags Flags;
+  ExportFlags Flags = ExportFlags::None;
   StringRef Name;
 
   uint32_t RecordOffset = 0;
@@ -686,7 +686,7 @@ public:
 
   TypeIndex Index;
   uint32_t ModFilenameOffset = 0;
-  LocalSymFlags Flags;
+  LocalSymFlags Flags = LocalSymFlags::None;
   StringRef Name;
 
   uint32_t RecordOffset = 0;
@@ -700,7 +700,7 @@ public:
       : SymbolRecord(SymbolRecordKind::Compile2Sym),
         RecordOffset(RecordOffset) {}
 
-  CompileSym2Flags Flags;
+  CompileSym2Flags Flags = CompileSym2Flags::None;
   CPUType Machine;
   uint16_t VersionFrontendMajor = 0;
   uint16_t VersionFrontendMinor = 0;
@@ -726,7 +726,7 @@ public:
       : SymbolRecord(SymbolRecordKind::Compile3Sym),
         RecordOffset(RecordOffset) {}
 
-  CompileSym3Flags Flags;
+  CompileSym3Flags Flags = CompileSym3Flags::None;
   CPUType Machine;
   uint16_t VersionFrontendMajor = 0;
   uint16_t VersionFrontendMinor = 0;
@@ -771,7 +771,7 @@ public:
   uint32_t BytesOfCalleeSavedRegisters = 0;
   uint32_t OffsetOfExceptionHandler = 0;
   uint16_t SectionIdOfExceptionHandler = 0;
-  FrameProcedureOptions Flags;
+  FrameProcedureOptions Flags = FrameProcedureOptions::None;
 
   /// Extract the register this frame uses to refer to local variables.
   RegisterId getLocalFramePtrReg(CPUType CPU) const {

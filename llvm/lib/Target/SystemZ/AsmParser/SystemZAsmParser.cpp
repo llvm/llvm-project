@@ -1304,20 +1304,38 @@ SystemZAsmParser::parsePCRel(OperandVector &Operands, int64_t MinVal,
   if (getParser().parseExpression(Expr))
     return MatchOperand_NoMatch;
 
+  auto isOutOfRangeConstant = [&](const MCExpr *E) -> bool {
+    if (auto *CE = dyn_cast<MCConstantExpr>(E)) {
+      int64_t Value = CE->getValue();
+      if ((Value & 1) || Value < MinVal || Value > MaxVal)
+        return true;
+    }
+    return false;
+  };
+
   // For consistency with the GNU assembler, treat immediates as offsets
   // from ".".
   if (auto *CE = dyn_cast<MCConstantExpr>(Expr)) {
-    int64_t Value = CE->getValue();
-    if ((Value & 1) || Value < MinVal || Value > MaxVal) {
+    if (isOutOfRangeConstant(CE)) {
       Error(StartLoc, "offset out of range");
       return MatchOperand_ParseFail;
     }
+    int64_t Value = CE->getValue();
     MCSymbol *Sym = Ctx.createTempSymbol();
     Out.EmitLabel(Sym);
     const MCExpr *Base = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
                                                  Ctx);
     Expr = Value == 0 ? Base : MCBinaryExpr::createAdd(Base, Expr, Ctx);
   }
+
+  // For consistency with the GNU assembler, conservatively assume that a
+  // constant offset must by itself be within the given size range.
+  if (const auto *BE = dyn_cast<MCBinaryExpr>(Expr))
+    if (isOutOfRangeConstant(BE->getLHS()) ||
+        isOutOfRangeConstant(BE->getRHS())) {
+      Error(StartLoc, "offset out of range");
+      return MatchOperand_ParseFail;
+    }
 
   // Optionally match :tls_gdcall: or :tls_ldcall: followed by a TLS symbol.
   const MCExpr *Sym = nullptr;

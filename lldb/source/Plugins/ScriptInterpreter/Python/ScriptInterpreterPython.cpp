@@ -16,6 +16,7 @@
 #include "lldb-python.h"
 
 #include "PythonDataObjects.h"
+#include "PythonReadline.h"
 #include "ScriptInterpreterPythonImpl.h"
 
 #include "lldb/API/SBFrame.h"
@@ -216,6 +217,22 @@ public:
     m_stdin_tty_state.Save(STDIN_FILENO, false);
 
     InitializePythonHome();
+
+#ifdef LLDB_USE_LIBEDIT_READLINE_COMPAT_MODULE
+    // Python's readline is incompatible with libedit being linked into lldb.
+    // Provide a patched version local to the embedded interpreter.
+    bool ReadlinePatched = false;
+    for (auto *p = PyImport_Inittab; p->name != NULL; p++) {
+      if (strcmp(p->name, "readline") == 0) {
+        p->initfunc = initlldb_readline;
+        break;
+      }
+    }
+    if (!ReadlinePatched) {
+      PyImport_AppendInittab("readline", initlldb_readline);
+      ReadlinePatched = true;
+    }
+#endif
 
     // Register _lldb as a built-in module.
     PyImport_AppendInittab("_lldb", LLDBSwigPyInit);
@@ -807,8 +824,10 @@ ScriptInterpreterPythonImpl::GetMaxPositionalArgumentsForCallable(
         llvm::inconvertibleErrorCode(),
         "can't find callable: %s", callable_name.str().c_str());
   }
-  PythonCallable::ArgInfo arg_info = pfunc.GetNumArguments();
-  return arg_info.max_positional_args;
+  llvm::Expected<PythonCallable::ArgInfo> arg_info = pfunc.GetArgInfo();
+  if (!arg_info)
+    return arg_info.takeError();
+  return arg_info.get().max_positional_args;
 }
 
 static std::string GenerateUniqueName(const char *base_name_wanted,

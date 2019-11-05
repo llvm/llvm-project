@@ -23,6 +23,19 @@ ACTION_TEMPLATE(InvokeArgument,
                 HAS_1_TEMPLATE_PARAMS(int, k),
                 AND_2_VALUE_PARAMS(p0, p1));
 
+// Regression test for PR43282; check that we match MSVC's failure to unpack
+// __VA_ARGS__ unless forwarded through another macro.
+#define THIRD_ARGUMENT(A, B, C, ...) C
+#define TEST(...) THIRD_ARGUMENT(__VA_ARGS__, 1, 2)
+#define COMBINE(...) __VA_ARGS__
+#define WRAPPED_TEST(...) COMBINE(THIRD_ARGUMENT(__VA_ARGS__, 1, 2))
+// Check that we match MSVC's failure to unpack __VA_ARGS__, unless forwarded
+// through another macro
+auto packed = TEST(,);
+auto unpacked = WRAPPED_TEST(,);
+// CHECK: auto packed = 2;
+// CHECK: auto unpacked = 1;
+
 // This tests compatibility with behaviour needed for type_traits in VS2012
 // Test based on _VARIADIC_EXPAND_0X macros in xstddef of VS2012
 #define _COMMA ,

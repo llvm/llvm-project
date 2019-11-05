@@ -4,6 +4,7 @@ import os
 import platform
 import re
 import subprocess
+import sys
 import tempfile
 
 import lit.formats
@@ -38,9 +39,11 @@ config.test_source_root = os.path.join(config.debuginfo_tests_src_root)
 # test_exec_root: The root path where tests should be run.
 config.test_exec_root = config.debuginfo_tests_obj_root
 
+llvm_config.use_default_substitutions()
+
 tools = [
     ToolSubst('%test_debuginfo', command=os.path.join(
-        config.debuginfo_tests_src_root, 'test_debuginfo.pl')),
+        config.debuginfo_tests_src_root, 'llgdb-tests', 'test_debuginfo.pl')),
 ]
 
 def get_required_attr(config, attr_name):
@@ -56,19 +59,17 @@ def get_required_attr(config, attr_name):
 # unsupported. The local win_cdb test suite, however, is supported.
 is_msvc = get_required_attr(config, "is_msvc")
 if is_msvc:
+    config.available_features.add('msvc')
     # FIXME: We should add some llvm lit utility code to find the Windows SDK
     # and set up the environment appopriately.
     win_sdk = 'C:/Program Files (x86)/Windows Kits/10/'
     arch = 'x64'
-    config.unsupported = True
     llvm_config.with_system_environment(['LIB', 'LIBPATH', 'INCLUDE'])
     # Clear _NT_SYMBOL_PATH to prevent cdb from attempting to load symbols from
     # the network.
     llvm_config.with_environment('_NT_SYMBOL_PATH', '')
     tools.append(ToolSubst('%cdb', '"%s"' % os.path.join(win_sdk, 'Debuggers',
                                                          arch, 'cdb.exe')))
-
-llvm_config.use_default_substitutions()
 
 # clang_src_dir is not used by these tests, but is required by
 # use_clang(), so set it to "".
@@ -80,6 +81,34 @@ if config.llvm_use_sanitizer:
     # Propagate path to symbolizer for ASan/MSan.
     llvm_config.with_system_environment(
         ['ASAN_SYMBOLIZER_PATH', 'MSAN_SYMBOLIZER_PATH'])
+llvm_config.with_environment('PATHTOCLANG', llvm_config.config.clang)
+llvm_config.with_environment('PATHTOCLANGPP', llvm_config.use_llvm_tool('clang++'))
+llvm_config.with_environment('PATHTOCLANGCL', llvm_config.use_llvm_tool('clang-cl'))
+
+# Check which debuggers are available:
+built_lldb = llvm_config.use_llvm_tool('lldb', search_env='CLANG')
+lldb_path = None
+if built_lldb is not None:
+    lldb_path = built_lldb
+elif lit.util.which('lldb') is not None:
+    lldb_path = lit.util.which('lldb')
+
+if lldb_path is not None:
+    config.available_features.add('lldb')
+
+# Produce dexter path, lldb path, and combine into the %dexter substitution
+# for running a test.
+dexter_path = os.path.join(config.debuginfo_tests_src_root,
+                           'dexter', 'dexter.py')
+dexter_test_cmd = '"{}" "{}" test'.format(config.python3_executable, dexter_path)
+if lldb_path is not None:
+  dexter_test_cmd += ' --lldb-executable {}'.format(lldb_path)
+tools.append(ToolSubst('%dexter', dexter_test_cmd))
+
+# For testing other bits of dexter that aren't under the "test" subcommand,
+# have a %dexter_base substitution.
+dexter_base_cmd = '"{}" "{}"'.format(config.python3_executable, dexter_path)
+tools.append(ToolSubst('%dexter_base', dexter_base_cmd))
 
 tool_dirs = [config.llvm_tools_dir]
 
@@ -87,6 +116,7 @@ llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 lit.util.usePlatformSdkOnDarwin(config, lit_config)
 
+# available_features: REQUIRES/UNSUPPORTED lit commands look at this list.
 if platform.system() == 'Darwin':
     import subprocess
     xcode_lldb_vers = subprocess.check_output(['xcrun', 'lldb', '--version']).decode("utf-8")
@@ -95,3 +125,4 @@ if platform.system() == 'Darwin':
         apple_lldb_vers = int(match.group(1))
         if apple_lldb_vers < 1000:
             config.available_features.add('apple-lldb-pre-1000')
+

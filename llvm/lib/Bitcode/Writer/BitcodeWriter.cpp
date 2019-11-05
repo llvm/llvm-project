@@ -521,6 +521,7 @@ static unsigned getEncodedUnaryOpcode(unsigned Opcode) {
   switch (Opcode) {
   default: llvm_unreachable("Unknown binary instruction!");
   case Instruction::FNeg: return bitc::UNOP_FNEG;
+  case Instruction::Freeze: return bitc::UNOP_FREEZE;
   }
 }
 
@@ -2433,6 +2434,17 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
           Record.push_back(VE.getTypeID(C->getOperand(0)->getType()));
           Record.push_back(VE.getValueID(C->getOperand(0)));
           AbbrevToUse = CONSTANTS_CE_CAST_Abbrev;
+        } else if (Instruction::isUnaryOp(CE->getOpcode())) {
+          assert(CE->getNumOperands() == 1 && "Unknown constant expr!");
+          Code = bitc::CST_CODE_CE_UNOP;
+          Record.push_back(getEncodedUnaryOpcode(CE->getOpcode()));
+          Record.push_back(VE.getValueID(C->getOperand(0)));
+          uint64_t Flags = getOptimizationFlags(CE);
+          if (Flags != 0) {
+            assert(CE->getOpcode() == Instruction::FNeg);
+            Record.push_back(Flags);
+          }
+          break;
         } else {
           assert(CE->getNumOperands() == 2 && "Unknown constant expr!");
           Code = bitc::CST_CODE_CE_BINOP;
@@ -2444,16 +2456,6 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
             Record.push_back(Flags);
         }
         break;
-      case Instruction::FNeg: {
-        assert(CE->getNumOperands() == 1 && "Unknown constant expr!");
-        Code = bitc::CST_CODE_CE_UNOP;
-        Record.push_back(getEncodedUnaryOpcode(CE->getOpcode()));
-        Record.push_back(VE.getValueID(C->getOperand(0)));
-        uint64_t Flags = getOptimizationFlags(CE);
-        if (Flags != 0)
-          Record.push_back(Flags);
-        break;
-      }
       case Instruction::GetElementPtr: {
         Code = bitc::CST_CODE_CE_GEP;
         const auto *GO = cast<GEPOperator>(C);
@@ -2611,6 +2613,17 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
         AbbrevToUse = FUNCTION_INST_CAST_ABBREV;
       Vals.push_back(VE.getTypeID(I.getType()));
       Vals.push_back(getEncodedCastOpcode(I.getOpcode()));
+    } else if (isa<UnaryOperator>(I)) {
+      Code = bitc::FUNC_CODE_INST_UNOP;
+      if (!pushValueAndType(I.getOperand(0), InstID, Vals))
+        AbbrevToUse = FUNCTION_INST_UNOP_ABBREV;
+      Vals.push_back(getEncodedUnaryOpcode(I.getOpcode()));
+      uint64_t Flags = getOptimizationFlags(&I);
+      if (Flags != 0) {
+        if (AbbrevToUse == FUNCTION_INST_UNOP_ABBREV)
+          AbbrevToUse = FUNCTION_INST_UNOP_FLAGS_ABBREV;
+        Vals.push_back(Flags);
+      }
     } else {
       assert(isa<BinaryOperator>(I) && "Unknown instruction!");
       Code = bitc::FUNC_CODE_INST_BINOP;
@@ -2626,19 +2639,6 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
       }
     }
     break;
-  case Instruction::FNeg: {
-    Code = bitc::FUNC_CODE_INST_UNOP;
-    if (!pushValueAndType(I.getOperand(0), InstID, Vals))
-      AbbrevToUse = FUNCTION_INST_UNOP_ABBREV;
-    Vals.push_back(getEncodedUnaryOpcode(I.getOpcode()));
-    uint64_t Flags = getOptimizationFlags(&I);
-    if (Flags != 0) {
-      if (AbbrevToUse == FUNCTION_INST_UNOP_ABBREV)
-        AbbrevToUse = FUNCTION_INST_UNOP_FLAGS_ABBREV;
-      Vals.push_back(Flags);
-    }
-    break;
-  }
   case Instruction::GetElementPtr: {
     Code = bitc::FUNC_CODE_INST_GEP;
     AbbrevToUse = FUNCTION_INST_GEP_ABBREV;

@@ -39,6 +39,22 @@ typedef struct ValueProfNode {
 } ValueProfNode;
 
 /*!
+ * \brief Return 1 if profile counters are continuously synced to the raw
+ * profile via an mmap(). This is in contrast to the default mode, in which
+ * the raw profile is written out at program exit time.
+ */
+int __llvm_profile_is_continuous_mode_enabled(void);
+
+/*!
+ * \brief Enable continuous mode.
+ *
+ * See \ref __llvm_profile_is_continuous_mode_enabled. The behavior is undefined
+ * if continuous mode is already enabled, or if it cannot be enable due to
+ * conflicting options.
+ */
+void __llvm_profile_enable_continuous_mode(void);
+
+/*!
  * \brief Get number of bytes necessary to pad the argument to eight
  * byte boundary.
  */
@@ -159,6 +175,12 @@ int __llvm_orderfile_dump(void);
  * Note: There may be multiple copies of the profile runtime (one for each
  * instrumented image/DSO). This API only modifies the filename within the
  * copy of the runtime available to the calling image.
+ *
+ * Warning: This is a no-op if continuous mode (\ref
+ * __llvm_profile_is_continuous_mode_enabled) is on. The reason for this is
+ * that in continuous mode, profile counters are mmap()'d to the profile at
+ * program initialization time. Support for transferring the mmap'd profile
+ * counts to a new file has not been implemented.
  */
 void __llvm_profile_set_filename(const char *Name);
 
@@ -181,6 +203,12 @@ void __llvm_profile_set_filename(const char *Name);
  * Note: There may be multiple copies of the profile runtime (one for each
  * instrumented image/DSO). This API only modifies the file object within the
  * copy of the runtime available to the calling image.
+ *
+ * Warning: This is a no-op if continuous mode (\ref
+ * __llvm_profile_is_continuous_mode_enabled) is on. The reason for this is
+ * that in continuous mode, profile counters are mmap()'d to the profile at
+ * program initialization time. Support for transferring the mmap'd profile
+ * counts to a new file has not been implemented.
  */
 void __llvm_profile_set_file_object(FILE *File, int EnableMerge);
 
@@ -222,6 +250,24 @@ uint64_t __llvm_profile_get_version(void);
 /*! \brief Get the number of entries in the profile data section. */
 uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
                                       const __llvm_profile_data *End);
+
+/* ! \brief Given the sizes of the data and counter information, return the
+ * number of padding bytes before and after the counters, and after the names,
+ * in the raw profile.
+ *
+ * Note: In this context, "size" means "number of entries", i.e. the first two
+ * arguments must be the result of __llvm_profile_get_data_size() and of
+ * (__llvm_profile_end_counters() - __llvm_profile_begin_counters()) resp.
+ *
+ * Note: When mmap() mode is disabled, no padding bytes before/after counters
+ * are needed. However, in mmap() mode, the counter section in the raw profile
+ * must be page-aligned: this API computes the number of padding bytes
+ * needed to achieve that.
+ */
+void __llvm_profile_get_padding_sizes_for_counters(
+    uint64_t DataSize, uint64_t CountersSize, uint64_t NamesSize,
+    uint64_t *PaddingBytesBeforeCounters, uint64_t *PaddingBytesAfterCounters,
+    uint64_t *PaddingBytesAfterNames);
 
 /*!
  * \brief Set the flag that profile data has been dumped to the file.

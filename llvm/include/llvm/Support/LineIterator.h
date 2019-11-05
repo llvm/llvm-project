@@ -30,16 +30,16 @@ class MemoryBuffer;
 /// Note that this iterator requires the buffer to be nul terminated.
 class line_iterator
     : public std::iterator<std::forward_iterator_tag, StringRef> {
-  const MemoryBuffer *Buffer;
-  char CommentMarker;
-  bool SkipBlanks;
+  const MemoryBuffer *Buffer = nullptr;
+  char CommentMarker = '\0';
+  bool SkipBlanks = true;
 
-  unsigned LineNumber;
+  unsigned LineNumber = 1;
   StringRef CurrentLine;
 
 public:
   /// Default construct an "end" iterator.
-  line_iterator() : Buffer(nullptr) {}
+  line_iterator() = default;
 
   /// Construct a new iterator around some memory buffer.
   explicit line_iterator(const MemoryBuffer &Buffer, bool SkipBlanks = true,

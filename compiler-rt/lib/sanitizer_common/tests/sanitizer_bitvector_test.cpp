@@ -68,7 +68,11 @@ void Print(const BV &bv) {
 
 void Print(const set<uptr> &s) {
   for (set<uptr>::iterator it = s.begin(); it != s.end(); ++it) {
+#if defined(_WIN64)
+    fprintf(stderr, "%llu ", *it);
+#else
     fprintf(stderr, "%lu ", *it);
+#endif
   }
   fprintf(stderr, "\n");
 }

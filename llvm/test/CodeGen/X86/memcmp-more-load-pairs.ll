@@ -2312,13 +2312,11 @@ define i1 @length32_eq(i8* %x, i8* %y) nounwind {
 ;
 ; X64-AVX1-LABEL: length32_eq:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-AVX1-NEXT:    vmovdqu 16(%rdi), %xmm1
-; X64-AVX1-NEXT:    vpxor 16(%rsi), %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpxor (%rsi), %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vptest %xmm0, %xmm0
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vxorps (%rsi), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX1-NEXT:    sete %al
+; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: length32_eq:
@@ -2653,13 +2651,11 @@ define i1 @length32_eq_const(i8* %X) nounwind {
 ;
 ; X64-AVX1-LABEL: length32_eq_const:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-AVX1-NEXT:    vmovdqu 16(%rdi), %xmm1
-; X64-AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vptest %xmm0, %xmm0
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX1-NEXT:    setne %al
+; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: length32_eq_const:
@@ -2814,16 +2810,15 @@ define i1 @length48_eq(i8* %x, i8* %y) nounwind {
 ;
 ; X64-AVX1-LABEL: length48_eq:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-AVX1-NEXT:    vmovdqu 16(%rdi), %xmm1
-; X64-AVX1-NEXT:    vmovdqu 32(%rdi), %xmm2
-; X64-AVX1-NEXT:    vpxor 16(%rsi), %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpxor (%rsi), %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpxor 32(%rsi), %xmm2, %xmm2
-; X64-AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vptest %xmm0, %xmm0
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vmovups 32(%rdi), %xmm1
+; X64-AVX1-NEXT:    vmovups 32(%rsi), %xmm2
+; X64-AVX1-NEXT:    vxorps (%rsi), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps %ymm2, %ymm1, %ymm1
+; X64-AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX1-NEXT:    sete %al
+; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: length48_eq:
@@ -3144,16 +3139,14 @@ define i1 @length48_eq_const(i8* %X) nounwind {
 ;
 ; X64-AVX1-LABEL: length48_eq_const:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-AVX1-NEXT:    vmovdqu 16(%rdi), %xmm1
-; X64-AVX1-NEXT:    vmovdqu 32(%rdi), %xmm2
-; X64-AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm2, %xmm2
-; X64-AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vptest %xmm0, %xmm0
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vmovups 32(%rdi), %xmm1
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm1, %ymm1
+; X64-AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX1-NEXT:    setne %al
+; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: length48_eq_const:
@@ -3333,19 +3326,14 @@ define i1 @length63_eq(i8* %x, i8* %y) nounwind {
 ;
 ; X64-AVX1-LABEL: length63_eq:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-AVX1-NEXT:    vmovdqu 16(%rdi), %xmm1
-; X64-AVX1-NEXT:    vmovdqu 32(%rdi), %xmm2
-; X64-AVX1-NEXT:    vmovdqu 47(%rdi), %xmm3
-; X64-AVX1-NEXT:    vpxor 47(%rsi), %xmm3, %xmm3
-; X64-AVX1-NEXT:    vpxor 32(%rsi), %xmm2, %xmm2
-; X64-AVX1-NEXT:    vpor %xmm3, %xmm2, %xmm2
-; X64-AVX1-NEXT:    vpxor 16(%rsi), %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpxor (%rsi), %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vptest %xmm0, %xmm0
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vmovups 31(%rdi), %ymm1
+; X64-AVX1-NEXT:    vxorps 31(%rsi), %ymm1, %ymm1
+; X64-AVX1-NEXT:    vxorps (%rsi), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX1-NEXT:    setne %al
+; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: length63_eq:
@@ -3542,19 +3530,14 @@ define i1 @length63_eq_const(i8* %X) nounwind {
 ;
 ; X64-AVX1-LABEL: length63_eq_const:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-AVX1-NEXT:    vmovdqu 16(%rdi), %xmm1
-; X64-AVX1-NEXT:    vmovdqu 32(%rdi), %xmm2
-; X64-AVX1-NEXT:    vmovdqu 47(%rdi), %xmm3
-; X64-AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm3, %xmm3
-; X64-AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm2, %xmm2
-; X64-AVX1-NEXT:    vpor %xmm3, %xmm2, %xmm2
-; X64-AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vptest %xmm0, %xmm0
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vmovups 31(%rdi), %ymm1
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm1, %ymm1
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX1-NEXT:    sete %al
+; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: length63_eq_const:
@@ -3734,19 +3717,14 @@ define i1 @length64_eq(i8* %x, i8* %y) nounwind {
 ;
 ; X64-AVX1-LABEL: length64_eq:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-AVX1-NEXT:    vmovdqu 16(%rdi), %xmm1
-; X64-AVX1-NEXT:    vmovdqu 32(%rdi), %xmm2
-; X64-AVX1-NEXT:    vmovdqu 48(%rdi), %xmm3
-; X64-AVX1-NEXT:    vpxor 48(%rsi), %xmm3, %xmm3
-; X64-AVX1-NEXT:    vpxor 32(%rsi), %xmm2, %xmm2
-; X64-AVX1-NEXT:    vpor %xmm3, %xmm2, %xmm2
-; X64-AVX1-NEXT:    vpxor 16(%rsi), %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpxor (%rsi), %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vptest %xmm0, %xmm0
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vmovups 32(%rdi), %ymm1
+; X64-AVX1-NEXT:    vxorps 32(%rsi), %ymm1, %ymm1
+; X64-AVX1-NEXT:    vxorps (%rsi), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX1-NEXT:    setne %al
+; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: length64_eq:
@@ -3958,19 +3936,14 @@ define i1 @length64_eq_const(i8* %X) nounwind {
 ;
 ; X64-AVX1-LABEL: length64_eq_const:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-AVX1-NEXT:    vmovdqu 16(%rdi), %xmm1
-; X64-AVX1-NEXT:    vmovdqu 32(%rdi), %xmm2
-; X64-AVX1-NEXT:    vmovdqu 48(%rdi), %xmm3
-; X64-AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm3, %xmm3
-; X64-AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm2, %xmm2
-; X64-AVX1-NEXT:    vpor %xmm3, %xmm2, %xmm2
-; X64-AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vptest %xmm0, %xmm0
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vmovups 32(%rdi), %ymm1
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm1, %ymm1
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX1-NEXT:    sete %al
+; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: length64_eq_const:
@@ -4073,12 +4046,17 @@ define i1 @length96_eq(i8* %x, i8* %y) nounwind {
 ;
 ; X64-AVX1-LABEL: length96_eq:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    pushq %rax
-; X64-AVX1-NEXT:    movl $96, %edx
-; X64-AVX1-NEXT:    callq memcmp
-; X64-AVX1-NEXT:    testl %eax, %eax
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vmovups 32(%rdi), %ymm1
+; X64-AVX1-NEXT:    vmovups 64(%rdi), %ymm2
+; X64-AVX1-NEXT:    vxorps 32(%rsi), %ymm1, %ymm1
+; X64-AVX1-NEXT:    vxorps (%rsi), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps 64(%rsi), %ymm2, %ymm2
+; X64-AVX1-NEXT:    vorps %ymm2, %ymm1, %ymm1
+; X64-AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX1-NEXT:    setne %al
-; X64-AVX1-NEXT:    popq %rcx
+; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: length96_eq:
@@ -4233,13 +4211,17 @@ define i1 @length96_eq_const(i8* %X) nounwind {
 ;
 ; X64-AVX1-LABEL: length96_eq_const:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    pushq %rax
-; X64-AVX1-NEXT:    movl $.L.str, %esi
-; X64-AVX1-NEXT:    movl $96, %edx
-; X64-AVX1-NEXT:    callq memcmp
-; X64-AVX1-NEXT:    testl %eax, %eax
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vmovups 32(%rdi), %ymm1
+; X64-AVX1-NEXT:    vmovups 64(%rdi), %ymm2
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm1, %ymm1
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm2, %ymm2
+; X64-AVX1-NEXT:    vorps %ymm2, %ymm1, %ymm1
+; X64-AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX1-NEXT:    sete %al
-; X64-AVX1-NEXT:    popq %rcx
+; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: length96_eq_const:
@@ -4355,12 +4337,20 @@ define i1 @length127_eq(i8* %x, i8* %y) nounwind {
 ;
 ; X64-AVX1-LABEL: length127_eq:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    pushq %rax
-; X64-AVX1-NEXT:    movl $127, %edx
-; X64-AVX1-NEXT:    callq memcmp
-; X64-AVX1-NEXT:    testl %eax, %eax
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vmovups 32(%rdi), %ymm1
+; X64-AVX1-NEXT:    vmovups 64(%rdi), %ymm2
+; X64-AVX1-NEXT:    vmovups 95(%rdi), %ymm3
+; X64-AVX1-NEXT:    vxorps 95(%rsi), %ymm3, %ymm3
+; X64-AVX1-NEXT:    vxorps 64(%rsi), %ymm2, %ymm2
+; X64-AVX1-NEXT:    vorps %ymm3, %ymm2, %ymm2
+; X64-AVX1-NEXT:    vxorps 32(%rsi), %ymm1, %ymm1
+; X64-AVX1-NEXT:    vorps %ymm2, %ymm1, %ymm1
+; X64-AVX1-NEXT:    vxorps (%rsi), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX1-NEXT:    setne %al
-; X64-AVX1-NEXT:    popq %rcx
+; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: length127_eq:
@@ -4519,13 +4509,20 @@ define i1 @length127_eq_const(i8* %X) nounwind {
 ;
 ; X64-AVX1-LABEL: length127_eq_const:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    pushq %rax
-; X64-AVX1-NEXT:    movl $.L.str, %esi
-; X64-AVX1-NEXT:    movl $127, %edx
-; X64-AVX1-NEXT:    callq memcmp
-; X64-AVX1-NEXT:    testl %eax, %eax
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vmovups 32(%rdi), %ymm1
+; X64-AVX1-NEXT:    vmovups 64(%rdi), %ymm2
+; X64-AVX1-NEXT:    vmovups 95(%rdi), %ymm3
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm3, %ymm3
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm2, %ymm2
+; X64-AVX1-NEXT:    vorps %ymm3, %ymm2, %ymm2
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm1, %ymm1
+; X64-AVX1-NEXT:    vorps %ymm2, %ymm1, %ymm1
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX1-NEXT:    sete %al
-; X64-AVX1-NEXT:    popq %rcx
+; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: length127_eq_const:
@@ -4648,12 +4645,20 @@ define i1 @length128_eq(i8* %x, i8* %y) nounwind {
 ;
 ; X64-AVX1-LABEL: length128_eq:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    pushq %rax
-; X64-AVX1-NEXT:    movl $128, %edx
-; X64-AVX1-NEXT:    callq memcmp
-; X64-AVX1-NEXT:    testl %eax, %eax
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vmovups 32(%rdi), %ymm1
+; X64-AVX1-NEXT:    vmovups 64(%rdi), %ymm2
+; X64-AVX1-NEXT:    vmovups 96(%rdi), %ymm3
+; X64-AVX1-NEXT:    vxorps 96(%rsi), %ymm3, %ymm3
+; X64-AVX1-NEXT:    vxorps 64(%rsi), %ymm2, %ymm2
+; X64-AVX1-NEXT:    vorps %ymm3, %ymm2, %ymm2
+; X64-AVX1-NEXT:    vxorps 32(%rsi), %ymm1, %ymm1
+; X64-AVX1-NEXT:    vorps %ymm2, %ymm1, %ymm1
+; X64-AVX1-NEXT:    vxorps (%rsi), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX1-NEXT:    setne %al
-; X64-AVX1-NEXT:    popq %rcx
+; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: length128_eq:
@@ -4812,13 +4817,20 @@ define i1 @length128_eq_const(i8* %X) nounwind {
 ;
 ; X64-AVX1-LABEL: length128_eq_const:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    pushq %rax
-; X64-AVX1-NEXT:    movl $.L.str, %esi
-; X64-AVX1-NEXT:    movl $128, %edx
-; X64-AVX1-NEXT:    callq memcmp
-; X64-AVX1-NEXT:    testl %eax, %eax
+; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
+; X64-AVX1-NEXT:    vmovups 32(%rdi), %ymm1
+; X64-AVX1-NEXT:    vmovups 64(%rdi), %ymm2
+; X64-AVX1-NEXT:    vmovups 96(%rdi), %ymm3
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm3, %ymm3
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm2, %ymm2
+; X64-AVX1-NEXT:    vorps %ymm3, %ymm2, %ymm2
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm1, %ymm1
+; X64-AVX1-NEXT:    vorps %ymm2, %ymm1, %ymm1
+; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX1-NEXT:    sete %al
-; X64-AVX1-NEXT:    popq %rcx
+; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: length128_eq_const:

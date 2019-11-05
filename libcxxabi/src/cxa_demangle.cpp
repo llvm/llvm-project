@@ -86,14 +86,6 @@ struct DumpVisitor {
     else
       printStr("<null>");
   }
-  void print(NodeOrString NS) {
-    if (NS.isNode())
-      print(NS.asNode());
-    else if (NS.isString())
-      print(NS.asString());
-    else
-      printStr("NodeOrString()");
-  }
   void print(NodeArray A) {
     ++Depth;
     printStr("{");

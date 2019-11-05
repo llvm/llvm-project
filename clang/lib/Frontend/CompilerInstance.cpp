@@ -1541,12 +1541,9 @@ bool CompilerInstance::loadModuleFile(StringRef FileName) {
     }
 
     void registerAll() {
-      for (auto *II : LoadedModules) {
-        CI.KnownModules[II] = CI.getPreprocessor()
-                                  .getHeaderSearchInfo()
-                                  .getModuleMap()
-                                  .findModule(II->getName());
-      }
+      ModuleMap &MM = CI.getPreprocessor().getHeaderSearchInfo().getModuleMap();
+      for (auto *II : LoadedModules)
+        MM.cacheModuleLoad(*II, MM.findModule(II->getName()));
       LoadedModules.clear();
     }
 
@@ -1635,14 +1632,12 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     return LastModuleImportResult;
   }
 
-  clang::Module *Module = nullptr;
-
   // If we don't already have information on this module, load the module now.
-  llvm::DenseMap<const IdentifierInfo *, clang::Module *>::iterator Known
-    = KnownModules.find(Path[0].first);
-  if (Known != KnownModules.end()) {
-    // Retrieve the cached top-level module.
-    Module = Known->second;
+  Module *Module = nullptr;
+  ModuleMap &MM = getPreprocessor().getHeaderSearchInfo().getModuleMap();
+  if (auto MaybeModule = MM.getCachedModuleLoad(*Path[0].first)) {
+    // Use the cached result, which may be nullptr.
+    Module = *MaybeModule;
   } else if (ModuleName == getLangOpts().CurrentModule) {
     // This is the module we're building.
     Module = PP->getHeaderSearchInfo().lookupModule(
@@ -1656,7 +1651,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     //  ModuleBuildFailed = true;
     //  return ModuleLoadResult();
     //}
-    Known = KnownModules.insert(std::make_pair(Path[0].first, Module)).first;
+    MM.cacheModuleLoad(*Path[0].first, Module);
   } else {
     // Search for a module with the given name.
     Module = PP->getHeaderSearchInfo().lookupModule(ModuleName, true,
@@ -1750,7 +1745,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
           getDiagnostics().Report(ModuleNameLoc, diag::err_module_prebuilt)
               << ModuleName;
           ModuleBuildFailed = true;
-          KnownModules[Path[0].first] = nullptr;
+          MM.cacheModuleLoad(*Path[0].first, nullptr);
           return ModuleLoadResult();
         }
       }
@@ -1764,7 +1759,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
         // necessarily even have a module map. Since ReadAST already produces
         // diagnostics for these two cases, we simply error out here.
         ModuleBuildFailed = true;
-        KnownModules[Path[0].first] = nullptr;
+        MM.cacheModuleLoad(*Path[0].first, nullptr);
         return ModuleLoadResult();
       }
 
@@ -1809,7 +1804,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
                "undiagnosed error in compileAndLoadModule");
         if (getPreprocessorOpts().FailedModules)
           getPreprocessorOpts().FailedModules->addFailed(ModuleName);
-        KnownModules[Path[0].first] = nullptr;
+        MM.cacheModuleLoad(*Path[0].first, nullptr);
         ModuleBuildFailed = true;
         return ModuleLoadResult();
       }
@@ -1832,19 +1827,19 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
       ModuleLoader::HadFatalFailure = true;
       // FIXME: The ASTReader will already have complained, but can we shoehorn
       // that diagnostic information into a more useful form?
-      KnownModules[Path[0].first] = nullptr;
+      MM.cacheModuleLoad(*Path[0].first, nullptr);
       return ModuleLoadResult();
 
     case ASTReader::Failure:
       ModuleLoader::HadFatalFailure = true;
       // Already complained, but note now that we failed.
-      KnownModules[Path[0].first] = nullptr;
+      MM.cacheModuleLoad(*Path[0].first, nullptr);
       ModuleBuildFailed = true;
       return ModuleLoadResult();
     }
 
     // Cache the result of this top-level module lookup for later.
-    Known = KnownModules.insert(std::make_pair(Path[0].first, Module)).first;
+    MM.cacheModuleLoad(*Path[0].first, Module);
   }
 
   // If we never found the module, fail.

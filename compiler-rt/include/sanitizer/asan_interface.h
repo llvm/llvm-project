@@ -315,6 +315,10 @@ void *__asan_addr_is_in_fake_stack(void *fake_stack, void *addr, void **beg,
 /// functions like <c>_exit()</c> and <c>execl()</c>.
 void __asan_handle_no_return(void);
 
+/// Update allocation stack trace for the given allocation to the current stack
+/// trace. Returns 1 if successfull, 0 if not.
+int __asan_update_allocation_context(void* addr);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

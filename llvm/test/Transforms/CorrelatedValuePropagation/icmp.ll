@@ -374,4 +374,37 @@ exit:
   ret i1 %iv
 }
 
+define i1 @test12(i32 %x) {
+; CHECK-LABEL: @test12(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[ZEXT]], 7
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[MUL]], 32
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[SHR]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TRUNC]], 7
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %zext = zext i32 %x to i64
+  %mul = mul nuw i64 %zext, 7
+  %shr = lshr i64 %mul, 32
+  %trunc = trunc i64 %shr to i32
+  %cmp = icmp ult i32 %trunc, 7
+  ret i1 %cmp
+}
+
+define i1 @test13(i8 %x, i64* %p) {
+; CHECK-LABEL: @test13(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i64
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[ZEXT]], 128
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[ADD]], 384
+; CHECK-NEXT:    store i64 [[ADD]], i64* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %zext = zext i8 %x to i64
+  %add = add nuw nsw i64 %zext, 128
+  %cmp = icmp ult i64 %add, 384
+  ; Without this extra use, InstSimplify could handle this
+  store i64 %add, i64* %p
+  ret i1 %cmp
+}
+
 attributes #4 = { noreturn }

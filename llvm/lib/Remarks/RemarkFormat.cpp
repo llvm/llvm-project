@@ -12,6 +12,7 @@
 
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Remarks/BitstreamRemarkContainer.h"
 
 using namespace llvm;
 using namespace llvm::remarks;
@@ -28,5 +29,19 @@ Expected<Format> llvm::remarks::parseFormat(StringRef FormatStr) {
                              "Unknown remark format: '%s'",
                              FormatStr.data());
 
+  return Result;
+}
+
+Expected<Format> llvm::remarks::magicToFormat(StringRef Magic) {
+  auto Result =
+      StringSwitch<Format>(Magic)
+          .StartsWith("--- ", Format::YAML) // This is only an assumption.
+          .StartsWith(remarks::Magic, Format::YAMLStrTab)
+          .StartsWith(remarks::ContainerMagic, Format::Bitstream)
+          .Default(Format::Unknown);
+
+  if (Result == Format::Unknown)
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "Unknown remark magic: '%s'", Magic.data());
   return Result;
 }

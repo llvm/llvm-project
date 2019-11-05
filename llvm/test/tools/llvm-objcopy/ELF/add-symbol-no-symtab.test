@@ -4,10 +4,10 @@
 
 ## If a non-SHF_ALLOC SHT_STRTAB exists but SHT_SYMTAB does not, create .symtab
 ## and set its sh_link to the SHT_STRTAB.
-# RUN: llvm-objcopy --remove-section=.symtab %t %t1
-# RUN: llvm-objcopy --add-symbol='abs1=1' %t1 %t2
-# RUN: llvm-readobj -S %t2 | FileCheck --check-prefix=SEC %s
-# RUN: llvm-readelf -s %t2 | FileCheck %s
+# RUN: llvm-objcopy --remove-section=.symtab %t %t.no.symtab
+# RUN: llvm-objcopy --add-symbol='abs1=1' %t.no.symtab %t.add.both
+# RUN: llvm-readobj -S %t.add.both | FileCheck --check-prefix=SEC %s
+# RUN: llvm-readelf -s %t.add.both | FileCheck %s
 
 # SEC:      Index: 1
 # SEC-NEXT: Name: .strtab
@@ -25,16 +25,15 @@
 # CHECK-NEXT: 1: 0000000000000001 0 NOTYPE GLOBAL DEFAULT ABS abs1
 
 ## Don't create .symtab if --add-symbol is not specified.
-# RUN: llvm-objcopy --remove-section=.symtab --remove-section=.strtab %t %t1
-# RUN: llvm-objcopy %t1 %t2
-# RUN: llvm-readobj -S %t2 | FileCheck --implicit-check-not=.symtab /dev/null
+# RUN: llvm-objcopy --remove-section=.symtab --remove-section=.strtab %t %t.no
+# RUN: llvm-objcopy %t.no %t.nop
+# RUN: llvm-readobj -S %t.nop | FileCheck --implicit-check-not=.symtab --implicit-check-not=.strtab /dev/null
 
-## Check that we create both .strtab and .symtab.
-## We reuse the existing .shstrtab (section names) for symbol names.
+## Reuse the existing .shstrtab (section names) for symbol names.
 ## This may look strange but it works.
-# RUN: llvm-objcopy --add-symbol='abs1=1' %t1 %t2
-# RUN: llvm-readobj -S %t2 | FileCheck --check-prefix=SEC2 %s
-# RUN: llvm-readelf -s %t2 | FileCheck %s
+# RUN: llvm-objcopy --add-symbol='abs1=1' %t.no %t.add.symtab
+# RUN: llvm-readobj -S %t.add.symtab | FileCheck --check-prefix=SEC2 %s --implicit-check-not=.strtab
+# RUN: llvm-readelf -s %t.add.symtab | FileCheck %s
 
 # SEC2:      Index: 1
 # SEC2-NEXT: Name: .shstrtab
@@ -51,14 +50,41 @@ FileHeader:
   Data:    ELFDATA2LSB
   Type:    ET_REL
   Machine: EM_X86_64
-Symbols:
+Sections:
+  - Name: .strtab
+    Type: SHT_STRTAB
+  - Name: .shstrtab
+    Type: SHT_STRTAB
+Symbols: []
+...
+
+## Check that we prefer the string table that is not the section header string table.
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-objcopy --remove-section=.symtab --remove-section=.strtab %t2 %t2.no
+# RUN: llvm-objcopy --add-symbol='abs1=1' %t2.no %t2.add.symtab
+# RUN: llvm-readobj -S %t2.add.symtab | FileCheck --check-prefix=SEC2 %s
+# RUN: llvm-readelf -s %t2.add.symtab | FileCheck %s
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  # .shstrtab is reordered before .strtab
+  - Name: .shstrtab
+    Type: SHT_STRTAB
+  - Name: .strtab
+    Type: SHT_STRTAB
+Symbols: []
 ...
 
 ## Check the created .symtab does not link to .dynstr (SHF_ALLOC).
-# RUN: yaml2obj --docnum=2 %s -o %t
-# RUN: llvm-objcopy --remove-section=.symtab --remove-section=.strtab %t %t1
-# RUN: llvm-objcopy --add-symbol='abs1=1' %t1 %t2
-# RUN: llvm-readobj -S %t2 | FileCheck --check-prefix=SEC3 %s
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-objcopy --remove-section=.symtab --remove-section=.strtab %t3 %t3.no
+# RUN: llvm-objcopy --add-symbol='abs1=1' %t3.no %t3.not.dynstr
+# RUN: llvm-readobj -S %t3.not.dynstr | FileCheck --check-prefix=SEC3 %s
 
 # SEC3:      Index: 1
 # SEC3-NEXT: Name: .shstrtab
@@ -77,5 +103,5 @@ FileHeader:
 DynamicSymbols:
   - Name:    dummy
     Binding: STB_GLOBAL
-Symbols:
+Symbols: []
 ...

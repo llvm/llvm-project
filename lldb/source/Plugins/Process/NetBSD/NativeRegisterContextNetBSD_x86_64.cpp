@@ -84,13 +84,71 @@ static_assert((sizeof(g_gpr_regnums_x86_64) / sizeof(g_gpr_regnums_x86_64[0])) -
                   k_num_gpr_registers_x86_64,
               "g_gpr_regnums_x86_64 has wrong number of register infos");
 
+// x86 64-bit floating point registers.
+static const uint32_t g_fpu_regnums_x86_64[] = {
+    lldb_fctrl_x86_64,     lldb_fstat_x86_64, lldb_ftag_x86_64,
+    lldb_fop_x86_64,       lldb_fiseg_x86_64, lldb_fioff_x86_64,
+    lldb_foseg_x86_64,     lldb_fooff_x86_64, lldb_mxcsr_x86_64,
+    lldb_mxcsrmask_x86_64, lldb_st0_x86_64,   lldb_st1_x86_64,
+    lldb_st2_x86_64,       lldb_st3_x86_64,   lldb_st4_x86_64,
+    lldb_st5_x86_64,       lldb_st6_x86_64,   lldb_st7_x86_64,
+    lldb_mm0_x86_64,       lldb_mm1_x86_64,   lldb_mm2_x86_64,
+    lldb_mm3_x86_64,       lldb_mm4_x86_64,   lldb_mm5_x86_64,
+    lldb_mm6_x86_64,       lldb_mm7_x86_64,   lldb_xmm0_x86_64,
+    lldb_xmm1_x86_64,      lldb_xmm2_x86_64,  lldb_xmm3_x86_64,
+    lldb_xmm4_x86_64,      lldb_xmm5_x86_64,  lldb_xmm6_x86_64,
+    lldb_xmm7_x86_64,      lldb_xmm8_x86_64,  lldb_xmm9_x86_64,
+    lldb_xmm10_x86_64,     lldb_xmm11_x86_64, lldb_xmm12_x86_64,
+    lldb_xmm13_x86_64,     lldb_xmm14_x86_64, lldb_xmm15_x86_64,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
+};
+static_assert((sizeof(g_fpu_regnums_x86_64) / sizeof(g_fpu_regnums_x86_64[0])) -
+                      1 ==
+                  k_num_fpr_registers_x86_64,
+              "g_fpu_regnums_x86_64 has wrong number of register infos");
+
+// x86 64-bit registers available via XState.
+static const uint32_t g_xstate_regnums_x86_64[] = {
+    lldb_ymm0_x86_64,   lldb_ymm1_x86_64,  lldb_ymm2_x86_64,  lldb_ymm3_x86_64,
+    lldb_ymm4_x86_64,   lldb_ymm5_x86_64,  lldb_ymm6_x86_64,  lldb_ymm7_x86_64,
+    lldb_ymm8_x86_64,   lldb_ymm9_x86_64,  lldb_ymm10_x86_64, lldb_ymm11_x86_64,
+    lldb_ymm12_x86_64,  lldb_ymm13_x86_64, lldb_ymm14_x86_64, lldb_ymm15_x86_64,
+    // Note: we currently do not provide them but this is needed to avoid
+    // unnamed groups in SBFrame::GetRegisterContext().
+    lldb_bnd0_x86_64,    lldb_bnd1_x86_64,    lldb_bnd2_x86_64,
+    lldb_bnd3_x86_64,    lldb_bndcfgu_x86_64, lldb_bndstatus_x86_64,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
+};
+static_assert((sizeof(g_xstate_regnums_x86_64) / sizeof(g_xstate_regnums_x86_64[0])) -
+                      1 ==
+                  k_num_avx_registers_x86_64 + k_num_mpx_registers_x86_64,
+              "g_xstate_regnums_x86_64 has wrong number of register infos");
+
+// x86 debug registers.
+static const uint32_t g_dbr_regnums_x86_64[] = {
+    lldb_dr0_x86_64,   lldb_dr1_x86_64,  lldb_dr2_x86_64,  lldb_dr3_x86_64,
+    lldb_dr4_x86_64,   lldb_dr5_x86_64,  lldb_dr6_x86_64,  lldb_dr7_x86_64,
+    LLDB_INVALID_REGNUM // register sets need to end with this flag
+};
+static_assert((sizeof(g_dbr_regnums_x86_64) / sizeof(g_dbr_regnums_x86_64[0])) -
+                      1 ==
+                  k_num_dbr_registers_x86_64,
+              "g_dbr_regnums_x86_64 has wrong number of register infos");
+
 // Number of register sets provided by this context.
-enum { k_num_extended_register_sets = 2, k_num_register_sets = 4 };
+enum { k_num_register_sets = 4 };
 
 // Register sets for x86 64-bit.
 static const RegisterSet g_reg_sets_x86_64[k_num_register_sets] = {
     {"General Purpose Registers", "gpr", k_num_gpr_registers_x86_64,
      g_gpr_regnums_x86_64},
+    {"Floating Point Registers", "fpu", k_num_fpr_registers_x86_64,
+     g_fpu_regnums_x86_64},
+    {"Extended State Registers", "xstate",
+     k_num_avx_registers_x86_64 + k_num_mpx_registers_x86_64,
+     g_xstate_regnums_x86_64},
+    {"Debug Registers", "dbr", k_num_dbr_registers_x86_64,
+     g_dbr_regnums_x86_64},
 };
 
 #define REG_CONTEXT_SIZE (GetRegisterInfoInterface().GetGPRSize())

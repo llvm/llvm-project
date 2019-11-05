@@ -7,6 +7,9 @@ define internal fastcc i64 @F() {
   ret i64 0
 }
 
-; Needed to give llvm-lto2 something to do
-@dummy2 = global i32 0
+@llvm.global_ctors = appending global [0 x { i32, void ()*, i8* }] zeroinitializer
 
+define i64 @G() {
+  ;%1 = load i32, i32* @dummy2, align 4
+  ret i64 0
+}

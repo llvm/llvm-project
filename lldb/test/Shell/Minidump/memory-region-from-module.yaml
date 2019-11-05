@@ -1,0 +1,90 @@
+# Check that memory region parsing works correctly, with a particular emphasis
+# on the boundary conditions.
+
+# RUN: yaml2obj --docnum=1 %s > %t1.dmp
+# RUN: yaml2obj --docnum=2 %s > %t2.dmp
+# RUN: yaml2obj %S/Inputs/basic-elf.yaml >%T/memory-region-from-module.exe
+
+# RUN: %lldb -b -c %t1.dmp %T/memory-region-from-module.exe \
+# RUN:   -o "memory region 0" -o "memory region 0x4000" \
+# RUN:   -o "memory region 0x5000" -o "memory region 0x6000" \
+# RUN:   | FileCheck --check-prefix=ALL --check-prefix=CHECK1 %s
+
+# RUN: %lldb -b -c %t2.dmp %T/memory-region-from-module.exe \
+# RUN:   -o "memory region 0" -o "memory region 0x4000" \
+# RUN:   -o "memory region 0x5000" -o "memory region 0x6000" \
+# RUN:   | FileCheck --check-prefix=ALL --check-prefix=CHECK2 %s
+
+# ALL-LABEL: (lldb) memory region 0
+# ALL: [0x0000000000000000-0x0000000000004000) ---
+# ALL-LABEL: (lldb) memory region 0x4000
+# CHECK1: [0x0000000000004000-0x00000000000040b0) r-x {{.*}}memory-region-from-module.exe PT_LOAD[0]
+# CHECK2: [0x0000000000004000-0x0000000000004010) r??
+# ALL-LABEL: (lldb) memory region 0x5000
+# ALL: [0x0000000000005000-0x000000000000505c) rw- {{.*}}memory-region-from-module.exe PT_LOAD[1]
+# ALL-LABEL: (lldb) memory region 0x6000
+# ALL: [0x000000000000505c-0xffffffffffffffff) ---
+
+--- !minidump
+Streams:
+  - Type:            ModuleList
+    Modules:
+      - Base of Image:   0x0000000000004000
+        Size of Image:   0x00002000
+        Module Name:     'memory-region-from-module.exe'
+        CodeView Record: 4C457042DEADBEEFBAADF00D
+
+  - Type:            SystemInfo
+    Processor Arch:  AMD64
+    Platform ID:     Linux
+    CPU:
+      Vendor ID:       GenuineIntel
+      Version Info:    0x00000000
+      Feature Info:    0x00000000
+  - Type:            LinuxProcStatus
+    Text:             |
+      Name:	memory-region-from-module.exe
+      State:	t (tracing stop)
+      Tgid:	29939
+      Ngid:	0
+      Pid:	29939
+      PPid:	29370
+      TracerPid:	29940
+      Uid:	1001	1001	1001	1001
+      Gid:	1001	1001	1001	1001
+
+...
+
+--- !minidump
+Streams:
+  - Type:            MemoryList
+    Memory Ranges:   
+      - Start of Memory Range: 0x0000000000004000
+        Content:         30044000000000000000000000000000
+  - Type:            ModuleList
+    Modules:
+      - Base of Image:   0x0000000000004000
+        Size of Image:   0x00002000
+        Module Name:     'memory-region-from-module.exe'
+        CodeView Record: 4C457042DEADBEEFBAADF00D
+
+  - Type:            SystemInfo
+    Processor Arch:  AMD64
+    Platform ID:     Linux
+    CPU:
+      Vendor ID:       GenuineIntel
+      Version Info:    0x00000000
+      Feature Info:    0x00000000
+  - Type:            LinuxProcStatus
+    Text:             |
+      Name:	memory-region-from-module.exe
+      State:	t (tracing stop)
+      Tgid:	29939
+      Ngid:	0
+      Pid:	29939
+      PPid:	29370
+      TracerPid:	29940
+      Uid:	1001	1001	1001	1001
+      Gid:	1001	1001	1001	1001
+
+...

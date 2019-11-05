@@ -11,6 +11,9 @@ if (current_os == "android") {
     "-B$android_ndk_path/toolchains/llvm/prebuilt/linux-x86_64",
   ]
   target_ldflags += [ "-static-libstdc++" ]
+  if (current_cpu == "arm") {
+    target_flags += [ "-march=armv7-a" ]
+  }
 }
 
 if (current_cpu == "x86") {

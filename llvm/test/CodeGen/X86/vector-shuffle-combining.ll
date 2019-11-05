@@ -2981,3 +2981,65 @@ define <8 x i16> @shuffle_extract_concat_insert(<4 x i16> %lhsa, <4 x i16> %rhsa
   %7 = insertelement <8 x i16> %6, i16 %b15, i32 7
   ret <8 x i16> %7
 }
+
+define void @PR43024() {
+; SSE2-LABEL: PR43024:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
+; SSE2-NEXT:    movaps %xmm0, (%rax)
+; SSE2-NEXT:    movaps %xmm0, %xmm1
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[2,3]
+; SSE2-NEXT:    addss %xmm0, %xmm1
+; SSE2-NEXT:    xorps %xmm0, %xmm0
+; SSE2-NEXT:    addss %xmm0, %xmm1
+; SSE2-NEXT:    addss %xmm0, %xmm1
+; SSE2-NEXT:    movss %xmm1, (%rax)
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: PR43024:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
+; SSSE3-NEXT:    movaps %xmm0, (%rax)
+; SSSE3-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSSE3-NEXT:    addss %xmm0, %xmm1
+; SSSE3-NEXT:    xorps %xmm0, %xmm0
+; SSSE3-NEXT:    addss %xmm0, %xmm1
+; SSSE3-NEXT:    addss %xmm0, %xmm1
+; SSSE3-NEXT:    movss %xmm1, (%rax)
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: PR43024:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
+; SSE41-NEXT:    movaps %xmm0, (%rax)
+; SSE41-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSE41-NEXT:    addss %xmm0, %xmm1
+; SSE41-NEXT:    xorps %xmm0, %xmm0
+; SSE41-NEXT:    addss %xmm0, %xmm1
+; SSE41-NEXT:    addss %xmm0, %xmm1
+; SSE41-NEXT:    movss %xmm1, (%rax)
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: PR43024:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
+; AVX-NEXT:    vmovaps %xmm0, (%rax)
+; AVX-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovss %xmm0, (%rax)
+; AVX-NEXT:    retq
+  store <4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x0, float 0x0>, <4 x float>* undef, align 16
+  %1 = load <4 x float>, <4 x float>* undef, align 16
+  %2 = fmul <4 x float> %1, <float 0x0, float 0x0, float 0x0, float 0x0>
+  %3 = shufflevector <4 x float> %2, <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %4 = fadd <4 x float> %2, %3
+  %5 = fadd <4 x float> zeroinitializer, %4
+  %6 = shufflevector <4 x float> %2, <4 x float> undef, <4 x i32> <i32 3, i32 undef, i32 undef, i32 undef>
+  %7 = fadd <4 x float> %6, %5
+  %8 = extractelement <4 x float> %7, i32 0
+  store float %8, float* undef, align 8
+  ret void
+}

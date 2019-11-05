@@ -10,6 +10,7 @@ static_library("Remarks") {
     "BitstreamRemarkSerializer.cpp",
     "Remark.cpp",
     "RemarkFormat.cpp",
+    "RemarkLinker.cpp",
     "RemarkParser.cpp",
     "RemarkSerializer.cpp",
     "RemarkStringTable.cpp",

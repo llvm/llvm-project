@@ -752,7 +752,7 @@ void mxcsr() {
   __asm fxrstor buf
 }
 // CHECK-LABEL: define void @mxcsr
-// CHECK: call void asm sideeffect inteldialect "fxrstor $0", "=*m,~{dirflag},~{fpsr},~{flags}"
+// CHECK: call void asm sideeffect inteldialect "fxrstor $0", "=*m,~{fpcr},~{dirflag},~{fpsr},~{flags}"
 
 // Make sure we can find the register for the dirflag for popfd
 void dirflag() {

@@ -354,7 +354,13 @@ struct __sanitizer_addrinfo {
   int ai_family;
   int ai_socktype;
   int ai_protocol;
+#if defined(__sparc__) && defined(_LP64)
+  int __ai_pad0;
+#endif
   unsigned ai_addrlen;
+#if defined(__alpha__) || (defined(__i386__) && defined(_LP64))
+  int __ai_pad0;
+#endif
   char *ai_canonname;
   void *ai_addr;
   struct __sanitizer_addrinfo *ai_next;

@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCStreamer.h"
@@ -41,11 +42,47 @@ void WinCFGuard::endFunction(const MachineFunction *MF) {
                         MF->getLongjmpTargets().end());
 }
 
+/// Returns true if this function's address is escaped in a way that might make
+/// it an indirect call target. Function::hasAddressTaken gives different
+/// results when a function is called directly with a function prototype
+/// mismatch, which requires a cast.
+static bool isPossibleIndirectCallTarget(const Function *F) {
+  SmallVector<const Value *, 4> Users{F};
+  while (!Users.empty()) {
+    const Value *FnOrCast = Users.pop_back_val();
+    for (const Use &U : FnOrCast->uses()) {
+      const User *FnUser = U.getUser();
+      if (isa<BlockAddress>(FnUser))
+        continue;
+      if (const auto *Call = dyn_cast<CallBase>(FnUser)) {
+        if (!Call->isCallee(&U))
+          return true;
+      } else if (isa<Instruction>(FnUser)) {
+        // Consider any other instruction to be an escape. This has some weird
+        // consequences like no-op intrinsics being an escape or a store *to* a
+        // function address being an escape.
+        return true;
+      } else if (const auto *C = dyn_cast<Constant>(FnUser)) {
+        // If this is a constant pointer cast of the function, don't consider
+        // this escape. Analyze the uses of the cast as well. This ensures that
+        // direct calls with mismatched prototypes don't end up in the CFG
+        // table. Consider other constants, such as vtable initializers, to
+        // escape the function.
+        if (C->stripPointerCasts() == F)
+          Users.push_back(FnUser);
+        else
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
 void WinCFGuard::endModule() {
   const Module *M = Asm->MMI->getModule();
   std::vector<const Function *> Functions;
   for (const Function &F : *M)
-    if (F.hasAddressTaken())
+    if (isPossibleIndirectCallTarget(&F))
       Functions.push_back(&F);
   if (Functions.empty() && LongjmpTargets.empty())
     return;

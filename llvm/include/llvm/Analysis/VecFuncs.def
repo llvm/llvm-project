@@ -8,7 +8,14 @@
 
 // This .def file will create mappings from scalar math functions to vector
 // functions along with their vectorization factor. The current support includes
-// such mappings for Accelerate framework, MASS vector library, and SVML library. 
+// such mappings for Accelerate framework, MASS vector library, and SVML library.
+// This .def file also allows creating an array of vector functions supported in
+// the specified framework or library.
+
+#if defined(TLI_DEFINE_MASSV_VECFUNCS_NAMES)
+#define TLI_DEFINE_MASSV_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF) VEC,
+#endif
 
 #if !(defined(TLI_DEFINE_VECFUNC))
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF) {SCAL, VEC, VF},
@@ -247,4 +254,4 @@ TLI_DEFINE_VECFUNC("llvm.log.f32", "__svml_logf16", 16)
 #undef TLI_DEFINE_ACCELERATE_VECFUNCS
 #undef TLI_DEFINE_MASSV_VECFUNCS
 #undef TLI_DEFINE_SVML_VECFUNCS
-
+#undef TLI_DEFINE_MASSV_VECFUNCS_NAMES

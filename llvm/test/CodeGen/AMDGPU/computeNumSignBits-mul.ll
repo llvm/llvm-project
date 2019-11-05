@@ -157,3 +157,14 @@ define i32 @num_sign_bits_mul_i32_10(i32 %x, i32 %y, i32 %z, i32 %w) {
   %mul2 = mul i32 %mul0, %mul1
   ret i32 %mul2
 }
+
+; GFX9-LABEL: known_bits_mul24:
+; GFX9: v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_setpc_b64
+define i32 @known_bits_mul24() {
+  %r0 = call i32 @llvm.amdgcn.mul.i24(i32 0, i32 -7)
+  %r1 = shl i32 %r0, 2
+  ret i32 %r1
+}
+
+declare i32 @llvm.amdgcn.mul.i24(i32, i32)

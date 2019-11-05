@@ -5,11 +5,14 @@ unittest("ScalarTests") {
     "//llvm/lib/Analysis",
     "//llvm/lib/AsmParser",
     "//llvm/lib/IR",
+    "//llvm/lib/Passes",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Support",
     "//llvm/lib/Transforms/Scalar",
     "//llvm/lib/Transforms/Utils",
   ]
   sources = [
+    "LICMTest.cpp",
     "LoopPassManagerTest.cpp",
   ]
 }

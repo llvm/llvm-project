@@ -61,7 +61,7 @@ void MipsTargetInfo::fillValidCPUList(
 unsigned MipsTargetInfo::getISARev() const {
   return llvm::StringSwitch<unsigned>(getCPU())
              .Cases("mips32", "mips64", 1)
-             .Cases("mips32r2", "mips64r2", 2)
+             .Cases("mips32r2", "mips64r2", "octeon", 2)
              .Cases("mips32r3", "mips64r3", 3)
              .Cases("mips32r5", "mips64r5", 5)
              .Cases("mips32r6", "mips64r6", 6)
@@ -188,6 +188,9 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   Builder.defineMacro("_MIPS_ARCH", "\"" + CPU + "\"");
   Builder.defineMacro("_MIPS_ARCH_" + StringRef(CPU).upper());
+
+  if (StringRef(CPU).startswith("octeon"))
+    Builder.defineMacro("__OCTEON__");
 
   // These shouldn't be defined for MIPS-I but there's no need to check
   // for that since MIPS-I isn't supported.

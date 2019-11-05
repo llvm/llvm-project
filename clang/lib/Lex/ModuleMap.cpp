@@ -229,7 +229,7 @@ const FileEntry *ModuleMap::findHeader(
   llvm::sys::path::append(FullPathName, RelativePathName);
   auto *NormalHdrFile = GetFile(FullPathName);
 
-  if (M && !NormalHdrFile && Directory->getName().endswith(".framework")) {
+  if (!NormalHdrFile && Directory->getName().endswith(".framework")) {
     // The lack of 'framework' keyword in a module declaration it's a simple
     // mistake we can diagnose when the header exists within the proper
     // framework style path.

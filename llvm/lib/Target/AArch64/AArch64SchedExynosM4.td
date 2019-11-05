@@ -156,8 +156,10 @@ def M4WriteAU : SchedWriteVariant<[SchedVar<IsCopyIdiomPred,   [M4WriteZ0]>,
                                    SchedVar<ExynosArithPred,   [M4WriteA1]>,
                                    SchedVar<ExynosLogicExPred, [M4WriteA1]>,
                                    SchedVar<NoSchedPred,       [M4WriteAA]>]>;
-def M4WriteAV : SchedWriteVariant<[SchedVar<ExynosResetPred, [M4WriteZ0]>,
-                                   SchedVar<NoSchedPred,     [M4WriteAA]>]>;
+def M4WriteAV : SchedWriteVariant<[SchedVar<ExynosResetPred,   [M4WriteZ0]>,
+                                   SchedVar<ExynosArithPred,   [M4WriteA1]>,
+                                   SchedVar<ExynosLogicExPred, [M4WriteA1]>,
+                                   SchedVar<NoSchedPred,       [M4WriteAA]>]>;
 def M4WriteAX : SchedWriteVariant<[SchedVar<ExynosArithPred,   [M4WriteA1]>,
                                    SchedVar<ExynosLogicExPred, [M4WriteA1]>,
                                    SchedVar<NoSchedPred,       [M4WriteAA]>]>;
@@ -173,8 +175,10 @@ def M4WriteC3 : SchedWriteRes<[M4UnitC]> { let Latency = 3; }
 def M4WriteCA : SchedWriteRes<[M4UnitC]> { let Latency = 4;
                                            let ResourceCycles = [2]; }
 
-def M4WriteD12 : SchedWriteRes<[M4UnitD]> { let Latency = 12; }
-def M4WriteD21 : SchedWriteRes<[M4UnitD]> { let Latency = 21; }
+def M4WriteD12 : SchedWriteRes<[M4UnitD]> { let Latency = 12;
+                                            let ResourceCycles = [12]; }
+def M4WriteD21 : SchedWriteRes<[M4UnitD]> { let Latency = 21;
+                                            let ResourceCycles = [21]; }
 
 def M4WriteE2 : SchedWriteRes<[M4UnitE]> { let Latency = 2; }
 

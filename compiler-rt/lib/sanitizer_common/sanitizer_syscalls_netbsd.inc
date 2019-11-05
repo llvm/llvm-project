@@ -42,8 +42,8 @@
 // DO NOT EDIT! THIS FILE HAS BEEN GENERATED!
 //
 // Generated with: generate_netbsd_syscalls.awk
-// Generated date: 2018-10-30
-// Generated from: syscalls.master,v 1.293 2018/07/31 13:00:13 rjs Exp
+// Generated date: 2019-11-01
+// Generated from: syscalls.master,v 1.296 2019/09/22 22:59:39 christos Exp
 //
 //===----------------------------------------------------------------------===//
 
@@ -2433,30 +2433,31 @@ PRE_SYSCALL(uuidgen)(void *store_, long long count_) { /* Nothing to do */ }
 POST_SYSCALL(uuidgen)(long long res, void *store_, long long count_) {
   /* Nothing to do */
 }
-PRE_SYSCALL(getvfsstat)(void *buf_, long long bufsize_, long long flags_) {
+PRE_SYSCALL(compat_90_getvfsstat)
+(void *buf_, long long bufsize_, long long flags_) {
   /* Nothing to do */
 }
-POST_SYSCALL(getvfsstat)
+POST_SYSCALL(compat_90_getvfsstat)
 (long long res, void *buf_, long long bufsize_, long long flags_) {
   /* Nothing to do */
 }
-PRE_SYSCALL(statvfs1)(void *path_, void *buf_, long long flags_) {
+PRE_SYSCALL(compat_90_statvfs1)(void *path_, void *buf_, long long flags_) {
   const char *path = (const char *)path_;
   if (path) {
     PRE_READ(path, __sanitizer::internal_strlen(path) + 1);
   }
 }
-POST_SYSCALL(statvfs1)
+POST_SYSCALL(compat_90_statvfs1)
 (long long res, void *path_, void *buf_, long long flags_) {
   const char *path = (const char *)path_;
   if (path) {
     POST_READ(path, __sanitizer::internal_strlen(path) + 1);
   }
 }
-PRE_SYSCALL(fstatvfs1)(long long fd_, void *buf_, long long flags_) {
+PRE_SYSCALL(compat_90_fstatvfs1)(long long fd_, void *buf_, long long flags_) {
   /* Nothing to do */
 }
-POST_SYSCALL(fstatvfs1)
+POST_SYSCALL(compat_90_fstatvfs1)
 (long long res, long long fd_, void *buf_, long long flags_) {
   /* Nothing to do */
 }
@@ -2853,13 +2854,13 @@ PRE_SYSCALL(__fhopen40)(void *fhp_, long long fh_size_, long long flags_) {
 }
 POST_SYSCALL(__fhopen40)
 (long long res, void *fhp_, long long fh_size_, long long flags_) {}
-PRE_SYSCALL(__fhstatvfs140)
+PRE_SYSCALL(compat_90_fhstatvfs1)
 (void *fhp_, long long fh_size_, void *buf_, long long flags_) {
   if (fhp_) {
     PRE_READ(fhp_, fh_size_);
   }
 }
-POST_SYSCALL(__fhstatvfs140)
+POST_SYSCALL(compat_90_fhstatvfs1)
 (long long res, void *fhp_, long long fh_size_, void *buf_, long long flags_) {}
 PRE_SYSCALL(compat_50___fhstat40)(void *fhp_, long long fh_size_, void *sb_) {
   if (fhp_) {
@@ -3768,6 +3769,41 @@ POST_SYSCALL(clock_getcpuclockid2)
 (long long res, long long idtype_, long long id_, void *clock_id_) {
   /* Nothing to do */
 }
+PRE_SYSCALL(__getvfsstat90)(void *buf_, long long bufsize_, long long flags_) {
+  /* Nothing to do */
+}
+POST_SYSCALL(__getvfsstat90)
+(long long res, void *buf_, long long bufsize_, long long flags_) {
+  /* Nothing to do */
+}
+PRE_SYSCALL(__statvfs190)(void *path_, void *buf_, long long flags_) {
+  const char *path = (const char *)path_;
+  if (path) {
+    PRE_READ(path, __sanitizer::internal_strlen(path) + 1);
+  }
+}
+POST_SYSCALL(__statvfs190)
+(long long res, void *path_, void *buf_, long long flags_) {
+  const char *path = (const char *)path_;
+  if (path) {
+    POST_READ(path, __sanitizer::internal_strlen(path) + 1);
+  }
+}
+PRE_SYSCALL(__fstatvfs190)(long long fd_, void *buf_, long long flags_) {
+  /* Nothing to do */
+}
+POST_SYSCALL(__fstatvfs190)
+(long long res, long long fd_, void *buf_, long long flags_) {
+  /* Nothing to do */
+}
+PRE_SYSCALL(__fhstatvfs190)
+(void *fhp_, long long fh_size_, void *buf_, long long flags_) {
+  if (fhp_) {
+    PRE_READ(fhp_, fh_size_);
+  }
+}
+POST_SYSCALL(__fhstatvfs190)
+(long long res, void *fhp_, long long fh_size_, void *buf_, long long flags_) {}
 #undef SYS_MAXSYSARGS
 } // extern "C"
 

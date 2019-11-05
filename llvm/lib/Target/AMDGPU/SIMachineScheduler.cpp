@@ -609,13 +609,8 @@ void SIScheduleBlock::printDebug(bool full) {
   }
 
   dbgs() << "\nInstructions:\n";
-  if (!Scheduled) {
-    for (const SUnit* SU : SUnits)
+  for (const SUnit* SU : SUnits)
       DAG->dumpNode(*SU);
-  } else {
-    for (const SUnit* SU : SUnits)
-      DAG->dumpNode(*SU);
-  }
 
   dbgs() << "///////////////////////\n";
 }

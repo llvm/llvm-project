@@ -1,5 +1,5 @@
 # REQUIRES: system-darwin
-# RUN: %clang %p/Inputs/cstr.c -g -o %t
+# RUN: %clang_host %p/Inputs/cstr.c -g -o %t
 # RUN: %lldb -b -s %s -f %t | FileCheck %s
 
 br set -p return

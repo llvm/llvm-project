@@ -182,6 +182,9 @@ template <class ELFT> class ELFState {
   void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::NoteSection &Section,
                            ContiguousBlobAccumulator &CBA);
+  void writeSectionContent(Elf_Shdr &SHeader,
+                           const ELFYAML::GnuHashSection &Section,
+                           ContiguousBlobAccumulator &CBA);
 
   ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH);
 
@@ -439,6 +442,8 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     } else if (auto S = dyn_cast<ELFYAML::AddrsigSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::NoteSection>(Sec)) {
+      writeSectionContent(SHeader, *S, CBA);
+    } else if (auto S = dyn_cast<ELFYAML::GnuHashSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else {
       llvm_unreachable("Unknown section type");
@@ -1089,6 +1094,70 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   }
 
   SHeader.sh_size = OS.tell() - Offset;
+}
+
+template <class ELFT>
+void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
+                                         const ELFYAML::GnuHashSection &Section,
+                                         ContiguousBlobAccumulator &CBA) {
+  raw_ostream &OS =
+      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+
+  unsigned Link = 0;
+  if (Section.Link.empty() && SN2I.lookup(".dynsym", Link))
+    SHeader.sh_link = Link;
+
+  if (Section.Content) {
+    SHeader.sh_size = writeContent(OS, Section.Content, None);
+    return;
+  }
+
+  // We write the header first, starting with the hash buckets count. Normally
+  // it is the number of entries in HashBuckets, but the "NBuckets" property can
+  // be used to override this field, which is useful for producing broken
+  // objects.
+  if (Section.Header->NBuckets)
+    support::endian::write<uint32_t>(OS, *Section.Header->NBuckets,
+                                     ELFT::TargetEndianness);
+  else
+    support::endian::write<uint32_t>(OS, Section.HashBuckets->size(),
+                                     ELFT::TargetEndianness);
+
+  // Write the index of the first symbol in the dynamic symbol table accessible
+  // via the hash table.
+  support::endian::write<uint32_t>(OS, Section.Header->SymNdx,
+                                   ELFT::TargetEndianness);
+
+  // Write the number of words in the Bloom filter. As above, the "MaskWords"
+  // property can be used to set this field to any value.
+  if (Section.Header->MaskWords)
+    support::endian::write<uint32_t>(OS, *Section.Header->MaskWords,
+                                     ELFT::TargetEndianness);
+  else
+    support::endian::write<uint32_t>(OS, Section.BloomFilter->size(),
+                                     ELFT::TargetEndianness);
+
+  // Write the shift constant used by the Bloom filter.
+  support::endian::write<uint32_t>(OS, Section.Header->Shift2,
+                                   ELFT::TargetEndianness);
+
+  // We've finished writing the header. Now write the Bloom filter.
+  for (llvm::yaml::Hex64 Val : *Section.BloomFilter)
+    support::endian::write<typename ELFT::uint>(OS, Val,
+                                                ELFT::TargetEndianness);
+
+  // Write an array of hash buckets.
+  for (llvm::yaml::Hex32 Val : *Section.HashBuckets)
+    support::endian::write<uint32_t>(OS, Val, ELFT::TargetEndianness);
+
+  // Write an array of hash values.
+  for (llvm::yaml::Hex32 Val : *Section.HashValues)
+    support::endian::write<uint32_t>(OS, Val, ELFT::TargetEndianness);
+
+  SHeader.sh_size = 16 /*Header size*/ +
+                    Section.BloomFilter->size() * sizeof(typename ELFT::uint) +
+                    Section.HashBuckets->size() * 4 +
+                    Section.HashValues->size() * 4;
 }
 
 template <class ELFT> void ELFState<ELFT>::buildSectionIndex() {

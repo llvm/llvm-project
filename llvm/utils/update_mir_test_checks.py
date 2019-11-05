@@ -333,7 +333,7 @@ def update_test_file(args, test):
 
         build_function_body_dictionary(test, raw_tool_output,
                                        triple_in_cmd or triple_in_ir,
-                                       prefixes, func_dict, args.verbose, False)
+                                       prefixes, func_dict, args.verbose)
 
     state = 'toplevel'
     func_name = None

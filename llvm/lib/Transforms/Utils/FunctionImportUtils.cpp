@@ -244,7 +244,12 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
       // same-named locals in different but same-named source files that were
       // compiled in their respective directories (so the source file name
       // and resulting GUID is the same). Find the one in this module.
-      auto* GVS = dyn_cast<GlobalVarSummary>(
+      // Handle the case where there is no summary found in this module. That
+      // can happen in the distributed ThinLTO backend, because the index only
+      // contains summaries from the source modules if they are being imported.
+      // We might have a non-null VI and get here even in that case if the name
+      // matches one in this module (e.g. weak or appending linkage).
+      auto* GVS = dyn_cast_or_null<GlobalVarSummary>(
           ImportIndex.findSummaryInModule(VI, M.getModuleIdentifier()));
       // At this stage "maybe" is "definitely"
       if (GVS && (GVS->maybeReadOnly() || GVS->maybeWriteOnly()))
