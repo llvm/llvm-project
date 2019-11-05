@@ -28,8 +28,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/bit.h"
 
-#include "llvm/ADT/APInt.h"
-
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
 
 #include "NSString.h"
