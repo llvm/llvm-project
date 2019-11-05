@@ -598,6 +598,9 @@ public:
   }
 };
 
+class FreezeOperator : public ConcreteOperator<Operator, Instruction::Freeze>
+{};
+
 } // end namespace llvm
 
 #endif // LLVM_IR_OPERATOR_H

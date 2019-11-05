@@ -1055,16 +1055,13 @@ static int getDecodedCastOpcode(unsigned Val) {
 }
 
 static int getDecodedUnaryOpcode(unsigned Val, Type *Ty) {
-  bool IsFP = Ty->isFPOrFPVectorTy();
-  // UnOps are only valid for int/fp or vector of int/fp types
-  if (!IsFP && !Ty->isIntOrIntVectorTy())
-    return -1;
-
   switch (Val) {
   default:
     return -1;
   case bitc::UNOP_FNEG:
-    return IsFP ? Instruction::FNeg : -1;
+    return Ty->isFPOrFPVectorTy() ? Instruction::FNeg : -1;
+  case bitc::UNOP_FREEZE:
+    return Instruction::Freeze;
   }
 }
 
@@ -3865,7 +3862,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     case bitc::FUNC_CODE_INST_UNOP: {    // UNOP: [opval, ty, opcode]
       unsigned OpNum = 0;
       Value *LHS;
-      if (getValueTypePair(Record, OpNum, NextValueNo, LHS) ||
+      if (getValueTypePair(Record, OpNum, NextValueNo, LHS, &FullTy) ||
           OpNum+1 > Record.size())
         return error("Invalid record");
 
