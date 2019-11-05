@@ -841,19 +841,19 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
       SectionType section_type = eSectionTypeOther;
       if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_CNT_CODE &&
           ((const_sect_name == g_code_sect_name) ||
-          (const_sect_name == g_CODE_sect_name))) {
+           (const_sect_name == g_CODE_sect_name))) {
         section_type = eSectionTypeCode;
       } else if (m_sect_headers[idx].flags &
-                    llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA &&
-                ((const_sect_name == g_data_sect_name) ||
+                     llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA &&
+                 ((const_sect_name == g_data_sect_name) ||
                   (const_sect_name == g_DATA_sect_name))) {
         if (m_sect_headers[idx].size == 0 && m_sect_headers[idx].offset == 0)
           section_type = eSectionTypeZeroFill;
         else
           section_type = eSectionTypeData;
       } else if (m_sect_headers[idx].flags &
-                    llvm::COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA &&
-                ((const_sect_name == g_bss_sect_name) ||
+                     llvm::COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA &&
+                 ((const_sect_name == g_bss_sect_name) ||
                   (const_sect_name == g_BSS_sect_name))) {
         if (m_sect_headers[idx].size == 0)
           section_type = eSectionTypeZeroFill;
