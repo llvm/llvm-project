@@ -117,6 +117,7 @@ public:
   struct CallInfo {
     uint32_t Kind;
     uint32_t AccessIndex;
+    uint32_t RecordAlignment;
     MDNode *Metadata;
     Value *Base;
   };
@@ -246,6 +247,8 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
       report_fatal_error("Missing metadata for llvm.preserve.array.access.index intrinsic");
     CInfo.AccessIndex = getConstant(Call->getArgOperand(2));
     CInfo.Base = Call->getArgOperand(0);
+    CInfo.RecordAlignment =
+        DL->getABITypeAlignment(CInfo.Base->getType()->getPointerElementType());
     return true;
   }
   if (GV->getName().startswith("llvm.preserve.union.access.index")) {
@@ -255,6 +258,8 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
       report_fatal_error("Missing metadata for llvm.preserve.union.access.index intrinsic");
     CInfo.AccessIndex = getConstant(Call->getArgOperand(1));
     CInfo.Base = Call->getArgOperand(0);
+    CInfo.RecordAlignment =
+        DL->getABITypeAlignment(CInfo.Base->getType()->getPointerElementType());
     return true;
   }
   if (GV->getName().startswith("llvm.preserve.struct.access.index")) {
@@ -264,6 +269,8 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
       report_fatal_error("Missing metadata for llvm.preserve.struct.access.index intrinsic");
     CInfo.AccessIndex = getConstant(Call->getArgOperand(2));
     CInfo.Base = Call->getArgOperand(0);
+    CInfo.RecordAlignment =
+        DL->getABITypeAlignment(CInfo.Base->getType()->getPointerElementType());
     return true;
   }
   if (GV->getName().startswith("llvm.bpf.preserve.field.info")) {
@@ -815,8 +822,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
     AccessKey += ":" + std::to_string(AccessIndex);
 
     MDNode *MDN = CInfo.Metadata;
-    uint32_t RecordAlignment =
-        DL->getABITypeAlignment(CInfo.Base->getType()->getPointerElementType());
+    uint32_t RecordAlignment = CInfo.RecordAlignment;
     // At this stage, it cannot be pointer type.
     auto *CTy = cast<DICompositeType>(stripQualifiers(cast<DIType>(MDN)));
     PatchImm = GetFieldInfo(InfoKind, CTy, AccessIndex, PatchImm,
