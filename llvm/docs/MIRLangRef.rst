@@ -345,6 +345,8 @@ specified in brackets after the block's definition:
 
 ``Alignment`` is specified in bytes, and must be a power of two.
 
+.. _mir-instructions:
+
 Machine Instructions
 --------------------
 
@@ -406,6 +408,8 @@ The syntax for bundled instructions is the following:
 
 The first instruction is often a bundle header. The instructions between ``{``
 and ``}`` are bundled with the first instruction.
+
+.. _mir-registers:
 
 Registers
 ---------

@@ -50,6 +50,7 @@ the following sections.
   :maxdepth: 1
 
   GMIR
+  GenericOpcode
   Pipeline
   Porting
   Resources

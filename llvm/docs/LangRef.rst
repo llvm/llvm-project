@@ -13954,6 +13954,8 @@ Examples
 Specialised Arithmetic Intrinsics
 ---------------------------------
 
+.. _i_intr_llvm_canonicalize:
+
 '``llvm.canonicalize.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
