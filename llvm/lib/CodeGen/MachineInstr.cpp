@@ -1701,12 +1701,13 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << " post-instr-symbol ";
     MachineOperand::printSymbol(OS, *PostInstrSymbol);
   }
-  if (/*MDNode *HeapAllocMarker =*/getHeapAllocMarker()) {
+  if (MDNode *HeapAllocMarker = getHeapAllocMarker()) {
     if (!FirstOp) {
       FirstOp = false;
       OS << ',';
     }
-    OS << " heap-alloc-marker";
+    OS << " heap-alloc-marker ";
+    HeapAllocMarker->printAsOperand(OS, MST);
   }
 
   if (!SkipDebugLoc) {
