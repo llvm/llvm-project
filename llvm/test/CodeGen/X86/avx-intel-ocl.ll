@@ -51,8 +51,8 @@ define <16 x float> @testf16_inp(<16 x float> %a, <16 x float> %b) nounwind {
 ; preserved ymm8-ymm15
 ; X64-LABEL: testf16_regs
 ; X64: call
-; X64: vaddps  {{%ymm[8-9]}}, {{%ymm[0-1]}}, {{%ymm[0-1]}}
-; X64: vaddps  {{%ymm[8-9]}}, {{%ymm[0-1]}}, {{%ymm[0-1]}}
+; X64: vaddps  {{%ymm[0-1]}}, {{%ymm[8-9]}}, {{%ymm[0-1]}}
+; X64: vaddps  {{%ymm[0-1]}}, {{%ymm[8-9]}}, {{%ymm[0-1]}}
 ; X64: ret
 
 define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {

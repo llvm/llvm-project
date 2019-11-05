@@ -499,7 +499,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512F-NEXT:    vpsubb %ymm7, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpsllw $3, %ymm2, %ymm4
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm8 = [248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248]
-; AVX512F-NEXT:    vpand %ymm8, %ymm4, %ymm4
+; AVX512F-NEXT:    vpand %ymm4, %ymm8, %ymm4
 ; AVX512F-NEXT:    vpsubb %ymm4, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpaddb %ymm2, %ymm1, %ymm1
 ; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm2
@@ -520,7 +520,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512F-NEXT:    vpaddb %ymm3, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpsubb %ymm7, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpsllw $3, %ymm2, %ymm3
-; AVX512F-NEXT:    vpand %ymm8, %ymm3, %ymm3
+; AVX512F-NEXT:    vpand %ymm3, %ymm8, %ymm3
 ; AVX512F-NEXT:    vpsubb %ymm3, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0

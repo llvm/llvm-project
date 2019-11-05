@@ -496,7 +496,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512F-NEXT:    vpand %ymm5, %ymm3, %ymm3
 ; AVX512F-NEXT:    vpsllw $3, %ymm3, %ymm7
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm8 = [248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248,248]
-; AVX512F-NEXT:    vpand %ymm8, %ymm7, %ymm7
+; AVX512F-NEXT:    vpand %ymm7, %ymm8, %ymm7
 ; AVX512F-NEXT:    vpsubb %ymm7, %ymm3, %ymm3
 ; AVX512F-NEXT:    vpaddb %ymm3, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm0[8],ymm2[8],ymm0[9],ymm2[9],ymm0[10],ymm2[10],ymm0[11],ymm2[11],ymm0[12],ymm2[12],ymm0[13],ymm2[13],ymm0[14],ymm2[14],ymm0[15],ymm2[15],ymm0[24],ymm2[24],ymm0[25],ymm2[25],ymm0[26],ymm2[26],ymm0[27],ymm2[27],ymm0[28],ymm2[28],ymm0[29],ymm2[29],ymm0[30],ymm2[30],ymm0[31],ymm2[31]
@@ -513,7 +513,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512F-NEXT:    vpsrlw $2, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpand %ymm5, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpsllw $3, %ymm2, %ymm3
-; AVX512F-NEXT:    vpand %ymm8, %ymm3, %ymm3
+; AVX512F-NEXT:    vpand %ymm3, %ymm8, %ymm3
 ; AVX512F-NEXT:    vpsubb %ymm3, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpaddb %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
