@@ -582,7 +582,7 @@ define <32 x i8> @test_rem7_32i8(<32 x i8> %a) nounwind {
 ; AVX1-NEXT:    vpaddb %xmm1, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsrlw $7, %xmm2, %xmm4
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm8 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX1-NEXT:    vpand %xmm8, %xmm4, %xmm4
+; AVX1-NEXT:    vpand %xmm4, %xmm8, %xmm4
 ; AVX1-NEXT:    vpsrlw $2, %xmm2, %xmm2
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
 ; AVX1-NEXT:    vpand %xmm6, %xmm2, %xmm2
@@ -605,7 +605,7 @@ define <32 x i8> @test_rem7_32i8(<32 x i8> %a) nounwind {
 ; AVX1-NEXT:    vpackuswb %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpaddb %xmm0, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsrlw $7, %xmm2, %xmm3
-; AVX1-NEXT:    vpand %xmm8, %xmm3, %xmm3
+; AVX1-NEXT:    vpand %xmm3, %xmm8, %xmm3
 ; AVX1-NEXT:    vpsrlw $2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpand %xmm6, %xmm2, %xmm2
 ; AVX1-NEXT:    vpxor %xmm7, %xmm2, %xmm2

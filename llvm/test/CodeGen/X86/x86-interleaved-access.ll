@@ -1412,8 +1412,8 @@ define <64 x i8> @interleaved_load_vf64_i8_stride3(<192 x i8>* %ptr){
 ; AVX1-NEXT:    vorps %ymm10, %ymm14, %ymm10
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm14
 ; AVX1-NEXT:    vandnps %ymm14, %ymm12, %ymm14
-; AVX1-NEXT:    vandps %ymm12, %ymm1, %ymm1
-; AVX1-NEXT:    vorps %ymm14, %ymm1, %ymm1
+; AVX1-NEXT:    vandps %ymm1, %ymm12, %ymm1
+; AVX1-NEXT:    vorps %ymm1, %ymm14, %ymm1
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm4 = xmm13[11,12,13,14,15],xmm4[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm3 = xmm3[11,12,13,14,15],xmm13[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm12 = xmm15[11,12,13,14,15],xmm7[0,1,2,3,4,5,6,7,8,9,10]
@@ -1434,7 +1434,7 @@ define <64 x i8> @interleaved_load_vf64_i8_stride3(<192 x i8>* %ptr){
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm4 = xmm7[10,11,12,13,14,15,0,1,2,3,4,5,6,7,8,9]
 ; AVX1-NEXT:    vpaddb %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
-; AVX1-NEXT:    vpaddb %xmm9, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddb %xmm1, %xmm9, %xmm1
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm3 = xmm6[10,11,12,13,14,15,0,1,2,3,4,5,6,7,8,9]
 ; AVX1-NEXT:    vpaddb %xmm1, %xmm3, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1

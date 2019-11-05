@@ -490,7 +490,7 @@ define <4 x i64> @vec256_i64_signed_reg_reg(<4 x i64> %a1, <4 x i64> %a2) nounwi
 ; AVX1-FALLBACK-NEXT:    vpsrlq $1, %xmm2, %xmm2
 ; AVX1-FALLBACK-NEXT:    vpsrlq $1, %xmm1, %xmm1
 ; AVX1-FALLBACK-NEXT:    vmovdqa {{.*#+}} xmm8 = [1,1]
-; AVX1-FALLBACK-NEXT:    vpor %xmm8, %xmm5, %xmm5
+; AVX1-FALLBACK-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; AVX1-FALLBACK-NEXT:    vpsrlq $32, %xmm5, %xmm7
 ; AVX1-FALLBACK-NEXT:    vpmuludq %xmm7, %xmm1, %xmm7
 ; AVX1-FALLBACK-NEXT:    vpsrlq $32, %xmm1, %xmm6
@@ -498,7 +498,7 @@ define <4 x i64> @vec256_i64_signed_reg_reg(<4 x i64> %a1, <4 x i64> %a2) nounwi
 ; AVX1-FALLBACK-NEXT:    vpaddq %xmm6, %xmm7, %xmm6
 ; AVX1-FALLBACK-NEXT:    vpsllq $32, %xmm6, %xmm6
 ; AVX1-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm1, %xmm1
-; AVX1-FALLBACK-NEXT:    vpor %xmm8, %xmm4, %xmm4
+; AVX1-FALLBACK-NEXT:    vpor %xmm4, %xmm8, %xmm4
 ; AVX1-FALLBACK-NEXT:    vpsrlq $32, %xmm4, %xmm5
 ; AVX1-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm2, %xmm5
 ; AVX1-FALLBACK-NEXT:    vpsrlq $32, %xmm2, %xmm7
@@ -551,7 +551,7 @@ define <4 x i64> @vec256_i64_signed_reg_reg(<4 x i64> %a1, <4 x i64> %a2) nounwi
 ; XOP-FALLBACK-NEXT:    vpsrlq $1, %xmm2, %xmm2
 ; XOP-FALLBACK-NEXT:    vpsrlq $1, %xmm1, %xmm1
 ; XOP-FALLBACK-NEXT:    vmovdqa {{.*#+}} xmm8 = [1,1]
-; XOP-FALLBACK-NEXT:    vpor %xmm8, %xmm5, %xmm5
+; XOP-FALLBACK-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm5, %xmm7
 ; XOP-FALLBACK-NEXT:    vpmuludq %xmm7, %xmm1, %xmm7
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm1, %xmm6
@@ -559,7 +559,7 @@ define <4 x i64> @vec256_i64_signed_reg_reg(<4 x i64> %a1, <4 x i64> %a2) nounwi
 ; XOP-FALLBACK-NEXT:    vpaddq %xmm6, %xmm7, %xmm6
 ; XOP-FALLBACK-NEXT:    vpsllq $32, %xmm6, %xmm6
 ; XOP-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm1, %xmm1
-; XOP-FALLBACK-NEXT:    vpor %xmm8, %xmm4, %xmm4
+; XOP-FALLBACK-NEXT:    vpor %xmm4, %xmm8, %xmm4
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm4, %xmm5
 ; XOP-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm2, %xmm5
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm2, %xmm7
@@ -591,7 +591,7 @@ define <4 x i64> @vec256_i64_signed_reg_reg(<4 x i64> %a1, <4 x i64> %a2) nounwi
 ; XOPAVX1-NEXT:    vpsrlq $1, %xmm2, %xmm2
 ; XOPAVX1-NEXT:    vpsrlq $1, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vmovdqa {{.*#+}} xmm8 = [1,1]
-; XOPAVX1-NEXT:    vpor %xmm8, %xmm5, %xmm5
+; XOPAVX1-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm5, %xmm7
 ; XOPAVX1-NEXT:    vpmuludq %xmm7, %xmm1, %xmm7
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm1, %xmm6
@@ -599,7 +599,7 @@ define <4 x i64> @vec256_i64_signed_reg_reg(<4 x i64> %a1, <4 x i64> %a2) nounwi
 ; XOPAVX1-NEXT:    vpaddq %xmm6, %xmm7, %xmm6
 ; XOPAVX1-NEXT:    vpsllq $32, %xmm6, %xmm6
 ; XOPAVX1-NEXT:    vpmuludq %xmm5, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpor %xmm8, %xmm4, %xmm4
+; XOPAVX1-NEXT:    vpor %xmm4, %xmm8, %xmm4
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm4, %xmm5
 ; XOPAVX1-NEXT:    vpmuludq %xmm5, %xmm2, %xmm5
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm2, %xmm7
@@ -778,7 +778,7 @@ define <4 x i64> @vec256_i64_unsigned_reg_reg(<4 x i64> %a1, <4 x i64> %a2) noun
 ; XOP-FALLBACK-NEXT:    vpsrlq $1, %xmm2, %xmm2
 ; XOP-FALLBACK-NEXT:    vpsrlq $1, %xmm1, %xmm1
 ; XOP-FALLBACK-NEXT:    vmovdqa {{.*#+}} xmm8 = [1,1]
-; XOP-FALLBACK-NEXT:    vpor %xmm8, %xmm5, %xmm5
+; XOP-FALLBACK-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm5, %xmm7
 ; XOP-FALLBACK-NEXT:    vpmuludq %xmm7, %xmm1, %xmm7
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm1, %xmm6
@@ -786,7 +786,7 @@ define <4 x i64> @vec256_i64_unsigned_reg_reg(<4 x i64> %a1, <4 x i64> %a2) noun
 ; XOP-FALLBACK-NEXT:    vpaddq %xmm6, %xmm7, %xmm6
 ; XOP-FALLBACK-NEXT:    vpsllq $32, %xmm6, %xmm6
 ; XOP-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm1, %xmm1
-; XOP-FALLBACK-NEXT:    vpor %xmm8, %xmm4, %xmm4
+; XOP-FALLBACK-NEXT:    vpor %xmm4, %xmm8, %xmm4
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm4, %xmm5
 ; XOP-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm2, %xmm5
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm2, %xmm7
@@ -818,7 +818,7 @@ define <4 x i64> @vec256_i64_unsigned_reg_reg(<4 x i64> %a1, <4 x i64> %a2) noun
 ; XOPAVX1-NEXT:    vpsrlq $1, %xmm2, %xmm2
 ; XOPAVX1-NEXT:    vpsrlq $1, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vmovdqa {{.*#+}} xmm8 = [1,1]
-; XOPAVX1-NEXT:    vpor %xmm8, %xmm5, %xmm5
+; XOPAVX1-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm5, %xmm7
 ; XOPAVX1-NEXT:    vpmuludq %xmm7, %xmm1, %xmm7
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm1, %xmm6
@@ -826,7 +826,7 @@ define <4 x i64> @vec256_i64_unsigned_reg_reg(<4 x i64> %a1, <4 x i64> %a2) noun
 ; XOPAVX1-NEXT:    vpaddq %xmm6, %xmm7, %xmm6
 ; XOPAVX1-NEXT:    vpsllq $32, %xmm6, %xmm6
 ; XOPAVX1-NEXT:    vpmuludq %xmm5, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpor %xmm8, %xmm4, %xmm4
+; XOPAVX1-NEXT:    vpor %xmm4, %xmm8, %xmm4
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm4, %xmm5
 ; XOPAVX1-NEXT:    vpmuludq %xmm5, %xmm2, %xmm5
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm2, %xmm7
@@ -939,7 +939,7 @@ define <4 x i64> @vec256_i64_signed_mem_reg(<4 x i64>* %a1_addr, <4 x i64> %a2) 
 ; AVX1-FALLBACK-NEXT:    vpsrlq $1, %xmm2, %xmm2
 ; AVX1-FALLBACK-NEXT:    vpsrlq $1, %xmm0, %xmm0
 ; AVX1-FALLBACK-NEXT:    vmovdqa {{.*#+}} xmm8 = [1,1]
-; AVX1-FALLBACK-NEXT:    vpor %xmm8, %xmm5, %xmm5
+; AVX1-FALLBACK-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; AVX1-FALLBACK-NEXT:    vpsrlq $32, %xmm5, %xmm7
 ; AVX1-FALLBACK-NEXT:    vpmuludq %xmm7, %xmm0, %xmm7
 ; AVX1-FALLBACK-NEXT:    vpsrlq $32, %xmm0, %xmm6
@@ -947,7 +947,7 @@ define <4 x i64> @vec256_i64_signed_mem_reg(<4 x i64>* %a1_addr, <4 x i64> %a2) 
 ; AVX1-FALLBACK-NEXT:    vpaddq %xmm6, %xmm7, %xmm6
 ; AVX1-FALLBACK-NEXT:    vpsllq $32, %xmm6, %xmm6
 ; AVX1-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm0, %xmm0
-; AVX1-FALLBACK-NEXT:    vpor %xmm8, %xmm4, %xmm4
+; AVX1-FALLBACK-NEXT:    vpor %xmm4, %xmm8, %xmm4
 ; AVX1-FALLBACK-NEXT:    vpsrlq $32, %xmm4, %xmm5
 ; AVX1-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm2, %xmm5
 ; AVX1-FALLBACK-NEXT:    vpsrlq $32, %xmm2, %xmm7
@@ -1002,7 +1002,7 @@ define <4 x i64> @vec256_i64_signed_mem_reg(<4 x i64>* %a1_addr, <4 x i64> %a2) 
 ; XOP-FALLBACK-NEXT:    vpsrlq $1, %xmm2, %xmm2
 ; XOP-FALLBACK-NEXT:    vpsrlq $1, %xmm0, %xmm0
 ; XOP-FALLBACK-NEXT:    vmovdqa {{.*#+}} xmm8 = [1,1]
-; XOP-FALLBACK-NEXT:    vpor %xmm8, %xmm5, %xmm5
+; XOP-FALLBACK-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm5, %xmm7
 ; XOP-FALLBACK-NEXT:    vpmuludq %xmm7, %xmm0, %xmm7
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm0, %xmm6
@@ -1010,7 +1010,7 @@ define <4 x i64> @vec256_i64_signed_mem_reg(<4 x i64>* %a1_addr, <4 x i64> %a2) 
 ; XOP-FALLBACK-NEXT:    vpaddq %xmm6, %xmm7, %xmm6
 ; XOP-FALLBACK-NEXT:    vpsllq $32, %xmm6, %xmm6
 ; XOP-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm0, %xmm0
-; XOP-FALLBACK-NEXT:    vpor %xmm8, %xmm4, %xmm4
+; XOP-FALLBACK-NEXT:    vpor %xmm4, %xmm8, %xmm4
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm4, %xmm5
 ; XOP-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm2, %xmm5
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm2, %xmm7
@@ -1043,7 +1043,7 @@ define <4 x i64> @vec256_i64_signed_mem_reg(<4 x i64>* %a1_addr, <4 x i64> %a2) 
 ; XOPAVX1-NEXT:    vpsrlq $1, %xmm2, %xmm2
 ; XOPAVX1-NEXT:    vpsrlq $1, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vmovdqa {{.*#+}} xmm8 = [1,1]
-; XOPAVX1-NEXT:    vpor %xmm8, %xmm5, %xmm5
+; XOPAVX1-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm5, %xmm7
 ; XOPAVX1-NEXT:    vpmuludq %xmm7, %xmm0, %xmm7
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm0, %xmm6
@@ -1051,7 +1051,7 @@ define <4 x i64> @vec256_i64_signed_mem_reg(<4 x i64>* %a1_addr, <4 x i64> %a2) 
 ; XOPAVX1-NEXT:    vpaddq %xmm6, %xmm7, %xmm6
 ; XOPAVX1-NEXT:    vpsllq $32, %xmm6, %xmm6
 ; XOPAVX1-NEXT:    vpmuludq %xmm5, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vpor %xmm8, %xmm4, %xmm4
+; XOPAVX1-NEXT:    vpor %xmm4, %xmm8, %xmm4
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm4, %xmm5
 ; XOPAVX1-NEXT:    vpmuludq %xmm5, %xmm2, %xmm5
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm2, %xmm7
@@ -1164,7 +1164,7 @@ define <4 x i64> @vec256_i64_signed_reg_mem(<4 x i64> %a1, <4 x i64>* %a2_addr) 
 ; AVX1-FALLBACK-NEXT:    vpsrlq $1, %xmm2, %xmm2
 ; AVX1-FALLBACK-NEXT:    vpsrlq $1, %xmm1, %xmm1
 ; AVX1-FALLBACK-NEXT:    vmovdqa {{.*#+}} xmm8 = [1,1]
-; AVX1-FALLBACK-NEXT:    vpor %xmm8, %xmm5, %xmm5
+; AVX1-FALLBACK-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; AVX1-FALLBACK-NEXT:    vpsrlq $32, %xmm5, %xmm7
 ; AVX1-FALLBACK-NEXT:    vpmuludq %xmm7, %xmm1, %xmm7
 ; AVX1-FALLBACK-NEXT:    vpsrlq $32, %xmm1, %xmm6
@@ -1172,7 +1172,7 @@ define <4 x i64> @vec256_i64_signed_reg_mem(<4 x i64> %a1, <4 x i64>* %a2_addr) 
 ; AVX1-FALLBACK-NEXT:    vpaddq %xmm6, %xmm7, %xmm6
 ; AVX1-FALLBACK-NEXT:    vpsllq $32, %xmm6, %xmm6
 ; AVX1-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm1, %xmm1
-; AVX1-FALLBACK-NEXT:    vpor %xmm8, %xmm4, %xmm4
+; AVX1-FALLBACK-NEXT:    vpor %xmm4, %xmm8, %xmm4
 ; AVX1-FALLBACK-NEXT:    vpsrlq $32, %xmm4, %xmm5
 ; AVX1-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm2, %xmm5
 ; AVX1-FALLBACK-NEXT:    vpsrlq $32, %xmm2, %xmm7
@@ -1227,7 +1227,7 @@ define <4 x i64> @vec256_i64_signed_reg_mem(<4 x i64> %a1, <4 x i64>* %a2_addr) 
 ; XOP-FALLBACK-NEXT:    vpsrlq $1, %xmm2, %xmm2
 ; XOP-FALLBACK-NEXT:    vpsrlq $1, %xmm1, %xmm1
 ; XOP-FALLBACK-NEXT:    vmovdqa {{.*#+}} xmm8 = [1,1]
-; XOP-FALLBACK-NEXT:    vpor %xmm8, %xmm5, %xmm5
+; XOP-FALLBACK-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm5, %xmm7
 ; XOP-FALLBACK-NEXT:    vpmuludq %xmm7, %xmm1, %xmm7
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm1, %xmm6
@@ -1235,7 +1235,7 @@ define <4 x i64> @vec256_i64_signed_reg_mem(<4 x i64> %a1, <4 x i64>* %a2_addr) 
 ; XOP-FALLBACK-NEXT:    vpaddq %xmm6, %xmm7, %xmm6
 ; XOP-FALLBACK-NEXT:    vpsllq $32, %xmm6, %xmm6
 ; XOP-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm1, %xmm1
-; XOP-FALLBACK-NEXT:    vpor %xmm8, %xmm4, %xmm4
+; XOP-FALLBACK-NEXT:    vpor %xmm4, %xmm8, %xmm4
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm4, %xmm5
 ; XOP-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm2, %xmm5
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm2, %xmm7
@@ -1268,7 +1268,7 @@ define <4 x i64> @vec256_i64_signed_reg_mem(<4 x i64> %a1, <4 x i64>* %a2_addr) 
 ; XOPAVX1-NEXT:    vpsrlq $1, %xmm2, %xmm2
 ; XOPAVX1-NEXT:    vpsrlq $1, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vmovdqa {{.*#+}} xmm8 = [1,1]
-; XOPAVX1-NEXT:    vpor %xmm8, %xmm5, %xmm5
+; XOPAVX1-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm5, %xmm7
 ; XOPAVX1-NEXT:    vpmuludq %xmm7, %xmm1, %xmm7
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm1, %xmm6
@@ -1276,7 +1276,7 @@ define <4 x i64> @vec256_i64_signed_reg_mem(<4 x i64> %a1, <4 x i64>* %a2_addr) 
 ; XOPAVX1-NEXT:    vpaddq %xmm6, %xmm7, %xmm6
 ; XOPAVX1-NEXT:    vpsllq $32, %xmm6, %xmm6
 ; XOPAVX1-NEXT:    vpmuludq %xmm5, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpor %xmm8, %xmm4, %xmm4
+; XOPAVX1-NEXT:    vpor %xmm4, %xmm8, %xmm4
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm4, %xmm5
 ; XOPAVX1-NEXT:    vpmuludq %xmm5, %xmm2, %xmm5
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm2, %xmm7
@@ -1390,7 +1390,7 @@ define <4 x i64> @vec256_i64_signed_mem_mem(<4 x i64>* %a1_addr, <4 x i64>* %a2_
 ; AVX1-FALLBACK-NEXT:    vpsrlq $1, %xmm2, %xmm2
 ; AVX1-FALLBACK-NEXT:    vpsrlq $1, %xmm1, %xmm1
 ; AVX1-FALLBACK-NEXT:    vmovdqa {{.*#+}} xmm8 = [1,1]
-; AVX1-FALLBACK-NEXT:    vpor %xmm8, %xmm5, %xmm5
+; AVX1-FALLBACK-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; AVX1-FALLBACK-NEXT:    vpsrlq $32, %xmm5, %xmm7
 ; AVX1-FALLBACK-NEXT:    vpmuludq %xmm7, %xmm1, %xmm7
 ; AVX1-FALLBACK-NEXT:    vpsrlq $32, %xmm1, %xmm6
@@ -1398,7 +1398,7 @@ define <4 x i64> @vec256_i64_signed_mem_mem(<4 x i64>* %a1_addr, <4 x i64>* %a2_
 ; AVX1-FALLBACK-NEXT:    vpaddq %xmm6, %xmm7, %xmm6
 ; AVX1-FALLBACK-NEXT:    vpsllq $32, %xmm6, %xmm6
 ; AVX1-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm1, %xmm1
-; AVX1-FALLBACK-NEXT:    vpor %xmm8, %xmm4, %xmm4
+; AVX1-FALLBACK-NEXT:    vpor %xmm4, %xmm8, %xmm4
 ; AVX1-FALLBACK-NEXT:    vpsrlq $32, %xmm4, %xmm5
 ; AVX1-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm2, %xmm5
 ; AVX1-FALLBACK-NEXT:    vpsrlq $32, %xmm2, %xmm7
@@ -1455,7 +1455,7 @@ define <4 x i64> @vec256_i64_signed_mem_mem(<4 x i64>* %a1_addr, <4 x i64>* %a2_
 ; XOP-FALLBACK-NEXT:    vpsrlq $1, %xmm2, %xmm2
 ; XOP-FALLBACK-NEXT:    vpsrlq $1, %xmm1, %xmm1
 ; XOP-FALLBACK-NEXT:    vmovdqa {{.*#+}} xmm8 = [1,1]
-; XOP-FALLBACK-NEXT:    vpor %xmm8, %xmm5, %xmm5
+; XOP-FALLBACK-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm5, %xmm7
 ; XOP-FALLBACK-NEXT:    vpmuludq %xmm7, %xmm1, %xmm7
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm1, %xmm6
@@ -1463,7 +1463,7 @@ define <4 x i64> @vec256_i64_signed_mem_mem(<4 x i64>* %a1_addr, <4 x i64>* %a2_
 ; XOP-FALLBACK-NEXT:    vpaddq %xmm6, %xmm7, %xmm6
 ; XOP-FALLBACK-NEXT:    vpsllq $32, %xmm6, %xmm6
 ; XOP-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm1, %xmm1
-; XOP-FALLBACK-NEXT:    vpor %xmm8, %xmm4, %xmm4
+; XOP-FALLBACK-NEXT:    vpor %xmm4, %xmm8, %xmm4
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm4, %xmm5
 ; XOP-FALLBACK-NEXT:    vpmuludq %xmm5, %xmm2, %xmm5
 ; XOP-FALLBACK-NEXT:    vpsrlq $32, %xmm2, %xmm7
@@ -1497,7 +1497,7 @@ define <4 x i64> @vec256_i64_signed_mem_mem(<4 x i64>* %a1_addr, <4 x i64>* %a2_
 ; XOPAVX1-NEXT:    vpsrlq $1, %xmm2, %xmm2
 ; XOPAVX1-NEXT:    vpsrlq $1, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vmovdqa {{.*#+}} xmm8 = [1,1]
-; XOPAVX1-NEXT:    vpor %xmm8, %xmm5, %xmm5
+; XOPAVX1-NEXT:    vpor %xmm5, %xmm8, %xmm5
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm5, %xmm7
 ; XOPAVX1-NEXT:    vpmuludq %xmm7, %xmm1, %xmm7
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm1, %xmm6
@@ -1505,7 +1505,7 @@ define <4 x i64> @vec256_i64_signed_mem_mem(<4 x i64>* %a1_addr, <4 x i64>* %a2_
 ; XOPAVX1-NEXT:    vpaddq %xmm6, %xmm7, %xmm6
 ; XOPAVX1-NEXT:    vpsllq $32, %xmm6, %xmm6
 ; XOPAVX1-NEXT:    vpmuludq %xmm5, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpor %xmm8, %xmm4, %xmm4
+; XOPAVX1-NEXT:    vpor %xmm4, %xmm8, %xmm4
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm4, %xmm5
 ; XOPAVX1-NEXT:    vpmuludq %xmm5, %xmm2, %xmm5
 ; XOPAVX1-NEXT:    vpsrlq $32, %xmm2, %xmm7
@@ -1760,10 +1760,10 @@ define <16 x i16> @vec256_i16_unsigned_reg_reg(<16 x i16> %a1, <16 x i16> %a2) n
 ; AVX1-FALLBACK-NEXT:    vpminuw %xmm2, %xmm3, %xmm4
 ; AVX1-FALLBACK-NEXT:    vpcmpeqw %xmm4, %xmm3, %xmm5
 ; AVX1-FALLBACK-NEXT:    vpcmpeqd %xmm8, %xmm8, %xmm8
-; AVX1-FALLBACK-NEXT:    vpxor %xmm8, %xmm5, %xmm5
+; AVX1-FALLBACK-NEXT:    vpxor %xmm5, %xmm8, %xmm5
 ; AVX1-FALLBACK-NEXT:    vpminuw %xmm1, %xmm0, %xmm7
 ; AVX1-FALLBACK-NEXT:    vpcmpeqw %xmm7, %xmm0, %xmm6
-; AVX1-FALLBACK-NEXT:    vpxor %xmm8, %xmm6, %xmm6
+; AVX1-FALLBACK-NEXT:    vpxor %xmm6, %xmm8, %xmm6
 ; AVX1-FALLBACK-NEXT:    vpmaxuw %xmm2, %xmm3, %xmm2
 ; AVX1-FALLBACK-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm1
 ; AVX1-FALLBACK-NEXT:    vpsubw %xmm7, %xmm1, %xmm1

@@ -1675,11 +1675,11 @@ define i32 @test_unsigned_short_1024(i16* nocapture readonly, i16* nocapture rea
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm8, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm5, %xmm0
-; AVX1-NEXT:    vpaddd %xmm8, %xmm6, %xmm1
+; AVX1-NEXT:    vpaddd %xmm6, %xmm8, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm8
 ; AVX1-NEXT:    vextractf128 $1, %ymm9, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm13, %xmm0
-; AVX1-NEXT:    vpaddd %xmm9, %xmm7, %xmm1
+; AVX1-NEXT:    vpaddd %xmm7, %xmm9, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm9
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm10, %xmm0

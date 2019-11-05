@@ -44,13 +44,13 @@ define <4 x float> @bar(<4 x float>* %a1p, <4 x float>* %a2p, <4 x float> %a3, <
 ; CHECK-NEXT:    vaddps %xmm1, %xmm0, %xmm8
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm11[0,1],xmm2[3],xmm11[3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm3[2]
-; CHECK-NEXT:    vaddps %xmm14, %xmm2, %xmm2
+; CHECK-NEXT:    vaddps %xmm2, %xmm14, %xmm2
 ; CHECK-NEXT:    vmovaps %xmm13, %xmm1
 ; CHECK-NEXT:    vmovaps %xmm13, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    vaddps %xmm10, %xmm13, %xmm10
 ; CHECK-NEXT:    vaddps %xmm13, %xmm13, %xmm3
 ; CHECK-NEXT:    vaddps %xmm12, %xmm14, %xmm0
-; CHECK-NEXT:    vaddps %xmm8, %xmm0, %xmm0
+; CHECK-NEXT:    vaddps %xmm0, %xmm8, %xmm0
 ; CHECK-NEXT:    vaddps %xmm0, %xmm13, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm3, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovaps %xmm10, (%rsp)

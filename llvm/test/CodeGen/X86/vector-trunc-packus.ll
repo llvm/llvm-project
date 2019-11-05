@@ -5056,9 +5056,9 @@ define <16 x i8> @trunc_packus_v16i64_v16i8(<16 x i64>* %p0) "min-legal-vector-w
 ; AVX1-NEXT:    vpand %xmm6, %xmm3, %xmm3
 ; AVX1-NEXT:    vpackusdw %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm11, %xmm3
-; AVX1-NEXT:    vpand %xmm11, %xmm3, %xmm3
+; AVX1-NEXT:    vpand %xmm3, %xmm11, %xmm3
 ; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm10, %xmm2
-; AVX1-NEXT:    vpand %xmm10, %xmm2, %xmm2
+; AVX1-NEXT:    vpand %xmm2, %xmm10, %xmm2
 ; AVX1-NEXT:    vpackusdw %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackusdw %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
