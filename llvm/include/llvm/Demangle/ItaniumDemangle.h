@@ -607,48 +607,12 @@ public:
   }
 };
 
-class NodeOrString {
-  const void *First;
-  const void *Second;
-
-public:
-  /* implicit */ NodeOrString(StringView Str) {
-    const char *FirstChar = Str.begin();
-    const char *SecondChar = Str.end();
-    if (SecondChar == nullptr) {
-      assert(FirstChar == SecondChar);
-      ++FirstChar, ++SecondChar;
-    }
-    First = static_cast<const void *>(FirstChar);
-    Second = static_cast<const void *>(SecondChar);
-  }
-
-  /* implicit */ NodeOrString(Node *N)
-      : First(static_cast<const void *>(N)), Second(nullptr) {}
-  NodeOrString() : First(nullptr), Second(nullptr) {}
-
-  bool isString() const { return Second && First; }
-  bool isNode() const { return First && !Second; }
-  bool isEmpty() const { return !First && !Second; }
-
-  StringView asString() const {
-    assert(isString());
-    return StringView(static_cast<const char *>(First),
-                      static_cast<const char *>(Second));
-  }
-
-  const Node *asNode() const {
-    assert(isNode());
-    return static_cast<const Node *>(First);
-  }
-};
-
 class ArrayType final : public Node {
   const Node *Base;
-  NodeOrString Dimension;
+  Node *Dimension;
 
 public:
-  ArrayType(const Node *Base_, NodeOrString Dimension_)
+  ArrayType(const Node *Base_, Node *Dimension_)
       : Node(KArrayType,
              /*RHSComponentCache=*/Cache::Yes,
              /*ArrayCache=*/Cache::Yes),
@@ -665,10 +629,8 @@ public:
     if (S.back() != ']')
       S += " ";
     S += "[";
-    if (Dimension.isString())
-      S += Dimension.asString();
-    else if (Dimension.isNode())
-      Dimension.asNode()->print(S);
+    if (Dimension)
+      Dimension->print(S);
     S += "]";
     Base->printRight(S);
   }
@@ -934,10 +896,10 @@ public:
 
 class VectorType final : public Node {
   const Node *BaseType;
-  const NodeOrString Dimension;
+  const Node *Dimension;
 
 public:
-  VectorType(const Node *BaseType_, NodeOrString Dimension_)
+  VectorType(const Node *BaseType_, Node *Dimension_)
       : Node(KVectorType), BaseType(BaseType_),
         Dimension(Dimension_) {}
 
@@ -946,19 +908,17 @@ public:
   void printLeft(OutputStream &S) const override {
     BaseType->print(S);
     S += " vector[";
-    if (Dimension.isNode())
-      Dimension.asNode()->print(S);
-    else if (Dimension.isString())
-      S += Dimension.asString();
+    if (Dimension)
+      Dimension->print(S);
     S += "]";
   }
 };
 
 class PixelVectorType final : public Node {
-  const NodeOrString Dimension;
+  const Node *Dimension;
 
 public:
-  PixelVectorType(NodeOrString Dimension_)
+  PixelVectorType(const Node *Dimension_)
       : Node(KPixelVectorType), Dimension(Dimension_) {}
 
   template<typename Fn> void match(Fn F) const { F(Dimension); }
@@ -966,7 +926,7 @@ public:
   void printLeft(OutputStream &S) const override {
     // FIXME: This should demangle as "vector pixel".
     S += "pixel vector[";
-    S += Dimension.asString();
+    Dimension->print(S);
     S += "]";
   }
 };
@@ -3548,7 +3508,9 @@ Node *AbstractManglingParser<Derived, Alloc>::parseVectorType() {
   if (!consumeIf("Dv"))
     return nullptr;
   if (look() >= '1' && look() <= '9') {
-    StringView DimensionNumber = parseNumber();
+    Node *DimensionNumber = make<NameType>(parseNumber());
+    if (!DimensionNumber)
+      return nullptr;
     if (!consumeIf('_'))
       return nullptr;
     if (consumeIf('p'))
@@ -3573,7 +3535,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseVectorType() {
   Node *ElemType = getDerived().parseType();
   if (!ElemType)
     return nullptr;
-  return make<VectorType>(ElemType, StringView());
+  return make<VectorType>(ElemType, /*Dimension=*/nullptr);
 }
 
 // <decltype>  ::= Dt <expression> E  # decltype of an id-expression or class member access (C++0x)
@@ -3599,10 +3561,12 @@ Node *AbstractManglingParser<Derived, Alloc>::parseArrayType() {
   if (!consumeIf('A'))
     return nullptr;
 
-  NodeOrString Dimension;
+  Node *Dimension = nullptr;
 
   if (std::isdigit(look())) {
-    Dimension = parseNumber();
+    Dimension = make<NameType>(parseNumber());
+    if (!Dimension)
+      return nullptr;
     if (!consumeIf('_'))
       return nullptr;
   } else if (!consumeIf('_')) {

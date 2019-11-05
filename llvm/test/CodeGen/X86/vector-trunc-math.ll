@@ -2983,20 +2983,20 @@ define <16 x i8> @trunc_and_v16i64_v16i8(<16 x i64> %a0, <16 x i64> %a1) nounwin
 ; AVX1-LABEL: trunc_and_v16i64_v16i8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovaps {{.*#+}} ymm8 = [255,255,255,255]
-; AVX1-NEXT:    vandps %ymm8, %ymm7, %ymm7
+; AVX1-NEXT:    vandps %ymm7, %ymm8, %ymm7
 ; AVX1-NEXT:    vandps %ymm7, %ymm3, %ymm3
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm7
 ; AVX1-NEXT:    vpackusdw %xmm7, %xmm3, %xmm3
-; AVX1-NEXT:    vandps %ymm8, %ymm6, %ymm6
+; AVX1-NEXT:    vandps %ymm6, %ymm8, %ymm6
 ; AVX1-NEXT:    vandps %ymm6, %ymm2, %ymm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm6
 ; AVX1-NEXT:    vpackusdw %xmm6, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackusdw %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vandps %ymm8, %ymm5, %ymm3
+; AVX1-NEXT:    vandps %ymm5, %ymm8, %ymm3
 ; AVX1-NEXT:    vandps %ymm3, %ymm1, %ymm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; AVX1-NEXT:    vpackusdw %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vandps %ymm8, %ymm4, %ymm3
+; AVX1-NEXT:    vandps %ymm4, %ymm8, %ymm3
 ; AVX1-NEXT:    vandps %ymm3, %ymm0, %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpackusdw %xmm3, %xmm0, %xmm0

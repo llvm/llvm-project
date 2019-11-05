@@ -179,15 +179,15 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm4 = mem[0],zero
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm5 = mem[0],zero
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm6 = mem[0],zero
-; AVX1-NEXT:    vpcmpeqb %xmm11, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpeqb %xmm3, %xmm11, %xmm3
 ; AVX1-NEXT:    vpmovsxbd %xmm3, %xmm7
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,2,3]
 ; AVX1-NEXT:    vpmovsxbd %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpeqb %xmm11, %xmm4, %xmm4
+; AVX1-NEXT:    vpcmpeqb %xmm4, %xmm11, %xmm4
 ; AVX1-NEXT:    vpmovsxbd %xmm4, %xmm8
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[1,1,2,3]
 ; AVX1-NEXT:    vpmovsxbd %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpeqb %xmm11, %xmm5, %xmm5
+; AVX1-NEXT:    vpcmpeqb %xmm5, %xmm11, %xmm5
 ; AVX1-NEXT:    vmovdqu (%rdi,%rcx,4), %xmm9
 ; AVX1-NEXT:    vpslld %xmm2, %xmm9, %xmm10
 ; AVX1-NEXT:    vpslld %xmm1, %xmm9, %xmm0
@@ -195,7 +195,7 @@ define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture 
 ; AVX1-NEXT:    vpmovsxbd %xmm5, %xmm7
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm5[1,1,2,3]
 ; AVX1-NEXT:    vpmovsxbd %xmm5, %xmm5
-; AVX1-NEXT:    vpcmpeqb %xmm11, %xmm6, %xmm6
+; AVX1-NEXT:    vpcmpeqb %xmm6, %xmm11, %xmm6
 ; AVX1-NEXT:    vmovdqu 16(%rdi,%rcx,4), %xmm0
 ; AVX1-NEXT:    vpslld %xmm2, %xmm0, %xmm2
 ; AVX1-NEXT:    vpslld %xmm1, %xmm0, %xmm0

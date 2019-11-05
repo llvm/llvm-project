@@ -29,3 +29,26 @@ entry:
   store i64 %2, i64* %add.ptr, align 8
   ret i32 undef
 }
+
+define void @PR43799() {
+; CHECK-LABEL: @PR43799(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BODY:%.*]]
+; CHECK:       body:
+; CHECK-NEXT:    br label [[BODY]]
+; CHECK:       epilog:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %body
+
+body:
+  %p.1.i19 = phi i8* [ undef, %entry ], [ %incdec.ptr.i.7, %body ]
+  %lsr.iv17 = phi i8* [ undef, %entry ], [ %scevgep113.7, %body ]
+  %incdec.ptr.i.7 = getelementptr inbounds i8, i8* undef, i32 1
+  %scevgep113.7 = getelementptr i8, i8* undef, i64 1
+  br label %body
+
+epilog:
+  ret void
+}

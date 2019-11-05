@@ -5370,7 +5370,10 @@ Sema::PerformObjectArgumentInitialization(Expr *From,
 
   if (!Context.hasSameType(From->getType(), DestType)) {
     CastKind CK;
-    if (FromRecordType.getAddressSpace() != DestType.getAddressSpace())
+    QualType PteeTy = DestType->getPointeeType();
+    LangAS DestAS =
+        PteeTy.isNull() ? DestType.getAddressSpace() : PteeTy.getAddressSpace();
+    if (FromRecordType.getAddressSpace() != DestAS)
       CK = CK_AddressSpaceConversion;
     else
       CK = CK_NoOp;

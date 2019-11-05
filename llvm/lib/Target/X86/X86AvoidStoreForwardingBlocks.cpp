@@ -83,13 +83,13 @@ public:
   }
 
 private:
-  MachineRegisterInfo *MRI;
-  const X86InstrInfo *TII;
-  const X86RegisterInfo *TRI;
+  MachineRegisterInfo *MRI = nullptr;
+  const X86InstrInfo *TII = nullptr;
+  const X86RegisterInfo *TRI = nullptr;
   SmallVector<std::pair<MachineInstr *, MachineInstr *>, 2>
       BlockedLoadsStoresPairs;
   SmallVector<MachineInstr *, 2> ForRemoval;
-  AliasAnalysis *AA;
+  AliasAnalysis *AA = nullptr;
 
   /// Returns couples of Load then Store to memory which look
   ///  like a memcpy.

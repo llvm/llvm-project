@@ -738,16 +738,7 @@ class VectorType;
     SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
                           SmallVectorImpl<SDNode *> &Created) const override;
 
-    /// isFMAFasterThanFMulAndFAdd - Return true if an FMA operation is faster
-    /// than a pair of fmul and fadd instructions. fmuladd intrinsics will be
-    /// expanded to FMAs when this method returns true, otherwise fmuladd is
-    /// expanded to fmul + fadd.
-    ///
-    /// ARM supports both fused and unfused multiply-add operations; we already
-    /// lower a pair of fmul and fadd to the latter so it's not clear that there
-    /// would be a gain or that the gain would be worthwhile enough to risk
-    /// correctness bugs.
-    bool isFMAFasterThanFMulAndFAdd(EVT VT) const override { return false; }
+    bool isFMAFasterThanFMulAndFAdd(EVT VT) const override;
 
     SDValue ReconstructShuffle(SDValue Op, SelectionDAG &DAG) const;
 

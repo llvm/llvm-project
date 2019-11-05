@@ -1,0 +1,21 @@
+﻿# Test non-ascii archive members
+
+RUN: rm -rf %t && mkdir -p %t/extracted
+
+# Note: lit's Python will read this UTF-8 encoded mri-nonascii.txt file,
+# decode it to unicode. The filename in the redirection below will then
+# be encoded in the system's filename encoding (e.g. UTF-16 for
+# Microsoft Windows).
+RUN: echo "contents" > %t/£.txt
+
+RUN: echo "CREATE %t/mri.ar" > %t/script.mri
+RUN: echo "ADDMOD %t/£.txt" >> %t/script.mri
+RUN: echo "SAVE" >> %t/script.mri
+
+RUN: llvm-ar -M < %t/script.mri
+RUN: cd %t/extracted && llvm-ar x %t/mri.ar
+
+# Same as above.
+RUN: FileCheck --strict-whitespace %s <£.txt
+CHECK:{{^}}
+CHECK-SAME:{{^}}contents{{$}}

@@ -474,7 +474,7 @@ public:
                                      const MCSubtargetInfo &STI, bool RelaxAll,
                                      bool IncrementalLinkerCompatible,
                                      bool DWARFMustBeAtTheEnd) const {
-    MCStreamer *S;
+    MCStreamer *S = nullptr;
     switch (T.getObjectFormat()) {
     case Triple::UnknownObjectFormat:
       llvm_unreachable("Unknown object format");

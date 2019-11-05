@@ -58,9 +58,34 @@ def RetCC_SystemZ : CallingConv<[
 ]>;
 
 //===----------------------------------------------------------------------===//
+// z/Linux argument calling conventions for GHC
+//===----------------------------------------------------------------------===//
+def CC_SystemZ_GHC : CallingConv<[
+  // Pass in STG registers: Base, Sp, Hp, R1, R2, R3, R4, R5, R6, R7, R8, SpLim
+  CCIfType<[i64], CCAssignToReg<[R7D, R8D, R10D, R11D, R12D, R13D,
+                                 R6D, R2D, R3D, R4D, R5D, R9D]>>,
+
+  // Pass in STG registers: F1, ..., F6
+  CCIfType<[f32], CCAssignToReg<[F8S, F9S, F10S, F11S, F0S, F1S]>>,
+
+  // Pass in STG registers: D1, ..., D6
+  CCIfType<[f64], CCAssignToReg<[F12D, F13D, F14D, F15D, F2D, F3D]>>,
+
+  // Pass in STG registers: XMM1, ..., XMM6
+  CCIfSubtarget<"hasVector()",
+    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+             CCIfFixed<CCAssignToReg<[V16, V17, V18, V19, V20, V21]>>>>,
+
+  // Fail otherwise
+  CCCustom<"CC_SystemZ_GHC_Error">
+]>;
+
+//===----------------------------------------------------------------------===//
 // z/Linux argument calling conventions
 //===----------------------------------------------------------------------===//
 def CC_SystemZ : CallingConv<[
+  CCIfCC<"CallingConv::GHC", CCDelegateTo<CC_SystemZ_GHC>>,
+
   // Promote i32 to i64 if it has an explicit extension type.
   // The convention is that true integer arguments that are smaller
   // than 64 bits should be marked as extended, but structures that
@@ -127,4 +152,6 @@ def CSR_SystemZ_AllRegs : CalleeSavedRegs<(add (sequence "R%dD", 2, 15),
                                                (sequence "F%dD", 0, 15))>;
 def CSR_SystemZ_AllRegs_Vector : CalleeSavedRegs<(add (sequence "R%dD", 2, 15),
                                                       (sequence "V%d", 0, 31))>;
+
+def CSR_SystemZ_NoRegs : CalleeSavedRegs<(add)>;
 

@@ -619,29 +619,11 @@ public:
      * function and can accept an arbitrary number */
     unsigned max_positional_args;
     static constexpr unsigned UNBOUNDED = UINT_MAX; // FIXME c++17 inline
-    /* the number of positional arguments, including optional ones,
-     * and excluding varargs.  If this is a bound method, then the
-     * count will still include a +1 for self.
-     *
-     * FIXME. That's crazy.  This should be replaced with
-     * an accurate min and max for positional args.
-     */
-    int count;
-    /* does the callable have positional varargs? */
-    bool has_varargs : 1; // FIXME delete this
   };
 
   static bool Check(PyObject *py_obj);
 
   llvm::Expected<ArgInfo> GetArgInfo() const;
-
-  llvm::Expected<ArgInfo> GetInitArgInfo() const;
-
-  ArgInfo GetNumArguments() const; // DEPRECATED
-
-  // If the callable is a Py_Class, then find the number of arguments
-  // of the __init__ method.
-  ArgInfo GetNumInitArguments() const; // DEPRECATED
 
   PythonObject operator()();
 

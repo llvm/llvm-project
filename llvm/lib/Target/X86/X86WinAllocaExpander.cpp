@@ -54,14 +54,14 @@ private:
   /// Lower a WinAlloca instruction.
   void lower(MachineInstr* MI, Lowering L);
 
-  MachineRegisterInfo *MRI;
-  const X86Subtarget *STI;
-  const TargetInstrInfo *TII;
-  const X86RegisterInfo *TRI;
-  unsigned StackPtr;
-  unsigned SlotSize;
-  int64_t StackProbeSize;
-  bool NoStackArgProbe;
+  MachineRegisterInfo *MRI = nullptr;
+  const X86Subtarget *STI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  const X86RegisterInfo *TRI = nullptr;
+  unsigned StackPtr = 0;
+  unsigned SlotSize = 0;
+  int64_t StackProbeSize = 0;
+  bool NoStackArgProbe = false;
 
   StringRef getPassName() const override { return "X86 WinAlloca Expander"; }
   static char ID;

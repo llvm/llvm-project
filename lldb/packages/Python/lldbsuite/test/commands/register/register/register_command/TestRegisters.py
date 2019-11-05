@@ -59,7 +59,6 @@ class RegisterCommandsTestCase(TestBase):
     @skipIfTargetAndroid(archs=["i386"])
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
-    @expectedFailureNetBSD
     def test_fp_register_write(self):
         """Test commands that write to registers, in particular floating-point registers."""
         self.build()

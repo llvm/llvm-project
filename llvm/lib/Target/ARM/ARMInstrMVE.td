@@ -2808,31 +2808,15 @@ def MVE_VFMSf32 : MVE_VADDSUBFMA_fp<"vfms", "f32", 0b0, 0b1, 0b0, 0b1,
 def MVE_VFMSf16 : MVE_VADDSUBFMA_fp<"vfms", "f16", 0b1, 0b1, 0b0, 0b1,
     (ins MQPR:$Qd_src), vpred_n, "$Qd = $Qd_src">;
 
-let Predicates = [HasMVEFloat, UseFusedMAC] in {
-  def : Pat<(v8f16 (fadd (v8f16 MQPR:$src1),
-                             (fmul (v8f16 MQPR:$src2),
-                                      (v8f16 MQPR:$src3)))),
-            (v8f16 (MVE_VFMAf16 $src1, $src2, $src3))>;
-  def : Pat<(v4f32 (fadd (v4f32 MQPR:$src1),
-                             (fmul (v4f32 MQPR:$src2),
-                                      (v4f32 MQPR:$src3)))),
-            (v4f32 (MVE_VFMAf32 $src1, $src2, $src3))>;
-
-  def : Pat<(v8f16 (fsub (v8f16 MQPR:$src1),
-                             (fmul (v8f16 MQPR:$src2),
-                                      (v8f16 MQPR:$src3)))),
-            (v8f16 (MVE_VFMSf16 $src1, $src2, $src3))>;
-  def : Pat<(v4f32 (fsub (v4f32 MQPR:$src1),
-                             (fmul (v4f32 MQPR:$src2),
-                                      (v4f32 MQPR:$src3)))),
-            (v4f32 (MVE_VFMSf32 $src1, $src2, $src3))>;
-}
-
 let Predicates = [HasMVEFloat] in {
   def : Pat<(v8f16 (fma (v8f16 MQPR:$src1), (v8f16 MQPR:$src2), (v8f16 MQPR:$src3))),
             (v8f16 (MVE_VFMAf16 $src3, $src1, $src2))>;
   def : Pat<(v4f32 (fma (v4f32 MQPR:$src1), (v4f32 MQPR:$src2), (v4f32 MQPR:$src3))),
             (v4f32 (MVE_VFMAf32 $src3, $src1, $src2))>;
+  def : Pat<(v8f16 (fma (fneg (v8f16 MQPR:$src1)), (v8f16 MQPR:$src2), (v8f16 MQPR:$src3))),
+            (v8f16 (MVE_VFMSf16 $src3, $src1, $src2))>;
+  def : Pat<(v4f32 (fma (fneg (v4f32 MQPR:$src1)), (v4f32 MQPR:$src2), (v4f32 MQPR:$src3))),
+            (v4f32 (MVE_VFMSf32 $src3, $src1, $src2))>;
 }
 
 multiclass MVE_VADDSUB_fp_m<string iname, bit bit_21, MVEVectorVTInfo VTI,

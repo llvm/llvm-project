@@ -1,6 +1,6 @@
 import multiprocessing
-import time
 import os
+import time
 
 import lit.Test
 import lit.util
@@ -13,7 +13,7 @@ class NopSemaphore(object):
     def release(self): pass
 
 def create_run(tests, lit_config, workers, progress_callback, timeout=None):
-    # TODO(yln) assert workers > 0
+    assert workers > 0
     if workers == 1:
         return SerialRun(tests, lit_config, progress_callback, timeout)
     return ParallelRun(tests, lit_config, progress_callback, timeout, workers)
@@ -45,27 +45,20 @@ class Run(object):
         computed. Tests which were not actually executed (for any reason) will
         be given an UNRESOLVED result.
         """
-        if not self.tests:
-            return 0.0
-
         self.failure_count = 0
         self.hit_max_failures = False
 
         # Larger timeouts (one year, positive infinity) don't work on Windows.
         one_week = 7 * 24 * 60 * 60  # days * hours * minutes * seconds
         timeout = self.timeout or one_week
+        deadline = time.time() + timeout
 
-        start = time.time()
-        deadline = start + timeout
         self._execute(deadline)
-        end = time.time()
 
         # Mark any tests that weren't run as UNRESOLVED.
         for test in self.tests:
             if test.result is None:
                 test.setResult(lit.Test.Result(lit.Test.UNRESOLVED, '', 0.0))
-
-        return end - start
 
     # TODO(yln): as the comment says.. this is racing with the main thread waiting
     # for results

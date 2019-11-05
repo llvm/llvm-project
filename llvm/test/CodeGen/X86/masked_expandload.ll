@@ -2073,21 +2073,21 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; AVX1-NEXT:    vextractf128 $1, %ymm5, %xmm8
 ; AVX1-NEXT:    vpxor %xmm9, %xmm9, %xmm9
 ; AVX1-NEXT:    vpcmpeqd %xmm9, %xmm8, %xmm8
-; AVX1-NEXT:    vpcmpeqd %xmm9, %xmm5, %xmm5
+; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm9, %xmm5
 ; AVX1-NEXT:    vpackssdw %xmm8, %xmm5, %xmm8
 ; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm5
-; AVX1-NEXT:    vpcmpeqd %xmm9, %xmm5, %xmm5
-; AVX1-NEXT:    vpcmpeqd %xmm9, %xmm4, %xmm4
+; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm9, %xmm5
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm9, %xmm4
 ; AVX1-NEXT:    vpackssdw %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vpacksswb %xmm8, %xmm4, %xmm4
 ; AVX1-NEXT:    vpmovmskb %xmm4, %ecx
 ; AVX1-NEXT:    vextractf128 $1, %ymm7, %xmm4
-; AVX1-NEXT:    vpcmpeqd %xmm9, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpeqd %xmm9, %xmm7, %xmm5
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm9, %xmm4
+; AVX1-NEXT:    vpcmpeqd %xmm7, %xmm9, %xmm5
 ; AVX1-NEXT:    vpackssdw %xmm4, %xmm5, %xmm4
 ; AVX1-NEXT:    vextractf128 $1, %ymm6, %xmm5
-; AVX1-NEXT:    vpcmpeqd %xmm9, %xmm5, %xmm5
-; AVX1-NEXT:    vpcmpeqd %xmm9, %xmm6, %xmm6
+; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm9, %xmm5
+; AVX1-NEXT:    vpcmpeqd %xmm6, %xmm9, %xmm6
 ; AVX1-NEXT:    vpackssdw %xmm5, %xmm6, %xmm5
 ; AVX1-NEXT:    vpacksswb %xmm4, %xmm5, %xmm4
 ; AVX1-NEXT:    vpmovmskb %xmm4, %eax
@@ -2404,12 +2404,12 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; AVX2-LABEL: expandload_v32f32_v32i32:
 ; AVX2:       ## %bb.0:
 ; AVX2-NEXT:    vpxor %xmm8, %xmm8, %xmm8
-; AVX2-NEXT:    vpcmpeqd %ymm8, %ymm7, %ymm7
-; AVX2-NEXT:    vpcmpeqd %ymm8, %ymm6, %ymm6
+; AVX2-NEXT:    vpcmpeqd %ymm7, %ymm8, %ymm7
+; AVX2-NEXT:    vpcmpeqd %ymm6, %ymm8, %ymm6
 ; AVX2-NEXT:    vpackssdw %ymm7, %ymm6, %ymm6
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm6 = ymm6[0,2,1,3]
-; AVX2-NEXT:    vpcmpeqd %ymm8, %ymm5, %ymm5
-; AVX2-NEXT:    vpcmpeqd %ymm8, %ymm4, %ymm4
+; AVX2-NEXT:    vpcmpeqd %ymm5, %ymm8, %ymm5
+; AVX2-NEXT:    vpcmpeqd %ymm4, %ymm8, %ymm4
 ; AVX2-NEXT:    vpackssdw %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm4 = ymm4[0,2,1,3]
 ; AVX2-NEXT:    vpacksswb %ymm6, %ymm4, %ymm4

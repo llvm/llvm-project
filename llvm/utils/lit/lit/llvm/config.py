@@ -411,6 +411,7 @@ class LLVMConfig(object):
             ToolSubst('%clang_cpp', command=self.config.clang, extra_args=['--driver-mode=cpp']+additional_flags),
             ToolSubst('%clang_cl', command=self.config.clang, extra_args=['--driver-mode=cl']+additional_flags),
             ToolSubst('%clangxx', command=self.config.clang, extra_args=['--driver-mode=g++']+additional_flags),
+            ToolSubst('%scan-build', command='scan-build'),
             ]
         self.add_tool_substitutions(tool_substitutions)
 

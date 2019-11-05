@@ -137,6 +137,9 @@ public:
   /// Live out registers are the union of the live-in registers of the successor
   /// blocks and pristine registers. Live out registers of the end block are the
   /// callee saved registers.
+  /// If a register is not added by this method, it is guaranteed to not be
+  /// live out from MBB, although a sub-register may be. This is true
+  /// both before and after regalloc.
   void addLiveOuts(const MachineBasicBlock &MBB);
 
   /// Adds all live-out registers of basic block \p MBB but skips pristine

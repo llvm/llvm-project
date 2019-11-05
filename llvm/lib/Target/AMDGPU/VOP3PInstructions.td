@@ -404,7 +404,7 @@ def : MnemonicAlias<"v_accvgpr_write", "v_accvgpr_write_b32">;
 multiclass VOP3P_Real_vi<bits<10> op> {
   def _vi : VOP3P_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
             VOP3Pe <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
-    let AssemblerPredicates = [HasVOP3PInsts];
+    let AssemblerPredicate = HasVOP3PInsts;
     let DecoderNamespace = "GFX8";
   }
 }
@@ -412,7 +412,7 @@ multiclass VOP3P_Real_vi<bits<10> op> {
 multiclass VOP3P_Real_MAI<bits<10> op> {
   def _vi : VOP3P_Real<!cast<VOP3_Pseudo>(NAME), SIEncodingFamily.VI>,
             VOP3Pe_MAI <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
-    let AssemblerPredicates = [HasMAIInsts];
+    let AssemblerPredicate = HasMAIInsts;
     let DecoderNamespace = "GFX8";
   }
 }

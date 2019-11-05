@@ -1633,10 +1633,11 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
   }
 
   // If we don't already have information on this module, load the module now.
+  Module *Module = nullptr;
   ModuleMap &MM = getPreprocessor().getHeaderSearchInfo().getModuleMap();
-  clang::Module *Module = MM.getCachedModuleLoad(*Path[0].first);
-  if (Module) {
-    // Nothing to do here, we found it.
+  if (auto MaybeModule = MM.getCachedModuleLoad(*Path[0].first)) {
+    // Use the cached result, which may be nullptr.
+    Module = *MaybeModule;
   } else if (ModuleName == getLangOpts().CurrentModule) {
     // This is the module we're building.
     Module = PP->getHeaderSearchInfo().lookupModule(

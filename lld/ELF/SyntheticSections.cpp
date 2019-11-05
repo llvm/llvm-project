@@ -3164,12 +3164,10 @@ static bool isValidExidxSectionDep(InputSection *isec) {
 
 bool ARMExidxSyntheticSection::addSection(InputSection *isec) {
   if (isec->type == SHT_ARM_EXIDX) {
-    if (InputSection* dep = isec->getLinkOrderDep())
-      if (isValidExidxSectionDep(dep)) {
+    if (InputSection *dep = isec->getLinkOrderDep())
+      if (isValidExidxSectionDep(dep))
         exidxSections.push_back(isec);
-        return true;
-      }
-    return false;
+    return true;
   }
 
   if (isValidExidxSectionDep(isec)) {

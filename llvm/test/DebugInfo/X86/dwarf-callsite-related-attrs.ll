@@ -25,6 +25,14 @@
 
 @sink = global i32 0, align 4, !dbg !0
 
+define void @__has_no_subprogram() {
+entry:
+  %0 = load volatile i32, i32* @sink, align 4
+  %inc = add nsw i32 %0, 1
+  store volatile i32 %inc, i32* @sink, align 4
+  ret void
+}
+
 ; ASM: DW_TAG_subprogram
 ; ASM:   DW_AT_call_all_calls
 ; OBJ: [[bat_sp:.*]]: DW_TAG_subprogram
@@ -70,6 +78,7 @@ entry:
 ; OBJ:     DW_AT_call_tail_call
 define void @_Z3foov() !dbg !25 {
 entry:
+  tail call void @__has_no_subprogram()
   tail call void @_Z3barv(), !dbg !26
   tail call void @_Z3batv(), !dbg !27
   tail call void @_Z3barv(), !dbg !26

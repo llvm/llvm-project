@@ -358,7 +358,7 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %amt) nounwind {
 ; AVX1-NEXT:    vpblendvb %xmm5, %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsrlw $7, %xmm2, %xmm3
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm8 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX1-NEXT:    vpand %xmm8, %xmm3, %xmm3
+; AVX1-NEXT:    vpand %xmm3, %xmm8, %xmm3
 ; AVX1-NEXT:    vpaddb %xmm2, %xmm2, %xmm7
 ; AVX1-NEXT:    vpor %xmm3, %xmm7, %xmm3
 ; AVX1-NEXT:    vpaddb %xmm5, %xmm5, %xmm5
@@ -378,7 +378,7 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %amt) nounwind {
 ; AVX1-NEXT:    vpaddb %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpblendvb %xmm1, %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $7, %xmm0, %xmm3
-; AVX1-NEXT:    vpand %xmm8, %xmm3, %xmm3
+; AVX1-NEXT:    vpand %xmm3, %xmm8, %xmm3
 ; AVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm4
 ; AVX1-NEXT:    vpor %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpaddb %xmm1, %xmm1, %xmm1
@@ -1141,7 +1141,7 @@ define <32 x i8> @constant_funnnel_v32i8(<32 x i8> %x) nounwind {
 ; AVX1-NEXT:    vpxor %xmm8, %xmm8, %xmm8
 ; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm1[8],xmm8[8],xmm1[9],xmm8[9],xmm1[10],xmm8[10],xmm1[11],xmm8[11],xmm1[12],xmm8[12],xmm1[13],xmm8[13],xmm1[14],xmm8[14],xmm1[15],xmm8[15]
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm9 = [256,128,64,32,16,8,4,2]
-; AVX1-NEXT:    vpmullw %xmm9, %xmm3, %xmm3
+; AVX1-NEXT:    vpmullw %xmm3, %xmm9, %xmm3
 ; AVX1-NEXT:    vpsrlw $8, %xmm3, %xmm3
 ; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm5 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [256,2,4,8,16,32,64,128]
@@ -1159,7 +1159,7 @@ define <32 x i8> @constant_funnnel_v32i8(<32 x i8> %x) nounwind {
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm5, %xmm1
 ; AVX1-NEXT:    vpor %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm0[8],xmm8[8],xmm0[9],xmm8[9],xmm0[10],xmm8[10],xmm0[11],xmm8[11],xmm0[12],xmm8[12],xmm0[13],xmm8[13],xmm0[14],xmm8[14],xmm0[15],xmm8[15]
-; AVX1-NEXT:    vpmullw %xmm9, %xmm3, %xmm3
+; AVX1-NEXT:    vpmullw %xmm3, %xmm9, %xmm3
 ; AVX1-NEXT:    vpsrlw $8, %xmm3, %xmm3
 ; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm5 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX1-NEXT:    vpmullw %xmm6, %xmm5, %xmm6

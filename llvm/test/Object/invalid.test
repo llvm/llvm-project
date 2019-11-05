@@ -235,13 +235,14 @@ Symbols: []
 
 # INVALID-PH-ENTSIZE: error: '[[FILE]]': invalid e_phentsize: 12336
 
-## Check that llvm-readobj reports an error when we have no SHT_SYMTAB_SHNDX section,
+## Check that llvm-readobj reports a warning when we have no SHT_SYMTAB_SHNDX section,
 ## but have a symbol referencing it.
 
-# RUN: not llvm-readobj --symbols %p/Inputs/invalid-ext-symtab-index.elf-x86-64 2>&1 | \
+# RUN: llvm-readobj --symbols %p/Inputs/invalid-ext-symtab-index.elf-x86-64 2>&1 | \
 # RUN:   FileCheck -DFILE=%p/Inputs/invalid-ext-symtab-index.elf-x86-64 --check-prefix=INVALID-EXT-SYMTAB-INDEX %s
 
-# INVALID-EXT-SYMTAB-INDEX: error: '[[FILE]]': extended symbol index (0) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# INVALID-EXT-SYMTAB-INDEX: warning: '[[FILE]]': extended symbol index (0) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# INVALID-EXT-SYMTAB-INDEX: Section: Reserved (0xFFFF)
 
 ## Check that llvm-readobj reports an error if a relocation section
 ## has a broken sh_offset (past the end of the file).

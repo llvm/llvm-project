@@ -57,7 +57,7 @@ template struct StaticCast0<int, A>; // expected-note{{instantiation}}
 template<typename T, typename U>
 struct DynamicCast0 {
   void f(T t) {
-    (void)dynamic_cast<U>(t); // expected-error{{not a reference or pointer}}
+    (void)dynamic_cast<U>(t); // expected-error{{invalid target type 'A' for dynamic_cast; target type must be a reference or pointer type to a defined class}}
   }
 };
 

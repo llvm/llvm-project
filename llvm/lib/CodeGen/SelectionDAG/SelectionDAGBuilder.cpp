@@ -6894,6 +6894,26 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     const ConstrainedFPIntrinsic &FPI) {
   SDLoc sdl = getCurSDLoc();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SmallVector<EVT, 4> ValueVTs;
+  ComputeValueVTs(TLI, DAG.getDataLayout(), FPI.getType(), ValueVTs);
+  ValueVTs.push_back(MVT::Other); // Out chain
+
+  SDValue Chain = getRoot();
+  SmallVector<SDValue, 4> Opers;
+  Opers.push_back(Chain);
+  if (FPI.isUnaryOp()) {
+    Opers.push_back(getValue(FPI.getArgOperand(0)));
+  } else if (FPI.isTernaryOp()) {
+    Opers.push_back(getValue(FPI.getArgOperand(0)));
+    Opers.push_back(getValue(FPI.getArgOperand(1)));
+    Opers.push_back(getValue(FPI.getArgOperand(2)));
+  } else {
+    Opers.push_back(getValue(FPI.getArgOperand(0)));
+    Opers.push_back(getValue(FPI.getArgOperand(1)));
+  }
+
   unsigned Opcode;
   switch (FPI.getIntrinsicID()) {
   default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
@@ -6923,6 +6943,8 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     break;
   case Intrinsic::experimental_constrained_fptrunc:
     Opcode = ISD::STRICT_FP_ROUND;
+    Opers.push_back(DAG.getTargetConstant(0, sdl,
+                      TLI.getPointerTy(DAG.getDataLayout())));
     break;
   case Intrinsic::experimental_constrained_fpext:
     Opcode = ISD::STRICT_FP_EXTEND;
@@ -6994,31 +7016,9 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     Opcode = ISD::STRICT_FTRUNC;
     break;
   }
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  SDValue Chain = getRoot();
-  SmallVector<EVT, 4> ValueVTs;
-  ComputeValueVTs(TLI, DAG.getDataLayout(), FPI.getType(), ValueVTs);
-  ValueVTs.push_back(MVT::Other); // Out chain
 
   SDVTList VTs = DAG.getVTList(ValueVTs);
-  SDValue Result;
-  if (Opcode == ISD::STRICT_FP_ROUND)
-    Result = DAG.getNode(Opcode, sdl, VTs,
-                          { Chain, getValue(FPI.getArgOperand(0)),
-                               DAG.getTargetConstant(0, sdl,
-                               TLI.getPointerTy(DAG.getDataLayout())) });
-  else if (FPI.isUnaryOp())
-    Result = DAG.getNode(Opcode, sdl, VTs,
-                         { Chain, getValue(FPI.getArgOperand(0)) });
-  else if (FPI.isTernaryOp())
-    Result = DAG.getNode(Opcode, sdl, VTs,
-                         { Chain, getValue(FPI.getArgOperand(0)),
-                                  getValue(FPI.getArgOperand(1)),
-                                  getValue(FPI.getArgOperand(2)) });
-  else
-    Result = DAG.getNode(Opcode, sdl, VTs,
-                         { Chain, getValue(FPI.getArgOperand(0)),
-                           getValue(FPI.getArgOperand(1))  });
+  SDValue Result = DAG.getNode(Opcode, sdl, VTs, Opers);
 
   if (FPI.getExceptionBehavior() !=
       ConstrainedFPIntrinsic::ExceptionBehavior::ebIgnore) {

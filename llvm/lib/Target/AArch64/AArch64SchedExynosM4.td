@@ -175,8 +175,10 @@ def M4WriteC3 : SchedWriteRes<[M4UnitC]> { let Latency = 3; }
 def M4WriteCA : SchedWriteRes<[M4UnitC]> { let Latency = 4;
                                            let ResourceCycles = [2]; }
 
-def M4WriteD12 : SchedWriteRes<[M4UnitD]> { let Latency = 12; }
-def M4WriteD21 : SchedWriteRes<[M4UnitD]> { let Latency = 21; }
+def M4WriteD12 : SchedWriteRes<[M4UnitD]> { let Latency = 12;
+                                            let ResourceCycles = [12]; }
+def M4WriteD21 : SchedWriteRes<[M4UnitD]> { let Latency = 21;
+                                            let ResourceCycles = [21]; }
 
 def M4WriteE2 : SchedWriteRes<[M4UnitE]> { let Latency = 2; }
 
