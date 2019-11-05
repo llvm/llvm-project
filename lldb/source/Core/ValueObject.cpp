@@ -100,6 +100,8 @@ ValueObject::ValueObject(ValueObject &parent)
       m_did_calculate_complete_objc_class_type(false),
       m_is_synthetic_children_generated(
           parent.m_is_synthetic_children_generated) {
+  m_data.SetByteOrder(parent.GetDataExtractor().GetByteOrder());
+  m_data.SetAddressByteSize(parent.GetDataExtractor().GetAddressByteSize());
   m_manager->ManageObject(this);
 }
 
@@ -126,6 +128,14 @@ ValueObject::ValueObject(ExecutionContextScope *exe_scope,
       m_is_getting_summary(false),
       m_did_calculate_complete_objc_class_type(false),
       m_is_synthetic_children_generated(false) {
+  if (exe_scope) {
+    TargetSP target_sp(exe_scope->CalculateTarget());
+    if (target_sp) {
+      const ArchSpec &arch = target_sp->GetArchitecture();
+      m_data.SetByteOrder(arch.GetByteOrder());
+      m_data.SetAddressByteSize(arch.GetAddressByteSize());
+    }
+  }
   m_manager = new ValueObjectManager();
   m_manager->ManageObject(this);
 }
