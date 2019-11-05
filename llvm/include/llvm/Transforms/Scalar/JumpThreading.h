@@ -109,6 +109,7 @@ public:
 
   void FindLoopHeaders(Function &F);
   bool ProcessBlock(BasicBlock *BB);
+  bool MaybeMergeBasicBlockIntoOnlyPred(BasicBlock *BB);
   void UpdateSSA(BasicBlock *BB, BasicBlock *NewBB,
                  DenseMap<Instruction *, Value *> &ValueMapping);
   bool ThreadEdge(BasicBlock *BB, const SmallVectorImpl<BasicBlock *> &PredBBs,
