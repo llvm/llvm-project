@@ -130,6 +130,9 @@ public:
   void writeTo(uint8_t *sectionStart) const override;
   StringRef getName() const override { return function->SymbolName; }
   StringRef getDebugName() const override { return function->DebugName; }
+  StringRef getExportName() const {
+    return function ? function->ExportName : "";
+  }
   uint32_t getComdat() const override { return function->Comdat; }
   uint32_t getFunctionInputOffset() const { return getInputSectionOffset(); }
   uint32_t getFunctionCodeOffset() const { return function->CodeOffset; }
