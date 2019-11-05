@@ -21,7 +21,7 @@
 
 # CHECK: error: unexpected end of data
 
-# UNKNOWN-REG: [0x0000000000000000,  0x0000000000000001): DW_OP_regx 0xdeadbeef
+# UNKNOWN-REG: (0x0000000000000000,  0x0000000000000001): DW_OP_regx 0xdeadbeef
 
 .section  .debug_loc,"",@progbits
 .ifdef CASE1

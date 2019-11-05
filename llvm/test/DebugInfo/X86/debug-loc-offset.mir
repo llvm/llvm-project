@@ -67,11 +67,11 @@
 #
 # CHECK: .debug_loc contents:
 # CHECK:       0x00000000:
-# CHECK-NEXT:    [0x00000000, 0x0000000a): DW_OP_consts +0, DW_OP_stack_value
-# CHECK-NEXT:    [0x0000000a, 0x00000017): DW_OP_consts +1, DW_OP_stack_value
+# CHECK-NEXT:    (0x00000000, 0x0000000a): DW_OP_consts +0, DW_OP_stack_value
+# CHECK-NEXT:    (0x0000000a, 0x00000017): DW_OP_consts +1, DW_OP_stack_value
 # CHECK:       0x00000022:
-# CHECK-NEXT:    [0x00000009, 0x00000017): DW_OP_breg0 EAX+0, DW_OP_deref
-# CHECK-NEXT:    [0x00000017, 0x00000043): DW_OP_breg5 EBP-8, DW_OP_deref, DW_OP_deref
+# CHECK-NEXT:    (0x00000009, 0x00000017): DW_OP_breg0 EAX+0, DW_OP_deref
+# CHECK-NEXT:    (0x00000017, 0x00000043): DW_OP_breg5 EBP-8, DW_OP_deref, DW_OP_deref
 --- |
   target triple = "i386-unknown-linux-gnu"
   

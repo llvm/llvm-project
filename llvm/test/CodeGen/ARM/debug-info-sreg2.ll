@@ -7,7 +7,7 @@ target triple = "thumbv7-apple-macosx10.6.7"
 ; of the size of the location description.
 
 ; CHECK: 0x00000000:
-; CHECK-NEXT:        [0x{{[0-9]*[a-f]*}}, 0x{{[0-9]*[a-f]*}}): DW_OP_regx D8
+; CHECK-NEXT:        (0x{{[0-9]*[a-f]*}}, 0x{{[0-9]*[a-f]*}}): DW_OP_regx D8
 
 define void @_Z3foov() optsize ssp !dbg !1 {
 entry:

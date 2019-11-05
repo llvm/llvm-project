@@ -19,7 +19,7 @@
 ; AS in 26163, we only expect one range as the first one is zero sized.
 ;
 ;
-; CHECK: [0x0000000000000000, 0x000000000000000f): DW_OP_lit3, DW_OP_piece 0x4, DW_OP_lit0, DW_OP_piece 0x4
+; CHECK: (0x0000000000000000, 0x000000000000000f): DW_OP_lit3, DW_OP_piece 0x4, DW_OP_lit0, DW_OP_piece 0x4
 
 source_filename = "test/DebugInfo/X86/PR26148.ll"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

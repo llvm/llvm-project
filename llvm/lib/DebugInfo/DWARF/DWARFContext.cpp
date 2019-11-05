@@ -734,13 +734,14 @@ const DWARFDebugLoc *DWARFContext::getDebugLoc() {
   if (Loc)
     return Loc.get();
 
-  Loc.reset(new DWARFDebugLoc);
   // Assume all units have the same address byte size.
-  if (getNumCompileUnits()) {
-    DWARFDataExtractor LocData(*DObj, DObj->getLocSection(), isLittleEndian(),
-                               getUnitAtIndex(0)->getAddressByteSize());
-    Loc->parse(LocData);
-  }
+  auto LocData =
+      getNumCompileUnits()
+          ? DWARFDataExtractor(*DObj, DObj->getLocSection(), isLittleEndian(),
+                               getUnitAtIndex(0)->getAddressByteSize())
+          : DWARFDataExtractor("", isLittleEndian(), 0);
+  Loc.reset(new DWARFDebugLoc(std::move(LocData)));
+  Loc->parse();
   return Loc.get();
 }
 

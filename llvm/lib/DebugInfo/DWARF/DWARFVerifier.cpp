@@ -1302,7 +1302,7 @@ static bool isVariableIndexable(const DWARFDie &Die, DWARFContext &DCtx) {
     if (const DWARFDebugLoc *DebugLoc = DCtx.getDebugLoc()) {
       if (const DWARFDebugLoc::LocationList *LocList =
               DebugLoc->getLocationListAtOffset(*Offset)) {
-        if (any_of(LocList->Entries, [&](const DWARFDebugLoc::Entry &E) {
+        if (any_of(LocList->Entries, [&](const DWARFLocationEntry &E) {
               return ContainsInterestingOperators(E.Loc);
             }))
           return true;

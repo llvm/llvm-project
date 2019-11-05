@@ -249,15 +249,22 @@ static void collectStatsForDie(DWARFDie Die, uint64_t UnitLowPC, std::string FnP
       // Get PC coverage.
       if (auto DebugLocOffset = FormValue->getAsSectionOffset()) {
         auto *DebugLoc = Die.getDwarfUnit()->getContext().getDebugLoc();
+        // TODO: This code does not handle DWARF5 nor DWARF4 base address
+        // selection entries. This should use a higher-level API which abstracts
+        // these away.
         if (auto List = DebugLoc->getLocationListAtOffset(*DebugLocOffset)) {
-          for (auto Entry : List->Entries) {
-            uint64_t BytesEntryCovered = Entry.End - Entry.Begin;
+          ArrayRef<DWARFLocationEntry> Entries = List->Entries;
+          // Ignore end-of-list entries
+          Entries = Entries.drop_back();
+
+          for (auto Entry : Entries) {
+            uint64_t BytesEntryCovered = Entry.Value1 - Entry.Value0;
             BytesCovered += BytesEntryCovered;
             if (IsEntryValue(Entry.Loc))
               BytesEntryValuesCovered += BytesEntryCovered;
           }
-          if (List->Entries.size()) {
-            uint64_t FirstDef = List->Entries[0].Begin;
+          if (Entries.size()) {
+            uint64_t FirstDef = Entries[0].Value0;
             uint64_t UnitOfs = UnitLowPC; 
             // Ranges sometimes start before the lexical scope.
             if (UnitOfs + FirstDef >= ScopeLowPC)
