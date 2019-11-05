@@ -189,6 +189,9 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("_MIPS_ARCH", "\"" + CPU + "\"");
   Builder.defineMacro("_MIPS_ARCH_" + StringRef(CPU).upper());
 
+  if (StringRef(CPU).startswith("octeon"))
+    Builder.defineMacro("__OCTEON__");
+
   // These shouldn't be defined for MIPS-I but there's no need to check
   // for that since MIPS-I isn't supported.
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
