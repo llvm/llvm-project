@@ -873,5 +873,103 @@ if.end:                                           ; preds = %if.then, %for.body
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
+define void @test15__ivar_mod2_is_1(i32 %len) {
+; CHECK-LABEL: @test15__ivar_mod2_is_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[LEN:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[INC:%.*]], [[IF_END:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[I_06]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[AND]], 1
+; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_END]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @init()
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sink()
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_06]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[LEN]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+;
+entry:
+  %cmp5 = icmp sgt i32 %len, 0
+  br i1 %cmp5, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %if.end, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %if.end
+  %i.06 = phi i32 [ %inc, %if.end ], [ 0, %entry ]
+  %and = and i32 %i.06, 1
+  %cmp1 = icmp eq i32 %and, 1
+  br i1 %cmp1, label %if.end, label %if.then
+
+if.then:                                          ; preds = %for.body
+  call void @init()
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %for.body
+  call void @sink()
+  %inc = add nuw nsw i32 %i.06, 1
+  %exitcond = icmp eq i32 %inc, %len
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+define void @test16__ivar_mod2_is_0(i32 %len) {
+; CHECK-LABEL: @test16__ivar_mod2_is_0(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp sgt i32 [[LEN:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[INC:%.*]], [[IF_END:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[I_06]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_END]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    call void @init()
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    call void @sink()
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_06]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[LEN]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+;
+entry:
+  %cmp5 = icmp sgt i32 %len, 0
+  br i1 %cmp5, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %if.end, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %if.end
+  %i.06 = phi i32 [ %inc, %if.end ], [ 0, %entry ]
+  %and = and i32 %i.06, 1
+  %cmp1 = icmp eq i32 %and, 0
+  br i1 %cmp1, label %if.end, label %if.then
+
+if.then:                                          ; preds = %for.body
+  call void @init()
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %for.body
+  call void @sink()
+  %inc = add nuw nsw i32 %i.06, 1
+  %exitcond = icmp eq i32 %inc, %len
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
 declare void @init()
 declare void @sink()
