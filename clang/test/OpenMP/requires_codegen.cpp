@@ -21,5 +21,5 @@
 #endif
 
 #ifdef REGION_DEVICE
-#pragma omp requires unified_shared_memory // expected-error {{Target architecture does not support unified addressing}} 
+#pragma omp requires unified_shared_memory // expected-error-re {{Target architecture sm_{{20|21|30|32|35|37|50|52|53|60|61|62}} does not support unified addressing}}
 #endif
