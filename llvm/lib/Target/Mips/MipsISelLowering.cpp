@@ -4008,11 +4008,13 @@ MipsTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     }
   }
 
-  std::pair<unsigned, const TargetRegisterClass *> R;
-  R = parseRegForInlineAsmConstraint(Constraint, VT);
+  if (!Constraint.empty()) {
+    std::pair<unsigned, const TargetRegisterClass *> R;
+    R = parseRegForInlineAsmConstraint(Constraint, VT);
 
-  if (R.second)
-    return R;
+    if (R.second)
+      return R;
+  }
 
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }
