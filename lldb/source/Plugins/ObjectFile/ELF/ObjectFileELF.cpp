@@ -22,7 +22,6 @@
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/SectionLoadList.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
