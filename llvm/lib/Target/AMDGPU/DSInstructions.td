@@ -58,6 +58,8 @@ class DS_Real <DS_Pseudo ds> :
 
   let isPseudo = 0;
   let isCodeGenOnly = 0;
+  let DS = 1;
+  let UseNamedOperandTable = 1;
 
   // copy relevant pseudo op flags
   let SubtargetPredicate = ds.SubtargetPredicate;
