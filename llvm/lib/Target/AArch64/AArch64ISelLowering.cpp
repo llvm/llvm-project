@@ -3118,6 +3118,9 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   switch (CC) {
   default:
     report_fatal_error("Unsupported calling convention.");
+  case CallingConv::AArch64_SVE_VectorCall:
+    // Calling SVE functions is currently not yet supported.
+    report_fatal_error("Unsupported calling convention.");
   case CallingConv::WebKit_JS:
     return CC_AArch64_WebKit_JS;
   case CallingConv::GHC:
