@@ -3410,6 +3410,11 @@ LLVMValueRef LLVMBuildFNeg(LLVMBuilderRef B, LLVMValueRef V, const char *Name) {
   return wrap(unwrap(B)->CreateFNeg(unwrap(V), Name));
 }
 
+LLVMValueRef LLVMBuildFreeze(LLVMBuilderRef B, LLVMValueRef V,
+                             const char *Name) {
+  return wrap(unwrap(B)->CreateFreeze(unwrap(V), Name));
+}
+
 LLVMValueRef LLVMBuildNot(LLVMBuilderRef B, LLVMValueRef V, const char *Name) {
   return wrap(unwrap(B)->CreateNot(unwrap(V), Name));
 }

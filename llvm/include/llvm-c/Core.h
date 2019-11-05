@@ -69,6 +69,7 @@ typedef enum {
 
   /* Standard Unary Operators */
   LLVMFNeg           = 66,
+  LLVMFreeze         = 68,
 
   /* Standard Binary Operators */
   LLVMAdd            = 8,
@@ -3747,6 +3748,7 @@ LLVMValueRef LLVMBuildNUWNeg(LLVMBuilderRef B, LLVMValueRef V,
                              const char *Name);
 LLVMValueRef LLVMBuildFNeg(LLVMBuilderRef, LLVMValueRef V, const char *Name);
 LLVMValueRef LLVMBuildNot(LLVMBuilderRef, LLVMValueRef V, const char *Name);
+LLVMValueRef LLVMBuildFreeze(LLVMBuilderRef, LLVMValueRef V, const char *Name);
 
 /* Memory */
 LLVMValueRef LLVMBuildMalloc(LLVMBuilderRef, LLVMTypeRef Ty, const char *Name);
