@@ -284,13 +284,15 @@ function(lldb_add_post_install_steps_darwin name install_prefix)
   install(CODE "execute_process(COMMAND xcrun dsymutil -o=${dsym_name} ${buildtree_name})"
           COMPONENT ${name})
 
-  # Strip distribution binary with -ST (removing debug symbol table entries and
-  # Swift symbols). Avoid CMAKE_INSTALL_DO_STRIP and llvm_externalize_debuginfo()
-  # as they can't be configured sufficiently.
-  set(installtree_name "\$ENV\{DESTDIR\}${install_prefix}/${bundle_subdir}${output_name}")
-  install(CODE "message(STATUS \"Stripping: ${installtree_name}\")" COMPONENT ${name})
-  install(CODE "execute_process(COMMAND xcrun strip -ST ${installtree_name})"
-          COMPONENT ${name})
+  if(NOT LLDB_SKIP_STRIP)
+    # Strip distribution binary with -ST (removing debug symbol table entries and
+    # Swift symbols). Avoid CMAKE_INSTALL_DO_STRIP and llvm_externalize_debuginfo()
+    # as they can't be configured sufficiently.
+    set(installtree_name "\$ENV\{DESTDIR\}${install_prefix}/${bundle_subdir}${output_name}")
+    install(CODE "message(STATUS \"Stripping: ${installtree_name}\")" COMPONENT ${name})
+    install(CODE "execute_process(COMMAND xcrun strip -ST ${installtree_name})"
+            COMPONENT ${name})
+  endif()
 endfunction()
 
 # CMake's set_target_properties() doesn't allow to pass lists for RPATH
