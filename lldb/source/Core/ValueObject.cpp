@@ -589,6 +589,10 @@ ValueObjectSP ValueObject::GetChildMemberWithName(ConstString name,
 
   std::vector<uint32_t> child_indexes;
   bool omit_empty_base_classes = true;
+
+  if (!GetCompilerType().IsValid())
+    return ValueObjectSP();
+
   const size_t num_child_indexes =
       GetCompilerType().GetIndexOfChildMemberWithName(
           name.GetCString(), omit_empty_base_classes, child_indexes);
