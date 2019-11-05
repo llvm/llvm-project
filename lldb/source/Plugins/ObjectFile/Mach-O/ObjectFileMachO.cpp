@@ -2677,7 +2677,8 @@ size_t ObjectFileMachO::ParseSymtab() {
 
     // Next we need to determine the correct path for the dyld shared cache.
 
-    ArchSpec header_arch = GetArchitecture();
+    ArchSpec header_arch;
+    GetArchitecture(header_arch);
     char dsc_path[PATH_MAX];
     char dsc_path_development[PATH_MAX];
 
@@ -5848,13 +5849,14 @@ llvm::VersionTuple ObjectFileMachO::GetVersion() {
 
 ArchSpec ObjectFileMachO::GetArchitecture() {
   ModuleSP module_sp(GetModule());
+  ArchSpec arch;
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
     return GetArchitecture(module_sp, m_header, m_data,
                            MachHeaderSizeFromMagic(m_header.magic));
   }
-  return {};
+  return arch;
 }
 
 void ObjectFileMachO::GetProcessSharedCacheUUID(Process *process,
