@@ -406,8 +406,9 @@ public:
 
   /// Build and insert \p Res = G_PTR_ADD \p Op0, \p Op1
   ///
-  /// G_PTR_ADD adds \p Op1 bytes to the pointer specified by \p Op0,
-  /// storing the resulting pointer in \p Res.
+  /// G_PTR_ADD adds \p Op1 addressible units to the pointer specified by \p Op0,
+  /// storing the resulting pointer in \p Res. Addressible units are typically
+  /// bytes but this can vary between targets.
   ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre \p Res and \p Op0 must be generic virtual registers with pointer
