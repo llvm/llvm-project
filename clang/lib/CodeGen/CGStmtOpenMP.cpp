@@ -23,6 +23,7 @@
 #include "clang/Basic/PrettyStackTrace.h"
 using namespace clang;
 using namespace CodeGen;
+using namespace llvm::omp;
 
 namespace {
 /// Lexical scope for OpenMP executable constructs, that handles correct codegen

@@ -15,6 +15,7 @@
 #include "clang/AST/ASTContext.h"
 
 using namespace clang;
+using namespace llvm::omp;
 
 void OMPExecutableDirective::setClauses(ArrayRef<OMPClause *> Clauses) {
   assert(Clauses.size() == getNumClauses() &&

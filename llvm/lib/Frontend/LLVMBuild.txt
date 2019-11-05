@@ -1,4 +1,4 @@
-;===- ./lib/LLVMBuild.txt --------------------------------------*- Conf -*--===;
+;===- ./lib/Frontend/LLVMBuild.txt -----------------------------*- Conf -*--===;
 ;
 ; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ; See https://llvm.org/LICENSE.txt for license information.
@@ -15,42 +15,9 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories =
- Analysis
- AsmParser
- Bitcode
- Bitstream
- CodeGen
- DebugInfo
- Demangle
- ExecutionEngine
- Frontend
- FuzzMutate
- LineEditor
- Linker
- IR
- IRReader
- LTO
- MC
- MCA
- Object
- BinaryFormat
- ObjectYAML
- Option
- Remarks
- Passes
- ProfileData
- Support
- TableGen
- TextAPI
- Target
- Testing
- ToolDrivers
- Transforms
- WindowsManifest
- XRay
+subdirectories = OpenMP
 
 [component_0]
 type = Group
-name = Libraries
-parent = $ROOT
+name = Frontend
+parent = Libraries

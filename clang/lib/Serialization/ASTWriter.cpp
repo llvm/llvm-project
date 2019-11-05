@@ -6622,7 +6622,7 @@ void OMPClauseWriter::writeClause(OMPClause *C) {
 }
 
 void OMPClauseWriter::VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C) {
-  Record.push_back(C->getCaptureRegion());
+  Record.push_back(uint64_t(C->getCaptureRegion()));
   Record.AddStmt(C->getPreInitStmt());
 }
 
@@ -6633,7 +6633,7 @@ void OMPClauseWriter::VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C) {
 
 void OMPClauseWriter::VisitOMPIfClause(OMPIfClause *C) {
   VisitOMPClauseWithPreInit(C);
-  Record.push_back(C->getNameModifier());
+  Record.push_back(uint64_t(C->getNameModifier()));
   Record.AddSourceLocation(C->getNameModifierLoc());
   Record.AddSourceLocation(C->getColonLoc());
   Record.AddStmt(C->getCondition());

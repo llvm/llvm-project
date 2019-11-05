@@ -1161,7 +1161,7 @@ OMPIsDevicePtrClause::CreateEmpty(const ASTContext &C,
 
 void OMPClausePrinter::VisitOMPIfClause(OMPIfClause *Node) {
   OS << "if(";
-  if (Node->getNameModifier() != OMPD_unknown)
+  if (Node->getNameModifier() != llvm::omp::OMPD_unknown)
     OS << getOpenMPDirectiveName(Node->getNameModifier()) << ": ";
   Node->getCondition()->printPretty(OS, nullptr, Policy, 0);
   OS << ")";

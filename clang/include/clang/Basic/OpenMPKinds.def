@@ -11,12 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef OPENMP_DIRECTIVE
-#  define OPENMP_DIRECTIVE(Name)
-#endif
-#ifndef OPENMP_DIRECTIVE_EXT
-#define OPENMP_DIRECTIVE_EXT(Name, Str)
-#endif
 #ifndef OPENMP_CLAUSE
 #  define OPENMP_CLAUSE(Name, Class)
 #endif
@@ -229,69 +223,6 @@ OPENMP_CONTEXT_SELECTOR_SET(device)
 // OpenMP context selectors.
 OPENMP_CONTEXT_SELECTOR(vendor)
 OPENMP_CONTEXT_SELECTOR(kind)
-
-// OpenMP directives.
-OPENMP_DIRECTIVE(threadprivate)
-OPENMP_DIRECTIVE(parallel)
-OPENMP_DIRECTIVE(task)
-OPENMP_DIRECTIVE(simd)
-OPENMP_DIRECTIVE(for)
-OPENMP_DIRECTIVE(sections)
-OPENMP_DIRECTIVE(section)
-OPENMP_DIRECTIVE(single)
-OPENMP_DIRECTIVE(master)
-OPENMP_DIRECTIVE(critical)
-OPENMP_DIRECTIVE(taskyield)
-OPENMP_DIRECTIVE(barrier)
-OPENMP_DIRECTIVE(taskwait)
-OPENMP_DIRECTIVE(taskgroup)
-OPENMP_DIRECTIVE(flush)
-OPENMP_DIRECTIVE(ordered)
-OPENMP_DIRECTIVE(atomic)
-OPENMP_DIRECTIVE(target)
-OPENMP_DIRECTIVE(teams)
-OPENMP_DIRECTIVE(cancel)
-OPENMP_DIRECTIVE(requires)
-OPENMP_DIRECTIVE_EXT(target_data, "target data")
-OPENMP_DIRECTIVE_EXT(target_enter_data, "target enter data")
-OPENMP_DIRECTIVE_EXT(target_exit_data, "target exit data")
-OPENMP_DIRECTIVE_EXT(target_parallel, "target parallel")
-OPENMP_DIRECTIVE_EXT(target_parallel_for, "target parallel for")
-OPENMP_DIRECTIVE_EXT(target_update, "target update")
-OPENMP_DIRECTIVE_EXT(parallel_for, "parallel for")
-OPENMP_DIRECTIVE_EXT(parallel_for_simd, "parallel for simd")
-OPENMP_DIRECTIVE_EXT(parallel_master, "parallel master")
-OPENMP_DIRECTIVE_EXT(parallel_sections, "parallel sections")
-OPENMP_DIRECTIVE_EXT(for_simd, "for simd")
-OPENMP_DIRECTIVE_EXT(cancellation_point, "cancellation point")
-OPENMP_DIRECTIVE_EXT(declare_reduction, "declare reduction")
-OPENMP_DIRECTIVE_EXT(declare_mapper, "declare mapper")
-OPENMP_DIRECTIVE_EXT(declare_simd, "declare simd")
-OPENMP_DIRECTIVE(taskloop)
-OPENMP_DIRECTIVE_EXT(taskloop_simd, "taskloop simd")
-OPENMP_DIRECTIVE(distribute)
-OPENMP_DIRECTIVE_EXT(declare_target, "declare target")
-OPENMP_DIRECTIVE_EXT(end_declare_target, "end declare target")
-OPENMP_DIRECTIVE_EXT(distribute_parallel_for, "distribute parallel for")
-OPENMP_DIRECTIVE_EXT(distribute_parallel_for_simd, "distribute parallel for simd")
-OPENMP_DIRECTIVE_EXT(distribute_simd, "distribute simd")
-OPENMP_DIRECTIVE_EXT(target_parallel_for_simd, "target parallel for simd")
-OPENMP_DIRECTIVE_EXT(target_simd, "target simd")
-OPENMP_DIRECTIVE_EXT(teams_distribute, "teams distribute")
-OPENMP_DIRECTIVE_EXT(teams_distribute_simd, "teams distribute simd")
-OPENMP_DIRECTIVE_EXT(teams_distribute_parallel_for_simd, "teams distribute parallel for simd")
-OPENMP_DIRECTIVE_EXT(teams_distribute_parallel_for, "teams distribute parallel for")
-OPENMP_DIRECTIVE_EXT(target_teams, "target teams")
-OPENMP_DIRECTIVE_EXT(target_teams_distribute, "target teams distribute")
-OPENMP_DIRECTIVE_EXT(target_teams_distribute_parallel_for, "target teams distribute parallel for")
-OPENMP_DIRECTIVE_EXT(target_teams_distribute_parallel_for_simd, "target teams distribute parallel for simd")
-OPENMP_DIRECTIVE_EXT(target_teams_distribute_simd, "target teams distribute simd")
-OPENMP_DIRECTIVE(allocate)
-OPENMP_DIRECTIVE_EXT(declare_variant, "declare variant")
-OPENMP_DIRECTIVE_EXT(master_taskloop, "master taskloop")
-OPENMP_DIRECTIVE_EXT(parallel_master_taskloop, "parallel master taskloop")
-OPENMP_DIRECTIVE_EXT(master_taskloop_simd, "master taskloop simd")
-OPENMP_DIRECTIVE_EXT(parallel_master_taskloop_simd, "parallel master taskloop simd")
 
 // OpenMP clauses.
 OPENMP_CLAUSE(allocator, OMPAllocatorClause)
@@ -1137,8 +1068,6 @@ OPENMP_MATCH_KIND(implementation)
 #undef OPENMP_SCHEDULE_KIND
 #undef OPENMP_PROC_BIND_KIND
 #undef OPENMP_DEFAULT_KIND
-#undef OPENMP_DIRECTIVE
-#undef OPENMP_DIRECTIVE_EXT
 #undef OPENMP_CLAUSE
 #undef OPENMP_CRITICAL_CLAUSE
 #undef OPENMP_ORDERED_CLAUSE
