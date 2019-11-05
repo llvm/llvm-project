@@ -1,28 +1,19 @@
-LEVEL = ../../make
-SRCDIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-CURDIR = $(shell pwd)
+SWIFT_SOURCES := main.swift
+SWIFTFLAGS_EXTRAS = -L$(BUILDDIR) -I$(BUILDDIR) -I$(SRCDIR) -lWrapper
+LD_EXTRAS = -Xlinker -rpath -Xlinker $(BUILDDIR)
 
-include $(LEVEL)/Makefile.rules
+all: libWrapper.dylib a.out
 
-a.out: main.swift libCppLib.dylib libWrapper.dylib
-	$(SWIFTC) $(SWIFTFLAGS) -Xlinker -rpath -Xlinker $(CURDIR) -I$(CURDIR) -lWrapper -L$(CURDIR) -o $@ $< \
-	    -toolchain-stdlib-rpath
-ifneq "$(CODESIGN)" ""
-	$(CODESIGN) -s - "$@"
-endif
-
+include Makefile.rules
 
 libCppLib.dylib: CppLib/CppLib.cpp
 	mkdir -p CppLib
-	$(MAKE) VPATH=$(VPATH) -f $(SRCDIR)/CppLib/Makefile
+	$(MAKE) -f $(MAKEFILE_RULES) \
+		DYLIB_NAME=CppLib DYLIB_ONLY=YES CXXFLAGS_EXTRAS=-fPIC \
+		DYLIB_CXX_SOURCES="CppLib/CppLib.cpp CppLib/CppLibWrapper.cpp"
 	install_name_tool -id $@ $@
 
-libWrapper.dylib: wrapper.swift libCppLib.dylib
-	$(SWIFTC) $(SWIFTFLAGS) -emit-module -emit-library -module-link-name Wrapper -module-name Wrapper -o $@ -L$(CURDIR) -lCppLib -I$(SRCDIR)/CppLib -o $@ -Xlinker -install_name -Xlinker @executable_path/$@ $< \
-            -toolchain-stdlib-rpath
-ifneq "$(CODESIGN)" ""
-	$(CODESIGN) -s - "$@"
-endif
-
-clean::
-	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out *.o
+libWrapper.dylib: libCppLib.dylib
+	$(MAKE) -f $(MAKEFILE_RULES) \
+		DYLIB_NAME=Wrapper DYLIB_SWIFT_SOURCES=wrapper.swift \
+		SWIFTFLAGS_EXTRAS="-I$(SRCDIR) -L. -lCppLib -module-link-name Wrapper"
