@@ -299,12 +299,11 @@ static void dumpLoclistsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
     }
 
     Header.dump(OS, DumpOpts);
-    DataExtractor LocData(Data.getData(),
-                          Data.isLittleEndian(), Header.getAddrSize());
 
     DWARFDebugLoclists Loclists;
     uint64_t EndOffset = Header.length() + Header.getHeaderOffset();
-    Loclists.parse(LocData, Offset, EndOffset, Header.getVersion());
+    Data.setAddressSize(Header.getAddrSize());
+    Loclists.parse(Data, Offset, EndOffset, Header.getVersion());
     Loclists.dump(OS, 0, MRI, DumpOpts, DumpOffset);
     Offset = EndOffset;
   }
@@ -733,7 +732,8 @@ const DWARFDebugLoclists *DWARFContext::getDebugLocDWO() {
   // Assume all compile units have the same address byte size.
   // FIXME: We don't need AddressSize for split DWARF since relocatable
   // addresses cannot appear there. At the moment DWARFExpression requires it.
-  DataExtractor LocData(DObj->getLocDWOSection().Data, isLittleEndian(), 4);
+  DWARFDataExtractor LocData(*DObj, DObj->getLocDWOSection(), isLittleEndian(),
+                             4);
   // Use version 4. DWO does not support the DWARF v5 .debug_loclists yet and
   // that means we are parsing the new style .debug_loc (pre-standatized version
   // of the .debug_loclists).

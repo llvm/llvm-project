@@ -119,13 +119,14 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
     }
 
     bool UseLocLists = !U->isDWOUnit();
-    StringRef LoclistsSectionData =
-        UseLocLists ? Obj.getLoclistsSection().Data : U->getLocSectionData();
+    auto Data =
+        UseLocLists
+            ? DWARFDataExtractor(Obj, Obj.getLoclistsSection(),
+                                 Ctx.isLittleEndian(), Obj.getAddressSize())
+            : DWARFDataExtractor(U->getLocSectionData(), Ctx.isLittleEndian(),
+                                 Obj.getAddressSize());
 
-    if (!LoclistsSectionData.empty()) {
-      DataExtractor Data(LoclistsSectionData, Ctx.isLittleEndian(),
-                         Obj.getAddressSize());
-
+    if (!Data.getData().empty()) {
       // Old-style location list were used in DWARF v4 (.debug_loc.dwo section).
       // Modern locations list (.debug_loclists) are used starting from v5.
       // Ideally we should take the version from the .debug_loclists section
