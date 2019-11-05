@@ -17,7 +17,7 @@ try:
 except ImportError:
     from io import StringIO
 
-from lit.ShCommands import GlobItem
+from lit.ShCommands import GlobItem, Command
 import lit.ShUtil as ShUtil
 import lit.Test as Test
 import lit.util
@@ -627,19 +627,34 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # Reference the global environment by default.
         cmd_shenv = shenv
         args = list(j.args)
-        while args[0] == 'env':
-            # Create a copy of the global environment and modify it for this one
-            # command. There might be multiple envs in a pipeline, and
-            # there might be multiple envs in a command (usually when one comes
-            # from a substitution):
-            #   env FOO=1 llc < %s | env BAR=2 llvm-mc | FileCheck %s
-            #   env FOO=1 %{another_env_plus_cmd} | FileCheck %s
-            if cmd_shenv is shenv:
-                cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env)
-            args = updateEnv(cmd_shenv, args)
-            if not args:
-                raise InternalShellError(j,
-                                         "Error: 'env' requires a subcommand")
+        not_args = []
+        not_count = 0
+        not_crash = False
+        while True:
+            if args[0] == 'env':
+                # Create a copy of the global environment and modify it for
+                # this one command. There might be multiple envs in a pipeline,
+                # and there might be multiple envs in a command (usually when
+                # one comes from a substitution):
+                #   env FOO=1 llc < %s | env BAR=2 llvm-mc | FileCheck %s
+                #   env FOO=1 %{another_env_plus_cmd} | FileCheck %s
+                if cmd_shenv is shenv:
+                    cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env)
+                args = updateEnv(cmd_shenv, args)
+                if not args:
+                    raise InternalShellError(j, "Error: 'env' requires a"
+                                                " subcommand")
+            elif args[0] == 'not':
+                not_args.append(args.pop(0))
+                not_count += 1
+                if args and args[0] == '--crash':
+                    not_args.append(args.pop(0))
+                    not_crash = True
+                if not args:
+                    raise InternalShellError(j, "Error: 'not' requires a"
+                                                " subcommand")
+            else:
+                break
 
         # Handle in-process builtins.
         #
@@ -655,12 +670,36 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             if not cmd_shenv is shenv:
                 raise InternalShellError(j, "Error: 'env' cannot call '{}'"
                                             .format(args[0]))
+            if not_crash:
+                raise InternalShellError(j, "Error: 'not --crash' cannot call"
+                                            " '{}'".format(args[0]))
             if len(cmd.commands) != 1:
                 raise InternalShellError(j, "Unsupported: '{}' cannot be part"
                                             " of a pipeline".format(args[0]))
-            result = inproc_builtin(j, cmd_shenv)
+            result = inproc_builtin(Command(args, j.redirects), cmd_shenv)
+            if not_count % 2:
+                result.exitCode = int(not result.exitCode)
+            result.command.args = j.args;
             results.append(result)
             return result.exitCode
+
+        # Resolve any out-of-process builtin command before adding back 'not'
+        # commands.
+        if args[0] in builtin_commands:
+            args.insert(0, sys.executable)
+            cmd_shenv.env['PYTHONPATH'] = \
+                os.path.dirname(os.path.abspath(__file__))
+            args[1] = os.path.join(builtin_commands_dir, args[1] + ".py")
+
+        # We had to search through the 'not' commands to find all the 'env'
+        # commands and any other in-process builtin command.  We don't want to
+        # reimplement 'not' and its '--crash' here, so just push all 'not'
+        # commands back to be called as external commands.  Because this
+        # approach effectively moves all 'env' commands up front, it relies on
+        # the assumptions that (1) environment variables are not intended to be
+        # relevant to 'not' commands and (2) the 'env' command should always
+        # blindly pass along the status it receives from any command it calls.
+        args = not_args + args
 
         stdin, stdout, stderr = processRedirects(j, default_stdin, cmd_shenv,
                                                  opened_files)
@@ -683,17 +722,15 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 
         # Resolve the executable path ourselves.
         executable = None
-        is_builtin_cmd = args[0] in builtin_commands;
-        if not is_builtin_cmd:
-            # For paths relative to cwd, use the cwd of the shell environment.
-            if args[0].startswith('.'):
-                exe_in_cwd = os.path.join(cmd_shenv.cwd, args[0])
-                if os.path.isfile(exe_in_cwd):
-                    executable = exe_in_cwd
-            if not executable:
-                executable = lit.util.which(args[0], cmd_shenv.env['PATH'])
-            if not executable:
-                raise InternalShellError(j, '%r: command not found' % args[0])
+        # For paths relative to cwd, use the cwd of the shell environment.
+        if args[0].startswith('.'):
+            exe_in_cwd = os.path.join(cmd_shenv.cwd, args[0])
+            if os.path.isfile(exe_in_cwd):
+                executable = exe_in_cwd
+        if not executable:
+            executable = lit.util.which(args[0], cmd_shenv.env['PATH'])
+        if not executable:
+            raise InternalShellError(j, '%r: command not found' % args[0])
 
         # Replace uses of /dev/null with temporary files.
         if kAvoidDevNull:
@@ -712,11 +749,6 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 
         # Expand all glob expressions
         args = expand_glob_expressions(args, cmd_shenv.cwd)
-        if is_builtin_cmd:
-            args.insert(0, sys.executable)
-            cmd_shenv.env['PYTHONPATH'] = \
-                os.path.dirname(os.path.abspath(__file__))
-            args[1] = os.path.join(builtin_commands_dir ,args[1] + ".py")
 
         # On Windows, do our own command line quoting for better compatibility
         # with some core utility distributions.
