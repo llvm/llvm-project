@@ -239,18 +239,18 @@ define void @test16elt(<16 x float>* noalias nocapture sret %agg.result, <16 x i
 ; CHECK-P9-NEXT:    xxsldwi v6, vs0, vs0, 3
 ; CHECK-P9-NEXT:    xvcvuxdsp vs0, v0
 ; CHECK-P9-NEXT:    lxv v5, 64(r4)
+; CHECK-P9-NEXT:    stxv v1, 0(r3)
 ; CHECK-P9-NEXT:    xxsldwi v0, vs0, vs0, 3
 ; CHECK-P9-NEXT:    xvcvuxdsp vs0, v5
 ; CHECK-P9-NEXT:    lxv v4, 80(r4)
 ; CHECK-P9-NEXT:    vpkudum v0, v0, v6
+; CHECK-P9-NEXT:    stxv v0, 16(r3)
 ; CHECK-P9-NEXT:    xxsldwi v5, vs0, vs0, 3
-; CHECK-P9-NEXT:    lxv v3, 96(r4)
 ; CHECK-P9-NEXT:    xvcvuxdsp vs0, v4
+; CHECK-P9-NEXT:    lxv v3, 96(r4)
 ; CHECK-P9-NEXT:    xxsldwi v4, vs0, vs0, 3
 ; CHECK-P9-NEXT:    xvcvuxdsp vs0, v3
 ; CHECK-P9-NEXT:    lxv v2, 112(r4)
-; CHECK-P9-NEXT:    stxv v0, 16(r3)
-; CHECK-P9-NEXT:    stxv v1, 0(r3)
 ; CHECK-P9-NEXT:    vpkudum v4, v4, v5
 ; CHECK-P9-NEXT:    stxv v4, 32(r3)
 ; CHECK-P9-NEXT:    xxsldwi v3, vs0, vs0, 3
@@ -275,18 +275,18 @@ define void @test16elt(<16 x float>* noalias nocapture sret %agg.result, <16 x i
 ; CHECK-BE-NEXT:    xxsldwi v6, vs0, vs0, 3
 ; CHECK-BE-NEXT:    xvcvuxdsp vs0, v0
 ; CHECK-BE-NEXT:    lxv v5, 80(r4)
+; CHECK-BE-NEXT:    stxv v1, 0(r3)
 ; CHECK-BE-NEXT:    xxsldwi v0, vs0, vs0, 3
 ; CHECK-BE-NEXT:    xvcvuxdsp vs0, v5
 ; CHECK-BE-NEXT:    lxv v4, 64(r4)
 ; CHECK-BE-NEXT:    vpkudum v0, v0, v6
+; CHECK-BE-NEXT:    stxv v0, 16(r3)
 ; CHECK-BE-NEXT:    xxsldwi v5, vs0, vs0, 3
-; CHECK-BE-NEXT:    lxv v3, 112(r4)
 ; CHECK-BE-NEXT:    xvcvuxdsp vs0, v4
+; CHECK-BE-NEXT:    lxv v3, 112(r4)
 ; CHECK-BE-NEXT:    xxsldwi v4, vs0, vs0, 3
 ; CHECK-BE-NEXT:    xvcvuxdsp vs0, v3
 ; CHECK-BE-NEXT:    lxv v2, 96(r4)
-; CHECK-BE-NEXT:    stxv v0, 16(r3)
-; CHECK-BE-NEXT:    stxv v1, 0(r3)
 ; CHECK-BE-NEXT:    vpkudum v4, v4, v5
 ; CHECK-BE-NEXT:    stxv v4, 32(r3)
 ; CHECK-BE-NEXT:    xxsldwi v3, vs0, vs0, 3
@@ -532,18 +532,18 @@ define void @test16elt_signed(<16 x float>* noalias nocapture sret %agg.result, 
 ; CHECK-P9-NEXT:    xxsldwi v6, vs0, vs0, 3
 ; CHECK-P9-NEXT:    xvcvsxdsp vs0, v0
 ; CHECK-P9-NEXT:    lxv v5, 64(r4)
+; CHECK-P9-NEXT:    stxv v1, 0(r3)
 ; CHECK-P9-NEXT:    xxsldwi v0, vs0, vs0, 3
 ; CHECK-P9-NEXT:    xvcvsxdsp vs0, v5
 ; CHECK-P9-NEXT:    lxv v4, 80(r4)
 ; CHECK-P9-NEXT:    vpkudum v0, v0, v6
+; CHECK-P9-NEXT:    stxv v0, 16(r3)
 ; CHECK-P9-NEXT:    xxsldwi v5, vs0, vs0, 3
-; CHECK-P9-NEXT:    lxv v3, 96(r4)
 ; CHECK-P9-NEXT:    xvcvsxdsp vs0, v4
+; CHECK-P9-NEXT:    lxv v3, 96(r4)
 ; CHECK-P9-NEXT:    xxsldwi v4, vs0, vs0, 3
 ; CHECK-P9-NEXT:    xvcvsxdsp vs0, v3
 ; CHECK-P9-NEXT:    lxv v2, 112(r4)
-; CHECK-P9-NEXT:    stxv v0, 16(r3)
-; CHECK-P9-NEXT:    stxv v1, 0(r3)
 ; CHECK-P9-NEXT:    vpkudum v4, v4, v5
 ; CHECK-P9-NEXT:    stxv v4, 32(r3)
 ; CHECK-P9-NEXT:    xxsldwi v3, vs0, vs0, 3
@@ -568,18 +568,18 @@ define void @test16elt_signed(<16 x float>* noalias nocapture sret %agg.result, 
 ; CHECK-BE-NEXT:    xxsldwi v6, vs0, vs0, 3
 ; CHECK-BE-NEXT:    xvcvsxdsp vs0, v0
 ; CHECK-BE-NEXT:    lxv v5, 80(r4)
+; CHECK-BE-NEXT:    stxv v1, 0(r3)
 ; CHECK-BE-NEXT:    xxsldwi v0, vs0, vs0, 3
 ; CHECK-BE-NEXT:    xvcvsxdsp vs0, v5
 ; CHECK-BE-NEXT:    lxv v4, 64(r4)
 ; CHECK-BE-NEXT:    vpkudum v0, v0, v6
+; CHECK-BE-NEXT:    stxv v0, 16(r3)
 ; CHECK-BE-NEXT:    xxsldwi v5, vs0, vs0, 3
-; CHECK-BE-NEXT:    lxv v3, 112(r4)
 ; CHECK-BE-NEXT:    xvcvsxdsp vs0, v4
+; CHECK-BE-NEXT:    lxv v3, 112(r4)
 ; CHECK-BE-NEXT:    xxsldwi v4, vs0, vs0, 3
 ; CHECK-BE-NEXT:    xvcvsxdsp vs0, v3
 ; CHECK-BE-NEXT:    lxv v2, 96(r4)
-; CHECK-BE-NEXT:    stxv v0, 16(r3)
-; CHECK-BE-NEXT:    stxv v1, 0(r3)
 ; CHECK-BE-NEXT:    vpkudum v4, v4, v5
 ; CHECK-BE-NEXT:    stxv v4, 32(r3)
 ; CHECK-BE-NEXT:    xxsldwi v3, vs0, vs0, 3

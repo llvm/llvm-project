@@ -712,24 +712,24 @@ define void @test16elt_signed(<16 x double>* noalias nocapture sret %agg.result,
 ; CHECK-P9-NEXT:    vextsh2d v2, v2
 ; CHECK-P9-NEXT:    xvcvsxddp vs3, v2
 ; CHECK-P9-NEXT:    vperm v2, v4, v4, v3
+; CHECK-P9-NEXT:    stxv vs2, 32(r3)
 ; CHECK-P9-NEXT:    vextsh2d v2, v2
 ; CHECK-P9-NEXT:    stxv vs3, 48(r3)
+; CHECK-P9-NEXT:    stxv vs1, 16(r3)
 ; CHECK-P9-NEXT:    xvcvsxddp vs4, v2
 ; CHECK-P9-NEXT:    vperm v2, v4, v4, v5
 ; CHECK-P9-NEXT:    vextsh2d v2, v2
 ; CHECK-P9-NEXT:    xvcvsxddp vs5, v2
 ; CHECK-P9-NEXT:    vperm v2, v4, v4, v0
 ; CHECK-P9-NEXT:    stxv vs4, 64(r3)
-; CHECK-P9-NEXT:    stxv vs5, 80(r3)
 ; CHECK-P9-NEXT:    vextsh2d v2, v2
 ; CHECK-P9-NEXT:    xvcvsxddp vs6, v2
 ; CHECK-P9-NEXT:    vperm v2, v4, v4, v1
-; CHECK-P9-NEXT:    vextsh2d v2, v2
+; CHECK-P9-NEXT:    stxv vs5, 80(r3)
 ; CHECK-P9-NEXT:    stxv vs6, 96(r3)
+; CHECK-P9-NEXT:    vextsh2d v2, v2
 ; CHECK-P9-NEXT:    xvcvsxddp vs7, v2
 ; CHECK-P9-NEXT:    stxv vs7, 112(r3)
-; CHECK-P9-NEXT:    stxv vs2, 32(r3)
-; CHECK-P9-NEXT:    stxv vs1, 16(r3)
 ; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    blr
 ;
