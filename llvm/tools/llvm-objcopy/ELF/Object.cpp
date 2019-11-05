@@ -1009,7 +1009,7 @@ void GnuDebugLinkSection::init(StringRef File) {
   Size = alignTo(FileName.size() + 1, 4) + 4;
   // The CRC32 will only be aligned if we align the whole section.
   Align = 4;
-  Type = ELF::SHT_PROGBITS;
+  Type = OriginalType = ELF::SHT_PROGBITS;
   Name = ".gnu_debuglink";
   // For sections not found in segments, OriginalOffset is only used to
   // establish the order that sections should go in. By using the maximum
@@ -1521,8 +1521,8 @@ template <class ELFT> void ELFBuilder<ELFT>::readSectionHeaders() {
     }
     auto &Sec = makeSection(Shdr);
     Sec.Name = unwrapOrError(ElfFile.getSectionName(&Shdr));
-    Sec.Type = Shdr.sh_type;
-    Sec.Flags = Shdr.sh_flags;
+    Sec.Type = Sec.OriginalType = Shdr.sh_type;
+    Sec.Flags = Sec.OriginalFlags = Shdr.sh_flags;
     Sec.Addr = Shdr.sh_addr;
     Sec.Offset = Shdr.sh_offset;
     Sec.OriginalOffset = Shdr.sh_offset;
@@ -1797,10 +1797,9 @@ template <class ELFT> void ELFWriter<ELFT>::writeSectionData() {
 
 template <class ELFT> void ELFWriter<ELFT>::writeSegmentData() {
   for (Segment &Seg : Obj.segments()) {
-    uint8_t *B = Buf.getBufferStart() + Seg.Offset;
-    assert(Seg.FileSize == Seg.getContents().size() &&
-           "Segment size must match contents size");
-    std::memcpy(B, Seg.getContents().data(), Seg.FileSize);
+    size_t Size = std::min<size_t>(Seg.FileSize, Seg.getContents().size());
+    std::memcpy(Buf.getBufferStart() + Seg.Offset, Seg.getContents().data(),
+                Size);
   }
 
   // Iterate over removed sections and overwrite their old data with zeroes.
@@ -1815,8 +1814,10 @@ template <class ELFT> void ELFWriter<ELFT>::writeSegmentData() {
 }
 
 template <class ELFT>
-ELFWriter<ELFT>::ELFWriter(Object &Obj, Buffer &Buf, bool WSH)
-    : Writer(Obj, Buf), WriteSectionHeaders(WSH && Obj.HadShdrs) {}
+ELFWriter<ELFT>::ELFWriter(Object &Obj, Buffer &Buf, bool WSH,
+                           bool OnlyKeepDebug)
+    : Writer(Obj, Buf), WriteSectionHeaders(WSH && Obj.HadShdrs),
+      OnlyKeepDebug(OnlyKeepDebug) {}
 
 Error Object::removeSections(bool AllowBrokenLinks,
     std::function<bool(const SectionBase &)> ToRemove) {
@@ -1957,6 +1958,78 @@ static uint64_t layoutSections(Range Sections, uint64_t Offset) {
   return Offset;
 }
 
+// Rewrite sh_offset after some sections are changed to SHT_NOBITS and thus
+// occupy no space in the file.
+static uint64_t layoutSectionsForOnlyKeepDebug(Object &Obj, uint64_t Off) {
+  uint32_t Index = 1;
+  for (auto &Sec : Obj.sections()) {
+    Sec.Index = Index++;
+
+    auto *FirstSec = Sec.ParentSegment && Sec.ParentSegment->Type == PT_LOAD
+                         ? Sec.ParentSegment->firstSection()
+                         : nullptr;
+
+    // The first section in a PT_LOAD has to have congruent offset and address
+    // modulo the alignment, which usually equals the maximum page size.
+    if (FirstSec && FirstSec == &Sec)
+      Off = alignTo(Off, Sec.ParentSegment->Align, Sec.Addr);
+
+    // sh_offset is not significant for SHT_NOBITS sections, but the congruence
+    // rule must be followed if it is the first section in a PT_LOAD. Do not
+    // advance Off.
+    if (Sec.Type == SHT_NOBITS) {
+      Sec.Offset = Off;
+      continue;
+    }
+
+    if (!FirstSec) {
+      // FirstSec being nullptr generally means that Sec does not have the
+      // SHF_ALLOC flag.
+      Off = Sec.Align ? alignTo(Off, Sec.Align) : Off;
+    } else if (FirstSec != &Sec) {
+      // The offset is relative to the first section in the PT_LOAD segment. Use
+      // sh_offset for non-SHF_ALLOC sections.
+      Off = Sec.OriginalOffset - FirstSec->OriginalOffset + FirstSec->Offset;
+    }
+    Sec.Offset = Off;
+    Off += Sec.Size;
+  }
+  return Off;
+}
+
+// Rewrite p_offset and p_filesz of non-empty non-PT_PHDR segments after
+// sh_offset values have been updated.
+static uint64_t layoutSegmentsForOnlyKeepDebug(std::vector<Segment *> &Segments,
+                                               uint64_t HdrEnd) {
+  uint64_t MaxOffset = 0;
+  for (Segment *Seg : Segments) {
+    const SectionBase *Sec = Seg->firstSection();
+    if (Seg->Type == PT_PHDR || !Sec)
+      continue;
+
+    uint64_t Offset = Sec->Offset;
+    uint64_t FileSize = 0;
+    for (const SectionBase *Sec : Seg->Sections) {
+      uint64_t Size = Sec->Type == SHT_NOBITS ? 0 : Sec->Size;
+      if (Sec->Offset + Size > Offset)
+        FileSize = std::max(FileSize, Sec->Offset + Size - Offset);
+    }
+
+    // If the segment includes EHDR and program headers, don't make it smaller
+    // than the headers.
+    if (Seg->Offset < HdrEnd && HdrEnd <= Seg->Offset + Seg->FileSize) {
+      FileSize += Offset - Seg->Offset;
+      Offset = Seg->Offset;
+      FileSize = std::max(FileSize, HdrEnd - Offset);
+    }
+
+    Seg->Offset = Offset;
+    Seg->FileSize = FileSize;
+    MaxOffset = std::max(MaxOffset, Offset + FileSize);
+  }
+  return MaxOffset;
+}
+
 template <class ELFT> void ELFWriter<ELFT>::initEhdrSegment() {
   Segment &ElfHdr = Obj.ElfHdrSegment;
   ElfHdr.Type = PT_PHDR;
@@ -1977,12 +2050,24 @@ template <class ELFT> void ELFWriter<ELFT>::assignOffsets() {
   OrderedSegments.push_back(&Obj.ElfHdrSegment);
   OrderedSegments.push_back(&Obj.ProgramHdrSegment);
   orderSegments(OrderedSegments);
-  // Offset is used as the start offset of the first segment to be laid out.
-  // Since the ELF Header (ElfHdrSegment) must be at the start of the file,
-  // we start at offset 0.
-  uint64_t Offset = 0;
-  Offset = layoutSegments(OrderedSegments, Offset);
-  Offset = layoutSections(Obj.sections(), Offset);
+
+  uint64_t Offset;
+  if (OnlyKeepDebug) {
+    // For --only-keep-debug, the sections that did not preserve contents were
+    // changed to SHT_NOBITS. We now rewrite sh_offset fields of sections, and
+    // then rewrite p_offset/p_filesz of program headers.
+    uint64_t HdrEnd =
+        sizeof(Elf_Ehdr) + llvm::size(Obj.segments()) * sizeof(Elf_Phdr);
+    Offset = layoutSectionsForOnlyKeepDebug(Obj, HdrEnd);
+    Offset = std::max(Offset,
+                      layoutSegmentsForOnlyKeepDebug(OrderedSegments, HdrEnd));
+  } else {
+    // Offset is used as the start offset of the first segment to be laid out.
+    // Since the ELF Header (ElfHdrSegment) must be at the start of the file,
+    // we start at offset 0.
+    Offset = layoutSegments(OrderedSegments, 0);
+    Offset = layoutSections(Obj.sections(), Offset);
+  }
   // If we need to write the section header table out then we need to align the
   // Offset so that SHOffset is valid.
   if (WriteSectionHeaders)
