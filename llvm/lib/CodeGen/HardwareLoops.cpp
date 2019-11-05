@@ -21,6 +21,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -75,7 +76,43 @@ ForceGuardLoopEntry(
 
 STATISTIC(NumHWLoops, "Number of loops converted to hardware loops");
 
+#ifndef NDEBUG
+static void debugHWLoopFailure(const StringRef DebugMsg,
+    Instruction *I) {
+  dbgs() << "HWLoops: " << DebugMsg;
+  if (I)
+    dbgs() << ' ' << *I;
+  else
+    dbgs() << '.';
+  dbgs() << '\n';
+}
+#endif
+
+static OptimizationRemarkAnalysis
+createHWLoopAnalysis(StringRef RemarkName, Loop *L, Instruction *I) {
+  Value *CodeRegion = L->getHeader();
+  DebugLoc DL = L->getStartLoc();
+
+  if (I) {
+    CodeRegion = I->getParent();
+    // If there is no debug location attached to the instruction, revert back to
+    // using the loop's.
+    if (I->getDebugLoc())
+      DL = I->getDebugLoc();
+  }
+
+  OptimizationRemarkAnalysis R(DEBUG_TYPE, RemarkName, DL, CodeRegion);
+  R << "hardware-loop not created: ";
+  return R;
+}
+
 namespace {
+
+  void reportHWLoopFailure(const StringRef Msg, const StringRef ORETag,
+      OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I = nullptr) {
+    LLVM_DEBUG(debugHWLoopFailure(Msg, I));
+    ORE->emit(createHWLoopAnalysis(ORETag, TheLoop, I) << Msg);
+  }
 
   using TTI = TargetTransformInfo;
 
@@ -97,6 +134,7 @@ namespace {
       AU.addRequired<ScalarEvolutionWrapperPass>();
       AU.addRequired<AssumptionCacheTracker>();
       AU.addRequired<TargetTransformInfoWrapperPass>();
+      AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
     }
 
     // Try to convert the given Loop into a hardware loop.
@@ -110,6 +148,7 @@ namespace {
     ScalarEvolution *SE = nullptr;
     LoopInfo *LI = nullptr;
     const DataLayout *DL = nullptr;
+    OptimizationRemarkEmitter *ORE = nullptr;
     const TargetTransformInfo *TTI = nullptr;
     DominatorTree *DT = nullptr;
     bool PreserveLCSSA = false;
@@ -143,8 +182,9 @@ namespace {
 
   public:
     HardwareLoop(HardwareLoopInfo &Info, ScalarEvolution &SE,
-                 const DataLayout &DL) :
-      SE(SE), DL(DL), L(Info.L), M(L->getHeader()->getModule()),
+                 const DataLayout &DL,
+                 OptimizationRemarkEmitter *ORE) :
+      SE(SE), DL(DL), ORE(ORE), L(Info.L), M(L->getHeader()->getModule()),
       ExitCount(Info.ExitCount),
       CountType(Info.CountType),
       ExitBranch(Info.ExitBranch),
@@ -157,6 +197,7 @@ namespace {
   private:
     ScalarEvolution &SE;
     const DataLayout &DL;
+    OptimizationRemarkEmitter *ORE = nullptr;
     Loop *L                 = nullptr;
     Module *M               = nullptr;
     const SCEV *ExitCount   = nullptr;
@@ -182,6 +223,7 @@ bool HardwareLoops::runOnFunction(Function &F) {
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   DL = &F.getParent()->getDataLayout();
+  ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
   auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
   LibInfo = TLIP ? &TLIP->getTLI(F) : nullptr;
   PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
@@ -201,31 +243,39 @@ bool HardwareLoops::runOnFunction(Function &F) {
 // converted and the parent loop doesn't support containing a hardware loop.
 bool HardwareLoops::TryConvertLoop(Loop *L) {
   // Process nested loops first.
-  for (Loop::iterator I = L->begin(), E = L->end(); I != E; ++I)
-    if (TryConvertLoop(*I))
+  for (Loop::iterator I = L->begin(), E = L->end(); I != E; ++I) {
+    if (TryConvertLoop(*I)) {
+      reportHWLoopFailure("nested hardware-loops not supported", "HWLoopNested",
+                          ORE, L);
       return true; // Stop search.
-
-  HardwareLoopInfo HWLoopInfo(L);
-  if (!HWLoopInfo.canAnalyze(*LI))
-    return false;
-
-  if (TTI->isHardwareLoopProfitable(L, *SE, *AC, LibInfo, HWLoopInfo) ||
-      ForceHardwareLoops) {
-
-    // Allow overriding of the counter width and loop decrement value.
-    if (CounterBitWidth.getNumOccurrences())
-      HWLoopInfo.CountType =
-        IntegerType::get(M->getContext(), CounterBitWidth);
-
-    if (LoopDecrement.getNumOccurrences())
-      HWLoopInfo.LoopDecrement =
-        ConstantInt::get(HWLoopInfo.CountType, LoopDecrement);
-
-    MadeChange |= TryConvertLoop(HWLoopInfo);
-    return MadeChange && (!HWLoopInfo.IsNestingLegal && !ForceNestedLoop);
+    }
   }
 
-  return false;
+  HardwareLoopInfo HWLoopInfo(L);
+  if (!HWLoopInfo.canAnalyze(*LI)) {
+    reportHWLoopFailure("cannot analyze loop, irreducible control flow",
+                        "HWLoopCannotAnalyze", ORE, L);
+    return false;
+  }
+
+  if (!ForceHardwareLoops &&
+      !TTI->isHardwareLoopProfitable(L, *SE, *AC, LibInfo, HWLoopInfo)) {
+    reportHWLoopFailure("it's not profitable to create a hardware-loop",
+                        "HWLoopNotProfitable", ORE, L);
+    return false;
+  }
+
+  // Allow overriding of the counter width and loop decrement value.
+  if (CounterBitWidth.getNumOccurrences())
+    HWLoopInfo.CountType =
+      IntegerType::get(M->getContext(), CounterBitWidth);
+
+  if (LoopDecrement.getNumOccurrences())
+    HWLoopInfo.LoopDecrement =
+      ConstantInt::get(HWLoopInfo.CountType, LoopDecrement);
+
+  MadeChange |= TryConvertLoop(HWLoopInfo);
+  return MadeChange && (!HWLoopInfo.IsNestingLegal && !ForceNestedLoop);
 }
 
 bool HardwareLoops::TryConvertLoop(HardwareLoopInfo &HWLoopInfo) {
@@ -234,8 +284,13 @@ bool HardwareLoops::TryConvertLoop(HardwareLoopInfo &HWLoopInfo) {
   LLVM_DEBUG(dbgs() << "HWLoops: Try to convert profitable loop: " << *L);
 
   if (!HWLoopInfo.isHardwareLoopCandidate(*SE, *LI, *DT, ForceNestedLoop,
-                                          ForceHardwareLoopPHI))
+                                          ForceHardwareLoopPHI)) {
+    // TODO: there can be many reasons a loop is not considered a
+    // candidate, so we should let isHardwareLoopCandidate fill in the
+    // reason and then report a better message here.
+    reportHWLoopFailure("loop is not a candidate", "HWLoopNoCandidate", ORE, L);
     return false;
+  }
 
   assert(
       (HWLoopInfo.ExitBlock && HWLoopInfo.ExitBranch && HWLoopInfo.ExitCount) &&
@@ -249,7 +304,7 @@ bool HardwareLoops::TryConvertLoop(HardwareLoopInfo &HWLoopInfo) {
   if (!Preheader)
     return false;
 
-  HardwareLoop HWLoop(HWLoopInfo, *SE, *DL);
+  HardwareLoop HWLoop(HWLoopInfo, *SE, *DL, ORE);
   HWLoop.Create();
   ++NumHWLoops;
   return true;
@@ -257,10 +312,13 @@ bool HardwareLoops::TryConvertLoop(HardwareLoopInfo &HWLoopInfo) {
 
 void HardwareLoop::Create() {
   LLVM_DEBUG(dbgs() << "HWLoops: Converting loop..\n");
- 
+
   Value *LoopCountInit = InitLoopCount();
-  if (!LoopCountInit)
+  if (!LoopCountInit) {
+    reportHWLoopFailure("could not safely create a loop count expression",
+                        "HWLoopNotSafe", ORE, L);
     return;
+  }
 
   InsertIterationSetup(LoopCountInit);
 
@@ -458,6 +516,7 @@ INITIALIZE_PASS_BEGIN(HardwareLoops, DEBUG_TYPE, HW_LOOPS_NAME, false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(HardwareLoops, DEBUG_TYPE, HW_LOOPS_NAME, false, false)
 
 FunctionPass *llvm::createHardwareLoopsPass() { return new HardwareLoops(); }
