@@ -173,6 +173,7 @@ ArchSpec MinidumpParser::GetArchitecture() {
   case ProcessorArchitecture::ARM:
     triple.setArch(llvm::Triple::ArchType::arm);
     break;
+  case ProcessorArchitecture::ARM64:
   case ProcessorArchitecture::BP_ARM64:
     triple.setArch(llvm::Triple::ArchType::aarch64);
     break;
