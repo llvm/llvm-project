@@ -1,0 +1,10 @@
+breakpoint set -f foo.cpp -l 11
+run
+p foo
+next
+p Foo(2, 3.33);
+p $1
+p foo = Foo(3, 4.44);
+p foo
+cont
+reproducer generate
