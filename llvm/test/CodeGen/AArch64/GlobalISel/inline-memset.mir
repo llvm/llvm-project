@@ -83,7 +83,7 @@ body:             |
     ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
     ; CHECK: G_STORE [[MUL]](s64), [[COPY]](p0) :: (store 8 into %ir.dst, align 1)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY]], [[C1]](s64)
+    ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
     ; CHECK: G_STORE [[MUL]](s64), [[GEP]](p0) :: (store 8 into %ir.dst + 8, align 1)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
@@ -108,7 +108,7 @@ body:             |
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4629771061636907072
     ; CHECK: G_STORE [[C]](s64), [[COPY]](p0) :: (store 8 into %ir.dst, align 1)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY]], [[C1]](s64)
+    ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
     ; CHECK: G_STORE [[C]](s64), [[GEP]](p0) :: (store 8 into %ir.dst + 8, align 1)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
@@ -132,11 +132,11 @@ body:             |
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4629771061636907072
     ; CHECK: G_STORE [[C]](s64), [[COPY]](p0) :: (store 8 into %ir.dst, align 1)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_GEP [[COPY]], [[C1]](s64)
+    ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
     ; CHECK: G_STORE [[C]](s64), [[GEP]](p0) :: (store 8 into %ir.dst + 8, align 1)
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[C]](s64)
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_GEP [[COPY]], [[C2]](s64)
+    ; CHECK: [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
     ; CHECK: G_STORE [[TRUNC]](s16), [[GEP1]](p0) :: (store 2 into %ir.dst + 16, align 1)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0

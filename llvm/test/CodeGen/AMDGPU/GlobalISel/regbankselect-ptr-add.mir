@@ -13,10 +13,10 @@ body: |
     ; CHECK-LABEL: name: gep_p1_s_k
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; CHECK: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 1
-    ; CHECK: [[GEP:%[0-9]+]]:sgpr(p1) = G_GEP [[COPY]], [[C]](s64)
+    ; CHECK: [[GEP:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s64) = G_CONSTANT i64 1
-    %2:_(p1) = G_GEP %0, %1
+    %2:_(p1) = G_PTR_ADD %0, %1
 ...
 
 ---
@@ -30,10 +30,10 @@ body: |
     ; CHECK-LABEL: name: gep_p1_s_s
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
-    ; CHECK: [[GEP:%[0-9]+]]:sgpr(p1) = G_GEP [[COPY]], [[COPY1]](s64)
+    ; CHECK: [[GEP:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[COPY]], [[COPY1]](s64)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s64) = COPY $sgpr2_sgpr3
-    %2:_(p1) = G_GEP %0, %1
+    %2:_(p1) = G_PTR_ADD %0, %1
 ...
 
 ---
@@ -48,10 +48,10 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
     ; CHECK: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY [[C]](s64)
-    ; CHECK: [[GEP:%[0-9]+]]:vgpr(p1) = G_GEP [[COPY]], [[COPY1]](s64)
+    ; CHECK: [[GEP:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY]], [[COPY1]](s64)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_CONSTANT i64 1
-    %2:_(p1) = G_GEP %0, %1
+    %2:_(p1) = G_PTR_ADD %0, %1
 ...
 
 ---
@@ -66,10 +66,10 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY1]](s64)
-    ; CHECK: [[GEP:%[0-9]+]]:vgpr(p1) = G_GEP [[COPY]], [[COPY2]](s64)
+    ; CHECK: [[GEP:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY]], [[COPY2]](s64)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $sgpr0_sgpr1
-    %2:_(p1) = G_GEP %0, %1
+    %2:_(p1) = G_PTR_ADD %0, %1
 ...
 
 ---
@@ -83,8 +83,8 @@ body: |
     ; CHECK-LABEL: name: gep_p1_v_v
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; CHECK: [[GEP:%[0-9]+]]:vgpr(p1) = G_GEP [[COPY]], [[COPY1]](s64)
+    ; CHECK: [[GEP:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY]], [[COPY1]](s64)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $vgpr2_vgpr3
-    %2:_(p1) = G_GEP %0, %1
+    %2:_(p1) = G_PTR_ADD %0, %1
 ...

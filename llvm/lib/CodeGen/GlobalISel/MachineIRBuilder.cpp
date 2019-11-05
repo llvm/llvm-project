@@ -219,19 +219,19 @@ void MachineIRBuilder::validateShiftOp(const LLT &Res, const LLT &Op0,
   assert((Res == Op0) && "type mismatch");
 }
 
-MachineInstrBuilder MachineIRBuilder::buildGEP(const DstOp &Res,
-                                               const SrcOp &Op0,
-                                               const SrcOp &Op1) {
+MachineInstrBuilder MachineIRBuilder::buildPtrAdd(const DstOp &Res,
+                                                  const SrcOp &Op0,
+                                                  const SrcOp &Op1) {
   assert(Res.getLLTTy(*getMRI()).isPointer() &&
          Res.getLLTTy(*getMRI()) == Op0.getLLTTy(*getMRI()) && "type mismatch");
   assert(Op1.getLLTTy(*getMRI()).isScalar() && "invalid offset type");
 
-  return buildInstr(TargetOpcode::G_GEP, {Res}, {Op0, Op1});
+  return buildInstr(TargetOpcode::G_PTR_ADD, {Res}, {Op0, Op1});
 }
 
 Optional<MachineInstrBuilder>
-MachineIRBuilder::materializeGEP(Register &Res, Register Op0,
-                                 const LLT &ValueTy, uint64_t Value) {
+MachineIRBuilder::materializePtrAdd(Register &Res, Register Op0,
+                                    const LLT &ValueTy, uint64_t Value) {
   assert(Res == 0 && "Res is a result argument");
   assert(ValueTy.isScalar()  && "invalid offset type");
 
@@ -242,7 +242,7 @@ MachineIRBuilder::materializeGEP(Register &Res, Register Op0,
 
   Res = getMRI()->createGenericVirtualRegister(getMRI()->getType(Op0));
   auto Cst = buildConstant(ValueTy, Value);
-  return buildGEP(Res, Op0, Cst.getReg(0));
+  return buildPtrAdd(Res, Op0, Cst.getReg(0));
 }
 
 MachineInstrBuilder MachineIRBuilder::buildPtrMask(const DstOp &Res,

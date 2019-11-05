@@ -557,7 +557,7 @@ define void @test_load_store_struct({i32, i32} *%addr) {
 ; CHECK: [[ADDR1:%[0-9]+]]:_(p0) = COPY $r0
 ; CHECK-DAG: [[VAL1:%[0-9]+]]:_(s32) = G_LOAD [[ADDR1]](p0) :: (load 4 from %ir.addr)
 ; CHECK-DAG: [[OFFSET:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-; CHECK-DAG: [[ADDR2:%[0-9]+]]:_(p0) = G_GEP [[ADDR1]], [[OFFSET]](s32)
+; CHECK-DAG: [[ADDR2:%[0-9]+]]:_(p0) = G_PTR_ADD [[ADDR1]], [[OFFSET]](s32)
 ; CHECK-DAG: [[VAL2:%[0-9]+]]:_(s32) = G_LOAD [[ADDR2]](p0) :: (load 4 from %ir.addr + 4)
 ; CHECK-DAG: G_STORE [[VAL1]](s32), [[ADDR1]](p0) :: (store 4 into %ir.addr)
 ; CHECK-DAG: [[ADDR3:%[0-9]+]]:_(p0) = COPY [[ADDR2]]

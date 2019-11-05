@@ -885,7 +885,7 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
       Regs.size() == 1 ? LI.getMetadata(LLVMContext::MD_range) : nullptr;
   for (unsigned i = 0; i < Regs.size(); ++i) {
     Register Addr;
-    MIRBuilder.materializeGEP(Addr, Base, OffsetTy, Offsets[i] / 8);
+    MIRBuilder.materializePtrAdd(Addr, Base, OffsetTy, Offsets[i] / 8);
 
     MachinePointerInfo Ptr(LI.getPointerOperand(), Offsets[i] / 8);
     unsigned BaseAlign = getMemOpAlignment(LI);
@@ -926,7 +926,7 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
 
   for (unsigned i = 0; i < Vals.size(); ++i) {
     Register Addr;
-    MIRBuilder.materializeGEP(Addr, Base, OffsetTy, Offsets[i] / 8);
+    MIRBuilder.materializePtrAdd(Addr, Base, OffsetTy, Offsets[i] / 8);
 
     MachinePointerInfo Ptr(SI.getPointerOperand(), Offsets[i] / 8);
     unsigned BaseAlign = getMemOpAlignment(SI);
@@ -1080,8 +1080,8 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       if (Offset != 0) {
         LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
         auto OffsetMIB = MIRBuilder.buildConstant({OffsetTy}, Offset);
-        BaseReg =
-            MIRBuilder.buildGEP(PtrTy, BaseReg, OffsetMIB.getReg(0)).getReg(0);
+        BaseReg = MIRBuilder.buildPtrAdd(PtrTy, BaseReg, OffsetMIB.getReg(0))
+                      .getReg(0);
         Offset = 0;
       }
 
@@ -1100,14 +1100,14 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       } else
         GepOffsetReg = IdxReg;
 
-      BaseReg = MIRBuilder.buildGEP(PtrTy, BaseReg, GepOffsetReg).getReg(0);
+      BaseReg = MIRBuilder.buildPtrAdd(PtrTy, BaseReg, GepOffsetReg).getReg(0);
     }
   }
 
   if (Offset != 0) {
     auto OffsetMIB =
         MIRBuilder.buildConstant(getLLTForType(*OffsetIRTy, *DL), Offset);
-    MIRBuilder.buildGEP(getOrCreateVReg(U), BaseReg, OffsetMIB.getReg(0));
+    MIRBuilder.buildPtrAdd(getOrCreateVReg(U), BaseReg, OffsetMIB.getReg(0));
     return true;
   }
 

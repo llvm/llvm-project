@@ -13,13 +13,13 @@ body: |
     ; CI: [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
     ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (load 1, addrspace 6)
     ; CI: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CI: [[GEP:%[0-9]+]]:_(p4) = G_GEP [[MV]], [[C1]](s64)
+    ; CI: [[GEP:%[0-9]+]]:_(p4) = G_PTR_ADD [[MV]], [[C1]](s64)
     ; CI: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[GEP]](p4) :: (load 1, addrspace 6)
     ; CI: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; CI: [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[MV]], [[C2]](s64)
+    ; CI: [[GEP1:%[0-9]+]]:_(p4) = G_PTR_ADD [[MV]], [[C2]](s64)
     ; CI: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[GEP1]](p4) :: (load 1, addrspace 6)
     ; CI: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
-    ; CI: [[GEP2:%[0-9]+]]:_(p4) = G_GEP [[MV]], [[C3]](s64)
+    ; CI: [[GEP2:%[0-9]+]]:_(p4) = G_PTR_ADD [[MV]], [[C3]](s64)
     ; CI: [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[GEP2]](p4) :: (load 1, addrspace 6)
     ; CI: [[C4:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
     ; CI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)

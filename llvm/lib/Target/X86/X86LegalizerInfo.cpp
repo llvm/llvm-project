@@ -77,7 +77,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
     setLegalizeScalarToDifferentSizeStrategy(MemOp, 0,
        narrowToSmallerAndWidenToSmallest);
   setLegalizeScalarToDifferentSizeStrategy(
-      G_GEP, 1, widenToLargerTypesUnsupportedOtherwise);
+      G_PTR_ADD, 1, widenToLargerTypesUnsupportedOtherwise);
   setLegalizeScalarToDifferentSizeStrategy(
       G_CONSTANT, 0, widenToLargerTypesAndNarrowToLargest);
 
@@ -140,8 +140,8 @@ void X86LegalizerInfo::setLegalizerInfo32bit() {
   setAction({G_FRAME_INDEX, p0}, Legal);
   setAction({G_GLOBAL_VALUE, p0}, Legal);
 
-  setAction({G_GEP, p0}, Legal);
-  setAction({G_GEP, 1, s32}, Legal);
+  setAction({G_PTR_ADD, p0}, Legal);
+  setAction({G_PTR_ADD, 1, s32}, Legal);
 
   if (!Subtarget.is64Bit()) {
     getActionDefinitionsBuilder(G_PTRTOINT)
@@ -223,7 +223,7 @@ void X86LegalizerInfo::setLegalizerInfo64bit() {
     setAction({MemOp, s64}, Legal);
 
   // Pointer-handling
-  setAction({G_GEP, 1, s64}, Legal);
+  setAction({G_PTR_ADD, 1, s64}, Legal);
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalForCartesianProduct({s1, s8, s16, s32, s64}, {p0})
       .maxScalar(0, s64)

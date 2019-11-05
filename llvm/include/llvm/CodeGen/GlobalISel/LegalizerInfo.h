@@ -1178,7 +1178,7 @@ private:
   ///            {65, NarrowScalar} // bit sizes [65, +inf[
   ///           });
   /// It may be that only 64-bit pointers are supported on your target:
-  /// setPointerAction(G_GEP, 0, LLT:pointer(1),
+  /// setPointerAction(G_PTR_ADD, 0, LLT:pointer(1),
   ///           {{1, Unsupported},  // bit sizes [ 1, 63[
   ///            {64, Legal},       // bit sizes [64, 65[
   ///            {65, Unsupported}, // bit sizes [65, +inf[

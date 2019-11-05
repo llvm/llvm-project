@@ -30,7 +30,7 @@ body:             |
     ; MIPS32: RetRA implicit $v0
     %0:gprb(p0) = COPY $a0
     %1:gprb(s32) = G_CONSTANT i32 32767
-    %2:gprb(p0) = G_GEP %0, %1(s32)
+    %2:gprb(p0) = G_PTR_ADD %0, %1(s32)
     %4:gprb(s32) = G_ZEXTLOAD %2(p0) :: (load 1)
     $v0 = COPY %4(s32)
     RetRA implicit $v0
@@ -55,7 +55,7 @@ body:             |
     %2:gprb(s32) = COPY $a0
     %1:gprb(p0) = COPY $a1
     %3:gprb(s32) = G_CONSTANT i32 -32768
-    %4:gprb(p0) = G_GEP %1, %3(s32)
+    %4:gprb(p0) = G_PTR_ADD %1, %3(s32)
     %5:gprb(s32) = COPY %2(s32)
     G_STORE %5(s32), %4(p0) :: (store 1)
     RetRA
@@ -82,7 +82,7 @@ body:             |
     %2:gprb(s32) = COPY $a0
     %1:gprb(p0) = COPY $a1
     %3:gprb(s32) = G_CONSTANT i32 32768
-    %4:gprb(p0) = G_GEP %1, %3(s32)
+    %4:gprb(p0) = G_PTR_ADD %1, %3(s32)
     %5:gprb(s32) = COPY %2(s32)
     G_STORE %5(s32), %4(p0) :: (store 1)
     RetRA
@@ -109,7 +109,7 @@ body:             |
     ; MIPS32: RetRA implicit $v0
     %0:gprb(p0) = COPY $a0
     %1:gprb(s32) = G_CONSTANT i32 -32769
-    %2:gprb(p0) = G_GEP %0, %1(s32)
+    %2:gprb(p0) = G_PTR_ADD %0, %1(s32)
     %4:gprb(s32) = G_SEXTLOAD %2(p0) :: (load 1)
     $v0 = COPY %4(s32)
     RetRA implicit $v0
@@ -133,7 +133,7 @@ body:             |
     ; MIPS32: RetRA implicit $f0
     %0:gprb(p0) = COPY $a0
     %1:gprb(s32) = G_CONSTANT i32 40
-    %2:gprb(p0) = G_GEP %0, %1(s32)
+    %2:gprb(p0) = G_PTR_ADD %0, %1(s32)
     %3:fprb(s32) = G_LOAD %2(p0) :: (load 4)
     $f0 = COPY %3(s32)
     RetRA implicit $f0
@@ -158,7 +158,7 @@ body:             |
     %0:fprb(s64) = COPY $d6
     %1:gprb(p0) = COPY $a2
     %2:gprb(s32) = G_CONSTANT i32 -80
-    %3:gprb(p0) = G_GEP %1, %2(s32)
+    %3:gprb(p0) = G_PTR_ADD %1, %2(s32)
     G_STORE %0(s64), %3(p0) :: (store 8)
     RetRA
 
@@ -181,7 +181,7 @@ body:             |
     ; MIPS32: RetRA implicit $v0
     %0:gprb(p0) = COPY $a0
     %1:gprb(s32) = G_CONSTANT i32 -20
-    %2:gprb(p0) = G_GEP %0, %1(s32)
+    %2:gprb(p0) = G_PTR_ADD %0, %1(s32)
     %4:gprb(s32) = G_LOAD %2(p0) :: (load 2)
     $v0 = COPY %4(s32)
     RetRA implicit $v0
@@ -206,7 +206,7 @@ body:             |
     %0:gprb(s32) = COPY $a0
     %1:gprb(p0) = COPY $a1
     %2:gprb(s32) = G_CONSTANT i32 40
-    %3:gprb(p0) = G_GEP %1, %2(s32)
+    %3:gprb(p0) = G_PTR_ADD %1, %2(s32)
     G_STORE %0(s32), %3(p0) :: (store 4)
     RetRA
 
