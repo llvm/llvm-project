@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/lldb-private.h"
-#include "llvm/ADT/StringExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -23,7 +22,7 @@ static const char *GetLLDBRevision() {
 #ifdef LLDB_REVISION
   return LLDB_REVISION;
 #else
-  return nullptr;
+  return NULL;
 #endif
 }
 
