@@ -133,21 +133,13 @@ public:
 
 namespace llvm {
 template <>
+/// If Options is empty, prints a textual representation of the value. If
+/// Options is a single character, it uses that character for the "yes" value,
+/// while "no" is printed as "-", and "don't know" as "?". This can be used to
+/// print the permissions in the traditional "rwx" form.
 struct format_provider<lldb_private::MemoryRegionInfo::OptionalBool> {
   static void format(const lldb_private::MemoryRegionInfo::OptionalBool &B,
-                     raw_ostream &OS, StringRef Options) {
-    switch(B) {
-    case lldb_private::MemoryRegionInfo::eNo:
-      OS << "no";
-      return;
-    case lldb_private::MemoryRegionInfo::eYes:
-      OS << "yes";
-      return;
-    case lldb_private::MemoryRegionInfo::eDontKnow:
-      OS << "don't know";
-      return;
-    }
-  }
+                     raw_ostream &OS, StringRef Options);
 };
 }
 

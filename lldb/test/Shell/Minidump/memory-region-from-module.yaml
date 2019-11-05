@@ -19,8 +19,7 @@
 # ALL: [0x0000000000000000-0x0000000000004000) ---
 # ALL-LABEL: (lldb) memory region 0x4000
 # CHECK1: [0x0000000000004000-0x00000000000040b0) r-x {{.*}}memory-region-from-module.exe PT_LOAD[0]
-# TODO: This output does not give any indication that the region is only "potentially" writable.
-# CHECK2: [0x0000000000004000-0x0000000000004010) rwx
+# CHECK2: [0x0000000000004000-0x0000000000004010) r??
 # ALL-LABEL: (lldb) memory region 0x5000
 # ALL: [0x0000000000005000-0x000000000000505c) rw- {{.*}}memory-region-from-module.exe PT_LOAD[1]
 # ALL-LABEL: (lldb) memory region 0x6000
