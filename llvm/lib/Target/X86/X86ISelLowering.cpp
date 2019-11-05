@@ -87,7 +87,7 @@ static cl::opt<bool> MulConstantOptimization(
     cl::Hidden);
 
 static cl::opt<bool> ExperimentalUnorderedISEL(
-    "x86-experimental-unordered-atomic-isel", cl::init(true),
+    "x86-experimental-unordered-atomic-isel", cl::init(false),
     cl::desc("Use LoadSDNode and StoreSDNode instead of "
              "AtomicSDNode for unordered atomic loads and "
              "stores respectively."),
