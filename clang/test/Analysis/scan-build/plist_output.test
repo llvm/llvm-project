@@ -1,4 +1,4 @@
-XFAIL: x86_64-scei-ps4
+REQUIRES: system-darwin
 
 RUN: rm -rf %t.output_dir && mkdir %t.output_dir
 RUN: %scan-build -plist -o %t.output_dir %clang %S/Inputs/single_null_dereference.c \

@@ -1,3 +1,5 @@
+REQUIRES: system-darwin
+
 RUN: %scan-build -h | FileCheck %s
 RUN: %scan-build --help | FileCheck %s
 
