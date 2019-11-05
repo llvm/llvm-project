@@ -1,4 +1,5 @@
 ; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck %s
+; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck %s
 
 ; CHECK: 'or_i32'
 ; CHECK: estimated cost of 1 for {{.*}} or i32

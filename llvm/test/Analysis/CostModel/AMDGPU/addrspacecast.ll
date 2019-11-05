@@ -1,4 +1,5 @@
 ; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri < %s | FileCheck %s
+; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri < %s | FileCheck %s
 
 ; CHECK-LABEL: 'addrspacecast_global_to_flat'
 ; CHECK: estimated cost of 0 for {{.*}} addrspacecast i8 addrspace(1)* %ptr to i8*

@@ -1,5 +1,7 @@
 ; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mattr=+half-rate-64-ops < %s | FileCheck -check-prefix=ALL -check-prefix=FAST64 %s
 ; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefix=ALL -check-prefix=SLOW64 %s
+; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mattr=+half-rate-64-ops < %s | FileCheck -check-prefix=ALL -check-prefix=FAST64 %s
+; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefix=ALL -check-prefix=SLOW64 %s
 
 ; ALL: 'shl_i32'
 ; ALL: estimated cost of 1 for {{.*}} shl i32
