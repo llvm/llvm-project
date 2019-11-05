@@ -2051,4 +2051,4 @@ define <16 x float> @stack_fold_permilpsvar_zmm_maskz(<16 x float> %a0, <16 x i3
 }
 
 attributes #0 = { "unsafe-fp-math"="false" }
-attributes #1 = { "unsafe-fp-math"="true" }
+attributes #1 = { "unsafe-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
