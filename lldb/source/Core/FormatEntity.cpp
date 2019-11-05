@@ -1289,6 +1289,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       if (thread) {
         StopInfoSP stop_info_sp = thread->GetStopInfo();
         if (stop_info_sp && stop_info_sp->IsValid()) {
+          // BEGIN SWIFT
           bool is_swift_error_return = false;
           ValueObjectSP return_valobj_sp = StopInfo::GetReturnValueObject(
               stop_info_sp, is_swift_error_return);
@@ -1299,6 +1300,10 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
             if (return_valobj_sp->DoesProvideSyntheticValue())
               options.SetUseSyntheticValue(true);
             return_valobj_sp->Dump(s, options);
+            return true;
+          }
+          // END SWIFT
+          if (return_valobj_sp) {
             return true;
           }
         }

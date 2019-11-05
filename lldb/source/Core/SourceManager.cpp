@@ -305,15 +305,16 @@ bool SourceManager::SetDefaultFileAndLine(const FileSpec &file_spec,
   }
 }
 
-// this is a vector of pairs that each represent a legitimate interesting
-// entry point to the user program. the bool argument means whether
-// we want to skip the prologue code or not when trying to resolve
-// this name to a line entry
-// FindEntryPoint() will attempt to resolve these to a valid line entry in the
-// order
-// in which they are provided. This could probably be extended with a notion
-// of "main language", i.e. the language in which the main executable module is
-// coded
+// BEGIN SWIFT
+
+// This is a vector of pairs that each represent a legitimate
+// interesting entry point to the user program. the bool argument
+// means whether we want to skip the prologue code or not when trying
+// to resolve this name to a line entry FindEntryPoint() will attempt
+// to resolve these to a valid line entry in the order in which they
+// are provided. This could probably be extended with a notion of
+// "main language", i.e. the language in which the main executable
+// module is coded
 static const std::vector<std::pair<ConstString, bool>> &GetEntryPointNames() {
   static std::vector<std::pair<ConstString, bool>> g_entry_point_names;
   if (g_entry_point_names.size() == 0) {
@@ -355,6 +356,7 @@ static lldb_private::LineEntry FindEntryPoint(Module *exe_module) {
   }
   return LineEntry();
 }
+// END SWIFT
 
 bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
   if (m_last_file_sp) {
@@ -371,6 +373,7 @@ bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
       // to set it (for instance when we stop somewhere...)
       Module *executable_ptr = target_sp->GetExecutableModulePointer();
       if (executable_ptr) {
+        // BEGIN SWIFT
 #if 0 // llvm.org
         SymbolContextList sc_list;
         ConstString main_name("main");
@@ -404,6 +407,7 @@ bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
           return true;
         }
 #endif
+        // END SWIFT
       }
     }
   }

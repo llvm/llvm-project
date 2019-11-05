@@ -756,11 +756,15 @@ bool SearchFilterByModuleListAndCU::CompUnitPasses(FileSpec &fileSpec) {
 }
 
 bool SearchFilterByModuleListAndCU::CompUnitPasses(CompileUnit &compUnit) {
+  // BEGIN SWIFT
   // If it comes from "<stdin>" then we should check it
   static ConstString g_stdin_filename("<stdin>");
+  // END SWIFT
   bool in_cu_list =
-      (m_cu_spec_list.FindFileIndex(0, compUnit, false) != UINT32_MAX) ||
-      (compUnit.GetFilename() == g_stdin_filename);
+      (m_cu_spec_list.FindFileIndex(0, compUnit, false) != UINT32_MAX)
+      // BEGIN SWIFT
+      || (compUnit.GetFilename() == g_stdin_filename);
+      // END SWIFT
   if (in_cu_list) {
     ModuleSP module_sp(compUnit.GetModule());
     if (module_sp) {
@@ -794,7 +798,10 @@ void SearchFilterByModuleListAndCU::Search(Searcher &searcher) {
   bool no_modules_in_filter = m_module_spec_list.GetSize() == 0;
   for (size_t i = 0; i < num_modules; i++) {
     lldb::ModuleSP module_sp = target_images.GetModuleAtIndexUnlocked(i);
-    if (no_modules_in_filter || ModulePasses(module_sp) ||
+    if (no_modules_in_filter ||
+        // BEGIN SWIFT
+        ModulePasses(module_sp) ||
+        // END SWIFT
         m_module_spec_list.FindFileIndex(0, module_sp->GetFileSpec(), false) !=
             UINT32_MAX) {
       SymbolContext matchingContext(m_target_sp, module_sp);
