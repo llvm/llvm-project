@@ -34,9 +34,6 @@ namespace lldb_private {
 /// 0-based counter for naming result variables.
 class ClangPersistentVariables : public PersistentExpressionState {
 public:
-  //----------------------------------------------------------------------
-  /// Constructor
-  //----------------------------------------------------------------------
   ClangPersistentVariables();
 
   ~ClangPersistentVariables() override = default;
