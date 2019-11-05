@@ -763,7 +763,7 @@ struct InstructionMapper {
     std::vector<unsigned> UnsignedVecForMBB;
     std::vector<MachineBasicBlock::iterator> InstrListForMBB;
 
-    for (MachineBasicBlock::iterator Et = MBB.end(); It != Et; It++) {
+    for (MachineBasicBlock::iterator Et = MBB.end(); It != Et; ++It) {
       // Keep track of where this instruction is in the module.
       switch (TII.getOutliningType(It, Flags)) {
       case InstrType::Illegal:
