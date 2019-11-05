@@ -589,6 +589,15 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       R"cpp(
       void $Function[[foo]]();
       using ::$Function[[foo]];
+    )cpp",
+      // Highlighting of template template arguments.
+      R"cpp(
+      template <template <class> class $TemplateParameter[[TT]],
+                template <class> class ...$TemplateParameter[[TTs]]>
+      struct $Class[[Foo]] {
+        $Class[[Foo]]<$TemplateParameter[[TT]], $TemplateParameter[[TTs]]...>
+          *$Field[[t]];
+      }
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);
