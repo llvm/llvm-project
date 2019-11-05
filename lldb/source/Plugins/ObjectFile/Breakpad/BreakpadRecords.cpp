@@ -72,7 +72,7 @@ llvm::Triple::ArchType stringTo<llvm::Triple::ArchType>(llvm::StringRef Str) {
       .Case("sparc", Triple::sparc)
       .Case("sparcv9", Triple::sparcv9)
       .Case("x86", Triple::x86)
-      .Case("x86_64", Triple::x86_64)
+      .Cases("x86_64", "x86_64h", Triple::x86_64)
       .Default(Triple::UnknownArch);
 }
 
