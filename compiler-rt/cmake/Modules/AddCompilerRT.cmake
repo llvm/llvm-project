@@ -465,7 +465,7 @@ function(add_compiler_rt_test test_suite test_name arch)
     set(TEST_LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${TEST_LINK_FLAGS}")
     separate_arguments(TEST_LINK_FLAGS)
   endif()
-  if(NOT COMPILER_RT_STANDALONE_BUILD AND COMPILER_RT_HAS_LLD)
+  if(NOT COMPILER_RT_STANDALONE_BUILD AND COMPILER_RT_HAS_LLD AND TARGET lld)
     # CMAKE_EXE_LINKER_FLAGS may contain -fuse=lld
     # FIXME: -DLLVM_ENABLE_LLD=ON and -DLLVM_ENABLE_PROJECTS without lld case.
     list(APPEND TEST_DEPS lld)
