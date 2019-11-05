@@ -1,0 +1,71 @@
+//===- llvm/IR/ConstrainedOps.def - Constrained intrinsics ------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Defines properties of constrained intrinsics, in particular corresponding
+// floating point operations and DAG nodes.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef INSTRUCTION
+#define INSTRUCTION(N,A,R,I,D)
+#endif
+
+// In most cases intrinsic function is handled similar to instruction.
+#ifndef FUNCTION
+#define FUNCTION INSTRUCTION
+#endif
+
+// Arguments of the entries are:
+// - instruction or intrinsic function name.
+// - Number of original instruction/intrinsic arguments.
+// - 1 if the corresponding constrained intrinsic has rounding mode argument.
+// - name of the constrained intrinsic to represent this instruction/function.
+// - DAG node corresponding to the constrained intrinsic without prefix STRICT_.
+
+// These are definitions for instructions, that are converted into constrained
+// intrinsics.
+//
+INSTRUCTION(FAdd,         2, 1, experimental_constrained_fadd,       FADD)
+INSTRUCTION(FSub,         2, 1, experimental_constrained_fsub,       FSUB)
+INSTRUCTION(FMul,         2, 1, experimental_constrained_fmul,       FMUL)
+INSTRUCTION(FDiv,         2, 1, experimental_constrained_fdiv,       FDIV)
+INSTRUCTION(FRem,         2, 1, experimental_constrained_frem,       FREM)
+INSTRUCTION(FPExt,        1, 0, experimental_constrained_fpext,      FP_EXTEND)
+INSTRUCTION(FPToSI,       1, 0, experimental_constrained_fptosi,     FP_TO_SINT)
+INSTRUCTION(FPToUI,       1, 0, experimental_constrained_fptoui,     FP_TO_UINT)
+INSTRUCTION(FPTrunc,      1, 1, experimental_constrained_fptrunc,    FP_ROUND)
+
+// Theses are definitions for intrinsic functions, that are converted into
+// constrained intrinsics.
+//
+FUNCTION(ceil,            1, 1, experimental_constrained_ceil,       FCEIL)
+FUNCTION(cos,             1, 1, experimental_constrained_cos,        FCOS)
+FUNCTION(exp,             1, 1, experimental_constrained_exp,        FEXP)
+FUNCTION(exp2,            1, 1, experimental_constrained_exp2,       FEXP2)
+FUNCTION(floor,           1, 1, experimental_constrained_floor,      FFLOOR)
+FUNCTION(fma,             3, 1, experimental_constrained_fma,        FMA)
+FUNCTION(log,             1, 1, experimental_constrained_log,        FLOG)
+FUNCTION(log10,           1, 1, experimental_constrained_log10,      FLOG10)
+FUNCTION(log2,            1, 1, experimental_constrained_log2,       FLOG2)
+FUNCTION(lrint,           1, 1, experimental_constrained_lrint,      LRINT)
+FUNCTION(llrint,          1, 1, experimental_constrained_llrint,     LLRINT)
+FUNCTION(lround,          1, 0, experimental_constrained_lround,     LROUND)
+FUNCTION(llround,         1, 0, experimental_constrained_llround,    LLROUND)
+FUNCTION(maxnum,          2, 1, experimental_constrained_maxnum,     FMAXNUM)
+FUNCTION(minnum,          2, 1, experimental_constrained_minnum,     FMINNUM)
+FUNCTION(nearbyint,       1, 1, experimental_constrained_nearbyint,  FNEARBYINT)
+FUNCTION(pow,             2, 1, experimental_constrained_pow,        FPOW)
+FUNCTION(powi,            2, 1, experimental_constrained_powi,       FPOWI)
+FUNCTION(rint,            1, 1, experimental_constrained_rint,       FRINT)
+FUNCTION(round,           1, 1, experimental_constrained_round,      FROUND)
+FUNCTION(sin,             1, 1, experimental_constrained_sin,        FSIN)
+FUNCTION(sqrt,            1, 1, experimental_constrained_sqrt,       FSQRT)
+FUNCTION(trunc,           1, 1, experimental_constrained_trunc,      FTRUNC)
+
+#undef INSTRUCTION
+#undef FUNCTION

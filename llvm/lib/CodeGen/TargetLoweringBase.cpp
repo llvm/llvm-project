@@ -694,38 +694,9 @@ void TargetLoweringBase::initActions() {
     }
 
     // Constrained floating-point operations default to expand.
-    setOperationAction(ISD::STRICT_FADD, VT, Expand);
-    setOperationAction(ISD::STRICT_FSUB, VT, Expand);
-    setOperationAction(ISD::STRICT_FMUL, VT, Expand);
-    setOperationAction(ISD::STRICT_FDIV, VT, Expand);
-    setOperationAction(ISD::STRICT_FREM, VT, Expand);
-    setOperationAction(ISD::STRICT_FMA, VT, Expand);
-    setOperationAction(ISD::STRICT_FSQRT, VT, Expand);
-    setOperationAction(ISD::STRICT_FPOW, VT, Expand);
-    setOperationAction(ISD::STRICT_FPOWI, VT, Expand);
-    setOperationAction(ISD::STRICT_FSIN, VT, Expand);
-    setOperationAction(ISD::STRICT_FCOS, VT, Expand);
-    setOperationAction(ISD::STRICT_FEXP, VT, Expand);
-    setOperationAction(ISD::STRICT_FEXP2, VT, Expand);
-    setOperationAction(ISD::STRICT_FLOG, VT, Expand);
-    setOperationAction(ISD::STRICT_FLOG10, VT, Expand);
-    setOperationAction(ISD::STRICT_FLOG2, VT, Expand);
-    setOperationAction(ISD::STRICT_LRINT, VT, Expand);
-    setOperationAction(ISD::STRICT_LLRINT, VT, Expand);
-    setOperationAction(ISD::STRICT_FRINT, VT, Expand);
-    setOperationAction(ISD::STRICT_FNEARBYINT, VT, Expand);
-    setOperationAction(ISD::STRICT_FCEIL, VT, Expand);
-    setOperationAction(ISD::STRICT_FFLOOR, VT, Expand);
-    setOperationAction(ISD::STRICT_LROUND, VT, Expand);
-    setOperationAction(ISD::STRICT_LLROUND, VT, Expand);
-    setOperationAction(ISD::STRICT_FROUND, VT, Expand);
-    setOperationAction(ISD::STRICT_FTRUNC, VT, Expand);
-    setOperationAction(ISD::STRICT_FMAXNUM, VT, Expand);
-    setOperationAction(ISD::STRICT_FMINNUM, VT, Expand);
-    setOperationAction(ISD::STRICT_FP_ROUND, VT, Expand);
-    setOperationAction(ISD::STRICT_FP_EXTEND, VT, Expand);
-    setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Expand);
-    setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Expand);
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                   \
+    setOperationAction(ISD::STRICT_##DAGN, VT, Expand);
+#include "llvm/IR/ConstrainedOps.def"
 
     // For most targets @llvm.get.dynamic.area.offset just returns 0.
     setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, VT, Expand);

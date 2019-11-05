@@ -188,29 +188,10 @@ bool ConstrainedFPIntrinsic::isUnaryOp() const {
   switch (getIntrinsicID()) {
     default:
       return false;
-    case Intrinsic::experimental_constrained_fptosi:
-    case Intrinsic::experimental_constrained_fptoui:
-    case Intrinsic::experimental_constrained_fptrunc:
-    case Intrinsic::experimental_constrained_fpext:
-    case Intrinsic::experimental_constrained_sqrt:
-    case Intrinsic::experimental_constrained_sin:
-    case Intrinsic::experimental_constrained_cos:
-    case Intrinsic::experimental_constrained_exp:
-    case Intrinsic::experimental_constrained_exp2:
-    case Intrinsic::experimental_constrained_log:
-    case Intrinsic::experimental_constrained_log10:
-    case Intrinsic::experimental_constrained_log2:
-    case Intrinsic::experimental_constrained_lrint:
-    case Intrinsic::experimental_constrained_llrint:
-    case Intrinsic::experimental_constrained_rint:
-    case Intrinsic::experimental_constrained_nearbyint:
-    case Intrinsic::experimental_constrained_ceil:
-    case Intrinsic::experimental_constrained_floor:
-    case Intrinsic::experimental_constrained_lround:
-    case Intrinsic::experimental_constrained_llround:
-    case Intrinsic::experimental_constrained_round:
-    case Intrinsic::experimental_constrained_trunc:
-      return true;
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                   \
+    case Intrinsic::INTRINSIC:                                                 \
+      return NARG == 1;
+#include "llvm/IR/ConstrainedOps.def"
   }
 }
 
@@ -218,8 +199,21 @@ bool ConstrainedFPIntrinsic::isTernaryOp() const {
   switch (getIntrinsicID()) {
     default:
       return false;
-    case Intrinsic::experimental_constrained_fma:
-      return true;
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                   \
+    case Intrinsic::INTRINSIC:                                                 \
+      return NARG == 3;
+#include "llvm/IR/ConstrainedOps.def"
+  }
+}
+
+bool ConstrainedFPIntrinsic::classof(const IntrinsicInst *I) {
+  switch (I->getIntrinsicID()) {
+#define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC, DAGN)                  \
+  case Intrinsic::INTRINSIC:
+#include "llvm/IR/ConstrainedOps.def"
+    return true;
+  default:
+    return false;
   }
 }
 

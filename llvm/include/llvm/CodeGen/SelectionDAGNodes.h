@@ -690,38 +690,9 @@ public:
     switch (NodeType) {
       default:
         return false;
-      case ISD::STRICT_FADD:
-      case ISD::STRICT_FSUB:
-      case ISD::STRICT_FMUL:
-      case ISD::STRICT_FDIV:
-      case ISD::STRICT_FREM:
-      case ISD::STRICT_FMA:
-      case ISD::STRICT_FSQRT:
-      case ISD::STRICT_FPOW:
-      case ISD::STRICT_FPOWI:
-      case ISD::STRICT_FSIN:
-      case ISD::STRICT_FCOS:
-      case ISD::STRICT_FEXP:
-      case ISD::STRICT_FEXP2:
-      case ISD::STRICT_FLOG:
-      case ISD::STRICT_FLOG10:
-      case ISD::STRICT_FLOG2:
-      case ISD::STRICT_LRINT:
-      case ISD::STRICT_LLRINT:
-      case ISD::STRICT_FRINT:
-      case ISD::STRICT_FNEARBYINT:
-      case ISD::STRICT_FMAXNUM:
-      case ISD::STRICT_FMINNUM:
-      case ISD::STRICT_FCEIL:
-      case ISD::STRICT_FFLOOR:
-      case ISD::STRICT_LROUND:
-      case ISD::STRICT_LLROUND:
-      case ISD::STRICT_FROUND:
-      case ISD::STRICT_FTRUNC:
-      case ISD::STRICT_FP_TO_SINT:
-      case ISD::STRICT_FP_TO_UINT:
-      case ISD::STRICT_FP_ROUND:
-      case ISD::STRICT_FP_EXTEND:
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                   \
+      case ISD::STRICT_##DAGN:
+#include "llvm/IR/ConstrainedOps.def"
         return true;
     }
   }
