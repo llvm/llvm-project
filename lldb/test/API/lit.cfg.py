@@ -30,7 +30,8 @@ if 'Address' in config.llvm_use_sanitizer:
   if 'Darwin' in config.host_os and 'x86' in config.host_triple:
     import subprocess
     resource_dir = subprocess.check_output(
-        [config.cmake_cxx_compiler, '-print-resource-dir']).strip()
+        [config.cmake_cxx_compiler,
+         '-print-resource-dir']).decode('utf-8').strip()
     runtime = os.path.join(resource_dir, 'lib', 'darwin',
                            'libclang_rt.asan_osx_dynamic.dylib')
     config.environment['DYLD_INSERT_LIBRARIES'] = runtime
@@ -69,9 +70,9 @@ for cachedir in [config.clang_module_cache, config.lldb_module_cache]:
 # lit complains if the value is set but it is not supported.
 supported, errormsg = lit_config.maxIndividualTestTimeIsSupported
 if supported:
-    lit_config.maxIndividualTestTime = 600
+  lit_config.maxIndividualTestTime = 600
 else:
-    lit_config.warning("Could not set a default per-test timeout. " + errormsg)
+  lit_config.warning("Could not set a default per-test timeout. " + errormsg)
 
 # Build dotest command.
 dotest_cmd = [config.dotest_path]
