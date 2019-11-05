@@ -252,7 +252,7 @@ private:
   /// Ukkonen's algorithm.
   struct ActiveState {
     /// The next node to insert at.
-    SuffixTreeNode *Node;
+    SuffixTreeNode *Node = nullptr;
 
     /// The index of the first character in the substring currently being added.
     unsigned Idx = EmptyIdx;

@@ -37,10 +37,10 @@ enum InstrType { Legal, LegalTerminator, Illegal, Invisible };
 struct Candidate {
 private:
   /// The start index of this \p Candidate in the instruction list.
-  unsigned StartIdx;
+  unsigned StartIdx = 0;
 
   /// The number of instructions in this \p Candidate.
-  unsigned Len;
+  unsigned Len = 0;
 
   // The first instruction in this \p Candidate.
   MachineBasicBlock::iterator FirstInst;
@@ -49,20 +49,20 @@ private:
   MachineBasicBlock::iterator LastInst;
 
   // The basic block that contains this Candidate.
-  MachineBasicBlock *MBB;
+  MachineBasicBlock *MBB = nullptr;
 
   /// Cost of calling an outlined function from this point as defined by the
   /// target.
-  unsigned CallOverhead;
+  unsigned CallOverhead = 0;
 
 public:
   /// The index of this \p Candidate's \p OutlinedFunction in the list of
   /// \p OutlinedFunctions.
-  unsigned FunctionIdx;
+  unsigned FunctionIdx = 0;
 
   /// Identifier denoting the instructions to emit to call an outlined function
   /// from this point. Defined by the target.
-  unsigned CallConstructionID;
+  unsigned CallConstructionID = 0;
 
   /// Contains physical register liveness information for the MBB containing
   /// this \p Candidate.
