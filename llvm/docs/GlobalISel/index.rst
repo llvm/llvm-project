@@ -63,6 +63,7 @@ More information on specific passes can be found in the following sections:
   Legalizer
   RegBankSelect
   InstructionSelect
+  KnownBits
 
 .. _progress:
 
