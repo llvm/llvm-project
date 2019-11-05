@@ -47,6 +47,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
@@ -217,6 +218,14 @@ void CodeGenModule::createOpenMPRuntime() {
     else
       OpenMPRuntime.reset(new CGOpenMPRuntime(*this));
     break;
+  }
+
+  // The OpenMP-IR-Builder should eventually replace the above runtime codegens
+  // but we are not there yet so they both reside in CGModule for now and the
+  // OpenMP-IR-Builder is opt-in only.
+  if (LangOpts.OpenMPIRBuilder) {
+    OMPBuilder.reset(new llvm::OpenMPIRBuilder(TheModule));
+    OMPBuilder->initialize();
   }
 }
 
