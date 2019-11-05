@@ -54,6 +54,10 @@ bool TargetSubtargetInfo::enablePostRAScheduler() const {
   return getSchedModel().PostRAScheduler;
 }
 
+bool TargetSubtargetInfo::enablePostRAMachineScheduler() const {
+  return enableMachineScheduler() && enablePostRAScheduler();
+}
+
 bool TargetSubtargetInfo::useAA() const {
   return false;
 }

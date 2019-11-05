@@ -402,7 +402,7 @@ bool PostMachineScheduler::runOnMachineFunction(MachineFunction &mf) {
   if (EnablePostRAMachineSched.getNumOccurrences()) {
     if (!EnablePostRAMachineSched)
       return false;
-  } else if (!mf.getSubtarget().enablePostRAScheduler()) {
+  } else if (!mf.getSubtarget().enablePostRAMachineScheduler()) {
     LLVM_DEBUG(dbgs() << "Subtarget disables post-MI-sched.\n");
     return false;
   }
