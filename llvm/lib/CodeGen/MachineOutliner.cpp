@@ -472,7 +472,6 @@ public:
     // Keep track of the number of suffixes we have to add of the current
     // prefix.
     unsigned SuffixesToAdd = 0;
-    Active.Node = Root;
 
     // Construct the suffix tree iteratively on each prefix of the string.
     // PfxEndIdx is the end index of the current prefix.
