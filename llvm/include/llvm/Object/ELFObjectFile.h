@@ -723,6 +723,8 @@ template <class ELFT>
 Expected<ArrayRef<uint8_t>>
 ELFObjectFile<ELFT>::getSectionContents(DataRefImpl Sec) const {
   const Elf_Shdr *EShdr = getSection(Sec);
+  if (EShdr->sh_type == ELF::SHT_NOBITS)
+    return makeArrayRef((const uint8_t *)base(), 0);
   if (std::error_code EC =
           checkOffset(getMemoryBufferRef(),
                       (uintptr_t)base() + EShdr->sh_offset, EShdr->sh_size))
