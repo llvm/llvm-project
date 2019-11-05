@@ -27,19 +27,7 @@ class MachOLinkGraphBuilder_arm64 : public MachOLinkGraphBuilder {
 public:
   MachOLinkGraphBuilder_arm64(const object::MachOObjectFile &Obj)
       : MachOLinkGraphBuilder(Obj),
-        NumSymbols(Obj.getSymtabLoadCommand().nsyms) {
-    addCustomSectionParser(
-        "__eh_frame", [this](NormalizedSection &EHFrameSection) {
-          if (!EHFrameSection.Data)
-            return make_error<JITLinkError>(
-                "__eh_frame section is marked zero-fill");
-          return MachOEHFrameBinaryParser(
-                     *this, EHFrameSection.Address,
-                     StringRef(EHFrameSection.Data, EHFrameSection.Size),
-                     *EHFrameSection.GraphSection, 8, 4, NegDelta32, Delta64)
-              .addToGraph();
-        });
-  }
+        NumSymbols(Obj.getSymtabLoadCommand().nsyms) {}
 
 private:
   static Expected<MachOARM64RelocationKind>

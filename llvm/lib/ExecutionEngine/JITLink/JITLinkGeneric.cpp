@@ -151,9 +151,12 @@ JITLinkerBase::SegmentLayoutMap JITLinkerBase::layOutBlocks() {
   for (auto &KV : Layout) {
 
     auto CompareBlocks = [](const Block *LHS, const Block *RHS) {
+      // Sort by section, address and size
       if (LHS->getSection().getOrdinal() != RHS->getSection().getOrdinal())
         return LHS->getSection().getOrdinal() < RHS->getSection().getOrdinal();
-      return LHS->getOrdinal() < RHS->getOrdinal();
+      if (LHS->getAddress() != RHS->getAddress())
+        return LHS->getAddress() < RHS->getAddress();
+      return LHS->getSize() < RHS->getSize();
     };
 
     auto &SegLists = KV.second;
