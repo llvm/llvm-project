@@ -25,9 +25,6 @@ class WatchpointIgnoreCountTestCase(TestBase):
             self.source, '// Set break point at this line.')
 
     @add_test_categories(['pyapi'])
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
     def test_set_watch_ignore_count(self):

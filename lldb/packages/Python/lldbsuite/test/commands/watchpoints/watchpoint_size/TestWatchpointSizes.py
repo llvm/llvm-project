@@ -29,27 +29,18 @@ class WatchpointSizeTestCase(TestBase):
         self.exe_name = self.getBuildArtifact("a.out")
         self.d = {'C_SOURCES': self.source, 'EXE': self.exe_name}
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
     def test_byte_size_watchpoints_with_byte_selection(self):
         """Test to selectively watch different bytes in a 8-byte array."""
         self.run_watchpoint_size_test('byteArray', 8, '1')
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
     def test_two_byte_watchpoints_with_word_selection(self):
         """Test to selectively watch different words in an 8-byte word array."""
         self.run_watchpoint_size_test('wordArray', 4, '2')
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
     def test_four_byte_watchpoints_with_dword_selection(self):

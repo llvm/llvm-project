@@ -18,17 +18,11 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     main_spec = lldb.SBFileSpec("main.cpp", False)
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     @expectedFailureNetBSD
     def test_watchpoint_before_thread_start(self):
         """Test that we can hit a watchpoint we set before starting another thread"""
         self.do_watchpoint_test("Before running the thread")
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     @expectedFailureNetBSD
     def test_watchpoint_after_thread_start(self):
         """Test that we can hit a watchpoint we set after starting another thread"""
@@ -66,9 +60,6 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
         self.expect("watchpoint list -v",
                     substrs=['hit_count = 1'])
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     def test_watchpoint_multiple_threads_wp_set_and_then_delete(self):
         """Test that lldb watchpoint works for multiple threads, and after the watchpoint is deleted, the watchpoint event should no longer fires."""
         self.build()
