@@ -1252,7 +1252,7 @@ define <8 x i64> @v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
 ; AVX1-NEXT:    vpxor %xmm4, %xmm5, %xmm9
 ; AVX1-NEXT:    vxorps %xmm7, %xmm7, %xmm7
 ; AVX1-NEXT:    vcmptrueps %ymm7, %ymm7, %ymm10
-; AVX1-NEXT:    vxorps %ymm10, %ymm2, %ymm8
+; AVX1-NEXT:    vxorps %ymm2, %ymm10, %ymm8
 ; AVX1-NEXT:    vextractf128 $1, %ymm8, %xmm6
 ; AVX1-NEXT:    vpxor %xmm4, %xmm6, %xmm7
 ; AVX1-NEXT:    vpcmpgtq %xmm9, %xmm7, %xmm7
@@ -1267,7 +1267,7 @@ define <8 x i64> @v8i64(<8 x i64> %x, <8 x i64> %y) nounwind {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm0, %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX1-NEXT:    vpxor %xmm4, %xmm2, %xmm8
-; AVX1-NEXT:    vxorps %ymm10, %ymm3, %ymm6
+; AVX1-NEXT:    vxorps %ymm3, %ymm10, %ymm6
 ; AVX1-NEXT:    vextractf128 $1, %ymm6, %xmm7
 ; AVX1-NEXT:    vpxor %xmm4, %xmm7, %xmm5
 ; AVX1-NEXT:    vpcmpgtq %xmm8, %xmm5, %xmm5

@@ -386,9 +386,9 @@ define x86_regcallcc float @test_CallargRetFloat(float %a)  {
 ; WIN64-NEXT:    .seh_savexmm %xmm8, 0
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
-; WIN64-NEXT:    vaddss %xmm8, %xmm0, %xmm0
+; WIN64-NEXT:    vaddss %xmm0, %xmm8, %xmm0
 ; WIN64-NEXT:    callq test_argRetFloat
-; WIN64-NEXT:    vaddss %xmm8, %xmm0, %xmm0
+; WIN64-NEXT:    vaddss %xmm0, %xmm8, %xmm0
 ; WIN64-NEXT:    vmovaps (%rsp), %xmm8 # 16-byte Reload
 ; WIN64-NEXT:    addq $16, %rsp
 ; WIN64-NEXT:    popq %rsp
@@ -407,9 +407,9 @@ define x86_regcallcc float @test_CallargRetFloat(float %a)  {
 ; LINUXOSX64-NEXT:    .cfi_offset %rsp, -16
 ; LINUXOSX64-NEXT:    .cfi_offset %xmm8, -32
 ; LINUXOSX64-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
-; LINUXOSX64-NEXT:    vaddss %xmm8, %xmm0, %xmm0
+; LINUXOSX64-NEXT:    vaddss %xmm0, %xmm8, %xmm0
 ; LINUXOSX64-NEXT:    callq test_argRetFloat
-; LINUXOSX64-NEXT:    vaddss %xmm8, %xmm0, %xmm0
+; LINUXOSX64-NEXT:    vaddss %xmm0, %xmm8, %xmm0
 ; LINUXOSX64-NEXT:    vmovaps (%rsp), %xmm8 # 16-byte Reload
 ; LINUXOSX64-NEXT:    addq $16, %rsp
 ; LINUXOSX64-NEXT:    .cfi_def_cfa_offset 16
@@ -468,9 +468,9 @@ define x86_regcallcc double @test_CallargRetDouble(double %a)  {
 ; WIN64-NEXT:    .seh_savexmm %xmm8, 0
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    vmovsd {{.*#+}} xmm8 = mem[0],zero
-; WIN64-NEXT:    vaddsd %xmm8, %xmm0, %xmm0
+; WIN64-NEXT:    vaddsd %xmm0, %xmm8, %xmm0
 ; WIN64-NEXT:    callq test_argRetDouble
-; WIN64-NEXT:    vaddsd %xmm8, %xmm0, %xmm0
+; WIN64-NEXT:    vaddsd %xmm0, %xmm8, %xmm0
 ; WIN64-NEXT:    vmovaps (%rsp), %xmm8 # 16-byte Reload
 ; WIN64-NEXT:    addq $16, %rsp
 ; WIN64-NEXT:    popq %rsp
@@ -489,9 +489,9 @@ define x86_regcallcc double @test_CallargRetDouble(double %a)  {
 ; LINUXOSX64-NEXT:    .cfi_offset %rsp, -16
 ; LINUXOSX64-NEXT:    .cfi_offset %xmm8, -32
 ; LINUXOSX64-NEXT:    vmovsd {{.*#+}} xmm8 = mem[0],zero
-; LINUXOSX64-NEXT:    vaddsd %xmm8, %xmm0, %xmm0
+; LINUXOSX64-NEXT:    vaddsd %xmm0, %xmm8, %xmm0
 ; LINUXOSX64-NEXT:    callq test_argRetDouble
-; LINUXOSX64-NEXT:    vaddsd %xmm8, %xmm0, %xmm0
+; LINUXOSX64-NEXT:    vaddsd %xmm0, %xmm8, %xmm0
 ; LINUXOSX64-NEXT:    vmovaps (%rsp), %xmm8 # 16-byte Reload
 ; LINUXOSX64-NEXT:    addq $16, %rsp
 ; LINUXOSX64-NEXT:    .cfi_def_cfa_offset 16

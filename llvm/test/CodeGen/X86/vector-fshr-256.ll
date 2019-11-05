@@ -231,8 +231,8 @@ define <8 x i32> @var_funnnel_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %amt) 
 ; AVX1-NEXT:    vpmulld %xmm6, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm0, %ymm0
 ; AVX1-NEXT:    vorps %ymm4, %ymm0, %ymm0
-; AVX1-NEXT:    vpcmpeqd %xmm8, %xmm3, %xmm3
-; AVX1-NEXT:    vpcmpeqd %xmm8, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm8, %xmm3
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm8, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX1-NEXT:    vblendvps %ymm2, %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
@@ -429,7 +429,7 @@ define <16 x i16> @var_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %
 ; AVX1-NEXT:    vpackusdw %xmm7, %xmm4, %xmm4
 ; AVX1-NEXT:    vpmullw %xmm4, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm0, %ymm0
-; AVX1-NEXT:    vorps %ymm8, %ymm0, %ymm0
+; AVX1-NEXT:    vorps %ymm0, %ymm8, %ymm0
 ; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; AVX1-NEXT:    vpcmpeqw %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpcmpeqw %xmm4, %xmm2, %xmm2
@@ -610,7 +610,7 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %amt) 
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
 ; AVX1-NEXT:    vpsllw $4, %xmm4, %xmm3
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm8 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
-; AVX1-NEXT:    vpand %xmm8, %xmm3, %xmm6
+; AVX1-NEXT:    vpand %xmm3, %xmm8, %xmm6
 ; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm2, %ymm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm9 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
@@ -626,7 +626,7 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %amt) 
 ; AVX1-NEXT:    vpaddb %xmm5, %xmm5, %xmm5
 ; AVX1-NEXT:    vpblendvb %xmm5, %xmm6, %xmm4, %xmm4
 ; AVX1-NEXT:    vpsllw $4, %xmm0, %xmm5
-; AVX1-NEXT:    vpand %xmm8, %xmm5, %xmm5
+; AVX1-NEXT:    vpand %xmm5, %xmm8, %xmm5
 ; AVX1-NEXT:    vpsubb %xmm2, %xmm9, %xmm6
 ; AVX1-NEXT:    vpsllw $5, %xmm6, %xmm6
 ; AVX1-NEXT:    vpblendvb %xmm6, %xmm5, %xmm0, %xmm0
@@ -641,12 +641,12 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %amt) 
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
 ; AVX1-NEXT:    vpsrlw $4, %xmm4, %xmm5
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm9 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX1-NEXT:    vpand %xmm9, %xmm5, %xmm5
+; AVX1-NEXT:    vpand %xmm5, %xmm9, %xmm5
 ; AVX1-NEXT:    vpsllw $5, %xmm3, %xmm7
 ; AVX1-NEXT:    vpblendvb %xmm7, %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vpsrlw $2, %xmm4, %xmm5
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm10 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
-; AVX1-NEXT:    vpand %xmm10, %xmm5, %xmm5
+; AVX1-NEXT:    vpand %xmm5, %xmm10, %xmm5
 ; AVX1-NEXT:    vpaddb %xmm7, %xmm7, %xmm7
 ; AVX1-NEXT:    vpblendvb %xmm7, %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vpsrlw $1, %xmm4, %xmm5
@@ -655,11 +655,11 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %amt) 
 ; AVX1-NEXT:    vpaddb %xmm7, %xmm7, %xmm7
 ; AVX1-NEXT:    vpblendvb %xmm7, %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm5
-; AVX1-NEXT:    vpand %xmm9, %xmm5, %xmm5
+; AVX1-NEXT:    vpand %xmm5, %xmm9, %xmm5
 ; AVX1-NEXT:    vpsllw $5, %xmm2, %xmm7
 ; AVX1-NEXT:    vpblendvb %xmm7, %xmm5, %xmm1, %xmm5
 ; AVX1-NEXT:    vpsrlw $2, %xmm5, %xmm0
-; AVX1-NEXT:    vpand %xmm10, %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm0, %xmm10, %xmm0
 ; AVX1-NEXT:    vpaddb %xmm7, %xmm7, %xmm7
 ; AVX1-NEXT:    vpblendvb %xmm7, %xmm0, %xmm5, %xmm0
 ; AVX1-NEXT:    vpsrlw $1, %xmm0, %xmm5
@@ -1477,7 +1477,7 @@ define <32 x i8> @splatvar_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm6, %xmm6
 ; AVX1-NEXT:    vpand %xmm6, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
-; AVX1-NEXT:    vorps %ymm9, %ymm0, %ymm0
+; AVX1-NEXT:    vorps %ymm0, %ymm9, %ymm0
 ; AVX1-NEXT:    vpcmpeqb %xmm3, %xmm5, %xmm4
 ; AVX1-NEXT:    vpcmpeqb %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm2

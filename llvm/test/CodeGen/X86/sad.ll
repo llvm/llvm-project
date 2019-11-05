@@ -786,49 +786,49 @@ define i32 @sad_avx64i8() nounwind {
 ; AVX1-NEXT:    vextractf128 $1, %ymm11, %xmm7
 ; AVX1-NEXT:    vpaddd %xmm7, %xmm2, %xmm2
 ; AVX1-NEXT:    vpabsd %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd %xmm11, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm11, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm7
 ; AVX1-NEXT:    vpabsd %xmm6, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm15, %xmm2
 ; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpabsd %xmm5, %xmm2
-; AVX1-NEXT:    vpaddd %xmm15, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddd %xmm2, %xmm15, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm15
 ; AVX1-NEXT:    vpabsd %xmm0, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm14, %xmm2
 ; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpabsd %xmm3, %xmm2
-; AVX1-NEXT:    vpaddd %xmm14, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddd %xmm2, %xmm14, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm14
 ; AVX1-NEXT:    vpabsd %xmm4, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm13, %xmm2
 ; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpabsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; AVX1-NEXT:    vpaddd %xmm13, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm13, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm13
 ; AVX1-NEXT:    vpabsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; AVX1-NEXT:    vextractf128 $1, %ymm8, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpabsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; AVX1-NEXT:    vpaddd %xmm8, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm8, %xmm1
 ; AVX1-NEXT:    vpabsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm8
 ; AVX1-NEXT:    vextractf128 $1, %ymm9, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vpabsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; AVX1-NEXT:    vpaddd %xmm9, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm9, %xmm1
 ; AVX1-NEXT:    vpabsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm9
 ; AVX1-NEXT:    vextractf128 $1, %ymm10, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vpabsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; AVX1-NEXT:    vpaddd %xmm10, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm10, %xmm1
 ; AVX1-NEXT:    vpabsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm10
 ; AVX1-NEXT:    vextractf128 $1, %ymm12, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vpabsd (%rsp), %xmm1 # 16-byte Folded Reload
-; AVX1-NEXT:    vpaddd %xmm12, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm12, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm12
 ; AVX1-NEXT:    addq $4, %rax
 ; AVX1-NEXT:    jne .LBB2_1
@@ -849,7 +849,7 @@ define i32 @sad_avx64i8() nounwind {
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm12, %xmm13, %xmm1
-; AVX1-NEXT:    vpaddd %xmm10, %xmm7, %xmm2
+; AVX1-NEXT:    vpaddd %xmm7, %xmm10, %xmm2
 ; AVX1-NEXT:    vpaddd %xmm2, %xmm8, %xmm2
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm9, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm15, %xmm1
