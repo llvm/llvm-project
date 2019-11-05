@@ -21,6 +21,7 @@ module asm "classical GAS"
 @protected = protected global i32 23
 @section = global i32 27, section ".custom"
 @align = global i32 31, align 4
+@nullptr = global i32* null
 
 @aliased1 = alias i32, i32* @var
 @aliased2 = internal alias i32, i32* @var
