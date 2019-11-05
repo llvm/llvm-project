@@ -15,10 +15,6 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/Target.h"
-
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/lldb-private.h"
-
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
@@ -772,8 +768,8 @@ bool SearchFilterByModuleListAndCU::CompUnitPasses(CompileUnit &compUnit) {
       return module_passes;
     } else
       return true;
-  }
-  return false;
+  } else
+    return false;
 }
 
 void SearchFilterByModuleListAndCU::Search(Searcher &searcher) {
@@ -790,6 +786,7 @@ void SearchFilterByModuleListAndCU::Search(Searcher &searcher) {
   // filespec that passes.  Otherwise, we need to go through all modules and
   // find the ones that match the file name.
 
+  ModuleList matching_modules;
   const ModuleList &target_images = m_target_sp->GetImages();
   std::lock_guard<std::recursive_mutex> guard(target_images.GetMutex());
 
