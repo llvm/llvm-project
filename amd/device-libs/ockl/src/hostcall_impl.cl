@@ -45,7 +45,7 @@ typedef struct {
     hsa_signal_t doorbell;
     ulong free_stack;
     ulong ready_stack;
-    uint index_size;
+    ulong index_mask;
 } buffer_t;
 
 static void
@@ -54,28 +54,16 @@ send_signal(hsa_signal_t signal)
     __ockl_hsa_signal_add(signal, 1, __ockl_memory_order_release);
 }
 
-static ulong
-get_ptr_tag(ulong ptr, uint index_size)
-{
-    return ptr >> index_size;
-}
-
-static ulong
-get_ptr_index(ulong ptr, uint index_size)
-{
-    return ptr & (((ulong)1 << index_size) - 1);
-}
-
 static __global header_t *
 get_header(__global buffer_t *buffer, ulong ptr)
 {
-    return buffer->headers + get_ptr_index(ptr, buffer->index_size);
+    return buffer->headers + (ptr & buffer->index_mask);
 }
 
 static __global payload_t *
 get_payload(__global buffer_t *buffer, ulong ptr)
 {
-    return buffer->payloads + get_ptr_index(ptr, buffer->index_size);
+    return buffer->payloads + (ptr & buffer->index_mask);
 }
 
 static uint
@@ -185,10 +173,10 @@ push_ready_stack(__global buffer_t *buffer, ulong ptr, uint me, uint low)
 }
 
 static ulong
-inc_ptr_tag(ulong ptr, uint index_size)
+inc_ptr_tag(ulong ptr, ulong index_mask)
 {
     // Unit step for the tag.
-    ulong inc = 1UL << index_size;
+    ulong inc = index_mask + 1;
     ptr += inc;
     // When the tag for index 0 wraps, increment the tag.
     return ptr == 0 ? inc : ptr;
@@ -200,7 +188,7 @@ static void
 return_free_packet(__global buffer_t *buffer, ulong ptr, uint me, uint low)
 {
     if (me == low) {
-        ptr = inc_ptr_tag(ptr, buffer->index_size);
+        ptr = inc_ptr_tag(ptr, buffer->index_mask);
         push(&buffer->free_stack, ptr, buffer);
     }
 }
