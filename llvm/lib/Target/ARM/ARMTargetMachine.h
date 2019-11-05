@@ -70,6 +70,8 @@ public:
            TargetTriple.isOSWindows() ||
            TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
   }
+
+  bool targetSchedulesPostRAScheduling() const override { return true; };
 };
 
 /// ARM/Thumb little endian target machine.

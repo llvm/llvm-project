@@ -806,6 +806,9 @@ public:
   /// True for some subtargets at > -O0.
   bool enablePostRAScheduler() const override;
 
+  /// True for some subtargets at > -O0.
+  bool enablePostRAMachineScheduler() const override;
+
   /// Enable use of alias analysis during code generation (during MI
   /// scheduling, DAGCombine, etc.).
   bool useAA() const override { return UseAA; }

@@ -141,6 +141,7 @@
 ; CHECK-NEXT:      Thumb IT blocks insertion pass
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      Machine Natural Loop Construction
+; CHECK-NEXT:      PostRA Machine Instruction Scheduler
 ; CHECK-NEXT:      Post RA top-down list latency scheduler
 ; CHECK-NEXT:      Analyze Machine Code For Garbage Collection
 ; CHECK-NEXT:      Machine Block Frequency Analysis
