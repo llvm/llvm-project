@@ -1009,7 +1009,7 @@ void GnuDebugLinkSection::init(StringRef File) {
   Size = alignTo(FileName.size() + 1, 4) + 4;
   // The CRC32 will only be aligned if we align the whole section.
   Align = 4;
-  Type = ELF::SHT_PROGBITS;
+  Type = OriginalType = ELF::SHT_PROGBITS;
   Name = ".gnu_debuglink";
   // For sections not found in segments, OriginalOffset is only used to
   // establish the order that sections should go in. By using the maximum
@@ -1521,8 +1521,8 @@ template <class ELFT> void ELFBuilder<ELFT>::readSectionHeaders() {
     }
     auto &Sec = makeSection(Shdr);
     Sec.Name = unwrapOrError(ElfFile.getSectionName(&Shdr));
-    Sec.Type = Shdr.sh_type;
-    Sec.Flags = Shdr.sh_flags;
+    Sec.Type = Sec.OriginalType = Shdr.sh_type;
+    Sec.Flags = Sec.OriginalFlags = Shdr.sh_flags;
     Sec.Addr = Shdr.sh_addr;
     Sec.Offset = Shdr.sh_offset;
     Sec.OriginalOffset = Shdr.sh_offset;

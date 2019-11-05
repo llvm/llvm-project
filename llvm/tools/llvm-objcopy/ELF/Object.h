@@ -384,9 +384,12 @@ public:
   std::string Name;
   Segment *ParentSegment = nullptr;
   uint64_t HeaderOffset;
-  uint64_t OriginalOffset = std::numeric_limits<uint64_t>::max();
   uint32_t Index;
   bool HasSymbol = false;
+
+  uint64_t OriginalFlags = 0;
+  uint64_t OriginalType = ELF::SHT_NULL;
+  uint64_t OriginalOffset = std::numeric_limits<uint64_t>::max();
 
   uint64_t Addr = 0;
   uint64_t Align = 1;
@@ -490,7 +493,7 @@ public:
   OwnedDataSection(StringRef SecName, ArrayRef<uint8_t> Data)
       : Data(std::begin(Data), std::end(Data)) {
     Name = SecName.str();
-    Type = ELF::SHT_PROGBITS;
+    Type = OriginalType = ELF::SHT_PROGBITS;
     Size = Data.size();
     OriginalOffset = std::numeric_limits<uint64_t>::max();
   }
@@ -498,9 +501,9 @@ public:
   OwnedDataSection(const Twine &SecName, uint64_t SecAddr, uint64_t SecFlags,
                    uint64_t SecOff) {
     Name = SecName.str();
-    Type = ELF::SHT_PROGBITS;
+    Type = OriginalType = ELF::SHT_PROGBITS;
     Addr = SecAddr;
-    Flags = SecFlags;
+    Flags = OriginalFlags = SecFlags;
     OriginalOffset = SecOff;
   }
 
@@ -530,7 +533,7 @@ public:
   void accept(MutableSectionVisitor &Visitor) override;
 
   static bool classof(const SectionBase *S) {
-    return (S->Flags & ELF::SHF_COMPRESSED) ||
+    return (S->OriginalFlags & ELF::SHF_COMPRESSED) ||
            (StringRef(S->Name).startswith(".zdebug"));
   }
 };
@@ -543,7 +546,7 @@ public:
       : SectionBase(Sec) {
     Size = Sec.getDecompressedSize();
     Align = Sec.getDecompressedAlign();
-    Flags = (Flags & ~ELF::SHF_COMPRESSED);
+    Flags = OriginalFlags = (Flags & ~ELF::SHF_COMPRESSED);
     if (StringRef(Name).startswith(".zdebug"))
       Name = "." + Name.substr(2);
   }
@@ -567,7 +570,7 @@ class StringTableSection : public SectionBase {
 
 public:
   StringTableSection() : StrTabBuilder(StringTableBuilder::ELF) {
-    Type = ELF::SHT_STRTAB;
+    Type = OriginalType = ELF::SHT_STRTAB;
   }
 
   void addString(StringRef Name);
@@ -577,9 +580,9 @@ public:
   void accept(MutableSectionVisitor &Visitor) override;
 
   static bool classof(const SectionBase *S) {
-    if (S->Flags & ELF::SHF_ALLOC)
+    if (S->OriginalFlags & ELF::SHF_ALLOC)
       return false;
-    return S->Type == ELF::SHT_STRTAB;
+    return S->OriginalType == ELF::SHT_STRTAB;
   }
 };
 
@@ -648,7 +651,7 @@ public:
     Name = ".symtab_shndx";
     Align = 4;
     EntrySize = 4;
-    Type = ELF::SHT_SYMTAB_SHNDX;
+    Type = OriginalType = ELF::SHT_SYMTAB_SHNDX;
   }
 };
 
@@ -666,7 +669,7 @@ protected:
   using SymPtr = std::unique_ptr<Symbol>;
 
 public:
-  SymbolTableSection() { Type = ELF::SHT_SYMTAB; }
+  SymbolTableSection() { Type = OriginalType = ELF::SHT_SYMTAB; }
 
   void addSymbol(Twine Name, uint8_t Bind, uint8_t Type, SectionBase *DefinedIn,
                  uint64_t Value, uint8_t Visibility, uint16_t Shndx,
@@ -695,7 +698,7 @@ public:
       const DenseMap<SectionBase *, SectionBase *> &FromTo) override;
 
   static bool classof(const SectionBase *S) {
-    return S->Type == ELF::SHT_SYMTAB;
+    return S->OriginalType == ELF::SHT_SYMTAB;
   }
 };
 
@@ -724,7 +727,7 @@ public:
   void setSection(SectionBase *Sec) { SecToApplyRel = Sec; }
 
   static bool classof(const SectionBase *S) {
-    return S->Type == ELF::SHT_REL || S->Type == ELF::SHT_RELA;
+    return S->OriginalType == ELF::SHT_REL || S->OriginalType == ELF::SHT_RELA;
   }
 };
 
@@ -762,9 +765,9 @@ public:
       const DenseMap<SectionBase *, SectionBase *> &FromTo) override;
 
   static bool classof(const SectionBase *S) {
-    if (S->Flags & ELF::SHF_ALLOC)
+    if (S->OriginalFlags & ELF::SHF_ALLOC)
       return false;
-    return S->Type == ELF::SHT_REL || S->Type == ELF::SHT_RELA;
+    return S->OriginalType == ELF::SHT_REL || S->OriginalType == ELF::SHT_RELA;
   }
 };
 
@@ -799,7 +802,7 @@ public:
       const DenseMap<SectionBase *, SectionBase *> &FromTo) override;
 
   static bool classof(const SectionBase *S) {
-    return S->Type == ELF::SHT_GROUP;
+    return S->OriginalType == ELF::SHT_GROUP;
   }
 };
 
@@ -808,7 +811,7 @@ public:
   explicit DynamicSymbolTableSection(ArrayRef<uint8_t> Data) : Section(Data) {}
 
   static bool classof(const SectionBase *S) {
-    return S->Type == ELF::SHT_DYNSYM;
+    return S->OriginalType == ELF::SHT_DYNSYM;
   }
 };
 
@@ -817,7 +820,7 @@ public:
   explicit DynamicSection(ArrayRef<uint8_t> Data) : Section(Data) {}
 
   static bool classof(const SectionBase *S) {
-    return S->Type == ELF::SHT_DYNAMIC;
+    return S->OriginalType == ELF::SHT_DYNAMIC;
   }
 };
 
@@ -838,9 +841,9 @@ public:
       function_ref<bool(const SectionBase *)> ToRemove) override;
 
   static bool classof(const SectionBase *S) {
-    if (!(S->Flags & ELF::SHF_ALLOC))
+    if (!(S->OriginalFlags & ELF::SHF_ALLOC))
       return false;
-    return S->Type == ELF::SHT_REL || S->Type == ELF::SHT_RELA;
+    return S->OriginalType == ELF::SHT_REL || S->OriginalType == ELF::SHT_RELA;
   }
 };
 
