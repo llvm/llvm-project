@@ -1,25 +1,12 @@
 # RUN: %{lit} %{inputs}/discovery | FileCheck --check-prefix=CHECK-BASIC %s
 # CHECK-BASIC: Testing: 5 tests
 
-
-# Check that we exit with an error if we do not discover any tests.
-#
-# RUN: not %{lit} %{inputs}/nonexistent 2>&1 | FileCheck --check-prefix=CHECK-BAD-PATH %s
-# CHECK-BAD-PATH: Did not disover any tests for provided path(s).
-
-# Check that we exit with an error if we filter out all tests.
-#
-# RUN: not %{lit} --filter 'nonexistent' %{inputs}/discovery 2>&1 | FileCheck --check-prefix=CHECK-BAD-FILTER %s
-# CHECK-BAD-FILTER: Filter did not match any tests (of 5 discovered).
-
-
 # Check that regex-filtering works, is case-insensitive, and can be configured via env var.
 #
 # RUN: %{lit} --filter 'o[a-z]e' %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER %s
 # RUN: %{lit} --filter 'O[A-Z]E' %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER %s
 # RUN: env LIT_FILTER='o[a-z]e' %{lit} %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER %s
 # CHECK-FILTER: Testing: 2 of 5 tests
-
 
 # Check that maximum counts work
 #
@@ -81,13 +68,15 @@
 #
 # RUN: %{lit} --num-shards 100 --run-shard 6 %{inputs}/discovery >%t.out 2>%t.err
 # RUN: FileCheck --check-prefix=CHECK-SHARD-BIG-ERR2 < %t.err %s
+# RUN: FileCheck --check-prefix=CHECK-SHARD-BIG-OUT2 < %t.out %s
 # CHECK-SHARD-BIG-ERR2: note: Selecting shard 6/100 = size 0/5 = tests #(100*k)+6 = []
-# CHECK-SHARD-BIG-ERR2: Shard does not contain any tests.  Consider decreasing the shard count.
+# CHECK-SHARD-BIG-OUT2: Testing: 0 of 5 tests
 #
 # RUN: %{lit} --num-shards 100 --run-shard 50 %{inputs}/discovery >%t.out 2>%t.err
 # RUN: FileCheck --check-prefix=CHECK-SHARD-BIG-ERR3 < %t.err %s
+# RUN: FileCheck --check-prefix=CHECK-SHARD-BIG-OUT3 < %t.out %s
 # CHECK-SHARD-BIG-ERR3: note: Selecting shard 50/100 = size 0/5 = tests #(100*k)+50 = []
-# CHECK-SHARD-BIG-ERR3: Shard does not contain any tests.  Consider decreasing the shard count.
+# CHECK-SHARD-BIG-OUT3: Testing: 0 of 5 tests
 
 
 # Check that range constraints are enforced
