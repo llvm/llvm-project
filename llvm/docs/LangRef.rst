@@ -3242,6 +3242,9 @@ the value is not necessarily consistent over time. In fact, ``%A`` and
 ``%C`` need to have the same semantics or the core LLVM "replace all
 uses with" concept would not hold.
 
+To ensure all uses of a given register observe the same value (even if
+'``undef``'), the :ref:`freeze instruction <i_freeze>` can be used.
+
 .. code-block:: llvm
 
       %A = sdiv undef, %X
@@ -3335,6 +3338,8 @@ Poison value behavior is defined in terms of value *dependence*:
 An instruction that *depends* on a poison value, produces a poison value
 itself. A poison value may be relaxed into an
 :ref:`undef value <undefvalues>`, which takes an arbitrary bit-pattern.
+Propagation of poison can be stopped with the
+:ref:`freeze instruction <i_freeze>`.
 
 This means that immediate undefined behavior occurs if a poison value is
 used as an instruction operand that has any values that trigger undefined
@@ -3345,9 +3350,9 @@ behavior. Notably this includes (but is not limited to):
    space).
 -  The divisor operand of a ``udiv``, ``sdiv``, ``urem`` or ``srem``
    instruction.
-
-Additionally, undefined behavior occurs if a side effect *depends* on poison.
-This includes side effects that are control dependent on a poisoned branch.
+-  The condition operand of a :ref:`br <i_br>` instruction.
+-  The callee operand of a :ref:`call <i_call>` or :ref:`invoke <i_invoke>`
+   instruction.
 
 Here are some examples:
 
@@ -3366,40 +3371,12 @@ Here are some examples:
       %narrowaddr = bitcast i32* @g to i16*
       %wideaddr = bitcast i32* @g to i64*
       %poison3 = load i16, i16* %narrowaddr ; Returns a poison value.
-      %poison4 = load i64, i64* %wideaddr  ; Returns a poison value.
+      %poison4 = load i64, i64* %wideaddr   ; Returns a poison value.
 
       %cmp = icmp slt i32 %poison, 0       ; Returns a poison value.
-      br i1 %cmp, label %true, label %end  ; Branch to either destination.
-
-    true:
-      store volatile i32 0, i32* @g        ; This is control-dependent on %cmp, so
-                                           ; it has undefined behavior.
-      br label %end
+      br i1 %cmp, label %end, label %end   ; undefined behavior
 
     end:
-      %p = phi i32 [ 0, %entry ], [ 1, %true ]
-                                           ; Both edges into this PHI are
-                                           ; control-dependent on %cmp, so this
-                                           ; always results in a poison value.
-
-      store volatile i32 0, i32* @g        ; This would depend on the store in %true
-                                           ; if %cmp is true, or the store in %entry
-                                           ; otherwise, so this is undefined behavior.
-
-      br i1 %cmp, label %second_true, label %second_end
-                                           ; The same branch again, but this time the
-                                           ; true block doesn't have side effects.
-
-    second_true:
-      ; No side effects!
-      ret void
-
-    second_end:
-      store volatile i32 0, i32* @g        ; This time, the instruction always depends
-                                           ; on the store in %end. Also, it is
-                                           ; control-equivalent to %end, so this is
-                                           ; well-defined (ignoring earlier undefined
-                                           ; behavior in this example).
 
 .. _blockaddress:
 
@@ -6878,6 +6855,7 @@ Upon execution of a conditional '``br``' instruction, the '``i1``'
 argument is evaluated. If the value is ``true``, control flows to the
 '``iftrue``' ``label`` argument. If "cond" is ``false``, control flows
 to the '``iffalse``' ``label`` argument.
+If '``cond``' is ``poison``, this instruction has undefined behavior.
 
 Example:
 """"""""
@@ -6928,6 +6906,7 @@ When the '``switch``' instruction is executed, this table is searched
 for the given value. If the value is found, control flow is transferred
 to the corresponding destination; otherwise, control flow is transferred
 to the default destination.
+If '``value``' is ``poison``, this instruction has undefined behavior.
 
 Implementation:
 """""""""""""""
@@ -6992,6 +6971,7 @@ Control transfers to the block specified in the address argument. All
 possible destination blocks must be listed in the label list, otherwise
 this instruction has undefined behavior. This implies that jumps to
 labels defined in other functions have undefined behavior as well.
+If '``address``' is ``poison``, this instruction has undefined behavior.
 
 Implementation:
 """""""""""""""
@@ -10217,6 +10197,74 @@ Example:
 .. code-block:: llvm
 
       %X = select i1 true, i8 17, i8 42          ; yields i8:17
+
+
+.. _i_freeze:
+
+'``freeze``' Instruction
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      <result> = freeze ty <val>    ; yields ty:result
+
+Overview:
+"""""""""
+
+The '``freeze``' instruction is used to stop propagation of
+:ref:`undef <undefvalues>` and :ref:`poison <poisonvalues>` values.
+
+Arguments:
+""""""""""
+
+The '``freeze``' instruction takes a single argument.
+
+Semantics:
+""""""""""
+
+If the argument is ``undef`` or ``poison``, '``freeze``' returns an
+arbitrary, but fixed, value of type '``ty``'.
+Otherwise, this instruction is a no-op and returns the input argument.
+All uses of a value returned by the same '``freeze``' instruction are
+guaranteed to always observe the same value, while different '``freeze``'
+instructions may yield different values.
+
+While ``undef`` and ``poison`` pointers can be frozen, the result is a
+non-dereferenceable pointer. See the
+:ref:`Pointer Aliasing Rules <pointeraliasing>` section for more information.
+
+
+Example:
+""""""""
+
+.. code-block:: llvm
+
+      %w = i32 undef
+      %x = freeze i32 %w
+      %y = add i32 %w, %w         ; undef
+      %z = add i32 %x, %x         ; even number because all uses of %x observe
+                                  ; the same value
+      %x2 = freeze i32 %w
+      %cmp = icmp eq i32 %x, %x2  ; can be true or false
+
+      ; example with vectors
+      %v = <2 x i32> <i32 undef, i32 poison>
+      %a = extractelement <2 x i32> %v, i32 0    ; undef
+      %b = extractelement <2 x i32> %v, i32 1    ; poison
+      %add = add i32 %a, %a                      ; undef
+
+      %v.fr = freeze <2 x i32> %v                ; element-wise freeze
+      %d = extractelement <2 x i32> %v.fr, i32 0 ; not undef
+      %add.f = add i32 %d, %d                    ; even number
+
+      ; branching on frozen value
+      %poison = add nsw i1 %k, undef   ; poison
+      %c = freeze i1 %poison
+      br i1 %c, label %foo, label %bar ; non-deterministic branch to %foo or %bar
+
 
 .. _i_call:
 
