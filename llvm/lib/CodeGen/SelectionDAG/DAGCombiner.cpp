@@ -14116,7 +14116,7 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
     return V;
 
   // Try to infer better alignment information than the load already has.
-  if (OptLevel != CodeGenOpt::None && LD->isUnindexed()) {
+  if (OptLevel != CodeGenOpt::None && LD->isUnindexed() && !LD->isAtomic()) {
     if (unsigned Align = DAG.InferPtrAlignment(Ptr)) {
       if (Align > LD->getAlignment() && LD->getSrcValueOffset() % Align == 0) {
         SDValue NewLoad = DAG.getExtLoad(
@@ -16164,8 +16164,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
         TLI.isStoreBitCastBeneficial(Value.getValueType(), SVT,
                                      DAG, *ST->getMemOperand())) {
       return DAG.getStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
-                          ST->getPointerInfo(), ST->getAlignment(),
-                          ST->getMemOperand()->getFlags(), ST->getAAInfo());
+                          ST->getMemOperand());
     }
   }
 
@@ -16174,7 +16173,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
     return Chain;
 
   // Try to infer better alignment information than the store already has.
-  if (OptLevel != CodeGenOpt::None && ST->isUnindexed()) {
+  if (OptLevel != CodeGenOpt::None && ST->isUnindexed() && !ST->isAtomic()) {
     if (unsigned Align = DAG.InferPtrAlignment(Ptr)) {
       if (Align > ST->getAlignment() && ST->getSrcValueOffset() % Align == 0) {
         SDValue NewStore =
