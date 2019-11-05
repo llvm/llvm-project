@@ -85,7 +85,7 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
                                     const Address &addr, bool show_fullpaths,
                                     bool show_module, bool show_inlined_frames,
                                     bool show_function_arguments,
-                                    bool show_function_name) {
+                                    bool show_function_name) const {
   bool dumped_something = false;
   if (show_module && module_sp) {
     if (show_fullpaths)
