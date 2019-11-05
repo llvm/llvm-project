@@ -42,6 +42,7 @@ class TestREPLExceptions(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
 
+    @decorators.skipIfRemote
     def do_repl_test(self):
         sdk_root = swift.getSwiftSDKRoot()
         build_dir = self.getBuildDir()
@@ -54,6 +55,17 @@ class TestREPLExceptions(TestBase):
         self.assertTrue("I called it successfully" in stdoutdata, "Didn't call call_cpp successfully: out: \n%s\nerr: %s"%(stdoutdata, stderrdata))
         
     def do_repl_mode_test(self):
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+        self.registerSharedLibrariesWithTarget(target, ['Wrapper'])
+
+        if lldb.remote_platform:
+            wd = lldb.remote_platform.GetWorkingDirectory()
+            filename = 'libCppLib.dylib'
+            err = lldb.remote_platform.Put(
+                lldb.SBFileSpec(self.getBuildArtifact(filename)),
+                lldb.SBFileSpec(os.path.join(wd, filename)))
+            self.assertFalse(err.Fail(), 'Failed to copy ' + filename)
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
                                    "Set a breakpoint here", self.main_source_file) 
 
