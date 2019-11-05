@@ -899,7 +899,7 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
       continue;
 
     // Load this module file.
-    if (llvm::Error Err = Builder.loadModuleFile(ModuleFile))
+    if (llvm::Error Err = Builder.loadModuleFile(*ModuleFile))
       return Err;
   }
 
