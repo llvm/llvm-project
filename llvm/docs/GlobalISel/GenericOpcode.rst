@@ -95,7 +95,7 @@ into the newly-created space.
 G_SEXT_INREG
 ^^^^^^^^^^^^
 
-Sign extend the a value from an arbitrary bit position, copying the sign bit
+Sign extend the value from an arbitrary bit position, copying the sign bit
 into all bits above it. This is equivalent to a shl + ashr pair with an
 appropriate shift amount. $sz is an immediate (MachineOperand::isImm()
 returns true) to allow targets to have some bitwidths legal and others
@@ -203,7 +203,7 @@ The input operands are always ordered from lowest bits to highest:
 G_UNMERGE_VALUES
 ^^^^^^^^^^^^^^^^
 
-Extract multiple registers specified size, starting from blocks given by
+Extract multiple registers of the specified size, starting from blocks given by
 indexes. This will almost certainly be mapped to sub-register COPYs after
 register banks have been selected.
 The output operands are always ordered from lowest bits to highest:
@@ -216,7 +216,7 @@ The output operands are always ordered from lowest bits to highest:
 G_BSWAP
 ^^^^^^^
 
-Reverse the order of the bytes in a scalar
+Reverse the order of the bytes in a scalar.
 
 .. code-block:: none
 
@@ -225,7 +225,7 @@ Reverse the order of the bytes in a scalar
 G_BITREVERSE
 ^^^^^^^^^^^^
 
-Reverse the order of the bits in a scalar
+Reverse the order of the bits in a scalar.
 
 .. code-block:: none
 
@@ -266,12 +266,17 @@ Select between two values depending on a zero/non-zero value.
 G_PTR_ADD
 ^^^^^^^^^
 
-Add an offset to a pointer measured in addressible units. Addressible units are
-typically bytes but this can vary between targets.
+Add a scalar offset in addressible units to a pointer. Addressible units are
+typically bytes but this may vary between targets.
 
 .. code-block:: none
 
-  %1:_(p0) = G_PTR_MASK %0, 3
+  %1:_(p0) = G_PTR_ADD %0:_(p0), %1:_(s32)
+
+.. caution::
+
+  There are currently no in-tree targets that use this with addressable units
+  not equal to 8 bit.
 
 G_PTR_MASK
 ^^^^^^^^^^
@@ -309,28 +314,39 @@ normal input. Also produce a carry output in addition to the normal result.
 
 .. code-block:: none
 
-  %3:_(s32), %4:_(s1) = G_UADDO %0, %1
+  %4:_(s32), %5:_(s1) = G_UADDE %0, %1, %3:_(s1)
 
 G_UMULH, G_SMULH
 ^^^^^^^^^^^^^^^^
 
 Multiply two numbers at twice the incoming bit width (signed) and return
-the high half of the result
+the high half of the result.
 
 .. code-block:: none
 
-  %3:_(s32), %4:_(s1) = G_UADDO %0, %1
+  %3:_(s32) = G_UMULH %0, %1
 
 G_CTLZ, G_CTTZ, G_CTPOP
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Count leading zeros, trailing zeros, or number of set bits
+Count leading zeros, trailing zeros, or number of set bits.
+
+.. code-block:: none
+
+  %2:_(s33) = G_CTLZ_ZERO_UNDEF %1
+  %2:_(s33) = G_CTTZ_ZERO_UNDEF %1
+  %2:_(s33) = G_CTPOP %1
 
 G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Count leading zeros or trailing zeros. If the value is zero then the result is
 undefined.
+
+.. code-block:: none
+
+  %2:_(s33) = G_CTLZ_ZERO_UNDEF %1
+  %2:_(s33) = G_CTTZ_ZERO_UNDEF %1
 
 Floating Point Operations
 -------------------------
@@ -345,27 +361,27 @@ non-zero value.
 G_FNEG
 ^^^^^^
 
-Floating point negation
+Floating point negation.
 
 G_FPEXT
 ^^^^^^^
 
-Convert a floating point value to a larger type
+Convert a floating point value to a larger type.
 
 G_FPTRUNC
 ^^^^^^^^^
 
-Convert a floating point value to a narrower type
+Convert a floating point value to a narrower type.
 
 G_FPTOSI, G_FPTOUI, G_SITOFP, G_UITOFP
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Convert between integer and floating point
+Convert between integer and floating point.
 
 G_FABS
 ^^^^^^
 
-Take the absolute value of a floating point value
+Take the absolute value of a floating point value.
 
 G_FCOPYSIGN
 ^^^^^^^^^^^
@@ -376,7 +392,7 @@ second operand.
 G_FCANONICALIZE
 ^^^^^^^^^^^^^^^
 
-See :ref:`i_intr_llvm_canonicalize`
+See :ref:`i_intr_llvm_canonicalize`.
 
 G_FMINNUM
 ^^^^^^^^^
@@ -434,12 +450,12 @@ Perform the specified floating point arithmetic.
 G_FMA
 ^^^^^
 
-Perform a fused multiple add (i.e. without the intermediate rounding step).
+Perform a fused multiply add (i.e. without the intermediate rounding step).
 
 G_FMAD
 ^^^^^^
 
-Perform a non-fused multiple add (i.e. with the intermediate rounding step).
+Perform a non-fused multiply add (i.e. with the intermediate rounding step).
 
 G_FPOW
 ^^^^^^
