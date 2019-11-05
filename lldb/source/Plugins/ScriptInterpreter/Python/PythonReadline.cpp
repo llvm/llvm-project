@@ -49,7 +49,11 @@ simple_readline(FILE *stdin, FILE *stdout, char *prompt)
   rl_outstream = stdout;
   char *line = readline(prompt);
   if (!line) {
+#if PY_MAJOR_VERSION >= 3
     char *ret = (char *)PyMem_RawMalloc(1);
+#else
+    char *ret = (char *)PyMem_Malloc(1);
+#endif
     if (ret != NULL)
       *ret = '\0';
     return ret;
@@ -57,7 +61,11 @@ simple_readline(FILE *stdin, FILE *stdout, char *prompt)
   if (*line)
     add_history(line);
   int n = strlen(line);
+#if PY_MAJOR_VERSION >= 3
   char *ret = (char *)PyMem_RawMalloc(n + 2);
+#else
+  char *ret = (char *)PyMem_Malloc(n + 2);
+#endif
   if (ret) {
     strncpy(ret, line, n);
     free(line);
@@ -73,7 +81,7 @@ PyMODINIT_FUNC initlldb_readline(void) {
 #if PY_MAJOR_VERSION >= 3
   return PyModule_Create(&readline_module);
 #else
-  Py_InitModule4("lldb_readline", moduleMethods, moduleDocumentation,
+  Py_InitModule4("readline", moduleMethods, moduleDocumentation,
                  static_cast<PyObject *>(NULL), PYTHON_API_VERSION);
 #endif
 }
