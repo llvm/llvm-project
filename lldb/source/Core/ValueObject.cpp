@@ -29,7 +29,6 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/Declaration.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Type.h"
@@ -52,6 +51,10 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-private-types.h"
+
+// BEGIN SWIFT
+#include "lldb/Symbol/SwiftASTContext.h"
+// END SWIFT
 
 #include "llvm/Support/Compiler.h"
 
@@ -78,13 +81,14 @@ using namespace lldb_private;
 
 static user_id_t g_value_obj_uid = 0;
 
+// BEGIN SWIFT
 static const ExecutionContextRef *GetSwiftExeCtx(ValueObject &valobj) {
   return (valobj.GetPreferredDisplayLanguage() == eLanguageTypeSwift)
              ? &valobj.GetExecutionContextRef()
              : nullptr;
 }
+// END SWIFT
 
-//----------------------------------------------------------------------
 // ValueObject constructor
 ValueObject::ValueObject(ValueObject &parent)
     : UserID(++g_value_obj_uid), // Unique identifier for every value object
@@ -208,6 +212,7 @@ bool ValueObject::UpdateValueIfNeeded(bool update_format) {
 
   bool did_change_formats = false;
 
+  // BEGIN SWIFT
   // Swift: Check whether the dynamic type system became stale.
   if (m_dynamic_value) {
     auto *dyn_val = static_cast<ValueObjectDynamicValue *>(m_dynamic_value);
@@ -216,7 +221,8 @@ bool ValueObject::UpdateValueIfNeeded(bool update_format) {
       SetNeedsUpdate();
     }
   }
-  
+  // END SWIFT
+
   if (update_format)
     did_change_formats = UpdateFormatsIfNeeded();
 

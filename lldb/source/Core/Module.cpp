@@ -23,7 +23,6 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -36,7 +35,6 @@
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -54,6 +52,11 @@
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
+
+// BEGIN SWIFT
+#include "lldb/Symbol/SwiftASTContext.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
+// END SWIFT
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
@@ -642,8 +645,10 @@ Module::LookupInfo::LookupInfo(ConstString name,
               Language::LanguageIsObjC(language)) &&
              ObjCLanguage::IsPossibleObjCMethodName(name_cstr))
       m_name_type_mask = eFunctionNameTypeFull;
+    // BEGIN SWIFT
     else if (SwiftLanguageRuntime::IsSwiftMangledName(name_cstr))
       m_name_type_mask = eFunctionNameTypeFull;
+    // END SWIFT
     else if (Language::LanguageIsC(language)) {
       m_name_type_mask = eFunctionNameTypeFull;
     } else {
@@ -653,6 +658,8 @@ Module::LookupInfo::LookupInfo(ConstString name,
         m_name_type_mask |= eFunctionNameTypeSelector;
 
       CPlusPlusLanguage::MethodName cpp_method(name);
+
+      // BEGIN SWIFT
       SwiftLanguageRuntime::MethodName swift_method(name, true);
 
       if ((language == eLanguageTypeUnknown ||
@@ -665,6 +672,7 @@ Module::LookupInfo::LookupInfo(ConstString name,
                 language == eLanguageTypeObjC_plus_plus) &&
                cpp_method.IsValid())
         basename = cpp_method.GetBasename();
+      // END SWIFT
 
       if (basename.empty()) {
         if (CPlusPlusLanguage::ExtractContextAndIdentifier(name_cstr, context,
@@ -683,6 +691,8 @@ Module::LookupInfo::LookupInfo(ConstString name,
       // If they've asked for a CPP method or function name and it can't be
       // that, we don't even need to search for CPP methods or names.
       CPlusPlusLanguage::MethodName cpp_method(name);
+
+      // BEGIN SWIFT
       SwiftLanguageRuntime::MethodName swift_method(name, true);
       if (swift_method.IsValid())
         basename = swift_method.GetBasename();
@@ -696,6 +706,7 @@ Module::LookupInfo::LookupInfo(ConstString name,
           if (m_name_type_mask == eFunctionNameTypeNone)
             return;
         }
+        // END SWIFT
       } else {
         // If the CPP method parser didn't manage to chop this up, try to fill
         // in the base name if we can. If a::b::c is passed in, we need to just
@@ -1550,13 +1561,15 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
 bool Module::SetArchitecture(const ArchSpec &new_arch) {
   if (!m_arch.IsValid()) {
     m_arch = new_arch;
-    auto type_system_or_err = m_type_system_map.GetTypeSystemForLanguage(eLanguageTypeSwift, this, false);
+    auto type_system_or_err = m_type_system_map.GetTypeSystemForLanguage(
+        eLanguageTypeSwift, this, false);
     if (!type_system_or_err) {
       llvm::consumeError(type_system_or_err.takeError());
       return true;
     }
 
-    if (auto *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err))
+    if (auto *swift_ast =
+            llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err))
       swift_ast->SetTriple(new_arch.GetTriple());
     return true;
   }
@@ -1650,17 +1663,6 @@ llvm::VersionTuple Module::GetVersion() {
   return llvm::VersionTuple();
 }
 
-void Module::ClearModuleDependentCaches() {
-  auto type_system_or_err = m_type_system_map.GetTypeSystemForLanguage(eLanguageTypeSwift, this, false);
-  if (!type_system_or_err) {
-    llvm::consumeError(type_system_or_err.takeError());
-    return;
-  }
-
-  if (auto *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err))
-    swift_ast->ClearModuleDependentCaches();
-}
-
 bool Module::GetIsDynamicLinkEditor() {
   ObjectFile *obj_file = GetObjectFile();
 
@@ -1668,6 +1670,19 @@ bool Module::GetIsDynamicLinkEditor() {
     return obj_file->GetIsDynamicLinkEditor();
 
   return false;
+}
+
+// BEGIN SWIFT
+void Module::ClearModuleDependentCaches() {
+  auto type_system_or_err = m_type_system_map.GetTypeSystemForLanguage(
+      eLanguageTypeSwift, this, false);
+  if (!type_system_or_err) {
+    llvm::consumeError(type_system_or_err.takeError());
+    return;
+  }
+
+  if (auto *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err))
+    swift_ast->ClearModuleDependentCaches();
 }
 
 void Module::ForEachTypeSystem(
@@ -1708,3 +1723,4 @@ Module::GetASTData(lldb::LanguageType language) {
 
   return ast_datas;
 }
+// END SWIFT

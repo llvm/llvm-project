@@ -8,15 +8,6 @@
 
 #include "lldb/Core/Debugger.h"
 
-#include <map>
-#include <mutex>
-
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Threading.h"
-
-#include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Mangled.h"
@@ -32,7 +23,6 @@
 #include "lldb/Host/Terminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
-#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueSInt64.h"
@@ -1042,6 +1032,8 @@ void Debugger::PushIOHandler(const IOHandlerSP &reader_sp,
   }
 }
 
+// BEGIN SWIFT
+
 // Pop 2 IOHandlers and don't active the second one after the first is popped
 uint32_t Debugger::PopIOHandlers(const IOHandlerSP &reader1_sp,
                                  const IOHandlerSP &reader2_sp) {
@@ -1077,6 +1069,7 @@ uint32_t Debugger::PopIOHandlers(const IOHandlerSP &reader1_sp,
   }
   return result;
 }
+// END SWIFT
 
 bool Debugger::PopIOHandler(const IOHandlerSP &pop_reader_sp) {
   if (!pop_reader_sp)
@@ -1346,7 +1339,9 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
 
   if (!gui_enabled) {
     bool pop_process_io_handler = false;
+    // BEGIN SWIFT
     bool pop_command_interpreter = false;
+    // END SWIFT
     assert(process_sp);
 
     bool state_is_stopped = false;
@@ -1367,7 +1362,10 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
     if (got_state_changed && !state_is_stopped) {
       Process::HandleProcessStateChangedEvent(event_sp, output_stream_sp.get(),
                                               pop_process_io_handler,
-                                              pop_command_interpreter);
+                                              // BEGIN SWIFT
+                                              pop_command_interpreter
+                                              // END SWIFT
+                                              );
     }
 
     // Now display STDOUT and STDERR
@@ -1408,14 +1406,19 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
     if (got_state_changed && state_is_stopped) {
       Process::HandleProcessStateChangedEvent(event_sp, output_stream_sp.get(),
                                               pop_process_io_handler,
-                                              pop_command_interpreter);
+                                              // BEGIN SWIFT
+                                              pop_command_interpreter
+                                              // END SWIFT
+                                              );
     }
 
     output_stream_sp->Flush();
     error_stream_sp->Flush();
 
     if (pop_process_io_handler)
+      // BEGIN SWIFT
       process_sp->PopProcessIOHandler(pop_command_interpreter);
+      // END SWIFT
   }
 }
 

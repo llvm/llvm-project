@@ -141,8 +141,10 @@ const char *Section::GetTypeAsCString() const {
   case eSectionTypeOther:
     return "regular";
 
+  // BEGIN SWIFT
   case eSectionTypeSwiftModules:
     break;
+  // END SWIFT
   }
   return "unknown";
 }

@@ -25,7 +25,6 @@
 #include "lldb/Utility/Logging.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-defines.h"
-#include "lldb/lldb-private-types.h"
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h"
@@ -62,10 +61,13 @@ class Target;
 using namespace lldb;
 using namespace lldb_private;
 
+// BEGIN SWIFT
 static bool KeepLookingInDylinker(SymbolContextList &sc_list, size_t start_idx);
+// END SWIFT
 
 namespace {
 
+// BEGIN SWIFT
 static constexpr OptionEnumValueElement g_swift_module_loading_mode_enums[] = {
   {eSwiftModuleLoadingModePreferInterface, "prefer-interface",
     "Prefer loading Swift modules via their .swiftinterface file, but fall back "
@@ -79,6 +81,7 @@ static constexpr OptionEnumValueElement g_swift_module_loading_mode_enums[] = {
   {eSwiftModuleLoadingModeOnlySerialized, "only-serialized",
     "Only load Swift modules via their .swiftmodule file - ignore "
     ".swiftinterface files."} };
+// END SWIFT
 
 #define LLDB_PROPERTIES_modulelist
 #include "CoreProperties.inc"
@@ -98,7 +101,9 @@ ModuleListProperties::ModuleListProperties() {
   llvm::SmallString<128> path;
   clang::driver::Driver::getDefaultModuleCachePath(path);
   SetClangModulesCachePath(path);
+  // BEGIN SWIFT
   SetSwiftModuleLoadingMode(eSwiftModuleLoadingModePreferSerialized);
+  // END SWIFT
 }
 
 bool ModuleListProperties::GetEnableExternalLookup() const {
@@ -119,23 +124,27 @@ FileSpec ModuleListProperties::GetClangModulesCachePath() const {
       ->GetCurrentValue();
 }
 
+// BEGIN SWIFT
 bool ModuleListProperties::GetUseDWARFImporter() const {
   const uint32_t idx = ePropertyUseDWARFImporter;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
       NULL, idx, g_modulelist_properties[idx].default_uint_value != 0);
 }
+// END SWIFT
 
 bool ModuleListProperties::SetClangModulesCachePath(llvm::StringRef path) {
   return m_collection_sp->SetPropertyAtIndexAsString(
       nullptr, ePropertyClangModulesCachePath, path);
 }
 
+// BEGIN SWIFT
 SwiftModuleLoadingMode ModuleListProperties::GetSwiftModuleLoadingMode() const {
   const uint32_t idx = ePropertySwiftModuleLoadingMode;
   return (SwiftModuleLoadingMode)
       m_collection_sp->GetPropertyAtIndexAsEnumeration(
           nullptr, idx, g_modulelist_properties[idx].default_uint_value);
 }
+// END SWIFT
 
 bool ModuleListProperties::SetSwiftModuleLoadingMode(SwiftModuleLoadingMode mode) {
   return m_collection_sp->SetPropertyAtIndexAsEnumeration(
@@ -424,10 +433,13 @@ void ModuleList::FindFunctionSymbols(ConstString name,
 void ModuleList::FindFunctions(const RegularExpression &name,
                                bool include_symbols, bool include_inlines,
                                SymbolContextList &sc_list) {
+  // BEGIN SWIFT
   const size_t initial_size = sc_list.GetSize();
+  // END SWIFT
 
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   collection::const_iterator pos, end = m_modules.end();
+  // BEGIN SWIFT
   collection dylinker_modules;
   for (pos = m_modules.begin(); pos != end; ++pos) {
     if (!(*pos)->GetIsDynamicLinkEditor())
@@ -442,6 +454,7 @@ void ModuleList::FindFunctions(const RegularExpression &name,
     for (pos = dylinker_modules.begin(); pos != end; pos++)
       (*pos)->FindFunctions(name, include_symbols, include_inlines, sc_list);
   }
+  // END SWIFT
 }
 
 void ModuleList::FindCompileUnits(const FileSpec &path,
@@ -472,6 +485,8 @@ void ModuleList::FindGlobalVariables(const RegularExpression &regex,
   }
 }
 
+// BEGIN SWIFT
+
 // We don't want to find symbols in the dylinker file if we've found
 // a viable candidate anywhere else.  This function looks at the symbols
 // added to the sc_list since start_idx, and if there's one in there that
@@ -501,11 +516,13 @@ static bool KeepLookingInDylinker(SymbolContextList &sc_list,
   }
   return keep_looking;
 }
+// END SWIFT
 
 void ModuleList::FindSymbolsWithNameAndType(ConstString name,
                                             SymbolType symbol_type,
                                             SymbolContextList &sc_list) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
+  // BEGIN SWIFT
   const size_t initial_size = sc_list.GetSize();
 
   collection::const_iterator pos, end = m_modules.end();
@@ -526,12 +543,14 @@ void ModuleList::FindSymbolsWithNameAndType(ConstString name,
     for (pos = dylinker_modules.begin(); pos != end; ++pos)
       (*pos)->FindSymbolsWithNameAndType(name, symbol_type, sc_list);
   }
+  // END SWIFT
 }
 
 void ModuleList::FindSymbolsMatchingRegExAndType(
     const RegularExpression &regex, lldb::SymbolType symbol_type,
     SymbolContextList &sc_list) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
+  // BEGIN SWIFT
   const size_t initial_size = sc_list.GetSize();
 
   collection::const_iterator pos, end = m_modules.end();
@@ -550,6 +569,7 @@ void ModuleList::FindSymbolsMatchingRegExAndType(
     for (pos = dylinker_modules.begin(); pos != end; ++pos)
       (*pos)->FindSymbolsMatchingRegExAndType(regex, symbol_type, sc_list);
   }
+  // END SWIFT
 }
 
 void ModuleList::FindModules(const ModuleSpec &module_spec,
@@ -1113,8 +1133,10 @@ void ModuleList::ForEach(
   }
 }
 
+// BEGIN SWIFT
 void ModuleList::ClearModuleDependentCaches() {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   for (const auto &module : m_modules)
     module->ClearModuleDependentCaches();
 }
+// END SWIFT
