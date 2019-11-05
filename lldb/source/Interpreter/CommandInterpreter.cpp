@@ -137,9 +137,9 @@ bool CommandInterpreter::GetPromptOnQuit() const {
       nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
-void CommandInterpreter::SetPromptOnQuit(bool b) {
+void CommandInterpreter::SetPromptOnQuit(bool enable) {
   const uint32_t idx = ePropertyPromptOnQuit;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, enable);
 }
 
 bool CommandInterpreter::GetEchoCommands() const {
@@ -148,9 +148,9 @@ bool CommandInterpreter::GetEchoCommands() const {
       nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
-void CommandInterpreter::SetEchoCommands(bool b) {
+void CommandInterpreter::SetEchoCommands(bool enable) {
   const uint32_t idx = ePropertyEchoCommands;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, enable);
 }
 
 bool CommandInterpreter::GetEchoCommentCommands() const {
@@ -159,9 +159,9 @@ bool CommandInterpreter::GetEchoCommentCommands() const {
       nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
-void CommandInterpreter::SetEchoCommentCommands(bool b) {
+void CommandInterpreter::SetEchoCommentCommands(bool enable) {
   const uint32_t idx = ePropertyEchoCommentCommands;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, enable);
 }
 
 void CommandInterpreter::AllowExitCodeOnQuit(bool allow) {
