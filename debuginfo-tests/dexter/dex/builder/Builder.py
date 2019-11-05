@@ -80,12 +80,14 @@ def run_external_build_script(context, script_path, source_files,
                 stderr=subprocess.PIPE)
             out, err = process.communicate()
             returncode = process.returncode
+        out = out.decode('utf-8')
+        err = err.decode('utf-8')
         if returncode != 0:
             raise BuildScriptException(
                 '{}: failed with returncode {}.\nstdout:\n{}\n\nstderr:\n{}\n'.
                 format(script_path, returncode, out, err),
                 script_error=err)
-        return out.decode('utf-8'), err.decode('utf-8'), builderIR
+        return out, err, builderIR
     except OSError as e:
         raise BuildScriptException('{}: {}'.format(e.strerror, script_path))
 
