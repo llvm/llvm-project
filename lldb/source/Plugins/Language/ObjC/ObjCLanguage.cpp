@@ -745,11 +745,6 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
                 "NSNotification summary provider",
                 ConstString("NSConcreteNotification"), appkit_flags);
 
-  // AddStringSummary(objc_category_sp, "domain: ${var._domain} - code:
-  // ${var._code}", ConstString("NSError"), appkit_flags);
-  // AddStringSummary(objc_category_sp,"name:${var.name%S}
-  // reason:${var.reason%S}",ConstString("NSException"),appkit_flags);
-
   AddCXXSummary(
       objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider,
       "NSNumber summary provider", ConstString("NSNumber"), appkit_flags);
@@ -978,9 +973,8 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
                    ResultSet &results) override {
       bool result = false;
 
-      Target *target = exe_scope->CalculateTarget().get();
-      if (target) {
-        if (auto clang_modules_decl_vendor =
+      if (auto *target = exe_scope->CalculateTarget().get()) {
+        if (auto *clang_modules_decl_vendor =
                 target->GetClangModulesDeclVendor()) {
           std::vector<clang::NamedDecl *> decls;
           ConstString key_cs(key);
