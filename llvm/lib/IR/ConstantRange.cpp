@@ -864,41 +864,17 @@ ConstantRange ConstantRange::addWithNoWrap(const ConstantRange &Other,
   using OBO = OverflowingBinaryOperator;
   ConstantRange Result = add(Other);
 
-  auto addWithNoUnsignedWrap = [this](const ConstantRange &Other) {
-    APInt LMin = getUnsignedMin(), LMax = getUnsignedMax();
-    APInt RMin = Other.getUnsignedMin(), RMax = Other.getUnsignedMax();
-    bool Overflow;
-    APInt NewMin = LMin.uadd_ov(RMin, Overflow);
-    if (Overflow)
-      return getEmpty();
-    APInt NewMax = LMax.uadd_sat(RMax);
-    return getNonEmpty(std::move(NewMin), std::move(NewMax) + 1);
-  };
-
-  auto addWithNoSignedWrap = [this](const ConstantRange &Other) {
-    APInt LMin = getSignedMin(), LMax = getSignedMax();
-    APInt RMin = Other.getSignedMin(), RMax = Other.getSignedMax();
-    if (LMin.isNonNegative()) {
-      bool Overflow;
-      APInt Temp = LMin.sadd_ov(RMin, Overflow);
-      if (Overflow)
-        return getEmpty();
-    }
-    if (LMax.isNegative()) {
-      bool Overflow;
-      APInt Temp = LMax.sadd_ov(RMax, Overflow);
-      if (Overflow)
-        return getEmpty();
-    }
-    APInt NewMin = LMin.sadd_sat(RMin);
-    APInt NewMax = LMax.sadd_sat(RMax);
-    return getNonEmpty(std::move(NewMin), std::move(NewMax) + 1);
-  };
+  // If an overflow happens for every value pair in these two constant ranges,
+  // we must return Empty set. In this case, we get that for free, because we
+  // get lucky that intersection of add() with uadd_sat()/sadd_sat() results
+  // in an empty set.
 
   if (NoWrapKind & OBO::NoSignedWrap)
-    Result = Result.intersectWith(addWithNoSignedWrap(Other), RangeType);
+    Result = Result.intersectWith(sadd_sat(Other), RangeType);
+
   if (NoWrapKind & OBO::NoUnsignedWrap)
-    Result = Result.intersectWith(addWithNoUnsignedWrap(Other), RangeType);
+    Result = Result.intersectWith(uadd_sat(Other), RangeType);
+
   return Result;
 }
 
