@@ -125,6 +125,11 @@
 # else
 #   define TEST_THROW_SPEC(...) throw(__VA_ARGS__)
 # endif
+# if TEST_STD_VER > 17
+#   define TEST_CONSTEXPR_CXX20 constexpr
+# else
+#   define TEST_CONSTEXPR_CXX20
+# endif
 #else
 #if defined(TEST_COMPILER_CLANG)
 # define TEST_ALIGNOF(...) _Alignof(__VA_ARGS__)
@@ -134,6 +139,7 @@
 #define TEST_ALIGNAS(...) __attribute__((__aligned__(__VA_ARGS__)))
 #define TEST_CONSTEXPR
 #define TEST_CONSTEXPR_CXX14
+#define TEST_CONSTEXPR_CXX20
 #define TEST_NOEXCEPT throw()
 #define TEST_NOEXCEPT_FALSE
 #define TEST_NOEXCEPT_COND(...)

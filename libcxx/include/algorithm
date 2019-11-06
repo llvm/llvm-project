@@ -167,20 +167,20 @@ template <class ForwardIterator, class Size, class T, class BinaryPredicate>
              Size count, const T& value, BinaryPredicate pred);
 
 template <class InputIterator, class OutputIterator>
-    OutputIterator
+    constexpr OutputIterator      // constexpr in C++20
     copy(InputIterator first, InputIterator last, OutputIterator result);
 
 template<class InputIterator, class OutputIterator, class Predicate>
-    OutputIterator
+    constexpr OutputIterator      // constexpr in C++20
     copy_if(InputIterator first, InputIterator last,
             OutputIterator result, Predicate pred);
 
 template<class InputIterator, class Size, class OutputIterator>
-    OutputIterator
+    constexpr OutputIterator      // constexpr in C++20
     copy_n(InputIterator first, Size n, OutputIterator result);
 
 template <class BidirectionalIterator1, class BidirectionalIterator2>
-    BidirectionalIterator2
+    constexpr BidirectionalIterator2      // constexpr in C++20
     copy_backward(BidirectionalIterator1 first, BidirectionalIterator1 last,
                   BidirectionalIterator2 result);
 
@@ -1631,7 +1631,7 @@ search_n(_ForwardIterator __first, _ForwardIterator __last, _Size __count, const
 
 // copy
 template <class _Iter>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _Iter
 __unwrap_iter(_Iter __i)
 {
@@ -1639,7 +1639,7 @@ __unwrap_iter(_Iter __i)
 }
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 typename enable_if
 <
     is_trivially_copy_assignable<_Tp>::value,
@@ -1693,13 +1693,21 @@ __unwrap_iter(__wrap_iter<_Tp*> __i)
 #endif  // _LIBCPP_DEBUG_LEVEL < 2
 
 template <class _InputIterator, class _OutputIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _OutputIterator
-__copy(_InputIterator __first, _InputIterator __last, _OutputIterator __result)
+__copy_constexpr(_InputIterator __first, _InputIterator __last, _OutputIterator __result)
 {
     for (; __first != __last; ++__first, (void) ++__result)
         *__result = *__first;
     return __result;
+}
+
+template <class _InputIterator, class _OutputIterator>
+inline _LIBCPP_INLINE_VISIBILITY
+_OutputIterator
+__copy(_InputIterator __first, _InputIterator __last, _OutputIterator __result)
+{
+    return __copy_constexpr(__first, __last, __result);
 }
 
 template <class _Tp, class _Up>
@@ -1719,23 +1727,37 @@ __copy(_Tp* __first, _Tp* __last, _Up* __result)
 }
 
 template <class _InputIterator, class _OutputIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _OutputIterator
 copy(_InputIterator __first, _InputIterator __last, _OutputIterator __result)
 {
-    return _VSTD::__copy(__unwrap_iter(__first), __unwrap_iter(__last), __unwrap_iter(__result));
+    if (__libcpp_is_constant_evaluated()) {
+        return _VSTD::__copy_constexpr(
+            __unwrap_iter(__first), __unwrap_iter(__last), __unwrap_iter(__result));
+    } else {
+        return _VSTD::__copy(
+            __unwrap_iter(__first), __unwrap_iter(__last), __unwrap_iter(__result));
+    }
 }
 
 // copy_backward
+
+template <class _BidirectionalIterator, class _OutputIterator>
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+_OutputIterator
+__copy_backward_constexpr(_BidirectionalIterator __first, _BidirectionalIterator __last, _OutputIterator __result)
+{
+    while (__first != __last)
+        *--__result = *--__last;
+    return __result;
+}
 
 template <class _BidirectionalIterator, class _OutputIterator>
 inline _LIBCPP_INLINE_VISIBILITY
 _OutputIterator
 __copy_backward(_BidirectionalIterator __first, _BidirectionalIterator __last, _OutputIterator __result)
 {
-    while (__first != __last)
-        *--__result = *--__last;
-    return __result;
+    return __copy_backward_constexpr(__first, __last, __result);
 }
 
 template <class _Tp, class _Up>
@@ -1758,20 +1780,26 @@ __copy_backward(_Tp* __first, _Tp* __last, _Up* __result)
 }
 
 template <class _BidirectionalIterator1, class _BidirectionalIterator2>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _BidirectionalIterator2
 copy_backward(_BidirectionalIterator1 __first, _BidirectionalIterator1 __last,
               _BidirectionalIterator2 __result)
 {
-    return _VSTD::__copy_backward(__unwrap_iter(__first),
-                                  __unwrap_iter(__last),
-                                  __unwrap_iter(__result));
+    if (__libcpp_is_constant_evaluated()) {
+        return _VSTD::__copy_backward_constexpr(__unwrap_iter(__first),
+                                                __unwrap_iter(__last),
+                                                __unwrap_iter(__result));
+    } else {
+        return _VSTD::__copy_backward(__unwrap_iter(__first),
+                                      __unwrap_iter(__last),
+                                      __unwrap_iter(__result));
+    }
 }
 
 // copy_if
 
 template<class _InputIterator, class _OutputIterator, class _Predicate>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 _OutputIterator
 copy_if(_InputIterator __first, _InputIterator __last,
         _OutputIterator __result, _Predicate __pred)
@@ -1790,7 +1818,7 @@ copy_if(_InputIterator __first, _InputIterator __last,
 // copy_n
 
 template<class _InputIterator, class _Size, class _OutputIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 typename enable_if
 <
     __is_input_iterator<_InputIterator>::value &&
@@ -1816,7 +1844,7 @@ copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result)
 }
 
 template<class _InputIterator, class _Size, class _OutputIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 typename enable_if
 <
     __is_random_access_iterator<_InputIterator>::value,
