@@ -2393,7 +2393,7 @@ public:
   }
 
   Value *CreateFreeze(Value *V, const Twine &Name = "") {
-    return Insert(UnaryOperator::CreateFreeze(V, Name));
+    return Insert(new FreezeInst(V), Name);
   }
 
   //===--------------------------------------------------------------------===//
