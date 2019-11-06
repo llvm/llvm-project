@@ -1228,11 +1228,14 @@ void JITDylib::notifyFailed(FailedSymbolsWorklist Worklist) {
       MI.UnemittedDependencies.clear();
 
       // Collect queries to be failed for this MII.
+      AsynchronousSymbolQueryList ToDetach;
       for (auto &Q : MII->second.pendingQueries()) {
         // Add the query to the list to be failed and detach it.
         FailedQueries.insert(Q);
-        Q->detach();
+        ToDetach.push_back(Q);
       }
+      for (auto &Q : ToDetach)
+        Q->detach();
 
       assert(MI.Dependants.empty() &&
              "Can not delete MaterializingInfo with dependants still attached");
