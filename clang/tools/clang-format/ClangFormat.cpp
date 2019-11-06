@@ -18,7 +18,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
 #include "clang/Format/Format.h"
-#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -300,12 +299,9 @@ emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   DiagOpts->ShowColors = (ShowColors && !NoShowColors);
 
-  TextDiagnosticPrinter *DiagsBuffer =
-      new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts, false);
-
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      new DiagnosticsEngine(DiagID, &*DiagOpts, DiagsBuffer));
+      new DiagnosticsEngine(DiagID, &*DiagOpts));
 
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
@@ -314,24 +310,41 @@ emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
   FileID FileID = createInMemoryFile(AssumedFileName, Code.get(), Sources,
                                      Files, InMemoryFileSystem.get());
 
-  const unsigned ID = Diags->getCustomDiagID(
-      WarningsAsErrors ? clang::DiagnosticsEngine::Error
-                       : clang::DiagnosticsEngine::Warning,
-      "code should be clang-formatted [-Wclang-format-violations]");
+  FileManager &FileMgr = Sources.getFileManager();
+  llvm::ErrorOr<const FileEntry *> FileEntryPtr =
+      FileMgr.getFile(AssumedFileName);
 
   unsigned Errors = 0;
-  DiagsBuffer->BeginSourceFile(LangOptions(), nullptr);
   if (WarnFormat && !NoWarnFormat) {
+    llvm::SourceMgr Mgr;
     for (const auto &R : Replaces) {
-      Diags->Report(
-          Sources.getLocForStartOfFile(FileID).getLocWithOffset(R.getOffset()),
-          ID);
+      PresumedLoc PLoc = Sources.getPresumedLoc(
+          Sources.getLocForStartOfFile(FileID).getLocWithOffset(R.getOffset()));
+
+      SourceLocation LineBegin =
+          Sources.translateFileLineCol(FileEntryPtr.get(), PLoc.getLine(), 1);
+      SourceLocation NextLineBegin = Sources.translateFileLineCol(
+          FileEntryPtr.get(), PLoc.getLine() + 1, 1);
+
+      const char *StartBuf = Sources.getCharacterData(LineBegin);
+      const char *EndBuf = Sources.getCharacterData(NextLineBegin);
+
+      StringRef Line(StartBuf, (EndBuf - StartBuf) - 1);
+
+      SMDiagnostic Diag(
+          Mgr, SMLoc::getFromPointer(StartBuf), AssumedFileName,
+          PLoc.getLine(), PLoc.getColumn(),
+          WarningsAsErrors ? SourceMgr::DiagKind::DK_Error
+                           : SourceMgr::DiagKind::DK_Warning,
+          "code should be clang-formatted [-Wclang-format-violations]", Line,
+          ArrayRef<std::pair<unsigned, unsigned>>());
+
+      Diag.print(nullptr, llvm::errs(), (ShowColors && !NoShowColors));
       Errors++;
       if (ErrorLimit && Errors >= ErrorLimit)
         break;
     }
   }
-  DiagsBuffer->EndSourceFile();
   return WarningsAsErrors;
 }
 
