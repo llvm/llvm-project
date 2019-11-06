@@ -76,6 +76,13 @@ private:
 };
 } // end anonymous namespace
 
+/// Insert (K, V) pair into the ValueToValueMap, and verify the key did not
+/// previously exist in the map, and the value was inserted.
+static void InsertNewValueIntoMap(ValueToValueMapTy &VM, Value *K, Value *V) {
+  bool Inserted = VM.insert({K, V}).second;
+  assert(Inserted);
+  (void)Inserted;
+}
 /// RewriteUsesOfClonedInstructions - We just cloned the instructions from the
 /// old header into the preheader.  If there were uses of the values produced by
 /// these instruction that were outside of the loop, we have to insert PHI nodes
@@ -300,7 +307,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   // For PHI nodes, the value available in OldPreHeader is just the
   // incoming value from OldPreHeader.
   for (; PHINode *PN = dyn_cast<PHINode>(I); ++I)
-    ValueMap[PN] = PN->getIncomingValueForBlock(OrigPreheader);
+    InsertNewValueIntoMap(ValueMap, PN,
+                          PN->getIncomingValueForBlock(OrigPreheader));
 
   // For the rest of the instructions, either hoist to the OrigPreheader if
   // possible or create a clone in the OldPreHeader if not.
@@ -358,13 +366,13 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     if (V && LI->replacementPreservesLCSSAForm(C, V)) {
       // If so, then delete the temporary instruction and stick the folded value
       // in the map.
-      ValueMap[Inst] = V;
+      InsertNewValueIntoMap(ValueMap, Inst, V);
       if (!C->mayHaveSideEffects()) {
         C->deleteValue();
         C = nullptr;
       }
     } else {
-      ValueMap[Inst] = C;
+      InsertNewValueIntoMap(ValueMap, Inst, C);
     }
     if (C) {
       // Otherwise, stick the new instruction into the new block!
@@ -376,7 +384,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
           AC->registerAssumption(II);
       // MemorySSA cares whether the cloned instruction was inserted or not, and
       // not whether it can be remapped to a simplified value.
-      ValueMapMSSA[Inst] = C;
+      if (MSSAU)
+        InsertNewValueIntoMap(ValueMapMSSA, Inst, C);
     }
   }
 
@@ -396,7 +405,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   // Update MemorySSA before the rewrite call below changes the 1:1
   // instruction:cloned_instruction_or_value mapping.
   if (MSSAU) {
-    ValueMapMSSA[OrigHeader] = OrigPreheader;
+    InsertNewValueIntoMap(ValueMapMSSA, OrigHeader, OrigPreheader);
     MSSAU->updateForClonedBlockIntoPred(OrigHeader, OrigPreheader,
                                         ValueMapMSSA);
   }

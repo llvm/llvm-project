@@ -36,11 +36,11 @@ define arm_aapcscc i32* @test_call_simple_stack_params(i32 *%a, i32 %b) {
 ; CHECK-DAG: $r3 = COPY [[AVREG]]
 ; CHECK: [[SP1:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-; CHECK: [[FI1:%[0-9]+]]:_(p0) = G_GEP [[SP1]], [[OFF1]](s32)
+; CHECK: [[FI1:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP1]], [[OFF1]](s32)
 ; CHECK: G_STORE [[BVREG]](s32), [[FI1]](p0){{.*}}store 4
 ; CHECK: [[SP2:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-; CHECK: [[FI2:%[0-9]+]]:_(p0) = G_GEP [[SP2]], [[OFF2]](s32)
+; CHECK: [[FI2:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP2]], [[OFF2]](s32)
 ; CHECK: G_STORE [[AVREG]](p0), [[FI2]](p0){{.*}}store 4
 ; ARM: BL @simple_stack_params_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
 ; THUMB: tBL 14, $noreg, @simple_stack_params_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
@@ -75,27 +75,27 @@ define arm_aapcscc signext i16 @test_call_ext_params(i8 %a, i16 %b, i1 %c) {
 ; CHECK: $r3 = COPY [[ZEXTB]]
 ; CHECK: [[SP1:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-; CHECK: [[FI1:%[0-9]+]]:_(p0) = G_GEP [[SP1]], [[OFF1]](s32)
+; CHECK: [[FI1:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP1]], [[OFF1]](s32)
 ; CHECK: [[SEXTA2:%[0-9]+]]:_(s32) = G_SEXT [[AVREG]]
 ; CHECK: G_STORE [[SEXTA2]](s32), [[FI1]](p0){{.*}}store 4
 ; CHECK: [[SP2:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-; CHECK: [[FI2:%[0-9]+]]:_(p0) = G_GEP [[SP2]], [[OFF2]](s32)
+; CHECK: [[FI2:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP2]], [[OFF2]](s32)
 ; CHECK: [[ZEXTA2:%[0-9]+]]:_(s32) = G_ZEXT [[AVREG]]
 ; CHECK: G_STORE [[ZEXTA2]](s32), [[FI2]](p0){{.*}}store 4
 ; CHECK: [[SP3:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-; CHECK: [[FI3:%[0-9]+]]:_(p0) = G_GEP [[SP3]], [[OFF3]](s32)
+; CHECK: [[FI3:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP3]], [[OFF3]](s32)
 ; CHECK: [[SEXTB2:%[0-9]+]]:_(s32) = G_SEXT [[BVREG]]
 ; CHECK: G_STORE [[SEXTB2]](s32), [[FI3]](p0){{.*}}store 4
 ; CHECK: [[SP4:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF4:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-; CHECK: [[FI4:%[0-9]+]]:_(p0) = G_GEP [[SP4]], [[OFF4]](s32)
+; CHECK: [[FI4:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP4]], [[OFF4]](s32)
 ; CHECK: [[ZEXTB2:%[0-9]+]]:_(s32) = G_ZEXT [[BVREG]]
 ; CHECK: G_STORE [[ZEXTB2]](s32), [[FI4]](p0){{.*}}store 4
 ; CHECK: [[SP5:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF5:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-; CHECK: [[FI5:%[0-9]+]]:_(p0) = G_GEP [[SP5]], [[OFF5]](s32)
+; CHECK: [[FI5:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP5]], [[OFF5]](s32)
 ; CHECK: [[ZEXTC:%[0-9]+]]:_(s32) = G_ZEXT [[CVREG]]
 ; CHECK: G_STORE [[ZEXTC]](s32), [[FI5]](p0){{.*}}store 4
 ; ARM: BL @ext_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
@@ -151,11 +151,11 @@ define arm_aapcscc double @test_call_aapcs_fp_params(double %a, float %b) {
 ; BIG-DAG: $r3 = COPY [[A1]]
 ; CHECK: [[SP1:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-; CHECK: [[FI1:%[0-9]+]]:_(p0) = G_GEP [[SP1]], [[OFF1]](s32)
+; CHECK: [[FI1:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP1]], [[OFF1]](s32)
 ; CHECK: G_STORE [[BVREG]](s32), [[FI1]](p0){{.*}}store 4
 ; CHECK: [[SP2:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-; CHECK: [[FI2:%[0-9]+]]:_(p0) = G_GEP [[SP2]], [[OFF2]](s32)
+; CHECK: [[FI2:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP2]], [[OFF2]](s32)
 ; CHECK: G_STORE [[AVREG]](s64), [[FI2]](p0){{.*}}store 8
 ; ARM: BL @aapcscc_fp_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
 ; THUMB: tBL 14, $noreg, @aapcscc_fp_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
@@ -273,13 +273,13 @@ define arm_aapcscc void @test_large_int_arrays([20 x i32] %arr) {
 ; CHECK: $r3 = COPY [[R3]]
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF_FIRST_ELEMENT:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-; CHECK: [[FIRST_STACK_ARG_ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[OFF_FIRST_ELEMENT]](s32)
+; CHECK: [[FIRST_STACK_ARG_ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[OFF_FIRST_ELEMENT]](s32)
 ; CHECK: G_STORE [[FIRST_STACK_ELEMENT]](s32), [[FIRST_STACK_ARG_ADDR]]{{.*}}store 4
 ; Match the second-to-last offset, so we can get the correct SP for the last element
 ; CHECK: G_CONSTANT i32 56
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF_LAST_ELEMENT:%[0-9]+]]:_(s32) = G_CONSTANT i32 60
-; CHECK: [[LAST_STACK_ARG_ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[OFF_LAST_ELEMENT]](s32)
+; CHECK: [[LAST_STACK_ARG_ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[OFF_LAST_ELEMENT]](s32)
 ; CHECK: G_STORE [[LAST_STACK_ELEMENT]](s32), [[LAST_STACK_ARG_ADDR]]{{.*}}store 4
 ; ARM: BL @large_int_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3
 ; THUMB: tBL 14, $noreg, @large_int_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3
@@ -321,7 +321,7 @@ define arm_aapcscc [2 x float] @test_fp_arrays_aapcs([3 x double] %arr) {
 ; BIG: $r3 = COPY [[ARR1_0]](s32)
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[ARR2_OFFSET:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-; CHECK: [[ARR2_ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[ARR2_OFFSET]](s32)
+; CHECK: [[ARR2_ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[ARR2_OFFSET]](s32)
 ; CHECK: G_STORE [[ARR2]](s64), [[ARR2_ADDR]](p0){{.*}}store 8
 ; ARM: BL @fp_arrays_aapcs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
 ; THUMB: tBL 14, $noreg, @fp_arrays_aapcs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
@@ -370,19 +370,19 @@ define arm_aapcs_vfpcc [4 x float] @test_fp_arrays_aapcs_vfp([3 x double] %x, [3
 ; CHECK: $s8 = COPY [[Y2]](s32)
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[Z0_OFFSET:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-; CHECK: [[Z0_ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[Z0_OFFSET]](s32)
+; CHECK: [[Z0_ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[Z0_OFFSET]](s32)
 ; CHECK: G_STORE [[Z0]](s64), [[Z0_ADDR]](p0){{.*}}store 8
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[Z1_OFFSET:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-; CHECK: [[Z1_ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[Z1_OFFSET]](s32)
+; CHECK: [[Z1_ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[Z1_OFFSET]](s32)
 ; CHECK: G_STORE [[Z1]](s64), [[Z1_ADDR]](p0){{.*}}store 8
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[Z2_OFFSET:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-; CHECK: [[Z2_ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[Z2_OFFSET]](s32)
+; CHECK: [[Z2_ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[Z2_OFFSET]](s32)
 ; CHECK: G_STORE [[Z2]](s64), [[Z2_ADDR]](p0){{.*}}store 8
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[Z3_OFFSET:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-; CHECK: [[Z3_ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[Z3_OFFSET]](s32)
+; CHECK: [[Z3_ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[Z3_OFFSET]](s32)
 ; CHECK: G_STORE [[Z3]](s64), [[Z3_ADDR]](p0){{.*}}store 8
 ; ARM: BL @fp_arrays_aapcs_vfp_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit $d1, implicit $d2, implicit $s6, implicit $s7, implicit $s8, implicit-def $s0, implicit-def $s1, implicit-def $s2, implicit-def $s3
 ; THUMB: tBL 14, $noreg, @fp_arrays_aapcs_vfp_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $d0, implicit $d1, implicit $d2, implicit $s6, implicit $s7, implicit $s8, implicit-def $s0, implicit-def $s1, implicit-def $s2, implicit-def $s3
@@ -427,13 +427,13 @@ define arm_aapcscc [2 x i32*] @test_tough_arrays([6 x [4 x i32]] %arr) {
 ; CHECK: $r3 = COPY [[R3]]
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF_FIRST_ELEMENT:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-; CHECK: [[FIRST_STACK_ARG_ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[OFF_FIRST_ELEMENT]](s32)
+; CHECK: [[FIRST_STACK_ARG_ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[OFF_FIRST_ELEMENT]](s32)
 ; CHECK: G_STORE [[FIRST_STACK_ELEMENT]](s32), [[FIRST_STACK_ARG_ADDR]]{{.*}}store 4
 ; Match the second-to-last offset, so we can get the correct SP for the last element
 ; CHECK: G_CONSTANT i32 72
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF_LAST_ELEMENT:%[0-9]+]]:_(s32) = G_CONSTANT i32 76
-; CHECK: [[LAST_STACK_ARG_ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[OFF_LAST_ELEMENT]](s32)
+; CHECK: [[LAST_STACK_ARG_ADDR:%[0-9]+]]:_(p0) = G_PTR_ADD [[SP]], [[OFF_LAST_ELEMENT]](s32)
 ; CHECK: G_STORE [[LAST_STACK_ELEMENT]](s32), [[LAST_STACK_ARG_ADDR]]{{.*}}store 4
 ; ARM: BL @tough_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
 ; THUMB: tBL 14, $noreg, @tough_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1

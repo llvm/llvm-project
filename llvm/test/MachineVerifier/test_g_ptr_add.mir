@@ -1,0 +1,32 @@
+#RUN: not llc -o - -march=arm64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: global-isel, aarch64-registered-target
+
+---
+name:            test_gep
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    %0:_(p0) = G_IMPLICIT_DEF
+    %1:_(s64) = G_IMPLICIT_DEF
+
+    ; CHECK:  Bad machine code: Type mismatch in generic instruction
+    %2:_(s64) = G_PTR_ADD %0, %1
+
+    ; CHECK:  Bad machine code: Type mismatch in generic instruction
+    %3:_(p0) = G_PTR_ADD %1, %1
+
+    ; CHECK: Bad machine code: gep offset operand must not be a pointer
+    %4:_(p0) = G_PTR_ADD %0, %0
+
+    ; CHECK: Bad machine code: Type mismatch in generic instruction
+    %5:_(p1) = G_PTR_ADD %0, %1
+
+    ; CHECK: Bad machine code: gep first operand must be a pointer
+    %6:_(s64) = G_PTR_ADD %1, %1
+
+...

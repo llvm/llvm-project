@@ -800,13 +800,8 @@ static ExprResult parseContextScore(Parser &P) {
   SmallString<16> Buffer;
   StringRef SelectorName =
       P.getPreprocessor().getSpelling(P.getCurToken(), Buffer);
-  OMPDeclareVariantAttr::ScoreType ScoreKind =
-      OMPDeclareVariantAttr::ScoreUnknown;
-  (void)OMPDeclareVariantAttr::ConvertStrToScoreType(SelectorName, ScoreKind);
-  if (ScoreKind == OMPDeclareVariantAttr::ScoreUnknown)
+  if (!SelectorName.equals("score"))
     return ScoreExpr;
-  assert(ScoreKind == OMPDeclareVariantAttr::ScoreSpecified &&
-         "Expected \"score\" clause.");
   (void)P.ConsumeToken();
   SourceLocation RLoc;
   ScoreExpr = P.ParseOpenMPParensExpr(SelectorName, RLoc);

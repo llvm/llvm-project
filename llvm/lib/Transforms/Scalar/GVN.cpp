@@ -112,7 +112,7 @@ static cl::opt<uint32_t> MaxNumDeps(
 
 struct llvm::GVN::Expression {
   uint32_t opcode;
-  Type *type;
+  Type *type = nullptr;
   bool commutative = false;
   SmallVector<uint32_t, 4> varargs;
 
@@ -173,7 +173,7 @@ struct llvm::gvn::AvailableValue {
   PointerIntPair<Value *, 2, ValType> Val;
 
   /// Offset - The byte offset in Val that is interesting for the load query.
-  unsigned Offset;
+  unsigned Offset = 0;
 
   static AvailableValue get(Value *V, unsigned Offset = 0) {
     AvailableValue Res;
@@ -237,7 +237,7 @@ struct llvm::gvn::AvailableValue {
 /// the associated BasicBlock.
 struct llvm::gvn::AvailableValueInBlock {
   /// BB - The basic block in question.
-  BasicBlock *BB;
+  BasicBlock *BB = nullptr;
 
   /// AV - The actual available value
   AvailableValue AV;
@@ -364,6 +364,7 @@ GVN::ValueTable::ValueTable() = default;
 GVN::ValueTable::ValueTable(const ValueTable &) = default;
 GVN::ValueTable::ValueTable(ValueTable &&) = default;
 GVN::ValueTable::~ValueTable() = default;
+GVN::ValueTable &GVN::ValueTable::operator=(const GVN::ValueTable &Arg) = default;
 
 /// add - Insert a value into the table with a specified value number.
 void GVN::ValueTable::add(Value *V, uint32_t num) {

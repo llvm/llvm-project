@@ -31,7 +31,7 @@ define void @testVaCopyArg(i8* %fmt, ...) {
   ; MIPS32:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.va_copy), [[FRAME_INDEX5]](p0), [[FRAME_INDEX4]](p0)
   ; MIPS32:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX5]](p0) :: (load 4 from %ir.aq)
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[LOAD]], [[C]](s32)
+  ; MIPS32:   [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C]](s32)
   ; MIPS32:   G_STORE [[GEP]](p0), [[FRAME_INDEX5]](p0) :: (store 4 into %ir.aq)
   ; MIPS32:   [[LOAD1:%[0-9]+]]:_(p0) = G_LOAD [[LOAD]](p0) :: (load 4 from %ir.2)
   ; MIPS32:   G_STORE [[LOAD1]](p0), [[FRAME_INDEX6]](p0) :: (store 4 into %ir.s)

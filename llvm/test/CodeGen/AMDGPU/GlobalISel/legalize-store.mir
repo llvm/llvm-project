@@ -389,15 +389,15 @@ body: |
     ; SI: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s8)
     ; SI: G_STORE [[ANYEXT1]](s32), [[COPY]](p1) :: (store 1, align 4, addrspace 1)
     ; SI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; SI: [[GEP:%[0-9]+]]:_(p1) = G_GEP [[COPY]], [[C]](s64)
+    ; SI: [[GEP:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
     ; SI: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s8)
     ; SI: G_STORE [[ANYEXT2]](s32), [[GEP]](p1) :: (store 1, addrspace 1)
     ; SI: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; SI: [[GEP1:%[0-9]+]]:_(p1) = G_GEP [[COPY]], [[C1]](s64)
+    ; SI: [[GEP1:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
     ; SI: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
     ; SI: G_STORE [[ANYEXT3]](s32), [[GEP1]](p1) :: (store 1, align 2, addrspace 1)
     ; SI: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
-    ; SI: [[GEP2:%[0-9]+]]:_(p1) = G_GEP [[COPY]], [[C2]](s64)
+    ; SI: [[GEP2:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C2]](s64)
     ; SI: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s8)
     ; SI: G_STORE [[ANYEXT4]](s32), [[GEP2]](p1) :: (store 1, addrspace 1)
     ; VI-LABEL: name: test_store_global_v3s8_align4
@@ -411,15 +411,15 @@ body: |
     ; VI: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s8)
     ; VI: G_STORE [[ANYEXT1]](s32), [[COPY]](p1) :: (store 1, align 4, addrspace 1)
     ; VI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; VI: [[GEP:%[0-9]+]]:_(p1) = G_GEP [[COPY]], [[C]](s64)
+    ; VI: [[GEP:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C]](s64)
     ; VI: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s8)
     ; VI: G_STORE [[ANYEXT2]](s32), [[GEP]](p1) :: (store 1, addrspace 1)
     ; VI: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; VI: [[GEP1:%[0-9]+]]:_(p1) = G_GEP [[COPY]], [[C1]](s64)
+    ; VI: [[GEP1:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C1]](s64)
     ; VI: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s8)
     ; VI: G_STORE [[ANYEXT3]](s32), [[GEP1]](p1) :: (store 1, align 2, addrspace 1)
     ; VI: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
-    ; VI: [[GEP2:%[0-9]+]]:_(p1) = G_GEP [[COPY]], [[C2]](s64)
+    ; VI: [[GEP2:%[0-9]+]]:_(p1) = G_PTR_ADD [[COPY]], [[C2]](s64)
     ; VI: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s8)
     ; VI: G_STORE [[ANYEXT4]](s32), [[GEP2]](p1) :: (store 1, addrspace 1)
     %0:_(p1) = COPY $vgpr0_vgpr1

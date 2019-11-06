@@ -1,0 +1,37 @@
+## Check that when BSS is larger than the file llvm-objdump doesn't
+## assert with an unexpected end of file error.
+# RUN: yaml2obj --docnum=1 %s > %t
+# RUN: yaml2obj --docnum=2 %s > %t.2
+# RUN: llvm-objdump -D %t | FileCheck %s
+# RUN: llvm-objdump -D %t.2 | FileCheck %s
+
+# CHECK: Disassembly of section .bss:
+# CHECK: .bss:
+# CHECK-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Size:            0x0000000000001000
+...
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Size:            0x0000000000001000
+    ShOffset:        0x0000000080000000
+...

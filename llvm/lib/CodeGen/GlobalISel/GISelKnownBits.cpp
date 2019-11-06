@@ -179,8 +179,8 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero = KnownZeroOut;
     break;
   }
-  case TargetOpcode::G_GEP: {
-    // G_GEP is like G_ADD. FIXME: Is this true for all targets?
+  case TargetOpcode::G_PTR_ADD: {
+    // G_PTR_ADD is like G_ADD. FIXME: Is this true for all targets?
     LLT Ty = MRI.getType(MI.getOperand(1).getReg());
     if (DL.isNonIntegralAddressSpace(Ty.getAddressSpace()))
       break;

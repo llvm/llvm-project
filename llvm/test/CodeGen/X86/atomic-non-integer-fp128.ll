@@ -21,7 +21,14 @@ define void @store_fp128(fp128* %fptr, fp128 %v) {
 ;
 ; X64-SSE-LABEL: store_fp128:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movaps %xmm0, (%rdi)
+; X64-SSE-NEXT:    subq $24, %rsp
+; X64-SSE-NEXT:    .cfi_def_cfa_offset 32
+; X64-SSE-NEXT:    movaps %xmm0, (%rsp)
+; X64-SSE-NEXT:    movq (%rsp), %rsi
+; X64-SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
+; X64-SSE-NEXT:    callq __sync_lock_test_and_set_16
+; X64-SSE-NEXT:    addq $24, %rsp
+; X64-SSE-NEXT:    .cfi_def_cfa_offset 8
 ; X64-SSE-NEXT:    retq
   store atomic fp128 %v, fp128* %fptr unordered, align 16
   ret void

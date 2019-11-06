@@ -3050,3 +3050,55 @@ TEST(YAMLIO, TestReadWritePolymorphicMap) {
     EXPECT_EQ(bar->DoubleValue, 2.0);
   }
 }
+
+TEST(YAMLIO, TestAnchorMapError) {
+  Input yin("& & &: ");
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestFlowSequenceTokenErrors) {
+  Input yin(",");
+  EXPECT_FALSE(yin.setCurrentDocument());
+  EXPECT_TRUE(yin.error());
+
+  Input yin2("]");
+  EXPECT_FALSE(yin2.setCurrentDocument());
+  EXPECT_TRUE(yin2.error());
+
+  Input yin3("}");
+  EXPECT_FALSE(yin3.setCurrentDocument());
+  EXPECT_TRUE(yin3.error());
+}
+
+TEST(YAMLIO, TestDirectiveMappingNoValue) {
+  Input yin("%YAML\n{5:");
+  EXPECT_FALSE(yin.setCurrentDocument());
+  EXPECT_TRUE(yin.error());
+
+  Input yin2("%TAG\n'\x98!< :\n");
+  yin2.setCurrentDocument();
+  EXPECT_TRUE(yin2.error());
+}
+
+TEST(YAMLIO, TestUnescapeInfiniteLoop) {
+  Input yin("\"\\u\\^#\\\\\"");
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerUnexpectedCharacter) {
+  Input yin("!<$\x9F.");
+  EXPECT_FALSE(yin.setCurrentDocument());
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestUnknownDirective) {
+  Input yin("%");
+  EXPECT_FALSE(yin.setCurrentDocument());
+  EXPECT_TRUE(yin.error());
+
+  Input yin2("%)");
+  EXPECT_FALSE(yin2.setCurrentDocument());
+  EXPECT_TRUE(yin2.error());
+}

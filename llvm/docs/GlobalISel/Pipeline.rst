@@ -135,3 +135,58 @@ It's possible to create an imaginary target such as in `LegalizerHelperTest.cpp 
 and perform a single step of the algorithm and check the result. The MIR and
 FileCheck directives can be embedded using strings so you still have access to
 the convenience available in llvm-lit.
+
+Debugging
+---------
+
+One debugging technique that's proven particularly valuable is to use the
+BlockExtractor to extract basic blocks into new functions. This can be used
+to track down correctness bugs and can also be used to track down performance
+regressions. It can also be coupled with function attributes to disable
+GlobalISel for one or more of the extracted functions.
+
+.. image:: block-extract.png
+
+The command to do the extraction is:
+
+.. code-block:: shell
+
+  ./bin/llvm-extract -o - -S -b ‘foo:bb1;bb4’ <input> > extracted.ll
+
+This particular example extracts two basic blocks from a function named ``foo``.
+The new LLVM-IR can then be modified to add the ``failedISel`` attribute to the
+extracted function containing bb4 to make that function use SelectionDAG.
+
+This can prevent some optimizations as GlobalISel is generally able to work on a
+single function at a time. This technique can be repeated for different
+combinations of basic blocks until you have identified the critical blocks
+involved in a bug.
+
+Once the critical blocks have been identified, you can further increase the
+resolution to the critical instructions by splitting the blocks like from:
+
+.. code-block:: llvm
+
+  bb1:
+    ... instructions group 1 ...
+    ... instructions group 2 ...
+
+into:
+
+.. code-block:: llvm
+
+  bb1:
+    ... instructions group 1 ...
+    br %bb2
+
+  bb2:
+    ... instructions group 2 ...
+
+and then repeating the process for the new blocks.
+
+It's also possible to use this technique in a mode where the main function
+is compiled with GlobalISel and the extracted basic blocks are compiled with
+SelectionDAG (or the other way around) to leverage the existing quality of
+another code generator to track down bugs. This technique can also be used to
+improve the similarity between fast and slow code when tracking down performance
+regressions and help you zero in on a particular cause of the regression.

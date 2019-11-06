@@ -77,7 +77,7 @@ body:             |
     ; MIPS32: SW [[LW]], [[FRAME_INDEX5]](p0), 0 :: (store 4)
     ; MIPS32: [[LOAD:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX5]](p0) :: (load 4 from %ir.aq)
     ; MIPS32: [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-    ; MIPS32: [[GEP:%[0-9]+]]:gprb(p0) = G_GEP [[LOAD]], [[C]](s32)
+    ; MIPS32: [[GEP:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[LOAD]], [[C]](s32)
     ; MIPS32: G_STORE [[GEP]](p0), [[FRAME_INDEX5]](p0) :: (store 4 into %ir.aq)
     ; MIPS32: [[LOAD1:%[0-9]+]]:gprb(p0) = G_LOAD [[LOAD]](p0) :: (load 4 from %ir.2)
     ; MIPS32: G_STORE [[LOAD1]](p0), [[FRAME_INDEX6]](p0) :: (store 4 into %ir.s)
@@ -110,7 +110,7 @@ body:             |
     SW %19, %9(p0), 0 :: (store 4)
     %11:_(p0) = G_LOAD %9(p0) :: (load 4 from %ir.aq)
     %12:_(s32) = G_CONSTANT i32 4
-    %13:_(p0) = G_GEP %11, %12(s32)
+    %13:_(p0) = G_PTR_ADD %11, %12(s32)
     G_STORE %13(p0), %9(p0) :: (store 4 into %ir.aq)
     %14:_(p0) = G_LOAD %11(p0) :: (load 4 from %ir.2)
     G_STORE %14(p0), %10(p0) :: (store 4 into %ir.s)

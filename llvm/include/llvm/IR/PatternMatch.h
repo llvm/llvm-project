@@ -825,6 +825,28 @@ m_FNegNSZ(const RHS &X) {
   return m_FSub(m_AnyZeroFP(), X);
 }
 
+template <typename Op_t> struct Freeze_match {
+  Op_t X;
+
+  Freeze_match(const Op_t &Op) : X(Op) {}
+  template <typename OpTy> bool match(OpTy *V) {
+    auto *I = dyn_cast<UnaryOperator>(V);
+    if (!I) return false;
+
+    if (isa<FreezeOperator>(I))
+      return X.match(I->getOperand(0));
+
+    return false;
+  }
+};
+
+/// Matches freeze.
+template <typename OpTy>
+inline Freeze_match<OpTy>
+m_Freeze(const OpTy &X) {
+  return Freeze_match<OpTy>(X);
+}
+
 template <typename LHS, typename RHS>
 inline BinaryOp_match<LHS, RHS, Instruction::Mul> m_Mul(const LHS &L,
                                                         const RHS &R) {

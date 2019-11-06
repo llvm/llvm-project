@@ -22,9 +22,9 @@ define i32 @t0_basic(i64 %x, i32 %nbits) {
 ; CHECK-NEXT:    call void @use64(i64 [[T0]])
 ; CHECK-NEXT:    call void @use64(i64 [[T1]])
 ; CHECK-NEXT:    call void @use32(i32 [[T2]])
-; CHECK-NEXT:    [[T3:%.*]] = lshr i64 [[T1]], [[T0]]
-; CHECK-NEXT:    [[T4:%.*]] = trunc i64 [[T3]] to i32
-; CHECK-NEXT:    [[T5:%.*]] = shl i32 [[T4]], [[T2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], [[T2]]
+; CHECK-NEXT:    [[T5:%.*]] = and i32 [[TMP2]], 2147483647
 ; CHECK-NEXT:    ret i32 [[T5]]
 ;
   %t0 = zext i32 %nbits to i64
@@ -54,9 +54,9 @@ define <8 x i32> @t1_vec_splat(<8 x i64> %x, <8 x i32> %nbits) {
 ; CHECK-NEXT:    call void @use8xi64(<8 x i64> [[T0]])
 ; CHECK-NEXT:    call void @use8xi64(<8 x i64> [[T1]])
 ; CHECK-NEXT:    call void @use8xi32(<8 x i32> [[T2]])
-; CHECK-NEXT:    [[T3:%.*]] = lshr <8 x i64> [[T1]], [[T0]]
-; CHECK-NEXT:    [[T4:%.*]] = trunc <8 x i64> [[T3]] to <8 x i32>
-; CHECK-NEXT:    [[T5:%.*]] = shl <8 x i32> [[T4]], [[T2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <8 x i64> [[X]] to <8 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <8 x i32> [[TMP1]], [[T2]]
+; CHECK-NEXT:    [[T5:%.*]] = and <8 x i32> [[TMP2]], <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
 ; CHECK-NEXT:    ret <8 x i32> [[T5]]
 ;
   %t0 = zext <8 x i32> %nbits to <8 x i64>
@@ -81,9 +81,9 @@ define <8 x i32> @t2_vec_splat_undef(<8 x i64> %x, <8 x i32> %nbits) {
 ; CHECK-NEXT:    call void @use8xi64(<8 x i64> [[T0]])
 ; CHECK-NEXT:    call void @use8xi64(<8 x i64> [[T1]])
 ; CHECK-NEXT:    call void @use8xi32(<8 x i32> [[T2]])
-; CHECK-NEXT:    [[T3:%.*]] = lshr <8 x i64> [[T1]], [[T0]]
-; CHECK-NEXT:    [[T4:%.*]] = trunc <8 x i64> [[T3]] to <8 x i32>
-; CHECK-NEXT:    [[T5:%.*]] = shl <8 x i32> [[T4]], [[T2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <8 x i64> [[X]] to <8 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <8 x i32> [[TMP1]], [[T2]]
+; CHECK-NEXT:    [[T5:%.*]] = and <8 x i32> [[TMP2]], <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647, i32 undef, i32 2147483647>
 ; CHECK-NEXT:    ret <8 x i32> [[T5]]
 ;
   %t0 = zext <8 x i32> %nbits to <8 x i64>
@@ -108,9 +108,9 @@ define <8 x i32> @t3_vec_nonsplat(<8 x i64> %x, <8 x i32> %nbits) {
 ; CHECK-NEXT:    call void @use8xi64(<8 x i64> [[T0]])
 ; CHECK-NEXT:    call void @use8xi64(<8 x i64> [[T1]])
 ; CHECK-NEXT:    call void @use8xi32(<8 x i32> [[T2]])
-; CHECK-NEXT:    [[T3:%.*]] = lshr <8 x i64> [[T1]], [[T0]]
-; CHECK-NEXT:    [[T4:%.*]] = trunc <8 x i64> [[T3]] to <8 x i32>
-; CHECK-NEXT:    [[T5:%.*]] = shl <8 x i32> [[T4]], [[T2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <8 x i64> [[X]] to <8 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <8 x i32> [[TMP1]], [[T2]]
+; CHECK-NEXT:    [[T5:%.*]] = and <8 x i32> [[TMP2]], <i32 undef, i32 1, i32 2147483647, i32 -1, i32 -1, i32 -1, i32 undef, i32 undef>
 ; CHECK-NEXT:    ret <8 x i32> [[T5]]
 ;
   %t0 = zext <8 x i32> %nbits to <8 x i64>

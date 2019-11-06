@@ -668,6 +668,7 @@ private:
 
   void visitUnary(const User &I, unsigned Opcode);
   void visitFNeg(const User &I) { visitUnary(I, ISD::FNEG); }
+  void visitFreeze(const User &I);
 
   void visitBinary(const User &I, unsigned Opcode);
   void visitShift(const User &I, unsigned Opcode);

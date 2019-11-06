@@ -162,10 +162,20 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
          "The input must be 'shl'!");
 
   Value *Masked, *ShiftShAmt;
-  match(OuterShift, m_Shift(m_Value(Masked), m_Value(ShiftShAmt)));
+  match(OuterShift,
+        m_Shift(m_Value(Masked), m_ZExtOrSelf(m_Value(ShiftShAmt))));
+
+  // *If* there is a truncation between an outer shift and a possibly-mask,
+  // then said truncation *must* be one-use, else we can't perform the fold.
+  Value *Trunc;
+  if (match(Masked, m_CombineAnd(m_Trunc(m_Value(Masked)), m_Value(Trunc))) &&
+      !Trunc->hasOneUse())
+    return nullptr;
 
   Type *NarrowestTy = OuterShift->getType();
   Type *WidestTy = Masked->getType();
+  bool HadTrunc = WidestTy != NarrowestTy;
+
   // The mask must be computed in a type twice as wide to ensure
   // that no bits are lost if the sum-of-shifts is wider than the base type.
   Type *ExtendedTy = WidestTy->getExtendedType();
@@ -186,6 +196,14 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
   Constant *NewMask;
 
   if (match(Masked, m_c_And(m_CombineOr(MaskA, MaskB), m_Value(X)))) {
+    // Peek through an optional zext of the shift amount.
+    match(MaskShAmt, m_ZExtOrSelf(m_Value(MaskShAmt)));
+
+    // We have two shift amounts from two different shifts. The types of those
+    // shift amounts may not match. If that's the case let's bailout now.
+    if (MaskShAmt->getType() != ShiftShAmt->getType())
+      return nullptr;
+
     // Can we simplify (MaskShAmt+ShiftShAmt) ?
     auto *SumOfShAmts = dyn_cast_or_null<Constant>(SimplifyAddInst(
         MaskShAmt, ShiftShAmt, /*IsNSW=*/false, /*IsNUW=*/false, Q));
@@ -210,6 +228,14 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
   } else if (match(Masked, m_c_And(m_CombineOr(MaskC, MaskD), m_Value(X))) ||
              match(Masked, m_Shr(m_Shl(m_Value(X), m_Value(MaskShAmt)),
                                  m_Deferred(MaskShAmt)))) {
+    // Peek through an optional zext of the shift amount.
+    match(MaskShAmt, m_ZExtOrSelf(m_Value(MaskShAmt)));
+
+    // We have two shift amounts from two different shifts. The types of those
+    // shift amounts may not match. If that's the case let's bailout now.
+    if (MaskShAmt->getType() != ShiftShAmt->getType())
+      return nullptr;
+
     // Can we simplify (ShiftShAmt-MaskShAmt) ?
     auto *ShAmtsDiff = dyn_cast_or_null<Constant>(SimplifySubInst(
         ShiftShAmt, MaskShAmt, /*IsNSW=*/false, /*IsNUW=*/false, Q));
@@ -254,10 +280,15 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
       return nullptr;
   }
 
+  // If we need to apply truncation, let's do it first, since we can.
+  // We have already ensured that the old truncation will go away.
+  if (HadTrunc)
+    X = Builder.CreateTrunc(X, NarrowestTy);
+
   // No 'NUW'/'NSW'! We no longer know that we won't shift-out non-0 bits.
+  // We didn't change the Type of this outermost shift, so we can just do it.
   auto *NewShift = BinaryOperator::Create(OuterShift->getOpcode(), X,
                                           OuterShift->getOperand(1));
-
   if (!NeedMask)
     return NewShift;
 

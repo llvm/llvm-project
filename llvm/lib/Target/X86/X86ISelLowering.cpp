@@ -87,7 +87,7 @@ static cl::opt<bool> MulConstantOptimization(
     cl::Hidden);
 
 static cl::opt<bool> ExperimentalUnorderedISEL(
-    "x86-experimental-unordered-atomic-isel", cl::init(true),
+    "x86-experimental-unordered-atomic-isel", cl::init(false),
     cl::desc("Use LoadSDNode and StoreSDNode instead of "
              "AtomicSDNode for unordered atomic loads and "
              "stores respectively."),
@@ -36916,7 +36916,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // the operands would cause it to handle comparisons between positive
         // and negative zero incorrectly.
         if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
-          if (!DAG.getTarget().Options.UnsafeFPMath &&
+          if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
               !(DAG.isKnownNeverZeroFloat(LHS) ||
                 DAG.isKnownNeverZeroFloat(RHS)))
             break;
@@ -36927,7 +36927,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       case ISD::SETOLE:
         // Converting this to a min would handle comparisons between positive
         // and negative zero incorrectly.
-        if (!DAG.getTarget().Options.UnsafeFPMath &&
+        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
             !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
           break;
         Opcode = X86ISD::FMIN;
@@ -36946,7 +36946,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       case ISD::SETOGE:
         // Converting this to a max would handle comparisons between positive
         // and negative zero incorrectly.
-        if (!DAG.getTarget().Options.UnsafeFPMath &&
+        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
             !DAG.isKnownNeverZeroFloat(LHS) && !DAG.isKnownNeverZeroFloat(RHS))
           break;
         Opcode = X86ISD::FMAX;
@@ -36956,7 +36956,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // the operands would cause it to handle comparisons between positive
         // and negative zero incorrectly.
         if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)) {
-          if (!DAG.getTarget().Options.UnsafeFPMath &&
+          if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
               !(DAG.isKnownNeverZeroFloat(LHS) ||
                 DAG.isKnownNeverZeroFloat(RHS)))
             break;
@@ -36984,7 +36984,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // Converting this to a min would handle comparisons between positive
         // and negative zero incorrectly, and swapping the operands would
         // cause it to handle NaNs incorrectly.
-        if (!DAG.getTarget().Options.UnsafeFPMath &&
+        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
             !(DAG.isKnownNeverZeroFloat(LHS) ||
               DAG.isKnownNeverZeroFloat(RHS))) {
           if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
@@ -36995,8 +36995,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         break;
       case ISD::SETUGT:
         // Converting this to a min would handle NaNs incorrectly.
-        if (!DAG.getTarget().Options.UnsafeFPMath &&
-            (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS)))
+        if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
           break;
         Opcode = X86ISD::FMIN;
         break;
@@ -37021,7 +37020,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // Converting this to a max would handle comparisons between positive
         // and negative zero incorrectly, and swapping the operands would
         // cause it to handle NaNs incorrectly.
-        if (!DAG.getTarget().Options.UnsafeFPMath &&
+        if (!DAG.getTarget().Options.NoSignedZerosFPMath &&
             !DAG.isKnownNeverZeroFloat(LHS) &&
             !DAG.isKnownNeverZeroFloat(RHS)) {
           if (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))
@@ -41986,8 +41985,9 @@ static SDValue combineFOr(SDNode *N, SelectionDAG &DAG,
 static SDValue combineFMinFMax(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == X86ISD::FMIN || N->getOpcode() == X86ISD::FMAX);
 
-  // Only perform optimizations if UnsafeMath is used.
-  if (!DAG.getTarget().Options.UnsafeFPMath)
+  // FMIN/FMAX are commutative if no NaNs and no negative zeros are allowed.
+  if (!DAG.getTarget().Options.NoNaNsFPMath ||
+      !DAG.getTarget().Options.NoSignedZerosFPMath)
     return SDValue();
 
   // If we run in unsafe-math mode, then convert the FMAX and FMIN nodes

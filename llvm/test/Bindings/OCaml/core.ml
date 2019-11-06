@@ -267,6 +267,7 @@ let test_constants () =
    * CHECK: @const_nsw_neg = global i64 sub nsw
    * CHECK: @const_nuw_neg = global i64 sub nuw
    * CHECK: @const_fneg = global double fneg
+   * CHECK: @const_freeze = global i64 freeze
    * CHECK: @const_not = global i64 xor
    * CHECK: @const_add = global i64 add
    * CHECK: @const_nsw_add = global i64 add nsw
@@ -303,6 +304,7 @@ let test_constants () =
   ignore (define_global "const_nsw_neg" (const_nsw_neg foldbomb) m);
   ignore (define_global "const_nuw_neg" (const_nuw_neg foldbomb) m);
   ignore (define_global "const_fneg" (const_fneg ffoldbomb) m);
+  ignore (define_global "const_freeze" (const_freeze foldbomb) m);
   ignore (define_global "const_not" (const_not foldbomb) m);
   ignore (define_global "const_add" (const_add foldbomb five) m);
   ignore (define_global "const_nsw_add" (const_nsw_add foldbomb five) m);
@@ -1400,6 +1402,7 @@ let test_builder () =
     ignore (build_nsw_neg p1 "build_nsw_neg" b);
     ignore (build_nuw_neg p1 "build_nuw_neg" b);
     ignore (build_fneg f1 "build_fneg" b);
+    ignore (build_freeze f1 "build_freeze" b);
     ignore (build_not p1 "build_not" b);
     ignore (build_unreachable b)
   end;

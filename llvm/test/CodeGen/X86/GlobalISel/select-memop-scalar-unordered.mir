@@ -882,7 +882,7 @@ body:             |
     %0(p0) = COPY $rdi
     %1(s32) = COPY $esi
     %2(s64) = G_CONSTANT i64 20
-    %3(p0) = G_GEP %0, %2(s64)
+    %3(p0) = G_PTR_ADD %0, %2(s64)
     G_STORE %1(s32), %3(p0) :: (store unordered 4 into %ir.arrayidx)
     %4(s32) = G_LOAD %3(p0) :: (load unordered 4 from %ir.arrayidx)
     $eax = COPY %4(s32)
@@ -943,7 +943,7 @@ body:             |
     %0(p0) = COPY $rdi
     %1(s32) = COPY $esi
     %2(s64) = G_CONSTANT i64 228719476720
-    %3(p0) = G_GEP %0, %2(s64)
+    %3(p0) = G_PTR_ADD %0, %2(s64)
     G_STORE %1(s32), %3(p0) :: (store unordered 4 into %ir.arrayidx)
     %4(s32) = G_LOAD %3(p0) :: (load unordered 4 from %ir.arrayidx)
     $eax = COPY %4(s32)

@@ -13,6 +13,11 @@ set(DEBUGINFO_TEST_DEPS
   not
   )
 
+# The Windows builder scripts pass -fuse-ld=lld.
+if (WIN32)
+  set(DEBUGINFO_TEST_DEPS ${DEBUGINFO_TEST_DEPS} lld)
+endif()
+
 # If we don't already have Python 3, throw away any previous results and try to
 # find it again.
 set(DEBUGINFO_UNSET_PYTHON3 OFF)

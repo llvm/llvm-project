@@ -22,6 +22,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_FINDTARGET_H
 #define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_FINDTARGET_H
 
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Stmt.h"
@@ -106,6 +107,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, ReferenceLoc R);
 void findExplicitReferences(const Stmt *S,
                             llvm::function_ref<void(ReferenceLoc)> Out);
 void findExplicitReferences(const Decl *D,
+                            llvm::function_ref<void(ReferenceLoc)> Out);
+void findExplicitReferences(const ASTContext &AST,
                             llvm::function_ref<void(ReferenceLoc)> Out);
 
 /// Similar to targetDecl(), however instead of applying a filter, all possible

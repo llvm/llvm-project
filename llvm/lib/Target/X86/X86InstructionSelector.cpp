@@ -340,7 +340,7 @@ bool X86InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_STORE:
   case TargetOpcode::G_LOAD:
     return selectLoadStoreOp(I, MRI, MF);
-  case TargetOpcode::G_GEP:
+  case TargetOpcode::G_PTR_ADD:
   case TargetOpcode::G_FRAME_INDEX:
     return selectFrameIndexOrGep(I, MRI, MF);
   case TargetOpcode::G_GLOBAL_VALUE:
@@ -476,7 +476,7 @@ static void X86SelectAddress(const MachineInstr &I,
   assert(MRI.getType(I.getOperand(0).getReg()).isPointer() &&
          "unsupported type.");
 
-  if (I.getOpcode() == TargetOpcode::G_GEP) {
+  if (I.getOpcode() == TargetOpcode::G_PTR_ADD) {
     if (auto COff = getConstantVRegVal(I.getOperand(2).getReg(), MRI)) {
       int64_t Imm = *COff;
       if (isInt<32>(Imm)) { // Check for displacement overflow.
@@ -560,7 +560,7 @@ bool X86InstructionSelector::selectFrameIndexOrGep(MachineInstr &I,
                                                    MachineFunction &MF) const {
   unsigned Opc = I.getOpcode();
 
-  assert((Opc == TargetOpcode::G_FRAME_INDEX || Opc == TargetOpcode::G_GEP) &&
+  assert((Opc == TargetOpcode::G_FRAME_INDEX || Opc == TargetOpcode::G_PTR_ADD) &&
          "unexpected instruction");
 
   const Register DefReg = I.getOperand(0).getReg();

@@ -299,7 +299,7 @@ Register OutgoingValueHandler::getStackAddress(const CCValAssign &VA,
   MIRBuilder.buildConstant(OffsetReg, Offset);
 
   Register AddrReg = MRI.createGenericVirtualRegister(p0);
-  MIRBuilder.buildGEP(AddrReg, SPReg, OffsetReg);
+  MIRBuilder.buildPtrAdd(AddrReg, SPReg, OffsetReg);
 
   MachinePointerInfo MPO =
       MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
