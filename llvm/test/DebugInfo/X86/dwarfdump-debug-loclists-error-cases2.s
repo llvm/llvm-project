@@ -8,11 +8,11 @@
 
 # CHECK:      DW_AT_name        ("x1")
 # CHECK-NEXT: DW_AT_location    (0xdeadbeef
-# CHECK-NEXT:    error extracting location list: unexpected end of data)
+# CHECK-NEXT:    error: unexpected end of data)
 
 # CHECK:      DW_AT_name        ("x2")
 # CHECK-NEXT: DW_AT_location    (0x00000025
-# CHECK-NEXT:    error extracting location list: unexpected end of data)
+# CHECK-NEXT:    error: unexpected end of data)
 
 
         .type   f,@function

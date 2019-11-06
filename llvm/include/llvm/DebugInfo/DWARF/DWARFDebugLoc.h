@@ -76,6 +76,9 @@ public:
 
 class DWARFDebugLoclists {
 public:
+  // Unconstructible.
+  DWARFDebugLoclists() = delete;
+
   struct Entry {
     uint8_t Kind;
     uint64_t Offset;
@@ -87,35 +90,30 @@ public:
               DIDumpOptions DumpOpts, unsigned Indent, size_t MaxEncodingStringLength) const;
   };
 
-  struct LocationList {
-    uint64_t Offset;
-    SmallVector<Entry, 2> Entries;
-    void dump(raw_ostream &OS, uint64_t BaseAddr, bool IsLittleEndian,
-              unsigned AddressSize, const MCRegisterInfo *RegInfo,
-              DWARFUnit *U, DIDumpOptions DumpOpts, unsigned Indent) const;
-  };
+  /// Call the user-provided callback for each entry (including the end-of-list
+  /// entry) in the location list starting at \p Offset. The callback can return
+  /// false to terminate the iteration early. Returns an error if it was unable
+  /// to parse the entire location list correctly. Upon successful termination
+  /// \p Offset will be updated point past the end of the list.
+  static Error visitLocationList(const DWARFDataExtractor &Data,
+                                 uint64_t *Offset, uint16_t Version,
+                                 llvm::function_ref<bool(const Entry &)> F);
 
-private:
-  using LocationLists = SmallVector<LocationList, 4>;
+  /// Dump the location list at the given \p Offset. The function returns true
+  /// iff it has successfully reched the end of the list. This means that one
+  /// can attempt to parse another list after the current one (\p Offset will be
+  /// updated to point past the end of the current list).
+  static bool dumpLocationList(const DWARFDataExtractor &Data, uint64_t *Offset,
+                               uint16_t Version, raw_ostream &OS,
+                               uint64_t BaseAddr, const MCRegisterInfo *MRI,
+                               DWARFUnit *U, DIDumpOptions DumpOpts,
+                               unsigned Indent);
 
-  LocationLists Locations;
-
-  unsigned AddressSize;
-
-  bool IsLittleEndian;
-
-public:
-  void parse(const DWARFDataExtractor &data, uint64_t Offset,
-             uint64_t EndOffset, uint16_t Version);
-  void dump(raw_ostream &OS, uint64_t BaseAddr, const MCRegisterInfo *RegInfo,
-            DIDumpOptions DumpOpts, Optional<uint64_t> Offset) const;
-
-  /// Return the location list at the given offset or nullptr.
-  LocationList const *getLocationListAtOffset(uint64_t Offset) const;
-
-  static Expected<LocationList>
-  parseOneLocationList(const DWARFDataExtractor &Data, uint64_t *Offset,
-                       unsigned Version);
+  /// Dump all location lists within the given range.
+  static void dumpRange(const DWARFDataExtractor &Data, uint64_t StartOffset,
+                        uint64_t Size, uint16_t Version, raw_ostream &OS,
+                        uint64_t BaseAddr, const MCRegisterInfo *MRI,
+                        DIDumpOptions DumpOpts);
 };
 
 } // end namespace llvm
