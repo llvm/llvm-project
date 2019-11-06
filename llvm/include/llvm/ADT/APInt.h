@@ -1727,13 +1727,13 @@ public:
     return BitsToDouble(getWord(0));
   }
 
-  /// Converts APInt bits to a double
+  /// Converts APInt bits to a float
   ///
   /// The conversion does not do a translation from integer to float, it just
   /// re-interprets the bits as a float. Note that it is valid to do this on
   /// any bit width. Exactly 32 bits will be translated.
   float bitsToFloat() const {
-    return BitsToFloat(getWord(0));
+    return BitsToFloat(static_cast<uint32_t>(getWord(0)));
   }
 
   /// Converts a double to APInt bits.
