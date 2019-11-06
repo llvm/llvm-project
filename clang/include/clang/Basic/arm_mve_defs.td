@@ -125,7 +125,9 @@ def Void : Type;
 class PrimitiveType<string kind_, int size_>: Type {
   string kind = kind_;
   int size = size_;
+  string nameOverride = "";
 }
+
 // The type records defined by these foreaches have names like s32, f16, u8.
 foreach size = [8, 16, 32, 64] in
   foreach kind = ["u", "s"] in
@@ -133,6 +135,12 @@ foreach size = [8, 16, 32, 64] in
 foreach size = [16, 32] in
   foreach kind = ["f"] in
     def kind # size: PrimitiveType<kind, size>;
+
+// Sometimes we need to refer to a type by a different name in C, when
+// ACLE defines a function parameter to be something like 'unsigned'
+// rather than uint32_t.
+def uint: PrimitiveType<"u", 32> { let nameOverride = "unsigned"; }
+def sint: PrimitiveType<"s", 32> { let nameOverride = "int"; }
 
 // VecOf<t> expects t to be a scalar, and gives a 128-bit vector of whatever it
 // is.
@@ -222,7 +230,7 @@ def imm_1248 : Immediate<u32, IB_ConstRange<1, 8>> {
 // memory access size is n bytes (e.g. 1 for vldrb_[whatever], 2 for vldrh,
 // ...). The set of valid immediates for these is {0*n, 1*n, ..., 127*n}.
 class imm_mem7bit<int membytes>
-  : Immediate<u32, IB_ConstRange<0, !mul(membytes, 127)>> {
+  : Immediate<sint, IB_ConstRange<0, !mul(membytes, 127)>> {
   let extra = !if(!eq(membytes, 1), ?, "Multiple");
   let extraarg = !cast<string>(membytes);
 }

@@ -98,22 +98,22 @@ def urshrl: Intrinsic<u64, (args u64:$value, imm_1to32:$shift),
                                (u64 (xval $pair, 0))))>;
 
 let params = T.Int32 in {
-def vadcq: Intrinsic<Vector, (args Vector:$a, Vector:$b, Ptr<u32>:$carry),
+def vadcq: Intrinsic<Vector, (args Vector:$a, Vector:$b, Ptr<uint>:$carry),
     (seq (IRInt<"vadc", [Vector]> $a, $b, (shl (load $carry), 29)):$pair,
          (store (and 1, (lshr (xval $pair, 1), 29)), $carry),
          (xval $pair, 0))>;
-def vadciq: Intrinsic<Vector, (args Vector:$a, Vector:$b, Ptr<u32>:$carry),
+def vadciq: Intrinsic<Vector, (args Vector:$a, Vector:$b, Ptr<uint>:$carry),
     (seq (IRInt<"vadc", [Vector]> $a, $b, 0):$pair,
          (store (and 1, (lshr (xval $pair, 1), 29)), $carry),
          (xval $pair, 0))>;
 def vadcq_m: Intrinsic<Vector, (args Vector:$inactive, Vector:$a, Vector:$b,
-                                     Ptr<u32>:$carry, Predicate:$pred),
+                                     Ptr<uint>:$carry, Predicate:$pred),
     (seq (IRInt<"vadc_predicated", [Vector, Predicate]> $inactive, $a, $b,
              (shl (load $carry), 29), $pred):$pair,
          (store (and 1, (lshr (xval $pair, 1), 29)), $carry),
          (xval $pair, 0))>;
 def vadciq_m: Intrinsic<Vector, (args Vector:$inactive, Vector:$a, Vector:$b,
-                                      Ptr<u32>:$carry, Predicate:$pred),
+                                      Ptr<uint>:$carry, Predicate:$pred),
     (seq (IRInt<"vadc_predicated", [Vector, Predicate]> $inactive, $a, $b,
              0, $pred):$pair,
          (store (and 1, (lshr (xval $pair, 1), 29)), $carry),
