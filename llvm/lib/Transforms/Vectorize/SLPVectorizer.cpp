@@ -26,7 +26,6 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -2678,74 +2677,24 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     }
     case Instruction::Store: {
       // Check if the stores are consecutive or if we need to swizzle them.
-      llvm::Type *ScalarTy = cast<StoreInst>(VL0)->getValueOperand()->getType();
-      // Make sure all stores in the bundle are simple - we can't vectorize
-      // atomic or volatile stores.
-      SmallVector<Value *, 4> PointerOps(VL.size());
-      ValueList Operands(VL.size());
-      auto POIter = PointerOps.begin();
-      auto OIter = Operands.begin();
-      for (Value *V : VL) {
-        auto *SI = cast<StoreInst>(V);
-        if (!SI->isSimple()) {
+      for (unsigned i = 0, e = VL.size() - 1; i < e; ++i)
+        if (!isConsecutiveAccess(VL[i], VL[i + 1], *DL, *SE)) {
           BS.cancelScheduling(VL, VL0);
           newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx,
                        ReuseShuffleIndicies);
-          LLVM_DEBUG(dbgs() << "SLP: Gathering non-simple stores.\n");
+          LLVM_DEBUG(dbgs() << "SLP: Non-consecutive store.\n");
           return;
         }
-        *POIter = SI->getPointerOperand();
-        *OIter = SI->getValueOperand();
-        ++POIter;
-        ++OIter;
-      }
 
-      OrdersType CurrentOrder;
-      // Check the order of pointer operands.
-      if (llvm::sortPtrAccesses(PointerOps, *DL, *SE, CurrentOrder)) {
-        Value *Ptr0;
-        Value *PtrN;
-        if (CurrentOrder.empty()) {
-          Ptr0 = PointerOps.front();
-          PtrN = PointerOps.back();
-        } else {
-          Ptr0 = PointerOps[CurrentOrder.front()];
-          PtrN = PointerOps[CurrentOrder.back()];
-        }
-        const SCEV *Scev0 = SE->getSCEV(Ptr0);
-        const SCEV *ScevN = SE->getSCEV(PtrN);
-        const auto *Diff =
-            dyn_cast<SCEVConstant>(SE->getMinusSCEV(ScevN, Scev0));
-        uint64_t Size = DL->getTypeAllocSize(ScalarTy);
-        // Check that the sorted pointer operands are consecutive.
-        if (Diff && Diff->getAPInt() == (VL.size() - 1) * Size) {
-          if (CurrentOrder.empty()) {
-            // Original stores are consecutive and does not require reordering.
-            ++NumOpsWantToKeepOriginalOrder;
-            TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S,
-                                         UserTreeIdx, ReuseShuffleIndicies);
-            TE->setOperandsInOrder();
-            buildTree_rec(Operands, Depth + 1, {TE, 0});
-            LLVM_DEBUG(dbgs() << "SLP: added a vector of stores.\n");
-          } else {
-            // Need to reorder.
-            auto I = NumOpsWantToKeepOrder.try_emplace(CurrentOrder).first;
-            ++(I->getSecond());
-            TreeEntry *TE =
-                newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
-                             ReuseShuffleIndicies, I->getFirst());
-            TE->setOperandsInOrder();
-            buildTree_rec(Operands, Depth + 1, {TE, 0});
-            LLVM_DEBUG(dbgs() << "SLP: added a vector of jumbled stores.\n");
-          }
-          return;
-        }
-      }
+      TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
+                                   ReuseShuffleIndicies);
+      LLVM_DEBUG(dbgs() << "SLP: added a vector of stores.\n");
 
-      BS.cancelScheduling(VL, VL0);
-      newTreeEntry(VL, None /*not vectorized*/, S, UserTreeIdx,
-                   ReuseShuffleIndicies);
-      LLVM_DEBUG(dbgs() << "SLP: Non-consecutive store.\n");
+      ValueList Operands;
+      for (Value *V : VL)
+        Operands.push_back(cast<Instruction>(V)->getOperand(0));
+      TE->setOperandsInOrder();
+      buildTree_rec(Operands, Depth + 1, {TE, 0});
       return;
     }
     case Instruction::Call: {
@@ -3243,22 +3192,15 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
     }
     case Instruction::Store: {
       // We know that we can merge the stores. Calculate the cost.
-      bool IsReorder = !E->ReorderIndices.empty();
-      auto *SI =
-          cast<StoreInst>(IsReorder ? VL[E->ReorderIndices.front()] : VL0);
-      MaybeAlign Alignment(SI->getAlignment());
+      MaybeAlign alignment(cast<StoreInst>(VL0)->getAlignment());
       int ScalarEltCost =
-          TTI->getMemoryOpCost(Instruction::Store, ScalarTy, Alignment, 0, VL0);
-      if (NeedToShuffleReuses)
-        ReuseShuffleCost = -(ReuseShuffleNumbers - VL.size()) * ScalarEltCost;
-      int ScalarStCost = VecTy->getNumElements() * ScalarEltCost;
-      int VecStCost = TTI->getMemoryOpCost(Instruction::Store,
-                                           VecTy, Alignment, 0, VL0);
-      if (IsReorder) {
-        // TODO: Merge this shuffle with the ReuseShuffleCost.
-        VecStCost += TTI->getShuffleCost(
-            TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
+          TTI->getMemoryOpCost(Instruction::Store, ScalarTy, alignment, 0, VL0);
+      if (NeedToShuffleReuses) {
+        ReuseShuffleCost -= (ReuseShuffleNumbers - VL.size()) * ScalarEltCost;
       }
+      int ScalarStCost = VecTy->getNumElements() * ScalarEltCost;
+      int VecStCost =
+          TTI->getMemoryOpCost(Instruction::Store, VecTy, alignment, 0, VL0);
       return ReuseShuffleCost + VecStCost - ScalarStCost;
     }
     case Instruction::Call: {
@@ -4120,25 +4062,15 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       return V;
     }
     case Instruction::Store: {
-      bool IsReorder = !E->ReorderIndices.empty();
-      auto *SI = cast<StoreInst>(
-          IsReorder ? E->Scalars[E->ReorderIndices.front()] : VL0);
+      StoreInst *SI = cast<StoreInst>(VL0);
       unsigned Alignment = SI->getAlignment();
       unsigned AS = SI->getPointerAddressSpace();
 
       setInsertPointAfterBundle(E);
 
       Value *VecValue = vectorizeTree(E->getOperand(0));
-      if (IsReorder) {
-        OrdersType Mask;
-        inversePermutation(E->ReorderIndices, Mask);
-        VecValue = Builder.CreateShuffleVector(
-            VecValue, UndefValue::get(VecValue->getType()), E->ReorderIndices,
-            "reorder_shuffle");
-      }
       Value *ScalarPtr = SI->getPointerOperand();
-      Value *VecPtr = Builder.CreateBitCast(
-          ScalarPtr, VecValue->getType()->getPointerTo(AS));
+      Value *VecPtr = Builder.CreateBitCast(ScalarPtr, VecTy->getPointerTo(AS));
       StoreInst *ST = Builder.CreateStore(VecValue, VecPtr);
 
       // The pointer operand uses an in-tree scalar, so add the new BitCast to
@@ -5427,135 +5359,125 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 }
 
 bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
-                                            unsigned Idx) {
-  LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length " << Chain.size()
+                                            unsigned VecRegSize) {
+  const unsigned ChainLen = Chain.size();
+  LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length " << ChainLen
                     << "\n");
   const unsigned Sz = R.getVectorElementSize(Chain[0]);
-  const unsigned MinVF = R.getMinVecRegSize() / Sz;
-  unsigned VF = Chain.size();
+  const unsigned VF = VecRegSize / Sz;
 
-  if (!isPowerOf2_32(Sz) || !isPowerOf2_32(VF) || VF < 2 || VF < MinVF)
+  if (!isPowerOf2_32(Sz) || VF < 2)
     return false;
 
-  LLVM_DEBUG(dbgs() << "SLP: Analyzing " << VF << " stores at offset " << Idx
-                    << "\n");
+  bool Changed = false;
+  // Look for profitable vectorizable trees at all offsets, starting at zero.
+  for (unsigned i = 0, e = ChainLen; i + VF <= e; ++i) {
 
-  R.buildTree(Chain);
-  Optional<ArrayRef<unsigned>> Order = R.bestOrder();
-  // TODO: Handle orders of size less than number of elements in the vector.
-  if (Order && Order->size() == Chain.size()) {
-    // TODO: reorder tree nodes without tree rebuilding.
-    SmallVector<Value *, 4> ReorderedOps(Chain.rbegin(), Chain.rend());
-    llvm::transform(*Order, ReorderedOps.begin(),
-                    [Chain](const unsigned Idx) { return Chain[Idx]; });
-    R.buildTree(ReorderedOps);
+    ArrayRef<Value *> Operands = Chain.slice(i, VF);
+    // Check that a previous iteration of this loop did not delete the Value.
+    if (llvm::any_of(Operands, [&R](Value *V) {
+          auto *I = dyn_cast<Instruction>(V);
+          return I && R.isDeleted(I);
+        }))
+      continue;
+
+    LLVM_DEBUG(dbgs() << "SLP: Analyzing " << VF << " stores at offset " << i
+                      << "\n");
+
+    R.buildTree(Operands);
+    if (R.isTreeTinyAndNotFullyVectorizable())
+      continue;
+
+    R.computeMinimumValueSizes();
+
+    int Cost = R.getTreeCost();
+
+    LLVM_DEBUG(dbgs() << "SLP: Found cost=" << Cost << " for VF=" << VF
+                      << "\n");
+    if (Cost < -SLPCostThreshold) {
+      LLVM_DEBUG(dbgs() << "SLP: Decided to vectorize cost=" << Cost << "\n");
+
+      using namespace ore;
+
+      R.getORE()->emit(OptimizationRemark(SV_NAME, "StoresVectorized",
+                                          cast<StoreInst>(Chain[i]))
+                       << "Stores SLP vectorized with cost " << NV("Cost", Cost)
+                       << " and with tree size "
+                       << NV("TreeSize", R.getTreeSize()));
+
+      R.vectorizeTree();
+
+      // Move to the next bundle.
+      i += VF - 1;
+      Changed = true;
+    }
   }
-  if (R.isTreeTinyAndNotFullyVectorizable())
-    return false;
 
-  R.computeMinimumValueSizes();
-
-  int Cost = R.getTreeCost();
-
-  LLVM_DEBUG(dbgs() << "SLP: Found cost=" << Cost << " for VF=" << VF << "\n");
-  if (Cost < -SLPCostThreshold) {
-    LLVM_DEBUG(dbgs() << "SLP: Decided to vectorize cost=" << Cost << "\n");
-
-    using namespace ore;
-
-    R.getORE()->emit(OptimizationRemark(SV_NAME, "StoresVectorized",
-                                        cast<StoreInst>(Chain[0]))
-                     << "Stores SLP vectorized with cost " << NV("Cost", Cost)
-                     << " and with tree size "
-                     << NV("TreeSize", R.getTreeSize()));
-
-    R.vectorizeTree();
-    return true;
-  }
-
-  return false;
+  return Changed;
 }
 
 bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
                                         BoUpSLP &R) {
+  SetVector<StoreInst *> Heads;
+  SmallDenseSet<StoreInst *> Tails;
+  SmallDenseMap<StoreInst *, StoreInst *> ConsecutiveChain;
+
   // We may run into multiple chains that merge into a single chain. We mark the
   // stores that we vectorized so that we don't visit the same store twice.
   BoUpSLP::ValueSet VectorizedStores;
   bool Changed = false;
 
-  int E = Stores.size();
-  SmallBitVector Tails(E, false);
-  SmallVector<int, 16> ConsecutiveChain(E, E + 1);
-  auto &&FindConsecutiveAccess = [this, &Stores, &Tails,
-                                  &ConsecutiveChain](int K, int Idx) {
-    if (!isConsecutiveAccess(Stores[K], Stores[Idx], *DL, *SE))
-      return false;
+  auto &&FindConsecutiveAccess =
+      [this, &Stores, &Heads, &Tails, &ConsecutiveChain] (int K, int Idx) {
+        if (!isConsecutiveAccess(Stores[K], Stores[Idx], *DL, *SE))
+          return false;
 
-    Tails.set(Idx);
-    ConsecutiveChain[K] = Idx;
-    return true;
-  };
+        Tails.insert(Stores[Idx]);
+        Heads.insert(Stores[K]);
+        ConsecutiveChain[Stores[K]] = Stores[Idx];
+        return true;
+      };
+
   // Do a quadratic search on all of the given stores in reverse order and find
   // all of the pairs of stores that follow each other.
+  int E = Stores.size();
   for (int Idx = E - 1; Idx >= 0; --Idx) {
     // If a store has multiple consecutive store candidates, search according
     // to the sequence: Idx-1, Idx+1, Idx-2, Idx+2, ...
     // This is because usually pairing with immediate succeeding or preceding
     // candidate create the best chance to find slp vectorization opportunity.
-    const int MaxLookDepth = std::min(E - Idx, 16);
-    for (int Offset = 1, F = std::max(MaxLookDepth, Idx + 1); Offset < F;
-         ++Offset)
+    for (int Offset = 1, F = std::max(E - Idx, Idx + 1); Offset < F; ++Offset)
       if ((Idx >= Offset && FindConsecutiveAccess(Idx - Offset, Idx)) ||
           (Idx + Offset < E && FindConsecutiveAccess(Idx + Offset, Idx)))
         break;
   }
 
   // For stores that start but don't end a link in the chain:
-  for (int Cnt = E; Cnt > 0; --Cnt) {
-    int I = Cnt - 1;
-    if (ConsecutiveChain[I] == E + 1 || Tails.test(I))
+  for (auto *SI : llvm::reverse(Heads)) {
+    if (Tails.count(SI))
       continue;
+
     // We found a store instr that starts a chain. Now follow the chain and try
     // to vectorize it.
     BoUpSLP::ValueList Operands;
+    StoreInst *I = SI;
     // Collect the chain into a list.
-    while (I != E + 1 && !VectorizedStores.count(Stores[I])) {
-      Operands.push_back(Stores[I]);
+    while ((Tails.count(I) || Heads.count(I)) && !VectorizedStores.count(I)) {
+      Operands.push_back(I);
       // Move to the next value in the chain.
       I = ConsecutiveChain[I];
     }
 
-    // If a vector register can't hold 1 element, we are done.
-    unsigned MaxVecRegSize = R.getMaxVecRegSize();
-    unsigned EltSize = R.getVectorElementSize(Stores[0]);
-    if (MaxVecRegSize % EltSize != 0)
-      continue;
-
-    unsigned MaxElts = MaxVecRegSize / EltSize;
     // FIXME: Is division-by-2 the correct step? Should we assert that the
     // register size is a power-of-2?
-    unsigned StartIdx = 0;
-    for (unsigned Size = llvm::PowerOf2Ceil(MaxElts); Size >= 2; Size /= 2) {
-      for (unsigned Cnt = StartIdx, E = Operands.size(); Cnt + Size <= E;) {
-        ArrayRef<Value *> Slice = makeArrayRef(Operands).slice(Cnt, Size);
-        if (!VectorizedStores.count(Slice.front()) &&
-            !VectorizedStores.count(Slice.back()) &&
-            vectorizeStoreChain(Slice, R, Cnt)) {
-          // Mark the vectorized stores so that we don't vectorize them again.
-          VectorizedStores.insert(Slice.begin(), Slice.end());
-          Changed = true;
-          // If we vectorized initial block, no need to try to vectorize it
-          // again.
-          if (Cnt == StartIdx)
-            StartIdx += Size;
-          Cnt += Size;
-          continue;
-        }
-        ++Cnt;
-      }
-      // Check if the whole array was vectorized already - exit.
-      if (StartIdx >= Operands.size())
+    for (unsigned Size = R.getMaxVecRegSize(); Size >= R.getMinVecRegSize();
+         Size /= 2) {
+      if (vectorizeStoreChain(Operands, R, Size)) {
+        // Mark the vectorized stores so that we don't vectorize them again.
+        VectorizedStores.insert(Operands.begin(), Operands.end());
+        Changed = true;
         break;
+      }
     }
   }
 
@@ -7223,7 +7145,14 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length "
                       << it->second.size() << ".\n");
 
-    Changed |= vectorizeStores(it->second, R);
+    // Process the stores in chunks of 16.
+    // TODO: The limit of 16 inhibits greater vectorization factors.
+    //       For example, AVX2 supports v32i8. Increasing this limit, however,
+    //       may cause a significant compile-time increase.
+    for (unsigned CI = 0, CE = it->second.size(); CI < CE; CI += 16) {
+      unsigned Len = std::min<unsigned>(CE - CI, 16);
+      Changed |= vectorizeStores(makeArrayRef(&it->second[CI], Len), R);
+    }
   }
   return Changed;
 }
