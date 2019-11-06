@@ -491,8 +491,8 @@ INVALID-EXPORT-OVERLAP: macho-invalid-export-overlap': truncated or malformed ob
 RUN: not llvm-objdump --macho --universal-headers %p/Inputs/macho-invalid-fat-header 2>&1 | FileCheck -check-prefix INVALID-FAT-HEADER %s
 INVALID-FAT-HEADER: macho-invalid-fat-header': truncated or malformed fat file (contains zero architecture types)
 
-RUN: not llvm-objdump --macho --universal-headers %p/Inputs/macho-invalid-fat-arch-size 2>&1 | FileCheck -check-prefix INVALID-FAT-ARCH-SIZE %s
-INVALID-FAT-ARCH-SIZE: macho-invalid-fat-arch-size': truncated or malformed fat file (offset plus size of cputype (7) cpusubtype (3) extends past the end of the file)
+RUN: yaml2obj %p/Inputs/macho-invalid-fat-arch-size.yaml -o - | not llvm-objdump --macho --universal-headers - 2>&1 | FileCheck -check-prefix INVALID-FAT-ARCH-SIZE %s
+INVALID-FAT-ARCH-SIZE: '-': truncated or malformed fat file (offset plus size of cputype (7) cpusubtype (3) extends past the end of the file)
 
 RUN: not llvm-objdump --macho --universal-headers %p/Inputs/macho-invalid-fat-arch-bigalign 2>&1 | FileCheck -check-prefix INVALID-FAT-ARCH-BIGALIGN %s
 INVALID-FAT-ARCH-BIGALIGN: macho-invalid-fat-arch-bigalign': truncated or malformed fat file (align (2^212) too large for cputype (7) cpusubtype (3) (maximum 2^15))
