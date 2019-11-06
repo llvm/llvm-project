@@ -15,9 +15,8 @@
 #include <cuda.h>
 #include "nvptx_interface.h"
 
-#define DEVICE __device__
-#define INLINE __forceinline__ DEVICE
-#define NOINLINE __noinline__ DEVICE
+#define INLINE __forceinline__ __device__
+#define NOINLINE __noinline__ __device__
 
 ////////////////////////////////////////////////////////////////////////////////
 // Kernel options

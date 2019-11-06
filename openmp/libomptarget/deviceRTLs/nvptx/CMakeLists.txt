@@ -55,7 +55,6 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
       src/omptarget-nvptx.cu
       src/parallel.cu
       src/reduction.cu
-      src/support.cu
       src/sync.cu
       src/task.cu
   )
@@ -89,7 +88,7 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
   set(BUILD_SHARED_LIBS OFF)
   set(CUDA_SEPARABLE_COMPILATION ON)
   list(APPEND CUDA_NVCC_FLAGS -I${devicertl_base_directory})
-  cuda_add_library(omptarget-nvptx STATIC unity.cu
+  cuda_add_library(omptarget-nvptx STATIC ${cuda_src_files} ${omp_data_objects}
       OPTIONS ${CUDA_ARCH} ${CUDA_DEBUG})
 
   # Install device RTL under the lib destination folder.
