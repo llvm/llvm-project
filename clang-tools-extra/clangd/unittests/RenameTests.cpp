@@ -22,71 +22,62 @@ MATCHER_P2(RenameRange, Code, Range, "") {
   return replacementToEdit(Code, arg).range == Range;
 }
 
+// Generates an expected rename result by replacing all ranges in the given
+// annotation with the NewName.
+std::string expectedResult(Annotations Test, llvm::StringRef NewName) {
+  std::string Result;
+  unsigned NextChar = 0;
+  llvm::StringRef Code = Test.code();
+  for (const auto &R : Test.llvm::Annotations::ranges()) {
+    assert(R.Begin <= R.End && NextChar <= R.Begin);
+    Result += Code.substr(NextChar, R.Begin - NextChar);
+    Result += NewName;
+    NextChar = R.End;
+  }
+  Result += Code.substr(NextChar);
+  return Result;
+}
+
 TEST(RenameTest, SingleFile) {
-  struct Test {
-    const char* Before;
-    const char* After;
-  } Tests[] = {
+  // "^" points to the position of the rename, and "[[]]" ranges point to the
+  // identifier that is being renamed.
+  llvm::StringRef Tests[] = {
       // Rename function.
-      {
-          R"cpp(
-            void foo() {
-              fo^o();
-            }
-          )cpp",
-          R"cpp(
-            void abcde() {
-              abcde();
-            }
-          )cpp",
-      },
+      R"cpp(
+        void [[foo]]() {
+          [[fo^o]]();
+        }
+      )cpp",
+
       // Rename type.
-      {
-          R"cpp(
-            struct foo{};
-            foo test() {
-               f^oo x;
-               return x;
-            }
-          )cpp",
-          R"cpp(
-            struct abcde{};
-            abcde test() {
-               abcde x;
-               return x;
-            }
-          )cpp",
-      },
+      R"cpp(
+        struct [[foo]]{};
+        [[foo]] test() {
+           [[f^oo]] x;
+           return x;
+        }
+      )cpp",
+
       // Rename variable.
-      {
-          R"cpp(
-            void bar() {
-              if (auto ^foo = 5) {
-                foo = 3;
-              }
-            }
-          )cpp",
-          R"cpp(
-            void bar() {
-              if (auto abcde = 5) {
-                abcde = 3;
-              }
-            }
-          )cpp",
-      },
+      R"cpp(
+        void bar() {
+          if (auto [[^foo]] = 5) {
+            [[foo]] = 3;
+          }
+        }
+      )cpp",
   };
-  for (const Test &T : Tests) {
-    Annotations Code(T.Before);
+  for (const auto T : Tests) {
+    Annotations Code(T);
     auto TU = TestTU::withCode(Code.code());
     auto AST = TU.build();
+    llvm::StringRef NewName = "abcde";
     auto RenameResult =
-        renameWithinFile(AST, testPath(TU.Filename), Code.point(), "abcde");
+        renameWithinFile(AST, testPath(TU.Filename), Code.point(), NewName);
     ASSERT_TRUE(bool(RenameResult)) << RenameResult.takeError();
-    auto ApplyResult =
-        tooling::applyAllReplacements(Code.code(), *RenameResult);
-    ASSERT_TRUE(bool(ApplyResult)) << ApplyResult.takeError();
-
-    EXPECT_EQ(T.After, *ApplyResult) << T.Before;
+    auto ApplyResult = llvm::cantFail(
+        tooling::applyAllReplacements(Code.code(), *RenameResult));
+    EXPECT_EQ(expectedResult(Code, NewName), ApplyResult);
   }
 }
 
@@ -176,25 +167,24 @@ TEST(RenameTest, Renameable) {
       TU.ExtraArgs.push_back("-xobjective-c++-header");
     }
     auto AST = TU.build();
-
+    llvm::StringRef NewName = "dummyNewName";
     auto Results = renameWithinFile(AST, testPath(TU.Filename), T.point(),
-                                    "dummyNewName", Case.Index);
+                                    NewName, Case.Index);
     bool WantRename = true;
     if (T.ranges().empty())
       WantRename = false;
     if (!WantRename) {
       assert(Case.ErrorMessage && "Error message must be set!");
-      EXPECT_FALSE(Results) << "expected renameWithinFile returned an error: "
-                            << T.code();
+      EXPECT_FALSE(Results)
+          << "expected renameWithinFile returned an error: " << T.code();
       auto ActualMessage = llvm::toString(Results.takeError());
       EXPECT_THAT(ActualMessage, testing::HasSubstr(Case.ErrorMessage));
     } else {
       EXPECT_TRUE(bool(Results)) << "renameWithinFile returned an error: "
                                  << llvm::toString(Results.takeError());
-      std::vector<testing::Matcher<tooling::Replacement>> Expected;
-      for (const auto &R : T.ranges())
-        Expected.push_back(RenameRange(TU.Code, R));
-      EXPECT_THAT(*Results, UnorderedElementsAreArray(Expected));
+      auto ApplyResult =
+          llvm::cantFail(tooling::applyAllReplacements(T.code(), *Results));
+      EXPECT_EQ(expectedResult(T, NewName), ApplyResult);
     }
   }
 }
