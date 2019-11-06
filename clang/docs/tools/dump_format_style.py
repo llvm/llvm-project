@@ -78,14 +78,15 @@ class Enum(object):
     return '\n'.join(map(str, self.values))
 
 class EnumValue(object):
-  def __init__(self, name, comment):
+  def __init__(self, name, comment, config):
     self.name = name
     self.comment = comment
+    self.config = config
 
   def __str__(self):
     return '* ``%s`` (in configuration: ``%s``)\n%s' % (
         self.name,
-        re.sub('.*_', '', self.name),
+        re.sub('.*_', '', self.config),
         doxygen2rst(indent(self.comment, 2)))
 
 def clean_comment_line(line):
@@ -170,7 +171,14 @@ def read_options(header):
         comment += clean_comment_line(line)
       else:
         state = State.InEnum
-        enum.values.append(EnumValue(line.replace(',', ''), comment))
+        val = line.replace(',', '')
+        pos = val.find(" // ")
+        if (pos != -1):
+            config = val[pos+4:]
+            val = val[:pos]
+        else:
+            config = val;
+        enum.values.append(EnumValue(val, comment,config))
   if state != State.Finished:
     raise Exception('Not finished by the end of file')
 

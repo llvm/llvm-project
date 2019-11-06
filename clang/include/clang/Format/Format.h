@@ -708,7 +708,7 @@ struct FormatStyle {
     BS_Allman,
     /// Like ``Allman`` but always indent braces and line up code with braces.
     /// \code
-    ///    try
+    ///   try
     ///     {
     ///     foo();
     ///     }
@@ -850,6 +850,7 @@ struct FormatStyle {
     ///   {};
     /// \endcode
     bool AfterClass;
+
     /// Wrap control statements (``if``/``for``/``while``/``switch``/..).
     BraceWrappingAfterControlStatementStyle AfterControlStatement;
     /// Wrap enum definitions.
@@ -1965,7 +1966,8 @@ struct FormatStyle {
   bool SpacesInParentheses;
 
   /// If ``true``, spaces will be inserted after ``[`` and before ``]``.
-  /// Lambdas or unspecified size array declarations will not be affected.
+  /// Lambdas without arguments or unspecified size array declarations will not
+  /// be affected.
   /// \code
   ///    true:                                  false:
   ///    int a[ 5 ];                    vs.     int a[5];
@@ -1982,26 +1984,29 @@ struct FormatStyle {
   /// The correct way to spell a specific language version is e.g. ``c++11``.
   /// The historical aliases ``Cpp03`` and ``Cpp11`` are deprecated.
   enum LanguageStandard {
-    /// c++03: Parse and format as C++03.
-    LS_Cpp03,
-    /// c++11: Parse and format as C++11.
-    LS_Cpp11,
-    /// c++14: Parse and format as C++14.
-    LS_Cpp14,
-    /// c++17: Parse and format as C++17.
-    LS_Cpp17,
-    /// c++20: Parse and format as C++20.
-    LS_Cpp20,
-    /// Latest: Parse and format using the latest supported language version.
-    /// 'Cpp11' is an alias for LS_Latest for historical reasons.
+    /// Parse and format as C++03.
+    /// ``Cpp03`` is a deprecated alias for ``c++03``
+    LS_Cpp03, // c++03
+    /// Parse and format as C++11.
+    LS_Cpp11, // c++11
+    /// Parse and format as C++14.
+    LS_Cpp14, // c++14
+    /// Parse and format as C++17.
+    LS_Cpp17, // c++17
+    /// Parse and format as C++20.
+    LS_Cpp20, // c++20
+    /// Parse and format using the latest supported language version.
+    /// ``Cpp11`` is a deprecated alias for ``Latest``
     LS_Latest,
-    /// Auto: Automatic detection based on the input.
-    /// Parse using the latest language version. Format based on detected input.
+    /// Automatic detection based on the input.
     LS_Auto,
   };
 
-  /// Format compatible with this standard, e.g. use ``A<A<int> >``
-  /// instead of ``A<A<int>>`` for ``LS_Cpp03``.
+  /// Parse and format C++ constructs compatible with this standard.
+  /// \code
+  ///    c++03:                                 latest:
+  ///    vector<set<int> > x;           vs.     vector<set<int>> x;
+  /// \endcode
   LanguageStandard Standard;
 
   /// The number of columns used for tab stops.
