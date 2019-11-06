@@ -108,9 +108,11 @@ template <typename... Ts> Stencil cat(Ts &&... Parts) {
 // Functions for conveniently building stencils.
 //
 
+/// DEPRECATED: Use `cat` instead.
 /// \returns exactly the text provided.
 Stencil text(llvm::StringRef Text);
 
+/// DEPRECATED: Use `cat` instead.
 /// \returns the source corresponding to the selected range.
 Stencil selection(RangeSelector Selector);
 
