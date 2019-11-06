@@ -812,17 +812,43 @@ defm int_arm_mve_minv: IntrinsicSignSuffix<[llvm_i32_ty],
 defm int_arm_mve_maxv: IntrinsicSignSuffix<[llvm_i32_ty],
    [llvm_i32_ty, llvm_anyvector_ty], [IntrNoMem]>;
 
-def int_arm_mve_vcvt_narrow: Intrinsic<[llvm_v8f16_ty],
-   [llvm_v8f16_ty, llvm_v4f32_ty, llvm_i32_ty], [IntrNoMem]>;
-def int_arm_mve_vcvt_narrow_predicated: Intrinsic<[llvm_v8f16_ty],
-   [llvm_v8f16_ty, llvm_v4f32_ty, llvm_i32_ty, llvm_v4i1_ty], [IntrNoMem]>;
+multiclass MVEPredicated<list<LLVMType> rets, list<LLVMType> params,
+                         LLVMType pred, list<IntrinsicProperty> props = []> {
+  def "": Intrinsic<rets, params, props>;
+  def _predicated: Intrinsic<rets, params # [pred], props>;
+}
 
-def int_arm_mve_vldr_gather_base_wb: Intrinsic<
+defm int_arm_mve_vcvt_narrow: MVEPredicated<[llvm_v8f16_ty],
+   [llvm_v8f16_ty, llvm_v4f32_ty, llvm_i32_ty], llvm_v4i1_ty, [IntrNoMem]>;
+
+defm int_arm_mve_vldr_gather_base: MVEPredicated<
+   [llvm_anyvector_ty], [llvm_anyvector_ty, llvm_i32_ty],
+   llvm_anyvector_ty, [IntrReadMem]>;
+defm int_arm_mve_vldr_gather_base_wb: MVEPredicated<
    [llvm_anyvector_ty, llvm_anyvector_ty],
-   [LLVMMatchType<1>, llvm_i32_ty], [IntrReadMem]>;
-def int_arm_mve_vldr_gather_base_wb_predicated: Intrinsic<
-   [llvm_anyvector_ty, llvm_anyvector_ty],
-   [LLVMMatchType<1>, llvm_i32_ty, llvm_anyvector_ty], [IntrReadMem]>;
+   [LLVMMatchType<1>, llvm_i32_ty], llvm_anyvector_ty, [IntrReadMem]>;
+defm int_arm_mve_vstr_scatter_base: MVEPredicated<
+   [], [llvm_anyvector_ty, llvm_i32_ty, llvm_anyvector_ty],
+   llvm_anyvector_ty, [IntrWriteMem]>;
+defm int_arm_mve_vstr_scatter_base_wb: MVEPredicated<
+   [llvm_anyvector_ty], [LLVMMatchType<0>, llvm_i32_ty, llvm_anyvector_ty],
+   llvm_anyvector_ty, [IntrWriteMem]>;
+
+// gather_offset takes three i32 parameters. The first is the size of
+// memory element loaded, in bits. The second is a left bit shift to
+// apply to each offset in the vector parameter (must be either 0, or
+// correspond to the element size of the destination vector type). The
+// last is 1 to indicate zero extension (if the load is widening), or
+// 0 for sign extension.
+//
+// scatter_offset has the first two of those parameters, but since it
+// narrows rather than widening, it doesn't have the last one.
+defm int_arm_mve_vldr_gather_offset: MVEPredicated<
+   [llvm_anyvector_ty], [llvm_anyptr_ty, llvm_anyvector_ty,
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], llvm_anyvector_ty, [IntrReadMem]>;
+defm int_arm_mve_vstr_scatter_offset: MVEPredicated<
+   [], [llvm_anyptr_ty, llvm_anyvector_ty, llvm_anyvector_ty,
+   llvm_i32_ty, llvm_i32_ty], llvm_anyvector_ty, [IntrWriteMem]>;
 
 def int_arm_mve_urshrl: Intrinsic<
    [llvm_i32_ty, llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],

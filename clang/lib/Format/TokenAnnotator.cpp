@@ -1350,6 +1350,70 @@ private:
     }
   }
 
+  static FormatToken *untilMatchingParen(FormatToken *Current) {
+    // Used when `MatchingParen` is not yet established.
+    int ParenLevel = 0;
+    while (Current) {
+      if (Current->is(tok::l_paren))
+        ParenLevel++;
+      if (Current->is(tok::r_paren))
+        ParenLevel--;
+      if (ParenLevel < 1)
+        break;
+      Current = Current->Next;
+    }
+    return Current;
+  }
+
+  static bool isDeductionGuide(FormatToken &Current) {
+    // Look for a deduction guide template<T> A(...) -> A<...>;
+    if (Current.Previous && Current.Previous->is(tok::r_paren) &&
+        Current.startsSequence(tok::arrow, tok::identifier, tok::less)) {
+      // Find the TemplateCloser.
+      FormatToken *TemplateCloser = Current.Next->Next;
+      int NestingLevel = 0;
+      while (TemplateCloser) {
+        // Skip over an expressions in parens  A<(3 < 2)>;
+        if (TemplateCloser->is(tok::l_paren)) {
+          // No Matching Paren yet so skip to matching paren
+          TemplateCloser = untilMatchingParen(TemplateCloser);
+        }
+        if (TemplateCloser->is(tok::less))
+          NestingLevel++;
+        if (TemplateCloser->is(tok::greater))
+          NestingLevel--;
+        if (NestingLevel < 1)
+          break;
+        TemplateCloser = TemplateCloser->Next;
+      }
+      // Assuming we have found the end of the template ensure its followed
+      // with a semi-colon.
+      if (TemplateCloser && TemplateCloser->Next &&
+          TemplateCloser->Next->is(tok::semi) &&
+          Current.Previous->MatchingParen) {
+        // Determine if the identifier `A` prior to the A<..>; is the same as
+        // prior to the A(..)
+        FormatToken *LeadingIdentifier =
+            Current.Previous->MatchingParen->Previous;
+
+        // Differentiate a deduction guide by seeing the
+        // > of the template prior to the leading identifier.
+        if (LeadingIdentifier) {
+          FormatToken *PriorLeadingIdentifier = LeadingIdentifier->Previous;
+          // Skip back past explicit decoration
+          if (PriorLeadingIdentifier &&
+              PriorLeadingIdentifier->is(tok::kw_explicit))
+            PriorLeadingIdentifier = PriorLeadingIdentifier->Previous;
+
+          return (PriorLeadingIdentifier &&
+                  PriorLeadingIdentifier->is(TT_TemplateCloser) &&
+                  LeadingIdentifier->TokenText == Current.Next->TokenText);
+        }
+      }
+    }
+    return false;
+  }
+
   void determineTokenType(FormatToken &Current) {
     if (!Current.is(TT_Unknown))
       // The token type is already known.
@@ -1396,6 +1460,10 @@ private:
                Current.NestingLevel == 0 &&
                !Current.Previous->is(tok::kw_operator)) {
       // not auto operator->() -> xxx;
+      Current.Type = TT_TrailingReturnArrow;
+
+    } else if (isDeductionGuide(Current)) {
+      // Deduction guides trailing arrow " A(...) -> A<T>;".
       Current.Type = TT_TrailingReturnArrow;
     } else if (Current.isOneOf(tok::star, tok::amp, tok::ampamp)) {
       Current.Type = determineStarAmpUsage(Current,
