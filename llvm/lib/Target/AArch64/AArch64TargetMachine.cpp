@@ -614,13 +614,14 @@ void AArch64PassConfig::addPreEmitPass() {
 
   if (EnableA53Fix835769)
     addPass(createAArch64A53Fix835769());
+
+  if (EnableBranchTargets)
+    addPass(createAArch64BranchTargetsPass());
+
   // Relax conditional branch instructions if they're otherwise out of
   // range of their destination.
   if (BranchRelaxation)
     addPass(&BranchRelaxationPassID);
-
-  if (EnableBranchTargets)
-    addPass(createAArch64BranchTargetsPass());
 
   // Identify valid longjmp targets for Windows Control Flow Guard.
   if (TM->getTargetTriple().isOSWindows())
