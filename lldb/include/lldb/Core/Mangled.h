@@ -261,6 +261,15 @@ public:
   bool DemangleWithRichManglingInfo(RichManglingContext &context,
                                     SkipMangledNameFn *skip_mangled_name);
 
+  /// Try to identify the mangling scheme used.
+  /// \param[in] name
+  ///     The name we are attempting to identify the mangling scheme for.
+  ///
+  /// \return
+  ///     eManglingSchemeNone if no known mangling scheme could be identified
+  ///     for s, otherwise the enumerator for the mangling scheme detected.
+  static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef const name);
+
 private:
   /// Mangled member variables.
   ConstString m_mangled;           ///< The mangled version of the name

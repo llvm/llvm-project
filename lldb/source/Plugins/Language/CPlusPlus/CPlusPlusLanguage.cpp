@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/ItaniumDemangle.h"
 
+#include "lldb/Core/Mangled.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/DataFormatters/CXXFunctionPointer.h"
@@ -238,18 +239,16 @@ std::string CPlusPlusLanguage::MethodName::GetScopeQualifiedName() {
   return res;
 }
 
-bool CPlusPlusLanguage::IsCPPMangledName(const char *name) {
+bool CPlusPlusLanguage::IsCPPMangledName(llvm::StringRef name) {
   // FIXME!! we should really run through all the known C++ Language plugins
   // and ask each one if this is a C++ mangled name
 
-  if (name == nullptr)
+  Mangled::ManglingScheme scheme = Mangled::GetManglingScheme(name);
+
+  if (scheme == Mangled::eManglingSchemeNone)
     return false;
 
-  // MSVC style mangling
-  if (name[0] == '?')
-    return true;
-
-  return (name[0] != '\0' && name[0] == '_' && name[1] == 'Z');
+  return true;
 }
 
 bool CPlusPlusLanguage::ExtractContextAndIdentifier(
