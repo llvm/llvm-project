@@ -782,15 +782,14 @@ public:
       }
 
       llvm::APInt typelo, typehi;
-      if (cast<ScalarType>(IA.ArgType)->kind() == ScalarTypeKind::UnsignedInt) {
-        typelo = llvm::APInt::getSignedMinValue(IA.ArgType->sizeInBits());
-        typehi = llvm::APInt::getSignedMaxValue(IA.ArgType->sizeInBits());
+      unsigned Bits = IA.ArgType->sizeInBits();
+      if (cast<ScalarType>(IA.ArgType)->kind() == ScalarTypeKind::SignedInt) {
+        typelo = llvm::APInt::getSignedMinValue(Bits).sext(128);
+        typehi = llvm::APInt::getSignedMaxValue(Bits).sext(128);
       } else {
-        typelo = llvm::APInt::getMinValue(IA.ArgType->sizeInBits());
-        typehi = llvm::APInt::getMaxValue(IA.ArgType->sizeInBits());
+        typelo = llvm::APInt::getMinValue(Bits).zext(128);
+        typehi = llvm::APInt::getMaxValue(Bits).zext(128);
       }
-      typelo = typelo.sext(128);
-      typehi = typehi.sext(128);
 
       std::string Index = utostr(kv.first);
 
