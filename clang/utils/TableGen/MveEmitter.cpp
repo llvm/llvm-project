@@ -229,6 +229,7 @@ public:
 class ScalarType : public CRegularNamedType {
   ScalarTypeKind Kind;
   unsigned Bits;
+  std::string NameOverride;
 
 public:
   ScalarType(const Record *Record) : CRegularNamedType(TypeKind::Scalar) {
@@ -237,12 +238,18 @@ public:
                .Case("u", ScalarTypeKind::UnsignedInt)
                .Case("f", ScalarTypeKind::Float);
     Bits = Record->getValueAsInt("size");
+    NameOverride = Record->getValueAsString("nameOverride");
   }
   unsigned sizeInBits() const override { return Bits; }
   ScalarTypeKind kind() const { return Kind; }
   std::string suffix() const { return toLetter(Kind) + utostr(Bits); }
   std::string cNameBase() const override {
     return toCPrefix(Kind) + utostr(Bits);
+  }
+  std::string cName() const override {
+    if (NameOverride.empty())
+      return CRegularNamedType::cName();
+    return NameOverride;
   }
   std::string llvmName() const override {
     if (Kind == ScalarTypeKind::Float) {
@@ -261,6 +268,7 @@ public:
   }
   bool isInteger() const { return Kind != ScalarTypeKind::Float; }
   bool requiresFloat() const override { return !isInteger(); }
+  bool hasNonstandardName() const { return !NameOverride.empty(); }
 
   static bool classof(const Type *T) {
     return T->typeKind() == TypeKind::Scalar;
@@ -1263,6 +1271,8 @@ void MveEmitter::EmitHeader(raw_ostream &OS) {
                   "typedef float float32_t;\n";
   for (const auto &kv : ScalarTypes) {
     const ScalarType *ST = kv.second.get();
+    if (ST->hasNonstandardName())
+      continue;
     raw_ostream &OS = parts[ST->requiresFloat() ? Float : 0];
     const VectorType *VT = getVectorType(ST);
 
