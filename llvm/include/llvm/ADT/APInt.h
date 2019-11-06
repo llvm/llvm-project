@@ -1249,7 +1249,7 @@ public:
   /// \returns true if *this <= RHS when considered signed.
   bool sle(uint64_t RHS) const { return !sgt(RHS); }
 
-  /// Unsigned greather than comparison
+  /// Unsigned greater than comparison
   ///
   /// Regards both *this and RHS as unsigned quantities and compares them for
   /// the validity of the greater-than relationship.
@@ -1268,7 +1268,7 @@ public:
     return (!isSingleWord() && getActiveBits() > 64) || getZExtValue() > RHS;
   }
 
-  /// Signed greather than comparison
+  /// Signed greater than comparison
   ///
   /// Regards both *this and RHS as signed quantities and compares them for the
   /// validity of the greater-than relationship.
@@ -2162,7 +2162,7 @@ inline float RoundAPIntToFloat(const APInt &APIVal) {
 
 /// Converts the given APInt to a float value.
 ///
-/// Treast the APInt as a signed value for conversion purposes.
+/// Treats the APInt as a signed value for conversion purposes.
 inline float RoundSignedAPIntToFloat(const APInt &APIVal) {
   return float(APIVal.signedRoundToDouble());
 }
@@ -2198,7 +2198,7 @@ APInt RoundingSDiv(const APInt &A, const APInt &B, APInt::Rounding RM);
 /// count as an overflow, but here we want to allow values to decrease
 /// and increase as long as they are within the same interval.
 /// Specifically, adding of two negative numbers should not cause an
-/// overflow (as long as the magnitude does not exceed the bith width).
+/// overflow (as long as the magnitude does not exceed the bit width).
 /// On the other hand, given a positive number, adding a negative
 /// number to it can give a negative result, which would cause the
 /// value to go from [-2^BW, 0) to [0, 2^BW). In that sense, zero is
