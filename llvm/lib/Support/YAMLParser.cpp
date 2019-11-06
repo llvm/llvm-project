@@ -789,6 +789,7 @@ Token &Scanner::peekNext() {
     if (TokenQueue.empty() || NeedMore) {
       if (!fetchMoreTokens()) {
         TokenQueue.clear();
+        SimpleKeys.clear();
         TokenQueue.push_back(Token());
         return TokenQueue.front();
       }
@@ -932,12 +933,16 @@ void Scanner::scan_ns_uri_char() {
 }
 
 bool Scanner::consume(uint32_t Expected) {
-  if (Expected >= 0x80)
-    report_fatal_error("Not dealing with this yet");
+  if (Expected >= 0x80) {
+    setError("Cannot consume non-ascii characters");
+    return false;
+  }
   if (Current == End)
     return false;
-  if (uint8_t(*Current) >= 0x80)
-    report_fatal_error("Not dealing with this yet");
+  if (uint8_t(*Current) >= 0x80) {
+    setError("Cannot consume non-ascii characters");
+    return false;
+  }
   if (uint8_t(*Current) == Expected) {
     ++Current;
     ++Column;
@@ -1227,7 +1232,10 @@ bool Scanner::scanValue() {
       if (i == SK.Tok)
         break;
     }
-    assert(i != e && "SimpleKey not in token queue!");
+    if (i == e) {
+      Failed = true;
+      return false;
+    }
     i = TokenQueue.insert(i, T);
 
     // We may also need to add a Block-Mapping-Start token.
@@ -1772,10 +1780,11 @@ Stream::~Stream() = default;
 bool Stream::failed() { return scanner->failed(); }
 
 void Stream::printError(Node *N, const Twine &Msg) {
-  scanner->printError( N->getSourceRange().Start
+  SMRange Range = N ? N->getSourceRange() : SMRange();
+  scanner->printError( Range.Start
                      , SourceMgr::DK_Error
                      , Msg
-                     , N->getSourceRange());
+                     , Range);
 }
 
 document_iterator Stream::begin() {
@@ -1934,15 +1943,18 @@ StringRef ScalarNode::unescapeDoubleQuoted( StringRef UnquotedValue
       UnquotedValue = UnquotedValue.substr(1);
       break;
     default:
-      if (UnquotedValue.size() == 1)
-        // TODO: Report error.
-        break;
+      if (UnquotedValue.size() == 1) {
+        Token T;
+        T.Range = StringRef(UnquotedValue.begin(), 1);
+        setError("Unrecognized escape code", T);
+        return "";
+      }
       UnquotedValue = UnquotedValue.substr(1);
       switch (UnquotedValue[0]) {
       default: {
           Token T;
           T.Range = StringRef(UnquotedValue.begin(), 1);
-          setError("Unrecognized escape code!", T);
+          setError("Unrecognized escape code", T);
           return "";
         }
       case '\r':
@@ -2078,7 +2090,14 @@ Node *KeyValueNode::getKey() {
 Node *KeyValueNode::getValue() {
   if (Value)
     return Value;
-  getKey()->skip();
+
+  if (Node* Key = getKey())
+    Key->skip();
+  else {
+    setError("Null key in Key Value.", peekNext());
+    return Value = new (getAllocator()) NullNode(Doc);
+  }
+
   if (failed())
     return Value = new (getAllocator()) NullNode(Doc);
 
@@ -2394,6 +2413,15 @@ parse_property:
     // TODO: Properly handle tags. "[!!str ]" should resolve to !!str "", not
     //       !!null null.
     return new (NodeAllocator) NullNode(stream.CurrentDoc);
+  case Token::TK_FlowMappingEnd:
+  case Token::TK_FlowSequenceEnd:
+  case Token::TK_FlowEntry: {
+    if (Root && (isa<MappingNode>(Root) || isa<SequenceNode>(Root)))
+      return new (NodeAllocator) NullNode(stream.CurrentDoc);
+
+    setError("Unexpected token", T);
+    return nullptr;
+  }
   case Token::TK_Error:
     return nullptr;
   }
