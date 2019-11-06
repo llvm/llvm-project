@@ -111,6 +111,11 @@ set_property(SOURCE ${LIBUNWIND_C_SOURCES}
 # Build the shared library.
 if (LIBUNWIND_ENABLE_SHARED)
   add_library(unwind_shared SHARED ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
+  if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
+    target_compile_options(unwind_shared PRIVATE /GR-)
+  else()
+    target_compile_options(unwind_shared PRIVATE -fno-rtti)
+  endif()
   if(COMMAND llvm_setup_rpath)
     llvm_setup_rpath(unwind_shared)
   endif()
@@ -142,6 +147,11 @@ endif()
 # Build the static library.
 if (LIBUNWIND_ENABLE_STATIC)
   add_library(unwind_static STATIC ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
+  if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
+    target_compile_options(unwind_static PRIVATE /GR-)
+  else()
+    target_compile_options(unwind_static PRIVATE -fno-rtti)
+  endif()
   target_link_libraries(unwind_static PRIVATE ${LIBUNWIND_LIBRARIES})
   set_target_properties(unwind_static
                         PROPERTIES
