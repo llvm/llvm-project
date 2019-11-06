@@ -147,6 +147,12 @@ Improvements to clang-tidy
   Finds classes, structs, and unions that contain redundant member
   access specifiers.
 
+- New :doc:`readability-make-member-function-const
+  <clang-tidy/checks/readability-make-member-function-const>` check.
+
+  Finds non-static member functions that can be made ``const``
+  because the functions don't use ``this`` in a non-const way.
+
 Improvements to include-fixer
 -----------------------------
 
