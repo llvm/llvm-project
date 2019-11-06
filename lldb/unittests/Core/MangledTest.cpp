@@ -37,6 +37,17 @@ TEST(MangledTest, ResultForValidName) {
   EXPECT_STREQ(ExpectedResult.GetCString(), TheDemangled.GetCString());
 }
 
+TEST(MangledTest, ResultForBlockInvocation) {
+  ConstString MangledName("___Z1fU13block_pointerFviE_block_invoke");
+  Mangled TheMangled(MangledName);
+  ConstString TheDemangled =
+      TheMangled.GetDemangledName(eLanguageTypeC_plus_plus);
+
+  ConstString ExpectedResult(
+      "invocation function for block in f(void (int) block_pointer)");
+  EXPECT_STREQ(ExpectedResult.GetCString(), TheDemangled.GetCString());
+}
+
 TEST(MangledTest, EmptyForInvalidName) {
   ConstString MangledName("_ZN1a1b1cmxktpEEvm");
   Mangled TheMangled(MangledName);
