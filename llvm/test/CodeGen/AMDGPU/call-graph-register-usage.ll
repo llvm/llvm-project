@@ -238,6 +238,34 @@ entry:
   ret void
 }
 
+; Make sure there's no assert when a sgpr160 is used.
+; GCN-LABEL: {{^}}count_use_sgpr160_external_call
+; GCN: ; sgpr160 s[{{[0-9]+}}:{{[0-9]+}}]
+; CI: NumSgprs: 48
+; VI-NOBUG: NumSgprs: 48
+; VI-BUG: NumSgprs: 96
+; GCN: NumVgprs: 24
+define amdgpu_kernel void @count_use_sgpr160_external_call()  {
+entry:
+  tail call void asm sideeffect "; sgpr160 $0", "s"(<5 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14>) #1
+  call void @external()
+  ret void
+}
+
+; Make sure there's no assert when a vgpr160 is used.
+; GCN-LABEL: {{^}}count_use_vgpr160_external_call
+; GCN: ; vgpr160 v[{{[0-9]+}}:{{[0-9]+}}]
+; CI: NumSgprs: 48
+; VI-NOBUG: NumSgprs: 48
+; VI-BUG: NumSgprs: 96
+; GCN: NumVgprs: 24
+define amdgpu_kernel void @count_use_vgpr160_external_call()  {
+entry:
+  tail call void asm sideeffect "; vgpr160 $0", "v"(<5 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14>) #1
+  call void @external()
+  ret void
+}
+
 attributes #0 = { nounwind noinline norecurse }
 attributes #1 = { nounwind noinline norecurse }
 attributes #2 = { nounwind noinline }
