@@ -152,7 +152,6 @@ def HasOnlySwappingMemOps : Predicate<"!PPCSubTarget->hasP9Vector()">;
 let Predicates = [HasVSX] in {
 let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
 let hasSideEffects = 0 in { // VSX instructions don't have side effects.
-let Uses = [RM] in {
 
   // Load indexed instructions
   let mayLoad = 1, mayStore = 0 in {
@@ -214,6 +213,7 @@ let Uses = [RM] in {
     }
   } // mayStore
 
+  let Uses = [RM] in {
   // Add/Mul Instructions
   let isCommutable = 1 in {
     def XSADDDP : XX3Form<60, 32,
