@@ -511,4 +511,20 @@ defm : X86WriteResUnsupported<WriteCvtPS2PHSt>;
 defm : X86WriteResUnsupported<WriteCvtPS2PHYSt>;
 defm : X86WriteResUnsupported<WriteCvtPS2PHZSt>;
 
+// Remaining SLM instrs.
+
+def SLMWriteResGroup1rr : SchedWriteRes<[SLM_FPC_RSV01]> {
+  let Latency = 4;
+  let NumMicroOps = 2;
+  let ResourceCycles = [4];
+}
+def: InstRW<[SLMWriteResGroup1rr], (instrs PADDQrr, PSUBQrr, PCMPEQQrr)>;
+
+def SLMWriteResGroup1rm : SchedWriteRes<[SLM_MEC_RSV,SLM_FPC_RSV01]> {
+  let Latency = 7;
+  let NumMicroOps = 3;
+  let ResourceCycles = [1,4];
+}
+def: InstRW<[SLMWriteResGroup1rm], (instrs PADDQrm, PSUBQrm, PCMPEQQrm)>;
+
 } // SchedModel

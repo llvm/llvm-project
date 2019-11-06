@@ -528,8 +528,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      4     1.00    *                   paddd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        paddq	%mm0, %mm2
 # CHECK-NEXT:  1      4     1.00    *                   paddq	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.50                        paddq	%xmm0, %xmm2
-# CHECK-NEXT:  1      4     1.00    *                   paddq	(%rax), %xmm2
+# CHECK-NEXT:  2      4     2.00                        paddq	%xmm0, %xmm2
+# CHECK-NEXT:  3      7     2.00    *                   paddq	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        paddsb	%xmm0, %xmm2
 # CHECK-NEXT:  1      4     1.00    *                   paddsb	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        paddsw	%xmm0, %xmm2
@@ -626,8 +626,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      4     1.00    *                   psubd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        psubq	%mm0, %mm2
 # CHECK-NEXT:  1      4     1.00    *                   psubq	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.50                        psubq	%xmm0, %xmm2
-# CHECK-NEXT:  1      4     1.00    *                   psubq	(%rax), %xmm2
+# CHECK-NEXT:  2      4     2.00                        psubq	%xmm0, %xmm2
+# CHECK-NEXT:  3      7     2.00    *                   psubq	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        psubsb	%xmm0, %xmm2
 # CHECK-NEXT:  1      4     1.00    *                   psubsb	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        psubsw	%xmm0, %xmm2
@@ -687,7 +687,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -     412.00 12.00  152.50 90.50  3.00   3.00   134.00
+# CHECK-NEXT:  -     412.00 12.00  158.50 96.50  3.00   3.00   134.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -812,8 +812,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   paddd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     paddq	%mm0, %mm2
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   paddq	(%rax), %mm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     paddq	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   paddq	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00   2.00    -      -      -     paddq	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00   2.00    -      -     1.00   paddq	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     paddsb	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   paddsb	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     paddsw	%xmm0, %xmm2
@@ -910,8 +910,8 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   psubd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     psubq	%mm0, %mm2
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   psubq	(%rax), %mm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     psubq	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   psubq	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00   2.00    -      -      -     psubq	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00   2.00    -      -     1.00   psubq	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     psubsb	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   psubsb	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     psubsw	%xmm0, %xmm2
