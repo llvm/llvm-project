@@ -695,34 +695,114 @@ void GCNTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 
 unsigned GCNTTIImpl::getUserCost(const User *U,
                                  ArrayRef<const Value *> Operands) {
-  // Estimate extractelement elimination
-  if (const ExtractElementInst *EE = dyn_cast<ExtractElementInst>(U)) {
-    ConstantInt *CI = dyn_cast<ConstantInt>(EE->getOperand(1));
+  const Instruction *I = dyn_cast<Instruction>(U);
+  if (!I)
+    return BaseT::getUserCost(U, Operands);
+
+  // Estimate different operations to be optimized out
+  switch (I->getOpcode()) {
+  case Instruction::ExtractElement: {
+    ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(1));
     unsigned Idx = -1;
     if (CI)
       Idx = CI->getZExtValue();
-    return getVectorInstrCost(EE->getOpcode(), EE->getOperand(0)->getType(),
-                              Idx);
+    return getVectorInstrCost(I->getOpcode(), I->getOperand(0)->getType(), Idx);
   }
-
-  // Estimate insertelement elimination
-  if (const InsertElementInst *IE = dyn_cast<InsertElementInst>(U)) {
-    ConstantInt *CI = dyn_cast<ConstantInt>(IE->getOperand(2));
+  case Instruction::InsertElement: {
+    ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(2));
     unsigned Idx = -1;
     if (CI)
       Idx = CI->getZExtValue();
-    return getVectorInstrCost(IE->getOpcode(), IE->getType(), Idx);
+    return getVectorInstrCost(I->getOpcode(), I->getType(), Idx);
+  }
+  case Instruction::Call: {
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
+      SmallVector<Value *, 4> Args(II->arg_operands());
+      FastMathFlags FMF;
+      if (auto *FPMO = dyn_cast<FPMathOperator>(II))
+        FMF = FPMO->getFastMathFlags();
+      return getIntrinsicInstrCost(II->getIntrinsicID(), II->getType(), Args,
+                                   FMF);
+    } else {
+      return BaseT::getUserCost(U, Operands);
+    }
+  }
+  case Instruction::ShuffleVector: {
+    const ShuffleVectorInst *Shuffle = cast<ShuffleVectorInst>(I);
+    Type *Ty = Shuffle->getType();
+    Type *SrcTy = Shuffle->getOperand(0)->getType();
+
+    // TODO: Identify and add costs for insert subvector, etc.
+    int SubIndex;
+    if (Shuffle->isExtractSubvectorMask(SubIndex))
+      return getShuffleCost(TTI::SK_ExtractSubvector, SrcTy, SubIndex, Ty);
+
+    if (Shuffle->changesLength())
+      return -1;
+
+    if (Shuffle->isIdentity())
+      return 0;
+
+    if (Shuffle->isReverse())
+      return getShuffleCost(TTI::SK_Reverse, Ty, 0, nullptr);
+
+    if (Shuffle->isSelect())
+      return getShuffleCost(TTI::SK_Select, Ty, 0, nullptr);
+
+    if (Shuffle->isTranspose())
+      return getShuffleCost(TTI::SK_Transpose, Ty, 0, nullptr);
+
+    if (Shuffle->isZeroEltSplat())
+      return getShuffleCost(TTI::SK_Broadcast, Ty, 0, nullptr);
+
+    if (Shuffle->isSingleSource())
+      return getShuffleCost(TTI::SK_PermuteSingleSrc, Ty, 0, nullptr);
+
+    return getShuffleCost(TTI::SK_PermuteTwoSrc, Ty, 0, nullptr);
+  }
+  case Instruction::ZExt:
+  case Instruction::SExt:
+  case Instruction::FPToUI:
+  case Instruction::FPToSI:
+  case Instruction::FPExt:
+  case Instruction::PtrToInt:
+  case Instruction::IntToPtr:
+  case Instruction::SIToFP:
+  case Instruction::UIToFP:
+  case Instruction::Trunc:
+  case Instruction::FPTrunc:
+  case Instruction::BitCast:
+  case Instruction::AddrSpaceCast: {
+    return getCastInstrCost(I->getOpcode(), I->getType(),
+                            I->getOperand(0)->getType(), I);
+  }
+  case Instruction::Add:
+  case Instruction::FAdd:
+  case Instruction::Sub:
+  case Instruction::FSub:
+  case Instruction::Mul:
+  case Instruction::FMul:
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::FDiv:
+  case Instruction::URem:
+  case Instruction::SRem:
+  case Instruction::FRem:
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+  case Instruction::FNeg: {
+    return getArithmeticInstrCost(I->getOpcode(), I->getType(),
+                                  TTI::OK_AnyValue, TTI::OK_AnyValue,
+                                  TTI::OP_None, TTI::OP_None, Operands);
+  }
+  default:
+    break;
   }
 
-  // Estimate different intrinsics, e.g. llvm.fabs
-  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
-    SmallVector<Value *, 4> Args(II->arg_operands());
-    FastMathFlags FMF;
-    if (auto *FPMO = dyn_cast<FPMathOperator>(II))
-      FMF = FPMO->getFastMathFlags();
-    return getIntrinsicInstrCost(II->getIntrinsicID(), II->getType(), Args,
-                                 FMF);
-  }
   return BaseT::getUserCost(U, Operands);
 }
 
