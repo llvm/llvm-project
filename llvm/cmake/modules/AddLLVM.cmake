@@ -732,7 +732,7 @@ endmacro(add_llvm_library name)
 
 macro(add_llvm_executable name)
   cmake_parse_arguments(ARG
-    "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO;NO_INSTALL_RPATH"
+    "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO;NO_INSTALL_RPATH;SUPPORT_PLUGINS"
     "ENTITLEMENTS;BUNDLE_PATH"
     "DEPENDS"
     ${ARGN})
@@ -782,6 +782,11 @@ macro(add_llvm_executable name)
   if(NOT LLVM_ENABLE_OBJLIB)
     llvm_update_compile_flags(${name})
   endif()
+
+  if (ARG_SUPPORT_PLUGINS)
+    set(LLVM_NO_DEAD_STRIP On)
+  endif()
+
   add_link_opts( ${name} )
 
   # Do not add -Dname_EXPORTS to the command-line when building files in this
