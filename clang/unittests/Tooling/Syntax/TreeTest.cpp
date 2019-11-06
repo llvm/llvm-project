@@ -41,8 +41,8 @@ protected:
 
       void HandleTranslationUnit(ASTContext &Ctx) override {
         Arena = std::make_unique<syntax::Arena>(Ctx.getSourceManager(),
-                                                 Ctx.getLangOpts(),
-                                                 std::move(*Tokens).consume());
+                                                Ctx.getLangOpts(),
+                                                std::move(*Tokens).consume());
         Tokens = nullptr; // make sure we fail if this gets called twice.
         Root = syntax::buildSyntaxTree(*Arena, *Ctx.getTranslationUnitDecl());
       }
@@ -65,7 +65,7 @@ protected:
         auto Tokens =
             std::make_unique<syntax::TokenCollector>(CI.getPreprocessor());
         return std::make_unique<BuildSyntaxTree>(Root, Arena,
-                                                  std::move(Tokens));
+                                                 std::move(Tokens));
       }
 
     private:
@@ -136,18 +136,315 @@ void foo() {}
 | |-(
 | |-)
 | `-CompoundStatement
-|   |-2: {
-|   `-3: }
+|   |-{
+|   `-}
 `-TopLevelDeclaration
   |-void
   |-foo
   |-(
   |-)
   `-CompoundStatement
-    |-2: {
-    `-3: }
+    |-{
+    `-}
 )txt"},
-  };
+      // if.
+      {
+          R"cpp(
+int main() {
+  if (true) {}
+  if (true) {} else if (false) {}
+}
+        )cpp",
+          R"txt(
+*: TranslationUnit
+`-TopLevelDeclaration
+  |-int
+  |-main
+  |-(
+  |-)
+  `-CompoundStatement
+    |-{
+    |-IfStatement
+    | |-if
+    | |-(
+    | |-UnknownExpression
+    | | `-true
+    | |-)
+    | `-CompoundStatement
+    |   |-{
+    |   `-}
+    |-IfStatement
+    | |-if
+    | |-(
+    | |-UnknownExpression
+    | | `-true
+    | |-)
+    | |-CompoundStatement
+    | | |-{
+    | | `-}
+    | |-else
+    | `-IfStatement
+    |   |-if
+    |   |-(
+    |   |-UnknownExpression
+    |   | `-false
+    |   |-)
+    |   `-CompoundStatement
+    |     |-{
+    |     `-}
+    `-}
+        )txt"},
+      // for.
+      {R"cpp(
+void test() {
+  for (;;)  {}
+}
+)cpp",
+       R"txt(
+*: TranslationUnit
+`-TopLevelDeclaration
+  |-void
+  |-test
+  |-(
+  |-)
+  `-CompoundStatement
+    |-{
+    |-ForStatement
+    | |-for
+    | |-(
+    | |-;
+    | |-;
+    | |-)
+    | `-CompoundStatement
+    |   |-{
+    |   `-}
+    `-}
+        )txt"},
+      // declaration statement.
+      {"void test() { int a = 10; }",
+       R"txt(
+*: TranslationUnit
+`-TopLevelDeclaration
+  |-void
+  |-test
+  |-(
+  |-)
+  `-CompoundStatement
+    |-{
+    |-DeclarationStatement
+    | |-int
+    | |-a
+    | |-=
+    | |-10
+    | `-;
+    `-}
+)txt"},
+      {"void test() { ; }", R"txt(
+*: TranslationUnit
+`-TopLevelDeclaration
+  |-void
+  |-test
+  |-(
+  |-)
+  `-CompoundStatement
+    |-{
+    |-EmptyStatement
+    | `-;
+    `-}
+)txt"},
+      // switch, case and default.
+      {R"cpp(
+void test() {
+  switch (true) {
+    case 0:
+    default:;
+  }
+}
+)cpp",
+       R"txt(
+*: TranslationUnit
+`-TopLevelDeclaration
+  |-void
+  |-test
+  |-(
+  |-)
+  `-CompoundStatement
+    |-{
+    |-SwitchStatement
+    | |-switch
+    | |-(
+    | |-UnknownExpression
+    | | `-true
+    | |-)
+    | `-CompoundStatement
+    |   |-{
+    |   |-CaseStatement
+    |   | |-case
+    |   | |-UnknownExpression
+    |   | | `-0
+    |   | |-:
+    |   | `-DefaultStatement
+    |   |   |-default
+    |   |   |-:
+    |   |   `-EmptyStatement
+    |   |     `-;
+    |   `-}
+    `-}
+)txt"},
+      // while.
+      {R"cpp(
+void test() {
+  while (true) { continue; break; }
+}
+)cpp",
+       R"txt(
+*: TranslationUnit
+`-TopLevelDeclaration
+  |-void
+  |-test
+  |-(
+  |-)
+  `-CompoundStatement
+    |-{
+    |-WhileStatement
+    | |-while
+    | |-(
+    | |-UnknownExpression
+    | | `-true
+    | |-)
+    | `-CompoundStatement
+    |   |-{
+    |   |-ContinueStatement
+    |   | |-continue
+    |   | `-;
+    |   |-BreakStatement
+    |   | |-break
+    |   | `-;
+    |   `-}
+    `-}
+)txt"},
+      // return.
+      {R"cpp(
+int test() { return 1; }
+      )cpp",
+       R"txt(
+*: TranslationUnit
+`-TopLevelDeclaration
+  |-int
+  |-test
+  |-(
+  |-)
+  `-CompoundStatement
+    |-{
+    |-ReturnStatement
+    | |-return
+    | |-UnknownExpression
+    | | `-1
+    | `-;
+    `-}
+)txt"},
+      // Range-based for.
+      {R"cpp(
+void test() {
+  int a[3];
+  for (int x : a) ;
+}
+      )cpp",
+       R"txt(
+*: TranslationUnit
+`-TopLevelDeclaration
+  |-void
+  |-test
+  |-(
+  |-)
+  `-CompoundStatement
+    |-{
+    |-DeclarationStatement
+    | |-int
+    | |-a
+    | |-[
+    | |-3
+    | |-]
+    | `-;
+    |-RangeBasedForStatement
+    | |-for
+    | |-(
+    | |-int
+    | |-x
+    | |-:
+    | |-UnknownExpression
+    | | `-a
+    | |-)
+    | `-EmptyStatement
+    |   `-;
+    `-}
+       )txt"},
+      // Unhandled statements should end up as 'unknown statement'.
+      // This example uses a 'label statement', which does not yet have a syntax
+      // counterpart.
+      {"void main() { foo: return 100; }", R"txt(
+*: TranslationUnit
+`-TopLevelDeclaration
+  |-void
+  |-main
+  |-(
+  |-)
+  `-CompoundStatement
+    |-{
+    |-UnknownStatement
+    | |-foo
+    | |-:
+    | `-ReturnStatement
+    |   |-return
+    |   |-UnknownExpression
+    |   | `-100
+    |   `-;
+    `-}
+)txt"},
+      // expressions should be wrapped in 'ExpressionStatement' when they appear
+      // in a statement position.
+      {R"cpp(
+void test() {
+  test();
+  if (true) test(); else test();
+}
+    )cpp",
+       R"txt(
+*: TranslationUnit
+`-TopLevelDeclaration
+  |-void
+  |-test
+  |-(
+  |-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-UnknownExpression
+    | | |-test
+    | | |-(
+    | | `-)
+    | `-;
+    |-IfStatement
+    | |-if
+    | |-(
+    | |-UnknownExpression
+    | | `-true
+    | |-)
+    | |-ExpressionStatement
+    | | |-UnknownExpression
+    | | | |-test
+    | | | |-(
+    | | | `-)
+    | | `-;
+    | |-else
+    | `-ExpressionStatement
+    |   |-UnknownExpression
+    |   | |-test
+    |   | |-(
+    |   | `-)
+    |   `-;
+    `-}
+)txt"}};
 
   for (const auto &T : Cases) {
     auto *Root = buildTree(T.first);

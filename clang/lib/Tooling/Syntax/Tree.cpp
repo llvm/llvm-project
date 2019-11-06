@@ -85,13 +85,10 @@ static void dumpTokens(llvm::raw_ostream &OS, ArrayRef<syntax::Token> Tokens,
 
 static void dumpTree(llvm::raw_ostream &OS, const syntax::Node *N,
                      const syntax::Arena &A, std::vector<bool> IndentMask) {
-  if (N->role() != syntax::NodeRole::Unknown) {
-    // FIXME: print the symbolic name of a role.
-    if (N->role() == syntax::NodeRole::Detached)
-      OS << "*: ";
-    else
-      OS << static_cast<int>(N->role()) << ": ";
-  }
+  if (N->role() == syntax::NodeRole::Detached)
+    OS << "*: ";
+  // FIXME: find a nice way to print other roles.
+
   if (auto *L = llvm::dyn_cast<syntax::Leaf>(N)) {
     dumpTokens(OS, *L->token(), A.sourceManager());
     OS << "\n";

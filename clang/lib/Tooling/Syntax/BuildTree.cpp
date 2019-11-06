@@ -27,6 +27,8 @@
 
 using namespace clang;
 
+static bool isImplicitExpr(clang::Expr *E) { return E->IgnoreImplicit() != E; }
+
 /// A helper class for constructing the syntax tree while traversing a clang
 /// AST.
 ///
@@ -51,6 +53,15 @@ public:
   /// Populate children for \p New node, assuming it covers tokens from \p
   /// Range.
   void foldNode(llvm::ArrayRef<syntax::Token> Range, syntax::Tree *New);
+
+  /// Mark the \p Child node with a corresponding \p Role. All marked children
+  /// should be consumed by foldNode.
+  /// (!) when called on expressions (clang::Expr is derived from clang::Stmt),
+  ///     wraps expressions into expression statement.
+  void markStmtChild(Stmt *Child, NodeRole Role);
+  /// Should be called for expressions in non-statement position to avoid
+  /// wrapping into expression statement.
+  void markExprChild(Expr *Child, NodeRole Role);
 
   /// Set role for a token starting at \p Loc.
   void markChildToken(SourceLocation Loc, tok::TokenKind Kind, NodeRole R);
@@ -83,8 +94,23 @@ public:
   llvm::ArrayRef<syntax::Token> getRange(const Decl *D) const {
     return getRange(D->getBeginLoc(), D->getEndLoc());
   }
-  llvm::ArrayRef<syntax::Token> getRange(const Stmt *S) const {
-    return getRange(S->getBeginLoc(), S->getEndLoc());
+  llvm::ArrayRef<syntax::Token> getExprRange(const Expr *E) const {
+    return getRange(E->getBeginLoc(), E->getEndLoc());
+  }
+  /// Find the adjusted range for the statement, consuming the trailing
+  /// semicolon when needed.
+  llvm::ArrayRef<syntax::Token> getStmtRange(const Stmt *S) const {
+    auto Tokens = getRange(S->getBeginLoc(), S->getEndLoc());
+    if (isa<CompoundStmt>(S))
+      return Tokens;
+
+    // Some statements miss a trailing semicolon, e.g. 'return', 'continue' and
+    // all statements that end with those. Consume this semicolon here.
+    //
+    // (!) statements never consume 'eof', so looking at the next token is ok.
+    if (Tokens.back().kind() != tok::semi && Tokens.end()->kind() == tok::semi)
+      return llvm::makeArrayRef(Tokens.begin(), Tokens.end() + 1);
+    return Tokens;
   }
 
 private:
@@ -227,13 +253,165 @@ public:
   bool WalkUpFromCompoundStmt(CompoundStmt *S) {
     using NodeRole = syntax::NodeRole;
 
-    Builder.markChildToken(S->getLBracLoc(), tok::l_brace,
-                           NodeRole::CompoundStatement_lbrace);
+    Builder.markChildToken(S->getLBracLoc(), tok::l_brace, NodeRole::OpenParen);
+    for (auto *Child : S->body())
+      Builder.markStmtChild(Child, NodeRole::CompoundStatement_statement);
     Builder.markChildToken(S->getRBracLoc(), tok::r_brace,
-                           NodeRole::CompoundStatement_rbrace);
+                           NodeRole::CloseParen);
 
-    Builder.foldNode(Builder.getRange(S),
+    Builder.foldNode(Builder.getStmtRange(S),
                      new (allocator()) syntax::CompoundStatement);
+    return true;
+  }
+
+  // Some statements are not yet handled by syntax trees.
+  bool WalkUpFromStmt(Stmt *S) {
+    Builder.foldNode(Builder.getStmtRange(S),
+                     new (allocator()) syntax::UnknownStatement);
+    return true;
+  }
+
+  bool TraverseCXXForRangeStmt(CXXForRangeStmt *S) {
+    // We override to traverse range initializer as VarDecl.
+    // RAV traverses it as a statement, we produce invalid node kinds in that
+    // case.
+    // FIXME: should do this in RAV instead?
+    if (S->getInit() && !TraverseStmt(S->getInit()))
+      return false;
+    if (S->getLoopVariable() && !TraverseDecl(S->getLoopVariable()))
+      return false;
+    if (S->getRangeInit() && !TraverseStmt(S->getRangeInit()))
+      return false;
+    if (S->getBody() && !TraverseStmt(S->getBody()))
+      return false;
+    return true;
+  }
+
+  bool TraverseStmt(Stmt *S) {
+    if (auto *E = llvm::dyn_cast_or_null<Expr>(S)) {
+      // (!) do not recurse into subexpressions.
+      // we do not have syntax trees for expressions yet, so we only want to see
+      // the first top-level expression.
+      return WalkUpFromExpr(E->IgnoreImplicit());
+    }
+    return RecursiveASTVisitor::TraverseStmt(S);
+  }
+
+  // Some expressions are not yet handled by syntax trees.
+  bool WalkUpFromExpr(Expr *E) {
+    assert(!isImplicitExpr(E) && "should be handled by TraverseStmt");
+    Builder.foldNode(Builder.getExprRange(E),
+                     new (allocator()) syntax::UnknownExpression);
+    return true;
+  }
+
+  // The code below is very regular, it could even be generated with some
+  // preprocessor magic. We merely assign roles to the corresponding children
+  // and fold resulting nodes.
+  bool WalkUpFromDeclStmt(DeclStmt *S) {
+    Builder.foldNode(Builder.getStmtRange(S),
+                     new (allocator()) syntax::DeclarationStatement);
+    return true;
+  }
+
+  bool WalkUpFromNullStmt(NullStmt *S) {
+    Builder.foldNode(Builder.getStmtRange(S),
+                     new (allocator()) syntax::EmptyStatement);
+    return true;
+  }
+
+  bool WalkUpFromSwitchStmt(SwitchStmt *S) {
+    Builder.markChildToken(S->getSwitchLoc(), tok::kw_switch,
+                           syntax::NodeRole::IntroducerKeyword);
+    Builder.markStmtChild(S->getBody(), syntax::NodeRole::BodyStatement);
+    Builder.foldNode(Builder.getStmtRange(S),
+                     new (allocator()) syntax::SwitchStatement);
+    return true;
+  }
+
+  bool WalkUpFromCaseStmt(CaseStmt *S) {
+    Builder.markChildToken(S->getKeywordLoc(), tok::kw_case,
+                           syntax::NodeRole::IntroducerKeyword);
+    Builder.markExprChild(S->getLHS(), syntax::NodeRole::CaseStatement_value);
+    Builder.markStmtChild(S->getSubStmt(), syntax::NodeRole::BodyStatement);
+    Builder.foldNode(Builder.getStmtRange(S),
+                     new (allocator()) syntax::CaseStatement);
+    return true;
+  }
+
+  bool WalkUpFromDefaultStmt(DefaultStmt *S) {
+    Builder.markChildToken(S->getKeywordLoc(), tok::kw_default,
+                           syntax::NodeRole::IntroducerKeyword);
+    Builder.markStmtChild(S->getSubStmt(), syntax::NodeRole::BodyStatement);
+    Builder.foldNode(Builder.getStmtRange(S),
+                     new (allocator()) syntax::DefaultStatement);
+    return true;
+  }
+
+  bool WalkUpFromIfStmt(IfStmt *S) {
+    Builder.markChildToken(S->getIfLoc(), tok::kw_if,
+                           syntax::NodeRole::IntroducerKeyword);
+    Builder.markStmtChild(S->getThen(),
+                          syntax::NodeRole::IfStatement_thenStatement);
+    Builder.markChildToken(S->getElseLoc(), tok::kw_else,
+                           syntax::NodeRole::IfStatement_elseKeyword);
+    Builder.markStmtChild(S->getElse(),
+                          syntax::NodeRole::IfStatement_elseStatement);
+    Builder.foldNode(Builder.getStmtRange(S),
+                     new (allocator()) syntax::IfStatement);
+    return true;
+  }
+
+  bool WalkUpFromForStmt(ForStmt *S) {
+    Builder.markChildToken(S->getForLoc(), tok::kw_for,
+                           syntax::NodeRole::IntroducerKeyword);
+    Builder.markStmtChild(S->getBody(), syntax::NodeRole::BodyStatement);
+    Builder.foldNode(Builder.getStmtRange(S),
+                     new (allocator()) syntax::ForStatement);
+    return true;
+  }
+
+  bool WalkUpFromWhileStmt(WhileStmt *S) {
+    Builder.markChildToken(S->getWhileLoc(), tok::kw_while,
+                           syntax::NodeRole::IntroducerKeyword);
+    Builder.markStmtChild(S->getBody(), syntax::NodeRole::BodyStatement);
+    Builder.foldNode(Builder.getStmtRange(S),
+                     new (allocator()) syntax::WhileStatement);
+    return true;
+  }
+
+  bool WalkUpFromContinueStmt(ContinueStmt *S) {
+    Builder.markChildToken(S->getContinueLoc(), tok::kw_continue,
+                           syntax::NodeRole::IntroducerKeyword);
+    Builder.foldNode(Builder.getStmtRange(S),
+                     new (allocator()) syntax::ContinueStatement);
+    return true;
+  }
+
+  bool WalkUpFromBreakStmt(BreakStmt *S) {
+    Builder.markChildToken(S->getBreakLoc(), tok::kw_break,
+                           syntax::NodeRole::IntroducerKeyword);
+    Builder.foldNode(Builder.getStmtRange(S),
+                     new (allocator()) syntax::BreakStatement);
+    return true;
+  }
+
+  bool WalkUpFromReturnStmt(ReturnStmt *S) {
+    Builder.markChildToken(S->getReturnLoc(), tok::kw_return,
+                           syntax::NodeRole::IntroducerKeyword);
+    Builder.markExprChild(S->getRetValue(),
+                          syntax::NodeRole::ReturnStatement_value);
+    Builder.foldNode(Builder.getStmtRange(S),
+                     new (allocator()) syntax::ReturnStatement);
+    return true;
+  }
+
+  bool WalkUpFromCXXForRangeStmt(CXXForRangeStmt *S) {
+    Builder.markChildToken(S->getForLoc(), tok::kw_for,
+                           syntax::NodeRole::IntroducerKeyword);
+    Builder.markStmtChild(S->getBody(), syntax::NodeRole::BodyStatement);
+    Builder.foldNode(Builder.getStmtRange(S),
+                     new (allocator()) syntax::RangeBasedForStatement);
     return true;
   }
 
@@ -256,6 +434,26 @@ void syntax::TreeBuilder::markChildToken(SourceLocation Loc,
   if (Loc.isInvalid())
     return;
   Pending.assignRole(*findToken(Loc), Role);
+}
+
+void syntax::TreeBuilder::markStmtChild(Stmt *Child, NodeRole Role) {
+  if (!Child)
+    return;
+
+  auto Range = getStmtRange(Child);
+  // This is an expression in a statement position, consume the trailing
+  // semicolon and form an 'ExpressionStatement' node.
+  if (auto *E = dyn_cast<Expr>(Child)) {
+    Pending.assignRole(getExprRange(E),
+                       NodeRole::ExpressionStatement_expression);
+    // (!) 'getRange(Stmt)' ensures this already covers a trailing semicolon.
+    Pending.foldChildren(Range, new (allocator()) syntax::ExpressionStatement);
+  }
+  Pending.assignRole(Range, Role);
+}
+
+void syntax::TreeBuilder::markExprChild(Expr *Child, NodeRole Role) {
+  Pending.assignRole(getExprRange(Child), Role);
 }
 
 const syntax::Token *syntax::TreeBuilder::findToken(SourceLocation L) const {
