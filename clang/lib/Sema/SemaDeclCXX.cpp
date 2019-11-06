@@ -1627,9 +1627,8 @@ static bool CheckConstexprDestructorSubobjects(Sema &SemaRef,
   return true;
 }
 
-// CheckConstexprParameterTypes - Check whether a function's parameter types
-// are all literal types. If so, return true. If not, produce a suitable
-// diagnostic and return false.
+/// Check whether a function's parameter types are all literal types. If so,
+/// return true. If not, produce a suitable diagnostic and return false.
 static bool CheckConstexprParameterTypes(Sema &SemaRef,
                                          const FunctionDecl *FD,
                                          Sema::CheckConstexprKind Kind) {
@@ -1646,6 +1645,17 @@ static bool CheckConstexprParameterTypes(Sema &SemaRef,
                          FD->isConsteval()))
       return false;
   }
+  return true;
+}
+
+/// Check whether a function's return type is a literal type. If so, return
+/// true. If not, produce a suitable diagnostic and return false.
+static bool CheckConstexprReturnType(Sema &SemaRef, const FunctionDecl *FD,
+                                     Sema::CheckConstexprKind Kind) {
+  if (CheckLiteralType(SemaRef, Kind, FD->getLocation(), FD->getReturnType(),
+                       diag::err_constexpr_non_literal_return,
+                       FD->isConsteval()))
+    return false;
   return true;
 }
 
@@ -1729,10 +1739,7 @@ bool Sema::CheckConstexprFunctionDefinition(const FunctionDecl *NewFD,
     }
 
     // - its return type shall be a literal type;
-    QualType RT = NewFD->getReturnType();
-    if (CheckLiteralType(*this, Kind, NewFD->getLocation(), RT,
-                         diag::err_constexpr_non_literal_return,
-                         NewFD->isConsteval()))
+    if (!CheckConstexprReturnType(*this, NewFD, Kind))
       return false;
   }
 
@@ -6391,10 +6398,26 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
   if (HasTrivialABI)
     Record->setHasTrivialSpecialMemberForCall();
 
+  // Explicitly-defaulted secondary comparison functions (!=, <, <=, >, >=).
+  // We check these last because they can depend on the properties of the
+  // primary comparison functions (==, <=>).
+  llvm::SmallVector<FunctionDecl*, 5> DefaultedSecondaryComparisons;
+
+  auto CheckForDefaultedFunction = [&](FunctionDecl *FD) {
+    if (!FD || FD->isInvalidDecl() || !FD->isExplicitlyDefaulted())
+      return;
+
+    DefaultedFunctionKind DFK = getDefaultedFunctionKind(FD);
+    if (DFK.asComparison() == DefaultedComparisonKind::NotEqual ||
+        DFK.asComparison() == DefaultedComparisonKind::Relational)
+      DefaultedSecondaryComparisons.push_back(FD);
+    else
+      CheckExplicitlyDefaultedFunction(FD);
+  };
+
   auto CompleteMemberFunction = [&](CXXMethodDecl *M) {
     // Check whether the explicitly-defaulted members are valid.
-    if (!M->isInvalidDecl() && M->isExplicitlyDefaulted())
-      CheckExplicitlyDefaultedFunction(M);
+    CheckForDefaultedFunction(M);
 
     // For an explicitly defaulted or deleted special member, we defer
     // determining triviality until the class is complete. That time is now!
@@ -6477,11 +6500,14 @@ void Sema::CheckCompletedCXXClass(CXXRecordDecl *Record) {
   // Process any defaulted friends in the member-specification.
   if (!Record->isDependentType()) {
     for (FriendDecl *D : Record->friends()) {
-      auto *FD = dyn_cast_or_null<FunctionDecl>(D->getFriendDecl());
-      if (FD && !FD->isInvalidDecl() && FD->isExplicitlyDefaulted())
-        CheckExplicitlyDefaultedFunction(FD);
+      CheckForDefaultedFunction(
+          dyn_cast_or_null<FunctionDecl>(D->getFriendDecl()));
     }
   }
+
+  // Check the defaulted secondary comparisons after any other member functions.
+  for (FunctionDecl *FD : DefaultedSecondaryComparisons)
+    CheckExplicitlyDefaultedFunction(FD);
 
   // ms_struct is a request to use the same ABI rules as MSVC.  Check
   // whether this class uses any C++ features that are implemented
@@ -7046,6 +7072,343 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
   return HadError;
 }
 
+namespace {
+/// Helper class for building and checking a defaulted comparison.
+///
+/// Defaulted functions are built in two phases:
+///
+///  * First, the set of operations that the function will perform are
+///    identified, and some of them are checked. If any of the checked
+///    operations is invalid in certain ways, the comparison function is
+///    defined as deleted and no body is built.
+///  * Then, if the function is not defined as deleted, the body is built.
+///
+/// This is accomplished by performing two visitation steps over the eventual
+/// body of the function.
+template<typename Derived, typename Result, typename Subobject>
+class DefaultedComparisonVisitor {
+public:
+  using DefaultedComparisonKind = Sema::DefaultedComparisonKind;
+
+  DefaultedComparisonVisitor(Sema &S, CXXRecordDecl *RD, FunctionDecl *FD,
+                             DefaultedComparisonKind DCK)
+      : S(S), RD(RD), FD(FD), DCK(DCK) {}
+
+  Result visit() {
+    // The type of an lvalue naming a parameter of this function.
+    QualType ParamLvalType =
+        FD->getParamDecl(0)->getType().getNonReferenceType();
+
+    switch (DCK) {
+    case DefaultedComparisonKind::None:
+      llvm_unreachable("not a defaulted comparison");
+
+    case DefaultedComparisonKind::Equal:
+    case DefaultedComparisonKind::ThreeWay:
+      return getDerived().visitSubobjects(RD, ParamLvalType.getQualifiers());
+
+    case DefaultedComparisonKind::NotEqual:
+    case DefaultedComparisonKind::Relational:
+      return getDerived().visitExpandedSubobject(
+          ParamLvalType, getDerived().getCompleteObject());
+    }
+  }
+
+protected:
+  Derived &getDerived() { return static_cast<Derived&>(*this); }
+
+  Result visitSubobjects(CXXRecordDecl *Record, Qualifiers Quals) {
+    Result R;
+    // C++ [class.compare.default]p5:
+    //   The direct base class subobjects of C [...]
+    for (CXXBaseSpecifier &Base : Record->bases())
+      if (R.add(getDerived().visitSubobject(
+              S.Context.getQualifiedType(Base.getType(), Quals),
+              getDerived().getBase(&Base))))
+        return R;
+    //   followed by the non-static data members of C [...]
+    for (FieldDecl *Field : Record->fields()) {
+      // Recursively expand anonymous structs.
+      if (Field->isAnonymousStructOrUnion()) {
+        if (R.add(
+                visitSubobjects(Field->getType()->getAsCXXRecordDecl(), Quals)))
+          return R;
+        continue;
+      }
+
+      // Figure out the type of an lvalue denoting this field.
+      Qualifiers FieldQuals = Quals;
+      if (Field->isMutable())
+        FieldQuals.removeConst();
+      QualType FieldType =
+          S.Context.getQualifiedType(Field->getType(), FieldQuals);
+
+      if (R.add(getDerived().visitSubobject(FieldType,
+                                            getDerived().getField(Field))))
+        return R;
+    }
+    //   form a list of subobjects.
+    return R;
+  }
+
+  Result visitSubobject(QualType Type, Subobject Subobj) {
+    //   In that list, any subobject of array type is recursively expanded
+    const ArrayType *AT = S.Context.getAsArrayType(Type);
+    if (auto *CAT = dyn_cast_or_null<ConstantArrayType>(AT))
+      return getDerived().visitSubobjectArray(CAT->getElementType(),
+                                              CAT->getSize(), Subobj);
+    return getDerived().visitExpandedSubobject(Type, Subobj);
+  }
+
+  Result visitSubobjectArray(QualType Type, const llvm::APInt &Size,
+                             Subobject Subobj) {
+    return getDerived().visitSubobject(Type, Subobj);
+  }
+
+protected:
+  Sema &S;
+  CXXRecordDecl *RD;
+  FunctionDecl *FD;
+  DefaultedComparisonKind DCK;
+};
+
+/// Information about a defaulted comparison, as determined by
+/// DefaultedComparisonAnalyzer.
+struct DefaultedComparisonInfo {
+  bool Deleted = false;
+  bool Constexpr = true;
+
+  static DefaultedComparisonInfo deleted() { return {true, false}; }
+
+  bool add(const DefaultedComparisonInfo &R) {
+    Deleted |= R.Deleted;
+    Constexpr &= R.Constexpr;
+    return Deleted;
+  }
+};
+
+/// An element in the expanded list of subobjects of a defaulted comparison, as
+/// specified in C++2a [class.compare.default]p4.
+struct DefaultedComparisonSubobject {
+  enum { CompleteObject, Member, Base } Kind;
+  NamedDecl *Decl;
+  SourceLocation Loc;
+};
+
+/// A visitor over the notional body of a defaulted comparison that determines
+/// whether that body would be deleted or constexpr.
+class DefaultedComparisonAnalyzer
+    : public DefaultedComparisonVisitor<DefaultedComparisonAnalyzer,
+                                        DefaultedComparisonInfo,
+                                        DefaultedComparisonSubobject> {
+public:
+  enum DiagnosticKind { NoDiagnostics, ExplainDeleted, ExplainConstexpr };
+
+private:
+  DiagnosticKind Diagnose;
+
+public:
+  using Base = DefaultedComparisonVisitor;
+  using Result = DefaultedComparisonInfo;
+  using Subobject = DefaultedComparisonSubobject;
+
+  friend Base;
+
+  DefaultedComparisonAnalyzer(Sema &S, CXXRecordDecl *RD, FunctionDecl *FD,
+                              DefaultedComparisonKind DCK,
+                              DiagnosticKind Diagnose = NoDiagnostics)
+      : Base(S, RD, FD, DCK), Diagnose(Diagnose) {}
+
+  Result visit() {
+    if ((DCK == DefaultedComparisonKind::Equal ||
+         DCK == DefaultedComparisonKind::ThreeWay) &&
+        RD->hasVariantMembers()) {
+      // C++2a [class.compare.default]p2 [P2002R0]:
+      //   A defaulted comparison operator function for class C is defined as
+      //   deleted if [...] C has variant members.
+      if (Diagnose == ExplainDeleted) {
+        S.Diag(FD->getLocation(), diag::note_defaulted_comparison_union)
+          << FD << RD->isUnion() << RD;
+      }
+      return Result::deleted();
+    }
+
+    return Base::visit();
+  }
+
+private:
+  Subobject getCompleteObject() {
+    return Subobject{Subobject::CompleteObject, nullptr, FD->getLocation()};
+  }
+
+  Subobject getBase(CXXBaseSpecifier *Base) {
+    return Subobject{Subobject::Base, Base->getType()->getAsCXXRecordDecl(),
+                     Base->getBaseTypeLoc()};
+  }
+
+  Subobject getField(FieldDecl *Field) {
+    return Subobject{Subobject::Member, Field, Field->getLocation()};
+  }
+
+  Result visitExpandedSubobject(QualType Type, Subobject Subobj) {
+    // C++2a [class.compare.default]p2 [P2002R0]:
+    //   A defaulted <=> or == operator function for class C is defined as
+    //   deleted if any non-static data member of C is of reference type
+    if (Type->isReferenceType()) {
+      if (Diagnose == ExplainDeleted) {
+        S.Diag(Subobj.Loc, diag::note_defaulted_comparison_reference_member)
+            << FD << RD;
+      }
+      return Result::deleted();
+    }
+
+    // [...] Let xi be an lvalue denoting the ith element [...]
+    OpaqueValueExpr Xi(FD->getLocation(), Type, VK_LValue);
+    Expr *Args[] = {&Xi, &Xi};
+
+    // All operators start by trying to apply that same operator recursively.
+    OverloadedOperatorKind OO = FD->getOverloadedOperator();
+    assert(OO != OO_None && "not an overloaded operator!");
+    return visitBinaryOperator(OO, Args, Subobj);
+  }
+
+  Result
+  visitBinaryOperator(OverloadedOperatorKind OO, ArrayRef<Expr *> Args,
+                      Subobject Subobj,
+                      OverloadCandidateSet *SpaceshipCandidates = nullptr) {
+    UnresolvedSet<4> Fns; // FIXME: Track this.
+
+    // Note that there is no need to consider rewritten candidates here if
+    // we've already found there is no viable 'operator<=>' candidate (and are
+    // considering synthesizing a '<=>' from '==' and '<').
+    OverloadCandidateSet CandidateSet(
+        FD->getLocation(), OverloadCandidateSet::CSK_Operator,
+        OverloadCandidateSet::OperatorRewriteInfo(
+            OO, /*AllowRewrittenCandidates=*/!SpaceshipCandidates));
+
+    /// C++2a [class.compare.default]p1 [P2002R0]:
+    ///   [...] the defaulted function itself is never a candidate for overload
+    ///   resolution [...]
+    CandidateSet.exclude(FD);
+
+    S.LookupOverloadedBinOp(CandidateSet, OO, Fns, Args);
+
+    Result R;
+
+    OverloadCandidateSet::iterator Best;
+    switch (CandidateSet.BestViableFunction(S, FD->getLocation(), Best)) {
+    case OR_Success:
+      // C++2a [class.compare.secondary]p2 [P2002R0]:
+      //   The operator function [...] is defined as deleted if [...] the
+      //   candidate selected by overload resolution is not a rewritten
+      //   candidate.
+      if ((DCK == DefaultedComparisonKind::NotEqual ||
+           DCK == DefaultedComparisonKind::Relational) &&
+          !Best->RewriteKind) {
+        S.Diag(Best->Function->getLocation(),
+               diag::note_defaulted_comparison_not_rewritten_callee)
+            << FD;
+        return Result::deleted();
+      }
+
+      // C++2a [class.compare.default]p3 [P2002R0]:
+      //   A defaulted comparison function is constexpr-compatible if [...]
+      //   no overlod resolution performed [...] results in a non-constexpr
+      //   function.
+      if (FunctionDecl *FD = Best->Function) {
+        assert(!FD->isDeleted() && "wrong overload resolution result");
+        // If it's not constexpr, explain why not.
+        if (Diagnose == ExplainConstexpr && !FD->isConstexpr()) {
+          if (Subobj.Kind != Subobject::CompleteObject)
+            S.Diag(Subobj.Loc, diag::note_defaulted_comparison_not_constexpr)
+              << Subobj.Kind << Subobj.Decl;
+          S.Diag(FD->getLocation(),
+                 diag::note_defaulted_comparison_not_constexpr_here);
+          // Bail out after explaining; we don't want any more notes.
+          return Result::deleted();
+        }
+        R.Constexpr &= FD->isConstexpr();
+      }
+
+      // Note that we might be rewriting to a different operator. That call is
+      // not considered until we come to actually build the comparison function.
+      break;
+
+    case OR_Ambiguous:
+      if (Diagnose == ExplainDeleted) {
+        unsigned Kind = 0;
+        if (FD->getOverloadedOperator() == OO_Spaceship && OO != OO_Spaceship)
+          Kind = OO == OO_EqualEqual ? 1 : 2;
+        CandidateSet.NoteCandidates(
+            PartialDiagnosticAt(
+                Subobj.Loc, S.PDiag(diag::note_defaulted_comparison_ambiguous)
+                                << FD << Kind << Subobj.Kind << Subobj.Decl),
+            S, OCD_AmbiguousCandidates, Args);
+      }
+      R = Result::deleted();
+      break;
+
+    case OR_Deleted:
+      if (Diagnose == ExplainDeleted) {
+        if ((DCK == DefaultedComparisonKind::NotEqual ||
+             DCK == DefaultedComparisonKind::Relational) &&
+            !Best->RewriteKind) {
+          S.Diag(Best->Function->getLocation(),
+                 diag::note_defaulted_comparison_not_rewritten_callee)
+              << FD;
+        } else {
+          S.Diag(Subobj.Loc,
+                 diag::note_defaulted_comparison_calls_deleted)
+              << FD << Subobj.Kind << Subobj.Decl;
+          S.NoteDeletedFunction(Best->Function);
+        }
+      }
+      R = Result::deleted();
+      break;
+
+    case OR_No_Viable_Function:
+      // If there's no usable candidate, we're done unless we can rewrite a
+      // '<=>' in terms of '==' and '<'.
+      if (OO == OO_Spaceship &&
+          S.Context.CompCategories.lookupInfoForType(FD->getReturnType())) {
+        // For any kind of comparison category return type, we need a usable
+        // '==' and a usable '<'.
+        if (!R.add(visitBinaryOperator(OO_EqualEqual, Args, Subobj,
+                                       &CandidateSet)))
+          R.add(visitBinaryOperator(OO_Less, Args, Subobj, &CandidateSet));
+        break;
+      }
+
+      if (Diagnose == ExplainDeleted) {
+        S.Diag(Subobj.Loc, diag::note_defaulted_comparison_no_viable_function)
+            << FD << Subobj.Kind << Subobj.Decl;
+
+        // For a three-way comparison, list both the candidates for the
+        // original operator and the candidates for the synthesized operator.
+        if (SpaceshipCandidates) {
+          SpaceshipCandidates->NoteCandidates(
+              S, Args,
+              SpaceshipCandidates->CompleteCandidates(S, OCD_AllCandidates,
+                                                      Args, FD->getLocation()));
+          S.Diag(Subobj.Loc,
+                 diag::note_defaulted_comparison_no_viable_function_synthesized)
+              << (OO == OO_EqualEqual ? 0 : 1);
+        }
+
+        CandidateSet.NoteCandidates(
+            S, Args,
+            CandidateSet.CompleteCandidates(S, OCD_AllCandidates, Args,
+                                            FD->getLocation()));
+      }
+      R = Result::deleted();
+      break;
+    }
+
+    return R;
+  }
+};
+}
+
 bool Sema::CheckExplicitlyDefaultedComparison(FunctionDecl *FD,
                                               DefaultedComparisonKind DCK) {
   assert(DCK != DefaultedComparisonKind::None && "not a defaulted comparison");
@@ -7092,45 +7455,6 @@ bool Sema::CheckExplicitlyDefaultedComparison(FunctionDecl *FD,
     assert(FD->getFriendObjectKind() && "expected a friend declaration");
   }
 
-  // C++2a [class.compare.default]p2:
-  //   A defaulted comparison operator function for class C is defined as
-  //   deleted if any non-static data member of C is of reference type or C is
-  //   a union-like class.
-  llvm::SmallVector<CXXRecordDecl*, 4> Classes(1, RD);
-  FieldDecl *ReferenceMember = nullptr;
-  bool UnionLike = RD->isUnion();
-  while (!Classes.empty()) {
-    if (Classes.back()->isUnion())
-      UnionLike = true;
-    for (FieldDecl *FD : Classes.pop_back_val()->fields()) {
-      if (FD->getType()->isReferenceType())
-        ReferenceMember = FD;
-      if (FD->isAnonymousStructOrUnion())
-        Classes.push_back(FD->getType()->getAsCXXRecordDecl());
-    }
-  }
-  // For non-memberwise comparisons, this rule is unjustified, so we permit
-  // those cases as an extension.
-  bool Memberwise = DCK == DefaultedComparisonKind::Equal ||
-                    DCK == DefaultedComparisonKind::ThreeWay;
-  if (ReferenceMember) {
-    Diag(FD->getLocation(),
-         Memberwise ? diag::err_defaulted_comparison_reference_member
-                    : diag::ext_defaulted_comparison_reference_member)
-        << FD << RD;
-    Diag(ReferenceMember->getLocation(), diag::note_reference_member)
-        << ReferenceMember;
-  } else if (UnionLike) {
-    // If the class actually has no variant members, this rule similarly
-    // is unjustified, so we permit those cases too.
-    Diag(FD->getLocation(),
-         !Memberwise ? diag::ext_defaulted_comparison_union
-                     : !RD->hasVariantMembers()
-                           ? diag::ext_defaulted_comparison_empty_union
-                           : diag::err_defaulted_comparison_union)
-        << FD << RD->isUnion() << RD;
-  }
-
   // C++2a [class.eq]p1, [class.rel]p1:
   //   A [defaulted comparison other than <=>] shall have a declared return
   //   type bool.
@@ -7142,20 +7466,77 @@ bool Sema::CheckExplicitlyDefaultedComparison(FunctionDecl *FD,
     return true;
   }
 
-  // FIXME: Determine whether the function should be defined as deleted.
+  // Determine whether the function should be defined as deleted.
+  DefaultedComparisonInfo Info =
+      DefaultedComparisonAnalyzer(*this, RD, FD, DCK).visit();
 
-  // C++2a [dcl.fct.def.default]p3:
-  //   An explicitly-defaulted function [..] may be declared constexpr or
-  //   consteval only if it would have been implicitly declared constexpr.
-  // FIXME: There are no rules governing when these should be constexpr,
-  // except for the special case of the injected operator==, for which
-  // C++2a [class.compare.default]p3 says:
-  //   The operator is a constexpr function if its definition would satisfy
-  //   the requirements for a constexpr function.
-  // FIXME: Apply this rule to all defaulted comparisons. The only way this
-  // can fail is if the return type of a defaulted operator<=> is not a literal
-  // type. We should additionally consider whether any of the operations
-  // performed by the comparison invokes a non-constexpr function.
+  bool First = FD == FD->getCanonicalDecl();
+
+  // If we want to delete the function, then do so; there's nothing else to
+  // check in that case.
+  if (Info.Deleted) {
+    if (!First) {
+      // C++11 [dcl.fct.def.default]p4:
+      //   [For a] user-provided explicitly-defaulted function [...] if such a
+      //   function is implicitly defined as deleted, the program is ill-formed.
+      //
+      // This is really just a consequence of the general rule that you can
+      // only delete a function on its first declaration.
+      Diag(FD->getLocation(), diag::err_non_first_default_compare_deletes)
+          << (int)DCK;
+      DefaultedComparisonAnalyzer(*this, RD, FD, DCK,
+                                  DefaultedComparisonAnalyzer::ExplainDeleted)
+          .visit();
+      return true;
+    }
+
+    SetDeclDeleted(FD, FD->getLocation());
+    if (!inTemplateInstantiation()) {
+      Diag(FD->getLocation(), diag::warn_defaulted_comparison_deleted)
+          << (int)DCK;
+      DefaultedComparisonAnalyzer(*this, RD, FD, DCK,
+                                  DefaultedComparisonAnalyzer::ExplainDeleted)
+          .visit();
+    }
+    return false;
+  }
+
+  // FIXME: Deduce the return type now.
+
+  // C++2a [dcl.fct.def.default]p3 [P2002R0]:
+  //   An explicitly-defaulted function that is not defined as deleted may be
+  //   declared constexpr or consteval only if it is constexpr-compatible.
+  // C++2a [class.compare.default]p3 [P2002R0]:
+  //   A defaulted comparison function is constexpr-compatible if it satisfies
+  //   the requirements for a constexpr function [...]
+  // The only relevant requirements are that the parameter and return types are
+  // literal types. The remaining conditions are checked by the analyzer.
+  if (FD->isConstexpr()) {
+    if (CheckConstexprReturnType(*this, FD, CheckConstexprKind::Diagnose) &&
+        CheckConstexprParameterTypes(*this, FD, CheckConstexprKind::Diagnose) &&
+        !Info.Constexpr) {
+      Diag(FD->getBeginLoc(),
+           diag::err_incorrect_defaulted_comparison_constexpr)
+          << (int)DCK << FD->isConsteval();
+      DefaultedComparisonAnalyzer(*this, RD, FD, DCK,
+                                  DefaultedComparisonAnalyzer::ExplainConstexpr)
+          .visit();
+    }
+  }
+
+  // C++2a [dcl.fct.def.default]p3 [P2002R0]:
+  //   If a constexpr-compatible function is explicitly defaulted on its first
+  //   declaration, it is implicitly considered to be constexpr.
+  // FIXME: Only applying this to the first declaration seems problematic, as
+  // simple reorderings can affect the meaning of the program.
+  if (First) {
+    if (!FD->isConstexpr() && Info.Constexpr)
+      FD->setConstexprKind(CSK_constexpr);
+
+    // FIXME: Set up an implicit exception specification, or if given an
+    // explicit one, check that it matches.
+  }
+
   return false;
 }
 
@@ -7761,6 +8142,22 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD, CXXSpecialMember CSM,
   }
 
   return false;
+}
+
+void Sema::DiagnoseDeletedDefaultedFunction(FunctionDecl *FD) {
+  DefaultedFunctionKind DFK = getDefaultedFunctionKind(FD);
+  assert(DFK && "not a defaultable function");
+  assert(FD->isDefaulted() && FD->isDeleted() && "not defaulted and deleted");
+
+  if (DFK.isSpecialMember()) {
+    ShouldDeleteSpecialMember(cast<CXXMethodDecl>(FD), DFK.asSpecialMember(),
+                              nullptr, /*Diagnose=*/true);
+  } else {
+    DefaultedComparisonAnalyzer(
+        *this, cast<CXXRecordDecl>(FD->getLexicalDeclContext()), FD,
+        DFK.asComparison(), DefaultedComparisonAnalyzer::ExplainDeleted)
+        .visit();
+  }
 }
 
 /// Perform lookup for a special member of the specified kind, and determine
@@ -15177,6 +15574,16 @@ void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc) {
   if (Fn->isDeleted())
     return;
 
+  // C++11 [basic.start.main]p3:
+  //   A program that defines main as deleted [...] is ill-formed.
+  if (Fn->isMain())
+    Diag(DelLoc, diag::err_deleted_main);
+
+  // C++11 [dcl.fct.def.delete]p4:
+  //  A deleted function is implicitly inline.
+  Fn->setImplicitlyInline();
+  Fn->setDeletedAsWritten();
+
   // See if we're deleting a function which is already known to override a
   // non-deleted virtual function.
   if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Fn)) {
@@ -15193,19 +15600,8 @@ void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc) {
     // If this function was implicitly deleted because it was defaulted,
     // explain why it was deleted.
     if (IssuedDiagnostic && MD->isDefaulted())
-      ShouldDeleteSpecialMember(MD, getSpecialMember(MD), nullptr,
-                                /*Diagnose*/true);
+      DiagnoseDeletedDefaultedFunction(MD);
   }
-
-  // C++11 [basic.start.main]p3:
-  //   A program that defines main as deleted [...] is ill-formed.
-  if (Fn->isMain())
-    Diag(DelLoc, diag::err_deleted_main);
-
-  // C++11 [dcl.fct.def.delete]p4:
-  //  A deleted function is implicitly inline.
-  Fn->setImplicitlyInline();
-  Fn->setDeletedAsWritten();
 }
 
 void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {

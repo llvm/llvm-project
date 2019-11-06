@@ -113,7 +113,7 @@ def UndefinedVarTemplate : DiagGroup<"undefined-var-template">;
 def UndefinedFuncTemplate : DiagGroup<"undefined-func-template">;
 def MissingNoEscape : DiagGroup<"missing-noescape">;
 
-def DefaultedComparison : DiagGroup<"defaulted-comparison">;
+def DefaultedFunctionDeleted : DiagGroup<"defaulted-function-deleted">;
 def DeleteIncomplete : DiagGroup<"delete-incomplete">;
 def DeleteNonAbstractNonVirtualDtor : DiagGroup<"delete-non-abstract-non-virtual-dtor">;
 def DeleteAbstractNonVirtualDtor : DiagGroup<"delete-abstract-non-virtual-dtor">;

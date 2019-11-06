@@ -11035,6 +11035,7 @@ CompleteNonViableCandidate(Sema &S, OverloadCandidate *Cand,
   unsigned ConvIdx = 0;
   unsigned ArgIdx = 0;
   ArrayRef<QualType> ParamTypes;
+  bool Reversed = Cand->RewriteKind & CRK_Reversed;
 
   if (Cand->IsSurrogate) {
     QualType ConvType
@@ -11048,7 +11049,7 @@ CompleteNonViableCandidate(Sema &S, OverloadCandidate *Cand,
     ParamTypes =
         Cand->Function->getType()->castAs<FunctionProtoType>()->getParamTypes();
     if (isa<CXXMethodDecl>(Cand->Function) &&
-        !isa<CXXConstructorDecl>(Cand->Function)) {
+        !isa<CXXConstructorDecl>(Cand->Function) && !Reversed) {
       // Conversion 0 is 'this', which doesn't have a corresponding parameter.
       ConvIdx = 1;
       if (CSK == OverloadCandidateSet::CSK_Operator &&
@@ -11063,7 +11064,6 @@ CompleteNonViableCandidate(Sema &S, OverloadCandidate *Cand,
   }
 
   // Fill in the rest of the conversions.
-  bool Reversed = Cand->RewriteKind & CRK_Reversed;
   for (unsigned ParamIdx = Reversed ? ParamTypes.size() - 1 : 0;
        ConvIdx != ConvCount;
        ++ConvIdx, ++ArgIdx, ParamIdx += (Reversed ? -1 : 1)) {
@@ -12755,6 +12755,70 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
   return CreateBuiltinUnaryOp(OpLoc, Opc, Input);
 }
 
+/// Perform lookup for an overloaded binary operator.
+void Sema::LookupOverloadedBinOp(OverloadCandidateSet &CandidateSet,
+                                 OverloadedOperatorKind Op,
+                                 const UnresolvedSetImpl &Fns,
+                                 ArrayRef<Expr *> Args, bool PerformADL) {
+  SourceLocation OpLoc = CandidateSet.getLocation();
+
+  OverloadedOperatorKind ExtraOp =
+      CandidateSet.getRewriteInfo().AllowRewrittenCandidates
+          ? getRewrittenOverloadedOperator(Op)
+          : OO_None;
+
+  // Add the candidates from the given function set. This also adds the
+  // rewritten candidates using these functions if necessary.
+  AddNonMemberOperatorCandidates(Fns, Args, CandidateSet);
+
+  // Add operator candidates that are member functions.
+  AddMemberOperatorCandidates(Op, OpLoc, Args, CandidateSet);
+  if (CandidateSet.getRewriteInfo().shouldAddReversed(Op))
+    AddMemberOperatorCandidates(Op, OpLoc, {Args[1], Args[0]}, CandidateSet,
+                                OverloadCandidateParamOrder::Reversed);
+
+  // In C++20, also add any rewritten member candidates.
+  if (ExtraOp) {
+    AddMemberOperatorCandidates(ExtraOp, OpLoc, Args, CandidateSet);
+    if (CandidateSet.getRewriteInfo().shouldAddReversed(ExtraOp))
+      AddMemberOperatorCandidates(ExtraOp, OpLoc, {Args[1], Args[0]},
+                                  CandidateSet,
+                                  OverloadCandidateParamOrder::Reversed);
+  }
+
+  // Add candidates from ADL. Per [over.match.oper]p2, this lookup is not
+  // performed for an assignment operator (nor for operator[] nor operator->,
+  // which don't get here).
+  if (Op != OO_Equal && PerformADL) {
+    DeclarationName OpName = Context.DeclarationNames.getCXXOperatorName(Op);
+    AddArgumentDependentLookupCandidates(OpName, OpLoc, Args,
+                                         /*ExplicitTemplateArgs*/ nullptr,
+                                         CandidateSet);
+    if (ExtraOp) {
+      DeclarationName ExtraOpName =
+          Context.DeclarationNames.getCXXOperatorName(ExtraOp);
+      AddArgumentDependentLookupCandidates(ExtraOpName, OpLoc, Args,
+                                           /*ExplicitTemplateArgs*/ nullptr,
+                                           CandidateSet);
+    }
+  }
+
+  // Add builtin operator candidates.
+  //
+  // FIXME: We don't add any rewritten candidates here. This is strictly
+  // incorrect; a builtin candidate could be hidden by a non-viable candidate,
+  // resulting in our selecting a rewritten builtin candidate. For example:
+  //
+  //   enum class E { e };
+  //   bool operator!=(E, E) requires false;
+  //   bool k = E::e != E::e;
+  //
+  // ... should select the rewritten builtin candidate 'operator==(E, E)'. But
+  // it seems unreasonable to consider rewritten builtin candidates. A core
+  // issue has been filed proposing to removed this requirement.
+  AddBuiltinOperatorCandidates(Op, OpLoc, Args, CandidateSet);
+}
+
 /// Create a binary operation that may resolve to an overloaded
 /// operator.
 ///
@@ -12783,7 +12847,6 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
     AllowRewrittenCandidates = false;
 
   OverloadedOperatorKind Op = BinaryOperator::getOverloadedOperator(Opc);
-  DeclarationName OpName = Context.DeclarationNames.getCXXOperatorName(Op);
 
   // If either side is type-dependent, create an appropriate dependent
   // expression.
@@ -12805,6 +12868,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
     // FIXME: save results of ADL from here?
     CXXRecordDecl *NamingClass = nullptr; // lookup ignores member operators
     // TODO: provide better source location info in DNLoc component.
+    DeclarationName OpName = Context.DeclarationNames.getCXXOperatorName(Op);
     DeclarationNameInfo OpNameInfo(OpName, OpLoc);
     UnresolvedLookupExpr *Fn = UnresolvedLookupExpr::Create(
         Context, NamingClass, NestedNameSpecifierLoc(), OpNameInfo,
@@ -12838,63 +12902,11 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
   if (Opc == BO_PtrMemD)
     return CreateBuiltinBinOp(OpLoc, Opc, Args[0], Args[1]);
 
-  // Build an empty overload set.
+  // Build the overload set.
   OverloadCandidateSet CandidateSet(
       OpLoc, OverloadCandidateSet::CSK_Operator,
       OverloadCandidateSet::OperatorRewriteInfo(Op, AllowRewrittenCandidates));
-
-  OverloadedOperatorKind ExtraOp =
-      AllowRewrittenCandidates ? getRewrittenOverloadedOperator(Op) : OO_None;
-
-  // Add the candidates from the given function set. This also adds the
-  // rewritten candidates using these functions if necessary.
-  AddNonMemberOperatorCandidates(Fns, Args, CandidateSet);
-
-  // Add operator candidates that are member functions.
-  AddMemberOperatorCandidates(Op, OpLoc, Args, CandidateSet);
-  if (CandidateSet.getRewriteInfo().shouldAddReversed(Op))
-    AddMemberOperatorCandidates(Op, OpLoc, {Args[1], Args[0]}, CandidateSet,
-                                OverloadCandidateParamOrder::Reversed);
-
-  // In C++20, also add any rewritten member candidates.
-  if (ExtraOp) {
-    AddMemberOperatorCandidates(ExtraOp, OpLoc, Args, CandidateSet);
-    if (CandidateSet.getRewriteInfo().shouldAddReversed(ExtraOp))
-      AddMemberOperatorCandidates(ExtraOp, OpLoc, {Args[1], Args[0]},
-                                  CandidateSet,
-                                  OverloadCandidateParamOrder::Reversed);
-  }
-
-  // Add candidates from ADL. Per [over.match.oper]p2, this lookup is not
-  // performed for an assignment operator (nor for operator[] nor operator->,
-  // which don't get here).
-  if (Opc != BO_Assign && PerformADL) {
-    AddArgumentDependentLookupCandidates(OpName, OpLoc, Args,
-                                         /*ExplicitTemplateArgs*/ nullptr,
-                                         CandidateSet);
-    if (ExtraOp) {
-      DeclarationName ExtraOpName =
-          Context.DeclarationNames.getCXXOperatorName(ExtraOp);
-      AddArgumentDependentLookupCandidates(ExtraOpName, OpLoc, Args,
-                                           /*ExplicitTemplateArgs*/ nullptr,
-                                           CandidateSet);
-    }
-  }
-
-  // Add builtin operator candidates.
-  //
-  // FIXME: We don't add any rewritten candidates here. This is strictly
-  // incorrect; a builtin candidate could be hidden by a non-viable candidate,
-  // resulting in our selecting a rewritten builtin candidate. For example:
-  //
-  //   enum class E { e };
-  //   bool operator!=(E, E) requires false;
-  //   bool k = E::e != E::e;
-  //
-  // ... should select the rewritten builtin candidate 'operator==(E, E)'. But
-  // it seems unreasonable to consider rewritten builtin candidates. A core
-  // issue has been filed proposing to removed this requirement.
-  AddBuiltinOperatorCandidates(Op, OpLoc, Args, CandidateSet);
+  LookupOverloadedBinOp(CandidateSet, Op, Fns, Args, PerformADL);
 
   bool HadMultipleCandidates = (CandidateSet.size() > 1);
 
@@ -13150,14 +13162,20 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
 
     case OR_Deleted:
       if (isImplicitlyDeleted(Best->Function)) {
-        CXXMethodDecl *Method = cast<CXXMethodDecl>(Best->Function);
-        Diag(OpLoc, diag::err_ovl_deleted_special_oper)
-          << Context.getRecordType(Method->getParent())
-          << getSpecialMember(Method);
+        FunctionDecl *DeletedFD = Best->Function;
+        DefaultedFunctionKind DFK = getDefaultedFunctionKind(DeletedFD);
+        if (DFK.isSpecialMember()) {
+          Diag(OpLoc, diag::err_ovl_deleted_special_oper)
+            << Args[0]->getType() << DFK.asSpecialMember();
+        } else {
+          assert(DFK.isComparison());
+          Diag(OpLoc, diag::err_ovl_deleted_comparison)
+            << Args[0]->getType() << DeletedFD;
+        }
 
         // The user probably meant to call this special member. Just
         // explain why it's deleted.
-        NoteDeletedFunction(Method);
+        NoteDeletedFunction(DeletedFD);
         return ExprError();
       }
       CandidateSet.NoteCandidates(

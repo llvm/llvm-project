@@ -4067,7 +4067,10 @@ def err_ovl_deleted_oper : Error<
   "overload resolution selected deleted operator '%0'">;
 def err_ovl_deleted_special_oper : Error<
   "object of type %0 cannot be %select{constructed|copied|moved|assigned|"
-  "assigned|destroyed}1 because its %sub{select_special_member_kind}1 is implicitly deleted">;
+  "assigned|destroyed}1 because its %sub{select_special_member_kind}1 is "
+  "implicitly deleted">;
+def err_ovl_deleted_comparison : Error<
+  "object of type %0 cannot be compared because its %1 is implicitly deleted">;
 def err_ovl_rewrite_equalequal_not_bool : Error<
   "return type %0 of selected 'operator==' function for rewritten "
   "'%1' comparison is not 'bool'">;
@@ -8152,7 +8155,7 @@ def err_incorrect_defaulted_consteval : Error<
   "cannot be consteval because implicit definition is not constexpr">;
 def warn_defaulted_method_deleted : Warning<
   "explicitly defaulted %sub{select_special_member_kind}0 is implicitly "
-  "deleted">, InGroup<DiagGroup<"defaulted-function-deleted">>;
+  "deleted">, InGroup<DefaultedFunctionDeleted>;
 def err_out_of_line_default_deletes : Error<
   "defaulting this %sub{select_special_member_kind}0 "
   "would delete it after its first declaration">;
@@ -8194,21 +8197,42 @@ def err_defaulted_comparison_non_const : Error<
 def err_defaulted_comparison_return_type_not_bool : Error<
   "return type for defaulted %sub{select_defaulted_comparison_kind}0 "
   "must be 'bool', not %1">;
-def err_defaulted_comparison_reference_member : Error<
-  "cannot default %0 in class %1 with reference member">;
-def ext_defaulted_comparison_reference_member : ExtWarn<
-  "ISO C++2a does not allow defaulting %0 in class %1 with reference member">,
-  InGroup<DefaultedComparison>;
-def note_reference_member : Note<"reference member %0 declared here">;
-def err_defaulted_comparison_union : Error<
-  "cannot default %0 in %select{union-like class|union}1 %2">;
-def ext_defaulted_comparison_union : ExtWarn<
-  "ISO C++2a does not allow defaulting %0 in "
-  "%select{union-like class|union}1 %2">, InGroup<DefaultedComparison>;
-def ext_defaulted_comparison_empty_union : ExtWarn<
-  "ISO C++2a does not allow defaulting %0 in "
-  "%select{union-like class|union}1 %2 despite it having no variant members">,
-  InGroup<DefaultedComparison>;
+def warn_defaulted_comparison_deleted : Warning<
+  "explicitly defaulted %sub{select_defaulted_comparison_kind}0 is implicitly "
+  "deleted">, InGroup<DefaultedFunctionDeleted>;
+def err_non_first_default_compare_deletes : Error<
+  "defaulting this %sub{select_defaulted_comparison_kind}0 "
+  "would delete it after its first declaration">;
+def note_defaulted_comparison_union : Note<
+  "defaulted %0 is implicitly deleted because "
+  "%2 is a %select{union-like class|union}1 with variant members">;
+def note_defaulted_comparison_reference_member : Note<
+  "defaulted %0 is implicitly deleted because "
+  "class %1 has a reference member">;
+def note_defaulted_comparison_ambiguous : Note<
+  "defaulted %0 is implicitly deleted because implied %select{|'==' |'<' }1"
+  "comparison %select{|for member %3 |for base class %3 }2is ambiguous">;
+def note_defaulted_comparison_calls_deleted : Note<
+  "defaulted %0 is implicitly deleted because it would invoke a deleted "
+  "comparison function%select{| for member %2| for base class %2}1">;
+def note_defaulted_comparison_no_viable_function : Note<
+  "defaulted %0 is implicitly deleted because there is no viable comparison "
+  "function%select{| for member %2| for base class %2}1">;
+def note_defaulted_comparison_no_viable_function_synthesized : Note<
+  "three-way comparison cannot be synthesized because there is no viable "
+  "function for %select{'=='|'<'}0 comparison">;
+def note_defaulted_comparison_not_rewritten_callee : Note<
+  "defaulted %0 is implicitly deleted because this non-rewritten comparison "
+  "function would be the best match for the comparison">;
+def err_incorrect_defaulted_comparison_constexpr : Error<
+  "defaulted definition of %sub{select_defaulted_comparison_kind}0 "
+  "cannot be declared %select{constexpr|consteval}1 because it invokes "
+  "a non-constexpr comparison function">;
+def note_defaulted_comparison_not_constexpr : Note<
+  "non-constexpr comparison function would be used to compare "
+  "%select{|member %1|base class %1}0">;
+def note_defaulted_comparison_not_constexpr_here : Note<
+  "non-constexpr comparison function declared here">;
 
 def ext_implicit_exception_spec_mismatch : ExtWarn<
   "function previously declared with an %select{explicit|implicit}0 exception "
