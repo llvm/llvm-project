@@ -412,17 +412,6 @@ public:
     return Idx - 1;
   }
 
-  /// Return true if the intrinsic takes an splat operand.
-  bool hasSplat() const { return Proto.find('a') != std::string::npos; }
-
-  /// Return the parameter index of the splat operand.
-  unsigned getSplatIdx() const {
-    assert(hasSplat());
-    unsigned Idx = Proto.find('a');
-    assert(Idx > 0 && "Can't return a splat!");
-    return Idx - 1;
-  }
-
   unsigned getNumParams() const { return Proto.size() - 1; }
   Type getReturnType() const { return Types[0]; }
   Type getParamType(unsigned I) const { return Types[I + 1]; }
@@ -431,7 +420,6 @@ public:
   std::string getProto() const { return Proto; }
 
   /// Return true if the prototype has a scalar argument.
-  /// This does not return true for the "splat" code ('a').
   bool protoHasScalar() const;
 
   /// Return the index that parameter PIndex will sit at
@@ -950,7 +938,6 @@ void Type::applyModifier(char Mod) {
     NumVectors = 0;
     break;
   case 's':
-  case 'a':
     Bitwidth = ElementBitwidth;
     NumVectors = 0;
     break;
@@ -1354,8 +1341,6 @@ void Intrinsic::emitShadowedArgs() {
   }
 }
 
-// We don't check 'a' in this function, because for builtin function the
-// argument matching to 'a' uses a vector type splatted from a scalar type.
 bool Intrinsic::protoHasScalar() const {
   return (Proto.find('s') != std::string::npos ||
           Proto.find('z') != std::string::npos ||
@@ -1374,12 +1359,6 @@ void Intrinsic::emitBodyAsBuiltinCall() {
   bool SRet = getReturnType().getNumVectors() >= 2;
 
   StringRef N = Name;
-  if (hasSplat()) {
-    // Call the non-splat builtin: chop off the "_n" suffix from the name.
-    assert(N.endswith("_n"));
-    N = N.drop_back(2);
-  }
-
   ClassKind LocalCK = CK;
   if (!protoHasScalar())
     LocalCK = ClassB;
@@ -1413,21 +1392,8 @@ void Intrinsic::emitBodyAsBuiltinCall() {
       continue;
     }
 
-    std::string Arg;
+    std::string Arg = V.getName();
     Type CastToType = T;
-    if (hasSplat() && I == getSplatIdx()) {
-      Arg = "(" + BaseType.str() + ") {";
-      for (unsigned J = 0; J < BaseType.getNumElements(); ++J) {
-        if (J != 0)
-          Arg += ", ";
-        Arg += V.getName();
-      }
-      Arg += "}";
-
-      CastToType = BaseType;
-    } else {
-      Arg = V.getName();
-    }
 
     // Check if an explicit cast is needed.
     if (CastToType.isVector() &&
@@ -2096,10 +2062,6 @@ void NeonEmitter::genBuiltinsDef(raw_ostream &OS,
   for (auto *Def : Defs) {
     if (Def->hasBody())
       continue;
-    // Functions with 'a' (the splat code) in the type prototype should not get
-    // their own builtin as they use the non-splat variant.
-    if (Def->hasSplat())
-      continue;
 
     std::string S = "BUILTIN(__builtin_neon_" + Def->getMangledName() + ", \"";
 
@@ -2135,10 +2097,6 @@ void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
     // If the def has a body (that is, it has Operation DAGs), it won't call
     // __builtin_neon_* so we don't need to generate a definition for it.
     if (Def->hasBody())
-      continue;
-    // Functions with 'a' (the splat code) in the type prototype should not get
-    // their own builtin as they use the non-splat variant.
-    if (Def->hasSplat())
       continue;
     // Functions which have a scalar argument cannot be overloaded, no need to
     // check them if we are emitting the type checking code.
@@ -2219,10 +2177,6 @@ void NeonEmitter::genIntrinsicRangeCheckCode(raw_ostream &OS,
 
   for (auto *Def : Defs) {
     if (Def->hasBody())
-      continue;
-    // Functions with 'a' (the splat code) in the type prototype should not get
-    // their own builtin as they use the non-splat variant.
-    if (Def->hasSplat())
       continue;
     // Functions which do not have an immediate do not need to have range
     // checking code emitted.
