@@ -37,10 +37,10 @@ define i32 @reduce_i64(i32 %arg) {
 ;
 ; SLM-LABEL: 'reduce_i64'
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V1 = call i64 @llvm.experimental.vector.reduce.add.v1i64(<1 x i64> undef)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2 = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> undef)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4 = call i64 @llvm.experimental.vector.reduce.add.v4i64(<4 x i64> undef)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8 = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> undef)
-; SLM-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16 = call i64 @llvm.experimental.vector.reduce.add.v16i64(<16 x i64> undef)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2 = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> undef)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4 = call i64 @llvm.experimental.vector.reduce.add.v4i64(<4 x i64> undef)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8 = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> undef)
+; SLM-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16 = call i64 @llvm.experimental.vector.reduce.add.v16i64(<16 x i64> undef)
 ; SLM-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %V1  = call i64 @llvm.experimental.vector.reduce.add.v1i64(<1 x i64> undef)
