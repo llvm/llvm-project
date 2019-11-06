@@ -305,6 +305,66 @@ deopt2:
   ret i32 %deoptret2
 }
 
+; This one is subtle - We can't widen only one branch use of the
+; widenable condition as two branches are correlated.  We'd have to
+; widen them *both*.
+define i32 @neg_correlated(i1 %cond_0, i1 %cond_1, i32* %p) {
+; CHECK-LABEL: @neg_correlated(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[COND_0:%.*]], [[WIDENABLE_COND]]
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
+; CHECK:       deopt:
+; CHECK-NEXT:    [[DEOPTRET:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+; CHECK-NEXT:    ret i32 [[DEOPTRET]]
+; CHECK:       guarded:
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND2:%.*]] = and i1 [[COND_1:%.*]], [[WIDENABLE_COND]]
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND2]], label [[GUARDED2:%.*]], label [[DEOPT2:%.*]], !prof !0
+; CHECK:       deopt2:
+; CHECK-NEXT:    [[DEOPTRET2:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+; CHECK-NEXT:    ret i32 [[DEOPTRET2]]
+; CHECK:       guarded2:
+; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[COND_2:%.*]] = icmp eq i32 [[V]], 0
+; CHECK-NEXT:    br i1 [[COND_2]], label [[RETURN:%.*]], label [[DEOPT3:%.*]], !prof !0
+; CHECK:       deopt3:
+; CHECK-NEXT:    [[DEOPTRET3:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+; CHECK-NEXT:    ret i32 [[DEOPTRET3]]
+; CHECK:       return:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %widenable_cond = call i1 @llvm.experimental.widenable.condition()
+  %exiplicit_guard_cond = and i1 %cond_0, %widenable_cond
+  br i1 %exiplicit_guard_cond, label %guarded, label %deopt, !prof !0
+
+deopt:
+  %deoptret = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+  ret i32 %deoptret
+
+guarded:
+  %exiplicit_guard_cond2 = and i1 %cond_1, %widenable_cond
+  br i1 %exiplicit_guard_cond2, label %guarded2, label %deopt2, !prof !0
+
+deopt2:
+  %deoptret2 = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+  ret i32 %deoptret2
+
+guarded2:
+  %v = load i32, i32* %p
+  %cond_2 = icmp eq i32 %v, 0
+  br i1 %cond_2, label %return, label %deopt3, !prof !0
+
+deopt3:
+  %deoptret3 = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"() ]
+  ret i32 %deoptret3
+
+return:
+  ret i32 0
+}
+
+
+
 
 declare void @unknown()
 declare i32 @unknown_i32()
