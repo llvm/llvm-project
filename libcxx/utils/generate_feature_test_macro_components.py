@@ -2,6 +2,8 @@
 
 import os
 import tempfile
+from builtins import int, range
+from functools import reduce
 
 def get_libcxx_paths():
   utils_path = os.path.dirname(os.path.abspath(__file__))
@@ -33,122 +35,122 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
   # C++14 macros
   {"name": "__cpp_lib_integer_sequence",
    "values": {
-      "c++14": 201304L
+      "c++14": int(201304)
     },
     "headers": ["utility"],
   },
   {"name": "__cpp_lib_exchange_function",
    "values": {
-     "c++14": 201304L
+     "c++14": int(201304)
    },
    "headers": ["utility"],
   },
   {"name": "__cpp_lib_tuples_by_type",
    "values": {
-     "c++14": 201304L
+     "c++14": int(201304)
    },
    "headers": ["utility", "tuple"],
   },
   {"name": "__cpp_lib_tuple_element_t",
    "values": {
-     "c++14": 201402L
+     "c++14": int(201402)
    },
    "headers": ["tuple"],
   },
   {"name": "__cpp_lib_make_unique",
    "values": {
-     "c++14": 201304L
+     "c++14": int(201304)
    },
    "headers": ["memory"],
   },
   {"name": "__cpp_lib_transparent_operators",
    "values": {
-     "c++14": 201210L,
-     "c++17": 201510L,
+     "c++14": int(201210),
+     "c++17": int(201510),
    },
    "headers": ["functional"],
   },
   {"name": "__cpp_lib_integral_constant_callable",
    "values": {
-     "c++14": 201304L
+     "c++14": int(201304)
    },
    "headers": ["type_traits"],
   },
   {"name": "__cpp_lib_transformation_trait_aliases",
    "values": {
-     "c++14": 201304L,
+     "c++14": int(201304),
    },
    "headers": ["type_traits"]
   },
   {"name": "__cpp_lib_result_of_sfinae",
    "values": {
-     "c++14": 201210L,
+     "c++14": int(201210),
    },
    "headers": ["functional", "type_traits"]
   },
   {"name": "__cpp_lib_is_final",
    "values": {
-     "c++14": 201402L,
+     "c++14": int(201402),
    },
    "headers": ["type_traits"]
   },
   {"name": "__cpp_lib_is_null_pointer",
    "values": {
-     "c++14": 201309L,
+     "c++14": int(201309),
    },
    "headers": ["type_traits"]
   },
   {"name": "__cpp_lib_chrono_udls",
    "values": {
-     "c++14": 201304L,
+     "c++14": int(201304),
    },
    "headers": ["chrono"]
   },
   {"name": "__cpp_lib_string_udls",
    "values": {
-     "c++14": 201304L,
+     "c++14": int(201304),
    },
    "headers": ["string"]
   },
   {"name": "__cpp_lib_generic_associative_lookup",
    "values": {
-     "c++14": 201304L,
+     "c++14": int(201304),
    },
    "headers": ["map", "set"]
   },
   {"name": "__cpp_lib_null_iterators",
    "values": {
-     "c++14": 201304L,
+     "c++14": int(201304),
    },
    "headers": ["iterator"]
   },
   {"name": "__cpp_lib_make_reverse_iterator",
    "values": {
-     "c++14": 201402L,
+     "c++14": int(201402),
    },
    "headers": ["iterator"]
   },
   {"name": "__cpp_lib_robust_nonmodifying_seq_ops",
    "values": {
-     "c++14": 201304L,
+     "c++14": int(201304),
    },
    "headers": ["algorithm"]
   },
   {"name": "__cpp_lib_complex_udls",
    "values": {
-     "c++14": 201309L,
+     "c++14": int(201309),
    },
    "headers": ["complex"]
   },
   {"name": "__cpp_lib_quoted_string_io",
    "values": {
-     "c++14": 201304L,
+     "c++14": int(201304),
    },
    "headers": ["iomanip"]
   },
   {"name": "__cpp_lib_shared_timed_mutex",
    "values": {
-     "c++14": 201402L,
+     "c++14": int(201402),
    },
    "headers": ["shared_mutex"],
    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
@@ -157,7 +159,7 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
   # C++17 macros
   {"name": "__cpp_lib_atomic_is_always_lock_free",
    "values": {
-     "c++17": 201603L,
+     "c++17": int(201603),
    },
    "headers": ["atomic"],
    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
@@ -165,91 +167,91 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
   },
   {"name": "__cpp_lib_filesystem",
    "values": {
-     "c++17": 201703L,
+     "c++17": int(201703),
    },
    "headers": ["filesystem"]
   },
   {"name": "__cpp_lib_invoke",
    "values": {
-     "c++17": 201411L,
+     "c++17": int(201411),
    },
    "headers": ["functional"]
   },
   {"name": "__cpp_lib_void_t",
    "values": {
-     "c++17": 201411L,
+     "c++17": int(201411),
    },
    "headers": ["type_traits"]
   },
   {"name": "__cpp_lib_node_extract",
    "values": {
-     "c++17": 201606L,
+     "c++17": int(201606),
    },
    "headers": ["map", "set", "unordered_map", "unordered_set"]
   },
   {"name": "__cpp_lib_byte",
    "values": {
-     "c++17": 201603L,
+     "c++17": int(201603),
    },
    "headers": ["cstddef"],
    },
   {"name": "__cpp_lib_hardware_interference_size",
    "values": {
-     "c++17": 201703L,
+     "c++17": int(201703),
    },
    "headers": ["new"],
    },
   {"name": "__cpp_lib_launder",
    "values": {
-     "c++17": 201606L,
+     "c++17": int(201606),
    },
    "headers": ["new"],
    },
   {"name": "__cpp_lib_uncaught_exceptions",
    "values": {
-     "c++17": 201411L,
+     "c++17": int(201411),
    },
    "headers": ["exception"],
    },
   {"name": "__cpp_lib_as_const",
    "values": {
-     "c++17": 201510L,
+     "c++17": int(201510),
    },
    "headers": ["utility"],
    },
   {"name": "__cpp_lib_make_from_tuple",
    "values": {
-     "c++17": 201606L,
+     "c++17": int(201606),
    },
    "headers": ["tuple"],
    },
   {"name": "__cpp_lib_apply",
    "values": {
-     "c++17": 201603L,
+     "c++17": int(201603),
    },
    "headers": ["tuple"],
    },
   {"name": "__cpp_lib_optional",
    "values": {
-     "c++17": 201606L,
+     "c++17": int(201606),
    },
    "headers": ["optional"],
    },
   {"name": "__cpp_lib_variant",
    "values": {
-     "c++17": 201606L,
+     "c++17": int(201606),
    },
    "headers": ["variant"],
    },
   {"name": "__cpp_lib_any",
    "values": {
-     "c++17": 201606L,
+     "c++17": int(201606),
    },
    "headers": ["any"],
    },
   {"name": "__cpp_lib_addressof_constexpr",
    "values": {
-     "c++17": 201603L,
+     "c++17": int(201603),
    },
    "headers": ["memory"],
    "depends": "TEST_HAS_BUILTIN(__builtin_addressof) || TEST_GCC_VER >= 700",
@@ -257,82 +259,82 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
    },
   {"name": "__cpp_lib_raw_memory_algorithms",
    "values": {
-     "c++17": 201606L,
+     "c++17": int(201606),
    },
    "headers": ["memory"],
    },
   {"name": "__cpp_lib_enable_shared_from_this",
    "values": {
-     "c++17": 201603L,
+     "c++17": int(201603),
    },
    "headers": ["memory"],
    },
   {"name": "__cpp_lib_shared_ptr_weak_type",
    "values": {
-     "c++17": 201606L,
+     "c++17": int(201606),
    },
    "headers": ["memory"],
    },
   {"name": "__cpp_lib_shared_ptr_arrays",
    "values": {
-     "c++17": 201611L,
+     "c++17": int(201611),
    },
    "headers": ["memory"],
    "unimplemented": True,
    },
   {"name": "__cpp_lib_memory_resource",
    "values": {
-     "c++17": 201603L,
+     "c++17": int(201603),
    },
    "headers": ["memory_resource"],
    "unimplemented": True,
    },
   {"name": "__cpp_lib_boyer_moore_searcher",
    "values": {
-     "c++17": 201603L,
+     "c++17": int(201603),
    },
    "headers": ["functional"],
    "unimplemented": True,
    },
   {"name": "__cpp_lib_not_fn",
    "values": {
-     "c++17": 201603L,
+     "c++17": int(201603),
    },
    "headers": ["functional"],
    },
   {"name": "__cpp_lib_bool_constant",
    "values": {
-     "c++17": 201505L,
+     "c++17": int(201505),
    },
    "headers": ["type_traits"],
    },
   {"name": "__cpp_lib_type_trait_variable_templates",
    "values": {
-     "c++17": 201510L,
+     "c++17": int(201510),
    },
    "headers": ["type_traits"],
    },
   {"name": "__cpp_lib_logical_traits",
    "values": {
-     "c++17": 201510L,
+     "c++17": int(201510),
    },
    "headers": ["type_traits"],
    },
   {"name": "__cpp_lib_is_swappable",
    "values": {
-     "c++17": 201603L,
+     "c++17": int(201603),
    },
    "headers": ["type_traits"],
    },
   {"name": "__cpp_lib_is_invocable",
    "values": {
-     "c++17": 201703L,
+     "c++17": int(201703),
    },
    "headers": ["type_traits"],
    },
   {"name": "__cpp_lib_has_unique_object_representations",
    "values": {
-     "c++17": 201606L,
+     "c++17": int(201606),
    },
    "headers": ["type_traits"],
    "depends": "TEST_HAS_BUILTIN_IDENTIFIER(__has_unique_object_representations) || TEST_GCC_VER >= 700",
@@ -340,7 +342,7 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
    },
   {"name": "__cpp_lib_is_aggregate",
    "values": {
-     "c++17": 201703L,
+     "c++17": int(201703),
    },
    "headers": ["type_traits"],
    "depends": "TEST_HAS_BUILTIN_IDENTIFIER(__is_aggregate) || TEST_GCC_VER_NEW >= 7001",
@@ -348,108 +350,108 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
    },
   {"name": "__cpp_lib_chrono",
    "values": {
-     "c++17": 201611L,
+     "c++17": int(201611),
    },
    "headers": ["chrono"],
    },
   {"name": "__cpp_lib_execution",
    "values": {
-     "c++17": 201603L,
+     "c++17": int(201603),
    },
    "headers": ["execution"],
    "unimplemented": True
    },
   {"name": "__cpp_lib_parallel_algorithm",
    "values": {
-     "c++17": 201603L,
+     "c++17": int(201603),
    },
    "headers": ["algorithm", "numeric"],
    "unimplemented": True,
    },
   {"name": "__cpp_lib_to_chars",
    "values": {
-     "c++17": 201611L,
+     "c++17": int(201611),
    },
    "headers": ["utility"],
    "unimplemented": True,
    },
   {"name": "__cpp_lib_string_view",
    "values": {
-     "c++17": 201606L,
+     "c++17": int(201606),
    },
    "headers": ["string", "string_view"],
    },
   {"name": "__cpp_lib_allocator_traits_is_always_equal",
    "values": {
-     "c++17": 201411L,
+     "c++17": int(201411),
    },
    "headers": ["memory", "scoped_allocator", "string", "deque", "forward_list", "list", "vector", "map", "set", "unordered_map", "unordered_set"],
    },
   {"name": "__cpp_lib_incomplete_container_elements",
    "values": {
-     "c++17": 201505L,
+     "c++17": int(201505),
    },
    "headers": ["forward_list", "list", "vector"],
    },
   {"name": "__cpp_lib_map_try_emplace",
    "values": {
-     "c++17": 201411L,
+     "c++17": int(201411),
    },
    "headers": ["map"],
    },
   {"name": "__cpp_lib_unordered_map_try_emplace",
    "values": {
-     "c++17": 201411L,
+     "c++17": int(201411),
    },
    "headers": ["unordered_map"],
    },
   {"name": "__cpp_lib_array_constexpr",
    "values": {
-     "c++17": 201603L,
+     "c++17": int(201603),
    },
    "headers": ["iterator", "array"],
    },
   {"name": "__cpp_lib_nonmember_container_access",
    "values": {
-     "c++17": 201411L,
+     "c++17": int(201411),
    },
    "headers": ["iterator", "array", "deque", "forward_list", "list", "map", "regex",
                "set", "string", "unordered_map", "unordered_set", "vector"],
    },
   {"name": "__cpp_lib_sample",
    "values": {
-     "c++17": 201603L,
+     "c++17": int(201603),
    },
    "headers": ["algorithm"],
    },
   {"name": "__cpp_lib_clamp",
    "values": {
-     "c++17": 201603L,
+     "c++17": int(201603),
    },
    "headers": ["algorithm"],
    },
   {"name": "__cpp_lib_gcd_lcm",
    "values": {
-     "c++17": 201606L,
+     "c++17": int(201606),
    },
    "headers": ["numeric"],
    },
   {"name": "__cpp_lib_hypot",
    "values": {
-     "c++17": 201603L,
+     "c++17": int(201603),
    },
    "headers": ["cmath"],
    },
   {"name": "__cpp_lib_math_special_functions",
    "values": {
-     "c++17": 201603L,
+     "c++17": int(201603),
    },
    "headers": ["cmath"],
    "unimplemented": True,
    },
   {"name": "__cpp_lib_shared_mutex",
    "values": {
-     "c++17": 201505L,
+     "c++17": int(201505),
    },
    "headers": ["shared_mutex"],
    "depends": "!defined(_LIBCPP_HAS_NO_THREADS)",
@@ -457,14 +459,14 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
    },
   {"name": "__cpp_lib_scoped_lock",
    "values": {
-     "c++17": 201703L,
+     "c++17": int(201703),
    },
    "headers": ["mutex"],
    },
   # C++2a
   {"name": "__cpp_lib_char8_t",
    "values": {
-     "c++2a": 201811L,
+     "c++2a": int(201811),
    },
    "headers": ["atomic", "filesystem", "istream", "limits", "locale", "ostream",
                "string", "string_view"],
@@ -473,14 +475,14 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
    },
   {"name": "__cpp_lib_erase_if",
    "values": {
-     "c++2a": 201811L,
+     "c++2a": int(201811),
    },
    "headers": ["string", "deque", "forward_list", "list", "vector", "map",
                "set", "unordered_map", "unordered_set"]
   },
   {"name": "__cpp_lib_destroying_delete",
    "values": {
-     "c++2a": 201806L,
+     "c++2a": int(201806),
    },
    "headers": ["new"],
    "depends":
@@ -494,42 +496,42 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
    },
   {"name": "__cpp_lib_three_way_comparison",
    "values": {
-     "c++2a": 201711L,
+     "c++2a": int(201711),
    },
    "headers": ["compare"],
    "unimplemented": True,
    },
   {"name": "__cpp_lib_concepts",
    "values": {
-     "c++2a": 201806L,
+     "c++2a": int(201806),
    },
    "headers": ["concepts"],
    "unimplemented": True,
    },
   {"name": "__cpp_lib_constexpr_swap_algorithms",
    "values": {
-     "c++2a": 201806L,
+     "c++2a": int(201806),
    },
    "headers": ["algorithm"],
    "unimplemented": True,
    },
   {"name": "__cpp_lib_constexpr_misc",
    "values": {
-     "c++2a": 201811L,
+     "c++2a": int(201811),
    },
    "headers": ["array", "functional", "iterator", "string_view", "tuple", "utility"],
    "unimplemented": True,
    },
   {"name": "__cpp_lib_bind_front",
    "values": {
-     "c++2a": 201811L,
+     "c++2a": int(201811),
    },
    "headers": ["functional"],
    "unimplemented": True,
    },
   {"name": "__cpp_lib_is_constant_evaluated",
    "values": {
-     "c++2a": 201811L,
+     "c++2a": int(201811),
    },
    "headers": ["type_traits"],
    "depends": "TEST_HAS_BUILTIN(__builtin_is_constant_evaluated) || TEST_GCC_VER >= 900",
@@ -537,35 +539,35 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
    },
   {"name": "__cpp_lib_list_remove_return_type",
    "values": {
-     "c++2a": 201806L,
+     "c++2a": int(201806),
    },
    "headers": ["forward_list", "list"],
    "unimplemented": True,
    },
   {"name": "__cpp_lib_generic_unordered_lookup",
    "values": {
-     "c++2a": 201811L,
+     "c++2a": int(201811),
    },
    "headers": ["unordered_map", "unordered_set"],
    "unimplemented": True,
    },
   {"name": "__cpp_lib_ranges",
    "values": {
-     "c++2a": 201811L,
+     "c++2a": int(201811),
    },
    "headers": ["algorithm", "functional", "iterator", "memory", "ranges"],
    "unimplemented": True,
    },
   {"name": "__cpp_lib_bit_cast",
    "values": {
-     "c++2a": 201806L,
+     "c++2a": int(201806),
    },
    "headers": ["bit"],
    "unimplemented": True,
    },
   {"name": "__cpp_lib_atomic_ref",
    "values": {
-     "c++2a": 201806L,
+     "c++2a": int(201806),
    },
    "headers": ["atomic"],
    "unimplemented": True,
@@ -574,7 +576,7 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
    },
   {"name": "__cpp_lib_interpolate",
    "values": {
-     "c++2a": 201902L,
+     "c++2a": int(201902),
    },
    "headers": ["numeric"],
    },
@@ -910,7 +912,7 @@ def create_table(grid, indent):
   num_cols = len(grid[0])
   result = indent_str + add_divider(col_widths, 2)
   header_flag = 2
-  for row_i in xrange(0, len(grid)):
+  for row_i in range(0, len(grid)):
     row = grid[row_i]
     result = result + indent_str + ' '.join([pad_cell(row[i], col_widths[i]) for i in range(0, len(row))]) + '\n'
     is_cxx_header = row[0].startswith('**')
@@ -969,7 +971,7 @@ Status
 .. table:: Current Status
      :name: feature-status-table
      :widths: auto
-     
+
 {status_tables}
 
 """.format(status_tables=create_table(get_status_table(), 4))
