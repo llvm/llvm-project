@@ -54,7 +54,7 @@ transformer::detail::translateEdits(const MatchResult &Result,
   return Transformations;
 }
 
-ASTEdit transformer::change(RangeSelector S, TextGenerator Replacement) {
+ASTEdit transformer::changeTo(RangeSelector S, TextGenerator Replacement) {
   ASTEdit E;
   E.TargetRange = std::move(S);
   E.Replacement = std::move(Replacement);

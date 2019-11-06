@@ -8,8 +8,9 @@
 
 #include "clang/Tooling/Transformer/Transformer.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Tooling/Transformer/RangeSelector.h"
 #include "clang/Tooling/Tooling.h"
+#include "clang/Tooling/Transformer/RangeSelector.h"
+#include "clang/Tooling/Transformer/Stencil.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
@@ -20,6 +21,8 @@ using namespace tooling;
 using namespace ast_matchers;
 namespace {
 using ::testing::IsEmpty;
+using transformer::cat;
+using transformer::changeTo;
 using transformer::RewriteRule;
 
 constexpr char KHeaderContents[] = R"cc(
