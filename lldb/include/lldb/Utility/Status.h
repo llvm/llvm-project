@@ -212,4 +212,11 @@ template <> struct format_provider<lldb_private::Status> {
 };
 }
 
+#define LLDB_ERRORF(status, fmt, ...)                                          \
+  do {                                                                         \
+    if (status) {                                                              \
+      (status)->SetErrorStringWithFormat((fmt), __VA_ARGS__);                  \
+    }                                                                          \
+  } while (0);
+
 #endif // #ifndef LLDB_UTILITY_STATUS_H

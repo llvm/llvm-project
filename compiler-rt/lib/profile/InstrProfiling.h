@@ -10,6 +10,7 @@
 #define PROFILE_INSTRPROFILING_H_
 
 #include "InstrProfilingPort.h"
+#include <stdio.h>
 
 #define INSTR_PROF_VISIBILITY COMPILER_RT_VISIBILITY
 #include "InstrProfData.inc"
@@ -36,6 +37,22 @@ typedef struct ValueProfNode {
 #define INSTR_PROF_VALUE_NODE(Type, LLVMType, Name, Initializer) Type Name;
 #include "InstrProfData.inc"
 } ValueProfNode;
+
+/*!
+ * \brief Return 1 if profile counters are continuously synced to the raw
+ * profile via an mmap(). This is in contrast to the default mode, in which
+ * the raw profile is written out at program exit time.
+ */
+int __llvm_profile_is_continuous_mode_enabled(void);
+
+/*!
+ * \brief Enable continuous mode.
+ *
+ * See \ref __llvm_profile_is_continuous_mode_enabled. The behavior is undefined
+ * if continuous mode is already enabled, or if it cannot be enable due to
+ * conflicting options.
+ */
+void __llvm_profile_enable_continuous_mode(void);
 
 /*!
  * \brief Get number of bytes necessary to pad the argument to eight
@@ -125,7 +142,7 @@ int __llvm_orderfile_write_file(void);
 /*!
  * \brief this is a wrapper interface to \c __llvm_profile_write_file.
  * After this interface is invoked, a arleady dumped flag will be set
- * so that profile won't be dumped again during program exit. 
+ * so that profile won't be dumped again during program exit.
  * Invocation of interface __llvm_profile_reset_counters will clear
  * the flag. This interface is designed to be used to collect profile
  * data from user selected hot regions. The use model is
@@ -154,8 +171,46 @@ int __llvm_orderfile_dump(void);
  *
  * \c Name is not copied, so it must remain valid.  Passing NULL resets the
  * filename logic to the default behaviour.
+ *
+ * Note: There may be multiple copies of the profile runtime (one for each
+ * instrumented image/DSO). This API only modifies the filename within the
+ * copy of the runtime available to the calling image.
+ *
+ * Warning: This is a no-op if continuous mode (\ref
+ * __llvm_profile_is_continuous_mode_enabled) is on. The reason for this is
+ * that in continuous mode, profile counters are mmap()'d to the profile at
+ * program initialization time. Support for transferring the mmap'd profile
+ * counts to a new file has not been implemented.
  */
 void __llvm_profile_set_filename(const char *Name);
+
+/*!
+ * \brief Set the FILE object for writing instrumentation data.
+ *
+ * Sets the FILE object to be used for subsequent calls to
+ * \a __llvm_profile_write_file(). The profile file name set by environment
+ * variable, command-line option, or calls to \a  __llvm_profile_set_filename
+ * will be ignored.
+ *
+ * \c File will not be closed after a call to \a __llvm_profile_write_file() but
+ * it may be flushed. Passing NULL restores default behavior.
+ *
+ * If \c EnableMerge is nonzero, the runtime will always merge profiling data
+ * with the contents of the profiling file. If EnableMerge is zero, the runtime
+ * may still merge the data if it would have merged for another reason (for
+ * example, because of a %m specifier in the file name).
+ *
+ * Note: There may be multiple copies of the profile runtime (one for each
+ * instrumented image/DSO). This API only modifies the file object within the
+ * copy of the runtime available to the calling image.
+ *
+ * Warning: This is a no-op if continuous mode (\ref
+ * __llvm_profile_is_continuous_mode_enabled) is on. The reason for this is
+ * that in continuous mode, profile counters are mmap()'d to the profile at
+ * program initialization time. Support for transferring the mmap'd profile
+ * counts to a new file has not been implemented.
+ */
+void __llvm_profile_set_file_object(FILE *File, int EnableMerge);
 
 /*! \brief Register to write instrumentation data to file at exit. */
 int __llvm_profile_register_write_file_atexit(void);
@@ -177,7 +232,12 @@ const char *__llvm_profile_get_path_prefix();
  * \brief Return filename (including path) of the profile data. Note that if the
  * user calls __llvm_profile_set_filename later after invoking this interface,
  * the actual file name may differ from what is returned here.
- * Side-effect: this API call will invoke malloc with dynamic memory allocation.
+ * Side-effect: this API call will invoke malloc with dynamic memory allocation
+ * (the returned pointer must be passed to `free` to avoid a leak).
+ *
+ * Note: There may be multiple copies of the profile runtime (one for each
+ * instrumented image/DSO). This API only retrieves the filename from the copy
+ * of the runtime available to the calling image.
  */
 const char *__llvm_profile_get_filename();
 
@@ -190,6 +250,24 @@ uint64_t __llvm_profile_get_version(void);
 /*! \brief Get the number of entries in the profile data section. */
 uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
                                       const __llvm_profile_data *End);
+
+/* ! \brief Given the sizes of the data and counter information, return the
+ * number of padding bytes before and after the counters, and after the names,
+ * in the raw profile.
+ *
+ * Note: In this context, "size" means "number of entries", i.e. the first two
+ * arguments must be the result of __llvm_profile_get_data_size() and of
+ * (__llvm_profile_end_counters() - __llvm_profile_begin_counters()) resp.
+ *
+ * Note: When mmap() mode is disabled, no padding bytes before/after counters
+ * are needed. However, in mmap() mode, the counter section in the raw profile
+ * must be page-aligned: this API computes the number of padding bytes
+ * needed to achieve that.
+ */
+void __llvm_profile_get_padding_sizes_for_counters(
+    uint64_t DataSize, uint64_t CountersSize, uint64_t NamesSize,
+    uint64_t *PaddingBytesBeforeCounters, uint64_t *PaddingBytesAfterCounters,
+    uint64_t *PaddingBytesAfterNames);
 
 /*!
  * \brief Set the flag that profile data has been dumped to the file.
