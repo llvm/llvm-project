@@ -19035,7 +19035,7 @@ static SDValue LowerAVXExtend(SDValue Op, SelectionDAG &DAG,
   assert(VT.isVector() && InVT.isVector() && "Expected vector type");
   assert((Opc == ISD::ANY_EXTEND || Opc == ISD::ZERO_EXTEND) &&
          "Unexpected extension opcode");
-  assert(VT.getVectorNumElements() == VT.getVectorNumElements() &&
+  assert(VT.getVectorNumElements() == InVT.getVectorNumElements() &&
          "Expected same number of elements");
   assert((VT.getVectorElementType() == MVT::i16 ||
           VT.getVectorElementType() == MVT::i32 ||
