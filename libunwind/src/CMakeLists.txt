@@ -127,8 +127,6 @@ if (LIBUNWIND_ENABLE_SHARED)
                             "${LIBUNWIND_COMPILE_FLAGS}"
                           LINK_FLAGS
                             "${LIBUNWIND_LINK_FLAGS}"
-                          LINKER_LANGUAGE
-                            C
                           OUTPUT_NAME
                             "unwind"
                           VERSION
