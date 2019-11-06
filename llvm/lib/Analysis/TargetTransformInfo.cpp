@@ -243,6 +243,12 @@ bool TargetTransformInfo::isHardwareLoopProfitable(
   return TTIImpl->isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
 }
 
+bool TargetTransformInfo::preferPredicateOverEpilogue(Loop *L, LoopInfo *LI,
+    ScalarEvolution &SE, AssumptionCache &AC, TargetLibraryInfo *TLI,
+    DominatorTree *DT, const LoopAccessInfo *LAI) const {
+  return TTIImpl->preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LAI);
+}
+
 void TargetTransformInfo::getUnrollingPreferences(
     Loop *L, ScalarEvolution &SE, UnrollingPreferences &UP) const {
   return TTIImpl->getUnrollingPreferences(L, SE, UP);
