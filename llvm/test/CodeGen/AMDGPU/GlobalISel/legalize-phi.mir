@@ -713,16 +713,16 @@ body: |
   ; CHECK:   [[ADD61:%[0-9]+]]:_(s32) = G_ADD [[UV61]], [[UV125]]
   ; CHECK:   [[ADD62:%[0-9]+]]:_(s32) = G_ADD [[UV62]], [[UV126]]
   ; CHECK:   [[ADD63:%[0-9]+]]:_(s32) = G_ADD [[UV63]], [[UV127]]
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[ADD]](s32), [[ADD1]](s32), [[ADD2]](s32), [[ADD3]](s32), [[ADD4]](s32), [[ADD5]](s32), [[ADD6]](s32), [[ADD7]](s32), [[ADD8]](s32), [[ADD9]](s32), [[ADD10]](s32), [[ADD11]](s32), [[ADD12]](s32), [[ADD13]](s32), [[ADD14]](s32), [[ADD15]](s32), [[ADD16]](s32), [[ADD17]](s32), [[ADD18]](s32), [[ADD19]](s32), [[ADD20]](s32), [[ADD21]](s32), [[ADD22]](s32), [[ADD23]](s32), [[ADD24]](s32), [[ADD25]](s32), [[ADD26]](s32), [[ADD27]](s32), [[ADD28]](s32), [[ADD29]](s32), [[ADD30]](s32), [[ADD31]](s32)
-  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[ADD32]](s32), [[ADD33]](s32), [[ADD34]](s32), [[ADD35]](s32), [[ADD36]](s32), [[ADD37]](s32), [[ADD38]](s32), [[ADD39]](s32), [[ADD40]](s32), [[ADD41]](s32), [[ADD42]](s32), [[ADD43]](s32), [[ADD44]](s32), [[ADD45]](s32), [[ADD46]](s32), [[ADD47]](s32), [[ADD48]](s32), [[ADD49]](s32), [[ADD50]](s32), [[ADD51]](s32), [[ADD52]](s32), [[ADD53]](s32), [[ADD54]](s32), [[ADD55]](s32), [[ADD56]](s32), [[ADD57]](s32), [[ADD58]](s32), [[ADD59]](s32), [[ADD60]](s32), [[ADD61]](s32), [[ADD62]](s32), [[ADD63]](s32)
-  ; CHECK:   [[UV128:%[0-9]+]]:_(<16 x s32>), [[UV129:%[0-9]+]]:_(<16 x s32>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<32 x s32>)
-  ; CHECK:   [[UV130:%[0-9]+]]:_(<16 x s32>), [[UV131:%[0-9]+]]:_(<16 x s32>) = G_UNMERGE_VALUES [[BUILD_VECTOR1]](<32 x s32>)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[ADD]](s32), [[ADD1]](s32), [[ADD2]](s32), [[ADD3]](s32), [[ADD4]](s32), [[ADD5]](s32), [[ADD6]](s32), [[ADD7]](s32), [[ADD8]](s32), [[ADD9]](s32), [[ADD10]](s32), [[ADD11]](s32), [[ADD12]](s32), [[ADD13]](s32), [[ADD14]](s32), [[ADD15]](s32)
+  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[ADD16]](s32), [[ADD17]](s32), [[ADD18]](s32), [[ADD19]](s32), [[ADD20]](s32), [[ADD21]](s32), [[ADD22]](s32), [[ADD23]](s32), [[ADD24]](s32), [[ADD25]](s32), [[ADD26]](s32), [[ADD27]](s32), [[ADD28]](s32), [[ADD29]](s32), [[ADD30]](s32), [[ADD31]](s32)
+  ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[ADD32]](s32), [[ADD33]](s32), [[ADD34]](s32), [[ADD35]](s32), [[ADD36]](s32), [[ADD37]](s32), [[ADD38]](s32), [[ADD39]](s32), [[ADD40]](s32), [[ADD41]](s32), [[ADD42]](s32), [[ADD43]](s32), [[ADD44]](s32), [[ADD45]](s32), [[ADD46]](s32), [[ADD47]](s32)
+  ; CHECK:   [[BUILD_VECTOR3:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[ADD48]](s32), [[ADD49]](s32), [[ADD50]](s32), [[ADD51]](s32), [[ADD52]](s32), [[ADD53]](s32), [[ADD54]](s32), [[ADD55]](s32), [[ADD56]](s32), [[ADD57]](s32), [[ADD58]](s32), [[ADD59]](s32), [[ADD60]](s32), [[ADD61]](s32), [[ADD62]](s32), [[ADD63]](s32)
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
-  ; CHECK:   [[PHI:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF]](<16 x s32>), %bb.0, [[UV128]](<16 x s32>), %bb.1
-  ; CHECK:   [[PHI1:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF1]](<16 x s32>), %bb.0, [[UV129]](<16 x s32>), %bb.1
-  ; CHECK:   [[PHI2:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF2]](<16 x s32>), %bb.0, [[UV130]](<16 x s32>), %bb.1
-  ; CHECK:   [[PHI3:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF3]](<16 x s32>), %bb.0, [[UV131]](<16 x s32>), %bb.1
+  ; CHECK:   [[PHI:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF]](<16 x s32>), %bb.0, [[BUILD_VECTOR]](<16 x s32>), %bb.1
+  ; CHECK:   [[PHI1:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF1]](<16 x s32>), %bb.0, [[BUILD_VECTOR1]](<16 x s32>), %bb.1
+  ; CHECK:   [[PHI2:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF2]](<16 x s32>), %bb.0, [[BUILD_VECTOR2]](<16 x s32>), %bb.1
+  ; CHECK:   [[PHI3:%[0-9]+]]:_(<16 x s32>) = G_PHI [[DEF3]](<16 x s32>), %bb.0, [[BUILD_VECTOR3]](<16 x s32>), %bb.1
   ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<64 x s32>) = G_CONCAT_VECTORS [[PHI]](<16 x s32>), [[PHI1]](<16 x s32>), [[PHI2]](<16 x s32>), [[PHI3]](<16 x s32>)
   ; CHECK:   S_SETPC_B64 undef $sgpr30_sgpr31, implicit [[CONCAT_VECTORS]](<64 x s32>)
   bb.0:
