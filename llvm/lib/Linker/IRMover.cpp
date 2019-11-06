@@ -654,9 +654,9 @@ AttributeList IRLinker::mapAttributeTypes(LLVMContext &C, AttributeList Attrs) {
 Function *IRLinker::copyFunctionProto(const Function *SF) {
   // If there is no linkage to be performed or we are linking from the source,
   // bring SF over.
-  auto *F =
-      Function::Create(TypeMap.get(SF->getFunctionType()),
-                       GlobalValue::ExternalLinkage, SF->getName(), &DstM);
+  auto *F = Function::Create(TypeMap.get(SF->getFunctionType()),
+                             GlobalValue::ExternalLinkage,
+                             SF->getAddressSpace(), SF->getName(), &DstM);
   F->copyAttributesFrom(SF);
   F->setAttributes(mapAttributeTypes(F->getContext(), F->getAttributes()));
   return F;
@@ -695,7 +695,8 @@ GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
     else if (SGV->getValueType()->isFunctionTy())
       NewGV =
           Function::Create(cast<FunctionType>(TypeMap.get(SGV->getValueType())),
-                           GlobalValue::ExternalLinkage, SGV->getName(), &DstM);
+                           GlobalValue::ExternalLinkage, SGV->getAddressSpace(),
+                           SGV->getName(), &DstM);
     else
       NewGV =
           new GlobalVariable(DstM, TypeMap.get(SGV->getValueType()),
