@@ -97,6 +97,7 @@ bool DPUInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction *MF = MBB.getParent();
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  MachineFrameInfo &MFI = MF->getFrameInfo();
 
   // todo __sys_thread_nanostack_entry_0 and __sys_thread_nanostack_entry_1
   // should have abstract representations
@@ -168,15 +169,19 @@ bool DPUInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addExternalSymbol("__sys_thread_nanostack_entry_0");
     break;
   }
-  case DPU::ADD_VAStart: {
-      unsigned int StackSize = MF->getFrameInfo().getStackSize();
-      unsigned int ResultReg = MI.getOperand(0).getReg();
-      BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::SUBrrif))
-          .addReg(ResultReg)
-          .addReg(DPU::R22)
-          .addImm(StackSize + STACK_SIZE_FOR_D22)
-          .addImm(DPUAsmCondition::Condition::False);
-      break;
+  case DPU::ADD_VAStart: { // Get the first index in stack where the first
+                           // vaargs is stored
+    unsigned int StackSize = 0;
+    if (MFI.hasCalls()) {
+      StackSize = MF->getFrameInfo().getStackSize();
+    }
+    unsigned int ResultReg = MI.getOperand(0).getReg();
+    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::SUBrrif))
+        .addReg(ResultReg)
+        .addReg(DPU::R22)
+        .addImm(StackSize + STACK_SIZE_FOR_D22)
+        .addImm(DPUAsmCondition::Condition::False);
+    break;
   }
   }
 
