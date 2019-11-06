@@ -111,7 +111,7 @@ class CommandObjectSourceInfo : public CommandObjectParsed {
     uint32_t start_line;
     uint32_t end_line;
     uint32_t num_lines;
-    STLStringArray modules;
+    std::vector<std::string> modules;
   };
 
 public:
@@ -708,7 +708,7 @@ class CommandObjectSourceList : public CommandObjectParsed {
     lldb::addr_t address;
     uint32_t start_line;
     uint32_t num_lines;
-    STLStringArray modules;
+    std::vector<std::string> modules;
     bool show_bp_locs;
     bool reverse;
   };
