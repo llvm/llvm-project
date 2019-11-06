@@ -130,7 +130,9 @@ INSTR_PROF_VALUE_NODE(PtrToNodeT, llvm::Type::getInt8PtrTy(Ctx), Next, \
 INSTR_PROF_RAW_HEADER(uint64_t, Magic, __llvm_profile_get_magic())
 INSTR_PROF_RAW_HEADER(uint64_t, Version, __llvm_profile_get_version())
 INSTR_PROF_RAW_HEADER(uint64_t, DataSize, DataSize)
+INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesBeforeCounters, PaddingBytesBeforeCounters)
 INSTR_PROF_RAW_HEADER(uint64_t, CountersSize, CountersSize)
+INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesAfterCounters, PaddingBytesAfterCounters)
 INSTR_PROF_RAW_HEADER(uint64_t, NamesSize,  NamesSize)
 INSTR_PROF_RAW_HEADER(uint64_t, CountersDelta, (uintptr_t)CountersBegin)
 INSTR_PROF_RAW_HEADER(uint64_t, NamesDelta, (uintptr_t)NamesBegin)
@@ -628,7 +630,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
         (uint64_t)'f' << 16 | (uint64_t)'R' << 8 | (uint64_t)129
 
 /* Raw profile format version (start from 1). */
-#define INSTR_PROF_RAW_VERSION 4
+#define INSTR_PROF_RAW_VERSION 5
 /* Indexed profile format version (start from 1). */
 #define INSTR_PROF_INDEX_VERSION 5
 /* Coverage mapping format vresion (start from 0). */
@@ -742,7 +744,7 @@ typedef struct InstrProfValueData {
 #endif /* INSTR_PROF_DATA_INC */
 
 #ifndef INSTR_ORDER_FILE_INC
-// The maximal # of functions: 128*1024 (the buffer size will be 128*4 KB).
+/* The maximal # of functions: 128*1024 (the buffer size will be 128*4 KB). */
 #define INSTR_ORDER_FILE_BUFFER_SIZE 131072
 #define INSTR_ORDER_FILE_BUFFER_BITS 17
 #define INSTR_ORDER_FILE_BUFFER_MASK 0x1ffff

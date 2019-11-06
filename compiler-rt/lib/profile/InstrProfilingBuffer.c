@@ -8,6 +8,27 @@
 
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
+#include "InstrProfilingPort.h"
+
+/* When continuous mode is enabled (%c), this parameter is set to 1. This is
+ * incompatible with the in-process merging mode. Lifting this restriction
+ * may be complicated, as merging mode requires a lock on the profile, and
+ * mmap() mode would require that lock to be held for the entire process
+ * lifetime.
+ *
+ * This parameter is defined here in InstrProfilingBuffer.o, instead of in
+ * InstrProfilingFile.o, to sequester all libc-dependent code in
+ * InstrProfilingFile.o. The test `instrprof-without-libc` will break if this
+ * layering is violated. */
+static int ContinuouslySyncProfile = 0;
+
+COMPILER_RT_VISIBILITY int __llvm_profile_is_continuous_mode_enabled(void) {
+  return ContinuouslySyncProfile;
+}
+
+COMPILER_RT_VISIBILITY void __llvm_profile_enable_continuous_mode(void) {
+  ContinuouslySyncProfile = 1;
+}
 
 COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_size_for_buffer(void) {
@@ -30,6 +51,41 @@ uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
          sizeof(__llvm_profile_data);
 }
 
+/// Calculate the number of padding bytes needed to add to \p Offset in order
+/// for (\p Offset + Padding) to be page-aligned.
+static uint64_t calculateBytesNeededToPageAlign(uint64_t Offset,
+                                                unsigned PageSize) {
+  uint64_t OffsetModPage = Offset % PageSize;
+  if (OffsetModPage > 0)
+    return PageSize - OffsetModPage;
+  return 0;
+}
+
+COMPILER_RT_VISIBILITY
+void __llvm_profile_get_padding_sizes_for_counters(
+    uint64_t DataSize, uint64_t CountersSize, uint64_t NamesSize,
+    uint64_t *PaddingBytesBeforeCounters, uint64_t *PaddingBytesAfterCounters,
+    uint64_t *PaddingBytesAfterNames) {
+  if (!__llvm_profile_is_continuous_mode_enabled()) {
+    *PaddingBytesBeforeCounters = 0;
+    *PaddingBytesAfterCounters = 0;
+    *PaddingBytesAfterNames = __llvm_profile_get_num_padding_bytes(NamesSize);
+    return;
+  }
+
+  // In continuous mode, the file offsets for headers and for the start of
+  // counter sections need to be page-aligned.
+  unsigned PageSize = getpagesize();
+  uint64_t DataSizeInBytes = DataSize * sizeof(__llvm_profile_data);
+  uint64_t CountersSizeInBytes = CountersSize * sizeof(uint64_t);
+  *PaddingBytesBeforeCounters = calculateBytesNeededToPageAlign(
+      sizeof(__llvm_profile_header) + DataSizeInBytes, PageSize);
+  *PaddingBytesAfterCounters =
+      calculateBytesNeededToPageAlign(CountersSizeInBytes, PageSize);
+  *PaddingBytesAfterNames =
+      calculateBytesNeededToPageAlign(NamesSize, PageSize);
+}
+
 COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_size_for_buffer_internal(
     const __llvm_profile_data *DataBegin, const __llvm_profile_data *DataEnd,
@@ -37,11 +93,21 @@ uint64_t __llvm_profile_get_size_for_buffer_internal(
     const char *NamesBegin, const char *NamesEnd) {
   /* Match logic in __llvm_profile_write_buffer(). */
   const uint64_t NamesSize = (NamesEnd - NamesBegin) * sizeof(char);
-  const uint8_t Padding = __llvm_profile_get_num_padding_bytes(NamesSize);
+  uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
+  uint64_t CountersSize = CountersEnd - CountersBegin;
+
+  /* Determine how much padding is needed before/after the counters and after
+   * the names. */
+  uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
+      PaddingBytesAfterNames;
+  __llvm_profile_get_padding_sizes_for_counters(
+      DataSize, CountersSize, NamesSize, &PaddingBytesBeforeCounters,
+      &PaddingBytesAfterCounters, &PaddingBytesAfterNames);
+
   return sizeof(__llvm_profile_header) +
-         (__llvm_profile_get_data_size(DataBegin, DataEnd) *
-          sizeof(__llvm_profile_data)) +
-         (CountersEnd - CountersBegin) * sizeof(uint64_t) + NamesSize + Padding;
+         (DataSize * sizeof(__llvm_profile_data)) + PaddingBytesBeforeCounters +
+         (CountersSize * sizeof(uint64_t)) + PaddingBytesAfterCounters +
+         NamesSize + PaddingBytesAfterNames;
 }
 
 COMPILER_RT_VISIBILITY

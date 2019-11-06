@@ -402,6 +402,11 @@ public:
   /// return None.
   llvm::MutableArrayRef<CallEdge> GetTailCallingEdges();
 
+  /// Get the outgoing call edge from this function which has the given return
+  /// address \p return_pc, or return nullptr. Note that this will not return a
+  /// tail-calling edge.
+  CallEdge *GetCallEdgeForReturnAddress(lldb::addr_t return_pc, Target &target);
+
   /// Get accessor for the block list.
   ///
   /// \return

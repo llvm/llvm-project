@@ -1,3 +1,4 @@
+// RUN: rm -rf %t1.profraw %t2.profraw
 // RUN: %clang_profgen -o %t -O3 %s
 // RUN: env LLVM_PROFILE_FILE=%t1.profraw %run %t %t2.profraw
 // RUN: llvm-profdata merge -o %t1.profdata %t1.profraw
