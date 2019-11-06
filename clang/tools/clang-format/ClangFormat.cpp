@@ -390,6 +390,10 @@ static bool format(StringRef FileName) {
   if (fillRanges(Code.get(), Ranges))
     return true;
   StringRef AssumedFileName = (FileName == "-") ? AssumeFileName : FileName;
+  if (AssumedFileName.empty()) {
+    llvm::errs() << "error: empty filenames are not allowed\n";
+    return true;
+  }
 
   llvm::Expected<FormatStyle> FormatStyle =
       getStyle(Style, AssumedFileName, FallbackStyle, Code->getBuffer());
