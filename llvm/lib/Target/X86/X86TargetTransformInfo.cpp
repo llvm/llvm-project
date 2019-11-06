@@ -2534,6 +2534,11 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
   // We use the Intel Architecture Code Analyzer(IACA) to measure the throughput
   // and make it as the cost.
 
+  static const CostTblEntry SLMCostTblPairWise[] = {
+    { ISD::FADD,  MVT::v2f64,   3 },
+    { ISD::ADD,   MVT::v2i64,   5 },
+  };
+
   static const CostTblEntry SSE2CostTblPairWise[] = {
     { ISD::FADD,  MVT::v2f64,   2 },
     { ISD::FADD,  MVT::v4f32,   4 },
@@ -2557,6 +2562,11 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
     { ISD::ADD,   MVT::v8i32,   5 },
     { ISD::ADD,   MVT::v16i16,  6 },
     { ISD::ADD,   MVT::v32i8,   4 },
+  };
+
+  static const CostTblEntry SLMCostTblNoPairWise[] = {
+    { ISD::FADD,  MVT::v2f64,   3 },
+    { ISD::ADD,   MVT::v2i64,   5 },
   };
 
   static const CostTblEntry SSE2CostTblNoPairWise[] = {
@@ -2595,6 +2605,10 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
   if (VT.isSimple()) {
     MVT MTy = VT.getSimpleVT();
     if (IsPairwise) {
+      if (ST->isSLM())
+        if (const auto *Entry = CostTableLookup(SLMCostTblPairWise, ISD, MTy))
+          return Entry->Cost;
+
       if (ST->hasAVX())
         if (const auto *Entry = CostTableLookup(AVX1CostTblPairWise, ISD, MTy))
           return Entry->Cost;
@@ -2603,6 +2617,10 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
         if (const auto *Entry = CostTableLookup(SSE2CostTblPairWise, ISD, MTy))
           return Entry->Cost;
     } else {
+      if (ST->isSLM())
+        if (const auto *Entry = CostTableLookup(SLMCostTblNoPairWise, ISD, MTy))
+          return Entry->Cost;
+
       if (ST->hasAVX())
         if (const auto *Entry = CostTableLookup(AVX1CostTblNoPairWise, ISD, MTy))
           return Entry->Cost;
@@ -2618,6 +2636,10 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
   MVT MTy = LT.second;
 
   if (IsPairwise) {
+    if (ST->isSLM())
+      if (const auto *Entry = CostTableLookup(SLMCostTblPairWise, ISD, MTy))
+        return LT.first * Entry->Cost;
+
     if (ST->hasAVX())
       if (const auto *Entry = CostTableLookup(AVX1CostTblPairWise, ISD, MTy))
         return LT.first * Entry->Cost;
@@ -2626,6 +2648,10 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
       if (const auto *Entry = CostTableLookup(SSE2CostTblPairWise, ISD, MTy))
         return LT.first * Entry->Cost;
   } else {
+    if (ST->isSLM())
+      if (const auto *Entry = CostTableLookup(SLMCostTblNoPairWise, ISD, MTy))
+        return LT.first * Entry->Cost;
+
     if (ST->hasAVX())
       if (const auto *Entry = CostTableLookup(AVX1CostTblNoPairWise, ISD, MTy))
         return LT.first * Entry->Cost;
