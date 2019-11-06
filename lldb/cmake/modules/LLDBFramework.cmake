@@ -1,10 +1,4 @@
-# Path relative to the root binary directory
-get_filename_component(
-  framework_target_dir ${LLDB_FRAMEWORK_BUILD_DIR} ABSOLUTE
-  BASE_DIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}
-)
-
-message(STATUS "LLDB.framework: build path is '${framework_target_dir}'")
+message(STATUS "LLDB.framework: build path is '${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}'")
 message(STATUS "LLDB.framework: install path is '${LLDB_FRAMEWORK_INSTALL_DIR}'")
 message(STATUS "LLDB.framework: resources subdirectory is 'Versions/${LLDB_FRAMEWORK_VERSION}/Resources'")
 
@@ -15,7 +9,7 @@ set_target_properties(liblldb PROPERTIES
 
   OUTPUT_NAME LLDB
   VERSION ${LLDB_VERSION}
-  LIBRARY_OUTPUT_DIRECTORY ${framework_target_dir}
+  LIBRARY_OUTPUT_DIRECTORY ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}
 
   # Compatibility version
   SOVERSION "1.0.0"
@@ -29,8 +23,8 @@ set_target_properties(liblldb PROPERTIES
 # Used in llvm_add_library() to set default output directories for multi-config
 # generators. Overwrite to account for special framework output directory.
 set_output_directory(liblldb
-  BINARY_DIR ${framework_target_dir}
-  LIBRARY_DIR ${framework_target_dir}
+  BINARY_DIR ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}
+  LIBRARY_DIR ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}
 )
 
 lldb_add_post_install_steps_darwin(liblldb ${LLDB_FRAMEWORK_INSTALL_DIR})
@@ -51,7 +45,7 @@ set(CMAKE_XCODE_ATTRIBUTE_CLANG_WARN_DOCUMENTATION_COMMENTS "YES")
 add_custom_command(TARGET liblldb POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E create_symlink
           Versions/Current/Headers
-          ${framework_target_dir}/LLDB.framework/Headers
+          ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/Headers
   COMMENT "LLDB.framework: create Headers symlink"
 )
 
