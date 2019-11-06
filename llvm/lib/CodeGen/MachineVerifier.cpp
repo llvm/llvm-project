@@ -1100,7 +1100,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     break;
   }
-  case TargetOpcode::G_GEP: {
+  case TargetOpcode::G_PTR_ADD: {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT PtrTy = MRI->getType(MI->getOperand(1).getReg());
     LLT OffsetTy = MRI->getType(MI->getOperand(2).getReg());

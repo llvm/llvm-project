@@ -462,7 +462,7 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
       }
     } else if (OpSize == 64) {
       switch (GenericOpc) {
-      case TargetOpcode::G_GEP:
+      case TargetOpcode::G_PTR_ADD:
         return AArch64::ADDXrr;
       case TargetOpcode::G_SHL:
         return AArch64::LSLVXr;
@@ -1765,7 +1765,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     auto *PtrMI = MRI.getVRegDef(PtrReg);
 
     // Try to fold a GEP into our unsigned immediate addressing mode.
-    if (PtrMI->getOpcode() == TargetOpcode::G_GEP) {
+    if (PtrMI->getOpcode() == TargetOpcode::G_PTR_ADD) {
       if (auto COff = getConstantVRegVal(PtrMI->getOperand(2).getReg(), MRI)) {
         int64_t Imm = *COff;
         const unsigned Size = MemSizeInBits / 8;
@@ -1883,7 +1883,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
 
-  case TargetOpcode::G_GEP: {
+  case TargetOpcode::G_PTR_ADD: {
     MachineIRBuilder MIRBuilder(I);
     emitADD(I.getOperand(0).getReg(), I.getOperand(1), I.getOperand(2),
             MIRBuilder);
@@ -4189,15 +4189,15 @@ AArch64InstructionSelector::selectAddrModeShiftedExtendXReg(
   //
   // val = G_CONSTANT LegalShiftVal
   // shift = G_SHL off_reg val
-  // ptr = G_GEP base_reg shift
+  // ptr = G_PTR_ADD base_reg shift
   // x = G_LOAD ptr
   //
   // And fold it into this addressing mode:
   //
   // ldr x, [base_reg, off_reg, lsl #LegalShiftVal]
 
-  // Check if we can find the G_GEP.
-  MachineInstr *Gep = getOpcodeDef(TargetOpcode::G_GEP, Root.getReg(), MRI);
+  // Check if we can find the G_PTR_ADD.
+  MachineInstr *Gep = getOpcodeDef(TargetOpcode::G_PTR_ADD, Root.getReg(), MRI);
   if (!Gep || !isWorthFoldingIntoExtendedReg(*Gep, MRI))
     return None;
 
@@ -4275,7 +4275,7 @@ AArch64InstructionSelector::selectAddrModeShiftedExtendXReg(
 ///
 /// Where x2 is the base register, and x3 is an offset register.
 ///
-/// When possible (or profitable) to fold a G_GEP into the address calculation,
+/// When possible (or profitable) to fold a G_PTR_ADD into the address calculation,
 /// this will do so. Otherwise, it will return None.
 InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectAddrModeRegisterOffset(
@@ -4284,7 +4284,7 @@ AArch64InstructionSelector::selectAddrModeRegisterOffset(
 
   // We need a GEP.
   MachineInstr *Gep = MRI.getVRegDef(Root.getReg());
-  if (!Gep || Gep->getOpcode() != TargetOpcode::G_GEP)
+  if (!Gep || Gep->getOpcode() != TargetOpcode::G_PTR_ADD)
     return None;
 
   // If this is used more than once, let's not bother folding.

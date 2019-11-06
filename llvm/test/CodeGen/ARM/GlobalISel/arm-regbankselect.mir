@@ -493,7 +493,7 @@ body:             |
 
     %2(p0) = COPY $sp
     %3(s32) = G_CONSTANT i32 8
-    %4(p0) = G_GEP %2, %3(s32)
+    %4(p0) = G_PTR_ADD %2, %3(s32)
     G_STORE %1(s32), %4(p0) :: (store 4)
 
     BX_RET 14, $noreg
@@ -520,7 +520,7 @@ body:             |
 
     %0(p0) = COPY $r0
     %1(s32) = COPY $r1
-    %2(p0) = G_GEP %0, %1(s32)
+    %2(p0) = G_PTR_ADD %0, %1(s32)
     $r0 = COPY %2(p0)
     BX_RET 14, $noreg, implicit $r0
 ...

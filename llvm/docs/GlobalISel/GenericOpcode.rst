@@ -1,0 +1,674 @@
+
+.. _gmir-opcodes:
+
+Generic Opcodes
+===============
+
+.. contents::
+   :local:
+
+.. note::
+
+  This documentation does not yet fully account for vectors. Many of the
+  scalar/integer/floating-point operations can also take vectors.
+
+Constants
+---------
+
+G_IMPLICIT_DEF
+^^^^^^^^^^^^^^
+
+An undefined value.
+
+.. code-block:: none
+
+  %0:_(s32) = G_IMPLICIT_DEF
+
+G_CONSTANT
+^^^^^^^^^^
+
+An integer constant.
+
+.. code-block:: none
+
+  %0:_(s32) = G_CONSTANT i32 1
+
+G_FCONSTANT
+^^^^^^^^^^^
+
+A floating point constant.
+
+.. code-block:: none
+
+  %0:_(s32) = G_FCONSTANT float 1.0
+
+G_FRAME_INDEX
+^^^^^^^^^^^^^
+
+The address of an object in the stack frame.
+
+.. code-block:: none
+
+  %1:_(p0) = G_FRAME_INDEX %stack.0.ptr0
+
+G_GLOBAL_VALUE
+^^^^^^^^^^^^^^
+
+The address of a global value.
+
+.. code-block:: none
+
+  %0(p0) = G_GLOBAL_VALUE @var_local
+
+G_BLOCK_ADDR
+^^^^^^^^^^^^
+
+The address of a basic block.
+
+.. code-block:: none
+
+  %0:_(p0) = G_BLOCK_ADDR blockaddress(@test_blockaddress, %ir-block.block)
+
+Integer Extension and Truncation
+--------------------------------
+
+G_ANYEXT
+^^^^^^^^
+
+Extend the underlying scalar type of an operation, leaving the high bits
+unspecified.
+
+.. code-block:: none
+
+  %1:_(s32) = G_ANYEXT %0:_(s16)
+
+G_SEXT
+^^^^^^
+
+Sign extend the underlying scalar type of an operation, copying the sign bit
+into the newly-created space.
+
+.. code-block:: none
+
+  %1:_(s32) = G_SEXT %0:_(s16)
+
+G_SEXT_INREG
+^^^^^^^^^^^^
+
+Sign extend the value from an arbitrary bit position, copying the sign bit
+into all bits above it. This is equivalent to a shl + ashr pair with an
+appropriate shift amount. $sz is an immediate (MachineOperand::isImm()
+returns true) to allow targets to have some bitwidths legal and others
+lowered. This opcode is particularly useful if the target has sign-extension
+instructions that are cheaper than the constituent shifts as the optimizer is
+able to make decisions on whether it's better to hang on to the G_SEXT_INREG
+or to lower it and optimize the individual shifts.
+
+.. code-block:: none
+
+  %1:_(s32) = G_SEXT_INREG %0:_(s32), 16
+
+G_ZEXT
+^^^^^^
+
+Zero extend the underlying scalar type of an operation, putting zero bits
+into the newly-created space.
+
+.. code-block:: none
+
+  %1:_(s32) = G_ZEXT %0:_(s16)
+
+G_TRUNC
+^^^^^^^
+
+Truncate the underlying scalar type of an operation. This is equivalent to
+G_EXTRACT for scalar types, but acts elementwise on vectors.
+
+.. code-block:: none
+
+  %1:_(s16) = G_TRUNC %0:_(s32)
+
+Type Conversions
+----------------
+
+G_INTTOPTR
+^^^^^^^^^^
+
+Convert an integer to a pointer.
+
+.. code-block:: none
+
+  %1:_(p0) = G_INTTOPTR %0:_(s32)
+
+G_PTRTOINT
+^^^^^^^^^^
+
+Convert an pointer to an integer.
+
+.. code-block:: none
+
+  %1:_(s32) = G_PTRTOINT %0:_(p0)
+
+G_BITCAST
+^^^^^^^^^
+
+Reinterpret a value as a new type. This is usually done without changing any
+bits but this is not always the case due a sublety in the definition of the
+:ref:`LLVM-IR Bitcast Instruction <i_bitcast>`.
+
+.. code-block:: none
+
+  %1:_(s64) = G_BITCAST %0:_(<2 x s32>)
+
+G_ADDRSPACE_CAST
+^^^^^^^^^^^^^^^^
+
+Convert a pointer to an address space to a pointer to another address space.
+
+.. code-block:: none
+
+  %1:_(p1) = G_ADDRSPACE_CAST %0:_(p0)
+
+.. caution::
+
+  :ref:`i_addrspacecast` doesn't mention what happens if the cast is simply
+  invalid (i.e. if the address spaces are disjoint).
+
+Scalar Operations
+-----------------
+
+G_EXTRACT
+^^^^^^^^^
+
+Extract a register of the specified size, starting from the block given by
+index. This will almost certainly be mapped to sub-register COPYs after
+register banks have been selected.
+
+G_INSERT
+^^^^^^^^
+
+Insert a smaller register into a larger one at the specified bit-index.
+
+G_MERGE_VALUES
+^^^^^^^^^^^^^^
+
+Concatenate multiple registers of the same size into a wider register.
+The input operands are always ordered from lowest bits to highest:
+
+.. code-block:: none
+
+  %0:(s32) = G_MERGE_VALUES %bits_0_7:(s8), %bits_8_15:(s8),
+                            %bits_16_23:(s8), %bits_24_31:(s8)
+
+G_UNMERGE_VALUES
+^^^^^^^^^^^^^^^^
+
+Extract multiple registers of the specified size, starting from blocks given by
+indexes. This will almost certainly be mapped to sub-register COPYs after
+register banks have been selected.
+The output operands are always ordered from lowest bits to highest:
+
+.. code-block:: none
+
+  %bits_0_7:(s8), %bits_8_15:(s8),
+      %bits_16_23:(s8), %bits_24_31:(s8) = G_UNMERGE_VALUES %0:(s32)
+
+G_BSWAP
+^^^^^^^
+
+Reverse the order of the bytes in a scalar.
+
+.. code-block:: none
+
+  %1:_(s32) = G_BSWAP %0:_(s32)
+
+G_BITREVERSE
+^^^^^^^^^^^^
+
+Reverse the order of the bits in a scalar.
+
+.. code-block:: none
+
+  %1:_(s32) = G_BITREVERSE %0:_(s32)
+
+Integer Operations
+-------------------
+
+G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR, G_SDIV, G_UDIV, G_SREM, G_UREM
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These each perform their respective integer arithmetic on a scalar.
+
+.. code-block:: none
+
+  %2:_(s32) = G_ADD %0:_(s32), %1:_(s32)
+
+G_SHL, G_LSHR, G_ASHR
+^^^^^^^^^^^^^^^^^^^^^
+
+Shift the bits of a scalar left or right inserting zeros (sign-bit for G_ASHR).
+
+G_ICMP
+^^^^^^
+
+Perform integer comparison producing non-zero (true) or zero (false). It's
+target specific whether a true value is 1, ~0U, or some other non-zero value.
+
+G_SELECT
+^^^^^^^^
+
+Select between two values depending on a zero/non-zero value.
+
+.. code-block:: none
+
+  %5:_(s32) = G_SELECT %4(s1), %6, %2
+
+G_PTR_ADD
+^^^^^^^^^
+
+Add a scalar offset in addressible units to a pointer. Addressible units are
+typically bytes but this may vary between targets.
+
+.. code-block:: none
+
+  %1:_(p0) = G_PTR_ADD %0:_(p0), %1:_(s32)
+
+.. caution::
+
+  There are currently no in-tree targets that use this with addressable units
+  not equal to 8 bit.
+
+G_PTR_MASK
+^^^^^^^^^^
+
+Zero the least significant N bits of a pointer.
+
+.. code-block:: none
+
+  %1:_(p0) = G_PTR_MASK %0, 3
+
+G_SMIN, G_SMAX, G_UMIN, G_UMAX
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Take the minimum/maximum of two values.
+
+.. code-block:: none
+
+  %5:_(s32) = G_SMIN %6, %2
+
+G_UADDO, G_SADDO, G_USUBO, G_SSUBO, G_SMULO, G_UMULO
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Perform the requested arithmetic and produce a carry output in addition to the
+normal result.
+
+.. code-block:: none
+
+  %3:_(s32), %4:_(s1) = G_UADDO %0, %1
+
+G_UADDE, G_SADDE, G_USUBE, G_SSUBE
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Perform the requested arithmetic and consume a carry input in addition to the
+normal input. Also produce a carry output in addition to the normal result.
+
+.. code-block:: none
+
+  %4:_(s32), %5:_(s1) = G_UADDE %0, %1, %3:_(s1)
+
+G_UMULH, G_SMULH
+^^^^^^^^^^^^^^^^
+
+Multiply two numbers at twice the incoming bit width (signed) and return
+the high half of the result.
+
+.. code-block:: none
+
+  %3:_(s32) = G_UMULH %0, %1
+
+G_CTLZ, G_CTTZ, G_CTPOP
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Count leading zeros, trailing zeros, or number of set bits.
+
+.. code-block:: none
+
+  %2:_(s33) = G_CTLZ_ZERO_UNDEF %1
+  %2:_(s33) = G_CTTZ_ZERO_UNDEF %1
+  %2:_(s33) = G_CTPOP %1
+
+G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Count leading zeros or trailing zeros. If the value is zero then the result is
+undefined.
+
+.. code-block:: none
+
+  %2:_(s33) = G_CTLZ_ZERO_UNDEF %1
+  %2:_(s33) = G_CTTZ_ZERO_UNDEF %1
+
+Floating Point Operations
+-------------------------
+
+G_FCMP
+^^^^^^
+
+Perform floating point comparison producing non-zero (true) or zero
+(false). It's target specific whether a true value is 1, ~0U, or some other
+non-zero value.
+
+G_FNEG
+^^^^^^
+
+Floating point negation.
+
+G_FPEXT
+^^^^^^^
+
+Convert a floating point value to a larger type.
+
+G_FPTRUNC
+^^^^^^^^^
+
+Convert a floating point value to a narrower type.
+
+G_FPTOSI, G_FPTOUI, G_SITOFP, G_UITOFP
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Convert between integer and floating point.
+
+G_FABS
+^^^^^^
+
+Take the absolute value of a floating point value.
+
+G_FCOPYSIGN
+^^^^^^^^^^^
+
+Copy the value of the first operand, replacing the sign bit with that of the
+second operand.
+
+G_FCANONICALIZE
+^^^^^^^^^^^^^^^
+
+See :ref:`i_intr_llvm_canonicalize`.
+
+G_FMINNUM
+^^^^^^^^^
+
+Perform floating-point minimum on two values.
+
+In the case where a single input is a NaN (either signaling or quiet),
+the non-NaN input is returned.
+
+The return value of (FMINNUM 0.0, -0.0) could be either 0.0 or -0.0.
+
+G_FMAXNUM
+^^^^^^^^^
+
+Perform floating-point maximum on two values.
+
+In the case where a single input is a NaN (either signaling or quiet),
+the non-NaN input is returned.
+
+The return value of (FMAXNUM 0.0, -0.0) could be either 0.0 or -0.0.
+
+G_FMINNUM_IEEE
+^^^^^^^^^^^^^^
+
+Perform floating-point minimum on two values, following the IEEE-754 2008
+definition. This differs from FMINNUM in the handling of signaling NaNs. If one
+input is a signaling NaN, returns a quiet NaN.
+
+G_FMAXNUM_IEEE
+^^^^^^^^^^^^^^
+
+Perform floating-point maximum on two values, following the IEEE-754 2008
+definition. This differs from FMAXNUM in the handling of signaling NaNs. If one
+input is a signaling NaN, returns a quiet NaN.
+
+G_FMINIMUM
+^^^^^^^^^^
+
+NaN-propagating minimum that also treat -0.0 as less than 0.0. While
+FMINNUM_IEEE follow IEEE 754-2008 semantics, FMINIMUM follows IEEE 754-2018
+draft semantics.
+
+G_FMAXIMUM
+^^^^^^^^^^
+
+NaN-propagating maximum that also treat -0.0 as less than 0.0. While
+FMAXNUM_IEEE follow IEEE 754-2008 semantics, FMAXIMUM follows IEEE 754-2018
+draft semantics.
+
+G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FREM
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Perform the specified floating point arithmetic.
+
+G_FMA
+^^^^^
+
+Perform a fused multiply add (i.e. without the intermediate rounding step).
+
+G_FMAD
+^^^^^^
+
+Perform a non-fused multiply add (i.e. with the intermediate rounding step).
+
+G_FPOW
+^^^^^^
+
+Raise the first operand to the power of the second.
+
+G_FEXP, G_FEXP2
+^^^^^^^^^^^^^^^
+
+Calculate the base-e or base-2 exponential of a value
+
+G_FLOG, G_FLOG2, G_FLOG10
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Calculate the base-e, base-2, or base-10 respectively.
+
+G_FCEIL, G_FCOS, G_FSIN, G_FSQRT, G_FFLOOR, G_FRINT, G_FNEARBYINT
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These correspond to the standard C functions of the same name.
+
+G_INTRINSIC_TRUNC
+^^^^^^^^^^^^^^^^^
+
+Returns the operand rounded to the nearest integer not larger in magnitude than the operand.
+
+G_INTRINSIC_ROUND
+^^^^^^^^^^^^^^^^^
+
+Returns the operand rounded to the nearest integer.
+
+Vector Specific Operations
+--------------------------
+
+G_CONCAT_VECTORS
+^^^^^^^^^^^^^^^^
+
+Concatenate two vectors to form a longer vector.
+
+G_BUILD_VECTOR, G_BUILD_VECTOR_TRUNC
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Create a vector from multiple scalar registers. No implicit
+conversion is performed (i.e. the result element type must be the
+same as all source operands)
+
+The _TRUNC version truncates the larger operand types to fit the
+destination vector elt type.
+
+G_INSERT_VECTOR_ELT
+^^^^^^^^^^^^^^^^^^^
+
+Insert an element into a vector
+
+G_EXTRACT_VECTOR_ELT
+^^^^^^^^^^^^^^^^^^^^
+
+Extract an element from a vector
+
+G_SHUFFLE_VECTOR
+^^^^^^^^^^^^^^^^
+
+Concatenate two vectors and shuffle the elements according to the mask operand.
+The mask operand should be an IR Constant which exactly matches the
+corresponding mask for the IR shufflevector instruction.
+
+Memory Operations
+-----------------
+
+G_LOAD, G_SEXTLOAD, G_ZEXTLOAD
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Generic load. Expects a MachineMemOperand in addition to explicit
+operands. If the result size is larger than the memory size, the
+high bits are undefined, sign-extended, or zero-extended respectively.
+
+Only G_LOAD is valid if the result is a vector type. If the result is larger
+than the memory size, the high elements are undefined (i.e. this is not a
+per-element, vector anyextload)
+
+G_INDEXED_LOAD
+^^^^^^^^^^^^^^
+
+Generic indexed load. Combines a GEP with a load. $newaddr is set to $base + $offset.
+If $am is 0 (post-indexed), then the value is loaded from $base; if $am is 1 (pre-indexed)
+then the value is loaded from $newaddr.
+
+G_INDEXED_SEXTLOAD
+^^^^^^^^^^^^^^^^^^
+
+Same as G_INDEXED_LOAD except that the load performed is sign-extending, as with G_SEXTLOAD.
+
+G_INDEXED_ZEXTLOAD
+^^^^^^^^^^^^^^^^^^
+
+Same as G_INDEXED_LOAD except that the load performed is zero-extending, as with G_ZEXTLOAD.
+
+G_STORE
+^^^^^^^
+
+Generic store. Expects a MachineMemOperand in addition to explicit operands.
+
+G_INDEXED_STORE
+^^^^^^^^^^^^^^^
+
+Combines a store with a GEP. See description of G_INDEXED_LOAD for indexing behaviour.
+
+G_ATOMIC_CMPXCHG_WITH_SUCCESS
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Generic atomic cmpxchg with internal success check. Expects a
+MachineMemOperand in addition to explicit operands.
+
+G_ATOMIC_CMPXCHG
+^^^^^^^^^^^^^^^^
+
+Generic atomic cmpxchg. Expects a MachineMemOperand in addition to explicit
+operands.
+
+G_ATOMICRMW_XCHG, G_ATOMICRMW_ADD, G_ATOMICRMW_SUB, G_ATOMICRMW_AND, G_ATOMICRMW_NAND, G_ATOMICRMW_OR, G_ATOMICRMW_XOR, G_ATOMICRMW_MAX, G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX, G_ATOMICRMW_UMIN, G_ATOMICRMW_FADD, G_ATOMICRMW_FSUB
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Generic atomicrmw. Expects a MachineMemOperand in addition to explicit
+operands.
+
+G_FENCE
+^^^^^^^
+
+.. caution::
+
+  I couldn't find any documentation on this at the time of writing.
+
+Control Flow
+------------
+
+G_PHI
+^^^^^
+
+Implement the φ node in the SSA graph representing the function.
+
+.. code-block:: none
+
+  %1(s8) = G_PHI %7(s8), %bb.0, %3(s8), %bb.1
+
+G_BR
+^^^^
+
+Unconditional branch
+
+G_BRCOND
+^^^^^^^^
+
+Conditional branch
+
+G_BRINDIRECT
+^^^^^^^^^^^^
+
+Indirect branch
+
+G_BRJT
+^^^^^^
+
+Indirect branch to jump table entry
+
+G_JUMP_TABLE
+^^^^^^^^^^^^
+
+.. caution::
+
+  I found no documentation for this instruction at the time of writing.
+
+G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Call an intrinsic
+
+The _W_SIDE_EFFECTS version is considered to have unknown side-effects and
+as such cannot be reordered acrosss other side-effecting instructions.
+
+.. note::
+
+  Unlike SelectionDAG, there is no _VOID variant. Both of these are permitted
+  to have zero, one, or multiple results.
+
+Variadic Arguments
+------------------
+
+G_VASTART
+^^^^^^^^^
+
+.. caution::
+
+  I found no documentation for this instruction at the time of writing.
+
+G_VAARG
+^^^^^^^
+
+.. caution::
+
+  I found no documentation for this instruction at the time of writing.
+
+Other Operations
+----------------
+
+G_DYN_STACKALLOC
+^^^^^^^^^^^^^^^^
+
+Dynamically realign the stack pointer to the specified alignment
+
+.. code-block:: none
+
+  %8:_(p0) = G_DYN_STACKALLOC %7(s64), 32
+
+.. caution::
+
+  What does it mean for the immediate to be 0? It happens in the tests

@@ -4,7 +4,7 @@ define i8* @test_simple_load_pre(i8* %ptr) {
 ; CHECK-LABEL: name: test_simple_load_pre
 ; CHECK: [[BASE:%.*]]:_(p0) = COPY $x0
 ; CHECK: [[OFFSET:%.*]]:_(s64) = G_CONSTANT i64 42
-; CHECK-NOT: G_GEP
+; CHECK-NOT: G_PTR_ADD
 ; CHECK: {{%.*}}:_(s8), [[NEXT:%.*]]:_(p0) = G_INDEXED_LOAD [[BASE]], [[OFFSET]](s64), 1
 ; CHECK: $x0 = COPY [[NEXT]](p0)
 
@@ -17,7 +17,7 @@ define void @test_load_multiple_dominated(i8* %ptr, i1 %tst, i1 %tst2) {
 ; CHECK-LABEL: name: test_load_multiple_dominated
 ; CHECK: [[BASE:%.*]]:_(p0) = COPY $x0
 ; CHECK: [[OFFSET:%.*]]:_(s64) = G_CONSTANT i64 42
-; CHECK-NOT: G_GEP
+; CHECK-NOT: G_PTR_ADD
 ; CHECK: {{%.*}}:_(s8), [[NEXT:%.*]]:_(p0) = G_INDEXED_LOAD [[BASE]], [[OFFSET]](s64), 1
 ; CHECK: $x0 = COPY [[NEXT]](p0)
   %next = getelementptr i8, i8* %ptr, i32 42
@@ -44,7 +44,7 @@ define i8* @test_simple_store_pre(i8* %ptr) {
 ; CHECK: [[BASE:%.*]]:_(p0) = COPY $x0
 ; CHECK: [[VAL:%.*]]:_(s8) = G_CONSTANT i8 0
 ; CHECK: [[OFFSET:%.*]]:_(s64) = G_CONSTANT i64 42
-; CHECK-NOT: G_GEP
+; CHECK-NOT: G_PTR_ADD
 ; CHECK: [[NEXT:%.*]]:_(p0) = G_INDEXED_STORE [[VAL]](s8), [[BASE]], [[OFFSET]](s64), 1
 ; CHECK: $x0 = COPY [[NEXT]](p0)
 
@@ -57,7 +57,7 @@ define i8* @test_simple_store_pre(i8* %ptr) {
 ; would produce the value too late but only by one instruction.
 define i64** @test_store_pre_val_loop(i64** %ptr) {
 ; CHECK-LABEL: name: test_store_pre_val_loop
-; CHECK: G_GEP
+; CHECK: G_PTR_ADD
 ; CHECK: G_STORE %
 
   %next = getelementptr i64*, i64** %ptr, i32 42
@@ -69,7 +69,7 @@ define i64** @test_store_pre_val_loop(i64** %ptr) {
 ; Potentially pre-indexed address is used between GEP computing it and load.
 define i8* @test_load_pre_before(i8* %ptr) {
 ; CHECK-LABEL: name: test_load_pre_before
-; CHECK: G_GEP
+; CHECK: G_PTR_ADD
 ; CHECK: BL @bar
 ; CHECK: G_LOAD %
 
@@ -83,7 +83,7 @@ define i8* @test_load_pre_before(i8* %ptr) {
 ; bad as the original GEP.
 define i8* @test_alloca_load_pre() {
 ; CHECK-LABEL: name: test_alloca_load_pre
-; CHECK: G_GEP
+; CHECK: G_PTR_ADD
 ; CHECK: G_LOAD %
 
   %ptr = alloca i8, i32 128
@@ -95,7 +95,7 @@ define i8* @test_alloca_load_pre() {
 ; Load does not dominate use of its address. No indexing.
 define i8* @test_pre_nodom(i8* %in, i1 %tst) {
 ; CHECK-LABEL: name: test_pre_nodom
-; CHECK: G_GEP
+; CHECK: G_PTR_ADD
 ; CHECK: G_LOAD %
 
   %next = getelementptr i8, i8* %in, i32 16
@@ -115,7 +115,7 @@ define i8* @test_simple_load_post(i8* %ptr) {
 ; CHECK-LABEL: name: test_simple_load_post
 ; CHECK: [[BASE:%.*]]:_(p0) = COPY $x0
 ; CHECK: [[OFFSET:%.*]]:_(s64) = G_CONSTANT i64 42
-; CHECK-NOT: G_GEP
+; CHECK-NOT: G_PTR_ADD
 ; CHECK: {{%.*}}:_(s8), [[NEXT:%.*]]:_(p0) = G_INDEXED_LOAD [[BASE]], [[OFFSET]](s64), 0
 ; CHECK: $x0 = COPY [[NEXT]](p0)
 
@@ -154,7 +154,7 @@ define i8* @test_load_post_keep_looking(i8* %ptr) {
 ; Base is frame index. Using indexing would need copy anyway.
 define i8* @test_load_post_alloca() {
 ; CHECK-LABEL: name: test_load_post_alloca
-; CHECK: G_GEP
+; CHECK: G_PTR_ADD
 ; CHECK: G_LOAD %
 
   %ptr = alloca i8, i32 128
@@ -168,7 +168,7 @@ define i8* @test_load_post_gep_offset_after(i8* %ptr) {
 ; CHECK-LABEL: name: test_load_post_gep_offset_after
 ; CHECK: G_LOAD %
 ; CHECK: BL @get_offset
-; CHECK: G_GEP
+; CHECK: G_PTR_ADD
 
   load volatile i8, i8* %ptr
   %offset = call i64 @get_offset()

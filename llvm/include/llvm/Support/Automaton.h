@@ -117,6 +117,10 @@ public:
     reset();
   }
 
+  ArrayRef<NfaStatePair> getTransitionInfo() const {
+    return TransitionInfo;
+  }
+
   void reset() {
     Paths.clear();
     Heads.clear();
@@ -198,7 +202,13 @@ public:
       M->emplace(std::make_pair(I.FromDfaState, I.Action),
                  std::make_pair(I.ToDfaState, I.InfoIdx));
   }
-  Automaton(const Automaton &) = default;
+  Automaton(const Automaton &Other)
+      : M(Other.M), State(Other.State), Transcribe(Other.Transcribe) {
+    // Transcriber is not thread-safe, so create a new instance on copy.
+    if (Other.Transcriber)
+      Transcriber = std::make_shared<internal::NfaTranscriber>(
+          Other.Transcriber->getTransitionInfo());
+  }
 
   /// Reset the automaton to its initial state.
   void reset() {

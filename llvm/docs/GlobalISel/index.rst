@@ -50,6 +50,7 @@ the following sections.
   :maxdepth: 1
 
   GMIR
+  GenericOpcode
   Pipeline
   Porting
   Resources
@@ -63,6 +64,7 @@ More information on specific passes can be found in the following sections:
   Legalizer
   RegBankSelect
   InstructionSelect
+  KnownBits
 
 .. _progress:
 

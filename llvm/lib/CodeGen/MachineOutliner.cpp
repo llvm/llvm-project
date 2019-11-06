@@ -472,7 +472,6 @@ public:
     // Keep track of the number of suffixes we have to add of the current
     // prefix.
     unsigned SuffixesToAdd = 0;
-    Active.Node = Root;
 
     // Construct the suffix tree iteratively on each prefix of the string.
     // PfxEndIdx is the end index of the current prefix.
@@ -763,7 +762,7 @@ struct InstructionMapper {
     std::vector<unsigned> UnsignedVecForMBB;
     std::vector<MachineBasicBlock::iterator> InstrListForMBB;
 
-    for (MachineBasicBlock::iterator Et = MBB.end(); It != Et; It++) {
+    for (MachineBasicBlock::iterator Et = MBB.end(); It != Et; ++It) {
       // Keep track of where this instruction is in the module.
       switch (TII.getOutliningType(It, Flags)) {
       case InstrType::Illegal:
@@ -904,10 +903,10 @@ struct MachineOutliner : public ModulePass {
   /// Return a DISubprogram for OF if one exists, and null otherwise. Helper
   /// function for remark emission.
   DISubprogram *getSubprogramOrNull(const OutlinedFunction &OF) {
-    DISubprogram *SP;
     for (const Candidate &C : OF.Candidates)
-      if (C.getMF() && (SP = C.getMF()->getFunction().getSubprogram()))
-        return SP;
+      if (MachineFunction *MF = C.getMF())
+        if (DISubprogram *SP = MF->getFunction().getSubprogram())
+          return SP;
     return nullptr;
   }
 

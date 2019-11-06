@@ -177,7 +177,7 @@ body: |
     ; VI: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
     ; VI: [[COPY2:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
     ; VI: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 68
-    ; VI: [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY2]], [[C2]](s64)
+    ; VI: [[GEP:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY2]], [[C2]](s64)
     ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 4 from `i8 addrspace(4)* undef` + 68, addrspace 4)
     ; VI: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY1]](p5), [[C]]
     ; VI: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY1]](p5)
@@ -260,7 +260,7 @@ body: |
     ; VI: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
     ; VI: [[COPY2:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
     ; VI: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
-    ; VI: [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY2]], [[C2]](s64)
+    ; VI: [[GEP:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY2]], [[C2]](s64)
     ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 4 from `i8 addrspace(4)* undef` + 64, align 64, addrspace 4)
     ; VI: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY1]](p3), [[C]]
     ; VI: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY1]](p3)
@@ -466,14 +466,14 @@ body: |
     ; VI: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
     ; VI: [[COPY2:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
     ; VI: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
-    ; VI: [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY2]], [[C2]](s64)
+    ; VI: [[GEP:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY2]], [[C2]](s64)
     ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 4 from `i8 addrspace(4)* undef` + 64, align 64, addrspace 4)
     ; VI: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](p3), [[C]]
     ; VI: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[UV]](p3)
     ; VI: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[LOAD]](s32)
     ; VI: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C1]]
     ; VI: [[COPY3:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
-    ; VI: [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY3]], [[C2]](s64)
+    ; VI: [[GEP1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY3]], [[C2]](s64)
     ; VI: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 4 from `i8 addrspace(4)* undef` + 64, align 64, addrspace 4)
     ; VI: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](p3), [[C]]
     ; VI: [[PTRTOINT1:%[0-9]+]]:_(s32) = G_PTRTOINT [[UV1]](p3)

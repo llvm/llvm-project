@@ -784,6 +784,13 @@ void MIPrinter::print(const MachineInstr &MI) {
     MachineOperand::printSymbol(OS, *PostInstrSymbol);
     NeedComma = true;
   }
+  if (MDNode *HeapAllocMarker = MI.getHeapAllocMarker()) {
+    if (NeedComma)
+      OS << ',';
+    OS << " heap-alloc-marker ";
+    HeapAllocMarker->printAsOperand(OS, MST);
+    NeedComma = true;
+  }
 
   if (const DebugLoc &DL = MI.getDebugLoc()) {
     if (NeedComma)

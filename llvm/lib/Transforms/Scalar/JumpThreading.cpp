@@ -1002,49 +1002,8 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
   // successor, merge the blocks.  This encourages recursive jump threading
   // because now the condition in this block can be threaded through
   // predecessors of our predecessor block.
-  if (BasicBlock *SinglePred = BB->getSinglePredecessor()) {
-    const Instruction *TI = SinglePred->getTerminator();
-    if (!TI->isExceptionalTerminator() && TI->getNumSuccessors() == 1 &&
-        SinglePred != BB && !hasAddressTakenAndUsed(BB)) {
-      // If SinglePred was a loop header, BB becomes one.
-      if (LoopHeaders.erase(SinglePred))
-        LoopHeaders.insert(BB);
-
-      LVI->eraseBlock(SinglePred);
-      MergeBasicBlockIntoOnlyPred(BB, DTU);
-
-      // Now that BB is merged into SinglePred (i.e. SinglePred Code followed by
-      // BB code within one basic block `BB`), we need to invalidate the LVI
-      // information associated with BB, because the LVI information need not be
-      // true for all of BB after the merge. For example,
-      // Before the merge, LVI info and code is as follows:
-      // SinglePred: <LVI info1 for %p val>
-      // %y = use of %p
-      // call @exit() // need not transfer execution to successor.
-      // assume(%p) // from this point on %p is true
-      // br label %BB
-      // BB: <LVI info2 for %p val, i.e. %p is true>
-      // %x = use of %p
-      // br label exit
-      //
-      // Note that this LVI info for blocks BB and SinglPred is correct for %p
-      // (info2 and info1 respectively). After the merge and the deletion of the
-      // LVI info1 for SinglePred. We have the following code:
-      // BB: <LVI info2 for %p val>
-      // %y = use of %p
-      // call @exit()
-      // assume(%p)
-      // %x = use of %p <-- LVI info2 is correct from here onwards.
-      // br label exit
-      // LVI info2 for BB is incorrect at the beginning of BB.
-
-      // Invalidate LVI information for BB if the LVI is not provably true for
-      // all of BB.
-      if (!isGuaranteedToTransferExecutionToSuccessor(BB))
-        LVI->eraseBlock(BB);
-      return true;
-    }
-  }
+  if (MaybeMergeBasicBlockIntoOnlyPred(BB))
+    return true;
 
   if (TryToUnfoldSelectInCurrBB(BB))
     return true;
@@ -1918,6 +1877,56 @@ static void AddPHINodeEntriesForMappedBlock(BasicBlock *PHIBB,
 
     PN.addIncoming(IV, NewPred);
   }
+}
+
+/// Merge basic block BB into its sole predecessor if possible.
+bool JumpThreadingPass::MaybeMergeBasicBlockIntoOnlyPred(BasicBlock *BB) {
+  BasicBlock *SinglePred = BB->getSinglePredecessor();
+  if (!SinglePred)
+    return false;
+
+  const Instruction *TI = SinglePred->getTerminator();
+  if (TI->isExceptionalTerminator() || TI->getNumSuccessors() != 1 ||
+      SinglePred == BB || hasAddressTakenAndUsed(BB))
+    return false;
+
+  // If SinglePred was a loop header, BB becomes one.
+  if (LoopHeaders.erase(SinglePred))
+    LoopHeaders.insert(BB);
+
+  LVI->eraseBlock(SinglePred);
+  MergeBasicBlockIntoOnlyPred(BB, DTU);
+
+  // Now that BB is merged into SinglePred (i.e. SinglePred Code followed by
+  // BB code within one basic block `BB`), we need to invalidate the LVI
+  // information associated with BB, because the LVI information need not be
+  // true for all of BB after the merge. For example,
+  // Before the merge, LVI info and code is as follows:
+  // SinglePred: <LVI info1 for %p val>
+  // %y = use of %p
+  // call @exit() // need not transfer execution to successor.
+  // assume(%p) // from this point on %p is true
+  // br label %BB
+  // BB: <LVI info2 for %p val, i.e. %p is true>
+  // %x = use of %p
+  // br label exit
+  //
+  // Note that this LVI info for blocks BB and SinglPred is correct for %p
+  // (info2 and info1 respectively). After the merge and the deletion of the
+  // LVI info1 for SinglePred. We have the following code:
+  // BB: <LVI info2 for %p val>
+  // %y = use of %p
+  // call @exit()
+  // assume(%p)
+  // %x = use of %p <-- LVI info2 is correct from here onwards.
+  // br label exit
+  // LVI info2 for BB is incorrect at the beginning of BB.
+
+  // Invalidate LVI information for BB if the LVI is not provably true for
+  // all of BB.
+  if (!isGuaranteedToTransferExecutionToSuccessor(BB))
+    LVI->eraseBlock(BB);
+  return true;
 }
 
 /// Update the SSA form.  NewBB contains instructions that are copied from BB.

@@ -78,6 +78,7 @@ class DriverBatchModeTest(PExpectTest):
         import pexpect
         child.expect(pexpect.EOF)
 
+    @skipIfRemote
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     def test_batch_mode_launch_stop_at_entry(self):
         """Test that the lldb driver's batch mode works correctly for process launch."""

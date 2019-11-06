@@ -13,6 +13,16 @@
 __constant__ int c;
 __device__ int g;
 
+// CHECK-DEFAULT: @e = external addrspace(1) global
+// CHECK-PROTECTED: @e = external protected addrspace(1) global
+// CHECK-HIDDEN: @e = external protected addrspace(1) global
+extern __device__ int e;
+
+// dummy one to hold reference to `e`.
+__device__ int f() {
+  return e;
+}
+
 // CHECK-DEFAULT: define amdgpu_kernel void @_Z3foov()
 // CHECK-PROTECTED: define protected amdgpu_kernel void @_Z3foov()
 // CHECK-HIDDEN: define protected amdgpu_kernel void @_Z3foov()

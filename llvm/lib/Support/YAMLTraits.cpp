@@ -87,7 +87,6 @@ bool Input::setCurrentDocument() {
   if (DocIterator != Strm->end()) {
     Node *N = DocIterator->getRoot();
     if (!N) {
-      assert(Strm->failed() && "Root is NULL iff parsing failed");
       EC = make_error_code(errc::invalid_argument);
       return false;
     }
@@ -394,7 +393,7 @@ std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
     auto mapHNode = std::make_unique<MapHNode>(N);
     for (KeyValueNode &KVN : *Map) {
       Node *KeyNode = KVN.getKey();
-      ScalarNode *Key = dyn_cast<ScalarNode>(KeyNode);
+      ScalarNode *Key = dyn_cast_or_null<ScalarNode>(KeyNode);
       Node *Value = KVN.getValue();
       if (!Key || !Value) {
         if (!Key)
