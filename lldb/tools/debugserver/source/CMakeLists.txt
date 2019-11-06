@@ -219,8 +219,7 @@ if (debugserver_codesign_identity AND LLDB_BUILD_FRAMEWORK AND
     set(pass_entitlements --entitlements ${entitlements})
   endif()
 
-  get_target_property(framework_build_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
-  set(copy_location ${framework_build_dir}/LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/Resources/debugserver)
+  set(copy_location ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/Resources/debugserver)
 
   add_custom_command(TARGET debugserver POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E
