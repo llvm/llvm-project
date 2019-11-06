@@ -898,6 +898,36 @@ ConstantRange::sub(const ConstantRange &Other) const {
   return X;
 }
 
+ConstantRange ConstantRange::subWithNoWrap(const ConstantRange &Other,
+                                           unsigned NoWrapKind,
+                                           PreferredRangeType RangeType) const {
+  // Calculate the range for "X - Y" which is guaranteed not to wrap(overflow).
+  // (X is from this, and Y is from Other)
+  if (isEmptySet() || Other.isEmptySet())
+    return getEmpty();
+  if (isFullSet() && Other.isFullSet())
+    return getFull();
+
+  using OBO = OverflowingBinaryOperator;
+  ConstantRange Result = sub(Other);
+
+  // If an overflow happens for every value pair in these two constant ranges,
+  // we must return Empty set. In signed case, we get that for free, because we
+  // get lucky that intersection of add() with ssub_sat() results in an
+  // empty set. But for unsigned we must perform the overflow check manually.
+
+  if (NoWrapKind & OBO::NoSignedWrap)
+    Result = Result.intersectWith(ssub_sat(Other), RangeType);
+
+  if (NoWrapKind & OBO::NoUnsignedWrap) {
+    if (getUnsignedMax().ult(Other.getUnsignedMin()))
+      return getEmpty(); // Always overflows.
+    Result = Result.intersectWith(usub_sat(Other), RangeType);
+  }
+
+  return Result;
+}
+
 ConstantRange
 ConstantRange::multiply(const ConstantRange &Other) const {
   // TODO: If either operand is a single element and the multiply is known to
