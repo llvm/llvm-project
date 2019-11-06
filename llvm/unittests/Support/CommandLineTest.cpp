@@ -1653,4 +1653,54 @@ TEST(CommandLineTest, LongOptions) {
   EXPECT_TRUE(Errs.empty()); Errs.clear();
   cl::ResetAllOptionOccurrences();
 }
+
+TEST(CommandLineTest, OptionErrorMessage) {
+  // When there is an error, we expect some error message like:
+  //   prog: for the -a option: [...]
+  //
+  // Test whether the "for the -a option"-part is correctly formatted.
+  cl::ResetCommandLineParser();
+
+  StackOption<bool> OptA("a", cl::desc("Some option"));
+  StackOption<bool> OptLong("long", cl::desc("Some long option"));
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
+  OptA.error("custom error", OS);
+  OS.flush();
+  EXPECT_FALSE(Errs.find("for the -a option:") == std::string::npos);
+  Errs.clear();
+
+  OptLong.error("custom error", OS);
+  OS.flush();
+  EXPECT_FALSE(Errs.find("for the --long option:") == std::string::npos);
+  Errs.clear();
+
+  cl::ResetAllOptionOccurrences();
+}
+
+TEST(CommandLineTest, OptionErrorMessageSuggest) {
+  // When there is an error, and the edit-distance is not very large,
+  // we expect some error message like:
+  //   prog: did you mean '--option'?
+  //
+  // Test whether this message is well-formatted.
+  cl::ResetCommandLineParser();
+
+  StackOption<bool> OptLong("aluminium", cl::desc("Some long option"));
+
+  const char *args[] = {"prog", "--aluminum"};
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
+  EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, StringRef(), &OS));
+  OS.flush();
+  EXPECT_FALSE(Errs.find("prog: Did you mean '--aluminium'?\n") ==
+               std::string::npos);
+  Errs.clear();
+
+  cl::ResetAllOptionOccurrences();
+}
 }  // anonymous namespace
