@@ -23,6 +23,7 @@
 #include "InconsistentDeclarationParameterNameCheck.h"
 #include "IsolateDeclarationCheck.h"
 #include "MagicNumbersCheck.h"
+#include "MakeMemberFunctionConstCheck.h"
 #include "MisleadingIndentationCheck.h"
 #include "MisplacedArrayIndexCheck.h"
 #include "NamedParameterCheck.h"
@@ -79,6 +80,8 @@ public:
         "readability-isolate-declaration");
     CheckFactories.registerCheck<MagicNumbersCheck>(
         "readability-magic-numbers");
+    CheckFactories.registerCheck<MakeMemberFunctionConstCheck>(
+        "readability-make-member-function-const");
     CheckFactories.registerCheck<MisleadingIndentationCheck>(
         "readability-misleading-indentation");
     CheckFactories.registerCheck<MisplacedArrayIndexCheck>(
