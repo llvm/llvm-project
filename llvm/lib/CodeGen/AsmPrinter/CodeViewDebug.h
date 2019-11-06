@@ -443,6 +443,19 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
                                                codeview::TypeIndex TI,
                                                const DIType *ClassTy = nullptr);
 
+  /// Collect the names of parent scopes, innermost to outermost. Return the
+  /// innermost subprogram scope if present. Ensure that parent type scopes are
+  /// inserted into the type table.
+  const DISubprogram *
+  collectParentScopeNames(const DIScope *Scope,
+                          SmallVectorImpl<StringRef> &ParentScopeNames);
+
+  std::string formatNestedName(ArrayRef<StringRef> ParentScopeNames,
+                               StringRef TypeName);
+
+  std::string getFullyQualifiedName(const DIScope *Scope, StringRef Name);
+  std::string getFullyQualifiedName(const DIScope *Scope);
+
   unsigned getPointerSizeInBytes();
 
 protected:
