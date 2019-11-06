@@ -21182,12 +21182,14 @@ static SDValue splitVectorStore(StoreSDNode *Store, SelectionDAG &DAG) {
          "Expecting 256/512-bit op");
 
   // Splitting volatile memory ops is not allowed unless the operation was not
-  // legal to begin with. We are assuming the input op is legal (this transform
-  // is only used for targets with AVX).
+  // legal to begin with. Assume the input store is legal (this transform is
+  // only used for targets with AVX). Note: It is possible that we have an
+  // illegal type like v2i128, and so we could allow splitting a volatile store
+  // in that case if that is important.
   if (Store->isVolatile())
     return SDValue();
 
-  MVT StoreVT = StoredVal.getSimpleValueType();
+  EVT StoreVT = StoredVal.getValueType();
   unsigned NumElems = StoreVT.getVectorNumElements();
   unsigned HalfSize = StoredVal.getValueSizeInBits() / 2;
   unsigned HalfAlign = (128 == HalfSize ? 16 : 32);
