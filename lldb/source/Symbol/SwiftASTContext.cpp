@@ -1948,7 +1948,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     // the Clang modules that were imported in this module. This can
     // be a lot of work (potentially ten seconds per module), but it
     // can be performed in parallel.
-    llvm::ThreadPool pool;
+    const unsigned threads = repro::Reproducer::Instance().IsReplaying()
+                                 ? 1
+                                 : llvm::hardware_concurrency();
+    llvm::ThreadPool pool(threads);
     for (size_t mi = 0; mi != num_images; ++mi) {
       auto module_sp = target.GetImages().GetModuleAtIndex(mi);
       pool.async([=] {
