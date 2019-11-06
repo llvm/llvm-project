@@ -11,14 +11,14 @@
 # CHECK:      .debug_loclists contents:
 # CHECK-NEXT: 0x00000000: locations list header: length = 0x0000002c, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 # CHECK-NEXT: 0x0000000c:
-# CHECK-NEXT:   DW_LLE_offset_pair (0x0000000000000000, 0x0000000000000010)
+# CHECK-NEXT:   DW_LLE_offset_pair  (0x0000000000000000, 0x0000000000000010)
 # CHECK-NEXT:                   => [0x0000000000000000, 0x0000000000000010): DW_OP_breg5 RDI+0
-# CHECK-NEXT:   DW_LLE_base_address(0x0000000000000500)
-# CHECK-NEXT:   DW_LLE_offset_pair (0x0000000000000030, 0x0000000000000040)
+# CHECK-NEXT:   DW_LLE_base_address (0x0000000000000500)
+# CHECK-NEXT:   DW_LLE_offset_pair  (0x0000000000000030, 0x0000000000000040)
 # CHECK-NEXT:                   => [0x0000000000000530, 0x0000000000000540): DW_OP_breg6 RBP-8, DW_OP_deref
-# CHECK-NEXT:   DW_LLE_start_length(0x0000000000000700, 0x0000000000000010)
+# CHECK-NEXT:   DW_LLE_start_length (0x0000000000000700, 0x0000000000000010)
 # CHECK-NEXT:                   => [0x0000000000000700, 0x0000000000000710): DW_OP_breg5 RDI+0
-# CHECK-NEXT:   DW_LLE_end_of_list ()
+# CHECK-NEXT:   DW_LLE_end_of_list  ()
 
 .section  .debug_str,"MS",@progbits,1
   .asciz  "stub"
