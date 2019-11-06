@@ -4221,6 +4221,20 @@ bool llvm::isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
   return llvm::any_of(GuardingBranches, AllUsesGuardedByBranch);
 }
 
+bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V) {
+  // If the value is a freeze instruction, then it can never
+  // be undef or poison.
+  if (isa<FreezeInst>(V))
+    return true;
+  // TODO: Some instructions are guaranteed to return neither undef
+  // nor poison if their arguments are not poison/undef.
+
+  // TODO: Deal with other Constant subclasses.
+  if (isa<ConstantInt>(V) || isa<GlobalVariable>(V))
+    return true;
+
+  return false;
+}
 
 OverflowResult llvm::computeOverflowForSignedAdd(const AddOperator *Add,
                                                  const DataLayout &DL,
