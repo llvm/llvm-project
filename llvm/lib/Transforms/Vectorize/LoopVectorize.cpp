@@ -7423,13 +7423,18 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
 
 static ScalarEpilogueLowering
 getScalarEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
-                          ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
+                          ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI,
+                          TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
+                          AssumptionCache *AC, LoopInfo *LI,
+                          ScalarEvolution *SE, DominatorTree *DT,
+                          const LoopAccessInfo *LAI) {
   ScalarEpilogueLowering SEL = CM_ScalarEpilogueAllowed;
   if (Hints.getForce() != LoopVectorizeHints::FK_Enabled &&
       (F->hasOptSize() ||
        llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI)))
     SEL = CM_ScalarEpilogueNotAllowedOptSize;
-  else if (PreferPredicateOverEpilog || Hints.getPredicate()) 
+  else if (PreferPredicateOverEpilog || Hints.getPredicate() ||
+           TTI->preferPredicateOverEpilogue(L, LI, *SE, *AC, TLI, DT, LAI))
     SEL = CM_ScalarEpilogueNotNeededUsePredicate;
 
   return SEL;
@@ -7449,7 +7454,10 @@ static bool processLoopInVPlanNativePath(
   assert(EnableVPlanNativePath && "VPlan-native path is disabled.");
   Function *F = L->getHeader()->getParent();
   InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL->getLAI());
-  ScalarEpilogueLowering SEL = getScalarEpilogueLowering(F, L, Hints, PSI, BFI);
+
+  ScalarEpilogueLowering SEL =
+    getScalarEpilogueLowering(F, L, Hints, PSI, BFI, TTI, TLI, AC, LI,
+                              PSE.getSE(), DT, LVL->getLAI());
 
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, LVL, *TTI, TLI, DB, AC, ORE, F,
                                 &Hints, IAI);
@@ -7541,7 +7549,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Check the function attributes and profiles to find out if this function
   // should be optimized for size.
-  ScalarEpilogueLowering SEL = getScalarEpilogueLowering(F, L, Hints, PSI, BFI);
+  ScalarEpilogueLowering SEL =
+    getScalarEpilogueLowering(F, L, Hints, PSI, BFI, TTI, TLI, AC, LI,
+                              PSE.getSE(), DT, LVL.getLAI());
 
   // Entrance to the VPlan-native vectorization path. Outer loops are processed
   // here. They may require CFG and instruction level transformations before

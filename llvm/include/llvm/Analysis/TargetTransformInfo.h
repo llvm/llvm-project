@@ -46,6 +46,7 @@ class Function;
 class GlobalValue;
 class IntrinsicInst;
 class LoadInst;
+class LoopAccessInfo;
 class Loop;
 class ProfileSummaryInfo;
 class SCEV;
@@ -517,6 +518,13 @@ public:
                                 AssumptionCache &AC,
                                 TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) const;
+
+  /// Query the target whether it would be prefered to create a predicated vector
+  /// loop, which can avoid the need to emit a scalar epilogue loop.
+  bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
+                                   AssumptionCache &AC, TargetLibraryInfo *TLI,
+                                   DominatorTree *DT,
+                                   const LoopAccessInfo *LAI) const;
 
   /// @}
 
@@ -1201,6 +1209,12 @@ public:
                                         AssumptionCache &AC,
                                         TargetLibraryInfo *LibInfo,
                                         HardwareLoopInfo &HWLoopInfo) = 0;
+  virtual bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI,
+                                           ScalarEvolution &SE,
+                                           AssumptionCache &AC,
+                                           TargetLibraryInfo *TLI,
+                                           DominatorTree *DT,
+                                           const LoopAccessInfo *LAI) = 0;
   virtual bool isLegalAddImmediate(int64_t Imm) = 0;
   virtual bool isLegalICmpImmediate(int64_t Imm) = 0;
   virtual bool isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
@@ -1470,6 +1484,12 @@ public:
                                 TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) override {
     return Impl.isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
+  }
+  bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
+                                   AssumptionCache &AC, TargetLibraryInfo *TLI,
+                                   DominatorTree *DT,
+                                   const LoopAccessInfo *LAI) override {
+    return Impl.preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LAI);
   }
   bool isLegalAddImmediate(int64_t Imm) override {
     return Impl.isLegalAddImmediate(Imm);
