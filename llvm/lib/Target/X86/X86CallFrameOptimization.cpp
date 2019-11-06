@@ -115,12 +115,12 @@ private:
 
   StringRef getPassName() const override { return "X86 Optimize Call Frame"; }
 
-  const X86InstrInfo *TII;
-  const X86FrameLowering *TFL;
-  const X86Subtarget *STI;
-  MachineRegisterInfo *MRI;
-  unsigned SlotSize;
-  unsigned Log2SlotSize;
+  const X86InstrInfo *TII = nullptr;
+  const X86FrameLowering *TFL = nullptr;
+  const X86Subtarget *STI = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
+  unsigned SlotSize = 0;
+  unsigned Log2SlotSize = 0;
 };
 
 } // end anonymous namespace

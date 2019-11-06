@@ -127,16 +127,16 @@ public:
   }
 
 private:
-  MachineFunction *MF;
+  MachineFunction *MF = nullptr;
 
   /// Machine instruction info used throughout the class.
-  const X86InstrInfo *TII;
+  const X86InstrInfo *TII = nullptr;
 
   /// Local member for function's OptForSize attribute.
-  bool OptForSize;
+  bool OptForSize = false;
 
   /// Machine loop info used for guiding some heruistics.
-  MachineLoopInfo *MLI;
+  MachineLoopInfo *MLI = nullptr;
 
   /// Register Liveness information after the current instruction.
   LivePhysRegs LiveRegs;
