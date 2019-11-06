@@ -53,6 +53,7 @@ def OP_MLAL_N   : Op<(op "+", $p0, (call "vmull", $p1, (dup $p2)))>;
 def OP_MLSL_N   : Op<(op "-", $p0, (call "vmull", $p1, (dup $p2)))>;
 def OP_MUL_LN   : Op<(op "*", $p0, (splat $p1, $p2))>;
 def OP_MULX_LN  : Op<(call "vmulx", $p0, (splat $p1, $p2))>;
+def OP_MULL_N  : Op<(call "vmull", $p0, (dup $p1))>;
 def OP_MULL_LN  : Op<(call "vmull", $p0, (splat $p1, $p2))>;
 def OP_MULLHi_LN: Op<(call "vmull", (call "vget_high", $p0), (splat $p1, $p2))>;
 def OP_MLA_LN   : Op<(op "+", $p0, (op "*", $p1, (splat $p2, $p3)))>;
@@ -63,17 +64,22 @@ def OP_MLALHi_LN: Op<(op "+", $p0, (call "vmull", (call "vget_high", $p1),
 def OP_MLSL_LN  : Op<(op "-", $p0, (call "vmull", $p1, (splat $p2, $p3)))>;
 def OP_MLSLHi_LN : Op<(op "-", $p0, (call "vmull", (call "vget_high", $p1),
                                                    (splat $p2, $p3)))>;
+def OP_QDMULL_N : Op<(call "vqdmull", $p0, (dup $p1))>;
 def OP_QDMULL_LN : Op<(call "vqdmull", $p0, (splat $p1, $p2))>;
 def OP_QDMULLHi_LN : Op<(call "vqdmull", (call "vget_high", $p0),
                                          (splat $p1, $p2))>;
+def OP_QDMLAL_N : Op<(call "vqdmlal", $p0, $p1, (dup $p2))>;
 def OP_QDMLAL_LN : Op<(call "vqdmlal", $p0, $p1, (splat $p2, $p3))>;
 def OP_QDMLALHi_LN : Op<(call "vqdmlal", $p0, (call "vget_high", $p1),
                                               (splat $p2, $p3))>;
+def OP_QDMLSL_N : Op<(call "vqdmlsl", $p0, $p1, (dup $p2))>;
 def OP_QDMLSL_LN : Op<(call "vqdmlsl", $p0, $p1, (splat $p2, $p3))>;
 def OP_QDMLSLHi_LN : Op<(call "vqdmlsl", $p0, (call "vget_high", $p1),
                                               (splat $p2, $p3))>;
+def OP_QDMULH_N : Op<(call "vqdmulh", $p0, (dup $p1))>;
 def OP_QDMULH_LN : Op<(call "vqdmulh", $p0, (splat $p1, $p2))>;
 def OP_QRDMULH_LN : Op<(call "vqrdmulh", $p0, (splat $p1, $p2))>;
+def OP_QRDMULH_N : Op<(call "vqrdmulh", $p0, (dup $p1))>;
 def OP_QRDMLAH : Op<(call "vqadd", $p0, (call "vqrdmulh", $p1, $p2))>;
 def OP_QRDMLSH : Op<(call "vqsub", $p0, (call "vqrdmulh", $p1, $p2))>;
 def OP_QRDMLAH_LN : Op<(call "vqadd", $p0, (call "vqrdmulh", $p1, (splat $p2, $p3)))>;
@@ -516,13 +522,13 @@ def VQDMLSL_LANE  : SOpInst<"vqdmlsl_lane", "wwddi", "si", OP_QDMLSL_LN>;
 def VMUL_N        : IOpInst<"vmul_n", "dds", "sifUsUiQsQiQfQUsQUi", OP_MUL_N>;
 def VMUL_LANE     : IOpInst<"vmul_lane", "ddgi",
                             "sifUsUiQsQiQfQUsQUi", OP_MUL_LN>;
-def VMULL_N       : SInst<"vmull_n", "wda", "siUsUi">;
+def VMULL_N       : SOpInst<"vmull_n", "wds", "siUsUi", OP_MULL_N>;
 def VMULL_LANE    : SOpInst<"vmull_lane", "wddi", "siUsUi", OP_MULL_LN>;
-def VQDMULL_N     : SInst<"vqdmull_n", "wda", "si">;
+def VQDMULL_N     : SOpInst<"vqdmull_n", "wds", "si", OP_QDMULL_N>;
 def VQDMULL_LANE  : SOpInst<"vqdmull_lane", "wddi", "si", OP_QDMULL_LN>;
-def VQDMULH_N     : SInst<"vqdmulh_n", "dda", "siQsQi">;
+def VQDMULH_N     : SOpInst<"vqdmulh_n", "dds", "siQsQi", OP_QDMULH_N>;
 def VQDMULH_LANE  : SOpInst<"vqdmulh_lane", "ddgi", "siQsQi", OP_QDMULH_LN>;
-def VQRDMULH_N    : SInst<"vqrdmulh_n", "dda", "siQsQi">;
+def VQRDMULH_N    : SOpInst<"vqrdmulh_n", "dds", "siQsQi", OP_QRDMULH_N>;
 def VQRDMULH_LANE : SOpInst<"vqrdmulh_lane", "ddgi", "siQsQi", OP_QRDMULH_LN>;
 
 let ArchGuard = "defined(__ARM_FEATURE_QRDMX)" in {
@@ -530,12 +536,12 @@ def VQRDMLAH_LANE : SOpInst<"vqrdmlah_lane", "dddgi", "siQsQi", OP_QRDMLAH_LN>;
 def VQRDMLSH_LANE : SOpInst<"vqrdmlsh_lane", "dddgi", "siQsQi", OP_QRDMLSH_LN>;
 }
 
-def VMLA_N        : IOpInst<"vmla_n", "ddda", "siUsUifQsQiQUsQUiQf", OP_MLA_N>;
-def VMLAL_N       : SOpInst<"vmlal_n", "wwda", "siUsUi", OP_MLAL_N>;
-def VQDMLAL_N     : SInst<"vqdmlal_n", "wwda", "si">;
+def VMLA_N        : IOpInst<"vmla_n", "ddds", "siUsUifQsQiQUsQUiQf", OP_MLA_N>;
+def VMLAL_N       : SOpInst<"vmlal_n", "wwds", "siUsUi", OP_MLAL_N>;
+def VQDMLAL_N     : SOpInst<"vqdmlal_n", "wwds", "si", OP_QDMLAL_N>;
 def VMLS_N        : IOpInst<"vmls_n", "ddds", "siUsUifQsQiQUsQUiQf", OP_MLS_N>;
-def VMLSL_N       : SOpInst<"vmlsl_n", "wwda", "siUsUi", OP_MLSL_N>;
-def VQDMLSL_N     : SInst<"vqdmlsl_n", "wwda", "si">;
+def VMLSL_N       : SOpInst<"vmlsl_n", "wwds", "siUsUi", OP_MLSL_N>;
+def VQDMLSL_N     : SOpInst<"vqdmlsl_n", "wwds", "si", OP_QDMLSL_N>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.26 Vector Extract
