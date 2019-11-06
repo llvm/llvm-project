@@ -96,7 +96,7 @@ protected:
                      .bind("expr")))
             .bind("stmt"));
     ASSERT_TRUE(StmtMatch);
-    if (auto ResultOrErr = Stencil.eval(StmtMatch->Result)) {
+    if (auto ResultOrErr = Stencil->eval(StmtMatch->Result)) {
       ADD_FAILURE() << "Expected failure but succeeded: " << *ResultOrErr;
     } else {
       auto Err = llvm::handleErrors(ResultOrErr.takeError(),
@@ -131,11 +131,12 @@ TEST_F(StencilTest, SingleStatement) {
   // Invert the if-then-else.
   auto Stencil = cat("if (!", node(Condition), ") ", statement(Else), " else ",
                      statement(Then));
-  EXPECT_THAT_EXPECTED(Stencil.eval(StmtMatch->Result),
+  EXPECT_THAT_EXPECTED(Stencil->eval(StmtMatch->Result),
                        HasValue("if (!true) return 0; else return 1;"));
 }
 
-TEST_F(StencilTest, SingleStatementCallOperator) {
+// Tests `stencil`.
+TEST_F(StencilTest, StencilFactoryFunction) {
   StringRef Condition("C"), Then("T"), Else("E");
   const std::string Snippet = R"cc(
     if (true)
@@ -148,9 +149,9 @@ TEST_F(StencilTest, SingleStatementCallOperator) {
                       hasThen(stmt().bind(Then)), hasElse(stmt().bind(Else))));
   ASSERT_TRUE(StmtMatch);
   // Invert the if-then-else.
-  Stencil S = cat("if (!", node(Condition), ") ", statement(Else), " else ",
-                  statement(Then));
-  EXPECT_THAT_EXPECTED(S(StmtMatch->Result),
+  auto Consumer = cat("if (!", node(Condition), ") ", statement(Else), " else ",
+                      statement(Then));
+  EXPECT_THAT_EXPECTED(Consumer(StmtMatch->Result),
                        HasValue("if (!true) return 0; else return 1;"));
 }
 
@@ -165,7 +166,7 @@ TEST_F(StencilTest, UnboundNode) {
                                              hasThen(stmt().bind("a2"))));
   ASSERT_TRUE(StmtMatch);
   auto Stencil = cat("if(!", node("a1"), ") ", node("UNBOUND"), ";");
-  auto ResultOrErr = Stencil.eval(StmtMatch->Result);
+  auto ResultOrErr = Stencil->eval(StmtMatch->Result);
   EXPECT_TRUE(llvm::errorToBool(ResultOrErr.takeError()))
       << "Expected unbound node, got " << *ResultOrErr;
 }
@@ -176,14 +177,14 @@ void testExpr(StringRef Id, StringRef Snippet, const Stencil &Stencil,
               StringRef Expected) {
   auto StmtMatch = matchStmt(Snippet, expr().bind(Id));
   ASSERT_TRUE(StmtMatch);
-  EXPECT_THAT_EXPECTED(Stencil.eval(StmtMatch->Result), HasValue(Expected));
+  EXPECT_THAT_EXPECTED(Stencil->eval(StmtMatch->Result), HasValue(Expected));
 }
 
 void testFailure(StringRef Id, StringRef Snippet, const Stencil &Stencil,
                  testing::Matcher<std::string> MessageMatcher) {
   auto StmtMatch = matchStmt(Snippet, expr().bind(Id));
   ASSERT_TRUE(StmtMatch);
-  EXPECT_THAT_EXPECTED(Stencil.eval(StmtMatch->Result),
+  EXPECT_THAT_EXPECTED(Stencil->eval(StmtMatch->Result),
                        Failed<StringError>(testing::Property(
                            &StringError::getMessage, MessageMatcher)));
 }
@@ -195,28 +196,28 @@ TEST_F(StencilTest, SelectionOp) {
 
 TEST_F(StencilTest, IfBoundOpBound) {
   StringRef Id = "id";
-  testExpr(Id, "3;", cat(ifBound(Id, text("5"), text("7"))), "5");
+  testExpr(Id, "3;", ifBound(Id, text("5"), text("7")), "5");
 }
 
 TEST_F(StencilTest, IfBoundOpUnbound) {
   StringRef Id = "id";
-  testExpr(Id, "3;", cat(ifBound("other", text("5"), text("7"))), "7");
+  testExpr(Id, "3;", ifBound("other", text("5"), text("7")), "7");
 }
 
 TEST_F(StencilTest, ExpressionOpNoParens) {
   StringRef Id = "id";
-  testExpr(Id, "3;", cat(expression(Id)), "3");
+  testExpr(Id, "3;", expression(Id), "3");
 }
 
 // Don't parenthesize a parens expression.
 TEST_F(StencilTest, ExpressionOpNoParensParens) {
   StringRef Id = "id";
-  testExpr(Id, "(3);", cat(expression(Id)), "(3)");
+  testExpr(Id, "(3);", expression(Id), "(3)");
 }
 
 TEST_F(StencilTest, ExpressionOpBinaryOpParens) {
   StringRef Id = "id";
-  testExpr(Id, "3+4;", cat(expression(Id)), "(3+4)");
+  testExpr(Id, "3+4;", expression(Id), "(3+4)");
 }
 
 // `expression` shares code with other ops, so we get sufficient coverage of the
@@ -224,33 +225,33 @@ TEST_F(StencilTest, ExpressionOpBinaryOpParens) {
 // tests should be added.
 TEST_F(StencilTest, ExpressionOpUnbound) {
   StringRef Id = "id";
-  testFailure(Id, "3;", cat(expression("ACACA")),
+  testFailure(Id, "3;", expression("ACACA"),
               AllOf(HasSubstr("ACACA"), HasSubstr("not bound")));
 }
 
 TEST_F(StencilTest, DerefPointer) {
   StringRef Id = "id";
-  testExpr(Id, "int *x; x;", cat(deref(Id)), "*x");
+  testExpr(Id, "int *x; x;", deref(Id), "*x");
 }
 
 TEST_F(StencilTest, DerefBinOp) {
   StringRef Id = "id";
-  testExpr(Id, "int *x; x + 1;", cat(deref(Id)), "*(x + 1)");
+  testExpr(Id, "int *x; x + 1;", deref(Id), "*(x + 1)");
 }
 
 TEST_F(StencilTest, DerefAddressExpr) {
   StringRef Id = "id";
-  testExpr(Id, "int x; &x;", cat(deref(Id)), "x");
+  testExpr(Id, "int x; &x;", deref(Id), "x");
 }
 
 TEST_F(StencilTest, AddressOfValue) {
   StringRef Id = "id";
-  testExpr(Id, "int x; x;", cat(addressOf(Id)), "&x");
+  testExpr(Id, "int x; x;", addressOf(Id), "&x");
 }
 
 TEST_F(StencilTest, AddressOfDerefExpr) {
   StringRef Id = "id";
-  testExpr(Id, "int *x; *x;", cat(addressOf(Id)), "x");
+  testExpr(Id, "int *x; *x;", addressOf(Id), "x");
 }
 
 TEST_F(StencilTest, AccessOpValue) {
@@ -259,7 +260,7 @@ TEST_F(StencilTest, AccessOpValue) {
     x;
   )cc";
   StringRef Id = "id";
-  testExpr(Id, Snippet, cat(access(Id, "field")), "x.field");
+  testExpr(Id, Snippet, access(Id, "field"), "x.field");
 }
 
 TEST_F(StencilTest, AccessOpValueExplicitText) {
@@ -268,7 +269,7 @@ TEST_F(StencilTest, AccessOpValueExplicitText) {
     x;
   )cc";
   StringRef Id = "id";
-  testExpr(Id, Snippet, cat(access(Id, text("field"))), "x.field");
+  testExpr(Id, Snippet, access(Id, text("field")), "x.field");
 }
 
 TEST_F(StencilTest, AccessOpValueAddress) {
@@ -277,7 +278,7 @@ TEST_F(StencilTest, AccessOpValueAddress) {
     &x;
   )cc";
   StringRef Id = "id";
-  testExpr(Id, Snippet, cat(access(Id, "field")), "x.field");
+  testExpr(Id, Snippet, access(Id, "field"), "x.field");
 }
 
 TEST_F(StencilTest, AccessOpPointer) {
@@ -286,7 +287,7 @@ TEST_F(StencilTest, AccessOpPointer) {
     x;
   )cc";
   StringRef Id = "id";
-  testExpr(Id, Snippet, cat(access(Id, "field")), "x->field");
+  testExpr(Id, Snippet, access(Id, "field"), "x->field");
 }
 
 TEST_F(StencilTest, AccessOpPointerDereference) {
@@ -295,7 +296,7 @@ TEST_F(StencilTest, AccessOpPointerDereference) {
     *x;
   )cc";
   StringRef Id = "id";
-  testExpr(Id, Snippet, cat(access(Id, "field")), "x->field");
+  testExpr(Id, Snippet, access(Id, "field"), "x->field");
 }
 
 TEST_F(StencilTest, AccessOpExplicitThis) {
@@ -314,8 +315,8 @@ TEST_F(StencilTest, AccessOpExplicitThis) {
       matchStmt(Snippet, returnStmt(hasReturnValue(ignoringImplicit(memberExpr(
                              hasObjectExpression(expr().bind("obj")))))));
   ASSERT_TRUE(StmtMatch);
-  const Stencil Stencil = cat(access("obj", "field"));
-  EXPECT_THAT_EXPECTED(Stencil.eval(StmtMatch->Result),
+  const Stencil Stencil = access("obj", "field");
+  EXPECT_THAT_EXPECTED(Stencil->eval(StmtMatch->Result),
                        HasValue("this->field"));
 }
 
@@ -335,8 +336,8 @@ TEST_F(StencilTest, AccessOpImplicitThis) {
       matchStmt(Snippet, returnStmt(hasReturnValue(ignoringImplicit(memberExpr(
                              hasObjectExpression(expr().bind("obj")))))));
   ASSERT_TRUE(StmtMatch);
-  const Stencil Stencil = cat(access("obj", "field"));
-  EXPECT_THAT_EXPECTED(Stencil.eval(StmtMatch->Result), HasValue("field"));
+  const Stencil Stencil = access("obj", "field");
+  EXPECT_THAT_EXPECTED(Stencil->eval(StmtMatch->Result), HasValue("field"));
 }
 
 TEST_F(StencilTest, RunOp) {
@@ -345,80 +346,106 @@ TEST_F(StencilTest, RunOp) {
     return std::string(R.Nodes.getNodeAs<Stmt>(Id) != nullptr ? "Bound"
                                                               : "Unbound");
   };
-  testExpr(Id, "3;", cat(run(SimpleFn)), "Bound");
+  testExpr(Id, "3;", run(SimpleFn), "Bound");
 }
 
 TEST(StencilToStringTest, RawTextOp) {
   auto S = cat("foo bar baz");
   StringRef Expected = R"("foo bar baz")";
-  EXPECT_EQ(S.toString(), Expected);
+  EXPECT_EQ(S->toString(), Expected);
 }
 
 TEST(StencilToStringTest, RawTextOpEscaping) {
   auto S = cat("foo \"bar\" baz\\n");
   StringRef Expected = R"("foo \"bar\" baz\\n")";
-  EXPECT_EQ(S.toString(), Expected);
+  EXPECT_EQ(S->toString(), Expected);
 }
 
 TEST(StencilToStringTest, DebugPrintNodeOp) {
-  auto S = cat(dPrint("Id"));
+  auto S = dPrint("Id");
   StringRef Expected = R"repr(dPrint("Id"))repr";
-  EXPECT_EQ(S.toString(), Expected);
+  EXPECT_EQ(S->toString(), Expected);
 }
 
 TEST(StencilToStringTest, ExpressionOp) {
-  auto S = cat(expression("Id"));
+  auto S = expression("Id");
   StringRef Expected = R"repr(expression("Id"))repr";
-  EXPECT_EQ(S.toString(), Expected);
+  EXPECT_EQ(S->toString(), Expected);
 }
 
 TEST(StencilToStringTest, DerefOp) {
-  auto S = cat(deref("Id"));
+  auto S = deref("Id");
   StringRef Expected = R"repr(deref("Id"))repr";
-  EXPECT_EQ(S.toString(), Expected);
+  EXPECT_EQ(S->toString(), Expected);
 }
 
 TEST(StencilToStringTest, AddressOfOp) {
-  auto S = cat(addressOf("Id"));
+  auto S = addressOf("Id");
   StringRef Expected = R"repr(addressOf("Id"))repr";
-  EXPECT_EQ(S.toString(), Expected);
+  EXPECT_EQ(S->toString(), Expected);
 }
 
 TEST(StencilToStringTest, SelectionOp) {
   auto S1 = cat(node("node1"));
-  EXPECT_EQ(S1.toString(), "selection(...)");
+  EXPECT_EQ(S1->toString(), "selection(...)");
 }
 
-TEST(StencilToStringTest, AccessOp) {
-  auto S = cat(access("Id", text("memberData")));
+TEST(StencilToStringTest, AccessOpText) {
+  auto S = access("Id", "memberData");
   StringRef Expected = R"repr(access("Id", "memberData"))repr";
-  EXPECT_EQ(S.toString(), Expected);
+  EXPECT_EQ(S->toString(), Expected);
 }
 
-TEST(StencilToStringTest, AccessOpStencilPart) {
-  auto S = cat(access("Id", access("subId", "memberData")));
-  StringRef Expected = R"repr(access("Id", access("subId", "memberData")))repr";
-  EXPECT_EQ(S.toString(), Expected);
+TEST(StencilToStringTest, AccessOpSelector) {
+  auto S = access("Id", selection(name("otherId")));
+  StringRef Expected = R"repr(access("Id", selection(...)))repr";
+  EXPECT_EQ(S->toString(), Expected);
+}
+
+TEST(StencilToStringTest, AccessOpStencil) {
+  auto S = access("Id", cat("foo_", "bar"));
+  StringRef Expected = R"repr(access("Id", seq("foo_", "bar")))repr";
+  EXPECT_EQ(S->toString(), Expected);
 }
 
 TEST(StencilToStringTest, IfBoundOp) {
-  auto S = cat(ifBound("Id", text("trueText"), access("exprId", "memberData")));
+  auto S = ifBound("Id", text("trueText"), access("exprId", "memberData"));
   StringRef Expected =
       R"repr(ifBound("Id", "trueText", access("exprId", "memberData")))repr";
-  EXPECT_EQ(S.toString(), Expected);
+  EXPECT_EQ(S->toString(), Expected);
 }
 
 TEST(StencilToStringTest, RunOp) {
   auto F1 = [](const MatchResult &R) { return "foo"; };
-  auto S1 = cat(run(F1));
-  EXPECT_EQ(S1.toString(), "run(...)");
+  auto S1 = run(F1);
+  EXPECT_EQ(S1->toString(), "run(...)");
 }
 
-TEST(StencilToStringTest, MultipleOp) {
+TEST(StencilToStringTest, Sequence) {
   auto S = cat("foo", access("x", "m()"), "bar",
                ifBound("x", text("t"), access("e", "f")));
-  StringRef Expected = R"repr("foo", access("x", "m()"), "bar", )repr"
-                       R"repr(ifBound("x", "t", access("e", "f")))repr";
-  EXPECT_EQ(S.toString(), Expected);
+  StringRef Expected = R"repr(seq("foo", access("x", "m()"), "bar", )repr"
+                       R"repr(ifBound("x", "t", access("e", "f"))))repr";
+  EXPECT_EQ(S->toString(), Expected);
+}
+
+TEST(StencilToStringTest, SequenceEmpty) {
+  auto S = cat();
+  StringRef Expected = "seq()";
+  EXPECT_EQ(S->toString(), Expected);
+}
+
+TEST(StencilToStringTest, SequenceSingle) {
+  auto S = cat("foo");
+  StringRef Expected = "\"foo\"";
+  EXPECT_EQ(S->toString(), Expected);
+}
+
+TEST(StencilToStringTest, SequenceFromVector) {
+  auto S = catVector({text("foo"), access("x", "m()"), text("bar"),
+                      ifBound("x", text("t"), access("e", "f"))});
+  StringRef Expected = R"repr(seq("foo", access("x", "m()"), "bar", )repr"
+                       R"repr(ifBound("x", "t", access("e", "f"))))repr";
+  EXPECT_EQ(S->toString(), Expected);
 }
 } // namespace
