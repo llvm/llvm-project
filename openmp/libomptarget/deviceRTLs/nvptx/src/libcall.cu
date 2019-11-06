@@ -364,7 +364,7 @@ EXTERN void omp_set_lock(omp_lock_t *lock) {
     for (;;) {
       now = clock();
       clock_t cycles = now > start ? now - start : now + (0xffffffff - start);
-      if (cycles >= __OMP_SPIN * GetBlockIdInKernel()) {
+      if (cycles >= __OMP_SPIN * blockIdx.x) {
         break;
       }
     }
