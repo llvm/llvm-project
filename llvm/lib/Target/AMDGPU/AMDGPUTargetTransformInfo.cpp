@@ -738,7 +738,7 @@ unsigned GCNTTIImpl::getUserCost(const User *U,
       return getShuffleCost(TTI::SK_ExtractSubvector, SrcTy, SubIndex, Ty);
 
     if (Shuffle->changesLength())
-      return -1;
+      return BaseT::getUserCost(U, Operands);
 
     if (Shuffle->isIdentity())
       return 0;
