@@ -45,8 +45,7 @@ define void @test_02(i1 %cond_0, i1 %cond_1) {
 ; CHECK-LABEL: @test_02(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[COND_0:%.*]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0]], [[COND_1:%.*]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0:%.*]], [[COND_1:%.*]]
 ; CHECK-NEXT:    [[GUARD_CHK:%.*]] = and i1 [[WIDE_CHK]], [[WIDENABLE_COND]]
 ; CHECK-NEXT:    br i1 [[GUARD_CHK]], label [[GUARDED:%.*]], label [[DEOPT:%.*]], !prof !0
 ; CHECK:       deopt:
