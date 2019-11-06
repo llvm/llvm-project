@@ -203,7 +203,12 @@ public:
                                 AssumptionCache &AC,
                                 TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo);
-
+  bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI,
+                                   ScalarEvolution &SE,
+                                   AssumptionCache &AC,
+                                   TargetLibraryInfo *TLI,
+                                   DominatorTree *DT,
+                                   const LoopAccessInfo *LAI);
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);
 
