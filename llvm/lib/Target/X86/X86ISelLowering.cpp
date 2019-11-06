@@ -23636,9 +23636,12 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue ShAmt = Op.getOperand(2);
     // If the argument is a constant, convert it to a target constant.
     if (auto *C = dyn_cast<ConstantSDNode>(ShAmt)) {
-      ShAmt = DAG.getTargetConstant(C->getZExtValue(), DL, MVT::i32);
+      // Clamp out of bounds shift amounts since they will otherwise be masked
+      // to 8-bits which may make it no longer out of bounds.
+      unsigned ShiftAmount = C->getAPIntValue().getLimitedValue(255);
       return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Op.getValueType(),
-                         Op.getOperand(0), Op.getOperand(1), ShAmt);
+                         Op.getOperand(0), Op.getOperand(1),
+                         DAG.getTargetConstant(ShiftAmount, DL, MVT::i32));
     }
 
     unsigned NewIntrinsic;
