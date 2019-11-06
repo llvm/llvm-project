@@ -280,7 +280,7 @@ int X86TTIImpl::getArithmeticInstrCost(
                                     TargetTransformInfo::OP_None,
                                     TargetTransformInfo::OP_None);
 
-    if (ISD == ISD::UREM)
+    else // UREM
       return getArithmeticInstrCost(Instruction::And, Ty, Op1Info, Op2Info,
                                     TargetTransformInfo::OP_None,
                                     TargetTransformInfo::OP_None);
