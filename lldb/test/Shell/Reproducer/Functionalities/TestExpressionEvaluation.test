@@ -1,5 +1,8 @@
 # UNSUPPORTED: system-windows, system-freebsd
 
+# Flaky
+# UNSUPPORTED: system-linux
+
 # This tests that expression evaluation continues to work when replaying a
 # reproducer.
 
