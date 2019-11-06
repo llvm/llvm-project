@@ -279,6 +279,11 @@ def Vec1        : IntList<"Vec1", [1]>;
 def TLAll   : TypeList<"TLAll", [Char, UChar, Short, UShort, Int, UInt, Long, ULong, Float, Double, Half]>;
 def TLFloat : TypeList<"TLFloat", [Float, Double, Half]>;
 
+// All unsigned integer types twice, to facilitate unsigned return types for e.g.
+// uchar abs(char) and
+// uchar abs(uchar).
+def TLAllUIntsTwice : TypeList<"TLAllUIntsTwice", [UChar, UChar, UShort, UShort, UInt, UInt, ULong, ULong]>;
+
 def TLAllInts : TypeList<"TLAllInts", [Char, UChar, Short, UShort, Int, UInt, Long, ULong]>;
 
 // GenType definitions for multiple base types (e.g. all floating point types,
@@ -290,6 +295,8 @@ def AGenTypeNNoScalar      : GenericType<"AGenTypeNNoScalar", TLAll, VecNoScalar
 def AIGenType1             : GenericType<"AIGenType1", TLAllInts, Vec1>;
 def AIGenTypeN             : GenericType<"AIGenTypeN", TLAllInts, VecAndScalar>;
 def AIGenTypeNNoScalar     : GenericType<"AIGenTypeNNoScalar", TLAllInts, VecNoScalar>;
+// All integer to unsigned
+def AI2UGenTypeN           : GenericType<"AI2UGenTypeN", TLAllUIntsTwice, VecAndScalar>;
 // Float
 def FGenTypeN              : GenericType<"FGenTypeN", TLFloat, VecAndScalar>;
 
@@ -464,6 +471,61 @@ foreach name = ["half_cos",
 foreach name = ["half_divide", "half_powr",
                 "native_divide", "native_powr"] in {
   def : Builtin<name, [GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar, GenTypeFloatVecAndScalar], Attr.Const>;
+}
+
+//--------------------------------------------------------------------
+// OpenCL v1.1 s6.11.3, v1.2 s6.12.3, v2.0 s6.13.3 - Integer Functions
+// --- Table 10 ---
+// --- 1 argument ---
+foreach name = ["abs"] in {
+  def : Builtin<name, [AI2UGenTypeN, AIGenTypeN], Attr.Const>;
+}
+foreach name = ["clz", "popcount"] in {
+  def : Builtin<name, [AIGenTypeN, AIGenTypeN], Attr.Const>;
+}
+let MinVersion = CL20 in {
+  foreach name = ["ctz"] in {
+    def : Builtin<name, [AIGenTypeN, AIGenTypeN]>;
+  }
+}
+
+// --- 2 arguments ---
+foreach name = ["abs_diff"] in {
+  def : Builtin<name, [AI2UGenTypeN, AIGenTypeN, AIGenTypeN], Attr.Const>;
+}
+foreach name = ["add_sat", "hadd", "rhadd", "mul_hi", "rotate", "sub_sat"] in {
+  def : Builtin<name, [AIGenTypeN, AIGenTypeN, AIGenTypeN], Attr.Const>;
+}
+foreach name = ["max", "min"] in {
+  def : Builtin<name, [AIGenTypeN, AIGenTypeN, AIGenTypeN], Attr.Const>;
+  def : Builtin<name, [AIGenTypeNNoScalar, AIGenTypeNNoScalar, AIGenType1], Attr.Const>;
+}
+foreach name = ["upsample"] in {
+  def : Builtin<name, [GenTypeShortVecAndScalar, GenTypeCharVecAndScalar, GenTypeUCharVecAndScalar], Attr.Const>;
+  def : Builtin<name, [GenTypeUShortVecAndScalar, GenTypeUCharVecAndScalar, GenTypeUCharVecAndScalar], Attr.Const>;
+  def : Builtin<name, [GenTypeIntVecAndScalar, GenTypeShortVecAndScalar, GenTypeUShortVecAndScalar], Attr.Const>;
+  def : Builtin<name, [GenTypeUIntVecAndScalar, GenTypeUShortVecAndScalar, GenTypeUShortVecAndScalar], Attr.Const>;
+  def : Builtin<name, [GenTypeLongVecAndScalar, GenTypeIntVecAndScalar, GenTypeUIntVecAndScalar], Attr.Const>;
+  def : Builtin<name, [GenTypeULongVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar], Attr.Const>;
+}
+
+// --- 3 arguments ---
+foreach name = ["clamp"] in {
+  def : Builtin<name, [AIGenTypeN, AIGenTypeN, AIGenTypeN, AIGenTypeN], Attr.Const>;
+  def : Builtin<name, [AIGenTypeNNoScalar, AIGenTypeNNoScalar, AIGenType1, AIGenType1], Attr.Const>;
+}
+foreach name = ["mad_hi", "mad_sat"] in {
+  def : Builtin<name, [AIGenTypeN, AIGenTypeN, AIGenTypeN, AIGenTypeN], Attr.Const>;
+}
+
+// --- Table 11 ---
+foreach name = ["mad24"] in {
+  def : Builtin<name, [GenTypeIntVecAndScalar, GenTypeIntVecAndScalar, GenTypeIntVecAndScalar, GenTypeIntVecAndScalar], Attr.Const>;
+  def : Builtin<name, [GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar], Attr.Const>;
+}
+foreach name = ["mul24"] in {
+  def : Builtin<name, [GenTypeIntVecAndScalar, GenTypeIntVecAndScalar, GenTypeIntVecAndScalar], Attr.Const>;
+  def : Builtin<name, [GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar], Attr.Const>;
 }
 
 //--------------------------------------------------------------------
@@ -653,12 +715,6 @@ foreach Type = [Int, UInt] in {
   foreach name = ["atom_cmpxchg"] in {
     def : Builtin<name, [Type, PointerType<VolatileType<Type>, GlobalAS>, Type, Type]>;
   }
-}
-
-// OpenCL v1.1 s6.11.3, v1.2 s6.12.3, v2.0 s6.13.3 - Integer Functions
-foreach name = ["max", "min"] in {
-  def : Builtin<name, [AIGenTypeN, AIGenTypeN, AIGenTypeN], Attr.Const>;
-  def : Builtin<name, [AIGenTypeNNoScalar, AIGenTypeNNoScalar, AIGenType1], Attr.Const>;
 }
 
 //--------------------------------------------------------------------
