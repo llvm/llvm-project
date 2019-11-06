@@ -20,13 +20,12 @@ namespace utils {
 namespace {
 using namespace ::clang::ast_matchers;
 
-using tooling::change;
-using tooling::IncludeFormat;
-using tooling::node;
-using tooling::RewriteRule;
-using tooling::statement;
-using tooling::text;
-using tooling::stencil::cat;
+using transformer::cat;
+using transformer::change;
+using transformer::IncludeFormat;
+using transformer::node;
+using transformer::RewriteRule;
+using transformer::statement;
 
 // Invert the code of an if-statement, while maintaining its semantics.
 RewriteRule invertIf() {
@@ -37,7 +36,7 @@ RewriteRule invertIf() {
       change(
           statement(RewriteRule::RootID),
           cat("if(!(", node(C), ")) ", statement(E), " else ", statement(T))),
-      text("negate condition and reverse `then` and `else` branches"));
+      cat("negate condition and reverse `then` and `else` branches"));
   return Rule;
 }
 
@@ -71,8 +70,8 @@ class IntLitCheck : public TransformerClangTidyCheck {
 public:
   IntLitCheck(StringRef Name, ClangTidyContext *Context)
       : TransformerClangTidyCheck(tooling::makeRule(integerLiteral(),
-                                                    change(text("LIT")),
-                                                    text("no message")),
+                                                    change(cat("LIT")),
+                                                    cat("no message")),
                                   Name, Context) {}
 };
 
@@ -97,7 +96,7 @@ public:
       : TransformerClangTidyCheck(
             tooling::makeRule(
                 binaryOperator(hasOperatorName("+"), hasRHS(expr().bind("r"))),
-                change(node("r"), text("RIGHT")), text("no message")),
+                change(node("r"), cat("RIGHT")), cat("no message")),
             Name, Context) {}
 };
 
@@ -123,7 +122,7 @@ Optional<RewriteRule> needsObjC(const LangOptions &LangOpts,
   if (!LangOpts.ObjC)
     return None;
   return tooling::makeRule(clang::ast_matchers::functionDecl(),
-                           change(cat("void changed() {}")), text("no message"));
+                           change(cat("void changed() {}")), cat("no message"));
 }
 
 class NeedsObjCCheck : public TransformerClangTidyCheck {
@@ -148,7 +147,7 @@ Optional<RewriteRule> noSkip(const LangOptions &LangOpts,
   if (Options.get("Skip", "false") == "true")
     return None;
   return tooling::makeRule(clang::ast_matchers::functionDecl(),
-                           change(cat("void nothing()")), text("no message"));
+                           change(cat("void nothing()")), cat("no message"));
 }
 
 class ConfigurableCheck : public TransformerClangTidyCheck {
@@ -176,7 +175,7 @@ RewriteRule replaceCall(IncludeFormat Format) {
   using namespace ::clang::ast_matchers;
   RewriteRule Rule =
       tooling::makeRule(callExpr(callee(functionDecl(hasName("f")))),
-                        change(text("other()")), text("no message"));
+                        change(cat("other()")), cat("no message"));
   addInclude(Rule, "clang/OtherLib.h", Format);
   return Rule;
 }
