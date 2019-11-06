@@ -24,7 +24,9 @@
 
 #include "llvm/ADT/StringRef.h"
 
+#ifdef LLDB_ENABLE_SWIFT
 #include "lldb/Target/SwiftLanguageRuntime.h"
+#endif // LLDB_ENABLE_SWIFT
 
 using namespace lldb;
 using namespace lldb_private;
@@ -299,6 +301,7 @@ void Symtab::InitNameIndexes() {
         if (type == eSymbolTypeCode || type == eSymbolTypeResolver) {
           if (mangled.DemangleWithRichManglingInfo(rmc, lldb_skip_name))
             RegisterMangledNameEntry(value, class_contexts, backlog, rmc);
+#ifdef LLDB_ENABLE_SWIFT
 	  else if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetStringRef())) {
             lldb_private::ConstString basename;
             bool is_method = false;
@@ -314,6 +317,7 @@ void Symtab::InitNameIndexes() {
               }
             }
           }
+#endif // LLDB_ENABLE_SWIFT
         }
       }
 

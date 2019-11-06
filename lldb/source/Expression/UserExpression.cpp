@@ -399,12 +399,15 @@ UserExpression::Execute(DiagnosticManager &diagnostic_manager,
       diagnostic_manager, exe_ctx, options, shared_ptr_to_me, result_var);
   Target *target = exe_ctx.GetTargetPtr();
   if (options.GetResultIsInternal() && result_var && target) {
+#ifdef LLDB_ENABLE_SWIFT
     if (m_language == lldb::eLanguageTypeSwift) {
       if (auto *exe_scope = exe_ctx.GetBestExecutionContextScope())
         if (auto *persistent_state =
                 target->GetSwiftPersistentExpressionState(*exe_scope))
           persistent_state->RemovePersistentVariable(result_var);
-    } else if (auto *persistent_state =
+    } else
+#endif // LLDB_ENABLE_SWIFT
+    if (auto *persistent_state =
                    target->GetPersistentExpressionStateForLanguage(m_language))
       persistent_state->RemovePersistentVariable(result_var);
   }

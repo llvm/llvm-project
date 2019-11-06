@@ -42,7 +42,6 @@
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
@@ -66,6 +65,10 @@
 
 #include <memory>
 #include <mutex>
+
+#ifdef LLDB_ENABLE_SWIFT
+#include "lldb/Symbol/SwiftASTContext.h"
+#endif // LLDB_ENABLE_SWIFT
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1647,14 +1650,15 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     if (m_process_sp) {
       m_process_sp->ModulesDidLoad(module_list);
     }
-
     // Notify all the ASTContext(s).
     auto notify_callback = [&](TypeSystem *type_system) {
+#ifdef LLDB_ENABLE_SWIFT
       auto *swift_ast_ctx =
           llvm::dyn_cast_or_null<SwiftASTContext>(type_system);
       if (!swift_ast_ctx)
         return true;
       swift_ast_ctx->ModulesDidLoad(module_list);
+#endif // LLDB_ENABLE_SWIFT
       return true;
     };
     m_scratch_type_system_map.ForEach(notify_callback);
@@ -2203,6 +2207,7 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
   if (!type_system_or_err)
     return std::move(type_system_or_err.takeError());
 
+#ifdef LLDB_ENABLE_SWIFT
   if (language == eLanguageTypeSwift) {
     if (auto *swift_ast_ctx =
             llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
@@ -2284,6 +2289,7 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
       }
     }
   }
+#endif // LLDB_ENABLE_SWIFT
   return type_system_or_err;
 }
 
@@ -2332,6 +2338,7 @@ Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
   return type_system_or_err->GetPersistentExpressionState();
 }
 
+#ifdef LLDB_ENABLE_SWIFT
 SwiftPersistentExpressionState *
 Target::GetSwiftPersistentExpressionState(ExecutionContextScope &exe_scope) {
   Status error;
@@ -2341,6 +2348,7 @@ Target::GetSwiftPersistentExpressionState(ExecutionContextScope &exe_scope) {
   return (SwiftPersistentExpressionState *)
       swift_ast_context->GetPersistentExpressionState();
 }
+#endif // LLDB_ENABLE_SWIFT
 
 UserExpression *Target::GetUserExpressionForLanguage(
     llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
@@ -2412,6 +2420,7 @@ Target::GetUtilityFunctionForLanguage(const char *text,
   return utility_fn;
 }
 
+#ifdef LLDB_ENABLE_SWIFT
 SwiftASTContextReader Target::GetScratchSwiftASTContext(
     Status &error, ExecutionContextScope &exe_scope, bool create_on_demand) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
@@ -2539,6 +2548,7 @@ void Target::DisplayFallbackSwiftContextErrors(
       swift_ast_ctx->GetFatalErrors().AsCString("unknown error"));
   errs->Flush();
 }
+#endif // LLDB_ENABLE_SWIFT
 
 void Target::SettingsInitialize() { Process::SettingsInitialize(); }
 

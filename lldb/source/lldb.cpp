@@ -12,7 +12,9 @@ using namespace lldb;
 using namespace lldb_private;
 
 #include "clang/Basic/Version.h"
+#ifdef LLDB_ENABLE_SWIFT
 #include "swift/Basic/Version.h"
+#endif // LLDB_ENABLE_SWIFT
 
 #ifdef HAVE_VCS_VERSION_INC
 #include "VCSVersion.inc"
@@ -76,8 +78,10 @@ const char *lldb_private::GetVersion() {
       g_version_str += " (buildbot " + build_date + ")";
 #endif
 
+#ifdef LLDB_ENABLE_SWIFT
     auto const swift_version = swift::version::getSwiftFullVersion();
     g_version_str += "\n" + swift_version;
+#endif // LLDB_ENABLE_SWIFT
 
     // getSwiftFullVersion() also prints clang and llvm versions, no
     // need to print them again. We keep this code here to not diverge

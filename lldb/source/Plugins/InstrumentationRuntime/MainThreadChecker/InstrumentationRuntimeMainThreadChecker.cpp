@@ -12,7 +12,6 @@
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Variable.h"
@@ -24,9 +23,12 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/RegularExpression.h"
+#ifdef LLDB_ENABLE_SWIFT
+#include "lldb/Symbol/SwiftASTContext.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/NameLookup.h"
 #include "swift/ClangImporter/ClangImporter.h"
+#endif // LLDB_ENABLE_SWIFT
 
 #include <memory>
 
@@ -82,6 +84,7 @@ bool InstrumentationRuntimeMainThreadChecker::CheckIfRuntimeIsValid(
   return symbol != nullptr;
 }
 
+#ifdef LLDB_ENABLE_SWIFT
 static std::string TranslateObjCNameToSwiftName(std::string className,
                                                 std::string selector,
                                                 StackFrameSP swiftFrame) {
@@ -155,6 +158,7 @@ static std::string TranslateObjCNameToSwiftName(std::string className,
   llvm::SmallString<32> scratchSpace;
   return className + "." + consumer.result.getString(scratchSpace).str();
 }
+#endif // LLDB_ENABLE_SWIFT
 
 StructuredData::ObjectSP
 InstrumentationRuntimeMainThreadChecker::RetrieveReportData(
@@ -221,7 +225,8 @@ InstrumentationRuntimeMainThreadChecker::RetrieveReportData(
     lldb::addr_t PC = addr.GetLoadAddress(&target);
     trace->AddItem(StructuredData::ObjectSP(new StructuredData::Integer(PC)));
   }
-  
+
+#ifdef LLDB_ENABLE_SWIFT
   if (responsible_frame) {
     if (responsible_frame->GetLanguage() == eLanguageTypeSwift) {
       std::string swiftApiName =
@@ -230,7 +235,8 @@ InstrumentationRuntimeMainThreadChecker::RetrieveReportData(
         apiName = swiftApiName;
     }
   }
-  
+#endif // LLDB_ENABLE_SWIFT
+
   auto *d = new StructuredData::Dictionary();
   auto dict_sp = StructuredData::ObjectSP(d);
   d->AddStringItem("instrumentation_class", "MainThreadChecker");

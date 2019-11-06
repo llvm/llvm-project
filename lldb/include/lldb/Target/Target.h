@@ -1086,8 +1086,10 @@ public:
   PersistentExpressionState *
   GetPersistentExpressionStateForLanguage(lldb::LanguageType language);
 
+#ifdef LLDB_ENABLE_SWIFT
   SwiftPersistentExpressionState *
   GetSwiftPersistentExpressionState(ExecutionContextScope &exe_scope);
+#endif // LLDB_ENABLE_SWIFT
 
   const TypeSystemMap &GetTypeSystemMap();
 
@@ -1126,6 +1128,7 @@ public:
                                                  Status &error);
 
 
+#ifdef LLDB_ENABLE_SWIFT
   /// Get the lock guarding the scratch typesystem from being re-initialized.
   SharedMutex &GetSwiftScratchContextLock() {
     return m_scratch_typesystem_lock;
@@ -1138,6 +1141,7 @@ public:
 private:
   void DisplayFallbackSwiftContextErrors(
       SwiftASTContextForExpressions *swift_ast_ctx);
+#endif // LLDB_ENABLE_SWIFT
 
 public:
 

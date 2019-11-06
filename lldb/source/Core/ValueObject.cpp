@@ -1748,6 +1748,7 @@ LanguageType ValueObject::GetObjectRuntimeLanguage() {
   return lldb::eLanguageTypeUnknown;
 }
 
+#ifdef LLDB_ENABLE_SWIFT
 SwiftASTContextReader ValueObject::GetScratchSwiftASTContext() {
   lldb::TargetSP target_sp(GetTargetSP());
   if (!target_sp)
@@ -1757,6 +1758,7 @@ SwiftASTContextReader ValueObject::GetScratchSwiftASTContext() {
   auto *exe_scope = ctx.GetBestExecutionContextScope();
   return target_sp->GetScratchSwiftASTContext(error, *exe_scope);
 }
+#endif // LLDB_ENABLE_SWIFT
 
 void ValueObject::AddSyntheticChild(ConstString key,
                                     ValueObject *valobj) {
@@ -2818,7 +2820,9 @@ void ValueObject::LogValueObject(Log *log,
 void ValueObject::Dump(Stream &s) { Dump(s, DumpValueObjectOptions(*this)); }
 
 void ValueObject::Dump(Stream &s, const DumpValueObjectOptions &options) {
+#ifdef LLDB_ENABLE_SWIFT
   auto swift_scratch_ctx_lock = SwiftASTContextLock(GetSwiftExeCtx(*this));
+#endif // LLDB_ENABLE_SWIFT
   ValueObjectPrinter printer(this, &s, options);
   printer.PrintValueObject();
 }
@@ -3360,6 +3364,7 @@ ValueObjectSP ValueObject::Persist() {
     return nullptr;
 
   PersistentExpressionState *persistent_state;
+#ifdef LLDB_ENABLE_SWIFT
   if (GetPreferredDisplayLanguage() == eLanguageTypeSwift) {
     ExecutionContext ctx = GetExecutionContextRef().Lock(false);
     auto *exe_scope = ctx.GetBestExecutionContextScope();
@@ -3367,6 +3372,7 @@ ValueObjectSP ValueObject::Persist() {
       return nullptr;
     persistent_state = target_sp->GetSwiftPersistentExpressionState(*exe_scope);
   } else
+#endif // LLDB_ENABLE_SWIFT
     persistent_state = target_sp->GetPersistentExpressionStateForLanguage(
         GetPreferredDisplayLanguage());
 
