@@ -111,9 +111,9 @@ public:
   static char ID;
 
 private:
-  MachineRegisterInfo *MRI;
-  const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
+  MachineRegisterInfo *MRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
   TargetSchedModel TSchedModel;
 
   /// List of consecutive CMOV instructions.
