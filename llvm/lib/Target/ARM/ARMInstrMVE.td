@@ -278,7 +278,7 @@ class mve_addr_q_shift<int shift> : MemOperand {
 // A family of classes wrapping up information about the vector types
 // used by MVE.
 class MVEVectorVTInfo<ValueType vec, ValueType pred, bits<2> size,
-                      string suffix, bit unsigned> {
+                      string suffixletter, bit unsigned> {
   // The LLVM ValueType representing the vector, so we can use it in
   // ISel patterns.
   ValueType Vec = vec;
@@ -304,32 +304,39 @@ class MVEVectorVTInfo<ValueType vec, ValueType pred, bits<2> size,
   // signed and 1 for unsigned. For anything else, undefined.
   bit Unsigned = unsigned;
 
-  // The suffix used on the instruction in assembly language.
-  string Suffix = suffix;
+  // The number of bits in a vector element, in integer form.
+  int LaneBits = !shl(8, Size);
+
+  // The suffix used in assembly language on an instruction operating
+  // on this lane if it only cares about number of bits.
+  string BitsSuffix = !cast<string>(LaneBits);
+
+  // The suffix used on an instruction that mentions the whole type.
+  string Suffix = suffixletter ## BitsSuffix;
 }
 
 // Integer vector types that don't treat signed and unsigned differently.
-def MVE_v16i8 : MVEVectorVTInfo<v16i8, v16i1, 0b00, "i8",  ?>;
-def MVE_v8i16 : MVEVectorVTInfo<v8i16, v8i1,  0b01, "i16", ?>;
-def MVE_v4i32 : MVEVectorVTInfo<v4i32, v4i1,  0b10, "i32", ?>;
-def MVE_v2i64 : MVEVectorVTInfo<v2i64, v4i1,  0b11, "i64", ?>;
+def MVE_v16i8 : MVEVectorVTInfo<v16i8, v16i1, 0b00, "i",  ?>;
+def MVE_v8i16 : MVEVectorVTInfo<v8i16, v8i1,  0b01, "i", ?>;
+def MVE_v4i32 : MVEVectorVTInfo<v4i32, v4i1,  0b10, "i", ?>;
+def MVE_v2i64 : MVEVectorVTInfo<v2i64, v4i1,  0b11, "i", ?>;
 
 // Explicitly signed and unsigned integer vectors. They map to the
 // same set of LLVM ValueTypes as above, but are represented
 // differently in assembly and instruction encodings.
-def MVE_v16s8 : MVEVectorVTInfo<v16i8, v16i1, 0b00, "s8",  0b0>;
-def MVE_v8s16 : MVEVectorVTInfo<v8i16, v8i1,  0b01, "s16", 0b0>;
-def MVE_v4s32 : MVEVectorVTInfo<v4i32, v4i1,  0b10, "s32", 0b0>;
-def MVE_v2s64 : MVEVectorVTInfo<v2i64, v4i1,  0b11, "s64", 0b0>;
-def MVE_v16u8 : MVEVectorVTInfo<v16i8, v16i1, 0b00, "u8",  0b1>;
-def MVE_v8u16 : MVEVectorVTInfo<v8i16, v8i1,  0b01, "u16", 0b1>;
-def MVE_v4u32 : MVEVectorVTInfo<v4i32, v4i1,  0b10, "u32", 0b1>;
-def MVE_v2u64 : MVEVectorVTInfo<v2i64, v4i1,  0b11, "u64", 0b1>;
+def MVE_v16s8 : MVEVectorVTInfo<v16i8, v16i1, 0b00, "s",  0b0>;
+def MVE_v8s16 : MVEVectorVTInfo<v8i16, v8i1,  0b01, "s", 0b0>;
+def MVE_v4s32 : MVEVectorVTInfo<v4i32, v4i1,  0b10, "s", 0b0>;
+def MVE_v2s64 : MVEVectorVTInfo<v2i64, v4i1,  0b11, "s", 0b0>;
+def MVE_v16u8 : MVEVectorVTInfo<v16i8, v16i1, 0b00, "u",  0b1>;
+def MVE_v8u16 : MVEVectorVTInfo<v8i16, v8i1,  0b01, "u", 0b1>;
+def MVE_v4u32 : MVEVectorVTInfo<v4i32, v4i1,  0b10, "u", 0b1>;
+def MVE_v2u64 : MVEVectorVTInfo<v2i64, v4i1,  0b11, "u", 0b1>;
 
 // FP vector types.
-def MVE_v8f16 : MVEVectorVTInfo<v8f16, v8i1,  0b01, "f16", ?>;
-def MVE_v4f32 : MVEVectorVTInfo<v4f32, v4i1,  0b10, "f32", ?>;
-def MVE_v2f64 : MVEVectorVTInfo<v2f64, v4i1,  0b11, "f64", ?>;
+def MVE_v8f16 : MVEVectorVTInfo<v8f16, v8i1,  0b01, "f", ?>;
+def MVE_v4f32 : MVEVectorVTInfo<v4f32, v4i1,  0b10, "f", ?>;
+def MVE_v2f64 : MVEVectorVTInfo<v2f64, v4i1,  0b11, "f", ?>;
 
 // --------- Start of base classes for the instructions themselves
 
@@ -4614,28 +4621,80 @@ class MVE_VLDRSTR_rq_b<MVE_ldst_direction dir, MVE_memsz memsz,
                        string asm, string suffix, bit U, bits<2> size>
   : MVE_VLDRSTR_rq<dir, memsz, U, size, 0, asm, suffix, 0>;
 
+// Multiclasses wrapping that to add ISel patterns for intrinsics.
+multiclass MVE_VLDR_rq_w<MVE_memsz memsz, list<MVEVectorVTInfo> VTIs> {
+  defm "": MVE_VLDRSTR_rq_w<MVE_ld, memsz, "vldr" # memsz.MnemonicLetter,
+                            VTIs[0].Suffix, VTIs[0].Unsigned, VTIs[0].Size>;
+  foreach VTI = VTIs in
+  foreach UnsignedFlag = !if(!eq(VTI.Size, memsz.encoding),
+                             [0,1], [VTI.Unsigned]) in {
+    def : Pat<(VTI.Vec (int_arm_mve_vldr_gather_offset GPR:$base, (VTIs[0].Vec MQPR:$offsets), memsz.TypeBits, 0, UnsignedFlag)),
+              (VTI.Vec (!cast<Instruction>(NAME#"_u") GPR:$base, MQPR:$offsets))>;
+    def : Pat<(VTI.Vec (int_arm_mve_vldr_gather_offset GPR:$base, (VTIs[0].Vec MQPR:$offsets), memsz.TypeBits, memsz.shift, UnsignedFlag)),
+              (VTI.Vec (!cast<Instruction>(NAME) GPR:$base, MQPR:$offsets))>;
+    def : Pat<(VTI.Vec (int_arm_mve_vldr_gather_offset_predicated GPR:$base, (VTIs[0].Vec MQPR:$offsets), memsz.TypeBits, 0, UnsignedFlag, (VTI.Pred VCCR:$pred))),
+              (VTI.Vec (!cast<Instruction>(NAME#"_u") GPR:$base, MQPR:$offsets, 1, VCCR:$pred))>;
+    def : Pat<(VTI.Vec (int_arm_mve_vldr_gather_offset_predicated GPR:$base, (VTIs[0].Vec MQPR:$offsets), memsz.TypeBits, memsz.shift, UnsignedFlag, (VTI.Pred VCCR:$pred))),
+              (VTI.Vec (!cast<Instruction>(NAME) GPR:$base, MQPR:$offsets, 1, VCCR:$pred))>;
+  }
+}
+multiclass MVE_VLDR_rq_b<list<MVEVectorVTInfo> VTIs> {
+  def "": MVE_VLDRSTR_rq_b<MVE_ld, MVE_memB, "vldrb",
+                           VTIs[0].Suffix, VTIs[0].Unsigned, VTIs[0].Size>;
+  foreach VTI = VTIs in {
+    def : Pat<(VTI.Vec (int_arm_mve_vldr_gather_offset GPR:$base, (VTIs[0].Vec MQPR:$offsets), 8, 0, VTI.Unsigned)),
+              (VTI.Vec (!cast<Instruction>(NAME) GPR:$base, MQPR:$offsets))>;
+    def : Pat<(VTI.Vec (int_arm_mve_vldr_gather_offset_predicated GPR:$base, (VTIs[0].Vec MQPR:$offsets), 8, 0, VTI.Unsigned, (VTI.Pred VCCR:$pred))),
+              (VTI.Vec (!cast<Instruction>(NAME) GPR:$base, MQPR:$offsets, 1, VCCR:$pred))>;
+  }
+}
+multiclass MVE_VSTR_rq_w<MVE_memsz memsz, list<MVEVectorVTInfo> VTIs> {
+  defm "": MVE_VLDRSTR_rq_w<MVE_st, memsz, "vstr" # memsz.MnemonicLetter,
+                            VTIs[0].BitsSuffix, 0, VTIs[0].Size>;
+  foreach VTI = VTIs in {
+    def : Pat<(int_arm_mve_vstr_scatter_offset GPR:$base, (VTIs[0].Vec MQPR:$offsets), (VTI.Vec MQPR:$data), memsz.TypeBits, 0),
+              (!cast<Instruction>(NAME#"_u") MQPR:$data, GPR:$base, MQPR:$offsets)>;
+    def : Pat<(int_arm_mve_vstr_scatter_offset GPR:$base, (VTIs[0].Vec MQPR:$offsets), (VTI.Vec MQPR:$data), memsz.TypeBits, memsz.shift),
+              (!cast<Instruction>(NAME) MQPR:$data, GPR:$base, MQPR:$offsets)>;
+    def : Pat<(int_arm_mve_vstr_scatter_offset_predicated GPR:$base, (VTIs[0].Vec MQPR:$offsets), (VTI.Vec MQPR:$data), memsz.TypeBits, 0, (VTI.Pred VCCR:$pred)),
+              (!cast<Instruction>(NAME#"_u") MQPR:$data, GPR:$base, MQPR:$offsets, 1, VCCR:$pred)>;
+    def : Pat<(int_arm_mve_vstr_scatter_offset_predicated GPR:$base, (VTIs[0].Vec MQPR:$offsets), (VTI.Vec MQPR:$data), memsz.TypeBits, memsz.shift, (VTI.Pred VCCR:$pred)),
+              (!cast<Instruction>(NAME) MQPR:$data, GPR:$base, MQPR:$offsets, 1, VCCR:$pred)>;
+  }
+}
+multiclass MVE_VSTR_rq_b<list<MVEVectorVTInfo> VTIs> {
+  def "": MVE_VLDRSTR_rq_b<MVE_st, MVE_memB, "vstrb",
+                           VTIs[0].BitsSuffix, 0, VTIs[0].Size>;
+  foreach VTI = VTIs in {
+    def : Pat<(int_arm_mve_vstr_scatter_offset GPR:$base, (VTIs[0].Vec MQPR:$offsets), (VTI.Vec MQPR:$data), 8, 0),
+              (!cast<Instruction>(NAME) MQPR:$data, GPR:$base, MQPR:$offsets)>;
+    def : Pat<(int_arm_mve_vstr_scatter_offset_predicated GPR:$base, (VTIs[0].Vec MQPR:$offsets), (VTI.Vec MQPR:$data), 8, 0, (VTI.Pred VCCR:$pred)),
+              (!cast<Instruction>(NAME) MQPR:$data, GPR:$base, MQPR:$offsets, 1, VCCR:$pred)>;
+  }
+}
+
 // Actually define all the loads and stores in this family.
 
-def  MVE_VLDRBU8_rq : MVE_VLDRSTR_rq_b<MVE_ld, MVE_memB, "vldrb","u8",  1,0b00>;
-def  MVE_VLDRBU16_rq: MVE_VLDRSTR_rq_b<MVE_ld, MVE_memB, "vldrb","u16", 1,0b01>;
-def  MVE_VLDRBS16_rq: MVE_VLDRSTR_rq_b<MVE_ld, MVE_memB, "vldrb","s16", 0,0b01>;
-def  MVE_VLDRBU32_rq: MVE_VLDRSTR_rq_b<MVE_ld, MVE_memB, "vldrb","u32", 1,0b10>;
-def  MVE_VLDRBS32_rq: MVE_VLDRSTR_rq_b<MVE_ld, MVE_memB, "vldrb","s32", 0,0b10>;
+defm MVE_VLDRBU8_rq : MVE_VLDR_rq_b<[MVE_v16u8,MVE_v16s8]>;
+defm MVE_VLDRBU16_rq: MVE_VLDR_rq_b<[MVE_v8u16]>;
+defm MVE_VLDRBS16_rq: MVE_VLDR_rq_b<[MVE_v8s16]>;
+defm MVE_VLDRBU32_rq: MVE_VLDR_rq_b<[MVE_v4u32]>;
+defm MVE_VLDRBS32_rq: MVE_VLDR_rq_b<[MVE_v4s32]>;
 
-defm MVE_VLDRHU16_rq: MVE_VLDRSTR_rq_w<MVE_ld, MVE_memH, "vldrh","u16", 1,0b01>;
-defm MVE_VLDRHU32_rq: MVE_VLDRSTR_rq_w<MVE_ld, MVE_memH, "vldrh","u32", 1,0b10>;
-defm MVE_VLDRHS32_rq: MVE_VLDRSTR_rq_w<MVE_ld, MVE_memH, "vldrh","s32", 0,0b10>;
-defm MVE_VLDRWU32_rq: MVE_VLDRSTR_rq_w<MVE_ld, MVE_memW, "vldrw","u32", 1,0b10>;
-defm MVE_VLDRDU64_rq: MVE_VLDRSTR_rq_w<MVE_ld, MVE_memD, "vldrd","u64", 1,0b11>;
+defm MVE_VLDRHU16_rq: MVE_VLDR_rq_w<MVE_memH, [MVE_v8u16,MVE_v8s16,MVE_v8f16]>;
+defm MVE_VLDRHU32_rq: MVE_VLDR_rq_w<MVE_memH, [MVE_v4u32]>;
+defm MVE_VLDRHS32_rq: MVE_VLDR_rq_w<MVE_memH, [MVE_v4s32]>;
+defm MVE_VLDRWU32_rq: MVE_VLDR_rq_w<MVE_memW, [MVE_v4u32,MVE_v4s32,MVE_v4f32]>;
+defm MVE_VLDRDU64_rq: MVE_VLDR_rq_w<MVE_memD, [MVE_v2u64,MVE_v2s64]>;
 
-def  MVE_VSTRB8_rq  : MVE_VLDRSTR_rq_b<MVE_st, MVE_memB, "vstrb","8",   0,0b00>;
-def  MVE_VSTRB16_rq : MVE_VLDRSTR_rq_b<MVE_st, MVE_memB, "vstrb","16",  0,0b01>;
-def  MVE_VSTRB32_rq : MVE_VLDRSTR_rq_b<MVE_st, MVE_memB, "vstrb","32",  0,0b10>;
+defm MVE_VSTRB8_rq  : MVE_VSTR_rq_b<[MVE_v16i8]>;
+defm MVE_VSTRB16_rq : MVE_VSTR_rq_b<[MVE_v8i16]>;
+defm MVE_VSTRB32_rq : MVE_VSTR_rq_b<[MVE_v4i32]>;
 
-defm MVE_VSTRH16_rq : MVE_VLDRSTR_rq_w<MVE_st, MVE_memH, "vstrh","16",  0,0b01>;
-defm MVE_VSTRH32_rq : MVE_VLDRSTR_rq_w<MVE_st, MVE_memH, "vstrh","32",  0,0b10>;
-defm MVE_VSTRW32_rq : MVE_VLDRSTR_rq_w<MVE_st, MVE_memW, "vstrw","32",  0,0b10>;
-defm MVE_VSTRD64_rq : MVE_VLDRSTR_rq_w<MVE_st, MVE_memD, "vstrd","64",  0,0b11>;
+defm MVE_VSTRH16_rq : MVE_VSTR_rq_w<MVE_memH, [MVE_v8i16,MVE_v8f16]>;
+defm MVE_VSTRH32_rq : MVE_VSTR_rq_w<MVE_memH, [MVE_v4i32]>;
+defm MVE_VSTRW32_rq : MVE_VSTR_rq_w<MVE_memW, [MVE_v4i32,MVE_v4f32]>;
+defm MVE_VSTRD64_rq : MVE_VSTR_rq_w<MVE_memD, [MVE_v2i64]>;
 
 // Gather loads / scatter stores whose address operand is of the form
 // [Qm,#imm], i.e. a vector containing a full base address for each
@@ -4674,11 +4733,56 @@ multiclass MVE_VLDRSTR_qi_m<MVE_ldst_direction dir, MVE_memsz memsz,
   }
 }
 
+// Multiclasses wrapping that one, adding selection patterns for the
+// non-writeback loads and all the stores. (The writeback loads must
+// deliver multiple output values, so they have to be selected by C++
+// code.)
+multiclass MVE_VLDR_qi<MVE_memsz memsz, MVEVectorVTInfo AVTI,
+                       list<MVEVectorVTInfo> DVTIs> {
+  defm "" : MVE_VLDRSTR_qi_m<MVE_ld, memsz, "vldr" # memsz.MnemonicLetter,
+                             "u" # memsz.TypeBits>;
+
+  foreach DVTI = DVTIs in {
+    def : Pat<(DVTI.Vec (int_arm_mve_vldr_gather_base
+                 (AVTI.Vec MQPR:$addr), (i32 imm:$offset))),
+              (DVTI.Vec (!cast<Instruction>(NAME)
+                 (AVTI.Vec MQPR:$addr), (i32 imm:$offset)))>;
+    def : Pat<(DVTI.Vec (int_arm_mve_vldr_gather_base_predicated
+                 (AVTI.Vec MQPR:$addr), (i32 imm:$offset), (AVTI.Pred VCCR:$pred))),
+              (DVTI.Vec (!cast<Instruction>(NAME)
+                 (AVTI.Vec MQPR:$addr), (i32 imm:$offset), 1, VCCR:$pred))>;
+  }
+}
+multiclass MVE_VSTR_qi<MVE_memsz memsz, MVEVectorVTInfo AVTI,
+                       list<MVEVectorVTInfo> DVTIs> {
+  defm "" : MVE_VLDRSTR_qi_m<MVE_st, memsz, "vstr" # memsz.MnemonicLetter,
+                             !cast<string>(memsz.TypeBits)>;
+
+  foreach DVTI = DVTIs in {
+    def : Pat<(int_arm_mve_vstr_scatter_base
+                (AVTI.Vec MQPR:$addr), (i32 imm:$offset), (DVTI.Vec MQPR:$data)),
+              (!cast<Instruction>(NAME)
+               (DVTI.Vec MQPR:$data), (AVTI.Vec MQPR:$addr), (i32 imm:$offset))>;
+    def : Pat<(int_arm_mve_vstr_scatter_base_predicated
+                (AVTI.Vec MQPR:$addr), (i32 imm:$offset), (DVTI.Vec MQPR:$data), (AVTI.Pred VCCR:$pred)),
+              (!cast<Instruction>(NAME)
+                (DVTI.Vec MQPR:$data), (AVTI.Vec MQPR:$addr), (i32 imm:$offset), 1, VCCR:$pred)>;
+    def : Pat<(AVTI.Vec (int_arm_mve_vstr_scatter_base_wb
+                (AVTI.Vec MQPR:$addr), (i32 imm:$offset), (DVTI.Vec MQPR:$data))),
+              (AVTI.Vec (!cast<Instruction>(NAME # "_pre")
+                 (DVTI.Vec MQPR:$data), (AVTI.Vec MQPR:$addr), (i32 imm:$offset)))>;
+    def : Pat<(AVTI.Vec (int_arm_mve_vstr_scatter_base_wb_predicated
+                (AVTI.Vec MQPR:$addr), (i32 imm:$offset), (DVTI.Vec MQPR:$data), (AVTI.Pred VCCR:$pred))),
+              (AVTI.Vec (!cast<Instruction>(NAME # "_pre")
+                 (DVTI.Vec MQPR:$data), (AVTI.Vec MQPR:$addr), (i32 imm:$offset), 1, VCCR:$pred))>;
+  }
+}
+
 // Actual instruction definitions.
-defm MVE_VLDRWU32_qi: MVE_VLDRSTR_qi_m<MVE_ld, MVE_memW, "vldrw", "u32">;
-defm MVE_VLDRDU64_qi: MVE_VLDRSTR_qi_m<MVE_ld, MVE_memD, "vldrd", "u64">;
-defm MVE_VSTRW32_qi:  MVE_VLDRSTR_qi_m<MVE_st, MVE_memW, "vstrw", "32">;
-defm MVE_VSTRD64_qi:  MVE_VLDRSTR_qi_m<MVE_st, MVE_memD, "vstrd", "64">;
+defm MVE_VLDRWU32_qi: MVE_VLDR_qi<MVE_memW, MVE_v4i32, [MVE_v4i32,MVE_v4f32]>;
+defm MVE_VLDRDU64_qi: MVE_VLDR_qi<MVE_memD, MVE_v2i64, [MVE_v2i64,MVE_v2f64]>;
+defm MVE_VSTRW32_qi:  MVE_VSTR_qi<MVE_memW, MVE_v4i32, [MVE_v4i32,MVE_v4f32]>;
+defm MVE_VSTRD64_qi:  MVE_VSTR_qi<MVE_memD, MVE_v2i64, [MVE_v2i64,MVE_v2f64]>;
 
 // Define aliases for all the instructions where memory size and
 // vector lane size are the same. These are mnemonic aliases, so they

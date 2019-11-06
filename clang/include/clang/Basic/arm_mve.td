@@ -72,22 +72,158 @@ def vcvt#half#q_m_f16: Intrinsic<
 
 } // loop over half = "b", "t"
 
-let params = T.All32, pnt = PNT_None in
-def vldrwq_gather_base_wb: Intrinsic<
-    Vector, (args Ptr<VecOf<Unsigned<Scalar>>>:$addr, imm_mem7bit<4>:$offset),
-    (seq (IRInt<"vldr_gather_base_wb", [Vector, VecOf<Unsigned<Scalar>>]>
-               (load $addr), $offset):$pair,
-         (store (xval $pair, 1), $addr),
-         (xval $pair, 0))>;
+multiclass gather_base<list<Type> types, int size> {
+  let params = types, pnt = PNT_None in {
+    def _gather_base: Intrinsic<
+      Vector, (args UVector:$addr, imm_mem7bit<size>:$offset),
+      (IRInt<"vldr_gather_base", [Vector, UVector]> $addr, $offset)>;
 
-let params = T.All64, pnt = PNT_None in
-def vldrdq_gather_base_wb_z: Intrinsic<
-    Vector, (args Ptr<VecOf<Unsigned<Scalar>>>:$addr, imm_mem7bit<8>:$offset,
-                  Predicate:$pred),
-    (seq (IRInt<"vldr_gather_base_wb_predicated", [Vector, VecOf<Unsigned<Scalar>>, Predicate]>
+    def _gather_base_z: Intrinsic<
+      Vector, (args UVector:$addr, imm_mem7bit<size>:$offset, Predicate:$pred),
+      (IRInt<"vldr_gather_base_predicated", [Vector, UVector, Predicate]>
+          $addr, $offset, $pred)>;
+
+    def _gather_base_wb: Intrinsic<
+      Vector, (args Ptr<UVector>:$addr, imm_mem7bit<size>:$offset),
+      (seq (IRInt<"vldr_gather_base_wb", [Vector, UVector]>
+               (load $addr), $offset):$pair,
+           (store (xval $pair, 1), $addr),
+           (xval $pair, 0))>;
+
+    def _gather_base_wb_z: Intrinsic<
+      Vector, (args Ptr<UVector>:$addr, imm_mem7bit<size>:$offset,
+                    Predicate:$pred),
+      (seq (IRInt<"vldr_gather_base_wb_predicated",
+                  [Vector, UVector, Predicate]>
                (load $addr), $offset, $pred):$pair,
-         (store (xval $pair, 1), $addr),
-         (xval $pair, 0))>;
+           (store (xval $pair, 1), $addr),
+           (xval $pair, 0))>;
+  }
+}
+
+defm vldrwq: gather_base<T.All32, 4>;
+defm vldrdq: gather_base<T.All64, 8>;
+
+multiclass scatter_base<list<Type> types, int size> {
+  let params = types in {
+    def _scatter_base: Intrinsic<
+      Void, (args UVector:$addr, imm_mem7bit<size>:$offset, Vector:$data),
+      (IRInt<"vstr_scatter_base", [UVector, Vector]> $addr, $offset, $data)>;
+
+    def _scatter_base_p: Intrinsic<
+      Void, (args UVector:$addr, imm_mem7bit<size>:$offset, Vector:$data,
+                  Predicate:$pred),
+      (IRInt<"vstr_scatter_base_predicated", [UVector, Vector, Predicate]>
+          $addr, $offset, $data, $pred)>;
+
+    def _scatter_base_wb: Intrinsic<
+      Void, (args Ptr<UVector>:$addr, imm_mem7bit<size>:$offset, Vector:$data),
+      (seq (IRInt<"vstr_scatter_base_wb", [UVector, Vector]>
+                 (load $addr), $offset, $data):$wbaddr,
+           (store $wbaddr, $addr))>;
+
+    def _scatter_base_wb_p: Intrinsic<
+      Void, (args Ptr<UVector>:$addr, imm_mem7bit<size>:$offset,
+                    Vector:$data, Predicate:$pred),
+      (seq (IRInt<"vstr_scatter_base_wb_predicated",
+                  [UVector, Vector, Predicate]>
+               (load $addr), $offset, $data, $pred):$wbaddr,
+           (store $wbaddr, $addr))>;
+  }
+}
+
+defm vstrwq: scatter_base<T.All32, 4>;
+defm vstrdq: scatter_base<T.All64, 8>;
+
+multiclass gather_offset_unshifted<list<Type> types, PrimitiveType memtype> {
+  let params = types in {
+    def _gather_offset: Intrinsic<
+      Vector, (args CPtr<CopyKind<memtype, Scalar>>:$base, UVector:$offsets),
+      (IRInt<"vldr_gather_offset",
+             [Vector, CPtr<CopyKind<memtype, Scalar>>, UVector]>
+          $base, $offsets, memtype.size, 0, (unsignedflag Scalar))>;
+    def _gather_offset_z: Intrinsic<
+      Vector, (args CPtr<CopyKind<memtype, Scalar>>:$base, UVector:$offsets,
+                    Predicate:$pred),
+      (IRInt<"vldr_gather_offset_predicated",
+             [Vector, CPtr<CopyKind<memtype, Scalar>>, UVector, Predicate]>
+          $base, $offsets, memtype.size, 0, (unsignedflag Scalar), $pred)>;
+  }
+}
+
+multiclass gather_offset_shifted<list<Type> types, PrimitiveType memtype,
+                                 int shift> {
+  let params = types in {
+    def _gather_shifted_offset: Intrinsic<
+      Vector, (args CPtr<CopyKind<memtype, Scalar>>:$base, UVector:$offsets),
+      (IRInt<"vldr_gather_offset",
+             [Vector, CPtr<CopyKind<memtype, Scalar>>, UVector]>
+          $base, $offsets, memtype.size, shift, (unsignedflag Scalar))>;
+    def _gather_shifted_offset_z: Intrinsic<
+      Vector, (args CPtr<CopyKind<memtype, Scalar>>:$base, UVector:$offsets,
+                    Predicate:$pred),
+      (IRInt<"vldr_gather_offset_predicated",
+             [Vector, CPtr<CopyKind<memtype, Scalar>>, UVector, Predicate]>
+          $base, $offsets, memtype.size, shift, (unsignedflag Scalar), $pred)>;
+  }
+}
+
+multiclass gather_offset_both<list<Type> types, PrimitiveType memtype,
+                              int shift> {
+  defm "": gather_offset_unshifted<types, memtype>;
+  defm "": gather_offset_shifted<types, memtype, shift>;
+}
+
+defm vldrbq: gather_offset_unshifted<!listconcat(T.All8, T.Int16, T.Int32), u8>;
+defm vldrhq: gather_offset_both<!listconcat(T.All16, T.Int32), u16, 1>;
+defm vldrwq: gather_offset_both<T.All32, u32, 2>;
+defm vldrdq: gather_offset_both<T.Int64, u64, 3>;
+
+multiclass scatter_offset_unshifted<list<Type> types, PrimitiveType memtype> {
+  let params = types in {
+    def _scatter_offset: Intrinsic<
+      Void, (args Ptr<CopyKind<memtype, Scalar>>:$base, UVector:$offsets,
+                  Vector:$data),
+      (IRInt<"vstr_scatter_offset",
+             [Ptr<CopyKind<memtype, Scalar>>, UVector, Vector]>
+          $base, $offsets, $data, memtype.size, 0)>;
+    def _scatter_offset_p: Intrinsic<
+      Void, (args Ptr<CopyKind<memtype, Scalar>>:$base, UVector:$offsets,
+                  Vector:$data, Predicate:$pred),
+      (IRInt<"vstr_scatter_offset_predicated",
+             [Ptr<CopyKind<memtype, Scalar>>, UVector, Vector, Predicate]>
+          $base, $offsets, $data, memtype.size, 0, $pred)>;
+  }
+}
+
+multiclass scatter_offset_shifted<list<Type> types, PrimitiveType memtype,
+                                  int shift> {
+  let params = types in {
+    def _scatter_shifted_offset: Intrinsic<
+      Void, (args Ptr<CopyKind<memtype, Scalar>>:$base, UVector:$offsets,
+                  Vector:$data),
+      (IRInt<"vstr_scatter_offset",
+             [Ptr<CopyKind<memtype, Scalar>>, UVector, Vector]>
+          $base, $offsets, $data, memtype.size, shift)>;
+    def _scatter_shifted_offset_p: Intrinsic<
+      Void, (args Ptr<CopyKind<memtype, Scalar>>:$base, UVector:$offsets,
+                  Vector:$data, Predicate:$pred),
+      (IRInt<"vstr_scatter_offset_predicated",
+             [Ptr<CopyKind<memtype, Scalar>>, UVector, Vector, Predicate]>
+          $base, $offsets, $data, memtype.size, shift, $pred)>;
+  }
+}
+
+multiclass scatter_offset_both<list<Type> types, PrimitiveType memtype,
+                               int shift> {
+  defm "": scatter_offset_unshifted<types, memtype>;
+  defm "": scatter_offset_shifted<types, memtype, shift>;
+}
+
+defm vstrbq: scatter_offset_unshifted<!listconcat(T.All8,T.Int16,T.Int32), u8>;
+defm vstrhq: scatter_offset_both<!listconcat(T.All16, T.Int32), u16, 1>;
+defm vstrwq: scatter_offset_both<T.All32, u32, 2>;
+defm vstrdq: scatter_offset_both<T.Int64, u64, 3>;
 
 let params = [Void], pnt = PNT_None in
 def urshrl: Intrinsic<u64, (args u64:$value, imm_1to32:$shift),
