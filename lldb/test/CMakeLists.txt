@@ -75,8 +75,16 @@ endif()
 # This works with standalone builds as they import the clang target.
 if(TARGET clang)
   add_lldb_test_dependency(clang)
+
+  if(TARGET asan)
+    add_lldb_test_dependency(asan)
+  endif()
+
+  if(TARGET tsan)
+    add_lldb_test_dependency(tsan)
+  endif()
+
   if(APPLE)
-    # If we build clang, we should build libcxx.
     # FIXME: Standalone builds should import the cxx target as well.
     if(LLDB_BUILT_STANDALONE)
       # For now check that the include directory exists.
