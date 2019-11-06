@@ -246,10 +246,11 @@ SkylakeCommon:
   case CK_Pentium3:
   case CK_C3_2:
     setFeatureEnabledImpl(Features, "sse", true);
+    LLVM_FALLTHROUGH;
+  case CK_Pentium2:
     setFeatureEnabledImpl(Features, "fxsr", true);
     LLVM_FALLTHROUGH;
   case CK_PentiumMMX:
-  case CK_Pentium2:
   case CK_K6:
   case CK_WinChipC6:
     setFeatureEnabledImpl(Features, "mmx", true);

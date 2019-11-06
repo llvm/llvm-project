@@ -184,6 +184,7 @@
 // RUN: %clang -march=pentium2 -m32 -E -dM %s -o - 2>&1 \
 // RUN:     -target i386-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_PENTIUM2_M32
+// CHECK_PENTIUM2_M32: #define __FXSR__ 1
 // CHECK_PENTIUM2_M32: #define __MMX__ 1
 // CHECK_PENTIUM2_M32: #define __i386 1
 // CHECK_PENTIUM2_M32: #define __i386__ 1
