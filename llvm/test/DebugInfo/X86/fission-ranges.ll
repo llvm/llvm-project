@@ -45,30 +45,21 @@
 ; if they've changed due to a bugfix, change in register allocation, etc.
 
 ; CHECK:      [[A]]:
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000002, 0x0000000f)
-; CHECK-NEXT:                    => Addr idx 2 (w/ length 15): DW_OP_consts +0, DW_OP_stack_value
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000003, 0x0000000f)
-; CHECK-NEXT:                    => Addr idx 3 (w/ length 15): DW_OP_reg0 RAX
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000004, 0x00000012)
-; CHECK-NEXT:                    => Addr idx 4 (w/ length 18): DW_OP_breg7 RSP-8
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000002, 0x0000000f): DW_OP_consts +0, DW_OP_stack_value
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000003, 0x0000000f): DW_OP_reg0 RAX
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000004, 0x00000012): DW_OP_breg7 RSP-8
 ; CHECK-NEXT:   DW_LLE_end_of_list   ()
 ; CHECK:      [[E]]:
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000005, 0x00000009)
-; CHECK-NEXT:                    => Addr idx 5 (w/ length 9): DW_OP_reg0 RAX
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000006, 0x00000062)
-; CHECK-NEXT:                    => Addr idx 6 (w/ length 98): DW_OP_breg7 RSP-44
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000005, 0x00000009): DW_OP_reg0 RAX
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000006, 0x00000062): DW_OP_breg7 RSP-44
 ; CHECK-NEXT:   DW_LLE_end_of_list   ()
 ; CHECK:      [[B]]:
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000007, 0x0000000f)
-; CHECK-NEXT:                    => Addr idx 7 (w/ length 15): DW_OP_reg0 RAX
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000008, 0x00000042)
-; CHECK-NEXT:                    => Addr idx 8 (w/ length 66): DW_OP_breg7 RSP-32
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000007, 0x0000000f): DW_OP_reg0 RAX
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000008, 0x00000042): DW_OP_breg7 RSP-32
 ; CHECK-NEXT:   DW_LLE_end_of_list   ()
 ; CHECK:      [[D]]:
-; CHECK-NEXT:   DW_LLE_startx_length (0x00000009, 0x0000000f)
-; CHECK-NEXT:                    => Addr idx 9 (w/ length 15): DW_OP_reg0 RAX
-; CHECK-NEXT:   DW_LLE_startx_length (0x0000000a, 0x0000002a)
-; CHECK-NEXT:                    => Addr idx 10 (w/ length 42): DW_OP_breg7 RSP-20
+; CHECK-NEXT:   DW_LLE_startx_length (0x00000009, 0x0000000f): DW_OP_reg0 RAX
+; CHECK-NEXT:   DW_LLE_startx_length (0x0000000a, 0x0000002a): DW_OP_breg7 RSP-20
 ; CHECK-NEXT:   DW_LLE_end_of_list   ()
 
 ; Make sure we don't produce any relocations in any .dwo section (though in particular, debug_info.dwo)
