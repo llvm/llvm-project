@@ -263,8 +263,10 @@ public:
       return error;
     }
 
-    void OptionParsingStarting(ExecutionContext *execution_context) override {}
-    
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      relative_frame_offset.reset();
+    }
+
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
       return llvm::makeArrayRef(g_frame_select_options);
     }
