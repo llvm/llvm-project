@@ -67,7 +67,7 @@ public:
 
   std::vector<std::string> Find() {
     // Fill OverriddenMethods and PartialSpecs storages.
-    TraverseDecl(Context.getTranslationUnitDecl());
+    TraverseAST(Context);
     if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FoundDecl)) {
       addUSRsOfOverridenFunctions(MethodDecl);
       for (const auto &OverriddenMethod : OverriddenMethods) {
