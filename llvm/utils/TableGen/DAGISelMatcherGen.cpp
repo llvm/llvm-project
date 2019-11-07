@@ -1047,7 +1047,6 @@ void MatcherGen::EmitResultCode() {
     }
   }
 
-  assert(Ops.size() >= NumSrcResults && "Didn't provide enough results");
   SmallVector<unsigned, 8> Results(Ops);
 
   // Apply result permutation.
