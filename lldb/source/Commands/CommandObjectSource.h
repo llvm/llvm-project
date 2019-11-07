@@ -10,7 +10,6 @@
 #ifndef liblldb_CommandObjectSource_h_
 #define liblldb_CommandObjectSource_h_
 
-#include "lldb/Core/STLUtils.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 
