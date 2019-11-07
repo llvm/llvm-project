@@ -20,18 +20,19 @@
 
 // Provide typedefs when invoking clang without -finclude-default-header.
 #ifdef NO_HEADER
-typedef char char2 __attribute__((ext_vector_type(2)));
-typedef char char4 __attribute__((ext_vector_type(4)));
-typedef float float4 __attribute__((ext_vector_type(4)));
-typedef half half4 __attribute__((ext_vector_type(4)));
-typedef int int2 __attribute__((ext_vector_type(2)));
-typedef int int4 __attribute__((ext_vector_type(4)));
-typedef long long2 __attribute__((ext_vector_type(2)));
 typedef unsigned char uchar;
 typedef unsigned int uint;
 typedef unsigned long ulong;
 typedef unsigned short ushort;
 typedef __SIZE_TYPE__ size_t;
+typedef char char2 __attribute__((ext_vector_type(2)));
+typedef char char4 __attribute__((ext_vector_type(4)));
+typedef uchar uchar4 __attribute__((ext_vector_type(4)));
+typedef float float4 __attribute__((ext_vector_type(4)));
+typedef half half4 __attribute__((ext_vector_type(4)));
+typedef int int2 __attribute__((ext_vector_type(2)));
+typedef int int4 __attribute__((ext_vector_type(4)));
+typedef long long2 __attribute__((ext_vector_type(2)));
 #endif
 
 kernel void test_pointers(volatile global void *global_p, global const int4 *a) {
@@ -61,6 +62,8 @@ kernel void basic_conversion() {
 char4 test_int(char c, char4 c4) {
   char m = max(c, c);
   char4 m4 = max(c4, c4);
+  uchar4 abs1 = abs(c4);
+  uchar4 abs2 = abs(abs1);
   return max(c4, c);
 }
 
