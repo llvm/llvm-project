@@ -4,6 +4,8 @@ let Command = "target modules dump symtab" in {
   def tm_sort : Option<"sort", "s">, Group<1>,
     Desc<"Supply a sort order when dumping the symbol table.">,
     EnumArg<"SortOrder", "OptionEnumValues(g_sort_option_enumeration)">;
+  def tm_smn : Option<"show-mangled-names", "m">, Group<1>,
+    Desc<"Do not demangle symbol names before showing them.">;
 }
 
 let Command = "help" in {
