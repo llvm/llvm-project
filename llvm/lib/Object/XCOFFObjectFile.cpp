@@ -46,10 +46,6 @@ static StringRef generateXCOFFFixedNameStringRef(const char *Name) {
                     : StringRef(Name, XCOFF::NameSize);
 }
 
-// Explictly instantiate template classes.
-template struct XCOFFSectionHeader<XCOFFSectionHeader32>;
-template struct XCOFFSectionHeader<XCOFFSectionHeader64>;
-
 template <typename T> StringRef XCOFFSectionHeader<T>::getName() const {
   const T &DerivedXCOFFSectionHeader = static_cast<const T &>(*this);
   return generateXCOFFFixedNameStringRef(DerivedXCOFFSectionHeader.Name);
@@ -772,6 +768,10 @@ bool XCOFFSymbolRef::isFunction() const {
 
   return (OwningObjectPtr->getSectionFlags(SI.get()) & XCOFF::STYP_TEXT);
 }
+
+// Explictly instantiate template classes.
+template struct XCOFFSectionHeader<XCOFFSectionHeader32>;
+template struct XCOFFSectionHeader<XCOFFSectionHeader64>;
 
 } // namespace object
 } // namespace llvm
