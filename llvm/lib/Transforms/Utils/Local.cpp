@@ -1611,6 +1611,11 @@ bool llvm::salvageDebugInfo(Instruction &I) {
   return salvageDebugInfoForDbgValues(I, DbgUsers);
 }
 
+void llvm::salvageDebugInfoOrMarkUndef(Instruction &I) {
+  if (!salvageDebugInfo(I))
+    replaceDbgUsesWithUndef(&I);
+}
+
 bool llvm::salvageDebugInfoForDbgValues(
     Instruction &I, ArrayRef<DbgVariableIntrinsic *> DbgUsers) {
   auto &Ctx = I.getContext();
