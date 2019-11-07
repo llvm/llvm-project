@@ -35,7 +35,7 @@
 ; should not be set.
 ; RUN: llvm-bcanalyzer --dump %t1.o.thinlto.bc | FileCheck %s -check-prefixes=CHECK-BC1
 ; CHECK-BC1: <GLOBALVAL_SUMMARY_BLOCK
-; CHECK-BC1: <FLAGS op0=1/>
+; CHECK-BC1: <FLAGS op0=33/>
 ; CHECK-BC1: </GLOBALVAL_SUMMARY_BLOCK
 
 ; Nothing interesting in the corresponding object file, so

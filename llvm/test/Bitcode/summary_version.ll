@@ -2,7 +2,7 @@
 ; RUN: opt  -module-summary  %s -o - | llvm-bcanalyzer -dump | FileCheck %s
 
 ; CHECK: <GLOBALVAL_SUMMARY_BLOCK
-; CHECK: <VERSION op0=7/>
+; CHECK: <VERSION op0=8/>
 
 
 

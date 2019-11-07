@@ -3723,7 +3723,7 @@ void ModuleBitcodeWriterBase::writeModuleLevelReferences(
 // Current version for the summary.
 // This is bumped whenever we introduce changes in the way some record are
 // interpreted, like flags for instance.
-static const uint64_t INDEX_VERSION = 7;
+static const uint64_t INDEX_VERSION = 8;
 
 /// Emit the per-module summary section alongside the rest of
 /// the module's bitcode.
@@ -3899,6 +3899,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     Flags |= 0x8;
   if (Index.partiallySplitLTOUnits())
     Flags |= 0x10;
+  if (Index.withAttributePropagation())
+    Flags |= 0x20;
   Stream.EmitRecord(bitc::FS_FLAGS, ArrayRef<uint64_t>{Flags});
 
   for (const auto &GVI : valueIds()) {
