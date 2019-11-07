@@ -217,8 +217,8 @@ public:
     return false;
   }
 
-  static unsigned canFoldMergeOpcode(unsigned MergeOp, unsigned ConvertOp,
-                                     LLT OpTy, LLT DestTy) {
+  static bool canFoldMergeOpcode(unsigned MergeOp, unsigned ConvertOp,
+                                 LLT OpTy, LLT DestTy) {
     // Check if we found a definition that is like G_MERGE_VALUES.
     switch (MergeOp) {
     default:
