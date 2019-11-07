@@ -1,5 +1,8 @@
 // RUN: %libomp-compile && env KMP_ENABLE_TASK_THROTTLING=0 %libomp-run
 
+// This test is known to be fragile on NetBSD kernel at the moment,
+// https://bugs.llvm.org/show_bug.cgi?id=42020.
+// UNSUPPORTED: netbsd
 #include<omp.h>
 #include<stdlib.h>
 #include<string.h>
