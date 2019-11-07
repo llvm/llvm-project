@@ -62,11 +62,11 @@ const char *expectedOut = "\n"
 // TODO: Fix Options
 const char *expectedLog =
     ": Unknown command line argument '-file-header'.  Try: ' --help'\n"
-    ": Did you mean '  --file-headers'?\n"
+    ": Did you mean '--file-headers'?\n"
     ": Unknown command line argument '-file headers'.  Try: ' --help'\n"
-    ": Did you mean '  --file-headers'?\n"
+    ": Did you mean '--file-headers'?\n"
     ": Unknown command line argument '-file\\headers'.  Try: ' --help'\n"
-    ": Did you mean '  --file-headers'?\n";
+    ": Did you mean '--file-headers'?\n";
 
 void printChars(const char *bytes, size_t count) {
   for (size_t i = 0; i < count; i++)
