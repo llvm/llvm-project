@@ -719,9 +719,10 @@ cleanupAndFormat(StringRef Code, const tooling::Replacements &Replaces,
   return formatReplacements(Code, std::move(*CleanReplaces), Style);
 }
 
-void lex(llvm::StringRef Code, const LangOptions &LangOpts,
-         llvm::function_ref<void(const clang::Token &, const SourceManager &SM)>
-             Action) {
+static void
+lex(llvm::StringRef Code, const LangOptions &LangOpts,
+    llvm::function_ref<void(const clang::Token &, const SourceManager &SM)>
+        Action) {
   // FIXME: InMemoryFileAdapter crashes unless the buffer is null terminated!
   std::string NullTerminatedCode = Code.str();
   SourceManagerForFile FileSM("dummy.cpp", NullTerminatedCode);
