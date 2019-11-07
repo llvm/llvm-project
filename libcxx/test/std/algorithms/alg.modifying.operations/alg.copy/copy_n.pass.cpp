@@ -26,7 +26,7 @@ TEST_CONSTEXPR_CXX20 void
 test_copy_n()
 {
     const unsigned N = 1000;
-    int ia[N];
+    int ia[N] = {};
     for (unsigned i = 0; i < N; ++i)
         ia[i] = i;
     int ib[N] = {0};
