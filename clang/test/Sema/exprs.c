@@ -179,17 +179,27 @@ void test18(int b) {
   test18_e(); // expected-error {{too few arguments to function call, expected at least 2, have 0}}
 }
 
+typedef int __attribute__((address_space(256))) int_AS256;
 // PR7569
 void test19() {
-  *(int*)0 = 0;   // expected-warning {{indirection of non-volatile null pointer}} \
+  *(int *)0 = 0;                                     // expected-warning {{indirection of non-volatile null pointer}} \
                   // expected-note {{consider using __builtin_trap}}
-  *(volatile int*)0 = 0;  // Ok.
+  *(volatile int *)0 = 0;                            // Ok.
+  *(int __attribute__((address_space(256))) *)0 = 0; // Ok.
+  *(int __attribute__((address_space(0))) *)0 = 0;   // expected-warning {{indirection of non-volatile null pointer}} \
+                     // expected-note {{consider using __builtin_trap}}
+  *(int_AS256 *)0 = 0;                               // Ok.
 
   // rdar://9269271
-  int x = *(int*)0;  // expected-warning {{indirection of non-volatile null pointer}} \
+  int x = *(int *)0;                                                                          // expected-warning {{indirection of non-volatile null pointer}} \
                      // expected-note {{consider using __builtin_trap}}
-  int x2 = *(volatile int*)0; // Ok.
-  int *p = &(*(int*)0); // Ok;
+  int x2 = *(volatile int *)0;                                                                // Ok.
+  int x3 = *(int __attribute__((address_space(0))) *)0;                                       // expected-warning {{indirection of non-volatile null pointer}} \
+                     // expected-note {{consider using __builtin_trap}}
+  int x4 = *(int_AS256 *)0;                                                                   // Ok.
+  int *p = &(*(int *)0);                                                                      // Ok.
+  int_AS256 *p1 = &(*(int __attribute__((address_space(256))) *)0);                           // Ok.
+  int __attribute__((address_space(0))) *p2 = &(*(int __attribute__((address_space(0))) *)0); // Ok.
 }
 
 int test20(int x) {
