@@ -37,3 +37,56 @@ void baz(int y) {
 // CHECK: {{store atomic|call void @__atomic_store}}
   x += y;
 }
+
+_Atomic(int) compound_add(_Atomic(int) in) {
+// CHECK-LABEL: @compound_add
+// CHECK: [[OLD:%.*]] = atomicrmw add i32* {{.*}}, i32 5 seq_cst
+// CHECK: [[NEW:%.*]] = add i32 [[OLD]], 5
+// CHECK: ret i32 [[NEW]]
+
+  return (in += 5);
+}
+
+_Atomic(int) compound_sub(_Atomic(int) in) {
+// CHECK-LABEL: @compound_sub
+// CHECK: [[OLD:%.*]] = atomicrmw sub i32* {{.*}}, i32 5 seq_cst
+// CHECK: [[NEW:%.*]] = sub i32 [[OLD]], 5
+// CHECK: ret i32 [[NEW]]
+
+  return (in -= 5);
+}
+
+_Atomic(int) compound_xor(_Atomic(int) in) {
+// CHECK-LABEL: @compound_xor
+// CHECK: [[OLD:%.*]] = atomicrmw xor i32* {{.*}}, i32 5 seq_cst
+// CHECK: [[NEW:%.*]] = xor i32 [[OLD]], 5
+// CHECK: ret i32 [[NEW]]
+
+  return (in ^= 5);
+}
+
+_Atomic(int) compound_or(_Atomic(int) in) {
+// CHECK-LABEL: @compound_or
+// CHECK: [[OLD:%.*]] = atomicrmw or i32* {{.*}}, i32 5 seq_cst
+// CHECK: [[NEW:%.*]] = or i32 [[OLD]], 5
+// CHECK: ret i32 [[NEW]]
+
+  return (in |= 5);
+}
+
+_Atomic(int) compound_and(_Atomic(int) in) {
+// CHECK-LABEL: @compound_and
+// CHECK: [[OLD:%.*]] = atomicrmw and i32* {{.*}}, i32 5 seq_cst
+// CHECK: [[NEW:%.*]] = and i32 [[OLD]], 5
+// CHECK: ret i32 [[NEW]]
+
+  return (in &= 5);
+}
+
+_Atomic(int) compound_mul(_Atomic(int) in) {
+// CHECK-LABEL: @compound_mul
+// CHECK: cmpxchg i32* {{%.*}}, i32 {{%.*}}, i32 [[NEW:%.*]] seq_cst seq_cst
+// CHECK: ret i32 [[NEW]]
+
+  return (in *= 5);
+}
