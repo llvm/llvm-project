@@ -311,9 +311,14 @@ std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST) {
     if (auto Kind = kindForReference(R))
       Builder.addToken(R.NameLoc, *Kind);
   });
-  // Add highlightings for macro expansions.
-  for (const auto &M : AST.getMacros().Ranges)
+  // Add highlightings for macro references.
+  for (const auto &SIDToRefs : AST.getMacros().MacroRefs) {
+    for (const auto &M : SIDToRefs.second)
+      Builder.addToken({HighlightingKind::Macro, M});
+  }
+  for (const auto &M : AST.getMacros().UnknownMacros)
     Builder.addToken({HighlightingKind::Macro, M});
+
   return std::move(Builder).collect();
 }
 
