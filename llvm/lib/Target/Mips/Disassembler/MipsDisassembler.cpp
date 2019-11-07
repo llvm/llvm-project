@@ -63,6 +63,8 @@ public:
 
   bool hasCnMips() const { return STI.getFeatureBits()[Mips::FeatureCnMips]; }
 
+  bool hasCnMipsP() const { return STI.getFeatureBits()[Mips::FeatureCnMipsP]; }
+
   bool hasCOP3() const {
     // Only present in MIPS-I and MIPS-II
     return !hasMips32() && !hasMips3();
@@ -1352,6 +1354,14 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   if (hasCnMips()) {
     LLVM_DEBUG(dbgs() << "Trying CnMips table (32-bit opcodes):\n");
     Result = decodeInstruction(DecoderTableCnMips32, Instr, Insn,
+                               Address, this, STI);
+    if (Result != MCDisassembler::Fail)
+      return Result;
+  }
+
+  if (hasCnMipsP()) {
+    LLVM_DEBUG(dbgs() << "Trying CnMipsP table (32-bit opcodes):\n");
+    Result = decodeInstruction(DecoderTableCnMipsP32, Instr, Insn,
                                Address, this, STI);
     if (Result != MCDisassembler::Fail)
       return Result;

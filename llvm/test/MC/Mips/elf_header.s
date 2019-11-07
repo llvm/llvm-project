@@ -86,6 +86,10 @@
 # RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=mips64r6                                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN2008,MIPS64R6 %s
 
 # RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux -mcpu=octeon   -target-abi=n64                 %s -o - | llvm-readobj -h | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,OCTEON   %s
+# RUN: llvm-mc -filetype=obj -triple mips64el-unknown-linux \
+# RUN:         -mcpu=octeon+ -target-abi=n64 %s -o - \
+# RUN:   | llvm-readobj -h \
+# RUN:   | FileCheck --check-prefixes=ALL,ELF64,LE,N64,NAN1985,OCTEON %s
 
 # ALL:        ElfHeader {
 # ALL-NEXT:     Ident {

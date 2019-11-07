@@ -111,6 +111,9 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // CPU supports cnMIPS (Cavium Networks Octeon CPU).
   bool HasCnMips;
 
+  // CPU supports cnMIPSP (Cavium Networks Octeon+ CPU).
+  bool HasCnMipsP;
+
   // isLinux - Target system is Linux. Is false we consider ELFOS for now.
   bool IsLinux;
 
@@ -270,6 +273,7 @@ public:
   bool hasMips64r6() const { return MipsArchVersion >= Mips64r6; }
 
   bool hasCnMips() const { return HasCnMips; }
+  bool hasCnMipsP() const { return HasCnMipsP; }
 
   bool isLittle() const { return IsLittle; }
   bool isABICalls() const { return !NoABICalls; }
