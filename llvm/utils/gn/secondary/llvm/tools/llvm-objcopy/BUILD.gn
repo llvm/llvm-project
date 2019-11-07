@@ -2,6 +2,11 @@ import("//llvm/tools/binutils_symlinks.gni")
 import("//llvm/utils/TableGen/tablegen.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
 
+tablegen("InstallNameToolOpts") {
+  visibility = [ ":llvm-objcopy" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 tablegen("ObjcopyOpts") {
   visibility = [ ":llvm-objcopy" ]
   args = [ "-gen-opt-parser-defs" ]
@@ -12,7 +17,10 @@ tablegen("StripOpts") {
   args = [ "-gen-opt-parser-defs" ]
 }
 
-symlinks = [ "llvm-strip" ]
+symlinks = [
+  "llvm-install-name-tool",
+  "llvm-strip",
+]
 if (llvm_install_binutils_symlinks) {
   symlinks += [
     "objcopy",
@@ -39,6 +47,7 @@ group("symlinks") {
 
 executable("llvm-objcopy") {
   deps = [
+    ":InstallNameToolOpts",
     ":ObjcopyOpts",
     ":StripOpts",
     "//llvm/lib/MC",
