@@ -10,13 +10,12 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_OPT_DEBUGIFY_H
-#define LLVM_TOOLS_OPT_DEBUGIFY_H
+#ifndef LLVM_TRANSFORM_UTILS_DEBUGIFY_H
+#define LLVM_TRANSFORM_UTILS_DEBUGIFY_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/raw_ostream.h"
 
 llvm::ModulePass *createDebugifyModulePass();
 llvm::FunctionPass *createDebugifyFunctionPass();
@@ -53,9 +52,6 @@ struct DebugifyStatistics {
 /// Map pass names to a per-pass DebugifyStatistics instance.
 using DebugifyStatsMap = llvm::MapVector<llvm::StringRef, DebugifyStatistics>;
 
-/// Export per-pass debugify statistics to the file specified by \p Path.
-void exportDebugifyStats(llvm::StringRef Path, const DebugifyStatsMap &Map);
-
 llvm::ModulePass *
 createCheckDebugifyModulePass(bool Strip = false,
                               llvm::StringRef NameOfWrappedPass = "",
@@ -71,4 +67,4 @@ struct NewPMCheckDebugifyPass
   llvm::PreservedAnalyses run(llvm::Module &M, llvm::ModuleAnalysisManager &AM);
 };
 
-#endif // LLVM_TOOLS_OPT_DEBUGIFY_H
+#endif // LLVM_TRANSFORM_UTILS_DEBUGIFY_H
