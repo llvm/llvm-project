@@ -33,6 +33,8 @@ RISCVToolChain::RISCVToolChain(const Driver &D, const llvm::Triple &Triple,
     getFilePaths().push_back(GCCInstallation.getInstallPath().str());
     getProgramPaths().push_back(
         (GCCInstallation.getParentLibPath() + "/../bin").str());
+  } else {
+    getProgramPaths().push_back(D.Dir);
   }
 }
 
@@ -74,17 +76,22 @@ std::string RISCVToolChain::computeSysRoot() const {
   if (!getDriver().SysRoot.empty())
     return getDriver().SysRoot;
 
-  if (!GCCInstallation.isValid())
-    return std::string();
-
-  StringRef LibDir = GCCInstallation.getParentLibPath();
-  StringRef TripleStr = GCCInstallation.getTriple().str();
-  std::string SysRootDir = LibDir.str() + "/../" + TripleStr.str();
+  SmallString<128> SysRootDir;
+  if (GCCInstallation.isValid()) {
+    StringRef LibDir = GCCInstallation.getParentLibPath();
+    StringRef TripleStr = GCCInstallation.getTriple().str();
+    llvm::sys::path::append(SysRootDir, LibDir, "..", TripleStr);
+  } else {
+    // Use the triple as provided to the driver. Unlike the parsed triple
+    // this has not been normalized to always contain every field.
+    llvm::sys::path::append(SysRootDir, getDriver().Dir, "..",
+                            getDriver().getTargetTriple());
+  }
 
   if (!llvm::sys::fs::exists(SysRootDir))
     return std::string();
 
-  return SysRootDir;
+  return SysRootDir.str();
 }
 
 void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
