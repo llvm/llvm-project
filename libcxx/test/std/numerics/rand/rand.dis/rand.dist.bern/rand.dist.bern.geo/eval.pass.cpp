@@ -30,6 +30,16 @@ sqr(T x)
     return x * x;
 }
 
+void test_small_inputs() {
+  std::mt19937 engine;
+  std::geometric_distribution<std::int16_t> distribution(5.45361e-311);
+  typedef std::geometric_distribution<std::int16_t>::result_type result_type;
+  for (int i = 0; i < 1000; ++i) {
+    volatile result_type res = distribution(engine);
+    ((void)res);
+  }
+}
+
 void
 test1()
 {
@@ -296,6 +306,7 @@ int main(int, char**)
     test4();
     test5();
     test6();
+    test_small_inputs();
 
   return 0;
 }
