@@ -1533,6 +1533,11 @@ void Function::setEntryCount(ProfileCount Count,
   auto PrevCount = getEntryCount();
   assert(!PrevCount.hasValue() || PrevCount.getType() == Count.getType());
 #endif
+
+  auto ImportGUIDs = getImportGUIDs();
+  if (S == nullptr && ImportGUIDs.size())
+    S = &ImportGUIDs;
+
   MDBuilder MDB(getContext());
   setMetadata(
       LLVMContext::MD_prof,
