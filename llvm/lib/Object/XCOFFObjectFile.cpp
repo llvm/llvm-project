@@ -46,6 +46,25 @@ static StringRef generateXCOFFFixedNameStringRef(const char *Name) {
                     : StringRef(Name, XCOFF::NameSize);
 }
 
+// Explictly instantiate template classes.
+template struct XCOFFSectionHeader<XCOFFSectionHeader32>;
+template struct XCOFFSectionHeader<XCOFFSectionHeader64>;
+
+template <typename T> StringRef XCOFFSectionHeader<T>::getName() const {
+  const T &DerivedXCOFFSectionHeader = static_cast<const T &>(*this);
+  return generateXCOFFFixedNameStringRef(DerivedXCOFFSectionHeader.Name);
+}
+
+template <typename T> uint16_t XCOFFSectionHeader<T>::getSectionType() const {
+  const T &DerivedXCOFFSectionHeader = static_cast<const T &>(*this);
+  return DerivedXCOFFSectionHeader.Flags & SectionFlagsTypeMask;
+}
+
+template <typename T>
+bool XCOFFSectionHeader<T>::isReservedSectionType() const {
+  return getSectionType() & SectionFlagsReservedMask;
+}
+
 bool XCOFFRelocation32::isRelocationSigned() const {
   return Info & XR_SIGN_INDICATOR_MASK;
 }
@@ -686,14 +705,6 @@ Expected<std::unique_ptr<ObjectFile>>
 ObjectFile::createXCOFFObjectFile(MemoryBufferRef MemBufRef,
                                   unsigned FileType) {
   return XCOFFObjectFile::create(FileType, MemBufRef);
-}
-
-StringRef XCOFFSectionHeader32::getName() const {
-  return generateXCOFFFixedNameStringRef(Name);
-}
-
-StringRef XCOFFSectionHeader64::getName() const {
-  return generateXCOFFFixedNameStringRef(Name);
 }
 
 XCOFF::StorageClass XCOFFSymbolRef::getStorageClass() const {
