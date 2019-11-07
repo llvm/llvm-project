@@ -1158,11 +1158,12 @@ void DwarfDebug::finalizeModuleInfo() {
       if (U.hasRangeLists())
         U.addRnglistsBase();
 
-      if (!DebugLocs.getLists().empty() && !useSplitDwarf()) {
+      if (!DebugLocs.getLists().empty()) {
         DebugLocs.setSym(Asm->createTempSymbol("loclists_table_base"));
-        U.addSectionLabel(U.getUnitDie(), dwarf::DW_AT_loclists_base,
-                          DebugLocs.getSym(),
-                          TLOF.getDwarfLoclistsSection()->getBeginSymbol());
+        if (!useSplitDwarf())
+          U.addSectionLabel(U.getUnitDie(), dwarf::DW_AT_loclists_base,
+                            DebugLocs.getSym(),
+                            TLOF.getDwarfLoclistsSection()->getBeginSymbol());
       }
     }
 
@@ -1207,9 +1208,10 @@ void DwarfDebug::endModule() {
   emitDebugStr();
 
   if (useSplitDwarf())
+    // Handles debug_loc.dwo / debug_loclists.dwo section emission
     emitDebugLocDWO();
   else
-    // Emit info into a debug loc section.
+    // Handles debug_loc / debug_loclists section emission
     emitDebugLoc();
 
   // Corresponding abbreviations into a abbrev section.
@@ -2335,8 +2337,6 @@ static MCSymbol *emitLoclistsTableHeader(AsmPrinter *Asm,
 
   const auto &DebugLocs = DD.getDebugLocs();
 
-  // FIXME: Generate the offsets table and use DW_FORM_loclistx with the
-  // DW_AT_loclists_base attribute. Until then set the number of offsets to 0.
   Asm->OutStreamer->AddComment("Offset entry count");
   Asm->emitInt32(DebugLocs.getLists().size());
   Asm->OutStreamer->EmitLabel(DebugLocs.getSym());
@@ -2443,27 +2443,29 @@ static void emitRangeList(
   }
 }
 
+// Handles emission of both debug_loclist / debug_loclist.dwo
 static void emitLocList(DwarfDebug &DD, AsmPrinter *Asm, const DebugLocStream::List &List) {
-  emitRangeList(
-      DD, Asm, List.Label, DD.getDebugLocs().getEntries(List), *List.CU,
-      dwarf::DW_LLE_base_addressx, dwarf::DW_LLE_offset_pair,
-      dwarf::DW_LLE_startx_length, dwarf::DW_LLE_end_of_list,
-      llvm::dwarf::LocListEncodingString,
-      /* ShouldUseBaseAddress */ true,
-      [&](const DebugLocStream::Entry &E) {
-        DD.emitDebugLocEntryLocation(E, List.CU);
-      });
+  emitRangeList(DD, Asm, List.Label, DD.getDebugLocs().getEntries(List),
+                *List.CU, dwarf::DW_LLE_base_addressx,
+                dwarf::DW_LLE_offset_pair, dwarf::DW_LLE_startx_length,
+                dwarf::DW_LLE_end_of_list, llvm::dwarf::LocListEncodingString,
+                /* ShouldUseBaseAddress */ true,
+                [&](const DebugLocStream::Entry &E) {
+                  DD.emitDebugLocEntryLocation(E, List.CU);
+                });
 }
 
-// Emit locations into the .debug_loc/.debug_rnglists section.
+// Emit locations into the .debug_loc/.debug_loclists section.
 void DwarfDebug::emitDebugLoc() {
   if (DebugLocs.getLists().empty())
     return;
 
   MCSymbol *TableEnd = nullptr;
   if (getDwarfVersion() >= 5) {
+
     Asm->OutStreamer->SwitchSection(
         Asm->getObjFileLowering().getDwarfLoclistsSection());
+
     TableEnd = emitLoclistsTableHeader(Asm, *this);
   } else {
     Asm->OutStreamer->SwitchSection(
@@ -2477,11 +2479,29 @@ void DwarfDebug::emitDebugLoc() {
     Asm->OutStreamer->EmitLabel(TableEnd);
 }
 
+// Emit locations into the .debug_loc.dwo/.debug_loclists.dwo section.
 void DwarfDebug::emitDebugLocDWO() {
+  if (DebugLocs.getLists().empty())
+    return;
+
+  if (getDwarfVersion() >= 5) {
+    MCSymbol *TableEnd = nullptr;
+    Asm->OutStreamer->SwitchSection(
+        Asm->getObjFileLowering().getDwarfLoclistsDWOSection());
+    TableEnd = emitLoclistsTableHeader(Asm, *this);
+    for (const auto &List : DebugLocs.getLists())
+      emitLocList(*this, Asm, List);
+
+    if (TableEnd)
+      Asm->OutStreamer->EmitLabel(TableEnd);
+    return;
+  }
+
   for (const auto &List : DebugLocs.getLists()) {
     Asm->OutStreamer->SwitchSection(
         Asm->getObjFileLowering().getDwarfLocDWOSection());
     Asm->OutStreamer->EmitLabel(List.Label);
+
     for (const auto &Entry : DebugLocs.getEntries(List)) {
       // GDB only supports startx_length in pre-standard split-DWARF.
       // (in v5 standard loclists, it currently* /only/ supports base_address +
@@ -2494,7 +2514,6 @@ void DwarfDebug::emitDebugLocDWO() {
       unsigned idx = AddrPool.getIndex(Entry.Begin);
       Asm->EmitULEB128(idx);
       Asm->EmitLabelDifference(Entry.End, Entry.Begin, 4);
-
       emitDebugLocEntryLocation(Entry, List.CU);
     }
     Asm->emitInt8(dwarf::DW_LLE_end_of_list);
