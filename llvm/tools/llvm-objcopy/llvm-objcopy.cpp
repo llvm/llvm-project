@@ -313,20 +313,11 @@ static Error executeObjcopy(CopyConfig &Config) {
   return Error::success();
 }
 
-namespace {
-
-enum class ToolType { Objcopy, Strip, InstallNameTool };
-
-} // anonymous namespace
-
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   ToolName = argv[0];
-  ToolType Tool = StringSwitch<ToolType>(sys::path::stem(ToolName))
-                      .EndsWith("strip", ToolType::Strip)
-                      .EndsWith("install-name-tool", ToolType::InstallNameTool)
-                      .EndsWith("install_name_tool", ToolType::InstallNameTool)
-                      .Default(ToolType::Objcopy);
+  bool IsStrip = sys::path::stem(ToolName).contains("strip");
+
   // Expand response files.
   // TODO: Move these lines, which are copied from lib/Support/CommandLine.cpp,
   // into a separate function in the CommandLine library and call that function
@@ -341,11 +332,10 @@ int main(int argc, char **argv) {
                           NewArgv);
 
   auto Args = makeArrayRef(NewArgv).drop_front();
+
   Expected<DriverConfig> DriverConfig =
-      (Tool == ToolType::Strip) ? parseStripOptions(Args, reportWarning)
-                                : ((Tool == ToolType::InstallNameTool)
-                                       ? parseInstallNameToolOptions(Args)
-                                       : parseObjcopyOptions(Args, reportWarning));
+      IsStrip ? parseStripOptions(Args, reportWarning)
+              : parseObjcopyOptions(Args, reportWarning);
   if (!DriverConfig) {
     logAllUnhandledErrors(DriverConfig.takeError(),
                           WithColor::error(errs(), ToolName));
