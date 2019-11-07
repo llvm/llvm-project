@@ -21,12 +21,14 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 
 using namespace clang;
 
+LLVM_ATTRIBUTE_UNUSED
 static bool isImplicitExpr(clang::Expr *E) { return E->IgnoreImplicit() != E; }
 
 /// A helper class for constructing the syntax tree while traversing a clang
