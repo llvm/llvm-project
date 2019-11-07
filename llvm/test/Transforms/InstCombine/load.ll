@@ -237,6 +237,42 @@ entry:
   ret void
 }
 
+define void @test16-vect(i8* %x, i8* %a, i8* %b, i8* %c) {
+; CHECK-LABEL: @test16-vect(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_CAST:%.*]] = bitcast i8* [[C:%.*]] to i32*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i32*
+; CHECK-NEXT:    [[X11:%.*]] = load i32, i32* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[A:%.*]] to i32*
+; CHECK-NEXT:    store i32 [[X11]], i32* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[B:%.*]] to i32*
+; CHECK-NEXT:    store i32 [[X11]], i32* [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[X]] to i32*
+; CHECK-NEXT:    [[X22:%.*]] = load i32, i32* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[B]] to i32*
+; CHECK-NEXT:    store i32 [[X22]], i32* [[TMP4]], align 4
+; CHECK-NEXT:    store i32 [[X22]], i32* [[C_CAST]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x.cast = bitcast i8* %x to <4 x i8>*
+  %a.cast = bitcast i8* %a to <4 x i8>*
+  %b.cast = bitcast i8* %b to <4 x i8>*
+  %c.cast = bitcast i8* %c to i32*
+
+  %x1 = load <4 x i8>, <4 x i8>* %x.cast
+  store <4 x i8> %x1, <4 x i8>* %a.cast
+  store <4 x i8> %x1, <4 x i8>* %b.cast
+
+  %x2 = load <4 x i8>, <4 x i8>* %x.cast
+  store <4 x i8> %x2, <4 x i8>* %b.cast
+  %x2.cast = bitcast <4 x i8> %x2 to i32
+  store i32 %x2.cast, i32* %c.cast
+
+  ret void
+}
+
+
 ; Check that in cases similar to @test16 we don't try to rewrite a load when
 ; its only use is a store but it is used as the pointer to that store rather
 ; than the value.
@@ -298,5 +334,17 @@ entry:
   %swifterror = bitcast i8** %tmp to %swift.error**
   %err.res = load %swift.error*, %swift.error** %swifterror, align 8
   store %swift.error* %err.res, %swift.error** %err, align 8
+  ret void
+}
+
+; Make sure we don't canonicalize accesses to scalable vectors.
+define void @test20(<vscale x 4 x i8>* %x, <vscale x 4 x i8>* %y) {
+; CHECK-LABEL: @test20(
+; CHECK-NEXT:    [[X_LOAD:%.*]] = load <vscale x 4 x i8>, <vscale x 4 x i8>* [[X:%.*]], align 1
+; CHECK-NEXT:    store <vscale x 4 x i8> [[X_LOAD]], <vscale x 4 x i8>* [[Y:%.*]], align 1
+; CHECK-NEXT:    ret void
+;
+  %x.load = load <vscale x 4 x i8>, <vscale x 4 x i8>* %x, align 1
+  store <vscale x 4 x i8> %x.load, <vscale x 4 x i8>* %y, align 1
   ret void
 }
