@@ -2369,5 +2369,12 @@ TEST_F(FormatTestJS, SupportPrivateFieldsAndMethods) {
                "  static #staticPrivateMethod() {}\n");
 }
 
+TEST_F(FormatTestJS, DeclaredFields) {
+  verifyFormat("class Example {\n"
+               "  declare pub: string;\n"
+               "  declare private priv: string;\n"
+               "}\n");
+}
+
 } // namespace format
 } // end namespace clang
