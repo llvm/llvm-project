@@ -143,7 +143,14 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
                  entry.packet.data);
         LLDB_LOG(log, "GDBRemoteCommunicationReplayServer actual packet: '{0}'",
                  packet.GetStringRef());
-        assert(false && "Encountered unexpected packet during replay");
+#ifndef NDEBUG
+        // This behaves like a regular assert, but prints the expected and
+        // received packet before aborting.
+        printf("Reproducer expected packet: '%s'\n", entry.packet.data.c_str());
+        printf("Reproducer received packet: '%s'\n",
+               packet.GetStringRef().data());
+        llvm::report_fatal_error("Encountered unexpected packet during replay");
+#endif
         return PacketResult::ErrorSendFailed;
       }
 
