@@ -180,7 +180,7 @@ public:
                         ExecutionContext *execution_context) override {
     Status error;
     const int short_option =
-        g_breakpoint_modify_options[option_idx].short_option;
+        g_breakpoint_dummy_options[option_idx].short_option;
 
     switch (short_option) {
     case 'D':
