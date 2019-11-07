@@ -22,7 +22,6 @@ executable("opt") {
   sources = [
     "AnalysisWrappers.cpp",
     "BreakpointPrinter.cpp",
-    "Debugify.cpp",
     "GraphPrinters.cpp",
     "NewPMDriver.cpp",
     "PassPrinters.cpp",
