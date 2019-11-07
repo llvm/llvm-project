@@ -1011,19 +1011,12 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
 
 void DeclPrinter::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
   const char *l;
-  switch (D->getLanguage()) {
-  case LinkageSpecDecl::lang_c:
+  if (D->getLanguage() == LinkageSpecDecl::lang_c)
     l = "C";
-    break;
-  case LinkageSpecDecl::lang_cxx_14:
-    l = "C++14";
-    break;
-  case LinkageSpecDecl::lang_cxx_11:
-    l = "C++11";
-    break;
-  case LinkageSpecDecl::lang_cxx:
+  else {
+    assert(D->getLanguage() == LinkageSpecDecl::lang_cxx &&
+           "unknown language in linkage specification");
     l = "C++";
-    break;
   }
 
   Out << "extern \"" << l << "\" ";
