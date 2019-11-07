@@ -33,6 +33,7 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Operator.h"
@@ -87,6 +88,7 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
     FMF.setAllowReassoc();
   }
   Builder.setFastMathFlags(FMF);
+  SetFPModel();
 }
 
 CodeGenFunction::~CodeGenFunction() {
@@ -100,6 +102,59 @@ CodeGenFunction::~CodeGenFunction() {
 
   if (getLangOpts().OpenMP && CurFn)
     CGM.getOpenMPRuntime().functionFinished(*this);
+}
+
+// Map the LangOption for rounding mode into
+// the corresponding enum in the IR.
+static llvm::ConstrainedFPIntrinsic::RoundingMode ToConstrainedRoundingMD(
+  LangOptions::FPRoundingModeKind Kind) {
+
+  switch (Kind) {
+  case LangOptions::FPR_ToNearest:
+    return llvm::ConstrainedFPIntrinsic::rmToNearest;
+  case LangOptions::FPR_Downward:
+    return llvm::ConstrainedFPIntrinsic::rmDownward;
+  case LangOptions::FPR_Upward:
+    return llvm::ConstrainedFPIntrinsic::rmUpward;
+  case LangOptions::FPR_TowardZero:
+    return llvm::ConstrainedFPIntrinsic::rmTowardZero;
+  case LangOptions::FPR_Dynamic:
+    return llvm::ConstrainedFPIntrinsic::rmDynamic;
+  }
+  llvm_unreachable("Unsupported FP RoundingMode");
+}
+
+// Map the LangOption for exception behavior into
+// the corresponding enum in the IR.
+static llvm::ConstrainedFPIntrinsic::ExceptionBehavior ToConstrainedExceptMD(
+  LangOptions::FPExceptionModeKind Kind) {
+
+  switch (Kind) {
+  case LangOptions::FPE_Ignore:
+    return llvm::ConstrainedFPIntrinsic::ebIgnore;
+  case LangOptions::FPE_MayTrap:
+    return llvm::ConstrainedFPIntrinsic::ebMayTrap;
+  case LangOptions::FPE_Strict:
+    return llvm::ConstrainedFPIntrinsic::ebStrict;
+  }
+  llvm_unreachable("Unsupported FP Exception Behavior");
+}
+
+void CodeGenFunction::SetFPModel() {
+  auto fpRoundingMode = ToConstrainedRoundingMD(
+                          getLangOpts().getFPRoundingMode());
+  auto fpExceptionBehavior = ToConstrainedExceptMD(
+                               getLangOpts().getFPExceptionMode());
+
+  if (fpExceptionBehavior == llvm::ConstrainedFPIntrinsic::ebIgnore &&
+      fpRoundingMode == llvm::ConstrainedFPIntrinsic::rmToNearest)
+    // Constrained intrinsics are not used.
+    ;
+  else {
+    Builder.setIsFPConstrained(true);
+    Builder.setDefaultConstrainedRounding(fpRoundingMode);
+    Builder.setDefaultConstrainedExcept(fpExceptionBehavior);
+  }
 }
 
 CharUnits CodeGenFunction::getNaturalPointeeTypeAlignment(QualType T,
