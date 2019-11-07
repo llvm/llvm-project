@@ -36,7 +36,7 @@ namespace llvm {
 
     /// MiOpNo - For isMachineInstrOperand, this is the operand number of the
     /// machine instruction.
-    unsigned MIOpNo;
+    unsigned MIOpNo = 0;
 
     /// Str - For isLiteralTextOperand, this IS the literal text.  For
     /// isMachineInstrOperand, this is the PrinterMethodName for the operand..
