@@ -91,6 +91,10 @@ FunctionPass *createAMDGPUAtomicOptimizerPass();
 void initializeAMDGPUAtomicOptimizerPass(PassRegistry &);
 extern char &AMDGPUAtomicOptimizerID;
 
+FunctionPass *createAMDGPUConditionalDiscardPass();
+void initializeAMDGPUConditionalDiscardPass(PassRegistry &);
+extern char &AMDGPUConditionalDiscardID;
+
 ModulePass *createAMDGPULowerIntrinsicsPass();
 void initializeAMDGPULowerIntrinsicsPass(PassRegistry &);
 extern char &AMDGPULowerIntrinsicsID;

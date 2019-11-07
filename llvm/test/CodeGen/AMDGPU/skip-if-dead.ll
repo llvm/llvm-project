@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -amdgpu-conditional-discard-transformations=0 -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}test_kill_depth_0_imm_pos:
 ; CHECK-NEXT: ; %bb.0:
