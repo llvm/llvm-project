@@ -4741,8 +4741,7 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
 
   if ((IndexExpr->getType()->isSpecificBuiltinType(BuiltinType::Char_S) ||
        IndexExpr->getType()->isSpecificBuiltinType(BuiltinType::Char_U))
-         && !IndexExpr->isTypeDependent()
-         && !isa<CharacterLiteral>(IndexExpr))
+         && !IndexExpr->isTypeDependent())
     Diag(LLoc, diag::warn_subscript_is_char) << IndexExpr->getSourceRange();
 
   // C99 6.5.2.1p1: "shall have type "pointer to *object* type". Similarly,
