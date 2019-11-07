@@ -2312,8 +2312,8 @@ the configuration (without a prefix: ``Auto``).
 
 **SpacesInSquareBrackets** (``bool``)
   If ``true``, spaces will be inserted after ``[`` and before ``]``.
-  Lambdas without arguments or unspecified size array declarations will not be
-  affected.
+  Lambdas without arguments or unspecified size array declarations will not
+  be affected.
 
   .. code-block:: c++
 
@@ -2332,29 +2332,29 @@ the configuration (without a prefix: ``Auto``).
   Possible values:
 
   * ``LS_Cpp03`` (in configuration: ``c++03``)
-    Use C++03-compatible syntax.
+    Parse and format as C++03.
+    ``Cpp03`` is a deprecated alias for ``c++03``
 
   * ``LS_Cpp11`` (in configuration: ``c++11``)
-    Use C++11-compatible syntax.
+    Parse and format as C++11.
 
   * ``LS_Cpp14`` (in configuration: ``c++14``)
-    Use C++14-compatible syntax.
+    Parse and format as C++14.
 
   * ``LS_Cpp17`` (in configuration: ``c++17``)
-    Use C++17-compatible syntax.
+    Parse and format as C++17.
 
   * ``LS_Cpp20`` (in configuration: ``c++20``)
-    Use C++20-compatible syntax.
+    Parse and format as C++20.
 
   * ``LS_Latest`` (in configuration: ``Latest``)
     Parse and format using the latest supported language version.
+    ``Cpp11`` is a deprecated alias for ``Latest``
 
   * ``LS_Auto`` (in configuration: ``Auto``)
     Automatic detection based on the input.
 
-  * ``Cpp03``: deprecated alias for ``c++03``
 
-  * ``Cpp11``: deprecated alias for ``Latest``
 
 **StatementMacros** (``std::vector<std::string>``)
   A vector of macros that should be interpreted as complete

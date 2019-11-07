@@ -284,6 +284,7 @@ protected:
   lldb::CommandObjectSP m_command_sp;
   int64_t m_breakpoint_pc_offset;
   lldb::tid_t m_initial_tid; // The initial thread ID, given by stub on attach
+  bool m_use_g_packet_for_reading;
 
   bool m_replay_mode;
   bool m_allow_flash_writes;

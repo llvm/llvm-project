@@ -824,6 +824,8 @@ ConstantRange ConstantRange::overflowingBinaryOp(Instruction::BinaryOps BinOp,
   switch (BinOp) {
   case Instruction::Add:
     return addWithNoWrap(Other, NoWrapKind);
+  case Instruction::Sub:
+    return subWithNoWrap(Other, NoWrapKind);
   default:
     // Don't know about this Overflowing Binary Operation.
     // Conservatively fallback to plain binop handling.
@@ -864,41 +866,17 @@ ConstantRange ConstantRange::addWithNoWrap(const ConstantRange &Other,
   using OBO = OverflowingBinaryOperator;
   ConstantRange Result = add(Other);
 
-  auto addWithNoUnsignedWrap = [this](const ConstantRange &Other) {
-    APInt LMin = getUnsignedMin(), LMax = getUnsignedMax();
-    APInt RMin = Other.getUnsignedMin(), RMax = Other.getUnsignedMax();
-    bool Overflow;
-    APInt NewMin = LMin.uadd_ov(RMin, Overflow);
-    if (Overflow)
-      return getEmpty();
-    APInt NewMax = LMax.uadd_sat(RMax);
-    return getNonEmpty(std::move(NewMin), std::move(NewMax) + 1);
-  };
-
-  auto addWithNoSignedWrap = [this](const ConstantRange &Other) {
-    APInt LMin = getSignedMin(), LMax = getSignedMax();
-    APInt RMin = Other.getSignedMin(), RMax = Other.getSignedMax();
-    if (LMin.isNonNegative()) {
-      bool Overflow;
-      APInt Temp = LMin.sadd_ov(RMin, Overflow);
-      if (Overflow)
-        return getEmpty();
-    }
-    if (LMax.isNegative()) {
-      bool Overflow;
-      APInt Temp = LMax.sadd_ov(RMax, Overflow);
-      if (Overflow)
-        return getEmpty();
-    }
-    APInt NewMin = LMin.sadd_sat(RMin);
-    APInt NewMax = LMax.sadd_sat(RMax);
-    return getNonEmpty(std::move(NewMin), std::move(NewMax) + 1);
-  };
+  // If an overflow happens for every value pair in these two constant ranges,
+  // we must return Empty set. In this case, we get that for free, because we
+  // get lucky that intersection of add() with uadd_sat()/sadd_sat() results
+  // in an empty set.
 
   if (NoWrapKind & OBO::NoSignedWrap)
-    Result = Result.intersectWith(addWithNoSignedWrap(Other), RangeType);
+    Result = Result.intersectWith(sadd_sat(Other), RangeType);
+
   if (NoWrapKind & OBO::NoUnsignedWrap)
-    Result = Result.intersectWith(addWithNoUnsignedWrap(Other), RangeType);
+    Result = Result.intersectWith(uadd_sat(Other), RangeType);
+
   return Result;
 }
 
@@ -920,6 +898,36 @@ ConstantRange::sub(const ConstantRange &Other) const {
     // We've wrapped, therefore, full set.
     return getFull();
   return X;
+}
+
+ConstantRange ConstantRange::subWithNoWrap(const ConstantRange &Other,
+                                           unsigned NoWrapKind,
+                                           PreferredRangeType RangeType) const {
+  // Calculate the range for "X - Y" which is guaranteed not to wrap(overflow).
+  // (X is from this, and Y is from Other)
+  if (isEmptySet() || Other.isEmptySet())
+    return getEmpty();
+  if (isFullSet() && Other.isFullSet())
+    return getFull();
+
+  using OBO = OverflowingBinaryOperator;
+  ConstantRange Result = sub(Other);
+
+  // If an overflow happens for every value pair in these two constant ranges,
+  // we must return Empty set. In signed case, we get that for free, because we
+  // get lucky that intersection of add() with ssub_sat() results in an
+  // empty set. But for unsigned we must perform the overflow check manually.
+
+  if (NoWrapKind & OBO::NoSignedWrap)
+    Result = Result.intersectWith(ssub_sat(Other), RangeType);
+
+  if (NoWrapKind & OBO::NoUnsignedWrap) {
+    if (getUnsignedMax().ult(Other.getUnsignedMin()))
+      return getEmpty(); // Always overflows.
+    Result = Result.intersectWith(usub_sat(Other), RangeType);
+  }
+
+  return Result;
 }
 
 ConstantRange

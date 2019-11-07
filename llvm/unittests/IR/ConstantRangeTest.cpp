@@ -651,11 +651,13 @@ static void TestAddWithNoSignedWrapExhaustive(Fn1 RangeFn, Fn2 IntFn) {
     ConstantRange CR = RangeFn(CR1, CR2);
     APInt Min = APInt::getSignedMaxValue(Bits);
     APInt Max = APInt::getSignedMinValue(Bits);
+    bool AllOverflow = true;
     ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
       ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
         bool IsOverflow = false;
         APInt N = IntFn(IsOverflow, N1, N2);
         if (!IsOverflow) {
+          AllOverflow = false;
           if (N.slt(Min))
             Min = N;
           if (N.sgt(Max))
@@ -664,6 +666,9 @@ static void TestAddWithNoSignedWrapExhaustive(Fn1 RangeFn, Fn2 IntFn) {
         }
       });
     });
+
+    EXPECT_EQ(CR.isEmptySet(), AllOverflow);
+
     if (!CR1.isSignWrappedSet() && !CR2.isSignWrappedSet()) {
       if (Min.sgt(Max)) {
         EXPECT_TRUE(CR.isEmptySet());
@@ -684,11 +689,13 @@ static void TestAddWithNoUnsignedWrapExhaustive(Fn1 RangeFn, Fn2 IntFn) {
     ConstantRange CR = RangeFn(CR1, CR2);
     APInt Min = APInt::getMaxValue(Bits);
     APInt Max = APInt::getMinValue(Bits);
+    bool AllOverflow = true;
     ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
       ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
         bool IsOverflow = false;
         APInt N = IntFn(IsOverflow, N1, N2);
         if (!IsOverflow) {
+          AllOverflow = false;
           if (N.ult(Min))
             Min = N;
           if (N.ugt(Max))
@@ -697,6 +704,8 @@ static void TestAddWithNoUnsignedWrapExhaustive(Fn1 RangeFn, Fn2 IntFn) {
         }
       });
     });
+
+    EXPECT_EQ(CR.isEmptySet(), AllOverflow);
 
     if (!CR1.isWrappedSet() && !CR2.isWrappedSet()) {
       if (Min.ugt(Max)) {
@@ -722,12 +731,14 @@ static void TestAddWithNoSignedUnsignedWrapExhaustive(Fn1 RangeFn,
         APInt UMax = APInt::getMinValue(Bits);
         APInt SMin = APInt::getSignedMaxValue(Bits);
         APInt SMax = APInt::getSignedMinValue(Bits);
+        bool AllOverflow = true;
         ForeachNumInConstantRange(CR1, [&](const APInt &N1) {
           ForeachNumInConstantRange(CR2, [&](const APInt &N2) {
             bool IsOverflow = false, IsSignedOverflow = false;
             APInt N = IntFnSigned(IsSignedOverflow, N1, N2);
             (void) IntFnUnsigned(IsOverflow, N1, N2);
             if (!IsSignedOverflow && !IsOverflow) {
+              AllOverflow = false;
               if (N.slt(SMin))
                 SMin = N;
               if (N.sgt(SMax))
@@ -740,6 +751,8 @@ static void TestAddWithNoSignedUnsignedWrapExhaustive(Fn1 RangeFn,
             }
           });
         });
+
+        EXPECT_EQ(CR.isEmptySet(), AllOverflow);
 
         if (!CR1.isWrappedSet() && !CR2.isWrappedSet() &&
             !CR1.isSignWrappedSet() && !CR2.isSignWrappedSet()) {
@@ -919,6 +932,34 @@ TEST_F(ConstantRangeTest, Sub) {
             ConstantRange(APInt(16, 0xaa6), APInt(16, 0x6)));
   EXPECT_EQ(One.sub(APInt(16, 4)),
             ConstantRange(APInt(16, 0x6)));
+}
+
+TEST_F(ConstantRangeTest, SubWithNoWrap) {
+  typedef OverflowingBinaryOperator OBO;
+  TestAddWithNoSignedWrapExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.subWithNoWrap(CR2, OBO::NoSignedWrap);
+      },
+      [](bool &IsOverflow, const APInt &N1, const APInt &N2) {
+        return N1.ssub_ov(N2, IsOverflow);
+      });
+  TestAddWithNoUnsignedWrapExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.subWithNoWrap(CR2, OBO::NoUnsignedWrap);
+      },
+      [](bool &IsOverflow, const APInt &N1, const APInt &N2) {
+        return N1.usub_ov(N2, IsOverflow);
+      });
+  TestAddWithNoSignedUnsignedWrapExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.subWithNoWrap(CR2, OBO::NoUnsignedWrap | OBO::NoSignedWrap);
+      },
+      [](bool &IsOverflow, const APInt &N1, const APInt &N2) {
+        return N1.ssub_ov(N2, IsOverflow);
+      },
+      [](bool &IsOverflow, const APInt &N1, const APInt &N2) {
+        return N1.usub_ov(N2, IsOverflow);
+      });
 }
 
 TEST_F(ConstantRangeTest, Multiply) {

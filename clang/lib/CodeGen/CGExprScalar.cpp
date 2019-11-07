@@ -2849,7 +2849,8 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
           CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
         CGF.getLangOpts().getSignedOverflowBehavior() !=
             LangOptions::SOB_Trapping) {
-      llvm::AtomicRMWInst::BinOp aop = llvm::AtomicRMWInst::BAD_BINOP;
+      llvm::AtomicRMWInst::BinOp AtomicOp = llvm::AtomicRMWInst::BAD_BINOP;
+      llvm::Instruction::BinaryOps Op;
       switch (OpInfo.Opcode) {
         // We don't have atomicrmw operands for *, %, /, <<, >>
         case BO_MulAssign: case BO_DivAssign:
@@ -2858,30 +2859,40 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
         case BO_ShrAssign:
           break;
         case BO_AddAssign:
-          aop = llvm::AtomicRMWInst::Add;
+          AtomicOp = llvm::AtomicRMWInst::Add;
+          Op = llvm::Instruction::Add;
           break;
         case BO_SubAssign:
-          aop = llvm::AtomicRMWInst::Sub;
+          AtomicOp = llvm::AtomicRMWInst::Sub;
+          Op = llvm::Instruction::Sub;
           break;
         case BO_AndAssign:
-          aop = llvm::AtomicRMWInst::And;
+          AtomicOp = llvm::AtomicRMWInst::And;
+          Op = llvm::Instruction::And;
           break;
         case BO_XorAssign:
-          aop = llvm::AtomicRMWInst::Xor;
+          AtomicOp = llvm::AtomicRMWInst::Xor;
+          Op = llvm::Instruction::Xor;
           break;
         case BO_OrAssign:
-          aop = llvm::AtomicRMWInst::Or;
+          AtomicOp = llvm::AtomicRMWInst::Or;
+          Op = llvm::Instruction::Or;
           break;
         default:
           llvm_unreachable("Invalid compound assignment type");
       }
-      if (aop != llvm::AtomicRMWInst::BAD_BINOP) {
-        llvm::Value *amt = CGF.EmitToMemory(
+      if (AtomicOp != llvm::AtomicRMWInst::BAD_BINOP) {
+        llvm::Value *Amt = CGF.EmitToMemory(
             EmitScalarConversion(OpInfo.RHS, E->getRHS()->getType(), LHSTy,
                                  E->getExprLoc()),
             LHSTy);
-        Builder.CreateAtomicRMW(aop, LHSLV.getPointer(), amt,
+        Value *OldVal = Builder.CreateAtomicRMW(
+            AtomicOp, LHSLV.getPointer(), Amt,
             llvm::AtomicOrdering::SequentiallyConsistent);
+
+        // Since operation is atomic, the result type is guaranteed to be the
+        // same as the input in LLVM terms.
+        Result = Builder.CreateBinOp(Op, OldVal, Amt);
         return LHSLV;
       }
     }

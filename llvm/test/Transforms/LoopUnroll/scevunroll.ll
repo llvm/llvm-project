@@ -67,12 +67,10 @@ exit2:
 ; SCEV properly unrolls multi-exit loops.
 ;
 ; CHECK-LABEL: @multiExit(
-; CHECK: getelementptr i32, i32* %base, i32 10
+; CHECK: getelementptr i32, i32* %base, i32 %iv
 ; CHECK-NEXT: load i32, i32*
-; CHECK: br i1 false, label %l2.10, label %exit1
-; CHECK: l2.10:
-; CHECK-NOT: br
-; CHECK: ret i32
+; CHECK: br i1 false, label %l2, label %exit1
+; CHECK: br i1 true, label %l1, label %exit2
 define i32 @multiExit(i32* %base) nounwind {
 entry:
   br label %l1

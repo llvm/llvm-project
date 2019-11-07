@@ -88,21 +88,26 @@ void parser<char>::anchor() {}
 
 //===----------------------------------------------------------------------===//
 
-static StringRef ArgPrefix = "  -";
-static StringRef ArgPrefixLong = "  --";
+const static size_t DefaultPad = 2;
+
+static StringRef ArgPrefix = "-";
+static StringRef ArgPrefixLong = "--";
 static StringRef ArgHelpPrefix = " - ";
 
-static size_t argPlusPrefixesSize(StringRef ArgName) {
+static size_t argPlusPrefixesSize(StringRef ArgName, size_t Pad = DefaultPad) {
   size_t Len = ArgName.size();
   if (Len == 1)
-    return Len + ArgPrefix.size() + ArgHelpPrefix.size();
-  return Len + ArgPrefixLong.size() + ArgHelpPrefix.size();
+    return Len + Pad + ArgPrefix.size() + ArgHelpPrefix.size();
+  return Len + Pad + ArgPrefixLong.size() + ArgHelpPrefix.size();
 }
 
-static StringRef argPrefix(StringRef ArgName) {
-  if (ArgName.size() == 1)
-    return ArgPrefix;
-  return ArgPrefixLong;
+static SmallString<8> argPrefix(StringRef ArgName, size_t Pad = DefaultPad) {
+  SmallString<8> Prefix;
+  for (size_t I = 0; I < Pad; ++I) {
+    Prefix.push_back(' ');
+  }
+  Prefix.append(ArgName.size() > 1 ? ArgPrefixLong : ArgPrefix);
+  return Prefix;
 }
 
 // Option predicates...
@@ -119,13 +124,14 @@ namespace {
 
 class PrintArg {
   StringRef ArgName;
+  size_t Pad;
 public:
-  PrintArg(StringRef ArgName) : ArgName(ArgName) {}
-  friend raw_ostream &operator<<(raw_ostream &OS, const PrintArg&);
+  PrintArg(StringRef ArgName, size_t Pad = DefaultPad) : ArgName(ArgName), Pad(Pad) {}
+  friend raw_ostream &operator<<(raw_ostream &OS, const PrintArg &);
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const PrintArg& Arg) {
-  OS << argPrefix(Arg.ArgName) << Arg.ArgName;
+  OS << argPrefix(Arg.ArgName, Arg.Pad) << Arg.ArgName;
   return OS;
 }
 
@@ -1447,7 +1453,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
         if (NearestHandler) {
           // If we know a near match, report it as well.
           *Errs << ProgramName << ": Did you mean '"
-                << PrintArg(NearestHandlerString) << "'?\n";
+                << PrintArg(NearestHandlerString, 0) << "'?\n";
         }
 
         ErrorParsing = true;
@@ -1601,7 +1607,7 @@ bool Option::error(const Twine &Message, StringRef ArgName, raw_ostream &Errs) {
   if (ArgName.empty())
     Errs << HelpStr; // Be nice for positional arguments
   else
-    Errs << GlobalParser->ProgramName << ": for the " << PrintArg(ArgName);
+    Errs << GlobalParser->ProgramName << ": for the " << PrintArg(ArgName, 0);
 
   Errs << " option: " << Message << "\n";
   return true;

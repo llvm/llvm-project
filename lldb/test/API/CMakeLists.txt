@@ -107,8 +107,7 @@ endif()
 
 if(CMAKE_HOST_APPLE)
   if(LLDB_BUILD_FRAMEWORK)
-    get_target_property(framework_build_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
-    list(APPEND LLDB_TEST_COMMON_ARGS --framework ${framework_build_dir}/LLDB.framework)
+    list(APPEND LLDB_TEST_COMMON_ARGS --framework ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework)
   endif()
 
   # Use the same identity for testing

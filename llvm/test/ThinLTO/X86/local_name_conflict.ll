@@ -12,7 +12,7 @@
 ; that module (%t3.bc) to be imported. Check that the imported reference's
 ; promoted name matches the imported copy.
 ; RUN: llvm-lto -thinlto-action=import %t.bc -thinlto-index=%t4.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=IMPORT
-; IMPORT: @baz.llvm.[[HASH:[0-9]+]] = available_externally hidden constant i32 10, align 4
+; IMPORT: @baz.llvm.[[HASH:[0-9]+]] = internal constant i32 10, align 4
 ; IMPORT: call i32 @foo.llvm.[[HASH]]
 ; IMPORT: define available_externally hidden i32 @foo.llvm.[[HASH]]()
 

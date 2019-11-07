@@ -158,7 +158,7 @@ define void @test_bad_call_conv() {
   ; COMMON-LABEL: name: test_bad_call_conv
   ; COMMON: bb.1 (%ir-block.0):
   ; COMMON:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-  ; COMMON:   BL @bad_call_conv_fn, csr_aarch64_aapcs, implicit-def $lr, implicit $sp
+  ; COMMON:   BL @bad_call_conv_fn, csr_aarch64_noregs, implicit-def $lr, implicit $sp
   ; COMMON:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; COMMON:   RET_ReallyLR
   tail call ghccc void @bad_call_conv_fn()

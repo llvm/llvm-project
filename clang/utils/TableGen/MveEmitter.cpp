@@ -204,6 +204,9 @@ public:
       Name = "const " + Name;
     return Name + " *";
   }
+  std::string llvmName() const override {
+    return "llvm::PointerType::getUnqual(" + Pointee->llvmName() + ")";
+  }
 
   static bool classof(const Type *T) {
     return T->typeKind() == TypeKind::Pointer;
@@ -229,6 +232,7 @@ public:
 class ScalarType : public CRegularNamedType {
   ScalarTypeKind Kind;
   unsigned Bits;
+  std::string NameOverride;
 
 public:
   ScalarType(const Record *Record) : CRegularNamedType(TypeKind::Scalar) {
@@ -237,12 +241,18 @@ public:
                .Case("u", ScalarTypeKind::UnsignedInt)
                .Case("f", ScalarTypeKind::Float);
     Bits = Record->getValueAsInt("size");
+    NameOverride = Record->getValueAsString("nameOverride");
   }
   unsigned sizeInBits() const override { return Bits; }
   ScalarTypeKind kind() const { return Kind; }
   std::string suffix() const { return toLetter(Kind) + utostr(Bits); }
   std::string cNameBase() const override {
     return toCPrefix(Kind) + utostr(Bits);
+  }
+  std::string cName() const override {
+    if (NameOverride.empty())
+      return CRegularNamedType::cName();
+    return NameOverride;
   }
   std::string llvmName() const override {
     if (Kind == ScalarTypeKind::Float) {
@@ -261,6 +271,7 @@ public:
   }
   bool isInteger() const { return Kind != ScalarTypeKind::Float; }
   bool requiresFloat() const override { return !isInteger(); }
+  bool hasNonstandardName() const { return !NameOverride.empty(); }
 
   static bool classof(const Type *T) {
     return T->typeKind() == TypeKind::Scalar;
@@ -504,6 +515,11 @@ public:
   void setVarname(const StringRef s) { VarName = s; }
   bool varnameUsed() const { return VarNameUsed; }
 
+  // Emit code to generate this result as a Value *.
+  virtual std::string asValue() {
+    return varname();
+  }
+
   // Code generation happens in multiple passes. This method tracks whether a
   // Result has yet been visited in a given pass, without the need for a
   // tedious loop in between passes that goes through and resets a 'visited'
@@ -538,6 +554,12 @@ public:
   }
   std::string typeName() const override {
     return AddressType ? "Address" : Result::typeName();
+  }
+  // Emit code to generate this result as a Value *.
+  std::string asValue() override {
+    if (AddressType)
+      return "(" + varname() + ".getPointer())";
+    return Result::asValue();
   }
 };
 
@@ -657,7 +679,7 @@ public:
     OS << "), llvm::SmallVector<Value *, " << Args.size() << "> {";
     const char *Sep = "";
     for (auto Arg : Args) {
-      OS << Sep << Arg->varname();
+      OS << Sep << Arg->asValue();
       Sep = ", ";
     }
     OS << "})";
@@ -782,15 +804,14 @@ public:
       }
 
       llvm::APInt typelo, typehi;
-      if (cast<ScalarType>(IA.ArgType)->kind() == ScalarTypeKind::UnsignedInt) {
-        typelo = llvm::APInt::getSignedMinValue(IA.ArgType->sizeInBits());
-        typehi = llvm::APInt::getSignedMaxValue(IA.ArgType->sizeInBits());
+      unsigned Bits = IA.ArgType->sizeInBits();
+      if (cast<ScalarType>(IA.ArgType)->kind() == ScalarTypeKind::SignedInt) {
+        typelo = llvm::APInt::getSignedMinValue(Bits).sext(128);
+        typehi = llvm::APInt::getSignedMaxValue(Bits).sext(128);
       } else {
-        typelo = llvm::APInt::getMinValue(IA.ArgType->sizeInBits());
-        typehi = llvm::APInt::getMaxValue(IA.ArgType->sizeInBits());
+        typelo = llvm::APInt::getMinValue(Bits).zext(128);
+        typehi = llvm::APInt::getMaxValue(Bits).zext(128);
       }
-      typelo = typelo.sext(128);
-      typehi = typehi.sext(128);
 
       std::string Index = utostr(kv.first);
 
@@ -967,17 +988,15 @@ const Type *MveEmitter::getType(DagInit *D, const Type *Param) {
     return getPointerType(Pointee, Op->getValueAsBit("const"));
   }
 
-  if (Op->isSubClassOf("CTO_Sign")) {
-    const ScalarType *ST = cast<ScalarType>(getType(D->getArg(0), Param));
-    ScalarTypeKind NewKind = Op->getValueAsBit("signed")
-                                 ? ScalarTypeKind::SignedInt
-                                 : ScalarTypeKind::UnsignedInt;
+  if (Op->getName() == "CTO_CopyKind") {
+    const ScalarType *STSize = cast<ScalarType>(getType(D->getArg(0), Param));
+    const ScalarType *STKind = cast<ScalarType>(getType(D->getArg(1), Param));
     for (const auto &kv : ScalarTypes) {
       const ScalarType *RT = kv.second.get();
-      if (RT->kind() == NewKind && RT->sizeInBits() == ST->sizeInBits())
+      if (RT->kind() == STKind->kind() && RT->sizeInBits() == STSize->sizeInBits())
         return RT;
     }
-    PrintFatalError("Cannot change sign of this type");
+    PrintFatalError("Cannot find a type to satisfy CopyKind");
   }
 
   PrintFatalError("Bad operator in type dag expression");
@@ -1018,6 +1037,18 @@ Result::Ptr MveEmitter::getCodeForDag(DagInit *D, const Result::Scope &Scope,
       }
     }
     PrintFatalError("Unsupported type cast");
+  } else if (Op->getName() == "unsignedflag") {
+    if (D->getNumArgs() != 1)
+      PrintFatalError("unsignedflag should have exactly one argument");
+    Record *TypeRec = cast<DefInit>(D->getArg(0))->getDef();
+    if (!TypeRec->isSubClassOf("Type"))
+      PrintFatalError("unsignedflag's argument should be a type");
+    if (const auto *ST = dyn_cast<ScalarType>(getType(TypeRec, Param))) {
+      return std::make_shared<IntLiteralResult>(
+        getScalarType("u32"), ST->kind() == ScalarTypeKind::UnsignedInt);
+    } else {
+      PrintFatalError("unsignedflag's argument should be a scalar type");
+    }
   } else {
     std::vector<Result::Ptr> Args;
     for (unsigned i = 0, e = D->getNumArgs(); i < e; ++i)
@@ -1264,6 +1295,8 @@ void MveEmitter::EmitHeader(raw_ostream &OS) {
                   "typedef float float32_t;\n";
   for (const auto &kv : ScalarTypes) {
     const ScalarType *ST = kv.second.get();
+    if (ST->hasNonstandardName())
+      continue;
     raw_ostream &OS = parts[ST->requiresFloat() ? Float : 0];
     const VectorType *VT = getVectorType(ST);
 

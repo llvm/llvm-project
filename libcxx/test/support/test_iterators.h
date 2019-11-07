@@ -35,17 +35,17 @@ public:
     typedef It                                                 pointer;
     typedef typename std::iterator_traits<It>::reference       reference;
 
-    It base() const {return it_;}
+    TEST_CONSTEXPR_CXX14 It base() const {return it_;}
 
-    output_iterator () {}
-    explicit output_iterator(It it) : it_(it) {}
+    TEST_CONSTEXPR_CXX14 output_iterator () {}
+    explicit TEST_CONSTEXPR_CXX14 output_iterator(It it) : it_(it) {}
     template <class U>
-        output_iterator(const output_iterator<U>& u) :it_(u.it_) {}
+        TEST_CONSTEXPR_CXX14 output_iterator(const output_iterator<U>& u) :it_(u.it_) {}
 
-    reference operator*() const {return *it_;}
+    TEST_CONSTEXPR_CXX14 reference operator*() const {return *it_;}
 
-    output_iterator& operator++() {++it_; return *this;}
-    output_iterator operator++(int)
+    TEST_CONSTEXPR_CXX14 output_iterator& operator++() {++it_; return *this;}
+    TEST_CONSTEXPR_CXX14 output_iterator operator++(int)
         {output_iterator tmp(*this); ++(*this); return tmp;}
 
     template <class T>

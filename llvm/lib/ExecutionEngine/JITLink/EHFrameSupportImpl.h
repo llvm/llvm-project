@@ -21,42 +21,36 @@
 namespace llvm {
 namespace jitlink {
 
-/// A generic binary parser for eh-frame sections.
-///
-/// Adds blocks and symbols representing CIE and FDE entries to a JITLink graph.
-///
-/// This parser assumes that the user has already verified that the EH-frame's
-/// address range does not overlap any other section/symbol, so that generated
-/// CIE/FDE records do not overlap other sections/symbols.
-class EHFrameBinaryParser {
+/// A LinkGraph pass that splits blocks in an eh-frame section into sub-blocks
+/// representing individual eh-frames.
+/// EHFrameSplitter should not be run without EHFrameEdgeFixer, which is
+/// responsible for adding FDE-to-CIE edges.
+class EHFrameSplitter {
 public:
-  EHFrameBinaryParser(JITTargetAddress EHFrameAddress, StringRef EHFrameContent,
-                      unsigned PointerSize, support::endianness Endianness);
-  virtual ~EHFrameBinaryParser() {}
-
-  Error addToGraph();
+  EHFrameSplitter(StringRef EHFrameSectionName);
+  Error operator()(LinkGraph &G);
 
 private:
-  virtual void anchor();
-  virtual Symbol *getSymbolAtAddress(JITTargetAddress Addr) = 0;
-  virtual Symbol &createCIERecord(JITTargetAddress RecordAddr,
-                                  StringRef RecordContent) = 0;
-  virtual Expected<Symbol &>
-  createFDERecord(JITTargetAddress RecordAddr, StringRef RecordContent,
-                  Symbol &CIE, size_t CIEOffset, Symbol &Func,
-                  size_t FuncOffset, Symbol *LSDA, size_t LSDAOffset) = 0;
+  Error processBlock(LinkGraph &G, Block &B, LinkGraph::SplitBlockCache &Cache);
+
+  StringRef EHFrameSectionName;
+};
+
+/// A LinkGraph pass that adds missing FDE-to-CIE, FDE-to-PC and FDE-to-LSDA
+/// edges.
+class EHFrameEdgeFixer {
+public:
+  EHFrameEdgeFixer(StringRef EHFrameSectionName, Edge::Kind FDEToCIE,
+                   Edge::Kind FDEToPCBegin, Edge::Kind FDEToLSDA);
+  Error operator()(LinkGraph &G);
+
+private:
 
   struct AugmentationInfo {
     bool AugmentationDataPresent = false;
     bool EHDataFieldPresent = false;
     uint8_t Fields[4] = {0x0, 0x0, 0x0, 0x0};
   };
-
-  Expected<AugmentationInfo> parseAugmentationString();
-  Expected<JITTargetAddress> readAbsolutePointer();
-  Error processCIE(size_t RecordOffset, size_t RecordLength);
-  Error processFDE(size_t RecordOffset, size_t RecordLength,
-                   JITTargetAddress CIEPointerOffset, uint32_t CIEPointer);
 
   struct CIEInformation {
     CIEInformation() = default;
@@ -65,11 +59,51 @@ private:
     bool FDEsHaveLSDAField = false;
   };
 
-  JITTargetAddress EHFrameAddress;
-  StringRef EHFrameContent;
-  unsigned PointerSize;
-  BinaryStreamReader EHFrameReader;
-  DenseMap<JITTargetAddress, CIEInformation> CIEInfos;
+  struct EdgeTarget {
+    EdgeTarget() = default;
+    EdgeTarget(const Edge &E) : Target(&E.getTarget()), Addend(E.getAddend()) {}
+
+    Symbol *Target = nullptr;
+    Edge::AddendT Addend = 0;
+  };
+
+  using BlockEdgeMap = DenseMap<Edge::OffsetT, EdgeTarget>;
+  using CIEInfosMap = DenseMap<JITTargetAddress, CIEInformation>;
+
+  struct ParseContext {
+    ParseContext(LinkGraph &G) : G(G) {}
+
+    Expected<CIEInformation *> findCIEInfo(JITTargetAddress Address) {
+      auto I = CIEInfos.find(Address);
+      if (I == CIEInfos.end())
+        return make_error<JITLinkError>("No CIE found at address " +
+                                        formatv("{0:x16}", Address));
+      return &I->second;
+    }
+
+    LinkGraph &G;
+    CIEInfosMap CIEInfos;
+    BlockAddressMap AddrToBlock;
+    SymbolAddressMap AddrToSyms;
+  };
+
+  Error processBlock(ParseContext &PC, Block &B);
+  Error processCIE(ParseContext &PC, Block &B, size_t RecordOffset,
+                   size_t RecordLength, size_t CIEDeltaFieldOffset);
+  Error processFDE(ParseContext &PC, Block &B, size_t RecordOffset,
+                   size_t RecordLength, size_t CIEDeltaFieldOffset,
+                   uint32_t CIEDelta, BlockEdgeMap &BlockEdges);
+
+  Expected<AugmentationInfo>
+  parseAugmentationString(BinaryStreamReader &RecordReader);
+  Expected<JITTargetAddress>
+  readAbsolutePointer(LinkGraph &G, BinaryStreamReader &RecordReader);
+  Expected<Symbol &> getOrCreateSymbol(ParseContext &PC, JITTargetAddress Addr);
+
+  StringRef EHFrameSectionName;
+  Edge::Kind FDEToCIE;
+  Edge::Kind FDEToPCBegin;
+  Edge::Kind FDEToLSDA;
 };
 
 } // end namespace jitlink

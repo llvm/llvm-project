@@ -169,10 +169,10 @@ define i32 @bswap32_shl_first(i32 %x) {
 
 define i32 @bswap32_shl_first_extra_use(i32 %x) {
 ; CHECK-LABEL: @bswap32_shl_first_extra_use(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], 16
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X]], 16
-; CHECK-NEXT:    [[SWAPHALF:%.*]] = or i32 [[SHL]], [[SHR]]
-; CHECK-NEXT:    [[T:%.*]] = shl i32 [[SWAPHALF]], 8
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[X:%.*]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X]], 24
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[SHR]], 8
+; CHECK-NEXT:    [[T:%.*]] = or i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[BSWAP:%.*]] = call i32 @llvm.bswap.i32(i32 [[X]])
 ; CHECK-NEXT:    call void @extra_use(i32 [[T]])
 ; CHECK-NEXT:    ret i32 [[BSWAP]]

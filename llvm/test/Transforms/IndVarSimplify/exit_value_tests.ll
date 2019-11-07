@@ -226,7 +226,6 @@ loopexit:
 define i32 @unroll_phi_select(i32 %arg1, i32 %arg2, i16 %len) {
 ; CHECK-LABEL: @unroll_phi_select(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LENGTH:%.*]] = zext i16 [[LEN:%.*]] to i32
 ; CHECK-NEXT:    ret i32 [[ARG2:%.*]]
 ;
 entry:

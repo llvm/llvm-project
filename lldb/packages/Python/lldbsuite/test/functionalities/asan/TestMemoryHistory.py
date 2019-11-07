@@ -17,7 +17,6 @@ class AsanTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
-    @skipIfRemote
     @skipUnlessAddressSanitizer
     def test(self):
         self.build()
@@ -33,9 +32,10 @@ class AsanTestCase(TestBase):
 
     def asan_tests(self):
         exe = self.getBuildArtifact("a.out")
-        self.expect(
-            "file " + exe,
-            patterns=["Current executable set to .*a.out"])
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        self.registerSanitizerLibrariesWithTarget(target)
 
         self.runCmd("breakpoint set -f main.c -l %d" % self.line_breakpoint)
 

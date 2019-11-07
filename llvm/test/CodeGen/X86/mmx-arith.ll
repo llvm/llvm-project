@@ -647,6 +647,40 @@ entry:
   ret void
 }
 
+; Make sure we clamp large shift amounts to 255
+define i64 @pr43922() {
+; X32-LABEL: pr43922:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    pushl %ebp
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    .cfi_offset %ebp, -8
+; X32-NEXT:    movl %esp, %ebp
+; X32-NEXT:    .cfi_def_cfa_register %ebp
+; X32-NEXT:    andl $-8, %esp
+; X32-NEXT:    subl $8, %esp
+; X32-NEXT:    movq {{\.LCPI.*}}, %mm0 # mm0 = 0x7AAAAAAA7AAAAAAA
+; X32-NEXT:    psrad $255, %mm0
+; X32-NEXT:    movq %mm0, (%esp)
+; X32-NEXT:    movl (%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl %ebp, %esp
+; X32-NEXT:    popl %ebp
+; X32-NEXT:    .cfi_def_cfa %esp, 4
+; X32-NEXT:    retl
+;
+; X64-LABEL: pr43922:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq {{.*}}(%rip), %mm0 # mm0 = 0x7AAAAAAA7AAAAAAA
+; X64-NEXT:    psrad $255, %mm0
+; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    retq
+entry:
+  %0 = tail call x86_mmx @llvm.x86.mmx.psrai.d(x86_mmx bitcast (<2 x i32> <i32 2058005162, i32 2058005162> to x86_mmx), i32 268435456)
+  %1 = bitcast x86_mmx %0 to i64
+  ret i64 %1
+}
+declare x86_mmx @llvm.x86.mmx.psrai.d(x86_mmx, i32)
+
 declare x86_mmx @llvm.x86.mmx.padd.b(x86_mmx, x86_mmx)
 declare x86_mmx @llvm.x86.mmx.padd.w(x86_mmx, x86_mmx)
 declare x86_mmx @llvm.x86.mmx.padd.d(x86_mmx, x86_mmx)

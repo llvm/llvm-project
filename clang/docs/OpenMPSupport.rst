@@ -13,9 +13,8 @@
 .. contents::
    :local:
 
-==================
 OpenMP Support
-==================
+==============
 
 Clang fully supports OpenMP 4.5. Clang supports offloading to X86_64, AArch64,
 PPC64[LE] and has `basic support for Cuda devices`_.
@@ -30,7 +29,7 @@ Interface (OMPT) on x86, x86_64, AArch64, and PPC64 on Linux, Windows, and macOS
 For the list of supported features from OpenMP 5.0 see `OpenMP implementation details`_.
 
 General improvements
---------------------
+====================
 - New collapse clause scheme to avoid expensive remainder operations.
   Compute loop index variables after collapsing a loop nest via the
   collapse clause by replacing the expensive remainder operation with
@@ -46,6 +45,13 @@ General improvements
 
 - Simplified SPMD code generation for `distribute parallel for` when
   the new default schedules are applicable.
+
+- When using the collapse clause on a loop nest the default behavior
+  is to automatically extend the representation of the loop counter to
+  64 bits for the cases where the sizes of the collapsed loops are not
+  known at compile time. To prevent this conservative choice and use
+  at most 32 bits, compile your program with the
+  `-fopenmp-optimistic-collapse`.
 
 .. _basic support for Cuda devices:
 
@@ -77,15 +83,6 @@ are stored in the global memory. In `Cuda` mode local variables are not shared
 between the threads and it is user responsibility to share the required data
 between the threads in the parallel regions.
 
-Collapsed loop nest counter
----------------------------
-
-When using the collapse clause on a loop nest the default behavior is to
-automatically extend the representation of the loop counter to 64 bits for
-the cases where the sizes of the collapsed loops are not known at compile
-time. To prevent this conservative choice and use at most 32 bits,
-compile your program with the `-fopenmp-optimistic-collapse`.
-
 
 Features not supported or with limited support for Cuda devices
 ---------------------------------------------------------------
@@ -112,7 +109,7 @@ Features not supported or with limited support for Cuda devices
 .. _OpenMP implementation details:
 
 OpenMP 5.0 Implementation Details
----------------------------------
+=================================
 
 The following table provides a quick overview over various OpenMP 5.0 features
 and their implementation status. Please contact *openmp-dev* at
@@ -176,13 +173,13 @@ implementation.
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | device extension             | OMP_TARGET_OFFLOAD environment variable                      | :good:`done`             | D50522                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | support full 'defaultmap' functionality                      | :part:`worked on`        |                                                                       |
+| device extension             | support full 'defaultmap' functionality                      | :part:`worked on`        | D69204                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | device extension             | device specific functions                                    | :none:`unclaimed`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | device extension             | clause: device_type                                          | :good:`done`             |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
-| device extension             | clause: in_reduction                                         | :none:`unclaimed`        | r308768                                                               |
+| device extension             | clause: in_reduction                                         | :part:`worked on`        | r308768                                                               |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | device extension             | omp_get_device_num()                                         | :part:`worked on`        | D54342                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
@@ -213,6 +210,8 @@ implementation.
 | device extension             | map(replicate) or map(local) when requires unified_shared_me | :part:`worked on`        | D55719,D55892                                                         |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | device extension             | teams construct on the host device                           | :part:`worked on`        | Clang part is done, r371553.                                          |
++------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
+| device extension             | support non-contiguous array sections for target update      | :part:`worked on`        |                                                                       |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+
 | atomic extension             | hints for the atomic construct                               | :part:`worked on`        | D51233                                                                |
 +------------------------------+--------------------------------------------------------------+--------------------------+-----------------------------------------------------------------------+

@@ -1,5 +1,7 @@
 ; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mattr=+half-rate-64-ops < %s | FileCheck -check-prefix=FASTF64 -check-prefix=ALL %s
 ; RUN: opt -cost-model -analyze -mtriple=amdgcn-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefix=SLOWF64 -check-prefix=ALL %s
+; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mattr=+half-rate-64-ops < %s | FileCheck -check-prefix=FASTF64 -check-prefix=ALL %s
+; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=amdgcn-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefix=SLOWF64 -check-prefix=ALL %s
 
 ; ALL: 'fmul_f32'
 ; ALL: estimated cost of 1 for {{.*}} fmul float

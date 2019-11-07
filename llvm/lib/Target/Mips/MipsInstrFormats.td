@@ -626,6 +626,19 @@ class SEQI_FM<bits<6> funct> : StdArch {
   let Inst{5-0}   = funct;
 }
 
+class SAA_FM<bits<6> funct> : StdArch {
+  bits<5> rt;
+  bits<5> rs;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0x1c;
+  let Inst{25-21} = rs;
+  let Inst{20-16} = rt;
+  let Inst{15-6}  = 0;
+  let Inst{5-0}   = funct;
+}
+
 //===----------------------------------------------------------------------===//
 //  System calls format <op|code_|funct>
 //===----------------------------------------------------------------------===//

@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -indvars -S -indvars-predicate-loops=0  | FileCheck %s
 ;
 ; Make sure that indvars isn't inserting canonical IVs.
 ; This is kinda hard to do until linear function test replacement is removed.

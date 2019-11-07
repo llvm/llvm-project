@@ -232,6 +232,11 @@ llvm::Error reformatEdit(Edit &E, const format::FormatStyle &Style);
 llvm::StringMap<unsigned> collectIdentifiers(llvm::StringRef Content,
                                              const format::FormatStyle &Style);
 
+/// Collects all ranges of the given identifier in the source code.
+std::vector<Range> collectIdentifierRanges(llvm::StringRef Identifier,
+                                           llvm::StringRef Content,
+                                           const LangOptions &LangOpts);
+
 /// Collects words from the source code.
 /// Unlike collectIdentifiers:
 /// - also finds text in comments:

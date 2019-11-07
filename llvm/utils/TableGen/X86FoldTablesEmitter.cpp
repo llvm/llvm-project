@@ -618,14 +618,14 @@ void X86FoldTablesEmitter::run(formatted_raw_ostream &OS) {
     uint8_t Opc =
         getValueFromBitsInit(MemInst->TheDef->getValueAsBitsInit("Opcode"));
 
-    if (RegInsts.count(Opc) == 0)
+    auto RegInstsIt = RegInsts.find(Opc);
+    if (RegInstsIt == RegInsts.end())
       continue;
 
     // Two forms (memory & register) of the same instruction must have the same
     // opcode. try matching only with register form instructions with the same
     // opcode.
-    std::vector<const CodeGenInstruction *> &OpcRegInsts =
-        RegInsts.find(Opc)->second;
+    std::vector<const CodeGenInstruction *> &OpcRegInsts = RegInstsIt->second;
 
     auto Match = find_if(OpcRegInsts, IsMatch(MemInst, Records));
     if (Match != OpcRegInsts.end()) {

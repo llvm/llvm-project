@@ -83,7 +83,7 @@ namespace {
     StringRef getPassName() const override { return "X86 FP Stackifier"; }
 
   private:
-    const TargetInstrInfo *TII; // Machine instruction info.
+    const TargetInstrInfo *TII = nullptr; // Machine instruction info.
 
     // Two CFG edges are related if they leave the same block, or enter the same
     // block. The transitive closure of an edge under this relation is a
@@ -119,7 +119,7 @@ namespace {
     SmallVector<LiveBundle, 8> LiveBundles;
 
     // The edge bundle analysis provides indices into the LiveBundles vector.
-    EdgeBundles *Bundles;
+    EdgeBundles *Bundles = nullptr;
 
     // Return a bitmask of FP registers in block's live-in list.
     static unsigned calcLiveInMask(MachineBasicBlock *MBB, bool RemoveFPs) {
@@ -143,14 +143,14 @@ namespace {
     // Partition all the CFG edges into LiveBundles.
     void bundleCFGRecomputeKillFlags(MachineFunction &MF);
 
-    MachineBasicBlock *MBB;     // Current basic block
+    MachineBasicBlock *MBB = nullptr;     // Current basic block
 
     // The hardware keeps track of how many FP registers are live, so we have
     // to model that exactly. Usually, each live register corresponds to an
     // FP<n> register, but when dealing with calls, returns, and inline
     // assembly, it is sometimes necessary to have live scratch registers.
     unsigned Stack[8];          // FP<n> Registers in each stack slot...
-    unsigned StackTop;          // The current top of the FP stack.
+    unsigned StackTop = 0;      // The current top of the FP stack.
 
     enum {
       NumFPRegs = 8             // Including scratch pseudo-registers.

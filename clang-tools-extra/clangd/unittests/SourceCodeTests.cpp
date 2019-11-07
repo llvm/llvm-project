@@ -680,6 +680,27 @@ TEST(SourceCodeTests, GetEligiblePoints) {
     EXPECT_EQ(Res.EnclosingNamespace, Case.EnclosingNamespace) << Test.code();
   }
 }
+
+TEST(SourceCodeTests, IdentifierRanges) {
+  Annotations Code(R"cpp(
+   class [[Foo]] {};
+   // Foo
+   /* Foo */
+   void f([[Foo]]* foo1) {
+     [[Foo]] foo2;
+     auto S = [[Foo]]();
+// cross-line identifier is not supported.
+F\
+o\
+o foo2;
+   }
+  )cpp");
+  LangOptions LangOpts;
+  LangOpts.CPlusPlus = true;
+  EXPECT_EQ(Code.ranges(),
+            collectIdentifierRanges("Foo", Code.code(), LangOpts));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

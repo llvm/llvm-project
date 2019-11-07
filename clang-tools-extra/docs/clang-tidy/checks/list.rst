@@ -361,6 +361,7 @@ Clang-Tidy Checks
    readability-inconsistent-declaration-parameter-name
    readability-isolate-declaration
    readability-magic-numbers
+   readability-make-member-function-const
    readability-misleading-indentation
    readability-misplaced-array-index
    readability-named-parameter

@@ -42,6 +42,11 @@ bool llvm::parseWidenableBranch(const User *U, Value *&Condition,
   if (!match(U, m_Br(m_And(m_Value(Condition), m_Value(WidenableCondition)),
                      IfTrueBB, IfFalseBB)))
     return false;
+  // For the branch to be (easily) widenable, it must not correlate with other
+  // branches.  Thus, the widenable condition must have a single use.
+  if (!WidenableCondition->hasOneUse() ||
+      !cast<BranchInst>(U)->getCondition()->hasOneUse())
+    return false;
   // TODO: At the moment, we only recognize the branch if the WC call in this
   // specific position.  We should generalize!
   return match(WidenableCondition,

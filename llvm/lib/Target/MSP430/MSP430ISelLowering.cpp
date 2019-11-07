@@ -353,6 +353,7 @@ SDValue MSP430TargetLowering::LowerOperation(SDValue Op,
   }
 }
 
+// Set transforms into shift amounts above 2 as not profitable
 unsigned MSP430TargetLowering::getShiftAmountThreshold(EVT VT) const {
   return 2;
 }

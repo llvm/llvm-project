@@ -19,7 +19,7 @@
 //
 #define LLDB_USE_LIBEDIT_READLINE_COMPAT_MODULE 1
 
-extern "C" PyMODINIT_FUNC initlldb_readline(void);
+PyMODINIT_FUNC initlldb_readline(void);
 
 #endif
 

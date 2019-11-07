@@ -26,6 +26,7 @@ static_library("readability") {
     "InconsistentDeclarationParameterNameCheck.cpp",
     "IsolateDeclarationCheck.cpp",
     "MagicNumbersCheck.cpp",
+    "MakeMemberFunctionConstCheck.cpp",
     "MisleadingIndentationCheck.cpp",
     "MisplacedArrayIndexCheck.cpp",
     "NamedParameterCheck.cpp",
