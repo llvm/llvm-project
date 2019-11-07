@@ -599,6 +599,11 @@ void PassManagerBuilder::populateModulePassManager(
     RunInliner = true;
   }
 
+  // Try to perform OpenMP specific optimizations. This is a (quick!) no-op if
+  // there are no OpenMP runtime calls present in the module.
+  if (OptLevel > 1)
+    MPM.add(createOpenMPOptLegacyPass());
+
   MPM.add(createPostOrderFunctionAttrsLegacyPass());
   if (OptLevel > 2)
     MPM.add(createArgumentPromotionPass()); // Scalarize uninlined fn args
@@ -929,6 +934,11 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
 
   // CSFDO instrumentation and use pass.
   addPGOInstrPasses(PM, /* IsCS */ true);
+
+  // Try to perform OpenMP specific optimizations. This is a (quick!) no-op if
+  // there are no OpenMP runtime calls present in the module.
+  if (OptLevel > 1)
+    PM.add(createOpenMPOptLegacyPass());
 
   // Optimize globals again if we ran the inliner.
   if (RunInliner)
