@@ -41,7 +41,7 @@ class GDBRemoteRegisterContext : public RegisterContext {
 public:
   GDBRemoteRegisterContext(ThreadGDBRemote &thread, uint32_t concrete_frame_idx,
                            GDBRemoteDynamicRegisterInfo &reg_info,
-                           bool read_all_at_once);
+                           bool read_all_at_once, bool write_all_at_once);
 
   ~GDBRemoteRegisterContext() override;
 
@@ -114,6 +114,7 @@ protected:
   std::vector<bool> m_reg_valid;
   DataExtractor m_reg_data;
   bool m_read_all_at_once;
+  bool m_write_all_at_once;
 
 private:
   // Helper function for ReadRegisterBytes().
