@@ -125,7 +125,7 @@ DisableLFTR("disable-lftr", cl::Hidden, cl::init(false),
             cl::desc("Disable Linear Function Test Replace optimization"));
 
 static cl::opt<bool>
-LoopPredication("indvars-predicate-loops", cl::Hidden, cl::init(false),
+LoopPredication("indvars-predicate-loops", cl::Hidden, cl::init(true),
                 cl::desc("Predicate conditions in read only loops"));
 
 namespace {
