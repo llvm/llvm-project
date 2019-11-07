@@ -40768,54 +40768,20 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
     if (!ISD::isNormalLoad(Ld))
       return SDValue();
 
-    // If this is not the MMX case, i.e. we are just turning i64 load/store
-    // into f64 load/store, avoid the transformation if there are multiple
-    // uses of the loaded value.
-    if (!VT.isVector() && !Ld->hasNUsesOfValue(1, 0))
+    // Avoid the transformation if there are multiple uses of the loaded value.
+    if (!Ld->hasNUsesOfValue(1, 0))
       return SDValue();
 
     SDLoc LdDL(Ld);
     SDLoc StDL(N);
-    // If we are a 64-bit capable x86, lower to a single movq load/store pair.
-    // Otherwise, if it's legal to use f64 SSE instructions, use f64 load/store
-    // pair instead.
-    if (Subtarget.is64Bit() || F64IsLegal) {
-      MVT LdVT = Subtarget.is64Bit() ? MVT::i64 : MVT::f64;
-      SDValue NewLd = DAG.getLoad(LdVT, LdDL, Ld->getChain(), Ld->getBasePtr(),
-                                  Ld->getMemOperand());
+    // Lower to a single movq load/store pair.
+    SDValue NewLd = DAG.getLoad(MVT::f64, LdDL, Ld->getChain(),
+                                Ld->getBasePtr(), Ld->getMemOperand());
 
-      // Make sure new load is placed in same chain order.
-      DAG.makeEquivalentMemoryOrdering(Ld, NewLd);
-      return DAG.getStore(St->getChain(), StDL, NewLd, St->getBasePtr(),
-                          St->getMemOperand());
-    }
-
-    // Otherwise, lower to two pairs of 32-bit loads / stores.
-    SDValue LoAddr = Ld->getBasePtr();
-    SDValue HiAddr = DAG.getMemBasePlusOffset(LoAddr, 4, LdDL);
-
-    SDValue LoLd = DAG.getLoad(MVT::i32, LdDL, Ld->getChain(), LoAddr,
-                               Ld->getPointerInfo(), Ld->getAlignment(),
-                               Ld->getMemOperand()->getFlags());
-    SDValue HiLd = DAG.getLoad(MVT::i32, LdDL, Ld->getChain(), HiAddr,
-                               Ld->getPointerInfo().getWithOffset(4),
-                               MinAlign(Ld->getAlignment(), 4),
-                               Ld->getMemOperand()->getFlags());
-    // Make sure new loads are placed in same chain order.
-    DAG.makeEquivalentMemoryOrdering(Ld, LoLd);
-    DAG.makeEquivalentMemoryOrdering(Ld, HiLd);
-
-    LoAddr = St->getBasePtr();
-    HiAddr = DAG.getMemBasePlusOffset(LoAddr, 4, StDL);
-
-    SDValue LoSt =
-        DAG.getStore(St->getChain(), StDL, LoLd, LoAddr, St->getPointerInfo(),
-                     St->getAlignment(), St->getMemOperand()->getFlags());
-    SDValue HiSt = DAG.getStore(St->getChain(), StDL, HiLd, HiAddr,
-                                St->getPointerInfo().getWithOffset(4),
-                                MinAlign(St->getAlignment(), 4),
-                                St->getMemOperand()->getFlags());
-    return DAG.getNode(ISD::TokenFactor, StDL, MVT::Other, LoSt, HiSt);
+    // Make sure new load is placed in same chain order.
+    DAG.makeEquivalentMemoryOrdering(Ld, NewLd);
+    return DAG.getStore(St->getChain(), StDL, NewLd, St->getBasePtr(),
+                        St->getMemOperand());
   }
 
   // This is similar to the above case, but here we handle a scalar 64-bit
