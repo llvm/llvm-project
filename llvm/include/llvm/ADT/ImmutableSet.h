@@ -205,8 +205,7 @@ public:
                              ImutInfo::KeyOfValue(getValue()))) &&
            "Value in left child is not less that current value");
 
-
-    assert(!(getRight() ||
+    assert((!getRight() ||
              ImutInfo::isLess(ImutInfo::KeyOfValue(getValue()),
                               ImutInfo::KeyOfValue(getRight()->getValue()))) &&
            "Current value is not less that value of right child");
