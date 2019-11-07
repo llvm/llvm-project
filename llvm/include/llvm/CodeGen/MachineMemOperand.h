@@ -229,7 +229,7 @@ public:
 
   /// Return the minimum known alignment in bytes of the base address, without
   /// the offset.
-  uint64_t getBaseAlignment() const { return (1u << BaseAlignLog2) >> 1; }
+  uint64_t getBaseAlignment() const { return (1ull << BaseAlignLog2) >> 1; }
 
   /// Return the AA tags for the memory reference.
   AAMDNodes getAAInfo() const { return AAInfo; }
