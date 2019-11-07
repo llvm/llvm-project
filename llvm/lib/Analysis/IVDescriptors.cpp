@@ -699,37 +699,25 @@ bool RecurrenceDescriptor::isFirstOrderRecurrence(
   // Ensure every user of the phi node is dominated by the previous value.
   // The dominance requirement ensures the loop vectorizer will not need to
   // vectorize the initial value prior to the first iteration of the loop.
-  // TODO: Consider extending this sinking to handle memory instructions and
-  // phis with multiple users.
-
-  // Returns true, if all users of I are dominated by DominatedBy.
-  auto allUsesDominatedBy = [DT](Instruction *I, Instruction *DominatedBy) {
-    return all_of(I->uses(), [DT, DominatedBy](Use &U) {
-      return DT->dominates(DominatedBy, U);
-    });
-  };
-
+  // TODO: Consider extending this sinking to handle other kinds of instructions
+  // and expressions, beyond sinking a single cast past Previous.
   if (Phi->hasOneUse()) {
-    Instruction *I = Phi->user_back();
-
-    // If the user of the PHI is also the incoming value, we potentially have a
-    // reduction and which cannot be handled by sinking.
-    if (Previous == I)
-      return false;
-
-    if (DT->dominates(Previous, I)) // We already are good w/o sinking.
-      return true;
-
-    // We can sink any instruction without side effects, as long as all users
-    // are dominated by the instruction we are sinking after.
-    if (I->getParent() == Phi->getParent() && !I->mayHaveSideEffects() &&
-        allUsesDominatedBy(I, Previous)) {
-      SinkAfter[I] = Previous;
+    auto *I = Phi->user_back();
+    if (I->isCast() && (I->getParent() == Phi->getParent()) && I->hasOneUse() &&
+        DT->dominates(Previous, I->user_back())) {
+      if (!DT->dominates(Previous, I)) // Otherwise we're good w/o sinking.
+        SinkAfter[I] = Previous;
       return true;
     }
   }
 
-  return allUsesDominatedBy(Phi, Previous);
+  for (User *U : Phi->users())
+    if (auto *I = dyn_cast<Instruction>(U)) {
+      if (!DT->dominates(Previous, I))
+        return false;
+    }
+
+  return true;
 }
 
 /// This function returns the identity element (or neutral element) for
