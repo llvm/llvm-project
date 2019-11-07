@@ -13,7 +13,7 @@
 Test Swift support of TSan.
 """
 import lldb
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 import os
@@ -25,10 +25,11 @@ class TsanSwiftTestCase(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.skipIfLinux
-    @decorators.skipUnlessSwiftThreadSanitizer
-    @decorators.expectedFailureAll(archs=['arm64'])
+    @swiftTest
+    @skipIfLinux
+    @skipUnlessSwiftThreadSanitizer
+    @skipIfAsan # This test does not behave reliable with an ASANified LLDB.
+    @expectedFailureAll(archs=['arm64'])
     def test_tsan_swift(self):
         self.build()
         self.do_test()
