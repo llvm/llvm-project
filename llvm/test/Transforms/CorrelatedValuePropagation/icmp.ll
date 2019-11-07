@@ -490,11 +490,9 @@ define i1 @test16(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[A]], [[B]]
 ; CHECK-NEXT:    br label [[CONT:%.*]]
 ; CHECK:       cont:
-; CHECK-NEXT:    [[RES:%.*]] = icmp sge i32 [[SUB]], 0
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[IV:%.*]] = phi i1 [ true, [[BEGIN:%.*]] ], [ [[RES]], [[CONT]] ]
-; CHECK-NEXT:    ret i1 [[IV]]
+; CHECK-NEXT:    ret i1 true
 ;
 begin:
   %cmp0 = icmp sge i32 %a, 0
@@ -598,11 +596,9 @@ define i1 @test19(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[A]], [[B]]
 ; CHECK-NEXT:    br label [[CONT:%.*]]
 ; CHECK:       cont:
-; CHECK-NEXT:    [[RES:%.*]] = icmp sle i32 [[SUB]], 0
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[IV:%.*]] = phi i1 [ true, [[BEGIN:%.*]] ], [ [[RES]], [[CONT]] ]
-; CHECK-NEXT:    ret i1 [[IV]]
+; CHECK-NEXT:    ret i1 true
 ;
 begin:
   %cmp0 = icmp sle i32 %a, 0
