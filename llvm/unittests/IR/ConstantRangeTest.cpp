@@ -934,6 +934,34 @@ TEST_F(ConstantRangeTest, Sub) {
             ConstantRange(APInt(16, 0x6)));
 }
 
+TEST_F(ConstantRangeTest, SubWithNoWrap) {
+  typedef OverflowingBinaryOperator OBO;
+  TestAddWithNoSignedWrapExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.subWithNoWrap(CR2, OBO::NoSignedWrap);
+      },
+      [](bool &IsOverflow, const APInt &N1, const APInt &N2) {
+        return N1.ssub_ov(N2, IsOverflow);
+      });
+  TestAddWithNoUnsignedWrapExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.subWithNoWrap(CR2, OBO::NoUnsignedWrap);
+      },
+      [](bool &IsOverflow, const APInt &N1, const APInt &N2) {
+        return N1.usub_ov(N2, IsOverflow);
+      });
+  TestAddWithNoSignedUnsignedWrapExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.subWithNoWrap(CR2, OBO::NoUnsignedWrap | OBO::NoSignedWrap);
+      },
+      [](bool &IsOverflow, const APInt &N1, const APInt &N2) {
+        return N1.ssub_ov(N2, IsOverflow);
+      },
+      [](bool &IsOverflow, const APInt &N1, const APInt &N2) {
+        return N1.usub_ov(N2, IsOverflow);
+      });
+}
+
 TEST_F(ConstantRangeTest, Multiply) {
   EXPECT_EQ(Full.multiply(Full), Full);
   EXPECT_EQ(Full.multiply(Empty), Empty);
