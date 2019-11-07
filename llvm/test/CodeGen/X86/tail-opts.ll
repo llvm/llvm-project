@@ -473,55 +473,53 @@ return:
   ret void
 }
 
+define void @one_pgso(i32 %v) nounwind !prof !14 {
+; CHECK-LABEL: one_pgso:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    je .LBB6_3
+; CHECK-NEXT:  # %bb.1: # %bby
+; CHECK-NEXT:    cmpl $16, %edi
+; CHECK-NEXT:    je .LBB6_4
+; CHECK-NEXT:  # %bb.2: # %bb7
+; CHECK-NEXT:    jmp tail_call_me # TAILCALL
+; CHECK-NEXT:  .LBB6_3: # %bbx
+; CHECK-NEXT:    cmpl $128, %edi
+; CHECK-NEXT:    jne tail_call_me # TAILCALL
+; CHECK-NEXT:  .LBB6_4: # %return
+; CHECK-NEXT:    retq
+entry:
+  %0 = icmp eq i32 %v, 0
+  br i1 %0, label %bbx, label %bby
+
+bby:
+  switch i32 %v, label %bb7 [
+    i32 16, label %return
+  ]
+
+bb7:
+  tail call void @tail_call_me()
+  ret void
+
+bbx:
+  switch i32 %v, label %bb12 [
+    i32 128, label %return
+  ]
+
+bb12:
+  tail call void @tail_call_me()
+  ret void
+
+return:
+  ret void
+}
+
 ; two - Same as one, but with two instructions in the common
 ; tail instead of one. This is too much to be merged, given
 ; the optsize attribute.
 
 define void @two() nounwind optsize {
 ; CHECK-LABEL: two:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB6_1
-; CHECK-NEXT:  # %bb.2: # %return
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB6_1: # %bb7
-; CHECK-NEXT:    movl $0, {{.*}}(%rip)
-; CHECK-NEXT:    movl $1, {{.*}}(%rip)
-entry:
-  %0 = icmp eq i32 undef, 0
-  br i1 %0, label %bbx, label %bby
-
-bby:
-  switch i32 undef, label %bb7 [
-    i32 16, label %return
-  ]
-
-bb7:
-  store volatile i32 0, i32* @XYZ
-  store volatile i32 1, i32* @XYZ
-  unreachable
-
-bbx:
-  switch i32 undef, label %bb12 [
-    i32 128, label %return
-  ]
-
-bb12:
-  store volatile i32 0, i32* @XYZ
-  store volatile i32 1, i32* @XYZ
-  unreachable
-
-return:
-  ret void
-}
-
-; two_minsize - Same as two, but with minsize instead of optsize.
-
-define void @two_minsize() nounwind minsize {
-; CHECK-LABEL: two_minsize:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
@@ -561,6 +559,90 @@ return:
   ret void
 }
 
+define void @two_pgso() nounwind !prof !14 {
+; CHECK-LABEL: two_pgso:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    je .LBB8_1
+; CHECK-NEXT:  # %bb.2: # %return
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB8_1: # %bb7
+; CHECK-NEXT:    movl $0, {{.*}}(%rip)
+; CHECK-NEXT:    movl $1, {{.*}}(%rip)
+entry:
+  %0 = icmp eq i32 undef, 0
+  br i1 %0, label %bbx, label %bby
+
+bby:
+  switch i32 undef, label %bb7 [
+    i32 16, label %return
+  ]
+
+bb7:
+  store volatile i32 0, i32* @XYZ
+  store volatile i32 1, i32* @XYZ
+  unreachable
+
+bbx:
+  switch i32 undef, label %bb12 [
+    i32 128, label %return
+  ]
+
+bb12:
+  store volatile i32 0, i32* @XYZ
+  store volatile i32 1, i32* @XYZ
+  unreachable
+
+return:
+  ret void
+}
+
+; two_minsize - Same as two, but with minsize instead of optsize.
+
+define void @two_minsize() nounwind minsize {
+; CHECK-LABEL: two_minsize:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    je .LBB9_1
+; CHECK-NEXT:  # %bb.2: # %return
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB9_1: # %bb7
+; CHECK-NEXT:    movl $0, {{.*}}(%rip)
+; CHECK-NEXT:    movl $1, {{.*}}(%rip)
+entry:
+  %0 = icmp eq i32 undef, 0
+  br i1 %0, label %bbx, label %bby
+
+bby:
+  switch i32 undef, label %bb7 [
+    i32 16, label %return
+  ]
+
+bb7:
+  store volatile i32 0, i32* @XYZ
+  store volatile i32 1, i32* @XYZ
+  unreachable
+
+bbx:
+  switch i32 undef, label %bb12 [
+    i32 128, label %return
+  ]
+
+bb12:
+  store volatile i32 0, i32* @XYZ
+  store volatile i32 1, i32* @XYZ
+  unreachable
+
+return:
+  ret void
+}
+
 ; two_nosize - Same as two, but without the optsize attribute.
 ; Now two instructions are enough to be tail-duplicated.
 
@@ -568,20 +650,20 @@ define void @two_nosize(i32 %x, i32 %y, i32 %z) nounwind {
 ; CHECK-LABEL: two_nosize:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB8_3
+; CHECK-NEXT:    je .LBB10_3
 ; CHECK-NEXT:  # %bb.1: # %bby
 ; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    je .LBB8_4
+; CHECK-NEXT:    je .LBB10_4
 ; CHECK-NEXT:  # %bb.2: # %bb7
 ; CHECK-NEXT:    movl $0, {{.*}}(%rip)
 ; CHECK-NEXT:    jmp tail_call_me # TAILCALL
-; CHECK-NEXT:  .LBB8_3: # %bbx
+; CHECK-NEXT:  .LBB10_3: # %bbx
 ; CHECK-NEXT:    cmpl $-1, %edx
-; CHECK-NEXT:    je .LBB8_4
+; CHECK-NEXT:    je .LBB10_4
 ; CHECK-NEXT:  # %bb.5: # %bb12
 ; CHECK-NEXT:    movl $0, {{.*}}(%rip)
 ; CHECK-NEXT:    jmp tail_call_me # TAILCALL
-; CHECK-NEXT:  .LBB8_4: # %return
+; CHECK-NEXT:  .LBB10_4: # %return
 ; CHECK-NEXT:    retq
 entry:
   %0 = icmp eq i32 %x, 0
@@ -621,11 +703,11 @@ define i64 @TESTE(i64 %parami, i64 %paraml) nounwind readnone {
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    cmovgq %rdi, %rax
 ; CHECK-NEXT:    testq %rsi, %rsi
-; CHECK-NEXT:    jle .LBB9_2
+; CHECK-NEXT:    jle .LBB11_2
 ; CHECK-NEXT:  # %bb.1: # %bb.nph
 ; CHECK-NEXT:    imulq %rdi, %rsi
 ; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:  .LBB9_2: # %for.end
+; CHECK-NEXT:  .LBB11_2: # %for.end
 ; CHECK-NEXT:    retq
 entry:
   %cmp = icmp slt i64 %parami, 1                  ; <i1> [#uses=1]
@@ -654,24 +736,24 @@ define void @merge_aborts() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq qux
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    je .LBB10_5
+; CHECK-NEXT:    je .LBB12_5
 ; CHECK-NEXT:  # %bb.1: # %cont1
 ; CHECK-NEXT:    callq qux
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    je .LBB10_5
+; CHECK-NEXT:    je .LBB12_5
 ; CHECK-NEXT:  # %bb.2: # %cont2
 ; CHECK-NEXT:    callq qux
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    je .LBB10_5
+; CHECK-NEXT:    je .LBB12_5
 ; CHECK-NEXT:  # %bb.3: # %cont3
 ; CHECK-NEXT:    callq qux
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    je .LBB10_5
+; CHECK-NEXT:    je .LBB12_5
 ; CHECK-NEXT:  # %bb.4: # %cont4
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB10_5: # %abort1
+; CHECK-NEXT:  .LBB12_5: # %abort1
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq abort
 entry:
@@ -714,27 +796,27 @@ define void @merge_alternating_aborts() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq qux
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    je .LBB11_5
+; CHECK-NEXT:    je .LBB13_5
 ; CHECK-NEXT:  # %bb.1: # %cont1
 ; CHECK-NEXT:    callq qux
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    je .LBB11_6
+; CHECK-NEXT:    je .LBB13_6
 ; CHECK-NEXT:  # %bb.2: # %cont2
 ; CHECK-NEXT:    callq qux
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    je .LBB11_5
+; CHECK-NEXT:    je .LBB13_5
 ; CHECK-NEXT:  # %bb.3: # %cont3
 ; CHECK-NEXT:    callq qux
 ; CHECK-NEXT:    testb $1, %al
-; CHECK-NEXT:    je .LBB11_6
+; CHECK-NEXT:    je .LBB13_6
 ; CHECK-NEXT:  # %bb.4: # %cont4
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB11_5: # %abort1
+; CHECK-NEXT:  .LBB13_5: # %abort1
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq abort
-; CHECK-NEXT:  .LBB11_6: # %abort2
+; CHECK-NEXT:  .LBB13_6: # %abort2
 ; CHECK-NEXT:    callq alt_abort
 entry:
   %c1 = call i1 @qux()
@@ -763,3 +845,20 @@ abort4:
 cont4:
   ret void
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}

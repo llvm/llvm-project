@@ -113,6 +113,38 @@ define <4 x float> @rcpss_full_size(<4 x float>* %a) optsize {
     ret <4 x float> %res
 }
 
+define float @rcpss_pgso(float* %a) !prof !14 {
+; SSE-LABEL: rcpss_pgso:
+; SSE:       # %bb.0:
+; SSE-NEXT:    rcpss (%rdi), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: rcpss_pgso:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vrcpss (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    retq
+    %ld = load float, float* %a
+    %ins = insertelement <4 x float> undef, float %ld, i32 0
+    %res = tail call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %ins)
+    %ext = extractelement <4 x float> %res, i32 0
+    ret float %ext
+}
+
+define <4 x float> @rcpss_full_pgso(<4 x float>* %a) !prof !14 {
+; SSE-LABEL: rcpss_full_pgso:
+; SSE:       # %bb.0:
+; SSE-NEXT:    rcpss (%rdi), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: rcpss_full_pgso:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vrcpss (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    retq
+    %ld = load <4 x float>, <4 x float>* %a
+    %res = tail call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %ld)
+    ret <4 x float> %res
+}
+
 define float @rsqrtss_size(float* %a) optsize {
 ; SSE-LABEL: rsqrtss_size:
 ; SSE:       # %bb.0:
@@ -137,6 +169,38 @@ define <4 x float> @rsqrtss_full_size(<4 x float>* %a) optsize {
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: rsqrtss_full_size:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vrsqrtss (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    retq
+    %ld = load <4 x float>, <4 x float>* %a
+    %res = tail call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %ld)
+    ret <4 x float> %res
+}
+
+define float @rsqrtss_pgso(float* %a) !prof !14 {
+; SSE-LABEL: rsqrtss_pgso:
+; SSE:       # %bb.0:
+; SSE-NEXT:    rsqrtss (%rdi), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: rsqrtss_pgso:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vrsqrtss (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    retq
+    %ld = load float, float* %a
+    %ins = insertelement <4 x float> undef, float %ld, i32 0
+    %res = tail call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %ins)
+    %ext = extractelement <4 x float> %res, i32 0
+    ret float %ext
+}
+
+define <4 x float> @rsqrtss_full_pgso(<4 x float>* %a) !prof !14 {
+; SSE-LABEL: rsqrtss_full_pgso:
+; SSE:       # %bb.0:
+; SSE-NEXT:    rsqrtss (%rdi), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: rsqrtss_full_pgso:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vrsqrtss (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -187,6 +251,57 @@ define <4 x float> @sqrtss_full_size_volatile(<4 x float>* %a) optsize{
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sqrtss_full_size_volatile:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps (%rdi), %xmm0
+; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+    %ld = load volatile <4 x float>, <4 x float>* %a
+    %res = tail call <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float> %ld)
+    ret <4 x float> %res
+}
+
+define float @sqrtss_pgso(float* %a) !prof !14 {
+; SSE-LABEL: sqrtss_pgso:
+; SSE:       # %bb.0:
+; SSE-NEXT:    sqrtss (%rdi), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: sqrtss_pgso:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsqrtss (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    retq
+    %ld = load float, float* %a
+    %ins = insertelement <4 x float> undef, float %ld, i32 0
+    %res = tail call <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float> %ins)
+    %ext = extractelement <4 x float> %res, i32 0
+    ret float %ext
+}
+
+define <4 x float> @sqrtss_full_pgso(<4 x float>* %a) !prof !14 {
+; SSE-LABEL: sqrtss_full_pgso:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps (%rdi), %xmm0
+; SSE-NEXT:    sqrtss %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: sqrtss_full_pgso:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps (%rdi), %xmm0
+; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+    %ld = load <4 x float>, <4 x float>* %a
+    %res = tail call <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float> %ld)
+    ret <4 x float> %res
+}
+
+define <4 x float> @sqrtss_full_pgso_volatile(<4 x float>* %a) !prof !14 {
+; SSE-LABEL: sqrtss_full_pgso_volatile:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps (%rdi), %xmm0
+; SSE-NEXT:    sqrtss %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: sqrtss_full_pgso_volatile:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
@@ -247,7 +362,75 @@ define <2 x double> @sqrtsd_full_size_volatile(<2 x double>* %a) optsize {
     ret <2 x double> %res
 }
 
+define double @sqrtsd_pgso(double* %a) !prof !14 {
+; SSE-LABEL: sqrtsd_pgso:
+; SSE:       # %bb.0:
+; SSE-NEXT:    sqrtsd (%rdi), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: sqrtsd_pgso:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsqrtsd (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    retq
+    %ld = load double, double* %a
+    %ins = insertelement <2 x double> undef, double %ld, i32 0
+    %res = tail call <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double> %ins)
+    %ext = extractelement <2 x double> %res, i32 0
+    ret double %ext
+}
+
+define <2 x double> @sqrtsd_full_pgso(<2 x double>* %a) !prof !14 {
+; SSE-LABEL: sqrtsd_full_pgso:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movapd (%rdi), %xmm0
+; SSE-NEXT:    sqrtsd %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: sqrtsd_full_pgso:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovapd (%rdi), %xmm0
+; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+    %ld = load <2 x double>, <2 x double>* %a
+    %res = tail call <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double> %ld)
+    ret <2 x double> %res
+}
+
+define <2 x double> @sqrtsd_full_pgso_volatile(<2 x double>* %a) !prof !14 {
+; SSE-LABEL: sqrtsd_full_pgso_volatile:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movapd (%rdi), %xmm0
+; SSE-NEXT:    sqrtsd %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: sqrtsd_full_pgso_volatile:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovapd (%rdi), %xmm0
+; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+    %ld = load volatile <2 x double>, <2 x double>* %a
+    %res = tail call <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double> %ld)
+    ret <2 x double> %res
+}
+
 declare <4 x float> @llvm.x86.sse.rcp.ss(<4 x float>) nounwind readnone
 declare <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float>) nounwind readnone
 declare <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float>) nounwind readnone
 declare <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double>) nounwind readnone
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}

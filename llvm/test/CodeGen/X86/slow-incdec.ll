@@ -54,6 +54,26 @@ define i32 @dec_size(i32 %x) optsize {
   ret i32 %r
 }
 
+define i32 @inc_pgso(i32 %x) !prof !14 {
+; CHECK-LABEL: inc_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    incl %eax
+; CHECK-NEXT:    retl
+  %r = add i32 %x, 1
+  ret i32 %r
+}
+
+define i32 @dec_pgso(i32 %x) !prof !14 {
+; CHECK-LABEL: dec_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    retl
+  %r = add i32 %x, -1
+  ret i32 %r
+}
+
 declare {i32, i1} @llvm.uadd.with.overflow.i32(i32, i32)
 declare void @other(i32* ) nounwind;
 
@@ -62,20 +82,20 @@ define void @cond_ae_to_cond_ne(i32* %p) nounwind {
 ; INCDEC:       # %bb.0: # %entry
 ; INCDEC-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; INCDEC-NEXT:    incl (%eax)
-; INCDEC-NEXT:    jne .LBB4_1
+; INCDEC-NEXT:    jne .LBB6_1
 ; INCDEC-NEXT:  # %bb.2: # %if.end4
 ; INCDEC-NEXT:    jmp other # TAILCALL
-; INCDEC-NEXT:  .LBB4_1: # %return
+; INCDEC-NEXT:  .LBB6_1: # %return
 ; INCDEC-NEXT:    retl
 ;
 ; ADD-LABEL: cond_ae_to_cond_ne:
 ; ADD:       # %bb.0: # %entry
 ; ADD-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; ADD-NEXT:    addl $1, (%eax)
-; ADD-NEXT:    jne .LBB4_1
+; ADD-NEXT:    jne .LBB6_1
 ; ADD-NEXT:  # %bb.2: # %if.end4
 ; ADD-NEXT:    jmp other # TAILCALL
-; ADD-NEXT:  .LBB4_1: # %return
+; ADD-NEXT:  .LBB6_1: # %return
 ; ADD-NEXT:    retl
 entry:
   %t0 = load i32, i32* %p, align 8
@@ -109,10 +129,10 @@ define void @test_tail_call(i32* %ptr) nounwind {
 ; INCDEC-NEXT:    incb a
 ; INCDEC-NEXT:    sete d
 ; INCDEC-NEXT:    testb %al, %al
-; INCDEC-NEXT:    jne .LBB5_2
+; INCDEC-NEXT:    jne .LBB7_2
 ; INCDEC-NEXT:  # %bb.1: # %then
 ; INCDEC-NEXT:    jmp external_a # TAILCALL
-; INCDEC-NEXT:  .LBB5_2: # %else
+; INCDEC-NEXT:  .LBB7_2: # %else
 ; INCDEC-NEXT:    jmp external_b # TAILCALL
 ;
 ; ADD-LABEL: test_tail_call:
@@ -123,10 +143,10 @@ define void @test_tail_call(i32* %ptr) nounwind {
 ; ADD-NEXT:    addb $1, a
 ; ADD-NEXT:    sete d
 ; ADD-NEXT:    testb %al, %al
-; ADD-NEXT:    jne .LBB5_2
+; ADD-NEXT:    jne .LBB7_2
 ; ADD-NEXT:  # %bb.1: # %then
 ; ADD-NEXT:    jmp external_a # TAILCALL
-; ADD-NEXT:  .LBB5_2: # %else
+; ADD-NEXT:  .LBB7_2: # %else
 ; ADD-NEXT:    jmp external_b # TAILCALL
 entry:
   %val = load i32, i32* %ptr
@@ -152,3 +172,19 @@ else:
   ret void
 }
 
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}

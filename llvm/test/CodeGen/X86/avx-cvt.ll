@@ -190,6 +190,16 @@ define float @floor_f32_load(float* %aptr) optsize {
   ret float %res
 }
 
+define float @floor_f32_load_pgso(float* %aptr) !prof !14 {
+; CHECK-LABEL: floor_f32_load_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vroundss $9, (%rdi), %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %a = load float, float* %aptr
+  %res = call float @llvm.floor.f32(float %a)
+  ret float %res
+}
+
 define double @nearbyint_f64_load(double* %aptr) optsize {
 ; CHECK-LABEL: nearbyint_f64_load:
 ; CHECK:       # %bb.0:
@@ -200,3 +210,29 @@ define double @nearbyint_f64_load(double* %aptr) optsize {
   ret double %res
 }
 
+define double @nearbyint_f64_load_pgso(double* %aptr) !prof !14 {
+; CHECK-LABEL: nearbyint_f64_load_pgso:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vroundsd $12, (%rdi), %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %a = load double, double* %aptr
+  %res = call double @llvm.nearbyint.f64(double %a)
+  ret double %res
+}
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", !"InstrProf"}
+!3 = !{!"TotalCount", i64 10000}
+!4 = !{!"MaxCount", i64 10}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1000}
+!7 = !{!"NumCounts", i64 3}
+!8 = !{!"NumFunctions", i64 3}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11, !12, !13}
+!11 = !{i32 10000, i64 100, i32 1}
+!12 = !{i32 999000, i64 100, i32 1}
+!13 = !{i32 999999, i64 1, i32 2}
+!14 = !{!"function_entry_count", i64 0}
