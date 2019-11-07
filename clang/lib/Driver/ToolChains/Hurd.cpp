@@ -70,6 +70,10 @@ Hurd::Hurd(const Driver &D, const llvm::Triple &Triple,
   const std::string OSLibDir = getOSLibDir(Triple, Args);
   const std::string MultiarchTriple = getMultiarchTriple(D, Triple, SysRoot);
 
+#ifdef ENABLE_LINKER_BUILD_ID
+  ExtraOpts.push_back("--build-id");
+#endif
+
   // If we are currently running Clang inside of the requested system root, add
   // its parent library paths to those searched.
   // FIXME: It's not clear whether we should use the driver's installed
