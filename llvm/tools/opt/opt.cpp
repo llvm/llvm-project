@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "BreakpointPrinter.h"
-#include "Debugify.h"
 #include "NewPMDriver.h"
 #include "PassPrinters.h"
 #include "llvm/ADT/Triple.h"
@@ -56,6 +55,7 @@
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Debugify.h"
 #include <algorithm>
 #include <memory>
 using namespace llvm;
@@ -481,6 +481,27 @@ namespace polly {
 void initializePollyPasses(llvm::PassRegistry &Registry);
 }
 #endif
+
+void exportDebugifyStats(llvm::StringRef Path, const DebugifyStatsMap &Map) {
+  std::error_code EC;
+  raw_fd_ostream OS{Path, EC};
+  if (EC) {
+    errs() << "Could not open file: " << EC.message() << ", " << Path << '\n';
+    return;
+  }
+
+  OS << "Pass Name" << ',' << "# of missing debug values" << ','
+     << "# of missing locations" << ',' << "Missing/Expected value ratio" << ','
+     << "Missing/Expected location ratio" << '\n';
+  for (const auto &Entry : Map) {
+    StringRef Pass = Entry.first;
+    DebugifyStatistics Stats = Entry.second;
+
+    OS << Pass << ',' << Stats.NumDbgValuesMissing << ','
+       << Stats.NumDbgLocsMissing << ',' << Stats.getMissingValueRatio() << ','
+       << Stats.getEmptyLocationRatio() << '\n';
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // main for opt

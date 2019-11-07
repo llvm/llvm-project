@@ -11,6 +11,7 @@ add_llvm_library(LLVMTransformUtils
   CloneModule.cpp
   CodeExtractor.cpp
   CtorUtils.cpp
+  Debugify.cpp
   DemoteRegToStack.cpp
   EntryExitInstrumenter.cpp
   EscapeEnumerator.cpp

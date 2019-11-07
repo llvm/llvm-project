@@ -27,7 +27,6 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_tool(opt
   AnalysisWrappers.cpp
   BreakpointPrinter.cpp
-  Debugify.cpp
   GraphPrinters.cpp
   NewPMDriver.cpp
   PassPrinters.cpp
