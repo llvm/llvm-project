@@ -101,7 +101,7 @@ public:
 
   static lldb_private::ConstString GetPluginNameStatic();
 
-  static bool IsCPPMangledName(const char *name);
+  static bool IsCPPMangledName(llvm::StringRef name);
 
   // Extract C++ context and identifier from a string using heuristic matching
   // (as opposed to
