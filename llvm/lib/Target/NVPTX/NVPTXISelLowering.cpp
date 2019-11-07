@@ -123,7 +123,7 @@ bool NVPTXTargetLowering::useF32FTZ(const MachineFunction &MF) const {
     return FtzEnabled;
   }
 
-  return MF.getDenormalMode(APFloat::IEEEsingle()) ==
+  return MF.getDenormalMode(APFloat::IEEEsingle()).Output ==
          DenormalMode::PreserveSign;
 }
 

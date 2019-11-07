@@ -587,7 +587,7 @@ void CodeGenModule::Release() {
     // floating point values to 0.  (This corresponds to its "__CUDA_FTZ"
     // property.)
     getModule().addModuleFlag(llvm::Module::Override, "nvvm-reflect-ftz",
-                              CodeGenOpts.FP32DenormalMode !=
+                              CodeGenOpts.FP32DenormalMode.Output !=
                                   llvm::DenormalMode::IEEE);
   }
 

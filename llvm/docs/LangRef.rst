@@ -1820,12 +1820,21 @@ example:
     not introduce any new floating-point instructions that may trap.
 
 ``"denormal-fp-math"``
-    This indicates the denormal (subnormal) handling that may be assumed
-    for the default floating-point environment. This may be one of
-    ``"ieee"``, ``"preserve-sign"``, or ``"positive-zero"``.  If this
-    is attribute is not specified, the default is ``"ieee"``. If the
-    mode is ``"preserve-sign"``, or ``"positive-zero"``, denormal
-    outputs may be flushed to zero by standard floating point
+    This indicates the denormal (subnormal) handling that may be
+    assumed for the default floating-point environment. This is a
+    comma separated pair. The elements may be one of ``"ieee"``,
+    ``"preserve-sign"``, or ``"positive-zero"``. The first entry
+    indicates the flushing mode for the result of floating point
+    operations. The second indicates the handling of denormal inputs
+    to floating point instructions. For compatability with older
+    bitcode, if the second value is omitted, both input and output
+    modes will assume the same mode.
+
+    If this is attribute is not specified, the default is
+    ``"ieee,ieee"``.
+
+    If the output mode is ``"preserve-sign"``, or ``"positive-zero"``,
+    denormal outputs may be flushed to zero by standard floating-point
     operations. It is not mandated that flushing to zero occurs, but if
     a denormal output is flushed to zero, it must respect the sign
     mode. Not all targets support all modes. While this indicates the
@@ -1833,6 +1842,12 @@ example:
     this does not make any attempt to ensure the mode is
     consistent. User or platform code is expected to set the floating
     point mode appropriately before function entry.
+
+   If the input mode is ``"preserve-sign"``, or ``"positive-zero"``, a
+   floating-point operation must treat any input denormal value as
+   zero. In some situations, if an instruction does not respect this
+   mode, the input may need to be converted to 0 as if by
+   ``@llvm.canonicalize`` during lowering for correctness.
 
 ``"denormal-fp-math-f32"``
     Same as ``"denormal-fp-math"``, but only controls the behavior of
@@ -15593,9 +15608,9 @@ Each of these intrinsics corresponds to a normal floating-point operation. The
 data arguments and the return value are the same as the corresponding FP
 operation.
 
-The rounding mode argument is a metadata string specifying what 
-assumptions, if any, the optimizer can make when transforming constant 
-values. Some constrained FP intrinsics omit this argument. If required 
+The rounding mode argument is a metadata string specifying what
+assumptions, if any, the optimizer can make when transforming constant
+values. Some constrained FP intrinsics omit this argument. If required
 by the intrinsic, this argument must be one of the following strings:
 
 ::
@@ -15911,7 +15926,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.fptoui``' intrinsic converts a 
+The '``llvm.experimental.constrained.fptoui``' intrinsic converts a
 floating-point ``value`` to its unsigned integer equivalent of type ``ty2``.
 
 Arguments:
@@ -15944,7 +15959,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.fptosi``' intrinsic converts 
+The '``llvm.experimental.constrained.fptosi``' intrinsic converts
 :ref:`floating-point <t_floating>` ``value`` to type ``ty2``.
 
 Arguments:
@@ -15952,7 +15967,7 @@ Arguments:
 
 The first argument to the '``llvm.experimental.constrained.fptosi``'
 intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector
-<t_vector>` of floating point values. 
+<t_vector>` of floating point values.
 
 The second argument specifies the exception behavior as described above.
 
@@ -16061,7 +16076,7 @@ intrinsic must be :ref:`floating point <t_floating>` or :ref:`vector
 <t_vector>` of floating point values. This argument must be larger in size
 than the result.
 
-The second and third arguments specify the rounding mode and exception 
+The second and third arguments specify the rounding mode and exception
 behavior as described above.
 
 Semantics:
@@ -16085,7 +16100,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.experimental.constrained.fpext``' intrinsic extends a 
+The '``llvm.experimental.constrained.fpext``' intrinsic extends a
 floating-point ``value`` to a larger floating-point value.
 
 Arguments:
@@ -17102,7 +17117,7 @@ Syntax:
       declare <inttype>
       @llvm.experimental.constrained.llround(<fptype> <op1>,
                                              metadata <exception behavior>)
-      
+
 Overview:
 """""""""
 

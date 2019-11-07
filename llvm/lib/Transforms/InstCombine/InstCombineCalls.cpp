@@ -1706,7 +1706,8 @@ static Instruction *SimplifyNVVMIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
     StringRef Attr = II->getFunction()
                          ->getFnAttribute("denormal-fp-math-f32")
                          .getValueAsString();
-    bool FtzEnabled = parseDenormalFPAttribute(Attr) != DenormalMode::IEEE;
+    DenormalMode Mode = parseDenormalFPAttribute(Attr);
+    bool FtzEnabled = Mode.Output != DenormalMode::IEEE;
 
     if (FtzEnabled != (Action.FtzRequirement == FTZ_MustBeOn))
       return nullptr;
