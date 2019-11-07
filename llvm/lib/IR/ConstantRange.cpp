@@ -824,6 +824,8 @@ ConstantRange ConstantRange::overflowingBinaryOp(Instruction::BinaryOps BinOp,
   switch (BinOp) {
   case Instruction::Add:
     return addWithNoWrap(Other, NoWrapKind);
+  case Instruction::Sub:
+    return subWithNoWrap(Other, NoWrapKind);
   default:
     // Don't know about this Overflowing Binary Operation.
     // Conservatively fallback to plain binop handling.
