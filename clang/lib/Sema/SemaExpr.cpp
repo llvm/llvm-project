@@ -481,16 +481,21 @@ static void CheckForNullPointerDereference(Sema &S, Expr *E) {
   // optimizer will delete, so warn about it.  People sometimes try to use this
   // to get a deterministic trap and are surprised by clang's behavior.  This
   // only handles the pattern "*null", which is a very syntactic check.
-  if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E->IgnoreParenCasts()))
-    if (UO->getOpcode() == UO_Deref &&
-        UO->getSubExpr()->IgnoreParenCasts()->
-          isNullPointerConstant(S.Context, Expr::NPC_ValueDependentIsNotNull) &&
+  const auto *UO = dyn_cast<UnaryOperator>(E->IgnoreParenCasts());
+  if (UO && UO->getOpcode() == UO_Deref) {
+    const LangAS AS =
+        UO->getSubExpr()->getType()->getPointeeType().getAddressSpace();
+    if ((!isTargetAddressSpace(AS) ||
+         (isTargetAddressSpace(AS) && toTargetAddressSpace(AS) == 0)) &&
+        UO->getSubExpr()->IgnoreParenCasts()->isNullPointerConstant(
+            S.Context, Expr::NPC_ValueDependentIsNotNull) &&
         !UO->getType().isVolatileQualified()) {
-    S.DiagRuntimeBehavior(UO->getOperatorLoc(), UO,
-                          S.PDiag(diag::warn_indirection_through_null)
-                            << UO->getSubExpr()->getSourceRange());
-    S.DiagRuntimeBehavior(UO->getOperatorLoc(), UO,
-                        S.PDiag(diag::note_indirection_through_null));
+      S.DiagRuntimeBehavior(UO->getOperatorLoc(), UO,
+                            S.PDiag(diag::warn_indirection_through_null)
+                                << UO->getSubExpr()->getSourceRange());
+      S.DiagRuntimeBehavior(UO->getOperatorLoc(), UO,
+                            S.PDiag(diag::note_indirection_through_null));
+    }
   }
 }
 
