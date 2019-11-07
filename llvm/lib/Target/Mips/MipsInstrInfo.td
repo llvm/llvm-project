@@ -211,6 +211,10 @@ def HasCnMips    :    Predicate<"Subtarget->hasCnMips()">,
                       AssemblerPredicate<"FeatureCnMips">;
 def NotCnMips    :    Predicate<"!Subtarget->hasCnMips()">,
                       AssemblerPredicate<"!FeatureCnMips">;
+def HasCnMipsP   :    Predicate<"Subtarget->hasCnMipsP()">,
+                      AssemblerPredicate<"FeatureCnMipsP">;
+def NotCnMipsP   :    Predicate<"!Subtarget->hasCnMipsP()">,
+                      AssemblerPredicate<"!FeatureCnMipsP">;
 def IsSym32     :     Predicate<"Subtarget->hasSym32()">,
                       AssemblerPredicate<"FeatureSym32">;
 def IsSym64     :     Predicate<"!Subtarget->hasSym32()">,
@@ -437,6 +441,14 @@ class ASE_CNMIPS {
 
 class NOT_ASE_CNMIPS {
   list<Predicate> ASEPredicate = [NotCnMips];
+}
+
+class ASE_CNMIPSP {
+  list<Predicate> ASEPredicate = [HasCnMipsP];
+}
+
+class NOT_ASE_CNMIPSP {
+  list<Predicate> ASEPredicate = [NotCnMipsP];
 }
 
 class ASE_MIPS64_CNMIPS {

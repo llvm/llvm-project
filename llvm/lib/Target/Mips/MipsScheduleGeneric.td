@@ -720,10 +720,15 @@ def : InstRW<[GenericWriteALU], (instrs BADDu, BBIT0, BBIT032, BBIT1, BBIT132,
                                  CINS, CINS32, CINS64_32, CINS_i32,
                                  DMFC2_OCTEON, DMTC2_OCTEON, DPOP, EXTS,
                                  EXTS32, MTM0, MTM1, MTM2, MTP0, MTP1, MTP2,
-                                 POP, SEQ, SEQi, SNE, SNEi, V3MULU, VMM0,
-                                 VMULU)>;
+                                 POP, SEQ, SEQi, SNE, SNEi,
+                                 V3MULU, VMM0, VMULU)>;
 
 def : InstRW<[GenericWriteMDUtoGPR], (instrs DMUL)>;
+
+// Cavium Networks MIPS (cnMIPSP) - Octeon+, HasCnMipsP
+// =================================================
+
+def : InstRW<[GenericWriteALU], (instrs SAA, SAAD)>;
 
 // FPU Pipelines
 // =============
