@@ -354,6 +354,10 @@ AllocaInst *findAllocaForValue(Value *V,
 /// Returns true if any debug users were updated.
 bool salvageDebugInfo(Instruction &I);
 
+/// Salvage all debug users of the instruction \p I or mark it as undef if it
+/// cannot be salvaged.
+void salvageDebugInfoOrMarkUndef(Instruction &I);
+
 /// Implementation of salvageDebugInfo, applying only to instructions in
 /// \p Insns, rather than all debug users of \p I.
 bool salvageDebugInfoForDbgValues(Instruction &I,
