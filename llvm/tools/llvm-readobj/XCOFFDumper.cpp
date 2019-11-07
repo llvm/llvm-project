@@ -49,13 +49,6 @@ private:
   void printCsectAuxEnt32(const XCOFFCsectAuxEnt32 *AuxEntPtr);
   void printSectAuxEntForStat(const XCOFFSectAuxEntForStat *AuxEntPtr);
   void printSymbol(const SymbolRef &);
-
-  // Least significant 3 bits are reserved.
-  static constexpr unsigned SectionFlagsReservedMask = 0x7;
-
-  // The low order 16 bits of section flags denotes the section type.
-  static constexpr unsigned SectionFlagsTypeMask = 0xffffu;
-
   void printRelocations(ArrayRef<XCOFFSectionHeader32> Sections);
   const XCOFFObjectFile &Obj;
 };
@@ -496,8 +489,7 @@ void XCOFFDumper::printSectionHeaders(ArrayRef<T> Sections) {
     DictScope SecDS(W, "Section");
 
     W.printNumber("Index", Index++);
-
-    uint16_t SectionType = Sec.Flags & SectionFlagsTypeMask;
+    uint16_t SectionType = Sec.getSectionType();
     switch (SectionType) {
     case XCOFF::STYP_OVRFLO:
       printOverflowSectionHeader(Sec);
@@ -513,8 +505,7 @@ void XCOFFDumper::printSectionHeaders(ArrayRef<T> Sections) {
       printGenericSectionHeader(Sec);
       break;
     }
-    // For now we just dump the section type portion of the flags.
-    if (SectionType & SectionFlagsReservedMask)
+    if (Sec.isReservedSectionType())
       W.printHex("Flags", "Reserved", SectionType);
     else
       W.printEnum("Type", SectionType, makeArrayRef(SectionTypeFlagsNames));

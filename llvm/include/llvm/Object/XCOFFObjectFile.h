@@ -47,7 +47,20 @@ struct XCOFFFileHeader64 {
   support::ubig32_t NumberOfSymTableEntries;
 };
 
-struct XCOFFSectionHeader32 {
+template <typename T> struct XCOFFSectionHeader {
+  // Least significant 3 bits are reserved.
+  static constexpr unsigned SectionFlagsReservedMask = 0x7;
+
+  // The low order 16 bits of section flags denotes the section type.
+  static constexpr unsigned SectionFlagsTypeMask = 0xffffu;
+
+public:
+  StringRef getName() const;
+  uint16_t getSectionType() const;
+  bool isReservedSectionType() const;
+};
+
+struct XCOFFSectionHeader32 : XCOFFSectionHeader<XCOFFSectionHeader32> {
   char Name[XCOFF::NameSize];
   support::ubig32_t PhysicalAddress;
   support::ubig32_t VirtualAddress;
@@ -58,11 +71,9 @@ struct XCOFFSectionHeader32 {
   support::ubig16_t NumberOfRelocations;
   support::ubig16_t NumberOfLineNumbers;
   support::big32_t Flags;
-
-  StringRef getName() const;
 };
 
-struct XCOFFSectionHeader64 {
+struct XCOFFSectionHeader64 : XCOFFSectionHeader<XCOFFSectionHeader64> {
   char Name[XCOFF::NameSize];
   support::ubig64_t PhysicalAddress;
   support::ubig64_t VirtualAddress;
@@ -74,8 +85,6 @@ struct XCOFFSectionHeader64 {
   support::ubig32_t NumberOfLineNumbers;
   support::big32_t Flags;
   char Padding[4];
-
-  StringRef getName() const;
 };
 
 struct XCOFFSymbolEntry {
