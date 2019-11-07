@@ -40763,7 +40763,6 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
       cast<LoadSDNode>(St->getValue())->isSimple() &&
       St->getChain().hasOneUse() && St->isSimple()) {
     LoadSDNode *Ld = cast<LoadSDNode>(St->getValue().getNode());
-    SmallVector<SDValue, 8> Ops;
 
     if (!ISD::isNormalLoad(Ld))
       return SDValue();
