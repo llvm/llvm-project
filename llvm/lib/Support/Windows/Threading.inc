@@ -34,7 +34,7 @@ static unsigned __stdcall threadFuncAsync(void *Arg) {
 }
 
 static void
-llvm_execute_on_thread_impl(_beginthreadex_proc_type ThreadFunc, void *Arg,
+llvm_execute_on_thread_impl(unsigned (__stdcall *ThreadFunc)(void *), void *Arg,
                             llvm::Optional<unsigned> StackSizeInBytes,
                             JoiningPolicy JP) {
   HANDLE hThread = (HANDLE)::_beginthreadex(

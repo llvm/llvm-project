@@ -187,7 +187,7 @@ APInt& APInt::operator--() {
   return clearUnusedBits();
 }
 
-/// Adds the RHS APint to this APInt.
+/// Adds the RHS APInt to this APInt.
 /// @returns this, after addition of RHS.
 /// Addition assignment operator.
 APInt& APInt::operator+=(const APInt& RHS) {
@@ -2830,7 +2830,7 @@ APInt llvm::APIntOps::RoundingSDiv(const APInt &A, const APInt &B,
       return Quo;
     return Quo + 1;
   }
-  // Currently sdiv rounds twards zero.
+  // Currently sdiv rounds towards zero.
   case APInt::Rounding::TOWARD_ZERO:
     return A.sdiv(B);
   }
@@ -2973,7 +2973,7 @@ llvm::APIntOps::SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
   APInt Q = SQ * SQ;
   bool InexactSQ = Q != D;
   // The calculated SQ may actually be greater than the exact (non-integer)
-  // value. If that's the case, decremement SQ to get a value that is lower.
+  // value. If that's the case, decrement SQ to get a value that is lower.
   if (Q.sgt(D))
     SQ -= 1;
 

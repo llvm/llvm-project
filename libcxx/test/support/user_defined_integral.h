@@ -8,12 +8,14 @@
 #ifndef SUPPORT_USER_DEFINED_INTEGRAL_H
 #define SUPPORT_USER_DEFINED_INTEGRAL_H
 
+#include "test_macros.h"
+
 template <class T>
 struct UserDefinedIntegral
 {
-    UserDefinedIntegral() : value(0) {}
-    UserDefinedIntegral(T v) : value(v) {}
-    operator T() const { return value; }
+    TEST_CONSTEXPR_CXX14 UserDefinedIntegral() : value(0) {}
+    TEST_CONSTEXPR_CXX14 UserDefinedIntegral(T v) : value(v) {}
+    TEST_CONSTEXPR_CXX14 operator T() const { return value; }
     T value;
 };
 

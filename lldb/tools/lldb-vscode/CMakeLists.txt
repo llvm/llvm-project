@@ -33,10 +33,9 @@ add_lldb_tool(lldb-vscode
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.
   # The installed framework can be in different locations.
-  get_target_property(framework_build_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
   lldb_setup_rpaths(lldb-vscode
     BUILD_RPATH
-      "${framework_build_dir}"
+      "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}"
     INSTALL_RPATH
       "@loader_path/../../../SharedFrameworks"
       "@loader_path/../../System/Library/PrivateFrameworks"

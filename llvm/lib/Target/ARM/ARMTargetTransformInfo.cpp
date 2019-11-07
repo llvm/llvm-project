@@ -1000,6 +1000,50 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
   return true;
 }
 
+bool ARMTTIImpl::preferPredicateOverEpilogue(Loop *L, LoopInfo *LI,
+                                             ScalarEvolution &SE,
+                                             AssumptionCache &AC,
+                                             TargetLibraryInfo *TLI,
+                                             DominatorTree *DT,
+                                             const LoopAccessInfo *LAI) {
+  // Creating a predicated vector loop is the first step for generating a
+  // tail-predicated hardware loop, for which we need the MVE masked
+  // load/stores instructions:
+  if (!ST->hasMVEIntegerOps())
+    return false;
+
+  HardwareLoopInfo HWLoopInfo(L);
+  if (!HWLoopInfo.canAnalyze(*LI)) {
+    LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
+                         "analyzable.\n");
+    return false;
+  }
+
+  // This checks if we have the low-overhead branch architecture
+  // extension, and if we will create a hardware-loop:
+  if (!isHardwareLoopProfitable(L, SE, AC, TLI, HWLoopInfo)) {
+    LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
+                         "profitable.\n");
+    return false;
+  }
+
+  if (!HWLoopInfo.isHardwareLoopCandidate(SE, *LI, *DT)) {
+    LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
+                         "a candidate.\n");
+    return false;
+  }
+
+  // TODO: to set up a tail-predicated loop, which works by setting up
+  // the total number of elements processed by the loop, we need to
+  // determine the element size here, and if it is uniform for all operations
+  // in the vector loop. This means we will reject narrowing/widening
+  // operations, and don't want to predicate the vector loop, which is
+  // the main prep step for tail-predicated loops.
+
+  return false;
+}
+
+
 void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP) {
   // Only currently enable these preferences for M-Class cores.

@@ -80,7 +80,7 @@ protected:
   void computeSummary(const StringMap<FunctionSamples> &ProfileMap);
 
   /// Profile format.
-  SampleProfileFormat Format;
+  SampleProfileFormat Format = SPF_None;
 };
 
 /// Sample-based profile writer (text format).
@@ -227,7 +227,7 @@ private:
   // Save the start of SecLBRProfile so we can compute the offset to the
   // start of SecLBRProfile for each Function's Profile and will keep it
   // in FuncOffsetTable.
-  uint64_t SecLBRProfileStart;
+  uint64_t SecLBRProfileStart = 0;
   // FuncOffsetTable maps function name to its profile offset in SecLBRProfile
   // section. It is used to load function profile on demand.
   MapVector<StringRef, uint64_t> FuncOffsetTable;

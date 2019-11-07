@@ -3748,7 +3748,9 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
 void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
                                           QualType CalleeType,
                                           const FunctionDecl *CalleeDecl) {
-  if (!CallOrInvoke || getCallSiteRelatedAttrs() == llvm::DINode::FlagZero)
+  auto &CGOpts = CGM.getCodeGenOpts();
+  if (!CGOpts.EnableDebugEntryValues || !CGM.getLangOpts().Optimize ||
+      !CallOrInvoke)
     return;
 
   auto *Func = CallOrInvoke->getCalledFunction();
@@ -4822,10 +4824,10 @@ llvm::DINode::DIFlags CGDebugInfo::getCallSiteRelatedAttrs() const {
   bool SupportsDWARFv4Ext =
       CGM.getCodeGenOpts().DwarfVersion == 4 &&
       (CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::LLDB ||
-       CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::GDB);
+       (CGM.getCodeGenOpts().EnableDebugEntryValues &&
+       CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::GDB));
 
-  if (!SupportsDWARFv4Ext && CGM.getCodeGenOpts().DwarfVersion < 5 &&
-      !CGM.getCodeGenOpts().EnableDebugEntryValues)
+  if (!SupportsDWARFv4Ext && CGM.getCodeGenOpts().DwarfVersion < 5)
     return llvm::DINode::FlagZero;
 
   return llvm::DINode::FlagAllCallsDescribed;

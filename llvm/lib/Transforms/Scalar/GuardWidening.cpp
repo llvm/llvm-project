@@ -271,16 +271,17 @@ class GuardWideningImpl {
   void widenGuard(Instruction *ToWiden, Value *NewCondition,
                   bool InvertCondition) {
     Value *Result;
+    
     widenCondCommon(getCondition(ToWiden), NewCondition, ToWiden, Result,
                     InvertCondition);
-    Value *WidenableCondition = nullptr;
     if (isGuardAsWidenableBranch(ToWiden)) {
-      auto *Cond = cast<BranchInst>(ToWiden)->getCondition();
-      WidenableCondition = cast<BinaryOperator>(Cond)->getOperand(1);
+      auto *BI = cast<BranchInst>(ToWiden);
+      auto *And = cast<Instruction>(BI->getCondition());
+      And->setOperand(0, Result);
+      And->moveBefore(ToWiden);
+      assert(isGuardAsWidenableBranch(ToWiden) && "still widenable?");
+      return;
     }
-    if (WidenableCondition)
-      Result = BinaryOperator::CreateAnd(Result, WidenableCondition,
-                                         "guard.chk", ToWiden);
     setCondition(ToWiden, Result);
   }
 

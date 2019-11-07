@@ -834,6 +834,11 @@ class AdvSIMD_Pred2VectorArg_Intrinsic
              [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>, LLVMMatchType<0>],
              [IntrNoMem]>;
 
+class AdvSIMD_Pred3VectorArg_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+             [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+             [IntrNoMem]>;
+
 
 //
 // Integer arithmetic
@@ -843,7 +848,32 @@ def int_aarch64_sve_add   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_sub   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_subr  : AdvSIMD_Pred2VectorArg_Intrinsic;
 
-def int_aarch64_sve_bic  : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_and        : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_or         : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_xor        : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_bic        : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_bic_pred   : AdvSIMD_Pred2VectorArg_Intrinsic;
+
+def int_aarch64_sve_mul        : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_smulh      : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_umulh      : AdvSIMD_Pred2VectorArg_Intrinsic;
+
+def int_aarch64_sve_sdiv       : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_udiv       : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_sdivr      : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_udivr      : AdvSIMD_Pred2VectorArg_Intrinsic;
+
+def int_aarch64_sve_smax       : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_umax       : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_smin       : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_umin       : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_sabd       : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_uabd       : AdvSIMD_Pred2VectorArg_Intrinsic;
+
+def int_aarch64_sve_mad        : AdvSIMD_Pred3VectorArg_Intrinsic;
+def int_aarch64_sve_msb        : AdvSIMD_Pred3VectorArg_Intrinsic;
+def int_aarch64_sve_mla        : AdvSIMD_Pred3VectorArg_Intrinsic;
+def int_aarch64_sve_mls        : AdvSIMD_Pred3VectorArg_Intrinsic;
 
 def int_aarch64_sve_abs : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_neg : AdvSIMD_Merged1VectorArg_Intrinsic;

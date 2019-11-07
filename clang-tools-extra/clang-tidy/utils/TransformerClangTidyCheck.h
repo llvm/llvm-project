@@ -44,14 +44,14 @@ public:
   // no explanation is desired, indicate that explicitly (for example, by
   // passing `text("no explanation")` to `makeRule` as the `Explanation`
   // argument).
-  TransformerClangTidyCheck(std::function<Optional<tooling::RewriteRule>(
+  TransformerClangTidyCheck(std::function<Optional<transformer::RewriteRule>(
                                 const LangOptions &, const OptionsView &)>
                                 MakeRule,
                             StringRef Name, ClangTidyContext *Context);
 
   // Convenience overload of the constructor when the rule doesn't depend on any
   // of the language or clang-tidy options.
-  TransformerClangTidyCheck(tooling::RewriteRule R, StringRef Name,
+  TransformerClangTidyCheck(transformer::RewriteRule R, StringRef Name,
                             ClangTidyContext *Context);
 
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
@@ -60,7 +60,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) final;
 
 private:
-  Optional<tooling::RewriteRule> Rule;
+  Optional<transformer::RewriteRule> Rule;
   std::unique_ptr<clang::tidy::utils::IncludeInserter> Inserter;
 };
 

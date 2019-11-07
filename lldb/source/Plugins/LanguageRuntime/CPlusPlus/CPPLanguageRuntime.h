@@ -10,6 +10,9 @@
 #define liblldb_CPPLanguageRuntime_h_
 
 #include <vector>
+
+#include "llvm/ADT/StringMap.h"
+
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/lldb-private.h"
@@ -82,6 +85,11 @@ protected:
   CPPLanguageRuntime(Process *process);
 
 private:
+  using OperatorStringToCallableInfoMap =
+    llvm::StringMap<CPPLanguageRuntime::LibCppStdFunctionCallableInfo>;
+
+  OperatorStringToCallableInfoMap CallableLookupCache;
+
   DISALLOW_COPY_AND_ASSIGN(CPPLanguageRuntime);
 };
 

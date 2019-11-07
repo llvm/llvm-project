@@ -4842,6 +4842,16 @@
 // MIPS-ARCH-OCTEON:#define __OCTEON__ 1
 // MIPS-ARCH-OCTEON:#define __mips_isa_rev 2
 //
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips64-none-none \
+// RUN:            -target-cpu octeon+ < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ARCH-OCTEONP %s
+//
+// MIPS-ARCH-OCTEONP:#define _MIPS_ARCH "octeon+"
+// MIPS-ARCH-OCTEONP:#define _MIPS_ARCH_OCTEONP 1
+// MIPS-ARCH-OCTEONP:#define _MIPS_ISA _MIPS_ISA_MIPS64
+// MIPS-ARCH-OCTEONP:#define __OCTEON__ 1
+// MIPS-ARCH-OCTEONP:#define __mips_isa_rev 2
+//
 // Check MIPS float ABI macros
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding \

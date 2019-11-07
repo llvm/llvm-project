@@ -17,6 +17,11 @@
 # RUN:   llvm-readobj --sections --section-data --section-relocations -A - | \
 # RUN:   FileCheck %s -check-prefixes=CHECK-OBJ,CHECK-OBJ-64R2,CHECK-OBJ-OCTEON
 
+# RUN: llvm-mc -triple mips64-unknown-linux-gnu \
+# RUN:         -mcpu=octeon+ -filetype=obj -o - /dev/null \
+# RUN:   | llvm-readobj --sections --section-data --section-relocations -A - \
+# RUN:   | FileCheck %s -check-prefixes=CHECK-OBJ,CHECK-OBJ-64R2,CHECK-OBJ-OCTEONP
+
 # CHECK-ASM: .module fp=xx
 
 # Checking if the Mips.abiflags were correctly emitted.
@@ -43,6 +48,7 @@
 # CHECK-OBJ-64R2-NEXT: ISA: MIPS64r2
 # CHECK-OBJ-MIPS-NEXT:   ISA Extension: None (0x0)
 # CHECK-OBJ-OCTEON-NEXT: ISA Extension: Cavium Networks Octeon (0x5)
+# CHECK-OBJ-OCTEONP-NEXT: ISA Extension: Cavium Networks OcteonP (0x3)
 # CHECK-OBJ-NEXT:    ASEs [ (0x0)          
 # CHECK-OBJ-NEXT:    ]                     
 # CHECK-OBJ-32R1-NEXT: FP ABI: Hard float (32-bit CPU, Any FPU) (0x5)

@@ -28,28 +28,28 @@
 ; the function, and the one that doesn't.
 
 ; CHECK-NEXT: 0x0000000c:
-; CHECK-NEXT:             DW_LLE_base_addressx(0x0000000000000000)
-; CHECK-NEXT:             DW_LLE_offset_pair  (0x0000000000000000, 0x0000000000000003)
+; CHECK-NEXT:             DW_LLE_base_addressx (0x0000000000000000)
+; CHECK-NEXT:             DW_LLE_offset_pair   (0x0000000000000000, 0x0000000000000003)
 ; CHECK-NEXT:                              => [0x0000000000000000, 0x0000000000000003): DW_OP_consts +3, DW_OP_stack_value
-; CHECK-NEXT:             DW_LLE_offset_pair  (0x0000000000000003, 0x0000000000000004)
+; CHECK-NEXT:             DW_LLE_offset_pair   (0x0000000000000003, 0x0000000000000004)
 ; CHECK-NEXT:                              => [0x0000000000000003, 0x0000000000000004): DW_OP_consts +4, DW_OP_stack_value
-; CHECK-NEXT:             DW_LLE_end_of_list  ()
+; CHECK-NEXT:             DW_LLE_end_of_list   ()
 
 ; Show that startx_length can be used when the address range starts at the start of the function.
 
 ; CHECK:      0x0000001d:
-; CHECK-NEXT:             DW_LLE_startx_length(0x0000000000000000, 0x0000000000000003)
+; CHECK-NEXT:             DW_LLE_startx_length (0x0000000000000000, 0x0000000000000003)
 ; CHECK-NEXT:                              => Addr idx 0 (w/ length 3): DW_OP_consts +5, DW_OP_stack_value
-; CHECK-NEXT:             DW_LLE_end_of_list  ()
+; CHECK-NEXT:             DW_LLE_end_of_list   ()
 
 ; And use a base address when the range doesn't start at an existing/useful
 ; address in the pool.
 
 ; CHECK:      0x00000025:
-; CHECK-NEXT:             DW_LLE_base_addressx(0x0000000000000000)
-; CHECK-NEXT:             DW_LLE_offset_pair  (0x0000000000000003, 0x0000000000000004)
+; CHECK-NEXT:             DW_LLE_base_addressx (0x0000000000000000)
+; CHECK-NEXT:             DW_LLE_offset_pair   (0x0000000000000003, 0x0000000000000004)
 ; CHECK-NEXT:                              => [0x0000000000000003, 0x0000000000000004): DW_OP_reg0 RAX
-; CHECK-NEXT:             DW_LLE_end_of_list  ()
+; CHECK-NEXT:             DW_LLE_end_of_list   ()
 
 ; Built with clang -O3 -ffunction-sections from source:
 ; 

@@ -238,7 +238,7 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
   // If global value dead stripping is not enabled in summary then
   // propagateConstants hasn't been run. We can't internalize GV
   // in such case.
-  if (!GV.isDeclaration() && VI && ImportIndex.withGlobalValueDeadStripping()) {
+  if (!GV.isDeclaration() && VI && ImportIndex.withAttributePropagation()) {
     if (GlobalVariable *V = dyn_cast<GlobalVariable>(&GV)) {
       // We can have more than one local with the same GUID, in the case of
       // same-named locals in different but same-named source files that were
@@ -252,7 +252,7 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
       auto* GVS = dyn_cast_or_null<GlobalVarSummary>(
           ImportIndex.findSummaryInModule(VI, M.getModuleIdentifier()));
       // At this stage "maybe" is "definitely"
-      if (GVS && (GVS->maybeReadOnly() || GVS->maybeWriteOnly()))
+      if (GVS && (ImportIndex.isReadOnly(GVS) || ImportIndex.isWriteOnly(GVS)))
         V->addAttribute("thinlto-internalize");
     }
   }

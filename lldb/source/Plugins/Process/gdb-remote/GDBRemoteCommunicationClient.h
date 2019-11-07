@@ -596,6 +596,8 @@ protected:
   Status GetQXferMemoryMapRegionInfo(lldb::addr_t addr,
                                      MemoryRegionInfo &region);
 
+  LazyBool GetThreadPacketSupported(lldb::tid_t tid, llvm::StringRef packetStr);
+
 private:
   DISALLOW_COPY_AND_ASSIGN(GDBRemoteCommunicationClient);
 };

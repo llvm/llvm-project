@@ -193,7 +193,13 @@
 # MIPS64EL-MIPS64-NAN2008-PIC: Flags [ (0x60000406)
 
 # RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux -mcpu=octeon -target-abi n64 %s -o -| llvm-readobj -h | FileCheck --check-prefix=MIPSEL-OCTEON %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux \
+# RUN:         -mcpu=octeon+ -target-abi n64 %s -o - \
+# RUN:   | llvm-readobj -h | FileCheck --check-prefix=MIPSEL-OCTEON %s
 # MIPSEL-OCTEON: Flags [ (0x808B0004)
 
 # RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux -position-independent -mcpu=octeon -target-abi n64 %s -o -| llvm-readobj -h | FileCheck --check-prefix=MIPSEL-OCTEON-PIC %s
+# RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux \
+# RUN:         -position-independent -mcpu=octeon+ -target-abi n64 %s -o - \
+# RUN:   | llvm-readobj -h | FileCheck --check-prefix=MIPSEL-OCTEON-PIC %s
 # MIPSEL-OCTEON-PIC: Flags [ (0x808B0006)

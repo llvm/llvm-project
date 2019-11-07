@@ -941,6 +941,11 @@ private:
   /// considered live.
   bool WithGlobalValueDeadStripping = false;
 
+  /// Indicates that summary-based attribute propagation has run and
+  /// GVarFlags::MaybeReadonly / GVarFlags::MaybeWriteonly are really
+  /// read/write only.
+  bool WithAttributePropagation = false;
+
   /// Indicates that summary-based synthetic entry count propagation has run
   bool HasSyntheticEntryCounts = false;
 
@@ -1063,6 +1068,18 @@ public:
   }
   void setWithGlobalValueDeadStripping() {
     WithGlobalValueDeadStripping = true;
+  }
+
+  bool withAttributePropagation() const { return WithAttributePropagation; }
+  void setWithAttributePropagation() {
+    WithAttributePropagation = true;
+  }
+
+  bool isReadOnly(const GlobalVarSummary *GVS) const {
+    return WithAttributePropagation && GVS->maybeReadOnly();
+  }
+  bool isWriteOnly(const GlobalVarSummary *GVS) const {
+    return WithAttributePropagation && GVS->maybeWriteOnly();
   }
 
   bool hasSyntheticEntryCounts() const { return HasSyntheticEntryCounts; }
@@ -1356,6 +1373,9 @@ public:
 
   /// Analyze index and detect unmodified globals
   void propagateAttributes(const DenseSet<GlobalValue::GUID> &PreservedSymbols);
+
+  /// Checks if we can import global variable from another module.
+  bool canImportGlobalVar(GlobalValueSummary *S, bool AnalyzeRefs) const;
 };
 
 /// GraphTraits definition to build SCC for the index
@@ -1427,15 +1447,6 @@ struct GraphTraits<ModuleSummaryIndex *> : public GraphTraits<ValueInfo> {
     return ValueInfo(I->haveGVs(), &P);
   }
 };
-
-static inline bool canImportGlobalVar(GlobalValueSummary *S) {
-  assert(isa<GlobalVarSummary>(S->getBaseObject()));
-
-  // We don't import GV with references, because it can result
-  // in promotion of local variables in the source module.
-  return !GlobalValue::isInterposableLinkage(S->linkage()) &&
-         !S->notEligibleToImport() && S->refs().empty();
-}
 } // end namespace llvm
 
 #endif // LLVM_IR_MODULESUMMARYINDEX_H

@@ -15,7 +15,7 @@
 ; RUN: llvm-dis %t2.bc.thinlto.promoted.bc -o - | FileCheck --check-prefix=PROMOTE1 %s
 ; RUN: llvm-dis %t2b.bc.thinlto.promoted.bc -o - | FileCheck --check-prefix=PROMOTE2 %s
 
-; IMPORT: @baz.llvm.0 = available_externally hidden constant i32 10, align 4
+; IMPORT: @baz.llvm.0 = internal constant i32 10, align 4
 
 ; PROMOTE1: @baz.llvm.0 = hidden constant i32 10, align 4
 ; PROMOTE1: define weak_odr i32 @foo() {

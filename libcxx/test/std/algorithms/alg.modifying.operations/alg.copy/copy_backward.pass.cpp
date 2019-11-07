@@ -20,25 +20,12 @@
 #include "test_iterators.h"
 #include "user_defined_integral.h"
 
-// #if TEST_STD_VER > 17
-// TEST_CONSTEXPR bool test_constexpr() {
-//     int ia[] = {1, 2, 3, 4, 5};
-//     int ic[] = {6, 6, 6, 6, 6, 6, 6};
-//
-//     size_t N = std::size(ia);
-//     auto p = std::copy_backward(std::begin(ia), std::end(ia), std::begin(ic) + N);
-//     return std::equal(std::begin(ic), p, std::begin(ia))
-//         && std::all_of(p, std::end(ic), [](int a){return a == 6;})
-//         ;
-//     }
-// #endif
-
 template <class InIter, class OutIter>
-void
-test()
+TEST_CONSTEXPR_CXX20 void
+test_copy_backward()
 {
     const unsigned N = 1000;
-    int ia[N];
+    int ia[N] = {};
     for (unsigned i = 0; i < N; ++i)
         ia[i] = i;
     int ib[N] = {0};
@@ -49,23 +36,31 @@ test()
         assert(ia[i] == ib[i]);
 }
 
+TEST_CONSTEXPR_CXX20 bool
+test()
+{
+    test_copy_backward<bidirectional_iterator<const int*>, bidirectional_iterator<int*> >();
+    test_copy_backward<bidirectional_iterator<const int*>, random_access_iterator<int*> >();
+    test_copy_backward<bidirectional_iterator<const int*>, int*>();
+
+    test_copy_backward<random_access_iterator<const int*>, bidirectional_iterator<int*> >();
+    test_copy_backward<random_access_iterator<const int*>, random_access_iterator<int*> >();
+    test_copy_backward<random_access_iterator<const int*>, int*>();
+
+    test_copy_backward<const int*, bidirectional_iterator<int*> >();
+    test_copy_backward<const int*, random_access_iterator<int*> >();
+    test_copy_backward<const int*, int*>();
+
+    return true;
+}
+
 int main(int, char**)
 {
-    test<bidirectional_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, random_access_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, int*>();
+    test();
 
-    test<random_access_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<random_access_iterator<const int*>, random_access_iterator<int*> >();
-    test<random_access_iterator<const int*>, int*>();
-
-    test<const int*, bidirectional_iterator<int*> >();
-    test<const int*, random_access_iterator<int*> >();
-    test<const int*, int*>();
-
-// #if TEST_STD_VER > 17
-//     static_assert(test_constexpr());
-// #endif
+#if TEST_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)
+    static_assert(test());
+#endif
 
   return 0;
 }

@@ -249,7 +249,6 @@ def OP_UNAVAILABLE : Operation {
 // s: scalar of element type
 // z: scalar of half width element type, signed
 // r: scalar of double width element type, signed
-// a: scalar of element type (splat to vector type)
 // b: scalar of unsigned integer/long type (int/float args)
 // $: scalar of signed integer/long type (int/float args)
 // y: scalar of float
