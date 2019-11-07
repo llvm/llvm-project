@@ -3335,7 +3335,6 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
   // This avoids having to monkey around further in cc1 other than to disable
   // codeview if not running in a Windows environment. Perhaps even that
   // decision should be made in the driver as well though.
-  unsigned DWARFVersion = 0;
   llvm::DebuggerKind DebuggerTuning = TC.getDefaultDebuggerTuning();
 
   bool SplitDWARFInlining =
@@ -3418,10 +3417,17 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
     }
   }
 
+  unsigned DWARFVersion = 0;
+  unsigned DefaultDWARFVersion = ParseDebugDefaultVersion(TC, Args);
   if (EmitDwarf) {
     // Start with the platform default DWARF version
     DWARFVersion = TC.GetDefaultDwarfVersion();
     assert(DWARFVersion && "toolchain default DWARF version must be nonzero");
+
+    // If the user specified a default DWARF version, that takes precedence
+    // over the platform default.
+    if (DefaultDWARFVersion)
+      DWARFVersion = DefaultDWARFVersion;
 
     // Override with a user-specified DWARF version
     if (GDwarfN)
@@ -6354,6 +6360,11 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
     if (WantDebug)
       DwarfVersion = DwarfVersionNum(A->getSpelling());
   }
+
+  unsigned DefaultDwarfVersion = ParseDebugDefaultVersion(getToolChain(), Args);
+  if (DwarfVersion == 0)
+    DwarfVersion = DefaultDwarfVersion;
+
   if (DwarfVersion == 0)
     DwarfVersion = getToolChain().GetDefaultDwarfVersion();
 
