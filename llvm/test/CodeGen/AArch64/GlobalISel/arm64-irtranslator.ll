@@ -1615,7 +1615,7 @@ define float @test_different_call_conv_target(float %x) {
 ; CHECK-LABEL: name: test_different_call_conv
 ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY $s0
 ; CHECK: $s8 = COPY [[X]]
-; CHECK: BL @different_call_conv_target, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $s8, implicit-def $s0
+; CHECK: BL @different_call_conv_target, csr_aarch64_noregs, implicit-def $lr, implicit $sp, implicit $s8, implicit-def $s0
   %res = call ghccc float @different_call_conv_target(float %x)
   ret float %res
 }
