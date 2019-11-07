@@ -63,6 +63,7 @@ buildCompilerInvocation(const ParseInputs &Inputs,
   // createInvocationFromCommandLine sets DisableFree.
   CI->getFrontendOpts().DisableFree = false;
   CI->getLangOpts()->CommentOpts.ParseAllComments = true;
+  CI->getLangOpts()->RetainCommentsFromSystemHeaders = true;
   return CI;
 }
 
