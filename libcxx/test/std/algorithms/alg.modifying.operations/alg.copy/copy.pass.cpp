@@ -79,7 +79,7 @@ int main(int, char**)
 {
     test();
 
-#if TEST_STD_VER > 17
+#if TEST_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)
     static_assert(test());
 #endif
 
