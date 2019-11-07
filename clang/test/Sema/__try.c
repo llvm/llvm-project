@@ -111,7 +111,7 @@ void TEST() {
   __try {
 
   }
-  __except ( NotFilterExpression() ) { // expected-error{{filter expression type should be an integral value not 'const char *'}}
+  __except ( NotFilterExpression() ) { // expected-error{{filter expression has non-integral type 'const char *'}}
 
   }
 }
