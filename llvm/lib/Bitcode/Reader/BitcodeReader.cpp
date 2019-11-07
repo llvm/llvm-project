@@ -5761,7 +5761,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
   }
   const uint64_t Version = Record[0];
   const bool IsOldProfileFormat = Version == 1;
-  if (Version < 1 || Version > 7)
+  if (Version < 1 || Version > 8)
     return error("Invalid summary version " + Twine(Version) +
                  ". Version should be in the range [1-7].");
   Record.clear();
@@ -5814,7 +5814,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     case bitc::FS_FLAGS: {  // [flags]
       uint64_t Flags = Record[0];
       // Scan flags.
-      assert(Flags <= 0x1f && "Unexpected bits in flag");
+      assert(Flags <= 0x3f && "Unexpected bits in flag");
 
       // 1 bit: WithGlobalValueDeadStripping flag.
       // Set on combined index only.
@@ -5837,6 +5837,10 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       // Set on combined index only.
       if (Flags & 0x10)
         TheIndex.setPartiallySplitLTOUnits();
+      // 1 bit: WithAttributePropagation flag.
+      // Set on combined index only.
+      if (Flags & 0x20)
+        TheIndex.setWithAttributePropagation();
       break;
     }
     case bitc::FS_VALUE_GUID: { // [valueid, refguid]
@@ -6542,7 +6546,7 @@ static Expected<bool> getEnableSplitLTOUnitFlag(BitstreamCursor &Stream,
     case bitc::FS_FLAGS: { // [flags]
       uint64_t Flags = Record[0];
       // Scan flags.
-      assert(Flags <= 0x1f && "Unexpected bits in flag");
+      assert(Flags <= 0x3f && "Unexpected bits in flag");
 
       return Flags & 0x8;
     }

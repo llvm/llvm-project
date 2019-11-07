@@ -172,8 +172,9 @@ void ModuleSummaryIndex::propagateAttributes(
       // assembly leading it to be in the @llvm.*used).
       if (auto *GVS = dyn_cast<GlobalVarSummary>(S->getBaseObject()))
         // Here we intentionally pass S.get() not GVS, because S could be
-        // an alias.
-        if (!canImportGlobalVar(S.get()) ||
+        // an alias. We don't analyze references here, because we have to
+        // know exactly if GV is readonly to do so.
+        if (!canImportGlobalVar(S.get(), /* AnalyzeRefs */ false) ||
             GUIDPreservedSymbols.count(P.first)) {
           GVS->setReadOnly(false);
           GVS->setWriteOnly(false);
@@ -191,6 +192,23 @@ void ModuleSummaryIndex::propagateAttributes(
             if (GVS->maybeWriteOnly())
               WriteOnlyLiveGVars++;
           }
+}
+
+bool ModuleSummaryIndex::canImportGlobalVar(GlobalValueSummary *S,
+                                            bool AnalyzeRefs) const {
+  auto HasRefsPreventingImport = [this](const GlobalVarSummary *GVS) {
+    return !isReadOnly(GVS) && GVS->refs().size();
+  };
+  auto *GVS = cast<GlobalVarSummary>(S->getBaseObject());
+
+  // Global variable with non-trivial initializer can be imported
+  // if it's readonly. This gives us extra opportunities for constant
+  // folding and converting indirect calls to direct calls. We don't
+  // analyze GV references during attribute propagation, because we
+  // don't know yet if it is readonly or not.
+  return !GlobalValue::isInterposableLinkage(S->linkage()) &&
+         !S->notEligibleToImport() &&
+         (!AnalyzeRefs || !HasRefsPreventingImport(GVS));
 }
 
 // TODO: write a graphviz dumper for SCCs (see ModuleSummaryIndex::exportToDot)
