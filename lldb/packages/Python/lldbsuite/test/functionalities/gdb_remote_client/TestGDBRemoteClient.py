@@ -7,6 +7,18 @@ from gdbclientutils import *
 
 class TestGDBRemoteClient(GDBRemoteTestBase):
 
+    class gPacketResponder(MockGDBServerResponder):
+        def readRegisters(self):
+            return '0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+
+    def setUp(self):
+        super(TestGDBRemoteClient, self).setUp()
+        self._initial_platform = lldb.DBG.GetSelectedPlatform()
+
+    def tearDown(self):
+        lldb.DBG.SetSelectedPlatform(self._initial_platform)
+        super(TestGDBRemoteClient, self).tearDown()
+
     def test_connect(self):
         """Test connecting to a remote gdb server"""
         target = self.createTarget("a.yaml")
@@ -37,3 +49,75 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         error = lldb.SBError()
         target.AttachToProcessWithID(lldb.SBListener(), 47, error)
         self.assertEquals(error_msg, error.GetCString())
+
+    def test_read_registers_using_g_packets(self):
+        """Test reading registers using 'g' packets (default behavior)"""
+        self.server.responder = self.gPacketResponder()
+        target = self.createTarget("a.yaml")
+        process = self.connect(target)
+
+        self.assertEquals(1, self.server.responder.packetLog.count("g"))
+        self.server.responder.packetLog = []
+        self.read_registers(process)
+        # Reading registers should not cause any 'p' packets to be exchanged.
+        self.assertEquals(
+                0, len([p for p in self.server.responder.packetLog if p.startswith("p")]))
+
+    def test_read_registers_using_p_packets(self):
+        """Test reading registers using 'p' packets"""
+        self.dbg.HandleCommand(
+                "settings set plugin.process.gdb-remote.use-g-packet-for-reading false")
+        target = self.createTarget("a.yaml")
+        process = self.connect(target)
+
+        self.read_registers(process)
+        self.assertFalse("g" in self.server.responder.packetLog)
+        self.assertGreater(
+                len([p for p in self.server.responder.packetLog if p.startswith("p")]), 0)
+
+    def test_write_registers_using_P_packets(self):
+        """Test writing registers using 'P' packets (default behavior)"""
+        self.server.responder = self.gPacketResponder()
+        target = self.createTarget("a.yaml")
+        process = self.connect(target)
+
+        self.write_registers(process)
+        self.assertEquals(0, len(
+                [p for p in self.server.responder.packetLog if p.startswith("G")]))
+        self.assertGreater(
+                len([p for p in self.server.responder.packetLog if p.startswith("P")]), 0)
+
+    def test_write_registers_using_G_packets(self):
+        """Test writing registers using 'G' packets"""
+
+        class MyResponder(self.gPacketResponder):
+            def readRegister(self, register):
+                # empty string means unsupported
+                return ""
+
+        self.server.responder = MyResponder()
+        target = self.createTarget("a.yaml")
+        process = self.connect(target)
+
+        self.write_registers(process)
+        self.assertEquals(0, len(
+                [p for p in self.server.responder.packetLog if p.startswith("P")]))
+        self.assertGreater(len(
+                [p for p in self.server.responder.packetLog if p.startswith("G")]), 0)
+
+    def read_registers(self, process):
+        self.for_each_gpr(
+                process, lambda r: self.assertEquals("0x00000000", r.GetValue()))
+
+    def write_registers(self, process):
+        self.for_each_gpr(
+                process, lambda r: r.SetValueFromCString("0x00000000"))
+
+    def for_each_gpr(self, process, operation):
+        registers = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetRegisters()
+        self.assertGreater(registers.GetSize(), 0)
+        regSet = registers[0]
+        numChildren = regSet.GetNumChildren()
+        self.assertGreater(numChildren, 0)
+        for i in range(numChildren):
+            operation(regSet.GetChildAtIndex(i))
