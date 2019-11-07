@@ -39,7 +39,7 @@ The emerging MCJIT component of LLVM allows full debugging of JIT-ed code with
 GDB.  This is due to MCJIT's ability to use the MC emitter to provide full
 DWARF debugging information to GDB.
 
-Note that lli has to be passed the ``-use-mcjit`` flag to JIT the code with
+Note that lli has to be passed the ``-jit-kind=mcjit`` flag to JIT the code with
 MCJIT instead of the old JIT.
 
 Example
@@ -86,14 +86,14 @@ code via ``lli`` inside GDB:
 .. code-block:: bash
 
    $ $BINPATH/clang -cc1 -O0 -g -emit-llvm showdebug.c
-   $ gdb --quiet --args $BINPATH/lli -use-mcjit showdebug.ll 5
+   $ gdb --quiet --args $BINPATH/lli -jit-kind=mcjit showdebug.ll 5
    Reading symbols from $BINPATH/lli...done.
    (gdb) b showdebug.c:6
    No source file named showdebug.c.
    Make breakpoint pending on future shared library load? (y or [n]) y
    Breakpoint 1 (showdebug.c:6) pending.
    (gdb) r
-   Starting program: $BINPATH/lli -use-mcjit showdebug.ll 5
+   Starting program: $BINPATH/lli -jit-kind=mcjit showdebug.ll 5
    [Thread debugging using libthread_db enabled]
 
    Breakpoint 1, compute_factorial (n=5) at showdebug.c:6
