@@ -101,10 +101,22 @@ class CrashLog(symbolication.Symbolicator):
     thread_regex = re.compile('^Thread ([0-9]+)([^:]*):(.*)')
     app_backtrace_regex = re.compile(
         '^Application Specific Backtrace ([0-9]+)([^:]*):(.*)')
-    frame_regex = re.compile('^([0-9]+)\s+(.+?)\s+(0x[0-9a-fA-F]{7}[0-9a-fA-F]+) +(.*)')
-    null_frame_regex = re.compile('^([0-9]+)\s+\?\?\?\s+(0{7}0+) +(.*)')
-    image_regex_uuid = re.compile(
-        '(0x[0-9a-fA-F]+)[-\s]+(0x[0-9a-fA-F]+)\s+[+]?(.+?)\s+(\(.+\))?\s?(<([-0-9a-fA-F]+)>)? (.*)')
+    version = r'(\(.+\)|(arm|x86_)[0-9a-z]+)\s+'
+    frame_regex = re.compile(r'^([0-9]+)' r'\s'                # id
+                             r'+(.+?)'    r'\s+'               # img_name
+                             r'(' +version+ r')?'              # img_version
+                             r'(0x[0-9a-fA-F]{7}[0-9a-fA-F]+)' # addr
+                             r' +(.*)'                         # offs
+                            )
+    null_frame_regex = re.compile(r'^([0-9]+)\s+\?\?\?\s+(0{7}0+) +(.*)')
+    image_regex_uuid = re.compile(r'(0x[0-9a-fA-F]+)'            # img_lo
+                                  r'\s+' '-' r'\s+'              #   -
+                                  r'(0x[0-9a-fA-F]+)'     r'\s+' # img_hi
+                                  r'[+]?(.+?)'            r'\s+' # img_name
+                                  r'(' +version+ ')?'            # img_version
+                                  r'(<([-0-9a-fA-F]+)>\s+)?'     # img_uuid
+                                  r'(/.*)'                       # img_path
+                                 )
     empty_line_regex = re.compile('^$')
 
     class Thread:
@@ -489,18 +501,20 @@ class CrashLog(symbolication.Symbolicator):
                     continue
                 frame_match = self.frame_regex.search(line)
                 if frame_match:
-                    ident = frame_match.group(2)
+                    (frame_id, frame_img_name, _, frame_img_version, _,
+                     frame_addr, frame_ofs) = frame_match.groups()
+                    ident = frame_img_name
                     thread.add_ident(ident)
                     if ident not in self.idents:
                         self.idents.append(ident)
-                    thread.frames.append(CrashLog.Frame(int(frame_match.group(1)), int(
-                        frame_match.group(3), 0), frame_match.group(4)))
+                    thread.frames.append(CrashLog.Frame(int(frame_id), int(
+                        frame_addr, 0), frame_ofs))
                 else:
                     print('error: frame regex failed for line: "%s"' % line)
             elif parse_mode == PARSE_MODE_IMAGES:
                 image_match = self.image_regex_uuid.search(line)
                 if image_match:
-                    (img_lo, img_hi, img_name, img_version,
+                    (img_lo, img_hi, img_name, _, img_version, _,
                      _, img_uuid, img_path) = image_match.groups()
                     image = CrashLog.DarwinImage(int(img_lo, 0), int(img_hi, 0),
                                                  img_name.strip(),
