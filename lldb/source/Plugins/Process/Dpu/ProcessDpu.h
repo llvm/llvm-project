@@ -119,6 +119,9 @@ public:
 
   bool StepThread(uint32_t thread_id);
 
+  void SaveCore(const char *save_core_filename, const char *executable_path,
+                Status &error) override;
+
 private:
   ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
              const ArchSpec &arch, MainLoop &mainloop, dpu::DpuRank *rank,

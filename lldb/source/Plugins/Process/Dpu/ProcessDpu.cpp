@@ -67,7 +67,6 @@ const long k_ci_polling_interval_ns = 10000; /* ns */
 
 constexpr lldb::addr_t k_dpu_iram_base = 0x80000000;
 constexpr lldb::addr_t k_dpu_mram_base = 0x08000000;
-constexpr lldb::addr_t k_dpu_save_core = 0xa0000000;
 } // end of anonymous namespace
 
 // -----------------------------------------------------------------------------
@@ -398,31 +397,7 @@ Status ProcessDpu::WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_MEMORY));
   LLDB_LOG(log, "addr = {0:X}, buf = {1}, size = {2}", addr, buf, size);
 
-  if (addr == k_dpu_save_core) {
-
-    // extract the core file name and the executable name
-    const char *exe_path = (const char *)buf;
-    const size_t exe_path_len = strlen(exe_path);
-    const char *core_file_path = &exe_path[exe_path_len + 1];
-    if ((strlen(core_file_path) + 1 + exe_path_len + 1) != size)
-      return Status("Cannot read core file path");
-
-    uint8_t *iram;
-    uint32_t iram_size;
-    if (!m_dpu->AllocIRAMBuffer(&iram, &iram_size))
-      return Status("Cannot alloc a IRAM Buffer");
-
-    // Read the iram without breakpoint
-    size_t bytes_read;
-    ReadMemoryWithoutTrap(k_dpu_iram_base, (void *)iram, iram_size, bytes_read);
-    if (bytes_read != iram_size)
-      return Status("Cannot read all the IRAM without trap");
-
-    if (!m_dpu->GenerateSaveCore(exe_path, core_file_path, iram, iram_size))
-      return Status("Cannot generate save core");
-
-    m_dpu->FreeIRAMBuffer(iram);
-  } else if (addr >= k_dpu_iram_base) {
+  if (addr >= k_dpu_iram_base) {
     if (!m_dpu->WriteIRAM(addr - k_dpu_iram_base, buf, size))
       return Status("Cannot copy to IRAM");
   } else if (addr >= k_dpu_mram_base) {
@@ -468,4 +443,30 @@ lldb::StateType ProcessDpu::GetThreadState(int thread_index,
                                            bool stepping) {
   return m_dpu->GetThreadState(thread_index, description, stop_reason,
                                stepping);
+}
+
+void ProcessDpu::SaveCore(const char *save_core_filename,
+                          const char *executable_path, Status &error) {
+  uint8_t *iram;
+  uint32_t iram_size;
+  if (!m_dpu->AllocIRAMBuffer(&iram, &iram_size)) {
+    error.SetErrorString("Cannot alloc a IRAM Buffer");
+    return;
+  }
+
+  // Read the iram without breakpoint
+  size_t bytes_read;
+  ReadMemoryWithoutTrap(k_dpu_iram_base, (void *)iram, iram_size, bytes_read);
+  if (bytes_read != iram_size) {
+    error.SetErrorString("Cannot read all the IRAM without trap");
+    return;
+  }
+
+  if (!m_dpu->GenerateSaveCore(executable_path, save_core_filename, iram,
+                               iram_size)) {
+    error.SetErrorString("Cannot generate save core");
+    return;
+  }
+
+  m_dpu->FreeIRAMBuffer(iram);
 }
