@@ -61,10 +61,6 @@ bool XCOFFSectionHeader<T>::isReservedSectionType() const {
   return getSectionType() & SectionFlagsReservedMask;
 }
 
-// Explictly instantiate template classes.
-template struct XCOFFSectionHeader<XCOFFSectionHeader32>;
-template struct XCOFFSectionHeader<XCOFFSectionHeader64>;
-
 bool XCOFFRelocation32::isRelocationSigned() const {
   return Info & XR_SIGN_INDICATOR_MASK;
 }
