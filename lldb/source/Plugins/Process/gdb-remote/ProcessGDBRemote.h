@@ -166,6 +166,9 @@ public:
 
   Status GetWatchpointSupportInfo(uint32_t &num) override;
 
+  void SaveCore(const char *save_core_filename, const char *executable_path,
+                Status &error) override;
+
   lldb::user_id_t StartTrace(const TraceOptions &options,
                              Status &error) override;
 

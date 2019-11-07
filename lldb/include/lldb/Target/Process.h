@@ -2455,6 +2455,11 @@ void PruneThreadPlans();
   lldb::StructuredDataPluginSP
   GetStructuredDataPlugin(ConstString type_name) const;
 
+  virtual void SaveCore(const char *save_core_filename,
+                        const char *executable_path, Status &error) {
+    error.SetErrorString("Not implemented");
+  }
+
   /// Starts tracing with the configuration provided in options. To enable
   /// tracing on the complete process the thread_id in the options should be
   /// set to LLDB_INVALID_THREAD_ID. The API returns a user_id which is needed

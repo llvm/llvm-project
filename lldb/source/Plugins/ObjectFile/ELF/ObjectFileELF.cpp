@@ -3423,43 +3423,13 @@ bool ObjectFileELF::SaveCore(const lldb::ProcessSP &process_sp,
     return false;
 
   Target &target = process_sp->GetTarget();
-  const ArchSpec target_arch = target.GetArchitecture();
-  const llvm::Triple &target_triple = target_arch.GetTriple();
 
-  // To generate a core, just write the name of the current executable, follow
-  // by the name of the core file at the dpu_save_core_addr.
+  Module *exe_module = target.GetExecutableModulePointer();
+  if (!exe_module)
+    return false;
+  const FileSpec &exefile = exe_module->GetFileSpec();
 
-  // ex: "my_executable\0my_core_file\0"
-  if (target_triple.getArch() == llvm::Triple::dpu) {
+  process_sp->SaveCore(outfile.GetCString(), exefile.GetCString(), error);
 
-    // Get the current executable module
-    Module *exe_module = target.GetExecutableModulePointer();
-    if (!exe_module)
-      return false;
-    const FileSpec &exefile = exe_module->GetFileSpec();
-
-    // Get the current executable and core file size (with the ending '\0')
-    size_t exe_path_size = exefile.GetPath().size() + 1;
-    size_t core_file_size = outfile.GetPath().size() + 1;
-
-    // Create the buffer that will be sent
-    size_t out_buffer_size = exe_path_size + core_file_size;
-    char *out_buffer = new char[out_buffer_size];
-
-    // Assemble the core file name and the current executable name with a '\0'
-    // at the end of each string
-    exefile.GetPath(out_buffer, exe_path_size);
-    outfile.GetPath(&out_buffer[exe_path_size], core_file_size);
-
-    // Write the assembled names at the dpu_save_core_addr
-    Status error;
-    const addr_t dpu_save_core_addr = 0xa0000000;
-    process_sp->WriteMemory(dpu_save_core_addr, out_buffer, out_buffer_size,
-                            error);
-
-    delete[] out_buffer;
-    return true;
-  }
-
-  return false;
+  return true;
 }

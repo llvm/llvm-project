@@ -3372,6 +3372,36 @@ bool GDBRemoteCommunicationClient::SyncThreadState(lldb::tid_t tid) {
          response.IsOKResponse();
 }
 
+void GDBRemoteCommunicationClient::SendSaveCorePacket(
+    const char *save_core_filename, const char *executable_path,
+    Status &error) {
+  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
+  StreamGDBRemote escaped_packet;
+  escaped_packet.PutCString("jSaveCore:");
+
+  StructuredData::Dictionary json_packet;
+  json_packet.AddStringItem("save_core_filename", save_core_filename);
+  json_packet.AddStringItem("executable_path", executable_path);
+
+  StreamString json_string;
+  json_packet.Dump(json_string, false);
+  escaped_packet.PutEscapedBytes(json_string.GetData(), json_string.GetSize());
+
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(escaped_packet.GetString(), response,
+                                   true) ==
+      GDBRemoteCommunication::PacketResult::Success) {
+    if (!response.IsNormalResponse()) {
+      error = response.GetStatus();
+      LLDB_LOG(log, "Target does not support SaveCore, error {0}}", error);
+    }
+  } else {
+    LLDB_LOG(log, "failed to send packet");
+    error.SetErrorStringWithFormat("failed to send packet: '%s'",
+                                   escaped_packet.GetData());
+  }
+}
+
 lldb::user_id_t
 GDBRemoteCommunicationClient::SendStartTracePacket(const TraceOptions &options,
                                                    Status &error) {

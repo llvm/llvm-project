@@ -1250,6 +1250,11 @@ Status ProcessGDBRemote::DoAttachToProcessWithName(
   return error;
 }
 
+void ProcessGDBRemote::SaveCore(const char *save_core_filename,
+                                const char *executable_path, Status &error) {
+  m_gdb_comm.SendSaveCorePacket(save_core_filename, executable_path, error);
+}
+
 lldb::user_id_t ProcessGDBRemote::StartTrace(const TraceOptions &options,
                                              Status &error) {
   return m_gdb_comm.SendStartTracePacket(options, error);

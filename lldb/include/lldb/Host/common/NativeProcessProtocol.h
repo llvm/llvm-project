@@ -306,6 +306,11 @@ public:
            MainLoop &mainloop) const = 0;
   };
 
+  virtual void SaveCore(const char *save_core_filename,
+                        const char *executable_path, Status &error) {
+    error.SetErrorString("Not Implemented");
+  }
+
   /// StartTracing API for starting a tracing instance with the
   /// TraceOptions on a specific thread or process.
   ///

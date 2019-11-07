@@ -505,6 +505,9 @@ public:
   ConfigureRemoteStructuredData(ConstString type_name,
                                 const StructuredData::ObjectSP &config_sp);
 
+  void SendSaveCorePacket(const char *save_core_filename,
+                          const char *executable_path, Status &error);
+
   lldb::user_id_t SendStartTracePacket(const TraceOptions &options,
                                        Status &error);
 

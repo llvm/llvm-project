@@ -186,6 +186,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       &GDBRemoteCommunicationServerLLGS::Handle_QPassSignals);
 
   RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jSaveCore,
+      &GDBRemoteCommunicationServerLLGS::Handle_jSaveCore);
+  RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_jTraceStart,
       &GDBRemoteCommunicationServerLLGS::Handle_jTraceStart);
   RegisterMemberFunctionHandler(
@@ -1167,6 +1170,38 @@ void GDBRemoteCommunicationServerLLGS::SendProcessOutput() {
       return;
     }
   }
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jSaveCore(
+    StringExtractorGDBRemote &packet) {
+  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
+  // Fail if we don't have a current process.
+  if (!m_debugged_process_up ||
+      (m_debugged_process_up->GetID() == LLDB_INVALID_PROCESS_ID))
+    return SendErrorResponse(68);
+
+  if (!packet.ConsumeFront("jSaveCore:"))
+    return SendIllFormedResponse(packet, "jSaveCore: Ill formed packet ");
+
+  auto json_object = StructuredData::ParseJSON(packet.Peek());
+
+  if (!json_object ||
+      json_object->GetType() != lldb::eStructuredDataTypeDictionary)
+    return SendIllFormedResponse(packet, "jSaveCore: Ill formed packet ");
+
+  auto json_dict = json_object->GetAsDictionary();
+
+  ConstString save_core_filename, executable_path;
+  Status error;
+
+  json_dict->GetValueForKeyAsString("save_core_filename", save_core_filename);
+  json_dict->GetValueForKeyAsString("executable_path", executable_path);
+
+  m_debugged_process_up->SaveCore(save_core_filename.AsCString(),
+                                  executable_path.AsCString(), error);
+
+  return SendPacketNoLock("");
 }
 
 GDBRemoteCommunication::PacketResult
