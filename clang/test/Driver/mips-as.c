@@ -88,6 +88,16 @@
 // RUN:   | FileCheck -check-prefix=MIPS-OCTEON %s
 // MIPS-OCTEON: as{{(.exe)?}}" "-march" "octeon" "-mabi" "64" "-mno-shared" "-EB"
 //
+// RUN: %clang -target mips64-linux-gnu -march=octeon+ -### \
+// RUN:   -no-integrated-as -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS-OCTEONP-PIC %s
+// MIPS-OCTEONP-PIC: as{{(.exe)?}}" "-march" "octeon+" "-mabi" "64" "-EB" "-KPIC"
+//
+// RUN: %clang -target mips64-linux-gnu -march=octeon+ -### \
+// RUN:   -no-integrated-as -c %s -fno-pic -mno-abicalls 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS-OCTEONP %s
+// MIPS-OCTEONP: as{{(.exe)?}}" "-march" "octeon+" "-mabi" "64" "-mno-shared" "-EB"
+//
 // RUN: %clang -target mips-linux-gnu -mips1 -### \
 // RUN:   -no-integrated-as -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-ALIAS-1 %s
