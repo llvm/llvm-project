@@ -20,9 +20,9 @@ protected:
   MCAsmInfoXCOFF();
 
 public:
-  // Return true only when the identifier Name does not need quotes to be
-  // syntactically correct for XCOFF.
-  bool isValidUnquotedName(StringRef Name) const override;
+  // Return true only when C is an acceptable character inside a
+  // MCSymbolXCOFF.
+  bool isAcceptableChar(char C) const override;
 };
 
 } // end namespace llvm

@@ -454,6 +454,9 @@ public:
                                             unsigned Encoding,
                                             MCStreamer &Streamer) const;
 
+  /// Return true if C is an acceptable character inside a symbol name.
+  virtual bool isAcceptableChar(char C) const;
+
   /// Return true if the identifier \p Name does not need quotes to be
   /// syntactically correct.
   virtual bool isValidUnquotedName(StringRef Name) const;
