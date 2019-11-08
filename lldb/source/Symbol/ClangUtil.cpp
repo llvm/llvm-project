@@ -15,6 +15,10 @@ using namespace clang;
 using namespace lldb_private;
 
 bool ClangUtil::IsClangType(const CompilerType &ct) {
+  // Invalid types are never Clang types.
+  if (!ct)
+    return false;
+
   if (llvm::dyn_cast_or_null<ClangASTContext>(ct.GetTypeSystem()) == nullptr)
     return false;
 
