@@ -274,13 +274,13 @@ def VOP_I32_VI32_NO_EXT : VOPProfile<[i32, i32, untyped, untyped]> {
 // to be a src operand. The custom inserter must add a tied implicit
 // def and use of the super register since there seems to be no way to
 // add an implicit def of a virtual register in tablegen.
-def VOP_MOVRELD : VOPProfile<[untyped, i32, untyped, untyped]> {
+class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, untyped]> {
   let Src0RC32 = VOPDstOperand<VGPR_32>;
   let Src0RC64 = VOPDstOperand<VGPR_32>;
 
   let Outs = (outs);
-  let Ins32 = (ins Src0RC32:$vdst, VSrc_b32:$src0);
-  let Ins64 = (ins Src0RC64:$vdst, VSrc_b32:$src0);
+  let Ins32 = (ins Src0RC32:$vdst, Src1RC:$src0);
+  let Ins64 = (ins Src0RC64:$vdst, Src1RC:$src0);
   let InsDPP = (ins DstRC:$vdst, DstRC:$old, Src0RC32:$src0,
                     dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
@@ -306,6 +306,9 @@ def VOP_MOVRELD : VOPProfile<[untyped, i32, untyped, untyped]> {
   let EmitDst = 1; // force vdst emission
 }
 
+def VOP_MOVRELD : VOP_MOVREL<VSrc_b32>;
+def VOP_MOVRELSD : VOP_MOVREL<VRegSrc_32>;
+
 let SubtargetPredicate = HasMovrel, Uses = [M0, EXEC] in {
 // v_movreld_b32 is a special case because the destination output
  // register is really a source. It isn't actually read (but may be
@@ -315,7 +318,7 @@ let SubtargetPredicate = HasMovrel, Uses = [M0, EXEC] in {
  // so this must have an implicit def of the register added to it.
 defm V_MOVRELD_B32 : VOP1Inst <"v_movreld_b32", VOP_MOVRELD>;
 defm V_MOVRELS_B32 : VOP1Inst <"v_movrels_b32", VOP_I32_VI32_NO_EXT>;
-defm V_MOVRELSD_B32 : VOP1Inst <"v_movrelsd_b32", VOP_NO_EXT<VOP_I32_I32>>;
+defm V_MOVRELSD_B32 : VOP1Inst <"v_movrelsd_b32", VOP_MOVRELSD>;
 } // End Uses = [M0, EXEC]
 
 defm V_MOV_FED_B32 : VOP1Inst <"v_mov_fed_b32", VOP_I32_I32>;
@@ -430,9 +433,8 @@ let SubtargetPredicate = isGFX10Plus in {
   defm V_PIPEFLUSH        : VOP1Inst<"v_pipeflush", VOP_NONE>;
 
   let Uses = [M0] in {
-    // FIXME-GFX10: Should V_MOVRELSD_2_B32 be VOP_NO_EXT?
     defm V_MOVRELSD_2_B32 :
-      VOP1Inst<"v_movrelsd_2_b32", VOP_NO_EXT<VOP_I32_I32>>;
+      VOP1Inst<"v_movrelsd_2_b32", VOP_MOVRELSD>;
 
     def V_SWAPREL_B32 : VOP1_Pseudo<"v_swaprel_b32", VOP_SWAP_I32, [], 1> {
       let Constraints = "$vdst = $src1, $vdst1 = $src0";
