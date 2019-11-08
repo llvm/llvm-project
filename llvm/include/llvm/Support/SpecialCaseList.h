@@ -55,6 +55,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/TrigramIndex.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <string>
 #include <vector>
 
@@ -102,8 +103,8 @@ public:
 protected:
   // Implementations of the create*() functions that can also be used by derived
   // classes.
-  bool createInternal(const std::vector<std::string> &Paths,
-                      std::string &Error);
+  bool createInternal(const std::vector<std::string> &Paths, std::string &Error,
+                      vfs::FileSystem &VFS = *vfs::getRealFileSystem());
   bool createInternal(const MemoryBuffer *MB, std::string &Error);
 
   SpecialCaseList() = default;
