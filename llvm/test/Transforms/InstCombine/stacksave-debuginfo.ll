@@ -8,10 +8,11 @@ declare void @llvm.stackrestore(i8*) #0
 
 define i32* @test1(i32 %P) !dbg !6 {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[P:%.*]] to i64, !dbg !12
-; CHECK-NEXT:    [[A:%.*]] = alloca i32, i64 [[TMP1]], align 4, !dbg !12
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32* [[A]], metadata !11, metadata !DIExpression()), !dbg !12
-; CHECK-NEXT:    ret i32* [[A]], !dbg !13
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8* undef
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[P:%.*]] to i64, !dbg !13
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, i64 [[TMP1]], align 4, !dbg !13
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32* [[A]]
+; CHECK-NEXT:    ret i32* [[A]], !dbg !14
 ;
   %tmp = call i8* @llvm.stacksave(), !dbg !12
   call void @llvm.dbg.value(metadata i8* %tmp, metadata !9, metadata !DIExpression()), !dbg !12

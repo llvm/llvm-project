@@ -32,7 +32,7 @@ public:
     SmallVectorImpl<std::string *>::iterator Current = Pool.begin();
     while (Current != Pool.end()) {
       delete *Current;
-      Current++;
+      ++Current;
     }
   }
 

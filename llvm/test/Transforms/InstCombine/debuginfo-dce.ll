@@ -34,7 +34,7 @@ entry:
   call void @llvm.dbg.value(metadata %struct.entry* %1, metadata !18, metadata !20), !dbg !19
 ; CHECK: define void @salvage_load
 ; CHECK-NEXT: entry:
-; CHECK-NOT: dbg.value
+; CHECK-NEXT: call void @llvm.dbg.value(metadata %struct.entry* undef
   store %struct.entry* %1, %struct.entry** %im_not_dead, align 8
   ret void, !dbg !21
 }

@@ -4184,19 +4184,16 @@ StmtResult Sema::ActOnSEHTryBlock(bool IsCXXTry, SourceLocation TryLoc,
   return SEHTryStmt::Create(Context, IsCXXTry, TryLoc, TryBlock, Handler);
 }
 
-StmtResult
-Sema::ActOnSEHExceptBlock(SourceLocation Loc,
-                          Expr *FilterExpr,
-                          Stmt *Block) {
+StmtResult Sema::ActOnSEHExceptBlock(SourceLocation Loc, Expr *FilterExpr,
+                                     Stmt *Block) {
   assert(FilterExpr && Block);
-
-  if(!FilterExpr->getType()->isIntegerType()) {
-    return StmtError(Diag(FilterExpr->getExprLoc(),
-                     diag::err_filter_expression_integral)
-                     << FilterExpr->getType());
+  QualType FTy = FilterExpr->getType();
+  if (!FTy->isIntegerType() && !FTy->isDependentType()) {
+    return StmtError(
+        Diag(FilterExpr->getExprLoc(), diag::err_filter_expression_integral)
+        << FTy);
   }
-
-  return SEHExceptStmt::Create(Context,Loc,FilterExpr,Block);
+  return SEHExceptStmt::Create(Context, Loc, FilterExpr, Block);
 }
 
 void Sema::ActOnStartSEHFinallyBlock() {

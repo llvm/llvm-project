@@ -289,7 +289,7 @@ public:
 };
 
 class CallArgRecord : public MetadataRecord {
-  uint64_t Arg;
+  uint64_t Arg = 0;
   friend class RecordInitializer;
 
 public:
@@ -371,8 +371,8 @@ public:
 
 class FunctionRecord : public Record {
   RecordTypes Kind;
-  int32_t FuncId;
-  uint32_t Delta;
+  int32_t FuncId = 0;
+  uint32_t Delta = 0;
   friend class RecordInitializer;
 
   static constexpr unsigned kFunctionRecordSize = 8;

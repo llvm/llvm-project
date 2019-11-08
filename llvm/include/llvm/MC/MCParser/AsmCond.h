@@ -30,8 +30,6 @@ public:
   ConditionalAssemblyType TheCond = NoCond;
   bool CondMet = false;
   bool Ignore = false;
-
-  AsmCond() = default;
 };
 
 } // end namespace llvm

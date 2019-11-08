@@ -119,6 +119,9 @@ cl::desc("don't always align innermost loop to 32 bytes on ppc"), cl::Hidden);
 static cl::opt<bool> EnableQuadPrecision("enable-ppc-quad-precision",
 cl::desc("enable quad precision float support on ppc"), cl::Hidden);
 
+static cl::opt<bool> UseAbsoluteJumpTables("ppc-use-absolute-jumptables",
+cl::desc("use absolute jump tables on ppc"), cl::Hidden);
+
 STATISTIC(NumTailCalls, "Number of tail calls");
 STATISTIC(NumSiblingCalls, "Number of sibling calls");
 
@@ -2744,6 +2747,8 @@ unsigned PPCTargetLowering::getJumpTableEncoding() const {
 }
 
 bool PPCTargetLowering::isJumpTableRelative() const {
+  if (UseAbsoluteJumpTables)
+    return false;
   if (Subtarget.isPPC64())
     return true;
   return TargetLowering::isJumpTableRelative();

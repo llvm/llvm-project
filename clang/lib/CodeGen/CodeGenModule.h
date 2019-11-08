@@ -523,17 +523,17 @@ private:
     int GlobalUniqueCount;
   } Block;
 
+  GlobalDecl initializedGlobalDecl;
+
+  /// @}
+
   /// void @llvm.lifetime.start(i64 %size, i8* nocapture <ptr>)
   llvm::Function *LifetimeStartFn = nullptr;
 
   /// void @llvm.lifetime.end(i64 %size, i8* nocapture <ptr>)
   llvm::Function *LifetimeEndFn = nullptr;
 
-  GlobalDecl initializedGlobalDecl;
-
   std::unique_ptr<SanitizerMetadata> SanitizerMD;
-
-  /// @}
 
   llvm::MapVector<const Decl *, bool> DeferredEmptyCoverageMappingDecls;
 

@@ -434,6 +434,14 @@ public:
   /// Perform a signed saturating subtraction of two constant ranges.
   ConstantRange ssub_sat(const ConstantRange &Other) const;
 
+  /// Perform an unsigned saturating left shift of this constant range by a
+  /// value in \p Other.
+  ConstantRange ushl_sat(const ConstantRange &Other) const;
+
+  /// Perform a signed saturating left shift of this constant range by a
+  /// value in \p Other.
+  ConstantRange sshl_sat(const ConstantRange &Other) const;
+
   /// Return a new range that is the logical not of the current set.
   ConstantRange inverse() const;
 

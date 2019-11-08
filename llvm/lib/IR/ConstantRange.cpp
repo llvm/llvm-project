@@ -1333,6 +1333,26 @@ ConstantRange ConstantRange::ssub_sat(const ConstantRange &Other) const {
   return getNonEmpty(std::move(NewL), std::move(NewU));
 }
 
+ConstantRange ConstantRange::ushl_sat(const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return getEmpty();
+
+  APInt NewL = getUnsignedMin().ushl_sat(Other.getUnsignedMin());
+  APInt NewU = getUnsignedMax().ushl_sat(Other.getUnsignedMax()) + 1;
+  return getNonEmpty(std::move(NewL), std::move(NewU));
+}
+
+ConstantRange ConstantRange::sshl_sat(const ConstantRange &Other) const {
+  if (isEmptySet() || Other.isEmptySet())
+    return getEmpty();
+
+  APInt Min = getSignedMin(), Max = getSignedMax();
+  APInt ShAmtMin = Other.getUnsignedMin(), ShAmtMax = Other.getUnsignedMax();
+  APInt NewL = Min.sshl_sat(Min.isNonNegative() ? ShAmtMin : ShAmtMax);
+  APInt NewU = Max.sshl_sat(Max.isNegative() ? ShAmtMin : ShAmtMax) + 1;
+  return getNonEmpty(std::move(NewL), std::move(NewU));
+}
+
 ConstantRange ConstantRange::inverse() const {
   if (isFullSet())
     return getEmpty();

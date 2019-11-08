@@ -6,10 +6,10 @@ target triple = "aarch64-unknown-linux-gnu"
 
 declare void @normal_cc()
 
-; Caller: preserve_mostcc; callee: normalcc. All normally callee saved registers
-; (x9 ~ x15) need to be spilled. Since most of them will be spilled in pairs
-; in reverse order, we only check the odd number ones since the same line of
-; assembly cannot be matched twice.
+; Caller: preserve_mostcc; callee: normalcc. Normally callee saved registers
+; x9~x15 need to be spilled. Since most of them will be spilled in pairs in
+; reverse order, we only check the odd number ones due to FileCheck not
+; matching the same line of assembly twice.
 ; CHECK-LABEL: preserve_most
 ; CHECK-DAG: {{st[rp]}} {{(x[0-9]+, )?x9(, x[0-9]+)?}}, [sp, #{{[-0-9]+}}]
 ; CHECK-DAG: {{st[rp]}} {{(x[0-9]+, )?x11(, x[0-9]+)?}}, [sp, #{{[-0-9]+}}]
@@ -25,7 +25,7 @@ define preserve_mostcc void @preserve_most() {
 ; CHECK-LABEL: normal_cc_caller
 ; CHECK-NOT: stp {{x[0-9]+}}, x9, [sp, #{{[-0-9]+}}]
 ; CHECK-NOT: stp x9, {{x[0-9]+}}, [sp, #{{[-0-9]+}}]
-; CHECK-NOT: str x9, [sp, {{#[-0-9]+}}]!
+; CHECK-NOT: str x9, [sp, {{#[-0-9]+}}]
 define dso_local void @normal_cc_caller() {
 entry:
   %v = alloca i32, align 4

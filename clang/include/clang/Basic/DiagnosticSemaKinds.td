@@ -8935,7 +8935,7 @@ def err_unknown_any_function : Error<
   "function %0 with unknown type must be given a function type">;
 
 def err_filter_expression_integral : Error<
-  "filter expression type should be an integral value not %0">;
+  "filter expression has non-integral type %0">;
 
 def err_non_asm_stmt_in_naked_function : Error<
   "non-ASM statement in naked function is not supported">;
