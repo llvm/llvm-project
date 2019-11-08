@@ -1,0 +1,8 @@
+## Show that the help message for llvm-ranlib can be printed with either the
+## long flag -help.
+
+# RUN: llvm-ranlib -h | FileCheck %s
+# RUN: llvm-ranlib -help | FileCheck %s
+# RUN: llvm-ranlib --help | FileCheck %s
+
+# CHECK: USAGE: llvm-ranlib
