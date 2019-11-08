@@ -169,6 +169,21 @@ public:
                       const ObjCInterfaceDecl *Class = nullptr,
                       const ObjCMethodDecl *Method = nullptr) = 0;
 
+  /// Generate an Objective-C message send operation.
+  ///
+  /// This variant allows for the call to be substituted with an optimized
+  /// variant.
+  CodeGen::RValue
+  GeneratePossiblySpecializedMessageSend(CodeGenFunction &CGF,
+                                         ReturnValueSlot Return,
+                                         QualType ResultType,
+                                         Selector Sel,
+                                         llvm::Value *Receiver,
+                                         const CallArgList& Args,
+                                         const ObjCInterfaceDecl *OID,
+                                         const ObjCMethodDecl *Method,
+                                         bool isClassMessage);
+
   /// Generate an Objective-C message send operation to the super
   /// class initiated in a method for Class and with the given Self
   /// object.
@@ -204,6 +219,12 @@ public:
   // should have full control over how parameters are passed.
   virtual llvm::Function *GenerateMethod(const ObjCMethodDecl *OMD,
                                          const ObjCContainerDecl *CD) = 0;
+
+  /// Generates prologue for direct Objective-C Methods.
+  virtual void GenerateDirectMethodPrologue(CodeGenFunction &CGF,
+                                            llvm::Function *Fn,
+                                            const ObjCMethodDecl *OMD,
+                                            const ObjCContainerDecl *CD) = 0;
 
   /// Return the runtime function for getting properties.
   virtual llvm::FunctionCallee GetPropertyGetFunction() = 0;

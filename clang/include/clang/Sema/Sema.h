@@ -8648,6 +8648,9 @@ public:
   checkRelatedResultTypeCompatibility(const ObjCMethodDecl *Method,
                                       const ObjCInterfaceDecl *CurrentClass);
 
+  void CheckObjCMethodDirectOverrides(ObjCMethodDecl *method,
+                                      ObjCMethodDecl *overridden);
+
   void CheckObjCMethodOverrides(ObjCMethodDecl *ObjCMethod,
                                 ObjCInterfaceDecl *CurrentClass,
                                 ResultTypeCompatibilityKind RTC);
