@@ -241,17 +241,10 @@ Address *AppleObjCRuntime::GetPrintForDebuggerAddr() {
 }
 
 bool AppleObjCRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
-  return CouldHaveDynamicValue(in_value,
-                               /* allow_swift = */ false);
-}
-
-bool AppleObjCRuntime::CouldHaveDynamicValue(ValueObject &in_value,
-                                             bool allow_swift) {
   return in_value.GetCompilerType().IsPossibleDynamicType(
       nullptr,
       false, // do not check C++
-      true,  // check ObjC
-      allow_swift);
+      true); // check ObjC
 }
 
 bool AppleObjCRuntime::GetDynamicTypeAndAddress(

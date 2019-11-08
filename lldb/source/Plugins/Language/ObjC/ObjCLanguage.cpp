@@ -884,9 +884,8 @@ ObjCLanguage::GetPossibleFormattersMatches(ValueObject &valobj,
 
   const bool check_cpp = false;
   const bool check_objc = true;
-  const bool check_swift = false;
-  bool canBeObjCDynamic = compiler_type.IsPossibleDynamicType(
-      nullptr, check_cpp, check_objc, check_swift);
+  bool canBeObjCDynamic =
+      compiler_type.IsPossibleDynamicType(nullptr, check_cpp, check_objc);
 
   if (canBeObjCDynamic) {
     do {

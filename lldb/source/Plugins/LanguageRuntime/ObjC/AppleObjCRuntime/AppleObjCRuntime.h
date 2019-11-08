@@ -47,8 +47,6 @@ public:
 
   bool CouldHaveDynamicValue(ValueObject &in_value) override;
 
-  virtual bool CouldHaveDynamicValue(ValueObject &in_value, bool allow_swift);
-
   bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                 lldb::DynamicValueType use_dynamic,
                                 TypeAndOrName &class_type_or_name,

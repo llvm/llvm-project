@@ -586,8 +586,7 @@ public:
 
   bool IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
                              CompilerType *target_type, // Can pass nullptr
-                             bool check_cplusplus, bool check_objc,
-                             bool check_swift) override;
+                             bool check_cplusplus, bool check_objc) override;
 
   bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) override;
 

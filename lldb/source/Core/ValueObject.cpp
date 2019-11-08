@@ -1818,7 +1818,7 @@ bool ValueObject::IsPossibleDynamicType() {
   if (process)
     return process->IsPossibleDynamicValue(*this);
   else
-    return GetCompilerType().IsPossibleDynamicType(nullptr, true, true, true);
+    return GetCompilerType().IsPossibleDynamicType(nullptr, true, true);
 }
 
 bool ValueObject::IsRuntimeSupportValue() {
