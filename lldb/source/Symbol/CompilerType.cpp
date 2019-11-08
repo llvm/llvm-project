@@ -221,11 +221,11 @@ bool CompilerType::IsPolymorphicClass() const {
 }
 
 bool CompilerType::IsPossibleDynamicType(CompilerType *dynamic_pointee_type,
-                                         bool check_cplusplus, bool check_objc,
-                                         bool check_swift) const {
+                                         bool check_cplusplus,
+                                         bool check_objc) const {
   if (IsValid())
-    return m_type_system->IsPossibleDynamicType(
-        m_type, dynamic_pointee_type, check_cplusplus, check_objc, check_swift);
+    return m_type_system->IsPossibleDynamicType(m_type, dynamic_pointee_type,
+                                                check_cplusplus, check_objc);
   return false;
 }
 
