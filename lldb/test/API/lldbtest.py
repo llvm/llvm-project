@@ -79,8 +79,10 @@ class LLDBTest(TestFormat):
             if not os.path.isfile(copied_python):
                 import shutil, subprocess
                 python = subprocess.check_output([
-                    '/usr/bin/python2.7', '-c',
-                    'import sys; print sys.executable']).strip()
+                    sys.executable,
+                    '-c',
+                    'import sys; print(sys.executable)'
+                ]).decode('utf-8').strip()
                 shutil.copy(python, copied_python)
             cmd[0] = copied_python
 
