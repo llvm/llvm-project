@@ -915,7 +915,7 @@ ConstantRange ConstantRange::subWithNoWrap(const ConstantRange &Other,
 
   // If an overflow happens for every value pair in these two constant ranges,
   // we must return Empty set. In signed case, we get that for free, because we
-  // get lucky that intersection of add() with ssub_sat() results in an
+  // get lucky that intersection of sub() with ssub_sat() results in an
   // empty set. But for unsigned we must perform the overflow check manually.
 
   if (NoWrapKind & OBO::NoSignedWrap)
