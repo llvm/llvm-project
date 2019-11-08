@@ -29,6 +29,10 @@
         .byte   1                       # DW_CHILDREN_yes
         .byte   37                      # DW_AT_producer
         .byte   8                       # DW_FORM_string
+        .byte   17                      # DW_AT_low_pc
+        .byte   1                       # DW_FORM_addr
+        .byte   18                      # DW_AT_high_pc
+        .byte   6                       # DW_FORM_data4
         .byte   0                       # EOM(1)
         .byte   0                       # EOM(2)
 
@@ -102,6 +106,7 @@
 
         .byte   0                       # EOM(3)
         .section        .debug_info,"",@progbits
+
 .Lcu_begin0:
         .long   .Lcu_end0-.Lcu_start0   # Length of Unit
 .Lcu_start0:
@@ -110,6 +115,8 @@
         .byte   8                       # Address Size (in bytes)
         .byte   1                       # Abbrev [1] DW_TAG_compile_unit
         .asciz  "hand-written DWARF"    # DW_AT_producer
+        .quad   0x0                     # DW_AT_low_pc
+        .long   0x100                   # DW_AT_high_pc
 
         .byte   4                       # Abbrev [4] DW_TAG_namespace
         .asciz  "namesp"                # DW_AT_name
