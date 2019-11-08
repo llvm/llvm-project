@@ -1675,6 +1675,15 @@ MemberExpr *MemberExpr::Create(
   MemberExpr *E = new (Mem) MemberExpr(Base, IsArrow, OperatorLoc, MemberDecl,
                                        NameInfo, T, VK, OK, NOUR);
 
+  if (FieldDecl *Field = dyn_cast<FieldDecl>(MemberDecl)) {
+    DeclContext *DC = MemberDecl->getDeclContext();
+    // dyn_cast_or_null is used to handle objC variables which do not
+    // have a declaration context.
+    CXXRecordDecl *RD = dyn_cast_or_null<CXXRecordDecl>(DC);
+    if (RD && RD->isDependentContext() && RD->isCurrentInstantiation(DC))
+      E->setTypeDependent(T->isDependentType());
+  }
+
   if (HasQualOrFound) {
     // FIXME: Wrong. We should be looking at the member declaration we found.
     if (QualifierLoc && QualifierLoc.getNestedNameSpecifier()->isDependent()) {
