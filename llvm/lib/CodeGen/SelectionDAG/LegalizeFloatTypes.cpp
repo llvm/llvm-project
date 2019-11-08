@@ -587,19 +587,26 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FPOW(SDNode *N) {
 SDValue DAGTypeLegalizer::SoftenFloatRes_FPOWI(SDNode *N) {
   assert(N->getOperand(1).getValueType() == MVT::i32 &&
          "Unsupported power type!");
+  RTLIB::Libcall LC = GetFPLibCall(N->getValueType(0),
+                                   RTLIB::POWI_F32,
+                                   RTLIB::POWI_F64,
+                                   RTLIB::POWI_F80,
+                                   RTLIB::POWI_F128,
+                                   RTLIB::POWI_PPCF128);
+  if (!TLI.getLibcallName(LC)) {
+    // Some targets don't have a powi libcall; use pow instead.
+    // FIXME: Implement this if some target needs it.
+    DAG.getContext()->emitError("Don't know how to soften fpowi to fpow");
+    return DAG.getUNDEF(N->getValueType(0));
+  }
+
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Ops[2] = { GetSoftenedFloat(N->getOperand(0)), N->getOperand(1) };
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[2] = { N->getOperand(0).getValueType(),
                    N->getOperand(1).getValueType() };
   CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
-  return TLI.makeLibCall(DAG, GetFPLibCall(N->getValueType(0),
-                                           RTLIB::POWI_F32,
-                                           RTLIB::POWI_F64,
-                                           RTLIB::POWI_F80,
-                                           RTLIB::POWI_F128,
-                                           RTLIB::POWI_PPCF128),
-                         NVT, Ops, CallOptions, SDLoc(N)).first;
+  return TLI.makeLibCall(DAG, LC, NVT, Ops, CallOptions, SDLoc(N)).first;
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FREM(SDNode *N) {
