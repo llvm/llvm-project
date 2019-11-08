@@ -41,7 +41,7 @@ public:
 
 private:
   std::string ErrMsg;
-  obj2yaml_error Code;
+  obj2yaml_error Code = obj2yaml_error::success;
 };
 
 } // namespace llvm
