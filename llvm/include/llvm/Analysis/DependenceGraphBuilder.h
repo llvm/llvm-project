@@ -44,7 +44,9 @@ public:
 
   /// The main entry to the graph construction algorithm. It starts by
   /// creating nodes in increasing order of granularity and then
-  /// adds def-use and memory edges.
+  /// adds def-use and memory edges. As one of the final stages, it
+  /// also creates pi-block nodes to facilitate codegen in transformations
+  /// that use dependence graphs.
   ///
   /// The algorithmic complexity of this implementation is O(V^2 * I^2), where V
   /// is the number of vertecies (nodes) and I is the number of instructions in
@@ -56,6 +58,7 @@ public:
     createDefUseEdges();
     createMemoryDependencyEdges();
     createAndConnectRootNode();
+    createPiBlocks();
   }
 
   /// Create fine grained nodes. These are typically atomic nodes that
@@ -74,12 +77,23 @@ public:
   /// reachable from the root.
   void createAndConnectRootNode();
 
+  /// Apply graph abstraction to groups of nodes that belong to a strongly
+  /// connected component of the graph to create larger compound nodes
+  /// called pi-blocks. The purpose of this abstraction is to isolate sets of
+  /// program elements that need to stay together during codegen and turn
+  /// the dependence graph into an acyclic graph.
+  void createPiBlocks();
+
 protected:
   /// Create the root node of the graph.
   virtual NodeType &createRootNode() = 0;
 
   /// Create an atomic node in the graph given a single instruction.
   virtual NodeType &createFineGrainedNode(Instruction &I) = 0;
+
+  /// Create a pi-block node in the graph representing a group of nodes in an
+  /// SCC of the graph.
+  virtual NodeType &createPiBlock(const NodeListType &L) = 0;
 
   /// Create a def-use edge going from \p Src to \p Tgt.
   virtual EdgeType &createDefUseEdge(NodeType &Src, NodeType &Tgt) = 0;
@@ -95,6 +109,10 @@ protected:
 
   /// Deallocate memory of node \p N.
   virtual void destroyNode(NodeType &N) { delete &N; }
+
+  /// Return true if creation of pi-blocks are supported and desired,
+  /// and false otherwise.
+  virtual bool shouldCreatePiBlocks() const { return true; }
 
   /// Map types to map instructions to nodes used when populating the graph.
   using InstToNodeMap = DenseMap<Instruction *, NodeType *>;
