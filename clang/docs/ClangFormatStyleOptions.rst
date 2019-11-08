@@ -1584,8 +1584,9 @@ the configuration (without a prefix: ``Auto``).
 **IndentCaseLabels** (``bool``)
   Indent case labels one level from the switch statement.
 
-  When ``false``, use the same indentation level as for the switch statement.
-  Switch statement body is always indented one level more than case labels.
+  When ``false``, use the same indentation level as for the switch
+  statement. Switch statement body is always indented one level more than
+  case labels.
 
   .. code-block:: c++
 
