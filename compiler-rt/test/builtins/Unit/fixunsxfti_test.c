@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_fixunsxfti
 // REQUIRES: x86-target-arch
 
 //===-- fixunsxfti_test.c - Test __fixunsxfti -----------------------------===//

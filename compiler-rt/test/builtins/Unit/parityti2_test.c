@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_parityti2
 // REQUIRES: int128
 //===-- parityti2_test.c - Test __parityti2 -------------------------------===//
 //

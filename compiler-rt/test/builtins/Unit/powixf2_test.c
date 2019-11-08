@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_powixf2
 // UNSUPPORTED: powerpc64
 // REQUIRES: x86-target-arch
 //===-- powixf2_test.cpp - Test __powixf2 ---------------------------------===//

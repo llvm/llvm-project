@@ -2,6 +2,7 @@
 // XFAIL: *
 // REQUIRES: x86-target-arch
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_cpu_model
 //===-- cpu_model_test.c - Test __builtin_cpu_supports --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.

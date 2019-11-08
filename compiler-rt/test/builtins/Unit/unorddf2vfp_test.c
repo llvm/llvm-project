@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_unorddf2vfp
 
 //===-- unorddf2vfp_test.c - Test __unorddf2vfp ---------------------------===//
 //

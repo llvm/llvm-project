@@ -25,9 +25,12 @@ if (MSVC AND NOT "${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
 endif()
 pythonize_bool(BUILTINS_IS_MSVC)
 
-#TODO: Add support for Apple.
-if (NOT APPLE)
-foreach(arch ${BUILTIN_SUPPORTED_ARCH})
+set(BUILTIN_TEST_ARCH ${BUILTIN_SUPPORTED_ARCH})
+if(APPLE)
+  darwin_filter_host_archs(BUILTIN_SUPPORTED_ARCH BUILTIN_TEST_ARCH)
+endif()
+
+foreach(arch ${BUILTIN_TEST_ARCH})
   set(BUILTINS_TEST_TARGET_ARCH ${arch})
   string(TOLOWER "-${arch}-${OS_NAME}" BUILTINS_TEST_CONFIG_SUFFIX)
   get_test_cc_for_arch(${arch} BUILTINS_TEST_TARGET_CC BUILTINS_TEST_TARGET_CFLAGS)
@@ -41,6 +44,33 @@ foreach(arch ${BUILTIN_SUPPORTED_ARCH})
     string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
   endif()
 
+  # Compute builtins available in library and add them as lit features.
+  if(APPLE)
+    # TODO: Support other Apple platforms.
+    set(BUILTIN_LIB_TARGET_NAME "clang_rt.builtins_${arch}_osx")
+  else()
+    set(BUILTIN_LIB_TARGET_NAME "clang_rt.builtins-${arch}")
+  endif()
+  if (NOT TARGET "${BUILTIN_LIB_TARGET_NAME}")
+    message(FATAL_ERROR "Target ${BUILTIN_LIB_TARGET_NAME} does not exist")
+  endif()
+  get_target_property(BUILTIN_LIB_SOURCES "${BUILTIN_LIB_TARGET_NAME}" SOURCES)
+  list(LENGTH BUILTIN_LIB_SOURCES BUILTIN_LIB_SOURCES_LENGTH)
+  if (BUILTIN_LIB_SOURCES_LENGTH EQUAL 0)
+    message(FATAL_ERROR "Failed to find source files for ${arch} builtin library")
+  endif()
+  set(BUILTINS_LIT_SOURCE_FEATURES "")
+  foreach (file_name ${BUILTIN_LIB_SOURCES})
+    # Strip off any directories and file extensions. This approach means we add
+    # add a single feature if there is a C source file or assembly override
+    # present in the builtin library.
+    # E.g.
+    # "hexagon/udivsi3.S" => "udivsi3"
+    # "udivsi3.c" => "udivsi3"
+    get_filename_component(FILE_NAME_FILTERED "${file_name}" NAME_WE)
+    list(APPEND BUILTINS_LIT_SOURCE_FEATURES "librt_has_${FILE_NAME_FILTERED}")
+  endforeach()
+
   string(TOUPPER ${arch} ARCH_UPPER_CASE)
   set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}Config)
   configure_lit_site_cfg(
@@ -49,7 +79,8 @@ foreach(arch ${BUILTIN_SUPPORTED_ARCH})
     )
   list(APPEND BUILTINS_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit/${CONFIG_NAME})
 endforeach()
-endif()
+
+# TODO: Add support for running tests on iOS and iOS simulator.
 
 add_lit_testsuite(check-builtins "Running the Builtins tests"
   ${BUILTINS_TESTSUITES}

@@ -59,10 +59,11 @@ size_t FunctionInfo::MemorySize() const {
   return m_name.MemorySize() + m_declaration.MemorySize();
 }
 
-InlineFunctionInfo::InlineFunctionInfo(const char *name, const char *mangled,
+InlineFunctionInfo::InlineFunctionInfo(const char *name,
+                                       llvm::StringRef mangled,
                                        const Declaration *decl_ptr,
                                        const Declaration *call_decl_ptr)
-    : FunctionInfo(name, decl_ptr), m_mangled(ConstString(mangled), true),
+    : FunctionInfo(name, decl_ptr), m_mangled(mangled),
       m_call_decl(call_decl_ptr) {}
 
 InlineFunctionInfo::InlineFunctionInfo(ConstString name,

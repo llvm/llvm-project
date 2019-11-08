@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_muloti4
 // REQUIRES: int128
 //===-- muloti4_test.c - Test __muloti4 -----------------------------------===//
 //

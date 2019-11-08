@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_fixsfsivfp
 
 //===-- fixsfsivfp_test.c - Test __fixsfsivfp -----------------------------===//
 //

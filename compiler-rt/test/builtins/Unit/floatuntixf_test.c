@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_floatuntixf
 // REQUIRES: x86-target-arch
 
 //===-- floatuntixf.c - Test __floatuntixf --------------------------------===//
