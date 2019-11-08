@@ -2,6 +2,9 @@
 ; RUN:     -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 \
 ; RUN:     -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -ppc-late-peephole=false \
+; RUN:     -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | FileCheck %s \
+; RUN:     --implicit-check-not creqv --implicit-check-not crxor
 
 
 ; For known CRBit spills, CRSET/CRUNSET, it is more efficient to just load and
@@ -21,7 +24,7 @@ define dso_local signext i32 @spillCRSET(i32 signext %p1, i32 signext %p2) {
 ; CHECK-DAG:    mfocrf [[REG2:.*]], [[CREG]]
 ; CHECK-DAG:    rlwinm [[REG2]], [[REG2]]
 ; CHECK:        .LBB0_3:
-; CHECK-DAG:    creqv [[CREG:.*]]*cr5+lt, [[CREG]]*cr5+lt, [[CREG]]*cr5+lt
+; CHECK-NOT:    #UNENCODED_NOP
 ; CHECK:        lis [[REG1:.*]], -32768
 ; CHECK:        .LBB0_4:
 ; CHECK-NOT:    mfocrf [[REG2:.*]], [[CREG]]
@@ -81,8 +84,8 @@ if.end13:                                         ; preds = %if.then6, %for.end,
 define dso_local signext i32 @spillCRUNSET(%struct.p5rx* readonly %p1, i32 signext %p2, i32 signext %p3) {
 ; CHECK-LABEL: spillCRUNSET:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-DAG:    crxor [[CREG:.*]]*cr5+lt, [[CREG]]*cr5+lt, [[CREG]]*cr5+lt
 ; CHECK-DAG:    li [[REG1:.*]], 0
+; CHECK-NOT:    #UNENCODED_NOP
 ; CHECK-NOT:    mfocrf [[REG2:.*]], [[CREG]]
 ; CHECK-NOT:    rlwinm [[REG2]], [[REG2]]
 ; CHECK:        stw [[REG1]]

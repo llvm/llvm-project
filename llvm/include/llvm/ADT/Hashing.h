@@ -257,7 +257,7 @@ inline uint64_t hash_short(const char *s, size_t length, uint64_t seed) {
 /// Currently, the algorithm for computing hash codes is based on CityHash and
 /// keeps 56 bytes of arbitrary state.
 struct hash_state {
-  uint64_t h0, h1, h2, h3, h4, h5, h6;
+  uint64_t h0 = 0, h1 = 0, h2 = 0, h3 = 0, h4 = 0, h5 = 0, h6 = 0;
 
   /// Create a new hash_state structure and initialize it based on the
   /// seed and the first 64-byte chunk.
@@ -492,7 +492,7 @@ namespace detail {
 /// useful at minimizing the code in the recursive calls to ease the pain
 /// caused by a lack of variadic functions.
 struct hash_combine_recursive_helper {
-  char buffer[64];
+  char buffer[64] = {};
   hash_state state;
   const uint64_t seed;
 

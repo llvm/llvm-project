@@ -1346,6 +1346,19 @@ public:
   /// that is greater than or equal to the current width.
   APInt trunc(unsigned width) const;
 
+  /// Truncate to new width with unsigned saturation.
+  ///
+  /// If the APInt, treated as unsigned integer, can be losslessly truncated to
+  /// the new bitwidth, then return truncated APInt. Else, return max value.
+  APInt truncUSat(unsigned width) const;
+
+  /// Truncate to new width with signed saturation.
+  ///
+  /// If this APInt, treated as signed integer, can be losslessly truncated to
+  /// the new bitwidth, then return truncated APInt. Else, return either
+  /// signed min value if the APInt was negative, or signed max value.
+  APInt truncSSat(unsigned width) const;
+
   /// Sign extend to a new width.
   ///
   /// This operation sign extends the APInt to a new width. If the high order

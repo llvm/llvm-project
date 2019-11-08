@@ -747,12 +747,18 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
   Register SrcReg = MI.getOperand(0).getReg();
 
   // Search up the BB to find the definition of the CR bit.
-  MachineBasicBlock::reverse_iterator Ins;
+  MachineBasicBlock::reverse_iterator Ins = MI;
+  MachineBasicBlock::reverse_iterator Rend = MBB.rend();
+  ++Ins;
   unsigned CRBitSpillDistance = 0;
-  for (Ins = MI; Ins != MBB.rend(); Ins++) {
+  bool SeenUse = false;
+  for (; Ins != Rend; ++Ins) {
     // Definition found.
     if (Ins->modifiesRegister(SrcReg, TRI))
       break;
+    // Use found.
+    if (Ins->readsRegister(SrcReg, TRI))
+      SeenUse = true;
     // Unable to find CR bit definition within maximum search distance.
     if (CRBitSpillDistance == MaxCRBitSpillDist) {
       Ins = MI;
@@ -767,15 +773,18 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
   if (Ins == MBB.rend())
     Ins = MI;
 
+  bool SpillsKnownBit = false;
   // There is no need to extract the CR bit if its value is already known.
   switch (Ins->getOpcode()) {
   case PPC::CRUNSET:
     BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::LI8 : PPC::LI), Reg)
       .addImm(0);
+    SpillsKnownBit = true;
     break;
   case PPC::CRSET:
     BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::LIS8 : PPC::LIS), Reg)
       .addImm(-32768);
+    SpillsKnownBit = true;
     break;
   default:
     // We need to move the CR field that contains the CR bit we are spilling.
@@ -803,8 +812,13 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
                     .addReg(Reg, RegState::Kill),
                     FrameIndex);
 
+  bool KillsCRBit = MI.killsRegister(SrcReg, TRI);
   // Discard the pseudo instruction.
   MBB.erase(II);
+  if (SpillsKnownBit && KillsCRBit && !SeenUse) {
+    Ins->setDesc(TII.get(PPC::UNENCODED_NOP));
+    Ins->RemoveOperand(0);
+  }
 }
 
 void PPCRegisterInfo::lowerCRBitRestore(MachineBasicBlock::iterator II,

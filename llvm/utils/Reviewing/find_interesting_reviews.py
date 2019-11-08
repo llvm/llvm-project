@@ -394,7 +394,7 @@ def print_most_recent_reviews(phab, days, filter_reviewers):
 
     def add_msg(msg):
         msgs.append(msg)
-        print(msg)
+        print(msg.encode('utf-8'))
 
     newest_reviews = get_most_recent_reviews(days)
     add_msg(u"These are the reviews that look interesting to be reviewed. " +

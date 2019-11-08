@@ -1752,15 +1752,15 @@ void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
                        "not supported yet.");
 
   // Create the containing csect and switch to it.
-  MCSectionXCOFF *CSect = cast<MCSectionXCOFF>(
+  MCSectionXCOFF *Csect = cast<MCSectionXCOFF>(
       getObjFileLowering().SectionForGlobal(GV, GVKind, TM));
-  OutStreamer->SwitchSection(CSect);
+  OutStreamer->SwitchSection(Csect);
 
   // Create the symbol, set its storage class, and emit it.
   MCSymbolXCOFF *GVSym = cast<MCSymbolXCOFF>(getSymbol(GV));
   GVSym->setStorageClass(
       TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV));
-  GVSym->setContainingCsect(CSect);
+  GVSym->setContainingCsect(Csect);
 
   const DataLayout &DL = GV->getParent()->getDataLayout();
 
@@ -1771,9 +1771,10 @@ void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
     uint64_t Size = DL.getTypeAllocSize(GV->getType()->getElementType());
 
     if (GVKind.isBSSLocal())
-      OutStreamer->EmitXCOFFLocalCommonSymbol(GVSym, Size, Align);
+      OutStreamer->EmitXCOFFLocalCommonSymbol(
+          GVSym, Size, Csect->getQualNameSymbol(), Align);
     else
-      OutStreamer->EmitCommonSymbol(GVSym, Size, Align);
+      OutStreamer->EmitCommonSymbol(Csect->getQualNameSymbol(), Size, Align);
     return;
   }
 
@@ -1813,11 +1814,9 @@ void PPCAIXAsmPrinter::EmitEndOfAsmFile(Module &M) {
     return;
 
   // Emit TOC base.
-  MCSymbol *TOCBaseSym = OutContext.getOrCreateSymbol(StringRef("TOC[TC0]"));
   MCSectionXCOFF *TOCBaseSection = OutStreamer->getContext().getXCOFFSection(
       StringRef("TOC"), XCOFF::XMC_TC0, XCOFF::XTY_SD, XCOFF::C_HIDEXT,
       SectionKind::getData());
-  cast<MCSymbolXCOFF>(TOCBaseSym)->setContainingCsect(TOCBaseSection);
   // Switch to section to emit TOC base.
   OutStreamer->SwitchSection(TOCBaseSection);
 }

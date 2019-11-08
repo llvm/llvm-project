@@ -78,12 +78,12 @@ class Timer {
   TimeRecord StartTime;     ///< The time startTimer() was last called.
   std::string Name;         ///< The name of this time variable.
   std::string Description;  ///< Description of this time variable.
-  bool Running;             ///< Is the timer currently running?
-  bool Triggered;           ///< Has the timer ever been triggered?
+  bool Running = false;     ///< Is the timer currently running?
+  bool Triggered = false;   ///< Has the timer ever been triggered?
   TimerGroup *TG = nullptr; ///< The TimerGroup this Timer is in.
 
-  Timer **Prev;             ///< Pointer to \p Next of previous timer in group.
-  Timer *Next;              ///< Next timer in the group.
+  Timer **Prev = nullptr;   ///< Pointer to \p Next of previous timer in group.
+  Timer *Next = nullptr;    ///< Next timer in the group.
 public:
   explicit Timer(StringRef Name, StringRef Description) {
     init(Name, Description);
