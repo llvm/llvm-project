@@ -16,7 +16,9 @@ using namespace clang;
 
 SanitizerBlacklist::SanitizerBlacklist(
     const std::vector<std::string> &BlacklistPaths, SourceManager &SM)
-    : SSCL(SanitizerSpecialCaseList::createOrDie(BlacklistPaths)), SM(SM) {}
+    : SSCL(SanitizerSpecialCaseList::createOrDie(
+          BlacklistPaths, SM.getFileManager().getVirtualFileSystem())),
+      SM(SM) {}
 
 bool SanitizerBlacklist::isBlacklistedGlobal(SanitizerMask Mask,
                                              StringRef GlobalName,
