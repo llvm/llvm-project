@@ -519,10 +519,10 @@ Error opts::symbols::findTypes(lldb_private::Module &Module) {
   DenseSet<SymbolFile *> SearchedFiles;
   TypeMap Map;
   if (!Name.empty())
-    Symfile.FindTypes(ConstString(Name), ContextPtr, true, UINT32_MAX,
-                      SearchedFiles, Map);
+    Symfile.FindTypes(ConstString(Name), ContextPtr, UINT32_MAX, SearchedFiles,
+                      Map);
   else
-    Module.FindTypes(parseCompilerContext(), languages, true, Map);
+    Module.FindTypes(parseCompilerContext(), languages, Map);
 
   outs() << formatv("Found {0} types:\n", Map.GetSize());
   StreamString Stream;

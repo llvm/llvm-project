@@ -164,7 +164,7 @@ bool TypeFormatImpl_EnumType::FormatObject(ValueObject *valobj,
     llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
     images.FindTypes(nullptr, m_enum_type, false, UINT32_MAX,
                      searched_symbol_files, types);
-    if (types.GetSize() == 0)
+    if (types.Empty())
       return false;
     for (lldb::TypeSP type_sp : types.Types()) {
       if (!type_sp)
