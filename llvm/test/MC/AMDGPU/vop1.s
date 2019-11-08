@@ -273,6 +273,10 @@ v_movrels_b32_e32 v1, v2
 // VI:   v_movrelsd_b32_e32 v1, v2 ; encoding: [0x02,0x71,0x02,0x7e]
 v_movrelsd_b32_e32 v1, v2
 
+// NOSICI: error: invalid operand for instruction
+// NOVI: error: invalid operand for instruction
+v_movrelsd_b32_e32 v1, s2
+
 // NOSI: error: instruction not supported on this GPU
 // NOSI: v_log_legacy_f32 v1, v2
 // CI: v_log_legacy_f32_e32 v1, v2 ; encoding: [0x02,0x8b,0x02,0x7e]
