@@ -318,10 +318,14 @@ static void computeImportForReferencedGlobals(
         if (ILI.second)
           NumImportedGlobalVarsThinLink++;
         MarkExported(VI, RefSummary.get());
-        // Promote referenced functions and variables
-        for (const auto &VI : RefSummary->refs())
-          for (const auto &RefFn : VI.getSummaryList())
-            MarkExported(VI, RefFn.get());
+        // Promote referenced functions and variables. We don't promote
+        // objects referenced by writeonly variable initializer, because
+        // we convert such variables initializers to "zeroinitializer".
+        // See processGlobalForThinLTO.
+        if (!Index.isWriteOnly(cast<GlobalVarSummary>(RefSummary.get())))
+          for (const auto &VI : RefSummary->refs())
+            for (const auto &RefFn : VI.getSummaryList())
+              MarkExported(VI, RefFn.get());
         break;
       }
   }
