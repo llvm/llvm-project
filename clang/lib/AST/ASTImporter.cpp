@@ -3963,10 +3963,10 @@ ExpectedDecl ASTNodeImporter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
 
   ObjCMethodDecl *ToMethod;
   if (GetImportedOrCreateDecl(
-          ToMethod, D, Importer.getToContext(), Loc,
-          ToEndLoc, Name.getObjCSelector(), ToReturnType,
-          ToReturnTypeSourceInfo, DC, D->isInstanceMethod(), D->isVariadic(),
-          D->isPropertyAccessor(), D->isImplicit(), D->isDefined(),
+          ToMethod, D, Importer.getToContext(), Loc, ToEndLoc,
+          Name.getObjCSelector(), ToReturnType, ToReturnTypeSourceInfo, DC,
+          D->isInstanceMethod(), D->isVariadic(), D->isPropertyAccessor(),
+          D->isSynthesizedAccessorStub(), D->isImplicit(), D->isDefined(),
           D->getImplementationControl(), D->hasRelatedResultType()))
     return ToMethod;
 

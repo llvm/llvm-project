@@ -30,8 +30,8 @@ int main(int argc, char *argv[]) {
   }
 }
 
-// CHECK: ![[FILE:.*]] = !DIFile(filename: "{{[^"]+}}foo.h"
+// CHECK: ![[FILE:.*]] = !DIFile(filename: "foo.m"
 // CHECK: !DISubprogram(name: "-[Foo setDict:]"
 // CHECK-SAME:          file: ![[FILE]],
-// CHECK-SAME:          line: 8,
+// CHECK-SAME:          line: 7,
 // CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition
