@@ -1023,6 +1023,32 @@ multiclass XOForm_1r<bits<6> opcode, bits<9> xo, bit oe, dag OOL, dag IOL,
   }
 }
 
+// Multiclass for instructions which have a record overflow form as well
+// as a record form but no carry (i.e. mulld, mulldo, subf, subfo, etc.)
+multiclass XOForm_1rx<bits<6> opcode, bits<9> xo, bit oe, dag OOL, dag IOL,
+                      string asmbase, string asmstr, InstrItinClass itin,
+                      list<dag> pattern> {
+  let BaseName = asmbase in {
+    def NAME : XOForm_1<opcode, xo, 0, OOL, IOL,
+                        !strconcat(asmbase, !strconcat(" ", asmstr)), itin,
+                        pattern>, RecFormRel;
+    let Defs = [CR0] in
+    def o    : XOForm_1<opcode, xo, 0, OOL, IOL,
+                        !strconcat(asmbase, !strconcat(". ", asmstr)), itin,
+                        []>, isDOT, RecFormRel;
+  }
+  let BaseName = !strconcat(asmbase, "O") in {
+    let Defs = [XER] in
+    def O    : XOForm_1<opcode, xo, 1, OOL, IOL,
+                        !strconcat(asmbase, !strconcat("o ", asmstr)), itin,
+                        []>, RecFormRel;
+    let Defs = [XER, CR0] in
+    def Oo    : XOForm_1<opcode, xo, 1, OOL, IOL,
+                         !strconcat(asmbase, !strconcat("o. ", asmstr)), itin,
+                         []>, isDOT, RecFormRel;
+  }
+}
+
 // Multiclass for instructions for which the non record form is not cracked
 // and the record form is cracked (i.e. divw, mullw, etc.)
 multiclass XOForm_1rcr<bits<6> opcode, bits<9> xo, bit oe, dag OOL, dag IOL,
@@ -1037,6 +1063,16 @@ multiclass XOForm_1rcr<bits<6> opcode, bits<9> xo, bit oe, dag OOL, dag IOL,
                        !strconcat(asmbase, !strconcat(". ", asmstr)), itin,
                        []>, isDOT, RecFormRel, PPC970_DGroup_First,
                        PPC970_DGroup_Cracked;
+  }
+  let BaseName = !strconcat(asmbase, "O") in {
+    let Defs = [XER] in
+    def O    : XOForm_1<opcode, xo, 1, OOL, IOL,
+                        !strconcat(asmbase, !strconcat("o ", asmstr)), itin,
+                        []>, RecFormRel;
+    let Defs = [XER, CR0] in
+    def Oo   : XOForm_1<opcode, xo, 1, OOL, IOL,
+                        !strconcat(asmbase, !strconcat("o. ", asmstr)), itin,
+                        []>, isDOT, RecFormRel;
   }
 }
 
@@ -1053,6 +1089,16 @@ multiclass XOForm_1rc<bits<6> opcode, bits<9> xo, bit oe, dag OOL, dag IOL,
                        !strconcat(asmbase, !strconcat(". ", asmstr)), itin,
                        []>, isDOT, RecFormRel;
   }
+  let BaseName = !strconcat(asmbase, "O") in {
+    let Defs = [CARRY, XER] in
+    def O    : XOForm_1<opcode, xo, 1, OOL, IOL,
+                        !strconcat(asmbase, !strconcat("o ", asmstr)), itin,
+                        []>, RecFormRel;
+    let Defs = [CARRY, XER, CR0] in
+    def Oo   : XOForm_1<opcode, xo, 1, OOL, IOL,
+                        !strconcat(asmbase, !strconcat("o. ", asmstr)), itin,
+                        []>, isDOT, RecFormRel;
+  }
 }
 
 multiclass XOForm_3r<bits<6> opcode, bits<9> xo, bit oe, dag OOL, dag IOL,
@@ -1066,6 +1112,16 @@ multiclass XOForm_3r<bits<6> opcode, bits<9> xo, bit oe, dag OOL, dag IOL,
     def o    : XOForm_3<opcode, xo, oe, OOL, IOL,
                        !strconcat(asmbase, !strconcat(". ", asmstr)), itin,
                        []>, isDOT, RecFormRel;
+  }
+  let BaseName = !strconcat(asmbase, "O") in {
+    let Defs = [XER] in
+    def O    : XOForm_3<opcode, xo, 1, OOL, IOL,
+                        !strconcat(asmbase, !strconcat("o ", asmstr)), itin,
+                        []>, RecFormRel;
+    let Defs = [XER, CR0] in
+    def Oo   : XOForm_3<opcode, xo, 1, OOL, IOL,
+                        !strconcat(asmbase, !strconcat("o. ", asmstr)), itin,
+                        []>, isDOT, RecFormRel;
   }
 }
 
@@ -1081,6 +1137,16 @@ multiclass XOForm_3rc<bits<6> opcode, bits<9> xo, bit oe, dag OOL, dag IOL,
     def o    : XOForm_3<opcode, xo, oe, OOL, IOL,
                        !strconcat(asmbase, !strconcat(". ", asmstr)), itin,
                        []>, isDOT, RecFormRel;
+  }
+  let BaseName = !strconcat(asmbase, "O") in {
+    let Defs = [CARRY, XER] in
+    def O    : XOForm_3<opcode, xo, 1, OOL, IOL,
+                        !strconcat(asmbase, !strconcat("o ", asmstr)), itin,
+                        []>, RecFormRel;
+    let Defs = [CARRY, XER, CR0] in
+    def Oo   : XOForm_3<opcode, xo, 1, OOL, IOL,
+                        !strconcat(asmbase, !strconcat("o. ", asmstr)), itin,
+                        []>, isDOT, RecFormRel;
   }
 }
 
@@ -2776,9 +2842,9 @@ def MODUW : XForm_8<31, 267, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
 let PPC970_Unit = 1, hasSideEffects = 0 in {  // FXU Operations.
 // XO-Form instructions.  Arithmetic instructions that can set overflow bit
 let isCommutable = 1 in
-defm ADD4  : XOForm_1r<31, 266, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
-                       "add", "$rT, $rA, $rB", IIC_IntSimple,
-                       [(set i32:$rT, (add i32:$rA, i32:$rB))]>;
+defm ADD4  : XOForm_1rx<31, 266, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
+                        "add", "$rT, $rA, $rB", IIC_IntSimple,
+                        [(set i32:$rT, (add i32:$rA, i32:$rB))]>;
 let isCodeGenOnly = 1 in
 def ADD4TLS  : XOForm_1<31, 266, 0, (outs gprc:$rT), (ins gprc:$rA, tlsreg32:$rB),
                        "add $rT, $rA, $rB", IIC_IntSimple,
@@ -2795,24 +2861,14 @@ defm DIVW  : XOForm_1rcr<31, 491, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
 defm DIVWU : XOForm_1rcr<31, 459, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
                           "divwu", "$rT, $rA, $rB", IIC_IntDivW,
                           [(set i32:$rT, (udiv i32:$rA, i32:$rB))]>;
-def DIVWE : XOForm_1<31, 427, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
-                     "divwe $rT, $rA, $rB", IIC_IntDivW,
-                     [(set i32:$rT, (int_ppc_divwe gprc:$rA, gprc:$rB))]>,
-                     Requires<[HasExtDiv]>;
-let Defs = [CR0] in
-def DIVWEo : XOForm_1<31, 427, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
-                      "divwe. $rT, $rA, $rB", IIC_IntDivW,
-                      []>, isDOT, PPC970_DGroup_Cracked, PPC970_DGroup_First,
-                      Requires<[HasExtDiv]>;
-def DIVWEU : XOForm_1<31, 395, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
-                      "divweu $rT, $rA, $rB", IIC_IntDivW,
-                      [(set i32:$rT, (int_ppc_divweu gprc:$rA, gprc:$rB))]>,
-                      Requires<[HasExtDiv]>;
-let Defs = [CR0] in
-def DIVWEUo : XOForm_1<31, 395, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
-                       "divweu. $rT, $rA, $rB", IIC_IntDivW,
-                       []>, isDOT, PPC970_DGroup_Cracked, PPC970_DGroup_First,
-                       Requires<[HasExtDiv]>;
+defm DIVWE : XOForm_1rcr<31, 427, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
+                         "divwe", "$rT, $rA, $rB", IIC_IntDivW,
+                         [(set i32:$rT, (int_ppc_divwe gprc:$rA, gprc:$rB))]>,
+                         Requires<[HasExtDiv]>;
+defm DIVWEU : XOForm_1rcr<31, 395, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
+                          "divweu", "$rT, $rA, $rB", IIC_IntDivW,
+                          [(set i32:$rT, (int_ppc_divweu gprc:$rA, gprc:$rB))]>,
+                          Requires<[HasExtDiv]>;
 let isCommutable = 1 in {
 defm MULHW : XOForm_1r<31, 75, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
                        "mulhw", "$rT, $rA, $rB", IIC_IntMulHW,
@@ -2820,13 +2876,13 @@ defm MULHW : XOForm_1r<31, 75, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
 defm MULHWU : XOForm_1r<31, 11, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
                        "mulhwu", "$rT, $rA, $rB", IIC_IntMulHWU,
                        [(set i32:$rT, (mulhu i32:$rA, i32:$rB))]>;
-defm MULLW : XOForm_1r<31, 235, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
-                       "mullw", "$rT, $rA, $rB", IIC_IntMulHW,
-                       [(set i32:$rT, (mul i32:$rA, i32:$rB))]>;
+defm MULLW : XOForm_1rx<31, 235, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
+                        "mullw", "$rT, $rA, $rB", IIC_IntMulHW,
+                        [(set i32:$rT, (mul i32:$rA, i32:$rB))]>;
 } // isCommutable
-defm SUBF  : XOForm_1r<31, 40, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
-                       "subf", "$rT, $rA, $rB", IIC_IntGeneral,
-                       [(set i32:$rT, (sub i32:$rB, i32:$rA))]>;
+defm SUBF  : XOForm_1rx<31, 40, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
+                        "subf", "$rT, $rA, $rB", IIC_IntGeneral,
+                        [(set i32:$rT, (sub i32:$rB, i32:$rA))]>;
 defm SUBFC : XOForm_1rc<31, 8, 0, (outs gprc:$rT), (ins gprc:$rA, gprc:$rB),
                         "subfc", "$rT, $rA, $rB", IIC_IntGeneral,
                         [(set i32:$rT, (subc i32:$rB, i32:$rA))]>,

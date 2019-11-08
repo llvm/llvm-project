@@ -128,14 +128,14 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C],
     (instregex "MTVSRW(A|Z)$"),
     (instregex "CMP(WI|LWI|W|LW)(8)?$"),
     (instregex "CMP(L)?D(I)?$"),
-    (instregex "SUBF(I)?C(8)?$"),
+    (instregex "SUBF(I)?C(8)?(O)?$"),
     (instregex "ANDI(S)?o(8)?$"),
-    (instregex "ADDC(8)?$"),
+    (instregex "ADDC(8)?(O)?$"),
     (instregex "ADDIC(8)?(o)?$"),
-    (instregex "ADD(8|4)(o)?$"),
-    (instregex "ADD(E|ME|ZE)(8)?(o)?$"),
-    (instregex "SUBF(E|ME|ZE)?(8)?(o)?$"),
-    (instregex "NEG(8)?(o)?$"),
+    (instregex "ADD(8|4)(O)?(o)?$"),
+    (instregex "ADD(E|ME|ZE)(8)?(O)?(o)?$"),
+    (instregex "SUBF(E|ME|ZE)?(8)?(O)?(o)?$"),
+    (instregex "NEG(8)?(O)?(o)?$"),
     (instregex "POPCNTB$"),
     (instregex "ADD(I|IS)?(8)?$"),
     (instregex "LI(S)?(8)?$"),
@@ -147,7 +147,7 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C],
     (instregex "EQV(8)?(o)?$"),
     (instregex "EXTS(B|H|W)(8)?(_32)?(_64)?(o)?$"),
     (instregex "ADD(4|8)(TLS)?(_)?$"),
-    (instregex "NEG(8)?$"),
+    (instregex "NEG(8)?(O)?$"),
     (instregex "ADDI(S)?toc(HA|L)$"),
     COPY,
     MCRF,
@@ -397,7 +397,7 @@ def : InstRW<[P9_DPE_7C, P9_DPO_7C, IP_EXECE_1C, IP_EXECO_1C, DISP_1C],
 def : InstRW<[P9_DP_5C, IP_EXEC_1C, DISP_3SLOTS_1C],
       (instrs
     (instregex "MADD(HD|HDU|LD|LD8)$"),
-    (instregex "MUL(HD|HW|LD|LI|LI8|LW)(U)?$")
+    (instregex "MUL(HD|HW|LD|LI|LI8|LW)(U)?(O)?$")
 )>;
 
 // 7 cycle Restricted DP operation. One DP unit, one EXEC pipeline and all three
@@ -456,7 +456,7 @@ def : InstRW<[P9_DP_7C, P9_ALU_3C, IP_EXEC_1C, IP_EXEC_1C,
 def : InstRW<[P9_DPOpAndALUOp_7C, IP_EXEC_1C, IP_EXEC_1C,
               DISP_3SLOTS_1C, DISP_1C],
       (instrs
-    (instregex "MUL(H|L)(D|W)(U)?o$")
+    (instregex "MUL(H|L)(D|W)(U)?(O)?o$")
 )>;
 
 // 7 cycle Restricted DP operation and one 3 cycle ALU operation.
@@ -944,7 +944,9 @@ def : InstRW<[P9_DIV_12C, IP_EXECE_1C, IP_EXECO_1C, DISP_EVEN_1C],
 def : InstRW<[P9_DIV_16C_8, IP_EXECO_1C, IP_EXECE_1C, DISP_EVEN_1C],
       (instrs
     DIVW,
+    DIVWO,
     DIVWU,
+    DIVWUO,
     MODSW
 )>;
 
@@ -954,9 +956,13 @@ def : InstRW<[P9_DIV_16C_8, IP_EXECO_1C, IP_EXECE_1C, DISP_EVEN_1C],
 def : InstRW<[P9_DIV_24C_8, IP_EXECO_1C, IP_EXECE_1C, DISP_EVEN_1C],
       (instrs
     DIVWE,
+    DIVWEO,
     DIVD,
+    DIVDO,
     DIVWEU,
+    DIVWEUO,
     DIVDU,
+    DIVDUO,
     MODSD,
     MODUD,
     MODUW
@@ -968,7 +974,9 @@ def : InstRW<[P9_DIV_24C_8, IP_EXECO_1C, IP_EXECE_1C, DISP_EVEN_1C],
 def : InstRW<[P9_DIV_40C_8, IP_EXECO_1C, IP_EXECE_1C, DISP_EVEN_1C],
       (instrs
     DIVDE,
-    DIVDEU
+    DIVDEO,
+    DIVDEU,
+    DIVDEUO
 )>;
 
 // Cracked DIV and ALU operation. Requires one full slice for the ALU operation
@@ -987,9 +995,13 @@ def : InstRW<[P9_IntDivAndALUOp_26C_8, IP_EXECE_1C, IP_EXECO_1C, IP_EXEC_1C,
               DISP_EVEN_1C, DISP_1C],
       (instrs
     DIVDo,
+    DIVDOo,
     DIVDUo,
+    DIVDUOo,
     DIVWEo,
-    DIVWEUo
+    DIVWEOo,
+    DIVWEUo,
+    DIVWEUOo
 )>;
 
 // Cracked DIV and ALU operation. Requires one full slice for the ALU operation
@@ -999,7 +1011,9 @@ def : InstRW<[P9_IntDivAndALUOp_42C_8, IP_EXECE_1C, IP_EXECO_1C, IP_EXEC_1C,
               DISP_EVEN_1C, DISP_1C],
       (instrs
     DIVDEo,
-    DIVDEUo
+    DIVDEOo,
+    DIVDEUo,
+    DIVDEUOo
 )>;
 
 // CR access instructions in _BrMCR, IIC_BrMCRX.
@@ -1024,8 +1038,8 @@ def : InstRW<[P9_ALU_2C, P9_ALU_2C, IP_EXEC_1C, IP_EXEC_1C,
 def : InstRW<[P9_ALU_2C, P9_ALU_2C, IP_EXEC_1C, IP_EXEC_1C,
               DISP_1C, DISP_1C],
       (instrs
-    (instregex "ADDC(8)?o$"),
-    (instregex "SUBFC(8)?o$")
+    (instregex "ADDC(8)?(O)?o$"),
+    (instregex "SUBFC(8)?(O)?o$")
 )>;
 
 // Cracked ALU operations.
