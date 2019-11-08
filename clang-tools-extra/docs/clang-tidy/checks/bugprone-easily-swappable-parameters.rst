@@ -111,3 +111,28 @@ None of the following cases produce a diagnostic:
 
         add(1, 2); // Instantiates 'add<int, int>', but that's not a user-defined function.
     }
+
+Due to the limitation above, parameters which type are further dependent upon
+template instantiations to *prove* that they mix with another parameter's is
+not diagnosed.
+
+.. code-block:: c++
+
+    template <typename T>
+    struct Vector {
+      typedef T element_type;
+    };
+
+    // Diagnosed: Explicit instantiation was done by the user, we can prove it
+    // is the same type.
+    void Explicit(int A, Vector<int>::element_type B) { /* ... */ }
+
+    // Diagnosed: The two parameter types are exactly the same.
+    template <typename T>
+    void Exact(typename Vector<T>::element_type A,
+               typename Vector<T>::element_type B) { /* ... */ }
+
+    // Skipped: The two parameters are both 'T' but we can not prove this
+    // without actually instantiating.
+    template <typename T>
+    void FalseNegative(T A, typename Vector<T>::element_type B) { /* ... */ }

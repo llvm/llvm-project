@@ -115,20 +115,38 @@ void typedefAndTypedef2(MyInt2 I1, MyInt2 I2) {}
 // CHECK-MESSAGES: :[[@LINE-2]]:32: note: the first parameter in the range is 'I1'
 // CHECK-MESSAGES: :[[@LINE-3]]:43: note: the last parameter in the range is 'I2'
 
-void throughTypedef(int I, MyInt1 J) {}
-// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: 2 adjacent parameters of 'throughTypedef' of similar type ('int')
-// CHECK-MESSAGES: :[[@LINE-2]]:25: note: the first parameter in the range is 'I'
-// CHECK-MESSAGES: :[[@LINE-3]]:35: note: the last parameter in the range is 'J'
+void typedefMultiple(MyInt1 I1, MyInt2 I2x, MyInt2 I2y) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:22: warning: 3 adjacent parameters of 'typedefMultiple' of similar type are
+// CHECK-MESSAGES: :[[@LINE-2]]:29: note: the first parameter in the range is 'I1'
+// CHECK-MESSAGES: :[[@LINE-3]]:52: note: the last parameter in the range is 'I2y'
+// CHECK-MESSAGES: :[[@LINE-4]]:22: note: after resolving type aliases, the common type of 'MyInt1' and 'MyInt2' is 'int'
 
-void betweenTypedef(MyInt1 I, MyInt2 J) {}
-// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: 2 adjacent parameters of 'betweenTypedef' of similar type ('MyInt1')
-// CHECK-MESSAGES: :[[@LINE-2]]:28: note: the first parameter in the range is 'I'
-// CHECK-MESSAGES: :[[@LINE-3]]:38: note: the last parameter in the range is 'J'
+void throughTypedef1(int I, MyInt1 J) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:22: warning: 2 adjacent parameters of 'throughTypedef1' of similar type are
+// CHECK-MESSAGES: :[[@LINE-2]]:26: note: the first parameter in the range is 'I'
+// CHECK-MESSAGES: :[[@LINE-3]]:36: note: the last parameter in the range is 'J'
+// CHECK-MESSAGES: :[[@LINE-4]]:22: note: after resolving type aliases, 'int' and 'MyInt1' are the same
+
+void betweenTypedef2(MyInt1 I, MyInt2 J) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:22: warning: 2 adjacent parameters of 'betweenTypedef2' of similar type are
+// CHECK-MESSAGES: :[[@LINE-2]]:29: note: the first parameter in the range is 'I'
+// CHECK-MESSAGES: :[[@LINE-3]]:39: note: the last parameter in the range is 'J'
+// CHECK-MESSAGES: :[[@LINE-4]]:22: note: after resolving type aliases, the common type of 'MyInt1' and 'MyInt2' is 'int'
+
+typedef MyInt2 MyInt2b;
+
+void typedefChain(int I, MyInt1 MI1, MyInt2 MI2, MyInt2b MI2b) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:19: warning: 4 adjacent parameters of 'typedefChain' of similar type are
+// CHECK-MESSAGES: :[[@LINE-2]]:23: note: the first parameter in the range is 'I'
+// CHECK-MESSAGES: :[[@LINE-3]]:58: note: the last parameter in the range is 'MI2b'
+// CHECK-MESSAGES: :[[@LINE-4]]:19: note: after resolving type aliases, 'int' and 'MyInt1' are the same
+// CHECK-MESSAGES: :[[@LINE-5]]:19: note: after resolving type aliases, 'int' and 'MyInt2' are the same
+// CHECK-MESSAGES: :[[@LINE-6]]:19: note: after resolving type aliases, 'int' and 'MyInt2b' are the same
 
 typedef long MyLong1;
 using MyLong2 = long;
 
-void throughTypedefToOtherType(MyInt1 I, MyLong1 J) {} // NO-WARN: Not the same type.
+void throughTypedefToOtherType(MyInt1 I, MyLong1 J) {} // NO-WARN: int and long.
 
 void qualified1(int I, const int CI) {} // NO-WARN: Not the same type.
 
@@ -142,18 +160,73 @@ using CInt = const int;
 
 void qualifiedThroughTypedef1(int I, CInt CI) {} // NO-WARN: Not the same type.
 
-void qualifiedThroughTypedef2(CInt CI1, const int CI2) {} // NO-WARN: Not the same type.
-// CHECK-MESSAGES: :[[@LINE-1]]:31: warning: 2 adjacent parameters of 'qualifiedThroughTypedef2' of similar type ('CInt')
+void qualifiedThroughTypedef2(CInt CI1, const int CI2) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:31: warning: 2 adjacent parameters of 'qualifiedThroughTypedef2' of similar type are
 // CHECK-MESSAGES: :[[@LINE-2]]:36: note: the first parameter in the range is 'CI1'
 // CHECK-MESSAGES: :[[@LINE-3]]:51: note: the last parameter in the range is 'CI2'
+// CHECK-MESSAGES: :[[@LINE-4]]:31: note: after resolving type aliases, 'CInt' and 'const int' are the same
 
-void reference1(int I, int &IR) {} // NO-WARN: Not the same type.
+void qualifiedThroughTypedef3(CInt CI1, const MyInt1 CI2, const int CI3) {} // NO-WARN: Not the same type.
 
-void reference2(int I, const int &CIR) {} // NO-WARN: Not the same type.
+void qualifiedThroughTypedef4(CInt CI1, const MyInt1 CI2, const MyInt2 CI3) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:41: warning: 2 adjacent parameters of 'qualifiedThroughTypedef4' of similar type are
+// CHECK-MESSAGES: :[[@LINE-2]]:54: note: the first parameter in the range is 'CI2'
+// CHECK-MESSAGES: :[[@LINE-3]]:72: note: the last parameter in the range is 'CI3'
+// CHECK-MESSAGES: :[[@LINE-4]]:41: note: after resolving type aliases, the common type of 'const MyInt1' and 'const MyInt2' is 'int'
 
-void reference3(int I, int &&IRR) {} // NO-WARN: Not the same type.
+void reference1(int I, int &IR) {} // NO-WARN: Distinct semantics when called.
 
-void reference4(int I, const int &&CIRR) {} // NO-WARN: Not the same type.
+void reference2(int I, const int &CIR) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:17: warning: 2 adjacent parameters of 'reference2' of similar type are
+// CHECK-MESSAGES: :[[@LINE-2]]:21: note: the first parameter in the range is 'I'
+// CHECK-MESSAGES: :[[@LINE-3]]:35: note: the last parameter in the range is 'CIR'
+// CHECK-MESSAGES: :[[@LINE-4]]:24: note: 'int' and 'const int &' parameters accept and bind the same kind of values
+
+void reference3(int I, int &&IRR) {} // NO-WARN: Distinct semantics when called.
+
+void reference4(int I, const int &&CIRR) {} // NO-WARN: Distinct semantics when called.
+
+void reference5(const int CI, const int &CIR) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:17: warning: 2 adjacent parameters of 'reference5' of similar type are
+// CHECK-MESSAGES: :[[@LINE-2]]:27: note: the first parameter in the range is 'CI'
+// CHECK-MESSAGES: :[[@LINE-3]]:42: note: the last parameter in the range is 'CIR'
+// CHECK-MESSAGES: :[[@LINE-4]]:31: note: 'const int' and 'const int &' parameters accept and bind the same kind of values
+
+void reference6(int I, const int &CIR, int J, const int &CJR) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:17: warning: 4 adjacent parameters of 'reference6' of similar type are
+// CHECK-MESSAGES: :[[@LINE-2]]:21: note: the first parameter in the range is 'I'
+// CHECK-MESSAGES: :[[@LINE-3]]:58: note: the last parameter in the range is 'CJR'
+// CHECK-MESSAGES: :[[@LINE-4]]:24: note: 'int' and 'const int &' parameters accept and bind the same kind of values
+
+using ICRTy = const int &;
+using MyIntCRTy = const MyInt1 &;
+
+void referenceThroughTypedef(int I, ICRTy Builtin, MyIntCRTy MyInt) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:30: warning: 3 adjacent parameters of 'referenceThroughTypedef' of similar type are
+// CHECK-MESSAGES: :[[@LINE-2]]:34: note: the first parameter in the range is 'I'
+// CHECK-MESSAGES: :[[@LINE-3]]:62: note: the last parameter in the range is 'MyInt'
+// CHECK-MESSAGES: :[[@LINE-4]]:30: note: after resolving type aliases, the common type of 'int' and 'ICRTy' is 'const int'
+// CHECK-MESSAGES: :[[@LINE-5]]:37: note: 'int' and 'ICRTy' parameters accept and bind the same kind of values
+// CHECK-MESSAGES: :[[@LINE-6]]:30: note: after resolving type aliases, 'int' and 'MyIntCRTy' are the same
+// CHECK-MESSAGES: :[[@LINE-7]]:52: note: 'int' and 'MyIntCRTy' parameters accept and bind the same kind of values
+// CHECK-MESSAGES: :[[@LINE-8]]:37: note: after resolving type aliases, the common type of 'ICRTy' and 'MyIntCRTy' is 'int'
+// CHECK-MESSAGES: :[[@LINE-9]]:52: note: 'ICRTy' and 'MyIntCRTy' parameters accept and bind the same kind of values
+
+short const typedef int unsigned Eldritch;
+typedef const unsigned short Holy;
+
+void collapse(Eldritch Cursed, Holy Blessed) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:15: warning: 2 adjacent parameters of 'collapse' of similar type are
+// CHECK-MESSAGES: :[[@LINE-2]]:24: note: the first parameter in the range is 'Cursed'
+// CHECK-MESSAGES: :[[@LINE-3]]:37: note: the last parameter in the range is 'Blessed'
+// CHECK-MESSAGES: :[[@LINE-4]]:15: note: after resolving type aliases, the common type of 'Eldritch' and 'Holy' is 'const unsigned short'
+
+void collapseAndTypedef(Eldritch Cursed, const Holy &Blessed) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:25: warning: 2 adjacent parameters of 'collapseAndTypedef' of similar type are
+// CHECK-MESSAGES: :[[@LINE-2]]:34: note: the first parameter in the range is 'Cursed'
+// CHECK-MESSAGES: :[[@LINE-3]]:54: note: the last parameter in the range is 'Blessed'
+// CHECK-MESSAGES: :[[@LINE-4]]:25: note: after resolving type aliases, the common type of 'Eldritch' and 'const Holy &' is 'const unsigned short'
+// CHECK-MESSAGES: :[[@LINE-5]]:42: note: 'Eldritch' and 'const Holy &' parameters accept and bind the same kind of values
 
 template <typename T1, typename T2>
 struct Pair {};
@@ -186,3 +259,54 @@ void templateVariadic2(int TVar, int UVars1, int UVars2) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: 3 adjacent parameters of 'templateVariadic2<int, int, int>' of similar type ('int')
 // CHECK-MESSAGES: :[[@LINE-2]]:28: note: the first parameter in the range is 'TVar'
 // CHECK-MESSAGES: :[[@LINE-3]]:50: note: the last parameter in the range is 'UVars2'
+
+template <typename T>
+using TwoOf = Pair<T, T>;
+
+void templateAndAliasTemplate(Pair<int, int> P, TwoOf<int> I) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:31: warning: 2 adjacent parameters of 'templateAndAliasTemplate' of similar type ('Pair<int, int>')
+// CHECK-MESSAGES: :[[@LINE-2]]:46: note: the first parameter in the range is 'P'
+// CHECK-MESSAGES: :[[@LINE-3]]:60: note: the last parameter in the range is 'I'
+
+template <typename T>
+struct Vector {
+  typedef T element_type;
+  typedef T &reference_type;
+  typedef const T const_element_type;
+  typedef const T &const_reference_type;
+};
+
+void memberTypedef(int I, Vector<int>::element_type E) {}
+// CHECK-MESSAGES: :[[@LINE-1]]:20: warning: 2 adjacent parameters of 'memberTypedef' of similar type are
+// CHECK-MESSAGES: :[[@LINE-2]]:24: note: the first parameter in the range is 'I'
+// CHECK-MESSAGES: :[[@LINE-3]]:53: note: the last parameter in the range is 'E'
+// CHECK-MESSAGES: :[[@LINE-4]]:20: note: after resolving type aliases, 'int' and 'Vector<int>::element_type' are the same
+
+template <typename T>
+void memberTypedefDependent1(T T1, typename Vector<T>::element_type T2) {} // NO-WARN: Dependent name is not instantiated and resolved against other type.
+
+template <typename T>
+void memberTypedefDependent2(typename Vector<T>::element_type E1,
+                             typename Vector<T>::element_type E2) {}
+// CHECK-MESSAGES: :[[@LINE-2]]:30: warning: 2 adjacent parameters of 'memberTypedefDependent2' of similar type ('typename Vector<T>::element_type')
+// CHECK-MESSAGES: :[[@LINE-3]]:63: note: the first parameter in the range is 'E1'
+// CHECK-MESSAGES: :[[@LINE-3]]:63: note: the last parameter in the range is 'E2'
+
+template <typename T>
+void memberTypedefDependentReference1(
+    typename Vector<T>::element_type E,
+    typename Vector<T>::const_element_type &R) {} // NO-WARN: Not instantiated.
+
+template <typename T>
+void memberTypedefDependentReference2(
+    typename Vector<T>::element_type E,
+    typename Vector<T>::const_reference_type R) {} // NO-WARN: Not instantiated.
+
+template <typename T>
+void memberTypedefDependentReference3(
+    typename Vector<T>::element_type E,
+    const typename Vector<T>::element_type &R) {}
+// CHECK-MESSAGES: :[[@LINE-2]]:5: warning: 2 adjacent parameters of 'memberTypedefDependentReference3' of similar type are
+// CHECK-MESSAGES: :[[@LINE-3]]:38: note: the first parameter in the range is 'E'
+// CHECK-MESSAGES: :[[@LINE-3]]:45: note: the last parameter in the range is 'R'
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: 'typename Vector<T>::element_type' and 'const typename Vector<T>::element_type &' parameters accept and bind the same kind of values
