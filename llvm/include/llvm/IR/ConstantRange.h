@@ -434,6 +434,12 @@ public:
   /// Perform a signed saturating subtraction of two constant ranges.
   ConstantRange ssub_sat(const ConstantRange &Other) const;
 
+  /// Perform an unsigned saturating multiplication of two constant ranges.
+  ConstantRange umul_sat(const ConstantRange &Other) const;
+
+  /// Perform a signed saturating multiplication of two constant ranges.
+  ConstantRange smul_sat(const ConstantRange &Other) const;
+
   /// Perform an unsigned saturating left shift of this constant range by a
   /// value in \p Other.
   ConstantRange ushl_sat(const ConstantRange &Other) const;
