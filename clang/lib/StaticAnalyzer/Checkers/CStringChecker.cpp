@@ -28,6 +28,7 @@ using namespace clang;
 using namespace ento;
 
 namespace {
+enum class ConcatFnKind { none = 0, strcat = 1, strlcat = 2 };
 class CStringChecker : public Checker< eval::Call,
                                          check::PreStmt<DeclStmt>,
                                          check::LiveSymbols,
@@ -129,11 +130,8 @@ public:
   void evalStrncpy(CheckerContext &C, const CallExpr *CE) const;
   void evalStpcpy(CheckerContext &C, const CallExpr *CE) const;
   void evalStrlcpy(CheckerContext &C, const CallExpr *CE) const;
-  void evalStrcpyCommon(CheckerContext &C,
-                        const CallExpr *CE,
-                        bool returnEnd,
-                        bool isBounded,
-                        bool isAppending,
+  void evalStrcpyCommon(CheckerContext &C, const CallExpr *CE, bool ReturnEnd,
+                        bool IsBounded, ConcatFnKind appendK,
                         bool returnPtr = true) const;
 
   void evalStrcat(CheckerContext &C, const CallExpr *CE) const;
@@ -146,8 +144,8 @@ public:
   void evalStrncasecmp(CheckerContext &C, const CallExpr *CE) const;
   void evalStrcmpCommon(CheckerContext &C,
                         const CallExpr *CE,
-                        bool isBounded = false,
-                        bool ignoreCase = false) const;
+                        bool IsBounded = false,
+                        bool IgnoreCase = false) const;
 
   void evalStrsep(CheckerContext &C, const CallExpr *CE) const;
 
@@ -1477,68 +1475,67 @@ void CStringChecker::evalstrLengthCommon(CheckerContext &C, const CallExpr *CE,
 void CStringChecker::evalStrcpy(CheckerContext &C, const CallExpr *CE) const {
   // char *strcpy(char *restrict dst, const char *restrict src);
   evalStrcpyCommon(C, CE,
-                   /* returnEnd = */ false,
-                   /* isBounded = */ false,
-                   /* isAppending = */ false);
+                   /* ReturnEnd = */ false,
+                   /* IsBounded = */ false,
+                   /* appendK = */ ConcatFnKind::none);
 }
 
 void CStringChecker::evalStrncpy(CheckerContext &C, const CallExpr *CE) const {
   // char *strncpy(char *restrict dst, const char *restrict src, size_t n);
   evalStrcpyCommon(C, CE,
-                   /* returnEnd = */ false,
-                   /* isBounded = */ true,
-                   /* isAppending = */ false);
+                   /* ReturnEnd = */ false,
+                   /* IsBounded = */ true,
+                   /* appendK = */ ConcatFnKind::none);
 }
 
 void CStringChecker::evalStpcpy(CheckerContext &C, const CallExpr *CE) const {
   // char *stpcpy(char *restrict dst, const char *restrict src);
   evalStrcpyCommon(C, CE,
-                   /* returnEnd = */ true,
-                   /* isBounded = */ false,
-                   /* isAppending = */ false);
+                   /* ReturnEnd = */ true,
+                   /* IsBounded = */ false,
+                   /* appendK = */ ConcatFnKind::none);
 }
 
 void CStringChecker::evalStrlcpy(CheckerContext &C, const CallExpr *CE) const {
-  // char *strlcpy(char *dst, const char *src, size_t n);
+  // size_t strlcpy(char *dest, const char *src, size_t size);
   evalStrcpyCommon(C, CE,
-                   /* returnEnd = */ true,
-                   /* isBounded = */ true,
-                   /* isAppending = */ false,
+                   /* ReturnEnd = */ true,
+                   /* IsBounded = */ true,
+                   /* appendK = */ ConcatFnKind::none,
                    /* returnPtr = */ false);
 }
 
 void CStringChecker::evalStrcat(CheckerContext &C, const CallExpr *CE) const {
-  //char *strcat(char *restrict s1, const char *restrict s2);
+  // char *strcat(char *restrict s1, const char *restrict s2);
   evalStrcpyCommon(C, CE,
-                   /* returnEnd = */ false,
-                   /* isBounded = */ false,
-                   /* isAppending = */ true);
+                   /* ReturnEnd = */ false,
+                   /* IsBounded = */ false,
+                   /* appendK = */ ConcatFnKind::strcat);
 }
 
 void CStringChecker::evalStrncat(CheckerContext &C, const CallExpr *CE) const {
   //char *strncat(char *restrict s1, const char *restrict s2, size_t n);
   evalStrcpyCommon(C, CE,
-                   /* returnEnd = */ false,
-                   /* isBounded = */ true,
-                   /* isAppending = */ true);
+                   /* ReturnEnd = */ false,
+                   /* IsBounded = */ true,
+                   /* appendK = */ ConcatFnKind::strcat);
 }
 
 void CStringChecker::evalStrlcat(CheckerContext &C, const CallExpr *CE) const {
-  // FIXME: strlcat() uses a different rule for bound checking, i.e. 'n' means
-  // a different thing as compared to strncat(). This currently causes
-  // false positives in the alpha string bound checker.
-
-  //char *strlcat(char *s1, const char *s2, size_t n);
+  // size_t strlcat(char *dst, const char *src, size_t size);
+  // It will append at most size - strlen(dst) - 1 bytes,
+  // NULL-terminating the result.
   evalStrcpyCommon(C, CE,
-                   /* returnEnd = */ false,
-                   /* isBounded = */ true,
-                   /* isAppending = */ true,
+                   /* ReturnEnd = */ false,
+                   /* IsBounded = */ true,
+                   /* appendK = */ ConcatFnKind::strlcat,
                    /* returnPtr = */ false);
 }
 
 void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
-                                      bool returnEnd, bool isBounded,
-                                      bool isAppending, bool returnPtr) const {
+                                      bool ReturnEnd, bool IsBounded,
+                                      ConcatFnKind appendK,
+                                      bool returnPtr) const {
   CurrentFunctionDescription = "string copy function";
   ProgramStateRef state = C.getState();
   const LocationContext *LCtx = C.getLocationContext();
@@ -1560,6 +1557,11 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
 
   // Get the string length of the source.
   SVal strLength = getCStringLength(C, state, srcExpr, srcVal);
+  Optional<NonLoc> strLengthNL = strLength.getAs<NonLoc>();
+
+  // Get the string length of the destination buffer.
+  SVal dstStrLength = getCStringLength(C, state, Dst, DstVal);
+  Optional<NonLoc> dstStrLengthNL = dstStrLength.getAs<NonLoc>();
 
   // If the source isn't a valid C string, give up.
   if (strLength.isUndef())
@@ -1576,13 +1578,14 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
   SVal maxLastElementIndex = UnknownVal();
   const char *boundWarning = nullptr;
 
-  state = CheckOverlap(C, state, isBounded ? CE->getArg(2) : CE->getArg(1), Dst, srcExpr);
+  state = CheckOverlap(C, state, IsBounded ? CE->getArg(2) : CE->getArg(1), Dst,
+                       srcExpr);
 
   if (!state)
     return;
 
   // If the function is strncpy, strncat, etc... it is bounded.
-  if (isBounded) {
+  if (IsBounded) {
     // Get the max number of characters to copy.
     const Expr *lenExpr = CE->getArg(2);
     SVal lenVal = state->getSVal(lenExpr, LCtx);
@@ -1590,57 +1593,100 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
     // Protect against misdeclared strncpy().
     lenVal = svalBuilder.evalCast(lenVal, sizeTy, lenExpr->getType());
 
-    Optional<NonLoc> strLengthNL = strLength.getAs<NonLoc>();
     Optional<NonLoc> lenValNL = lenVal.getAs<NonLoc>();
 
     // If we know both values, we might be able to figure out how much
     // we're copying.
     if (strLengthNL && lenValNL) {
-      ProgramStateRef stateSourceTooLong, stateSourceNotTooLong;
+      switch (appendK) {
+      case ConcatFnKind::none:
+      case ConcatFnKind::strcat: {
+        ProgramStateRef stateSourceTooLong, stateSourceNotTooLong;
+        // Check if the max number to copy is less than the length of the src.
+        // If the bound is equal to the source length, strncpy won't null-
+        // terminate the result!
+        std::tie(stateSourceTooLong, stateSourceNotTooLong) = state->assume(
+            svalBuilder
+                .evalBinOpNN(state, BO_GE, *strLengthNL, *lenValNL, cmpTy)
+                .castAs<DefinedOrUnknownSVal>());
 
-      // Check if the max number to copy is less than the length of the src.
-      // If the bound is equal to the source length, strncpy won't null-
-      // terminate the result!
-      std::tie(stateSourceTooLong, stateSourceNotTooLong) = state->assume(
-          svalBuilder.evalBinOpNN(state, BO_GE, *strLengthNL, *lenValNL, cmpTy)
-              .castAs<DefinedOrUnknownSVal>());
+        if (stateSourceTooLong && !stateSourceNotTooLong) {
+          // Max number to copy is less than the length of the src, so the
+          // actual strLength copied is the max number arg.
+          state = stateSourceTooLong;
+          amountCopied = lenVal;
 
-      if (stateSourceTooLong && !stateSourceNotTooLong) {
-        // Max number to copy is less than the length of the src, so the actual
-        // strLength copied is the max number arg.
-        state = stateSourceTooLong;
-        amountCopied = lenVal;
+        } else if (!stateSourceTooLong && stateSourceNotTooLong) {
+          // The source buffer entirely fits in the bound.
+          state = stateSourceNotTooLong;
+          amountCopied = strLength;
+        }
+        break;
+      }
+      case ConcatFnKind::strlcat:
+        if (!dstStrLengthNL)
+          return;
 
-      } else if (!stateSourceTooLong && stateSourceNotTooLong) {
-        // The source buffer entirely fits in the bound.
-        state = stateSourceNotTooLong;
-        amountCopied = strLength;
+        // amountCopied = min (size - dstLen - 1 , srcLen)
+        SVal freeSpace = svalBuilder.evalBinOpNN(state, BO_Sub, *lenValNL,
+                                                 *dstStrLengthNL, sizeTy);
+        if (!freeSpace.getAs<NonLoc>())
+          return;
+        freeSpace =
+            svalBuilder.evalBinOp(state, BO_Sub, freeSpace,
+                                  svalBuilder.makeIntVal(1, sizeTy), sizeTy);
+        Optional<NonLoc> freeSpaceNL = freeSpace.getAs<NonLoc>();
+
+        // While unlikely, it is possible that the subtraction is
+        // too complex to compute, let's check whether it succeeded.
+        if (!freeSpaceNL)
+          return;
+        SVal hasEnoughSpace = svalBuilder.evalBinOpNN(
+            state, BO_LE, *strLengthNL, *freeSpaceNL, cmpTy);
+
+        ProgramStateRef TrueState, FalseState;
+        std::tie(TrueState, FalseState) =
+            state->assume(hasEnoughSpace.castAs<DefinedOrUnknownSVal>());
+
+        // srcStrLength <= size - dstStrLength -1
+        if (TrueState && !FalseState) {
+          amountCopied = strLength;
+        }
+
+        // srcStrLength > size - dstStrLength -1
+        if (!TrueState && FalseState) {
+          amountCopied = freeSpace;
+        }
+
+        if (TrueState && FalseState)
+          amountCopied = UnknownVal();
+        break;
       }
     }
-
     // We still want to know if the bound is known to be too large.
     if (lenValNL) {
-      if (isAppending) {
+      switch (appendK) {
+      case ConcatFnKind::strcat:
         // For strncat, the check is strlen(dst) + lenVal < sizeof(dst)
 
         // Get the string length of the destination. If the destination is
         // memory that can't have a string length, we shouldn't be copying
         // into it anyway.
-        SVal dstStrLength = getCStringLength(C, state, Dst, DstVal);
         if (dstStrLength.isUndef())
           return;
 
-        if (Optional<NonLoc> dstStrLengthNL = dstStrLength.getAs<NonLoc>()) {
-          maxLastElementIndex = svalBuilder.evalBinOpNN(state, BO_Add,
-                                                        *lenValNL,
-                                                        *dstStrLengthNL,
-                                                        sizeTy);
+        if (dstStrLengthNL) {
+          maxLastElementIndex = svalBuilder.evalBinOpNN(
+              state, BO_Add, *lenValNL, *dstStrLengthNL, sizeTy);
+
           boundWarning = "Size argument is greater than the free space in the "
                          "destination buffer";
         }
-
-      } else {
-        // For strncpy, this is just checking that lenVal <= sizeof(dst)
+        break;
+      case ConcatFnKind::none:
+      case ConcatFnKind::strlcat:
+        // For strncpy and strlcat, this is just checking
+        //  that lenVal <= sizeof(dst).
         // (Yes, strncpy and strncat differ in how they treat termination.
         // strncat ALWAYS terminates, but strncpy doesn't.)
 
@@ -1649,14 +1695,23 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
         // as the last element accessed, so n == 0 is problematic.
         ProgramStateRef StateZeroSize, StateNonZeroSize;
         std::tie(StateZeroSize, StateNonZeroSize) =
-          assumeZero(C, state, *lenValNL, sizeTy);
+            assumeZero(C, state, *lenValNL, sizeTy);
 
         // If the size is known to be zero, we're done.
         if (StateZeroSize && !StateNonZeroSize) {
           if (returnPtr) {
             StateZeroSize = StateZeroSize->BindExpr(CE, LCtx, DstVal);
           } else {
-            StateZeroSize = StateZeroSize->BindExpr(CE, LCtx, *lenValNL);
+            if (appendK == ConcatFnKind::none) {
+              // strlcpy returns strlen(src)
+              StateZeroSize = StateZeroSize->BindExpr(CE, LCtx, *strLengthNL);
+            } else if (dstStrLengthNL) {
+              // strlcat returns strlen(src) + strlen(dst)
+              SVal retSize = svalBuilder.evalBinOpNN(
+                  state, BO_Add, *strLengthNL, *dstStrLengthNL, sizeTy);
+              StateZeroSize =
+                  StateZeroSize->BindExpr(CE, LCtx, *(retSize.getAs<NonLoc>()));
+            }
           }
           C.addTransition(StateZeroSize);
           return;
@@ -1666,50 +1721,13 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
         // We don't record the non-zero assumption here because we can't
         // be sure. We won't warn on a possible zero.
         NonLoc one = svalBuilder.makeIntVal(1, sizeTy).castAs<NonLoc>();
-        maxLastElementIndex = svalBuilder.evalBinOpNN(state, BO_Sub, *lenValNL,
-                                                      one, sizeTy);
+        maxLastElementIndex =
+            svalBuilder.evalBinOpNN(state, BO_Sub, *lenValNL, one, sizeTy);
         boundWarning = "Size argument is greater than the length of the "
                        "destination buffer";
+        break;
       }
     }
-
-    // If we couldn't pin down the copy length, at least bound it.
-    // FIXME: We should actually run this code path for append as well, but
-    // right now it creates problems with constraints (since we can end up
-    // trying to pass constraints from symbol to symbol).
-    if (amountCopied.isUnknown() && !isAppending) {
-      // Try to get a "hypothetical" string length symbol, which we can later
-      // set as a real value if that turns out to be the case.
-      amountCopied = getCStringLength(C, state, lenExpr, srcVal, true);
-      assert(!amountCopied.isUndef());
-
-      if (Optional<NonLoc> amountCopiedNL = amountCopied.getAs<NonLoc>()) {
-        if (lenValNL) {
-          // amountCopied <= lenVal
-          SVal copiedLessThanBound = svalBuilder.evalBinOpNN(state, BO_LE,
-                                                             *amountCopiedNL,
-                                                             *lenValNL,
-                                                             cmpTy);
-          state = state->assume(
-              copiedLessThanBound.castAs<DefinedOrUnknownSVal>(), true);
-          if (!state)
-            return;
-        }
-
-        if (strLengthNL) {
-          // amountCopied <= strlen(source)
-          SVal copiedLessThanSrc = svalBuilder.evalBinOpNN(state, BO_LE,
-                                                           *amountCopiedNL,
-                                                           *strLengthNL,
-                                                           cmpTy);
-          state = state->assume(
-              copiedLessThanSrc.castAs<DefinedOrUnknownSVal>(), true);
-          if (!state)
-            return;
-        }
-      }
-    }
-
   } else {
     // The function isn't bounded. The amount copied should match the length
     // of the source buffer.
@@ -1722,28 +1740,37 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
   // buffer. (It may not actually be the strlen if the destination buffer
   // is not terminated.)
   SVal finalStrLength = UnknownVal();
+  SVal strlRetVal = UnknownVal();
+
+  if (appendK == ConcatFnKind::none && !returnPtr) {
+    // strlcpy returns the sizeof(src)
+    strlRetVal = strLength;
+  }
 
   // If this is an appending function (strcat, strncat...) then set the
   // string length to strlen(src) + strlen(dst) since the buffer will
   // ultimately contain both.
-  if (isAppending) {
+  if (appendK != ConcatFnKind::none) {
     // Get the string length of the destination. If the destination is memory
     // that can't have a string length, we shouldn't be copying into it anyway.
-    SVal dstStrLength = getCStringLength(C, state, Dst, DstVal);
     if (dstStrLength.isUndef())
       return;
 
-    Optional<NonLoc> srcStrLengthNL = amountCopied.getAs<NonLoc>();
-    Optional<NonLoc> dstStrLengthNL = dstStrLength.getAs<NonLoc>();
+    if (appendK == ConcatFnKind::strlcat && dstStrLengthNL && strLengthNL) {
+      strlRetVal = svalBuilder.evalBinOpNN(state, BO_Add, *strLengthNL,
+                                           *dstStrLengthNL, sizeTy);
+    }
+
+    Optional<NonLoc> amountCopiedNL = amountCopied.getAs<NonLoc>();
 
     // If we know both string lengths, we might know the final string length.
-    if (srcStrLengthNL && dstStrLengthNL) {
+    if (amountCopiedNL && dstStrLengthNL) {
       // Make sure the two lengths together don't overflow a size_t.
-      state = checkAdditionOverflow(C, state, *srcStrLengthNL, *dstStrLengthNL);
+      state = checkAdditionOverflow(C, state, *amountCopiedNL, *dstStrLengthNL);
       if (!state)
         return;
 
-      finalStrLength = svalBuilder.evalBinOpNN(state, BO_Add, *srcStrLengthNL,
+      finalStrLength = svalBuilder.evalBinOpNN(state, BO_Add, *amountCopiedNL,
                                                *dstStrLengthNL, sizeTy);
     }
 
@@ -1756,19 +1783,19 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
       assert(!finalStrLength.isUndef());
 
       if (Optional<NonLoc> finalStrLengthNL = finalStrLength.getAs<NonLoc>()) {
-        if (srcStrLengthNL) {
+        if (amountCopiedNL && appendK == ConcatFnKind::none) {
+          // we overwrite dst string with the src
           // finalStrLength >= srcStrLength
-          SVal sourceInResult = svalBuilder.evalBinOpNN(state, BO_GE,
-                                                        *finalStrLengthNL,
-                                                        *srcStrLengthNL,
-                                                        cmpTy);
+          SVal sourceInResult = svalBuilder.evalBinOpNN(
+              state, BO_GE, *finalStrLengthNL, *amountCopiedNL, cmpTy);
           state = state->assume(sourceInResult.castAs<DefinedOrUnknownSVal>(),
                                 true);
           if (!state)
             return;
         }
 
-        if (dstStrLengthNL) {
+        if (dstStrLengthNL && appendK != ConcatFnKind::none) {
+          // we extend the dst string with the src
           // finalStrLength >= dstStrLength
           SVal destInResult = svalBuilder.evalBinOpNN(state, BO_GE,
                                                       *finalStrLengthNL,
@@ -1793,9 +1820,13 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
   if (returnPtr) {
     // The final result of the function will either be a pointer past the last
     // copied element, or a pointer to the start of the destination buffer.
-    Result = (returnEnd ? UnknownVal() : DstVal);
+    Result = (ReturnEnd ? UnknownVal() : DstVal);
   } else {
-    Result = finalStrLength;
+    if (appendK == ConcatFnKind::strlcat || appendK == ConcatFnKind::none)
+      //strlcpy, strlcat
+      Result = strlRetVal;
+    else
+      Result = finalStrLength;
   }
 
   assert(state);
@@ -1834,7 +1865,7 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
       }
 
       // If this is a stpcpy-style copy, the last element is the return value.
-      if (returnPtr && returnEnd)
+      if (returnPtr && ReturnEnd)
         Result = lastElement;
     }
 
@@ -1854,7 +1885,7 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
         nullptr);
 
     // Set the C string length of the destination, if we know it.
-    if (isBounded && !isAppending) {
+    if (IsBounded && (appendK == ConcatFnKind::none)) {
       // strncpy is annoying in that it doesn't guarantee to null-terminate
       // the result string. If the original string didn't fit entirely inside
       // the bound (including the null-terminator), we don't know how long the
@@ -1870,7 +1901,7 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
   if (returnPtr) {
     // If this is a stpcpy-style copy, but we were unable to check for a buffer
     // overflow, we still need a result. Conjure a return value.
-    if (returnEnd && Result.isUnknown()) {
+    if (ReturnEnd && Result.isUnknown()) {
       Result = svalBuilder.conjureSymbolVal(nullptr, CE, LCtx, C.blockCount());
     }
   }
@@ -1881,28 +1912,28 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
 
 void CStringChecker::evalStrcmp(CheckerContext &C, const CallExpr *CE) const {
   //int strcmp(const char *s1, const char *s2);
-  evalStrcmpCommon(C, CE, /* isBounded = */ false, /* ignoreCase = */ false);
+  evalStrcmpCommon(C, CE, /* IsBounded = */ false, /* IgnoreCase = */ false);
 }
 
 void CStringChecker::evalStrncmp(CheckerContext &C, const CallExpr *CE) const {
   //int strncmp(const char *s1, const char *s2, size_t n);
-  evalStrcmpCommon(C, CE, /* isBounded = */ true, /* ignoreCase = */ false);
+  evalStrcmpCommon(C, CE, /* IsBounded = */ true, /* IgnoreCase = */ false);
 }
 
 void CStringChecker::evalStrcasecmp(CheckerContext &C,
     const CallExpr *CE) const {
   //int strcasecmp(const char *s1, const char *s2);
-  evalStrcmpCommon(C, CE, /* isBounded = */ false, /* ignoreCase = */ true);
+  evalStrcmpCommon(C, CE, /* IsBounded = */ false, /* IgnoreCase = */ true);
 }
 
 void CStringChecker::evalStrncasecmp(CheckerContext &C,
     const CallExpr *CE) const {
   //int strncasecmp(const char *s1, const char *s2, size_t n);
-  evalStrcmpCommon(C, CE, /* isBounded = */ true, /* ignoreCase = */ true);
+  evalStrcmpCommon(C, CE, /* IsBounded = */ true, /* IgnoreCase = */ true);
 }
 
 void CStringChecker::evalStrcmpCommon(CheckerContext &C, const CallExpr *CE,
-    bool isBounded, bool ignoreCase) const {
+    bool IsBounded, bool IgnoreCase) const {
   CurrentFunctionDescription = "string comparison function";
   ProgramStateRef state = C.getState();
   const LocationContext *LCtx = C.getLocationContext();
@@ -1972,7 +2003,7 @@ void CStringChecker::evalStrcmpCommon(CheckerContext &C, const CallExpr *CE,
     StringRef s1StrRef = s1StrLiteral->getString();
     StringRef s2StrRef = s2StrLiteral->getString();
 
-    if (isBounded) {
+    if (IsBounded) {
       // Get the max number of characters to compare.
       const Expr *lenExpr = CE->getArg(2);
       SVal lenVal = state->getSVal(lenExpr, LCtx);
@@ -2000,7 +2031,7 @@ void CStringChecker::evalStrcmpCommon(CheckerContext &C, const CallExpr *CE,
         s2StrRef = s2StrRef.substr(0, s2Term);
 
       // Use StringRef's comparison methods to compute the actual result.
-      int compareRes = ignoreCase ? s1StrRef.compare_lower(s2StrRef)
+      int compareRes = IgnoreCase ? s1StrRef.compare_lower(s2StrRef)
         : s1StrRef.compare(s2StrRef);
 
       // The strcmp function returns an integer greater than, equal to, or less
@@ -2180,7 +2211,7 @@ void CStringChecker::evalBzero(CheckerContext &C, const CallExpr *CE) const {
   SVal Zero = C.getSValBuilder().makeZeroVal(C.getASTContext().IntTy);
 
   ProgramStateRef State = C.getState();
-  
+
   // See if the size argument is zero.
   SVal SizeVal = C.getSVal(Size);
   QualType SizeTy = Size->getType();

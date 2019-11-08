@@ -791,18 +791,14 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       module_spec.GetArchitecture() = target.GetArchitecture();
 
       // For the kernel, we really do need an on-disk file copy of the binary
-      // to do anything useful. This will force a clal to
+      // to do anything useful. This will force a call to dsymForUUID if it
+      // exists, instead of depending on the DebugSymbols preferences being 
+      // set.
       if (IsKernel()) {
         if (Symbols::DownloadObjectAndSymbolFile(module_spec, true)) {
           if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
             m_module_sp = std::make_shared<Module>(module_spec.GetFileSpec(),
                                                    target.GetArchitecture());
-            if (m_module_sp.get() &&
-                m_module_sp->MatchesModuleSpec(module_spec)) {
-              ModuleList loaded_module_list;
-              loaded_module_list.Append(m_module_sp);
-              target.ModulesDidLoad(loaded_module_list);
-            }
           }
         }
       }
@@ -810,6 +806,8 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       // If the current platform is PlatformDarwinKernel, create a ModuleSpec
       // with the filename set to be the bundle ID for this kext, e.g.
       // "com.apple.filesystems.msdosfs", and ask the platform to find it.
+      // PlatformDarwinKernel does a special scan for kexts on the local
+      // system.
       PlatformSP platform_sp(target.GetPlatform());
       if (!m_module_sp && platform_sp) {
         ConstString platform_name(platform_sp->GetPluginName());
@@ -818,7 +816,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
         if (platform_name == g_platform_name) {
           ModuleSpec kext_bundle_module_spec(module_spec);
           FileSpec kext_filespec(m_name.c_str());
-	  FileSpecList search_paths = target.GetExecutableSearchPaths();
+          FileSpecList search_paths = target.GetExecutableSearchPaths();
           kext_bundle_module_spec.GetFileSpec() = kext_filespec;
           platform_sp->GetSharedModule(kext_bundle_module_spec, process,
                                        m_module_sp, &search_paths, nullptr,
@@ -847,7 +845,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
     // UUIDs
     if (m_module_sp) {
       if (m_uuid.IsValid() && m_module_sp->GetUUID() == m_uuid) {
-        target.GetImages().AppendIfNeeded(m_module_sp);
+        target.GetImages().AppendIfNeeded(m_module_sp, false);
         if (IsKernel() &&
             target.GetExecutableModulePointer() != m_module_sp.get()) {
           target.SetExecutableModule(m_module_sp, eLoadDependentsNo);
@@ -943,6 +941,14 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
                m_module_sp->GetFileSpec().GetPath().c_str());
     }
     s.Flush();
+  }
+
+  // Notify the target about the module being added;
+  // set breakpoints, load dSYM scripts, etc. as needed.
+  if (is_loaded && m_module_sp) {
+    ModuleList loaded_module_list;
+    loaded_module_list.Append(m_module_sp);
+    target.ModulesDidLoad(loaded_module_list);
   }
 
   return is_loaded;

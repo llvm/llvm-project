@@ -130,7 +130,7 @@ class Reduce(object):
                r"fatal error: error in backend: (.+)",
                r"LLVM ERROR: (.+)",
                r"UNREACHABLE executed (at .+)?!",
-               r"LLVM IR generation of ceclaration '(.+)'",
+               r"LLVM IR generation of declaration '(.+)'",
                r"Generating code for declaration '(.+)'",
                r"\*\*\* Bad machine code: (.+) \*\*\*"]
     for msg_re in regexes:

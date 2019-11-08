@@ -113,3 +113,17 @@ void (^use_cxx_in_global_block)() = ^{
   } catch(int) {
   }
 };
+
+template <class T> void dependent_filter() {
+  __try {
+    might_crash();
+  } __except (T()) { // expected-error {{filter expression has non-integral type 'NotInteger'}}
+  }
+}
+
+struct NotInteger { int x; };
+
+void instantiate_dependent_filter() {
+  dependent_filter<int>();
+  dependent_filter<NotInteger>(); // expected-note {{requested here}}
+}
