@@ -64,6 +64,14 @@ template <class T> class SmallVectorImpl;
 
 using ParamLoadedValue = std::pair<MachineOperand, DIExpression*>;
 
+struct DestSourcePair {
+  const MachineOperand *Destination;
+  const MachineOperand *Source;
+
+  DestSourcePair(const MachineOperand &Dest, const MachineOperand &Src)
+      : Destination(&Dest), Source(&Src) {}
+};
+
 //---------------------------------------------------------------------------
 ///
 /// TargetInstrInfo - Interface to description of machine instruction set
@@ -918,41 +926,36 @@ public:
   }
 
 protected:
-  /// Target-dependent implemenation for IsCopyInstr.
+  /// Target-dependent implementation for IsCopyInstr.
   /// If the specific machine instruction is a instruction that moves/copies
-  /// value from one register to another register return true along with
-  /// @Source machine operand and @Destination machine operand.
-  virtual bool isCopyInstrImpl(const MachineInstr &MI,
-                               const MachineOperand *&Source,
-                               const MachineOperand *&Destination) const {
-    return false;
+  /// value from one register to another register return destination and source
+  /// registers as machine operands.
+  virtual Optional<DestSourcePair>
+  isCopyInstrImpl(const MachineInstr &MI) const {
+    return None;
   }
 
 public:
   /// If the specific machine instruction is a instruction that moves/copies
-  /// value from one register to another register return true along with
-  /// @Source machine operand and @Destination machine operand.
-  /// For COPY-instruction the method naturally returns true, for all other
-  /// instructions the method calls target-dependent implementation.
-  bool isCopyInstr(const MachineInstr &MI, const MachineOperand *&Source,
-                   const MachineOperand *&Destination) const {
+  /// value from one register to another register return destination and source
+  /// registers as machine operands.
+  /// For COPY-instruction the method naturally returns destination and source
+  /// registers as machine operands, for all other instructions the method calls
+  /// target-dependent implementation.
+  Optional<DestSourcePair> isCopyInstr(const MachineInstr &MI) const {
     if (MI.isCopy()) {
-      Destination = &MI.getOperand(0);
-      Source = &MI.getOperand(1);
-      return true;
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
     }
-    return isCopyInstrImpl(MI, Source, Destination);
+    return isCopyInstrImpl(MI);
   }
 
   /// If the specific machine instruction is an instruction that adds an
-  /// immediate value to its \c Source operand and stores it in \c Destination,
-  /// return true along with \c Destination and \c Source machine operand to
-  /// which \c Offset has been added.
-  virtual bool isAddImmediate(const MachineInstr &MI,
-                              const MachineOperand *&Destination,
-                              const MachineOperand *&Source,
-                              int64_t &Offset) const {
-    return false;
+  /// immediate value to its source operand and stores it in destination,
+  /// return destination and source registers as machine operands along with
+  /// \c Offset which has been added.
+  virtual Optional<DestSourcePair> isAddImmediate(const MachineInstr &MI,
+                                                  int64_t &Offset) const {
+    return None;
   }
 
   /// Store the specified register of the given register class to the specified
