@@ -997,10 +997,14 @@ void LiveDebugValues::transferRegisterCopy(MachineInstr &MI,
                                            OpenRangesSet &OpenRanges,
                                            VarLocMap &VarLocIDs,
                                            TransferMap &Transfers) {
-  const MachineOperand *SrcRegOp, *DestRegOp;
 
-  if (!TII->isCopyInstr(MI, SrcRegOp, DestRegOp) || !SrcRegOp->isKill() ||
-      !DestRegOp->isDef())
+  auto DestSrc = TII->isCopyInstr(MI);
+  if (!DestSrc)
+    return;
+
+  const MachineOperand *DestRegOp = DestSrc->Destination;
+  const MachineOperand *SrcRegOp = DestSrc->Source;
+  if (!SrcRegOp->isKill() || !DestRegOp->isDef())
     return;
 
   auto isCalleeSavedReg = [&](unsigned Reg) {

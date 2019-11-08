@@ -870,6 +870,9 @@ if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
   elseif(LLVM_USE_LINKER STREQUAL "gold")
     append("-Wl,--plugin-opt,cache-dir=${PROJECT_BINARY_DIR}/lto.cache"
            CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  elseif(LINKER_IS_LLD_LINK)
+    append("/lldltocache:${PROJECT_BINARY_DIR}/lto.cache"
+           CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   endif()
 elseif(uppercase_LLVM_ENABLE_LTO STREQUAL "FULL")
   append("-flto=full" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)

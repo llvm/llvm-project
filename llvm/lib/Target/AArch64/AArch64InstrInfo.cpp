@@ -5702,39 +5702,33 @@ bool AArch64InstrInfo::shouldOutlineFromFunctionByDefault(
   return MF.getFunction().hasMinSize();
 }
 
-bool AArch64InstrInfo::isCopyInstrImpl(
-    const MachineInstr &MI, const MachineOperand *&Source,
-    const MachineOperand *&Destination) const {
+Optional<DestSourcePair>
+AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
 
   // AArch64::ORRWrs and AArch64::ORRXrs with WZR/XZR reg
   // and zero immediate operands used as an alias for mov instruction.
   if (MI.getOpcode() == AArch64::ORRWrs &&
       MI.getOperand(1).getReg() == AArch64::WZR &&
       MI.getOperand(3).getImm() == 0x0) {
-    Destination = &MI.getOperand(0);
-    Source = &MI.getOperand(2);
-    return true;
+    return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
   }
 
   if (MI.getOpcode() == AArch64::ORRXrs &&
       MI.getOperand(1).getReg() == AArch64::XZR &&
       MI.getOperand(3).getImm() == 0x0) {
-    Destination = &MI.getOperand(0);
-    Source = &MI.getOperand(2);
-    return true;
+    return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
   }
 
-  return false;
+  return None;
 }
 
-bool AArch64InstrInfo::isAddImmediate(const MachineInstr &MI,
-                                      const MachineOperand *&Destination,
-                                      const MachineOperand *&Source,
-                                      int64_t &Offset) const {
+Optional<DestSourcePair>
+AArch64InstrInfo::isAddImmediate(const MachineInstr &MI,
+                                 int64_t &Offset) const {
   int Sign = 1;
   switch (MI.getOpcode()) {
   default:
-    return false;
+    return None;
   case AArch64::SUBWri:
   case AArch64::SUBXri:
   case AArch64::SUBSWri:
@@ -5748,16 +5742,14 @@ bool AArch64InstrInfo::isAddImmediate(const MachineInstr &MI,
     // TODO: Third operand can be global address (usually some string).
     if (!MI.getOperand(0).isReg() || !MI.getOperand(1).isReg() ||
         !MI.getOperand(2).isImm())
-      return false;
-    Source = &MI.getOperand(1);
+      return None;
     Offset = MI.getOperand(2).getImm() * Sign;
     int Shift = MI.getOperand(3).getImm();
     assert((Shift == 0 || Shift == 12) && "Shift can be either 0 or 12");
     Offset = Offset << Shift;
   }
   }
-  Destination = &MI.getOperand(0);
-  return true;
+  return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
 }
 
 Optional<ParamLoadedValue>

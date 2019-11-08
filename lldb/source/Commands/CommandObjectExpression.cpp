@@ -589,60 +589,58 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
       return false;
 
     if (m_repl_option.GetOptionValue().GetCurrentValue()) {
-      Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
-      if (target) {
-        // Drop into REPL
-        m_expr_lines.clear();
-        m_expr_line_count = 0;
+      Target &target = GetSelectedOrDummyTarget();
+      // Drop into REPL
+      m_expr_lines.clear();
+      m_expr_line_count = 0;
 
-        Debugger &debugger = target->GetDebugger();
+      Debugger &debugger = target.GetDebugger();
 
-        // Check if the LLDB command interpreter is sitting on top of a REPL
-        // that launched it...
-        if (debugger.CheckTopIOHandlerTypes(IOHandler::Type::CommandInterpreter,
-                                            IOHandler::Type::REPL)) {
-          // the LLDB command interpreter is sitting on top of a REPL that
-          // launched it, so just say the command interpreter is done and
-          // fall back to the existing REPL
-          m_interpreter.GetIOHandler(false)->SetIsDone(true);
-        } else {
-          // We are launching the REPL on top of the current LLDB command
-          // interpreter, so just push one
-          bool initialize = false;
-          Status repl_error;
-          REPLSP repl_sp(target->GetREPL(repl_error, m_command_options.language,
-                                         nullptr, false));
+      // Check if the LLDB command interpreter is sitting on top of a REPL
+      // that launched it...
+      if (debugger.CheckTopIOHandlerTypes(IOHandler::Type::CommandInterpreter,
+                                          IOHandler::Type::REPL)) {
+        // the LLDB command interpreter is sitting on top of a REPL that
+        // launched it, so just say the command interpreter is done and
+        // fall back to the existing REPL
+        m_interpreter.GetIOHandler(false)->SetIsDone(true);
+      } else {
+        // We are launching the REPL on top of the current LLDB command
+        // interpreter, so just push one
+        bool initialize = false;
+        Status repl_error;
+        REPLSP repl_sp(target.GetREPL(repl_error, m_command_options.language,
+                                       nullptr, false));
 
-          if (!repl_sp) {
-            initialize = true;
-            repl_sp = target->GetREPL(repl_error, m_command_options.language,
-                                      nullptr, true);
-            if (!repl_error.Success()) {
-              result.SetError(repl_error);
-              return result.Succeeded();
-            }
-          }
-
-          if (repl_sp) {
-            if (initialize) {
-              repl_sp->SetEvaluateOptions(
-                  GetExprOptions(exe_ctx, m_command_options));
-              repl_sp->SetFormatOptions(m_format_options);
-              repl_sp->SetValueObjectDisplayOptions(m_varobj_options);
-            }
-
-            IOHandlerSP io_handler_sp(repl_sp->GetIOHandler());
-
-            io_handler_sp->SetIsDone(false);
-
-            debugger.PushIOHandler(io_handler_sp);
-          } else {
-            repl_error.SetErrorStringWithFormat(
-                "Couldn't create a REPL for %s",
-                Language::GetNameForLanguageType(m_command_options.language));
+        if (!repl_sp) {
+          initialize = true;
+          repl_sp = target.GetREPL(repl_error, m_command_options.language,
+                                    nullptr, true);
+          if (!repl_error.Success()) {
             result.SetError(repl_error);
             return result.Succeeded();
           }
+        }
+
+        if (repl_sp) {
+          if (initialize) {
+            repl_sp->SetEvaluateOptions(
+                GetExprOptions(exe_ctx, m_command_options));
+            repl_sp->SetFormatOptions(m_format_options);
+            repl_sp->SetValueObjectDisplayOptions(m_varobj_options);
+          }
+
+          IOHandlerSP io_handler_sp(repl_sp->GetIOHandler());
+
+          io_handler_sp->SetIsDone(false);
+
+          debugger.PushIOHandler(io_handler_sp);
+        } else {
+          repl_error.SetErrorStringWithFormat(
+              "Couldn't create a REPL for %s",
+              Language::GetNameForLanguageType(m_command_options.language));
+          result.SetError(repl_error);
+          return result.Succeeded();
         }
       }
     }
