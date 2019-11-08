@@ -59,7 +59,8 @@ struct Entry {
 };
 
 struct TimeTraceProfiler {
-  TimeTraceProfiler() {
+  TimeTraceProfiler(unsigned TimeTraceGranularity = 0)
+      : TimeTraceGranularity(TimeTraceGranularity) {
     StartTime = steady_clock::now();
   }
 
@@ -188,8 +189,7 @@ struct TimeTraceProfiler {
 void timeTraceProfilerInitialize(unsigned TimeTraceGranularity) {
   assert(TimeTraceProfilerInstance == nullptr &&
          "Profiler should not be initialized");
-  TimeTraceProfilerInstance = new TimeTraceProfiler();
-  TimeTraceProfilerInstance->TimeTraceGranularity = TimeTraceGranularity;
+  TimeTraceProfilerInstance = new TimeTraceProfiler(TimeTraceGranularity);
 }
 
 void timeTraceProfilerCleanup() {
