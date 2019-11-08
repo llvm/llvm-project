@@ -2217,6 +2217,14 @@ TEST_F(ConstantRangeTest, USubSat) {
       });
 }
 
+TEST_F(ConstantRangeTest, UShlSat) {
+  TestUnsignedBinOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.ushl_sat(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) { return N1.ushl_sat(N2); });
+}
+
 TEST_F(ConstantRangeTest, SAddSat) {
   TestSignedBinOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
@@ -2235,6 +2243,14 @@ TEST_F(ConstantRangeTest, SSubSat) {
       [](const APInt &N1, const APInt &N2) {
         return N1.ssub_sat(N2);
       });
+}
+
+TEST_F(ConstantRangeTest, SShlSat) {
+  TestSignedBinOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.sshl_sat(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) { return N1.sshl_sat(N2); });
 }
 
 TEST_F(ConstantRangeTest, Abs) {
