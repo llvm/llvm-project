@@ -68,7 +68,7 @@ mailing list</a> to notify other members of the community.</p>
 
   <li>Improve C++ support
   <ul>
-    <li>Handle aggregate construction.
+    <li>Handle construction as part of aggregate initialization.
       <p><a href="https://en.cppreference.com/w/cpp/language/aggregate_initialization">Aggregates</a>
       are objects that can be brace-initialized without calling a
       constructor (that is, <code><a href="https://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">
@@ -89,12 +89,31 @@ mailing list</a> to notify other members of the community.</p>
       <p><i>(Difficulty: Medium) </i></p></p>
     </li>
 
-    <li>Handle constructors within <code>new[]</code>
-      <p>When an array of objects is allocated using the <code>operator new[]</code>,
+    <li>Handle array constructors.
+      <p>When an array of objects is allocated (say, using the
+         <code>operator new[]</code> or defining a stack array),
          constructors for all elements of the array are called.
          We should model (potentially some of) such evaluations,
          and the same applies for destructors called from
          <code>operator delete[]</code>.
+         See tests cases in <a href="https://github.com/llvm/llvm-project/tree/master/clang/test/Analysis/handle_constructors_with_new_array.cpp">handle_constructors_with_new_array.cpp</a>.
+      </p>
+      <p>
+      Constructing an array requires invoking multiple (potentially unknown)
+      amount of constructors with the same construct-expression.
+      Apart from the technical difficulties of juggling program points around
+      correctly to avoid accidentally merging paths together, we'll have to
+      be a judge on when to exit the loop and how to widen it.
+      Given that the constructor is going to be a default constructor,
+      a nice 95% solution might be to execute exactly one constructor and
+      then default-bind the resulting LazyCompoundVal to the whole array;
+      it'll work whenever the default constructor doesn't touch global state
+      but only initializes the object to various default values.
+      But if, say, we're making an array of strings,
+      depending on the implementation you might have to allocate a new buffer
+      for each string, and in this case default-binding won't cut it.
+      We might want to come up with an auxiliary analysis in order to perform
+      widening of these simple loops more precisely.
       </p>
     </li>
 
@@ -116,6 +135,24 @@ mailing list</a> to notify other members of the community.</p>
     <li>Handle constructors for default arguments
       <p>Default arguments in C++ are recomputed at every call,
          and are therefore local, and not static, variables.
+         See tests cases in <a href="https://github.com/llvm/llvm-project/tree/master/clang/test/Analysis/handle_constructors_for_default_arguments.cpp">handle_constructors_for_default_arguments.cpp</a>.
+      </p>
+      <p>
+      Default arguments are annoying because the initializer expression is
+      evaluated at the call site but doesn't syntactically belong to the
+      caller's AST; instead it belongs to the ParmVarDecl for the default
+      parameter. This can lead to situations when the same expression has to
+      carry different values simultaneously -
+      when multiple instances of the same function are evaluated as part of the
+      same full-expression without specifying the default arguments.
+      Even simply calling the function twice (not necessarily within the
+      same full-expression) may lead to program points agglutinating because
+      it's the same expression. There are some nasty test cases already
+      in temporaries.cpp (struct DefaultParam and so on). I recommend adding a
+      new LocationContext kind specifically to deal with this problem. It'll
+      also help you figure out the construction context when you evaluate the
+      construct-expression (though you might still need to do some additional
+      CFG work to get construction contexts right).
       </p>
     </li>
 
