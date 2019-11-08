@@ -1114,19 +1114,7 @@ public:
                                                  const char *name,
                                                  Status &error);
 
-#ifdef __clang_analyzer__
-  // See GetScratchTypeSystemForLanguage()
-  ClangASTContext *GetScratchClangASTContext(bool create_on_demand = true)
-      __attribute__((always_inline)) {
-    ClangASTContext *ret = GetScratchClangASTContextImpl(create_on_demand);
-
-    return ret ? ret : nullptr;
-  }
-
-  ClangASTContext *GetScratchClangASTContextImpl(bool create_on_demand = true);
-#else
   ClangASTContext *GetScratchClangASTContext(bool create_on_demand = true);
-#endif
 
   lldb::ClangASTImporterSP GetClangASTImporter();
 
