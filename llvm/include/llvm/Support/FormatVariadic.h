@@ -57,7 +57,7 @@ struct ReplacementItem {
   size_t Index = 0;
   size_t Align = 0;
   AlignStyle Where = AlignStyle::Right;
-  char Pad;
+  char Pad = 0;
   StringRef Options;
 };
 
