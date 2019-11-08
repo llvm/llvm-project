@@ -1144,6 +1144,10 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
       // Assumes don't actually alias anything or throw
       return true;
 
+    if (match(CI, m_Intrinsic<Intrinsic::experimental_widenable_condition>()))
+      // Widenable conditions don't actually alias anything or throw
+      return true;
+
     // Handle simple cases by querying alias analysis.
     FunctionModRefBehavior Behavior = AA->getModRefBehavior(CI);
     if (Behavior == FMRB_DoesNotAccessMemory)
