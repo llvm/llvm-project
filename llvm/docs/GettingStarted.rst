@@ -622,7 +622,8 @@ used by people developing LLVM.
 |                         | default set of LLVM components that can be         |
 |                         | overridden with ``LLVM_DYLIB_COMPONENTS``. The     |
 |                         | default contains most of LLVM and is defined in    |
-|                         | ``tools/llvm-shlib/CMakelists.txt``.               |
+|                         | ``tools/llvm-shlib/CMakelists.txt``. This option is|
+|                         | not avialable on Windows.                          |
 +-------------------------+----------------------------------------------------+
 | LLVM_OPTIMIZED_TABLEGEN | Builds a release tablegen that gets used during    |
 |                         | the LLVM build. This can dramatically speed up     |
