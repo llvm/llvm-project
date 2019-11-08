@@ -2737,10 +2737,6 @@ void DwarfDebug::emitDebugMacinfo() {
       }))
     return;
 
-  // Start the dwarf macinfo section.
-  Asm->OutStreamer->SwitchSection(
-      Asm->getObjFileLowering().getDwarfMacinfoSection());
-
   for (const auto &P : CUMap) {
     auto &TheCU = *P.second;
     if (TheCU.getCUNode()->isDebugDirectivesOnly())
@@ -2750,6 +2746,8 @@ void DwarfDebug::emitDebugMacinfo() {
     auto *CUNode = cast<DICompileUnit>(P.first);
     DIMacroNodeArray Macros = CUNode->getMacros();
     if (!Macros.empty()) {
+      Asm->OutStreamer->SwitchSection(
+          Asm->getObjFileLowering().getDwarfMacinfoSection());
       Asm->OutStreamer->EmitLabel(U.getMacroLabelBegin());
       handleMacroNodes(Macros, U);
       Asm->OutStreamer->AddComment("End Of Macro List Mark");
