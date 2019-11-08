@@ -26,7 +26,7 @@ class ExprCommandCallOverriddenMethod(TestBase):
         # Find the line number to break for main.c.
         self.line = line_number('main.cpp', '// Set breakpoint here')
 
-    def test(self):
+    def test_call_on_base(self):
         """Test calls to overridden methods in derived classes."""
         self.build()
 
@@ -42,14 +42,28 @@ class ExprCommandCallOverriddenMethod(TestBase):
         # class method is never an override).
         self.expect("expr b->foo()", substrs=["2"])
 
+        # Test calling the base class.
+        self.expect("expr realbase.foo()", substrs=["1"])
+
+    @skipIfLinux # Returns wrong result code on some platforms.
+    def test_call_on_derived(self):
+        """Test calls to overridden methods in derived classes."""
+        self.build()
+
+        # Set breakpoint in main and run exe
+        self.runCmd("file " + self.getBuildArtifact("a.out"),
+                    CURRENT_EXECUTABLE_SET)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.line, num_expected_locations=-1, loc_exact=True)
+
+        self.runCmd("run", RUN_SUCCEEDED)
+
         # Test call to overridden method in derived class (this will fail if the
         # overrides table is not correctly set up, as Derived::foo will be assigned
         # a vtable entry that does not exist in the compiled program).
         self.expect("expr d.foo()", substrs=["2"])
 
-        # Test calling the base class.
-        self.expect("expr realbase.foo()", substrs=["1"])
-
+    @skipIfLinux # Calling constructor causes SIGABRT
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr43707")
     def test_call_on_temporary(self):
         """Test calls to overridden methods in derived classes."""
