@@ -588,6 +588,33 @@ void ObjCARCOpt::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
 }
 
+static bool isSafeBetweenRVCalls(const Instruction *I) {
+  if (IsNoopInstruction(I))
+    return true;
+
+  auto *CB = dyn_cast<CallBase>(I);
+  if (!CB)
+    return false;
+
+  Intrinsic::ID IID = CB->getIntrinsicID();
+  if (IID == Intrinsic::not_intrinsic)
+    return false;
+
+  switch (IID) {
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end:
+    // The inliner adds new lifetime markers as part of the return sequence,
+    // which should be skipped when looking for paired return RV call.
+    LLVM_FALLTHROUGH;
+  case Intrinsic::stacksave:
+  case Intrinsic::stackrestore:
+    // If the inlined code contains dynamic allocas, the above applies as well.
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// Turn objc_retainAutoreleasedReturnValue into objc_retain if the operand is
 /// not a return value.  Or, if it can be paired with an
 /// objc_autoreleaseReturnValue, delete the pair and return true.
@@ -634,7 +661,7 @@ ObjCARCOpt::OptimizeRetainRVCall(Function &F, Instruction *RetainRV) {
   if (I != Begin) {
     do
       --I;
-    while (I != Begin && IsNoopInstruction(&*I));
+    while (I != Begin && isSafeBetweenRVCalls(&*I));
     if (GetBasicARCInstKind(&*I) == ARCInstKind::AutoreleaseRV &&
         EquivalentArgs.count(GetArgRCIdentityRoot(&*I))) {
       Changed = true;
