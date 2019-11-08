@@ -14,9 +14,9 @@
 @b = internal global i64 0, align 8
 @c = internal global i16 0, align 2
 
-; CHECK:      .lcomm a,4,a,2
-; CHECK-NEXT: .lcomm b,8,b,3
-; CHECK-NEXT: .lcomm c,2,c,1
+; CHECK:      .lcomm a,4,a[BS],2
+; CHECK-NEXT: .lcomm b,8,b[BS],3
+; CHECK-NEXT: .lcomm c,2,c[BS],1
 
 ; OBJ:      File: {{.*}}aix-xcoff-lcomm.ll.tmp.o
 ; OBJ-NEXT: Format: aixcoff-rs6000

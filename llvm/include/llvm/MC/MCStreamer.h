@@ -546,11 +546,13 @@ public:
 
   /// Emits an lcomm directive with XCOFF csect information.
   ///
-  /// \param Symbol - The symbol we are emiting.
+  /// \param LabelSym - Label on the block of storage.
   /// \param Size - The size of the block of storage.
-  /// \param ByteAlignment - The alignment of the symbol in bytes. Must be a power
-  /// of 2.
-  virtual void EmitXCOFFLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+  /// \param CsectSym - Csect name for the block of storage.
+  /// \param ByteAlignment - The alignment of the symbol in bytes. Must be a
+  /// power of 2.
+  virtual void EmitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
+                                          MCSymbol *CsectSym,
                                           unsigned ByteAlignment);
 
   /// Emit an ELF .size directive.

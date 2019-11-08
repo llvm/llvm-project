@@ -84,13 +84,13 @@
 ; CHECK-NEXT: .llong  4613937818241073152
 ; CHECK-NEXT: .llong  4616189618054758400
 
-; CHECK-NEXT: .comm   a,4,2
-; CHECK-NEXT: .comm   b,8,3
-; CHECK-NEXT: .comm   c,2,1
-; CHECK-NEXT: .comm   d,8,3
-; CHECK-NEXT: .comm   f,4,2
-; CHECK-NEXT: .comm   over_aligned_comm,8,5
-; CHECK-NEXT: .comm   array,33,0
+; CHECK-NEXT: .comm   a[RW],4,2
+; CHECK-NEXT: .comm   b[RW],8,3
+; CHECK-NEXT: .comm   c[RW],2,1
+; CHECK-NEXT: .comm   d[RW],8,3
+; CHECK-NEXT: .comm   f[RW],4,2
+; CHECK-NEXT: .comm   over_aligned_comm[RW],8,5
+; CHECK-NEXT: .comm   array[RW],33,0
 
 ; OBJ:      File: {{.*}}aix-xcoff-data.ll.tmp.o
 ; OBJ-NEXT: Format: aixcoff-rs6000
