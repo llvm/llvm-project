@@ -2752,10 +2752,10 @@ void DwarfDebug::emitDebugMacinfo() {
     if (!Macros.empty()) {
       Asm->OutStreamer->EmitLabel(U.getMacroLabelBegin());
       handleMacroNodes(Macros, U);
+      Asm->OutStreamer->AddComment("End Of Macro List Mark");
+      Asm->emitInt8(0);
     }
   }
-  Asm->OutStreamer->AddComment("End Of Macro List Mark");
-  Asm->emitInt8(0);
 }
 
 // DWARF5 Experimental Separate Dwarf emitters.

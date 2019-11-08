@@ -333,6 +333,6 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT: }
 ; CHECK-NEXT: .section .debug_macinfo
 ; CHECK-NEXT: {
-; CHECK-NEXT: .b8 0                                   // End Of Macro List Mark
-; CHECK:      }
+; CHECK-EMPTY:
+; CHECK-NEXT: }
 
