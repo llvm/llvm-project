@@ -819,6 +819,7 @@ the configuration (without a prefix: ``Auto``).
         for (int i = 0; i < 10; ++i)
         {}
 
+
   * ``bool AfterEnum`` Wrap enum definitions.
 
     .. code-block:: c++
