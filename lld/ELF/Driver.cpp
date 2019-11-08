@@ -1782,6 +1782,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   for (StringRef pat : args::getStrings(args, OPT_undefined_glob))
     handleUndefinedGlob(pat);
 
+  // Mark -init and -fini symbols so that the LTO doesn't eliminate them.
+  if (Symbol *sym = symtab->find(config->init))
+    sym->isUsedInRegularObj = true;
+  if (Symbol *sym = symtab->find(config->fini))
+    sym->isUsedInRegularObj = true;
+
   // If any of our inputs are bitcode files, the LTO code generator may create
   // references to certain library functions that might not be explicit in the
   // bitcode file's symbol table. If any of those library functions are defined
