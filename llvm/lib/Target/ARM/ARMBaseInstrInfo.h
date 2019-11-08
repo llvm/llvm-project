@@ -99,12 +99,11 @@ protected:
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx1,
                                        unsigned OpIdx2) const override;
-
-  /// If the specific machine instruction is a instruction that moves/copies
-  /// value from one register to another register return true along with
-  /// @Source machine operand and @Destination machine operand.
-  bool isCopyInstrImpl(const MachineInstr &MI, const MachineOperand *&Source,
-                       const MachineOperand *&Destination) const override;
+  /// If the specific machine instruction is an instruction that moves/copies
+  /// value from one register to another register return destination and source
+  /// registers as machine operands.
+  Optional<DestSourcePair>
+  isCopyInstrImpl(const MachineInstr &MI) const override;
 
 public:
   // Return whether the target has an explicit NOP encoding.
@@ -456,10 +455,8 @@ public:
     return MI.getOperand(3).getReg();
   }
 
-  bool isAddImmediate(const MachineInstr &MI,
-                      const MachineOperand *&Destination,
-                      const MachineOperand *&Source,
-                      int64_t &Offset) const override;
+  Optional<DestSourcePair> isAddImmediate(const MachineInstr &MI,
+                                          int64_t &Offset) const override;
 };
 
 /// Get the operands corresponding to the given \p Pred value. By default, the

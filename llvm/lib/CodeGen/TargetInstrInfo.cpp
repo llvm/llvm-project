@@ -1124,14 +1124,13 @@ Optional<ParamLoadedValue>
 TargetInstrInfo::describeLoadedValue(const MachineInstr &MI) const {
   const MachineFunction *MF = MI.getMF();
   DIExpression *Expr = DIExpression::get(MF->getFunction().getContext(), {});
-  const MachineOperand *SrcRegOp, *DestRegOp;
   int64_t Offset;
 
-  if (isCopyInstr(MI, SrcRegOp, DestRegOp)) {
-    return ParamLoadedValue(*SrcRegOp, Expr);
-  } else if (isAddImmediate(MI, DestRegOp, SrcRegOp, Offset)) {
+  if (auto DestSrc = isCopyInstr(MI)) {
+    return ParamLoadedValue(*DestSrc->Source, Expr);
+  } else if (auto DestSrc = isAddImmediate(MI, Offset)) {
     Expr = DIExpression::prepend(Expr, DIExpression::ApplyOffset, Offset);
-    return ParamLoadedValue(*SrcRegOp, Expr);
+    return ParamLoadedValue(*DestSrc->Source, Expr);
   }
 
   return None;
