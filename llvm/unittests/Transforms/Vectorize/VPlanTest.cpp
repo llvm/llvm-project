@@ -83,7 +83,6 @@ TEST(VPInstructionTest, moveAfter) {
 
   CHECK_ITERATOR(VPBB1, I2, I1);
   CHECK_ITERATOR(VPBB2, I4, I3, I5);
-  EXPECT_EQ(I3->getParent(), I4->getParent());
 }
 
 } // namespace

@@ -201,9 +201,6 @@ class LoopVectorizationPlanner {
   /// The profitability analysis.
   LoopVectorizationCostModel &CM;
 
-  /// The interleaved access analysis.
-  InterleavedAccessInfo &IAI;
-
   SmallVector<VPlanPtr, 4> VPlans;
 
   /// This class is used to enable the VPlan to invoke a method of ILV. This is
@@ -226,10 +223,8 @@ public:
   LoopVectorizationPlanner(Loop *L, LoopInfo *LI, const TargetLibraryInfo *TLI,
                            const TargetTransformInfo *TTI,
                            LoopVectorizationLegality *Legal,
-                           LoopVectorizationCostModel &CM,
-                           InterleavedAccessInfo &IAI)
-      : OrigLoop(L), LI(LI), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
-        IAI(IAI) {}
+                           LoopVectorizationCostModel &CM)
+      : OrigLoop(L), LI(LI), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM) {}
 
   /// Plan how to best vectorize, return the best VF and its cost, or None if
   /// vectorization and interleaving should be avoided up front.
