@@ -58,6 +58,9 @@ Non-comprehensive list of changes in this release
 * The BasicBlockPass, BBPassManager and all their uses were deleted in
   `this revision <https://reviews.llvm.org/rG9f0ff0b2634bab6a5be8dace005c9eb24d386dd1>`_.
 
+* The LLVM_BUILD_LLVM_DYLIB and LLVM_LINK_LLVM_DYLIB CMake options are no longer
+  available on Windows.
+
 .. NOTE
    If you would like to document a larger change, then you can add a
    subsection about it right here. You can copy the following boilerplate
