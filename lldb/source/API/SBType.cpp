@@ -799,7 +799,7 @@ const char *SBTypeMemberFunction::GetDemangledName() {
   if (m_opaque_sp) {
     ConstString mangled_str = m_opaque_sp->GetMangledName();
     if (mangled_str) {
-      Mangled mangled(mangled_str, true);
+      Mangled mangled(mangled_str);
       return mangled.GetDemangledName(mangled.GuessLanguage()).GetCString();
     }
   }
