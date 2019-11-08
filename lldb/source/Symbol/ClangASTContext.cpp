@@ -8639,7 +8639,7 @@ clang::ObjCMethodDecl *ClangASTContext::AddMethodToObjCObjectType(
     return nullptr;
 
   const bool isInstance = (name[0] == '-');
-  const bool isVariadic = false;
+  const bool isVariadic = is_variadic;
   const bool isPropertyAccessor = false;
   const bool isSynthesizedAccessorStub = false;
   /// Force this to true because we don't have source locations.
