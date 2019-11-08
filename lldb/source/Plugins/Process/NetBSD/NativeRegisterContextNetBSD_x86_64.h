@@ -58,6 +58,8 @@ public:
 
   bool ClearHardwareWatchpoint(uint32_t wp_index) override;
 
+  Status ClearWatchpointHit(uint32_t wp_index) override;
+
   Status ClearAllHardwareWatchpoints() override;
 
   Status SetHardwareWatchpointWithIndex(lldb::addr_t addr, size_t size,
