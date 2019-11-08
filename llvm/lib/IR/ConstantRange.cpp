@@ -1348,8 +1348,8 @@ ConstantRange ConstantRange::sshl_sat(const ConstantRange &Other) const {
 
   APInt Min = getSignedMin(), Max = getSignedMax();
   APInt ShAmtMin = Other.getUnsignedMin(), ShAmtMax = Other.getUnsignedMax();
-  APInt NewL = Min.sshl_sat(isAllNonNegative() ? ShAmtMin : ShAmtMax);
-  APInt NewU = Max.sshl_sat(isAllNegative() ? ShAmtMin : ShAmtMax) + 1;
+  APInt NewL = Min.sshl_sat(Min.isNonNegative() ? ShAmtMin : ShAmtMax);
+  APInt NewU = Max.sshl_sat(Max.isNegative() ? ShAmtMin : ShAmtMax) + 1;
   return getNonEmpty(std::move(NewL), std::move(NewU));
 }
 
