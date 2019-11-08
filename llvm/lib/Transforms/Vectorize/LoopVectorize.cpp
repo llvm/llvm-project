@@ -6710,6 +6710,37 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
   return BlockMaskCache[BB] = BlockMask;
 }
 
+VPInterleaveRecipe *VPRecipeBuilder::tryToInterleaveMemory(Instruction *I,
+                                                           VFRange &Range,
+                                                           VPlanPtr &Plan) {
+  const InterleaveGroup<Instruction> *IG = CM.getInterleavedAccessGroup(I);
+  if (!IG)
+    return nullptr;
+
+  // Now check if IG is relevant for VF's in the given range.
+  auto isIGMember = [&](Instruction *I) -> std::function<bool(unsigned)> {
+    return [=](unsigned VF) -> bool {
+      return (VF >= 2 && // Query is illegal for VF == 1
+              CM.getWideningDecision(I, VF) ==
+                  LoopVectorizationCostModel::CM_Interleave);
+    };
+  };
+  if (!LoopVectorizationPlanner::getDecisionAndClampRange(isIGMember(I), Range))
+    return nullptr;
+
+  // I is a member of an InterleaveGroup for VF's in the (possibly trimmed)
+  // range. If it's the primary member of the IG construct a VPInterleaveRecipe.
+  // Otherwise, it's an adjunct member of the IG, do not construct any Recipe.
+  assert(I == IG->getInsertPos() &&
+         "Generating a recipe for an adjunct member of an interleave group");
+
+  VPValue *Mask = nullptr;
+  if (Legal->isMaskRequired(I))
+    Mask = createBlockInMask(I->getParent(), Plan);
+
+  return new VPInterleaveRecipe(IG, Mask);
+}
+
 VPWidenMemoryInstructionRecipe *
 VPRecipeBuilder::tryToWidenMemory(Instruction *I, VFRange &Range,
                                   VPlanPtr &Plan) {
@@ -6726,6 +6757,8 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, VFRange &Range,
         CM.getWideningDecision(I, VF);
     assert(Decision != LoopVectorizationCostModel::CM_Unknown &&
            "CM decision should be taken at this point.");
+    assert(Decision != LoopVectorizationCostModel::CM_Interleave &&
+           "Interleave memory opportunity should be caught earlier.");
     return Decision != LoopVectorizationCostModel::CM_Scalarize;
   };
 
@@ -6890,21 +6923,15 @@ bool VPRecipeBuilder::tryToWiden(Instruction *I, VPBasicBlock *VPBB,
   if (!LoopVectorizationPlanner::getDecisionAndClampRange(willWiden, Range))
     return false;
 
-  // If this ingredient's recipe is to be recorded, keep its recipe a singleton
-  // to avoid having to split recipes later.
-  bool IsSingleton = Ingredient2Recipe.count(I);
-
   // Success: widen this instruction. We optimize the common case where
   // consecutive instructions can be represented by a single recipe.
-  if (!IsSingleton && !VPBB->empty() && LastExtensibleRecipe == &VPBB->back() &&
-      LastExtensibleRecipe->appendInstruction(I))
-    return true;
+  if (!VPBB->empty()) {
+    VPWidenRecipe *LastWidenRecipe = dyn_cast<VPWidenRecipe>(&VPBB->back());
+    if (LastWidenRecipe && LastWidenRecipe->appendInstruction(I))
+      return true;
+  }
 
-  VPWidenRecipe *WidenRecipe = new VPWidenRecipe(I);
-  if (!IsSingleton)
-    LastExtensibleRecipe = WidenRecipe;
-  setRecipe(I, WidenRecipe);
-  VPBB->appendRecipe(WidenRecipe);
+  VPBB->appendRecipe(new VPWidenRecipe(I));
   return true;
 }
 
@@ -6920,7 +6947,6 @@ VPBasicBlock *VPRecipeBuilder::handleReplication(
       [&](unsigned VF) { return CM.isScalarWithPredication(I, VF); }, Range);
 
   auto *Recipe = new VPReplicateRecipe(I, IsUniform, IsPredicated);
-  setRecipe(I, Recipe);
 
   // Find if I uses a predicated instruction. If so, it will use its scalar
   // value. Avoid hoisting the insert-element which packs the scalar value into
@@ -6979,20 +7005,36 @@ VPRegionBlock *VPRecipeBuilder::createReplicateRegion(Instruction *Instr,
 bool VPRecipeBuilder::tryToCreateRecipe(Instruction *Instr, VFRange &Range,
                                         VPlanPtr &Plan, VPBasicBlock *VPBB) {
   VPRecipeBase *Recipe = nullptr;
-
-  // First, check for specific widening recipes that deal with memory
-  // operations, inductions and Phi nodes.
-  if ((Recipe = tryToWidenMemory(Instr, Range, Plan)) ||
-      (Recipe = tryToOptimizeInduction(Instr, Range)) ||
-      (Recipe = tryToBlend(Instr, Plan)) ||
-      (isa<PHINode>(Instr) &&
-       (Recipe = new VPWidenPHIRecipe(cast<PHINode>(Instr))))) {
-    setRecipe(Instr, Recipe);
+  // Check if Instr should belong to an interleave memory recipe, or already
+  // does. In the latter case Instr is irrelevant.
+  if ((Recipe = tryToInterleaveMemory(Instr, Range, Plan))) {
     VPBB->appendRecipe(Recipe);
     return true;
   }
 
-  // Check if Instr is to be widened by a general VPWidenRecipe.
+  // Check if Instr is a memory operation that should be widened.
+  if ((Recipe = tryToWidenMemory(Instr, Range, Plan))) {
+    VPBB->appendRecipe(Recipe);
+    return true;
+  }
+
+  // Check if Instr should form some PHI recipe.
+  if ((Recipe = tryToOptimizeInduction(Instr, Range))) {
+    VPBB->appendRecipe(Recipe);
+    return true;
+  }
+  if ((Recipe = tryToBlend(Instr, Plan))) {
+    VPBB->appendRecipe(Recipe);
+    return true;
+  }
+  if (PHINode *Phi = dyn_cast<PHINode>(Instr)) {
+    VPBB->appendRecipe(new VPWidenPHIRecipe(Phi));
+    return true;
+  }
+
+  // Check if Instr is to be widened by a general VPWidenRecipe, after
+  // having first checked for specific widening recipes that deal with
+  // Interleave Groups, Inductions and Phi nodes.
   if (tryToWiden(Instr, VPBB, Range))
     return true;
 
@@ -7048,57 +7090,19 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(unsigned MinVF,
 VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     VFRange &Range, SmallPtrSetImpl<Value *> &NeedDef,
     SmallPtrSetImpl<Instruction *> &DeadInstructions) {
-
   // Hold a mapping from predicated instructions to their recipes, in order to
   // fix their AlsoPack behavior if a user is determined to replicate and use a
   // scalar instead of vector value.
   DenseMap<Instruction *, VPReplicateRecipe *> PredInst2Recipe;
 
   DenseMap<Instruction *, Instruction *> &SinkAfter = Legal->getSinkAfter();
-
-  SmallPtrSet<const InterleaveGroup<Instruction> *, 1> InterleaveGroups;
-
-  VPRecipeBuilder RecipeBuilder(OrigLoop, TLI, Legal, CM, Builder);
-
-  // ---------------------------------------------------------------------------
-  // Pre-construction: record ingredients whose recipes we'll need to further
-  // process after constructing the initial VPlan.
-  // ---------------------------------------------------------------------------
-
-  // Mark instructions we'll need to sink later and their targets as
-  // ingredients whose recipe we'll need to record.
-  for (auto &Entry : SinkAfter) {
-    RecipeBuilder.recordRecipeOf(Entry.first);
-    RecipeBuilder.recordRecipeOf(Entry.second);
-  }
-
-  // For each interleave group which is relevant for this (possibly trimmed)
-  // Range, add it to the set of groups to be later applied to the VPlan and add
-  // placeholders for its members' Recipes which we'll be replacing with a
-  // single VPInterleaveRecipe.
-  for (InterleaveGroup<Instruction> *IG : IAI.getInterleaveGroups()) {
-    auto applyIG = [IG, this](unsigned VF) -> bool {
-      return (VF >= 2 && // Query is illegal for VF == 1
-              CM.getWideningDecision(IG->getInsertPos(), VF) ==
-                  LoopVectorizationCostModel::CM_Interleave);
-    };
-    if (!getDecisionAndClampRange(applyIG, Range))
-      continue;
-    InterleaveGroups.insert(IG);
-    for (unsigned i = 0; i < IG->getFactor(); i++)
-      if (Instruction *Member = IG->getMember(i))
-        RecipeBuilder.recordRecipeOf(Member);
-  };
-
-  // ---------------------------------------------------------------------------
-  // Build initial VPlan: Scan the body of the loop in a topological order to
-  // visit each basic block after having visited its predecessor basic blocks.
-  // ---------------------------------------------------------------------------
+  DenseMap<Instruction *, Instruction *> SinkAfterInverse;
 
   // Create a dummy pre-entry VPBasicBlock to start building the VPlan.
   VPBasicBlock *VPBB = new VPBasicBlock("Pre-Entry");
   auto Plan = std::make_unique<VPlan>(VPBB);
 
+  VPRecipeBuilder RecipeBuilder(OrigLoop, TLI, Legal, CM, Builder);
   // Represent values that will have defs inside VPlan.
   for (Value *V : NeedDef)
     Plan->addVPValue(V);
@@ -7119,7 +7123,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
     std::vector<Instruction *> Ingredients;
 
-    // Introduce each ingredient into VPlan.
+    // Organize the ingredients to vectorize from current basic block in the
+    // right order.
     for (Instruction &I : BB->instructionsWithoutDebug()) {
       Instruction *Instr = &I;
 
@@ -7129,6 +7134,43 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
           DeadInstructions.find(Instr) != DeadInstructions.end())
         continue;
 
+      // I is a member of an InterleaveGroup for Range.Start. If it's an adjunct
+      // member of the IG, do not construct any Recipe for it.
+      const InterleaveGroup<Instruction> *IG =
+          CM.getInterleavedAccessGroup(Instr);
+      if (IG && Instr != IG->getInsertPos() &&
+          Range.Start >= 2 && // Query is illegal for VF == 1
+          CM.getWideningDecision(Instr, Range.Start) ==
+              LoopVectorizationCostModel::CM_Interleave) {
+        auto SinkCandidate = SinkAfterInverse.find(Instr);
+        if (SinkCandidate != SinkAfterInverse.end())
+          Ingredients.push_back(SinkCandidate->second);
+        continue;
+      }
+
+      // Move instructions to handle first-order recurrences, step 1: avoid
+      // handling this instruction until after we've handled the instruction it
+      // should follow.
+      auto SAIt = SinkAfter.find(Instr);
+      if (SAIt != SinkAfter.end()) {
+        LLVM_DEBUG(dbgs() << "Sinking" << *SAIt->first << " after"
+                          << *SAIt->second
+                          << " to vectorize a 1st order recurrence.\n");
+        SinkAfterInverse[SAIt->second] = Instr;
+        continue;
+      }
+
+      Ingredients.push_back(Instr);
+
+      // Move instructions to handle first-order recurrences, step 2: push the
+      // instruction to be sunk at its insertion point.
+      auto SAInvIt = SinkAfterInverse.find(Instr);
+      if (SAInvIt != SinkAfterInverse.end())
+        Ingredients.push_back(SAInvIt->second);
+    }
+
+    // Introduce each ingredient into VPlan.
+    for (Instruction *Instr : Ingredients) {
       if (RecipeBuilder.tryToCreateRecipe(Instr, Range, Plan, VPBB))
         continue;
 
@@ -7152,32 +7194,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   VPBlockBase *Entry = Plan->setEntry(PreEntry->getSingleSuccessor());
   VPBlockUtils::disconnectBlocks(PreEntry, Entry);
   delete PreEntry;
-
-  // ---------------------------------------------------------------------------
-  // Transform initial VPlan: Apply previously taken decisions, in order, to
-  // bring the VPlan to its final state.
-  // ---------------------------------------------------------------------------
-
-  // Apply Sink-After legal constraints.
-  for (auto &Entry : SinkAfter) {
-    VPRecipeBase *Sink = RecipeBuilder.getRecipe(Entry.first);
-    VPRecipeBase *Target = RecipeBuilder.getRecipe(Entry.second);
-    Sink->moveAfter(Target);
-  }
-
-  // Interleave memory: for each Interleave Group we marked earlier as relevant
-  // for this VPlan, replace the Recipes widening its memory instructions with a
-  // single VPInterleaveRecipe at its insertion point.
-  for (auto IG : InterleaveGroups) {
-    auto *Recipe = cast<VPWidenMemoryInstructionRecipe>(
-        RecipeBuilder.getRecipe(IG->getInsertPos()));
-    (new VPInterleaveRecipe(IG, Recipe->getMask()))->insertBefore(Recipe);
-
-    for (unsigned i = 0; i < IG->getFactor(); ++i)
-      if (Instruction *Member = IG->getMember(i)) {
-        RecipeBuilder.getRecipe(Member)->eraseFromParent();
-      }
-  }
 
   // Finally, if tail is folded by masking, introduce selects between the phi
   // and the live-out instruction of each reduction, at the end of the latch.
@@ -7411,11 +7427,12 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
 }
 
 void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
-  VPValue *Mask = getMask();
-  if (!Mask)
+  if (!User)
     return State.ILV->vectorizeMemoryInstruction(&Instr);
 
+  // Last (and currently only) operand is a mask.
   InnerLoopVectorizer::VectorParts MaskValues(State.UF);
+  VPValue *Mask = User->getOperand(User->getNumOperands() - 1);
   for (unsigned Part = 0; Part < State.UF; ++Part)
     MaskValues[Part] = State.get(Mask, Part);
   State.ILV->vectorizeMemoryInstruction(&Instr, &MaskValues);
@@ -7464,7 +7481,7 @@ static bool processLoopInVPlanNativePath(
   // Use the planner for outer loop vectorization.
   // TODO: CM is not used at this point inside the planner. Turn CM into an
   // optional argument if we don't need it in the future.
-  LoopVectorizationPlanner LVP(L, LI, TLI, TTI, LVL, CM, IAI);
+  LoopVectorizationPlanner LVP(L, LI, TLI, TTI, LVL, CM);
 
   // Get user vectorization factor.
   const unsigned UserVF = Hints.getWidth();
@@ -7624,7 +7641,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   CM.collectValuesToIgnore();
 
   // Use the planner for vectorization.
-  LoopVectorizationPlanner LVP(L, LI, TLI, TTI, &LVL, CM, IAI);
+  LoopVectorizationPlanner LVP(L, LI, TLI, TTI, &LVL, CM);
 
   // Get user vectorization factor.
   unsigned UserVF = Hints.getWidth();
