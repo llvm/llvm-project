@@ -17,7 +17,7 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool test()
 {
     char s2[3] = {0};
     assert(std::char_traits<char>::assign(s2, 3, char(5)) == s2);
@@ -25,6 +25,17 @@ int main(int, char**)
     assert(s2[1] == char(5));
     assert(s2[2] == char(5));
     assert(std::char_traits<char>::assign(NULL, 0, char(5)) == NULL);
+
+  return true;
+}
+
+int main(int, char**)
+{
+    test();
+
+#if TEST_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)
+    static_assert(test());
+#endif
 
   return 0;
 }
