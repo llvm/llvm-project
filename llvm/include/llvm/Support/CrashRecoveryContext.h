@@ -111,12 +111,12 @@ public:
 /// a crash recovery context.
 class CrashRecoveryContextCleanup {
 protected:
-  CrashRecoveryContext *context;
+  CrashRecoveryContext *context = nullptr;
   CrashRecoveryContextCleanup(CrashRecoveryContext *context)
-      : context(context), cleanupFired(false) {}
+      : context(context) {}
 
 public:
-  bool cleanupFired;
+  bool cleanupFired = false;
 
   virtual ~CrashRecoveryContextCleanup();
   virtual void recoverResources() = 0;
@@ -127,7 +127,7 @@ public:
 
 private:
   friend class CrashRecoveryContext;
-  CrashRecoveryContextCleanup *prev, *next;
+  CrashRecoveryContextCleanup *prev = nullptr, *next = nullptr;
 };
 
 /// Base class of cleanup handler that controls recovery of resources of the
