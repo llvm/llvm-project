@@ -759,35 +759,42 @@ Value *InstCombiner::SimplifyUsingDistributiveLaws(BinaryOperator &I) {
 
 Value *InstCombiner::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
                                                     Value *LHS, Value *RHS) {
-  Instruction::BinaryOps Opcode = I.getOpcode();
-  // (op (select (a, b, c)), (select (a, d, e))) -> (select (a, (op b, d), (op
-  // c, e)))
-  Value *A, *B, *C, *D, *E;
-  Value *SI = nullptr;
-  if (match(LHS, m_Select(m_Value(A), m_Value(B), m_Value(C))) &&
-      match(RHS, m_Select(m_Specific(A), m_Value(D), m_Value(E)))) {
-    bool SelectsHaveOneUse = LHS->hasOneUse() && RHS->hasOneUse();
+  Value *A, *B, *C, *D, *E, *F;
+  bool LHSIsSelect = match(LHS, m_Select(m_Value(A), m_Value(B), m_Value(C)));
+  bool RHSIsSelect = match(RHS, m_Select(m_Value(D), m_Value(E), m_Value(F)));
+  if (!LHSIsSelect && !RHSIsSelect)
+    return nullptr;
 
-    FastMathFlags FMF;
-    BuilderTy::FastMathFlagGuard Guard(Builder);
-    if (isa<FPMathOperator>(&I)) {
-      FMF = I.getFastMathFlags();
-      Builder.setFastMathFlags(FMF);
-    }
-
-    Value *V1 = SimplifyBinOp(Opcode, C, E, FMF, SQ.getWithInstruction(&I));
-    Value *V2 = SimplifyBinOp(Opcode, B, D, FMF, SQ.getWithInstruction(&I));
-    if (V1 && V2)
-      SI = Builder.CreateSelect(A, V2, V1);
-    else if (V2 && SelectsHaveOneUse)
-      SI = Builder.CreateSelect(A, V2, Builder.CreateBinOp(Opcode, C, E));
-    else if (V1 && SelectsHaveOneUse)
-      SI = Builder.CreateSelect(A, Builder.CreateBinOp(Opcode, B, D), V1);
-
-    if (SI)
-      SI->takeName(&I);
+  FastMathFlags FMF;
+  BuilderTy::FastMathFlagGuard Guard(Builder);
+  if (isa<FPMathOperator>(&I)) {
+    FMF = I.getFastMathFlags();
+    Builder.setFastMathFlags(FMF);
   }
 
+  Instruction::BinaryOps Opcode = I.getOpcode();
+  SimplifyQuery Q = SQ.getWithInstruction(&I);
+
+  Value *Cond, *True = nullptr, *False = nullptr;
+  if (LHSIsSelect && RHSIsSelect && A == D) {
+    // (A ? B : C) op (A ? E : F) -> A ? (B op E) : (C op F)
+    Cond = A;
+    True = SimplifyBinOp(Opcode, B, E, FMF, Q);
+    False = SimplifyBinOp(Opcode, C, F, FMF, Q);
+
+    if (LHS->hasOneUse() && RHS->hasOneUse()) {
+      if (False && !True)
+        True = Builder.CreateBinOp(Opcode, B, E);
+      else if (True && !False)
+        False = Builder.CreateBinOp(Opcode, C, F);
+    }
+  }
+
+  if (!True || !False)
+    return nullptr;
+
+  Value *SI = Builder.CreateSelect(Cond, True, False);
+  SI->takeName(&I);
   return SI;
 }
 
