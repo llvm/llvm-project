@@ -1190,16 +1190,15 @@ bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
                                              true /*instance*/);
 
   if (!AtIndexGetter && S.getLangOpts().DebuggerObjCLiteral) {
-    AtIndexGetter = ObjCMethodDecl::Create(S.Context, SourceLocation(),
-                           SourceLocation(), AtIndexGetterSelector,
-                           S.Context.getObjCIdType() /*ReturnType*/,
-                           nullptr /*TypeSourceInfo */,
-                           S.Context.getTranslationUnitDecl(),
-                           true /*Instance*/, false/*isVariadic*/,
-                           /*isPropertyAccessor=*/false,
-                           /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
-                           ObjCMethodDecl::Required,
-                           false);
+    AtIndexGetter = ObjCMethodDecl::Create(
+        S.Context, SourceLocation(), SourceLocation(), AtIndexGetterSelector,
+        S.Context.getObjCIdType() /*ReturnType*/, nullptr /*TypeSourceInfo */,
+        S.Context.getTranslationUnitDecl(), true /*Instance*/,
+        false /*isVariadic*/,
+        /*isPropertyAccessor=*/false,
+        /*isSynthesizedAccessorStub=*/false,
+        /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
+        ObjCMethodDecl::Required, false);
     ParmVarDecl *Argument = ParmVarDecl::Create(S.Context, AtIndexGetter,
                                                 SourceLocation(), SourceLocation(),
                                                 arrayRef ? &S.Context.Idents.get("index")
@@ -1303,6 +1302,7 @@ bool ObjCSubscriptOpBuilder::findAtIndexSetter() {
         ReturnType, ReturnTInfo, S.Context.getTranslationUnitDecl(),
         true /*Instance*/, false /*isVariadic*/,
         /*isPropertyAccessor=*/false,
+        /*isSynthesizedAccessorStub=*/false,
         /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
         ObjCMethodDecl::Required, false);
     SmallVector<ParmVarDecl *, 2> Params;
