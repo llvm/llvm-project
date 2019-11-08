@@ -2943,7 +2943,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   //    varying check.
   Rewriter.setInsertPoint(L->getLoopPreheader()->getTerminator());
   IRBuilder<> B(L->getLoopPreheader()->getTerminator());
-  Value *ExactBTCV = nullptr; //lazy generated if needed
+  Value *ExactBTCV = nullptr; // Lazily generated if needed.
   for (BasicBlock *ExitingBB : ExitingBlocks) {
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
 
