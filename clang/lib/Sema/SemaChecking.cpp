@@ -14682,6 +14682,8 @@ void Sema::RefersToMemberWithReducedAlignment(
   bool AnyIsPacked = false;
   do {
     QualType BaseType = ME->getBase()->getType();
+    if (BaseType->isDependentType())
+      return;
     if (ME->isArrow())
       BaseType = BaseType->getPointeeType();
     RecordDecl *RD = BaseType->castAs<RecordType>()->getDecl();
