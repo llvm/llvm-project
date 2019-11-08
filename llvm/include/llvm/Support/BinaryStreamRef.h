@@ -198,7 +198,7 @@ public:
 };
 
 struct BinarySubstreamRef {
-  uint32_t Offset;            // Offset in the parent stream
+  uint32_t Offset = 0;        // Offset in the parent stream
   BinaryStreamRef StreamData; // Stream Data
 
   BinarySubstreamRef slice(uint32_t Off, uint32_t Size) const {
@@ -211,8 +211,8 @@ struct BinarySubstreamRef {
   BinarySubstreamRef keep_front(uint32_t N) const { return slice(0, N); }
 
   std::pair<BinarySubstreamRef, BinarySubstreamRef>
-  split(uint32_t Offset) const {
-    return std::make_pair(keep_front(Offset), drop_front(Offset));
+  split(uint32_t Off) const {
+    return std::make_pair(keep_front(Off), drop_front(Off));
   }
 
   uint32_t size() const { return StreamData.getLength(); }

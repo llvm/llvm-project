@@ -139,10 +139,10 @@ Error BinaryStreamReader::readStreamRef(BinaryStreamRef &Ref, uint32_t Length) {
   return Error::success();
 }
 
-Error BinaryStreamReader::readSubstream(BinarySubstreamRef &Stream,
-                                        uint32_t Size) {
-  Stream.Offset = getOffset();
-  return readStreamRef(Stream.StreamData, Size);
+Error BinaryStreamReader::readSubstream(BinarySubstreamRef &Ref,
+                                        uint32_t Length) {
+  Ref.Offset = getOffset();
+  return readStreamRef(Ref.StreamData, Length);
 }
 
 Error BinaryStreamReader::skip(uint32_t Amount) {
