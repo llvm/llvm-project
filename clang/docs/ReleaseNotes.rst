@@ -289,6 +289,9 @@ clang-format
   ``Cpp11`` is treated as ``Latest``, as this was always clang-format's behavior.
   (One motivation for this change is the new name describes the behavior better).
 
+- clang-format gets a new option called ``--dry-run`` or ``-n`` to emit a
+  warning.
+
 libclang
 --------
 
