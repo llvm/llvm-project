@@ -3184,6 +3184,11 @@ def ADDIStocHA : PPCEmitTimePseudo<(outs gprc:$rD), (ins gprc_nor0:$reg, tocentr
 // the function label.
 def UpdateGBR : PPCEmitTimePseudo<(outs gprc:$rD, gprc:$rT), (ins gprc:$rI), "#UpdateGBR", []>;
 
+// Pseudo-instruction marked for deletion. When deleting the instruction would
+// cause iterator invalidation in MIR transformation passes, this pseudo can be
+// used instead. It will be removed unconditionally at pre-emit time (prior to
+// branch selection).
+def UNENCODED_NOP: PPCEmitTimePseudo<(outs), (ins), "#UNENCODED_NOP", []>;
 
 // Standard shifts.  These are represented separately from the real shifts above
 // so that we can distinguish between shifts that allow 5-bit and 6-bit shift
