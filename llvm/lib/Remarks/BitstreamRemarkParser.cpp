@@ -278,19 +278,20 @@ Expected<bool> BitstreamParserHelper::isRemarkBlock() {
   return isBlock(Stream, META_BLOCK_ID);
 }
 
-static Error validateMagicNumber(StringRef Magic) {
-  if (Magic != remarks::ContainerMagic)
+static Error validateMagicNumber(StringRef MagicNumber) {
+  if (MagicNumber != remarks::ContainerMagic)
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Unknown magic number: expecting %s, got %.4s.",
-                             remarks::ContainerMagic.data(), Magic.data());
+                             remarks::ContainerMagic.data(), MagicNumber.data());
   return Error::success();
 }
 
 static Error advanceToMetaBlock(BitstreamParserHelper &Helper) {
-  Expected<std::array<char, 4>> Magic = Helper.parseMagic();
-  if (!Magic)
-    return Magic.takeError();
-  if (Error E = validateMagicNumber(StringRef(Magic->data(), Magic->size())))
+  Expected<std::array<char, 4>> MagicNumber = Helper.parseMagic();
+  if (!MagicNumber)
+    return MagicNumber.takeError();
+  if (Error E = validateMagicNumber(
+          StringRef(MagicNumber->data(), MagicNumber->size())))
     return E;
   if (Error E = Helper.parseBlockInfoBlock())
     return E;
@@ -309,11 +310,12 @@ remarks::createBitstreamParserFromMeta(
     StringRef Buf, Optional<ParsedStringTable> StrTab,
     Optional<StringRef> ExternalFilePrependPath) {
   BitstreamParserHelper Helper(Buf);
-  Expected<std::array<char, 4>> Magic = Helper.parseMagic();
-  if (!Magic)
-    return Magic.takeError();
+  Expected<std::array<char, 4>> MagicNumber = Helper.parseMagic();
+  if (!MagicNumber)
+    return MagicNumber.takeError();
 
-  if (Error E = validateMagicNumber(StringRef(Magic->data(), Magic->size())))
+  if (Error E = validateMagicNumber(
+          StringRef(MagicNumber->data(), MagicNumber->size())))
     return std::move(E);
 
   auto Parser =
