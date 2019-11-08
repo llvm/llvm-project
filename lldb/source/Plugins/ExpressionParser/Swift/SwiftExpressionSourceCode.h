@@ -9,6 +9,7 @@
 #ifndef liblldb_SwiftExpressionSourceCode_h
 #define liblldb_SwiftExpressionSourceCode_h
 
+#include "lldb/Expression/Expression.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/lldb-enumerations.h"
 
