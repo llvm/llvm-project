@@ -8403,7 +8403,6 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: }
 ; CHECK-NEXT: .section .debug_macinfo
 ; CHECK-NEXT: {
-; CHECK-EMPTY:
 ; CHECK-NEXT: }
 
 ; Function Attrs: nounwind readnone

@@ -333,6 +333,5 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT: }
 ; CHECK-NEXT: .section .debug_macinfo
 ; CHECK-NEXT: {
-; CHECK-EMPTY:
 ; CHECK-NEXT: }
 
