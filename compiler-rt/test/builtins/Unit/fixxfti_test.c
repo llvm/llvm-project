@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_fixxfti
 // REQUIRES: x86-target-arch
 
 //===-- fixxfti_test.c - Test __fixxfti -----------------------------------===//

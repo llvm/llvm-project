@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -lm -o %t && %run %t
+// REQUIRES: librt_has_mulxc3
 // UNSUPPORTED: powerpc64
 // REQUIRES: x86-target-arch
 //===-- mulxc3_test.c - Test __mulxc3 -------------------------------------===//

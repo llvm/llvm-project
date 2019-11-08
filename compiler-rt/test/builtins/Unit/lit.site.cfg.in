@@ -6,6 +6,8 @@ config.target_cflags = "@BUILTINS_TEST_TARGET_CFLAGS@"
 config.target_arch = "@BUILTINS_TEST_TARGET_ARCH@"
 config.is_msvc = @MSVC_PYBOOL@
 config.builtins_is_msvc = @BUILTINS_IS_MSVC_PYBOOL@
+config.builtins_lit_source_features = "@BUILTINS_LIT_SOURCE_FEATURES@"
+
 # Load common config for all compiler-rt lit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
 
