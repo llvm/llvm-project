@@ -126,7 +126,7 @@ public:
 /// Only information available on most platforms is included.
 class directory_entry {
   std::string Path;
-  llvm::sys::fs::file_type Type;
+  llvm::sys::fs::file_type Type = llvm::sys::fs::file_type::type_unknown;
 
 public:
   directory_entry() = default;
