@@ -1921,6 +1921,8 @@ void TextNodeDumper::VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
       OS << " unsafe_unretained";
     if (Attrs & ObjCPropertyDecl::OBJC_PR_class)
       OS << " class";
+    if (Attrs & ObjCPropertyDecl::OBJC_PR_direct)
+      OS << " direct";
     if (Attrs & ObjCPropertyDecl::OBJC_PR_getter)
       dumpDeclRef(D->getGetterMethodDecl(), "getter");
     if (Attrs & ObjCPropertyDecl::OBJC_PR_setter)
