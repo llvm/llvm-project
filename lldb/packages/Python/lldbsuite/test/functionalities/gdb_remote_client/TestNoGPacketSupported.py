@@ -23,7 +23,6 @@ from gdbclientutils import *
 class TestNoGPacketSupported(GDBRemoteTestBase):
 
     @skipIfXmlSupportMissing
-    @expectedFailureAll
     def test(self):
         class MyResponder(MockGDBServerResponder):
             def haltReason(self):
