@@ -2,7 +2,7 @@
 
 // CHECK:      --- !experimental-ifs-v1
 // CHECK-NEXT: IfsVersion: 1.0
-// CHECK-NEXT: Triple: x86_64-unknown-linux-gnu
+// CHECK-NEXT: Triple:
 // CHECK-NEXT: ObjectFileFormat: ELF
 // CHECK-NEXT: Symbols:
 // CHECK-NEXT: ...
