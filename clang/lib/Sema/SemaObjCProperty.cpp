@@ -2175,7 +2175,6 @@ Sema::AtomicPropertySetterGetterRules (ObjCImplDecl* IMPDecl,
     const ObjCPropertyDecl *Property = I->second;
     ObjCMethodDecl *GetterMethod = nullptr;
     ObjCMethodDecl *SetterMethod = nullptr;
-    bool LookedUpGetterSetter = false;
 
     unsigned Attributes = Property->getPropertyAttributes();
     unsigned AttributesAsWritten = Property->getPropertyAttributesAsWritten();
@@ -2192,7 +2191,6 @@ Sema::AtomicPropertySetterGetterRules (ObjCImplDecl* IMPDecl,
         GetterMethod = nullptr;
       if (SetterMethod && SetterMethod->isSynthesizedAccessorStub())
         SetterMethod = nullptr;
-      LookedUpGetterSetter = true;
       if (GetterMethod) {
         Diag(GetterMethod->getLocation(),
              diag::warn_default_atomic_custom_getter_setter)
