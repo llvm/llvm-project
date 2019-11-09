@@ -178,10 +178,10 @@ namespace {
 /// others) before the SimpleKey's Tok.
 struct SimpleKey {
   TokenQueueT::iterator Tok;
-  unsigned Column;
-  unsigned Line;
-  unsigned FlowLevel;
-  bool IsRequired;
+  unsigned Column = 0;
+  unsigned Line = 0;
+  unsigned FlowLevel = 0;
+  bool IsRequired = false;
 
   bool operator ==(const SimpleKey &Other) {
     return Tok == Other.Tok;
