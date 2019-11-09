@@ -547,6 +547,8 @@ public:
 
     // Indicate if the global value cannot be inlined.
     unsigned NoInline : 1;
+    // Indicate if function should be always inlined.
+    unsigned AlwaysInline : 1;
   };
 
   /// Create an empty FunctionSummary (with specified call edges).

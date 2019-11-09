@@ -330,7 +330,7 @@ static std::string fflagsToString(FunctionSummary::FFlags F) {
   auto FlagValue = [](unsigned V) { return V ? '1' : '0'; };
   char FlagRep[] = {FlagValue(F.ReadNone),     FlagValue(F.ReadOnly),
                     FlagValue(F.NoRecurse),    FlagValue(F.ReturnDoesNotAlias),
-                    FlagValue(F.NoInline), 0};
+                    FlagValue(F.NoInline), FlagValue(F.AlwaysInline), 0};
 
   return FlagRep;
 }
