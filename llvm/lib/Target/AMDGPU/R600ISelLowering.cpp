@@ -1500,7 +1500,6 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   // buffer. However SEXT loads from other address spaces are not supported, so
   // we need to expand them here.
   if (LoadNode->getExtensionType() == ISD::SEXTLOAD) {
-    EVT MemVT = LoadNode->getMemoryVT();
     assert(!MemVT.isVector() && (MemVT == MVT::i16 || MemVT == MVT::i8));
     SDValue NewLoad = DAG.getExtLoad(
         ISD::EXTLOAD, DL, VT, Chain, Ptr, LoadNode->getPointerInfo(), MemVT,
