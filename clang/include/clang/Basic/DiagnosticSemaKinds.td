@@ -10065,7 +10065,6 @@ def err_preserve_field_info_not_field : Error<
   "__builtin_preserve_field_info argument %0 not a field access">;
 def err_preserve_field_info_not_const: Error<
   "__builtin_preserve_field_info argument %0 not a constant">;
-def err_preserve_access_index_wrong_type: Error<"%0 attribute only applies to %1">;
 
 def err_bit_cast_non_trivially_copyable : Error<
   "__builtin_bit_cast %select{source|destination}0 type must be trivially copyable">;

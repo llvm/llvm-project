@@ -5700,59 +5700,6 @@ static void handleAVRSignalAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   handleSimpleAttribute<AVRSignalAttr>(S, D, AL);
 }
 
-static void handleBPFPreserveAIRecord(Sema &S, RecordDecl *RD,
-    const BPFPreserveAccessIndexAttr &AL) {
-  // Add preserve_access_index attribute to all fields and inner records.
-  for (DeclContext::decl_iterator D = RD->decls_begin(), DEnd = RD->decls_end();
-       D != DEnd; ++D) {
-    // Any member or inner struct having attribute means done.
-    if (D->hasAttr<BPFPreserveAccessIndexAttr>())
-      return;
-
-    RecordDecl *Rec = dyn_cast<RecordDecl>(*D);
-    if (Rec) {
-      Rec->addAttr(::new (S.Context) BPFPreserveAccessIndexAttr(S.Context, AL));
-      handleBPFPreserveAIRecord(S, Rec, AL);
-    } else {
-      D->addAttr(::new (S.Context) BPFPreserveAccessIndexAttr(S.Context, AL));
-    }
-  }
-}
-
-static void handleBPFPreserveAIRecord(Sema &S, RecordDecl *RD,
-    const ParsedAttr &AL) {
-  // Add preserve_access_index attribute to all fields and inner records.
-  for (DeclContext::decl_iterator D = RD->decls_begin(), DEnd = RD->decls_end();
-       D != DEnd; ++D) {
-    RecordDecl *Rec = dyn_cast<RecordDecl>(*D);
-    if (Rec) {
-      // Inner record may have been processed.
-      if (!Rec->hasAttr<BPFPreserveAccessIndexAttr>()) {
-        Rec->addAttr(::new (S.Context) BPFPreserveAccessIndexAttr(S.Context, AL));
-        handleBPFPreserveAIRecord(S, Rec, AL);
-      }
-    } else {
-      D->addAttr(::new (S.Context) BPFPreserveAccessIndexAttr(S.Context, AL));
-    }
-  }
-}
-
-static void handleBPFPreserveAccessIndexAttr(Sema &S, Decl *D,
-    const ParsedAttr &AL) {
-  RecordDecl *Rec = dyn_cast<RecordDecl>(D);
-  if (!Rec) {
-    S.Diag(D->getLocation(), diag::err_preserve_access_index_wrong_type)
-        << "preserve_addess_index" << "struct or union type";
-    return;
-  }
-
-  if (!checkAttributeNumArgs(S, AL, 0))
-    return;
-
-  handleBPFPreserveAIRecord(S, Rec, AL);
-  Rec->addAttr(::new (S.Context) BPFPreserveAccessIndexAttr(S.Context, AL));
-}
-
 static void handleWebAssemblyImportModuleAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!isFunctionOrMethod(D)) {
     S.Diag(D->getLocation(), diag::warn_attribute_wrong_decl_type)
@@ -6629,9 +6576,6 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_AVRSignal:
     handleAVRSignalAttr(S, D, AL);
     break;
-  case ParsedAttr::AT_BPFPreserveAccessIndex:
-    handleBPFPreserveAccessIndexAttr(S, D, AL);
-    break;
   case ParsedAttr::AT_WebAssemblyImportModule:
     handleWebAssemblyImportModuleAttr(S, D, AL);
     break;
@@ -7381,8 +7325,7 @@ void Sema::ProcessDeclAttributeList(Scope *S, Decl *D,
   }
 }
 
-// Helper for delayed processing TransparentUnion or BPFPreserveAccessIndexAttr
-// attribute.
+// Helper for delayed processing TransparentUnion attribute.
 void Sema::ProcessDeclAttributeDelayed(Decl *D,
                                        const ParsedAttributesView &AttrList) {
   for (const ParsedAttr &AL : AttrList)
@@ -7390,13 +7333,6 @@ void Sema::ProcessDeclAttributeDelayed(Decl *D,
       handleTransparentUnionAttr(*this, D, AL);
       break;
     }
-
-  // For BPFPreserveAccessIndexAttr, we want to populate the attributes
-  // to fields and inner records as well.
-  if (D->hasAttr<BPFPreserveAccessIndexAttr>()) {
-    handleBPFPreserveAIRecord(*this, cast<RecordDecl>(D),
-        *D->getAttr<BPFPreserveAccessIndexAttr>());
-  }
 }
 
 // Annotation attributes are the only attributes allowed after an access

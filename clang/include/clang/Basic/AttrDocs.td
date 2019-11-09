@@ -1634,17 +1634,6 @@ The semantics are as follows:
   }];
 }
 
-def BPFPreserveAccessIndexDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-Clang supports the ``__attribute__((preserve_access_index))``
-attribute for the BPF target. This attribute may be attached to a
-struct or union declaration, where if -g is specified, it enables
-preserving struct or union member access debuginfo indicies of this
-struct or union, similar to clang ``__builtin_preserve_acceess_index()``.
-  }];
-}
-
 def MipsInterruptDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "interrupt (MIPS)";
