@@ -271,7 +271,6 @@ entry:
 ; CHECK-NEXT: }
 ; CHECK-NEXT: .section .debug_macinfo
 ; CHECK-NEXT: {
-; CHECK-EMPTY:
 ; CHECK-NEXT: }
 
 attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
