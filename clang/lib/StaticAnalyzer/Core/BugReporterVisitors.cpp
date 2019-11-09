@@ -1606,9 +1606,6 @@ SuppressInlineDefensiveChecksVisitor(DefinedSVal Value, const ExplodedNode *N)
   AnalyzerOptions &Options = N->getState()->getAnalysisManager().options;
   if (!Options.ShouldSuppressInlinedDefensiveChecks)
     IsSatisfied = true;
-
-  assert(N->getState()->isNull(V).isConstrainedTrue() &&
-         "The visitor only tracks the cases where V is constrained to 0");
 }
 
 void SuppressInlineDefensiveChecksVisitor::Profile(
@@ -1639,13 +1636,12 @@ SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
 
   // Check if in the previous state it was feasible for this value
   // to *not* be null.
-  if (!Pred->getState()->isNull(V).isConstrainedTrue()) {
+  if (!Pred->getState()->isNull(V).isConstrainedTrue() &&
+      Succ->getState()->isNull(V).isConstrainedTrue()) {
     IsSatisfied = true;
 
-    assert(Succ->getState()->isNull(V).isConstrainedTrue());
-
     // Check if this is inlined defensive checks.
-    const LocationContext *CurLC =Succ->getLocationContext();
+    const LocationContext *CurLC = Succ->getLocationContext();
     const LocationContext *ReportLC = BR.getErrorNode()->getLocationContext();
     if (CurLC != ReportLC && !CurLC->isParentOf(ReportLC)) {
       BR.markInvalid("Suppress IDC", CurLC);
@@ -2012,11 +2008,16 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
 
       // Add visitor, which will suppress inline defensive checks.
       if (auto DV = V.getAs<DefinedSVal>())
-        if (!DV->isZeroConstant() && LVState->isNull(*DV).isConstrainedTrue() &&
-            EnableNullFPSuppression)
+        if (!DV->isZeroConstant() && EnableNullFPSuppression) {
+          // Note that LVNode may be too late (i.e., too far from the InputNode)
+          // because the lvalue may have been computed before the inlined call
+          // was evaluated. InputNode may as well be too early here, because
+          // the symbol is already dead; this, however, is fine because we can
+          // still find the node in which it collapsed to null previously.
           report.addVisitor(
-              std::make_unique<SuppressInlineDefensiveChecksVisitor>(*DV,
-                                                                      LVNode));
+              std::make_unique<SuppressInlineDefensiveChecksVisitor>(
+                  *DV, InputNode));
+        }
 
       if (auto KV = V.getAs<KnownSVal>())
         report.addVisitor(std::make_unique<FindLastStoreBRVisitor>(

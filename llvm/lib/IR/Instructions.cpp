@@ -2048,7 +2048,7 @@ bool ShuffleVectorInst::isExtractSubvectorMask(ArrayRef<int> Mask,
     SubIndex = Offset;
   }
 
-  if (0 <= SubIndex) {
+  if (0 <= SubIndex && SubIndex + (int)Mask.size() <= NumSrcElts) {
     Index = SubIndex;
     return true;
   }

@@ -13,12 +13,12 @@
 #ifndef LLVM_ANALYSIS_DDG_H
 #define LLVM_ANALYSIS_DDG_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DirectedGraph.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DependenceGraphBuilder.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/Instructions.h"
-#include <unordered_map>
 
 namespace llvm {
 class DDGNode;
@@ -33,7 +33,11 @@ class LPMUpdater;
 /// 1. Single instruction node containing just one instruction.
 /// 2. Multiple instruction node where two or more instructions from
 ///    the same basic block are merged into one node.
-/// 3. Root node is a special node that connects to all components such that
+/// 3. Pi-block node which is a group of other DDG nodes that are part of a
+///    strongly-connected component of the graph.
+///    A pi-block node contains more than one single or multiple instruction
+///    nodes. The root node cannot be part of a pi-block.
+/// 4. Root node is a special node that connects to all components such that
 ///    there is always a path from it to any node in the graph.
 class DDGNode : public DDGNodeBase {
 public:
@@ -43,6 +47,7 @@ public:
     Unknown,
     SingleInstruction,
     MultiInstruction,
+    PiBlock,
     Root,
   };
 
@@ -155,6 +160,55 @@ private:
   SmallVector<Instruction *, 2> InstList;
 };
 
+/// Subclass of DDGNode representing a pi-block. A pi-block represents a group
+/// of DDG nodes that are part of a strongly-connected component of the graph.
+/// Replacing all the SCCs with pi-blocks results in an acyclic representation
+/// of the DDG. For example if we have:
+/// {a -> b}, {b -> c, d}, {c -> a}
+/// the cycle a -> b -> c -> a is abstracted into a pi-block "p" as follows:
+/// {p -> d} with "p" containing: {a -> b}, {b -> c}, {c -> a}
+class PiBlockDDGNode : public DDGNode {
+public:
+  using PiNodeList = SmallVector<DDGNode *, 4>;
+
+  PiBlockDDGNode() = delete;
+  PiBlockDDGNode(const PiNodeList &List);
+  PiBlockDDGNode(const PiBlockDDGNode &N);
+  PiBlockDDGNode(PiBlockDDGNode &&N);
+  ~PiBlockDDGNode();
+
+  PiBlockDDGNode &operator=(const PiBlockDDGNode &N) {
+    DDGNode::operator=(N);
+    NodeList = N.NodeList;
+    return *this;
+  }
+
+  PiBlockDDGNode &operator=(PiBlockDDGNode &&N) {
+    DDGNode::operator=(std::move(N));
+    NodeList = std::move(N.NodeList);
+    return *this;
+  }
+
+  /// Get the list of nodes in this pi-block.
+  const PiNodeList &getNodes() const {
+    assert(!NodeList.empty() && "Node list is empty.");
+    return NodeList;
+  }
+  PiNodeList &getNodes() {
+    return const_cast<PiNodeList &>(
+        static_cast<const PiBlockDDGNode *>(this)->getNodes());
+  }
+
+  /// Define classof to be able to use isa<>, cast<>, dyn_cast<>, etc.
+  static bool classof(const DDGNode *N) {
+    return N->getKind() == NodeKind::PiBlock;
+  }
+
+private:
+  /// List of nodes in this pi-block.
+  PiNodeList NodeList;
+};
+
 /// Data Dependency Graph Edge.
 /// An edge in the DDG can represent a def-use relationship or
 /// a memory dependence based on the result of DependenceAnalysis.
@@ -163,7 +217,13 @@ private:
 class DDGEdge : public DDGEdgeBase {
 public:
   /// The kind of edge in the DDG
-  enum class EdgeKind { Unknown, RegisterDefUse, MemoryDependence, Rooted };
+  enum class EdgeKind {
+    Unknown,
+    RegisterDefUse,
+    MemoryDependence,
+    Rooted,
+    Last = Rooted // Must be equal to the largest enum value.
+  };
 
   explicit DDGEdge(DDGNode &N) = delete;
   DDGEdge(DDGNode &N, EdgeKind K) : DDGEdgeBase(N), Kind(K) {}
@@ -254,11 +314,22 @@ public:
   DataDependenceGraph(const Loop &L, DependenceInfo &DI);
   ~DataDependenceGraph();
 
+  /// If node \p N belongs to a pi-block return a pointer to the pi-block,
+  /// otherwise return null.
+  const PiBlockDDGNode *getPiBlock(const NodeType &N) const;
+
 protected:
-  /// Add node \p N to the graph, if it's not added yet, and keep track of
-  /// the root node. Return true if node is successfully added.
+  /// Add node \p N to the graph, if it's not added yet, and keep track of the
+  /// root node as well as pi-blocks and their members. Return true if node is
+  /// successfully added.
   bool addNode(NodeType &N);
 
+private:
+  using PiBlockMapType = DenseMap<const NodeType *, const PiBlockDDGNode *>;
+
+  /// Mapping from graph nodes to their containing pi-blocks. If a node is not
+  /// part of a pi-block, it will not appear in this map.
+  PiBlockMapType PiBlockMap;
 };
 
 /// Concrete implementation of a pure data dependence graph builder. This class
@@ -284,6 +355,12 @@ public:
     Graph.addNode(*SN);
     return *SN;
   }
+  DDGNode &createPiBlock(const NodeListType &L) final override {
+    auto *Pi = new PiBlockDDGNode(L);
+    assert(Pi && "Failed to allocate memory for pi-block node.");
+    Graph.addNode(*Pi);
+    return *Pi;
+  }
   DDGEdge &createDefUseEdge(DDGNode &Src, DDGNode &Tgt) final override {
     auto *E = new DDGEdge(Tgt, DDGEdge::EdgeKind::RegisterDefUse);
     assert(E && "Failed to allocate memory for edge");
@@ -304,6 +381,7 @@ public:
     return *E;
   }
 
+  bool shouldCreatePiBlocks() const final override;
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const DDGNode &N);

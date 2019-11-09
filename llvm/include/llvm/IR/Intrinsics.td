@@ -1070,7 +1070,7 @@ def int_experimental_guard : Intrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
 
 // Supports widenable conditions for guards represented as explicit branches.
 def int_experimental_widenable_condition : Intrinsic<[llvm_i1_ty], [],
-                                           [IntrInaccessibleMemOnly, IntrWillReturn]>;
+        [IntrInaccessibleMemOnly, IntrWillReturn, IntrSpeculatable]>;
 
 // NOP: calls/invokes to this intrinsic are removed by codegen
 def int_donothing : Intrinsic<[], [], [IntrNoMem, IntrWillReturn]>;

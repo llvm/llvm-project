@@ -64,7 +64,7 @@ private:
   /// this buffer.
   char *OutBufStart, *OutBufEnd, *OutBufCur;
 
-  enum BufferKind {
+  enum class BufferKind {
     Unbuffered = 0,
     InternalBuffer,
     ExternalBuffer
@@ -97,7 +97,8 @@ public:
   static const Colors RESET = Colors::RESET;
 
   explicit raw_ostream(bool unbuffered = false)
-      : BufferMode(unbuffered ? Unbuffered : InternalBuffer) {
+      : BufferMode(unbuffered ? BufferKind::Unbuffered
+                              : BufferKind::InternalBuffer) {
     // Start out ready to flush.
     OutBufStart = OutBufEnd = OutBufCur = nullptr;
   }
@@ -121,13 +122,13 @@ public:
   /// Set the stream to be buffered, using the specified buffer size.
   void SetBufferSize(size_t Size) {
     flush();
-    SetBufferAndMode(new char[Size], Size, InternalBuffer);
+    SetBufferAndMode(new char[Size], Size, BufferKind::InternalBuffer);
   }
 
   size_t GetBufferSize() const {
     // If we're supposed to be buffered but haven't actually gotten around
     // to allocating the buffer yet, return the value that would be used.
-    if (BufferMode != Unbuffered && OutBufStart == nullptr)
+    if (BufferMode != BufferKind::Unbuffered && OutBufStart == nullptr)
       return preferred_buffer_size();
 
     // Otherwise just return the size of the allocated buffer.
@@ -139,7 +140,7 @@ public:
   /// when the stream is being set to unbuffered.
   void SetUnbuffered() {
     flush();
-    SetBufferAndMode(nullptr, 0, Unbuffered);
+    SetBufferAndMode(nullptr, 0, BufferKind::Unbuffered);
   }
 
   size_t GetNumBytesInBuffer() const {
@@ -325,7 +326,7 @@ protected:
   /// use only by subclasses which can arrange for the output to go directly
   /// into the desired output buffer, instead of being copied on each flush.
   void SetBuffer(char *BufferStart, size_t Size) {
-    SetBufferAndMode(BufferStart, Size, ExternalBuffer);
+    SetBufferAndMode(BufferStart, Size, BufferKind::ExternalBuffer);
   }
 
   /// Return an efficient buffer size for the underlying output mechanism.
@@ -384,7 +385,7 @@ public:
 class raw_fd_ostream : public raw_pwrite_stream {
   int FD;
   bool ShouldClose;
-  bool SupportsSeeking;
+  bool SupportsSeeking = false;
   bool ColorEnabled = true;
 
 #ifdef _WIN32
@@ -395,7 +396,7 @@ class raw_fd_ostream : public raw_pwrite_stream {
 
   std::error_code EC;
 
-  uint64_t pos;
+  uint64_t pos = 0;
 
   /// See raw_ostream::write_impl.
   void write_impl(const char *Ptr, size_t Size) override;

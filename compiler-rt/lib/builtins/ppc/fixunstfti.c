@@ -34,9 +34,9 @@ __uint128_t __fixunstfti(long double input) {
   } ldUnion;
 
   // If the long double is less than 1.0 or negative,
-  // return 0.0.
+  // return 0.
   if (input < 1.0)
-    return 0.0;
+    return 0;
 
   // Retrieve the 64-bit patterns of high and low doubles.
   // Compute the unbiased exponent of both high and low doubles by
@@ -98,6 +98,16 @@ __uint128_t __fixunstfti(long double input) {
     loResult = (long long)ldUnion.d[1];
     loResult <<= shift;
   }
+
+  // If the low double is negative, it may change the integer value of the
+  // whole number if the absolute value of its fractional part is bigger than
+  // the fractional part of the high double. Because both doubles cannot
+  // overlap, this situation only occurs when the high double has no
+  // fractional part.
+  ldUnion.ld = input;
+  if ((ldUnion.d[0] == (double)hiResult) &&
+      (ldUnion.d[1] < (double)((__int128_t)loResult)))
+    loResult--;
 
   // Add the high and low doublewords together to form a 128 bit integer.
   result = loResult + hiResult;

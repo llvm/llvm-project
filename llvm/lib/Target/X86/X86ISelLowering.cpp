@@ -154,6 +154,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setLibcallCallingConv(RTLIB::MUL_I64, CallingConv::X86_StdCall);
   }
 
+  if (Subtarget.getTargetTriple().isOSMSVCRT()) {
+    // MSVCRT doesn't have powi; fall back to pow
+    setLibcallName(RTLIB::POWI_F32, nullptr);
+    setLibcallName(RTLIB::POWI_F64, nullptr);
+  }
+
   if (Subtarget.isTargetDarwin()) {
     // Darwin should use _setjmp/_longjmp instead of setjmp/longjmp.
     setUseUnderscoreSetJmp(false);

@@ -3225,8 +3225,10 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
                         MF->getSubtarget().enableRALocalReassignment(
                             MF->getTarget().getOptLevel());
 
-  EnableAdvancedRASplitCost = ConsiderLocalIntervalCost ||
-                              MF->getSubtarget().enableAdvancedRASplitCost();
+  EnableAdvancedRASplitCost =
+      ConsiderLocalIntervalCost.getNumOccurrences()
+          ? ConsiderLocalIntervalCost
+          : MF->getSubtarget().enableAdvancedRASplitCost();
 
   if (VerifyEnabled)
     MF->verify(this, "Before greedy register allocator");

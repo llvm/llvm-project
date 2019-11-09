@@ -144,6 +144,8 @@ void DirectIvarAssignment::checkASTDecl(const ObjCImplementationDecl *D,
       continue;
 
     const Stmt *Body = M->getBody();
+    if (M->isSynthesizedAccessorStub())
+      continue;
     assert(Body);
 
     MethodCrawler MC(IvarToPropMap, M->getCanonicalDecl(), InterD, BR, this,

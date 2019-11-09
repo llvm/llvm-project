@@ -13,6 +13,7 @@
 #ifndef LLVM_BINARYFORMAT_XCOFF_H
 #define LLVM_BINARYFORMAT_XCOFF_H
 
+#include "llvm/ADT/StringRef.h"
 #include <cstdint>
 
 namespace llvm {
@@ -250,6 +251,8 @@ enum CFileCpuId : uint8_t {
   TCPU_COM = 3,   ///< POWER and PowerPC architecture common.
   TCPU_970 = 19   ///< PPC970 - PowerPC 64-bit architecture.
 };
+
+StringRef getMappingClassString(XCOFF::StorageMappingClass SMC);
 
 } // end namespace XCOFF
 } // end namespace llvm

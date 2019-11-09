@@ -1531,7 +1531,7 @@ private:
   document_iterator                   DocIterator;
   std::vector<bool>                   BitValuesUsed;
   HNode *CurrentNode = nullptr;
-  bool                                ScalarMatchFound;
+  bool                                ScalarMatchFound = false;
 };
 
 ///

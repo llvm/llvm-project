@@ -1880,13 +1880,12 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     for (auto *propImpl : OID->property_impls())
       if (propImpl->getPropertyImplementation() ==
           ObjCPropertyImplDecl::Synthesize) {
-        ObjCPropertyDecl *prop = propImpl->getPropertyDecl();
-        auto addIfExists = [&](const ObjCMethodDecl* OMD) {
-          if (OMD)
+        auto addIfExists = [&](const ObjCMethodDecl *OMD) {
+          if (OMD && OMD->hasBody())
             InstanceMethods.push_back(OMD);
         };
-        addIfExists(prop->getGetterMethodDecl());
-        addIfExists(prop->getSetterMethodDecl());
+        addIfExists(propImpl->getGetterMethodDecl());
+        addIfExists(propImpl->getSetterMethodDecl());
       }
 
     if (InstanceMethods.size() == 0)
@@ -3494,13 +3493,12 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
   for (auto *propertyImpl : OID->property_impls())
     if (propertyImpl->getPropertyImplementation() ==
         ObjCPropertyImplDecl::Synthesize) {
-      ObjCPropertyDecl *property = propertyImpl->getPropertyDecl();
       auto addPropertyMethod = [&](const ObjCMethodDecl *accessor) {
         if (accessor)
           InstanceMethods.push_back(accessor);
       };
-      addPropertyMethod(property->getGetterMethodDecl());
-      addPropertyMethod(property->getSetterMethodDecl());
+      addPropertyMethod(propertyImpl->getGetterMethodDecl());
+      addPropertyMethod(propertyImpl->getSetterMethodDecl());
     }
 
   llvm::Constant *Properties = GeneratePropertyList(OID, ClassDecl);

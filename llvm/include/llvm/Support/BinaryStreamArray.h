@@ -133,9 +133,9 @@ public:
   Extractor &getExtractor() { return E; }
 
   BinaryStreamRef getUnderlyingStream() const { return Stream; }
-  void setUnderlyingStream(BinaryStreamRef S, uint32_t Skew = 0) {
-    Stream = S;
-    this->Skew = Skew;
+  void setUnderlyingStream(BinaryStreamRef NewStream, uint32_t NewSkew = 0) {
+    Stream = NewStream;
+    Skew = NewSkew;
   }
 
   void drop_front() { Skew += begin()->length(); }
@@ -143,7 +143,7 @@ public:
 private:
   BinaryStreamRef Stream;
   Extractor E;
-  uint32_t Skew;
+  uint32_t Skew = 0;
 };
 
 template <typename ValueType, typename Extractor>

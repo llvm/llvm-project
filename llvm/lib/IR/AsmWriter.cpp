@@ -2959,6 +2959,7 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
     Out << ", noRecurse: " << FFlags.NoRecurse;
     Out << ", returnDoesNotAlias: " << FFlags.ReturnDoesNotAlias;
     Out << ", noInline: " << FFlags.NoInline;
+    Out << ", alwaysInline: " << FFlags.AlwaysInline;
     Out << ")";
   }
   if (!FS->calls().empty()) {

@@ -382,6 +382,7 @@ enum Kind {
   kw_noRecurse,
   kw_returnDoesNotAlias,
   kw_noInline,
+  kw_alwaysInline,
   kw_calls,
   kw_callee,
   kw_hotness,

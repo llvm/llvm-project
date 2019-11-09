@@ -3559,12 +3559,10 @@ void CGObjCMac::GenerateClass(const ObjCImplementationDecl *ID) {
 
   for (const auto *PID : ID->property_impls()) {
     if (PID->getPropertyImplementation() == ObjCPropertyImplDecl::Synthesize) {
-      ObjCPropertyDecl *PD = PID->getPropertyDecl();
-
-      if (ObjCMethodDecl *MD = PD->getGetterMethodDecl())
+      if (ObjCMethodDecl *MD = PID->getGetterMethodDecl())
         if (GetMethodDefinition(MD))
           Methods[InstanceMethods].push_back(MD);
-      if (ObjCMethodDecl *MD = PD->getSetterMethodDecl())
+      if (ObjCMethodDecl *MD = PID->getSetterMethodDecl())
         if (GetMethodDefinition(MD))
           Methods[InstanceMethods].push_back(MD);
     }
@@ -6232,19 +6230,6 @@ llvm::GlobalVariable * CGObjCNonFragileABIMac::BuildClassRoTInitializer(
   } else {
     for (const auto *MD : ID->instance_methods())
       methods.push_back(MD);
-
-    for (const auto *PID : ID->property_impls()) {
-      if (PID->getPropertyImplementation() == ObjCPropertyImplDecl::Synthesize){
-        ObjCPropertyDecl *PD = PID->getPropertyDecl();
-
-        if (auto MD = PD->getGetterMethodDecl())
-          if (GetMethodDefinition(MD))
-            methods.push_back(MD);
-        if (auto MD = PD->getSetterMethodDecl())
-          if (GetMethodDefinition(MD))
-            methods.push_back(MD);
-      }
-    }
   }
 
   values.add(emitMethodList(ID->getObjCRuntimeNameAsString(),
@@ -6707,9 +6692,8 @@ CGObjCNonFragileABIMac::emitMethodList(Twine name, MethodListType kind,
   // method_count
   values.addInt(ObjCTypes.IntTy, methods.size());
   auto methodArray = values.beginArray(ObjCTypes.MethodTy);
-  for (auto MD : methods) {
+  for (auto MD : methods)
     emitMethodConstant(methodArray, MD, forProtocol);
-  }
   methodArray.finishAndAddTo(values);
 
   llvm::GlobalVariable *GV = finishAndCreateGlobal(values, prefix + name, CGM);
