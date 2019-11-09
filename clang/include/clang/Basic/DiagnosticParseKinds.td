@@ -325,6 +325,8 @@ def err_for_range_expected_decl : Error<
 def err_argument_required_after_attribute : Error<
   "argument required after attribute">;
 def err_missing_param : Error<"expected parameter declarator">;
+def err_function_scope_depth_exceeded : Error<
+  "function scope depth exceeded maximum of %0">, DefaultFatal;
 def err_missing_comma_before_ellipsis : Error<
   "C requires a comma prior to the ellipsis in a variadic function type">;
 def err_unexpected_typedef_ident : Error<
