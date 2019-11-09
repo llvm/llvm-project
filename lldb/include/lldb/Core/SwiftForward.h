@@ -64,6 +64,7 @@ class TupleTypeElt;
 class Type;
 class TypeAliasType;
 class TypeBase;
+class TypeCheckerOptions;
 class TypeDecl;
 class TypeInfo;
 class UnionElementDecl;

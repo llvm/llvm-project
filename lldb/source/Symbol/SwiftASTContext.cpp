@@ -2629,6 +2629,10 @@ swift::LangOptions &SwiftASTContext::GetLanguageOptions() {
   return GetCompilerInvocation().getLangOptions();
 }
 
+swift::TypeCheckerOptions &SwiftASTContext::GetTypeCheckerOptions() {
+  return GetCompilerInvocation().getTypeCheckerOptions();
+}
+
 swift::DiagnosticEngine &SwiftASTContext::GetDiagnosticEngine() {
   if (!m_diagnostic_engine_ap) {
     m_diagnostic_engine_ap.reset(
@@ -3322,7 +3326,8 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     return m_ast_context_ap.get();
 
   m_ast_context_ap.reset(
-      swift::ASTContext::get(GetLanguageOptions(), GetSearchPathOptions(),
+      swift::ASTContext::get(GetLanguageOptions(), GetTypeCheckerOptions(),
+                             GetSearchPathOptions(),
                              GetSourceManager(), GetDiagnosticEngine()));
   m_diagnostic_consumer_ap.reset(new StoringDiagnosticConsumer(*this));
 

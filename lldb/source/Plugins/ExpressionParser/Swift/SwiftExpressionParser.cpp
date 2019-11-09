@@ -1465,10 +1465,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
   // Not persistent because we're building source files one at a time.
   swift::TopLevelContext top_level_context;
-  swift::OptionSet<swift::TypeCheckingFlags> type_checking_options;
-
-  swift::performTypeChecking(parsed_expr->source_file, top_level_context,
-                             type_checking_options);
+  swift::performTypeChecking(parsed_expr->source_file, top_level_context);
 
   if (swift_ast_ctx->HasErrors()) {
     DiagnoseSwiftASTContextError();
