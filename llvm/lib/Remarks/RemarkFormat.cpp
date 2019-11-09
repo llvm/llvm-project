@@ -32,9 +32,9 @@ Expected<Format> llvm::remarks::parseFormat(StringRef FormatStr) {
   return Result;
 }
 
-Expected<Format> llvm::remarks::magicToFormat(StringRef Magic) {
+Expected<Format> llvm::remarks::magicToFormat(StringRef MagicStr) {
   auto Result =
-      StringSwitch<Format>(Magic)
+      StringSwitch<Format>(MagicStr)
           .StartsWith("--- ", Format::YAML) // This is only an assumption.
           .StartsWith(remarks::Magic, Format::YAMLStrTab)
           .StartsWith(remarks::ContainerMagic, Format::Bitstream)
@@ -42,6 +42,6 @@ Expected<Format> llvm::remarks::magicToFormat(StringRef Magic) {
 
   if (Result == Format::Unknown)
     return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "Unknown remark magic: '%s'", Magic.data());
+                             "Unknown remark magic: '%s'", MagicStr.data());
   return Result;
 }
