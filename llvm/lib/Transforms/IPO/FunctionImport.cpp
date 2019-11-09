@@ -231,7 +231,8 @@ selectCallee(const ModuleSummaryIndex &Index,
           return false;
         }
 
-        if (Summary->instCount() > Threshold) {
+        if ((Summary->instCount() > Threshold) &&
+            !Summary->fflags().AlwaysInline) {
           Reason = FunctionImporter::ImportFailureReason::TooLarge;
           return false;
         }
@@ -475,7 +476,8 @@ static void computeImportForFunction(
       CalleeSummary = CalleeSummary->getBaseObject();
       ResolvedCalleeSummary = cast<FunctionSummary>(CalleeSummary);
 
-      assert(ResolvedCalleeSummary->instCount() <= NewThreshold &&
+      assert((ResolvedCalleeSummary->fflags().AlwaysInline ||
+	     (ResolvedCalleeSummary->instCount() <= NewThreshold)) &&
              "selectCallee() didn't honor the threshold");
 
       auto ExportModulePath = ResolvedCalleeSummary->modulePath();
