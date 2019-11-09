@@ -88,8 +88,8 @@ bb:
 ; CHECK-NEXT: }
 ; CHECK-NEXT: .section .debug_macinfo
 ; CHECK-NEXT: {
-; CHECK-NEXT: .b8 0                                // End Of Macro List Mark
-; CHECK:      }
+; CHECK-EMPTY:
+; CHECK-NEXT: }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9}

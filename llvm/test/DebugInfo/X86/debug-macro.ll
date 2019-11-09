@@ -9,7 +9,7 @@
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NOT: DW_TAG
 ; CHECK:   DW_AT_name {{.*}}"debug-macro1.cpp")
-; CHECK:   DW_AT_macro_info {{.*}}(0x00000044)
+; CHECK:   DW_AT_macro_info {{.*}}(0x00000045)
 ; CHECK: DW_TAG_compile_unit
 ; CHECK-NOT: DW_TAG
 ; CHECK:   DW_AT_name {{.*}}"debug-macro2.cpp")
@@ -24,7 +24,8 @@
 ; CHECK-NEXT:   DW_MACINFO_end_file
 ; CHECK-NEXT:   DW_MACINFO_undef - lineno: 10 macro: NameUndef2
 ; CHECK-NEXT: DW_MACINFO_end_file
-; CHECK-NEXT: DW_MACINFO_start_file - lineno: 0 filenum: 1
+
+; CHECK: DW_MACINFO_start_file - lineno: 0 filenum: 1
 ; CHECK-NEXT: DW_MACINFO_end_file
 
 ; CHECK-LABEL: .debug_line contents:
