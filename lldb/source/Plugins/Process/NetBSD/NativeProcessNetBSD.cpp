@@ -272,12 +272,21 @@ void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
     }
 
     switch (pst.pe_report_event) {
-      case PTRACE_LWP_CREATE:
+      case PTRACE_LWP_CREATE: {
         LLDB_LOG(log,
                  "monitoring new thread, pid = {0}, LWP = {1}", pid,
                  pst.pe_lwp);
-        AddThread(pst.pe_lwp);
-        break;
+        NativeThreadNetBSD& t = AddThread(pst.pe_lwp);
+        error = t.CopyWatchpointsFrom(
+            static_cast<NativeThreadNetBSD &>(*GetCurrentThread()));
+        if (error.Fail()) {
+          LLDB_LOG(log,
+                   "failed to copy watchpoints to new thread {0}: {1}",
+                   pst.pe_lwp, error);
+          SetState(StateType::eStateInvalid);
+          return;
+        }
+      } break;
       case PTRACE_LWP_EXIT:
         LLDB_LOG(log,
                  "removing exited thread, pid = {0}, LWP = {1}", pid,
