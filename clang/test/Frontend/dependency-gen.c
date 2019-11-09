@@ -27,3 +27,20 @@
 #ifndef INCLUDE_FLAG_TEST
 #include <x.h>
 #endif
+
+// RUN: echo "fun:foo" > %t.blacklist1
+// RUN: echo "fun:foo" > %t.blacklist2
+// RUN: %clang -MD -MF - %s -fsyntax-only -resource-dir=%S/Inputs/resource_dir_with_cfi_blacklist -fsanitize=cfi-vcall -flto -fvisibility=hidden -fsanitize-blacklist=%t.blacklist1 -fsanitize-blacklist=%t.blacklist2 -I ./ | FileCheck -check-prefix=TWO-BLACK-LISTS %s
+// TWO-BLACK-LISTS: dependency-gen.o:
+// TWO-BLACK-LISTS-DAG: blacklist1
+// TWO-BLACK-LISTS-DAG: blacklist2
+// TWO-BLACK-LISTS-DAG: x.h
+// TWO-BLACK-LISTS-DAG: dependency-gen.c
+
+// RUN: %clang -MD -MF - %s -fsyntax-only -resource-dir=%S/Inputs/resource_dir_with_cfi_blacklist -fsanitize=cfi-vcall -flto -fvisibility=hidden -I ./ | FileCheck -check-prefix=USER-AND-SYS-DEPS %s
+// USER-AND-SYS-DEPS: dependency-gen.o:
+// USER-AND-SYS-DEPS-DAG: cfi_blacklist.txt
+
+// RUN: %clang -MMD -MF - %s -fsyntax-only -resource-dir=%S/Inputs/resource_dir_with_cfi_blacklist -fsanitize=cfi-vcall -flto -fvisibility=hidden -I ./ | FileCheck -check-prefix=ONLY-USER-DEPS %s
+// ONLY-USER-DEPS: dependency-gen.o:
+// NOT-ONLY-USER-DEPS: cfi_blacklist.txt
