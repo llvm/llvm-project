@@ -1884,8 +1884,6 @@ SDValue R600TargetLowering::PerformDAGCombine(SDNode *N,
                            DAG.getConstant(-1, DL, MVT::i32), // True
                            DAG.getConstant(0, DL, MVT::i32),  // False
                            SelectCC.getOperand(4)); // CC
-
-    break;
   }
 
   // insert_vector_elt (build_vector elt0, ... , eltN), NewEltIdx, idx
