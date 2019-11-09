@@ -84,6 +84,19 @@ multiple file formats.
  For MachO objects, ``<section>`` must be formatted as
  ``<segment name>,<section name>``.
 
+.. option:: --redefine-sym <old>=<new>
+
+ Rename symbols called ``<old>`` to ``<new>`` in the output. Can be specified
+ multiple times to rename multiple symbols.
+
+.. option:: --redefine-syms <filename>
+
+ Rename symbols in the output as described in the file ``<filename>``. In the
+ file, each line represents a single symbol to rename, with the old name and new
+ name separated by whitespace. Leading and trailing whitespace is ignored, as is
+ anything following a '#'. Can be specified multiple times to read names from
+ multiple files.
+
 .. option:: --regex
 
  If specified, symbol and section names specified by other switches are treated
@@ -377,19 +390,6 @@ them.
 .. option:: --preserve-dates, -p
 
  Preserve access and modification timestamps in the output.
-
-.. option:: --redefine-sym <old>=<new>
-
- Rename symbols called ``<old>`` to ``<new>`` in the output. Can be specified
- multiple times to rename multiple symbols.
-
-.. option:: --redefine-syms <filename>
-
- Rename symbols in the output as described in the file ``<filename>``. In the
- file, each line represents a single symbol to rename, with the old name and new
- name separated by an equals sign. Leading and trailing whitespace is ignored,
- as is anything following a '#'. Can be specified multiple times to read names
- from multiple files.
 
 .. option:: --rename-section <old>=<new>[,<flag>,...]
 
