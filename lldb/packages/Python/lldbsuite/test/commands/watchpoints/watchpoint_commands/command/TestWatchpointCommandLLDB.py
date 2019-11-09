@@ -36,7 +36,6 @@ class WatchpointLLDBCommandTestCase(TestBase):
         archs=["aarch64"],
         triple=no_match(".*-android"),
         bugnumber="llvm.org/pr27710") # work on android
-    @expectedFailureNetBSD
     def test_watchpoint_command(self):
         """Test 'watchpoint command'."""
         self.build(dictionary=self.d)
