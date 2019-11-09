@@ -233,7 +233,7 @@ struct a {
 template <class>
 class d {
   a e;
-  void f() { e.b(0); }
+  void f() { e.b(); }
 };
 }  // namespace
 }  // namespace PR38055
