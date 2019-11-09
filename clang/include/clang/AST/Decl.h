@@ -921,11 +921,13 @@ protected:
     /// Whether this parameter is an ObjC method parameter or not.
     unsigned IsObjCMethodParam : 1;
 
+    enum { NumScopeDepthOrObjCQualsBits = 7 };
+
     /// If IsObjCMethodParam, a Decl::ObjCDeclQualifier.
     /// Otherwise, the number of function parameter scopes enclosing
     /// the function parameter scope in which this parameter was
     /// declared.
-    unsigned ScopeDepthOrObjCQuals : 7;
+    unsigned ScopeDepthOrObjCQuals : NumScopeDepthOrObjCQualsBits;
 
     /// The number of parameters preceding this parameter in the
     /// function parameter scope in which it was declared.
@@ -1648,6 +1650,10 @@ public:
   unsigned getFunctionScopeDepth() const {
     if (ParmVarDeclBits.IsObjCMethodParam) return 0;
     return ParmVarDeclBits.ScopeDepthOrObjCQuals;
+  }
+
+  static constexpr unsigned getMaxFunctionScopeDepth() {
+    return (1u << ParmVarDeclBitfields::NumScopeDepthOrObjCQualsBits) - 1;
   }
 
   /// Returns the index of this parameter in its prototype or method scope.
