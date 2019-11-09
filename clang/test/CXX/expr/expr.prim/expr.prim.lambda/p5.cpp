@@ -3,7 +3,7 @@
 // An attribute-specifier-seq in a lambda-declarator appertains to the
 // type of the corresponding function call operator.
 void test_attributes() {
-  auto nrl = [](int x) -> int { if (x > 0) return x; }; // expected-warning{{control may reach end of non-void lambda}}
+  auto nrl = [](int x) -> int { if (x > 0) return x; }; // expected-warning{{on-void lambda does not return a value in all control paths}}
 
   // FIXME: GCC accepts the [[gnu::noreturn]] attribute here.
   auto nrl2 = []() [[gnu::noreturn]] { return; }; // expected-warning{{attribute 'noreturn' ignored}}

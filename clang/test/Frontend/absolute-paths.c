@@ -7,11 +7,11 @@
 // directory in the path.
 // NORMAL: SystemHeaderPrefix
 // ABSOLUTE-NOT: SystemHeaderPrefix
-// CHECK: warning: control reaches end of non-void function
+// CHECK: warning: non-void function does not return a value
 
 
 // For files which don't exist, just print the filename.
 #line 123 "non-existant.c"
 int g() {}
-// NORMAL: non-existant.c:123:10: warning: control reaches end of non-void function
-// ABSOLUTE: non-existant.c:123:10: warning: control reaches end of non-void function
+// NORMAL: non-existant.c:123:10: warning: non-void function does not return a value
+// ABSOLUTE: non-existant.c:123:10: warning: non-void function does not return a value
