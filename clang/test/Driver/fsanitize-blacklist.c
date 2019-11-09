@@ -16,22 +16,18 @@
 // RUN: %clang -target aarch64-linux-gnu -fsanitize=hwaddress -fsanitize-blacklist=%t.good -fsanitize-blacklist=%t.second %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-BLACKLIST
 // CHECK-BLACKLIST: -fsanitize-blacklist={{.*}}.good" "-fsanitize-blacklist={{.*}}.second
 
-// Now, check for -fdepfile-entry flags.
-// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-blacklist=%t.good -fsanitize-blacklist=%t.second %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-BLACKLIST2
-// CHECK-BLACKLIST2: -fdepfile-entry={{.*}}.good" "-fdepfile-entry={{.*}}.second
-
 // Check that the default blacklist is not added as an extra dependency.
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-BLACKLIST-ASAN --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=
-// CHECK-DEFAULT-BLACKLIST-ASAN: -fsanitize-blacklist={{.*[^w]}}asan_blacklist.txt
+// CHECK-DEFAULT-BLACKLIST-ASAN: -fsanitize-system-blacklist={{.*[^w]}}asan_blacklist.txt
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=hwaddress -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-BLACKLIST-HWASAN --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=
-// CHECK-DEFAULT-BLACKLIST-HWASAN: -fsanitize-blacklist={{.*}}hwasan_blacklist.txt
+// CHECK-DEFAULT-BLACKLIST-HWASAN: -fsanitize-system-blacklist={{.*}}hwasan_blacklist.txt
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=integer -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=nullability -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=alignment -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=
 // RUN: %clang -target %itanium_abi_triple -fsanitize=float-divide-by-zero -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=
-// CHECK-DEFAULT-UBSAN-BLACKLIST: -fsanitize-blacklist={{.*}}ubsan_blacklist.txt
+// CHECK-DEFAULT-UBSAN-BLACKLIST: -fsanitize-system-blacklist={{.*}}ubsan_blacklist.txt
 
 // Check that combining ubsan and another sanitizer results in both blacklists being used.
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined,address -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --check-prefix=CHECK-DEFAULT-ASAN-BLACKLIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=
