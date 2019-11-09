@@ -70,7 +70,7 @@ static bool addPass(PassManagerBase &PM, StringRef PassName,
   return false;
 }
 
-MachineFunction &createVoidVoidPtrMachineFunction(StringRef FunctionID,
+MachineFunction &createVoidVoidPtrMachineFunction(StringRef FunctionName,
                                                   Module *Module,
                                                   MachineModuleInfo *MMI) {
   Type *const ReturnType = Type::getInt32Ty(Module->getContext());
@@ -79,7 +79,7 @@ MachineFunction &createVoidVoidPtrMachineFunction(StringRef FunctionID,
   FunctionType *FunctionType =
       FunctionType::get(ReturnType, {MemParamType}, false);
   Function *const F = Function::Create(
-      FunctionType, GlobalValue::InternalLinkage, FunctionID, Module);
+      FunctionType, GlobalValue::InternalLinkage, FunctionName, Module);
   // Making sure we can create a MachineFunction out of this Function even if it
   // contains no IR.
   F->setIsMaterializable(true);

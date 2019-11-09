@@ -29,7 +29,7 @@ int f0() {}
 // CHECK:       <key>column</key>
 // CHECK:       <integer>11</integer>
 // CHECK:       <key>message</key>
-// CHECK:       <string>control reaches end of non-void function</string>
+// CHECK:       <string>non-void function does not return a value</string>
 // CHECK:     </dict>
 // CHECK:   </array>
 // CHECK: </dict>

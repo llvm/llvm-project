@@ -2,7 +2,7 @@
 
 // Check that analysis-based warnings work in lambda bodies.
 void analysis_based_warnings() {
-  (void)[]() -> int { }; // expected-warning{{control reaches end of non-void lambda}}
+  (void)[]() -> int { }; // expected-warning{{non-void lambda does not return a value}}
 }
 
 // Check that we get the right types of captured variables (the

@@ -53,6 +53,8 @@ make_error_type_string(regex_constants::error_type ecode)
         return "An invalid regex grammar has been requested.";
     case regex_constants::__re_err_empty:
         return "An empty regex is not allowed in the POSIX grammar.";
+    case regex_constants::__re_err_parse:
+        return "The parser did not consume the entire regular expression.";
     default:
         break;
     }

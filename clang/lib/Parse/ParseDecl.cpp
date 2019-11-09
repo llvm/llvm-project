@@ -6566,6 +6566,19 @@ void Parser::ParseParameterDeclarationClause(
        ParsedAttributes &FirstArgAttrs,
        SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
        SourceLocation &EllipsisLoc) {
+
+  // Avoid exceeding the maximum function scope depth.
+  // See https://bugs.llvm.org/show_bug.cgi?id=19607
+  // Note Sema::ActOnParamDeclarator calls ParmVarDecl::setScopeInfo with
+  // getFunctionPrototypeDepth() - 1.
+  if (getCurScope()->getFunctionPrototypeDepth() - 1 >
+      ParmVarDecl::getMaxFunctionScopeDepth()) {
+    Diag(Tok.getLocation(), diag::err_function_scope_depth_exceeded)
+        << ParmVarDecl::getMaxFunctionScopeDepth();
+    cutOffParsing();
+    return;
+  }
+
   do {
     // FIXME: Issue a diagnostic if we parsed an attribute-specifier-seq
     // before deciding this was a parameter-declaration-clause.

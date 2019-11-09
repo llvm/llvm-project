@@ -14,7 +14,7 @@ void GetURL() const;
 // CHECK: call dereferenceable({{[0-9]+}}) %struct.TFENode* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend
 // CHECK-NEXT: call void @_ZNK7TFENode6GetURLEv(%struct.TFENode* %{{.*}})
 	self.node.GetURL();
-}	// expected-warning {{control reaches end of non-void function}}
+}	// expected-warning {{non-void function does not return a value}}
 @end
 
 // rdar://8437240
