@@ -8401,9 +8401,8 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT: .b8 0                                // End Of Children Mark
 ; CHECK-NEXT: .b8 0                                // End Of Children Mark
 ; CHECK-NEXT: }
-; CHECK-NEXT: .section .debug_macinfo
-; CHECK-NEXT: {
-; CHECK-NEXT: }
+; CHECK-NEXT: .section .debug_loc { }
+; CHECK-NOT: debug_
 
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.nvvm.read.ptx.sreg.ctaid.x() #1
