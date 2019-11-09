@@ -121,13 +121,13 @@ namespace {
 
   class RegisterCoalescer : public MachineFunctionPass,
                             private LiveRangeEdit::Delegate {
-    MachineFunction* MF;
-    MachineRegisterInfo* MRI;
-    const TargetRegisterInfo* TRI;
-    const TargetInstrInfo* TII;
-    LiveIntervals *LIS;
-    const MachineLoopInfo* Loops;
-    AliasAnalysis *AA;
+    MachineFunction* MF = nullptr;
+    MachineRegisterInfo* MRI = nullptr;
+    const TargetRegisterInfo* TRI = nullptr;
+    const TargetInstrInfo* TII = nullptr;
+    LiveIntervals *LIS = nullptr;
+    const MachineLoopInfo* Loops = nullptr;
+    AliasAnalysis *AA = nullptr;
     RegisterClassInfo RegClassInfo;
 
     /// A LaneMask to remember on which subregister live ranges we need to call
@@ -136,15 +136,15 @@ namespace {
 
     /// True if the main range of the currently coalesced intervals should be
     /// checked for smaller live intervals.
-    bool ShrinkMainRange;
+    bool ShrinkMainRange = false;
 
     /// True if the coalescer should aggressively coalesce global copies
     /// in favor of keeping local copies.
-    bool JoinGlobalCopies;
+    bool JoinGlobalCopies = false;
 
     /// True if the coalescer should aggressively coalesce fall-thru
     /// blocks exclusively containing copies.
-    bool JoinSplitEdges;
+    bool JoinSplitEdges = false;
 
     /// Copy instructions yet to be coalesced.
     SmallVector<MachineInstr*, 8> WorkList;
