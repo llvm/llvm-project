@@ -3115,7 +3115,8 @@ void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
                            LiveInterval *LI) {
   for (unsigned i = 0, e = LR.getNumValNums(); i != e; ++i) {
     // Get the def location before markUnused() below invalidates it.
-    SlotIndex Def = LR.getValNumInfo(i)->def;
+    VNInfo *VNI = LR.getValNumInfo(i);
+    SlotIndex Def = VNI->def;
     switch (Vals[i].Resolution) {
     case CR_Keep: {
       // If an IMPLICIT_DEF value is pruned, it doesn't serve a purpose any
@@ -3131,8 +3132,6 @@ void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
       // In such cases, removing this def from the main range must be
       // complemented by extending the main range to account for the liveness
       // of the other subrange.
-      VNInfo *VNI = LR.getValNumInfo(i);
-      SlotIndex Def = VNI->def;
       // The new end point of the main range segment to be extended.
       SlotIndex NewEnd;
       if (LI != nullptr) {
