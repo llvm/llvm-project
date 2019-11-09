@@ -567,6 +567,7 @@ public:
 /// instructions.
 class VPRecipeBase : public ilist_node_with_parent<VPRecipeBase, VPBasicBlock> {
   friend VPBasicBlock;
+  friend class VPBlockUtils;
 
 private:
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
@@ -615,9 +616,17 @@ public:
   /// the specified recipe.
   void insertBefore(VPRecipeBase *InsertPos);
 
+  /// Insert an unlinked Recipe into a basic block immediately after
+  /// the specified Recipe.
+  void insertAfter(VPRecipeBase *InsertPos);
+
   /// Unlink this recipe from its current VPBasicBlock and insert it into
   /// the VPBasicBlock that MovePos lives in, right after MovePos.
   void moveAfter(VPRecipeBase *MovePos);
+
+  /// This method unlinks 'this' from the containing basic block, but does not
+  /// delete it.
+  void removeFromParent();
 
   /// This method unlinks 'this' from the containing basic block and deletes it.
   ///
@@ -971,6 +980,13 @@ public:
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPRecipeBase *V) {
     return V->getVPRecipeID() == VPRecipeBase::VPWidenMemoryInstructionSC;
+  }
+
+  /// Return the mask used by this recipe. Note that a full mask is represented
+  /// by a nullptr.
+  VPValue *getMask() {
+    // Mask is the last operand.
+    return User ? User->getOperand(User->getNumOperands() - 1) : nullptr;
   }
 
   /// Generate the wide load/store.
