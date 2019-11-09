@@ -3,7 +3,6 @@
 ; Test that we don't pollute the start of the file with debug sections
 
 ; CHECK:      .section .debug_macinfo,"",@progbits
-; CHECK-NEXT: .byte 0 # End Of Macro List Mark
 ; CHECK-NEXT: .section
 ; CHECK-NOT:  .debug_macinfo
 
