@@ -970,10 +970,10 @@ SDValue R600TargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const 
   //
 
   // Move hardware True/False values to the correct operand.
-  ISD::CondCode CCOpcode = cast<CondCodeSDNode>(CC)->get();
-  ISD::CondCode InverseCC =
-     ISD::getSetCCInverse(CCOpcode, CompareVT == MVT::i32);
   if (isHWTrueValue(False) && isHWFalseValue(True)) {
+    ISD::CondCode CCOpcode = cast<CondCodeSDNode>(CC)->get();
+    ISD::CondCode InverseCC =
+        ISD::getSetCCInverse(CCOpcode, CompareVT == MVT::i32);
     if (isCondCodeLegal(InverseCC, CompareVT.getSimpleVT())) {
       std::swap(False, True);
       CC = DAG.getCondCode(InverseCC);
