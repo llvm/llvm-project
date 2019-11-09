@@ -17,7 +17,7 @@ class TestDSYMSourcePathRemapping(lldbtest.TestBase):
         lldbutil.mkdir_p(botdir)
         lldbutil.mkdir_p(userdir)
         import shutil
-        for f in ['main.c']:
+        for f in ['main.c', 'relative.c']:
             shutil.copyfile(os.path.join(inputs, f), os.path.join(botdir, f))
             shutil.copyfile(os.path.join(inputs, f), os.path.join(userdir, f))
 
@@ -52,5 +52,10 @@ class TestDSYMSourcePathRemapping(lldbtest.TestBase):
     @skipIf(debug_info=no_match("dsym"))
     def test(self):
         self.build()
-        lldbutil.run_to_name_breakpoint(self, 'main')
-        self.expect("source list", substrs=["Hello World"])
+        
+        target, process, _, _ = lldbutil.run_to_name_breakpoint(
+            self, 'main')
+        self.expect("source list -n main", substrs=["Hello Absolute"])
+        bkpt = target.BreakpointCreateByName('relative')
+        lldbutil.continue_to_breakpoint(process, bkpt)
+        self.expect("source list -n relative", substrs=["Hello Relative"])
