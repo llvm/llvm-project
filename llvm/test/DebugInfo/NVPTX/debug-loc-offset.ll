@@ -472,5 +472,4 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 ; CHECK-NEXT: }
 ; CHECK-NEXT: .section .debug_macinfo
 ; CHECK-NEXT: {
-; CHECK-EMPTY:
 ; CHECK-NEXT: }
