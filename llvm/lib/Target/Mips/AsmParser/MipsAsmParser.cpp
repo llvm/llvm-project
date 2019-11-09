@@ -2039,8 +2039,6 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     //        of the assembler. We ought to leave it to those later stages.
     const MCSymbol *JalSym = getSingleMCSymbol(JalExpr);
 
-    // FIXME: Add support for label+offset operands (currently causes an error).
-    // FIXME: Add support for forward-declared local symbols.
     if (expandLoadAddress(Mips::T9, Mips::NoRegister, Inst.getOperand(0),
                           !isGP64bit(), IDLoc, Out, STI))
       return true;
