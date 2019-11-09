@@ -76,8 +76,9 @@ using namespace llvm;
 MipsRegisterBankInfo::MipsRegisterBankInfo(const TargetRegisterInfo &TRI)
     : MipsGenRegisterBankInfo() {}
 
-const RegisterBank &MipsRegisterBankInfo::getRegBankFromRegClass(
-    const TargetRegisterClass &RC) const {
+const RegisterBank &
+MipsRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
+                                             LLT) const {
   using namespace Mips;
 
   switch (RC.getID()) {

@@ -177,8 +177,9 @@ unsigned AMDGPURegisterBankInfo::getBreakDownCost(
   return 1;
 }
 
-const RegisterBank &AMDGPURegisterBankInfo::getRegBankFromRegClass(
-    const TargetRegisterClass &RC) const {
+const RegisterBank &
+AMDGPURegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
+                                               LLT Ty) const {
   if (&RC == &AMDGPU::SReg_1RegClass)
     return AMDGPU::VCCRegBank;
 
