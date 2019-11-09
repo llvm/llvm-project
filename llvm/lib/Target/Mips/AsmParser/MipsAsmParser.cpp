@@ -562,6 +562,19 @@ public:
     return getSTI().getFeatureBits()[Mips::FeatureFP64Bit];
   }
 
+  bool isJalrRelocAvailable(const MCExpr *JalExpr) {
+    if (!EmitJalrReloc)
+      return false;
+    MCValue Res;
+    if (!JalExpr->evaluateAsRelocatable(Res, nullptr, nullptr))
+      return false;
+    if (Res.getSymB() != nullptr)
+      return false;
+    if (Res.getConstant() != 0)
+      return ABI.IsN32() || ABI.IsN64();
+    return true;
+  }
+
   const MipsABIInfo &getABI() const { return ABI; }
   bool isABI_N32() const { return ABI.IsN32(); }
   bool isABI_N64() const { return ABI.IsN64(); }
@@ -2048,7 +2061,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     JalrInst.addOperand(MCOperand::createReg(Mips::RA));
     JalrInst.addOperand(MCOperand::createReg(Mips::T9));
 
-    if (EmitJalrReloc) {
+    if (isJalrRelocAvailable(JalExpr)) {
       // As an optimization hint for the linker, before the JALR we add:
       // .reloc tmplabel, R_{MICRO}MIPS_JALR, symbol
       // tmplabel:
