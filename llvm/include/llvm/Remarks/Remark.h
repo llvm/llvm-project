@@ -30,8 +30,8 @@ constexpr uint64_t CurrentRemarkVersion = 0;
 struct RemarkLocation {
   /// Absolute path of the source file corresponding to this remark.
   StringRef SourceFilePath;
-  unsigned SourceLine;
-  unsigned SourceColumn;
+  unsigned SourceLine = 0;
+  unsigned SourceColumn = 0;
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).

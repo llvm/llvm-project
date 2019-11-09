@@ -174,7 +174,7 @@ static Error parseBlock(T &ParserHelper, unsigned BlockID,
   // Stop when there is nothing to read anymore or when we encounter an
   // END_BLOCK.
   while (!Stream.AtEndOfStream()) {
-    Expected<BitstreamEntry> Next = Stream.advance();
+    Next = Stream.advance();
     if (!Next)
       return Next.takeError();
     switch (Next->Kind) {
@@ -366,15 +366,15 @@ Error BitstreamRemarkParser::parseMeta() {
 }
 
 Error BitstreamRemarkParser::processCommonMeta(
-    BitstreamMetaParserHelper &MetaHelper) {
-  if (Optional<uint64_t> Version = MetaHelper.ContainerVersion)
+    BitstreamMetaParserHelper &Helper) {
+  if (Optional<uint64_t> Version = Helper.ContainerVersion)
     ContainerVersion = *Version;
   else
     return createStringError(
         std::make_error_code(std::errc::illegal_byte_sequence),
         "Error while parsing BLOCK_META: missing container version.");
 
-  if (Optional<uint8_t> Type = MetaHelper.ContainerType) {
+  if (Optional<uint8_t> Type = Helper.ContainerType) {
     // Always >= BitstreamRemarkContainerType::First since it's unsigned.
     if (*Type > static_cast<uint8_t>(BitstreamRemarkContainerType::Last))
       return createStringError(

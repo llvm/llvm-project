@@ -34,15 +34,16 @@ struct BitstreamRemarkParser : public RemarkParser {
   std::unique_ptr<MemoryBuffer> TmpRemarkBuffer;
   /// The common metadata used to decide how to parse the buffer.
   /// This is filled when parsing the metadata block.
-  uint64_t ContainerVersion;
-  uint64_t RemarkVersion;
-  BitstreamRemarkContainerType ContainerType;
+  uint64_t ContainerVersion = 0;
+  uint64_t RemarkVersion = 0;
+  BitstreamRemarkContainerType ContainerType =
+      BitstreamRemarkContainerType::Standalone;
   /// Wether the parser is ready to parse remarks.
   bool ReadyToParseRemarks = false;
 
   /// Create a parser that expects to find a string table embedded in the
   /// stream.
-  BitstreamRemarkParser(StringRef Buf)
+  explicit BitstreamRemarkParser(StringRef Buf)
       : RemarkParser(Format::Bitstream), ParserHelper(Buf) {}
 
   /// Create a parser that uses a pre-parsed string table.
