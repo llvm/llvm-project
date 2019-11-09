@@ -5,7 +5,7 @@
 // RUN: c-index-test -read-diagnostics %S/Inputs/serialized-diags-stable.dia 2>&1 | FileCheck %s
 
 int foo() {
-  // CHECK: serialized-diags-stable.c:[[@LINE+2]]:1: warning: control reaches end of non-void function [-Wreturn-type] [Semantic Issue]
+  // CHECK: serialized-diags-stable.c:[[@LINE+2]]:1: warning: non-void function does not return a value [-Wreturn-type] [Semantic Issue]
   // CHECK-NEXT: Number FIXITs = 0
 }
 
