@@ -15,8 +15,8 @@ class ArrayBuffer {
   char data() {
     visit([](auto buffer) -> char { // expected-note {{in instantiation}}
       buffer->data();
-    }); // expected-warning {{control reaches end of non-void lambda}}
-  } // expected-warning {{control reaches end of non-void function}}
+    }); // expected-warning {{non-void lambda does not return a value}}
+  } // expected-warning {{non-void function does not return a value}}
 };
 
 // pr34185

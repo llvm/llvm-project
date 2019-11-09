@@ -5,5 +5,5 @@ int foo() {
     auto[a] = s{1}; // FIXME: proper modelling
     if (a) {
     }
-} // expected-warning{{control reaches end of non-void function}}
+} // expected-warning{{non-void function does not return a value}}
 
