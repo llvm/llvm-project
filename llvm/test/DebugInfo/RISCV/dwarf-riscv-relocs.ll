@@ -5,13 +5,13 @@
 ; RUN:     FileCheck -check-prefix=DWARF-DUMP %s
 
 ; Check that we actually have relocations, otherwise this is kind of pointless.
-; READOBJ-RELOCS:  Section (8) .rela.debug_info {
+; READOBJ-RELOCS:  Section ({{.*}}) .rela.debug_info {
 ; READOBJ-RELOCS:    0x1B R_RISCV_ADD32 - 0x0
 ; READOBJ-RELOCS-NEXT:    0x1B R_RISCV_SUB32 - 0x0
-; READOBJ-RELOCS:  Section (15) .rela.debug_frame {
+; READOBJ-RELOCS:  Section ({{.*}}) .rela.debug_frame {
 ; READOBJ-RELOCS:    0x20 R_RISCV_ADD32 - 0x0
 ; READOBJ-RELOCS-NEXT:    0x20 R_RISCV_SUB32 - 0x0
-; READOBJ-RELOCS:  Section (17) .rela.debug_line {
+; READOBJ-RELOCS:  Section ({{.*}}) .rela.debug_line {
 ; READOBJ-RELOCS:    0x5A R_RISCV_ADD16 - 0x0
 ; READOBJ-RELOCS-NEXT:    0x5A R_RISCV_SUB16 - 0x0
 

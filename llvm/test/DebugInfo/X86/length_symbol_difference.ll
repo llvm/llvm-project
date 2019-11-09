@@ -5,7 +5,6 @@
 ; CHECK-NOT:  .byte   0
 ; CHECK:      .byte   0                       # End Of Children Mark
 ; CHECK-NEXT: .Ldebug_info_end0:
-; CHECK-NEXT: .section
 
 
 define dso_local void @_Z2f1v() !dbg !7 {
