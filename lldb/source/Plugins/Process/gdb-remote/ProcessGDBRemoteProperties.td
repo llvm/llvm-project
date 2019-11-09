@@ -15,6 +15,6 @@ let Definition = "processgdbremote" in {
     Desc<"If true, the libraries-svr4 feature will be used to get a hold of the process's loaded modules.">;
   def UseGPacketForReading: Property<"use-g-packet-for-reading", "Boolean">,
     Global,
-    DefaultTrue,
+    DefaultFalse,
     Desc<"Specify if the server should use 'g' packets to read registers.">;
 }
