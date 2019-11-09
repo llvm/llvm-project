@@ -1,8 +1,8 @@
-void stop() {}
+void relative();
 
 int main()
 {
-  stop();
-  // Hello World!
+  relative();
+  // Hello Absolute!
   return 0;
 }
