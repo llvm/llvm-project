@@ -6,3 +6,6 @@
 
 # CHECK:     error: unable to load '[[FILE]]': file too small to be an archive
 # CHECK-NOT: {{.}}
+
+## Also test that errors like this (e.g. invlid input files) don't generate a usage message
+# CHECK-NOT: USAGE: llvm-ar
