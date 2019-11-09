@@ -20,7 +20,7 @@ class TestDiagnostics(unittest.TestCase):
         self.assertEqual(tu.diagnostics[0].location.line, 1)
         self.assertEqual(tu.diagnostics[0].location.column, 11)
         self.assertEqual(tu.diagnostics[0].spelling,
-                'control reaches end of non-void function')
+                'non-void function does not return a value')
 
     def test_diagnostic_note(self):
         # FIXME: We aren't getting notes here for some reason.

@@ -10,7 +10,7 @@ struct S {
 };
 template<typename T>
 T *S<T>::mf() {
-    // warning: control reaches end of non-void function [-Wreturn-type]
+    // warning: non-void function does not return a value [-Wreturn-type]
 }
 
 void f() {
