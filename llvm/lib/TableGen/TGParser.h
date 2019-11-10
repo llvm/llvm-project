@@ -70,7 +70,7 @@ namespace llvm {
 
   struct DefsetRecord {
     SMLoc Loc;
-    RecTy *EltTy;
+    RecTy *EltTy = nullptr;
     SmallVector<Init *, 16> Elements;
   };
 
