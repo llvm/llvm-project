@@ -149,7 +149,6 @@
 #include <string>
 #include <tuple>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 
@@ -7118,8 +7117,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     VPBlockUtils::insertBlockAfter(FirstVPBBForBB, VPBB);
     VPBB = FirstVPBBForBB;
     Builder.setInsertPoint(VPBB);
-
-    std::vector<Instruction *> Ingredients;
 
     // Introduce each ingredient into VPlan.
     for (Instruction &I : BB->instructionsWithoutDebug()) {
