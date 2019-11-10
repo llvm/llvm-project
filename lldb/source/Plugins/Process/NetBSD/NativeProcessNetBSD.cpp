@@ -381,12 +381,7 @@ Status NativeProcessNetBSD::Resume(const ResumeActionList &resume_actions) {
 }
 
 Status NativeProcessNetBSD::Halt() {
-  Status error;
-
-  if (kill(GetID(), SIGSTOP) != 0)
-    error.SetErrorToErrno();
-
-  return error;
+  return PtraceWrapper(PT_STOP, GetID());
 }
 
 Status NativeProcessNetBSD::Detach() {
@@ -409,6 +404,10 @@ Status NativeProcessNetBSD::Signal(int signo) {
     error.SetErrorToErrno();
 
   return error;
+}
+
+Status NativeProcessNetBSD::Interrupt() {
+  return PtraceWrapper(PT_STOP, GetID());
 }
 
 Status NativeProcessNetBSD::Kill() {

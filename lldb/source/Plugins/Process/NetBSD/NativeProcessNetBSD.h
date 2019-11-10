@@ -47,6 +47,8 @@ public:
 
   Status Signal(int signo) override;
 
+  Status Interrupt() override;
+
   Status Kill() override;
 
   Status GetMemoryRegionInfo(lldb::addr_t load_addr,
