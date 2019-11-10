@@ -4217,6 +4217,12 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
     if (ASTReadResult Result = ReadASTBlock(F, ClientLoadCapabilities))
       return removeModulesAndReturn(Result);
 
+    // The AST block should always have a definition for the main module.
+    if (F.isModule() && !F.DidReadTopLevelSubmodule) {
+      Error(diag::err_module_file_missing_top_level_submodule, F.FileName);
+      return removeModulesAndReturn(Failure);
+    }
+
     // Read the extension blocks.
     while (!SkipCursorToBlock(F.Stream, EXTENSION_BLOCK_ID)) {
       if (ASTReadResult Result = ReadExtensionBlock(F))
@@ -5489,6 +5495,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
           }
         }
 
+        F.DidReadTopLevelSubmodule = true;
         CurrentModule->setASTFile(F.File);
         CurrentModule->PresumedModuleMapFile = F.ModuleMapPath;
       }
