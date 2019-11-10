@@ -41,7 +41,8 @@ public:
   void InitSections(bool NoExecStack) override;
   void ChangeSection(MCSection *Section, const MCExpr *Subsection) override;
   void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
-  void EmitLabel(MCSymbol *Symbol, SMLoc Loc, MCFragment *F) override;
+  void EmitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment *F,
+                      uint64_t Offset) override;
   void EmitAssemblerFlag(MCAssemblerFlag Flag) override;
   void EmitThumbFunc(MCSymbol *Func) override;
   void EmitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;

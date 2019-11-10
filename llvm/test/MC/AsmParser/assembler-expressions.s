@@ -5,7 +5,7 @@
 
 # OBJDATA: Contents of section .data
 # OBJDATA-NEXT: 0000 aa0506ff
-	
+
 foo2:
 # ASM-ERR: [[@LINE+1]]:5: error: expected absolute expression
 .if . - foo2 == 0
@@ -26,17 +26,22 @@ foo3:
 .byte 0xff
 
 # nop is a fixed size instruction so this should pass.
-	
+
 # OBJTEXT: Contents of section .text
-# OBJTEXT-NEXT: 0000 9090ff34 25000000 00909090 78563412
-# OBJTEXT-NEXT: 0010 78563412 90
+# OBJTEXT-NEXT: 0000 909090ff 34250000 00009090 90785634
+# OBJTEXT-NEXT: 0010 12785634 1290
 
 .text
-	
 text1:
+# ASM-ERR: [[@LINE+1]]:5: error: expected absolute expression
+.if . - text1 == 0
+	nop
+.endif
+
+text2:
         nop
 # ASM-ERR: [[@LINE+1]]:5: error: expected absolute expression
-.if . - text1 == 1
+.if . - text2 == 1
 	nop
 .else
 	ret
@@ -46,15 +51,14 @@ text1:
 	nop
 	nop
 # No additional errors.
-#	
+#
 # ASM-ERR-NOT: {{[0-9]+}}:{{[0-9]+}}: error:
 
-	
 
-text2:
-	.long 0x12345678
 text3:
-	.fill (text3-text2)/4, 4, 0x12345678
+	.long 0x12345678
+text4:
+	.fill (text4-text3)/4, 4, 0x12345678
 	nop
 
 
