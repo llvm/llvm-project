@@ -1272,6 +1272,19 @@ public:
     return isArgOperand(&UI.getUse());
   }
 
+  /// Given a use for a arg operand, get the arg operand number that
+  /// corresponds to it.
+  unsigned getArgOperandNo(const Use *U) const {
+    assert(isArgOperand(U) && "Arg operand # out of range!");
+    return U - arg_begin();
+  }
+
+  /// Given a value use iterator, return the arg operand number corresponding to
+  /// it. Iterator must actually correspond to a data operand.
+  unsigned getArgOperandNo(Value::const_user_iterator UI) const {
+    return getArgOperandNo(&UI.getUse());
+  }
+
   /// Returns true if this CallSite passes the given Value* as an argument to
   /// the called function.
   bool hasArgument(const Value *V) const {
