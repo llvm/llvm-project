@@ -1825,7 +1825,6 @@ define i32 @va_large_stack(i8* %fmt, ...) {
 ; ILP32-ILP32F-WITHFP-NEXT:    lui a0, 24414
 ; ILP32-ILP32F-WITHFP-NEXT:    addi a0, a0, -1728
 ; ILP32-ILP32F-WITHFP-NEXT:    sub sp, sp, a0
-; ILP32-ILP32F-WITHFP-NEXT:    .cfi_def_cfa_offset 100000048
 ; ILP32-ILP32F-WITHFP-NEXT:    mv a0, a1
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a7, 28(s0)
 ; ILP32-ILP32F-WITHFP-NEXT:    sw a6, 24(s0)
@@ -1842,9 +1841,8 @@ define i32 @va_large_stack(i8* %fmt, ...) {
 ; ILP32-ILP32F-WITHFP-NEXT:    lui a1, 24414
 ; ILP32-ILP32F-WITHFP-NEXT:    addi a1, a1, -1728
 ; ILP32-ILP32F-WITHFP-NEXT:    add sp, sp, a1
-; ILP32-ILP32F-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
 ; ILP32-ILP32F-WITHFP-NEXT:    lw s0, 1992(sp)
-; ILP32-ILP32F-WITHFP-NEXT:    .cfi_def_cfa sp, 100000016
+; ILP32-ILP32F-WITHFP-NEXT:    .cfi_def_cfa sp, 2000
 ; ILP32-ILP32F-WITHFP-NEXT:    lw ra, 1996(sp)
 ; ILP32-ILP32F-WITHFP-NEXT:    .cfi_restore ra
 ; ILP32-ILP32F-WITHFP-NEXT:    .cfi_restore s0
@@ -1961,7 +1959,6 @@ define i32 @va_large_stack(i8* %fmt, ...) {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    lui a0, 24414
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addiw a0, a0, -1680
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    sub sp, sp, a0
-; LP64-LP64F-LP64D-WITHFP-NEXT:    .cfi_def_cfa_offset 100000096
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    sd a1, 8(s0)
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    sd a7, 56(s0)
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    sd a6, 48(s0)
@@ -1979,9 +1976,8 @@ define i32 @va_large_stack(i8* %fmt, ...) {
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    lui a1, 24414
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    addiw a1, a1, -1680
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    add sp, sp, a1
-; LP64-LP64F-LP64D-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld s0, 1952(sp)
-; LP64-LP64F-LP64D-WITHFP-NEXT:    .cfi_def_cfa sp, 100000032
+; LP64-LP64F-LP64D-WITHFP-NEXT:    .cfi_def_cfa sp, 1968
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    ld ra, 1960(sp)
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    .cfi_restore ra
 ; LP64-LP64F-LP64D-WITHFP-NEXT:    .cfi_restore s0
