@@ -1211,12 +1211,12 @@ void ASTReader::Error(StringRef Msg) const {
   }
 }
 
-void ASTReader::Error(unsigned DiagID,
-                      StringRef Arg1, StringRef Arg2) const {
+void ASTReader::Error(unsigned DiagID, StringRef Arg1, StringRef Arg2,
+                      StringRef Arg3) const {
   if (Diags.isDiagnosticInFlight())
-    Diags.SetDelayedDiagnostic(DiagID, Arg1, Arg2);
+    Diags.SetDelayedDiagnostic(DiagID, Arg1, Arg2, Arg3);
   else
-    Diag(DiagID) << Arg1 << Arg2;
+    Diag(DiagID) << Arg1 << Arg2 << Arg3;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5067,12 +5067,9 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
           // Don't emit module relocation error if we have -fno-validate-pch
           if (!PP.getPreprocessorOpts().DisablePCHValidation &&
               CurFile != F.File) {
-            if (!Diags.isDiagnosticInFlight()) {
-              Diag(diag::err_module_file_conflict)
-                << CurrentModule->getTopLevelModuleName()
-                << CurFile->getName()
-                << F.File->getName();
-            }
+            Error(diag::err_module_file_conflict,
+                  CurrentModule->getTopLevelModuleName(), CurFile->getName(),
+                  F.File->getName());
             return Failure;
           }
         }
