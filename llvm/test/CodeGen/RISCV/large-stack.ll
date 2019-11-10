@@ -32,13 +32,11 @@ define void @test() {
 ; RV32I-WITHFP-NEXT:    lui a0, 74565
 ; RV32I-WITHFP-NEXT:    addi a0, a0, -352
 ; RV32I-WITHFP-NEXT:    sub sp, sp, a0
-; RV32I-WITHFP-NEXT:    .cfi_def_cfa_offset 305419920
 ; RV32I-WITHFP-NEXT:    lui a0, 74565
 ; RV32I-WITHFP-NEXT:    addi a0, a0, -352
 ; RV32I-WITHFP-NEXT:    add sp, sp, a0
-; RV32I-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
 ; RV32I-WITHFP-NEXT:    lw s0, 2024(sp)
-; RV32I-WITHFP-NEXT:    .cfi_def_cfa sp, 305419920
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa sp, 2032
 ; RV32I-WITHFP-NEXT:    lw ra, 2028(sp)
 ; RV32I-WITHFP-NEXT:    .cfi_restore ra
 ; RV32I-WITHFP-NEXT:    .cfi_restore s0
@@ -105,7 +103,6 @@ define void @test_emergency_spill_slot(i32 %a) {
 ; RV32I-WITHFP-NEXT:    lui a1, 97
 ; RV32I-WITHFP-NEXT:    addi a1, a1, 688
 ; RV32I-WITHFP-NEXT:    sub sp, sp, a1
-; RV32I-WITHFP-NEXT:    .cfi_def_cfa_offset 400032
 ; RV32I-WITHFP-NEXT:    lui a1, 78
 ; RV32I-WITHFP-NEXT:    addi a1, a1, 512
 ; RV32I-WITHFP-NEXT:    lui a2, 1048478
@@ -123,11 +120,10 @@ define void @test_emergency_spill_slot(i32 %a) {
 ; RV32I-WITHFP-NEXT:    lui a0, 97
 ; RV32I-WITHFP-NEXT:    addi a0, a0, 688
 ; RV32I-WITHFP-NEXT:    add sp, sp, a0
-; RV32I-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
 ; RV32I-WITHFP-NEXT:    lw s2, 2016(sp)
 ; RV32I-WITHFP-NEXT:    lw s1, 2020(sp)
 ; RV32I-WITHFP-NEXT:    lw s0, 2024(sp)
-; RV32I-WITHFP-NEXT:    .cfi_def_cfa sp, 400032
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa sp, 2032
 ; RV32I-WITHFP-NEXT:    lw ra, 2028(sp)
 ; RV32I-WITHFP-NEXT:    .cfi_restore ra
 ; RV32I-WITHFP-NEXT:    .cfi_restore s0
