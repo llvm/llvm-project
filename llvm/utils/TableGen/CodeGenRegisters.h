@@ -635,9 +635,11 @@ namespace llvm {
     CodeGenSubRegIndex *
       getConcatSubRegIndex(const SmallVector<CodeGenSubRegIndex *, 8>&);
 
-    const std::deque<CodeGenRegister> &getRegisters() { return Registers; }
+    const std::deque<CodeGenRegister> &getRegisters() const {
+      return Registers;
+    }
 
-    const StringMap<CodeGenRegister*> &getRegistersByName() {
+    const StringMap<CodeGenRegister *> &getRegistersByName() const {
       return RegistersByName;
     }
 
@@ -686,7 +688,7 @@ namespace llvm {
     // Native units are the singular unit of a leaf register. Register aliasing
     // is completely characterized by native units. Adopted units exist to give
     // register additional weight but don't affect aliasing.
-    bool isNativeUnit(unsigned RUID) {
+    bool isNativeUnit(unsigned RUID) const {
       return RUID < NumNativeRegUnits;
     }
 
