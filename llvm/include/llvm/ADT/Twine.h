@@ -153,11 +153,11 @@ namespace llvm {
 
     /// LHS - The prefix in the concatenation, which may be uninitialized for
     /// Null or Empty kinds.
-    Child LHS;
+    Child LHS = {0};
 
     /// RHS - The suffix in the concatenation, which may be uninitialized for
     /// Null or Empty kinds.
-    Child RHS;
+    Child RHS = {0};
 
     /// LHSKind - The NodeKind of the left hand side, \see getLHSKind().
     NodeKind LHSKind = EmptyKind;
