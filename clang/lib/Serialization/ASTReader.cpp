@@ -3874,17 +3874,8 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
     PreviousGeneration = incrementGeneration(*ContextObj);
 
   unsigned NumModules = ModuleMgr.size();
-  SmallVector<ImportedModule, 4> Loaded;
-  switch (ASTReadResult ReadResult =
-              ReadASTCore(FileName, Type, ImportLoc,
-                          /*ImportedBy=*/nullptr, Loaded, 0, 0,
-                          ASTFileSignature(), ClientLoadCapabilities)) {
-  case Failure:
-  case Missing:
-  case OutOfDate:
-  case VersionMismatch:
-  case ConfigurationMismatch:
-  case HadErrors: {
+  auto removeModulesAndReturn = [&](ASTReadResult ReadResult) {
+    assert(ReadResult && "expected to return error");
     ModuleMgr.removeModules(ModuleMgr.begin() + NumModules,
                             PP.getLangOpts().Modules
                                 ? &PP.getHeaderSearchInfo().getModuleMap()
@@ -3895,7 +3886,20 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
     GlobalIndex.reset();
     ModuleMgr.setGlobalIndex(nullptr);
     return ReadResult;
-  }
+  };
+
+  SmallVector<ImportedModule, 4> Loaded;
+  switch (ASTReadResult ReadResult =
+              ReadASTCore(FileName, Type, ImportLoc,
+                          /*ImportedBy=*/nullptr, Loaded, 0, 0,
+                          ASTFileSignature(), ClientLoadCapabilities)) {
+  case Failure:
+  case Missing:
+  case OutOfDate:
+  case VersionMismatch:
+  case ConfigurationMismatch:
+  case HadErrors:
+    return removeModulesAndReturn(ReadResult);
   case Success:
     break;
   }
@@ -3909,12 +3913,12 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
 
     // Read the AST block.
     if (ASTReadResult Result = ReadASTBlock(F, ClientLoadCapabilities))
-      return Result;
+      return removeModulesAndReturn(Result);
 
     // Read the extension blocks.
     while (!SkipCursorToBlock(F.Stream, EXTENSION_BLOCK_ID)) {
       if (ASTReadResult Result = ReadExtensionBlock(F))
-        return Result;
+        return removeModulesAndReturn(Result);
     }
 
     // Once read, set the ModuleFile bit base offset and update the size in
