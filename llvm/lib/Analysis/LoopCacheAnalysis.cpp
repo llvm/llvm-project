@@ -313,7 +313,7 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
   const SCEV *ElemSize = SE.getElementSize(&StoreOrLoadInst);
   const BasicBlock *BB = StoreOrLoadInst.getParent();
 
-  for (Loop *L = LI.getLoopFor(BB); L != nullptr; L = L->getParentLoop()) {
+  if (Loop *L = LI.getLoopFor(BB)) {
     const SCEV *AccessFn =
         SE.getSCEVAtScope(getPointerOperand(&StoreOrLoadInst), L);
 
@@ -342,7 +342,7 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
                    << "ERROR: failed to delinearize reference\n");
         Subscripts.clear();
         Sizes.clear();
-        break;
+        return false;
       }
 
       const SCEV *Div = SE.getUDivExactExpr(AccessFn, ElemSize);
@@ -453,7 +453,7 @@ CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
                      AliasAnalysis &AA, DependenceInfo &DI,
                      Optional<unsigned> TRT)
     : Loops(Loops), TripCounts(), LoopCosts(),
-      TRT(TRT == None ? Optional<unsigned>(TemporalReuseThreshold) : TRT),
+      TRT((TRT == None) ? Optional<unsigned>(TemporalReuseThreshold) : TRT),
       LI(LI), SE(SE), TTI(TTI), AA(AA), DI(DI) {
   assert(!Loops.empty() && "Expecting a non-empty loop vector.");
 
