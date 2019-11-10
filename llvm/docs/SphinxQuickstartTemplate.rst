@@ -2,18 +2,28 @@
 Sphinx Quickstart Template
 ==========================
 
-Introduction and Quickstart
-===========================
+This article is intended to take someone in the state of “I want to write documentation and get it added to LLVM’s docs” and help them start writing documentation as fast as possible and with as little nonsense as possible.
 
-This document is meant to get you writing documentation as fast as possible
-even if you have no previous experience with Sphinx. The goal is to take
-someone in the state of "I want to write documentation and get it added to
-LLVM's docs" and turn that into useful documentation mailed to llvm-commits
-with as little nonsense as possible.
+.. contents::
+   :local:
 
-You can find this document in ``docs/SphinxQuickstartTemplate.rst``. You
-should copy it, open the new file in your text editor, write your docs, and
-then send the new document to llvm-commits for review.
+Overview
+========
+
+LLVM documentation is written in `reStructuredText`_, a markup syntax similar to markdown (but much more powerful). The LLVM documentation site itself uses `Sphinx`_, a documentation generator originally written for Python documentation.
+
+.. _`reStructuredText`: http://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html
+.. _`Sphinx`: http://www.sphinx-doc.org
+
+How to use this template
+========================
+
+This article is located in ``docs/SphinxQuickstartTemplate.rst``. To use it as a template, make a copy and open it in a text editor. You can then write your docs, and then send the new article to llvm-commits for review.
+
+To view the restructuredText source file for this article, click **Show Source** on the right sidebar.
+
+Authoring Guidelines
+====================
 
 Focus on *content*. It is easy to fix the Sphinx (reStructuredText) syntax
 later if necessary, although reStructuredText tries to imitate common
@@ -23,15 +33,13 @@ reStructuredText syntax is useful when writing the document, so the last
 which should cover 99% of use cases.
 
 Let me say that again: focus on *content*. But if you really need to verify
-Sphinx's output, see ``docs/README.txt`` for information.
-
-Once you have finished with the content, please send the ``.rst`` file to
+Sphinx's output, see ``docs/README.txt`` for information. Once you have finished with the content, please send the ``.rst`` file to
 llvm-commits for review.
 
-Guidelines
-==========
+Creating New Articles
+---------------------
 
-Try to answer the following questions in your first section:
+Before creating a new article, consider the following questions:
 
 #. Why would I want to read this document?
 
@@ -39,17 +47,11 @@ Try to answer the following questions in your first section:
 
 #. What will I have learned by the end of this document?
 
-Common names for the first section are ``Introduction``, ``Overview``, or
-``Background``.
+A standard best practice is to make your articles task-oriented. You generally should not be writing documentation that isn't based around "how to" do something
+unless there's already an existing "how to" article for the topic you're documenting. The reason for this is that without a "how to" article to read first, it might be difficult for
+someone unfamiliar with the topic to understand a more advanced, conceptual article.
 
-If possible, make your document a "how to". Give it a name ``HowTo*.rst``
-like the other "how to" documents. This format is usually the easiest
-for another person to understand and also the most useful.
-
-You generally should not be writing documentation other than a "how to"
-unless there is already a "how to" about your topic. The reason for this
-is that without a "how to" document to read first, it is difficult for a
-person to understand a more advanced document.
+When creating a task-oriented article, follow existing LLVM articles by giving it a filename that starts with ``HowTo*.rst``. This format is usually the easiest for another person to understand and also the most useful.
 
 Focus on content (yes, I had to say it again).
 
@@ -60,26 +62,37 @@ this file into a new file for the documentation you are about to write.
 Example Section
 ===============
 
-Your text can be *emphasized*, **bold**, or ``monospace``.
-
-Use blank lines to separate paragraphs.
-
-Headings (like ``Example Section`` just above) give your document its
+An article can contain one or more sections (i.e., headings). Sections (like ``Example Section`` above) help give your document its
 structure. Use the same kind of adornments (e.g. ``======`` vs. ``------``)
 as are used in this document. The adornment must be the same length as the
 text above it. For Vim users, variations of ``yypVr=`` might be handy.
 
-Example Subsection
-------------------
+Example Nested Subsection
+-------------------------
 
-Make a link `like this <http://llvm.org/>`_. There is also a more
-sophisticated syntax which `can be more readable`_ for longer links since
-it disrupts the flow less. You can put the ``.. _`link text`: <URL>`` block
-pretty much anywhere later in the document.
+Subsections can also be nested beneath other subsections. For more information on sections, see Sphinx's `reStructuredText Primer`_.
 
-.. _`can be more readable`: http://en.wikipedia.org/wiki/LLVM
+.. _`reStructuredText Primer`: http://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html#sections
 
-Lists can be made like this:
+Text Formatting
+===============
+
+Text can be *emphasized*, **bold**, or ``monospace``.
+
+To create a new paragraph, simply insert a blank line.
+
+Links
+=====
+
+You can format a link `like this <http://llvm.org/>`_. A more `sophisticated syntax`_ allows you to place the ``.. _`link text`: <URL>`` block
+pretty much anywhere else in the document. This is useful when linking to especially long URLs.
+
+.. _`sophisticated syntax`: http://en.wikipedia.org/wiki/LLVM
+
+Lists
+=====
+
+restructuredText allows you to create ordered lists...
 
 #. A list starting with ``#.`` will be automatically numbered.
 
@@ -87,7 +100,7 @@ Lists can be made like this:
 
    #. Use indentation to create nested lists.
 
-You can also use unordered lists.
+...as well as unordered lists:
 
 * Stuff.
 
@@ -95,8 +108,8 @@ You can also use unordered lists.
 
 * More stuff.
 
-Example Subsubsection
-^^^^^^^^^^^^^^^^^^^^^
+Code Blocks
+===========
 
 You can make blocks of code like this:
 
@@ -151,10 +164,4 @@ without any syntax highlighting like this:
                          .++:..
                           ...
 
-Hopefully you won't need to be this deep
-""""""""""""""""""""""""""""""""""""""""
 
-If you need to do fancier things than what has been shown in this document,
-you can mail the list or check Sphinx's `reStructuredText Primer`_.
-
-.. _`reStructuredText Primer`: http://sphinx.pocoo.org/rest.html
