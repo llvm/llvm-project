@@ -2176,7 +2176,7 @@ class PODSmallVector {
   T* First = nullptr;
   T* Last = nullptr;
   T* Cap = nullptr;
-  T Inline[N] = {};
+  T Inline[N] = {0};
 
   bool isInline() const { return First == Inline; }
 
