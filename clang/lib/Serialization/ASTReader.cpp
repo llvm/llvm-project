@@ -3408,8 +3408,10 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       break;
 
     case SOURCE_MANAGER_LINE_TABLE:
-      if (ParseLineTable(F, Record))
+      if (ParseLineTable(F, Record)) {
+        Error("malformed SOURCE_MANAGER_LINE_TABLE in AST file");
         return Failure;
+      }
       break;
 
     case SOURCE_LOCATION_PRELOADS: {
@@ -4771,8 +4773,10 @@ ASTReader::ASTReadResult ASTReader::ReadExtensionBlock(ModuleFile &F) {
     switch (MaybeRecCode.get()) {
     case EXTENSION_METADATA: {
       ModuleFileExtensionMetadata Metadata;
-      if (parseModuleFileExtensionMetadata(Record, Blob, Metadata))
+      if (parseModuleFileExtensionMetadata(Record, Blob, Metadata)) {
+        Error("malformed EXTENSION_METADATA in AST file");
         return Failure;
+      }
 
       // Find a module file extension with this block name.
       auto Known = ModuleFileExtensions.find(Metadata.BlockName);
