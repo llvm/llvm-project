@@ -4202,7 +4202,8 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
 
   // Here comes stuff that we only do once the entire chain is loaded.
 
-  // Load the AST blocks of all of the modules that we loaded.
+  // Load the AST blocks of all of the modules that we loaded.  We can still
+  // hit errors parsing the ASTs at this point.
   for (ImportedModule &M : Loaded) {
     ModuleFile &F = *M.Mod;
 
@@ -4221,6 +4222,11 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
     F.GlobalBitOffset = TotalModulesSizeInBits;
     TotalModulesSizeInBits += F.SizeInBits;
     GlobalBitOffsetsMap.insert(std::make_pair(F.GlobalBitOffset, &F));
+  }
+
+  // Preload source locations and interesting indentifiers.
+  for (ImportedModule &M : Loaded) {
+    ModuleFile &F = *M.Mod;
 
     // Preload SLocEntries.
     for (unsigned I = 0, N = F.PreloadSLocEntries.size(); I != N; ++I) {
