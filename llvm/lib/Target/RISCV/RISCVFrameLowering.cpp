@@ -228,6 +228,8 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   }
 }
 
+// FIXME Fix emission of .cfi_restore and .cfi_def_cfa CFI directives that can
+// incorrectly affect subsequent basic blocks.
 void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
                                       MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
