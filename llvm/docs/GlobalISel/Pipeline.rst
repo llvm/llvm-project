@@ -165,7 +165,7 @@ involved in a bug.
 Once the critical blocks have been identified, you can further increase the
 resolution to the critical instructions by splitting the blocks like from:
 
-.. code-block:: llvm
+.. code-block:: none
 
   bb1:
     ... instructions group 1 ...
@@ -173,7 +173,7 @@ resolution to the critical instructions by splitting the blocks like from:
 
 into:
 
-.. code-block:: llvm
+.. code-block:: none
 
   bb1:
     ... instructions group 1 ...
