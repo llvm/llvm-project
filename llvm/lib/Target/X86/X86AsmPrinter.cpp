@@ -218,6 +218,7 @@ void X86AsmPrinter::PrintOperand(const MachineInstr *MI, unsigned OpNo,
     O << MO.getImm();
     return;
 
+  case MachineOperand::MO_ConstantPoolIndex:
   case MachineOperand::MO_GlobalAddress: {
     if (IsATT)
       O << '$';
