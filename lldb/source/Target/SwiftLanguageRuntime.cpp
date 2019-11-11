@@ -2632,7 +2632,7 @@ bool SwiftLanguageRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
     // disable it.
     return !in_value.IsBaseClass();
   }
-  return var_type.IsPossibleDynamicType(nullptr, false, false, true);
+  return var_type.IsPossibleDynamicType(nullptr, false, false);
 }
 
 CompilerType
