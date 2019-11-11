@@ -244,8 +244,6 @@ public:
   // If the current object represents a typedef type, get the underlying type
   CompilerType GetTypedefedType() const;
 
-  CompilerType GetUnboundType() const;
-
   // Create related types using the current type's AST
   CompilerType GetBasicTypeFromAST(lldb::BasicType basic_type) const;
 
