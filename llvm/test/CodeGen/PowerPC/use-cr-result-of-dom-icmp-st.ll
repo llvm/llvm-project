@@ -25,7 +25,7 @@ define i64 @ll_a_op_b__2(i64 %a, i64 %b) {
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB0_2: # %if.end
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mulld r3, r4, r3
 ; CHECK-NEXT:    blr
 entry:
@@ -54,7 +54,7 @@ define i64 @ll_a_op_b__1(i64 %a, i64 %b) {
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB1_2: # %if.end
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mulld r3, r4, r3
 ; CHECK-NEXT:    blr
 entry:
@@ -81,9 +81,8 @@ define i64 @ll_a_op_b_0(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mr r3, r4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB2_2: # %if.end
-; CHECK-NEXT:    cmpldi r5, 0
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mulld r3, r4, r3
 ; CHECK-NEXT:    blr
 entry:
@@ -111,9 +110,8 @@ define i64 @ll_a_op_b_1(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mr r3, r4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB3_2: # %if.end
-; CHECK-NEXT:    cmpldi r5, 1
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mulld r3, r4, r3
 ; CHECK-NEXT:    blr
 entry:
@@ -141,9 +139,8 @@ define i64 @ll_a_op_b_2(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mr r3, r4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB4_2: # %if.end
-; CHECK-NEXT:    cmpldi r5, 2
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mulld r3, r4, r3
 ; CHECK-NEXT:    blr
 entry:
@@ -171,7 +168,7 @@ define i64 @ll_a__2(i64 %a, i64 %b) {
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB5_2: # %if.end
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mulld r3, r4, r3
 ; CHECK-NEXT:    blr
 entry:
@@ -198,7 +195,7 @@ define i64 @ll_a__1(i64 %a, i64 %b) {
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB6_2: # %if.end
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mulld r3, r4, r3
 ; CHECK-NEXT:    blr
 entry:
@@ -224,9 +221,8 @@ define i64 @ll_a_0(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mr r3, r4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB7_2: # %if.end
-; CHECK-NEXT:    cmpldi r3, 0
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mulld r3, r4, r3
 ; CHECK-NEXT:    blr
 entry:
@@ -252,9 +248,8 @@ define i64 @ll_a_1(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mr r3, r4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB8_2: # %if.end
-; CHECK-NEXT:    cmpldi r3, 1
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mulld r3, r4, r3
 ; CHECK-NEXT:    blr
 entry:
@@ -280,9 +275,8 @@ define i64 @ll_a_2(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mr r3, r4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB9_2: # %if.end
-; CHECK-NEXT:    cmpldi r3, 2
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mulld r3, r4, r3
 ; CHECK-NEXT:    blr
 entry:
@@ -307,7 +301,7 @@ define i64 @i_a_op_b__2(i32 signext %a, i32 signext %b) {
 ; CHECK-NEXT:    bgt cr0, .LBB10_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mullw r4, r4, r3
 ; CHECK-NEXT:  .LBB10_2: # %return
 ; CHECK-NEXT:    extsw r3, r4
@@ -340,7 +334,7 @@ define i64 @i_a_op_b__1(i32 signext %a, i32 signext %b) {
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB11_2: # %if.end
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mullw r4, r4, r3
 ; CHECK-NEXT:    extsw r3, r4
 ; CHECK-NEXT:    blr
@@ -371,9 +365,8 @@ define i64 @i_a_op_b_0(i32 signext %a, i32 signext %b) {
 ; CHECK-NEXT:    extsw r3, r4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB12_2: # %if.end
-; CHECK-NEXT:    cmplwi r5, 0
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mullw r4, r4, r3
 ; CHECK-NEXT:    extsw r3, r4
 ; CHECK-NEXT:    blr
@@ -401,9 +394,8 @@ define i64 @i_a_op_b_1(i32 signext %a, i32 signext %b) {
 ; CHECK-NEXT:    cmpwi r5, 1
 ; CHECK-NEXT:    bgt cr0, .LBB13_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
-; CHECK-NEXT:    cmplwi r5, 1
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mullw r4, r4, r3
 ; CHECK-NEXT:  .LBB13_2: # %return
 ; CHECK-NEXT:    extsw r3, r4
@@ -432,9 +424,8 @@ define i64 @i_a_op_b_2(i32 signext %a, i32 signext %b) {
 ; CHECK-NEXT:    cmpwi r5, 2
 ; CHECK-NEXT:    bgt cr0, .LBB14_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
-; CHECK-NEXT:    cmplwi r5, 2
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mullw r4, r4, r3
 ; CHECK-NEXT:  .LBB14_2: # %return
 ; CHECK-NEXT:    extsw r3, r4
@@ -463,7 +454,7 @@ define i64 @i_a__2(i32 signext %a, i32 signext %b) {
 ; CHECK-NEXT:    bgt cr0, .LBB15_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mullw r4, r4, r3
 ; CHECK-NEXT:  .LBB15_2: # %return
 ; CHECK-NEXT:    extsw r3, r4
@@ -494,7 +485,7 @@ define i64 @i_a__1(i32 signext %a, i32 signext %b) {
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB16_2: # %if.end
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mullw r4, r4, r3
 ; CHECK-NEXT:    extsw r3, r4
 ; CHECK-NEXT:    blr
@@ -523,9 +514,8 @@ define i64 @i_a_0(i32 signext %a, i32 signext %b) {
 ; CHECK-NEXT:    extsw r3, r4
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB17_2: # %if.end
-; CHECK-NEXT:    cmplwi r3, 0
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mullw r4, r4, r3
 ; CHECK-NEXT:    extsw r3, r4
 ; CHECK-NEXT:    blr
@@ -551,9 +541,8 @@ define i64 @i_a_1(i32 signext %a, i32 signext %b) {
 ; CHECK-NEXT:    cmpwi r3, 1
 ; CHECK-NEXT:    bgt cr0, .LBB18_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
-; CHECK-NEXT:    cmplwi r3, 1
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mullw r4, r4, r3
 ; CHECK-NEXT:  .LBB18_2: # %return
 ; CHECK-NEXT:    extsw r3, r4
@@ -580,9 +569,8 @@ define i64 @i_a_2(i32 signext %a, i32 signext %b) {
 ; CHECK-NEXT:    cmpwi r3, 2
 ; CHECK-NEXT:    bgt cr0, .LBB19_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
-; CHECK-NEXT:    cmplwi r3, 2
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    isel r4, r4, r5, eq
+; CHECK-NEXT:    isel r4, r5, r4, lt
 ; CHECK-NEXT:    mullw r4, r4, r3
 ; CHECK-NEXT:  .LBB19_2: # %return
 ; CHECK-NEXT:    extsw r3, r4
