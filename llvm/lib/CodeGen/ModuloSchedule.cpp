@@ -1582,6 +1582,99 @@ PeelingModuloScheduleExpander::peelKernel(LoopPeelDirection LPD) {
   return NewBB;
 }
 
+void PeelingModuloScheduleExpander::filterInstructions(MachineBasicBlock *MB,
+                                                       int MinStage) {
+  for (auto I = MB->getFirstInstrTerminator()->getReverseIterator();
+       I != std::next(MB->getFirstNonPHI()->getReverseIterator());) {
+    MachineInstr *MI = &*I++;
+    int Stage = getStage(MI);
+    if (Stage == -1 || Stage >= MinStage)
+      continue;
+
+    for (MachineOperand &DefMO : MI->defs()) {
+      SmallVector<std::pair<MachineInstr *, Register>, 4> Subs;
+      for (MachineInstr &UseMI : MRI.use_instructions(DefMO.getReg())) {
+        // Only PHIs can use values from this block by construction.
+        // Match with the equivalent PHI in B.
+        assert(UseMI.isPHI());
+        Register Reg = getEquivalentRegisterIn(UseMI.getOperand(0).getReg(),
+                                               MI->getParent());
+        Subs.emplace_back(&UseMI, Reg);
+      }
+      for (auto &Sub : Subs)
+        Sub.first->substituteRegister(DefMO.getReg(), Sub.second, /*SubIdx=*/0,
+                                      *MRI.getTargetRegisterInfo());
+    }
+    if (LIS)
+      LIS->RemoveMachineInstrFromMaps(*MI);
+    MI->eraseFromParent();
+  }
+}
+
+void PeelingModuloScheduleExpander::moveStageBetweenBlocks(
+    MachineBasicBlock *DestBB, MachineBasicBlock *SourceBB, unsigned Stage) {
+  auto InsertPt = DestBB->getFirstNonPHI();
+  DenseMap<Register, Register> Remaps;
+  for (auto I = SourceBB->getFirstNonPHI(); I != SourceBB->end();) {
+    MachineInstr *MI = &*I++;
+    if (MI->isPHI()) {
+      // This is an illegal PHI. If we move any instructions using an illegal
+      // PHI, we need to create a legal Phi
+      Register PhiR = MI->getOperand(0).getReg();
+      auto RC = MRI.getRegClass(PhiR);
+      Register NR = MRI.createVirtualRegister(RC);
+      MachineInstr *NI = BuildMI(*DestBB, DestBB->getFirstNonPHI(), DebugLoc(),
+                                 TII->get(TargetOpcode::PHI), NR)
+                             .addReg(PhiR)
+                             .addMBB(SourceBB);
+      BlockMIs[{DestBB, CanonicalMIs[MI]}] = NI;
+      CanonicalMIs[NI] = CanonicalMIs[MI];
+      Remaps[PhiR] = NR;
+      continue;
+    }
+    if (getStage(MI) != Stage)
+      continue;
+    MI->removeFromParent();
+    DestBB->insert(InsertPt, MI);
+    auto *KernelMI = CanonicalMIs[MI];
+    BlockMIs[{DestBB, KernelMI}] = MI;
+    BlockMIs.erase({SourceBB, KernelMI});
+  }
+  SmallVector<MachineInstr *, 4> PhiToDelete;
+  for (MachineInstr &MI : DestBB->phis()) {
+    assert(MI.getNumOperands() == 3);
+    MachineInstr *Def = MRI.getVRegDef(MI.getOperand(1).getReg());
+    // If the instruction referenced by the phi is moved inside the block
+    // we don't need the phi anymore.
+    if (getStage(Def) == Stage) {
+      Register PhiReg = MI.getOperand(0).getReg();
+      MRI.replaceRegWith(MI.getOperand(0).getReg(),
+                         Def->getOperand(0).getReg());
+      MI.getOperand(0).setReg(PhiReg);
+      PhiToDelete.push_back(&MI);
+    }
+  }
+  for (auto *P : PhiToDelete)
+    P->eraseFromParent();
+  InsertPt = DestBB->getFirstNonPHI();
+  for (MachineInstr &MI : SourceBB->phis()) {
+    MachineInstr *NewMI = MF.CloneMachineInstr(&MI);
+    DestBB->insert(InsertPt, NewMI);
+    Register OrigR = MI.getOperand(0).getReg();
+    Register R = MRI.createVirtualRegister(MRI.getRegClass(OrigR));
+    NewMI->getOperand(0).setReg(R);
+    NewMI->getOperand(1).setReg(OrigR);
+    NewMI->getOperand(2).setMBB(*DestBB->pred_begin());
+    Remaps[OrigR] = R;
+    CanonicalMIs[NewMI] = CanonicalMIs[&MI];
+    BlockMIs[{DestBB, CanonicalMIs[&MI]}] = NewMI;
+  }
+  for (auto I = DestBB->getFirstNonPHI(); I != DestBB->end(); ++I)
+    for (MachineOperand &MO : I->uses())
+      if (MO.isReg() && Remaps.count(MO.getReg()))
+        MO.setReg(Remaps[MO.getReg()]);
+}
+
 void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
   BitVector LS(Schedule.getNumStages(), true);
   BitVector AS(Schedule.getNumStages(), true);
@@ -1607,23 +1700,36 @@ void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
 
   // Push out the epilogs, again in reverse order.
   // We can't assume anything about the minumum loop trip count at this point,
-  // so emit a fairly complex epilog:
-  //  K[0, 1, 2]     // Kernel runs stages 0, 1, 2
-  //  E0[2] <- P1    // Epilog runs stage 2 only, so the state after is [0].
-  //  E1[1, 2] <- P0 // Epilog 1 moves the last item from stage 0 to stage 2.
-  //
-  // This creates a single-successor single-predecessor sequence of blocks for
-  // each epilog, which are kept this way for simplicity at this stage and
-  // cleaned up by the optimizer later.
+  // so emit a fairly complex epilog.
+
+  // We first peel number of stages minus one epilogue. Then we remove dead
+  // stages and reorder instructions based on their stage. If we have 3 stages
+  // we generate first:
+  // E0[3, 2, 1]
+  // E1[3', 2']
+  // E2[3'']
+  // And then we move instructions based on their stages to have:
+  // E0[3]
+  // E1[2, 3']
+  // E2[1, 2', 3'']
+  // The transformation is legal because we only move instructions past
+  // instructions of a previous loop iteration.
   for (int I = 1; I <= Schedule.getNumStages() - 1; ++I) {
-    Epilogs.push_back(nullptr);
-    for (int J = Schedule.getNumStages() - 1; J >= I; --J) {
-      LS.reset();
-      LS[J] = 1;
-      Epilogs.back() = peelKernel(LPD_Back);
-      LiveStages[Epilogs.back()] = LS;
-      AvailableStages[Epilogs.back()] = AS;
+    Epilogs.push_back(peelKernel(LPD_Back));
+    filterInstructions(Epilogs.back(), Schedule.getNumStages() - I);
+  }
+  for (size_t I = 0; I < Epilogs.size(); I++) {
+    LS.reset();
+    for (size_t J = I; J < Epilogs.size(); J++) {
+      int Iteration = J;
+      unsigned Stage = Schedule.getNumStages() - 1 + I - J;
+      // Move stage one block at a time so that Phi nodes are updated correctly.
+      for (size_t K = Iteration; K > I; K--)
+        moveStageBetweenBlocks(Epilogs[K - 1], Epilogs[K], Stage);
+      LS[Stage] = 1;
     }
+    LiveStages[Epilogs[I]] = LS;
+    AvailableStages[Epilogs[I]] = AS;
   }
 
   // Now we've defined all the prolog and epilog blocks as a fallthrough
@@ -1659,6 +1765,13 @@ void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
       rewriteUsesOf(MI);
     }
   }
+  for (auto *MI : IllegalPhisToDelete) {
+    if (LIS)
+      LIS->RemoveMachineInstrFromMaps(*MI);
+    MI->eraseFromParent();
+  }
+  IllegalPhisToDelete.clear();
+
   // Now all remapping has been done, we're free to optimize the generated code.
   for (MachineBasicBlock *B : reverse(Blocks))
     EliminateDeadPhis(B, MRI, LIS);
@@ -1727,9 +1840,10 @@ void PeelingModuloScheduleExpander::rewriteUsesOf(MachineInstr *MI) {
       R = MI->getOperand(1).getReg();
     MRI.setRegClass(R, MRI.getRegClass(PhiR));
     MRI.replaceRegWith(PhiR, R);
-    if (LIS)
-      LIS->RemoveMachineInstrFromMaps(*MI);
-    MI->eraseFromParent();
+    // Postpone deleting the Phi as it may be referenced by BlockMIs and used
+    // later to figure out how to remap registers.
+    MI->getOperand(0).setReg(PhiR);
+    IllegalPhisToDelete.push_back(MI);
     return;
   }
 
