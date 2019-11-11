@@ -114,7 +114,7 @@ public:
 
   /// \returns the line number where this variable is defined, if any, or None
   /// if defined before input is parsed.
-  Optional<size_t> getDefLineNumber() { return DefLineNumber; }
+  Optional<size_t> getDefLineNumber() const { return DefLineNumber; }
 };
 
 /// Class representing the use of a numeric variable in the AST of an
