@@ -377,7 +377,7 @@ bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
         Roles & static_cast<unsigned>(index::SymbolRole::Definition)))
     return true;
 
-  auto ID = getSymbolID(*Name, MI, SM);
+  auto ID = getSymbolID(Name->getName(), MI, SM);
   if (!ID)
     return true;
 
@@ -473,14 +473,14 @@ void SymbolCollector::finish() {
     // First, drop header guards. We can't identify these until EOF.
     for (const IdentifierInfo *II : IndexedMacros) {
       if (const auto *MI = PP->getMacroDefinition(II).getMacroInfo())
-        if (auto ID = getSymbolID(*II, MI, PP->getSourceManager()))
+        if (auto ID = getSymbolID(II->getName(), MI, PP->getSourceManager()))
           if (MI->isUsedForHeaderGuard())
             Symbols.erase(*ID);
     }
     // Now increment refcounts.
     for (const IdentifierInfo *II : ReferencedMacros) {
       if (const auto *MI = PP->getMacroDefinition(II).getMacroInfo())
-        if (auto ID = getSymbolID(*II, MI, PP->getSourceManager()))
+        if (auto ID = getSymbolID(II->getName(), MI, PP->getSourceManager()))
           IncRef(*ID);
     }
   }
