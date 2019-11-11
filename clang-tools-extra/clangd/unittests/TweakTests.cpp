@@ -920,6 +920,9 @@ TEST_F(DefineInlineTest, TriggersOnFunctionDecl) {
     [[(void)(5+3);
     return;]]
   }]]
+
+  // Definition with no body.
+  class Bar { Bar() = def^ault; }
   )cpp");
 }
 
