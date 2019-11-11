@@ -51,6 +51,53 @@ MatchConsumer<T> ifBound(std::string ID, MatchConsumer<T> TrueC,
     return (Map.find(ID) != Map.end() ? TrueC : FalseC)(Result);
   };
 }
+
+/// A failable computation over nodes bound by AST matchers, with (limited)
+/// reflection via the `toString` method.
+///
+/// The computation should report any errors though its return value (rather
+/// than terminating the program) to enable usage in interactive scenarios like
+/// clang-query.
+///
+/// This is a central abstraction of the Transformer framework. It is a
+/// generalization of `MatchConsumer` and intended to replace it.
+template <typename T> class MatchComputation {
+public:
+  virtual ~MatchComputation() = default;
+
+  /// Evaluates the computation and (potentially) updates the accumulator \c
+  /// Result.  \c Result is undefined in the case of an error. `Result` is an
+  /// out parameter to optimize case where the computation involves composing
+  /// the result of sub-computation evaluations.
+  virtual llvm::Error eval(const ast_matchers::MatchFinder::MatchResult &Match,
+                           T *Result) const = 0;
+
+  /// Convenience version of `eval`, for the case where the computation is being
+  /// evaluated on its own.
+  llvm::Expected<T> eval(const ast_matchers::MatchFinder::MatchResult &R) const;
+
+  /// Constructs a string representation of the computation, for informational
+  /// purposes. The representation must be deterministic, but is not required to
+  /// be unique.
+  virtual std::string toString() const = 0;
+
+protected:
+  MatchComputation() = default;
+
+  // Since this is an abstract class, copying/assigning only make sense for
+  // derived classes implementing `clone()`.
+  MatchComputation(const MatchComputation &) = default;
+  MatchComputation &operator=(const MatchComputation &) = default;
+};
+
+template <typename T>
+llvm::Expected<T> MatchComputation<T>::eval(
+    const ast_matchers::MatchFinder::MatchResult &R) const {
+  T Output;
+  if (auto Err = eval(R, &Output))
+    return std::move(Err);
+  return Output;
+}
 } // namespace transformer
 
 namespace tooling {

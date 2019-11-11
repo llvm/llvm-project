@@ -272,14 +272,6 @@ public:
 };
 } // namespace
 
-llvm::Expected<std::string>
-StencilInterface::eval(const MatchFinder::MatchResult &R) const {
-  std::string Output;
-  if (auto Err = eval(R, &Output))
-    return std::move(Err);
-  return Output;
-}
-
 Stencil transformer::detail::makeStencil(StringRef Text) { return text(Text); }
 
 Stencil transformer::detail::makeStencil(RangeSelector Selector) {
@@ -287,52 +279,50 @@ Stencil transformer::detail::makeStencil(RangeSelector Selector) {
 }
 
 Stencil transformer::text(StringRef Text) {
-  return Stencil(std::make_shared<StencilImpl<RawTextData>>(Text));
+  return std::make_shared<StencilImpl<RawTextData>>(Text);
 }
 
 Stencil transformer::selection(RangeSelector Selector) {
-  return Stencil(
-      std::make_shared<StencilImpl<SelectorData>>(std::move(Selector)));
+  return std::make_shared<StencilImpl<SelectorData>>(std::move(Selector));
 }
 
 Stencil transformer::dPrint(StringRef Id) {
-  return Stencil(std::make_shared<StencilImpl<DebugPrintNodeData>>(Id));
+  return std::make_shared<StencilImpl<DebugPrintNodeData>>(Id);
 }
 
 Stencil transformer::expression(llvm::StringRef Id) {
-  return Stencil(std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::Parens, Id));
+  return std::make_shared<StencilImpl<UnaryOperationData>>(
+      UnaryNodeOperator::Parens, Id);
 }
 
 Stencil transformer::deref(llvm::StringRef ExprId) {
-  return Stencil(std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::Deref, ExprId));
+  return std::make_shared<StencilImpl<UnaryOperationData>>(
+      UnaryNodeOperator::Deref, ExprId);
 }
 
 Stencil transformer::addressOf(llvm::StringRef ExprId) {
-  return Stencil(std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::Address, ExprId));
+  return std::make_shared<StencilImpl<UnaryOperationData>>(
+      UnaryNodeOperator::Address, ExprId);
 }
 
 Stencil transformer::access(StringRef BaseId, Stencil Member) {
-  return Stencil(
-      std::make_shared<StencilImpl<AccessData>>(BaseId, std::move(Member)));
+  return std::make_shared<StencilImpl<AccessData>>(BaseId, std::move(Member));
 }
 
 Stencil transformer::ifBound(StringRef Id, Stencil TrueStencil,
                              Stencil FalseStencil) {
-  return Stencil(std::make_shared<StencilImpl<IfBoundData>>(
-      Id, std::move(TrueStencil), std::move(FalseStencil)));
+  return std::make_shared<StencilImpl<IfBoundData>>(Id, std::move(TrueStencil),
+                                                    std::move(FalseStencil));
 }
 
 Stencil transformer::run(MatchConsumer<std::string> Fn) {
-  return Stencil(
-      std::make_shared<StencilImpl<MatchConsumer<std::string>>>(std::move(Fn)));
+  return std::make_shared<StencilImpl<MatchConsumer<std::string>>>(
+      std::move(Fn));
 }
 
 Stencil transformer::catVector(std::vector<Stencil> Parts) {
   // Only one argument, so don't wrap in sequence.
   if (Parts.size() == 1)
     return std::move(Parts[0]);
-  return Stencil(std::make_shared<StencilImpl<SequenceData>>(std::move(Parts)));
+  return std::make_shared<StencilImpl<SequenceData>>(std::move(Parts));
 }
