@@ -342,6 +342,8 @@ private:
       MI = CanonicalMIs[MI];
     return Schedule.getStage(MI);
   }
+  /// Target loop info before kernel peeling.
+  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> Info;
 };
 
 /// Expander that simply annotates each scheduled instruction with a post-instr

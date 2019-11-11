@@ -1759,10 +1759,6 @@ void PeelingModuloScheduleExpander::rewriteUsesOf(MachineInstr *MI) {
 }
 
 void PeelingModuloScheduleExpander::fixupBranches() {
-  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> Info =
-      TII->analyzeLoopForPipelining(BB);
-  assert(Info);
-
   // Work outwards from the kernel.
   bool KernelDisposed = false;
   int TC = Schedule.getNumStages() - 1;
@@ -1818,6 +1814,8 @@ void PeelingModuloScheduleExpander::expand() {
   BB = Schedule.getLoop()->getTopBlock();
   Preheader = Schedule.getLoop()->getLoopPreheader();
   LLVM_DEBUG(Schedule.dump());
+  Info = TII->analyzeLoopForPipelining(BB);
+  assert(Info);
 
   rewriteKernel();
   peelPrologAndEpilogs();
