@@ -2330,24 +2330,13 @@ static bool isAllocSiteRemovable(Instruction *AI,
               return false;
             LLVM_FALLTHROUGH;
           }
+          case Intrinsic::invariant_start:
           case Intrinsic::invariant_end:
           case Intrinsic::lifetime_start:
           case Intrinsic::lifetime_end:
           case Intrinsic::objectsize:
             Users.emplace_back(I);
             continue;
-          case Intrinsic::invariant_start:
-            // Only try to delete this if it has no uses or a single 'end' use.
-            if (I->use_empty()) {
-              Users.emplace_back(I);
-              continue;
-            } else if (I->hasOneUse() &&
-                       match(I->user_back(),
-                             m_Intrinsic<Intrinsic::invariant_end>())) {
-              Users.emplace_back(I);
-              continue;
-            }
-            return false;
           }
         }
 
@@ -2395,23 +2384,18 @@ Instruction *InstCombiner::visitAllocSite(Instruction &MI) {
 
   if (isAllocSiteRemovable(&MI, Users, &TLI)) {
     for (unsigned i = 0, e = Users.size(); i != e; ++i) {
+      // Lowering all @llvm.objectsize calls first because they may
+      // use a bitcast/GEP of the alloca we are removing.
       if (!Users[i])
        continue;
 
       Instruction *I = cast<Instruction>(&*Users[i]);
+
       if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-        // Lowering all @llvm.objectsize calls first because they may
-        // use a bitcast/GEP of the alloca we are removing.
         if (II->getIntrinsicID() == Intrinsic::objectsize) {
           Value *Result =
               lowerObjectSizeCall(II, DL, &TLI, /*MustSucceed=*/true);
           replaceInstUsesWith(*I, Result);
-          eraseInstFromFunction(*I);
-          Users[i] = nullptr; // Skip examining in the next loop.
-        }
-        // Erase llvm.invariant.end because we expect that it uses an
-        // llvm.invariant.start that we will remove below.
-        if (II->getIntrinsicID() == Intrinsic::invariant_end) {
           eraseInstFromFunction(*I);
           Users[i] = nullptr; // Skip examining in the next loop.
         }
