@@ -147,3 +147,73 @@ entry:
   %cond = select i1 %cmp, i16 32, i16 0
   ret i16 %cond
 }
+
+; Check the following conversion in TargetLowering::SimplifySetCC
+; (X & 8) != 0  -->  (X & 8) >> 3
+define i16 @testSimplifySetCC_0_sh8(i16 %x) {
+; CHECK-LABEL: testSimplifySetCC_0_sh8:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    bit #256, r12
+; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    and #1, r12
+; CHECK-NEXT:    ret
+entry:
+  %and = and i16 %x, 256
+  %cmp = icmp ne i16 %and, 0
+  %conv = zext i1 %cmp to i16
+  ret i16 %conv
+}
+
+; Check the following conversion in TargetLowering::SimplifySetCC
+; (X & 8) == 8  -->  (X & 8) >> 3
+define i16 @testSimplifySetCC_1_sh8(i16 %x) {
+; CHECK-LABEL: testSimplifySetCC_1_sh8:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    bit #256, r12
+; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    and #1, r12
+; CHECK-NEXT:    ret
+entry:
+  %and = and i16 %x, 256
+  %cmp = icmp eq i16 %and, 256
+  %conv = zext i1 %cmp to i16
+  ret i16 %conv
+}
+
+; Check the following conversion in DAGCombiner::foldSelectCCToShiftAnd
+; select_cc setlt X, 0, A, 0 -> "and (srl X, C2), A" iff A is a single-bit
+define i16 @testShiftAnd_1_sh8(i16 %x) {
+; CHECK-LABEL: testShiftAnd_1_sh8:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    mov #128, r12
+; CHECK-NEXT:    tst r13
+; CHECK-NEXT:    jl .LBB10_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    clr r12
+; CHECK-NEXT:  .LBB10_2: ; %entry
+; CHECK-NEXT:    ret
+entry:
+  %cmp = icmp slt i16 %x, 0
+  %cond = select i1 %cmp, i16 128, i16 0
+  ret i16 %cond
+}
+
+; Check the following conversion in DAGCombiner::foldSelectCCToShiftAnd
+; select_cc setlt X, 0, A, 0 -> "and (srl X, C2), A" iff A is a single-bit
+define i16 @testShiftAnd_1_sh9(i16 %x) {
+; CHECK-LABEL: testShiftAnd_1_sh9:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    mov #64, r12
+; CHECK-NEXT:    tst r13
+; CHECK-NEXT:    jl .LBB11_2
+; CHECK-NEXT:  ; %bb.1: ; %entry
+; CHECK-NEXT:    clr r12
+; CHECK-NEXT:  .LBB11_2: ; %entry
+; CHECK-NEXT:    ret
+entry:
+  %cmp = icmp slt i16 %x, 0
+  %cond = select i1 %cmp, i16 64, i16 0
+  ret i16 %cond
+}
