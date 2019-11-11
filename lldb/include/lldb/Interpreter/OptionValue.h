@@ -61,10 +61,6 @@ public:
   OptionValue()
       : m_callback(nullptr), m_baton(nullptr), m_value_was_set(false) {}
 
-  OptionValue(const OptionValue &rhs)
-      : m_callback(rhs.m_callback), m_baton(rhs.m_baton),
-        m_value_was_set(rhs.m_value_was_set) {}
-
   virtual ~OptionValue() = default;
 
   // Subclasses should override these functions

@@ -7,7 +7,7 @@
 define i8* @test_objc_autorelease(i8* %arg0) {
 ; CHECK-LABEL: test_objc_autorelease
 ; CHECK-NEXT: entry
-; CHECK-NEXT: %0 = call i8* @objc_autorelease(i8* %arg0)
+; CHECK-NEXT: %0 = notail call i8* @objc_autorelease(i8* %arg0)
 ; CHECK-NEXT: ret i8* %0
 entry:
   %0 = call i8* @llvm.objc.autorelease(i8* %arg0)
@@ -37,7 +37,7 @@ entry:
 define i8* @test_objc_autoreleaseReturnValue(i8* %arg0) {
 ; CHECK-LABEL: test_objc_autoreleaseReturnValue
 ; CHECK-NEXT: entry
-; CHECK-NEXT: %0 = call i8* @objc_autoreleaseReturnValue(i8* %arg0)
+; CHECK-NEXT: %0 = tail call i8* @objc_autoreleaseReturnValue(i8* %arg0)
 ; CHECK-NEXT: ret i8* %0
 entry:
   %0 = call i8* @llvm.objc.autoreleaseReturnValue(i8* %arg0)
@@ -117,7 +117,7 @@ entry:
 define i8* @test_objc_retain(i8* %arg0) {
 ; CHECK-LABEL: test_objc_retain
 ; CHECK-NEXT: entry
-; CHECK-NEXT: %0 = call i8* @objc_retain(i8* %arg0)
+; CHECK-NEXT: %0 = tail call i8* @objc_retain(i8* %arg0)
 ; CHECK-NEXT: ret i8* %0
 entry:
   %0 = call i8* @llvm.objc.retain(i8* %arg0)
@@ -147,7 +147,7 @@ entry:
 define i8* @test_objc_retainAutoreleasedReturnValue(i8* %arg0) {
 ; CHECK-LABEL: test_objc_retainAutoreleasedReturnValue
 ; CHECK-NEXT: entry
-; CHECK-NEXT: %0 = call i8* @objc_retainAutoreleasedReturnValue(i8* %arg0)
+; CHECK-NEXT: %0 = tail call i8* @objc_retainAutoreleasedReturnValue(i8* %arg0)
 ; CHECK-NEXT: ret i8* %0
 entry:
   %0 = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %arg0)
@@ -187,7 +187,7 @@ entry:
 define i8* @test_objc_unsafeClaimAutoreleasedReturnValue(i8* %arg0) {
 ; CHECK-LABEL: test_objc_unsafeClaimAutoreleasedReturnValue
 ; CHECK-NEXT: entry
-; CHECK-NEXT: %0 = call i8* @objc_unsafeClaimAutoreleasedReturnValue(i8* %arg0)
+; CHECK-NEXT: %0 = tail call i8* @objc_unsafeClaimAutoreleasedReturnValue(i8* %arg0)
 ; CHECK-NEXT: ret i8* %0
 entry:
   %0 = call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* %arg0)
