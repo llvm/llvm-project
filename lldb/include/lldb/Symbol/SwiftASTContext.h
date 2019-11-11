@@ -682,7 +682,9 @@ public:
   // If the current object represents a typedef type, get the underlying type
   CompilerType GetTypedefedType(void *type) override;
 
-  CompilerType GetUnboundType(lldb::opaque_compiler_type_t type) override;
+  CompilerType GetUnboundType(lldb::opaque_compiler_type_t type);
+
+  std::string GetSuperclassName(const CompilerType &superclass_type);
 
   CompilerType GetTypeForDecl(void *opaque_decl) override;
 
