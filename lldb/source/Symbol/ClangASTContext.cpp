@@ -7089,10 +7089,9 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
   return CompilerType();
 }
 
-uint32_t
-ClangASTContext::GetIndexForRecordBase(const clang::RecordDecl *record_decl,
-                                       const clang::CXXBaseSpecifier *base_spec,
-                                       bool omit_empty_base_classes) {
+static uint32_t GetIndexForRecordBase(const clang::RecordDecl *record_decl,
+                                      const clang::CXXBaseSpecifier *base_spec,
+                                      bool omit_empty_base_classes) {
   uint32_t child_idx = 0;
 
   const clang::CXXRecordDecl *cxx_record_decl =
@@ -7234,10 +7233,10 @@ size_t ClangASTContext::GetIndexOfChildMemberWithName(
 
           clang::CXXBasePaths paths;
           if (cxx_record_decl->lookupInBases(
-                  [&decl_name](const CXXBaseSpecifier *base_specifier,
-                               CXXBasePath &base_path) {
+                  [decl_name](const clang::CXXBaseSpecifier *specifier,
+                              clang::CXXBasePath &path) {
                     return clang::CXXRecordDecl::FindOrdinaryMember(
-                        base_specifier, base_path, decl_name);
+                        specifier, path, decl_name);
                   },
                   paths)) {
             clang::CXXBasePaths::const_paths_iterator path,
