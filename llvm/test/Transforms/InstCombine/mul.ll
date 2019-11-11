@@ -599,9 +599,7 @@ define <2 x i8> @negate_if_true_wrong_constant(<2 x i8> %px, i1 %cond) {
 ; (C ? (X /exact Y) : 1) * Y -> C ? X : Y
 define i32 @mul_div_select(i32 %x, i32 %y, i1 %c) {
 ; CHECK-LABEL: @mul_div_select(
-; CHECK-NEXT:    [[DIV:%.*]] = udiv exact i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i32 [[DIV]], i32 1
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SEL]], [[Y]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[C:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %div = udiv exact i32 %x, %y
