@@ -5888,6 +5888,18 @@ CompilerType SwiftASTContext::GetCanonicalType(void *type) {
   return CompilerType();
 }
 
+CompilerType SwiftASTContext::GetInstanceType(CompilerType ct) {
+  if (!ct)
+    return {};
+
+  SwiftASTContext *ctxt = llvm::dyn_cast<SwiftASTContext>(ct.GetTypeSystem());
+
+  if (!ctxt)
+    return CompilerType();
+
+  return ctxt->GetInstanceType(ct.GetOpaqueQualType());
+}
+
 CompilerType SwiftASTContext::GetInstanceType(void *type) {
   VALID_OR_RETURN(CompilerType());
 
