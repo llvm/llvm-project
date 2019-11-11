@@ -83,7 +83,7 @@ to format C/C++/Java/JavaScript/Objective-C/Protobuf/C# code.
   Generic Options:
 
     --help                     - Display available options (--help-hidden for more)
-    --help-list                - Display list of available options (--help-list-hidden for moOAre)
+    --help-list                - Display list of available options (--help-list-hidden for more)
     --version                  - Display the version of this program
 
 
