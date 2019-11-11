@@ -24,7 +24,7 @@
 
 namespace llvm {
 
-ELFYAML::Section::~Section() = default;
+ELFYAML::Chunk::~Chunk() = default;
 
 namespace yaml {
 
@@ -1094,6 +1094,12 @@ static void sectionMapping(IO &IO, ELFYAML::AddrsigSection &Section) {
   IO.mapOptional("Symbols", Section.Symbols);
 }
 
+static void fillMapping(IO &IO, ELFYAML::Fill &Fill) {
+  IO.mapOptional("Name", Fill.Name, StringRef());
+  IO.mapOptional("Pattern", Fill.Pattern);
+  IO.mapRequired("Size", Fill.Size);
+}
+
 void MappingTraits<ELFYAML::SectionOrType>::mapping(
     IO &IO, ELFYAML::SectionOrType &sectionOrType) {
   IO.mapRequired("SectionOrType", sectionOrType.sectionNameOrType);
@@ -1124,15 +1130,27 @@ static void sectionMapping(IO &IO, ELFYAML::MipsABIFlags &Section) {
   IO.mapOptional("Flags2", Section.Flags2, Hex32(0));
 }
 
-void MappingTraits<std::unique_ptr<ELFYAML::Section>>::mapping(
-    IO &IO, std::unique_ptr<ELFYAML::Section> &Section) {
-  ELFYAML::ELF_SHT sectionType;
-  if (IO.outputting())
-    sectionType = Section->Type;
-  else
-    IO.mapRequired("Type", sectionType);
+void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
+    IO &IO, std::unique_ptr<ELFYAML::Chunk> &Section) {
+  ELFYAML::ELF_SHT Type;
+  if (IO.outputting()) {
+    Type = cast<ELFYAML::Section>(Section.get())->Type;
+  } else {
+    // When the Type string does not have a "SHT_" prefix, we know it is not a
+    // description of a regular ELF output section. Currently, we have one
+    // special type named "Fill". See comments for Fill.
+    StringRef StrType;
+    IO.mapRequired("Type", StrType);
+    if (StrType == "Fill") {
+      Section.reset(new ELFYAML::Fill());
+      fillMapping(IO, *cast<ELFYAML::Fill>(Section.get()));
+      return;
+    }
 
-  switch (sectionType) {
+    IO.mapRequired("Type", Type);
+  }
+
+  switch (Type) {
   case ELF::SHT_DYNAMIC:
     if (!IO.outputting())
       Section.reset(new ELFYAML::DynamicSection());
@@ -1218,17 +1236,17 @@ void MappingTraits<std::unique_ptr<ELFYAML::Section>>::mapping(
   }
 }
 
-StringRef MappingTraits<std::unique_ptr<ELFYAML::Section>>::validate(
-    IO &io, std::unique_ptr<ELFYAML::Section> &Section) {
+StringRef MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
+    IO &io, std::unique_ptr<ELFYAML::Chunk> &C) {
   if (const auto *RawSection =
-          dyn_cast<ELFYAML::RawContentSection>(Section.get())) {
+          dyn_cast<ELFYAML::RawContentSection>(C.get())) {
     if (RawSection->Size && RawSection->Content &&
         (uint64_t)(*RawSection->Size) < RawSection->Content->binary_size())
       return "Section size must be greater than or equal to the content size";
     return {};
   }
 
-  if (const auto *SS = dyn_cast<ELFYAML::StackSizesSection>(Section.get())) {
+  if (const auto *SS = dyn_cast<ELFYAML::StackSizesSection>(C.get())) {
     if (!SS->Entries && !SS->Content && !SS->Size)
       return ".stack_sizes: one of Content, Entries and Size must be specified";
 
@@ -1248,7 +1266,7 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Section>>::validate(
     return {};
   }
 
-  if (const auto *HS = dyn_cast<ELFYAML::HashSection>(Section.get())) {
+  if (const auto *HS = dyn_cast<ELFYAML::HashSection>(C.get())) {
     if (!HS->Content && !HS->Bucket && !HS->Chain && !HS->Size)
       return "one of \"Content\", \"Size\", \"Bucket\" or \"Chain\" must be "
              "specified";
@@ -1271,7 +1289,7 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Section>>::validate(
     return {};
   }
 
-  if (const auto *Sec = dyn_cast<ELFYAML::AddrsigSection>(Section.get())) {
+  if (const auto *Sec = dyn_cast<ELFYAML::AddrsigSection>(C.get())) {
     if (!Sec->Symbols && !Sec->Content && !Sec->Size)
       return "one of \"Content\", \"Size\" or \"Symbols\" must be specified";
 
@@ -1296,7 +1314,7 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Section>>::validate(
     return {};
   }
 
-  if (const auto *NS = dyn_cast<ELFYAML::NoteSection>(Section.get())) {
+  if (const auto *NS = dyn_cast<ELFYAML::NoteSection>(C.get())) {
     if (!NS->Content && !NS->Size && !NS->Notes)
       return "one of \"Content\", \"Size\" or \"Notes\" must be "
              "specified";
@@ -1314,7 +1332,7 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Section>>::validate(
     return {};
   }
 
-  if (const auto *Sec = dyn_cast<ELFYAML::GnuHashSection>(Section.get())) {
+  if (const auto *Sec = dyn_cast<ELFYAML::GnuHashSection>(C.get())) {
     if (!Sec->Content && !Sec->Header && !Sec->BloomFilter &&
         !Sec->HashBuckets && !Sec->HashValues)
       return "either \"Content\" or \"Header\", \"BloomFilter\", "
@@ -1334,6 +1352,14 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Section>>::validate(
     }
 
     // Only Content is specified.
+    return {};
+  }
+
+  if (const auto *F = dyn_cast<ELFYAML::Fill>(C.get())) {
+    if (!F->Pattern)
+      return {};
+    if (F->Pattern->binary_size() != 0 && !F->Size)
+      return "\"Size\" can't be 0 when \"Pattern\" is not empty";
     return {};
   }
 
@@ -1455,7 +1481,7 @@ void MappingTraits<ELFYAML::Object>::mapping(IO &IO, ELFYAML::Object &Object) {
   IO.mapTag("!ELF", true);
   IO.mapRequired("FileHeader", Object.Header);
   IO.mapOptional("ProgramHeaders", Object.ProgramHeaders);
-  IO.mapOptional("Sections", Object.Sections);
+  IO.mapOptional("Sections", Object.Chunks);
   IO.mapOptional("Symbols", Object.Symbols);
   IO.mapOptional("DynamicSymbols", Object.DynamicSymbols);
   IO.setContext(nullptr);
