@@ -36,7 +36,11 @@ add_clang_library(IndexStore SHARED
   Support
   )
 
-if(APPLE)
+if(WIN32)
+  set_target_properties(IndexStore
+    PROPERTIES
+    DEFINE_SYMBOL IndexStore_EXPORTS)
+elseif(APPLE)
   set(INDEXSTORE_LIBRARY_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
 
   set(INDEXSTORE_LINK_FLAGS " -Wl,-compatibility_version -Wl,1")
