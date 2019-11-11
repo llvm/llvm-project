@@ -48,8 +48,8 @@ public:
                               int &FrameIndex) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
-                   const DebugLoc &DL, unsigned DestinationRegister,
-                   unsigned SourceRegister, bool KillSource) const override;
+                   const DebugLoc &DL, MCRegister DestinationRegister,
+                   MCRegister SourceRegister, bool KillSource) const override;
 
   void
   storeRegToStackSlot(MachineBasicBlock &MBB,
