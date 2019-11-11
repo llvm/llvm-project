@@ -78,7 +78,7 @@ public:
             interpreter, "reproducer generate",
             "Generate reproducer on disk. When the debugger is in capture "
             "mode, this command will output the reproducer to a directory on "
-            "disk. In replay mode this command in a no-op.",
+            "disk and quit. In replay mode this command in a no-op.",
             nullptr) {}
 
   ~CommandObjectReproducerGenerate() override = default;
@@ -110,7 +110,9 @@ protected:
         << "Please have a look at the directory to assess if you're willing to "
            "share the contained information.\n";
 
-    result.SetStatus(eReturnStatusSuccessFinishResult);
+    m_interpreter.BroadcastEvent(
+        CommandInterpreter::eBroadcastBitQuitCommandReceived);
+    result.SetStatus(eReturnStatusQuit);
     return result.Succeeded();
   }
 };
