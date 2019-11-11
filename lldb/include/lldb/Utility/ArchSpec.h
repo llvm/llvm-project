@@ -258,13 +258,6 @@ public:
   /// Destructor.
   ~ArchSpec();
 
-  /// Assignment operator.
-  ///
-  /// \param[in] rhs another ArchSpec object to copy.
-  ///
-  /// \return A const reference to this object.
-  const ArchSpec &operator=(const ArchSpec &rhs);
-
   /// Returns true if the OS, vendor and environment fields of the triple are
   /// unset. The triple is expected to be normalized
   /// (llvm::Triple::normalize).

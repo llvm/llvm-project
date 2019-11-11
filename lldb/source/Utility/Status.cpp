@@ -93,16 +93,6 @@ llvm::Error Status::ToError() const {
                                              llvm::inconvertibleErrorCode());
 }
 
-// Assignment operator
-const Status &Status::operator=(const Status &rhs) {
-  if (this != &rhs) {
-    m_code = rhs.m_code;
-    m_type = rhs.m_type;
-    m_string = rhs.m_string;
-  }
-  return *this;
-}
-
 Status::~Status() = default;
 
 #ifdef _WIN32

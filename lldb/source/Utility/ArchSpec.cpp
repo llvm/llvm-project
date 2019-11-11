@@ -564,20 +564,6 @@ ArchSpec::ArchSpec(ArchitectureType arch_type, uint32_t cpu, uint32_t subtype) {
 
 ArchSpec::~ArchSpec() = default;
 
-//===----------------------------------------------------------------------===//
-// Assignment and initialization.
-
-const ArchSpec &ArchSpec::operator=(const ArchSpec &rhs) {
-  if (this != &rhs) {
-    m_triple = rhs.m_triple;
-    m_core = rhs.m_core;
-    m_byte_order = rhs.m_byte_order;
-    m_distribution_id = rhs.m_distribution_id;
-    m_flags = rhs.m_flags;
-  }
-  return *this;
-}
-
 void ArchSpec::Clear() {
   m_triple = llvm::Triple();
   m_core = kCore_invalid;
