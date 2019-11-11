@@ -2854,8 +2854,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       getLastArgIntValue(Args, OPT_fconstexpr_steps, 1048576, Diags);
   Opts.EnableNewConstInterp =
       Args.hasArg(OPT_fexperimental_new_constant_interpreter);
-  Opts.ForceNewConstInterp =
-      Args.hasArg(OPT_fforce_experimental_new_constant_interpreter);
   Opts.BracketDepth = getLastArgIntValue(Args, OPT_fbracket_depth, 256, Diags);
   Opts.DelayedTemplateParsing = Args.hasArg(OPT_fdelayed_template_parsing);
   Opts.NumLargeByValueCopy =

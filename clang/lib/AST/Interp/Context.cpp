@@ -21,44 +21,37 @@
 using namespace clang;
 using namespace clang::interp;
 
-Context::Context(ASTContext &Ctx)
-    : Ctx(Ctx), ForceInterp(getLangOpts().ForceNewConstInterp),
-      P(new Program(*this)) {}
+Context::Context(ASTContext &Ctx) : Ctx(Ctx), P(new Program(*this)) {}
 
 Context::~Context() {}
 
-InterpResult Context::isPotentialConstantExpr(State &Parent,
-                                              const FunctionDecl *FD) {
+bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   Function *Func = P->getFunction(FD);
   if (!Func) {
     if (auto R = ByteCodeStmtGen<ByteCodeEmitter>(*this, *P).compileFunc(FD)) {
       Func = *R;
-    } else if (ForceInterp) {
+    } else {
       handleAllErrors(R.takeError(), [&Parent](ByteCodeGenError &Err) {
         Parent.FFDiag(Err.getLoc(), diag::err_experimental_clang_interp_failed);
       });
-      return InterpResult::Fail;
-    } else {
-      consumeError(R.takeError());
-      return InterpResult::Bail;
+      return false;
     }
   }
 
   if (!Func->isConstexpr())
-    return InterpResult::Fail;
+    return false;
 
   APValue Dummy;
   return Run(Parent, Func, Dummy);
 }
 
-InterpResult Context::evaluateAsRValue(State &Parent, const Expr *E,
-                                       APValue &Result) {
+bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
   return Check(Parent, C.interpretExpr(E));
 }
 
-InterpResult Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
-                                            APValue &Result) {
+bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
+                                    APValue &Result) {
   ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
   return Check(Parent, C.interpretDecl(VD));
 }
@@ -116,33 +109,20 @@ unsigned Context::getCharBit() const {
   return Ctx.getTargetInfo().getCharWidth();
 }
 
-InterpResult Context::Run(State &Parent, Function *Func, APValue &Result) {
-  InterpResult Flag;
-  {
-    InterpState State(Parent, *P, Stk, *this);
-    State.Current = new InterpFrame(State, Func, nullptr, {}, {});
-    if (Interpret(State, Result)) {
-      Flag = InterpResult::Success;
-    } else {
-      Flag = InterpResult::Fail;
-    }
-  }
-
-  if (Flag != InterpResult::Success)
-    Stk.clear();
-  return Flag;
+bool Context::Run(State &Parent, Function *Func, APValue &Result) {
+  InterpState State(Parent, *P, Stk, *this);
+  State.Current = new InterpFrame(State, Func, nullptr, {}, {});
+  if (Interpret(State, Result))
+    return true;
+  Stk.clear();
+  return false;
 }
 
-InterpResult Context::Check(State &Parent, llvm::Expected<bool> &&R) {
-  if (R) {
-    return *R ? InterpResult::Success : InterpResult::Fail;
-  } else if (ForceInterp) {
-    handleAllErrors(R.takeError(), [&Parent](ByteCodeGenError &Err) {
-      Parent.FFDiag(Err.getLoc(), diag::err_experimental_clang_interp_failed);
-    });
-    return InterpResult::Fail;
-  } else {
-    consumeError(R.takeError());
-    return InterpResult::Bail;
-  }
+bool Context::Check(State &Parent, llvm::Expected<bool> &&Flag) {
+  if (Flag)
+    return *Flag;
+  handleAllErrors(Flag.takeError(), [&Parent](ByteCodeGenError &Err) {
+    Parent.FFDiag(Err.getLoc(), diag::err_experimental_clang_interp_failed);
+  });
+  return false;
 }
