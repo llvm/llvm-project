@@ -39,6 +39,7 @@ class TestSwiftDWARFImporterObjC(lldbtest.TestBase):
     @swiftTest
     def test_dwarf_importer(self):
         self.runCmd("settings set symbols.use-swift-dwarfimporter true")
+
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'))
@@ -58,5 +59,5 @@ class TestSwiftDWARFImporterObjC(lldbtest.TestBase):
         # This is a Clang type, since Clang doesn't generate DWARF for protocols.
         self.expect("target var -d no-dyn proto", substrs=["(id)", "proto"])
         # This is a Swift type.
-        self.expect("target var -d run proto", substrs=["(ProtoImpl?)", "proto"])
+        self.expect("target var -d run proto", substrs=["(ProtoImpl)", "proto"])
         self.expect("target var -O proto", substrs=["<ProtoImpl"])

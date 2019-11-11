@@ -921,6 +921,8 @@ SwiftASTContext::~SwiftASTContext() {
   }
 }
 
+const std::string &SwiftASTContext::GetDescription() const { return m_description; }
+
 ConstString SwiftASTContext::GetPluginNameStatic() {
   return ConstString("swift");
 }
@@ -3163,6 +3165,11 @@ private:
 /// Clang AST to ClangImporter to import the type into Swift.
 class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
   SwiftASTContext &m_swift_ast_ctx;
+  using ModuleAndName = std::pair<const char *, const char *>;
+  /// Caches successful lookups for the scratch context.
+  llvm::DenseMap<ModuleAndName, llvm::SmallVector<clang::QualType, 1>>
+      m_decl_cache;
+  std::string m_description;
 
   /// Used to filter out types with mismatching kinds.
   bool HasTypeKind(TypeSP clang_type_sp, swift::ClangTypeKind kind) {
@@ -3230,9 +3237,42 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
     }
   }
 
+  /// Import \p qual_type from one clang ASTContext to another and
+  /// add it to \p results if successful.
+  void importType(clang::QualType qual_type, clang::ASTContext &from_ctx,
+                  clang::ASTContext &to_ctx,
+                  llvm::Optional<swift::ClangTypeKind> kind,
+                  llvm::SmallVectorImpl<clang::Decl *> &results) {
+    clang::FileSystemOptions file_system_options;
+    clang::FileManager file_manager(
+        file_system_options, FileSystem::Instance().GetVirtualFileSystem());
+    clang::ASTImporter importer(to_ctx, file_manager, from_ctx, file_manager,
+                                false);
+    llvm::Expected<clang::QualType> clang_type(importer.Import(qual_type));
+    if (!clang_type) {
+      llvm::consumeError(clang_type.takeError());
+      return;
+    }
+
+    // Retrieve the imported type's Decl.
+    if (kind) {
+      if (clang::Decl *clang_decl = GetDeclForTypeAndKind(*clang_type, *kind))
+        results.push_back(clang_decl);
+    } else {
+      swift::ClangTypeKind kinds[] = {
+          swift::ClangTypeKind::Typedef, // =swift::ClangTypeKind::ObjCClass,
+          swift::ClangTypeKind::Tag, swift::ClangTypeKind::ObjCProtocol};
+      for (auto kind : kinds)
+        if (clang::Decl *clang_decl = GetDeclForTypeAndKind(*clang_type, kind))
+          results.push_back(clang_decl);
+    }
+  }
+
 public:
   SwiftDWARFImporterDelegate(SwiftASTContext &swift_ast_ctx)
-      : m_swift_ast_ctx(swift_ast_ctx) {}
+      : m_swift_ast_ctx(swift_ast_ctx),
+        m_description(swift_ast_ctx.GetDescription() +
+                      "::SwiftDWARFImporterDelegate") {}
 
   /// Look up a clang::Decl by name.
   ///
@@ -3291,6 +3331,8 @@ public:
   void lookupValue(StringRef name, llvm::Optional<swift::ClangTypeKind> kind,
                    StringRef inModule,
                    llvm::SmallVectorImpl<clang::Decl *> &results) override {
+    LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\")", name.str().c_str());
+
     // We will not find any Swift types in the Clang compile units.
     if (SwiftLanguageRuntime::IsSwiftMangledName(name.str().c_str()))
       return;
@@ -3301,15 +3343,16 @@ public:
 
     // Find the type in the debug info.
     TypeMap clang_types;
+    ConstString name_cs(name);
+    ConstString module_cs(inModule);
 
     llvm::SmallVector<CompilerContext, 3> decl_context;
     // Perform a lookup in a specific module, if requested.
     if (!inModule.empty())
-      decl_context.push_back(
-          {CompilerContextKind::Module, ConstString(inModule)});
+      decl_context.push_back({CompilerContextKind::Module, module_cs});
     // Swift doesn't keep track of submodules.
     decl_context.push_back({CompilerContextKind::AnyModule, ConstString()});
-    decl_context.push_back({GetCompilerContextKind(kind), ConstString(name)});
+    decl_context.push_back({GetCompilerContextKind(kind), name_cs});
     auto search = [&](Module &module) {
       return module.FindTypes(decl_context,
                               ClangASTContext::GetSupportedLanguagesForTypes(),
@@ -3318,16 +3361,46 @@ public:
     if (Module *module = m_swift_ast_ctx.GetModule())
       search(*module);
     else if (TargetSP target_sp = m_swift_ast_ctx.GetTarget().lock()) {
-      // In a scratch context, search everywhere.
+      // In a scratch context, check the module's DWARFImporterDelegates first.
+      //
+      // It's a common pattern that a type is revisited immediately
+      // after looking it up in a per-module context in the scratch
+      // context for dynamic type resolution.
       auto images = target_sp->GetImages();
-      for (size_t i = 0; i != images.GetSize(); ++i)
-        if (search(*images.GetModuleAtIndex(i)))
-          break;
+      for (size_t i = 0; i != images.GetSize(); ++i) {
+        auto module_sp = images.GetModuleAtIndex(i);
+        auto ts = module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+        if (!ts) {
+          llvm::consumeError(ts.takeError());
+          continue;
+        }
+        auto *swift_ast_ctx = static_cast<SwiftASTContext *>(&*ts);
+        auto *dwarf_imp = static_cast<SwiftDWARFImporterDelegate *>(
+            swift_ast_ctx->GetDWARFImporterDelegate());
+        if (!dwarf_imp)
+          continue;
+        auto it = dwarf_imp->m_decl_cache.find(
+            {module_cs.GetCString(), name_cs.GetCString()});
+        if (it == dwarf_imp->m_decl_cache.end())
+          continue;
+
+        auto *from_clang_importer = swift_ast_ctx->GetClangImporter();
+        if (!from_clang_importer)
+          continue;
+        auto &from_ctx = from_clang_importer->getClangASTContext();
+        auto &to_ctx = clang_importer->getClangASTContext();
+        for (clang::QualType qual_type : it->second)
+          importType(qual_type, from_ctx, to_ctx, kind, results);
+      }
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "%d types found in cache.", results.size());
+
+      // TODO: Otherwise, the correct thing to do is to invoke
+      //       search() on all modules. In practice, however, this is
+      //       prohibitively expensive, so we need to do something
+      //       more targeted.
+      return;
     }
 
-    clang::FileSystemOptions file_system_options;
-    clang::FileManager file_manager(
-        file_system_options, FileSystem::Instance().GetVirtualFileSystem());
     clang_types.ForEach([&](lldb::TypeSP &clang_type_sp) {
       if (!clang_type_sp)
         return true;
@@ -3350,29 +3423,19 @@ public:
       clang::ASTContext *from_ctx = type_system->getASTContext();
       if (!from_ctx)
         return true;
-      clang::ASTImporter importer(to_ctx, file_manager, *from_ctx, file_manager,
-                                  false);
-      llvm::Expected<clang::QualType> clang_type(
-          importer.Import(ClangUtil::GetQualType(compiler_type)));
-      if (!clang_type) {
-        llvm::consumeError(clang_type.takeError());
-        return true;
-      }
 
-      // Retrieve the imported type's Decl.
-      if (kind) {
-        if (clang::Decl *clang_decl = GetDeclForTypeAndKind(*clang_type, *kind))
-          results.push_back(clang_decl);
-      } else {
-        swift::ClangTypeKind kinds[] = {
-            swift::ClangTypeKind::Typedef, // =swift::ClangTypeKind::ObjCClass,
-            swift::ClangTypeKind::Tag, swift::ClangTypeKind::ObjCProtocol};
-        for (auto kind : kinds)
-          if (clang::Decl *clang_decl = GetDeclForTypeAndKind(*clang_type, kind))
-            results.push_back(clang_decl);
-      }
+      clang::QualType qual_type = ClangUtil::GetQualType(compiler_type);
+      importType(qual_type, *from_ctx, to_ctx, kind, results);
+
+      // If this is a module context, cache the result for the scratch context.
+      if (m_swift_ast_ctx.GetModule())
+        m_decl_cache[{module_cs.GetCString(), name_cs.GetCString()}].push_back(
+            qual_type);
+
       return true;
     });
+
+    LOG_PRINTF(LIBLLDB_LOG_TYPES, "%d types from debug info.", results.size());
   }
 };
 } // namespace lldb_private
@@ -3550,6 +3613,12 @@ swift::ClangImporter *SwiftASTContext::GetClangImporter() {
 
   GetASTContext();
   return m_clang_importer;
+}
+
+swift::DWARFImporterDelegate *SwiftASTContext::GetDWARFImporterDelegate() {
+  VALID_OR_RETURN(nullptr);
+
+  return m_dwarf_importer_delegate_up.get();
 }
 
 bool SwiftASTContext::AddClangArgument(std::string clang_arg, bool unique) {
