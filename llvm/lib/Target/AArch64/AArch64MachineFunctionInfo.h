@@ -51,15 +51,15 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   bool HasStackFrame = false;
 
   /// Amount of stack frame size, not including callee-saved registers.
-  unsigned LocalStackSize;
+  unsigned LocalStackSize = 0;
 
   /// The start and end frame indices for the SVE callee saves.
-  int MinSVECSFrameIndex;
-  int MaxSVECSFrameIndex;
+  int MinSVECSFrameIndex = 0;
+  int MaxSVECSFrameIndex = 0;
 
   /// Amount of stack frame size used for saving callee-saved registers.
-  unsigned CalleeSavedStackSize;
-  unsigned SVECalleeSavedStackSize;
+  unsigned CalleeSavedStackSize = 0;
+  unsigned SVECalleeSavedStackSize = 0;
   bool HasCalleeSavedStackSize = false;
 
   /// Number of TLS accesses using the special (combinable)
@@ -123,7 +123,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // Offset from SP-at-entry to the tagged base pointer.
   // Tagged base pointer is set up to point to the first (lowest address) tagged
   // stack slot.
-  unsigned TaggedBasePointerOffset;
+  unsigned TaggedBasePointerOffset = 0;
 
 public:
   AArch64FunctionInfo() = default;
