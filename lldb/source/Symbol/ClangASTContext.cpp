@@ -3627,7 +3627,7 @@ bool ClangASTContext::IsObjCClassType(const CompilerType &type) {
 }
 
 bool ClangASTContext::IsObjCObjectOrInterfaceType(const CompilerType &type) {
-  if (type && ClangUtil::IsClangType(type))
+  if (ClangUtil::IsClangType(type))
     return ClangUtil::GetCanonicalQualType(type)->isObjCObjectOrInterfaceType();
   return false;
 }
