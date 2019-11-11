@@ -173,7 +173,7 @@ void ReassociatePass::BuildRankMap(Function &F,
                       << "\n");
   }
 
-  // Traverse basic blocks in ReversePostOrder
+  // Traverse basic blocks in ReversePostOrder.
   for (BasicBlock *BB : RPOT) {
     unsigned BBRank = RankMap[BB] = ++Rank << 16;
 
