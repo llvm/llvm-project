@@ -96,7 +96,7 @@ struct Fragment {
   uint32_t Type;
   uint64_t AddrAlign;
 };
-}; // namespace
+} // namespace
 
 /// "Single point of truth" for the ELF file construction.
 /// TODO: This class still has a ways to go before it is truly a "single
