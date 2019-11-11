@@ -318,9 +318,6 @@ bool BroadcastEventSpec::operator<(const BroadcastEventSpec &rhs) const {
   return GetBroadcasterClass() < rhs.GetBroadcasterClass();
 }
 
-BroadcastEventSpec &BroadcastEventSpec::
-operator=(const BroadcastEventSpec &rhs) = default;
-
 BroadcasterManager::BroadcasterManager() : m_manager_mutex() {}
 
 lldb::BroadcasterManagerSP BroadcasterManager::MakeBroadcasterManager() {
