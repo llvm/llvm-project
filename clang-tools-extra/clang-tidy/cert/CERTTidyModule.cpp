@@ -10,7 +10,6 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/UnhandledSelfAssignmentCheck.h"
-#include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../google/UnnamedNamespaceInHeaderCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/NonCopyableObjects.h"
@@ -83,9 +82,6 @@ public:
     CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc30-c");
     CheckFactories.registerCheck<ProperlySeededRandomGeneratorCheck>(
         "cert-msc32-c");
-    // POS
-    CheckFactories.registerCheck<bugprone::BadSignalToKillThreadCheck>(
-        "cert-pos44-c");
   }
 
   ClangTidyOptions getModuleOptions() override {
