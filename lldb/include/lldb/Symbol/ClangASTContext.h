@@ -266,11 +266,6 @@ public:
   static uint32_t GetNumBaseClasses(const clang::CXXRecordDecl *cxx_record_decl,
                                     bool omit_empty_base_classes);
 
-  static uint32_t
-  GetIndexForRecordBase(const clang::RecordDecl *record_decl,
-                        const clang::CXXBaseSpecifier *base_spec,
-                        bool omit_empty_base_classes);
-
   CompilerType CreateRecordType(clang::DeclContext *decl_ctx,
                                 lldb::AccessType access_type, const char *name,
                                 int kind, lldb::LanguageType language,
