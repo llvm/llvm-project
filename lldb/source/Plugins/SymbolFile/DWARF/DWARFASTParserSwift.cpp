@@ -296,8 +296,6 @@ void DWARFASTParserSwift::GetClangType(const DWARFDIE &die,
 
   // Next search the .dSYM the DIE came from, if applicable.
   sym_file.FindTypes(decl_context, clang_languages, clang_types);
-  if (clang_types.GetSize() > old_size)
-    return;
 }
 
 Function *DWARFASTParserSwift::ParseFunctionFromDWARF(
