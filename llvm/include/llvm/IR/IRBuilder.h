@@ -2087,6 +2087,8 @@ public:
     case Intrinsic::experimental_constrained_fpext:
     case Intrinsic::experimental_constrained_fptoui:
     case Intrinsic::experimental_constrained_fptosi:
+    case Intrinsic::experimental_constrained_lround:
+    case Intrinsic::experimental_constrained_llround:
       C = CreateIntrinsic(ID, {DestTy, V->getType()}, {V, ExceptV}, nullptr,
                           Name);
       break;
@@ -2295,6 +2297,37 @@ public:
     return CreateCall(
         cast<FunctionType>(Callee->getType()->getPointerElementType()), Callee,
         Args, OpBundles, Name, FPMathTag);
+  }
+
+  // Deprecated [opaque pointer types]
+  CallInst *CreateConstrainedFPCall(
+      Value *Callee, ArrayRef<Value *> Args, const Twine &Name = "",
+      Optional<fp::RoundingMode> Rounding = None,
+      Optional<fp::ExceptionBehavior> Except = None) {
+    llvm::SmallVector<Value *, 6> UseArgs;
+
+    for (auto *OneArg : Args)
+      UseArgs.push_back(OneArg);
+    Function *F = cast<Function>(Callee);
+    switch (F->getIntrinsicID()) {
+    default:
+      UseArgs.push_back(getConstrainedFPRounding(Rounding));
+      break;
+    case Intrinsic::experimental_constrained_fpext:
+    case Intrinsic::experimental_constrained_fptoui:
+    case Intrinsic::experimental_constrained_fptosi:
+    case Intrinsic::experimental_constrained_lround:
+    case Intrinsic::experimental_constrained_llround:
+      // No rounding metadata for these intrinsics.
+      break;
+    }
+    UseArgs.push_back(getConstrainedFPExcept(Except));
+
+    CallInst *C = CreateCall(
+        cast<FunctionType>(Callee->getType()->getPointerElementType()), Callee,
+        UseArgs, Name);
+    setConstrainedFPCallAttr(C);
+    return C;
   }
 
   Value *CreateSelect(Value *C, Value *True, Value *False,
