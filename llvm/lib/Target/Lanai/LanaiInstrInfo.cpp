@@ -34,8 +34,8 @@ LanaiInstrInfo::LanaiInstrInfo()
 void LanaiInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator Position,
                                  const DebugLoc &DL,
-                                 unsigned DestinationRegister,
-                                 unsigned SourceRegister,
+                                 MCRegister DestinationRegister,
+                                 MCRegister SourceRegister,
                                  bool KillSource) const {
   if (!Lanai::GPRRegClass.contains(DestinationRegister, SourceRegister)) {
     llvm_unreachable("Impossible reg-to-reg copy");

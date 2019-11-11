@@ -30,8 +30,8 @@ BPFInstrInfo::BPFInstrInfo()
 
 void BPFInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,
-                               const DebugLoc &DL, unsigned DestReg,
-                               unsigned SrcReg, bool KillSrc) const {
+                               const DebugLoc &DL, MCRegister DestReg,
+                               MCRegister SrcReg, bool KillSrc) const {
   if (BPF::GPRRegClass.contains(DestReg, SrcReg))
     BuildMI(MBB, I, DL, get(BPF::MOV_rr), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc));
