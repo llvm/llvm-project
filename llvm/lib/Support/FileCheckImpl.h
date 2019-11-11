@@ -51,7 +51,7 @@ public:
   FileCheckExpressionLiteral(uint64_t Val) : Value(Val) {}
 
   /// \returns the literal's value.
-  Expected<uint64_t> eval() const { return Value; }
+  Expected<uint64_t> eval() const override { return Value; }
 };
 
 /// Class to represent an undefined variable error, which quotes that
@@ -133,7 +133,7 @@ public:
       : Name(Name), NumericVariable(NumericVariable) {}
 
   /// \returns the value of the variable referenced by this instance.
-  Expected<uint64_t> eval() const;
+  Expected<uint64_t> eval() const override;
 };
 
 /// Type of functions evaluating a given binary operation.
@@ -164,7 +164,7 @@ public:
   /// using EvalBinop on the result of recursively evaluating the operands.
   /// \returns the expression value or an error if an undefined numeric
   /// variable is used in one of the operands.
-  Expected<uint64_t> eval() const;
+  Expected<uint64_t> eval() const override;
 };
 
 class FileCheckPatternContext;
