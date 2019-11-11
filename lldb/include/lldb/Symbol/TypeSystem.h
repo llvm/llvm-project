@@ -466,8 +466,6 @@ public:
   // If the current object represents a typedef type, get the underlying type
   virtual CompilerType GetTypedefedType(lldb::opaque_compiler_type_t type) = 0;
 
-  virtual CompilerType GetUnboundType(lldb::opaque_compiler_type_t type) = 0;
-
   virtual bool IsVectorType(lldb::opaque_compiler_type_t type,
                             CompilerType *element_type, uint64_t *size) = 0;
 
