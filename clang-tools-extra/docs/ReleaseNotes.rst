@@ -94,8 +94,8 @@ Improvements to clang-tidy
   Without the null terminator it can result in undefined behaviour when the
   string is read.
 
-- New alias :doc:`cert-pos44-cpp
-  <clang-tidy/checks/cert-pos44-cpp>` to
+- New alias :doc:`cert-pos44-c
+  <clang-tidy/checks/cert-pos44-c>` to
   :doc:`bugprone-bad-signal-to-kill-thread
   <clang-tidy/checks/bugprone-bad-signal-to-kill-thread>` was added.
 
