@@ -1915,9 +1915,8 @@ struct RegPairInfo {
     case ZPR:
     case FPR128:
       return 16;
-    default:
-      llvm_unreachable("Unsupported type");
     }
+    llvm_unreachable("Unsupported type");
   }
 
   bool isScalable() const { return Type == PPR || Type == ZPR; }
