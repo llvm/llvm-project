@@ -59,8 +59,7 @@ define <1 x i64> @f(x86_mmx %y) {
 define double @g(x86_mmx %x) {
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BC:%.*]] = bitcast x86_mmx %x to <1 x double>
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <1 x double> [[BC]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast x86_mmx [[X:%.*]] to double
 ; CHECK-NEXT:    ret double [[TMP0]]
 ;
 entry:
