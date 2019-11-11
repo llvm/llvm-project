@@ -39,7 +39,7 @@ StringRef yaml::ScalarTraits<yaml::BinaryRef>::input(StringRef Scalar, void *,
 
 void yaml::BinaryRef::writeAsBinary(raw_ostream &OS, uint64_t N) const {
   if (!DataIsHexString) {
-    OS.write((const char *)Data.data(), std::min(N, Data.size()));
+    OS.write((const char *)Data.data(), std::min<uint64_t>(N, Data.size()));
     return;
   }
 
