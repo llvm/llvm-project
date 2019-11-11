@@ -648,8 +648,6 @@ public:
 
   CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type) override;
 
-  CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) override;
-
   CompilerType
   GetFullyUnqualifiedType(lldb::opaque_compiler_type_t type) override;
 

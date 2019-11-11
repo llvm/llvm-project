@@ -223,7 +223,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   Flags self_type_flags(self_type.GetTypeInfo());
 
   if (self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeIsMetatype)) {
-    self_type = self_type.GetInstanceType();
+    self_type = SwiftASTContext::GetInstanceType(self_type);
     self_type_flags = self_type.GetTypeInfo();
     if (self_type_flags.Test(lldb::eTypeIsClass))
       m_is_class = true;
