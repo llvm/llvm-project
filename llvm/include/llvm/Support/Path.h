@@ -52,10 +52,10 @@ enum class Style { windows, posix, native };
 class const_iterator
     : public iterator_facade_base<const_iterator, std::input_iterator_tag,
                                   const StringRef> {
-  StringRef Path;      ///< The entire path.
-  StringRef Component; ///< The current component. Not necessarily in Path.
-  size_t    Position;  ///< The iterators current position within Path.
-  Style S;             ///< The path style to use.
+  StringRef Path;          ///< The entire path.
+  StringRef Component;     ///< The current component. Not necessarily in Path.
+  size_t    Position = 0;  ///< The iterators current position within Path.
+  Style S = Style::native; ///< The path style to use.
 
   // An end iterator has Position = Path.size() + 1.
   friend const_iterator begin(StringRef path, Style style);
@@ -78,10 +78,10 @@ public:
 class reverse_iterator
     : public iterator_facade_base<reverse_iterator, std::input_iterator_tag,
                                   const StringRef> {
-  StringRef Path;      ///< The entire path.
-  StringRef Component; ///< The current component. Not necessarily in Path.
-  size_t    Position;  ///< The iterators current position within Path.
-  Style S;             ///< The path style to use.
+  StringRef Path;          ///< The entire path.
+  StringRef Component;     ///< The current component. Not necessarily in Path.
+  size_t    Position = 0;  ///< The iterators current position within Path.
+  Style S = Style::native; ///< The path style to use.
 
   friend reverse_iterator rbegin(StringRef path, Style style);
   friend reverse_iterator rend(StringRef path);

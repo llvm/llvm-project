@@ -149,7 +149,6 @@
 #include <string>
 #include <tuple>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 
@@ -6719,13 +6718,15 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, VFRange &Range,
   auto willWiden = [&](unsigned VF) -> bool {
     if (VF == 1)
       return false;
-    if (CM.isScalarAfterVectorization(I, VF) ||
-        CM.isProfitableToScalarize(I, VF))
-      return false;
     LoopVectorizationCostModel::InstWidening Decision =
         CM.getWideningDecision(I, VF);
     assert(Decision != LoopVectorizationCostModel::CM_Unknown &&
            "CM decision should be taken at this point.");
+    if (Decision == LoopVectorizationCostModel::CM_Interleave)
+      return true;
+    if (CM.isScalarAfterVectorization(I, VF) ||
+        CM.isProfitableToScalarize(I, VF))
+      return false;
     return Decision != LoopVectorizationCostModel::CM_Scalarize;
   };
 
@@ -7116,8 +7117,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     VPBlockUtils::insertBlockAfter(FirstVPBBForBB, VPBB);
     VPBB = FirstVPBBForBB;
     Builder.setInsertPoint(VPBB);
-
-    std::vector<Instruction *> Ingredients;
 
     // Introduce each ingredient into VPlan.
     for (Instruction &I : BB->instructionsWithoutDebug()) {

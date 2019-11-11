@@ -564,17 +564,21 @@ if(NOT DEFINED LLVM_DYLIB_COMPONENTS)
   set(LLVM_DYLIB_COMPONENTS "all" CACHE STRING
     "Semicolon-separated list of components to include in libLLVM, or \"all\".")
 endif()
-option(LLVM_LINK_LLVM_DYLIB "Link tools against the libllvm dynamic library" OFF)
+
 if(MSVC)
   option(LLVM_BUILD_LLVM_C_DYLIB "Build LLVM-C.dll (Windows only)" ON)
+  # Set this variable to OFF here so it can't be set with a command-line
+  # argument.
+  set (LLVM_LINK_LLVM_DYLIB OFF)
 else()
+  option(LLVM_LINK_LLVM_DYLIB "Link tools against the libllvm dynamic library" OFF)
   option(LLVM_BUILD_LLVM_C_DYLIB "Build libllvm-c re-export library (Darwin only)" OFF)
+  set(LLVM_BUILD_LLVM_DYLIB_default OFF)
+  if(LLVM_LINK_LLVM_DYLIB OR LLVM_BUILD_LLVM_C_DYLIB)
+    set(LLVM_BUILD_LLVM_DYLIB_default ON)
+  endif()
+  option(LLVM_BUILD_LLVM_DYLIB "Build libllvm dynamic library" ${LLVM_BUILD_LLVM_DYLIB_default})
 endif()
-set(LLVM_BUILD_LLVM_DYLIB_default OFF)
-if(LLVM_LINK_LLVM_DYLIB OR (LLVM_BUILD_LLVM_C_DYLIB AND NOT MSVC))
-  set(LLVM_BUILD_LLVM_DYLIB_default ON)
-endif()
-option(LLVM_BUILD_LLVM_DYLIB "Build libllvm dynamic library" ${LLVM_BUILD_LLVM_DYLIB_default})
 
 option(LLVM_OPTIMIZED_TABLEGEN "Force TableGen to be built with optimization" OFF)
 if(CMAKE_CROSSCOMPILING OR (LLVM_OPTIMIZED_TABLEGEN AND (LLVM_ENABLE_ASSERTIONS OR CMAKE_CONFIGURATION_TYPES)))
@@ -805,11 +809,7 @@ set(LLVM_SRPM_DIR "${CMAKE_CURRENT_BINARY_DIR}/srpm")
 
 get_source_info(${CMAKE_CURRENT_SOURCE_DIR} revision repository)
 string(LENGTH "${revision}" revision_length)
-if(revision MATCHES "^[0-9]+$" AND revision_length LESS 40)
-  set(LLVM_RPM_SPEC_REVISION "r${revision}")
-else()
-  set(LLVM_RPM_SPEC_REVISION "${revision}")
-endif()
+set(LLVM_RPM_SPEC_REVISION "${revision}")
 
 configure_file(
   ${LLVM_SRPM_USER_BINARY_SPECFILE}

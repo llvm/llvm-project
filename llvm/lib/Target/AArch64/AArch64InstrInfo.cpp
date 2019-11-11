@@ -2409,8 +2409,8 @@ static bool forwardCopyWillClobberTuple(unsigned DestReg, unsigned SrcReg,
 
 void AArch64InstrInfo::copyPhysRegTuple(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator I,
-                                        const DebugLoc &DL, unsigned DestReg,
-                                        unsigned SrcReg, bool KillSrc,
+                                        const DebugLoc &DL, MCRegister DestReg,
+                                        MCRegister SrcReg, bool KillSrc,
                                         unsigned Opcode,
                                         ArrayRef<unsigned> Indices) const {
   assert(Subtarget.hasNEON() && "Unexpected register copy without NEON");
@@ -2461,8 +2461,8 @@ void AArch64InstrInfo::copyGPRRegTuple(MachineBasicBlock &MBB,
 
 void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I,
-                                   const DebugLoc &DL, unsigned DestReg,
-                                   unsigned SrcReg, bool KillSrc) const {
+                                   const DebugLoc &DL, MCRegister DestReg,
+                                   MCRegister SrcReg, bool KillSrc) const {
   if (AArch64::GPR32spRegClass.contains(DestReg) &&
       (AArch64::GPR32spRegClass.contains(SrcReg) || SrcReg == AArch64::WZR)) {
     const TargetRegisterInfo *TRI = &getRegisterInfo();
@@ -2471,10 +2471,10 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       // If either operand is WSP, expand to ADD #0.
       if (Subtarget.hasZeroCycleRegMove()) {
         // Cyclone recognizes "ADD Xd, Xn, #0" as a zero-cycle register move.
-        unsigned DestRegX = TRI->getMatchingSuperReg(DestReg, AArch64::sub_32,
-                                                     &AArch64::GPR64spRegClass);
-        unsigned SrcRegX = TRI->getMatchingSuperReg(SrcReg, AArch64::sub_32,
-                                                    &AArch64::GPR64spRegClass);
+        MCRegister DestRegX = TRI->getMatchingSuperReg(
+            DestReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
+        MCRegister SrcRegX = TRI->getMatchingSuperReg(
+            SrcReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
         // This instruction is reading and writing X registers.  This may upset
         // the register scavenger and machine verifier, so we need to indicate
         // that we are reading an undefined value from SrcRegX, but a proper
@@ -2497,10 +2497,10 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     } else {
       if (Subtarget.hasZeroCycleRegMove()) {
         // Cyclone recognizes "ORR Xd, XZR, Xm" as a zero-cycle register move.
-        unsigned DestRegX = TRI->getMatchingSuperReg(DestReg, AArch64::sub_32,
-                                                     &AArch64::GPR64spRegClass);
-        unsigned SrcRegX = TRI->getMatchingSuperReg(SrcReg, AArch64::sub_32,
-                                                    &AArch64::GPR64spRegClass);
+        MCRegister DestRegX = TRI->getMatchingSuperReg(
+            DestReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
+        MCRegister SrcRegX = TRI->getMatchingSuperReg(
+            SrcReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
         // This instruction is reading and writing X registers.  This may upset
         // the register scavenger and machine verifier, so we need to indicate
         // that we are reading an undefined value from SrcRegX, but a proper

@@ -903,15 +903,15 @@ static unsigned getCRBitValue(unsigned CRBit) {
 
 void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,
-                               const DebugLoc &DL, unsigned DestReg,
-                               unsigned SrcReg, bool KillSrc) const {
+                               const DebugLoc &DL, MCRegister DestReg,
+                               MCRegister SrcReg, bool KillSrc) const {
   // We can end up with self copies and similar things as a result of VSX copy
   // legalization. Promote them here.
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   if (PPC::F8RCRegClass.contains(DestReg) &&
       PPC::VSRCRegClass.contains(SrcReg)) {
-    unsigned SuperReg =
-      TRI->getMatchingSuperReg(DestReg, PPC::sub_64, &PPC::VSRCRegClass);
+    MCRegister SuperReg =
+        TRI->getMatchingSuperReg(DestReg, PPC::sub_64, &PPC::VSRCRegClass);
 
     if (VSXSelfCopyCrash && SrcReg == SuperReg)
       llvm_unreachable("nop VSX copy");
@@ -919,8 +919,8 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     DestReg = SuperReg;
   } else if (PPC::F8RCRegClass.contains(SrcReg) &&
              PPC::VSRCRegClass.contains(DestReg)) {
-    unsigned SuperReg =
-      TRI->getMatchingSuperReg(SrcReg, PPC::sub_64, &PPC::VSRCRegClass);
+    MCRegister SuperReg =
+        TRI->getMatchingSuperReg(SrcReg, PPC::sub_64, &PPC::VSRCRegClass);
 
     if (VSXSelfCopyCrash && DestReg == SuperReg)
       llvm_unreachable("nop VSX copy");
@@ -931,7 +931,7 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Different class register copy
   if (PPC::CRBITRCRegClass.contains(SrcReg) &&
       PPC::GPRCRegClass.contains(DestReg)) {
-    unsigned CRReg = getCRFromCRBit(SrcReg);
+    MCRegister CRReg = getCRFromCRBit(SrcReg);
     BuildMI(MBB, I, DL, get(PPC::MFOCRF), DestReg).addReg(CRReg);
     getKillRegState(KillSrc);
     // Rotate the CR bit in the CR fields to be the least significant bit and

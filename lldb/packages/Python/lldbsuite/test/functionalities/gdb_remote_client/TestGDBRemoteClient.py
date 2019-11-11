@@ -52,6 +52,10 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
 
     def test_read_registers_using_g_packets(self):
         """Test reading registers using 'g' packets (default behavior)"""
+        self.dbg.HandleCommand(
+                "settings set plugin.process.gdb-remote.use-g-packet-for-reading true")
+        self.addTearDownHook(lambda: 
+                self.runCmd("settings set plugin.process.gdb-remote.use-g-packet-for-reading false"))
         self.server.responder = self.gPacketResponder()
         target = self.createTarget("a.yaml")
         process = self.connect(target)

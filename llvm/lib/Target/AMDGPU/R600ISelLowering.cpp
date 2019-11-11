@@ -970,10 +970,10 @@ SDValue R600TargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const 
   //
 
   // Move hardware True/False values to the correct operand.
-  ISD::CondCode CCOpcode = cast<CondCodeSDNode>(CC)->get();
-  ISD::CondCode InverseCC =
-     ISD::getSetCCInverse(CCOpcode, CompareVT == MVT::i32);
   if (isHWTrueValue(False) && isHWFalseValue(True)) {
+    ISD::CondCode CCOpcode = cast<CondCodeSDNode>(CC)->get();
+    ISD::CondCode InverseCC =
+        ISD::getSetCCInverse(CCOpcode, CompareVT == MVT::i32);
     if (isCondCodeLegal(InverseCC, CompareVT.getSimpleVT())) {
       std::swap(False, True);
       CC = DAG.getCondCode(InverseCC);
@@ -1500,7 +1500,6 @@ SDValue R600TargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   // buffer. However SEXT loads from other address spaces are not supported, so
   // we need to expand them here.
   if (LoadNode->getExtensionType() == ISD::SEXTLOAD) {
-    EVT MemVT = LoadNode->getMemoryVT();
     assert(!MemVT.isVector() && (MemVT == MVT::i16 || MemVT == MVT::i8));
     SDValue NewLoad = DAG.getExtLoad(
         ISD::EXTLOAD, DL, VT, Chain, Ptr, LoadNode->getPointerInfo(), MemVT,
@@ -1884,8 +1883,6 @@ SDValue R600TargetLowering::PerformDAGCombine(SDNode *N,
                            DAG.getConstant(-1, DL, MVT::i32), // True
                            DAG.getConstant(0, DL, MVT::i32),  // False
                            SelectCC.getOperand(4)); // CC
-
-    break;
   }
 
   // insert_vector_elt (build_vector elt0, ... , eltN), NewEltIdx, idx

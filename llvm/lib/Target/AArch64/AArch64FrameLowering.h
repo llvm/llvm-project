@@ -101,7 +101,11 @@ public:
 private:
   bool shouldCombineCSRLocalStackBump(MachineFunction &MF,
                                       unsigned StackBumpBytes) const;
-  int64_t determineSVEStackSize(MachineFrameInfo &MF, unsigned &MaxAlign) const;
+
+  int64_t estimateSVEStackObjectOffsets(MachineFrameInfo &MF) const;
+  int64_t assignSVEStackObjectOffsets(MachineFrameInfo &MF,
+                                      int &MinCSFrameIndex,
+                                      int &MaxCSFrameIndex) const;
 };
 
 } // End llvm namespace

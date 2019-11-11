@@ -17,36 +17,39 @@ using namespace dwarf;
 
 void DWARFDebugMacro::dump(raw_ostream &OS) const {
   unsigned IndLevel = 0;
-  for (const Entry &E : Macros) {
-    // There should not be DW_MACINFO_end_file when IndLevel is Zero. However,
-    // this check handles the case of corrupted ".debug_macinfo" section.
-    if (IndLevel > 0)
-      IndLevel -= (E.Type == DW_MACINFO_end_file);
-    // Print indentation.
-    for (unsigned I = 0; I < IndLevel; I++)
-      OS << "  ";
-    IndLevel += (E.Type == DW_MACINFO_start_file);
+  for (const auto &Macros : MacroLists) {
+    for (const Entry &E : Macros) {
+      // There should not be DW_MACINFO_end_file when IndLevel is Zero. However,
+      // this check handles the case of corrupted ".debug_macinfo" section.
+      if (IndLevel > 0)
+        IndLevel -= (E.Type == DW_MACINFO_end_file);
+      // Print indentation.
+      for (unsigned I = 0; I < IndLevel; I++)
+        OS << "  ";
+      IndLevel += (E.Type == DW_MACINFO_start_file);
 
-    WithColor(OS, HighlightColor::Macro).get() << MacinfoString(E.Type);
-    switch (E.Type) {
-    default:
-      // Got a corrupted ".debug_macinfo" section (invalid macinfo type).
-      break;
-    case DW_MACINFO_define:
-    case DW_MACINFO_undef:
-      OS << " - lineno: " << E.Line;
-      OS << " macro: " << E.MacroStr;
-      break;
-    case DW_MACINFO_start_file:
-      OS << " - lineno: " << E.Line;
-      OS << " filenum: " << E.File;
-      break;
-    case DW_MACINFO_end_file:
-      break;
-    case DW_MACINFO_vendor_ext:
-      OS << " - constant: " << E.ExtConstant;
-      OS << " string: " << E.ExtStr;
-      break;
+      WithColor(OS, HighlightColor::Macro).get() << MacinfoString(E.Type);
+      switch (E.Type) {
+      default:
+        // Got a corrupted ".debug_macinfo" section (invalid macinfo type).
+        break;
+      case DW_MACINFO_define:
+      case DW_MACINFO_undef:
+        OS << " - lineno: " << E.Line;
+        OS << " macro: " << E.MacroStr;
+        break;
+      case DW_MACINFO_start_file:
+        OS << " - lineno: " << E.Line;
+        OS << " filenum: " << E.File;
+        break;
+      case DW_MACINFO_end_file:
+        break;
+      case DW_MACINFO_vendor_ext:
+        OS << " - constant: " << E.ExtConstant;
+        OS << " string: " << E.ExtStr;
+        break;
+      }
+      OS << "\n";
     }
     OS << "\n";
   }
@@ -54,15 +57,21 @@ void DWARFDebugMacro::dump(raw_ostream &OS) const {
 
 void DWARFDebugMacro::parse(DataExtractor data) {
   uint64_t Offset = 0;
+  MacroList *M = nullptr;
   while (data.isValidOffset(Offset)) {
+    if (!M) {
+      MacroLists.emplace_back();
+      M = &MacroLists.back();
+    }
     // A macro list entry consists of:
-    Entry E;
+    M->emplace_back();
+    Entry &E = M->back();
     // 1. Macinfo type
     E.Type = data.getULEB128(&Offset);
 
     if (E.Type == 0) {
-      // Reached end of ".debug_macinfo" section.
-      return;
+      // Reached end of a ".debug_macinfo" section contribution.
+      continue;
     }
 
     switch (E.Type) {
@@ -70,7 +79,6 @@ void DWARFDebugMacro::parse(DataExtractor data) {
       // Got a corrupted ".debug_macinfo" section (invalid macinfo type).
       // Push the corrupted entry to the list and halt parsing.
       E.Type = DW_MACINFO_invalid;
-      Macros.push_back(E);
       return;
     case DW_MACINFO_define:
     case DW_MACINFO_undef:
@@ -94,7 +102,5 @@ void DWARFDebugMacro::parse(DataExtractor data) {
       E.ExtStr = data.getCStr(&Offset);
       break;
     }
-
-    Macros.push_back(E);
   }
 }

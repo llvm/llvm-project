@@ -88,12 +88,12 @@ float test1() { co_await a; }
 
 int test2() {
   co_await a;
-} // expected-warning {{control reaches end of coroutine; which is undefined behavior because the promise type 'std::experimental::coroutine_traits<int>::promise_type' (aka 'promise_int') does not declare 'return_void()'}}
+} // expected-warning {{non-void coroutine does not return a value}}
 
 int test2a(bool b) {
   if (b)
     co_return 42;
-} // expected-warning {{control may reach end of coroutine; which is undefined behavior because the promise type 'std::experimental::coroutine_traits<int, bool>::promise_type' (aka 'promise_int') does not declare 'return_void()'}}
+} // expected-warning {{non-void coroutine does not return a value in all control paths}}
 
 int test3() {
   co_await a;
@@ -107,12 +107,12 @@ int test4() {
 
 void test5(int) {
   co_await a;
-} // expected-warning {{control reaches end of coroutine; which is undefined behavior because}}
+} // expected-warning {{non-void coroutine does not return a value}}
 
 void test6(int x) {
   if (x)
     co_return 42;
-} // expected-warning {{control may reach end of coroutine; which is undefined behavior because}}
+} // expected-warning {{non-void coroutine does not return a value in all control paths}}
 
 void test7(int y) {
   if (y)
@@ -132,9 +132,9 @@ VoidTagReturnVoid test9(bool b) {
 
 VoidTagReturnValue test10() {
   co_await a;
-} // expected-warning {{control reaches end of coroutine}}
+} // expected-warning {{non-void coroutine does not return a value}}
 
 VoidTagReturnValue test11(bool b) {
   if (b)
     co_return 42;
-} // expected-warning {{control may reach end of coroutine}}
+} // expected-warning {{non-void coroutine does not return a value in all control paths}}

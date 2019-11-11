@@ -197,7 +197,21 @@ void ModuleSummaryIndex::propagateAttributes(
 bool ModuleSummaryIndex::canImportGlobalVar(GlobalValueSummary *S,
                                             bool AnalyzeRefs) const {
   auto HasRefsPreventingImport = [this](const GlobalVarSummary *GVS) {
-    return !isReadOnly(GVS) && GVS->refs().size();
+    // We don't analyze GV references during attribute propagation, so
+    // GV with non-trivial initializer can be marked either read or
+    // write-only.
+    // Importing definiton of readonly GV with non-trivial initializer
+    // allows us doing some extra optimizations (like converting indirect
+    // calls to direct).
+    // Definition of writeonly GV with non-trivial initializer should also
+    // be imported. Not doing so will result in:
+    // a) GV internalization in source module (because it's writeonly)
+    // b) Importing of GV declaration to destination module as a result
+    //    of promotion.
+    // c) Link error (external declaration with internal definition).
+    // However we do not promote objects referenced by writeonly GV
+    // initializer by means of converting it to 'zeroinitializer'
+    return !isReadOnly(GVS) && !isWriteOnly(GVS) && GVS->refs().size();
   };
   auto *GVS = cast<GlobalVarSummary>(S->getBaseObject());
 
@@ -316,7 +330,7 @@ static std::string fflagsToString(FunctionSummary::FFlags F) {
   auto FlagValue = [](unsigned V) { return V ? '1' : '0'; };
   char FlagRep[] = {FlagValue(F.ReadNone),     FlagValue(F.ReadOnly),
                     FlagValue(F.NoRecurse),    FlagValue(F.ReturnDoesNotAlias),
-                    FlagValue(F.NoInline), 0};
+                    FlagValue(F.NoInline), FlagValue(F.AlwaysInline), 0};
 
   return FlagRep;
 }

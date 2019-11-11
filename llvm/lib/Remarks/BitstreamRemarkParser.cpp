@@ -174,7 +174,7 @@ static Error parseBlock(T &ParserHelper, unsigned BlockID,
   // Stop when there is nothing to read anymore or when we encounter an
   // END_BLOCK.
   while (!Stream.AtEndOfStream()) {
-    Expected<BitstreamEntry> Next = Stream.advance();
+    Next = Stream.advance();
     if (!Next)
       return Next.takeError();
     switch (Next->Kind) {
@@ -278,19 +278,20 @@ Expected<bool> BitstreamParserHelper::isRemarkBlock() {
   return isBlock(Stream, META_BLOCK_ID);
 }
 
-static Error validateMagicNumber(StringRef Magic) {
-  if (Magic != remarks::ContainerMagic)
+static Error validateMagicNumber(StringRef MagicNumber) {
+  if (MagicNumber != remarks::ContainerMagic)
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Unknown magic number: expecting %s, got %.4s.",
-                             remarks::ContainerMagic.data(), Magic.data());
+                             remarks::ContainerMagic.data(), MagicNumber.data());
   return Error::success();
 }
 
 static Error advanceToMetaBlock(BitstreamParserHelper &Helper) {
-  Expected<std::array<char, 4>> Magic = Helper.parseMagic();
-  if (!Magic)
-    return Magic.takeError();
-  if (Error E = validateMagicNumber(StringRef(Magic->data(), Magic->size())))
+  Expected<std::array<char, 4>> MagicNumber = Helper.parseMagic();
+  if (!MagicNumber)
+    return MagicNumber.takeError();
+  if (Error E = validateMagicNumber(
+          StringRef(MagicNumber->data(), MagicNumber->size())))
     return E;
   if (Error E = Helper.parseBlockInfoBlock())
     return E;
@@ -309,11 +310,12 @@ remarks::createBitstreamParserFromMeta(
     StringRef Buf, Optional<ParsedStringTable> StrTab,
     Optional<StringRef> ExternalFilePrependPath) {
   BitstreamParserHelper Helper(Buf);
-  Expected<std::array<char, 4>> Magic = Helper.parseMagic();
-  if (!Magic)
-    return Magic.takeError();
+  Expected<std::array<char, 4>> MagicNumber = Helper.parseMagic();
+  if (!MagicNumber)
+    return MagicNumber.takeError();
 
-  if (Error E = validateMagicNumber(StringRef(Magic->data(), Magic->size())))
+  if (Error E = validateMagicNumber(
+          StringRef(MagicNumber->data(), MagicNumber->size())))
     return std::move(E);
 
   auto Parser =
@@ -364,15 +366,15 @@ Error BitstreamRemarkParser::parseMeta() {
 }
 
 Error BitstreamRemarkParser::processCommonMeta(
-    BitstreamMetaParserHelper &MetaHelper) {
-  if (Optional<uint64_t> Version = MetaHelper.ContainerVersion)
+    BitstreamMetaParserHelper &Helper) {
+  if (Optional<uint64_t> Version = Helper.ContainerVersion)
     ContainerVersion = *Version;
   else
     return createStringError(
         std::make_error_code(std::errc::illegal_byte_sequence),
         "Error while parsing BLOCK_META: missing container version.");
 
-  if (Optional<uint8_t> Type = MetaHelper.ContainerType) {
+  if (Optional<uint8_t> Type = Helper.ContainerType) {
     // Always >= BitstreamRemarkContainerType::First since it's unsigned.
     if (*Type > static_cast<uint8_t>(BitstreamRemarkContainerType::Last))
       return createStringError(

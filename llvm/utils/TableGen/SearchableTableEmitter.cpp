@@ -44,7 +44,7 @@ struct GenericEnum {
   using Entry = std::pair<StringRef, int64_t>;
 
   std::string Name;
-  Record *Class;
+  Record *Class = nullptr;
   std::string PreprocessorGuard;
   std::vector<std::unique_ptr<Entry>> Entries;
   DenseMap<Record *, Entry *> EntryMap;
@@ -63,7 +63,7 @@ struct GenericField {
 struct SearchIndex {
   std::string Name;
   SmallVector<GenericField, 1> Fields;
-  bool EarlyOut;
+  bool EarlyOut = false;
 };
 
 struct GenericTable {

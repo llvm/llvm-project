@@ -701,7 +701,8 @@ static std::vector<UndefinedDiag> undefs;
 // the reference name ref.
 static bool canSuggestExternCForCXX(StringRef ref, StringRef def) {
   llvm::ItaniumPartialDemangler d;
-  if (d.partialDemangle(def.str().c_str()))
+  std::string name = def.str();
+  if (d.partialDemangle(name.c_str()))
     return false;
   char *buf = d.getFunctionName(nullptr, nullptr);
   if (!buf)
@@ -779,8 +780,9 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
   // The reference may be a mangled name while the definition is not. Suggest a
   // missing extern "C".
   if (name.startswith("_Z")) {
+    std::string buf = name.str();
     llvm::ItaniumPartialDemangler d;
-    if (!d.partialDemangle(name.str().c_str()))
+    if (!d.partialDemangle(buf.c_str()))
       if (char *buf = d.getFunctionName(nullptr, nullptr)) {
         const Symbol *s = suggest(buf);
         free(buf);

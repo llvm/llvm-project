@@ -36,7 +36,6 @@ class WatchpointConditionCmdTestCase(TestBase):
         archs=["aarch64"],
         triple=no_match(".*-android"),
         bugnumber="llvm.org/pr27710")
-    @expectedFailureNetBSD
     def test_watchpoint_cond(self):
         """Test watchpoint condition."""
         self.build(dictionary=self.d)

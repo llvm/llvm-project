@@ -121,14 +121,6 @@ SmallString<128> getStatsFileName(const llvm::opt::ArgList &Args,
 void addMultilibFlag(bool Enabled, const char *const Flag,
                      Multilib::flags_list &Flags);
 
-StringRef getTargetABI(const llvm::opt::ArgList &Args,
-                       const llvm::Triple &Triple);
-
-void getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
-                       const llvm::opt::ArgList &Args,
-                       llvm::opt::ArgStringList &CmdArgs, bool ForAS,
-                       bool ForLTOPlugin = false);
-
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang

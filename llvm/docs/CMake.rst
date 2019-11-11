@@ -570,11 +570,13 @@ LLVM-specific variables
   is also ON.
   The components in the library can be customised by setting LLVM_DYLIB_COMPONENTS
   to a list of the desired components.
+  This option is not available on Windows.
 
 **LLVM_LINK_LLVM_DYLIB**:BOOL
   If enabled, tools will be linked with the libLLVM shared library. Defaults
   to OFF. Setting LLVM_LINK_LLVM_DYLIB to ON also sets LLVM_BUILD_LLVM_DYLIB
   to ON.
+  This option is not available on Windows.
 
 **BUILD_SHARED_LIBS**:BOOL
   Flag indicating if each LLVM component (e.g. Support) is built as a shared

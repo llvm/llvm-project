@@ -86,10 +86,8 @@ bb:
 ; CHECK-NEXT: .b64 Lfunc_begin0                    // DW_AT_low_pc
 ; CHECK-NEXT: .b64 Lfunc_end1                      // DW_AT_high_pc
 ; CHECK-NEXT: }
-; CHECK-NEXT: .section .debug_macinfo
-; CHECK-NEXT: {
-; CHECK-NEXT: .b8 0                                // End Of Macro List Mark
-; CHECK:      }
+; CHECK-NEXT: .section .debug_loc { }
+; CHECK-NOT: debug_
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9}

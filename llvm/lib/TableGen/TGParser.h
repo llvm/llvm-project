@@ -70,7 +70,7 @@ namespace llvm {
 
   struct DefsetRecord {
     SMLoc Loc;
-    RecTy *EltTy;
+    RecTy *EltTy = nullptr;
     SmallVector<Init *, 16> Elements;
   };
 
@@ -114,9 +114,9 @@ class TGParser {
   };
 
 public:
-  TGParser(SourceMgr &SrcMgr, ArrayRef<std::string> Macros,
+  TGParser(SourceMgr &SM, ArrayRef<std::string> Macros,
            RecordKeeper &records)
-    : Lex(SrcMgr, Macros), CurMultiClass(nullptr), Records(records) {}
+    : Lex(SM, Macros), CurMultiClass(nullptr), Records(records) {}
 
   /// ParseFile - Main entrypoint for parsing a tblgen file.  These parser
   /// routines return true on error, or false on success.

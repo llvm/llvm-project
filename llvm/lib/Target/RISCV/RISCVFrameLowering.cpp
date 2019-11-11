@@ -195,11 +195,16 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
            "SecondSPAdjustAmount should be greater than zero");
     adjustReg(MBB, MBBI, DL, SPReg, SPReg, -SecondSPAdjustAmount,
               MachineInstr::FrameSetup);
-    // Emit ".cfi_def_cfa_offset StackSize"
-    unsigned CFIIndex = MF.addFrameInst(
-        MCCFIInstruction::createDefCfaOffset(nullptr, -MFI.getStackSize()));
-    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex);
+
+    // If we are using a frame-pointer, and thus emitted ".cfi_def_cfa fp, 0",
+    // don't emit an sp-based .cfi_def_cfa_offset
+    if (!hasFP(MF)) {
+      // Emit ".cfi_def_cfa_offset StackSize"
+      unsigned CFIIndex = MF.addFrameInst(
+          MCCFIInstruction::createDefCfaOffset(nullptr, -MFI.getStackSize()));
+      BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex);
+    }
   }
 
   if (hasFP(MF)) {
@@ -228,6 +233,8 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   }
 }
 
+// FIXME Fix emission of .cfi_restore and .cfi_def_cfa CFI directives that can
+// incorrectly affect subsequent basic blocks.
 void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
                                       MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
@@ -265,13 +272,14 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
     adjustReg(MBB, LastFrameDestroy, DL, SPReg, SPReg, SecondSPAdjustAmount,
               MachineInstr::FrameDestroy);
 
-    // Emit ".cfi_def_cfa_offset FirstSPAdjustAmount"
-    unsigned CFIIndex =
-        MF.addFrameInst(
-             MCCFIInstruction::createDefCfaOffset(nullptr,
-                                                  -FirstSPAdjustAmount));
-    BuildMI(MBB, LastFrameDestroy, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex);
+    // Emit ".cfi_def_cfa_offset FirstSPAdjustAmount" if using an sp-based CFA
+    if (!hasFP(MF)) {
+      unsigned CFIIndex = MF.addFrameInst(
+          MCCFIInstruction::createDefCfaOffset(nullptr, -FirstSPAdjustAmount));
+      BuildMI(MBB, LastFrameDestroy, DL,
+              TII->get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex);
+    }
   }
 
   if (hasFP(MF)) {
@@ -281,10 +289,14 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
         Register DestReg = I->getOperand(0).getReg();
         if (DestReg == FPReg) {
           // If there is frame pointer, after restoring $fp registers, we
-          // need adjust CFA to ($sp - FPOffset).
-          // Emit ".cfi_def_cfa $sp, -FPOffset"
+          // need adjust CFA back to the correct sp-based offset.
+          // Emit ".cfi_def_cfa $sp, CFAOffset"
+          uint64_t CFAOffset =
+              FirstSPAdjustAmount
+                  ? -FirstSPAdjustAmount + RVFI->getVarArgsSaveSize()
+                  : -FPOffset;
           unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createDefCfa(
-              nullptr, RI->getDwarfRegNum(SPReg, true), -FPOffset));
+              nullptr, RI->getDwarfRegNum(SPReg, true), CFAOffset));
           BuildMI(MBB, std::next(I), DL,
                   TII->get(TargetOpcode::CFI_INSTRUCTION))
               .addCFIIndex(CFIIndex);

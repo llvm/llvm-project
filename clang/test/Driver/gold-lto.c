@@ -26,21 +26,3 @@
 // RUN: %clang -target i686-linux-android -### %t.o -flto 2>&1 \
 // RUN:     | FileCheck %s --check-prefix=CHECK-X86-ANDROID
 // CHECK-X86-ANDROID: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
-//
-// RUN: %clang -target riscv64-unknown-elf -### %t.o -flto 2>&1 \
-// RUN:     -march=rv64imf -mabi=lp64f \
-// RUN:     | FileCheck %s --check-prefix=CHECK-RISCV-BAREMETAL
-// CHECK-RISCV-BAREMETAL: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
-// CHECK-RISCV-BAREMETAL: "-plugin-opt=-mattr=+m"
-// CHECK-RISCV-BAREMETAL: "-plugin-opt=-mattr=+f"
-// CHECK-RISCV-BAREMETAL: "-plugin-opt=-mattr=+relax"
-// CHECK-RISCV-BAREMETAL: "-plugin-opt=-target-abi=lp64f"
-//
-// RUN: %clang -target riscv64-unknown-linux-gnu -### %t.o -flto 2>&1 \
-// RUN:     -march=rv64imf -mabi=lp64f \
-// RUN:     | FileCheck %s --check-prefix=CHECK-RISCV-LINUX
-// CHECK-RISCV-LINUX: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
-// CHECK-RISCV-LINUX: "-plugin-opt=-mattr=+m"
-// CHECK-RISCV-LINUX: "-plugin-opt=-mattr=+f"
-// CHECK-RISCV-LINUX: "-plugin-opt=-mattr=+relax"
-// CHECK-RISCV-LINUX: "-plugin-opt=-target-abi=lp64f"

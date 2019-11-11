@@ -26,13 +26,13 @@ _start:
   ld 1, .L1@toc@l(2)
 
 # CHECK-LABEL: Disassembly of section .R_PPC64_TOC16_LO_DS:
-# CHECK: ld 1, -32768(2)
+# CHECK: ld 1, -32760(2)
 
 .section .R_PPC64_TOC16_LO,"ax",@progbits
   addi  1, 2, .L1@toc@l
 
 # CHECK-LABEL: Disassembly of section .R_PPC64_TOC16_LO:
-# CHECK: addi 1, 2, -32768
+# CHECK: addi 1, 2, -32760
 
 .section .R_PPC64_TOC16_HI,"ax",@progbits
   addis 1, 2, .L1@toc@h

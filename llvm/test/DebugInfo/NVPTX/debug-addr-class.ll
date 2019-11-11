@@ -331,8 +331,6 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-NEXT: .b8 4                                   // DW_AT_byte_size
 ; CHECK-NEXT: .b8 0                                   // End Of Children Mark
 ; CHECK-NEXT: }
-; CHECK-NEXT: .section .debug_macinfo
-; CHECK-NEXT: {
-; CHECK-NEXT: .b8 0                                   // End Of Macro List Mark
-; CHECK:      }
+; CHECK-NEXT: .section .debug_loc { }
+; CHECK-NOT: debug_
 

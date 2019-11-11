@@ -39,6 +39,6 @@ xsnmsubad %r1, %r2
 
 adXd %r1, %r2, %r3
 
-# CHECK:      error: invalid instruction, did you mean: add, addc, adde, addi, fadd?
+# CHECK:      error: invalid instruction, did you mean: add, addc, adde, addi, addo, fadd?
 # CHECK-NEXT: adXd %r1, %r2, %r3
 # CHECK-NEXT: ^

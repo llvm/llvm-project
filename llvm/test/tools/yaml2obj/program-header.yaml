@@ -81,8 +81,8 @@ ProgramHeaders:
 ## Check we do not allow referencing sections that do not exist.
 # RUN: not yaml2obj --docnum=2 %s -o %t 2>&1 | FileCheck %s --check-prefix=ERR
 
-# ERR: error: unknown section referenced: '.foo' by program header
-# ERR: error: unknown section referenced: '.bar' by program header
+# ERR: error: unknown section or fill referenced: '.foo' by program header
+# ERR: error: unknown section or fill referenced: '.bar' by program header
 
 --- !ELF
 FileHeader:

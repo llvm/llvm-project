@@ -182,8 +182,32 @@ class InterfaceStubFunctionsConsumer : public ASTConsumer {
     case Decl::Kind::Enum:
     case Decl::Kind::EnumConstant:
     case Decl::Kind::TemplateTypeParm:
+    case Decl::Kind::NonTypeTemplateParm:
+    case Decl::Kind::CXXConversion:
+    case Decl::Kind::UnresolvedUsingValue:
+    case Decl::Kind::Using:
+    case Decl::Kind::UsingShadow:
+    case Decl::Kind::TypeAliasTemplate:
+    case Decl::Kind::TypeAlias:
+    case Decl::Kind::VarTemplate:
+    case Decl::Kind::VarTemplateSpecialization:
+    case Decl::Kind::UsingDirective:
+    case Decl::Kind::TemplateTemplateParm:
+    case Decl::Kind::ClassTemplatePartialSpecialization:
+    case Decl::Kind::IndirectField:
       return true;
-    case Decl::Kind::Var:
+    case Decl::Kind::Var: {
+      // Bail on any VarDecl that either has no named symbol.
+      if (!ND->getIdentifier())
+        return true;
+      const auto *VD = cast<VarDecl>(ND);
+      // Bail on any VarDecl that is a dependent or templated type.
+      if (VD->isTemplated() || VD->getType()->isDependentType())
+        return true;
+      if (WriteNamedDecl(ND, Symbols, RDO))
+        return true;
+      break;
+    }
     case Decl::Kind::ParmVar:
     case Decl::Kind::CXXMethod:
     case Decl::Kind::CXXConstructor:
@@ -251,14 +275,16 @@ public:
     for (const NamedDecl *ND : v.NamedDecls)
       HandleNamedDecl(ND, Symbols, FromTU);
 
-    auto writeIfsV1 =
-        [this](const llvm::Triple &T, const MangledSymbols &Symbols,
-               const ASTContext &context, StringRef Format,
-               raw_ostream &OS) -> void {
+    auto writeIfsV1 = [this](const llvm::Triple &T,
+                             const MangledSymbols &Symbols,
+                             const ASTContext &context, StringRef Format,
+                             raw_ostream &OS) -> void {
       OS << "--- !" << Format << "\n";
       OS << "IfsVersion: 1.0\n";
       OS << "Triple: " << T.str() << "\n";
-      OS << "ObjectFileFormat: " << "ELF" << "\n"; // TODO: For now, just ELF.
+      OS << "ObjectFileFormat: "
+         << "ELF"
+         << "\n"; // TODO: For now, just ELF.
       OS << "Symbols:\n";
       for (const auto &E : Symbols) {
         const MangledSymbol &Symbol = E.second;
