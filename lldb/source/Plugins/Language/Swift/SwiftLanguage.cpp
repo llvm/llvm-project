@@ -1236,7 +1236,7 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
                   CompilerType result_type(result_sp->GetCompilerType());
                   if (Flags(result_type.GetTypeInfo())
                           .AllSet(eTypeIsSwift | eTypeIsMetatype))
-                    result_type = result_type.GetInstanceType();
+                    result_type = SwiftASTContext::GetInstanceType(result_type);
                   results.insert(TypeOrDecl(result_type));
                 }
               }
