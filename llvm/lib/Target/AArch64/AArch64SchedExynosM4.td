@@ -541,7 +541,7 @@ def : SchedAlias<WriteFMul, M4WriteFMAC3>;
 // FP miscellaneous instructions.
 def : SchedAlias<WriteFCvt,  M4WriteFCVT2>;
 def : SchedAlias<WriteFImm,  M4WriteNALU1>;
-def : SchedAlias<WriteFCopy, M4WriteCOPY>;
+def : SchedAlias<WriteFCopy, M4WriteNALU1>;
 
 // FP load instructions.
 def : SchedAlias<WriteVLD, M4WriteL5>;
