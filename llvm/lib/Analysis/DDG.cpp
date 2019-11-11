@@ -213,7 +213,8 @@ bool DataDependenceGraph::addNode(DDGNode &N) {
   // always reachable by the root, because they represent components that are
   // already reachable by root.
   auto *Pi = dyn_cast<PiBlockDDGNode>(&N);
-  assert(!Root || Pi && "Root node is already added. No more nodes can be added.");
+  assert((!Root || Pi) &&
+         "Root node is already added. No more nodes can be added.");
 
   if (isa<RootDDGNode>(N))
     Root = &N;
