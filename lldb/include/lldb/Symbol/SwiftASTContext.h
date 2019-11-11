@@ -594,7 +594,7 @@ public:
 
   size_t GetNumTemplateArguments(void *type) override;
 
-  lldb::GenericKind GetGenericArgumentKind(void *type, size_t idx) override;
+  lldb::GenericKind GetGenericArgumentKind(void *type, size_t idx);
   CompilerType GetUnboundGenericType(void *type, size_t idx);
   CompilerType GetBoundGenericType(void *type, size_t idx);
   CompilerType GetGenericArgumentType(void *type, size_t idx) override;
