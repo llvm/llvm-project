@@ -16,6 +16,7 @@ static_library("bugprone") {
   sources = [
     "ArgumentCommentCheck.cpp",
     "AssertSideEffectCheck.cpp",
+    "BadSignalToKillThreadCheck.cpp",
     "BoolPointerImplicitConversionCheck.cpp",
     "BranchCloneCheck.cpp",
     "BugproneTidyModule.cpp",
