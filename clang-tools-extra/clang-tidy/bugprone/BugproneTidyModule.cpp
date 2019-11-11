@@ -12,6 +12,7 @@
 #include "../cppcoreguidelines/NarrowingConversionsCheck.h"
 #include "ArgumentCommentCheck.h"
 #include "AssertSideEffectCheck.h"
+#include "BadSignalToKillThreadCheck.h"
 #include "BoolPointerImplicitConversionCheck.h"
 #include "BranchCloneCheck.h"
 #include "CopyConstructorInitCheck.h"
@@ -68,6 +69,8 @@ public:
         "bugprone-argument-comment");
     CheckFactories.registerCheck<AssertSideEffectCheck>(
         "bugprone-assert-side-effect");
+    CheckFactories.registerCheck<BadSignalToKillThreadCheck>(
+        "bugprone-bad-signal-to-kill-thread");
     CheckFactories.registerCheck<BoolPointerImplicitConversionCheck>(
         "bugprone-bool-pointer-implicit-conversion");
     CheckFactories.registerCheck<BranchCloneCheck>(
