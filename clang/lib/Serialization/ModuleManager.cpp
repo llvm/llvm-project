@@ -219,10 +219,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   return NewlyLoaded;
 }
 
-void ModuleManager::removeModules(
-    ModuleIterator First,
-    llvm::SmallPtrSetImpl<ModuleFile *> &LoadedSuccessfully,
-    ModuleMap *modMap) {
+void ModuleManager::removeModules(ModuleIterator First, ModuleMap *modMap) {
   auto Last = end();
   if (First == Last)
     return;

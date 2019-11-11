@@ -435,6 +435,13 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
         Worklist.AddValue(EE);
         return CastInst::Create(CI->getOpcode(), EE, EI.getType());
       }
+
+      // If the input is a bitcast from x86_mmx, turn into a single bitcast from
+      // the mmx type to the scalar type.
+      if (CI->getOpcode() == Instruction::BitCast &&
+          EI.getVectorOperandType()->getNumElements() == 1 &&
+          CI->getOperand(0)->getType()->isX86_MMXTy())
+        return new BitCastInst(CI->getOperand(0), EI.getType());
     }
   }
   return nullptr;

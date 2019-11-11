@@ -4185,11 +4185,7 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
   case VersionMismatch:
   case ConfigurationMismatch:
   case HadErrors: {
-    llvm::SmallPtrSet<ModuleFile *, 4> LoadedSet;
-    for (const ImportedModule &IM : Loaded)
-      LoadedSet.insert(IM.Mod);
-
-    ModuleMgr.removeModules(ModuleMgr.begin() + NumModules, LoadedSet,
+    ModuleMgr.removeModules(ModuleMgr.begin() + NumModules,
                             PP.getLangOpts().Modules
                                 ? &PP.getHeaderSearchInfo().getModuleMap()
                                 : nullptr);

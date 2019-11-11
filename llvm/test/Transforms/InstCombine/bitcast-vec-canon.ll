@@ -49,9 +49,21 @@ define x86_mmx @e(<1 x i64> %y) {
 
 define <1 x i64> @f(x86_mmx %y) {
 ; CHECK-LABEL: @f(
-; CHECK-NEXT:    [[C:%.*]] = bitcast x86_mmx %y to <1 x i64>
+; CHECK-NEXT:    [[C:%.*]] = bitcast x86_mmx [[Y:%.*]] to <1 x i64>
 ; CHECK-NEXT:    ret <1 x i64> [[C]]
 ;
   %c = bitcast x86_mmx %y to <1 x i64>
   ret <1 x i64> %c
+}
+
+define double @g(x86_mmx %x) {
+; CHECK-LABEL: @g(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast x86_mmx [[X:%.*]] to double
+; CHECK-NEXT:    ret double [[TMP0]]
+;
+entry:
+  %0 = bitcast x86_mmx %x to <1 x i64>
+  %1 = bitcast <1 x i64> %0 to double
+  ret double %1
 }
