@@ -40,8 +40,8 @@ AVRInstrInfo::AVRInstrInfo()
 
 void AVRInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
-                               const DebugLoc &DL, unsigned DestReg,
-                               unsigned SrcReg, bool KillSrc) const {
+                               const DebugLoc &DL, MCRegister DestReg,
+                               MCRegister SrcReg, bool KillSrc) const {
   const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
   const AVRRegisterInfo &TRI = *STI.getRegisterInfo();
   unsigned Opc;
