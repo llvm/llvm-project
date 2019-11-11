@@ -98,9 +98,13 @@
 
 #define INDEXSTORE_OPTIONS_ATTRS INDEXSTORE_OPEN_ENUM_ATTR INDEXSTORE_FLAG_ENUM_ATTR
 
+#if defined(__has_extension)
 #if __has_extension(cxx_strong_enums) || __has_feature(objc_fixed_enum)
 # define INDEXSTORE_OPTIONS(_type, _name) enum INDEXSTORE_OPTIONS_ATTRS _name : _type _name; enum INDEXSTORE_OPTIONS_ATTRS _name : _type
-#else
+#endif
+#endif
+
+#ifndef INDEXSTORE_OPTIONS
 # define INDEXSTORE_OPTIONS(_type, _name) _type _name; enum INDEXSTORE_OPTIONS_ATTRS
 #endif
 

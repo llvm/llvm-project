@@ -1198,9 +1198,8 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
               auto ast_ctx = target->GetScratchSwiftASTContext(
                   error, *exe_scope, create_on_demand);
               if (ast_ctx) {
-                const bool is_mangled = true;
                 ConstString cs_input{input};
-                Mangled mangled(cs_input, is_mangled);
+                Mangled mangled(cs_input);
                 if (mangled.GuessLanguage() == eLanguageTypeSwift) {
                   Status error;
                   auto candidate =
