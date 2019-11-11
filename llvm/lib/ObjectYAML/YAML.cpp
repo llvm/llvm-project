@@ -43,7 +43,8 @@ void yaml::BinaryRef::writeAsBinary(raw_ostream &OS, uint64_t N) const {
     return;
   }
 
-  for (uint64_t I = 0, E = std::min(N, Data.size() / 2); I != E; ++I) {
+  for (uint64_t I = 0, E = std::min<uint64_t>(N, Data.size() / 2); I != E;
+       ++I) {
     uint8_t Byte = llvm::hexDigitValue(Data[I * 2]);
     Byte <<= 4;
     Byte |= llvm::hexDigitValue(Data[I * 2 + 1]);
