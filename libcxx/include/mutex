@@ -650,7 +650,7 @@ public:
 #endif
 
 template <class _Fp>
-void
+void _LIBCPP_INLINE_VISIBILITY
 __call_once_proxy(void* __vp)
 {
     __call_once_param<_Fp>* __p = static_cast<__call_once_param<_Fp>*>(__vp);
