@@ -6,14 +6,8 @@
 define i16 @testSimplifySetCC_2(i16 %x) {
 ; CHECK-LABEL: testSimplifySetCC_2:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    clrc
-; CHECK-NEXT:    rrc r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    cmp #1, r12
+; CHECK-NEXT:    and #-64, r12
+; CHECK-NEXT:    cmp #64, r12
 ; CHECK-NEXT:    mov r2, r12
 ; CHECK-NEXT:    rra r12
 ; CHECK-NEXT:    and #1, r12
@@ -30,18 +24,9 @@ entry:
 define i16 @testSimplifySetCC_3(i16 %x) {
 ; CHECK-LABEL: testSimplifySetCC_3:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    clrc
-; CHECK-NEXT:    rrc r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    tst r12
-; CHECK-NEXT:    mov r2, r13
-; CHECK-NEXT:    rra r13
-; CHECK-NEXT:    mov #1, r12
-; CHECK-NEXT:    bic r13, r12
+; CHECK-NEXT:    cmp #64, r12
+; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    and #1, r12
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp ugt i16 %x, 63
@@ -54,17 +39,9 @@ entry:
 define i16 @testSimplifySetCC_4(i16 %x) {
 ; CHECK-LABEL: testSimplifySetCC_4:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    clrc
-; CHECK-NEXT:    rrc r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    tst r12
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    rra r12
-; CHECK-NEXT:    and #1, r12
+; CHECK-NEXT:    cmp #64, r12
+; CHECK-NEXT:    mov #1, r12
+; CHECK-NEXT:    bic r2, r12
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp ult i16 %x, 64
