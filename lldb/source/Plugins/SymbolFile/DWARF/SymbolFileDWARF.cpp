@@ -19,6 +19,7 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/OptionParsing.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/StreamString.h"
@@ -3043,7 +3044,8 @@ bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
             if (strstr(flags, option)) {
               Args compiler_args(flags);
 
-              return compiler_args.GetOptionValueAsString(option, value);
+              return OptionParsing::GetOptionValueAsString(compiler_args,
+                                                           option, value);
             }
           }
         }
@@ -3062,7 +3064,8 @@ bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
               if (strstr(flags, option)) {
                 Args compiler_args(flags);
 
-                return compiler_args.GetOptionValueAsString(option, value);
+                return OptionParsing::GetOptionValueAsString(compiler_args,
+                                                             option, value);
               }
             }
           }
@@ -3093,7 +3096,8 @@ int SymbolFileDWARF::GetCompileOptions(const char *option,
             if (strstr(flags, option)) {
               Args compiler_args(flags);
 
-              return compiler_args.GetOptionValuesAsStrings(option, values);
+              return OptionParsing::GetOptionValuesAsStrings(compiler_args,
+                                                             option, values);
             }
           }
         }
@@ -3114,7 +3118,8 @@ int SymbolFileDWARF::GetCompileOptions(const char *option,
               if (strstr(flags, option)) {
                 Args compiler_args(flags);
 
-                return compiler_args.GetOptionValuesAsStrings(option, values);
+                return OptionParsing::GetOptionValuesAsStrings(compiler_args,
+                                                               option, values);
               }
             }
           }
