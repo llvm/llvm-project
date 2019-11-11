@@ -887,7 +887,7 @@ ObjCLanguage::GetPossibleFormattersMatches(ValueObject &valobj,
   bool canBeObjCDynamic =
       compiler_type.IsPossibleDynamicType(nullptr, check_cpp, check_objc);
 
-  if (canBeObjCDynamic) {
+  if (canBeObjCDynamic && ClangUtil::IsClangType(compiler_type)) {
     do {
       lldb::ProcessSP process_sp = valobj.GetProcessSP();
       if (!process_sp)
