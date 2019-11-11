@@ -10,7 +10,8 @@
 
 ;;; Commentary:
 
-;; Unit tests for clang-format.el.
+;; Unit tests for clang-format.el. Not run by lit, run as:
+;; emacs -Q -batch -l clang/tools/clang-format/clang-format.el -l clang/tools/clang-format/clang-format-test.el -f ert-run-tests-batch-and-exit
 
 ;;; Code:
 
@@ -58,6 +59,7 @@
        (should-not display)
        (should (equal args
                       '("-output-replacements-xml" "-assume-filename" "foo.cpp"
+                        "-fallback-style" "none"
                         ;; Beginning of buffer, no byte-order mark.
                         "-offset" "0"
                         ;; We have two lines with 2×2 bytes for the umlauts,
