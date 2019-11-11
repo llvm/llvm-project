@@ -4538,12 +4538,6 @@ ClangASTContext::GetCanonicalType(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }
 
-CompilerType ClangASTContext::GetInstanceType(void *type) {
-  if (type)
-    return CompilerType(this, GetQualType(type).getAsOpaquePtr());
-  return CompilerType();
-}
-
 static clang::QualType GetFullyUnqualifiedType_Impl(clang::ASTContext *ast,
                                                     clang::QualType qual_type) {
   if (qual_type->isPointerType())

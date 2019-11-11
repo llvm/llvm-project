@@ -374,12 +374,6 @@ CompilerType CompilerType::GetCanonicalType() const {
   return CompilerType();
 }
 
-CompilerType CompilerType::GetInstanceType() const {
-  if (IsValid())
-    return m_type_system->GetInstanceType(m_type);
-  return CompilerType();
-}
-
 CompilerType CompilerType::GetFullyUnqualifiedType() const {
   if (IsValid())
     return m_type_system->GetFullyUnqualifiedType(m_type);

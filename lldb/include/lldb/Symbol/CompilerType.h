@@ -182,8 +182,6 @@ public:
 
   CompilerType GetCanonicalType() const;
 
-  CompilerType GetInstanceType() const;
-
   CompilerType GetFullyUnqualifiedType() const;
 
   // Returns -1 if this isn't a function of if the function doesn't have a

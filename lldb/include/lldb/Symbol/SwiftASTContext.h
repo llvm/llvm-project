@@ -522,7 +522,8 @@ public:
 
   CompilerType GetCanonicalType(void *type) override;
 
-  CompilerType GetInstanceType(void *type) override;
+  static CompilerType GetInstanceType(CompilerType ct);
+  CompilerType GetInstanceType(void *type);
 
   // Returns -1 if this isn't a function of if the function doesn't have a
   // prototype. Returns a value >override if there is a prototype.
