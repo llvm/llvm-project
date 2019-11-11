@@ -629,6 +629,11 @@ bool CursorVisitor::VisitDeclContext(DeclContext *DC) {
     Decl *D = *I;
     if (D->getLexicalDeclContext() != DC)
       continue;
+    // Filter out synthesized property accessor redeclarations.
+    if (isa<ObjCImplDecl>(DC))
+      if (auto *OMD = dyn_cast<ObjCMethodDecl>(D))
+        if (OMD->isSynthesizedAccessorStub())
+          continue;
     const Optional<bool> V = handleDeclForVisitation(D);
     if (!V.hasValue())
       continue;
