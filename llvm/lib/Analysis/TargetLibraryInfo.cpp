@@ -1637,3 +1637,19 @@ INITIALIZE_PASS(TargetLibraryInfoWrapperPass, "targetlibinfo",
 char TargetLibraryInfoWrapperPass::ID = 0;
 
 void TargetLibraryInfoWrapperPass::anchor() {}
+
+unsigned TargetLibraryInfoImpl::getWidestVF(StringRef ScalarF) const {
+  ScalarF = sanitizeFunctionName(ScalarF);
+  if (ScalarF.empty())
+    return 1;
+
+  unsigned VF = 1;
+  std::vector<VecDesc>::const_iterator I =
+      llvm::lower_bound(VectorDescs, ScalarF, compareWithScalarFnName);
+  while (I != VectorDescs.end() && StringRef(I->ScalarFnName) == ScalarF) {
+    if (I->VectorizationFactor > VF)
+      VF = I->VectorizationFactor;
+    ++I;
+  }
+  return VF;
+}
