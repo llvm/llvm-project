@@ -72,6 +72,7 @@
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
 #include "lldb/Target/ThreadPlanStepOverRange.h"
+#include "lldb/Utility/OptionParsing.h"
 #include "lldb/Utility/Status.h"
 
 #include "llvm/ADT/ScopeExit.h"
@@ -3406,7 +3407,8 @@ Status SwiftLanguageRuntime::SwiftExceptionPrecondition::ConfigurePrecondition(
     Args &args) {
   Status error;
   std::vector<std::string> object_typenames;
-  args.GetOptionValuesAsStrings("exception-typename", object_typenames);
+  OptionParsing::GetOptionValuesAsStrings(args, "exception-typename",
+                                          object_typenames);
   for (auto type_name : object_typenames)
     AddTypeName(type_name.c_str());
   return error;
