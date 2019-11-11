@@ -85,7 +85,7 @@ void TransformerClangTidyCheck::check(
   if (Transformations->empty())
     return;
 
-  Expected<std::string> Explanation = Case.Explanation(Result);
+  Expected<std::string> Explanation = Case.Explanation->eval(Result);
   if (!Explanation) {
     llvm::errs() << "Error in explanation: "
                  << llvm::toString(Explanation.takeError()) << "\n";
