@@ -91,17 +91,6 @@ public:
 
   bool FileEquals(const FileSpec &other) const;
 
-  /// Assignment operator.
-  ///
-  /// Makes a copy of the uniqued directory and filename strings from \a rhs.
-  ///
-  /// \param[in] rhs
-  ///     A const FileSpec object reference to assign to this object.
-  ///
-  /// \return
-  ///     A const reference to this object.
-  const FileSpec &operator=(const FileSpec &rhs);
-
   /// Equal to operator
   ///
   /// Tests if this object is equal to \a rhs.
