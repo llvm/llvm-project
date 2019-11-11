@@ -346,6 +346,13 @@ TEST_F(VFABIParserTest, ISAIndependentMangling) {
   __COMMON_CHECKS;
   EXPECT_EQ(VectorName, "_ZGVeN2vls2Ls27Us4Rs5l1L10U100R1000u2_sin");
 
+  // LLVM: <isa> = "_LLVM_" internal vector function.
+  EXPECT_TRUE(
+      invokeParser("_ZGV_LLVM_N2vls2Ls27Us4Rs5l1L10U100R1000u2_sin(vectorf)"));
+  EXPECT_EQ(ISA, VFISAKind::LLVM);
+  __COMMON_CHECKS;
+  EXPECT_EQ(VectorName, "vectorf");
+
   // Unknown ISA (randomly using "q"). This test will need update if
   // some targets decide to use "q" as their ISA token.
   EXPECT_TRUE(invokeParser("_ZGVqN2vls2Ls27Us4Rs5l1L10U100R1000u2_sin"));
@@ -472,4 +479,10 @@ TEST_F(VFABIAttrTest, Read) {
   Exp.push_back("_ZGVnN2v_g(custom_vg)");
   Exp.push_back("_ZGVnN4v_g");
   EXPECT_EQ(Mappings, Exp);
+}
+
+TEST_F(VFABIParserTest, LLVM_InternalISA) {
+  EXPECT_FALSE(invokeParser("_ZGV_LLVM_N2v_sin"));
+  EXPECT_TRUE(invokeParser("_ZGV_LLVM_N2v_sin_(vector_name)"));
+  EXPECT_EQ(ISA, VFISAKind::LLVM);
 }
