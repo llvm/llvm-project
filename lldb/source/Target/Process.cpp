@@ -239,7 +239,7 @@ bool ProcessProperties::GetStopOnExec() const {
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
       nullptr, idx, g_process_properties[idx].default_uint_value != 0);
 }
-  
+
 std::chrono::seconds ProcessProperties::GetUtilityExpressionTimeout() const {
   const uint32_t idx = ePropertyUtilityExpressionTimeout;
   uint64_t value = m_collection_sp->GetPropertyAtIndexAsUInt64(
