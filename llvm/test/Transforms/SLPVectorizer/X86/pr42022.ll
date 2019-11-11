@@ -8,22 +8,19 @@ define { <2 x float>, <2 x float> } @StructOfVectors(float *%Ptr) {
 ; CHECK-LABEL: @StructOfVectors(
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds float, float* [[PTR:%.*]], i64 0
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, float* [[PTR]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[GEP0]] to <2 x float>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds float, float* [[PTR]], i64 2
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds float, float* [[PTR]], i64 3
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[GEP2]] to <2 x float>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, <2 x float>* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <2 x float> [[TMP2]], <float 1.100000e+01, float 1.200000e+01>
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <2 x float> [[TMP4]], <float 1.300000e+01, float 1.400000e+01>
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP5]], i32 0
-; CHECK-NEXT:    [[VECIN0:%.*]] = insertelement <2 x float> undef, float [[TMP7]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP5]], i32 1
-; CHECK-NEXT:    [[VECIN1:%.*]] = insertelement <2 x float> [[VECIN0]], float [[TMP8]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP6]], i32 0
-; CHECK-NEXT:    [[VECIN2:%.*]] = insertelement <2 x float> undef, float [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x float> [[TMP6]], i32 1
-; CHECK-NEXT:    [[VECIN3:%.*]] = insertelement <2 x float> [[VECIN2]], float [[TMP10]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[GEP0]] to <4 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <4 x float> [[TMP2]], <float 1.100000e+01, float 1.200000e+01, float 1.300000e+01, float 1.400000e+01>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP3]], i32 0
+; CHECK-NEXT:    [[VECIN0:%.*]] = insertelement <2 x float> undef, float [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP3]], i32 1
+; CHECK-NEXT:    [[VECIN1:%.*]] = insertelement <2 x float> [[VECIN0]], float [[TMP5]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP3]], i32 2
+; CHECK-NEXT:    [[VECIN2:%.*]] = insertelement <2 x float> undef, float [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP3]], i32 3
+; CHECK-NEXT:    [[VECIN3:%.*]] = insertelement <2 x float> [[VECIN2]], float [[TMP7]], i64 1
 ; CHECK-NEXT:    [[RET0:%.*]] = insertvalue { <2 x float>, <2 x float> } undef, <2 x float> [[VECIN1]], 0
 ; CHECK-NEXT:    [[RET1:%.*]] = insertvalue { <2 x float>, <2 x float> } [[RET0]], <2 x float> [[VECIN3]], 1
 ; CHECK-NEXT:    ret { <2 x float>, <2 x float> } [[RET1]]
