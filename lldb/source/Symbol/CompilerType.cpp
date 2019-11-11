@@ -486,12 +486,6 @@ CompilerType CompilerType::GetTypedefedType() const {
     return CompilerType();
 }
 
-CompilerType CompilerType::GetUnboundType() const {
-  if (IsValid())
-    return m_type_system->GetUnboundType(m_type);
-  return CompilerType();
-}
-
 //----------------------------------------------------------------------
 // Create related types using the current type's AST
 

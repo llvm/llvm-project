@@ -4941,11 +4941,6 @@ ClangASTContext::GetTypedefedType(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }
 
-CompilerType
-ClangASTContext::GetUnboundType(lldb::opaque_compiler_type_t type) {
-  return CompilerType(this, GetQualType(type).getAsOpaquePtr());
-}
-
 //----------------------------------------------------------------------
 // Create related types using the current type's AST
 

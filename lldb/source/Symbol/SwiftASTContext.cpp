@@ -6712,8 +6712,8 @@ static std::string GetTupleElementName(const swift::TupleType *tuple_type,
 }
 
 /// Retrieve the printable name of a type referenced as a superclass.
-static std::string GetSuperclassName(const CompilerType &superclass_type) {
-  return superclass_type.GetUnboundType().GetTypeName().AsCString(
+std::string SwiftASTContext::GetSuperclassName(const CompilerType &superclass_type) {
+  return GetUnboundType(superclass_type.GetOpaqueQualType()).GetTypeName().AsCString(
       "<no type name>");
 }
 
