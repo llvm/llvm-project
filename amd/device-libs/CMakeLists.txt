@@ -9,16 +9,16 @@ cmake_minimum_required(VERSION 2.8)
 
 cmake_policy(SET CMP0011 NEW)
 
-# Build ROCM-Device-Libs with ccache if the package is present.
-set(ROCM_DEVICE_LIBS_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
-if(ROCM_DEVICE_LIBS_CCACHE_BUILD)
+# Optionally, build Device Libs with ccache.
+set(ROCM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
+if (ROCM_CCACHE_BUILD)
   find_program(CCACHE_PROGRAM ccache)
-  if(CCACHE_PROGRAM)
+  if (CCACHE_PROGRAM)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_PROGRAM})
   else()
-    message(FATAL_ERROR "Unable to find the program ccache. Set ROCM_DEVICE_LIBS_CCACHE_BUILD to OFF")
-  endif()
-endif()
+    message(WARNING "Unable to find ccache. Falling back to real compiler")
+  endif() # if (CCACHE_PROGRAM)
+endif() # if (ROCM_CCACHE_BUILD)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 project(ROCm-Device-Libs)
