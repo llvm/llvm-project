@@ -9,7 +9,7 @@
 ;   return 1.0/10.0;
 ; }
 ;
-; CHECK-LABEL: f1
+; COMMON-LABEL: f1
 ; COMMON: divsd
 define double @f1() #0 {
 entry:
@@ -29,7 +29,7 @@ entry:
 ;   return a - 0;
 ; }
 ;
-; CHECK-LABEL: f2
+; COMMON-LABEL: f2
 ; COMMON:  subsd
 define double @f2(double %a) #0 {
 entry:
@@ -50,7 +50,7 @@ entry:
 ;   return -((-a)*b);
 ; }
 ;
-; CHECK-LABEL: f3:
+; COMMON-LABEL: f3:
 ; COMMON:  subsd
 ; COMMON:  mulsd
 ; COMMON:  subsd
@@ -83,7 +83,7 @@ entry:
 ; }
 ;
 ;
-; CHECK-LABEL: f4:
+; COMMON-LABEL: f4:
 ; COMMON: testl
 ; COMMON: jle
 ; COMMON: addsd
@@ -105,7 +105,7 @@ if.end:
 }
 
 ; Verify that sqrt(42.0) isn't simplified when the rounding mode is unknown.
-; CHECK-LABEL: f5
+; COMMON-LABEL: f5
 ; COMMON:  sqrtsd
 define double @f5() #0 {
 entry:
@@ -116,7 +116,7 @@ entry:
 }
 
 ; Verify that pow(42.1, 3.0) isn't simplified when the rounding mode is unknown.
-; CHECK-LABEL: f6
+; COMMON-LABEL: f6
 ; COMMON:  pow
 define double @f6() #0 {
 entry:
@@ -128,7 +128,7 @@ entry:
 }
 
 ; Verify that powi(42.1, 3) isn't simplified when the rounding mode is unknown.
-; CHECK-LABEL: f7
+; COMMON-LABEL: f7
 ; COMMON:  powi
 define double @f7() #0 {
 entry:
@@ -140,7 +140,7 @@ entry:
 }
 
 ; Verify that sin(42.0) isn't simplified when the rounding mode is unknown.
-; CHECK-LABEL: f8
+; COMMON-LABEL: f8
 ; COMMON:  sin
 define double @f8() #0 {
 entry:
@@ -151,7 +151,7 @@ entry:
 }
 
 ; Verify that cos(42.0) isn't simplified when the rounding mode is unknown.
-; CHECK-LABEL: f9
+; COMMON-LABEL: f9
 ; COMMON:  cos
 define double @f9() #0 {
 entry:
@@ -162,7 +162,7 @@ entry:
 }
 
 ; Verify that exp(42.0) isn't simplified when the rounding mode is unknown.
-; CHECK-LABEL: f10
+; COMMON-LABEL: f10
 ; COMMON:  exp
 define double @f10() #0 {
 entry:
@@ -173,7 +173,7 @@ entry:
 }
 
 ; Verify that exp2(42.1) isn't simplified when the rounding mode is unknown.
-; CHECK-LABEL: f11
+; COMMON-LABEL: f11
 ; COMMON:  exp2
 define double @f11() #0 {
 entry:
@@ -184,7 +184,7 @@ entry:
 }
 
 ; Verify that log(42.0) isn't simplified when the rounding mode is unknown.
-; CHECK-LABEL: f12
+; COMMON-LABEL: f12
 ; COMMON:  log
 define double @f12() #0 {
 entry:
@@ -195,7 +195,7 @@ entry:
 }
 
 ; Verify that log10(42.0) isn't simplified when the rounding mode is unknown.
-; CHECK-LABEL: f13
+; COMMON-LABEL: f13
 ; COMMON:  log10
 define double @f13() #0 {
 entry:
@@ -206,7 +206,7 @@ entry:
 }
 
 ; Verify that log2(42.0) isn't simplified when the rounding mode is unknown.
-; CHECK-LABEL: f14
+; COMMON-LABEL: f14
 ; COMMON:  log2
 define double @f14() #0 {
 entry:
@@ -217,7 +217,7 @@ entry:
 }
 
 ; Verify that rint(42.1) isn't simplified when the rounding mode is unknown.
-; CHECK-LABEL: f15
+; COMMON-LABEL: f15
 ; NO-FMA:  rint
 ; HAS-FMA: vroundsd
 define double @f15() #0 {
@@ -230,7 +230,7 @@ entry:
 
 ; Verify that nearbyint(42.1) isn't simplified when the rounding mode is
 ; unknown.
-; CHECK-LABEL: f16
+; COMMON-LABEL: f16
 ; NO-FMA:  nearbyint
 ; HAS-FMA: vroundsd
 define double @f16() #0 {
@@ -244,7 +244,7 @@ entry:
 
 ; Verify that fma(3.5) isn't simplified when the rounding mode is
 ; unknown.
-; CHECK-LABEL: f17
+; COMMON-LABEL: f17
 ; FMACALL32: jmp fmaf  # TAILCALL
 ; FMA32: vfmadd213ss
 define float @f17() #0 {
@@ -260,7 +260,7 @@ entry:
 
 ; Verify that fma(42.1) isn't simplified when the rounding mode is
 ; unknown.
-; CHECK-LABEL: f18
+; COMMON-LABEL: f18
 ; FMACALL64: jmp fma  # TAILCALL
 ; FMA64: vfmadd213sd
 define double @f18() #0 {
@@ -274,7 +274,7 @@ entry:
   ret double %result
 }
 
-; CHECK-LABEL: f19
+; COMMON-LABEL: f19
 ; COMMON: fmod
 define double @f19() #0 {
 entry:
@@ -289,7 +289,7 @@ entry:
 ; Verify that fptoui(%x) isn't simplified when the rounding mode is
 ; unknown. The expansion should have only one conversion instruction.
 ; Verify that no gross errors happen.
-; CHECK-LABEL: @f20u
+; COMMON-LABEL: @f20u
 ; NO-FMA: cmpltsd
 ; NO-FMA: movapd
 ; NO-FMA: andpd
@@ -322,7 +322,7 @@ entry:
 ; Verify that round(42.1) isn't simplified when the rounding mode is
 ; unknown.
 ; Verify that no gross errors happen.
-; CHECK-LABEL: @f21
+; COMMON-LABEL: @f21
 ; COMMON: cvtsd2ss
 define float @f21() #0 {
 entry:
@@ -333,7 +333,7 @@ entry:
   ret float %result
 }
 
-; CHECK-LABEL: @f22
+; COMMON-LABEL: @f22
 ; COMMON: cvtss2sd
 define double @f22(float %x) #0 {
 entry:
@@ -342,7 +342,7 @@ entry:
   ret double %result
 }
 
-; CHECK-LABEL: f23
+; COMMON-LABEL: f23
 ; COMMON: jmp lrint
 define i32 @f23(double %x) #0 {
 entry:
@@ -352,7 +352,7 @@ entry:
   ret i32 %result
 }
 
-; CHECK-LABEL: f24
+; COMMON-LABEL: f24
 ; COMMON: jmp lrintf
 define i32 @f24(float %x) #0 {
 entry:
@@ -362,7 +362,7 @@ entry:
   ret i32 %result
 }
 
-; CHECK-LABEL: f25
+; COMMON-LABEL: f25
 ; COMMON: jmp llrint
 define i64 @f25(double %x) #0 {
 entry:
@@ -372,7 +372,7 @@ entry:
   ret i64 %result
 }
 
-; CHECK-LABEL: f26
+; COMMON-LABEL: f26
 ; COMMON: jmp llrintf
 define i64 @f26(float %x) {
 entry:
@@ -382,7 +382,7 @@ entry:
   ret i64 %result
 }
 
-; CHECK-LABEL: f27
+; COMMON-LABEL: f27
 ; COMMON: jmp lround
 define i32 @f27(double %x) #0 {
 entry:
@@ -391,7 +391,7 @@ entry:
   ret i32 %result
 }
 
-; CHECK-LABEL: f28
+; COMMON-LABEL: f28
 ; COMMON: jmp lroundf
 define i32 @f28(float %x) #0 {
 entry:
@@ -400,7 +400,7 @@ entry:
   ret i32 %result
 }
 
-; CHECK-LABEL: f29
+; COMMON-LABEL: f29
 ; COMMON: jmp llround
 define i64 @f29(double %x) #0 {
 entry:
@@ -409,7 +409,7 @@ entry:
   ret i64 %result
 }
 
-; CHECK-LABEL: f30
+; COMMON-LABEL: f30
 ; COMMON: jmp llroundf
 define i64 @f30(float %x) #0 {
 entry:
