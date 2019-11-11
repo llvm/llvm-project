@@ -85,11 +85,11 @@ class Timer {
   Timer **Prev = nullptr;   ///< Pointer to \p Next of previous timer in group.
   Timer *Next = nullptr;    ///< Next timer in the group.
 public:
-  explicit Timer(StringRef Name, StringRef Description) {
-    init(Name, Description);
+  explicit Timer(StringRef TimerName, StringRef TimerDescription) {
+    init(TimerName, TimerDescription);
   }
-  Timer(StringRef Name, StringRef Description, TimerGroup &tg) {
-    init(Name, Description, tg);
+  Timer(StringRef TimerName, StringRef TimerDescription, TimerGroup &tg) {
+    init(TimerName, TimerDescription, tg);
   }
   Timer(const Timer &RHS) {
     assert(!RHS.TG && "Can only copy uninitialized timers");
@@ -102,8 +102,8 @@ public:
 
   /// Create an uninitialized timer, client must use 'init'.
   explicit Timer() {}
-  void init(StringRef Name, StringRef Description);
-  void init(StringRef Name, StringRef Description, TimerGroup &tg);
+  void init(StringRef TimerName, StringRef TimerDescription);
+  void init(StringRef TimerName, StringRef TimerDescription, TimerGroup &tg);
 
   const std::string &getName() const { return Name; }
   const std::string &getDescription() const { return Description; }
