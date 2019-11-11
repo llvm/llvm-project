@@ -23,6 +23,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -74,6 +75,27 @@ static cl::opt<bool>
 HoistConstStores("hoist-const-stores",
                  cl::desc("Hoist invariant stores"),
                  cl::init(true), cl::Hidden);
+// The default threshold of 100 (i.e. if target block is 100 times hotter)
+// is based on empirical data on a single target and is subject to tuning.
+static cl::opt<unsigned>
+BlockFrequencyRatioThreshold("block-freq-ratio-threshold",
+                             cl::desc("Do not hoist instructions if target"
+                             "block is N times hotter than the source."),
+                             cl::init(100), cl::Hidden);
+
+enum class UseBFI { None, PGO, All };
+
+static cl::opt<UseBFI>
+DisableHoistingToHotterBlocks("disable-hoisting-to-hotter-blocks",
+                              cl::desc("Disable hoisting instructions to"
+                              " hotter blocks"),
+                              cl::init(UseBFI::None), cl::Hidden,
+                              cl::values(clEnumValN(UseBFI::None, "none",
+                              "disable the feature"),
+                              clEnumValN(UseBFI::PGO, "pgo",
+                              "enable the feature when using profile data"),
+                              clEnumValN(UseBFI::All, "all",
+                              "enable the feature with/wo profile data")));
 
 STATISTIC(NumHoisted,
           "Number of machine instructions hoisted out of loops");
@@ -87,6 +109,8 @@ STATISTIC(NumPostRAHoisted,
           "Number of machine instructions hoisted out of loops post regalloc");
 STATISTIC(NumStoreConst,
           "Number of stores of const phys reg hoisted out of loops");
+STATISTIC(NumNotHoistedDueToHotness,
+          "Number of instructions not hoisted due to block frequency");
 
 namespace {
 
@@ -98,9 +122,11 @@ namespace {
     MachineRegisterInfo *MRI;
     TargetSchedModel SchedModel;
     bool PreRegAlloc;
+    bool HasProfileData;
 
     // Various analyses that we use...
     AliasAnalysis        *AA;      // Alias analysis info.
+    MachineBlockFrequencyInfo *MBFI; // Machine block frequncy info
     MachineLoopInfo      *MLI;     // Current MachineLoopInfo
     MachineDominatorTree *DT;      // Machine dominator tree for the cur loop
 
@@ -150,6 +176,8 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<MachineLoopInfo>();
+      if (DisableHoistingToHotterBlocks != UseBFI::None)
+        AU.addRequired<MachineBlockFrequencyInfo>();
       AU.addRequired<MachineDominatorTree>();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addPreserved<MachineLoopInfo>();
@@ -245,6 +273,8 @@ namespace {
 
     void InitCSEMap(MachineBasicBlock *BB);
 
+    bool isTgtHotterThanSrc(MachineBasicBlock *SrcBlock,
+                            MachineBasicBlock *TgtBlock);
     MachineBasicBlock *getCurPreheader();
   };
 
@@ -275,6 +305,7 @@ char &llvm::EarlyMachineLICMID = EarlyMachineLICM::ID;
 INITIALIZE_PASS_BEGIN(MachineLICM, DEBUG_TYPE,
                       "Machine Loop Invariant Code Motion", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MachineLICM, DEBUG_TYPE,
@@ -283,6 +314,7 @@ INITIALIZE_PASS_END(MachineLICM, DEBUG_TYPE,
 INITIALIZE_PASS_BEGIN(EarlyMachineLICM, "early-machinelicm",
                       "Early Machine Loop Invariant Code Motion", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(EarlyMachineLICM, "early-machinelicm",
@@ -315,6 +347,7 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
   SchedModel.init(&ST);
 
   PreRegAlloc = MRI->isSSA();
+  HasProfileData = MF.getFunction().hasProfileData();
 
   if (PreRegAlloc)
     LLVM_DEBUG(dbgs() << "******** Pre-regalloc Machine LICM: ");
@@ -333,6 +366,8 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
   }
 
   // Get our Loop information...
+  if (DisableHoistingToHotterBlocks != UseBFI::None)
+    MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
   MLI = &getAnalysis<MachineLoopInfo>();
   DT  = &getAnalysis<MachineDominatorTree>();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
@@ -1433,6 +1468,15 @@ bool MachineLICMBase::MayCSE(MachineInstr *MI) {
 /// that are safe to hoist, this instruction is called to do the dirty work.
 /// It returns true if the instruction is hoisted.
 bool MachineLICMBase::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader) {
+  MachineBasicBlock *SrcBlock = MI->getParent();
+
+  // Disable the instruction hoisting due to block hotness
+  if ((DisableHoistingToHotterBlocks == UseBFI::All ||
+      (DisableHoistingToHotterBlocks == UseBFI::PGO && HasProfileData)) &&
+      isTgtHotterThanSrc(SrcBlock, Preheader)) {
+    ++NumNotHoistedDueToHotness;
+    return false;
+  }
   // First check whether we should hoist this instruction.
   if (!IsLoopInvariantInst(*MI) || !IsProfitableToHoist(*MI)) {
     // If not, try unfolding a hoistable load.
@@ -1525,4 +1569,22 @@ MachineBasicBlock *MachineLICMBase::getCurPreheader() {
     }
   }
   return CurPreheader;
+}
+
+/// Is the target basic block at least "BlockFrequencyRatioThreshold"
+/// times hotter than the source basic block.
+bool MachineLICMBase::isTgtHotterThanSrc(MachineBasicBlock *SrcBlock,
+                                         MachineBasicBlock *TgtBlock) {
+  // Parse source and target basic block frequency from MBFI
+  uint64_t SrcBF = MBFI->getBlockFreq(SrcBlock).getFrequency();
+  uint64_t DstBF = MBFI->getBlockFreq(TgtBlock).getFrequency();
+
+  // Disable the hoisting if source block frequency is zero
+  if (!SrcBF)
+    return true;
+
+  double Ratio = (double)DstBF / SrcBF;
+
+  // Compare the block frequency ratio with the threshold
+  return Ratio > BlockFrequencyRatioThreshold;
 }
