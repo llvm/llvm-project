@@ -408,13 +408,20 @@ TEST(MergeIndexTest, Refs) {
 }
 
 TEST(MergeIndexTest, NonDocumentation) {
+  using index::SymbolKind;
   Symbol L, R;
   L.ID = R.ID = SymbolID("x");
   L.Definition.FileURI = "file:/x.h";
   R.Documentation = "Forward declarations because x.h is too big to include";
+  for (auto ClassLikeKind :
+       {SymbolKind::Class, SymbolKind::Struct, SymbolKind::Union}) {
+    L.SymInfo.Kind = ClassLikeKind;
+    EXPECT_EQ(mergeSymbol(L, R).Documentation, "");
+  }
 
-  Symbol M = mergeSymbol(L, R);
-  EXPECT_EQ(M.Documentation, "");
+  L.SymInfo.Kind = SymbolKind::Function;
+  R.Documentation = "Documentation from non-class symbols should be included";
+  EXPECT_EQ(mergeSymbol(L, R).Documentation, R.Documentation);
 }
 
 MATCHER_P2(IncludeHeaderWithRef, IncludeHeader, References, "") {
