@@ -160,6 +160,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
+  // The boolean content concept here is too inflexible. Compares only ever
+  // really produce a 1-bit result. Any copy/extend from these will turn into a
+  // select, and zext/1 or sext/-1 are equally cheap. Arbitrarily choose 0/1, as
+  // it's what most targets use.
+  setBooleanContents(ZeroOrOneBooleanContent);
+  setBooleanVectorContents(ZeroOrOneBooleanContent);
+
   // We need to custom lower vector stores from local memory
   setOperationAction(ISD::LOAD, MVT::v2i32, Custom);
   setOperationAction(ISD::LOAD, MVT::v3i32, Custom);

@@ -306,10 +306,10 @@ entry:
 
 ; GCN-LABEL: {{^}}bit128_extelt:
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V1:v[0-9]+]], 1, 0,
+; GCN-DAG: v_cndmask_b32_e{{32|64}} [[V1:v[0-9]+]], 0, 1
 ; GCN-DAG: v_mov_b32_e32 [[LASTIDX:v[0-9]+]], 0x7f
 ; GCN-DAG: v_cmp_ne_u32_e32 [[CL:[^,]+]], s{{[0-9]+}}, [[LASTIDX]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} [[VL:v[0-9]+]], 0, v{{[0-9]+}}, [[CL]]
+; GCN-DAG: v_cndmask_b32_e{{32|64}} [[VL:v[0-9]+]], 0, [[V1]], [[CL]]
 ; GCN:     v_and_b32_e32 [[RES:v[0-9]+]], 1, [[VL]]
 ; GCN:     store_dword v[{{[0-9:]+}}], [[RES]]
 define amdgpu_kernel void @bit128_extelt(i32 addrspace(1)* %out, i32 %sel) {
