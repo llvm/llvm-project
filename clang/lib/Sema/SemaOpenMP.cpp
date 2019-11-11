@@ -5200,28 +5200,59 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
 
 void Sema::ActOnOpenMPDeclareVariantDirective(
     FunctionDecl *FD, Expr *VariantRef, SourceRange SR,
-    const Sema::OpenMPDeclareVariantCtsSelectorData &Data) {
-  if (Data.CtxSet == OMPDeclareVariantAttr::CtxSetUnknown ||
-      Data.Ctx == OMPDeclareVariantAttr::CtxUnknown)
+    ArrayRef<OMPCtxSelectorData> Data) {
+  if (Data.empty())
     return;
-  Expr *Score = nullptr;
-  if (Data.CtxScore.isUsable()) {
-    Score = Data.CtxScore.get();
-    if (!Score->isTypeDependent() && !Score->isValueDependent() &&
-        !Score->isInstantiationDependent() &&
-        !Score->containsUnexpandedParameterPack()) {
-      llvm::APSInt Result;
-      ExprResult ICE = VerifyIntegerConstantExpression(Score, &Result);
-      if (ICE.isInvalid())
-        return;
+  SmallVector<Expr *, 4> CtxScores;
+  SmallVector<unsigned, 4> CtxSets;
+  SmallVector<unsigned, 4> Ctxs;
+  SmallVector<StringRef, 4> ImplVendors;
+  bool IsError = false;
+  for (const OMPCtxSelectorData &D : Data) {
+    OpenMPContextSelectorSetKind CtxSet = D.CtxSet;
+    OpenMPContextSelectorKind Ctx = D.Ctx;
+    if (CtxSet == OMP_CTX_SET_unknown || Ctx == OMP_CTX_unknown)
+      return;
+    Expr *Score = nullptr;
+    if (D.Score.isUsable()) {
+      Score = D.Score.get();
+      if (!Score->isTypeDependent() && !Score->isValueDependent() &&
+          !Score->isInstantiationDependent() &&
+          !Score->containsUnexpandedParameterPack()) {
+        Score =
+            PerformOpenMPImplicitIntegerConversion(Score->getExprLoc(), Score)
+                .get();
+        if (Score)
+          Score = VerifyIntegerConstantExpression(Score).get();
+      }
+    } else {
+      Score = ActOnIntegerConstant(SourceLocation(), 0).get();
     }
-  } else {
-    Score = ActOnIntegerConstant(SourceLocation(), 0).get();
+    switch (CtxSet) {
+    case OMP_CTX_SET_implementation:
+      switch (Ctx) {
+      case OMP_CTX_vendor:
+        ImplVendors.append(D.Names.begin(), D.Names.end());
+        break;
+      case OMP_CTX_unknown:
+        llvm_unreachable("Unexpected context selector kind.");
+      }
+      break;
+    case OMP_CTX_SET_unknown:
+      llvm_unreachable("Unexpected context selector set kind.");
+    }
+    IsError = IsError || !Score;
+    CtxSets.push_back(CtxSet);
+    Ctxs.push_back(Ctx);
+    CtxScores.push_back(Score);
   }
-  auto *NewAttr = OMPDeclareVariantAttr::CreateImplicit(
-      Context, VariantRef, Score, Data.CtxSet, Data.Ctx,
-      Data.ImplVendors.begin(), Data.ImplVendors.size(), SR);
-  FD->addAttr(NewAttr);
+  if (!IsError) {
+    auto *NewAttr = OMPDeclareVariantAttr::CreateImplicit(
+        Context, VariantRef, CtxScores.begin(), CtxScores.size(),
+        CtxSets.begin(), CtxSets.size(), Ctxs.begin(), Ctxs.size(),
+        ImplVendors.begin(), ImplVendors.size(), SR);
+    FD->addAttr(NewAttr);
+  }
 }
 
 void Sema::markOpenMPDeclareVariantFuncsReferenced(SourceLocation Loc,

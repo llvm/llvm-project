@@ -11023,12 +11023,16 @@ Address CGOpenMPRuntime::getAddressOfLocalVariable(CodeGenFunction &CGF,
   return Address(Addr, Align);
 }
 
+namespace {
+using OMPContextSelectorData =
+    OpenMPCtxSelectorData<StringRef, ArrayRef<StringRef>, llvm::APSInt>;
+using CompleteOMPContextSelectorData = SmallVector<OMPContextSelectorData, 4>;
+} // anonymous namespace
+
 /// Checks current context and returns true if it matches the context selector.
-template <OMPDeclareVariantAttr::CtxSelectorSetType CtxSet,
-          OMPDeclareVariantAttr::CtxSelectorType Ctx>
-static bool checkContext(const OMPDeclareVariantAttr *A) {
-  assert(CtxSet != OMPDeclareVariantAttr::CtxSetUnknown &&
-         Ctx != OMPDeclareVariantAttr::CtxUnknown &&
+template <OpenMPContextSelectorSetKind CtxSet, OpenMPContextSelectorKind Ctx>
+static bool checkContext(const OMPContextSelectorData &Data) {
+  assert(Data.CtxSet != OMP_CTX_SET_unknown && Data.Ctx != OMP_CTX_unknown &&
          "Unknown context selector or context selector set.");
   return false;
 }
@@ -11036,17 +11040,88 @@ static bool checkContext(const OMPDeclareVariantAttr *A) {
 /// Checks for implementation={vendor(<vendor>)} context selector.
 /// \returns true iff <vendor>="llvm", false otherwise.
 template <>
-bool checkContext<OMPDeclareVariantAttr::CtxSetImplementation,
-                  OMPDeclareVariantAttr::CtxVendor>(
-    const OMPDeclareVariantAttr *A) {
-  return llvm::all_of(A->implVendors(),
+bool checkContext<OMP_CTX_SET_implementation, OMP_CTX_vendor>(
+    const OMPContextSelectorData &Data) {
+  return llvm::all_of(Data.Names,
                       [](StringRef S) { return !S.compare_lower("llvm"); });
 }
 
-static bool greaterCtxScore(ASTContext &Ctx, const Expr *LHS, const Expr *RHS) {
-  llvm::APSInt LHSVal = LHS->EvaluateKnownConstInt(Ctx);
-  llvm::APSInt RHSVal = RHS->EvaluateKnownConstInt(Ctx);
-  return llvm::APSInt::compareValues(LHSVal, RHSVal) >= 0;
+bool matchesContext(const CompleteOMPContextSelectorData &ContextData) {
+  for (const OMPContextSelectorData &Data : ContextData) {
+    switch (Data.CtxSet) {
+    case OMP_CTX_SET_implementation:
+      switch (Data.Ctx) {
+      case OMP_CTX_vendor:
+        if (!checkContext<OMP_CTX_SET_implementation, OMP_CTX_vendor>(Data))
+          return false;
+        break;
+      case OMP_CTX_unknown:
+        llvm_unreachable("Unexpected context selector kind.");
+      }
+      break;
+    case OMP_CTX_SET_unknown:
+      llvm_unreachable("Unexpected context selector set kind.");
+    }
+  }
+  return true;
+}
+
+static CompleteOMPContextSelectorData
+translateAttrToContextSelectorData(ASTContext &C,
+                                   const OMPDeclareVariantAttr *A) {
+  CompleteOMPContextSelectorData Data;
+  for (unsigned I = 0, E = A->scores_size(); I < E; ++I) {
+    Data.emplace_back();
+    auto CtxSet = static_cast<OpenMPContextSelectorSetKind>(
+        *std::next(A->ctxSelectorSets_begin(), I));
+    auto Ctx = static_cast<OpenMPContextSelectorKind>(
+        *std::next(A->ctxSelectors_begin(), I));
+    Data.back().CtxSet = CtxSet;
+    Data.back().Ctx = Ctx;
+    const Expr *Score = *std::next(A->scores_begin(), I);
+    Data.back().Score = Score->EvaluateKnownConstInt(C);
+    switch (CtxSet) {
+    case OMP_CTX_SET_implementation:
+      switch (Ctx) {
+      case OMP_CTX_vendor:
+        Data.back().Names =
+            llvm::makeArrayRef(A->implVendors_begin(), A->implVendors_end());
+        break;
+      case OMP_CTX_unknown:
+        llvm_unreachable("Unexpected context selector kind.");
+      }
+      break;
+    case OMP_CTX_SET_unknown:
+      llvm_unreachable("Unexpected context selector set kind.");
+    }
+  }
+  return Data;
+}
+
+static bool greaterCtxScore(const CompleteOMPContextSelectorData &LHS,
+                            const CompleteOMPContextSelectorData &RHS) {
+  // Score is calculated as sum of all scores + 1.
+  llvm::APSInt LHSScore(llvm::APInt(64, 1), /*isUnsigned=*/false);
+  for (const OMPContextSelectorData &Data : LHS) {
+    if (Data.Score.getBitWidth() > LHSScore.getBitWidth()) {
+      LHSScore = LHSScore.extend(Data.Score.getBitWidth()) + Data.Score;
+    } else if (Data.Score.getBitWidth() < LHSScore.getBitWidth()) {
+      LHSScore += Data.Score.extend(LHSScore.getBitWidth());
+    } else {
+      LHSScore += Data.Score;
+    }
+  }
+  llvm::APSInt RHSScore(llvm::APInt(64, 1), /*isUnsigned=*/false);
+  for (const OMPContextSelectorData &Data : RHS) {
+    if (Data.Score.getBitWidth() > RHSScore.getBitWidth()) {
+      RHSScore = RHSScore.extend(Data.Score.getBitWidth()) + Data.Score;
+    } else if (Data.Score.getBitWidth() < RHSScore.getBitWidth()) {
+      RHSScore += Data.Score.extend(RHSScore.getBitWidth());
+    } else {
+      RHSScore += Data.Score;
+    }
+  }
+  return llvm::APSInt::compareValues(LHSScore, RHSScore) >= 0;
 }
 
 /// Finds the variant function that matches current context with its context
@@ -11056,33 +11131,19 @@ static const FunctionDecl *getDeclareVariantFunction(ASTContext &Ctx,
   if (!FD->hasAttrs() || !FD->hasAttr<OMPDeclareVariantAttr>())
     return FD;
   // Iterate through all DeclareVariant attributes and check context selectors.
-  auto &&Comparer = [&Ctx](const OMPDeclareVariantAttr *LHS,
-                           const OMPDeclareVariantAttr *RHS) {
-    return greaterCtxScore(Ctx, LHS->getScore(), RHS->getScore());
-  };
   const OMPDeclareVariantAttr *TopMostAttr = nullptr;
+  CompleteOMPContextSelectorData TopMostData;
   for (const auto *A : FD->specific_attrs<OMPDeclareVariantAttr>()) {
-    const OMPDeclareVariantAttr *SelectedAttr = nullptr;
-    switch (A->getCtxSelectorSet()) {
-    case OMPDeclareVariantAttr::CtxSetImplementation:
-      switch (A->getCtxSelector()) {
-      case OMPDeclareVariantAttr::CtxVendor:
-        if (checkContext<OMPDeclareVariantAttr::CtxSetImplementation,
-                         OMPDeclareVariantAttr::CtxVendor>(A))
-          SelectedAttr = A;
-        break;
-      case OMPDeclareVariantAttr::CtxUnknown:
-        llvm_unreachable(
-            "Unknown context selector in implementation selector set.");
-      }
-      break;
-    case OMPDeclareVariantAttr::CtxSetUnknown:
-      llvm_unreachable("Unknown context selector set.");
-    }
+    CompleteOMPContextSelectorData Data =
+        translateAttrToContextSelectorData(Ctx, A);
+    if (!matchesContext(Data))
+      continue;
     // If the attribute matches the context, find the attribute with the highest
     // score.
-    if (SelectedAttr && (!TopMostAttr || !Comparer(TopMostAttr, SelectedAttr)))
-      TopMostAttr = SelectedAttr;
+    if (!TopMostAttr || !greaterCtxScore(TopMostData, Data)) {
+      TopMostAttr = A;
+      TopMostData.swap(Data);
+    }
   }
   if (!TopMostAttr)
     return FD;
