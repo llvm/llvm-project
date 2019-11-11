@@ -203,13 +203,13 @@ llvm::Optional<SymbolID> getSymbolID(const Decl *D) {
   return SymbolID(USR);
 }
 
-llvm::Optional<SymbolID> getSymbolID(const IdentifierInfo &II,
+llvm::Optional<SymbolID> getSymbolID(const llvm::StringRef MacroName,
                                      const MacroInfo *MI,
                                      const SourceManager &SM) {
   if (MI == nullptr)
     return None;
   llvm::SmallString<128> USR;
-  if (index::generateUSRForMacro(II.getName(), MI->getDefinitionLoc(), SM, USR))
+  if (index::generateUSRForMacro(MacroName, MI->getDefinitionLoc(), SM, USR))
     return None;
   return SymbolID(USR);
 }
