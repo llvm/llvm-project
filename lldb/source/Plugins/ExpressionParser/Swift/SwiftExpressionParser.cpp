@@ -1498,7 +1498,6 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     }
   } else {
     swift::performPlaygroundTransform(parsed_expr->source_file, true);
-    swift::typeCheckExternalDefinitions(parsed_expr->source_file);
   }
 
   // FIXME: We now should have to do the name binding and type
