@@ -130,7 +130,7 @@ template <typename T> T Take(PyObject *obj) {
   assert(!PyErr_Occurred());
   T thing(PyRefType::Owned, obj);
   assert(thing.IsValid());
-  return std::move(thing);
+  return thing;
 }
 
 // Retain a reference you have borrowed, and turn it into
@@ -148,7 +148,7 @@ template <typename T> T Retain(PyObject *obj) {
   assert(!PyErr_Occurred());
   T thing(PyRefType::Borrowed, obj);
   assert(thing.IsValid());
-  return std::move(thing);
+  return thing;
 }
 
 // This class can be used like a utility function to convert from
