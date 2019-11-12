@@ -275,7 +275,9 @@ void UseAfterMoveFinder::getDeclRefs(
                                       unless(inDecltypeOrTemplateArg()))
                               .bind("declref");
 
-    addDeclRefs(match(findAll(DeclRefMatcher), *S->getStmt(), *Context));
+    addDeclRefs(
+        match(traverse(ast_type_traits::TK_AsIs, findAll(DeclRefMatcher)),
+              *S->getStmt(), *Context));
     addDeclRefs(match(findAll(cxxOperatorCallExpr(
                                   hasAnyOverloadedOperatorName("*", "->", "[]"),
                                   hasArgument(0, DeclRefMatcher))
@@ -340,7 +342,7 @@ void UseAfterMoveFinder::getReinits(
                // Passing variable to a function as a non-const lvalue reference
                // (unless that function is std::move()).
                callExpr(forEachArgumentWithParam(
-                            DeclRefMatcher,
+                            traverse(ast_type_traits::TK_AsIs, DeclRefMatcher),
                             unless(parmVarDecl(hasType(
                                 references(qualType(isConstQualified())))))),
                         unless(callee(functionDecl(hasName("::std::move")))))))
@@ -403,19 +405,22 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
           .bind("call-move");
 
   Finder->addMatcher(
-      // To find the Stmt that we assume performs the actual move, we look for
-      // the direct ancestor of the std::move() that isn't one of the node
-      // types ignored by ignoringParenImpCasts().
-      stmt(forEach(expr(ignoringParenImpCasts(CallMoveMatcher))),
-           // Don't allow an InitListExpr to be the moving call. An InitListExpr
-           // has both a syntactic and a semantic form, and the parent-child
-           // relationships are different between the two. This could cause an
-           // InitListExpr to be analyzed as the moving call in addition to the
-           // Expr that we actually want, resulting in two diagnostics with
-           // different code locations for the same move.
-           unless(initListExpr()),
-           unless(expr(ignoringParenImpCasts(equalsBoundNode("call-move")))))
-          .bind("moving-call"),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          // To find the Stmt that we assume performs the actual move, we look
+          // for the direct ancestor of the std::move() that isn't one of the
+          // node types ignored by ignoringParenImpCasts().
+          stmt(
+              forEach(expr(ignoringParenImpCasts(CallMoveMatcher))),
+              // Don't allow an InitListExpr to be the moving call. An
+              // InitListExpr has both a syntactic and a semantic form, and the
+              // parent-child relationships are different between the two. This
+              // could cause an InitListExpr to be analyzed as the moving call
+              // in addition to the Expr that we actually want, resulting in two
+              // diagnostics with different code locations for the same move.
+              unless(initListExpr()),
+              unless(expr(ignoringParenImpCasts(equalsBoundNode("call-move")))))
+              .bind("moving-call")),
       this);
 }
 

@@ -133,33 +133,36 @@ void PassByValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      cxxConstructorDecl(
-          forEachConstructorInitializer(
-              cxxCtorInitializer(
-                  unless(isBaseInitializer()),
-                  // Clang builds a CXXConstructExpr only when it knows which
-                  // constructor will be called. In dependent contexts a
-                  // ParenListExpr is generated instead of a CXXConstructExpr,
-                  // filtering out templates automatically for us.
-                  withInitializer(cxxConstructExpr(
-                      has(ignoringParenImpCasts(declRefExpr(
-                          to(parmVarDecl(
-                                 hasType(qualType(
-                                     // Match only const-ref or a non-const
-                                     // value parameters. Rvalues,
-                                     // TemplateSpecializationValues and
-                                     // const-values shouldn't be modified.
-                                     ValuesOnly
-                                         ? nonConstValueType()
-                                         : anyOf(notTemplateSpecConstRefType(),
-                                                 nonConstValueType()))))
-                                 .bind("Param"))))),
-                      hasDeclaration(cxxConstructorDecl(
-                          isCopyConstructor(), unless(isDeleted()),
-                          hasDeclContext(
-                              cxxRecordDecl(isMoveConstructible())))))))
-                  .bind("Initializer")))
-          .bind("Ctor"),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          cxxConstructorDecl(
+              forEachConstructorInitializer(
+                  cxxCtorInitializer(
+                      unless(isBaseInitializer()),
+                      // Clang builds a CXXConstructExpr only when it knows
+                      // which constructor will be called. In dependent contexts
+                      // a ParenListExpr is generated instead of a
+                      // CXXConstructExpr, filtering out templates automatically
+                      // for us.
+                      withInitializer(cxxConstructExpr(
+                          has(ignoringParenImpCasts(declRefExpr(to(
+                              parmVarDecl(
+                                  hasType(qualType(
+                                      // Match only const-ref or a non-const
+                                      // value parameters. Rvalues,
+                                      // TemplateSpecializationValues and
+                                      // const-values shouldn't be modified.
+                                      ValuesOnly
+                                          ? nonConstValueType()
+                                          : anyOf(notTemplateSpecConstRefType(),
+                                                  nonConstValueType()))))
+                                  .bind("Param"))))),
+                          hasDeclaration(cxxConstructorDecl(
+                              isCopyConstructor(), unless(isDeleted()),
+                              hasDeclContext(
+                                  cxxRecordDecl(isMoveConstructible())))))))
+                      .bind("Initializer")))
+              .bind("Ctor")),
       this);
 }
 

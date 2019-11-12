@@ -75,14 +75,17 @@ static bool isCopyConstructorAndCanBeDefaulted(ASTContext *Context,
     // The initialization of a base class should be a call to a copy
     // constructor of the base.
     if (match(
-            cxxConstructorDecl(forEachConstructorInitializer(cxxCtorInitializer(
-                isBaseInitializer(),
-                withInitializer(cxxConstructExpr(
-                    hasType(equalsNode(Base)),
-                    hasDeclaration(cxxConstructorDecl(isCopyConstructor())),
-                    argumentCountIs(1),
-                    hasArgument(
-                        0, declRefExpr(to(varDecl(equalsNode(Param)))))))))),
+            traverse(ast_type_traits::TK_AsIs,
+                     cxxConstructorDecl(
+                         forEachConstructorInitializer(cxxCtorInitializer(
+                             isBaseInitializer(),
+                             withInitializer(cxxConstructExpr(
+                                 hasType(equalsNode(Base)),
+                                 hasDeclaration(
+                                     cxxConstructorDecl(isCopyConstructor())),
+                                 argumentCountIs(1),
+                                 hasArgument(0, declRefExpr(to(varDecl(
+                                                    equalsNode(Param))))))))))),
             *Ctor, *Context)
             .empty())
       return false;
@@ -92,17 +95,20 @@ static bool isCopyConstructorAndCanBeDefaulted(ASTContext *Context,
   for (const auto *Field : FieldsToInit) {
     auto AccessToFieldInParam = accessToFieldInVar(Field, Param);
     // The initialization is a CXXConstructExpr for class types.
-    if (match(
-            cxxConstructorDecl(forEachConstructorInitializer(cxxCtorInitializer(
-                isMemberInitializer(), forField(equalsNode(Field)),
-                withInitializer(anyOf(
-                    AccessToFieldInParam,
-                    initListExpr(has(AccessToFieldInParam)),
-                    cxxConstructExpr(
-                        hasDeclaration(cxxConstructorDecl(isCopyConstructor())),
-                        argumentCountIs(1),
-                        hasArgument(0, AccessToFieldInParam))))))),
-            *Ctor, *Context)
+    if (match(traverse(
+                  ast_type_traits::TK_AsIs,
+                  cxxConstructorDecl(
+                      forEachConstructorInitializer(cxxCtorInitializer(
+                          isMemberInitializer(), forField(equalsNode(Field)),
+                          withInitializer(anyOf(
+                              AccessToFieldInParam,
+                              initListExpr(has(AccessToFieldInParam)),
+                              cxxConstructExpr(
+                                  hasDeclaration(
+                                      cxxConstructorDecl(isCopyConstructor())),
+                                  argumentCountIs(1),
+                                  hasArgument(0, AccessToFieldInParam)))))))),
+              *Ctor, *Context)
             .empty())
       return false;
   }
@@ -130,8 +136,10 @@ static bool isCopyAssignmentAndCanBeDefaulted(ASTContext *Context,
   // statement:
   //   return *this;
   if (Compound->body_empty() ||
-      match(returnStmt(has(ignoringParenImpCasts(unaryOperator(
-                hasOperatorName("*"), hasUnaryOperand(cxxThisExpr()))))),
+      match(traverse(
+                ast_type_traits::TK_AsIs,
+                returnStmt(has(ignoringParenImpCasts(unaryOperator(
+                    hasOperatorName("*"), hasUnaryOperand(cxxThisExpr())))))),
             *Compound->body_back(), *Context)
           .empty())
     return false;
@@ -145,21 +153,23 @@ static bool isCopyAssignmentAndCanBeDefaulted(ASTContext *Context,
     //   ((Base*)this)->operator=((Base)Other);
     //
     // So we are looking for a member call that fulfills:
-    if (match(
-            compoundStmt(has(ignoringParenImpCasts(cxxMemberCallExpr(
-                // - The object is an implicit cast of 'this' to a pointer to
-                //   a base class.
-                onImplicitObjectArgument(
-                    implicitCastExpr(hasImplicitDestinationType(
-                                         pointsTo(type(equalsNode(Base)))),
-                                     hasSourceExpression(cxxThisExpr()))),
-                // - The called method is the operator=.
-                callee(cxxMethodDecl(isCopyAssignmentOperator())),
-                // - The argument is (an implicit cast to a Base of) the
-                // argument taken by "Operator".
-                argumentCountIs(1),
-                hasArgument(0, declRefExpr(to(varDecl(equalsNode(Param))))))))),
-            *Compound, *Context)
+    if (match(traverse(ast_type_traits::TK_AsIs,
+                       compoundStmt(has(ignoringParenImpCasts(cxxMemberCallExpr(
+                           // - The object is an implicit cast of 'this' to a
+                           // pointer to
+                           //   a base class.
+                           onImplicitObjectArgument(implicitCastExpr(
+                               hasImplicitDestinationType(
+                                   pointsTo(type(equalsNode(Base)))),
+                               hasSourceExpression(cxxThisExpr()))),
+                           // - The called method is the operator=.
+                           callee(cxxMethodDecl(isCopyAssignmentOperator())),
+                           // - The argument is (an implicit cast to a Base of)
+                           // the argument taken by "Operator".
+                           argumentCountIs(1),
+                           hasArgument(0, declRefExpr(to(varDecl(
+                                              equalsNode(Param)))))))))),
+              *Compound, *Context)
             .empty())
       return false;
   }
@@ -174,11 +184,13 @@ static bool isCopyAssignmentAndCanBeDefaulted(ASTContext *Context,
                           member(fieldDecl(equalsNode(Field))));
     auto RHS = accessToFieldInVar(Field, Param);
     if (match(
-            compoundStmt(has(ignoringParenImpCasts(stmt(anyOf(
-                binaryOperator(hasOperatorName("="), hasLHS(LHS), hasRHS(RHS)),
-                cxxOperatorCallExpr(hasOverloadedOperatorName("="),
-                                    argumentCountIs(2), hasArgument(0, LHS),
-                                    hasArgument(1, RHS))))))),
+            traverse(ast_type_traits::TK_AsIs,
+                     compoundStmt(has(ignoringParenImpCasts(stmt(anyOf(
+                         binaryOperator(hasOperatorName("="), hasLHS(LHS),
+                                        hasRHS(RHS)),
+                         cxxOperatorCallExpr(
+                             hasOverloadedOperatorName("="), argumentCountIs(2),
+                             hasArgument(0, LHS), hasArgument(1, RHS)))))))),
             *Compound, *Context)
             .empty())
       return false;

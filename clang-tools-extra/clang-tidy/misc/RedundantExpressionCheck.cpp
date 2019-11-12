@@ -828,18 +828,20 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   // Binary with equivalent operands, like (X != 2 && X != 2).
   Finder->addMatcher(
-      binaryOperator(anyOf(isComparisonOperator(),
-                           hasAnyOperatorName("-", "/", "%", "|", "&", "^",
-                                              "&&", "||", "=")),
-                     operandsAreEquivalent(),
-                     // Filter noisy false positives.
-                     unless(isInTemplateInstantiation()),
-                     unless(binaryOperatorIsInMacro()),
-                     unless(hasType(realFloatingPointType())),
-                     unless(hasEitherOperand(hasType(realFloatingPointType()))),
-                     unless(hasLHS(AnyLiteralExpr)),
-                     unless(hasDescendant(BannedIntegerLiteral)))
-          .bind("binary"),
+      traverse(ast_type_traits::TK_AsIs,
+               binaryOperator(
+                   anyOf(isComparisonOperator(),
+                         hasAnyOperatorName("-", "/", "%", "|", "&", "^", "&&",
+                                            "||", "=")),
+                   operandsAreEquivalent(),
+                   // Filter noisy false positives.
+                   unless(isInTemplateInstantiation()),
+                   unless(binaryOperatorIsInMacro()),
+                   unless(hasType(realFloatingPointType())),
+                   unless(hasEitherOperand(hasType(realFloatingPointType()))),
+                   unless(hasLHS(AnyLiteralExpr)),
+                   unless(hasDescendant(BannedIntegerLiteral)))
+                   .bind("binary")),
       this);
 
   // Logical or bitwise operator with equivalent nested operands, like (X && Y
@@ -856,23 +858,27 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
       this);
 
   // Conditional (trenary) operator with equivalent operands, like (Y ? X : X).
-  Finder->addMatcher(conditionalOperator(expressionsAreEquivalent(),
-                                         // Filter noisy false positives.
-                                         unless(conditionalOperatorIsInMacro()),
-                                         unless(isInTemplateInstantiation()))
-                         .bind("cond"),
-                     this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs,
+               conditionalOperator(expressionsAreEquivalent(),
+                                   // Filter noisy false positives.
+                                   unless(conditionalOperatorIsInMacro()),
+                                   unless(isInTemplateInstantiation()))
+                   .bind("cond")),
+      this);
 
   // Overloaded operators with equivalent operands.
-  Finder->addMatcher(cxxOperatorCallExpr(
-                         hasAnyOverloadedOperatorName(
-                             "-", "/", "%", "|", "&", "^", "==", "!=", "<",
-                             "<=", ">", ">=", "&&", "||", "="),
-                         parametersAreEquivalent(),
-                         // Filter noisy false positives.
-                         unless(isMacro()), unless(isInTemplateInstantiation()))
-                         .bind("call"),
-                     this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs,
+               cxxOperatorCallExpr(
+                   hasAnyOverloadedOperatorName("-", "/", "%", "|", "&", "^",
+                                                "==", "!=", "<", "<=", ">",
+                                                ">=", "&&", "||", "="),
+                   parametersAreEquivalent(),
+                   // Filter noisy false positives.
+                   unless(isMacro()), unless(isInTemplateInstantiation()))
+                   .bind("call")),
+      this);
 
   // Overloaded operators with equivalent operands.
   Finder->addMatcher(
@@ -886,30 +892,34 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   // Match expressions like: !(1 | 2 | 3)
   Finder->addMatcher(
-      implicitCastExpr(
-          hasImplicitDestinationType(isInteger()),
-          has(unaryOperator(
-                  hasOperatorName("!"),
-                  hasUnaryOperand(ignoringParenImpCasts(binaryOperator(
-                      hasAnyOperatorName("|", "&"),
-                      hasLHS(anyOf(binaryOperator(hasAnyOperatorName("|", "&")),
+      traverse(ast_type_traits::TK_AsIs,
+               implicitCastExpr(
+                   hasImplicitDestinationType(isInteger()),
+                   has(unaryOperator(
+                           hasOperatorName("!"),
+                           hasUnaryOperand(ignoringParenImpCasts(binaryOperator(
+                               hasAnyOperatorName("|", "&"),
+                               hasLHS(anyOf(
+                                   binaryOperator(hasAnyOperatorName("|", "&")),
                                    integerLiteral())),
-                      hasRHS(integerLiteral())))))
-                  .bind("logical-bitwise-confusion"))),
+                               hasRHS(integerLiteral())))))
+                           .bind("logical-bitwise-confusion")))),
       this);
 
-  // Match expressions like: (X << 8) & 0xFF
-  Finder->addMatcher(
+   // Match expressions like: (X << 8) & 0xFF
+   Finder->addMatcher(
+          traverse(
+          ast_type_traits::TK_AsIs,
       binaryOperator(
           hasOperatorName("&"),
           hasOperands(
               ignoringParenImpCasts(
                   binaryOperator(hasOperatorName("<<"),
-                                 hasRHS(ignoringParenImpCasts(
+                              hasRHS(ignoringParenImpCasts(
                                      integerLiteral().bind("shift-const"))))),
               ignoringParenImpCasts(integerLiteral().bind("and-const"))))
-          .bind("left-right-shift-confusion"),
-      this);
+          .bind("left-right-shift-confusion")),
+       this);
 
   // Match common expressions and apply more checks to find redundant
   // sub-expressions.
@@ -923,26 +933,32 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
   const auto SymRight = matchSymbolicExpr("rhs");
 
   // Match expressions like: x <op> 0xFF == 0xF00.
-  Finder->addMatcher(binaryOperator(isComparisonOperator(),
-                                    hasOperands(BinOpCstLeft, CstRight))
-                         .bind("binop-const-compare-to-const"),
+  Finder->addMatcher(traverse(ast_type_traits::TK_AsIs,
+                              binaryOperator(isComparisonOperator(),
+                                             hasOperands(BinOpCstLeft,
+                                             CstRight))
+                                  .bind("binop-const-compare-to-const")),
                      this);
 
   // Match expressions like: x <op> 0xFF == x.
   Finder->addMatcher(
-      binaryOperator(isComparisonOperator(),
-                     anyOf(allOf(hasLHS(BinOpCstLeft), hasRHS(SymRight)),
-                           allOf(hasLHS(SymRight), hasRHS(BinOpCstLeft))))
-          .bind("binop-const-compare-to-sym"),
+      traverse(
+          ast_type_traits::TK_AsIs,
+          binaryOperator(isComparisonOperator(),
+                         anyOf(allOf(hasLHS(BinOpCstLeft), hasRHS(SymRight)),
+                               allOf(hasLHS(SymRight), hasRHS(BinOpCstLeft))))
+              .bind("binop-const-compare-to-sym")),
       this);
 
   // Match expressions like: x <op> 10 == x <op> 12.
-  Finder->addMatcher(binaryOperator(isComparisonOperator(),
-                                    hasLHS(BinOpCstLeft), hasRHS(BinOpCstRight),
-                                    // Already reported as redundant.
-                                    unless(operandsAreEquivalent()))
-                         .bind("binop-const-compare-to-binop-const"),
-                     this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs,
+               binaryOperator(isComparisonOperator(), hasLHS(BinOpCstLeft),
+                              hasRHS(BinOpCstRight),
+                              // Already reported as redundant.
+                              unless(operandsAreEquivalent()))
+                   .bind("binop-const-compare-to-binop-const")),
+      this);
 
   // Match relational expressions combined with logical operators and find
   // redundant sub-expressions.
@@ -951,13 +967,14 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
   // Match expressions like: x < 2 && x > 2.
   const auto ComparisonLeft = matchRelationalIntegerConstantExpr("lhs");
   const auto ComparisonRight = matchRelationalIntegerConstantExpr("rhs");
-  Finder->addMatcher(binaryOperator(hasAnyOperatorName("||", "&&"),
-                                    hasLHS(ComparisonLeft),
-                                    hasRHS(ComparisonRight),
-                                    // Already reported as redundant.
-                                    unless(operandsAreEquivalent()))
-                         .bind("comparisons-of-symbol-and-const"),
-                     this);
+  Finder->addMatcher(
+      traverse(ast_type_traits::TK_AsIs,
+               binaryOperator(hasAnyOperatorName("||", "&&"),
+                              hasLHS(ComparisonLeft), hasRHS(ComparisonRight),
+                              // Already reported as redundant.
+                              unless(operandsAreEquivalent()))
+                   .bind("comparisons-of-symbol-and-const")),
+      this);
 }
 
 void RedundantExpressionCheck::checkArithmeticExpr(
