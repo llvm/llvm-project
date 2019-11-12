@@ -1,13 +1,18 @@
 ## Check that we can use the --elf-linker-options option
 ## to dump SHT_LLVM_LINKER_OPTIONS sections.
 
-# RUN: yaml2obj %s -o %t1
-# RUN: llvm-readobj --elf-linker-options %t1 | FileCheck %s
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --elf-linker-options %t1 2>&1 | FileCheck %s --check-prefix=CHECK -DFILE=%t1
 
-# CHECK:      LinkerOptions [
-# CHECK-NEXT:  option 0: value 0
-# CHECK-NEXT:  option 1: value 1
-# CHECK-NEXT: ]
+# CHECK:       LinkerOptions [
+# CHECK:         option 0: value 0
+# CHECK:         option 1: value 1
+# CHECK-EMPTY:
+# CHECK-NEXT:    warning: '[[FILE]]': SHT_LLVM_LINKER_OPTIONS section at index 2 is broken: an incomplete key-value pair was found. The last possible key was: "c"
+# CHECK-EMPTY:
+# CHECK-NEXT:    warning: '[[FILE]]': SHT_LLVM_LINKER_OPTIONS section at index 4 is broken: the content is not null-terminated
+# CHECK-NEXT:    option 3: value 3
+# CHECK-NEXT:  ]
 
 --- !ELF
 FileHeader:
@@ -16,13 +21,37 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_X86_64
 Sections:
-  - Name: .linker-options
+## Case 1: a correct case.
+  - Name: .linker-options.valid1
     Type: SHT_LLVM_LINKER_OPTIONS
     Options:
       - Name:  option 0
         Value: value 0
       - Name:  option 1
         Value: value 1
+## Case 2: check we do not attempt to dump data from outside the SHT_LLVM_LINKER_OPTIONS section
+##         when it contains an incomplete key-value pair.
+  - Name:    .linker-options.incomplete
+    Type:    SHT_LLVM_LINKER_OPTIONS
+    Content: "610062006300" ## 'a', '\0', 'b', '\0', 'c', '\0'
+  - Type:    Fill
+    Pattern: "FF"
+    Size:    "1"
+## Case 3: in case of an empty section we dump nothing.
+  - Name:    .linker-options.empty
+    Type:    SHT_LLVM_LINKER_OPTIONS
+    Content: ""
+## Case 4: check we do not attempt to dump data from outside the SHT_LLVM_LINKER_OPTIONS section
+##         when it is not null-terminated.
+  - Name:    .linker-options.nonul
+    Type:    SHT_LLVM_LINKER_OPTIONS
+    Content: "61"
+## Case 5: another correct case to show we do not stop dumping after reporting a warning.
+  - Name: .linker-options.valid2
+    Type: SHT_LLVM_LINKER_OPTIONS
+    Options:
+      - Name:  option 3
+        Value: value 3
 
 ## llvm-readelf doesn't support --elf-linker-options yet.
 # RUN: llvm-readelf --elf-linker-options %t1 2>&1 | FileCheck %s --check-prefix=READELF
