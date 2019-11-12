@@ -1,8 +1,21 @@
-# NOTE: This test verifies disable/enable instruction hoisting to hot blocks based on non-profile data
-# RUN: llc -run-pass early-machinelicm -mtriple=powerpc64le-unknown-linux-gnu -disable-hoisting-to-hotter-blocks=all -block-freq-ratio-threshold=100 %s -o - | FileCheck %s --check-prefix=CHECK-NO-HOIST
-# RUN: llc -run-pass early-machinelicm -mtriple=powerpc64le-unknown-linux-gnu -disable-hoisting-to-hotter-blocks=all -block-freq-ratio-threshold=100000000 %s -o - | FileCheck %s --check-prefix=CHECK-HOIST
-# RUN: llc -run-pass early-machinelicm -mtriple=powerpc64le-unknown-linux-gnu -disable-hoisting-to-hotter-blocks=pgo -block-freq-ratio-threshold=100 %s -o - | FileCheck %s --check-prefix=CHECK-HOIST
-# RUN: llc -run-pass early-machinelicm -mtriple=powerpc64le-unknown-linux-gnu -disable-hoisting-to-hotter-blocks=none -block-freq-ratio-threshold=100 %s -o - | FileCheck %s --check-prefix=CHECK-HOIST
+# NOTE: This test verifies disable/enable instruction hoisting to hot blocks
+#       based on non-profile data
+# RUN: llc -run-pass early-machinelicm -mtriple=powerpc64le-unknown-linux-gnu \
+# RUN:   -verify-machineinstrs -disable-hoisting-to-hotter-blocks=all \
+# RUN:   -block-freq-ratio-threshold=100 %s -o - | FileCheck %s \
+# RUN:   --check-prefix=CHECK-NO-HOIST
+# RUN: llc -run-pass early-machinelicm -mtriple=powerpc64le-unknown-linux-gnu \
+# RUN:   -verify-machineinstrs -disable-hoisting-to-hotter-blocks=all \
+# RUN:   -block-freq-ratio-threshold=100000000 %s -o - | FileCheck %s \
+# RUN:   --check-prefix=CHECK-HOIST
+# RUN: llc -run-pass early-machinelicm -mtriple=powerpc64le-unknown-linux-gnu \
+# RUN:   -verify-machineinstrs -disable-hoisting-to-hotter-blocks=pgo \
+# RUN:   -block-freq-ratio-threshold=100 %s -o - | FileCheck %s \
+# RUN:   --check-prefix=CHECK-HOIST
+# RUN: llc -run-pass early-machinelicm -mtriple=powerpc64le-unknown-linux-gnu \
+# RUN:   -verify-machineinstrs -disable-hoisting-to-hotter-blocks=none \
+# RUN:   -block-freq-ratio-threshold=100 %s -o - | FileCheck %s \
+# RUN:   --check-prefix=CHECK-HOIST
 
 --- |
   target datalayout = "e-m:e-i64:64-n32:64"
@@ -119,6 +132,7 @@ body:             |
   bb.1.for.body.lr.ph:
     successors: %bb.3(0x80000000)
 
+    INLINEASM &"#NOTHING", 1, 12, implicit-def early-clobber $r2
     %11:crrc = CMPWI %7, 10
     %0:crbitrc = COPY %11.sub_gt
     %10:gprc = LI 0
