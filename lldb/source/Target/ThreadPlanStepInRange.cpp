@@ -392,7 +392,7 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereCallback(
   should_stop_here = ThreadPlanShouldStopHere::DefaultShouldStopHereCallback(
       current_plan, flags, operation, status, baton);
   if (!should_stop_here)
-    return should_stop_here;
+    return false;
 
   if (should_stop_here && current_plan->GetKind() == eKindStepInRange &&
       operation == eFrameCompareYounger) {
