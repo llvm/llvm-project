@@ -131,6 +131,12 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
     if (Error E = Obj.markSymbols())
       return E;
 
+  for (Symbol &Sym : Obj.getMutableSymbols()) {
+    auto I = Config.SymbolsToRename.find(Sym.Name);
+    if (I != Config.SymbolsToRename.end())
+      Sym.Name = I->getValue();
+  }
+
   // Actually do removals of symbols.
   Obj.removeSymbols([&](const Symbol &Sym) {
     // For StripAll, all relocations have been stripped and we remove all
@@ -200,10 +206,9 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       !Config.SymbolsToLocalize.empty() || !Config.SymbolsToWeaken.empty() ||
       !Config.SymbolsToKeepGlobal.empty() || !Config.SectionsToRename.empty() ||
       !Config.SetSectionAlignment.empty() || !Config.SetSectionFlags.empty() ||
-      !Config.SymbolsToRename.empty() || Config.ExtractDWO ||
-      Config.KeepFileSymbols || Config.LocalizeHidden || Config.PreserveDates ||
-      Config.StripDWO || Config.StripNonAlloc || Config.StripSections ||
-      Config.Weaken || Config.DecompressDebugSections ||
+      Config.ExtractDWO || Config.KeepFileSymbols || Config.LocalizeHidden ||
+      Config.PreserveDates || Config.StripDWO || Config.StripNonAlloc ||
+      Config.StripSections || Config.Weaken || Config.DecompressDebugSections ||
       Config.DiscardMode == DiscardType::Locals ||
       !Config.SymbolsToAdd.empty() || Config.EntryExpr) {
     return createStringError(llvm::errc::invalid_argument,
