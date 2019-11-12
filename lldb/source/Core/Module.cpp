@@ -1006,12 +1006,14 @@ void Module::FindTypes(
   }
 }
 
-void Module::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                       LanguageSet languages, TypeMap &types) {
+void Module::FindTypes(
+    llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
+    llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
+    TypeMap &types) {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
   if (SymbolFile *symbols = GetSymbolFile())
-    symbols->FindTypes(pattern, languages, types);
+    symbols->FindTypes(pattern, languages, searched_symbol_files, types);
 }
 
 SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {

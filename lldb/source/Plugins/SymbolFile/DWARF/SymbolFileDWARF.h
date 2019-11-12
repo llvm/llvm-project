@@ -190,6 +190,7 @@ public:
 
   void FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> pattern,
                  lldb_private::LanguageSet languages,
+                 llvm::DenseSet<SymbolFile *> &searched_symbol_files,
                  lldb_private::TypeMap &types) override;
 
   void GetTypes(lldb_private::SymbolContextScope *sc_scope,
