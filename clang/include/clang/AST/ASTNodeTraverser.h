@@ -620,7 +620,7 @@ public:
     Visit(E->getControllingExpr());
     Visit(E->getControllingExpr()->getType()); // FIXME: remove
 
-    for (const auto &Assoc : E->associations()) {
+    for (const auto Assoc : E->associations()) {
       Visit(Assoc);
     }
   }

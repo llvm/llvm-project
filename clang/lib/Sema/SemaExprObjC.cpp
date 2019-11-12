@@ -4353,7 +4353,7 @@ Expr *Sema::stripARCUnbridgedCast(Expr *e) {
     SmallVector<TypeSourceInfo *, 4> subTypes;
     subExprs.reserve(n);
     subTypes.reserve(n);
-    for (const GenericSelectionExpr::Association &assoc : gse->associations()) {
+    for (const GenericSelectionExpr::Association assoc : gse->associations()) {
       subTypes.push_back(assoc.getTypeSourceInfo());
       Expr *sub = assoc.getAssociationExpr();
       if (assoc.isSelected())

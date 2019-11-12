@@ -189,7 +189,7 @@ class CXXFoldExpr {
 }
 class GenericSelectionExpr {
   code Code = [{
-    for (const GenericSelectionExpr::ConstAssociation &Assoc : S->associations()) {
+    for (const GenericSelectionExpr::ConstAssociation Assoc : S->associations()) {
       addData(Assoc.getType());
     }
   }];
