@@ -133,9 +133,8 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
       // Modern locations list (.debug_loclists) are used starting from v5.
       // Ideally we should take the version from the .debug_loclists section
       // header, but using CU's version for simplicity.
-      DWARFDebugLoclists::dumpLocationList(
-          Data, &Offset, UseLocLists ? U->getVersion() : 4, OS, BaseAddr, MRI,
-          U, LLDumpOpts, Indent);
+      DWARFDebugLoclists(Data, UseLocLists ? U->getVersion() : 4)
+          .dumpLocationList(&Offset, OS, BaseAddr, MRI, U, LLDumpOpts, Indent);
     }
     return;
   }
