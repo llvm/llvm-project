@@ -641,6 +641,8 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
     Triple.setArchName("arm64");
     return Triple.getTriple();
   }
+  case llvm::Triple::aarch64_32:
+    return getTripleString();
   case llvm::Triple::arm:
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:

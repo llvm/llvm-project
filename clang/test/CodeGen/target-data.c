@@ -163,6 +163,10 @@
 // RUN: FileCheck %s -check-prefix=AARCH64
 // AARCH64: target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
+// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=AARCH64-ILP32
+// AARCH64-ILP32: target datalayout = "e-m:o-p:32:32-i64:64-i128:128-n32:64-S128"
+
 // RUN: %clang_cc1 -triple thumb-unknown-gnueabi -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=THUMB
 // THUMB: target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
