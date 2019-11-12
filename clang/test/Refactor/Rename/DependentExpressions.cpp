@@ -70,3 +70,5 @@ void renameSimpleDependentDeclarations(const TemplateClass<T, S> &object) {
   typename TemplateClass<T, S>::TypeAlias Val2; // CHECK11: [[@LINE]]:33 -> [[@LINE]]:42
 // RUN: clang-refactor-test rename-initiate -at=%s:38:9 -at=%s:70:33 -new-name=x %s | FileCheck --check-prefix=CHECK11 %s
 }
+
+// UNSUPPORTED: system-windows
