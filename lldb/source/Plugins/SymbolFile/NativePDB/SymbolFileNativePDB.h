@@ -131,6 +131,7 @@ public:
                  TypeMap &types) override;
 
   void FindTypes(llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
+                 llvm::DenseSet<SymbolFile *> &searched_symbol_files,
                  TypeMap &types) override;
 
   llvm::Expected<TypeSystem &>

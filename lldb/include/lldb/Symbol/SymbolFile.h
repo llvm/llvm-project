@@ -193,9 +193,14 @@ public:
             TypeMap &types);
 
   /// Find types specified by a CompilerContextPattern.
-  /// \param languages    Only return results in these languages.
-  virtual void FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                           LanguageSet languages, TypeMap &types);
+  /// \param languages
+  ///     Only return results in these languages.
+  /// \param searched_symbol_files
+  ///     Prevents one file from being visited multiple times.
+  virtual void
+  FindTypes(llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
+            llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
+            TypeMap &types);
 
   virtual void
   GetMangledNamesForFunction(const std::string &scope_qualified_name,
