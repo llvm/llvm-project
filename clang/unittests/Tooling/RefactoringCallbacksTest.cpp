@@ -22,7 +22,7 @@ void expectRewritten(const std::string &Code, const std::string &Expected,
                      const T &AMatcher, RefactoringCallback &Callback) {
   std::map<std::string, Replacements> FileToReplace;
   ASTMatchRefactorer Finder(FileToReplace);
-  Finder.addMatcher(AMatcher, &Callback);
+  Finder.addMatcher(traverse(ast_type_traits::TK_AsIs, AMatcher), &Callback);
   std::unique_ptr<tooling::FrontendActionFactory> Factory(
       tooling::newFrontendActionFactory(&Finder));
   ASSERT_TRUE(tooling::runToolOnCode(Factory->create(), Code))

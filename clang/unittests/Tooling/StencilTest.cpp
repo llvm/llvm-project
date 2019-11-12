@@ -60,7 +60,8 @@ static llvm::Optional<TestMatch> matchStmt(StringRef StatementCode,
     return llvm::None;
   }
   ASTContext &Context = AstUnit->getASTContext();
-  auto Matches = ast_matchers::match(wrapMatcher(Matcher), Context);
+  auto Matches = ast_matchers::match(
+      traverse(ast_type_traits::TK_AsIs, wrapMatcher(Matcher)), Context);
   // We expect a single, exact match for the statement.
   if (Matches.size() != 1) {
     ADD_FAILURE() << "Wrong number of matches: " << Matches.size();
@@ -333,9 +334,10 @@ TEST_F(StencilTest, AccessOpExplicitThis) {
       int foo() { return this->x; }
     };
   )cc";
-  auto StmtMatch =
-      matchStmt(Snippet, returnStmt(hasReturnValue(ignoringImplicit(memberExpr(
-                             hasObjectExpression(expr().bind("obj")))))));
+  auto StmtMatch = matchStmt(
+      Snippet, traverse(ast_type_traits::TK_AsIs,
+                        returnStmt(hasReturnValue(ignoringImplicit(memberExpr(
+                            hasObjectExpression(expr().bind("obj"))))))));
   ASSERT_TRUE(StmtMatch);
   const Stencil Stencil = access("obj", "field");
   EXPECT_THAT_EXPECTED(Stencil->eval(StmtMatch->Result),
