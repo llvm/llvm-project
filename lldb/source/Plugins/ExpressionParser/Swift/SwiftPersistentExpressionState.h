@@ -15,6 +15,7 @@
 
 #include "SwiftExpressionVariable.h"
 
+#include "lldb/Core/SwiftForward.h"
 #include "lldb/Expression/ExpressionVariable.h"
 
 #include "llvm/ADT/DenseMap.h"

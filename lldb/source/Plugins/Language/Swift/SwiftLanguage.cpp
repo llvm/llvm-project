@@ -1315,7 +1315,7 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
                              name_parts.size() == 1 &&
                              name_parts.front() == module->getName().str())
                     results.insert(
-                        CompilerType(swift::ModuleType::get(module)));
+                        ToCompilerType(swift::ModuleType::get(module)));
                 }
               };
 
@@ -1462,7 +1462,7 @@ LazyBool SwiftLanguage::IsLogicalTrue(ValueObject &valobj, Status &error) {
   Scalar scalar_value;
 
   auto swift_ty = GetCanonicalSwiftType(valobj.GetCompilerType());
-  CompilerType valobj_type(swift_ty);
+  CompilerType valobj_type = ToCompilerType(swift_ty);
   Flags type_flags(valobj_type.GetTypeInfo());
   if (llvm::isa<SwiftASTContext>(valobj_type.GetTypeSystem())) {
     if (type_flags.AllSet(eTypeIsStructUnion) &&
