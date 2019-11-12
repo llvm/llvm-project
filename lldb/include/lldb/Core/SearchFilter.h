@@ -366,8 +366,6 @@ public:
 
   ~SearchFilterByModuleList() override;
 
-  SearchFilterByModuleList &operator=(const SearchFilterByModuleList &rhs);
-
   bool ModulePasses(const lldb::ModuleSP &module_sp) override;
 
   bool ModulePasses(const FileSpec &spec) override;
@@ -416,12 +414,7 @@ public:
                                 const FileSpecList &module_list,
                                 const FileSpecList &cu_list);
 
-  SearchFilterByModuleListAndCU(const SearchFilterByModuleListAndCU &rhs);
-
   ~SearchFilterByModuleListAndCU() override;
-
-  SearchFilterByModuleListAndCU &
-  operator=(const SearchFilterByModuleListAndCU &rhs);
 
   bool AddressPasses(Address &address) override;
 

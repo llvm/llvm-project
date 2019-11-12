@@ -299,6 +299,8 @@ class PeelingModuloScheduleExpander {
 
   /// State passed from peelKernel to peelPrologAndEpilogs().
   std::deque<MachineBasicBlock *> PeeledFront, PeeledBack;
+  /// Illegal phis that need to be deleted once we re-link stages.
+  SmallVector<MachineInstr *, 4> IllegalPhisToDelete;
 
 public:
   PeelingModuloScheduleExpander(MachineFunction &MF, ModuloSchedule &S,
@@ -321,6 +323,13 @@ private:
   /// Peels one iteration of the rewritten kernel (BB) in the specified
   /// direction.
   MachineBasicBlock *peelKernel(LoopPeelDirection LPD);
+  // Delete instructions whose stage is less than MinStage in the given basic
+  // block.
+  void filterInstructions(MachineBasicBlock *MB, int MinStage);
+  // Move instructions of the given stage from sourceBB to DestBB. Remap the phi
+  // instructions to keep a valid IR.
+  void moveStageBetweenBlocks(MachineBasicBlock *DestBB,
+                              MachineBasicBlock *SourceBB, unsigned Stage);
   /// Peel the kernel forwards and backwards to produce prologs and epilogs,
   /// and stitch them together.
   void peelPrologAndEpilogs();

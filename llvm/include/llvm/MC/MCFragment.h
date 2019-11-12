@@ -80,8 +80,6 @@ protected:
   MCFragment(FragmentType Kind, bool HasInstructions,
              MCSection *Parent = nullptr);
 
-  ~MCFragment();
-
 public:
   MCFragment() = delete;
   MCFragment(const MCFragment &) = delete;

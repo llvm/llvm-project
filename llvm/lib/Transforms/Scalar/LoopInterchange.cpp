@@ -1339,7 +1339,8 @@ static void updateSuccessor(BranchInst *BI, BasicBlock *OldBB,
 // Move Lcssa PHIs to the right place.
 static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
                           BasicBlock *InnerLatch, BasicBlock *OuterHeader,
-                          BasicBlock *OuterLatch, BasicBlock *OuterExit) {
+                          BasicBlock *OuterLatch, BasicBlock *OuterExit,
+                          Loop *InnerLoop, LoopInfo *LI) {
 
   // Deal with LCSSA PHI nodes in the exit block of the inner loop, that are
   // defined either in the header or latch. Those blocks will become header and
@@ -1394,19 +1395,17 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
     P->moveBefore(InnerExit->getFirstNonPHI());
 
   // Deal with LCSSA PHI nodes in the loop nest exit block. For PHIs that have
-  // incoming values from the outer latch or header, we have to add a new PHI
+  // incoming values defined in the outer loop, we have to add a new PHI
   // in the inner loop latch, which became the exit block of the outer loop,
   // after interchanging.
   if (OuterExit) {
     for (PHINode &P : OuterExit->phis()) {
       if (P.getNumIncomingValues() != 1)
         continue;
-      // Skip Phis with incoming values not defined in the outer loop's header
-      // and latch. Also skip incoming phis defined in the latch. Those should
+      // Skip Phis with incoming values defined in the inner loop. Those should
       // already have been updated.
       auto I = dyn_cast<Instruction>(P.getIncomingValue(0));
-      if (!I || ((I->getParent() != OuterLatch || isa<PHINode>(I)) &&
-                 I->getParent() != OuterHeader))
+      if (!I || LI->getLoopFor(I->getParent()) == InnerLoop)
         continue;
 
       PHINode *NewPhi = dyn_cast<PHINode>(P.clone());
@@ -1520,7 +1519,8 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
                    OuterLoopPreHeader);
 
   moveLCSSAPhis(InnerLoopLatchSuccessor, InnerLoopHeader, InnerLoopLatch,
-                OuterLoopHeader, OuterLoopLatch, InnerLoop->getExitBlock());
+                OuterLoopHeader, OuterLoopLatch, InnerLoop->getExitBlock(),
+                InnerLoop, LI);
   // For PHIs in the exit block of the outer loop, outer's latch has been
   // replaced by Inners'.
   OuterLoopLatchSuccessor->replacePhiUsesWith(OuterLoopLatch, InnerLoopLatch);

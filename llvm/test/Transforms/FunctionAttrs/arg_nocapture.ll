@@ -244,7 +244,7 @@ declare i32 @printf(i8* nocapture, ...)
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define nonnull dereferenceable(8) i64* @not_captured_but_returned_0(i64* nofree nonnull returned writeonly dereferenceable(8) "no-capture-maybe-returned" %a)
+; CHECK: define nonnull align 8 dereferenceable(8) i64* @not_captured_but_returned_0(i64* nofree nonnull returned writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" %a)
 
 define i64* @not_captured_but_returned_0(i64* %a) #0 {
 entry:
@@ -260,7 +260,8 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define nonnull dereferenceable(8) i64* @not_captured_but_returned_1(i64* nofree nonnull writeonly dereferenceable(16) "no-capture-maybe-returned" %a)
+; FIXME: %a should have align 8
+; CHECK: define nonnull align 8 dereferenceable(8) i64* @not_captured_but_returned_1(i64* nofree nonnull writeonly dereferenceable(16) "no-capture-maybe-returned" %a)
 define i64* @not_captured_but_returned_1(i64* %a) #0 {
 entry:
   %add.ptr = getelementptr inbounds i64, i64* %a, i64 1
@@ -320,7 +321,7 @@ entry:
 ; }
 ;
 ; There should *not* be a no-capture attribute on %a
-; CHECK: define nonnull dereferenceable(8) i64* @negative_test_not_captured_but_returned_call_1a(i64* nofree writeonly "no-capture-maybe-returned" %a)
+; CHECK: define nonnull align 8 dereferenceable(8) i64* @negative_test_not_captured_but_returned_call_1a(i64* nofree writeonly "no-capture-maybe-returned" %a)
 define i64* @negative_test_not_captured_but_returned_call_1a(i64* %a) #0 {
 entry:
   %call = call i64* @not_captured_but_returned_1(i64* %a)

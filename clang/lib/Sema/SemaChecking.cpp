@@ -1536,6 +1536,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
           return ExprError();
         break;
       case llvm::Triple::aarch64:
+      case llvm::Triple::aarch64_32:
       case llvm::Triple::aarch64_be:
         if (CheckAArch64BuiltinFunctionCall(BuiltinID, TheCall))
           return ExprError();
@@ -1685,6 +1686,7 @@ bool Sema::CheckNeonBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     llvm::Triple::ArchType Arch = Context.getTargetInfo().getTriple().getArch();
     bool IsPolyUnsigned = Arch == llvm::Triple::aarch64 ||
+                          Arch == llvm::Triple::aarch64_32 ||
                           Arch == llvm::Triple::aarch64_be;
     bool IsInt64Long =
         Context.getTargetInfo().getInt64Type() == TargetInfo::SignedLong;
@@ -5516,7 +5518,8 @@ ExprResult Sema::CheckOSLogFormatStringArg(Expr *Arg) {
 static bool checkVAStartABI(Sema &S, unsigned BuiltinID, Expr *Fn) {
   const llvm::Triple &TT = S.Context.getTargetInfo().getTriple();
   bool IsX64 = TT.getArch() == llvm::Triple::x86_64;
-  bool IsAArch64 = TT.getArch() == llvm::Triple::aarch64;
+  bool IsAArch64 = (TT.getArch() == llvm::Triple::aarch64 ||
+                    TT.getArch() == llvm::Triple::aarch64_32);
   bool IsWindows = TT.isOSWindows();
   bool IsMSVAStart = BuiltinID == Builtin::BI__builtin_ms_va_start;
   if (IsX64 || IsAArch64) {

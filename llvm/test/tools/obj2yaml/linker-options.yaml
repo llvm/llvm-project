@@ -1,0 +1,69 @@
+## Check how obj2yaml produces SHT_LLVM_LINKER_OPTIONS section descriptions.
+
+## Check we dump valid sections using pairs of "Name" and "Value" strings.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=VALID
+
+# VALID:      - Name: .linker-options-valid1
+# VALID-NEXT:   Type: SHT_LLVM_LINKER_OPTIONS
+# VALID-NEXT:   Options:
+# VALID-NEXT:     - Name:  a
+# VALID-NEXT:       Value: b
+# VALID-NEXT: - Name: .linker-options-valid2
+# VALID-NEXT:   Type: SHT_LLVM_LINKER_OPTIONS
+# VALID-NEXT:   Options:
+# VALID-NEXT:     - Name:  a
+# VALID-NEXT:       Value: b
+# VALID-NEXT:     - Name:  c
+# VALID-NEXT:       Value: d
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .linker-options-valid1
+    Type:    SHT_LLVM_LINKER_OPTIONS
+    Content: "61006200"
+  - Name:    .linker-options-valid2
+    Type:    SHT_LLVM_LINKER_OPTIONS
+    Content: "6100620063006400"
+
+## Check we dump corrupt sections using the "Content" key.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=CORRUPT
+
+# CORRUPT:      - Name:    .linker-options-empty
+# CORRUPT-NEXT:   Type:    SHT_LLVM_LINKER_OPTIONS
+# CORRUPT-NEXT:   Content: ''
+# CORRUPT-NEXT: - Name:    .linker-options-no-null
+# CORRUPT-NEXT:   Type:    SHT_LLVM_LINKER_OPTIONS
+# CORRUPT-NEXT:   Content: '610062'
+# CORRUPT-NEXT: - Name:    .linker-options-incomplete
+# CORRUPT-NEXT:   Type:    SHT_LLVM_LINKER_OPTIONS
+# CORRUPT-NEXT:   Content: '6100'
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+## 1) Empty content.
+  - Name:    .linker-options-empty
+    Type:    SHT_LLVM_LINKER_OPTIONS
+    Content: ""
+## 2) Non-null terminated content.
+  - Name:    .linker-options-no-null
+    Type:    SHT_LLVM_LINKER_OPTIONS
+    Content: "610062"
+## 3) Odd number of strings in the section.
+##   (Hence it contains an incomplete key-value pair).
+  - Name:    .linker-options-incomplete
+    Type:    SHT_LLVM_LINKER_OPTIONS
+    Content: "6100"

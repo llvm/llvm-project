@@ -70,7 +70,7 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 ; CHECK: Function Attrs: nofree nosync nounwind
-; CHECK-NEXT: define internal i32* @internal_ret1_rrw(i32* nofree nonnull dereferenceable(4) %r0, i32* nofree returned %r1, i32* nofree %w0)
+; CHECK-NEXT: define internal i32* @internal_ret1_rrw(i32* nofree nonnull align 4 dereferenceable(4) %r0, i32* nofree returned %r1, i32* nofree %w0)
 define internal i32* @internal_ret1_rrw(i32* %r0, i32* %r1, i32* %w0) {
 entry:
   %0 = load i32, i32* %r0, align 4
@@ -121,7 +121,7 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 ; CHECK: Function Attrs: nofree nosync nounwind
-; CHECK-NEXT: define internal i32* @internal_ret1_rw(i32* nofree nonnull dereferenceable(4) %r0, i32* nofree returned %w0)
+; CHECK-NEXT: define internal i32* @internal_ret1_rw(i32* nofree nonnull align 4 dereferenceable(4) %r0, i32* nofree returned %w0)
 define internal i32* @internal_ret1_rw(i32* %r0, i32* %w0) {
 entry:
   %0 = load i32, i32* %r0, align 4

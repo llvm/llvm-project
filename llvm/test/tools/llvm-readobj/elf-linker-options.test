@@ -1,0 +1,30 @@
+## Check that we can use the --elf-linker-options option
+## to dump SHT_LLVM_LINKER_OPTIONS sections.
+
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-readobj --elf-linker-options %t1 | FileCheck %s
+
+# CHECK:      LinkerOptions [
+# CHECK-NEXT:  option 0: value 0
+# CHECK-NEXT:  option 1: value 1
+# CHECK-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .linker-options
+    Type: SHT_LLVM_LINKER_OPTIONS
+    Options:
+      - Name:  option 0
+        Value: value 0
+      - Name:  option 1
+        Value: value 1
+
+## llvm-readelf doesn't support --elf-linker-options yet.
+# RUN: llvm-readelf --elf-linker-options %t1 2>&1 | FileCheck %s --check-prefix=READELF
+
+# READELF: printELFLinkerOptions not implemented!

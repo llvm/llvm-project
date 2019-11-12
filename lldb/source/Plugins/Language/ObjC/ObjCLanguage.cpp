@@ -15,6 +15,7 @@
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
@@ -887,7 +888,7 @@ ObjCLanguage::GetPossibleFormattersMatches(ValueObject &valobj,
   bool canBeObjCDynamic =
       compiler_type.IsPossibleDynamicType(nullptr, check_cpp, check_objc);
 
-  if (canBeObjCDynamic) {
+  if (canBeObjCDynamic && ClangUtil::IsClangType(compiler_type)) {
     do {
       lldb::ProcessSP process_sp = valobj.GetProcessSP();
       if (!process_sp)

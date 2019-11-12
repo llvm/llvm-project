@@ -668,7 +668,6 @@ private:
 
   void visitUnary(const User &I, unsigned Opcode);
   void visitFNeg(const User &I) { visitUnary(I, ISD::FNEG); }
-  void visitFreeze(const User &I);
 
   void visitBinary(const User &I, unsigned Opcode);
   void visitShift(const User &I, unsigned Opcode);
@@ -743,6 +742,7 @@ private:
   void visitAtomicStore(const StoreInst &I);
   void visitLoadFromSwiftError(const LoadInst &I);
   void visitStoreToSwiftError(const StoreInst &I);
+  void visitFreeze(const FreezeInst &I);
 
   void visitInlineAsm(ImmutableCallSite CS);
   void visitIntrinsicCall(const CallInst &I, unsigned Intrinsic);

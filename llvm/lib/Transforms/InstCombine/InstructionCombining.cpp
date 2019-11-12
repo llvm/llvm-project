@@ -3131,6 +3131,15 @@ Instruction *InstCombiner::visitLandingPadInst(LandingPadInst &LI) {
   return nullptr;
 }
 
+Instruction *InstCombiner::visitFreeze(FreezeInst &I) {
+  Value *Op0 = I.getOperand(0);
+
+  if (Value *V = SimplifyFreezeInst(Op0, SQ.getWithInstruction(&I)))
+    return replaceInstUsesWith(I, V);
+
+  return nullptr;
+}
+
 /// Try to move the specified instruction from its current block into the
 /// beginning of DestBlock, which can only happen if it's safe to move the
 /// instruction past all of the instructions between it and the end of its

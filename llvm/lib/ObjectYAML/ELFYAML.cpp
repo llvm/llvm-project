@@ -1100,6 +1100,12 @@ static void fillMapping(IO &IO, ELFYAML::Fill &Fill) {
   IO.mapRequired("Size", Fill.Size);
 }
 
+static void sectionMapping(IO &IO, ELFYAML::LinkerOptionsSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapOptional("Options", Section.Options);
+  IO.mapOptional("Content", Section.Content);
+}
+
 void MappingTraits<ELFYAML::SectionOrType>::mapping(
     IO &IO, ELFYAML::SectionOrType &sectionOrType) {
   IO.mapRequired("SectionOrType", sectionOrType.sectionNameOrType);
@@ -1216,6 +1222,11 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     if (!IO.outputting())
       Section.reset(new ELFYAML::AddrsigSection());
     sectionMapping(IO, *cast<ELFYAML::AddrsigSection>(Section.get()));
+    break;
+  case ELF::SHT_LLVM_LINKER_OPTIONS:
+    if (!IO.outputting())
+      Section.reset(new ELFYAML::LinkerOptionsSection());
+    sectionMapping(IO, *cast<ELFYAML::LinkerOptionsSection>(Section.get()));
     break;
   default:
     if (!IO.outputting()) {
@@ -1355,6 +1366,12 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
     return {};
   }
 
+  if (const auto *Sec = dyn_cast<ELFYAML::LinkerOptionsSection>(C.get())) {
+    if (Sec->Options && Sec->Content)
+      return "\"Options\" and \"Content\" can't be used together";
+    return {};
+  }
+
   if (const auto *F = dyn_cast<ELFYAML::Fill>(C.get())) {
     if (!F->Pattern)
       return {};
@@ -1491,6 +1508,13 @@ void MappingTraits<ELFYAML::AddrsigSymbol>::mapping(IO &IO, ELFYAML::AddrsigSymb
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapOptional("Name", Sym.Name);
   IO.mapOptional("Index", Sym.Index);
+}
+
+void MappingTraits<ELFYAML::LinkerOption>::mapping(IO &IO,
+                                                   ELFYAML::LinkerOption &Opt) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapRequired("Name", Opt.Key);
+  IO.mapRequired("Value", Opt.Value);
 }
 
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, MIPS_AFL_REG)

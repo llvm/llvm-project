@@ -105,6 +105,113 @@
 // ARM:INTMAX_C_(0) 0LL
 // ARM:UINTMAX_C_(0) 0ULL
 //
+// RUN: %clang_cc1 -E -ffreestanding -triple=arm64_32-apple-ios7.0 %s | FileCheck -check-prefix ARM64_32 %s
+//
+// ARM64_32:typedef long long int int64_t;
+// ARM64_32:typedef long long unsigned int uint64_t;
+// ARM64_32:typedef int64_t int_least64_t;
+// ARM64_32:typedef uint64_t uint_least64_t;
+// ARM64_32:typedef int64_t int_fast64_t;
+// ARM64_32:typedef uint64_t uint_fast64_t;
+//
+// ARM64_32:typedef int int32_t;
+// ARM64_32:typedef unsigned int uint32_t;
+// ARM64_32:typedef int32_t int_least32_t;
+// ARM64_32:typedef uint32_t uint_least32_t;
+// ARM64_32:typedef int32_t int_fast32_t;
+// ARM64_32:typedef uint32_t uint_fast32_t;
+// 
+// ARM64_32:typedef short int16_t;
+// ARM64_32:typedef unsigned short uint16_t;
+// ARM64_32:typedef int16_t int_least16_t;
+// ARM64_32:typedef uint16_t uint_least16_t;
+// ARM64_32:typedef int16_t int_fast16_t;
+// ARM64_32:typedef uint16_t uint_fast16_t;
+//
+// ARM64_32:typedef signed char int8_t;
+// ARM64_32:typedef unsigned char uint8_t;
+// ARM64_32:typedef int8_t int_least8_t;
+// ARM64_32:typedef uint8_t uint_least8_t;
+// ARM64_32:typedef int8_t int_fast8_t;
+// ARM64_32:typedef uint8_t uint_fast8_t;
+//
+// ARM64_32:typedef long int intptr_t;
+// ARM64_32:typedef long unsigned int uintptr_t;
+// 
+// ARM64_32:typedef long long int intmax_t;
+// ARM64_32:typedef long long unsigned int uintmax_t;
+//
+// ARM64_32:INT8_MAX_ 127
+// ARM64_32:INT8_MIN_ (-127 -1)
+// ARM64_32:UINT8_MAX_ 255
+// ARM64_32:INT_LEAST8_MIN_ (-127 -1)
+// ARM64_32:INT_LEAST8_MAX_ 127
+// ARM64_32:UINT_LEAST8_MAX_ 255
+// ARM64_32:INT_FAST8_MIN_ (-127 -1)
+// ARM64_32:INT_FAST8_MAX_ 127
+// ARM64_32:UINT_FAST8_MAX_ 255
+//
+// ARM64_32:INT16_MAX_ 32767
+// ARM64_32:INT16_MIN_ (-32767 -1)
+// ARM64_32:UINT16_MAX_ 65535
+// ARM64_32:INT_LEAST16_MIN_ (-32767 -1)
+// ARM64_32:INT_LEAST16_MAX_ 32767
+// ARM64_32:UINT_LEAST16_MAX_ 65535
+// ARM64_32:INT_FAST16_MIN_ (-32767 -1)
+// ARM64_32:INT_FAST16_MAX_ 32767
+// ARM64_32:UINT_FAST16_MAX_ 65535
+//
+// ARM64_32:INT32_MAX_ 2147483647
+// ARM64_32:INT32_MIN_ (-2147483647 -1)
+// ARM64_32:UINT32_MAX_ 4294967295U
+// ARM64_32:INT_LEAST32_MIN_ (-2147483647 -1)
+// ARM64_32:INT_LEAST32_MAX_ 2147483647
+// ARM64_32:UINT_LEAST32_MAX_ 4294967295U
+// ARM64_32:INT_FAST32_MIN_ (-2147483647 -1)
+// ARM64_32:INT_FAST32_MAX_ 2147483647
+// ARM64_32:UINT_FAST32_MAX_ 4294967295U
+//
+// ARM64_32:INT64_MAX_ 9223372036854775807LL
+// ARM64_32:INT64_MIN_ (-9223372036854775807LL -1)
+// ARM64_32:UINT64_MAX_ 18446744073709551615ULL
+// ARM64_32:INT_LEAST64_MIN_ (-9223372036854775807LL -1)
+// ARM64_32:INT_LEAST64_MAX_ 9223372036854775807LL
+// ARM64_32:UINT_LEAST64_MAX_ 18446744073709551615ULL
+// ARM64_32:INT_FAST64_MIN_ (-9223372036854775807LL -1)
+// ARM64_32:INT_FAST64_MAX_ 9223372036854775807LL
+// ARM64_32:UINT_FAST64_MAX_ 18446744073709551615ULL
+//
+// ARM64_32:INTPTR_MIN_ (-2147483647L -1)
+// ARM64_32:INTPTR_MAX_ 2147483647L
+// ARM64_32:UINTPTR_MAX_ 4294967295UL
+// ARM64_32:PTRDIFF_MIN_ (-2147483647L -1)
+// ARM64_32:PTRDIFF_MAX_ 2147483647L
+// ARM64_32:SIZE_MAX_ 4294967295UL
+//
+// ARM64_32:INTMAX_MIN_ (-9223372036854775807LL -1)
+// ARM64_32:INTMAX_MAX_ 9223372036854775807LL
+// ARM64_32:UINTMAX_MAX_ 18446744073709551615ULL
+//
+// ARM64_32:SIG_ATOMIC_MIN_ (-2147483647 -1)
+// ARM64_32:SIG_ATOMIC_MAX_ 2147483647
+// ARM64_32:WINT_MIN_ (-2147483647 -1)
+// ARM64_32:WINT_MAX_ 2147483647
+//
+// ARM64_32:WCHAR_MAX_ 2147483647
+// ARM64_32:WCHAR_MIN_ (-2147483647 -1)
+//
+// ARM64_32:INT8_C_(0) 0
+// ARM64_32:UINT8_C_(0) 0U
+// ARM64_32:INT16_C_(0) 0
+// ARM64_32:UINT16_C_(0) 0U
+// ARM64_32:INT32_C_(0) 0
+// ARM64_32:UINT32_C_(0) 0U
+// ARM64_32:INT64_C_(0) 0LL
+// ARM64_32:UINT64_C_(0) 0ULL
+//
+// ARM64_32:INTMAX_C_(0) 0LL
+// ARM64_32:UINTMAX_C_(0) 0ULL
+
 //
 // RUN: %clang_cc1 -E -ffreestanding -triple=i386-none-none %s | FileCheck -check-prefix I386 %s
 //

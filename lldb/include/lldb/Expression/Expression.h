@@ -32,22 +32,11 @@ class RecordingMemoryManager;
 /// LLVM IR from the expression.
 class Expression {
 public:
-  /// Discriminator for LLVM-style RTTI (dyn_cast<> et al.)
-  enum ExpressionKind {
-    eKindFunctionCaller,
-    eKindClangFunctionCaller,
-    eKindUserExpression,
-    eKindLLVMUserExpression,
-    eKindClangUserExpression,
-    eKindUtilityFunction,
-    eKindClangUtilityFunction,
-  };
-
   enum ResultType { eResultTypeAny, eResultTypeId };
 
-  Expression(Target &target, ExpressionKind kind);
+  Expression(Target &target);
 
-  Expression(ExecutionContextScope &exe_scope, ExpressionKind kind);
+  Expression(ExecutionContextScope &exe_scope);
 
   /// Destructor
   virtual ~Expression() {}
@@ -94,12 +83,9 @@ public:
 
   virtual ExpressionTypeSystemHelper *GetTypeSystemHelper() { return nullptr; }
 
-  /// LLVM-style RTTI support.
-  ExpressionKind getKind() const { return m_kind; }
-  
-private:
-  /// LLVM-style RTTI support.
-  const ExpressionKind m_kind;
+  // LLVM RTTI support
+  virtual bool isA(const void *ClassID) const = 0;
+
 protected:
   lldb::TargetWP m_target_wp; /// Expression's always have to have a target...
   lldb::ProcessWP m_jit_process_wp; /// An expression might have a process, but

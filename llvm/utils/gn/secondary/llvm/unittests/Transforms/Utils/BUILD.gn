@@ -19,6 +19,7 @@ unittest("UtilsTests") {
     "SSAUpdaterBulkTest.cpp",
     "SizeOptsTest.cpp",
     "UnrollLoopTest.cpp",
+    "VFABIUtils.cpp",
     "ValueMapperTest.cpp",
   ]
 }

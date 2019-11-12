@@ -147,7 +147,8 @@ struct Chunk {
     Symver,
     MipsABIFlags,
     Addrsig,
-    Fill
+    Fill,
+    LinkerOptions,
   };
 
   ChunkKind Kind;
@@ -349,6 +350,22 @@ struct AddrsigSection : Section {
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Addrsig; }
 };
 
+struct LinkerOption {
+  StringRef Key;
+  StringRef Value;
+};
+
+struct LinkerOptionsSection : Section {
+  Optional<std::vector<LinkerOption>> Options;
+  Optional<yaml::BinaryRef> Content;
+
+  LinkerOptionsSection() : Section(ChunkKind::LinkerOptions) {}
+
+  static bool classof(const Chunk *S) {
+    return S->Kind == ChunkKind::LinkerOptions;
+  }
+};
+
 struct SymverSection : Section {
   std::vector<uint16_t> Entries;
 
@@ -464,6 +481,7 @@ struct Object {
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::AddrsigSymbol)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::StackSizeEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::DynamicEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::LinkerOption)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::NoteEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::ProgramHeader)
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<llvm::ELFYAML::Chunk>)
@@ -629,6 +647,10 @@ template <> struct MappingTraits<ELFYAML::VernauxEntry> {
 
 template <> struct MappingTraits<ELFYAML::AddrsigSymbol> {
   static void mapping(IO &IO, ELFYAML::AddrsigSymbol &Sym);
+};
+
+template <> struct MappingTraits<ELFYAML::LinkerOption> {
+  static void mapping(IO &IO, ELFYAML::LinkerOption &Sym);
 };
 
 template <> struct MappingTraits<ELFYAML::Relocation> {

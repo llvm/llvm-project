@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/VectorUtils.h"
 
 using namespace llvm;
@@ -34,7 +36,6 @@ ParseRet tryParseISA(StringRef &MangledName, VFISAKind &ISA) {
             .Case("d", VFISAKind::AVX2)
             .Case("e", VFISAKind::AVX512)
             .Default(VFISAKind::Unknown);
-
   MangledName = MangledName.drop_front(1);
 
   return ParseRet::OK;
@@ -338,7 +339,7 @@ Optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName) {
     }
   } while (ParamFound == ParseRet::OK);
 
-  // A valid MangledName mus have at least one valid entry in the
+  // A valid MangledName must have at least one valid entry in the
   // <parameters>.
   if (Parameters.empty())
     return None;

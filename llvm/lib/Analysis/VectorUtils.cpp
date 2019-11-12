@@ -1159,3 +1159,22 @@ void InterleaveGroup<Instruction>::addMetadata(Instruction *NewInst) const {
   propagateMetadata(NewInst, VL);
 }
 }
+
+void VFABI::getVectorVariantNames(
+    const CallInst &CI, SmallVectorImpl<std::string> &VariantMappings) {
+  const StringRef S =
+      CI.getAttribute(AttributeList::FunctionIndex, VFABI::MappingsAttrName)
+          .getValueAsString();
+  SmallVector<StringRef, 8> ListAttr;
+  S.split(ListAttr, ",");
+
+  for (auto &S : SetVector<StringRef>(ListAttr.begin(), ListAttr.end())) {
+#ifndef NDEBUG
+    Optional<VFInfo> Info = VFABI::tryDemangleForVFABI(S);
+    assert(Info.hasValue() && "Invalid name for a VFABI variant.");
+    assert(CI.getModule()->getFunction(Info.getValue().VectorName) &&
+           "Vector function is missing.");
+#endif
+    VariantMappings.push_back(S);
+  }
+}

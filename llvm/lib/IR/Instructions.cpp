@@ -2232,9 +2232,6 @@ void UnaryOperator::AssertOK() {
            "Tried to create a floating-point operation on a "
            "non-floating-point type!");
     break;
-  case Freeze:
-    // Freeze can take any type as an argument.
-    break;
   default: llvm_unreachable("Invalid opcode provided");
   }
 #endif
@@ -4095,6 +4092,22 @@ void IndirectBrInst::removeDestination(unsigned idx) {
 }
 
 //===----------------------------------------------------------------------===//
+//                            FreezeInst Implementation
+//===----------------------------------------------------------------------===//
+
+FreezeInst::FreezeInst(Value *S,
+                       const Twine &Name, Instruction *InsertBefore)
+    : UnaryInstruction(S->getType(), Freeze, S, InsertBefore) {
+  setName(Name);
+}
+
+FreezeInst::FreezeInst(Value *S,
+                       const Twine &Name, BasicBlock *InsertAtEnd)
+    : UnaryInstruction(S->getType(), Freeze, S, InsertAtEnd) {
+  setName(Name);
+}
+
+//===----------------------------------------------------------------------===//
 //                           cloneImpl() implementations
 //===----------------------------------------------------------------------===//
 
@@ -4309,4 +4322,8 @@ FuncletPadInst *FuncletPadInst::cloneImpl() const {
 UnreachableInst *UnreachableInst::cloneImpl() const {
   LLVMContext &Context = getContext();
   return new UnreachableInst(Context);
+}
+
+FreezeInst *FreezeInst::cloneImpl() const {
+  return new FreezeInst(getOperand(0));
 }

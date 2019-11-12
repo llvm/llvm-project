@@ -618,11 +618,8 @@ void SIScheduleBlock::printDebug(bool full) {
 
 // SIScheduleBlockCreator //
 
-SIScheduleBlockCreator::SIScheduleBlockCreator(SIScheduleDAGMI *DAG) :
-DAG(DAG) {
-}
-
-SIScheduleBlockCreator::~SIScheduleBlockCreator() = default;
+SIScheduleBlockCreator::SIScheduleBlockCreator(SIScheduleDAGMI *DAG)
+    : DAG(DAG) {}
 
 SIScheduleBlocks
 SIScheduleBlockCreator::getBlocks(SISchedulerBlockCreatorVariant BlockVariant) {

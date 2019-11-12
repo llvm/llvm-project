@@ -51,7 +51,7 @@ public:
   FileCheckExpressionLiteral(uint64_t Val) : Value(Val) {}
 
   /// \returns the literal's value.
-  Expected<uint64_t> eval() const { return Value; }
+  Expected<uint64_t> eval() const override { return Value; }
 };
 
 /// Class to represent an undefined variable error, which quotes that
@@ -114,7 +114,7 @@ public:
 
   /// \returns the line number where this variable is defined, if any, or None
   /// if defined before input is parsed.
-  Optional<size_t> getDefLineNumber() { return DefLineNumber; }
+  Optional<size_t> getDefLineNumber() const { return DefLineNumber; }
 };
 
 /// Class representing the use of a numeric variable in the AST of an
@@ -133,7 +133,7 @@ public:
       : Name(Name), NumericVariable(NumericVariable) {}
 
   /// \returns the value of the variable referenced by this instance.
-  Expected<uint64_t> eval() const;
+  Expected<uint64_t> eval() const override;
 };
 
 /// Type of functions evaluating a given binary operation.
@@ -164,7 +164,7 @@ public:
   /// using EvalBinop on the result of recursively evaluating the operands.
   /// \returns the expression value or an error if an undefined numeric
   /// variable is used in one of the operands.
-  Expected<uint64_t> eval() const;
+  Expected<uint64_t> eval() const override;
 };
 
 class FileCheckPatternContext;
@@ -523,10 +523,10 @@ private:
   /// Finds the closing sequence of a regex variable usage or definition.
   ///
   /// \p Str has to point in the beginning of the definition (right after the
-  /// opening sequence). \p SM holds the SourceMgr used for error repporting.
+  /// opening sequence). \p SM holds the SourceMgr used for error reporting.
   ///  \returns the offset of the closing sequence within Str, or npos if it
   /// was not found.
-  size_t FindRegexVarEnd(StringRef Str, SourceMgr &SM);
+  static size_t FindRegexVarEnd(StringRef Str, SourceMgr &SM);
 
   /// Parses \p Expr for the name of a numeric variable to be defined at line
   /// \p LineNumber, or before input is parsed if \p LineNumber is None.
