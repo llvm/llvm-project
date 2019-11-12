@@ -14,15 +14,29 @@
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .long   24
 ; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   16
-; CHECK-NEXT:        .long   16
-; CHECK-NEXT:        .long   5
+; CHECK-NEXT:        .long   56
+; CHECK-NEXT:        .long   56
+; CHECK-NEXT:        .long   13
 ; CHECK-NEXT:        .long   1                       # BTF_KIND_INT(id = 1)
 ; CHECK-NEXT:        .long   16777216                # 0x1000000
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   16777248                # 0x1000020
+; CHECK-NEXT:        .long   5                       # BTF_KIND_VAR(id = 2)
+; CHECK-NEXT:        .long   234881024               # 0xe000000
+; CHECK-NEXT:        .long   1
+; CHECK-NEXT:        .long   1
+; CHECK-NEXT:        .long   7                       # BTF_KIND_DATASEC(id = 3)
+; CHECK-NEXT:        .long   251658241               # 0xf000001
+; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   2
+; CHECK-NEXT:        .long   a
+; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .byte   0                       # string offset=0
 ; CHECK-NEXT:        .ascii  "int"                   # string offset=1
+; CHECK-NEXT:        .byte   0
+; CHECK-NEXT:        .byte   97                      # string offset=5
+; CHECK-NEXT:        .byte   0
+; CHECK-NEXT:        .ascii  ".data"                 # string offset=7
 ; CHECK-NEXT:        .byte   0
 
 !llvm.dbg.cu = !{!2}

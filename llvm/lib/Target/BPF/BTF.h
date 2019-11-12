@@ -180,8 +180,6 @@ struct BTFParam {
 enum : uint8_t {
   VAR_STATIC = 0,           ///< Linkage: InternalLinkage
   VAR_GLOBAL_ALLOCATED = 1, ///< Linkage: ExternalLinkage
-  VAR_GLOBAL_TENTATIVE = 2, ///< Linkage: CommonLinkage
-  VAR_GLOBAL_EXTERNAL = 3,  ///< Linkage: ExternalLinkage
 };
 
 /// BTF_KIND_DATASEC are followed by multiple "struct BTFDataSecVar".
