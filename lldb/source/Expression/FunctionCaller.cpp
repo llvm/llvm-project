@@ -29,14 +29,16 @@
 
 using namespace lldb_private;
 
+char FunctionCaller::ID;
+
 // FunctionCaller constructor
 FunctionCaller::FunctionCaller(ExecutionContextScope &exe_scope,
                                const CompilerType &return_type,
                                const Address &functionAddress,
                                const ValueList &arg_value_list,
                                const char *name)
-    : Expression(exe_scope, eKindFunctionCaller), m_execution_unit_sp(),
-      m_parser(), m_jit_module_wp(), m_name(name ? name : "<unknown>"),
+    : Expression(exe_scope), m_execution_unit_sp(), m_parser(),
+      m_jit_module_wp(), m_name(name ? name : "<unknown>"),
       m_function_ptr(nullptr), m_function_addr(functionAddress),
       m_function_return_type(return_type),
       m_wrapper_function_name("__lldb_caller_function"),

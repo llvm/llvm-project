@@ -35,20 +35,20 @@
 
 using namespace lldb_private;
 
+char LLVMUserExpression::ID;
+
 LLVMUserExpression::LLVMUserExpression(ExecutionContextScope &exe_scope,
                                        llvm::StringRef expr,
                                        llvm::StringRef prefix,
                                        lldb::LanguageType language,
                                        ResultType desired_type,
-                                       const EvaluateExpressionOptions &options,
-                                       ExpressionKind kind)
-    : UserExpression(exe_scope, expr, prefix, language, desired_type, options,
-                     kind),
+                                       const EvaluateExpressionOptions &options)
+    : UserExpression(exe_scope, expr, prefix, language, desired_type, options),
       m_stack_frame_bottom(LLDB_INVALID_ADDRESS),
       m_stack_frame_top(LLDB_INVALID_ADDRESS), m_allow_cxx(false),
       m_allow_objc(false), m_transformed_text(), m_execution_unit_sp(),
-      m_materializer_up(), m_jit_module_wp(),
-      m_can_interpret(false), m_materialized_address(LLDB_INVALID_ADDRESS) {}
+      m_materializer_up(), m_jit_module_wp(), m_can_interpret(false),
+      m_materialized_address(LLDB_INVALID_ADDRESS) {}
 
 LLVMUserExpression::~LLVMUserExpression() {
   if (m_target) {
