@@ -159,6 +159,9 @@ public:
   /// Whether the PCH has a corresponding object file.
   bool PCHHasObjectFile = false;
 
+  /// Whether the top-level module has been read from the AST file.
+  bool DidReadTopLevelSubmodule = false;
+
   /// The file entry for the module file.
   const FileEntry *File = nullptr;
 
