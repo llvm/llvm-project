@@ -523,10 +523,10 @@ private:
   /// Finds the closing sequence of a regex variable usage or definition.
   ///
   /// \p Str has to point in the beginning of the definition (right after the
-  /// opening sequence). \p SM holds the SourceMgr used for error repporting.
+  /// opening sequence). \p SM holds the SourceMgr used for error reporting.
   ///  \returns the offset of the closing sequence within Str, or npos if it
   /// was not found.
-  size_t FindRegexVarEnd(StringRef Str, SourceMgr &SM);
+  static size_t FindRegexVarEnd(StringRef Str, SourceMgr &SM);
 
   /// Parses \p Expr for the name of a numeric variable to be defined at line
   /// \p LineNumber, or before input is parsed if \p LineNumber is None.
