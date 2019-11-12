@@ -6,7 +6,7 @@
 
 # CHECK:         .debug_loc.dwo contents:
 # CHECK-NEXT:    0x00000000:
-# CHECK-NEXT:    Addr idx 1 (w/ length 16): DW_OP_reg5 RDI
+# CHECK-NEXT:    DW_LLE_startx_length (0x00000001, 0x00000010): DW_OP_reg5 RDI
 
 .section .debug_loc.dwo,"",@progbits
 # One location list. The pre-DWARF v5 implementation only recognizes
