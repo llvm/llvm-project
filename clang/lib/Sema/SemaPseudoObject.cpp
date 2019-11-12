@@ -145,7 +145,7 @@ namespace {
         assocExprs.reserve(numAssocs);
         assocTypes.reserve(numAssocs);
 
-        for (const GenericSelectionExpr::Association &assoc :
+        for (const GenericSelectionExpr::Association assoc :
              gse->associations()) {
           Expr *assocExpr = assoc.getAssociationExpr();
           if (assoc.isSelected())
