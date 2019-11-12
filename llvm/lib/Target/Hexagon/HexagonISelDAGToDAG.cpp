@@ -1261,7 +1261,7 @@ void HexagonDAGToDAGISel::PreprocessISelDAG() {
 }
 
 void HexagonDAGToDAGISel::EmitFunctionEntryCode() {
-  auto &HST = static_cast<const HexagonSubtarget&>(MF->getSubtarget());
+  auto &HST = MF->getSubtarget<HexagonSubtarget>();
   auto &HFI = *HST.getFrameLowering();
   if (!HFI.needsAligna(*MF))
     return;
@@ -1269,10 +1269,21 @@ void HexagonDAGToDAGISel::EmitFunctionEntryCode() {
   MachineFrameInfo &MFI = MF->getFrameInfo();
   MachineBasicBlock *EntryBB = &MF->front();
   unsigned AR = FuncInfo->CreateReg(MVT::i32);
-  unsigned MaxA = MFI.getMaxAlignment();
+  unsigned EntryMaxA = MFI.getMaxAlignment();
   BuildMI(EntryBB, DebugLoc(), HII->get(Hexagon::PS_aligna), AR)
-      .addImm(MaxA);
+      .addImm(EntryMaxA);
   MF->getInfo<HexagonMachineFunctionInfo>()->setStackAlignBaseVReg(AR);
+}
+
+void HexagonDAGToDAGISel::updateAligna() {
+  auto &HFI = *MF->getSubtarget<HexagonSubtarget>().getFrameLowering();
+  if (!HFI.needsAligna(*MF))
+    return;
+  auto *AlignaI = const_cast<MachineInstr*>(HFI.getAlignaInstr(*MF));
+  assert(AlignaI != nullptr);
+  unsigned MaxA = MF->getFrameInfo().getMaxAlignment();
+  if (AlignaI->getOperand(1).getImm() < MaxA)
+    AlignaI->getOperand(1).setImm(MaxA);
 }
 
 // Match a frame index that can be used in an addressing mode.
