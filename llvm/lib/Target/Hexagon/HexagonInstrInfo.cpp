@@ -888,10 +888,7 @@ void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned SlotAlign = MFI.getObjectAlignment(FI);
-  unsigned RegAlign = TRI->getSpillAlignment(*RC);
   unsigned KillFlag = getKillRegState(isKill);
-  bool HasAlloca = MFI.hasVarSizedObjects();
-  const HexagonFrameLowering &HFI = *Subtarget.getFrameLowering();
 
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOStore,
@@ -918,29 +915,13 @@ void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       .addFrameIndex(FI).addImm(0)
       .addReg(SrcReg, KillFlag).addMemOperand(MMO);
   } else if (Hexagon::HvxVRRegClass.hasSubClassEq(RC)) {
-    // If there are variable-sized objects, spills will not be aligned.
-    if (HasAlloca)
-      SlotAlign = HFI.getStackAlignment();
-    unsigned Opc = SlotAlign < RegAlign ? Hexagon::V6_vS32Ub_ai
-                                        : Hexagon::V6_vS32b_ai;
-    MachineMemOperand *MMOA = MF.getMachineMemOperand(
-        MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOStore,
-        MFI.getObjectSize(FI), SlotAlign);
-    BuildMI(MBB, I, DL, get(Opc))
+    BuildMI(MBB, I, DL, get(Hexagon::PS_vstorerv_ai))
       .addFrameIndex(FI).addImm(0)
-      .addReg(SrcReg, KillFlag).addMemOperand(MMOA);
+      .addReg(SrcReg, KillFlag).addMemOperand(MMO);
   } else if (Hexagon::HvxWRRegClass.hasSubClassEq(RC)) {
-    // If there are variable-sized objects, spills will not be aligned.
-    if (HasAlloca)
-      SlotAlign = HFI.getStackAlignment();
-    unsigned Opc = SlotAlign < RegAlign ? Hexagon::PS_vstorerwu_ai
-                                        : Hexagon::PS_vstorerw_ai;
-    MachineMemOperand *MMOA = MF.getMachineMemOperand(
-        MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOStore,
-        MFI.getObjectSize(FI), SlotAlign);
-    BuildMI(MBB, I, DL, get(Opc))
+    BuildMI(MBB, I, DL, get(Hexagon::PS_vstorerw_ai))
       .addFrameIndex(FI).addImm(0)
-      .addReg(SrcReg, KillFlag).addMemOperand(MMOA);
+      .addReg(SrcReg, KillFlag).addMemOperand(MMO);
   } else {
     llvm_unreachable("Unimplemented");
   }
@@ -954,9 +935,6 @@ void HexagonInstrInfo::loadRegFromStackSlot(
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned SlotAlign = MFI.getObjectAlignment(FI);
-  unsigned RegAlign = TRI->getSpillAlignment(*RC);
-  bool HasAlloca = MFI.hasVarSizedObjects();
-  const HexagonFrameLowering &HFI = *Subtarget.getFrameLowering();
 
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOLoad,
@@ -978,27 +956,11 @@ void HexagonInstrInfo::loadRegFromStackSlot(
     BuildMI(MBB, I, DL, get(Hexagon::PS_vloadrq_ai), DestReg)
       .addFrameIndex(FI).addImm(0).addMemOperand(MMO);
   } else if (Hexagon::HvxVRRegClass.hasSubClassEq(RC)) {
-    // If there are variable-sized objects, spills will not be aligned.
-    if (HasAlloca)
-      SlotAlign = HFI.getStackAlignment();
-    unsigned Opc = SlotAlign < RegAlign ? Hexagon::V6_vL32Ub_ai
-                                        : Hexagon::V6_vL32b_ai;
-    MachineMemOperand *MMOA = MF.getMachineMemOperand(
-        MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOLoad,
-        MFI.getObjectSize(FI), SlotAlign);
-    BuildMI(MBB, I, DL, get(Opc), DestReg)
-      .addFrameIndex(FI).addImm(0).addMemOperand(MMOA);
+    BuildMI(MBB, I, DL, get(Hexagon::PS_vloadrv_ai), DestReg)
+      .addFrameIndex(FI).addImm(0).addMemOperand(MMO);
   } else if (Hexagon::HvxWRRegClass.hasSubClassEq(RC)) {
-    // If there are variable-sized objects, spills will not be aligned.
-    if (HasAlloca)
-      SlotAlign = HFI.getStackAlignment();
-    unsigned Opc = SlotAlign < RegAlign ? Hexagon::PS_vloadrwu_ai
-                                        : Hexagon::PS_vloadrw_ai;
-    MachineMemOperand *MMOA = MF.getMachineMemOperand(
-        MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOLoad,
-        MFI.getObjectSize(FI), SlotAlign);
-    BuildMI(MBB, I, DL, get(Opc), DestReg)
-      .addFrameIndex(FI).addImm(0).addMemOperand(MMOA);
+    BuildMI(MBB, I, DL, get(Hexagon::PS_vloadrw_ai), DestReg)
+      .addFrameIndex(FI).addImm(0).addMemOperand(MMO);
   } else {
     llvm_unreachable("Can't store this register to stack slot");
   }
@@ -1038,6 +1000,15 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MIB.addReg(CSx, RegState::Implicit);
     MBB.erase(MI);
     return true;
+  };
+
+  auto UseAligned = [&] (const MachineInstr &MI, unsigned NeedAlign) {
+    if (MI.memoperands().empty())
+      return false;
+    return all_of(MI.memoperands(),
+                  [NeedAlign] (const MachineMemOperand *MMO) {
+                    return NeedAlign <= MMO->getAlignment();
+                  });
   };
 
   switch (Opc) {
@@ -1086,47 +1057,78 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       MRI.clearKillFlags(SrcSubHi);
       return true;
     }
-    case Hexagon::PS_vstorerw_ai:
-    case Hexagon::PS_vstorerwu_ai: {
-      bool Aligned = Opc == Hexagon::PS_vstorerw_ai;
-      Register SrcReg = MI.getOperand(2).getReg();
-      Register SrcSubHi = HRI.getSubReg(SrcReg, Hexagon::vsub_hi);
-      Register SrcSubLo = HRI.getSubReg(SrcReg, Hexagon::vsub_lo);
-      unsigned NewOpc = Aligned ? Hexagon::V6_vS32b_ai : Hexagon::V6_vS32Ub_ai;
-      unsigned Offset = HRI.getSpillSize(Hexagon::HvxVRRegClass);
-
-      MachineInstr *MI1New = BuildMI(MBB, MI, DL, get(NewOpc))
-                                 .add(MI.getOperand(0))
-                                 .addImm(MI.getOperand(1).getImm())
-                                 .addReg(SrcSubLo)
-                                 .cloneMemRefs(MI);
-      MI1New->getOperand(0).setIsKill(false);
-      BuildMI(MBB, MI, DL, get(NewOpc))
-          .add(MI.getOperand(0))
-          // The Vectors are indexed in multiples of vector size.
-          .addImm(MI.getOperand(1).getImm() + Offset)
-          .addReg(SrcSubHi)
+    case Hexagon::PS_vloadrv_ai: {
+      Register DstReg = MI.getOperand(0).getReg();
+      const MachineOperand &BaseOp = MI.getOperand(1);
+      assert(BaseOp.getSubReg() == 0);
+      int Offset = MI.getOperand(2).getImm();
+      unsigned NeedAlign = HRI.getSpillAlignment(Hexagon::HvxVRRegClass);
+      unsigned NewOpc = UseAligned(MI, NeedAlign) ? Hexagon::V6_vL32b_ai
+                                                  : Hexagon::V6_vL32Ub_ai;
+      BuildMI(MBB, MI, DL, get(NewOpc), DstReg)
+          .addReg(BaseOp.getReg(), getRegState(BaseOp))
+          .addImm(Offset)
           .cloneMemRefs(MI);
       MBB.erase(MI);
       return true;
     }
-    case Hexagon::PS_vloadrw_ai:
-    case Hexagon::PS_vloadrwu_ai: {
-      bool Aligned = Opc == Hexagon::PS_vloadrw_ai;
+    case Hexagon::PS_vloadrw_ai: {
       Register DstReg = MI.getOperand(0).getReg();
-      unsigned NewOpc = Aligned ? Hexagon::V6_vL32b_ai : Hexagon::V6_vL32Ub_ai;
-      unsigned Offset = HRI.getSpillSize(Hexagon::HvxVRRegClass);
-
-      MachineInstr *MI1New = BuildMI(MBB, MI, DL, get(NewOpc),
-                                     HRI.getSubReg(DstReg, Hexagon::vsub_lo))
-                                 .add(MI.getOperand(1))
-                                 .addImm(MI.getOperand(2).getImm())
-                                 .cloneMemRefs(MI);
-      MI1New->getOperand(1).setIsKill(false);
-      BuildMI(MBB, MI, DL, get(NewOpc), HRI.getSubReg(DstReg, Hexagon::vsub_hi))
-          .add(MI.getOperand(1))
-          // The Vectors are indexed in multiples of vector size.
-          .addImm(MI.getOperand(2).getImm() + Offset)
+      const MachineOperand &BaseOp = MI.getOperand(1);
+      assert(BaseOp.getSubReg() == 0);
+      int Offset = MI.getOperand(2).getImm();
+      unsigned VecOffset = HRI.getSpillSize(Hexagon::HvxVRRegClass);
+      unsigned NeedAlign = HRI.getSpillAlignment(Hexagon::HvxVRRegClass);
+      unsigned NewOpc = UseAligned(MI, NeedAlign) ? Hexagon::V6_vL32b_ai
+                                                  : Hexagon::V6_vL32Ub_ai;
+      BuildMI(MBB, MI, DL, get(NewOpc),
+              HRI.getSubReg(DstReg, Hexagon::vsub_lo))
+          .addReg(BaseOp.getReg(), getRegState(BaseOp) & ~RegState::Kill)
+          .addImm(Offset)
+          .cloneMemRefs(MI);
+      BuildMI(MBB, MI, DL, get(NewOpc),
+              HRI.getSubReg(DstReg, Hexagon::vsub_hi))
+          .addReg(BaseOp.getReg(), getRegState(BaseOp))
+          .addImm(Offset + VecOffset)
+          .cloneMemRefs(MI);
+      MBB.erase(MI);
+      return true;
+    }
+    case Hexagon::PS_vstorerv_ai: {
+      const MachineOperand &SrcOp = MI.getOperand(2);
+      assert(SrcOp.getSubReg() == 0);
+      const MachineOperand &BaseOp = MI.getOperand(0);
+      assert(BaseOp.getSubReg() == 0);
+      int Offset = MI.getOperand(1).getImm();
+      unsigned NeedAlign = HRI.getSpillAlignment(Hexagon::HvxVRRegClass);
+      unsigned NewOpc = UseAligned(MI, NeedAlign) ? Hexagon::V6_vS32b_ai
+                                                  : Hexagon::V6_vS32Ub_ai;
+      BuildMI(MBB, MI, DL, get(NewOpc))
+          .addReg(BaseOp.getReg(), getRegState(BaseOp))
+          .addImm(Offset)
+          .addReg(SrcOp.getReg(), getRegState(SrcOp))
+          .cloneMemRefs(MI);
+      MBB.erase(MI);
+      return true;
+    }
+    case Hexagon::PS_vstorerw_ai: {
+      Register SrcReg = MI.getOperand(2).getReg();
+      const MachineOperand &BaseOp = MI.getOperand(0);
+      assert(BaseOp.getSubReg() == 0);
+      int Offset = MI.getOperand(1).getImm();
+      unsigned VecOffset = HRI.getSpillSize(Hexagon::HvxVRRegClass);
+      unsigned NeedAlign = HRI.getSpillAlignment(Hexagon::HvxVRRegClass);
+      unsigned NewOpc = UseAligned(MI, NeedAlign) ? Hexagon::V6_vS32b_ai
+                                                  : Hexagon::V6_vS32Ub_ai;
+      BuildMI(MBB, MI, DL, get(NewOpc))
+          .addReg(BaseOp.getReg(), getRegState(BaseOp) & ~RegState::Kill)
+          .addImm(Offset)
+          .addReg(HRI.getSubReg(SrcReg, Hexagon::vsub_lo))
+          .cloneMemRefs(MI);
+      BuildMI(MBB, MI, DL, get(NewOpc))
+          .addReg(BaseOp.getReg(), getRegState(BaseOp))
+          .addImm(Offset + VecOffset)
+          .addReg(HRI.getSubReg(SrcReg, Hexagon::vsub_hi))
           .cloneMemRefs(MI);
       MBB.erase(MI);
       return true;
@@ -2683,9 +2685,11 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   // misaligns with respect to load size.
   switch (Opcode) {
   case Hexagon::PS_vstorerq_ai:
+  case Hexagon::PS_vstorerv_ai:
   case Hexagon::PS_vstorerw_ai:
   case Hexagon::PS_vstorerw_nt_ai:
   case Hexagon::PS_vloadrq_ai:
+  case Hexagon::PS_vloadrv_ai:
   case Hexagon::PS_vloadrw_ai:
   case Hexagon::PS_vloadrw_nt_ai:
   case Hexagon::V6_vL32b_ai:
