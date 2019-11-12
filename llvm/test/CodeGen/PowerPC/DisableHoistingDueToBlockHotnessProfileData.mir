@@ -1,7 +1,7 @@
 # NOTE: This test verifies disable/enable instruction hoisting to hot blocks based on profile data
-# RUN: llc -run-pass early-machinelicm -disable-hoisting-to-hotter-blocks=pgo -block-freq-ratio-threshold=100 %s -o - | FileCheck %s --check-prefix=CHECK-NO-HOIST
-# RUN: llc -run-pass early-machinelicm -disable-hoisting-to-hotter-blocks=pgo -block-freq-ratio-threshold=100000000 %s -o - | FileCheck %s --check-prefix=CHECK-HOIST
-# RUN: llc -run-pass early-machinelicm -disable-hoisting-to-hotter-blocks=none -block-freq-ratio-threshold=100 %s -o - | FileCheck %s --check-prefix=CHECK-HOIST
+# RUN: llc -run-pass early-machinelicm -mtriple=powerpc64le-unknown-linux-gnu -disable-hoisting-to-hotter-blocks=pgo -block-freq-ratio-threshold=100 %s -o - | FileCheck %s --check-prefix=CHECK-NO-HOIST
+# RUN: llc -run-pass early-machinelicm -mtriple=powerpc64le-unknown-linux-gnu -disable-hoisting-to-hotter-blocks=pgo -block-freq-ratio-threshold=100000000 %s -o - | FileCheck %s --check-prefix=CHECK-HOIST
+# RUN: llc -run-pass early-machinelicm -mtriple=powerpc64le-unknown-linux-gnu -disable-hoisting-to-hotter-blocks=none -block-freq-ratio-threshold=100 %s -o - | FileCheck %s --check-prefix=CHECK-HOIST
 
 --- |
   target datalayout = "e-m:e-i64:64-n32:64"
