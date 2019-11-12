@@ -1259,8 +1259,9 @@ void SymbolFileNativePDB::FindTypes(
   FindTypesByName(name.GetStringRef(), max_matches, types);
 }
 
-void SymbolFileNativePDB::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                                    LanguageSet languages, TypeMap &types) {}
+void SymbolFileNativePDB::FindTypes(
+    llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
+    llvm::DenseSet<SymbolFile *> &searched_symbol_files, TypeMap &types) {}
 
 void SymbolFileNativePDB::FindTypesByName(llvm::StringRef name,
                                           uint32_t max_matches,
