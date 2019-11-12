@@ -342,7 +342,7 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
         swift_runtime->GetMetadataPromise(argmetadata_ptr, valobj));
     if (promise_sp)
       if (CompilerType type = promise_sp->FulfillTypePromise())
-        argument_type = type.GetGenericArgumentType(0);
+        argument_type = SwiftASTContext::GetGenericArgumentType(type, 0);
 
     if (!argument_type.IsValid())
       return nullptr;

@@ -366,8 +366,8 @@ HashedCollectionConfig::CreateNativeHandler(
   }
   
   if (typeName.startswith(m_nativeStorage_demangledPrefix.GetStringRef())) {
-    auto key_type = type.GetGenericArgumentType(0);
-    auto value_type = type.GetGenericArgumentType(1);
+    auto key_type = SwiftASTContext::GetGenericArgumentType(type, 0);
+    auto value_type = SwiftASTContext::GetGenericArgumentType(type, 1);
     if (key_type.IsValid()) {
       return _CreateNativeHandler(dynamic_storage_sp, key_type, value_type);
     }
@@ -377,8 +377,8 @@ HashedCollectionConfig::CreateNativeHandler(
   // is some valid storage class instance, and attempt to get
   // key/value types from value_sp.
   type = value_sp->GetCompilerType();
-  CompilerType key_type = type.GetGenericArgumentType(0);
-  CompilerType value_type = type.GetGenericArgumentType(1);
+  CompilerType key_type = SwiftASTContext::GetGenericArgumentType(type, 0);
+  CompilerType value_type = SwiftASTContext::GetGenericArgumentType(type, 1);
   if (key_type.IsValid()) {
     return _CreateNativeHandler(storage_sp, key_type, value_type);
   }

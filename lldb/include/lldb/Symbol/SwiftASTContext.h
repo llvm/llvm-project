@@ -599,7 +599,8 @@ public:
   lldb::GenericKind GetGenericArgumentKind(void *type, size_t idx);
   CompilerType GetUnboundGenericType(void *type, size_t idx);
   CompilerType GetBoundGenericType(void *type, size_t idx);
-  CompilerType GetGenericArgumentType(void *type, size_t idx) override;
+  static CompilerType GetGenericArgumentType(CompilerType ct, size_t idx);
+  CompilerType GetGenericArgumentType(void *type, size_t idx);
 
   CompilerType GetTypeForFormatters(void *type) override;
 
