@@ -586,6 +586,7 @@ static Instruction *combineLoadToOperationType(InstCombiner &IC, LoadInst &LI) {
   // Do not perform canonicalization if minmax pattern is found (to avoid
   // infinite loop).
   if (!Ty->isIntegerTy() && Ty->isSized() &&
+      !(Ty->isVectorTy() && Ty->getVectorIsScalable()) &&
       DL.isLegalInteger(DL.getTypeStoreSizeInBits(Ty)) &&
       DL.typeSizeEqualsStoreSize(Ty) &&
       !DL.isNonIntegralPointerType(Ty) &&
