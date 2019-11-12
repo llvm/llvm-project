@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 %s -triple arm64-none-linux-gnu -target-feature +neon -fsyntax-only -verify
 // RUN: %clang_cc1 %s -triple arm64-none-linux-gnu -target-feature +neon -DUSE_LONG -fsyntax-only -verify
 
+// RUN: %clang_cc1 %s -triple arm64_32-apple-ios -target-feature +neon -fsyntax-only -verify
+
 typedef float float32_t;
 typedef unsigned char poly8_t;
 typedef unsigned short poly16_t;
