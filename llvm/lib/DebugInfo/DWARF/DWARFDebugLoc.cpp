@@ -102,13 +102,12 @@ static void dumpExpression(raw_ostream &OS, ArrayRef<uint8_t> Data,
 }
 
 bool DWARFLocationTable::dumpLocationList(uint64_t *Offset, raw_ostream &OS,
-                                          uint64_t BaseAddr,
+                                          Optional<SectionedAddress> BaseAddr,
                                           const MCRegisterInfo *MRI,
                                           DWARFUnit *U, DIDumpOptions DumpOpts,
                                           unsigned Indent) const {
   DWARFLocationInterpreter Interp(
-      SectionedAddress{BaseAddr, SectionedAddress::UndefSection},
-      [U](uint32_t Index) -> Optional<SectionedAddress> {
+      BaseAddr, [U](uint32_t Index) -> Optional<SectionedAddress> {
         if (U)
           return U->getAddrOffsetSectionItem(Index);
         return None;
@@ -342,8 +341,7 @@ void DWARFDebugLoclists::dumpRawEntry(const DWARFLocationEntry &Entry,
 }
 
 void DWARFDebugLoclists::dumpRange(uint64_t StartOffset, uint64_t Size,
-                                   raw_ostream &OS, uint64_t BaseAddr,
-                                   const MCRegisterInfo *MRI,
+                                   raw_ostream &OS, const MCRegisterInfo *MRI,
                                    DIDumpOptions DumpOpts) {
   if (!Data.isValidOffsetForDataOfSize(StartOffset, Size))  {
     OS << "Invalid dump range\n";
@@ -356,7 +354,7 @@ void DWARFDebugLoclists::dumpRange(uint64_t StartOffset, uint64_t Size,
     OS << Separator;
     Separator = "\n";
 
-    CanContinue = dumpLocationList(&Offset, OS, BaseAddr, MRI, nullptr,
+    CanContinue = dumpLocationList(&Offset, OS, /*BaseAddr=*/None, MRI, nullptr,
                                    DumpOpts, /*Indent=*/12);
     OS << '\n';
   }
