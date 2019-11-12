@@ -2149,9 +2149,6 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     bool is_global = symbol.getBinding() == STB_GLOBAL;
     uint32_t flags = symbol.st_other << 8 | symbol.st_info | additional_flags;
-    bool is_mangled =
-        (symbol_name && symbol_name[0] == '_' && symbol_name[1] == 'Z');
-
     llvm::StringRef symbol_ref(symbol_name);
 
     // Symbol names may contain @VERSION suffixes. Find those and strip them
@@ -2159,13 +2156,7 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     size_t version_pos = symbol_ref.find('@');
     bool has_suffix = version_pos != llvm::StringRef::npos;
     llvm::StringRef symbol_bare = symbol_ref.substr(0, version_pos);
-
-    Mangled guess_the_language(ConstString(symbol_bare), true);
-    if (guess_the_language.GuessLanguage() != lldb::eLanguageTypeUnknown) {
-      is_mangled = true;
-    }
-
-    Mangled mangled(ConstString(symbol_bare), is_mangled);
+    Mangled mangled(symbol_bare);
 
     // Now append the suffix back to mangled and unmangled names. Only do it if
     // the demangling was successful (string is not empty).
@@ -2396,14 +2387,11 @@ static unsigned ParsePLTRelocations(
       break;
 
     const char *symbol_name = strtab_data.PeekCStr(symbol.st_name);
-    bool is_mangled =
-        symbol_name ? (symbol_name[0] == '_' && symbol_name[1] == 'Z') : false;
     uint64_t plt_index = plt_offset + i * plt_entsize;
 
     Symbol jump_symbol(
         i + start_id,          // Symbol table index
         symbol_name,           // symbol name.
-        is_mangled,            // is the symbol name mangled?
         eSymbolTypeTrampoline, // Type of this symbol
         false,                 // Is this globally visible?
         false,                 // Is this symbol debug info?
@@ -2791,7 +2779,6 @@ void ObjectFileELF::ParseUnwindSymbols(Symtab *symbol_table,
         Symbol eh_symbol(
             symbol_id,       // Symbol table index.
             symbol_name,     // Symbol name.
-            false,           // Is the symbol name mangled?
             eSymbolTypeCode, // Type of this symbol.
             true,            // Is this globally visible?
             false,           // Is this symbol debug info?

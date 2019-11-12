@@ -8548,7 +8548,8 @@ bool ClangASTContext::AddObjCClassProperty(
                   ? class_interface_decl->lookupInstanceMethod(getter_sel)
                   : class_interface_decl->lookupClassMethod(getter_sel))) {
           const bool isVariadic = false;
-          const bool isSynthesized = false;
+          const bool isPropertyAccessor = false;
+          const bool isSynthesizedAccessorStub = false;
           const bool isImplicitlyDeclared = true;
           const bool isDefined = false;
           const clang::ObjCMethodDecl::ImplementationControl impControl =
@@ -8559,7 +8560,8 @@ bool ClangASTContext::AddObjCClassProperty(
               *clang_ast, clang::SourceLocation(), clang::SourceLocation(),
               getter_sel, ClangUtil::GetQualType(property_clang_type_to_access),
               nullptr, class_interface_decl, isInstance, isVariadic,
-              isSynthesized, isImplicitlyDeclared, isDefined, impControl,
+              isPropertyAccessor, isSynthesizedAccessorStub,
+              isImplicitlyDeclared, isDefined, impControl,
               HasRelatedResultType);
 
           if (getter && metadata)
@@ -8580,7 +8582,8 @@ bool ClangASTContext::AddObjCClassProperty(
                   : class_interface_decl->lookupClassMethod(setter_sel))) {
           clang::QualType result_type = clang_ast->VoidTy;
           const bool isVariadic = false;
-          const bool isSynthesized = false;
+          const bool isPropertyAccessor = true;
+          const bool isSynthesizedAccessorStub = false;
           const bool isImplicitlyDeclared = true;
           const bool isDefined = false;
           const clang::ObjCMethodDecl::ImplementationControl impControl =
@@ -8590,8 +8593,9 @@ bool ClangASTContext::AddObjCClassProperty(
           clang::ObjCMethodDecl *setter = clang::ObjCMethodDecl::Create(
               *clang_ast, clang::SourceLocation(), clang::SourceLocation(),
               setter_sel, result_type, nullptr, class_interface_decl,
-              isInstance, isVariadic, isSynthesized, isImplicitlyDeclared,
-              isDefined, impControl, HasRelatedResultType);
+              isInstance, isVariadic, isPropertyAccessor,
+              isSynthesizedAccessorStub, isImplicitlyDeclared, isDefined,
+              impControl, HasRelatedResultType);
 
           if (setter && metadata)
             ClangASTContext::SetMetadata(clang_ast, setter, *metadata);
@@ -8693,10 +8697,16 @@ clang::ObjCMethodDecl *ClangASTContext::AddMethodToObjCObjectType(
   if (!method_function_prototype)
     return nullptr;
 
-  bool is_synthesized = false;
-  bool is_defined = false;
-  clang::ObjCMethodDecl::ImplementationControl imp_control =
+  const bool isInstance = (name[0] == '-');
+  const bool isVariadic = false;
+  const bool isPropertyAccessor = false;
+  const bool isSynthesizedAccessorStub = false;
+  /// Force this to true because we don't have source locations.
+  const bool isImplicitlyDeclared = true;
+  const bool isDefined = false;
+  const clang::ObjCMethodDecl::ImplementationControl impControl =
       clang::ObjCMethodDecl::None;
+  const bool HasRelatedResultType = false;
 
   const unsigned num_args = method_function_prototype->getNumParams();
 
@@ -8712,10 +8722,8 @@ clang::ObjCMethodDecl *ClangASTContext::AddMethodToObjCObjectType(
       nullptr, // TypeSourceInfo *ResultTInfo,
       ClangASTContext::GetASTContext(ast)->GetDeclContextForType(
           ClangUtil::GetQualType(type)),
-      name[0] == '-', is_variadic, is_synthesized,
-      true, // is_implicitly_declared; we force this to true because we don't
-            // have source locations
-      is_defined, imp_control, false /*has_related_result_type*/);
+      isInstance, isVariadic, isPropertyAccessor, isSynthesizedAccessorStub,
+      isImplicitlyDeclared, isDefined, impControl, HasRelatedResultType);
 
   if (objc_method_decl == nullptr)
     return nullptr;

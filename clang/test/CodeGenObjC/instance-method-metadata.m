@@ -1,6 +1,5 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -S -o %t %s 
-// RUN: FileCheck < %t %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -S %s -o - | FileCheck %s
 
 // rdar://9072317
 

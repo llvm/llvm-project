@@ -3710,7 +3710,7 @@ protected:
             return base_object_sp;
           base_object_sp = m_backend.GetSyntheticBase(
               0, base_type, true,
-              Mangled(base_type_name, true)
+              Mangled(base_type_name)
                   .GetDemangledName(lldb::eLanguageTypeSwift));
           return base_object_sp;
         } else

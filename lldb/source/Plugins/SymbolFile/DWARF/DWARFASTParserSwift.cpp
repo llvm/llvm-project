@@ -290,17 +290,18 @@ void DWARFASTParserSwift::GetClangType(const DWARFDIE &die,
   decl_context.back().kind = CompilerContextKind::AnyType;
   LanguageSet clang_languages = ClangASTContext::GetSupportedLanguagesForTypes();
   // Search any modules referenced by DWARF.
+  auto old_size = clang_types.GetSize();
   for (const auto &name_module : sym_file.getExternalTypeModules()) {
     if (!name_module.second)
       continue;
-    if (name_module.second->GetSymbolFile()->FindTypes(
-            decl_context, clang_languages, true, clang_types))
+    name_module.second->GetSymbolFile()->FindTypes(
+        decl_context, clang_languages, clang_types);
+    if (clang_types.GetSize() > old_size)
       return;
   }
 
   // Next search the .dSYM the DIE came from, if applicable.
-  if (sym_file.FindTypes(decl_context, clang_languages, true, clang_types))
-    return;
+  sym_file.FindTypes(decl_context, clang_languages, clang_types);
 }
 
 Function *DWARFASTParserSwift::ParseFunctionFromDWARF(
