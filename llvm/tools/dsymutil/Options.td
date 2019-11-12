@@ -144,3 +144,15 @@ def: Separate<["-"], "j">,
   Alias<threads>,
   HelpText<"Alias for --num-threads">,
   Group<grp_general>;
+
+def remarks_prepend_path: Separate<["--", "-"], "remarks-prepend-path">,
+  MetaVarName<"<path>">,
+  HelpText<"Specify a directory to prepend to the paths of the external remark files.">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "remarks-prepend-path=">, Alias<remarks_prepend_path>;
+
+def remarks_output_format: Separate<["--", "-"], "remarks-output-format">,
+  MetaVarName<"<format>">,
+  HelpText<"Specify the format to be used when serializing the linked remarks.">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "remarks-output-format=">, Alias<remarks_output_format>;

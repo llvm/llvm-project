@@ -1,4 +1,4 @@
-//===- BitCodes.h - Enum values for the bitcode format ----------*- C++ -*-===//
+//===- BitCodes.h - Enum values for the bitstream format --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This header Bitcode enum values.
+// This header defines bitstream enum values.
 //
 // The enum values defined in this file should be considered permanent.  If
 // new features are added, they should have values added at the end of the
@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_BITCODE_BITCODES_H
-#define LLVM_BITCODE_BITCODES_H
+#ifndef LLVM_BITSTREAM_BITCODES_H
+#define LLVM_BITSTREAM_BITCODES_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/DataTypes.h"
@@ -23,7 +23,7 @@
 #include <cassert>
 
 namespace llvm {
-/// Offsets of the 32-bit fields of bitcode wrapper header.
+/// Offsets of the 32-bit fields of bitstream wrapper header.
 static const unsigned BWH_MagicField = 0 * 4;
 static const unsigned BWH_VersionField = 1 * 4;
 static const unsigned BWH_OffsetField = 2 * 4;

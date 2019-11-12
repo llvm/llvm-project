@@ -20,6 +20,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Bitstream/BitCodes.h"
+#include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
 

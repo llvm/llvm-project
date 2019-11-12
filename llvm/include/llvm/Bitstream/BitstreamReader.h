@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_BITCODE_BITSTREAMREADER_H
-#define LLVM_BITCODE_BITSTREAMREADER_H
+#ifndef LLVM_BITSTREAM_BITSTREAMREADER_H
+#define LLVM_BITSTREAM_BITSTREAMREADER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Bitcode/BitCodes.h"
+#include "llvm/Bitstream/BitCodes.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -97,7 +97,7 @@ private:
   unsigned BitsInCurWord = 0;
 
 public:
-  static const size_t MaxChunkSize = sizeof(word_t) * 8;
+  static const constexpr size_t MaxChunkSize = sizeof(word_t) * 8;
 
   SimpleBitstreamCursor() = default;
   explicit SimpleBitstreamCursor(ArrayRef<uint8_t> BitcodeBytes)
@@ -127,7 +127,7 @@ public:
   ArrayRef<uint8_t> getBitcodeBytes() const { return BitcodeBytes; }
 
   /// Reset the stream to the specified bit number.
-  void JumpToBit(uint64_t BitNo) {
+  Error JumpToBit(uint64_t BitNo) {
     size_t ByteNo = size_t(BitNo/8) & ~(sizeof(word_t)-1);
     unsigned WordBitNo = unsigned(BitNo & (sizeof(word_t)*8-1));
     assert(canSkipToPos(ByteNo) && "Invalid location");
@@ -137,8 +137,14 @@ public:
     BitsInCurWord = 0;
 
     // Skip over any bits that are already consumed.
-    if (WordBitNo)
-      Read(WordBitNo);
+    if (WordBitNo) {
+      if (Expected<word_t> Res = Read(WordBitNo))
+        return Error::success();
+      else
+        return Res.takeError();
+    }
+
+    return Error::success();
   }
 
   /// Get a pointer into the bitstream at the specified byte offset.
@@ -154,9 +160,11 @@ public:
     return getPointerToByte(BitNo / 8, NumBytes);
   }
 
-  void fillCurWord() {
+  Error fillCurWord() {
     if (NextChar >= BitcodeBytes.size())
-      report_fatal_error("Unexpected end of file");
+      return createStringError(std::errc::io_error,
+                               "Unexpected end of file reading %u of %u bytes",
+                               NextChar, BitcodeBytes.size());
 
     // Read the next word from the stream.
     const uint8_t *NextCharPtr = BitcodeBytes.data() + NextChar;
@@ -175,9 +183,10 @@ public:
     }
     NextChar += BytesRead;
     BitsInCurWord = BytesRead * 8;
+    return Error::success();
   }
 
-  word_t Read(unsigned NumBits) {
+  Expected<word_t> Read(unsigned NumBits) {
     static const unsigned BitsInWord = MaxChunkSize;
 
     assert(NumBits && NumBits <= BitsInWord &&
@@ -199,11 +208,14 @@ public:
     word_t R = BitsInCurWord ? CurWord : 0;
     unsigned BitsLeft = NumBits - BitsInCurWord;
 
-    fillCurWord();
+    if (Error fillResult = fillCurWord())
+      return std::move(fillResult);
 
     // If we run out of data, abort.
     if (BitsLeft > BitsInCurWord)
-      report_fatal_error("Unexpected end of file");
+      return createStringError(std::errc::io_error,
+                               "Unexpected end of file reading %u of %u bits",
+                               BitsInCurWord, BitsLeft);
 
     word_t R2 = CurWord & (~word_t(0) >> (BitsInWord - BitsLeft));
 
@@ -217,8 +229,12 @@ public:
     return R;
   }
 
-  uint32_t ReadVBR(unsigned NumBits) {
-    uint32_t Piece = Read(NumBits);
+  Expected<uint32_t> ReadVBR(unsigned NumBits) {
+    Expected<unsigned> MaybeRead = Read(NumBits);
+    if (!MaybeRead)
+      return MaybeRead;
+    uint32_t Piece = MaybeRead.get();
+
     if ((Piece & (1U << (NumBits-1))) == 0)
       return Piece;
 
@@ -231,14 +247,21 @@ public:
         return Result;
 
       NextBit += NumBits-1;
-      Piece = Read(NumBits);
+      MaybeRead = Read(NumBits);
+      if (!MaybeRead)
+        return MaybeRead;
+      Piece = MaybeRead.get();
     }
   }
 
   // Read a VBR that may have a value up to 64-bits in size. The chunk size of
   // the VBR must still be <= 32 bits though.
-  uint64_t ReadVBR64(unsigned NumBits) {
-    uint32_t Piece = Read(NumBits);
+  Expected<uint64_t> ReadVBR64(unsigned NumBits) {
+    Expected<uint64_t> MaybeRead = Read(NumBits);
+    if (!MaybeRead)
+      return MaybeRead;
+    uint32_t Piece = MaybeRead.get();
+
     if ((Piece & (1U << (NumBits-1))) == 0)
       return uint64_t(Piece);
 
@@ -251,7 +274,10 @@ public:
         return Result;
 
       NextBit += NumBits-1;
-      Piece = Read(NumBits);
+      MaybeRead = Read(NumBits);
+      if (!MaybeRead)
+        return MaybeRead;
+      Piece = MaybeRead.get();
     }
   }
 
@@ -349,6 +375,7 @@ public:
   using SimpleBitstreamCursor::Read;
   using SimpleBitstreamCursor::ReadVBR;
   using SimpleBitstreamCursor::ReadVBR64;
+  using SimpleBitstreamCursor::skipToEnd;
 
   /// Return the number of bits used to encode an abbrev #.
   unsigned getAbbrevIDWidth() const { return CurCodeSize; }
@@ -365,12 +392,16 @@ public:
   };
 
   /// Advance the current bitstream, returning the next entry in the stream.
-  BitstreamEntry advance(unsigned Flags = 0) {
+  Expected<BitstreamEntry> advance(unsigned Flags = 0) {
     while (true) {
       if (AtEndOfStream())
         return BitstreamEntry::getError();
 
-      unsigned Code = ReadCode();
+      Expected<unsigned> MaybeCode = ReadCode();
+      if (!MaybeCode)
+        return MaybeCode.takeError();
+      unsigned Code = MaybeCode.get();
+
       if (Code == bitc::END_BLOCK) {
         // Pop the end of the block unless Flags tells us not to.
         if (!(Flags & AF_DontPopBlockAtEnd) && ReadBlockEnd())
@@ -378,14 +409,19 @@ public:
         return BitstreamEntry::getEndBlock();
       }
 
-      if (Code == bitc::ENTER_SUBBLOCK)
-        return BitstreamEntry::getSubBlock(ReadSubBlockID());
+      if (Code == bitc::ENTER_SUBBLOCK) {
+        if (Expected<unsigned> MaybeSubBlock = ReadSubBlockID())
+          return BitstreamEntry::getSubBlock(MaybeSubBlock.get());
+        else
+          return MaybeSubBlock.takeError();
+      }
 
       if (Code == bitc::DEFINE_ABBREV &&
           !(Flags & AF_DontAutoprocessAbbrevs)) {
         // We read and accumulate abbrev's, the client can't do anything with
         // them anyway.
-        ReadAbbrevRecord();
+        if (Error Err = ReadAbbrevRecord())
+          return std::move(Err);
         continue;
       }
 
@@ -395,53 +431,66 @@ public:
 
   /// This is a convenience function for clients that don't expect any
   /// subblocks. This just skips over them automatically.
-  BitstreamEntry advanceSkippingSubblocks(unsigned Flags = 0) {
+  Expected<BitstreamEntry> advanceSkippingSubblocks(unsigned Flags = 0) {
     while (true) {
       // If we found a normal entry, return it.
-      BitstreamEntry Entry = advance(Flags);
+      Expected<BitstreamEntry> MaybeEntry = advance(Flags);
+      if (!MaybeEntry)
+        return MaybeEntry;
+      BitstreamEntry Entry = MaybeEntry.get();
+
       if (Entry.Kind != BitstreamEntry::SubBlock)
         return Entry;
 
       // If we found a sub-block, just skip over it and check the next entry.
-      if (SkipBlock())
-        return BitstreamEntry::getError();
+      if (Error Err = SkipBlock())
+        return std::move(Err);
     }
   }
 
-  unsigned ReadCode() {
-    return Read(CurCodeSize);
-  }
+  Expected<unsigned> ReadCode() { return Read(CurCodeSize); }
 
   // Block header:
   //    [ENTER_SUBBLOCK, blockid, newcodelen, <align4bytes>, blocklen]
 
   /// Having read the ENTER_SUBBLOCK code, read the BlockID for the block.
-  unsigned ReadSubBlockID() {
-    return ReadVBR(bitc::BlockIDWidth);
-  }
+  Expected<unsigned> ReadSubBlockID() { return ReadVBR(bitc::BlockIDWidth); }
 
   /// Having read the ENTER_SUBBLOCK abbrevid and a BlockID, skip over the body
-  /// of this block. If the block record is malformed, return true.
-  bool SkipBlock() {
-    // Read and ignore the codelen value.  Since we are skipping this block, we
-    // don't care what code widths are used inside of it.
-    ReadVBR(bitc::CodeLenWidth);
+  /// of this block.
+  Error SkipBlock() {
+    // Read and ignore the codelen value.
+    if (Expected<uint32_t> Res = ReadVBR(bitc::CodeLenWidth))
+      ; // Since we are skipping this block, we don't care what code widths are
+        // used inside of it.
+    else
+      return Res.takeError();
+
     SkipToFourByteBoundary();
-    size_t NumFourBytes = Read(bitc::BlockSizeWidth);
+    Expected<unsigned> MaybeNum = Read(bitc::BlockSizeWidth);
+    if (!MaybeNum)
+      return MaybeNum.takeError();
+    size_t NumFourBytes = MaybeNum.get();
 
     // Check that the block wasn't partially defined, and that the offset isn't
     // bogus.
-    size_t SkipTo = GetCurrentBitNo() + NumFourBytes*4*8;
-    if (AtEndOfStream() || !canSkipToPos(SkipTo/8))
-      return true;
+    size_t SkipTo = GetCurrentBitNo() + NumFourBytes * 4 * 8;
+    if (AtEndOfStream())
+      return createStringError(std::errc::illegal_byte_sequence,
+                               "can't skip block: already at end of stream");
+    if (!canSkipToPos(SkipTo / 8))
+      return createStringError(std::errc::illegal_byte_sequence,
+                               "can't skip to bit %zu from %" PRIu64, SkipTo,
+                               GetCurrentBitNo());
 
-    JumpToBit(SkipTo);
-    return false;
+    if (Error Res = JumpToBit(SkipTo))
+      return Res;
+
+    return Error::success();
   }
 
-  /// Having read the ENTER_SUBBLOCK abbrevid, enter the block, and return true
-  /// if the block has an error.
-  bool EnterSubBlock(unsigned BlockID, unsigned *NumWordsP = nullptr);
+  /// Having read the ENTER_SUBBLOCK abbrevid, and enter the block.
+  Error EnterSubBlock(unsigned BlockID, unsigned *NumWordsP = nullptr);
 
   bool ReadBlockEnd() {
     if (BlockScope.empty()) return true;
@@ -476,22 +525,23 @@ public:
   }
 
   /// Read the current record and discard it, returning the code for the record.
-  unsigned skipRecord(unsigned AbbrevID);
+  Expected<unsigned> skipRecord(unsigned AbbrevID);
 
-  unsigned readRecord(unsigned AbbrevID, SmallVectorImpl<uint64_t> &Vals,
-                      StringRef *Blob = nullptr);
+  Expected<unsigned> readRecord(unsigned AbbrevID,
+                                SmallVectorImpl<uint64_t> &Vals,
+                                StringRef *Blob = nullptr);
 
   //===--------------------------------------------------------------------===//
   // Abbrev Processing
   //===--------------------------------------------------------------------===//
-  void ReadAbbrevRecord();
+  Error ReadAbbrevRecord();
 
   /// Read and return a block info block from the bitstream. If an error was
   /// encountered, return None.
   ///
   /// \param ReadBlockInfoNames Whether to read block/record name information in
   /// the BlockInfo block. Only llvm-bcanalyzer uses this.
-  Optional<BitstreamBlockInfo>
+  Expected<Optional<BitstreamBlockInfo>>
   ReadBlockInfoBlock(bool ReadBlockInfoNames = false);
 
   /// Set the block info to be used by this BitstreamCursor to interpret
@@ -501,4 +551,4 @@ public:
 
 } // end llvm namespace
 
-#endif // LLVM_BITCODE_BITSTREAMREADER_H
+#endif // LLVM_BITSTREAM_BITSTREAMREADER_H
