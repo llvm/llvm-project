@@ -43,6 +43,7 @@ public:
     HII = HST->getInstrInfo();
     HRI = HST->getRegisterInfo();
     SelectionDAGISel::runOnMachineFunction(MF);
+    updateAligna();
     return true;
   }
 
@@ -143,6 +144,9 @@ private:
   void ppAddrReorderAddShl(std::vector<SDNode*> &&Nodes);
   void ppAddrRewriteAndSrl(std::vector<SDNode*> &&Nodes);
   void ppHoistZextI1(std::vector<SDNode*> &&Nodes);
+
+  // Function postprocessing.
+  void updateAligna();
 
   SmallDenseMap<SDNode *,int> RootWeights;
   SmallDenseMap<SDNode *,int> RootHeights;

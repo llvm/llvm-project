@@ -68,3 +68,58 @@ for.end:                                          ; preds = %for.cond.for.end_cr
   ret i32 %sum.0.lcssa
 }
 
+; FIXME: PR43948 - https://bugs.llvm.org/show_bug.cgi?id=43948
+; The extra use of a non-vectorized element of a reduction must not be killed.
+
+define i32 @horiz_max_multiple_uses([32 x i32]* %x, i32* %p) {
+; CHECK-LABEL: @horiz_max_multiple_uses(
+; CHECK-NEXT:    [[X0:%.*]] = getelementptr [32 x i32], [32 x i32]* [[X:%.*]], i64 0, i64 0
+; CHECK-NEXT:    [[X4:%.*]] = getelementptr [32 x i32], [32 x i32]* [[X]], i64 0, i64 4
+; CHECK-NEXT:    [[X5:%.*]] = getelementptr [32 x i32], [32 x i32]* [[X]], i64 0, i64 5
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[X0]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 4
+; CHECK-NEXT:    [[T4:%.*]] = load i32, i32* [[X4]]
+; CHECK-NEXT:    [[T5:%.*]] = load i32, i32* [[X5]]
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp sgt <4 x i32> [[TMP2]], [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i32> [[TMP2]], <4 x i32> [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp sgt <4 x i32> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
+; CHECK-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x i32> [[RDX_MINMAX_SELECT]], <4 x i32> [[RDX_SHUF1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[RDX_MINMAX_SELECT3]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP3]], [[T4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32 [[TMP3]], i32 [[T4]]
+; CHECK-NEXT:    [[C012345:%.*]] = icmp sgt i32 [[TMP5]], [[T5]]
+; CHECK-NEXT:    [[T17:%.*]] = select i1 [[C012345]], i32 [[TMP5]], i32 [[T5]]
+; CHECK-NEXT:    [[THREE_OR_FOUR:%.*]] = select i1 undef, i32 3, i32 4
+; CHECK-NEXT:    store i32 [[THREE_OR_FOUR]], i32* [[P:%.*]], align 8
+; CHECK-NEXT:    ret i32 [[T17]]
+;
+  %x0 = getelementptr [32 x i32], [32 x i32]* %x, i64 0, i64 0
+  %x1 = getelementptr [32 x i32], [32 x i32]* %x, i64 0, i64 1
+  %x2 = getelementptr [32 x i32], [32 x i32]* %x, i64 0, i64 2
+  %x3 = getelementptr [32 x i32], [32 x i32]* %x, i64 0, i64 3
+  %x4 = getelementptr [32 x i32], [32 x i32]* %x, i64 0, i64 4
+  %x5 = getelementptr [32 x i32], [32 x i32]* %x, i64 0, i64 5
+
+  %t0 = load i32, i32* %x0
+  %t1 = load i32, i32* %x1
+  %t2 = load i32, i32* %x2
+  %t3 = load i32, i32* %x3
+  %t4 = load i32, i32* %x4
+  %t5 = load i32, i32* %x5
+
+  %c01 = icmp sgt i32 %t0, %t1
+  %s5 = select i1 %c01, i32 %t0, i32 %t1
+  %c012 = icmp sgt i32 %s5, %t2
+  %t8 = select i1 %c012, i32 %s5, i32 %t2
+  %c0123 = icmp sgt i32 %t8, %t3
+  %rdx4 = select i1 %c0123, i32 %t8, i32 %t3
+  %EXTRA_USE = icmp sgt i32 %rdx4, %t4
+  %t14 = select i1 %EXTRA_USE, i32 %rdx4, i32 %t4
+  %c012345 = icmp sgt i32 %t14, %t5
+  %t17 = select i1 %c012345, i32 %t14, i32 %t5
+  %THREE_OR_FOUR = select i1 %EXTRA_USE, i32 3, i32 4
+  store i32 %THREE_OR_FOUR, i32* %p, align 8
+  ret i32 %t17
+}
