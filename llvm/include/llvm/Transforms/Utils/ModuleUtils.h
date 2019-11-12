@@ -13,6 +13,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 #define LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include <utility> // for std::pair
 
@@ -107,6 +108,23 @@ void filterDeadComdatFunctions(
 /// semantic effect if it performs global initialization), we cannot produce a
 /// unique identifier for this module, so we return the empty string.
 std::string getUniqueModuleId(Module *M);
+
+class TargetLibraryInfo;
+class CallInst;
+namespace VFABI {
+
+/// \defgroup Vector Function ABI (VABI) Module functions.
+///
+/// Utility functions for VFABI data that can modify the module.
+///
+/// @{
+/// Overwrite the Vector Function ABI variants attribute with the names provide
+/// in \p VariantMappings.
+void setVectorVariantNames(CallInst *CI,
+                           const SmallVector<std::string, 8> &VariantMappings);
+
+/// @}
+} // End VFABI namespace
 
 } // End llvm namespace
 
