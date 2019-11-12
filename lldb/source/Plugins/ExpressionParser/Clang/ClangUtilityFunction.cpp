@@ -31,6 +31,8 @@
 
 using namespace lldb_private;
 
+char ClangUtilityFunction::ID;
+
 /// Constructor
 ///
 /// \param[in] text
@@ -40,7 +42,7 @@ using namespace lldb_private;
 ///     The name of the function, as used in the text.
 ClangUtilityFunction::ClangUtilityFunction(ExecutionContextScope &exe_scope,
                                            const char *text, const char *name)
-    : UtilityFunction(exe_scope, text, name, eKindClangUtilityFunction) {
+    : UtilityFunction(exe_scope, text, name) {
   m_function_text.assign(ClangExpressionSourceCode::g_expression_prefix);
   if (text && text[0])
     m_function_text.append(text);
