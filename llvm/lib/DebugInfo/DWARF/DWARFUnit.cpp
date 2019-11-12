@@ -352,6 +352,7 @@ void DWARFUnit::clear() {
   Abbrevs = nullptr;
   BaseAddr.reset();
   RangeSectionBase = 0;
+  LocSectionBase = 0;
   AddrOffsetSectionBase = 0;
   clearDIEs(false);
   DWO.reset();
@@ -442,11 +443,13 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
   if (!IsDWO) {
     assert(AddrOffsetSectionBase == 0);
     assert(RangeSectionBase == 0);
+    assert(LocSectionBase == 0);
     AddrOffsetSectionBase = toSectionOffset(UnitDie.find(DW_AT_addr_base), 0);
     if (!AddrOffsetSectionBase)
       AddrOffsetSectionBase =
           toSectionOffset(UnitDie.find(DW_AT_GNU_addr_base), 0);
     RangeSectionBase = toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0);
+    LocSectionBase = toSectionOffset(UnitDie.find(DW_AT_loclists_base), 0);
   }
 
   // In general, in DWARF v5 and beyond we derive the start of the unit's
@@ -497,6 +500,28 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
       // Adjust RangeSectionBase to point past the table header.
       if (IsDWO && RngListTable)
         RangeSectionBase = RngListTable->getHeaderSize();
+    }
+
+    // FIXME: add loclists.dwo support
+    setLocSection(&Context.getDWARFObj().getLoclistsSection(),
+                  toSectionOffset(UnitDie.find(DW_AT_loclists_base), 0));
+
+    if (LocSection->Data.size()) {
+      LoclistTableHeader.emplace(".debug_loclists", "locations");
+      uint64_t Offset = LocSectionBase;
+      uint64_t HeaderSize = DWARFListTableHeader::getHeaderSize(Header.getFormat());
+      DWARFDataExtractor Data(Context.getDWARFObj(), *LocSection,
+                              isLittleEndian, getAddressByteSize());
+      if (Offset < HeaderSize)
+        return createStringError(errc::invalid_argument,
+                                 "did not detect a valid"
+                                 " list table with base = 0x%" PRIx64 "\n",
+                                 Offset);
+      Offset -= HeaderSize;
+      if (Error E = LoclistTableHeader->extract(Data, &Offset))
+        return createStringError(errc::invalid_argument,
+                                 "parsing a loclist table: " +
+                                     toString(std::move(E)));
     }
   }
 
