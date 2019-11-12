@@ -189,7 +189,7 @@ if.false:
 }
 
 define i32* @f7_3() {
-; ATTRIBUTOR: define nonnull dereferenceable(4) i32* @f7_3()
+; ATTRIBUTOR: define nonnull align 16 dereferenceable(4) i32* @f7_3()
   %ptr = tail call i32* @unkown_ptr()
   store i32 10, i32* %ptr, align 16
   ret i32* %ptr
