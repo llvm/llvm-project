@@ -21,6 +21,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/RegisterContext.h"
@@ -28,6 +29,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
+#include "lldb/Utility/Timer.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -58,9 +60,53 @@ bool CPPLanguageRuntime::GetObjectDescription(
   return false;
 }
 
+bool contains_lambda_identifier(llvm::StringRef &str_ref) {
+  return str_ref.contains("$_") || str_ref.contains("'lambda'");
+};
+
+CPPLanguageRuntime::LibCppStdFunctionCallableInfo
+line_entry_helper(Target &target, const SymbolContext &sc, Symbol *symbol,
+                  llvm::StringRef first_template_param_sref,
+                  bool has___invoke) {
+
+  CPPLanguageRuntime::LibCppStdFunctionCallableInfo optional_info;
+
+  AddressRange range;
+  sc.GetAddressRange(eSymbolContextEverything, 0, false, range);
+
+  Address address = range.GetBaseAddress();
+
+  Address addr;
+  if (target.ResolveLoadAddress(address.GetCallableLoadAddress(&target),
+                                addr)) {
+    LineEntry line_entry;
+    addr.CalculateSymbolContextLineEntry(line_entry);
+
+    if (contains_lambda_identifier(first_template_param_sref) || has___invoke) {
+      // Case 1 and 2
+      optional_info.callable_case = lldb_private::CPPLanguageRuntime::
+          LibCppStdFunctionCallableCase::Lambda;
+    } else {
+      // Case 3
+      optional_info.callable_case = lldb_private::CPPLanguageRuntime::
+          LibCppStdFunctionCallableCase::CallableObject;
+    }
+
+    optional_info.callable_symbol = *symbol;
+    optional_info.callable_line_entry = line_entry;
+    optional_info.callable_address = addr;
+  }
+
+  return optional_info;
+}
+
 CPPLanguageRuntime::LibCppStdFunctionCallableInfo
 CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
     lldb::ValueObjectSP &valobj_sp) {
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat,
+                     "CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo");
+
   LibCppStdFunctionCallableInfo optional_info;
 
   if (!valobj_sp)
@@ -93,7 +139,7 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   //    this entry and lookup operator()() and obtain the line table entry.
   // 3) a callable object via operator()(). We will obtain the name of the
   //    object from the first template parameter from __func's vtable. We will
-  //    look up the objectc operator()() and obtain the line table entry.
+  //    look up the objects operator()() and obtain the line table entry.
   // 4) a member function. A pointer to the function will stored after the
   //    we will obtain the name from this pointer.
   // 5) a free function. A pointer to the function will stored after the vtable
@@ -113,6 +159,9 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
 
   optional_info.member__f_pointer_value = member__f_pointer_value;
 
+  if (!member__f_pointer_value)
+    return optional_info;
+
   ExecutionContext exe_ctx(valobj_sp->GetExecutionContextRef());
   Process *process = exe_ctx.GetProcessPtr();
 
@@ -130,8 +179,14 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   if (status.Fail())
     return optional_info;
 
+  lldb::addr_t vtable_address_first_entry =
+      process->ReadPointerFromMemory(vtable_address + address_size, status);
+
+  if (status.Fail())
+    return optional_info;
+
   lldb::addr_t address_after_vtable = member__f_pointer_value + address_size;
-  // As commened above we may not have a function pointer but if we do we will
+  // As commented above we may not have a function pointer but if we do we will
   // need it.
   lldb::addr_t possible_function_address =
       process->ReadPointerFromMemory(address_after_vtable, status);
@@ -144,9 +199,15 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   if (target.GetSectionLoadList().IsEmpty())
     return optional_info;
 
+  Address vtable_first_entry_resolved;
+
+  if (!target.GetSectionLoadList().ResolveLoadAddress(
+          vtable_address_first_entry, vtable_first_entry_resolved))
+    return optional_info;
+
   Address vtable_addr_resolved;
   SymbolContext sc;
-  Symbol *symbol;
+  Symbol *symbol = nullptr;
 
   if (!target.GetSectionLoadList().ResolveLoadAddress(vtable_address,
                                                       vtable_addr_resolved))
@@ -159,7 +220,7 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   if (symbol == nullptr)
     return optional_info;
 
-  llvm::StringRef vtable_name(symbol->GetName().GetCString());
+  llvm::StringRef vtable_name(symbol->GetName().GetStringRef());
   bool found_expected_start_string =
       vtable_name.startswith("vtable for std::__1::__function::__func<");
 
@@ -171,6 +232,11 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   //
   //  ... __func<main::$_0, std::__1::allocator<main::$_0> ...
   //             ^^^^^^^^^
+  //
+  // We could see names such as:
+  //    main::$_0
+  //    Bar::add_num2(int)::'lambda'(int)
+  //    Bar
   //
   // We do this by find the first < and , and extracting in between.
   //
@@ -192,17 +258,29 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
         function_address_resolved, eSymbolContextEverything, sc);
     symbol = sc.symbol;
   }
-    
-    auto contains_lambda_identifier = []( llvm::StringRef & str_ref ) {
-        return str_ref.contains("$_") || str_ref.contains("'lambda'");
-    };
+
+  // These conditions are used several times to simplify statements later on.
+  bool has___invoke =
+      (symbol ? symbol->GetName().GetStringRef().contains("__invoke") : false);
+  auto calculate_symbol_context_helper = [](auto &t,
+                                            SymbolContextList &sc_list) {
+    SymbolContext sc;
+    t->CalculateSymbolContext(&sc);
+    sc_list.Append(sc);
+  };
+
+  // Case 2
+  if (has___invoke) {
+    SymbolContextList scl;
+    calculate_symbol_context_helper(symbol, scl);
+
+    return line_entry_helper(target, scl[0], symbol, first_template_parameter,
+                             has___invoke);
+  }
 
   // Case 4 or 5
-  // We eliminate these cases early because they don't need the potentially
-  // expensive lookup through the symbol table.
   if (symbol && !symbol->GetName().GetStringRef().startswith("vtable for") &&
-      !contains_lambda_identifier(first_template_parameter) &&
-      !symbol->GetName().GetStringRef().contains("__invoke")) {
+      !contains_lambda_identifier(first_template_parameter) && !has___invoke) {
     optional_info.callable_case =
         LibCppStdFunctionCallableCase::FreeOrMemberFunction;
     optional_info.callable_address = function_address_resolved;
@@ -211,41 +289,7 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
     return optional_info;
   }
 
-  auto get_name = [&first_template_parameter, &symbol, contains_lambda_identifier]() {
-    // Given case 1:
-    //
-    //    main::$_0
-    //    Bar::add_num2(int)::'lambda'(int)
-    //
-    // we want to append ::operator()()
-    if (contains_lambda_identifier(first_template_parameter))
-      return llvm::Regex::escape(first_template_parameter.str()) +
-             R"(::operator\(\)\(.*\))";
-
-    if (symbol != nullptr &&
-        symbol->GetName().GetStringRef().contains("__invoke")) {
-
-      llvm::StringRef symbol_name = symbol->GetName().GetStringRef();
-      size_t pos2 = symbol_name.find_last_of(':');
-
-      // Given case 2:
-      //
-      //    main::$_1::__invoke(...)
-      //
-      // We want to slice off __invoke(...) and append operator()()
-      std::string lambda_operator =
-          llvm::Regex::escape(symbol_name.slice(0, pos2 + 1).str()) +
-          R"(operator\(\)\(.*\))";
-
-      return lambda_operator;
-    }
-
-    // Case 3
-    return first_template_parameter.str() + R"(::operator\(\)\(.*\))";
-    ;
-  };
-
-  std::string func_to_match = get_name();
+  std::string func_to_match = first_template_parameter.str();
 
   auto it = CallableLookupCache.find(func_to_match);
   if (it != CallableLookupCache.end())
@@ -253,39 +297,38 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
 
   SymbolContextList scl;
 
-  target.GetImages().FindSymbolsMatchingRegExAndType(
-      RegularExpression{R"(^)" + func_to_match}, eSymbolTypeAny, scl);
+  CompileUnit *vtable_cu =
+      vtable_first_entry_resolved.CalculateSymbolContextCompileUnit();
+  llvm::StringRef name_to_use = func_to_match;
 
-  // Case 1,2 or 3
-  if (scl.GetSize() >= 1) {
-    SymbolContext sc2 = scl[0];
+  // Case 3, we have a callable object instead of a lambda
+  //
+  // TODO
+  // We currently don't support this case a callable object may have multiple
+  // operator()() varying on const/non-const and number of arguments and we
+  // don't have a way to currently distinguish them so we will bail out now.
+  if (!contains_lambda_identifier(name_to_use))
+    return optional_info;
 
-    AddressRange range;
-    sc2.GetAddressRange(eSymbolContextEverything, 0, false, range);
+  if (vtable_cu && !has___invoke) {
+    lldb::FunctionSP func_sp =
+        vtable_cu->FindFunction([name_to_use](const FunctionSP &f) {
+          auto name = f->GetName().GetStringRef();
+          if (name.startswith(name_to_use) && name.contains("operator"))
+            return true;
 
-    Address address = range.GetBaseAddress();
+          return false;
+        });
 
-    Address addr;
-    if (target.ResolveLoadAddress(address.GetCallableLoadAddress(&target),
-                                  addr)) {
-      LineEntry line_entry;
-      addr.CalculateSymbolContextLineEntry(line_entry);
-
-      if (contains_lambda_identifier(first_template_parameter) ||
-          (symbol != nullptr &&
-           symbol->GetName().GetStringRef().contains("__invoke"))) {
-        // Case 1 and 2
-        optional_info.callable_case = LibCppStdFunctionCallableCase::Lambda;
-      } else {
-        // Case 3
-        optional_info.callable_case =
-            LibCppStdFunctionCallableCase::CallableObject;
-      }
-
-      optional_info.callable_symbol = *symbol;
-      optional_info.callable_line_entry = line_entry;
-      optional_info.callable_address = addr;
+    if (func_sp) {
+      calculate_symbol_context_helper(func_sp, scl);
     }
+  }
+
+  // Case 1 or 3
+  if (scl.GetSize() >= 1) {
+    optional_info = line_entry_helper(target, scl[0], symbol,
+                                      first_template_parameter, has___invoke);
   }
 
   CallableLookupCache[func_to_match] = optional_info;

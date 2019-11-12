@@ -32,7 +32,9 @@ int main (int argc, char *argv[])
   return f_mem(bar1) +     // Set break point at this line.
          f1(acc,acc) +     // Source main invoking f1
          f2(acc) +         // Set break point at this line.
-         f3(acc+1,acc+2) + // Set break point at this line. 
-         f4() +            // Set break point at this line. 
+         f3(acc+1,acc+2) + // Set break point at this line.
+         // TODO reenable this case when std::function formatter supports
+         // general callable object case.
+         //f4() +            // Set break point at this line.
          f5(bar1, 10);     // Set break point at this line.
 }
