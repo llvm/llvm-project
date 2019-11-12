@@ -561,6 +561,10 @@ class Value;
   /// the parent of I.
   bool programUndefinedIfFullPoison(const Instruction *PoisonI);
 
+  /// Return true if this function can prove that V is never undef value
+  /// or poison value.
+  bool isGuaranteedNotToBeUndefOrPoison(const Value *V);
+
   /// Specific patterns of select instructions we can match.
   enum SelectPatternFlavor {
     SPF_UNKNOWN = 0,
