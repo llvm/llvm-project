@@ -950,9 +950,9 @@ private:
         if (CurrentToken->isOneOf(tok::star, tok::amp))
           CurrentToken->Type = TT_PointerOrReference;
         consumeToken();
-        if (CurrentToken &&
-            CurrentToken->Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator,
-                                            tok::comma))
+        if (CurrentToken && CurrentToken->Previous->isOneOf(
+                                TT_BinaryOperator, TT_UnaryOperator, tok::comma,
+                                tok::star, tok::arrow, tok::amp, tok::ampamp))
           CurrentToken->Previous->Type = TT_OverloadedOperator;
       }
       if (CurrentToken) {
@@ -1344,8 +1344,12 @@ private:
         Contexts.back().IsExpression = false;
     } else if (Current.is(tok::kw_new)) {
       Contexts.back().CanBeExpression = false;
-    } else if (Current.isOneOf(tok::semi, tok::exclaim)) {
+    } else if (Current.is(tok::semi) ||
+               (Current.is(tok::exclaim) && Current.Previous &&
+                !Current.Previous->is(tok::kw_operator))) {
       // This should be the condition or increment in a for-loop.
+      // But not operator !() (can't use TT_OverloadedOperator here as its not
+      // been annotated yet).
       Contexts.back().IsExpression = true;
     }
   }
@@ -2155,9 +2159,20 @@ static bool isFunctionDeclarationName(const FormatToken &Current,
         continue;
       if (Next->isOneOf(tok::kw_new, tok::kw_delete)) {
         // For 'new[]' and 'delete[]'.
-        if (Next->Next && Next->Next->is(tok::l_square) && Next->Next->Next &&
-            Next->Next->Next->is(tok::r_square))
+        if (Next->Next &&
+            Next->Next->startsSequence(tok::l_square, tok::r_square))
           Next = Next->Next->Next;
+        continue;
+      }
+      if (Next->startsSequence(tok::l_square, tok::r_square)) {
+        // For operator[]().
+        Next = Next->Next;
+        continue;
+      }
+      if ((Next->isSimpleTypeSpecifier() || Next->is(tok::identifier)) &&
+          Next->Next && Next->Next->isOneOf(tok::star, tok::amp, tok::ampamp)) {
+        // For operator void*(), operator char*(), operator Foo*().
+        Next = Next->Next;
         continue;
       }
 
@@ -2673,6 +2688,13 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
                                     tok::l_square));
   if (Right.is(tok::star) && Left.is(tok::l_paren))
     return false;
+  if (Right.isOneOf(tok::star, tok::amp, tok::ampamp) &&
+      (Left.is(tok::identifier) || Left.isSimpleTypeSpecifier()) &&
+      Left.Previous && Left.Previous->is(tok::kw_operator))
+    // Space between the type and the *
+    // operator void*(), operator char*(), operator Foo*() dependant
+    // on PointerAlignment style.
+    return (Style.PointerAlignment == FormatStyle::PAS_Right);
   const auto SpaceRequiredForArrayInitializerLSquare =
       [](const FormatToken &LSquareTok, const FormatStyle &Style) {
         return Style.SpacesInContainerLiterals ||
