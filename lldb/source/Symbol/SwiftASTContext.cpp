@@ -2913,12 +2913,8 @@ public:
     m_ast_context.GetDiagnosticEngine().takeConsumers();
   }
 
-  virtual void
-  handleDiagnostic(swift::SourceManager &source_mgr, swift::SourceLoc Loc,
-                   swift::DiagnosticKind Kind, llvm::StringRef FormatString,
-                   llvm::ArrayRef<swift::DiagnosticArgument> FormatArgs,
-                   const swift::DiagnosticInfo &Info,
-                   swift::SourceLoc bufferIndirectlyCausingDiagnostic) {
+  virtual void handleDiagnostic(swift::SourceManager &source_mgr,
+                                const swift::DiagnosticInfo &info) {
     llvm::StringRef bufferName = "<anonymous>";
     unsigned bufferID = 0;
     std::pair<unsigned, unsigned> line_col = {0, 0};
@@ -2926,11 +2922,11 @@ public:
     llvm::SmallString<256> text;
     {
       llvm::raw_svector_ostream out(text);
-      swift::DiagnosticEngine::formatDiagnosticText(out, FormatString,
-                                                    FormatArgs);
+      swift::DiagnosticEngine::formatDiagnosticText(out, info.FormatString,
+                                                    info.FormatArgs);
     }
 
-    swift::SourceLoc source_loc = Loc;
+    swift::SourceLoc source_loc = info.Loc;
     if (source_loc.isValid()) {
       bufferID = source_mgr.findBufferContainingLoc(source_loc);
       bufferName = source_mgr.getDisplayNameForLoc(source_loc);
@@ -2944,7 +2940,7 @@ public:
       // we want to use its fixits:
       bool use_fixits = false;
       llvm::SourceMgr::DiagKind source_mgr_kind;
-      switch (Kind) {
+      switch (info.Kind) {
       default:
       case swift::DiagnosticKind::Error:
         source_mgr_kind = llvm::SourceMgr::DK_Error;
@@ -2961,12 +2957,12 @@ public:
 
       // Translate ranges.
       llvm::SmallVector<llvm::SMRange, 2> ranges;
-      for (auto R : Info.Ranges)
+      for (auto R : info.Ranges)
         ranges.push_back(getRawRange(source_mgr, R));
 
       // Translate fix-its.
       llvm::SmallVector<llvm::SMFixIt, 2> fix_its;
-      for (swift::DiagnosticInfo::FixIt F : Info.FixIts)
+      for (swift::DiagnosticInfo::FixIt F : info.FixIts)
         fix_its.push_back(getRawFixIt(source_mgr, F));
 
       // Display the diagnostic.
@@ -2981,23 +2977,23 @@ public:
 
       if (message_ref.empty())
         m_diagnostics.push_back(RawDiagnostic(
-            text.str(), Kind, bufferName, bufferID, line_col.first,
+            text.str(), info.Kind, bufferName, bufferID, line_col.first,
             line_col.second,
-            use_fixits ? Info.FixIts
+            use_fixits ? info.FixIts
                        : llvm::ArrayRef<swift::Diagnostic::FixIt>()));
       else
         m_diagnostics.push_back(RawDiagnostic(
-            message_ref, Kind, bufferName, bufferID, line_col.first,
+            message_ref, info.Kind, bufferName, bufferID, line_col.first,
             line_col.second,
-            use_fixits ? Info.FixIts
+            use_fixits ? info.FixIts
                        : llvm::ArrayRef<swift::Diagnostic::FixIt>()));
     } else {
       m_diagnostics.push_back(RawDiagnostic(
-          text.str(), Kind, bufferName, bufferID, line_col.first,
+          text.str(), info.Kind, bufferName, bufferID, line_col.first,
           line_col.second, llvm::ArrayRef<swift::Diagnostic::FixIt>()));
     }
 
-    if (Kind == swift::DiagnosticKind::Error)
+    if (info.Kind == swift::DiagnosticKind::Error)
       m_num_errors++;
   }
 
