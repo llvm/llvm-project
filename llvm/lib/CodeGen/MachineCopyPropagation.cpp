@@ -432,6 +432,15 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     if (hasImplicitOverlap(MI, MOUse))
       continue;
 
+    // Check that the instruction is not a copy that partially overwrites the
+    // original copy source that we are about to use. The tracker mechanism
+    // cannot cope with that.
+    if (MI.isCopy() && MI.modifiesRegister(CopySrcReg, TRI) &&
+        !MI.definesRegister(CopySrcReg)) {
+      LLVM_DEBUG(dbgs() << "MCP: Copy source overlap with dest in " << MI);
+      continue;
+    }
+
     if (!DebugCounter::shouldExecute(FwdCounter)) {
       LLVM_DEBUG(dbgs() << "MCP: Skipping forwarding due to debug counter:\n  "
                         << MI);
