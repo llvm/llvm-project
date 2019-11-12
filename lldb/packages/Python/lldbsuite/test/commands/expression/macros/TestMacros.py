@@ -21,6 +21,9 @@ class TestMacros(TestBase):
         hostoslist=["windows"],
         compiler="gcc",
         triple='.*-android')
+    @expectedFailureAll(
+        compiler="gcc", compiler_version=['<', '5.1'],
+        bugnumber=".debug_macro was introduced in DWARF 5, GCC supports it since version 5.1")
     def test_expr_with_macros(self):
         self.build()
 
