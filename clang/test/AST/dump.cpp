@@ -33,13 +33,11 @@ int ga, gb;
 // CHECK-NEXT: | | |-DeclRefExpr {{.+}} <col:45> 'float' lvalue Var {{.+}} 'omp_out' 'float'
 // CHECK-NEXT: | | `-ImplicitCastExpr {{.+}} <col:56> 'float' <LValueToRValue>
 // CHECK-NEXT: | |   `-DeclRefExpr {{.+}} <col:56> 'float' lvalue Var {{.+}} 'omp_in' 'float'
-// CHECK-NEXT: | |-BinaryOperator {{.+}} <col:76, col:98> 'float' lvalue '='
-// CHECK-NEXT: | | |-DeclRefExpr {{.+}} <col:76> 'float' lvalue Var {{.+}} 'omp_priv' 'float'
-// CHECK-NEXT: | | `-BinaryOperator {{.+}} <col:87, col:98> 'float' '+'
-// CHECK-NEXT: | |   |-ImplicitCastExpr {{.+}} <col:87> 'float' <LValueToRValue>
-// CHECK-NEXT: | |   | `-DeclRefExpr {{.+}} <col:87> 'float' lvalue Var {{.+}} 'omp_orig' 'float'
-// CHECK-NEXT: | |   `-ImplicitCastExpr {{.+}} <col:98> 'float' <IntegralToFloating>
-// CHECK-NEXT: | |     `-IntegerLiteral {{.+}} <col:98> 'int' 15
+// CHECK-NEXT: | |-BinaryOperator {{.+}} <col:87, col:98> 'float' '+'
+// CHECK-NEXT: | | |-ImplicitCastExpr {{.+}} <col:87> 'float' <LValueToRValue>
+// CHECK-NEXT: | | | `-DeclRefExpr {{.+}} <col:87> 'float' lvalue Var {{.+}} 'omp_orig' 'float'
+// CHECK-NEXT: | | `-ImplicitCastExpr {{.+}} <col:98> 'float' <IntegralToFloating>
+// CHECK-NEXT: | |   `-IntegerLiteral {{.+}} <col:98> 'int' 15
 
 struct S {
   int a, b;
