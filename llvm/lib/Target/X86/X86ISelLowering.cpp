@@ -236,8 +236,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // We have an algorithm for SSE2, and we turn this into a 64-bit
     // FILD or VCVTUSI2SS/SD for other targets.
     setOperationAction(ISD::UINT_TO_FP     , MVT::i32  , Custom);
-  } else {
-    setOperationAction(ISD::UINT_TO_FP     , MVT::i32  , Expand);
   }
 
   // Promote i1/i8 SINT_TO_FP to larger SINT_TO_FP's, as X86 doesn't have
@@ -255,9 +253,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SINT_TO_FP     , MVT::i16  , Custom);
       setOperationAction(ISD::SINT_TO_FP     , MVT::i32  , Custom);
     }
-  } else {
-    setOperationAction(ISD::SINT_TO_FP     , MVT::i16  , Promote);
-    setOperationAction(ISD::SINT_TO_FP     , MVT::i32  , Expand);
   }
 
   // Promote i1/i8 FP_TO_SINT to larger FP_TO_SINTS's, as X86 doesn't have
@@ -273,10 +268,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setOperationAction(ISD::FP_TO_SINT     , MVT::i16  , Custom);
     setOperationAction(ISD::FP_TO_SINT     , MVT::i32  , Custom);
-  } else {
-    setOperationAction(ISD::FP_TO_SINT     , MVT::i16  , Promote);
-    setOperationAction(ISD::FP_TO_SINT     , MVT::i32  , Expand);
-    setOperationAction(ISD::FP_TO_SINT     , MVT::i64  , Expand);
   }
 
   // Handle FP_TO_UINT by promoting the destination to a larger signed
