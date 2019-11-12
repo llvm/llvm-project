@@ -108,11 +108,6 @@ public:
 
   bool IsPolymorphicClass() const;
 
-  bool
-  IsPossibleCPlusPlusDynamicType(CompilerType *target_type = nullptr) const {
-    return IsPossibleDynamicType(target_type, true, false);
-  }
-
   bool IsPossibleDynamicType(CompilerType *target_type, // Can pass nullptr
                              bool check_cplusplus, bool check_objc) const;
 
