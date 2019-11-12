@@ -207,7 +207,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
         return {};
       }
       preferred_name = name;
-      compiler_type = {swift_ast_ctx->TheRawPointerType};
+      compiler_type = ToCompilerType({swift_ast_ctx->TheRawPointerType});
     }
   }
 

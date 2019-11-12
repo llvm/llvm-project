@@ -13,6 +13,7 @@
 #ifndef liblldb_SwiftREPLMaterializer_h
 #define liblldb_SwiftREPLMaterializer_h
 
+#include "lldb/Core/SwiftForward.h"
 #include "lldb/Expression/Materializer.h"
 
 namespace lldb_private {
