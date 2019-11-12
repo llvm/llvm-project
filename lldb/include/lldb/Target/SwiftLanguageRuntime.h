@@ -224,7 +224,7 @@ public:
 
   // Use these passthrough functions rather than calling into Swift directly,
   // since some day we may want to support more than one swift variant.
-  static bool IsSwiftMangledName(const char *name);
+  static bool IsSwiftMangledName(llvm::StringRef name);
   
   static bool IsSwiftClassName(const char *name);
 

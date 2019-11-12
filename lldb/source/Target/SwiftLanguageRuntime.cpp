@@ -359,8 +359,9 @@ static bool GetObjectDescription_ResultVariable(Process *process, Stream &str,
 
   lldb_private::formatters::StringPrinter::ReadStringAndDumpToStreamOptions
       dump_options;
-  dump_options.SetEscapeNonPrintables(false).SetQuote('\0').SetPrefixToken(
-      nullptr);
+  dump_options.SetEscapeNonPrintables(false);
+  dump_options.SetQuote('\0');
+  dump_options.SetPrefixToken(nullptr);
   if (lldb_private::formatters::swift::String_SummaryProvider(
           *result_sp.get(), str, TypeSummaryOptions()
                                      .SetLanguage(lldb::eLanguageTypeSwift)
@@ -465,8 +466,9 @@ static bool GetObjectDescription_ObjectReference(Process *process, Stream &str,
 
   lldb_private::formatters::StringPrinter::ReadStringAndDumpToStreamOptions
       dump_options;
-  dump_options.SetEscapeNonPrintables(false).SetQuote('\0').SetPrefixToken(
-      nullptr);
+  dump_options.SetEscapeNonPrintables(false);
+  dump_options.SetQuote('\0');
+  dump_options.SetPrefixToken(nullptr);
   if (lldb_private::formatters::swift::String_SummaryProvider(
           *result_sp.get(), str, TypeSummaryOptions()
                                      .SetLanguage(lldb::eLanguageTypeSwift)
@@ -716,7 +718,7 @@ bool SwiftLanguageRuntime::GetObjectDescription(
   return false;
 }
 
-bool SwiftLanguageRuntime::IsSwiftMangledName(const char *name) {
+bool SwiftLanguageRuntime::IsSwiftMangledName(StringRef name) {
   return swift::Demangle::isSwiftSymbol(name);
 }
 

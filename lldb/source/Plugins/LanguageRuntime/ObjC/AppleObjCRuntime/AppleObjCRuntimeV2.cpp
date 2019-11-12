@@ -494,15 +494,6 @@ bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
   return !class_type_or_name.IsEmpty();
 }
 
-bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
-    ValueObject &in_value, DynamicValueType use_dynamic,
-    TypeAndOrName &class_type_or_name, Address &address,
-    Value::ValueType &value_type) {
-  return GetDynamicTypeAndAddress(in_value, use_dynamic, class_type_or_name,
-                                  address, value_type,
-                                  /* allow_swift = */ false);
-}
-
 //------------------------------------------------------------------
 // Static Functions
 LanguageRuntime *AppleObjCRuntimeV2::CreateInstance(Process *process,

@@ -3295,7 +3295,7 @@ public:
                    StringRef inModule,
                    llvm::SmallVectorImpl<clang::Decl *> &results) override {
     // We will not find any Swift types in the Clang compile units.
-    if (SwiftLanguageRuntime::IsSwiftMangledName(name.str().c_str()))
+    if (SwiftLanguageRuntime::IsSwiftMangledName(name))
       return;
 
     auto clang_importer = m_swift_ast_ctx.GetClangImporter();

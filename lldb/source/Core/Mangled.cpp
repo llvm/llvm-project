@@ -66,9 +66,6 @@ get_demangled_name_without_arguments(ConstString mangled,
   g_last_mangled = mangled;
 
   const char *mangled_name_cstr = mangled.GetCString();
-  // BEGIN SWIFT
-  const char *demangled_name_cstr = demangled.GetCString();
-  // END SWIFT
 
   if (demangled && mangled_name_cstr && mangled_name_cstr[0]) {
     if (mangled_name_cstr[0] == '_' && mangled_name_cstr[1] == 'Z' &&
@@ -93,7 +90,8 @@ get_demangled_name_without_arguments(ConstString mangled,
       }
     }
     // BEGIN SWIFT
-    else if (SwiftLanguageRuntime::IsSwiftMangledName(demangled_name_cstr)) {
+    else if (SwiftLanguageRuntime::IsSwiftMangledName(
+                 demangled.GetStringRef())) {
       lldb_private::ConstString basename;
       bool is_method = false;
       if (SwiftLanguageRuntime::MethodName::ExtractFunctionBasenameFromMangled(
