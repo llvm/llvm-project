@@ -1372,7 +1372,7 @@ void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
     unsigned A = std::max(MFI.getObjectAlignment(i), 8U);
     MFI.setObjectAlignment(i, 8);
     LFS = alignTo(LFS+S, A);
-    MFI.mapLocalFrameObject(i, -LFS);
+    MFI.mapLocalFrameObject(i, -static_cast<int64_t>(LFS));
   }
 
   MFI.setLocalFrameSize(LFS);
