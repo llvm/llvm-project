@@ -77,7 +77,7 @@ EnableGEPOpt("ppc-gep-opt", cl::Hidden,
 
 static cl::opt<bool>
 EnablePrefetch("enable-ppc-prefetching",
-                  cl::desc("disable software prefetching on PPC"),
+                  cl::desc("enable software prefetching on PPC"),
                   cl::init(false), cl::Hidden);
 
 static cl::opt<bool>
