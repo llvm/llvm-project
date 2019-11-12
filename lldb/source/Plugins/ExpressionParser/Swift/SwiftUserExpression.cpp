@@ -44,6 +44,8 @@
 
 using namespace lldb_private;
 
+char SwiftUserExpression::ID;
+
 SwiftUserExpression::SwiftUserExpression(
     ExecutionContextScope &exe_scope, llvm::StringRef expr,
     llvm::StringRef prefix, lldb::LanguageType language,
