@@ -46,8 +46,6 @@ TEST_F(VFABIAttrTest, Write) {
   Mappings.push_back("_ZGVnN8v_g");
   Mappings.push_back("_ZGVnN2v_g(custom_vg)");
   VFABI::setVectorVariantNames(CI, Mappings);
-  const AttributeList Attrs = CI->getAttributes();
-  const AttributeSet FnAttrs = Attrs.getFnAttributes();
   const StringRef S = CI->getAttribute(AttributeList::FunctionIndex,
                                        "vector-function-abi-variant")
                           .getValueAsString();
