@@ -15,6 +15,7 @@
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
