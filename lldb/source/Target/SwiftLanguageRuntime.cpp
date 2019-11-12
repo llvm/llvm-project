@@ -718,7 +718,7 @@ bool SwiftLanguageRuntime::GetObjectDescription(
   return false;
 }
 
-bool SwiftLanguageRuntime::IsSwiftMangledName(const char *name) {
+bool SwiftLanguageRuntime::IsSwiftMangledName(StringRef name) {
   return swift::Demangle::isSwiftSymbol(name);
 }
 

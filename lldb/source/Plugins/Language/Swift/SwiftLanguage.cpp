@@ -127,7 +127,7 @@ SwiftLanguage::GetMethodNameVariants(ConstString method_name) const {
 
   ConstString counterpart;
   if (method_name.GetMangledCounterpart(counterpart))
-    if (SwiftLanguageRuntime::IsSwiftMangledName(counterpart.GetCString()))
+    if (SwiftLanguageRuntime::IsSwiftMangledName(counterpart.GetStringRef()))
       variant_names.emplace_back(counterpart);
   return variant_names;
 }
