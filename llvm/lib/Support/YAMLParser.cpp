@@ -2288,8 +2288,8 @@ Document::Document(Stream &S) : stream(S), Root(nullptr) {
 bool Document::skip()  {
   if (stream.scanner->failed())
     return false;
-  if (!Root)
-    getRoot();
+  if (!Root && !getRoot())
+    return false;
   Root->skip();
   Token &T = peekNext();
   if (T.Kind == Token::TK_StreamEnd)
