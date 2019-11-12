@@ -13,7 +13,7 @@ if(LLDB_BUILD_FRAMEWORK)
   set(option_install_prefix INSTALL_PREFIX ${LLDB_FRAMEWORK_INSTALL_DIR})
 endif()
 
-add_lldb_library(liblldb SHARED
+add_lldb_library(liblldb SHARED FRAMEWORK
   SBAddress.cpp
   SBAttachInfo.cpp
   SBBlock.cpp
