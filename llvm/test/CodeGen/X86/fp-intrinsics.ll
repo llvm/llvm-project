@@ -400,6 +400,25 @@ entry:
   ret double %rem
 }
 
+; Verify that fptosi(%x) isn't simplified when the rounding mode is
+; unknown. The expansion should have only one conversion instruction.
+; Verify that no gross errors happen.
+define i32 @f20s(double %x) #0 {
+; SSE-LABEL: f20s:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    cvttsd2si %xmm0, %eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: f20s:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX-NEXT:    retq
+entry:
+  %result = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %x,
+                                               metadata !"fpexcept.strict") #0
+  ret i32 %result
+}
+
 ; Verify that fptoui(%x) isn't simplified when the rounding mode is
 ; unknown. The expansion should have only one conversion instruction.
 ; Verify that no gross errors happen.
