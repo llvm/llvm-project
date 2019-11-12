@@ -167,6 +167,8 @@ def M3WriteLH : SchedWriteRes<[]>        { let Latency = 5;
                                            let NumMicroOps = 0; }
 def M3WriteLX : SchedWriteVariant<[SchedVar<ExynosScaledIdxPred, [M3WriteL5]>,
                                    SchedVar<NoSchedPred,         [M3WriteL4]>]>;
+def M3WriteLY : SchedWriteVariant<[SchedVar<ExynosScaledIdxPred, [M3WriteLE]>,
+                                   SchedVar<NoSchedPred,         [M3WriteL5]>]>;
 
 def M3WriteS1 : SchedWriteRes<[M3UnitS]>   { let Latency = 1; }
 def M3WriteSA : SchedWriteRes<[M3UnitA,
@@ -176,6 +178,12 @@ def M3WriteSA : SchedWriteRes<[M3UnitA,
 def M3WriteSB : SchedWriteRes<[M3UnitA,
                                M3UnitS]>   { let Latency = 2;
                                              let NumMicroOps = 2; }
+def M3WriteSC : SchedWriteRes<[M3UnitA,
+                               M3UnitS,
+                               M3UnitFST]> { let Latency = 1;
+                                             let NumMicroOps = 2; }
+def M3WriteSY : SchedWriteVariant<[SchedVar<ExynosScaledIdxPred, [M3WriteSA]>,
+                                   SchedVar<NoSchedPred,         [WriteVST]>]>;
 
 def M3ReadAdrBase : SchedReadVariant<[SchedVar<ExynosScaledIdxPred, [ReadDefault]>,
                                       SchedVar<NoSchedPred,         [ReadDefault]>]>;
@@ -559,7 +567,7 @@ def : InstRW<[M3WriteLE,
               ReadAdrBase], (instregex "^LDR[BDHS]roW")>;
 def : InstRW<[WriteVLD,
               ReadAdrBase], (instregex "^LDR[BDHS]roX")>;
-def : InstRW<[M3WriteLE,
+def : InstRW<[M3WriteLY,
               ReadAdrBase], (instregex "^LDRQro[WX]")>;
 def : InstRW<[WriteVLD,
               M3WriteLH],   (instregex "^LDN?P[DS]i")>;
@@ -579,14 +587,16 @@ def : InstRW<[WriteVST,
 def : InstRW<[WriteVST],    (instregex "^STR[BDHSQ]ui")>;
 def : InstRW<[M3WriteSA,
               ReadAdrBase], (instregex "^STR[BDHS]roW")>;
+def : InstRW<[M3WriteSA,
+              ReadAdrBase], (instregex "^STRQroW")>;
 def : InstRW<[WriteVST,
               ReadAdrBase], (instregex "^STR[BDHS]roX")>;
-def : InstRW<[M3WriteSA,
-              ReadAdrBase], (instregex "^STRQro[WX]")>;
+def : InstRW<[M3WriteSY,
+              ReadAdrBase], (instregex "^STRQroX")>;
 def : InstRW<[WriteVST],    (instregex "^STN?P[DSQ]i")>;
 def : InstRW<[WriteVST,
               WriteAdr],    (instregex "^STP[DS](post|pre)")>;
-def : InstRW<[M3WriteSA,
+def : InstRW<[M3WriteSC,
               WriteAdr],    (instregex "^STPQ(post|pre)")>;
 
 // ASIMD instructions.
