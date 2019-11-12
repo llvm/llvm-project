@@ -54,6 +54,15 @@ option(LLDB_NO_INSTALL_DEFAULT_RPATH "Disable default RPATH settings in binaries
 option(LLDB_USE_SYSTEM_DEBUGSERVER "Use the system's debugserver for testing (Darwin only)." OFF)
 option(LLDB_SKIP_STRIP "Whether to skip stripping of binaries when installing lldb." OFF)
 
+if (LLDB_USE_SYSTEM_DEBUGSERVER)
+  # The custom target for the system debugserver has no install target, so we
+  # need to remove it from the LLVM_DISTRIBUTION_COMPONENTS list.
+  if (LLVM_DISTRIBUTION_COMPONENTS)
+    list(REMOVE_ITEM LLVM_DISTRIBUTION_COMPONENTS debugserver)
+    set(LLVM_DISTRIBUTION_COMPONENTS ${LLVM_DISTRIBUTION_COMPONENTS} CACHE STRING "" FORCE)
+  endif()
+endif()
+
 if(LLDB_BUILD_FRAMEWORK)
   if(NOT APPLE)
     message(FATAL_ERROR "LLDB.framework can only be generated when targeting Apple platforms")
