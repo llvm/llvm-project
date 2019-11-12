@@ -1,0 +1,9 @@
+add_llvm_library(ExampleIRTransforms
+  InitializePasses.cpp
+  SimplifyCFG.cpp
+
+  ADDITIONAL_HEADER_DIRS
+
+  DEPENDS
+  intrinsics_gen
+  )
