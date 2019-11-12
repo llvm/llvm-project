@@ -179,6 +179,23 @@ ParseLLVMLineTable(lldb_private::DWARFContext &context,
   return *line_table;
 }
 
+static llvm::Optional<std::string>
+GetFileByIndex(const llvm::DWARFDebugLine::Prologue &prologue, size_t idx,
+               llvm::StringRef compile_dir, FileSpec::Style style) {
+  // Try to get an absolute path first.
+  std::string abs_path;
+  auto absolute = llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath;
+  if (prologue.getFileNameByIndex(idx, compile_dir, absolute, abs_path, style))
+    return std::move(abs_path);
+
+  // Otherwise ask for a relative path.
+  std::string rel_path;
+  auto relative = llvm::DILineInfoSpecifier::FileLineInfoKind::Default;
+  if (!prologue.getFileNameByIndex(idx, compile_dir, relative, rel_path, style))
+    return {};
+  return std::move(rel_path);
+}
+
 static FileSpecList ParseSupportFilesFromPrologue(
     const lldb::ModuleSP &module,
     const llvm::DWARFDebugLine::Prologue &prologue, FileSpec::Style style,
@@ -188,27 +205,12 @@ static FileSpecList ParseSupportFilesFromPrologue(
 
   const size_t number_of_files = prologue.FileNames.size();
   for (size_t idx = 1; idx <= number_of_files; ++idx) {
-    std::string original_file;
-    if (!prologue.getFileNameByIndex(
-            idx, compile_dir,
-            llvm::DILineInfoSpecifier::FileLineInfoKind::Default, original_file,
-            style)) {
-      // Always add an entry so the indexes remain correct.
-      support_files.EmplaceBack();
-      continue;
-    }
-
     std::string remapped_file;
-    if (!prologue.getFileNameByIndex(
-            idx, compile_dir,
-            llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-            remapped_file, style)) {
-      // Always add an entry so the indexes remain correct.
-      support_files.EmplaceBack(original_file, style);
-      continue;
-    }
+    if (auto file_path = GetFileByIndex(prologue, idx, compile_dir, style))
+      if (!module->RemapSourceFile(llvm::StringRef(*file_path), remapped_file))
+        remapped_file = std::move(*file_path);
 
-    module->RemapSourceFile(llvm::StringRef(original_file), remapped_file);
+    // Unconditionally add an entry, so the indices match up.
     support_files.EmplaceBack(remapped_file, style);
   }
 
@@ -2364,11 +2366,9 @@ void SymbolFileDWARF::FindTypes(
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  // Make sure we haven't already searched this SymbolFile before...
-  if (searched_symbol_files.count(this))
+  // Make sure we haven't already searched this SymbolFile before.
+  if (!searched_symbol_files.insert(this).second)
     return;
-
-  searched_symbol_files.insert(this);
 
   DWARFDebugInfo *info = DebugInfo();
   if (!info)
@@ -2451,8 +2451,13 @@ void SymbolFileDWARF::FindTypes(
   }
 }
 
-void SymbolFileDWARF::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                                  LanguageSet languages, TypeMap &types) {
+void SymbolFileDWARF::FindTypes(
+    llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
+    llvm::DenseSet<SymbolFile *> &searched_symbol_files, TypeMap &types) {
+  // Make sure we haven't already searched this SymbolFile before.
+  if (!searched_symbol_files.insert(this).second)
+    return;
+
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   if (pattern.empty())
     return;

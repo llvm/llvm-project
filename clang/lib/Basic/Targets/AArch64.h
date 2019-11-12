@@ -97,6 +97,8 @@ public:
   }
 
   int getEHDataRegisterNumber(unsigned RegNo) const override;
+
+  bool hasInt128Type() const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY AArch64leTargetInfo : public AArch64TargetInfo {

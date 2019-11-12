@@ -8,7 +8,7 @@
 // RUN: %clang %s %target_itanium_abi_host_triple -gdwarf-4 -O0 -c -g -o %t-ex
 // RUN: llvm-objdump -section-headers %t-ex | FileCheck %s
 
-// A function in a different section forces the compiler to create the 
+// A function in a different section forces the compiler to create the
 // __debug_ranges section.
 __attribute__((section("1,__text_foo"))) void foo() {}
 int main (int argc, char const *argv[]) { return argc; }
@@ -17,7 +17,6 @@ int main (int argc, char const *argv[]) { return argc; }
 // CHECK-NEXT: __debug_abbrev
 // CHECK-NEXT: __debug_info
 // CHECK-NEXT: __debug_ranges
-// CHECK-NEXT: __debug_macinfo
 // CHECK-NEXT: __apple_names
 // CHECK-NEXT: __apple_objc
 // CHECK-NEXT: __apple_namespac

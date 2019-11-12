@@ -43,7 +43,7 @@ transformer::detail::translateEdits(const MatchResult &Result,
     // it as is currently done.
     if (!EditRange)
       return SmallVector<Transformation, 0>();
-    auto Replacement = Edit.Replacement(Result);
+    auto Replacement = Edit.Replacement->eval(Result);
     if (!Replacement)
       return Replacement.takeError();
     transformer::detail::Transformation T;
@@ -59,6 +59,28 @@ ASTEdit transformer::changeTo(RangeSelector S, TextGenerator Replacement) {
   E.TargetRange = std::move(S);
   E.Replacement = std::move(Replacement);
   return E;
+}
+
+namespace {
+/// A \c TextGenerator that always returns a fixed string.
+class SimpleTextGenerator : public MatchComputation<std::string> {
+  std::string S;
+
+public:
+  SimpleTextGenerator(std::string S) : S(std::move(S)) {}
+  llvm::Error eval(const ast_matchers::MatchFinder::MatchResult &,
+                   std::string *Result) const override {
+    Result->append(S);
+    return llvm::Error::success();
+  }
+  std::string toString() const override {
+    return (llvm::Twine("text(\"") + S + "\")").str();
+  }
+};
+} // namespace
+
+ASTEdit transformer::remove(RangeSelector S) {
+  return change(std::move(S), std::make_shared<SimpleTextGenerator>(""));
 }
 
 RewriteRule transformer::makeRule(DynTypedMatcher M, SmallVector<ASTEdit, 1> Edits,
@@ -176,3 +198,7 @@ transformer::detail::findSelectedCase(const MatchResult &Result,
 }
 
 constexpr llvm::StringLiteral RewriteRule::RootID;
+
+TextGenerator tooling::text(std::string M) {
+  return std::make_shared<SimpleTextGenerator>(std::move(M));
+}

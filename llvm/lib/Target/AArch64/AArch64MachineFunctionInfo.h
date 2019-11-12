@@ -51,10 +51,15 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   bool HasStackFrame = false;
 
   /// Amount of stack frame size, not including callee-saved registers.
-  unsigned LocalStackSize;
+  unsigned LocalStackSize = 0;
+
+  /// The start and end frame indices for the SVE callee saves.
+  int MinSVECSFrameIndex = 0;
+  int MaxSVECSFrameIndex = 0;
 
   /// Amount of stack frame size used for saving callee-saved registers.
-  unsigned CalleeSavedStackSize;
+  unsigned CalleeSavedStackSize = 0;
+  unsigned SVECalleeSavedStackSize = 0;
   bool HasCalleeSavedStackSize = false;
 
   /// Number of TLS accesses using the special (combinable)
@@ -118,7 +123,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // Offset from SP-at-entry to the tagged base pointer.
   // Tagged base pointer is set up to point to the first (lowest address) tagged
   // stack slot.
-  unsigned TaggedBasePointerOffset;
+  unsigned TaggedBasePointerOffset = 0;
 
 public:
   AArch64FunctionInfo() = default;
@@ -161,7 +166,6 @@ public:
   void setCalleeSaveStackHasFreeSpace(bool s) {
     CalleeSaveStackHasFreeSpace = s;
   }
-
   bool isSplitCSR() const { return IsSplitCSR; }
   void setIsSplitCSR(bool s) { IsSplitCSR = s; }
 
@@ -217,6 +221,22 @@ public:
            "CalleeSavedStackSize has not been calculated");
     return CalleeSavedStackSize;
   }
+
+  // Saves the CalleeSavedStackSize for SVE vectors in 'scalable bytes'
+  void setSVECalleeSavedStackSize(unsigned Size) {
+    SVECalleeSavedStackSize = Size;
+  }
+  unsigned getSVECalleeSavedStackSize() const {
+    return SVECalleeSavedStackSize;
+  }
+
+  void setMinMaxSVECSFrameIndex(int Min, int Max) {
+    MinSVECSFrameIndex = Min;
+    MaxSVECSFrameIndex = Max;
+  }
+
+  int getMinSVECSFrameIndex() const { return MinSVECSFrameIndex; }
+  int getMaxSVECSFrameIndex() const { return MaxSVECSFrameIndex; }
 
   void incNumLocalDynamicTLSAccesses() { ++NumLocalDynamicTLSAccesses; }
   unsigned getNumLocalDynamicTLSAccesses() const {

@@ -109,7 +109,10 @@ def ExynosScaledIdxFn   : TIIPredicate<"isExynosScaledAddr",
 def ExynosScaledIdxPred : MCSchedPredicate<ExynosScaledIdxFn>;
 
 // Identify FP instructions.
-def ExynosFPPred : MCSchedPredicate<CheckAny<[CheckDForm, CheckQForm]>>;
+def ExynosFPPred : MCSchedPredicate<CheckAny<[CheckHForm,
+                                              CheckSForm,
+                                              CheckDForm,
+                                              CheckQForm]>>;
 
 // Identify 128-bit NEON instructions.
 def ExynosQFormPred : MCSchedPredicate<CheckQForm>;

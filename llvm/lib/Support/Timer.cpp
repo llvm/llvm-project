@@ -91,14 +91,15 @@ static TimerGroup *getDefaultTimerGroup() { return &*DefaultTimerGroup; }
 // Timer Implementation
 //===----------------------------------------------------------------------===//
 
-void Timer::init(StringRef Name, StringRef Description) {
-  init(Name, Description, *getDefaultTimerGroup());
+void Timer::init(StringRef TimerName, StringRef TimerDescription) {
+  init(TimerName, TimerDescription, *getDefaultTimerGroup());
 }
 
-void Timer::init(StringRef Name, StringRef Description, TimerGroup &tg) {
+void Timer::init(StringRef TimerName, StringRef TimerDescription,
+                 TimerGroup &tg) {
   assert(!TG && "Timer already initialized");
-  this->Name.assign(Name.begin(), Name.end());
-  this->Description.assign(Description.begin(), Description.end());
+  Name.assign(TimerName.begin(), TimerName.end());
+  Description.assign(TimerDescription.begin(), TimerDescription.end());
   Running = Triggered = false;
   TG = &tg;
   TG->addTimer(*this);

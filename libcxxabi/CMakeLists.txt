@@ -270,6 +270,13 @@ include(config-ix)
 
 if (LIBCXXABI_HAS_NOSTDINCXX_FLAG)
   list(APPEND LIBCXXABI_COMPILE_FLAGS -nostdinc++)
+  # cmake 3.14 and above remove system include paths that are explicitly
+  # passed on the command line.  We build with -nostdinc++ and explicitly add
+  # just the libcxx system include paths with -I on the command line.
+  # Setting CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES effectively prevents cmake
+  # from removing these.
+  # See: https://gitlab.kitware.com/cmake/cmake/issues/19227
+  set(CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES "")
   # Remove -stdlib flags to prevent them from causing an unused flag warning.
   string(REPLACE "-stdlib=libc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   string(REPLACE "-stdlib=libstdc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")

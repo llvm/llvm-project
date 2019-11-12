@@ -26,10 +26,10 @@ class TestNoGPacketSupported(GDBRemoteTestBase):
     def test(self):
         class MyResponder(MockGDBServerResponder):
             def haltReason(self):
-                return "T11thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;00:7882773ce0ffffff;01:1122334455667788;03:00bc010001000000;"
+                return "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;00:7882773ce0ffffff;01:1122334455667788;03:00bc010001000000;"
 
             def threadStopInfo(self, threadnum):
-                return "T11thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;00:7882773ce0ffffff;01:1122334455667788;03:00bc010001000000;"
+                return "T02thread:1ff0d;threads:1ff0d;thread-pcs:000000010001bc00;00:7882773ce0ffffff;01:1122334455667788;03:00bc010001000000;"
 
             def writeRegisters(self):
                 return "E02"

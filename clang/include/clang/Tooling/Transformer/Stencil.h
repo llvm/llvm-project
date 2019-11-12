@@ -32,33 +32,8 @@
 
 namespace clang {
 namespace transformer {
-class StencilInterface {
-public:
-  virtual ~StencilInterface() = default;
 
-  /// Evaluates this part to a string and appends it to \c Result.  \c Result is
-  /// undefined in the case of an error. `Result` is an out parameter to
-  /// optimize the expected common case of evaluating a sequence of generators.
-  virtual llvm::Error eval(const ast_matchers::MatchFinder::MatchResult &Match,
-                           std::string *Result) const = 0;
-
-  /// Convenience version of `eval`, for the case where the generator is being
-  /// evaluated on its own.
-  llvm::Expected<std::string>
-  eval(const ast_matchers::MatchFinder::MatchResult &R) const;
-
-  /// Constructs a string representation of the StencilInterface. The
-  /// representation must be deterministic, but is not required to be unique.
-  virtual std::string toString() const = 0;
-
-protected:
-  StencilInterface() = default;
-
-  // Since this is an abstract class, copying/assigning only make sense for
-  // derived classes implementing `clone()`.
-  StencilInterface(const StencilInterface &) = default;
-  StencilInterface &operator=(const StencilInterface &) = default;
-};
+using StencilInterface = MatchComputation<std::string>;
 
 /// A sequence of code fragments, references to parameters and code-generation
 /// operations that together can be evaluated to (a fragment of) source code or
@@ -68,27 +43,13 @@ protected:
 /// Since `StencilInterface` is an immutable interface, the sharing doesn't
 /// impose any risks. Otherwise, we would have to add a virtual `copy` method to
 /// the API and implement it for all derived classes.
-class Stencil {
-  std::shared_ptr<StencilInterface> Impl;
-
-public:
-  Stencil() = default;
-  explicit Stencil(std::shared_ptr<StencilInterface> Ptr)
-      : Impl(std::move(Ptr)) {}
-
-  StencilInterface *operator->() const { return Impl.get(); }
-
-  llvm::Expected<std::string>
-  operator()(const ast_matchers::MatchFinder::MatchResult &R) {
-    return Impl->eval(R);
-  }
-};
+using Stencil = std::shared_ptr<StencilInterface>;
 
 namespace detail {
 /// Convenience function to construct a \c Stencil. Overloaded for common cases
 /// so that user doesn't need to specify which factory function to use. This
 /// pattern gives benefits similar to implicit constructors, while maintaing a
-/// higher degree of explictness.
+/// higher degree of explicitness.
 Stencil makeStencil(llvm::StringRef Text);
 Stencil makeStencil(RangeSelector Selector);
 inline Stencil makeStencil(Stencil S) { return S; }

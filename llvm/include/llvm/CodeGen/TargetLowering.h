@@ -472,6 +472,10 @@ public:
     return false;
   }
 
+  /// Return true if instruction generated for equality comparison is folded
+  /// with instruction generated for signed comparison.
+  virtual bool isEqualityCmpFoldedWithSignedCmp() const { return true; }
+
   /// Return true if it is safe to transform an integer-domain bitwise operation
   /// into the equivalent floating-point operation. This should be set to true
   /// if the target has IEEE-754-compliant fabs/fneg operations for the input

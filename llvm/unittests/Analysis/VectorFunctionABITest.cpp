@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/InstIterator.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -436,4 +438,38 @@ TEST_F(VFABIParserTest, ParseMaskingAVX512) {
   EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
   EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));
   EXPECT_EQ(ScalarName, "sin");
+}
+
+class VFABIAttrTest : public testing::Test {
+protected:
+  void SetUp() override {
+    M = parseAssemblyString(IR, Err, Ctx);
+    // Get the only call instruction in the block, which is the first
+    // instruction.
+    CI = dyn_cast<CallInst>(&*(instructions(M->getFunction("f")).begin()));
+  }
+  const char *IR = "define i32 @f(i32 %a) {\n"
+                   " %1 = call i32 @g(i32 %a) #0\n"
+                   "  ret i32 %1\n"
+                   "}\n"
+                   "declare i32 @g(i32)\n"
+                   "declare <2 x i32> @custom_vg(<2 x i32>)"
+                   "declare <4 x i32> @_ZGVnN4v_g(<4 x i32>)"
+                   "declare <8 x i32> @_ZGVnN8v_g(<8 x i32>)"
+                   "attributes #0 = { "
+                   "\"vector-function-abi-variant\"=\""
+                   "_ZGVnN2v_g(custom_vg),_ZGVnN4v_g\" }";
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M;
+  CallInst *CI;
+  SmallVector<std::string, 8> Mappings;
+};
+
+TEST_F(VFABIAttrTest, Read) {
+  VFABI::getVectorVariantNames(*CI, Mappings);
+  SmallVector<std::string, 8> Exp;
+  Exp.push_back("_ZGVnN2v_g(custom_vg)");
+  Exp.push_back("_ZGVnN4v_g");
+  EXPECT_EQ(Mappings, Exp);
 }

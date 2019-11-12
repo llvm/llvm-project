@@ -497,9 +497,9 @@ def XORIS8  : DForm_4<27, (outs g8rc:$dst), (ins g8rc:$src1, u16imm64:$src2),
                    [(set i64:$dst, (xor i64:$src1, imm16ShiftedZExt:$src2))]>;
 
 let isCommutable = 1 in
-defm ADD8  : XOForm_1r<31, 266, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
-                       "add", "$rT, $rA, $rB", IIC_IntSimple,
-                       [(set i64:$rT, (add i64:$rA, i64:$rB))]>;
+defm ADD8  : XOForm_1rx<31, 266, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
+                        "add", "$rT, $rA, $rB", IIC_IntSimple,
+                        [(set i64:$rT, (add i64:$rA, i64:$rB))]>;
 // ADD8 has a special form: reg = ADD8(reg, sym@tls) for use by the
 // initial-exec thread-local storage model.  We need to forbid r0 here -
 // while it works for add just fine, the linker can relax this to local-exec
@@ -576,9 +576,9 @@ defm SUBFC8 : XOForm_1rc<31, 8, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                         "subfc", "$rT, $rA, $rB", IIC_IntGeneral,
                         [(set i64:$rT, (subc i64:$rB, i64:$rA))]>,
                         PPC970_DGroup_Cracked;
-defm SUBF8 : XOForm_1r<31, 40, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
-                       "subf", "$rT, $rA, $rB", IIC_IntGeneral,
-                       [(set i64:$rT, (sub i64:$rB, i64:$rA))]>;
+defm SUBF8 : XOForm_1rx<31, 40, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
+                        "subf", "$rT, $rA, $rB", IIC_IntGeneral,
+                        [(set i64:$rT, (sub i64:$rB, i64:$rA))]>;
 defm NEG8    : XOForm_3r<31, 104, 0, (outs g8rc:$rT), (ins g8rc:$rA),
                         "neg", "$rT, $rA", IIC_IntSimple,
                         [(set i64:$rT, (ineg i64:$rA))]>;
@@ -777,10 +777,10 @@ defm DIVD  : XOForm_1rcr<31, 489, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
 defm DIVDU : XOForm_1rcr<31, 457, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                           "divdu", "$rT, $rA, $rB", IIC_IntDivD,
                           [(set i64:$rT, (udiv i64:$rA, i64:$rB))]>, isPPC64;
-def DIVDE : XOForm_1<31, 425, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
-                     "divde $rT, $rA, $rB", IIC_IntDivD,
-                     [(set i64:$rT, (int_ppc_divde g8rc:$rA, g8rc:$rB))]>,
-                     isPPC64, Requires<[HasExtDiv]>;
+defm DIVDE : XOForm_1rcr<31, 425, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
+                         "divde", "$rT, $rA, $rB", IIC_IntDivD,
+                         [(set i64:$rT, (int_ppc_divde g8rc:$rA, g8rc:$rB))]>,
+                         isPPC64, Requires<[HasExtDiv]>;
 
 let Predicates = [IsISA3_0] in {
 def MADDHD : VAForm_1a<48, (outs g8rc :$RT), (ins g8rc:$RA, g8rc:$RB, g8rc:$RC),
@@ -815,24 +815,14 @@ def MODUD : XForm_8<31, 265, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                         [(set i64:$rT, (urem i64:$rA, i64:$rB))]>;
 }
 
-let Defs = [CR0] in
-def DIVDEo : XOForm_1<31, 425, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
-                      "divde. $rT, $rA, $rB", IIC_IntDivD,
-                      []>, isDOT, PPC970_DGroup_Cracked, PPC970_DGroup_First,
-                      isPPC64, Requires<[HasExtDiv]>;
-def DIVDEU : XOForm_1<31, 393, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
-                      "divdeu $rT, $rA, $rB", IIC_IntDivD,
-                      [(set i64:$rT, (int_ppc_divdeu g8rc:$rA, g8rc:$rB))]>,
-                      isPPC64, Requires<[HasExtDiv]>;
-let Defs = [CR0] in
-def DIVDEUo : XOForm_1<31, 393, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
-                       "divdeu. $rT, $rA, $rB", IIC_IntDivD,
-                       []>, isDOT, PPC970_DGroup_Cracked, PPC970_DGroup_First,
-                        isPPC64, Requires<[HasExtDiv]>;
+defm DIVDEU : XOForm_1rcr<31, 393, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
+                          "divdeu", "$rT, $rA, $rB", IIC_IntDivD,
+                          [(set i64:$rT, (int_ppc_divdeu g8rc:$rA, g8rc:$rB))]>,
+                          isPPC64, Requires<[HasExtDiv]>;
 let isCommutable = 1 in
-defm MULLD : XOForm_1r<31, 233, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
-                       "mulld", "$rT, $rA, $rB", IIC_IntMulHD,
-                       [(set i64:$rT, (mul i64:$rA, i64:$rB))]>, isPPC64;
+defm MULLD : XOForm_1rx<31, 233, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
+                        "mulld", "$rT, $rA, $rB", IIC_IntMulHD,
+                        [(set i64:$rT, (mul i64:$rA, i64:$rB))]>, isPPC64;
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in
 def MULLI8 : DForm_2<7, (outs g8rc:$rD), (ins g8rc:$rA, s16imm64:$imm),
                        "mulli $rD, $rA, $imm", IIC_IntMulLI,

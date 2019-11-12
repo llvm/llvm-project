@@ -174,16 +174,6 @@ bool needsNormalization(const llvm::StringRef &path) {
 
 
 }
-// Assignment operator.
-const FileSpec &FileSpec::operator=(const FileSpec &rhs) {
-  if (this != &rhs) {
-    m_directory = rhs.m_directory;
-    m_filename = rhs.m_filename;
-    m_is_resolved = rhs.m_is_resolved;
-    m_style = rhs.m_style;
-  }
-  return *this;
-}
 
 void FileSpec::SetFile(llvm::StringRef pathname) { SetFile(pathname, m_style); }
 

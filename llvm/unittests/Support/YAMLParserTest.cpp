@@ -331,4 +331,15 @@ TEST(YAMLParser, DifferentNodesIteratorOperatorEquals) {
   EXPECT_TRUE(End == AnotherEnd);
 }
 
+TEST(YAMLParser, FlowSequenceTokensOutsideFlowSequence) {
+  auto FlowSequenceStrs = {",", "]", "}"};
+  SourceMgr SM;
+
+  for (auto &Str : FlowSequenceStrs) {
+    yaml::Stream Stream(Str, SM);
+    yaml::Document &Doc = *Stream.begin();
+    EXPECT_FALSE(Doc.skip());
+  }
+}
+
 } // end namespace llvm

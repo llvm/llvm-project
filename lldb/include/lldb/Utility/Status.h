@@ -64,8 +64,6 @@ public:
   explicit Status(const char *format, ...)
       __attribute__((format(printf, 2, 3)));
 
-  const Status &operator=(const Status &rhs);
-
   ~Status();
 
   // llvm::Error support

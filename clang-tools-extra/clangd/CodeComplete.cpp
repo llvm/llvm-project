@@ -492,7 +492,7 @@ llvm::Optional<SymbolID> getSymbolID(const CodeCompletionResult &R,
     return clang::clangd::getSymbolID(R.Declaration);
   }
   case CodeCompletionResult::RK_Macro:
-    return clang::clangd::getSymbolID(*R.Macro, R.MacroDefInfo, SM);
+    return clang::clangd::getSymbolID(R.Macro->getName(), R.MacroDefInfo, SM);
   case CodeCompletionResult::RK_Keyword:
     return None;
   }

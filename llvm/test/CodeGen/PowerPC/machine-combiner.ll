@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr7 -enable-unsafe-fp-math < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=CHECK -check-prefix=CHECK-PWR
-; RUN: llc -verify-machineinstrs -O3 -mcpu=a2q -enable-unsafe-fp-math < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=CHECK -check-prefix=CHECK-QPX
+; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr7 -enable-unsafe-fp-math < %s | FileCheck  %s -check-prefix=CHECK -check-prefix=CHECK-PWR
+; RUN: llc -verify-machineinstrs -O3 -mcpu=a2q -enable-unsafe-fp-math < %s | FileCheck  %s -check-prefix=CHECK -check-prefix=CHECK-QPX
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -71,7 +71,7 @@ define float @reassociate_adds5(float %x0, float %x1, float %x2, float %x3, floa
 ; CHECK-DAG:   fadds [[REG12:[0-9]+]], 5, 6
 ; CHECK-DAG:   fadds [[REG0:[0-9]+]], 1, 2
 ; CHECK-DAG:   fadds [[REG11:[0-9]+]], 3, 4
-; CHECK:       fadds [[REG13:[0-9]+]], [[REG12]], 7
+; CHECK-DAG:   fadds [[REG13:[0-9]+]], [[REG12]], 7
 ; CHECK-DAG:   fadds [[REG1:[0-9]+]], [[REG0]], [[REG11]]
 ; CHECK-DAG:   fadds [[REG2:[0-9]+]], [[REG1]], [[REG13]]
 ; CHECK:       fadds 1, [[REG2]], 8

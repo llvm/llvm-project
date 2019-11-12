@@ -31,6 +31,8 @@
 using namespace lldb_private;
 using namespace lldb;
 
+char UtilityFunction::ID;
+
 /// Constructor
 ///
 /// \param[in] text
@@ -39,12 +41,9 @@ using namespace lldb;
 /// \param[in] name
 ///     The name of the function, as used in the text.
 UtilityFunction::UtilityFunction(ExecutionContextScope &exe_scope,
-                                 const char *text, const char *name,
-                                 ExpressionKind kind)
-    : Expression(exe_scope, kind),
-      m_execution_unit_sp(), m_jit_module_wp(),
-      m_function_text(),
-      m_function_name(name) {}
+                                 const char *text, const char *name)
+    : Expression(exe_scope), m_execution_unit_sp(), m_jit_module_wp(),
+      m_function_text(), m_function_name(name) {}
 
 UtilityFunction::~UtilityFunction() {
   lldb::ProcessSP process_sp(m_jit_process_wp.lock());

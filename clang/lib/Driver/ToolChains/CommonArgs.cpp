@@ -11,12 +11,8 @@
 #include "Arch/ARM.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
-#include "Arch/RISCV.h"
-#include "Arch/Sparc.h"
 #include "Arch/SystemZ.h"
 #include "Arch/X86.h"
-#include "AMDGPU.h"
-#include "MSP430.h"
 #include "HIP.h"
 #include "Hexagon.h"
 #include "InputInfo.h"
@@ -257,6 +253,7 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
     return "";
 
   case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_32:
   case llvm::Triple::aarch64_be:
     return aarch64::getAArch64TargetCPU(Args, T, A);
 
@@ -488,14 +485,6 @@ void tools::AddGoldPlugin(const ToolChain &ToolChain, const ArgList &Args,
   if (!StatsFile.empty())
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-plugin-opt=stats-file=") + StatsFile));
-
-  getTargetFeatures(ToolChain, ToolChain.getTriple(), Args, CmdArgs,
-                    /* ForAS= */ false, /* ForLTOPlugin= */ true);
-
-  StringRef ABIName = tools::getTargetABI(Args, ToolChain.getTriple());
-  if (!ABIName.empty())
-    CmdArgs.push_back(
-        Args.MakeArgString(Twine("-plugin-opt=-target-abi=") + ABIName));
 }
 
 void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
@@ -1406,112 +1395,4 @@ SmallString<128> tools::getStatsFileName(const llvm::opt::ArgList &Args,
 void tools::addMultilibFlag(bool Enabled, const char *const Flag,
                             Multilib::flags_list &Flags) {
   Flags.push_back(std::string(Enabled ? "+" : "-") + Flag);
-}
-
-static void getWebAssemblyTargetFeatures(const ArgList &Args,
-                                         std::vector<StringRef> &Features) {
-  handleTargetFeaturesGroup(Args, Features, options::OPT_m_wasm_Features_Group);
-}
-
-void tools::getTargetFeatures(const ToolChain &TC, const llvm::Triple &Triple,
-                       const ArgList &Args, ArgStringList &CmdArgs, bool ForAS,
-                       bool ForLTOPlugin) {
-
-  const Driver &D = TC.getDriver();
-  std::vector<StringRef> Features;
-  switch (Triple.getArch()) {
-  default:
-    break;
-  case llvm::Triple::mips:
-  case llvm::Triple::mipsel:
-  case llvm::Triple::mips64:
-  case llvm::Triple::mips64el:
-    mips::getMIPSTargetFeatures(D, Triple, Args, Features);
-    break;
-
-  case llvm::Triple::arm:
-  case llvm::Triple::armeb:
-  case llvm::Triple::thumb:
-  case llvm::Triple::thumbeb:
-    arm::getARMTargetFeatures(TC, Triple, Args, CmdArgs, Features, ForAS);
-    break;
-
-  case llvm::Triple::ppc:
-  case llvm::Triple::ppc64:
-  case llvm::Triple::ppc64le:
-    ppc::getPPCTargetFeatures(D, Triple, Args, Features);
-    break;
-  case llvm::Triple::riscv32:
-  case llvm::Triple::riscv64:
-    riscv::getRISCVTargetFeatures(D, Triple, Args, Features);
-    break;
-  case llvm::Triple::systemz:
-    systemz::getSystemZTargetFeatures(Args, Features);
-    break;
-  case llvm::Triple::aarch64:
-  case llvm::Triple::aarch64_be:
-    aarch64::getAArch64TargetFeatures(D, Triple, Args, Features);
-    break;
-  case llvm::Triple::x86:
-  case llvm::Triple::x86_64:
-    x86::getX86TargetFeatures(D, Triple, Args, Features);
-    break;
-  case llvm::Triple::hexagon:
-    hexagon::getHexagonTargetFeatures(D, Args, Features);
-    break;
-  case llvm::Triple::wasm32:
-  case llvm::Triple::wasm64:
-    getWebAssemblyTargetFeatures(Args, Features);
-    break;
-  case llvm::Triple::sparc:
-  case llvm::Triple::sparcel:
-  case llvm::Triple::sparcv9:
-    sparc::getSparcTargetFeatures(D, Args, Features);
-    break;
-  case llvm::Triple::r600:
-  case llvm::Triple::amdgcn:
-    amdgpu::getAMDGPUTargetFeatures(D, Args, Features);
-    break;
-  case llvm::Triple::msp430:
-    msp430::getMSP430TargetFeatures(D, Args, Features);
-  }
-
-  // Find the last of each feature.
-  llvm::StringMap<unsigned> LastOpt;
-  for (unsigned I = 0, N = Features.size(); I < N; ++I) {
-    StringRef Name = Features[I];
-    assert(Name[0] == '-' || Name[0] == '+');
-    LastOpt[Name.drop_front(1)] = I;
-  }
-
-  for (unsigned I = 0, N = Features.size(); I < N; ++I) {
-    // If this feature was overridden, ignore it.
-    StringRef Name = Features[I];
-    llvm::StringMap<unsigned>::iterator LastI =
-        LastOpt.find(Name.drop_front(1));
-    assert(LastI != LastOpt.end());
-    unsigned Last = LastI->second;
-    if (Last != I)
-      continue;
-    if (!ForLTOPlugin) {
-      CmdArgs.push_back("-target-feature");
-      CmdArgs.push_back(Name.data());
-    } else {
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine("-plugin-opt=-mattr=") + Name));
-    }
-  }
-}
-
-StringRef tools::getTargetABI(const ArgList &Args, const llvm::Triple &Triple) {
-  // TODO: Support the other target ABI
-  switch (Triple.getArch()) {
-  default:
-    break;
-  case llvm::Triple::riscv32:
-  case llvm::Triple::riscv64:
-    return tools::riscv::getRISCVABI(Args, Triple);
-    break;
-  }
-  return StringRef();
 }

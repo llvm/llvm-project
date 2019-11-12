@@ -33,17 +33,6 @@ public:
   ///     The initial value for all flags.
   Flags(ValueType flags = 0) : m_flags(flags) {}
 
-  /// Copy constructor.
-  ///
-  /// Construct and copy the flags from \a rhs.
-  ///
-  /// \param[in] rhs
-  ///     A const Flags object reference to copy.
-  Flags(const Flags &rhs) : m_flags(rhs.m_flags) {}
-
-  /// Destructor.
-  ~Flags() {}
-
   /// Get accessor for all flags.
   ///
   /// \return

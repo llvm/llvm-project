@@ -650,6 +650,10 @@ namespace llvm {
       return true;
     }
 
+    bool isEqualityCmpFoldedWithSignedCmp() const override {
+      return false;
+    }
+
     bool hasAndNotCompare(SDValue) const override {
       return true;
     }

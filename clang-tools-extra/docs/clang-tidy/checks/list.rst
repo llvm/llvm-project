@@ -39,6 +39,7 @@ Clang-Tidy Checks
    boost-use-to-string
    bugprone-argument-comment
    bugprone-assert-side-effect
+   bugprone-bad-signal-to-kill-thread
    bugprone-bool-pointer-implicit-conversion
    bugprone-branch-clone
    bugprone-copy-constructor-init
@@ -105,6 +106,7 @@ Clang-Tidy Checks
    cert-msc51-cpp
    cert-oop11-cpp (redirects to performance-move-constructor-init) <cert-oop11-cpp>
    cert-oop54-cpp (redirects to bugprone-unhandled-self-assignment) <cert-oop54-cpp>
+   cert-pos44-c (redirects to bugprone-bad-signal-to-kill-thread) <cert-pos44-c>
    clang-analyzer-core.CallAndMessage (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-core.CallAndMessage>
    clang-analyzer-core.DivideZero (redirects to https://clang.llvm.org/docs/analyzer/checkers) <clang-analyzer-core.DivideZero>
    clang-analyzer-core.DynamicTypePropagation

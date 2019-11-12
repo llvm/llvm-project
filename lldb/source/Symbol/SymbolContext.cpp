@@ -55,20 +55,6 @@ SymbolContext::SymbolContext(SymbolContextScope *sc_scope)
 
 SymbolContext::~SymbolContext() {}
 
-const SymbolContext &SymbolContext::operator=(const SymbolContext &rhs) {
-  if (this != &rhs) {
-    target_sp = rhs.target_sp;
-    module_sp = rhs.module_sp;
-    comp_unit = rhs.comp_unit;
-    function = rhs.function;
-    block = rhs.block;
-    line_entry = rhs.line_entry;
-    symbol = rhs.symbol;
-    variable = rhs.variable;
-  }
-  return *this;
-}
-
 void SymbolContext::Clear(bool clear_target) {
   if (clear_target)
     target_sp.reset();

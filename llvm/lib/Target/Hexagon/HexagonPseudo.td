@@ -408,15 +408,17 @@ let isCall = 1, Uses = [R29, R31], isAsmParserOnly = 1 in {
 // Vector store pseudos
 let Predicates = [HasV60,UseHVX], isPseudo = 1, isCodeGenOnly = 1,
     mayStore = 1, accessSize = HVXVectorAccess, hasSideEffects = 0 in
-class STrivv_template<RegisterClass RC, InstHexagon rootInst>
+class STriv_template<RegisterClass RC, InstHexagon rootInst>
   : InstHexagon<(outs), (ins IntRegs:$addr, s32_0Imm:$off, RC:$src),
     "", [], "", rootInst.Itinerary, rootInst.Type>;
 
-def PS_vstorerw_ai: STrivv_template<HvxWR, V6_vS32b_ai>,
+def PS_vstorerv_ai: STriv_template<HvxVR, V6_vS32b_ai>,
       Requires<[HasV60,UseHVX]>;
-def PS_vstorerw_nt_ai: STrivv_template<HvxWR, V6_vS32b_nt_ai>,
+def PS_vstorerv_nt_ai: STriv_template<HvxVR, V6_vS32b_nt_ai>,
       Requires<[HasV60,UseHVX]>;
-def PS_vstorerwu_ai: STrivv_template<HvxWR, V6_vS32Ub_ai>,
+def PS_vstorerw_ai: STriv_template<HvxWR, V6_vS32b_ai>,
+      Requires<[HasV60,UseHVX]>;
+def PS_vstorerw_nt_ai: STriv_template<HvxWR, V6_vS32b_nt_ai>,
       Requires<[HasV60,UseHVX]>;
 
 let isPseudo = 1, isCodeGenOnly = 1, mayStore = 1, hasSideEffects = 0 in
@@ -427,15 +429,17 @@ def PS_vstorerq_ai: Pseudo<(outs),
 // Vector load pseudos
 let Predicates = [HasV60, UseHVX], isPseudo = 1, isCodeGenOnly = 1,
     mayLoad = 1, accessSize = HVXVectorAccess, hasSideEffects = 0 in
-class LDrivv_template<RegisterClass RC, InstHexagon rootInst>
+class LDriv_template<RegisterClass RC, InstHexagon rootInst>
   : InstHexagon<(outs RC:$dst), (ins IntRegs:$addr, s32_0Imm:$off),
     "", [], "", rootInst.Itinerary, rootInst.Type>;
 
-def PS_vloadrw_ai: LDrivv_template<HvxWR, V6_vL32b_ai>,
+def PS_vloadrv_ai: LDriv_template<HvxVR, V6_vL32b_ai>,
       Requires<[HasV60,UseHVX]>;
-def PS_vloadrw_nt_ai: LDrivv_template<HvxWR, V6_vL32b_nt_ai>,
+def PS_vloadrv_nt_ai: LDriv_template<HvxVR, V6_vL32b_nt_ai>,
       Requires<[HasV60,UseHVX]>;
-def PS_vloadrwu_ai: LDrivv_template<HvxWR, V6_vL32Ub_ai>,
+def PS_vloadrw_ai: LDriv_template<HvxWR, V6_vL32b_ai>,
+      Requires<[HasV60,UseHVX]>;
+def PS_vloadrw_nt_ai: LDriv_template<HvxWR, V6_vL32b_nt_ai>,
       Requires<[HasV60,UseHVX]>;
 
 let isPseudo = 1, isCodeGenOnly = 1, mayLoad = 1, hasSideEffects = 0 in

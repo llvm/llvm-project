@@ -173,7 +173,7 @@ void ReassociatePass::BuildRankMap(Function &F,
                       << "\n");
   }
 
-  // Traverse basic blocks in ReversePostOrder
+  // Traverse basic blocks in ReversePostOrder.
   for (BasicBlock *BB : RPOT) {
     unsigned BBRank = RankMap[BB] = ++Rank << 16;
 
@@ -1898,6 +1898,7 @@ void ReassociatePass::RecursivelyEraseDeadInsts(Instruction *I,
   ValueRankMap.erase(I);
   Insts.remove(I);
   RedoInsts.remove(I);
+  llvm::salvageDebugInfoOrMarkUndef(*I);
   I->eraseFromParent();
   for (auto Op : Ops)
     if (Instruction *OpInst = dyn_cast<Instruction>(Op))
@@ -1914,6 +1915,7 @@ void ReassociatePass::EraseInst(Instruction *I) {
   // Erase the dead instruction.
   ValueRankMap.erase(I);
   RedoInsts.remove(I);
+  llvm::salvageDebugInfoOrMarkUndef(*I);
   I->eraseFromParent();
   // Optimize its operands.
   SmallPtrSet<Instruction *, 8> Visited; // Detect self-referential nodes.

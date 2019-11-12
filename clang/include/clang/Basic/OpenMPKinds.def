@@ -212,6 +212,18 @@
 #ifndef OPENMP_MATCH_KIND
 #define OPENMP_MATCH_KIND(Name)
 #endif
+#ifndef OPENMP_CONTEXT_SELECTOR_SET
+#define OPENMP_CONTEXT_SELECTOR_SET(Name)
+#endif
+#ifndef OPENMP_CONTEXT_SELECTOR
+#define OPENMP_CONTEXT_SELECTOR(Name)
+#endif
+
+// OpenMP context selector sets.
+OPENMP_CONTEXT_SELECTOR_SET(implementation)
+
+// OpenMP context selectors.
+OPENMP_CONTEXT_SELECTOR(vendor)
 
 // OpenMP directives.
 OPENMP_DIRECTIVE(threadprivate)
@@ -1076,6 +1088,8 @@ OPENMP_DECLARE_VARIANT_CLAUSE(match)
 // TODO: add other context selectors.
 OPENMP_MATCH_KIND(implementation)
 
+#undef OPENMP_CONTEXT_SELECTOR
+#undef OPENMP_CONTEXT_SELECTOR_SET
 #undef OPENMP_MATCH_KIND
 #undef OPENMP_DECLARE_VARIANT_CLAUSE
 #undef OPENMP_DEVICE_TYPE_KIND

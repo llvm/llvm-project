@@ -575,13 +575,16 @@ TEST_F(TransformerTest, TextGeneratorFailure) {
   std::string Input = "int conflictOneRule() { return 3 + 7; }";
   // Try to change the whole binary-operator expression AND one its operands:
   StringRef O = "O";
-  auto AlwaysFail = [](const ast_matchers::MatchFinder::MatchResult &)
-      -> llvm::Expected<std::string> {
-    return llvm::createStringError(llvm::errc::invalid_argument, "ERROR");
+  class AlwaysFail : public transformer::MatchComputation<std::string> {
+    llvm::Error eval(const ast_matchers::MatchFinder::MatchResult &,
+                     std::string *) const override {
+      return llvm::createStringError(llvm::errc::invalid_argument, "ERROR");
+    }
+    std::string toString() const override { return "AlwaysFail"; }
   };
-  Transformer T(
-      makeRule(binaryOperator().bind(O), changeTo(node(O), AlwaysFail)),
-      consumer());
+  Transformer T(makeRule(binaryOperator().bind(O),
+                         changeTo(node(O), std::make_shared<AlwaysFail>())),
+                consumer());
   T.registerMatchers(&MatchFinder);
   EXPECT_FALSE(rewrite(Input));
   EXPECT_THAT(Changes, IsEmpty());

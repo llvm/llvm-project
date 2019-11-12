@@ -405,10 +405,10 @@ def CSR_AArch64_AAVPCS : CalleeSavedRegs<(add X19, X20, X21, X22, X23, X24,
 
 // Functions taking SVE arguments or returning an SVE type
 // must (additionally) preserve full Z8-Z23 and predicate registers P4-P15
-def CSR_AArch64_SVE_AAPCS : CalleeSavedRegs<(add X19, X20, X21, X22, X23, X24,
-                                               X25, X26, X27, X28, LR, FP,
-                                               (sequence "Z%u", 8, 23),
-                                               (sequence "P%u", 4, 15))>;
+def CSR_AArch64_SVE_AAPCS : CalleeSavedRegs<(add (sequence "Z%u", 8, 23),
+                                                 (sequence "P%u", 4, 15),
+                                                 X19, X20, X21, X22, X23, X24,
+                                                 X25, X26, X27, X28, LR, FP)>;
 
 // Constructors and destructors return 'this' in the iOS 64-bit C++ ABI; since
 // 'this' and the pointer return value are both passed in X0 in these cases,
@@ -486,5 +486,7 @@ def CSR_AArch64_RT_MostRegs_SCS
     : CalleeSavedRegs<(add CSR_AArch64_RT_MostRegs, X18)>;
 def CSR_AArch64_AAVPCS_SCS
     : CalleeSavedRegs<(add CSR_AArch64_AAVPCS, X18)>;
+def CSR_AArch64_SVE_AAPCS_SCS
+    : CalleeSavedRegs<(add CSR_AArch64_SVE_AAPCS, X18)>;
 def CSR_AArch64_AAPCS_SCS
     : CalleeSavedRegs<(add CSR_AArch64_AAPCS, X18)>;

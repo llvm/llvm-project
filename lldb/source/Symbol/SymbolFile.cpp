@@ -134,7 +134,9 @@ void SymbolFile::FindTypes(
     TypeMap &types) {}
 
 void SymbolFile::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                           LanguageSet languages, TypeMap &types) {}
+                           LanguageSet languages,
+                           llvm::DenseSet<SymbolFile *> &searched_symbol_files,
+                           TypeMap &types) {}
 
 void SymbolFile::AssertModuleLock() {
   // The code below is too expensive to leave enabled in release builds. It's

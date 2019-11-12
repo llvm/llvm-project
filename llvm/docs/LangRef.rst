@@ -10240,7 +10240,7 @@ non-dereferenceable pointer. See the
 Example:
 """"""""
 
-.. code-block:: llvm
+.. code-block:: text
 
       %w = i32 undef
       %x = freeze i32 %w

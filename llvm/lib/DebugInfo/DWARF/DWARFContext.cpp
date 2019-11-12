@@ -302,18 +302,18 @@ static void dumpLoclistsSection(raw_ostream &OS, DIDumpOptions DumpOpts,
 
     uint64_t EndOffset = Header.length() + Header.getHeaderOffset();
     Data.setAddressSize(Header.getAddrSize());
+    DWARFDebugLoclists Loc(Data, Header.getVersion());
     if (DumpOffset) {
       if (DumpOffset >= Offset && DumpOffset < EndOffset) {
         Offset = *DumpOffset;
-        DWARFDebugLoclists::dumpLocationList(Data, &Offset, Header.getVersion(),
-                                             OS, /*BaseAddr=*/0, MRI, nullptr,
-                                             DumpOpts, /*Indent=*/0);
+        Loc.dumpLocationList(&Offset, OS, /*BaseAddr=*/0, MRI, nullptr,
+                             DumpOpts, /*Indent=*/0);
         OS << "\n";
         return;
       }
     } else {
-      DWARFDebugLoclists::dumpRange(Data, Offset, EndOffset - Offset,
-                                    Header.getVersion(), OS, 0, MRI, DumpOpts);
+      Loc.dumpRange(Offset, EndOffset - Offset, OS, /*BaseAddr=*/0, MRI,
+                    DumpOpts);
     }
     Offset = EndOffset;
   }
@@ -405,16 +405,16 @@ void DWARFContext::dump(
                      DObj->getLocDWOSection().Data)) {
     DWARFDataExtractor Data(*DObj, DObj->getLocDWOSection(), isLittleEndian(),
                             4);
+    DWARFDebugLoclists Loc(Data, /*Version=*/4);
     if (*Off) {
       uint64_t Offset = **Off;
-      DWARFDebugLoclists::dumpLocationList(Data, &Offset, /*Version=*/4, OS,
-                                           /*BaseAddr=*/0, getRegisterInfo(),
-                                           nullptr, DumpOpts, /*Indent=*/0);
+      Loc.dumpLocationList(&Offset, OS,
+                           /*BaseAddr=*/0, getRegisterInfo(), nullptr, DumpOpts,
+                           /*Indent=*/0);
       OS << "\n";
     } else {
-      DWARFDebugLoclists::dumpRange(Data, 0, Data.getData().size(),
-                                    /*Version=*/4, OS, /*BaseAddr=*/0,
-                                    getRegisterInfo(), DumpOpts);
+      Loc.dumpRange(0, Data.getData().size(), OS, /*BaseAddr=*/0,
+                    getRegisterInfo(), DumpOpts);
     }
   }
 

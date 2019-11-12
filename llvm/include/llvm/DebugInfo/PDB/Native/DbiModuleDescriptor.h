@@ -27,7 +27,6 @@ class DbiModuleDescriptor {
 public:
   DbiModuleDescriptor();
   DbiModuleDescriptor(const DbiModuleDescriptor &Info);
-  ~DbiModuleDescriptor();
 
   static Error initialize(BinaryStreamRef Stream, DbiModuleDescriptor &Info);
 

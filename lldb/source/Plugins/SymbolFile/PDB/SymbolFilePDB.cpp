@@ -1562,9 +1562,10 @@ void SymbolFilePDB::FindTypesByName(
   }
 }
 
-void SymbolFilePDB::FindTypes(llvm::ArrayRef<CompilerContext> pattern,
-                              LanguageSet languages,
-                              lldb_private::TypeMap &types) {}
+void SymbolFilePDB::FindTypes(
+    llvm::ArrayRef<CompilerContext> pattern, LanguageSet languages,
+    llvm::DenseSet<SymbolFile *> &searched_symbol_files,
+    lldb_private::TypeMap &types) {}
 
 void SymbolFilePDB::GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol &pdb_symbol,
                                          uint32_t type_mask,

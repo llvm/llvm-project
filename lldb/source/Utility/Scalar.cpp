@@ -305,15 +305,6 @@ const char *Scalar::GetTypeAsCString() const {
   return "<invalid Scalar type>";
 }
 
-Scalar &Scalar::operator=(const Scalar &rhs) {
-  if (this != &rhs) {
-    m_type = rhs.m_type;
-    m_integer = llvm::APInt(rhs.m_integer);
-    m_float = rhs.m_float;
-  }
-  return *this;
-}
-
 Scalar &Scalar::operator=(const int v) {
   m_type = e_sint;
   m_integer = llvm::APInt(sizeof(int) * 8, v, true);

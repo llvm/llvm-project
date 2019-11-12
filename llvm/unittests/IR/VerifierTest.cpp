@@ -45,6 +45,54 @@ TEST(VerifierTest, Branch_i1) {
   EXPECT_TRUE(verifyFunction(*F));
 }
 
+TEST(VerifierTest, Freeze) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  ReturnInst *RI = ReturnInst::Create(C, Entry);
+
+  IntegerType *ITy = IntegerType::get(C, 32);
+  ConstantInt *CI = ConstantInt::get(ITy, 0);
+
+  // Valid type : freeze(<2 x i32>)
+  Constant *CV = ConstantVector::getSplat(2, CI);
+  FreezeInst *FI_vec = new FreezeInst(CV);
+  FI_vec->insertBefore(RI);
+
+  EXPECT_FALSE(verifyFunction(*F));
+
+  FI_vec->eraseFromParent();
+
+  // Valid type : freeze(float)
+  Constant *CFP = ConstantFP::get(Type::getDoubleTy(C), 0.0);
+  FreezeInst *FI_dbl = new FreezeInst(CFP);
+  FI_dbl->insertBefore(RI);
+
+  EXPECT_FALSE(verifyFunction(*F));
+
+  FI_dbl->eraseFromParent();
+
+  // Valid type : freeze(i32*)
+  PointerType *PT = PointerType::get(ITy, 0);
+  ConstantPointerNull *CPN = ConstantPointerNull::get(PT);
+  FreezeInst *FI_ptr = new FreezeInst(CPN);
+  FI_ptr->insertBefore(RI);
+
+  EXPECT_FALSE(verifyFunction(*F));
+
+  FI_ptr->eraseFromParent();
+
+  // Valid type : freeze(int)
+  FreezeInst *FI = new FreezeInst(CI);
+  FI->insertBefore(RI);
+
+  EXPECT_FALSE(verifyFunction(*F));
+
+  FI->eraseFromParent();
+}
+
 TEST(VerifierTest, InvalidRetAttribute) {
   LLVMContext C;
   Module M("M", C);

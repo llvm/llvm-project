@@ -84,18 +84,6 @@ public:
 
   ~SymbolContext();
 
-  /// Assignment operator.
-  ///
-  /// Copies the address value from another SymbolContext object \a rhs into
-  /// \a this object.
-  ///
-  /// \param[in] rhs
-  ///     A const SymbolContext object reference to copy.
-  ///
-  /// \return
-  ///     A const SymbolContext object reference to \a this.
-  const SymbolContext &operator=(const SymbolContext &rhs);
-
   /// Clear the object's state.
   ///
   /// Resets all pointer members to nullptr, and clears any class objects to

@@ -920,7 +920,7 @@ public:
   /// large registers. See for example the ARM target.
   virtual void copyPhysReg(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI, const DebugLoc &DL,
-                           unsigned DestReg, unsigned SrcReg,
+                           MCRegister DestReg, MCRegister SrcReg,
                            bool KillSrc) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::copyPhysReg!");
   }

@@ -55,16 +55,6 @@ public:
   {
   }
 
-  /// Construct with a reference to another Declaration object.
-  Declaration(const Declaration &rhs)
-      : m_file(rhs.m_file), m_line(rhs.m_line)
-#ifdef LLDB_ENABLE_DECLARATION_COLUMNS
-        ,
-        m_column(rhs.m_column)
-#endif
-  {
-  }
-
   /// Construct with a pointer to another Declaration object.
   Declaration(const Declaration *decl_ptr)
       : m_file(), m_line(0)

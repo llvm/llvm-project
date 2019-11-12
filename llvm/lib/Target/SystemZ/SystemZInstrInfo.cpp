@@ -765,8 +765,8 @@ bool SystemZInstrInfo::PredicateInstruction(
 
 void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI,
-                                   const DebugLoc &DL, unsigned DestReg,
-                                   unsigned SrcReg, bool KillSrc) const {
+                                   const DebugLoc &DL, MCRegister DestReg,
+                                   MCRegister SrcReg, bool KillSrc) const {
   // Split 128-bit GPR moves into two 64-bit moves. Add implicit uses of the
   // super register in case one of the subregs is undefined.
   // This handles ADDR128 too.
@@ -791,12 +791,12 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Move 128-bit floating-point values between VR128 and FP128.
   if (SystemZ::VR128BitRegClass.contains(DestReg) &&
       SystemZ::FP128BitRegClass.contains(SrcReg)) {
-    unsigned SrcRegHi =
-      RI.getMatchingSuperReg(RI.getSubReg(SrcReg, SystemZ::subreg_h64),
-                             SystemZ::subreg_h64, &SystemZ::VR128BitRegClass);
-    unsigned SrcRegLo =
-      RI.getMatchingSuperReg(RI.getSubReg(SrcReg, SystemZ::subreg_l64),
-                             SystemZ::subreg_h64, &SystemZ::VR128BitRegClass);
+    MCRegister SrcRegHi =
+        RI.getMatchingSuperReg(RI.getSubReg(SrcReg, SystemZ::subreg_h64),
+                               SystemZ::subreg_h64, &SystemZ::VR128BitRegClass);
+    MCRegister SrcRegLo =
+        RI.getMatchingSuperReg(RI.getSubReg(SrcReg, SystemZ::subreg_l64),
+                               SystemZ::subreg_h64, &SystemZ::VR128BitRegClass);
 
     BuildMI(MBB, MBBI, DL, get(SystemZ::VMRHG), DestReg)
       .addReg(SrcRegHi, getKillRegState(KillSrc))
@@ -805,12 +805,12 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
   if (SystemZ::FP128BitRegClass.contains(DestReg) &&
       SystemZ::VR128BitRegClass.contains(SrcReg)) {
-    unsigned DestRegHi =
-      RI.getMatchingSuperReg(RI.getSubReg(DestReg, SystemZ::subreg_h64),
-                             SystemZ::subreg_h64, &SystemZ::VR128BitRegClass);
-    unsigned DestRegLo =
-      RI.getMatchingSuperReg(RI.getSubReg(DestReg, SystemZ::subreg_l64),
-                             SystemZ::subreg_h64, &SystemZ::VR128BitRegClass);
+    MCRegister DestRegHi =
+        RI.getMatchingSuperReg(RI.getSubReg(DestReg, SystemZ::subreg_h64),
+                               SystemZ::subreg_h64, &SystemZ::VR128BitRegClass);
+    MCRegister DestRegLo =
+        RI.getMatchingSuperReg(RI.getSubReg(DestReg, SystemZ::subreg_l64),
+                               SystemZ::subreg_h64, &SystemZ::VR128BitRegClass);
 
     if (DestRegHi != SrcReg)
       copyPhysReg(MBB, MBBI, DL, DestRegHi, SrcReg, false);

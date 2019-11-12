@@ -172,7 +172,6 @@ public:
   Scalar &operator=(double v);
   Scalar &operator=(long double v);
   Scalar &operator=(llvm::APInt v);
-  Scalar &operator=(const Scalar &rhs); // Assignment operator
   Scalar &operator+=(const Scalar &rhs);
   Scalar &operator<<=(const Scalar &rhs); // Shift left
   Scalar &operator>>=(const Scalar &rhs); // Shift right (arithmetic)

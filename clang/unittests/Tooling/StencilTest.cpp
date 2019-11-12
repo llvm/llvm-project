@@ -24,7 +24,6 @@ using ::llvm::Failed;
 using ::llvm::HasValue;
 using ::llvm::StringError;
 using ::testing::AllOf;
-using ::testing::Eq;
 using ::testing::HasSubstr;
 using MatchResult = MatchFinder::MatchResult;
 
@@ -132,26 +131,6 @@ TEST_F(StencilTest, SingleStatement) {
   auto Stencil = cat("if (!", node(Condition), ") ", statement(Else), " else ",
                      statement(Then));
   EXPECT_THAT_EXPECTED(Stencil->eval(StmtMatch->Result),
-                       HasValue("if (!true) return 0; else return 1;"));
-}
-
-// Tests `stencil`.
-TEST_F(StencilTest, StencilFactoryFunction) {
-  StringRef Condition("C"), Then("T"), Else("E");
-  const std::string Snippet = R"cc(
-    if (true)
-      return 1;
-    else
-      return 0;
-  )cc";
-  auto StmtMatch = matchStmt(
-      Snippet, ifStmt(hasCondition(expr().bind(Condition)),
-                      hasThen(stmt().bind(Then)), hasElse(stmt().bind(Else))));
-  ASSERT_TRUE(StmtMatch);
-  // Invert the if-then-else.
-  auto Consumer = cat("if (!", node(Condition), ") ", statement(Else), " else ",
-                      statement(Then));
-  EXPECT_THAT_EXPECTED(Consumer(StmtMatch->Result),
                        HasValue("if (!true) return 0; else return 1;"));
 }
 
