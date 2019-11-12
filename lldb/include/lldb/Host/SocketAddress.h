@@ -48,8 +48,6 @@ public:
   ~SocketAddress();
 
   // Operators
-  const SocketAddress &operator=(const SocketAddress &rhs);
-
   const SocketAddress &operator=(const struct addrinfo *addr_info);
 
   const SocketAddress &operator=(const struct sockaddr &s);

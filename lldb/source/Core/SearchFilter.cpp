@@ -523,13 +523,6 @@ SearchFilterByModuleList::SearchFilterByModuleList(
     enum FilterTy filter_ty)
     : SearchFilter(target_sp, filter_ty), m_module_spec_list(module_list) {}
 
-SearchFilterByModuleList &SearchFilterByModuleList::
-operator=(const SearchFilterByModuleList &rhs) {
-  m_target_sp = rhs.m_target_sp;
-  m_module_spec_list = rhs.m_module_spec_list;
-  return *this;
-}
-
 SearchFilterByModuleList::~SearchFilterByModuleList() = default;
 
 bool SearchFilterByModuleList::ModulePasses(const ModuleSP &module_sp) {
@@ -668,19 +661,6 @@ SearchFilterByModuleListAndCU::SearchFilterByModuleListAndCU(
     : SearchFilterByModuleList(target_sp, module_list,
                                FilterTy::ByModulesAndCU),
       m_cu_spec_list(cu_list) {}
-
-SearchFilterByModuleListAndCU::SearchFilterByModuleListAndCU(
-    const SearchFilterByModuleListAndCU &rhs) = default;
-
-SearchFilterByModuleListAndCU &SearchFilterByModuleListAndCU::
-operator=(const SearchFilterByModuleListAndCU &rhs) {
-  if (&rhs != this) {
-    m_target_sp = rhs.m_target_sp;
-    m_module_spec_list = rhs.m_module_spec_list;
-    m_cu_spec_list = rhs.m_cu_spec_list;
-  }
-  return *this;
-}
 
 SearchFilterByModuleListAndCU::~SearchFilterByModuleListAndCU() = default;
 

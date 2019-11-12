@@ -174,12 +174,6 @@ bool SocketAddress::SetPort(uint16_t port) {
 }
 
 // SocketAddress assignment operator
-const SocketAddress &SocketAddress::operator=(const SocketAddress &rhs) {
-  if (this != &rhs)
-    m_socket_addr = rhs.m_socket_addr;
-  return *this;
-}
-
 const SocketAddress &SocketAddress::
 operator=(const struct addrinfo *addr_info) {
   Clear();

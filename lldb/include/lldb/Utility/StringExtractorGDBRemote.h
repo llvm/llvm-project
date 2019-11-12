@@ -31,11 +31,6 @@ public:
   StringExtractorGDBRemote(const char *cstr)
       : StringExtractor(cstr), m_validator(nullptr) {}
 
-  StringExtractorGDBRemote(const StringExtractorGDBRemote &rhs)
-      : StringExtractor(rhs), m_validator(rhs.m_validator) {}
-
-  ~StringExtractorGDBRemote() override {}
-
   bool ValidateResponse() const;
 
   void CopyResponseValidator(const StringExtractorGDBRemote &rhs);
