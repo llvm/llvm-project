@@ -142,7 +142,7 @@ int main() {
 #if __cplusplus == 201103L
 struct A {
   A() {}
-  A& operator=(A&&) = default;
+  A(const A &) = default;
 };
 
 int A_TEST() {
