@@ -225,7 +225,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   // Promote all UINT_TO_FP to larger SINT_TO_FP's, as X86 doesn't have this
   // operation.
-  setOperationAction(ISD::UINT_TO_FP       , MVT::i1   , Promote);
   setOperationAction(ISD::UINT_TO_FP       , MVT::i8   , Promote);
   setOperationAction(ISD::UINT_TO_FP       , MVT::i16  , Promote);
 
@@ -240,7 +239,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   // Promote i1/i8 SINT_TO_FP to larger SINT_TO_FP's, as X86 doesn't have
   // this operation.
-  setOperationAction(ISD::SINT_TO_FP       , MVT::i1   , Promote);
   setOperationAction(ISD::SINT_TO_FP       , MVT::i8   , Promote);
 
   if (!Subtarget.useSoftFloat()) {
@@ -257,7 +255,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   // Promote i1/i8 FP_TO_SINT to larger FP_TO_SINTS's, as X86 doesn't have
   // this operation.
-  setOperationAction(ISD::FP_TO_SINT       , MVT::i1   , Promote);
   setOperationAction(ISD::FP_TO_SINT       , MVT::i8   , Promote);
 
   if (!Subtarget.useSoftFloat()) {
@@ -272,7 +269,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   // Handle FP_TO_UINT by promoting the destination to a larger signed
   // conversion.
-  setOperationAction(ISD::FP_TO_UINT       , MVT::i1   , Promote);
   setOperationAction(ISD::FP_TO_UINT       , MVT::i8   , Promote);
   setOperationAction(ISD::FP_TO_UINT       , MVT::i16  , Promote);
 
@@ -406,8 +402,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (!Subtarget.hasMOVBE())
     setOperationAction(ISD::BSWAP          , MVT::i16  , Expand);
 
-  // These should be promoted to a larger select which is supported.
-  setOperationAction(ISD::SELECT          , MVT::i1   , Promote);
   // X86 wants to expand cmov itself.
   for (auto VT : { MVT::f32, MVT::f64, MVT::f80, MVT::f128 }) {
     setOperationAction(ISD::SELECT, VT, Custom);
