@@ -307,7 +307,6 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
 
   // Standard unary operators...
   case FNeg: return "fneg";
-  case Freeze: return "freeze";
 
   // Standard binary operators...
   case Add: return "add";
@@ -369,6 +368,7 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case InsertValue:    return "insertvalue";
   case LandingPad:     return "landingpad";
   case CleanupPad:     return "cleanuppad";
+  case Freeze:         return "freeze";
 
   default: return "<Invalid operator> ";
   }

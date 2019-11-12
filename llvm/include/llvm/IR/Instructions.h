@@ -5290,6 +5290,35 @@ inline unsigned getLoadStoreAddressSpace(Value *I) {
   return cast<StoreInst>(I)->getPointerAddressSpace();
 }
 
+//===----------------------------------------------------------------------===//
+//                              FreezeInst Class
+//===----------------------------------------------------------------------===//
+
+/// This class represents a freeze function that returns random concrete
+/// value if an operand is either a poison value or an undef value
+class FreezeInst : public UnaryInstruction {
+protected:
+  // Note: Instruction needs to be a friend here to call cloneImpl.
+  friend class Instruction;
+
+  /// Clone an identical FreezeInst
+  FreezeInst *cloneImpl() const;
+
+public:
+  explicit FreezeInst(Value *S,
+                      const Twine &NameStr = "",
+                      Instruction *InsertBefore = nullptr);
+  FreezeInst(Value *S, const Twine &NameStr, BasicBlock *InsertAtEnd);
+
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static inline bool classof(const Instruction *I) {
+    return I->getOpcode() == Freeze;
+  }
+  static inline bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
 } // end namespace llvm
 
 #endif // LLVM_IR_INSTRUCTIONS_H
