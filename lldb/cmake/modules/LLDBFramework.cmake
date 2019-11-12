@@ -129,3 +129,8 @@ if(NOT IOS)
     )
   endif()
 endif()
+
+# Add an rpath pointing to the directory where LLDB.framework is installed.
+# This allows frameworks (relying on @rpath) to be installed in the same folder and found at runtime.
+set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH
+  "@loader_path/../../../")
