@@ -2677,8 +2677,7 @@ size_t ObjectFileMachO::ParseSymtab() {
 
     // Next we need to determine the correct path for the dyld shared cache.
 
-    ArchSpec header_arch;
-    GetArchitecture(header_arch);
+    ArchSpec header_arch = GetArchitecture();
     char dsc_path[PATH_MAX];
     char dsc_path_development[PATH_MAX];
 
@@ -2876,9 +2875,12 @@ size_t ObjectFileMachO::ParseSymtab() {
                      nlist_index++) {
                   /////////////////////////////
                   {
-                    struct nlist_64 nlist;
-                    if (!ParseNList(dsc_local_symbols_data, nlist_data_offset, nlist_byte_size, nlist)
+                    llvm::Optional<struct nlist_64> nlist_maybe =
+                        ParseNList(dsc_local_symbols_data, nlist_data_offset,
+                                   nlist_byte_size);
+                    if (!nlist_maybe)
                       break;
+                    struct nlist_64 nlist = *nlist_maybe;
 
                     SymbolType type = eSymbolTypeInvalid;
                     const char *symbol_name = dsc_local_symbols_data.PeekCStr(
