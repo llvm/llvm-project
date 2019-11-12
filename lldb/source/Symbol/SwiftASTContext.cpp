@@ -7778,6 +7778,18 @@ CompilerType SwiftASTContext::GetUnboundGenericType(void *type, size_t idx) {
   return {};
 }
 
+CompilerType SwiftASTContext::GetGenericArgumentType(CompilerType ct, size_t idx) {
+  if (!ct)
+    return {};
+
+  SwiftASTContext *ctxt = llvm::dyn_cast<SwiftASTContext>(ct.GetTypeSystem());
+
+  if (!ctxt)
+    return CompilerType();
+
+  return ctxt->GetGenericArgumentType(ct.GetOpaqueQualType(), idx);
+}
+
 CompilerType SwiftASTContext::GetGenericArgumentType(void *type, size_t idx) {
   VALID_OR_RETURN(CompilerType());
 
