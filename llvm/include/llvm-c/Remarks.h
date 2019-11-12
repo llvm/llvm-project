@@ -30,7 +30,8 @@ extern "C" {
  * @{
  */
 
-#define REMARKS_API_VERSION 0
+// 0 -> 1: Bitstream remarks support.
+#define REMARKS_API_VERSION 1
 
 /**
  * The type of the emitted remark.
@@ -137,6 +138,13 @@ extern LLVMRemarkDebugLocRef LLVMRemarkArgGetDebugLoc(LLVMRemarkArgRef Arg);
 typedef struct LLVMRemarkOpaqueEntry *LLVMRemarkEntryRef;
 
 /**
+ * Free the resources used by the remark entry.
+ *
+ * \since REMARKS_API_VERSION=0
+ */
+extern void LLVMRemarkEntryDispose(LLVMRemarkEntryRef Remark);
+
+/**
  * The type of the remark. For example, it can allow users to only keep the
  * missed optimizations from the compiler.
  *
@@ -161,7 +169,7 @@ extern LLVMRemarkStringRef
 LLVMRemarkEntryGetRemarkName(LLVMRemarkEntryRef Remark);
 
 /**
- * Get the name of the function being processsed when the remark was emitted.
+ * Get the name of the function being processed when the remark was emitted.
  *
  * \since REMARKS_API_VERSION=0
  */
@@ -199,6 +207,8 @@ extern uint32_t LLVMRemarkEntryGetNumArgs(LLVMRemarkEntryRef Remark);
  *
  * If there are no arguments in \p Remark, the return value will be `NULL`.
  *
+ * The lifetime of the returned value is bound to the lifetime of \p Remark.
+ *
  * \since REMARKS_API_VERSION=0
  */
 extern LLVMRemarkArgRef LLVMRemarkEntryGetFirstArg(LLVMRemarkEntryRef Remark);
@@ -207,6 +217,8 @@ extern LLVMRemarkArgRef LLVMRemarkEntryGetFirstArg(LLVMRemarkEntryRef Remark);
  * Get the next argument in \p Remark from the position of \p It.
  *
  * Returns `NULL` if there are no more arguments available.
+ *
+ * The lifetime of the returned value is bound to the lifetime of \p Remark.
  *
  * \since REMARKS_API_VERSION=0
  */
@@ -230,10 +242,27 @@ extern LLVMRemarkParserRef LLVMRemarkParserCreateYAML(const void *Buf,
                                                       uint64_t Size);
 
 /**
+ * Creates a remark parser that can be used to parse the buffer located in \p
+ * Buf of size \p Size bytes.
+ *
+ * \p Buf cannot be `NULL`.
+ *
+ * This function should be paired with LLVMRemarkParserDispose() to avoid
+ * leaking resources.
+ *
+ * \since REMARKS_API_VERSION=1
+ */
+extern LLVMRemarkParserRef LLVMRemarkParserCreateBitstream(const void *Buf,
+                                                           uint64_t Size);
+
+/**
  * Returns the next remark in the file.
  *
- * The value pointed to by the return value is invalidated by the next call to
- * LLVMRemarkParserGetNext().
+ * The value pointed to by the return value needs to be disposed using a call to
+ * LLVMRemarkEntryDispose().
+ *
+ * All the entries in the returned value that are of LLVMRemarkStringRef type
+ * will become invalidated once a call to LLVMRemarkParserDispose is made.
  *
  * If the parser reaches the end of the buffer, the return value will be `NULL`.
  *
@@ -258,8 +287,9 @@ extern LLVMRemarkParserRef LLVMRemarkParserCreateYAML(const void *Buf,
  * ```
  * LLVMRemarkParserRef Parser = LLVMRemarkParserCreateYAML(Buf, Size);
  * LLVMRemarkEntryRef Remark = NULL;
- * while ((Remark == LLVMRemarkParserGetNext(Parser))) {
+ * while ((Remark = LLVMRemarkParserGetNext(Parser))) {
  *    // use Remark
+ *    LLVMRemarkEntryDispose(Remark); // Release memory.
  * }
  * bool HasError = LLVMRemarkParserHasError(Parser);
  * LLVMRemarkParserDispose(Parser);

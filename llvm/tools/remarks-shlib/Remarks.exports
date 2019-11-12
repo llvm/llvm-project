@@ -6,6 +6,7 @@ LLVMRemarkDebugLocGetSourceColumn
 LLVMRemarkArgGetKey
 LLVMRemarkArgGetValue
 LLVMRemarkArgGetDebugLoc
+LLVMRemarkEntryDispose
 LLVMRemarkEntryGetType
 LLVMRemarkEntryGetPassName
 LLVMRemarkEntryGetRemarkName
@@ -16,6 +17,7 @@ LLVMRemarkEntryGetNumArgs
 LLVMRemarkEntryGetFirstArg
 LLVMRemarkEntryGetNextArg
 LLVMRemarkParserCreateYAML
+LLVMRemarkParserCreateBitstream
 LLVMRemarkParserGetNext
 LLVMRemarkParserHasError
 LLVMRemarkParserGetErrorMessage

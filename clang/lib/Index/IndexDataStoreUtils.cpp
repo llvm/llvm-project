@@ -10,7 +10,7 @@
 #include "clang/Index/IndexDataStoreSymbolUtils.h"
 #include "IndexDataStoreUtils.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Bitcode/BitstreamWriter.h"
+#include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 

@@ -18,4 +18,4 @@
 type = Library
 name = BitReader
 parent = Bitcode
-required_libraries = Core Support
+required_libraries = BitstreamReader Core Support

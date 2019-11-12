@@ -1,7 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   support
-  BitReader
-  BitWriter
+  BitstreamReader
   )
 
 add_clang_library(clangDoc
