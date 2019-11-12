@@ -248,7 +248,6 @@ class SIScheduleBlockCreator {
 
 public:
   SIScheduleBlockCreator(SIScheduleDAGMI *DAG);
-  ~SIScheduleBlockCreator();
 
   SIScheduleBlocks
   getBlocks(SISchedulerBlockCreatorVariant BlockVariant);
