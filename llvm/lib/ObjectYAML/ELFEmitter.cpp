@@ -200,6 +200,9 @@ template <class ELFT> class ELFState {
   void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::GnuHashSection &Section,
                            ContiguousBlobAccumulator &CBA);
+  void writeSectionContent(Elf_Shdr &SHeader,
+                           const ELFYAML::LinkerOptionsSection &Section,
+                           ContiguousBlobAccumulator &CBA);
 
   void writeFill(ELFYAML::Fill &Fill, ContiguousBlobAccumulator &CBA);
 
@@ -465,6 +468,8 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     } else if (auto S = dyn_cast<ELFYAML::HashSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::AddrsigSection>(Sec)) {
+      writeSectionContent(SHeader, *S, CBA);
+    } else if (auto S = dyn_cast<ELFYAML::LinkerOptionsSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::NoteSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
@@ -889,6 +894,30 @@ void ELFState<ELFT>::writeSectionContent(
   for (const ELFYAML::StackSizeEntry &E : *Section.Entries) {
     support::endian::write<uintX_t>(OS, E.Address, ELFT::TargetEndianness);
     SHeader.sh_size += sizeof(uintX_t) + encodeULEB128(E.Size, OS);
+  }
+}
+
+template <class ELFT>
+void ELFState<ELFT>::writeSectionContent(
+    Elf_Shdr &SHeader, const ELFYAML::LinkerOptionsSection &Section,
+    ContiguousBlobAccumulator &CBA) {
+  raw_ostream &OS =
+      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+
+  if (Section.Content) {
+    SHeader.sh_size = writeContent(OS, Section.Content, None);
+    return;
+  }
+
+  if (!Section.Options)
+    return;
+
+  for (const ELFYAML::LinkerOption &LO : *Section.Options) {
+    OS.write(LO.Key.data(), LO.Key.size());
+    OS.write('\0');
+    OS.write(LO.Value.data(), LO.Value.size());
+    OS.write('\0');
+    SHeader.sh_size += (LO.Key.size() + LO.Value.size() + 2);
   }
 }
 
