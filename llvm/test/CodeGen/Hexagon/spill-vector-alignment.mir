@@ -1,0 +1,16 @@
+# RUN: llc -march=hexagon -run-pass prologepilog %s -o - | FileCheck %s
+
+# Check that the spill of $q0 uses unaligned store instruction.
+# CHECK: V6_vS32Ub_ai $r30, -128, killed $v0
+
+---
+name:            test
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: variable-sized, offset: 0, alignment: 1 }
+  - { id: 1, type: spill-slot, size: 128, alignment: 128 }
+body: |
+  bb.0:
+    liveins: $q0
+    PS_vstorerq_ai %stack.1, 0, $q0
+...

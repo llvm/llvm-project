@@ -11,6 +11,7 @@
 
 #include "Hexagon.h"
 #include "HexagonInstrInfo.h"
+#include "HexagonMachineFunctionInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
@@ -103,7 +104,10 @@ bool HexagonVExtract::runOnMachineFunction(MachineFunction &MF) {
   const auto &HRI = *HST->getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
+  Register AR =
+      MF.getInfo<HexagonMachineFunctionInfo>()->getStackAlignBaseVReg();
   std::map<unsigned, SmallVector<MachineInstr*,4>> VExtractMap;
+  unsigned MaxAlign = 0;
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
@@ -116,22 +120,41 @@ bool HexagonVExtract::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
+  auto EmitAddr = [&] (MachineBasicBlock &BB, MachineBasicBlock::iterator At,
+                       DebugLoc dl, int FI, unsigned Offset) {
+    Register AddrR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+    unsigned FiOpc = AR != 0 ? Hexagon::PS_fia : Hexagon::PS_fi;
+    auto MIB = BuildMI(BB, At, dl, HII->get(FiOpc), AddrR);
+    if (AR)
+      MIB.addReg(AR);
+    MIB.addFrameIndex(FI).addImm(Offset);
+    return AddrR;
+  };
+
   for (auto &P : VExtractMap) {
     unsigned VecR = P.first;
     if (P.second.size() <= VExtractThreshold)
       continue;
 
     const auto &VecRC = *MRI.getRegClass(VecR);
-    int FI = MFI.CreateSpillStackObject(HRI.getSpillSize(VecRC),
-                                        HRI.getSpillAlignment(VecRC));
+    unsigned Align = HRI.getSpillAlignment(VecRC);
+    MaxAlign = std::max(MaxAlign, Align);
+    // Make sure this is not a spill slot: spill slots cannot be aligned
+    // if there are variable-sized objects on the stack. They must be
+    // accessible via FP (which is not aligned), because SP is unknown,
+    // and AP may not be available at the location of the load/store.
+    int FI = MFI.CreateStackObject(HRI.getSpillSize(VecRC), Align,
+                                   /*isSpillSlot*/false);
+
     MachineInstr *DefI = MRI.getVRegDef(VecR);
     MachineBasicBlock::iterator At = std::next(DefI->getIterator());
     MachineBasicBlock &DefB = *DefI->getParent();
     unsigned StoreOpc = VecRC.getID() == Hexagon::HvxVRRegClassID
                           ? Hexagon::V6_vS32b_ai
                           : Hexagon::PS_vstorerw_ai;
+    Register AddrR = EmitAddr(DefB, At, DefI->getDebugLoc(), FI, 0);
     BuildMI(DefB, At, DefI->getDebugLoc(), HII->get(StoreOpc))
-      .addFrameIndex(FI)
+      .addReg(AddrR)
       .addImm(0)
       .addReg(VecR);
 
@@ -144,10 +167,8 @@ bool HexagonVExtract::runOnMachineFunction(MachineFunction &MF) {
 
       MachineBasicBlock &ExtB = *ExtI->getParent();
       DebugLoc DL = ExtI->getDebugLoc();
-      Register BaseR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-      BuildMI(ExtB, ExtI, DL, HII->get(Hexagon::PS_fi), BaseR)
-        .addFrameIndex(FI)
-        .addImm(SR == 0 ? 0 : VecSize/2);
+      Register BaseR = EmitAddr(ExtB, ExtI, ExtI->getDebugLoc(), FI,
+                                SR == 0 ? 0 : VecSize/2);
 
       unsigned ElemR = genElemLoad(ExtI, BaseR, MRI);
       Register ExtR = ExtI->getOperand(0).getReg();
@@ -155,6 +176,15 @@ bool HexagonVExtract::runOnMachineFunction(MachineFunction &MF) {
       ExtB.erase(ExtI);
       Changed = true;
     }
+  }
+
+  if (AR) {
+    // Update the required stack alignment.
+    MachineInstr *AlignaI = MRI.getVRegDef(AR);
+    assert(AlignaI->getOpcode() == Hexagon::PS_aligna);
+    MachineOperand &Op = AlignaI->getOperand(1);
+    if (MaxAlign > Op.getImm())
+      Op.setImm(MaxAlign);
   }
 
   return Changed;
