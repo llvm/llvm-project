@@ -56,6 +56,34 @@ void init_plus(BaseS1&, const BaseS1&);
 // CHECK-DAG: [[REDUCTION_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 18, i32 0, i32 0, i8*
 // CHECK-DAG: [[REDUCTION_LOCK:@.+]] = common global [8 x i32] zeroinitializer
 
+#pragma omp declare reduction(operator* : S<int> : omp_out.f = 17 * omp_in.f) initializer(omp_priv = S<int>())
+// CHECK-LABEL: bazz
+void bazz() {
+  S<int> s;
+// CHECK: [[S_ADDR:%.+]] = alloca [[S_INT_TY]],
+// CHECK: call {{.*}} [[S_INT_TY_CONSTR:@.+]]([[S_INT_TY]]* [[S_ADDR]])
+// CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @{{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[S_INT_TY]]*)* [[BAZZ_OUTLINE:@.+]] to void (i32*, i32*, ...)*), [[S_INT_TY]]* [[S_ADDR]])
+// CHECK: call {{.*}} [[S_INT_TY_DESTR:@.+]]([[S_INT_TY]]*
+// CHECK: ret void
+#pragma omp parallel
+#pragma omp simd reduction(*: s)
+  for (int I = 0; I < 10; ++I)
+    ;
+}
+
+// CHECK: define internal void [[BAZZ_OUTLINE]](i32* {{.+}}, i32* {{.+}}, [[S_INT_TY]]* {{.+}})
+// CHECK: [[S_PRIV_ADDR:%.+]] = alloca [[S_INT_TY]],
+// CHECK: call void [[BAZZ_INIT:@.+]]([[S_INT_TY]]* [[S_PRIV_ADDR]], [[S_INT_TY]]* [[S_ORIG_ADDR:%.+]])
+// CHECK:  call void @{{.+}}([[S_INT_TY]]* [[S_ORIG_ADDR]], [[S_INT_TY]]* [[S_PRIV_ADDR]])
+// CHECK-NEXT:  call void [[S_INT_TY_DESTR]]([[S_INT_TY]]* [[S_PRIV_ADDR]])
+// CHECK-NEXT:  ret void
+
+// CHECK: define internal void [[BAZZ_INIT]]([[S_INT_TY]]* {{.*}}[[S_PRIV_ADDR:%.+]], [[S_INT_TY]]* {{.*}}[[S_ORIG_ADDR:%.+]])
+// CHECK: store [[S_INT_TY]]* [[S_PRIV_ADDR]], [[S_INT_TY]]** [[S_PRIV_ADDR_REF:%.+]],
+// CHECK: [[S_PRIV_ADDR:%.+]] = load [[S_INT_TY]]*, [[S_INT_TY]]** [[S_PRIV_ADDR_REF]],
+// CHECK: call void [[S_INT_TY_CONSTR]]([[S_INT_TY]]* [[S_PRIV_ADDR]])
+// CHECK-NEXT: ret void
+
 #pragma omp declare reduction(operator&& : int : omp_out = 111 & omp_in)
 template <typename T, int length>
 T tmain() {
@@ -828,7 +856,7 @@ int main() {
 // CHECK: store [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]], [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR:%.+]],
 // CHECK: [[VAR3_ORIG:%.+]] = load [4 x [[S_FLOAT_TY]]]*, [4 x [[S_FLOAT_TY]]]** [[VAR3_ORIG_ADDR]],
 // CHECK: [[VAR3_VOID_PTR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID:%.+]], i64 48, i8* inttoptr (i64 6 to i8*))
-// CHECK: [[VAR3_PRIV:%.+]] = bitcast i8* [[VAR3_VOID_PTR]] to [4 x %struct.S]*
+// CHECK: [[VAR3_PRIV:%.+]] = bitcast i8* [[VAR3_VOID_PTR]] to [4 x [[S_FLOAT_TY]]]*
 // CHECK: getelementptr inbounds [4 x [[S_FLOAT_TY]]], [4 x [[S_FLOAT_TY]]]* [[VAR3_PRIV]], i32 0, i32 0
 // CHECK: bitcast [4 x [[S_FLOAT_TY]]]* [[VAR3_ORIG]] to [[S_FLOAT_TY]]*
 // CHECK: getelementptr [[S_FLOAT_TY]], [[S_FLOAT_TY]]* %{{.+}}, i64 4
@@ -839,13 +867,13 @@ int main() {
 
 // CHECK: define {{.*}} i{{[0-9]+}} [[TMAIN_INT_42]]()
 // CHECK: [[TEST:%.+]] = alloca [[S_INT_TY]],
-// CHECK: call {{.*}} [[S_INT_TY_CONSTR:@.+]]([[S_INT_TY]]* [[TEST]])
+// CHECK: call {{.*}} [[S_INT_TY_CONSTR]]([[S_INT_TY]]* [[TEST]])
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 6, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i32*, [[S_INT_TY]]*, [[S_INT_TY]]*, i32*, [2 x i32]*, [2 x [[S_INT_TY]]]*)* [[TMAIN_MICROTASK:@.+]] to void
 // Not interested in this one:
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 4,
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 5, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [42 x [[S_INT_TY]]]*, [2 x i32]*, i32*, [2 x [[S_INT_TY]]]*, [[S_INT_TY]]*)* [[TMAIN_MICROTASK2:@.+]] to void
-// CHECK: call {{.*}} [[S_INT_TY_DESTR:@.+]]([[S_INT_TY]]*
-// CHECK: call {{.*}} [[S_INT_TY_DESTR:@.+]]([[S_INT_TY]]*
+// CHECK: call {{.*}} [[S_INT_TY_DESTR]]([[S_INT_TY]]*
+// CHECK: call {{.*}} [[S_INT_TY_DESTR]]([[S_INT_TY]]*
 // CHECK: ret
 //
 // CHECK: define internal void [[TMAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i32* dereferenceable(4) %{{.+}}, [[S_INT_TY]]* dereferenceable(12) %{{.+}}, [[S_INT_TY]]* dereferenceable(12) %{{.+}}, i32* dereferenceable(4) %{{.+}}, [2 x i32]* dereferenceable(8) %{{.+}}, [2 x [[S_INT_TY]]]* dereferenceable(24) %{{.+}})
