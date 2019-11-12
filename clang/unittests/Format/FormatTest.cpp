@@ -6134,7 +6134,48 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
                "void\n"
                "A::operator>>() {}\n"
                "void\n"
-               "A::operator+() {}\n",
+               "A::operator+() {}\n"
+               "void\n"
+               "A::operator*() {}\n"
+               "void\n"
+               "A::operator->() {}\n"
+               "void\n"
+               "A::operator void *() {}\n"
+               "void\n"
+               "A::operator void &() {}\n"
+               "void\n"
+               "A::operator void &&() {}\n"
+               "void\n"
+               "A::operator char *() {}\n"
+               "void\n"
+               "A::operator[]() {}\n"
+               "void\n"
+               "A::operator!() {}\n",
+               Style);
+  verifyFormat("constexpr auto\n"
+               "operator()() const -> reference {}\n"
+               "constexpr auto\n"
+               "operator>>() const -> reference {}\n"
+               "constexpr auto\n"
+               "operator+() const -> reference {}\n"
+               "constexpr auto\n"
+               "operator*() const -> reference {}\n"
+               "constexpr auto\n"
+               "operator->() const -> reference {}\n"
+               "constexpr auto\n"
+               "operator++() const -> reference {}\n"
+               "constexpr auto\n"
+               "operator void *() const -> reference {}\n"
+               "constexpr auto\n"
+               "operator void &() const -> reference {}\n"
+               "constexpr auto\n"
+               "operator void &&() const -> reference {}\n"
+               "constexpr auto\n"
+               "operator char *() const -> reference {}\n"
+               "constexpr auto\n"
+               "operator!() const -> reference {}\n"
+               "constexpr auto\n"
+               "operator[]() const -> reference {}\n",
                Style);
   verifyFormat("void *operator new(std::size_t s);", // No break here.
                Style);
@@ -14753,6 +14794,53 @@ TEST_F(FormatTest, STLWhileNotDefineChed) {
   verifyFormat("#if defined(while)\n"
                "#define while EMIT WARNING C4005\n"
                "#endif // while");
+}
+
+TEST_F(FormatTest, OperatorSpacing) {
+  FormatStyle Style = getLLVMStyle();
+  Style.PointerAlignment = FormatStyle::PAS_Right;
+  verifyFormat("Foo::operator*();", Style);
+  verifyFormat("Foo::operator void *();", Style);
+  verifyFormat("Foo::operator()(void *);", Style);
+  verifyFormat("Foo::operator*(void *);", Style);
+  verifyFormat("Foo::operator*();", Style);
+  verifyFormat("operator*(int (*)(), class Foo);", Style);
+
+  verifyFormat("Foo::operator&();", Style);
+  verifyFormat("Foo::operator void &();", Style);
+  verifyFormat("Foo::operator()(void &);", Style);
+  verifyFormat("Foo::operator&(void &);", Style);
+  verifyFormat("Foo::operator&();", Style);
+  verifyFormat("operator&(int (&)(), class Foo);", Style);
+
+  verifyFormat("Foo::operator&&();", Style);
+  verifyFormat("Foo::operator void &&();", Style);
+  verifyFormat("Foo::operator()(void &&);", Style);
+  verifyFormat("Foo::operator&&(void &&);", Style);
+  verifyFormat("Foo::operator&&();", Style);
+  verifyFormat("operator&&(int(&&)(), class Foo);", Style);
+
+  Style.PointerAlignment = FormatStyle::PAS_Left;
+  verifyFormat("Foo::operator*();", Style);
+  verifyFormat("Foo::operator void*();", Style);
+  verifyFormat("Foo::operator()(void*);", Style);
+  verifyFormat("Foo::operator*(void*);", Style);
+  verifyFormat("Foo::operator*();", Style);
+  verifyFormat("operator*(int (*)(), class Foo);", Style);
+
+  verifyFormat("Foo::operator&();", Style);
+  verifyFormat("Foo::operator void&();", Style);
+  verifyFormat("Foo::operator()(void&);", Style);
+  verifyFormat("Foo::operator&(void&);", Style);
+  verifyFormat("Foo::operator&();", Style);
+  verifyFormat("operator&(int (&)(), class Foo);", Style);
+
+  verifyFormat("Foo::operator&&();", Style);
+  verifyFormat("Foo::operator void&&();", Style);
+  verifyFormat("Foo::operator()(void&&);", Style);
+  verifyFormat("Foo::operator&&(void&&);", Style);
+  verifyFormat("Foo::operator&&();", Style);
+  verifyFormat("operator&&(int(&&)(), class Foo);", Style);
 }
 
 } // namespace
