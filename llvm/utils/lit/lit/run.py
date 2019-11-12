@@ -13,7 +13,7 @@ class NopSemaphore(object):
     def release(self): pass
 
 def create_run(tests, lit_config, workers, progress_callback, timeout=None):
-    # TODO(yln) assert workers > 0
+    assert workers > 0
     if workers == 1:
         return SerialRun(tests, lit_config, progress_callback, timeout)
     return ParallelRun(tests, lit_config, progress_callback, timeout, workers)
@@ -45,9 +45,6 @@ class Run(object):
         computed. Tests which were not actually executed (for any reason) will
         be given an UNRESOLVED result.
         """
-        if not self.tests:
-            return 0.0
-
         self.failure_count = 0
         self.hit_max_failures = False
 

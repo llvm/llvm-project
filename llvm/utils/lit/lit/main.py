@@ -43,6 +43,9 @@ def main(builtin_params = {}):
         echo_all_commands = opts.echoAllCommands)
 
     tests = lit.discovery.find_tests_for_inputs(litConfig, opts.test_paths)
+    if not tests:
+        sys.stderr.write('Did not disover any tests for provided path(s).\n')
+        sys.exit(2)
 
     # Command line overrides configuration for maxIndividualTestTime.
     if opts.maxIndividualTestTime is not None:  # `not None` is important (default: 0)
@@ -63,12 +66,27 @@ def main(builtin_params = {}):
 
     if opts.filter:
         tests = [t for t in tests if opts.filter.search(t.getFullName())]
+        if not tests:
+            sys.stderr.write('Filter did not match any tests '
+                             '(of %d discovered).  ' % numTotalTests)
+            if opts.allow_empty_runs:
+                sys.stderr.write('Suppressing error because '
+                                 "'--allow-empty-runs' was specified.\n")
+                sys.exit(0)
+            else:
+                sys.stderr.write("Use '--allow-empty-runs' to suppress this "
+                                 'error.\n')
+                sys.exit(2)
 
     determine_order(tests, opts.order)
 
     if opts.shard:
         (run, shards) = opts.shard
         tests = filter_by_shard(tests, run, shards, litConfig)
+        if not tests:
+            sys.stderr.write('Shard does not contain any tests.  Consider '
+                             'decreasing the number of shards.\n')
+            sys.exit(0)
 
     if opts.max_tests:
         tests = tests[:opts.max_tests]
@@ -87,7 +105,7 @@ def main(builtin_params = {}):
         write_test_results_xunit(tests, opts)
 
     if litConfig.numErrors:
-        sys.stderr.write('\n%d error(s), exiting.\n' % litConfig.numErrors)
+        sys.stderr.write('\n%d error(s) in tests.\n' % litConfig.numErrors)
         sys.exit(2)
 
     if litConfig.numWarnings:
