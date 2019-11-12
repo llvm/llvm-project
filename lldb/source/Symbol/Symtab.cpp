@@ -896,14 +896,8 @@ void Symtab::InitAddressIndexes() {
       for (size_t i = 0; i < num_entries; i++) {
         FileRangeToIndexMap::Entry *entry =
             m_file_addr_to_index.GetMutableEntryAtIndex(i);
-        if (entry->GetByteSize() > 0)
-          continue;
-        addr_t curr_base_addr = entry->GetRangeBase();
-        // Symbols with non-zero size will show after zero-sized symbols on the
-        // same address. So do not set size of a non-last zero-sized symbol.
-        if (i == num_entries - 1 ||
-            m_file_addr_to_index.GetMutableEntryAtIndex(i + 1)
-                    ->GetRangeBase() != curr_base_addr) {
+        if (entry->GetByteSize() == 0) {
+          addr_t curr_base_addr = entry->GetRangeBase();
           const RangeVector<addr_t, addr_t>::Entry *containing_section =
               section_ranges.FindEntryThatContains(curr_base_addr);
 
