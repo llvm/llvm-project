@@ -73,6 +73,9 @@ HexagonRegisterInfo::getCallerSavedRegs(const MachineFunction *MF,
   static const MCPhysReg VecDbl[] = {
     W0, W1, W2, W3, W4, W5, W6, W7, W8, W9, W10, W11, W12, W13, W14, W15, 0
   };
+  static const MCPhysReg VecPred[] = {
+    Q0, Q1, Q2, Q3, 0
+  };
 
   switch (RC->getID()) {
     case IntRegsRegClassID:
@@ -85,6 +88,8 @@ HexagonRegisterInfo::getCallerSavedRegs(const MachineFunction *MF,
       return VecSgl;
     case HvxWRRegClassID:
       return VecDbl;
+    case HvxQRRegClassID:
+      return VecPred;
     default:
       break;
   }

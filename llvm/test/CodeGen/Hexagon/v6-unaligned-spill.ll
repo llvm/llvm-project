@@ -4,7 +4,7 @@
 ; has an alloca. Also, make sure the addressing mode for unaligned store does
 ; is not a base+offset with a non-zero offset that is not a multiple of 128.
 
-; CHECK: vmemu(r{{[0-9]+}}+#0)
+; CHECK: vmemu({{.*}}) =
 
 %s.0 = type { [5 x [4 x i8]], i32, i32, i32, i32 }
 
