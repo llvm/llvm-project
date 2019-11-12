@@ -1190,6 +1190,7 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLineWithReturn(
     return true;
   }
   }
+  llvm_unreachable("Fully covered switch!");
 }
 
 Status ScriptInterpreterPythonImpl::ExecuteMultipleLines(
