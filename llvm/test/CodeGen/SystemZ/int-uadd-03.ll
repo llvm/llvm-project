@@ -199,7 +199,7 @@ define zeroext i1 @f10(i64 %src, i64 %index, i64 %a, i64 *%res) {
 define zeroext i1 @f11(i32 *%ptr0) {
 ; CHECK-LABEL: f11:
 ; CHECK: brasl %r14, foo@PLT
-; CHECK: algf %r2, 160(%r15)
+; CHECK: algf {{%r[0-9]+}}, 160(%r15)
 ; CHECK: br %r14
   %ptr1 = getelementptr i32, i32 *%ptr0, i64 2
   %ptr2 = getelementptr i32, i32 *%ptr0, i64 4
