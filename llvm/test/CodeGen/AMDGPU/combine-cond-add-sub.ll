@@ -237,6 +237,80 @@ bb:
   ret void
 }
 
+; sub x, sext (setcc) => addcarry x, 0, setcc
+; GCN-LABEL: {{^}}cmp_sub_sext:
+; GCN: v_cmp_gt_u32_e32 vcc, v
+; GCN-NOT: vcc
+; GCN: v_addc_u32_e32 [[RESULT:v[0-9]+]], vcc, 0, v{{[0-9]+}}, vcc
+define amdgpu_kernel void @cmp_sub_sext(i32 addrspace(1)* nocapture %arg) {
+bb:
+  %x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %y = tail call i32 @llvm.amdgcn.workitem.id.y()
+  %gep = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %x
+  %v = load i32, i32 addrspace(1)* %gep, align 4
+  %cmp = icmp ugt i32 %x, %y
+  %ext = sext i1 %cmp to i32
+  %add = sub i32 %v, %ext
+  store i32 %add, i32 addrspace(1)* %gep, align 4
+  ret void
+}
+
+; sub x, zext (setcc) => subcarry x, 0, setcc
+; GCN-LABEL: {{^}}cmp_sub_zext:
+; GCN: v_cmp_gt_u32_e32 vcc, v
+; GCN-NOT: vcc
+; GCN: v_subbrev_u32_e32 [[RESULT:v[0-9]+]], vcc, 0, v{{[0-9]+}}, vcc
+define amdgpu_kernel void @cmp_sub_zext(i32 addrspace(1)* nocapture %arg) {
+bb:
+  %x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %y = tail call i32 @llvm.amdgcn.workitem.id.y()
+  %gep = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %x
+  %v = load i32, i32 addrspace(1)* %gep, align 4
+  %cmp = icmp ugt i32 %x, %y
+  %ext = zext i1 %cmp to i32
+  %add = sub i32 %v, %ext
+  store i32 %add, i32 addrspace(1)* %gep, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}sub_addcarry:
+; GCN: v_cmp_gt_u32_e32 vcc, v
+; GCN-NOT: vcc
+; GCN: v_addc_u32_e32 [[ADDC:v[0-9]+]], vcc, 0, v{{[0-9]+}}, vcc
+; GCN-NOT: vcc
+; GCN: v_subrev_i32_e32 [[RESULT:v[0-9]+]], vcc,
+define amdgpu_kernel void @sub_addcarry(i32 addrspace(1)* nocapture %arg, i32 %a) {
+bb:
+  %x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %y = tail call i32 @llvm.amdgcn.workitem.id.y()
+  %gep = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %x
+  %v = load i32, i32 addrspace(1)* %gep, align 4
+  %cmp = icmp ugt i32 %x, %y
+  %ext = zext i1 %cmp to i32
+  %adde = add i32 %v, %ext
+  %add2 = sub i32 %adde, %a
+  store i32 %add2, i32 addrspace(1)* %gep, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}sub_subcarry:
+; GCN: v_cmp_gt_u32_e32 vcc, v
+; GCN-NOT: vcc
+; GCN: v_subb_u32_e32 [[RESULT:v[0-9]+]], vcc, v{{[0-9]+}}, v{{[0-9]+}}, vcc
+define amdgpu_kernel void @sub_subcarry(i32 addrspace(1)* nocapture %arg, i32 %a) {
+bb:
+  %x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %y = tail call i32 @llvm.amdgcn.workitem.id.y()
+  %gep = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %x
+  %v = load i32, i32 addrspace(1)* %gep, align 4
+  %cmp = icmp ugt i32 %x, %y
+  %ext = zext i1 %cmp to i32
+  %adde = sub i32 %v, %ext
+  %add2 = sub i32 %adde, %a
+  store i32 %add2, i32 addrspace(1)* %gep, align 4
+  ret void
+}
+
 declare i1 @llvm.amdgcn.class.f32(float, i32) #0
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
