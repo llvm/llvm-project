@@ -2388,9 +2388,9 @@ bool HexagonFrameLowering::needsAligna(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   if (!MFI.hasVarSizedObjects())
     return false;
-  unsigned MaxA = MFI.getMaxAlignment();
-  if (MaxA <= getStackAlignment())
-    return false;
+  // Do not check for max stack object alignment here, because the stack
+  // may not be complete yet. Assume that we will need PS_aligna if there
+  // are variable-sized objects.
   return true;
 }
 
