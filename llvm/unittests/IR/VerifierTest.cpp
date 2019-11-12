@@ -90,7 +90,7 @@ TEST(VerifierTest, Freeze) {
 
   EXPECT_FALSE(verifyFunction(*F));
 
-  FI_ptr->eraseFromParent();
+  FI->eraseFromParent();
 }
 
 TEST(VerifierTest, InvalidRetAttribute) {
