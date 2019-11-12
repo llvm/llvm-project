@@ -237,7 +237,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UINT_TO_FP     , MVT::i32  , Custom);
   }
 
-  // Promote i1/i8 SINT_TO_FP to larger SINT_TO_FP's, as X86 doesn't have
+  // Promote i8 SINT_TO_FP to larger SINT_TO_FP's, as X86 doesn't have
   // this operation.
   setOperationAction(ISD::SINT_TO_FP       , MVT::i8   , Promote);
 
@@ -253,7 +253,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
-  // Promote i1/i8 FP_TO_SINT to larger FP_TO_SINTS's, as X86 doesn't have
+  // Promote i8 FP_TO_SINT to larger FP_TO_SINTS's, as X86 doesn't have
   // this operation.
   setOperationAction(ISD::FP_TO_SINT       , MVT::i8   , Promote);
 
