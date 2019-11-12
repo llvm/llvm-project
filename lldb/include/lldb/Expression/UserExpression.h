@@ -33,12 +33,13 @@ namespace lldb_private {
 /// implementations of UserExpression - which will be vended through the
 /// appropriate TypeSystem.
 class UserExpression : public Expression {
+  // LLVM RTTI support
+  static char ID;
+
 public:
-  /// LLVM-style RTTI support.
-  static bool classof(const Expression *E) {
-    return E->getKind() == eKindUserExpression;
-  }
-  
+  bool isA(const void *ClassID) const override { return ClassID == &ID; }
+  static bool classof(const Expression *obj) { return obj->isA(&ID); }
+
   enum { kDefaultTimeout = 500000u };
 
   /// Constructor
@@ -61,8 +62,7 @@ public:
   UserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
                  llvm::StringRef prefix, lldb::LanguageType language,
                  ResultType desired_type,
-                 const EvaluateExpressionOptions &options,
-                 ExpressionKind kind);
+                 const EvaluateExpressionOptions &options);
 
   /// Destructor
   ~UserExpression() override;

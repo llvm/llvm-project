@@ -42,6 +42,8 @@
 
 using namespace lldb_private;
 
+char ClangFunctionCaller::ID;
+
 // ClangFunctionCaller constructor
 ClangFunctionCaller::ClangFunctionCaller(ExecutionContextScope &exe_scope,
                                          const CompilerType &return_type,
