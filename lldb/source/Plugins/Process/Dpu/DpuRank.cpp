@@ -28,6 +28,7 @@
 
 extern "C" {
 #include <dpu.h>
+#include <dpu_log.h>
 }
 
 using namespace lldb;
@@ -50,8 +51,8 @@ const uint32_t dpuword_size_mask = ~dpuword_size_mod;
 
 DpuRank::DpuRank() : nr_threads(0), m_lock() { m_rank = NULL; }
 
-bool DpuRank::Open(char *profile) {
-  std::lock_guard<std::mutex> guard(m_lock);
+bool DpuRank::Open(char *profile, FILE *stdout_file) {
+  std::lock_guard<std::recursive_mutex> guard(m_lock);
 
   int ret = dpu_get_rank_of_type(profile, &m_rank);
   if (ret != DPU_API_SUCCESS)
@@ -61,7 +62,9 @@ bool DpuRank::Open(char *profile) {
   nr_threads = m_desc->dpu.nr_of_threads;
 
   struct dpu_t *dpu;
-  DPU_FOREACH(m_rank, dpu) { m_dpus.push_back(new Dpu(this, dpu)); }
+  DPU_FOREACH(m_rank, dpu) {
+    m_dpus.push_back(new Dpu(this, dpu, stdout_file));
+  }
 
   return true;
 }
@@ -69,7 +72,7 @@ bool DpuRank::Open(char *profile) {
 bool DpuRank::IsValid() { return m_rank ? true : false; }
 
 bool DpuRank::Reset() {
-  std::lock_guard<std::mutex> guard(m_lock);
+  std::lock_guard<std::recursive_mutex> guard(m_lock);
   return dpu_reset_rank(m_rank) == DPU_API_SUCCESS;
 }
 
@@ -85,7 +88,7 @@ Dpu *DpuRank::GetDpuFromSliceIdAndDpuId(unsigned int slice_id,
 
 bool DpuRank::StopDpus() {
   for (Dpu *dpu : m_dpus) {
-    bool success = dpu->StopThreadsUnlock(true);
+    bool success = dpu->StopThreads(true);
     if (!success)
       return false;
   }
@@ -111,22 +114,60 @@ void DpuRank::SetSliceInfo(uint32_t slice_id, uint64_t structure_value,
                                            slice_target);
 }
 
-Dpu::Dpu(DpuRank *rank, dpu_t *dpu) : m_rank(rank), m_dpu(dpu) {
+Dpu::Dpu(DpuRank *rank, dpu_t *dpu, FILE *stdout_file_)
+    : m_rank(rank), m_dpu(dpu), printf_enable(false),
+      printf_buffer_last_addr((uint32_t)LLDB_INVALID_ADDRESS),
+      printf_buffer_var_addr((uint32_t)LLDB_INVALID_ADDRESS) {
   nr_threads = m_rank->GetNrThreads();
   nr_of_work_registers_per_thread =
       rank->GetDesc()->dpu.nr_of_work_registers_per_thread;
 
   m_context = dpu_alloc_dpu_context(dpu_get_rank(dpu));
+
+  stdout_file = stdout_file_;
 }
 
-Dpu::~Dpu() { dpu_free_dpu_context(m_context); }
+Dpu::~Dpu() {
+  fclose(stdout_file);
+  dpu_free_dpu_context(m_context);
+}
+
+bool Dpu::GetPrintfSequenceAddrs() {
+  dpu_runtime_context_t *runtime = dpu_get_runtime_context(m_dpu);
+  open_print_sequence_addr = runtime->open_print_sequence_addr;
+  close_print_sequence_addr = runtime->close_print_sequence_addr;
+  printf_buffer_address = runtime->printf_buffer_address;
+  printf_buffer_size = runtime->printf_buffer_size;
+  printf_buffer_var_addr = runtime->printf_write_pointer_address;
+  if (open_print_sequence_addr != (lldb::addr_t)LLDB_INVALID_ADDRESS &&
+      close_print_sequence_addr != (lldb::addr_t)LLDB_INVALID_ADDRESS) {
+    open_print_sequence_addr++; // we add 1 to avoid to be on the 'acquire'
+                                // which could makes us loop forever
+    open_print_sequence_addr *= 8;
+    close_print_sequence_addr *= 8;
+    printf_enable = true;
+    if (!ReadIRAM(open_print_sequence_addr, &open_print_sequence_inst,
+                  sizeof(open_print_sequence_inst)))
+      return false;
+    if (!ReadIRAM(close_print_sequence_addr, &close_print_sequence_inst,
+                  sizeof(close_print_sequence_inst)))
+      return false;
+  }
+  return true;
+}
 
 bool Dpu::LoadElf(const FileSpec &elf_file_path) {
   ModuleSP elf_mod(new Module(elf_file_path, k_dpu_arch));
 
   dpu_api_status_t status =
       dpu_load_individual(m_dpu, elf_file_path.GetCString());
-  return status == DPU_API_SUCCESS;
+  if (status != DPU_API_SUCCESS)
+    return false;
+
+  if (!GetPrintfSequenceAddrs())
+    return false;
+
+  return true;
 }
 
 bool Dpu::Boot() {
@@ -178,7 +219,9 @@ bool Dpu::Boot() {
   }
 }
 
-bool Dpu::StopThreadsUnlock(bool force) {
+bool Dpu::StopThreads(bool force) {
+  std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
+
   if (!dpu_is_running && !force)
     return true;
   dpu_is_running = false;
@@ -192,8 +235,10 @@ bool Dpu::StopThreadsUnlock(bool force) {
   m_context->mem_fault = false;
 
   int ret = DPU_API_SUCCESS;
-  ret |= dpu_initialize_fault_process_for_dpu(m_dpu, m_context);
-  ret |= dpu_extract_context_for_dpu(m_dpu, m_context);
+  ret = dpu_initialize_fault_process_for_dpu(m_dpu, m_context);
+  if (ret != DPU_API_SUCCESS)
+    return false;
+  ret = dpu_extract_context_for_dpu(m_dpu, m_context);
   return ret == DPU_API_SUCCESS;
 }
 
@@ -202,8 +247,28 @@ static void SetExitStatus(unsigned int *exit_status,
   *exit_status = context->registers[lldb_private::r0_dpu];
 }
 
+StateType Dpu::StepOverPrintfSequenceAndContinue(StateType result_state,
+                                                 unsigned int *exit_status) {
+  dpu_thread_t thread_in_fault = m_context->bkp_fault_thread_index;
+  lldb::addr_t pc_of_thread_in_fault = m_context->pcs[thread_in_fault] * 8;
+  if (pc_of_thread_in_fault == open_print_sequence_addr ||
+      pc_of_thread_in_fault == close_print_sequence_addr) {
+    result_state = StepThread(thread_in_fault, exit_status);
+
+    SetExitStatus(exit_status, m_context);
+
+    if (result_state != StateType::eStateStopped)
+      return result_state;
+    if (ResumeThreads(true))
+      return StateType::eStateRunning;
+    else
+      return StateType::eStateCrashed;
+  }
+  return result_state;
+}
+
 StateType Dpu::PollStatus(unsigned int *exit_status) {
-  std::lock_guard<std::mutex> guard(m_rank->GetLock());
+  std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
   bool dpu_is_in_fault;
   StateType result_state = StateType::eStateRunning;
 
@@ -219,20 +284,18 @@ StateType Dpu::PollStatus(unsigned int *exit_status) {
     return StateType::eStateRunning;
   }
 
-  if (!StopThreadsUnlock(true)) {
+  if (!StopThreads(true)) {
     return StateType::eStateCrashed;
   }
-  // Needs to be after StopThreadsUnlock to make sure that context is up to
+  // Needs to be after StopThreads to make sure that context is up to
   // date.
   SetExitStatus(exit_status, m_context);
 
+  if (dpu_is_in_fault && m_context->bkp_fault && printf_enable) {
+    return StepOverPrintfSequenceAndContinue(result_state, exit_status);
+  }
+
   return result_state;
-}
-
-bool Dpu::StopThreads() {
-  std::lock_guard<std::mutex> guard(m_rank->GetLock());
-
-  return StopThreadsUnlock();
 }
 
 static bool IsContextReadyForResumeOrStep(struct _dpu_context_t *context) {
@@ -241,17 +304,19 @@ static bool IsContextReadyForResumeOrStep(struct _dpu_context_t *context) {
 }
 
 bool Dpu::ResumeThreads(bool allowed_polling) {
-  std::lock_guard<std::mutex> guard(m_rank->GetLock());
+  std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
 
   if (!IsContextReadyForResumeOrStep(m_context))
     return false;
 
   int ret = DPU_API_SUCCESS;
   if (registers_has_been_modified) {
-    ret |= dpu_restore_context_for_dpu(m_dpu, m_context);
+    ret = dpu_restore_context_for_dpu(m_dpu, m_context);
+    if (ret != DPU_API_SUCCESS)
+      return false;
     registers_has_been_modified = false;
   }
-  ret |= dpu_finalize_fault_process_for_dpu(m_dpu, m_context);
+  ret = dpu_finalize_fault_process_for_dpu(m_dpu, m_context);
 
   if (allowed_polling)
     dpu_is_running = true;
@@ -259,8 +324,68 @@ bool Dpu::ResumeThreads(bool allowed_polling) {
   return ret == DPU_API_SUCCESS;
 }
 
+bool Dpu::PrepareStepOverPrintfBkp(
+    const uint32_t thread_index,
+    dpuinstruction_t &inst_to_restore_if_printf_enable,
+    dpuinstruction_t &inst_to_replace_with, const uint32_t current_pc) {
+  if (current_pc == open_print_sequence_addr) {
+    inst_to_replace_with = open_print_sequence_inst;
+
+    if (printf_buffer_var_addr != (uint32_t)LLDB_INVALID_ADDRESS) {
+      if (!ReadWRAM(printf_buffer_var_addr, &printf_buffer_last_addr,
+                    sizeof(printf_buffer_last_addr)))
+        return false;
+    }
+  } else if (current_pc == close_print_sequence_addr) {
+    inst_to_replace_with = close_print_sequence_inst;
+    if (printf_buffer_var_addr != (uint32_t)LLDB_INVALID_ADDRESS &&
+        printf_buffer_last_addr != (uint32_t)LLDB_INVALID_ADDRESS) {
+      uint32_t printf_buffer_current_addr;
+      if (!ReadWRAM(printf_buffer_var_addr, &printf_buffer_current_addr,
+                    sizeof(printf_buffer_current_addr)))
+        return false;
+
+      size_t mram_buffer_size;
+      if (printf_buffer_current_addr <= printf_buffer_last_addr) {
+        mram_buffer_size = printf_buffer_size;
+      } else {
+        mram_buffer_size = printf_buffer_current_addr - printf_buffer_last_addr;
+      }
+      uint8_t *mram_buffer = (uint8_t *)malloc(mram_buffer_size);
+      if (mram_buffer == NULL)
+        return false;
+      if (mram_buffer_size == printf_buffer_size) {
+        uint32_t buffer_index = printf_buffer_last_addr - printf_buffer_address;
+        if (!ReadMRAM(printf_buffer_last_addr, mram_buffer,
+                      printf_buffer_size - buffer_index))
+          return false;
+        if (!ReadMRAM(printf_buffer_address, &mram_buffer[buffer_index],
+                      printf_buffer_current_addr - printf_buffer_address))
+          return false;
+
+      } else {
+        if (!ReadMRAM(printf_buffer_last_addr, mram_buffer, mram_buffer_size))
+          return false;
+      }
+
+      if (stdout_file != NULL) {
+        if (!read_and_display_contents_of(mram_buffer, mram_buffer_size,
+                                          stdout_file))
+          return false;
+
+        fflush(stdout_file);
+      }
+
+      free(mram_buffer);
+    }
+  }
+  return true;
+}
+
+#define UNKNOWN_INSTRUCTION (0ULL)
+
 StateType Dpu::StepThread(uint32_t thread_index, unsigned int *exit_status) {
-  std::lock_guard<std::mutex> guard(m_rank->GetLock());
+  std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
 
   if (!IsContextReadyForResumeOrStep(m_context))
     return StateType::eStateCrashed;
@@ -274,12 +399,47 @@ StateType Dpu::StepThread(uint32_t thread_index, unsigned int *exit_status) {
 
   int ret = DPU_API_SUCCESS;
   if (registers_has_been_modified) {
-    ret |= dpu_restore_context_for_dpu(m_dpu, m_context);
+    ret = dpu_restore_context_for_dpu(m_dpu, m_context);
+    if (ret != DPU_API_SUCCESS)
+      return StateType::eStateCrashed;
     registers_has_been_modified = false;
   }
-  ret |=
+
+  uint64_t inst_to_restore_if_printf_enable = UNKNOWN_INSTRUCTION;
+  uint32_t current_pc;
+  if (printf_enable) {
+    uint64_t inst_to_replace_with = UNKNOWN_INSTRUCTION;
+    current_pc = (m_context->pcs[thread_index] * 8);
+
+    if (!PrepareStepOverPrintfBkp(thread_index,
+                                  inst_to_restore_if_printf_enable,
+                                  inst_to_replace_with, current_pc))
+      return StateType::eStateCrashed;
+
+    if (inst_to_replace_with != UNKNOWN_INSTRUCTION) {
+      // Read what should be the bkp instruction and write the expected
+      // instruction instead
+      if (!ReadIRAM(current_pc, &inst_to_restore_if_printf_enable,
+                    sizeof(inst_to_restore_if_printf_enable)))
+        return StateType::eStateCrashed;
+      if (!WriteIRAM(current_pc, (const void *)&inst_to_replace_with,
+                     sizeof(inst_to_replace_with)))
+        return StateType::eStateCrashed;
+    }
+  }
+
+  ret =
       dpu_execute_thread_step_in_fault_for_dpu(m_dpu, thread_index, m_context);
-  ret |= dpu_extract_context_for_dpu(m_dpu, m_context);
+  if (ret != DPU_API_SUCCESS)
+    return StateType::eStateCrashed;
+  ret = dpu_extract_context_for_dpu(m_dpu, m_context);
+
+  // Write back the breakpoint
+  if (inst_to_restore_if_printf_enable != UNKNOWN_INSTRUCTION) {
+    if (!WriteIRAM(current_pc, (const void *)&inst_to_restore_if_printf_enable,
+                   sizeof(inst_to_restore_if_printf_enable)))
+      return StateType::eStateCrashed;
+  }
 
   if (ret != DPU_API_SUCCESS)
     return StateType::eStateCrashed;
@@ -291,7 +451,7 @@ StateType Dpu::StepThread(uint32_t thread_index, unsigned int *exit_status) {
 }
 
 bool Dpu::WriteWRAM(uint32_t offset, const void *buf, size_t size) {
-  std::lock_guard<std::mutex> guard(m_rank->GetLock());
+  std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
 
   dpu_api_status_t ret;
   // fast path, everything is aligned
@@ -341,7 +501,7 @@ bool Dpu::WriteWRAM(uint32_t offset, const void *buf, size_t size) {
 }
 
 bool Dpu::ReadWRAM(uint32_t offset, void *buf, size_t size) {
-  std::lock_guard<std::mutex> guard(m_rank->GetLock());
+  std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
   dpuword_t *words = static_cast<dpuword_t *>(buf);
 
   dpu_api_status_t ret;
@@ -372,7 +532,7 @@ bool Dpu::ReadWRAM(uint32_t offset, void *buf, size_t size) {
 }
 
 bool Dpu::WriteIRAM(uint32_t offset, const void *buf, size_t size) {
-  std::lock_guard<std::mutex> guard(m_rank->GetLock());
+  std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
 
   dpu_api_status_t ret;
   // fast path, everything is aligned
@@ -423,7 +583,7 @@ bool Dpu::WriteIRAM(uint32_t offset, const void *buf, size_t size) {
 }
 
 bool Dpu::ReadIRAM(uint32_t offset, void *buf, size_t size) {
-  std::lock_guard<std::mutex> guard(m_rank->GetLock());
+  std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
   dpuinstruction_t *instrs = static_cast<dpuinstruction_t *>(buf);
 
   dpu_api_status_t ret;
@@ -456,7 +616,7 @@ bool Dpu::ReadIRAM(uint32_t offset, void *buf, size_t size) {
 }
 
 bool Dpu::WriteMRAM(uint32_t offset, const void *buf, size_t size) {
-  std::lock_guard<std::mutex> guard(m_rank->GetLock());
+  std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
   const uint8_t *bytes = static_cast<const uint8_t *>(buf);
 
   dpu_api_status_t ret = dpu_copy_to_mram(m_dpu, offset, bytes, size, 0);
@@ -464,7 +624,7 @@ bool Dpu::WriteMRAM(uint32_t offset, const void *buf, size_t size) {
 }
 
 bool Dpu::ReadMRAM(uint32_t offset, void *buf, size_t size) {
-  std::lock_guard<std::mutex> guard(m_rank->GetLock());
+  std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
   uint8_t *bytes = static_cast<uint8_t *>(buf);
 
   dpu_api_status_t ret = dpu_copy_from_mram(m_dpu, bytes, offset, size, 0);
@@ -589,3 +749,12 @@ bool Dpu::RestoreSliceContext() {
 void Dpu::SetAttachSession() { attach_session = true; }
 
 bool Dpu::AttachSession() { return attach_session; }
+
+bool Dpu::PrintfEnable() { return printf_enable; }
+
+lldb::addr_t Dpu::GetOpenPrintfSequenceAddr() {
+  return open_print_sequence_addr;
+}
+lldb::addr_t Dpu::GetClosePrintfSequenceAddr() {
+  return close_print_sequence_addr;
+}

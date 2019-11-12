@@ -37,14 +37,14 @@ class Dpu;
 class DpuRank {
 public:
   DpuRank();
-  bool Open(char *profile);
+  bool Open(char *profile, FILE *stdout_fd);
   bool IsValid();
   bool Reset();
   Dpu *GetDpu(size_t index);
 
   dpu_description_t GetDesc() { return m_desc; }
   int GetNrThreads() { return nr_threads; }
-  std::mutex &GetLock() { return m_lock; }
+  std::recursive_mutex &GetLock() { return m_lock; }
 
   Dpu *GetDpuFromSliceIdAndDpuId(unsigned int slice_id, unsigned int dpu_id);
 
@@ -58,22 +58,32 @@ private:
   dpu_rank_t *m_rank;
   dpu_description_t m_desc;
   int nr_threads;
-  std::mutex m_lock; /* protect rank resources including the comm channel */
+  std::recursive_mutex m_lock; /* protect rank resources including the comm channel */
   std::vector<Dpu *> m_dpus;
 };
 
 class Dpu {
 public:
-  Dpu(DpuRank *rank, dpu_t *dpu);
+  Dpu(DpuRank *rank, dpu_t *dpu, FILE *stdout_fd);
   ~Dpu();
+
+  bool GetPrintfSequenceAddrs();
 
   bool LoadElf(const FileSpec &elf_file_path);
   bool Boot();
+
+  lldb::StateType
+  StepOverPrintfSequenceAndContinue(lldb::StateType result_state,
+                                    unsigned int *exit_status);
   lldb::StateType PollStatus(unsigned int *exit_status);
   bool ResumeThreads(bool allowed_polling = true);
-  bool StopThreads();
-  bool StopThreadsUnlock(bool force = false);
+  bool StopThreads(bool force = false);
 
+  bool
+  PrepareStepOverPrintfBkp(const uint32_t thread_index,
+                           dpuinstruction_t &inst_to_restore_if_printf_enable,
+                           dpuinstruction_t &inst_to_replace_with,
+                           const uint32_t current_pc);
   lldb::StateType StepThread(uint32_t thread_index, unsigned int *exit_status);
 
   bool WriteWRAM(uint32_t offset, const void *buf, size_t size);
@@ -108,6 +118,10 @@ public:
   void SetAttachSession();
   bool AttachSession();
 
+  bool PrintfEnable();
+  lldb::addr_t GetOpenPrintfSequenceAddr();
+  lldb::addr_t GetClosePrintfSequenceAddr();
+
 private:
   DpuRank *m_rank;
   dpu_t *m_dpu;
@@ -117,6 +131,12 @@ private:
   bool dpu_is_running = false;
   bool attach_session = false;
   bool registers_has_been_modified = false;
+  bool printf_enable = false;
+  lldb::addr_t open_print_sequence_addr, close_print_sequence_addr;
+  dpuinstruction_t open_print_sequence_inst, close_print_sequence_inst;
+  uint32_t printf_buffer_last_addr, printf_buffer_var_addr,
+      printf_buffer_address, printf_buffer_size;
+  FILE *stdout_file;
 };
 
 } // namespace dpu

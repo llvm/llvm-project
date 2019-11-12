@@ -79,8 +79,20 @@ ProcessDpu::Factory::Launch(ProcessLaunchInfo &launch_info,
                             MainLoop &mainloop) const {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
 
+  int terminal_fd = launch_info.GetPTY().ReleaseMasterFileDescriptor();
+  if (terminal_fd == PseudoTerminal::invalid_fd) {
+    terminal_fd = open(
+        launch_info.GetFileActionForFD(STDOUT_FILENO)->GetPath().str().c_str(),
+        O_RDWR);
+  }
+
+  FILE *stdout_fd = fdopen(terminal_fd, "w");
+  if (stdout_fd == NULL) {
+    return Status("Cannot open terminal_fd ").ToError();
+  }
+
   DpuRank *rank = new DpuRank();
-  bool success = rank->Open(NULL);
+  bool success = rank->Open(NULL, stdout_fd);
   if (!success)
     return Status("Cannot get a DPU rank ").ToError();
 
@@ -100,9 +112,8 @@ ProcessDpu::Factory::Launch(ProcessLaunchInfo &launch_info,
   ::pid_t pid = 666 << 5; // TODO unique Rank ID
   LLDB_LOG(log, "Dpu Rank {0}", pid);
 
-  return std::unique_ptr<ProcessDpu>(
-      new ProcessDpu(pid, launch_info.GetPTY().ReleaseMasterFileDescriptor(),
-                     native_delegate, k_dpu_arch, mainloop, rank, dpu));
+  return std::unique_ptr<ProcessDpu>(new ProcessDpu(
+      pid, terminal_fd, native_delegate, k_dpu_arch, mainloop, rank, dpu));
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
@@ -123,7 +134,7 @@ ProcessDpu::Factory::Attach(
           region_id, rank_id);
 
   DpuRank *rank = new DpuRank();
-  bool success = rank->Open(profile);
+  bool success = rank->Open(profile, NULL);
   if (!success)
     return Status("Cannot get a DPU rank ").ToError();
 
@@ -181,6 +192,12 @@ ProcessDpu::ProcessDpu(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
   for (int thread_id = 0; thread_id < m_dpu->GetNrThreads(); thread_id++) {
     m_threads.push_back(
         llvm::make_unique<ThreadDpu>(*this, pid | thread_id, thread_id));
+  }
+
+  if (dpu->PrintfEnable()) {
+    SetSoftwareBreakpoint(dpu->GetOpenPrintfSequenceAddr() | k_dpu_iram_base, 8);
+    SetSoftwareBreakpoint(dpu->GetClosePrintfSequenceAddr() | k_dpu_iram_base,
+                          8);
   }
 
   SetCurrentThreadID(pid);
