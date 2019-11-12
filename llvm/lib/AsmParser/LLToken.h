@@ -280,7 +280,6 @@ enum Kind {
 
   // Instruction Opcodes (Opcode in UIntVal).
   kw_fneg,
-  kw_freeze,
   kw_add,
   kw_fadd,
   kw_sub,
@@ -354,6 +353,8 @@ enum Kind {
   kw_extractvalue,
   kw_insertvalue,
   kw_blockaddress,
+
+  kw_freeze,
 
   // Metadata types.
   kw_distinct,

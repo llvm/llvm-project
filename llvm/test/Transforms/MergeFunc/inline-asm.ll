@@ -3,12 +3,12 @@
 ; CHECK-LABEL: @int_ptr_arg_different
 ; CHECK-NEXT: call void asm
 
+; CHECK-LABEL: @int_ptr_null
+; CHECK-NEXT: tail call void @float_ptr_null()
+
 ; CHECK-LABEL: @int_ptr_arg_same
 ; CHECK-NEXT: %2 = bitcast i32* %0 to float*
 ; CHECK-NEXT: tail call void @float_ptr_arg_same(float* %2)
-
-; CHECK-LABEL: @int_ptr_null
-; CHECK-NEXT: tail call void @float_ptr_null()
 
 ; Used to satisfy minimum size limit
 declare void @stuff()
