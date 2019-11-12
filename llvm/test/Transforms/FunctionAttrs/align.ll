@@ -330,5 +330,12 @@ e:
   ret i32* %phi
 }
 
+
+; ATTRIBUTOR: define i64 @test11(i32* nocapture nofree nonnull readonly align 8 dereferenceable(8) %p)
+define i64 @test11(i32* %p) {
+  %p-cast = bitcast i32* %p to i64*
+  %ret = load i64, i64* %p-cast, align 8
+  ret i64 %ret
+}
 attributes #0 = { nounwind uwtable noinline }
 attributes #1 = { uwtable noinline }
