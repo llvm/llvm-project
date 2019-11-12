@@ -8,7 +8,7 @@
 
 define <4 x double> @PR21780(double* %ptr) {
 ; CHECK-LABEL: @PR21780(double* %ptr)
-; ATTRIBUTOR-LABEL: @PR21780(double* nocapture nofree nonnull readonly dereferenceable(32) %ptr)
+; ATTRIBUTOR-LABEL: @PR21780(double* nocapture nofree nonnull readonly align 8 dereferenceable(32) %ptr)
 
   ; GEP of index 0 is simplified away.
   %arrayidx1 = getelementptr inbounds double, double* %ptr, i64 1
@@ -31,6 +31,7 @@ define <4 x double> @PR21780(double* %ptr) {
 
 define double @PR21780_only_access3_with_inbounds(double* %ptr) {
 ; CHECK-LABEL: @PR21780_only_access3_with_inbounds(double* %ptr)
+; FIXME: %ptr should have align 8
 ; ATTRIBUTOR-LABEL: @PR21780_only_access3_with_inbounds(double* nocapture nofree nonnull readonly dereferenceable(32) %ptr)
 
   %arrayidx3 = getelementptr inbounds double, double* %ptr, i64 3
@@ -40,6 +41,7 @@ define double @PR21780_only_access3_with_inbounds(double* %ptr) {
 
 define double @PR21780_only_access3_without_inbounds(double* %ptr) {
 ; CHECK-LABEL: @PR21780_only_access3_without_inbounds(double* %ptr)
+; FIXME: %ptr should have align 8
 ; ATTRIBUTOR-LABEL: @PR21780_only_access3_without_inbounds(double* nocapture nofree readonly %ptr)
   %arrayidx3 = getelementptr double, double* %ptr, i64 3
   %t3 = load double, double* %arrayidx3, align 8
@@ -49,7 +51,7 @@ define double @PR21780_only_access3_without_inbounds(double* %ptr) {
 define double @PR21780_without_inbounds(double* %ptr) {
 ; CHECK-LABEL: @PR21780_without_inbounds(double* %ptr)
 ; FIXME: this should be @PR21780_without_inbounds(double* nonnull dereferenceable(32) %ptr)
-; ATTRIBUTOR-LABEL: @PR21780_without_inbounds(double* nocapture nofree nonnull readonly dereferenceable(8) %ptr)
+; ATTRIBUTOR-LABEL: @PR21780_without_inbounds(double* nocapture nofree nonnull readonly align 8 dereferenceable(8) %ptr)
 
   %arrayidx1 = getelementptr double, double* %ptr, i64 1
   %arrayidx2 = getelementptr double, double* %ptr, i64 2

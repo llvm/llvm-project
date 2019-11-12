@@ -3086,6 +3086,38 @@ struct AADereferenceableCallSiteReturned final
 
 // ------------------------ Align Argument Attribute ------------------------
 
+static unsigned int getKnownAlignForUse(Attributor &A,
+                                        AbstractAttribute &QueryingAA,
+                                        Value &AssociatedValue, const Use *U,
+                                        const Instruction *I, bool &TrackUse) {
+  if (ImmutableCallSite ICS = ImmutableCallSite(I)) {
+    if (ICS.isBundleOperand(U) || ICS.isCallee(U))
+      return 0;
+
+    unsigned ArgNo = ICS.getArgumentNo(U);
+    IRPosition IRP = IRPosition::callsite_argument(ICS, ArgNo);
+    // As long as we only use known information there is no need to track
+    // dependences here.
+    auto &AlignAA = A.getAAFor<AAAlign>(QueryingAA, IRP,
+                                        /* TrackDependence */ false);
+    return AlignAA.getKnownAlign();
+  }
+
+  // We need to follow common pointer manipulation uses to the accesses they
+  // feed into.
+  // TODO: Consider gep instruction
+  if (isa<CastInst>(I)) {
+    TrackUse = true;
+    return 0;
+  }
+
+  if (auto *SI = dyn_cast<StoreInst>(I))
+    return SI->getAlignment();
+  else if (auto *LI = dyn_cast<LoadInst>(I))
+    return LI->getAlignment();
+
+  return 0;
+}
 struct AAAlignImpl : AAAlign {
   AAAlignImpl(const IRPosition &IRP) : AAAlign(IRP) {}
 
@@ -3143,6 +3175,15 @@ struct AAAlignImpl : AAAlign {
       Attrs.emplace_back(
           Attribute::getWithAlignment(Ctx, Align(getAssumedAlign())));
   }
+  /// See AAFromMustBeExecutedContext
+  bool followUse(Attributor &A, const Use *U, const Instruction *I) {
+    bool TrackUse = false;
+
+    unsigned int KnownAlign = getKnownAlignForUse(A, *this, getAssociatedValue(), U, I, TrackUse);
+    takeKnownMaximum(KnownAlign);
+
+    return TrackUse;
+  }
 
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr() const override {
@@ -3153,11 +3194,14 @@ struct AAAlignImpl : AAAlign {
 };
 
 /// Align attribute for a floating value.
-struct AAAlignFloating : AAAlignImpl {
-  AAAlignFloating(const IRPosition &IRP) : AAAlignImpl(IRP) {}
+struct AAAlignFloating : AAFromMustBeExecutedContext<AAAlign, AAAlignImpl> {
+  using Base = AAFromMustBeExecutedContext<AAAlign, AAAlignImpl>;
+  AAAlignFloating(const IRPosition &IRP) : Base(IRP) {}
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
+    Base::updateImpl(A);
+
     const DataLayout &DL = A.getDataLayout();
 
     auto VisitValueCB = [&](Value &V, AAAlign::StateType &T,
@@ -3203,9 +3247,12 @@ struct AAAlignReturned final
 
 /// Align attribute for function argument.
 struct AAAlignArgument final
-    : AAArgumentFromCallSiteArguments<AAAlign, AAAlignImpl> {
+    : AAArgumentFromCallSiteArgumentsAndMustBeExecutedContext<AAAlign,
+                                                              AAAlignImpl> {
   AAAlignArgument(const IRPosition &IRP)
-      : AAArgumentFromCallSiteArguments<AAAlign, AAAlignImpl>(IRP) {}
+      : AAArgumentFromCallSiteArgumentsAndMustBeExecutedContext<AAAlign,
+                                                                AAAlignImpl>(
+            IRP) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(aligned) }
@@ -3224,28 +3271,20 @@ struct AAAlignCallSiteArgument final : AAAlignFloating {
 };
 
 /// Align attribute deduction for a call site return value.
-struct AAAlignCallSiteReturned final : AAAlignImpl {
-  AAAlignCallSiteReturned(const IRPosition &IRP) : AAAlignImpl(IRP) {}
+struct AAAlignCallSiteReturned final
+    : AACallSiteReturnedFromReturnedAndMustBeExecutedContext<AAAlign,
+                                                             AAAlignImpl> {
+  using Base =
+      AACallSiteReturnedFromReturnedAndMustBeExecutedContext<AAAlign,
+                                                             AAAlignImpl>;
+  AAAlignCallSiteReturned(const IRPosition &IRP) : Base(IRP) {}
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    AAAlignImpl::initialize(A);
+    Base::initialize(A);
     Function *F = getAssociatedFunction();
     if (!F)
       indicatePessimisticFixpoint();
-  }
-
-  /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A) override {
-    // TODO: Once we have call site specific value information we can provide
-    //       call site specific liveness information and then it makes
-    //       sense to specialize attributes for call sites arguments instead of
-    //       redirecting requests to the callee argument.
-    Function *F = getAssociatedFunction();
-    const IRPosition &FnPos = IRPosition::returned(*F);
-    auto &FnAA = A.getAAFor<AAAlign>(*this, FnPos);
-    return clampStateAndIndicateChange(
-        getState(), static_cast<const AAAlign::StateType &>(FnAA.getState()));
   }
 
   /// See AbstractAttribute::trackStatistics()
