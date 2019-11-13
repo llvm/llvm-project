@@ -16,13 +16,14 @@
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "GCNRegPressure.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 

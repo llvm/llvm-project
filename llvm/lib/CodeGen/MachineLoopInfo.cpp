@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -27,6 +28,9 @@ template class llvm::LoopBase<MachineBasicBlock, MachineLoop>;
 template class llvm::LoopInfoBase<MachineBasicBlock, MachineLoop>;
 
 char MachineLoopInfo::ID = 0;
+MachineLoopInfo::MachineLoopInfo() : MachineFunctionPass(ID) {
+  initializeMachineLoopInfoPass(*PassRegistry::getPassRegistry());
+}
 INITIALIZE_PASS_BEGIN(MachineLoopInfo, "machine-loops",
                 "Machine Natural Loop Construction", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)

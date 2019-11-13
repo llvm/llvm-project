@@ -35,10 +35,7 @@ class MachineBranchProbabilityInfo : public ImmutablePass {
 public:
   static char ID;
 
-  MachineBranchProbabilityInfo() : ImmutablePass(ID) {
-    PassRegistry &Registry = *PassRegistry::getPassRegistry();
-    initializeMachineBranchProbabilityInfoPass(Registry);
-  }
+  MachineBranchProbabilityInfo();
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();

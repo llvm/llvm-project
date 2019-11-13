@@ -18,6 +18,7 @@
 #include "polly/Support/ISLTools.h"
 #include "polly/Support/VirtualInstruction.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #define DEBUG_TYPE "polly-simplify"
 

@@ -44,6 +44,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
@@ -733,6 +734,15 @@ namespace {
 
 
 } // end anonymous namespace
+
+ExternalAAWrapperPass::ExternalAAWrapperPass() : ImmutablePass(ID) {
+  initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
+}
+
+ExternalAAWrapperPass::ExternalAAWrapperPass(CallbackT CB)
+    : ImmutablePass(ID), CB(std::move(CB)) {
+  initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
+}
 
 char ExternalAAWrapperPass::ID = 0;
 

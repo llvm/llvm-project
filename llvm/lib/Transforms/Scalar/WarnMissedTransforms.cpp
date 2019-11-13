@@ -12,6 +12,7 @@
 
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 using namespace llvm;
