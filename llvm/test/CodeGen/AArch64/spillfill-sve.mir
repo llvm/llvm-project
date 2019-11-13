@@ -1,0 +1,92 @@
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass=greedy %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-linux-gnu -start-before=greedy -stop-after=aarch64-expand-pseudo %s -o - | FileCheck %s --check-prefix=EXPAND
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "<stdin>"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--linux-gnu"
+
+  define aarch64_sve_vector_pcs void @spills_fills_stack_id_ppr() #0 { entry: unreachable }
+  define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr() #0 { entry: unreachable }
+
+  attributes #0 = { nounwind "target-features"="+sve" }
+
+...
+---
+name: spills_fills_stack_id_ppr
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr }
+stack:
+liveins:
+  - { reg: '$p0', virtual-reg: '%0' }
+body:             |
+  bb.0.entry:
+    liveins: $p0
+
+    ; CHECK-LABEL: name: spills_fills_stack_id_ppr
+    ; CHECK: stack:
+    ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 2, alignment: 2
+    ; CHECK-NEXT:     stack-id: sve-vec, callee-saved-register: ''
+
+    ; EXPAND-LABEL: name: spills_fills_stack_id_ppr
+    ; EXPAND: STR_PXI $p0, $sp, 7
+    ; EXPAND: $p0 = LDR_PXI $sp, 7
+
+    %0:ppr = COPY $p0
+
+    $p0 = IMPLICIT_DEF
+    $p1 = IMPLICIT_DEF
+    $p2 = IMPLICIT_DEF
+    $p3 = IMPLICIT_DEF
+    $p4 = IMPLICIT_DEF
+    $p5 = IMPLICIT_DEF
+    $p6 = IMPLICIT_DEF
+    $p7 = IMPLICIT_DEF
+    $p8 = IMPLICIT_DEF
+    $p9 = IMPLICIT_DEF
+    $p10 = IMPLICIT_DEF
+    $p11 = IMPLICIT_DEF
+    $p12 = IMPLICIT_DEF
+    $p13 = IMPLICIT_DEF
+    $p14 = IMPLICIT_DEF
+    $p15 = IMPLICIT_DEF
+
+    $p0 = COPY %0
+    RET_ReallyLR
+...
+---
+name: spills_fills_stack_id_zpr
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: zpr }
+stack:
+liveins:
+  - { reg: '$z0', virtual-reg: '%0' }
+body:             |
+  bb.0.entry:
+    liveins: $z0
+
+    ; CHECK-LABEL: name: spills_fills_stack_id_zpr
+    ; CHECK: stack:
+    ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 16, alignment: 16
+    ; CHECK-NEXT:     stack-id: sve-vec, callee-saved-register: ''
+
+    ; EXPAND-LABEL: name: spills_fills_stack_id_zpr
+    ; EXPAND: STR_ZXI $z0, $sp, 0
+    ; EXPAND: $z0 = LDR_ZXI $sp, 0
+
+    %0:zpr = COPY $z0
+
+    $z0_z1_z2_z3     = IMPLICIT_DEF
+    $z4_z5_z6_z7     = IMPLICIT_DEF
+    $z8_z9_z10_z11   = IMPLICIT_DEF
+    $z12_z13_z14_z15 = IMPLICIT_DEF
+    $z16_z17_z18_z19 = IMPLICIT_DEF
+    $z20_z21_z22_z23 = IMPLICIT_DEF
+    $z24_z25_z26_z27 = IMPLICIT_DEF
+    $z28_z29_z30_z31 = IMPLICIT_DEF
+
+    $z0 = COPY %0
+    RET_ReallyLR
+...
