@@ -283,12 +283,9 @@ class VectorType : public CRegularNamedType {
   unsigned Lanes;
 
 public:
-  VectorType(const ScalarType *Element)
-      : CRegularNamedType(TypeKind::Vector), Element(Element) {
-    // MVE has a fixed 128-bit vector size
-    Lanes = 128 / Element->sizeInBits();
-  }
-  unsigned sizeInBits() const override { return 128; }
+  VectorType(const ScalarType *Element, unsigned Lanes)
+      : CRegularNamedType(TypeKind::Vector), Element(Element), Lanes(Lanes) {}
+  unsigned sizeInBits() const override { return Lanes * Element->sizeInBits(); }
   unsigned lanes() const { return Lanes; }
   bool requiresFloat() const override { return Element->requiresFloat(); }
   std::string cNameBase() const override {
@@ -609,24 +606,41 @@ public:
   }
 };
 
+// Result subclass representing a cast between different pointer types.
+class PointerCastResult : public Result {
+public:
+  const PointerType *PtrType;
+  Ptr V;
+  PointerCastResult(const PointerType *PtrType, Ptr V)
+      : PtrType(PtrType), V(V) {}
+  void genCode(raw_ostream &OS,
+               CodeGenParamAllocator &ParamAlloc) const override {
+    OS << "Builder.CreatePointerCast(" << V->asValue() << ", "
+       << ParamAlloc.allocParam("llvm::Type *", PtrType->llvmName()) << ")";
+  }
+  void morePrerequisites(std::vector<Ptr> &output) const override {
+    output.push_back(V);
+  }
+};
+
 // Result subclass representing a call to an IRBuilder method. Each IRBuilder
 // method we want to use will have a Tablegen record giving the method name and
 // describing any important details of how to call it, such as whether a
 // particular argument should be an integer constant instead of an llvm::Value.
 class IRBuilderResult : public Result {
 public:
-  StringRef BuilderMethod;
+  StringRef CallPrefix;
   std::vector<Ptr> Args;
   std::set<unsigned> AddressArgs;
   std::set<unsigned> IntConstantArgs;
-  IRBuilderResult(StringRef BuilderMethod, std::vector<Ptr> Args,
+  IRBuilderResult(StringRef CallPrefix, std::vector<Ptr> Args,
                   std::set<unsigned> AddressArgs,
                   std::set<unsigned> IntConstantArgs)
-      : BuilderMethod(BuilderMethod), Args(Args), AddressArgs(AddressArgs),
+    : CallPrefix(CallPrefix), Args(Args), AddressArgs(AddressArgs),
         IntConstantArgs(IntConstantArgs) {}
   void genCode(raw_ostream &OS,
                CodeGenParamAllocator &ParamAlloc) const override {
-    OS << "Builder." << BuilderMethod << "(";
+    OS << CallPrefix;
     const char *Sep = "";
     for (unsigned i = 0, e = Args.size(); i < e; ++i) {
       Ptr Arg = Args[i];
@@ -652,6 +666,25 @@ public:
   }
 };
 
+// Result subclass representing making an Address out of a Value.
+class AddressResult : public Result {
+public:
+  Ptr Arg;
+  unsigned Align;
+  AddressResult(Ptr Arg, unsigned Align) : Arg(Arg), Align(Align) {}
+  void genCode(raw_ostream &OS,
+               CodeGenParamAllocator &ParamAlloc) const override {
+    OS << "Address(" << Arg->varname() << ", CharUnits::fromQuantity("
+       << Align << "))";
+  }
+  std::string typeName() const override {
+    return "Address";
+  }
+  void morePrerequisites(std::vector<Ptr> &output) const override {
+    output.push_back(Arg);
+  }
+};
+
 // Result subclass representing a call to an IR intrinsic, which we first have
 // to look up using an Intrinsic::ID constant and an array of types.
 class IRIntrinsicResult : public Result {
@@ -665,7 +698,7 @@ public:
   void genCode(raw_ostream &OS,
                CodeGenParamAllocator &ParamAlloc) const override {
     std::string IntNo = ParamAlloc.allocParam(
-        "Intrinsic::ID", "Intrinsic::arm_mve_" + IntrinsicID);
+        "Intrinsic::ID", "Intrinsic::" + IntrinsicID);
     OS << "Builder.CreateCall(CGM.getIntrinsic(" << IntNo;
     if (!ParamTypes.empty()) {
       OS << ", llvm::SmallVector<llvm::Type *, " << ParamTypes.size() << "> {";
@@ -686,6 +719,20 @@ public:
   }
   void morePrerequisites(std::vector<Ptr> &output) const override {
     output.insert(output.end(), Args.begin(), Args.end());
+  }
+};
+
+// Result subclass that specifies a type, for use in IRBuilder operations such
+// as CreateBitCast that take a type argument.
+class TypeResult : public Result {
+public:
+  const Type *T;
+  TypeResult(const Type *T) : T(T) {}
+  void genCode(raw_ostream &OS, CodeGenParamAllocator &) const override {
+    OS << T->llvmName();
+  }
+  std::string typeName() const override {
+    return "llvm::Type *";
   }
 };
 
@@ -852,7 +899,8 @@ class MveEmitter {
   // MveEmitter holds a collection of all the types we've instantiated.
   VoidType Void;
   std::map<std::string, std::unique_ptr<ScalarType>> ScalarTypes;
-  std::map<std::pair<ScalarTypeKind, unsigned>, std::unique_ptr<VectorType>>
+  std::map<std::tuple<ScalarTypeKind, unsigned, unsigned>,
+           std::unique_ptr<VectorType>>
       VectorTypes;
   std::map<std::pair<std::string, unsigned>, std::unique_ptr<MultiVectorType>>
       MultiVectorTypes;
@@ -872,11 +920,15 @@ public:
   const ScalarType *getScalarType(Record *R) {
     return getScalarType(R->getName());
   }
-  const VectorType *getVectorType(const ScalarType *ST) {
-    std::pair<ScalarTypeKind, unsigned> key(ST->kind(), ST->sizeInBits());
+  const VectorType *getVectorType(const ScalarType *ST, unsigned Lanes) {
+    std::tuple<ScalarTypeKind, unsigned, unsigned> key(ST->kind(),
+                                                       ST->sizeInBits(), Lanes);
     if (VectorTypes.find(key) == VectorTypes.end())
-      VectorTypes[key] = std::make_unique<VectorType>(ST);
+      VectorTypes[key] = std::make_unique<VectorType>(ST, Lanes);
     return VectorTypes[key].get();
+  }
+  const VectorType *getVectorType(const ScalarType *ST) {
+    return getVectorType(ST, 128 / ST->sizeInBits());
   }
   const MultiVectorType *getMultiVectorType(unsigned Registers,
                                             const VectorType *VT) {
@@ -969,7 +1021,13 @@ const Type *MveEmitter::getType(DagInit *D, const Type *Param) {
 
   if (Op->getName() == "CTO_Vec") {
     const Type *Element = getType(D->getArg(0), Param);
-    return getVectorType(cast<ScalarType>(Element));
+    if (D->getNumArgs() == 1) {
+      return getVectorType(cast<ScalarType>(Element));
+    } else {
+      const Type *ExistingVector = getType(D->getArg(1), Param);
+      return getVectorType(cast<ScalarType>(Element),
+                           cast<VectorType>(ExistingVector)->lanes());
+    }
   }
 
   if (Op->getName() == "CTO_Pred") {
@@ -1035,8 +1093,21 @@ Result::Ptr MveEmitter::getCodeForDag(DagInit *D, const Result::Scope &Scope,
         else
           return std::make_shared<IntCastResult>(ST, Arg);
       }
+    } else if (const auto *PT = dyn_cast<PointerType>(CastType)) {
+      return std::make_shared<PointerCastResult>(PT, Arg);
     }
     PrintFatalError("Unsupported type cast");
+  } else if (Op->getName() == "address") {
+    if (D->getNumArgs() != 2)
+      PrintFatalError("'address' should have two arguments");
+    Result::Ptr Arg = getCodeForDagArg(D, 0, Scope, Param);
+    unsigned Alignment;
+    if (auto *II = dyn_cast<IntInit>(D->getArg(1))) {
+      Alignment = II->getValue();
+    } else {
+      PrintFatalError("'address' alignment argument should be an integer");
+    }
+    return std::make_shared<AddressResult>(Arg, Alignment);
   } else if (Op->getName() == "unsignedflag") {
     if (D->getNumArgs() != 1)
       PrintFatalError("unsignedflag should have exactly one argument");
@@ -1053,7 +1124,7 @@ Result::Ptr MveEmitter::getCodeForDag(DagInit *D, const Result::Scope &Scope,
     std::vector<Result::Ptr> Args;
     for (unsigned i = 0, e = D->getNumArgs(); i < e; ++i)
       Args.push_back(getCodeForDagArg(D, i, Scope, Param));
-    if (Op->isSubClassOf("IRBuilder")) {
+    if (Op->isSubClassOf("IRBuilderBase")) {
       std::set<unsigned> AddressArgs;
       for (unsigned i : Op->getValueAsListOfInts("address_params"))
         AddressArgs.insert(i);
@@ -1061,8 +1132,8 @@ Result::Ptr MveEmitter::getCodeForDag(DagInit *D, const Result::Scope &Scope,
       for (unsigned i : Op->getValueAsListOfInts("int_constant_params"))
         IntConstantArgs.insert(i);
       return std::make_shared<IRBuilderResult>(
-          Op->getValueAsString("func"), Args, AddressArgs, IntConstantArgs);
-    } else if (Op->isSubClassOf("IRInt")) {
+          Op->getValueAsString("prefix"), Args, AddressArgs, IntConstantArgs);
+    } else if (Op->isSubClassOf("IRIntBase")) {
       std::vector<const Type *> ParamTypes;
       for (Record *RParam : Op->getValueAsListOfDefs("params"))
         ParamTypes.push_back(getType(RParam, Param));
@@ -1099,6 +1170,14 @@ Result::Ptr MveEmitter::getCodeForDagArg(DagInit *D, unsigned ArgNum,
   if (auto *DI = dyn_cast<DagInit>(Arg))
     return getCodeForDag(DI, Scope, Param);
 
+  if (auto *DI = dyn_cast<DefInit>(Arg)) {
+    Record *Rec = DI->getDef();
+    if (Rec->isSubClassOf("Type")) {
+      const Type *T = getType(Rec, Param);
+      return std::make_shared<TypeResult>(T);
+    }
+  }
+
   PrintFatalError("bad dag argument type for code generation");
 }
 
@@ -1111,8 +1190,9 @@ Result::Ptr MveEmitter::getCodeForArg(unsigned ArgNum, const Type *ArgType) {
       V = std::make_shared<IntCastResult>(getScalarType("u32"), V);
   } else if (const auto *PT = dyn_cast<PredicateType>(ArgType)) {
     V = std::make_shared<IntCastResult>(getScalarType("u32"), V);
-    V = std::make_shared<IRIntrinsicResult>(
-        "pred_i2v", std::vector<const Type *>{PT}, std::vector<Result::Ptr>{V});
+    V = std::make_shared<IRIntrinsicResult>("arm_mve_pred_i2v",
+                                            std::vector<const Type *>{PT},
+                                            std::vector<Result::Ptr>{V});
   }
 
   return V;
