@@ -19,3 +19,7 @@ void Func() {
 struct A {
   _LIBCPP_FLOAT_ABI int operator()() throw(); // expected-warning{{'pcs' calling convention is not supported for this target}}
 };
+
+// Added test for fix for PR43315
+#define a __attribute__((__cdecl__, __regparm__(0)))
+int(a b)();
