@@ -632,10 +632,10 @@ public:
   StringRef CallPrefix;
   std::vector<Ptr> Args;
   std::set<unsigned> AddressArgs;
-  std::set<unsigned> IntConstantArgs;
+  std::map<unsigned, std::string> IntConstantArgs;
   IRBuilderResult(StringRef CallPrefix, std::vector<Ptr> Args,
                   std::set<unsigned> AddressArgs,
-                  std::set<unsigned> IntConstantArgs)
+                  std::map<unsigned, std::string> IntConstantArgs)
     : CallPrefix(CallPrefix), Args(Args), AddressArgs(AddressArgs),
         IntConstantArgs(IntConstantArgs) {}
   void genCode(raw_ostream &OS,
@@ -644,11 +644,13 @@ public:
     const char *Sep = "";
     for (unsigned i = 0, e = Args.size(); i < e; ++i) {
       Ptr Arg = Args[i];
-      if (IntConstantArgs.find(i) != IntConstantArgs.end()) {
+      auto it = IntConstantArgs.find(i);
+      if (it != IntConstantArgs.end()) {
         assert(Arg->hasIntegerConstantValue());
-        OS << Sep
+        OS << Sep << "static_cast<" << it->second << ">("
            << ParamAlloc.allocParam("unsigned",
-                                    utostr(Arg->integerConstantValue()));
+                                    utostr(Arg->integerConstantValue()))
+           << ")";
       } else {
         OS << Sep << Arg->varname();
       }
@@ -763,6 +765,14 @@ class ACLEIntrinsic {
   // shares with at least one other intrinsic.
   std::string ShortName, FullName;
 
+  // A very small number of intrinsics _only_ have a polymorphic
+  // variant (vuninitializedq taking an unevaluated argument).
+  bool PolymorphicOnly;
+
+  // Another rarely-used flag indicating that the builtin doesn't
+  // evaluate its argument(s) at all.
+  bool NonEvaluating;
+
   const Type *ReturnType;
   std::vector<const Type *> ArgTypes;
   std::map<unsigned, ImmediateArg> ImmediateArgs;
@@ -796,6 +806,8 @@ public:
     return false;
   }
   bool polymorphic() const { return ShortName != FullName; }
+  bool polymorphicOnly() const { return PolymorphicOnly; }
+  bool nonEvaluating() const { return NonEvaluating; }
 
   // External entry point for code generation, called from MveEmitter.
   void genCode(raw_ostream &OS, CodeGenParamAllocator &ParamAlloc,
@@ -1126,11 +1138,15 @@ Result::Ptr MveEmitter::getCodeForDag(DagInit *D, const Result::Scope &Scope,
       Args.push_back(getCodeForDagArg(D, i, Scope, Param));
     if (Op->isSubClassOf("IRBuilderBase")) {
       std::set<unsigned> AddressArgs;
-      for (unsigned i : Op->getValueAsListOfInts("address_params"))
-        AddressArgs.insert(i);
-      std::set<unsigned> IntConstantArgs;
-      for (unsigned i : Op->getValueAsListOfInts("int_constant_params"))
-        IntConstantArgs.insert(i);
+      std::map<unsigned, std::string> IntConstantArgs;
+      for (Record *sp : Op->getValueAsListOfDefs("special_params")) {
+        unsigned Index = sp->getValueAsInt("index");
+        if (sp->isSubClassOf("IRBuilderAddrParam")) {
+          AddressArgs.insert(Index);
+        } else if (sp->isSubClassOf("IRBuilderIntParam")) {
+          IntConstantArgs[Index] = sp->getValueAsString("type");
+        }
+      }
       return std::make_shared<IRBuilderResult>(
           Op->getValueAsString("prefix"), Args, AddressArgs, IntConstantArgs);
     } else if (Op->isSubClassOf("IRIntBase")) {
@@ -1234,6 +1250,9 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
     }
   }
   ShortName = join(std::begin(NameParts), std::end(NameParts), "_");
+
+  PolymorphicOnly = R->getValueAsBit("polymorphicOnly");
+  NonEvaluating = R->getValueAsBit("nonEvaluating");
 
   // Process the intrinsic's argument list.
   DagInit *ArgsDag = R->getValueAsDag("args");
@@ -1404,6 +1423,8 @@ void MveEmitter::EmitHeader(raw_ostream &OS) {
     for (bool Polymorphic : {false, true}) {
       if (Polymorphic && !Int.polymorphic())
         continue;
+      if (!Polymorphic && Int.polymorphicOnly())
+        continue;
 
       // We also generate each intrinsic under a name like __arm_vfooq
       // (which is in C language implementation namespace, so it's
@@ -1557,7 +1578,10 @@ void MveEmitter::EmitBuiltinDef(raw_ostream &OS) {
     if (Int.polymorphic()) {
       StringRef Name = Int.shortName();
       if (ShortNamesSeen.find(Name) == ShortNamesSeen.end()) {
-        OS << "BUILTIN(__builtin_arm_mve_" << Name << ", \"vi.\", \"nt\")\n";
+        OS << "BUILTIN(__builtin_arm_mve_" << Name << ", \"vi.\", \"nt";
+        if (Int.nonEvaluating())
+          OS << "u"; // indicate that this builtin doesn't evaluate its args
+        OS << "\")\n";
         ShortNamesSeen.insert(Name);
       }
     }

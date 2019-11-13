@@ -29,6 +29,11 @@ def args;
 // -----------------------------------------------------------------------------
 // Family of nodes for use in the codegen dag for an intrinsic, corresponding
 // to function calls that return LLVM IR nodes.
+class IRBuilderParam<int index_> { int index = index_; }
+class IRBuilderAddrParam<int index_> : IRBuilderParam<index_>;
+class IRBuilderIntParam<int index_, string type_> : IRBuilderParam<index_> {
+  string type = type_;
+}
 class IRBuilderBase {
   // The prefix of the function call, including an open parenthesis.
   string prefix;
@@ -36,8 +41,7 @@ class IRBuilderBase {
   // Any parameters that have types that have to be treated specially by the
   // Tablegen back end. Generally these will be types other than llvm::Value *,
   // although not all other types need special treatment (e.g. llvm::Type *).
-  list<int> address_params = []; // indices of parameters with type Address
-  list<int> int_constant_params = []; // indices of plain integer parameters
+  list<IRBuilderParam> special_params = [];
 }
 class IRBuilder<string func> : IRBuilderBase {
   // The usual case: a method called on the code gen function's instance of
@@ -61,12 +65,25 @@ def shl: IRBuilder<"CreateShl">;
 def lshr: IRBuilder<"CreateLShr">;
 def fadd: IRBuilder<"CreateFAdd">;
 def fsub: IRBuilder<"CreateFSub">;
-def load: IRBuilder<"CreateLoad"> { let address_params = [0]; }
-def store: IRBuilder<"CreateStore"> { let address_params = [1]; }
-def xval: IRBuilder<"CreateExtractValue"> { let int_constant_params = [1]; }
+def load: IRBuilder<"CreateLoad"> {
+  let special_params = [IRBuilderAddrParam<0>];
+}
+def store: IRBuilder<"CreateStore"> {
+  let special_params = [IRBuilderAddrParam<1>];
+}
+def xval: IRBuilder<"CreateExtractValue"> {
+  let special_params = [IRBuilderIntParam<1, "unsigned">];
+}
+def ielt_const: IRBuilder<"CreateInsertElement"> {
+  let special_params = [IRBuilderIntParam<2, "uint64_t">];
+}
 def trunc: IRBuilder<"CreateTrunc">;
-def extend: CGHelperFn<"SignOrZeroExtend"> { let int_constant_params = [2]; }
+def bitcast: IRBuilder<"CreateBitCast">;
+def extend: CGHelperFn<"SignOrZeroExtend"> {
+  let special_params = [IRBuilderIntParam<2, "bool">];
+}
 def zeroinit: IRFunction<"llvm::Constant::getNullValue">;
+def undef: IRFunction<"UndefValue::get">;
 
 // A node that makes an Address out of a pointer-typed Value, by
 // providing an alignment as the second argument.
@@ -350,6 +367,12 @@ class Intrinsic<Type ret_, dag args_, dag codegen_> {
 
   // Default to PNT_Type, which is by far the most common case.
   PolymorphicNameType pnt = PNT_Type;
+
+  // A very few intrinsics _only_ have a polymorphic name.
+  bit polymorphicOnly = 0;
+
+  // True if the builtin has to avoid evaluating its arguments.
+  bit nonEvaluating = 0;
 }
 
 // Sometimes you have to use two separate Intrinsic declarations to
