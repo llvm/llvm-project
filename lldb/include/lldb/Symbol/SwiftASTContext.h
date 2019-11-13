@@ -15,6 +15,7 @@
 
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "lldb/Core/ClangForward.h"
+#include "lldb/Core/SwiftForward.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/ThreadSafeDenseSet.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -65,6 +66,8 @@ class SwiftEnumDescriptor;
 namespace lldb_private {
 
 struct SourceModule;
+
+CompilerType ToCompilerType(swift::Type qual_type);
 
 class SwiftASTContext : public TypeSystem {
 public:

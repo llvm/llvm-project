@@ -1044,7 +1044,7 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
   if (generic_args.size() != 1)
     return false;
   auto swift_arg_type = generic_args[0];
-  CompilerType arg_type(swift_arg_type);
+  CompilerType arg_type = ToCompilerType(swift_arg_type);
 
   llvm::Optional<uint64_t> opt_arg_size = arg_type.GetByteSize(nullptr);
   if (!opt_arg_size)

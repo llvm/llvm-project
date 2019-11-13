@@ -13,7 +13,6 @@
 #include <string>
 #include <vector>
 
-#include "lldb/Core/SwiftForward.h"
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/APSInt.h"
 
@@ -32,7 +31,6 @@ class CompilerType {
 public:
   // Constructors and Destructors
   CompilerType(TypeSystem *type_system, lldb::opaque_compiler_type_t type);
-  CompilerType(swift::Type qual_type);
 
   CompilerType(const CompilerType &rhs)
       : m_type(rhs.m_type), m_type_system(rhs.m_type_system) {}
