@@ -1,0 +1,34 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build_llvm:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macOS-latest
+        cmake_args:
+          - ""
+    steps:
+    - name: Setup Windows
+      if: startsWith(matrix.os, 'windows')
+      uses: tstellar/actions/setup-windows@master
+      with:
+        arch: amd64
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+    - name: Install Ninja
+      uses: tstellar/actions/install-ninja@master
+      with:
+        os: ${{ runner.os }}
+    - name: Test LLVM
+      uses: tstellar/actions/build-test-llvm-project@master
+      with:
+        cmake_args: -G Ninja -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }}
+        os: ${{ runner.os }}
