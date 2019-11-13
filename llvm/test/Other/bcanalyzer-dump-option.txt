@@ -1,0 +1,11 @@
+RUN: llvm-bcanalyzer -dump %S/Inputs/has-block-info.bc | FileCheck -check-prefix=WITH-DUMP %s
+RUN: llvm-bcanalyzer %S/Inputs/has-block-info.bc | FileCheck -check-prefix=WITHOUT-DUMP %s
+
+WITH-DUMP: <ABC
+WITHOUT-DUMP-NOT: <ABC
+WITH-DUMP: </ABC>
+WITHOUT-DUMP-NOT: </ABC>
+WITH-DUMP: <XYZ
+WITHOUT-DUMP-NOT: <XYZ
+WITH-DUMP: </XYZ>
+WITHOUT-DUMP-NOT: </XYZ>
