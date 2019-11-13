@@ -12210,9 +12210,9 @@ defm VP4DPWSSDSrm : AVX512_maskable_3src_in_asm<0x53, MRMSrcMem, v16i32_info,
 }
 
 let hasSideEffects = 0 in {
-  let mayStore = 1 in
+  let mayStore = 1, SchedRW = [WriteFStoreX] in
   def MASKPAIR16STORE : PseudoI<(outs), (ins anymem:$dst, VK16PAIR:$src), []>;
-  let mayLoad = 1 in
+  let mayLoad = 1, SchedRW = [WriteFLoadX] in
   def MASKPAIR16LOAD : PseudoI<(outs VK16PAIR:$dst), (ins anymem:$src), []>;
 }
 
@@ -12220,7 +12220,7 @@ let hasSideEffects = 0 in {
 // VP2INTERSECT
 //===----------------------------------------------------------------------===//
 
-multiclass avx512_vp2intersect_modes<X86VectorVTInfo _> {
+multiclass avx512_vp2intersect_modes<X86FoldableSchedWrite sched, X86VectorVTInfo _> {
   def rr : I<0x68, MRMSrcReg,
                   (outs _.KRPC:$dst),
                   (ins _.RC:$src1, _.RC:$src2),
@@ -12228,7 +12228,7 @@ multiclass avx512_vp2intersect_modes<X86VectorVTInfo _> {
                              "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                   [(set _.KRPC:$dst, (X86vp2intersect
                             _.RC:$src1, (_.VT _.RC:$src2)))]>,
-                  EVEX_4V, T8XD;
+                  EVEX_4V, T8XD, Sched<[sched]>;
 
   def rm : I<0x68, MRMSrcMem,
                   (outs _.KRPC:$dst),
@@ -12237,7 +12237,8 @@ multiclass avx512_vp2intersect_modes<X86VectorVTInfo _> {
                              "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
                   [(set _.KRPC:$dst, (X86vp2intersect
                             _.RC:$src1, (_.VT (bitconvert (_.LdFrag addr:$src2)))))]>,
-                  EVEX_4V, T8XD, EVEX_CD8<_.EltSize, CD8VF>;
+                  EVEX_4V, T8XD, EVEX_CD8<_.EltSize, CD8VF>,
+                  Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   def rmb : I<0x68, MRMSrcMem,
                   (outs _.KRPC:$dst),
@@ -12246,21 +12247,22 @@ multiclass avx512_vp2intersect_modes<X86VectorVTInfo _> {
                              ", $src1, $dst|$dst, $src1, ${src2}", _.BroadcastStr ,"}"),
                   [(set _.KRPC:$dst, (X86vp2intersect
                              _.RC:$src1, (_.VT (_.BroadcastLdFrag addr:$src2))))]>,
-                  EVEX_4V, T8XD, EVEX_B, EVEX_CD8<_.EltSize, CD8VF>;
+                  EVEX_4V, T8XD, EVEX_B, EVEX_CD8<_.EltSize, CD8VF>,
+                  Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
-multiclass avx512_vp2intersect<AVX512VLVectorVTInfo _> {
+multiclass avx512_vp2intersect<X86SchedWriteWidths sched, AVX512VLVectorVTInfo _> {
   let Predicates  = [HasAVX512, HasVP2INTERSECT] in
-    defm Z : avx512_vp2intersect_modes<_.info512>, EVEX_V512;
+    defm Z : avx512_vp2intersect_modes<sched.ZMM, _.info512>, EVEX_V512;
 
   let Predicates = [HasAVX512, HasVP2INTERSECT, HasVLX] in {
-    defm Z256 : avx512_vp2intersect_modes<_.info256>, EVEX_V256;
-    defm Z128 : avx512_vp2intersect_modes<_.info128>, EVEX_V128;
+    defm Z256 : avx512_vp2intersect_modes<sched.YMM, _.info256>, EVEX_V256;
+    defm Z128 : avx512_vp2intersect_modes<sched.XMM, _.info128>, EVEX_V128;
   }
 }
 
-defm VP2INTERSECTD : avx512_vp2intersect<avx512vl_i32_info>;
-defm VP2INTERSECTQ : avx512_vp2intersect<avx512vl_i64_info>, VEX_W;
+defm VP2INTERSECTD : avx512_vp2intersect<SchedWriteVecALU, avx512vl_i32_info>;
+defm VP2INTERSECTQ : avx512_vp2intersect<SchedWriteVecALU, avx512vl_i64_info>, VEX_W;
 
 multiclass avx512_binop_all2<bits<8> opc, string OpcodeStr,
                              X86SchedWriteWidths sched,
@@ -12358,19 +12360,21 @@ let Predicates = [HasBF16, HasVLX] in {
 
 let Constraints = "$src1 = $dst" in {
 multiclass avx512_dpbf16ps_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
+                              X86FoldableSchedWrite sched,
                               X86VectorVTInfo _, X86VectorVTInfo src_v> {
   defm r: AVX512_maskable_3src<opc, MRMSrcReg, _, (outs _.RC:$dst),
                            (ins _.RC:$src2, _.RC:$src3),
                            OpcodeStr, "$src3, $src2", "$src2, $src3",
                            (_.VT (OpNode _.RC:$src1, _.RC:$src2, _.RC:$src3))>,
-                           EVEX_4V;
+                           EVEX_4V, Sched<[sched]>;
 
   defm m: AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
                                (ins _.RC:$src2, _.MemOp:$src3),
                                OpcodeStr, "$src3, $src2", "$src2, $src3",
                                (_.VT (OpNode _.RC:$src1, _.RC:$src2,
                                (src_v.VT (bitconvert
-                               (src_v.LdFrag addr:$src3)))))>, EVEX_4V;
+                               (src_v.LdFrag addr:$src3)))))>, EVEX_4V,
+                               Sched<[sched.Folded, sched.ReadAfterFold]>;
 
   defm mb: AVX512_maskable_3src<opc, MRMSrcMem, _, (outs _.RC:$dst),
                   (ins _.RC:$src2, _.ScalarMemOp:$src3),
@@ -12379,26 +12383,26 @@ multiclass avx512_dpbf16ps_rm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                   !strconcat("$src2, ${src3}", _.BroadcastStr),
                   (_.VT (OpNode _.RC:$src1, _.RC:$src2,
                   (src_v.VT (src_v.BroadcastLdFrag addr:$src3))))>,
-                  EVEX_B, EVEX_4V;
+                  EVEX_B, EVEX_4V, Sched<[sched.Folded, sched.ReadAfterFold]>;
 
 }
 } // Constraints = "$src1 = $dst"
 
 multiclass avx512_dpbf16ps_sizes<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                                 AVX512VLVectorVTInfo _,
+                                 X86SchedWriteWidths sched, AVX512VLVectorVTInfo _,
                                  AVX512VLVectorVTInfo src_v, Predicate prd> {
   let Predicates = [prd] in {
-    defm Z    : avx512_dpbf16ps_rm<opc, OpcodeStr, OpNode, _.info512,
+    defm Z    : avx512_dpbf16ps_rm<opc, OpcodeStr, OpNode, sched.ZMM, _.info512,
                                    src_v.info512>, EVEX_V512;
   }
   let Predicates = [HasVLX, prd] in {
-    defm Z256 : avx512_dpbf16ps_rm<opc, OpcodeStr, OpNode, _.info256,
+    defm Z256 : avx512_dpbf16ps_rm<opc, OpcodeStr, OpNode, sched.YMM, _.info256,
                                    src_v.info256>, EVEX_V256;
-    defm Z128 : avx512_dpbf16ps_rm<opc, OpcodeStr, OpNode, _.info128,
+    defm Z128 : avx512_dpbf16ps_rm<opc, OpcodeStr, OpNode, sched.XMM, _.info128,
                                    src_v.info128>, EVEX_V128;
   }
 }
 
-defm VDPBF16PS : avx512_dpbf16ps_sizes<0x52, "vdpbf16ps", X86dpbf16ps,
+defm VDPBF16PS : avx512_dpbf16ps_sizes<0x52, "vdpbf16ps", X86dpbf16ps, SchedWriteFMA,
                                        avx512vl_f32_info, avx512vl_i32_info,
                                        HasBF16>, T8XS, EVEX_CD8<32, CD8VF>;
