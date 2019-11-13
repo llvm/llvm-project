@@ -166,6 +166,8 @@ public:
 
   swift::LangOptions &GetLanguageOptions();
 
+  swift::TypeCheckerOptions &GetTypeCheckerOptions();
+
   swift::DiagnosticEngine &GetDiagnosticEngine();
 
   swift::SearchPathOptions &GetSearchPathOptions();
