@@ -28,6 +28,7 @@ foreach n = [ 2, 4 ] in {
                               "Intrinsic::arm_mve_vld"#n#"q":$IRIntr)>;
 }
 
+
 let params = T.Int in {
 def vaddq: Intrinsic<Vector, (args Vector:$a, Vector:$b), (add $a, $b)>;
 def vsubq: Intrinsic<Vector, (args Vector:$a, Vector:$b), (sub $a, $b)>;
@@ -41,6 +42,14 @@ def vsubqf: Intrinsic<Vector, (args Vector:$a, Vector:$b), (fsub $a, $b)>,
 }
 
 let params = T.Usual in {
+def vabdq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
+                             (IRInt<"vabd", [Vector]> $a, $b)>;
+}
+
+let params = T.Usual in {
+def vabdq_m: Intrinsic<
+    Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
+    (IRInt<"abd_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
 def vaddq_m: Intrinsic<
     Vector, (args Vector:$inactive, Vector:$a, Vector:$b, Predicate:$pred),
     (IRInt<"add_predicated", [Vector, Predicate]> $a, $b, $pred, $inactive)>;
