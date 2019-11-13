@@ -836,10 +836,35 @@ namespace llvm {
     /// don't defne the related lane masks after they get shrunk. E.g.,
     /// when L000F gets split into L0007 and L0008 maybe only a subset
     /// of the VNIs that defined L000F defines L0007.
+    ///
+    /// The clean up of the VNIs need to look at the actual instructions
+    /// to decide what is or is not live at a definition point. If the
+    /// update of the subranges occurs while the IR does not reflect these
+    /// changes, \p ComposeSubRegIdx can be used to specify how the
+    /// definition are going to be rewritten.
+    /// E.g., let say we want to merge:
+    ///     V1.sub1:<2 x s32> = COPY V2.sub3:<4 x s32>
+    /// We do that by choosing a class where sub1:<2 x s32> and sub3:<4 x s32>
+    /// overlap, i.e., by choosing a class where we can find "offset + 1 == 3".
+    /// Put differently we align V2's sub3 with V1's sub1:
+    /// V2: sub0 sub1 sub2 sub3
+    /// V1: <offset>  sub0 sub1
+    ///
+    /// This offset will look like a composed subregidx in the the class:
+    ///     V1.(composed sub2 with sub1):<4 x s32> = COPY V2.sub3:<4 x s32>
+    /// =>  V1.(composed sub2 with sub1):<4 x s32> = COPY V2.sub3:<4 x s32>
+    ///
+    /// Now if we didn't rewrite the uses and def of V1, all the checks for V1
+    /// need to account for this offset.
+    /// This happens during coalescing where we update the live-ranges while
+    /// still having the old IR around because updating the IR on-the-fly
+    /// would actually clobber some information on how the live-ranges that
+    /// are being updated look like.
     void refineSubRanges(BumpPtrAllocator &Allocator, LaneBitmask LaneMask,
                          std::function<void(LiveInterval::SubRange &)> Apply,
                          const SlotIndexes &Indexes,
-                         const TargetRegisterInfo &TRI);
+                         const TargetRegisterInfo &TRI,
+                         unsigned ComposeSubRegIdx = 0);
 
     bool operator<(const LiveInterval& other) const {
       const SlotIndex &thisIndex = beginIndex();
