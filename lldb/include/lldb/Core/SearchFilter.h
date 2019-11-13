@@ -84,7 +84,7 @@ class SearchFilter {
 public:
   /// The basic constructor takes a Target, which gives the space to search.
   ///
-  /// \param[in] target
+  /// \param[in] target_sp
   ///    The Target that provides the module list to search.
   SearchFilter(const lldb::TargetSP &target_sp);
 
@@ -102,7 +102,7 @@ public:
 
   /// Call this method with a Module to see if that module passes the filter.
   ///
-  /// \param[in] module
+  /// \param[in] module_sp
   ///    The Module to check against the filter.
   ///
   /// \return
@@ -306,7 +306,7 @@ public:
   /// The basic constructor takes a Target, which gives the space to search,
   /// and the module to restrict the search to.
   ///
-  /// \param[in] target
+  /// \param[in] targetSP
   ///    The Target that provides the module list to search.
   ///
   /// \param[in] module
@@ -352,10 +352,10 @@ public:
   /// The basic constructor takes a Target, which gives the space to search,
   /// and the module list to restrict the search to.
   ///
-  /// \param[in] target
+  /// \param[in] targetSP
   ///    The Target that provides the module list to search.
   ///
-  /// \param[in] module
+  /// \param[in] module_list
   ///    The Module that limits the search.
   SearchFilterByModuleList(const lldb::TargetSP &targetSP,
                            const FileSpecList &module_list);
@@ -404,12 +404,6 @@ class SearchFilterByModuleListAndCU : public SearchFilterByModuleList {
 public:
   /// The basic constructor takes a Target, which gives the space to search,
   /// and the module list to restrict the search to.
-  ///
-  /// \param[in] target
-  ///    The Target that provides the module list to search.
-  ///
-  /// \param[in] module
-  ///    The Module that limits the search.
   SearchFilterByModuleListAndCU(const lldb::TargetSP &targetSP,
                                 const FileSpecList &module_list,
                                 const FileSpecList &cu_list);

@@ -76,10 +76,6 @@ public:
   ///
   /// \param[in] func_name
   ///     The name of the function to prepare for execution in the target.
-  ///
-  /// \param[in] decl_map
-  ///     The mapping used to look up entities in the target process. In
-  ///     this case, used to find objc_msgSend
   IRDynamicChecks(ClangDynamicCheckerFunctions &checker_functions,
                   const char *func_name = "$__lldb_expr");
 

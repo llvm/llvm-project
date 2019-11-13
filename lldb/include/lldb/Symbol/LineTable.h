@@ -135,8 +135,8 @@ public:
   ///     If true, match only if you find a line entry exactly matching \a line.
   ///     If false, return the closest line entry greater than \a line.
   ///
-  /// \param[out] line_entry
-  ///     A reference to a line entry object that will get a copy of
+  /// \param[out] line_entry_ptr
+  ///     A pointer to a line entry object that will get a copy of
   ///     the line entry if \b true is returned, otherwise \a
   ///     line_entry is left untouched.
   ///
@@ -194,16 +194,6 @@ public:
   size_t GetContiguousFileAddressRanges(FileAddressRanges &file_ranges,
                                         bool append);
 
-  /// Given a file range link map, relink the current line table and return a
-  /// fixed up line table.
-  ///
-  /// \param[out] file_range_map
-  ///     A collection of file ranges that maps to new file ranges
-  ///     that will be used when linking the line table.
-  ///
-  /// \return
-  ///     A new line table if at least one line table entry was able
-  ///     to be mapped.
   typedef RangeDataVector<lldb::addr_t, lldb::addr_t, lldb::addr_t>
       FileRangeMap;
 

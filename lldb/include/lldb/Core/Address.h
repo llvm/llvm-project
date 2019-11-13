@@ -61,45 +61,55 @@ public:
   /// Dump styles allow the Address::Dump(Stream *,DumpStyle) const function
   /// to display Address contents in a variety of ways.
   enum DumpStyle {
-    DumpStyleInvalid,           ///< Invalid dump style
-    DumpStyleSectionNameOffset, ///< Display as the section name + offset.
-                                ///< \code
+    /// Invalid dump style.
+    DumpStyleInvalid,
+    /// Display as the section name + offset.
+    /// \code
     /// // address for printf in libSystem.B.dylib as a section name + offset
-    /// libSystem.B.dylib.__TEXT.__text + 0x0005cfdf \endcode
-    DumpStyleSectionPointerOffset, ///< Display as the section pointer + offset
-                                   ///(debug output).
-                                   ///< \code
+    /// libSystem.B.dylib.__TEXT.__text + 0x0005cfdf
+    /// \endcode
+    DumpStyleSectionNameOffset,
+    /// Display as the section pointer + offset (debug output).
+    /// \code
     /// // address for printf in libSystem.B.dylib as a section pointer +
-    /// offset (lldb::Section *)0x35cc50 + 0x000000000005cfdf \endcode
-    DumpStyleFileAddress, ///< Display as the file address (if any).
-                          ///< \code
+    /// offset (lldb::Section *)0x35cc50 + 0x000000000005cfdf
+    /// \endcode
+    DumpStyleSectionPointerOffset,
+    /// Display as the file address (if any).
+    /// \code
     /// // address for printf in libSystem.B.dylib as a file address
-    /// 0x000000000005dcff \endcode
-    DumpStyleModuleWithFileAddress, ///< Display as the file address with the
-                                    /// module name prepended (if any).
-                                    ///< \code
+    /// 0x000000000005dcff
+    /// \endcode
+    ///
+    DumpStyleFileAddress,
+    /// Display as the file address with the module name prepended (if any).
+    /// \code
     /// // address for printf in libSystem.B.dylib as a file address
-    /// libSystem.B.dylib[0x000000000005dcff] \endcode
-    DumpStyleLoadAddress, ///< Display as the load address (if resolved).
-                          ///< \code
+    /// libSystem.B.dylib[0x000000000005dcff]
+    /// \endcode
+    DumpStyleModuleWithFileAddress,
+    /// Display as the load address (if resolved).
+    /// \code
     /// // address for printf in libSystem.B.dylib as a load address
-    /// 0x00007fff8306bcff \endcode
-    DumpStyleResolvedDescription, ///< Display the details about what an address
-                                  /// resolves to. This can
-    ///< be anything from a symbol context summary (module, function/symbol,
-    ///< and file and line), to information about what the pointer points to
-    ///< if the address is in a section (section of pointers, c strings, etc).
+    /// 0x00007fff8306bcff
+    /// \endcode
+    DumpStyleLoadAddress,
+    /// Display the details about what an address resolves to. This can be
+    /// anything from a symbol context summary (module, function/symbol, and
+    /// file and line), to information about what the pointer points to if the
+    /// address is in a section (section of pointers, c strings, etc).
+    DumpStyleResolvedDescription,
     DumpStyleResolvedDescriptionNoModule,
     DumpStyleResolvedDescriptionNoFunctionArguments,
-    DumpStyleNoFunctionName, ///< Elide the function name; display an offset
-                             /// into the current function.
-                             ///< Used primarily in disassembly symbolication
-    DumpStyleDetailedSymbolContext, ///< Detailed symbol context information for
-                                    /// an address for all symbol
-                                    ///< context members.
-    DumpStyleResolvedPointerDescription ///< Dereference a pointer at the
-                                        /// current address and then lookup the
-    ///< dereferenced address using DumpStyleResolvedDescription
+    /// Elide the function name; display an offset into the current function.
+    /// Used primarily in disassembly symbolication
+    DumpStyleNoFunctionName,
+    /// Detailed symbol context information for an address for all symbol
+    /// context members.
+    DumpStyleDetailedSymbolContext,
+    /// Dereference a pointer at the current address and then lookup the
+    /// dereferenced address using DumpStyleResolvedDescription
+    DumpStyleResolvedPointerDescription
   };
 
   /// Default constructor.
@@ -179,9 +189,9 @@ public:
   ///     The Right Hand Side const Address object reference.
   ///
   /// \return
-  ///     \li -1 if lhs < rhs
-  ///     \li 0 if lhs == rhs
-  ///     \li 1 if lhs > rhs
+  ///     -1 if lhs < rhs
+  ///     0 if lhs == rhs
+  ///     1 if lhs > rhs
   static int CompareFileAddress(const Address &lhs, const Address &rhs);
 
   static int CompareLoadAddress(const Address &lhs, const Address &rhs,

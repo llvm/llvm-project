@@ -47,10 +47,6 @@ public:
   /// \param[in] expr
   ///     The expression to parse.
   ///
-  /// \param[in] expr_prefix
-  ///     If non-nullptr, a C string containing translation-unit level
-  ///     definitions to be included when the expression is parsed.
-  ///
   /// \param[in] language
   ///     If not eLanguageTypeUnknown, a language to use when parsing
   ///     the expression.  Currently restricted to those languages
@@ -166,8 +162,14 @@ public:
   ///     A pointer to direct at the persistent variable in which the
   ///     expression's result is stored.
   ///
-  /// \param[in] function_stack_pointer
-  ///     A pointer to the base of the function's stack frame.  This
+  /// \param[in] function_stack_bottom
+  ///     A pointer to the bottom of the function's stack frame.  This
+  ///     is used to determine whether the expression result resides in
+  ///     memory that will still be valid, or whether it needs to be
+  ///     treated as homeless for the purpose of future expressions.
+  ///
+  /// \param[in] function_stack_top
+  ///     A pointer to the top of the function's stack frame.  This
   ///     is used to determine whether the expression result resides in
   ///     memory that will still be valid, or whether it needs to be
   ///     treated as homeless for the purpose of future expressions.

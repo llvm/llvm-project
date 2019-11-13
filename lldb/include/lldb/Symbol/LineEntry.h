@@ -42,11 +42,6 @@ struct LineEntry {
   /// \param[in] s
   ///     The stream to which to dump the object description.
   ///
-  /// \param[in] comp_unit
-  ///     The compile unit object that contains the support file
-  ///     list so the line entry can dump the file name (since this
-  ///     object contains a file index into the support file list).
-  ///
   /// \param[in] show_file
   ///     If \b true, display the filename with the line entry which
   ///     requires that the compile unit object \a comp_unit be a
@@ -75,11 +70,6 @@ struct LineEntry {
   /// \param[in] s
   ///     The stream to which to dump the object description.
   ///
-  /// \param[in] comp_unit
-  ///     The compile unit object that contains the support file
-  ///     list so the line entry can dump the file name (since this
-  ///     object contains a file index into the support file list).
-  ///
   /// \return
   ///     Returns \b true if the file and line were properly dumped,
   ///     \b false otherwise.
@@ -102,9 +92,9 @@ struct LineEntry {
   ///     The Right Hand Side const LineEntry object reference.
   ///
   /// \return
-  ///     \li -1 if lhs < rhs
-  ///     \li 0 if lhs == rhs
-  ///     \li 1 if lhs > rhs
+  ///     -1 if lhs < rhs
+  ///     0 if lhs == rhs
+  ///     1 if lhs > rhs
   static int Compare(const LineEntry &lhs, const LineEntry &rhs);
 
   /// Give the range for this LineEntry + any additional LineEntries for this
@@ -143,7 +133,6 @@ struct LineEntry {
   ///
   /// \param[in] target_sp
   ///     Shared pointer to the target this LineEntry belongs to.
-
   void ApplyFileMappings(lldb::TargetSP target_sp);
 
   // Member variables.
