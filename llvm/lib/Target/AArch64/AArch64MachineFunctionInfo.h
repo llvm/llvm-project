@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include <cassert>
@@ -201,6 +202,8 @@ public:
       int64_t MaxOffset = std::numeric_limits<int64_t>::min();
       for (const auto &Info : MFI.getCalleeSavedInfo()) {
         int FrameIdx = Info.getFrameIdx();
+        if (MFI.getStackID(FrameIdx) != TargetStackID::Default)
+          continue;
         int64_t Offset = MFI.getObjectOffset(FrameIdx);
         int64_t ObjSize = MFI.getObjectSize(FrameIdx);
         MinOffset = std::min<int64_t>(Offset, MinOffset);
