@@ -224,7 +224,8 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
     StringRef FileName = "input.cc", StringRef ToolName = "clang-tool",
     std::shared_ptr<PCHContainerOperations> PCHContainerOps =
         std::make_shared<PCHContainerOperations>(),
-    ArgumentsAdjuster Adjuster = getClangStripDependencyFileAdjuster());
+    ArgumentsAdjuster Adjuster = getClangStripDependencyFileAdjuster(),
+    const FileContentMappings &VirtualMappedFiles = FileContentMappings());
 
 /// Utility to run a FrontendAction in a single clang invocation.
 class ToolInvocation {
