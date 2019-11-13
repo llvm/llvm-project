@@ -135,9 +135,42 @@ static bool IsClangModuleFwdDecl(const DWARFDIE &Die) {
   return false;
 }
 
+static DWARFDIE GetContainingClangModuleDIE(const DWARFDIE &die) {
+  if (die.IsValid()) {
+    DWARFDIE top_module_die;
+    // Now make sure this DIE is scoped in a DW_TAG_module tag and return true
+    // if so
+    for (DWARFDIE parent = die.GetParent(); parent.IsValid();
+         parent = parent.GetParent()) {
+      const dw_tag_t tag = parent.Tag();
+      if (tag == DW_TAG_module)
+        top_module_die = parent;
+      else if (tag == DW_TAG_compile_unit || tag == DW_TAG_partial_unit)
+        break;
+    }
+
+    return top_module_die;
+  }
+  return DWARFDIE();
+}
+
+static lldb::ModuleSP GetContainingClangModule(const DWARFDIE &die) {
+  if (die.IsValid()) {
+    DWARFDIE clang_module_die = GetContainingClangModuleDIE(die);
+
+    if (clang_module_die) {
+      const char *module_name = clang_module_die.GetName();
+      if (module_name)
+        return die.GetDWARF()->GetExternalModule(
+            lldb_private::ConstString(module_name));
+    }
+  }
+  return lldb::ModuleSP();
+}
+
 TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const DWARFDIE &die,
                                                      Log *log) {
-  ModuleSP dwo_module_sp = die.GetContainingDWOModule();
+  ModuleSP dwo_module_sp = GetContainingClangModule(die);
   if (!dwo_module_sp)
     return TypeSP();
 
@@ -873,7 +906,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           if (class_type) {
             bool alternate_defn = false;
             if (class_type->GetID() != decl_ctx_die.GetID() ||
-                decl_ctx_die.GetContainingDWOModuleDIE()) {
+                GetContainingClangModuleDIE(decl_ctx_die)) {
               alternate_defn = true;
 
               // We uniqued the parent class of this function to another
@@ -887,11 +920,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                 CopyUniqueClassMethodTypes(decl_ctx_die, class_type_die,
                                            class_type, failures);
 
-                // FIXME do something with these failures that's smarter
-                // than
-                // just dropping them on the ground.  Unfortunately classes
-                // don't like having stuff added to them after their
-                // definitions are complete...
+                // FIXME do something with these failures that's
+                // smarter than just dropping them on the ground.
+                // Unfortunately classes don't like having stuff added
+                // to them after their definitions are complete...
 
                 type_ptr = dwarf->GetDIEToType()[die.GetDIE()];
                 if (type_ptr && type_ptr != DIE_IS_BEING_PARSED) {
