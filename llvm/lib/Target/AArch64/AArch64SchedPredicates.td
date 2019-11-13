@@ -41,7 +41,7 @@ let FunctionMapper = "AArch64_AM::getMemExtendType" in {
 
 // Check for scaling in the register offset addressing mode.
 let FunctionMapper = "AArch64_AM::getMemDoShift" in
-def CheckMemScaled                      : CheckImmOperandSimple<3>;
+def CheckMemScaled                      : CheckImmOperandSimple<4>;
 
 // Check the shifting type in arithmetic and logic instructions.
 let FunctionMapper = "AArch64_AM::getShiftType" in {
@@ -319,7 +319,8 @@ def IsLoadRegOffsetOp      : CheckOpcode<[PRFMroW, PRFMroX,
                                           LDRBroW, LDRBroX,
                                           LDRHroW, LDRHroX,
                                           LDRSroW, LDRSroX,
-                                          LDRDroW, LDRDroX]>;
+                                          LDRDroW, LDRDroX,
+                                          LDRQroW, LDRQroX]>;
 
 // Identify whether an instruction is a load
 // using the register offset addressing mode.
@@ -330,7 +331,8 @@ def IsStoreRegOffsetOp     : CheckOpcode<[STRBBroW, STRBBroX,
                                           STRBroW, STRBroX,
                                           STRHroW, STRHroX,
                                           STRSroW, STRSroX,
-                                          STRDroW, STRDroX]>;
+                                          STRDroW, STRDroX,
+                                          STRQroW, STRQroX]>;
 
 // Identify whether an instruction is a load or
 // store using the register offset addressing mode.

@@ -12,6 +12,7 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Language.h"
+#include "lldb/Utility/Timer.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -79,6 +80,31 @@ void CompileUnit::ForeachFunction(
   for (auto &f : sorted_functions)
     if (lambda(f))
       return;
+}
+
+lldb::FunctionSP CompileUnit::FindFunction(
+    llvm::function_ref<bool(const FunctionSP &)> matching_lambda) {
+  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
+  Timer scoped_timer(func_cat, "CompileUnit::FindFunction");
+
+  lldb::ModuleSP module = CalculateSymbolContextModule();
+
+  if (!module)
+    return {};
+
+  SymbolFile *symbol_file = module->GetSymbolFile();
+
+  if (!symbol_file)
+    return {};
+
+  // m_functions_by_uid is filled in lazily but we need all the entries.
+  symbol_file->ParseFunctions(*this);
+
+  for (auto &p : m_functions_by_uid) {
+    if (matching_lambda(p.second))
+      return p.second;
+  }
+  return {};
 }
 
 // Dump the current contents of this object. No functions that cause on demand

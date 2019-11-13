@@ -48,7 +48,9 @@ enum class VFISAKind {
   AVX,          // x86 AVX
   AVX2,         // x86 AVX2
   AVX512,       // x86 AVX512
-  Unknown       // Unknown ISA
+  LLVM,         // LLVM internal ISA for functions that are not
+  // attached to an existing ABI via name mangling.
+  Unknown // Unknown ISA
 };
 
 /// Encapsulates information needed to describe a parameter.
@@ -103,6 +105,9 @@ struct VFInfo {
 };
 
 namespace VFABI {
+/// LLVM Internal VFABI ISA token for vector functions.
+static constexpr char const *_LLVM_ = "_LLVM_";
+
 /// Function to contruct a VFInfo out of a mangled names in the
 /// following format:
 ///

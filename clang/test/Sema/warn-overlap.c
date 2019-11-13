@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wtautological-overlap-compare %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wall -Wno-unused -Wno-loop-analysis %s
 
 #define mydefine 2
 

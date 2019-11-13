@@ -239,7 +239,7 @@ else
 		override ARCH :=
 		override ARCHFLAG :=
 	endif
-	ifeq "$(ARCH)" "arm"
+	ifeq "$(findstring arm,$(ARCH))" "arm"
 		override ARCH :=
 		override ARCHFLAG :=
 	endif
