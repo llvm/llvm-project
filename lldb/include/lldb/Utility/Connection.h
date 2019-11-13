@@ -171,7 +171,7 @@ public:
   ///
   /// \return
   ///     The underlying IOObject used for reading.
-  virtual lldb::IOObjectSP GetReadObject() { return lldb::IOObjectSP(); }
+  virtual lldb::IOObjectSP GetReadObject() = 0;
 
 private:
   // For Connection only

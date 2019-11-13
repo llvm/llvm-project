@@ -207,7 +207,7 @@ bool UndefinedBehaviorSanitizerRuntime::NotifyBreakpointHit(
     user_id_t break_loc_id) {
   assert(baton && "null baton");
   if (!baton)
-    return false; //< false => resume execution.
+    return false; ///< false => resume execution.
 
   UndefinedBehaviorSanitizerRuntime *const instance =
       static_cast<UndefinedBehaviorSanitizerRuntime *>(baton);
