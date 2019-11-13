@@ -103,6 +103,9 @@ struct Configuration {
   bool debugDwarf = false;
   bool debugGHashes = false;
   bool debugSymtab = false;
+  bool driver = false;
+  bool driverUponly = false;
+  bool driverWdm = false;
   bool showTiming = false;
   bool showSummary = false;
   unsigned debugTypes = static_cast<unsigned>(DebugType::None);
