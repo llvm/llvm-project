@@ -1122,63 +1122,6 @@ Instruction *InstCombiner::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
   return replaceInstUsesWith(FirstPhi, Undef);
 }
 
-Instruction *InstCombiner::FoldPHIWithEqualPointers(PHINode &PN) {
-  auto *PhiTy = dyn_cast<PointerType>(PN.getType());
-  if (!PhiTy)
-    return nullptr;
-
-  // Make sure all incoming pointers have the same base pointers and offsets.
-  // Also, make sure no addrspacecasts involved.
-  // Note: only inbounds GEPs are supported!
-  const DataLayout &DL = PN.getModule()->getDataLayout();
-  Value *FirstValue = PN.getIncomingValue(0);
-  int64_t Offset;
-  Value *Base = GetPointerBaseWithConstantOffset(
-      FirstValue, Offset, DL, /* AllowNonInbounds */ false);
-
-  auto *BaseTy = cast<PointerType>(Base->getType());
-  if (BaseTy->getAddressSpace() != PhiTy->getAddressSpace())
-    return nullptr;
-
-  for (Use &Incoming : PN.incoming_values()) {
-    if (!isa<Instruction>(Incoming))
-      return nullptr;
-    int64_t CurrentOffset;
-    Value *CurrentBase = GetPointerBaseWithConstantOffset(
-        Incoming, CurrentOffset, DL, /* AllowNonInbounds */ false);
-    if (CurrentBase != Base || CurrentOffset != Offset)
-      return nullptr;
-  }
-
-  Instruction *InsertPt = nullptr;
-  if (auto *BaseInst = dyn_cast<Instruction>(Base)) {
-    if (isa<PHINode>(BaseInst)) {
-      BasicBlock *InsertBB = BaseInst->getParent();
-      BasicBlock::iterator InsertPtIter = InsertBB->getFirstInsertionPt();
-      // Make sure the insertion point exists. At the moment the only reason why
-      // insertion point may not exist is EHPad being a terminator. This check
-      // is a bit more future-proof than just `if (!TI->isEHPad())`.
-      if (InsertPtIter != InsertBB->end())
-        InsertPt = &*InsertPtIter;
-    } else
-      InsertPt = BaseInst->getNextNode();
-  } else
-    InsertPt = &*PN.getFunction()->getEntryBlock().getFirstInsertionPt();
-
-  if (!InsertPt)
-    return nullptr;
-
-  Builder.SetInsertPoint(InsertPt);
-  Type *I8PtrTy = Builder.getInt8PtrTy(PhiTy->getAddressSpace());
-  Value *BaseI8Ptr = Builder.CreateBitCast(Base, I8PtrTy);
-  Value *GEP = Builder.CreateConstInBoundsGEP1_64(BaseI8Ptr, Offset);
-  Value *GEPTyped = Builder.CreateBitCast(GEP, PhiTy);
-
-  for (Use &Incoming : PN.incoming_values())
-    replaceInstUsesWith(*cast<Instruction>(Incoming), GEPTyped);
-  return replaceInstUsesWith(PN, GEPTyped);
-}
-
 // PHINode simplification
 //
 Instruction *InstCombiner::visitPHINode(PHINode &PN) {
@@ -1199,9 +1142,6 @@ Instruction *InstCombiner::visitPHINode(PHINode &PN) {
       PN.getIncomingValue(0)->hasOneUse())
     if (Instruction *Result = FoldPHIArgOpIntoPHI(PN))
       return Result;
-
-  if (Instruction *Result = FoldPHIWithEqualPointers(PN))
-    return Result;
 
   // If this is a trivial cycle in the PHI node graph, remove it.  Basically, if
   // this PHI only has a single use (a PHI), and if that PHI only has one use (a
