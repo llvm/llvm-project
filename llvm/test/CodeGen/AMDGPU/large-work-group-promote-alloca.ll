@@ -47,8 +47,9 @@ entry:
   ret void
 }
 
-; SICI: @promote_alloca_size_1600.stack = internal unnamed_addr addrspace(3) global [1600 x [5 x i32]] undef, align 4
-; GFX10: alloca [5 x i32]
+; SI-NOT: @promote_alloca_size_1600.stack
+; CI: @promote_alloca_size_1600.stack = internal unnamed_addr addrspace(3) global [1024 x [5 x i32]] undef, align 4
+; GFX10: @promote_alloca_size_1600.stack = internal unnamed_addr addrspace(3) global [1024 x [5 x i32]] undef, align 4
 
 define amdgpu_kernel void @promote_alloca_size_1600(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #2 {
 entry:
@@ -274,7 +275,7 @@ entry:
 
 attributes #0 = { nounwind "amdgpu-flat-work-group-size"="63,63" }
 attributes #1 = { nounwind "amdgpu-waves-per-eu"="1,3" "amdgpu-flat-work-group-size"="256,256" }
-attributes #2 = { nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1600,1600" }
+attributes #2 = { nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1024,1024" }
 attributes #3 = { nounwind "amdgpu-waves-per-eu"="1,10" }
 attributes #4 = { nounwind "amdgpu-waves-per-eu"="1,10" }
 attributes #5 = { nounwind "amdgpu-waves-per-eu"="1,6" "amdgpu-flat-work-group-size"="64,64" }
