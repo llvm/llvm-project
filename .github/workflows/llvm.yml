@@ -15,7 +15,7 @@ jobs:
     - name: create build dir
       run: mkdir _build
     - name: configure
-      run: cmake .. -DBUILD_SHARED_LIBS=ON
+      run: cmake ../llvm -DBUILD_SHARED_LIBS=ON
       working-directory: _build 
     - name: build
       run: cmake --build .
