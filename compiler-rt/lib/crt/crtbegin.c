@@ -10,11 +10,13 @@
 
 __attribute__((visibility("hidden"))) void *__dso_handle = &__dso_handle;
 
+#ifdef EH_USE_FRAME_REGISTRY
 __extension__ static void *__EH_FRAME_LIST__[]
     __attribute__((section(".eh_frame"), aligned(sizeof(void *)))) = {};
 
 extern void __register_frame_info(const void *, void *) __attribute__((weak));
 extern void *__deregister_frame_info(const void *) __attribute__((weak));
+#endif
 
 #ifndef CRT_HAS_INITFINI_ARRAY
 typedef void (*fp)(void);
@@ -32,10 +34,11 @@ static void __attribute__((used)) __do_init() {
     return;
   __initialized = 1;
 
+#ifdef EH_USE_FRAME_REGISTRY
   static struct { void *p[8]; } __object;
   if (__register_frame_info)
     __register_frame_info(__EH_FRAME_LIST__, &__object);
-
+#endif
 #ifndef CRT_HAS_INITFINI_ARRAY
   const size_t n = __CTOR_LIST_END__ - __CTOR_LIST__ - 1;
   for (size_t i = n; i >= 1; i--) __CTOR_LIST__[i]();
@@ -73,11 +76,12 @@ static void __attribute__((used)) __do_fini() {
     __cxa_finalize(__dso_handle);
 
 #ifndef CRT_HAS_INITFINI_ARRAY
-  if (__deregister_frame_info)
-    __deregister_frame_info(__EH_FRAME_LIST__);
-
   const size_t n = __DTOR_LIST_END__ - __DTOR_LIST__ - 1;
   for (size_t i = 1; i <= n; i++) __DTOR_LIST__[i]();
+#endif
+#ifdef EH_USE_FRAME_REGISTRY
+  if (__deregister_frame_info)
+    __deregister_frame_info(__EH_FRAME_LIST__);
 #endif
 }
 
