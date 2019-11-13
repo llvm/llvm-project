@@ -412,7 +412,7 @@ define amdgpu_kernel void @ptrtoint(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 ; OPT-LABEL: @pointer_typed_alloca(
 ; OPT:  getelementptr inbounds [256 x i32 addrspace(1)*], [256 x i32 addrspace(1)*] addrspace(3)* @pointer_typed_alloca.A.addr, i32 0, i32 %{{[0-9]+}}
 ; OPT: load i32 addrspace(1)*, i32 addrspace(1)* addrspace(3)* %{{[0-9]+}}, align 4
-define amdgpu_kernel void @pointer_typed_alloca(i32 addrspace(1)* %A) {
+define amdgpu_kernel void @pointer_typed_alloca(i32 addrspace(1)* %A) #1 {
 entry:
   %A.addr = alloca i32 addrspace(1)*, align 4, addrspace(5)
   store i32 addrspace(1)* %A, i32 addrspace(1)* addrspace(5)* %A.addr, align 4
@@ -556,7 +556,8 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,2" }
+attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="1,256" }
+attributes #1 = { nounwind "amdgpu-flat-work-group-size"="1,256" }
 
 ; HSAOPT: !0 = !{}
 ; HSAOPT: !1 = !{i32 0, i32 257}
