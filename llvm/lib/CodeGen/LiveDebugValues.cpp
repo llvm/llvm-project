@@ -109,6 +109,8 @@ static bool isRegOtherThanSPAndFP(const MachineOperand &Op,
 
 namespace {
 
+using DefinedRegsSet = SmallSet<Register, 32>;
+
 class LiveDebugValues : public MachineFunctionPass {
 private:
   const TargetRegisterInfo *TRI;
@@ -479,7 +481,8 @@ private:
   ///
   /// Currently, we generate debug entry values only for parameters that are
   /// unmodified throughout the function and located in a register.
-  bool isEntryValueCandidate(const MachineInstr &MI) const;
+  bool isEntryValueCandidate(const MachineInstr &MI,
+                             const DefinedRegsSet &Regs) const;
 
   /// If a given instruction is identified as a spill, return the spill location
   /// and set \p Reg to the spilled register.
@@ -1278,7 +1281,8 @@ void LiveDebugValues::flushPendingLocs(VarLocInMBB &PendingInLocs,
   }
 }
 
-bool LiveDebugValues::isEntryValueCandidate(const MachineInstr &MI) const {
+bool LiveDebugValues::isEntryValueCandidate(
+    const MachineInstr &MI, const DefinedRegsSet &DefinedRegs) const {
   if (!MI.isDebugValue())
     return false;
 
@@ -1304,11 +1308,27 @@ bool LiveDebugValues::isEntryValueCandidate(const MachineInstr &MI) const {
   if (!isRegOtherThanSPAndFP(MI.getOperand(0), MI, TRI))
     return false;
 
+  // If a parameter's value has been propagated from the caller, then the
+  // parameter's DBG_VALUE may be described using a register defined by some
+  // instruction in the entry block, in which case we shouldn't create an
+  // entry value.
+  if (DefinedRegs.count(MI.getOperand(0).getReg()))
+    return false;
+
   // TODO: Add support for parameters that are described as fragments.
   if (MI.getDebugExpression()->isFragment())
     return false;
 
   return true;
+}
+
+/// Collect all register defines (including aliases) for the given instruction.
+static void collectRegDefs(const MachineInstr &MI, DefinedRegsSet &Regs,
+                           const TargetRegisterInfo *TRI) {
+  for (const MachineOperand &MO : MI.operands())
+    if (MO.isReg() && MO.isDef() && MO.getReg())
+      for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid(); ++AI)
+        Regs.insert(*AI);
 }
 
 /// Calculate the liveness information for the given machine function and
@@ -1351,13 +1371,20 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
   // representing candidates for production of debug entry values.
   DebugParamMap DebugEntryVals;
 
+  // Set of register defines that are seen when traversing the entry block
+  // looking for debug entry value candidates.
+  DefinedRegsSet DefinedRegs;
+
   // Only in the case of entry MBB collect DBG_VALUEs representing
   // function parameters in order to generate debug entry values for them.
+
   MachineBasicBlock &First_MBB = *(MF.begin());
-  for (auto &MI : First_MBB)
-    if (isEntryValueCandidate(MI) &&
+  for (auto &MI : First_MBB) {
+    collectRegDefs(MI, DefinedRegs, TRI);
+    if (isEntryValueCandidate(MI, DefinedRegs) &&
         !DebugEntryVals.count(MI.getDebugVariable()))
       DebugEntryVals[MI.getDebugVariable()] = &MI;
+  }
 
   // Initialize per-block structures and scan for fragment overlaps.
   for (auto &MBB : MF) {
