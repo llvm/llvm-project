@@ -233,8 +233,6 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   }
 }
 
-// FIXME Fix emission of .cfi_restore and .cfi_def_cfa CFI directives that can
-// incorrectly affect subsequent basic blocks.
 void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
                                       MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
@@ -242,7 +240,6 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   DebugLoc DL = MBBI->getDebugLoc();
-  const RISCVInstrInfo *TII = STI.getInstrInfo();
   Register FPReg = getFPReg(STI);
   Register SPReg = getSPReg(STI);
 
@@ -271,51 +268,6 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
 
     adjustReg(MBB, LastFrameDestroy, DL, SPReg, SPReg, SecondSPAdjustAmount,
               MachineInstr::FrameDestroy);
-
-    // Emit ".cfi_def_cfa_offset FirstSPAdjustAmount" if using an sp-based CFA
-    if (!hasFP(MF)) {
-      unsigned CFIIndex = MF.addFrameInst(
-          MCCFIInstruction::createDefCfaOffset(nullptr, -FirstSPAdjustAmount));
-      BuildMI(MBB, LastFrameDestroy, DL,
-              TII->get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex);
-    }
-  }
-
-  if (hasFP(MF)) {
-    // To find the instruction restoring FP from stack.
-    for (auto &I = LastFrameDestroy; I != MBBI; ++I) {
-      if (I->mayLoad() && I->getOperand(0).isReg()) {
-        Register DestReg = I->getOperand(0).getReg();
-        if (DestReg == FPReg) {
-          // If there is frame pointer, after restoring $fp registers, we
-          // need adjust CFA back to the correct sp-based offset.
-          // Emit ".cfi_def_cfa $sp, CFAOffset"
-          uint64_t CFAOffset =
-              FirstSPAdjustAmount
-                  ? -FirstSPAdjustAmount + RVFI->getVarArgsSaveSize()
-                  : -FPOffset;
-          unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createDefCfa(
-              nullptr, RI->getDwarfRegNum(SPReg, true), CFAOffset));
-          BuildMI(MBB, std::next(I), DL,
-                  TII->get(TargetOpcode::CFI_INSTRUCTION))
-              .addCFIIndex(CFIIndex);
-          break;
-        }
-      }
-    }
-  }
-
-  // Add CFI directives for callee-saved registers.
-  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
-  // Iterate over list of callee-saved registers and emit .cfi_restore
-  // directives.
-  for (const auto &Entry : CSI) {
-    Register Reg = Entry.getReg();
-    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createRestore(
-        nullptr, RI->getDwarfRegNum(Reg, true)));
-    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex);
   }
 
   if (FirstSPAdjustAmount)
@@ -323,13 +275,6 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
 
   // Deallocate stack
   adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackSize, MachineInstr::FrameDestroy);
-
-  // After restoring $sp, we need to adjust CFA to $(sp + 0)
-  // Emit ".cfi_def_cfa_offset 0"
-  unsigned CFIIndex =
-      MF.addFrameInst(MCCFIInstruction::createDefCfaOffset(nullptr, 0));
-  BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex);
 }
 
 int RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF,
