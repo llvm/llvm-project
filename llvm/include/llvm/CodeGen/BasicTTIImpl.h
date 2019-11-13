@@ -781,9 +781,10 @@ public:
       // cost of the split itself. Count that as 1, to be consistent with
       // TLI->getTypeLegalizationCost().
       if ((TLI->getTypeAction(Src->getContext(), TLI->getValueType(DL, Src)) ==
-           TargetLowering::TypeSplitVector) ||
-          (TLI->getTypeAction(Dst->getContext(), TLI->getValueType(DL, Dst)) ==
-           TargetLowering::TypeSplitVector)) {
+               TargetLowering::TypeSplitVector ||
+           TLI->getTypeAction(Dst->getContext(), TLI->getValueType(DL, Dst)) ==
+               TargetLowering::TypeSplitVector) &&
+          Src->getVectorNumElements() > 1 && Dst->getVectorNumElements() > 1) {
         Type *SplitDst = VectorType::get(Dst->getVectorElementType(),
                                          Dst->getVectorNumElements() / 2);
         Type *SplitSrc = VectorType::get(Src->getVectorElementType(),
