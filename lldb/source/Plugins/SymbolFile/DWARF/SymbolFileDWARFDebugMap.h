@@ -115,9 +115,11 @@ public:
             uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             lldb_private::TypeMap &types) override;
-  void FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> context,
-                   lldb_private::LanguageSet langauges,
-                   lldb_private::TypeMap &types) override;
+  void
+  FindTypes(llvm::ArrayRef<lldb_private::CompilerContext> context,
+            lldb_private::LanguageSet languages,
+            llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
+            lldb_private::TypeMap &types) override;
   lldb_private::CompilerDeclContext FindNamespace(
       lldb_private::ConstString name,
       const lldb_private::CompilerDeclContext *parent_decl_ctx) override;

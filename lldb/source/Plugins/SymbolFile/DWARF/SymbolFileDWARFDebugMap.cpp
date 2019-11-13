@@ -1184,11 +1184,12 @@ void SymbolFileDWARFDebugMap::FindTypes(
   });
 }
 
-void
-SymbolFileDWARFDebugMap::FindTypes(llvm::ArrayRef<CompilerContext> context,
-                                   LanguageSet languages, TypeMap &types) {
+void SymbolFileDWARFDebugMap::FindTypes(
+    llvm::ArrayRef<CompilerContext> context, LanguageSet languages,
+    llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
+    TypeMap &types) {
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
-    oso_dwarf->FindTypes(context, languages, types);
+    oso_dwarf->FindTypes(context, languages, searched_symbol_files, types);
     return false;
   });
 }

@@ -2510,7 +2510,8 @@ void SymbolFileDWARF::FindTypes(
 
   for (const auto &pair : m_external_type_modules)
     if (ModuleSP external_module_sp = pair.second)
-      external_module_sp->FindTypes(pattern, languages, types);
+      external_module_sp->FindTypes(pattern, languages, searched_symbol_files,
+                                    types);
 }
 
 CompilerDeclContext
