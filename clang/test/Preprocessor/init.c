@@ -7604,6 +7604,12 @@
 //
 // PPC32-SPE:#define __NO_FPRS__ 1
 // PPC32-SPE:#define __SPE__ 1
+// 
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-unknown-linux-gnu -target-cpu 8548 < /dev/null | FileCheck -match-full-lines -check-prefix PPC8548 %s
+//
+// PPC8548:#define __NO_FPRS__ 1
+// PPC8548:#define __NO_LWSYNC__ 1
+// PPC8548:#define __SPE__ 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-apple-darwin8 < /dev/null | FileCheck -match-full-lines -check-prefix PPC-DARWIN %s
 //
