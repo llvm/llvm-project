@@ -256,6 +256,10 @@ MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
     stackAlignment = Align(8);
   }
 
+  if ((isABI_N32() || isABI_N64()) && !isGP64bit())
+    report_fatal_error("64-bit code requested on a subtarget that doesn't "
+                       "support it!");
+
   return *this;
 }
 
