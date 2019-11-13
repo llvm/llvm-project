@@ -28,12 +28,30 @@ def args;
 
 // -----------------------------------------------------------------------------
 // Family of nodes for use in the codegen dag for an intrinsic, corresponding
-// roughly to operations in LLVM IR. More precisely, they correspond to calls
-// to methods of llvm::IRBuilder.
-class IRBuilder<string func_> {
-  string func = func_;          // the method name
+// to function calls that return LLVM IR nodes.
+class IRBuilderBase {
+  // The prefix of the function call, including an open parenthesis.
+  string prefix;
+
+  // Any parameters that have types that have to be treated specially by the
+  // Tablegen back end. Generally these will be types other than llvm::Value *,
+  // although not all other types need special treatment (e.g. llvm::Type *).
   list<int> address_params = []; // indices of parameters with type Address
   list<int> int_constant_params = []; // indices of plain integer parameters
+}
+class IRBuilder<string func> : IRBuilderBase {
+  // The usual case: a method called on the code gen function's instance of
+  // llvm::IRBuilder.
+  let prefix = "Builder." # func # "(";
+}
+class IRFunction<string func> : IRBuilderBase {
+  // Some other function that doesn't use the IRBuilder at all.
+  let prefix = func # "(";
+}
+class CGHelperFn<string func> : IRBuilderBase {
+  // A helper function defined in CGBuiltin.cpp, which takes the IRBuilder as
+  // an argument.
+  let prefix = func # "(Builder, ";
 }
 def add: IRBuilder<"CreateAdd">;
 def or: IRBuilder<"CreateOr">;
@@ -46,12 +64,19 @@ def fsub: IRBuilder<"CreateFSub">;
 def load: IRBuilder<"CreateLoad"> { let address_params = [0]; }
 def store: IRBuilder<"CreateStore"> { let address_params = [1]; }
 def xval: IRBuilder<"CreateExtractValue"> { let int_constant_params = [1]; }
+def trunc: IRBuilder<"CreateTrunc">;
+def extend: CGHelperFn<"SignOrZeroExtend"> { let int_constant_params = [2]; }
+def zeroinit: IRFunction<"llvm::Constant::getNullValue">;
+
+// A node that makes an Address out of a pointer-typed Value, by
+// providing an alignment as the second argument.
+def address;
 
 // Another node class you can use in the codegen dag. This one corresponds to
 // an IR intrinsic function, which has to be specialized to a particular list
 // of types.
-class IRInt<string name_, list<Type> params_ = [], bit appendKind_ = 0> {
-  string intname = name_;       // base name of the intrinsic, minus "arm_mve_"
+class IRIntBase<string name_, list<Type> params_ = [], bit appendKind_ = 0> {
+  string intname = name_;       // base name of the intrinsic
   list<Type> params = params_;  // list of parameter types
 
   // If this flag is set, then the IR intrinsic name will get a suffix _s, _u
@@ -66,6 +91,11 @@ class IRInt<string name_, list<Type> params_ = [], bit appendKind_ = 0> {
   // backend will take care of adding _s or _u as appropriate in each instance.
   bit appendKind = appendKind_;
 }
+
+// Mostly we'll be using @llvm.arm.mve.* intrinsics, so here's a trivial
+// subclass that puts on that prefix.
+class IRInt<string name, list<Type> params = [], bit appendKind = 0>
+      : IRIntBase<"arm_mve_" # name, params, appendKind>;
 
 // The 'seq' node in a codegen dag specifies a set of IR operations to be
 // performed in order. It has the special ability to define extra variable
@@ -150,6 +180,14 @@ def sint: PrimitiveType<"s", 32> { let nameOverride = "int"; }
 // VecOf<t> expects t to be a scalar, and gives a 128-bit vector of whatever it
 // is.
 class VecOf<Type t>: ComplexType<(CTO_Vec t)>;
+
+// NarrowedVecOf<t,v> expects t to be a scalar type, and v to be a vector
+// type. It returns a vector type whose element type is t, and whose lane
+// count is the same as the lane count of v. (Used as an intermediate value
+// type in the IR representation of a widening load: you load a vector of
+// small things out of memory, and then zext/sext them into a full 128-bit
+// output vector.)
+class NarrowedVecOf<Type t, Type v>: ComplexType<(CTO_Vec t, v)>;
 
 // PredOf expects t to be a scalar, and expands to a predicate vector which
 // (logically speaking) has the same number of lanes as VecOf<t> would.
