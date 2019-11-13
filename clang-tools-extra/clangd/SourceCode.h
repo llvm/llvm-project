@@ -292,9 +292,14 @@ struct DefinedMacro {
   llvm::StringRef Name;
   const MacroInfo *Info;
 };
-// Gets the macro at a specified \p Loc.
+/// Gets the macro at a specified \p Loc.
 llvm::Optional<DefinedMacro> locateMacroAt(SourceLocation Loc,
                                            Preprocessor &PP);
+
+/// Infers whether this is a header from the FileName and LangOpts (if
+/// presents).
+bool isHeaderFile(llvm::StringRef FileName,
+                  llvm::Optional<LangOptions> LangOpts = llvm::None);
 
 } // namespace clangd
 } // namespace clang
