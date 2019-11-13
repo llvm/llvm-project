@@ -89,7 +89,7 @@ public:
   /// Sends a GDB remote protocol 'A' packet that delivers program
   /// arguments to the remote server.
   ///
-  /// \param[in] argv
+  /// \param[in] launch_info
   ///     A NULL terminated array of const C strings to use as the
   ///     arguments.
   ///
@@ -155,7 +155,7 @@ public:
   /// Sets the path to use for stdin/out/err for a process
   /// that will be launched with the 'A' packet.
   ///
-  /// \param[in] path
+  /// \param[in] file_spec
   ///     The path to use for stdin/out/err
   ///
   /// \return

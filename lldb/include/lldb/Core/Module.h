@@ -291,9 +291,6 @@ public:
   /// \param[in] name
   ///     The name of the compile unit we are looking for.
   ///
-  /// \param[in] namespace_decl
-  ///     If valid, a namespace to search in.
-  ///
   /// \param[in] name_type_mask
   ///     A bit mask of bits that indicate what kind of names should
   ///     be used when doing the lookup. Bits include fully qualified
@@ -316,10 +313,6 @@ public:
   ///
   /// \param[in] regex
   ///     A regular expression to use when matching the name.
-  ///
-  /// \param[in] append
-  ///     If \b true, any matches will be appended to \a sc_list, else
-  ///     matches replace the contents of \a sc_list.
   ///
   /// \param[out] sc_list
   ///     A symbol context list that gets filled in with all of the
@@ -416,7 +409,7 @@ public:
   ///     omitted to make finding types that a user may type
   ///     easier.
   ///
-  /// \param[out] type_list
+  /// \param[out] types
   ///     A type list gets populated with any matches.
   ///
   void
@@ -447,12 +440,8 @@ public:
   ///     The name of a type within a namespace that should not include
   ///     any qualifying namespaces (just a type basename).
   ///
-  /// \param[in] namespace_decl
-  ///     The namespace declaration that this type must exist in.
-  ///
   /// \param[out] type_list
   ///     A type list gets populated with any matches.
-  ///
   void FindTypesInNamespace(ConstString type_name,
                             const CompilerDeclContext *parent_decl_ctx,
                             size_t max_matches, TypeList &type_list);

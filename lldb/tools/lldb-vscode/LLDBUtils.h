@@ -113,8 +113,8 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id);
 /// breakpoint ID in the lower BREAKPOINT_ID_SHIFT bits and the
 /// breakpoint location ID in the upper BREAKPOINT_ID_SHIFT bits.
 ///
-/// \param[in] frame
-///     The LLDB stack frame object generate the ID for
+/// \param[in] bp_loc
+///     The LLDB break point location.
 ///
 /// \return
 ///     A unique integer that allows us to easily find the right

@@ -43,8 +43,6 @@ struct HighlightStyle {
     void Apply(Stream &s, llvm::StringRef value) const;
 
     /// Sets the prefix and suffix strings.
-    /// \param prefix
-    /// \param suffix
     void Set(llvm::StringRef prefix, llvm::StringRef suffix);
   };
 
@@ -100,6 +98,7 @@ public:
 
   /// Highlights the given line
   /// \param options
+  ///     The highlight options.
   /// \param line
   ///     The user supplied line that needs to be highlighted.
   /// \param cursor_pos

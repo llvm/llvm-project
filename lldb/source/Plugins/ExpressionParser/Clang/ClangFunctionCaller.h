@@ -104,8 +104,8 @@ public:
   /// \param[in] ast_context
   ///     The AST context to evaluate argument types in.
   ///
-  /// \param[in] return_qualtype
-  ///     An opaque Clang QualType for the function result.  Should be
+  /// \param[in] return_type
+  ///     A compiler type for the function result.  Should be
   ///     defined in ast_context.
   ///
   /// \param[in] function_address

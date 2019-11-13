@@ -193,7 +193,7 @@ public:
   /// Tell this breakpoint to scan a given module list and resolve any new
   /// locations that match the breakpoint's specifications.
   ///
-  /// \param[in] changed_modules
+  /// \param[in] module_list
   ///    The list of modules to look in for new locations.
   ///
   /// \param[in]  new_locations
@@ -205,7 +205,7 @@ public:
   /// which case we will remove any locations that are in modules that got
   /// unloaded.
   ///
-  /// \param[in] changedModules
+  /// \param[in] changed_modules
   ///    The list of modules to look in for new locations.
   /// \param[in] load_event
   ///    If \b true then the modules were loaded, if \b false, unloaded.
@@ -372,10 +372,6 @@ public:
   ///    If \b true the callback will be run on the private event thread
   ///    before the stop event gets reported.  If false, the callback will get
   ///    handled on the public event thread after the stop has been posted.
-  ///
-  /// \return
-  ///    \b true if the process should stop when you hit the breakpoint.
-  ///    \b false if it should continue.
   void SetCallback(BreakpointHitCallback callback, void *baton,
                    bool is_synchronous = false);
 
@@ -522,7 +518,7 @@ private: // The target needs to manage adding & removing names.  It will do the
     if (name_to_remove)
       m_name_list.erase(name_to_remove);
   }
-  
+
 public:
   bool MatchesName(const char *name) {
     return m_name_list.find(name) != m_name_list.end();
@@ -554,14 +550,14 @@ public:
   lldb::BreakpointPreconditionSP GetPrecondition() { return m_precondition_sp; }
 
   // Produces the OR'ed values for all the names assigned to this breakpoint.
-  const BreakpointName::Permissions &GetPermissions() const { 
-      return m_permissions; 
+  const BreakpointName::Permissions &GetPermissions() const {
+      return m_permissions;
   }
 
-  BreakpointName::Permissions &GetPermissions() { 
-      return m_permissions; 
+  BreakpointName::Permissions &GetPermissions() {
+      return m_permissions;
   }
-  
+
   bool AllowList() const {
     return GetPermissions().GetAllowList();
   }

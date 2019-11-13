@@ -105,7 +105,7 @@ public:
   /// \param[in] expr
   ///     The expression to parse.
   ///
-  /// \param[in] expr_prefix
+  /// \param[in] prefix
   ///     If non-NULL, a C string containing translation-unit level
   ///     definitions to be included when the expression is parsed.
   ///
