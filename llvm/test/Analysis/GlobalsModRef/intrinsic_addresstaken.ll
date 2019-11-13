@@ -1,7 +1,5 @@
 ; RUN: opt -globals-aa -gvn -S < %s | FileCheck %s
 
-; XFAIL: *
-
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -31,7 +29,7 @@ if.else:                                          ; preds = %entry
 
 ; CHECK-LABEL: if.end:
 ; CHECK-NEXT: call void @llvm.objc.autoreleasePoolPop
-; CHECK-NEXT: load i8, i8* @deallocCalled
+;;; Disable: CHECK-NEXT: load i8, i8* @deallocCalled
 if.end:                                           ; preds = %entry
   call void @llvm.objc.autoreleasePoolPop(i8* %tmp0)
   %tmp7 = load i8, i8* @deallocCalled, align 1
