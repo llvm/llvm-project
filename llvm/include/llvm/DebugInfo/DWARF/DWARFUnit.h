@@ -16,6 +16,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
@@ -199,12 +200,14 @@ class DWARFUnit {
   const DWARFDebugAbbrev *Abbrev;
   const DWARFSection *RangeSection;
   uint64_t RangeSectionBase;
-  /// We either keep track of the location list section or its data, depending
-  /// on whether we are handling a split DWARF section or not.
-  union {
-    const DWARFSection *LocSection;
-    StringRef LocSectionData;
-  };
+
+  /// Section containing the location lists of this unit used for non-split
+  /// DWARF<=v4 units.
+  const DWARFSection *LocSection;
+
+  /// Location table of this unit. Used for DWARF v5 and DWO units.
+  std::unique_ptr<DWARFLocationTable> LocTable;
+
   const DWARFSection &LineSection;
   StringRef StringSection;
   const DWARFSection &StringOffsetSection;
@@ -275,7 +278,6 @@ public:
   DWARFContext& getContext() const { return Context; }
   const DWARFSection &getInfoSection() const { return InfoSection; }
   const DWARFSection *getLocSection() const { return LocSection; }
-  StringRef getLocSectionData() const { return LocSectionData; }
   uint64_t getOffset() const { return Header.getOffset(); }
   const dwarf::FormParams &getFormParams() const {
     return Header.getFormParams();
@@ -318,6 +320,8 @@ public:
   DataExtractor getStringExtractor() const {
     return DataExtractor(StringSection, false, 0);
   }
+
+  const DWARFLocationTable *getLocationTable() { return LocTable.get(); }
 
   /// Extract the range list referenced by this compile unit from the
   /// .debug_ranges section. If the extraction is unsuccessful, an error
