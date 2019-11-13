@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wtautological-bitwise-compare %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wall -Wno-unused %s
 
 #define mydefine 2
 

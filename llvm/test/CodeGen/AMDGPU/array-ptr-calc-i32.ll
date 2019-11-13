@@ -43,7 +43,7 @@ define amdgpu_kernel void @test_private_array_ptr_calc(i32 addrspace(1)* noalias
   ret void
 }
 
-attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,1" }
+attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind convergent }
 

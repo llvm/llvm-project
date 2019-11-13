@@ -108,7 +108,7 @@ d2:
 d3:
   %y = load i32*, i32** %ptr
   store i32 1, i32* %y
-  %c2 = icmp eq i32* %y, @p
+  %c2 = icmp eq i32* %y, null
   br i1 %c2, label %ret1, label %ret2
 
 ret1:
@@ -118,6 +118,5 @@ ret2:
   ret void
 }
 
-@p = external global i32
 
 !0 = !{}

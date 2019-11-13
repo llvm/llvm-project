@@ -91,7 +91,7 @@ void CheckerManager::runCheckersOnASTDecl(const Decl *D, AnalysisManager& mgr,
   }
 
   assert(checkers);
-  for (const auto checker : *checkers)
+  for (const auto &checker : *checkers)
     checker(D, mgr, BR);
 }
 
@@ -99,7 +99,7 @@ void CheckerManager::runCheckersOnASTBody(const Decl *D, AnalysisManager& mgr,
                                           BugReporter &BR) {
   assert(D && D->hasBody());
 
-  for (const auto BodyChecker : BodyCheckers)
+  for (const auto &BodyChecker : BodyCheckers)
     BodyChecker(D, mgr, BR);
 }
 
@@ -402,7 +402,7 @@ void CheckerManager::runCheckersForBind(ExplodedNodeSet &Dst,
 void CheckerManager::runCheckersForEndAnalysis(ExplodedGraph &G,
                                                BugReporter &BR,
                                                ExprEngine &Eng) {
-  for (const auto EndAnalysisChecker : EndAnalysisCheckers)
+  for (const auto &EndAnalysisChecker : EndAnalysisCheckers)
     EndAnalysisChecker(G, BR, Eng);
 }
 
@@ -455,7 +455,7 @@ void CheckerManager::runCheckersForEndFunction(NodeBuilderContext &BC,
   // creates a successor for Pred, we do not need to generate an
   // autotransition for it.
   NodeBuilder Bldr(Pred, Dst, BC);
-  for (const auto checkFn : EndFunctionCheckers) {
+  for (const auto &checkFn : EndFunctionCheckers) {
     const ProgramPoint &L =
         FunctionExitPoint(RS, Pred->getLocationContext(), checkFn.Checker);
     CheckerContext C(Bldr, Eng, Pred, L);
@@ -542,7 +542,7 @@ void CheckerManager::runCheckersForNewAllocator(
 /// Run checkers for live symbols.
 void CheckerManager::runCheckersForLiveSymbols(ProgramStateRef state,
                                                SymbolReaper &SymReaper) {
-  for (const auto LiveSymbolsChecker : LiveSymbolsCheckers)
+  for (const auto &LiveSymbolsChecker : LiveSymbolsCheckers)
     LiveSymbolsChecker(state, SymReaper);
 }
 
@@ -599,7 +599,7 @@ CheckerManager::runCheckersForRegionChanges(ProgramStateRef state,
                                             ArrayRef<const MemRegion *> Regions,
                                             const LocationContext *LCtx,
                                             const CallEvent *Call) {
-  for (const auto RegionChangesChecker : RegionChangesCheckers) {
+  for (const auto &RegionChangesChecker : RegionChangesCheckers) {
     // If any checker declares the state infeasible (or if it starts that way),
     // bail out.
     if (!state)
@@ -621,7 +621,7 @@ CheckerManager::runCheckersForPointerEscape(ProgramStateRef State,
           (Kind != PSK_DirectEscapeOnCall &&
            Kind != PSK_IndirectEscapeOnCall)) &&
          "Call must not be NULL when escaping on call");
-  for (const auto PointerEscapeChecker : PointerEscapeCheckers) {
+  for (const auto &PointerEscapeChecker : PointerEscapeCheckers) {
     // If any checker declares the state infeasible (or if it starts that
     //  way), bail out.
     if (!State)
@@ -635,7 +635,7 @@ CheckerManager::runCheckersForPointerEscape(ProgramStateRef State,
 ProgramStateRef
 CheckerManager::runCheckersForEvalAssume(ProgramStateRef state,
                                          SVal Cond, bool Assumption) {
-  for (const auto EvalAssumeChecker : EvalAssumeCheckers) {
+  for (const auto &EvalAssumeChecker : EvalAssumeCheckers) {
     // If any checker declares the state infeasible (or if it starts that way),
     // bail out.
     if (!state)
@@ -658,7 +658,7 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
     NodeBuilder B(Pred, checkDst, Eng.getBuilderContext());
 
     // Check if any of the EvalCall callbacks can evaluate the call.
-    for (const auto EvalCallChecker : EvalCallCheckers) {
+    for (const auto &EvalCallChecker : EvalCallCheckers) {
       // TODO: Support the situation when the call doesn't correspond
       // to any Expr.
       ProgramPoint L = ProgramPoint::getProgramPoint(
@@ -697,7 +697,7 @@ void CheckerManager::runCheckersOnEndOfTranslationUnit(
                                                   const TranslationUnitDecl *TU,
                                                   AnalysisManager &mgr,
                                                   BugReporter &BR) {
-  for (const auto EndOfTranslationUnitChecker : EndOfTranslationUnitCheckers)
+  for (const auto &EndOfTranslationUnitChecker : EndOfTranslationUnitCheckers)
     EndOfTranslationUnitChecker(TU, mgr, BR);
 }
 
@@ -904,6 +904,6 @@ CheckerManager::getCachedStmtCheckersFor(const Stmt *S, bool isPreVisit) {
 }
 
 CheckerManager::~CheckerManager() {
-  for (const auto CheckerDtor : CheckerDtors)
+  for (const auto &CheckerDtor : CheckerDtors)
     CheckerDtor();
 }

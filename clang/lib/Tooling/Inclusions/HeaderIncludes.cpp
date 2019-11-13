@@ -184,6 +184,10 @@ IncludeCategoryManager::IncludeCategoryManager(const IncludeStyle &Style,
                FileName.endswith(".cpp") || FileName.endswith(".c++") ||
                FileName.endswith(".cxx") || FileName.endswith(".m") ||
                FileName.endswith(".mm");
+  if (!Style.IncludeIsMainSourceRegex.empty()) {
+    llvm::Regex MainFileRegex(Style.IncludeIsMainSourceRegex);
+    IsMainFile |= MainFileRegex.match(FileName);
+  }
 }
 
 int IncludeCategoryManager::getIncludePriority(StringRef IncludeName,
@@ -363,7 +367,6 @@ tooling::Replacements HeaderIncludes::remove(llvm::StringRef IncludeName,
   }
   return Result;
 }
-
 
 } // namespace tooling
 } // namespace clang

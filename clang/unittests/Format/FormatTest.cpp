@@ -12847,6 +12847,8 @@ TEST_F(FormatTest, ParsesConfiguration) {
               IncludeStyle.IncludeCategories, ExpectedCategories);
   CHECK_PARSE("IncludeIsMainRegex: 'abc$'", IncludeStyle.IncludeIsMainRegex,
               "abc$");
+  CHECK_PARSE("IncludeIsMainSourceRegex: 'abc$'",
+              IncludeStyle.IncludeIsMainSourceRegex, "abc$");
 
   Style.RawStringFormats.clear();
   std::vector<FormatStyle::RawStringFormat> ExpectedRawStringFormats = {

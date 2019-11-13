@@ -2538,8 +2538,7 @@ size_t ObjectFileMachO::ParseSymtab() {
 
     // Next we need to determine the correct path for the dyld shared cache.
 
-    ArchSpec header_arch;
-    GetArchitecture(header_arch);
+    ArchSpec header_arch = GetArchitecture();
     char dsc_path[PATH_MAX];
     char dsc_path_development[PATH_MAX];
 

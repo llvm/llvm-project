@@ -1576,6 +1576,9 @@ int X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i64, 6 },
     { ISD::UINT_TO_FP, MVT::v4f32, MVT::v2i64, 15 },
 
+    { ISD::FP_TO_SINT,  MVT::v4i16,  MVT::v4f32,  2 },
+    { ISD::FP_TO_SINT,  MVT::v2i16,  MVT::v2f64,  2 },
+
     { ISD::FP_TO_SINT,  MVT::v2i32,  MVT::v2f64,  3 },
 
     { ISD::UINT_TO_FP,  MVT::f64,    MVT::i64,    6 },
