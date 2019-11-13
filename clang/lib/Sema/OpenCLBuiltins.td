@@ -666,8 +666,9 @@ foreach name = ["select"] in {
 }
 
 
+//--------------------------------------------------------------------
 // OpenCL v1.1 s6.11.7, v1.2 s6.12.7, v2.0 s6.13.7 - Vector Data Load and Store Functions
-// OpenCL Extension v1.1 s9.3.6 and s9.6.6, v1.2 s9.5.6, v2.0 s9.4.6, v2.0 s5.1.6 and 6.1.6 - Vector Data Load and Store Functions
+// OpenCL Extension v1.1 s9.3.6 and s9.6.6, v1.2 s9.5.6, v2.0 s5.1.6 and s6.1.6 - Vector Data Load and Store Functions
 // --- Table 15 ---
 // Variants for OpenCL versions below 2.0, using pointers to the global, local
 // and private address spaces.
@@ -775,6 +776,55 @@ foreach VSize = [2, 3, 4, 8, 16] in {
     foreach name = ["vstorea_half" # VSize # rnd] in {
       def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<Half, ConstantAS>]>;
       def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<Half, ConstantAS>]>;
+    }
+  }
+}
+let MaxVersion = CL20 in {
+  foreach AS = [GlobalAS, LocalAS, PrivateAS] in {
+    def : Builtin<"vload_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
+    foreach VSize = [2, 3, 4, 8, 16] in {
+      foreach name = ["vload_half" # VSize] in {
+        def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
+      }
+    }
+    foreach rnd = ["", "_rte", "_rtz", "_rtp", "_rtn"] in {
+      def : Builtin<"vstore_half" # rnd, [Void, Float, Size, PointerType<Half, AS>]>;
+      def : Builtin<"vstore_half" # rnd, [Void, Double, Size, PointerType<Half, AS>]>;
+      foreach VSize = [2, 3, 4, 8, 16] in {
+        foreach name = ["vstore_half" # VSize # rnd] in {
+          def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<Half, AS>]>;
+          def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<Half, AS>]>;
+        }
+      }
+    }
+  }
+}
+let MinVersion = CL20 in {
+  foreach AS = [GenericAS] in {
+    def : Builtin<"vload_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
+    foreach VSize = [2, 3, 4, 8, 16] in {
+      foreach name = ["vload_half" # VSize] in {
+        def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
+      }
+    }
+    foreach rnd = ["", "_rte", "_rtz", "_rtp", "_rtn"] in {
+      def : Builtin<"vstore_half" # rnd, [Void, Float, Size, PointerType<Half, AS>]>;
+      def : Builtin<"vstore_half" # rnd, [Void, Double, Size, PointerType<Half, AS>]>;
+      foreach VSize = [2, 3, 4, 8, 16] in {
+        foreach name = ["vstore_half" # VSize # rnd] in {
+          def : Builtin<name, [Void, VectorType<Float, VSize>, Size, PointerType<Half, AS>]>;
+          def : Builtin<name, [Void, VectorType<Double, VSize>, Size, PointerType<Half, AS>]>;
+        }
+      }
+    }
+  }
+}
+
+foreach AS = [ConstantAS] in {
+  def : Builtin<"vload_half", [Float, Size, PointerType<ConstType<Half>, AS>]>;
+  foreach VSize = [2, 3, 4, 8, 16] in {
+    foreach name = ["vload_half" # VSize] in {
+      def : Builtin<name, [VectorType<Float, VSize>, Size, PointerType<ConstType<Half>, AS>]>;
     }
   }
 }
