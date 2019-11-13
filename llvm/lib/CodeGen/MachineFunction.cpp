@@ -822,12 +822,9 @@ try_next:;
   return FilterID;
 }
 
-void MachineFunction::moveCallSiteInfo(const MachineInstr *Old,
-                                       const MachineInstr *New) {
-  assert(New->isCall() && "Call site info refers only to call instructions!");
-
-  CallSiteInfoMap::iterator CSIt = getCallSiteInfo(Old);
-  if (CSIt == CallSitesInfo.end())
+void MachineFunction::updateCallSiteInfo(const MachineInstr *Old,
+                                         const MachineInstr *New) {
+  if (!Target.Options.EnableDebugEntryValues || Old == New)
     return;
 
   assert(Old->isCall() && (!New || New->isCall()) &&
