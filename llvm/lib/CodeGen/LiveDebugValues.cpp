@@ -89,7 +89,27 @@ static Register isDbgValueDescribedByReg(const MachineInstr &MI) {
   return MI.getOperand(0).isReg() ? MI.getOperand(0).getReg() : Register();
 }
 
+/// If \p Op is a stack or frame register return true, otherwise return false.
+/// This is used to avoid basing the debug entry values on the registers, since
+/// we do not support it at the moment.
+static bool isRegOtherThanSPAndFP(const MachineOperand &Op,
+                                  const MachineInstr &MI,
+                                  const TargetRegisterInfo *TRI) {
+  if (!Op.isReg())
+    return false;
+
+  const MachineFunction *MF = MI.getParent()->getParent();
+  const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
+  unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
+  Register FP = TRI->getFrameRegister(*MF);
+  Register Reg = Op.getReg();
+
+  return Reg && Reg != SP && Reg != FP;
+}
+
 namespace {
+
+using DefinedRegsSet = SmallSet<Register, 32>;
 
 class LiveDebugValues : public MachineFunctionPass {
 private:
@@ -455,6 +475,14 @@ private:
   /// other spills). We do not handle this yet (more than one memory operand).
   bool isLocationSpill(const MachineInstr &MI, MachineFunction *MF,
                        unsigned &Reg);
+
+  /// Returns true if the given machine instruction is a debug value which we
+  /// can emit entry values for.
+  ///
+  /// Currently, we generate debug entry values only for parameters that are
+  /// unmodified throughout the function and located in a register.
+  bool isEntryValueCandidate(const MachineInstr &MI,
+                             const DefinedRegsSet &Regs) const;
 
   /// If a given instruction is identified as a spill, return the spill location
   /// and set \p Reg to the spilled register.
@@ -1253,6 +1281,56 @@ void LiveDebugValues::flushPendingLocs(VarLocInMBB &PendingInLocs,
   }
 }
 
+bool LiveDebugValues::isEntryValueCandidate(
+    const MachineInstr &MI, const DefinedRegsSet &DefinedRegs) const {
+  if (!MI.isDebugValue())
+    return false;
+
+  // TODO: Add support for local variables that are expressed in terms of
+  // parameters entry values.
+  // TODO: Add support for modified arguments that can be expressed
+  // by using its entry value.
+  auto *DIVar = MI.getDebugVariable();
+  if (!DIVar->isParameter() || !DIVar->isNotModified())
+    return false;
+
+  // Do not consider parameters that belong to an inlined function.
+  if (MI.getDebugLoc()->getInlinedAt())
+    return false;
+
+  // Do not consider indirect debug values (TODO: explain why).
+  if (MI.isIndirectDebugValue())
+    return false;
+
+  // Only consider parameters that are described using registers. Parameters
+  // that are passed on the stack are not yet supported, so ignore debug
+  // values that are described by the frame or stack pointer.
+  if (!isRegOtherThanSPAndFP(MI.getOperand(0), MI, TRI))
+    return false;
+
+  // If a parameter's value has been propagated from the caller, then the
+  // parameter's DBG_VALUE may be described using a register defined by some
+  // instruction in the entry block, in which case we shouldn't create an
+  // entry value.
+  if (DefinedRegs.count(MI.getOperand(0).getReg()))
+    return false;
+
+  // TODO: Add support for parameters that are described as fragments.
+  if (MI.getDebugExpression()->isFragment())
+    return false;
+
+  return true;
+}
+
+/// Collect all register defines (including aliases) for the given instruction.
+static void collectRegDefs(const MachineInstr &MI, DefinedRegsSet &Regs,
+                           const TargetRegisterInfo *TRI) {
+  for (const MachineOperand &MO : MI.operands())
+    if (MO.isReg() && MO.isDef() && MO.getReg())
+      for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid(); ++AI)
+        Regs.insert(*AI);
+}
+
 /// Calculate the liveness information for the given machine function and
 /// extend ranges across basic blocks.
 bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
@@ -1289,42 +1367,24 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
                       std::greater<unsigned int>>
       Pending;
 
-  // Besides parameter's modification, check whether a DBG_VALUE is inlined
-  // in order to deduce whether the variable that it tracks comes from
-  // a different function. If that is the case we can't track its entry value.
-  auto IsUnmodifiedFuncParam = [&](const MachineInstr &MI) {
-    auto *DIVar = MI.getDebugVariable();
-    return DIVar->isParameter() && DIVar->isNotModified() &&
-           !MI.getDebugLoc()->getInlinedAt();
-  };
-
-  const TargetLowering *TLI = MF.getSubtarget().getTargetLowering();
-  unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
-  Register FP = TRI->getFrameRegister(MF);
-  auto IsRegOtherThanSPAndFP = [&](const MachineOperand &Op) -> bool {
-    return Op.isReg() && Op.getReg() != SP && Op.getReg() != FP;
-  };
-
   // Working set of currently collected debug variables mapped to DBG_VALUEs
   // representing candidates for production of debug entry values.
   DebugParamMap DebugEntryVals;
 
-  MachineBasicBlock &First_MBB = *(MF.begin());
+  // Set of register defines that are seen when traversing the entry block
+  // looking for debug entry value candidates.
+  DefinedRegsSet DefinedRegs;
+
   // Only in the case of entry MBB collect DBG_VALUEs representing
   // function parameters in order to generate debug entry values for them.
-  // Currently, we generate debug entry values only for parameters that are
-  // unmodified throughout the function and located in a register.
-  // TODO: Add support for parameters that are described as fragments.
-  // TODO: Add support for modified arguments that can be expressed
-  // by using its entry value.
-  // TODO: Add support for local variables that are expressed in terms of
-  // parameters entry values.
-  for (auto &MI : First_MBB)
-    if (MI.isDebugValue() && IsUnmodifiedFuncParam(MI) &&
-        !MI.isIndirectDebugValue() && IsRegOtherThanSPAndFP(MI.getOperand(0)) &&
-        !DebugEntryVals.count(MI.getDebugVariable()) &&
-        !MI.getDebugExpression()->isFragment())
+
+  MachineBasicBlock &First_MBB = *(MF.begin());
+  for (auto &MI : First_MBB) {
+    collectRegDefs(MI, DefinedRegs, TRI);
+    if (isEntryValueCandidate(MI, DefinedRegs) &&
+        !DebugEntryVals.count(MI.getDebugVariable()))
       DebugEntryVals[MI.getDebugVariable()] = &MI;
+  }
 
   // Initialize per-block structures and scan for fragment overlaps.
   for (auto &MBB : MF) {
