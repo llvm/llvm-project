@@ -46,7 +46,7 @@ public:
     return "NVPTX DAG->DAG Pattern Instruction Selection";
   }
   bool runOnMachineFunction(MachineFunction &MF) override;
-  const NVPTXSubtarget *Subtarget;
+  const NVPTXSubtarget *Subtarget = nullptr;
 
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,
                                     unsigned ConstraintID,
