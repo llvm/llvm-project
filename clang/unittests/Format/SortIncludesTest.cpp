@@ -466,6 +466,57 @@ TEST_F(SortIncludesTest, LeavesMainHeaderFirst) {
                  "a.cc"));
 }
 
+TEST_F(SortIncludesTest, LeavesMainHeaderFirstInAdditionalExtensions) {
+  Style.IncludeIsMainRegex = "([-_](test|unittest))?|(Impl)?$";
+  EXPECT_EQ("#include \"b.h\"\n"
+            "#include \"c.h\"\n"
+            "#include \"llvm/a.h\"\n",
+            sort("#include \"llvm/a.h\"\n"
+                 "#include \"c.h\"\n"
+                 "#include \"b.h\"\n",
+                 "a_test.xxx"));
+  EXPECT_EQ("#include \"b.h\"\n"
+            "#include \"c.h\"\n"
+            "#include \"llvm/a.h\"\n",
+            sort("#include \"llvm/a.h\"\n"
+                 "#include \"c.h\"\n"
+                 "#include \"b.h\"\n",
+                 "aImpl.hpp"));
+
+  // .cpp extension is considered "main" by default
+  EXPECT_EQ("#include \"llvm/a.h\"\n"
+            "#include \"b.h\"\n"
+            "#include \"c.h\"\n",
+            sort("#include \"llvm/a.h\"\n"
+                 "#include \"c.h\"\n"
+                 "#include \"b.h\"\n",
+                 "aImpl.cpp"));
+  EXPECT_EQ("#include \"llvm/a.h\"\n"
+            "#include \"b.h\"\n"
+            "#include \"c.h\"\n",
+            sort("#include \"llvm/a.h\"\n"
+                 "#include \"c.h\"\n"
+                 "#include \"b.h\"\n",
+                 "a_test.cpp"));
+
+  // Allow additional filenames / extensions
+  Style.IncludeIsMainSourceRegex = "(Impl\\.hpp)|(\\.xxx)$";
+  EXPECT_EQ("#include \"llvm/a.h\"\n"
+            "#include \"b.h\"\n"
+            "#include \"c.h\"\n",
+            sort("#include \"llvm/a.h\"\n"
+                 "#include \"c.h\"\n"
+                 "#include \"b.h\"\n",
+                 "a_test.xxx"));
+  EXPECT_EQ("#include \"llvm/a.h\"\n"
+            "#include \"b.h\"\n"
+            "#include \"c.h\"\n",
+            sort("#include \"llvm/a.h\"\n"
+                 "#include \"c.h\"\n"
+                 "#include \"b.h\"\n",
+                 "aImpl.hpp"));
+}
+
 TEST_F(SortIncludesTest, RecognizeMainHeaderInAllGroups) {
   Style.IncludeIsMainRegex = "([-_](test|unittest))?$";
   Style.IncludeBlocks = tooling::IncludeStyle::IBS_Merge;
