@@ -41,7 +41,7 @@ using namespace llvm;
 #define DEBUG_TYPE "mve-tail-predication"
 #define DESC "Transform predicated vector loops to use MVE tail predication"
 
-static cl::opt<bool>
+cl::opt<bool>
 DisableTailPredication("disable-mve-tail-predication", cl::Hidden,
                        cl::init(true),
                        cl::desc("Disable MVE Tail Predication"));
