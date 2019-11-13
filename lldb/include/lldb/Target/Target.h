@@ -906,8 +906,8 @@ public:
   /// The target call at present just consults the Platform's call of the
   /// same name.
   ///
-  /// \param[in] module_sp
-  ///     A shared pointer reference to the module that checked.
+  /// \param[in] module_spec
+  ///     Path to the module.
   ///
   /// \return \b true if the module should be excluded, \b false otherwise.
   bool ModuleIsExcludedForUnconstrainedSearches(const FileSpec &module_spec);

@@ -75,7 +75,7 @@ public:
   /// \param[in] module
   ///     The module to seek in.
   ///
-  /// \param[in]
+  /// \param[in] bp_loc_list
   ///     A breakpoint collection that gets any breakpoint locations
   ///     that match \a module appended to.
   ///
@@ -166,14 +166,6 @@ protected:
   /// list.
   BreakpointLocationList(Breakpoint &owner);
 
-  /// Add the breakpoint \a bp_loc_sp to the list.
-  ///
-  /// \param[in] bp_sp
-  ///     Shared pointer to the breakpoint location that will get
-  ///     added to the list.
-  ///
-  /// \result
-  ///     Returns breakpoint location id.
   lldb::BreakpointLocationSP Create(const Address &addr,
                                     bool resolve_indirect_symbols);
 
@@ -189,7 +181,7 @@ protected:
                     lldb::BreakpointLocationSP from_location_sp);
 
   bool RemoveLocation(const lldb::BreakpointLocationSP &bp_loc_sp);
-  
+
   void RemoveLocationByIndex(size_t idx);
 
   void RemoveInvalidLocations(const ArchSpec &arch);

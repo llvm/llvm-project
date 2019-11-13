@@ -130,7 +130,7 @@ public:
   /// ObjectFile plug-in interface and returns the first instance that can
   /// parse the file.
   ///
-  /// \param[in] module
+  /// \param[in] module_sp
   ///     The parent module that owns this object file.
   ///
   /// \param[in] file_spec
@@ -158,7 +158,7 @@ public:
   /// ObjectFile plug-in interface and returns the first instance that can
   /// parse the file.
   ///
-  /// \param[in] module
+  /// \param[in] module_sp
   ///     The parent module that owns this object file.
   ///
   /// \param[in] process_sp
@@ -356,13 +356,6 @@ public:
   /// Frees the symbol table.
   ///
   /// This function should only be used when an object file is
-  ///
-  /// \param[in] flags
-  ///     eSymtabFromUnifiedSectionList: Whether to clear symbol table
-  ///     for unified module section list, or object file.
-  ///
-  /// \return
-  ///     The symbol table for this object file.
   virtual void ClearSymtab();
 
   /// Gets the UUID for this object file.
@@ -487,8 +480,8 @@ public:
   /// \return
   ///     Returns the identifier string if one exists, else an empty
   ///     string.
-  virtual std::string GetIdentifierString () { 
-      return std::string(); 
+  virtual std::string GetIdentifierString () {
+      return std::string();
   }
 
   /// When the ObjectFile is a core file, lldb needs to locate the "binary" in
@@ -652,8 +645,6 @@ public:
   ///
   /// \param[in] target
   ///     Target where to load.
-  ///
-  /// \return
   virtual std::vector<LoadableData> GetLoadableData(Target &target);
 
   /// Creates a plugin-specific call frame info

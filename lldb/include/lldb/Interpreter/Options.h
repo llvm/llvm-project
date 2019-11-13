@@ -163,7 +163,7 @@ public:
   /// Handles the generic bits of figuring out whether we are in an option,
   /// and if so completing it.
   ///
-  /// \param[in/out] request
+  /// \param[in,out] request
   ///    The completion request that we need to act upon.
   ///
   /// \param[in] interpreter
@@ -182,7 +182,7 @@ public:
   /// Handles the generic bits of figuring out whether we are in an option,
   /// and if so completing it.
   ///
-  /// \param[in/out] request
+  /// \param[in,out] request
   ///    The completion request that we need to act upon.
   ///
   /// \param[in] interpreter

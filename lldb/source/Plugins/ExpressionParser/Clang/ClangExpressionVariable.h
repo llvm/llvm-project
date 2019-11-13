@@ -74,9 +74,6 @@ public:
 
   /// Finds a variable by NamedDecl in the list.
   ///
-  /// \param[in] name
-  ///     The name of the requested variable.
-  ///
   /// \return
   ///     The variable requested, or NULL if that variable is not in the list.
   static ClangExpressionVariable *

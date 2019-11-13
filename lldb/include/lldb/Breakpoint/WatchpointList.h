@@ -180,7 +180,7 @@ public:
 
   /// Sets the passed in Locker to hold the Watchpoint List mutex.
   ///
-  /// \param[in] locker
+  /// \param[in] lock
   ///   The locker object that is set.
   void GetListMutex(std::unique_lock<std::recursive_mutex> &lock);
 

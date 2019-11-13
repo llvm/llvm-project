@@ -128,10 +128,6 @@ public:
 
   /// Constructor
   ///
-  /// \param [in] process
-  ///
-  /// \param [in] tid
-  ///
   /// \param [in] use_invalid_index_id
   ///     Optional parameter, defaults to false.  The only subclass that
   ///     is likely to set use_invalid_index_id == true is the HistoryThread
@@ -760,6 +756,8 @@ public:
   ///    \b true if we will stop other threads while we single step this one.
   ///
   /// \param[in] stop_vote
+  ///    See standard meanings for the stop & run votes in ThreadPlan.h.
+  ///
   /// \param[in] run_vote
   ///    See standard meanings for the stop & run votes in ThreadPlan.h.
   ///
@@ -807,11 +805,13 @@ public:
   ///    \b true if we will stop other threads while we single step this one.
   ///
   /// \param[in] stop_vote
+  ///    See standard meanings for the stop & run votes in ThreadPlan.h.
   ///
   /// \param[in] run_vote
   ///    See standard meanings for the stop & run votes in ThreadPlan.h.
   ///
   /// \param[in] frame_idx
+  ///     The fame index.
   ///
   /// \param[out] status
   ///     A status with an error if queuing failed.
@@ -899,7 +899,7 @@ public:
 
   virtual lldb::ThreadPlanSP
   QueueThreadPlanForStepScripted(bool abort_other_plans, const char *class_name,
-                                 StructuredData::ObjectSP extra_args_sp,  
+                                 StructuredData::ObjectSP extra_args_sp,
                                  bool stop_other_threads, Status &status);
 
   // Thread Plan accessors:
@@ -1004,7 +1004,7 @@ public:
   /// including the plan in that matches \a thread_index counting only
   /// the non-Private plans.
   ///
-  /// \param[in] up_to_plan_sp
+  /// \param[in] thread_index
   ///   Discard all plans up to and including this user plan given by this
   ///   index.
   ///
@@ -1102,9 +1102,9 @@ public:
   // right even if you have not calculated this yourself, or if it disagrees
   // with what you might have calculated.
   virtual lldb::StopInfoSP GetPrivateStopInfo();
-  
+
   // Calculate the stop info that will be shown to lldb clients.  For instance,
-  // a "step out" is implemented by running to a breakpoint on the function 
+  // a "step out" is implemented by running to a breakpoint on the function
   // return PC, so the process plugin initially sets the stop info to a
   // StopInfoBreakpoint. But once we've run the ShouldStop machinery, we
   // discover that there's a completed ThreadPlanStepOut, and that's really
