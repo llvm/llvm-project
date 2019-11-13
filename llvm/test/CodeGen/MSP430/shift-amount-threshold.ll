@@ -153,9 +153,8 @@ entry:
 define i16 @testSimplifySetCC_0_sh8(i16 %x) {
 ; CHECK-LABEL: testSimplifySetCC_0_sh8:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    bit #256, r12
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    and #1, r12
+; CHECK-NEXT:    and #256, r12
+; CHECK-NEXT:    swpb r12
 ; CHECK-NEXT:    ret
 entry:
   %and = and i16 %x, 256
@@ -169,9 +168,8 @@ entry:
 define i16 @testSimplifySetCC_1_sh8(i16 %x) {
 ; CHECK-LABEL: testSimplifySetCC_1_sh8:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    bit #256, r12
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    and #1, r12
+; CHECK-NEXT:    and #256, r12
+; CHECK-NEXT:    swpb r12
 ; CHECK-NEXT:    ret
 entry:
   %and = and i16 %x, 256
@@ -185,13 +183,8 @@ entry:
 define i16 @testShiftAnd_1_sh8(i16 %x) {
 ; CHECK-LABEL: testShiftAnd_1_sh8:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov r12, r13
-; CHECK-NEXT:    mov #128, r12
-; CHECK-NEXT:    tst r13
-; CHECK-NEXT:    jl .LBB10_2
-; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    clr r12
-; CHECK-NEXT:  .LBB10_2: ; %entry
+; CHECK-NEXT:    swpb r12
+; CHECK-NEXT:    and #128, r12
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp slt i16 %x, 0
@@ -204,13 +197,11 @@ entry:
 define i16 @testShiftAnd_1_sh9(i16 %x) {
 ; CHECK-LABEL: testShiftAnd_1_sh9:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov r12, r13
-; CHECK-NEXT:    mov #64, r12
-; CHECK-NEXT:    tst r13
-; CHECK-NEXT:    jl .LBB11_2
-; CHECK-NEXT:  ; %bb.1: ; %entry
-; CHECK-NEXT:    clr r12
-; CHECK-NEXT:  .LBB11_2: ; %entry
+; CHECK-NEXT:    swpb r12
+; CHECK-NEXT:    mov.b r12, r12
+; CHECK-NEXT:    clrc
+; CHECK-NEXT:    rrc r12
+; CHECK-NEXT:    and #64, r12
 ; CHECK-NEXT:    ret
 entry:
   %cmp = icmp slt i16 %x, 0
