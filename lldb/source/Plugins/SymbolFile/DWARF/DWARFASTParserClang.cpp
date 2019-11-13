@@ -188,9 +188,6 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const DWARFDIE &die,
   dwo_module_sp->GetSymbolFile()->FindTypes(decl_context, languages,
                                             searched_symbol_files, pcm_types);
   if (pcm_types.Empty()) {
-    if (!IsClangModuleFwdDecl(die))
-      return TypeSP();
-
     // Since this type is defined in one of the Clang modules imported
     // by this symbol file, search all of them.
     auto &sym_file = die.GetCU()->GetSymbolFileDWARF();
