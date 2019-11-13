@@ -60,6 +60,15 @@ option(LLDB_ALLOW_STATIC_BINDINGS "Enable using static/baked language bindings i
 option(LLDB_ENABLE_WERROR "Fail and stop if a warning is triggered." ${LLVM_ENABLE_WERROR})
 # END SWIFT CODE
 
+if (LLDB_USE_SYSTEM_DEBUGSERVER)
+  # The custom target for the system debugserver has no install target, so we
+  # need to remove it from the LLVM_DISTRIBUTION_COMPONENTS list.
+  if (LLVM_DISTRIBUTION_COMPONENTS)
+    list(REMOVE_ITEM LLVM_DISTRIBUTION_COMPONENTS debugserver)
+    set(LLVM_DISTRIBUTION_COMPONENTS ${LLVM_DISTRIBUTION_COMPONENTS} CACHE STRING "" FORCE)
+  endif()
+endif()
+
 if(LLDB_BUILD_FRAMEWORK)
   if(NOT APPLE)
     message(FATAL_ERROR "LLDB.framework can only be generated when targeting Apple platforms")
