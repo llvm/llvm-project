@@ -385,6 +385,5 @@ INLINE omptarget_nvptx_TaskDescr *getMyTopTaskDescriptor(int globalThreadId);
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "omptarget-nvptxi.h"
-#include "supporti.h"
 
 #endif

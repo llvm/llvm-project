@@ -1,4 +1,4 @@
-//===--------- supporti.h - NVPTX OpenMP support functions ------- CUDA -*-===//
+//===--------- support.cu - NVPTX OpenMP support functions ------- CUDA -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,26 +10,28 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "support.h"
+#include "debug.h"
+#include "omptarget-nvptx.h"
+
 ////////////////////////////////////////////////////////////////////////////////
 // Execution Parameters
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "target_impl.h"
-
-INLINE void setExecutionParameters(ExecutionMode EMode, RuntimeMode RMode) {
+DEVICE void setExecutionParameters(ExecutionMode EMode, RuntimeMode RMode) {
   execution_param = EMode;
   execution_param |= RMode;
 }
 
-INLINE bool isGenericMode() { return (execution_param & ModeMask) == Generic; }
+DEVICE bool isGenericMode() { return (execution_param & ModeMask) == Generic; }
 
-INLINE bool isSPMDMode() { return (execution_param & ModeMask) == Spmd; }
+DEVICE bool isSPMDMode() { return (execution_param & ModeMask) == Spmd; }
 
-INLINE bool isRuntimeUninitialized() {
+DEVICE bool isRuntimeUninitialized() {
   return (execution_param & RuntimeMask) == RuntimeUninitialized;
 }
 
-INLINE bool isRuntimeInitialized() {
+DEVICE bool isRuntimeInitialized() {
   return (execution_param & RuntimeMask) == RuntimeInitialized;
 }
 
@@ -37,7 +39,7 @@ INLINE bool isRuntimeInitialized() {
 // Execution Modes based on location parameter fields
 ////////////////////////////////////////////////////////////////////////////////
 
-INLINE bool checkSPMDMode(kmp_Ident *loc) {
+DEVICE bool checkSPMDMode(kmp_Ident *loc) {
   if (!loc)
     return isSPMDMode();
 
@@ -55,11 +57,11 @@ INLINE bool checkSPMDMode(kmp_Ident *loc) {
   return isSPMDMode();
 }
 
-INLINE bool checkGenericMode(kmp_Ident *loc) {
+DEVICE bool checkGenericMode(kmp_Ident *loc) {
   return !checkSPMDMode(loc);
 }
 
-INLINE bool checkRuntimeUninitialized(kmp_Ident *loc) {
+DEVICE bool checkRuntimeUninitialized(kmp_Ident *loc) {
   if (!loc)
     return isRuntimeUninitialized();
 
@@ -82,7 +84,7 @@ INLINE bool checkRuntimeUninitialized(kmp_Ident *loc) {
   return isRuntimeUninitialized();
 }
 
-INLINE bool checkRuntimeInitialized(kmp_Ident *loc) {
+DEVICE bool checkRuntimeInitialized(kmp_Ident *loc) {
   return !checkRuntimeUninitialized(loc);
 }
 
@@ -96,17 +98,17 @@ INLINE bool checkRuntimeInitialized(kmp_Ident *loc) {
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-INLINE int GetThreadIdInBlock() { return threadIdx.x; }
+DEVICE int GetThreadIdInBlock() { return threadIdx.x; }
 
-INLINE int GetBlockIdInKernel() { return blockIdx.x; }
+DEVICE int GetBlockIdInKernel() { return blockIdx.x; }
 
-INLINE int GetNumberOfBlocksInKernel() { return gridDim.x; }
+DEVICE int GetNumberOfBlocksInKernel() { return gridDim.x; }
 
-INLINE int GetNumberOfThreadsInBlock() { return blockDim.x; }
+DEVICE int GetNumberOfThreadsInBlock() { return blockDim.x; }
 
-INLINE unsigned GetWarpId() { return threadIdx.x / WARPSIZE; }
+DEVICE unsigned GetWarpId() { return threadIdx.x / WARPSIZE; }
 
-INLINE unsigned GetLaneId() { return threadIdx.x & (WARPSIZE - 1); }
+DEVICE unsigned GetLaneId() { return threadIdx.x & (WARPSIZE - 1); }
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -122,11 +124,11 @@ INLINE unsigned GetLaneId() { return threadIdx.x & (WARPSIZE - 1); }
 //      If NumThreads is 1024, master id is 992.
 //
 // Called in Generic Execution Mode only.
-INLINE int GetMasterThreadID() { return (blockDim.x - 1) & ~(WARPSIZE - 1); }
+DEVICE int GetMasterThreadID() { return (blockDim.x - 1) & ~(WARPSIZE - 1); }
 
 // The last warp is reserved for the master; other warps are workers.
 // Called in Generic Execution Mode only.
-INLINE int GetNumberOfWorkersInTeam() { return GetMasterThreadID(); }
+DEVICE int GetNumberOfWorkersInTeam() { return GetMasterThreadID(); }
 
 ////////////////////////////////////////////////////////////////////////////////
 // get thread id in team
@@ -135,7 +137,7 @@ INLINE int GetNumberOfWorkersInTeam() { return GetMasterThreadID(); }
 // or a serial region by the master.  If the master (whose CUDA thread
 // id is GetMasterThreadID()) calls this routine, we return 0 because
 // it is a shadow for the first worker.
-INLINE int GetLogicalThreadIdInBlock(bool isSPMDExecutionMode) {
+DEVICE int GetLogicalThreadIdInBlock(bool isSPMDExecutionMode) {
   // Implemented using control flow (predication) instead of with a modulo
   // operation.
   int tid = GetThreadIdInBlock();
@@ -151,7 +153,7 @@ INLINE int GetLogicalThreadIdInBlock(bool isSPMDExecutionMode) {
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-INLINE int GetOmpThreadId(int threadId, bool isSPMDExecutionMode) {
+DEVICE int GetOmpThreadId(int threadId, bool isSPMDExecutionMode) {
   // omp_thread_num
   int rc;
   if ((parallelLevel[GetWarpId()] & (OMP_ACTIVE_PARALLEL_LEVEL - 1)) > 1) {
@@ -167,7 +169,7 @@ INLINE int GetOmpThreadId(int threadId, bool isSPMDExecutionMode) {
   return rc;
 }
 
-INLINE int GetNumberOfOmpThreads(bool isSPMDExecutionMode) {
+DEVICE int GetNumberOfOmpThreads(bool isSPMDExecutionMode) {
   // omp_num_threads
   int rc;
   int Level = parallelLevel[GetWarpId()];
@@ -185,12 +187,12 @@ INLINE int GetNumberOfOmpThreads(bool isSPMDExecutionMode) {
 ////////////////////////////////////////////////////////////////////////////////
 // Team id linked to OpenMP
 
-INLINE int GetOmpTeamId() {
+DEVICE int GetOmpTeamId() {
   // omp_team_num
   return GetBlockIdInKernel(); // assume 1 block per team
 }
 
-INLINE int GetNumberOfOmpTeams() {
+DEVICE int GetNumberOfOmpTeams() {
   // omp_num_teams
   return GetNumberOfBlocksInKernel(); // assume 1 block per team
 }
@@ -198,12 +200,12 @@ INLINE int GetNumberOfOmpTeams() {
 ////////////////////////////////////////////////////////////////////////////////
 // Masters
 
-INLINE int IsTeamMaster(int ompThreadId) { return (ompThreadId == 0); }
+DEVICE int IsTeamMaster(int ompThreadId) { return (ompThreadId == 0); }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Parallel level
 
-INLINE void IncParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
+DEVICE void IncParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
   __kmpc_impl_syncwarp(Mask);
   __kmpc_impl_lanemask_t LaneMaskLt = __kmpc_impl_lanemask_lt();
   unsigned Rank = __kmpc_impl_popc(Mask & LaneMaskLt);
@@ -215,7 +217,7 @@ INLINE void IncParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
   __kmpc_impl_syncwarp(Mask);
 }
 
-INLINE void DecParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
+DEVICE void DecParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
   __kmpc_impl_syncwarp(Mask);
   __kmpc_impl_lanemask_t LaneMaskLt = __kmpc_impl_lanemask_lt();
   unsigned Rank = __kmpc_impl_popc(Mask & LaneMaskLt);
@@ -231,13 +233,13 @@ INLINE void DecParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
 // get OpenMP number of procs
 
 // Get the number of processors in the device.
-INLINE int GetNumberOfProcsInDevice(bool isSPMDExecutionMode) {
+DEVICE int GetNumberOfProcsInDevice(bool isSPMDExecutionMode) {
   if (!isSPMDExecutionMode)
     return GetNumberOfWorkersInTeam();
   return GetNumberOfThreadsInBlock();
 }
 
-INLINE int GetNumberOfProcsInTeam(bool isSPMDExecutionMode) {
+DEVICE int GetNumberOfProcsInTeam(bool isSPMDExecutionMode) {
   return GetNumberOfProcsInDevice(isSPMDExecutionMode);
 }
 
@@ -245,7 +247,7 @@ INLINE int GetNumberOfProcsInTeam(bool isSPMDExecutionMode) {
 // Memory
 ////////////////////////////////////////////////////////////////////////////////
 
-INLINE unsigned long PadBytes(unsigned long size,
+DEVICE unsigned long PadBytes(unsigned long size,
                               unsigned long alignment) // must be a power of 2
 {
   // compute the necessary padding to satisfy alignment constraint
@@ -254,7 +256,7 @@ INLINE unsigned long PadBytes(unsigned long size,
   return (~(unsigned long)size + 1) & (alignment - 1);
 }
 
-INLINE void *SafeMalloc(size_t size, const char *msg) // check if success
+DEVICE void *SafeMalloc(size_t size, const char *msg) // check if success
 {
   void *ptr = malloc(size);
   PRINT(LD_MEM, "malloc data of size %llu for %s: 0x%llx\n",
@@ -262,7 +264,7 @@ INLINE void *SafeMalloc(size_t size, const char *msg) // check if success
   return ptr;
 }
 
-INLINE void *SafeFree(void *ptr, const char *msg) {
+DEVICE void *SafeFree(void *ptr, const char *msg) {
   PRINT(LD_MEM, "free data ptr 0x%llx for %s\n", (unsigned long long)ptr, msg);
   free(ptr);
   return NULL;
@@ -272,14 +274,14 @@ INLINE void *SafeFree(void *ptr, const char *msg) {
 // Teams Reduction Scratchpad Helpers
 ////////////////////////////////////////////////////////////////////////////////
 
-INLINE unsigned int *GetTeamsReductionTimestamp() {
+DEVICE unsigned int *GetTeamsReductionTimestamp() {
   return static_cast<unsigned int *>(ReductionScratchpadPtr);
 }
 
-INLINE char *GetTeamsReductionScratchpad() {
+DEVICE char *GetTeamsReductionScratchpad() {
   return static_cast<char *>(ReductionScratchpadPtr) + 256;
 }
 
-INLINE void SetTeamsReductionScratchpadPtr(void *ScratchpadPtr) {
+DEVICE void SetTeamsReductionScratchpadPtr(void *ScratchpadPtr) {
   ReductionScratchpadPtr = ScratchpadPtr;
 }
