@@ -6076,38 +6076,36 @@ class HorizontalReduction {
 
     explicit operator bool() const { return Opcode; }
 
-    /// Get the index of the first operand.
-    unsigned getFirstOperandIndex() const {
-      assert(!!*this && "The opcode is not set.");
+    /// Return true if this operation is any kind of minimum or maximum.
+    bool isMinMax() const {
       switch (Kind) {
-      case RK_Min:
-      case RK_UMin:
-      case RK_Max:
-      case RK_UMax:
-        return 1;
       case RK_Arithmetic:
+        return false;
+      case RK_Min:
+      case RK_Max:
+      case RK_UMin:
+      case RK_UMax:
+        return true;
       case RK_None:
         break;
       }
-      return 0;
+      llvm_unreachable("Reduction kind is not set");
+    }
+
+    /// Get the index of the first operand.
+    unsigned getFirstOperandIndex() const {
+      assert(!!*this && "The opcode is not set.");
+      // We allow calling this before 'Kind' is set, so handle that specially.
+      if (Kind == RK_None)
+        return 0;
+      return isMinMax() ? 1 : 0;
     }
 
     /// Total number of operands in the reduction operation.
     unsigned getNumberOfOperands() const {
       assert(Kind != RK_None && !!*this && LHS && RHS &&
              "Expected reduction operation.");
-      switch (Kind) {
-      case RK_Arithmetic:
-        return 2;
-      case RK_Min:
-      case RK_UMin:
-      case RK_Max:
-      case RK_UMax:
-        return 3;
-      case RK_None:
-        break;
-      }
-      llvm_unreachable("Reduction kind is not set");
+      return isMinMax() ? 3 : 2;
     }
 
     /// Checks if the operation has the same parent as \p P.
@@ -6116,79 +6114,46 @@ class HorizontalReduction {
              "Expected reduction operation.");
       if (!IsRedOp)
         return I->getParent() == P;
-      switch (Kind) {
-      case RK_Arithmetic:
-        // Arithmetic reduction operation must be used once only.
-        return I->getParent() == P;
-      case RK_Min:
-      case RK_UMin:
-      case RK_Max:
-      case RK_UMax: {
+      if (isMinMax()) {
         // SelectInst must be used twice while the condition op must have single
         // use only.
         auto *Cmp = cast<Instruction>(cast<SelectInst>(I)->getCondition());
         return I->getParent() == P && Cmp && Cmp->getParent() == P;
       }
-      case RK_None:
-        break;
-      }
-      llvm_unreachable("Reduction kind is not set");
+      // Arithmetic reduction operation must be used once only.
+      return I->getParent() == P;
     }
+
     /// Expected number of uses for reduction operations/reduced values.
     bool hasRequiredNumberOfUses(Instruction *I, bool IsReductionOp) const {
       assert(Kind != RK_None && !!*this && LHS && RHS &&
              "Expected reduction operation.");
-      switch (Kind) {
-      case RK_Arithmetic:
-        return I->hasOneUse();
-      case RK_Min:
-      case RK_UMin:
-      case RK_Max:
-      case RK_UMax:
+      if (isMinMax())
         return I->hasNUses(2) &&
                (!IsReductionOp ||
                 cast<SelectInst>(I)->getCondition()->hasOneUse());
-      case RK_None:
-        break;
-      }
-      llvm_unreachable("Reduction kind is not set");
+      return I->hasOneUse();
     }
 
     /// Initializes the list of reduction operations.
     void initReductionOps(ReductionOpsListType &ReductionOps) {
       assert(Kind != RK_None && !!*this && LHS && RHS &&
              "Expected reduction operation.");
-      switch (Kind) {
-      case RK_Arithmetic:
-        ReductionOps.assign(1, ReductionOpsType());
-        break;
-      case RK_Min:
-      case RK_UMin:
-      case RK_Max:
-      case RK_UMax:
+      if (isMinMax())
         ReductionOps.assign(2, ReductionOpsType());
-        break;
-      case RK_None:
-        llvm_unreachable("Reduction kind is not set");
-      }
+      else
+        ReductionOps.assign(1, ReductionOpsType());
     }
+
     /// Add all reduction operations for the reduction instruction \p I.
     void addReductionOps(Instruction *I, ReductionOpsListType &ReductionOps) {
       assert(Kind != RK_None && !!*this && LHS && RHS &&
              "Expected reduction operation.");
-      switch (Kind) {
-      case RK_Arithmetic:
-        ReductionOps[0].emplace_back(I);
-        break;
-      case RK_Min:
-      case RK_UMin:
-      case RK_Max:
-      case RK_UMax:
+      if (isMinMax()) {
         ReductionOps[0].emplace_back(cast<SelectInst>(I)->getCondition());
         ReductionOps[1].emplace_back(I);
-        break;
-      case RK_None:
-        llvm_unreachable("Reduction kind is not set");
+      } else {
+        ReductionOps[0].emplace_back(I);
       }
     }
 
@@ -6246,18 +6211,7 @@ class HorizontalReduction {
     Value *getLHS() const { return LHS; }
     Value *getRHS() const { return RHS; }
     Type *getConditionType() const {
-      switch (Kind) {
-      case RK_Arithmetic:
-        return nullptr;
-      case RK_Min:
-      case RK_Max:
-      case RK_UMin:
-      case RK_UMax:
-        return CmpInst::makeCmpResultType(LHS->getType());
-      case RK_None:
-        break;
-      }
-      llvm_unreachable("Reduction kind is not set");
+      return isMinMax() ? CmpInst::makeCmpResultType(LHS->getType()) : nullptr;
     }
 
     /// Creates reduction operation with the current opcode with the IR flags
