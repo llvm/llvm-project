@@ -830,6 +830,16 @@ Stmt *BodyFarm::getBody(const ObjCMethodDecl *D) {
   if (D->param_size() != 0)
     return nullptr;
 
+  // If the property was defined in an extension, search the extensions for
+  // overrides.
+  const ObjCInterfaceDecl *OID = D->getClassInterface();
+  if (dyn_cast<ObjCInterfaceDecl>(D->getParent()) != OID)
+    for (auto *Ext : OID->known_extensions()) {
+      auto *OMD = Ext->getInstanceMethod(D->getSelector());
+      if (OMD && !OMD->isImplicit())
+        return nullptr;
+    }
+
   Val = createObjCPropertyGetter(C, Prop);
 
   return Val.getValue();

@@ -2569,8 +2569,8 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
           SourceLocation Loc = PD->getLocation();
           llvm::DIFile *PUnit = getOrCreateFile(Loc);
           unsigned PLine = getLineNumber(Loc);
-          ObjCMethodDecl *Getter = PD->getGetterMethodDecl();
-          ObjCMethodDecl *Setter = PD->getSetterMethodDecl();
+          ObjCMethodDecl *Getter = PImpD->getGetterMethodDecl();
+          ObjCMethodDecl *Setter = PImpD->getSetterMethodDecl();
           PropertyNode = DBuilder.createObjCProperty(
               PD->getName(), PUnit, PLine,
               hasDefaultGetterName(PD, Getter)
@@ -3445,6 +3445,38 @@ llvm::DISubprogram *CGDebugInfo::getFunctionDeclaration(const Decl *D) {
   return nullptr;
 }
 
+llvm::DISubprogram *CGDebugInfo::getObjCMethodDeclaration(
+    const Decl *D, llvm::DISubroutineType *FnType, unsigned LineNo,
+    llvm::DINode::DIFlags Flags, llvm::DISubprogram::DISPFlags SPFlags) {
+  if (!D || DebugKind <= codegenoptions::DebugLineTablesOnly)
+    return nullptr;
+
+  if (CGM.getCodeGenOpts().DwarfVersion < 5)
+    return nullptr;
+
+  // Starting with DWARF V5 method declarations are emitted as children of
+  // the interface type.
+  const auto *OMD = dyn_cast<ObjCMethodDecl>(D);
+  if (!OMD)
+    return nullptr;
+  auto *ID = dyn_cast_or_null<ObjCInterfaceDecl>(D->getDeclContext());
+  if (!ID)
+    ID = OMD->getClassInterface();
+  if (!ID)
+    return nullptr;
+  QualType QTy(ID->getTypeForDecl(), 0);
+  auto It = TypeCache.find(QTy.getAsOpaquePtr());
+  if (It == TypeCache.end())
+    return nullptr;
+  auto *InterfaceType = cast<llvm::DICompositeType>(It->second);
+  llvm::DISubprogram *FD = DBuilder.createFunction(
+      InterfaceType, getObjCMethodName(OMD), StringRef(),
+      InterfaceType->getFile(), LineNo, FnType, LineNo, Flags, SPFlags);
+  DBuilder.finalizeSubprogram(FD);
+  ObjCMethodCache[ID].push_back(FD);
+  return FD;
+}
+
 // getOrCreateFunctionType - Construct type. If it is a c++ method, include
 // implicit parameter "this".
 llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
@@ -3587,6 +3619,12 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
 
   unsigned LineNo = getLineNumber(Loc);
   unsigned ScopeLine = getLineNumber(ScopeLoc);
+  llvm::DISubroutineType *DIFnType = getOrCreateFunctionType(D, FnType, Unit);
+  llvm::DISubprogram *Decl = nullptr;
+  if (D)
+    Decl = isa<ObjCMethodDecl>(D)
+               ? getObjCMethodDeclaration(D, DIFnType, LineNo, Flags, SPFlags)
+               : getFunctionDeclaration(D);
 
   // FIXME: The function declaration we're constructing here is mostly reusing
   // declarations from CXXMethodDecl and not constructing new ones for arbitrary
@@ -3594,35 +3632,14 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   // all subprograms instead of the actual context since subprogram definitions
   // are emitted as CU level entities by the backend.
   llvm::DISubprogram *SP = DBuilder.createFunction(
-      FDContext, Name, LinkageName, Unit, LineNo,
-      getOrCreateFunctionType(D, FnType, Unit), ScopeLine, FlagsForDef,
-      SPFlagsForDef, TParamsArray.get(), getFunctionDeclaration(D));
+      FDContext, Name, LinkageName, Unit, LineNo, DIFnType, ScopeLine,
+      FlagsForDef, SPFlagsForDef, TParamsArray.get(), Decl);
   Fn->setSubprogram(SP);
   // We might get here with a VarDecl in the case we're generating
   // code for the initialization of globals. Do not record these decls
   // as they will overwrite the actual VarDecl Decl in the cache.
   if (HasDecl && isa<FunctionDecl>(D))
     DeclCache[D->getCanonicalDecl()].reset(SP);
-
-  if (CGM.getCodeGenOpts().DwarfVersion >= 5) {
-    // Starting with DWARF V5 method declarations are emitted as children of
-    // the interface type.
-    if (const auto *OMD = dyn_cast_or_null<ObjCMethodDecl>(D)) {
-      const ObjCInterfaceDecl *ID = OMD->getClassInterface();
-      QualType QTy(ID->getTypeForDecl(), 0);
-      auto It = TypeCache.find(QTy.getAsOpaquePtr());
-      if (It != TypeCache.end()) {
-        llvm::DICompositeType *InterfaceDecl =
-            cast<llvm::DICompositeType>(It->second);
-        llvm::DISubprogram *FD = DBuilder.createFunction(
-            InterfaceDecl, Name, LinkageName, Unit, LineNo,
-            getOrCreateFunctionType(D, FnType, Unit), ScopeLine, Flags, SPFlags,
-            TParamsArray.get());
-        DBuilder.finalizeSubprogram(FD);
-        ObjCMethodCache[ID].push_back(FD);
-      }
-    }
-  }
 
   // Push the function onto the lexical block stack.
   LexicalBlockStack.emplace_back(SP);

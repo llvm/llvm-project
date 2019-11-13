@@ -3360,7 +3360,7 @@ public:
     auto search = [&](Module &module) {
       return module.FindTypes(decl_context,
                               ClangASTContext::GetSupportedLanguagesForTypes(),
-                              true, clang_types);
+                              clang_types);
     };
     if (Module *module = m_swift_ast_ctx.GetModule())
       search(*module);

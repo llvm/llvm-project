@@ -2627,11 +2627,15 @@ struct FooBarMapMap {
   std::map<std::string, FooBar> fbm;
 };
 
+namespace llvm {
+namespace yaml {
 template <> struct MappingTraits<FooBarMapMap> {
   static void mapping(IO &io, FooBarMapMap &x) {
     io.mapRequired("fbm", x.fbm);
   }
 };
+}
+}
 
 TEST(YAMLIO, TestEmptyMapWrite) {
   FooBarMapMap cont;

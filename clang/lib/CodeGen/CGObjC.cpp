@@ -954,8 +954,7 @@ void CodeGenFunction::GenerateObjCGetter(ObjCImplementationDecl *IMP,
                                          const ObjCPropertyImplDecl *PID) {
   llvm::Constant *AtomicHelperFn =
       CodeGenFunction(CGM).GenerateObjCAtomicGetterCopyHelperFunction(PID);
-  const ObjCPropertyDecl *PD = PID->getPropertyDecl();
-  ObjCMethodDecl *OMD = PD->getGetterMethodDecl();
+  ObjCMethodDecl *OMD = PID->getGetterMethodDecl();
   assert(OMD && "Invalid call to generate getter (empty method)");
   StartObjCMethod(OMD, IMP->getClassInterface());
 
@@ -1041,7 +1040,7 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
 
   const ObjCPropertyDecl *prop = propImpl->getPropertyDecl();
   QualType propType = prop->getType();
-  ObjCMethodDecl *getterMethod = prop->getGetterMethodDecl();
+  ObjCMethodDecl *getterMethod = propImpl->getGetterMethodDecl();
 
   ObjCIvarDecl *ivar = propImpl->getPropertyIvarDecl();
 
@@ -1311,9 +1310,8 @@ void
 CodeGenFunction::generateObjCSetterBody(const ObjCImplementationDecl *classImpl,
                                         const ObjCPropertyImplDecl *propImpl,
                                         llvm::Constant *AtomicHelperFn) {
-  const ObjCPropertyDecl *prop = propImpl->getPropertyDecl();
   ObjCIvarDecl *ivar = propImpl->getPropertyIvarDecl();
-  ObjCMethodDecl *setterMethod = prop->getSetterMethodDecl();
+  ObjCMethodDecl *setterMethod = propImpl->getSetterMethodDecl();
 
   // Just use the setter expression if Sema gave us one and it's
   // non-trivial.
@@ -1490,8 +1488,7 @@ void CodeGenFunction::GenerateObjCSetter(ObjCImplementationDecl *IMP,
                                          const ObjCPropertyImplDecl *PID) {
   llvm::Constant *AtomicHelperFn =
       CodeGenFunction(CGM).GenerateObjCAtomicSetterCopyHelperFunction(PID);
-  const ObjCPropertyDecl *PD = PID->getPropertyDecl();
-  ObjCMethodDecl *OMD = PD->getSetterMethodDecl();
+  ObjCMethodDecl *OMD = PID->getSetterMethodDecl();
   assert(OMD && "Invalid call to generate setter (empty method)");
   StartObjCMethod(OMD, IMP->getClassInterface());
 

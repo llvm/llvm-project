@@ -11,19 +11,6 @@
 
 @protocol HasASelection <NSObject>
 @property (nonatomic, retain) Selection* selection;
-// CHECK: !DISubprogram(name: "-[MyClass selection]"
-// CHECK-SAME:          line: [[@LINE-2]]
-// CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK: !DISubprogram(name: "-[MyClass setSelection:]"
-// CHECK-SAME:          line: [[@LINE-5]]
-// CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK: !DISubprogram(name: "-[OtherClass selection]"
-// CHECK-SAME:          line: [[@LINE-8]]
-// CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK: !DISubprogram(name: "-[OtherClass setSelection:]"
-// CHECK-SAME:          line: [[@LINE-11]]
-// CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition
-
 @end
 
 @interface MyClass : NSObject <HasASelection> {
@@ -33,6 +20,12 @@
 
 @implementation MyClass
 @synthesize selection = _selection;
+// CHECK: !DISubprogram(name: "-[MyClass selection]"
+// CHECK-SAME:          line: [[@LINE-2]]
+// CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK: !DISubprogram(name: "-[MyClass setSelection:]"
+// CHECK-SAME:          line: [[@LINE-5]]
+// CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition
 @end
 
 @interface OtherClass : NSObject <HasASelection> {
@@ -41,4 +34,10 @@
 @end
 @implementation OtherClass
 @synthesize selection = _selection;
+// CHECK: !DISubprogram(name: "-[OtherClass selection]"
+// CHECK-SAME:          line: [[@LINE-2]]
+// CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK: !DISubprogram(name: "-[OtherClass setSelection:]"
+// CHECK-SAME:          line: [[@LINE-5]]
+// CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition
 @end

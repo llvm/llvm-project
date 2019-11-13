@@ -121,20 +121,17 @@ ObjCLanguageRuntime::LookupInCompleteClassCache(ConstString &name) {
     TypeList types;
 
     llvm::DenseSet<SymbolFile *> searched_symbol_files;
-    const uint32_t num_types = module_sp->FindTypes(
-        name, exact_match, max_matches, searched_symbol_files, types);
+    module_sp->FindTypes(name, exact_match, max_matches, searched_symbol_files,
+                         types);
 
-    if (num_types) {
-      uint32_t i;
-      for (i = 0; i < num_types; ++i) {
-        TypeSP type_sp(types.GetTypeAtIndex(i));
+    for (uint32_t i = 0; i < types.GetSize(); ++i) {
+      TypeSP type_sp(types.GetTypeAtIndex(i));
 
-        if (ClangASTContext::IsObjCObjectOrInterfaceType(
-                type_sp->GetForwardCompilerType())) {
-          if (type_sp->IsCompleteObjCClass()) {
-            m_complete_class_cache[name] = type_sp;
-            return type_sp;
-          }
+      if (ClangASTContext::IsObjCObjectOrInterfaceType(
+              type_sp->GetForwardCompilerType())) {
+        if (type_sp->IsCompleteObjCClass()) {
+          m_complete_class_cache[name] = type_sp;
+          return type_sp;
         }
       }
     }
