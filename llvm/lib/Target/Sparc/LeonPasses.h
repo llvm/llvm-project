@@ -23,7 +23,7 @@ namespace llvm {
 class LLVM_LIBRARY_VISIBILITY LEONMachineFunctionPass
     : public MachineFunctionPass {
 protected:
-  const SparcSubtarget *Subtarget;
+  const SparcSubtarget *Subtarget = nullptr;
   const int LAST_OPERAND = -1;
 
   // this vector holds free registers that we allocate in groups for some of the
