@@ -37,7 +37,7 @@ static cl::opt<bool> DisableDelaySlotFiller(
 
 namespace {
   struct Filler : public MachineFunctionPass {
-    const SparcSubtarget *Subtarget;
+    const SparcSubtarget *Subtarget = nullptr;
 
     static char ID;
     Filler() : MachineFunctionPass(ID) {}

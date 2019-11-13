@@ -2161,9 +2161,10 @@ TEST(FindReferences, NeedsIndex) {
 TEST(FindReferences, NoQueryForLocalSymbols) {
   struct RecordingIndex : public MemIndex {
     mutable Optional<llvm::DenseSet<SymbolID>> RefIDs;
-    void refs(const RefsRequest &Req,
+    bool refs(const RefsRequest &Req,
               llvm::function_ref<void(const Ref &)>) const override {
       RefIDs = Req.IDs;
+      return false;
     }
   };
 

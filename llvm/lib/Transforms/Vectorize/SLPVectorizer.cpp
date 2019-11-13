@@ -1940,7 +1940,7 @@ private:
       return nullptr;
     }
 
-    bool isInSchedulingRegion(ScheduleData *SD) {
+    bool isInSchedulingRegion(ScheduleData *SD) const {
       return SD->SchedulingRegionID == SchedulingRegionID;
     }
 
@@ -6221,12 +6221,12 @@ class HorizontalReduction {
 
     /// Checks if two operation data are both a reduction op or both a reduced
     /// value.
-    bool operator==(const OperationData &OD) {
+    bool operator==(const OperationData &OD) const {
       assert(((Kind != OD.Kind) || ((!LHS == !OD.LHS) && (!RHS == !OD.RHS))) &&
              "One of the comparing operations is incorrect.");
       return this == &OD || (Kind == OD.Kind && Opcode == OD.Opcode);
     }
-    bool operator!=(const OperationData &OD) { return !(*this == OD); }
+    bool operator!=(const OperationData &OD) const { return !(*this == OD); }
     void clear() {
       Opcode = 0;
       LHS = nullptr;
