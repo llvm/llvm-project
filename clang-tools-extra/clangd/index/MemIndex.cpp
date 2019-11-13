@@ -67,22 +67,30 @@ void MemIndex::lookup(const LookupRequest &Req,
   }
 }
 
-void MemIndex::refs(const RefsRequest &Req,
+bool MemIndex::refs(const RefsRequest &Req,
                     llvm::function_ref<void(const Ref &)> Callback) const {
   trace::Span Tracer("MemIndex refs");
   uint32_t Remaining =
       Req.Limit.getValueOr(std::numeric_limits<uint32_t>::max());
+  bool More = false;
   for (const auto &ReqID : Req.IDs) {
     auto SymRefs = Refs.find(ReqID);
     if (SymRefs == Refs.end())
       continue;
     for (const auto &O : SymRefs->second) {
-      if (Remaining > 0 && static_cast<int>(Req.Filter & O.Kind)) {
+      if (!static_cast<int>(Req.Filter & O.Kind))
+        continue;
+      if (Remaining == 0) {
+        More = true;
+        break;
+      }
+      if (Remaining > 0) {
         --Remaining;
         Callback(O);
       }
     }
   }
+  return More;
 }
 
 void MemIndex::relations(
