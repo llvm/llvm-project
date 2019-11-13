@@ -903,7 +903,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           if (class_type) {
             bool alternate_defn = false;
             if (class_type->GetID() != decl_ctx_die.GetID() ||
-                GetContainingClangModuleDIE(decl_ctx_die)) {
+                IsClangModuleFwdDecl(decl_ctx_die)) {
               alternate_defn = true;
 
               // We uniqued the parent class of this function to another
