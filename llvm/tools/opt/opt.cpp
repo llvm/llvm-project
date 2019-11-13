@@ -193,6 +193,12 @@ static cl::opt<bool>
 DisableSimplifyLibCalls("disable-simplify-libcalls",
                         cl::desc("Disable simplify-libcalls"));
 
+static cl::list<std::string>
+DisableBuiltins("disable-builtin",
+                cl::desc("Disable specific target library builtin function"),
+                cl::ZeroOrMore);
+
+
 static cl::opt<bool>
 Quiet("q", cl::desc("Obsolete option"), cl::Hidden);
 
@@ -726,6 +732,19 @@ int main(int argc, char **argv) {
   // The -disable-simplify-libcalls flag actually disables all builtin optzns.
   if (DisableSimplifyLibCalls)
     TLII.disableAllFunctions();
+  else {
+    // Disable individual builtin functions in TargetLibraryInfo.
+    LibFunc F;
+    for (auto &FuncName : DisableBuiltins)
+      if (TLII.getLibFunc(FuncName, F))
+        TLII.setUnavailable(F);
+      else {
+        errs() << argv[0] << ": cannot disable nonexistent builtin function "
+               << FuncName << '\n';
+        return 1;
+      }
+  }
+
   Passes.add(new TargetLibraryInfoWrapperPass(TLII));
 
   // Add internal analysis passes from the target machine.
