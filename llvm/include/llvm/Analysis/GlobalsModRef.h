@@ -39,6 +39,9 @@ class GlobalsAAResult : public AAResultBase<GlobalsAAResult> {
   /// The globals that do not have their addresses taken.
   SmallPtrSet<const GlobalValue *, 8> NonAddressTakenGlobals;
 
+  /// Are there functions with local linkage that may modify globals.
+  bool UnknownFunctionsWithLocalLinkage = false;
+
   /// IndirectGlobals - The memory pointed to by this global is known to be
   /// 'owned' by the global.
   SmallPtrSet<const GlobalValue *, 8> IndirectGlobals;
