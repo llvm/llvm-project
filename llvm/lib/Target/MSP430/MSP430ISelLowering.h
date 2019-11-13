@@ -125,7 +125,7 @@ namespace llvm {
     bool isZExtFree(SDValue Val, EVT VT2) const override;
 
     bool isLegalICmpImmediate(int64_t) const override;
-    unsigned getShiftAmountThreshold(EVT VT) const override;
+    bool shouldAvoidTransformToShift(EVT VT, unsigned Amount) const override;
 
     MachineBasicBlock *
     EmitInstrWithCustomInserter(MachineInstr &MI,
