@@ -206,6 +206,11 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF) {
   return DefaultSafeSPDisplacement;
 }
 
+TargetStackID::Value
+AArch64FrameLowering::getStackIDForScalableVectors() const {
+  return TargetStackID::SVEVector;
+}
+
 /// Returns the size of the entire SVE stackframe (calleesaves + spills).
 static StackOffset getSVEStackSize(const MachineFunction &MF) {
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
@@ -2488,11 +2493,12 @@ bool AArch64FrameLowering::enableStackSlotScavenging(
 /// returns true if there are any SVE callee saves.
 static bool getSVECalleeSaveSlotRange(const MachineFrameInfo &MFI,
                                       int &Min, int &Max) {
+  Min = std::numeric_limits<int>::max();
+  Max = std::numeric_limits<int>::min();
+
   if (!MFI.isCalleeSavedInfoValid())
     return false;
 
-  Min = std::numeric_limits<int>::max();
-  Max = std::numeric_limits<int>::min();
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   for (auto &CS : CSI) {
     if (AArch64::ZPRRegClass.contains(CS.getReg()) ||
@@ -2526,6 +2532,11 @@ static int64_t determineSVEStackObjectOffsets(MachineFrameInfo &MFI,
         Offset = FixedOffset;
     }
 
+  auto Assign = [&MFI](int FI, int64_t Offset) {
+    LLVM_DEBUG(dbgs() << "alloc FI(" << FI << ") at SP[" << Offset << "]\n");
+    MFI.setObjectOffset(FI, Offset);
+  };
+
   // Then process all callee saved slots.
   if (getSVECalleeSaveSlotRange(MFI, MinCSFrameIndex, MaxCSFrameIndex)) {
     // Make sure to align the last callee save slot.
@@ -2535,17 +2546,40 @@ static int64_t determineSVEStackObjectOffsets(MachineFrameInfo &MFI,
     for (int I = MinCSFrameIndex; I <= MaxCSFrameIndex; ++I) {
       Offset += MFI.getObjectSize(I);
       Offset = alignTo(Offset, MFI.getObjectAlignment(I));
-      if (AssignOffsets) {
-        LLVM_DEBUG(dbgs() << "alloc FI(" << I << ") at SP[" << Offset
-                          << "]\n");
-        MFI.setObjectOffset(I, -Offset);
-      }
+      if (AssignOffsets)
+        Assign(I, -Offset);
     }
   }
 
-  // Note: We don't take allocatable stack objects into
-  // account yet, because allocation for those is not yet
-  // implemented.
+  // Create a buffer of SVE objects to allocate and sort it.
+  SmallVector<int, 8> ObjectsToAllocate;
+  for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
+    unsigned StackID = MFI.getStackID(I);
+    if (StackID != TargetStackID::SVEVector)
+      continue;
+    if (MaxCSFrameIndex >= I && I >= MinCSFrameIndex)
+      continue;
+    if (MFI.isDeadObjectIndex(I))
+      continue;
+
+    ObjectsToAllocate.push_back(I);
+  }
+
+  // Allocate all SVE locals and spills
+  for (unsigned FI : ObjectsToAllocate) {
+    unsigned Align = MFI.getObjectAlignment(FI);
+    // FIXME: Given that the length of SVE vectors is not necessarily a power of
+    // two, we'd need to align every object dynamically at runtime if the
+    // alignment is larger than 16. This is not yet supported.
+    if (Align > 16)
+      report_fatal_error(
+          "Alignment of scalable vectors > 16 bytes is not yet supported");
+
+    Offset = alignTo(Offset + MFI.getObjectSize(FI), Align);
+    if (AssignOffsets)
+      Assign(FI, -Offset);
+  }
+
   return Offset;
 }
 
