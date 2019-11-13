@@ -103,7 +103,6 @@ function(add_lldb_library name)
   # this may result in the wrong install DESTINATION. The FRAMEWORK property
   # must be set earlier.
   if(PARAM_FRAMEWORK)
-    message(WARNING "{name} is now a FRAMEWORK")
     set_target_properties(liblldb PROPERTIES FRAMEWORK ON)
   endif()
 
