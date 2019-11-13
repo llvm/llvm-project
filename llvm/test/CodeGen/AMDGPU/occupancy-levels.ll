@@ -262,8 +262,8 @@ define amdgpu_kernel void @used_lds_6552() {
 }
 
 ; GCN-LABEL: {{^}}used_lds_6556:
-; GFX9:       ; Occupancy: 9
-; GFX1010W64: ; Occupancy: 19
+; GFX9:       ; Occupancy: 10
+; GFX1010W64: ; Occupancy: 20
 ; GFX1010W32: ; Occupancy: 20
 @lds6556 = internal addrspace(3) global [6556 x i8] undef, align 4
 define amdgpu_kernel void @used_lds_6556() {
@@ -273,9 +273,9 @@ define amdgpu_kernel void @used_lds_6556() {
 }
 
 ; GCN-LABEL: {{^}}used_lds_13112:
-; GFX9:       ; Occupancy: 4
-; GFX1010W64: ; Occupancy: 9
-; GFX1010W32: ; Occupancy: 19
+; GFX9:       ; Occupancy: 10
+; GFX1010W64: ; Occupancy: 20
+; GFX1010W32: ; Occupancy: 20
 @lds13112 = internal addrspace(3) global [13112 x i8] undef, align 4
 define amdgpu_kernel void @used_lds_13112() {
   %p = bitcast [13112 x i8] addrspace(3)* @lds13112 to i8 addrspace(3)*

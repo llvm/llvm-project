@@ -64,4 +64,4 @@ define amdgpu_kernel void @lds_promoted_alloca_icmp_unknown_ptr(i32 addrspace(1)
 
 declare i32* @get_unknown_pointer() #0
 
-attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,1" }
+attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" }

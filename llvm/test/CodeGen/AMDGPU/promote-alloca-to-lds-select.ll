@@ -131,5 +131,5 @@ bb:
   ret void
 }
 
-attributes #0 = { norecurse nounwind "amdgpu-waves-per-eu"="1,1" }
+attributes #0 = { norecurse nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,256" }
 attributes #1 = { norecurse nounwind }

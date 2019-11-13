@@ -343,11 +343,6 @@ AMDGPUSubtarget::getOccupancyWithLocalMemSize(const MachineFunction &MF) const {
 std::pair<unsigned, unsigned>
 AMDGPUSubtarget::getDefaultFlatWorkGroupSize(CallingConv::ID CC) const {
   switch (CC) {
-  case CallingConv::AMDGPU_CS:
-  case CallingConv::AMDGPU_KERNEL:
-  case CallingConv::SPIR_KERNEL:
-    return std::make_pair(getWavefrontSize() * 2,
-                          std::max(getWavefrontSize() * 4, 256u));
   case CallingConv::AMDGPU_VS:
   case CallingConv::AMDGPU_LS:
   case CallingConv::AMDGPU_HS:
@@ -356,13 +351,12 @@ AMDGPUSubtarget::getDefaultFlatWorkGroupSize(CallingConv::ID CC) const {
   case CallingConv::AMDGPU_PS:
     return std::make_pair(1, getWavefrontSize());
   default:
-    return std::make_pair(1, 16 * getWavefrontSize());
+    return std::make_pair(1u, getMaxFlatWorkGroupSize());
   }
 }
 
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
   const Function &F) const {
-  // FIXME: 1024 if function.
   // Default minimum/maximum flat work group sizes.
   std::pair<unsigned, unsigned> Default =
     getDefaultFlatWorkGroupSize(F.getCallingConv());
