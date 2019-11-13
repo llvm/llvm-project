@@ -42,7 +42,7 @@ class PPCFunctionInfo : public MachineFunctionInfo {
   /// MustSaveLR - Indicates whether LR is defined (or clobbered) in the current
   /// function.  This is only valid after the initial scan of the function by
   /// PEI.
-  bool MustSaveLR;
+  bool MustSaveLR = false;
 
   /// MustSaveTOC - Indicates that the TOC save needs to be performed in the
   /// prologue of the function. This is typically the case when there are
