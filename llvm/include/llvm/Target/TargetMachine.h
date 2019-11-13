@@ -271,15 +271,6 @@ public:
   /// PassManagerBuilder::addExtension.
   virtual void adjustPassManager(PassManagerBuilder &) {}
 
-  /// These enums are meant to be passed into addPassesToEmitFile to indicate
-  /// what type of file to emit, and returned by it to indicate what type of
-  /// file could actually be made.
-  enum CodeGenFileType {
-    CGFT_AssemblyFile,
-    CGFT_ObjectFile,
-    CGFT_Null         // Do not emit any output.
-  };
-
   /// Add passes to the specified pass manager to get the specified file
   /// emitted.  Typically this will involve several steps of code generation.
   /// This method should return true if emission of this file type is not
