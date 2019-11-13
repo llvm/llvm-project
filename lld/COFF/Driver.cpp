@@ -1479,6 +1479,8 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     parseNumbers(arg->getValue(), &config->align);
     if (!isPowerOf2_64(config->align))
       error("/align: not a power of two: " + StringRef(arg->getValue()));
+    if (!args.hasArg(OPT_driver))
+      warn("/align specified without /driver; image may not run");
   }
 
   // Handle /aligncomm
