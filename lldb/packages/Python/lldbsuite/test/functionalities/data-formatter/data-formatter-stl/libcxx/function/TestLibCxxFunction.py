@@ -17,24 +17,22 @@ class LibCxxFunctionTestCase(TestBase):
 
     # Run frame var for a variable twice. Verify we do not hit the cache
     # the first time but do the second time.
-    def run_frame_var_check_cache_use(self, variable, result_to_match):
+    def run_frame_var_check_cache_use(self, variable, result_to_match, skip_find_function=False):
         self.runCmd("log timers reset")
         self.expect("frame variable " + variable,
                     substrs=[variable + " =  " + result_to_match])
-        self.expect("log timers dump",
-                   substrs=["lldb_private::Module::FindSymbolsMatchingRegExAndType"])
+        if not skip_find_function:
+          self.expect("log timers dump",
+                   substrs=["lldb_private::CompileUnit::FindFunction"])
 
         self.runCmd("log timers reset")
         self.expect("frame variable " + variable,
                     substrs=[variable + " =  " + result_to_match])
         self.expect("log timers dump",
                    matching=False,
-                   substrs=["lldb_private::Module::FindSymbolsMatchingRegExAndType"])
+                   substrs=["lldb_private::CompileUnit::FindFunction"])
 
 
-    # Temporarily skipping for everywhere b/c we are disabling the std::function formatter
-    # due to performance issues but plan on turning it back on once they are addressed.
-    @skipIf
     @add_test_categories(["libc++"])
     def test(self):
         """Test that std::function as defined by libc++ is correctly printed by LLDB"""
@@ -61,8 +59,10 @@ class LibCxxFunctionTestCase(TestBase):
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.run_frame_var_check_cache_use("f2", "Lambda in File main.cpp at Line 43")
-        self.run_frame_var_check_cache_use("f3", "Lambda in File main.cpp at Line 47")
-        self.run_frame_var_check_cache_use("f4", "Function in File main.cpp at Line 16")
+        self.run_frame_var_check_cache_use("f3", "Lambda in File main.cpp at Line 47", True)
+        # TODO reenable this case when std::function formatter supports
+        # general callable object case.
+        #self.run_frame_var_check_cache_use("f4", "Function in File main.cpp at Line 16")
 
         # These cases won't hit the cache at all but also don't require
         # an expensive lookup.
