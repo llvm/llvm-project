@@ -9552,6 +9552,8 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
   case ISD::SIGN_EXTEND:
   case ISD::ANY_EXTEND: {
     auto Cond = RHS.getOperand(0);
+    // If this won't be a real VOPC output, we would still need to insert an
+    // extra instruction anyway.
     if (!isBoolSGPR(Cond))
       break;
     SDVTList VTList = DAG.getVTList(MVT::i32, MVT::i1);
@@ -9581,6 +9583,26 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
   SDLoc SL(N);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
+
+  // sub x, zext (setcc) => subcarry x, 0, setcc
+  // sub x, sext (setcc) => addcarry x, 0, setcc
+  unsigned Opc = RHS.getOpcode();
+  switch (Opc) {
+  default: break;
+  case ISD::ZERO_EXTEND:
+  case ISD::SIGN_EXTEND:
+  case ISD::ANY_EXTEND: {
+    auto Cond = RHS.getOperand(0);
+    // If this won't be a real VOPC output, we would still need to insert an
+    // extra instruction anyway.
+    if (!isBoolSGPR(Cond))
+      break;
+    SDVTList VTList = DAG.getVTList(MVT::i32, MVT::i1);
+    SDValue Args[] = { LHS, DAG.getConstant(0, SL, MVT::i32), Cond };
+    Opc = (Opc == ISD::SIGN_EXTEND) ? ISD::ADDCARRY : ISD::SUBCARRY;
+    return DAG.getNode(Opc, SL, VTList, Args);
+  }
+  }
 
   if (LHS.getOpcode() == ISD::SUBCARRY) {
     // sub (subcarry x, 0, cc), y => subcarry x, y, cc
