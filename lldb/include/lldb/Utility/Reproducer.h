@@ -288,7 +288,7 @@ private:
   FileSpec m_root;
 
   /// Flag to ensure that we never call both keep and discard.
-  bool m_done;
+  bool m_done = false;
 };
 
 class Loader final {
