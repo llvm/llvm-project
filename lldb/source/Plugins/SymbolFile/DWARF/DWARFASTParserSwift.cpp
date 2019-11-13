@@ -166,7 +166,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
       DWARFASTParserClang *clang_ast_parser =
           static_cast<DWARFASTParserClang *>(clang_ctx->GetDWARFParser());
       TypeMap clang_types;
-      GetClangType(die, mangled_name.GetStringRef(), clang_types);
+      GetClangType(*sc.comp_unit, die, mangled_name.GetStringRef(), clang_types);
 
       // Import the Clang type into the Clang context.
       if (!compiler_type && clang_types.GetSize())
@@ -248,7 +248,8 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   return type_sp;
 }
 
-void DWARFASTParserSwift::GetClangType(const DWARFDIE &die,
+void DWARFASTParserSwift::GetClangType(lldb_private::CompileUnit &comp_unit,
+                                       const DWARFDIE &die,
                                        llvm::StringRef mangled_name,
                                        TypeMap &clang_types) const {
   llvm::SmallVector<CompilerContext, 4> decl_context;
@@ -291,18 +292,19 @@ void DWARFASTParserSwift::GetClangType(const DWARFDIE &die,
   decl_context.back().kind = CompilerContextKind::AnyType;
   LanguageSet clang_languages = ClangASTContext::GetSupportedLanguagesForTypes();
   // Search any modules referenced by DWARF.
+  llvm::DenseSet<SymbolFile *> searched_symbol_files;
+  // Well-formed clang modules never form cycles; guard against corrupted ones.
+  searched_symbol_files.insert(&sym_file);
   auto old_size = clang_types.GetSize();
-  for (const auto &name_module : sym_file.getExternalTypeModules()) {
-    if (!name_module.second)
-      continue;
-    name_module.second->GetSymbolFile()->FindTypes(
-        decl_context, clang_languages, clang_types);
-    if (clang_types.GetSize() > old_size)
-      return;
-  }
+  sym_file.ForEachExternalModule(comp_unit, [&](ModuleSP module) {
+    module->GetSymbolFile()->FindTypes(decl_context, clang_languages,
+                                       searched_symbol_files, clang_types);
+    return; //(clang_types.GetSize() > old_size);
+  });
 
   // Next search the .dSYM the DIE came from, if applicable.
-  sym_file.FindTypes(decl_context, clang_languages, clang_types);
+  sym_file.FindTypes(decl_context, clang_languages, searched_symbol_files,
+                     clang_types);
 }
 
 Function *DWARFASTParserSwift::ParseFunctionFromDWARF(
