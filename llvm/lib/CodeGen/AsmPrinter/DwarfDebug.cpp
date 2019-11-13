@@ -615,7 +615,7 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     ++NumCSParams;
   };
 
-  // Search for a loading value in forwaring registers.
+  // Search for a loading value in forwarding registers.
   for (; I != MBB->rend(); ++I) {
     // If the next instruction is a call we can not interpret parameter's
     // forwarding registers or we finished the interpretation of all parameters.

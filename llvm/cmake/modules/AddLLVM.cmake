@@ -783,7 +783,7 @@ macro(add_llvm_executable name)
     llvm_update_compile_flags(${name})
   endif()
 
-  if (ARG_SUPPORT_PLUGINS)
+  if (ARG_SUPPORT_PLUGINS AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
     set(LLVM_NO_DEAD_STRIP On)
   endif()
 
