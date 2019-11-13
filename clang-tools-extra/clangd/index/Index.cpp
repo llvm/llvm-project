@@ -65,7 +65,7 @@ void SwapIndex::lookup(const LookupRequest &R,
                        llvm::function_ref<void(const Symbol &)> CB) const {
   return snapshot()->lookup(R, CB);
 }
-void SwapIndex::refs(const RefsRequest &R,
+bool SwapIndex::refs(const RefsRequest &R,
                      llvm::function_ref<void(const Ref &)> CB) const {
   return snapshot()->refs(R, CB);
 }

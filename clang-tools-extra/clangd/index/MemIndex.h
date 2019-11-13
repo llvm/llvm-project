@@ -55,7 +55,7 @@ public:
   void lookup(const LookupRequest &Req,
               llvm::function_ref<void(const Symbol &)> Callback) const override;
 
-  void refs(const RefsRequest &Req,
+  bool refs(const RefsRequest &Req,
             llvm::function_ref<void(const Ref &)> Callback) const override;
 
   void relations(const RelationsRequest &Req,
