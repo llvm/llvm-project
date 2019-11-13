@@ -28,15 +28,20 @@ ParseRet tryParseISA(StringRef &MangledName, VFISAKind &ISA) {
   if (MangledName.empty())
     return ParseRet::Error;
 
-  ISA = StringSwitch<VFISAKind>(MangledName.take_front(1))
-            .Case("n", VFISAKind::AdvancedSIMD)
-            .Case("s", VFISAKind::SVE)
-            .Case("b", VFISAKind::SSE)
-            .Case("c", VFISAKind::AVX)
-            .Case("d", VFISAKind::AVX2)
-            .Case("e", VFISAKind::AVX512)
-            .Default(VFISAKind::Unknown);
-  MangledName = MangledName.drop_front(1);
+  if (MangledName.startswith(VFABI::_LLVM_)) {
+    MangledName = MangledName.drop_front(strlen(VFABI::_LLVM_));
+    ISA = VFISAKind::LLVM;
+  } else {
+    ISA = StringSwitch<VFISAKind>(MangledName.take_front(1))
+              .Case("n", VFISAKind::AdvancedSIMD)
+              .Case("s", VFISAKind::SVE)
+              .Case("b", VFISAKind::SSE)
+              .Case("c", VFISAKind::AVX)
+              .Case("d", VFISAKind::AVX2)
+              .Case("e", VFISAKind::AVX512)
+              .Default(VFISAKind::Unknown);
+    MangledName = MangledName.drop_front(1);
+  }
 
   return ParseRet::OK;
 }
@@ -287,6 +292,7 @@ ParseRet tryParseAlign(StringRef &ParseString, Align &Alignment) {
 // Format of the ABI name:
 // _ZGV<isa><mask><vlen><parameters>_<scalarname>[(<redirection>)]
 Optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName) {
+  const StringRef OriginalName = MangledName;
   // Assume there is no custom name <redirection>, and therefore the
   // vector name consists of
   // _ZGV<isa><mask><vlen><parameters>_<scalarname>.
@@ -369,6 +375,11 @@ Optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName) {
     if (VectorName.empty())
       return None;
   }
+
+  // LLVM internal mapping via the TargetLibraryInfo (TLI) must be
+  // redirected to an existing name.
+  if (ISA == VFISAKind::LLVM && VectorName == OriginalName)
+    return None;
 
   // When <mask> is "M", we need to add a parameter that is used as
   // global predicate for the function.
