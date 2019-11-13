@@ -29,7 +29,6 @@ if.else:                                          ; preds = %entry
 
 ; CHECK-LABEL: if.end:
 ; CHECK-NEXT: call void @llvm.objc.autoreleasePoolPop
-;;; Disable: CHECK-NEXT: load i8, i8* @deallocCalled
 if.end:                                           ; preds = %entry
   call void @llvm.objc.autoreleasePoolPop(i8* %tmp0)
   %tmp7 = load i8, i8* @deallocCalled, align 1
