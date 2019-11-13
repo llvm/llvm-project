@@ -227,8 +227,6 @@ void SymbolTable::loadMinGWAutomaticImports() {
     auto *undef = dyn_cast<Undefined>(sym);
     if (!undef)
       continue;
-    if (!sym->isUsedInRegularObj)
-      continue;
     if (undef->getWeakAlias())
       continue;
 
