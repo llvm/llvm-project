@@ -1,0 +1,20 @@
+name: Build and test llvm
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: [windows-latest, ubuntu-latest]
+    
+    steps:
+    - uses: actions/checkout@v1
+    - name: create build dir
+      run: mkdir _build
+    - name: configure
+      run: cmake .. -DBUILD_SHARED_LIBS=ON
+      working-directory: _build 
+    - name: build
+      run: cmake --build .
+    - name: test
+      run: cmake --build . --target check
