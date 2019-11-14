@@ -1483,6 +1483,7 @@ class RCPCLoad<bits<2> sz, string asm, RegisterClass RC>
 class AuthBase<bits<1> M, dag oops, dag iops, string asm, string operands,
                list<dag> pattern>
   : I<oops, iops, asm, operands, "", pattern>, Sched<[]> {
+  let isAuthenticated = 1;
   let Inst{31-25} = 0b1101011;
   let Inst{20-11} = 0b1111100001;
   let Inst{10} = M;
@@ -1522,6 +1523,7 @@ class BaseAuthLoad<bit M, bit W, dag oops, dag iops, string asm,
   bits<10> offset;
   bits<5> Rn;
   bits<5> Rt;
+  let isAuthenticated = 1;
   let Inst{31-24} = 0b11111000;
   let Inst{23} = M;
   let Inst{22} = offset{9};
