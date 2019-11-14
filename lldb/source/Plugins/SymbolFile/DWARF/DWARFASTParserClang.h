@@ -159,7 +159,9 @@ protected:
   UpdateSymbolContextScopeForType(const lldb_private::SymbolContext &sc,
                                   const DWARFDIE &die, lldb::TypeSP type_sp);
 
-  lldb::TypeSP ParseTypeFromDWO(const DWARFDIE &die, lldb_private::Log *log);
+  /// Follow Clang Module Skeleton CU references to find a type definition.
+  lldb::TypeSP ParseTypeFromClangModule(const DWARFDIE &die,
+                                        lldb_private::Log *log);
 
   // Return true if this type is a declaration to a type in an external
   // module.
