@@ -283,7 +283,7 @@ void SIBufMemMerge::processSubSection(const SmallVector<SimpleMI, 8> &Candidates
           MergeInstr = &TII->get(AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM);
           break;
         case 4:
-          SuperRC = &AMDGPU::SReg_128RegClass;
+          SuperRC = &AMDGPU::SGPR_128RegClass;
           MergeInstr = &TII->get(AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM);
           break;
         case 2:
