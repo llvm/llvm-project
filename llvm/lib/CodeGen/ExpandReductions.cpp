@@ -79,14 +79,32 @@ RecurrenceDescriptor::MinMaxRecurrenceKind getMRK(Intrinsic::ID ID) {
 bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
   bool Changed = false;
   SmallVector<IntrinsicInst *, 4> Worklist;
-  for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I)
-    if (auto II = dyn_cast<IntrinsicInst>(&*I))
-      Worklist.push_back(II);
+  for (auto &I : instructions(F)) {
+    if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+      switch (II->getIntrinsicID()) {
+      default: break;
+      case Intrinsic::experimental_vector_reduce_v2_fadd:
+      case Intrinsic::experimental_vector_reduce_v2_fmul:
+      case Intrinsic::experimental_vector_reduce_add:
+      case Intrinsic::experimental_vector_reduce_mul:
+      case Intrinsic::experimental_vector_reduce_and:
+      case Intrinsic::experimental_vector_reduce_or:
+      case Intrinsic::experimental_vector_reduce_xor:
+      case Intrinsic::experimental_vector_reduce_smax:
+      case Intrinsic::experimental_vector_reduce_smin:
+      case Intrinsic::experimental_vector_reduce_umax:
+      case Intrinsic::experimental_vector_reduce_umin:
+      case Intrinsic::experimental_vector_reduce_fmax:
+      case Intrinsic::experimental_vector_reduce_fmin:
+        if (TTI->shouldExpandReduction(II))
+          Worklist.push_back(II);
+
+        break;
+      }
+    }
+  }
 
   for (auto *II : Worklist) {
-    if (!TTI->shouldExpandReduction(II))
-      continue;
-
     FastMathFlags FMF =
         isa<FPMathOperator>(II) ? II->getFastMathFlags() : FastMathFlags{};
     Intrinsic::ID ID = II->getIntrinsicID();
@@ -97,6 +115,7 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
     IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
     Builder.setFastMathFlags(FMF);
     switch (ID) {
+    default: llvm_unreachable("Unexpected intrinsic!");
     case Intrinsic::experimental_vector_reduce_v2_fadd:
     case Intrinsic::experimental_vector_reduce_v2_fmul: {
       // FMFs must be attached to the call, otherwise it's an ordered reduction
@@ -113,7 +132,8 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
         Rdx = Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(ID),
                                   Acc, Rdx, "bin.rdx");
       }
-    } break;
+      break;
+    }
     case Intrinsic::experimental_vector_reduce_add:
     case Intrinsic::experimental_vector_reduce_mul:
     case Intrinsic::experimental_vector_reduce_and:
@@ -130,9 +150,8 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
         continue;
 
       Rdx = getShuffleReduction(Builder, Vec, getOpcode(ID), MRK);
-    } break;
-    default:
-      continue;
+      break;
+    }
     }
     II->replaceAllUsesWith(Rdx);
     II->eraseFromParent();
