@@ -58,7 +58,8 @@ public:
   /// iff it has successfully reched the end of the list. This means that one
   /// can attempt to parse another list after the current one (\p Offset will be
   /// updated to point past the end of the current list).
-  bool dumpLocationList(uint64_t *Offset, raw_ostream &OS, uint64_t BaseAddr,
+  bool dumpLocationList(uint64_t *Offset, raw_ostream &OS,
+                        Optional<object::SectionedAddress> BaseAddr,
                         const MCRegisterInfo *MRI, DWARFUnit *U,
                         DIDumpOptions DumpOpts, unsigned Indent) const;
 
@@ -133,8 +134,7 @@ public:
 
   /// Dump all location lists within the given range.
   void dumpRange(uint64_t StartOffset, uint64_t Size, raw_ostream &OS,
-                 uint64_t BaseAddr, const MCRegisterInfo *MRI,
-                 DIDumpOptions DumpOpts);
+                 const MCRegisterInfo *MRI, DIDumpOptions DumpOpts);
 
 protected:
   void dumpRawEntry(const DWARFLocationEntry &Entry, raw_ostream &OS,

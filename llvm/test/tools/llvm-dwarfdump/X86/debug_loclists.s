@@ -70,6 +70,10 @@ f:                                      # @f
         .byte   23                      # DW_FORM_sec_offset
         .ascii  "\214\001"              # DW_AT_loclists_base
         .byte   23                      # DW_FORM_sec_offset
+        .byte   17                      # DW_AT_low_pc
+        .byte   27                      # DW_FORM_addrx
+        .byte   18                      # DW_AT_high_pc
+        .byte   6                       # DW_FORM_data4
         .byte   0                       # EOM(1)
         .byte   0                       # EOM(2)
         .byte   2                       # Abbreviation Code
@@ -100,6 +104,8 @@ f:                                      # @f
         .byte   1                       # Abbrev [1] 0xc:0x3c DW_TAG_compile_unit
         .long   .Laddr_table_base0      # DW_AT_addr_base
         .long   .Lloclists_table_base0  # DW_AT_loclists_base
+        .byte   0                       # DW_AT_low_pc
+        .long   .Lfend-.Lf0             # DW_AT_high_pc
         .byte   2                       # Abbrev [2] 0x27:0x1c DW_TAG_subprogram
         .byte   0                       # DW_AT_low_pc
         .long   .Lfend-.Lf0             # DW_AT_high_pc
