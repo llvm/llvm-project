@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown -o - %s | FileCheck %s
 ; RUN: llc -mtriple=x86_64-unknown-unknown -filetype=obj < %s \
-; RUN:   | llvm-dwarfdump -v - | FileCheck %s --check-prefix=DWARF
+; RUN:   | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
 
 define i1 @test() !dbg !4 {
 entry:
@@ -22,7 +22,7 @@ while.end:
 ; CHECK-LABEL: test
 ; To get the value of the variable, we need to do [$rsp+8], i.e:
 ; CHECK:       #DEBUG_VALUE: test:w <- [DW_OP_plus_uconst 8, DW_OP_deref] $rsp
-; DWARF:  DW_AT_location [DW_FORM_sec_offset] (
+; DWARF:  DW_AT_location (
 ; DWARF-NEXT:   [{{.*}}, {{.*}}): DW_OP_breg7 RSP+8)
 
 ; Note: A previous version of this test checked for `[DW_OP_plus_uconst 8] [$rsp+0]`,
