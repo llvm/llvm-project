@@ -23,7 +23,7 @@ jobs:
       working-directory: _build
       if: startswith(matrix.os, 'windows')
     - name: ubuntu build
-      run: cmake --build . -j4
+      run: cmake --build . -- -j4
       if: startswith(matrix.os, 'ubuntu')
       working-directory: _build
     - name: windows build
