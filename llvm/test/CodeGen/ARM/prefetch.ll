@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple=thumb-eabi -mattr=-thumb2 %s -o - | FileCheck %s -check-prefix CHECK-T1
 ; RUN: llc -mtriple=thumb-eabi -mattr=+v7 %s -o - | FileCheck %s -check-prefix=THUMB2
+; RUN: llc -mtriple=thumb-eabi -mattr=+v7 -mattr=+mp %s -o - | FileCheck %s -check-prefix=THUMB2-MP
 ; RUN: llc -mtriple=arm-eabi -mattr=+v7 %s -o - | FileCheck %s -check-prefix=ARM
 ; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a9 %s -o - | FileCheck %s -check-prefix=ARM-MP
 ; rdar://8601536
@@ -83,15 +84,63 @@ entry:
 ;ARM-LABEL: t6:
 ;ARM: pld [sp]
 ;ARM: pld [sp, #50]
+;ARM: pld [sp, #-50]
 
 ;THUMB2-LABEL: t6:
 ;THUMB2: pld [sp]
 ;THUMB2: pld [sp, #50]
+;THUMB2: pld [sp, #-50]
 
 %red = alloca [100 x i8], align 1
 %0 = getelementptr inbounds [100 x i8], [100 x i8]* %red, i32 0, i32 0
 %1 = getelementptr inbounds [100 x i8], [100 x i8]* %red, i32 0, i32 50
+%2 = getelementptr inbounds [100 x i8], [100 x i8]* %red, i32 0, i32 -50
 call void @llvm.prefetch(i8* %0, i32 0, i32 3, i32 1)
 call void @llvm.prefetch(i8* %1, i32 0, i32 3, i32 1)
+call void @llvm.prefetch(i8* %2, i32 0, i32 3, i32 1)
+ret void
+}
+
+define void @t7() {
+entry:
+;ARM-LABEL: t7:
+;ARM-MP: pldw [sp]
+;ARM-MP: pldw [sp, #50]
+;ARM-MP: pldw [sp, #-50]
+
+;THUMB2-MP-LABEL: t7:
+;THUMB2-MP: pldw [sp]
+;THUMB2-MP: pldw [sp, #50]
+;THUMB2-MP: pldw [sp, #-50]
+
+%red = alloca [100 x i8], align 1
+%0 = getelementptr inbounds [100 x i8], [100 x i8]* %red, i32 0, i32 0
+%1 = getelementptr inbounds [100 x i8], [100 x i8]* %red, i32 0, i32 50
+%2 = getelementptr inbounds [100 x i8], [100 x i8]* %red, i32 0, i32 -50
+call void @llvm.prefetch(i8* %0, i32 1, i32 3, i32 1)
+call void @llvm.prefetch(i8* %1, i32 1, i32 3, i32 1)
+call void @llvm.prefetch(i8* %2, i32 1, i32 3, i32 1)
+ret void
+}
+
+define void @t8() {
+entry:
+;ARM-LABEL: t8:
+;ARM: pli [sp]
+;ARM: pli [sp, #50]
+;ARM: pli [sp, #-50]
+
+;THUMB2-LABEL: t8:
+;THUMB2: pli [sp]
+;THUMB2: pli [sp, #50]
+;THUMB2: pli [sp, #-50]
+
+%red = alloca [100 x i8], align 1
+%0 = getelementptr inbounds [100 x i8], [100 x i8]* %red, i32 0, i32 0
+%1 = getelementptr inbounds [100 x i8], [100 x i8]* %red, i32 0, i32 50
+%2 = getelementptr inbounds [100 x i8], [100 x i8]* %red, i32 0, i32 -50
+call void @llvm.prefetch(i8* %0, i32 0, i32 3, i32 0)
+call void @llvm.prefetch(i8* %1, i32 0, i32 3, i32 0)
+call void @llvm.prefetch(i8* %2, i32 0, i32 3, i32 0)
 ret void
 }
