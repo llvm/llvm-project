@@ -112,7 +112,7 @@ void Variable::Dump(Stream *s, bool show_context) const {
   if (m_symfile_type_sp) {
     Type *type = m_symfile_type_sp->GetType();
     if (type) {
-      *s << ", type = {" << type->GetID() << "} " << (void *)type << " (";
+      s->Format(", type = {{{0:x-16}} {1} (", type->GetID(), type);
       type->DumpTypeName(s);
       s->PutChar(')');
     }

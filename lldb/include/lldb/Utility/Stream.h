@@ -213,45 +213,10 @@ public:
   ///     in one statement.
   Stream &operator<<(char ch);
 
-  /// Output a uint8_t \a uval to the stream \a s.
-  ///
-  /// \param[in] uval
-  ///     A uint8_t value.
-  ///
-  /// \return
-  ///     A reference to this class so multiple things can be streamed
-  ///     in one statement.
-  Stream &operator<<(uint8_t uval);
-
-  /// Output a uint16_t \a uval to the stream \a s.
-  ///
-  /// \param[in] uval
-  ///     A uint16_t value.
-  ///
-  /// \return
-  ///     A reference to this class so multiple things can be streamed
-  ///     in one statement.
-  Stream &operator<<(uint16_t uval);
-
-  /// Output a uint32_t \a uval to the stream \a s.
-  ///
-  /// \param[in] uval
-  ///     A uint32_t value.
-  ///
-  /// \return
-  ///     A reference to this class so multiple things can be streamed
-  ///     in one statement.
-  Stream &operator<<(uint32_t uval);
-
-  /// Output a uint64_t \a uval to the stream \a s.
-  ///
-  /// \param[in] uval
-  ///     A uint64_t value.
-  ///
-  /// \return
-  ///     A reference to this class so multiple things can be streamed
-  ///     in one statement.
-  Stream &operator<<(uint64_t uval);
+  Stream &operator<<(uint8_t uval) = delete;
+  Stream &operator<<(uint16_t uval) = delete;
+  Stream &operator<<(uint32_t uval) = delete;
+  Stream &operator<<(uint64_t uval) = delete;
 
   /// Output a int8_t \a sval to the stream \a s.
   ///

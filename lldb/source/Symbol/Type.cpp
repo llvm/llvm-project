@@ -255,7 +255,7 @@ void Type::Dump(Stream *s, bool show_context) {
     *s << ", compiler_type = " << m_compiler_type.GetOpaqueQualType() << ' ';
     GetForwardCompilerType().DumpTypeDescription(s);
   } else if (m_encoding_uid != LLDB_INVALID_UID) {
-    *s << ", type_data = " << (uint64_t)m_encoding_uid;
+    s->Format(", type_data = {0:x-16}", m_encoding_uid);
     switch (m_encoding_uid_type) {
     case eEncodingInvalid:
       break;
