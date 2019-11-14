@@ -157,10 +157,10 @@ public:
 
   bool GetVerbose() const;
 
-private:
   void VAPrintf(const char *format, va_list args);
   void VAError(const char *format, va_list args);
 
+private:
   Channel &m_channel;
 
   // The mutex makes sure enable/disable operations are thread-safe. The
