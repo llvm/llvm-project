@@ -300,6 +300,9 @@ public:
 
   virtual llvm::Optional<uint32_t> GetDwoNum() { return llvm::None; }
 
+  /// If this is a DWARF object with a single CU, return its DW_AT_dwo_id.
+  llvm::Optional<uint64_t> GetDWOId();
+
   static bool
   DIEInDeclContext(const lldb_private::CompilerDeclContext *parent_decl_ctx,
                    const DWARFDIE &die);
