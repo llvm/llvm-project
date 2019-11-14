@@ -71,7 +71,7 @@ class LLVMConfig(object):
         sanitizers = frozenset(x.lower() for x in sanitizers.split(';'))
         if 'address' in sanitizers:
             features.add('asan')
-        if 'memory' in sanitizers:
+        if 'memory' in sanitizers or 'memorywithorigins' in sanitizers:
             features.add('msan')
         if 'undefined' in sanitizers:
             features.add('ubsan')
