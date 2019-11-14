@@ -181,8 +181,8 @@ endif
 
 ifeq "$(OS)" "Darwin"
     ifeq "$(SDKROOT)" ""
-        # We haven't otherwise set the SDKROOT, so set it now to macosx
-        SDKROOT := $(shell xcrun --sdk macosx --show-sdk-path)
+	# We haven't otherwise set the SDKROOT, so set it now to macosx
+	SDKROOT := $(shell xcrun --sdk macosx --show-sdk-path)
     endif
 endif
 
@@ -360,46 +360,46 @@ endif
 
 # Function that returns the counterpart C++ compiler, given $(CC) as arg.
 cxx_compiler_notdir = $(if $(findstring icc,$(1)), \
-                            $(subst icc,icpc,$(1)), \
-                            $(if $(findstring llvm-gcc,$(1)), \
-                                 $(subst llvm-gcc,llvm-g++,$(1)), \
-                                 $(if $(findstring gcc,$(1)), \
-                                      $(subst gcc,g++,$(1)), \
-                                      $(subst cc,c++,$(1)))))
+			$(subst icc,icpc,$(1)), \
+			$(if $(findstring llvm-gcc,$(1)), \
+				$(subst llvm-gcc,llvm-g++,$(1)), \
+				$(if $(findstring gcc,$(1)), \
+					$(subst gcc,g++,$(1)), \
+					$(subst cc,c++,$(1)))))
 cxx_compiler = $(if $(findstring /,$(1)),$(join $(dir $(1)), $(call cxx_compiler_notdir,$(notdir $(1)))),$(call cxx_compiler_notdir,$(1)))
 
 # Function that returns the C++ linker, given $(CC) as arg.
 cxx_linker_notdir = $(if $(findstring icc,$(1)), \
-                          $(subst icc,icpc,$(1)), \
-                          $(if $(findstring llvm-gcc,$(1)), \
-                               $(subst llvm-gcc,llvm-g++,$(1)), \
-                               $(if $(findstring gcc,$(1)), \
-                                    $(subst gcc,g++,$(1)), \
-                                    $(subst cc,c++,$(1)))))
+			$(subst icc,icpc,$(1)), \
+			$(if $(findstring llvm-gcc,$(1)), \
+				$(subst llvm-gcc,llvm-g++,$(1)), \
+				$(if $(findstring gcc,$(1)), \
+					$(subst gcc,g++,$(1)), \
+					$(subst cc,c++,$(1)))))
 cxx_linker = $(if $(findstring /,$(1)),$(join $(dir $(1)), $(call cxx_linker_notdir,$(notdir $(1)))),$(call cxx_linker_notdir,$(1)))
 
 ifneq "$(OS)" "Darwin"
-    CLANG_OR_GCC := $(strip $(if $(findstring clang,$(CC)), \
-                                 $(findstring clang,$(CC)), \
-                                 $(if $(findstring gcc,$(CC)), \
-                                      $(findstring gcc,$(CC)), \
-                                      cc)))
+	CLANG_OR_GCC := $(strip $(if $(findstring clang,$(CC)), \
+				$(findstring clang,$(CC)), \
+				$(if $(findstring gcc,$(CC)), \
+					$(findstring gcc,$(CC)), \
+					cc)))
 
-    CC_LASTWORD := $(strip $(lastword $(subst -, ,$(CC))))
+	CC_LASTWORD := $(strip $(lastword $(subst -, ,$(CC))))
 
-    replace_with = $(strip $(if $(findstring $(3),$(CC_LASTWORD)), \
-                           $(subst $(3),$(1),$(2)), \
-                           $(subst $(3),$(1),$(subst -$(CC_LASTWORD),,$(2)))))
+	replace_with = $(strip $(if $(findstring $(3),$(CC_LASTWORD)), \
+			$(subst $(3),$(1),$(2)), \
+			$(subst $(3),$(1),$(subst -$(CC_LASTWORD),,$(2)))))
 
-    ifeq "$(notdir $(CC))" "$(CC)"
-        replace_cc_with = $(call replace_with,$(1),$(CC),$(CLANG_OR_GCC))
-    else
-        replace_cc_with = $(join $(dir $(CC)),$(call replace_with,$(1),$(notdir $(CC)),$(CLANG_OR_GCC)))
-    endif
+	ifeq "$(notdir $(CC))" "$(CC)"
+		replace_cc_with = $(call replace_with,$(1),$(CC),$(CLANG_OR_GCC))
+	else
+		replace_cc_with = $(join $(dir $(CC)),$(call replace_with,$(1),$(notdir $(CC)),$(CLANG_OR_GCC)))
+	endif
 
-    OBJCOPY ?= $(call replace_cc_with,objcopy)
-    ARCHIVER ?= $(call replace_cc_with,ar)
-    override AR = $(ARCHIVER)
+	OBJCOPY ?= $(call replace_cc_with,objcopy)
+	ARCHIVER ?= $(call replace_cc_with,ar)
+	override AR = $(ARCHIVER)
 endif
 
 ifdef PIE
