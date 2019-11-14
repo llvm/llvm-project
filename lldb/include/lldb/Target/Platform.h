@@ -380,9 +380,6 @@ public:
   /// attached to the process, or an empty shared pointer with an appropriate
   /// error.
   ///
-  /// \param[in] pid
-  ///     The process ID that we should attempt to attach to.
-  ///
   /// \return
   ///     An appropriate ProcessSP containing a valid shared pointer
   ///     to the default Process subclass for the platform that is
@@ -777,7 +774,7 @@ public:
   ///     given an install name and a set (e.g. DYLD_LIBRARY_PATH provided) of
   ///     alternate paths.
   ///
-  /// \param[in] path_list
+  /// \param[in] paths
   ///     The list of paths to use to search for the library.  First
   ///     match wins.
   ///
@@ -788,7 +785,7 @@ public:
   /// \param[out] loaded_path
   ///      If non-null, the path to the dylib that was successfully loaded
   ///      is stored in this path.
-  /// 
+  ///
   /// \return
   ///     A token that represents the shared library which can be
   ///     passed to UnloadImage. A value of

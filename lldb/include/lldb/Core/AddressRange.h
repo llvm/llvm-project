@@ -123,7 +123,7 @@ public:
   /// Check if the resolved file address \a file_addr is contained within this
   /// object's file address range.
   ///
-  /// \param[in] so_addr
+  /// \param[in] file_addr
   ///     A section offset address object reference.
   ///
   /// \return
@@ -146,9 +146,6 @@ public:
 
   /// Check if the resolved load address \a load_addr is contained within this
   /// object's load address range.
-  ///
-  /// \param[in] so_addr
-  ///     A section offset address object reference.
   ///
   /// \return
   ///     Returns \b true if both \a this has a resolvable load

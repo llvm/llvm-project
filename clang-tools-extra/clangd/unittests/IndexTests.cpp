@@ -389,7 +389,8 @@ TEST(MergeIndexTest, Refs) {
   RefsRequest Request;
   Request.IDs = {Foo.ID};
   RefSlab::Builder Results;
-  Merge.refs(Request, [&](const Ref &O) { Results.insert(Foo.ID, O); });
+  EXPECT_FALSE(
+      Merge.refs(Request, [&](const Ref &O) { Results.insert(Foo.ID, O); }));
   EXPECT_THAT(
       std::move(Results).build(),
       ElementsAre(Pair(
@@ -400,7 +401,8 @@ TEST(MergeIndexTest, Refs) {
 
   Request.Limit = 1;
   RefSlab::Builder Results2;
-  Merge.refs(Request, [&](const Ref &O) { Results2.insert(Foo.ID, O); });
+  EXPECT_TRUE(
+      Merge.refs(Request, [&](const Ref &O) { Results2.insert(Foo.ID, O); }));
   EXPECT_THAT(std::move(Results2).build(),
               ElementsAre(Pair(
                   _, ElementsAre(AnyOf(FileURI("unittest:///test.cc"),

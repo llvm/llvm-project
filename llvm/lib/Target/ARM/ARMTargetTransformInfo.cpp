@@ -44,6 +44,8 @@ static cl::opt<bool> DisableLowOverheadLoops(
   "disable-arm-loloops", cl::Hidden, cl::init(false),
   cl::desc("Disable the generation of low-overhead loops"));
 
+extern cl::opt<bool> DisableTailPredication;
+
 bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
                                      const Function *Callee) const {
   const TargetMachine &TM = getTLI()->getTargetMachine();
@@ -1000,17 +1002,113 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
   return true;
 }
 
+static bool canTailPredicateInstruction(Instruction &I, int &ICmpCount) {
+  // We don't allow icmp's, and because we only look at single block loops,
+  // we simply count the icmps, i.e. there should only be 1 for the backedge.
+  if (isa<ICmpInst>(&I) && ++ICmpCount > 1)
+    return false;
+
+  // We could allow extending/narrowing FP loads/stores, but codegen is
+  // too inefficient so reject this for now.
+  if (isa<FPExtInst>(&I) || isa<FPTruncInst>(&I))
+    return false;
+
+  // Extends have to be extending-loads
+  if (isa<SExtInst>(&I) || isa<ZExtInst>(&I) )
+    if (!I.getOperand(0)->hasOneUse() || !isa<LoadInst>(I.getOperand(0)))
+      return false;
+
+  // Truncs have to be narrowing-stores
+  if (isa<TruncInst>(&I) )
+    if (!I.hasOneUse() || !isa<StoreInst>(*I.user_begin()))
+      return false;
+
+  return true;
+}
+
+// To set up a tail-predicated loop, we need to know the total number of
+// elements processed by that loop. Thus, we need to determine the element
+// size and:
+// 1) it should be uniform for all operations in the vector loop, so we
+//    e.g. don't want any widening/narrowing operations.
+// 2) it should be smaller than i64s because we don't have vector operations
+//    that work on i64s.
+// 3) we don't want elements to be reversed or shuffled, to make sure the
+//    tail-predication masks/predicates the right lanes.
+//
+static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
+                                 const DataLayout &DL,
+                                 const LoopAccessInfo *LAI) {
+  PredicatedScalarEvolution PSE = LAI->getPSE();
+  int ICmpCount = 0;
+  int Stride = 0;
+
+  LLVM_DEBUG(dbgs() << "tail-predication: checking allowed instructions\n");
+  SmallVector<Instruction *, 16> LoadStores;
+  for (BasicBlock *BB : L->blocks()) {
+    for (Instruction &I : BB->instructionsWithoutDebug()) {
+      if (isa<PHINode>(&I))
+        continue;
+      if (!canTailPredicateInstruction(I, ICmpCount)) {
+        LLVM_DEBUG(dbgs() << "Instruction not allowed: "; I.dump());
+        return false;
+      }
+
+      Type *T  = I.getType();
+      if (T->isPointerTy())
+        T = T->getPointerElementType();
+
+      if (T->getScalarSizeInBits() > 32) {
+        LLVM_DEBUG(dbgs() << "Unsupported Type: "; T->dump());
+        return false;
+      }
+
+      if (isa<StoreInst>(I) || isa<LoadInst>(I)) {
+        Value *Ptr = isa<LoadInst>(I) ? I.getOperand(0) : I.getOperand(1);
+        int64_t NextStride = getPtrStride(PSE, Ptr, L);
+        // TODO: for now only allow consecutive strides of 1. We could support
+        // other strides as long as it is uniform, but let's keep it simple for
+        // now.
+        if (Stride == 0 && NextStride == 1) {
+          Stride = NextStride;
+          continue;
+        }
+        if (Stride != NextStride) {
+          LLVM_DEBUG(dbgs() << "Different strides found, can't "
+                               "tail-predicate\n.");
+          return false;
+        }
+      }
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "tail-predication: all instructions allowed!\n");
+  return true;
+}
+
 bool ARMTTIImpl::preferPredicateOverEpilogue(Loop *L, LoopInfo *LI,
                                              ScalarEvolution &SE,
                                              AssumptionCache &AC,
                                              TargetLibraryInfo *TLI,
                                              DominatorTree *DT,
                                              const LoopAccessInfo *LAI) {
+  if (DisableTailPredication)
+    return false;
+
   // Creating a predicated vector loop is the first step for generating a
   // tail-predicated hardware loop, for which we need the MVE masked
   // load/stores instructions:
   if (!ST->hasMVEIntegerOps())
     return false;
+
+  // For now, restrict this to single block loops.
+  if (L->getNumBlocks() > 1) {
+    LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: not a single block "
+                         "loop.\n");
+    return false;
+  }
+
+  assert(L->empty() && "preferPredicateOverEpilogue: inner-loop expected");
 
   HardwareLoopInfo HWLoopInfo(L);
   if (!HWLoopInfo.canAnalyze(*LI)) {
@@ -1033,14 +1131,7 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(Loop *L, LoopInfo *LI,
     return false;
   }
 
-  // TODO: to set up a tail-predicated loop, which works by setting up
-  // the total number of elements processed by the loop, we need to
-  // determine the element size here, and if it is uniform for all operations
-  // in the vector loop. This means we will reject narrowing/widening
-  // operations, and don't want to predicate the vector loop, which is
-  // the main prep step for tail-predicated loops.
-
-  return false;
+  return canTailPredicateLoop(L, LI, SE, DL, LAI);
 }
 
 

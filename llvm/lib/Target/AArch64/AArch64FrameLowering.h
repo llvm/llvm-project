@@ -72,6 +72,7 @@ public:
   }
 
   bool enableStackSlotScavenging(const MachineFunction &MF) const override;
+  TargetStackID::Value getStackIDForScalableVectors() const override;
 
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                              RegScavenger *RS) const override;

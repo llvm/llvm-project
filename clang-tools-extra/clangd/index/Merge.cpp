@@ -89,9 +89,10 @@ void MergedIndex::lookup(
       Callback(*Sym);
 }
 
-void MergedIndex::refs(const RefsRequest &Req,
+bool MergedIndex::refs(const RefsRequest &Req,
                        llvm::function_ref<void(const Ref &)> Callback) const {
   trace::Span Tracer("MergedIndex refs");
+  bool More = false;
   uint32_t Remaining =
       Req.Limit.getValueOr(std::numeric_limits<uint32_t>::max());
   // We don't want duplicated refs from the static/dynamic indexes,
@@ -103,21 +104,26 @@ void MergedIndex::refs(const RefsRequest &Req,
   // refs were removed (we will report stale ones from the static index).
   // Ultimately we should explicit check which index has the file instead.
   llvm::StringSet<> DynamicIndexFileURIs;
-  Dynamic->refs(Req, [&](const Ref &O) {
+  More |= Dynamic->refs(Req, [&](const Ref &O) {
     DynamicIndexFileURIs.insert(O.Location.FileURI);
     Callback(O);
     --Remaining;
   });
-  if (Remaining == 0)
-    return;
+  if (Remaining == 0 && More)
+    return More;
   // We return less than Req.Limit if static index returns more refs for dirty
   // files.
-  Static->refs(Req, [&](const Ref &O) {
-    if (Remaining > 0 && !DynamicIndexFileURIs.count(O.Location.FileURI)) {
+  More |= Static->refs(Req, [&](const Ref &O) {
+    if (DynamicIndexFileURIs.count(O.Location.FileURI))
+      return; // ignore refs that have been seen from dynamic index.
+    if (Remaining == 0)
+      More = true;
+    if (Remaining > 0) {
       --Remaining;
       Callback(O);
     }
   });
+  return More;
 }
 
 void MergedIndex::relations(

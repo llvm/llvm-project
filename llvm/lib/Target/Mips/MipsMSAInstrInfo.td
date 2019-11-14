@@ -1287,6 +1287,7 @@ class MSA_I10_LDI_DESC_BASE<string instr_asm, RegisterOperand ROWD,
   // LDI is matched using custom matching code in MipsSEISelDAGToDAG.cpp
   list<dag> Pattern = [];
   bit hasSideEffects = 0;
+  bit isReMaterializable = 1;
   InstrItinClass Itinerary = itin;
 }
 

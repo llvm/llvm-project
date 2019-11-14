@@ -363,6 +363,11 @@ public:
     return true;
   }
 
+  /// Returns the StackID that scalable vectors should be associated with.
+  virtual TargetStackID::Value getStackIDForScalableVectors() const {
+    return TargetStackID::Default;
+  }
+
   virtual bool isSupportedStackID(TargetStackID::Value ID) const {
     switch (ID) {
     default:

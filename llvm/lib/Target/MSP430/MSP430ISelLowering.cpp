@@ -358,9 +358,10 @@ SDValue MSP430TargetLowering::LowerOperation(SDValue Op,
   }
 }
 
-// Set transforms into shift amounts above 2 as not profitable
-unsigned MSP430TargetLowering::getShiftAmountThreshold(EVT VT) const {
-  return 2;
+// Define non profitable transforms into shifts
+bool MSP430TargetLowering::shouldAvoidTransformToShift(EVT VT,
+                                                       unsigned Amount) const {
+  return !(Amount == 8 || Amount == 9 || Amount<=2);
 }
 
 // Implemented to verify test case assertions in

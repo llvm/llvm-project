@@ -99,15 +99,12 @@ public:
   bool ShouldStop(StoppointCallbackContext *context) override;
 
   /// Standard Dump method
-  ///
-  /// \param[in] context
-  ///    The stream to dump this output.
   void Dump(Stream *s) const override;
 
   /// The "Owners" are the breakpoint locations that share this breakpoint
   /// site. The method adds the \a owner to this breakpoint site's owner list.
   ///
-  /// \param[in] context
+  /// \param[in] owner
   ///    \a owner is the Breakpoint Location to add.
   void AddOwner(const lldb::BreakpointLocationSP &owner);
 
@@ -123,8 +120,9 @@ public:
   /// GetNumberOfOwners() - 1 so you can use this method to iterate over the
   /// owners
   ///
-  /// \param[in] index
+  /// \param[in] idx
   ///     The index in the list of owners for which you wish the owner location.
+  ///
   /// \return
   ///    A shared pointer to the breakpoint location at that index.
   lldb::BreakpointLocationSP GetOwnerAtIndex(size_t idx);
@@ -201,9 +199,6 @@ private:
 
   /// The method removes the owner at \a break_loc_id from this breakpoint
   /// list.
-  ///
-  /// \param[in] context
-  ///    \a break_loc_id is the Breakpoint Location to remove.
   size_t RemoveOwner(lldb::break_id_t break_id, lldb::break_id_t break_loc_id);
 
   BreakpointSite::Type m_type; ///< The type of this breakpoint site.

@@ -99,8 +99,6 @@ public:
   /// \param [in] pc
   ///   The current pc value of this stack frame.
   ///
-  /// \param [in] frame_kind
-  ///
   /// \param [in] sc_ptr
   ///   Optionally seed the StackFrame with the SymbolContext information that
   ///   has
@@ -289,18 +287,18 @@ public:
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
       uint32_t options, lldb::VariableSP &var_sp, Status &error);
 
-  /// Determine whether this StackFrame has debug information available or not
+  /// Determine whether this StackFrame has debug information available or not.
   ///
   /// \return
-  //    true if debug information is available for this frame (function,
-  //    compilation unit, block, etc.)
+  ///    true if debug information is available for this frame (function,
+  ///    compilation unit, block, etc.)
   bool HasDebugInformation();
 
   /// Return the disassembly for the instructions of this StackFrame's
   /// function as a single C string.
   ///
   /// \return
-  //    C string with the assembly instructions for this function.
+  ///    C string with the assembly instructions for this function.
   const char *Disassemble();
 
   /// Print a description for this frame using the frame-format formatter
@@ -407,7 +405,7 @@ public:
   ///     is sufficient.  One of the DynamicValueType enumerated values.
   ///
   /// \return
-  //    A ValueObject for this variable.
+  ///     A ValueObject for this variable.
   lldb::ValueObjectSP
   GetValueObjectForFrameVariable(const lldb::VariableSP &variable_sp,
                                  lldb::DynamicValueType use_dynamic);
@@ -424,7 +422,7 @@ public:
   ///     is sufficient.  One of the DynamicValueType enumerated values.
   ///
   /// \return
-  //    A ValueObject for this variable.
+  ///     A ValueObject for this variable.
   lldb::ValueObjectSP TrackGlobalVariable(const lldb::VariableSP &variable_sp,
                                           lldb::DynamicValueType use_dynamic);
 

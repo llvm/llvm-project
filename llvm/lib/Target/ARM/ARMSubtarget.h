@@ -806,6 +806,9 @@ public:
   /// True for some subtargets at > -O0.
   bool enablePostRAMachineScheduler() const override;
 
+  /// Check whether this subtarget wants to use subregister liveness.
+  bool enableSubRegLiveness() const override;
+
   /// Enable use of alias analysis during code generation (during MI
   /// scheduling, DAGCombine, etc.).
   bool useAA() const override { return true; }

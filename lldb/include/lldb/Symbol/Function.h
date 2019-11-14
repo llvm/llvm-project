@@ -68,9 +68,9 @@ public:
   ///     The Right Hand Side const FunctionInfo object reference.
   ///
   /// \return
-  ///     \li -1 if lhs < rhs
-  ///     \li 0 if lhs == rhs
-  ///     \li 1 if lhs > rhs
+  ///     -1 if lhs < rhs
+  ///     0 if lhs == rhs
+  ///     1 if lhs > rhs
   static int Compare(const FunctionInfo &lhs, const FunctionInfo &rhs);
 
   /// Dump a description of this object to a Stream.
@@ -183,9 +183,9 @@ public:
   ///     reference.
   ///
   /// \return
-  ///     \li -1 if lhs < rhs
-  ///     \li 0 if lhs == rhs
-  ///     \li 1 if lhs > rhs
+  ///     -1 if lhs < rhs
+  ///     0 if lhs == rhs
+  ///     1 if lhs > rhs
   int Compare(const InlineFunctionInfo &lhs, const InlineFunctionInfo &rhs);
 
   /// Dump a description of this object to a Stream.

@@ -79,7 +79,7 @@ namespace {
 class PPCAsmPrinter : public AsmPrinter {
 protected:
   MapVector<const MCSymbol *, MCSymbol *> TOC;
-  const PPCSubtarget *Subtarget;
+  const PPCSubtarget *Subtarget = nullptr;
   StackMaps SM;
 
 public:

@@ -179,14 +179,22 @@ DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
       StringSection(SS), StringOffsetSection(SOS), AddrOffsetSection(AOS),
       isLittleEndian(LE), IsDWO(IsDWO), UnitVector(UnitVector) {
   clear();
-  // For split DWARF we only need to keep track of the location list section's
-  // data (no relocations), and if we are reading a package file, we need to
-  // adjust the location list data based on the index entries.
   if (IsDWO) {
-    LocSectionData = LocSection->Data;
+    // If we are reading a package file, we need to adjust the location list
+    // data based on the index entries.
+    StringRef Data = LocSection->Data;
     if (auto *IndexEntry = Header.getIndexEntry())
       if (const auto *C = IndexEntry->getOffset(DW_SECT_LOC))
-        LocSectionData = LocSectionData.substr(C->Offset, C->Length);
+        Data = Data.substr(C->Offset, C->Length);
+    LocTable = std::make_unique<DWARFDebugLoclists>(
+        DWARFDataExtractor(Data, isLittleEndian, getAddressByteSize()),
+        Header.getVersion());
+  } else if (Header.getVersion() >= 5) {
+    LocTable = std::make_unique<DWARFDebugLoclists>(
+        DWARFDataExtractor(Context.getDWARFObj(),
+                           Context.getDWARFObj().getLoclistsSection(),
+                           isLittleEndian, getAddressByteSize()),
+        Header.getVersion());
   }
 }
 

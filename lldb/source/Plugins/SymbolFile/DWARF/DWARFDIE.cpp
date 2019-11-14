@@ -406,39 +406,6 @@ bool DWARFDIE::IsMethod() const {
   return false;
 }
 
-DWARFDIE
-DWARFDIE::GetContainingDWOModuleDIE() const {
-  if (IsValid()) {
-    DWARFDIE top_module_die;
-    // Now make sure this DIE is scoped in a DW_TAG_module tag and return true
-    // if so
-    for (DWARFDIE parent = GetParent(); parent.IsValid();
-         parent = parent.GetParent()) {
-      const dw_tag_t tag = parent.Tag();
-      if (tag == DW_TAG_module)
-        top_module_die = parent;
-      else if (tag == DW_TAG_compile_unit || tag == DW_TAG_partial_unit)
-        break;
-    }
-
-    return top_module_die;
-  }
-  return DWARFDIE();
-}
-
-lldb::ModuleSP DWARFDIE::GetContainingDWOModule() const {
-  if (IsValid()) {
-    DWARFDIE dwo_module_die = GetContainingDWOModuleDIE();
-
-    if (dwo_module_die) {
-      const char *module_name = dwo_module_die.GetName();
-      if (module_name)
-        return GetDWARF()->GetDWOModule(lldb_private::ConstString(module_name));
-    }
-  }
-  return lldb::ModuleSP();
-}
-
 bool DWARFDIE::GetDIENamesAndRanges(
     const char *&name, const char *&mangled, DWARFRangeList &ranges,
     int &decl_file, int &decl_line, int &decl_column, int &call_file,

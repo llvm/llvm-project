@@ -9401,7 +9401,7 @@ static SDValue foldExtendedSignBitTest(SDNode *N, SelectionDAG &DAG,
     SDLoc DL(N);
     unsigned ShCt = VT.getSizeInBits() - 1;
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-    if (ShCt <= TLI.getShiftAmountThreshold(VT)) {
+    if (!TLI.shouldAvoidTransformToShift(VT, ShCt)) {
       SDValue NotX = DAG.getNOT(DL, X, VT);
       SDValue ShiftAmount = DAG.getConstant(ShCt, DL, VT);
       auto ShiftOpcode =
@@ -19958,7 +19958,7 @@ SDValue DAGCombiner::foldSelectCCToShiftAnd(const SDLoc &DL, SDValue N0,
   auto *N2C = dyn_cast<ConstantSDNode>(N2.getNode());
   if (N2C && ((N2C->getAPIntValue() & (N2C->getAPIntValue() - 1)) == 0)) {
     unsigned ShCt = XType.getSizeInBits() - N2C->getAPIntValue().logBase2() - 1;
-    if (ShCt <= TLI.getShiftAmountThreshold(XType)) {
+    if (!TLI.shouldAvoidTransformToShift(XType, ShCt)) {
       SDValue ShiftAmt = DAG.getConstant(ShCt, DL, ShiftAmtTy);
       SDValue Shift = DAG.getNode(ISD::SRL, DL, XType, N0, ShiftAmt);
       AddToWorklist(Shift.getNode());
@@ -19976,7 +19976,7 @@ SDValue DAGCombiner::foldSelectCCToShiftAnd(const SDLoc &DL, SDValue N0,
   }
 
   unsigned ShCt = XType.getSizeInBits() - 1;
-  if (ShCt > TLI.getShiftAmountThreshold(XType))
+  if (TLI.shouldAvoidTransformToShift(XType, ShCt))
     return SDValue();
 
   SDValue ShiftAmt = DAG.getConstant(ShCt, DL, ShiftAmtTy);
@@ -20097,7 +20097,7 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
       // Shift the tested bit over the sign bit.
       const APInt &AndMask = ConstAndRHS->getAPIntValue();
       unsigned ShCt = AndMask.getBitWidth() - 1;
-      if (ShCt <= TLI.getShiftAmountThreshold(VT)) {
+      if (!TLI.shouldAvoidTransformToShift(VT, ShCt)) {
         SDValue ShlAmt =
           DAG.getConstant(AndMask.countLeadingZeros(), SDLoc(AndLHS),
                           getShiftAmountTy(AndLHS.getValueType()));
@@ -20154,7 +20154,7 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
       return Temp;
 
     unsigned ShCt = N2C->getAPIntValue().logBase2();
-    if (ShCt > TLI.getShiftAmountThreshold(VT))
+    if (TLI.shouldAvoidTransformToShift(VT, ShCt))
       return SDValue();
 
     // shl setcc result by log2 n2c

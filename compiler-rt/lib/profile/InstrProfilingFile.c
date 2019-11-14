@@ -171,6 +171,59 @@ static void setupIOBuffer() {
   }
 }
 
+/* Get the size of the profile file. If there are any errors, print the
+ * message under the assumption that the profile is being read for merging
+ * purposes, and return -1. Otherwise return the file size in the inout param
+ * \p ProfileFileSize. */
+static int getProfileFileSizeForMerging(FILE *ProfileFile,
+                                        uint64_t *ProfileFileSize) {
+  if (fseek(ProfileFile, 0L, SEEK_END) == -1) {
+    PROF_ERR("Unable to merge profile data, unable to get size: %s\n",
+             strerror(errno));
+    return -1;
+  }
+  *ProfileFileSize = ftell(ProfileFile);
+
+  /* Restore file offset.  */
+  if (fseek(ProfileFile, 0L, SEEK_SET) == -1) {
+    PROF_ERR("Unable to merge profile data, unable to rewind: %s\n",
+             strerror(errno));
+    return -1;
+  }
+
+  if (*ProfileFileSize > 0 &&
+      *ProfileFileSize < sizeof(__llvm_profile_header)) {
+    PROF_WARN("Unable to merge profile data: %s\n",
+              "source profile file is too small.");
+    return -1;
+  }
+  return 0;
+}
+
+/* mmap() \p ProfileFile for profile merging purposes, assuming that an
+ * exclusive lock is held on the file and that \p ProfileFileSize is the
+ * length of the file. Return the mmap'd buffer in the inout variable
+ * \p ProfileBuffer. Returns -1 on failure. On success, the caller is
+ * responsible for unmapping the mmap'd buffer in \p ProfileBuffer. */
+static int mmapProfileForMerging(FILE *ProfileFile, uint64_t ProfileFileSize,
+                                 char **ProfileBuffer) {
+  *ProfileBuffer = mmap(NULL, ProfileFileSize, PROT_READ, MAP_SHARED | MAP_FILE,
+                        fileno(ProfileFile), 0);
+  if (*ProfileBuffer == MAP_FAILED) {
+    PROF_ERR("Unable to merge profile data, mmap failed: %s\n",
+             strerror(errno));
+    return -1;
+  }
+
+  if (__llvm_profile_check_compatibility(*ProfileBuffer, ProfileFileSize)) {
+    (void)munmap(*ProfileBuffer, ProfileFileSize);
+    PROF_WARN("Unable to merge profile data: %s\n",
+              "source profile file is not compatible.");
+    return -1;
+  }
+  return 0;
+}
+
 /* Read profile data in \c ProfileFile and merge with in-memory
    profile counters. Returns -1 if there is fatal error, otheriwse
    0 is returned. Returning 0 does not mean merge is actually
@@ -180,42 +233,18 @@ static int doProfileMerging(FILE *ProfileFile, int *MergeDone) {
   uint64_t ProfileFileSize;
   char *ProfileBuffer;
 
-  if (fseek(ProfileFile, 0L, SEEK_END) == -1) {
-    PROF_ERR("Unable to merge profile data, unable to get size: %s\n",
-             strerror(errno));
+  /* Get the size of the profile on disk. */
+  if (getProfileFileSizeForMerging(ProfileFile, &ProfileFileSize) == -1)
     return -1;
-  }
-  ProfileFileSize = ftell(ProfileFile);
-
-  /* Restore file offset.  */
-  if (fseek(ProfileFile, 0L, SEEK_SET) == -1) {
-    PROF_ERR("Unable to merge profile data, unable to rewind: %s\n",
-             strerror(errno));
-    return -1;
-  }
 
   /* Nothing to merge.  */
-  if (ProfileFileSize < sizeof(__llvm_profile_header)) {
-    if (ProfileFileSize)
-      PROF_WARN("Unable to merge profile data: %s\n",
-                "source profile file is too small.");
+  if (!ProfileFileSize)
     return 0;
-  }
 
-  ProfileBuffer = mmap(NULL, ProfileFileSize, PROT_READ, MAP_SHARED | MAP_FILE,
-                       fileno(ProfileFile), 0);
-  if (ProfileBuffer == MAP_FAILED) {
-    PROF_ERR("Unable to merge profile data, mmap failed: %s\n",
-             strerror(errno));
+  /* mmap() the profile and check that it is compatible with the data in
+   * the current image. */
+  if (mmapProfileForMerging(ProfileFile, ProfileFileSize, &ProfileBuffer) == -1)
     return -1;
-  }
-
-  if (__llvm_profile_check_compatibility(ProfileBuffer, ProfileFileSize)) {
-    (void)munmap(ProfileBuffer, ProfileFileSize);
-    PROF_WARN("Unable to merge profile data: %s\n",
-              "source profile file is not compatible.");
-    return 0;
-  }
 
   /* Now start merging */
   __llvm_profile_merge_from_buffer(ProfileBuffer, ProfileFileSize);

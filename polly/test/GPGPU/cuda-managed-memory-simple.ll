@@ -46,7 +46,7 @@
 ; CHECK-NEXT:  store i8* %[[REGCR]], i8** %polly_launch_0_param_1
 ; CHECK-NEXT:  %[[REGCP1:[0-9]+]] = bitcast i8** %polly_launch_0_param_1 to i8*
 ; CHECK-NEXT:  store i8* %[[REGCP1]], i8** %[[REGGEP1]]
-; CHECK-NEXT:  %[[REGKERNEL:[0-9]+]] = call i8* @polly_getKernel(i8* getelementptr inbounds ([852 x i8], [852 x i8]* @FUNC_copy_SCOP_0_KERNEL_0, i32 0, i32 0), i8* getelementptr inbounds ([26 x i8], [26 x i8]* @FUNC_copy_SCOP_0_KERNEL_0_name, i32 0, i32 0))
+; CHECK-NEXT:  %[[REGKERNEL:[0-9]+]] = call i8* @polly_getKernel(i8* getelementptr inbounds ([851 x i8], [851 x i8]* @FUNC_copy_SCOP_0_KERNEL_0, i32 0, i32 0), i8* getelementptr inbounds ([26 x i8], [26 x i8]* @FUNC_copy_SCOP_0_KERNEL_0_name, i32 0, i32 0))
 ; CHECK-NEXT:  call void @polly_launchKernel(i8* %[[REGKERNEL]], i32 2, i32 1, i32 32, i32 1, i32 1, i8* %polly_launch_0_params_i8ptr)
 ; CHECK-NEXT:  call void @polly_freeKernel(i8* %[[REGKERNEL]])
 ; CHECK-NEXT:  call void @polly_synchronizeDevice()

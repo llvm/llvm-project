@@ -22,9 +22,8 @@ define x86_fp80 @fiadd_fp80_i16(x86_fp80 %a0, i16 %a1) {
 ; X64-LABEL: fiadd_fp80_i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; X64-NEXT:    movswl %di, %eax
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fiaddl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fiadds -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
   %1 = sitofp i16 %a1 to x86_fp80
   %2 = fadd x86_fp80 %a0, %1
@@ -48,9 +47,9 @@ define x86_fp80 @fiadd_fp80_i16_ld(x86_fp80 %a0, i16 *%a1) {
 ; X64-LABEL: fiadd_fp80_i16_ld:
 ; X64:       # %bb.0:
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; X64-NEXT:    movswl (%rdi), %eax
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fiaddl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzwl (%rdi), %eax
+; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fiadds -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
   %1 = load i16, i16 *%a1
   %2 = sitofp i16 %1 to x86_fp80
@@ -129,9 +128,8 @@ define x86_fp80 @fisub_fp80_i16(x86_fp80 %a0, i16 %a1) {
 ; X64-LABEL: fisub_fp80_i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; X64-NEXT:    movswl %di, %eax
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fisubl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fisubs -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
   %1 = sitofp i16 %a1 to x86_fp80
   %2 = fsub x86_fp80 %a0, %1
@@ -155,9 +153,9 @@ define x86_fp80 @fisub_fp80_i16_ld(x86_fp80 %a0, i16 *%a1) {
 ; X64-LABEL: fisub_fp80_i16_ld:
 ; X64:       # %bb.0:
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; X64-NEXT:    movswl (%rdi), %eax
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fisubl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzwl (%rdi), %eax
+; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fisubs -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
   %1 = load i16, i16 *%a1
   %2 = sitofp i16 %1 to x86_fp80
@@ -236,9 +234,8 @@ define x86_fp80 @fisubr_fp80_i16(x86_fp80 %a0, i16 %a1) {
 ; X64-LABEL: fisubr_fp80_i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; X64-NEXT:    movswl %di, %eax
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fisubrl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fisubrs -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
   %1 = sitofp i16 %a1 to x86_fp80
   %2 = fsub x86_fp80 %1, %a0
@@ -262,9 +259,9 @@ define x86_fp80 @fisubr_fp80_i16_ld(x86_fp80 %a0, i16 *%a1) {
 ; X64-LABEL: fisubr_fp80_i16_ld:
 ; X64:       # %bb.0:
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; X64-NEXT:    movswl (%rdi), %eax
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fisubrl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzwl (%rdi), %eax
+; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fisubrs -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
   %1 = load i16, i16 *%a1
   %2 = sitofp i16 %1 to x86_fp80
@@ -343,9 +340,8 @@ define x86_fp80 @fimul_fp80_i16(x86_fp80 %a0, i16 %a1) {
 ; X64-LABEL: fimul_fp80_i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; X64-NEXT:    movswl %di, %eax
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fimull -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fimuls -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
   %1 = sitofp i16 %a1 to x86_fp80
   %2 = fmul x86_fp80 %a0, %1
@@ -369,9 +365,9 @@ define x86_fp80 @fimul_fp80_i16_ld(x86_fp80 %a0, i16 *%a1) {
 ; X64-LABEL: fimul_fp80_i16_ld:
 ; X64:       # %bb.0:
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; X64-NEXT:    movswl (%rdi), %eax
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fimull -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzwl (%rdi), %eax
+; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fimuls -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
   %1 = load i16, i16 *%a1
   %2 = sitofp i16 %1 to x86_fp80
@@ -450,9 +446,8 @@ define x86_fp80 @fidiv_fp80_i16(x86_fp80 %a0, i16 %a1) {
 ; X64-LABEL: fidiv_fp80_i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; X64-NEXT:    movswl %di, %eax
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fidivl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fidivs -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
   %1 = sitofp i16 %a1 to x86_fp80
   %2 = fdiv x86_fp80 %a0, %1
@@ -476,9 +471,9 @@ define x86_fp80 @fidiv_fp80_i16_ld(x86_fp80 %a0, i16 *%a1) {
 ; X64-LABEL: fidiv_fp80_i16_ld:
 ; X64:       # %bb.0:
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; X64-NEXT:    movswl (%rdi), %eax
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fidivl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzwl (%rdi), %eax
+; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fidivs -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
   %1 = load i16, i16 *%a1
   %2 = sitofp i16 %1 to x86_fp80
@@ -557,9 +552,8 @@ define x86_fp80 @fidivr_fp80_i16(x86_fp80 %a0, i16 %a1) {
 ; X64-LABEL: fidivr_fp80_i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; X64-NEXT:    movswl %di, %eax
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fidivrl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fidivrs -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
   %1 = sitofp i16 %a1 to x86_fp80
   %2 = fdiv x86_fp80 %1, %a0
@@ -583,9 +577,9 @@ define x86_fp80 @fidivr_fp80_i16_ld(x86_fp80 %a0, i16 *%a1) {
 ; X64-LABEL: fidivr_fp80_i16_ld:
 ; X64:       # %bb.0:
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; X64-NEXT:    movswl (%rdi), %eax
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fidivrl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzwl (%rdi), %eax
+; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fidivrs -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
   %1 = load i16, i16 *%a1
   %2 = sitofp i16 %1 to x86_fp80
