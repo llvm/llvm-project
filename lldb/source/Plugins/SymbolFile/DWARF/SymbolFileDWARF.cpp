@@ -1642,51 +1642,53 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
         die.GetAttributeValueAsString(DW_AT_GNU_dwo_name, nullptr);
     if (!dwo_path)
       dwo_path = die.GetAttributeValueAsString(DW_AT_dwo_name, nullptr);
-    if (dwo_path) {
-      ModuleSpec dwo_module_spec;
-      dwo_module_spec.GetFileSpec().SetFile(dwo_path, FileSpec::Style::native);
-      if (dwo_module_spec.GetFileSpec().IsRelative()) {
-        const char *comp_dir =
-            die.GetAttributeValueAsString(DW_AT_comp_dir, nullptr);
-        if (comp_dir) {
-          dwo_module_spec.GetFileSpec().SetFile(comp_dir,
-                                                FileSpec::Style::native);
-          FileSystem::Instance().Resolve(dwo_module_spec.GetFileSpec());
-          dwo_module_spec.GetFileSpec().AppendPathComponent(dwo_path);
-        }
-      }
-      dwo_module_spec.GetArchitecture() =
-          m_objfile_sp->GetModule()->GetArchitecture();
+    if (!dwo_path)
+      continue;
 
-      // When LLDB loads "external" modules it looks at the presence
-      // of DW_AT_dwo_name. However, when the already created module
-      // (corresponding to .dwo itself) is being processed, it will
-      // see the presence of DW_AT_dwo_name (which contains the name
-      // of dwo file) and will try to call ModuleList::GetSharedModule
-      // again. In some cases (i.e., for empty files) Clang 4.0
-      // generates a *.dwo file which has DW_AT_dwo_name, but no
-      // DW_AT_comp_dir. In this case the method
-      // ModuleList::GetSharedModule will fail and the warning will be
-      // printed. However, as one can notice in this case we don't
-      // actually need to try to load the already loaded module
-      // (corresponding to .dwo) so we simply skip it.
-      if (m_objfile_sp->GetFileSpec().GetFileNameExtension() == ".dwo" &&
-          llvm::StringRef(m_objfile_sp->GetFileSpec().GetPath())
-              .endswith(dwo_module_spec.GetFileSpec().GetPath())) {
-        continue;
+    ModuleSpec dwo_module_spec;
+    dwo_module_spec.GetFileSpec().SetFile(dwo_path, FileSpec::Style::native);
+    if (dwo_module_spec.GetFileSpec().IsRelative()) {
+      const char *comp_dir =
+          die.GetAttributeValueAsString(DW_AT_comp_dir, nullptr);
+      if (comp_dir) {
+        dwo_module_spec.GetFileSpec().SetFile(comp_dir,
+                                              FileSpec::Style::native);
+        FileSystem::Instance().Resolve(dwo_module_spec.GetFileSpec());
+        dwo_module_spec.GetFileSpec().AppendPathComponent(dwo_path);
       }
+    }
+    dwo_module_spec.GetArchitecture() =
+        m_objfile_sp->GetModule()->GetArchitecture();
 
-      Status error = ModuleList::GetSharedModule(dwo_module_spec, module_sp,
-                                                 nullptr, nullptr, nullptr);
-      if (!module_sp) {
-        GetObjectFile()->GetModule()->ReportWarning(
-            "0x%8.8x: unable to locate module needed for external types: "
-            "%s\nerror: %s\nDebugging will be degraded due to missing "
-            "types. Rebuilding your project will regenerate the needed "
-            "module files.",
-            die.GetOffset(), dwo_module_spec.GetFileSpec().GetPath().c_str(),
-            error.AsCString("unknown error"));
-      }
+    // When LLDB loads "external" modules it looks at the presence of
+    // DW_AT_dwo_name. However, when the already created module
+    // (corresponding to .dwo itself) is being processed, it will see
+    // the presence of DW_AT_dwo_name (which contains the name of dwo
+    // file) and will try to call ModuleList::GetSharedModule
+    // again. In some cases (i.e., for empty files) Clang 4.0
+    // generates a *.dwo file which has DW_AT_dwo_name, but no
+    // DW_AT_comp_dir. In this case the method
+    // ModuleList::GetSharedModule will fail and the warning will be
+    // printed. However, as one can notice in this case we don't
+    // actually need to try to load the already loaded module
+    // (corresponding to .dwo) so we simply skip it.
+    if (m_objfile_sp->GetFileSpec().GetFileNameExtension() == ".dwo" &&
+        llvm::StringRef(m_objfile_sp->GetFileSpec().GetPath())
+            .endswith(dwo_module_spec.GetFileSpec().GetPath())) {
+      continue;
+    }
+
+    Status error = ModuleList::GetSharedModule(dwo_module_spec, module_sp,
+                                               nullptr, nullptr, nullptr);
+    if (!module_sp) {
+      GetObjectFile()->GetModule()->ReportWarning(
+          "0x%8.8x: unable to locate module needed for external types: "
+          "%s\nerror: %s\nDebugging will be degraded due to missing "
+          "types. Rebuilding your project will regenerate the needed "
+          "module files.",
+          die.GetOffset(), dwo_module_spec.GetFileSpec().GetPath().c_str(),
+          error.AsCString("unknown error"));
+      continue;
     }
   }
 }
