@@ -589,11 +589,10 @@ struct IsExported {
              const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols)
       : ExportLists(ExportLists), GUIDPreservedSymbols(GUIDPreservedSymbols) {}
 
-  bool operator()(StringRef ModuleIdentifier, GlobalValue::GUID GUID) const {
+  bool operator()(StringRef ModuleIdentifier, ValueInfo VI) const {
     const auto &ExportList = ExportLists.find(ModuleIdentifier);
-    return (ExportList != ExportLists.end() &&
-            ExportList->second.count(GUID)) ||
-           GUIDPreservedSymbols.count(GUID);
+    return (ExportList != ExportLists.end() && ExportList->second.count(VI)) ||
+           GUIDPreservedSymbols.count(VI.getGUID());
   }
 };
 
