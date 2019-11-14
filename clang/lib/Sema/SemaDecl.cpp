@@ -7009,6 +7009,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
           Diag(E->getExprLoc(), diag::err_asm_invalid_global_var_reg) << Label;
         else if (HasSizeMismatch)
           Diag(E->getExprLoc(), diag::err_asm_register_size_mismatch) << Label;
+        else if (!TI.isRegisterReservedGlobally(Label))
+          Diag(E->getExprLoc(), diag::err_asm_missing_fixed_reg_opt) << Label;
       }
 
       if (!R->isIntegralType(Context) && !R->isPointerType()) {

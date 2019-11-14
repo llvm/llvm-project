@@ -5572,9 +5572,15 @@ SDValue ARMTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
 Register ARMTargetLowering::getRegisterByName(const char* RegName, EVT VT,
                                               const MachineFunction &MF) const {
   Register Reg = StringSwitch<unsigned>(RegName)
-                       .Case("sp", ARM::SP)
-                       .Default(0);
-  if (Reg)
+                     .Case("r6", ARM::R6)
+                     .Case("r7", ARM::R7)
+                     .Case("r8", ARM::R8)
+                     .Case("r9", ARM::R9)
+                     .Case("r10", ARM::R10)
+                     .Case("r11", ARM::R11)
+                     .Case("sp", ARM::SP)
+                     .Default(ARM::NoRegister);
+  if (Reg != ARM::NoRegister)
     return Reg;
   report_fatal_error(Twine("Invalid register name \""
                               + StringRef(RegName)  + "\"."));

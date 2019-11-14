@@ -391,9 +391,11 @@ def FeatureExecuteOnly    : SubtargetFeature<"execute-only",
                                              "Enable the generation of "
                                              "execute only code.">;
 
-def FeatureReserveR9      : SubtargetFeature<"reserve-r9", "ReserveR9", "true",
-                                             "Reserve R9, making it unavailable"
-                                             " as GPR">;
+foreach i = {6-11} in
+    def FeatureReserveR#i : SubtargetFeature<"reserve-r"#i,
+                                             "ReservedGPRegisters["#i#"]", "true",
+                                             "Reserve R"#i#", making it "
+                                             "unavailable as a GPR">;
 
 def FeatureNoMovt         : SubtargetFeature<"no-movt", "NoMovt", "true",
                                              "Don't use movt/movw pairs for "
