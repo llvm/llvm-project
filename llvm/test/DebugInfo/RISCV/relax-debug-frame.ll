@@ -12,14 +12,13 @@
 ; RELAX: 0x20 R_RISCV_ADD32
 ; RELAX: 0x20 R_RISCV_SUB32
 ; RELAX-NOT: {{[}]}}
-; RELAX: 0x25 R_RISCV_SET6
-; RELAX: 0x25 R_RISCV_SUB6
+; RELAX: 0x39 R_RISCV_SET6
+; RELAX: 0x39 R_RISCV_SUB6
 ;
 ; RELAX-DWARFDUMP: CIE
 ; RELAX-DWARFDUMP: DW_CFA_advance_loc
 ; RELAX-DWARFDUMP: DW_CFA_def_cfa_offset
 ; RELAX-DWARFDUMP: DW_CFA_offset
-; RELAX-DWARFDUMP: DW_CFA_restore
 source_filename = "frame.c"
 
 ; Function Attrs: noinline nounwind optnone
