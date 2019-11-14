@@ -84,6 +84,28 @@ namespace sys {
   /// function.  Note also that the handler may be executed on a different
   /// thread on some platforms.
   void SetInfoSignalFunction(void (*Handler)());
+
+  /// Registers a function to be called in a "one-shot" manner when a pipe
+  /// signal is delivered to the process (i.e., on a failed write to a pipe).
+  /// After the pipe signal is handled once, the handler is unregistered.
+  ///
+  /// The LLVM signal handling code will not install any handler for the pipe
+  /// signal unless one is provided with this API (see \ref
+  /// DefaultOneShotPipeSignalHandler). This handler must be provided before
+  /// any other LLVM signal handlers are installed: the \ref InitLLVM
+  /// constructor has a flag that can simplify this setup.
+  ///
+  /// Note that the handler is not allowed to call any non-reentrant
+  /// functions.  A null handler pointer disables the current installed
+  /// function.  Note also that the handler may be executed on a
+  /// different thread on some platforms.
+  ///
+  /// This is a no-op on Windows.
+  void SetOneShotPipeSignalFunction(void (*Handler)());
+
+  /// On Unix systems, this function exits with an "IO error" exit code.
+  /// This is a no-op on Windows.
+  void DefaultOneShotPipeSignalHandler();
 } // End sys namespace
 } // End llvm namespace
 
