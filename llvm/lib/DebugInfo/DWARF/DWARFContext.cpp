@@ -388,16 +388,20 @@ void DWARFContext::dump(
       dumpDebugType(".debug_types.dwo", dwo_types_section_units());
   }
 
+  DIDumpOptions LLDumpOpts = DumpOpts;
+  if (LLDumpOpts.Verbose)
+    LLDumpOpts.DisplayRawContents = true;
+
   if (const auto *Off = shouldDump(Explicit, ".debug_loc", DIDT_ID_DebugLoc,
                                    DObj->getLocSection().Data)) {
-    getDebugLoc()->dump(OS, getRegisterInfo(), DumpOpts, *Off);
+    getDebugLoc()->dump(OS, getRegisterInfo(), LLDumpOpts, *Off);
   }
   if (const auto *Off =
           shouldDump(Explicit, ".debug_loclists", DIDT_ID_DebugLoclists,
                      DObj->getLoclistsSection().Data)) {
     DWARFDataExtractor Data(*DObj, DObj->getLoclistsSection(), isLittleEndian(),
                             0);
-    dumpLoclistsSection(OS, DumpOpts, Data, getRegisterInfo(), *Off);
+    dumpLoclistsSection(OS, LLDumpOpts, Data, getRegisterInfo(), *Off);
   }
   if (const auto *Off =
           shouldDump(ExplicitDWO, ".debug_loc.dwo", DIDT_ID_DebugLoc,
@@ -409,10 +413,11 @@ void DWARFContext::dump(
       uint64_t Offset = **Off;
       Loc.dumpLocationList(&Offset, OS,
                            /*BaseAddr=*/None, getRegisterInfo(), nullptr,
-                           DumpOpts, /*Indent=*/0);
+                           LLDumpOpts, /*Indent=*/0);
       OS << "\n";
     } else {
-      Loc.dumpRange(0, Data.getData().size(), OS, getRegisterInfo(), DumpOpts);
+      Loc.dumpRange(0, Data.getData().size(), OS, getRegisterInfo(),
+                    LLDumpOpts);
     }
   }
 

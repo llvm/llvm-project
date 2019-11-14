@@ -62,16 +62,10 @@ static void dumpRanges(const DWARFObject &Obj, raw_ostream &OS,
   if (!DumpOpts.ShowAddresses)
     return;
 
-  ArrayRef<SectionName> SectionNames;
-  if (DumpOpts.Verbose)
-    SectionNames = Obj.getSectionNames();
-
   for (const DWARFAddressRange &R : Ranges) {
     OS << '\n';
     OS.indent(Indent);
-    R.dump(OS, AddressSize);
-
-    DWARFFormValue::dumpAddressSection(Obj, OS, DumpOpts, R.SectionIndex);
+    R.dump(OS, AddressSize, DumpOpts, &Obj);
   }
 }
 
@@ -91,9 +85,6 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
   }
 
   if (FormValue.isFormClass(DWARFFormValue::FC_SectionOffset)) {
-    auto LLDumpOpts = DumpOpts;
-    LLDumpOpts.Verbose = false;
-
     uint64_t Offset = *FormValue.getAsSectionOffset();
 
     if (FormValue.getForm() == DW_FORM_loclistx) {
@@ -104,7 +95,7 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
         return;
     }
     U->getLocationTable().dumpLocationList(&Offset, OS, U->getBaseAddress(),
-                                           MRI, U, LLDumpOpts, Indent);
+                                           MRI, U, DumpOpts, Indent);
     return;
   }
 
