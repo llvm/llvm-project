@@ -38,6 +38,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BranchProbability.h"

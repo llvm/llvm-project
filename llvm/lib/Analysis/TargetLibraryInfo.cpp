@@ -13,6 +13,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 using namespace llvm;
 

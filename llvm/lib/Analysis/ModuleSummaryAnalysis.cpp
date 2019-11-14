@@ -44,6 +44,7 @@
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Pass.h"

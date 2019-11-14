@@ -16,8 +16,6 @@
 #ifndef LLVM_ADT_STLEXTRAS_H
 #define LLVM_ADT_STLEXTRAS_H
 
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/abi-breaking.h"
@@ -41,6 +39,9 @@
 #endif
 
 namespace llvm {
+
+template <typename T> class Optional;
+template <typename T, unsigned N> class SmallVector;
 
 // Only used by compiler if both template types are the same.  Useful when
 // using SFINAE to test for the existence of member functions.

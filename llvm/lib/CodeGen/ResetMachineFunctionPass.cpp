@@ -17,9 +17,10 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/StackProtector.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 using namespace llvm;
 

@@ -25,9 +25,9 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/PhiValues.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/Analysis/PhiValues.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constant.h"
@@ -49,6 +49,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -2049,7 +2050,7 @@ BasicAAResult BasicAA::run(Function &F, FunctionAnalysisManager &AM) {
 }
 
 BasicAAWrapperPass::BasicAAWrapperPass() : FunctionPass(ID) {
-    initializeBasicAAWrapperPassPass(*PassRegistry::getPassRegistry());
+  initializeBasicAAWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
 char BasicAAWrapperPass::ID = 0;

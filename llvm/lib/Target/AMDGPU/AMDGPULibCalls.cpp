@@ -11,31 +11,32 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "amdgpu-simplifylib"
-
 #include "AMDGPU.h"
 #include "AMDGPULibFunc.h"
 #include "AMDGPUSubtarget.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
-#include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-#include <vector>
 #include <cmath>
+#include <vector>
+
+#define DEBUG_TYPE "amdgpu-simplifylib"
 
 using namespace llvm;
 

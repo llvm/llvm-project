@@ -954,10 +954,7 @@ template <typename T> class ArrayRef;
   class DependenceAnalysisWrapperPass : public FunctionPass {
   public:
     static char ID; // Class identification, replacement for typeinfo
-    DependenceAnalysisWrapperPass() : FunctionPass(ID) {
-      initializeDependenceAnalysisWrapperPassPass(
-          *PassRegistry::getPassRegistry());
-    }
+    DependenceAnalysisWrapperPass();
 
     bool runOnFunction(Function &F) override;
     void releaseMemory() override;

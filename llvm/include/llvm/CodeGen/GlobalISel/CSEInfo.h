@@ -220,9 +220,7 @@ class GISelCSEAnalysisWrapperPass : public MachineFunctionPass {
 
 public:
   static char ID;
-  GISelCSEAnalysisWrapperPass() : MachineFunctionPass(ID) {
-    initializeGISelCSEAnalysisWrapperPassPass(*PassRegistry::getPassRegistry());
-  }
+  GISelCSEAnalysisWrapperPass();
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 

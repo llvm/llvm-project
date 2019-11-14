@@ -22,6 +22,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 using namespace polly;

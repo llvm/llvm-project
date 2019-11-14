@@ -46,6 +46,7 @@
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/InitializePasses.h"
 
 namespace llvm {
 

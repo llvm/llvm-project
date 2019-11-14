@@ -233,10 +233,7 @@ class BranchProbabilityInfoWrapperPass : public FunctionPass {
 public:
   static char ID;
 
-  BranchProbabilityInfoWrapperPass() : FunctionPass(ID) {
-    initializeBranchProbabilityInfoWrapperPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+  BranchProbabilityInfoWrapperPass();
 
   BranchProbabilityInfo &getBPI() { return BPI; }
   const BranchProbabilityInfo &getBPI() const { return BPI; }

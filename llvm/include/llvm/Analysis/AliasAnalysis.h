@@ -1179,14 +1179,9 @@ struct ExternalAAWrapperPass : ImmutablePass {
 
   static char ID;
 
-  ExternalAAWrapperPass() : ImmutablePass(ID) {
-    initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
-  }
+  ExternalAAWrapperPass();
 
-  explicit ExternalAAWrapperPass(CallbackT CB)
-      : ImmutablePass(ID), CB(std::move(CB)) {
-    initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
-  }
+  explicit ExternalAAWrapperPass(CallbackT CB);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();

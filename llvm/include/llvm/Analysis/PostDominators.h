@@ -68,9 +68,7 @@ struct PostDominatorTreeWrapperPass : public FunctionPass {
 
   PostDominatorTree DT;
 
-  PostDominatorTreeWrapperPass() : FunctionPass(ID) {
-    initializePostDominatorTreeWrapperPassPass(*PassRegistry::getPassRegistry());
-  }
+  PostDominatorTreeWrapperPass();
 
   PostDominatorTree &getPostDomTree() { return DT; }
   const PostDominatorTree &getPostDomTree() const { return DT; }

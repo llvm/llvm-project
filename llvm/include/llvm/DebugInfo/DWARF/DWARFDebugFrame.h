@@ -10,9 +10,10 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGFRAME_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/iterator.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/Support/Error.h"
