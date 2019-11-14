@@ -15,7 +15,7 @@ jobs:
     - name: create build dir
       run: mkdir _build
     - name: configure
-      run: cmake ../llvm -DBUILD_SHARED_LIBS=ON -DLLVM_TARGETS_TO_BUILD=host -DLLVM_ENABLE_WARNINGS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF
+      run: cmake ../llvm -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD=host -DLLVM_ENABLE_WARNINGS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF
       working-directory: _build 
     - name: build
       run: cmake --build .
