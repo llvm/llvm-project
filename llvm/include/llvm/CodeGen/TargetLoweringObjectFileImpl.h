@@ -233,6 +233,15 @@ public:
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
 
+  MCSection *getSectionForJumpTable(const Function &F,
+                                    const TargetMachine &TM) const override;
+
+  /// Given a constant with the SectionKind, return a section that it should be
+  /// placed in.
+  MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
+                                   const Constant *C,
+                                   unsigned &Align) const override;
+
   static XCOFF::StorageClass getStorageClassForGlobal(const GlobalObject *GO);
 };
 
