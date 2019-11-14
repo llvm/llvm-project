@@ -495,9 +495,7 @@ protected:
 
 class IOHandlerStack {
 public:
-  IOHandlerStack() : m_stack(), m_mutex(), m_top(nullptr) {}
-
-  ~IOHandlerStack() = default;
+  IOHandlerStack() = default;
 
   size_t GetSize() const {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -574,7 +572,7 @@ protected:
   typedef std::vector<lldb::IOHandlerSP> collection;
   collection m_stack;
   mutable std::recursive_mutex m_mutex;
-  IOHandler *m_top;
+  IOHandler *m_top = nullptr;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(IOHandlerStack);
