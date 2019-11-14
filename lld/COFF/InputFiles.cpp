@@ -767,7 +767,8 @@ void ObjFile::initializeDependencies() {
   if (firstType == types.end())
     return;
 
-  debugTypes.emplace(types);
+  // Remember the .debug$T or .debug$P section.
+  debugTypes = data;
 
   if (isPCH) {
     debugTypesObj = makePrecompSource(this);

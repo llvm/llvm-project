@@ -15,7 +15,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/BinaryFormat/Magic.h"
-#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/StringSaver.h"
@@ -204,8 +203,8 @@ public:
   // If the OBJ has a .debug$T stream, this tells how it will be handled.
   TpiSource *debugTypesObj = nullptr;
 
-  // The .debug$T stream if there's one.
-  llvm::Optional<llvm::codeview::CVTypeArray> debugTypes;
+  // The .debug$P or .debug$T section data if present. Empty otherwise.
+  ArrayRef<uint8_t> debugTypes;
 
   llvm::Optional<std::pair<StringRef, uint32_t>>
   getVariableLocation(StringRef var);
