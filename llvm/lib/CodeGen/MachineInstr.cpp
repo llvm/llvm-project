@@ -338,7 +338,7 @@ void MachineInstr::setExtraInfo(MachineFunction &MF,
   // 32-bit pointers.
   // FIXME: Maybe we should make the symbols in the extra info mutable?
   else if (NumPointers > 1 || HasHeapAllocMarker) {
-    Info.set<EIIK_OutOfLine>(MF.createMIExtraInfo(
+    Info.set<EIIK_OutOfLine>(MF.createMIExtraInfoWithMarker(
         MMOs, PreInstrSymbol, PostInstrSymbol, HeapAllocMarker));
     return;
   }
