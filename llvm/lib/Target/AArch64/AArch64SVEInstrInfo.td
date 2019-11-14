@@ -145,28 +145,28 @@ let Predicates = [HasSVE] in {
   defm FRECPS_ZZZ  : sve_fp_3op_u_zd<0b110, "frecps",  int_aarch64_sve_frecps_x>;
   defm FRSQRTS_ZZZ : sve_fp_3op_u_zd<0b111, "frsqrts", int_aarch64_sve_frsqrts_x>;
 
-  defm FTSSEL_ZZZ : sve_int_bin_cons_misc_0_b<"ftssel">;
+  defm FTSSEL_ZZZ : sve_int_bin_cons_misc_0_b<"ftssel", int_aarch64_sve_ftssel_x>;
 
-  defm FCADD_ZPmZ : sve_fp_fcadd<"fcadd">;
-  defm FCMLA_ZPmZZ : sve_fp_fcmla<"fcmla">;
+  defm FCADD_ZPmZ : sve_fp_fcadd<"fcadd", int_aarch64_sve_fcadd>;
+  defm FCMLA_ZPmZZ : sve_fp_fcmla<"fcmla", int_aarch64_sve_fcmla>;
 
-  defm FMLA_ZPmZZ  : sve_fp_3op_p_zds_a<0b00, "fmla">;
-  defm FMLS_ZPmZZ  : sve_fp_3op_p_zds_a<0b01, "fmls">;
-  defm FNMLA_ZPmZZ : sve_fp_3op_p_zds_a<0b10, "fnmla">;
-  defm FNMLS_ZPmZZ : sve_fp_3op_p_zds_a<0b11, "fnmls">;
+  defm FMLA_ZPmZZ  : sve_fp_3op_p_zds_a<0b00, "fmla",  int_aarch64_sve_fmla>;
+  defm FMLS_ZPmZZ  : sve_fp_3op_p_zds_a<0b01, "fmls",  int_aarch64_sve_fmls>;
+  defm FNMLA_ZPmZZ : sve_fp_3op_p_zds_a<0b10, "fnmla", int_aarch64_sve_fnmla>;
+  defm FNMLS_ZPmZZ : sve_fp_3op_p_zds_a<0b11, "fnmls", int_aarch64_sve_fnmls>;
 
-  defm FMAD_ZPmZZ  : sve_fp_3op_p_zds_b<0b00, "fmad">;
-  defm FMSB_ZPmZZ  : sve_fp_3op_p_zds_b<0b01, "fmsb">;
-  defm FNMAD_ZPmZZ : sve_fp_3op_p_zds_b<0b10, "fnmad">;
-  defm FNMSB_ZPmZZ : sve_fp_3op_p_zds_b<0b11, "fnmsb">;
+  defm FMAD_ZPmZZ  : sve_fp_3op_p_zds_b<0b00, "fmad",  int_aarch64_sve_fmad>;
+  defm FMSB_ZPmZZ  : sve_fp_3op_p_zds_b<0b01, "fmsb",  int_aarch64_sve_fmsb>;
+  defm FNMAD_ZPmZZ : sve_fp_3op_p_zds_b<0b10, "fnmad", int_aarch64_sve_fnmad>;
+  defm FNMSB_ZPmZZ : sve_fp_3op_p_zds_b<0b11, "fnmsb", int_aarch64_sve_fnmsb>;
 
-  defm FTMAD_ZZI : sve_fp_ftmad<"ftmad">;
+  defm FTMAD_ZZI : sve_fp_ftmad<"ftmad", int_aarch64_sve_ftmad_x>;
 
-  defm FMLA_ZZZI : sve_fp_fma_by_indexed_elem<0b0, "fmla">;
-  defm FMLS_ZZZI : sve_fp_fma_by_indexed_elem<0b1, "fmls">;
+  defm FMLA_ZZZI : sve_fp_fma_by_indexed_elem<0b0, "fmla", int_aarch64_sve_fmla_lane>;
+  defm FMLS_ZZZI : sve_fp_fma_by_indexed_elem<0b1, "fmls", int_aarch64_sve_fmls_lane>;
 
-  defm FCMLA_ZZZI : sve_fp_fcmla_by_indexed_elem<"fcmla">;
-  defm FMUL_ZZZI   : sve_fp_fmul_by_indexed_elem<"fmul">;
+  defm FCMLA_ZZZI : sve_fp_fcmla_by_indexed_elem<"fcmla", int_aarch64_sve_fcmla_lane>;
+  defm FMUL_ZZZI   : sve_fp_fmul_by_indexed_elem<"fmul", int_aarch64_sve_fmul_lane>;
 
   // SVE floating point reductions.
   defm FADDA_VPZ   : sve_fp_2op_p_vd<0b000, "fadda">;
