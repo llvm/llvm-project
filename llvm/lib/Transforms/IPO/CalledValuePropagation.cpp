@@ -22,6 +22,7 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
 using namespace llvm;
 
