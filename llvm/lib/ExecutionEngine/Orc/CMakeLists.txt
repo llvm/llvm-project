@@ -2,6 +2,7 @@ add_llvm_library(LLVMOrcJIT
   CompileOnDemandLayer.cpp
   CompileUtils.cpp
   Core.cpp
+  DebugUtils.cpp
   ExecutionUtils.cpp
   IndirectionUtils.cpp
   IRCompileLayer.cpp
