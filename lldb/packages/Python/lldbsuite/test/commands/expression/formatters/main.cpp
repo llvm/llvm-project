@@ -42,7 +42,7 @@ int main(int argc, char** argv)
 	foo1.b.i = 9999;
 	
 	int numbers[5] = {1,2,3,4,5};
-	
-	return 0;
-	
+
+	return 0; // Done initializing
+
 }
