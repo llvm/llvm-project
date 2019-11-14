@@ -758,6 +758,13 @@ def imm0_7 : Operand<i64>, ImmLeaf<i64, [{
   let ParserMatchClass = Imm0_7Operand;
 }
 
+// imm32_0_7 predicate - True if the 32-bit immediate is in the range [0,7]
+def imm32_0_7 : Operand<i32>, ImmLeaf<i32, [{
+  return ((uint32_t)Imm) < 8;
+}]> {
+  let ParserMatchClass = Imm0_7Operand;
+}
+
 // imm32_0_15 predicate - True if the 32-bit immediate is in the range [0,15]
 def imm32_0_15 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint32_t)Imm) < 16;
@@ -10056,15 +10063,20 @@ class ComplexRotationOperand<int Angle, int Remainder, string Type>
   let DiagnosticType = "InvalidComplexRotation" # Type;
   let Name = "ComplexRotation" # Type;
 }
-def complexrotateop : Operand<i32> {
+def complexrotateop : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm <= 270;  }],
+                                                 SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant((N->getSExtValue() / 90), SDLoc(N), MVT::i32);
+}]>> {
   let ParserMatchClass = ComplexRotationOperand<90, 0, "Even">;
   let PrintMethod = "printComplexRotationOp<90, 0>";
 }
-def complexrotateopodd : Operand<i32> {
+def complexrotateopodd : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm <= 270;  }],
+                                                 SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(((N->getSExtValue() - 90) / 180), SDLoc(N), MVT::i32);
+}]>> {
   let ParserMatchClass = ComplexRotationOperand<180, 90, "Odd">;
   let PrintMethod = "printComplexRotationOp<180, 90>";
 }
-
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
 class BaseSIMDThreeSameVectorComplex<bit Q, bit U, bits<2> size, bits<3> opcode,
                                      RegisterOperand regtype, Operand rottype,
