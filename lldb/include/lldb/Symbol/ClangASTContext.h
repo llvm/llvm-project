@@ -30,7 +30,10 @@
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Log.h"
+#include "lldb/Utility/Logging.h"
 #include "lldb/lldb-enumerations.h"
 
 class DWARFASTParserClang;
@@ -85,6 +88,18 @@ public:
   static void Terminate();
 
   static ClangASTContext *GetASTContext(clang::ASTContext *ast_ctx);
+
+  static ClangASTContext *GetScratch(Target &target,
+                                     bool create_on_demand = true) {
+    auto type_system_or_err = target.GetScratchTypeSystemForLanguage(
+        lldb::eLanguageTypeC, create_on_demand);
+    if (auto err = type_system_or_err.takeError()) {
+      LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
+                     std::move(err), "Couldn't get scratch ClangASTContext");
+      return nullptr;
+    }
+    return llvm::dyn_cast<ClangASTContext>(&type_system_or_err.get());
+  }
 
   clang::ASTContext *getASTContext();
 
