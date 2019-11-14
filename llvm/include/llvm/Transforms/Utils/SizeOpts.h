@@ -21,6 +21,7 @@ using namespace llvm;
 
 extern cl::opt<bool> EnablePGSO;
 extern cl::opt<bool> PGSOLargeWorkingSetSizeOnly;
+extern cl::opt<bool> PGSOColdCodeOnly;
 extern cl::opt<bool> ForcePGSO;
 extern cl::opt<int> PgsoCutoffInstrProf;
 extern cl::opt<int> PgsoCutoffSampleProf;
@@ -42,7 +43,8 @@ bool shouldFuncOptimizeForSizeImpl(const FuncT *F, ProfileSummaryInfo *PSI,
     return true;
   if (!EnablePGSO)
     return false;
-  if (PGSOLargeWorkingSetSizeOnly && !PSI->hasLargeWorkingSetSize()) {
+  if (PGSOColdCodeOnly ||
+      (PGSOLargeWorkingSetSizeOnly && !PSI->hasLargeWorkingSetSize())) {
     // Even if the working set size isn't large, size-optimize cold code.
     return AdapterT::isFunctionColdInCallGraph(F, PSI, *BFI);
   }
@@ -61,7 +63,8 @@ bool shouldOptimizeForSizeImpl(const BlockT *BB, ProfileSummaryInfo *PSI,
     return true;
   if (!EnablePGSO)
     return false;
-  if (PGSOLargeWorkingSetSizeOnly && !PSI->hasLargeWorkingSetSize()) {
+  if (PGSOColdCodeOnly ||
+      (PGSOLargeWorkingSetSizeOnly && !PSI->hasLargeWorkingSetSize())) {
     // Even if the working set size isn't large, size-optimize cold code.
     return AdapterT::isColdBlock(BB, PSI, BFI);
   }

@@ -23,6 +23,11 @@ cl::opt<bool> PGSOLargeWorkingSetSizeOnly(
     cl::desc("Apply the profile guided size optimizations only "
              "if the working set size is large (except for cold code.)"));
 
+cl::opt<bool> PGSOColdCodeOnly(
+    "pgso-cold-code-only", cl::Hidden, cl::init(true),
+    cl::desc("Apply the profile guided size optimizations only "
+             "to cold code."));
+
 cl::opt<bool> ForcePGSO(
     "force-pgso", cl::Hidden, cl::init(false),
     cl::desc("Force the (profiled-guided) size optimizations. "));
