@@ -17,7 +17,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/StringSaver.h"
@@ -29,6 +28,9 @@ namespace llvm {
 struct DILineInfo;
 namespace pdb {
 class DbiModuleDescriptorBuilder;
+}
+namespace lto {
+class InputFile;
 }
 }
 
@@ -336,11 +338,11 @@ public:
 class BitcodeFile : public InputFile {
 public:
   BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
-              uint64_t offsetInArchive)
-      : BitcodeFile(mb, archiveName, offsetInArchive, {}) {}
+              uint64_t offsetInArchive);
   explicit BitcodeFile(MemoryBufferRef m, StringRef archiveName,
                        uint64_t offsetInArchive,
                        std::vector<Symbol *> &&symbols);
+  ~BitcodeFile();
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   ArrayRef<Symbol *> getSymbols() { return symbols; }
   MachineTypes getMachineType() override;
