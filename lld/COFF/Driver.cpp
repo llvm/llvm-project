@@ -102,9 +102,16 @@ static std::pair<StringRef, StringRef> getOldNewOptions(opt::InputArgList &args,
   return ret;
 }
 
-// Drop directory components and replace extension with ".exe" or ".dll".
+// Drop directory components and replace extension with
+// ".exe", ".dll" or ".sys".
 static std::string getOutputPath(StringRef path) {
-  return (sys::path::stem(path) + (config->dll ? ".dll" : ".exe")).str();
+  StringRef ext = ".exe";
+  if (config->dll)
+    ext = ".dll";
+  else if (config->driver)
+    ext = ".sys";
+
+  return (sys::path::stem(path) + ext).str();
 }
 
 // Returns true if S matches /crtend.?\.o$/.
@@ -1229,6 +1236,16 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   // Handle /debugtype
   config->debugTypes = parseDebugTypes(args);
 
+  // Handle /driver[:uponly|:wdm].
+  config->driverUponly = args.hasArg(OPT_driver_uponly) ||
+                         args.hasArg(OPT_driver_uponly_wdm) ||
+                         args.hasArg(OPT_driver_wdm_uponly);
+  config->driverWdm = args.hasArg(OPT_driver_wdm) ||
+                      args.hasArg(OPT_driver_uponly_wdm) ||
+                      args.hasArg(OPT_driver_wdm_uponly);
+  config->driver =
+      config->driverUponly || config->driverWdm || args.hasArg(OPT_driver);
+
   // Handle /pdb
   bool shouldCreatePDB =
       (debug == DebugKind::Full || debug == DebugKind::GHash);
@@ -1703,6 +1720,9 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
       StringRef s = (config->machine == I386) ? "__DllMainCRTStartup@12"
                                               : "_DllMainCRTStartup";
       config->entry = addUndefined(s);
+    } else if (config->driverWdm) {
+      // /driver:wdm implies /entry:_NtProcessStartup
+      config->entry = addUndefined(mangle("_NtProcessStartup"));
     } else {
       // Windows specific -- If entry point name is not given, we need to
       // infer that from user-defined entry name.
