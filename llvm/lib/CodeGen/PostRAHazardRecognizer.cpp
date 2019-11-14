@@ -1,16 +1,3 @@
-//===----- PostRAHazardRecognizer.cpp - hazard recognizer -----------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-/// \file
-/// This runs the hazard recognizer and emits noops when necessary.  This
-/// gives targets a way to run the hazard recognizer without running one of
-/// the schedulers.  Example use cases for this pass would be:
-///
 /// - Targets that need the hazard recognizer to be run at -O0.
 /// - Targets that want to guarantee that hazards at the beginning of
 ///   scheduling regions are handled correctly.  The post-RA scheduler is
@@ -32,6 +19,7 @@
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"

@@ -46,10 +46,7 @@ class InstructionCombiningPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  InstructionCombiningPass(bool ExpensiveCombines = true)
-      : FunctionPass(ID), ExpensiveCombines(ExpensiveCombines) {
-    initializeInstructionCombiningPassPass(*PassRegistry::getPassRegistry());
-  }
+  InstructionCombiningPass(bool ExpensiveCombines = true);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;

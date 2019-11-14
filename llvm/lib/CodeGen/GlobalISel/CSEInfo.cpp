@@ -10,11 +10,16 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/InitializePasses.h"
 
 #define DEBUG_TYPE "cseinfo"
 
 using namespace llvm;
 char llvm::GISelCSEAnalysisWrapperPass::ID = 0;
+GISelCSEAnalysisWrapperPass::GISelCSEAnalysisWrapperPass()
+    : MachineFunctionPass(ID) {
+  initializeGISelCSEAnalysisWrapperPassPass(*PassRegistry::getPassRegistry());
+}
 INITIALIZE_PASS_BEGIN(GISelCSEAnalysisWrapperPass, DEBUG_TYPE,
                       "Analysis containing CSE Info", false, true)
 INITIALIZE_PASS_END(GISelCSEAnalysisWrapperPass, DEBUG_TYPE,

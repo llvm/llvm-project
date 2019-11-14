@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -36,6 +37,12 @@ cl::opt<unsigned> ProfileLikelyProb(
     cl::init(51), cl::Hidden);
 
 char MachineBranchProbabilityInfo::ID = 0;
+
+MachineBranchProbabilityInfo::MachineBranchProbabilityInfo()
+    : ImmutablePass(ID) {
+  PassRegistry &Registry = *PassRegistry::getPassRegistry();
+  initializeMachineBranchProbabilityInfoPass(Registry);
+}
 
 void MachineBranchProbabilityInfo::anchor() {}
 

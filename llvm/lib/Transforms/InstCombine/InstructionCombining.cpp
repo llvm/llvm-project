@@ -86,6 +86,7 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Casting.h"
@@ -3669,6 +3670,11 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
 }
 
 char InstructionCombiningPass::ID = 0;
+
+InstructionCombiningPass::InstructionCombiningPass(bool ExpensiveCombines)
+    : FunctionPass(ID), ExpensiveCombines(ExpensiveCombines) {
+  initializeInstructionCombiningPassPass(*PassRegistry::getPassRegistry());
+}
 
 INITIALIZE_PASS_BEGIN(InstructionCombiningPass, "instcombine",
                       "Combine redundant instructions", false, false)

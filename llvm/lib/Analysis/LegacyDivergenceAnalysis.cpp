@@ -64,10 +64,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/DivergenceAnalysis.h"
-#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -75,6 +75,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Value.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <vector>
@@ -281,6 +282,9 @@ void DivergencePropagator::propagate() {
 
 // Register this pass.
 char LegacyDivergenceAnalysis::ID = 0;
+LegacyDivergenceAnalysis::LegacyDivergenceAnalysis() : FunctionPass(ID) {
+  initializeLegacyDivergenceAnalysisPass(*PassRegistry::getPassRegistry());
+}
 INITIALIZE_PASS_BEGIN(LegacyDivergenceAnalysis, "divergence",
                       "Legacy Divergence Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
