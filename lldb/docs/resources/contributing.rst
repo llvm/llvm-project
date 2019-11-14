@@ -24,7 +24,7 @@ Policy in the following respects.
    folder on disk for examples.
 
  - **Coding Style**: LLDB's code style differs from LLVM's coding style.
-   Unfortunately there is no document describing the different. Please be
+   Unfortunately there is no document describing the differences. Please be
    consistent with the existing code.
 
 For anything not explicitly listed here, assume that LLDB follows the LLVM
@@ -61,7 +61,7 @@ rules of thumb:
   what allows us to refactor and evolve the LLDB code base.
 
 * Logging. LLDB provides a very rich logging API. When recoverable
-  errors cannot reasonably by surfaced to the end user, the error may
+  errors cannot reasonably be surfaced to the end user, the error may
   be written to a topical log channel.
 
 * Soft assertions.  LLDB provides `lldb_assert()` as a soft
