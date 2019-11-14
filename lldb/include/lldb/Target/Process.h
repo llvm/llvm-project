@@ -1384,7 +1384,8 @@ public:
   /// the core file.
   ///
   /// \return
-  //      true if the user should be warned about detaching from this process.
+  ///     Returns \b true if the user should be warned about detaching from
+  ///     this process.
   virtual bool WarnBeforeDetach() const { return true; }
 
   /// Actually do the reading of memory from a process.

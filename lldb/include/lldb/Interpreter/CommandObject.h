@@ -261,8 +261,8 @@ public:
 
   /// Get the command that appropriate for a "repeat" of the current command.
   ///
-  /// \param[in] current_command_line
-  ///    The complete current command line.
+  /// \param[in] current_command_args
+  ///    The command arguments.
   ///
   /// \return
   ///     nullptr if there is no special repeat command - it will use the

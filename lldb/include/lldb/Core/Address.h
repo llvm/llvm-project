@@ -131,7 +131,7 @@ public:
   ///
   /// Initialize the address with the supplied \a section and \a offset.
   ///
-  /// \param[in] section
+  /// \param[in] section_sp
   ///     A section pointer to a valid lldb::Section, or NULL if the
   ///     address doesn't have a section or will get resolved later.
   ///
@@ -443,7 +443,7 @@ public:
 
   /// Set accessor for the section.
   ///
-  /// \param[in] section
+  /// \param[in] section_sp
   ///     A new lldb::Section pointer to use as the section base. Can
   ///     be NULL for absolute addresses that are not relative to
   ///     any section.

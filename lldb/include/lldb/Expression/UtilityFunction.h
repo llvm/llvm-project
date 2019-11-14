@@ -60,16 +60,16 @@ public:
   virtual bool Install(DiagnosticManager &diagnostic_manager,
                        ExecutionContext &exe_ctx) = 0;
 
-  /// Check whether the given PC is inside the function
+  /// Check whether the given address is inside the function
   ///
   /// Especially useful if the function dereferences nullptr to indicate a
   /// failed assert.
   ///
-  /// \param[in] pc
-  ///     The program counter to check.
+  /// \param[in] address
+  ///     The address to check.
   ///
   /// \return
-  ///     True if the program counter falls within the function's bounds;
+  ///     True if the address falls within the function's bounds;
   ///     false if not (or the function is not JIT compiled)
   bool ContainsAddress(lldb::addr_t address) {
     // nothing is both >= LLDB_INVALID_ADDRESS and < LLDB_INVALID_ADDRESS, so
