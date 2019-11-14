@@ -195,13 +195,13 @@ static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
 
   Mod->setDataLayout(TM->createDataLayout());
 
-  TargetMachine::CodeGenFileType ft;
+  CodeGenFileType ft;
   switch (codegen) {
     case LLVMAssemblyFile:
-      ft = TargetMachine::CGFT_AssemblyFile;
+      ft = CGFT_AssemblyFile;
       break;
     default:
-      ft = TargetMachine::CGFT_ObjectFile;
+      ft = CGFT_ObjectFile;
       break;
   }
   if (TM->addPassesToEmitFile(pass, OS, nullptr, ft)) {

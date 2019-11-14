@@ -262,9 +262,7 @@ class DominatorTreeWrapperPass : public FunctionPass {
 public:
   static char ID;
 
-  DominatorTreeWrapperPass() : FunctionPass(ID) {
-    initializeDominatorTreeWrapperPassPass(*PassRegistry::getPassRegistry());
-  }
+  DominatorTreeWrapperPass();
 
   DominatorTree &getDomTree() { return DT; }
   const DominatorTree &getDomTree() const { return DT; }

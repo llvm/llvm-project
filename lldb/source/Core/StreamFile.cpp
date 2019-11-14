@@ -15,9 +15,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-// StreamFile constructor
-StreamFile::StreamFile() : Stream() { m_file_sp = std::make_shared<File>(); }
-
 StreamFile::StreamFile(uint32_t flags, uint32_t addr_size, ByteOrder byte_order)
     : Stream(flags, addr_size, byte_order) {
   m_file_sp = std::make_shared<File>();
@@ -30,20 +27,6 @@ StreamFile::StreamFile(int fd, bool transfer_ownership) : Stream() {
 
 StreamFile::StreamFile(FILE *fh, bool transfer_ownership) : Stream() {
   m_file_sp = std::make_shared<NativeFile>(fh, transfer_ownership);
-}
-
-StreamFile::StreamFile(const char *path) : Stream() {
-  auto file = FileSystem::Instance().Open(
-      FileSpec(path), File::eOpenOptionWrite | File::eOpenOptionCanCreate |
-                          File::eOpenOptionCloseOnExec);
-  if (file)
-    m_file_sp = std::move(file.get());
-  else {
-    // TODO refactor this so the error gets popagated up instead of logged here.
-    LLDB_LOG_ERROR(GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST), file.takeError(),
-                   "Cannot open {1}: {0}", path);
-    m_file_sp = std::make_shared<File>();
-  }
 }
 
 StreamFile::StreamFile(const char *path, File::OpenOptions options,

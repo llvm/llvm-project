@@ -87,8 +87,8 @@ struct LTOCodeGenerator {
   void setCodePICModel(Optional<Reloc::Model> Model) { RelocModel = Model; }
 
   /// Set the file type to be emitted (assembly or object code).
-  /// The default is TargetMachine::CGFT_ObjectFile.
-  void setFileType(TargetMachine::CodeGenFileType FT) { FileType = FT; }
+  /// The default is CGFT_ObjectFile.
+  void setFileType(CodeGenFileType FT) { FileType = FT; }
 
   void setCpu(StringRef MCpu) { this->MCpu = MCpu; }
   void setAttr(StringRef MAttr) { this->MAttr = MAttr; }
@@ -238,7 +238,7 @@ private:
   bool ShouldInternalize = EnableLTOInternalization;
   bool ShouldEmbedUselists = false;
   bool ShouldRestoreGlobalsLinkage = false;
-  TargetMachine::CodeGenFileType FileType = TargetMachine::CGFT_ObjectFile;
+  CodeGenFileType FileType = CGFT_ObjectFile;
   std::unique_ptr<ToolOutputFile> DiagnosticOutputFile;
   bool Freestanding = false;
   std::unique_ptr<ToolOutputFile> StatsFile = nullptr;

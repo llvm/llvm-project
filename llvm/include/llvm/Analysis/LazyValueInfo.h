@@ -144,9 +144,7 @@ class LazyValueInfoWrapperPass : public FunctionPass {
   void operator=(const LazyValueInfoWrapperPass&) = delete;
 public:
   static char ID;
-  LazyValueInfoWrapperPass() : FunctionPass(ID) {
-    initializeLazyValueInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-  }
+  LazyValueInfoWrapperPass();
   ~LazyValueInfoWrapperPass() override {
     assert(!Info.PImpl && "releaseMemory not called");
   }

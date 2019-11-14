@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 

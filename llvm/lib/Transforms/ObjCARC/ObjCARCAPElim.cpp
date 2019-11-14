@@ -26,6 +26,7 @@
 #include "ObjCARC.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 

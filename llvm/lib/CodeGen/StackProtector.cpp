@@ -41,6 +41,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -60,6 +61,10 @@ static cl::opt<bool> EnableSelectionDAGSP("enable-selectiondag-sp",
                                           cl::init(true), cl::Hidden);
 
 char StackProtector::ID = 0;
+
+StackProtector::StackProtector() : FunctionPass(ID), SSPBufferSize(8) {
+  initializeStackProtectorPass(*PassRegistry::getPassRegistry());
+}
 
 INITIALIZE_PASS_BEGIN(StackProtector, DEBUG_TYPE,
                       "Insert stack protectors", false, true)

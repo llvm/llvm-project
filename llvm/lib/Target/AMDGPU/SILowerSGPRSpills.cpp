@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;

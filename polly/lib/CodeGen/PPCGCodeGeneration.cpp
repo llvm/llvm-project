@@ -2367,8 +2367,7 @@ std::string GPUNodeBuilder::createKernelASM() {
 
   PM.add(createTargetTransformInfoWrapperPass(TargetM->getTargetIRAnalysis()));
 
-  if (TargetM->addPassesToEmitFile(PM, ASMStream, nullptr,
-                                   TargetMachine::CGFT_AssemblyFile,
+  if (TargetM->addPassesToEmitFile(PM, ASMStream, nullptr, CGFT_AssemblyFile,
                                    true /* verify */)) {
     errs() << "The target does not support generation of this file type!\n";
     return "";

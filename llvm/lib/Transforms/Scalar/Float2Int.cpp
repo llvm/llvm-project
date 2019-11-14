@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/InitializePasses.h"
 #define DEBUG_TYPE "float2int"
 
 #include "llvm/Transforms/Scalar/Float2Int.h"

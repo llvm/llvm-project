@@ -830,6 +830,15 @@ try_next:;
   return FilterID;
 }
 
+MachineFunction::CallSiteInfoMap::iterator
+MachineFunction::getCallSiteInfo(const MachineInstr *MI) {
+  assert(MI->isCall() && "Call site info refers only to call instructions!");
+
+  if (!Target.Options.EnableDebugEntryValues)
+    return CallSitesInfo.end();
+  return CallSitesInfo.find(MI);
+}
+
 void MachineFunction::moveCallSiteInfo(const MachineInstr *Old,
                                        const MachineInstr *New) {
   assert(New->isCall() && "Call site info refers only to call instructions!");

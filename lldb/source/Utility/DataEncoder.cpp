@@ -61,42 +61,6 @@ void DataEncoder::Clear() {
   m_data_sp.reset();
 }
 
-// If this object contains shared data, this function returns the offset into
-// that shared data. Else zero is returned.
-size_t DataEncoder::GetSharedDataOffset() const {
-  if (m_start != nullptr) {
-    const DataBuffer *data = m_data_sp.get();
-    if (data != nullptr) {
-      const uint8_t *data_bytes = data->GetBytes();
-      if (data_bytes != nullptr) {
-        assert(m_start >= data_bytes);
-        return m_start - data_bytes;
-      }
-    }
-  }
-  return 0;
-}
-
-// Set the data with which this object will extract from to data starting at
-// BYTES and set the length of the data to LENGTH bytes long. The data is
-// externally owned must be around at least as long as this object points to
-// the data. No copy of the data is made, this object just refers to this data
-// and can extract from it. If this object refers to any shared data upon
-// entry, the reference to that data will be released. Is SWAP is set to true,
-// any data extracted will be endian swapped.
-uint32_t DataEncoder::SetData(void *bytes, uint32_t length, ByteOrder endian) {
-  m_byte_order = endian;
-  m_data_sp.reset();
-  if (bytes == nullptr || length == 0) {
-    m_start = nullptr;
-    m_end = nullptr;
-  } else {
-    m_start = static_cast<uint8_t *>(bytes);
-    m_end = m_start + length;
-  }
-  return GetByteSize();
-}
-
 // Assign the data for this object to be a subrange of the shared data in
 // "data_sp" starting "data_offset" bytes into "data_sp" and ending
 // "data_length" bytes later. If "data_offset" is not a valid offset into
@@ -187,16 +151,8 @@ uint32_t DataEncoder::PutU64(uint32_t offset, uint64_t value) {
   return UINT32_MAX;
 }
 
-// Extract a single integer value from the data and update the offset pointed
-// to by "offset_ptr". The size of the extracted integer is specified by the
-// "byte_size" argument. "byte_size" should have a value >= 1 and <= 8 since
-// the return value is only 64 bits wide. Any "byte_size" values less than 1 or
-// greater than 8 will result in nothing being extracted, and zero being
-// returned.
-//
-// RETURNS the integer value that was extracted, or zero on failure.
-uint32_t DataEncoder::PutMaxU64(uint32_t offset, uint32_t byte_size,
-                                uint64_t value) {
+uint32_t DataEncoder::PutUnsigned(uint32_t offset, uint32_t byte_size,
+                                  uint64_t value) {
   switch (byte_size) {
   case 1:
     return PutU8(offset, value);
@@ -225,7 +181,7 @@ uint32_t DataEncoder::PutData(uint32_t offset, const void *src,
 }
 
 uint32_t DataEncoder::PutAddress(uint32_t offset, lldb::addr_t addr) {
-  return PutMaxU64(offset, GetAddressByteSize(), addr);
+  return PutUnsigned(offset, m_addr_size, addr);
 }
 
 uint32_t DataEncoder::PutCString(uint32_t offset, const char *cstr) {

@@ -104,7 +104,13 @@ def debug : F<"debug">, HelpText<"Embed a symbol table in the image">;
 def debug_opt : P<"debug", "Embed a symbol table in the image with option">;
 def debugtype : P<"debugtype", "Debug Info Options">;
 def dll : F<"dll">, HelpText<"Create a DLL">;
-def driver : P<"driver", "Generate a Windows NT Kernel Mode Driver">;
+def driver : F<"driver">, HelpText<"Generate a Windows NT Kernel Mode Driver">;
+def driver_wdm : F<"driver:wdm">,
+    HelpText<"Set IMAGE_FILE_UP_SYSTEM_ONLY bit in PE header">;
+def driver_uponly : F<"driver:uponly">,
+    HelpText<"Set IMAGE_DLL_CHARACTERISTICS_WDM_DRIVER bit in PE header">;
+def driver_wdm_uponly : F<"driver:wdm,uponly">;
+def driver_uponly_wdm : F<"driver:uponly,wdm">;
 def nodefaultlib_all : F<"nodefaultlib">,
     HelpText<"Remove all default libraries">;
 def noentry : F<"noentry">,

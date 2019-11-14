@@ -89,7 +89,7 @@ public:
   /// \param[in] DC
   ///     The DeclContext being searched.
   ///
-  /// \param[in] isKindWeWant
+  /// \param[in] IsKindWeWant
   ///     A callback function that returns true given the
   ///     DeclKinds of desired Decls, and false otherwise.
   ///
@@ -155,7 +155,7 @@ public:
   /// setHasExternalVisibleStorage() and setHasExternalLexicalStorage() that
   /// this object has something to say about undefined names.
   ///
-  /// \param[in] ASTConsumer
+  /// \param[in] Consumer
   ///     Unused.
   void StartTranslationUnit(clang::ASTConsumer *Consumer) override;
 
@@ -321,13 +321,6 @@ protected:
   /// A wrapper for ClangASTContext::CopyType that sets a flag that
   /// indicates that we should not respond to queries during import.
   ///
-  /// \param[in] dest_context
-  ///     The target AST context, typically the parser's AST context.
-  ///
-  /// \param[in] source_context
-  ///     The source AST context, typically the AST context of whatever
-  ///     symbol file the type was found in.
-  ///
   /// \param[in] src_type
   ///     The source type.
   ///
@@ -341,7 +334,7 @@ public:
   /// \param[in] name
   ///     The name to be considered.
   ///
-  /// \param[in] ignore_all_dollar_nmmes
+  /// \param[in] ignore_all_dollar_names
   ///     True if $-names of all sorts should be ignored.
   ///
   /// \return
@@ -358,7 +351,7 @@ public:
   /// \return
   ///     A copy of the Decl in m_ast_context, or NULL if the copy failed.
   clang::Decl *CopyDecl(clang::Decl *src_decl);
-                         
+
   /// Copies a single Type to the target of the given ExternalASTMerger.
   ///
   /// \param[in] src_context
@@ -392,11 +385,11 @@ public:
   ///     True if lookup succeeded; false otherwise.
   bool ResolveDeclOrigin(const clang::Decl *decl, clang::Decl **original_decl,
                          clang::ASTContext **original_ctx);
- 
+
   /// Returns m_merger_up.  Only call this if the target is configured to use
   /// modern lookup,
 	clang::ExternalASTMerger &GetMergerUnchecked();
- 
+
   /// Returns true if there is a merger.  This only occurs if the target is
   /// using modern lookup.
   bool HasMerger() { return (bool)m_merger_up; }
