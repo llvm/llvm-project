@@ -36,7 +36,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Recycler.h"
-#include "llvm/Target/TargetMachine.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -403,14 +402,7 @@ private:
 
   /// A helper function that returns call site info for a give call
   /// instruction if debug entry value support is enabled.
-  CallSiteInfoMap::iterator getCallSiteInfo(const MachineInstr *MI) {
-    assert(MI->isCall() &&
-           "Call site info refers only to call instructions!");
-
-    if (!Target.Options.EnableDebugEntryValues)
-      return CallSitesInfo.end();
-    return CallSitesInfo.find(MI);
-  }
+  CallSiteInfoMap::iterator getCallSiteInfo(const MachineInstr *MI);
 
   // Callbacks for insertion and removal.
   void handleInsertion(MachineInstr &MI);

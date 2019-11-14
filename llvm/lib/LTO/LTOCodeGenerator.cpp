@@ -259,7 +259,7 @@ bool LTOCodeGenerator::compileOptimizedToFile(const char **Name) {
   int FD;
 
   StringRef Extension
-      (FileType == TargetMachine::CGFT_AssemblyFile ? "s" : "o");
+      (FileType == CGFT_AssemblyFile ? "s" : "o");
 
   std::error_code EC =
       sys::fs::createTemporaryFile("lto-llvm", Extension, FD, Filename);

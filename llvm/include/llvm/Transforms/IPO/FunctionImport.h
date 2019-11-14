@@ -98,7 +98,7 @@ public:
   using ImportMapTy = StringMap<FunctionsToImportTy>;
 
   /// The set contains an entry for every global value the module exports.
-  using ExportSetTy = std::unordered_set<GlobalValue::GUID>;
+  using ExportSetTy = DenseSet<ValueInfo>;
 
   /// A function of this type is used to load modules referenced by the index.
   using ModuleLoaderTy =

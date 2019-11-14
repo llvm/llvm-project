@@ -79,17 +79,23 @@
 // RUN:   | FileCheck -check-prefix=PTHREAD_NO_SIGN_EXT %s
 // PTHREAD_NO_SIGN_EXT: invalid argument '-pthread' not allowed with '-mno-sign-ext'
 
-// '-fwasm-exceptions' sets +exception-handling
+// '-fwasm-exceptions' sets +exception-handling and +reference-types
 // RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown \
 // RUN:    --sysroot=/foo %s -fwasm-exceptions 2>&1 \
 // RUN:  | FileCheck -check-prefix=WASM_EXCEPTIONS %s
-// WASM_EXCEPTIONS: clang{{.*}}" "-cc1" {{.*}} "-target-feature" "+exception-handling"
+// WASM_EXCEPTIONS: clang{{.*}}" "-cc1" {{.*}} "-target-feature" "+exception-handling" "-target-feature" "+reference-types"
 
 // '-fwasm-exceptions' not allowed with '-mno-exception-handling'
 // RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown \
 // RUN:     --sysroot=/foo %s -fwasm-exceptions -mno-exception-handling 2>&1 \
 // RUN:   | FileCheck -check-prefix=WASM_EXCEPTIONS_NO_EH %s
 // WASM_EXCEPTIONS_NO_EH: invalid argument '-fwasm-exceptions' not allowed with '-mno-exception-handling'
+
+// '-fwasm-exceptions' not allowed with '-mno-reference-types'
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -fwasm-exceptions -mno-reference-types 2>&1 \
+// RUN:   | FileCheck -check-prefix=WASM_EXCEPTIONS_NO_REFTYPES %s
+// WASM_EXCEPTIONS_NO_REFTYPES: invalid argument '-fwasm-exceptions' not allowed with '-mno-reference-types'
 
 // '-fwasm-exceptions' not allowed with
 // '-mllvm -enable-emscripten-cxx-exceptions'

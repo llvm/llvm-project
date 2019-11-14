@@ -102,8 +102,9 @@ int main(int argc, char **argv) {
   O.Symbolic = !NonSymbolic;
   O.ShowBinaryBlobs = ShowBinaryBlobs;
 
-  ExitOnErr(
-      BA.analyze(O, CheckHash.empty() ? None : Optional<StringRef>(CheckHash)));
+  ExitOnErr(BA.analyze(
+      Dump ? Optional<BCDumpOptions>(O) : Optional<BCDumpOptions>(None),
+      CheckHash.empty() ? None : Optional<StringRef>(CheckHash)));
 
   if (Dump)
     outs() << "\n\n";

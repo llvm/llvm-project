@@ -226,7 +226,7 @@ public:
   /// option. Don't override this method, override HandleArgumentCompletion
   /// instead unless you have special reasons.
   ///
-  /// \param[in/out] request
+  /// \param[in,out] request
   ///    The completion request that needs to be answered.
   virtual void HandleCompletion(CompletionRequest &request);
 
@@ -235,7 +235,7 @@ public:
   /// We've constructed the map of options and their arguments as well if that
   /// is helpful for the completion.
   ///
-  /// \param[in/out] request
+  /// \param[in,out] request
   ///    The completion request that needs to be answered.
   virtual void
   HandleArgumentCompletion(CompletionRequest &request,

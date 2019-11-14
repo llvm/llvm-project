@@ -1,26 +1,20 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang -target x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=experimental-ifs-v1 -fvisibility=hidden \
-// RUN: %s | FileCheck --check-prefix=CHECK-CMD-HIDDEN %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
+// RUN: -fvisibility hidden  %s | FileCheck --check-prefix=CHECK-CMD-HIDDEN %s
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=experimental-ifs-v1 -fvisibility=hidden \
-// RUN: %s | FileCheck --check-prefix=CHECK-CMD-HIDDEN %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
+// RUN: -fvisibility hidden %s | FileCheck --check-prefix=CHECK-CMD-HIDDEN %s
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=experimental-ifs-v1 %s | \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -o - -emit-interface-stubs %s | \
 // RUN: FileCheck --check-prefix=CHECK-CMD %s
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=experimental-ifs-v1 %s | \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -o - -emit-interface-stubs %s | \
 // RUN: FileCheck --check-prefix=CHECK-CMD %s
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=experimental-ifs-v1 %s | \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -o - -emit-interface-stubs %s | \
 // RUN: FileCheck --check-prefix=CHECK-CMD2 %s
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=experimental-ifs-v1 %s | \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -o - -emit-interface-stubs %s | \
 // RUN: FileCheck --check-prefix=CHECK-CMD2 %s
 
 // RUN: %clang -target x86_64-unknown-linux-gnu -o - -c %s | llvm-readelf -s - 2>&1 | \

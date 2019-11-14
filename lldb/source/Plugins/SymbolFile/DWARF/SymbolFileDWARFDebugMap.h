@@ -348,8 +348,8 @@ protected:
   /// \param[in] oso_symfile
   ///     The DWARF symbol file that produced the \a line_table
   ///
-  /// \param[in] addr
-  ///     A section offset address from a .o file
+  /// \param[in] line_table
+  ///     A pointer to the line table.
   ///
   /// \return
   ///     Returns a valid line table full of linked addresses, or NULL

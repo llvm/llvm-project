@@ -17,6 +17,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 

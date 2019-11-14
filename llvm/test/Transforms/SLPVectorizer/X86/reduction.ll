@@ -91,7 +91,7 @@ define i32 @horiz_max_multiple_uses([32 x i32]* %x, i32* %p) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32 [[TMP3]], i32 [[T4]]
 ; CHECK-NEXT:    [[C012345:%.*]] = icmp sgt i32 [[TMP5]], [[T5]]
 ; CHECK-NEXT:    [[T17:%.*]] = select i1 [[C012345]], i32 [[TMP5]], i32 [[T5]]
-; CHECK-NEXT:    [[THREE_OR_FOUR:%.*]] = select i1 undef, i32 3, i32 4
+; CHECK-NEXT:    [[THREE_OR_FOUR:%.*]] = select i1 [[TMP4]], i32 3, i32 4
 ; CHECK-NEXT:    store i32 [[THREE_OR_FOUR]], i32* [[P:%.*]], align 8
 ; CHECK-NEXT:    ret i32 [[T17]]
 ;
@@ -115,11 +115,11 @@ define i32 @horiz_max_multiple_uses([32 x i32]* %x, i32* %p) {
   %t8 = select i1 %c012, i32 %s5, i32 %t2
   %c0123 = icmp sgt i32 %t8, %t3
   %rdx4 = select i1 %c0123, i32 %t8, i32 %t3
-  %EXTRA_USE = icmp sgt i32 %rdx4, %t4
-  %t14 = select i1 %EXTRA_USE, i32 %rdx4, i32 %t4
-  %c012345 = icmp sgt i32 %t14, %t5
-  %t17 = select i1 %c012345, i32 %t14, i32 %t5
-  %THREE_OR_FOUR = select i1 %EXTRA_USE, i32 3, i32 4
-  store i32 %THREE_OR_FOUR, i32* %p, align 8
+  %MAX_ROOT_CMP = icmp sgt i32 %rdx4, %t4
+  %MAX_ROOT_SEL = select i1 %MAX_ROOT_CMP, i32 %rdx4, i32 %t4
+  %c012345 = icmp sgt i32 %MAX_ROOT_SEL, %t5
+  %t17 = select i1 %c012345, i32 %MAX_ROOT_SEL, i32 %t5
+  %three_or_four = select i1 %MAX_ROOT_CMP, i32 3, i32 4
+  store i32 %three_or_four, i32* %p, align 8
   ret i32 %t17
 }

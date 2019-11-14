@@ -205,6 +205,44 @@ TEST_F(HighlighterTest, ClangPPDirectives) {
             highlightC("#include \"foo\" //c", s));
 }
 
+TEST_F(HighlighterTest, ClangPreserveNewLine) {
+  HighlightStyle s;
+  s.comment.Set("<cc>", "</cc>");
+
+  EXPECT_EQ("<cc>//</cc>\n", highlightC("//\n", s));
+}
+
+TEST_F(HighlighterTest, ClangTrailingBackslashBeforeNewline) {
+  HighlightStyle s;
+
+  EXPECT_EQ("\\\n", highlightC("\\\n", s));
+  EXPECT_EQ("\\\r\n", highlightC("\\\r\n", s));
+
+  EXPECT_EQ("#define a \\\n", highlightC("#define a \\\n", s));
+  EXPECT_EQ("#define a \\\r\n", highlightC("#define a \\\r\n", s));
+  EXPECT_EQ("#define a \\\r", highlightC("#define a \\\r", s));
+}
+
+TEST_F(HighlighterTest, ClangTrailingBackslashWithWhitespace) {
+  HighlightStyle s;
+
+  EXPECT_EQ("\\  \n", highlightC("\\  \n", s));
+  EXPECT_EQ("\\ \t\n", highlightC("\\ \t\n", s));
+  EXPECT_EQ("\\ \n", highlightC("\\ \n", s));
+  EXPECT_EQ("\\\t\n", highlightC("\\\t\n", s));
+
+  EXPECT_EQ("#define a \\  \n", highlightC("#define a \\  \n", s));
+  EXPECT_EQ("#define a \\ \t\n", highlightC("#define a \\ \t\n", s));
+  EXPECT_EQ("#define a \\ \n", highlightC("#define a \\ \n", s));
+  EXPECT_EQ("#define a \\\t\n", highlightC("#define a \\\t\n", s));
+}
+
+TEST_F(HighlighterTest, ClangTrailingBackslashMissingNewLine) {
+  HighlightStyle s;
+  EXPECT_EQ("\\", highlightC("\\", s));
+  EXPECT_EQ("#define a\\", highlightC("#define a\\", s));
+}
+
 TEST_F(HighlighterTest, ClangComments) {
   HighlightStyle s;
   s.comment.Set("<cc>", "</cc>");

@@ -138,7 +138,7 @@ public:
 
   /// Sets the passed in Locker to hold the Breakpoint List mutex.
   ///
-  /// \param[in] locker
+  /// \param[in] lock
   ///   The locker object that is set.
   void GetListMutex(std::unique_lock<std::recursive_mutex> &lock);
 

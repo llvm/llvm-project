@@ -32,7 +32,7 @@ public:
   /// Get a REPL with an existing target (or, failing that, a debugger to use),
   /// and (optional) extra arguments for the compiler.
   ///
-  /// \param[out] error
+  /// \param[out] Status
   ///     If this language is supported but the REPL couldn't be created, this
   ///     error is populated with the reason.
   ///

@@ -724,9 +724,7 @@ class LoopAccessLegacyAnalysis : public FunctionPass {
 public:
   static char ID;
 
-  LoopAccessLegacyAnalysis() : FunctionPass(ID) {
-    initializeLoopAccessLegacyAnalysisPass(*PassRegistry::getPassRegistry());
-  }
+  LoopAccessLegacyAnalysis();
 
   bool runOnFunction(Function &F) override;
 

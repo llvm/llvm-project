@@ -135,28 +135,59 @@ static bool IsClangModuleFwdDecl(const DWARFDIE &Die) {
   return false;
 }
 
-TypeSP DWARFASTParserClang::ParseTypeFromDWO(const DWARFDIE &die, Log *log) {
-  ModuleSP dwo_module_sp = die.GetContainingDWOModule();
+static DWARFDIE GetContainingClangModuleDIE(const DWARFDIE &die) {
+  if (die.IsValid()) {
+    DWARFDIE top_module_die;
+    // Now make sure this DIE is scoped in a DW_TAG_module tag and return true
+    // if so
+    for (DWARFDIE parent = die.GetParent(); parent.IsValid();
+         parent = parent.GetParent()) {
+      const dw_tag_t tag = parent.Tag();
+      if (tag == DW_TAG_module)
+        top_module_die = parent;
+      else if (tag == DW_TAG_compile_unit || tag == DW_TAG_partial_unit)
+        break;
+    }
+
+    return top_module_die;
+  }
+  return DWARFDIE();
+}
+
+static lldb::ModuleSP GetContainingClangModule(const DWARFDIE &die) {
+  if (die.IsValid()) {
+    DWARFDIE clang_module_die = GetContainingClangModuleDIE(die);
+
+    if (clang_module_die) {
+      const char *module_name = clang_module_die.GetName();
+      if (module_name)
+        return die.GetDWARF()->GetExternalModule(
+            lldb_private::ConstString(module_name));
+    }
+  }
+  return lldb::ModuleSP();
+}
+
+TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const DWARFDIE &die,
+                                                     Log *log) {
+  ModuleSP dwo_module_sp = GetContainingClangModule(die);
   if (!dwo_module_sp)
     return TypeSP();
 
-  // If this type comes from a Clang module, look in the DWARF section
-  // of the pcm file in the module cache. Clang generates DWO skeleton
-  // units as breadcrumbs to find them.
+  // If this type comes from a Clang module, recursively look in the
+  // DWARF section of the .pcm file in the module cache. Clang
+  // generates DWO skeleton units as breadcrumbs to find them.
   llvm::SmallVector<CompilerContext, 4> decl_context;
   die.GetDeclContext(decl_context);
-  TypeMap dwo_types;
+  TypeMap pcm_types;
 
   // The type in the Clang module must have the same language as the current CU.
   LanguageSet languages;
   languages.Insert(die.GetCU()->GetLanguageType());
   llvm::DenseSet<SymbolFile *> searched_symbol_files;
   dwo_module_sp->GetSymbolFile()->FindTypes(decl_context, languages,
-                                            searched_symbol_files, dwo_types);
-  if (dwo_types.Empty()) {
-    if (!IsClangModuleFwdDecl(die))
-      return TypeSP();
-
+                                            searched_symbol_files, pcm_types);
+  if (pcm_types.Empty()) {
     // Since this type is defined in one of the Clang modules imported
     // by this symbol file, search all of them.
     auto &sym_file = die.GetCU()->GetSymbolFileDWARF();
@@ -164,34 +195,33 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWO(const DWARFDIE &die, Log *log) {
       if (!name_module.second)
         continue;
       name_module.second->GetSymbolFile()->FindTypes(
-          decl_context, languages, searched_symbol_files, dwo_types);
-      if (dwo_types.GetSize())
+          decl_context, languages, searched_symbol_files, pcm_types);
+      if (pcm_types.GetSize())
         break;
     }
   }
 
-  if (dwo_types.GetSize() != 1)
+  if (pcm_types.GetSize() != 1)
     return TypeSP();
 
   // We found a real definition for this type in the Clang module, so lets use
   // it and cache the fact that we found a complete type for this die.
-  TypeSP dwo_type_sp = dwo_types.GetTypeAtIndex(0);
-  if (!dwo_type_sp)
+  TypeSP pcm_type_sp = pcm_types.GetTypeAtIndex(0);
+  if (!pcm_type_sp)
     return TypeSP();
 
-  lldb_private::CompilerType dwo_type = dwo_type_sp->GetForwardCompilerType();
-
+  lldb_private::CompilerType pcm_type = pcm_type_sp->GetForwardCompilerType();
   lldb_private::CompilerType type =
-      GetClangASTImporter().CopyType(m_ast, dwo_type);
+      GetClangASTImporter().CopyType(m_ast, pcm_type);
 
   if (!type)
     return TypeSP();
 
   SymbolFileDWARF *dwarf = die.GetDWARF();
   TypeSP type_sp(new Type(
-      die.GetID(), dwarf, dwo_type_sp->GetName(), dwo_type_sp->GetByteSize(),
+      die.GetID(), dwarf, pcm_type_sp->GetName(), pcm_type_sp->GetByteSize(),
       nullptr, LLDB_INVALID_UID, Type::eEncodingInvalid,
-      &dwo_type_sp->GetDeclaration(), type, Type::eResolveStateForward));
+      &pcm_type_sp->GetDeclaration(), type, Type::eResolveStateForward));
 
   dwarf->GetTypeList().Insert(type_sp);
   dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
@@ -382,12 +412,11 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
     dwarf->GetObjectFile()->GetModule()->LogMessage(
         log,
-        "SymbolFileDWARF::ParseType (die = 0x%8.8x, decl_ctx = %p (die "
-        "0x%8.8x)) %s name = '%s')",
+        "DWARFASTParserClang::ParseTypeFromDWARF "
+        "(die = 0x%8.8x, decl_ctx = %p (die 0x%8.8x)) %s name = '%s')",
         die.GetOffset(), static_cast<void *>(context), context_die.GetOffset(),
         die.GetTagAsCString(), die.GetName());
   }
-
 
   Type *type_ptr = dwarf->GetDIEToType().lookup(die.GetDIE());
   if (type_ptr == DIE_IS_BEING_PARSED)
@@ -462,7 +491,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
       // contain those
       if (encoding_die &&
           encoding_die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0) == 1) {
-        type_sp = ParseTypeFromDWO(die, log);
+        type_sp = ParseTypeFromClangModule(die, log);
         if (type_sp)
           return type_sp;
       }
@@ -644,7 +673,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
   case DW_TAG_enumeration_type: {
     if (attrs.is_forward_declaration) {
-      type_sp = ParseTypeFromDWO(die, log);
+      type_sp = ParseTypeFromClangModule(die, log);
       if (type_sp)
         return type_sp;
 
@@ -874,7 +903,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           if (class_type) {
             bool alternate_defn = false;
             if (class_type->GetID() != decl_ctx_die.GetID() ||
-                decl_ctx_die.GetContainingDWOModuleDIE()) {
+                IsClangModuleFwdDecl(decl_ctx_die)) {
               alternate_defn = true;
 
               // We uniqued the parent class of this function to another
@@ -888,11 +917,10 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                 CopyUniqueClassMethodTypes(decl_ctx_die, class_type_die,
                                            class_type, failures);
 
-                // FIXME do something with these failures that's smarter
-                // than
-                // just dropping them on the ground.  Unfortunately classes
-                // don't like having stuff added to them after their
-                // definitions are complete...
+                // FIXME do something with these failures that's
+                // smarter than just dropping them on the ground.
+                // Unfortunately classes don't like having stuff added
+                // to them after their definitions are complete...
 
                 type_ptr = dwarf->GetDIEToType()[die.GetDIE()];
                 if (type_ptr && type_ptr != DIE_IS_BEING_PARSED) {
@@ -1443,9 +1471,9 @@ DWARFASTParserClang::ParseStructureLikeDIE(const DWARFDIE &die,
           attrs.name.GetCString());
     }
 
-    // See if the type comes from a DWO module and if so, track down that
-    // type.
-    type_sp = ParseTypeFromDWO(die, log);
+    // See if the type comes from a Clang module and if so, track down
+    // that type.
+    type_sp = ParseTypeFromClangModule(die, log);
     if (type_sp)
       return type_sp;
 

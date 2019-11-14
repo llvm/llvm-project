@@ -40,6 +40,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -228,7 +229,8 @@ namespace {
     void mergeSubRangeInto(LiveInterval &LI, const LiveRange &ToMerge,
                            LaneBitmask LaneMask, CoalescerPair &CP,
                            const JoinVals &LHSMainVals,
-                           const JoinVals &RHSMainVals);
+                           const JoinVals &RHSMainVals,
+                           unsigned DstIdx);
 
     /// Join the liveranges of two subregisters. Joins @p RRange into
     /// @p LRange, @p RRange may be invalid afterwards.
@@ -3306,7 +3308,8 @@ void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
                                           LaneBitmask LaneMask,
                                           CoalescerPair &CP,
                                           const JoinVals &LHSMainVals,
-                                          const JoinVals &RHSMainVals) {
+                                          const JoinVals &RHSMainVals,
+                                          unsigned ComposeSubRegIdx) {
   BumpPtrAllocator &Allocator = LIS->getVNInfoAllocator();
   LI.refineSubRanges(
       Allocator, LaneMask,
@@ -3321,7 +3324,7 @@ void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
                            RHSMainVals);
         }
       },
-      *LIS->getSlotIndexes(), *TRI);
+      *LIS->getSlotIndexes(), *TRI, ComposeSubRegIdx);
 }
 
 bool RegisterCoalescer::isHighCostLiveInterval(LiveInterval &LI) {
@@ -3387,12 +3390,12 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
     if (!RHS.hasSubRanges()) {
       LaneBitmask Mask = SrcIdx == 0 ? CP.getNewRC()->getLaneMask()
                                      : TRI->getSubRegIndexLaneMask(SrcIdx);
-      mergeSubRangeInto(LHS, RHS, Mask, CP, LHSVals, RHSVals);
+          mergeSubRangeInto(LHS, RHS, Mask, CP, LHSVals, RHSVals, DstIdx);
     } else {
       // Pair up subranges and merge.
       for (LiveInterval::SubRange &R : RHS.subranges()) {
         LaneBitmask Mask = TRI->composeSubRegIndexLaneMask(SrcIdx, R.LaneMask);
-        mergeSubRangeInto(LHS, R, Mask, CP, LHSVals, RHSVals);
+        mergeSubRangeInto(LHS, R, Mask, CP, LHSVals, RHSVals, DstIdx);
       }
     }
     LLVM_DEBUG(dbgs() << "\tJoined SubRanges " << LHS << "\n");

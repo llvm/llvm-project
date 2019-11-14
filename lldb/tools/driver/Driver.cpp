@@ -22,7 +22,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
@@ -809,12 +808,9 @@ llvm::Optional<int> InitializeReproducer(opt::InputArgList &input_args) {
 
 int main(int argc, char const *argv[])
 {
+  // Setup LLVM signal handlers and make sure we call llvm_shutdown() on
+  // destruction.
   llvm::InitLLVM IL(argc, argv);
-
-  // Print stack trace on crash.
-  llvm::StringRef ToolName = llvm::sys::path::filename(argv[0]);
-  llvm::sys::PrintStackTraceOnErrorSignal(ToolName);
-  llvm::PrettyStackTraceProgram X(argc, argv);
 
   // Parse arguments.
   LLDBOptTable T;
@@ -824,7 +820,7 @@ int main(int argc, char const *argv[])
   opt::InputArgList input_args = T.ParseArgs(arg_arr, MAI, MAC);
 
   if (input_args.hasArg(OPT_help)) {
-    printHelp(T, ToolName);
+    printHelp(T, llvm::sys::path::filename(argv[0]));
     return 0;
   }
 

@@ -18,10 +18,16 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils.h"
 using namespace llvm;
 
 char UnifyFunctionExitNodes::ID = 0;
+
+UnifyFunctionExitNodes::UnifyFunctionExitNodes() : FunctionPass(ID) {
+  initializeUnifyFunctionExitNodesPass(*PassRegistry::getPassRegistry());
+}
+
 INITIALIZE_PASS(UnifyFunctionExitNodes, "mergereturn",
                 "Unify function exit nodes", false, false)
 

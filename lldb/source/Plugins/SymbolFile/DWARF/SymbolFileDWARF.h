@@ -254,7 +254,7 @@ public:
   virtual lldb_private::DWARFExpression::LocationListFormat
   GetLocationListFormat() const;
 
-  lldb::ModuleSP GetDWOModule(lldb_private::ConstString name);
+  lldb::ModuleSP GetExternalModule(lldb_private::ConstString name);
 
   typedef std::map<lldb_private::ConstString, lldb::ModuleSP>
       ExternalTypeModuleMap;

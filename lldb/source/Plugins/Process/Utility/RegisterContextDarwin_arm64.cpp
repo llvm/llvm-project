@@ -30,12 +30,6 @@
 #include <sys/sysctl.h>
 #endif
 
-// Support building against older versions of LLVM, this macro was added
-// recently.
-#ifndef LLVM_EXTENSION
-#define LLVM_EXTENSION
-#endif
-
 #include "Utility/ARM64_DWARF_Registers.h"
 
 using namespace lldb;

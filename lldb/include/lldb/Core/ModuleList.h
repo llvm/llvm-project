@@ -53,7 +53,7 @@ public:
   bool SetClangModulesCachePath(llvm::StringRef path);
   bool GetEnableExternalLookup() const;
   bool SetEnableExternalLookup(bool new_value);
-}; 
+};
 
 /// \class ModuleList ModuleList.h "lldb/Core/ModuleList.h"
 /// A collection class for Module objects.
@@ -116,10 +116,10 @@ public:
   ///     If true, and a notifier function is set, the notifier function
   ///     will be called.  Defaults to true.
   ///
-  ///     When this ModuleList is the Target's ModuleList, the notifier 
-  ///     function is Target::ModulesDidLoad -- the call to 
-  ///     ModulesDidLoad may be deferred when adding multiple Modules 
-  ///     to the Target, but it must be called at the end, 
+  ///     When this ModuleList is the Target's ModuleList, the notifier
+  ///     function is Target::ModulesDidLoad -- the call to
+  ///     ModulesDidLoad may be deferred when adding multiple Modules
+  ///     to the Target, but it must be called at the end,
   ///     before resuming execution.
   void Append(const lldb::ModuleSP &module_sp, bool notify = true);
 
@@ -135,16 +135,14 @@ public:
 
   /// Append a module to the module list, if it is not already there.
   ///
-  /// \param[in] module_sp
-  ///
   /// \param[in] notify
   ///     If true, and a notifier function is set, the notifier function
   ///     will be called.  Defaults to true.
   ///
-  ///     When this ModuleList is the Target's ModuleList, the notifier 
-  ///     function is Target::ModulesDidLoad -- the call to 
-  ///     ModulesDidLoad may be deferred when adding multiple Modules 
-  ///     to the Target, but it must be called at the end, 
+  ///     When this ModuleList is the Target's ModuleList, the notifier
+  ///     function is Target::ModulesDidLoad -- the call to
+  ///     ModulesDidLoad may be deferred when adding multiple Modules
+  ///     to the Target, but it must be called at the end,
   ///     before resuming execution.
   bool AppendIfNeeded(const lldb::ModuleSP &module_sp, bool notify = true);
 
@@ -297,25 +295,13 @@ public:
 
   /// Finds the first module whose file specification matches \a file_spec.
   ///
-  /// \param[in] file_spec_ptr
+  /// \param[in] module_spec
   ///     A file specification object to match against the Module's
   ///     file specifications. If \a file_spec does not have
   ///     directory information, matches will occur by matching only
   ///     the basename of any modules in this list. If this value is
   ///     NULL, then file specifications won't be compared when
   ///     searching for matching modules.
-  ///
-  /// \param[in] arch_ptr
-  ///     The architecture to search for if non-NULL. If this value
-  ///     is NULL no architecture matching will be performed.
-  ///
-  /// \param[in] uuid_ptr
-  ///     The uuid to search for if non-NULL. If this value is NULL
-  ///     no uuid matching will be performed.
-  ///
-  /// \param[in] object_name
-  ///     An optional object name that must match as well. This value
-  ///     can be NULL.
   ///
   /// \param[out] matching_module_list
   ///     A module list that gets filled in with any modules that
@@ -351,24 +337,11 @@ public:
   /// \param[in] name
   ///     The name of the type we are looking for.
   ///
-  /// \param[in] append
-  ///     If \b true, any matches will be appended to \a
-  ///     variable_list, else matches replace the contents of
-  ///     \a variable_list.
-  ///
   /// \param[in] max_matches
   ///     Allow the number of matches to be limited to \a
   ///     max_matches. Specify UINT32_MAX to get all possible matches.
   ///
-  /// \param[in] encoding
-  ///     Limit the search to specific types, or get all types if
-  ///     set to Type::invalid.
-  ///
-  /// \param[in] udt_name
-  ///     If the encoding is a user defined type, specify the name
-  ///     of the user defined type ("struct", "union", "class", etc).
-  ///
-  /// \param[out] type_list
+  /// \param[out] types
   ///     A type list gets populated with any matches.
   ///
   void FindTypes(Module *search_first, ConstString name,
@@ -414,10 +387,10 @@ public:
   ///     If true, and a notifier function is set, the notifier function
   ///     will be called.  Defaults to true.
   ///
-  ///     When this ModuleList is the Target's ModuleList, the notifier 
-  ///     function is Target::ModulesDidUnload -- the call to 
-  ///     ModulesDidUnload may be deferred when removing multiple Modules 
-  ///     from the Target, but it must be called at the end, 
+  ///     When this ModuleList is the Target's ModuleList, the notifier
+  ///     function is Target::ModulesDidUnload -- the call to
+  ///     ModulesDidUnload may be deferred when removing multiple Modules
+  ///     from the Target, but it must be called at the end,
   ///     before resuming execution.
   bool Remove(const lldb::ModuleSP &module_sp, bool notify = true);
 
@@ -477,7 +450,7 @@ public:
   static size_t RemoveOrphanSharedModules(bool mandatory);
 
   static bool RemoveSharedModuleIfOrphaned(const Module *module_ptr);
-  
+
   void ForEach(std::function<bool(const lldb::ModuleSP &module_sp)> const
                    &callback) const;
 

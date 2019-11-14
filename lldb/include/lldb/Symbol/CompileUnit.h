@@ -44,7 +44,7 @@ public:
   /// convert into a FileSpec, the SymbolFile plug-in supplied \a uid, and the
   /// source language type.
   ///
-  /// \param[in] module
+  /// \param[in] module_sp
   ///     The parent module that owns this compile unit. This value
   ///     must be a valid pointer value.
   ///
@@ -82,7 +82,7 @@ public:
   /// convert into a FileSpec, the SymbolFile plug-in supplied \a uid, and the
   /// source language type.
   ///
-  /// \param[in] module
+  /// \param[in] module_sp
   ///     The parent module that owns this compile unit. This value
   ///     must be a valid pointer value.
   ///
@@ -241,7 +241,7 @@ public:
   /// compilation unit. Recursively also descends into the referenced external
   /// modules of any encountered compilation unit.
   ///
-  /// \param[in] lambda
+  /// \param[in] f
   ///     The lambda that should be applied to every module.
   void ForEachExternalModule(llvm::function_ref<void(lldb::ModuleSP)> f);
 

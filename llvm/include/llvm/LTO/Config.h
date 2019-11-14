@@ -15,8 +15,8 @@
 #define LLVM_LTO_CONFIG_H
 
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
 #include <functional>
@@ -41,7 +41,7 @@ struct Config {
   Optional<Reloc::Model> RelocModel = Reloc::PIC_;
   Optional<CodeModel::Model> CodeModel = None;
   CodeGenOpt::Level CGOptLevel = CodeGenOpt::Default;
-  TargetMachine::CodeGenFileType CGFileType = TargetMachine::CGFT_ObjectFile;
+  CodeGenFileType CGFileType = CGFT_ObjectFile;
   unsigned OptLevel = 2;
   bool DisableVerify = false;
 

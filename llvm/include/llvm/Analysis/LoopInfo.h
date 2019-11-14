@@ -1211,9 +1211,7 @@ class LoopInfoWrapperPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  LoopInfoWrapperPass() : FunctionPass(ID) {
-    initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-  }
+  LoopInfoWrapperPass();
 
   LoopInfo &getLoopInfo() { return LI; }
   const LoopInfo &getLoopInfo() const { return LI; }

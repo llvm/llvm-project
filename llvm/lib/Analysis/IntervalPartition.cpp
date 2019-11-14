@@ -14,6 +14,7 @@
 #include "llvm/Analysis/IntervalPartition.h"
 #include "llvm/Analysis/Interval.h"
 #include "llvm/Analysis/IntervalIterator.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include <cassert>
 #include <utility>
@@ -21,6 +22,10 @@
 using namespace llvm;
 
 char IntervalPartition::ID = 0;
+
+IntervalPartition::IntervalPartition() : FunctionPass(ID) {
+  initializeIntervalPartitionPass(*PassRegistry::getPassRegistry());
+}
 
 INITIALIZE_PASS(IntervalPartition, "intervals",
                 "Interval Partition Construction", true, true)

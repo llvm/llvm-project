@@ -184,19 +184,6 @@ public:
   ///     This is a static method so the opcodes need to be provided
   ///     explicitly.
   ///
-  /// \param[in] expr_locals
-  ///     If the location expression was produced by the expression parser,
-  ///     the list of local variables referenced by the DWARF expression.
-  ///     This list should already have been populated during parsing;
-  ///     the DWARF expression refers to variables by index.  Can be NULL if
-  ///     the location expression uses no locals.
-  ///
-  /// \param[in] decl_map
-  ///     If the location expression was produced by the expression parser,
-  ///     the list of external variables referenced by the location
-  ///     expression.  Can be NULL if the location expression uses no
-  ///     external variables.
-  ///
   ///  \param[in] reg_ctx
   ///     An optional parameter which provides a RegisterContext for use
   ///     when evaluating the expression (i.e. for fetching register values).
@@ -251,7 +238,7 @@ public:
 private:
   /// Pretty-prints the location expression to a stream
   ///
-  /// \param[in] stream
+  /// \param[in] s
   ///     The stream to use for pretty-printing.
   ///
   /// \param[in] offset
