@@ -899,7 +899,7 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
                             /* UseInputModulePath */ true));
     break;
   case options::OT_ASM_ONLY:
-    Conf.CGFileType = TargetMachine::CGFT_AssemblyFile;
+    Conf.CGFileType = CGFT_AssemblyFile;
     break;
   }
 

@@ -238,7 +238,7 @@ void assembleToStream(const ExegesisTarget &ET,
   TPC->setInitialized();
 
   // AsmPrinter is responsible for generating the assembly into AsmBuffer.
-  if (TM->addAsmPrinter(PM, AsmStream, nullptr, TargetMachine::CGFT_ObjectFile,
+  if (TM->addAsmPrinter(PM, AsmStream, nullptr, CGFT_ObjectFile,
                         MCContext))
     report_fatal_error("Cannot add AsmPrinter passes");
 

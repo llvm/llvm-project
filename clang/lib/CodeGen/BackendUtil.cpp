@@ -412,14 +412,14 @@ getCodeModel(const CodeGenOptions &CodeGenOpts) {
   return static_cast<llvm::CodeModel::Model>(CodeModel);
 }
 
-static TargetMachine::CodeGenFileType getCodeGenFileType(BackendAction Action) {
+static CodeGenFileType getCodeGenFileType(BackendAction Action) {
   if (Action == Backend_EmitObj)
-    return TargetMachine::CGFT_ObjectFile;
+    return CGFT_ObjectFile;
   else if (Action == Backend_EmitMCNull)
-    return TargetMachine::CGFT_Null;
+    return CGFT_Null;
   else {
     assert(Action == Backend_EmitAssembly && "Invalid action!");
-    return TargetMachine::CGFT_AssemblyFile;
+    return CGFT_AssemblyFile;
   }
 }
 
@@ -801,7 +801,7 @@ bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
 
   // Normal mode, emit a .s or .o file by running the code generator. Note,
   // this also adds codegenerator level optimization passes.
-  TargetMachine::CodeGenFileType CGFT = getCodeGenFileType(Action);
+  CodeGenFileType CGFT = getCodeGenFileType(Action);
 
   // Add ObjC ARC final-cleanup optimizations. This is done as part of the
   // "codegen" passes so that it isn't run multiple times when there is
