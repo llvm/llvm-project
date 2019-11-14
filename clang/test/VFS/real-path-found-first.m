@@ -4,9 +4,6 @@
 // intentionally rebuild modules, since the precompiled module file refers to
 // the dependency files by real path.
 
-// FIXME: PR43272
-// XFAIL: system-windows
-
 // RUN: rm -rf %t %t-cache %t.pch
 // RUN: mkdir -p %t/SomeFramework.framework/Modules
 // RUN: cat %S/Inputs/some_frame_module.map > %t/SomeFramework.framework/Modules/module.modulemap

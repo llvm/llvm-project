@@ -580,6 +580,12 @@ feature_test_macros = sorted([ add_version_header(x) for x in [
    },
    "headers": ["numeric"],
    },
+  {"name": "__cpp_lib_endian",
+   "values": {
+     "c++2a": int(201907),
+   },
+   "headers": ["bit"],
+   },
 ]], key=lambda tc: tc["name"])
 
 def get_std_dialects():

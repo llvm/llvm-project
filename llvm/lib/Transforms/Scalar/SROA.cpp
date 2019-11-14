@@ -362,7 +362,7 @@ private:
 
   /// The beginning and ending offsets of the alloca for this
   /// partition.
-  uint64_t BeginOffset, EndOffset;
+  uint64_t BeginOffset = 0, EndOffset = 0;
 
   /// The start and end iterators of this partition.
   iterator SI, SJ;
@@ -1683,7 +1683,7 @@ static Value *getAdjustedPtr(IRBuilderTy &IRB, const DataLayout &DL, Value *Ptr,
 /// Compute the adjusted alignment for a load or store from an offset.
 static unsigned getAdjustedAlignment(Instruction *I, uint64_t Offset,
                                      const DataLayout &DL) {
-  unsigned Alignment;
+  unsigned Alignment = 0;
   Type *Ty;
   if (auto *LI = dyn_cast<LoadInst>(I)) {
     Alignment = LI->getAlignment();
@@ -2301,9 +2301,9 @@ class llvm::sroa::AllocaSliceRewriter
 
   // The new offsets of the slice currently being rewritten relative to the
   // original alloca.
-  uint64_t NewBeginOffset, NewEndOffset;
+  uint64_t NewBeginOffset = 0, NewEndOffset = 0;
 
-  uint64_t SliceSize;
+  uint64_t SliceSize = 0;
   bool IsSplittable = false;
   bool IsSplit = false;
   Use *OldUse = nullptr;
@@ -3223,7 +3223,7 @@ class AggLoadStoreRewriter : public InstVisitor<AggLoadStoreRewriter, bool> {
 
   /// The current pointer use being rewritten. This is used to dig up the used
   /// value (as opposed to the user).
-  Use *U;
+  Use *U = nullptr;
 
   /// Used to calculate offsets, and hence alignment, of subobjects.
   const DataLayout &DL;

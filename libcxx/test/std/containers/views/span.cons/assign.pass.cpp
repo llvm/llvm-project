@@ -43,11 +43,11 @@ int main(int, char**)
 //  constexpr dynamically sized assignment
     {
 //  On systems where 'ptrdiff_t' is a synonym for 'int',
-//  the call span(ptr, 0) selects the (pointer, index_type) constructor.
+//  the call span(ptr, 0) selects the (pointer, size_type) constructor.
 //  On systems where 'ptrdiff_t' is NOT a synonym for 'int',
 //  it is ambiguous, because of 0 also being convertible to a null pointer
 //  and so the compiler can't choose between:
-//      span(pointer, index_type)
+//      span(pointer, size_type)
 //  and span(pointer, pointer)
 //  We cast zero to std::ptrdiff_t to remove that ambiguity.
 //  Example:

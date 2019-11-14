@@ -213,11 +213,18 @@ TEST(SelectionTest, CommonAncestor) {
       {
           R"cpp(
             struct S {
-              int foo;
-              int bar() { return [[f^oo]]; }
+              int foo() const;
+              int bar() { return [[f^oo]](); }
             };
           )cpp",
-          "MemberExpr", // Not implicit CXXThisExpr!
+          "MemberExpr", // Not implicit CXXThisExpr, or its implicit cast!
+      },
+      {
+          R"cpp(
+            auto lambda = [](const char*){ return 0; };
+            int x = lambda([["y^"]]);
+          )cpp",
+          "StringLiteral", // Not DeclRefExpr to operator()!
       },
 
       // Point selections.

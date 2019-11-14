@@ -8,4 +8,4 @@
 // AS_LINK: clang{{.*}} "-cc1as"
 // AS_LINK: ld.lld{{.*}} "-shared"
 
-// DWARF_VER: "-dwarf-version=5"
+// DWARF_VER: "-dwarf-version=4"

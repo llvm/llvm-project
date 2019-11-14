@@ -13,7 +13,7 @@
 // template<size_t Count>
 //  constexpr span<element_type, Count> last() const;
 //
-// constexpr span<element_type, dynamic_extent> last(index_type count) const;
+// constexpr span<element_type, dynamic_extent> last(size_type count) const;
 //
 //  Requires: 0 <= Count && Count <= size().
 

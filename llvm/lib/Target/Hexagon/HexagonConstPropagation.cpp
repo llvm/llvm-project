@@ -260,7 +260,7 @@ namespace {
     void propagate(MachineFunction &MF);
     bool rewrite(MachineFunction &MF);
 
-    MachineRegisterInfo      *MRI;
+    MachineRegisterInfo      *MRI = nullptr;
     MachineConstEvaluator    &MCE;
 
     using CFGEdge = std::pair<unsigned, unsigned>;

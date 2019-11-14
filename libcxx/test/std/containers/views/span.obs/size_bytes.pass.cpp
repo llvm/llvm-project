@@ -10,7 +10,7 @@
 
 // <span>
 
-// constexpr index_type size_bytes() const noexcept;
+// constexpr size_type size_bytes() const noexcept;
 //
 //  Effects: Equivalent to: return size() * sizeof(element_type);
 

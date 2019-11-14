@@ -96,12 +96,10 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
     LLDumpOpts.Verbose = false;
 
     uint64_t Offset = *FormValue.getAsSectionOffset();
-    uint64_t BaseAddr = 0;
-    if (Optional<object::SectionedAddress> BA = U->getBaseAddress())
-      BaseAddr = BA->Address;
 
     if (const DWARFLocationTable *LT = U->getLocationTable()) {
-      LT->dumpLocationList(&Offset, OS, BaseAddr, MRI, U, LLDumpOpts, Indent);
+      LT->dumpLocationList(&Offset, OS, U->getBaseAddress(), MRI, U, LLDumpOpts,
+                           Indent);
       return;
     }
 
@@ -114,6 +112,9 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
 
     if (Expected<DWARFDebugLoc::LocationList> LL =
             DebugLoc.parseOneLocationList(Data, &Offset)) {
+      uint64_t BaseAddr = 0;
+      if (Optional<object::SectionedAddress> BA = U->getBaseAddress())
+        BaseAddr = BA->Address;
       LL->dump(OS, BaseAddr, Ctx.isLittleEndian(), Obj.getAddressSize(), MRI, U,
                LLDumpOpts, Indent);
     } else {

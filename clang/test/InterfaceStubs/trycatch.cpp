@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -c -o - -emit-interface-stubs %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -o - -emit-interface-stubs %s | FileCheck %s
 
 
 // CHECK:      --- !experimental-ifs-v1

@@ -14,7 +14,7 @@
 //   constexpr span<element_type, see below> subspan() const;
 //
 // constexpr span<element_type, dynamic_extent> subspan(
-//   index_type offset, index_type count = dynamic_extent) const;
+//   size_type offset, size_type count = dynamic_extent) const;
 //
 //  Requires: (0 <= Offset && Offset <= size())
 //      && (Count == dynamic_extent || Count >= 0 && Offset + Count <= size())
