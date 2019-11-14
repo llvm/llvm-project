@@ -21,8 +21,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Bitcode/BitstreamReader.h"
-#include "llvm/Bitcode/BitstreamWriter.h"
+#include "llvm/Bitstream/BitstreamReader.h"
+#include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LockFileManager.h"
@@ -128,12 +128,21 @@ GlobalModuleIndex::GlobalModuleIndex(std::unique_ptr<llvm::MemoryBuffer> Buffer,
                                      llvm::BitstreamCursor Cursor)
     : Buffer(std::move(Buffer)), IdentifierIndex(), NumIdentifierLookups(),
       NumIdentifierLookupHits() {
+  auto Fail = [&Buffer](llvm::Error &&Err) {
+    report_fatal_error("Module index '" + Buffer->getBufferIdentifier() +
+                       "' failed: " + toString(std::move(Err)));
+  };
+
   llvm::TimeTraceScope TimeScope("Module LoadIndex", StringRef(""));
   // Read the global index.
   bool InGlobalIndexBlock = false;
   bool Done = false;
   while (!Done) {
-    llvm::BitstreamEntry Entry = Cursor.advance();
+    llvm::BitstreamEntry Entry;
+    if (Expected<llvm::BitstreamEntry> Res = Cursor.advance())
+      Entry = Res.get();
+    else
+      Fail(Res.takeError());
 
     switch (Entry.Kind) {
     case llvm::BitstreamEntry::Error:
@@ -157,19 +166,23 @@ GlobalModuleIndex::GlobalModuleIndex(std::unique_ptr<llvm::MemoryBuffer> Buffer,
 
     case llvm::BitstreamEntry::SubBlock:
       if (!InGlobalIndexBlock && Entry.ID == GLOBAL_INDEX_BLOCK_ID) {
-        if (Cursor.EnterSubBlock(GLOBAL_INDEX_BLOCK_ID))
-          return;
-
+        if (llvm::Error Err = Cursor.EnterSubBlock(GLOBAL_INDEX_BLOCK_ID))
+          Fail(std::move(Err));
         InGlobalIndexBlock = true;
-      } else if (Cursor.SkipBlock()) {
-        return;
-      }
+      } else if (llvm::Error Err = Cursor.SkipBlock())
+        Fail(std::move(Err));
       continue;
     }
 
     SmallVector<uint64_t, 64> Record;
     StringRef Blob;
-    switch ((IndexRecordTypes)Cursor.readRecord(Entry.ID, Record, &Blob)) {
+    Expected<unsigned> MaybeIndexRecord =
+        Cursor.readRecord(Entry.ID, Record, &Blob);
+    if (!MaybeIndexRecord)
+      Fail(MaybeIndexRecord.takeError());
+    IndexRecordTypes IndexRecord =
+        static_cast<IndexRecordTypes>(MaybeIndexRecord.get());
+    switch (IndexRecord) {
     case INDEX_METADATA:
       // Make sure that the version matches.
       if (Record.size() < 1 || Record[0] != CurrentVersion)
@@ -234,7 +247,7 @@ GlobalModuleIndex::~GlobalModuleIndex() {
   delete static_cast<IdentifierIndexTable *>(IdentifierIndex);
 }
 
-std::pair<GlobalModuleIndex *, GlobalModuleIndex::ErrorCode>
+std::pair<GlobalModuleIndex *, llvm::Error>
 GlobalModuleIndex::readIndex(StringRef Path) {
   // Load the index file, if it's there.
   llvm::SmallString<128> IndexPath;
@@ -244,22 +257,26 @@ GlobalModuleIndex::readIndex(StringRef Path) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> BufferOrErr =
       llvm::MemoryBuffer::getFile(IndexPath.c_str());
   if (!BufferOrErr)
-    return std::make_pair(nullptr, EC_NotFound);
+    return std::make_pair(nullptr,
+                          llvm::errorCodeToError(BufferOrErr.getError()));
   std::unique_ptr<llvm::MemoryBuffer> Buffer = std::move(BufferOrErr.get());
 
   /// The main bitstream cursor for the main block.
   llvm::BitstreamCursor Cursor(*Buffer);
 
   // Sniff for the signature.
-  if (Cursor.Read(8) != 'B' ||
-      Cursor.Read(8) != 'C' ||
-      Cursor.Read(8) != 'G' ||
-      Cursor.Read(8) != 'I') {
-    return std::make_pair(nullptr, EC_IOError);
+  for (unsigned char C : {'B', 'C', 'G', 'I'}) {
+    if (Expected<llvm::SimpleBitstreamCursor::word_t> Res = Cursor.Read(8)) {
+      if (Res.get() != C)
+        return std::make_pair(
+            nullptr, llvm::createStringError(std::errc::illegal_byte_sequence,
+                                             "expected signature BCGI"));
+    } else
+      return std::make_pair(nullptr, Res.takeError());
   }
 
   return std::make_pair(new GlobalModuleIndex(std::move(Buffer), Cursor),
-                        EC_None);
+                        llvm::Error::success());
 }
 
 void
@@ -438,9 +455,7 @@ namespace {
         : FileMgr(FileMgr), PCHContainerRdr(PCHContainerRdr) {}
 
     /// Load the contents of the given module file into the builder.
-    ///
-    /// \returns true if an error occurred, false otherwise.
-    bool loadModuleFile(const FileEntry *File);
+    llvm::Error loadModuleFile(const FileEntry *File);
 
     /// Write the index to the given bitstream.
     /// \returns true if an error occurred, false otherwise.
@@ -511,24 +526,25 @@ namespace {
   };
 }
 
-bool GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
+llvm::Error GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
   // Open the module file.
 
   auto Buffer = FileMgr.getBufferForFile(File, /*isVolatile=*/true);
-  if (!Buffer) {
-    return true;
-  }
+  if (!Buffer)
+    return llvm::createStringError(Buffer.getError(),
+                                   "failed getting buffer for module file");
 
   // Initialize the input stream
   llvm::BitstreamCursor InStream(PCHContainerRdr.ExtractPCH(**Buffer));
 
   // Sniff for the signature.
-  if (InStream.Read(8) != 'C' ||
-      InStream.Read(8) != 'P' ||
-      InStream.Read(8) != 'C' ||
-      InStream.Read(8) != 'H') {
-    return true;
-  }
+  for (unsigned char C : {'C', 'P', 'C', 'H'})
+    if (Expected<llvm::SimpleBitstreamCursor::word_t> Res = InStream.Read(8)) {
+      if (Res.get() != C)
+        return llvm::createStringError(std::errc::illegal_byte_sequence,
+                                       "expected signature CPCH");
+    } else
+      return Res.takeError();
 
   // Record this module file and assign it a unique ID (if it doesn't have
   // one already).
@@ -538,7 +554,11 @@ bool GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
   enum { Other, ControlBlock, ASTBlock, DiagnosticOptionsBlock } State = Other;
   bool Done = false;
   while (!Done) {
-    llvm::BitstreamEntry Entry = InStream.advance();
+    Expected<llvm::BitstreamEntry> MaybeEntry = InStream.advance();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
+
     switch (Entry.Kind) {
     case llvm::BitstreamEntry::Error:
       Done = true;
@@ -547,8 +567,10 @@ bool GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
     case llvm::BitstreamEntry::Record:
       // In the 'other' state, just skip the record. We don't care.
       if (State == Other) {
-        InStream.skipRecord(Entry.ID);
-        continue;
+        if (llvm::Expected<unsigned> Skipped = InStream.skipRecord(Entry.ID))
+          continue;
+        else
+          return Skipped.takeError();
       }
 
       // Handle potentially-interesting records below.
@@ -556,8 +578,8 @@ bool GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
 
     case llvm::BitstreamEntry::SubBlock:
       if (Entry.ID == CONTROL_BLOCK_ID) {
-        if (InStream.EnterSubBlock(CONTROL_BLOCK_ID))
-          return true;
+        if (llvm::Error Err = InStream.EnterSubBlock(CONTROL_BLOCK_ID))
+          return Err;
 
         // Found the control block.
         State = ControlBlock;
@@ -565,8 +587,8 @@ bool GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
       }
 
       if (Entry.ID == AST_BLOCK_ID) {
-        if (InStream.EnterSubBlock(AST_BLOCK_ID))
-          return true;
+        if (llvm::Error Err = InStream.EnterSubBlock(AST_BLOCK_ID))
+          return Err;
 
         // Found the AST block.
         State = ASTBlock;
@@ -574,16 +596,16 @@ bool GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
       }
 
       if (Entry.ID == UNHASHED_CONTROL_BLOCK_ID) {
-        if (InStream.EnterSubBlock(UNHASHED_CONTROL_BLOCK_ID))
-          return true;
+        if (llvm::Error Err = InStream.EnterSubBlock(UNHASHED_CONTROL_BLOCK_ID))
+          return Err;
 
         // Found the Diagnostic Options block.
         State = DiagnosticOptionsBlock;
         continue;
       }
 
-      if (InStream.SkipBlock())
-        return true;
+      if (llvm::Error Err = InStream.SkipBlock())
+        return Err;
 
       continue;
 
@@ -595,7 +617,10 @@ bool GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
     // Read the given record.
     SmallVector<uint64_t, 64> Record;
     StringRef Blob;
-    unsigned Code = InStream.readRecord(Entry.ID, Record, &Blob);
+    Expected<unsigned> MaybeCode = InStream.readRecord(Entry.ID, Record, &Blob);
+    if (!MaybeCode)
+      return MaybeCode.takeError();
+    unsigned Code = MaybeCode.get();
 
     // Handle module dependencies.
     if (State == ControlBlock && Code == IMPORTS) {
@@ -637,7 +662,9 @@ bool GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
                             /*CacheFailure=*/false);
 
         if (!DependsOnFile)
-          return true;
+          return llvm::createStringError(std::errc::bad_file_descriptor,
+                                         "imported file \"%s\" not found",
+                                         ImportedFile.c_str());
 
         // Save the information in ImportedModuleFileInfo so we can verify after
         // loading all pcms.
@@ -682,7 +709,7 @@ bool GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
     // We don't care about this record.
   }
 
-  return false;
+  return llvm::Error::success();
 }
 
 namespace {
@@ -820,7 +847,7 @@ bool GlobalModuleIndexBuilder::writeIndex(llvm::BitstreamWriter &Stream) {
   return false;
 }
 
-GlobalModuleIndex::ErrorCode
+llvm::Error
 GlobalModuleIndex::writeIndex(FileManager &FileMgr,
                               const PCHContainerReader &PCHContainerRdr,
                               StringRef Path) {
@@ -833,7 +860,7 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
   llvm::LockFileManager Locked(IndexPath);
   switch (Locked) {
   case llvm::LockFileManager::LFS_Error:
-    return EC_IOError;
+    return llvm::createStringError(std::errc::io_error, "LFS error");
 
   case llvm::LockFileManager::LFS_Owned:
     // We're responsible for building the index ourselves. Do so below.
@@ -842,7 +869,8 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
   case llvm::LockFileManager::LFS_Shared:
     // Someone else is responsible for building the index. We don't care
     // when they finish, so we're done.
-    return EC_Building;
+    return llvm::createStringError(std::errc::device_or_resource_busy,
+                                   "someone else is building the index");
   }
 
   // The module index builder.
@@ -859,7 +887,8 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
       // in the process of rebuilding a module. They'll rebuild the index
       // at the end of that translation unit, so we don't have to.
       if (llvm::sys::path::extension(D->path()) == ".pcm.lock")
-        return EC_Building;
+        return llvm::createStringError(std::errc::device_or_resource_busy,
+                                       "someone else is building the index");
 
       continue;
     }
@@ -870,8 +899,8 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
       continue;
 
     // Load this module file.
-    if (Builder.loadModuleFile(*ModuleFile))
-      return EC_IOError;
+    if (llvm::Error Err = Builder.loadModuleFile(*ModuleFile))
+      return Err;
   }
 
   // The output buffer, into which the global index will be written.
@@ -879,7 +908,8 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
   {
     llvm::BitstreamWriter OutputStream(OutputBuffer);
     if (Builder.writeIndex(OutputStream))
-      return EC_IOError;
+      return llvm::createStringError(std::errc::io_error,
+                                     "failed writing index");
   }
 
   // Write the global index file to a temporary file.
@@ -887,31 +917,32 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
   int TmpFD;
   if (llvm::sys::fs::createUniqueFile(IndexPath + "-%%%%%%%%", TmpFD,
                                       IndexTmpPath))
-    return EC_IOError;
+    return llvm::createStringError(std::errc::io_error,
+                                   "failed creating unique file");
 
   // Open the temporary global index file for output.
   llvm::raw_fd_ostream Out(TmpFD, true);
   if (Out.has_error())
-    return EC_IOError;
+    return llvm::createStringError(Out.error(), "failed outputting to stream");
 
   // Write the index.
   Out.write(OutputBuffer.data(), OutputBuffer.size());
   Out.close();
   if (Out.has_error())
-    return EC_IOError;
+    return llvm::createStringError(Out.error(), "failed writing to stream");
 
   // Remove the old index file. It isn't relevant any more.
   llvm::sys::fs::remove(IndexPath);
 
   // Rename the newly-written index file to the proper name.
-  if (llvm::sys::fs::rename(IndexTmpPath, IndexPath)) {
-    // Rename failed; just remove the
+  if (std::error_code Err = llvm::sys::fs::rename(IndexTmpPath, IndexPath)) {
+    // Remove the file on failure, don't check whether removal succeeded.
     llvm::sys::fs::remove(IndexTmpPath);
-    return EC_IOError;
+    return llvm::createStringError(Err, "failed renaming file \"%s\" to \"%s\"",
+                                   IndexTmpPath.c_str(), IndexPath.c_str());
   }
 
-  // We're done.
-  return EC_None;
+  return llvm::Error::success();
 }
 
 namespace {

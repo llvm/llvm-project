@@ -15,15 +15,24 @@ class LibCxxFunctionTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def get_variable(self, name):
-        var = self.frame().FindVariable(name)
-        var.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
-        var.SetPreferSyntheticValue(True)
-        return var
+    # Run frame var for a variable twice. Verify we do not hit the cache
+    # the first time but do the second time.
+    def run_frame_var_check_cache_use(self, variable, result_to_match, skip_find_function=False):
+        self.runCmd("log timers reset")
+        self.expect("frame variable " + variable,
+                    substrs=[variable + " =  " + result_to_match])
+        if not skip_find_function:
+          self.expect("log timers dump",
+                   substrs=["lldb_private::CompileUnit::FindFunction"])
 
-    # Temporarily skipping for everywhere b/c we are disabling the std::function formatter
-    # due to performance issues but plan on turning it back on once they are addressed.
-    @skipIf
+        self.runCmd("log timers reset")
+        self.expect("frame variable " + variable,
+                    substrs=[variable + " =  " + result_to_match])
+        self.expect("log timers dump",
+                   matching=False,
+                   substrs=["lldb_private::CompileUnit::FindFunction"])
+
+
     @add_test_categories(["libc++"])
     def test(self):
         """Test that std::function as defined by libc++ is correctly printed by LLDB"""
@@ -41,17 +50,24 @@ class LibCxxFunctionTestCase(TestBase):
                     substrs=['stopped',
                              'stop reason = breakpoint'])
 
+        self.run_frame_var_check_cache_use("foo2_f", "Lambda in File main.cpp at Line 30")
+
+        lldbutil.continue_to_breakpoint(self.process(), bkpt)
+
+        self.run_frame_var_check_cache_use("add_num2_f", "Lambda in File main.cpp at Line 21")
+
+        lldbutil.continue_to_breakpoint(self.process(), bkpt)
+
+        self.run_frame_var_check_cache_use("f2", "Lambda in File main.cpp at Line 43")
+        self.run_frame_var_check_cache_use("f3", "Lambda in File main.cpp at Line 47", True)
+        # TODO reenable this case when std::function formatter supports
+        # general callable object case.
+        #self.run_frame_var_check_cache_use("f4", "Function in File main.cpp at Line 16")
+
+        # These cases won't hit the cache at all but also don't require
+        # an expensive lookup.
         self.expect("frame variable f1",
                     substrs=['f1 =  Function = foo(int, int)'])
-
-        self.expect("frame variable f2",
-                    substrs=['f2 =  Lambda in File main.cpp at Line 26'])
-
-        self.expect("frame variable f3",
-                    substrs=['f3 =  Lambda in File main.cpp at Line 30'])
-
-        self.expect("frame variable f4",
-                    substrs=['f4 =  Function in File main.cpp at Line 16'])
 
         self.expect("frame variable f5",
                     substrs=['f5 =  Function = Bar::add_num(int) const'])

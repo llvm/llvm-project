@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_FRONTEND_SERIALIZE_DIAGNOSTICS_H_
 #define LLVM_CLANG_FRONTEND_SERIALIZE_DIAGNOSTICS_H_
 
-#include "llvm/Bitcode/BitCodes.h"
+#include "llvm/Bitstream/BitCodes.h"
 
 namespace clang {
 namespace serialized_diags {

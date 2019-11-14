@@ -71,8 +71,13 @@ void ODRHash::AddDeclarationNameImpl(DeclarationName Name) {
     AddBoolean(S.isKeywordSelector());
     AddBoolean(S.isUnarySelector());
     unsigned NumArgs = S.getNumArgs();
+    ID.AddInteger(NumArgs);
     for (unsigned i = 0; i < NumArgs; ++i) {
-      AddIdentifierInfo(S.getIdentifierInfoForSlot(i));
+      const IdentifierInfo *II = S.getIdentifierInfoForSlot(i);
+      AddBoolean(II);
+      if (II) {
+        AddIdentifierInfo(II);
+      }
     }
     break;
   }

@@ -12,6 +12,7 @@ set(LLVM_LINK_COMPONENTS
   MC
   Object
   Option
+  Remarks
   Support
   Target
   )

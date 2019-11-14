@@ -20,7 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Bitcode/BitstreamWriter.h"
+#include "llvm/Bitstream/BitstreamWriter.h"
 #include <initializer_list>
 #include <vector>
 
@@ -44,7 +44,7 @@ struct BitCodeConstants {
   static constexpr unsigned ReferenceTypeSize = 8U;
   static constexpr unsigned USRLengthSize = 6U;
   static constexpr unsigned USRBitLengthSize = 8U;
-  static constexpr char Signature[4] = {'D', 'O', 'C', 'S'};
+  static constexpr unsigned char Signature[4] = {'D', 'O', 'C', 'S'};
   static constexpr int USRHashSize = 20;
 };
 

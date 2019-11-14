@@ -18,7 +18,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Allocator.h"
+#include "llvm/Remarks/Remark.h"
 #include <vector>
 
 namespace llvm {
@@ -27,21 +27,35 @@ class raw_ostream;
 
 namespace remarks {
 
+struct ParsedStringTable;
+
 /// The string table used for serializing remarks.
 /// This table can be for example serialized in a section to be consumed after
 /// the compilation.
 struct StringTable {
-  /// Allocator holding all the memory used by the map.
-  BumpPtrAllocator Allocator;
   /// The string table containing all the unique strings used in the output.
   /// It maps a string to an unique ID.
-  StringMap<unsigned, BumpPtrAllocator &> StrTab;
+  StringMap<unsigned, BumpPtrAllocator> StrTab;
   /// Total size of the string table when serialized.
   size_t SerializedSize = 0;
 
-  StringTable() : Allocator(), StrTab(Allocator) {}
+  StringTable() = default;
+
+  /// Disable copy.
+  StringTable(const StringTable &) = delete;
+  StringTable &operator=(const StringTable &) = delete;
+  /// Should be movable.
+  StringTable(StringTable &&) = default;
+  StringTable &operator=(StringTable &&) = default;
+
+  /// Construct a string table from a ParsedStringTable.
+  StringTable(const ParsedStringTable &Other);
+
   /// Add a string to the table. It returns an unique ID of the string.
   std::pair<unsigned, StringRef> add(StringRef Str);
+  /// Modify \p R to use strings from this string table. If the string table
+  /// does not contain the strings, it adds them.
+  void internalize(Remark &R);
   /// Serialize the string table to a stream. It is serialized as a little
   /// endian uint64 (the size of the table in bytes) followed by a sequence of
   /// NULL-terminated strings, where the N-th string is the string with the ID N

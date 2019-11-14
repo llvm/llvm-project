@@ -24,7 +24,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Bitcode/BitstreamReader.h"
+#include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/Endian.h"
 #include <cassert>
 #include <cstdint>
@@ -158,6 +158,9 @@ public:
 
   /// Whether the PCH has a corresponding object file.
   bool PCHHasObjectFile = false;
+
+  /// Whether the top-level module has been read from the AST file.
+  bool DidReadTopLevelSubmodule = false;
 
   /// The file entry for the module file.
   const FileEntry *File = nullptr;
