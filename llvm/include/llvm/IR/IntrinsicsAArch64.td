@@ -824,6 +824,11 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  llvm_i32_ty],
                 [IntrNoMem]>;
 
+  class AdvSIMD_SVE_EXPA_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMVectorOfBitcastsToInt<0>],
+                [IntrNoMem]>;
+
   class AdvSIMD_SVE_PUNPKHI_Intrinsic
     : Intrinsic<[LLVMHalfElementsVectorType<0>],
                 [llvm_anyvector_ty],
@@ -966,12 +971,14 @@ def int_aarch64_sve_uxtw : AdvSIMD_Merged1VectorArg_Intrinsic;
 //
 
 def int_aarch64_sve_fabd       : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_fabs       : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_fadd       : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_fcadd      : AdvSIMD_SVE_CADD_Intrinsic;
 def int_aarch64_sve_fcmla      : AdvSIMD_SVE_CMLA_Intrinsic;
 def int_aarch64_sve_fcmla_lane : AdvSIMD_SVE_CMLA_LANE_Intrinsic;
 def int_aarch64_sve_fdiv       : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_fdivr      : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_fexpa_x    : AdvSIMD_SVE_EXPA_Intrinsic;
 def int_aarch64_sve_fmad       : AdvSIMD_Pred3VectorArg_Intrinsic;
 def int_aarch64_sve_fmax       : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_fmaxnm     : AdvSIMD_Pred2VectorArg_Intrinsic;
@@ -984,12 +991,26 @@ def int_aarch64_sve_fmls_lane  : AdvSIMD_3VectorArgIndexed_Intrinsic;
 def int_aarch64_sve_fmsb       : AdvSIMD_Pred3VectorArg_Intrinsic;
 def int_aarch64_sve_fmul       : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_fmulx      : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_fneg       : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_fmul_lane  : AdvSIMD_2VectorArgIndexed_Intrinsic;
 def int_aarch64_sve_fnmad      : AdvSIMD_Pred3VectorArg_Intrinsic;
 def int_aarch64_sve_fnmla      : AdvSIMD_Pred3VectorArg_Intrinsic;
 def int_aarch64_sve_fnmls      : AdvSIMD_Pred3VectorArg_Intrinsic;
 def int_aarch64_sve_fnmsb      : AdvSIMD_Pred3VectorArg_Intrinsic;
+def int_aarch64_sve_frecpe_x   : AdvSIMD_1VectorArg_Intrinsic;
+def int_aarch64_sve_frecps_x   : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_frecpx     : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_frinta     : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_frinti     : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_frintm     : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_frintn     : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_frintp     : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_frintx     : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_frintz     : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_frsqrte_x  : AdvSIMD_1VectorArg_Intrinsic;
+def int_aarch64_sve_frsqrts_x  : AdvSIMD_2VectorArg_Intrinsic;
 def int_aarch64_sve_fscale     : AdvSIMD_SVE_SCALE_Intrinsic;
+def int_aarch64_sve_fsqrt      : AdvSIMD_Merged1VectorArg_Intrinsic;
 def int_aarch64_sve_fsub       : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_fsubr      : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_ftmad_x    : AdvSIMD_2VectorArgIndexed_Intrinsic;
@@ -1001,12 +1022,6 @@ def int_aarch64_sve_ftssel_x   : AdvSIMD_SVE_TSMUL_Intrinsic;
 //
 
 def int_aarch64_sve_fcvtzs_i32f16 : Builtin_SVCVT<"svcvt_s32_f16_m", llvm_nxv4i32_ty, llvm_nxv8f16_ty>;
-
-//
-// Floating-point arithmetic
-//
-def int_aarch64_sve_frecps_x: AdvSIMD_2VectorArg_Intrinsic;
-def int_aarch64_sve_frsqrts_x: AdvSIMD_2VectorArg_Intrinsic;
 
 //
 // Predicate operations
