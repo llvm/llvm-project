@@ -595,7 +595,7 @@ Status AdbClient::SyncService::SendSyncRequest(const char *request_id,
   const DataBufferSP data_sp(new DataBufferHeap(kSyncPacketLen, 0));
   DataEncoder encoder(data_sp, eByteOrderLittle, sizeof(void *));
   auto offset = encoder.PutData(0, request_id, strlen(request_id));
-  encoder.PutU32(offset, data_len);
+  encoder.PutUnsigned(offset, 4, data_len);
 
   Status error;
   ConnectionStatus status;
