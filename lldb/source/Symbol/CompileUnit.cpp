@@ -379,9 +379,12 @@ const std::vector<SourceModule> &CompileUnit::GetImportedModules() {
   return m_imported_modules;
 }
 
-void CompileUnit::ForEachExternalModule(llvm::function_ref<void(ModuleSP)> f) {
+bool CompileUnit::ForEachExternalModule(
+    llvm::DenseSet<SymbolFile *> &visited_symbol_files,
+    llvm::function_ref<bool(Module &)> lambda) {
   if (SymbolFile *symfile = GetModule()->GetSymbolFile())
-    symfile->ForEachExternalModule(*this, f);
+    return symfile->ForEachExternalModule(*this, visited_symbol_files, lambda);
+  return false;
 }
 
 const FileSpecList &CompileUnit::GetSupportFiles() {

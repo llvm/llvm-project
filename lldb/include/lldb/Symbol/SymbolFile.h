@@ -122,9 +122,35 @@ public:
   virtual size_t ParseFunctions(CompileUnit &comp_unit) = 0;
   virtual bool ParseLineTable(CompileUnit &comp_unit) = 0;
   virtual bool ParseDebugMacros(CompileUnit &comp_unit) = 0;
-  virtual void
-  ForEachExternalModule(CompileUnit &comp_unit,
-                        llvm::function_ref<void(lldb::ModuleSP)> f) {}
+
+  /// Apply a lambda to each external lldb::Module referenced by this
+  /// \p comp_unit. Recursively also descends into the referenced external
+  /// modules of any encountered compilation unit.
+  ///
+  /// \param comp_unit
+  ///     When this SymbolFile consists of multiple auxilliary
+  ///     SymbolFiles, for example, a Darwin debug map that references
+  ///     multiple .o files, comp_unit helps choose the auxilliary
+  ///     file. In most other cases comp_unit's symbol file is
+  ///     identiacal with *this.
+  ///
+  /// \param[in] lambda
+  ///     The lambda that should be applied to every function. The lambda can
+  ///     return true if the iteration should be aborted earlier.
+  ///
+  /// \param visited_symbol_files
+  ///     A set of SymbolFiles that were already visited to avoid
+  ///     visiting one file more than once.
+  ///
+  /// \return
+  ///     If the lambda early-exited, this function returns true to
+  ///     propagate the early exit.
+  virtual bool ForEachExternalModule(
+      lldb_private::CompileUnit &comp_unit,
+      llvm::DenseSet<lldb_private::SymbolFile *> &visited_symbol_files,
+      llvm::function_ref<bool(Module &)> lambda) {
+    return false;
+  }
   virtual bool ParseSupportFiles(CompileUnit &comp_unit,
                                  FileSpecList &support_files) = 0;
   virtual size_t ParseTypes(CompileUnit &comp_unit) = 0;
