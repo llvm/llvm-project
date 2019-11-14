@@ -10,7 +10,6 @@
 #define LLD_COFF_INPUT_FILES_H
 
 #include "Config.h"
-#include "lld/Common/DWARF.h"
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -35,6 +34,8 @@ class InputFile;
 }
 
 namespace lld {
+class DWARFCache;
+
 namespace coff {
 
 std::vector<MemoryBufferRef> getArchiveMembers(llvm::object::Archive *file);
