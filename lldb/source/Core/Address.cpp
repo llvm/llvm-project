@@ -389,6 +389,19 @@ bool Address::SetOpcodeLoadAddress(lldb::addr_t load_addr, Target *target,
   return false;
 }
 
+bool Address::GetDescription(Stream &s, Target &target,
+                             DescriptionLevel level) const {
+  assert(level == eDescriptionLevelBrief &&
+         "Non-brief descriptions not implemented");
+  LineEntry line_entry;
+  if (CalculateSymbolContextLineEntry(line_entry)) {
+    s.Printf(" (%s:%u:%u)", line_entry.file.GetFilename().GetCString(),
+             line_entry.line, line_entry.column);
+    return true;
+  }
+  return false;
+}
+
 bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
                    DumpStyle fallback_style, uint32_t addr_size) const {
   // If the section was nullptr, only load address is going to work unless we

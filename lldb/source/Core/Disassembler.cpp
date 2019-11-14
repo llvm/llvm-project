@@ -1123,6 +1123,10 @@ bool PseudoInstruction::HasDelaySlot() {
   return false;
 }
 
+bool PseudoInstruction::IsLoad() { return false; }
+
+bool PseudoInstruction::IsAuthenticated() { return false; }
+
 size_t PseudoInstruction::Decode(const lldb_private::Disassembler &disassembler,
                                  const lldb_private::DataExtractor &data,
                                  lldb::offset_t data_offset) {

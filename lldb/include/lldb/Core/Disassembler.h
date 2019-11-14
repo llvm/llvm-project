@@ -150,6 +150,10 @@ public:
 
   virtual bool HasDelaySlot();
 
+  virtual bool IsLoad() = 0;
+
+  virtual bool IsAuthenticated() = 0;
+
   bool CanSetBreakpoint ();
 
   virtual size_t Decode(const Disassembler &disassembler,
@@ -335,6 +339,10 @@ public:
   bool DoesBranch() override;
 
   bool HasDelaySlot() override;
+
+  bool IsLoad() override;
+
+  bool IsAuthenticated() override;
 
   void CalculateMnemonicOperandsAndComment(
       const ExecutionContext *exe_ctx) override {

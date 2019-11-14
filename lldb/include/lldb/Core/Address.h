@@ -210,6 +210,10 @@ public:
     }
   };
 
+  /// Write a description of this object to a Stream.
+  bool GetDescription(Stream &s, Target &target,
+                      lldb::DescriptionLevel level) const;
+
   /// Dump a description of this object to a Stream.
   ///
   /// Dump a description of the contents of this object to the supplied stream
