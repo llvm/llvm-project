@@ -1,13 +1,11 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang -target x86_64-unknown-linux-gnu -o - -emit-interface-stubs -emit-merged-ifs \
-// RUN: -interface-stub-version=experimental-ifs-v1 %s | \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -o - -emit-interface-stubs %s | \
 // RUN: FileCheck -check-prefix=CHECK-TAPI %s
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -o - -emit-interface-stubs -emit-merged-ifs \
-// RUN: -interface-stub-version=experimental-ifs-v1 %s | \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -o - -emit-interface-stubs %s | \
 // RUN: FileCheck -check-prefix=CHECK-TAPI2 %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -o - -c %s | \
-// RUN: llvm-readelf -s - 2>&1 | \
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -c -o - %s | llvm-readelf -s - 2>&1 | \
 // RUN: FileCheck -check-prefix=CHECK-SYMBOLS %s
 
 // For the following:
