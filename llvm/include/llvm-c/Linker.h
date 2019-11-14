@@ -14,11 +14,10 @@
 #ifndef LLVM_C_LINKER_H
 #define LLVM_C_LINKER_H
 
+#include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+LLVM_C_EXTERN_C_BEGIN
 
 /* This enum is provided for backwards-compatibility only. It has no effect. */
 typedef enum {
@@ -34,8 +33,6 @@ typedef enum {
 */
 LLVMBool LLVMLinkModules2(LLVMModuleRef Dest, LLVMModuleRef Src);
 
-#ifdef __cplusplus
-}
-#endif
+LLVM_C_EXTERN_C_END
 
 #endif

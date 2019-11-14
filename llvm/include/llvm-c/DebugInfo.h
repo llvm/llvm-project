@@ -17,10 +17,9 @@
 #define LLVM_C_DEBUGINFO_H
 
 #include "llvm-c/Core.h"
+#include "llvm-c/ExternC.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+LLVM_C_EXTERN_C_BEGIN
 
 /**
  * Debug info flags.
@@ -1353,8 +1352,6 @@ void LLVMInstructionSetDebugLoc(LLVMValueRef Inst, LLVMMetadataRef Loc);
  */
 LLVMMetadataKind LLVMGetMetadataKind(LLVMMetadataRef Metadata);
 
-#ifdef __cplusplus
-} /* end extern "C" */
-#endif
+LLVM_C_EXTERN_C_END
 
 #endif
