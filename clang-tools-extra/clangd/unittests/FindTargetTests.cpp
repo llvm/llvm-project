@@ -288,8 +288,7 @@ TEST_F(TargetDeclTest, ClassTemplate) {
   )cpp";
   EXPECT_DECLS("TemplateSpecializationTypeLoc",
                {"template<> class Foo<int *>", Rel::TemplateInstantiation},
-               {"template <typename T> class Foo<type-parameter-0-0 *>",
-                Rel::TemplatePattern});
+               {"template <typename T> class Foo<T *>", Rel::TemplatePattern});
 }
 
 TEST_F(TargetDeclTest, FunctionTemplate) {
