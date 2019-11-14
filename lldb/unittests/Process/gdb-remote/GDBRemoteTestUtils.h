@@ -46,6 +46,8 @@ public:
     return dst_len;
   };
 
+  lldb::IOObjectSP GetReadObject() { return lldb::IOObjectSP(); }
+
   std::vector<std::string> *m_packets;
 };
 
