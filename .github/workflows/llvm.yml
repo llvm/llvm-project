@@ -19,5 +19,7 @@ jobs:
       working-directory: _build 
     - name: build
       run: cmake --build .
+      working-directory: _build
     - name: test
       run: cmake --build . --target check
+      working-directory: _build
