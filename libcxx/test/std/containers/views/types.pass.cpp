@@ -16,7 +16,7 @@
 //  // constants and types
 //  using element_type           = ElementType;
 //  using value_type             = remove_cv_t<ElementType>;
-//  using index_type             = size_t;
+//  using size_type              = size_t;
 //  using difference_type        = ptrdiff_t;
 //  using pointer                = element_type *;
 //  using reference              = element_type &;
@@ -27,7 +27,7 @@
 //  using reverse_iterator       = std::reverse_iterator<iterator>;
 //  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 //
-//  static constexpr index_type extent = Extent;
+//  static constexpr size_type extent = Extent;
 //
 
 #include <span>
@@ -68,7 +68,7 @@ void testSpan()
 {
     ASSERT_SAME_TYPE(typename S::element_type,    ElementType);
     ASSERT_SAME_TYPE(typename S::value_type,      std::remove_cv_t<ElementType>);
-    ASSERT_SAME_TYPE(typename S::index_type,      std::size_t);
+    ASSERT_SAME_TYPE(typename S::size_type,       std::size_t);
     ASSERT_SAME_TYPE(typename S::difference_type, std::ptrdiff_t);
     ASSERT_SAME_TYPE(typename S::pointer,         ElementType *);
     ASSERT_SAME_TYPE(typename S::const_pointer,   const ElementType *);

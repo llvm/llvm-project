@@ -31,7 +31,7 @@ constexpr bool testConstexprSpan(Span s)
     }
     else
     {
-        const typename Span::index_type last = s.size() - 1;
+        const typename Span::size_type last = s.size() - 1;
         ret = ret &&  (  *b ==  s[last]);
         ret = ret &&  ( &*b == &s[last]);
         ret = ret &&  ( *cb ==  s[last]);
@@ -54,7 +54,7 @@ void testRuntimeSpan(Span s)
     }
     else
     {
-        const typename Span::index_type last = s.size() - 1;
+        const typename Span::size_type last = s.size() - 1;
         assert(  *b ==  s[last]);
         assert( &*b == &s[last]);
         assert( *cb ==  s[last]);

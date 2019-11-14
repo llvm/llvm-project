@@ -10,7 +10,7 @@
 
 // <span>
 
-// constexpr span(pointer ptr, index_type count);
+// constexpr span(pointer ptr, size_type count);
 // Requires: [ptr, ptr + count) shall be a valid range.
 //  If extent is not equal to dynamic_extent, then count shall be equal to extent.
 //
