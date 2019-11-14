@@ -1,8 +1,6 @@
 name: CI
 
-on:
-  push:
-    types:
+on: [push]
 
 jobs:
   build_llvm:
@@ -33,4 +31,4 @@ jobs:
       uses: tstellar/actions/build-test-llvm-project@master
       with:
         cmake_args: -G Ninja -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }}
-os: ${{ runner.os }}
+        os: ${{ runner.os }}
