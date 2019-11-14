@@ -14,12 +14,19 @@ jobs:
     - uses: actions/checkout@v1
     - name: create build dir
       run: mkdir _build
-    - name: configure
+    - name: ubuntu configure
       run: cmake ../llvm -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_TOOLS=OFF -DLLVM_LINK_LLVM_DYLIB=ON -DLLVM_TARGETS_TO_BUILD=host -DLLVM_ENABLE_WARNINGS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF
-      working-directory: _build 
-    - name: build
-      run: cmake --build .
       working-directory: _build
-    - name: test
-      run: cmake --build . --target check
+      if: startswith(${{ matrix.os }}, 'ubuntu')
+    - name: windows configure
+      run: cmake ../llvm -Thost=x64 -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_TOOLS=OFF -DLLVM_LINK_LLVM_DYLIB=ON -DLLVM_TARGETS_TO_BUILD=host -DLLVM_ENABLE_WARNINGS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF
+      working-directory: _build
+      if: startswith(${{ matrix.os }}, 'windows')
+    - name: ubuntu build
+      run: cmake --build . -j4
+      if: startswith(${{ matrix.os }}, 'ubuntu')
+      working-directory: _build
+    - name: windows build
+      run: msbuild /m -p:Configuration=Release INSTALL.vcxproj
+      if: startswith(${{ matrix.os }}, 'windows')
       working-directory: _build
