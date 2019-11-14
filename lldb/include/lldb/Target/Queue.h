@@ -126,10 +126,7 @@ public:
     m_pending_items.push_back(item);
   }
 
-  /// Return the kind (serial, concurrent) of this queue
-  ///
-  /// \return
-  //      Whether this is a serial or a concurrent queue
+  /// Return the kind (serial, concurrent) of this queue.
   lldb::QueueKind GetKind();
 
   void SetKind(lldb::QueueKind kind);
