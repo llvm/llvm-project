@@ -15,6 +15,7 @@
 
 namespace llvm {
 class PassRegistry;
+class PassBuilder;
 namespace legacy {
 class PassManagerBase;
 } // namespace legacy
@@ -22,6 +23,6 @@ class PassManagerBase;
 
 namespace polly {
 void initializePollyPasses(llvm::PassRegistry &Registry);
-void registerPollyPasses(llvm::legacy::PassManagerBase &PM);
+void RegisterPollyPasses(llvm::PassBuilder &PB);
 } // namespace polly
 #endif

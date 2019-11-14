@@ -700,10 +700,3 @@ void RegisterPollyPasses(PassBuilder &PB) {
   // FIXME else Error?
 }
 } // namespace polly
-
-// Plugin Entrypoint:
-extern "C" ::llvm::PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
-llvmGetPassPluginInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "Polly", LLVM_VERSION_STRING,
-          polly::RegisterPollyPasses};
-}

@@ -202,11 +202,9 @@ static void registerEPCallbacks(PassBuilder &PB, bool VerifyEachPass,
         });
 }
 
-#ifdef LINK_POLLY_INTO_TOOLS
-namespace polly {
-void RegisterPollyPasses(PassBuilder &);
-}
-#endif
+#define HANDLE_EXTENSION(Ext)                                                  \
+  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+#include "llvm/Support/Extension.def"
 
 bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
                            ToolOutputFile *Out, ToolOutputFile *ThinLTOLinkOut,
@@ -290,9 +288,9 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
         return false;
       });
 
-#ifdef LINK_POLLY_INTO_TOOLS
-  polly::RegisterPollyPasses(PB);
-#endif
+#define HANDLE_EXTENSION(Ext)                                                  \
+  get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
+#include "llvm/Support/Extension.def"
 
   // Specially handle the alias analysis manager so that we can register
   // a custom pipeline of AA passes with it.

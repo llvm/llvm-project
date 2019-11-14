@@ -486,11 +486,6 @@ static TargetMachine* GetTargetMachine(Triple TheTriple, StringRef CPUStr,
 void initializeExampleIRTransforms(llvm::PassRegistry &Registry);
 #endif
 
-#ifdef LINK_POLLY_INTO_TOOLS
-namespace polly {
-void initializePollyPasses(llvm::PassRegistry &Registry);
-}
-#endif
 
 void exportDebugifyStats(llvm::StringRef Path, const DebugifyStatsMap &Map) {
   std::error_code EC;
@@ -569,10 +564,6 @@ int main(int argc, char **argv) {
 
 #ifdef BUILD_EXAMPLES
   initializeExampleIRTransforms(Registry);
-#endif
-
-#ifdef LINK_POLLY_INTO_TOOLS
-  polly::initializePollyPasses(Registry);
 #endif
 
   cl::ParseCommandLineOptions(argc, argv,

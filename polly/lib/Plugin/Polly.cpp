@@ -10,6 +10,7 @@
 
 #include "polly/RegisterPasses.h"
 #include "llvm/PassRegistry.h"
+#include "llvm/Passes/PassPlugin.h"
 
 namespace {
 
@@ -27,3 +28,14 @@ public:
 };
 static StaticInitializer InitializeEverything;
 } // end of anonymous namespace.
+
+// Pass Plugin Entrypoints
+llvm::PassPluginLibraryInfo getPollyPluginInfo() {
+  return {LLVM_PLUGIN_API_VERSION, "Polly", LLVM_VERSION_STRING,
+          polly::RegisterPollyPasses};
+}
+
+extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
+llvmGetPassPluginInfo() {
+  return getPollyPluginInfo();
+}
