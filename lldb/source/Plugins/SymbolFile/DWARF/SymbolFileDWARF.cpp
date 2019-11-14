@@ -1511,7 +1511,7 @@ bool SymbolFileDWARF::GetFunction(const DWARFDIE &die, SymbolContext &sc) {
   return false;
 }
 
-lldb::ModuleSP SymbolFileDWARF::GetDWOModule(ConstString name) {
+lldb::ModuleSP SymbolFileDWARF::GetExternalModule(ConstString name) {
   UpdateExternalModuleListIfNeeded();
   const auto &pos = m_external_type_modules.find(name);
   if (pos != m_external_type_modules.end())
