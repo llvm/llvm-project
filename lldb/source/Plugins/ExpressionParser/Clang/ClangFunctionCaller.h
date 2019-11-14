@@ -101,9 +101,6 @@ public:
   ///     An execution context scope that gets us at least a target and
   ///     process.
   ///
-  /// \param[in] ast_context
-  ///     The AST context to evaluate argument types in.
-  ///
   /// \param[in] return_type
   ///     A compiler type for the function result.  Should be
   ///     defined in ast_context.
