@@ -7,7 +7,7 @@
 
  // CHECK-IFS: --- !experimental-ifs-v1
  // CHECK-IFS: IfsVersion:      1.0
- // CHECK-IFS: Triple:          x86_64-unknown-windows-msvc19.11.0
+ // CHECK-IFS: Triple:
  // CHECK-IFS: Symbols:
  // CHECK-IFS:   ?helloWindowsMsvc@@YAHXZ: { Type: Func }
  // CHECK-IFS: ...
