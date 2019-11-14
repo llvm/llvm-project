@@ -896,6 +896,11 @@ private:
   /// insert a new pointer typed PHI and replace the original one.
   Instruction *FoldIntegerTypedPHI(PHINode &PN);
 
+  /// If all incoming values of a pointer typed PHI are pointers with the same
+  /// base and offset, replace the PHI and all incoming values with one
+  /// definition of such pointer.
+  Instruction *FoldPHIWithEqualPointers(PHINode &PN);
+
   /// Helper function for FoldPHIArgXIntoPHI() to set debug location for the
   /// folded operation.
   void PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN);
