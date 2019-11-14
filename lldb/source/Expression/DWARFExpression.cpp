@@ -477,7 +477,7 @@ bool DWARFExpression::Update_DW_OP_addr(lldb::addr_t file_addr) {
                           m_data.GetByteOrder(), addr_byte_size);
 
       // Replace the address in the new buffer
-      if (encoder.PutMaxU64(offset, addr_byte_size, file_addr) == UINT32_MAX)
+      if (encoder.PutUnsigned(offset, addr_byte_size, file_addr) == UINT32_MAX)
         return false;
 
       // All went well, so now we can reset the data using a shared pointer to
@@ -583,8 +583,8 @@ bool DWARFExpression::LinkThreadLocalStorage(
         if (linked_file_addr == LLDB_INVALID_ADDRESS)
           return false;
         // Replace the address in the new buffer
-        if (encoder.PutMaxU64(const_offset, const_byte_size,
-                              linked_file_addr) == UINT32_MAX)
+        if (encoder.PutUnsigned(const_offset, const_byte_size,
+                                linked_file_addr) == UINT32_MAX)
           return false;
       }
       break;
