@@ -19,6 +19,8 @@ using HostObjectFile = ObjectFilePECOFF;
 using HostObjectFile = ObjectFileELF;
 #endif
 
+#ifndef USE_DPU
+
 #if defined(__arm64__) || defined(__aarch64__) || defined(_M_ARM64)
 #define LLDB_TARGET_ARM64
 #endif
@@ -40,6 +42,8 @@ using HostObjectFile = ObjectFileELF;
 #define LLDB_TARGET_MIPS
 #include "Plugins/Instruction/MIPS/EmulateInstructionMIPS.h"
 #endif
+
+#endif /* USE_DPU */
 
 using namespace lldb_private;
 
