@@ -158,15 +158,15 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 registers:
-  - { id: 0, class: sreg_128, preferred-register: '' }
+  - { id: 0, class: sgpr_128, preferred-register: '' }
   - { id: 1, class: sreg_32_xm0, preferred-register: '%5' }
-  - { id: 2, class: sreg_128, preferred-register: '' }
+  - { id: 2, class: sgpr_128, preferred-register: '' }
   - { id: 3, class: sreg_32_xm0, preferred-register: '' }
-  - { id: 4, class: sreg_128, preferred-register: '' }
+  - { id: 4, class: sgpr_128, preferred-register: '' }
   - { id: 5, class: sreg_32_xm0, preferred-register: '%1' }
-  - { id: 6, class: sreg_128, preferred-register: '' }
-  - { id: 7, class: sreg_128, preferred-register: '' }
-  - { id: 8, class: sreg_128, preferred-register: '' }
+  - { id: 6, class: sgpr_128, preferred-register: '' }
+  - { id: 7, class: sgpr_128, preferred-register: '' }
+  - { id: 8, class: sgpr_128, preferred-register: '' }
   - { id: 9, class: sreg_32_xm0, preferred-register: '' }
   - { id: 10, class: vgpr_32, preferred-register: '' }
   - { id: 11, class: vgpr_32, preferred-register: '' }
@@ -176,23 +176,23 @@ registers:
   - { id: 15, class: sreg_32, preferred-register: '' }
   - { id: 16, class: sreg_32_xm0, preferred-register: '' }
   - { id: 17, class: sreg_32_xm0, preferred-register: '' }
-  - { id: 18, class: sreg_128, preferred-register: '' }
+  - { id: 18, class: sgpr_128, preferred-register: '' }
   - { id: 19, class: sreg_32_xm0, preferred-register: '' }
   - { id: 20, class: sreg_32_xm0, preferred-register: '' }
   - { id: 21, class: sreg_32_xm0, preferred-register: '' }
   - { id: 22, class: vreg_128, preferred-register: '' }
   - { id: 23, class: vgpr_32, preferred-register: '' }
-  - { id: 24, class: sreg_128, preferred-register: '' }
+  - { id: 24, class: sgpr_128, preferred-register: '' }
   - { id: 25, class: sreg_32_xm0, preferred-register: '' }
   - { id: 26, class: sreg_32_xm0, preferred-register: '' }
-  - { id: 27, class: sreg_128, preferred-register: '' }
+  - { id: 27, class: sgpr_128, preferred-register: '' }
   - { id: 28, class: sreg_32_xm0, preferred-register: '' }
   - { id: 29, class: sreg_32_xm0, preferred-register: '' }
   - { id: 30, class: sreg_32_xm0, preferred-register: '' }
   - { id: 31, class: sreg_32_xm0, preferred-register: '' }
   - { id: 32, class: sreg_32_xm0, preferred-register: '' }
   - { id: 33, class: sreg_32_xm0, preferred-register: '' }
-  - { id: 34, class: sreg_128, preferred-register: '' }
+  - { id: 34, class: sgpr_128, preferred-register: '' }
   - { id: 35, class: sreg_64, preferred-register: '' }
   - { id: 36, class: sreg_64, preferred-register: '' }
   - { id: 37, class: vgpr_32, preferred-register: '' }
@@ -291,7 +291,7 @@ body:             |
   bb.3..lr.ph3410.preheader:
     successors: %bb.4(0x80000000)
 
-    dead %22:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN killed %53.sub3, undef %24:sreg_128, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from constant-pool, align 1, addrspace 4)
+    dead %22:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN killed %53.sub3, undef %24:sgpr_128, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from constant-pool, align 1, addrspace 4)
     dead %60:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
     %36:sreg_64 = S_AND_B64 $exec, -1, implicit-def dead $scc
     dead %67:vgpr_32 = V_MOV_B32_e32 0, implicit $exec

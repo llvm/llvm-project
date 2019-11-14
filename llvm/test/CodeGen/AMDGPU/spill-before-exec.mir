@@ -14,28 +14,28 @@ machineFunctionInfo:
   stackPtrOffsetReg: $sgpr32
 registers:
   - { id: 0, class: sreg_64 }
-  - { id: 1100, class: sreg_128 }
-  - { id: 1101, class: sreg_128 }
-  - { id: 1102, class: sreg_128 }
-  - { id: 1103, class: sreg_128 }
-  - { id: 1104, class: sreg_128 }
-  - { id: 1105, class: sreg_128 }
-  - { id: 1106, class: sreg_128 }
-  - { id: 1107, class: sreg_128 }
-  - { id: 1108, class: sreg_128 }
-  - { id: 1109, class: sreg_128 }
-  - { id: 1110, class: sreg_128 }
-  - { id: 1111, class: sreg_128 }
-  - { id: 1112, class: sreg_128 }
-  - { id: 1113, class: sreg_128 }
-  - { id: 1114, class: sreg_128 }
-  - { id: 1115, class: sreg_128 }
-  - { id: 1116, class: sreg_128 }
-  - { id: 1117, class: sreg_128 }
-  - { id: 1118, class: sreg_128 }
-  - { id: 1119, class: sreg_128 }
-  - { id: 1120, class: sreg_128 }
-  - { id: 1121, class: sreg_128 }
+  - { id: 1100, class: sgpr_128 }
+  - { id: 1101, class: sgpr_128 }
+  - { id: 1102, class: sgpr_128 }
+  - { id: 1103, class: sgpr_128 }
+  - { id: 1104, class: sgpr_128 }
+  - { id: 1105, class: sgpr_128 }
+  - { id: 1106, class: sgpr_128 }
+  - { id: 1107, class: sgpr_128 }
+  - { id: 1108, class: sgpr_128 }
+  - { id: 1109, class: sgpr_128 }
+  - { id: 1110, class: sgpr_128 }
+  - { id: 1111, class: sgpr_128 }
+  - { id: 1112, class: sgpr_128 }
+  - { id: 1113, class: sgpr_128 }
+  - { id: 1114, class: sgpr_128 }
+  - { id: 1115, class: sgpr_128 }
+  - { id: 1116, class: sgpr_128 }
+  - { id: 1117, class: sgpr_128 }
+  - { id: 1118, class: sgpr_128 }
+  - { id: 1119, class: sgpr_128 }
+  - { id: 1120, class: sgpr_128 }
+  - { id: 1121, class: sgpr_128 }
 body:             |
   bb.0:
     successors: %bb.1

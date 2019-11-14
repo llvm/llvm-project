@@ -9,7 +9,7 @@ body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0, 0
-    %3:sreg_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %3:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %4:sreg_32_xm0 = COPY $sgpr101
     %5:sreg_32_xm0 = S_MOV_B32 0
     $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %3
@@ -62,7 +62,7 @@ body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0, 0
-    %3:sreg_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %3:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %4:sreg_32_xm0 = COPY $sgpr101
     %5:sreg_32_xm0 = S_MOV_B32 0
     $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %3
@@ -115,7 +115,7 @@ body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0, 0
-    %3:sreg_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %3:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %4:sreg_32_xm0 = COPY $sgpr101
     %5:sreg_32_xm0 = S_MOV_B32 0
     $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %3
@@ -160,7 +160,7 @@ body:             |
     bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0, 0
-    %3:sreg_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %3:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %4:sreg_32_xm0 = COPY $sgpr101
     %5:sreg_32_xm0 = S_MOV_B32 0
     $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %3

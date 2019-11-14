@@ -143,7 +143,7 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; GCN: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
     ; GCN: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr2_sgpr3
-    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3
+    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3
     ; GCN: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[REG_SEQUENCE]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = COPY $sgpr2_sgpr3

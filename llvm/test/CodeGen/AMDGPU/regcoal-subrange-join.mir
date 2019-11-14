@@ -44,7 +44,7 @@ registers:
   - { id: 22, class: sreg_32_xm0_xexec }
   - { id: 23, class: sreg_32_xm0 }
   - { id: 24, class: sreg_64_xexec }
-  - { id: 25, class: sreg_128 }
+  - { id: 25, class: sgpr_128 }
   - { id: 26, class: sreg_64_xexec }
   - { id: 27, class: sreg_32_xm0_xexec }
   - { id: 28, class: sreg_32_xm0 }
@@ -57,7 +57,7 @@ registers:
   - { id: 35, class: vgpr_32 }
   - { id: 36, class: vgpr_32 }
   - { id: 37, class: vgpr_32 }
-  - { id: 38, class: sreg_128 }
+  - { id: 38, class: sgpr_128 }
   - { id: 39, class: sreg_64_xexec }
   - { id: 40, class: sreg_32_xm0_xexec }
   - { id: 41, class: sreg_32_xm0 }
@@ -70,7 +70,7 @@ registers:
   - { id: 48, class: vgpr_32 }
   - { id: 49, class: vgpr_32 }
   - { id: 50, class: vgpr_32 }
-  - { id: 51, class: sreg_128 }
+  - { id: 51, class: sgpr_128 }
   - { id: 52, class: vgpr_32 }
   - { id: 53, class: vgpr_32 }
   - { id: 54, class: vgpr_32 }

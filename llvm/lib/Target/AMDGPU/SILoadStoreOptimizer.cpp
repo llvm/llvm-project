@@ -1273,7 +1273,7 @@ SILoadStoreOptimizer::getTargetRegisterClass(const CombineInfo &CI) {
     case 2:
       return &AMDGPU::SReg_64_XEXECRegClass;
     case 4:
-      return &AMDGPU::SReg_128RegClass;
+      return &AMDGPU::SGPR_128RegClass;
     case 8:
       return &AMDGPU::SReg_256RegClass;
     case 16:

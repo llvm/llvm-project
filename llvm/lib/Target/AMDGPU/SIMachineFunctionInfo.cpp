@@ -189,7 +189,7 @@ unsigned SIMachineFunctionInfo::addPrivateSegmentBuffer(
   const SIRegisterInfo &TRI) {
   ArgInfo.PrivateSegmentBuffer =
     ArgDescriptor::createRegister(TRI.getMatchingSuperReg(
-    getNextUserSGPR(), AMDGPU::sub0, &AMDGPU::SReg_128RegClass));
+    getNextUserSGPR(), AMDGPU::sub0, &AMDGPU::SGPR_128RegClass));
   NumUserSGPRs += 4;
   return ArgInfo.PrivateSegmentBuffer.getRegister();
 }

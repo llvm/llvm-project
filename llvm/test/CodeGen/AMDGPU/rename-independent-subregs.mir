@@ -18,7 +18,7 @@
 # CHECK: S_NOP 0, implicit %0
 name: test0
 registers:
-  - { id: 0, class: sreg_128 }
+  - { id: 0, class: sgpr_128 }
 body: |
   bb.0:
     S_NOP 0, implicit-def undef %0.sub0
@@ -46,8 +46,8 @@ body: |
 # CHECK: S_NOP 0, implicit %2.sub
 name: test1
 registers:
-  - { id: 0, class: sreg_128 }
-  - { id: 1, class: sreg_128 }
+  - { id: 0, class: sgpr_128 }
+  - { id: 1, class: sgpr_128 }
 body: |
   bb.0:
     S_NOP 0, implicit-def undef %0.sub2

@@ -529,6 +529,7 @@ def TTMP_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64], 32,
 def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64, v2f64], 32,
                              (add SGPR_128, TTMP_128)> {
   let AllocationPriority = 15;
+  let isAllocatable = 0;
 }
 
 } // End CopyCost = 2

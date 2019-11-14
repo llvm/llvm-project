@@ -12,9 +12,9 @@ registers:
   - { id: 1, class: vgpr_32 }
   - { id: 2, class: vgpr_32 }
   - { id: 3, class: sreg_256 }
-  - { id: 4, class: sreg_128 }
+  - { id: 4, class: sgpr_128 }
   - { id: 5, class: sreg_256 }
-  - { id: 6, class: sreg_128 }
+  - { id: 6, class: sgpr_128 }
   - { id: 7, class: sreg_512 }
   - { id: 9, class: vreg_512 }
   - { id: 11, class: vreg_512 }

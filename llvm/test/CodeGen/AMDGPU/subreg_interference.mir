@@ -21,9 +21,9 @@
 name: func0
 body: |
   bb.0:
-    S_NOP 0, implicit-def undef %0.sub0 : sreg_128
+    S_NOP 0, implicit-def undef %0.sub0 : sgpr_128
     S_NOP 0, implicit-def %0.sub3
-    S_NOP 0, implicit-def undef %1.sub1 : sreg_128
+    S_NOP 0, implicit-def undef %1.sub1 : sgpr_128
     S_NOP 0, implicit-def %1.sub2
 
 

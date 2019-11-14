@@ -238,7 +238,7 @@ body:             |
     GLOBAL_STORE_DWORDX2 %11, %77, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     GLOBAL_ATOMIC_UMAX_X2 %11, %16, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)
 
-    %79:sreg_128 = REG_SEQUENCE %4, %subreg.sub0, %4, %subreg.sub1, %4, %subreg.sub2, %4, %subreg.sub3
+    %79:sgpr_128 = REG_SEQUENCE %4, %subreg.sub0, %4, %subreg.sub1, %4, %subreg.sub2, %4, %subreg.sub3
     %80:vreg_128 = COPY %79
 
     %78:vreg_64 = GLOBAL_ATOMIC_CMPSWAP_X2_RTN %11, %80, 16, 0, implicit $exec :: (volatile load store seq_cst 4, addrspace 1)

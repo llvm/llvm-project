@@ -15,36 +15,36 @@
 name:            regcoal-subrange-join-seg
 tracksRegLiveness: true
 registers:
-  - { id: 0, class: sreg_128 }
-  - { id: 1, class: sreg_128 }
-  - { id: 2, class: sreg_128 }
-  - { id: 3, class: sreg_128 }
-  - { id: 4, class: sreg_128 }
-  - { id: 5, class: sreg_128 }
-  - { id: 6, class: sreg_128 }
-  - { id: 7, class: sreg_128 }
-  - { id: 8, class: sreg_128 }
+  - { id: 0, class: sgpr_128 }
+  - { id: 1, class: sgpr_128 }
+  - { id: 2, class: sgpr_128 }
+  - { id: 3, class: sgpr_128 }
+  - { id: 4, class: sgpr_128 }
+  - { id: 5, class: sgpr_128 }
+  - { id: 6, class: sgpr_128 }
+  - { id: 7, class: sgpr_128 }
+  - { id: 8, class: sgpr_128 }
   - { id: 9, class: sreg_32_xm0 }
   - { id: 10, class: sreg_32_xm0 }
   - { id: 11, class: vgpr_32 }
   - { id: 12, class: vgpr_32 }
   - { id: 13, class: vgpr_32 }
   - { id: 14, class: sreg_32_xm0_xexec }
-  - { id: 15, class: sreg_128 }
+  - { id: 15, class: sgpr_128 }
   - { id: 16, class: sreg_32 }
   - { id: 17, class: sreg_32_xm0 }
   - { id: 18, class: sreg_32_xm0 }
   - { id: 19, class: sreg_32_xm0 }
   - { id: 20, class: sreg_32_xm0 }
   - { id: 21, class: sreg_32_xm0_xexec }
-  - { id: 22, class: sreg_128 }
+  - { id: 22, class: sgpr_128 }
   - { id: 23, class: sreg_32_xm0 }
   - { id: 24, class: vgpr_32 }
   - { id: 25, class: sreg_64_xexec }
   - { id: 26, class: vgpr_32 }
   - { id: 27, class: sreg_32_xm0 }
   - { id: 28, class: sreg_32 }
-  - { id: 29, class: sreg_128 }
+  - { id: 29, class: sgpr_128 }
   - { id: 30, class: sreg_32_xm0 }
   - { id: 31, class: sreg_32_xm0 }
   - { id: 32, class: vgpr_32 }
