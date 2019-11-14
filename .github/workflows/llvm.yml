@@ -13,7 +13,7 @@ jobs:
           - windows-latest
           - macOS-latest
         cmake_args:
-          - ""
+            - "-DLLVM_ENABLE_PROJECTS:STRING=clang;polly"
     steps:
     - name: Setup Windows
       if: startsWith(matrix.os, 'windows')
