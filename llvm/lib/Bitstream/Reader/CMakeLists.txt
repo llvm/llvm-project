@@ -1,4 +1,4 @@
-add_llvm_library(LLVMBitstreamReader
+add_llvm_component_library(LLVMBitstreamReader
   BitstreamReader.cpp
 
   ADDITIONAL_HEADER_DIRS

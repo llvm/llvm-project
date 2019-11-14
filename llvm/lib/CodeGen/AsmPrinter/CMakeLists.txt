@@ -1,4 +1,4 @@
-add_llvm_library(LLVMAsmPrinter
+add_llvm_component_library(LLVMAsmPrinter
   AccelTable.cpp
   AddressPool.cpp
   ARMException.cpp

@@ -1,4 +1,4 @@
-add_llvm_library(LLVMPerfJITEvents
+add_llvm_component_library(LLVMPerfJITEvents
   PerfJITEventListener.cpp
   )
 

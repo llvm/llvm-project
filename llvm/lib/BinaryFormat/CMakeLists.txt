@@ -1,4 +1,4 @@
-add_llvm_library(LLVMBinaryFormat
+add_llvm_component_library(LLVMBinaryFormat
   AMDGPUMetadataVerifier.cpp
   Dwarf.cpp
   Magic.cpp

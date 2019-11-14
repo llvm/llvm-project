@@ -1,4 +1,4 @@
-add_llvm_library(LLVMDebugInfoDWARF
+add_llvm_component_library(LLVMDebugInfoDWARF
   DWARFAbbreviationDeclaration.cpp
   DWARFAddressRange.cpp
   DWARFAcceleratorTable.cpp

@@ -1,3 +1,3 @@
-add_llvm_library(LLVMNVPTXInfo
+add_llvm_component_library(LLVMNVPTXInfo
   NVPTXTargetInfo.cpp
   )

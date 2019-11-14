@@ -1,4 +1,4 @@
-add_llvm_library(LLVMOption
+add_llvm_component_library(LLVMOption
   Arg.cpp
   ArgList.cpp
   Option.cpp

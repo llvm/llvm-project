@@ -1,3 +1,3 @@
-add_llvm_library(LLVMARMInfo
+add_llvm_component_library(LLVMARMInfo
   ARMTargetInfo.cpp
   )
