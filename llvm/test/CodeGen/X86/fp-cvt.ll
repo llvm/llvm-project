@@ -615,9 +615,8 @@ define x86_fp80 @sitofp_fp80_i16(i16 %a0) nounwind {
 ;
 ; X64-LABEL: sitofp_fp80_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movswl %di, %eax
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
   %1 = sitofp i16 %a0 to x86_fp80
   ret x86_fp80 %1
@@ -636,9 +635,9 @@ define x86_fp80 @sitofp_fp80_i16_ld(i16 *%a0) nounwind {
 ;
 ; X64-LABEL: sitofp_fp80_i16_ld:
 ; X64:       # %bb.0:
-; X64-NEXT:    movswl (%rdi), %eax
-; X64-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzwl (%rdi), %eax
+; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
   %1 = load i16, i16 *%a0
   %2 = sitofp i16 %1 to x86_fp80
