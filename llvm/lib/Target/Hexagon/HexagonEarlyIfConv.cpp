@@ -217,7 +217,7 @@ namespace {
     MachineDominatorTree *MDT = nullptr;
     MachineLoopInfo *MLI = nullptr;
     BlockSetType Deleted;
-    const MachineBranchProbabilityInfo *MBPI;
+    const MachineBranchProbabilityInfo *MBPI = nullptr;
   };
 
 } // end anonymous namespace

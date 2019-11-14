@@ -60,7 +60,7 @@ class HexagonAsmBackend : public MCAsmBackend {
 public:
   HexagonAsmBackend(const Target &T, const Triple &TT, uint8_t OSABI,
                     StringRef CPU)
-      : MCAsmBackend(support::little), OSABI(OSABI), CPU(CPU),
+      : MCAsmBackend(support::little), OSABI(OSABI), CPU(CPU), relaxedCnt(0),
         MCII(T.createMCInstrInfo()), RelaxTarget(new MCInst *),
         Extender(nullptr) {}
 
