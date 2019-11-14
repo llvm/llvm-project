@@ -32,6 +32,38 @@
 # CHECK-ADD-EMPTY-NAME-NEXT:  0000: {{.+}}|DEADBEEF{{.+}}|
 # CHECK-ADD-EMPTY-NAME-NEXT: )
 
+## Test that llvm-objcopy can add a section to an object with extended
+## relocations.
+# RUN: %python %p/../Inputs/ungzip.py %p/Inputs/x86_64-xrelocs.obj.gz > %t.in.xrelocs.obj
+# RUN: llvm-objcopy --add-section=.test.section=%t.sec %t.in.xrelocs.obj %t1.xrelocs.obj
+# RUN: llvm-readobj --file-headers --sections --section-data %t1.xrelocs.obj | FileCheck %s --check-prefixes=CHECK-EXTENDED-RELOCS
+
+# CHECK-EXTENDED-RELOCS:      SectionCount: 5
+# CHECK-EXTENDED-RELOCS:      Name: .data
+# CHECK-EXTENDED-RELOCS-NEXT: VirtualSize:
+# CHECK-EXTENDED-RELOCS-NEXT: VirtualAddress:
+# CHECK-EXTENDED-RELOCS-NEXT: RawDataSize:
+# CHECK-EXTENDED-RELOCS-NEXT: PointerToRawData:
+# CHECK-EXTENDED-RELOCS-NEXT: PointerToRelocations:
+# CHECK-EXTENDED-RELOCS-NEXT: PointerToLineNumbers:
+# CHECK-EXTENDED-RELOCS-NEXT: RelocationCount: 65535
+# CHECK-EXTENDED-RELOCS-NEXT: LineNumberCount: 0
+# CHECK-EXTENDED-RELOCS-NEXT: Characteristics [
+# CHECK-EXTENDED-RELOCS-NEXT:   IMAGE_SCN_ALIGN_16BYTES
+# CHECK-EXTENDED-RELOCS-NEXT:   IMAGE_SCN_CNT_INITIALIZED_DATA
+# CHECK-EXTENDED-RELOCS-NEXT:   IMAGE_SCN_LNK_NRELOC_OVFL
+# CHECK-EXTENDED-RELOCS-NEXT:   IMAGE_SCN_MEM_READ
+# CHECK-EXTENDED-RELOCS-NEXT:   IMAGE_SCN_MEM_WRITE
+# CHECK-EXTENDED-RELOCS-NEXT: ]
+# CHECK-EXTENDED-RELOCS:      Name: .test.section
+# CHECK-EXTENDED-RELOCS:      Characteristics [
+# CHECK-EXTENDED-RELOCS-NEXT:   IMAGE_SCN_ALIGN_1BYTES
+# CHECK-EXTENDED-RELOCS-NEXT:   IMAGE_SCN_CNT_INITIALIZED_DATA
+# CHECK-EXTENDED-RELOCS-NEXT: ]
+# CHECK-EXTENDED-RELOCS:      SectionData (
+# CHECK-EXTENDED-RELOCS-NEXT:  0000: {{.+}}|DEADBEEF{{.+}}|
+# CHECK-EXTENDED-RELOCS-NEXT: )
+
 ## Test that llvm-objcopy produces an error if the file with section contents
 ## to be added does not exist.
 # RUN: not llvm-objcopy --add-section=.another.section=%t2 %t %t3 2>&1 | FileCheck -DFILE1=%t -DFILE2=%t2 %s --check-prefixes=ERR1
