@@ -254,21 +254,16 @@ bool Dex::refs(const RefsRequest &Req,
   trace::Span Tracer("Dex refs");
   uint32_t Remaining =
       Req.Limit.getValueOr(std::numeric_limits<uint32_t>::max());
-  bool More = false;
   for (const auto &ID : Req.IDs)
     for (const auto &Ref : Refs.lookup(ID)) {
       if (!static_cast<int>(Req.Filter & Ref.Kind))
         continue;
-      if (Remaining == 0) {
-        More = true;
-        break;
-      }
-      if (Remaining > 0) {
-        --Remaining;
-        Callback(Ref);
-      }
+      if (Remaining == 0)
+        return true; // More refs were available.
+      --Remaining;
+      Callback(Ref);
     }
-  return More;
+  return false; // We reported all refs.
 }
 
 void Dex::relations(
