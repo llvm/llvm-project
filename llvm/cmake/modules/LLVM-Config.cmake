@@ -268,7 +268,7 @@ function(llvm_map_components_to_libnames out_libs)
       # already processed
     elseif( c STREQUAL "all" )
       list(APPEND expanded_components ${LLVM_AVAILABLE_LIBS})
-    else( NOT idx LESS 0 )
+    else()
       # Canonize the component name:
       string(TOUPPER "${c}" capitalized)
       list(FIND capitalized_libs LLVM${capitalized} lib_idx)
