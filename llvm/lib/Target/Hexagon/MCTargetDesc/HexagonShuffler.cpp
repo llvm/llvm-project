@@ -304,7 +304,7 @@ void HexagonShuffler::restrictBranchOrder(HexagonPacketSummary const &Summary) {
     Packet = PacketSave;
   }
 
-  reportError("invalid instruction packet: out of slots");
+  reportResourceError(Summary, "out of slots");
 }
 
 void HexagonShuffler::permitNonSlot() {
@@ -319,7 +319,7 @@ bool HexagonShuffler::ValidResourceUsage(HexagonPacketSummary const &Summary) {
   Optional<HexagonPacket> ShuffledPacket = tryAuction(Summary);
 
   if (!ShuffledPacket) {
-    reportError("invalid instruction packet: slot error");
+    reportResourceError(Summary, "slot error");
     return false;
   }
 
@@ -439,6 +439,15 @@ bool HexagonShuffler::restrictStoreLoadOrder(
   return true;
 }
 
+static std::string SlotMaskToText(unsigned SlotMask) {
+    SmallVector<std::string, HEXAGON_PRESHUFFLE_PACKET_SIZE> Slots;
+    for (unsigned SlotNum = 0; SlotNum < HEXAGON_PACKET_SIZE; SlotNum++)
+        if ((SlotMask & (1 << SlotNum)) != 0)
+            Slots.push_back(utostr(SlotNum));
+
+    return llvm::join(Slots, StringRef(", "));
+}
+
 HexagonShuffler::HexagonPacketSummary HexagonShuffler::GetPacketSummary() {
   HexagonPacketSummary Summary = HexagonPacketSummary();
 
@@ -455,8 +464,13 @@ HexagonShuffler::HexagonPacketSummary HexagonShuffler::GetPacketSummary() {
       ++Summary.pSlot3Cnt;
       Summary.PrefSlot3Inst = ISJ;
     }
-    Summary.ReservedSlotMask |=
+    const unsigned ReservedSlots =
         HexagonMCInstrInfo::getOtherReservedSlots(MCII, STI, ID);
+    Summary.ReservedSlotMask |= ReservedSlots;
+    if (ReservedSlots != 0)
+      AppliedRestrictions.push_back(std::make_pair(ID.getLoc(),
+                  (Twine("Instruction has reserved slots: ") +
+                   SlotMaskToText(ReservedSlots)).str()));
 
     switch (HexagonMCInstrInfo::getType(MCII, ID)) {
     case HexagonII::TypeS_2op:
@@ -639,7 +653,7 @@ bool HexagonShuffler::shuffle() {
   if (size() > HEXAGON_PACKET_SIZE) {
     // Ignore a packet with with more than what a packet can hold
     // or with compound or duplex insns for now.
-    reportError(Twine("invalid instruction packet"));
+    reportError("invalid instruction packet");
     return false;
   }
 
@@ -686,6 +700,32 @@ bool HexagonShuffler::shuffle() {
   );
 
   return Ok;
+}
+
+void HexagonShuffler::reportResourceError(HexagonPacketSummary const &Summary, StringRef Err) {
+  if (ReportErrors)
+    reportResourceUsage(Summary);
+  reportError(Twine("invalid instruction packet: ") + Err);
+}
+
+
+void HexagonShuffler::reportResourceUsage(HexagonPacketSummary const &Summary) {
+  auto SM = Context.getSourceManager();
+  if (SM) {
+    for (HexagonInstr const &I : insts()) {
+      const unsigned Units = I.Core.getUnits();
+
+      if (HexagonMCInstrInfo::requiresSlot(STI, *I.ID)) {
+        const std::string UnitsText = Units ? SlotMaskToText(Units) : "<None>";
+        SM->PrintMessage(I.ID->getLoc(), SourceMgr::DK_Note,
+                Twine("Instruction can utilize slots: ") +
+                UnitsText);
+      }
+      else if (!HexagonMCInstrInfo::isImmext(*I.ID))
+        SM->PrintMessage(I.ID->getLoc(), SourceMgr::DK_Note,
+                       "Instruction does not require a slot");
+    }
+  }
 }
 
 void HexagonShuffler::reportError(Twine const &Msg) {
