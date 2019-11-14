@@ -292,56 +292,25 @@ static void outputReplacementsXML(const Replacements &Replaces) {
 static bool
 emitReplacementWarnings(const Replacements &Replaces, StringRef AssumedFileName,
                         const std::unique_ptr<llvm::MemoryBuffer> &Code) {
-  if (Replaces.empty()) {
+  if (Replaces.empty())
     return false;
-  }
-
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  DiagOpts->ShowColors = (ShowColors && !NoShowColors);
-
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      new DiagnosticsEngine(DiagID, &*DiagOpts));
-
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
-  FileManager Files(FileSystemOptions(), InMemoryFileSystem);
-  SourceManager Sources(*Diags, Files);
-  FileID FileID = createInMemoryFile(AssumedFileName, Code.get(), Sources,
-                                     Files, InMemoryFileSystem.get());
-
-  FileManager &FileMgr = Sources.getFileManager();
-  llvm::ErrorOr<const FileEntry *> FileEntryPtr =
-      FileMgr.getFile(AssumedFileName);
 
   unsigned Errors = 0;
   if (WarnFormat && !NoWarnFormat) {
     llvm::SourceMgr Mgr;
+    const char *StartBuf = Code->getBufferStart();
+
+    Mgr.AddNewSourceBuffer(
+        MemoryBuffer::getMemBuffer(StartBuf, AssumedFileName), SMLoc());
     for (const auto &R : Replaces) {
-      PresumedLoc PLoc = Sources.getPresumedLoc(
-          Sources.getLocForStartOfFile(FileID).getLocWithOffset(R.getOffset()));
-
-      SourceLocation LineBegin =
-          Sources.translateFileLineCol(FileEntryPtr.get(), PLoc.getLine(), 1);
-      SourceLocation NextLineBegin = Sources.translateFileLineCol(
-          FileEntryPtr.get(), PLoc.getLine() + 1, 1);
-
-      const char *StartBuf = Sources.getCharacterData(LineBegin);
-      const char *EndBuf = Sources.getCharacterData(NextLineBegin);
-
-      StringRef Line(StartBuf, (EndBuf - StartBuf) - 1);
-
-      SMDiagnostic Diag(
-          Mgr, SMLoc::getFromPointer(StartBuf), AssumedFileName,
-          PLoc.getLine(), PLoc.getColumn(),
+      SMDiagnostic Diag = Mgr.GetMessage(
+          SMLoc::getFromPointer(StartBuf + R.getOffset()),
           WarningsAsErrors ? SourceMgr::DiagKind::DK_Error
                            : SourceMgr::DiagKind::DK_Warning,
-          "code should be clang-formatted [-Wclang-format-violations]", Line,
-          ArrayRef<std::pair<unsigned, unsigned>>());
+          "code should be clang-formatted [-Wclang-format-violations]");
 
       Diag.print(nullptr, llvm::errs(), (ShowColors && !NoShowColors));
-      Errors++;
-      if (ErrorLimit && Errors >= ErrorLimit)
+      if (ErrorLimit && ++Errors >= ErrorLimit)
         break;
     }
   }
