@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_CACHE_PRUNING_H
 #define LLVM_SUPPORT_CACHE_PRUNING_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <chrono>
 
