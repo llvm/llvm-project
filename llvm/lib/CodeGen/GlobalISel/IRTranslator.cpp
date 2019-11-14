@@ -890,9 +890,11 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
 
     MachinePointerInfo Ptr(LI.getPointerOperand(), Offsets[i] / 8);
     unsigned BaseAlign = getMemOpAlignment(LI);
+    AAMDNodes AAMetadata;
+    LI.getAAMetadata(AAMetadata);
     auto MMO = MF->getMachineMemOperand(
         Ptr, Flags, (MRI->getType(Regs[i]).getSizeInBits() + 7) / 8,
-        MinAlign(BaseAlign, Offsets[i] / 8), AAMDNodes(), Ranges,
+        MinAlign(BaseAlign, Offsets[i] / 8), AAMetadata, Ranges,
         LI.getSyncScopeID(), LI.getOrdering());
     MIRBuilder.buildLoad(Regs[i], Addr, *MMO);
   }
@@ -931,9 +933,11 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
 
     MachinePointerInfo Ptr(SI.getPointerOperand(), Offsets[i] / 8);
     unsigned BaseAlign = getMemOpAlignment(SI);
+    AAMDNodes AAMetadata;
+    SI.getAAMetadata(AAMetadata);
     auto MMO = MF->getMachineMemOperand(
         Ptr, Flags, (MRI->getType(Vals[i]).getSizeInBits() + 7) / 8,
-        MinAlign(BaseAlign, Offsets[i] / 8), AAMDNodes(), nullptr,
+        MinAlign(BaseAlign, Offsets[i] / 8), AAMetadata, nullptr,
         SI.getSyncScopeID(), SI.getOrdering());
     MIRBuilder.buildStore(Vals[i], Addr, *MMO);
   }
@@ -1959,11 +1963,14 @@ bool IRTranslator::translateAtomicCmpXchg(const User &U,
   Register Cmp = getOrCreateVReg(*I.getCompareOperand());
   Register NewVal = getOrCreateVReg(*I.getNewValOperand());
 
+  AAMDNodes AAMetadata;
+  I.getAAMetadata(AAMetadata);
+
   MIRBuilder.buildAtomicCmpXchgWithSuccess(
       OldValRes, SuccessRes, Addr, Cmp, NewVal,
       *MF->getMachineMemOperand(MachinePointerInfo(I.getPointerOperand()),
                                 Flags, DL->getTypeStoreSize(ValType),
-                                getMemOpAlignment(I), AAMDNodes(), nullptr,
+                                getMemOpAlignment(I), AAMetadata, nullptr,
                                 I.getSyncScopeID(), I.getSuccessOrdering(),
                                 I.getFailureOrdering()));
   return true;
@@ -2028,12 +2035,15 @@ bool IRTranslator::translateAtomicRMW(const User &U,
     break;
   }
 
+  AAMDNodes AAMetadata;
+  I.getAAMetadata(AAMetadata);
+
   MIRBuilder.buildAtomicRMW(
       Opcode, Res, Addr, Val,
       *MF->getMachineMemOperand(MachinePointerInfo(I.getPointerOperand()),
                                 Flags, DL->getTypeStoreSize(ResType),
-                                getMemOpAlignment(I), AAMDNodes(), nullptr,
-                                I.getSyncScopeID(), I.getOrdering()));
+                                getMemOpAlignment(I), AAMetadata,
+                                nullptr, I.getSyncScopeID(), I.getOrdering()));
   return true;
 }
 
