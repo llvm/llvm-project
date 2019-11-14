@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCInstrAnalysis.h"
+
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
