@@ -9586,7 +9586,16 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
 
   // sub x, zext (setcc) => subcarry x, 0, setcc
   // sub x, sext (setcc) => addcarry x, 0, setcc
-  unsigned Opc = RHS.getOpcode();
+
+  bool Commuted = false;
+  unsigned Opc = LHS.getOpcode();
+  if (Opc == ISD::ZERO_EXTEND || Opc == ISD::SIGN_EXTEND ||
+      Opc == ISD::ANY_EXTEND) {
+    std::swap(RHS, LHS);
+    Commuted = true;
+  }
+
+  Opc = RHS.getOpcode();
   switch (Opc) {
   default: break;
   case ISD::ZERO_EXTEND:
@@ -9598,8 +9607,22 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
     if (!isBoolSGPR(Cond))
       break;
     SDVTList VTList = DAG.getVTList(MVT::i32, MVT::i1);
-    SDValue Args[] = { LHS, DAG.getConstant(0, SL, MVT::i32), Cond };
-    Opc = (Opc == ISD::SIGN_EXTEND) ? ISD::ADDCARRY : ISD::SUBCARRY;
+    SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
+    SDValue Args[3];
+    Args[2] = Cond;
+
+    if (Commuted) {
+      // sub zext (setcc), x => addcarry 0, x, setcc
+      // sub sext (setcc), x => subcarry 0, x, setcc
+      Args[0] = Zero;
+      Args[1] = LHS;
+      Opc = (Opc == ISD::SIGN_EXTEND) ? ISD::SUBCARRY : ISD::ADDCARRY;
+    } else {
+      Args[0] = LHS;
+      Args[1] = Zero;
+      Opc = (Opc == ISD::SIGN_EXTEND) ? ISD::ADDCARRY : ISD::SUBCARRY;
+    }
+
     return DAG.getNode(Opc, SL, VTList, Args);
   }
   }

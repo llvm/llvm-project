@@ -311,6 +311,49 @@ bb:
   ret void
 }
 
+; Check case where sub is commuted with zext
+; GCN-LABEL: {{^}}sub_zext_setcc_commute:
+; GCN: v_cmp_gt_u32_e32 vcc, v
+; GCN-NOT: vcc
+; GCN: v_addc_u32_e32 [[ADDC:v[0-9]+]], vcc, v{{[0-9]+}}, v{{[0-9]+}}, vcc
+; GCN: v_subrev_i32_e32 [[RESULT:v[0-9]+]], vcc, s{{[0-9]+}}, [[ADDC]]
+define amdgpu_kernel void @sub_zext_setcc_commute(i32 addrspace(1)* nocapture %arg, i32 %a, i32%b) {
+bb:
+  %x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %y = tail call i32 @llvm.amdgcn.workitem.id.y()
+  %gep = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %x
+  %v = load i32, i32 addrspace(1)* %gep, align 4
+  %cmp = icmp ugt i32 %x, %y
+  %ext = zext i1 %cmp to i32
+  %adde = sub i32 %v, %ext
+  %sub = sub i32 %a, %adde
+  %sub2 = sub i32 %sub, %b
+  store i32 %sub2, i32 addrspace(1)* %gep, align 4
+  ret void
+}
+
+; Check case where sub is commuted with sext
+; GCN-LABEL: {{^}}sub_sext_setcc_commute:
+; GCN: v_cmp_gt_u32_e32 vcc, v
+; GCN-NOT: vcc
+; GCN: v_subb_u32_e32 [[SUBB:v[0-9]+]], vcc, 0, v{{[0-9]+}}, vcc
+; GCN: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, s{{[0-9]+}}, [[SUBB]]
+; GCN: v_subrev_i32_e32 [[RESULT:v[0-9]+]], vcc, s{{[0-9]+}}, [[ADD]]
+define amdgpu_kernel void @sub_sext_setcc_commute(i32 addrspace(1)* nocapture %arg, i32 %a, i32%b) {
+bb:
+  %x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %y = tail call i32 @llvm.amdgcn.workitem.id.y()
+  %gep = getelementptr inbounds i32, i32 addrspace(1)* %arg, i32 %x
+  %v = load i32, i32 addrspace(1)* %gep, align 4
+  %cmp = icmp ugt i32 %x, %y
+  %ext = sext i1 %cmp to i32
+  %adde = sub i32 %v, %ext
+  %sub = sub i32 %a, %adde
+  %sub2 = sub i32 %sub, %b
+  store i32 %sub2, i32 addrspace(1)* %gep, align 4
+  ret void
+}
+
 declare i1 @llvm.amdgcn.class.f32(float, i32) #0
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
