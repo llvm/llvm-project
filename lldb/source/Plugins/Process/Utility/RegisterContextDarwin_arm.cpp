@@ -21,12 +21,6 @@
 
 #include <memory>
 
-// Support building against older versions of LLVM, this macro was added
-// recently.
-#ifndef LLVM_EXTENSION
-#define LLVM_EXTENSION
-#endif
-
 #include "Utility/ARM_DWARF_Registers.h"
 #include "Utility/ARM_ehframe_Registers.h"
 
