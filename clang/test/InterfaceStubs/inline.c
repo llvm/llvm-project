@@ -1,31 +1,31 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang -c -DINLINE=inline -target x86_64-unknown-linux-gnu -o - \
+// RUN: %clang_cc1 -DINLINE=inline -triple x86_64-unknown-linux-gnu -o - \
 // RUN: -emit-interface-stubs -std=gnu89 -xc %s | \
 // RUN: FileCheck -check-prefix=CHECK-GNU %s
 // RUN: %clang -DINLINE=inline -target x86_64-linux-gnu -O0 -o - -c \
 // RUN: -std=gnu89 -xc %s | llvm-nm - | FileCheck -check-prefix=CHECK-GNU %s
 
-// RUN: %clang -c -DINLINE="__attribute__((always_inline))" \
-// RUN: -target x86_64-unknown-linux-gnu -o - -emit-interface-stubs -xc %s | \
+// RUN: %clang_cc1 -DINLINE="__attribute__((always_inline))" \
+// RUN: -triple x86_64-unknown-linux-gnu -o - -emit-interface-stubs -xc %s | \
 // RUN: FileCheck -check-prefix=CHECK-GNU %s
 // RUN: %clang -DINLINE="__attribute__((always_inline))" \
 // RUN: -target x86_64-linux-gnu -O0 -o - -c -xc %s | \
 // RUN: llvm-nm - | FileCheck -check-prefix=CHECK-GNU %s
 
-// RUN: %clang -c -DINLINE=inline -target x86_64-unknown-linux-gnu -o - \
+// RUN: %clang_cc1 -DINLINE=inline -triple x86_64-unknown-linux-gnu -o - \
 // RUN: -emit-interface-stubs -std=c99 -xc %s | \
 // RUN: FileCheck -check-prefix=CHECK-STD %s
 // RUN: %clang -DINLINE=inline -target x86_64-linux-gnu -O0 -o - -c -std=c99 \
 // RUN: -xc %s | llvm-nm - 2>&1 | FileCheck -check-prefix=CHECK-STD %s
 
-// RUN: %clang -c -DINLINE="__attribute__((noinline))" \
-// RUN: -target x86_64-unknown-linux-gnu -o - -emit-interface-stubs -std=c99 -xc %s | \
+// RUN: %clang_cc1 -DINLINE="__attribute__((noinline))" \
+// RUN: -triple x86_64-unknown-linux-gnu -o - -emit-interface-stubs -std=c99 -xc %s | \
 // RUN: FileCheck -check-prefix=CHECK-NOINLINE %s
 // RUN: %clang -DINLINE="__attribute__((noinline))" -target x86_64-linux-gnu \
 // RUN: -O0 -o - -c -std=c99 -xc %s | llvm-nm - 2>&1 | \
 // RUN: FileCheck -check-prefix=CHECK-NOINLINE %s
 
-// RUN: %clang -c -DINLINE="static" -target x86_64-unknown-linux-gnu -o - \
+// RUN: %clang_cc1 -DINLINE="static" -triple x86_64-unknown-linux-gnu -o - \
 // RUN: -emit-interface-stubs -std=c99 -xc %s | \
 // RUN: FileCheck -check-prefix=CHECK-STATIC %s
 // RUN: %clang -DINLINE="static" -target x86_64-linux-gnu -O0 -o - -c \
@@ -45,11 +45,11 @@ INLINE int foo() {
   return var;
 }
 
-// RUN: %clang -c -DINLINE=inline -target x86_64-linux-gnu -o - \
+// RUN: %clang_cc1 -DINLINE=inline -triple x86_64-linux-gnu -o - \
 // RUN: -emit-interface-stubs \
 // RUN: -std=gnu89 -xc %s | FileCheck -check-prefix=CHECK-TAPI %s
 
-// RUN: %clang -c -DINLINE=inline -target x86_64-linux-gnu -o - \
+// RUN: %clang_cc1 -DINLINE=inline -triple x86_64-linux-gnu -o - \
 // RUN: -emit-interface-stubs \
 // RUN: -std=gnu89 -xc %s | FileCheck -check-prefix=CHECK-SYMBOLS %s
 // RUN: %clang -DINLINE=inline -target x86_64-linux-gnu -o - \
