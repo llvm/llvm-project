@@ -238,9 +238,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // Promote i8 SINT_TO_FP to larger SINT_TO_FP's, as X86 doesn't have
     // this operation.
     setOperationAction(ISD::SINT_TO_FP, MVT::i8,  Promote);
-    // SSE has no i16 to fp conversion, only i32.
-    setOperationAction(ISD::SINT_TO_FP, MVT::i16, X86ScalarSSEf32 ? Promote
-                                                                  : Custom);
+    // SSE has no i16 to fp conversion, only i32. We promote in the handler
+    // to allow f80 to use i16 and f64 to use i16 with sse1 only
+    setOperationAction(ISD::SINT_TO_FP, MVT::i16, Custom);
     // f32 and f64 cases are Legal with SSE1/SSE2, f80 case is not
     setOperationAction(ISD::SINT_TO_FP, MVT::i32, Custom);
     // In 32-bit mode these are custom lowered.  In 64-bit mode F32 and F64
@@ -18440,6 +18440,12 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
 
   if (SDValue V = LowerI64IntToFP_AVX512DQ(Op, DAG, Subtarget))
     return V;
+
+  // SSE doesn't have an i16 conversion so we need to promote.
+  if (SrcVT == MVT::i16 && isScalarFPTypeInSSEReg(VT)) {
+    SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::i32, Src);
+    return DAG.getNode(ISD::SINT_TO_FP, dl, VT, Ext);
+  }
 
   SDValue ValueToStore = Op.getOperand(0);
   if (SrcVT == MVT::i64 && isScalarFPTypeInSSEReg(VT) &&
