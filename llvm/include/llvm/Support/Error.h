@@ -14,6 +14,7 @@
 #define LLVM_SUPPORT_ERROR_H
 
 #include "llvm-c/Error.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"

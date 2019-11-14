@@ -15,6 +15,7 @@
 #define LLVM_SUPPORT_THREADING_H
 
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Compiler.h"
