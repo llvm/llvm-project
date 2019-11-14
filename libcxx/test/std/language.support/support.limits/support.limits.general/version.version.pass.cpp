@@ -37,6 +37,7 @@
     __cpp_lib_constexpr_swap_algorithms            201806L [C++2a]
     __cpp_lib_destroying_delete                    201806L [C++2a]
     __cpp_lib_enable_shared_from_this              201603L [C++17]
+    __cpp_lib_endian                               201907L [C++2a]
     __cpp_lib_erase_if                             201811L [C++2a]
     __cpp_lib_exchange_function                    201304L [C++14]
     __cpp_lib_execution                            201603L [C++17]
@@ -195,6 +196,10 @@
 
 # ifdef __cpp_lib_enable_shared_from_this
 #   error "__cpp_lib_enable_shared_from_this should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_endian
+#   error "__cpp_lib_endian should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_erase_if
@@ -535,6 +540,10 @@
 
 # ifdef __cpp_lib_enable_shared_from_this
 #   error "__cpp_lib_enable_shared_from_this should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_endian
+#   error "__cpp_lib_endian should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_erase_if
@@ -992,6 +1001,10 @@
 # endif
 # if __cpp_lib_enable_shared_from_this != 201603L
 #   error "__cpp_lib_enable_shared_from_this should have the value 201603L in c++17"
+# endif
+
+# ifdef __cpp_lib_endian
+#   error "__cpp_lib_endian should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_erase_if
@@ -1680,6 +1693,13 @@
 # endif
 # if __cpp_lib_enable_shared_from_this != 201603L
 #   error "__cpp_lib_enable_shared_from_this should have the value 201603L in c++2a"
+# endif
+
+# ifndef __cpp_lib_endian
+#   error "__cpp_lib_endian should be defined in c++2a"
+# endif
+# if __cpp_lib_endian != 201907L
+#   error "__cpp_lib_endian should have the value 201907L in c++2a"
 # endif
 
 # ifndef __cpp_lib_erase_if
