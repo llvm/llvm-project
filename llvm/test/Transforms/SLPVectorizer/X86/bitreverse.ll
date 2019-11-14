@@ -311,14 +311,26 @@ define void @bitreverse_16i8() #0 {
 }
 
 define void @bitreverse_32i8() #0 {
-; CHECK-LABEL: @bitreverse_32i8(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([32 x i8]* @src8 to <16 x i8>*), align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 16) to <16 x i8>*), align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> [[TMP2]])
-; CHECK-NEXT:    store <16 x i8> [[TMP3]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
-; CHECK-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 16) to <16 x i8>*), align 1
-; CHECK-NEXT:    ret void
+; SSE-LABEL: @bitreverse_32i8(
+; SSE-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([32 x i8]* @src8 to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64 16) to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP3:%.*]] = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> [[TMP1]])
+; SSE-NEXT:    [[TMP4:%.*]] = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> [[TMP2]])
+; SSE-NEXT:    store <16 x i8> [[TMP3]], <16 x i8>* bitcast ([32 x i8]* @dst8 to <16 x i8>*), align 1
+; SSE-NEXT:    store <16 x i8> [[TMP4]], <16 x i8>* bitcast (i8* getelementptr inbounds ([32 x i8], [32 x i8]* @dst8, i8 0, i64 16) to <16 x i8>*), align 1
+; SSE-NEXT:    ret void
+;
+; AVX-LABEL: @bitreverse_32i8(
+; AVX-NEXT:    [[TMP1:%.*]] = load <32 x i8>, <32 x i8>* bitcast ([32 x i8]* @src8 to <32 x i8>*), align 1
+; AVX-NEXT:    [[TMP2:%.*]] = call <32 x i8> @llvm.bitreverse.v32i8(<32 x i8> [[TMP1]])
+; AVX-NEXT:    store <32 x i8> [[TMP2]], <32 x i8>* bitcast ([32 x i8]* @dst8 to <32 x i8>*), align 1
+; AVX-NEXT:    ret void
+;
+; XOP-LABEL: @bitreverse_32i8(
+; XOP-NEXT:    [[TMP1:%.*]] = load <32 x i8>, <32 x i8>* bitcast ([32 x i8]* @src8 to <32 x i8>*), align 1
+; XOP-NEXT:    [[TMP2:%.*]] = call <32 x i8> @llvm.bitreverse.v32i8(<32 x i8> [[TMP1]])
+; XOP-NEXT:    store <32 x i8> [[TMP2]], <32 x i8>* bitcast ([32 x i8]* @dst8 to <32 x i8>*), align 1
+; XOP-NEXT:    ret void
 ;
   %ld0  = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64  0), align 1
   %ld1  = load i8, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @src8, i8 0, i64  1), align 1
