@@ -3,7 +3,7 @@
 
 define <2 x double> @test_vfrcz_sd(<2 x double> %a) {
 ; CHECK-LABEL: @test_vfrcz_sd(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.xop.vfrcz.sd(<2 x double> %a)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.x86.xop.vfrcz.sd(<2 x double> [[A:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = insertelement <2 x double> %a, double 1.000000e+00, i32 1
@@ -13,7 +13,7 @@ define <2 x double> @test_vfrcz_sd(<2 x double> %a) {
 
 define double @test_vfrcz_sd_0(double %a) {
 ; CHECK-LABEL: @test_vfrcz_sd_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double %a, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.x86.xop.vfrcz.sd(<2 x double> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
 ; CHECK-NEXT:    ret double [[TMP3]]
@@ -38,7 +38,7 @@ define double @test_vfrcz_sd_1(double %a) {
 
 define <4 x float> @test_vfrcz_ss(<4 x float> %a) {
 ; CHECK-LABEL: @test_vfrcz_ss(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.xop.vfrcz.ss(<4 x float> %a)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.xop.vfrcz.ss(<4 x float> [[A:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = insertelement <4 x float> %a, float 1.000000e+00, i32 1
@@ -50,7 +50,7 @@ define <4 x float> @test_vfrcz_ss(<4 x float> %a) {
 
 define float @test_vfrcz_ss_0(float %a) {
 ; CHECK-LABEL: @test_vfrcz_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> undef, float %a, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> undef, float [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.x86.xop.vfrcz.ss(<4 x float> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
 ; CHECK-NEXT:    ret float [[TMP3]]
@@ -79,7 +79,7 @@ define float @test_vfrcz_ss_3(float %a) {
 
 define <2 x i64> @cmp_slt_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: @cmp_slt_v2i64(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i64> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i64> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i1> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 ;
@@ -89,7 +89,7 @@ define <2 x i64> @cmp_slt_v2i64(<2 x i64> %a, <2 x i64> %b) {
 
 define <2 x i64> @cmp_ult_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: @cmp_ult_v2i64(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i64> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i64> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i1> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 ;
@@ -99,7 +99,7 @@ define <2 x i64> @cmp_ult_v2i64(<2 x i64> %a, <2 x i64> %b) {
 
 define <2 x i64> @cmp_sle_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: @cmp_sle_v2i64(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sle <2 x i64> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sle <2 x i64> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i1> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 ;
@@ -109,7 +109,7 @@ define <2 x i64> @cmp_sle_v2i64(<2 x i64> %a, <2 x i64> %b) {
 
 define <2 x i64> @cmp_ule_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: @cmp_ule_v2i64(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i64> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i64> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i1> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
 ;
@@ -119,7 +119,7 @@ define <2 x i64> @cmp_ule_v2i64(<2 x i64> %a, <2 x i64> %b) {
 
 define <4 x i32> @cmp_sgt_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @cmp_sgt_v4i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
@@ -129,7 +129,7 @@ define <4 x i32> @cmp_sgt_v4i32(<4 x i32> %a, <4 x i32> %b) {
 
 define <4 x i32> @cmp_ugt_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @cmp_ugt_v4i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i32> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i32> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
@@ -139,7 +139,7 @@ define <4 x i32> @cmp_ugt_v4i32(<4 x i32> %a, <4 x i32> %b) {
 
 define <4 x i32> @cmp_sge_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @cmp_sge_v4i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge <4 x i32> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge <4 x i32> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
@@ -149,7 +149,7 @@ define <4 x i32> @cmp_sge_v4i32(<4 x i32> %a, <4 x i32> %b) {
 
 define <4 x i32> @cmp_uge_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @cmp_uge_v4i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge <4 x i32> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge <4 x i32> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
@@ -159,7 +159,7 @@ define <4 x i32> @cmp_uge_v4i32(<4 x i32> %a, <4 x i32> %b) {
 
 define <8 x i16> @cmp_seq_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: @cmp_seq_v8i16(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i16> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i16> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <8 x i1> [[TMP1]] to <8 x i16>
 ; CHECK-NEXT:    ret <8 x i16> [[TMP2]]
 ;
@@ -169,7 +169,7 @@ define <8 x i16> @cmp_seq_v8i16(<8 x i16> %a, <8 x i16> %b) {
 
 define <8 x i16> @cmp_ueq_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: @cmp_ueq_v8i16(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i16> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i16> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <8 x i1> [[TMP1]] to <8 x i16>
 ; CHECK-NEXT:    ret <8 x i16> [[TMP2]]
 ;
@@ -179,7 +179,7 @@ define <8 x i16> @cmp_ueq_v8i16(<8 x i16> %a, <8 x i16> %b) {
 
 define <8 x i16> @cmp_sne_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: @cmp_sne_v8i16(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i16> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i16> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <8 x i1> [[TMP1]] to <8 x i16>
 ; CHECK-NEXT:    ret <8 x i16> [[TMP2]]
 ;
@@ -189,7 +189,7 @@ define <8 x i16> @cmp_sne_v8i16(<8 x i16> %a, <8 x i16> %b) {
 
 define <8 x i16> @cmp_une_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: @cmp_une_v8i16(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i16> %a, %b
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i16> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <8 x i1> [[TMP1]] to <8 x i16>
 ; CHECK-NEXT:    ret <8 x i16> [[TMP2]]
 ;
