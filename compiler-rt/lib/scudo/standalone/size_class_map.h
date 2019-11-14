@@ -120,7 +120,8 @@ public:
       if (C < LargestClassId)
         CHECK_EQ(getClassIdBySize(S + 1), C + 1);
       CHECK_EQ(getClassIdBySize(S - 1), C);
-      CHECK_GT(getSizeByClassId(C), getSizeByClassId(C - 1));
+      if (C - 1 != BatchClassId)
+        CHECK_GT(getSizeByClassId(C), getSizeByClassId(C - 1));
     }
     // Do not perform the loop if the maximum size is too large.
     if (MaxSizeLog > 19)
@@ -129,7 +130,7 @@ public:
       const uptr C = getClassIdBySize(S);
       CHECK_LT(C, NumClasses);
       CHECK_GE(getSizeByClassId(C), S);
-      if (C > 0)
+      if (C - 1 != BatchClassId)
         CHECK_LT(getSizeByClassId(C - 1), S);
     }
   }
