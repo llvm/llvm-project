@@ -332,6 +332,12 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     unsigned MxOpc = getMuxOpcode(*MX.SrcT, *MX.SrcF);
     if (!MxOpc)
       continue;
+    // Basic sanity check: since we are deleting instructions, validate the
+    // iterators. There is a possibility that one of Def1 or Def2 is translated
+    // to "mux" and being considered for other "mux" instructions.
+    if (!MX.At->getParent() || !MX.Def1->getParent() || !MX.Def2->getParent())
+      continue;
+
     MachineBasicBlock &B = *MX.At->getParent();
     const DebugLoc &DL = B.findDebugLoc(MX.At);
     auto NewMux = BuildMI(B, MX.At, DL, HII->get(MxOpc), MX.DefR)
@@ -339,8 +345,8 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
                       .add(*MX.SrcT)
                       .add(*MX.SrcF);
     NewMux->clearKillInfo();
-    B.erase(MX.Def1);
-    B.erase(MX.Def2);
+    B.remove(MX.Def1);
+    B.remove(MX.Def2);
     Changed = true;
   }
 
