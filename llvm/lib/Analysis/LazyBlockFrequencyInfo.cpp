@@ -17,6 +17,7 @@
 #include "llvm/Analysis/LazyBranchProbabilityInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 

@@ -104,9 +104,7 @@ private:
 public:
   static char ID; // Pass identification, replacement for typeid.
 
-  StackProtector() : FunctionPass(ID), SSPBufferSize(8) {
-    initializeStackProtectorPass(*PassRegistry::getPassRegistry());
-  }
+  StackProtector();
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 

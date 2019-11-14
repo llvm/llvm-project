@@ -29,9 +29,7 @@ struct UnifyFunctionExitNodes : public FunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  UnifyFunctionExitNodes() : FunctionPass(ID) {
-    initializeUnifyFunctionExitNodesPass(*PassRegistry::getPassRegistry());
-  }
+  UnifyFunctionExitNodes();
 
   // We can preserve non-critical-edgeness when we unify function exit nodes
   void getAnalysisUsage(AnalysisUsage &AU) const override;

@@ -8,9 +8,9 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "R600InstrInfo.h"
 #include "R600RegisterInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"

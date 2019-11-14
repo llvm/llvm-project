@@ -31,6 +31,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Object/SymbolicFile.h"

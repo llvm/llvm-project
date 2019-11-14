@@ -18,6 +18,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 

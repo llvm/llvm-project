@@ -312,7 +312,6 @@ extern bool TimePassesIsEnabled;
 
 // Include support files that contain important APIs commonly used by Passes,
 // but that we want to separate out to make it easier to read the header files.
-#include "llvm/InitializePasses.h"
 #include "llvm/PassAnalysisSupport.h"
 #include "llvm/PassSupport.h"
 

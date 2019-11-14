@@ -30,9 +30,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
-
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 
 using namespace llvm;

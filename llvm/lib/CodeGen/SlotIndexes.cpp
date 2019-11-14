@@ -10,6 +10,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -18,6 +19,16 @@ using namespace llvm;
 #define DEBUG_TYPE "slotindexes"
 
 char SlotIndexes::ID = 0;
+
+SlotIndexes::SlotIndexes() : MachineFunctionPass(ID), mf(nullptr) {
+  initializeSlotIndexesPass(*PassRegistry::getPassRegistry());
+}
+
+SlotIndexes::~SlotIndexes() {
+  // The indexList's nodes are all allocated in the BumpPtrAllocator.
+  indexList.clearAndLeakNodesUnsafely();
+}
+
 INITIALIZE_PASS(SlotIndexes, DEBUG_TYPE,
                 "Slot index numbering", false, false)
 

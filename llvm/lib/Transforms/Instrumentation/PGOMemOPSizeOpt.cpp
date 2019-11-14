@@ -35,6 +35,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/PassSupport.h"

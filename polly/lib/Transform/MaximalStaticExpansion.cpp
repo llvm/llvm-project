@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/InitializePasses.h"
 #include "isl/isl-noexceptions.h"
 #include "isl/union_map.h"
 #include <cassert>

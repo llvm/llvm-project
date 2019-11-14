@@ -10,6 +10,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
