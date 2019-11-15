@@ -322,6 +322,32 @@ for.end:
   ret i32 0
 }
 
+@ftab = common global [32 x float] zeroinitializer, align 1
+
+define float @fcmp_not_allowed() #0 {
+; CHECK-LABEL:        fcmp_not_allowed(
+; PREFER-FOLDING:     vector.body:
+; PREFER-FOLDING-NOT: llvm.masked.load
+; PREFER-FOLDING-NOT: llvm.masked.store
+; PREFER-FOLDING:     br i1 %{{.*}}, label %{{.*}}, label %vector.body
+entry:
+  br label %for.body
+
+for.body:
+  %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %arrayidx = getelementptr inbounds [32 x float], [32 x float]* @ftab, i32 0, i32 %i.08
+  %0 = load float, float* %arrayidx, align 4
+  %cmp1 = fcmp oeq float %0, 0.000000e+00
+  %. = select i1 %cmp1, float 2.000000e+00, float 1.000000e+00
+  store float %., float* %arrayidx, align 4
+  %inc = add nsw i32 %i.08, 1
+  %exitcond = icmp slt i32 %inc, 999
+  br i1 %exitcond, label %for.body, label %for.end
+
+for.end:
+  ret float 0.000000e+00
+}
+
 define void @pragma_vect_predicate_disable(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL:        pragma_vect_predicate_disable(
 ; PREFER-FOLDING:     vector.body:
