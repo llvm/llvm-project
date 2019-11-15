@@ -664,6 +664,17 @@ TEST_F(SymbolCollectorTest, HeaderAsMainFile) {
   runSymbolCollector("", Header.code(),
                      /*ExtraArgs=*/{"-xobjective-c++-header"});
   EXPECT_THAT(Symbols, UnorderedElementsAre(QName("Foo"), QName("Func")));
+  EXPECT_THAT(Refs,
+              UnorderedElementsAre(Pair(findSymbol(Symbols, "Foo").ID,
+                                        HaveRanges(Header.ranges("Foo"))),
+                                   Pair(findSymbol(Symbols, "Func").ID,
+                                        HaveRanges(Header.ranges("Func")))));
+
+  // Run the .hh file as main file (without "-x c++-header"), we should collect
+  // the refs as well.
+  TestFileName = testPath("foo.hh");
+  runSymbolCollector("", Header.code());
+  EXPECT_THAT(Symbols, UnorderedElementsAre(QName("Foo"), QName("Func")));
   EXPECT_THAT(Refs, UnorderedElementsAre(Pair(findSymbol(Symbols, "Foo").ID,
                                   HaveRanges(Header.ranges("Foo"))),
                              Pair(findSymbol(Symbols, "Func").ID,
