@@ -56,7 +56,7 @@ option(LLDB_SKIP_STRIP "Whether to skip stripping of binaries when installing ll
 
 # BEGIN SWIFT MOD
 option(LLDB_ENABLE_SWIFT_SUPPORT "Enable swift support" ON)
-option(LLDB_ALLOW_STATIC_BINDINGS "Enable using static/baked language bindings if swig is not present." OFF)
+option(LLDB_USE_STATIC_BINDINGS "Use the static Python bindings." OFF)
 option(LLDB_ENABLE_WERROR "Fail and stop if a warning is triggered." ${LLVM_ENABLE_WERROR})
 # END SWIFT CODE
 
