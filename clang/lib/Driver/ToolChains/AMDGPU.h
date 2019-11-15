@@ -55,7 +55,7 @@ protected:
 public:
   AMDGPUToolChain(const Driver &D, const llvm::Triple &Triple,
                   const llvm::opt::ArgList &Args);
-  unsigned GetDefaultDwarfVersion() const override { return 5; }
+  unsigned GetDefaultDwarfVersion() const override { return 4; }
   bool IsIntegratedAssemblerDefault() const override { return true; }
   bool IsMathErrnoDefault() const override { return false; }
 
