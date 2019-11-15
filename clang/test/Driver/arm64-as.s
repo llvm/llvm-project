@@ -2,4 +2,4 @@
 // RUN: %clang -target arm64-apple-ios -arch arm64 -### -c %s 2>&1 | FileCheck -check-prefix=TARGET %s
 //
 // TARGET: "-cc1as"
-// TARGET: "-target-cpu" "cyclone"
+// TARGET: "-target-cpu" "apple-a7"
