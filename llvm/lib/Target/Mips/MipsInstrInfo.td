@@ -1272,6 +1272,7 @@ def immSExt8  : PatLeaf<(imm), [{ return isInt<8>(N->getSExtValue()); }]>;
 // Node immediate fits as 16-bit sign extended on target immediate.
 // e.g. addi, andi
 def immSExt16  : PatLeaf<(imm), [{ return isInt<16>(N->getSExtValue()); }]>;
+def imm32SExt16  : IntImmLeaf<i32, [{ return isInt<16>(Imm.getSExtValue()); }]>;
 
 // Node immediate fits as 7-bit zero extended on target immediate.
 def immZExt7 : PatLeaf<(imm), [{ return isUInt<7>(N->getZExtValue()); }]>;
@@ -2058,7 +2059,7 @@ def LONG_BRANCH_ADDiu2Op : PseudoSE<(outs GPR32Opnd:$dst),
 /// Arithmetic Instructions (ALU Immediate)
 let AdditionalPredicates = [NotInMicroMips] in {
   def ADDiu : MMRel, StdMMR6Rel, ArithLogicI<"addiu", simm16_relaxed, GPR32Opnd,
-                                             II_ADDIU, immSExt16, add>,
+                                             II_ADDIU, imm32SExt16, add>,
               ADDI_FM<0x9>, IsAsCheapAsAMove, ISA_MIPS1;
 
   def ANDi : MMRel, StdMMR6Rel,
