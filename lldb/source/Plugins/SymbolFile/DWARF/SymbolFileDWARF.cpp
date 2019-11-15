@@ -839,7 +839,8 @@ size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
 
   size_t functions_added = 0;
   std::vector<DWARFDIE> function_dies;
-  dwarf_cu->AppendDIEsWithTag(DW_TAG_subprogram, function_dies);
+  dwarf_cu->GetNonSkeletonUnit().AppendDIEsWithTag(DW_TAG_subprogram,
+                                                    function_dies);
   for (const DWARFDIE &die : function_dies) {
     if (comp_unit.FindFunctionByUID(die.GetID()))
       continue;
