@@ -3851,6 +3851,14 @@ LegalizerHelper::lowerUITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Src);
 
+  if (SrcTy == LLT::scalar(1)) {
+    auto True = MIRBuilder.buildFConstant(DstTy, 1.0);
+    auto False = MIRBuilder.buildFConstant(DstTy, 0.0);
+    MIRBuilder.buildSelect(Dst, Src, True, False);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
   if (SrcTy != LLT::scalar(64))
     return UnableToLegalize;
 
@@ -3875,6 +3883,14 @@ LegalizerHelper::lowerSITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   const LLT S64 = LLT::scalar(64);
   const LLT S32 = LLT::scalar(32);
   const LLT S1 = LLT::scalar(1);
+
+  if (SrcTy == S1) {
+    auto True = MIRBuilder.buildFConstant(DstTy, -1.0);
+    auto False = MIRBuilder.buildFConstant(DstTy, 0.0);
+    MIRBuilder.buildSelect(Dst, Src, True, False);
+    MI.eraseFromParent();
+    return Legalized;
+  }
 
   if (SrcTy != S64)
     return UnableToLegalize;
