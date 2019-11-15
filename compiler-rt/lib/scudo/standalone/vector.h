@@ -84,7 +84,8 @@ private:
     DCHECK_LE(Size, NewCapacity);
     const uptr NewCapacityBytes =
         roundUpTo(NewCapacity * sizeof(T), getPageSizeCached());
-    T *NewData = (T *)map(nullptr, NewCapacityBytes, "scudo:vector");
+    T *NewData =
+        reinterpret_cast<T *>(map(nullptr, NewCapacityBytes, "scudo:vector"));
     if (Data) {
       memcpy(NewData, Data, Size * sizeof(T));
       unmap(Data, CapacityBytes);
