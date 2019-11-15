@@ -58,6 +58,8 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::pdb;
 
+char SymbolFilePDB::ID;
+
 namespace {
 lldb::LanguageType TranslateLanguage(PDB_Lang lang) {
   switch (lang) {

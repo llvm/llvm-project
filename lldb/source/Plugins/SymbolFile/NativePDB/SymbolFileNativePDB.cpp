@@ -68,6 +68,8 @@ using namespace npdb;
 using namespace llvm::codeview;
 using namespace llvm::pdb;
 
+char SymbolFileNativePDB::ID;
+
 static lldb::LanguageType TranslateLanguage(PDB_Lang lang) {
   switch (lang) {
   case PDB_Lang::Cpp:

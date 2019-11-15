@@ -93,6 +93,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+char SymbolFileDWARF::ID;
+
 // static inline bool
 // child_requires_parent_class_union_or_struct_to_be_completed (dw_tag_t tag)
 //{

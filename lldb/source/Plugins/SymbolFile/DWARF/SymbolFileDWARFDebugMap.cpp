@@ -39,6 +39,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+char SymbolFileDWARFDebugMap::ID;
+
 // Subclass lldb_private::Module so we can intercept the
 // "Module::GetObjectFile()" (so we can fixup the object file sections) and
 // also for "Module::GetSymbolFile()" (so we can fixup the symbol file id.

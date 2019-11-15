@@ -26,6 +26,8 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::breakpad;
 
+char SymbolFileBreakpad::ID;
+
 class SymbolFileBreakpad::LineIterator {
 public:
   // begin iterator for sections of given type
