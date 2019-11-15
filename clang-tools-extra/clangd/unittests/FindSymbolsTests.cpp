@@ -178,13 +178,10 @@ TEST_F(WorkspaceSymbolsTest, Namespaces) {
 }
 
 TEST_F(WorkspaceSymbolsTest, AnonymousNamespace) {
-  addFile("foo.h", R"cpp(
+  addFile("foo.cpp", R"cpp(
       namespace {
       void test() {}
       }
-      )cpp");
-  addFile("foo.cpp", R"cpp(
-      #include "foo.h"
       )cpp");
   EXPECT_THAT(getSymbols("test"), ElementsAre(QName("test")));
 }
