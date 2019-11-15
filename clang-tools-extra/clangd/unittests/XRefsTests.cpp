@@ -917,7 +917,7 @@ void foo())cpp";
          HI.NamespaceScope = "";
          HI.Name = "X";
          HI.LocalScope = "X::";        // FIXME: Should be X<T *>::
-         HI.Kind = SymbolKind::Method; // FIXME: Should be Constructor
+         HI.Kind = SymbolKind::Constructor;
          HI.Type = "void ()";          // FIXME: Should be None
          HI.ReturnType = "void";       // FIXME: Should be None or X<T*>
          HI.Definition = "X<type - parameter - 0 - 0 *>()"; // FIXME: --> X()

@@ -257,7 +257,7 @@ SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
     return SymbolKind::Property;
   case index::SymbolKind::Constructor:
   case index::SymbolKind::Destructor:
-    return SymbolKind::Method;
+    return SymbolKind::Constructor;
   case index::SymbolKind::ConversionFunction:
     return SymbolKind::Function;
   case index::SymbolKind::Parameter:
