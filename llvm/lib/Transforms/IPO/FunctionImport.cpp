@@ -308,7 +308,7 @@ static void computeImportForReferencedGlobals(
 
     auto MarkExported = [&](const ValueInfo &VI, const GlobalValueSummary *S) {
       if (ExportLists)
-        (*ExportLists)[S->modulePath()].insert(VI);
+        (*ExportLists)[S->modulePath()].insert(VI.getGUID());
     };
 
     for (auto &RefSummary : VI.getSummaryList())
@@ -497,7 +497,7 @@ static void computeImportForFunction(
       // Make exports in the source module.
       if (ExportLists) {
         auto &ExportList = (*ExportLists)[ExportModulePath];
-        ExportList.insert(VI);
+        ExportList.insert(VI.getGUID());
         if (!PreviouslyImported) {
           // This is the first time this function was exported from its source
           // module, so mark all functions and globals it references as exported
@@ -505,11 +505,14 @@ static void computeImportForFunction(
           // For efficiency, we unconditionally add all the referenced GUIDs
           // to the ExportList for this module, and will prune out any not
           // defined in the module later in a single pass.
-          for (auto &Edge : ResolvedCalleeSummary->calls())
-            ExportList.insert(Edge.first);
-
-          for (auto &Ref : ResolvedCalleeSummary->refs())
-            ExportList.insert(Ref);
+          for (auto &Edge : ResolvedCalleeSummary->calls()) {
+            auto CalleeGUID = Edge.first.getGUID();
+            ExportList.insert(CalleeGUID);
+          }
+          for (auto &Ref : ResolvedCalleeSummary->refs()) {
+            auto GUID = Ref.getGUID();
+            ExportList.insert(GUID);
+          }
         }
       }
     }
@@ -627,37 +630,6 @@ static unsigned numGlobalVarSummaries(const ModuleSummaryIndex &Index,
 }
 #endif
 
-static bool
-checkVariableImport(const ModuleSummaryIndex &Index,
-                    StringMap<FunctionImporter::ImportMapTy> &ImportLists,
-                    StringMap<FunctionImporter::ExportSetTy> &ExportLists) {
-
-  DenseSet<GlobalValue::GUID> FlattenedImports;
-
-  for (auto &ImportPerModule : ImportLists)
-    for (auto &ExportPerModule : ImportPerModule.second)
-      FlattenedImports.insert(ExportPerModule.second.begin(),
-                              ExportPerModule.second.end());
-
-  // Checks that all GUIDs of read/writeonly vars we see in export lists
-  // are also in the import lists. Otherwise we my face linker undefs,
-  // because readonly and writeonly vars are internalized in their
-  // source modules.
-  auto IsReadOrWriteOnlyVar = [&](StringRef ModulePath, const ValueInfo &VI) {
-    auto *GVS = dyn_cast_or_null<GlobalVarSummary>(
-        Index.findSummaryInModule(VI, ModulePath));
-    return GVS && (Index.isReadOnly(GVS) || Index.isWriteOnly(GVS));
-  };
-
-  for (auto &ExportPerModule : ExportLists)
-    for (auto &VI : ExportPerModule.second)
-      if (!FlattenedImports.count(VI.getGUID()) &&
-          IsReadOrWriteOnlyVar(ExportPerModule.first(), VI))
-        return false;
-
-  return true;
-}
-
 /// Compute all the import and export for every module using the Index.
 void llvm::ComputeCrossModuleImport(
     const ModuleSummaryIndex &Index,
@@ -682,13 +654,14 @@ void llvm::ComputeCrossModuleImport(
   for (auto &ELI : ExportLists) {
     const auto &DefinedGVSummaries =
         ModuleToDefinedGVSummaries.lookup(ELI.first());
-    std::remove_if(ELI.second.begin(), ELI.second.end(),
-                   [&](const ValueInfo &VI) {
-                     return !DefinedGVSummaries.count(VI.getGUID());
-                   });
+    for (auto EI = ELI.second.begin(); EI != ELI.second.end();) {
+      if (!DefinedGVSummaries.count(*EI))
+        EI = ELI.second.erase(EI);
+      else
+        ++EI;
+    }
   }
 
-  assert(checkVariableImport(Index, ImportLists, ExportLists));
 #ifndef NDEBUG
   LLVM_DEBUG(dbgs() << "Import/Export lists for " << ImportLists.size()
                     << " modules:\n");
