@@ -164,10 +164,6 @@ Improvements to clang-tidy
   Finds non-static member functions that can be made ``const``
   because the functions don't use ``this`` in a non-const way.
 
-- The :doc:`readability-redundant-string-init
-  <clang-tidy/checks/readability-redundant-string-init>` check now supports a
-  `StringNames` option enabling its application to custom string classes.
-
 Improvements to include-fixer
 -----------------------------
 
