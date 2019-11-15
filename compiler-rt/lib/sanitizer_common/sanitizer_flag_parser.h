@@ -22,9 +22,23 @@ namespace __sanitizer {
 class FlagHandlerBase {
  public:
   virtual bool Parse(const char *value) { return false; }
+  // Write the C string representation of the current value (truncated to fit)
+  // into the buffer of size `size`. Returns false if truncation occurred and
+  // returns true otherwise.
+  virtual bool Format(char *buffer, uptr size) {
+    if (size > 0)
+      buffer[0] = '\0';
+    return false;
+  }
 
  protected:
   ~FlagHandlerBase() {}
+
+  inline bool FormatString(char *buffer, uptr size, const char *str_to_use) {
+    uptr num_symbols_should_write =
+        internal_snprintf(buffer, size, "%s", str_to_use);
+    return num_symbols_should_write < size;
+  }
 };
 
 template <typename T>
@@ -34,6 +48,7 @@ class FlagHandler : public FlagHandlerBase {
  public:
   explicit FlagHandler(T *t) : t_(t) {}
   bool Parse(const char *value) final;
+  bool Format(char *buffer, uptr size) final;
 };
 
 inline bool ParseBool(const char *value, bool *b) {
@@ -60,6 +75,11 @@ inline bool FlagHandler<bool>::Parse(const char *value) {
 }
 
 template <>
+inline bool FlagHandler<bool>::Format(char *buffer, uptr size) {
+  return FormatString(buffer, size, *t_ ? "true" : "false");
+}
+
+template <>
 inline bool FlagHandler<HandleSignalMode>::Parse(const char *value) {
   bool b;
   if (ParseBool(value, &b)) {
@@ -76,9 +96,20 @@ inline bool FlagHandler<HandleSignalMode>::Parse(const char *value) {
 }
 
 template <>
+inline bool FlagHandler<HandleSignalMode>::Format(char *buffer, uptr size) {
+  uptr num_symbols_should_write = internal_snprintf(buffer, size, "%d", *t_);
+  return num_symbols_should_write < size;
+}
+
+template <>
 inline bool FlagHandler<const char *>::Parse(const char *value) {
   *t_ = value;
   return true;
+}
+
+template <>
+inline bool FlagHandler<const char *>::Format(char *buffer, uptr size) {
+  return FormatString(buffer, size, *t_);
 }
 
 template <>
@@ -91,6 +122,12 @@ inline bool FlagHandler<int>::Parse(const char *value) {
 }
 
 template <>
+inline bool FlagHandler<int>::Format(char *buffer, uptr size) {
+  uptr num_symbols_should_write = internal_snprintf(buffer, size, "%d", *t_);
+  return num_symbols_should_write < size;
+}
+
+template <>
 inline bool FlagHandler<uptr>::Parse(const char *value) {
   const char *value_end;
   *t_ = internal_simple_strtoll(value, &value_end, 10);
@@ -100,12 +137,24 @@ inline bool FlagHandler<uptr>::Parse(const char *value) {
 }
 
 template <>
+inline bool FlagHandler<uptr>::Format(char *buffer, uptr size) {
+  uptr num_symbols_should_write = internal_snprintf(buffer, size, "%p", *t_);
+  return num_symbols_should_write < size;
+}
+
+template <>
 inline bool FlagHandler<s64>::Parse(const char *value) {
   const char *value_end;
   *t_ = internal_simple_strtoll(value, &value_end, 10);
   bool ok = *value_end == 0;
   if (!ok) Printf("ERROR: Invalid value for s64 option: '%s'\n", value);
   return ok;
+}
+
+template <>
+inline bool FlagHandler<s64>::Format(char *buffer, uptr size) {
+  uptr num_symbols_should_write = internal_snprintf(buffer, size, "%lld", *t_);
+  return num_symbols_should_write < size;
 }
 
 class FlagParser {
