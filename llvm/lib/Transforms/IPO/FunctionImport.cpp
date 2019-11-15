@@ -627,6 +627,7 @@ static unsigned numGlobalVarSummaries(const ModuleSummaryIndex &Index,
 }
 #endif
 
+#ifndef NDEBUG
 static bool
 checkVariableImport(const ModuleSummaryIndex &Index,
                     StringMap<FunctionImporter::ImportMapTy> &ImportLists,
@@ -657,6 +658,7 @@ checkVariableImport(const ModuleSummaryIndex &Index,
 
   return true;
 }
+#endif
 
 /// Compute all the import and export for every module using the Index.
 void llvm::ComputeCrossModuleImport(
