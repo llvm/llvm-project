@@ -1564,9 +1564,11 @@ SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
 std::unique_ptr<SymbolFileDWARFDwo>
 SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     DWARFUnit &unit, const DWARFDebugInfoEntry &cu_die) {
-  // If we are using a dSYM file, we never want the standard DWO files since
-  // the -gmodules support uses the same DWO machanism to specify full debug
-  // info files for modules.
+  // If this is a Darwin-style debug map (non-.dSYM) symbol file,
+  // never attempt to load ELF-style DWO files since the -gmodules
+  // support uses the same DWO machanism to specify full debug info
+  // files for modules. This is handled in
+  // UpdateExternalModuleListIfNeeded().
   if (GetDebugMapSymfile())
     return nullptr;
 
