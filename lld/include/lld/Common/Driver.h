@@ -15,27 +15,27 @@
 namespace lld {
 namespace coff {
 bool link(llvm::ArrayRef<const char *> args, bool canExitEarly,
-          llvm::raw_ostream &diag = llvm::errs());
+          llvm::raw_ostream &stdout, llvm::raw_ostream &stderr);
 }
 
 namespace mingw {
-bool link(llvm::ArrayRef<const char *> args,
-          llvm::raw_ostream &diag = llvm::errs());
+bool link(llvm::ArrayRef<const char *> args, bool canExitEarly,
+          llvm::raw_ostream &stdout, llvm::raw_ostream &stderr);
 }
 
 namespace elf {
 bool link(llvm::ArrayRef<const char *> args, bool canExitEarly,
-          llvm::raw_ostream &diag = llvm::errs());
+          llvm::raw_ostream &stdout, llvm::raw_ostream &stderr);
 }
 
 namespace mach_o {
 bool link(llvm::ArrayRef<const char *> args, bool canExitEarly,
-          llvm::raw_ostream &diag = llvm::errs());
+          llvm::raw_ostream &stdout, llvm::raw_ostream &stderr);
 }
 
 namespace wasm {
 bool link(llvm::ArrayRef<const char *> args, bool canExitEarly,
-          llvm::raw_ostream &diag = llvm::errs());
+          llvm::raw_ostream &stdout, llvm::raw_ostream &stderr);
 }
 }
 

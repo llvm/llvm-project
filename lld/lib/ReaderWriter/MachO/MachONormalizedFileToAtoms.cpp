@@ -316,8 +316,8 @@ llvm::Error processSymboledSection(DefinedAtom::ContentType atomType,
             });
 
   // Debug logging of symbols.
-  //for (const Symbol *sym : symbols)
-  //  llvm::errs() << "  sym: "
+  // for (const Symbol *sym : symbols)
+  //  lld::errs() << "  sym: "
   //    << llvm::format("0x%08llx ", (uint64_t)sym->value)
   //    << ", " << sym->name << "\n";
 
