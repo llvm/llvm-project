@@ -39,25 +39,46 @@ static bool CheckRemoval(SourceManager &SM, SourceLocation StartLoc,
                   File.begin(), TokenBegin, File.end());
 
   Token Tok;
-  int ParenLevel = 0;
+  int NestingLevel = 0; // Parens, braces, and square brackets
+  int AngleBracketLevel = 0;
   bool FoundTypedef = false;
 
   while (!DeclLexer.LexFromRawLexer(Tok) && !Tok.is(tok::semi)) {
     switch (Tok.getKind()) {
     case tok::l_brace:
-    case tok::r_brace:
-      // This might be the `typedef struct {...} T;` case.
-      return false;
-    case tok::l_paren:
-      ParenLevel++;
+      if (NestingLevel == 0 && AngleBracketLevel == 0) {
+        // At top level, this might be the `typedef struct {...} T;` case.
+        // Inside parens, square brackets, or angle brackets it's not.
+        return false;
+      }
+      ++NestingLevel;
       break;
+    case tok::l_paren:
+    case tok::l_square:
+      ++NestingLevel;
+      break;
+    case tok::r_brace:
     case tok::r_paren:
-      ParenLevel--;
+    case tok::r_square:
+      --NestingLevel;
+      break;
+    case tok::less:
+      // If not nested in paren/brace/square bracket, treat as opening angle bracket.
+      if (NestingLevel == 0)
+        ++AngleBracketLevel;
+      break;
+    case tok::greater:
+      // Per C++ 17 Draft N4659, Section 17.2/3
+      //   https://timsong-cpp.github.io/cppwp/n4659/temp.names#3:
+      // "When parsing a template-argument-list, the first non-nested > is
+      // taken as the ending delimiter rather than a greater-than operator."
+      // If not nested in paren/brace/square bracket, treat as closing angle bracket.
+      if (NestingLevel == 0)
+        --AngleBracketLevel;
       break;
     case tok::comma:
-      if (ParenLevel == 0) {
-        // If there is comma and we are not between open parenthesis then it is
-        // two or more declarations in this chain.
+      if (NestingLevel == 0 && AngleBracketLevel == 0) {
+        // If there is a non-nested comma we have two or more declarations in this chain.
         return false;
       }
       break;
@@ -88,8 +109,7 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   if (StartLoc.isMacroID() && IgnoreMacros)
     return;
 
-  auto Diag =
-      diag(StartLoc, "use 'using' instead of 'typedef'");
+  auto Diag = diag(StartLoc, "use 'using' instead of 'typedef'");
 
   // do not fix if there is macro or array
   if (MatchedDecl->getUnderlyingType()->isArrayType() || StartLoc.isMacroID())
