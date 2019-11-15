@@ -171,8 +171,8 @@ static lldb::ModuleSP GetContainingClangModule(const DWARFDIE &die) {
 TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
                                                      const DWARFDIE &die,
                                                      Log *log) {
-  ModuleSP dwo_module_sp = GetContainingClangModule(die);
-  if (!dwo_module_sp)
+  ModuleSP clang_module_sp = GetContainingClangModule(die);
+  if (!clang_module_sp)
     return TypeSP();
 
   // If this type comes from a Clang module, recursively look in the
@@ -186,7 +186,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
   LanguageSet languages;
   languages.Insert(die.GetCU()->GetLanguageType());
   llvm::DenseSet<SymbolFile *> searched_symbol_files;
-  dwo_module_sp->GetSymbolFile()->FindTypes(decl_context, languages,
+  clang_module_sp->GetSymbolFile()->FindTypes(decl_context, languages,
                                             searched_symbol_files, pcm_types);
   if (pcm_types.Empty()) {
     // Since this type is defined in one of the Clang modules imported
@@ -468,32 +468,36 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   case DW_TAG_volatile_type:
   case DW_TAG_unspecified_type: {
     if (tag == DW_TAG_typedef && attrs.type.IsValid()) {
-      // Try to parse a typedef from the DWO file first as modules can
-      // contain typedef'ed structures that have no names like:
+      // Try to parse a typedef from the (DWARF embedded in the) Clang
+      // module file first as modules can contain typedef'ed
+      // structures that have no names like:
       //
       //  typedef struct { int a; } Foo;
       //
-      // In this case we will have a structure with no name and a typedef
-      // named "Foo" that points to this unnamed structure. The name in the
-      // typedef is the only identifier for the struct, so always try to
-      // get typedefs from DWO files if possible.
+      // In this case we will have a structure with no name and a
+      // typedef named "Foo" that points to this unnamed
+      // structure. The name in the typedef is the only identifier for
+      // the struct, so always try to get typedefs from Clang modules
+      // if possible.
       //
-      // The type_sp returned will be empty if the typedef doesn't exist in
-      // a DWO file, so it is cheap to call this function just to check.
+      // The type_sp returned will be empty if the typedef doesn't
+      // exist in a module file, so it is cheap to call this function
+      // just to check.
       //
-      // If we don't do this we end up creating a TypeSP that says this is
-      // a typedef to type 0x123 (the DW_AT_type value would be 0x123 in
-      // the DW_TAG_typedef), and this is the unnamed structure type. We
-      // will have a hard time tracking down an unnammed structure type in
-      // the module DWO file, so we make sure we don't get into this
-      // situation by always resolving typedefs from the DWO file.
+      // If we don't do this we end up creating a TypeSP that says
+      // this is a typedef to type 0x123 (the DW_AT_type value would
+      // be 0x123 in the DW_TAG_typedef), and this is the unnamed
+      // structure type. We will have a hard time tracking down an
+      // unnammed structure type in the module debug info, so we make
+      // sure we don't get into this situation by always resolving
+      // typedefs from the module.
       const DWARFDIE encoding_die = attrs.type.Reference();
 
-      // First make sure that the die that this is typedef'ed to _is_ just
-      // a declaration (DW_AT_declaration == 1), not a full definition
-      // since template types can't be represented in modules since only
-      // concrete instances of templates are ever emitted and modules won't
-      // contain those
+      // First make sure that the die that this is typedef'ed to _is_
+      // just a declaration (DW_AT_declaration == 1), not a full
+      // definition since template types can't be represented in
+      // modules since only concrete instances of templates are ever
+      // emitted and modules won't contain those
       if (encoding_die &&
           encoding_die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0) == 1) {
         type_sp = ParseTypeFromClangModule(sc, die, log);
