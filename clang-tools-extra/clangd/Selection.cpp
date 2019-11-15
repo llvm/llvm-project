@@ -10,9 +10,11 @@
 #include "Logger.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
@@ -145,6 +147,32 @@ std::string printNodeToString(const DynTypedNode &N, const PrintingPolicy &PP) {
 }
 #endif
 
+bool isImplicit(const Stmt* S) {
+  // Some Stmts are implicit and shouldn't be traversed, but there's no
+  // "implicit" attribute on Stmt/Expr.
+  // Unwrap implicit casts first if present (other nodes too?).
+  if (auto *ICE = llvm::dyn_cast<ImplicitCastExpr>(S))
+    S = ICE->getSubExprAsWritten();
+  // Implicit this in a MemberExpr is not filtered out by RecursiveASTVisitor.
+  // It would be nice if RAV handled this (!shouldTraverseImplicitCode()).
+  if (auto *CTI = llvm::dyn_cast<CXXThisExpr>(S))
+    if (CTI->isImplicit())
+      return true;
+  // Refs to operator() and [] are (almost?) always implicit as part of calls.
+  if (auto *DRE = llvm::dyn_cast<DeclRefExpr>(S)) {
+    if (auto *FD = llvm::dyn_cast<FunctionDecl>(DRE->getDecl())) {
+      switch (FD->getOverloadedOperator()) {
+      case OO_Call:
+      case OO_Subscript:
+        return true;
+      default:
+        break;
+      }
+    }
+  }
+  return false;
+}
+
 // We find the selection by visiting written nodes in the AST, looking for nodes
 // that intersect with the selected character range.
 //
@@ -210,13 +238,8 @@ public:
   }
   // Stmt is the same, but this form allows the data recursion optimization.
   bool dataTraverseStmtPre(Stmt *X) {
-    if (!X)
+    if (!X || isImplicit(X))
       return false;
-    // Implicit this in a MemberExpr is not filtered out by RecursiveASTVisitor.
-    // It would be nice if RAV handled this (!shouldTRaverseImplicitCode()).
-    if (auto *CTI = llvm::dyn_cast<CXXThisExpr>(X))
-      if (CTI->isImplicit())
-        return false;
     auto N = DynTypedNode::create(*X);
     if (canSafelySkipNode(N))
       return false;
