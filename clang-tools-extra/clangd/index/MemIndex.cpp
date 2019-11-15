@@ -72,7 +72,6 @@ bool MemIndex::refs(const RefsRequest &Req,
   trace::Span Tracer("MemIndex refs");
   uint32_t Remaining =
       Req.Limit.getValueOr(std::numeric_limits<uint32_t>::max());
-  bool More = false;
   for (const auto &ReqID : Req.IDs) {
     auto SymRefs = Refs.find(ReqID);
     if (SymRefs == Refs.end())
@@ -80,17 +79,13 @@ bool MemIndex::refs(const RefsRequest &Req,
     for (const auto &O : SymRefs->second) {
       if (!static_cast<int>(Req.Filter & O.Kind))
         continue;
-      if (Remaining == 0) {
-        More = true;
-        break;
-      }
-      if (Remaining > 0) {
-        --Remaining;
-        Callback(O);
-      }
+      if (Remaining == 0)
+        return true; // More refs were available.
+      --Remaining;
+      Callback(O);
     }
   }
-  return More;
+  return false; // We reported all refs.
 }
 
 void MemIndex::relations(
