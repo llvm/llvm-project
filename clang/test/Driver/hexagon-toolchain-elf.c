@@ -132,7 +132,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK029 %s
 // CHECK029: "-cc1" {{.*}} "-target-cpu" "hexagonv65"
-// CHECK029: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v65/crt0
+// CHECK029: {{hexagon-link|ld}}{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v65/crt0
 
 // -----------------------------------------------------------------------------
 // Test Linker related args
