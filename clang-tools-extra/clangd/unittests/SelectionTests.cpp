@@ -246,6 +246,17 @@ TEST(SelectionTest, CommonAncestor) {
       // Tricky case: two VarDecls share a specifier.
       {"[[int ^a]], b;", "VarDecl"},
       {"[[int a, ^b]];", "VarDecl"},
+      // Tricky case: CXXConstructExpr wants to claim the whole init range.
+      {
+          R"cpp(
+            class X { X(int); };
+            class Y {
+              X x;
+              Y() : [[^x(4)]] {}
+            };
+          )cpp",
+          "CXXCtorInitializer", // Not the CXXConstructExpr!
+      },
       // Tricky case: anonymous struct is a sibling of the VarDecl.
       {"[[st^ruct {int x;}]] y;", "CXXRecordDecl"},
       {"[[struct {int x;} ^y]];", "VarDecl"},

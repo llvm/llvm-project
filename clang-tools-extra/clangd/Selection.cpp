@@ -10,6 +10,7 @@
 #include "Logger.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -397,6 +398,9 @@ private:
       // int (*[[s]])();
       else if (auto *VD = llvm::dyn_cast<VarDecl>(D))
         return VD->getLocation();
+    } else if (const auto* CCI = N.get<CXXCtorInitializer>()) {
+      // : [[b_]](42)
+      return CCI->getMemberLocation();
     }
     return SourceRange();
   }
