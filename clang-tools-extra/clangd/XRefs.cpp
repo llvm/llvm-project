@@ -414,12 +414,12 @@ static PrintingPolicy printingPolicyForDecls(PrintingPolicy Base) {
 static std::string getLocalScope(const Decl *D) {
   std::vector<std::string> Scopes;
   const DeclContext *DC = D->getDeclContext();
-  auto GetName = [](const Decl *D) {
-    const NamedDecl *ND = dyn_cast<NamedDecl>(D);
-    std::string Name = ND->getNameAsString();
-    // FIXME(sammccall): include template params/specialization args?.
-    if (!Name.empty())
-      return Name;
+  auto GetName = [](const TypeDecl *D) {
+    if (!D->getDeclName().isEmpty()) {
+      PrintingPolicy Policy = D->getASTContext().getPrintingPolicy();
+      Policy.SuppressScope = true;
+      return declaredType(D).getAsString(Policy);
+    }
     if (auto RD = dyn_cast<RecordDecl>(D))
       return ("(anonymous " + RD->getKindName() + ")").str();
     return std::string("");
