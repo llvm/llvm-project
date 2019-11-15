@@ -375,7 +375,7 @@ static bool doDefKillClear(MachineBasicBlock *MBB) {
 
 static bool runOnBasicBlock(MachineBasicBlock *MBB,
                             std::vector<StringRef> &bbNames,
-                            unsigned &basicBlockNum, NamedVRegCursor &NVC) {
+                            unsigned &basicBlockNum, VRegRenamer &Renamer) {
 
   if (CanonicalizeBasicBlockNumber != ~0U) {
     if (CanonicalizeBasicBlockNumber != basicBlockNum++)
@@ -398,8 +398,6 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
   });
 
   bool Changed = false;
-  MachineFunction &MF = *MBB->getParent();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
 
   bbNames.push_back(MBB->getName());
   LLVM_DEBUG(dbgs() << "\n\n NEW BASIC BLOCK: " << MBB->getName() << "\n\n";);
@@ -414,31 +412,7 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
   Changed |= rescheduleCanonically(IdempotentInstCount, MBB);
   LLVM_DEBUG(dbgs() << "MBB After Scheduling:\n"; MBB->dump(););
 
-  Changed |= NVC.renameVRegs(MBB);
-
-  // Here we renumber the def vregs for the idempotent instructions from the top
-  // of the MachineBasicBlock so that they are named in the order that we sorted
-  // them alphabetically. Eventually we wont need SkipVRegs because we will use
-  // named vregs instead.
-  if (IdempotentInstCount)
-    NVC.skipVRegs();
-
-  auto MII = MBB->begin();
-  for (unsigned i = 0; i < IdempotentInstCount && MII != MBB->end(); ++i) {
-    MachineInstr &MI = *MII++;
-    Changed = true;
-    Register vRegToRename = MI.getOperand(0).getReg();
-    auto Rename = NVC.createVirtualRegister(vRegToRename);
-
-    std::vector<MachineOperand *> RenameMOs;
-    for (auto &MO : MRI.reg_operands(vRegToRename)) {
-      RenameMOs.push_back(&MO);
-    }
-
-    for (auto *MO : RenameMOs) {
-      MO->setReg(Rename);
-    }
-  }
+  Changed |= Renamer.renameVRegs(MBB);
 
   Changed |= doDefKillClear(MBB);
 
@@ -478,9 +452,9 @@ bool MIRCanonicalizer::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  NamedVRegCursor NVC(MRI);
+  VRegRenamer Renamer(MRI);
   for (auto MBB : RPOList)
-    Changed |= runOnBasicBlock(MBB, BBNames, BBNum, NVC);
+    Changed |= runOnBasicBlock(MBB, BBNames, BBNum, Renamer);
 
   return Changed;
 }
