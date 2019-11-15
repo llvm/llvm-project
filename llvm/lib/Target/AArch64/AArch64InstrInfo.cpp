@@ -5798,7 +5798,7 @@ AArch64InstrInfo::describeLoadedValue(const MachineInstr &MI) const {
   case AArch64::MOVZXi:
     if (!MI.getOperand(1).isImm())
       return None;
-    int Immediate = MI.getOperand(1).getImm();
+    int64_t Immediate = MI.getOperand(1).getImm();
     int Shift = MI.getOperand(2).getImm();
     return ParamLoadedValue(MachineOperand::CreateImm(Immediate << Shift),
                             nullptr);
