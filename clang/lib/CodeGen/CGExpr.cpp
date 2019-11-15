@@ -3423,10 +3423,6 @@ static bool IsPreserveAIArrayBase(CodeGenFunction &CGF, const Expr *ArrayBase) {
   if (!ArrayBase || !CGF.getDebugInfo())
     return false;
 
-  const auto *ImplicitCast = dyn_cast<ImplicitCastExpr>(ArrayBase);
-  if (!ImplicitCast)
-    return false;
-
   // Only support base as either a MemberExpr or DeclRefExpr.
   // DeclRefExpr to cover cases like:
   //    struct s { int a; int b[10]; };
@@ -3434,39 +3430,24 @@ static bool IsPreserveAIArrayBase(CodeGenFunction &CGF, const Expr *ArrayBase) {
   //    p[1].a
   // p[1] will generate a DeclRefExpr and p[1].a is a MemberExpr.
   // p->b[5] is a MemberExpr example.
-  const Expr *E = ImplicitCast->getSubExpr();
-  const auto *MemberCast = dyn_cast<MemberExpr>(E);
-  if (MemberCast)
-    return MemberCast->getMemberDecl()->hasAttr<BPFPreserveAccessIndexAttr>();
+  const Expr *E = ArrayBase->IgnoreImpCasts();
+  if (const auto *ME = dyn_cast<MemberExpr>(E))
+    return ME->getMemberDecl()->hasAttr<BPFPreserveAccessIndexAttr>();
 
-  const auto *DeclRefCast = dyn_cast<DeclRefExpr>(E);
-  if (DeclRefCast) {
-    const VarDecl *VarDef = dyn_cast<VarDecl>(DeclRefCast->getDecl());
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    const auto *VarDef = dyn_cast<VarDecl>(DRE->getDecl());
     if (!VarDef)
       return false;
 
-    const auto *PtrT = dyn_cast<PointerType>(VarDef->getType().getTypePtr());
+    const auto *PtrT = VarDef->getType()->getAs<PointerType>();
     if (!PtrT)
       return false;
-    const auto *PointeeT = PtrT->getPointeeType().getTypePtr();
 
-    // Peel off typedef's
-    const auto *TypedefT = dyn_cast<TypedefType>(PointeeT);
-    while (TypedefT) {
-      PointeeT = TypedefT->desugar().getTypePtr();
-      TypedefT = dyn_cast<TypedefType>(PointeeT);
-    }
-
-    // Not a typedef any more, it should be an elaborated type.
-    const auto ElaborateT = dyn_cast<ElaboratedType>(PointeeT);
-    if (!ElaborateT)
-      return false;
-
-    const auto *RecT = dyn_cast<RecordType>(ElaborateT->desugar().getTypePtr());
-    if (!RecT)
-      return false;
-
-    return RecT->getDecl()->hasAttr<BPFPreserveAccessIndexAttr>();
+    const auto *PointeeT = PtrT->getPointeeType()
+                             ->getUnqualifiedDesugaredType();
+    if (const auto *RecT = dyn_cast<RecordType>(PointeeT))
+      return RecT->getDecl()->hasAttr<BPFPreserveAccessIndexAttr>();
+    return false;
   }
 
   return false;
