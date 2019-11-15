@@ -38,6 +38,7 @@ struct S : public BaseS, public BaseS1 {
   T f;
   S(T a) : f(a + g) {}
   S() : f(g) {}
+  S& operator=(const S&);
   ~S() {}
 };
 void red(BaseS1&, const BaseS1&);
