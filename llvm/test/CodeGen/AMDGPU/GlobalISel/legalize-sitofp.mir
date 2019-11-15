@@ -384,3 +384,84 @@ body: |
     %2:_(s64) = G_SITOFP %1
     $vgpr0_vgpr1 = COPY %2
 ...
+
+---
+name: test_sitofp_s1_to_s16
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; GFX6-LABEL: name: test_sitofp_s1_to_s16
+    ; GFX6: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX6: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
+    ; GFX6: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xHBC00
+    ; GFX6: [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+    ; GFX6: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[TRUNC]](s1), [[C]], [[C1]]
+    ; GFX6: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
+    ; GFX6: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; GFX8-LABEL: name: test_sitofp_s1_to_s16
+    ; GFX8: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX8: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
+    ; GFX8: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xHBC00
+    ; GFX8: [[C1:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH0000
+    ; GFX8: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[TRUNC]](s1), [[C]], [[C1]]
+    ; GFX8: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
+    ; GFX8: $vgpr0 = COPY [[ANYEXT]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s1) = G_TRUNC %0
+    %2:_(s16) = G_SITOFP %1
+    %3:_(s32) = G_ANYEXT %2
+    $vgpr0 = COPY %3
+...
+
+---
+name: test_sitofp_s1_to_s32
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; GFX6-LABEL: name: test_sitofp_s1_to_s32
+    ; GFX6: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX6: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
+    ; GFX6: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float -1.000000e+00
+    ; GFX6: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
+    ; GFX6: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[C]], [[C1]]
+    ; GFX6: $vgpr0 = COPY [[SELECT]](s32)
+    ; GFX8-LABEL: name: test_sitofp_s1_to_s32
+    ; GFX8: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX8: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
+    ; GFX8: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float -1.000000e+00
+    ; GFX8: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
+    ; GFX8: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[C]], [[C1]]
+    ; GFX8: $vgpr0 = COPY [[SELECT]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s1) = G_TRUNC %0
+    %2:_(s32) = G_SITOFP %1
+    $vgpr0 = COPY %2
+...
+
+---
+name: test_sitofp_s1_to_s64
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; GFX6-LABEL: name: test_sitofp_s1_to_s64
+    ; GFX6: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX6: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
+    ; GFX6: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double -1.000000e+00
+    ; GFX6: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 0.000000e+00
+    ; GFX6: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[C]], [[C1]]
+    ; GFX6: $vgpr0_vgpr1 = COPY [[SELECT]](s64)
+    ; GFX8-LABEL: name: test_sitofp_s1_to_s64
+    ; GFX8: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GFX8: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
+    ; GFX8: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double -1.000000e+00
+    ; GFX8: [[C1:%[0-9]+]]:_(s64) = G_FCONSTANT double 0.000000e+00
+    ; GFX8: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[C]], [[C1]]
+    ; GFX8: $vgpr0_vgpr1 = COPY [[SELECT]](s64)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s1) = G_TRUNC %0
+    %2:_(s64) = G_SITOFP %1
+    $vgpr0_vgpr1 = COPY %2
+...
