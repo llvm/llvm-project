@@ -29,7 +29,7 @@ public:
   ///
   /// Initializes class variables.
   ///
-  /// \param[in] exe_scope,
+  /// \param[in] exe_scope
   ///     If non-NULL, an execution context scope that can help to
   ///     correctly create an expression with a valid process for
   ///     optional tuning Objective-C runtime support. Can be NULL.
