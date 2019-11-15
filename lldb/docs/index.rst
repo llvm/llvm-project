@@ -109,12 +109,13 @@ interesting areas to contribute to lldb.
 .. toctree::
    :hidden:
    :maxdepth: 1
-   :caption: Goals & Status
+   :caption: Project
 
    status/goals
    status/features
    status/status
    status/projects
+   status/releases
 
 .. toctree::
    :hidden:
@@ -136,14 +137,13 @@ interesting areas to contribute to lldb.
 .. toctree::
    :hidden:
    :maxdepth: 1
-   :caption: Resources
+   :caption: Development
 
    resources/contributing
    resources/build
    resources/test
    resources/bots
    resources/sbapi
-   resources/download
 
 .. toctree::
    :hidden:
