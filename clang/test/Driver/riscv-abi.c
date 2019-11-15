@@ -16,6 +16,10 @@
 
 // RUN: %clang -target riscv32-unknown-elf %s -### -o %t.o -march=rv32ifd -mabi=ilp32d 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-ILP32D %s
+// RUN: %clang -target riscv32-unknown-linux-gnu %s -### -o %t.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-ILP32D %s
+// RUN: %clang -target riscv32-unknown-linux-gnu -x assembler %s -### -o %t.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-ILP32D %s
 
 // CHECK-ILP32D: "-target-abi" "ilp32d"
 
@@ -42,6 +46,10 @@
 
 // RUN: %clang -target riscv64-unknown-elf %s -### -o %t.o -march=rv64d -mabi=lp64d 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-LP64D %s
+// RUN: %clang -target riscv64-unknown-linux-gnu %s -### -o %t.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-LP64D %s
+// RUN: %clang -target riscv64-unknown-linux-gnu -x assembler %s -### -o %t.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-LP64D  %s
 
 // CHECK-LP64D: "-target-abi" "lp64d"
 
