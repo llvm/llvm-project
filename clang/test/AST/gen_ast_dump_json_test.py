@@ -55,11 +55,19 @@ def filter_json(dict_var, filters, out):
             for e in v:
                 if isinstance(e, OrderedDict):
                     filter_json(e, filters, out)
-                
+
+
+def default_clang_path():
+    guessed_clang = os.path.join(os.path.dirname(__file__), "clang")
+    if os.path.isfile(guessed_clang):
+        return guessed_clang
+    return None
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--clang", help="The clang binary (could be a relative or absolute path)",
-                        action="store", required=True)
+                        action="store", default=default_clang_path())
     parser.add_argument("--source", help="the source file. Command used to generate the json will be of the format <clang> -cc1 -ast-dump=json <opts> <source>",
                         action="store", required=True)
     parser.add_argument("--filters", help="comma separated list of AST filters. Ex: --filters=TypedefDecl,BuiltinType",
