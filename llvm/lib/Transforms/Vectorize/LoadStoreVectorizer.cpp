@@ -1004,7 +1004,7 @@ bool Vectorizer::vectorizeStoreChain(
     LLVM_DEBUG(dbgs() << "LSV: Chain doesn't match with the vector factor."
                          " Creating two separate arrays.\n");
     return vectorizeStoreChain(Chain.slice(0, TargetVF),
-                               InstructionsProcessed) ||
+                               InstructionsProcessed) |
            vectorizeStoreChain(Chain.slice(TargetVF), InstructionsProcessed);
   }
 
@@ -1022,7 +1022,7 @@ bool Vectorizer::vectorizeStoreChain(
   if (accessIsMisaligned(SzInBytes, AS, Alignment)) {
     if (S0->getPointerAddressSpace() != DL.getAllocaAddrSpace()) {
       auto Chains = splitOddVectorElts(Chain, Sz);
-      return vectorizeStoreChain(Chains.first, InstructionsProcessed) ||
+      return vectorizeStoreChain(Chains.first, InstructionsProcessed) |
              vectorizeStoreChain(Chains.second, InstructionsProcessed);
     }
 
@@ -1035,7 +1035,7 @@ bool Vectorizer::vectorizeStoreChain(
 
   if (!TTI.isLegalToVectorizeStoreChain(SzInBytes, Alignment, AS)) {
     auto Chains = splitOddVectorElts(Chain, Sz);
-    return vectorizeStoreChain(Chains.first, InstructionsProcessed) ||
+    return vectorizeStoreChain(Chains.first, InstructionsProcessed) |
            vectorizeStoreChain(Chains.second, InstructionsProcessed);
   }
 
@@ -1153,7 +1153,7 @@ bool Vectorizer::vectorizeLoadChain(
   if (ChainSize > VF || (VF != TargetVF && TargetVF < ChainSize)) {
     LLVM_DEBUG(dbgs() << "LSV: Chain doesn't match with the vector factor."
                          " Creating two separate arrays.\n");
-    return vectorizeLoadChain(Chain.slice(0, TargetVF), InstructionsProcessed) ||
+    return vectorizeLoadChain(Chain.slice(0, TargetVF), InstructionsProcessed) |
            vectorizeLoadChain(Chain.slice(TargetVF), InstructionsProcessed);
   }
 
@@ -1165,7 +1165,7 @@ bool Vectorizer::vectorizeLoadChain(
   if (accessIsMisaligned(SzInBytes, AS, Alignment)) {
     if (L0->getPointerAddressSpace() != DL.getAllocaAddrSpace()) {
       auto Chains = splitOddVectorElts(Chain, Sz);
-      return vectorizeLoadChain(Chains.first, InstructionsProcessed) ||
+      return vectorizeLoadChain(Chains.first, InstructionsProcessed) |
              vectorizeLoadChain(Chains.second, InstructionsProcessed);
     }
 
@@ -1175,7 +1175,7 @@ bool Vectorizer::vectorizeLoadChain(
 
   if (!TTI.isLegalToVectorizeLoadChain(SzInBytes, Alignment, AS)) {
     auto Chains = splitOddVectorElts(Chain, Sz);
-    return vectorizeLoadChain(Chains.first, InstructionsProcessed) ||
+    return vectorizeLoadChain(Chains.first, InstructionsProcessed) |
            vectorizeLoadChain(Chains.second, InstructionsProcessed);
   }
 
