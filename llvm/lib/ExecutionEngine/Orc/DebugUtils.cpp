@@ -42,8 +42,8 @@ DumpObjects::operator()(std::unique_ptr<MemoryBuffer> Obj) {
   }
 
   LLVM_DEBUG({
-    dbgs() << "Dumping object buffer [ " << (void *)Obj->getBufferStart()
-           << " -- " << (void *)(Obj->getBufferEnd() - 1) << " ] to "
+    dbgs() << "Dumping object buffer [ " << (const void *)Obj->getBufferStart()
+           << " -- " << (const void *)(Obj->getBufferEnd() - 1) << " ] to "
            << DumpPath << "\n";
   });
 
