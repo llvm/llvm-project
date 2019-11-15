@@ -777,6 +777,10 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
   DataSection = Ctx->getXCOFFSection(
       ".data", XCOFF::StorageMappingClass::XMC_RW, XCOFF::XTY_SD,
       XCOFF::C_HIDEXT, SectionKind::getData());
+
+  ReadOnlySection = Ctx->getXCOFFSection(
+      ".rodata", XCOFF::StorageMappingClass::XMC_RO, XCOFF::XTY_SD,
+      XCOFF::C_HIDEXT, SectionKind::getReadOnly());
 }
 
 void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple, bool PIC,
