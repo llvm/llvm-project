@@ -44,6 +44,7 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestBlockExpr",
+// CHECK-NEXT:  "mangledName": "TestBlockExpr",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void (int)"
 // CHECK-NEXT:  },
@@ -71,6 +72,7 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "x",
+// CHECK-NEXT:    "mangledName": "x",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -275,6 +277,7 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestExprWithCleanup",
+// CHECK-NEXT:  "mangledName": "TestExprWithCleanup",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void (int)"
 // CHECK-NEXT:  },
@@ -302,6 +305,7 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "x",
+// CHECK-NEXT:    "mangledName": "x",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -506,6 +510,7 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestObjCAtCatchStmt",
+// CHECK-NEXT:  "mangledName": "TestObjCAtCatchStmt",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void ()"
 // CHECK-NEXT:  },
@@ -603,6 +608,7 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "name": "a",
+// CHECK-NEXT:          "mangledName": "a",
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "A *"
 // CHECK-NEXT:          }
@@ -749,6 +755,7 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "isImplicit": true,
 // CHECK-NEXT:              "name": "__context",
+// CHECK-NEXT:              "mangledName": "__context",
 // CHECK-NEXT:              "type": {
 // CHECK-NEXT:               "qualType": "struct (anonymous at {{.*}}:18:14) *"
 // CHECK-NEXT:              }
