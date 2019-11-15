@@ -57,8 +57,7 @@ define i32 @incoming_gpr(i32 %incoming_phys_reg, i1 %test, i32* %a) {
 ; MIPS32-LABEL: incoming_gpr:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lw $1, 0($6)
-; MIPS32-NEXT:    ori $2, $zero, 1
-; MIPS32-NEXT:    and $2, $5, $2
+; MIPS32-NEXT:    andi $2, $5, 1
 ; MIPS32-NEXT:    movn $4, $1, $2
 ; MIPS32-NEXT:    move $2, $4
 ; MIPS32-NEXT:    jr $ra
@@ -73,8 +72,7 @@ define float @incoming_fpr(float %incoming_phys_reg, i1 %test, float* %a) {
 ; MIPS32-LABEL: incoming_fpr:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lwc1 $f0, 0($6)
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    and $1, $5, $1
+; MIPS32-NEXT:    andi $1, $5, 1
 ; MIPS32-NEXT:    movn.s $f12, $f0, $1
 ; MIPS32-NEXT:    mov.s $f0, $f12
 ; MIPS32-NEXT:    jr $ra
@@ -91,8 +89,7 @@ define i32 @incoming_i32_instr(i32 %val1, i32 %val2, i32* %i32_ptr, i1 %test) {
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lw $1, 0($6)
 ; MIPS32-NEXT:    addu $2, $5, $4
-; MIPS32-NEXT:    ori $3, $zero, 1
-; MIPS32-NEXT:    and $3, $7, $3
+; MIPS32-NEXT:    andi $3, $7, 1
 ; MIPS32-NEXT:    movn $2, $1, $3
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
@@ -108,8 +105,7 @@ define float @incoming_float_instr(float %val1, float %val2, float* %float_ptr, 
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lwc1 $f0, 0($6)
 ; MIPS32-NEXT:    add.s $f1, $f14, $f12
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    and $1, $7, $1
+; MIPS32-NEXT:    andi $1, $7, 1
 ; MIPS32-NEXT:    movn.s $f1, $f0, $1
 ; MIPS32-NEXT:    mov.s $f0, $f1
 ; MIPS32-NEXT:    jr $ra

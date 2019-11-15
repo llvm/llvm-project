@@ -29,8 +29,7 @@ define zeroext i8 @sub_i8_zext(i8 zeroext %a, i8 zeroext %b) {
 ; MIPS32-LABEL: sub_i8_zext:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    subu $1, $5, $4
-; MIPS32-NEXT:    ori $2, $zero, 255
-; MIPS32-NEXT:    and $2, $1, $2
+; MIPS32-NEXT:    andi $2, $1, 255
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -66,8 +65,7 @@ define zeroext i16 @sub_i16_zext(i16 zeroext %a, i16 zeroext %b) {
 ; MIPS32-LABEL: sub_i16_zext:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    subu $1, $5, $4
-; MIPS32-NEXT:    ori $2, $zero, 65535
-; MIPS32-NEXT:    and $2, $1, $2
+; MIPS32-NEXT:    andi $2, $1, 65535
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -92,8 +90,7 @@ define i64 @sub_i64(i64 %a, i64 %b) {
 ; MIPS32-NEXT:    subu $2, $6, $4
 ; MIPS32-NEXT:    sltu $1, $6, $4
 ; MIPS32-NEXT:    subu $3, $7, $5
-; MIPS32-NEXT:    ori $4, $zero, 1
-; MIPS32-NEXT:    and $1, $1, $4
+; MIPS32-NEXT:    andi $1, $1, 1
 ; MIPS32-NEXT:    subu $3, $3, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
@@ -116,24 +113,23 @@ define i128 @sub_i128(i128 %a, i128 %b) {
 ; MIPS32-NEXT:    subu $9, $1, $4
 ; MIPS32-NEXT:    sltu $1, $1, $4
 ; MIPS32-NEXT:    subu $4, $2, $5
-; MIPS32-NEXT:    ori $10, $zero, 1
-; MIPS32-NEXT:    and $11, $1, $10
-; MIPS32-NEXT:    subu $4, $4, $11
-; MIPS32-NEXT:    xor $11, $2, $5
-; MIPS32-NEXT:    sltiu $11, $11, 1
+; MIPS32-NEXT:    andi $10, $1, 1
+; MIPS32-NEXT:    subu $4, $4, $10
+; MIPS32-NEXT:    xor $10, $2, $5
+; MIPS32-NEXT:    sltiu $10, $10, 1
 ; MIPS32-NEXT:    sltu $2, $2, $5
-; MIPS32-NEXT:    and $5, $11, $10
+; MIPS32-NEXT:    andi $5, $10, 1
 ; MIPS32-NEXT:    movn $2, $1, $5
 ; MIPS32-NEXT:    subu $1, $3, $6
-; MIPS32-NEXT:    and $5, $2, $10
+; MIPS32-NEXT:    andi $5, $2, 1
 ; MIPS32-NEXT:    subu $1, $1, $5
 ; MIPS32-NEXT:    xor $5, $3, $6
 ; MIPS32-NEXT:    sltiu $5, $5, 1
 ; MIPS32-NEXT:    sltu $3, $3, $6
-; MIPS32-NEXT:    and $5, $5, $10
+; MIPS32-NEXT:    andi $5, $5, 1
 ; MIPS32-NEXT:    movn $3, $2, $5
 ; MIPS32-NEXT:    subu $2, $8, $7
-; MIPS32-NEXT:    and $3, $3, $10
+; MIPS32-NEXT:    andi $3, $3, 1
 ; MIPS32-NEXT:    subu $5, $2, $3
 ; MIPS32-NEXT:    move $2, $9
 ; MIPS32-NEXT:    move $3, $4

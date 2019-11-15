@@ -1288,6 +1288,9 @@ def immZExt16  : PatLeaf<(imm), [{
   else
     return (uint64_t)N->getZExtValue() == (unsigned short)N->getZExtValue();
 }], LO16>;
+def imm32ZExt16  : IntImmLeaf<i32, [{
+  return (uint32_t)Imm.getZExtValue() == (unsigned short)Imm.getZExtValue();
+}]>;
 
 // Immediate can be loaded with LUi (32-bit int with lower 16-bit cleared).
 def immSExt32Low16Zero : PatLeaf<(imm), [{
@@ -2063,13 +2066,13 @@ let AdditionalPredicates = [NotInMicroMips] in {
               ADDI_FM<0x9>, IsAsCheapAsAMove, ISA_MIPS1;
 
   def ANDi : MMRel, StdMMR6Rel,
-             ArithLogicI<"andi", uimm16, GPR32Opnd, II_ANDI, immZExt16, and>,
+             ArithLogicI<"andi", uimm16, GPR32Opnd, II_ANDI, imm32ZExt16, and>,
              ADDI_FM<0xc>, ISA_MIPS1;
   def ORi  : MMRel, StdMMR6Rel,
-             ArithLogicI<"ori", uimm16, GPR32Opnd, II_ORI, immZExt16, or>,
+             ArithLogicI<"ori", uimm16, GPR32Opnd, II_ORI, imm32ZExt16, or>,
              ADDI_FM<0xd>, ISA_MIPS1;
   def XORi : MMRel, StdMMR6Rel,
-             ArithLogicI<"xori", uimm16, GPR32Opnd, II_XORI, immZExt16, xor>,
+             ArithLogicI<"xori", uimm16, GPR32Opnd, II_XORI, imm32ZExt16, xor>,
              ADDI_FM<0xe>, ISA_MIPS1;
   def ADDi  : MMRel, ArithLogicI<"addi", simm16_relaxed, GPR32Opnd, II_ADDI>,
               ADDI_FM<0x8>, ISA_MIPS1_NOT_32R6_64R6;
