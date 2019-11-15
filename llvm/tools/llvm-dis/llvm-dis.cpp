@@ -186,7 +186,7 @@ int main(int argc, char **argv) {
     if (DontPrint)
       FinalFilename = "-";
 
-    if (OutputFilename.empty()) { // Unspecified output, infer it.
+    if (FinalFilename.empty()) { // Unspecified output, infer it.
       if (InputFilename == "-") {
         FinalFilename = "-";
       } else {
