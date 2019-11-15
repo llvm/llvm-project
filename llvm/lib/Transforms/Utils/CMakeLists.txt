@@ -23,6 +23,7 @@ add_llvm_library(LLVMTransformUtils
   GuardUtils.cpp
   InlineFunction.cpp
   ImportedFunctionsInliningStatistics.cpp
+  InjectTLIMappings.cpp
   InstructionNamer.cpp
   IntegerDivision.cpp
   LCSSA.cpp
