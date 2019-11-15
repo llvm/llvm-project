@@ -714,7 +714,10 @@ void GCOVProfiler::emitProfileNotes() {
       // to have a counter for the function definition.
       uint32_t Line = SP->getLine();
       auto Filename = getFilename(SP);
-      Func.getBlock(&EntryBlock).getFile(Filename).addLine(Line);
+
+      // Artificial functions such as global initializers
+      if (!SP->isArtificial())
+        Func.getBlock(&EntryBlock).getFile(Filename).addLine(Line);
 
       for (auto &BB : F) {
         GCOVBlock &Block = Func.getBlock(&BB);
