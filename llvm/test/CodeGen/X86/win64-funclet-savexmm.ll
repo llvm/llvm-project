@@ -85,17 +85,17 @@ try.cont:                                         ; preds = %catchret.dest, %inv
 ; CHECK: subq    $88, %rsp
 ; CHECK: .seh_stackalloc 88
 ; CHECK: leaq    112(%rdx), %rbp
-; CHECK: vmovaps %xmm8, 48(%rsp)
-; CHECK: .seh_savexmm %xmm8, 48
-; CHECK: vmovaps %xmm7, 64(%rsp)
-; CHECK: .seh_savexmm %xmm7, 64
-; CHECK: vmovaps %xmm6, 80(%rsp)
-; CHECK: .seh_savexmm %xmm6, 80
+; CHECK: vmovaps %xmm8, 32(%rsp)
+; CHECK: .seh_savexmm %xmm8, 32
+; CHECK: vmovaps %xmm7, 48(%rsp)
+; CHECK: .seh_savexmm %xmm7, 48
+; CHECK: vmovaps %xmm6, 64(%rsp)
+; CHECK: .seh_savexmm %xmm6, 64
 ; CHECK: .seh_endprologue
 ; CHECK: movl   -{{[0-9]+}}(%rbp), %ecx
-; CHECK: vmovaps 80(%rsp), %xmm6
-; CHECK: vmovaps 64(%rsp), %xmm7
-; CHECK: vmovaps 48(%rsp), %xmm8
+; CHECK: vmovaps 64(%rsp), %xmm6
+; CHECK: vmovaps 48(%rsp), %xmm7
+; CHECK: vmovaps 32(%rsp), %xmm8
 ; CHECK: leaq    .LBB0_1(%rip), %rax
 ; CHECK: addq    $88, %rsp
 ; CHECK: popq    %rbx
