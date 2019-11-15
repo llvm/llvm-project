@@ -616,8 +616,8 @@ struct WholeProgramDevirt : public ModulePass {
 
   bool UseCommandLine = false;
 
-  ModuleSummaryIndex *ExportSummary;
-  const ModuleSummaryIndex *ImportSummary;
+  ModuleSummaryIndex *ExportSummary = nullptr;
+  const ModuleSummaryIndex *ImportSummary = nullptr;
 
   WholeProgramDevirt() : ModulePass(ID), UseCommandLine(true) {
     initializeWholeProgramDevirtPass(*PassRegistry::getPassRegistry());
