@@ -106,9 +106,9 @@ DEVICE int GetNumberOfBlocksInKernel() { return gridDim.x; }
 
 DEVICE int GetNumberOfThreadsInBlock() { return blockDim.x; }
 
-DEVICE unsigned GetWarpId() { return threadIdx.x / WARPSIZE; }
+DEVICE unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
 
-DEVICE unsigned GetLaneId() { return threadIdx.x & (WARPSIZE - 1); }
+DEVICE unsigned GetLaneId() { return GetThreadIdInBlock() & (WARPSIZE - 1); }
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -124,7 +124,7 @@ DEVICE unsigned GetLaneId() { return threadIdx.x & (WARPSIZE - 1); }
 //      If NumThreads is 1024, master id is 992.
 //
 // Called in Generic Execution Mode only.
-DEVICE int GetMasterThreadID() { return (blockDim.x - 1) & ~(WARPSIZE - 1); }
+DEVICE int GetMasterThreadID() { return (GetNumberOfThreadsInBlock() - 1) & ~(WARPSIZE - 1); }
 
 // The last warp is reserved for the master; other warps are workers.
 // Called in Generic Execution Mode only.
