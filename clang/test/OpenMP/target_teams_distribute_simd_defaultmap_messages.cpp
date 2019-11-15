@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 %s -verify=expected,omp5 -Wuninitialized -DOMP5
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 %s -verify=expected,omp5 -Wuninitialized -DOMP5
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 %s -verify=expected,omp45 -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 %s -verify=expected,omp45 -Wuninitialized
 
 void foo() {
 }
@@ -10,23 +12,23 @@ T tmain(T argc, S **argv) {
   int i;
 #pragma omp target teams distribute simd defaultmap // expected-error {{expected '(' after 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd defaultmap ( // expected-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp target teams distribute simd defaultmap ( // omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} expected-error {{expected ')'}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} expected-note {{to match this '('}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd defaultmap () // expected-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
+#pragma omp target teams distribute simd defaultmap () // omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd defaultmap (tofrom // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-warning {{missing ':' after defaultmap modifier - ignoring}} expected-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
+#pragma omp target teams distribute simd defaultmap (tofrom // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-warning {{missing ':' after defaultmap modifier - ignoring}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd defaultmap (tofrom: // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
+#pragma omp target teams distribute simd defaultmap (tofrom: // expected-error {{expected ')'}} expected-note {{to match this '('}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd defaultmap (tofrom) // expected-warning {{missing ':' after defaultmap modifier - ignoring}} expected-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
+#pragma omp target teams distribute simd defaultmap (tofrom) // expected-warning {{missing ':' after defaultmap modifier - ignoring}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute simd defaultmap (tofrom scalar) // expected-warning {{missing ':' after defaultmap modifier - ignoring}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd defaultmap (tofrom, // expected-error {{expected ')'}} expected-error {{expected 'scalar' in OpenMP clause 'defaultmap'}} expected-warning {{missing ':' after defaultmap modifier - ignoring}} expected-note {{to match this '('}}
+#pragma omp target teams distribute simd defaultmap (tofrom, // expected-error {{expected ')'}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} expected-warning {{missing ':' after defaultmap modifier - ignoring}} expected-note {{to match this '('}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd defaultmap (scalar: // expected-error {{expected ')'}} expected-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}} expected-note {{to match this '('}}
+#pragma omp target teams distribute simd defaultmap (scalar: // expected-error {{expected ')'}} omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} expected-note {{to match this '('}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd defaultmap (tofrom, scalar // expected-error {{expected ')'}} expected-warning {{missing ':' after defaultmap modifier - ignoring}} expected-error {{expected 'scalar' in OpenMP clause 'defaultmap'}} expected-note {{to match this '('}}
+#pragma omp target teams distribute simd defaultmap (tofrom, scalar // expected-error {{expected ')'}} expected-warning {{missing ':' after defaultmap modifier - ignoring}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} expected-note {{to match this '('}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
 
   return argc;
@@ -36,25 +38,24 @@ int main(int argc, char **argv) {
   int i;
 #pragma omp target teams distribute simd defaultmap // expected-error {{expected '(' after 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd defaultmap ( // expected-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+#pragma omp target teams distribute simd defaultmap ( // omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd defaultmap () // expected-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
+#pragma omp target teams distribute simd defaultmap () // omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd defaultmap (tofrom // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-warning {{missing ':' after defaultmap modifier - ignoring}} expected-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
+#pragma omp target teams distribute simd defaultmap (tofrom // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-warning {{missing ':' after defaultmap modifier - ignoring}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd defaultmap (tofrom: // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
+#pragma omp target teams distribute simd defaultmap (tofrom: // expected-error {{expected ')'}} expected-note {{to match this '('}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd defaultmap (tofrom) // expected-warning {{missing ':' after defaultmap modifier - ignoring}} expected-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
+#pragma omp target teams distribute simd defaultmap (tofrom) // expected-warning {{missing ':' after defaultmap modifier - ignoring}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute simd defaultmap (tofrom scalar) // expected-warning {{missing ':' after defaultmap modifier - ignoring}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd defaultmap (tofrom, // expected-error {{expected ')'}} expected-error {{expected 'scalar' in OpenMP clause 'defaultmap'}} expected-warning {{missing ':' after defaultmap modifier - ignoring}} expected-note {{to match this '('}}
+#pragma omp target teams distribute simd defaultmap (tofrom, // expected-error {{expected ')'}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} expected-warning {{missing ':' after defaultmap modifier - ignoring}} expected-note {{to match this '('}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd defaultmap (scalar: // expected-error {{expected ')'}} expected-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}} expected-note {{to match this '('}}
+#pragma omp target teams distribute simd defaultmap (scalar: // expected-error {{expected ')'}} omp5-error {{expected 'alloc', 'from', 'to', 'tofrom', 'firstprivate', 'none', 'default' in OpenMP clause 'defaultmap'}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} expected-note {{to match this '('}} omp45-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd defaultmap (tofrom, scalar // expected-error {{expected ')'}} expected-warning {{missing ':' after defaultmap modifier - ignoring}} expected-error {{expected 'scalar' in OpenMP clause 'defaultmap'}} expected-note {{to match this '('}}
+#pragma omp target teams distribute simd defaultmap (tofrom, scalar // expected-error {{expected ')'}} expected-warning {{missing ':' after defaultmap modifier - ignoring}} omp5-error {{expected 'scalar', 'aggregate', 'pointer' in OpenMP clause 'defaultmap'}} expected-note {{to match this '('}} omp45-error {{expected 'scalar' in OpenMP clause 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
 
   return tmain<int, char, 1, 0>(argc, argv);
 }
-
