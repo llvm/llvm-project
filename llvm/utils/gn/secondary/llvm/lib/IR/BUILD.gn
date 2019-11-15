@@ -39,6 +39,7 @@ static_library("IR") {
     "DiagnosticInfo.cpp",
     "DiagnosticPrinter.cpp",
     "Dominators.cpp",
+    "FPEnv.cpp",
     "Function.cpp",
     "GVMaterializer.cpp",
     "Globals.cpp",
