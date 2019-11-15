@@ -49,6 +49,7 @@ void BLAP(foo, __COUNTER__)(void);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "frobble",
+// CHECK-NEXT:  "mangledName": "frobble",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void (void)"
 // CHECK-NEXT:  }
@@ -84,6 +85,7 @@ void BLAP(foo, __COUNTER__)(void);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "previousDecl": "0x{{.*}}",
 // CHECK-NEXT:  "name": "frobble",
+// CHECK-NEXT:  "mangledName": "frobble",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void (void)"
 // CHECK-NEXT:  }
@@ -118,6 +120,7 @@ void BLAP(foo, __COUNTER__)(void);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "quux",
+// CHECK-NEXT:  "mangledName": "quux",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void (void)"
 // CHECK-NEXT:  }
@@ -154,6 +157,7 @@ void BLAP(foo, __COUNTER__)(void);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "foo0",
+// CHECK-NEXT:  "mangledName": "foo0",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void (void)"
 // CHECK-NEXT:  }
@@ -190,6 +194,7 @@ void BLAP(foo, __COUNTER__)(void);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "foo1",
+// CHECK-NEXT:  "mangledName": "foo1",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void (void)"
 // CHECK-NEXT:  }

@@ -108,6 +108,7 @@ void f() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestObjCIvarDecl",
+// CHECK-NEXT:  "mangledName": "OBJC_CLASS_$_TestObjCIvarDecl",
 // CHECK-NEXT:  "super": {
 // CHECK-NEXT:   "id": "0x{{.*}}",
 // CHECK-NEXT:   "kind": "ObjCInterfaceDecl",
@@ -312,6 +313,7 @@ void f() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestObjCMethodDecl:",
+// CHECK-NEXT:  "mangledName": "-[testObjCMethodDecl TestObjCMethodDecl:]",
 // CHECK-NEXT:  "returnType": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
@@ -339,6 +341,7 @@ void f() {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "i",
+// CHECK-NEXT:    "mangledName": "i",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -369,6 +372,7 @@ void f() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestObjCMethodDecl:",
+// CHECK-NEXT:  "mangledName": "-[testObjCMethodDecl TestObjCMethodDecl:]",
 // CHECK-NEXT:  "returnType": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
@@ -385,6 +389,7 @@ void f() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "name": "self",
+// CHECK-NEXT:    "mangledName": "self",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "testObjCMethodDecl *"
 // CHECK-NEXT:    }
@@ -399,6 +404,7 @@ void f() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "name": "_cmd",
+// CHECK-NEXT:    "mangledName": "_cmd",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "SEL *",
 // CHECK-NEXT:     "qualType": "SEL",
@@ -427,6 +433,7 @@ void f() {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "i",
+// CHECK-NEXT:    "mangledName": "i",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -539,6 +546,7 @@ void f() {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "foo",
+// CHECK-NEXT:    "mangledName": "-[TestObjCProtocolDecl foo]",
 // CHECK-NEXT:    "returnType": {
 // CHECK-NEXT:     "qualType": "void"
 // CHECK-NEXT:    },
@@ -570,6 +578,7 @@ void f() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestObjCClass",
+// CHECK-NEXT:  "mangledName": "OBJC_CLASS_$_TestObjCClass",
 // CHECK-NEXT:  "super": {
 // CHECK-NEXT:   "id": "0x{{.*}}",
 // CHECK-NEXT:   "kind": "ObjCInterfaceDecl",
@@ -610,6 +619,7 @@ void f() {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "foo",
+// CHECK-NEXT:    "mangledName": "-[TestObjCClass foo]",
 // CHECK-NEXT:    "returnType": {
 // CHECK-NEXT:     "qualType": "void"
 // CHECK-NEXT:    },
@@ -702,6 +712,7 @@ void f() {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "foo",
+// CHECK-NEXT:    "mangledName": "-[TestObjCClass foo]",
 // CHECK-NEXT:    "returnType": {
 // CHECK-NEXT:     "qualType": "void"
 // CHECK-NEXT:    },
@@ -717,6 +728,7 @@ void f() {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
 // CHECK-NEXT:      "name": "self",
+// CHECK-NEXT:      "mangledName": "self",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "TestObjCClass *"
 // CHECK-NEXT:      }
@@ -731,6 +743,7 @@ void f() {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
 // CHECK-NEXT:      "name": "_cmd",
+// CHECK-NEXT:      "mangledName": "_cmd",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "desugaredQualType": "SEL *",
 // CHECK-NEXT:       "qualType": "SEL",
@@ -823,6 +836,7 @@ void f() {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "bar",
+// CHECK-NEXT:    "mangledName": "-[TestObjCCategoryDecl bar]",
 // CHECK-NEXT:    "returnType": {
 // CHECK-NEXT:     "qualType": "void"
 // CHECK-NEXT:    },
@@ -854,6 +868,7 @@ void f() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestGenericInterface",
+// CHECK-NEXT:  "mangledName": "OBJC_CLASS_$_TestGenericInterface",
 // CHECK-NEXT:  "super": {
 // CHECK-NEXT:   "id": "0x{{.*}}",
 // CHECK-NEXT:   "kind": "ObjCInterfaceDecl",
@@ -958,6 +973,7 @@ void f() {
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "bar",
+// CHECK-NEXT:    "mangledName": "-[TestObjCClass(TestObjCCategoryDecl) bar]",
 // CHECK-NEXT:    "returnType": {
 // CHECK-NEXT:     "qualType": "void"
 // CHECK-NEXT:    },
@@ -973,6 +989,7 @@ void f() {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
 // CHECK-NEXT:      "name": "self",
+// CHECK-NEXT:      "mangledName": "self",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "TestObjCClass *"
 // CHECK-NEXT:      }
@@ -987,6 +1004,7 @@ void f() {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
 // CHECK-NEXT:      "name": "_cmd",
+// CHECK-NEXT:      "mangledName": "_cmd",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "desugaredQualType": "SEL *",
 // CHECK-NEXT:       "qualType": "SEL",
@@ -1068,6 +1086,7 @@ void f() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestObjCProperty",
+// CHECK-NEXT:  "mangledName": "OBJC_CLASS_$_TestObjCProperty",
 // CHECK-NEXT:  "super": {
 // CHECK-NEXT:   "id": "0x{{.*}}",
 // CHECK-NEXT:   "kind": "ObjCInterfaceDecl",
@@ -1172,6 +1191,7 @@ void f() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "name": "getterFoo",
+// CHECK-NEXT:    "mangledName": "-[TestObjCProperty getterFoo]",
 // CHECK-NEXT:    "returnType": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    },
@@ -1199,6 +1219,7 @@ void f() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "name": "setterFoo:",
+// CHECK-NEXT:    "mangledName": "-[TestObjCProperty setterFoo:]",
 // CHECK-NEXT:    "returnType": {
 // CHECK-NEXT:     "qualType": "void"
 // CHECK-NEXT:    },
@@ -1225,6 +1246,7 @@ void f() {
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "foo",
+// CHECK-NEXT:      "mangledName": "foo",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
 // CHECK-NEXT:      }
@@ -1254,6 +1276,7 @@ void f() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "name": "bar",
+// CHECK-NEXT:    "mangledName": "-[TestObjCProperty bar]",
 // CHECK-NEXT:    "returnType": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    },
@@ -1281,6 +1304,7 @@ void f() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "name": "setBar:",
+// CHECK-NEXT:    "mangledName": "-[TestObjCProperty setBar:]",
 // CHECK-NEXT:    "returnType": {
 // CHECK-NEXT:     "qualType": "void"
 // CHECK-NEXT:    },
@@ -1307,6 +1331,7 @@ void f() {
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "bar",
+// CHECK-NEXT:      "mangledName": "bar",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
 // CHECK-NEXT:      }
@@ -1499,6 +1524,7 @@ void f() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "name": "getterFoo",
+// CHECK-NEXT:    "mangledName": "-[TestObjCProperty getterFoo]",
 // CHECK-NEXT:    "returnType": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    },
@@ -1526,6 +1552,7 @@ void f() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "name": "setterFoo:",
+// CHECK-NEXT:    "mangledName": "-[TestObjCProperty setterFoo:]",
 // CHECK-NEXT:    "returnType": {
 // CHECK-NEXT:     "qualType": "void"
 // CHECK-NEXT:    },
@@ -1553,6 +1580,7 @@ void f() {
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "foo",
+// CHECK-NEXT:      "mangledName": "foo",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
 // CHECK-NEXT:      }
@@ -1582,6 +1610,7 @@ void f() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "name": "bar",
+// CHECK-NEXT:    "mangledName": "-[TestObjCProperty bar]",
 // CHECK-NEXT:    "returnType": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    },
@@ -1609,6 +1638,7 @@ void f() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "name": "setBar:",
+// CHECK-NEXT:    "mangledName": "-[TestObjCProperty setBar:]",
 // CHECK-NEXT:    "returnType": {
 // CHECK-NEXT:     "qualType": "void"
 // CHECK-NEXT:    },
@@ -1636,6 +1666,7 @@ void f() {
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "bar",
+// CHECK-NEXT:      "mangledName": "bar",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
 // CHECK-NEXT:      }
@@ -1668,6 +1699,7 @@ void f() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestBlockDecl",
+// CHECK-NEXT:  "mangledName": "TestBlockDecl",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void (int)"
 // CHECK-NEXT:  },
@@ -1695,6 +1727,7 @@ void f() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "x",
+// CHECK-NEXT:    "mangledName": "x",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -1807,6 +1840,7 @@ void f() {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "name": "y",
+// CHECK-NEXT:            "mangledName": "y",
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int"
 // CHECK-NEXT:            }
@@ -1912,6 +1946,7 @@ void f() {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "name": "y",
+// CHECK-NEXT:            "mangledName": "y",
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int"
 // CHECK-NEXT:            }
@@ -1949,6 +1984,7 @@ void f() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "Test",
+// CHECK-NEXT:  "mangledName": "Test",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "desugaredQualType": "int",
 // CHECK-NEXT:   "qualType": "typeof (B.foo)"
