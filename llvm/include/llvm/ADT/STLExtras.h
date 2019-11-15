@@ -198,6 +198,15 @@ constexpr bool empty(const T &RangeOrContainer) {
   return adl_begin(RangeOrContainer) == adl_end(RangeOrContainer);
 }
 
+/// Return a range covering \p RangeOrContainer with the first N elements
+/// excluded.
+template <typename T>
+auto drop_begin(T &&RangeOrContainer, size_t N) ->
+    iterator_range<decltype(adl_begin(RangeOrContainer))> {
+  return make_range(std::next(adl_begin(RangeOrContainer), N),
+                    adl_end(RangeOrContainer));
+}
+
 // mapped_iterator - This is a simple iterator adapter that causes a function to
 // be applied whenever operator* is invoked on the iterator.
 
