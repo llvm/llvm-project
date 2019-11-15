@@ -168,7 +168,8 @@ static lldb::ModuleSP GetContainingClangModule(const DWARFDIE &die) {
   return lldb::ModuleSP();
 }
 
-TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const DWARFDIE &die,
+TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
+                                                     const DWARFDIE &die,
                                                      Log *log) {
   ModuleSP dwo_module_sp = GetContainingClangModule(die);
   if (!dwo_module_sp)
@@ -189,19 +190,23 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const DWARFDIE &die,
                                             searched_symbol_files, pcm_types);
   if (pcm_types.Empty()) {
     // Since this type is defined in one of the Clang modules imported
-    // by this symbol file, search all of them.
+    // by this symbol file, search all of them. Instead of calling
+    // sym_file->FindTypes(), which would return this again, go straight
+    // to the imported modules.
     auto &sym_file = die.GetCU()->GetSymbolFileDWARF();
-    for (const auto &name_module : sym_file.getExternalTypeModules()) {
-      if (!name_module.second)
-        continue;
-      name_module.second->GetSymbolFile()->FindTypes(
-          decl_context, languages, searched_symbol_files, pcm_types);
-      if (pcm_types.GetSize())
-        break;
-    }
+
+    // Well-formed clang modules never form cycles; guard against corrupted
+    // ones by inserting the current file.
+    searched_symbol_files.insert(&sym_file);
+    sym_file.ForEachExternalModule(
+        *sc.comp_unit, searched_symbol_files, [&](Module &module) {
+          module.GetSymbolFile()->FindTypes(decl_context, languages,
+                                            searched_symbol_files, pcm_types);
+          return pcm_types.GetSize();
+        });
   }
 
-  if (pcm_types.GetSize() != 1)
+  if (!pcm_types.GetSize())
     return TypeSP();
 
   // We found a real definition for this type in the Clang module, so lets use
@@ -491,7 +496,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
       // contain those
       if (encoding_die &&
           encoding_die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0) == 1) {
-        type_sp = ParseTypeFromClangModule(die, log);
+        type_sp = ParseTypeFromClangModule(sc, die, log);
         if (type_sp)
           return type_sp;
       }
@@ -667,13 +672,13 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   case DW_TAG_class_type: {
     assert((!type_sp && !clang_type) &&
            "Did not expect partially computed structure-like type");
-    TypeSP struct_like_type_sp = ParseStructureLikeDIE(die, attrs);
+    TypeSP struct_like_type_sp = ParseStructureLikeDIE(sc, die, attrs);
     return UpdateSymbolContextScopeForType(sc, die, struct_like_type_sp);
   }
 
   case DW_TAG_enumeration_type: {
     if (attrs.is_forward_declaration) {
-      type_sp = ParseTypeFromClangModule(die, log);
+      type_sp = ParseTypeFromClangModule(sc, die, log);
       if (type_sp)
         return type_sp;
 
@@ -1339,7 +1344,8 @@ TypeSP DWARFASTParserClang::UpdateSymbolContextScopeForType(
 }
 
 TypeSP
-DWARFASTParserClang::ParseStructureLikeDIE(const DWARFDIE &die,
+DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
+                                           const DWARFDIE &die,
                                            ParsedDWARFTypeAttributes &attrs) {
   TypeSP type_sp;
   CompilerType clang_type;
@@ -1473,7 +1479,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const DWARFDIE &die,
 
     // See if the type comes from a Clang module and if so, track down
     // that type.
-    type_sp = ParseTypeFromClangModule(die, log);
+    type_sp = ParseTypeFromClangModule(sc, die, log);
     if (type_sp)
       return type_sp;
 

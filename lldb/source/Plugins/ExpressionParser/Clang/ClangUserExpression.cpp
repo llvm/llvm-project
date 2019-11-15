@@ -42,6 +42,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/VariableList.h"
@@ -478,15 +479,18 @@ CppModuleConfiguration GetModuleConfig(lldb::LanguageType language,
     files.AppendIfUnique(f);
   // We also need to look at external modules in the case of -gmodules as they
   // contain the support files for libc++ and the C library.
-  sc.comp_unit->ForEachExternalModule([&files](lldb::ModuleSP module) {
-    for (std::size_t i = 0; i < module->GetNumCompileUnits(); ++i) {
-      const FileSpecList &support_files =
-          module->GetCompileUnitAtIndex(i)->GetSupportFiles();
-      for (const FileSpec &f : support_files) {
-        files.AppendIfUnique(f);
-      }
-    }
-  });
+  llvm::DenseSet<SymbolFile *> visited_symbol_files;
+  sc.comp_unit->ForEachExternalModule(
+      visited_symbol_files, [&files](Module &module) {
+        for (std::size_t i = 0; i < module.GetNumCompileUnits(); ++i) {
+          const FileSpecList &support_files =
+              module.GetCompileUnitAtIndex(i)->GetSupportFiles();
+          for (const FileSpec &f : support_files) {
+            files.AppendIfUnique(f);
+          }
+        }
+        return false;
+      });
 
   LLDB_LOG(log, "[C++ module config] Found {0} support files to analyze",
            files.GetSize());

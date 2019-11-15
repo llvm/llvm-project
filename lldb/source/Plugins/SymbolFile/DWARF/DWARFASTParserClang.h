@@ -128,7 +128,8 @@ protected:
                                const DWARFDIE &parent_die);
 
   /// Parse a structure, class, or union type DIE.
-  lldb::TypeSP ParseStructureLikeDIE(const DWARFDIE &die,
+  lldb::TypeSP ParseStructureLikeDIE(const lldb_private::SymbolContext &sc,
+                                     const DWARFDIE &die,
                                      ParsedDWARFTypeAttributes &attrs);
 
   lldb_private::Type *GetTypeForDIE(const DWARFDIE &die);
@@ -160,7 +161,8 @@ protected:
                                   const DWARFDIE &die, lldb::TypeSP type_sp);
 
   /// Follow Clang Module Skeleton CU references to find a type definition.
-  lldb::TypeSP ParseTypeFromClangModule(const DWARFDIE &die,
+  lldb::TypeSP ParseTypeFromClangModule(const lldb_private::SymbolContext &sc,
+                                        const DWARFDIE &die,
                                         lldb_private::Log *log);
 
   // Return true if this type is a declaration to a type in an external
