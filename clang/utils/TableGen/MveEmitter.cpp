@@ -980,7 +980,8 @@ public:
                             const Type *Param);
   Result::Ptr getCodeForDagArg(DagInit *D, unsigned ArgNum,
                                const Result::Scope &Scope, const Type *Param);
-  Result::Ptr getCodeForArg(unsigned ArgNum, const Type *ArgType);
+  Result::Ptr getCodeForArg(unsigned ArgNum, const Type *ArgType,
+                            bool Promote);
 
   // Constructor and top-level functions.
 
@@ -1003,8 +1004,13 @@ const Type *MveEmitter::getType(Init *I, const Type *Param) {
 }
 
 const Type *MveEmitter::getType(Record *R, const Type *Param) {
+  // Pass to a subfield of any wrapper records. We don't expect more than one
+  // of these: immediate operands are used as plain numbers rather than as
+  // llvm::Value, so it's meaningless to promote their type anyway.
   if (R->isSubClassOf("Immediate"))
-    R = R->getValueAsDef("type"); // pass to subfield
+    R = R->getValueAsDef("type");
+  else if (R->isSubClassOf("unpromoted"))
+    R = R->getValueAsDef("underlying_type");
 
   if (R->getName() == "Void")
     return getVoidType();
@@ -1197,12 +1203,13 @@ Result::Ptr MveEmitter::getCodeForDagArg(DagInit *D, unsigned ArgNum,
   PrintFatalError("bad dag argument type for code generation");
 }
 
-Result::Ptr MveEmitter::getCodeForArg(unsigned ArgNum, const Type *ArgType) {
+Result::Ptr MveEmitter::getCodeForArg(unsigned ArgNum, const Type *ArgType,
+                                      bool Promote) {
   Result::Ptr V =
       std::make_shared<BuiltinArgResult>(ArgNum, isa<PointerType>(ArgType));
 
   if (const auto *ST = dyn_cast<ScalarType>(ArgType)) {
-    if (ST->isInteger() && ST->sizeInBits() < 32)
+    if (Promote && ST->isInteger() && ST->sizeInBits() < 32)
       V = std::make_shared<IntCastResult>(getScalarType("u32"), V);
   } else if (const auto *PT = dyn_cast<PredicateType>(ArgType)) {
     V = std::make_shared<IntCastResult>(getScalarType("u32"), V);
@@ -1260,6 +1267,11 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
   for (unsigned i = 0, e = ArgsDag->getNumArgs(); i < e; ++i) {
     Init *TypeInit = ArgsDag->getArg(i);
 
+    bool Promote = true;
+    if (auto TypeDI = dyn_cast<DefInit>(TypeInit))
+      if (TypeDI->getDef()->isSubClassOf("unpromoted"))
+        Promote = false;
+
     // Work out the type of the argument, for use in the function prototype in
     // the header file.
     const Type *ArgType = ME.getType(TypeInit, Param);
@@ -1269,7 +1281,7 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
     // into the variable-name scope that the code gen will refer to.
     StringRef ArgName = ArgsDag->getArgNameStr(i);
     if (!ArgName.empty())
-      Scope[ArgName] = ME.getCodeForArg(i, ArgType);
+      Scope[ArgName] = ME.getCodeForArg(i, ArgType, Promote);
 
     // If the argument is a subclass of Immediate, record the details about
     // what values it can take, for Sema checking.
@@ -1288,7 +1300,7 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
         } else if (Bounds->getName() == "IB_LaneIndex") {
           IA.boundsType = ImmediateArg::BoundsType::ExplicitRange;
           IA.i1 = 0;
-          IA.i2 = 128 / Param->sizeInBits();
+          IA.i2 = 128 / Param->sizeInBits() - 1;
         } else if (Bounds->getName() == "IB_EltBit") {
           IA.boundsType = ImmediateArg::BoundsType::ExplicitRange;
           IA.i1 = Bounds->getValueAsInt("base");
