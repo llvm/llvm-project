@@ -12715,13 +12715,15 @@ floating-point type. Not all targets support all types however.
 Overview:
 """""""""
 
-The '``llvm.lround.*``' intrinsics returns the operand rounded to the
-nearest integer.
+The '``llvm.lround.*``' intrinsics return the operand rounded to the nearest
+integer.
+
 
 Arguments:
 """"""""""
 
-The argument is a floating-point number and return is an integer type.
+The argument is a floating-point number and the return value is an integer
+type.
 
 Semantics:
 """"""""""
@@ -12749,13 +12751,14 @@ floating-point type. Not all targets support all types however.
 Overview:
 """""""""
 
-The '``llvm.llround.*``' intrinsics returns the operand rounded to the
-nearest integer.
+The '``llvm.llround.*``' intrinsics return the operand rounded to the nearest
+integer.
 
 Arguments:
 """"""""""
 
-The argument is a floating-point number and return is an integer type.
+The argument is a floating-point number and the return value is an integer
+type.
 
 Semantics:
 """"""""""
@@ -12789,13 +12792,15 @@ floating-point type. Not all targets support all types however.
 Overview:
 """""""""
 
-The '``llvm.lrint.*``' intrinsics returns the operand rounded to the
-nearest integer.
+The '``llvm.lrint.*``' intrinsics return the operand rounded to the nearest
+integer.
+
 
 Arguments:
 """"""""""
 
-The argument is a floating-point number and return is an integer type.
+The argument is a floating-point number and the return value is an integer
+type.
 
 Semantics:
 """"""""""
@@ -12823,13 +12828,14 @@ floating-point type. Not all targets support all types however.
 Overview:
 """""""""
 
-The '``llvm.llrint.*``' intrinsics returns the operand rounded to the
-nearest integer.
+The '``llvm.llrint.*``' intrinsics return the operand rounded to the nearest
+integer.
 
 Arguments:
 """"""""""
 
-The argument is a floating-point number and return is an integer type.
+The argument is a floating-point number and the return value is an integer
+type.
 
 Semantics:
 """"""""""
