@@ -357,14 +357,9 @@ static bool getArchFeatures(const Driver &D, StringRef MArch,
 void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                    const ArgList &Args,
                                    std::vector<StringRef> &Features) {
-  llvm::Optional<StringRef> MArch;
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
-    MArch = A->getValue();
-  else if (Triple.getOS() == llvm::Triple::Linux)
-    // RISC-V Linux defaults to rv{32,64}gc.
-    MArch = Triple.getArch() == llvm::Triple::riscv32 ? "rv32gc" : "rv64gc";
+  StringRef MArch = getRISCVArch(Args, Triple);
 
-  if (MArch.hasValue() && !getArchFeatures(D, *MArch, Features, Args))
+  if (!getArchFeatures(D, MArch, Features, Args))
     return;
 
   // Handle features corresponding to "-ffixed-X" options
@@ -455,12 +450,132 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
           Triple.getArch() == llvm::Triple::riscv64) &&
          "Unexpected triple");
 
+  // GCC's logic around choosing a default `-mabi=` is complex. If GCC is not
+  // configured using `--with-abi=`, then the logic for the default choice is
+  // defined in config.gcc. This function is based on the logic in GCC 9.2.0. We
+  // deviate from GCC's default only on baremetal targets (UnknownOS) where
+  // neither `-march` nor `-mabi` is specified.
+  //
+  // The logic uses the following, in order:
+  // 1. Explicit choices using `--with-abi=`
+  // 2. A default based on `--with-arch=`, if provided
+  // 3. A default based on the target triple's arch
+  //
+  // The logic in config.gcc is a little circular but it is not inconsistent.
+  //
+  // Clang does not have `--with-arch=` or `--with-abi=`, so we use `-march=`
+  // and `-mabi=` respectively instead.
+
+  // 1. If `-mabi=` is specified, use it.
   if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ))
     return A->getValue();
 
-  // RISC-V Linux defaults to ilp32d/lp64d
-  if (Triple.getOS() == llvm::Triple::Linux)
-    return Triple.getArch() == llvm::Triple::riscv32 ? "ilp32d" : "lp64d";
-  else
-    return Triple.getArch() == llvm::Triple::riscv32 ? "ilp32" : "lp64";
+  // 2. Choose a default based on `-march=`
+  //
+  // rv32g | rv32*d -> ilp32d
+  // rv32e -> ilp32e
+  // rv32* -> ilp32
+  // rv64g | rv64*d -> lp64d
+  // rv64* -> lp64
+  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
+    StringRef MArch = A->getValue();
+
+    if (MArch.startswith_lower("rv32")) {
+      // FIXME: parse `March` to find `D` extension properly
+      if (MArch.substr(4).contains_lower("d") ||
+          MArch.startswith_lower("rv32g"))
+        return "ilp32d";
+      else if (MArch.startswith_lower("rv32e"))
+        return "ilp32e";
+      else
+        return "ilp32";
+    } else if (MArch.startswith_lower("rv64")) {
+      // FIXME: parse `March` to find `D` extension properly
+      if (MArch.substr(4).contains_lower("d") ||
+          MArch.startswith_lower("rv64g"))
+        return "lp64d";
+      else
+        return "lp64";
+    }
+  }
+
+  // 3. Choose a default based on the triple
+  //
+  // We deviate from GCC's defaults here:
+  // - On `riscv{XLEN}-unknown-elf` we use the integer calling convention only.
+  // - On all other OSs we use the double floating point calling convention.
+  if (Triple.getArch() == llvm::Triple::riscv32) {
+    if (Triple.getOS() == llvm::Triple::UnknownOS)
+      return "ilp32";
+    else
+      return "ilp32d";
+  } else {
+    if (Triple.getOS() == llvm::Triple::UnknownOS)
+      return "lp64";
+    else
+      return "lp64d";
+  }
+}
+
+StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
+                              const llvm::Triple &Triple) {
+  assert((Triple.getArch() == llvm::Triple::riscv32 ||
+          Triple.getArch() == llvm::Triple::riscv64) &&
+         "Unexpected triple");
+
+  // GCC's logic around choosing a default `-march=` is complex. If GCC is not
+  // configured using `--with-arch=`, then the logic for the default choice is
+  // defined in config.gcc. This function is based on the logic in GCC 9.2.0. We
+  // deviate from GCC's default only on baremetal targets (UnknownOS) where
+  // neither `-march` nor `-mabi` is specified.
+  //
+  // The logic uses the following, in order:
+  // 1. Explicit choices using `--with-arch=`
+  // 2. A default based on `--with-abi=`, if provided
+  // 3. A default based on the target triple's arch
+  //
+  // The logic in config.gcc is a little circular but it is not inconsistent.
+  //
+  // Clang does not have `--with-arch=` or `--with-abi=`, so we use `-march=`
+  // and `-mabi=` respectively instead.
+  //
+  // Clang does not yet support MULTILIB_REUSE, so we use `rv{XLEN}imafdc`
+  // instead of `rv{XLEN}gc` though they are (currently) equivalent.
+
+  // 1. If `-march=` is specified, use it.
+  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
+    return A->getValue();
+
+  // 2. Choose a default based on `-mabi=`
+  //
+  // ilp32e -> rv32e
+  // ilp32 | ilp32f | ilp32d -> rv32imafdc
+  // lp64 | lp64f | lp64d -> rv64imafdc
+  if (const Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
+    StringRef MABI = A->getValue();
+
+    if (MABI.equals_lower("ilp32e"))
+      return "rv32e";
+    else if (MABI.startswith_lower("ilp32"))
+      return "rv32imafdc";
+    else if (MABI.startswith_lower("lp64"))
+      return "rv64imafdc";
+  }
+
+  // 3. Choose a default based on the triple
+  //
+  // We deviate from GCC's defaults here:
+  // - On `riscv{XLEN}-unknown-elf` we default to `rv{XLEN}imac`
+  // - On all other OSs we use `rv{XLEN}imafdc` (equivalent to `rv{XLEN}gc`)
+  if (Triple.getArch() == llvm::Triple::riscv32) {
+    if (Triple.getOS() == llvm::Triple::UnknownOS)
+      return "rv32imac";
+    else
+      return "rv32imafdc";
+  } else {
+    if (Triple.getOS() == llvm::Triple::UnknownOS)
+      return "rv64imac";
+    else
+      return "rv64imafdc";
+  }
 }
