@@ -19,6 +19,6 @@ class C {
 void testCopyNull(C *I, C *E) {
   std::copy(I, E, (C *)0);
 #ifndef SUPPRESSED
-  // expected-warning@../Inputs/system-header-simulator-cxx.h:686 {{Called C++ object pointer is null}}
+  // expected-warning@../Inputs/system-header-simulator-cxx.h:698 {{Called C++ object pointer is null}}
 #endif
 }
