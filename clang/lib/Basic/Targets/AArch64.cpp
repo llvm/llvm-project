@@ -15,6 +15,8 @@
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/AArch64TargetParser.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -104,6 +106,28 @@ bool AArch64TargetInfo::setABI(const std::string &Name) {
     return false;
 
   ABI = Name;
+  return true;
+}
+
+bool AArch64TargetInfo::validateBranchProtection(StringRef Spec,
+                                                 BranchProtectionInfo &BPI,
+                                                 StringRef &Err) const {
+  llvm::AArch64::ParsedBranchProtection PBP;
+  if (!llvm::AArch64::parseBranchProtection(Spec, PBP, Err))
+    return false;
+
+  BPI.SignReturnAddr =
+      llvm::StringSwitch<CodeGenOptions::SignReturnAddressScope>(PBP.Scope)
+          .Case("non-leaf", CodeGenOptions::SignReturnAddressScope::NonLeaf)
+          .Case("all", CodeGenOptions::SignReturnAddressScope::All)
+          .Default(CodeGenOptions::SignReturnAddressScope::None);
+
+  if (PBP.Key == "a_key")
+    BPI.SignKey = CodeGenOptions::SignReturnAddressKeyValue::AKey;
+  else
+    BPI.SignKey = CodeGenOptions::SignReturnAddressKeyValue::BKey;
+
+  BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
   return true;
 }
 
