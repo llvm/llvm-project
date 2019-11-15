@@ -12716,7 +12716,7 @@ Overview:
 """""""""
 
 The '``llvm.lround.*``' intrinsics return the operand rounded to the nearest
-integer.
+integer with ties away from zero.
 
 
 Arguments:
@@ -12752,7 +12752,7 @@ Overview:
 """""""""
 
 The '``llvm.llround.*``' intrinsics return the operand rounded to the nearest
-integer.
+integer with ties away from zero.
 
 Arguments:
 """"""""""
