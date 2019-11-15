@@ -143,12 +143,14 @@ static FileSpec MakeAbsolute(FileSpec file_spec) {
   return FileSpec(path, file_spec.GetPathStyle());
 }
 
-Generator::Generator(FileSpec root)
-    : m_root(MakeAbsolute(std::move(root))), m_done(false) {
+Generator::Generator(FileSpec root) : m_root(MakeAbsolute(std::move(root))) {
   GetOrCreate<repro::WorkingDirectoryProvider>();
 }
 
-Generator::~Generator() {}
+Generator::~Generator() {
+  if (!m_done)
+    Discard();
+}
 
 ProviderBase *Generator::Register(std::unique_ptr<ProviderBase> provider) {
   std::lock_guard<std::mutex> lock(m_providers_mutex);

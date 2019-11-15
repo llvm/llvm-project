@@ -1,0 +1,13 @@
+# UNSUPPORTED: system-windows
+# This ensures that the reproducer properly cleans up after itself.
+
+# Build the inferior.
+# RUN: mkdir -p %t
+# RUN: rm -rf %t.repro
+# RUN: %clang_host %S/Inputs/simple.c -g -o %t/reproducer.out
+
+# Capture but don't generate the reproducer.
+# RUN: %lldb -x -b -s %S/Inputs/Discard.in --capture --capture-path %t.repro %t/reproducer.out
+
+# Make sure the directory doesn't exist.
+# RUN: mkdir %t.repro
