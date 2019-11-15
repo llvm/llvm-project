@@ -897,6 +897,17 @@ void foo())cpp";
          HI.Definition = "int test";
          HI.Type = "int";
        }},
+      // Partially-specialized class decl. (formerly type-parameter-0-0)
+      {R"cpp(
+        template <typename T> class X;
+        template <typename T> class [[^X]]<T*> {};
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "X<T *>";
+         HI.NamespaceScope = "";
+         HI.Kind = SymbolKind::Class;
+         HI.Definition = "template <typename T> class X<T *> {}";
+       }},
 
       // auto on lambda
       {R"cpp(

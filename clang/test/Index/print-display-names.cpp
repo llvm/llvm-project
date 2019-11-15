@@ -22,7 +22,7 @@ template<> void g<int>(ClassTmpl<int, int>);
 // RUN: env CINDEXTEST_PRINTINGPOLICY_TERSEOUTPUT=1 c-index-test -test-load-source all-pretty %s | FileCheck %s --check-prefix=PRETTY
 // PRETTY: print-display-names.cpp:2:7: ClassTemplate=template <typename T, typename> class ClassTmpl {}:2:7 (Definition) Extent=[1:1 - 2:20]
 // PRETTY: print-display-names.cpp:4:13: TypedefDecl=typedef int Integer:4:13 (Definition) Extent=[4:1 - 4:20]
-// PRETTY: print-display-names.cpp:6:16: ClassDecl=template<> class ClassTmpl<int, int> {}:6:16 (Definition) [Specialization of ClassTmpl:2:7] Extent=[6:1 - 6:43]
+// PRETTY: print-display-names.cpp:6:16: ClassDecl=template<> class ClassTmpl<Integer, Integer> {}:6:16 (Definition) [Specialization of ClassTmpl:2:7] Extent=[6:1 - 6:43]
 // PRETTY: print-display-names.cpp:8:6: FunctionDecl=void f(ClassTmpl<float, Integer> p):8:6 Extent=[8:1 - 8:36]
 // PRETTY: print-display-names.cpp:8:34: ParmDecl=ClassTmpl<float, Integer> p:8:34 (Definition) Extent=[8:8 - 8:35]
 // PRETTY: print-display-names.cpp:11:6: FunctionTemplate=template <typename T> void g(ClassTmpl<T, T>):11:6 Extent=[10:1 - 11:24]
