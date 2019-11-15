@@ -5056,23 +5056,38 @@ public:
     const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
     if (!FD)
       return;
-    llvm::Function *Fn = cast<llvm::Function>(GV);
 
-    auto Kind = CGM.getCodeGenOpts().getSignReturnAddress();
-    if (Kind != CodeGenOptions::SignReturnAddressScope::None) {
+    CodeGenOptions::SignReturnAddressScope Scope = CGM.getCodeGenOpts().getSignReturnAddress();
+    CodeGenOptions::SignReturnAddressKeyValue Key = CGM.getCodeGenOpts().getSignReturnAddressKey();
+    bool BranchTargetEnforcement = CGM.getCodeGenOpts().BranchTargetEnforcement;
+    if (const auto *TA = FD->getAttr<TargetAttr>()) {
+      TargetAttr::ParsedTargetAttr Attr = TA->parse();
+      if (!Attr.BranchProtection.empty()) {
+        TargetInfo::BranchProtectionInfo BPI;
+        StringRef Error;
+        (void)CGM.getTarget().validateBranchProtection(Attr.BranchProtection,
+                                                       BPI, Error);
+        assert(Error.empty());
+        Scope = BPI.SignReturnAddr;
+        Key = BPI.SignKey;
+        BranchTargetEnforcement = BPI.BranchTargetEnforcement;
+      }
+    }
+
+    auto *Fn = cast<llvm::Function>(GV);
+    if (Scope != CodeGenOptions::SignReturnAddressScope::None) {
       Fn->addFnAttr("sign-return-address",
-                    Kind == CodeGenOptions::SignReturnAddressScope::All
+                    Scope == CodeGenOptions::SignReturnAddressScope::All
                         ? "all"
                         : "non-leaf");
 
-      auto Key = CGM.getCodeGenOpts().getSignReturnAddressKey();
       Fn->addFnAttr("sign-return-address-key",
                     Key == CodeGenOptions::SignReturnAddressKeyValue::AKey
                         ? "a_key"
                         : "b_key");
     }
 
-    if (CGM.getCodeGenOpts().BranchTargetEnforcement)
+    if (BranchTargetEnforcement)
       Fn->addFnAttr("branch-target-enforcement");
   }
 };

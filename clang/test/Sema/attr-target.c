@@ -17,5 +17,6 @@ int __attribute__((target("arch="))) turtle() { return 4; }
 int __attribute__((target("arch=hiss,arch=woof"))) pine_tree() { return 4; }
 //expected-warning@+1 {{duplicate 'arch=' in the 'target' attribute string; 'target' attribute ignored}}
 int __attribute__((target("arch=ivybridge,arch=haswell"))) oak_tree() { return 4; }
-
+//expected-warning@+1 {{unsupported 'branch-protection' in the 'target' attribute string; 'target' attribute ignored}}
+int __attribute__((target("branch-protection=none"))) birch_tree() { return 5; }
 
