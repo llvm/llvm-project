@@ -109,10 +109,7 @@ bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
   // Walk over all the operands of concat vectors and check if they are
   // build_vector themselves or undef.
   // Then collect their operands in Ops.
-  for (const MachineOperand &MO : MI.operands()) {
-    // Skip the instruction definition.
-    if (MO.isDef())
-      continue;
+  for (const MachineOperand &MO : MI.uses()) {
     Register Reg = MO.getReg();
     MachineInstr *Def = MRI.getVRegDef(Reg);
     assert(Def && "Operand not defined");
@@ -121,12 +118,8 @@ bool CombinerHelper::matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
       IsUndef = false;
       // Remember the operands of the build_vector to fold
       // them into the yet-to-build flattened concat vectors.
-      for (const MachineOperand &BuildVecMO : Def->operands()) {
-        // Skip the definition.
-        if (BuildVecMO.isDef())
-          continue;
+      for (const MachineOperand &BuildVecMO : Def->uses())
         Ops.push_back(BuildVecMO.getReg());
-      }
       break;
     case TargetOpcode::G_IMPLICIT_DEF: {
       LLT OpType = MRI.getType(Reg);
