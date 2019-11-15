@@ -27,6 +27,13 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     return;
   }
 
+  if (getKind().isReadOnly()) {
+    if (getMappingClass() != XCOFF::XMC_RO)
+      report_fatal_error("Unhandled storage-mapping class for .rodata csect.");
+    OS << "\t.csect " << QualName->getName() << '\n';
+    return;
+  }
+
   if (getKind().isData()) {
     switch (getMappingClass()) {
     case XCOFF::XMC_RW:
