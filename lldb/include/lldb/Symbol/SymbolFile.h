@@ -35,7 +35,16 @@
 namespace lldb_private {
 
 class SymbolFile : public PluginInterface {
+  /// LLVM RTTI support.
+  static char ID;
+
 public:
+  /// LLVM RTTI support.
+  /// \{
+  virtual bool isA(const void *ClassID) const { return ClassID == &ID; }
+  static bool classof(const SymbolFile *obj) { return obj->isA(&ID); }
+  /// \}
+
   // Symbol file ability bits.
   //
   // Each symbol file can claim to support one or more symbol file abilities.
