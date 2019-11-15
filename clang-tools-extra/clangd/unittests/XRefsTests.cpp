@@ -920,7 +920,7 @@ void foo())cpp";
          HI.Kind = SymbolKind::Constructor;
          HI.Type = "void ()";          // FIXME: Should be None
          HI.ReturnType = "void";       // FIXME: Should be None or X<T*>
-         HI.Definition = "X<type - parameter - 0 - 0 *>()"; // FIXME: --> X()
+         HI.Definition = "X()";
          HI.Parameters.emplace();
        }},
 

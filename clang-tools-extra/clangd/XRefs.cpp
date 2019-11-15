@@ -456,6 +456,7 @@ static std::string printDefinition(const Decl *D) {
   PrintingPolicy Policy =
       printingPolicyForDecls(D->getASTContext().getPrintingPolicy());
   Policy.IncludeTagDefinition = false;
+  Policy.SuppressTemplateArgsInCXXConstructors = true;
   D->print(OS, Policy);
   OS.flush();
   return Definition;
