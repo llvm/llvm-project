@@ -3644,10 +3644,14 @@ class sve_fp_fast_red<bits<2> sz, bits<3> opc, string asm,
   let Inst{4-0}   = Vd;
 }
 
-multiclass sve_fp_fast_red<bits<3> opc, string asm> {
+multiclass sve_fp_fast_red<bits<3> opc, string asm, SDPatternOperator op> {
   def _H : sve_fp_fast_red<0b01, opc, asm, ZPR16, FPR16>;
   def _S : sve_fp_fast_red<0b10, opc, asm, ZPR32, FPR32>;
   def _D : sve_fp_fast_red<0b11, opc, asm, ZPR64, FPR64>;
+
+  def : SVE_2_Op_Pat<f16, op, nxv8i1, nxv8f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_2_Op_Pat<f32, op, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_2_Op_Pat<f64, op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
 
@@ -3677,10 +3681,14 @@ class sve_fp_2op_p_vd<bits<2> sz, bits<3> opc, string asm,
   let Constraints = "$Vdn = $_Vdn";
 }
 
-multiclass sve_fp_2op_p_vd<bits<3> opc, string asm> {
+multiclass sve_fp_2op_p_vd<bits<3> opc, string asm, SDPatternOperator op> {
   def _H : sve_fp_2op_p_vd<0b01, opc, asm, ZPR16, FPR16>;
   def _S : sve_fp_2op_p_vd<0b10, opc, asm, ZPR32, FPR32>;
   def _D : sve_fp_2op_p_vd<0b11, opc, asm, ZPR64, FPR64>;
+
+  def : SVE_3_Op_Pat<f16, op, nxv8i1, f16, nxv8f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<f32, op, nxv4i1, f32, nxv4f32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<f64, op, nxv2i1, f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3710,10 +3718,14 @@ class sve_fp_3op_p_pd<bits<2> sz, bits<3> opc, string asm, PPRRegOp pprty,
   let Inst{3-0}   = Pd;
 }
 
-multiclass sve_fp_3op_p_pd<bits<3> opc, string asm> {
+multiclass sve_fp_3op_p_pd<bits<3> opc, string asm, SDPatternOperator op> {
   def _H : sve_fp_3op_p_pd<0b01, opc, asm, PPR16, ZPR16>;
   def _S : sve_fp_3op_p_pd<0b10, opc, asm, PPR32, ZPR32>;
   def _D : sve_fp_3op_p_pd<0b11, opc, asm, PPR64, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv8i1, op, nxv8i1, nxv8f16, nxv8f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4i1, op, nxv4i1, nxv4f32, nxv4f32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2i1, op, nxv2i1, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
 
