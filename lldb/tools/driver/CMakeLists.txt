@@ -3,8 +3,12 @@ tablegen(LLVM Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(LLDBOptionsTableGen)
 
 if(APPLE)
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/lldb-Info.plist.in
+    ${CMAKE_CURRENT_BINARY_DIR}/lldb-Info.plist
+    )
   # Inline info plist in binary (use target_link_options for this as soon as CMake 3.13 is available)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-sectcreate,__TEXT,__info_plist,${LLDB_SOURCE_DIR}/tools/driver/lldb-Info.plist")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-sectcreate,__TEXT,__info_plist,${CMAKE_CURRENT_BINARY_DIR}/lldb-Info.plist")
 endif()
 
 add_lldb_tool(lldb
