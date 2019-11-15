@@ -1,10 +1,11 @@
 # RUN: llvm-mc %s -filetype obj -triple x86_64-pc-linux -o %t.o
-# RUN: llvm-dwarfdump --debug-loc %t.o | FileCheck %s
+# RUN: llvm-dwarfdump --debug-loc -v %t.o | FileCheck %s
 
 # CHECK:         .debug_loc contents:
 # CHECK-NEXT:    0x00000000:
-# CHECK-NEXT:    [0xffffffffffffffff, 0x000000000000002a):
-# CHECK-NEXT:    [0x0000000000000003, 0x0000000000000007): DW_OP_consts +3, DW_OP_stack_value
+# CHECK-NEXT:    (0xffffffffffffffff, 0x000000000000002a)
+# CHECK-NEXT:    (0x0000000000000003, 0x0000000000000007)
+# CHECK-NEXT:        => [0x000000000000002d, 0x0000000000000031): DW_OP_consts +3, DW_OP_stack_value
 
 	.section	.debug_loc,"",@progbits
 	.quad	0xffffffffffffffff
