@@ -1,8 +1,5 @@
 // REQUIRES: crash-recovery
 
-// FIXME: PR43272
-// XFAIL: system-windows
-
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/vdir %t/outdir %t/cache
 // RUN: cp -R %S/Inputs/Bar.framework %t/outdir/
