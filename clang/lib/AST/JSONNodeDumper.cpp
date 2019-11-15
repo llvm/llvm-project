@@ -688,8 +688,12 @@ void JSONNodeDumper::VisitMemberPointerType(const MemberPointerType *MPT) {
 }
 
 void JSONNodeDumper::VisitNamedDecl(const NamedDecl *ND) {
-  if (ND && ND->getDeclName())
+  if (ND && ND->getDeclName()) {
     JOS.attribute("name", ND->getNameAsString());
+    std::string MangledName = ASTNameGen.getName(ND);
+    if (!MangledName.empty())
+      JOS.attribute("mangledName", MangledName);
+  }
 }
 
 void JSONNodeDumper::VisitTypedefDecl(const TypedefDecl *TD) {

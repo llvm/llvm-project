@@ -588,6 +588,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "previousDecl": "0x{{.*}}",
 // CHECK-NEXT:    "name": "c",
+// CHECK-NEXT:    "mangledName": "_Z1cIfiEvT_",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "void (float)"
 // CHECK-NEXT:    },
@@ -1017,6 +1018,7 @@ void V<Ty>::f() {}
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "name": "i",
+// CHECK-NEXT:        "mangledName": "_ZZ1fiE1i",
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "int"
 // CHECK-NEXT:        },

@@ -120,6 +120,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestObjCEncode",
+// CHECK-NEXT:  "mangledName": "TestObjCEncode",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void ()"
 // CHECK-NEXT:  },
@@ -265,6 +266,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestObjCMessage",
+// CHECK-NEXT:  "mangledName": "TestObjCMessage",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void (I *)"
 // CHECK-NEXT:  },
@@ -292,6 +294,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "Obj",
+// CHECK-NEXT:    "mangledName": "Obj",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "I *"
 // CHECK-NEXT:    }
@@ -443,6 +446,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestObjCBoxed",
+// CHECK-NEXT:  "mangledName": "TestObjCBoxed",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void ()"
 // CHECK-NEXT:  },
@@ -604,6 +608,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestObjCSelector",
+// CHECK-NEXT:  "mangledName": "TestObjCSelector",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void ()"
 // CHECK-NEXT:  },
@@ -664,6 +669,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "name": "s",
+// CHECK-NEXT:        "mangledName": "s",
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "SEL *",
 // CHECK-NEXT:         "qualType": "SEL",
@@ -726,6 +732,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestObjCProtocol",
+// CHECK-NEXT:  "mangledName": "TestObjCProtocol",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void (id)"
 // CHECK-NEXT:  },
@@ -753,6 +760,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "Obj",
+// CHECK-NEXT:    "mangledName": "Obj",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "id",
 // CHECK-NEXT:     "qualType": "id",
@@ -911,6 +919,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestObjCPropertyRef",
+// CHECK-NEXT:  "mangledName": "TestObjCPropertyRef",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void (J *)"
 // CHECK-NEXT:  },
@@ -938,6 +947,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "Obj",
+// CHECK-NEXT:    "mangledName": "Obj",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "J *"
 // CHECK-NEXT:    }
@@ -1577,6 +1587,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "name": "i",
+// CHECK-NEXT:        "mangledName": "i",
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "int"
 // CHECK-NEXT:        },
@@ -1931,6 +1942,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestObjCSubscriptRef",
+// CHECK-NEXT:  "mangledName": "TestObjCSubscriptRef",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void (NSMutableArray *, NSMutableDictionary *)"
 // CHECK-NEXT:  },
@@ -1958,6 +1970,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "Array",
+// CHECK-NEXT:    "mangledName": "Array",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "NSMutableArray *"
 // CHECK-NEXT:    }
@@ -1984,6 +1997,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "Dict",
+// CHECK-NEXT:    "mangledName": "Dict",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "NSMutableDictionary *"
 // CHECK-NEXT:    }
@@ -2849,6 +2863,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isUsed": true,
 // CHECK-NEXT:        "name": "i",
+// CHECK-NEXT:        "mangledName": "i",
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "desugaredQualType": "id",
 // CHECK-NEXT:         "qualType": "id",
@@ -4775,6 +4790,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestObjCIVarRef",
+// CHECK-NEXT:  "mangledName": "TestObjCIVarRef",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void (I *)"
 // CHECK-NEXT:  },
@@ -4802,6 +4818,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "Ptr",
+// CHECK-NEXT:    "mangledName": "Ptr",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "I *"
 // CHECK-NEXT:    }
@@ -4978,6 +4995,7 @@ void TestObjCBoolLiteral() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestObjCBoolLiteral",
+// CHECK-NEXT:  "mangledName": "TestObjCBoolLiteral",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void ()"
 // CHECK-NEXT:  },
