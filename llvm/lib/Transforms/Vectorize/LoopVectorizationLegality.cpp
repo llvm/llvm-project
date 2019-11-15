@@ -72,7 +72,7 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
       Interleave("interleave.count", InterleaveOnlyWhenForced, HK_UNROLL),
       Force("vectorize.enable", FK_Undefined, HK_FORCE),
       IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
-      Predicate("vectorize.predicate.enable", 0, HK_PREDICATE), TheLoop(L),
+      Predicate("vectorize.predicate.enable", FK_Undefined, HK_PREDICATE), TheLoop(L),
       ORE(ORE) {
   // Populate values with existing loop metadata.
   getHintsFromMetadata();

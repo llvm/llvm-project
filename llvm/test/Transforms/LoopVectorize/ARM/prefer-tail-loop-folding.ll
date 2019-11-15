@@ -323,15 +323,12 @@ for.end:
 }
 
 define void @pragma_vect_predicate_disable(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C) #0 {
-; CHECK-LABEL: pragma_vect_predicate_disable(
-;
-; FIXME:
-; respect loop hint predicate.enable = false, and don't tail-fold here:
-;
-; PREFER-FOLDING: call <4 x i32> @llvm.masked.load.v4i32.p0v4i32
-; PREFER-FOLDING: call <4 x i32> @llvm.masked.load.v4i32.p0v4i32
-; PREFER-FOLDING: call void @llvm.masked.store.v4i32.p0v4i32
-; PREFER-FOLDING: br i1 %{{.*}}, label %{{.*}}, label %vector.body
+; CHECK-LABEL:        pragma_vect_predicate_disable(
+; PREFER-FOLDING:     vector.body:
+; PREFER-FOLDING-NOT: call <4 x i32> @llvm.masked.load.v4i32.p0v4i32
+; PREFER-FOLDING-NOT: call <4 x i32> @llvm.masked.load.v4i32.p0v4i32
+; PREFER-FOLDING-NOT: call void @llvm.masked.store.v4i32.p0v4i32
+; PREFER-FOLDING:     br i1 %{{.*}}, label %{{.*}}, label %vector.body
 entry:
   br label %for.body
 
