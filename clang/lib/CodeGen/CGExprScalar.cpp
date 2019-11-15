@@ -644,8 +644,8 @@ public:
     auto &Ctx = CGF.getContext();
     APValue Evaluated =
         SLE->EvaluateInContext(Ctx, CGF.CurSourceLocExprScope.getDefaultExpr());
-    return ConstantEmitter(CGF.CGM, &CGF)
-        .emitAbstract(SLE->getLocation(), Evaluated, SLE->getType());
+    return ConstantEmitter(CGF).emitAbstract(SLE->getLocation(), Evaluated,
+                                             SLE->getType());
   }
 
   Value *VisitCXXDefaultArgExpr(CXXDefaultArgExpr *DAE) {
