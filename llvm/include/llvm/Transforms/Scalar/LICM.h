@@ -34,6 +34,7 @@
 
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 namespace llvm {

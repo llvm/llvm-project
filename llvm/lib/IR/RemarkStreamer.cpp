@@ -18,6 +18,7 @@
 #include "llvm/Remarks/BitstreamRemarkSerializer.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkSerializer.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
