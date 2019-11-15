@@ -435,9 +435,17 @@ OPENMP_SCHEDULE_MODIFIER(simd)
 
 // Static attributes for 'defaultmap' clause.
 OPENMP_DEFAULTMAP_KIND(scalar)
+OPENMP_DEFAULTMAP_KIND(aggregate)
+OPENMP_DEFAULTMAP_KIND(pointer)
 
 // Modifiers for 'defaultmap' clause.
+OPENMP_DEFAULTMAP_MODIFIER(alloc)
+OPENMP_DEFAULTMAP_MODIFIER(to)
+OPENMP_DEFAULTMAP_MODIFIER(from)
 OPENMP_DEFAULTMAP_MODIFIER(tofrom)
+OPENMP_DEFAULTMAP_MODIFIER(firstprivate)
+OPENMP_DEFAULTMAP_MODIFIER(none)
+OPENMP_DEFAULTMAP_MODIFIER(default)
 
 // Static attributes for 'depend' clause.
 OPENMP_DEPEND_KIND(in)
