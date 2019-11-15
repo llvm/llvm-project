@@ -108,7 +108,7 @@ ScheduleHazardRecognizer *
 PPCInstrInfo::CreateTargetHazardRecognizer(const TargetSubtargetInfo *STI,
                                            const ScheduleDAG *DAG) const {
   unsigned Directive =
-      static_cast<const PPCSubtarget *>(STI)->getDarwinDirective();
+      static_cast<const PPCSubtarget *>(STI)->getCPUDirective();
   if (Directive == PPC::DIR_440 || Directive == PPC::DIR_A2 ||
       Directive == PPC::DIR_E500mc || Directive == PPC::DIR_E5500) {
     const InstrItineraryData *II =
@@ -125,7 +125,7 @@ ScheduleHazardRecognizer *
 PPCInstrInfo::CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
                                                  const ScheduleDAG *DAG) const {
   unsigned Directive =
-      DAG->MF.getSubtarget<PPCSubtarget>().getDarwinDirective();
+      DAG->MF.getSubtarget<PPCSubtarget>().getCPUDirective();
 
   // FIXME: Leaving this as-is until we have POWER9 scheduling info
   if (Directive == PPC::DIR_PWR7 || Directive == PPC::DIR_PWR8)
@@ -202,7 +202,7 @@ int PPCInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
 
     // On some cores, there is an additional delay between writing to a condition
     // register, and using it from a branch.
-    unsigned Directive = Subtarget.getDarwinDirective();
+    unsigned Directive = Subtarget.getCPUDirective();
     switch (Directive) {
     default: break;
     case PPC::DIR_7400:
@@ -469,7 +469,7 @@ void PPCInstrInfo::insertNoop(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MI) const {
   // This function is used for scheduling, and the nop wanted here is the type
   // that terminates dispatch groups on the POWER cores.
-  unsigned Directive = Subtarget.getDarwinDirective();
+  unsigned Directive = Subtarget.getCPUDirective();
   unsigned Opcode;
   switch (Directive) {
   default:            Opcode = PPC::NOP; break;

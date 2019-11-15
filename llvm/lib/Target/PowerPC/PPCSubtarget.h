@@ -84,7 +84,7 @@ protected:
   InstrItineraryData InstrItins;
 
   /// Which cpu directive was used.
-  unsigned DarwinDirective;
+  unsigned CPUDirective;
 
   /// Used by the ISel to turn in optimizations for POWER4-derived architectures
   bool HasMFOCRF;
@@ -169,8 +169,11 @@ public:
   Align getStackAlignment() const { return StackAlignment; }
 
   /// getDarwinDirective - Returns the -m directive specified for the cpu.
+  unsigned getDarwinDirective() const { return CPUDirective; }
+
+  /// getCPUDirective - Returns the -m directive specified for the cpu.
   ///
-  unsigned getDarwinDirective() const { return DarwinDirective; }
+  unsigned getCPUDirective() const { return CPUDirective; }
 
   /// getInstrItins - Return the instruction itineraries based on subtarget
   /// selection.
