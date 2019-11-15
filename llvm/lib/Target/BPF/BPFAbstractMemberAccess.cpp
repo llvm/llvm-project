@@ -131,7 +131,7 @@ private:
     BPFPreserveFieldInfoAI = 4,
   };
 
-  const DataLayout *DL;
+  const DataLayout *DL = nullptr;
 
   std::map<std::string, GlobalVariable *> GEPGlobals;
   // A map to link preserve_*_access_index instrinsic calls.

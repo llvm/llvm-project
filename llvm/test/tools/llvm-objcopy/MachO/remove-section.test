@@ -1,0 +1,127 @@
+## Show that if --remove-section is given, llvm-objcopy removes sections
+## specified by the option.
+
+# RUN: yaml2obj %s > %t
+
+## Remove only __TEXT,__text section.
+# RUN: llvm-objcopy --remove-section __TEXT,__text %t %t2
+# RUN: llvm-readobj --sections --section-data %t2 \
+# RUN:   | FileCheck %s --check-prefixes=COMMON,REMOVE-TEXT-ONLY
+
+## Remove multiple sections.
+# RUN: llvm-objcopy --remove-section __TEXT,__text --remove-section __DATA,__data %t %t3
+# RUN: llvm-readobj --sections --section-data %t3 \
+# RUN:   | FileCheck %s --check-prefixes=COMMON,REMOVE-TEXT-AND-DATA
+
+# COMMON:                    Sections [
+# REMOVE-TEXT-ONLY-NEXT:       Section {
+# REMOVE-TEXT-ONLY-NEXT:         Index: 0
+# REMOVE-TEXT-ONLY-NEXT:         Name: __data (5F 5F 64 61 74 61 00 00 00 00 00 00 00 00 00 00)
+# REMOVE-TEXT-ONLY-NEXT:         Segment: __DATA (5F 5F 44 41 54 41 00 00 00 00 00 00 00 00 00 00)
+# REMOVE-TEXT-ONLY-NEXT:         Address: 0x4
+# REMOVE-TEXT-ONLY-NEXT:         Size: 0x4
+# REMOVE-TEXT-ONLY-NEXT:         Offset: 264
+# REMOVE-TEXT-ONLY-NEXT:         Alignment: 0
+# REMOVE-TEXT-ONLY-NEXT:         RelocationOffset: 0x0
+# REMOVE-TEXT-ONLY-NEXT:         RelocationCount: 0
+# REMOVE-TEXT-ONLY-NEXT:         Type: Regular (0x0)
+# REMOVE-TEXT-ONLY-NEXT:         Attributes [ (0x0)
+# REMOVE-TEXT-ONLY-NEXT:         ]
+# REMOVE-TEXT-ONLY-NEXT:         Reserved1: 0x0
+# REMOVE-TEXT-ONLY-NEXT:         Reserved2: 0x0
+# REMOVE-TEXT-ONLY-NEXT:         Reserved3: 0x0
+# REMOVE-TEXT-ONLY-NEXT:         SectionData (
+# REMOVE-TEXT-ONLY-NEXT:           0000: DDAADDAA                             |....|
+# REMOVE-TEXT-ONLY-NEXT:         )
+# REMOVE-TEXT-ONLY-NEXT:       }
+# COMMON-NEXT:                 Section {
+# REMOVE-TEXT-ONLY-NEXT:         Index: 1
+# REMOVE-TEXT-AND-DATA-NEXT:     Index: 0
+# COMMON-NEXT:                   Name: __const (5F 5F 63 6F 6E 73 74 00 00 00 00 00 00 00 00 00)
+# COMMON-NEXT:                   Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# COMMON-NEXT:                   Address: 0x8
+# COMMON-NEXT:                   Size: 0x4
+# REMOVE-TEXT-ONLY-NEXT:         Offset: 268
+# REMOVE-TEXT-AND-DATA-NEXT:     Offset: 184
+# COMMON-NEXT:                   Alignment: 0
+# COMMON-NEXT:                   RelocationOffset: 0x0
+# COMMON-NEXT:                   RelocationCount: 0
+# COMMON-NEXT:                   Type: Regular (0x0)
+# COMMON-NEXT:                   Attributes [ (0x0)
+# COMMON-NEXT:                   ]
+# COMMON-NEXT:                   Reserved1: 0x0
+# COMMON-NEXT:                   Reserved2: 0x0
+# COMMON-NEXT:                   Reserved3: 0x0
+# COMMON-NEXT:                   SectionData (
+# COMMON-NEXT:                     0000: EEFFEEFF                             |....|
+# COMMON-NEXT:                   )
+# COMMON-NEXT:                 }
+# COMMON-NEXT:               ]
+
+## Keep all sections if the specified section name is not present in the
+## input. The output file should be the same as the input.
+# RUN: llvm-objcopy --remove-section __TEXT,__foo %t %t4
+# RUN: cmp %t %t4
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      312
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         ''
+    vmaddr:          0
+    vmsize:          12
+    fileoff:         344
+    filesize:        12
+    maxprot:         7
+    initprot:        7
+    nsects:          3
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        content:         'AABBCCDD'
+        size:            4
+        offset:          344
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x0000000000000004
+        content:         'DDAADDAA'
+        size:            4
+        offset:          348
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+      - sectname:        __const
+        segname:         __TEXT
+        addr:            0x0000000000000008
+        content:         'EEFFEEFF'
+        size:            4
+        offset:          352
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000

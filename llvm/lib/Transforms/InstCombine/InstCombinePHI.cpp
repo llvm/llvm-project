@@ -14,9 +14,10 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
@@ -180,13 +181,14 @@ Instruction *InstCombiner::FoldIntegerTypedPHI(PHINode &PN) {
          "Not enough available ptr typed incoming values");
   PHINode *MatchingPtrPHI = nullptr;
   unsigned NumPhis = 0;
-  for (auto II = BB->begin(), EI = BasicBlock::iterator(BB->getFirstNonPHI());
-       II != EI; II++, NumPhis++) {
+  for (auto II = BB->begin(); II != BB->end(); II++, NumPhis++) {
     // FIXME: consider handling this in AggressiveInstCombine
+    PHINode *PtrPHI = dyn_cast<PHINode>(II);
+    if (!PtrPHI)
+      break;
     if (NumPhis > MaxNumPhis)
       return nullptr;
-    PHINode *PtrPHI = dyn_cast<PHINode>(II);
-    if (!PtrPHI || PtrPHI == &PN || PtrPHI->getType() != IntToPtr->getType())
+    if (PtrPHI == &PN || PtrPHI->getType() != IntToPtr->getType())
       continue;
     MatchingPtrPHI = PtrPHI;
     for (unsigned i = 0; i != PtrPHI->getNumIncomingValues(); ++i) {

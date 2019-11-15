@@ -449,17 +449,4 @@ TEST(RangeTest, Distance) {
   EXPECT_EQ(std::distance(v2.begin(), v2.end()), size(v2));
 }
 
-TEST(IteratorRangeTest, DropBegin) {
-  SmallVector<int, 5> vec{0, 1, 2, 3, 4};
-
-  for (int n = 0; n < 5; ++n) {
-    int i = n;
-    for (auto &v : drop_begin(vec, n)) {
-      EXPECT_EQ(v, i);
-      i += 1;
-    }
-    EXPECT_EQ(i, 5);
-  }
-}
-
 } // anonymous namespace

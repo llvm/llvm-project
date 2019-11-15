@@ -644,9 +644,10 @@ define i32* @gep_demanded_lane_undef(i32* %base, i64 %idx) {
 ;; indices.
 define i32* @PR41624(<2 x { i32, i32 }*> %a) {
 ; CHECK-LABEL: @PR41624(
-; CHECK-NEXT:   %w = getelementptr { i32, i32 }, <2 x { i32, i32 }*> %a, <2 x i64> <i64 5, i64 5>, <2 x i32> zeroinitializer
-; CHECK-NEXT:   %r = extractelement <2 x i32*> %w, i32 0
-; CHECK-NEXT:   ret i32* %r
+; CHECK-NEXT:    [[W:%.*]] = getelementptr { i32, i32 }, <2 x { i32, i32 }*> [[A:%.*]], <2 x i64> <i64 5, i64 5>, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = extractelement <2 x i32*> [[W]], i32 0
+; CHECK-NEXT:    ret i32* [[R]]
+;
   %w = getelementptr { i32, i32 }, <2 x { i32, i32 }*> %a, <2 x i64> <i64 5, i64 5>, <2 x i32> zeroinitializer
   %r = extractelement <2 x i32*> %w, i32 0
   ret i32* %r

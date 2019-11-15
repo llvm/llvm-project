@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 

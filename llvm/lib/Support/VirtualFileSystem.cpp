@@ -1671,9 +1671,7 @@ RedirectingFileSystem::lookupPath(sys::path::const_iterator Start,
 
   // Forward the search to the next component in case this is an empty one.
   if (!FromName.empty()) {
-    if (CaseSensitive ? !Start->equals(FromName)
-                      : !Start->equals_lower(FromName))
-      // failure to match
+    if (!pathComponentMatches(*Start, FromName))
       return make_error_code(llvm::errc::no_such_file_or_directory);
 
     ++Start;
@@ -1695,6 +1693,7 @@ RedirectingFileSystem::lookupPath(sys::path::const_iterator Start,
     if (Result || Result.getError() != llvm::errc::no_such_file_or_directory)
       return Result;
   }
+
   return make_error_code(llvm::errc::no_such_file_or_directory);
 }
 

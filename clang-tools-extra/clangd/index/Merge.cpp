@@ -107,23 +107,24 @@ bool MergedIndex::refs(const RefsRequest &Req,
   More |= Dynamic->refs(Req, [&](const Ref &O) {
     DynamicIndexFileURIs.insert(O.Location.FileURI);
     Callback(O);
+    assert(Remaining != 0);
     --Remaining;
   });
   if (Remaining == 0 && More)
     return More;
   // We return less than Req.Limit if static index returns more refs for dirty
   // files.
-  More |= Static->refs(Req, [&](const Ref &O) {
+  bool StaticHadMore =  Static->refs(Req, [&](const Ref &O) {
     if (DynamicIndexFileURIs.count(O.Location.FileURI))
       return; // ignore refs that have been seen from dynamic index.
-    if (Remaining == 0)
+    if (Remaining == 0) {
       More = true;
-    if (Remaining > 0) {
-      --Remaining;
-      Callback(O);
+      return;
     }
+    --Remaining;
+    Callback(O);
   });
-  return More;
+  return More || StaticHadMore;
 }
 
 void MergedIndex::relations(

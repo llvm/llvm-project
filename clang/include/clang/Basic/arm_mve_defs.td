@@ -29,6 +29,11 @@ def args;
 // -----------------------------------------------------------------------------
 // Family of nodes for use in the codegen dag for an intrinsic, corresponding
 // to function calls that return LLVM IR nodes.
+class IRBuilderParam<int index_> { int index = index_; }
+class IRBuilderAddrParam<int index_> : IRBuilderParam<index_>;
+class IRBuilderIntParam<int index_, string type_> : IRBuilderParam<index_> {
+  string type = type_;
+}
 class IRBuilderBase {
   // The prefix of the function call, including an open parenthesis.
   string prefix;
@@ -36,8 +41,7 @@ class IRBuilderBase {
   // Any parameters that have types that have to be treated specially by the
   // Tablegen back end. Generally these will be types other than llvm::Value *,
   // although not all other types need special treatment (e.g. llvm::Type *).
-  list<int> address_params = []; // indices of parameters with type Address
-  list<int> int_constant_params = []; // indices of plain integer parameters
+  list<IRBuilderParam> special_params = [];
 }
 class IRBuilder<string func> : IRBuilderBase {
   // The usual case: a method called on the code gen function's instance of
@@ -61,12 +65,27 @@ def shl: IRBuilder<"CreateShl">;
 def lshr: IRBuilder<"CreateLShr">;
 def fadd: IRBuilder<"CreateFAdd">;
 def fsub: IRBuilder<"CreateFSub">;
-def load: IRBuilder<"CreateLoad"> { let address_params = [0]; }
-def store: IRBuilder<"CreateStore"> { let address_params = [1]; }
-def xval: IRBuilder<"CreateExtractValue"> { let int_constant_params = [1]; }
+def load: IRBuilder<"CreateLoad"> {
+  let special_params = [IRBuilderAddrParam<0>];
+}
+def store: IRBuilder<"CreateStore"> {
+  let special_params = [IRBuilderAddrParam<1>];
+}
+def xval: IRBuilder<"CreateExtractValue"> {
+  let special_params = [IRBuilderIntParam<1, "unsigned">];
+}
+def ielt_const: IRBuilder<"CreateInsertElement"> {
+  let special_params = [IRBuilderIntParam<2, "uint64_t">];
+}
+def ielt_var: IRBuilder<"CreateInsertElement">;
+def xelt_var: IRBuilder<"CreateExtractElement">;
 def trunc: IRBuilder<"CreateTrunc">;
-def extend: CGHelperFn<"SignOrZeroExtend"> { let int_constant_params = [2]; }
+def bitcast: IRBuilder<"CreateBitCast">;
+def extend: CGHelperFn<"SignOrZeroExtend"> {
+  let special_params = [IRBuilderIntParam<2, "bool">];
+}
 def zeroinit: IRFunction<"llvm::Constant::getNullValue">;
+def undef: IRFunction<"UndefValue::get">;
 
 // A node that makes an Address out of a pointer-typed Value, by
 // providing an alignment as the second argument.
@@ -154,6 +173,10 @@ def CTO_CopyKind: ComplexTypeOp;
 // parameter type for intrinsics that aren't actually parameterised by any kind
 // of _s32 / _f16 / _u8 suffix.
 def Void : Type;
+
+// A wrapper you can put on an intrinsic's argument type to prevent it from
+// being automatically promoted to i32 from a smaller integer type.
+class unpromoted<Type t> : Type { Type underlying_type = t; }
 
 // Primitive types: base class, and an instance for the set of scalar integer
 // and floating types that MVE uses.
@@ -268,7 +291,7 @@ def imm_0toNm1 : Immediate<u32, IB_EltBit<0>>;
 
 // imm_lane has to be the index of a vector lane in the main vector type, i.e
 // it can range from 0 to (128 / size of scalar)-1 inclusive. (e.g. vgetq_lane)
-def imm_lane : Immediate<u32, IB_LaneIndex>;
+def imm_lane : Immediate<sint, IB_LaneIndex>;
 
 // imm_1to32 can be in the range 1 to 32, unconditionally. (e.g. scalar shift
 // intrinsics)
@@ -350,6 +373,12 @@ class Intrinsic<Type ret_, dag args_, dag codegen_> {
 
   // Default to PNT_Type, which is by far the most common case.
   PolymorphicNameType pnt = PNT_Type;
+
+  // A very few intrinsics _only_ have a polymorphic name.
+  bit polymorphicOnly = 0;
+
+  // True if the builtin has to avoid evaluating its arguments.
+  bit nonEvaluating = 0;
 }
 
 // Sometimes you have to use two separate Intrinsic declarations to

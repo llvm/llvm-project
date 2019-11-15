@@ -29,6 +29,7 @@
 #include "llvm/LTO/SummaryBasedOptimizations.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -146,11 +147,9 @@ void llvm::computeLTOCacheKey(
   // Include the hash for the current module
   auto ModHash = Index.getModuleHash(ModuleID);
   Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
-  for (const auto &VI : ExportList) {
-    auto GUID = VI.getGUID();
+  for (auto F : ExportList)
     // The export list can impact the internalization, be conservative here
-    Hasher.update(ArrayRef<uint8_t>((uint8_t *)&GUID, sizeof(GUID)));
-  }
+    Hasher.update(ArrayRef<uint8_t>((uint8_t *)&F, sizeof(F)));
 
   // Include the hash for every module we import functions from. The set of
   // imported symbols for each module may affect code generation and is
@@ -385,12 +384,12 @@ static bool isWeakObjectWithRWAccess(GlobalValueSummary *GVS) {
 }
 
 static void thinLTOInternalizeAndPromoteGUID(
-    GlobalValueSummaryList &GVSummaryList, ValueInfo VI,
-    function_ref<bool(StringRef, ValueInfo)> isExported,
+    GlobalValueSummaryList &GVSummaryList, GlobalValue::GUID GUID,
+    function_ref<bool(StringRef, GlobalValue::GUID)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing) {
   for (auto &S : GVSummaryList) {
-    if (isExported(S->modulePath(), VI)) {
+    if (isExported(S->modulePath(), GUID)) {
       if (GlobalValue::isLocalLinkage(S->linkage()))
         S->setLinkage(GlobalValue::ExternalLinkage);
     } else if (EnableLTOInternalization &&
@@ -398,7 +397,7 @@ static void thinLTOInternalizeAndPromoteGUID(
                // doesn't resolve them.
                !GlobalValue::isLocalLinkage(S->linkage()) &&
                (!GlobalValue::isInterposableLinkage(S->linkage()) ||
-                isPrevailing(VI.getGUID(), S.get())) &&
+                isPrevailing(GUID, S.get())) &&
                S->linkage() != GlobalValue::AppendingLinkage &&
                // We can't internalize available_externally globals because this
                // can break function pointer equality.
@@ -417,12 +416,12 @@ static void thinLTOInternalizeAndPromoteGUID(
 // as external and non-exported values as internal.
 void llvm::thinLTOInternalizeAndPromoteInIndex(
     ModuleSummaryIndex &Index,
-    function_ref<bool(StringRef, ValueInfo)> isExported,
+    function_ref<bool(StringRef, GlobalValue::GUID)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing) {
   for (auto &I : Index)
-    thinLTOInternalizeAndPromoteGUID(
-        I.second.SummaryList, Index.getValueInfo(I), isExported, isPrevailing);
+    thinLTOInternalizeAndPromoteGUID(I.second.SummaryList, I.first, isExported,
+                                     isPrevailing);
 }
 
 // Requires a destructor for std::vector<InputModule>.
@@ -1332,10 +1331,11 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
     ExportedGUIDs.insert(
         GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Def)));
 
-  auto isExported = [&](StringRef ModuleIdentifier, ValueInfo VI) {
+  auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
     const auto &ExportList = ExportLists.find(ModuleIdentifier);
-    return (ExportList != ExportLists.end() && ExportList->second.count(VI)) ||
-           ExportedGUIDs.count(VI.getGUID());
+    return (ExportList != ExportLists.end() &&
+            ExportList->second.count(GUID)) ||
+           ExportedGUIDs.count(GUID);
   };
 
   // Update local devirtualized targets that were exported by cross-module

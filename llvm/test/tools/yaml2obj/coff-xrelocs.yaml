@@ -1,0 +1,71 @@
+## This test checks that yaml2obj correctly handles COFF sections with
+## extended relocation tables (IMAGE_SCN_LNK_NRELOC_OVFL).
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --sections --relocations %t | FileCheck %s --check-prefix=CHECK-OBJ
+# RUN: obj2yaml %t | FileCheck %s --check-prefix=CHECK-YAML
+
+# CHECK-OBJ:      Sections [
+# CHECK-OBJ-NEXT:   Section {
+# CHECK-OBJ-NEXT:     Number: 1
+# CHECK-OBJ-NEXT:     Name: .data
+# CHECK-OBJ:          RawDataSize: 16
+# CHECK-OBJ:          RelocationCount: 65535
+# CHECK-OBJ:          Characteristics [
+# CHECK-OBJ-NEXT:       IMAGE_SCN_ALIGN_16BYTES
+# CHECK-OBJ-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA
+# CHECK-OBJ-NEXT:       IMAGE_SCN_LNK_NRELOC_OVFL
+# CHECK-OBJ-NEXT:       IMAGE_SCN_MEM_READ
+# CHECK-OBJ-NEXT:     ]
+# CHECK-OBJ-NEXT:   }
+# CHECK-OBJ-NEXT: ]
+# CHECK-OBJ-NEXT: Relocations [
+# CHECK-OBJ-NEXT:   Section (1) .data {
+# CHECK-OBJ-NEXT:     0x0 IMAGE_REL_AMD64_ADDR64 foo (0)
+# CHECK-OBJ-NEXT:     0x8 IMAGE_REL_AMD64_ADDR64 bar (1)
+# CHECK-OBJ-NEXT:   }
+# CHECK-OBJ-NEXT: ]
+
+# CHECK-YAML:      sections:
+# CHECK-YAML-NEXT:   - Name:            .data
+# CHECK-YAML-NEXT:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_NRELOC_OVFL, IMAGE_SCN_MEM_READ ]
+# CHECK-YAML-NEXT:     Alignment:       16
+# CHECK-YAML-NEXT:     SectionData:     '00000000000000000000000000000000'
+# CHECK-YAML-NEXT:     Relocations:
+# CHECK-YAML-NEXT:       - VirtualAddress:  0
+# CHECK-YAML-NEXT:         SymbolName:      foo
+# CHECK-YAML-NEXT:         Type:            IMAGE_REL_AMD64_ADDR64
+# CHECK-YAML-NEXT:       - VirtualAddress:  8
+# CHECK-YAML-NEXT:         SymbolName:      bar
+# CHECK-YAML-NEXT:         Type:            IMAGE_REL_AMD64_ADDR64
+# CHECK-YAML-NEXT: symbols:
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_NRELOC_OVFL, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     '00000000000000000000000000000000'
+    Relocations:
+      - VirtualAddress:  0
+        SymbolName:      foo
+        Type:            IMAGE_REL_AMD64_ADDR64
+      - VirtualAddress:  8
+        SymbolName:      bar
+        Type:            IMAGE_REL_AMD64_ADDR64
+symbols:
+  - Name:            foo
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            bar
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

@@ -839,7 +839,8 @@ size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
 
   size_t functions_added = 0;
   std::vector<DWARFDIE> function_dies;
-  dwarf_cu->AppendDIEsWithTag(DW_TAG_subprogram, function_dies);
+  dwarf_cu->GetNonSkeletonUnit().AppendDIEsWithTag(DW_TAG_subprogram,
+                                                    function_dies);
   for (const DWARFDIE &die : function_dies) {
     if (comp_unit.FindFunctionByUID(die.GetID()))
       continue;
@@ -850,16 +851,32 @@ size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
   return functions_added;
 }
 
-void SymbolFileDWARF::ForEachExternalModule(
-    CompileUnit &comp_unit, llvm::function_ref<void(ModuleSP)> f) {
-  UpdateExternalModuleListIfNeeded();
+bool SymbolFileDWARF::ForEachExternalModule(
+    CompileUnit &comp_unit,
+    llvm::DenseSet<lldb_private::SymbolFile *> &visited_symbol_files,
+    llvm::function_ref<bool(Module &)> lambda) {
+  // Only visit each symbol file once.
+  if (!visited_symbol_files.insert(this).second)
+    return false;
 
+  UpdateExternalModuleListIfNeeded();
   for (auto &p : m_external_type_modules) {
     ModuleSP module = p.second;
-    f(module);
-    for (std::size_t i = 0; i < module->GetNumCompileUnits(); ++i)
-      module->GetCompileUnitAtIndex(i)->ForEachExternalModule(f);
+    if (!module)
+      continue;
+
+    // Invoke the action and potentially early-exit.
+    if (lambda(*module))
+      return true;
+
+    for (std::size_t i = 0; i < module->GetNumCompileUnits(); ++i) {
+      auto cu = module->GetCompileUnitAtIndex(i);
+      bool early_exit = cu->ForEachExternalModule(visited_symbol_files, lambda);
+      if (early_exit)
+        return true;
+    }
   }
+  return false;
 }
 
 bool SymbolFileDWARF::ParseSupportFiles(CompileUnit &comp_unit,
@@ -1539,9 +1556,11 @@ SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
 std::unique_ptr<SymbolFileDWARFDwo>
 SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     DWARFUnit &unit, const DWARFDebugInfoEntry &cu_die) {
-  // If we are using a dSYM file, we never want the standard DWO files since
-  // the -gmodules support uses the same DWO machanism to specify full debug
-  // info files for modules.
+  // If this is a Darwin-style debug map (non-.dSYM) symbol file,
+  // never attempt to load ELF-style DWO files since the -gmodules
+  // support uses the same DWO machanism to specify full debug info
+  // files for modules. This is handled in
+  // UpdateExternalModuleListIfNeeded().
   if (GetDebugMapSymfile())
     return nullptr;
 
@@ -1601,72 +1620,74 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
 
   DWARFDebugInfo *debug_info = DebugInfo();
 
+  // Follow DWO skeleton unit breadcrumbs.
   const uint32_t num_compile_units = GetNumCompileUnits();
   for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
     DWARFUnit *dwarf_cu = debug_info->GetUnitAtIndex(cu_idx);
-
     const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
-    if (die && !die.HasChildren()) {
-      const char *name = die.GetAttributeValueAsString(DW_AT_name, nullptr);
+    if (!die || die.HasChildren())
+      continue;
 
-      if (name) {
-        ConstString const_name(name);
-        if (m_external_type_modules.find(const_name) ==
-            m_external_type_modules.end()) {
-          ModuleSP module_sp;
-          const char *dwo_path =
-              die.GetAttributeValueAsString(DW_AT_GNU_dwo_name, nullptr);
-          if (dwo_path) {
-            ModuleSpec dwo_module_spec;
-            dwo_module_spec.GetFileSpec().SetFile(dwo_path,
-                                                  FileSpec::Style::native);
-            if (dwo_module_spec.GetFileSpec().IsRelative()) {
-              const char *comp_dir =
-                  die.GetAttributeValueAsString(DW_AT_comp_dir, nullptr);
-              if (comp_dir) {
-                dwo_module_spec.GetFileSpec().SetFile(comp_dir,
-                                                      FileSpec::Style::native);
-                FileSystem::Instance().Resolve(dwo_module_spec.GetFileSpec());
-                dwo_module_spec.GetFileSpec().AppendPathComponent(dwo_path);
-              }
-            }
-            dwo_module_spec.GetArchitecture() =
-                m_objfile_sp->GetModule()->GetArchitecture();
+    const char *name = die.GetAttributeValueAsString(DW_AT_name, nullptr);
+    if (!name)
+      continue;
 
-            // When LLDB loads "external" modules it looks at the presence of
-            // DW_AT_GNU_dwo_name. However, when the already created module
-            // (corresponding to .dwo itself) is being processed, it will see
-            // the presence of DW_AT_GNU_dwo_name (which contains the name of
-            // dwo file) and will try to call ModuleList::GetSharedModule
-            // again. In some cases (i.e. for empty files) Clang 4.0 generates
-            // a *.dwo file which has DW_AT_GNU_dwo_name, but no
-            // DW_AT_comp_dir. In this case the method
-            // ModuleList::GetSharedModule will fail and the warning will be
-            // printed. However, as one can notice in this case we don't
-            // actually need to try to load the already loaded module
-            // (corresponding to .dwo) so we simply skip it.
-            if (m_objfile_sp->GetFileSpec().GetFileNameExtension() == ".dwo" &&
-                llvm::StringRef(m_objfile_sp->GetFileSpec().GetPath())
-                    .endswith(dwo_module_spec.GetFileSpec().GetPath())) {
-              continue;
-            }
+    ConstString const_name(name);
+    ModuleSP &module_sp = m_external_type_modules[const_name];
+    if (module_sp)
+      continue;
 
-            Status error = ModuleList::GetSharedModule(
-                dwo_module_spec, module_sp, nullptr, nullptr, nullptr);
-            if (!module_sp) {
-              GetObjectFile()->GetModule()->ReportWarning(
-                  "0x%8.8x: unable to locate module needed for external types: "
-                  "%s\nerror: %s\nDebugging will be degraded due to missing "
-                  "types. Rebuilding your project will regenerate the needed "
-                  "module files.",
-                  die.GetOffset(),
-                  dwo_module_spec.GetFileSpec().GetPath().c_str(),
-                  error.AsCString("unknown error"));
-            }
-          }
-          m_external_type_modules[const_name] = module_sp;
-        }
+    const char *dwo_path =
+        die.GetAttributeValueAsString(DW_AT_GNU_dwo_name, nullptr);
+    if (!dwo_path)
+      dwo_path = die.GetAttributeValueAsString(DW_AT_dwo_name, nullptr);
+    if (!dwo_path)
+      continue;
+
+    ModuleSpec dwo_module_spec;
+    dwo_module_spec.GetFileSpec().SetFile(dwo_path, FileSpec::Style::native);
+    if (dwo_module_spec.GetFileSpec().IsRelative()) {
+      const char *comp_dir =
+          die.GetAttributeValueAsString(DW_AT_comp_dir, nullptr);
+      if (comp_dir) {
+        dwo_module_spec.GetFileSpec().SetFile(comp_dir,
+                                              FileSpec::Style::native);
+        FileSystem::Instance().Resolve(dwo_module_spec.GetFileSpec());
+        dwo_module_spec.GetFileSpec().AppendPathComponent(dwo_path);
       }
+    }
+    dwo_module_spec.GetArchitecture() =
+        m_objfile_sp->GetModule()->GetArchitecture();
+
+    // When LLDB loads "external" modules it looks at the presence of
+    // DW_AT_dwo_name. However, when the already created module
+    // (corresponding to .dwo itself) is being processed, it will see
+    // the presence of DW_AT_dwo_name (which contains the name of dwo
+    // file) and will try to call ModuleList::GetSharedModule
+    // again. In some cases (i.e., for empty files) Clang 4.0
+    // generates a *.dwo file which has DW_AT_dwo_name, but no
+    // DW_AT_comp_dir. In this case the method
+    // ModuleList::GetSharedModule will fail and the warning will be
+    // printed. However, as one can notice in this case we don't
+    // actually need to try to load the already loaded module
+    // (corresponding to .dwo) so we simply skip it.
+    if (m_objfile_sp->GetFileSpec().GetFileNameExtension() == ".dwo" &&
+        llvm::StringRef(m_objfile_sp->GetFileSpec().GetPath())
+            .endswith(dwo_module_spec.GetFileSpec().GetPath())) {
+      continue;
+    }
+
+    Status error = ModuleList::GetSharedModule(dwo_module_spec, module_sp,
+                                               nullptr, nullptr, nullptr);
+    if (!module_sp) {
+      GetObjectFile()->GetModule()->ReportWarning(
+          "0x%8.8x: unable to locate module needed for external types: "
+          "%s\nerror: %s\nDebugging will be degraded due to missing "
+          "types. Rebuilding your project will regenerate the needed "
+          "module files.",
+          die.GetOffset(), dwo_module_spec.GetFileSpec().GetPath().c_str(),
+          error.AsCString("unknown error"));
+      continue;
     }
   }
 }
@@ -2489,11 +2510,22 @@ void SymbolFileDWARF::FindTypes(
     if (!contextMatches(die_context, pattern))
       continue;
 
-    if (Type *matching_type = ResolveType(die, true, true))
+    if (Type *matching_type = ResolveType(die, true, true)) {
       // We found a type pointer, now find the shared pointer form our type
       // list.
       types.InsertUnique(matching_type->shared_from_this());
+    }
   }
+
+  // Next search through the reachable Clang modules. This only applies for
+  // DWARF objects compiled with -gmodules that haven't been processed by
+  // dsymutil.
+  UpdateExternalModuleListIfNeeded();
+
+  for (const auto &pair : m_external_type_modules)
+    if (ModuleSP external_module_sp = pair.second)
+      external_module_sp->FindTypes(pattern, languages, searched_symbol_files,
+                                    types);
 }
 
 CompilerDeclContext

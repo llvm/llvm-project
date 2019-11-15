@@ -117,6 +117,9 @@ public:
   /// Returns a reference to the ObjLinkingLayer
   ObjectLayer &getObjLinkingLayer() { return *ObjLinkingLayer; }
 
+  /// Returns a reference to the object transform layer.
+  ObjectTransformLayer &getObjTransformLayer() { return ObjTransformLayer; }
+
 protected:
   static std::unique_ptr<ObjectLayer>
   createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES);
@@ -140,6 +143,7 @@ protected:
   std::unique_ptr<ThreadPool> CompileThreads;
 
   std::unique_ptr<ObjectLayer> ObjLinkingLayer;
+  ObjectTransformLayer ObjTransformLayer;
   std::unique_ptr<IRCompileLayer> CompileLayer;
 
   CtorDtorRunner CtorRunner, DtorRunner;

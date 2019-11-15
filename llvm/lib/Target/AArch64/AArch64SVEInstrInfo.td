@@ -169,12 +169,12 @@ let Predicates = [HasSVE] in {
   defm FMUL_ZZZI   : sve_fp_fmul_by_indexed_elem<"fmul", int_aarch64_sve_fmul_lane>;
 
   // SVE floating point reductions.
-  defm FADDA_VPZ   : sve_fp_2op_p_vd<0b000, "fadda">;
-  defm FADDV_VPZ   : sve_fp_fast_red<0b000, "faddv">;
-  defm FMAXNMV_VPZ : sve_fp_fast_red<0b100, "fmaxnmv">;
-  defm FMINNMV_VPZ : sve_fp_fast_red<0b101, "fminnmv">;
-  defm FMAXV_VPZ   : sve_fp_fast_red<0b110, "fmaxv">;
-  defm FMINV_VPZ   : sve_fp_fast_red<0b111, "fminv">;
+  defm FADDA_VPZ   : sve_fp_2op_p_vd<0b000, "fadda", int_aarch64_sve_fadda>;
+  defm FADDV_VPZ   : sve_fp_fast_red<0b000, "faddv", int_aarch64_sve_faddv>;
+  defm FMAXNMV_VPZ : sve_fp_fast_red<0b100, "fmaxnmv", int_aarch64_sve_fmaxnmv>;
+  defm FMINNMV_VPZ : sve_fp_fast_red<0b101, "fminnmv", int_aarch64_sve_fminnmv>;
+  defm FMAXV_VPZ   : sve_fp_fast_red<0b110, "fmaxv", int_aarch64_sve_fmaxv>;
+  defm FMINV_VPZ   : sve_fp_fast_red<0b111, "fminv", int_aarch64_sve_fminv>;
 
   // Splat immediate (unpredicated)
   defm DUP_ZI   : sve_int_dup_imm<"dup">;
@@ -736,13 +736,13 @@ let Predicates = [HasSVE] in {
   defm CMPLO_PPzZI : sve_int_ucmp_vi<0b10, "cmplo">;
   defm CMPLS_PPzZI : sve_int_ucmp_vi<0b11, "cmpls">;
 
-  defm FCMGE_PPzZZ : sve_fp_3op_p_pd<0b000, "fcmge">;
-  defm FCMGT_PPzZZ : sve_fp_3op_p_pd<0b001, "fcmgt">;
-  defm FCMEQ_PPzZZ : sve_fp_3op_p_pd<0b010, "fcmeq">;
-  defm FCMNE_PPzZZ : sve_fp_3op_p_pd<0b011, "fcmne">;
-  defm FCMUO_PPzZZ : sve_fp_3op_p_pd<0b100, "fcmuo">;
-  defm FACGE_PPzZZ : sve_fp_3op_p_pd<0b101, "facge">;
-  defm FACGT_PPzZZ : sve_fp_3op_p_pd<0b111, "facgt">;
+  defm FCMGE_PPzZZ : sve_fp_3op_p_pd<0b000, "fcmge", int_aarch64_sve_fcmpge>;
+  defm FCMGT_PPzZZ : sve_fp_3op_p_pd<0b001, "fcmgt", int_aarch64_sve_fcmpgt>;
+  defm FCMEQ_PPzZZ : sve_fp_3op_p_pd<0b010, "fcmeq", int_aarch64_sve_fcmpeq>;
+  defm FCMNE_PPzZZ : sve_fp_3op_p_pd<0b011, "fcmne", int_aarch64_sve_fcmpne>;
+  defm FCMUO_PPzZZ : sve_fp_3op_p_pd<0b100, "fcmuo", int_aarch64_sve_fcmpuo>;
+  defm FACGE_PPzZZ : sve_fp_3op_p_pd<0b101, "facge", int_aarch64_sve_facge>;
+  defm FACGT_PPzZZ : sve_fp_3op_p_pd<0b111, "facgt", int_aarch64_sve_facgt>;
 
   defm FCMGE_PPzZ0 : sve_fp_2op_p_pd<0b000, "fcmge">;
   defm FCMGT_PPzZ0 : sve_fp_2op_p_pd<0b001, "fcmgt">;

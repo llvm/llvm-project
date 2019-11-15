@@ -1,6 +1,3 @@
-// FIXME: PR43272
-// XFAIL: system-windows
-
 // RUN: rm -rf %t
 // RUN: mkdir %t
 

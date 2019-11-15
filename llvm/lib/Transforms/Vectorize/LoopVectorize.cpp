@@ -7433,8 +7433,10 @@ getScalarEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
       (F->hasOptSize() ||
        llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI)))
     SEL = CM_ScalarEpilogueNotAllowedOptSize;
-  else if (PreferPredicateOverEpilog || Hints.getPredicate() ||
-           TTI->preferPredicateOverEpilogue(L, LI, *SE, *AC, TLI, DT, LAI))
+  else if (PreferPredicateOverEpilog ||
+           Hints.getPredicate() == LoopVectorizeHints::FK_Enabled ||
+           (TTI->preferPredicateOverEpilogue(L, LI, *SE, *AC, TLI, DT, LAI) &&
+            Hints.getPredicate() != LoopVectorizeHints::FK_Disabled))
     SEL = CM_ScalarEpilogueNotNeededUsePredicate;
 
   return SEL;

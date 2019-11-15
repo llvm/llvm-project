@@ -135,7 +135,7 @@ public:
 
   // Operators
   const BreakpointOptions &operator=(const BreakpointOptions &rhs);
-  
+
   /// Copy over only the options set in the incoming BreakpointOptions.
   void CopyOverSetOptions(const BreakpointOptions &rhs);
 
@@ -267,7 +267,7 @@ public:
   bool IsEnabled() const { return m_enabled; }
 
   /// If \a enable is \b true, enable the breakpoint, if \b false disable it.
-  void SetEnabled(bool enabled) { 
+  void SetEnabled(bool enabled) {
     m_enabled = enabled;
     m_set_flags.Set(eEnabled);
   }
@@ -278,7 +278,7 @@ public:
   bool IsAutoContinue() const { return m_auto_continue; }
 
   /// Set the auto-continue state.
-  void SetAutoContinue(bool auto_continue) { 
+  void SetAutoContinue(bool auto_continue) {
     m_auto_continue = auto_continue;
     m_set_flags.Set(eAutoContinue);
   }
@@ -289,17 +289,16 @@ public:
   bool IsOneShot() const { return m_one_shot; }
 
   /// If \a enable is \b true, enable the breakpoint, if \b false disable it.
-  void SetOneShot(bool one_shot) { 
-    m_one_shot = one_shot; 
-    m_set_flags.Set(eOneShot); 
+  void SetOneShot(bool one_shot) {
+    m_one_shot = one_shot;
+    m_set_flags.Set(eOneShot);
   }
 
   /// Set the breakpoint to ignore the next \a count breakpoint hits.
-  /// \param[in] count
+  /// \param[in] n
   ///    The number of breakpoint hits to ignore.
-
-  void SetIgnoreCount(uint32_t n) { 
-    m_ignore_count = n; 
+  void SetIgnoreCount(uint32_t n) {
+    m_ignore_count = n;
     m_set_flags.Set(eIgnoreCount);
   }
 
@@ -341,13 +340,13 @@ public:
   ///     A UP holding the new'ed CommandData object.
   ///     The breakpoint will take ownership of pointer held by this object.
   void SetCommandDataCallback(std::unique_ptr<CommandData> &cmd_data);
-  
+
   void Clear();
-  
+
   bool AnySet() const {
     return m_set_flags.AnySet(eAllOptions);
   }
-  
+
 protected:
   // Classes that inherit from BreakpointOptions can see and modify these
   bool IsOptionSet(OptionKind kind)
@@ -377,7 +376,7 @@ protected:
 
 private:
   /// For BreakpointOptions only
-  
+
   /// This is the callback function pointer
   BreakpointHitCallback m_callback;
   /// This is the client data for the callback

@@ -10638,6 +10638,7 @@ TEST_F(FormatTest, ConfigurableSpacesInSquareBrackets) {
   verifyFormat("return [ i, args... ] {};", Spaces);
   verifyFormat("int foo = [ &bar ]() {};", Spaces);
   verifyFormat("int foo = [ = ]() {};", Spaces);
+  verifyFormat("int foo = [ & ]() {};", Spaces);
   verifyFormat("int foo = [ =, &bar ]() {};", Spaces);
   verifyFormat("int foo = [ &bar, = ]() {};", Spaces);
 }

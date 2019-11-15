@@ -11,7 +11,7 @@ declare <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16>)
 ; Only bottom 4 elements required.
 define <4 x float> @demand_vcvtph2ps_128(<8 x i16> %A) {
 ; CHECK-LABEL: @demand_vcvtph2ps_128(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.vcvtph2ps.128(<8 x i16> %A)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.vcvtph2ps.128(<8 x i16> [[A:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = shufflevector <8 x i16> %A, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -22,7 +22,7 @@ define <4 x float> @demand_vcvtph2ps_128(<8 x i16> %A) {
 ; All 8 elements required.
 define <8 x float> @demand_vcvtph2ps_256(<8 x i16> %A) {
 ; CHECK-LABEL: @demand_vcvtph2ps_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> %A, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A:%.*]], <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16> [[TMP1]])
 ; CHECK-NEXT:    ret <8 x float> [[TMP2]]
 ;

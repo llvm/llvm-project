@@ -107,6 +107,9 @@ multiple file formats.
  Remove the specified section from the output. Can be specified multiple times
  to remove multiple sections simultaneously.
 
+ For MachO objects, ``<section>`` must be formatted as
+ ``<segment name>,<section name>``.
+
 .. option:: --set-section-alignment <section>=<align>
 
  Set the alignment of section ``<section>`` to `<align>``. Can be specified

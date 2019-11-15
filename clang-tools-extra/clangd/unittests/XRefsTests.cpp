@@ -897,6 +897,17 @@ void foo())cpp";
          HI.Definition = "int test";
          HI.Type = "int";
        }},
+      // Partially-specialized class decl. (formerly type-parameter-0-0)
+      {R"cpp(
+        template <typename T> class X;
+        template <typename T> class [[^X]]<T*> {};
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "X<T *>";
+         HI.NamespaceScope = "";
+         HI.Kind = SymbolKind::Class;
+         HI.Definition = "template <typename T> class X<T *> {}";
+       }},
 
       // auto on lambda
       {R"cpp(
@@ -980,6 +991,19 @@ void foo())cpp";
          HI.Type = "int";
          HI.NamespaceScope = "";
          HI.Value = "3";
+       }},
+      {R"cpp(
+        enum Color { RED, GREEN, };
+        Color x = [[GR^EEN]];
+       )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "GREEN";
+         HI.NamespaceScope = "";
+         HI.LocalScope = "Color::";
+         HI.Definition = "GREEN";
+         HI.Kind = SymbolKind::EnumMember;
+         HI.Type = "enum Color";
+         HI.Value = "1";
        }},
       // FIXME: We should use the Decl referenced, even if it comes from an
       // implicit instantiation.
