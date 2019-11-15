@@ -89,6 +89,9 @@ def main():
   database = json.load(open(os.path.join(build_path, db_path)))
   files = [entry['file'] for entry in database]
 
+  # Filter out .rc files on Windows. CMake includes them for some reason.
+  files = [f for f in files if not f.endswith('.rc')]
+
   max_task = args.j
   if max_task == 0:
     max_task = multiprocessing.cpu_count()
