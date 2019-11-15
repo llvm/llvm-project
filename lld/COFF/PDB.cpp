@@ -369,8 +369,10 @@ PDBLinker::mergeDebugT(ObjFile *file, CVIndexMap *objectIndexMap) {
     // don't merge any type information.
     return maybeMergeTypeServerPDB(file);
   }
-  
-  CVTypeArray &types = *file->debugTypes;
+
+  CVTypeArray types;
+  BinaryStreamReader reader(file->debugTypes, support::little);
+  cantFail(reader.readArray(types, reader.getLength()));
 
   if (file->debugTypesObj->kind == TpiSource::UsingPCH) {
     // This object was compiled with /Yu, so process the corresponding
