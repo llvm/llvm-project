@@ -2242,7 +2242,7 @@ void GPUNodeBuilder::createKernelVariables(ppcg_kernel *Kernel, Function *FN) {
       auto GlobalVar = new GlobalVariable(
           *M, ArrayTy, false, GlobalValue::InternalLinkage, 0, Var.name,
           nullptr, GlobalValue::ThreadLocalMode::NotThreadLocal, 3);
-      GlobalVar->setAlignment(EleTy->getPrimitiveSizeInBits() / 8);
+      GlobalVar->setAlignment(llvm::Align(EleTy->getPrimitiveSizeInBits() / 8));
       GlobalVar->setInitializer(Constant::getNullValue(ArrayTy));
 
       Allocation = GlobalVar;
