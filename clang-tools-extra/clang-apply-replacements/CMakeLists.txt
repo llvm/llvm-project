@@ -10,7 +10,7 @@ add_clang_library(clangApplyReplacements
   clangBasic
   clangRewrite
   clangToolingCore
-  clangToolingRefactor
+  clangToolingRefactoring
   )
 
 include_directories(
