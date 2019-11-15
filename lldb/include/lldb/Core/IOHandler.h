@@ -495,11 +495,7 @@ protected:
 
 class IOHandlerStack {
 public:
-  IOHandlerStack()
-      : m_stack(), m_mutex(), m_top(nullptr), m_repl_active(false),
-        m_repl_enabled(false) {}
-
-  ~IOHandlerStack() = default;
+  IOHandlerStack() = default;
 
   size_t GetSize() const {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -630,10 +626,11 @@ protected:
   typedef std::vector<lldb::IOHandlerSP> collection;
   collection m_stack;
   mutable std::recursive_mutex m_mutex;
-  IOHandler *m_top;
-  bool m_repl_active;  // REPL is the active IOHandler or right underneath the
-                       // process IO handler
-  bool m_repl_enabled; // REPL is on IOHandler stack somewhere
+  IOHandler *m_top = nullptr;
+  /// REPL is the active IOHandler or right underneath the process IO handler.
+  bool m_repl_active = false;
+  // REPL is on IOHandler stack somewhere
+  bool m_repl_enabled = false;
 
 private:
   DISALLOW_COPY_AND_ASSIGN(IOHandlerStack);
