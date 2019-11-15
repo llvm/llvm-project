@@ -23,6 +23,10 @@ class DWARFDeclContext;
 
 #define DIE_SIBLING_IDX_BITSIZE 31
 
+/// DWARFDebugInfoEntry objects assume that they are living in one big
+/// vector and do pointer arithmetic on their this pointers. Don't
+/// pass them by value. Due to the way they are constructed in a
+/// std::vector, we cannot delete the copy constructor.
 class DWARFDebugInfoEntry {
 public:
   typedef std::vector<DWARFDebugInfoEntry> collection;
