@@ -373,3 +373,44 @@ def vadciq_m: Intrinsic<Vector, (args Vector:$inactive, Vector:$a, Vector:$b,
          (store (and 1, (lshr (xval $pair, 1), 29)), $carry),
          (xval $pair, 0))>;
 }
+
+foreach desttype = T.All in {
+  // We want a vreinterpretq between every pair of supported vector types
+  // _except_ that there shouldn't be one from a type to itself.
+  //
+  // So this foldl expression implements what you'd write in Python as
+  // [srctype for srctype in T.All if srctype != desttype]
+  let params = !foldl([]<Type>, T.All, tlist, srctype, !listconcat(tlist,
+      !if(!eq(!cast<string>(desttype),!cast<string>(srctype)),[],[srctype])))
+  in {
+    def "vreinterpretq_" # desttype: Intrinsic<
+        VecOf<desttype>, (args Vector:$x), (bitcast $x, VecOf<desttype>)>;
+  }
+}
+
+let params = T.All in {
+  let pnt = PNT_None in {
+    def vcreateq: Intrinsic<Vector, (args u64:$a, u64:$b),
+        (bitcast (ielt_const (ielt_const (undef VecOf<u64>), $a, 0),
+                             $b, 1), Vector)>;
+    def vuninitializedq: Intrinsic<Vector, (args), (undef Vector)>;
+  }
+
+  // This is the polymorphic form of vuninitializedq, which takes no type
+  // suffix, but takes an _unevaluated_ vector parameter and returns an
+  // uninitialized vector of the same vector type.
+  //
+  // This intrinsic has no _non_-polymorphic form exposed to the user. But each
+  // separately typed version of it still has to have its own clang builtin id,
+  // which can't be called vuninitializedq_u32 or similar because that would
+  // collide with the explicit nullary versions above. So I'm calling them
+  // vuninitializedq_polymorphic_u32 (and so on) for builtin id purposes; that
+  // full name never appears in the header file due to the polymorphicOnly
+  // flag, and the _polymorphic suffix is omitted from the shortened name by
+  // the custom PolymorphicNameType here.
+  let polymorphicOnly = 1, nonEvaluating = 1,
+      pnt = PolymorphicNameType<1, "polymorphic"> in {
+    def vuninitializedq_polymorphic: Intrinsic<
+        Vector, (args Vector), (undef Vector)>;
+  }
+}
