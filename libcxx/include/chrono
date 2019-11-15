@@ -1858,6 +1858,7 @@ public:
          constexpr weekday_indexed operator[](unsigned __index) const noexcept;
          constexpr weekday_last    operator[](last_spec) const noexcept;
 
+  // TODO: Make private?
   static constexpr unsigned char __weekday_from_days(int __days) noexcept;
 };
 
@@ -2568,8 +2569,13 @@ public:
     inline constexpr bool ok() const noexcept
     {
         if (!__y.ok() || !__m.ok() || !__wdi.ok()) return false;
-    //  TODO: make sure it's a valid date
-        return true;
+        if (__wdi.index() <= 4) return true;
+        auto __nth_weekday_day =
+            __wdi.weekday() -
+            chrono::weekday{static_cast<sys_days>(__y / __m / 1)} +
+            days{(__wdi.index() - 1) * 7 + 1};
+        return static_cast<unsigned>(__nth_weekday_day.count()) <=
+               static_cast<unsigned>((__y / __m / last).day());
     }
 
     static constexpr year_month_weekday __from_days(days __d) noexcept;
