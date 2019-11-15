@@ -56,7 +56,13 @@ static void markSymbols(const CopyConfig &Config, Object &Obj) {
       (*ISE.Symbol)->Referenced = true;
 }
 
-static void removeSymbols(const CopyConfig &Config, Object &Obj) {
+static void updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
+  for (SymbolEntry &Sym : Obj.SymTable) {
+    auto I = Config.SymbolsToRename.find(Sym.Name);
+    if (I != Config.SymbolsToRename.end())
+      Sym.Name = I->getValue();
+  }
+
   auto RemovePred = [Config](const std::unique_ptr<SymbolEntry> &N) {
     if (N->Referenced)
       return false;
@@ -75,7 +81,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       Config.NewSymbolVisibility || !Config.SymbolsToGlobalize.empty() ||
       !Config.SymbolsToKeep.empty() || !Config.SymbolsToLocalize.empty() ||
       !Config.SymbolsToWeaken.empty() || !Config.SymbolsToKeepGlobal.empty() ||
-      !Config.SectionsToRename.empty() || !Config.SymbolsToRename.empty() ||
+      !Config.SectionsToRename.empty() ||
       !Config.UnneededSymbolsToRemove.empty() ||
       !Config.SetSectionAlignment.empty() || !Config.SetSectionFlags.empty() ||
       Config.ExtractDWO || Config.KeepFileSymbols || Config.LocalizeHidden ||
@@ -95,7 +101,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
   if (Config.StripAll)
     markSymbols(Config, Obj);
 
-  removeSymbols(Config, Obj);
+  updateAndRemoveSymbols(Config, Obj);
 
   if (Config.StripAll)
     for (LoadCommand &LC : Obj.LoadCommands)

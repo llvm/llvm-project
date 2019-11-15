@@ -110,6 +110,12 @@ struct SymbolEntry {
 struct SymbolTable {
   std::vector<std::unique_ptr<SymbolEntry>> Symbols;
 
+  using iterator = pointee_iterator<
+      std::vector<std::unique_ptr<SymbolEntry>>::const_iterator>;
+
+  iterator begin() const { return iterator(Symbols.begin()); }
+  iterator end() const { return iterator(Symbols.end()); }
+
   const SymbolEntry *getSymbolByIndex(uint32_t Index) const;
   SymbolEntry *getSymbolByIndex(uint32_t Index);
   void removeSymbols(
