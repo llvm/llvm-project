@@ -53,7 +53,7 @@ DumpObjects::operator()(std::unique_ptr<MemoryBuffer> Obj) {
     return errorCodeToError(EC);
   DumpStream.write(Obj->getBufferStart(), Obj->getBufferSize());
 
-  return Obj;
+  return std::move(Obj);
 }
 
 StringRef DumpObjects::getBufferIdentifier(MemoryBuffer &B) {
