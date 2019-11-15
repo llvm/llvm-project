@@ -55,11 +55,11 @@ public:
     if (MF.empty())
       return Changed;
 
-    NamedVRegCursor NVC(MF.getRegInfo());
+    VRegRenamer Renamer(MF.getRegInfo());
 
     ReversePostOrderTraversal<MachineBasicBlock *> RPOT(&*MF.begin());
     for (auto &MBB : RPOT)
-      Changed |= NVC.renameVRegs(MBB);
+      Changed |= Renamer.renameVRegs(MBB);
 
     return Changed;
   }
