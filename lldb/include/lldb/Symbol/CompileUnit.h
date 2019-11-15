@@ -19,6 +19,7 @@
 #include "lldb/lldb-enumerations.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace lldb_private {
 /// \class CompileUnit CompileUnit.h "lldb/Symbol/CompileUnit.h"
@@ -241,9 +242,20 @@ public:
   /// compilation unit. Recursively also descends into the referenced external
   /// modules of any encountered compilation unit.
   ///
-  /// \param[in] f
-  ///     The lambda that should be applied to every module.
-  void ForEachExternalModule(llvm::function_ref<void(lldb::ModuleSP)> f);
+  /// \param visited_symbol_files
+  ///     A set of SymbolFiles that were already visited to avoid
+  ///     visiting one file more than once.
+  ///
+  /// \param[in] lambda
+  ///     The lambda that should be applied to every function. The lambda can
+  ///     return true if the iteration should be aborted earlier.
+  ///
+  /// \return
+  ///     If the lambda early-exited, this function returns true to
+  ///     propagate the early exit.
+  virtual bool ForEachExternalModule(
+      llvm::DenseSet<lldb_private::SymbolFile *> &visited_symbol_files,
+      llvm::function_ref<bool(Module &)> lambda);
 
   /// Get the compile unit's support file list.
   ///
