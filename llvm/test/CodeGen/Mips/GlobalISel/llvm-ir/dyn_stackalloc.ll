@@ -17,10 +17,9 @@ define void @Print_c_N_times(i8 %c, i32 %N) {
 ; MIPS32-NEXT:    .cfi_def_cfa_register 30
 ; MIPS32-NEXT:    ori $1, $zero, 1
 ; MIPS32-NEXT:    ori $2, $zero, 0
-; MIPS32-NEXT:    addu $3, $5, $1
+; MIPS32-NEXT:    addiu $3, $5, 1
 ; MIPS32-NEXT:    mul $1, $3, $1
-; MIPS32-NEXT:    ori $3, $zero, 7
-; MIPS32-NEXT:    addu $1, $1, $3
+; MIPS32-NEXT:    addiu $1, $1, 7
 ; MIPS32-NEXT:    addiu $3, $zero, 65528
 ; MIPS32-NEXT:    and $1, $1, $3
 ; MIPS32-NEXT:    move $3, $sp

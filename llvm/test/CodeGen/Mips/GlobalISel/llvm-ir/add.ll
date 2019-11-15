@@ -141,6 +141,40 @@ entry:
   ret i128 %add
 }
 
+define i32 @add_imm(i32 %a) {
+; MIPS32-LABEL: add_imm:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    addiu $2, $4, 3
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %add = add i32 %a, 3
+  ret i32 %add
+}
+
+define i32 @add_negative_imm(i32 %a) {
+; MIPS32-LABEL: add_negative_imm:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    addiu $2, $4, -3
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %add = add i32 %a, -3
+  ret i32 %add
+}
+
+define i32 @add_not_imm32SExt16(i32 %a) {
+; MIPS32-LABEL: add_not_imm32SExt16:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    ori $1, $zero, 65535
+; MIPS32-NEXT:    addu $2, $4, $1
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %add = add i32 %a, 65535
+  ret i32 %add
+}
+
 declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32)
 define void @uadd_with_overflow(i32 %lhs, i32 %rhs, i32* %padd, i1* %pcarry_flag) {
 ; MIPS32-LABEL: uadd_with_overflow:
