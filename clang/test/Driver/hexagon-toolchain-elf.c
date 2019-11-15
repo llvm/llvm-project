@@ -121,6 +121,19 @@
 // CHECK028-NOT: "-ffp-contract=fast"
 // CHECK028: {{hexagon-link|ld}}
 
+// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv65 -march=hexagon\
+// RUN:   %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK029 %s
+// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mv65 -march=hexagon\
+// RUN:   %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK029 %s
+// CHECK029: "-cc1" {{.*}} "-target-cpu" "hexagonv65"
+// CHECK029: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v65/crt0
+
 // -----------------------------------------------------------------------------
 // Test Linker related args
 // -----------------------------------------------------------------------------
