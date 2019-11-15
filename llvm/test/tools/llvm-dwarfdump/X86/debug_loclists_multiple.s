@@ -5,9 +5,9 @@
 # CHECK: .debug_loclists contents:
 # CHECK: 0x00000000: locations list header:
 # CHECK: 0x0000000c:
-# CHECK:             [0x0000000000000001, 0x0000000000000002): DW_OP_consts +7, DW_OP_stack_value
+# CHECK:             DW_LLE_offset_pair (0x0000000000000001, 0x0000000000000002): DW_OP_consts +7, DW_OP_stack_value
 # CHECK: 0x00000014: locations list header:
-# CHECK:             [0x0000000000000005, 0x0000000000000007): DW_OP_consts +12, DW_OP_stack_value
+# CHECK:             DW_LLE_offset_pair (0x0000000000000005, 0x0000000000000007): DW_OP_consts +12, DW_OP_stack_value
 
 	.section	.debug_loclists,"",@progbits
 	.long	.Ldebug_loclist_table_end0-.Ldebug_loclist_table_start0 # Length
