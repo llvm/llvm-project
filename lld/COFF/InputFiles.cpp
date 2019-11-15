@@ -24,6 +24,7 @@
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Casting.h"
@@ -877,6 +878,10 @@ void ImportFile::parse() {
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
+                         uint64_t offsetInArchive)
+    : BitcodeFile(mb, archiveName, offsetInArchive, {}) {}
+
+BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
                          uint64_t offsetInArchive,
                          std::vector<Symbol *> &&symbols)
     : InputFile(BitcodeKind, mb), symbols(std::move(symbols)) {
@@ -897,6 +902,8 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
 
   obj = check(lto::InputFile::create(mbref));
 }
+
+BitcodeFile::~BitcodeFile() = default;
 
 void BitcodeFile::parse() {
   std::vector<std::pair<Symbol *, bool>> comdat(obj->getComdatTable().size());
