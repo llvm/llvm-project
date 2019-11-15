@@ -77,6 +77,8 @@ def xval: IRBuilder<"CreateExtractValue"> {
 def ielt_const: IRBuilder<"CreateInsertElement"> {
   let special_params = [IRBuilderIntParam<2, "uint64_t">];
 }
+def ielt_var: IRBuilder<"CreateInsertElement">;
+def xelt_var: IRBuilder<"CreateExtractElement">;
 def trunc: IRBuilder<"CreateTrunc">;
 def bitcast: IRBuilder<"CreateBitCast">;
 def extend: CGHelperFn<"SignOrZeroExtend"> {
@@ -171,6 +173,10 @@ def CTO_CopyKind: ComplexTypeOp;
 // parameter type for intrinsics that aren't actually parameterised by any kind
 // of _s32 / _f16 / _u8 suffix.
 def Void : Type;
+
+// A wrapper you can put on an intrinsic's argument type to prevent it from
+// being automatically promoted to i32 from a smaller integer type.
+class unpromoted<Type t> : Type { Type underlying_type = t; }
 
 // Primitive types: base class, and an instance for the set of scalar integer
 // and floating types that MVE uses.
@@ -285,7 +291,7 @@ def imm_0toNm1 : Immediate<u32, IB_EltBit<0>>;
 
 // imm_lane has to be the index of a vector lane in the main vector type, i.e
 // it can range from 0 to (128 / size of scalar)-1 inclusive. (e.g. vgetq_lane)
-def imm_lane : Immediate<u32, IB_LaneIndex>;
+def imm_lane : Immediate<sint, IB_LaneIndex>;
 
 // imm_1to32 can be in the range 1 to 32, unconditionally. (e.g. scalar shift
 // intrinsics)

@@ -413,4 +413,9 @@ let params = T.All in {
     def vuninitializedq_polymorphic: Intrinsic<
         Vector, (args Vector), (undef Vector)>;
   }
+
+  def vgetq_lane: Intrinsic<Scalar, (args Vector:$v, imm_lane:$lane),
+                            (xelt_var $v, $lane)>;
+  def vsetq_lane: Intrinsic<Vector, (args unpromoted<Scalar>:$e, Vector:$v, imm_lane:$lane),
+                            (ielt_var $v, $e, $lane)>;
 }
