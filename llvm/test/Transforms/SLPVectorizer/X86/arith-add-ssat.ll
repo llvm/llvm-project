@@ -354,14 +354,10 @@ define void @add_v32i16() {
 ; AVX-NEXT:    ret void
 ;
 ; AVX512-LABEL: @add_v32i16(
-; AVX512-NEXT:    [[TMP1:%.*]] = load <16 x i16>, <16 x i16>* bitcast ([32 x i16]* @a16 to <16 x i16>*), align 2
-; AVX512-NEXT:    [[TMP2:%.*]] = load <16 x i16>, <16 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 16) to <16 x i16>*), align 2
-; AVX512-NEXT:    [[TMP3:%.*]] = load <16 x i16>, <16 x i16>* bitcast ([32 x i16]* @b16 to <16 x i16>*), align 2
-; AVX512-NEXT:    [[TMP4:%.*]] = load <16 x i16>, <16 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 16) to <16 x i16>*), align 2
-; AVX512-NEXT:    [[TMP5:%.*]] = call <16 x i16> @llvm.sadd.sat.v16i16(<16 x i16> [[TMP1]], <16 x i16> [[TMP3]])
-; AVX512-NEXT:    [[TMP6:%.*]] = call <16 x i16> @llvm.sadd.sat.v16i16(<16 x i16> [[TMP2]], <16 x i16> [[TMP4]])
-; AVX512-NEXT:    store <16 x i16> [[TMP5]], <16 x i16>* bitcast ([32 x i16]* @c16 to <16 x i16>*), align 2
-; AVX512-NEXT:    store <16 x i16> [[TMP6]], <16 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 16) to <16 x i16>*), align 2
+; AVX512-NEXT:    [[TMP1:%.*]] = load <32 x i16>, <32 x i16>* bitcast ([32 x i16]* @a16 to <32 x i16>*), align 2
+; AVX512-NEXT:    [[TMP2:%.*]] = load <32 x i16>, <32 x i16>* bitcast ([32 x i16]* @b16 to <32 x i16>*), align 2
+; AVX512-NEXT:    [[TMP3:%.*]] = call <32 x i16> @llvm.sadd.sat.v32i16(<32 x i16> [[TMP1]], <32 x i16> [[TMP2]])
+; AVX512-NEXT:    store <32 x i16> [[TMP3]], <32 x i16>* bitcast ([32 x i16]* @c16 to <32 x i16>*), align 2
 ; AVX512-NEXT:    ret void
 ;
   %a0  = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 0 ), align 2
@@ -496,24 +492,61 @@ define void @add_v32i16() {
 }
 
 define void @add_v64i8() {
-; CHECK-LABEL: @add_v64i8(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([64 x i8]* @a8 to <16 x i8>*), align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 16) to <16 x i8>*), align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 32) to <16 x i8>*), align 1
-; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 48) to <16 x i8>*), align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([64 x i8]* @b8 to <16 x i8>*), align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 16) to <16 x i8>*), align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 32) to <16 x i8>*), align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 48) to <16 x i8>*), align 1
-; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP5]])
-; CHECK-NEXT:    [[TMP10:%.*]] = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[TMP2]], <16 x i8> [[TMP6]])
-; CHECK-NEXT:    [[TMP11:%.*]] = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[TMP3]], <16 x i8> [[TMP7]])
-; CHECK-NEXT:    [[TMP12:%.*]] = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[TMP4]], <16 x i8> [[TMP8]])
-; CHECK-NEXT:    store <16 x i8> [[TMP9]], <16 x i8>* bitcast ([64 x i8]* @c8 to <16 x i8>*), align 1
-; CHECK-NEXT:    store <16 x i8> [[TMP10]], <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 16) to <16 x i8>*), align 1
-; CHECK-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 32) to <16 x i8>*), align 1
-; CHECK-NEXT:    store <16 x i8> [[TMP12]], <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 48) to <16 x i8>*), align 1
-; CHECK-NEXT:    ret void
+; SSE-LABEL: @add_v64i8(
+; SSE-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([64 x i8]* @a8 to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 16) to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 32) to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 48) to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([64 x i8]* @b8 to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP6:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 16) to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 32) to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP8:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 48) to <16 x i8>*), align 1
+; SSE-NEXT:    [[TMP9:%.*]] = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP5]])
+; SSE-NEXT:    [[TMP10:%.*]] = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[TMP2]], <16 x i8> [[TMP6]])
+; SSE-NEXT:    [[TMP11:%.*]] = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[TMP3]], <16 x i8> [[TMP7]])
+; SSE-NEXT:    [[TMP12:%.*]] = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[TMP4]], <16 x i8> [[TMP8]])
+; SSE-NEXT:    store <16 x i8> [[TMP9]], <16 x i8>* bitcast ([64 x i8]* @c8 to <16 x i8>*), align 1
+; SSE-NEXT:    store <16 x i8> [[TMP10]], <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 16) to <16 x i8>*), align 1
+; SSE-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 32) to <16 x i8>*), align 1
+; SSE-NEXT:    store <16 x i8> [[TMP12]], <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 48) to <16 x i8>*), align 1
+; SSE-NEXT:    ret void
+;
+; SLM-LABEL: @add_v64i8(
+; SLM-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([64 x i8]* @a8 to <16 x i8>*), align 1
+; SLM-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 16) to <16 x i8>*), align 1
+; SLM-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 32) to <16 x i8>*), align 1
+; SLM-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 48) to <16 x i8>*), align 1
+; SLM-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([64 x i8]* @b8 to <16 x i8>*), align 1
+; SLM-NEXT:    [[TMP6:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 16) to <16 x i8>*), align 1
+; SLM-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 32) to <16 x i8>*), align 1
+; SLM-NEXT:    [[TMP8:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 48) to <16 x i8>*), align 1
+; SLM-NEXT:    [[TMP9:%.*]] = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP5]])
+; SLM-NEXT:    [[TMP10:%.*]] = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[TMP2]], <16 x i8> [[TMP6]])
+; SLM-NEXT:    [[TMP11:%.*]] = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[TMP3]], <16 x i8> [[TMP7]])
+; SLM-NEXT:    [[TMP12:%.*]] = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[TMP4]], <16 x i8> [[TMP8]])
+; SLM-NEXT:    store <16 x i8> [[TMP9]], <16 x i8>* bitcast ([64 x i8]* @c8 to <16 x i8>*), align 1
+; SLM-NEXT:    store <16 x i8> [[TMP10]], <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 16) to <16 x i8>*), align 1
+; SLM-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 32) to <16 x i8>*), align 1
+; SLM-NEXT:    store <16 x i8> [[TMP12]], <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 48) to <16 x i8>*), align 1
+; SLM-NEXT:    ret void
+;
+; AVX-LABEL: @add_v64i8(
+; AVX-NEXT:    [[TMP1:%.*]] = load <32 x i8>, <32 x i8>* bitcast ([64 x i8]* @a8 to <32 x i8>*), align 1
+; AVX-NEXT:    [[TMP2:%.*]] = load <32 x i8>, <32 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 32) to <32 x i8>*), align 1
+; AVX-NEXT:    [[TMP3:%.*]] = load <32 x i8>, <32 x i8>* bitcast ([64 x i8]* @b8 to <32 x i8>*), align 1
+; AVX-NEXT:    [[TMP4:%.*]] = load <32 x i8>, <32 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 32) to <32 x i8>*), align 1
+; AVX-NEXT:    [[TMP5:%.*]] = call <32 x i8> @llvm.sadd.sat.v32i8(<32 x i8> [[TMP1]], <32 x i8> [[TMP3]])
+; AVX-NEXT:    [[TMP6:%.*]] = call <32 x i8> @llvm.sadd.sat.v32i8(<32 x i8> [[TMP2]], <32 x i8> [[TMP4]])
+; AVX-NEXT:    store <32 x i8> [[TMP5]], <32 x i8>* bitcast ([64 x i8]* @c8 to <32 x i8>*), align 1
+; AVX-NEXT:    store <32 x i8> [[TMP6]], <32 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 32) to <32 x i8>*), align 1
+; AVX-NEXT:    ret void
+;
+; AVX512-LABEL: @add_v64i8(
+; AVX512-NEXT:    [[TMP1:%.*]] = load <64 x i8>, <64 x i8>* bitcast ([64 x i8]* @a8 to <64 x i8>*), align 1
+; AVX512-NEXT:    [[TMP2:%.*]] = load <64 x i8>, <64 x i8>* bitcast ([64 x i8]* @b8 to <64 x i8>*), align 1
+; AVX512-NEXT:    [[TMP3:%.*]] = call <64 x i8> @llvm.sadd.sat.v64i8(<64 x i8> [[TMP1]], <64 x i8> [[TMP2]])
+; AVX512-NEXT:    store <64 x i8> [[TMP3]], <64 x i8>* bitcast ([64 x i8]* @c8 to <64 x i8>*), align 1
+; AVX512-NEXT:    ret void
 ;
   %a0  = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 0 ), align 1
   %a1  = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 1 ), align 1
