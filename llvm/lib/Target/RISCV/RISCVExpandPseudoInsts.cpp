@@ -319,9 +319,9 @@ static void doMaskedAtomicBinOpExpansion(
   default:
     llvm_unreachable("Unexpected AtomicRMW BinOp");
   case AtomicRMWInst::Xchg:
-    BuildMI(LoopMBB, DL, TII->get(RISCV::ADD), ScratchReg)
-        .addReg(RISCV::X0)
-        .addReg(IncrReg);
+    BuildMI(LoopMBB, DL, TII->get(RISCV::ADDI), ScratchReg)
+        .addReg(IncrReg)
+        .addImm(0);
     break;
   case AtomicRMWInst::Add:
     BuildMI(LoopMBB, DL, TII->get(RISCV::ADD), ScratchReg)
