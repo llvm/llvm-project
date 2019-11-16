@@ -65,6 +65,7 @@ public:
     UbuntuCosmic,
     UbuntuDisco,
     UbuntuEoan,
+    UbuntuFocal,
     UnknownDistro
   };
 
@@ -118,7 +119,7 @@ public:
   }
 
   bool IsUbuntu() const {
-    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuEoan;
+    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuFocal;
   }
 
   bool IsAlpineLinux() const {
