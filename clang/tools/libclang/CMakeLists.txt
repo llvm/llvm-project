@@ -1,6 +1,7 @@
 set(SOURCES
   ARCMigrate.cpp
   BuildSystem.cpp
+  CDependencies.cpp
   CIndex.cpp
   CIndexCXX.cpp
   CIndexCodeCompletion.cpp
@@ -40,6 +41,7 @@ set(LIBS
   clangASTMatchers
   clangAPINotes
   clangBasic
+  clangDependencyScanning
   clangDriver
   clangFrontend
   clangIndex
