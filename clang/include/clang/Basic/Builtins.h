@@ -25,8 +25,6 @@
 namespace clang {
 class TargetInfo;
 class IdentifierTable;
-class ASTContext;
-class QualType;
 class LangOptions;
 
 enum LanguageID {

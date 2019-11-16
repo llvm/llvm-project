@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MacroRepeatedSideEffectsCheck.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/PPCallbacks.h"

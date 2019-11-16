@@ -25,6 +25,7 @@
 #include <memory>
 
 namespace clang {
+class ASTContext;
 namespace clangd {
 class ParsedAST;
 
