@@ -106,9 +106,10 @@ void MCELFStreamer::EmitLabel(MCSymbol *S, SMLoc Loc) {
     Symbol->setType(ELF::STT_TLS);
 }
 
-void MCELFStreamer::EmitLabel(MCSymbol *S, SMLoc Loc, MCFragment *F) {
+void MCELFStreamer::EmitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment *F,
+                                   uint64_t Offset) {
   auto *Symbol = cast<MCSymbolELF>(S);
-  MCObjectStreamer::EmitLabel(Symbol, Loc, F);
+  MCObjectStreamer::EmitLabelAtPos(Symbol, Loc, F, Offset);
 
   const MCSectionELF &Section =
       static_cast<const MCSectionELF &>(*getCurrentSectionOnly());
