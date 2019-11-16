@@ -275,6 +275,7 @@ void foo())cpp";
              {std::string("int"), std::string("T"), llvm::None},
              {std::string("bool"), std::string("B"), llvm::None},
          };
+         HI.Value = "false";
          return HI;
        }},
       // Lambda variable
@@ -443,10 +444,23 @@ void foo())cpp";
          HI.Definition = "GREEN";
          HI.Kind = SymbolKind::EnumMember;
          HI.Type = "enum Color";
-         HI.Value = "1";
+         HI.Value = "1"; // Numeric when hovering on the enumerator name.
+       }},
+      {R"cpp(
+        enum Color { RED, GREEN, };
+        Color x = GREEN;
+        Color y = [[^x]];
+       )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "x";
+         HI.NamespaceScope = "";
+         HI.Definition = "enum Color x = GREEN";
+         HI.Kind = SymbolKind::Variable;
+         HI.Type = "enum Color";
+         HI.Value = "GREEN (1)"; // Symbolic when hovering on an expression.
        }},
       // FIXME: We should use the Decl referenced, even if from an implicit
-      // instantiation. Then the scope would be Add<1, 2> and the value 3.
+      // instantiation. Then the scope would be Add<1, 2>.
       {R"cpp(
         template<int a, int b> struct Add {
           static constexpr int result = a + b;
@@ -460,6 +474,21 @@ void foo())cpp";
          HI.Type = "const int";
          HI.NamespaceScope = "";
          HI.LocalScope = "Add<a, b>::";
+         HI.Value = "3";
+       }},
+      {R"cpp(
+        constexpr int answer() { return 40 + 2; }
+        int x = [[ans^wer]]();
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "answer";
+         HI.Definition = "constexpr int answer()";
+         HI.Kind = SymbolKind::Function;
+         HI.Type = "int ()";
+         HI.ReturnType = "int";
+         HI.Parameters.emplace();
+         HI.NamespaceScope = "";
+         HI.Value = "42";
        }},
       {R"cpp(
         const char *[[ba^r]] = "1234";
