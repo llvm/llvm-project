@@ -85,7 +85,7 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         source = 'main.cpp'
         breakpoint1_line = line_number(source, '// breakpoint 1')
         lines = [breakpoint1_line]
-        # Set breakoint in the thread function so we can step the threads
+        # Set breakpoint in the thread function so we can step the threads
         breakpoint_ids = self.set_source_breakpoints(source, lines)
         self.assertTrue(len(breakpoint_ids) == len(lines),
                         "expect correct number of breakpoints")
