@@ -19,7 +19,7 @@ define float @PR39535min(float %x) {
 ; CHECK-LABEL: @PR39535min(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[DOTX:%.*]] = select i1 [[TOBOOL]], float 0.000000e+00, float [[X]]
+; CHECK-NEXT:    [[DOTX:%.*]] = select fast i1 [[TOBOOL]], float 0.000000e+00, float [[X]]
 ; CHECK-NEXT:    ret float [[DOTX]]
 ;
 entry:
