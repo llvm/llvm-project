@@ -254,7 +254,7 @@ class VSCodeTestCaseBase(TestBase):
         '''Sending launch request to vscode
         '''
 
-        # Make sure we disconnet and terminate the VSCode debug adaptor,
+        # Make sure we disconnect and terminate the VSCode debug adapter,
         # if we throw an exception during the test case
         def cleanup():
             self.vscode.request_disconnect(terminateDebuggee=True)

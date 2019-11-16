@@ -821,6 +821,152 @@ void request_exceptionInfo(const llvm::json::Object &request) {
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
 
+// "CompletionsRequest": {
+//   "allOf": [ { "$ref": "#/definitions/Request" }, {
+//     "type": "object",
+//     "description": "Returns a list of possible completions for a given caret position and text.\nThe CompletionsRequest may only be called if the 'supportsCompletionsRequest' capability exists and is true.",
+//     "properties": {
+//       "command": {
+//         "type": "string",
+//         "enum": [ "completions" ]
+//       },
+//       "arguments": {
+//         "$ref": "#/definitions/CompletionsArguments"
+//       }
+//     },
+//     "required": [ "command", "arguments"  ]
+//   }]
+// },
+// "CompletionsArguments": {
+//   "type": "object",
+//   "description": "Arguments for 'completions' request.",
+//   "properties": {
+//     "frameId": {
+//       "type": "integer",
+//       "description": "Returns completions in the scope of this stack frame. If not specified, the completions are returned for the global scope."
+//     },
+//     "text": {
+//       "type": "string",
+//       "description": "One or more source lines. Typically this is the text a user has typed into the debug console before he asked for completion."
+//     },
+//     "column": {
+//       "type": "integer",
+//       "description": "The character position for which to determine the completion proposals."
+//     },
+//     "line": {
+//       "type": "integer",
+//       "description": "An optional line for which to determine the completion proposals. If missing the first line of the text is assumed."
+//     }
+//   },
+//   "required": [ "text", "column" ]
+// },
+// "CompletionsResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to 'completions' request.",
+//     "properties": {
+//       "body": {
+//         "type": "object",
+//         "properties": {
+//           "targets": {
+//             "type": "array",
+//             "items": {
+//               "$ref": "#/definitions/CompletionItem"
+//             },
+//             "description": "The possible completions for ."
+//           }
+//         },
+//         "required": [ "targets" ]
+//       }
+//     },
+//     "required": [ "body" ]
+//   }]
+// },
+// "CompletionItem": {
+//   "type": "object",
+//   "description": "CompletionItems are the suggestions returned from the CompletionsRequest.",
+//   "properties": {
+//     "label": {
+//       "type": "string",
+//       "description": "The label of this completion item. By default this is also the text that is inserted when selecting this completion."
+//     },
+//     "text": {
+//       "type": "string",
+//       "description": "If text is not falsy then it is inserted instead of the label."
+//     },
+//     "sortText": {
+//       "type": "string",
+//       "description": "A string that should be used when comparing this item with other items. When `falsy` the label is used."
+//     },
+//     "type": {
+//       "$ref": "#/definitions/CompletionItemType",
+//       "description": "The item's type. Typically the client uses this information to render the item in the UI with an icon."
+//     },
+//     "start": {
+//       "type": "integer",
+//       "description": "This value determines the location (in the CompletionsRequest's 'text' attribute) where the completion text is added.\nIf missing the text is added at the location specified by the CompletionsRequest's 'column' attribute."
+//     },
+//     "length": {
+//       "type": "integer",
+//       "description": "This value determines how many characters are overwritten by the completion text.\nIf missing the value 0 is assumed which results in the completion text being inserted."
+//     }
+//   },
+//   "required": [ "label" ]
+// },
+// "CompletionItemType": {
+//   "type": "string",
+//   "description": "Some predefined types for the CompletionItem. Please note that not all clients have specific icons for all of them.",
+//   "enum": [ "method", "function", "constructor", "field", "variable", "class", "interface", "module", "property", "unit", "value", "enum", "keyword", "snippet", "text", "color", "file", "reference", "customcolor" ]
+// }
+void request_completions(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  FillResponse(request, response);
+  llvm::json::Object body;
+  auto arguments = request.getObject("arguments");
+  std::string text = GetString(arguments, "text");
+  auto original_column = GetSigned(arguments, "column", text.size());
+  auto actual_column = original_column - 1;
+  llvm::json::Array targets;
+  // NOTE: the 'line' argument is not needed, as multiline expressions
+  // work well already
+  // TODO: support frameID. Currently
+  // g_vsc.debugger.GetCommandInterpreter().HandleCompletionWithDescriptions
+  // is frame-unaware.
+
+  if (!text.empty() && text[0] == '`') {
+    text = text.substr(1);
+    actual_column--;
+  } else {
+    text = "p " + text;
+    actual_column += 2;
+  }
+  lldb::SBStringList matches;
+  lldb::SBStringList descriptions;
+  g_vsc.debugger.GetCommandInterpreter().HandleCompletionWithDescriptions(
+    text.c_str(),
+    actual_column,
+    0, -1, matches, descriptions);
+  size_t count = std::min((uint32_t)50, matches.GetSize());
+  targets.reserve(count);
+  for (size_t i = 0; i < count; i++) {
+    std::string match = matches.GetStringAtIndex(i);
+    std::string description = descriptions.GetStringAtIndex(i);
+
+    llvm::json::Object item;
+    EmplaceSafeString(item, "text", match);
+    if (description.empty())
+      EmplaceSafeString(item, "label", match);
+    else
+      EmplaceSafeString(item, "label", match + " -- " + description);
+
+    targets.emplace_back(std::move(item));
+  }
+
+  body.try_emplace("targets", std::move(targets));
+  response.try_emplace("body", std::move(body));
+  g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+}
+
 //  "EvaluateRequest": {
 //    "allOf": [ { "$ref": "#/definitions/Request" }, {
 //      "type": "object",
@@ -1107,7 +1253,7 @@ void request_initialize(const llvm::json::Object &request) {
   // The debug adapter supports the stepInTargetsRequest.
   body.try_emplace("supportsStepInTargetsRequest", false);
   // The debug adapter supports the completionsRequest.
-  body.try_emplace("supportsCompletionsRequest", false);
+  body.try_emplace("supportsCompletionsRequest", true);
   // The debug adapter supports the modules request.
   body.try_emplace("supportsModulesRequest", false);
   // The set of additional module information exposed by the debug adapter.
@@ -2556,6 +2702,7 @@ const std::map<std::string, RequestCallback> &GetRequestHandlers() {
   static std::map<std::string, RequestCallback> g_request_handlers = {
       // VSCode Debug Adaptor requests
       REQUEST_CALLBACK(attach),
+      REQUEST_CALLBACK(completions),
       REQUEST_CALLBACK(continue),
       REQUEST_CALLBACK(configurationDone),
       REQUEST_CALLBACK(disconnect),
