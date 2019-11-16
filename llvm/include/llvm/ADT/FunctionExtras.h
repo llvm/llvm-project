@@ -287,6 +287,37 @@ public:
   }
 };
 
+template <typename CallTy> struct FunctionObjectCallback {
+  void *Context;
+  CallTy *Callback;
+};
+
+namespace detail {
+template <typename FuncTy, typename CallTy>
+struct functionObjectToCCallbackRefImpl;
+
+template <typename FuncTy, typename Ret, typename... Args>
+struct functionObjectToCCallbackRefImpl<FuncTy, Ret(Args...)> {
+  static FunctionObjectCallback<Ret(void *, Args...)> impl(FuncTy &F) {
+    auto Func = +[](void *C, Args... V) -> Ret {
+      return (*reinterpret_cast<std::decay_t<FuncTy> *>(C))(
+          std::forward<Args>(V)...);
+    };
+
+    return {&F, Func};
+  }
+};
+} // namespace detail
+
+/// Returns a function pointer and context pair suitable for use as a C
+/// callback.
+///
+/// \param F the function object to turn into a C callback. The returned
+///   callback has the same lifetime as F.
+template <typename CallTy, typename FuncTy>
+auto functionObjectToCCallbackRef(FuncTy &F) {
+  return detail::functionObjectToCCallbackRefImpl<FuncTy, CallTy>::impl(F);
+}
 } // end namespace llvm
 
 #endif // LLVM_ADT_FUNCTION_H
