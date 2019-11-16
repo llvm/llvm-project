@@ -20,6 +20,7 @@
 #include "llvm/ADT/PointerEmbeddedInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Bitcode/RecordLayout.h"
+#include "llvm/Bitstream/BitCodes.h"
 
 namespace clang {
 namespace api_notes {
