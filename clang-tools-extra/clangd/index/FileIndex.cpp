@@ -16,6 +16,7 @@
 #include "index/Merge.h"
 #include "index/SymbolOrigin.h"
 #include "index/dex/Dex.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Index/IndexingOptions.h"
 #include "clang/Lex/MacroInfo.h"

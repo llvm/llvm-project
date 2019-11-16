@@ -701,6 +701,30 @@ o foo2;
             collectIdentifierRanges("Foo", Code.code(), LangOpts));
 }
 
+TEST(SourceCodeTests, isHeaderFile) {
+  // Without lang options.
+  EXPECT_TRUE(isHeaderFile("foo.h"));
+  EXPECT_TRUE(isHeaderFile("foo.hh"));
+  EXPECT_TRUE(isHeaderFile("foo.hpp"));
+
+  EXPECT_FALSE(isHeaderFile("foo.cpp"));
+  EXPECT_FALSE(isHeaderFile("foo.c++"));
+  EXPECT_FALSE(isHeaderFile("foo.cxx"));
+  EXPECT_FALSE(isHeaderFile("foo.cc"));
+  EXPECT_FALSE(isHeaderFile("foo.c"));
+  EXPECT_FALSE(isHeaderFile("foo.mm"));
+  EXPECT_FALSE(isHeaderFile("foo.m"));
+
+  // With lang options
+  LangOptions LangOpts;
+  LangOpts.IsHeaderFile = true;
+  EXPECT_TRUE(isHeaderFile("string", LangOpts));
+  // Emulate cases where there is no "-x header" flag for a .h file, we still
+  // want to treat it as a header.
+  LangOpts.IsHeaderFile = false;
+  EXPECT_TRUE(isHeaderFile("header.h", LangOpts));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

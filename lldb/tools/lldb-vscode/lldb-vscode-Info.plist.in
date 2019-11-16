@@ -5,13 +5,13 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.apple.lldb</string>
+	<string>com.apple.lldb-vscode</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>lldb</string>
+	<string>lldb-vscode</string>
 	<key>CFBundleVersion</key>
-	<string>360.99.0</string>
+	<string>${LLDB_VERSION}</string>
 	<key>SecTaskAccess</key>
 	<array>
 		<string>allowed</string>

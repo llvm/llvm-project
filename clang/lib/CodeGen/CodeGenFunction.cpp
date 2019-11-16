@@ -33,6 +33,7 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -106,36 +107,28 @@ CodeGenFunction::~CodeGenFunction() {
 
 // Map the LangOption for rounding mode into
 // the corresponding enum in the IR.
-static llvm::ConstrainedFPIntrinsic::RoundingMode ToConstrainedRoundingMD(
+static llvm::fp::RoundingMode ToConstrainedRoundingMD(
   LangOptions::FPRoundingModeKind Kind) {
 
   switch (Kind) {
-  case LangOptions::FPR_ToNearest:
-    return llvm::ConstrainedFPIntrinsic::rmToNearest;
-  case LangOptions::FPR_Downward:
-    return llvm::ConstrainedFPIntrinsic::rmDownward;
-  case LangOptions::FPR_Upward:
-    return llvm::ConstrainedFPIntrinsic::rmUpward;
-  case LangOptions::FPR_TowardZero:
-    return llvm::ConstrainedFPIntrinsic::rmTowardZero;
-  case LangOptions::FPR_Dynamic:
-    return llvm::ConstrainedFPIntrinsic::rmDynamic;
+  case LangOptions::FPR_ToNearest:  return llvm::fp::rmToNearest;
+  case LangOptions::FPR_Downward:   return llvm::fp::rmDownward;
+  case LangOptions::FPR_Upward:     return llvm::fp::rmUpward;
+  case LangOptions::FPR_TowardZero: return llvm::fp::rmTowardZero;
+  case LangOptions::FPR_Dynamic:    return llvm::fp::rmDynamic;
   }
   llvm_unreachable("Unsupported FP RoundingMode");
 }
 
 // Map the LangOption for exception behavior into
 // the corresponding enum in the IR.
-static llvm::ConstrainedFPIntrinsic::ExceptionBehavior ToConstrainedExceptMD(
+static llvm::fp::ExceptionBehavior ToConstrainedExceptMD(
   LangOptions::FPExceptionModeKind Kind) {
 
   switch (Kind) {
-  case LangOptions::FPE_Ignore:
-    return llvm::ConstrainedFPIntrinsic::ebIgnore;
-  case LangOptions::FPE_MayTrap:
-    return llvm::ConstrainedFPIntrinsic::ebMayTrap;
-  case LangOptions::FPE_Strict:
-    return llvm::ConstrainedFPIntrinsic::ebStrict;
+  case LangOptions::FPE_Ignore:  return llvm::fp::ebIgnore;
+  case LangOptions::FPE_MayTrap: return llvm::fp::ebMayTrap;
+  case LangOptions::FPE_Strict:  return llvm::fp::ebStrict;
   }
   llvm_unreachable("Unsupported FP Exception Behavior");
 }
@@ -146,8 +139,8 @@ void CodeGenFunction::SetFPModel() {
   auto fpExceptionBehavior = ToConstrainedExceptMD(
                                getLangOpts().getFPExceptionMode());
 
-  if (fpExceptionBehavior == llvm::ConstrainedFPIntrinsic::ebIgnore &&
-      fpRoundingMode == llvm::ConstrainedFPIntrinsic::rmToNearest)
+  if (fpExceptionBehavior == llvm::fp::ebIgnore &&
+      fpRoundingMode == llvm::fp::rmToNearest)
     // Constrained intrinsics are not used.
     ;
   else {

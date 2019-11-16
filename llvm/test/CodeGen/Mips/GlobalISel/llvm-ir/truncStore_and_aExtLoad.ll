@@ -27,8 +27,7 @@ define void @load_store_i1(i1* %px, i1* %py) {
 ; MIPS32-LABEL: load_store_i1:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lbu $1, 0($5)
-; MIPS32-NEXT:    ori $2, $zero, 1
-; MIPS32-NEXT:    and $1, $1, $2
+; MIPS32-NEXT:    andi $1, $1, 1
 ; MIPS32-NEXT:    sb $1, 0($4)
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop

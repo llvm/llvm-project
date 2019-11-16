@@ -632,10 +632,10 @@ public:
   StringRef CallPrefix;
   std::vector<Ptr> Args;
   std::set<unsigned> AddressArgs;
-  std::set<unsigned> IntConstantArgs;
+  std::map<unsigned, std::string> IntConstantArgs;
   IRBuilderResult(StringRef CallPrefix, std::vector<Ptr> Args,
                   std::set<unsigned> AddressArgs,
-                  std::set<unsigned> IntConstantArgs)
+                  std::map<unsigned, std::string> IntConstantArgs)
     : CallPrefix(CallPrefix), Args(Args), AddressArgs(AddressArgs),
         IntConstantArgs(IntConstantArgs) {}
   void genCode(raw_ostream &OS,
@@ -644,11 +644,13 @@ public:
     const char *Sep = "";
     for (unsigned i = 0, e = Args.size(); i < e; ++i) {
       Ptr Arg = Args[i];
-      if (IntConstantArgs.find(i) != IntConstantArgs.end()) {
+      auto it = IntConstantArgs.find(i);
+      if (it != IntConstantArgs.end()) {
         assert(Arg->hasIntegerConstantValue());
-        OS << Sep
+        OS << Sep << "static_cast<" << it->second << ">("
            << ParamAlloc.allocParam("unsigned",
-                                    utostr(Arg->integerConstantValue()));
+                                    utostr(Arg->integerConstantValue()))
+           << ")";
       } else {
         OS << Sep << Arg->varname();
       }
@@ -763,6 +765,14 @@ class ACLEIntrinsic {
   // shares with at least one other intrinsic.
   std::string ShortName, FullName;
 
+  // A very small number of intrinsics _only_ have a polymorphic
+  // variant (vuninitializedq taking an unevaluated argument).
+  bool PolymorphicOnly;
+
+  // Another rarely-used flag indicating that the builtin doesn't
+  // evaluate its argument(s) at all.
+  bool NonEvaluating;
+
   const Type *ReturnType;
   std::vector<const Type *> ArgTypes;
   std::map<unsigned, ImmediateArg> ImmediateArgs;
@@ -796,6 +806,8 @@ public:
     return false;
   }
   bool polymorphic() const { return ShortName != FullName; }
+  bool polymorphicOnly() const { return PolymorphicOnly; }
+  bool nonEvaluating() const { return NonEvaluating; }
 
   // External entry point for code generation, called from MveEmitter.
   void genCode(raw_ostream &OS, CodeGenParamAllocator &ParamAlloc,
@@ -968,7 +980,8 @@ public:
                             const Type *Param);
   Result::Ptr getCodeForDagArg(DagInit *D, unsigned ArgNum,
                                const Result::Scope &Scope, const Type *Param);
-  Result::Ptr getCodeForArg(unsigned ArgNum, const Type *ArgType);
+  Result::Ptr getCodeForArg(unsigned ArgNum, const Type *ArgType,
+                            bool Promote);
 
   // Constructor and top-level functions.
 
@@ -991,8 +1004,13 @@ const Type *MveEmitter::getType(Init *I, const Type *Param) {
 }
 
 const Type *MveEmitter::getType(Record *R, const Type *Param) {
+  // Pass to a subfield of any wrapper records. We don't expect more than one
+  // of these: immediate operands are used as plain numbers rather than as
+  // llvm::Value, so it's meaningless to promote their type anyway.
   if (R->isSubClassOf("Immediate"))
-    R = R->getValueAsDef("type"); // pass to subfield
+    R = R->getValueAsDef("type");
+  else if (R->isSubClassOf("unpromoted"))
+    R = R->getValueAsDef("underlying_type");
 
   if (R->getName() == "Void")
     return getVoidType();
@@ -1126,11 +1144,15 @@ Result::Ptr MveEmitter::getCodeForDag(DagInit *D, const Result::Scope &Scope,
       Args.push_back(getCodeForDagArg(D, i, Scope, Param));
     if (Op->isSubClassOf("IRBuilderBase")) {
       std::set<unsigned> AddressArgs;
-      for (unsigned i : Op->getValueAsListOfInts("address_params"))
-        AddressArgs.insert(i);
-      std::set<unsigned> IntConstantArgs;
-      for (unsigned i : Op->getValueAsListOfInts("int_constant_params"))
-        IntConstantArgs.insert(i);
+      std::map<unsigned, std::string> IntConstantArgs;
+      for (Record *sp : Op->getValueAsListOfDefs("special_params")) {
+        unsigned Index = sp->getValueAsInt("index");
+        if (sp->isSubClassOf("IRBuilderAddrParam")) {
+          AddressArgs.insert(Index);
+        } else if (sp->isSubClassOf("IRBuilderIntParam")) {
+          IntConstantArgs[Index] = sp->getValueAsString("type");
+        }
+      }
       return std::make_shared<IRBuilderResult>(
           Op->getValueAsString("prefix"), Args, AddressArgs, IntConstantArgs);
     } else if (Op->isSubClassOf("IRIntBase")) {
@@ -1181,12 +1203,13 @@ Result::Ptr MveEmitter::getCodeForDagArg(DagInit *D, unsigned ArgNum,
   PrintFatalError("bad dag argument type for code generation");
 }
 
-Result::Ptr MveEmitter::getCodeForArg(unsigned ArgNum, const Type *ArgType) {
+Result::Ptr MveEmitter::getCodeForArg(unsigned ArgNum, const Type *ArgType,
+                                      bool Promote) {
   Result::Ptr V =
       std::make_shared<BuiltinArgResult>(ArgNum, isa<PointerType>(ArgType));
 
   if (const auto *ST = dyn_cast<ScalarType>(ArgType)) {
-    if (ST->isInteger() && ST->sizeInBits() < 32)
+    if (Promote && ST->isInteger() && ST->sizeInBits() < 32)
       V = std::make_shared<IntCastResult>(getScalarType("u32"), V);
   } else if (const auto *PT = dyn_cast<PredicateType>(ArgType)) {
     V = std::make_shared<IntCastResult>(getScalarType("u32"), V);
@@ -1235,11 +1258,19 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
   }
   ShortName = join(std::begin(NameParts), std::end(NameParts), "_");
 
+  PolymorphicOnly = R->getValueAsBit("polymorphicOnly");
+  NonEvaluating = R->getValueAsBit("nonEvaluating");
+
   // Process the intrinsic's argument list.
   DagInit *ArgsDag = R->getValueAsDag("args");
   Result::Scope Scope;
   for (unsigned i = 0, e = ArgsDag->getNumArgs(); i < e; ++i) {
     Init *TypeInit = ArgsDag->getArg(i);
+
+    bool Promote = true;
+    if (auto TypeDI = dyn_cast<DefInit>(TypeInit))
+      if (TypeDI->getDef()->isSubClassOf("unpromoted"))
+        Promote = false;
 
     // Work out the type of the argument, for use in the function prototype in
     // the header file.
@@ -1250,7 +1281,7 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
     // into the variable-name scope that the code gen will refer to.
     StringRef ArgName = ArgsDag->getArgNameStr(i);
     if (!ArgName.empty())
-      Scope[ArgName] = ME.getCodeForArg(i, ArgType);
+      Scope[ArgName] = ME.getCodeForArg(i, ArgType, Promote);
 
     // If the argument is a subclass of Immediate, record the details about
     // what values it can take, for Sema checking.
@@ -1269,7 +1300,7 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
         } else if (Bounds->getName() == "IB_LaneIndex") {
           IA.boundsType = ImmediateArg::BoundsType::ExplicitRange;
           IA.i1 = 0;
-          IA.i2 = 128 / Param->sizeInBits();
+          IA.i2 = 128 / Param->sizeInBits() - 1;
         } else if (Bounds->getName() == "IB_EltBit") {
           IA.boundsType = ImmediateArg::BoundsType::ExplicitRange;
           IA.i1 = Bounds->getValueAsInt("base");
@@ -1403,6 +1434,8 @@ void MveEmitter::EmitHeader(raw_ostream &OS) {
     // name and its shorter polymorphic name (if the latter exists).
     for (bool Polymorphic : {false, true}) {
       if (Polymorphic && !Int.polymorphic())
+        continue;
+      if (!Polymorphic && Int.polymorphicOnly())
         continue;
 
       // We also generate each intrinsic under a name like __arm_vfooq
@@ -1557,7 +1590,10 @@ void MveEmitter::EmitBuiltinDef(raw_ostream &OS) {
     if (Int.polymorphic()) {
       StringRef Name = Int.shortName();
       if (ShortNamesSeen.find(Name) == ShortNamesSeen.end()) {
-        OS << "BUILTIN(__builtin_arm_mve_" << Name << ", \"vi.\", \"nt\")\n";
+        OS << "BUILTIN(__builtin_arm_mve_" << Name << ", \"vi.\", \"nt";
+        if (Int.nonEvaluating())
+          OS << "u"; // indicate that this builtin doesn't evaluate its args
+        OS << "\")\n";
         ShortNamesSeen.insert(Name);
       }
     }

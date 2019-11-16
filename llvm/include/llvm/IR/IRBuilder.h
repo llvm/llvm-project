@@ -97,8 +97,8 @@ protected:
   FastMathFlags FMF;
 
   bool IsFPConstrained;
-  ConstrainedFPIntrinsic::ExceptionBehavior DefaultConstrainedExcept;
-  ConstrainedFPIntrinsic::RoundingMode DefaultConstrainedRounding;
+  fp::ExceptionBehavior DefaultConstrainedExcept;
+  fp::RoundingMode DefaultConstrainedRounding;
 
   ArrayRef<OperandBundleDef> DefaultOperandBundles;
 
@@ -106,8 +106,8 @@ public:
   IRBuilderBase(LLVMContext &context, MDNode *FPMathTag = nullptr,
                 ArrayRef<OperandBundleDef> OpBundles = None)
       : Context(context), DefaultFPMathTag(FPMathTag), IsFPConstrained(false),
-        DefaultConstrainedExcept(ConstrainedFPIntrinsic::ebStrict),
-        DefaultConstrainedRounding(ConstrainedFPIntrinsic::rmDynamic),
+        DefaultConstrainedExcept(fp::ebStrict),
+        DefaultConstrainedRounding(fp::rmDynamic),
         DefaultOperandBundles(OpBundles) {
     ClearInsertionPoint();
   }
@@ -234,24 +234,22 @@ public:
   bool getIsFPConstrained() { return IsFPConstrained; }
 
   /// Set the exception handling to be used with constrained floating point
-  void setDefaultConstrainedExcept(
-      ConstrainedFPIntrinsic::ExceptionBehavior NewExcept) {
+  void setDefaultConstrainedExcept(fp::ExceptionBehavior NewExcept) {
     DefaultConstrainedExcept = NewExcept;
   }
 
   /// Set the rounding mode handling to be used with constrained floating point
-  void setDefaultConstrainedRounding(
-      ConstrainedFPIntrinsic::RoundingMode NewRounding) {
+  void setDefaultConstrainedRounding(fp::RoundingMode NewRounding) {
     DefaultConstrainedRounding = NewRounding;
   }
 
   /// Get the exception handling used with constrained floating point
-  ConstrainedFPIntrinsic::ExceptionBehavior getDefaultConstrainedExcept() {
+  fp::ExceptionBehavior getDefaultConstrainedExcept() {
     return DefaultConstrainedExcept;
   }
 
   /// Get the rounding mode handling used with constrained floating point
-  ConstrainedFPIntrinsic::RoundingMode getDefaultConstrainedRounding() {
+  fp::RoundingMode getDefaultConstrainedRounding() {
     return DefaultConstrainedRounding;
   }
 
@@ -1097,32 +1095,26 @@ private:
     return (LC && RC) ? Insert(Folder.CreateBinOp(Opc, LC, RC), Name) : nullptr;
   }
 
-  Value *getConstrainedFPRounding(
-      Optional<ConstrainedFPIntrinsic::RoundingMode> Rounding) {
-    ConstrainedFPIntrinsic::RoundingMode UseRounding =
-        DefaultConstrainedRounding;
+  Value *getConstrainedFPRounding(Optional<fp::RoundingMode> Rounding) {
+    fp::RoundingMode UseRounding = DefaultConstrainedRounding;
 
     if (Rounding.hasValue())
       UseRounding = Rounding.getValue();
 
-    Optional<StringRef> RoundingStr =
-        ConstrainedFPIntrinsic::RoundingModeToStr(UseRounding);
+    Optional<StringRef> RoundingStr = RoundingModeToStr(UseRounding);
     assert(RoundingStr.hasValue() && "Garbage strict rounding mode!");
     auto *RoundingMDS = MDString::get(Context, RoundingStr.getValue());
 
     return MetadataAsValue::get(Context, RoundingMDS);
   }
 
-  Value *getConstrainedFPExcept(
-      Optional<ConstrainedFPIntrinsic::ExceptionBehavior> Except) {
-    ConstrainedFPIntrinsic::ExceptionBehavior UseExcept =
-        DefaultConstrainedExcept;
+  Value *getConstrainedFPExcept(Optional<fp::ExceptionBehavior> Except) {
+    fp::ExceptionBehavior UseExcept = DefaultConstrainedExcept;
 
     if (Except.hasValue())
       UseExcept = Except.getValue();
 
-    Optional<StringRef> ExceptStr =
-        ConstrainedFPIntrinsic::ExceptionBehaviorToStr(UseExcept);
+    Optional<StringRef> ExceptStr = ExceptionBehaviorToStr(UseExcept);
     assert(ExceptStr.hasValue() && "Garbage strict exception behavior!");
     auto *ExceptMDS = MDString::get(Context, ExceptStr.getValue());
 
@@ -1483,8 +1475,8 @@ public:
   CallInst *CreateConstrainedFPBinOp(
       Intrinsic::ID ID, Value *L, Value *R, Instruction *FMFSource = nullptr,
       const Twine &Name = "", MDNode *FPMathTag = nullptr,
-      Optional<ConstrainedFPIntrinsic::RoundingMode> Rounding = None,
-      Optional<ConstrainedFPIntrinsic::ExceptionBehavior> Except = None) {
+      Optional<fp::RoundingMode> Rounding = None,
+      Optional<fp::ExceptionBehavior> Except = None) {
     Value *RoundingV = getConstrainedFPRounding(Rounding);
     Value *ExceptV = getConstrainedFPExcept(Except);
 
@@ -2078,8 +2070,8 @@ public:
       Intrinsic::ID ID, Value *V, Type *DestTy,
       Instruction *FMFSource = nullptr, const Twine &Name = "",
       MDNode *FPMathTag = nullptr,
-      Optional<ConstrainedFPIntrinsic::RoundingMode> Rounding = None,
-      Optional<ConstrainedFPIntrinsic::ExceptionBehavior> Except = None) {
+      Optional<fp::RoundingMode> Rounding = None,
+      Optional<fp::ExceptionBehavior> Except = None) {
     Value *ExceptV = getConstrainedFPExcept(Except);
 
     FastMathFlags UseFMF = FMF;

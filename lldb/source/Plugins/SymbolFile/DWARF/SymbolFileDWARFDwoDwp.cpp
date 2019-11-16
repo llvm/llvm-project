@@ -19,6 +19,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+char SymbolFileDWARFDwoDwp::ID;
+
 SymbolFileDWARFDwoDwp::SymbolFileDWARFDwoDwp(SymbolFileDWARFDwp *dwp_symfile,
                                              ObjectFileSP objfile,
                                              DWARFCompileUnit &dwarf_cu,

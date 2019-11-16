@@ -338,9 +338,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @cmpsltr_v4i1(<4 x i32> %a, <4 x i32> %b, i32 %c) {
 ; CHECK-LABEL: cmpsltr_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.32 q2, r0
 ; CHECK-NEXT:    vpt.i32 eq, q0, zr
-; CHECK-NEXT:    vcmpt.s32 gt, q2, q1
+; CHECK-NEXT:    vcmpt.s32 lt, q1, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -373,9 +372,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @cmpsler_v4i1(<4 x i32> %a, <4 x i32> %b, i32 %c) {
 ; CHECK-LABEL: cmpsler_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.32 q2, r0
 ; CHECK-NEXT:    vpt.i32 eq, q0, zr
-; CHECK-NEXT:    vcmpt.s32 ge, q2, q1
+; CHECK-NEXT:    vcmpt.s32 le, q1, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:

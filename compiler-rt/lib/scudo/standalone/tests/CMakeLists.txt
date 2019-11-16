@@ -11,6 +11,7 @@ set(SCUDO_UNITTEST_CFLAGS
   -I${COMPILER_RT_SOURCE_DIR}/lib
   -I${COMPILER_RT_SOURCE_DIR}/lib/scudo/standalone
   -DGTEST_HAS_RTTI=0
+  -DSCUDO_DEBUG=1
   # Extra flags for the C++ tests
   # TODO(kostyak): find a way to make -fsized-deallocation work
   -Wno-mismatched-new-delete)

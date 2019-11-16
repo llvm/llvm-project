@@ -246,8 +246,8 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   // a call site parameter expression and if that expression is just a register
   // location, emit it with addBReg and offset 0, because we should emit a DWARF
   // expression representing a value, rather than a location.
-  if (!isMemoryLocation() && !HasComplexExpression &&
-      (!isParameterValue() || isEntryValue())) {
+  if (!isMemoryLocation() && !HasComplexExpression && (!isParameterValue() ||
+                                                       isEntryValue())) {
     for (auto &Reg : DwarfRegs) {
       if (Reg.DwarfRegNo >= 0)
         addReg(Reg.DwarfRegNo, Reg.Comment);
@@ -436,9 +436,6 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       break;
     case dwarf::DW_OP_deref:
       assert(!isRegisterLocation());
-      // For more detailed explanation see llvm.org/PR43343.
-      assert(!isParameterValue() && "Parameter entry values should not be "
-                                    "dereferenced due to safety reasons.");
       if (!isMemoryLocation() && ::isMemoryLocation(ExprCursor))
         // Turning this into a memory location description makes the deref
         // implicit.

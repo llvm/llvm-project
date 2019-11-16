@@ -25,65 +25,68 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <queue>
 
 namespace llvm {
+/// VRegRenamer - This class is used for renaming vregs in a machine basic
+/// block according to semantics of the instruction.
+class VRegRenamer {
+  class NamedVReg {
+    Register Reg;
+    std::string Name;
 
-/// NamedVRegCursor - The cursor is an object that keeps track of what the next
-/// vreg name should be. It does book keeping to determine when to skip the
-/// index value and by how much, or if the next vreg name should be an increment
-/// from the previous.
-class NamedVRegCursor {
+  public:
+    NamedVReg(Register Reg, std::string Name = "") : Reg(Reg), Name(Name) {}
+    NamedVReg(std::string Name = "") : Reg(~0U), Name(Name) {}
+
+    const std::string &getName() const { return Name; }
+
+    Register getReg() const { return Reg; }
+  };
+
   MachineRegisterInfo &MRI;
 
-  /// virtualVRegNumber - Book keeping of the last vreg position.
-  unsigned virtualVRegNumber;
+  unsigned CurrentBBNumber = 0;
 
-  /// SkipGapSize - Used to calculate a modulo amount to skip by after every
-  /// sequence of instructions starting from a given side-effecting
-  /// MachineInstruction for a given MachineBasicBlock. The general idea is that
-  /// for a given program compiled with two different opt pipelines, there
-  /// shouldn't be greater than SkipGapSize difference in how many vregs are in
-  /// play between the two and for every def-use graph of vregs we rename we
-  /// will round up to the next SkipGapSize'th number so that we have a high
-  /// change of landing on the same name for two given matching side-effects
-  /// for the two compilation outcomes.
-  const unsigned SkipGapSize;
+  /// Given an Instruction, construct a hash of the operands
+  /// of the instructions along with the opcode.
+  /// When dealing with virtual registers, just hash the opcode of
+  /// the instruction defining that vreg.
+  /// Handle immediates, registers (physical and virtual) explicitly,
+  /// and return a common value for the other cases.
+  /// Instruction will be named in the following scheme
+  /// bb<block_no>_hash_<collission_count>.
+  std::string getInstructionOpcodeHash(MachineInstr &MI);
 
-  /// RenamedInOtherBB - VRegs that we already renamed: ie breadcrumbs.
-  std::vector<Register> RenamedInOtherBB;
+  /// For all the VRegs that are candidates for renaming,
+  /// return a mapping from old vregs to new vregs with names.
+  std::map<unsigned, unsigned>
+  getVRegRenameMap(const std::vector<NamedVReg> &VRegs);
+
+  /// Perform replacing of registers based on the <old,new> vreg map.
+  bool doVRegRenaming(const std::map<unsigned, unsigned> &VRegRenameMap);
 
 public:
-  NamedVRegCursor() = delete;
-  /// 1000 for the SkipGapSize was a good heuristic at the time of the writing
-  /// of the MIRCanonicalizerPass. Adjust as needed.
-  NamedVRegCursor(MachineRegisterInfo &MRI, unsigned SkipGapSize = 1000)
-      : MRI(MRI), virtualVRegNumber(0), SkipGapSize(SkipGapSize) {}
-
-  /// SkipGapSize - Skips modulo a gap value of indices. Indices are used to
-  /// produce the next vreg name.
-  void skipVRegs();
-
-  unsigned getVirtualVReg() const { return virtualVRegNumber; }
-
-  /// incrementVirtualVReg - This increments an index value that us used to
-  /// create a new vreg name. This is not a Register.
-  unsigned incrementVirtualVReg(unsigned incr = 1) {
-    virtualVRegNumber += incr;
-    return virtualVRegNumber;
-  }
+  VRegRenamer() = delete;
+  VRegRenamer(MachineRegisterInfo &MRI) : MRI(MRI) {}
 
   /// createVirtualRegister - Given an existing vreg, create a named vreg to
-  /// take its place.
+  /// take its place. The name is determined by calling
+  /// getInstructionOpcodeHash.
   unsigned createVirtualRegister(unsigned VReg);
 
-  /// renameVRegs - For a given MachineBasicBlock, scan for side-effecting
-  /// instructions, walk the def-use from each side-effecting root (in sorted
-  /// root order) and rename the encountered vregs in the def-use graph in a
-  /// canonical ordering. This method maintains book keeping for which vregs
-  /// were already renamed in RenamedInOtherBB.
-  // @return changed
-  bool renameVRegs(MachineBasicBlock *MBB);
+  /// Create a vreg with name and return it.
+  unsigned createVirtualRegisterWithName(unsigned VReg,
+                                         const std::string &Name);
+  /// Linearly traverse the MachineBasicBlock and rename each instruction's
+  /// vreg definition based on the semantics of the instruction.
+  /// Names are as follows bb<BBNum>_hash_[0-9]+
+  bool renameInstsInMBB(MachineBasicBlock *MBB);
+
+  /// Same as the above, but sets a BBNum depending on BB traversal that
+  /// will be used as prefix for the vreg names.
+  bool renameVRegs(MachineBasicBlock *MBB, unsigned BBNum = 0);
+
+  unsigned getCurrentBBNumber() const { return CurrentBBNumber; }
 };
 
 } // namespace llvm

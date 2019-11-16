@@ -24,6 +24,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "vectorutils"
 
@@ -1165,6 +1166,9 @@ void VFABI::getVectorVariantNames(
   const StringRef S =
       CI.getAttribute(AttributeList::FunctionIndex, VFABI::MappingsAttrName)
           .getValueAsString();
+  if (S.empty())
+    return;
+
   SmallVector<StringRef, 8> ListAttr;
   S.split(ListAttr, ",");
 

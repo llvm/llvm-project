@@ -897,6 +897,32 @@ void foo())cpp";
          HI.Definition = "int test";
          HI.Type = "int";
        }},
+      // Partially-specialized class template. (formerly type-parameter-0-0)
+      {R"cpp(
+        template <typename T> class X;
+        template <typename T> class [[^X]]<T*> {};
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "X<T *>";
+         HI.NamespaceScope = "";
+         HI.Kind = SymbolKind::Class;
+         HI.Definition = "template <typename T> class X<T *> {}";
+       }},
+      // Constructor of partially-specialized class template
+      {R"cpp(
+          template<typename> struct X;
+          template<typename T> struct X<T*>{ [[^X]](); };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "X";
+         HI.LocalScope = "X::";        // FIXME: Should be X<T *>::
+         HI.Kind = SymbolKind::Constructor;
+         HI.Type = "void ()";          // FIXME: Should be None
+         HI.ReturnType = "void";       // FIXME: Should be None or X<T*>
+         HI.Definition = "X()";
+         HI.Parameters.emplace();
+       }},
 
       // auto on lambda
       {R"cpp(

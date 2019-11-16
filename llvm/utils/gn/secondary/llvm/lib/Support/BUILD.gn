@@ -91,7 +91,6 @@ static_library("Support") {
     "MemoryBuffer.cpp",
     "NativeFormatting.cpp",
     "Optional.cpp",
-    "Options.cpp",
     "Parallel.cpp",
     "PluginLoader.cpp",
     "PrettyStackTrace.cpp",

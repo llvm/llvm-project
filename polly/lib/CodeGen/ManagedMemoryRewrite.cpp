@@ -23,6 +23,7 @@
 #include "polly/ScopDetection.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace polly;

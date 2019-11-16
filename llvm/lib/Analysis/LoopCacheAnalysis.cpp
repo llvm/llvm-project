@@ -29,6 +29,7 @@
 #include "llvm/ADT/BreadthFirstIterator.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -283,6 +284,9 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
     const SCEV *ElemSize = Sizes.back();
     const SCEV *Stride = SE.getMulExpr(Coeff, ElemSize);
     const SCEV *CacheLineSize = SE.getConstant(Stride->getType(), CLS);
+    Type *WiderType = SE.getWiderType(Stride->getType(), TripCount->getType());
+    Stride = SE.getNoopOrSignExtend(Stride, WiderType);
+    TripCount = SE.getNoopOrAnyExtend(TripCount, WiderType);
     const SCEV *Numerator = SE.getMulExpr(Stride, TripCount);
     RefCost = SE.getUDivExpr(Numerator, CacheLineSize);
     LLVM_DEBUG(dbgs().indent(4)

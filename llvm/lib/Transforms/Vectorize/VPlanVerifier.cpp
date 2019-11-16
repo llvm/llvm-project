@@ -14,6 +14,7 @@
 
 #include "VPlanVerifier.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "loop-vectorize"
 

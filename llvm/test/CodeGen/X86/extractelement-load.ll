@@ -93,3 +93,29 @@ define i64 @t4(<2 x double>* %a) {
   ret i64 %e
 }
 
+; Don't extract from a volatile.
+define void @t5(<2 x double> *%a0, double *%a1) {
+; X32-SSE2-LABEL: t5:
+; X32-SSE2:       # %bb.0:
+; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-SSE2-NEXT:    movaps (%ecx), %xmm0
+; X32-SSE2-NEXT:    movhps %xmm0, (%eax)
+; X32-SSE2-NEXT:    retl
+;
+; X64-SSSE3-LABEL: t5:
+; X64-SSSE3:       # %bb.0:
+; X64-SSSE3-NEXT:    movaps (%rdi), %xmm0
+; X64-SSSE3-NEXT:    movhps %xmm0, (%rsi)
+; X64-SSSE3-NEXT:    retq
+;
+; X64-AVX-LABEL: t5:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vmovaps (%rdi), %xmm0
+; X64-AVX-NEXT:    vmovhps %xmm0, (%rsi)
+; X64-AVX-NEXT:    retq
+  %vecload = load volatile <2 x double>, <2 x double>* %a0, align 16
+  %vecext = extractelement <2 x double> %vecload, i32 1
+  store volatile double %vecext, double* %a1, align 8
+  ret void
+}

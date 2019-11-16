@@ -22,7 +22,6 @@ define void @test1([65536 x i32]** %sp, [65536 x i32]* %t, i32 %n) {
 ; RV32I-NEXT:    sw a3, 4(a0)
 ; RV32I-NEXT:    sw a3, 0(a1)
 ; RV32I-NEXT:    sw a2, 4(a1)
-; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test1:
@@ -38,7 +37,6 @@ define void @test1([65536 x i32]** %sp, [65536 x i32]* %t, i32 %n) {
 ; RV64I-NEXT:    sw a3, 4(a0)
 ; RV64I-NEXT:    sw a3, 0(a1)
 ; RV64I-NEXT:    sw a2, 4(a1)
-; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 entry:
   %s = load [65536 x i32]*, [65536 x i32]** %sp
@@ -74,7 +72,6 @@ define void @test2([65536 x i32]** %sp, [65536 x i32]* %t, i32 %n) {
 ; RV32I-NEXT:    mv a3, a4
 ; RV32I-NEXT:    blt a3, a2, .LBB1_1
 ; RV32I-NEXT:  .LBB1_2: # %while_end
-; RV32I-NEXT:    .cfi_def_cfa_offset 0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test2:
@@ -99,7 +96,6 @@ define void @test2([65536 x i32]** %sp, [65536 x i32]* %t, i32 %n) {
 ; RV64I-NEXT:    sext.w a4, a3
 ; RV64I-NEXT:    blt a4, a2, .LBB1_1
 ; RV64I-NEXT:  .LBB1_2: # %while_end
-; RV64I-NEXT:    .cfi_def_cfa_offset 0
 ; RV64I-NEXT:    ret
 entry:
   %s = load [65536 x i32]*, [65536 x i32]** %sp

@@ -76,7 +76,7 @@ llvm::Optional<ReasonToReject> renamableWithinFile(const Decl &RenameDecl,
   }
   auto &ASTCtx = RenameDecl.getASTContext();
   const auto &SM = ASTCtx.getSourceManager();
-  bool MainFileIsHeader = ASTCtx.getLangOpts().IsHeaderFile;
+  bool MainFileIsHeader = isHeaderFile(MainFile, ASTCtx.getLangOpts());
   bool DeclaredInMainFile = isInsideMainFile(RenameDecl.getBeginLoc(), SM);
 
   if (!DeclaredInMainFile)

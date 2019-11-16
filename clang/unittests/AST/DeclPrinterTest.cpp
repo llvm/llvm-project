@@ -1067,8 +1067,7 @@ TEST(DeclPrinter, TestClassTemplatePartialSpecializationDecl2) {
     "template<typename T>"
     "struct A<T *> { T a; };",
     classTemplateSpecializationDecl().bind("id"),
-    "template <typename T> struct A<type-parameter-0-0 *> {}"));
-    // WRONG; Should be: "template<typename T> struct A<T *> { ... }"
+    "template <typename T> struct A<T *> {}"));
 }
 
 TEST(DeclPrinter, TestClassTemplateSpecializationDecl1) {

@@ -312,6 +312,7 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
     case DW_FORM_udata:
     case DW_FORM_ref_udata:
     case DW_FORM_rnglistx:
+    case DW_FORM_loclistx:
       Value.uval = Data.getULEB128(OffsetPtr);
       break;
     case DW_FORM_string:
@@ -549,6 +550,10 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
 
   case DW_FORM_rnglistx:
     OS << format("indexed (0x%x) rangelist = ", (uint32_t)UValue);
+    break;
+
+  case DW_FORM_loclistx:
+    OS << format("indexed (0x%x) loclist = ", (uint32_t)UValue);
     break;
 
   // Should be formatted to 64-bit for DWARF64.

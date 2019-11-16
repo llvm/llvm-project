@@ -197,6 +197,10 @@ public:
   /// Returns the size of the wchar_t type in bytes or 0 if the size is unknown.
   /// This queries the 'wchar_size' metadata.
   unsigned getWCharSize(const Module &M) const;
+
+  /// Returns the largest vectorization factor used in the list of
+  /// vector functions.
+  unsigned getWidestVF(StringRef ScalarF) const;
 };
 
 /// Provides information about what library functions are available for
@@ -336,6 +340,12 @@ public:
   bool invalidate(Function &, const PreservedAnalyses &,
                   FunctionAnalysisManager::Invalidator &) {
     return false;
+  }
+
+  /// Returns the largest vectorization factor used in the list of
+  /// vector functions.
+  unsigned getWidestVF(StringRef ScalarF) const {
+    return Impl->getWidestVF(ScalarF);
   }
 };
 

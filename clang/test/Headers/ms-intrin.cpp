@@ -56,12 +56,8 @@ void f() {
   __nop();
   __readmsr(0);
 
-  // FIXME: Call these in 64-bit too once the intrinsics have been fixed to
-  // work there, PR19301
-#ifndef _M_X64
   __readcr3();
   __writecr3(0);
-#endif
 
 #ifdef _M_ARM
   __dmb(_ARM_BARRIER_ISHST);

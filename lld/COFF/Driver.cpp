@@ -35,6 +35,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
@@ -1170,7 +1171,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     }
   }
 
-  if (!args.hasArg(OPT_INPUT)) {
+  if (!args.hasArg(OPT_INPUT, OPT_wholearchive_file)) {
     if (args.hasArg(OPT_deffile))
       config->noEntry = true;
     else
@@ -1699,7 +1700,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   }
 
   // Handle generation of import library from a def file.
-  if (!args.hasArg(OPT_INPUT)) {
+  if (!args.hasArg(OPT_INPUT, OPT_wholearchive_file)) {
     fixupExports();
     createImportLibrary(/*asLib=*/true);
     return;
@@ -1748,8 +1749,8 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
 
   // Set default image name if neither /out or /def set it.
   if (config->outputFile.empty()) {
-    config->outputFile =
-        getOutputPath((*args.filtered(OPT_INPUT).begin())->getValue());
+    config->outputFile = getOutputPath(
+        (*args.filtered(OPT_INPUT, OPT_wholearchive_file).begin())->getValue());
   }
 
   // Fail early if an output file is not writable.

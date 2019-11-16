@@ -231,9 +231,8 @@ class ExprFormattersTestCase(TestBase):
                 0) == 122,
             '*a_ptr = 122')
 
-        self.runCmd("n")
-        self.runCmd("n")
-        self.runCmd("n")
+        ret = line_number("main.cpp", "Done initializing")
+        self.runCmd("thread until " + str(ret))
 
         self.expect("frame variable numbers",
                     substrs=['1', '2', '3', '4', '5'])

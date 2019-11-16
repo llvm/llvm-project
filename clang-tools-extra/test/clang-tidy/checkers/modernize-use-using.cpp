@@ -183,3 +183,67 @@ class E : public C<E> {
   void f() override { super::f(); }
 };
 }
+
+template <typename T1, typename T2>
+class TwoArgTemplate {
+  typedef TwoArgTemplate<T1, T2> self;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef'
+  // CHECK-FIXES: using self = TwoArgTemplate<T1, T2>;
+};
+
+template <bool B, typename T>
+struct S {};
+
+typedef S<(0 > 0), int> S_t, *S_p;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: typedef S<(0 > 0), int> S_t, *S_p;
+
+typedef S<(0 < 0), int> S2_t, *S2_p;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: typedef S<(0 < 0), int> S2_t, *S2_p;
+
+typedef S<(0 > 0 && (3 > 1) && (1 < 1)), int> S3_t;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using S3_t = S<(0 > 0 && (3 > 1) && (1 < 1)), int>;
+
+template <bool B>
+struct Q {};
+
+constexpr bool b[1] = {true};
+
+typedef Q<b[0 < 0]> Q_t, *Q_p;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: typedef Q<b[0 < 0]> Q_t, *Q_p;
+
+typedef Q<b[0 < 0]> Q2_t;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using Q2_t = Q<b[0 < 0]>;
+
+struct T {
+  constexpr T(bool) {}
+
+  static constexpr bool b = true;
+};
+
+typedef Q<T{0 < 0}.b> Q3_t, *Q3_p;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: typedef Q<T{0 < 0}.b> Q3_t, *Q3_p;
+
+typedef Q<T{0 < 0}.b> Q3_t;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using Q3_t = Q<T{0 < 0}.b>;
+
+typedef TwoArgTemplate<TwoArgTemplate<int, Q<T{0 < 0}.b> >, S<(0 < 0), Q<b[0 < 0]> > > Nested_t;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using Nested_t = TwoArgTemplate<TwoArgTemplate<int, Q<T{0 < 0}.b> >, S<(0 < 0), Q<b[0 < 0]> > >;
+
+template <typename... Args>
+class Variadic {};
+
+typedef Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > > Variadic_t;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using Variadic_t = Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > >
+
+typedef Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > > Variadic_t, *Variadic_p;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: typedef Variadic<Variadic<int, bool, Q<T{0 < 0}.b> >, S<(0 < 0), Variadic<Q<b[0 < 0]> > > > Variadic_t, *Variadic_p;

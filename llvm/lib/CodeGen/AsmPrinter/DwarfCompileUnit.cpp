@@ -1231,8 +1231,11 @@ void DwarfCompileUnit::addComplexAddress(const DbgVariable &DV, DIE &Die,
 /// Add a Dwarf loclistptr attribute data and value.
 void DwarfCompileUnit::addLocationList(DIE &Die, dwarf::Attribute Attribute,
                                        unsigned Index) {
-  dwarf::Form Form = DD->getDwarfVersion() >= 4 ? dwarf::DW_FORM_sec_offset
-                                                : dwarf::DW_FORM_data4;
+  dwarf::Form Form = dwarf::DW_FORM_data4;
+  if (DD->getDwarfVersion() == 4)
+    Form =dwarf::DW_FORM_sec_offset;
+  if (DD->getDwarfVersion() >= 5)
+    Form =dwarf::DW_FORM_loclistx;
   Die.addValue(DIEValueAllocator, Attribute, Form, DIELocList(Index));
 }
 

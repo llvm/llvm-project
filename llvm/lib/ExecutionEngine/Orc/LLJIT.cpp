@@ -51,7 +51,7 @@ Error LLJIT::addIRModule(JITDylib &JD, ThreadSafeModule TSM) {
 Error LLJIT::addObjectFile(JITDylib &JD, std::unique_ptr<MemoryBuffer> Obj) {
   assert(Obj && "Can not add null object");
 
-  return ObjLinkingLayer->add(JD, std::move(Obj), ES->allocateVModule());
+  return ObjTransformLayer.add(JD, std::move(Obj), ES->allocateVModule());
 }
 
 Expected<JITEvaluatedSymbol> LLJIT::lookupLinkerMangled(JITDylib &JD,
@@ -103,12 +103,12 @@ LLJIT::createCompileFunction(LLJITBuilderState &S,
 
 LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     : ES(S.ES ? std::move(S.ES) : std::make_unique<ExecutionSession>()),
-      Main(this->ES->getMainJITDylib()), DL(""), CtorRunner(Main),
+      Main(this->ES->getMainJITDylib()), DL(""),
+      ObjLinkingLayer(createObjectLinkingLayer(S, *ES)),
+      ObjTransformLayer(*this->ES, *ObjLinkingLayer), CtorRunner(Main),
       DtorRunner(Main) {
 
   ErrorAsOutParameter _(&Err);
-
-  ObjLinkingLayer = createObjectLinkingLayer(S, *ES);
 
   if (auto DLOrErr = S.JTMB->getDefaultDataLayoutForTarget())
     DL = std::move(*DLOrErr);
@@ -124,7 +124,7 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
       return;
     }
     CompileLayer = std::make_unique<IRCompileLayer>(
-        *ES, *ObjLinkingLayer, std::move(*CompileFunction));
+        *ES, ObjTransformLayer, std::move(*CompileFunction));
   }
 
   if (S.NumCompileThreads > 0) {

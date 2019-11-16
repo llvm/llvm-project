@@ -1861,6 +1861,10 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
   if (Kind.isBSS())
     return DataSection;
 
+  if (Kind.isReadOnly() && !Kind.isMergeableConst() &&
+      !Kind.isMergeableCString())
+    return ReadOnlySection;
+
   report_fatal_error("XCOFF other section types not yet implemented.");
 }
 

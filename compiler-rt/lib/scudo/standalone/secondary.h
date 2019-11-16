@@ -114,7 +114,7 @@ template <uptr MaxFreeListSize>
 void *MapAllocator<MaxFreeListSize>::allocate(uptr Size, uptr AlignmentHint,
                                               uptr *BlockEnd,
                                               bool ZeroContents) {
-  DCHECK_GT(Size, AlignmentHint);
+  DCHECK_GE(Size, AlignmentHint);
   const uptr PageSize = getPageSizeCached();
   const uptr RoundedSize =
       roundUpTo(Size + LargeBlock::getHeaderSize(), PageSize);

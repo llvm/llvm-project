@@ -23,6 +23,12 @@ using SectionPred = std::function<bool(const Section &Sec)>;
 static void removeSections(const CopyConfig &Config, Object &Obj) {
   SectionPred RemovePred = [](const Section &) { return false; };
 
+  if (!Config.ToRemove.empty()) {
+    RemovePred = [&Config, RemovePred](const Section &Sec) {
+      return Config.ToRemove.matches(Sec.CanonicalName);
+    };
+  }
+
   if (Config.StripAll) {
     // Remove all debug sections.
     RemovePred = [RemovePred](const Section &Sec) {
@@ -34,7 +40,8 @@ static void removeSections(const CopyConfig &Config, Object &Obj) {
   }
 
   if (!Config.OnlySection.empty()) {
-    RemovePred = [&Config, RemovePred](const Section &Sec) {
+    // Overwrite RemovePred because --only-section takes priority.
+    RemovePred = [&Config](const Section &Sec) {
       return !Config.OnlySection.matches(Sec.CanonicalName);
     };
   }
@@ -49,7 +56,13 @@ static void markSymbols(const CopyConfig &Config, Object &Obj) {
       (*ISE.Symbol)->Referenced = true;
 }
 
-static void removeSymbols(const CopyConfig &Config, Object &Obj) {
+static void updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
+  for (SymbolEntry &Sym : Obj.SymTable) {
+    auto I = Config.SymbolsToRename.find(Sym.Name);
+    if (I != Config.SymbolsToRename.end())
+      Sym.Name = I->getValue();
+  }
+
   auto RemovePred = [Config](const std::unique_ptr<SymbolEntry> &N) {
     if (N->Referenced)
       return false;
@@ -68,13 +81,13 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       Config.NewSymbolVisibility || !Config.SymbolsToGlobalize.empty() ||
       !Config.SymbolsToKeep.empty() || !Config.SymbolsToLocalize.empty() ||
       !Config.SymbolsToWeaken.empty() || !Config.SymbolsToKeepGlobal.empty() ||
-      !Config.SectionsToRename.empty() || !Config.SymbolsToRename.empty() ||
+      !Config.SectionsToRename.empty() ||
       !Config.UnneededSymbolsToRemove.empty() ||
       !Config.SetSectionAlignment.empty() || !Config.SetSectionFlags.empty() ||
-      !Config.ToRemove.empty() || Config.ExtractDWO || Config.KeepFileSymbols ||
-      Config.LocalizeHidden || Config.PreserveDates || Config.StripAllGNU ||
-      Config.StripDWO || Config.StripNonAlloc || Config.StripSections ||
-      Config.Weaken || Config.DecompressDebugSections || Config.StripDebug ||
+      Config.ExtractDWO || Config.KeepFileSymbols || Config.LocalizeHidden ||
+      Config.PreserveDates || Config.StripAllGNU || Config.StripDWO ||
+      Config.StripNonAlloc || Config.StripSections || Config.Weaken ||
+      Config.DecompressDebugSections || Config.StripDebug ||
       Config.StripNonAlloc || Config.StripSections || Config.StripUnneeded ||
       Config.DiscardMode != DiscardType::None || !Config.SymbolsToAdd.empty() ||
       Config.EntryExpr) {
@@ -88,7 +101,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
   if (Config.StripAll)
     markSymbols(Config, Obj);
 
-  removeSymbols(Config, Obj);
+  updateAndRemoveSymbols(Config, Obj);
 
   if (Config.StripAll)
     for (LoadCommand &LC : Obj.LoadCommands)

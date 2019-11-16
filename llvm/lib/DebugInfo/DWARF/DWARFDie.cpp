@@ -79,7 +79,6 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
                          DWARFUnit *U, unsigned Indent,
                          DIDumpOptions DumpOpts) {
   DWARFContext &Ctx = U->getContext();
-  const DWARFObject &Obj = Ctx.getDWARFObj();
   const MCRegisterInfo *MRI = Ctx.getRegisterInfo();
   if (FormValue.isFormClass(DWARFFormValue::FC_Block) ||
       FormValue.isFormClass(DWARFFormValue::FC_Exprloc)) {
@@ -97,32 +96,15 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
 
     uint64_t Offset = *FormValue.getAsSectionOffset();
 
-    if (const DWARFLocationTable *LT = U->getLocationTable()) {
-      LT->dumpLocationList(&Offset, OS, U->getBaseAddress(), MRI, U, LLDumpOpts,
-                           Indent);
-      return;
+    if (FormValue.getForm() == DW_FORM_loclistx) {
+      FormValue.dump(OS, DumpOpts);
+      if (auto LoclistOffset = U->getLoclistOffset(Offset))
+        Offset = *LoclistOffset + U->getLocSectionBase();
+      else
+        return;
     }
-
-    DWARFDebugLoc DebugLoc;
-    DWARFDataExtractor Data(Obj, *U->getLocSection(), Ctx.isLittleEndian(),
-                            Obj.getAddressSize());
-
-    FormValue.dump(OS, DumpOpts);
-    OS << ": ";
-
-    if (Expected<DWARFDebugLoc::LocationList> LL =
-            DebugLoc.parseOneLocationList(Data, &Offset)) {
-      uint64_t BaseAddr = 0;
-      if (Optional<object::SectionedAddress> BA = U->getBaseAddress())
-        BaseAddr = BA->Address;
-      LL->dump(OS, BaseAddr, Ctx.isLittleEndian(), Obj.getAddressSize(), MRI, U,
-               LLDumpOpts, Indent);
-    } else {
-      OS << '\n';
-      OS.indent(Indent);
-      OS << formatv("error extracting location list: {0}",
-                    fmt_consume(LL.takeError()));
-    }
+    U->getLocationTable().dumpLocationList(&Offset, OS, U->getBaseAddress(),
+                                           MRI, U, LLDumpOpts, Indent);
     return;
   }
 
@@ -432,6 +414,10 @@ DWARFDie::getAttributeValueAsReferencedDie(const DWARFFormValue &V) const {
 
 Optional<uint64_t> DWARFDie::getRangesBaseAttribute() const {
   return toSectionOffset(find({DW_AT_rnglists_base, DW_AT_GNU_ranges_base}));
+}
+
+Optional<uint64_t> DWARFDie::getLocBaseAttribute() const {
+  return toSectionOffset(find(DW_AT_loclists_base));
 }
 
 Optional<uint64_t> DWARFDie::getHighPC(uint64_t LowPC) const {

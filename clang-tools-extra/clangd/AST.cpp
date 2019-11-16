@@ -127,6 +127,8 @@ std::string printName(const ASTContext &Ctx, const NamedDecl &ND) {
   std::string Name;
   llvm::raw_string_ostream Out(Name);
   PrintingPolicy PP(Ctx.getLangOpts());
+  // We don't consider a class template's args part of the constructor name.
+  PP.SuppressTemplateArgsInCXXConstructors = true;
 
   // Handle 'using namespace'. They all have the same name - <using-directive>.
   if (auto *UD = llvm::dyn_cast<UsingDirectiveDecl>(&ND)) {

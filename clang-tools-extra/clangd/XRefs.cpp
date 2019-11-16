@@ -417,6 +417,7 @@ static std::string getLocalScope(const Decl *D) {
   auto GetName = [](const Decl *D) {
     const NamedDecl *ND = dyn_cast<NamedDecl>(D);
     std::string Name = ND->getNameAsString();
+    // FIXME(sammccall): include template params/specialization args?.
     if (!Name.empty())
       return Name;
     if (auto RD = dyn_cast<RecordDecl>(D))
@@ -455,6 +456,7 @@ static std::string printDefinition(const Decl *D) {
   PrintingPolicy Policy =
       printingPolicyForDecls(D->getASTContext().getPrintingPolicy());
   Policy.IncludeTagDefinition = false;
+  Policy.SuppressTemplateArgsInCXXConstructors = true;
   D->print(OS, Policy);
   OS.flush();
   return Definition;

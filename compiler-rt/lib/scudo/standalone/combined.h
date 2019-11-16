@@ -222,7 +222,7 @@ public:
     if (UNLIKELY(!isAligned(UserPtr, Alignment))) {
       const uptr AlignedUserPtr = roundUpTo(UserPtr, Alignment);
       const uptr Offset = AlignedUserPtr - UserPtr;
-      DCHECK_GT(Offset, 2 * sizeof(u32));
+      DCHECK_GE(Offset, 2 * sizeof(u32));
       // The BlockMarker has no security purpose, but is specifically meant for
       // the chunk iteration function that can be used in debugging situations.
       // It is the only situation where we have to locate the start of a chunk
