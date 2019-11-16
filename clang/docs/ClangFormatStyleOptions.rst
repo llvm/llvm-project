@@ -1432,6 +1432,10 @@ the configuration (without a prefix: ``Auto``).
      f(MyMap[{composite, key}]);            f(MyMap[{ composite, key }]);
      new int[3]{1, 2, 3};                   new int[3]{ 1, 2, 3 };
 
+**DeriveLineEnding** (``bool``)
+  Analyze the formatted file for the most used line ending (``\r\n``
+  or ``\n``). ``UseCRLF`` is only used as a fallback if none can be derived.
+
 **DerivePointerAlignment** (``bool``)
   If ``true``, analyze the formatted file for the most common
   alignment of ``&`` and ``*``.
@@ -2257,6 +2261,16 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      for (auto v : values) {}       vs.     for(auto v: values) {}
 
+**SpaceBeforeSquareBrackets** (``bool``)
+  If ``true``, spaces will be before  ``[``.
+  Lambdas will not be affected. Only the first ``[`` will get a space added.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     int a [5];                    vs.      int a[5];
+     int a [5][5];                 vs.      int a[5][5];
+
 **SpaceInEmptyBlock** (``bool``)
   If ``true``, spaces will be inserted into ``{}``.
 
@@ -2408,6 +2422,10 @@ the configuration (without a prefix: ``Auto``).
     TypenameMacros: ['STACK_OF', 'LIST']
 
   For example: OpenSSL STACK_OF, BSD LIST_ENTRY.
+
+**UseCRLF** (``bool``)
+  Use ``\r\n`` instead of ``\n`` for line breaks.
+  Also used as fallback if ``DeriveLineEnding`` is true.
 
 **UseTab** (``UseTabStyle``)
   The way to use tab characters in the resulting file.
