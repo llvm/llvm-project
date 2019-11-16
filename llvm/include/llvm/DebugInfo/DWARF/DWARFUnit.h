@@ -200,6 +200,8 @@ class DWARFUnit {
   const DWARFDebugAbbrev *Abbrev;
   const DWARFSection *RangeSection;
   uint64_t RangeSectionBase;
+  const DWARFSection *LocSection;
+  uint64_t LocSectionBase;
 
   /// Location table of this unit.
   std::unique_ptr<DWARFLocationTable> LocTable;
@@ -219,6 +221,7 @@ class DWARFUnit {
 
   /// A table of range lists (DWARF v5 and later).
   Optional<DWARFDebugRnglistTable> RngListTable;
+  Optional<DWARFListTableHeader> LoclistTableHeader;
 
   mutable const DWARFAbbreviationDeclarationSet *Abbrevs;
   llvm::Optional<object::SectionedAddress> BaseAddr;
@@ -304,6 +307,14 @@ public:
   void setRangesSection(const DWARFSection *RS, uint64_t Base) {
     RangeSection = RS;
     RangeSectionBase = Base;
+  }
+  void setLocSection(const DWARFSection *LS, uint64_t Base) {
+    LocSection = LS;
+    LocSectionBase = Base;
+  }
+
+  uint64_t getLocSectionBase() const {
+    return LocSectionBase;
   }
 
   Optional<object::SectionedAddress>
@@ -421,6 +432,11 @@ public:
     return None;
   }
 
+  Optional<uint64_t> getLoclistOffset(uint32_t Index) {
+    if (LoclistTableHeader)
+      return LoclistTableHeader->getOffsetEntry(Index);
+    return None;
+  }
   Expected<DWARFAddressRangesVector> collectAddressRanges();
 
   /// Returns subprogram DIE with address range encompassing the provided
