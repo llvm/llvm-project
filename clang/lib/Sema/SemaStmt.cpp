@@ -2724,7 +2724,7 @@ static void DiagnoseForRangeReferenceVariableCopies(Sema &SemaRef,
   if (!MTE)
     return;
 
-  const Expr *E = MTE->GetTemporaryExpr()->IgnoreImpCasts();
+  const Expr *E = MTE->getSubExpr()->IgnoreImpCasts();
 
   // Searching for either UnaryOperator for dereference of a pointer or
   // CXXOperatorCallExpr for handling iterators.
@@ -2736,7 +2736,7 @@ static void DiagnoseForRangeReferenceVariableCopies(Sema &SemaRef,
       E = ME->getBase();
     } else {
       const MaterializeTemporaryExpr *MTE = cast<MaterializeTemporaryExpr>(E);
-      E = MTE->GetTemporaryExpr();
+      E = MTE->getSubExpr();
     }
     E = E->IgnoreImpCasts();
   }

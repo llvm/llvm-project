@@ -543,6 +543,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.SpacesInCStyleCastParentheses);
     IO.mapOptional("SpacesInParentheses", Style.SpacesInParentheses);
     IO.mapOptional("SpacesInSquareBrackets", Style.SpacesInSquareBrackets);
+    IO.mapOptional("SpaceBeforeSquareBrackets",
+                   Style.SpaceBeforeSquareBrackets);
     IO.mapOptional("Standard", Style.Standard);
     IO.mapOptional("StatementMacros", Style.StatementMacros);
     IO.mapOptional("TabWidth", Style.TabWidth);
@@ -813,6 +815,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceBeforeRangeBasedForLoopColon = true;
   LLVMStyle.SpaceBeforeAssignmentOperators = true;
   LLVMStyle.SpaceBeforeCpp11BracedList = false;
+  LLVMStyle.SpaceBeforeSquareBrackets = false;
   LLVMStyle.SpacesInAngles = false;
 
   LLVMStyle.PenaltyBreakAssignment = prec::Assignment;
@@ -1354,10 +1357,11 @@ public:
 
     WhitespaceManager Whitespaces(
         Env.getSourceManager(), Style,
-        Style.DeriveLineEnding ?
-          inputUsesCRLF(Env.getSourceManager().getBufferData(Env.getFileID()),
-                        Style.UseCRLF) :
-          Style.UseCRLF);
+        Style.DeriveLineEnding
+            ? inputUsesCRLF(
+                  Env.getSourceManager().getBufferData(Env.getFileID()),
+                  Style.UseCRLF)
+            : Style.UseCRLF);
     ContinuationIndenter Indenter(Style, Tokens.getKeywords(),
                                   Env.getSourceManager(), Whitespaces, Encoding,
                                   BinPackInconclusiveFunctions);

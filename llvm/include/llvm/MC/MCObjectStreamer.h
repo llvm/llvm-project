@@ -107,7 +107,8 @@ public:
   /// @{
 
   void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
-  virtual void EmitLabel(MCSymbol *Symbol, SMLoc Loc, MCFragment *F);
+  virtual void EmitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment *F,
+                              uint64_t Offset);
   void EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void EmitValueImpl(const MCExpr *Value, unsigned Size,
                      SMLoc Loc = SMLoc()) override;

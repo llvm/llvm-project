@@ -306,9 +306,11 @@ DIDerivedType *DIBuilder::createReferenceType(
 
 DIDerivedType *DIBuilder::createTypedef(DIType *Ty, StringRef Name,
                                         DIFile *File, unsigned LineNo,
-                                        DIScope *Context) {
+                                        DIScope *Context,
+                                        Optional<unsigned> AlignInBits) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_typedef, Name, File,
-                            LineNo, getNonCompileUnitScope(Context), Ty, 0, 0,
+                            LineNo, getNonCompileUnitScope(Context), Ty, 0,
+                            AlignInBits.hasValue() ? AlignInBits.getValue() : 0,
                             0, None, DINode::FlagZero);
 }
 

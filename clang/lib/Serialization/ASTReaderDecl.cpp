@@ -405,6 +405,7 @@ namespace clang {
     void VisitBlockDecl(BlockDecl *BD);
     void VisitCapturedDecl(CapturedDecl *CD);
     void VisitEmptyDecl(EmptyDecl *D);
+    void VisitLifetimeExtendedTemporaryDecl(LifetimeExtendedTemporaryDecl *D);
 
     std::pair<uint64_t, uint64_t> VisitDeclContext(DeclContext *DC);
 
@@ -2349,6 +2350,16 @@ void ASTDeclReader::VisitEmptyDecl(EmptyDecl *D) {
   VisitDecl(D);
 }
 
+void ASTDeclReader::VisitLifetimeExtendedTemporaryDecl(
+    LifetimeExtendedTemporaryDecl *D) {
+  VisitDecl(D);
+  D->ExtendingDecl = ReadDeclAs<ValueDecl>();
+  D->ExprWithTemporary = Record.readStmt();
+  if (Record.readInt())
+    D->Value = new (D->getASTContext()) APValue(Record.readAPValue());
+  D->ManglingNumber = Record.readInt();
+}
+
 std::pair<uint64_t, uint64_t>
 ASTDeclReader::VisitDeclContext(DeclContext *DC) {
   uint64_t LexicalOffset = ReadLocalOffset();
@@ -3886,6 +3897,9 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     break;
   case DECL_EMPTY:
     D = EmptyDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_LIFETIME_EXTENDED_TEMPORARY:
+    D = LifetimeExtendedTemporaryDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_OBJC_TYPE_PARAM:
     D = ObjCTypeParamDecl::CreateDeserialized(Context, ID);

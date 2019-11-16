@@ -2694,7 +2694,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     // Space between the type and the *
     // operator void*(), operator char*(), operator Foo*() dependant
     // on PointerAlignment style.
-    return (Style.PointerAlignment == FormatStyle::PAS_Right);
+    return (Style.PointerAlignment != FormatStyle::PAS_Left);
   const auto SpaceRequiredForArrayInitializerLSquare =
       [](const FormatToken &LSquareTok, const FormatStyle &Style) {
         return Style.SpacesInContainerLiterals ||
@@ -2724,7 +2724,9 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       !Right.isOneOf(TT_ObjCMethodExpr, TT_LambdaLSquare,
                      TT_DesignatedInitializerLSquare,
                      TT_StructuredBindingLSquare, TT_AttributeSquare) &&
-      !Left.isOneOf(tok::numeric_constant, TT_DictLiteral))
+      !Left.isOneOf(tok::numeric_constant, TT_DictLiteral) &&
+      !(!Left.is(tok::r_square) && Style.SpaceBeforeSquareBrackets &&
+        Right.is(TT_ArraySubscriptLSquare)))
     return false;
   if (Left.is(tok::l_brace) && Right.is(tok::r_brace))
     return !Left.Children.empty(); // No spaces in "{}".
