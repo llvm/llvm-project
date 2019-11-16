@@ -29,6 +29,7 @@ static_library("Utils") {
     "GlobalStatus.cpp",
     "GuardUtils.cpp",
     "ImportedFunctionsInliningStatistics.cpp",
+    "InjectTLIMappings.cpp",
     "InlineFunction.cpp",
     "InstructionNamer.cpp",
     "IntegerDivision.cpp",
