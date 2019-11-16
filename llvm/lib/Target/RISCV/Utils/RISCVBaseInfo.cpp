@@ -66,6 +66,12 @@ ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
     return ABI_LP64;
   return ABI_ILP32;
 }
+
+// To avoid the BP value clobbered by a function call, we need to choose a
+// callee saved register to save the value. RV32E only has X8 and X9 as callee
+// saved registers and X8 will be used as fp. So we choose X9 as bp.
+Register getBPReg() { return RISCV::X9; }
+
 } // namespace RISCVABI
 
 namespace RISCVFeatures {
