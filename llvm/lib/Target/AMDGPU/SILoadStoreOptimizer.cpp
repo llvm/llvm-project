@@ -1665,8 +1665,8 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
 void SILoadStoreOptimizer::addInstToMergeableList(const CombineInfo &CI,
                  std::list<std::list<CombineInfo> > &MergeableInsts) const {
   for (std::list<CombineInfo> &AddrList : MergeableInsts) {
-    if (AddrList.front().hasSameBaseAddress(*CI.I) &&
-        AddrList.front().InstClass == CI.InstClass) {
+    if (AddrList.front().InstClass == CI.InstClass &&
+        AddrList.front().hasSameBaseAddress(*CI.I)) {
       AddrList.emplace_back(CI);
       return;
     }
