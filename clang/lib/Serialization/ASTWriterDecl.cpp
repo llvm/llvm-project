@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ASTCommon.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/AST/DeclTemplate.h"
@@ -986,7 +987,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
   }
 
   if (D->hasAttr<BlocksAttr>() && D->getType()->getAsCXXRecordDecl()) {
-    ASTContext::BlockVarCopyInit Init = Writer.Context->getBlockVarCopyInit(D);
+    BlockVarCopyInit Init = Writer.Context->getBlockVarCopyInit(D);
     Record.AddStmt(Init.getCopyExpr());
     if (Init.getCopyExpr())
       Record.push_back(Init.canThrow());

@@ -2678,8 +2678,7 @@ const ObjCInterfaceDecl *ASTContext::getObjContainingInterface(
 
 /// Get the copy initialization expression of VarDecl, or nullptr if
 /// none exists.
-ASTContext::BlockVarCopyInit
-ASTContext::getBlockVarCopyInit(const VarDecl*VD) const {
+BlockVarCopyInit ASTContext::getBlockVarCopyInit(const VarDecl *VD) const {
   assert(VD && "Passed null params");
   assert(VD->hasAttr<BlocksAttr>() &&
          "getBlockVarCopyInits - not __block var");

@@ -8,6 +8,7 @@
 
 #include "clang/Index/USRGeneration.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/Lex/PreprocessingRecord.h"
