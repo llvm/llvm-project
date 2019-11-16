@@ -2,32 +2,36 @@
 ; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | FileCheck %s
 
 ; CHECK:      DW_TAG_variable
-; FIXME: Use DW_FORM_loclistx to reduce relocations
-; CHECK-NEXT:   DW_AT_location [DW_FORM_sec_offset]   (0x0000000c
+; CHECK-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x0) loclist = 0x00000018:
 ; CHECK-NEXT:     [0x0000000000000000, 0x0000000000000003): DW_OP_consts +3, DW_OP_stack_value
 ; CHECK-NEXT:     [0x0000000000000003, 0x0000000000000004): DW_OP_consts +4, DW_OP_stack_value)
 ; CHECK-NEXT:   DW_AT_name {{.*}} "y"
 
 ; CHECK:      DW_TAG_variable
-; FIXME: Use DW_FORM_loclistx to reduce relocations
-; CHECK-NEXT:   DW_AT_location [DW_FORM_sec_offset]   (0x0000001d
+; CHECK-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x1) loclist = 0x00000029:
 ; CHECK-NEXT:     [0x0000000000000000, 0x0000000000000003): DW_OP_consts +5, DW_OP_stack_value)
 ; CHECK-NEXT:   DW_AT_name {{.*}} "x"
 
 ; CHECK:      DW_TAG_variable
 ; FIXME: Use DW_FORM_loclistx to reduce relocations
-; CHECK-NEXT:   DW_AT_location [DW_FORM_sec_offset]   (0x00000025
+; CHECK-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x2) loclist = 0x00000031:
 ; CHECK-NEXT:     [0x0000000000000003, 0x0000000000000004): DW_OP_reg0 RAX)
 ; CHECK-NEXT:   DW_AT_name {{.*}} "r"
 
 ; CHECK:      .debug_loclists contents:
-; CHECK-NEXT: 0x00000000: locations list header: length = 0x00000029, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+; CHECK-NEXT: 0x00000000: locations list header: length = 0x00000035, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000003
+
+; CHECK-NEXT: offsets: [
+; CHECK-NEXT: 0x0000000c => 0x00000018
+; CHECK-NEXT: 0x0000001d => 0x00000029
+; CHECK-NEXT: 0x00000025 => 0x00000031
+; CHECK-NEXT: ]
 
 ; Don't use startx_length if there's more than one entry, because the shared
 ; base address will be useful for both the range that does start at the start of
 ; the function, and the one that doesn't.
 
-; CHECK-NEXT: 0x0000000c:
+; CHECK-NEXT: 0x00000018:
 ; CHECK-NEXT:             DW_LLE_base_addressx (0x0000000000000000)
 ; CHECK-NEXT:             DW_LLE_offset_pair   (0x0000000000000000, 0x0000000000000003): DW_OP_consts +3, DW_OP_stack_value
 ; CHECK-NEXT:             DW_LLE_offset_pair   (0x0000000000000003, 0x0000000000000004): DW_OP_consts +4, DW_OP_stack_value
@@ -35,14 +39,14 @@
 
 ; Show that startx_length can be used when the address range starts at the start of the function.
 
-; CHECK:      0x0000001d:
+; CHECK:      0x00000029:
 ; CHECK-NEXT:             DW_LLE_startx_length (0x0000000000000000, 0x0000000000000003): DW_OP_consts +5, DW_OP_stack_value
 ; CHECK-NEXT:             DW_LLE_end_of_list   ()
 
 ; And use a base address when the range doesn't start at an existing/useful
 ; address in the pool.
 
-; CHECK:      0x00000025:
+; CHECK:      0x00000031:
 ; CHECK-NEXT:             DW_LLE_base_addressx (0x0000000000000000)
 ; CHECK-NEXT:             DW_LLE_offset_pair   (0x0000000000000003, 0x0000000000000004): DW_OP_reg0 RAX
 ; CHECK-NEXT:             DW_LLE_end_of_list   ()

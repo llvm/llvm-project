@@ -96,6 +96,13 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
 
     uint64_t Offset = *FormValue.getAsSectionOffset();
 
+    if (FormValue.getForm() == DW_FORM_loclistx) {
+      FormValue.dump(OS, DumpOpts);
+      if (auto LoclistOffset = U->getLoclistOffset(Offset))
+        Offset = *LoclistOffset + U->getLocSectionBase();
+      else
+        return;
+    }
     U->getLocationTable().dumpLocationList(&Offset, OS, U->getBaseAddress(),
                                            MRI, U, LLDumpOpts, Indent);
     return;
@@ -420,6 +427,10 @@ DWARFDie::getAttributeValueAsReferencedDie(const DWARFFormValue &V) const {
 
 Optional<uint64_t> DWARFDie::getRangesBaseAttribute() const {
   return toSectionOffset(find({DW_AT_rnglists_base, DW_AT_GNU_ranges_base}));
+}
+
+Optional<uint64_t> DWARFDie::getLocBaseAttribute() const {
+  return toSectionOffset(find(DW_AT_loclists_base));
 }
 
 Optional<uint64_t> DWARFDie::getHighPC(uint64_t LowPC) const {
