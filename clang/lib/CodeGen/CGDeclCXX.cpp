@@ -244,6 +244,8 @@ llvm::Constant *CodeGenFunction::createAtExitStub(const VarDecl &VD,
 
   CGF.StartFunction(GlobalDecl(&VD, DynamicInitKind::AtExit),
                     CGM.getContext().VoidTy, fn, FI, FunctionArgList());
+  // Emit an artificial location for this function.
+  auto AL = ApplyDebugLocation::CreateArtificial(CGF);
 
   llvm::CallInst *call = CGF.Builder.CreateCall(dtor, addr);
 
@@ -649,8 +651,9 @@ void CodeGenFunction::GenerateCXXGlobalVarDeclInitFunc(llvm::Function *Fn,
 
   StartFunction(GlobalDecl(D, DynamicInitKind::Initializer),
                 getContext().VoidTy, Fn, getTypes().arrangeNullaryFunction(),
-                FunctionArgList(), D->getLocation(),
-                D->getInit()->getExprLoc());
+                FunctionArgList());
+  // Emit an artificial location for this function.
+  auto AL = ApplyDebugLocation::CreateArtificial(*this);
 
   // Use guarded initialization if the global variable is weak. This
   // occurs for, e.g., instantiated static data members and
@@ -775,7 +778,10 @@ llvm::Function *CodeGenFunction::generateDestroyHelper(
 
   CurEHLocation = VD->getBeginLoc();
 
-  StartFunction(VD, getContext().VoidTy, fn, FI, args);
+  StartFunction(GlobalDecl(VD, DynamicInitKind::GlobalArrayDestructor),
+                getContext().VoidTy, fn, FI, args);
+  // Emit an artificial location for this function.
+  auto AL = ApplyDebugLocation::CreateArtificial(*this);
 
   emitDestroy(addr, type, destroyer, useEHCleanupForArray);
 
