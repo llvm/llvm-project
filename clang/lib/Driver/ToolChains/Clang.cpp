@@ -2794,6 +2794,8 @@ static void RenderAnalyzerOptions(const ArgList &Args, ArgStringList &CmdArgs,
       CmdArgs.push_back(
           "-analyzer-checker=security.insecureAPI.decodeValueOfObjCType");
     }
+    else if (Triple.isOSFuchsia())
+      CmdArgs.push_back("-analyzer-checker=fuchsia");
 
     CmdArgs.push_back("-analyzer-checker=deadcode");
 
