@@ -20,11 +20,13 @@ namespace modernize {
 UseOverrideCheck::UseOverrideCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoreDestructors(Options.get("IgnoreDestructors", false)),
+      AllowOverrideAndFinal(Options.get("AllowOverrideAndFinal", false)),
       OverrideSpelling(Options.get("OverrideSpelling", "override")),
       FinalSpelling(Options.get("FinalSpelling", "final")) {}
 
 void UseOverrideCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreDestructors", IgnoreDestructors);
+  Options.store(Opts, "AllowOverrideAndFinal", AllowOverrideAndFinal);
   Options.store(Opts, "OverrideSpelling", OverrideSpelling);
   Options.store(Opts, "FinalSpelling", FinalSpelling);
 }
@@ -103,7 +105,8 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
   bool OnlyVirtualSpecified = HasVirtual && !HasOverride && !HasFinal;
   unsigned KeywordCount = HasVirtual + HasOverride + HasFinal;
 
-  if (!OnlyVirtualSpecified && KeywordCount == 1)
+  if ((!OnlyVirtualSpecified && KeywordCount == 1) ||
+      (!HasVirtual && HasOverride && HasFinal && AllowOverrideAndFinal))
     return; // Nothing to do.
 
   std::string Message;
@@ -113,8 +116,9 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
     Message = "annotate this function with '%0' or (rarely) '%1'";
   } else {
     StringRef Redundant =
-        HasVirtual ? (HasOverride && HasFinal ? "'virtual' and '%0' are"
-                                              : "'virtual' is")
+        HasVirtual ? (HasOverride && HasFinal && !AllowOverrideAndFinal
+                          ? "'virtual' and '%0' are"
+                          : "'virtual' is")
                    : "'%0' is";
     StringRef Correct = HasFinal ? "'%1'" : "'%0'";
 
@@ -211,7 +215,7 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
     Diag << FixItHint::CreateInsertion(InsertLoc, ReplacementText);
   }
 
-  if (HasFinal && HasOverride) {
+  if (HasFinal && HasOverride && !AllowOverrideAndFinal) {
     SourceLocation OverrideLoc = Method->getAttr<OverrideAttr>()->getLocation();
     Diag << FixItHint::CreateRemoval(
         CharSourceRange::getTokenRange(OverrideLoc, OverrideLoc));
