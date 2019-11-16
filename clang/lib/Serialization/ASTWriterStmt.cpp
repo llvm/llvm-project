@@ -1835,9 +1835,11 @@ void ASTStmtWriter::VisitFunctionParmPackExpr(FunctionParmPackExpr *E) {
 
 void ASTStmtWriter::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E) {
   VisitExpr(E);
-  Record.AddStmt(E->getTemporary());
-  Record.AddDeclRef(E->getExtendingDecl());
-  Record.push_back(E->getManglingNumber());
+  Record.push_back(static_cast<bool>(E->getLifetimeExtendedTemporaryDecl()));
+  if (E->getLifetimeExtendedTemporaryDecl())
+    Record.AddDeclRef(E->getLifetimeExtendedTemporaryDecl());
+  else
+    Record.AddStmt(E->getSubExpr());
   Code = serialization::EXPR_MATERIALIZE_TEMPORARY;
 }
 
