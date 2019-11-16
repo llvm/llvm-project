@@ -189,7 +189,10 @@ bool CombinerHelper::matchCombineShuffleVector(MachineInstr &MI,
   LLT DstType = MRI.getType(MI.getOperand(0).getReg());
   Register Src1 = MI.getOperand(1).getReg();
   LLT SrcType = MRI.getType(Src1);
-  unsigned DstNumElts = DstType.getNumElements();
+  // As bizarre as it may look, shuffle vector can actually produce
+  // scalar! This is because at the IR level a <1 x ty> shuffle
+  // vector is perfectly valid.
+  unsigned DstNumElts = DstType.isVector() ? DstType.getNumElements() : 1;
   unsigned SrcNumElts = SrcType.isVector() ? SrcType.getNumElements() : 1;
 
   // If the resulting vector is smaller than the size of the source
@@ -199,7 +202,15 @@ bool CombinerHelper::matchCombineShuffleVector(MachineInstr &MI,
   // Note: We may still be able to produce a concat_vectors fed by
   //       extract_vector_elt and so on. It is less clear that would
   //       be better though, so don't bother for now.
-  if (DstNumElts < 2 * SrcNumElts)
+  //
+  // If the destination is a scalar, the size of the sources doesn't
+  // matter. we will lower the shuffle to a plain copy. This will
+  // work only if the source and destination have the same size. But
+  // that's covered by the next condition.
+  //
+  // TODO: If the size between the source and destination don't match
+  //       we could still emit an extract vector element in that case.
+  if (DstNumElts < 2 * SrcNumElts && DstNumElts != 1)
     return false;
 
   // Check that the shuffle mask can be broken evenly between the
@@ -254,7 +265,10 @@ void CombinerHelper::applyCombineShuffleVector(MachineInstr &MI,
   Builder.setInsertPt(*MI.getParent(), MI);
   Register NewDstReg = MRI.cloneVirtualRegister(DstReg);
 
-  Builder.buildMerge(NewDstReg, Ops);
+  if (Ops.size() == 1)
+    Builder.buildCopy(NewDstReg, Ops[0]);
+  else
+    Builder.buildMerge(NewDstReg, Ops);
 
   MI.eraseFromParent();
   replaceRegWith(MRI, DstReg, NewDstReg);
