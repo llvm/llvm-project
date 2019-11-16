@@ -14,6 +14,7 @@
 #include "CXXABI.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/RecordLayout.h"
@@ -154,21 +155,26 @@ static bool usesMultipleInheritanceModel(const CXXRecordDecl *RD) {
   return false;
 }
 
-MSInheritanceAttr::Spelling CXXRecordDecl::calculateInheritanceModel() const {
+MSInheritanceModel CXXRecordDecl::calculateInheritanceModel() const {
   if (!hasDefinition() || isParsingBaseSpecifiers())
-    return MSInheritanceAttr::Keyword_unspecified_inheritance;
+    return MSInheritanceModel::Unspecified;
   if (getNumVBases() > 0)
-    return MSInheritanceAttr::Keyword_virtual_inheritance;
+    return MSInheritanceModel::Virtual;
   if (usesMultipleInheritanceModel(this))
-    return MSInheritanceAttr::Keyword_multiple_inheritance;
-  return MSInheritanceAttr::Keyword_single_inheritance;
+    return MSInheritanceModel::Multiple;
+  return MSInheritanceModel::Single;
 }
 
-MSInheritanceAttr::Spelling
-CXXRecordDecl::getMSInheritanceModel() const {
+MSInheritanceModel CXXRecordDecl::getMSInheritanceModel() const {
   MSInheritanceAttr *IA = getAttr<MSInheritanceAttr>();
   assert(IA && "Expected MSInheritanceAttr on the CXXRecordDecl!");
-  return IA->getSemanticSpelling();
+  return IA->getInheritanceModel();
+}
+
+bool CXXRecordDecl::nullFieldOffsetIsZero() const {
+  return !inheritanceModelHasOnlyOneField(/*IsMemberFunction=*/false,
+                                          getMSInheritanceModel()) ||
+         (hasDefinition() && isPolymorphic());
 }
 
 MSVtorDispMode CXXRecordDecl::getMSVtorDispMode() const {
@@ -209,19 +215,19 @@ MSVtorDispMode CXXRecordDecl::getMSVtorDispMode() const {
 static std::pair<unsigned, unsigned>
 getMSMemberPointerSlots(const MemberPointerType *MPT) {
   const CXXRecordDecl *RD = MPT->getMostRecentCXXRecordDecl();
-  MSInheritanceAttr::Spelling Inheritance = RD->getMSInheritanceModel();
+  MSInheritanceModel Inheritance = RD->getMSInheritanceModel();
   unsigned Ptrs = 0;
   unsigned Ints = 0;
   if (MPT->isMemberFunctionPointer())
     Ptrs = 1;
   else
     Ints = 1;
-  if (MSInheritanceAttr::hasNVOffsetField(MPT->isMemberFunctionPointer(),
+  if (inheritanceModelHasNVOffsetField(MPT->isMemberFunctionPointer(),
                                           Inheritance))
     Ints++;
-  if (MSInheritanceAttr::hasVBPtrOffsetField(Inheritance))
+  if (inheritanceModelHasVBPtrOffsetField(Inheritance))
     Ints++;
-  if (MSInheritanceAttr::hasVBTableOffsetField(Inheritance))
+  if (inheritanceModelHasVBTableOffsetField(Inheritance))
     Ints++;
   return std::make_pair(Ptrs, Ints);
 }

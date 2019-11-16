@@ -2733,19 +2733,17 @@ llvm::DIType *CGDebugInfo::CreateType(const MemberPointerType *Ty,
     // Set the MS inheritance model. There is no flag for the unspecified model.
     if (CGM.getTarget().getCXXABI().isMicrosoft()) {
       switch (Ty->getMostRecentCXXRecordDecl()->getMSInheritanceModel()) {
-      case MSInheritanceAttr::Keyword_single_inheritance:
+      case MSInheritanceModel::Single:
         Flags |= llvm::DINode::FlagSingleInheritance;
         break;
-      case MSInheritanceAttr::Keyword_multiple_inheritance:
+      case MSInheritanceModel::Multiple:
         Flags |= llvm::DINode::FlagMultipleInheritance;
         break;
-      case MSInheritanceAttr::Keyword_virtual_inheritance:
+      case MSInheritanceModel::Virtual:
         Flags |= llvm::DINode::FlagVirtualInheritance;
         break;
-      case MSInheritanceAttr::Keyword_unspecified_inheritance:
+      case MSInheritanceModel::Unspecified:
         break;
-      case MSInheritanceAttr::SpellingNotCalculated:
-        llvm_unreachable("Spelling not yet calculated");
       }
     }
   }
