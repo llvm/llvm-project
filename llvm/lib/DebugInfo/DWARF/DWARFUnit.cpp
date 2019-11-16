@@ -317,8 +317,9 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
 
 // Parse the rangelist table header, including the optional array of offsets
 // following it (DWARF v5 and later).
-static Expected<DWARFDebugRnglistTable>
-parseRngListTableHeader(DWARFDataExtractor &DA, uint64_t Offset,
+template<typename ListTableType>
+static Expected<ListTableType>
+parseListTableHeader(DWARFDataExtractor &DA, uint64_t Offset,
                         DwarfFormat Format) {
   // We are expected to be called with Offset 0 or pointing just past the table
   // header. Correct Offset in the latter case so that it points to the start
@@ -326,12 +327,12 @@ parseRngListTableHeader(DWARFDataExtractor &DA, uint64_t Offset,
   if (Offset > 0) {
     uint64_t HeaderSize = DWARFListTableHeader::getHeaderSize(Format);
     if (Offset < HeaderSize)
-      return createStringError(errc::invalid_argument, "Did not detect a valid"
-                               " range list table with base = 0x%" PRIx64 "\n",
+      return createStringError(errc::invalid_argument, "did not detect a valid"
+                               " list table with base = 0x%" PRIx64 "\n",
                                Offset);
     Offset -= HeaderSize;
   }
-  llvm::DWARFDebugRnglistTable Table;
+  ListTableType Table;
   if (Error E = Table.extractHeaderAndOffsets(DA, &Offset))
     return std::move(E);
   return Table;
@@ -483,8 +484,8 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
       // extracted lazily.
       DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
                                   isLittleEndian, 0);
-      auto TableOrError = parseRngListTableHeader(RangesDA, RangeSectionBase,
-                                                  Header.getFormat());
+      auto TableOrError = parseListTableHeader<DWARFDebugRnglistTable>(
+          RangesDA, RangeSectionBase, Header.getFormat());
       if (!TableOrError)
         return createStringError(errc::invalid_argument,
                                  "parsing a range list table: " +
@@ -539,8 +540,8 @@ bool DWARFUnit::parseDWO() {
     DWO->setRangesSection(&Context.getDWARFObj().getRnglistsDWOSection(), 0);
     DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
                                 isLittleEndian, 0);
-    if (auto TableOrError = parseRngListTableHeader(RangesDA, RangeSectionBase,
-                                                    Header.getFormat()))
+    if (auto TableOrError = parseListTableHeader<DWARFDebugRnglistTable>(
+            RangesDA, RangeSectionBase, Header.getFormat()))
       DWO->RngListTable = TableOrError.get();
     else
       WithColor::error() << "parsing a range list table: "

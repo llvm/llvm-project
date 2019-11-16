@@ -202,6 +202,6 @@ Range1_end:
 # CHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1) rangelist = 0x00000009
 # CHECK-NEXT: [0x0000002a, 0x00000034))
 
-#ERR: error: parsing a range list table: Did not detect a valid range list table with base = 0x8
+#ERR: error: parsing a range list table: did not detect a valid list table with base = 0x8
 #ERR: error: decoding address ranges: missing or invalid range list table
 #ERR: error: decoding address ranges: invalid range list offset 0xfa0
