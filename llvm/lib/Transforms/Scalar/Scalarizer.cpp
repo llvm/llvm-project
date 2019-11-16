@@ -38,8 +38,8 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/Options.h"
 #include "llvm/Transforms/Scalar.h"
 #include <cassert>
 #include <cstdint>
