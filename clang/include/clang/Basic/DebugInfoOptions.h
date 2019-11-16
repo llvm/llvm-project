@@ -18,24 +18,30 @@ enum DebugInfoFormat {
 };
 
 enum DebugInfoKind {
-  NoDebugInfo,         /// Don't generate debug info.
-  LocTrackingOnly,     /// Emit location information but do not generate
-                       /// debug info in the output. This is useful in
-                       /// cases where the backend wants to track source
-                       /// locations for instructions without actually
-                       /// emitting debug info for them (e.g., when -Rpass
-                       /// is used).
-  DebugDirectivesOnly, /// Emit only debug directives with the line numbers data
-  DebugLineTablesOnly, /// Emit only debug info necessary for generating
-                       /// line number tables (-gline-tables-only).
-  LimitedDebugInfo,    /// Limit generated debug info to reduce size
-                       /// (-fno-standalone-debug). This emits
-                       /// forward decls for types that could be
-                       /// replaced with forward decls in the source
-                       /// code. For dynamic C++ classes type info
-                       /// is only emitted into the module that
-                       /// contains the classe's vtable.
-  FullDebugInfo        /// Generate complete debug info.
+  /// Don't generate debug info.
+  NoDebugInfo,
+
+  /// Emit location information but do not generate debug info in the output.
+  /// This is useful in cases where the backend wants to track source
+  /// locations for instructions without actually emitting debug info for them
+  /// (e.g., when -Rpass is used).
+  LocTrackingOnly,
+
+  /// Emit only debug directives with the line numbers data
+  DebugDirectivesOnly,
+
+  /// Emit only debug info necessary for generating line number tables
+  /// (-gline-tables-only).
+  DebugLineTablesOnly,
+
+  /// Limit generated debug info to reduce size (-fno-standalone-debug). This
+  /// emits forward decls for types that could be replaced with forward decls in
+  /// the source code. For dynamic C++ classes type info is only emitted into
+  /// the module that contains the classe's vtable.
+  LimitedDebugInfo,
+
+  /// Generate complete debug info.
+  FullDebugInfo
 };
 
 } // end namespace codegenoptions
