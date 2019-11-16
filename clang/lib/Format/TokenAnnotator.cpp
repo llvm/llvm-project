@@ -2694,7 +2694,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     // Space between the type and the *
     // operator void*(), operator char*(), operator Foo*() dependant
     // on PointerAlignment style.
-    return (Style.PointerAlignment == FormatStyle::PAS_Right);
+    return (Style.PointerAlignment != FormatStyle::PAS_Left);
   const auto SpaceRequiredForArrayInitializerLSquare =
       [](const FormatToken &LSquareTok, const FormatStyle &Style) {
         return Style.SpacesInContainerLiterals ||
