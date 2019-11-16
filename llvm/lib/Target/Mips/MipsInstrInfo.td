@@ -959,8 +959,7 @@ foreach I = {16} in
 // Like uimm16_64 but coerces simm16 to uimm16.
 def uimm16_relaxed : Operand<i32> {
   let PrintMethod = "printUImm<16>";
-  let ParserMatchClass =
-      !cast<AsmOperandClass>("UImm16RelaxedAsmOperandClass");
+  let ParserMatchClass = UImm16RelaxedAsmOperandClass;
 }
 
 foreach I = {5} in
@@ -980,14 +979,12 @@ foreach I = {16} in
 // Like uimm16_64 but coerces simm16 to uimm16.
 def uimm16_64_relaxed : Operand<i64> {
   let PrintMethod = "printUImm<16>";
-  let ParserMatchClass =
-      !cast<AsmOperandClass>("UImm16RelaxedAsmOperandClass");
+  let ParserMatchClass = UImm16RelaxedAsmOperandClass;
 }
 
 def uimm16_altrelaxed : Operand<i32> {
   let PrintMethod = "printUImm<16>";
-  let ParserMatchClass =
-      !cast<AsmOperandClass>("UImm16AltRelaxedAsmOperandClass");
+  let ParserMatchClass = UImm16AltRelaxedAsmOperandClass;
 }
 // Like uimm5 but reports a less confusing error for 32-63 when
 // an instruction alias permits that.
@@ -1060,22 +1057,22 @@ foreach I = {16, 32} in
 // Like simm16 but coerces uimm16 to simm16.
 def simm16_relaxed : Operand<i32> {
   let DecoderMethod = "DecodeSImmWithOffsetAndScale<16>";
-  let ParserMatchClass = !cast<AsmOperandClass>("SImm16RelaxedAsmOperandClass");
+  let ParserMatchClass = SImm16RelaxedAsmOperandClass;
 }
 
 def simm16_64 : Operand<i64> {
   let DecoderMethod = "DecodeSImmWithOffsetAndScale<16>";
-  let ParserMatchClass = !cast<AsmOperandClass>("SImm16AsmOperandClass");
+  let ParserMatchClass = SImm16AsmOperandClass;
 }
 
 // like simm32 but coerces simm32 to uimm32.
 def uimm32_coerced : Operand<i32> {
-  let ParserMatchClass = !cast<AsmOperandClass>("UImm32CoercedAsmOperandClass");
+  let ParserMatchClass = UImm32CoercedAsmOperandClass;
 }
 // Like simm32 but coerces uimm32 to simm32.
 def simm32_relaxed : Operand<i32> {
   let DecoderMethod = "DecodeSImmWithOffsetAndScale<32>";
-  let ParserMatchClass = !cast<AsmOperandClass>("SImm32RelaxedAsmOperandClass");
+  let ParserMatchClass = SImm32RelaxedAsmOperandClass;
 }
 
 // This is almost the same as a uimm7 but 0x7f is interpreted as -1.
