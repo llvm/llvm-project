@@ -46,23 +46,23 @@ void RedundantStringInitCheck::registerMatchers(MatchFinder *Finder) {
   //     string bar("");
   Finder->addMatcher(
       namedDecl(
-          varDecl(hasType(hasUnqualifiedDesugaredType(recordType(
-                      hasDeclaration(cxxRecordDecl(hasName("basic_string")))))),
-                  hasInitializer(expr(ignoringImplicit(anyOf(
-                                          EmptyStringCtorExpr,
-                                          EmptyStringCtorExprWithTemporaries)))
-                                     .bind("expr"))),
-          unless(parmVarDecl()))
-          .bind("decl"),
+          varDecl(
+              hasType(hasUnqualifiedDesugaredType(recordType(
+                  hasDeclaration(cxxRecordDecl(hasName("basic_string")))))),
+              hasInitializer(expr(ignoringImplicit(anyOf(
+                  EmptyStringCtorExpr, EmptyStringCtorExprWithTemporaries)))))
+              .bind("vardecl"),
+          unless(parmVarDecl())),
       this);
 }
 
 void RedundantStringInitCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *CtorExpr = Result.Nodes.getNodeAs<Expr>("expr");
-  const auto *Decl = Result.Nodes.getNodeAs<NamedDecl>("decl");
-  diag(CtorExpr->getExprLoc(), "redundant string initialization")
-      << FixItHint::CreateReplacement(CtorExpr->getSourceRange(),
-                                      Decl->getName());
+  const auto *VDecl = Result.Nodes.getNodeAs<VarDecl>("vardecl");
+  // VarDecl's getSourceRange() spans 'string foo = ""' or 'string bar("")'.
+  // So start at getLocation() to span just 'foo = ""' or 'bar("")'.
+  SourceRange ReplaceRange(VDecl->getLocation(), VDecl->getEndLoc());
+  diag(VDecl->getLocation(), "redundant string initialization")
+      << FixItHint::CreateReplacement(ReplaceRange, VDecl->getName());
 }
 
 } // namespace readability
