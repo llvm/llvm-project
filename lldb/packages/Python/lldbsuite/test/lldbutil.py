@@ -761,12 +761,17 @@ def run_to_breakpoint_make_target(test, exe_name = "a.out", in_cwd = True):
     test.assertTrue(target, "Target: %s is not valid."%(exe_name))
     return target
 
-def run_to_breakpoint_do_run(test, target, bkpt, launch_info = None, only_one_thread = True):
+def run_to_breakpoint_do_run(test, target, bkpt, launch_info = None,
+                             only_one_thread = True, extra_images = None):
 
     # Launch the process, and do not stop at the entry point.
     if not launch_info:
         launch_info = lldb.SBLaunchInfo(None)
         launch_info.SetWorkingDirectory(test.get_process_working_directory())
+
+    if extra_images and lldb.remote_platform:
+        environ = test.registerSharedLibrariesWithTarget(target, extra_images)
+        launch_info.SetEnvironmentEntries(environ, True)
 
     error = lldb.SBError()
     process = target.Launch(launch_info, error)
@@ -792,7 +797,8 @@ def run_to_name_breakpoint (test, bkpt_name, launch_info = None,
                             exe_name = "a.out",
                             bkpt_module = None,
                             in_cwd = True,
-                            only_one_thread = True):
+                            only_one_thread = True,
+                            extra_images = None):
     """Start up a target, using exe_name as the executable, and run it to
        a breakpoint set by name on bkpt_name restricted to bkpt_module.
 
@@ -828,13 +834,15 @@ def run_to_name_breakpoint (test, bkpt_name, launch_info = None,
 
     test.assertTrue(breakpoint.GetNumLocations() > 0,
                     "No locations found for name breakpoint: '%s'."%(bkpt_name))
-    return run_to_breakpoint_do_run(test, target, breakpoint, launch_info, only_one_thread)
+    return run_to_breakpoint_do_run(test, target, breakpoint, launch_info,
+                                    only_one_thread, extra_images)
 
 def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
                              launch_info = None, exe_name = "a.out",
                              bkpt_module = None,
                              in_cwd = True,
-                             only_one_thread = True):
+                             only_one_thread = True,
+                             extra_images = None):
     """Start up a target, using exe_name as the executable, and run it to
        a breakpoint set by source regex bkpt_pattern.
 
@@ -848,13 +856,15 @@ def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
     test.assertTrue(breakpoint.GetNumLocations() > 0,
         'No locations found for source breakpoint: "%s", file: "%s", dir: "%s"'
         %(bkpt_pattern, source_spec.GetFilename(), source_spec.GetDirectory()))
-    return run_to_breakpoint_do_run(test, target, breakpoint, launch_info, only_one_thread)
+    return run_to_breakpoint_do_run(test, target, breakpoint, launch_info,
+                                    only_one_thread, extra_images)
 
 def run_to_line_breakpoint(test, source_spec, line_number, column = 0,
                            launch_info = None, exe_name = "a.out",
                            bkpt_module = None,
                            in_cwd = True,
-                           only_one_thread = True):
+                           only_one_thread = True,
+                           extra_images = None):
     """Start up a target, using exe_name as the executable, and run it to
        a breakpoint set by (source_spec, line_number(, column)).
 
@@ -869,7 +879,8 @@ def run_to_line_breakpoint(test, source_spec, line_number, column = 0,
         'No locations found for line breakpoint: "%s:%d(:%d)", dir: "%s"'
         %(source_spec.GetFilename(), line_number, column,
           source_spec.GetDirectory()))
-    return run_to_breakpoint_do_run(test, target, breakpoint, launch_info, only_one_thread)
+    return run_to_breakpoint_do_run(test, target, breakpoint, launch_info,
+                                    only_one_thread, extra_images)
 
 
 def continue_to_breakpoint(process, bkpt):
