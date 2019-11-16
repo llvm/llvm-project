@@ -102,10 +102,11 @@ buildPreamble(PathRef FileName, CompilerInvocation &CI,
       compileCommandsAreEqual(Inputs.CompileCommand, OldCompileCommand) &&
       OldPreamble->Preamble.CanReuse(CI, ContentsBuffer.get(), Bounds,
                                      Inputs.FS.get())) {
-    vlog("Reusing preamble for file {0}", llvm::Twine(FileName));
+    vlog("Reusing preamble for {0}", FileName);
     return OldPreamble;
   }
-  vlog("Preamble for file {0} cannot be reused. Attempting to rebuild it.",
+  vlog(OldPreamble ? "Rebuilding invalidated preamble for {0}"
+                   : "Building first preamble for {0}",
        FileName);
 
   trace::Span Tracer("BuildPreamble");
