@@ -121,10 +121,3 @@ def : Pat<(select (i32 (seteq I32:$cond, 0)), F32:$lhs, F32:$rhs),
           (SELECT_F32 F32:$rhs, F32:$lhs, I32:$cond)>;
 def : Pat<(select (i32 (seteq I32:$cond, 0)), F64:$lhs, F64:$rhs),
           (SELECT_F64 F64:$rhs, F64:$lhs, I32:$cond)>;
-
-// The legalizer inserts an unnecessary `and 1` to make input conform
-// to getBooleanContents, which we can lower away.
-def : Pat<(select (i32 (and I32:$cond, 1)), F32:$lhs, F32:$rhs),
-          (SELECT_F32 F32:$lhs, F32:$rhs, I32:$cond)>;
-def : Pat<(select (i32 (and I32:$cond, 1)), F64:$lhs, F64:$rhs),
-          (SELECT_F64 F64:$lhs, F64:$rhs, I32:$cond)>;
