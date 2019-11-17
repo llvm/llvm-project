@@ -2586,7 +2586,12 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_UINT(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::ExpandIntRes_LLROUND_LLRINT(SDNode *N, SDValue &Lo,
                                                    SDValue &Hi) {
-  EVT VT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
+  SDValue Op = N->getOperand(0);
+
+  assert(getTypeAction(Op.getValueType()) != TargetLowering::TypePromoteFloat &&
+         "Input type needs to be promoted!");
+
+  EVT VT = Op.getValueType();
 
   RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
   if (N->getOpcode() == ISD::LLROUND) {
@@ -2615,10 +2620,6 @@ void DAGTypeLegalizer::ExpandIntRes_LLROUND_LLRINT(SDNode *N, SDValue &Lo,
     assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected llrint input type!");
   } else
     llvm_unreachable("Unexpected opcode!");
-
-  SDValue Op = N->getOperand(0);
-  if (getTypeAction(Op.getValueType()) == TargetLowering::TypePromoteFloat)
-    Op = GetPromotedFloat(Op);
 
   SDLoc dl(N);
   EVT RetVT = N->getValueType(0);
