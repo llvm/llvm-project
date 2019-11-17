@@ -847,7 +847,7 @@ void ConsumedStmtVisitor::VisitDeclStmt(const DeclStmt *DeclS) {
 
 void ConsumedStmtVisitor::VisitMaterializeTemporaryExpr(
   const MaterializeTemporaryExpr *Temp) {
-  forwardInfo(Temp->GetTemporaryExpr(), Temp);
+  forwardInfo(Temp->getSubExpr(), Temp);
 }
 
 void ConsumedStmtVisitor::VisitMemberExpr(const MemberExpr *MExpr) {

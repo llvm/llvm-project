@@ -27,7 +27,7 @@ void ExprEngine::CreateCXXTemporaryObject(const MaterializeTemporaryExpr *ME,
                                           ExplodedNode *Pred,
                                           ExplodedNodeSet &Dst) {
   StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-  const Expr *tempExpr = ME->GetTemporaryExpr()->IgnoreParens();
+  const Expr *tempExpr = ME->getSubExpr()->IgnoreParens();
   ProgramStateRef state = Pred->getState();
   const LocationContext *LCtx = Pred->getLocationContext();
 

@@ -124,6 +124,7 @@ namespace clang {
     void VisitBlockDecl(BlockDecl *D);
     void VisitCapturedDecl(CapturedDecl *D);
     void VisitEmptyDecl(EmptyDecl *D);
+    void VisitLifetimeExtendedTemporaryDecl(LifetimeExtendedTemporaryDecl *D);
 
     void VisitDeclContext(DeclContext *DC);
     template <typename T> void VisitRedeclarable(Redeclarable<T> *D);
@@ -1134,6 +1135,17 @@ void ASTDeclWriter::VisitEmptyDecl(EmptyDecl *D) {
   Code = serialization::DECL_EMPTY;
 }
 
+void ASTDeclWriter::VisitLifetimeExtendedTemporaryDecl(
+    LifetimeExtendedTemporaryDecl *D) {
+  VisitDecl(D);
+  Record.AddDeclRef(D->getExtendingDecl());
+  Record.AddStmt(D->getTemporaryExpr());
+  Record.push_back(static_cast<bool>(D->getValue()));
+  if (D->getValue())
+    Record.AddAPValue(*D->getValue());
+  Record.push_back(D->getManglingNumber());
+  Code = serialization::DECL_LIFETIME_EXTENDED_TEMPORARY;
+}
 void ASTDeclWriter::VisitBlockDecl(BlockDecl *D) {
   VisitDecl(D);
   Record.AddStmt(D->getBody());

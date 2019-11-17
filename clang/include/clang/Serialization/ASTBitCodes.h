@@ -1537,6 +1537,9 @@ namespace serialization {
       /// An EmptyDecl record.
       DECL_EMPTY,
 
+      /// An LifetimeExtendedTemporaryDecl record.
+      DECL_LIFETIME_EXTENDED_TEMPORARY,
+
       /// An ObjCTypeParamDecl record.
       DECL_OBJC_TYPE_PARAM,
 
