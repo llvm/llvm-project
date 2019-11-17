@@ -410,6 +410,44 @@ define i8 @ssub_x_le_max(i8 %x, i8 %y) {
   ret i8 %r
 }
 
+define i8 @ssub_x_lt2_min(i8 %x, i8 %y) {
+; CHECK-LABEL: @ssub_x_lt2_min(
+; CHECK-NEXT:    [[AO:%.*]] = tail call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[AO]], 1
+; CHECK-NEXT:    [[A:%.*]] = extractvalue { i8, i1 } [[AO]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X]], -1
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 127, i8 -128
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[O]], i8 [[S]], i8 [[A]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %ao = tail call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 %x, i8 %y)
+  %o = extractvalue { i8, i1 } %ao, 1
+  %a = extractvalue { i8, i1 } %ao, 0
+  %c = icmp slt i8 %x, -1
+  %s = select i1 %c, i8 127, i8 -128
+  %r = select i1 %o, i8 %s, i8 %a
+  ret i8 %r
+}
+
+define i8 @ssub_x_lt2_max(i8 %x, i8 %y) {
+; CHECK-LABEL: @ssub_x_lt2_max(
+; CHECK-NEXT:    [[AO:%.*]] = tail call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[AO]], 1
+; CHECK-NEXT:    [[A:%.*]] = extractvalue { i8, i1 } [[AO]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X]], -1
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 -128, i8 127
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[O]], i8 [[S]], i8 [[A]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %ao = tail call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 %x, i8 %y)
+  %o = extractvalue { i8, i1 } %ao, 1
+  %a = extractvalue { i8, i1 } %ao, 0
+  %c = icmp slt i8 %x, -1
+  %s = select i1 %c, i8 -128, i8 127
+  %r = select i1 %o, i8 %s, i8 %a
+  ret i8 %r
+}
+
 define i8 @ssub_x_gt_min(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ssub_x_gt_min(
 ; CHECK-NEXT:    [[AO:%.*]] = tail call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
@@ -481,6 +519,44 @@ define i8 @ssub_x_ge_max(i8 %x, i8 %y) {
   %o = extractvalue { i8, i1 } %ao, 1
   %a = extractvalue { i8, i1 } %ao, 0
   %c = icmp sge i8 %x, 0
+  %s = select i1 %c, i8 -128, i8 127
+  %r = select i1 %o, i8 %s, i8 %a
+  ret i8 %r
+}
+
+define i8 @ssub_x_gt2_min(i8 %x, i8 %y) {
+; CHECK-LABEL: @ssub_x_gt2_min(
+; CHECK-NEXT:    [[AO:%.*]] = tail call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[AO]], 1
+; CHECK-NEXT:    [[A:%.*]] = extractvalue { i8, i1 } [[AO]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X]], -2
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 127, i8 -128
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[O]], i8 [[S]], i8 [[A]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %ao = tail call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 %x, i8 %y)
+  %o = extractvalue { i8, i1 } %ao, 1
+  %a = extractvalue { i8, i1 } %ao, 0
+  %c = icmp sgt i8 %x, -2
+  %s = select i1 %c, i8 127, i8 -128
+  %r = select i1 %o, i8 %s, i8 %a
+  ret i8 %r
+}
+
+define i8 @ssub_x_gt2_max(i8 %x, i8 %y) {
+; CHECK-LABEL: @ssub_x_gt2_max(
+; CHECK-NEXT:    [[AO:%.*]] = tail call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[AO]], 1
+; CHECK-NEXT:    [[A:%.*]] = extractvalue { i8, i1 } [[AO]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X]], -2
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 -128, i8 127
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[O]], i8 [[S]], i8 [[A]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %ao = tail call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 %x, i8 %y)
+  %o = extractvalue { i8, i1 } %ao, 1
+  %a = extractvalue { i8, i1 } %ao, 0
+  %c = icmp sgt i8 %x, -2
   %s = select i1 %c, i8 -128, i8 127
   %r = select i1 %o, i8 %s, i8 %a
   ret i8 %r
