@@ -2625,6 +2625,12 @@ void DAGTypeLegalizer::ExpandIntRes_LLROUND_LLRINT(SDNode *N, SDValue &Lo,
   EVT RetVT = N->getValueType(0);
   TargetLowering::MakeLibCallOptions CallOptions;
   CallOptions.setSExt(true);
+
+  if (getTypeAction(VT) == TargetLowering::TypeSoftenFloat) {
+    Op = GetSoftenedFloat(Op);
+    CallOptions.setTypeListBeforeSoften(VT, RetVT, true);
+  }
+
   SplitInteger(TLI.makeLibCall(DAG, LC, RetVT, Op, CallOptions, dl).first,
                Lo, Hi);
 }
