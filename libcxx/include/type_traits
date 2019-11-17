@@ -525,6 +525,7 @@ struct __identity { typedef _Tp type; };
 template <class _Tp, bool>
 struct _LIBCPP_TEMPLATE_VIS __dependent_type : public _Tp {};
 
+
 template <bool _Bp, class _If, class _Then>
     struct _LIBCPP_TEMPLATE_VIS conditional {typedef _If type;};
 template <class _If, class _Then>
@@ -569,6 +570,16 @@ using _IsNotSame = _BoolConstant<
     !_VSTD::is_same<_Tp, _Up>::value
 #endif
 >;
+
+
+template <class _Tp>
+using __test_for_primary_template = _EnableIf<
+    _IsSame<_Tp, typename _Tp::__primary_template>::value
+  >;
+template <class _Tp>
+using __is_primary_template = _IsValidExpansion<
+    __test_for_primary_template, _Tp
+  >;
 
 // addressof
 #ifndef _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
