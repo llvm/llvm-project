@@ -319,7 +319,8 @@ static Instruction *foldShiftOfShiftedLogic(BinaryOperator &I,
   // TODO: Remove the one-use check if the other logic operand (Y) is constant.
   Value *X, *Y;
   auto matchFirstShift = [&](Value *V) {
-    return match(V, m_OneUse(m_Shift(m_Value(X), m_APInt(C0)))) &&
+    return !isa<ConstantExpr>(V) &&
+           match(V, m_OneUse(m_Shift(m_Value(X), m_APInt(C0)))) &&
            cast<BinaryOperator>(V)->getOpcode() == ShiftOpcode &&
            (*C0 + *C1).ult(Ty->getScalarSizeInBits());
   };
