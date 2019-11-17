@@ -9270,7 +9270,7 @@ void Sema::CheckMaxUnsignedZero(const CallExpr *Call,
   auto IsLiteralZeroArg = [](const Expr* E) -> bool {
     const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E);
     if (!MTE) return false;
-    const auto *Num = dyn_cast<IntegerLiteral>(MTE->getSubExpr());
+    const auto *Num = dyn_cast<IntegerLiteral>(MTE->GetTemporaryExpr());
     if (!Num) return false;
     if (Num->getValue() != 0) return false;
     return true;

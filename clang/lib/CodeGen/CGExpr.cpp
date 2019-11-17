@@ -417,7 +417,7 @@ static Address createReferenceTemporary(CodeGenFunction &CGF,
 
 LValue CodeGenFunction::
 EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
-  const Expr *E = M->getSubExpr();
+  const Expr *E = M->GetTemporaryExpr();
 
   assert((!M->getExtendingDecl() || !isa<VarDecl>(M->getExtendingDecl()) ||
           !cast<VarDecl>(M->getExtendingDecl())->isARCPseudoStrong()) &&

@@ -2796,34 +2796,6 @@ NamespaceAliasDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
                                         SourceLocation(), nullptr);
 }
 
-void LifetimeExtendedTemporaryDecl::anchor() {}
-
-/// Retrieve the storage duration for the materialized temporary.
-StorageDuration LifetimeExtendedTemporaryDecl::getStorageDuration() const {
-  const ValueDecl *ExtendingDecl = getExtendingDecl();
-  if (!ExtendingDecl)
-    return SD_FullExpression;
-  // FIXME: This is not necessarily correct for a temporary materialized
-  // within a default initializer.
-  if (isa<FieldDecl>(ExtendingDecl))
-    return SD_Automatic;
-  // FIXME: This only works because storage class specifiers are not allowed
-  // on decomposition declarations.
-  if (isa<BindingDecl>(ExtendingDecl))
-    return ExtendingDecl->getDeclContext()->isFunctionOrMethod() ? SD_Automatic
-                                                                 : SD_Static;
-  return cast<VarDecl>(ExtendingDecl)->getStorageDuration();
-}
-
-APValue *LifetimeExtendedTemporaryDecl::getOrCreateValue(bool MayCreate) const {
-  assert(getStorageDuration() == SD_Static &&
-         "don't need to cache the computed value for this temporary");
-  if (MayCreate && !Value)
-    Value = (new (getASTContext()) APValue);
-  assert(Value && "may not be null");
-  return Value;
-}
-
 void UsingShadowDecl::anchor() {}
 
 UsingShadowDecl::UsingShadowDecl(Kind K, ASTContext &C, DeclContext *DC,

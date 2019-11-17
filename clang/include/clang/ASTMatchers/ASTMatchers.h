@@ -6621,8 +6621,8 @@ AST_MATCHER_P(Expr, ignoringElidableConstructorCall,
     if (CtorExpr->isElidable()) {
       if (const auto *MaterializeTemp =
               dyn_cast<MaterializeTemporaryExpr>(CtorExpr->getArg(0))) {
-        return InnerMatcher.matches(*MaterializeTemp->getSubExpr(), Finder,
-                                    Builder);
+        return InnerMatcher.matches(*MaterializeTemp->GetTemporaryExpr(),
+                                    Finder, Builder);
       }
     }
   }

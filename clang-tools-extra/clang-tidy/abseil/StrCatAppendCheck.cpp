@@ -24,7 +24,7 @@ AST_MATCHER_P(Stmt, IgnoringTemporaries, ast_matchers::internal::Matcher<Stmt>,
   const Stmt *E = &Node;
   while (true) {
     if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
-      E = MTE->getSubExpr();
+      E = MTE->getTemporary();
     if (const auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
       E = BTE->getSubExpr();
     if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E))

@@ -4338,7 +4338,7 @@ recurse:
   }
 
   case Expr::MaterializeTemporaryExprClass: {
-    mangleExpression(cast<MaterializeTemporaryExpr>(E)->getSubExpr());
+    mangleExpression(cast<MaterializeTemporaryExpr>(E)->GetTemporaryExpr());
     break;
   }
 
