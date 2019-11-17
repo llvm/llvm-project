@@ -28,7 +28,7 @@ cond.true:
   br label %cond.end
 
 cond.end:
-  %cond = phi double [ %div, %cond.true ], [ 0.0, %entry ]
+  %cond = phi nsz double [ %div, %cond.true ], [ 0.0, %entry ]
   ret double %cond
 }
 
@@ -50,7 +50,7 @@ cond.else.i:                                      ; preds = %entry
   br label %test_sqrt.exit
 
 test_sqrt.exit:                                   ; preds = %cond.else.i, %entry
-  %cond.i = phi float [ %0, %cond.else.i ], [ 0x7FF8000000000000, %entry ]
+  %cond.i = phi afn float [ %0, %cond.else.i ], [ 0x7FF8000000000000, %entry ]
   store float %cond.i, float addrspace(1)* %out, align 4
   ret void
 }
@@ -73,7 +73,7 @@ cond.else.i:                                      ; preds = %entry
   br label %test_fabs.exit
 
 test_fabs.exit:                                   ; preds = %cond.else.i, %entry
-  %cond.i = phi float [ %0, %cond.else.i ], [ 0x7FF8000000000000, %entry ]
+  %cond.i = phi reassoc float [ %0, %cond.else.i ], [ 0x7FF8000000000000, %entry ]
   store float %cond.i, float addrspace(1)* %out, align 4
   ret void
 }
@@ -96,7 +96,7 @@ cond.else.i:                                      ; preds = %entry
   br label %test_fma.exit
 
 test_fma.exit:                                   ; preds = %cond.else.i, %entry
-  %cond.i = phi float [ %0, %cond.else.i ], [ 0x7FF8000000000000, %entry ]
+  %cond.i = phi nsz reassoc float [ %0, %cond.else.i ], [ 0x7FF8000000000000, %entry ]
   store float %cond.i, float addrspace(1)* %out, align 4
   ret void
 }
@@ -119,7 +119,7 @@ cond.else.i:                                      ; preds = %entry
   br label %test_fmuladd.exit
 
 test_fmuladd.exit:                                   ; preds = %cond.else.i, %entry
-  %cond.i = phi float [ %0, %cond.else.i ], [ 0x7FF8000000000000, %entry ]
+  %cond.i = phi ninf float [ %0, %cond.else.i ], [ 0x7FF8000000000000, %entry ]
   store float %cond.i, float addrspace(1)* %out, align 4
   ret void
 }
@@ -165,7 +165,7 @@ cond.else.i:                                      ; preds = %entry
   br label %test_maxnum.exit
 
 test_maxnum.exit:                                   ; preds = %cond.else.i, %entry
-  %cond.i = phi float [ %0, %cond.else.i ], [ 0x7FF8000000000000, %entry ]
+  %cond.i = phi ninf nsz float [ %0, %cond.else.i ], [ 0x7FF8000000000000, %entry ]
   store float %cond.i, float addrspace(1)* %out, align 4
   ret void
 }
@@ -188,7 +188,7 @@ cond.else.i:                                      ; preds = %entry
   br label %test_minimum.exit
 
 test_minimum.exit:                                   ; preds = %cond.else.i, %entry
-  %cond.i = phi float [ %0, %cond.else.i ], [ 0x7FF8000000000000, %entry ]
+  %cond.i = phi reassoc float [ %0, %cond.else.i ], [ 0x7FF8000000000000, %entry ]
   store float %cond.i, float addrspace(1)* %out, align 4
   ret void
 }
@@ -211,7 +211,7 @@ cond.else.i:                                      ; preds = %entry
   br label %test_maximum.exit
 
 test_maximum.exit:                                   ; preds = %cond.else.i, %entry
-  %cond.i = phi float [ %0, %cond.else.i ], [ 0x7FF8000000000000, %entry ]
+  %cond.i = phi nsz float [ %0, %cond.else.i ], [ 0x7FF8000000000000, %entry ]
   store float %cond.i, float addrspace(1)* %out, align 4
   ret void
 }
