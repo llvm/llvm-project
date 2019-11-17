@@ -2238,7 +2238,7 @@ void StmtPrinter::VisitFunctionParmPackExpr(FunctionParmPackExpr *E) {
 }
 
 void StmtPrinter::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *Node){
-  PrintExpr(Node->GetTemporaryExpr());
+  PrintExpr(Node->getSubExpr());
 }
 
 void StmtPrinter::VisitCXXFoldExpr(CXXFoldExpr *E) {
