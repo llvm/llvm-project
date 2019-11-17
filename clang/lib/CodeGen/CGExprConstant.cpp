@@ -1173,7 +1173,7 @@ public:
 
   llvm::Constant *VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E,
                                                 QualType T) {
-    return Visit(E->getSubExpr(), T);
+    return Visit(E->GetTemporaryExpr(), T);
   }
 
   llvm::Constant *EmitArrayInitialization(InitListExpr *ILE, QualType T) {
@@ -2154,8 +2154,8 @@ ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
   assert(E->getStorageDuration() == SD_Static);
   SmallVector<const Expr *, 2> CommaLHSs;
   SmallVector<SubobjectAdjustment, 2> Adjustments;
-  const Expr *Inner =
-      E->getSubExpr()->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
+  const Expr *Inner = E->GetTemporaryExpr()
+      ->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
   return CGM.GetAddrOfGlobalTemporary(E, Inner);
 }
 

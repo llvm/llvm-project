@@ -1900,11 +1900,10 @@ void ASTStmtReader::VisitFunctionParmPackExpr(FunctionParmPackExpr *E) {
 
 void ASTStmtReader::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E) {
   VisitExpr(E);
-  bool HasMaterialzedDecl = Record.readInt();
-  if (HasMaterialzedDecl)
-    E->State = cast<LifetimeExtendedTemporaryDecl>(Record.readDecl());
-  else
-    E->State = Record.readSubExpr();
+  E->State = Record.readSubExpr();
+  auto *VD = ReadDeclAs<ValueDecl>();
+  unsigned ManglingNumber = Record.readInt();
+  E->setExtendingDecl(VD, ManglingNumber);
 }
 
 void ASTStmtReader::VisitCXXFoldExpr(CXXFoldExpr *E) {

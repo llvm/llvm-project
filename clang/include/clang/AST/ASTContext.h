@@ -272,6 +272,12 @@ private:
   /// Mapping from __block VarDecls to BlockVarCopyInit.
   llvm::DenseMap<const VarDecl *, BlockVarCopyInit> BlockVarCopyInits;
 
+  /// Mapping from materialized temporaries with static storage duration
+  /// that appear in constant initializers to their evaluated values.  These are
+  /// allocated in a std::map because their address must be stable.
+  llvm::DenseMap<const MaterializeTemporaryExpr *, APValue *>
+    MaterializedTemporaryValues;
+
   /// Used to cleanups APValues stored in the AST.
   mutable llvm::SmallVector<APValue *, 0> APValueCleanups;
 
@@ -2833,6 +2839,11 @@ public:
   /// Used by ParmVarDecl to retrieve on the side the
   /// index of the parameter when it exceeds the size of the normal bitfield.
   unsigned getParameterIndex(const ParmVarDecl *D) const;
+
+  /// Get the storage for the constant value of a materialized temporary
+  /// of static storage duration.
+  APValue *getMaterializedTemporaryValue(const MaterializeTemporaryExpr *E,
+                                         bool MayCreate);
 
   /// Return a string representing the human readable name for the specified
   /// function declaration or file name. Used by SourceLocExpr and

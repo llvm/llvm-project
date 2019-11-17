@@ -1428,7 +1428,7 @@ void CFGBuilder::findConstructionContexts(
     if (Layer->getItem().getKind() ==
         ConstructionContextItem::ElidableConstructorKind) {
       auto *MTE = cast<MaterializeTemporaryExpr>(Child);
-      findConstructionContexts(withExtraLayer(MTE), MTE->getSubExpr());
+      findConstructionContexts(withExtraLayer(MTE), MTE->GetTemporaryExpr());
     }
     break;
   }
@@ -1694,7 +1694,7 @@ static QualType getReferenceInitTemporaryType(const Expr *Init,
     // Skip through the temporary-materialization expression.
     if (const MaterializeTemporaryExpr *MTE
           = dyn_cast<MaterializeTemporaryExpr>(Init)) {
-      Init = MTE->getSubExpr();
+      Init = MTE->GetTemporaryExpr();
       if (FoundMTE)
         *FoundMTE = true;
       continue;
@@ -3462,7 +3462,7 @@ CFGBuilder::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *MTE,
                                           AddStmtChoice asc) {
   findConstructionContexts(
       ConstructionContextLayer::create(cfg->getBumpVectorContext(), MTE),
-      MTE->getSubExpr());
+      MTE->getTemporary());
 
   return VisitStmt(MTE, asc);
 }
@@ -4649,7 +4649,7 @@ tryAgain:
       // Find the expression whose lifetime needs to be extended.
       E = const_cast<Expr *>(
           cast<MaterializeTemporaryExpr>(E)
-              ->getSubExpr()
+              ->GetTemporaryExpr()
               ->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments));
       // Visit the skipped comma operator left-hand sides for other temporaries.
       for (const Expr *CommaLHS : CommaLHSs) {
