@@ -6,9 +6,9 @@ body:             |
   bb.0:
 
     ;CHECK-LABEL: bb.0
-    ;CHECK-NEXT: %bb0_12265__1:_(p0) = COPY $d0
-    ;CHECK-NEXT: %bb0_18308__1:_(<4 x s32>) = COPY $q0
-    ;CHECK-NEXT: G_STORE %bb0_18308__1(<4 x s32>), %bb0_12265__1(p0) :: (store 16)
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:_(p0) = COPY $d0
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:_(<4 x s32>) = COPY $q0
+    ;CHECK-NEXT: G_STORE %bb0_{{[0-9]+}}__1(<4 x s32>), %bb0_{{[0-9]+}}__1(p0) :: (store 16)
 
     liveins: $q0, $d0
     %1:fpr(p0) = COPY $d0
@@ -26,19 +26,19 @@ body:             |
   bb.0:
 
     ;CHECK-LABEL: bb.0
-    ;CHECK-NEXT: %bb0_11909__1:gpr32 = LDRWui
-    ;CHECK-NEXT: %bb0_17251__1:gpr32 = MOVi32imm 1
-    ;CHECK-NEXT: %bb0_11909__2:gpr32 = LDRWui
-    ;CHECK-NEXT: %bb0_44296__1:gpr32 = MOVi32imm 2
-    ;CHECK-NEXT: %bb0_11909__3:gpr32 = LDRWui
-    ;CHECK-NEXT: %bb0_10150__1:gpr32 = MOVi32imm 3
-    ;CHECK-NEXT: %bb0_18184__1:gpr32 = nsw ADDWrr
-    ;CHECK-NEXT: %bb0_11909__4:gpr32 = LDRWui
-    ;CHECK-NEXT: %bb0_18184__2:gpr32 = nsw ADDWrr
-    ;CHECK-NEXT: %bb0_56622__1:gpr32 = MOVi32imm 4
-    ;CHECK-NEXT: %bb0_18184__3:gpr32 = nsw ADDWrr
-    ;CHECK-NEXT: %bb0_11909__5:gpr32 = LDRWui
-    ;CHECK-NEXT: %bb0_74788__1:gpr32 = MOVi32imm 5
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = LDRWui
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = MOVi32imm 1
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__2:gpr32 = LDRWui
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = MOVi32imm 2
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__3:gpr32 = LDRWui
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = MOVi32imm 3
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = nsw ADDWrr
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__4:gpr32 = LDRWui
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__2:gpr32 = nsw ADDWrr
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = MOVi32imm 4
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__3:gpr32 = nsw ADDWrr
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__5:gpr32 = LDRWui
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = MOVi32imm 5
 
     %0:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
     %1:gpr32 = MOVi32imm 1
@@ -74,11 +74,11 @@ body:             |
     liveins: $x0, $x1, $d0, $d1
 
     ;CHECK-LABEL: bb.0:
-    ;CHECK-NEXT: %bb0_11909__1:gpr32 = LDRWui %stack.0, 0
-    ;CHECK-NEXT: %bb0_31408__1:gpr32 = COPY %bb0_11909__1
-    ;CHECK-NEXT: %bb0_14282__1:gpr32 = COPY %bb0_31408__1
-    ;CHECK-NEXT: %bb0_14282__2:gpr32 = COPY %bb0_14282__1
-    ;CHECK-NEXT: $w0 = COPY %bb0_14282__2
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = LDRWui %stack.0, 0
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = COPY %bb0_{{[0-9]+}}__1
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = COPY %bb0_{{[0-9]+}}__1
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__2:gpr32 = COPY %bb0_{{[0-9]+}}__1
+    ;CHECK-NEXT: $w0 = COPY %bb0_{{[0-9]+}}__2
 
     %0:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
     %1:gpr32 = COPY %0
