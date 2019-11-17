@@ -16,7 +16,7 @@ define double @fdiv_test(double %a, double %b) {
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    [[CMP:%.*]] = fcmp ogt double [[A:%.*]], 0.000000e+00
 ; ALL-NEXT:    [[DIV:%.*]] = fdiv double [[B:%.*]], [[A]]
-; ALL-NEXT:    [[COND:%.*]] = select i1 [[CMP]], double [[DIV]], double 0.000000e+00
+; ALL-NEXT:    [[COND:%.*]] = select nsz i1 [[CMP]], double [[DIV]], double 0.000000e+00
 ; ALL-NEXT:    ret double [[COND]]
 ;
 entry:
@@ -37,7 +37,7 @@ define void @sqrt_test(float addrspace(1)* noalias nocapture %out, float %a) nou
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
 ; ALL-NEXT:    [[TMP0:%.*]] = tail call float @llvm.sqrt.f32(float [[A]]) #2
-; ALL-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; ALL-NEXT:    [[COND_I:%.*]] = select afn i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
 ; ALL-NEXT:    store float [[COND_I]], float addrspace(1)* [[OUT:%.*]], align 4
 ; ALL-NEXT:    ret void
 ;
@@ -60,7 +60,7 @@ define void @fabs_test(float addrspace(1)* noalias nocapture %out, float %a) nou
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
 ; ALL-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[A]]) #2
-; ALL-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; ALL-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
 ; ALL-NEXT:    store float [[COND_I]], float addrspace(1)* [[OUT:%.*]], align 4
 ; ALL-NEXT:    ret void
 ;
@@ -83,7 +83,7 @@ define void @fma_test(float addrspace(1)* noalias nocapture %out, float %a, floa
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
 ; ALL-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fma.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #2
-; ALL-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; ALL-NEXT:    [[COND_I:%.*]] = select reassoc nsz i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
 ; ALL-NEXT:    store float [[COND_I]], float addrspace(1)* [[OUT:%.*]], align 4
 ; ALL-NEXT:    ret void
 ;
@@ -106,7 +106,7 @@ define void @fmuladd_test(float addrspace(1)* noalias nocapture %out, float %a, 
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
 ; ALL-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fmuladd.f32(float [[A]], float [[B:%.*]], float [[C:%.*]]) #2
-; ALL-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; ALL-NEXT:    [[COND_I:%.*]] = select ninf i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
 ; ALL-NEXT:    store float [[COND_I]], float addrspace(1)* [[OUT:%.*]], align 4
 ; ALL-NEXT:    ret void
 ;
@@ -152,7 +152,7 @@ define void @maxnum_test(float addrspace(1)* noalias nocapture %out, float %a, f
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
 ; ALL-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maxnum.f32(float [[A]], float [[B:%.*]]) #2
-; ALL-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; ALL-NEXT:    [[COND_I:%.*]] = select ninf nsz i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
 ; ALL-NEXT:    store float [[COND_I]], float addrspace(1)* [[OUT:%.*]], align 4
 ; ALL-NEXT:    ret void
 ;
@@ -175,7 +175,7 @@ define void @minimum_test(float addrspace(1)* noalias nocapture %out, float %a, 
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
 ; ALL-NEXT:    [[TMP0:%.*]] = tail call float @llvm.minimum.f32(float [[A]], float [[B:%.*]]) #2
-; ALL-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; ALL-NEXT:    [[COND_I:%.*]] = select reassoc i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
 ; ALL-NEXT:    store float [[COND_I]], float addrspace(1)* [[OUT:%.*]], align 4
 ; ALL-NEXT:    ret void
 ;
@@ -198,7 +198,7 @@ define void @maximum_test(float addrspace(1)* noalias nocapture %out, float %a, 
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
 ; ALL-NEXT:    [[TMP0:%.*]] = tail call float @llvm.maximum.f32(float [[A]], float [[B:%.*]]) #2
-; ALL-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
+; ALL-NEXT:    [[COND_I:%.*]] = select nsz i1 [[CMP_I]], float 0x7FF8000000000000, float [[TMP0]]
 ; ALL-NEXT:    store float [[COND_I]], float addrspace(1)* [[OUT:%.*]], align 4
 ; ALL-NEXT:    ret void
 ;
