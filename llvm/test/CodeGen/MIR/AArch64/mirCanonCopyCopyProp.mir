@@ -39,8 +39,8 @@ body: |
 
     %42:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
 
-    ;CHECK: %bb0_11909__1:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
-    ;CHECK-NEXT: $w0 = COPY %bb0_11909__1
+    ;CHECK: %bb0_{{[0-9]+}}__1:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
+    ;CHECK-NEXT: $w0 = COPY %bb0_
     ;CHECK-NEXT: RET_ReallyLR implicit $w0
 
     %vreg1234:gpr32 = COPY %42

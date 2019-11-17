@@ -907,7 +907,7 @@ static const Expr *getExprAsWritten(const Expr *E) {
     E = FE->getSubExpr();
 
   if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
-    E = MTE->getSubExpr();
+    E = MTE->GetTemporaryExpr();
 
   while (const auto *Binder = dyn_cast<CXXBindTemporaryExpr>(E))
     E = Binder->getSubExpr();
