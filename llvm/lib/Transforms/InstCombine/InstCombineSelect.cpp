@@ -1734,6 +1734,8 @@ static Instruction *foldAddSubSelect(SelectInst &SI,
 
 /// Turn X + Y overflows ? -1 : X + Y -> uadd_sat X, Y
 /// And X - Y overflows ? 0 : X - Y -> usub_sat X, Y
+/// Along with a number of patterns similar to:
+/// X + Y overflows ? (X < 0 ? INTMIN : INTMAX) : X + Y --> sadd_sat X, Y
 static Instruction *
 foldOverflowingAddSubSelect(SelectInst &SI, InstCombiner::BuilderTy &Builder) {
   Value *CondVal = SI.getCondition();
@@ -1745,6 +1747,50 @@ foldOverflowingAddSubSelect(SelectInst &SI, InstCombiner::BuilderTy &Builder) {
       !match(FalseVal, m_ExtractValue<0>(m_Specific(II))))
     return nullptr;
 
+  Value *X = II->getLHS();
+  Value *Y = II->getRHS();
+
+  auto IsSignedSaturateLimit = [&](Value *Limit) {
+    Type *Ty = Limit->getType();
+
+    ICmpInst::Predicate Pred;
+    Value *TrueVal, *FalseVal, *Op;
+    const APInt *C;
+    if (!match(Limit, m_Select(m_ICmp(Pred, m_Value(Op), m_APInt(C)),
+                               m_Value(TrueVal), m_Value(FalseVal))))
+      return false;
+
+    auto IsZeroOrOne = [](const APInt &C) {
+      return C.isNullValue() || C.isOneValue();
+    };
+    auto IsMinMax = [&](Value *Min, Value *Max) {
+      APInt MinVal = APInt::getSignedMinValue(Ty->getScalarSizeInBits());
+      APInt MaxVal = APInt::getSignedMaxValue(Ty->getScalarSizeInBits());
+      return match(Min, m_SpecificInt(MinVal)) &&
+             match(Max, m_SpecificInt(MaxVal));
+    };
+
+    if (Op != X && Op != Y)
+      return false;
+
+    // X + Y overflows ? (X <s 0 ? INTMIN : INTMAX) : X + Y --> sadd_sat X, Y
+    // X + Y overflows ? (X <s 1 ? INTMIN : INTMAX) : X + Y --> sadd_sat X, Y
+    // X + Y overflows ? (Y <s 0 ? INTMIN : INTMAX) : X + Y --> sadd_sat X, Y
+    // X + Y overflows ? (Y <s 1 ? INTMIN : INTMAX) : X + Y --> sadd_sat X, Y
+    if (Pred == ICmpInst::ICMP_SLT && IsZeroOrOne(*C) &&
+        IsMinMax(TrueVal, FalseVal))
+      return true;
+    // X + Y overflows ? (X >s 0 ? INTMAX : INTMIN) : X + Y --> sadd_sat X, Y
+    // X + Y overflows ? (X >s -1 ? INTMAX : INTMIN) : X + Y --> sadd_sat X, Y
+    // X + Y overflows ? (Y >s 0 ? INTMAX : INTMIN) : X + Y --> sadd_sat X, Y
+    // X + Y overflows ? (Y >s -1 ? INTMAX : INTMIN) : X + Y --> sadd_sat X, Y
+    if (Pred == ICmpInst::ICMP_SGT && IsZeroOrOne(*C + 1) &&
+        IsMinMax(FalseVal, TrueVal))
+      return true;
+
+    return false;
+  };
+
   Intrinsic::ID NewIntrinsicID;
   if (II->getIntrinsicID() == Intrinsic::uadd_with_overflow &&
       match(TrueVal, m_AllOnes()))
@@ -1754,12 +1800,23 @@ foldOverflowingAddSubSelect(SelectInst &SI, InstCombiner::BuilderTy &Builder) {
            match(TrueVal, m_Zero()))
     // X - Y overflows ? 0 : X - Y -> usub_sat X, Y
     NewIntrinsicID = Intrinsic::usub_sat;
+  else if (II->getIntrinsicID() == Intrinsic::sadd_with_overflow &&
+           IsSignedSaturateLimit(TrueVal))
+    // X + Y overflows ? (X <s 0 ? INTMIN : INTMAX) : X + Y --> sadd_sat X, Y
+    // X + Y overflows ? (X <s 1 ? INTMIN : INTMAX) : X + Y --> sadd_sat X, Y
+    // X + Y overflows ? (X >s 0 ? INTMAX : INTMIN) : X + Y --> sadd_sat X, Y
+    // X + Y overflows ? (X >s -1 ? INTMAX : INTMIN) : X + Y --> sadd_sat X, Y
+    // X + Y overflows ? (Y <s 0 ? INTMIN : INTMAX) : X + Y --> sadd_sat X, Y
+    // X + Y overflows ? (Y <s 1 ? INTMIN : INTMAX) : X + Y --> sadd_sat X, Y
+    // X + Y overflows ? (Y >s 0 ? INTMAX : INTMIN) : X + Y --> sadd_sat X, Y
+    // X + Y overflows ? (Y >s -1 ? INTMAX : INTMIN) : X + Y --> sadd_sat X, Y
+    NewIntrinsicID = Intrinsic::sadd_sat;
   else
     return nullptr;
 
   Function *F =
       Intrinsic::getDeclaration(SI.getModule(), NewIntrinsicID, SI.getType());
-  return CallInst::Create(F, {II->getArgOperand(0), II->getArgOperand(1)});
+  return CallInst::Create(F, {X, Y});
 }
 
 Instruction *InstCombiner::foldSelectExtConst(SelectInst &Sel) {

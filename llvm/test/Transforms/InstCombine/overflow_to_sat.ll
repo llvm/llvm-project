@@ -47,12 +47,7 @@ define i8 @sadd_x_lt_min(i8 %x, i8 %y) {
 
 define i8 @sadd_x_lt_max(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sadd_x_lt_max(
-; CHECK-NEXT:    [[AO:%.*]] = tail call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[AO]], 1
-; CHECK-NEXT:    [[A:%.*]] = extractvalue { i8, i1 } [[AO]], 0
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X]], 0
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 -128, i8 127
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[O]], i8 [[S]], i8 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %ao = tail call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %x, i8 %y)
@@ -85,12 +80,7 @@ define i8 @sadd_x_le_min(i8 %x, i8 %y) {
 
 define i8 @sadd_x_le_max(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sadd_x_le_max(
-; CHECK-NEXT:    [[AO:%.*]] = tail call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[AO]], 1
-; CHECK-NEXT:    [[A:%.*]] = extractvalue { i8, i1 } [[AO]], 0
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X]], 1
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 -128, i8 127
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[O]], i8 [[S]], i8 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %ao = tail call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %x, i8 %y)
@@ -104,12 +94,7 @@ define i8 @sadd_x_le_max(i8 %x, i8 %y) {
 
 define i8 @sadd_x_gt_min(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sadd_x_gt_min(
-; CHECK-NEXT:    [[AO:%.*]] = tail call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[AO]], 1
-; CHECK-NEXT:    [[A:%.*]] = extractvalue { i8, i1 } [[AO]], 0
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X]], 0
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 127, i8 -128
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[O]], i8 [[S]], i8 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %ao = tail call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %x, i8 %y)
@@ -142,12 +127,7 @@ define i8 @sadd_x_gt_max(i8 %x, i8 %y) {
 
 define i8 @sadd_x_ge_min(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sadd_x_ge_min(
-; CHECK-NEXT:    [[AO:%.*]] = tail call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[AO]], 1
-; CHECK-NEXT:    [[A:%.*]] = extractvalue { i8, i1 } [[AO]], 0
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X]], -1
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 127, i8 -128
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[O]], i8 [[S]], i8 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %ao = tail call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %x, i8 %y)
@@ -200,12 +180,7 @@ define i8 @sadd_y_lt_min(i8 %x, i8 %y) {
 
 define i8 @sadd_y_lt_max(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sadd_y_lt_max(
-; CHECK-NEXT:    [[AO:%.*]] = tail call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[AO]], 1
-; CHECK-NEXT:    [[A:%.*]] = extractvalue { i8, i1 } [[AO]], 0
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[Y]], 0
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 -128, i8 127
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[O]], i8 [[S]], i8 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %ao = tail call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %x, i8 %y)
@@ -238,12 +213,7 @@ define i8 @sadd_y_le_min(i8 %x, i8 %y) {
 
 define i8 @sadd_y_le_max(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sadd_y_le_max(
-; CHECK-NEXT:    [[AO:%.*]] = tail call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[AO]], 1
-; CHECK-NEXT:    [[A:%.*]] = extractvalue { i8, i1 } [[AO]], 0
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[Y]], 1
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 -128, i8 127
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[O]], i8 [[S]], i8 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %ao = tail call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %x, i8 %y)
@@ -257,12 +227,7 @@ define i8 @sadd_y_le_max(i8 %x, i8 %y) {
 
 define i8 @sadd_y_gt_min(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sadd_y_gt_min(
-; CHECK-NEXT:    [[AO:%.*]] = tail call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[AO]], 1
-; CHECK-NEXT:    [[A:%.*]] = extractvalue { i8, i1 } [[AO]], 0
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[Y]], 0
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 127, i8 -128
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[O]], i8 [[S]], i8 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %ao = tail call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %x, i8 %y)
@@ -295,12 +260,7 @@ define i8 @sadd_y_gt_max(i8 %x, i8 %y) {
 
 define i8 @sadd_y_ge_min(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sadd_y_ge_min(
-; CHECK-NEXT:    [[AO:%.*]] = tail call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i8, i1 } [[AO]], 1
-; CHECK-NEXT:    [[A:%.*]] = extractvalue { i8, i1 } [[AO]], 0
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[Y]], -1
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 127, i8 -128
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[O]], i8 [[S]], i8 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %ao = tail call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %x, i8 %y)
@@ -718,12 +678,7 @@ define i8 @ssub_y_ge_max(i8 %x, i8 %y) {
 
 define i32 @sadd_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sadd_i32(
-; CHECK-NEXT:    [[AO:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i32, i1 } [[AO]], 1
-; CHECK-NEXT:    [[A:%.*]] = extractvalue { i32, i1 } [[AO]], 0
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 -2147483648, i32 2147483647
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[O]], i32 [[S]], i32 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ao = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %x, i32 %y)
