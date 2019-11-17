@@ -275,6 +275,11 @@ namespace llvm {
   /// MachineCSE - This pass performs global CSE on machine instructions.
   extern char &MachineCSEID;
 
+  /// MIRCanonicalizer - This pass canonicalizes MIR by renaming vregs
+  /// according to the semantics of the instruction as well as hoists
+  /// code.
+  extern char &MIRCanonicalizerID;
+
   /// ImplicitNullChecks - This pass folds null pointer checks into nearby
   /// memory operations.
   extern char &ImplicitNullChecksID;
