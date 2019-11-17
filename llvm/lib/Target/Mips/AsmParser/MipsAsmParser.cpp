@@ -1316,8 +1316,6 @@ public:
   }
 
   // Allow relocation operators.
-  // FIXME: This predicate and others need to look through binary expressions
-  //        and determine whether a Value is a constant or not.
   template <unsigned Bits, unsigned ShiftAmount = 0>
   bool isMemWithSimmOffset() const {
     if (!isMem())
