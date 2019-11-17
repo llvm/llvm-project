@@ -988,6 +988,19 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
                                               Constant *C2) {
   assert(Instruction::isBinaryOp(Opcode) && "Non-binary instruction detected");
 
+  // Simplify BinOps with their identity values first. They are no-ops and we
+  // can always return the other value, including undef or poison values.
+  // FIXME: remove unnecessary duplicated identity patterns below.
+  // FIXME: Use AllowRHSConstant with getBinOpIdentity to handle additional ops,
+  //        like X << 0 = X.
+  Constant *Identity = ConstantExpr::getBinOpIdentity(Opcode, C1->getType());
+  if (Identity) {
+    if (C1 == Identity)
+      return C2;
+    if (C2 == Identity)
+      return C1;
+  }
+
   // Handle scalar UndefValue. Vectors are always evaluated per element.
   bool HasScalarUndef = !C1->getType()->isVectorTy() &&
                         (isa<UndefValue>(C1) || isa<UndefValue>(C2));
