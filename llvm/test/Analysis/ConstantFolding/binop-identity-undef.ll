@@ -3,7 +3,7 @@
 
 define i32 @and1() {
 ; CHECK-LABEL: @and1(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 undef
 ;
   %r = and i32 undef, -1
   ret i32 %r
@@ -11,7 +11,7 @@ define i32 @and1() {
 
 define i32 @and2() {
 ; CHECK-LABEL: @and2(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 undef
 ;
   %r = and i32 -1, undef
   ret i32 %r
@@ -27,7 +27,7 @@ define i32 @and3_no_identity() {
 
 define i32 @or1() {
 ; CHECK-LABEL: @or1(
-; CHECK-NEXT:    ret i32 -1
+; CHECK-NEXT:    ret i32 undef
 ;
   %r = or i32 0, undef
   ret i32 %r
@@ -35,7 +35,7 @@ define i32 @or1() {
 
 define i32 @or2() {
 ; CHECK-LABEL: @or2(
-; CHECK-NEXT:    ret i32 -1
+; CHECK-NEXT:    ret i32 undef
 ;
   %r = or i32 undef, 0
   ret i32 %r
