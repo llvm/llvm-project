@@ -1034,13 +1034,11 @@ entry:
   ret <4 x i16> %and
 }
 
-; FIXME: We should be able to move the AND across the shuffle, as -1 (AND identity value) is used for undef lanes.
+; We can move the AND across the shuffle, as -1 (AND identity value) is used for undef lanes.
 define <4 x i16> @and_constant_mask_undef_3(<4 x i16> %add) {
 ; CHECK-LABEL: @and_constant_mask_undef_3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[ADD:%.*]], <4 x i16> undef, <4 x i32> <i32 0, i32 1, i32 1, i32 undef>
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i16> [[SHUFFLE]], <i16 0, i16 0, i16 0, i16 -1>
-; CHECK-NEXT:    ret <4 x i16> [[AND]]
+; CHECK-NEXT:    ret <4 x i16> <i16 0, i16 0, i16 0, i16 undef>
 ;
 entry:
   %shuffle = shufflevector <4 x i16> %add, <4 x i16> undef, <4 x i32> <i32 0, i32 1, i32 1, i32 undef>
@@ -1048,12 +1046,12 @@ entry:
   ret <4 x i16> %and
 }
 
-; FIXME: We should be able to move the AND across the shuffle, as -1 (AND identity value) is used for undef lanes.
+; We can move the AND across the shuffle, as -1 (AND identity value) is used for undef lanes.
 define <4 x i16> @and_constant_mask_undef_4(<4 x i16> %add) {
 ; CHECK-LABEL: @and_constant_mask_undef_4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[ADD:%.*]], <4 x i16> undef, <4 x i32> <i32 0, i32 1, i32 1, i32 undef>
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i16> [[SHUFFLE]], <i16 9, i16 20, i16 20, i16 -1>
+; CHECK-NEXT:    [[TMP0:%.*]] = and <4 x i16> [[ADD:%.*]], <i16 9, i16 20, i16 undef, i16 undef>
+; CHECK-NEXT:    [[AND:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> undef, <4 x i32> <i32 0, i32 1, i32 1, i32 undef>
 ; CHECK-NEXT:    ret <4 x i16> [[AND]]
 ;
 entry:
@@ -1105,13 +1103,11 @@ entry:
   ret <4 x i16> %or
 }
 
-; FIXME: We should be able to move the OR across the shuffle, as 0 (OR identity value) is used for undef lanes.
+; We can move the OR across the shuffle, as 0 (OR identity value) is used for undef lanes.
 define <4 x i16> @or_constant_mask_undef_3(<4 x i16> %in) {
 ; CHECK-LABEL: @or_constant_mask_undef_3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[IN:%.*]], <4 x i16> undef, <4 x i32> <i32 undef, i32 1, i32 1, i32 undef>
-; CHECK-NEXT:    [[OR:%.*]] = or <4 x i16> [[SHUFFLE]], <i16 0, i16 -1, i16 -1, i16 0>
-; CHECK-NEXT:    ret <4 x i16> [[OR]]
+; CHECK-NEXT:    ret <4 x i16> <i16 undef, i16 -1, i16 -1, i16 undef>
 ;
 entry:
   %shuffle = shufflevector <4 x i16> %in, <4 x i16> undef, <4 x i32> <i32 undef, i32 1, i32 1, i32 undef>
@@ -1119,12 +1115,12 @@ entry:
   ret <4 x i16> %or
 }
 
-; FIXME: We should be able to move the OR across the shuffle, as 0 (OR identity value) is used for undef lanes.
+; We can move the OR across the shuffle, as 0 (OR identity value) is used for undef lanes.
 define <4 x i16> @or_constant_mask_undef_4(<4 x i16> %in) {
 ; CHECK-LABEL: @or_constant_mask_undef_4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[IN:%.*]], <4 x i16> undef, <4 x i32> <i32 undef, i32 1, i32 1, i32 undef>
-; CHECK-NEXT:    [[OR:%.*]] = or <4 x i16> [[SHUFFLE]], <i16 0, i16 99, i16 99, i16 0>
+; CHECK-NEXT:    [[TMP0:%.*]] = or <4 x i16> [[IN:%.*]], <i16 undef, i16 99, i16 undef, i16 undef>
+; CHECK-NEXT:    [[OR:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> undef, <4 x i32> <i32 undef, i32 1, i32 1, i32 undef>
 ; CHECK-NEXT:    ret <4 x i16> [[OR]]
 ;
 entry:
