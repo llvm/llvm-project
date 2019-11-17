@@ -427,7 +427,6 @@ template <class _T1, class _T2> struct _LIBCPP_TEMPLATE_VIS pair;
 template <class _Tp> class _LIBCPP_TEMPLATE_VIS reference_wrapper;
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS hash;
 
-
 template <class _Tp, _Tp __v>
 struct _LIBCPP_TEMPLATE_VIS integral_constant
 {
@@ -570,6 +569,7 @@ using _IsNotSame = _BoolConstant<
     !_VSTD::is_same<_Tp, _Up>::value
 #endif
 >;
+
 // addressof
 #ifndef _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
 

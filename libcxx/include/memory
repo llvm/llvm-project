@@ -1098,40 +1098,51 @@ struct __const_void_pointer<_Ptr, _Alloc, false>
 #endif
 };
 
+
+template <bool _UsePointerTraits> struct __to_address_helper;
+
+template <> struct __to_address_helper<true> {
+    template <class _Pointer>
+    using __return_type = decltype(pointer_traits<_Pointer>::to_address(std::declval<const _Pointer&>()));
+
+    template <class _Pointer>
+    _LIBCPP_CONSTEXPR
+    static __return_type<_Pointer>
+    __do_it(const _Pointer &__p) _NOEXCEPT { return pointer_traits<_Pointer>::to_address(__p); }
+};
+
+template <class _Pointer, bool _Dummy = true>
+using __choose_to_address = __to_address_helper<_IsValidExpansion<__to_address_helper<_Dummy>::template __return_type, _Pointer>::value>;
+
+
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 _Tp*
-__to_raw_pointer(_Tp* __p) _NOEXCEPT
+__to_address(_Tp* __p) _NOEXCEPT
 {
+    static_assert(!is_function<_Tp>::value, "_Tp is a function type");
     return __p;
 }
 
-#if _LIBCPP_STD_VER <= 17
 template <class _Pointer>
-inline _LIBCPP_INLINE_VISIBILITY
-typename pointer_traits<_Pointer>::element_type*
-__to_raw_pointer(_Pointer __p) _NOEXCEPT
-{
-    return _VSTD::__to_raw_pointer(__p.operator->());
-}
-#else
-template <class _Pointer>
-inline _LIBCPP_INLINE_VISIBILITY
-auto
-__to_raw_pointer(const _Pointer& __p) _NOEXCEPT
--> decltype(pointer_traits<_Pointer>::to_address(__p))
-{
-    return pointer_traits<_Pointer>::to_address(__p);
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+typename __choose_to_address<_Pointer>::template __return_type<_Pointer>
+__to_address(const _Pointer& __p) _NOEXCEPT {
+  return __choose_to_address<_Pointer>::__do_it(__p);
 }
 
-template <class _Pointer, class... _None>
-inline _LIBCPP_INLINE_VISIBILITY
-auto
-__to_raw_pointer(const _Pointer& __p, _None...) _NOEXCEPT
-{
-    return _VSTD::__to_raw_pointer(__p.operator->());
-}
+template <> struct __to_address_helper<false> {
+    template <class _Pointer>
+    using __return_type = typename pointer_traits<_Pointer>::element_type*;
 
+    template <class _Pointer>
+    _LIBCPP_CONSTEXPR
+    static __return_type<_Pointer>
+    __do_it(const _Pointer &__p) _NOEXCEPT { return std::__to_address(__p.operator->()); }
+};
+
+
+#if _LIBCPP_STD_VER > 17
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY constexpr
 _Tp*
@@ -1146,7 +1157,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 auto
 to_address(const _Pointer& __p) _NOEXCEPT
 {
-    return _VSTD::__to_raw_pointer(__p);
+    return _VSTD::__to_address(__p);
 }
 #endif
 
@@ -1638,7 +1649,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
             static_assert(__is_cpp17_move_insertable<allocator_type>::value,
               "The specified type does not meet the requirements of Cpp17MoveInsertible");
             for (; __begin1 != __end1; ++__begin1, (void) ++__begin2)
-              construct(__a, _VSTD::__to_raw_pointer(__begin2),
+              construct(__a, _VSTD::__to_address(__begin2),
 #ifdef _LIBCPP_NO_EXCEPTIONS
                         _VSTD::move(*__begin1)
 #else
@@ -1674,7 +1685,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
         __construct_range_forward(allocator_type& __a, _Iter __begin1, _Iter __end1, _Ptr& __begin2)
         {
             for (; __begin1 != __end1; ++__begin1, (void) ++__begin2)
-                construct(__a, _VSTD::__to_raw_pointer(__begin2), *__begin1);
+                construct(__a, _VSTD::__to_address(__begin2), *__begin1);
         }
 
     template <class _SourceTp, class _DestTp,
@@ -1710,7 +1721,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
               "The specified type does not meet the requirements of Cpp17MoveInsertable");
             while (__end1 != __begin1)
             {
-              construct(__a, _VSTD::__to_raw_pointer(__end2 - 1),
+              construct(__a, _VSTD::__to_address(__end2 - 1),
 #ifdef _LIBCPP_NO_EXCEPTIONS
                         _VSTD::move(*--__end1)
 #else
