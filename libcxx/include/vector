@@ -423,7 +423,7 @@ __vector_base<_Tp, _Allocator>::__destruct_at_end(pointer __new_last) _NOEXCEPT
 {
     pointer __soon_to_be_end = __end_;
     while (__new_last != __soon_to_be_end)
-        __alloc_traits::destroy(__alloc(), _VSTD::__to_raw_pointer(--__soon_to_be_end));
+        __alloc_traits::destroy(__alloc(), _VSTD::__to_address(--__soon_to_be_end));
     __end_ = __new_last;
 }
 
@@ -692,10 +692,10 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     value_type*       data() _NOEXCEPT
-        {return _VSTD::__to_raw_pointer(this->__begin_);}
+        {return _VSTD::__to_address(this->__begin_);}
     _LIBCPP_INLINE_VISIBILITY
     const value_type* data() const _NOEXCEPT
-        {return _VSTD::__to_raw_pointer(this->__begin_);}
+        {return _VSTD::__to_address(this->__begin_);}
 
 #ifdef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
@@ -921,7 +921,7 @@ private:
   _LIBCPP_INLINE_VISIBILITY
   void __construct_one_at_end(_Args&& ...__args) {
     _ConstructTransaction __tx(*this, 1);
-    __alloc_traits::construct(this->__alloc(), _VSTD::__to_raw_pointer(__tx.__pos_),
+    __alloc_traits::construct(this->__alloc(), _VSTD::__to_address(__tx.__pos_),
         _VSTD::forward<_Args>(__args)...);
     ++__tx.__pos_;
   }
@@ -1042,7 +1042,7 @@ vector<_Tp, _Allocator>::__construct_at_end(size_type __n)
 {
     _ConstructTransaction __tx(*this, __n);
     for (; __tx.__pos_ != __tx.__new_end_; ++__tx.__pos_) {
-      __alloc_traits::construct(this->__alloc(), _VSTD::__to_raw_pointer(__tx.__pos_));
+      __alloc_traits::construct(this->__alloc(), _VSTD::__to_address(__tx.__pos_));
     }
 }
 
@@ -1059,7 +1059,7 @@ vector<_Tp, _Allocator>::__construct_at_end(size_type __n, const_reference __x)
 {
     _ConstructTransaction __tx(*this, __n);
     for (; __tx.__pos_ != __tx.__new_end_; ++__tx.__pos_) {
-        __alloc_traits::construct(this->__alloc(), _VSTD::__to_raw_pointer(__tx.__pos_), __x);
+        __alloc_traits::construct(this->__alloc(), _VSTD::__to_address(__tx.__pos_), __x);
     }
 }
 
@@ -1622,7 +1622,7 @@ vector<_Tp, _Allocator>::__push_back_slow_path(_Up& __x)
     allocator_type& __a = this->__alloc();
     __split_buffer<value_type, allocator_type&> __v(__recommend(size() + 1), size(), __a);
     // __v.push_back(_VSTD::forward<_Up>(__x));
-    __alloc_traits::construct(__a, _VSTD::__to_raw_pointer(__v.__end_), _VSTD::forward<_Up>(__x));
+    __alloc_traits::construct(__a, _VSTD::__to_address(__v.__end_), _VSTD::forward<_Up>(__x));
     __v.__end_++;
     __swap_out_circular_buffer(__v);
 }
@@ -1663,7 +1663,7 @@ vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args)
     allocator_type& __a = this->__alloc();
     __split_buffer<value_type, allocator_type&> __v(__recommend(size() + 1), size(), __a);
 //    __v.emplace_back(_VSTD::forward<_Args>(__args)...);
-    __alloc_traits::construct(__a, _VSTD::__to_raw_pointer(__v.__end_), _VSTD::forward<_Args>(__args)...);
+    __alloc_traits::construct(__a, _VSTD::__to_address(__v.__end_), _VSTD::forward<_Args>(__args)...);
     __v.__end_++;
     __swap_out_circular_buffer(__v);
 }
@@ -1753,7 +1753,7 @@ vector<_Tp, _Allocator>::__move_range(pointer __from_s, pointer __from_e, pointe
       _ConstructTransaction __tx(*this, __from_e - __i);
       for (; __i < __from_e; ++__i, ++__tx.__pos_) {
           __alloc_traits::construct(this->__alloc(),
-                                    _VSTD::__to_raw_pointer(__tx.__pos_),
+                                    _VSTD::__to_address(__tx.__pos_),
                                     _VSTD::move(*__i));
       }
     }

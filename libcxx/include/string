@@ -1239,10 +1239,10 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     const value_type* c_str() const _NOEXCEPT {return data();}
     _LIBCPP_INLINE_VISIBILITY
-    const value_type* data() const _NOEXCEPT  {return _VSTD::__to_raw_pointer(__get_pointer());}
+    const value_type* data() const _NOEXCEPT  {return _VSTD::__to_address(__get_pointer());}
 #if _LIBCPP_STD_VER > 14 || defined(_LIBCPP_BUILDING_LIBRARY)
     _LIBCPP_INLINE_VISIBILITY
-    value_type* data()             _NOEXCEPT  {return _VSTD::__to_raw_pointer(__get_pointer());}
+    value_type* data()             _NOEXCEPT  {return _VSTD::__to_address(__get_pointer());}
 #endif
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1765,7 +1765,7 @@ void basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s,
         __set_long_cap(__cap+1);
         __set_long_size(__sz);
     }
-    traits_type::copy(_VSTD::__to_raw_pointer(__p), __s, __sz);
+    traits_type::copy(_VSTD::__to_address(__p), __s, __sz);
     traits_type::assign(__p[__sz], value_type());
 }
 
@@ -1789,7 +1789,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s, size_ty
         __set_long_cap(__cap+1);
         __set_long_size(__sz);
     }
-    traits_type::copy(_VSTD::__to_raw_pointer(__p), __s, __sz);
+    traits_type::copy(_VSTD::__to_address(__p), __s, __sz);
     traits_type::assign(__p[__sz], value_type());
 }
 
@@ -1835,7 +1835,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const basic_string& __st
     if (!__str.__is_long())
         __r_.first().__r = __str.__r_.first().__r;
     else
-        __init(_VSTD::__to_raw_pointer(__str.__get_long_pointer()), __str.__get_long_size());
+        __init(_VSTD::__to_address(__str.__get_long_pointer()), __str.__get_long_size());
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
 #endif
@@ -1849,7 +1849,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(
     if (!__str.__is_long())
         __r_.first().__r = __str.__r_.first().__r;
     else
-        __init(_VSTD::__to_raw_pointer(__str.__get_long_pointer()), __str.__get_long_size());
+        __init(_VSTD::__to_address(__str.__get_long_pointer()), __str.__get_long_size());
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__insert_c(this);
 #endif
@@ -1881,7 +1881,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(basic_string&& __str, co
     : __r_(__second_tag(), __a)
 {
     if (__str.__is_long() && __a != __str.__alloc()) // copy, not move
-        __init(_VSTD::__to_raw_pointer(__str.__get_long_pointer()), __str.__get_long_size());
+        __init(_VSTD::__to_address(__str.__get_long_pointer()), __str.__get_long_size());
     else
     {
         __r_.first().__r = __str.__r_.first().__r;
@@ -1916,7 +1916,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init(size_type __n, value_type __c)
         __set_long_cap(__cap+1);
         __set_long_size(__n);
     }
-    traits_type::assign(_VSTD::__to_raw_pointer(__p), __n, __c);
+    traits_type::assign(_VSTD::__to_address(__p), __n, __c);
     traits_type::assign(__p[__n], value_type());
 }
 
@@ -2144,14 +2144,14 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by_and_replace
     pointer __p = __alloc_traits::allocate(__alloc(), __cap+1);
     __invalidate_all_iterators();
     if (__n_copy != 0)
-        traits_type::copy(_VSTD::__to_raw_pointer(__p),
-                          _VSTD::__to_raw_pointer(__old_p), __n_copy);
+        traits_type::copy(_VSTD::__to_address(__p),
+                          _VSTD::__to_address(__old_p), __n_copy);
     if (__n_add != 0)
-        traits_type::copy(_VSTD::__to_raw_pointer(__p) + __n_copy, __p_new_stuff, __n_add);
+        traits_type::copy(_VSTD::__to_address(__p) + __n_copy, __p_new_stuff, __n_add);
     size_type __sec_cp_sz = __old_sz - __n_del - __n_copy;
     if (__sec_cp_sz != 0)
-        traits_type::copy(_VSTD::__to_raw_pointer(__p) + __n_copy + __n_add,
-                          _VSTD::__to_raw_pointer(__old_p) + __n_copy + __n_del, __sec_cp_sz);
+        traits_type::copy(_VSTD::__to_address(__p) + __n_copy + __n_add,
+                          _VSTD::__to_address(__old_p) + __n_copy + __n_del, __sec_cp_sz);
     if (__old_cap+1 != __min_cap)
         __alloc_traits::deallocate(__alloc(), __old_p, __old_cap+1);
     __set_long_pointer(__p);
@@ -2176,12 +2176,12 @@ basic_string<_CharT, _Traits, _Allocator>::__grow_by(size_type __old_cap, size_t
     pointer __p = __alloc_traits::allocate(__alloc(), __cap+1);
     __invalidate_all_iterators();
     if (__n_copy != 0)
-        traits_type::copy(_VSTD::__to_raw_pointer(__p),
-                          _VSTD::__to_raw_pointer(__old_p), __n_copy);
+        traits_type::copy(_VSTD::__to_address(__p),
+                          _VSTD::__to_address(__old_p), __n_copy);
     size_type __sec_cp_sz = __old_sz - __n_del - __n_copy;
     if (__sec_cp_sz != 0)
-        traits_type::copy(_VSTD::__to_raw_pointer(__p) + __n_copy + __n_add,
-                          _VSTD::__to_raw_pointer(__old_p) + __n_copy + __n_del,
+        traits_type::copy(_VSTD::__to_address(__p) + __n_copy + __n_add,
+                          _VSTD::__to_address(__old_p) + __n_copy + __n_del,
                           __sec_cp_sz);
     if (__old_cap+1 != __min_cap)
         __alloc_traits::deallocate(__alloc(), __old_p, __old_cap+1);
@@ -2199,7 +2199,7 @@ basic_string<_CharT, _Traits, _Allocator>::assign(const value_type* __s, size_ty
     size_type __cap = capacity();
     if (__cap >= __n)
     {
-        value_type* __p = _VSTD::__to_raw_pointer(__get_pointer());
+        value_type* __p = _VSTD::__to_address(__get_pointer());
         traits_type::move(__p, __s, __n);
         traits_type::assign(__p[__n], value_type());
         __set_size(__n);
@@ -2225,7 +2225,7 @@ basic_string<_CharT, _Traits, _Allocator>::assign(size_type __n, value_type __c)
     }
     else
         __invalidate_iterators_past(__n);
-    value_type* __p = _VSTD::__to_raw_pointer(__get_pointer());
+    value_type* __p = _VSTD::__to_address(__get_pointer());
     traits_type::assign(__p, __n, __c);
     traits_type::assign(__p[__n], value_type());
     __set_size(__n);
@@ -2398,7 +2398,7 @@ basic_string<_CharT, _Traits, _Allocator>::append(const value_type* __s, size_ty
     {
         if (__n)
         {
-            value_type* __p = _VSTD::__to_raw_pointer(__get_pointer());
+            value_type* __p = _VSTD::__to_address(__get_pointer());
             traits_type::copy(__p + __sz, __s, __n);
             __sz += __n;
             __set_size(__sz);
@@ -2421,7 +2421,7 @@ basic_string<_CharT, _Traits, _Allocator>::append(size_type __n, value_type __c)
         if (__cap - __sz < __n)
             __grow_by(__cap, __sz + __n - __cap, __sz, __sz, 0);
         pointer __p = __get_pointer();
-        traits_type::assign(_VSTD::__to_raw_pointer(__p) + __sz, __n, __c);
+        traits_type::assign(_VSTD::__to_address(__p) + __sz, __n, __c);
         __sz += __n;
         __set_size(__sz);
         traits_type::assign(__p[__sz], value_type());
@@ -2586,7 +2586,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos, const value_t
     {
         if (__n)
         {
-            value_type* __p = _VSTD::__to_raw_pointer(__get_pointer());
+            value_type* __p = _VSTD::__to_address(__get_pointer());
             size_type __n_move = __sz - __pos;
             if (__n_move != 0)
             {
@@ -2618,7 +2618,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos, size_type __n
         value_type* __p;
         if (__cap - __sz >= __n)
         {
-            __p = _VSTD::__to_raw_pointer(__get_pointer());
+            __p = _VSTD::__to_address(__get_pointer());
             size_type __n_move = __sz - __pos;
             if (__n_move != 0)
                 traits_type::move(__p + __pos + __n, __p + __pos, __n_move);
@@ -2626,7 +2626,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos, size_type __n
         else
         {
             __grow_by(__cap, __sz + __n - __cap, __sz, __pos, 0, __n);
-            __p = _VSTD::__to_raw_pointer(__get_long_pointer());
+            __p = _VSTD::__to_address(__get_long_pointer());
         }
         traits_type::assign(__p + __pos, __n, __c);
         __sz += __n;
@@ -2687,7 +2687,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _Forward
         value_type* __p;
         if (__cap - __sz >= __n)
         {
-            __p = _VSTD::__to_raw_pointer(__get_pointer());
+            __p = _VSTD::__to_address(__get_pointer());
             size_type __n_move = __sz - __ip;
             if (__n_move != 0)
                 traits_type::move(__p + __ip + __n, __p + __ip, __n_move);
@@ -2695,7 +2695,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _Forward
         else
         {
             __grow_by(__cap, __sz + __n - __cap, __sz, __ip, 0, __n);
-            __p = _VSTD::__to_raw_pointer(__get_long_pointer());
+            __p = _VSTD::__to_address(__get_long_pointer());
         }
         __sz += __n;
         __set_size(__sz);
@@ -2761,11 +2761,11 @@ basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, value_ty
     if (__cap == __sz)
     {
         __grow_by(__cap, 1, __sz, __ip, 0, 1);
-        __p = _VSTD::__to_raw_pointer(__get_long_pointer());
+        __p = _VSTD::__to_address(__get_long_pointer());
     }
     else
     {
-        __p = _VSTD::__to_raw_pointer(__get_pointer());
+        __p = _VSTD::__to_address(__get_pointer());
         size_type __n_move = __sz - __ip;
         if (__n_move != 0)
             traits_type::move(__p + __ip + 1, __p + __ip, __n_move);
@@ -2806,7 +2806,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
     size_type __cap = capacity();
     if (__cap - __sz + __n1 >= __n2)
     {
-        value_type* __p = _VSTD::__to_raw_pointer(__get_pointer());
+        value_type* __p = _VSTD::__to_address(__get_pointer());
         if (__n1 != __n2)
         {
             size_type __n_move = __sz - __pos - __n1;
@@ -2861,7 +2861,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
     value_type* __p;
     if (__cap - __sz + __n1 >= __n2)
     {
-        __p = _VSTD::__to_raw_pointer(__get_pointer());
+        __p = _VSTD::__to_address(__get_pointer());
         if (__n1 != __n2)
         {
             size_type __n_move = __sz - __pos - __n1;
@@ -2872,7 +2872,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
     else
     {
         __grow_by(__cap, __sz - __n1 + __n2 - __cap, __sz, __pos, __n1, __n2);
-        __p = _VSTD::__to_raw_pointer(__get_long_pointer());
+        __p = _VSTD::__to_address(__get_long_pointer());
     }
     traits_type::assign(__p + __pos, __n2, __c);
     __sz += __n2 - __n1;
@@ -2984,7 +2984,7 @@ basic_string<_CharT, _Traits, _Allocator>::erase(size_type __pos, size_type __n)
         this->__throw_out_of_range();
     if (__n)
     {
-        value_type* __p = _VSTD::__to_raw_pointer(__get_pointer());
+        value_type* __p = _VSTD::__to_address(__get_pointer());
         __n = _VSTD::min(__n, __sz - __pos);
         size_type __n_move = __sz - __pos - __n;
         if (__n_move != 0)
@@ -3172,8 +3172,8 @@ basic_string<_CharT, _Traits, _Allocator>::reserve(size_type __res_arg)
             __was_long = __is_long();
             __p = __get_pointer();
         }
-        traits_type::copy(_VSTD::__to_raw_pointer(__new_data),
-                          _VSTD::__to_raw_pointer(__p), size()+1);
+        traits_type::copy(_VSTD::__to_address(__new_data),
+                          _VSTD::__to_address(__p), size()+1);
         if (__was_long)
             __alloc_traits::deallocate(__alloc(), __p, __cap+1);
         if (__now_long)
@@ -4284,23 +4284,23 @@ template<class _CharT, class _Traits, class _Allocator>
 bool
 basic_string<_CharT, _Traits, _Allocator>::__dereferenceable(const const_iterator* __i) const
 {
-    return this->data() <= _VSTD::__to_raw_pointer(__i->base()) &&
-           _VSTD::__to_raw_pointer(__i->base()) < this->data() + this->size();
+    return this->data() <= _VSTD::__to_address(__i->base()) &&
+           _VSTD::__to_address(__i->base()) < this->data() + this->size();
 }
 
 template<class _CharT, class _Traits, class _Allocator>
 bool
 basic_string<_CharT, _Traits, _Allocator>::__decrementable(const const_iterator* __i) const
 {
-    return this->data() < _VSTD::__to_raw_pointer(__i->base()) &&
-           _VSTD::__to_raw_pointer(__i->base()) <= this->data() + this->size();
+    return this->data() < _VSTD::__to_address(__i->base()) &&
+           _VSTD::__to_address(__i->base()) <= this->data() + this->size();
 }
 
 template<class _CharT, class _Traits, class _Allocator>
 bool
 basic_string<_CharT, _Traits, _Allocator>::__addable(const const_iterator* __i, ptrdiff_t __n) const
 {
-    const value_type* __p = _VSTD::__to_raw_pointer(__i->base()) + __n;
+    const value_type* __p = _VSTD::__to_address(__i->base()) + __n;
     return this->data() <= __p && __p <= this->data() + this->size();
 }
 
@@ -4308,7 +4308,7 @@ template<class _CharT, class _Traits, class _Allocator>
 bool
 basic_string<_CharT, _Traits, _Allocator>::__subscriptable(const const_iterator* __i, ptrdiff_t __n) const
 {
-    const value_type* __p = _VSTD::__to_raw_pointer(__i->base()) + __n;
+    const value_type* __p = _VSTD::__to_address(__i->base()) + __n;
     return this->data() <= __p && __p < this->data() + this->size();
 }
 
