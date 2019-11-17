@@ -800,7 +800,8 @@ void IteratorChecker::checkPostStmt(const MaterializeTemporaryExpr *MTE,
                                     CheckerContext &C) const {
   /* Transfer iterator state to temporary objects */
   auto State = C.getState();
-  const auto *Pos = getIteratorPosition(State, C.getSVal(MTE->getSubExpr()));
+  const auto *Pos =
+      getIteratorPosition(State, C.getSVal(MTE->GetTemporaryExpr()));
   if (!Pos)
     return;
   State = setIteratorPosition(State, C.getSVal(MTE), *Pos);

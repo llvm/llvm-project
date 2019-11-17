@@ -464,9 +464,8 @@ class VarDecl;
 #define OBJCPROPERTY(DERIVED, BASE)
 #define OBJCPROPERTYIMPL(DERIVED, BASE)
 #define EMPTY(DERIVED, BASE)
-#define LIFETIMEEXTENDEDTEMPORARY(DERIVED, BASE)
 
-    // Decls which use special-case instantiation code.
+// Decls which use special-case instantiation code.
 #define BLOCK(DERIVED, BASE)
 #define CAPTURED(DERIVED, BASE)
 #define IMPLICITPARAM(DERIVED, BASE)

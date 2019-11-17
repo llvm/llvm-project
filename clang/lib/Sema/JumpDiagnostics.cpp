@@ -546,8 +546,8 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
       SmallVector<const Expr *, 4> CommaLHS;
       SmallVector<SubobjectAdjustment, 4> Adjustments;
       const Expr *ExtendedObject =
-          MTE->getSubExpr()->skipRValueSubobjectAdjustments(CommaLHS,
-                                                            Adjustments);
+          MTE->GetTemporaryExpr()->skipRValueSubobjectAdjustments(
+              CommaLHS, Adjustments);
       if (ExtendedObject->getType().isDestructedType()) {
         Scopes.push_back(GotoScope(ParentScope, 0,
                                    diag::note_exits_temporary_dtor,
