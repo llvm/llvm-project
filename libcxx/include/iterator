@@ -440,6 +440,11 @@ struct _LIBCPP_TEMPLATE_VIS output_iterator_tag {};
 struct _LIBCPP_TEMPLATE_VIS forward_iterator_tag       : public input_iterator_tag {};
 struct _LIBCPP_TEMPLATE_VIS bidirectional_iterator_tag : public forward_iterator_tag {};
 struct _LIBCPP_TEMPLATE_VIS random_access_iterator_tag : public bidirectional_iterator_tag {};
+#if _LIBCPP_STD_VER > 17
+// TODO(EricWF)  contiguous_iterator_tag is provided as an extension prior to
+//  C++20 to allow optimizations for users providing wrapped iterator types.
+struct _LIBCPP_TEMPLATE_VIS contiguous_iterator_tag: public random_access_iterator_tag { };
+#endif
 
 template <class _Tp>
 struct __has_iterator_typedefs
@@ -510,6 +515,9 @@ struct _LIBCPP_TEMPLATE_VIS iterator_traits<_Tp*>
     typedef _Tp* pointer;
     typedef _Tp& reference;
     typedef random_access_iterator_tag iterator_category;
+#if _LIBCPP_STD_VER > 17
+    typedef contiguous_iterator_tag    iterator_concept;
+#endif
 };
 
 template <class _Tp, class _Up, bool = __has_iterator_category<iterator_traits<_Tp> >::value>
@@ -531,6 +539,11 @@ struct __is_bidirectional_iterator : public __has_iterator_category_convertible_
 
 template <class _Tp>
 struct __is_random_access_iterator : public __has_iterator_category_convertible_to<_Tp, random_access_iterator_tag> {};
+
+#if _LIBCPP_STD_VER > 17
+template <class _Tp>
+struct __is_contiguous_iterator : public __has_iterator_category_convertible_to<_Tp, contiguous_iterator_tag> {};
+#endif
 
 template <class _Tp>
 struct __is_exactly_input_iterator
