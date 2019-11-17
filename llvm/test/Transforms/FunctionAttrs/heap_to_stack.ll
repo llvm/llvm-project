@@ -24,6 +24,13 @@ declare void @free(i8* nocapture)
 
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
 
+; CHECK: @nofree_arg_only(i8* nocapture nofree %p1, i8* nocapture %p2)
+define void @nofree_arg_only(i8* %p1, i8* %p2) {
+  tail call void @free(i8* %p2)
+  tail call void @nofree_func(i8* %p1)
+  ret void
+}
+
 ; TEST 1 - negative, pointer freed in another function.
 
 define void @test1() {
@@ -59,6 +66,16 @@ define void @test3() {
   ret void
 }
 
+define void @test3a(i8* %p) {
+  %1 = tail call noalias i8* @malloc(i64 4)
+  ; CHECK: %1 = alloca i8, i64 4
+  ; CHECK-NEXT: tail call void @nofree_arg_only
+  tail call void @nofree_arg_only(i8* %1, i8* %p)
+  ; CHECK-NOT: @free(i8* %1)
+  tail call void @free(i8* %1)
+  ret void
+}
+
 declare noalias i8* @calloc(i64, i64)
 
 define void @test0() {
@@ -85,7 +102,7 @@ define void @test4() {
 ; TEST 5 - not all exit paths have a call to free, but all uses of malloc
 ; are in nofree functions and are not captured
 
-define void @test5(i32) {
+define void @test5(i32, i8* %p) {
   %2 = tail call noalias i8* @malloc(i64 4)
   ; CHECK: %2 = alloca i8, i64 4
   ; CHECK-NEXT: icmp eq i32 %0, 0
@@ -97,6 +114,7 @@ define void @test5(i32) {
   br label %6
 
 5:                                                ; preds = %1
+  tail call void @nofree_arg_only(i8* %2, i8* %p)
   tail call void @free(i8* %2)
   ; CHECK-NOT: @free(i8* %2)
   br label %6
