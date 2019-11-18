@@ -164,9 +164,9 @@ for.end:
 ; NOOPTSWAP: stxvd2x
 
 ; CHECK-P9-LABEL: @foo
-; CHECK-P9-DAG: lxvx
-; CHECK-P9-DAG: lxvx
-; CHECK-P9-DAG: lxvx
+; CHECK-P9-DAG: lxv
+; CHECK-P9-DAG: lxv
+; CHECK-P9-DAG: lxv
 ; CHECK-P9-DAG: lxv
 ; CHECK-P9-DAG: lxv
 ; CHECK-P9-DAG: lxv
@@ -184,7 +184,7 @@ for.end:
 ; CHECK-P9-DAG: vmuluwm
 ; CHECK-P9-DAG: vmuluwm
 ; CHECK-P9-DAG: vmuluwm
-; CHECK-P9-DAG: stxvx
+; CHECK-P9-DAG: stxv
 ; CHECK-P9-DAG: stxv
 ; CHECK-P9-DAG: stxv
 ; CHECK-P9-DAG: stxv
