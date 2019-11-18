@@ -296,11 +296,12 @@ void DWARFASTParserSwift::GetClangType(lldb_private::CompileUnit &comp_unit,
   // Well-formed clang modules never form cycles; guard against corrupted ones.
   searched_symbol_files.insert(&sym_file);
   auto old_size = clang_types.GetSize();
-  sym_file.ForEachExternalModule(comp_unit, [&](ModuleSP module) {
-    module->GetSymbolFile()->FindTypes(decl_context, clang_languages,
-                                       searched_symbol_files, clang_types);
-    return; //(clang_types.GetSize() > old_size);
-  });
+  sym_file.ForEachExternalModule(
+      comp_unit, searched_symbol_files, [&](Module &module) -> bool {
+        module.GetSymbolFile()->FindTypes(decl_context, clang_languages,
+                                          searched_symbol_files, clang_types);
+        return (clang_types.GetSize() > old_size);
+      });
 
   // Next search the .dSYM the DIE came from, if applicable.
   sym_file.FindTypes(decl_context, clang_languages, searched_symbol_files,
