@@ -86,7 +86,7 @@ Sections:
 # RUN: not yaml2obj %s --docnum=4 2>&1 | FileCheck %s --check-prefix=BOTH
 
 # BOTH: error: "Options" and "Content" can't be used together
- 
+
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64

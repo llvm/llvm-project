@@ -51,12 +51,12 @@ DynamicSymbols:
 # NUM-SAME: .data (0x1)
 
 # NUM:      Name: bar
-# NUM:      Section: 
+# NUM:      Section:
 # NUM-SAME: .strtab (0x2)
 
 # NUM:      Name: zed
 # NUM: warning: '[[FILE]]': invalid section index: 255
-# NUM:      Section: 
+# NUM:      Section:
 # NUM-SAME: <?> (0xFF)
 
 --- !ELF

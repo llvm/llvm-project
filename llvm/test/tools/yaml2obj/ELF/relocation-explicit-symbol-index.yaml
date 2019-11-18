@@ -1,7 +1,8 @@
-# Test that a relocation's symbol can be an integer.
-# RUN: yaml2obj %s > %t
-# LLVM tools (both llvm-readobj and llvm-objdump) reject relocations with
-# invalid symbol indexes, so inspect the hex contents instead.
+## Test that a relocation's symbol can be an integer (symbol index).
+
+# RUN: yaml2obj %s -o %t
+## LLVM tools (both llvm-readobj and llvm-objdump) reject relocations with
+## invalid symbol indexes, so inspect the hex contents instead.
 # RUN: llvm-readobj -x .rela.text %t | FileCheck %s
 
 # CHECK:      Hex dump of section '.rela.text':

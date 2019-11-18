@@ -159,7 +159,7 @@ Sections:
   - Name: '.group [1]'
     Type: SHT_GROUP
     Info: 'foo [1]'
-    Members:         
+    Members:
       - SectionOrType: GRP_COMDAT
       - SectionOrType: '.text.foo [1]'
   - Name: '.text.foo [1]'
