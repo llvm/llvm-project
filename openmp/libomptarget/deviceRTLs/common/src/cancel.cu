@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "interface.h"
-#include "debug.h"
+#include "common/debug.h"
 
 EXTERN int32_t __kmpc_cancellationpoint(kmp_Ident *loc, int32_t global_tid,
                                         int32_t cancelVal) {
