@@ -138,6 +138,11 @@ public:
     return IsScalable;
   }
 
+  // Returns true if the number of bits is a multiple of an 8-bit byte.
+  bool isByteSized() const {
+    return (MinSize & 7) == 0;
+  }
+
   // Casts to a uint64_t if this is a fixed-width size.
   //
   // NOTE: This interface is obsolete and will be removed in a future version

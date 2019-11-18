@@ -475,7 +475,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       MemAddr = DAG.getNode(ISD::ADD, dl, MVT::i32, StackPtr, MemAddr);
       if (ArgAlign)
         LargestAlignSeen = std::max(LargestAlignSeen,
-                                    VA.getLocVT().getStoreSizeInBits() >> 3);
+                             (unsigned)VA.getLocVT().getStoreSizeInBits() >> 3);
       if (Flags.isByVal()) {
         // The argument is a struct passed by value. According to LLVM, "Arg"
         // is a pointer.

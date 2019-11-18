@@ -8842,7 +8842,9 @@ MemSDNode::MemSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl,
   // We check here that the size of the memory operand fits within the size of
   // the MMO. This is because the MMO might indicate only a possible address
   // range instead of specifying the affected memory addresses precisely.
-  assert(memvt.getStoreSize() <= MMO->getSize() && "Size mismatch!");
+  // TODO: Make MachineMemOperands aware of scalable vectors.
+  assert(memvt.getStoreSize().getKnownMinSize() <= MMO->getSize() &&
+         "Size mismatch!");
 }
 
 /// Profile - Gather unique data for the node.

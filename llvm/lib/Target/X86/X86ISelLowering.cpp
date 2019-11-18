@@ -5835,7 +5835,7 @@ static SDValue getExtendInVec(unsigned Opcode, const SDLoc &DL, EVT VT,
            "Expected VTs to be the same size!");
     unsigned Scale = VT.getScalarSizeInBits() / InVT.getScalarSizeInBits();
     In = extractSubVector(In, 0, DAG, DL,
-                          std::max(128U, VT.getSizeInBits() / Scale));
+                          std::max(128U, (unsigned)VT.getSizeInBits() / Scale));
     InVT = In.getValueType();
   }
 
@@ -8626,7 +8626,7 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, SelectionDAG &DAG,
       ImmH = DAG.getBitcast(MVT::v32i1, ImmH);
       DstVec = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v64i1, ImmL, ImmH);
     } else {
-      MVT ImmVT = MVT::getIntegerVT(std::max(VT.getSizeInBits(), 8U));
+      MVT ImmVT = MVT::getIntegerVT(std::max((unsigned)VT.getSizeInBits(), 8U));
       SDValue Imm = DAG.getConstant(Immediate, dl, ImmVT);
       MVT VecVT = VT.getSizeInBits() >= 8 ? VT : MVT::v8i1;
       DstVec = DAG.getBitcast(VecVT, Imm);
@@ -32849,7 +32849,8 @@ static SDValue combineX86ShuffleChainWithExtract(
       Offset += Src.getConstantOperandVal(1);
       Src = Src.getOperand(0);
     }
-    WideSizeInBits = std::max(WideSizeInBits, Src.getValueSizeInBits());
+    WideSizeInBits = std::max(WideSizeInBits,
+                              (unsigned)Src.getValueSizeInBits());
     assert((Offset % BaseVT.getVectorNumElements()) == 0 &&
            "Unexpected subvector extraction");
     Offset /= BaseVT.getVectorNumElements();
@@ -35786,7 +35787,7 @@ static SDValue createPSADBW(SelectionDAG &DAG, const SDValue &Zext0,
                             const X86Subtarget &Subtarget) {
   // Find the appropriate width for the PSADBW.
   EVT InVT = Zext0.getOperand(0).getValueType();
-  unsigned RegSize = std::max(128u, InVT.getSizeInBits());
+  unsigned RegSize = std::max(128u, (unsigned)InVT.getSizeInBits());
 
   // "Zero-extend" the i8 vectors. This is not a per-element zext, rather we
   // fill in the missing vector elements with 0.
