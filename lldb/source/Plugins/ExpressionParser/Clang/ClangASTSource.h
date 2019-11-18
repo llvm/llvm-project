@@ -404,15 +404,16 @@ protected:
   bool m_import_in_progress;
   bool m_lookups_enabled;
 
-  const lldb::TargetSP
-      m_target; ///< The target to use in finding variables and types.
-  clang::ASTContext
-      *m_ast_context; ///< The AST context requests are coming in for.
-  clang::FileManager
-      *m_file_manager; ///< The file manager paired with the AST context.
-  lldb::ClangASTImporterSP m_ast_importer_sp; ///< The target's AST importer.
+  /// The target to use in finding variables and types.
+  const lldb::TargetSP m_target;
+  /// The AST context requests are coming in for.
+  clang::ASTContext *m_ast_context;
+  /// The file manager paired with the AST context.
+  clang::FileManager *m_file_manager;
+  /// The target's AST importer.
+  lldb::ClangASTImporterSP m_ast_importer_sp;
+  /// The ExternalASTMerger for this parse.
   std::unique_ptr<clang::ExternalASTMerger> m_merger_up;
-      ///< The ExternalASTMerger for this parse.
   std::set<const clang::Decl *> m_active_lexical_decls;
   std::set<const char *> m_active_lookups;
 };
@@ -425,20 +426,20 @@ protected:
 /// what name is being searched for and provides helper functions to construct
 /// Decls given appropriate type information.
 struct NameSearchContext {
-  ClangASTSource &m_ast_source; ///< The AST source making the request
-  llvm::SmallVectorImpl<clang::NamedDecl *>
-      &m_decls; ///< The list of declarations already constructed
-  ClangASTImporter::NamespaceMapSP m_namespace_map; ///< The mapping of all
-                                                    ///namespaces found for this
-                                                    ///request back to their
-                                                    ///modules
-  const clang::DeclarationName &m_decl_name; ///< The name being looked for
-  const clang::DeclContext
-      *m_decl_context; ///< The DeclContext to put declarations into
-  llvm::SmallSet<CompilerType, 5> m_function_types; ///< All the types of
-                                                    ///functions that have been
-                                                    ///reported, so we don't
-                                                    ///report conflicts
+  /// The AST source making the request.
+  ClangASTSource &m_ast_source;
+  /// The list of declarations already constructed.
+  llvm::SmallVectorImpl<clang::NamedDecl *> &m_decls;
+  /// The mapping of all namespaces found for this request back to their
+  /// modules.
+  ClangASTImporter::NamespaceMapSP m_namespace_map;
+  /// The name being looked for.
+  const clang::DeclarationName &m_decl_name;
+  /// The DeclContext to put declarations into.
+  const clang::DeclContext *m_decl_context;
+  /// All the types of functions that have been reported, so we don't
+  /// report conflicts.
+  llvm::SmallSet<CompilerType, 5> m_function_types;
 
   struct {
     bool variable : 1;
