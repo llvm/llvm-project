@@ -1043,7 +1043,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_LROUND(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
 
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
-  EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
+  EVT RetVT = N->getOperand(0).getValueType();
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[1] = { N->getOperand(0).getValueType() };
   CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
@@ -1060,7 +1060,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_LLROUND(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
 
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
-  EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
+  EVT RetVT = N->getOperand(0).getValueType();
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[1] = { N->getOperand(0).getValueType() };
   CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
@@ -1077,7 +1077,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_LRINT(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
 
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
-  EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
+  EVT RetVT = N->getOperand(0).getValueType();
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[1] = { N->getOperand(0).getValueType() };
   CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
@@ -1094,7 +1094,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_LLRINT(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
 
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
-  EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
+  EVT RetVT = N->getOperand(0).getValueType();
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpsVT[1] = { N->getOperand(0).getValueType() };
   CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0), true);
@@ -1833,7 +1833,7 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_STORE(SDNode *N, unsigned OpNo) {
 
 SDValue DAGTypeLegalizer::ExpandFloatOp_LROUND(SDNode *N) {
   EVT RVT = N->getValueType(0);
-  EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
+  EVT RetVT = N->getOperand(0).getValueType();
   TargetLowering::MakeLibCallOptions CallOptions;
   return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
                                            RTLIB::LROUND_F32,
@@ -1846,7 +1846,7 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_LROUND(SDNode *N) {
 
 SDValue DAGTypeLegalizer::ExpandFloatOp_LLROUND(SDNode *N) {
   EVT RVT = N->getValueType(0);
-  EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
+  EVT RetVT = N->getOperand(0).getValueType();
   TargetLowering::MakeLibCallOptions CallOptions;
   return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
                                            RTLIB::LLROUND_F32,
@@ -1859,7 +1859,7 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_LLROUND(SDNode *N) {
 
 SDValue DAGTypeLegalizer::ExpandFloatOp_LRINT(SDNode *N) {
   EVT RVT = N->getValueType(0);
-  EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
+  EVT RetVT = N->getOperand(0).getValueType();
   TargetLowering::MakeLibCallOptions CallOptions;
   return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
                                            RTLIB::LRINT_F32,
@@ -1872,7 +1872,7 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_LRINT(SDNode *N) {
 
 SDValue DAGTypeLegalizer::ExpandFloatOp_LLRINT(SDNode *N) {
   EVT RVT = N->getValueType(0);
-  EVT RetVT = N->getOperand(0).getValueType().getSimpleVT().SimpleTy;
+  EVT RetVT = N->getOperand(0).getValueType();
   TargetLowering::MakeLibCallOptions CallOptions;
   return TLI.makeLibCall(DAG, GetFPLibCall(RetVT,
                                            RTLIB::LLRINT_F32,
