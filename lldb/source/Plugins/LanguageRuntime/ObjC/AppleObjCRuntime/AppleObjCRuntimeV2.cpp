@@ -436,7 +436,7 @@ AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
 bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
     ValueObject &in_value, lldb::DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &address,
-    Value::ValueType &value_type, bool allow_swift) {
+    Value::ValueType &value_type) {
   // We should never get here with a null process...
   assert(m_process != nullptr);
 
@@ -455,7 +455,7 @@ bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
   value_type = Value::ValueType::eValueTypeScalar;
 
   // Make sure we can have a dynamic value before starting...
-  if (CouldHaveDynamicValue(in_value, allow_swift)) {
+  if (CouldHaveDynamicValue(in_value)) {
     // First job, pull out the address at 0 offset from the object  That will
     // be the ISA pointer.
     ClassDescriptorSP objc_class_sp(GetNonKVOClassDescriptor(in_value));
@@ -492,15 +492,6 @@ bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
     }
   }
   return !class_type_or_name.IsEmpty();
-}
-
-bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
-    ValueObject &in_value, DynamicValueType use_dynamic,
-    TypeAndOrName &class_type_or_name, Address &address,
-    Value::ValueType &value_type) {
-  return GetDynamicTypeAndAddress(in_value, use_dynamic, class_type_or_name,
-                                  address, value_type,
-                                  /* allow_swift = */ false);
 }
 
 //------------------------------------------------------------------
