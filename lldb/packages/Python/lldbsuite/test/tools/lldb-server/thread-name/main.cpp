@@ -9,7 +9,7 @@ void set_thread_name(const char *name) {
 #elif defined(__linux__)
   ::pthread_setname_np(::pthread_self(), name);
 #elif defined(__NetBSD__)
-  ::pthread_setname_np(::pthread_self(), "%s", name);
+  ::pthread_setname_np(::pthread_self(), "%s", const_cast<char *>(name));
 #endif
 }
 
