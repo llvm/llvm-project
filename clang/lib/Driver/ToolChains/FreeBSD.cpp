@@ -397,6 +397,11 @@ void FreeBSD::AddCXXStdlibLibArgs(const ArgList &Args,
   }
 }
 
+void FreeBSD::AddCudaIncludeArgs(const ArgList &DriverArgs,
+                                 ArgStringList &CC1Args) const {
+  CudaInstallation.AddCudaIncludeArgs(DriverArgs, CC1Args);
+}
+
 Tool *FreeBSD::buildAssembler() const {
   return new tools::freebsd::Assembler(*this);
 }
