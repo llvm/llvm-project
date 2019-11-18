@@ -6,16 +6,39 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a pass to prepare loops for pre-increment addressing
-// modes. Additional PHIs are created for loop induction variables used by
-// load/store instructions so that the pre-increment forms can be used.
-// Generically, this means transforming loops like this:
-//   for (int i = 0; i < n; ++i)
-//     array[i] = c;
-// to look like this:
-//   T *p = array[-1];
-//   for (int i = 0; i < n; ++i)
-//     *++p = c;
+// This file implements a pass to prepare loops for ppc preferred addressing
+// modes, leveraging different instruction form. (eg: DS/DQ form, D/DS form with
+// update)
+// Additional PHIs are created for loop induction variables used by load/store
+// instructions so that preferred addressing modes can be used.
+//
+// 1: DS/DQ form preparation, prepare the load/store instructions so that they
+//    can satisfy the DS/DQ form displacement requirements.
+//    Generically, this means transforming loops like this:
+//    for (int i = 0; i < n; ++i) {
+//      unsigned long x1 = *(unsigned long *)(p + i + 5);
+//      unsigned long x2 = *(unsigned long *)(p + i + 9);
+//    }
+//
+//    to look like this:
+//
+//    unsigned NewP = p + 5;
+//    for (int i = 0; i < n; ++i) {
+//      unsigned long x1 = *(unsigned long *)(i + NewP);
+//      unsigned long x2 = *(unsigned long *)(i + NewP + 4);
+//    }
+//
+// 2: D/DS form with update preparation, prepare the load/store instructions so
+//    that we can use update form to do pre-increment.
+//    Generically, this means transforming loops like this:
+//    for (int i = 0; i < n; ++i)
+//      array[i] = c;
+//
+//    to look like this:
+//
+//    T *p = array[-1];
+//    for (int i = 0; i < n; ++i)
+//      *++p = c;
 //===----------------------------------------------------------------------===//
 
 #define DEBUG_TYPE "ppc-loop-preinc-prep"
@@ -57,13 +80,49 @@
 
 using namespace llvm;
 
-// By default, we limit this to creating 16 PHIs (which is a little over half
-// of the allocatable register set).
-static cl::opt<unsigned> MaxVars("ppc-preinc-prep-max-vars",
+// By default, we limit this to creating 16 common bases out of loops per
+// function. 16 is a little over half of the allocatable register set.
+static cl::opt<unsigned> MaxVarsPrep("ppc-formprep-max-vars",
                                  cl::Hidden, cl::init(16),
-  cl::desc("Potential PHI threshold for PPC preinc loop prep"));
+  cl::desc("Potential common base number threshold per function for PPC loop "
+           "prep"));
 
-STATISTIC(PHINodeAlreadyExists, "PHI node already in pre-increment form");
+static cl::opt<bool> PreferUpdateForm("ppc-formprep-prefer-update",
+                                 cl::init(true), cl::Hidden,
+  cl::desc("prefer update form when ds form is also a update form"));
+
+// Sum of following 3 per loop thresholds for all loops can not be larger
+// than MaxVarsPrep.
+// By default, we limit this to creating 9 PHIs for one loop.
+// 9 and 3 for each kind prep are exterimental values on Power9.
+static cl::opt<unsigned> MaxVarsUpdateForm("ppc-preinc-prep-max-vars",
+                                 cl::Hidden, cl::init(3),
+  cl::desc("Potential PHI threshold per loop for PPC loop prep of update "
+           "form"));
+
+static cl::opt<unsigned> MaxVarsDSForm("ppc-dsprep-max-vars",
+                                 cl::Hidden, cl::init(3),
+  cl::desc("Potential PHI threshold per loop for PPC loop prep of DS form"));
+
+static cl::opt<unsigned> MaxVarsDQForm("ppc-dqprep-max-vars",
+                                 cl::Hidden, cl::init(3),
+  cl::desc("Potential PHI threshold per loop for PPC loop prep of DQ form"));
+
+
+// If would not be profitable if the common base has only one load/store, ISEL
+// should already be able to choose best load/store form based on offset for
+// single load/store. Set minimal profitable value default to 2 and make it as
+// an option.
+static cl::opt<unsigned> DispFormPrepMinThreshold("ppc-dispprep-min-threshold",
+                                    cl::Hidden, cl::init(2),
+  cl::desc("Minimal common base load/store instructions triggering DS/DQ form "
+           "preparation"));
+
+STATISTIC(PHINodeAlreadyExistsUpdate, "PHI node already in pre-increment form");
+STATISTIC(PHINodeAlreadyExistsDS, "PHI node already in DS form");
+STATISTIC(PHINodeAlreadyExistsDQ, "PHI node already in DQ form");
+STATISTIC(DSFormChainRewritten, "Num of DS form chain rewritten");
+STATISTIC(DQFormChainRewritten, "Num of DQ form chain rewritten");
 STATISTIC(UpdFormChainRewritten, "Num of update form chain rewritten");
 
 namespace {
@@ -82,6 +141,12 @@ namespace {
     const SCEV *BaseSCEV;
     SmallVector<BucketElement, 16> Elements;
   };
+
+  // "UpdateForm" is not a real PPC instruction form, it stands for dform
+  // load/store with update like ldu/stdu, or Prefetch intrinsic.
+  // For DS form instructions, their displacements must be multiple of 4.
+  // For DQ form instructions, their displacements must be multiple of 16.
+  enum InstrForm { UpdateForm = 1, DSForm = 4, DQForm = 16 };
 
   class PPCLoopPreIncPrep : public FunctionPass {
   public:
@@ -112,12 +177,19 @@ namespace {
     ScalarEvolution *SE;
     bool PreserveLCSSA;
 
+    /// Successful preparation number for Update/DS/DQ form in all inner most
+    /// loops. One successful preparation will put one common base out of loop,
+    /// this may leads to register presure like LICM does.
+    /// Make sure total preparation number can be controlled by option.
+    unsigned SuccPrepCount;
+
     bool runOnLoop(Loop *L);
 
     /// Check if required PHI node is already exist in Loop \p L.
     bool alreadyPrepared(Loop *L, Instruction* MemI,
                          const SCEV *BasePtrStartSCEV,
-                         const SCEVConstant *BasePtrIncSCEV);
+                         const SCEVConstant *BasePtrIncSCEV,
+                         InstrForm Form);
 
     /// Collect condition matched(\p isValidCandidate() returns true)
     /// candidates in Loop \p L.
@@ -135,14 +207,32 @@ namespace {
     /// Prepare all candidates in \p Buckets for update form.
     bool updateFormPrep(Loop *L, SmallVector<Bucket, 16> &Buckets);
 
+    /// Prepare all candidates in \p Buckets for displacement form, now for
+    /// ds/dq.
+    bool dispFormPrep(Loop *L, SmallVector<Bucket, 16> &Buckets,
+                      InstrForm Form);
+
     /// Prepare for one chain \p BucketChain, find the best base element and
     /// update all other elements in \p BucketChain accordingly.
+    /// \p Form is used to find the best base element.
+    /// If success, best base element must be stored as the first element of
+    /// \p BucketChain.
+    /// Return false if no base element found, otherwise return true.
+    bool prepareBaseForDispFormChain(Bucket &BucketChain,
+                                     InstrForm Form);
+
+    /// Prepare for one chain \p BucketChain, find the best base element and
+    /// update all other elements in \p BucketChain accordingly.
+    /// If success, best base element must be stored as the first element of
+    /// \p BucketChain.
+    /// Return false if no base element found, otherwise return true.
     bool prepareBaseForUpdateFormChain(Bucket &BucketChain);
 
     /// Rewrite load/store instructions in \p BucketChain according to
     /// preparation.
     bool rewriteLoadStores(Loop *L, Bucket &BucketChain,
-                           SmallSet<BasicBlock *, 16> &BBChanged);
+                           SmallSet<BasicBlock *, 16> &BBChanged,
+                           InstrForm Form);
   };
 
 } // end anonymous namespace
@@ -204,6 +294,7 @@ bool PPCLoopPreIncPrep::runOnFunction(Function &F) {
   DT = DTWP ? &DTWP->getDomTree() : nullptr;
   PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
   ST = TM ? TM->getSubtargetImpl(F) : nullptr;
+  SuccPrepCount = 0;
 
   bool MadeChange = false;
 
@@ -278,7 +369,76 @@ SmallVector<Bucket, 16> PPCLoopPreIncPrep::collectCandidates(
   return Buckets;
 }
 
-// TODO: implement a more clever base choosing policy.
+bool PPCLoopPreIncPrep::prepareBaseForDispFormChain(Bucket &BucketChain,
+                                                    InstrForm Form) {
+  // RemainderOffsetInfo details:
+  // key:            value of (Offset urem DispConstraint). For DSForm, it can
+  //                 be [0, 4).
+  // first of pair:  the index of first BucketElement whose remainder is equal
+  //                 to key. For key 0, this value must be 0.
+  // second of pair: number of load/stores with the same remainder.
+  DenseMap<unsigned, std::pair<unsigned, unsigned>> RemainderOffsetInfo;
+
+  for (unsigned j = 0, je = BucketChain.Elements.size(); j != je; ++j) {
+    if (!BucketChain.Elements[j].Offset)
+      RemainderOffsetInfo[0] = std::make_pair(0, 1);
+    else {
+      unsigned Remainder =
+          BucketChain.Elements[j].Offset->getAPInt().urem(Form);
+      if (RemainderOffsetInfo.find(Remainder) == RemainderOffsetInfo.end())
+        RemainderOffsetInfo[Remainder] = std::make_pair(j, 1);
+      else
+        RemainderOffsetInfo[Remainder].second++;
+    }
+  }
+  // Currently we choose the most profitable base as the one which has the max
+  // number of load/store with same remainder.
+  // FIXME: adjust the base selection strategy according to load/store offset
+  // distribution.
+  // For example, if we have one candidate chain for DS form preparation, which
+  // contains following load/stores with different remainders:
+  // 1: 10 load/store whose remainder is 1;
+  // 2: 9 load/store whose remainder is 2;
+  // 3: 1 for remainder 3 and 0 for remainder 0; 
+  // Now we will choose the first load/store whose remainder is 1 as base and
+  // adjust all other load/stores according to new base, so we will get 10 DS
+  // form and 10 X form.
+  // But we should be more clever, for this case we could use two bases, one for
+  // remainder 1 and the other for remainder 2, thus we could get 19 DS form and 1
+  // X form.
+  unsigned MaxCountRemainder = 0;
+  for (unsigned j = 0; j < Form; j++)
+    if ((RemainderOffsetInfo.find(j) != RemainderOffsetInfo.end()) &&
+        RemainderOffsetInfo[j].second >
+            RemainderOffsetInfo[MaxCountRemainder].second)
+      MaxCountRemainder = j;
+
+  // Abort when there are too few insts with common base.
+  if (RemainderOffsetInfo[MaxCountRemainder].second < DispFormPrepMinThreshold)
+    return false;
+
+  // If the first value is most profitable, no needed to adjust BucketChain
+  // elements as they are substracted the first value when collecting.
+  if (MaxCountRemainder == 0)
+    return true;
+
+  // Adjust load/store to the new chosen base.
+  const SCEV *Offset =
+      BucketChain.Elements[RemainderOffsetInfo[MaxCountRemainder].first].Offset;
+  BucketChain.BaseSCEV = SE->getAddExpr(BucketChain.BaseSCEV, Offset);
+  for (auto &E : BucketChain.Elements) {
+    if (E.Offset)
+      E.Offset = cast<SCEVConstant>(SE->getMinusSCEV(E.Offset, Offset));
+    else
+      E.Offset = cast<SCEVConstant>(SE->getNegativeSCEV(Offset));
+  }
+
+  std::swap(BucketChain.Elements[RemainderOffsetInfo[MaxCountRemainder].first],
+            BucketChain.Elements[0]);
+  return true;
+}
+
+// FIXME: implement a more clever base choosing policy.
 // Currently we always choose an exist load/store offset. This maybe lead to
 // suboptimal code sequences. For example, for one DS chain with offsets
 // {-32769, 2003, 2007, 2011}, we choose -32769 as base offset, and left disp
@@ -324,8 +484,9 @@ bool PPCLoopPreIncPrep::prepareBaseForUpdateFormChain(Bucket &BucketChain) {
   return true;
 }
 
-bool PPCLoopPreIncPrep::rewriteLoadStores(
-    Loop *L, Bucket &BucketChain, SmallSet<BasicBlock *, 16> &BBChanged) {
+bool PPCLoopPreIncPrep::rewriteLoadStores(Loop *L, Bucket &BucketChain,
+                                          SmallSet<BasicBlock *, 16> &BBChanged,
+                                          InstrForm Form) {
   bool MadeChange = false;
   const SCEVAddRecExpr *BasePtrSCEV =
       cast<SCEVAddRecExpr>(BucketChain.BaseSCEV);
@@ -346,19 +507,30 @@ bool PPCLoopPreIncPrep::rewriteLoadStores(
   Type *I8PtrTy = Type::getInt8PtrTy(MemI->getParent()->getContext(),
     BasePtr->getType()->getPointerAddressSpace());
 
-  const SCEV *BasePtrStartSCEV = BasePtrSCEV->getStart();
-  if (!SE->isLoopInvariant(BasePtrStartSCEV, L))
+  if (!SE->isLoopInvariant(BasePtrSCEV->getStart(), L))
     return MadeChange;
 
   const SCEVConstant *BasePtrIncSCEV =
     dyn_cast<SCEVConstant>(BasePtrSCEV->getStepRecurrence(*SE));
   if (!BasePtrIncSCEV)
     return MadeChange;
-  BasePtrStartSCEV = SE->getMinusSCEV(BasePtrStartSCEV, BasePtrIncSCEV);
+
+  // For some DS form load/store instructions, it can also be an update form,
+  // if the stride is a multipler of 4. Use update form if prefer it.
+  bool CanPreInc = (Form == UpdateForm ||
+                    ((Form == DSForm) && !BasePtrIncSCEV->getAPInt().urem(4) &&
+                     PreferUpdateForm));
+  const SCEV *BasePtrStartSCEV = nullptr;
+  if (CanPreInc)
+    BasePtrStartSCEV =
+        SE->getMinusSCEV(BasePtrSCEV->getStart(), BasePtrIncSCEV);
+  else
+    BasePtrStartSCEV = BasePtrSCEV->getStart();
+
   if (!isSafeToExpand(BasePtrStartSCEV, *SE))
     return MadeChange;
 
-  if (alreadyPrepared(L, MemI, BasePtrStartSCEV, BasePtrIncSCEV))
+  if (alreadyPrepared(L, MemI, BasePtrStartSCEV, BasePtrIncSCEV, Form))
     return MadeChange;
 
   LLVM_DEBUG(dbgs() << "PIP: New start is: " << *BasePtrStartSCEV << "\n");
@@ -385,24 +557,54 @@ bool PPCLoopPreIncPrep::rewriteLoadStores(
     NewPHI->addIncoming(BasePtrStart, LoopPredecessor);
   }
 
-  Instruction *InsPoint = &*Header->getFirstInsertionPt();
-  GetElementPtrInst *PtrInc = GetElementPtrInst::Create(
-      I8Ty, NewPHI, BasePtrIncSCEV->getValue(),
-      getInstrName(MemI, GEPNodeIncNameSuffix), InsPoint);
-  PtrInc->setIsInBounds(IsPtrInBounds(BasePtr));
-  for (const auto &PI : predecessors(Header)) {
-    if (PI == LoopPredecessor)
-      continue;
+  Instruction *PtrInc = nullptr;
+  Instruction *NewBasePtr = nullptr;
+  if (CanPreInc) {
+    Instruction *InsPoint = &*Header->getFirstInsertionPt();
+    PtrInc = GetElementPtrInst::Create(
+        I8Ty, NewPHI, BasePtrIncSCEV->getValue(),
+        getInstrName(MemI, GEPNodeIncNameSuffix), InsPoint);
+    cast<GetElementPtrInst>(PtrInc)->setIsInBounds(IsPtrInBounds(BasePtr));
+    for (const auto &PI : predecessors(Header)) {
+      if (PI == LoopPredecessor)
+        continue;
 
-    NewPHI->addIncoming(PtrInc, PI);
+      NewPHI->addIncoming(PtrInc, PI);
+    }
+    if (PtrInc->getType() != BasePtr->getType())
+      NewBasePtr = new BitCastInst(
+          PtrInc, BasePtr->getType(),
+          getInstrName(PtrInc, CastNodeNameSuffix), InsPoint);
+    else
+      NewBasePtr = PtrInc;
+  } else {
+    // Note that LoopPredecessor might occur in the predecessor list multiple
+    // times, and we need to make sure no more incoming value for them in PHI.
+    for (const auto &PI : predecessors(Header)) {
+      if (PI == LoopPredecessor)
+        continue;
+
+      // For the latch predecessor, we need to insert a GEP just before the
+      // terminator to increase the address.
+      BasicBlock *BB = PI;
+      Instruction *InsPoint = BB->getTerminator();
+      PtrInc = GetElementPtrInst::Create(
+          I8Ty, NewPHI, BasePtrIncSCEV->getValue(),
+          getInstrName(MemI, GEPNodeIncNameSuffix), InsPoint);
+
+      cast<GetElementPtrInst>(PtrInc)->setIsInBounds(IsPtrInBounds(BasePtr));
+
+      NewPHI->addIncoming(PtrInc, PI);
+    }
+    PtrInc = NewPHI;
+    if (NewPHI->getType() != BasePtr->getType())
+      NewBasePtr =
+          new BitCastInst(NewPHI, BasePtr->getType(),
+                          getInstrName(NewPHI, CastNodeNameSuffix),
+                          &*Header->getFirstInsertionPt());
+    else
+      NewBasePtr = NewPHI;
   }
-
-  Instruction *NewBasePtr;
-  if (PtrInc->getType() != BasePtr->getType())
-    NewBasePtr = new BitCastInst(PtrInc, BasePtr->getType(),
-      getInstrName(PtrInc, CastNodeNameSuffix), InsPoint);
-  else
-    NewBasePtr = PtrInc;
 
   if (Instruction *IDel = dyn_cast<Instruction>(BasePtr))
     BBChanged.insert(IDel->getParent());
@@ -461,7 +663,15 @@ bool PPCLoopPreIncPrep::rewriteLoadStores(
   }
 
   MadeChange = true;
-  UpdFormChainRewritten++;
+
+  SuccPrepCount++;  
+
+  if (Form == DSForm && !CanPreInc)
+    DSFormChainRewritten++;
+  else if (Form == DQForm)
+    DQFormChainRewritten++;
+  else if (Form == UpdateForm || (Form == DSForm && CanPreInc))
+    UpdFormChainRewritten++;
 
   return MadeChange;
 }
@@ -476,7 +686,8 @@ bool PPCLoopPreIncPrep::updateFormPrep(Loop *L,
     // The base address of each bucket is transformed into a phi and the others
     // are rewritten based on new base.
     if (prepareBaseForUpdateFormChain(Bucket))
-      MadeChange |= rewriteLoadStores(L, Bucket, BBChanged);
+      MadeChange |= rewriteLoadStores(L, Bucket, BBChanged, UpdateForm);
+
   if (MadeChange)
     for (auto &BB : L->blocks())
       if (BBChanged.count(BB))
@@ -484,13 +695,36 @@ bool PPCLoopPreIncPrep::updateFormPrep(Loop *L,
   return MadeChange;
 }
 
-// In order to prepare for the pre-increment a PHI is added.
+bool PPCLoopPreIncPrep::dispFormPrep(Loop *L, SmallVector<Bucket, 16> &Buckets,
+                                     InstrForm Form) {
+  bool MadeChange = false;
+
+  if (Buckets.empty())
+    return MadeChange;
+
+  SmallSet<BasicBlock *, 16> BBChanged;
+  for (auto &Bucket : Buckets) {
+    if (Bucket.Elements.size() < DispFormPrepMinThreshold)
+      continue;
+    if (prepareBaseForDispFormChain(Bucket, Form))
+      MadeChange |= rewriteLoadStores(L, Bucket, BBChanged, Form);
+  }
+
+  if (MadeChange)
+    for (auto &BB : L->blocks())
+      if (BBChanged.count(BB))
+        DeleteDeadPHIs(BB);
+  return MadeChange;
+}
+
+// In order to prepare for the preferred instruction form, a PHI is added.
 // This function will check to see if that PHI already exists and will return
-// true if it found an existing PHI with the same start and increment as the
+// true if it found an existing PHI with the matched start and increment as the
 // one we wanted to create.
 bool PPCLoopPreIncPrep::alreadyPrepared(Loop *L, Instruction* MemI,
                                         const SCEV *BasePtrStartSCEV,
-                                        const SCEVConstant *BasePtrIncSCEV) {
+                                        const SCEVConstant *BasePtrIncSCEV,
+                                        InstrForm Form) {
   BasicBlock *BB = MemI->getParent();
   if (!BB)
     return false;
@@ -527,12 +761,25 @@ bool PPCLoopPreIncPrep::alreadyPrepared(Loop *L, Instruction* MemI,
            CurrentPHINode->getIncomingBlock(1) == PredBB) ||
           (CurrentPHINode->getIncomingBlock(1) == LatchBB &&
            CurrentPHINode->getIncomingBlock(0) == PredBB)) {
-        if (PHIBasePtrSCEV->getStart() == BasePtrStartSCEV &&
-            PHIBasePtrIncSCEV == BasePtrIncSCEV) {
+        if (PHIBasePtrIncSCEV == BasePtrIncSCEV) {
           // The existing PHI (CurrentPHINode) has the same start and increment
-          //  as the PHI that we wanted to create.
-          ++PHINodeAlreadyExists;
-          return true;
+          // as the PHI that we wanted to create.
+          if (Form == UpdateForm &&
+              PHIBasePtrSCEV->getStart() == BasePtrStartSCEV) {
+            ++PHINodeAlreadyExistsUpdate;
+            return true;
+          } 
+          if (Form == DSForm || Form == DQForm) {
+            const SCEVConstant *Diff = dyn_cast<SCEVConstant>(
+                SE->getMinusSCEV(PHIBasePtrSCEV->getStart(), BasePtrStartSCEV));
+            if (Diff && !Diff->getAPInt().urem(Form)) {
+              if (Form == DSForm)
+                ++PHINodeAlreadyExistsDS;
+              else
+                ++PHINodeAlreadyExistsDQ;
+              return true;
+            }
+          } 
         }
       }
     }
@@ -545,6 +792,10 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
 
   // Only prep. the inner-most loop
   if (!L->empty())
+    return MadeChange;
+
+  // Return if already done enough preparation.
+  if (SuccPrepCount >= MaxVarsPrep)
     return MadeChange;
 
   LLVM_DEBUG(dbgs() << "PIP: Examining: " << *L << "\n");
@@ -563,7 +814,6 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
     LLVM_DEBUG(dbgs() << "PIP fails since no predecessor for current loop.\n");
     return MadeChange;
   }
-
   // Check if a load/store has update form. This lambda is used by function
   // collectCandidates which can collect candidates for types defined by lambda.
   auto isUpdateFormCandidate = [&] (const Instruction *I,
@@ -592,15 +842,49 @@ bool PPCLoopPreIncPrep::runOnLoop(Loop *L) {
     }
     return true;
   };
+  
+  // Check if a load/store has DS form.
+  auto isDSFormCandidate = [] (const Instruction *I, const Value *PtrValue) {
+    assert((PtrValue && I) && "Invalid parameter!");
+    // FIXME: 32 bit instruction lwa is also DS form.
+    return !isa<IntrinsicInst>(I) &&
+           ((PtrValue->getType()->getPointerElementType()->isIntegerTy(64)) ||
+            (PtrValue->getType()->getPointerElementType()->isFloatTy()) ||
+            (PtrValue->getType()->getPointerElementType()->isDoubleTy()));
+  };
 
-  // Collect buckets of comparable addresses used by loads, stores and prefetch
+  // Check if a load/store has DQ form.
+  auto isDQFormCandidate = [&] (const Instruction *I, const Value *PtrValue) {
+    assert((PtrValue && I) && "Invalid parameter!");
+    return !isa<IntrinsicInst>(I) && ST && ST->hasP9Vector() &&
+           (PtrValue->getType()->getPointerElementType()->isVectorTy());
+  };
+
   // intrinsic for update form.
   SmallVector<Bucket, 16> UpdateFormBuckets =
-      collectCandidates(L, isUpdateFormCandidate, MaxVars);
+      collectCandidates(L, isUpdateFormCandidate, MaxVarsUpdateForm);
 
   // Prepare for update form.
   if (!UpdateFormBuckets.empty())
     MadeChange |= updateFormPrep(L, UpdateFormBuckets);
+
+  // Collect buckets of comparable addresses used by loads and stores for DS
+  // form.
+  SmallVector<Bucket, 16> DSFormBuckets =
+      collectCandidates(L, isDSFormCandidate, MaxVarsDSForm);
+
+  // Prepare for DS form.
+  if (!DSFormBuckets.empty())
+    MadeChange |= dispFormPrep(L, DSFormBuckets, DSForm);
+
+  // Collect buckets of comparable addresses used by loads and stores for DQ
+  // form.
+  SmallVector<Bucket, 16> DQFormBuckets =
+      collectCandidates(L, isDQFormCandidate, MaxVarsDQForm);
+
+  // Prepare for DQ form.
+  if (!DQFormBuckets.empty())
+    MadeChange |= dispFormPrep(L, DQFormBuckets, DQForm);
 
   return MadeChange;
 }
