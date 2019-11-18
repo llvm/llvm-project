@@ -648,9 +648,10 @@ public:
              (M == OMPC_DEFAULTMAP_MODIFIER_default);
     case OMPC_DEFAULTMAP_aggregate:
       return M == OMPC_DEFAULTMAP_MODIFIER_firstprivate;
-    case OMPC_DEFAULTMAP_unknown:
-      llvm_unreachable("Unexpected variable category");
+    default:
+      break;
     }
+    llvm_unreachable("Unexpected OpenMPDefaultmapClauseKind enum");
   }
   bool mustBeFirstprivateAtLevel(unsigned Level,
                                  OpenMPDefaultmapClauseKind Kind) const {
