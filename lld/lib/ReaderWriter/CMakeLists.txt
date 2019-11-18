@@ -16,5 +16,6 @@ add_lld_library(lldReaderWriter
     Support
 
   LINK_LIBS
+    lldCommon
     lldCore
   )
