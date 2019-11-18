@@ -260,14 +260,9 @@ defm V_CLREXCP : VOP1Inst <"v_clrexcp", VOP_NO_EXT<VOP_NONE>>;
 }
 
 // Restrict src0 to be VGPR
-def VOP_I32_VI32_NO_EXT : VOPProfile<[i32, i32, untyped, untyped]> {
+def VOP_MOVRELS : VOPProfile<[i32, i32, untyped, untyped]> {
   let Src0RC32 = VRegSrc_32;
   let Src0RC64 = VRegSrc_32;
-
-  let HasExt = 0;
-  let HasExtDPP = 0;
-  let HasExtSDWA = 0;
-  let HasExtSDWA9 = 0;
 }
 
 // Special case because there are no true output operands.  Hack vdst
@@ -281,26 +276,24 @@ class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, un
   let Outs = (outs);
   let Ins32 = (ins Src0RC32:$vdst, Src1RC:$src0);
   let Ins64 = (ins Src0RC64:$vdst, Src1RC:$src0);
-  let InsDPP = (ins DstRC:$vdst, DstRC:$old, Src0RC32:$src0,
-                    dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
-                    bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
-  let InsDPP16 = !con(InsDPP, (ins FI:$fi));
-
-  let InsSDWA = (ins Src0RC32:$vdst, Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
-                     clampmod:$clamp, omod:$omod, dst_sel:$dst_sel, dst_unused:$dst_unused,
-                     src0_sel:$src0_sel);
-
   let Asm32 = getAsm32<1, 1>.ret;
   let Asm64 = getAsm64<1, 1, 0, 0, 1>.ret;
-  let AsmDPP = getAsmDPP<1, 1, 0>.ret;
-  let AsmDPP16 = getAsmDPP16<1, 1, 0>.ret;
-  let AsmSDWA = getAsmSDWA<1, 1>.ret;
+
+  let OutsSDWA = (outs Src0RC32:$vdst);
+  let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
+                     clampmod:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,
+                     src0_sel:$src0_sel);
   let AsmSDWA9 = getAsmSDWA9<1, 0, 1>.ret;
 
-  let HasExt = 0;
-  let HasExtDPP = 0;
-  let HasExtSDWA = 0;
-  let HasExtSDWA9 = 0;
+  let OutsDPP = (outs Src0RC32:$vdst);
+  let InsDPP16 = (ins Src0RC32:$old, Src0RC32:$src0,
+                      dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
+                      bank_mask:$bank_mask, bound_ctrl:$bound_ctrl, FI:$fi);
+  let AsmDPP16 = getAsmDPP16<1, 1, 0>.ret;
+
+  let OutsDPP8 = (outs Src0RC32:$vdst);
+  let InsDPP8 = (ins Src0RC32:$old, Src0RC32:$src0, dpp8:$dpp8, FI:$fi);
+  let AsmDPP8 = getAsmDPP8<1, 1, 0>.ret;
 
   let HasDst = 0;
   let EmitDst = 1; // force vdst emission
@@ -310,14 +303,14 @@ def VOP_MOVRELD : VOP_MOVREL<VSrc_b32>;
 def VOP_MOVRELSD : VOP_MOVREL<VRegSrc_32>;
 
 let SubtargetPredicate = HasMovrel, Uses = [M0, EXEC] in {
-// v_movreld_b32 is a special case because the destination output
+ // v_movreld_b32 is a special case because the destination output
  // register is really a source. It isn't actually read (but may be
  // written), and is only to provide the base register to start
  // indexing from. Tablegen seems to not let you define an implicit
  // virtual register output for the super register being written into,
  // so this must have an implicit def of the register added to it.
 defm V_MOVRELD_B32 : VOP1Inst <"v_movreld_b32", VOP_MOVRELD>;
-defm V_MOVRELS_B32 : VOP1Inst <"v_movrels_b32", VOP_I32_VI32_NO_EXT>;
+defm V_MOVRELS_B32 : VOP1Inst <"v_movrels_b32", VOP_MOVRELS>;
 defm V_MOVRELSD_B32 : VOP1Inst <"v_movrelsd_b32", VOP_MOVRELSD>;
 } // End Uses = [M0, EXEC]
 
@@ -528,16 +521,10 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
   }
 } // End AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10"
 
-multiclass VOP1_Real_gfx10_no_dpp<bits<9> op> :
-  VOP1_Real_e32_gfx10<op>, VOP1_Real_e64_gfx10<op>,
-  VOP1_Real_sdwa_gfx10<op>;
-
-multiclass VOP1_Real_gfx10_no_dpp8<bits<9> op> :
-  VOP1_Real_e32_gfx10<op>, VOP1_Real_e64_gfx10<op>,
-  VOP1_Real_sdwa_gfx10<op>, VOP1_Real_dpp_gfx10<op>;
-
 multiclass VOP1_Real_gfx10<bits<9> op> :
-  VOP1_Real_gfx10_no_dpp8<op>, VOP1_Real_dpp8_gfx10<op>;
+  VOP1_Real_e32_gfx10<op>, VOP1_Real_e64_gfx10<op>,
+  VOP1_Real_sdwa_gfx10<op>, VOP1_Real_dpp_gfx10<op>,
+  VOP1_Real_dpp8_gfx10<op>;
 
 defm V_PIPEFLUSH         : VOP1_Real_gfx10<0x01b>;
 defm V_MOVRELSD_2_B32    : VOP1_Real_gfx10<0x048>;
@@ -620,12 +607,6 @@ multiclass VOP1_Real_gfx6_gfx7<bits<9> op> :
 multiclass VOP1_Real_gfx6_gfx7_gfx10<bits<9> op> :
   VOP1_Real_gfx6_gfx7<op>, VOP1_Real_gfx10<op>;
 
-multiclass VOP1_Real_gfx6_gfx7_gfx10_no_dpp8<bits<9> op> :
-  VOP1_Real_gfx6_gfx7<op>, VOP1_Real_gfx10_no_dpp8<op>;
-
-multiclass VOP1_Real_gfx6_gfx7_gfx10_no_dpp<bits<9> op> :
-  VOP1_Real_gfx6_gfx7<op>, VOP1_Real_gfx10_no_dpp<op>;
-
 defm V_LOG_CLAMP_F32  : VOP1_Real_gfx6_gfx7<0x026>;
 defm V_RCP_CLAMP_F32  : VOP1_Real_gfx6_gfx7<0x028>;
 defm V_RCP_LEGACY_F32 : VOP1_Real_gfx6_gfx7<0x029>;
@@ -683,9 +664,9 @@ defm V_FRACT_F64         : VOP1_Real_gfx6_gfx7_gfx10<0x03e>;
 defm V_FREXP_EXP_I32_F32 : VOP1_Real_gfx6_gfx7_gfx10<0x03f>;
 defm V_FREXP_MANT_F32    : VOP1_Real_gfx6_gfx7_gfx10<0x040>;
 defm V_CLREXCP           : VOP1_Real_gfx6_gfx7_gfx10<0x041>;
-defm V_MOVRELD_B32       : VOP1_Real_gfx6_gfx7_gfx10_no_dpp<0x042>;
-defm V_MOVRELS_B32       : VOP1_Real_gfx6_gfx7_gfx10_no_dpp8<0x043>;
-defm V_MOVRELSD_B32      : VOP1_Real_gfx6_gfx7_gfx10_no_dpp8<0x044>;
+defm V_MOVRELD_B32       : VOP1_Real_gfx6_gfx7_gfx10<0x042>;
+defm V_MOVRELS_B32       : VOP1_Real_gfx6_gfx7_gfx10<0x043>;
+defm V_MOVRELSD_B32      : VOP1_Real_gfx6_gfx7_gfx10<0x044>;
 
 //===----------------------------------------------------------------------===//
 // GFX8, GFX9 (VI).
