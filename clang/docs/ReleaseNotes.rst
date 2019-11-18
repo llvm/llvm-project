@@ -112,7 +112,8 @@ future versions of Clang.
 Modified Compiler Flags
 -----------------------
 
-- ...
+- RISC-V now sets the architecture (riscv32/riscv64) based on the value provided
+  to the ``-march`` flag, overriding the target provided by ``-triple``.
 
 New Pragmas in Clang
 --------------------

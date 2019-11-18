@@ -541,6 +541,17 @@ static llvm::Triple computeTargetTriple(const Driver &D,
     }
   }
 
+  // If target is RISC-V adjust the target triple according to
+  // provided architecture name
+  A = Args.getLastArg(options::OPT_march_EQ);
+  if (A && Target.isRISCV()) {
+    StringRef ArchName = A->getValue();
+    if (ArchName.startswith_lower("rv32"))
+      Target.setArch(llvm::Triple::riscv32);
+    else if (ArchName.startswith_lower("rv64"))
+      Target.setArch(llvm::Triple::riscv64);
+  }
+
   return Target;
 }
 
