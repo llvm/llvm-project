@@ -223,8 +223,8 @@ bool Resolver::resolveUndefines() {
     if (!file)
       return true;
     if (std::error_code ec = file->parse()) {
-      llvm::errs() << "Cannot open " + file->path()
-                   << ": " << ec.message() << "\n";
+      lld::errs() << "Cannot open " + file->path() << ": " << ec.message()
+                  << "\n";
       return false;
     }
     DEBUG_WITH_TYPE("resolver",
@@ -252,8 +252,8 @@ bool Resolver::resolveUndefines() {
       if (auto EC = undefAddedOrError.takeError()) {
         // FIXME: This should be passed to logAllUnhandledErrors but it needs
         // to be passed a Twine instead of a string.
-        llvm::errs() << "Error in " + file->path() << ": ";
-        logAllUnhandledErrors(std::move(EC), llvm::errs(), std::string());
+        lld::errs() << "Error in " + file->path() << ": ";
+        logAllUnhandledErrors(std::move(EC), lld::errs(), std::string());
         return false;
       }
       undefAdded = undefAddedOrError.get();
@@ -266,8 +266,8 @@ bool Resolver::resolveUndefines() {
       if (auto EC = undefAddedOrError.takeError()) {
         // FIXME: This should be passed to logAllUnhandledErrors but it needs
         // to be passed a Twine instead of a string.
-        llvm::errs() << "Error in " + file->path() << ": ";
-        logAllUnhandledErrors(std::move(EC), llvm::errs(), std::string());
+        lld::errs() << "Error in " + file->path() << ": ";
+        logAllUnhandledErrors(std::move(EC), lld::errs(), std::string());
         return false;
       }
       undefAdded = undefAddedOrError.get();
@@ -279,8 +279,8 @@ bool Resolver::resolveUndefines() {
       if (auto EC = handleSharedLibrary(*file)) {
         // FIXME: This should be passed to logAllUnhandledErrors but it needs
         // to be passed a Twine instead of a string.
-        llvm::errs() << "Error in " + file->path() << ": ";
-        logAllUnhandledErrors(std::move(EC), llvm::errs(), std::string());
+        lld::errs() << "Error in " + file->path() << ": ";
+        logAllUnhandledErrors(std::move(EC), lld::errs(), std::string());
         return false;
       }
       break;
@@ -424,15 +424,14 @@ bool Resolver::checkUndefines() {
     // Seems like this symbol is undefined. Warn that.
     foundUndefines = true;
     if (_ctx.printRemainingUndefines()) {
-      llvm::errs() << "Undefined symbol: " << undef->file().path()
-                   << ": " << _ctx.demangle(undef->name())
-                   << "\n";
+      lld::errs() << "Undefined symbol: " << undef->file().path() << ": "
+                  << _ctx.demangle(undef->name()) << "\n";
     }
   }
   if (!foundUndefines)
     return false;
   if (_ctx.printRemainingUndefines())
-    llvm::errs() << "symbol(s) not found\n";
+    lld::errs() << "symbol(s) not found\n";
   return true;
 }
 
