@@ -8,6 +8,7 @@ include_directories(${LLDB_SOURCE_DIR}/tools/debugserver/source
                     ${LLDB_SOURCE_DIR}/tools/debugserver/source/MacOSX)
 
 add_lldb_unittest(debugserverTests
+  JSONTest.cpp
   RNBSocketTest.cpp
   debugserver_LogCallback.cpp
 
@@ -24,8 +25,9 @@ if(IOS)
       WITH_FBS
       WITH_BKS
       )
-  
+
   add_lldb_unittest(debugserverNonUITests
+    JSONTest.cpp
     RNBSocketTest.cpp
     debugserver_LogCallback.cpp
 
