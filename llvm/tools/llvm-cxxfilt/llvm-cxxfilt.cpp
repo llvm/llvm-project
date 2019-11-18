@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -41,6 +43,13 @@ static cl::opt<bool> StripUnderscore("strip-underscore",
 static cl::alias StripUnderscoreShort("_",
                                       cl::desc("alias for --strip-underscore"),
                                       cl::aliasopt(StripUnderscore));
+static cl::opt<bool>
+    NoStripUnderscore("no-strip-underscore",
+                      cl::desc("do not strip the leading underscore"),
+                      cl::init(false));
+static cl::alias
+    NoStripUnderscoreShort("n", cl::desc("alias for --no-strip-underscore"),
+                           cl::aliasopt(NoStripUnderscore));
 
 static cl::opt<bool>
     Types("types",
@@ -55,11 +64,21 @@ Decorated(cl::Positional, cl::desc("<mangled>"), cl::ZeroOrMore);
 static cl::extrahelp
     HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
 
+static bool shouldStripUnderscore() {
+  if (StripUnderscore)
+    return true;
+  if (NoStripUnderscore)
+    return false;
+  // If none of them are set, use the default value for platform.
+  // macho has symbols prefix with "_" so strip by default.
+  return Triple(sys::getProcessTriple()).isOSBinFormatMachO();
+}
+
 static std::string demangle(llvm::raw_ostream &OS, const std::string &Mangled) {
   int Status;
 
   const char *DecoratedStr = Mangled.c_str();
-  if (StripUnderscore)
+  if (shouldStripUnderscore())
     if (DecoratedStr[0] == '_')
       ++DecoratedStr;
   size_t DecoratedLength = strlen(DecoratedStr);
