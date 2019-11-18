@@ -41,7 +41,7 @@ Sections:
 # RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-size.elf 2>&1 \
 # RUN:   | FileCheck %s -DFILE=%p/Inputs/invalid-strtab-size.elf --check-prefix=INVALID-STRTAB-SIZE
 
-# INVALID-STRTAB-SIZE: error: '[[FILE]]': section [index 1] has a sh_offset (0x70) + sh_size (0x16777215) that cannot be represented
+# INVALID-STRTAB-SIZE: error: '[[FILE]]': section [index 1] has a sh_offset (0x70) + sh_size (0xffffff) that cannot be represented
 
 ## Check that llvm-dwarfdump reports an error during relocation resolution
 ## when instead of expected SHT_RELA section it locates a section of a different type.
@@ -282,7 +282,7 @@ Sections:
 # RUN: yaml2obj %s --docnum=14 -o %t14
 # RUN: not llvm-readobj --symbols %t14 2>&1 | FileCheck -DFILE=%t14 --check-prefix=INVALID-SECTION-SIZE2 %s
 
-# INVALID-SECTION-SIZE2: error: '[[FILE]]': section [index 1] has a sh_offset (0xffffffff) + sh_size (0x27) that cannot be represented
+# INVALID-SECTION-SIZE2: error: '[[FILE]]': section [index 1] has a sh_offset (0xffffffff) + sh_size (0x1b) that cannot be represented
 
 --- !ELF
 FileHeader:
