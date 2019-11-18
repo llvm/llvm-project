@@ -2284,18 +2284,9 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   bool AssociativeMath = false;
   bool ReciprocalMath = false;
   bool SignedZeros = true;
-  bool TrappingMath = false; // Implemented via -ffp-exception-behavior
-  bool TrappingMathPresent = false; // Is trapping-math in args, and not
-                                    // overriden by ffp-exception-behavior?
-  bool RoundingFPMath = false;
-  bool RoundingMathPresent = false; // Is rounding-math in args?
-  // -ffp-model values: strict, fast, precise
-  StringRef FPModel = "";
-  // -ffp-exception-behavior options: strict, maytrap, ignore
-  StringRef FPExceptionBehavior = "";
+  bool TrappingMath = true;
   StringRef DenormalFPMath = "";
   StringRef FPContract = "";
-  bool StrictFPModel = false;
 
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
     CmdArgs.push_back("-mlimit-float-precision");
@@ -2303,82 +2294,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   }
 
   for (const Arg *A : Args) {
-    auto optID = A->getOption().getID();
-    bool PreciseFPModel = false;
-    switch (optID) {
-    default:
-      break;
-    case options::OPT_ffp_model_EQ: {
-      StringRef Val = A->getValue();
-      if (OFastEnabled && !Val.equals("fast")) {
-          // Only -ffp-model=fast is compatible with OFast, ignore.
-        D.Diag(clang::diag::warn_drv_overriding_flag_option)
-          << Args.MakeArgString("-ffp-model=" + Val)
-          << "-Ofast";
-        break;
-      }
-      StrictFPModel = false;
-      PreciseFPModel = true;
-      // ffp-model= is a Driver option, it is entirely rewritten into more
-      // granular options before being passed into cc1.
-      // Use the gcc option in the switch below.
-      if (!FPModel.empty() && !FPModel.equals(Val)) {
-        D.Diag(clang::diag::warn_drv_overriding_flag_option)
-          << Args.MakeArgString("-ffp-model=" + FPModel)
-          << Args.MakeArgString("-ffp-model=" + Val);
-        FPContract = "";
-      }
-      if (Val.equals("fast")) {
-        if (!FPContract.empty() && !FPContract.equals("fast"))
-          // FPContract has already been set to something else
-          // so warn about the override.
-          D.Diag(clang::diag::warn_drv_overriding_flag_option)
-            << Args.MakeArgString("-ffp-contract=" + FPContract)
-            << "-ffp-contract=fast";
-        optID = options::OPT_ffast_math;
-        FPModel = Val;
-        FPContract = "fast";
-      } else if (Val.equals("precise")) {
-        if (!FPContract.empty() && !FPContract.equals("fast"))
-          D.Diag(clang::diag::warn_drv_overriding_flag_option)
-            << Args.MakeArgString("-ffp-contract=" + FPContract)
-            << "-ffp-contract=fast";
-        optID = options::OPT_ffp_contract;
-        FPModel = Val;
-        FPContract = "fast";
-        PreciseFPModel = true;
-      } else if (Val.equals("strict")) {
-        StrictFPModel = true;
-        if (!FPContract.empty() && !FPContract.equals("strict"))
-          D.Diag(clang::diag::warn_drv_overriding_flag_option)
-            << Args.MakeArgString("-ffp-contract=" + FPContract)
-            << "-ffp-contract=strict";
-        optID = options::OPT_frounding_math;
-        FPExceptionBehavior = "strict";
-        FPModel = Val;
-        // -ffp-model=strict also enables fno-fast-math
-        HonorINFs = true;
-        HonorNaNs = true;
-        // Turning on -ffast-math (with either flag) removes the need for
-        // MathErrno. However, turning *off* -ffast-math merely restores the
-        // toolchain default (which may be false).
-        MathErrno = TC.IsMathErrnoDefault();
-        AssociativeMath = false;
-        ReciprocalMath = false;
-        SignedZeros = true;
-        TrappingMath = true;
-        RoundingFPMath = true;
-        // -fno_fast_math restores default denormal and fpcontract handling
-        DenormalFPMath = "";
-        FPContract = "";
-      } else
-        D.Diag(diag::err_drv_unsupported_option_argument)
-            << A->getOption().getName() << Val;
-      break;
-      }
-    }
-
-    switch (optID) {
+    switch (A->getOption().getID()) {
     // If this isn't an FP option skip the claim below
     default: continue;
 
@@ -2395,71 +2311,19 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     case options::OPT_fno_reciprocal_math:  ReciprocalMath = false;   break;
     case options::OPT_fsigned_zeros:        SignedZeros = true;       break;
     case options::OPT_fno_signed_zeros:     SignedZeros = false;      break;
-    case options::OPT_ftrapping_math:
-      TrappingMath = true;
-      TrappingMathPresent = true;
-      FPExceptionBehavior = "strict";
-      break;
-    case options::OPT_fno_trapping_math:
-      TrappingMath = false;
-      TrappingMathPresent = true;
-      FPExceptionBehavior = "ignore";
-      break;
-    case options::OPT_frounding_math:
-      // The default setting for frounding-math is True and ffast-math
-      // sets fno-rounding-math, but we only want to use constrained
-      // floating point intrinsics if the option is specifically requested.
-      RoundingFPMath = true;
-      RoundingMathPresent = true;
-      break;
-    case options::OPT_fno_rounding_math:
-      RoundingFPMath = false;
-      RoundingMathPresent = false;
-      break;
+    case options::OPT_ftrapping_math:       TrappingMath = true;      break;
+    case options::OPT_fno_trapping_math:    TrappingMath = false;     break;
 
     case options::OPT_fdenormal_fp_math_EQ:
       DenormalFPMath = A->getValue();
       break;
 
-    // Validate and pass through -ffp-contract option.
+    // Validate and pass through -fp-contract option.
     case options::OPT_ffp_contract: {
       StringRef Val = A->getValue();
-      if (PreciseFPModel) {
-        // -ffp-model=precise enables ffp-contract=fast as a side effect
-        // the FPContract value has already been set to a string literal
-        // and the Val string isn't a pertinent value.
-        ;
-      } else if (Val.equals("fast") || Val.equals("on") || Val.equals("off"))
+      if (Val == "fast" || Val == "on" || Val == "off")
         FPContract = Val;
       else
-        D.Diag(diag::err_drv_unsupported_option_argument)
-           << A->getOption().getName() << Val;
-      break;
-    }
-
-    // Validate and pass through -ffp-model option.
-    case options::OPT_ffp_model_EQ:
-      // This should only occur in the error case
-      // since the optID has been replaced by a more granular
-      // floating point option.
-      break;
-
-    // Validate and pass through -ffp-exception-behavior option.
-    case options::OPT_ffp_exception_behavior_EQ: {
-      StringRef Val = A->getValue();
-      if (!TrappingMathPresent && !FPExceptionBehavior.empty() &&
-          !FPExceptionBehavior.equals(Val))
-        // Warn that previous value of option is overridden.
-        D.Diag(clang::diag::warn_drv_overriding_flag_option)
-          << Args.MakeArgString("-ffp-exception-behavior=" + FPExceptionBehavior)
-          << Args.MakeArgString("-ffp-exception-behavior=" + Val);
-      TrappingMathPresent = false;
-      if (Val.equals("ignore") || Val.equals("maytrap"))
-        FPExceptionBehavior = Val;
-      else if (Val.equals("strict")) {
-        FPExceptionBehavior = Val;
-        TrappingMath = TrappingMathPresent = true;
-      } else
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getOption().getName() << Val;
       break;
@@ -2479,14 +2343,12 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       ReciprocalMath = true;
       SignedZeros = false;
       TrappingMath = false;
-      FPExceptionBehavior = "";
       break;
     case options::OPT_fno_unsafe_math_optimizations:
       AssociativeMath = false;
       ReciprocalMath = false;
       SignedZeros = true;
       TrappingMath = true;
-      FPExceptionBehavior = "strict";
       // -fno_unsafe_math_optimizations restores default denormal handling
       DenormalFPMath = "";
       break;
@@ -2504,7 +2366,6 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       ReciprocalMath = true;
       SignedZeros = false;
       TrappingMath = false;
-      RoundingFPMath = false;
       // If fast-math is set then set the fp-contract mode to fast.
       FPContract = "fast";
       break;
@@ -2518,30 +2379,11 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       AssociativeMath = false;
       ReciprocalMath = false;
       SignedZeros = true;
-      TrappingMath = false;
-      RoundingFPMath = false;
+      TrappingMath = true;
       // -fno_fast_math restores default denormal and fpcontract handling
       DenormalFPMath = "";
       FPContract = "";
       break;
-    }
-    if (StrictFPModel) {
-      // If -ffp-model=strict has been specified on command line but
-      // subsequent options conflict then emit warning diagnostic.
-      if (HonorINFs && HonorNaNs &&
-        !AssociativeMath && !ReciprocalMath &&
-        SignedZeros && TrappingMath && RoundingFPMath &&
-        DenormalFPMath.empty() && FPContract.empty())
-        // OK: Current Arg doesn't conflict with -ffp-model=strict
-        ;
-      else {
-        StrictFPModel = false;
-        FPModel = "";
-        D.Diag(clang::diag::warn_drv_overriding_flag_option)
-            << "-ffp-model=strict" <<
-            ((A->getNumValues() == 0) ?  A->getSpelling()
-            : Args.MakeArgString(A->getSpelling() + A->getValue()));
-      }
     }
 
     // If we handled this option claim it
@@ -2570,11 +2412,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (ReciprocalMath)
     CmdArgs.push_back("-freciprocal-math");
 
-  if (TrappingMath) {
-    // FP Exception Behavior is also set to strict
-    assert(FPExceptionBehavior.equals("strict"));
-    CmdArgs.push_back("-ftrapping-math");
-  } else if (TrappingMathPresent)
+  if (!TrappingMath)
     CmdArgs.push_back("-fno-trapping-math");
 
   if (!DenormalFPMath.empty())
@@ -2584,37 +2422,14 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (!FPContract.empty())
     CmdArgs.push_back(Args.MakeArgString("-ffp-contract=" + FPContract));
 
-  if (!RoundingFPMath)
-    CmdArgs.push_back(Args.MakeArgString("-fno-rounding-math"));
-
-  if (RoundingFPMath && RoundingMathPresent)
-    CmdArgs.push_back(Args.MakeArgString("-frounding-math"));
-
-  if (!FPExceptionBehavior.empty())
-    CmdArgs.push_back(Args.MakeArgString("-ffp-exception-behavior=" +
-                      FPExceptionBehavior));
-
   ParseMRecip(D, Args, CmdArgs);
 
   // -ffast-math enables the __FAST_MATH__ preprocessor macro, but check for the
   // individual features enabled by -ffast-math instead of the option itself as
   // that's consistent with gcc's behaviour.
   if (!HonorINFs && !HonorNaNs && !MathErrno && AssociativeMath &&
-      ReciprocalMath && !SignedZeros && !TrappingMath && !RoundingFPMath) {
+      ReciprocalMath && !SignedZeros && !TrappingMath)
     CmdArgs.push_back("-ffast-math");
-    if (FPModel.equals("fast")) {
-      if (FPContract.equals("fast"))
-        // All set, do nothing.
-        ;
-      else if (FPContract.empty())
-        // Enable -ffp-contract=fast
-        CmdArgs.push_back(Args.MakeArgString("-ffp-contract=fast"));
-      else
-        D.Diag(clang::diag::warn_drv_overriding_flag_option)
-          << "-ffp-model=fast"
-          << Args.MakeArgString("-ffp-contract=" + FPContract);
-    }
-  }
 
   // Handle __FINITE_MATH_ONLY__ similarly.
   if (!HonorINFs && !HonorNaNs)
