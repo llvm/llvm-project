@@ -116,15 +116,15 @@ public:
     template <class _InputIter>
         typename enable_if
         <
-            __is_input_iterator<_InputIter>::value &&
-           !__is_forward_iterator<_InputIter>::value,
+            __is_cpp17_input_iterator<_InputIter>::value &&
+           !__is_cpp17_forward_iterator<_InputIter>::value,
             void
         >::type
         __construct_at_end(_InputIter __first, _InputIter __last);
     template <class _ForwardIterator>
         typename enable_if
         <
-            __is_forward_iterator<_ForwardIterator>::value,
+            __is_cpp17_forward_iterator<_ForwardIterator>::value,
             void
         >::type
         __construct_at_end(_ForwardIterator __first, _ForwardIterator __last);
@@ -237,8 +237,8 @@ template <class _Tp, class _Allocator>
 template <class _InputIter>
 typename enable_if
 <
-     __is_input_iterator<_InputIter>::value &&
-    !__is_forward_iterator<_InputIter>::value,
+     __is_cpp17_input_iterator<_InputIter>::value &&
+    !__is_cpp17_forward_iterator<_InputIter>::value,
     void
 >::type
 __split_buffer<_Tp, _Allocator>::__construct_at_end(_InputIter __first, _InputIter __last)
@@ -265,7 +265,7 @@ template <class _Tp, class _Allocator>
 template <class _ForwardIterator>
 typename enable_if
 <
-    __is_forward_iterator<_ForwardIterator>::value,
+    __is_cpp17_forward_iterator<_ForwardIterator>::value,
     void
 >::type
 __split_buffer<_Tp, _Allocator>::__construct_at_end(_ForwardIterator __first, _ForwardIterator __last)
