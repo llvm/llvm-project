@@ -355,7 +355,7 @@ class BinaryWriter : public Writer {
 private:
   std::unique_ptr<BinarySectionWriter> SecWriter;
 
-  uint64_t TotalSize;
+  uint64_t TotalSize = 0;
 
 public:
   ~BinaryWriter() {}
@@ -370,7 +370,7 @@ class IHexWriter : public Writer {
   };
 
   std::set<const SectionBase *, SectionCompare> Sections;
-  size_t TotalSize;
+  size_t TotalSize = 0;
 
   Error checkSection(const SectionBase &Sec);
   uint64_t writeEntryPointRecord(uint8_t *Buf);
@@ -387,8 +387,8 @@ class SectionBase {
 public:
   std::string Name;
   Segment *ParentSegment = nullptr;
-  uint64_t HeaderOffset;
-  uint32_t Index;
+  uint64_t HeaderOffset = 0;
+  uint32_t Index = 0;
   bool HasSymbol = false;
 
   uint64_t OriginalFlags = 0;
@@ -440,23 +440,23 @@ private:
   };
 
 public:
-  uint32_t Type;
-  uint32_t Flags;
-  uint64_t Offset;
-  uint64_t VAddr;
-  uint64_t PAddr;
-  uint64_t FileSize;
-  uint64_t MemSize;
-  uint64_t Align;
+  uint32_t Type = 0;
+  uint32_t Flags = 0;
+  uint64_t Offset = 0;
+  uint64_t VAddr = 0;
+  uint64_t PAddr = 0;
+  uint64_t FileSize = 0;
+  uint64_t MemSize = 0;
+  uint64_t Align = 0;
 
-  uint32_t Index;
-  uint64_t OriginalOffset;
+  uint32_t Index = 0;
+  uint64_t OriginalOffset = 0;
   Segment *ParentSegment = nullptr;
   ArrayRef<uint8_t> Contents;
   std::set<const SectionBase *, SectionCompare> Sections;
 
   explicit Segment(ArrayRef<uint8_t> Data) : Contents(Data) {}
-  Segment() {}
+  Segment() = default;
 
   const SectionBase *firstSection() const {
     if (!Sections.empty())
