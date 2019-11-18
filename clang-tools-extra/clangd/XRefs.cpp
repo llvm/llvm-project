@@ -566,6 +566,51 @@ static void enhanceFromIndex(HoverInfo &Hover, const Decl *D,
       Req, [&](const Symbol &S) { Hover.Documentation = S.Documentation; });
 }
 
+// Populates Type, ReturnType, and Parameters for function-like decls.
+static void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
+                                      const FunctionDecl *FD,
+                                      const PrintingPolicy &Policy) {
+  HI.Parameters.emplace();
+  for (const ParmVarDecl *PVD : FD->parameters()) {
+    HI.Parameters->emplace_back();
+    auto &P = HI.Parameters->back();
+    if (!PVD->getType().isNull()) {
+      P.Type.emplace();
+      llvm::raw_string_ostream OS(*P.Type);
+      PVD->getType().print(OS, Policy);
+    } else {
+      std::string Param;
+      llvm::raw_string_ostream OS(Param);
+      PVD->dump(OS);
+      OS.flush();
+      elog("Got param with null type: {0}", Param);
+    }
+    if (!PVD->getName().empty())
+      P.Name = PVD->getNameAsString();
+    if (PVD->hasDefaultArg()) {
+      P.Default.emplace();
+      llvm::raw_string_ostream Out(*P.Default);
+      PVD->getDefaultArg()->printPretty(Out, nullptr, Policy);
+    }
+  }
+
+  if (const auto* CCD = llvm::dyn_cast<CXXConstructorDecl>(FD)) {
+    // Constructor's "return type" is the class type.
+    HI.ReturnType = declaredType(CCD->getParent()).getAsString(Policy);
+    // Don't provide any type for the constructor itself.
+  } else if (const auto* CDD = llvm::dyn_cast<CXXDestructorDecl>(FD)){
+    HI.ReturnType = "void";
+  } else {
+    HI.ReturnType = FD->getReturnType().getAsString(Policy);
+
+    QualType FunctionType = FD->getType();
+    if (const VarDecl *VD = llvm::dyn_cast<VarDecl>(D)) // Lambdas
+      FunctionType = VD->getType().getDesugaredType(D->getASTContext());
+    HI.Type = FunctionType.getAsString(Policy);
+  }
+  // FIXME: handle variadics.
+}
+
 /// Generate a \p Hover object given the declaration \p D.
 static HoverInfo getHoverContents(const Decl *D, const SymbolIndex *Index) {
   HoverInfo HI;
@@ -601,45 +646,7 @@ static HoverInfo getHoverContents(const Decl *D, const SymbolIndex *Index) {
 
   // Fill in types and params.
   if (const FunctionDecl *FD = getUnderlyingFunction(D)) {
-    HI.ReturnType.emplace();
-    {
-      llvm::raw_string_ostream OS(*HI.ReturnType);
-      FD->getReturnType().print(OS, Policy);
-    }
-
-    HI.Parameters.emplace();
-    for (const ParmVarDecl *PVD : FD->parameters()) {
-      HI.Parameters->emplace_back();
-      auto &P = HI.Parameters->back();
-      if (!PVD->getType().isNull()) {
-        P.Type.emplace();
-        llvm::raw_string_ostream OS(*P.Type);
-        PVD->getType().print(OS, Policy);
-      } else {
-        std::string Param;
-        llvm::raw_string_ostream OS(Param);
-        PVD->dump(OS);
-        OS.flush();
-        elog("Got param with null type: {0}", Param);
-      }
-      if (!PVD->getName().empty())
-        P.Name = PVD->getNameAsString();
-      if (PVD->hasDefaultArg()) {
-        P.Default.emplace();
-        llvm::raw_string_ostream Out(*P.Default);
-        PVD->getDefaultArg()->printPretty(Out, nullptr, Policy);
-      }
-    }
-
-    HI.Type.emplace();
-    llvm::raw_string_ostream TypeOS(*HI.Type);
-    // Lambdas
-    if (const VarDecl *VD = llvm::dyn_cast<VarDecl>(D))
-      VD->getType().getDesugaredType(D->getASTContext()).print(TypeOS, Policy);
-    // Functions
-    else
-      FD->getType().print(TypeOS, Policy);
-    // FIXME: handle variadics.
+    fillFunctionTypeAndParams(HI, D, FD, Policy);
   } else if (const auto *VD = dyn_cast<ValueDecl>(D)) {
     HI.Type.emplace();
     llvm::raw_string_ostream OS(*HI.Type);

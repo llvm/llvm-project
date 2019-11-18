@@ -918,9 +918,18 @@ void foo())cpp";
          HI.Name = "X";
          HI.LocalScope = "X::";        // FIXME: Should be X<T *>::
          HI.Kind = SymbolKind::Constructor;
-         HI.Type = "void ()";          // FIXME: Should be None
-         HI.ReturnType = "void";       // FIXME: Should be None or X<T*>
+         HI.ReturnType = "X<T *>";
          HI.Definition = "X()";
+         HI.Parameters.emplace();
+       }},
+      {"class X { [[^~]]X(); };", // FIXME: Should be [[~X]]()
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "~X";
+         HI.LocalScope = "X::";
+         HI.Kind = SymbolKind::Constructor;
+         HI.ReturnType = "void";
+         HI.Definition = "~X()";
          HI.Parameters.emplace();
        }},
 

@@ -111,6 +111,11 @@ bool isExplicitTemplateSpecialization(const NamedDecl *D);
 ///     void foo() -> returns null
 NestedNameSpecifierLoc getQualifierLoc(const NamedDecl &ND);
 
+// Returns a type corresponding to a declaration of that type.
+// Unlike the method on ASTContext, attempts to preserve the type as-written
+// (i.e. vector<T*> rather than vector<type-parameter-0-0 *>.
+QualType declaredType(const TypeDecl *D);
+
 } // namespace clangd
 } // namespace clang
 

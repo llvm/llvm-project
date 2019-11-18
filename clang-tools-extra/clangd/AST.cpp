@@ -246,6 +246,12 @@ std::string printType(const QualType QT, const DeclContext & Context){
       printNamespaceScope(Context) );
 }
 
+QualType declaredType(const TypeDecl *D) {
+  if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(D))
+    if (const auto *TSI = CTSD->getTypeAsWritten())
+      return TSI->getType();
+  return D->getASTContext().getTypeDeclType(D);
+}
 
 } // namespace clangd
 } // namespace clang
