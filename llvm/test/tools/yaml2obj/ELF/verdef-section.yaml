@@ -6,21 +6,28 @@
 # CHECK:      VersionDefinitions [
 # CHECK-NEXT:   Definition {
 # CHECK-NEXT:     Version: 1
-# CHECK-NEXT:     Flags: Base
+# CHECK-NEXT:     Flags [ (0x1)
+# CHECK-NEXT:       Base (0x1)
+# CHECK-NEXT:     ]
 # CHECK-NEXT:     Index: 1
 # CHECK-NEXT:     Hash: 170240160
 # CHECK-NEXT:     Name: dso.so.0
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Definition {
 # CHECK-NEXT:     Version: 1
-# CHECK-NEXT:     Flags: Weak
+# CHECK-NEXT:     Flags [ (0x2)
+# CHECK-NEXT:       Weak (0x2)
+# CHECK-NEXT:     ]
 # CHECK-NEXT:     Index: 2
 # CHECK-NEXT:     Hash: 108387921
 # CHECK-NEXT:     Name: VERSION_1
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Definition {
 # CHECK-NEXT:     Version: 1
-# CHECK-NEXT:     Flags: 0x3
+# CHECK-NEXT:     Flags [ (0x3)
+# CHECK-NEXT:       Base (0x1)
+# CHECK-NEXT:       Weak (0x2)
+# CHECK-NEXT:     ]
 # CHECK-NEXT:     Index: 3
 # CHECK-NEXT:     Hash: 108387922
 # CHECK-NEXT:     Name: VERSION_2

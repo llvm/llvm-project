@@ -27,28 +27,33 @@
 # DSO-NEXT: VersionDefinitions [
 # DSO-NEXT:   Definition {
 # DSO-NEXT:     Version: 1
-# DSO-NEXT:     Flags: Base
+# DSO-NEXT:     Flags [ (0x1)
+# DSO-NEXT:       Base (0x1)
+# DSO-NEXT:     ]
 # DSO-NEXT:     Index: 1
 # DSO-NEXT:     Hash: 127830196
 # DSO-NEXT:     Name: shared
 # DSO-NEXT:   }
 # DSO-NEXT:   Definition {
 # DSO-NEXT:     Version: 1
-# DSO-NEXT:     Flags: 0x0
+# DSO-NEXT:     Flags [ (0x0)
+# DSO-NEXT:     ]
 # DSO-NEXT:     Index: 2
 # DSO-NEXT:     Hash: 98457184
 # DSO-NEXT:     Name: LIBSAMPLE_1.0
 # DSO-NEXT:   }
 # DSO-NEXT:   Definition {
 # DSO-NEXT:     Version: 1
-# DSO-NEXT:     Flags: 0x0
+# DSO-NEXT:     Flags [ (0x0)
+# DSO-NEXT:     ]
 # DSO-NEXT:     Index: 3
 # DSO-NEXT:     Hash: 98456416
 # DSO-NEXT:     Name: LIBSAMPLE_2.0
 # DSO-NEXT:   }
 # DSO-NEXT:   Definition {
 # DSO-NEXT:     Version: 1
-# DSO-NEXT:     Flags: 0x0
+# DSO-NEXT:     Flags [ (0x0)
+# DSO-NEXT:     ]
 # DSO-NEXT:     Index: 4
 # DSO-NEXT:     Hash: 98456672
 # DSO-NEXT:     Name: LIBSAMPLE_3.0
