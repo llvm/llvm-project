@@ -292,6 +292,8 @@ public:
   JSONValue::SP ParseJSONValue();
 
 protected:
+  JSONValue::SP ParseJSONValue(const std::string &value, const Token &token);
+
   JSONValue::SP ParseJSONObject();
 
   JSONValue::SP ParseJSONArray();
