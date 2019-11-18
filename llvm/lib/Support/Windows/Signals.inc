@@ -556,6 +556,17 @@ void llvm::sys::SetInterruptFunction(void (*IF)()) {
   LeaveCriticalSection(&CriticalSection);
 }
 
+void llvm::sys::SetInfoSignalFunction(void (*Handler)()) {
+  // Unimplemented.
+}
+
+void llvm::sys::SetOneShotPipeSignalFunction(void (*Handler)()) {
+  // Unimplemented.
+}
+
+void llvm::sys::DefaultOneShotPipeSignalHandler() {
+  // Unimplemented.
+}
 
 /// Add a function to be called when a signal is delivered to the process. The
 /// handler can have a cookie passed to it to identify what instance of the

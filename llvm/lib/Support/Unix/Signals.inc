@@ -42,6 +42,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/UniqueLock.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -80,10 +81,16 @@
 using namespace llvm;
 
 static RETSIGTYPE SignalHandler(int Sig);  // defined below.
+static RETSIGTYPE InfoSignalHandler(int Sig);  // defined below.
 
+using SignalHandlerFunctionType = void (*)();
 /// The function to call if ctrl-c is pressed.
-using InterruptFunctionType = void (*)();
-static std::atomic<InterruptFunctionType> InterruptFunction =
+static std::atomic<SignalHandlerFunctionType> InterruptFunction =
+    ATOMIC_VAR_INIT(nullptr);
+static std::atomic<SignalHandlerFunctionType> InfoSignalFunction =
+    ATOMIC_VAR_INIT(nullptr);
+/// The function to call on SIGPIPE (one-time use only).
+static std::atomic<SignalHandlerFunctionType> OneShotPipeSignalFunction =
     ATOMIC_VAR_INIT(nullptr);
 
 namespace {
@@ -199,15 +206,15 @@ struct FilesToRemoveCleanup {
 
 static StringRef Argv0;
 
-// Signals that represent requested termination. There's no bug or failure, or
-// if there is, it's not our direct responsibility. For whatever reason, our
-// continued execution is no longer desirable.
+/// Signals that represent requested termination. There's no bug or failure, or
+/// if there is, it's not our direct responsibility. For whatever reason, our
+/// continued execution is no longer desirable.
 static const int IntSigs[] = {
-  SIGHUP, SIGINT, SIGPIPE, SIGTERM, SIGUSR1, SIGUSR2
+  SIGHUP, SIGINT, SIGTERM, SIGUSR2
 };
 
-// Signals that represent that we have a bug, and our prompt termination has
-// been ordered.
+/// Signals that represent that we have a bug, and our prompt termination has
+/// been ordered.
 static const int KillSigs[] = {
   SIGILL, SIGTRAP, SIGABRT, SIGFPE, SIGBUS, SIGSEGV, SIGQUIT
 #ifdef SIGSYS
@@ -224,11 +231,24 @@ static const int KillSigs[] = {
 #endif
 };
 
+/// Signals that represent requests for status.
+static const int InfoSigs[] = {
+  SIGUSR1
+#ifdef SIGINFO
+  , SIGINFO
+#endif
+};
+
+static const size_t NumSigs =
+    array_lengthof(IntSigs) + array_lengthof(KillSigs) +
+    array_lengthof(InfoSigs) + 1 /* SIGPIPE */;
+
+
 static std::atomic<unsigned> NumRegisteredSignals = ATOMIC_VAR_INIT(0);
 static struct {
   struct sigaction SA;
   int SigNo;
-} RegisteredSignalInfo[array_lengthof(IntSigs) + array_lengthof(KillSigs)];
+} RegisteredSignalInfo[NumSigs];
 
 #if defined(HAVE_SIGALTSTACK)
 // Hold onto both the old and new alternate signal stack so that it's not
@@ -276,15 +296,24 @@ static void RegisterHandlers() { // Not signal-safe.
   // be able to reliably handle signals due to stack overflow.
   CreateSigAltStack();
 
-  auto registerHandler = [&](int Signal) {
+  enum class SignalKind { IsKill, IsInfo };
+  auto registerHandler = [&](int Signal, SignalKind Kind) {
     unsigned Index = NumRegisteredSignals.load();
     assert(Index < array_lengthof(RegisteredSignalInfo) &&
            "Out of space for signal handlers!");
 
     struct sigaction NewHandler;
 
-    NewHandler.sa_handler = SignalHandler;
-    NewHandler.sa_flags = SA_NODEFER | SA_RESETHAND | SA_ONSTACK;
+    switch (Kind) {
+    case SignalKind::IsKill:
+      NewHandler.sa_handler = SignalHandler;
+      NewHandler.sa_flags = SA_NODEFER | SA_RESETHAND | SA_ONSTACK;
+      break;
+    case SignalKind::IsInfo:
+      NewHandler.sa_handler = InfoSignalHandler;
+      NewHandler.sa_flags = SA_ONSTACK;
+      break;
+    }
     sigemptyset(&NewHandler.sa_mask);
 
     // Install the new handler, save the old one in RegisteredSignalInfo.
@@ -294,9 +323,13 @@ static void RegisterHandlers() { // Not signal-safe.
   };
 
   for (auto S : IntSigs)
-    registerHandler(S);
+    registerHandler(S, SignalKind::IsKill);
   for (auto S : KillSigs)
-    registerHandler(S);
+    registerHandler(S, SignalKind::IsKill);
+  if (OneShotPipeSignalFunction)
+    registerHandler(SIGPIPE, SignalKind::IsKill);
+  for (auto S : InfoSigs)
+    registerHandler(S, SignalKind::IsInfo);
 }
 
 static void UnregisterHandlers() {
@@ -334,9 +367,10 @@ static RETSIGTYPE SignalHandler(int Sig) {
       if (auto OldInterruptFunction = InterruptFunction.exchange(nullptr))
         return OldInterruptFunction();
 
-      // Send a special return code that drivers can check for, from sysexits.h.
       if (Sig == SIGPIPE)
-        exit(EX_IOERR);
+        if (auto OldOneShotPipeFunction =
+                OneShotPipeSignalFunction.exchange(nullptr))
+          return OldOneShotPipeFunction();
 
       raise(Sig);   // Execute the default handler.
       return;
@@ -356,6 +390,12 @@ static RETSIGTYPE SignalHandler(int Sig) {
 #endif
 }
 
+static RETSIGTYPE InfoSignalHandler(int Sig) {
+  SaveAndRestore<int> SaveErrnoDuringASignalHandler(errno);
+  if (SignalHandlerFunctionType CurrentInfoFunction = InfoSignalFunction)
+    CurrentInfoFunction();
+}
+
 void llvm::sys::RunInterruptHandlers() {
   RemoveFilesToRemove();
 }
@@ -363,6 +403,21 @@ void llvm::sys::RunInterruptHandlers() {
 void llvm::sys::SetInterruptFunction(void (*IF)()) {
   InterruptFunction.exchange(IF);
   RegisterHandlers();
+}
+
+void llvm::sys::SetInfoSignalFunction(void (*Handler)()) {
+  InfoSignalFunction.exchange(Handler);
+  RegisterHandlers();
+}
+
+void llvm::sys::SetOneShotPipeSignalFunction(void (*Handler)()) {
+  OneShotPipeSignalFunction.exchange(Handler);
+  RegisterHandlers();
+}
+
+void llvm::sys::DefaultOneShotPipeSignalHandler() {
+  // Send a special return code that drivers can check for, from sysexits.h.
+  exit(EX_IOERR);
 }
 
 // The public API
