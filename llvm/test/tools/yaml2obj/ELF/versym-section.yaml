@@ -68,7 +68,7 @@ Sections:
     Dependencies:
       - Version:         1
         File:            dso.so.0
-        Entries:         
+        Entries:
           - Name:            v1
             Hash:            1937
             Flags:           0

@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-readelf -s %t | FileCheck %s
 
 !ELF
@@ -21,10 +21,10 @@ Symbols:
     Binding:  STB_GLOBAL
   - Name:     common1
     Index:    SHN_COMMON
-    Binding:  STB_GLOBAL 
+    Binding:  STB_GLOBAL
   - Name:     common2
     Index:    0xfff2
-    Binding:  STB_GLOBAL 
+    Binding:  STB_GLOBAL
   - Name:     good
     Index:    0x1
     Binding:  STB_GLOBAL

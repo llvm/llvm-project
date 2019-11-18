@@ -1,5 +1,5 @@
-# Show that yaml2obj can handle a dynamic section with raw content instead of
-# entries. Also show that it rejects raw content when entries are also provided.
+## Show that yaml2obj can handle a dynamic section with raw content instead of
+## entries. Also show that it rejects raw content when entries are also provided.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readobj -x .dynamic --sections %t1 | FileCheck %s --check-prefix=RAW

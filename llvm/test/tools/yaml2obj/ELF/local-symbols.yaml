@@ -1,6 +1,6 @@
-# Check we correctly set the sh_info field of .symtab section.
-# A symbol table section's sh_info section header member holds
-# the symbol table index for the first non-local symbol.
+## Check we correctly set the sh_info field of .symtab section.
+## A symbol table section's sh_info section header member holds
+## the symbol table index for the first non-local symbol.
 
 # RUN: yaml2obj -docnum=1 %s -o %t
 # RUN: llvm-readobj --sections %t | FileCheck %s --check-prefix=ONE

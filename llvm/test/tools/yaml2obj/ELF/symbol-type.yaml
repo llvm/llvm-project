@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-readobj --symbols %t | FileCheck %s
 
 # CHECK: Name: notype
@@ -30,7 +30,7 @@ Sections:
 Symbols:
   - Name:    notype
     Type:    STT_NOTYPE
-    Binding: STB_GLOBAL 
+    Binding: STB_GLOBAL
   - Name:    normal_type
     Type:    STT_OBJECT
     Binding: STB_GLOBAL

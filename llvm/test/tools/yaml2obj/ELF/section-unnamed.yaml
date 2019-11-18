@@ -1,4 +1,5 @@
-# Ensure yaml2obj doesn't crash on unnamed sections
+## Check that "Name" defaults to an empty string.
+
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-readobj --sections %t | FileCheck %s
 

@@ -1,4 +1,5 @@
-# Ensures that implicitly added sections can be ordered within Sections.
+## Ensures that implicitly added sections can be ordered within Sections.
+
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-readobj --sections %t | FileCheck %s
 

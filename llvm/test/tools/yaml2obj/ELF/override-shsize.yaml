@@ -5,7 +5,7 @@
 # RUN: llvm-readelf --sections %t1 | FileCheck %s --check-prefix=CASE1
 
 # CASE1:      Section Headers:
-# CASE1-NEXT:  [Nr] Name           Type     Address          Off    Size  
+# CASE1-NEXT:  [Nr] Name           Type     Address          Off    Size
 # CASE1-NEXT:  [ 0]                NULL     0000000000000000 000000 000000
 # CASE1-NEXT:  [ 1] .dynsym        DYNSYM   0000000000000000 000040 000001
 # CASE1-NEXT:  [ 2] .symtab        SYMTAB   0000000000000000 000058 000002
