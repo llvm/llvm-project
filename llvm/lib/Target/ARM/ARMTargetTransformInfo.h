@@ -76,7 +76,9 @@ class ARMTTIImpl : public BasicTTIImplBase<ARMTTIImpl> {
       ARM::FeatureDSP, ARM::FeatureMP, ARM::FeatureVirtualization,
       ARM::FeatureMClass, ARM::FeatureRClass, ARM::FeatureAClass,
       ARM::FeatureNaClTrap, ARM::FeatureStrictAlign, ARM::FeatureLongCalls,
-      ARM::FeatureExecuteOnly, ARM::FeatureReserveR9, ARM::FeatureNoMovt,
+      ARM::FeatureExecuteOnly, ARM::FeatureReserveR6, ARM::FeatureReserveR7,
+      ARM::FeatureReserveR8, ARM::FeatureReserveR9, ARM::FeatureReserveR10,
+      ARM::FeatureReserveR11, ARM::FeatureNoMovt,
       ARM::FeatureNoNegativeImmediates
   };
 

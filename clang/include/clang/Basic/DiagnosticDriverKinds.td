@@ -467,6 +467,10 @@ def warn_drv_msp430_hwmult_no_device : Warning<"no MCU device specified, but "
   "specify a MSP430 device, or -mhwmult to set hardware multiply type "
   "explicitly.">, InGroup<InvalidCommandLineArgument>;
 
+// Frame pointer reservation.
+def err_reserved_frame_pointer : Error<
+  "'%0' has been specified but '%1' is used as the frame pointer for this target">;
+
 def warn_drv_libstdcxx_not_found : Warning<
   "include path for libstdc++ headers not found; pass '-stdlib=libc++' on the "
   "command line to use the libc++ standard library instead">,
