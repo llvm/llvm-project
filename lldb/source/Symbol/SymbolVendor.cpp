@@ -96,16 +96,6 @@ lldb_private::ConstString SymbolVendor::GetPluginName() {
 
 uint32_t SymbolVendor::GetPluginVersion() { return 1; }
 
-bool SymbolVendor::SymbolContextShouldBeExcluded(const SymbolContext &sc,
-                                                 uint32_t actual_line) {
-  SymbolFile *sym_file = GetSymbolFile();
-
-  if (sym_file)
-    return sym_file->SymbolContextShouldBeExcluded(sc, actual_line);
-
-  return false;
-}
-
 std::vector<DataBufferSP>
 SymbolVendor::GetASTData(lldb::LanguageType language) {
   std::vector<DataBufferSP> ast_datas;

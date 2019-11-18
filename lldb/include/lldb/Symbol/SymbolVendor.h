@@ -52,9 +52,6 @@ public:
 
   uint32_t GetPluginVersion() override;
 
-  virtual bool SymbolContextShouldBeExcluded(const SymbolContext &sc,
-                                             uint32_t actual_line);
-
   virtual std::vector<lldb::DataBufferSP>
   GetASTData(lldb::LanguageType language);
 
