@@ -27,7 +27,6 @@ namespace {
 
 using llvm::Failed;
 using llvm::HasValue;
-using ::testing::UnorderedElementsAreArray;
 
 MATCHER_P2(Pos, Line, Col, "") {
   return arg.line == int(Line) && arg.character == int(Col);
@@ -36,18 +35,18 @@ MATCHER_P2(Pos, Line, Col, "") {
 MATCHER_P(MacroName, Name, "") { return arg.Name == Name; }
 
 /// A helper to make tests easier to read.
-Position position(int line, int character) {
+Position position(int Line, int Character) {
   Position Pos;
-  Pos.line = line;
-  Pos.character = character;
+  Pos.line = Line;
+  Pos.character = Character;
   return Pos;
 }
 
-Range range(const std::pair<int, int> p1, const std::pair<int, int> p2) {
-  Range range;
-  range.start = position(p1.first, p1.second);
-  range.end = position(p2.first, p2.second);
-  return range;
+Range range(const std::pair<int, int> &P1, const std::pair<int, int> &P2) {
+  Range Range;
+  Range.start = position(P1.first, P1.second);
+  Range.end = position(P2.first, P2.second);
+  return Range;
 }
 
 TEST(SourceCodeTests, lspLength) {
