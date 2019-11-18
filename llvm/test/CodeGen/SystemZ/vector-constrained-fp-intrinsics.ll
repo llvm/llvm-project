@@ -244,8 +244,7 @@ define <2 x double> @constrained_vector_frem_v2f64() #0 {
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    brasl %r14, fmod@PLT
-; S390X-NEXT:    ldr %f2, %f0
-; S390X-NEXT:    ldr %f0, %f9
+; S390X-NEXT:    ldr %f2, %f9
 ; S390X-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 288(%r15)
@@ -317,9 +316,8 @@ define <3 x float> @constrained_vector_frem_v3f32() #0 {
 ; S390X-NEXT:    ler %f0, %f1
 ; S390X-NEXT:    ler %f2, %f8
 ; S390X-NEXT:    brasl %r14, fmodf@PLT
-; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    ler %f0, %f9
 ; S390X-NEXT:    ler %f2, %f10
+; S390X-NEXT:    ler %f4, %f9
 ; S390X-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
@@ -501,10 +499,9 @@ define <4 x double> @constrained_vector_frem_v4f64() #0 {
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    brasl %r14, fmod@PLT
-; S390X-NEXT:    ldr %f6, %f0
-; S390X-NEXT:    ldr %f0, %f9
-; S390X-NEXT:    ldr %f2, %f10
-; S390X-NEXT:    ldr %f4, %f11
+; S390X-NEXT:    ldr %f2, %f11
+; S390X-NEXT:    ldr %f4, %f10
+; S390X-NEXT:    ldr %f6, %f9
 ; S390X-NEXT:    ld %f8, 184(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 176(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f10, 168(%r15) # 8-byte Folded Reload
@@ -1288,8 +1285,7 @@ define <2 x double> @constrained_vector_pow_v2f64() #0 {
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    brasl %r14, pow@PLT
-; S390X-NEXT:    ldr %f2, %f0
-; S390X-NEXT:    ldr %f0, %f9
+; S390X-NEXT:    ldr %f2, %f9
 ; S390X-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 288(%r15)
@@ -1363,9 +1359,8 @@ define <3 x float> @constrained_vector_pow_v3f32() #0 {
 ; S390X-NEXT:    ler %f0, %f1
 ; S390X-NEXT:    ler %f2, %f8
 ; S390X-NEXT:    brasl %r14, powf@PLT
-; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    ler %f0, %f9
 ; S390X-NEXT:    ler %f2, %f10
+; S390X-NEXT:    ler %f4, %f9
 ; S390X-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
@@ -1553,10 +1548,9 @@ define <4 x double> @constrained_vector_pow_v4f64() #0 {
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    brasl %r14, pow@PLT
-; S390X-NEXT:    ldr %f6, %f0
-; S390X-NEXT:    ldr %f0, %f9
-; S390X-NEXT:    ldr %f2, %f10
-; S390X-NEXT:    ldr %f4, %f11
+; S390X-NEXT:    ldr %f2, %f11
+; S390X-NEXT:    ldr %f4, %f10
+; S390X-NEXT:    ldr %f6, %f9
 ; S390X-NEXT:    ld %f8, 184(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 176(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f10, 168(%r15) # 8-byte Folded Reload
@@ -1676,8 +1670,7 @@ define <2 x double> @constrained_vector_powi_v2f64() #0 {
 ; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, __powidf2@PLT
-; S390X-NEXT:    ldr %f2, %f0
-; S390X-NEXT:    ldr %f0, %f8
+; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    ld %f8, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 280(%r15)
 ; S390X-NEXT:    br %r14
@@ -1741,9 +1734,8 @@ define <3 x float> @constrained_vector_powi_v3f32() #0 {
 ; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    ler %f0, %f1
 ; S390X-NEXT:    brasl %r14, __powisf2@PLT
-; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    ler %f0, %f8
 ; S390X-NEXT:    ler %f2, %f9
+; S390X-NEXT:    ler %f4, %f8
 ; S390X-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 288(%r15)
@@ -1803,12 +1795,12 @@ define void @constrained_vector_powi_v3f64(<3 x double>* %a) #0 {
 ; S390X-NEXT:    .cfi_offset %f8, -168
 ; S390X-NEXT:    .cfi_offset %f9, -176
 ; S390X-NEXT:    larl %r1, .LCPI38_0
-; S390X-NEXT:    ld %f0, 0(%r1)
+; S390X-NEXT:    ldeb %f0, 0(%r1)
 ; S390X-NEXT:    lgr %r13, %r2
 ; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    brasl %r14, __powidf2@PLT
 ; S390X-NEXT:    larl %r1, .LCPI38_1
-; S390X-NEXT:    ldeb %f1, 0(%r1)
+; S390X-NEXT:    ld %f1, 0(%r1)
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    ldr %f0, %f1
@@ -1819,9 +1811,9 @@ define void @constrained_vector_powi_v3f64(<3 x double>* %a) #0 {
 ; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, __powidf2@PLT
-; S390X-NEXT:    std %f0, 8(%r13)
-; S390X-NEXT:    std %f9, 0(%r13)
-; S390X-NEXT:    std %f8, 16(%r13)
+; S390X-NEXT:    std %f0, 16(%r13)
+; S390X-NEXT:    std %f9, 8(%r13)
+; S390X-NEXT:    std %f8, 0(%r13)
 ; S390X-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r13, %r15, 280(%r15)
@@ -1906,10 +1898,9 @@ define <4 x double> @constrained_vector_powi_v4f64() #0 {
 ; S390X-NEXT:    lghi %r2, 3
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, __powidf2@PLT
-; S390X-NEXT:    ldr %f6, %f0
-; S390X-NEXT:    ldr %f0, %f8
-; S390X-NEXT:    ldr %f2, %f9
-; S390X-NEXT:    ldr %f4, %f10
+; S390X-NEXT:    ldr %f2, %f10
+; S390X-NEXT:    ldr %f4, %f9
+; S390X-NEXT:    ldr %f6, %f8
 ; S390X-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
@@ -2010,15 +2001,14 @@ define <2 x double> @constrained_vector_sin_v2f64() #0 {
 ; S390X-NEXT:    std %f8, 160(%r15) # 8-byte Folded Spill
 ; S390X-NEXT:    .cfi_offset %f8, -168
 ; S390X-NEXT:    larl %r1, .LCPI41_0
-; S390X-NEXT:    ldeb %f0, 0(%r1)
+; S390X-NEXT:    ld %f0, 0(%r1)
 ; S390X-NEXT:    brasl %r14, sin@PLT
 ; S390X-NEXT:    larl %r1, .LCPI41_1
-; S390X-NEXT:    ld %f1, 0(%r1)
+; S390X-NEXT:    ldeb %f1, 0(%r1)
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, sin@PLT
-; S390X-NEXT:    ldr %f2, %f0
-; S390X-NEXT:    ldr %f0, %f8
+; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    ld %f8, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 280(%r15)
 ; S390X-NEXT:    br %r14
@@ -2076,9 +2066,8 @@ define <3 x float> @constrained_vector_sin_v3f32() #0 {
 ; S390X-NEXT:    ler %f9, %f0
 ; S390X-NEXT:    ler %f0, %f1
 ; S390X-NEXT:    brasl %r14, sinf@PLT
-; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    ler %f0, %f8
 ; S390X-NEXT:    ler %f2, %f9
+; S390X-NEXT:    ler %f4, %f8
 ; S390X-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 288(%r15)
@@ -2214,7 +2203,7 @@ define <4 x double> @constrained_vector_sin_v4f64() #0 {
 ; S390X-NEXT:    .cfi_offset %f9, -176
 ; S390X-NEXT:    .cfi_offset %f10, -184
 ; S390X-NEXT:    larl %r1, .LCPI44_0
-; S390X-NEXT:    ldeb %f0, 0(%r1)
+; S390X-NEXT:    ld %f0, 0(%r1)
 ; S390X-NEXT:    brasl %r14, sin@PLT
 ; S390X-NEXT:    larl %r1, .LCPI44_1
 ; S390X-NEXT:    ld %f1, 0(%r1)
@@ -2227,14 +2216,13 @@ define <4 x double> @constrained_vector_sin_v4f64() #0 {
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, sin@PLT
 ; S390X-NEXT:    larl %r1, .LCPI44_3
-; S390X-NEXT:    ld %f1, 0(%r1)
+; S390X-NEXT:    ldeb %f1, 0(%r1)
 ; S390X-NEXT:    ldr %f10, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, sin@PLT
-; S390X-NEXT:    ldr %f6, %f0
-; S390X-NEXT:    ldr %f0, %f8
-; S390X-NEXT:    ldr %f2, %f9
-; S390X-NEXT:    ldr %f4, %f10
+; S390X-NEXT:    ldr %f2, %f10
+; S390X-NEXT:    ldr %f4, %f9
+; S390X-NEXT:    ldr %f6, %f8
 ; S390X-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
@@ -2330,15 +2318,14 @@ define <2 x double> @constrained_vector_cos_v2f64() #0 {
 ; S390X-NEXT:    std %f8, 160(%r15) # 8-byte Folded Spill
 ; S390X-NEXT:    .cfi_offset %f8, -168
 ; S390X-NEXT:    larl %r1, .LCPI46_0
-; S390X-NEXT:    ldeb %f0, 0(%r1)
+; S390X-NEXT:    ld %f0, 0(%r1)
 ; S390X-NEXT:    brasl %r14, cos@PLT
 ; S390X-NEXT:    larl %r1, .LCPI46_1
-; S390X-NEXT:    ld %f1, 0(%r1)
+; S390X-NEXT:    ldeb %f1, 0(%r1)
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, cos@PLT
-; S390X-NEXT:    ldr %f2, %f0
-; S390X-NEXT:    ldr %f0, %f8
+; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    ld %f8, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 280(%r15)
 ; S390X-NEXT:    br %r14
@@ -2396,9 +2383,8 @@ define <3 x float> @constrained_vector_cos_v3f32() #0 {
 ; S390X-NEXT:    ler %f9, %f0
 ; S390X-NEXT:    ler %f0, %f1
 ; S390X-NEXT:    brasl %r14, cosf@PLT
-; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    ler %f0, %f8
 ; S390X-NEXT:    ler %f2, %f9
+; S390X-NEXT:    ler %f4, %f8
 ; S390X-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 288(%r15)
@@ -2534,7 +2520,7 @@ define <4 x double> @constrained_vector_cos_v4f64() #0 {
 ; S390X-NEXT:    .cfi_offset %f9, -176
 ; S390X-NEXT:    .cfi_offset %f10, -184
 ; S390X-NEXT:    larl %r1, .LCPI49_0
-; S390X-NEXT:    ldeb %f0, 0(%r1)
+; S390X-NEXT:    ld %f0, 0(%r1)
 ; S390X-NEXT:    brasl %r14, cos@PLT
 ; S390X-NEXT:    larl %r1, .LCPI49_1
 ; S390X-NEXT:    ld %f1, 0(%r1)
@@ -2547,14 +2533,13 @@ define <4 x double> @constrained_vector_cos_v4f64() #0 {
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, cos@PLT
 ; S390X-NEXT:    larl %r1, .LCPI49_3
-; S390X-NEXT:    ld %f1, 0(%r1)
+; S390X-NEXT:    ldeb %f1, 0(%r1)
 ; S390X-NEXT:    ldr %f10, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, cos@PLT
-; S390X-NEXT:    ldr %f6, %f0
-; S390X-NEXT:    ldr %f0, %f8
-; S390X-NEXT:    ldr %f2, %f9
-; S390X-NEXT:    ldr %f4, %f10
+; S390X-NEXT:    ldr %f2, %f10
+; S390X-NEXT:    ldr %f4, %f9
+; S390X-NEXT:    ldr %f6, %f8
 ; S390X-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
@@ -2650,15 +2635,14 @@ define <2 x double> @constrained_vector_exp_v2f64() #0 {
 ; S390X-NEXT:    std %f8, 160(%r15) # 8-byte Folded Spill
 ; S390X-NEXT:    .cfi_offset %f8, -168
 ; S390X-NEXT:    larl %r1, .LCPI51_0
-; S390X-NEXT:    ldeb %f0, 0(%r1)
+; S390X-NEXT:    ld %f0, 0(%r1)
 ; S390X-NEXT:    brasl %r14, exp@PLT
 ; S390X-NEXT:    larl %r1, .LCPI51_1
-; S390X-NEXT:    ld %f1, 0(%r1)
+; S390X-NEXT:    ldeb %f1, 0(%r1)
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, exp@PLT
-; S390X-NEXT:    ldr %f2, %f0
-; S390X-NEXT:    ldr %f0, %f8
+; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    ld %f8, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 280(%r15)
 ; S390X-NEXT:    br %r14
@@ -2716,9 +2700,8 @@ define <3 x float> @constrained_vector_exp_v3f32() #0 {
 ; S390X-NEXT:    ler %f9, %f0
 ; S390X-NEXT:    ler %f0, %f1
 ; S390X-NEXT:    brasl %r14, expf@PLT
-; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    ler %f0, %f8
 ; S390X-NEXT:    ler %f2, %f9
+; S390X-NEXT:    ler %f4, %f8
 ; S390X-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 288(%r15)
@@ -2854,7 +2837,7 @@ define <4 x double> @constrained_vector_exp_v4f64() #0 {
 ; S390X-NEXT:    .cfi_offset %f9, -176
 ; S390X-NEXT:    .cfi_offset %f10, -184
 ; S390X-NEXT:    larl %r1, .LCPI54_0
-; S390X-NEXT:    ldeb %f0, 0(%r1)
+; S390X-NEXT:    ld %f0, 0(%r1)
 ; S390X-NEXT:    brasl %r14, exp@PLT
 ; S390X-NEXT:    larl %r1, .LCPI54_1
 ; S390X-NEXT:    ld %f1, 0(%r1)
@@ -2867,14 +2850,13 @@ define <4 x double> @constrained_vector_exp_v4f64() #0 {
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, exp@PLT
 ; S390X-NEXT:    larl %r1, .LCPI54_3
-; S390X-NEXT:    ld %f1, 0(%r1)
+; S390X-NEXT:    ldeb %f1, 0(%r1)
 ; S390X-NEXT:    ldr %f10, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, exp@PLT
-; S390X-NEXT:    ldr %f6, %f0
-; S390X-NEXT:    ldr %f0, %f8
-; S390X-NEXT:    ldr %f2, %f9
-; S390X-NEXT:    ldr %f4, %f10
+; S390X-NEXT:    ldr %f2, %f10
+; S390X-NEXT:    ldr %f4, %f9
+; S390X-NEXT:    ldr %f6, %f8
 ; S390X-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
@@ -2970,15 +2952,14 @@ define <2 x double> @constrained_vector_exp2_v2f64() #0 {
 ; S390X-NEXT:    std %f8, 160(%r15) # 8-byte Folded Spill
 ; S390X-NEXT:    .cfi_offset %f8, -168
 ; S390X-NEXT:    larl %r1, .LCPI56_0
-; S390X-NEXT:    ld %f0, 0(%r1)
+; S390X-NEXT:    ldeb %f0, 0(%r1)
 ; S390X-NEXT:    brasl %r14, exp2@PLT
 ; S390X-NEXT:    larl %r1, .LCPI56_1
-; S390X-NEXT:    ldeb %f1, 0(%r1)
+; S390X-NEXT:    ld %f1, 0(%r1)
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, exp2@PLT
-; S390X-NEXT:    ldr %f2, %f0
-; S390X-NEXT:    ldr %f0, %f8
+; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    ld %f8, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 280(%r15)
 ; S390X-NEXT:    br %r14
@@ -3036,9 +3017,8 @@ define <3 x float> @constrained_vector_exp2_v3f32() #0 {
 ; S390X-NEXT:    ler %f9, %f0
 ; S390X-NEXT:    ler %f0, %f1
 ; S390X-NEXT:    brasl %r14, exp2f@PLT
-; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    ler %f0, %f8
 ; S390X-NEXT:    ler %f2, %f9
+; S390X-NEXT:    ler %f4, %f8
 ; S390X-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 288(%r15)
@@ -3191,10 +3171,9 @@ define <4 x double> @constrained_vector_exp2_v4f64() #0 {
 ; S390X-NEXT:    ldr %f10, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, exp2@PLT
-; S390X-NEXT:    ldr %f6, %f0
-; S390X-NEXT:    ldr %f0, %f8
-; S390X-NEXT:    ldr %f2, %f9
-; S390X-NEXT:    ldr %f4, %f10
+; S390X-NEXT:    ldr %f2, %f10
+; S390X-NEXT:    ldr %f4, %f9
+; S390X-NEXT:    ldr %f6, %f8
 ; S390X-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
@@ -3290,15 +3269,14 @@ define <2 x double> @constrained_vector_log_v2f64() #0 {
 ; S390X-NEXT:    std %f8, 160(%r15) # 8-byte Folded Spill
 ; S390X-NEXT:    .cfi_offset %f8, -168
 ; S390X-NEXT:    larl %r1, .LCPI61_0
-; S390X-NEXT:    ldeb %f0, 0(%r1)
+; S390X-NEXT:    ld %f0, 0(%r1)
 ; S390X-NEXT:    brasl %r14, log@PLT
 ; S390X-NEXT:    larl %r1, .LCPI61_1
-; S390X-NEXT:    ld %f1, 0(%r1)
+; S390X-NEXT:    ldeb %f1, 0(%r1)
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, log@PLT
-; S390X-NEXT:    ldr %f2, %f0
-; S390X-NEXT:    ldr %f0, %f8
+; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    ld %f8, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 280(%r15)
 ; S390X-NEXT:    br %r14
@@ -3356,9 +3334,8 @@ define <3 x float> @constrained_vector_log_v3f32() #0 {
 ; S390X-NEXT:    ler %f9, %f0
 ; S390X-NEXT:    ler %f0, %f1
 ; S390X-NEXT:    brasl %r14, logf@PLT
-; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    ler %f0, %f8
 ; S390X-NEXT:    ler %f2, %f9
+; S390X-NEXT:    ler %f4, %f8
 ; S390X-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 288(%r15)
@@ -3494,7 +3471,7 @@ define <4 x double> @constrained_vector_log_v4f64() #0 {
 ; S390X-NEXT:    .cfi_offset %f9, -176
 ; S390X-NEXT:    .cfi_offset %f10, -184
 ; S390X-NEXT:    larl %r1, .LCPI64_0
-; S390X-NEXT:    ldeb %f0, 0(%r1)
+; S390X-NEXT:    ld %f0, 0(%r1)
 ; S390X-NEXT:    brasl %r14, log@PLT
 ; S390X-NEXT:    larl %r1, .LCPI64_1
 ; S390X-NEXT:    ld %f1, 0(%r1)
@@ -3507,14 +3484,13 @@ define <4 x double> @constrained_vector_log_v4f64() #0 {
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, log@PLT
 ; S390X-NEXT:    larl %r1, .LCPI64_3
-; S390X-NEXT:    ld %f1, 0(%r1)
+; S390X-NEXT:    ldeb %f1, 0(%r1)
 ; S390X-NEXT:    ldr %f10, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, log@PLT
-; S390X-NEXT:    ldr %f6, %f0
-; S390X-NEXT:    ldr %f0, %f8
-; S390X-NEXT:    ldr %f2, %f9
-; S390X-NEXT:    ldr %f4, %f10
+; S390X-NEXT:    ldr %f2, %f10
+; S390X-NEXT:    ldr %f4, %f9
+; S390X-NEXT:    ldr %f6, %f8
 ; S390X-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
@@ -3610,15 +3586,14 @@ define <2 x double> @constrained_vector_log10_v2f64() #0 {
 ; S390X-NEXT:    std %f8, 160(%r15) # 8-byte Folded Spill
 ; S390X-NEXT:    .cfi_offset %f8, -168
 ; S390X-NEXT:    larl %r1, .LCPI66_0
-; S390X-NEXT:    ldeb %f0, 0(%r1)
+; S390X-NEXT:    ld %f0, 0(%r1)
 ; S390X-NEXT:    brasl %r14, log10@PLT
 ; S390X-NEXT:    larl %r1, .LCPI66_1
-; S390X-NEXT:    ld %f1, 0(%r1)
+; S390X-NEXT:    ldeb %f1, 0(%r1)
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, log10@PLT
-; S390X-NEXT:    ldr %f2, %f0
-; S390X-NEXT:    ldr %f0, %f8
+; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    ld %f8, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 280(%r15)
 ; S390X-NEXT:    br %r14
@@ -3676,9 +3651,8 @@ define <3 x float> @constrained_vector_log10_v3f32() #0 {
 ; S390X-NEXT:    ler %f9, %f0
 ; S390X-NEXT:    ler %f0, %f1
 ; S390X-NEXT:    brasl %r14, log10f@PLT
-; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    ler %f0, %f8
 ; S390X-NEXT:    ler %f2, %f9
+; S390X-NEXT:    ler %f4, %f8
 ; S390X-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 288(%r15)
@@ -3814,7 +3788,7 @@ define <4 x double> @constrained_vector_log10_v4f64() #0 {
 ; S390X-NEXT:    .cfi_offset %f9, -176
 ; S390X-NEXT:    .cfi_offset %f10, -184
 ; S390X-NEXT:    larl %r1, .LCPI69_0
-; S390X-NEXT:    ldeb %f0, 0(%r1)
+; S390X-NEXT:    ld %f0, 0(%r1)
 ; S390X-NEXT:    brasl %r14, log10@PLT
 ; S390X-NEXT:    larl %r1, .LCPI69_1
 ; S390X-NEXT:    ld %f1, 0(%r1)
@@ -3827,14 +3801,13 @@ define <4 x double> @constrained_vector_log10_v4f64() #0 {
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, log10@PLT
 ; S390X-NEXT:    larl %r1, .LCPI69_3
-; S390X-NEXT:    ld %f1, 0(%r1)
+; S390X-NEXT:    ldeb %f1, 0(%r1)
 ; S390X-NEXT:    ldr %f10, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, log10@PLT
-; S390X-NEXT:    ldr %f6, %f0
-; S390X-NEXT:    ldr %f0, %f8
-; S390X-NEXT:    ldr %f2, %f9
-; S390X-NEXT:    ldr %f4, %f10
+; S390X-NEXT:    ldr %f2, %f10
+; S390X-NEXT:    ldr %f4, %f9
+; S390X-NEXT:    ldr %f6, %f8
 ; S390X-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
@@ -3930,15 +3903,14 @@ define <2 x double> @constrained_vector_log2_v2f64() #0 {
 ; S390X-NEXT:    std %f8, 160(%r15) # 8-byte Folded Spill
 ; S390X-NEXT:    .cfi_offset %f8, -168
 ; S390X-NEXT:    larl %r1, .LCPI71_0
-; S390X-NEXT:    ldeb %f0, 0(%r1)
+; S390X-NEXT:    ld %f0, 0(%r1)
 ; S390X-NEXT:    brasl %r14, log2@PLT
 ; S390X-NEXT:    larl %r1, .LCPI71_1
-; S390X-NEXT:    ld %f1, 0(%r1)
+; S390X-NEXT:    ldeb %f1, 0(%r1)
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, log2@PLT
-; S390X-NEXT:    ldr %f2, %f0
-; S390X-NEXT:    ldr %f0, %f8
+; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    ld %f8, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 280(%r15)
 ; S390X-NEXT:    br %r14
@@ -3996,9 +3968,8 @@ define <3 x float> @constrained_vector_log2_v3f32() #0 {
 ; S390X-NEXT:    ler %f9, %f0
 ; S390X-NEXT:    ler %f0, %f1
 ; S390X-NEXT:    brasl %r14, log2f@PLT
-; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    ler %f0, %f8
 ; S390X-NEXT:    ler %f2, %f9
+; S390X-NEXT:    ler %f4, %f8
 ; S390X-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 288(%r15)
@@ -4134,7 +4105,7 @@ define <4 x double> @constrained_vector_log2_v4f64() #0 {
 ; S390X-NEXT:    .cfi_offset %f9, -176
 ; S390X-NEXT:    .cfi_offset %f10, -184
 ; S390X-NEXT:    larl %r1, .LCPI74_0
-; S390X-NEXT:    ldeb %f0, 0(%r1)
+; S390X-NEXT:    ld %f0, 0(%r1)
 ; S390X-NEXT:    brasl %r14, log2@PLT
 ; S390X-NEXT:    larl %r1, .LCPI74_1
 ; S390X-NEXT:    ld %f1, 0(%r1)
@@ -4147,14 +4118,13 @@ define <4 x double> @constrained_vector_log2_v4f64() #0 {
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, log2@PLT
 ; S390X-NEXT:    larl %r1, .LCPI74_3
-; S390X-NEXT:    ld %f1, 0(%r1)
+; S390X-NEXT:    ldeb %f1, 0(%r1)
 ; S390X-NEXT:    ldr %f10, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, log2@PLT
-; S390X-NEXT:    ldr %f6, %f0
-; S390X-NEXT:    ldr %f0, %f8
-; S390X-NEXT:    ldr %f2, %f9
-; S390X-NEXT:    ldr %f4, %f10
+; S390X-NEXT:    ldr %f2, %f10
+; S390X-NEXT:    ldr %f4, %f9
+; S390X-NEXT:    ldr %f6, %f8
 ; S390X-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
@@ -4396,15 +4366,14 @@ define <2 x double> @constrained_vector_nearbyint_v2f64() #0 {
 ; S390X-NEXT:    std %f8, 160(%r15) # 8-byte Folded Spill
 ; S390X-NEXT:    .cfi_offset %f8, -168
 ; S390X-NEXT:    larl %r1, .LCPI81_0
-; S390X-NEXT:    ld %f0, 0(%r1)
+; S390X-NEXT:    ldeb %f0, 0(%r1)
 ; S390X-NEXT:    brasl %r14, nearbyint@PLT
 ; S390X-NEXT:    larl %r1, .LCPI81_1
-; S390X-NEXT:    ldeb %f1, 0(%r1)
+; S390X-NEXT:    ld %f1, 0(%r1)
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, nearbyint@PLT
-; S390X-NEXT:    ldr %f2, %f0
-; S390X-NEXT:    ldr %f0, %f8
+; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    ld %f8, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 280(%r15)
 ; S390X-NEXT:    br %r14
@@ -4448,9 +4417,8 @@ define <3 x float> @constrained_vector_nearbyint_v3f32() #0 {
 ; S390X-NEXT:    ler %f9, %f0
 ; S390X-NEXT:    ler %f0, %f1
 ; S390X-NEXT:    brasl %r14, nearbyintf@PLT
-; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    ler %f0, %f8
 ; S390X-NEXT:    ler %f2, %f9
+; S390X-NEXT:    ler %f4, %f8
 ; S390X-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 288(%r15)
@@ -4565,10 +4533,9 @@ define <4 x double> @constrained_vector_nearbyint_v4f64() #0 {
 ; S390X-NEXT:    ldr %f10, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, nearbyint@PLT
-; S390X-NEXT:    ldr %f6, %f0
-; S390X-NEXT:    ldr %f0, %f8
-; S390X-NEXT:    ldr %f2, %f9
-; S390X-NEXT:    ldr %f4, %f10
+; S390X-NEXT:    ldr %f2, %f10
+; S390X-NEXT:    ldr %f4, %f9
+; S390X-NEXT:    ldr %f6, %f8
 ; S390X-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
@@ -4655,8 +4622,7 @@ define <2 x double> @constrained_vector_maxnum_v2f64() #0 {
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, fmax@PLT
-; S390X-NEXT:    ldr %f2, %f0
-; S390X-NEXT:    ldr %f0, %f8
+; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    ld %f8, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 280(%r15)
 ; S390X-NEXT:    br %r14
@@ -4709,10 +4675,10 @@ define <3 x float> @constrained_vector_maxnum_v3f32() #0 {
 ; S390X-NEXT:    .cfi_offset %f9, -176
 ; S390X-NEXT:    .cfi_offset %f10, -184
 ; S390X-NEXT:    larl %r1, .LCPI87_0
-; S390X-NEXT:    le %f8, 0(%r1)
+; S390X-NEXT:    le %f0, 0(%r1)
 ; S390X-NEXT:    larl %r1, .LCPI87_1
-; S390X-NEXT:    le %f2, 0(%r1)
-; S390X-NEXT:    ler %f0, %f8
+; S390X-NEXT:    le %f8, 0(%r1)
+; S390X-NEXT:    ler %f2, %f8
 ; S390X-NEXT:    brasl %r14, fmaxf@PLT
 ; S390X-NEXT:    larl %r1, .LCPI87_2
 ; S390X-NEXT:    le %f1, 0(%r1)
@@ -4722,14 +4688,12 @@ define <3 x float> @constrained_vector_maxnum_v3f32() #0 {
 ; S390X-NEXT:    ler %f0, %f1
 ; S390X-NEXT:    brasl %r14, fmaxf@PLT
 ; S390X-NEXT:    larl %r1, .LCPI87_4
-; S390X-NEXT:    le %f1, 0(%r1)
+; S390X-NEXT:    le %f2, 0(%r1)
 ; S390X-NEXT:    ler %f10, %f0
-; S390X-NEXT:    ler %f0, %f1
-; S390X-NEXT:    ler %f2, %f8
+; S390X-NEXT:    ler %f0, %f8
 ; S390X-NEXT:    brasl %r14, fmaxf@PLT
-; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    ler %f0, %f9
 ; S390X-NEXT:    ler %f2, %f10
+; S390X-NEXT:    ler %f4, %f9
 ; S390X-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
@@ -4914,10 +4878,9 @@ define <4 x double> @constrained_vector_maxnum_v4f64() #0 {
 ; S390X-NEXT:    ldr %f10, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, fmax@PLT
-; S390X-NEXT:    ldr %f6, %f0
-; S390X-NEXT:    ldr %f0, %f8
-; S390X-NEXT:    ldr %f2, %f9
-; S390X-NEXT:    ldr %f4, %f10
+; S390X-NEXT:    ldr %f2, %f10
+; S390X-NEXT:    ldr %f4, %f9
+; S390X-NEXT:    ldr %f6, %f8
 ; S390X-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
@@ -5038,8 +5001,7 @@ define <2 x double> @constrained_vector_minnum_v2f64() #0 {
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, fmin@PLT
-; S390X-NEXT:    ldr %f2, %f0
-; S390X-NEXT:    ldr %f0, %f8
+; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    ld %f8, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 280(%r15)
 ; S390X-NEXT:    br %r14
@@ -5092,10 +5054,10 @@ define <3 x float> @constrained_vector_minnum_v3f32() #0 {
 ; S390X-NEXT:    .cfi_offset %f9, -176
 ; S390X-NEXT:    .cfi_offset %f10, -184
 ; S390X-NEXT:    larl %r1, .LCPI92_0
-; S390X-NEXT:    le %f8, 0(%r1)
+; S390X-NEXT:    le %f0, 0(%r1)
 ; S390X-NEXT:    larl %r1, .LCPI92_1
-; S390X-NEXT:    le %f2, 0(%r1)
-; S390X-NEXT:    ler %f0, %f8
+; S390X-NEXT:    le %f8, 0(%r1)
+; S390X-NEXT:    ler %f2, %f8
 ; S390X-NEXT:    brasl %r14, fminf@PLT
 ; S390X-NEXT:    larl %r1, .LCPI92_2
 ; S390X-NEXT:    le %f1, 0(%r1)
@@ -5105,14 +5067,12 @@ define <3 x float> @constrained_vector_minnum_v3f32() #0 {
 ; S390X-NEXT:    ler %f0, %f1
 ; S390X-NEXT:    brasl %r14, fminf@PLT
 ; S390X-NEXT:    larl %r1, .LCPI92_4
-; S390X-NEXT:    le %f1, 0(%r1)
+; S390X-NEXT:    le %f2, 0(%r1)
 ; S390X-NEXT:    ler %f10, %f0
-; S390X-NEXT:    ler %f0, %f1
-; S390X-NEXT:    ler %f2, %f8
+; S390X-NEXT:    ler %f0, %f8
 ; S390X-NEXT:    brasl %r14, fminf@PLT
-; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    ler %f0, %f9
 ; S390X-NEXT:    ler %f2, %f10
+; S390X-NEXT:    ler %f4, %f9
 ; S390X-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
@@ -5301,10 +5261,9 @@ define <4 x double> @constrained_vector_minnum_v4f64() #0 {
 ; S390X-NEXT:    ldr %f10, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, fmin@PLT
-; S390X-NEXT:    ldr %f6, %f0
-; S390X-NEXT:    ldr %f0, %f8
-; S390X-NEXT:    ldr %f2, %f9
-; S390X-NEXT:    ldr %f4, %f10
+; S390X-NEXT:    ldr %f2, %f10
+; S390X-NEXT:    ldr %f4, %f9
+; S390X-NEXT:    ldr %f6, %f8
 ; S390X-NEXT:    ld %f8, 176(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f10, 160(%r15) # 8-byte Folded Reload
@@ -5661,8 +5620,7 @@ define <2 x double> @constrained_vector_ceil_v2f64() #0 {
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, ceil@PLT
-; S390X-NEXT:    ldr %f2, %f0
-; S390X-NEXT:    ldr %f0, %f8
+; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    ld %f8, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 280(%r15)
 ; S390X-NEXT:    br %r14
@@ -5706,9 +5664,8 @@ define <3 x float> @constrained_vector_ceil_v3f32() #0 {
 ; S390X-NEXT:    ler %f9, %f0
 ; S390X-NEXT:    ler %f0, %f1
 ; S390X-NEXT:    brasl %r14, ceilf@PLT
-; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    ler %f0, %f8
 ; S390X-NEXT:    ler %f2, %f9
+; S390X-NEXT:    ler %f4, %f8
 ; S390X-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 288(%r15)
@@ -5837,8 +5794,7 @@ define <2 x double> @constrained_vector_floor_v2f64() #0 {
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, floor@PLT
-; S390X-NEXT:    ldr %f2, %f0
-; S390X-NEXT:    ldr %f0, %f8
+; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    ld %f8, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 280(%r15)
 ; S390X-NEXT:    br %r14
@@ -5882,9 +5838,8 @@ define <3 x float> @constrained_vector_floor_v3f32() #0 {
 ; S390X-NEXT:    ler %f9, %f0
 ; S390X-NEXT:    ler %f0, %f1
 ; S390X-NEXT:    brasl %r14, floorf@PLT
-; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    ler %f0, %f8
 ; S390X-NEXT:    ler %f2, %f9
+; S390X-NEXT:    ler %f4, %f8
 ; S390X-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 288(%r15)
@@ -6012,8 +5967,7 @@ define <2 x double> @constrained_vector_round_v2f64() #0 {
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, round@PLT
-; S390X-NEXT:    ldr %f2, %f0
-; S390X-NEXT:    ldr %f0, %f8
+; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    ld %f8, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 280(%r15)
 ; S390X-NEXT:    br %r14
@@ -6057,9 +6011,8 @@ define <3 x float> @constrained_vector_round_v3f32() #0 {
 ; S390X-NEXT:    ler %f9, %f0
 ; S390X-NEXT:    ler %f0, %f1
 ; S390X-NEXT:    brasl %r14, roundf@PLT
-; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    ler %f0, %f8
 ; S390X-NEXT:    ler %f2, %f9
+; S390X-NEXT:    ler %f4, %f8
 ; S390X-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 288(%r15)
@@ -6188,8 +6141,7 @@ define <2 x double> @constrained_vector_trunc_v2f64() #0 {
 ; S390X-NEXT:    ldr %f8, %f0
 ; S390X-NEXT:    ldr %f0, %f1
 ; S390X-NEXT:    brasl %r14, trunc@PLT
-; S390X-NEXT:    ldr %f2, %f0
-; S390X-NEXT:    ldr %f0, %f8
+; S390X-NEXT:    ldr %f2, %f8
 ; S390X-NEXT:    ld %f8, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 280(%r15)
 ; S390X-NEXT:    br %r14
@@ -6233,9 +6185,8 @@ define <3 x float> @constrained_vector_trunc_v3f32() #0 {
 ; S390X-NEXT:    ler %f9, %f0
 ; S390X-NEXT:    ler %f0, %f1
 ; S390X-NEXT:    brasl %r14, truncf@PLT
-; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    ler %f0, %f8
 ; S390X-NEXT:    ler %f2, %f9
+; S390X-NEXT:    ler %f4, %f8
 ; S390X-NEXT:    ld %f8, 168(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    ld %f9, 160(%r15) # 8-byte Folded Reload
 ; S390X-NEXT:    lmg %r14, %r15, 288(%r15)
