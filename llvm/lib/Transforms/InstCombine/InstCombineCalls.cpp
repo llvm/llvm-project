@@ -3308,6 +3308,34 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::arm_mve_pred_i2v: {
+    Value *Arg = II->getArgOperand(0);
+    Value *ArgArg;
+    if (match(Arg, m_Intrinsic<Intrinsic::arm_mve_pred_v2i>(m_Value(ArgArg))) &&
+        II->getType() == ArgArg->getType())
+      return replaceInstUsesWith(*II, ArgArg);
+    KnownBits ScalarKnown(32);
+    if (SimplifyDemandedBits(II, 0, APInt::getLowBitsSet(32, 16),
+                             ScalarKnown, 0))
+      return II;
+    break;
+  }
+  case Intrinsic::arm_mve_pred_v2i: {
+    Value *Arg = II->getArgOperand(0);
+    Value *ArgArg;
+    if (match(Arg, m_Intrinsic<Intrinsic::arm_mve_pred_i2v>(m_Value(ArgArg))))
+      return replaceInstUsesWith(*II, ArgArg);
+    if (!II->getMetadata(LLVMContext::MD_range)) {
+      Type *IntTy32 = Type::getInt32Ty(II->getContext());
+      Metadata *M[] = {
+        ConstantAsMetadata::get(ConstantInt::get(IntTy32, 0)),
+        ConstantAsMetadata::get(ConstantInt::get(IntTy32, 0xFFFF))
+      };
+      II->setMetadata(LLVMContext::MD_range, MDNode::get(II->getContext(), M));
+      return II;
+    }
+    break;
+  }
   case Intrinsic::arm_mve_vadc:
   case Intrinsic::arm_mve_vadc_predicated: {
     unsigned CarryOp =
