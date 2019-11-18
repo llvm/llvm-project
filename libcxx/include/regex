@@ -2625,8 +2625,8 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         typename enable_if
         <
-             __is_input_iterator  <_InputIterator>::value &&
-            !__is_forward_iterator<_InputIterator>::value,
+             __is_cpp17_input_iterator  <_InputIterator>::value &&
+            !__is_cpp17_forward_iterator<_InputIterator>::value,
             basic_regex&
         >::type
         assign(_InputIterator __first, _InputIterator __last,
@@ -2652,7 +2652,7 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         typename enable_if
         <
-            __is_forward_iterator<_ForwardIterator>::value,
+            __is_cpp17_forward_iterator<_ForwardIterator>::value,
             basic_regex&
         >::type
         assign(_ForwardIterator __first, _ForwardIterator __last,
@@ -2952,7 +2952,7 @@ private:
 
 #ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
 template <class _ForwardIterator,
-          class = typename enable_if<__is_forward_iterator<_ForwardIterator>::value, nullptr_t>::type
+          class = typename enable_if<__is_cpp17_forward_iterator<_ForwardIterator>::value, nullptr_t>::type
 >
 basic_regex(_ForwardIterator, _ForwardIterator,
             regex_constants::syntax_option_type = regex_constants::ECMAScript)
