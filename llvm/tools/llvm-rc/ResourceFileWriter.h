@@ -72,7 +72,7 @@ public:
   // function to do it.
   Error dumpAllStringTables();
 
-  bool AppendNull; // Append '\0' to each existing STRINGTABLE element?
+  bool AppendNull = false; // Append '\0' to each existing STRINGTABLE element?
 
   struct ObjectInfo {
     uint16_t LanguageInfo;

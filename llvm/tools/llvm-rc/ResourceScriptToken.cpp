@@ -84,7 +84,7 @@ namespace {
 
 class Tokenizer {
 public:
-  Tokenizer(StringRef Input) : Data(Input), DataLength(Input.size()) {}
+  Tokenizer(StringRef Input) : Data(Input), DataLength(Input.size()), Pos(0) {}
 
   Expected<std::vector<RCToken>> run();
 
