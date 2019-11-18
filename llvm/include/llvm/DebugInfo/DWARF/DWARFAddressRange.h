@@ -17,7 +17,6 @@
 namespace llvm {
 
 class raw_ostream;
-class DWARFObject;
 
 struct DWARFAddressRange {
   uint64_t LowPC;
@@ -27,9 +26,7 @@ struct DWARFAddressRange {
   DWARFAddressRange() = default;
 
   /// Used for unit testing.
-  DWARFAddressRange(
-      uint64_t LowPC, uint64_t HighPC,
-      uint64_t SectionIndex = object::SectionedAddress::UndefSection)
+  DWARFAddressRange(uint64_t LowPC, uint64_t HighPC, uint64_t SectionIndex = 0)
       : LowPC(LowPC), HighPC(HighPC), SectionIndex(SectionIndex) {}
 
   /// Returns true if LowPC is smaller or equal to HighPC. This accounts for
@@ -45,8 +42,8 @@ struct DWARFAddressRange {
     return LowPC < RHS.HighPC && RHS.LowPC < HighPC;
   }
 
-  void dump(raw_ostream &OS, uint32_t AddressSize, DIDumpOptions DumpOpts = {},
-            const DWARFObject *Obj = nullptr) const;
+  void dump(raw_ostream &OS, uint32_t AddressSize,
+            DIDumpOptions DumpOpts = {}) const;
 };
 
 static inline bool operator<(const DWARFAddressRange &LHS,
