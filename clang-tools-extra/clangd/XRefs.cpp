@@ -917,8 +917,7 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
                      MainFileRefs.end());
   for (const auto &Ref : MainFileRefs) {
     if (auto Range =
-            getTokenRange(AST.getASTContext().getSourceManager(),
-                          AST.getASTContext().getLangOpts(), Ref.Loc)) {
+            getTokenRange(SM, AST.getASTContext().getLangOpts(), Ref.Loc)) {
       Location Result;
       Result.range = *Range;
       Result.uri = URIForFile::canonicalize(*MainFilePath, *MainFilePath);
