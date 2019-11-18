@@ -879,6 +879,38 @@ ArrayRef<TargetInfo::GCCRegAlias> ARMTargetInfo::getGCCRegAliases() const {
   return llvm::makeArrayRef(GCCRegAliases);
 }
 
+bool ARMTargetInfo::validateGlobalRegisterVariable(
+    StringRef RegName, unsigned RegSize, bool &HasSizeMismatch) const {
+  bool isValid = llvm::StringSwitch<bool>(RegName)
+                     .Case("r6", true)
+                     .Case("r7", true)
+                     .Case("r8", true)
+                     .Case("r9", true)
+                     .Case("r10", true)
+                     .Case("r11", true)
+                     .Case("sp", true)
+                     .Default(false);
+  HasSizeMismatch = false;
+  return isValid;
+}
+
+bool ARMTargetInfo::isRegisterReservedGlobally(StringRef RegName) const {
+  // The "sp" register does not have a -ffixed-sp option,
+  // so reserve it unconditionally.
+  if (RegName.equals("sp"))
+    return true;
+
+  // reserve rN (N:6-11) registers only if the corresponding
+  // +reserve-rN feature is found
+  const std::vector<std::string> &Features = getTargetOpts().Features;
+  const std::string SearchFeature = "+reserve-" + RegName.str();
+  for (const std::string &Feature : Features) {
+    if (Feature.compare(SearchFeature) == 0)
+      return true;
+  }
+  return false;
+}
+
 bool ARMTargetInfo::validateAsmConstraint(
     const char *&Name, TargetInfo::ConstraintInfo &Info) const {
   switch (*Name) {
