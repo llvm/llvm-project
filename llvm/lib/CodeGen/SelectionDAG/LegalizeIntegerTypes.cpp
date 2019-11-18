@@ -1698,6 +1698,8 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::FLT_ROUNDS_: ExpandIntRes_FLT_ROUNDS(N, Lo, Hi); break;
   case ISD::FP_TO_SINT:  ExpandIntRes_FP_TO_SINT(N, Lo, Hi); break;
   case ISD::FP_TO_UINT:  ExpandIntRes_FP_TO_UINT(N, Lo, Hi); break;
+  case ISD::STRICT_LLROUND:
+  case ISD::STRICT_LLRINT:
   case ISD::LLROUND:
   case ISD::LLRINT:      ExpandIntRes_LLROUND_LLRINT(N, Lo, Hi); break;
   case ISD::LOAD:        ExpandIntRes_LOAD(cast<LoadSDNode>(N), Lo, Hi); break;
@@ -2586,7 +2588,7 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_UINT(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::ExpandIntRes_LLROUND_LLRINT(SDNode *N, SDValue &Lo,
                                                    SDValue &Hi) {
-  SDValue Op = N->getOperand(0);
+  SDValue Op = N->getOperand(N->isStrictFPOpcode() ? 1 : 0);
 
   assert(getTypeAction(Op.getValueType()) != TargetLowering::TypePromoteFloat &&
          "Input type needs to be promoted!");
@@ -2594,7 +2596,8 @@ void DAGTypeLegalizer::ExpandIntRes_LLROUND_LLRINT(SDNode *N, SDValue &Lo,
   EVT VT = Op.getValueType();
 
   RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
-  if (N->getOpcode() == ISD::LLROUND) {
+  if (N->getOpcode() == ISD::LLROUND ||
+      N->getOpcode() == ISD::STRICT_LLROUND) {
     if (VT == MVT::f32)
       LC = RTLIB::LLROUND_F32;
     else if (VT == MVT::f64)
@@ -2606,7 +2609,8 @@ void DAGTypeLegalizer::ExpandIntRes_LLROUND_LLRINT(SDNode *N, SDValue &Lo,
     else if (VT == MVT::ppcf128)
       LC = RTLIB::LLROUND_PPCF128;
     assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected llround input type!");
-  } else if (N->getOpcode() == ISD::LLRINT) {
+  } else if (N->getOpcode() == ISD::LLRINT ||
+             N->getOpcode() == ISD::STRICT_LLRINT) {
     if (VT == MVT::f32)
       LC = RTLIB::LLRINT_F32;
     else if (VT == MVT::f64)
@@ -2623,6 +2627,17 @@ void DAGTypeLegalizer::ExpandIntRes_LLROUND_LLRINT(SDNode *N, SDValue &Lo,
 
   SDLoc dl(N);
   EVT RetVT = N->getValueType(0);
+
+  if (N->isStrictFPOpcode()) {
+    // FIXME: Support softening for strict fp!
+    assert(getTypeAction(VT) != TargetLowering::TypeSoftenFloat &&
+           "Softening strict fp calls not supported yet!");
+    std::pair<SDValue, SDValue> Tmp = ExpandChainLibCall(LC, N, true);
+    SplitInteger(Tmp.first, Lo, Hi);
+    ReplaceValueWith(SDValue(N, 1), Tmp.second);
+    return;
+  }
+
   TargetLowering::MakeLibCallOptions CallOptions;
   CallOptions.setSExt(true);
 
