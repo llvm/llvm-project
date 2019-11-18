@@ -1,5 +1,5 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
-; RUN: llc < %s -filetype=obj | llvm-dwarfdump -v - | FileCheck %s --check-prefix=DWARF
+; RUN: llc < %s -filetype=obj | llvm-dwarfdump - | FileCheck %s --check-prefix=DWARF
 
 ; Values in registers should be clobbered by calls, which use a regmask instead
 ; of individual register def operands.
@@ -22,9 +22,9 @@
 ; argc is the first formal parameter.
 ; DWARF: .debug_info contents:
 ; DWARF:  DW_TAG_formal_parameter
-; DWARF-NEXT:    DW_AT_location [DW_FORM_sec_offset]   ({{0x.*}}
+; DWARF-NEXT:    DW_AT_location ({{0x.*}}
 ; DWARF-NEXT:      [0x0000000000000000, 0x0000000000000013): DW_OP_reg2 RCX)
-; DWARF-NEXT:    DW_AT_name [DW_FORM_strp]     {{.*}} "argc"
+; DWARF-NEXT:    DW_AT_name ("argc")
 
 ; ModuleID = 't.cpp'
 source_filename = "test/DebugInfo/X86/dbg-value-regmask-clobber.ll"
