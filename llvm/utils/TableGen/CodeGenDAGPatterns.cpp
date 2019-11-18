@@ -23,6 +23,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
@@ -503,18 +504,24 @@ bool TypeInfer::EnforceSmallerThan(TypeSetByHwMode &Small,
   }
 
   auto LT = [](MVT A, MVT B) -> bool {
-    return A.getScalarSizeInBits() < B.getScalarSizeInBits() ||
-           (A.getScalarSizeInBits() == B.getScalarSizeInBits() &&
-            A.getSizeInBits() < B.getSizeInBits());
+    // Always treat non-scalable MVTs as smaller than scalable MVTs for the
+    // purposes of ordering.
+    auto ASize = std::make_tuple(A.isScalableVector(), A.getScalarSizeInBits(),
+                                 A.getSizeInBits());
+    auto BSize = std::make_tuple(B.isScalableVector(), B.getScalarSizeInBits(),
+                                 B.getSizeInBits());
+    return ASize < BSize;
   };
-  auto LE = [&LT](MVT A, MVT B) -> bool {
+  auto SameKindLE = [](MVT A, MVT B) -> bool {
     // This function is used when removing elements: when a vector is compared
-    // to a non-vector, it should return false (to avoid removal).
-    if (A.isVector() != B.isVector())
+    // to a non-vector or a scalable vector to any non-scalable MVT, it should
+    // return false (to avoid removal).
+    if (std::make_tuple(A.isVector(), A.isScalableVector()) !=
+        std::make_tuple(B.isVector(), B.isScalableVector()))
       return false;
 
-    return LT(A, B) || (A.getScalarSizeInBits() == B.getScalarSizeInBits() &&
-                        A.getSizeInBits() == B.getSizeInBits());
+    return std::make_tuple(A.getScalarSizeInBits(), A.getSizeInBits()) <=
+           std::make_tuple(B.getScalarSizeInBits(), B.getSizeInBits());
   };
 
   for (unsigned M : Modes) {
@@ -524,25 +531,29 @@ bool TypeInfer::EnforceSmallerThan(TypeSetByHwMode &Small,
     // smaller-or-equal than MinS.
     auto MinS = min_if(S.begin(), S.end(), isScalar, LT);
     if (MinS != S.end())
-      Changed |= berase_if(B, std::bind(LE, std::placeholders::_1, *MinS));
+      Changed |= berase_if(B, std::bind(SameKindLE,
+                                        std::placeholders::_1, *MinS));
 
     // MaxS = max scalar in Big, remove all scalars from Small that are
     // larger than MaxS.
     auto MaxS = max_if(B.begin(), B.end(), isScalar, LT);
     if (MaxS != B.end())
-      Changed |= berase_if(S, std::bind(LE, *MaxS, std::placeholders::_1));
+      Changed |= berase_if(S, std::bind(SameKindLE,
+                                        *MaxS, std::placeholders::_1));
 
     // MinV = min vector in Small, remove all vectors from Big that are
     // smaller-or-equal than MinV.
     auto MinV = min_if(S.begin(), S.end(), isVector, LT);
     if (MinV != S.end())
-      Changed |= berase_if(B, std::bind(LE, std::placeholders::_1, *MinV));
+      Changed |= berase_if(B, std::bind(SameKindLE,
+                                        std::placeholders::_1, *MinV));
 
     // MaxV = max vector in Big, remove all vectors from Small that are
     // larger than MaxV.
     auto MaxV = max_if(B.begin(), B.end(), isVector, LT);
     if (MaxV != B.end())
-      Changed |= berase_if(S, std::bind(LE, *MaxV, std::placeholders::_1));
+      Changed |= berase_if(S, std::bind(SameKindLE,
+                                        *MaxV, std::placeholders::_1));
   }
 
   return Changed;

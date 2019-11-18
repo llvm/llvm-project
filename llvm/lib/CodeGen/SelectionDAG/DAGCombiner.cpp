@@ -220,11 +220,13 @@ namespace {
       ForCodeSize = DAG.getMachineFunction().getFunction().hasOptSize();
 
       MaximumLegalStoreInBits = 0;
+      // We use the minimum store size here, since that's all we can guarantee
+      // for the scalable vector types.
       for (MVT VT : MVT::all_valuetypes())
         if (EVT(VT).isSimple() && VT != MVT::Other &&
             TLI.isTypeLegal(EVT(VT)) &&
-            VT.getSizeInBits() >= MaximumLegalStoreInBits)
-          MaximumLegalStoreInBits = VT.getSizeInBits();
+            VT.getSizeInBits().getKnownMinSize() >= MaximumLegalStoreInBits)
+          MaximumLegalStoreInBits = VT.getSizeInBits().getKnownMinSize();
     }
 
     void ConsiderForPruning(SDNode *N) {
@@ -13969,8 +13971,8 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   // the stored value). With Offset=n (for n > 0) the loaded value starts at the
   // n:th least significant byte of the stored value.
   if (DAG.getDataLayout().isBigEndian())
-    Offset = (STMemType.getStoreSizeInBits() -
-              LDMemType.getStoreSizeInBits()) / 8 - Offset;
+    Offset = ((int64_t)STMemType.getStoreSizeInBits() -
+              (int64_t)LDMemType.getStoreSizeInBits()) / 8 - Offset;
 
   // Check that the stored value cover all bits that are loaded.
   bool STCoversLD =
@@ -15127,7 +15129,7 @@ bool DAGCombiner::MergeStoresOfConstantsOrVecElts(
   // The latest Node in the DAG.
   SDLoc DL(StoreNodes[0].MemNode);
 
-  int64_t ElementSizeBits = MemVT.getStoreSizeInBits();
+  TypeSize ElementSizeBits = MemVT.getStoreSizeInBits();
   unsigned SizeInBits = NumStores * ElementSizeBits;
   unsigned NumMemElts = MemVT.isVector() ? MemVT.getVectorNumElements() : 1;
 
@@ -15512,7 +15514,7 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
       Attribute::NoImplicitFloat);
 
   // This function cannot currently deal with non-byte-sized memory sizes.
-  if (ElementSizeBytes * 8 != MemVT.getSizeInBits())
+  if (ElementSizeBytes * 8 != (int64_t)MemVT.getSizeInBits())
     return false;
 
   if (!MemVT.isSimple())
