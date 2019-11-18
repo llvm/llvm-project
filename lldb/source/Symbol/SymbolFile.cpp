@@ -121,25 +121,6 @@ bool SymbolFile::SetLimitSourceFileRange(const FileSpec &file,
   return false;
 }
 
-bool SymbolFile::SymbolContextShouldBeExcluded(const SymbolContext &sc,
-                                               uint32_t actual_line) {
-  if (!m_limit_source_ranges.empty()) {
-    bool file_match = false;
-    bool line_match = false;
-    for (const auto &range : m_limit_source_ranges) {
-      const auto &line_entry = sc.line_entry;
-      if (range.file == line_entry.file) {
-        file_match = true;
-        if (range.first_line <= actual_line && actual_line <= range.last_line)
-          line_match = true;
-      }
-    }
-    if (file_match && !line_match)
-      return true;
-  }
-  return false;
-}
-
 std::vector<lldb::DataBufferSP>
 SymbolFile::GetASTData(lldb::LanguageType language) {
   // SymbolFile subclasses must add this functionality
