@@ -28,8 +28,7 @@ define zeroext i8 @add_i8_zext(i8 zeroext %a, i8 zeroext %b) {
 ; MIPS32-LABEL: add_i8_zext:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addu $1, $5, $4
-; MIPS32-NEXT:    ori $2, $zero, 255
-; MIPS32-NEXT:    and $2, $1, $2
+; MIPS32-NEXT:    andi $2, $1, 255
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -65,8 +64,7 @@ define zeroext i16 @add_i16_zext(i16 zeroext %a, i16 zeroext %b) {
 ; MIPS32-LABEL: add_i16_zext:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addu $1, $5, $4
-; MIPS32-NEXT:    ori $2, $zero, 65535
-; MIPS32-NEXT:    and $2, $1, $2
+; MIPS32-NEXT:    andi $2, $1, 65535
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -91,8 +89,7 @@ define i64 @add_i64(i64 %a, i64 %b) {
 ; MIPS32-NEXT:    addu $1, $6, $4
 ; MIPS32-NEXT:    sltu $2, $1, $4
 ; MIPS32-NEXT:    addu $3, $7, $5
-; MIPS32-NEXT:    ori $4, $zero, 1
-; MIPS32-NEXT:    and $2, $2, $4
+; MIPS32-NEXT:    andi $2, $2, 1
 ; MIPS32-NEXT:    addu $3, $3, $2
 ; MIPS32-NEXT:    move $2, $1
 ; MIPS32-NEXT:    jr $ra
@@ -118,16 +115,15 @@ define i128 @add_i128(i128 %a, i128 %b) {
 ; MIPS32-NEXT:    addu $1, $1, $4
 ; MIPS32-NEXT:    sltu $4, $1, $4
 ; MIPS32-NEXT:    addu $5, $2, $5
-; MIPS32-NEXT:    ori $9, $zero, 1
-; MIPS32-NEXT:    and $4, $4, $9
+; MIPS32-NEXT:    andi $4, $4, 1
 ; MIPS32-NEXT:    addu $4, $5, $4
 ; MIPS32-NEXT:    sltu $2, $4, $2
 ; MIPS32-NEXT:    addu $5, $3, $6
-; MIPS32-NEXT:    and $2, $2, $9
+; MIPS32-NEXT:    andi $2, $2, 1
 ; MIPS32-NEXT:    addu $2, $5, $2
 ; MIPS32-NEXT:    sltu $3, $2, $3
 ; MIPS32-NEXT:    addu $5, $8, $7
-; MIPS32-NEXT:    and $3, $3, $9
+; MIPS32-NEXT:    andi $3, $3, 1
 ; MIPS32-NEXT:    addu $5, $5, $3
 ; MIPS32-NEXT:    sw $2, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    move $2, $1
@@ -141,14 +137,47 @@ entry:
   ret i128 %add
 }
 
+define i32 @add_imm(i32 %a) {
+; MIPS32-LABEL: add_imm:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    addiu $2, $4, 3
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %add = add i32 %a, 3
+  ret i32 %add
+}
+
+define i32 @add_negative_imm(i32 %a) {
+; MIPS32-LABEL: add_negative_imm:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    addiu $2, $4, -3
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %add = add i32 %a, -3
+  ret i32 %add
+}
+
+define i32 @add_not_imm32SExt16(i32 %a) {
+; MIPS32-LABEL: add_not_imm32SExt16:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    ori $1, $zero, 65535
+; MIPS32-NEXT:    addu $2, $4, $1
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %add = add i32 %a, 65535
+  ret i32 %add
+}
+
 declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32)
 define void @uadd_with_overflow(i32 %lhs, i32 %rhs, i32* %padd, i1* %pcarry_flag) {
 ; MIPS32-LABEL: uadd_with_overflow:
 ; MIPS32:       # %bb.0:
 ; MIPS32-NEXT:    addu $1, $4, $5
 ; MIPS32-NEXT:    sltu $2, $1, $5
-; MIPS32-NEXT:    ori $3, $zero, 1
-; MIPS32-NEXT:    and $2, $2, $3
+; MIPS32-NEXT:    andi $2, $2, 1
 ; MIPS32-NEXT:    sb $2, 0($7)
 ; MIPS32-NEXT:    sw $1, 0($6)
 ; MIPS32-NEXT:    jr $ra

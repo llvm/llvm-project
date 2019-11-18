@@ -60,8 +60,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vcmp_slt_v4i32(<4 x i32> %src, i32 %src2, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: vcmp_slt_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.32 q3, r0
-; CHECK-NEXT:    vcmp.s32 gt, q3, q0
+; CHECK-NEXT:    vcmp.s32 lt, q0, r0
 ; CHECK-NEXT:    vpsel q0, q1, q2
 ; CHECK-NEXT:    bx lr
 entry:
@@ -75,8 +74,7 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @vcmp_sle_v4i32(<4 x i32> %src, i32 %src2, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: vcmp_sle_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.32 q3, r0
-; CHECK-NEXT:    vcmp.s32 ge, q3, q0
+; CHECK-NEXT:    vcmp.s32 le, q0, r0
 ; CHECK-NEXT:    vpsel q0, q1, q2
 ; CHECK-NEXT:    bx lr
 entry:
@@ -205,8 +203,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vcmp_slt_v8i16(<8 x i16> %src, i16 %src2, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: vcmp_slt_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.16 q3, r0
-; CHECK-NEXT:    vcmp.s16 gt, q3, q0
+; CHECK-NEXT:    vcmp.s16 lt, q0, r0
 ; CHECK-NEXT:    vpsel q0, q1, q2
 ; CHECK-NEXT:    bx lr
 entry:
@@ -220,8 +217,7 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vcmp_sle_v8i16(<8 x i16> %src, i16 %src2, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: vcmp_sle_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.16 q3, r0
-; CHECK-NEXT:    vcmp.s16 ge, q3, q0
+; CHECK-NEXT:    vcmp.s16 le, q0, r0
 ; CHECK-NEXT:    vpsel q0, q1, q2
 ; CHECK-NEXT:    bx lr
 entry:
@@ -350,8 +346,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vcmp_slt_v16i8(<16 x i8> %src, i8 %src2, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: vcmp_slt_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.8 q3, r0
-; CHECK-NEXT:    vcmp.s8 gt, q3, q0
+; CHECK-NEXT:    vcmp.s8 lt, q0, r0
 ; CHECK-NEXT:    vpsel q0, q1, q2
 ; CHECK-NEXT:    bx lr
 entry:
@@ -365,8 +360,7 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vcmp_sle_v16i8(<16 x i8> %src, i8 %src2, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: vcmp_sle_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.8 q3, r0
-; CHECK-NEXT:    vcmp.s8 ge, q3, q0
+; CHECK-NEXT:    vcmp.s8 le, q0, r0
 ; CHECK-NEXT:    vpsel q0, q1, q2
 ; CHECK-NEXT:    bx lr
 entry:

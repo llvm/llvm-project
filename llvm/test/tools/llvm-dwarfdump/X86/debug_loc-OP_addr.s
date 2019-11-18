@@ -3,7 +3,7 @@
 # CHECK: DW_TAG_variable
 # CHECK-NEXT: DW_AT_name ("a")
 # CHECK-NEXT: DW_AT_location
-# CHECK-NEXT: [0x0000000000000000,  0x0000000000000001): DW_OP_addr 0xdeadbeefbaadf00d
+# CHECK-NEXT: (0x0000000000000000,  0x0000000000000001): DW_OP_addr 0xdeadbeefbaadf00d
 
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_producer:

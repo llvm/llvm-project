@@ -9,13 +9,13 @@ Example RUN lines in .c/.cc test files:
 Usage:
 
 % utils/update_cc_test_checks.py --llvm-bin=release/bin test/a.cc
-% utils/update_cc_test_checks.py --c-index-test=release/bin/c-index-test \
-  --clang=release/bin/clang /tmp/c/a.cc
+% utils/update_cc_test_checks.py --clang=release/bin/clang /tmp/c/a.cc
 '''
 
 import argparse
 import collections
 import distutils.spawn
+import json
 import os
 import shlex
 import string
@@ -38,47 +38,51 @@ SUBST = {
 }
 
 def get_line2spell_and_mangled(args, clang_args):
+  def debug_mangled(*print_args, **kwargs):
+    if args.verbose:
+      print(*print_args, file=sys.stderr, **kwargs)
   ret = {}
-  with tempfile.NamedTemporaryFile() as f:
-    # TODO Make c-index-test print mangled names without circumventing through precompiled headers
-    status = subprocess.run([args.c_index_test, '-write-pch', f.name, *clang_args],
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    if status.returncode:
-      sys.stderr.write(status.stdout.decode())
-      sys.exit(2)
-    output = subprocess.check_output([args.c_index_test,
-        '-test-print-mangle', f.name])
-    if sys.version_info[0] > 2:
-      output = output.decode()
-  DeclRE = re.compile(r'^FunctionDecl=(\w+):(\d+):\d+ \(Definition\)')
-  MangleRE = re.compile(r'.*\[mangled=([^]]+)\]')
-  MatchedDecl = False
-  for line in output.splitlines():
-    # Get the function source name, line number and mangled name.  Sometimes
-    # c-index-test outputs the mangled name on a separate line (this can happen
-    # with block comments in front of functions).  Keep scanning until we see
-    # the mangled name.
-    decl_m = DeclRE.match(line)
-    mangle_m = MangleRE.match(line)
+  # Use clang's JSON AST dump to get the mangled name
+  json_dump_args = [args.clang, *clang_args, '-fsyntax-only', '-o', '-']
+  if '-cc1' not in json_dump_args:
+    # For tests that invoke %clang instead if %clang_cc1 we have to use
+    # -Xclang -ast-dump=json instead:
+    json_dump_args.append('-Xclang')
+  json_dump_args.append('-ast-dump=json')
+  debug_mangled('Running', ' '.join(json_dump_args))
+  status = subprocess.run(json_dump_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  if status.returncode != 0:
+    sys.stderr.write('Failed to run ' + ' '.join(json_dump_args) + '\n')
+    sys.stderr.write(status.stderr.decode())
+    sys.stderr.write(status.stdout.decode())
+    sys.exit(2)
+  ast = json.loads(status.stdout.decode())
+  if ast['kind'] != 'TranslationUnitDecl':
+    common.error('Clang AST dump JSON format changed?')
+    sys.exit(2)
 
-    if decl_m:
-      MatchedDecl = True
-      spell, lineno = decl_m.groups()
-    if MatchedDecl and mangle_m:
-      mangled = mangle_m.group(1)
-      MatchedDecl = False
-    else:
+  # Get the inner node and iterate over all children of type FunctionDecl.
+  # TODO: Should we add checks for global variables being emitted?
+  for node in ast['inner']:
+    if node['kind'] != 'FunctionDecl':
       continue
-
-    if mangled == '_' + spell:
-      # HACK for MacOS (where the mangled name includes an _ for C but the IR won't):
-      mangled = spell
-    # Note -test-print-mangle does not print file names so if #include is used,
-    # the line number may come from an included file.
-    ret[int(lineno)-1] = (spell, mangled)
+    if node.get('isImplicit') is True and node.get('storageClass') == 'extern':
+      debug_mangled('Skipping builtin function:', node['name'], '@', node['loc'])
+      continue
+    debug_mangled('Found function:', node['kind'], node['name'], '@', node['loc'])
+    line = node['loc'].get('line')
+    # If there is no line it is probably a builtin function -> skip
+    if line is None:
+      debug_mangled('Skipping function without line number:', node['name'], '@', node['loc'])
+      continue
+    spell = node['name']
+    mangled = node.get('mangledName', spell)
+    ret[int(line)-1] = (spell, mangled)
   if args.verbose:
     for line, func_name in sorted(ret.items()):
       print('line {}: found function {}'.format(line+1, func_name), file=sys.stderr)
+  if not ret:
+    common.warn('Did not find any functions using', ' '.join(json_dump_args))
   return ret
 
 
@@ -92,8 +96,6 @@ def config():
                       help='"clang" executable, defaults to $llvm_bin/clang')
   parser.add_argument('--clang-args',
                       help='Space-separated extra args to clang, e.g. --clang-args=-v')
-  parser.add_argument('--c-index-test',
-                      help='"c-index-test" executable, defaults to $llvm_bin/c-index-test')
   parser.add_argument('--opt',
                       help='"opt" executable, defaults to $llvm_bin/opt')
   parser.add_argument(
@@ -139,15 +141,6 @@ def config():
     # needed for updating a test that runs clang | opt | FileCheck. So we
     # defer this error message until we find that opt is actually needed.
     args.opt = None
-
-  if args.c_index_test is None:
-    if args.llvm_bin is None:
-      args.c_index_test = 'c-index-test'
-    else:
-      args.c_index_test = os.path.join(args.llvm_bin, 'c-index-test')
-  if not distutils.spawn.find_executable(args.c_index_test):
-    print('Please specify --llvm-bin or --c-index-test', file=sys.stderr)
-    sys.exit(1)
 
   return args
 
@@ -274,8 +267,8 @@ def main():
 
       get_function_body(args, filename, clang_args, extra_commands, prefixes, triple_in_cmd, func_dict)
 
-      # Invoke c-index-test to get mapping from start lines to mangled names.
-      # Forward all clang args for now.
+      # Invoke clang -Xclang -ast-dump=json to get mapping from start lines to
+      # mangled names. Forward all clang args for now.
       for k, v in get_line2spell_and_mangled(args, clang_args).items():
         line2spell_and_mangled_list[k].append(v)
 

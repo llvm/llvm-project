@@ -175,9 +175,9 @@ DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
                      const DWARFSection *AOS, const DWARFSection &LS, bool LE,
                      bool IsDWO, const DWARFUnitVector &UnitVector)
     : Context(DC), InfoSection(Section), Header(Header), Abbrev(DA),
-      RangeSection(RS), LocSection(LocSection), LineSection(LS),
-      StringSection(SS), StringOffsetSection(SOS), AddrOffsetSection(AOS),
-      isLittleEndian(LE), IsDWO(IsDWO), UnitVector(UnitVector) {
+      RangeSection(RS), LineSection(LS), StringSection(SS),
+      StringOffsetSection(SOS), AddrOffsetSection(AOS), isLittleEndian(LE),
+      IsDWO(IsDWO), UnitVector(UnitVector) {
   clear();
   if (IsDWO) {
     // If we are reading a package file, we need to adjust the location list
@@ -195,6 +195,10 @@ DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
                            Context.getDWARFObj().getLoclistsSection(),
                            isLittleEndian, getAddressByteSize()),
         Header.getVersion());
+  } else {
+    LocTable = std::make_unique<DWARFDebugLoc>(
+        DWARFDataExtractor(Context.getDWARFObj(), *LocSection, isLittleEndian,
+                           getAddressByteSize()));
   }
 }
 

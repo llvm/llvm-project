@@ -15,8 +15,8 @@ CHECK: .debug_loc contents:
 CHECK-NEXT: [[F_LOC]]:
 this is actually the wrong location due to PR14763, but that doesn't matter for
 the purposes of testing dwarfdump
-CHECK-NEXT:             [0x00000000, 0x00000023): DW_OP_reg1 ECX
-CHECK-NEXT:             [0x00000023, 0x0000005d): DW_OP_breg5 EBP-16
+CHECK-NEXT:             (0x00000000, 0x00000023): DW_OP_reg1 ECX
+CHECK-NEXT:             (0x00000023, 0x0000005d): DW_OP_breg5 EBP-16
 CHECK: [[G_LOC]]:
-CHECK-NEXT:             [0x00000000, 0x00000020): DW_OP_reg0 EAX
-CHECK-NEXT:             [0x00000020, 0x0000005d): DW_OP_breg5 EBP-12
+CHECK-NEXT:             (0x00000000, 0x00000020): DW_OP_reg0 EAX
+CHECK-NEXT:             (0x00000020, 0x0000005d): DW_OP_breg5 EBP-12

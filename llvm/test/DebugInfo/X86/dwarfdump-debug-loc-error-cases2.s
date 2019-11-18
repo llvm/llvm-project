@@ -8,11 +8,11 @@
 
 # CHECK:      DW_AT_name        ("x1")
 # CHECK-NEXT: DW_AT_location    (0xdeadbeef
-# CHECK-NEXT:    error extracting location list: unexpected end of data)
+# CHECK-NEXT:    error: unexpected end of data)
 
 # CHECK:      DW_AT_name        ("x2")
 # CHECK-NEXT: DW_AT_location    (0x00000036
-# CHECK-NEXT:    error extracting location list: unexpected end of data)
+# CHECK-NEXT:    error: unexpected end of data)
 
 
         .type   f,@function
@@ -64,6 +64,10 @@ f:                                      # @f
         .byte   14                      # DW_FORM_strp
         .byte   19                      # DW_AT_language
         .byte   5                       # DW_FORM_data2
+        .byte   17                      # DW_AT_low_pc
+        .byte   1                       # DW_FORM_addr
+        .byte   18                      # DW_AT_high_pc
+        .byte   6                       # DW_FORM_data4
         .byte   0                       # EOM(1)
         .byte   0                       # EOM(2)
         .byte   2                       # Abbreviation Code
@@ -105,6 +109,8 @@ f:                                      # @f
         .byte   1                       # Abbrev [1] 0xb:0x50 DW_TAG_compile_unit
         .long   .Linfo_string0          # DW_AT_producer
         .short  12                      # DW_AT_language
+        .quad   0                       # DW_AT_low_pc
+        .long   0x100                   # DW_AT_high_pc
         .byte   2                       # Abbrev [2] 0x2a:0x29 DW_TAG_subprogram
         .long   .Linfo_string3          # DW_AT_name
         .byte   3                       # Abbrev [3] DW_TAG_formal_parameter

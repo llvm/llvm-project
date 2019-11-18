@@ -24,9 +24,8 @@ body:             |
     ; MIPS32FP32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32FP32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
     ; MIPS32FP32: [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
-    ; MIPS32FP32: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 1
-    ; MIPS32FP32: [[AND:%[0-9]+]]:gpr32 = AND [[COPY]], [[ORi]]
-    ; MIPS32FP32: [[MOVN_I_I:%[0-9]+]]:gpr32 = MOVN_I_I [[COPY1]], [[AND]], [[COPY2]]
+    ; MIPS32FP32: [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
+    ; MIPS32FP32: [[MOVN_I_I:%[0-9]+]]:gpr32 = MOVN_I_I [[COPY1]], [[ANDi]], [[COPY2]]
     ; MIPS32FP32: $v0 = COPY [[MOVN_I_I]]
     ; MIPS32FP32: RetRA implicit $v0
     ; MIPS32FP64-LABEL: name: select_i32
@@ -34,9 +33,8 @@ body:             |
     ; MIPS32FP64: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32FP64: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
     ; MIPS32FP64: [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
-    ; MIPS32FP64: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 1
-    ; MIPS32FP64: [[AND:%[0-9]+]]:gpr32 = AND [[COPY]], [[ORi]]
-    ; MIPS32FP64: [[MOVN_I_I:%[0-9]+]]:gpr32 = MOVN_I_I [[COPY1]], [[AND]], [[COPY2]]
+    ; MIPS32FP64: [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
+    ; MIPS32FP64: [[MOVN_I_I:%[0-9]+]]:gpr32 = MOVN_I_I [[COPY1]], [[ANDi]], [[COPY2]]
     ; MIPS32FP64: $v0 = COPY [[MOVN_I_I]]
     ; MIPS32FP64: RetRA implicit $v0
     %3:gprb(s32) = COPY $a0
@@ -65,9 +63,8 @@ body:             |
     ; MIPS32FP32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32FP32: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
     ; MIPS32FP32: [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
-    ; MIPS32FP32: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 1
-    ; MIPS32FP32: [[AND:%[0-9]+]]:gpr32 = AND [[COPY]], [[ORi]]
-    ; MIPS32FP32: [[MOVN_I_I:%[0-9]+]]:gpr32 = MOVN_I_I [[COPY1]], [[AND]], [[COPY2]]
+    ; MIPS32FP32: [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
+    ; MIPS32FP32: [[MOVN_I_I:%[0-9]+]]:gpr32 = MOVN_I_I [[COPY1]], [[ANDi]], [[COPY2]]
     ; MIPS32FP32: $v0 = COPY [[MOVN_I_I]]
     ; MIPS32FP32: RetRA implicit $v0
     ; MIPS32FP64-LABEL: name: select_ptr
@@ -75,9 +72,8 @@ body:             |
     ; MIPS32FP64: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32FP64: [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
     ; MIPS32FP64: [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
-    ; MIPS32FP64: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 1
-    ; MIPS32FP64: [[AND:%[0-9]+]]:gpr32 = AND [[COPY]], [[ORi]]
-    ; MIPS32FP64: [[MOVN_I_I:%[0-9]+]]:gpr32 = MOVN_I_I [[COPY1]], [[AND]], [[COPY2]]
+    ; MIPS32FP64: [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
+    ; MIPS32FP64: [[MOVN_I_I:%[0-9]+]]:gpr32 = MOVN_I_I [[COPY1]], [[ANDi]], [[COPY2]]
     ; MIPS32FP64: $v0 = COPY [[MOVN_I_I]]
     ; MIPS32FP64: RetRA implicit $v0
     %3:gprb(s32) = COPY $a0
@@ -106,9 +102,8 @@ body:             |
     ; MIPS32FP32: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32FP32: [[MTC1_:%[0-9]+]]:fgr32 = MTC1 $a1
     ; MIPS32FP32: [[MTC1_1:%[0-9]+]]:fgr32 = MTC1 $a2
-    ; MIPS32FP32: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 1
-    ; MIPS32FP32: [[AND:%[0-9]+]]:gpr32 = AND [[COPY]], [[ORi]]
-    ; MIPS32FP32: [[MOVN_I_S:%[0-9]+]]:fgr32 = MOVN_I_S [[MTC1_]], [[AND]], [[MTC1_1]]
+    ; MIPS32FP32: [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
+    ; MIPS32FP32: [[MOVN_I_S:%[0-9]+]]:fgr32 = MOVN_I_S [[MTC1_]], [[ANDi]], [[MTC1_1]]
     ; MIPS32FP32: $f0 = COPY [[MOVN_I_S]]
     ; MIPS32FP32: RetRA implicit $f0
     ; MIPS32FP64-LABEL: name: select_float
@@ -116,9 +111,8 @@ body:             |
     ; MIPS32FP64: [[COPY:%[0-9]+]]:gpr32 = COPY $a0
     ; MIPS32FP64: [[MTC1_:%[0-9]+]]:fgr32 = MTC1 $a1
     ; MIPS32FP64: [[MTC1_1:%[0-9]+]]:fgr32 = MTC1 $a2
-    ; MIPS32FP64: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 1
-    ; MIPS32FP64: [[AND:%[0-9]+]]:gpr32 = AND [[COPY]], [[ORi]]
-    ; MIPS32FP64: [[MOVN_I_S:%[0-9]+]]:fgr32 = MOVN_I_S [[MTC1_]], [[AND]], [[MTC1_1]]
+    ; MIPS32FP64: [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
+    ; MIPS32FP64: [[MOVN_I_S:%[0-9]+]]:fgr32 = MOVN_I_S [[MTC1_]], [[ANDi]], [[MTC1_1]]
     ; MIPS32FP64: $f0 = COPY [[MOVN_I_S]]
     ; MIPS32FP64: RetRA implicit $f0
     %3:gprb(s32) = COPY $a0
@@ -150,9 +144,8 @@ body:             |
     ; MIPS32FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
     ; MIPS32FP32: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu %fixed-stack.0, 0
     ; MIPS32FP32: [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (load 4 from %fixed-stack.0, align 8)
-    ; MIPS32FP32: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 1
-    ; MIPS32FP32: [[AND:%[0-9]+]]:gpr32 = AND [[LW]], [[ORi]]
-    ; MIPS32FP32: [[MOVN_I_D32_:%[0-9]+]]:afgr64 = MOVN_I_D32 [[COPY]], [[AND]], [[COPY1]]
+    ; MIPS32FP32: [[ANDi:%[0-9]+]]:gpr32 = ANDi [[LW]], 1
+    ; MIPS32FP32: [[MOVN_I_D32_:%[0-9]+]]:afgr64 = MOVN_I_D32 [[COPY]], [[ANDi]], [[COPY1]]
     ; MIPS32FP32: $d0 = COPY [[MOVN_I_D32_]]
     ; MIPS32FP32: RetRA implicit $d0
     ; MIPS32FP64-LABEL: name: select_double
@@ -161,9 +154,8 @@ body:             |
     ; MIPS32FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
     ; MIPS32FP64: [[ADDiu:%[0-9]+]]:gpr32 = ADDiu %fixed-stack.0, 0
     ; MIPS32FP64: [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (load 4 from %fixed-stack.0, align 8)
-    ; MIPS32FP64: [[ORi:%[0-9]+]]:gpr32 = ORi $zero, 1
-    ; MIPS32FP64: [[AND:%[0-9]+]]:gpr32 = AND [[LW]], [[ORi]]
-    ; MIPS32FP64: [[MOVN_I_D64_:%[0-9]+]]:fgr64 = MOVN_I_D64 [[COPY]], [[AND]], [[COPY1]]
+    ; MIPS32FP64: [[ANDi:%[0-9]+]]:gpr32 = ANDi [[LW]], 1
+    ; MIPS32FP64: [[MOVN_I_D64_:%[0-9]+]]:fgr64 = MOVN_I_D64 [[COPY]], [[ANDi]], [[COPY1]]
     ; MIPS32FP64: $d0 = COPY [[MOVN_I_D64_]]
     ; MIPS32FP64: RetRA implicit $d0
     %0:fprb(s64) = COPY $d6

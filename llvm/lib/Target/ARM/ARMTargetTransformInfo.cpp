@@ -1008,6 +1008,9 @@ static bool canTailPredicateInstruction(Instruction &I, int &ICmpCount) {
   if (isa<ICmpInst>(&I) && ++ICmpCount > 1)
     return false;
 
+  if (isa<FCmpInst>(&I))
+    return false;
+
   // We could allow extending/narrowing FP loads/stores, but codegen is
   // too inefficient so reject this for now.
   if (isa<FPExtInst>(&I) || isa<FPTruncInst>(&I))

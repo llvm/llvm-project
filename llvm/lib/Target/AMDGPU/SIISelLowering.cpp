@@ -5659,11 +5659,16 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
                                        SDValue Offset, SDValue GLC, SDValue DLC,
                                        SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
+
+  const DataLayout &DataLayout = DAG.getDataLayout();
+  unsigned Align =
+      DataLayout.getABITypeAlignment(VT.getTypeForEVT(*DAG.getContext()));
+
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(),
       MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
           MachineMemOperand::MOInvariant,
-      VT.getStoreSize(), VT.getStoreSize());
+      VT.getStoreSize(), Align);
 
   if (!Offset->isDivergent()) {
     SDValue Ops[] = {
@@ -5672,6 +5677,20 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
         GLC,
         DLC,
     };
+
+    // Widen vec3 load to vec4.
+    if (VT.isVector() && VT.getVectorNumElements() == 3) {
+      EVT WidenedVT =
+          EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(), 4);
+      auto WidenedOp = DAG.getMemIntrinsicNode(
+          AMDGPUISD::SBUFFER_LOAD, DL, DAG.getVTList(WidenedVT), Ops, WidenedVT,
+          MF.getMachineMemOperand(MMO, 0, WidenedVT.getStoreSize()));
+      auto Subvector = DAG.getNode(
+          ISD::EXTRACT_SUBVECTOR, DL, VT, WidenedOp,
+          DAG.getConstant(0, DL, getVectorIdxTy(DAG.getDataLayout())));
+      return Subvector;
+    }
+
     return DAG.getMemIntrinsicNode(AMDGPUISD::SBUFFER_LOAD, DL,
                                    DAG.getVTList(VT), Ops, VT, MMO);
   }
@@ -5683,11 +5702,10 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
   MVT LoadVT = VT.getSimpleVT();
   unsigned NumElts = LoadVT.isVector() ? LoadVT.getVectorNumElements() : 1;
   assert((LoadVT.getScalarType() == MVT::i32 ||
-          LoadVT.getScalarType() == MVT::f32) &&
-         isPowerOf2_32(NumElts));
+          LoadVT.getScalarType() == MVT::f32));
 
   if (NumElts == 8 || NumElts == 16) {
-    NumLoads = NumElts == 16 ? 4 : 2;
+    NumLoads = NumElts / 4;
     LoadVT = MVT::v4i32;
   }
 
@@ -5711,8 +5729,8 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
   uint64_t InstOffset = cast<ConstantSDNode>(Ops[5])->getZExtValue();
   for (unsigned i = 0; i < NumLoads; ++i) {
     Ops[5] = DAG.getTargetConstant(InstOffset + 16 * i, DL, MVT::i32);
-    Loads.push_back(DAG.getMemIntrinsicNode(AMDGPUISD::BUFFER_LOAD, DL, VTList,
-                                            Ops, LoadVT, MMO));
+    Loads.push_back(getMemIntrinsicNode(AMDGPUISD::BUFFER_LOAD, DL, VTList, Ops,
+                                        LoadVT, MMO, DAG));
   }
 
   if (VT == MVT::v8i32 || VT == MVT::v16i32)

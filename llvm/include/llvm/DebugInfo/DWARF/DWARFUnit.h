@@ -201,11 +201,7 @@ class DWARFUnit {
   const DWARFSection *RangeSection;
   uint64_t RangeSectionBase;
 
-  /// Section containing the location lists of this unit used for non-split
-  /// DWARF<=v4 units.
-  const DWARFSection *LocSection;
-
-  /// Location table of this unit. Used for DWARF v5 and DWO units.
+  /// Location table of this unit.
   std::unique_ptr<DWARFLocationTable> LocTable;
 
   const DWARFSection &LineSection;
@@ -277,7 +273,6 @@ public:
   bool isDWOUnit() const { return IsDWO; }
   DWARFContext& getContext() const { return Context; }
   const DWARFSection &getInfoSection() const { return InfoSection; }
-  const DWARFSection *getLocSection() const { return LocSection; }
   uint64_t getOffset() const { return Header.getOffset(); }
   const dwarf::FormParams &getFormParams() const {
     return Header.getFormParams();
@@ -321,7 +316,7 @@ public:
     return DataExtractor(StringSection, false, 0);
   }
 
-  const DWARFLocationTable *getLocationTable() { return LocTable.get(); }
+  const DWARFLocationTable &getLocationTable() { return *LocTable; }
 
   /// Extract the range list referenced by this compile unit from the
   /// .debug_ranges section. If the extraction is unsuccessful, an error

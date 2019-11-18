@@ -12,8 +12,7 @@ define void @long_chain_ambiguous_i32_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i32* 
 ; MIPS32-NEXT:    lw $2, 0($2)
 ; MIPS32-NEXT:    addiu $3, $sp, 72
 ; MIPS32-NEXT:    lw $3, 0($3)
-; MIPS32-NEXT:    ori $8, $zero, 1
-; MIPS32-NEXT:    and $8, $4, $8
+; MIPS32-NEXT:    andi $8, $4, 1
 ; MIPS32-NEXT:    sw $1, 44($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $4, 40($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $5, 36($sp) # 4-byte Folded Spill
@@ -24,16 +23,14 @@ define void @long_chain_ambiguous_i32_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i32* 
 ; MIPS32-NEXT:    bnez $8, $BB0_9
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.1: # %pre.PHI.1
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    lw $2, 36($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $1, $2, $1
-; MIPS32-NEXT:    bnez $1, $BB0_4
+; MIPS32-NEXT:    lw $1, 36($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $2, $1, 1
+; MIPS32-NEXT:    bnez $2, $BB0_4
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %pre.PHI.1.0
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    lw $2, 32($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $1, $2, $1
-; MIPS32-NEXT:    bnez $1, $BB0_5
+; MIPS32-NEXT:    lw $1, 32($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $2, $1, 1
+; MIPS32-NEXT:    bnez $2, $BB0_5
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.3: # %b.PHI.1.0
 ; MIPS32-NEXT:    lw $1, 28($sp) # 4-byte Folded Reload
@@ -53,13 +50,12 @@ define void @long_chain_ambiguous_i32_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i32* 
 ; MIPS32-NEXT:    sw $2, 16($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  $BB0_6: # %b.PHI.1
 ; MIPS32-NEXT:    lw $1, 16($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    ori $2, $zero, 1
-; MIPS32-NEXT:    lw $3, 32($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $2, $3, $2
+; MIPS32-NEXT:    lw $2, 32($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $3, $2, 1
 ; MIPS32-NEXT:    move $4, $1
 ; MIPS32-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $4, 8($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    bnez $2, $BB0_8
+; MIPS32-NEXT:    bnez $3, $BB0_8
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.7: # %b.PHI.1
 ; MIPS32-NEXT:    j $BB0_15
@@ -72,10 +68,9 @@ define void @long_chain_ambiguous_i32_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i32* 
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB0_9: # %pre.PHI.2
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    lw $2, 40($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $1, $2, $1
-; MIPS32-NEXT:    bnez $1, $BB0_11
+; MIPS32-NEXT:    lw $1, 40($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $2, $1, 1
+; MIPS32-NEXT:    bnez $2, $BB0_11
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.10: # %pre.PHI.2
 ; MIPS32-NEXT:    j $BB0_12
@@ -92,13 +87,12 @@ define void @long_chain_ambiguous_i32_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i32* 
 ; MIPS32-NEXT:    sw $2, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  $BB0_13: # %b.PHI.2
 ; MIPS32-NEXT:    lw $1, 4($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    ori $2, $zero, 1
-; MIPS32-NEXT:    lw $3, 36($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $2, $3, $2
+; MIPS32-NEXT:    lw $2, 36($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $3, $2, 1
 ; MIPS32-NEXT:    move $4, $1
 ; MIPS32-NEXT:    sw $1, 0($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $4, 8($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    bnez $2, $BB0_15
+; MIPS32-NEXT:    bnez $3, $BB0_15
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.14: # %b.PHI.2.end
 ; MIPS32-NEXT:    lw $1, 0($sp) # 4-byte Folded Reload
@@ -110,14 +104,13 @@ define void @long_chain_ambiguous_i32_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i32* 
 ; MIPS32-NEXT:  $BB0_15: # %b.PHI.3
 ; MIPS32-NEXT:    lw $1, 8($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    lw $2, 8($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    ori $3, $zero, 1
-; MIPS32-NEXT:    lw $4, 32($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $5, $4, $3
-; MIPS32-NEXT:    movn $1, $2, $5
-; MIPS32-NEXT:    lw $5, 36($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $3, $5, $3
+; MIPS32-NEXT:    lw $3, 32($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $4, $3, 1
+; MIPS32-NEXT:    movn $1, $2, $4
+; MIPS32-NEXT:    lw $4, 36($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $5, $4, 1
 ; MIPS32-NEXT:    move $6, $2
-; MIPS32-NEXT:    movn $6, $1, $3
+; MIPS32-NEXT:    movn $6, $1, $5
 ; MIPS32-NEXT:    lw $1, 20($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    sw $6, 0($1)
 ; MIPS32-NEXT:    sw $2, 0($1)
@@ -195,8 +188,7 @@ define void @long_chain_i32_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i32* %a, i32* %
 ; MIPS32-NEXT:    addiu $3, $sp, 80
 ; MIPS32-NEXT:    lw $3, 0($3)
 ; MIPS32-NEXT:    ori $8, $zero, 0
-; MIPS32-NEXT:    ori $9, $zero, 1
-; MIPS32-NEXT:    and $9, $4, $9
+; MIPS32-NEXT:    andi $9, $4, 1
 ; MIPS32-NEXT:    sw $1, 52($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $4, 48($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $5, 44($sp) # 4-byte Folded Spill
@@ -208,16 +200,14 @@ define void @long_chain_i32_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i32* %a, i32* %
 ; MIPS32-NEXT:    bnez $9, $BB1_9
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.1: # %pre.PHI.1
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    lw $2, 44($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $1, $2, $1
-; MIPS32-NEXT:    bnez $1, $BB1_4
+; MIPS32-NEXT:    lw $1, 44($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $2, $1, 1
+; MIPS32-NEXT:    bnez $2, $BB1_4
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %pre.PHI.1.0
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    lw $2, 40($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $1, $2, $1
-; MIPS32-NEXT:    bnez $1, $BB1_5
+; MIPS32-NEXT:    lw $1, 40($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $2, $1, 1
+; MIPS32-NEXT:    bnez $2, $BB1_5
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.3: # %b.PHI.1.0
 ; MIPS32-NEXT:    lw $1, 36($sp) # 4-byte Folded Reload
@@ -237,15 +227,14 @@ define void @long_chain_i32_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i32* %a, i32* %
 ; MIPS32-NEXT:    sw $2, 20($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  $BB1_6: # %b.PHI.1
 ; MIPS32-NEXT:    lw $1, 20($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    ori $2, $zero, 1
-; MIPS32-NEXT:    lw $3, 40($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $2, $3, $2
+; MIPS32-NEXT:    lw $2, 40($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $3, $2, 1
 ; MIPS32-NEXT:    move $4, $1
 ; MIPS32-NEXT:    lw $5, 24($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    sw $1, 16($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $4, 12($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $5, 8($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    bnez $2, $BB1_8
+; MIPS32-NEXT:    bnez $3, $BB1_8
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.7: # %b.PHI.1
 ; MIPS32-NEXT:    j $BB1_15
@@ -258,10 +247,9 @@ define void @long_chain_i32_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i32* %a, i32* %
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB1_9: # %pre.PHI.2
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    lw $2, 48($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $1, $2, $1
-; MIPS32-NEXT:    bnez $1, $BB1_11
+; MIPS32-NEXT:    lw $1, 48($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $2, $1, 1
+; MIPS32-NEXT:    bnez $2, $BB1_11
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.10: # %pre.PHI.2
 ; MIPS32-NEXT:    j $BB1_12
@@ -278,15 +266,14 @@ define void @long_chain_i32_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i32* %a, i32* %
 ; MIPS32-NEXT:    sw $2, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  $BB1_13: # %b.PHI.2
 ; MIPS32-NEXT:    lw $1, 4($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    ori $2, $zero, 1
-; MIPS32-NEXT:    lw $3, 44($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $2, $3, $2
+; MIPS32-NEXT:    lw $2, 44($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $3, $2, 1
 ; MIPS32-NEXT:    move $4, $1
 ; MIPS32-NEXT:    move $5, $1
 ; MIPS32-NEXT:    sw $1, 0($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $4, 12($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $5, 8($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    bnez $2, $BB1_15
+; MIPS32-NEXT:    bnez $3, $BB1_15
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.14: # %b.PHI.2.end
 ; MIPS32-NEXT:    lw $1, 0($sp) # 4-byte Folded Reload
@@ -298,14 +285,13 @@ define void @long_chain_i32_in_gpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, i32* %a, i32* %
 ; MIPS32-NEXT:  $BB1_15: # %b.PHI.3
 ; MIPS32-NEXT:    lw $1, 8($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    lw $2, 12($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    ori $3, $zero, 1
-; MIPS32-NEXT:    lw $4, 40($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $5, $4, $3
-; MIPS32-NEXT:    movn $1, $2, $5
-; MIPS32-NEXT:    lw $5, 44($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $3, $5, $3
+; MIPS32-NEXT:    lw $3, 40($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $4, $3, 1
+; MIPS32-NEXT:    movn $1, $2, $4
+; MIPS32-NEXT:    lw $4, 44($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $5, $4, 1
 ; MIPS32-NEXT:    move $6, $2
-; MIPS32-NEXT:    movn $6, $1, $3
+; MIPS32-NEXT:    movn $6, $1, $5
 ; MIPS32-NEXT:    lw $1, 28($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    sw $6, 0($1)
 ; MIPS32-NEXT:    sw $2, 0($1)
@@ -381,8 +367,7 @@ define void @long_chain_ambiguous_float_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, flo
 ; MIPS32-NEXT:    lw $2, 0($2)
 ; MIPS32-NEXT:    addiu $3, $sp, 72
 ; MIPS32-NEXT:    lw $3, 0($3)
-; MIPS32-NEXT:    ori $8, $zero, 1
-; MIPS32-NEXT:    and $8, $4, $8
+; MIPS32-NEXT:    andi $8, $4, 1
 ; MIPS32-NEXT:    sw $1, 44($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $4, 40($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $5, 36($sp) # 4-byte Folded Spill
@@ -393,16 +378,14 @@ define void @long_chain_ambiguous_float_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, flo
 ; MIPS32-NEXT:    bnez $8, $BB2_9
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.1: # %pre.PHI.1
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    lw $2, 36($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $1, $2, $1
-; MIPS32-NEXT:    bnez $1, $BB2_4
+; MIPS32-NEXT:    lw $1, 36($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $2, $1, 1
+; MIPS32-NEXT:    bnez $2, $BB2_4
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %pre.PHI.1.0
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    lw $2, 32($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $1, $2, $1
-; MIPS32-NEXT:    bnez $1, $BB2_5
+; MIPS32-NEXT:    lw $1, 32($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $2, $1, 1
+; MIPS32-NEXT:    bnez $2, $BB2_5
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.3: # %b.PHI.1.0
 ; MIPS32-NEXT:    lw $1, 28($sp) # 4-byte Folded Reload
@@ -422,13 +405,12 @@ define void @long_chain_ambiguous_float_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, flo
 ; MIPS32-NEXT:    sw $2, 16($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  $BB2_6: # %b.PHI.1
 ; MIPS32-NEXT:    lw $1, 16($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    ori $2, $zero, 1
-; MIPS32-NEXT:    lw $3, 32($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $2, $3, $2
+; MIPS32-NEXT:    lw $2, 32($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $3, $2, 1
 ; MIPS32-NEXT:    move $4, $1
 ; MIPS32-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $4, 8($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    bnez $2, $BB2_8
+; MIPS32-NEXT:    bnez $3, $BB2_8
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.7: # %b.PHI.1
 ; MIPS32-NEXT:    j $BB2_15
@@ -441,10 +423,9 @@ define void @long_chain_ambiguous_float_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, flo
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB2_9: # %pre.PHI.2
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    lw $2, 40($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $1, $2, $1
-; MIPS32-NEXT:    bnez $1, $BB2_11
+; MIPS32-NEXT:    lw $1, 40($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $2, $1, 1
+; MIPS32-NEXT:    bnez $2, $BB2_11
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.10: # %pre.PHI.2
 ; MIPS32-NEXT:    j $BB2_12
@@ -461,13 +442,12 @@ define void @long_chain_ambiguous_float_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, flo
 ; MIPS32-NEXT:    sw $2, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  $BB2_13: # %b.PHI.2
 ; MIPS32-NEXT:    lw $1, 4($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    ori $2, $zero, 1
-; MIPS32-NEXT:    lw $3, 36($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $2, $3, $2
+; MIPS32-NEXT:    lw $2, 36($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $3, $2, 1
 ; MIPS32-NEXT:    move $4, $1
 ; MIPS32-NEXT:    sw $1, 0($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $4, 8($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    bnez $2, $BB2_15
+; MIPS32-NEXT:    bnez $3, $BB2_15
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.14: # %b.PHI.2.end
 ; MIPS32-NEXT:    lw $1, 0($sp) # 4-byte Folded Reload
@@ -479,14 +459,13 @@ define void @long_chain_ambiguous_float_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, flo
 ; MIPS32-NEXT:  $BB2_15: # %b.PHI.3
 ; MIPS32-NEXT:    lw $1, 8($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    lw $2, 8($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    ori $3, $zero, 1
-; MIPS32-NEXT:    lw $4, 32($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $5, $4, $3
-; MIPS32-NEXT:    movn $1, $2, $5
-; MIPS32-NEXT:    lw $5, 36($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $3, $5, $3
+; MIPS32-NEXT:    lw $3, 32($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $4, $3, 1
+; MIPS32-NEXT:    movn $1, $2, $4
+; MIPS32-NEXT:    lw $4, 36($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $5, $4, 1
 ; MIPS32-NEXT:    move $6, $2
-; MIPS32-NEXT:    movn $6, $1, $3
+; MIPS32-NEXT:    movn $6, $1, $5
 ; MIPS32-NEXT:    lw $1, 20($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    sw $6, 0($1)
 ; MIPS32-NEXT:    sw $2, 0($1)
@@ -565,8 +544,7 @@ define void @long_chain_float_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, float* %a, fl
 ; MIPS32-NEXT:    lw $3, 0($3)
 ; MIPS32-NEXT:    ori $8, $zero, 0
 ; MIPS32-NEXT:    mtc1 $8, $f0
-; MIPS32-NEXT:    ori $8, $zero, 1
-; MIPS32-NEXT:    and $8, $4, $8
+; MIPS32-NEXT:    andi $8, $4, 1
 ; MIPS32-NEXT:    sw $1, 52($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $4, 48($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $5, 44($sp) # 4-byte Folded Spill
@@ -578,16 +556,14 @@ define void @long_chain_float_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, float* %a, fl
 ; MIPS32-NEXT:    bnez $8, $BB3_9
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.1: # %pre.PHI.1
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    lw $2, 44($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $1, $2, $1
-; MIPS32-NEXT:    bnez $1, $BB3_4
+; MIPS32-NEXT:    lw $1, 44($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $2, $1, 1
+; MIPS32-NEXT:    bnez $2, $BB3_4
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.2: # %pre.PHI.1.0
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    lw $2, 40($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $1, $2, $1
-; MIPS32-NEXT:    bnez $1, $BB3_5
+; MIPS32-NEXT:    lw $1, 40($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $2, $1, 1
+; MIPS32-NEXT:    bnez $2, $BB3_5
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.3: # %b.PHI.1.0
 ; MIPS32-NEXT:    lw $1, 36($sp) # 4-byte Folded Reload
@@ -607,15 +583,14 @@ define void @long_chain_float_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, float* %a, fl
 ; MIPS32-NEXT:    swc1 $f0, 20($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  $BB3_6: # %b.PHI.1
 ; MIPS32-NEXT:    lwc1 $f0, 20($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    lw $2, 40($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $1, $2, $1
+; MIPS32-NEXT:    lw $1, 40($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $2, $1, 1
 ; MIPS32-NEXT:    mov.s $f1, $f0
 ; MIPS32-NEXT:    lwc1 $f2, 24($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    swc1 $f0, 16($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    swc1 $f1, 12($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    swc1 $f2, 8($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    bnez $1, $BB3_8
+; MIPS32-NEXT:    bnez $2, $BB3_8
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.7: # %b.PHI.1
 ; MIPS32-NEXT:    j $BB3_15
@@ -628,10 +603,9 @@ define void @long_chain_float_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, float* %a, fl
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB3_9: # %pre.PHI.2
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    lw $2, 48($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $1, $2, $1
-; MIPS32-NEXT:    bnez $1, $BB3_11
+; MIPS32-NEXT:    lw $1, 48($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $2, $1, 1
+; MIPS32-NEXT:    bnez $2, $BB3_11
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.10: # %pre.PHI.2
 ; MIPS32-NEXT:    j $BB3_12
@@ -648,15 +622,14 @@ define void @long_chain_float_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, float* %a, fl
 ; MIPS32-NEXT:    swc1 $f0, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:  $BB3_13: # %b.PHI.2
 ; MIPS32-NEXT:    lwc1 $f0, 4($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    lw $2, 44($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $1, $2, $1
+; MIPS32-NEXT:    lw $1, 44($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $2, $1, 1
 ; MIPS32-NEXT:    mov.s $f1, $f0
 ; MIPS32-NEXT:    mov.s $f2, $f0
 ; MIPS32-NEXT:    swc1 $f0, 0($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    swc1 $f1, 12($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    swc1 $f2, 8($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    bnez $1, $BB3_15
+; MIPS32-NEXT:    bnez $2, $BB3_15
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.14: # %b.PHI.2.end
 ; MIPS32-NEXT:    lwc1 $f0, 0($sp) # 4-byte Folded Reload
@@ -668,17 +641,16 @@ define void @long_chain_float_in_fpr(i1 %cnd0, i1 %cnd1, i1 %cnd2, float* %a, fl
 ; MIPS32-NEXT:  $BB3_15: # %b.PHI.3
 ; MIPS32-NEXT:    lwc1 $f0, 8($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    lwc1 $f1, 12($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    ori $1, $zero, 1
-; MIPS32-NEXT:    lw $2, 40($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $3, $2, $1
-; MIPS32-NEXT:    movn.s $f0, $f1, $3
-; MIPS32-NEXT:    lw $3, 44($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    and $1, $3, $1
+; MIPS32-NEXT:    lw $1, 40($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $2, $1, 1
+; MIPS32-NEXT:    movn.s $f0, $f1, $2
+; MIPS32-NEXT:    lw $2, 44($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    andi $3, $2, 1
 ; MIPS32-NEXT:    mov.s $f2, $f1
-; MIPS32-NEXT:    movn.s $f2, $f0, $1
-; MIPS32-NEXT:    lw $1, 28($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    swc1 $f2, 0($1)
-; MIPS32-NEXT:    swc1 $f1, 0($1)
+; MIPS32-NEXT:    movn.s $f2, $f0, $3
+; MIPS32-NEXT:    lw $3, 28($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    swc1 $f2, 0($3)
+; MIPS32-NEXT:    swc1 $f1, 0($3)
 ; MIPS32-NEXT:    addiu $sp, $sp, 56
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop

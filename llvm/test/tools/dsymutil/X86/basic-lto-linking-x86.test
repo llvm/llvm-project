@@ -134,11 +134,11 @@ CHECK:    NULL
 
 CHECK: .debug_loc contents:
 CHECK-NEXT: 0x00000000:
-CHECK-NEXT:              [0x0000000000000000, 0x000000000000000e): DW_OP_reg5 RDI, DW_OP_piece 0x4
+CHECK-NEXT:              (0x0000000000000000, 0x000000000000000e): DW_OP_reg5 RDI, DW_OP_piece 0x4
 CHECK-NOT: :
 CHECK:      0x00000025:
-CHECK-NEXT:              [0x0000000000000000, 0x000000000000000f): DW_OP_reg5 RDI, DW_OP_piece 0x4
-CHECK-NEXT:              [0x0000000000000019, 0x000000000000001d): DW_OP_reg5 RDI, DW_OP_piece 0x4
+CHECK-NEXT:              (0x0000000000000000, 0x000000000000000f): DW_OP_reg5 RDI, DW_OP_piece 0x4
+CHECK-NEXT:              (0x0000000000000019, 0x000000000000001d): DW_OP_reg5 RDI, DW_OP_piece 0x4
 
 CHECK: .debug_aranges contents:
 CHECK-NEXT: Address Range Header: length = 0x0000002c, version = 0x0002, cu_offset = 0x00000000, addr_size = 0x08, seg_size = 0x00

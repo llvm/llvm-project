@@ -159,6 +159,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestLocation",
+// CHECK-NEXT:  "mangledName": "TestLocation",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  }
@@ -186,6 +187,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestLocationFromInclude",
+// CHECK-NEXT:  "mangledName": "TestLocationFromInclude",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "desugaredQualType": "int",
 // CHECK-NEXT:   "qualType": "TestTypedefFromInclude",
@@ -1128,6 +1130,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestFunctionDecl",
+// CHECK-NEXT:  "mangledName": "TestFunctionDecl",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int (int, enum (anonymous enum at {{.*}}:69:29))"
 // CHECK-NEXT:  },
@@ -1155,6 +1158,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "x",
+// CHECK-NEXT:    "mangledName": "x",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -1180,6 +1184,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "y",
+// CHECK-NEXT:    "mangledName": "y",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "enum (anonymous at {{.*}}:69:29)",
 // CHECK-NEXT:     "qualType": "enum (anonymous enum at {{.*}}:69:29)"
@@ -1299,6 +1304,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestFunctionDecl2",
+// CHECK-NEXT:  "mangledName": "TestFunctionDecl2",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int (enum Enum)"
 // CHECK-NEXT:  },
@@ -1325,6 +1331,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
 // CHECK-NEXT:    "name": "x",
+// CHECK-NEXT:    "mangledName": "x",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "enum Enum",
 // CHECK-NEXT:     "qualType": "enum Enum"
@@ -1468,6 +1475,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestFunctionDeclProto",
+// CHECK-NEXT:  "mangledName": "TestFunctionDeclProto",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int (int)"
 // CHECK-NEXT:  },
@@ -1493,6 +1501,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "x",
+// CHECK-NEXT:    "mangledName": "x",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    }
@@ -1522,6 +1531,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestFunctionDeclNoProto",
+// CHECK-NEXT:  "mangledName": "TestFunctionDeclNoProto",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "void ()"
 // CHECK-NEXT:  }
@@ -1549,6 +1559,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestFunctionDeclSC",
+// CHECK-NEXT:  "mangledName": "TestFunctionDeclSC",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int ()"
 // CHECK-NEXT:  },
@@ -1577,6 +1588,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestFunctionDeclInline",
+// CHECK-NEXT:  "mangledName": "TestFunctionDeclInline",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int ()"
 // CHECK-NEXT:  },
@@ -1705,6 +1717,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestVarDecl",
+// CHECK-NEXT:  "mangledName": "TestVarDecl",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  }
@@ -1732,6 +1745,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestVarDeclSC",
+// CHECK-NEXT:  "mangledName": "TestVarDeclSC",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
@@ -1760,6 +1774,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestVarDeclThread",
+// CHECK-NEXT:  "mangledName": "TestVarDeclThread",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
@@ -1788,6 +1803,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestVarDeclInit",
+// CHECK-NEXT:  "mangledName": "TestVarDeclInit",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
@@ -1839,6 +1855,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestParmVarDecl",
+// CHECK-NEXT:  "mangledName": "TestParmVarDecl",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  }
