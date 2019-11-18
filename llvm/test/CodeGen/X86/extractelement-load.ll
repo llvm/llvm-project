@@ -119,3 +119,49 @@ define void @t5(<2 x double> *%a0, double *%a1) {
   store volatile double %vecext, double* %a1, align 8
   ret void
 }
+
+; Check for multiuse.
+define float @t6(<8 x float> *%a0) {
+; X32-SSE2-LABEL: t6:
+; X32-SSE2:       # %bb.0:
+; X32-SSE2-NEXT:    pushl %eax
+; X32-SSE2-NEXT:    .cfi_def_cfa_offset 8
+; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X32-SSE2-NEXT:    xorps %xmm1, %xmm1
+; X32-SSE2-NEXT:    cmpeqss %xmm0, %xmm1
+; X32-SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X32-SSE2-NEXT:    andps %xmm1, %xmm2
+; X32-SSE2-NEXT:    andnps %xmm0, %xmm1
+; X32-SSE2-NEXT:    orps %xmm2, %xmm1
+; X32-SSE2-NEXT:    movss %xmm1, (%esp)
+; X32-SSE2-NEXT:    flds (%esp)
+; X32-SSE2-NEXT:    popl %eax
+; X32-SSE2-NEXT:    .cfi_def_cfa_offset 4
+; X32-SSE2-NEXT:    retl
+;
+; X64-SSSE3-LABEL: t6:
+; X64-SSSE3:       # %bb.0:
+; X64-SSSE3-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X64-SSSE3-NEXT:    xorps %xmm0, %xmm0
+; X64-SSSE3-NEXT:    cmpeqss %xmm1, %xmm0
+; X64-SSSE3-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X64-SSSE3-NEXT:    andps %xmm0, %xmm2
+; X64-SSSE3-NEXT:    andnps %xmm1, %xmm0
+; X64-SSSE3-NEXT:    orps %xmm2, %xmm0
+; X64-SSSE3-NEXT:    retq
+;
+; X64-AVX-LABEL: t6:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vmovshdup {{.*#+}} xmm0 = mem[1,1,3,3]
+; X64-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-AVX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm1
+; X64-AVX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X64-AVX-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
+; X64-AVX-NEXT:    retq
+  %vecload = load <8 x float>, <8 x float>* %a0, align 32
+  %vecext = extractelement <8 x float> %vecload, i32 1
+  %cmp = fcmp oeq float %vecext, 0.000000e+00
+  %cond = select i1 %cmp, float 1.000000e+00, float %vecext
+  ret float %cond
+}
