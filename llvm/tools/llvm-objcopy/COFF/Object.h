@@ -25,11 +25,11 @@ namespace objcopy {
 namespace coff {
 
 struct Relocation {
-  Relocation() {}
+  Relocation() = default;
   Relocation(const object::coff_relocation& R) : Reloc(R) {}
 
   object::coff_relocation Reloc;
-  size_t Target;
+  size_t Target = 0;
   StringRef TargetName; // Used for diagnostics only
 };
 
