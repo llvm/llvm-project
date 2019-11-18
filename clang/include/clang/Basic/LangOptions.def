@@ -254,8 +254,6 @@ LANGOPT(SinglePrecisionConstants , 1, 0, "treating double-precision floating poi
 LANGOPT(FastRelaxedMath , 1, 0, "OpenCL fast relaxed math")
 /// FP_CONTRACT mode (on/off/fast).
 ENUM_LANGOPT(DefaultFPContractMode, FPContractModeKind, 2, FPC_Off, "FP contraction type")
-ENUM_LANGOPT(FPRoundingMode, FPRoundingModeKind, 3, FPR_ToNearest, "FP Rounding Mode type")
-ENUM_LANGOPT(FPExceptionMode, FPExceptionModeKind, 2, FPE_Ignore, "FP Exception Behavior Mode type")
 LANGOPT(NoBitFieldTypeAlign , 1, 0, "bit-field type alignment")
 LANGOPT(HexagonQdsp6Compat , 1, 0, "hexagon-qdsp6 backward compatibility")
 LANGOPT(ObjCAutoRefCount , 1, 0, "Objective-C automated reference counting")
