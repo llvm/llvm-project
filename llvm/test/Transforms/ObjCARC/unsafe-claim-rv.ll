@@ -40,8 +40,7 @@ if.end:                                           ; preds = %if.then, %entry
 
 ; CHECK: if.then
 ; CHECK: tail call i8* @llvm.objc.retain
-; CHECK-NEXT: call i8* @llvm.objc.autorelease
 ; CHECK: %Y.0 = phi
-; CHECK-NEXT: tail call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* %Y.0)
+; CHECK-NEXT: tail call void @llvm.objc.release
 ; CHECK-NEXT: tail call void @llvm.objc.release
 
