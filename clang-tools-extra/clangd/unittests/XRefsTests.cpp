@@ -1300,6 +1300,19 @@ TEST(Hover, All) {
           "text[Typedef]",
       },
       {
+          R"cpp(// Typedef with embedded definition
+            typedef struct Bar {} Foo;
+            int main() {
+              ^Foo bar;
+            }
+          )cpp",
+          "text[Declared in]code[global namespace]\n"
+          "codeblock(cpp) [\n"
+          "typedef struct Bar Foo\n"
+          "]\n"
+          "text[Typedef with embedded definition]",
+      },
+      {
           R"cpp(// Namespace
             namespace ns {
             struct Foo { static void bar(); }

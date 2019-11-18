@@ -868,7 +868,7 @@ struct test_noattach12 *test_attach13;
 /// \brief\author Aaa
 typedef struct test_noattach14 *test_attach15;
 
-// expected-warning@+1 {{empty paragraph passed to '\brief' command}}
+// expected-warning@+1 + {{empty paragraph passed to '\brief' command}}
 /// \brief\author Aaa
 typedef struct test_attach16 { int a; } test_attach17;
 
@@ -886,7 +886,7 @@ typedef struct S *test_attach19;
 /// \brief\author Aaa
 struct test_attach20;
 
-// expected-warning@+1 {{empty paragraph passed to '\brief' command}}
+// expected-warning@+1 + {{empty paragraph passed to '\brief' command}}
 /// \brief\author Aaa
 typedef struct test_attach21 {
   // expected-warning@+1 {{empty paragraph passed to '\brief' command}}
