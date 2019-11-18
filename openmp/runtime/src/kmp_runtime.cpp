@@ -5799,15 +5799,9 @@ void __kmp_internal_end_dest(void *specific_gtid) {
 
 #if KMP_OS_UNIX && KMP_DYNAMIC_LIB
 
-// 2009-09-08 (lev): It looks the destructor does not work. In simple test cases
-// destructors work perfectly, but in real libomp.so I have no evidence it is
-// ever called. However, -fini linker option in makefile.mk works fine.
-
 __attribute__((destructor)) void __kmp_internal_end_dtor(void) {
   __kmp_internal_end_atexit();
 }
-
-void __kmp_internal_end_fini(void) { __kmp_internal_end_atexit(); }
 
 #endif
 
