@@ -13,6 +13,7 @@
 #ifndef liblldb_SwiftREPL_h_
 #define liblldb_SwiftREPL_h_
 
+#include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/lldb-public.h"
@@ -76,7 +77,7 @@ public:
   }
 
 private:
-  lldb::SwiftASTContextSP m_swift_ast_sp;
+  std::shared_ptr<SwiftASTContext> m_swift_ast_sp;
   bool m_completion_module_initialized = false;
 };
 }

@@ -19,6 +19,8 @@
 class DWARFDebugInfoEntry;
 class DWARFDIECollection;
 
+namespace lldb_private { class SwiftASTContext; }
+
 class DWARFASTParserSwift : public DWARFASTParser {
 public:
   DWARFASTParserSwift(lldb_private::SwiftASTContext &ast);
