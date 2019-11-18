@@ -38,6 +38,10 @@ endif()
 get_filename_component(devicertl_base_directory
   ${CMAKE_CURRENT_SOURCE_DIR}
   DIRECTORY)
+set(devicertl_common_directory
+  ${devicertl_base_directory}/common)
+set(devicertl_nvptx_directory
+  ${devicertl_base_directory}/nvptx)
 
 if(LIBOMPTARGET_DEP_CUDA_FOUND)
   libomptarget_say("Building CUDA offloading device RTL.")
@@ -47,17 +51,17 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
   set(CUDA_PROPAGATE_HOST_FLAGS OFF)
 
   set(cuda_src_files
-      src/cancel.cu
-      src/critical.cu
+      ${devicertl_common_directory}/src/cancel.cu
+      ${devicertl_common_directory}/src/critical.cu
       src/data_sharing.cu
       src/libcall.cu
-      src/loop.cu
+      ${devicertl_common_directory}/src/loop.cu
       src/omptarget-nvptx.cu
       src/parallel.cu
       src/reduction.cu
       src/support.cu
       src/sync.cu
-      src/task.cu
+      ${devicertl_common_directory}/src/task.cu
   )
 
   set(omp_data_objects src/omp_data.cu)
@@ -88,7 +92,8 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
   # yet supported by the CUDA toolchain on the device.
   set(BUILD_SHARED_LIBS OFF)
   set(CUDA_SEPARABLE_COMPILATION ON)
-  list(APPEND CUDA_NVCC_FLAGS -I${devicertl_base_directory})
+  list(APPEND CUDA_NVCC_FLAGS -I${devicertl_base_directory}
+                              -I${devicertl_nvptx_directory}/src)
   cuda_add_library(omptarget-nvptx STATIC ${cuda_src_files} ${omp_data_objects}
       OPTIONS ${CUDA_ARCH} ${CUDA_DEBUG})
 
@@ -123,7 +128,9 @@ if(LIBOMPTARGET_DEP_CUDA_FOUND)
 
     # Set flags for LLVM Bitcode compilation.
     set(bc_flags ${LIBOMPTARGET_NVPTX_SELECTED_CUDA_COMPILER_FLAGS}
-                 -I${devicertl_base_directory})
+                 -I${devicertl_base_directory}
+                 -I${devicertl_nvptx_directory}/src)
+
     if(${LIBOMPTARGET_NVPTX_DEBUG})
       set(bc_flags ${bc_flags} -DOMPTARGET_NVPTX_DEBUG=-1)
     else()
