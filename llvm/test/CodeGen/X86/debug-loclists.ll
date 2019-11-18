@@ -3,19 +3,18 @@
 
 ; CHECK:      DW_TAG_variable
 ; CHECK-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x0) loclist = 0x00000018:
-; CHECK-NEXT:     [0x0000000000000000, 0x0000000000000003): DW_OP_consts +3, DW_OP_stack_value
-; CHECK-NEXT:     [0x0000000000000003, 0x0000000000000004): DW_OP_consts +4, DW_OP_stack_value)
+; CHECK-NEXT:     [0x0000000000000000, 0x0000000000000003) ".text._Z2f1ii": DW_OP_consts +3, DW_OP_stack_value
+; CHECK-NEXT:     [0x0000000000000003, 0x0000000000000004) ".text._Z2f1ii": DW_OP_consts +4, DW_OP_stack_value)
 ; CHECK-NEXT:   DW_AT_name {{.*}} "y"
 
 ; CHECK:      DW_TAG_variable
 ; CHECK-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x1) loclist = 0x00000029:
-; CHECK-NEXT:     [0x0000000000000000, 0x0000000000000003): DW_OP_consts +5, DW_OP_stack_value)
+; CHECK-NEXT:     [0x0000000000000000, 0x0000000000000003) ".text._Z2f1ii": DW_OP_consts +5, DW_OP_stack_value)
 ; CHECK-NEXT:   DW_AT_name {{.*}} "x"
 
 ; CHECK:      DW_TAG_variable
-; FIXME: Use DW_FORM_loclistx to reduce relocations
 ; CHECK-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x2) loclist = 0x00000031:
-; CHECK-NEXT:     [0x0000000000000003, 0x0000000000000004): DW_OP_reg0 RAX)
+; CHECK-NEXT:     [0x0000000000000003, 0x0000000000000004) ".text._Z2f1ii": DW_OP_reg0 RAX)
 ; CHECK-NEXT:   DW_AT_name {{.*}} "r"
 
 ; CHECK:      .debug_loclists contents:
