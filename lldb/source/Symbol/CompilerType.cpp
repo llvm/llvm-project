@@ -477,7 +477,6 @@ CompilerType CompilerType::GetTypedefedType() const {
     return CompilerType();
 }
 
-//----------------------------------------------------------------------
 // Create related types using the current type's AST
 
 CompilerType
