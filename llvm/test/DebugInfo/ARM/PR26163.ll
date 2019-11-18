@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -o - < %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: llc -filetype=obj -o - < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 ;
 ; Checks that we're omitting the first range, as it is empty, and that we're
 ; emitting one that spans the rest of the function. In this case, the first
@@ -10,7 +10,7 @@
 ;
 ; CHECK: DW_TAG_inlined_subroutine
 ; CHECK: DW_TAG_variable
-; CHECK:   DW_AT_location [DW_FORM_sec_offset] ({{.*}}
+; CHECK:   DW_AT_location ({{.*}}
 ; CHECK-NEXT: [0x00000004, 0x00000014): DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x4)
 
 ; Created form the following test case (PR26163) with

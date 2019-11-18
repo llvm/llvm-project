@@ -115,14 +115,20 @@ bool DWARFLocationTable::dumpLocationList(uint64_t *Offset, raw_ostream &OS,
   OS << format("0x%8.8" PRIx64 ": ", *Offset);
   Error E = visitLocationList(Offset, [&](const DWARFLocationEntry &E) {
     Expected<Optional<DWARFLocationExpression>> Loc = Interp.Interpret(E);
-    if (!Loc || DumpOpts.Verbose)
+    if (!Loc || DumpOpts.DisplayRawContents)
       dumpRawEntry(E, OS, Indent);
     if (Loc && *Loc) {
       OS << "\n";
       OS.indent(Indent);
-      if (DumpOpts.Verbose)
+      if (DumpOpts.DisplayRawContents)
         OS << "          => ";
-      Loc.get()->Range->dump(OS, Data.getAddressSize(), DumpOpts);
+
+      DIDumpOptions RangeDumpOpts(DumpOpts);
+      RangeDumpOpts.DisplayRawContents = false;
+      const DWARFObject *Obj = nullptr;
+      if (U)
+        Obj = &U->getContext().getDWARFObj();
+      Loc.get()->Range->dump(OS, Data.getAddressSize(), RangeDumpOpts, Obj);
     }
     if (!Loc)
       consumeError(Loc.takeError());
