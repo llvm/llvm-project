@@ -62,7 +62,8 @@ public:
 
 class BasicFileAnalysisTest : public ::testing::Test {
 public:
-  BasicFileAnalysisTest(StringRef Trip) : Analysis(Trip) {}
+  BasicFileAnalysisTest(StringRef Trip)
+      : SuccessfullyInitialised(false), Analysis(Trip) {}
 protected:
   virtual void SetUp() {
     IgnoreDWARFFlag = true;
