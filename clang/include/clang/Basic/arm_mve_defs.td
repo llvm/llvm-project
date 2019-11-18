@@ -86,6 +86,23 @@ def extend: CGHelperFn<"SignOrZeroExtend"> {
 }
 def zeroinit: IRFunction<"llvm::Constant::getNullValue">;
 def undef: IRFunction<"UndefValue::get">;
+def icmp_eq: IRBuilder<"CreateICmpEQ">;
+def icmp_ne: IRBuilder<"CreateICmpNE">;
+def icmp_ugt: IRBuilder<"CreateICmpUGT">;
+def icmp_uge: IRBuilder<"CreateICmpUGE">;
+def icmp_ult: IRBuilder<"CreateICmpULT">;
+def icmp_ule: IRBuilder<"CreateICmpULE">;
+def icmp_sgt: IRBuilder<"CreateICmpSGT">;
+def icmp_sge: IRBuilder<"CreateICmpSGE">;
+def icmp_slt: IRBuilder<"CreateICmpSLT">;
+def icmp_sle: IRBuilder<"CreateICmpSLE">;
+def fcmp_eq: IRBuilder<"CreateFCmpOEQ">;
+def fcmp_ne: IRBuilder<"CreateFCmpUNE">; // not O: it must return true on NaNs
+def fcmp_gt: IRBuilder<"CreateFCmpOGT">;
+def fcmp_ge: IRBuilder<"CreateFCmpOGE">;
+def fcmp_lt: IRBuilder<"CreateFCmpOLT">;
+def fcmp_le: IRBuilder<"CreateFCmpOLE">;
+def splat: CGHelperFn<"ARMMVEVectorSplat">;
 
 // A node that makes an Address out of a pointer-typed Value, by
 // providing an alignment as the second argument.

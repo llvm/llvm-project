@@ -72,6 +72,51 @@ def vcvt#half#q_m_f16: Intrinsic<
 
 } // loop over half = "b", "t"
 
+multiclass compare_with_pred<string condname, dag arguments,
+                             dag cmp, string suffix> {
+  // Make the predicated and unpredicated versions of a single comparison.
+  def: Intrinsic<Predicate, arguments,
+                 (u16 (IRInt<"pred_v2i", [Predicate]> cmp))>,
+       NameOverride<"vcmp" # condname # "q" # suffix>;
+  def: Intrinsic<Predicate, !con(arguments, (args Predicate:$inpred)),
+                 (u16 (IRInt<"pred_v2i", [Predicate]> (and $inpred, cmp)))>,
+       NameOverride<"vcmp" # condname # "q_m" # suffix>;
+}
+
+multiclass compare<string condname, IRBuilder cmpop> {
+  // Make all four variants of a comparison: the vector/vector and
+  // vector/scalar forms, each using compare_with_pred to make a
+  // predicated and unpredicated version.
+  defm: compare_with_pred<condname, (args Vector:$va, Vector:$vb),
+                          (cmpop $va, $vb), "">;
+  let pnt = PNT_NType in {
+    defm: compare_with_pred<condname, (args Vector:$va, unpromoted<Scalar>:$sb),
+                            (cmpop $va, (splat $sb)), "_n">;
+  }
+}
+let params = T.Int in {
+  defm: compare<"eq", icmp_eq>;
+  defm: compare<"ne", icmp_ne>;
+}
+let params = T.Signed in {
+  defm: compare<"gt", icmp_sgt>;
+  defm: compare<"ge", icmp_sge>;
+  defm: compare<"lt", icmp_slt>;
+  defm: compare<"le", icmp_sle>;
+}
+let params = T.Unsigned in {
+  defm: compare<"hi", icmp_ugt>;
+  defm: compare<"cs", icmp_uge>;
+}
+let params = T.Float in {
+  defm: compare<"eq", fcmp_eq>;
+  defm: compare<"ne", fcmp_ne>;
+  defm: compare<"gt", fcmp_gt>;
+  defm: compare<"ge", fcmp_ge>;
+  defm: compare<"lt", fcmp_lt>;
+  defm: compare<"le", fcmp_le>;
+}
+
 multiclass contiguous_load<string mnemonic, PrimitiveType memtype,
                            list<Type> same_size, list<Type> wider> {
   // Intrinsics named with explicit memory and element sizes that match:
