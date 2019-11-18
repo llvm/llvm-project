@@ -284,17 +284,6 @@ AppleObjCRuntime::FixUpDynamicType(const TypeAndOrName &type_and_or_name,
   return ret;
 }
 
-bool AppleObjCRuntime::GetDynamicTypeAndAddress(
-    ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-    TypeAndOrName &class_type_or_name, Address &address,
-    Value::ValueType &value_type, bool allow_swift) {
-  if (!allow_swift)
-    return GetDynamicTypeAndAddress(in_value, use_dynamic, class_type_or_name,
-                                    address, value_type);
-  else
-    return false;
-}
-
 bool AppleObjCRuntime::AppleIsModuleObjCLibrary(const ModuleSP &module_sp) {
   if (module_sp) {
     const FileSpec &module_file_spec = module_sp->GetFileSpec();
