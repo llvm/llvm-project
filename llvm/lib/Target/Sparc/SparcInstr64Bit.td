@@ -497,8 +497,6 @@ let Predicates = [Is64Bit], Constraints = "$swap = $rd", asi = 0b10000000 in {
 
 let Predicates = [Is64Bit] in {
 
-def : Pat<(atomic_fence imm, imm), (MEMBARi 0xf)>;
-
 // atomic_load_64 addr -> load addr
 def : Pat<(i64 (atomic_load_64 ADDRrr:$src)), (LDXrr ADDRrr:$src)>;
 def : Pat<(i64 (atomic_load_64 ADDRri:$src)), (LDXri ADDRri:$src)>;
