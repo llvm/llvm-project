@@ -3616,7 +3616,9 @@ static int addMonoNonMonoModifier(CodeGenModule &CGM, OpenMPSchedType Schedule,
   if (CGM.getLangOpts().OpenMP >= 50 && Modifier == 0) {
     if (!(Schedule == OMP_sch_static_chunked || Schedule == OMP_sch_static ||
           Schedule == OMP_sch_static_balanced_chunked ||
-          Schedule == OMP_ord_static_chunked || Schedule == OMP_ord_static))
+          Schedule == OMP_ord_static_chunked || Schedule == OMP_ord_static ||
+          Schedule == OMP_dist_sch_static_chunked ||
+          Schedule == OMP_dist_sch_static))
       Modifier = OMP_sch_modifier_nonmonotonic;
   }
   return Schedule | Modifier;
