@@ -990,75 +990,75 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
         }
       }
       // If we have null operands and no critical edges, optimize.
-      if (!HasCriticalEdges && HasNull) {
-        SmallPtrSet<Instruction *, 4> DependingInstructions;
-        SmallPtrSet<const BasicBlock *, 4> Visited;
+      if (HasCriticalEdges)
+        continue;
+      if (!HasNull)
+        continue;
 
-        // Check that there is nothing that cares about the reference
-        // count between the call and the phi.
-        switch (Class) {
-        case ARCInstKind::Retain:
-        case ARCInstKind::RetainBlock:
-          // These can always be moved up.
-          break;
-        case ARCInstKind::Release:
-          // These can't be moved across things that care about the retain
-          // count.
-          FindDependencies(NeedsPositiveRetainCount, Arg,
-                           Inst->getParent(), Inst,
-                           DependingInstructions, Visited, PA);
-          break;
-        case ARCInstKind::Autorelease:
-          // These can't be moved across autorelease pool scope boundaries.
-          FindDependencies(AutoreleasePoolBoundary, Arg,
-                           Inst->getParent(), Inst,
-                           DependingInstructions, Visited, PA);
-          break;
-        case ARCInstKind::ClaimRV:
-        case ARCInstKind::RetainRV:
-        case ARCInstKind::AutoreleaseRV:
-          // Don't move these; the RV optimization depends on the autoreleaseRV
-          // being tail called, and the retainRV being immediately after a call
-          // (which might still happen if we get lucky with codegen layout, but
-          // it's not worth taking the chance).
-          continue;
-        default:
-          llvm_unreachable("Invalid dependence flavor");
-        }
+      SmallPtrSet<Instruction *, 4> DependingInstructions;
+      SmallPtrSet<const BasicBlock *, 4> Visited;
 
-        if (DependingInstructions.size() == 1 &&
-            *DependingInstructions.begin() == PN) {
-          Changed = true;
-          ++NumPartialNoops;
-          // Clone the call into each predecessor that has a non-null value.
-          CallInst *CInst = cast<CallInst>(Inst);
-          Type *ParamTy = CInst->getArgOperand(0)->getType();
-          for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-            Value *Incoming =
-              GetRCIdentityRoot(PN->getIncomingValue(i));
-            if (!IsNullOrUndef(Incoming)) {
-              Value *Op = PN->getIncomingValue(i);
-              Instruction *InsertPos = &PN->getIncomingBlock(i)->back();
-              CallInst *Clone = cast<CallInst>(CloneCallInstForBB(
-                  *CInst, *InsertPos->getParent(), BlockColors));
-              if (Op->getType() != ParamTy)
-                Op = new BitCastInst(Op, ParamTy, "", InsertPos);
-              Clone->setArgOperand(0, Op);
-              Clone->insertBefore(InsertPos);
-
-              LLVM_DEBUG(dbgs() << "Cloning " << *CInst
-                                << "\n"
-                                   "And inserting clone at "
-                                << *InsertPos << "\n");
-              Worklist.push_back(std::make_pair(Clone, Incoming));
-            }
-          }
-          // Erase the original call.
-          LLVM_DEBUG(dbgs() << "Erasing: " << *CInst << "\n");
-          EraseInstruction(CInst);
-          continue;
-        }
+      // Check that there is nothing that cares about the reference
+      // count between the call and the phi.
+      switch (Class) {
+      case ARCInstKind::Retain:
+      case ARCInstKind::RetainBlock:
+        // These can always be moved up.
+        break;
+      case ARCInstKind::Release:
+        // These can't be moved across things that care about the retain
+        // count.
+        FindDependencies(NeedsPositiveRetainCount, Arg, Inst->getParent(), Inst,
+                         DependingInstructions, Visited, PA);
+        break;
+      case ARCInstKind::Autorelease:
+        // These can't be moved across autorelease pool scope boundaries.
+        FindDependencies(AutoreleasePoolBoundary, Arg, Inst->getParent(), Inst,
+                         DependingInstructions, Visited, PA);
+        break;
+      case ARCInstKind::ClaimRV:
+      case ARCInstKind::RetainRV:
+      case ARCInstKind::AutoreleaseRV:
+        // Don't move these; the RV optimization depends on the autoreleaseRV
+        // being tail called, and the retainRV being immediately after a call
+        // (which might still happen if we get lucky with codegen layout, but
+        // it's not worth taking the chance).
+        continue;
+      default:
+        llvm_unreachable("Invalid dependence flavor");
       }
+
+      if (DependingInstructions.size() != 1)
+        continue;
+      if (*DependingInstructions.begin() != PN)
+        continue;
+
+      Changed = true;
+      ++NumPartialNoops;
+      // Clone the call into each predecessor that has a non-null value.
+      CallInst *CInst = cast<CallInst>(Inst);
+      Type *ParamTy = CInst->getArgOperand(0)->getType();
+      for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+        Value *Incoming = GetRCIdentityRoot(PN->getIncomingValue(i));
+        if (IsNullOrUndef(Incoming))
+          continue;
+        Value *Op = PN->getIncomingValue(i);
+        Instruction *InsertPos = &PN->getIncomingBlock(i)->back();
+        CallInst *Clone = cast<CallInst>(
+            CloneCallInstForBB(*CInst, *InsertPos->getParent(), BlockColors));
+        if (Op->getType() != ParamTy)
+          Op = new BitCastInst(Op, ParamTy, "", InsertPos);
+        Clone->setArgOperand(0, Op);
+        Clone->insertBefore(InsertPos);
+
+        LLVM_DEBUG(dbgs() << "Cloning " << *CInst << "\n"
+                                                     "And inserting clone at "
+                          << *InsertPos << "\n");
+        Worklist.push_back(std::make_pair(Clone, Incoming));
+      }
+      // Erase the original call.
+      LLVM_DEBUG(dbgs() << "Erasing: " << *CInst << "\n");
+      EraseInstruction(CInst);
     } while (!Worklist.empty());
   }
 }
