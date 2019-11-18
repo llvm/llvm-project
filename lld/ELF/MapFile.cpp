@@ -213,7 +213,7 @@ void writeMapFile() {
 }
 
 static void print(StringRef a, StringRef b) {
-  outs() << left_justify(a, 49) << " " << b << "\n";
+  lld::outs() << left_justify(a, 49) << " " << b << "\n";
 }
 
 // Output a cross reference table to stdout. This is for --cref.
@@ -244,7 +244,7 @@ void writeCrossReferenceTable() {
   }
 
   // Print out a header.
-  outs() << "Cross Reference Table\n\n";
+  lld::outs() << "Cross Reference Table\n\n";
   print("Symbol", "File");
 
   // Print out a table.
