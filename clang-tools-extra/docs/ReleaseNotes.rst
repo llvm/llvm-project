@@ -143,6 +143,11 @@ Improvements to clang-tidy
   Finds Objective-C implementations that implement ``-isEqual:`` without also
   appropriately implementing ``-hash``.
 
+- New :doc:`performance-no-automatic-move
+  <clang-tidy/checks/performance-no-automatic-move>` check.
+
+  Finds local variables that cannot be automatically moved due to constness.
+
 - New :doc:`performance-trivially-destructible
   <clang-tidy/checks/performance-trivially-destructible>` check.
 

@@ -344,6 +344,7 @@ Clang-Tidy Checks
    performance-inefficient-vector-operation
    performance-move-const-arg
    performance-move-constructor-init
+   performance-no-automatic-move
    performance-noexcept-move-constructor
    performance-trivially-destructible
    performance-type-promotion-in-math-fn
