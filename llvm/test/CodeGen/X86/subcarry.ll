@@ -444,3 +444,81 @@ define void @PR39464(%struct.U192* noalias nocapture sret %0, %struct.U192* noca
   store i64 %31, i64* %32, align 8
   ret void
 }
+
+%uint128 = type { i64, i64 }
+%uint256 = type { %uint128, %uint128 }
+
+; The 256-bit subtraction implementation using two inlined usubo procedures for U128 type { i64, i64 }.
+; This is similar to how LLVM legalize types in CodeGen.
+define void @sub_U256_without_i128_or_recursive(%uint256* sret %0, %uint256* %1, %uint256* %2) nounwind {
+; CHECK-LABEL: sub_U256_without_i128_or_recursive:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movq (%rsi), %r8
+; CHECK-NEXT:    movq 8(%rsi), %r10
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    subq (%rdx), %r8
+; CHECK-NEXT:    setb %cl
+; CHECK-NEXT:    subq 8(%rdx), %r10
+; CHECK-NEXT:    setb %r9b
+; CHECK-NEXT:    subq %rcx, %r10
+; CHECK-NEXT:    setb %cl
+; CHECK-NEXT:    orb %r9b, %cl
+; CHECK-NEXT:    movq 16(%rsi), %rdi
+; CHECK-NEXT:    movq 24(%rsi), %rsi
+; CHECK-NEXT:    xorl %r9d, %r9d
+; CHECK-NEXT:    subq 16(%rdx), %rdi
+; CHECK-NEXT:    setb %r9b
+; CHECK-NEXT:    subq 24(%rdx), %rsi
+; CHECK-NEXT:    movzbl %cl, %ecx
+; CHECK-NEXT:    subq %rcx, %rdi
+; CHECK-NEXT:    sbbq %r9, %rsi
+; CHECK-NEXT:    movq %r8, (%rax)
+; CHECK-NEXT:    movq %r10, 8(%rax)
+; CHECK-NEXT:    movq %rdi, 16(%rax)
+; CHECK-NEXT:    movq %rsi, 24(%rax)
+; CHECK-NEXT:    retq
+  %4 = getelementptr inbounds %uint256, %uint256* %1, i64 0, i32 0, i32 0
+  %5 = load i64, i64* %4, align 8
+  %6 = getelementptr inbounds %uint256, %uint256* %1, i64 0, i32 0, i32 1
+  %7 = load i64, i64* %6, align 8
+  %8 = getelementptr inbounds %uint256, %uint256* %2, i64 0, i32 0, i32 0
+  %9 = load i64, i64* %8, align 8
+  %10 = getelementptr inbounds %uint256, %uint256* %2, i64 0, i32 0, i32 1
+  %11 = load i64, i64* %10, align 8
+  %12 = sub i64 %5, %9
+  %13 = icmp ult i64 %5, %9
+  %14 = sub i64 %7, %11
+  %15 = icmp ult i64 %7, %11
+  %16 = zext i1 %13 to i64
+  %17 = sub i64 %14, %16
+  %18 = icmp ult i64 %14, %16
+  %19 = or i1 %15, %18
+  %20 = getelementptr inbounds %uint256, %uint256* %1, i64 0, i32 1, i32 0
+  %21 = load i64, i64* %20, align 8
+  %22 = getelementptr inbounds %uint256, %uint256* %1, i64 0, i32 1, i32 1
+  %23 = load i64, i64* %22, align 8
+  %24 = getelementptr inbounds %uint256, %uint256* %2, i64 0, i32 1, i32 0
+  %25 = load i64, i64* %24, align 8
+  %26 = getelementptr inbounds %uint256, %uint256* %2, i64 0, i32 1, i32 1
+  %27 = load i64, i64* %26, align 8
+  %28 = sub i64 %21, %25
+  %29 = icmp ult i64 %21, %25
+  %30 = sub i64 %23, %27
+  %31 = zext i1 %29 to i64
+  %32 = sub i64 %30, %31
+  %33 = zext i1 %19 to i64
+  %34 = sub i64 %28, %33
+  %35 = icmp ult i64 %28, %33
+  %36 = zext i1 %35 to i64
+  %37 = sub i64 %32, %36
+  %38 = getelementptr inbounds %uint256, %uint256* %0, i64 0, i32 0, i32 0
+  store i64 %12, i64* %38, align 8
+  %39 = getelementptr inbounds %uint256, %uint256* %0, i64 0, i32 0, i32 1
+  store i64 %17, i64* %39, align 8
+  %40 = getelementptr inbounds %uint256, %uint256* %0, i64 0, i32 1, i32 0
+  store i64 %34, i64* %40, align 8
+  %41 = getelementptr inbounds %uint256, %uint256* %0, i64 0, i32 1, i32 1
+  store i64 %37, i64* %41, align 8
+  ret void
+}
