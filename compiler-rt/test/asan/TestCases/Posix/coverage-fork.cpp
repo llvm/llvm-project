@@ -4,6 +4,7 @@
 // RUN: %env_asan_opts=coverage=1:verbosity=1 %run %t 2>&1 | FileCheck %s
 //
 // UNSUPPORTED: android
+// UNSUPPORTED: iossim
 //
 // Ideally a forked-subprocess should only report it's own coverage,
 // not parent's one. But trace-pc-guard currently does nothing special for fork,
