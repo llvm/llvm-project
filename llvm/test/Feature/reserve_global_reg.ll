@@ -1,3 +1,4 @@
+; REQUIRES: arm
 ; RUN: not llc < %s -mtriple=thumbv7-apple-darwin -mattr=+reserve-r7 -o - 2>&1 | FileCheck -check-prefix=CHECK-RESERVE-FP7 %s
 ; RUN: not llc < %s -mtriple=armv7-windows-msvc -mattr=+reserve-r11 -o - 2>&1 | FileCheck -check-prefix=CHECK-RESERVE-FP11 %s
 ; RUN: not llc < %s -mtriple=thumbv7-windows -mattr=+reserve-r11 -o - 2>&1 | FileCheck -check-prefix=CHECK-RESERVE-FP11-2 %s
