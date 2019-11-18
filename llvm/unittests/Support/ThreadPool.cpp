@@ -71,8 +71,7 @@ protected:
 
   std::condition_variable WaitMainThread;
   std::mutex WaitMainThreadMutex;
-  bool MainThreadReady;
-
+  bool MainThreadReady = false;
 };
 
 #define CHECK_UNSUPPORTED() \
