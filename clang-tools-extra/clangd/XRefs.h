@@ -124,11 +124,14 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
                                    format::FormatStyle Style,
                                    const SymbolIndex *Index);
 
-/// Returns reference locations of the symbol at a specified \p Pos.
+struct ReferencesResult {
+  std::vector<Location> References;
+  bool HasMore = false;
+};
+/// Returns references of the symbol at a specified \p Pos.
 /// \p Limit limits the number of results returned (0 means no limit).
-std::vector<Location> findReferences(ParsedAST &AST, Position Pos,
-                                     uint32_t Limit,
-                                     const SymbolIndex *Index = nullptr);
+ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
+                                const SymbolIndex *Index = nullptr);
 
 /// Get info about symbols at \p Pos.
 std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos);
