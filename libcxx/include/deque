@@ -190,7 +190,7 @@ __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 copy(_RAIter __f,
      _RAIter __l,
      __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
-     typename enable_if<__is_random_access_iterator<_RAIter>::value>::type* = 0);
+     typename enable_if<__is_cpp17_random_access_iterator<_RAIter>::value>::type* = 0);
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _OutputIterator>
@@ -212,7 +212,7 @@ __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 copy_backward(_RAIter __f,
               _RAIter __l,
               __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
-              typename enable_if<__is_random_access_iterator<_RAIter>::value>::type* = 0);
+              typename enable_if<__is_cpp17_random_access_iterator<_RAIter>::value>::type* = 0);
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _OutputIterator>
@@ -234,7 +234,7 @@ __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 move(_RAIter __f,
      _RAIter __l,
      __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
-     typename enable_if<__is_random_access_iterator<_RAIter>::value>::type* = 0);
+     typename enable_if<__is_cpp17_random_access_iterator<_RAIter>::value>::type* = 0);
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _OutputIterator>
@@ -256,7 +256,7 @@ __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 move_backward(_RAIter __f,
               _RAIter __l,
               __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
-              typename enable_if<__is_random_access_iterator<_RAIter>::value>::type* = 0);
+              typename enable_if<__is_cpp17_random_access_iterator<_RAIter>::value>::type* = 0);
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _OutputIterator>
@@ -450,7 +450,7 @@ private:
     copy(_RAIter __f,
          _RAIter __l,
          __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
-         typename enable_if<__is_random_access_iterator<_RAIter>::value>::type*);
+         typename enable_if<__is_cpp17_random_access_iterator<_RAIter>::value>::type*);
 
     template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
               class _OutputIterator>
@@ -475,7 +475,7 @@ private:
     copy_backward(_RAIter __f,
                   _RAIter __l,
                   __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
-                  typename enable_if<__is_random_access_iterator<_RAIter>::value>::type*);
+                  typename enable_if<__is_cpp17_random_access_iterator<_RAIter>::value>::type*);
 
     template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
               class _OutputIterator>
@@ -500,7 +500,7 @@ private:
     move(_RAIter __f,
          _RAIter __l,
          __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
-         typename enable_if<__is_random_access_iterator<_RAIter>::value>::type*);
+         typename enable_if<__is_cpp17_random_access_iterator<_RAIter>::value>::type*);
 
     template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
               class _OutputIterator>
@@ -525,7 +525,7 @@ private:
     move_backward(_RAIter __f,
                   _RAIter __l,
                   __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
-                  typename enable_if<__is_random_access_iterator<_RAIter>::value>::type*);
+                  typename enable_if<__is_cpp17_random_access_iterator<_RAIter>::value>::type*);
 
     template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
               class _OutputIterator>
@@ -558,7 +558,7 @@ __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 copy(_RAIter __f,
      _RAIter __l,
      __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
-     typename enable_if<__is_random_access_iterator<_RAIter>::value>::type*)
+     typename enable_if<__is_cpp17_random_access_iterator<_RAIter>::value>::type*)
 {
     typedef typename __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>::difference_type difference_type;
     typedef typename __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>::pointer pointer;
@@ -646,7 +646,7 @@ __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 copy_backward(_RAIter __f,
               _RAIter __l,
               __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
-              typename enable_if<__is_random_access_iterator<_RAIter>::value>::type*)
+              typename enable_if<__is_cpp17_random_access_iterator<_RAIter>::value>::type*)
 {
     typedef typename __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>::difference_type difference_type;
     typedef typename __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>::pointer pointer;
@@ -734,7 +734,7 @@ __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 move(_RAIter __f,
      _RAIter __l,
      __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
-     typename enable_if<__is_random_access_iterator<_RAIter>::value>::type*)
+     typename enable_if<__is_cpp17_random_access_iterator<_RAIter>::value>::type*)
 {
     typedef typename __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>::difference_type difference_type;
     typedef typename __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>::pointer pointer;
@@ -822,7 +822,7 @@ __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 move_backward(_RAIter __f,
               _RAIter __l,
               __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
-              typename enable_if<__is_random_access_iterator<_RAIter>::value>::type*)
+              typename enable_if<__is_cpp17_random_access_iterator<_RAIter>::value>::type*)
 {
     typedef typename __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>::difference_type difference_type;
     typedef typename __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>::pointer pointer;
@@ -1308,10 +1308,10 @@ public:
     deque(size_type __n, const value_type& __v, const allocator_type& __a);
     template <class _InputIter>
         deque(_InputIter __f, _InputIter __l,
-              typename enable_if<__is_input_iterator<_InputIter>::value>::type* = 0);
+              typename enable_if<__is_cpp17_input_iterator<_InputIter>::value>::type* = 0);
     template <class _InputIter>
         deque(_InputIter __f, _InputIter __l, const allocator_type& __a,
-              typename enable_if<__is_input_iterator<_InputIter>::value>::type* = 0);
+              typename enable_if<__is_cpp17_input_iterator<_InputIter>::value>::type* = 0);
     deque(const deque& __c);
     deque(const deque& __c, const allocator_type& __a);
 
@@ -1339,11 +1339,11 @@ public:
 
     template <class _InputIter>
         void assign(_InputIter __f, _InputIter __l,
-                    typename enable_if<__is_input_iterator<_InputIter>::value &&
-                                      !__is_random_access_iterator<_InputIter>::value>::type* = 0);
+                    typename enable_if<__is_cpp17_input_iterator<_InputIter>::value &&
+                                      !__is_cpp17_random_access_iterator<_InputIter>::value>::type* = 0);
     template <class _RAIter>
         void assign(_RAIter __f, _RAIter __l,
-                    typename enable_if<__is_random_access_iterator<_RAIter>::value>::type* = 0);
+                    typename enable_if<__is_cpp17_random_access_iterator<_RAIter>::value>::type* = 0);
     void assign(size_type __n, const value_type& __v);
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1443,15 +1443,15 @@ public:
     iterator insert(const_iterator __p, size_type __n, const value_type& __v);
     template <class _InputIter>
         iterator insert(const_iterator __p, _InputIter __f, _InputIter __l,
-                         typename enable_if<__is_input_iterator<_InputIter>::value
-                                         &&!__is_forward_iterator<_InputIter>::value>::type* = 0);
+                         typename enable_if<__is_cpp17_input_iterator<_InputIter>::value
+                                         &&!__is_cpp17_forward_iterator<_InputIter>::value>::type* = 0);
     template <class _ForwardIterator>
         iterator insert(const_iterator __p, _ForwardIterator __f, _ForwardIterator __l,
-                               typename enable_if<__is_forward_iterator<_ForwardIterator>::value
-                                         &&!__is_bidirectional_iterator<_ForwardIterator>::value>::type* = 0);
+                               typename enable_if<__is_cpp17_forward_iterator<_ForwardIterator>::value
+                                         &&!__is_cpp17_bidirectional_iterator<_ForwardIterator>::value>::type* = 0);
     template <class _BiIter>
         iterator insert(const_iterator __p, _BiIter __f, _BiIter __l,
-                         typename enable_if<__is_bidirectional_iterator<_BiIter>::value>::type* = 0);
+                         typename enable_if<__is_cpp17_bidirectional_iterator<_BiIter>::value>::type* = 0);
 
     void pop_front();
     void pop_back();
@@ -1535,11 +1535,11 @@ public:
 
     template <class _InpIter>
         void __append(_InpIter __f, _InpIter __l,
-                 typename enable_if<__is_input_iterator<_InpIter>::value &&
-                                   !__is_forward_iterator<_InpIter>::value>::type* = 0);
+                 typename enable_if<__is_cpp17_input_iterator<_InpIter>::value &&
+                                   !__is_cpp17_forward_iterator<_InpIter>::value>::type* = 0);
     template <class _ForIter>
         void __append(_ForIter __f, _ForIter __l,
-                      typename enable_if<__is_forward_iterator<_ForIter>::value>::type* = 0);
+                      typename enable_if<__is_cpp17_forward_iterator<_ForIter>::value>::type* = 0);
     void __append(size_type __n);
     void __append(size_type __n, const value_type& __v);
     void __erase_to_end(const_iterator __f);
@@ -1634,7 +1634,7 @@ deque<_Tp, _Allocator>::deque(size_type __n, const value_type& __v, const alloca
 template <class _Tp, class _Allocator>
 template <class _InputIter>
 deque<_Tp, _Allocator>::deque(_InputIter __f, _InputIter __l,
-              typename enable_if<__is_input_iterator<_InputIter>::value>::type*)
+              typename enable_if<__is_cpp17_input_iterator<_InputIter>::value>::type*)
 {
     __append(__f, __l);
 }
@@ -1642,7 +1642,7 @@ deque<_Tp, _Allocator>::deque(_InputIter __f, _InputIter __l,
 template <class _Tp, class _Allocator>
 template <class _InputIter>
 deque<_Tp, _Allocator>::deque(_InputIter __f, _InputIter __l, const allocator_type& __a,
-              typename enable_if<__is_input_iterator<_InputIter>::value>::type*)
+              typename enable_if<__is_cpp17_input_iterator<_InputIter>::value>::type*)
     : __base(__a)
 {
     __append(__f, __l);
@@ -1750,8 +1750,8 @@ template <class _Tp, class _Allocator>
 template <class _InputIter>
 void
 deque<_Tp, _Allocator>::assign(_InputIter __f, _InputIter __l,
-                               typename enable_if<__is_input_iterator<_InputIter>::value &&
-                                                 !__is_random_access_iterator<_InputIter>::value>::type*)
+                               typename enable_if<__is_cpp17_input_iterator<_InputIter>::value &&
+                                                 !__is_cpp17_random_access_iterator<_InputIter>::value>::type*)
 {
     iterator __i = __base::begin();
     iterator __e = __base::end();
@@ -1767,7 +1767,7 @@ template <class _Tp, class _Allocator>
 template <class _RAIter>
 void
 deque<_Tp, _Allocator>::assign(_RAIter __f, _RAIter __l,
-                               typename enable_if<__is_random_access_iterator<_RAIter>::value>::type*)
+                               typename enable_if<__is_cpp17_random_access_iterator<_RAIter>::value>::type*)
 {
     if (static_cast<size_type>(__l - __f) > __base::size())
     {
@@ -2252,8 +2252,8 @@ template <class _Tp, class _Allocator>
 template <class _InputIter>
 typename deque<_Tp, _Allocator>::iterator
 deque<_Tp, _Allocator>::insert(const_iterator __p, _InputIter __f, _InputIter __l,
-                               typename enable_if<__is_input_iterator<_InputIter>::value
-                                               &&!__is_forward_iterator<_InputIter>::value>::type*)
+                               typename enable_if<__is_cpp17_input_iterator<_InputIter>::value
+                                               &&!__is_cpp17_forward_iterator<_InputIter>::value>::type*)
 {
     __split_buffer<value_type, allocator_type&> __buf(__base::__alloc());
     __buf.__construct_at_end(__f, __l);
@@ -2265,8 +2265,8 @@ template <class _Tp, class _Allocator>
 template <class _ForwardIterator>
 typename deque<_Tp, _Allocator>::iterator
 deque<_Tp, _Allocator>::insert(const_iterator __p, _ForwardIterator __f, _ForwardIterator __l,
-                               typename enable_if<__is_forward_iterator<_ForwardIterator>::value
-                                               &&!__is_bidirectional_iterator<_ForwardIterator>::value>::type*)
+                               typename enable_if<__is_cpp17_forward_iterator<_ForwardIterator>::value
+                                               &&!__is_cpp17_bidirectional_iterator<_ForwardIterator>::value>::type*)
 {
     size_type __n = _VSTD::distance(__f, __l);
     __split_buffer<value_type, allocator_type&> __buf(__n, 0, __base::__alloc());
@@ -2279,7 +2279,7 @@ template <class _Tp, class _Allocator>
 template <class _BiIter>
 typename deque<_Tp, _Allocator>::iterator
 deque<_Tp, _Allocator>::insert(const_iterator __p, _BiIter __f, _BiIter __l,
-                               typename enable_if<__is_bidirectional_iterator<_BiIter>::value>::type*)
+                               typename enable_if<__is_cpp17_bidirectional_iterator<_BiIter>::value>::type*)
 {
     size_type __n = _VSTD::distance(__f, __l);
     size_type __pos = __p - __base::begin();
@@ -2348,8 +2348,8 @@ template <class _Tp, class _Allocator>
 template <class _InpIter>
 void
 deque<_Tp, _Allocator>::__append(_InpIter __f, _InpIter __l,
-                                 typename enable_if<__is_input_iterator<_InpIter>::value &&
-                                                   !__is_forward_iterator<_InpIter>::value>::type*)
+                                 typename enable_if<__is_cpp17_input_iterator<_InpIter>::value &&
+                                                   !__is_cpp17_forward_iterator<_InpIter>::value>::type*)
 {
     for (; __f != __l; ++__f)
 #ifdef _LIBCPP_CXX03_LANG
@@ -2363,7 +2363,7 @@ template <class _Tp, class _Allocator>
 template <class _ForIter>
 void
 deque<_Tp, _Allocator>::__append(_ForIter __f, _ForIter __l,
-                                 typename enable_if<__is_forward_iterator<_ForIter>::value>::type*)
+                                 typename enable_if<__is_cpp17_forward_iterator<_ForIter>::value>::type*)
 {
     size_type __n = _VSTD::distance(__f, __l);
     allocator_type& __a = __base::__alloc();
