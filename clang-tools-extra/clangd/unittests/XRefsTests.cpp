@@ -2109,7 +2109,7 @@ TEST(FindReferences, WithinAST) {
     std::vector<Matcher<Location>> ExpectedLocations;
     for (const auto &R : T.ranges())
       ExpectedLocations.push_back(RangeIs(R));
-    EXPECT_THAT(findReferences(AST, T.point(), 0),
+    EXPECT_THAT(findReferences(AST, T.point(), 0).References,
                 ElementsAreArray(ExpectedLocations))
         << Test;
   }
@@ -2170,7 +2170,7 @@ TEST(FindReferences, ExplicitSymbols) {
     for (const auto &R : T.ranges())
       ExpectedLocations.push_back(RangeIs(R));
     ASSERT_THAT(ExpectedLocations, Not(IsEmpty()));
-    EXPECT_THAT(findReferences(AST, T.point(), 0),
+    EXPECT_THAT(findReferences(AST, T.point(), 0).References,
                 ElementsAreArray(ExpectedLocations))
         << Test;
   }
@@ -2185,8 +2185,9 @@ TEST(FindReferences, NeedsIndex) {
   auto AST = TU.build();
 
   // References in main file are returned without index.
-  EXPECT_THAT(findReferences(AST, Main.point(), 0, /*Index=*/nullptr),
-              ElementsAre(RangeIs(Main.range())));
+  EXPECT_THAT(
+      findReferences(AST, Main.point(), 0, /*Index=*/nullptr).References,
+      ElementsAre(RangeIs(Main.range())));
   Annotations IndexedMain(R"cpp(
     int main() { [[f^oo]](); }
   )cpp");
@@ -2196,17 +2197,18 @@ TEST(FindReferences, NeedsIndex) {
   IndexedTU.Code = IndexedMain.code();
   IndexedTU.Filename = "Indexed.cpp";
   IndexedTU.HeaderCode = Header;
-  EXPECT_THAT(findReferences(AST, Main.point(), 0, IndexedTU.index().get()),
-              ElementsAre(RangeIs(Main.range()), RangeIs(IndexedMain.range())));
-
-  EXPECT_EQ(1u, findReferences(AST, Main.point(), /*Limit*/ 1,
-                               IndexedTU.index().get())
-                    .size());
+  EXPECT_THAT(
+      findReferences(AST, Main.point(), 0, IndexedTU.index().get()).References,
+      ElementsAre(RangeIs(Main.range()), RangeIs(IndexedMain.range())));
+  auto LimitRefs =
+      findReferences(AST, Main.point(), /*Limit*/ 1, IndexedTU.index().get());
+  EXPECT_EQ(1u, LimitRefs.References.size());
+  EXPECT_TRUE(LimitRefs.HasMore);
 
   // If the main file is in the index, we don't return duplicates.
   // (even if the references are in a different location)
   TU.Code = ("\n\n" + Main.code()).str();
-  EXPECT_THAT(findReferences(AST, Main.point(), 0, TU.index().get()),
+  EXPECT_THAT(findReferences(AST, Main.point(), 0, TU.index().get()).References,
               ElementsAre(RangeIs(Main.range())));
 }
 

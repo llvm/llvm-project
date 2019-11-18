@@ -562,7 +562,7 @@ void ClangdServer::documentSymbols(llvm::StringRef File,
 }
 
 void ClangdServer::findReferences(PathRef File, Position Pos, uint32_t Limit,
-                                  Callback<std::vector<Location>> CB) {
+                                  Callback<ReferencesResult> CB) {
   auto Action = [Pos, Limit, CB = std::move(CB),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
