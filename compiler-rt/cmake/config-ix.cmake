@@ -343,12 +343,14 @@ if(APPLE)
       ${DARWIN_tvos_MIN_VER_FLAG}=9.0)
   endif()
 
-  # Note: In order to target x86_64h on OS X the minimum deployment target must
-  # be 10.8 or higher.
   set(SANITIZER_COMMON_SUPPORTED_OS osx)
   set(PROFILE_SUPPORTED_OS osx)
   set(TSAN_SUPPORTED_OS osx)
   set(XRAY_SUPPORTED_OS osx)
+
+  # Note: In order to target x86_64h on OS X the minimum deployment target must
+  # be 10.8 or higher.
+  set(DEFAULT_SANITIZER_MIN_OSX_VERSION 10.10)
   if(NOT SANITIZER_MIN_OSX_VERSION)
     string(REGEX MATCH "-mmacosx-version-min=([.0-9]+)"
            MACOSX_VERSION_MIN_FLAG "${CMAKE_CXX_FLAGS}")
@@ -357,14 +359,14 @@ if(APPLE)
     elseif(CMAKE_OSX_DEPLOYMENT_TARGET)
       set(SANITIZER_MIN_OSX_VERSION ${CMAKE_OSX_DEPLOYMENT_TARGET})
     else()
-      set(SANITIZER_MIN_OSX_VERSION 10.10)
+      set(SANITIZER_MIN_OSX_VERSION ${DEFAULT_SANITIZER_MIN_OSX_VERSION})
     endif()
     if(SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.7")
       message(FATAL_ERROR "macOS deployment target '${SANITIZER_MIN_OSX_VERSION}' is too old.")
     endif()
-    if(SANITIZER_MIN_OSX_VERSION VERSION_GREATER "10.10")
-      message(WARNING "macOS deployment target '${SANITIZER_MIN_OSX_VERSION}' is too new, setting to '10.10' instead.")
-      set(SANITIZER_MIN_OSX_VERSION 10.10)
+    if(SANITIZER_MIN_OSX_VERSION VERSION_GREATER ${DEFAULT_SANITIZER_MIN_OSX_VERSION})
+      message(WARNING "macOS deployment target '${SANITIZER_MIN_OSX_VERSION}' is too new, setting to '${DEFAULT_SANITIZER_MIN_OSX_VERSION}' instead.")
+      set(SANITIZER_MIN_OSX_VERSION ${DEFAULT_SANITIZER_MIN_OSX_VERSION})
     endif()
   endif()
 
