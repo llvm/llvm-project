@@ -237,10 +237,8 @@ namespace llvm {
     /// \param File        File where this type is defined.
     /// \param LineNo      Line number.
     /// \param Context     The surrounding context for the typedef.
-    /// \param AlignInBits Alignment. (Optional)
     DIDerivedType *createTypedef(DIType *Ty, StringRef Name, DIFile *File,
-                                 unsigned LineNo, DIScope *Context,
-                                 Optional<unsigned> AlignInBits = {});
+                                 unsigned LineNo, DIScope *Context);
 
     /// Create debugging information entry for a 'friend'.
     DIDerivedType *createFriend(DIType *Ty, DIType *FriendTy);

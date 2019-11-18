@@ -1108,10 +1108,11 @@ LLVMMetadataRef
 LLVMDIBuilderCreateTypedef(LLVMDIBuilderRef Builder, LLVMMetadataRef Type,
                            const char *Name, size_t NameLen,
                            LLVMMetadataRef File, unsigned LineNo,
-                           LLVMMetadataRef Scope, uint32_t AlignInBits) {
+                           LLVMMetadataRef Scope) {
   return wrap(unwrap(Builder)->createTypedef(
-      unwrapDI<DIType>(Type), {Name, NameLen}, unwrapDI<DIFile>(File), LineNo,
-      unwrapDI<DIScope>(Scope), AlignInBits));
+                  unwrapDI<DIType>(Type), {Name, NameLen},
+                  unwrapDI<DIFile>(File), LineNo,
+                  unwrapDI<DIScope>(Scope)));
 }
 
 LLVMMetadataRef
