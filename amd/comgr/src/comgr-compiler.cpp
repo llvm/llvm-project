@@ -555,7 +555,8 @@ parseLLVMOptions(const std::vector<std::string> &Options) {
 }
 
 static amd_comgr_status_t linkWithLLD(llvm::ArrayRef<const char *> Args,
-                                      llvm::raw_ostream &LogS) {
+                                      llvm::raw_ostream &LogS,
+                                      llvm::raw_ostream &LogE) {
   ArgStringList LLDArgs(llvm::iterator_range<ArrayRef<const char *>::iterator>(
       Args.begin(), Args.end()));
   LLDArgs.insert(LLDArgs.begin(), "lld");
@@ -563,7 +564,7 @@ static amd_comgr_status_t linkWithLLD(llvm::ArrayRef<const char *> Args,
   ArrayRef<const char *> ArgRefs = llvm::makeArrayRef(LLDArgs);
   static std::mutex MScreen;
   MScreen.lock();
-  bool LLDRet = lld::elf::link(ArgRefs, false, LogS);
+  bool LLDRet = lld::elf::link(ArgRefs, false, LogS, LogE);
   MScreen.unlock();
   if (!LLDRet)
     return AMD_COMGR_STATUS_ERROR;
@@ -637,7 +638,7 @@ amd_comgr_status_t InProcessDriver::execute(ArrayRef<const char *> Args) {
     } else if (Job.getCreator().getName() == LinkerJobName) {
       if (env::shouldEmitVerboseLogs())
         logArgv(DiagOS, "lld", Argv);
-      if (auto Status = linkWithLLD(Arguments, DiagOS))
+      if (auto Status = linkWithLLD(Arguments, DiagOS, DiagOS))
         return Status;
     } else {
       return AMD_COMGR_STATUS_ERROR;
@@ -1058,7 +1059,7 @@ amd_comgr_status_t AMDGPUCompiler::linkToRelocatable() {
 
   Args.push_back("-r");
 
-  if (auto Status = linkWithLLD(Args, LogS))
+  if (auto Status = linkWithLLD(Args, LogS, LogS))
     return Status;
 
   if (auto Status = inputFromFile(Output, OutputFilePath))
