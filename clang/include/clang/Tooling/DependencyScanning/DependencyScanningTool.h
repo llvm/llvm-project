@@ -23,9 +23,6 @@ namespace dependencies{
 class DependencyScanningTool {
 public:
   /// Construct a dependency scanning tool.
-  ///
-  /// \param Compilations     The reference to the compilation database that's
-  /// used by the clang tool.
   DependencyScanningTool(DependencyScanningService &Service);
 
   /// Print out the dependency information into a string using the dependency
