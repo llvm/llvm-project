@@ -128,7 +128,7 @@ TEST(RenameTest, Renameable) {
        "not eligible for indexing", HeaderFile, Index},
 
       {R"cpp(// disallow -- namespace symbol isn't supported
-        namespace fo^o {}
+        namespace n^s {}
       )cpp",
        "not a supported kind", HeaderFile, Index},
 
@@ -142,7 +142,7 @@ TEST(RenameTest, Renameable) {
       {
 
           R"cpp(
-        struct X { X operator++(int) {} };
+        struct X { X operator++(int); };
         void f(X x) {x+^+;})cpp",
           "not a supported kind", HeaderFile, Index},
 
@@ -167,6 +167,8 @@ TEST(RenameTest, Renameable) {
       TU.ExtraArgs.push_back("-xobjective-c++-header");
     }
     auto AST = TU.build();
+    EXPECT_TRUE(AST.getDiagnostics().empty())
+      << AST.getDiagnostics().front() << T.code();
     llvm::StringRef NewName = "dummyNewName";
     auto Results = renameWithinFile(AST, testPath(TU.Filename), T.point(),
                                     NewName, Case.Index);
