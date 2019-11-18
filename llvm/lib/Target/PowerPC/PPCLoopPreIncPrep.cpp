@@ -407,7 +407,7 @@ bool PPCLoopPreIncPrep::prepareBaseForDispFormChain(Bucket &BucketChain,
   // remainder 1 and the other for remainder 2, thus we could get 19 DS form and 1
   // X form.
   unsigned MaxCountRemainder = 0;
-  for (unsigned j = 0; j < Form; j++)
+  for (unsigned j = 0; j < (unsigned)Form; j++)
     if ((RemainderOffsetInfo.find(j) != RemainderOffsetInfo.end()) &&
         RemainderOffsetInfo[j].second >
             RemainderOffsetInfo[MaxCountRemainder].second)
