@@ -30,6 +30,7 @@ class TestGdbRemoteThreadName(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertEqual(expected_name, kv_dict.get("name"))
 
     @skipIfWindows # the test is not updated for Windows.
+    @skipIfNetBSD # build failure due to pthread_setname_np prototype
     @llgs_test
     def test(self):
         """ Make sure lldb-server can retrieve inferior thread name"""
