@@ -1,6 +1,6 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -mattr=-fp32-denormals -verify-machineinstrs -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde -mattr=-fp32-denormals -verify-machineinstrs -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -verify-machineinstrs -fp-contract=fast -enable-no-infs-fp-math -enable-unsafe-fp-math -mattr=+fp32-denormals < %s | FileCheck -enable-var-scope -check-prefix=SI-FMA -check-prefix=SI-UNSAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -denormal-fp-math-f32=preserve-sign -verify-machineinstrs -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=verde -denormal-fp-math-f32=preserve-sign -verify-machineinstrs -fp-contract=fast < %s | FileCheck -enable-var-scope -check-prefix=SI-NOFMA -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -denormal-fp-math-f32=ieee -verify-machineinstrs -fp-contract=fast -enable-no-infs-fp-math -enable-unsafe-fp-math < %s | FileCheck -enable-var-scope -check-prefix=SI-FMA -check-prefix=SI-UNSAFE -check-prefix=SI -check-prefix=FUNC %s
 
 ; FIXME: Remove enable-unsafe-fp-math in RUN line and add flags to IR instrs
 

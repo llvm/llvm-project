@@ -66,7 +66,6 @@ private:
 protected:
   bool Has16BitInsts;
   bool HasMadMixInsts;
-  bool FP32Denormals;
   bool FPExceptions;
   bool HasSDWA;
   bool HasVOP3PInsts;
@@ -147,15 +146,6 @@ public:
 
   bool hasMadMixInsts() const {
     return HasMadMixInsts;
-  }
-
-  bool hasFP32Denormals(const Function &F) const {
-    // FIXME: This should not be a property of the subtarget. This should be a
-    // property with a default set by the calling convention which can be
-    // overridden by attributes. For now, use the subtarget feature as a
-    // placeholder attribute. The function arguments only purpose is to
-    // discourage use without a function context until this is removed.
-    return FP32Denormals;
   }
 
   bool hasFPExceptions() const {
@@ -304,7 +294,6 @@ protected:
   bool HalfRate64Ops;
 
   // Dynamially set bits that enable features.
-  bool FP64FP16Denormals;
   bool FlatForGlobal;
   bool AutoWaitcntBeforeBarrier;
   bool CodeObjectV3;
@@ -635,20 +624,6 @@ public:
   /// occupancy lower than WaveCount.
   unsigned getMaxLocalMemSizeWithWaveCount(unsigned WaveCount,
                                            const Function &) const;
-
-  /// Alias for hasFP64FP16Denormals
-  bool hasFP16Denormals(const Function &F) const {
-    return FP64FP16Denormals;
-  }
-
-  /// Alias for hasFP64FP16Denormals
-  bool hasFP64Denormals(const Function &F) const {
-    return FP64FP16Denormals;
-  }
-
-  bool hasFP64FP16Denormals(const Function &F) const {
-    return FP64FP16Denormals;
-  }
 
   bool supportsMinMaxDenormModes() const {
     return getGeneration() >= AMDGPUSubtarget::GFX9;

@@ -739,6 +739,6 @@ define <4 x half> @v_test_canonicalize_reg_undef_reg_reg_v4f16(half %val0, half 
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "target-features"="-fp32-denormals" }
-attributes #2 = { nounwind "target-features"="-fp32-denormals,-fp64-fp16-denormals" }
-attributes #3 = { nounwind "target-features"="-fp32-denormals,+fp64-fp16-denormals" }
+attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #2 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #3 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }

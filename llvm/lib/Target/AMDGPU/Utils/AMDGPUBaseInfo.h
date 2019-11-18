@@ -695,19 +695,13 @@ struct SIModeRegisterDefaults {
     FP64FP16InputDenormals(true),
     FP64FP16OutputDenormals(true) {}
 
-  // FIXME: Should not depend on the subtarget
-  SIModeRegisterDefaults(const Function &F, const GCNSubtarget &ST);
+  SIModeRegisterDefaults(const Function &F);
 
   static SIModeRegisterDefaults getDefaultForCallingConv(CallingConv::ID CC) {
     const bool IsCompute = AMDGPU::isCompute(CC);
 
     SIModeRegisterDefaults Mode;
-    Mode.DX10Clamp = true;
     Mode.IEEE = IsCompute;
-    Mode.FP32InputDenormals = true;
-    Mode.FP32OutputDenormals = true;
-    Mode.FP64FP16InputDenormals = true;
-    Mode.FP64FP16OutputDenormals = true;
     return Mode;
   }
 

@@ -767,8 +767,8 @@ declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #1
 declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>) #1
 declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>) #1
 
-attributes #0 = { nounwind "target-features"="-fp32-denormals" }
+attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "amdgpu-dx10-clamp"="false" "target-features"="-fp32-denormals,-fp-exceptions" "no-nans-fp-math"="false" }
-attributes #3 = { nounwind "amdgpu-dx10-clamp"="true" "target-features"="-fp32-denormals,+fp-exceptions" "no-nans-fp-math"="false" }
-attributes #4 = { nounwind "amdgpu-dx10-clamp"="false" "target-features"="-fp32-denormals,+fp-exceptions" "no-nans-fp-math"="false" }
+attributes #2 = { nounwind "amdgpu-dx10-clamp"="false" "target-features"="-fp-exceptions" "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-nans-fp-math"="false" }
+attributes #3 = { nounwind "amdgpu-dx10-clamp"="true" "target-features"="+fp-exceptions" "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-nans-fp-math"="false" }
+attributes #4 = { nounwind "amdgpu-dx10-clamp"="false" "target-features"="+fp-exceptions" "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-nans-fp-math"="false" }

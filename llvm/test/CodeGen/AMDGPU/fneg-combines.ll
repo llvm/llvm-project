@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mcpu=hawaii -start-after=sink -mattr=-fp32-denormals,+flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-SAFE -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=hawaii -mattr=-fp32-denormals,+flat-for-global -start-after=sink -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NSZ -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=hawaii -start-after=sink -mattr=+flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-SAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=hawaii -mattr=+flat-for-global -start-after=sink -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NSZ -check-prefix=SI -check-prefix=FUNC %s
 
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-fp32-denormals -start-after=sink --verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-SAFE -check-prefix=VI -check-prefix=FUNC %s
-; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=fiji -mattr=-fp32-denormals -start-after=sink -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NSZ -check-prefix=VI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=fiji -start-after=sink --verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-SAFE -check-prefix=VI -check-prefix=FUNC %s
+; RUN: llc -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=fiji -start-after=sink -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NSZ -check-prefix=VI -check-prefix=FUNC %s
 
 ; --------------------------------------------------------------------------------
 ; fadd tests
@@ -2562,6 +2562,6 @@ declare float @llvm.amdgcn.fmul.legacy(float, float) #1
 declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #0
 declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #0
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind "unsafe-fp-math"="true" }
