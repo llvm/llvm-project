@@ -132,8 +132,7 @@ int main(int, char**)
     static_assert((std::is_same<decltype(rand()), int>::value), "");
     static_assert((std::is_same<decltype(srand(0)), void>::value), "");
 
-//  Microsoft does not implement aligned_alloc in their C library
-#if TEST_STD_VER > 14 && defined(TEST_HAS_C11_FEATURES) && !defined(_WIN32)
+#if TEST_STD_VER > 14 && defined(TEST_HAS_ALIGNED_ALLOC)
     static_assert((std::is_same<decltype(aligned_alloc(0,0)), void*>::value), "");
 #endif
 

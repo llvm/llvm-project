@@ -19,7 +19,7 @@
 #error CLOCKS_PER_SEC not defined
 #endif
 
-#if TEST_STD_VER > 14 && defined(TEST_HAS_C11_FEATURES)
+#if TEST_STD_VER > 14 && defined(TEST_HAS_TIMESPEC_GET)
 #ifndef TIME_UTC
 #error TIME_UTC not defined
 #endif
@@ -41,7 +41,7 @@ int main(int, char**)
     ((void)t); // Prevent unused warning
     ((void)tm); // Prevent unused warning
     ((void)str); // Prevent unused warning
-#if TEST_STD_VER > 14 && defined(TEST_HAS_C11_FEATURES)
+#if TEST_STD_VER > 14 && defined(TEST_HAS_TIMESPEC_GET)
     std::timespec tmspec = {};
     ((void)tmspec); // Prevent unused warning
 #endif
