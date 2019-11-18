@@ -67,11 +67,9 @@ class FunctionImportGlobalProcessing {
   /// import SGV as a definition, otherwise import as a declaration.
   bool doImportAsDefinition(const GlobalValue *SGV);
 
-  /// Get the name for SGV that should be used in the linked destination
-  /// module. Specifically, this handles the case where we need to rename
-  /// a local that is being promoted to global scope, which it will always
-  /// do when \p DoPromote is true (or when importing a local).
-  std::string getName(const GlobalValue *SGV, bool DoPromote);
+  /// Get the name for a local SGV that should be promoted and renamed to global
+  /// scope in the linked destination module.
+  std::string getPromotedName(const GlobalValue *SGV);
 
   /// Process globals so that they can be used in ThinLTO. This includes
   /// promoting local variables so that they can be reference externally by
