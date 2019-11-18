@@ -17,7 +17,7 @@ typedef enum : NSUInteger {
         MyEnumBar, /**< value Bar */
         MyEnumBaz, /**< value Baz */
 } MyEnum;
-// CHECK: TypedefDecl=MyEnum:[[@LINE-1]]:3 (Definition) FullCommentAsHTML=[<p class="para-brief"> Documentation for MyEnum </p>] FullCommentAsXML=[<Typedef file="{{[^"]+}}annotate-comments-typedef.m" line="[[@LINE-1]]" column="3"><Name>&lt;anonymous&gt;</Name><USR>c:@EA@MyEnum</USR><Declaration>typedef enum MyEnum MyEnum</Declaration><Abstract><Para> Documentation for MyEnum </Para></Abstract></Typedef>]
+// CHECK: TypedefDecl=MyEnum:[[@LINE-1]]:3 (Definition) {{.*}} FullCommentAsHTML=[<p class="para-brief"> Documentation for MyEnum </p>] FullCommentAsXML=[<Typedef file="{{[^"]+}}annotate-comments-typedef.m" line="[[@LINE-1]]" column="3"><Name>MyEnum</Name><USR>c:@T@MyEnum</USR><Declaration>typedef enum MyEnum MyEnum</Declaration><Abstract><Para> Documentation for MyEnum </Para></Abstract></Typedef>]
 
 
 /** Documentation for E */
@@ -35,7 +35,7 @@ typedef enum E E_T;
 typedef struct {
          int iii;
         } Foo;
-// CHECK: TypedefDecl=Foo:[[@LINE-1]]:11 (Definition) FullCommentAsHTML=[<p class="para-brief"> Comment about Foo </p>] FullCommentAsXML=[<Typedef file="{{[^"]+}}annotate-comments-typedef.m" line="[[@LINE-1]]" column="11"><Name>&lt;anonymous&gt;</Name><USR>c:@SA@Foo</USR><Declaration>typedef struct Foo Foo</Declaration><Abstract><Para> Comment about Foo </Para></Abstract></Typedef>]
+// CHECK: TypedefDecl=Foo:[[@LINE-1]]:11 (Definition) {{.*}} FullCommentAsHTML=[<p class="para-brief"> Comment about Foo </p>] FullCommentAsXML=[<Typedef file="{{[^"]+}}annotate-comments-typedef.m" line="[[@LINE-1]]" column="11"><Name>Foo</Name><USR>c:@T@Foo</USR><Declaration>typedef struct Foo Foo</Declaration><Abstract><Para> Comment about Foo </Para></Abstract></Typedef>]
 // CHECK: StructDecl=:[[@LINE-4]]:9 (Definition) {{.*}} BriefComment=[Comment about Foo] FullCommentAsHTML=[<p class="para-brief"> Comment about Foo </p>] FullCommentAsXML=[<Class file="{{[^"]+}}annotate-comments-typedef.m" line="[[@LINE-4]]" column="9"><Name>&lt;anonymous&gt;</Name><USR>c:@SA@Foo</USR><Declaration>struct {}</Declaration><Abstract><Para> Comment about Foo </Para></Abstract></Class>]
 
 
