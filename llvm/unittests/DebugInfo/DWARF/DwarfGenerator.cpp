@@ -377,7 +377,8 @@ void dwarfgen::LineTable::writeProloguePayload(
 
 dwarfgen::Generator::Generator()
     : MAB(nullptr), MCE(nullptr), MS(nullptr), StringPool(nullptr),
-      Abbreviations(Allocator) {}
+      TLOF(nullptr), Abbreviations(Allocator), StringOffsetsStartSym(nullptr),
+      Version(0) {}
 dwarfgen::Generator::~Generator() = default;
 
 llvm::Expected<std::unique_ptr<dwarfgen::Generator>>
