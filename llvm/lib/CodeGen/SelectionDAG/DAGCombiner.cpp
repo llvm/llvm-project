@@ -6750,12 +6750,6 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
     return SDValue();
   unsigned ByteWidth = VT.getSizeInBits() / 8;
 
-  // Before legalize we can introduce too wide illegal loads which will be later
-  // split into legal sized loads. This enables us to combine i64 load by i8
-  // patterns to a couple of i32 loads on 32 bit targets.
-  if (LegalOperations && !TLI.isOperationLegal(ISD::LOAD, VT))
-    return SDValue();
-
   bool IsBigEndianTarget = DAG.getDataLayout().isBigEndian();
   auto MemoryByteOffset = [&] (ByteProvider P) {
     assert(P.isMemory() && "Must be a memory byte provider");
@@ -6778,10 +6772,20 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // Check if all the bytes of the OR we are looking at are loaded from the same
   // base address. Collect bytes offsets from Base address in ByteOffsets.
   SmallVector<int64_t, 8> ByteOffsets(ByteWidth);
-  for (unsigned i = 0; i < ByteWidth; i++) {
+  unsigned ZeroExtendedBytes = 0;
+  for (int i = ByteWidth - 1; i >= 0; --i) {
     auto P = calculateByteProvider(SDValue(N, 0), i, 0, /*Root=*/true);
-    if (!P || !P->isMemory()) // All the bytes must be loaded from memory
+    if (!P)
       return SDValue();
+
+    if (P->isConstantZero()) {
+      // It's OK for the N most significant bytes to be 0, we can just
+      // zero-extend the load.
+      if (++ZeroExtendedBytes != (ByteWidth - static_cast<unsigned>(i)))
+        return SDValue();
+      continue;
+    }
+    assert(P->isMemory() && "provenance should either be memory or zero");
 
     LoadSDNode *L = P->Load;
     assert(L->hasNUsesOfValue(1, 0) && L->isSimple() &&
@@ -6821,9 +6825,23 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   assert(Base && "Base address of the accessed memory location must be set");
   assert(FirstOffset != INT64_MAX && "First byte offset must be set");
 
+  bool NeedsZext = ZeroExtendedBytes > 0;
+
+  EVT MemVT =
+      EVT::getIntegerVT(*DAG.getContext(), (ByteWidth - ZeroExtendedBytes) * 8);
+
+  // Before legalize we can introduce too wide illegal loads which will be later
+  // split into legal sized loads. This enables us to combine i64 load by i8
+  // patterns to a couple of i32 loads on 32 bit targets.
+  if (LegalOperations &&
+      !TLI.isOperationLegal(NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD,
+                            MemVT))
+    return SDValue();
+
   // Check if the bytes of the OR we are looking at match with either big or
   // little endian value load
-  Optional<bool> IsBigEndian = isBigEndian(ByteOffsets, FirstOffset);
+  Optional<bool> IsBigEndian = isBigEndian(
+      makeArrayRef(ByteOffsets).drop_back(ZeroExtendedBytes), FirstOffset);
   if (!IsBigEndian.hasValue())
     return SDValue();
 
@@ -6836,7 +6854,8 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   LoadSDNode *FirstLoad = FirstByteProvider->Load;
 
   // The node we are looking at matches with the pattern, check if we can
-  // replace it with a single load and bswap if needed.
+  // replace it with a single (possibly zero-extended) load and bswap + shift if
+  // needed.
 
   // If the load needs byte swap check if the target supports it
   bool NeedsBswap = IsBigEndianTarget != *IsBigEndian;
@@ -6844,25 +6863,45 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // Before legalize we can introduce illegal bswaps which will be later
   // converted to an explicit bswap sequence. This way we end up with a single
   // load and byte shuffling instead of several loads and byte shuffling.
-  if (NeedsBswap && LegalOperations && !TLI.isOperationLegal(ISD::BSWAP, VT))
+  // We do not introduce illegal bswaps when zero-extending as this tends to
+  // introduce too many arithmetic instructions.
+  if (NeedsBswap && (LegalOperations || NeedsZext) &&
+      !TLI.isOperationLegal(ISD::BSWAP, VT))
+    return SDValue();
+
+  // If we need to bswap and zero extend, we have to insert a shift. Check that
+  // it is legal.
+  if (NeedsBswap && NeedsZext && LegalOperations &&
+      !TLI.isOperationLegal(ISD::SHL, VT))
     return SDValue();
 
   // Check that a load of the wide type is both allowed and fast on the target
   bool Fast = false;
-  bool Allowed = TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(),
-                                        VT, *FirstLoad->getMemOperand(), &Fast);
+  bool Allowed =
+      TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
+                             *FirstLoad->getMemOperand(), &Fast);
   if (!Allowed || !Fast)
     return SDValue();
 
-  SDValue NewLoad =
-      DAG.getLoad(VT, SDLoc(N), Chain, FirstLoad->getBasePtr(),
-                  FirstLoad->getPointerInfo(), FirstLoad->getAlignment());
+  SDValue NewLoad = DAG.getExtLoad(NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD,
+                                   SDLoc(N), VT, Chain, FirstLoad->getBasePtr(),
+                                   FirstLoad->getPointerInfo(), MemVT,
+                                   FirstLoad->getAlignment());
 
   // Transfer chain users from old loads to the new load.
   for (LoadSDNode *L : Loads)
     DAG.ReplaceAllUsesOfValueWith(SDValue(L, 1), SDValue(NewLoad.getNode(), 1));
 
-  return NeedsBswap ? DAG.getNode(ISD::BSWAP, SDLoc(N), VT, NewLoad) : NewLoad;
+  if (!NeedsBswap)
+    return NewLoad;
+
+  SDValue ShiftedLoad =
+      NeedsZext
+          ? DAG.getNode(ISD::SHL, SDLoc(N), VT, NewLoad,
+                        DAG.getShiftAmountConstant(ZeroExtendedBytes * 8, VT,
+                                                   SDLoc(N), LegalOperations))
+          : NewLoad;
+  return DAG.getNode(ISD::BSWAP, SDLoc(N), VT, ShiftedLoad);
 }
 
 // If the target has andn, bsl, or a similar bit-select instruction,
