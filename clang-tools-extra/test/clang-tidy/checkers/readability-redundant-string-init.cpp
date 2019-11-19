@@ -1,4 +1,8 @@
-// RUN: %check_clang_tidy -std=c++11,c++14 %s readability-redundant-string-init %t
+// RUN: %check_clang_tidy -std=c++11,c++14 %s readability-redundant-string-init %t \
+// RUN:   -config="{CheckOptions: \
+// RUN:             [{key: readability-redundant-string-init.StringNames, \
+// RUN:               value: '::std::basic_string;our::TestString'}] \
+// RUN:             }"
 // FIXME: Fix the checker to work in C++17 mode.
 
 namespace std {
@@ -131,6 +135,11 @@ void k() {
   // CHECK-FIXES: std::string a, b, c;
 
   std::string d = "u", e = "u", f = "u";
+
+  std::string g = "u", h = "", i = "uuu", j = "", k;
+  // CHECK-MESSAGES: [[@LINE-1]]:24: warning: redundant string initialization
+  // CHECK-MESSAGES: [[@LINE-2]]:43: warning: redundant string initialization
+  // CHECK-FIXES: std::string g = "u", h, i = "uuu", j, k;
 }
 
 // These cases should not generate warnings.
