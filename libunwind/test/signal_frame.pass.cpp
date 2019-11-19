@@ -13,13 +13,19 @@
 #include <stdlib.h>
 #include <libunwind.h>
 
-int main(void) {
+void test() {
   asm(".cfi_signal_frame");
   unw_cursor_t cursor;
   unw_context_t uc;
   unw_getcontext(&uc);
   unw_init_local(&cursor, &uc);
   assert(unw_step(&cursor) > 0);
+#if !defined(_LIBUNWIND_ARM_EHABI)
   assert(unw_is_signal_frame(&cursor));
+#endif
+}
+
+int main() {
+  test();
   return 0;
 }
