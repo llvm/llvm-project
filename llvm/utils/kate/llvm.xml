@@ -36,6 +36,7 @@
       <item> type </item>
       <item> align </item>
       <item> alias </item>
+      <item> monotonic </item>
     </list>
     <list name="linkage-types">
       <item> private </item>
@@ -56,6 +57,7 @@
       <item> fastcc </item>
       <item> coldcc </item>
       <item> cc </item>
+      <item> spir_kernel </item>
     </list>
     <list name="visibility-styles">
       <item> default </item>
@@ -75,8 +77,11 @@
     <list name="function-attributes">
       <item> alignstack </item>
       <item> alwaysinline </item>
+      <item> argmemonly </item>
+      <item> convergent </item>
       <item> inlinehint </item>
       <item> naked </item>
+      <item> nobuiltin </item>
       <item> noimplicitfloat </item>
       <item> noinline </item>
       <item> noredzone </item>
@@ -91,6 +96,8 @@
       <item> sspstrong </item>
     </list>
     <list name="types">
+      <item> addrspace </item>
+      <item> half </item>
       <item> float </item>
       <item> double </item>
       <item> fp128 </item>
@@ -133,8 +140,13 @@
       <item> lshr </item>
       <item> ashr </item>
       <item> and </item>
+      <item> nand </item>
       <item> or </item>
       <item> xor </item>
+      <item> min </item>
+      <item> umin </item>
+      <item> max </item>
+      <item> umax </item>
       <item> extractelement </item>
       <item> insertelement </item>
       <item> shufflevector </item>
@@ -159,6 +171,8 @@
       <item> addrspacecast </item>
       <item> icmp </item>
       <item> fcmp </item>
+      <item> atomicrmw </item>
+      <item> cmpxchg </item>
       <item> phi </item>
       <item> select </item>
       <item> call </item>
