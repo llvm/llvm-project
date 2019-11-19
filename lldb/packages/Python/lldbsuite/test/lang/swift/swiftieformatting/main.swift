@@ -25,7 +25,7 @@ class SwiftClass {
 		ns_d = NSData()
 		sw_i = 30
 		ns_n = 30 as NSNumber
-		ns_u = NSURL(string: "http://www.apple.com")!
+		ns_u = NSURL(string: "page.html", relativeTo: URL(string: "http://www.apple.com")!)!
 	}
 }
 
