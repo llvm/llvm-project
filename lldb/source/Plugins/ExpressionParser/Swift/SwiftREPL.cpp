@@ -279,7 +279,7 @@ void SwiftREPL::Terminate() {
 }
 
 SwiftREPL::SwiftREPL(Target &target)
-    : REPL(LLVMCastKind::eKindSwift, target), m_swift_ast_sp() {}
+    : REPL(LLVMCastKind::eKindSwift, target), m_swift_ast(nullptr) {}
 
 SwiftREPL::~SwiftREPL() {}
 
@@ -542,7 +542,7 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
   // our own copy of the AST and using this separate AST for completion.
   //----------------------------------------------------------------------
   Status error;
-  if (!m_swift_ast_sp) {
+  if (!m_swift_ast) {
     auto type_system_or_err = m_target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
     if (!type_system_or_err) {
       llvm::consumeError(type_system_or_err.takeError());
@@ -551,10 +551,9 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
 
     auto *target_swift_ast =
         llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
-    if (target_swift_ast)
-      m_swift_ast_sp.reset(new SwiftASTContext(*target_swift_ast));
+    m_swift_ast = target_swift_ast;
   }
-  SwiftASTContext *swift_ast = m_swift_ast_sp.get();
+  SwiftASTContext *swift_ast = m_swift_ast;
 
   if (swift_ast) {
     swift::ASTContext *ast = swift_ast->GetASTContext();

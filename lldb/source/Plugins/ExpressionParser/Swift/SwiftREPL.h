@@ -77,7 +77,7 @@ public:
   }
 
 private:
-  std::shared_ptr<SwiftASTContext> m_swift_ast_sp;
+  SwiftASTContext *m_swift_ast = nullptr;
   bool m_completion_module_initialized = false;
 };
 }
