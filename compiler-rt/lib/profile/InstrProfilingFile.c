@@ -435,12 +435,12 @@ static void unlockProfile(int *ProfileRequiresUnlock, FILE *File) {
 }
 
 static void initializeProfileForContinuousMode(void) {
-#if defined(__Fuchsia__) || defined(_WIN32)
-  PROF_ERR("%s\n", "Continuous mode not yet supported on Fuchsia or Windows.");
-#else // defined(__Fuchsia__) || defined(_WIN32)
   if (!__llvm_profile_is_continuous_mode_enabled())
     return;
 
+#if defined(__Fuchsia__) || defined(_WIN32)
+  PROF_ERR("%s\n", "Continuous mode not yet supported on Fuchsia or Windows.");
+#else // defined(__Fuchsia__) || defined(_WIN32)
   /* Get the sizes of various profile data sections. Taken from
    * __llvm_profile_get_size_for_buffer(). */
   const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
