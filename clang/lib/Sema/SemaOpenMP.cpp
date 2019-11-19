@@ -4488,6 +4488,8 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   case OMPD_simd:
     Res = ActOnOpenMPSimdDirective(ClausesWithImplicit, AStmt, StartLoc, EndLoc,
                                    VarsWithInheritedDSA);
+    if (LangOpts.OpenMP >= 50)
+      AllowedNameModifiers.push_back(OMPD_simd);
     break;
   case OMPD_for:
     Res = ActOnOpenMPForDirective(ClausesWithImplicit, AStmt, StartLoc, EndLoc,
@@ -10667,6 +10669,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_master_taskloop:
     case OMPD_master_taskloop_simd:
     case OMPD_target_data:
+    case OMPD_simd:
       // Do not capture if-clause expressions.
       break;
     case OMPD_threadprivate:
@@ -10683,7 +10686,6 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_declare_target:
     case OMPD_end_declare_target:
     case OMPD_teams:
-    case OMPD_simd:
     case OMPD_for:
     case OMPD_for_simd:
     case OMPD_sections:
