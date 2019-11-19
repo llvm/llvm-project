@@ -250,7 +250,9 @@ struct LoopICmp {
 
 class LoopPredication {
   AliasAnalysis *AA;
+  DominatorTree *DT;
   ScalarEvolution *SE;
+  LoopInfo *LI;
   BranchProbabilityInfo *BPI;
 
   Loop *L;
@@ -302,10 +304,13 @@ class LoopPredication {
   // within the loop. We identify such unprofitable loops through BPI.
   bool isLoopProfitableToPredicate();
 
+  bool predicateLoopExits(Loop *L, SCEVExpander &Rewriter);
+
 public:
-  LoopPredication(AliasAnalysis *AA, ScalarEvolution *SE,
+  LoopPredication(AliasAnalysis *AA, DominatorTree *DT,
+                  ScalarEvolution *SE, LoopInfo *LI,
                   BranchProbabilityInfo *BPI)
-    : AA(AA), SE(SE), BPI(BPI){};
+    : AA(AA), DT(DT), SE(SE), LI(LI), BPI(BPI) {};
   bool runOnLoop(Loop *L);
 };
 
@@ -325,10 +330,12 @@ public:
     if (skipLoop(L))
       return false;
     auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+    auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     BranchProbabilityInfo &BPI =
         getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
     auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-    LoopPredication LP(AA, SE, &BPI);
+    LoopPredication LP(AA, DT, SE, LI, &BPI);
     return LP.runOnLoop(L);
   }
 };
@@ -354,7 +361,7 @@ PreservedAnalyses LoopPredicationPass::run(Loop &L, LoopAnalysisManager &AM,
       AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR).getManager();
   Function *F = L.getHeader()->getParent();
   auto *BPI = FAM.getCachedResult<BranchProbabilityAnalysis>(*F);
-  LoopPredication LP(&AR.AA, &AR.SE, BPI);
+  LoopPredication LP(&AR.AA, &AR.DT, &AR.SE, &AR.LI, BPI);
   if (!LP.runOnLoop(&L))
     return PreservedAnalyses::all();
 
@@ -955,6 +962,200 @@ bool LoopPredication::isLoopProfitableToPredicate() {
   return true;
 }
 
+/// If we can (cheaply) find a widenable branch which controls entry into the
+/// loop, return it.
+static BranchInst *FindWidenableTerminatorAboveLoop(Loop *L, LoopInfo &LI) {
+  // Walk back through any unconditional executed blocks and see if we can find
+  // a widenable condition which seems to control execution of this loop.  Note
+  // that we predict that maythrow calls are likely untaken and thus that it's
+  // profitable to widen a branch before a maythrow call with a condition
+  // afterwards even though that may cause the slow path to run in a case where
+  // it wouldn't have otherwise.
+  BasicBlock *BB = L->getLoopPreheader();
+  if (!BB)
+    return nullptr;
+  do {
+    if (BasicBlock *Pred = BB->getSinglePredecessor())
+      if (BB == Pred->getSingleSuccessor()) {
+        BB = Pred;
+        continue;
+      }
+    break;
+  } while (true);
+
+  if (BasicBlock *Pred = BB->getSinglePredecessor()) {
+    auto *Term = Pred->getTerminator();
+
+    Value *Cond, *WC;
+    BasicBlock *IfTrueBB, *IfFalseBB;
+    if (parseWidenableBranch(Term, Cond, WC, IfTrueBB, IfFalseBB) &&
+        IfTrueBB == BB)
+      return cast<BranchInst>(Term);
+  }
+  return nullptr;
+}
+
+/// Return the minimum of all analyzeable exit counts.  This is an upper bound
+/// on the actual exit count.  If there are not at least two analyzeable exits,
+/// returns SCEVCouldNotCompute.
+static const SCEV *getMinAnalyzeableBackedgeTakenCount(ScalarEvolution &SE,
+                                                       DominatorTree &DT,
+                                                       Loop *L) {
+  SmallVector<BasicBlock *, 16> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+
+  SmallVector<const SCEV *, 4> ExitCounts;
+  for (BasicBlock *ExitingBB : ExitingBlocks) {
+    const SCEV *ExitCount = SE.getExitCount(L, ExitingBB);
+    if (isa<SCEVCouldNotCompute>(ExitCount))
+      continue;
+    assert(DT.dominates(ExitingBB, L->getLoopLatch()) &&
+           "We should only have known counts for exiting blocks that "
+           "dominate latch!");
+    ExitCounts.push_back(ExitCount);
+  }
+  if (ExitCounts.size() < 2)
+    return SE.getCouldNotCompute();
+  return SE.getUMinFromMismatchedTypes(ExitCounts);
+}
+
+/// This implements an analogous, but entirely distinct transform from the main
+/// loop predication transform.  This one is phrased in terms of using a
+/// widenable branch *outside* the loop to allow us to simplify loop exits in a
+/// following loop.  This is close in spirit to the IndVarSimplify transform
+/// of the same name, but is materially different widening loosens legality
+/// sharply.
+bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
+  // The transformation performed here aims to widen a widenable condition
+  // above the loop such that all analyzeable exit leading to deopt are dead.
+  // It assumes that the latch is the dominant exit for profitability and that
+  // exits branching to deoptimizing blocks are rarely taken. It relies on the
+  // semantics of widenable expressions for legality. (i.e. being able to fall
+  // down the widenable path spuriously allows us to ignore exit order,
+  // unanalyzeable exits, side effects, exceptional exits, and other challenges
+  // which restrict the applicability of the non-WC based version of this
+  // transform in IndVarSimplify.)
+  //
+  // NOTE ON POISON/UNDEF - We're hoisting an expression above guards which may
+  // imply flags on the expression being hoisted and inserting new uses (flags
+  // are only correct for current uses).  The result is that we may be
+  // inserting a branch on the value which can be either poison or undef.  In
+  // this case, the branch can legally go either way; we just need to avoid
+  // introducing UB.  This is achieved through the use of the freeze
+  // instruction.  
+
+  SmallVector<BasicBlock *, 16> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+
+  if (ExitingBlocks.empty())
+    return false; // Nothing to do.
+
+  auto *Latch = L->getLoopLatch();
+  if (!Latch)
+    return false;
+
+  auto *WidenableBR = FindWidenableTerminatorAboveLoop(L, *LI);
+  if (!WidenableBR)
+    return false;
+
+  const SCEV *LatchEC = SE->getExitCount(L, Latch);
+  if (isa<SCEVCouldNotCompute>(LatchEC))
+    return false; // profitability - want hot exit in analyzeable set
+
+  // The use of umin(all analyzeable exits) instead of latch is subtle, but
+  // important for profitability.  We may have a loop which hasn't been fully
+  // canonicalized just yet.  If the exit we chose to widen is provably never
+  // taken, we want the widened form to *also* be provably never taken.  We
+  // can't guarantee this as a current unanalyzeable exit may later become
+  // analyzeable, but we can at least avoid the obvious cases.
+  const SCEV *MinEC = getMinAnalyzeableBackedgeTakenCount(*SE, *DT, L);
+  if (isa<SCEVCouldNotCompute>(MinEC) || MinEC->getType()->isPointerTy() ||
+      !SE->isLoopInvariant(MinEC, L) ||
+      !isSafeToExpandAt(MinEC, WidenableBR, *SE))
+    return false;
+
+  // Subtlety: We need to avoid inserting additional uses of the WC.  We know
+  // that it can only have one transitive use at the moment, and thus moving
+  // that use to just before the branch and inserting code before it and then
+  // modifying the operand is legal.
+  auto *IP = cast<Instruction>(WidenableBR->getCondition());
+  IP->moveBefore(WidenableBR);
+  Rewriter.setInsertPoint(IP);
+  IRBuilder<> B(IP);
+
+  bool Changed = false;
+  Value *MinECV = nullptr; // lazily generated if needed
+  for (BasicBlock *ExitingBB : ExitingBlocks) {
+    // If our exiting block exits multiple loops, we can only rewrite the
+    // innermost one.  Otherwise, we're changing how many times the innermost
+    // loop runs before it exits.
+    if (LI->getLoopFor(ExitingBB) != L)
+      continue;
+
+    // Can't rewrite non-branch yet.
+    auto *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    if (!BI)
+      continue;
+
+    // If already constant, nothing to do.
+    if (isa<Constant>(BI->getCondition()))
+      continue;
+
+    const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
+    if (isa<SCEVCouldNotCompute>(ExitCount) ||
+        ExitCount->getType()->isPointerTy() ||
+        !isSafeToExpandAt(ExitCount, WidenableBR, *SE))
+      continue;
+
+    const bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
+    BasicBlock *ExitBB = BI->getSuccessor(ExitIfTrue ? 0 : 1);
+    if (!ExitBB->getTerminatingDeoptimizeCall())
+      // Profitability: indicator of rarely/never taken exit
+      continue;
+
+    // If we found a widenable exit condition, do two things:
+    // 1) fold the widened exit test into the widenable condition
+    // 2) fold the branch to untaken - avoids infinite looping
+
+    Value *ECV = Rewriter.expandCodeFor(ExitCount);
+    if (!MinECV)
+      MinECV = Rewriter.expandCodeFor(MinEC);
+    Value *RHS = MinECV;
+    if (ECV->getType() != RHS->getType()) {
+      Type *WiderTy = SE->getWiderType(ECV->getType(), RHS->getType());
+      ECV = B.CreateZExt(ECV, WiderTy);
+      RHS = B.CreateZExt(RHS, WiderTy);
+    }
+    assert(!Latch || DT->dominates(ExitingBB, Latch));
+    Value *NewCond = B.CreateICmp(ICmpInst::ICMP_UGT, ECV, RHS);
+    // Freeze poison or undef to an arbitrary bit pattern to ensure we can
+    // branch without introducing UB.  See NOTE ON POISON/UNDEF above for
+    // context.
+    NewCond = B.CreateFreeze(NewCond);
+
+    Value *Cond, *WC;
+    BasicBlock *IfTrueBB, *IfFalseBB;
+    bool Success =
+        parseWidenableBranch(WidenableBR, Cond, WC, IfTrueBB, IfFalseBB);
+    assert(Success && "implied from above");
+    (void)Success;
+    Instruction *WCAnd = cast<Instruction>(WidenableBR->getCondition());
+    WCAnd->setOperand(0, B.CreateAnd(NewCond, Cond));
+
+    Value *OldCond = BI->getCondition();
+    BI->setCondition(ConstantInt::get(OldCond->getType(), !ExitIfTrue));
+    Changed = true;
+  }
+
+  if (Changed)
+    // We just mutated a bunch of loop exits changing there exit counts
+    // widely.  We need to force recomputation of the exit counts given these
+    // changes.  Note that all of the inserted exits are never taken, and
+    // should be removed next time the CFG is modified.
+    SE->forgetLoop(L);
+  return Changed;
+}
+
 bool LoopPredication::runOnLoop(Loop *Loop) {
   L = Loop;
 
@@ -1006,16 +1207,12 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
           cast<BranchInst>(BB->getTerminator()));
   }
 
-  if (Guards.empty() && GuardsAsWidenableBranches.empty())
-    return false;
-
   SCEVExpander Expander(*SE, *DL, "loop-predication");
-
   bool Changed = false;
   for (auto *Guard : Guards)
     Changed |= widenGuardConditions(Guard, Expander);
   for (auto *Guard : GuardsAsWidenableBranches)
     Changed |= widenWidenableBranchGuardConditions(Guard, Expander);
-
+  Changed |= predicateLoopExits(L, Expander);
   return Changed;
 }
