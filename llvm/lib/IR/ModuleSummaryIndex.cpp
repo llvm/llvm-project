@@ -61,6 +61,8 @@ std::pair<unsigned, unsigned> FunctionSummary::specialRefCounts() const {
   return {RORefCnt, WORefCnt};
 }
 
+constexpr uint64_t ModuleSummaryIndex::BitcodeSummaryVersion;
+
 // Collect for the given module the list of function it defines
 // (GUID -> Summary).
 void ModuleSummaryIndex::collectDefinedFunctionsForModule(
