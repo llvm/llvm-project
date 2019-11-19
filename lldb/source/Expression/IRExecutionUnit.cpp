@@ -977,30 +977,34 @@ IRExecutionUnit::FindSymbol(lldb_private::ConstString name, bool &missing_weak) 
 
 void IRExecutionUnit::GetStaticInitializers(
     std::vector<lldb::addr_t> &static_initializers) {
-  if (llvm::GlobalVariable *global_ctors =
-          m_module->getNamedGlobal("llvm.global_ctors")) {
-    if (llvm::ConstantArray *ctor_array = llvm::dyn_cast<llvm::ConstantArray>(
-            global_ctors->getInitializer())) {
-      for (llvm::Use &ctor_use : ctor_array->operands()) {
-        if (llvm::ConstantStruct *ctor_struct =
-                llvm::dyn_cast<llvm::ConstantStruct>(ctor_use)) {
-          lldbassert(ctor_struct->getNumOperands() ==
-                     3); // this is standardized
-          if (llvm::Function *ctor_function =
-                  llvm::dyn_cast<llvm::Function>(ctor_struct->getOperand(1))) {
-            ConstString ctor_function_name_cs(ctor_function->getName().str());
+  llvm::GlobalVariable *global_ctors =
+      m_module->getNamedGlobal("llvm.global_ctors");
+  if (!global_ctors)
+    return;
+  auto *ctor_array =
+      llvm::dyn_cast<llvm::ConstantArray>(global_ctors->getInitializer());
+  if (!ctor_array)
+    return;
 
-            for (JittedFunction &jitted_function : m_jitted_functions) {
-              if (ctor_function_name_cs == jitted_function.m_name) {
-                if (jitted_function.m_remote_addr != LLDB_INVALID_ADDRESS) {
-                  static_initializers.push_back(jitted_function.m_remote_addr);
-                }
-                break;
-              }
-            }
-          }
-        }
-      }
+  for (llvm::Use &ctor_use : ctor_array->operands()) {
+    auto *ctor_struct = llvm::dyn_cast<llvm::ConstantStruct>(ctor_use);
+    if (!ctor_struct)
+      continue;
+    // this is standardized
+    lldbassert(ctor_struct->getNumOperands() == 3);
+    auto *ctor_function =
+        llvm::dyn_cast<llvm::Function>(ctor_struct->getOperand(1));
+    if (!ctor_function)
+      continue;
+    ConstString ctor_function_name_cs(ctor_function->getName().str());
+
+    for (JittedFunction &jitted_function : m_jitted_functions) {
+      if (ctor_function_name_cs != jitted_function.m_name)
+        continue;
+      if (jitted_function.m_remote_addr == LLDB_INVALID_ADDRESS)
+        continue;
+      static_initializers.push_back(jitted_function.m_remote_addr);
+      break;
     }
   }
 }
