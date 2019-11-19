@@ -48,6 +48,7 @@ add_unittest(ClangdUnitTests ClangdTests
   GlobalCompilationDatabaseTests.cpp
   HeadersTests.cpp
   HeaderSourceSwitchTests.cpp
+  HoverTests.cpp
   IndexActionTests.cpp
   IndexTests.cpp
   JSONTransportTests.cpp
