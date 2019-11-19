@@ -69,7 +69,7 @@ body:             |
   ; CHECK:   G_BRCOND [[TRUNC1]](s1), %bb.3
   ; CHECK:   G_BR %bb.1
   ; CHECK: bb.3.bb10:
-  ; CHECK:   RET 0
+  ; CHECK:   RET_ReallyLR
   bb.1.bb:
     %3:_(s64) = G_CONSTANT i64 0
     %2:_(p0) = G_INTTOPTR %3(s64)
@@ -94,6 +94,6 @@ body:             |
     G_BR %bb.2
 
   bb.4.bb10:
-    RET 0
+    RET_ReallyLR
 
 ...
