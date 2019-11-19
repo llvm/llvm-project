@@ -806,8 +806,7 @@ llvm::Optional<int> InitializeReproducer(opt::InputArgList &input_args) {
   return llvm::None;
 }
 
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const *argv[]) {
   // Setup LLVM signal handlers and make sure we call llvm_shutdown() on
   // destruction.
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
