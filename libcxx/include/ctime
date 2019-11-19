@@ -58,7 +58,7 @@ using ::clock_t;
 using ::size_t;
 using ::time_t;
 using ::tm;
-#if _LIBCPP_STD_VER > 14 && defined(_LIBCPP_HAS_C11_FEATURES)
+#if _LIBCPP_STD_VER > 14 && defined(_LIBCPP_HAS_TIMESPEC_GET)
 using ::timespec;
 #endif
 using ::clock;
