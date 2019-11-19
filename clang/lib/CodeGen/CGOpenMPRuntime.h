@@ -248,9 +248,9 @@ protected:
   /// } else {
   ///   ElseGen();
   /// }
-  void emitOMPIfClause(CodeGenFunction &CGF, const Expr *Cond,
-                       const RegionCodeGenTy &ThenGen,
-                       const RegionCodeGenTy &ElseGen);
+  void emitIfClause(CodeGenFunction &CGF, const Expr *Cond,
+                    const RegionCodeGenTy &ThenGen,
+                    const RegionCodeGenTy &ElseGen);
 
   /// Emits object of ident_t type with info for source location.
   /// \param Flags Flags for OpenMP location.
