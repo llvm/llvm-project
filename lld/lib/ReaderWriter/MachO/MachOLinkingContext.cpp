@@ -825,7 +825,7 @@ bool MachOLinkingContext::sectionAligned(StringRef seg, StringRef sect,
 void MachOLinkingContext::addExportSymbol(StringRef sym) {
   // Support old crufty export lists with bogus entries.
   if (sym.endswith(".eh") || sym.startswith(".objc_category_name_")) {
-    lld::errs() << "warning: ignoring " << sym << " in export list\n";
+    llvm::errs() << "warning: ignoring " << sym << " in export list\n";
     return;
   }
   // Only i386 MacOSX uses old ABI, so don't change those.

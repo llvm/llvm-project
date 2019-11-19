@@ -241,8 +241,8 @@ static bool compareAtomsSub(const LayoutPass::SortKey &lc,
     return leftOrdinal < rightOrdinal;
   }
 
-  lld::errs() << "Unordered: <" << left->name() << "> <" << right->name()
-              << ">\n";
+  llvm::errs() << "Unordered: <" << left->name() << "> <" << right->name()
+               << ">\n";
   llvm_unreachable("Atoms with Same Ordinal!");
 }
 
