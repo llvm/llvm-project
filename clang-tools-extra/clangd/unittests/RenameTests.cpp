@@ -210,8 +210,6 @@ TEST(RenameTest, WithinFileRename) {
           [[Foo]] foo;
           const Baz &BazReference = foo;
           const Baz *BazPointer = &foo;
-          dynamic_cast<const [[^Foo]] &>(BazReference).getValue();
-          dynamic_cast<const [[^Foo]] *>(BazPointer)->getValue();
           reinterpret_cast<const [[^Foo]] *>(BazPointer)->getValue();
           static_cast<const [[^Foo]] &>(BazReference).getValue();
           static_cast<const [[^Foo]] *>(BazPointer)->getValue();
