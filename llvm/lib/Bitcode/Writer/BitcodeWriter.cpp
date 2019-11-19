@@ -3727,11 +3727,6 @@ void ModuleBitcodeWriterBase::writeModuleLevelReferences(
   NameVals.clear();
 }
 
-// Current version for the summary.
-// This is bumped whenever we introduce changes in the way some record are
-// interpreted, like flags for instance.
-static const uint64_t INDEX_VERSION = 8;
-
 /// Emit the per-module summary section alongside the rest of
 /// the module's bitcode.
 void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
@@ -3745,7 +3740,9 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
                                  : bitc::FULL_LTO_GLOBALVAL_SUMMARY_BLOCK_ID,
                        4);
 
-  Stream.EmitRecord(bitc::FS_VERSION, ArrayRef<uint64_t>{INDEX_VERSION});
+  Stream.EmitRecord(
+      bitc::FS_VERSION,
+      ArrayRef<uint64_t>{ModuleSummaryIndex::BitcodeSummaryVersion});
 
   // Write the index flags.
   uint64_t Flags = 0;
@@ -3892,7 +3889,9 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
 /// Emit the combined summary section into the combined index file.
 void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Stream.EnterSubblock(bitc::GLOBALVAL_SUMMARY_BLOCK_ID, 3);
-  Stream.EmitRecord(bitc::FS_VERSION, ArrayRef<uint64_t>{INDEX_VERSION});
+  Stream.EmitRecord(
+      bitc::FS_VERSION,
+      ArrayRef<uint64_t>{ModuleSummaryIndex::BitcodeSummaryVersion});
 
   // Write the index flags.
   uint64_t Flags = 0;
