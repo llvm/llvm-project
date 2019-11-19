@@ -714,6 +714,12 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
   // Emit call site entries for each call or tail call in the function.
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB.instrs()) {
+      // Bundles with call in them will pass the isCall() test below but do not
+      // have callee operand information so skip them here. Iterator will
+      // eventually reach the call MI.
+      if (MI.isBundle())
+        continue;
+
       // Skip instructions which aren't calls. Both calls and tail-calling jump
       // instructions (e.g TAILJMPd64) are classified correctly here.
       if (!MI.isCall())
@@ -748,19 +754,28 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
 
       bool IsTail = TII->isTailCall(MI);
 
+      // If MI is in a bundle, the label was created after the bundle since
+      // EmitFunctionBody iterates over top-level MIs. Get that top-level MI
+      // to search for that label below.
+      const MachineInstr *TopLevelCallMI =
+          MI.isInsideBundle() ? &*getBundleStart(MI.getIterator()) : &MI;
+
       // For tail calls, for non-gdb tuning, no return PC information is needed.
       // For regular calls (and tail calls in GDB tuning), the return PC
       // is needed to disambiguate paths in the call graph which could lead to
       // some target function.
       const MCExpr *PCOffset =
-          (IsTail && !tuneForGDB()) ? nullptr
-                                    : getFunctionLocalOffsetAfterInsn(&MI);
+          (IsTail && !tuneForGDB())
+              ? nullptr
+              : getFunctionLocalOffsetAfterInsn(TopLevelCallMI);
 
-      // Address of a call-like instruction for a normal call or a jump-like
-      // instruction for a tail call. This is needed for GDB + DWARF 4 tuning.
+      // Return address of a call-like instruction for a normal call or a
+      // jump-like instruction for a tail call. This is needed for
+      // GDB + DWARF 4 tuning.
       const MCSymbol *PCAddr =
-          ApplyGNUExtensions ? const_cast<MCSymbol*>(getLabelAfterInsn(&MI))
-                             : nullptr;
+          ApplyGNUExtensions
+              ? const_cast<MCSymbol *>(getLabelAfterInsn(TopLevelCallMI))
+              : nullptr;
 
       assert((IsTail || PCOffset || PCAddr) &&
              "Call without return PC information");
