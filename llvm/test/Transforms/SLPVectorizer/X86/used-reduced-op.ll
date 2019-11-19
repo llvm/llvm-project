@@ -71,7 +71,7 @@ define void @n() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[NEG_1_1:%.*]] = sub nsw i32 0, [[SUB_1_1]]
 ; CHECK-NEXT:    [[TMP46:%.*]] = select i1 [[TMP45]], i32 [[NEG_1_1]], i32 [[SUB_1_1]]
 ; CHECK-NEXT:    [[CMP12_1_1:%.*]] = icmp slt i32 [[TMP46]], [[OP_EXTRA]]
-; CHECK-NEXT:    [[NARROW:%.*]] = or i1 [[CMP12_1_1]], [[TMP44]]
+; CHECK-NEXT:    [[NARROW:%.*]] = or i1 [[CMP12_1_1]], undef
 ; CHECK-NEXT:    [[SPEC_SELECT8_1_1:%.*]] = select i1 [[CMP12_1_1]], i32 [[TMP46]], i32 [[OP_EXTRA]]
 ; CHECK-NEXT:    [[SUB_2_1:%.*]] = sub i32 [[TMP30]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP47:%.*]] = icmp slt i32 [[SUB_2_1]], 0
