@@ -363,18 +363,6 @@ if (CXX_SUPPORTS_NO_VLA_EXTENSION)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-vla-extension")
 endif ()
 
-check_cxx_compiler_flag("-Wno-gnu-anonymous-struct"
-                        CXX_SUPPORTS_NO_GNU_ANONYMOUS_STRUCT)
-if (CXX_SUPPORTS_NO_GNU_ANONYMOUS_STRUCT)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-gnu-anonymous-struct")
-endif ()
-
-check_cxx_compiler_flag("-Wno-nested-anon-types"
-                        CXX_SUPPORTS_NO_NESTED_ANON_TYPES)
-if (CXX_SUPPORTS_NO_NESTED_ANON_TYPES)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nested-anon-types")
-endif ()
-
 # Disable MSVC warnings
 if( MSVC )
   add_definitions(
