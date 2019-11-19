@@ -21,6 +21,7 @@
 #include "llvm/Support/Watchdog.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <atomic>
 #include <cstdarg>
 #include <cstdio>
 #include <tuple>
