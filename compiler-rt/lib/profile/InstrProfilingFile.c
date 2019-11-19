@@ -414,6 +414,7 @@ static void assertIsZero(int *i) {
 }
 #endif
 
+#if !defined(__Fuchsia__) && !defined(_WIN32)
 /* Write a partial profile to \p Filename, which is required to be backed by
  * the open file object \p File. */
 static int writeProfileWithFileObject(const char *Filename, FILE *File) {
@@ -433,6 +434,7 @@ static void unlockProfile(int *ProfileRequiresUnlock, FILE *File) {
   lprofUnlockFileHandle(File);
   *ProfileRequiresUnlock = 0;
 }
+#endif // !defined(__Fuchsia__) && !defined(_WIN32)
 
 static void initializeProfileForContinuousMode(void) {
   if (!__llvm_profile_is_continuous_mode_enabled())
