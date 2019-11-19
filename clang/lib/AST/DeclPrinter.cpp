@@ -1474,6 +1474,11 @@ void DeclPrinter::VisitObjCPropertyDecl(ObjCPropertyDecl *PDecl) {
       first = false;
     }
 
+    if (PDecl->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_direct) {
+      Out << (first ? "" : ", ") << "direct";
+      first = false;
+    }
+
     if (PDecl->getPropertyAttributes() &
         ObjCPropertyDecl::OBJC_PR_nonatomic) {
       Out << (first ? "" : ", ") << "nonatomic";
