@@ -2,7 +2,7 @@
 RUN: echo "" > %t
 RUN: echo "_Z3foov" >> %t
 RUN: echo "" >> %t
-RUN: llvm-cxxfilt < %t | FileCheck %s
+RUN: llvm-cxxfilt -n < %t | FileCheck %s
 
 CHECK:       {{^$}}
 CHECK-NEXT:  foo()
