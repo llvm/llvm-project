@@ -507,6 +507,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
   this->sectionStringTable =
       CHECK(obj.getSectionStringTable(objSections), this);
 
+  std::vector<ArrayRef<Elf_Word>> selectedGroups;
+
   for (size_t i = 0, e = objSections.size(); i < e; ++i) {
     if (this->sections[i] == &InputSection::discarded)
       continue;
@@ -564,6 +566,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
       if (isNew) {
         if (config->relocatable)
           this->sections[i] = createInputSection(sec);
+        selectedGroups.push_back(entries);
         continue;
       }
 
@@ -588,6 +591,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
     }
   }
 
+  // This block handles SHF_LINK_ORDER.
   for (size_t i = 0, e = objSections.size(); i < e; ++i) {
     if (this->sections[i] == &InputSection::discarded)
       continue;
@@ -609,6 +613,25 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
       error("a section " + isec->name +
             " with SHF_LINK_ORDER should not refer a non-regular section: " +
             toString(linkSec));
+  }
+
+  // For each secion group, connect its members in a circular doubly-linked list
+  // via nextInSectionGroup. See the comment in markLive().
+  for (ArrayRef<Elf_Word> entries : selectedGroups) {
+    InputSectionBase *head;
+    InputSectionBase *prev = nullptr;
+    for (uint32_t secIndex : entries.slice(1)) {
+      InputSectionBase *s = this->sections[secIndex];
+      if (!s || s == &InputSection::discarded)
+        continue;
+      if (prev)
+        prev->nextInSectionGroup = s;
+      else
+        head = s;
+      prev = s;
+    }
+    if (prev)
+      prev->nextInSectionGroup = head;
   }
 }
 
