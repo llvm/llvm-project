@@ -257,15 +257,25 @@ define double @f6() #0 {
 ;
 ; SSE-LABEL: f6:
 ; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    jmp pow # TAILCALL
+; SSE-NEXT:    callq pow
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f6:
 ; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    jmp pow # TAILCALL
+; AVX-NEXT:    callq pow
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.pow.f64(double 42.1,
                                                double 3.0,
@@ -290,15 +300,25 @@ define double @f7() #0 {
 ;
 ; SSE-LABEL: f7:
 ; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    movl $3, %edi
-; SSE-NEXT:    jmp __powidf2 # TAILCALL
+; SSE-NEXT:    callq __powidf2
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f7:
 ; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    movl $3, %edi
-; AVX-NEXT:    jmp __powidf2 # TAILCALL
+; AVX-NEXT:    callq __powidf2
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.powi.f64(double 42.1,
                                                i32 3,
@@ -322,13 +342,23 @@ define double @f8() #0 {
 ;
 ; SSE-LABEL: f8:
 ; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    jmp sin # TAILCALL
+; SSE-NEXT:    callq sin
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f8:
 ; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    jmp sin # TAILCALL
+; AVX-NEXT:    callq sin
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.sin.f64(double 42.0,
                                                metadata !"round.dynamic",
@@ -351,13 +381,23 @@ define double @f9() #0 {
 ;
 ; SSE-LABEL: f9:
 ; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    jmp cos # TAILCALL
+; SSE-NEXT:    callq cos
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f9:
 ; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    jmp cos # TAILCALL
+; AVX-NEXT:    callq cos
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.cos.f64(double 42.0,
                                                metadata !"round.dynamic",
@@ -380,13 +420,23 @@ define double @f10() #0 {
 ;
 ; SSE-LABEL: f10:
 ; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    jmp exp # TAILCALL
+; SSE-NEXT:    callq exp
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f10:
 ; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    jmp exp # TAILCALL
+; AVX-NEXT:    callq exp
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.exp.f64(double 42.0,
                                                metadata !"round.dynamic",
@@ -409,13 +459,23 @@ define double @f11() #0 {
 ;
 ; SSE-LABEL: f11:
 ; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    jmp exp2 # TAILCALL
+; SSE-NEXT:    callq exp2
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f11:
 ; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    jmp exp2 # TAILCALL
+; AVX-NEXT:    callq exp2
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.exp2.f64(double 42.1,
                                                metadata !"round.dynamic",
@@ -438,13 +498,23 @@ define double @f12() #0 {
 ;
 ; SSE-LABEL: f12:
 ; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    jmp log # TAILCALL
+; SSE-NEXT:    callq log
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f12:
 ; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    jmp log # TAILCALL
+; AVX-NEXT:    callq log
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.log.f64(double 42.0,
                                                metadata !"round.dynamic",
@@ -467,13 +537,23 @@ define double @f13() #0 {
 ;
 ; SSE-LABEL: f13:
 ; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    jmp log10 # TAILCALL
+; SSE-NEXT:    callq log10
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f13:
 ; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    jmp log10 # TAILCALL
+; AVX-NEXT:    callq log10
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.log10.f64(double 42.0,
                                                metadata !"round.dynamic",
@@ -496,13 +576,23 @@ define double @f14() #0 {
 ;
 ; SSE-LABEL: f14:
 ; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    jmp log2 # TAILCALL
+; SSE-NEXT:    callq log2
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f14:
 ; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    jmp log2 # TAILCALL
+; AVX-NEXT:    callq log2
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.log2.f64(double 42.0,
                                                metadata !"round.dynamic",
@@ -525,8 +615,13 @@ define double @f15() #0 {
 ;
 ; SSE-LABEL: f15:
 ; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    jmp rint # TAILCALL
+; SSE-NEXT:    callq rint
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f15:
 ; AVX:       # %bb.0: # %entry
@@ -556,8 +651,13 @@ define double @f16() #0 {
 ;
 ; SSE-LABEL: f16:
 ; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    jmp nearbyint # TAILCALL
+; SSE-NEXT:    callq nearbyint
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f16:
 ; AVX:       # %bb.0: # %entry
@@ -588,15 +688,25 @@ define double @f19() #0 {
 ;
 ; SSE-LABEL: f19:
 ; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    jmp fmod # TAILCALL
+; SSE-NEXT:    callq fmod
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f19:
 ; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    jmp fmod # TAILCALL
+; AVX-NEXT:    callq fmod
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %rem = call double @llvm.experimental.constrained.frem.f64(
                                                double 1.000000e+00,
@@ -768,9 +878,34 @@ entry:
 }
 
 define i32 @f23(double %x) #0 {
-; COMMON-LABEL: f23:
-; COMMON:       # %bb.0: # %entry
-; COMMON-NEXT:    jmp lrint # TAILCALL
+; X86-SSE-LABEL: f23:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movsd %xmm0, (%esp)
+; X86-SSE-NEXT:    calll lrint
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: f23:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
+; SSE-NEXT:    callq lrint
+; SSE-NEXT:    popq %rcx
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: f23:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
+; AVX-NEXT:    callq lrint
+; AVX-NEXT:    popq %rcx
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %result = call i32 @llvm.experimental.constrained.lrint.i32.f64(double %x,
                                                metadata !"round.dynamic",
@@ -779,9 +914,34 @@ entry:
 }
 
 define i32 @f24(float %x) #0 {
-; COMMON-LABEL: f24:
-; COMMON:       # %bb.0: # %entry
-; COMMON-NEXT:    jmp lrintf # TAILCALL
+; X86-SSE-LABEL: f24:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss %xmm0, (%esp)
+; X86-SSE-NEXT:    calll lrintf
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: f24:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
+; SSE-NEXT:    callq lrintf
+; SSE-NEXT:    popq %rcx
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: f24:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
+; AVX-NEXT:    callq lrintf
+; AVX-NEXT:    popq %rcx
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %result = call i32 @llvm.experimental.constrained.lrint.i32.f32(float %x,
                                                metadata !"round.dynamic",
@@ -803,11 +963,21 @@ define i64 @f25(double %x) #0 {
 ;
 ; SSE-LABEL: f25:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    jmp llrint # TAILCALL
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
+; SSE-NEXT:    callq llrint
+; SSE-NEXT:    popq %rcx
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f25:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    jmp llrint # TAILCALL
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
+; AVX-NEXT:    callq llrint
+; AVX-NEXT:    popq %rcx
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %result = call i64 @llvm.experimental.constrained.llrint.i64.f64(double %x,
                                                metadata !"round.dynamic",
@@ -829,11 +999,21 @@ define i64 @f26(float %x) {
 ;
 ; SSE-LABEL: f26:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    jmp llrintf # TAILCALL
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
+; SSE-NEXT:    callq llrintf
+; SSE-NEXT:    popq %rcx
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f26:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    jmp llrintf # TAILCALL
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
+; AVX-NEXT:    callq llrintf
+; AVX-NEXT:    popq %rcx
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %result = call i64 @llvm.experimental.constrained.llrint.i64.f32(float %x,
                                                metadata !"round.dynamic",
@@ -842,9 +1022,34 @@ entry:
 }
 
 define i32 @f27(double %x) #0 {
-; COMMON-LABEL: f27:
-; COMMON:       # %bb.0: # %entry
-; COMMON-NEXT:    jmp lround # TAILCALL
+; X86-SSE-LABEL: f27:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movsd %xmm0, (%esp)
+; X86-SSE-NEXT:    calll lround
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: f27:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
+; SSE-NEXT:    callq lround
+; SSE-NEXT:    popq %rcx
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: f27:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
+; AVX-NEXT:    callq lround
+; AVX-NEXT:    popq %rcx
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %result = call i32 @llvm.experimental.constrained.lround.i32.f64(double %x,
                                                metadata !"fpexcept.strict") #0
@@ -852,9 +1057,34 @@ entry:
 }
 
 define i32 @f28(float %x) #0 {
-; COMMON-LABEL: f28:
-; COMMON:       # %bb.0: # %entry
-; COMMON-NEXT:    jmp lroundf # TAILCALL
+; X86-SSE-LABEL: f28:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    movss %xmm0, (%esp)
+; X86-SSE-NEXT:    calll lroundf
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: f28:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
+; SSE-NEXT:    callq lroundf
+; SSE-NEXT:    popq %rcx
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: f28:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
+; AVX-NEXT:    callq lroundf
+; AVX-NEXT:    popq %rcx
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %result = call i32 @llvm.experimental.constrained.lround.i32.f32(float %x,
                                                metadata !"fpexcept.strict") #0
@@ -875,11 +1105,21 @@ define i64 @f29(double %x) #0 {
 ;
 ; SSE-LABEL: f29:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    jmp llround # TAILCALL
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
+; SSE-NEXT:    callq llround
+; SSE-NEXT:    popq %rcx
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f29:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    jmp llround # TAILCALL
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
+; AVX-NEXT:    callq llround
+; AVX-NEXT:    popq %rcx
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %result = call i64 @llvm.experimental.constrained.llround.i64.f64(double %x,
                                                metadata !"fpexcept.strict") #0
@@ -900,11 +1140,21 @@ define i64 @f30(float %x) #0 {
 ;
 ; SSE-LABEL: f30:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    jmp llroundf # TAILCALL
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
+; SSE-NEXT:    callq llroundf
+; SSE-NEXT:    popq %rcx
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f30:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    jmp llroundf # TAILCALL
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
+; AVX-NEXT:    callq llroundf
+; AVX-NEXT:    popq %rcx
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
 entry:
   %result = call i64 @llvm.experimental.constrained.llround.i64.f32(float %x,
                                                metadata !"fpexcept.strict") #0
