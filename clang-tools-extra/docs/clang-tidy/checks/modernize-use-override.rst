@@ -27,14 +27,6 @@ Options
 
    If set to non-zero, this check will not diagnose destructors. Default is `0`.
 
-.. option:: AllowOverrideAndFinal
-
-   If set to non-zero, this check will not diagnose ``override`` as redundant
-   with ``final``. This is useful when code will be compiled by a compiler with
-   warning/error checking flags requiring ``override`` explicitly on overriden
-   members, such as ``gcc -Wsuggest-override``/``gcc -Werror=suggest-override``.
-   Default is `0`.
-
 .. option:: OverrideSpelling
 
    Specifies a macro to use instead of ``override``. This is useful when
