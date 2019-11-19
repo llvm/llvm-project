@@ -239,7 +239,6 @@ set(x86_ARCH_SOURCES
   floatuntixf.c
   mulxc3.c
   powixf2.c
-  i386/fp_mode.c
 )
 
 if (NOT MSVC)
