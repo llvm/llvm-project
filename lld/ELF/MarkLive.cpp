@@ -165,9 +165,11 @@ static bool isReserved(InputSectionBase *sec) {
   switch (sec->type) {
   case SHT_FINI_ARRAY:
   case SHT_INIT_ARRAY:
-  case SHT_NOTE:
   case SHT_PREINIT_ARRAY:
     return true;
+  case SHT_NOTE:
+    // SHT_NOTE sections in a group are subject to garbage collection.
+    return !sec->nextInSectionGroup;
   default:
     StringRef s = sec->name;
     return s.startswith(".ctors") || s.startswith(".dtors") ||
@@ -283,6 +285,10 @@ template <class ELFT> void MarkLive<ELFT>::mark() {
 
     for (InputSectionBase *isec : sec.dependentSections)
       enqueue(isec, 0);
+
+    // Mark the next group member.
+    if (sec.nextInSectionGroup)
+      enqueue(sec.nextInSectionGroup, 0);
   }
 }
 
@@ -353,12 +359,19 @@ template <class ELFT> void markLive() {
   // or -emit-reloc were given. And they are subject of garbage
   // collection because, if we remove a text section, we also
   // remove its relocation section.
+  //
+  // Note on nextInSectionGroup: The ELF spec says that group sections are
+  // included or omitted as a unit. We take the interpretation that:
+  //
+  // - Group members (nextInSectionGroup != nullptr) are subject to garbage
+  //   collection.
+  // - Groups members are retained or discarded as a unit.
   for (InputSectionBase *sec : inputSections) {
     bool isAlloc = (sec->flags & SHF_ALLOC);
     bool isLinkOrder = (sec->flags & SHF_LINK_ORDER);
     bool isRel = (sec->type == SHT_REL || sec->type == SHT_RELA);
 
-    if (!isAlloc && !isLinkOrder && !isRel)
+    if (!isAlloc && !isLinkOrder && !isRel && !sec->nextInSectionGroup)
       sec->markLive();
   }
 

@@ -142,6 +142,10 @@ public:
   // cases this points one level up.
   SectionBase *parent = nullptr;
 
+  // The next member in the section group if this section is in a group. This is
+  // used by --gc-sections.
+  InputSectionBase *nextInSectionGroup = nullptr;
+
   template <class ELFT> ArrayRef<typename ELFT::Rel> rels() const {
     assert(!areRelocsRela);
     return llvm::makeArrayRef(
