@@ -500,12 +500,11 @@ func (d *DIBuilder) CreateArrayType(t DIArrayType) Metadata {
 
 // DITypedef holds the values for creating typedef type debug metadata.
 type DITypedef struct {
-	Type        Metadata
-	Name        string
-	File        Metadata
-	Line        int
-	Context     Metadata
-	AlignInBits int
+	Type    Metadata
+	Name    string
+	File    Metadata
+	Line    int
+	Context Metadata
 }
 
 // CreateTypedef creates typedef type debug metadata.
@@ -520,7 +519,6 @@ func (d *DIBuilder) CreateTypedef(t DITypedef) Metadata {
 		t.File.C,
 		C.unsigned(t.Line),
 		t.Context.C,
-		C.unsigned(t.AlignInBits),
 	)
 	return Metadata{C: result}
 }
