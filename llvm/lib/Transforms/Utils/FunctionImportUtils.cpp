@@ -19,7 +19,9 @@ using namespace llvm;
 /// Checks if we should import SGV as a definition, otherwise import as a
 /// declaration.
 bool FunctionImportGlobalProcessing::doImportAsDefinition(
-    const GlobalValue *SGV, SetVector<GlobalValue *> *GlobalsToImport) {
+    const GlobalValue *SGV) {
+  if (!isPerformingImport())
+    return false;
 
   // Only import the globals requested for importing.
   if (!GlobalsToImport->count(const_cast<GlobalValue *>(SGV)))
@@ -32,16 +34,8 @@ bool FunctionImportGlobalProcessing::doImportAsDefinition(
   return true;
 }
 
-bool FunctionImportGlobalProcessing::doImportAsDefinition(
-    const GlobalValue *SGV) {
-  if (!isPerformingImport())
-    return false;
-  return FunctionImportGlobalProcessing::doImportAsDefinition(SGV,
-                                                              GlobalsToImport);
-}
-
 bool FunctionImportGlobalProcessing::shouldPromoteLocalToGlobal(
-    const GlobalValue *SGV) {
+    const GlobalValue *SGV, ValueInfo VI) {
   assert(SGV->hasLocalLinkage());
   // Both the imported references and the original local variable must
   // be promoted.
@@ -66,7 +60,7 @@ bool FunctionImportGlobalProcessing::shouldPromoteLocalToGlobal(
   // (so the source file name and resulting GUID is the same). Find the one
   // in this module.
   auto Summary = ImportIndex.findSummaryInModule(
-      SGV->getGUID(), SGV->getParent()->getModuleIdentifier());
+      VI, SGV->getParent()->getModuleIdentifier());
   assert(Summary && "Missing summary for global value when exporting");
   auto Linkage = Summary->linkage();
   if (!GlobalValue::isLocalLinkage(Linkage)) {
@@ -227,6 +221,11 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
     }
   }
 
+  // We should always have a ValueInfo (i.e. GV in index) for definitions when
+  // we are exporting, and also when importing that value.
+  assert(VI || GV.isDeclaration() ||
+         (isPerformingImport() && !doImportAsDefinition(&GV)));
+
   // Mark read/write-only variables which can be imported with specific
   // attribute. We can't internalize them now because IRMover will fail
   // to link variable definitions to their external declarations during
@@ -265,7 +264,7 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
     }
   }
 
-  if (GV.hasLocalLinkage() && shouldPromoteLocalToGlobal(&GV)) {
+  if (GV.hasLocalLinkage() && shouldPromoteLocalToGlobal(&GV, VI)) {
     // Save the original name string before we rename GV below.
     auto Name = GV.getName().str();
     GV.setName(getPromotedName(&GV));
