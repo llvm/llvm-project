@@ -446,6 +446,20 @@ public:
     llvm_unreachable("bad kind");
   }
 
+  /// Does this runtime supports direct dispatch
+  bool allowsDirectDispatch() const {
+    switch (getKind()) {
+    case FragileMacOSX: return false;
+    case MacOSX: return true;
+    case iOS: return true;
+    case WatchOS: return true;
+    case GCC: return false;
+    case GNUstep: return false;
+    case ObjFW: return false;
+    }
+    llvm_unreachable("bad kind");
+  }
+
   /// Try to parse an Objective-C runtime specification from the given
   /// string.
   ///
