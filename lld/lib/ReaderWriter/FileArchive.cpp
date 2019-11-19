@@ -145,7 +145,7 @@ private:
                            + mb.getBufferIdentifier() + ")").str();
 
     if (_logLoading)
-      lld::errs() << memberPath << "\n";
+      llvm::errs() << memberPath << "\n";
 
     std::unique_ptr<MemoryBuffer> memberMB(MemoryBuffer::getMemBuffer(
         mb.getBuffer(), mb.getBufferIdentifier(), false));
