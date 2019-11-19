@@ -73,6 +73,9 @@ class Command {
   /// See Command::setEnvironment
   std::vector<const char *> Environment;
 
+  /// Dependent actions
+  llvm::SmallVector<const Action *, 4> DependentActions;
+
   /// When a response file is needed, we try to put most arguments in an
   /// exclusive file, while others remains as regular command line arguments.
   /// This functions fills a vector with the regular command line arguments,
@@ -130,6 +133,10 @@ public:
 
   /// Set whether to print the input filenames when executing.
   void setPrintInputFilenames(bool P) { PrintInputFilenames = P; }
+
+  const llvm::SmallVector<const Action *, 4> &getDependentActions() const {
+    return DependentActions;
+  }
 };
 
 /// Like Command, but with a fallback which is executed in case

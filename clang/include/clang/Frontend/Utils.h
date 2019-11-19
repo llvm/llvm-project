@@ -15,6 +15,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/OptionUtils.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -33,12 +34,6 @@
 namespace llvm {
 
 class Triple;
-
-namespace opt {
-
-class ArgList;
-
-} // namespace opt
 
 } // namespace llvm
 
@@ -225,29 +220,6 @@ std::unique_ptr<CompilerInvocation> createInvocationFromCommandLine(
         IntrusiveRefCntPtr<DiagnosticsEngine>(),
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr,
     bool ShouldRecoverOnErrors = false);
-
-/// Return the value of the last argument as an integer, or a default. If Diags
-/// is non-null, emits an error if the argument is given, but non-integral.
-int getLastArgIntValue(const llvm::opt::ArgList &Args,
-                       llvm::opt::OptSpecifier Id, int Default,
-                       DiagnosticsEngine *Diags = nullptr);
-
-inline int getLastArgIntValue(const llvm::opt::ArgList &Args,
-                              llvm::opt::OptSpecifier Id, int Default,
-                              DiagnosticsEngine &Diags) {
-  return getLastArgIntValue(Args, Id, Default, &Diags);
-}
-
-uint64_t getLastArgUInt64Value(const llvm::opt::ArgList &Args,
-                               llvm::opt::OptSpecifier Id, uint64_t Default,
-                               DiagnosticsEngine *Diags = nullptr);
-
-inline uint64_t getLastArgUInt64Value(const llvm::opt::ArgList &Args,
-                                      llvm::opt::OptSpecifier Id,
-                                      uint64_t Default,
-                                      DiagnosticsEngine &Diags) {
-  return getLastArgUInt64Value(Args, Id, Default, &Diags);
-}
 
 // Frontend timing utils
 
