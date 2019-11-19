@@ -168,6 +168,8 @@ private:
   SmallVector<MachineInstr *, 4> LowerToCopyInstrs;
   SmallVector<MachineInstr *, 4> DemoteInstrs;
 
+  bool HasWaterfalls;
+
   void printInfo();
 
   void markInstruction(MachineInstr &MI, char Flag,
@@ -273,6 +275,18 @@ LLVM_DUMP_METHOD void SIWholeQuadMode::printInfo() {
   }
 }
 #endif
+
+static bool isWaterfallStart(unsigned Opcode) {
+  switch (Opcode) {
+    case AMDGPU::SI_WATERFALL_BEGIN_V1:
+    case AMDGPU::SI_WATERFALL_BEGIN_V2:
+    case AMDGPU::SI_WATERFALL_BEGIN_V4:
+    case AMDGPU::SI_WATERFALL_BEGIN_V8:
+      return true;
+    default:
+      return false;
+  }
+}
 
 void SIWholeQuadMode::markInstruction(MachineInstr &MI, char Flag,
                                       std::vector<WorkItem> &Worklist) {
@@ -413,6 +427,8 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
           LiveMaskQueries.push_back(&MI);
         } else if (Opcode == AMDGPU::SI_DEMOTE_I1) {
           DemoteInstrs.push_back(&MI);
+        } else if (isWaterfallStart(MI.getOpcode())) {
+          HasWaterfalls = true;
         } else if (WQMOutputs) {
           // The function is in machine SSA form, which means that physical
           // VGPRs correspond to shader inputs and outputs. Inputs are
@@ -753,6 +769,35 @@ MachineBasicBlock::iterator SIWholeQuadMode::prepareInsertion(
 
   if (MachineInstr *MI = LIS->getInstructionFromIndex(Idx)) {
     MBBI = MI;
+
+    if (HasWaterfalls) {
+      MachineBasicBlock::iterator I = MBBI;
+      bool IsMaybeWaterfall = true;
+      while ((I != Last) && IsMaybeWaterfall) {
+        switch (I->getOpcode()) {
+        case AMDGPU::SI_WATERFALL_BEGIN_V1:
+        case AMDGPU::SI_WATERFALL_BEGIN_V2:
+        case AMDGPU::SI_WATERFALL_BEGIN_V4:
+        case AMDGPU::SI_WATERFALL_BEGIN_V8:
+          // Waterfalls do not nest, so not inside waterfall
+          IsMaybeWaterfall = false;
+          break;
+        case AMDGPU::SI_WATERFALL_END_V1:
+        case AMDGPU::SI_WATERFALL_END_V2:
+        case AMDGPU::SI_WATERFALL_END_V4:
+        case AMDGPU::SI_WATERFALL_END_V8:
+          // Waterfall has ended
+          MBBI = I;
+          MBBI++;
+          IsMaybeWaterfall = false;
+          break;
+        default:
+          break;
+        }
+        I++;
+      }
+    }
+
     if (CheckPhys) {
       // Make sure insertion point is after any COPY instructions
       // accessing physical live in registers.  This is ensures that
@@ -1313,6 +1358,7 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   DemoteInstrs.clear();
   LiveMaskRegs.clear();
   StateTransition.clear();
+  HasWaterfalls = false;
 
   CallingConv = MF.getFunction().getCallingConv();
 
