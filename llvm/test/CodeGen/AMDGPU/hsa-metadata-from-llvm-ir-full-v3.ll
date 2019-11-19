@@ -42,6 +42,7 @@
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NOT:          .value_kind:     hidden_default_queue
 ; CHECK-NOT:          .value_kind:     hidden_completion_action
+; CHECK-NOT:          .value_kind:     hidden_hostcall_buffer
 ; CHECK-NEXT:         .value_kind:     hidden_printf_buffer
 ; CHECK-NEXT:         .value_type:     i8
 ; CHECK:              .value_kind:     hidden_multigrid_sync_arg

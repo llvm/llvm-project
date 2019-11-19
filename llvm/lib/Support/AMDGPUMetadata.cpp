@@ -62,6 +62,7 @@ struct ScalarEnumerationTraits<ValueKind> {
     YIO.enumCase(EN, "HiddenGlobalOffsetZ", ValueKind::HiddenGlobalOffsetZ);
     YIO.enumCase(EN, "HiddenNone", ValueKind::HiddenNone);
     YIO.enumCase(EN, "HiddenPrintfBuffer", ValueKind::HiddenPrintfBuffer);
+    YIO.enumCase(EN, "HiddenHostcallBuffer", ValueKind::HiddenHostcallBuffer);
     YIO.enumCase(EN, "HiddenDefaultQueue", ValueKind::HiddenDefaultQueue);
     YIO.enumCase(EN, "HiddenCompletionAction",
                  ValueKind::HiddenCompletionAction);
