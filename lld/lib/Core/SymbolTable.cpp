@@ -157,15 +157,15 @@ bool SymbolTable::addByName(const Atom &newAtom) {
         useNew = true;
         break;
       }
-      lld::errs() << "Size mismatch: " << existing->name() << " ("
-                  << existingSize << ") " << newAtom.name() << " (" << newSize
-                  << ")\n";
+      llvm::errs() << "Size mismatch: " << existing->name() << " ("
+                   << existingSize << ") " << newAtom.name() << " (" << newSize
+                   << ")\n";
       LLVM_FALLTHROUGH;
     }
     case MCR_Error:
-      lld::errs() << "Duplicate symbols: " << existing->name() << ":"
-                  << existing->file().path() << " and " << newAtom.name() << ":"
-                  << newAtom.file().path() << "\n";
+      llvm::errs() << "Duplicate symbols: " << existing->name() << ":"
+                   << existing->file().path() << " and " << newAtom.name()
+                   << ":" << newAtom.file().path() << "\n";
       llvm::report_fatal_error("duplicate symbol error");
       break;
     }
@@ -187,7 +187,7 @@ bool SymbolTable::addByName(const Atom &newAtom) {
     break;
   }
   case NCR_Error:
-    lld::errs() << "SymbolTable: error while merging " << name << "\n";
+    llvm::errs() << "SymbolTable: error while merging " << name << "\n";
     llvm::report_fatal_error("duplicate symbol error");
     break;
   }
