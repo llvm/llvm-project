@@ -226,9 +226,6 @@ public:
   int GetCompileOptions(const char *option, std::vector<std::string> &value,
                         lldb_private::CompileUnit *cu = nullptr) override;
 
-  void GetLoadedModules(lldb::LanguageType language,
-                        lldb_private::FileSpecList &modules) override;
-
   void PreloadSymbols() override;
 
   std::recursive_mutex &GetModuleMutex() const override;

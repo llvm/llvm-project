@@ -3175,30 +3175,6 @@ int SymbolFileDWARF::GetCompileOptions(const char *option,
   return 0;
 }
 
-void SymbolFileDWARF::GetLoadedModules(lldb::LanguageType language,
-                                       lldb_private::FileSpecList &modules) {
-  ModuleSP module_sp(m_objfile_sp->GetModule());
-
-  if (IsSwiftLanguage(language)) {
-    const uint32_t num_cus = module_sp->GetNumCompileUnits();
-    for (uint32_t i = 0; i < num_cus; ++i) {
-      CompileUnit *cu = module_sp->GetCompileUnitAtIndex(i).get();
-      if (cu) {
-        const FileSpecList &files = cu->GetSupportFiles();
-        const size_t num_files = files.GetSize();
-        static ConstString g_swift_module_extension("swiftmodule");
-        for (uint32_t pass = 0; pass < 2; ++pass) {
-          for (size_t file_idx = 0; file_idx < num_files; ++file_idx) {
-            const FileSpec &file = files.GetFileSpecAtIndex(file_idx);
-            if (file.GetFileNameExtension() == g_swift_module_extension)
-              modules.AppendIfUnique(file);
-          }
-        }
-      }
-    }
-  }
-}
-
 TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
                                   bool *type_is_new_ptr) {
   if (!die)

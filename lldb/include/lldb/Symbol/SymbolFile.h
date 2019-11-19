@@ -285,9 +285,6 @@ public:
     return false;
   }
 
-  virtual void GetLoadedModules(lldb::LanguageType language,
-                                FileSpecList &modules) {}
-
   // Some symbol files might know if we should always check for inline
   // source file and line entries. This virtual function lets
   // SymbolFile subclasses control that, but a default implementation
