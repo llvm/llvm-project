@@ -977,14 +977,20 @@ IRExecutionUnit::FindSymbol(lldb_private::ConstString name, bool &missing_weak) 
 
 void IRExecutionUnit::GetStaticInitializers(
     std::vector<lldb::addr_t> &static_initializers) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
   llvm::GlobalVariable *global_ctors =
       m_module->getNamedGlobal("llvm.global_ctors");
-  if (!global_ctors)
+  if (!global_ctors) {
+    LLDB_LOG(log, "Couldn't find llvm.global_ctors.");
     return;
+  }
   auto *ctor_array =
       llvm::dyn_cast<llvm::ConstantArray>(global_ctors->getInitializer());
-  if (!ctor_array)
+  if (!ctor_array) {
+    LLDB_LOG(log, "llvm.global_ctors not a ConstantArray.");
     return;
+  }
 
   for (llvm::Use &ctor_use : ctor_array->operands()) {
     auto *ctor_struct = llvm::dyn_cast<llvm::ConstantStruct>(ctor_use);
@@ -994,16 +1000,25 @@ void IRExecutionUnit::GetStaticInitializers(
     lldbassert(ctor_struct->getNumOperands() == 3);
     auto *ctor_function =
         llvm::dyn_cast<llvm::Function>(ctor_struct->getOperand(1));
-    if (!ctor_function)
+    if (!ctor_function) {
+      LLDB_LOG(log, "global_ctor doesn't contain an llvm::Function");
       continue;
-    ConstString ctor_function_name_cs(ctor_function->getName().str());
+    }
+
+    ConstString ctor_function_name(ctor_function->getName().str());
+    LLDB_LOG(log, "Looking for callable jitted function with name {0}.",
+             ctor_function_name);
 
     for (JittedFunction &jitted_function : m_jitted_functions) {
-      if (ctor_function_name_cs != jitted_function.m_name)
+      if (ctor_function_name != jitted_function.m_name)
         continue;
-      if (jitted_function.m_remote_addr == LLDB_INVALID_ADDRESS)
+      if (jitted_function.m_remote_addr == LLDB_INVALID_ADDRESS) {
+        LLDB_LOG(log, "Found jitted function with invalid address.");
         continue;
+      }
       static_initializers.push_back(jitted_function.m_remote_addr);
+      LLDB_LOG(log, "Calling function at address {0:x}.",
+               jitted_function.m_remote_addr);
       break;
     }
   }
