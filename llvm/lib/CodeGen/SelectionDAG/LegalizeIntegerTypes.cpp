@@ -1818,7 +1818,7 @@ std::pair <SDValue, SDValue> DAGTypeLegalizer::ExpandAtomic(SDNode *Node) {
   RTLIB::Libcall LC = RTLIB::getSYNC(Opc, VT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected atomic op or value type!");
 
-  return ExpandChainLibCall(LC, Node, false);
+  return TLI.ExpandChainLibCall(DAG, LC, Node, false);
 }
 
 /// N is a shift by a value that needs to be expanded,
@@ -2629,7 +2629,7 @@ void DAGTypeLegalizer::ExpandIntRes_LLROUND_LLRINT(SDNode *N, SDValue &Lo,
   EVT RetVT = N->getValueType(0);
 
   if (N->isStrictFPOpcode()) {
-    std::pair<SDValue, SDValue> Tmp = ExpandChainLibCall(LC, N, true);
+    std::pair<SDValue, SDValue> Tmp = TLI.ExpandChainLibCall(DAG, LC, N, true);
     SplitInteger(Tmp.first, Lo, Hi);
     ReplaceValueWith(SDValue(N, 1), Tmp.second);
     return;
