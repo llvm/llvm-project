@@ -155,6 +155,8 @@ inline bool operator==(const SectionedAddress &LHS,
          std::tie(RHS.SectionIndex, RHS.Address);
 }
 
+raw_ostream &operator<<(raw_ostream &OS, const SectionedAddress &Addr);
+
 /// This is a value type class that represents a single symbol in the list of
 /// symbols in the object file.
 class SymbolRef : public BasicSymbolRef {
