@@ -19,9 +19,9 @@
 #include <stdint.h>
 #include "amdgcn_interface.h"
 
-#define DEVICE __device__
-#define INLINE __inline__ DEVICE
-#define NOINLINE __noinline__ DEVICE
+#define DEVICE __attribute__((device))
+#define INLINE inline DEVICE
+#define NOINLINE __attribute__((noinline)) DEVICE
 
 ////////////////////////////////////////////////////////////////////////////////
 // Kernel options
