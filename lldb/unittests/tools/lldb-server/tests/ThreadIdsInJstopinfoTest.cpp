@@ -22,7 +22,13 @@ using namespace llvm;
 using namespace lldb;
 using namespace testing;
 
-TEST_F(StandardStartupTest, TestStopReplyContainsThreadPcs) {
+#ifdef __NetBSD__
+#define SKIP_ON_NETBSD(x) DISABLED_ ## x
+#else
+#define SKIP_ON_NETBSD(x) x
+#endif
+
+TEST_F(StandardStartupTest, SKIP_ON_NETBSD(TestStopReplyContainsThreadPcs)) {
   // This inferior spawns 4 threads, then forces a break.
   ASSERT_THAT_ERROR(
       Client->SetInferior({getInferiorPath("thread_inferior"), "4"}),
