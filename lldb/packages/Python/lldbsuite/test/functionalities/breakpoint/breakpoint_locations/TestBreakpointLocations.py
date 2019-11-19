@@ -16,17 +16,26 @@ class BreakpointLocationsTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
+    @expectedFailureAll(archs=["aarch64"], oslist=["linux"],
+                        debug_info=["dwo"],
+                        bugnumber="llvm.org/pr44037")
     def test_enable(self):
         """Test breakpoint enable/disable for a breakpoint ID with multiple locations."""
         self.build()
         self.breakpoint_locations_test()
 
+    @expectedFailureAll(archs=["aarch64"], oslist=["linux"],
+                        debug_info=["dwo"],
+                        bugnumber="llvm.org/pr44037")
     def test_shadowed_cond_options(self):
         """Test that options set on the breakpoint and location behave correctly."""
         self.build()
         self.shadowed_bkpt_cond_test()
 
 
+    @expectedFailureAll(archs=["aarch64"], oslist=["linux"],
+                        debug_info=["dwo"],
+                        bugnumber="llvm.org/pr44037")
     def test_shadowed_command_options(self):
         """Test that options set on the breakpoint and location behave correctly."""
         self.build()
