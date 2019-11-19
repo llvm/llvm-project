@@ -1,5 +1,5 @@
 RUN: llvm-cxxfilt -_ ___imp__ZSt6futureIvE | FileCheck %s
-RUN: llvm-cxxfilt __imp__ZSt6futureIvE | FileCheck %s
+RUN: llvm-cxxfilt -n __imp__ZSt6futureIvE | FileCheck %s
 
 CHECK: import thunk for std::future<void>
 
