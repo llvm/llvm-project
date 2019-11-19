@@ -21,7 +21,7 @@
 # CHECK-NEXT: Size:
 # CHECK-NEXT: Link:
 # CHECK-NEXT: Info: 26
- 
+
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64

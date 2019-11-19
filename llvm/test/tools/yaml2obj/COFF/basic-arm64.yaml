@@ -9,7 +9,7 @@
 # ROUNDTRIP: VirtualAddress:  12288
 
 --- !COFF
-OptionalHeader:  
+OptionalHeader:
   AddressOfEntryPoint: 4096
   ImageBase:       1073741824
   SectionAlignment: 4096
@@ -26,55 +26,55 @@ OptionalHeader:
   SizeOfStackCommit: 4096
   SizeOfHeapReserve: 1048576
   SizeOfHeapCommit: 4096
-  ExportTable:     
+  ExportTable:
     RelativeVirtualAddress: 0
     Size:            0
-  ImportTable:     
+  ImportTable:
     RelativeVirtualAddress: 0
     Size:            0
-  ResourceTable:   
+  ResourceTable:
     RelativeVirtualAddress: 0
     Size:            0
-  ExceptionTable:  
+  ExceptionTable:
     RelativeVirtualAddress: 12288
     Size:            8
-  CertificateTable: 
+  CertificateTable:
     RelativeVirtualAddress: 0
     Size:            0
-  BaseRelocationTable: 
+  BaseRelocationTable:
     RelativeVirtualAddress: 0
     Size:            0
-  Debug:           
+  Debug:
     RelativeVirtualAddress: 0
     Size:            0
-  Architecture:    
+  Architecture:
     RelativeVirtualAddress: 0
     Size:            0
-  GlobalPtr:       
+  GlobalPtr:
     RelativeVirtualAddress: 0
     Size:            0
-  TlsTable:        
+  TlsTable:
     RelativeVirtualAddress: 0
     Size:            0
-  LoadConfigTable: 
+  LoadConfigTable:
     RelativeVirtualAddress: 0
     Size:            0
-  BoundImport:     
+  BoundImport:
     RelativeVirtualAddress: 0
     Size:            0
-  IAT:             
+  IAT:
     RelativeVirtualAddress: 0
     Size:            0
-  DelayImportDescriptor: 
+  DelayImportDescriptor:
     RelativeVirtualAddress: 0
     Size:            0
-  ClrRuntimeHeader: 
+  ClrRuntimeHeader:
     RelativeVirtualAddress: 0
     Size:            0
-header:          
+header:
   Machine:         IMAGE_FILE_MACHINE_ARM64
   Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
-sections:        
+sections:
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     VirtualAddress:  4096

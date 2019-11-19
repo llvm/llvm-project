@@ -21,7 +21,7 @@ Symbols:
     Index: SHN_XINDEX
 
 ## Check that yaml2obj keeps the SHT_SYMTAB_SHNDX section in the output
-## even when symbol's section index value is low enough to not require the extended symtab. 
+## even when symbol's section index value is low enough to not require the extended symtab.
 ## Also, check that symbols in .symtab still have the SHN_XINDEX index.
 
 # RUN: yaml2obj --docnum=2 %s -o %t2

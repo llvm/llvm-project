@@ -1,4 +1,5 @@
-# This test insures that the user cannot have both an Index and a Section field.
+## Check that "Index" and "Section" cannot be used together in a symbol.
+
 # RUN: not yaml2obj %s
 
 !ELF

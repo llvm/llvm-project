@@ -1,5 +1,5 @@
-# Show that yaml2obj properly emits program headers with explicit file size,
-# memory size and offset parameters.
+## Show that yaml2obj properly emits program headers with explicit file size,
+## memory size and offset parameters.
 
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-readobj %t --program-headers | FileCheck %s

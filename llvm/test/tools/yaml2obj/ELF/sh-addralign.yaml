@@ -1,6 +1,6 @@
 ## Check that yaml2obj takes in account section AddressAlign field.
 
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-readobj -S %t | FileCheck %s
 
 # CHECK:      Section {
