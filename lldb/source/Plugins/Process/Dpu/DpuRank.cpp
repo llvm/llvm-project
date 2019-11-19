@@ -373,8 +373,8 @@ bool Dpu::PrepareStepOverPrintfBkp(
       }
 
       if (stdout_file != NULL) {
-        if (!read_and_display_contents_of(mram_buffer, mram_buffer_size,
-                                          stdout_file))
+        if (dpulog_read_and_display_contents_of(mram_buffer, mram_buffer_size,
+                                                stdout_file) != DPU_API_SUCCESS)
           return false;
 
         fflush(stdout_file);
