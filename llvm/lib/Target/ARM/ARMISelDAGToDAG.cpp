@@ -226,7 +226,8 @@ private:
   void SelectMVE_WB(SDNode *N, const uint16_t *Opcodes, bool Predicated);
 
   /// SelectMVE_LongShift - Select MVE 64-bit scalar shift intrinsics.
-  void SelectMVE_LongShift(SDNode *N, uint16_t Opcode, bool Immediate);
+  void SelectMVE_LongShift(SDNode *N, uint16_t Opcode, bool Immediate,
+                           bool HasSaturationOperand);
 
   /// SelectMVE_VADCSBC - Select MVE vector add/sub-with-carry intrinsics.
   void SelectMVE_VADCSBC(SDNode *N, uint16_t OpcodeWithCarry,
@@ -2399,7 +2400,8 @@ void ARMDAGToDAGISel::SelectMVE_WB(SDNode *N, const uint16_t *Opcodes,
 }
 
 void ARMDAGToDAGISel::SelectMVE_LongShift(SDNode *N, uint16_t Opcode,
-                                          bool Immediate) {
+                                          bool Immediate,
+                                          bool HasSaturationOperand) {
   SDLoc Loc(N);
   SmallVector<SDValue, 8> Ops;
 
@@ -2410,9 +2412,16 @@ void ARMDAGToDAGISel::SelectMVE_LongShift(SDNode *N, uint16_t Opcode,
   // The shift count
   if (Immediate) {
     int32_t ImmValue = cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
-    Ops.push_back(getI32Imm(ImmValue, Loc)); // immediate offset
+    Ops.push_back(getI32Imm(ImmValue, Loc)); // immediate shift count
   } else {
     Ops.push_back(N->getOperand(3));
+  }
+
+  // The immediate saturation operand, if any
+  if (HasSaturationOperand) {
+    int32_t SatOp = cast<ConstantSDNode>(N->getOperand(4))->getZExtValue();
+    int SatBit = (SatOp == 64 ? 0 : 1);
+    Ops.push_back(getI32Imm(SatBit, Loc));
   }
 
   // MVE scalar shifts are IT-predicable, so include the standard
@@ -4267,7 +4276,28 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       break;
 
     case Intrinsic::arm_mve_urshrl:
-      SelectMVE_LongShift(N, ARM::MVE_URSHRL, true);
+      SelectMVE_LongShift(N, ARM::MVE_URSHRL, true, false);
+      return;
+    case Intrinsic::arm_mve_uqshll:
+      SelectMVE_LongShift(N, ARM::MVE_UQSHLL, true, false);
+      return;
+    case Intrinsic::arm_mve_srshrl:
+      SelectMVE_LongShift(N, ARM::MVE_SRSHRL, true, false);
+      return;
+    case Intrinsic::arm_mve_sqshll:
+      SelectMVE_LongShift(N, ARM::MVE_SQSHLL, true, false);
+      return;
+    case Intrinsic::arm_mve_uqrshll:
+      SelectMVE_LongShift(N, ARM::MVE_UQRSHLL, false, true);
+      return;
+    case Intrinsic::arm_mve_sqrshrl:
+      SelectMVE_LongShift(N, ARM::MVE_SQRSHRL, false, true);
+      return;
+    case Intrinsic::arm_mve_lsll:
+      SelectMVE_LongShift(N, ARM::MVE_LSLLr, false, false);
+      return;
+    case Intrinsic::arm_mve_asrl:
+      SelectMVE_LongShift(N, ARM::MVE_ASRLr, false, false);
       return;
 
     case Intrinsic::arm_mve_vadc:

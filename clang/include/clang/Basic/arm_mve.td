@@ -388,13 +388,56 @@ defm vstrhq: scatter_offset_both<!listconcat(T.All16, T.Int32), u16, 1>;
 defm vstrwq: scatter_offset_both<T.All32, u32, 2>;
 defm vstrdq: scatter_offset_both<T.Int64, u64, 3>;
 
-let params = [Void], pnt = PNT_None in
-def urshrl: Intrinsic<u64, (args u64:$value, imm_1to32:$shift),
-                      (seq (u32 (lshr $value, (u64 32))):$hi,
-                           (u32 $value):$lo,
-                           (IRInt<"urshrl"> $lo, $hi, $shift):$pair,
-                           (or (shl (u64 (xval $pair, 1)), (u64 32)),
-                               (u64 (xval $pair, 0))))>;
+// Base class for the scalar shift intrinsics.
+class ScalarShift<Type argtype, dag shiftCountArg, dag shiftCodeGen>:
+  Intrinsic<argtype, !con((args argtype:$value), shiftCountArg), shiftCodeGen> {
+  let params = [Void];
+  let pnt = PNT_None;
+}
+
+// Subclass that includes the machinery to take a 64-bit input apart
+// into halves, retrieve the two halves of a shifted output as a pair,
+// and glue the pieces of the pair back into an i64 for output.
+class LongScalarShift<Type argtype, dag shiftCountArg, dag shiftCodeGen>:
+   ScalarShift<argtype, shiftCountArg,
+               (seq (u32 (lshr $value, (argtype 32))):$hi,
+                    (u32 $value):$lo,
+                    shiftCodeGen:$pair,
+                    (or (shl (u64 (xval $pair, 1)), (u64 32)),
+                             (u64 (xval $pair, 0))))>;
+
+// The family of saturating/rounding scalar shifts that take an
+// immediate shift count. They come in matched 32- and 64-bit pairs.
+multiclass ScalarSaturatingShiftImm<Type arg32, Type arg64> {
+  def "": ScalarShift<arg32, (args imm_1to32:$sh),
+                      (IRInt<NAME> $value, $sh)>;
+  def l:  LongScalarShift<arg64, (args imm_1to32:$sh),
+                          (IRInt<NAME # "l"> $lo, $hi, $sh)>;
+}
+defm uqshl: ScalarSaturatingShiftImm<u32, u64>;
+defm urshr: ScalarSaturatingShiftImm<u32, u64>;
+defm sqshl: ScalarSaturatingShiftImm<s32, s64>;
+defm srshr: ScalarSaturatingShiftImm<s32, s64>;
+
+// The family of saturating/rounding scalar shifts that take a
+// register shift count. They also have 32- and 64-bit forms, but the
+// 64-bit form also has a version that saturates to 48 bits, so the IR
+// intrinsic takes an extra saturation-type operand.
+multiclass ScalarSaturatingShiftReg<Type arg32, Type arg64> {
+  def "":          ScalarShift<arg32, (args s32:$sh),
+                               (IRInt<NAME> $value, $sh)>;
+  def l:       LongScalarShift<arg64, (args s32:$sh),
+                               (IRInt<NAME # "l"> $lo, $hi, $sh, 64)>;
+  def l_sat48: LongScalarShift<arg64, (args s32:$sh),
+                               (IRInt<NAME # "l"> $lo, $hi, $sh, 48)>;
+}
+defm uqrshl: ScalarSaturatingShiftReg<u32, u64>;
+defm sqrshr: ScalarSaturatingShiftReg<s32, s64>;
+
+// The intrinsics for LSLL and ASRL come in 64-bit versions only, with
+// no saturation count.
+def lsll: LongScalarShift<u64, (args s32:$sh), (IRInt<"lsll"> $lo, $hi, $sh)>;
+def asrl: LongScalarShift<s64, (args s32:$sh), (IRInt<"asrl"> $lo, $hi, $sh)>;
 
 let params = T.Int32 in {
 def vadcq: Intrinsic<Vector, (args Vector:$a, Vector:$b, Ptr<uint>:$carry),
