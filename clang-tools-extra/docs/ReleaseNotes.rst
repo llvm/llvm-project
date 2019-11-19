@@ -176,6 +176,13 @@ Improvements to clang-tidy
   The check now supports the ``AllowOverrideAndFinal`` option to eliminate
   conflicts with ``gcc -Wsuggest-override`` or ``gcc -Werror=suggest-override``.
 
+- Improved :doc:`readability-redundant-member-init
+  <clang-tidy/checks/readability-redundant-member-init>` check.
+
+  The check  now supports the ``IgnoreBaseInCopyConstructors`` option to avoid
+  `"base class \‘Foo\’ should be explicitly initialized in the copy constructor"`
+  warnings or errors with ``gcc -Wextra`` or ``gcc -Werror=extra``.
+
 - The :doc:`readability-redundant-string-init
   <clang-tidy/checks/readability-redundant-string-init>` check now supports a
   `StringNames` option enabling its application to custom string classes.
