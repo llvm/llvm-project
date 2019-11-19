@@ -91,7 +91,7 @@ define i32 @horiz_max_multiple_uses([32 x i32]* %x, i32* %p) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32 [[TMP3]], i32 [[T4]]
 ; CHECK-NEXT:    [[C012345:%.*]] = icmp sgt i32 [[TMP5]], [[T5]]
 ; CHECK-NEXT:    [[T17:%.*]] = select i1 [[C012345]], i32 [[TMP5]], i32 [[T5]]
-; CHECK-NEXT:    [[THREE_OR_FOUR:%.*]] = select i1 undef, i32 3, i32 4
+; CHECK-NEXT:    [[THREE_OR_FOUR:%.*]] = select i1 [[TMP4]], i32 3, i32 4
 ; CHECK-NEXT:    store i32 [[THREE_OR_FOUR]], i32* [[P:%.*]], align 8
 ; CHECK-NEXT:    ret i32 [[T17]]
 ;
@@ -137,7 +137,7 @@ define i1 @bad_insertpoint_rdx([8 x i32]* %p) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[RDX_MINMAX_SELECT]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP3]], 0
 ; CHECK-NEXT:    [[OP_EXTRA:%.*]] = select i1 [[TMP4]], i32 [[TMP3]], i32 0
-; CHECK-NEXT:    [[SPEC_STORE_SELECT87:%.*]] = zext i1 undef to i32
+; CHECK-NEXT:    [[SPEC_STORE_SELECT87:%.*]] = zext i1 [[TMP4]] to i32
 ; CHECK-NEXT:    [[CMP23_2:%.*]] = icmp sgt i32 [[SPEC_STORE_SELECT87]], [[OP_EXTRA]]
 ; CHECK-NEXT:    ret i1 [[CMP23_2]]
 ;
