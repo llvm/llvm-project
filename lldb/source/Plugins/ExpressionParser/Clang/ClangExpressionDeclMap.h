@@ -98,13 +98,6 @@ public:
 
   void InstallCodeGenerator(clang::ASTConsumer *code_gen);
 
-  /// [Used by ClangExpressionParser] For each variable that had an unknown
-  ///     type at the beginning of parsing, determine its final type now.
-  ///
-  /// \return
-  ///     True on success; false otherwise.
-  bool ResolveUnknownTypes();
-
   /// Disable the state needed for parsing and IR transformation.
   void DidParse();
 
