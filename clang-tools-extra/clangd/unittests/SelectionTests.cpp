@@ -304,6 +304,16 @@ TEST(SelectionTest, CommonAncestor) {
             }
           )cpp",
           "CallExpr"},
+
+      // User-defined literals are tricky: is 12_i one token or two?
+      // For now we treat it as one, and the UserDefinedLiteral as a leaf.
+      {
+          R"cpp(
+            struct Foo{};
+            Foo operator""_ud(unsigned long long);
+            Foo x = [[^12_ud]];
+          )cpp",
+          "UserDefinedLiteral"},
   };
   for (const Case &C : Cases) {
     Annotations Test(C.Code);
