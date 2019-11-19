@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks -fobjc-runtime=ios-11.0 -fobjc-exceptions -fexceptions -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks -fobjc-runtime=ios-11.0 -fobjc-exceptions -fexceptions -debug-info-kind=line-tables-only -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: %[[STRUCT_STRONG:.*]] = type { i32, i8* }
 // CHECK: %[[STRUCT_WEAK:.*]] = type { i32, i8* }
@@ -25,8 +25,8 @@ typedef struct {
 // CHECK-NEXT: ret void
 
 // CHECK: landingpad { i8*, i32 }
-// CHECK: %[[V9:.*]] = bitcast %[[STRUCT_STRONG]]* %[[AGG_TMP]] to i8**
-// CHECK: call void @__destructor_8_s8(i8** %[[V9]])
+// CHECK: %[[V9:.*]] = bitcast %[[STRUCT_STRONG]]* %[[AGG_TMP]] to i8**{{.*}}, !dbg [[ARTIFICIAL_LOC_1:![0-9]+]]
+// CHECK: call void @__destructor_8_s8(i8** %[[V9]]){{.*}}, !dbg [[ARTIFICIAL_LOC_1]]
 // CHECK: br label
 
 // CHECK: resume
@@ -48,8 +48,8 @@ void testStrongException(void) {
 // CHECK: ret void
 
 // CHECK: landingpad { i8*, i32 }
-// CHECK: %[[V3:.*]] = bitcast %[[STRUCT_WEAK]]* %[[AGG_TMP]] to i8**
-// CHECK: call void @__destructor_8_w8(i8** %[[V3]])
+// CHECK: %[[V3:.*]] = bitcast %[[STRUCT_WEAK]]* %[[AGG_TMP]] to i8**{{.*}}, !dbg [[ARTIFICIAL_LOC_2:![0-9]+]]
+// CHECK: call void @__destructor_8_w8(i8** %[[V3]]){{.*}}, !dbg [[ARTIFICIAL_LOC_2]]
 // CHECK: br label
 
 // CHECK: resume
@@ -60,3 +60,6 @@ void calleeWeak(Weak, Weak);
 void testWeakException(void) {
   calleeWeak(genWeak(), genWeak());
 }
+
+// CHECK-DAG: [[ARTIFICIAL_LOC_1]] = !DILocation(line: 0
+// CHECK-DAG: [[ARTIFICIAL_LOC_2]] = !DILocation(line: 0
