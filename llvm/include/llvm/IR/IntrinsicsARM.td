@@ -850,9 +850,25 @@ defm int_arm_mve_vstr_scatter_offset: MVEPredicated<
    [], [llvm_anyptr_ty, llvm_anyvector_ty, llvm_anyvector_ty,
    llvm_i32_ty, llvm_i32_ty], llvm_anyvector_ty, [IntrWriteMem]>;
 
-def int_arm_mve_urshrl: Intrinsic<
-   [llvm_i32_ty, llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-   [IntrNoMem]>;
+// MVE scalar shifts.
+class ARM_MVE_qrshift_single<list<LLVMType> value,
+                             list<LLVMType> saturate = []> :
+  Intrinsic<value, value # [llvm_i32_ty] # saturate, [IntrNoMem]>;
+multiclass ARM_MVE_qrshift<list<LLVMType> saturate = []> {
+  // Most of these shifts come in 32- and 64-bit versions. But only
+  // the 64-bit ones have the extra saturation argument (if any).
+  def "": ARM_MVE_qrshift_single<[llvm_i32_ty]>;
+  def l:  ARM_MVE_qrshift_single<[llvm_i32_ty, llvm_i32_ty], saturate>;
+}
+defm int_arm_mve_urshr: ARM_MVE_qrshift;
+defm int_arm_mve_uqshl: ARM_MVE_qrshift;
+defm int_arm_mve_srshr: ARM_MVE_qrshift;
+defm int_arm_mve_sqshl: ARM_MVE_qrshift;
+defm int_arm_mve_uqrshl: ARM_MVE_qrshift<[llvm_i32_ty]>;
+defm int_arm_mve_sqrshr: ARM_MVE_qrshift<[llvm_i32_ty]>;
+// LSLL and ASRL only have 64-bit versions, not 32.
+def int_arm_mve_lsll: ARM_MVE_qrshift_single<[llvm_i32_ty, llvm_i32_ty]>;
+def int_arm_mve_asrl: ARM_MVE_qrshift_single<[llvm_i32_ty, llvm_i32_ty]>;
 
 def int_arm_mve_vadc: Intrinsic<
    [llvm_anyvector_ty, llvm_i32_ty],
