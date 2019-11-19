@@ -47,6 +47,13 @@ struct RenameInputs {
 /// in another file (per the index).
 llvm::Expected<FileEdits> rename(const RenameInputs &RInputs);
 
+/// Generates rename edits that replaces all given occurrences with the
+/// NewName.
+/// Exposed for testing only.
+llvm::Expected<Edit> buildRenameEdit(llvm::StringRef InitialCode,
+                                     std::vector<Range> Occurrences,
+                                     llvm::StringRef NewName);
+
 } // namespace clangd
 } // namespace clang
 

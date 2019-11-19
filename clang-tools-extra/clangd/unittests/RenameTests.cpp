@@ -638,6 +638,33 @@ TEST(CrossFileRenameTests, CrossFileOnLocalSymbol) {
       UnorderedElementsAre(Pair(Eq(Path), Eq(expectedResult(Code, NewName)))));
 }
 
+TEST(CrossFileRenameTests, BuildRenameEdits) {
+  Annotations Code("[[😂]]");
+  auto LSPRange = Code.range();
+  auto Edit = buildRenameEdit(Code.code(), {LSPRange}, "abc");
+  ASSERT_TRUE(bool(Edit)) << Edit.takeError();
+  ASSERT_EQ(1UL, Edit->Replacements.size());
+  EXPECT_EQ(4UL, Edit->Replacements.begin()->getLength());
+
+  // Test invalid range.
+  LSPRange.end = {10, 0}; // out of range
+  Edit = buildRenameEdit(Code.code(), {LSPRange}, "abc");
+  EXPECT_FALSE(Edit);
+  EXPECT_THAT(llvm::toString(Edit.takeError()),
+              testing::HasSubstr("fail to convert"));
+
+  // Normal ascii characters.
+  Annotations T(R"cpp(
+    [[range]]
+              [[range]]
+      [[range]]
+  )cpp");
+  Edit = buildRenameEdit(T.code(), T.ranges(), "abc");
+  ASSERT_TRUE(bool(Edit)) << Edit.takeError();
+  EXPECT_EQ(applyEdits(FileEdits{{T.code(), std::move(*Edit)}}).front().second,
+            expectedResult(Code, expectedResult(T, "abc")));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
