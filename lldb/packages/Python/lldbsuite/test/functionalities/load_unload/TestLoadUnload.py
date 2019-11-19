@@ -363,12 +363,16 @@ class LoadUnloadTestCase(TestBase):
 
     @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
+    @expectedFailureAll(archs="aarch64", oslist="linux",
+                        bugnumber="https://bugs.llvm.org/show_bug.cgi?id=27806")
     def test_step_over_load(self):
         self.setSvr4Support(False)
         self.run_step_over_load()
 
     @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
+    @expectedFailureAll(archs="aarch64", oslist="linux",
+                        bugnumber="https://bugs.llvm.org/show_bug.cgi?id=27806")
     def test_step_over_load_with_svr4(self):
         self.setSvr4Support(True)
         self.run_step_over_load()
