@@ -92,18 +92,15 @@ bool FunctionImportGlobalProcessing::isNonRenamableLocal(
 }
 #endif
 
-std::string FunctionImportGlobalProcessing::getName(const GlobalValue *SGV,
-                                                    bool DoPromote) {
+std::string
+FunctionImportGlobalProcessing::getPromotedName(const GlobalValue *SGV) {
+  assert(SGV->hasLocalLinkage());
   // For locals that must be promoted to global scope, ensure that
   // the promoted name uniquely identifies the copy in the original module,
-  // using the ID assigned during combined index creation. When importing,
-  // we rename all locals (not just those that are promoted) in order to
-  // avoid naming conflicts between locals imported from different modules.
-  if (SGV->hasLocalLinkage() && (DoPromote || isPerformingImport()))
-    return ModuleSummaryIndex::getGlobalNameForLocal(
-        SGV->getName(),
-        ImportIndex.getModuleHash(SGV->getParent()->getModuleIdentifier()));
-  return SGV->getName();
+  // using the ID assigned during combined index creation.
+  return ModuleSummaryIndex::getGlobalNameForLocal(
+      SGV->getName(),
+      ImportIndex.getModuleHash(SGV->getParent()->getModuleIdentifier()));
 }
 
 GlobalValue::LinkageTypes
@@ -268,19 +265,13 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
     }
   }
 
-  bool DoPromote = false;
-  if (GV.hasLocalLinkage() &&
-      ((DoPromote = shouldPromoteLocalToGlobal(&GV)) || isPerformingImport())) {
+  if (GV.hasLocalLinkage() && shouldPromoteLocalToGlobal(&GV)) {
     // Save the original name string before we rename GV below.
     auto Name = GV.getName().str();
-    // Once we change the name or linkage it is difficult to determine
-    // again whether we should promote since shouldPromoteLocalToGlobal needs
-    // to locate the summary (based on GUID from name and linkage). Therefore,
-    // use DoPromote result saved above.
-    GV.setName(getName(&GV, DoPromote));
-    GV.setLinkage(getLinkage(&GV, DoPromote));
-    if (!GV.hasLocalLinkage())
-      GV.setVisibility(GlobalValue::HiddenVisibility);
+    GV.setName(getPromotedName(&GV));
+    GV.setLinkage(getLinkage(&GV, /* DoPromote */ true));
+    assert(!GV.hasLocalLinkage());
+    GV.setVisibility(GlobalValue::HiddenVisibility);
 
     // If we are renaming a COMDAT leader, ensure that we record the COMDAT
     // for later renaming as well. This is required for COFF.
