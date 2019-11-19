@@ -2647,7 +2647,7 @@ void CGOpenMPRuntimeNVPTX::emitNonSPMDParallelCall(
   };
 
   if (IfCond) {
-    emitOMPIfClause(CGF, IfCond, LNParallelGen, SeqGen);
+    emitIfClause(CGF, IfCond, LNParallelGen, SeqGen);
   } else {
     CodeGenFunction::RunCleanupsScope Scope(CGF);
     RegionCodeGenTy ThenRCG(LNParallelGen);
