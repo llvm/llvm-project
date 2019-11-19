@@ -1515,6 +1515,7 @@ class MVE_VMULt1<string suffix, bits<2> size, list<dag> pattern=[]>
   let Inst{12-8} = 0b01001;
   let Inst{4} = 0b1;
   let Inst{0} = 0b0;
+  let validForTailPredication = 1;
 }
 
 def MVE_VMULt1i8  : MVE_VMULt1<"i8", 0b00>;
