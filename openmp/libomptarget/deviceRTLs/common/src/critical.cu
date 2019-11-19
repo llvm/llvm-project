@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "interface.h"
-#include "debug.h"
+#include "common/debug.h"
 
 EXTERN
 void __kmpc_critical(kmp_Ident *loc, int32_t global_tid,
