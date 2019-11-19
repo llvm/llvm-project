@@ -21,7 +21,11 @@
 using namespace llvm;
 using namespace llvm::sys;
 
-InitLLVM::InitLLVM(int &Argc, const char **&Argv) : StackPrinter(Argc, Argv) {
+InitLLVM::InitLLVM(int &Argc, const char **&Argv,
+                   bool InstallPipeSignalExitHandler)
+    : StackPrinter(Argc, Argv) {
+  if (InstallPipeSignalExitHandler)
+    sys::SetOneShotPipeSignalFunction(sys::DefaultOneShotPipeSignalHandler);
   sys::PrintStackTraceOnErrorSignal(Argv[0]);
 
 #ifdef _WIN32
