@@ -2693,18 +2693,16 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     assert(VA.getLocInfo() != CCValAssign::FPExt &&
            "Unexpected FP-extend for return value.");
 
-    // If this is x86-64, and we disabled SSE, we can't return FP values,
-    // or SSE or MMX vectors.
-    if ((ValVT == MVT::f32 || ValVT == MVT::f64 ||
-         VA.getLocReg() == X86::XMM0 || VA.getLocReg() == X86::XMM1) &&
-        (Subtarget.is64Bit() && !Subtarget.hasSSE1())) {
+    // Report an error if we have attempted to return a value via an XMM
+    // register and SSE was disabled.
+    if (!Subtarget.hasSSE1() && X86::FR32XRegClass.contains(VA.getLocReg())) {
       errorUnsupported(DAG, dl, "SSE register return with SSE disabled");
       VA.convertToReg(X86::FP0); // Set reg to FP0, avoid hitting asserts.
-    } else if (ValVT == MVT::f64 &&
-               (Subtarget.is64Bit() && !Subtarget.hasSSE2())) {
-      // Likewise we can't return F64 values with SSE1 only.  gcc does so, but
-      // llvm-gcc has never done it right and no one has noticed, so this
-      // should be OK for now.
+    } else if (!Subtarget.hasSSE2() &&
+               X86::FR64XRegClass.contains(VA.getLocReg()) &&
+               ValVT == MVT::f64) {
+      // When returning a double via an XMM register, report an error if SSE2 is
+      // not enabled.
       errorUnsupported(DAG, dl, "SSE2 register return with SSE2 disabled");
       VA.convertToReg(X86::FP0); // Set reg to FP0, avoid hitting asserts.
     }
@@ -2999,7 +2997,6 @@ SDValue X86TargetLowering::LowerCallResult(
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
-  bool Is64Bit = Subtarget.is64Bit();
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
                  *DAG.getContext());
   CCInfo.AnalyzeCallResult(Ins, RetCC_X86);
@@ -3018,16 +3015,17 @@ SDValue X86TargetLowering::LowerCallResult(
         RegMask[*SubRegs / 32] &= ~(1u << (*SubRegs % 32));
     }
 
-    // If this is x86-64, and we disabled SSE, we can't return FP values
-    if ((CopyVT == MVT::f32 || CopyVT == MVT::f64 || CopyVT == MVT::f128) &&
-        ((Is64Bit || Ins[InsIndex].Flags.isInReg()) && !Subtarget.hasSSE1())) {
+    // Report an error if there was an attempt to return FP values via XMM
+    // registers.
+    if (!Subtarget.hasSSE1() && X86::FR32XRegClass.contains(VA.getLocReg())) {
       errorUnsupported(DAG, dl, "SSE register return with SSE disabled");
       if (VA.getLocReg() == X86::XMM1)
         VA.convertToReg(X86::FP1); // Set reg to FP1, avoid hitting asserts.
       else
         VA.convertToReg(X86::FP0); // Set reg to FP0, avoid hitting asserts.
-    } else if (CopyVT == MVT::f64 &&
-               (Is64Bit && !Subtarget.hasSSE2())) {
+    } else if (!Subtarget.hasSSE2() &&
+               X86::FR64XRegClass.contains(VA.getLocReg()) &&
+               CopyVT == MVT::f64) {
       errorUnsupported(DAG, dl, "SSE2 register return with SSE2 disabled");
       if (VA.getLocReg() == X86::XMM1)
         VA.convertToReg(X86::FP1); // Set reg to FP1, avoid hitting asserts.
@@ -3073,6 +3071,9 @@ SDValue X86TargetLowering::LowerCallResult(
       } else
         Val = DAG.getNode(ISD::TRUNCATE, dl, VA.getValVT(), Val);
     }
+
+    if (VA.getLocInfo() == CCValAssign::BCvt)
+      Val = DAG.getBitcast(VA.getValVT(), Val);
 
     InVals.push_back(Val);
   }
