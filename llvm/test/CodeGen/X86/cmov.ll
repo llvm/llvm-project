@@ -186,8 +186,6 @@ entry:
 }
 
 
-; Don't try to use a 16-bit conditional move to do an 8-bit select,
-; because it isn't worth it. Just use a branch instead.
 define i8 @test7(i1 inreg %c, i8 inreg %a, i8 inreg %b) nounwind {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0:
