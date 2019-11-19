@@ -5,7 +5,7 @@
 ; CHECK: "formal params scope bytes total":20
 ; CHECK: "formal params scope bytes covered":20
 ; CHECK: "formal params entry value scope bytes covered":5
-; CHECK: "vars scope bytes total":78
+; CHECK: "vars scope bytes total":90
 ; CHECK: "vars scope bytes covered":60
 ; CHECK: "vars entry value scope bytes covered":0
 ; CHECK: "total variables procesed by location statistics":6
