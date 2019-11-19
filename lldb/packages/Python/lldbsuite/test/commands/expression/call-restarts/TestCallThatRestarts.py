@@ -27,6 +27,7 @@ class ExprCommandThatRestartsTestCase(TestBase):
     @skipIfDarwin  # llvm.org/pr19246: intermittent failure
     @skipIfWindows  # Test relies on signals, unsupported on Windows
     @expectedFlakeyAndroid(bugnumber="llvm.org/pr19246")
+    @expectedFailureNetBSD
     def test(self):
         """Test calling function that hits a signal and restarts."""
         self.build()

@@ -16,6 +16,7 @@ class HandleSegvTestCase(TestBase):
 
     @skipIfWindows  # signals do not exist on Windows
     @skipIfDarwin
+    @expectedFailureNetBSD
     def test_inferior_handle_sigsegv(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
