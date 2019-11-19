@@ -123,3 +123,33 @@ define i32 @horiz_max_multiple_uses([32 x i32]* %x, i32* %p) {
   store i32 %three_or_four, i32* %p, align 8
   ret i32 %t17
 }
+
+; FIXME: This is a miscompile (see the undef operand) and/or test for invalid IR.
+
+define i1 @bad_insertpoint_rdx([8 x i32]* %p) #0 {
+; CHECK-LABEL: @bad_insertpoint_rdx(
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* [[P:%.*]], i64 0, i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[ARRAYIDX22]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, <2 x i32>* [[TMP1]], align 16
+; CHECK-NEXT:    [[SPEC_STORE_SELECT87:%.*]] = zext i1 undef to i32
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> undef, <2 x i32> <i32 1, i32 undef>
+; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp sgt <2 x i32> [[TMP2]], [[RDX_SHUF]]
+; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <2 x i1> [[RDX_MINMAX_CMP]], <2 x i32> [[TMP2]], <2 x i32> [[RDX_SHUF]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[RDX_MINMAX_SELECT]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP3]], 0
+; CHECK-NEXT:    [[OP_EXTRA:%.*]] = select i1 [[TMP4]], i32 [[TMP3]], i32 0
+; CHECK-NEXT:    [[CMP23_2:%.*]] = icmp sgt i32 [[SPEC_STORE_SELECT87]], [[OP_EXTRA]]
+; CHECK-NEXT:    ret i1 [[CMP23_2]]
+;
+  %arrayidx22 = getelementptr inbounds [8 x i32], [8 x i32]* %p, i64 0, i64 0
+  %t0 = load i32, i32* %arrayidx22, align 16
+  %cmp23 = icmp sgt i32 %t0, 0
+  %spec.select = select i1 %cmp23, i32 %t0, i32 0
+  %arrayidx22.1 = getelementptr inbounds [8 x i32], [8 x i32]* %p, i64 0, i64 1
+  %t1 = load i32, i32* %arrayidx22.1, align 4
+  %cmp23.1 = icmp sgt i32 %t1, %spec.select
+  %spec.store.select87 = zext i1 %cmp23.1 to i32
+  %spec.select88 = select i1 %cmp23.1, i32 %t1, i32 %spec.select
+  %cmp23.2 = icmp sgt i32 %spec.store.select87, %spec.select88
+  ret i1 %cmp23.2
+}
