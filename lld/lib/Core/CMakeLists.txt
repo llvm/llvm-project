@@ -21,8 +21,9 @@ add_lld_library(lldCore
     Support
 
   LINK_LIBS
-  ${LLVM_PTHREAD_LIB}
+    lldCommon
+    ${LLVM_PTHREAD_LIB}
 
   DEPENDS
-  ${tablegen_deps}
+    ${tablegen_deps}
   )
