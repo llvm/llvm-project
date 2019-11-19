@@ -269,12 +269,12 @@ define float @extract_zero_insertps_z0z7(<4 x float> %a0, <4 x float> %a1) {
 define float @extract_lane_insertps_5123(<4 x float> %a0, <4 x float> *%p1) {
 ; SSE-LABEL: extract_lane_insertps_5123:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movshdup {{.*#+}} xmm0 = mem[1,1,3,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: extract_lane_insertps_5123:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovshdup {{.*#+}} xmm0 = mem[1,1,3,3]
 ; AVX-NEXT:    retq
   %a1 = load <4 x float>, <4 x float> *%p1
   %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %a1, i8 64)
@@ -285,12 +285,13 @@ define float @extract_lane_insertps_5123(<4 x float> %a0, <4 x float> *%p1) {
 define float @extract_lane_insertps_6123(<4 x float> %a0, <4 x float> *%p1) {
 ; SSE-LABEL: extract_lane_insertps_6123:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    movaps (%rdi), %xmm0
+; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: extract_lane_insertps_6123:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vpermilpd {{.*#+}} xmm0 = mem[1,0]
 ; AVX-NEXT:    retq
   %a1 = load <4 x float>, <4 x float> *%p1
   %res = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> %a0, <4 x float> %a1, i8 128)
