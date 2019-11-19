@@ -191,9 +191,8 @@ Expected<StringRef> XCOFFObjectFile::getSymbolName(DataRefImpl Symb) const {
 }
 
 Expected<uint64_t> XCOFFObjectFile::getSymbolAddress(DataRefImpl Symb) const {
-  uint64_t Result = 0;
-  llvm_unreachable("Not yet implemented!");
-  return Result;
+  assert(!is64Bit() && "Symbol table support not implemented for 64-bit.");
+  return toSymbolEntry(Symb)->Value;
 }
 
 uint64_t XCOFFObjectFile::getSymbolValueImpl(DataRefImpl Symb) const {
@@ -266,7 +265,19 @@ uint64_t XCOFFObjectFile::getSectionSize(DataRefImpl Sec) const {
 
 Expected<ArrayRef<uint8_t>>
 XCOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
-  llvm_unreachable("Not yet implemented!");
+  if (isSectionVirtual(Sec))
+    return ArrayRef<uint8_t>();
+
+  const uint64_t OffsetToRaw = is64Bit()
+                                   ? toSection64(Sec)->FileOffsetToRawData
+                                   : toSection32(Sec)->FileOffsetToRawData;
+
+  const uint8_t * ContentStart = base() + OffsetToRaw;
+  uint64_t SectionSize = getSectionSize(Sec);
+  if (checkOffset(Data, uintptr_t(ContentStart), SectionSize))
+    return make_error<BinaryError>();
+
+  return makeArrayRef(ContentStart,SectionSize);
 }
 
 uint64_t XCOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
@@ -296,9 +307,8 @@ bool XCOFFObjectFile::isSectionBSS(DataRefImpl Sec) const {
 }
 
 bool XCOFFObjectFile::isSectionVirtual(DataRefImpl Sec) const {
-  bool Result = false;
-  llvm_unreachable("Not yet implemented!");
-  return Result;
+  return is64Bit() ? toSection64(Sec)->FileOffsetToRawData == 0
+                   : toSection32(Sec)->FileOffsetToRawData == 0;
 }
 
 relocation_iterator XCOFFObjectFile::section_rel_begin(DataRefImpl Sec) const {
@@ -384,7 +394,6 @@ Triple::ArchType XCOFFObjectFile::getArch() const {
 }
 
 SubtargetFeatures XCOFFObjectFile::getFeatures() const {
-  llvm_unreachable("Not yet implemented!");
   return SubtargetFeatures();
 }
 
