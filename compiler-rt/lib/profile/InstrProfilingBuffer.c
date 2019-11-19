@@ -10,11 +10,7 @@
 #include "InstrProfilingInternal.h"
 #include "InstrProfilingPort.h"
 
-/* When continuous mode is enabled (%c), this parameter is set to 1. This is
- * incompatible with the in-process merging mode. Lifting this restriction
- * may be complicated, as merging mode requires a lock on the profile, and
- * mmap() mode would require that lock to be held for the entire process
- * lifetime.
+/* When continuous mode is enabled (%c), this parameter is set to 1.
  *
  * This parameter is defined here in InstrProfilingBuffer.o, instead of in
  * InstrProfilingFile.o, to sequester all libc-dependent code in
