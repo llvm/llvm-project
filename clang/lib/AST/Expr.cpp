@@ -191,6 +191,12 @@ bool Expr::isKnownToHaveBooleanValue() const {
   if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E))
     return OVE->getSourceExpr()->isKnownToHaveBooleanValue();
 
+  if (const FieldDecl *FD = E->getSourceBitField())
+    if (FD->getType()->isUnsignedIntegerType() &&
+        !FD->getBitWidth()->isValueDependent() &&
+        FD->getBitWidthValue(FD->getASTContext()) == 1)
+      return true;
+
   return false;
 }
 
