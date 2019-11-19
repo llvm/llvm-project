@@ -30,6 +30,7 @@ static_library("DWARF") {
     "DWARFFormValue.cpp",
     "DWARFGdbIndex.cpp",
     "DWARFListTable.cpp",
+    "DWARFLocationExpression.cpp",
     "DWARFTypeUnit.cpp",
     "DWARFUnit.cpp",
     "DWARFUnitIndex.cpp",
