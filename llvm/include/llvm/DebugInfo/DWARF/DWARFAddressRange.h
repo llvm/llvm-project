@@ -49,9 +49,14 @@ struct DWARFAddressRange {
             const DWARFObject *Obj = nullptr) const;
 };
 
-static inline bool operator<(const DWARFAddressRange &LHS,
-                             const DWARFAddressRange &RHS) {
+inline bool operator<(const DWARFAddressRange &LHS,
+                      const DWARFAddressRange &RHS) {
   return std::tie(LHS.LowPC, LHS.HighPC) < std::tie(RHS.LowPC, RHS.HighPC);
+}
+
+inline bool operator==(const DWARFAddressRange &LHS,
+                       const DWARFAddressRange &RHS) {
+  return std::tie(LHS.LowPC, LHS.HighPC) == std::tie(RHS.LowPC, RHS.HighPC);
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const DWARFAddressRange &R);

@@ -14,6 +14,7 @@ add_llvm_unittest(DebugInfoDWARFTests
   DWARFDebugInfoTest.cpp
   DWARFDebugLineTest.cpp
   DWARFFormValueTest.cpp
+  DWARFLocationExpressionTest.cpp
   )
 
 target_link_libraries(DebugInfoDWARFTests PRIVATE LLVMTestingSupport)

@@ -14,6 +14,8 @@
 
 namespace llvm {
 
+class raw_ostream;
+
 /// Represents a single DWARF expression, whose value is location-dependent.
 /// Typically used in DW_AT_location attributes to describe the location of
 /// objects.
@@ -26,6 +28,18 @@ struct DWARFLocationExpression {
   /// The expression itself.
   SmallVector<uint8_t, 4> Expr;
 };
+
+inline bool operator==(const DWARFLocationExpression &L,
+                       const DWARFLocationExpression &R) {
+  return L.Range == R.Range && L.Expr == R.Expr;
+}
+
+inline bool operator!=(const DWARFLocationExpression &L,
+                       const DWARFLocationExpression &R) {
+  return !(L == R);
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const DWARFLocationExpression &Loc);
 
 } // end namespace llvm
 
