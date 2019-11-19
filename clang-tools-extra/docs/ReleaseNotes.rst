@@ -94,6 +94,12 @@ Improvements to clang-tidy
   Without the null terminator it can result in undefined behaviour when the
   string is read.
 
+- New :doc:`cert-mem57-cpp
+  <clang-tidy/checks/cert-mem57-cpp>` check.
+
+  Checks if an object of type with extended alignment is allocated by using
+  the default ``operator new``.
+
 - New alias :doc:`cert-pos44-c
   <clang-tidy/checks/cert-pos44-c>` to
   :doc:`bugprone-bad-signal-to-kill-thread
