@@ -8,14 +8,16 @@
 
 #include "refactor/Rename.h"
 #include "AST.h"
+#include "FindTarget.h"
 #include "Logger.h"
 #include "ParsedAST.h"
+#include "Selection.h"
 #include "SourceCode.h"
 #include "index/SymbolCollector.h"
-#include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
-#include "clang/Tooling/Refactoring/Rename/USRFinder.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Refactoring/Rename/USRFindingAction.h"
-#include "clang/Tooling/Refactoring/Rename/USRLocFinder.h"
 
 namespace clang {
 namespace clangd {
@@ -32,6 +34,17 @@ llvm::Optional<std::string> filePath(const SymbolLocation &Loc,
   }
 
   return *Path;
+}
+
+// Returns true if the given location is expanded from any macro body.
+bool isInMacroBody(const SourceManager &SM, SourceLocation Loc) {
+  while (Loc.isMacroID()) {
+    if (SM.isMacroBodyExpansion(Loc))
+      return true;
+    Loc = SM.getImmediateMacroCallerLoc(Loc);
+  }
+
+  return false;
 }
 
 // Query the index to find some other files where the Decl is referenced.
@@ -56,12 +69,41 @@ llvm::Optional<std::string> getOtherRefFile(const Decl &D, StringRef MainFile,
   return OtherFile;
 }
 
+llvm::DenseSet<const Decl *> locateDeclAt(ParsedAST &AST,
+                                          SourceLocation TokenStartLoc) {
+  unsigned Offset =
+      AST.getSourceManager().getDecomposedSpellingLoc(TokenStartLoc).second;
+
+  SelectionTree Selection(AST.getASTContext(), AST.getTokens(), Offset);
+  const SelectionTree::Node *SelectedNode = Selection.commonAncestor();
+  if (!SelectedNode)
+    return {};
+
+  // If the location points to a Decl, we check it is actually on the name
+  // range of the Decl. This would avoid allowing rename on unrelated tokens.
+  //   ^class Foo {} // SelectionTree returns CXXRecordDecl,
+  //                 // we don't attempt to trigger rename on this position.
+  // FIXME: make this work on destructors, e.g. "~F^oo()".
+  if (const auto *D = SelectedNode->ASTNode.get<Decl>()) {
+    if (D->getLocation() != TokenStartLoc)
+      return {};
+  }
+
+  llvm::DenseSet<const Decl *> Result;
+  for (const auto *D :
+       targetDecl(SelectedNode->ASTNode,
+                  DeclRelation::Alias | DeclRelation::TemplatePattern))
+    Result.insert(D);
+  return Result;
+}
+
 enum ReasonToReject {
   NoSymbolFound,
   NoIndexProvided,
   NonIndexable,
   UsedOutsideFile,
   UnsupportedSymbol,
+  AmbiguousSymbol,
 };
 
 // Check the symbol Decl is renameable (per the index) within the file.
@@ -125,6 +167,8 @@ llvm::Error makeError(ReasonToReject Reason) {
       return "symbol may be used in other files (not eligible for indexing)";
     case UnsupportedSymbol:
       return "symbol is not a supported kind (e.g. namespace, macro)";
+    case AmbiguousSymbol:
+      return "there are multiple symbols at the given location";
     }
     llvm_unreachable("unhandled reason kind");
   };
@@ -134,22 +178,38 @@ llvm::Error makeError(ReasonToReject Reason) {
 }
 
 // Return all rename occurrences in the main file.
-tooling::SymbolOccurrences
-findOccurrencesWithinFile(ParsedAST &AST, const NamedDecl *RenameDecl) {
-  const NamedDecl *CanonicalRenameDecl =
-      tooling::getCanonicalSymbolDeclaration(RenameDecl);
-  assert(CanonicalRenameDecl && "RenameDecl must be not null");
-  std::vector<std::string> RenameUSRs =
-      tooling::getUSRsForDeclaration(CanonicalRenameDecl, AST.getASTContext());
-  std::string OldName = CanonicalRenameDecl->getNameAsString();
-  tooling::SymbolOccurrences Result;
+std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
+                                                      const NamedDecl &ND) {
+  // In theory, locateDeclAt should return the primary template. However, if the
+  // cursor is under the underlying CXXRecordDecl of the ClassTemplateDecl, ND
+  // will be the CXXRecordDecl, for this case, we need to get the primary
+  // template maunally.
+  const auto &RenameDecl =
+      ND.getDescribedTemplate() ? *ND.getDescribedTemplate() : ND;
+  // getUSRsForDeclaration will find other related symbols, e.g. virtual and its
+  // overriddens, primary template and all explicit specializations.
+  // FIXME: get rid of the remaining tooling APIs.
+  std::vector<std::string> RenameUSRs = tooling::getUSRsForDeclaration(
+      tooling::getCanonicalSymbolDeclaration(&RenameDecl), AST.getASTContext());
+  llvm::DenseSet<SymbolID> TargetIDs;
+  for (auto &USR : RenameUSRs)
+    TargetIDs.insert(SymbolID(USR));
+
+  std::vector<SourceLocation> Results;
   for (Decl *TopLevelDecl : AST.getLocalTopLevelDecls()) {
-    tooling::SymbolOccurrences RenameInDecl =
-        tooling::getOccurrencesOfUSRs(RenameUSRs, OldName, TopLevelDecl);
-    Result.insert(Result.end(), std::make_move_iterator(RenameInDecl.begin()),
-                  std::make_move_iterator(RenameInDecl.end()));
+    findExplicitReferences(TopLevelDecl, [&](ReferenceLoc Ref) {
+      if (Ref.Targets.empty())
+        return;
+      for (const auto *Target : Ref.Targets) {
+        auto ID = getSymbolID(Target);
+        if (!ID || TargetIDs.find(*ID) == TargetIDs.end())
+          return;
+      }
+      Results.push_back(Ref.NameLoc);
+    });
   }
-  return Result;
+
+  return Results;
 }
 
 } // namespace
@@ -165,30 +225,41 @@ renameWithinFile(ParsedAST &AST, llvm::StringRef File, Position Pos,
   if (locateMacroAt(SourceLocationBeg, AST.getPreprocessor()))
     return makeError(UnsupportedSymbol);
 
-  const auto *RenameDecl =
-      tooling::getNamedDeclAt(AST.getASTContext(), SourceLocationBeg);
-  if (!RenameDecl)
+  auto DeclsUnderCursor = locateDeclAt(AST, SourceLocationBeg);
+  if (DeclsUnderCursor.empty())
     return makeError(NoSymbolFound);
+  if (DeclsUnderCursor.size() > 1)
+    return makeError(AmbiguousSymbol);
+
+  const auto *RenameDecl = llvm::dyn_cast<NamedDecl>(*DeclsUnderCursor.begin());
+  if (!RenameDecl)
+    return makeError(UnsupportedSymbol);
 
   if (auto Reject =
           renamableWithinFile(*RenameDecl->getCanonicalDecl(), File, Index))
     return makeError(*Reject);
 
-  // Rename sometimes returns duplicate edits (which is a bug). A side-effect of
-  // adding them to a single Replacements object is these are deduplicated.
   tooling::Replacements FilteredChanges;
-  for (const tooling::SymbolOccurrence &Rename :
-       findOccurrencesWithinFile(AST, RenameDecl)) {
-    // Currently, we only support normal rename (one range) for C/C++.
-    // FIXME: support multiple-range rename for objective-c methods.
-    if (Rename.getNameRanges().size() > 1)
+  for (SourceLocation Loc : findOccurrencesWithinFile(AST, *RenameDecl)) {
+    SourceLocation RenameLoc = Loc;
+    // We don't rename in any macro bodies, but we allow rename the symbol
+    // spelled in a top-level macro argument in the main file.
+    if (RenameLoc.isMacroID()) {
+      if (isInMacroBody(SM, RenameLoc))
+        continue;
+      RenameLoc = SM.getSpellingLoc(Loc);
+    }
+    // Filter out locations not from main file.
+    // We traverse only main file decls, but locations could come from an
+    // non-preamble #include file e.g.
+    //   void test() {
+    //     int f^oo;
+    //     #include "use_foo.inc"
+    //   }
+    if (!isInsideMainFile(RenameLoc, SM))
       continue;
-    // We shouldn't have conflicting replacements. If there are conflicts, it
-    // means that we have bugs either in clangd or in Rename library, therefore
-    // we refuse to perform the rename.
     if (auto Err = FilteredChanges.add(tooling::Replacement(
-            AST.getASTContext().getSourceManager(),
-            CharSourceRange::getCharRange(Rename.getNameRanges()[0]), NewName)))
+            SM, CharSourceRange::getTokenRange(RenameLoc), NewName)))
       return std::move(Err);
   }
   return FilteredChanges;
