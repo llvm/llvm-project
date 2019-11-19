@@ -16681,15 +16681,20 @@ ARMTargetLowering::getNumInterleavedAccesses(VectorType *VecTy,
 }
 
 bool ARMTargetLowering::isLegalInterleavedAccessType(
-    VectorType *VecTy, const DataLayout &DL) const {
+    unsigned Factor, VectorType *VecTy, const DataLayout &DL) const {
 
   unsigned VecSize = DL.getTypeSizeInBits(VecTy);
   unsigned ElSize = DL.getTypeSizeInBits(VecTy->getElementType());
 
+  if (!Subtarget->hasNEON() && !Subtarget->hasMVEIntegerOps())
+    return false;
+
   // Ensure the vector doesn't have f16 elements. Even though we could do an
   // i16 vldN, we can't hold the f16 vectors and will end up converting via
   // f32.
-  if (VecTy->getElementType()->isHalfTy())
+  if (Subtarget->hasNEON() && VecTy->getElementType()->isHalfTy())
+    return false;
+  if (Subtarget->hasMVEIntegerOps() && Factor == 3)
     return false;
 
   // Ensure the number of vector elements is greater than 1.
@@ -16702,11 +16707,15 @@ bool ARMTargetLowering::isLegalInterleavedAccessType(
 
   // Ensure the total vector size is 64 or a multiple of 128. Types larger than
   // 128 will be split into multiple interleaved accesses.
-  return VecSize == 64 || VecSize % 128 == 0;
+  if (Subtarget->hasNEON() && VecSize == 64)
+    return true;
+  return VecSize % 128 == 0;
 }
 
 unsigned ARMTargetLowering::getMaxSupportedInterleaveFactor() const {
   if (Subtarget->hasNEON())
+    return 4;
+  if (Subtarget->hasMVEIntegerOps())
     return 4;
   return TargetLoweringBase::getMaxSupportedInterleaveFactor();
 }
@@ -16739,7 +16748,7 @@ bool ARMTargetLowering::lowerInterleavedLoad(
   // Skip if we do not have NEON and skip illegal vector types. We can
   // "legalize" wide vector types into multiple interleaved accesses as long as
   // the vector types are divisible by 128.
-  if (!Subtarget->hasNEON() || !isLegalInterleavedAccessType(VecTy, DL))
+  if (!isLegalInterleavedAccessType(Factor, VecTy, DL))
     return false;
 
   unsigned NumLoads = getNumInterleavedAccesses(VecTy, DL);
@@ -16771,13 +16780,37 @@ bool ARMTargetLowering::lowerInterleavedLoad(
 
   assert(isTypeLegal(EVT::getEVT(VecTy)) && "Illegal vldN vector type!");
 
-  Type *Int8Ptr = Builder.getInt8PtrTy(LI->getPointerAddressSpace());
-  Type *Tys[] = {VecTy, Int8Ptr};
-  static const Intrinsic::ID LoadInts[3] = {Intrinsic::arm_neon_vld2,
-                                            Intrinsic::arm_neon_vld3,
-                                            Intrinsic::arm_neon_vld4};
-  Function *VldnFunc =
-      Intrinsic::getDeclaration(LI->getModule(), LoadInts[Factor - 2], Tys);
+  auto createLoadIntrinsic = [&](Value *BaseAddr) {
+    if (Subtarget->hasNEON()) {
+      Type *Int8Ptr = Builder.getInt8PtrTy(LI->getPointerAddressSpace());
+      Type *Tys[] = {VecTy, Int8Ptr};
+      static const Intrinsic::ID LoadInts[3] = {Intrinsic::arm_neon_vld2,
+                                                Intrinsic::arm_neon_vld3,
+                                                Intrinsic::arm_neon_vld4};
+      Function *VldnFunc =
+          Intrinsic::getDeclaration(LI->getModule(), LoadInts[Factor - 2], Tys);
+
+      SmallVector<Value *, 2> Ops;
+      Ops.push_back(Builder.CreateBitCast(BaseAddr, Int8Ptr));
+      Ops.push_back(Builder.getInt32(LI->getAlignment()));
+
+      return Builder.CreateCall(VldnFunc, Ops, "vldN");
+    } else {
+      assert((Factor == 2 || Factor == 4) &&
+             "expected interleave factor of 2 or 4 for MVE");
+      Intrinsic::ID LoadInts =
+          Factor == 2 ? Intrinsic::arm_mve_vld2q : Intrinsic::arm_mve_vld4q;
+      Type *VecEltTy = VecTy->getVectorElementType()->getPointerTo(
+          LI->getPointerAddressSpace());
+      Type *Tys[] = {VecTy, VecEltTy};
+      Function *VldnFunc =
+          Intrinsic::getDeclaration(LI->getModule(), LoadInts, Tys);
+
+      SmallVector<Value *, 2> Ops;
+      Ops.push_back(Builder.CreateBitCast(BaseAddr, VecEltTy));
+      return Builder.CreateCall(VldnFunc, Ops, "vldN");
+    }
+  };
 
   // Holds sub-vectors extracted from the load intrinsic return values. The
   // sub-vectors are associated with the shufflevector instructions they will
@@ -16792,11 +16825,7 @@ bool ARMTargetLowering::lowerInterleavedLoad(
           Builder.CreateConstGEP1_32(VecTy->getVectorElementType(), BaseAddr,
                                      VecTy->getVectorNumElements() * Factor);
 
-    SmallVector<Value *, 2> Ops;
-    Ops.push_back(Builder.CreateBitCast(BaseAddr, Int8Ptr));
-    Ops.push_back(Builder.getInt32(LI->getAlignment()));
-
-    CallInst *VldN = Builder.CreateCall(VldnFunc, Ops, "vldN");
+    CallInst *VldN = createLoadIntrinsic(BaseAddr);
 
     // Replace uses of each shufflevector with the corresponding vector loaded
     // by ldN.
@@ -16875,7 +16904,7 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
   // Skip if we do not have NEON and skip illegal vector types. We can
   // "legalize" wide vector types into multiple interleaved accesses as long as
   // the vector types are divisible by 128.
-  if (!Subtarget->hasNEON() || !isLegalInterleavedAccessType(SubVecTy, DL))
+  if (!isLegalInterleavedAccessType(Factor, SubVecTy, DL))
     return false;
 
   unsigned NumStores = getNumInterleavedAccesses(SubVecTy, DL);
@@ -16919,11 +16948,46 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
 
   auto Mask = SVI->getShuffleMask();
 
-  Type *Int8Ptr = Builder.getInt8PtrTy(SI->getPointerAddressSpace());
-  Type *Tys[] = {Int8Ptr, SubVecTy};
-  static const Intrinsic::ID StoreInts[3] = {Intrinsic::arm_neon_vst2,
-                                             Intrinsic::arm_neon_vst3,
-                                             Intrinsic::arm_neon_vst4};
+  auto createStoreIntrinsic = [&](Value *BaseAddr,
+                                  SmallVectorImpl<Value *> &Shuffles) {
+    if (Subtarget->hasNEON()) {
+      static const Intrinsic::ID StoreInts[3] = {Intrinsic::arm_neon_vst2,
+                                                 Intrinsic::arm_neon_vst3,
+                                                 Intrinsic::arm_neon_vst4};
+      Type *Int8Ptr = Builder.getInt8PtrTy(SI->getPointerAddressSpace());
+      Type *Tys[] = {Int8Ptr, SubVecTy};
+
+      Function *VstNFunc = Intrinsic::getDeclaration(
+          SI->getModule(), StoreInts[Factor - 2], Tys);
+
+      SmallVector<Value *, 6> Ops;
+      Ops.push_back(Builder.CreateBitCast(BaseAddr, Int8Ptr));
+      for (auto S : Shuffles)
+        Ops.push_back(S);
+      Ops.push_back(Builder.getInt32(SI->getAlignment()));
+      Builder.CreateCall(VstNFunc, Ops);
+    } else {
+      assert((Factor == 2 || Factor == 4) &&
+             "expected interleave factor of 2 or 4 for MVE");
+      Intrinsic::ID StoreInts =
+          Factor == 2 ? Intrinsic::arm_mve_vst2q : Intrinsic::arm_mve_vst4q;
+      Type *EltPtrTy = SubVecTy->getVectorElementType()->getPointerTo(
+          SI->getPointerAddressSpace());
+      Type *Tys[] = {EltPtrTy, SubVecTy};
+      Function *VstNFunc =
+          Intrinsic::getDeclaration(SI->getModule(), StoreInts, Tys);
+
+      SmallVector<Value *, 6> Ops;
+      Ops.push_back(Builder.CreateBitCast(BaseAddr, EltPtrTy));
+      for (auto S : Shuffles)
+        Ops.push_back(S);
+      for (unsigned F = 0; F < Factor; F++) {
+        Ops.push_back(Builder.getInt32(F));
+        Builder.CreateCall(VstNFunc, Ops);
+        Ops.pop_back();
+      }
+    }
+  };
 
   for (unsigned StoreCount = 0; StoreCount < NumStores; ++StoreCount) {
     // If we generating more than one store, we compute the base address of
@@ -16932,17 +16996,13 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
       BaseAddr = Builder.CreateConstGEP1_32(SubVecTy->getVectorElementType(),
                                             BaseAddr, LaneLen * Factor);
 
-    SmallVector<Value *, 6> Ops;
-    Ops.push_back(Builder.CreateBitCast(BaseAddr, Int8Ptr));
-
-    Function *VstNFunc =
-        Intrinsic::getDeclaration(SI->getModule(), StoreInts[Factor - 2], Tys);
+    SmallVector<Value *, 4> Shuffles;
 
     // Split the shufflevector operands into sub vectors for the new vstN call.
     for (unsigned i = 0; i < Factor; i++) {
       unsigned IdxI = StoreCount * LaneLen * Factor + i;
       if (Mask[IdxI] >= 0) {
-        Ops.push_back(Builder.CreateShuffleVector(
+        Shuffles.push_back(Builder.CreateShuffleVector(
             Op0, Op1, createSequentialMask(Builder, Mask[IdxI], LaneLen, 0)));
       } else {
         unsigned StartMask = 0;
@@ -16959,13 +17019,12 @@ bool ARMTargetLowering::lowerInterleavedStore(StoreInst *SI,
         // In the case of all undefs we're defaulting to using elems from 0
         // Note: StartMask cannot be negative, it's checked in
         // isReInterleaveMask
-        Ops.push_back(Builder.CreateShuffleVector(
+        Shuffles.push_back(Builder.CreateShuffleVector(
             Op0, Op1, createSequentialMask(Builder, StartMask, LaneLen, 0)));
       }
     }
 
-    Ops.push_back(Builder.getInt32(SI->getAlignment()));
-    Builder.CreateCall(VstNFunc, Ops);
+    createStoreIntrinsic(BaseAddr, Shuffles);
   }
   return true;
 }

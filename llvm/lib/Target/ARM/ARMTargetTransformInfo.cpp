@@ -755,13 +755,10 @@ int ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   return BaseCost * LT.first;
 }
 
-int ARMTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
-                                           unsigned Factor,
-                                           ArrayRef<unsigned> Indices,
-                                           unsigned Alignment,
-                                           unsigned AddressSpace,
-                                           bool UseMaskForCond,
-                                           bool UseMaskForGaps) {
+int ARMTTIImpl::getInterleavedMemoryOpCost(
+    unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
+    unsigned Alignment, unsigned AddressSpace, bool UseMaskForCond,
+    bool UseMaskForGaps) {
   assert(Factor >= 2 && "Invalid interleave factor");
   assert(isa<VectorType>(VecTy) && "Expect a vector type");
 
@@ -776,9 +773,19 @@ int ARMTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
     // vldN/vstN only support legal vector types of size 64 or 128 in bits.
     // Accesses having vector types that are a multiple of 128 bits can be
     // matched to more than one vldN/vstN instruction.
+    int BaseCost = ST->hasMVEIntegerOps() ? ST->getMVEVectorCostFactor() : 1;
     if (NumElts % Factor == 0 &&
-        TLI->isLegalInterleavedAccessType(SubVecTy, DL))
-      return Factor * TLI->getNumInterleavedAccesses(SubVecTy, DL);
+        TLI->isLegalInterleavedAccessType(Factor, SubVecTy, DL))
+      return Factor * BaseCost * TLI->getNumInterleavedAccesses(SubVecTy, DL);
+
+    // Some smaller than legal interleaved patterns are cheap as we can make
+    // use of the vmovn or vrev patterns to interleave a standard load. This is
+    // true for v4i8, v8i8 and v4i16 at least (but not for v4f16 as it is
+    // promoted differently). The cost of 2 here is then a load and vrev or
+    // vmovn.
+    if (ST->hasMVEIntegerOps() && Factor == 2 && NumElts / Factor > 2 &&
+        VecTy->isIntOrIntVectorTy() && DL.getTypeSizeInBits(SubVecTy) <= 64)
+      return 2 * BaseCost;
   }
 
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
