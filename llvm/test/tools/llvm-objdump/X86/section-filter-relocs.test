@@ -11,7 +11,7 @@
 # DISASM-EMPTY:
 # DISASM-NEXT:  0000000000000400 .text:
 # DISASM-NEXT:  400: e8 00 00 00 00                callq   0 <.text+0x5>
-# RELOC-NEXT:                      00000401:  R_X86_64_PC32        foo+1
+# RELOC-NEXT:                      00000401:  R_X86_64_PC32        foo+0x1
 # RELOC-NEXT:                      00000401:  R_X86_64_GOT32       foo
 # DISASM:       Disassembly of section .rodata:
 # DISASM-EMPTY:

@@ -12,8 +12,8 @@
 // CHECK: add x0, x2, :lo12:sym+12
 // CHECK: add x0, x2, :lo12:sym-3
 // CHECK-OBJ-LP64:  0 R_AARCH64_ADD_ABS_LO12_NC sym
-// CHECK-OBJ-LP64:  4 R_AARCH64_ADD_ABS_LO12_NC sym+12
-// CHECK-OBJ-LP64:  8 R_AARCH64_ADD_ABS_LO12_NC sym-3
+// CHECK-OBJ-LP64:  4 R_AARCH64_ADD_ABS_LO12_NC sym+0xc
+// CHECK-OBJ-LP64:  8 R_AARCH64_ADD_ABS_LO12_NC sym-0x3
 
    add x5, x7, #:dtprel_lo12:sym
 // CHECK: add x5, x7, :dtprel_lo12:sym
@@ -37,41 +37,41 @@
 
         add x0, x2, #:lo12:sym+8
 // CHECK: add x0, x2, :lo12:sym
-// CHECK-OBJ-LP64: 20 R_AARCH64_ADD_ABS_LO12_NC sym+8
+// CHECK-OBJ-LP64: 20 R_AARCH64_ADD_ABS_LO12_NC sym+0x8
 
    add x5, x7, #:dtprel_lo12:sym+1
 // CHECK: add x5, x7, :dtprel_lo12:sym+1
-// CHECK-OBJ-LP64: 24 R_AARCH64_TLSLD_ADD_DTPREL_LO12 sym+1
+// CHECK-OBJ-LP64: 24 R_AARCH64_TLSLD_ADD_DTPREL_LO12 sym+0x1
 
    add x9, x12, #:dtprel_lo12_nc:sym+2
 // CHECK: add x9, x12, :dtprel_lo12_nc:sym+2
-// CHECK-OBJ-LP64: 28 R_AARCH64_TLSLD_ADD_DTPREL_LO12_NC sym+2
+// CHECK-OBJ-LP64: 28 R_AARCH64_TLSLD_ADD_DTPREL_LO12_NC sym+0x2
 
    add x20, x30, #:tprel_lo12:sym+12
 // CHECK: add x20, x30, :tprel_lo12:sym+12
-// CHECK-OBJ-LP64: 2c R_AARCH64_TLSLE_ADD_TPREL_LO12 sym+12
+// CHECK-OBJ-LP64: 2c R_AARCH64_TLSLE_ADD_TPREL_LO12 sym+0xc
 
    add x9, x12, #:tprel_lo12_nc:sym+54
 // CHECK: add x9, x12, :tprel_lo12_nc:sym+54
-// CHECK-OBJ-LP64: 30 R_AARCH64_TLSLE_ADD_TPREL_LO12_NC sym+54
+// CHECK-OBJ-LP64: 30 R_AARCH64_TLSLE_ADD_TPREL_LO12_NC sym+0x36
 
    add x5, x0, #:tlsdesc_lo12:sym+70
 // CHECK: add x5, x0, :tlsdesc_lo12:sym+70
-// CHECK-OBJ-LP64: 34 R_AARCH64_TLSDESC_ADD_LO12 sym+70
+// CHECK-OBJ-LP64: 34 R_AARCH64_TLSDESC_ADD_LO12 sym+0x46
 
         .hword sym + 4 - .
-// CHECK-OBJ-LP64: 38 R_AARCH64_PREL16 sym+4
+// CHECK-OBJ-LP64: 38 R_AARCH64_PREL16 sym+0x4
         .word sym - . + 8
-// CHECK-OBJ-LP64: 3a R_AARCH64_PREL32 sym+8
+// CHECK-OBJ-LP64: 3a R_AARCH64_PREL32 sym+0x8
         .xword sym-.
 // CHECK-OBJ-LP64: 3e R_AARCH64_PREL64 sym{{$}}
 
         .hword sym
 // CHECK-OBJ-LP64: 46 R_AARCH64_ABS16 sym
         .word sym+1
-// CHECK-OBJ-LP64: 48 R_AARCH64_ABS32 sym+1
+// CHECK-OBJ-LP64: 48 R_AARCH64_ABS32 sym+0x1
         .xword sym+16
-// CHECK-OBJ-LP64: 4c R_AARCH64_ABS64 sym+16
+// CHECK-OBJ-LP64: 4c R_AARCH64_ABS64 sym+0x10
 
    adrp x0, sym
 // CHECK: adrp x0, sym
@@ -116,9 +116,9 @@ trickQuestion:
 // CHECK-OBJ-LP64: R_AARCH64_LDST8_ABS_LO12_NC sym
 // CHECK-OBJ-LP64: R_AARCH64_LDST8_ABS_LO12_NC sym
 // CHECK-OBJ-LP64: R_AARCH64_LDST8_ABS_LO12_NC sym
-// CHECK-OBJ-LP64: R_AARCH64_LDST8_ABS_LO12_NC sym+15
-// CHECK-OBJ-LP64: R_AARCH64_LDST8_ABS_LO12_NC sym-2
-// CHECK-OBJ-LP64: R_AARCH64_LDST8_ABS_LO12_NC sym+4
+// CHECK-OBJ-LP64: R_AARCH64_LDST8_ABS_LO12_NC sym+0xf
+// CHECK-OBJ-LP64: R_AARCH64_LDST8_ABS_LO12_NC sym-0x2
+// CHECK-OBJ-LP64: R_AARCH64_LDST8_ABS_LO12_NC sym+0x4
 
    ldrb w23, [x29, #:dtprel_lo12_nc:sym]
    ldrsb w23, [x19, #:dtprel_lo12:sym]
@@ -134,7 +134,7 @@ trickQuestion:
 // CHECK-OBJ-LP64: R_AARCH64_TLSLD_LDST8_DTPREL_LO12 sym
 // CHECK-OBJ-LP64: R_AARCH64_TLSLD_LDST8_DTPREL_LO12_NC sym
 // CHECK-OBJ-LP64: R_AARCH64_TLSLD_LDST8_DTPREL_LO12 sym
-// CHECK-OBJ-LP64: R_AARCH64_TLSLD_LDST8_DTPREL_LO12_NC sym+2
+// CHECK-OBJ-LP64: R_AARCH64_TLSLD_LDST8_DTPREL_LO12_NC sym+0x2
 
    ldrb w1, [x2, :tprel_lo12:sym]
    ldrsb w3, [x4, #:tprel_lo12_nc:sym]
@@ -163,7 +163,7 @@ trickQuestion:
 // CHECK-OBJ-LP64: R_AARCH64_LDST16_ABS_LO12_NC sym
 // CHECK-OBJ-LP64: R_AARCH64_LDST16_ABS_LO12_NC sym
 // CHECK-OBJ-LP64: R_AARCH64_LDST16_ABS_LO12_NC sym
-// CHECK-OBJ-LP64: R_AARCH64_LDST16_ABS_LO12_NC sym+4
+// CHECK-OBJ-LP64: R_AARCH64_LDST16_ABS_LO12_NC sym+0x4
 
    ldrh w23, [x29, #:dtprel_lo12_nc:sym]
    ldrsh w23, [x19, :dtprel_lo12:sym]
@@ -232,8 +232,8 @@ trickQuestion:
 // CHECK: ldr x28, [x27, :lo12:sym-15]
 // CHECK-OBJ-LP64: R_AARCH64_LDST64_ABS_LO12_NC sym
 // CHECK-OBJ-LP64: R_AARCH64_LDST64_ABS_LO12_NC sym
-// CHECK-OBJ-LP64: R_AARCH64_LDST64_ABS_LO12_NC sym+10
-// CHECK-OBJ-LP64: R_AARCH64_LDST64_ABS_LO12_NC sym-15
+// CHECK-OBJ-LP64: R_AARCH64_LDST64_ABS_LO12_NC sym+0xa
+// CHECK-OBJ-LP64: R_AARCH64_LDST64_ABS_LO12_NC sym-0xf
 
    ldr x24, [x23, #:got_lo12:sym]
    ldr d22, [x21, :got_lo12:sym]
@@ -243,7 +243,7 @@ trickQuestion:
 // CHECK: ldr x24, [x23, :got_lo12:sym+7]
 // CHECK-OBJ-LP64: R_AARCH64_LD64_GOT_LO12_NC sym
 // CHECK-OBJ-LP64: R_AARCH64_LD64_GOT_LO12_NC sym
-// CHECK-OBJ-LP64: R_AARCH64_LD64_GOT_LO12_NC sym+7
+// CHECK-OBJ-LP64: R_AARCH64_LD64_GOT_LO12_NC sym+0x7
 
    ldr x24, [x23, :dtprel_lo12_nc:sym]
    ldr d22, [x21, #:dtprel_lo12:sym]

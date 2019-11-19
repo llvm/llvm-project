@@ -341,7 +341,7 @@ local_label:
 # XN32-NEXT: .reloc .Ltmp3, R_MIPS_JALR, weak_label
 
 # ELF-XN32:      3c 19 00 00 lui $25, 0
-# ELF-XN32-NEXT:                  R_MIPS_GOT_HI16 weak_label+8
+# ELF-XN32-NEXT:                  R_MIPS_GOT_HI16 weak_label+0x8
 # ELF-XN32-NEXT: 03 3c c8 21 addu $25, $25, $gp
 # ELF-XN32-NEXT: 8f 39 00 00 lw $25, 0($25)
 # ELF-XN32-NEXT:                  R_MIPS_GOT_LO16 weak_label
@@ -369,7 +369,7 @@ local_label:
 # XN64-NEXT: .reloc .Ltmp3, R_MIPS_JALR, weak_label
 
 # ELF-XN64:      3c 19 00 00 lui $25, 0
-# ELF-XN64-NEXT:                  R_MIPS_GOT_HI16/R_MIPS_NONE/R_MIPS_NONE weak_label+8
+# ELF-XN64-NEXT:                  R_MIPS_GOT_HI16/R_MIPS_NONE/R_MIPS_NONE weak_label+0x8
 # ELF-XN64-NEXT: 03 3c c8 2d daddu $25, $25, $gp
 # ELF-XN64-NEXT: df 39 00 00 ld $25, 0($25)
 # ELF-XN64-NEXT:                  R_MIPS_GOT_LO16/R_MIPS_NONE/R_MIPS_NONE weak_label
@@ -521,7 +521,7 @@ local_label:
 # XN32-NEXT: .reloc .Ltmp5, R_MIPS_JALR, global_label
 
 # ELF-XN32:      3c 19 00 00 lui $25, 0
-# ELF-XN32-NEXT:                  R_MIPS_GOT_HI16 global_label+8
+# ELF-XN32-NEXT:                  R_MIPS_GOT_HI16 global_label+0x8
 # ELF-XN32-NEXT: 03 3c c8 21 addu $25, $25, $gp
 # ELF-XN32-NEXT: 8f 39 00 00 lw $25, 0($25)
 # ELF-XN32-NEXT:                  R_MIPS_GOT_LO16 global_label
@@ -549,7 +549,7 @@ local_label:
 # XN64-NEXT: .reloc .Ltmp5, R_MIPS_JALR, global_label
 
 # ELF-XN64:      3c 19 00 00 lui $25, 0
-# ELF-XN64-NEXT:                  R_MIPS_GOT_HI16/R_MIPS_NONE/R_MIPS_NONE global_label+8
+# ELF-XN64-NEXT:                  R_MIPS_GOT_HI16/R_MIPS_NONE/R_MIPS_NONE global_label+0x8
 # ELF-XN64-NEXT: 03 3c c8 2d daddu $25, $25, $gp
 # ELF-XN64-NEXT: df 39 00 00 ld $25, 0($25)
 # ELF-XN64-NEXT:                  R_MIPS_GOT_LO16/R_MIPS_NONE/R_MIPS_NONE global_label
