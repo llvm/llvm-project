@@ -823,6 +823,10 @@ ObjCMethodDecl *ObjCMethodDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
                                     Selector(), QualType(), nullptr, nullptr);
 }
 
+bool ObjCMethodDecl::isDirectMethod() const {
+  return hasAttr<ObjCDirectAttr>();
+}
+
 bool ObjCMethodDecl::isThisDeclarationADesignatedInitializer() const {
   return getMethodFamily() == OMF_init &&
       hasAttr<ObjCDesignatedInitializerAttr>();
@@ -1077,7 +1081,7 @@ ObjCMethodFamily ObjCMethodDecl::getMethodFamily() const {
 QualType ObjCMethodDecl::getSelfType(ASTContext &Context,
                                      const ObjCInterfaceDecl *OID,
                                      bool &selfIsPseudoStrong,
-                                     bool &selfIsConsumed) {
+                                     bool &selfIsConsumed) const {
   QualType selfTy;
   selfIsPseudoStrong = false;
   selfIsConsumed = false;
