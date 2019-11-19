@@ -132,6 +132,10 @@ Dpu::~Dpu() {
   dpu_free_dpu_context(m_context);
 }
 
+static lldb::addr_t InstIdx2InstAddr(lldb::addr_t nb_of_inst) {
+  return nb_of_inst * sizeof(dpuinstruction_t);
+}
+
 bool Dpu::GetPrintfSequenceAddrs() {
   dpu_runtime_context_t *runtime = dpu_get_runtime_context(m_dpu);
   open_print_sequence_addr = runtime->open_print_sequence_addr;
@@ -143,8 +147,8 @@ bool Dpu::GetPrintfSequenceAddrs() {
       close_print_sequence_addr != (lldb::addr_t)LLDB_INVALID_ADDRESS) {
     open_print_sequence_addr++; // we add 1 to avoid to be on the 'acquire'
                                 // which could makes us loop forever
-    open_print_sequence_addr *= 8;
-    close_print_sequence_addr *= 8;
+    open_print_sequence_addr = InstIdx2InstAddr(open_print_sequence_addr);
+    close_print_sequence_addr = InstIdx2InstAddr(close_print_sequence_addr);
     printf_enable = true;
     if (!ReadIRAM(open_print_sequence_addr, &open_print_sequence_inst,
                   sizeof(open_print_sequence_inst)))
