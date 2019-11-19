@@ -168,6 +168,40 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
   return LowerCallTo(CLI);
 }
 
+/// Expand a node into a call to a libcall. Similar to ExpandLibCall except that
+/// the first operand is the in-chain.
+std::pair<SDValue, SDValue>
+TargetLowering::ExpandChainLibCall(SelectionDAG &DAG, RTLIB::Libcall LC,
+                                   SDNode *Node, bool isSigned) const {
+  SDValue InChain = Node->getOperand(0);
+
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+  for (unsigned i = 1, e = Node->getNumOperands(); i != e; ++i) {
+    EVT ArgVT = Node->getOperand(i).getValueType();
+    Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
+    Entry.Node = Node->getOperand(i);
+    Entry.Ty = ArgTy;
+    Entry.IsSExt = isSigned;
+    Entry.IsZExt = !isSigned;
+    Args.push_back(Entry);
+  }
+  SDValue Callee = DAG.getExternalSymbol(getLibcallName(LC),
+                                         getPointerTy(DAG.getDataLayout()));
+
+  Type *RetTy = Node->getValueType(0).getTypeForEVT(*DAG.getContext());
+
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(SDLoc(Node))
+      .setChain(InChain)
+      .setLibCallee(getLibcallCallingConv(LC), RetTy, Callee,
+                    std::move(Args))
+      .setSExtResult(isSigned)
+      .setZExtResult(!isSigned);
+
+  return LowerCallTo(CLI);
+}
+
 bool
 TargetLowering::findOptimalMemOpLowering(std::vector<EVT> &MemOps,
                                          unsigned Limit, uint64_t Size,

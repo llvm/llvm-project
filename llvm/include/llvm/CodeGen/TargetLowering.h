@@ -3031,6 +3031,11 @@ public:
                                           MakeLibCallOptions CallOptions,
                                           const SDLoc &dl) const;
 
+  std::pair<SDValue, SDValue> ExpandChainLibCall(SelectionDAG &DAG,
+                                                 RTLIB::Libcall LC,
+                                                 SDNode *Node,
+                                                 bool isSigned) const;
+
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be
   /// checked for tail call eligibility.
