@@ -604,24 +604,26 @@ static void ComputeImportForModule(
 }
 
 #ifndef NDEBUG
-static bool isGlobalVarSummary(const ModuleSummaryIndex &Index,
-                               GlobalValue::GUID G) {
-  if (const auto &VI = Index.getValueInfo(G)) {
-    auto SL = VI.getSummaryList();
-    if (!SL.empty())
-      return SL[0]->getSummaryKind() == GlobalValueSummary::GlobalVarKind;
-  }
-  return false;
+static bool isGlobalVarSummary(const ModuleSummaryIndex &Index, ValueInfo VI) {
+  auto SL = VI.getSummaryList();
+  return SL.empty()
+             ? false
+             : SL[0]->getSummaryKind() == GlobalValueSummary::GlobalVarKind;
 }
 
-static GlobalValue::GUID getGUID(GlobalValue::GUID G) { return G; }
+static bool isGlobalVarSummary(const ModuleSummaryIndex &Index,
+                               GlobalValue::GUID G) {
+  if (const auto &VI = Index.getValueInfo(G))
+    return isGlobalVarSummary(Index, VI);
+  return false;
+}
 
 template <class T>
 static unsigned numGlobalVarSummaries(const ModuleSummaryIndex &Index,
                                       T &Cont) {
   unsigned NumGVS = 0;
   for (auto &V : Cont)
-    if (isGlobalVarSummary(Index, getGUID(V)))
+    if (isGlobalVarSummary(Index, V))
       ++NumGVS;
   return NumGVS;
 }
