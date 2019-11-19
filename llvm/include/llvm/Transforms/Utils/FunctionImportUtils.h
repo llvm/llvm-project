@@ -49,7 +49,7 @@ class FunctionImportGlobalProcessing {
   DenseMap<const Comdat *, Comdat *> RenamedComdats;
 
   /// Check if we should promote the given local value to global scope.
-  bool shouldPromoteLocalToGlobal(const GlobalValue *SGV);
+  bool shouldPromoteLocalToGlobal(const GlobalValue *SGV, ValueInfo VI);
 
 #ifndef NDEBUG
   /// Check if the given value is a local that can't be renamed (promoted).
@@ -105,9 +105,6 @@ public:
   }
 
   bool run();
-
-  static bool doImportAsDefinition(const GlobalValue *SGV,
-                                   SetVector<GlobalValue *> *GlobalsToImport);
 };
 
 /// Perform in-place global value handling on the given Module for
