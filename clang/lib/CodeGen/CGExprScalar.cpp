@@ -746,6 +746,8 @@ public:
       Value *V = Builder.CreateFMul(Ops.LHS, Ops.RHS, "mul");
       return propagateFMFlags(V, Ops);
     }
+    if (Ops.isFixedPointBinOp())
+      return EmitFixedPointBinOp(Ops);
     return Builder.CreateMul(Ops.LHS, Ops.RHS, "mul");
   }
   /// Create a binary op that checks for overflow.
@@ -3121,6 +3123,8 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
     }
     return Val;
   }
+  else if (Ops.isFixedPointBinOp())
+    return EmitFixedPointBinOp(Ops);
   else if (Ops.Ty->hasUnsignedIntegerRepresentation())
     return Builder.CreateUDiv(Ops.LHS, Ops.RHS, "div");
   else
@@ -3543,6 +3547,32 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
     }
     break;
   }
+  case BO_Mul: {
+    llvm::Intrinsic::ID IID;
+    if (ResultFixedSema.isSaturated())
+      IID = ResultFixedSema.isSigned()
+                ? llvm::Intrinsic::smul_fix_sat
+                : llvm::Intrinsic::umul_fix_sat;
+    else
+      IID = ResultFixedSema.isSigned()
+                ? llvm::Intrinsic::smul_fix
+                : llvm::Intrinsic::umul_fix;
+    Result = Builder.CreateIntrinsic(IID, {FullLHS->getType()},
+        {FullLHS, FullRHS, Builder.getInt32(CommonFixedSema.getScale())});
+    break;
+  }
+  case BO_Div: {
+    llvm::Intrinsic::ID IID;
+    if (ResultFixedSema.isSaturated())
+      IID = ResultFixedSema.isSigned() ? llvm::Intrinsic::sdiv_fix_sat
+                                       : llvm::Intrinsic::udiv_fix_sat;
+    else
+      IID = ResultFixedSema.isSigned() ? llvm::Intrinsic::sdiv_fix
+                                       : llvm::Intrinsic::udiv_fix;
+    Result = Builder.CreateIntrinsic(IID, {FullLHS->getType()},
+        {FullLHS, FullRHS, Builder.getInt32(CommonFixedSema.getScale())});
+    break;    
+  }
   case BO_LT:
     return CommonFixedSema.isSigned() ? Builder.CreateICmpSLT(FullLHS, FullRHS)
                                       : Builder.CreateICmpULT(FullLHS, FullRHS);
@@ -3562,8 +3592,6 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
     return Builder.CreateICmpEQ(FullLHS, FullRHS);
   case BO_NE:
     return Builder.CreateICmpNE(FullLHS, FullRHS);
-  case BO_Mul:
-  case BO_Div:
   case BO_Shl:
   case BO_Shr:
   case BO_Cmp:
