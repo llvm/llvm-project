@@ -567,7 +567,7 @@ public:
   static StringRef guessLibraryShortName(StringRef Name, bool &isFramework,
                                          StringRef &Suffix);
 
-  static Triple::ArchType getArch(uint32_t CPUType);
+  static Triple::ArchType getArch(uint32_t CPUType, uint32_t CPUSubType);
   static Triple getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
                               const char **McpuDefault = nullptr,
                               const char **ArchFlag = nullptr);
