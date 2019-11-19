@@ -144,7 +144,10 @@ public:
 
   TSDRegistryT *getTSDRegistry() { return &TSDRegistry; }
 
-  void initCache(CacheT *Cache) { Cache->init(&Stats, &Primary); }
+  // The Cache must be provided zero-initialized.
+  void initCache(CacheT *Cache) {
+    Cache->initLinkerInitialized(&Stats, &Primary);
+  }
 
   // Release the resources used by a TSD, which involves:
   // - draining the local quarantine cache to the global quarantine;
@@ -161,7 +164,7 @@ public:
                           uptr Alignment = MinAlignment,
                           bool ZeroContents = false) {
     initThreadMaybe();
-    ZeroContents = ZeroContents || Options.ZeroContents;
+    ZeroContents |= static_cast<bool>(Options.ZeroContents);
 
     if (UNLIKELY(Alignment > MaxAlignment)) {
       if (Options.MayReturnNull)
@@ -181,12 +184,13 @@ public:
         ((Alignment > MinAlignment) ? Alignment : Chunk::getHeaderSize());
 
     // Takes care of extravagantly large sizes as well as integer overflows.
-    if (UNLIKELY(Size >= MaxAllowedMallocSize ||
-                 NeededSize >= MaxAllowedMallocSize)) {
+    COMPILER_CHECK(MaxAllowedMallocSize < UINTPTR_MAX - MaxAlignment);
+    if (UNLIKELY(Size >= MaxAllowedMallocSize)) {
       if (Options.MayReturnNull)
         return nullptr;
       reportAllocationSizeTooBig(Size, NeededSize, MaxAllowedMallocSize);
     }
+    DCHECK_LE(Size, NeededSize);
 
     void *Block;
     uptr ClassId;
@@ -541,7 +545,9 @@ private:
     Chunk::UnpackedHeader NewHeader = *Header;
     // If the quarantine is disabled, the actual size of a chunk is 0 or larger
     // than the maximum allowed, we return a chunk directly to the backend.
-    const bool BypassQuarantine = !Quarantine.getCacheSize() || !Size ||
+    // Logical Or can be short-circuited, which introduces unnecessary
+    // conditional jumps, so use bitwise Or and let the compiler be clever.
+    const bool BypassQuarantine = !Quarantine.getCacheSize() | !Size |
                                   (Size > Options.QuarantineMaxChunkSize);
     if (BypassQuarantine) {
       NewHeader.State = Chunk::State::Available;
