@@ -55,6 +55,7 @@ unittest("ClangdTests") {
     "GlobalCompilationDatabaseTests.cpp",
     "HeaderSourceSwitchTests.cpp",
     "HeadersTests.cpp",
+    "HoverTests.cpp",
     "IndexActionTests.cpp",
     "IndexTests.cpp",
     "JSONTransportTests.cpp",
