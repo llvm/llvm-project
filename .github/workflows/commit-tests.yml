@@ -3,7 +3,11 @@ name: Commit Tests
 env:
   release_major: 9
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - 'release/**'
+  pull_request:
 
 jobs:
   build_llvm:
