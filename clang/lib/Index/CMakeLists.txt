@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   BitReader
+  BitstreamReader
   Core
   Support
   )
