@@ -1034,15 +1034,6 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   }
 
   if (!num_errors) {
-    if (type_system_helper->DeclMap() &&
-        !type_system_helper->DeclMap()->ResolveUnknownTypes()) {
-      diagnostic_manager.Printf(eDiagnosticSeverityError,
-                                "Couldn't infer the type of a variable");
-      num_errors++;
-    }
-  }
-
-  if (!num_errors) {
     type_system_helper->CommitPersistentDecls();
   }
 
