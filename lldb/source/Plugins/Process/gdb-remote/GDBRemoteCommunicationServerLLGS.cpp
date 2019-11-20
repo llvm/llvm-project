@@ -1516,9 +1516,8 @@ GDBRemoteCommunicationServerLLGS::Handle_k(StringExtractorGDBRemote &packet) {
     LLDB_LOG(log, "Failed to kill debugged process {0}: {1}",
              m_debugged_process_up->GetID(), error);
 
-  // No OK response for kill packet.
-  // return SendOKResponse ();
-  return PacketResult::Success;
+  // kill packet wait for an answer, let's just give him one.
+  return SendPacketNoLock("X00");
 }
 
 GDBRemoteCommunication::PacketResult
