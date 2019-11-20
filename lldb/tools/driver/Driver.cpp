@@ -732,6 +732,20 @@ void sigcont_handler(int signo) {
   signal(signo, sigcont_handler);
 }
 
+void reproducer_handler(void *) {
+  if (SBReproducer::Generate()) {
+    llvm::outs() << "********************\n";
+    llvm::outs() << "Crash reproducer for ";
+    llvm::outs() << lldb::SBDebugger::GetVersionString() << '\n';
+    llvm::outs() << "Reproducer written to '" << SBReproducer::GetPath()
+                 << "'\n";
+    llvm::outs()
+        << "Please have a look at the directory to assess if you're willing to "
+           "share the contained information.\n";
+    llvm::outs() << "********************\n";
+  }
+}
+
 static void printHelp(LLDBOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + "options";
   table.PrintHelp(llvm::outs(), usage_str.c_str(), "LLDB", false);
@@ -831,6 +845,9 @@ int main(int argc, char const *argv[]) {
   if (auto exit_code = InitializeReproducer(input_args)) {
     return *exit_code;
   }
+
+  // Register the reproducer signal handler.
+  llvm::sys::AddSignalHandler(reproducer_handler, nullptr);
 
   SBError error = SBDebugger::InitializeWithErrorHandling();
   if (error.Fail()) {
