@@ -150,10 +150,11 @@ void MachOReader::readLoadCommands(Object &O) const {
            sizeof(MachO::LCStruct));                                           \
     if (MachOObj.isLittleEndian() != sys::IsLittleEndianHost)                  \
       MachO::swapStruct(LC.MachOLoadCommand.LCStruct##_data);                  \
-    LC.Payload = ArrayRef<uint8_t>(                                            \
-        reinterpret_cast<uint8_t *>(const_cast<char *>(LoadCmd.Ptr)) +         \
-            sizeof(MachO::LCStruct),                                           \
-        LoadCmd.C.cmdsize - sizeof(MachO::LCStruct));                          \
+    if (LoadCmd.C.cmdsize > sizeof(MachO::LCStruct))                           \
+      LC.Payload = ArrayRef<uint8_t>(                                          \
+          reinterpret_cast<uint8_t *>(const_cast<char *>(LoadCmd.Ptr)) +       \
+              sizeof(MachO::LCStruct),                                         \
+          LoadCmd.C.cmdsize - sizeof(MachO::LCStruct));                        \
     break;
 
     switch (LoadCmd.C.cmd) {
@@ -162,10 +163,11 @@ void MachOReader::readLoadCommands(Object &O) const {
              sizeof(MachO::load_command));
       if (MachOObj.isLittleEndian() != sys::IsLittleEndianHost)
         MachO::swapStruct(LC.MachOLoadCommand.load_command_data);
-      LC.Payload = ArrayRef<uint8_t>(
-          reinterpret_cast<uint8_t *>(const_cast<char *>(LoadCmd.Ptr)) +
-              sizeof(MachO::load_command),
-          LoadCmd.C.cmdsize - sizeof(MachO::load_command));
+      if (LoadCmd.C.cmdsize > sizeof(MachO::load_command))
+        LC.Payload = ArrayRef<uint8_t>(
+            reinterpret_cast<uint8_t *>(const_cast<char *>(LoadCmd.Ptr)) +
+                sizeof(MachO::load_command),
+            LoadCmd.C.cmdsize - sizeof(MachO::load_command));
       break;
 #include "llvm/BinaryFormat/MachO.def"
     }

@@ -63,6 +63,44 @@ public:
   ObjcopyOptTable() : OptTable(ObjcopyInfoTable) {}
 };
 
+enum InstallNameToolID {
+  INSTALL_NAME_TOOL_INVALID = 0, // This is not an option ID.
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  INSTALL_NAME_TOOL_##ID,
+#include "InstallNameToolOpts.inc"
+#undef OPTION
+};
+
+#define PREFIX(NAME, VALUE)                                                    \
+  const char *const INSTALL_NAME_TOOL_##NAME[] = VALUE;
+#include "InstallNameToolOpts.inc"
+#undef PREFIX
+
+static const opt::OptTable::Info InstallNameToolInfoTable[] = {
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  {INSTALL_NAME_TOOL_##PREFIX,                                                 \
+   NAME,                                                                       \
+   HELPTEXT,                                                                   \
+   METAVAR,                                                                    \
+   INSTALL_NAME_TOOL_##ID,                                                     \
+   opt::Option::KIND##Class,                                                   \
+   PARAM,                                                                      \
+   FLAGS,                                                                      \
+   INSTALL_NAME_TOOL_##GROUP,                                                  \
+   INSTALL_NAME_TOOL_##ALIAS,                                                  \
+   ALIASARGS,                                                                  \
+   VALUES},
+#include "InstallNameToolOpts.inc"
+#undef OPTION
+};
+
+class InstallNameToolOptTable : public opt::OptTable {
+public:
+  InstallNameToolOptTable() : OptTable(InstallNameToolInfoTable) {}
+};
+
 enum StripID {
   STRIP_INVALID = 0, // This is not an option ID.
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
@@ -747,6 +785,57 @@ parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
     return createStringError(errc::invalid_argument,
                              "cannot specify --extract-partition together with "
                              "--extract-main-partition");
+
+  DC.CopyConfigs.push_back(std::move(Config));
+  return std::move(DC);
+}
+
+// ParseInstallNameToolOptions returns the config and sets the input arguments.
+// If a help flag is set then ParseInstallNameToolOptions will print the help
+// messege and exit.
+Expected<DriverConfig>
+parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
+  DriverConfig DC;
+  CopyConfig Config;
+  InstallNameToolOptTable T;
+  unsigned MissingArgumentIndex, MissingArgumentCount;
+  llvm::opt::InputArgList InputArgs =
+      T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
+
+  if (InputArgs.size() == 0) {
+    printHelp(T, errs(), "llvm-install-name-tool");
+    exit(1);
+  }
+
+  if (InputArgs.hasArg(INSTALL_NAME_TOOL_help)) {
+    printHelp(T, outs(), "llvm-install-name-tool");
+    exit(0);
+  }
+
+  if (InputArgs.hasArg(INSTALL_NAME_TOOL_version)) {
+    outs() << "llvm-install-name-tool, compatible with cctools "
+              "install_name_tool\n";
+    cl::PrintVersionMessage();
+    exit(0);
+  }
+
+  for (auto Arg : InputArgs.filtered(INSTALL_NAME_TOOL_add_rpath))
+    Config.RPathToAdd.push_back(Arg->getValue());
+
+  SmallVector<StringRef, 2> Positional;
+  for (auto Arg : InputArgs.filtered(INSTALL_NAME_TOOL_UNKNOWN))
+    return createStringError(errc::invalid_argument, "unknown argument '%s'",
+                             Arg->getAsString(InputArgs).c_str());
+  for (auto Arg : InputArgs.filtered(INSTALL_NAME_TOOL_INPUT))
+    Positional.push_back(Arg->getValue());
+  if (Positional.empty())
+    return createStringError(errc::invalid_argument, "no input file specified");
+  if (Positional.size() > 1)
+    return createStringError(
+        errc::invalid_argument,
+        "llvm-install-name-tool expects a single input file");
+  Config.InputFilename = Positional[0];
+  Config.OutputFilename = Positional[0];
 
   DC.CopyConfigs.push_back(std::move(Config));
   return std::move(DC);

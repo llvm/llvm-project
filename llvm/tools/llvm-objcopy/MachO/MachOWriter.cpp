@@ -180,7 +180,8 @@ void MachOWriter::writeLoadCommands() {
       MachO::swapStruct(MLC.LCStruct##_data);                                  \
     memcpy(Begin, &MLC.LCStruct##_data, sizeof(MachO::LCStruct));              \
     Begin += sizeof(MachO::LCStruct);                                          \
-    memcpy(Begin, LC.Payload.data(), LC.Payload.size());                       \
+    if (!LC.Payload.empty())                                                   \
+      memcpy(Begin, LC.Payload.data(), LC.Payload.size());                     \
     Begin += LC.Payload.size();                                                \
     break;
 
@@ -193,7 +194,8 @@ void MachOWriter::writeLoadCommands() {
         MachO::swapStruct(MLC.load_command_data);
       memcpy(Begin, &MLC.load_command_data, sizeof(MachO::load_command));
       Begin += sizeof(MachO::load_command);
-      memcpy(Begin, LC.Payload.data(), LC.Payload.size());
+      if (!LC.Payload.empty())
+        memcpy(Begin, LC.Payload.data(), LC.Payload.size());
       Begin += LC.Payload.size();
       break;
 #include "llvm/BinaryFormat/MachO.def"
