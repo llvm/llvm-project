@@ -622,6 +622,19 @@ def IteratorModeling : Checker<"IteratorModeling">,
   Documentation<NotDocumented>,
   Hidden;
 
+def STLAlgorithmModeling : Checker<"STLAlgorithmModeling">,
+  HelpText<"Models the algorithm library of the C++ STL.">,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "AggressiveStdFindModeling",
+                  "Enables exploration of the failure branch in std::find-like "
+                  "functions.",
+                  "false",
+                  Released>
+  ]>,
+  Dependencies<[ContainerModeling]>,
+  Documentation<NotDocumented>;
+
 def InvalidatedIteratorChecker : Checker<"InvalidatedIterator">,
   HelpText<"Check for use of invalidated iterators">,
   Dependencies<[IteratorModeling]>,
