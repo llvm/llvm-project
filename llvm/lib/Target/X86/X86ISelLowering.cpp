@@ -814,7 +814,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::LOAD,               MVT::v2f32, Custom);
     setOperationAction(ISD::STORE,              MVT::v2f32, Custom);
 
-    setOperationAction(ISD::STRICT_FP_ROUND,    MVT::v4f32, Custom);
+    // FIXME: Currently mutated to non-strict form in X86ISelDAGToDAG::Select,
+    // but its sufficient to pretend their Legal since they will be someday.
+    setOperationAction(ISD::STRICT_FP_ROUND,    MVT::v4f32, Legal);
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSE2()) {
@@ -1104,7 +1106,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i32, Legal);
 
-    setOperationAction(ISD::STRICT_FP_ROUND,    MVT::v8f32, Custom);
+    // FIXME: Currently mutated to non-strict form in X86ISelDAGToDAG::Select,
+    // but its sufficient to pretend their Legal since they will be someday.
+    setOperationAction(ISD::STRICT_FP_ROUND,    MVT::v8f32, Legal);
 
     if (!Subtarget.hasAVX512())
       setOperationAction(ISD::BITCAST, MVT::v32i1, Custom);
@@ -1367,7 +1371,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SINT_TO_FP,         MVT::v16i32, Legal);
     setOperationAction(ISD::UINT_TO_FP,         MVT::v16i32, Legal);
 
-    setOperationAction(ISD::STRICT_FP_ROUND,    MVT::v16f32, Custom);
+    // FIXME: Currently mutated to non-strict form in X86ISelDAGToDAG::Select,
+    // but its sufficient to pretend their Legal since they will be someday.
+    setOperationAction(ISD::STRICT_FP_ROUND,    MVT::v16f32, Legal);
 
     setTruncStoreAction(MVT::v8i64,   MVT::v8i8,   Legal);
     setTruncStoreAction(MVT::v8i64,   MVT::v8i16,  Legal);
