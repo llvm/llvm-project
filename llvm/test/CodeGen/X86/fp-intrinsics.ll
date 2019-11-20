@@ -897,6 +897,52 @@ entry:
 ; unknown.
 ; Verify that no gross errors happen.
 ; FIXME: The SSE/AVX code does not raise an invalid exception for all values
+; that don't fit in i8.
+define i8 @f20s8(double %x) #0 {
+; X87-LABEL: f20s8:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistps {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: f20s8:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    cvttsd2si {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    # kill: def $al killed $al killed $eax
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: f20s8:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    cvttsd2si %xmm0, %eax
+; SSE-NEXT:    # kill: def $al killed $al killed $eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: f20s8:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX-NEXT:    # kill: def $al killed $al killed $eax
+; AVX-NEXT:    retq
+entry:
+  %result = call i8 @llvm.experimental.constrained.fptosi.i8.f64(double %x,
+                                               metadata !"fpexcept.strict") #0
+  ret i8 %result
+}
+
+; Verify that fptosi(%x) isn't simplified when the rounding mode is
+; unknown.
+; Verify that no gross errors happen.
+; FIXME: The SSE/AVX code does not raise an invalid exception for all values
 ; that don't fit in i16.
 define i16 @f20s16(double %x) #0 {
 ; X87-LABEL: f20s16:
@@ -1036,6 +1082,98 @@ entry:
   %result = call i64 @llvm.experimental.constrained.fptosi.i64.f64(double %x,
                                                metadata !"fpexcept.strict") #0
   ret i64 %result
+}
+
+; Verify that fptoui(%x) isn't simplified when the rounding mode is
+; unknown.
+; Verify that no gross errors happen.
+; FIXME: The SSE/AVX code does not raise an invalid exception for all values
+; that don't fit in i8.
+define i8 @f20u8(double %x) #0 {
+; X87-LABEL: f20u8:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistps {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: f20u8:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    cvttsd2si {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    # kill: def $al killed $al killed $eax
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: f20u8:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    cvttsd2si %xmm0, %eax
+; SSE-NEXT:    # kill: def $al killed $al killed $eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: f20u8:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX-NEXT:    # kill: def $al killed $al killed $eax
+; AVX-NEXT:    retq
+entry:
+  %result = call i8 @llvm.experimental.constrained.fptoui.i8.f64(double %x,
+                                               metadata !"fpexcept.strict") #0
+  ret i8 %result
+}
+; Verify that fptoui(%x) isn't simplified when the rounding mode is
+; unknown.
+; Verify that no gross errors happen.
+; FIXME: The SSE/AVX code does not raise an invalid exception for all values
+; that don't fit in i16.
+define i16 @f20u16(double %x) #0 {
+; X87-LABEL: f20u16:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 12
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    fnstcw (%esp)
+; X87-NEXT:    movzwl (%esp), %eax
+; X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X87-NEXT:    fistpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldcw (%esp)
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X87-NEXT:    # kill: def $ax killed $ax killed $eax
+; X87-NEXT:    addl $8, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: f20u16:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    cvttsd2si {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: f20u16:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    cvttsd2si %xmm0, %eax
+; SSE-NEXT:    # kill: def $ax killed $ax killed $eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: f20u16:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX-NEXT:    retq
+entry:
+  %result = call i16 @llvm.experimental.constrained.fptoui.i16.f64(double %x,
+                                               metadata !"fpexcept.strict") #0
+  ret i16 %result
 }
 
 ; Verify that fptoui(%x) isn't simplified when the rounding mode is
@@ -1681,9 +1819,12 @@ declare double @llvm.experimental.constrained.log10.f64(double, metadata, metada
 declare double @llvm.experimental.constrained.log2.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.rint.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.nearbyint.f64(double, metadata, metadata)
+declare i8  @llvm.experimental.constrained.fptosi.i8.f64(double, metadata)
 declare i16 @llvm.experimental.constrained.fptosi.i16.f64(double, metadata)
 declare i32 @llvm.experimental.constrained.fptosi.i32.f64(double, metadata)
 declare i64 @llvm.experimental.constrained.fptosi.i64.f64(double, metadata)
+declare i8  @llvm.experimental.constrained.fptoui.i8.f64(double, metadata)
+declare i16 @llvm.experimental.constrained.fptoui.i16.f64(double, metadata)
 declare i32 @llvm.experimental.constrained.fptoui.i32.f64(double, metadata)
 declare i64 @llvm.experimental.constrained.fptoui.i64.f64(double, metadata)
 declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)

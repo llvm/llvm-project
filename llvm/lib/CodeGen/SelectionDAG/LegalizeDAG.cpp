@@ -176,8 +176,8 @@ private:
                                const SDLoc &dl);
   SDValue PromoteLegalINT_TO_FP(SDValue LegalOp, EVT DestVT, bool isSigned,
                                 const SDLoc &dl);
-  SDValue PromoteLegalFP_TO_INT(SDValue LegalOp, EVT DestVT, bool isSigned,
-                                const SDLoc &dl);
+  void PromoteLegalFP_TO_INT(SDNode *N, const SDLoc &dl,
+                             SmallVectorImpl<SDValue> &Results);
 
   SDValue ExpandBITREVERSE(SDValue Op, const SDLoc &dl);
   SDValue ExpandBSWAP(SDValue Op, const SDLoc &dl);
@@ -2480,9 +2480,13 @@ SDValue SelectionDAGLegalize::PromoteLegalINT_TO_FP(SDValue LegalOp, EVT DestVT,
 /// we promote it.  At this point, we know that the result and operand types are
 /// legal for the target, and that there is a legal FP_TO_UINT or FP_TO_SINT
 /// operation that returns a larger result.
-SDValue SelectionDAGLegalize::PromoteLegalFP_TO_INT(SDValue LegalOp, EVT DestVT,
-                                                    bool isSigned,
-                                                    const SDLoc &dl) {
+void SelectionDAGLegalize::PromoteLegalFP_TO_INT(SDNode *N, const SDLoc &dl,
+                                                 SmallVectorImpl<SDValue> &Results) {
+  bool IsStrict = N->isStrictFPOpcode();
+  bool IsSigned = N->getOpcode() == ISD::FP_TO_SINT ||
+                  N->getOpcode() == ISD::STRICT_FP_TO_SINT;
+  EVT DestVT = N->getValueType(0);
+  SDValue LegalOp = N->getOperand(IsStrict ? 1 : 0);
   // First step, figure out the appropriate FP_TO*INT operation to use.
   EVT NewOutTy = DestVT;
 
@@ -2495,26 +2499,32 @@ SDValue SelectionDAGLegalize::PromoteLegalFP_TO_INT(SDValue LegalOp, EVT DestVT,
 
     // A larger signed type can hold all unsigned values of the requested type,
     // so using FP_TO_SINT is valid
-    if (TLI.isOperationLegalOrCustom(ISD::FP_TO_SINT, NewOutTy)) {
-      OpToUse = ISD::FP_TO_SINT;
+    OpToUse = IsStrict ? ISD::STRICT_FP_TO_SINT : ISD::FP_TO_SINT;
+    if (TLI.isOperationLegalOrCustom(OpToUse, NewOutTy))
       break;
-    }
 
     // However, if the value may be < 0.0, we *must* use some FP_TO_SINT.
-    if (!isSigned && TLI.isOperationLegalOrCustom(ISD::FP_TO_UINT, NewOutTy)) {
-      OpToUse = ISD::FP_TO_UINT;
+    OpToUse = IsStrict ? ISD::STRICT_FP_TO_UINT : ISD::FP_TO_UINT;
+    if (!IsSigned && TLI.isOperationLegalOrCustom(OpToUse, NewOutTy))
       break;
-    }
 
     // Otherwise, try a larger type.
   }
 
   // Okay, we found the operation and type to use.
-  SDValue Operation = DAG.getNode(OpToUse, dl, NewOutTy, LegalOp);
+  SDValue Operation;
+  if (IsStrict) {
+    SDVTList VTs = DAG.getVTList(NewOutTy, MVT::Other);
+    Operation = DAG.getNode(OpToUse, dl, VTs, N->getOperand(0), LegalOp);
+  } else
+    Operation = DAG.getNode(OpToUse, dl, NewOutTy, LegalOp);
 
   // Truncate the result of the extended FP_TO_*INT operation to the desired
   // size.
-  return DAG.getNode(ISD::TRUNCATE, dl, DestVT, Operation);
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, dl, DestVT, Operation);
+  Results.push_back(Trunc);
+  if (IsStrict)
+    Results.push_back(Operation.getValue(1));
 }
 
 /// Legalize a BITREVERSE scalar/vector operation as a series of mask + shifts.
@@ -4181,10 +4191,10 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     break;
   }
   case ISD::FP_TO_UINT:
+  case ISD::STRICT_FP_TO_UINT:
   case ISD::FP_TO_SINT:
-    Tmp1 = PromoteLegalFP_TO_INT(Node->getOperand(0), Node->getValueType(0),
-                                 Node->getOpcode() == ISD::FP_TO_SINT, dl);
-    Results.push_back(Tmp1);
+  case ISD::STRICT_FP_TO_SINT:
+    PromoteLegalFP_TO_INT(Node, dl, Results);
     break;
   case ISD::UINT_TO_FP:
   case ISD::SINT_TO_FP:
