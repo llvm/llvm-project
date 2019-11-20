@@ -1815,6 +1815,37 @@ static bool isEvaluated(const MCExpr *Expr) {
   return false;
 }
 
+static bool needsExpandMemInst(MCInst &Inst) {
+  const MCInstrDesc &MCID = getInstDesc(Inst.getOpcode());
+
+  unsigned NumOp = MCID.getNumOperands();
+  if (NumOp != 3 && NumOp != 4)
+    return false;
+
+  const MCOperandInfo &OpInfo = MCID.OpInfo[NumOp - 1];
+  if (OpInfo.OperandType != MCOI::OPERAND_MEMORY &&
+      OpInfo.OperandType != MCOI::OPERAND_UNKNOWN)
+    return false;
+
+  MCOperand &Op = Inst.getOperand(NumOp - 1);
+  if (Op.isImm()) {
+    // Offset can't exceed 16bit value.
+    return !isInt<16>(Op.getImm());
+  }
+
+  if (Op.isExpr()) {
+    const MCExpr *Expr = Op.getExpr();
+    if (Expr->getKind() != MCExpr::SymbolRef)
+      return !isEvaluated(Expr);
+
+    // Expand symbol.
+    const MCSymbolRefExpr *SR = static_cast<const MCSymbolRefExpr *>(Expr);
+    return SR->getKind() == MCSymbolRefExpr::VK_None;
+  }
+
+  return false;
+}
+
 bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
                                        MCStreamer &Out,
                                        const MCSubtargetInfo *STI) {
@@ -2102,35 +2133,11 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   if ((MCID.mayLoad() || MCID.mayStore()) && !IsPCRelativeLoad) {
     // Check the offset of memory operand, if it is a symbol
     // reference or immediate we may have to expand instructions.
-    for (unsigned i = 0; i < MCID.getNumOperands(); i++) {
-      const MCOperandInfo &OpInfo = MCID.OpInfo[i];
-      if ((OpInfo.OperandType == MCOI::OPERAND_MEMORY) ||
-          (OpInfo.OperandType == MCOI::OPERAND_UNKNOWN)) {
-        MCOperand &Op = Inst.getOperand(i);
-        if (Op.isImm()) {
-          if (!isInt<16>(Op.getImm())) {
-            // Offset can't exceed 16bit value.
-            expandMemInst(Inst, IDLoc, Out, STI, MCID.mayLoad());
-            return getParser().hasPendingError();
-          }
-        } else if (Op.isExpr()) {
-          const MCExpr *Expr = Op.getExpr();
-          if (Expr->getKind() == MCExpr::SymbolRef) {
-            const MCSymbolRefExpr *SR =
-                static_cast<const MCSymbolRefExpr *>(Expr);
-            if (SR->getKind() == MCSymbolRefExpr::VK_None) {
-              // Expand symbol.
-              expandMemInst(Inst, IDLoc, Out, STI, MCID.mayLoad());
-              return getParser().hasPendingError();
-            }
-          } else if (!isEvaluated(Expr)) {
-            expandMemInst(Inst, IDLoc, Out, STI, MCID.mayLoad());
-            return getParser().hasPendingError();
-          }
-        }
-      }
-    } // for
-  }   // if load/store
+    if (needsExpandMemInst(Inst)) {
+      expandMemInst(Inst, IDLoc, Out, STI, MCID.mayLoad());
+      return getParser().hasPendingError();
+    }
+  }
 
   if (inMicroMipsMode()) {
     if (MCID.mayLoad() && Opcode != Mips::LWP_MM) {
