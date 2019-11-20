@@ -553,7 +553,8 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
   unsigned NumUses = 0;
 
   bool OptForSize = Entry->getParent()->hasOptSize() ||
-                    llvm::shouldOptimizeForSize(Entry->getParent(), PSI, BFI);
+                    llvm::shouldOptimizeForSize(Entry->getParent(), PSI, BFI,
+                                                PGSOQueryType::IRPass);
   if (!OptForSize || std::distance(S,E) > 100) {
     for (auto ConstCand = S; ConstCand != E; ++ConstCand) {
       NumUses += ConstCand->Uses.size();
