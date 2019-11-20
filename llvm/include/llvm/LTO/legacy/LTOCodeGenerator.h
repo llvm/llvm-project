@@ -35,6 +35,7 @@
 #define LLVM_LTO_LTOCODEGENERATOR_H
 
 #include "llvm-c/lto.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
@@ -122,7 +123,7 @@ struct LTOCodeGenerator {
   /// name is misleading).  This function should be called before
   /// LTOCodeGenerator::compilexxx(), and
   /// LTOCodeGenerator::writeMergedModules().
-  void setCodeGenDebugOptions(StringRef Opts);
+  void setCodeGenDebugOptions(ArrayRef<const char *> Opts);
 
   /// Parse the options set in setCodeGenDebugOptions.
   ///

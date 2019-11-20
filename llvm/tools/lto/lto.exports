@@ -33,6 +33,7 @@ lto_codegen_set_debug_model
 lto_codegen_set_pic_model
 lto_codegen_write_merged_modules
 lto_codegen_debug_options
+lto_codegen_debug_options_array
 lto_codegen_set_assembler_args
 lto_codegen_set_assembler_path
 lto_codegen_set_cpu
