@@ -370,7 +370,7 @@ public:
   unsigned IndexRecordCodegenName : 1;
 
   /// The input files and their types.
-  std::vector<FrontendInputFile> Inputs;
+  SmallVector<FrontendInputFile, 0> Inputs;
 
   /// When the input is a module map, the original module map file from which
   /// that map was inferred, if any (for umbrella modules).
