@@ -73,7 +73,7 @@ void RedundantStringInitCheck::registerMatchers(MatchFinder *Finder) {
       namedDecl(
           varDecl(
               hasType(hasUnqualifiedDesugaredType(recordType(
-                  hasDeclaration(cxxRecordDecl(hasStringTypeName))))),
+                  hasDeclaration(cxxRecordDecl(hasName("basic_string")))))),
               hasInitializer(expr(ignoringImplicit(anyOf(
                   EmptyStringCtorExpr, EmptyStringCtorExprWithTemporaries)))))
               .bind("vardecl"),
@@ -82,12 +82,11 @@ void RedundantStringInitCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void RedundantStringInitCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *VDecl = Result.Nodes.getNodeAs<VarDecl>("vardecl");
-  // VarDecl's getSourceRange() spans 'string foo = ""' or 'string bar("")'.
-  // So start at getLocation() to span just 'foo = ""' or 'bar("")'.
-  SourceRange ReplaceRange(VDecl->getLocation(), VDecl->getEndLoc());
-  diag(VDecl->getLocation(), "redundant string initialization")
-      << FixItHint::CreateReplacement(ReplaceRange, VDecl->getName());
+  const auto *CtorExpr = Result.Nodes.getNodeAs<Expr>("expr");
+  const auto *Decl = Result.Nodes.getNodeAs<NamedDecl>("decl");
+  diag(CtorExpr->getExprLoc(), "redundant string initialization")
+      << FixItHint::CreateReplacement(CtorExpr->getSourceRange(),
+                                      Decl->getName());
 }
 
 } // namespace readability
