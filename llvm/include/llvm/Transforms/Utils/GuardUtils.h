@@ -23,8 +23,11 @@ class Value;
 /// by the condition of guard's first argument. The taken branch then goes to
 /// the block that contains  \p Guard's successors, and the non-taken branch
 /// goes to a newly-created deopt block that contains a sole call of the
-/// deoptimize function \p DeoptIntrinsic.
-void makeGuardControlFlowExplicit(Function *DeoptIntrinsic, CallInst *Guard);
+/// deoptimize function \p DeoptIntrinsic.  If 'UseWC' is set, preserve the
+/// widenable nature of the guard by lowering to equivelent form.  If not set,
+/// lower to a form without widenable semantics.
+void makeGuardControlFlowExplicit(Function *DeoptIntrinsic, CallInst *Guard,
+                                  bool UseWC);
 
 /// Given a branch we know is widenable (defined per Analysis/GuardUtils.h),
 /// widen it such that condition 'NewCond' is also known to hold on the taken
