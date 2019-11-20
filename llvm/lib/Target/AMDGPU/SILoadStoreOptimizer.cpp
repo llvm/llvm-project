@@ -1430,7 +1430,9 @@ unsigned SILoadStoreOptimizer::computeBase(MachineInstr &MI,
 void SILoadStoreOptimizer::updateBaseAndOffset(MachineInstr &MI,
                                                unsigned NewBase,
                                                int32_t NewOffset) const {
-  TII->getNamedOperand(MI, AMDGPU::OpName::vaddr)->setReg(NewBase);
+  auto Base = TII->getNamedOperand(MI, AMDGPU::OpName::vaddr);
+  Base->setReg(NewBase);
+  Base->setIsKill(false);
   TII->getNamedOperand(MI, AMDGPU::OpName::offset)->setImm(NewOffset);
 }
 
