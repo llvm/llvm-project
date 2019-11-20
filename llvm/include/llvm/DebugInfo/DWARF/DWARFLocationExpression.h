@@ -41,9 +41,6 @@ inline bool operator!=(const DWARFLocationExpression &L,
 
 raw_ostream &operator<<(raw_ostream &OS, const DWARFLocationExpression &Loc);
 
-/// Represents a set of absolute location expressions.
-using DWARFLocationExpressionsVector = std::vector<DWARFLocationExpression>;
-
 } // end namespace llvm
 
 #endif // LLVM_DEBUGINFO_DWARF_DWARFLOCATIONEXPRESSION_H

@@ -151,21 +151,6 @@ bool DWARFLocationTable::dumpLocationList(uint64_t *Offset, raw_ostream &OS,
   return true;
 }
 
-Error DWARFLocationTable::visitAbsoluteLocationList(
-    uint64_t Offset, Optional<SectionedAddress> BaseAddr,
-    std::function<Optional<SectionedAddress>(uint32_t)> LookupAddr,
-    function_ref<bool(Expected<DWARFLocationExpression>)> Callback) const {
-  DWARFLocationInterpreter Interp(BaseAddr, std::move(LookupAddr));
-  return visitLocationList(&Offset, [&](const DWARFLocationEntry &E) {
-    Expected<Optional<DWARFLocationExpression>> Loc = Interp.Interpret(E);
-    if (!Loc)
-      return Callback(Loc.takeError());
-    if (*Loc)
-      return Callback(**Loc);
-    return true;
-  });
-}
-
 DWARFDebugLoc::LocationList const *
 DWARFDebugLoc::getLocationListAtOffset(uint64_t Offset) const {
   auto It = partition_point(
