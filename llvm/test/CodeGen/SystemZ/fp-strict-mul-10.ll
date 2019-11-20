@@ -11,7 +11,7 @@ define double @f1(double %f1, double %f2, double %acc) #0 {
                         double %f1, double %f2, double %acc,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %negres = fsub double -0.0, %res
+  %negres = fneg double %res
   ret double %negres
 }
 
@@ -19,12 +19,12 @@ define double @f2(double %f1, double %f2, double %acc) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK: wfnmsdb %f0, %f0, %f2, %f4
 ; CHECK: br %r14
-  %negacc = fsub double -0.0, %acc
+  %negacc = fneg double %acc
   %res = call double @llvm.experimental.constrained.fma.f64 (
                         double %f1, double %f2, double %negacc,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %negres = fsub double -0.0, %res
+  %negres = fneg double %res
   ret double %negres
 }
 
@@ -36,7 +36,7 @@ define float @f3(float %f1, float %f2, float %acc) #0 {
                         float %f1, float %f2, float %acc,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %negres = fsub float -0.0, %res
+  %negres = fneg float %res
   ret float %negres
 }
 
@@ -44,12 +44,12 @@ define float @f4(float %f1, float %f2, float %acc) #0 {
 ; CHECK-LABEL: f4:
 ; CHECK: wfnmssb %f0, %f0, %f2, %f4
 ; CHECK: br %r14
-  %negacc = fsub float -0.0, %acc
+  %negacc = fneg float %acc
   %res = call float @llvm.experimental.constrained.fma.f32 (
                         float %f1, float %f2, float %negacc,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %negres = fsub float -0.0, %res
+  %negres = fneg float %res
   ret float %negres
 }
 

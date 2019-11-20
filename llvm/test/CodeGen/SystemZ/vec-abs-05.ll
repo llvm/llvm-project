@@ -20,7 +20,7 @@ define <2 x double> @f2(<2 x double> %val) {
 ; CHECK: vflndb %v24, %v24
 ; CHECK: br %r14
   %abs = call <2 x double> @llvm.fabs.v2f64(<2 x double> %val)
-  %ret = fsub <2 x double> <double -0.0, double -0.0>, %abs
+  %ret = fneg <2 x double> %abs
   ret <2 x double> %ret
 }
 
@@ -41,6 +41,6 @@ define double @f4(<2 x double> %val) {
 ; CHECK: br %r14
   %scalar = extractelement <2 x double> %val, i32 0
   %abs = call double @llvm.fabs.f64(double %scalar)
-  %ret = fsub double -0.0, %abs
+  %ret = fneg double %abs
   ret double %ret
 }
