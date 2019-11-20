@@ -16,6 +16,7 @@
 #include "SourceCode.h"
 #include "index/SymbolCollector.h"
 
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/PrettyPrinter.h"
@@ -239,6 +240,46 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
   // FIXME: handle variadics.
 }
 
+llvm::Optional<std::string> printExprValue(const Expr *E, const ASTContext &Ctx) {
+  Expr::EvalResult Constant;
+  // Evaluating [[foo]]() as "&foo" isn't useful, and prevents us walking up
+  // to the enclosing call.
+  QualType T = E->getType();
+  if (T->isFunctionType() || T->isFunctionPointerType() ||
+      T->isFunctionReferenceType())
+    return llvm::None;
+  // Attempt to evaluate. If expr is dependent, evaluation crashes!
+  if (E->isValueDependent() || !E->EvaluateAsRValue(Constant, Ctx))
+    return llvm::None;
+
+  // Show enums symbolically, not numerically like APValue::printPretty().
+  if (T->isEnumeralType() && Constant.Val.getInt().getMinSignedBits() <= 64) {
+    // Compare to int64_t to avoid bit-width match requirements.
+    int64_t Val = Constant.Val.getInt().getExtValue();
+    for (const EnumConstantDecl *ECD :
+         T->castAs<EnumType>()->getDecl()->enumerators())
+      if (ECD->getInitVal() == Val)
+        return llvm::formatv("{0} ({1})", ECD->getNameAsString(), Val).str();
+  }
+  return Constant.Val.getAsString(Ctx, E->getType());
+}
+
+llvm::Optional<std::string> printExprValue(const SelectionTree::Node *N,
+                                           const ASTContext &Ctx) {
+  for (; N; N = N->Parent) {
+    // Try to evaluate the first evaluable enclosing expression.
+    if (const Expr *E = N->ASTNode.get<Expr>()) {
+      if (auto Val = printExprValue(E, Ctx))
+        return Val;
+    } else if (N->ASTNode.get<Decl>() || N->ASTNode.get<Stmt>()) {
+      // Refuse to cross certain non-exprs. (TypeLoc are OK as part of Exprs).
+      // This tries to ensure we're showing a value related to the cursor.
+      break;
+    }
+  }
+  return llvm::None;
+}
+
 /// Generate a \p Hover object given the declaration \p D.
 HoverInfo getHoverContents(const Decl *D, const SymbolIndex *Index) {
   HoverInfo HI;
@@ -282,18 +323,9 @@ HoverInfo getHoverContents(const Decl *D, const SymbolIndex *Index) {
   }
 
   // Fill in value with evaluated initializer if possible.
-  // FIXME(kadircet): Also set Value field for expressions like "sizeof" and
-  // function calls.
   if (const auto *Var = dyn_cast<VarDecl>(D)) {
-    if (const Expr *Init = Var->getInit()) {
-      Expr::EvalResult Result;
-      if (!Init->isValueDependent() && Init->EvaluateAsRValue(Result, Ctx)) {
-        HI.Value.emplace();
-        llvm::raw_string_ostream ValueOS(*HI.Value);
-        Result.Val.printPretty(ValueOS, const_cast<ASTContext &>(Ctx),
-                               Init->getType());
-      }
-    }
+    if (const Expr *Init = Var->getInit())
+      HI.Value = printExprValue(Init, Ctx);
   } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(D)) {
     // Dependent enums (e.g. nested in template classes) don't have values yet.
     if (!ECD->getType()->isDependentType())
@@ -381,8 +413,16 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
     if (const SelectionTree::Node *N = Selection.commonAncestor()) {
       DeclRelationSet Rel = DeclRelation::TemplatePattern | DeclRelation::Alias;
       auto Decls = targetDecl(N->ASTNode, Rel);
-      if (!Decls.empty())
+      if (!Decls.empty()) {
         HI = getHoverContents(Decls.front(), Index);
+        // Look for a close enclosing expression to show the value of.
+        if (!HI->Value)
+          HI->Value = printExprValue(N, AST.getASTContext());
+      }
+      // FIXME: support hovers for other nodes?
+      //  - certain expressions (sizeof etc)
+      //  - built-in types
+      //  - literals (esp user-defined)
     }
   }
 
