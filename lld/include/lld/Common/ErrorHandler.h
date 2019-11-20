@@ -117,8 +117,6 @@ private:
 /// Returns the default error handler.
 ErrorHandler &errorHandler();
 
-void enableColors(bool enable);
-
 inline void error(const Twine &msg) { errorHandler().error(msg); }
 inline LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &msg) {
   errorHandler().fatal(msg);
