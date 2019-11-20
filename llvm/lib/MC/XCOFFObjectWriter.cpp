@@ -151,6 +151,8 @@ class XCOFFObjectWriter : public MCObjectWriter {
   // the same section and get handled in a 'similar' way.
   CsectGroup ProgramCodeCsects;
   CsectGroup DataCsects;
+  CsectGroup FuncDSCsects;
+  CsectGroup TOCCsects;
   CsectGroup BSSCsects;
 
   // The Predefined sections.
@@ -219,7 +221,7 @@ XCOFFObjectWriter::XCOFFObjectWriter(
       Text(".text", XCOFF::STYP_TEXT, /* IsVirtual */ false,
            CsectGroups{&ProgramCodeCsects}),
       Data(".data", XCOFF::STYP_DATA, /* IsVirtual */ false,
-           CsectGroups{&DataCsects}),
+           CsectGroups{&DataCsects, &FuncDSCsects, &TOCCsects}),
       BSS(".bss", XCOFF::STYP_BSS, /* IsVirtual */ true,
           CsectGroups{&BSSCsects}) {}
 
@@ -251,11 +253,20 @@ CsectGroup &XCOFFObjectWriter::getCsectGroup(const MCSectionXCOFF *MCSec) {
       return DataCsects;
 
     report_fatal_error("Unhandled mapping of read-write csect to section.");
+  case XCOFF::XMC_DS:
+    return FuncDSCsects;
   case XCOFF::XMC_BS:
     assert(XCOFF::XTY_CM == MCSec->getCSectType() &&
            "Mapping invalid csect. CSECT with bss storage class must be "
            "common type.");
     return BSSCsects;
+  case XCOFF::XMC_TC0:
+    assert(XCOFF::XTY_SD == MCSec->getCSectType() &&
+           "Only an initialized csect can contain TOC-base.");
+    assert(TOCCsects.empty() &&
+           "We should have only one TOC-base, and it should be the first csect "
+           "in this CsectGroup.");
+    return TOCCsects;
   default:
     report_fatal_error("Unhandled mapping of csect to section.");
   }
@@ -280,10 +291,6 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
     // entry, add it to the string table.
     if (nameShouldBeInStringTable(MCSec->getSectionName()))
       Strings.add(MCSec->getSectionName());
-
-    // TODO FIXME Handle emiting the TOC base.
-    if (MCSec->getMappingClass() == XCOFF::XMC_TC0)
-      continue;
 
     CsectGroup &Group = getCsectGroup(MCSec);
     Group.emplace_back(MCSec);
@@ -322,7 +329,7 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
 void XCOFFObjectWriter::recordRelocation(MCAssembler &, const MCAsmLayout &,
                                          const MCFragment *, const MCFixup &,
                                          MCValue, uint64_t &) {
-  report_fatal_error("XCOFF relocations not supported.");
+  // TODO: recordRelocation is not yet implemented.
 }
 
 void XCOFFObjectWriter::writeSections(const MCAssembler &Asm,
