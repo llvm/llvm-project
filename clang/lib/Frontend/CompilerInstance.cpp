@@ -1472,51 +1472,52 @@ static void pruneModuleCache(const HeaderSearchOptions &HSOpts) {
 }
 
 void CompilerInstance::createModuleManager() {
-  if (!ModuleManager) {
-    if (!hasASTContext())
-      createASTContext();
+  if (ModuleManager)
+    return;
 
-    // If we're implicitly building modules but not currently recursively
-    // building a module, check whether we need to prune the module cache.
-    if (getSourceManager().getModuleBuildStack().empty() &&
-        !getPreprocessor().getHeaderSearchInfo().getModuleCachePath().empty() &&
-        getHeaderSearchOpts().ModuleCachePruneInterval > 0 &&
-        getHeaderSearchOpts().ModuleCachePruneAfter > 0) {
-      pruneModuleCache(getHeaderSearchOpts());
-    }
+  if (!hasASTContext())
+    createASTContext();
 
-    HeaderSearchOptions &HSOpts = getHeaderSearchOpts();
-    std::string Sysroot = HSOpts.Sysroot;
-    const PreprocessorOptions &PPOpts = getPreprocessorOpts();
-    std::unique_ptr<llvm::Timer> ReadTimer;
-    if (FrontendTimerGroup)
-      ReadTimer = std::make_unique<llvm::Timer>("reading_modules",
-                                                 "Reading modules",
-                                                 *FrontendTimerGroup);
-    ModuleManager = new ASTReader(
-        getPreprocessor(), getModuleCache(), &getASTContext(),
-        getPCHContainerReader(), getFrontendOpts().ModuleFileExtensions,
-        Sysroot.empty() ? "" : Sysroot.c_str(), PPOpts.DisablePCHValidation,
-        /*AllowASTWithCompilerErrors=*/false,
-        /*AllowConfigurationMismatch=*/false,
-        HSOpts.ModulesValidateSystemHeaders,
-        HSOpts.ValidateASTInputFilesContent,
-        getFrontendOpts().UseGlobalModuleIndex, std::move(ReadTimer));
-    if (hasASTConsumer()) {
-      ModuleManager->setDeserializationListener(
-        getASTConsumer().GetASTDeserializationListener());
-      getASTContext().setASTMutationListener(
-        getASTConsumer().GetASTMutationListener());
-    }
-    getASTContext().setExternalSource(ModuleManager);
-    if (hasSema())
-      ModuleManager->InitializeSema(getSema());
-    if (hasASTConsumer())
-      ModuleManager->StartTranslationUnit(&getASTConsumer());
-
-    for (auto &Listener : DependencyCollectors)
-      Listener->attachToASTReader(*ModuleManager);
+  // If we're implicitly building modules but not currently recursively
+  // building a module, check whether we need to prune the module cache.
+  if (getSourceManager().getModuleBuildStack().empty() &&
+      !getPreprocessor().getHeaderSearchInfo().getModuleCachePath().empty() &&
+      getHeaderSearchOpts().ModuleCachePruneInterval > 0 &&
+      getHeaderSearchOpts().ModuleCachePruneAfter > 0) {
+    pruneModuleCache(getHeaderSearchOpts());
   }
+
+  HeaderSearchOptions &HSOpts = getHeaderSearchOpts();
+  std::string Sysroot = HSOpts.Sysroot;
+  const PreprocessorOptions &PPOpts = getPreprocessorOpts();
+  std::unique_ptr<llvm::Timer> ReadTimer;
+  if (FrontendTimerGroup)
+    ReadTimer = std::make_unique<llvm::Timer>("reading_modules",
+                                                "Reading modules",
+                                                *FrontendTimerGroup);
+  ModuleManager = new ASTReader(
+      getPreprocessor(), getModuleCache(), &getASTContext(),
+      getPCHContainerReader(), getFrontendOpts().ModuleFileExtensions,
+      Sysroot.empty() ? "" : Sysroot.c_str(), PPOpts.DisablePCHValidation,
+      /*AllowASTWithCompilerErrors=*/false,
+      /*AllowConfigurationMismatch=*/false,
+      HSOpts.ModulesValidateSystemHeaders,
+      HSOpts.ValidateASTInputFilesContent,
+      getFrontendOpts().UseGlobalModuleIndex, std::move(ReadTimer));
+  if (hasASTConsumer()) {
+    ModuleManager->setDeserializationListener(
+      getASTConsumer().GetASTDeserializationListener());
+    getASTContext().setASTMutationListener(
+      getASTConsumer().GetASTMutationListener());
+  }
+  getASTContext().setExternalSource(ModuleManager);
+  if (hasSema())
+    ModuleManager->InitializeSema(getSema());
+  if (hasASTConsumer())
+    ModuleManager->StartTranslationUnit(&getASTConsumer());
+
+  for (auto &Listener : DependencyCollectors)
+    Listener->attachToASTReader(*ModuleManager);
 }
 
 bool CompilerInstance::loadModuleFile(StringRef FileName) {
