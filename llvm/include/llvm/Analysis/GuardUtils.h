@@ -22,6 +22,10 @@ class Value;
 /// of llvm.experimental.guard intrinsic.
 bool isGuard(const User *U);
 
+/// Returns true iff \p U is a widenable branch (that is, parseWidenableBranch
+/// returns true).
+bool isWidenableBranch(const User *U);
+
 /// Returns true iff \p U has semantics of a guard expressed in a form of a
 /// widenable conditional branch to deopt block.
 bool isGuardAsWidenableBranch(const User *U);

@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/GuardUtils.h"
+#include "llvm/Analysis/GuardUtils.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -61,4 +62,29 @@ void llvm::makeGuardControlFlowExplicit(Function *DeoptIntrinsic,
 
   DeoptCall->setCallingConv(Guard->getCallingConv());
   DeoptBlockTerm->eraseFromParent();
+}
+
+
+void llvm::widenWidenableBranch(BranchInst *WidenableBR, Value *NewCond) {
+  assert(isWidenableBranch(WidenableBR) && "precondition");
+
+  Instruction *WCAnd = cast<Instruction>(WidenableBR->getCondition());
+  // Condition is only guaranteed to dominate branch
+  WCAnd->moveBefore(WidenableBR);
+  Value *OldCond = WCAnd->getOperand(0);
+  IRBuilder<> B(WCAnd);
+  WCAnd->setOperand(0, B.CreateAnd(NewCond, OldCond));
+
+  assert(isWidenableBranch(WidenableBR) && "preserve widenabiliy");
+}
+
+void llvm::setWidenableBranchCond(BranchInst *WidenableBR, Value *NewCond) {
+  assert(isWidenableBranch(WidenableBR) && "precondition");
+
+  Instruction *WCAnd = cast<Instruction>(WidenableBR->getCondition());
+  // Condition is only guaranteed to dominate branch
+  WCAnd->moveBefore(WidenableBR);
+  WCAnd->setOperand(0, NewCond);
+
+  assert(isWidenableBranch(WidenableBR) && "preserve widenabiliy");
 }

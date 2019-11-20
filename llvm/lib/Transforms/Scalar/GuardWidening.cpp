@@ -58,6 +58,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/GuardUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <functional>
 
@@ -277,11 +278,7 @@ class GuardWideningImpl {
     widenCondCommon(getCondition(ToWiden), NewCondition, ToWiden, Result,
                     InvertCondition);
     if (isGuardAsWidenableBranch(ToWiden)) {
-      auto *BI = cast<BranchInst>(ToWiden);
-      auto *And = cast<Instruction>(BI->getCondition());
-      And->setOperand(0, Result);
-      And->moveBefore(ToWiden);
-      assert(isGuardAsWidenableBranch(ToWiden) && "still widenable?");
+      setWidenableBranchCond(cast<BranchInst>(ToWiden), Result);
       return;
     }
     setCondition(ToWiden, Result);
