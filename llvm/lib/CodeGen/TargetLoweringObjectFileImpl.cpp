@@ -1868,9 +1868,28 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
   report_fatal_error("XCOFF other section types not yet implemented.");
 }
 
+MCSection *TargetLoweringObjectFileXCOFF::getSectionForJumpTable(
+    const Function &F, const TargetMachine &TM) const {
+  assert (!TM.getFunctionSections() && "Unique sections not supported on XCOFF"
+          " yet.");
+  assert (!F.getComdat() && "Comdat not supported on XCOFF.");
+  //TODO: Enable emiting jump table to unique sections when we support it.
+  return ReadOnlySection;
+}
+
 bool TargetLoweringObjectFileXCOFF::shouldPutJumpTableInFunctionSection(
     bool UsesLabelDifference, const Function &F) const {
-  report_fatal_error("TLOF XCOFF not yet implemented.");
+  return false;
+}
+
+/// Given a mergeable constant with the specified size and relocation
+/// information, return a section that it should be placed in.
+MCSection *TargetLoweringObjectFileXCOFF::getSectionForConstant(
+    const DataLayout &DL, SectionKind Kind, const Constant *C,
+    unsigned &Align) const {
+  //TODO: Enable emiting constant pool to unique sections when we support it.
+  if (Kind.isReadOnly() && ReadOnlySection != nullptr)
+    return ReadOnlySection;
 }
 
 void TargetLoweringObjectFileXCOFF::Initialize(MCContext &Ctx,

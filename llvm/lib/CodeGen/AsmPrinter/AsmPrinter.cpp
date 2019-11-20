@@ -1755,6 +1755,11 @@ void AsmPrinter::EmitConstantPool() {
       if (!Sym->isUndefined())
         continue;
 
+      if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
+        cast<MCSymbolXCOFF>(Sym)->setContainingCsect(
+            cast<MCSectionXCOFF>(CPSections[i].S));
+      }
+
       if (CurSection != CPSections[i].S) {
         OutStreamer->SwitchSection(CPSections[i].S);
         EmitAlignment(Align(CPSections[i].Alignment));
@@ -1844,10 +1849,16 @@ void AsmPrinter::EmitJumpTableInfo() {
     // second label is actually referenced by the code.
     if (JTInDiffSection && DL.hasLinkerPrivateGlobalPrefix())
       // FIXME: This doesn't have to have any specific name, just any randomly
-      // named and numbered 'l' label would work.  Simplify GetJTISymbol.
+      // named and numbered local label started with 'l' would work.  Simplify
+      // GetJTISymbol.
       OutStreamer->EmitLabel(GetJTISymbol(JTI, true));
 
-    OutStreamer->EmitLabel(GetJTISymbol(JTI));
+    MCSymbol* JTISymbol = GetJTISymbol(JTI);
+    if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
+      cast<MCSymbolXCOFF>(JTISymbol)->setContainingCsect(
+          cast<MCSectionXCOFF>(TLOF.getSectionForJumpTable(F, TM)));
+    }
+    OutStreamer->EmitLabel(JTISymbol);
 
     for (unsigned ii = 0, ee = JTBBs.size(); ii != ee; ++ii)
       EmitJumpTableEntry(MJTI, JTBBs[ii], JTI);
