@@ -2068,6 +2068,8 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
       getLastArgUInt64Value(Args, OPT_fbuild_session_timestamp, 0);
   Opts.ModulesValidateSystemHeaders =
       Args.hasArg(OPT_fmodules_validate_system_headers);
+  Opts.ValidateASTInputFilesContent =
+      Args.hasArg(OPT_fvalidate_ast_input_files_content);
   if (const Arg *A = Args.getLastArg(OPT_fmodule_format_EQ))
     Opts.ModuleFormat = A->getValue();
 

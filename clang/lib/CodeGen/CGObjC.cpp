@@ -430,6 +430,20 @@ tryGenerateSpecializedMessageSend(CodeGenFunction &CGF, QualType ResultType,
   return None;
 }
 
+CodeGen::RValue CGObjCRuntime::GeneratePossiblySpecializedMessageSend(
+    CodeGenFunction &CGF, ReturnValueSlot Return, QualType ResultType,
+    Selector Sel, llvm::Value *Receiver, const CallArgList &Args,
+    const ObjCInterfaceDecl *OID, const ObjCMethodDecl *Method,
+    bool isClassMessage) {
+  if (Optional<llvm::Value *> SpecializedResult =
+          tryGenerateSpecializedMessageSend(CGF, ResultType, Receiver, Args,
+                                            Sel, Method, isClassMessage)) {
+    return RValue::get(SpecializedResult.getValue());
+  }
+  return GenerateMessageSend(CGF, Return, ResultType, Sel, Receiver, Args, OID,
+                             Method);
+}
+
 /// Instead of '[[MyClass alloc] init]', try to generate
 /// 'objc_alloc_init(MyClass)'. This provides a code size improvement on the
 /// caller side, as well as the optimized objc_alloc.
@@ -611,16 +625,9 @@ RValue CodeGenFunction::EmitObjCMessageExpr(const ObjCMessageExpr *E,
                                               method);
   } else {
     // Call runtime methods directly if we can.
-    if (Optional<llvm::Value *> SpecializedResult =
-            tryGenerateSpecializedMessageSend(*this, ResultType, Receiver, Args,
-                                              E->getSelector(), method,
-                                              isClassMessage)) {
-      result = RValue::get(SpecializedResult.getValue());
-    } else {
-      result = Runtime.GenerateMessageSend(*this, Return, ResultType,
-                                           E->getSelector(), Receiver, Args,
-                                           OID, method);
-    }
+    result = Runtime.GeneratePossiblySpecializedMessageSend(
+        *this, Return, ResultType, E->getSelector(), Receiver, Args, OID,
+        method, isClassMessage);
   }
 
   // For delegate init calls in ARC, implicitly store the result of
@@ -683,7 +690,13 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
   llvm::Function *Fn = CGM.getObjCRuntime().GenerateMethod(OMD, CD);
 
   const CGFunctionInfo &FI = CGM.getTypes().arrangeObjCMethodDeclaration(OMD);
-  CGM.SetInternalFunctionAttributes(OMD, Fn, FI);
+  if (OMD->isDirectMethod()) {
+    Fn->setVisibility(llvm::Function::HiddenVisibility);
+    CGM.SetLLVMFunctionAttributes(OMD, FI, Fn);
+    CGM.SetLLVMFunctionAttributesForDefinition(OMD, Fn);
+  } else {
+    CGM.SetInternalFunctionAttributes(OMD, Fn, FI);
+  }
 
   args.push_back(OMD->getSelfDecl());
   args.push_back(OMD->getCmdDecl());
@@ -695,6 +708,14 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
 
   StartFunction(OMD, OMD->getReturnType(), Fn, FI, args,
                 OMD->getLocation(), StartLoc);
+
+  if (OMD->isDirectMethod()) {
+    // This function is a direct call, it has to implement a nil check
+    // on entry.
+    //
+    // TODO: possibly have several entry points to elide the check
+    CGM.getObjCRuntime().GenerateDirectMethodPrologue(*this, Fn, OMD, CD);
+  }
 
   // In ARC, certain methods get an extra cleanup.
   if (CGM.getLangOpts().ObjCAutoRefCount &&

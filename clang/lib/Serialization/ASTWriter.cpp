@@ -1097,6 +1097,7 @@ void ASTWriter::WriteBlockInfoBlock() {
 
   BLOCK(INPUT_FILES_BLOCK);
   RECORD(INPUT_FILE);
+  RECORD(INPUT_FILE_HASH);
 
   // AST Top-Level Block.
   BLOCK(AST_BLOCK);
@@ -1768,6 +1769,7 @@ struct InputFileEntry {
   bool IsTransient;
   bool BufferOverridden;
   bool IsTopLevelModuleMap;
+  uint32_t ContentHash[2];
 };
 
 } // namespace
@@ -1790,6 +1792,13 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Module map
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // File name
   unsigned IFAbbrevCode = Stream.EmitAbbrev(std::move(IFAbbrev));
+
+  // Create input file hash abbreviation.
+  auto IFHAbbrev = std::make_shared<BitCodeAbbrev>();
+  IFHAbbrev->Add(BitCodeAbbrevOp(INPUT_FILE_HASH));
+  IFHAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  IFHAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  unsigned IFHAbbrevCode = Stream.EmitAbbrev(std::move(IFHAbbrev));
 
   // Get all ContentCache objects for files, sorted by whether the file is a
   // system one or not. System files go at the back, users files at the front.
@@ -1814,6 +1823,25 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
     Entry.BufferOverridden = Cache->BufferOverridden;
     Entry.IsTopLevelModuleMap = isModuleMap(File.getFileCharacteristic()) &&
                                 File.getIncludeLoc().isInvalid();
+
+    auto ContentHash = hash_code(-1);
+    if (PP->getHeaderSearchInfo()
+            .getHeaderSearchOpts()
+            .ValidateASTInputFilesContent) {
+      auto *MemBuff = Cache->getRawBuffer();
+      if (MemBuff)
+        ContentHash = hash_value(MemBuff->getBuffer());
+      else
+        // FIXME: The path should be taken from the FileEntryRef.
+        PP->Diag(SourceLocation(), diag::err_module_unable_to_hash_content)
+            << Entry.File->getName();
+    }
+    auto CH = llvm::APInt(64, ContentHash);
+    Entry.ContentHash[0] =
+        static_cast<uint32_t>(CH.getLoBits(32).getZExtValue());
+    Entry.ContentHash[1] =
+        static_cast<uint32_t>(CH.getHiBits(32).getZExtValue());
+
     if (Cache->IsSystemFile)
       SortedFiles.push_back(Entry);
     else
@@ -1838,17 +1866,26 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
 
     // Emit size/modification time for this file.
     // And whether this file was overridden.
-    RecordData::value_type Record[] = {
-        INPUT_FILE,
-        InputFileOffsets.size(),
-        (uint64_t)Entry.File->getSize(),
-        (uint64_t)getTimestampForOutput(Entry.File),
-        Entry.BufferOverridden,
-        Entry.IsTransient,
-        Entry.IsTopLevelModuleMap};
+    {
+      RecordData::value_type Record[] = {
+          INPUT_FILE,
+          InputFileOffsets.size(),
+          (uint64_t)Entry.File->getSize(),
+          (uint64_t)getTimestampForOutput(Entry.File),
+          Entry.BufferOverridden,
+          Entry.IsTransient,
+          Entry.IsTopLevelModuleMap};
 
-    // FIXME: The path should be taken from the FileEntryRef.
-    EmitRecordWithPath(IFAbbrevCode, Record, Entry.File->getName());
+      // FIXME: The path should be taken from the FileEntryRef.
+      EmitRecordWithPath(IFAbbrevCode, Record, Entry.File->getName());
+    }
+
+    // Emit content hash for this file.
+    {
+      RecordData::value_type Record[] = {INPUT_FILE_HASH, Entry.ContentHash[0],
+                                         Entry.ContentHash[1]};
+      Stream.EmitRecordWithAbbrev(IFHAbbrevCode, Record);
+    }
   }
 
   Stream.ExitBlock();
