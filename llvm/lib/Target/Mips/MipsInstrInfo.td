@@ -1140,17 +1140,11 @@ def simm12 : Operand<i32> {
   let DecoderMethod = "DecodeSimm12";
 }
 
-def mem_simm9 : mem_generic {
-  let MIOperandInfo = (ops ptr_rc, simm9);
-  let EncoderMethod = "getMemEncoding";
-  let ParserMatchClass = MipsMemSimmAsmOperand<9>;
-}
-
-def mem_simm10 : mem_generic {
-  let MIOperandInfo = (ops ptr_rc, simm10);
-  let EncoderMethod = "getMemEncoding";
-  let ParserMatchClass = MipsMemSimmAsmOperand<10>;
-}
+foreach I = {9, 10, 11, 12, 16} in
+  def mem_simm # I : mem_generic {
+    let MIOperandInfo = (ops ptr_rc, !cast<Operand>("simm" # I));
+    let ParserMatchClass = MipsMemSimmAsmOperand<I>;
+  }
 
 foreach I = {1, 2, 3} in
   def mem_simm10_lsl # I : mem_generic {
@@ -1158,24 +1152,6 @@ foreach I = {1, 2, 3} in
     let EncoderMethod = "getMemEncoding<" # I  # ">";
     let ParserMatchClass = MipsMemSimmAsmOperand<10, I>;
   }
-
-def mem_simm11 : mem_generic {
-  let MIOperandInfo = (ops ptr_rc, simm11);
-  let EncoderMethod = "getMemEncoding";
-  let ParserMatchClass = MipsMemSimmAsmOperand<11>;
-}
-
-def mem_simm12 : mem_generic {
-  let MIOperandInfo = (ops ptr_rc, simm12);
-  let EncoderMethod = "getMemEncoding";
-  let ParserMatchClass = MipsMemSimmAsmOperand<12>;
-}
-
-def mem_simm16 : mem_generic {
-  let MIOperandInfo = (ops ptr_rc, simm16);
-  let EncoderMethod = "getMemEncoding";
-  let ParserMatchClass = MipsMemSimmAsmOperand<16>;
-}
 
 def mem_simmptr : mem_generic {
   let ParserMatchClass = MipsMemSimmPtrAsmOperand;
