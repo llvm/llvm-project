@@ -344,11 +344,6 @@ public:
   GetUniqueNamespaceDeclaration(const char *name, clang::DeclContext *decl_ctx,
                                 bool is_inline = false);
 
-  static clang::NamespaceDecl *
-  GetUniqueNamespaceDeclaration(clang::ASTContext *ast, const char *name,
-                                clang::DeclContext *decl_ctx,
-                                bool is_inline = false);
-
   // Function Types
 
   clang::FunctionDecl *
