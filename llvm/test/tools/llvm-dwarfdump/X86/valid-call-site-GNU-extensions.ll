@@ -90,7 +90,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !17 = !{null, !18}
 !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64)
 !19 = !{!20, !21}
-!20 = !DILocalVariable(name: "arg", arg: 1, scope: !15, file: !1, line: 6, type: !18, flags: DIFlagArgumentNotModified)
+!20 = !DILocalVariable(name: "arg", arg: 1, scope: !15, file: !1, line: 6, type: !18)
 !21 = !DILocalVariable(name: "a", scope: !15, file: !1, line: 7, type: !7)
 !22 = !DILocation(line: 0, scope: !15)
 !23 = !DILocation(line: 7, column: 11, scope: !15)

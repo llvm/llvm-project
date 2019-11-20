@@ -54,7 +54,6 @@ const (
 	FlagVector
 	FlagStaticMember
 	FlagIndirectVariable
-	FlagArgumentNotModified
 )
 
 type DwarfLang uint32

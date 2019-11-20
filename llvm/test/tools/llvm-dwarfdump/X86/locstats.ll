@@ -191,8 +191,8 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !17 = !DISubroutineType(types: !18)
 !18 = !{null, !7, !7}
 !19 = !{!20, !21, !22, !23}
-!20 = !DILocalVariable(name: "x", arg: 1, scope: !16, file: !1, line: 6, type: !7, flags: DIFlagArgumentNotModified)
-!21 = !DILocalVariable(name: "y", arg: 2, scope: !16, file: !1, line: 6, type: !7, flags: DIFlagArgumentNotModified)
+!20 = !DILocalVariable(name: "x", arg: 1, scope: !16, file: !1, line: 6, type: !7)
+!21 = !DILocalVariable(name: "y", arg: 2, scope: !16, file: !1, line: 6, type: !7)
 !22 = !DILocalVariable(name: "u", scope: !16, file: !1, line: 8, type: !7)
 !23 = !DILocalVariable(name: "a", scope: !16, file: !1, line: 18, type: !7)
 !24 = !DILocation(line: 0, scope: !16)

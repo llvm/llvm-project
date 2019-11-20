@@ -1292,7 +1292,7 @@ bool LiveDebugValues::isEntryValueCandidate(
   // TODO: Add support for modified arguments that can be expressed
   // by using its entry value.
   auto *DIVar = MI.getDebugVariable();
-  if (!DIVar->isParameter() || !DIVar->isNotModified())
+  if (!DIVar->isParameter())
     return false;
 
   // Do not consider parameters that belong to an inlined function.
