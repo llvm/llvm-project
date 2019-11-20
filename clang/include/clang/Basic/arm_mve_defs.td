@@ -312,7 +312,7 @@ def imm_lane : Immediate<sint, IB_LaneIndex>;
 
 // imm_1to32 can be in the range 1 to 32, unconditionally. (e.g. scalar shift
 // intrinsics)
-def imm_1to32 : Immediate<u32, IB_ConstRange<1, 32>>;
+def imm_1to32 : Immediate<sint, IB_ConstRange<1, 32>>;
 
 // imm_1248 can be 1, 2, 4 or 8. (e.g. vidupq)
 def imm_1248 : Immediate<u32, IB_ConstRange<1, 8>> {

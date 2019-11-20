@@ -409,9 +409,12 @@ class MVE_ScalarShiftSingleReg<string iname, dag iops, string asm, string cstr,
   let Inst{19-16} = RdaDest{3-0};
 }
 
-class MVE_ScalarShiftSRegImm<string iname, bits<2> op5_4, list<dag> pattern=[]>
+class MVE_ScalarShiftSRegImm<string iname, bits<2> op5_4>
   : MVE_ScalarShiftSingleReg<iname, (ins rGPR:$RdaSrc, long_shift:$imm),
-                     "$RdaSrc, $imm", "$RdaDest = $RdaSrc", pattern> {
+                     "$RdaSrc, $imm", "$RdaDest = $RdaSrc",
+                     [(set rGPR:$RdaDest,
+                          (i32 (!cast<Intrinsic>("int_arm_mve_" # iname)
+                                    (i32 rGPR:$RdaSrc), (i32 imm:$imm))))]> {
   bits<5> imm;
 
   let Inst{15} = 0b0;
@@ -427,9 +430,12 @@ def MVE_SRSHR : MVE_ScalarShiftSRegImm<"srshr", 0b10>;
 def MVE_UQSHL : MVE_ScalarShiftSRegImm<"uqshl", 0b00>;
 def MVE_URSHR : MVE_ScalarShiftSRegImm<"urshr", 0b01>;
 
-class MVE_ScalarShiftSRegReg<string iname, bits<2> op5_4, list<dag> pattern=[]>
+class MVE_ScalarShiftSRegReg<string iname, bits<2> op5_4>
   : MVE_ScalarShiftSingleReg<iname, (ins rGPR:$RdaSrc, rGPR:$Rm),
-                     "$RdaSrc, $Rm", "$RdaDest = $RdaSrc", pattern> {
+                     "$RdaSrc, $Rm", "$RdaDest = $RdaSrc",
+                     [(set rGPR:$RdaDest,
+                         (i32 (!cast<Intrinsic>("int_arm_mve_" # iname)
+                                   (i32 rGPR:$RdaSrc), (i32 rGPR:$Rm))))]> {
   bits<4> Rm;
 
   let Inst{15-12} = Rm{3-0};
