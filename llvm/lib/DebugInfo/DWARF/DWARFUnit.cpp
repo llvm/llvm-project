@@ -637,6 +637,30 @@ Expected<DWARFAddressRangesVector> DWARFUnit::collectAddressRanges() {
   return *CUDIERangesOrError;
 }
 
+Expected<DWARFLocationExpressionsVector>
+DWARFUnit::findLoclistFromOffset(uint64_t Offset) {
+  DWARFLocationExpressionsVector Result;
+
+  Error InterpretationError = Error::success();
+
+  Error ParseError = getLocationTable().visitAbsoluteLocationList(
+      Offset, getBaseAddress(),
+      [this](uint32_t Index) { return getAddrOffsetSectionItem(Index); },
+      [&](Expected<DWARFLocationExpression> L) {
+        if (L)
+          Result.push_back(std::move(*L));
+        else
+          InterpretationError =
+              joinErrors(L.takeError(), std::move(InterpretationError));
+        return !InterpretationError;
+      });
+
+  if (ParseError || InterpretationError)
+    return joinErrors(std::move(ParseError), std::move(InterpretationError));
+
+  return Result;
+}
+
 void DWARFUnit::updateAddressDieMap(DWARFDie Die) {
   if (Die.isSubroutineDIE()) {
     auto DIERangesOrError = Die.getAddressRanges();
