@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z14 | FileCheck %s
 
 declare fp128 @llvm.experimental.constrained.fmul.f128(fp128, fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.fpext.f128.f64(double, metadata)
 
 define void @f1(fp128 *%ptr1, fp128 *%ptr2) #0 {
 ; CHECK-LABEL: f1:
@@ -28,8 +29,10 @@ define void @f2(double %f1, double %f2, fp128 *%dst) #0 {
 ; CHECK: wfmxb [[RES:%v[0-9]+]], [[REG1]], [[REG2]]
 ; CHECK: vst [[RES]], 0(%r2)
 ; CHECK: br %r14
-  %f1x = fpext double %f1 to fp128
-  %f2x = fpext double %f2 to fp128
+  %f1x = call fp128 @llvm.experimental.constrained.fpext.f128.f64(double %f1,
+                                               metadata !"fpexcept.strict") #0
+  %f2x = call fp128 @llvm.experimental.constrained.fpext.f128.f64(double %f2,
+                                               metadata !"fpexcept.strict") #0
   %res = call fp128 @llvm.experimental.constrained.fmul.f128(
                         fp128 %f1x, fp128 %f2x,
                         metadata !"round.dynamic",
