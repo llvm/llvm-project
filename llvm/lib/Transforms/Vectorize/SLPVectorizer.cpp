@@ -6653,7 +6653,7 @@ public:
 
   /// Attempt to vectorize the tree found by
   /// matchAssociativeReduction.
-  bool tryToReduce(BoUpSLP &V, TargetTransformInfo *TTI, bool Try2WayRdx) {
+  bool tryToReduce(BoUpSLP &V, TargetTransformInfo *TTI) {
     if (ReducedVals.empty())
       return false;
 
@@ -6661,14 +6661,11 @@ public:
     // to a nearby power-of-2. Can safely generate oversized
     // vectors and rely on the backend to split them to legal sizes.
     unsigned NumReducedVals = ReducedVals.size();
-    if (Try2WayRdx && NumReducedVals != 2)
-      return false;
-    unsigned MinRdxVals = Try2WayRdx ? 2 : 4;
-    if (NumReducedVals < MinRdxVals)
+    if (NumReducedVals < 4)
       return false;
 
     unsigned ReduxWidth = PowerOf2Floor(NumReducedVals);
-    unsigned MinRdxWidth = Log2_32(MinRdxVals);
+
     Value *VectorizedTree = nullptr;
 
     // FIXME: Fast-math-flags should be set based on the instructions in the
@@ -6704,7 +6701,7 @@ public:
     SmallVector<Value *, 16> IgnoreList;
     for (auto &V : ReductionOps)
       IgnoreList.append(V.begin(), V.end());
-    while (i < NumReducedVals - ReduxWidth + 1 && ReduxWidth > MinRdxWidth) {
+    while (i < NumReducedVals - ReduxWidth + 1 && ReduxWidth > 2) {
       auto VL = makeArrayRef(&ReducedVals[i], ReduxWidth);
       V.buildTree(VL, ExternallyUsedValues, IgnoreList);
       Optional<ArrayRef<unsigned>> Order = V.bestOrder();
@@ -7048,7 +7045,7 @@ static Value *getReductionValue(const DominatorTree *DT, PHINode *P,
 /// performed.
 static bool tryToVectorizeHorReductionOrInstOperands(
     PHINode *P, Instruction *Root, BasicBlock *BB, BoUpSLP &R,
-    TargetTransformInfo *TTI, bool Try2WayRdx,
+    TargetTransformInfo *TTI,
     const function_ref<bool(Instruction *, BoUpSLP &)> Vectorize) {
   if (!ShouldVectorizeHor)
     return false;
@@ -7079,7 +7076,7 @@ static bool tryToVectorizeHorReductionOrInstOperands(
     if (BI || SI) {
       HorizontalReduction HorRdx;
       if (HorRdx.matchAssociativeReduction(P, Inst)) {
-        if (HorRdx.tryToReduce(R, TTI, Try2WayRdx)) {
+        if (HorRdx.tryToReduce(R, TTI)) {
           Res = true;
           // Set P to nullptr to avoid re-analysis of phi node in
           // matchAssociativeReduction function unless this is the root node.
@@ -7122,8 +7119,7 @@ static bool tryToVectorizeHorReductionOrInstOperands(
 
 bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Value *V,
                                                  BasicBlock *BB, BoUpSLP &R,
-                                                 TargetTransformInfo *TTI,
-                                                 bool Try2WayRdx) {
+                                                 TargetTransformInfo *TTI) {
   if (!V)
     return false;
   auto *I = dyn_cast<Instruction>(V);
@@ -7136,7 +7132,7 @@ bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Value *V,
   auto &&ExtraVectorization = [this](Instruction *I, BoUpSLP &R) -> bool {
     return tryToVectorize(I, R);
   };
-  return tryToVectorizeHorReductionOrInstOperands(P, I, BB, R, TTI, Try2WayRdx,
+  return tryToVectorizeHorReductionOrInstOperands(P, I, BB, R, TTI,
                                                   ExtraVectorization);
 }
 
@@ -7330,23 +7326,6 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     if (isa<InsertElementInst>(it) || isa<CmpInst>(it) ||
         isa<InsertValueInst>(it))
       PostProcessInstructions.push_back(&*it);
-  }
-
-  // Make a final attempt to match a 2-way reduction if nothing else worked.
-  // We do not try this above because it may interfere with other vectorization
-  // attempts.
-  // TODO: The constraints are copied from the above call to
-  //       vectorizeRootInstruction(), but that might be too restrictive?
-  BasicBlock::iterator LastInst = --BB->end();
-  if (!Changed && LastInst->use_empty() &&
-      (LastInst->getType()->isVoidTy() || isa<CallInst>(LastInst) ||
-       isa<InvokeInst>(LastInst))) {
-    if (ShouldStartVectorizeHorAtStore || !isa<StoreInst>(LastInst)) {
-      for (auto *V : LastInst->operand_values()) {
-        Changed |= vectorizeRootInstruction(nullptr, V, BB, R, TTI,
-                                            /* Try2WayRdx */ true);
-      }
-    }
   }
 
   return Changed;
