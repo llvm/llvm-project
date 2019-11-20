@@ -180,7 +180,7 @@ Improvements to clang-tidy
   <clang-tidy/checks/readability-redundant-member-init>` check.
 
   The check  now supports the ``IgnoreBaseInCopyConstructors`` option to avoid
-  `"base class \‘Foo\’ should be explicitly initialized in the copy constructor"`
+  `"base class 'Foo' should be explicitly initialized in the copy constructor"`
   warnings or errors with ``gcc -Wextra`` or ``gcc -Werror=extra``.
 
 - The :doc:`readability-redundant-string-init
