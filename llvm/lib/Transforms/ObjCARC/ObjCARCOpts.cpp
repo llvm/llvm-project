@@ -507,10 +507,20 @@ namespace {
     void OptimizeAutoreleaseRVCall(Function &F, Instruction *AutoreleaseRV,
                                    ARCInstKind &Class);
     void OptimizeIndividualCalls(Function &F);
-    void
-    OptimizeIndividualCallImpl(Function &F,
-                               DenseMap<BasicBlock *, ColorVector> &BlockColors,
-                               Instruction *Inst, ARCInstKind Class);
+
+    /// Optimize an individual call, optionally passing the
+    /// GetArgRCIdentityRoot if it has already been computed.
+    void OptimizeIndividualCallImpl(
+        Function &F, DenseMap<BasicBlock *, ColorVector> &BlockColors,
+        Instruction *Inst, ARCInstKind Class, const Value *Arg);
+
+    /// Try to optimize an AutoreleaseRV with a RetainRV or ClaimRV.  If the
+    /// optimization occurs, returns true to indicate that the caller should
+    /// assume the instructions are dead.
+    bool OptimizeInlinedAutoreleaseRVCall(
+        Function &F, DenseMap<BasicBlock *, ColorVector> &BlockColors,
+        Instruction *Inst, const Value *&Arg, ARCInstKind Class,
+        Instruction *AutoreleaseRV, const Value *&AutoreleaseRVArg);
 
     void CheckForCFGHazards(const BasicBlock *BB,
                             DenseMap<const BasicBlock *, BBState> &BBStates,
@@ -594,36 +604,8 @@ void ObjCARCOpt::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
 }
 
-static bool isSafeBetweenRVCalls(const Instruction *I) {
-  if (IsNoopInstruction(I))
-    return true;
-
-  auto *CB = dyn_cast<CallBase>(I);
-  if (!CB)
-    return false;
-
-  Intrinsic::ID IID = CB->getIntrinsicID();
-  if (IID == Intrinsic::not_intrinsic)
-    return false;
-
-  switch (IID) {
-  case Intrinsic::lifetime_start:
-  case Intrinsic::lifetime_end:
-    // The inliner adds new lifetime markers as part of the return sequence,
-    // which should be skipped when looking for paired return RV call.
-    LLVM_FALLTHROUGH;
-  case Intrinsic::stacksave:
-  case Intrinsic::stackrestore:
-    // If the inlined code contains dynamic allocas, the above applies as well.
-    return true;
-  default:
-    return false;
-  }
-}
-
 /// Turn objc_retainAutoreleasedReturnValue into objc_retain if the operand is
-/// not a return value.  Or, if it can be paired with an
-/// objc_autoreleaseReturnValue, delete the pair and return true.
+/// not a return value.
 bool
 ObjCARCOpt::OptimizeRetainRVCall(Function &F, Instruction *RetainRV) {
   // Check for the argument being from an immediately preceding call or invoke.
@@ -649,39 +631,6 @@ ObjCARCOpt::OptimizeRetainRVCall(Function &F, Instruction *RetainRV) {
     }
   }
 
-  // Track PHIs which are equivalent to our Arg.
-  SmallDenseSet<const Value*, 2> EquivalentArgs;
-  EquivalentArgs.insert(Arg);
-
-  // Add PHIs that are equivalent to Arg to ArgUsers.
-  if (const PHINode *PN = dyn_cast<PHINode>(Arg)) {
-    SmallVector<const Value *, 2> ArgUsers;
-    getEquivalentPHIs(*PN, ArgUsers);
-    EquivalentArgs.insert(ArgUsers.begin(), ArgUsers.end());
-  }
-
-  // Check for being preceded by an objc_autoreleaseReturnValue on the same
-  // pointer. In this case, we can delete the pair.
-  BasicBlock::iterator I = RetainRV->getIterator(),
-                       Begin = RetainRV->getParent()->begin();
-  if (I != Begin) {
-    do
-      --I;
-    while (I != Begin && isSafeBetweenRVCalls(&*I));
-    if (GetBasicARCInstKind(&*I) == ARCInstKind::AutoreleaseRV &&
-        EquivalentArgs.count(GetArgRCIdentityRoot(&*I))) {
-      Changed = true;
-      ++NumPeeps;
-
-      LLVM_DEBUG(dbgs() << "Erasing autoreleaseRV,retainRV pair: " << *I << "\n"
-                        << "Erasing " << *RetainRV << "\n");
-
-      EraseInstruction(&*I);
-      EraseInstruction(RetainRV);
-      return true;
-    }
-  }
-
   // Turn it to a plain objc_retain.
   Changed = true;
   ++NumPeeps;
@@ -697,6 +646,62 @@ ObjCARCOpt::OptimizeRetainRVCall(Function &F, Instruction *RetainRV) {
   LLVM_DEBUG(dbgs() << "New = " << *RetainRV << "\n");
 
   return false;
+}
+
+bool ObjCARCOpt::OptimizeInlinedAutoreleaseRVCall(
+    Function &F, DenseMap<BasicBlock *, ColorVector> &BlockColors,
+    Instruction *Inst, const Value *&Arg, ARCInstKind Class,
+    Instruction *AutoreleaseRV, const Value *&AutoreleaseRVArg) {
+  // Must be in the same basic block.
+  assert(Inst->getParent() == AutoreleaseRV->getParent());
+
+  // Must operate on the same root.
+  Arg = GetArgRCIdentityRoot(Inst);
+  AutoreleaseRVArg = GetArgRCIdentityRoot(AutoreleaseRV);
+  if (Arg != AutoreleaseRVArg) {
+    // If there isn't an exact match, check if we have equivalent PHIs.
+    const PHINode *PN = dyn_cast<PHINode>(Arg);
+    if (!PN)
+      return false;
+
+    SmallVector<const Value *, 4> ArgUsers;
+    getEquivalentPHIs(*PN, ArgUsers);
+    if (llvm::find(ArgUsers, AutoreleaseRVArg) == ArgUsers.end())
+      return false;
+  }
+
+  // Okay, this is a match.  Merge them.
+  ++NumPeeps;
+  LLVM_DEBUG(dbgs() << "Found inlined objc_autoreleaseReturnValue '"
+                    << *AutoreleaseRV << "' paired with '" << *Inst << "'\n");
+
+  // Delete the RV pair, starting with the AutoreleaseRV.
+  AutoreleaseRV->replaceAllUsesWith(
+      cast<CallInst>(AutoreleaseRV)->getArgOperand(0));
+  EraseInstruction(AutoreleaseRV);
+  if (Class == ARCInstKind::RetainRV) {
+    // AutoreleaseRV and RetainRV cancel out.  Delete the RetainRV.
+    Inst->replaceAllUsesWith(cast<CallInst>(Inst)->getArgOperand(0));
+    EraseInstruction(Inst);
+    return true;
+  }
+
+  // ClaimRV is a frontend peephole for RetainRV + Release.  Since the
+  // AutoreleaseRV and RetainRV cancel out, replace the ClaimRV with a Release.
+  assert(Class == ARCInstKind::ClaimRV);
+  Value *CallArg = cast<CallInst>(Inst)->getArgOperand(0);
+  CallInst *Release = CallInst::Create(
+      EP.get(ARCRuntimeEntryPointKind::Release), CallArg, "", Inst);
+  assert(IsAlwaysTail(ARCInstKind::ClaimRV) &&
+         "Expected ClaimRV to be safe to tail call");
+  Release->setTailCall();
+  Inst->replaceAllUsesWith(CallArg);
+  EraseInstruction(Inst);
+
+  // Run the normal optimizations on Release.
+  OptimizeIndividualCallImpl(F, BlockColors, Release, ARCInstKind::Release,
+                             Arg);
+  return true;
 }
 
 /// Turn objc_autoreleaseReturnValue into objc_autorelease if the result is not
@@ -785,31 +790,98 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
       isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     BlockColors = colorEHFunclets(F);
 
+  // Store any delayed AutoreleaseRV intrinsics, so they can be easily paired
+  // with RetainRV and ClaimRV.
+  Instruction *DelayedAutoreleaseRV = nullptr;
+  const Value *DelayedAutoreleaseRVArg = nullptr;
+  auto setDelayedAutoreleaseRV = [&](Instruction *AutoreleaseRV) {
+    assert(!DelayedAutoreleaseRV || !AutoreleaseRV);
+    DelayedAutoreleaseRV = AutoreleaseRV;
+    DelayedAutoreleaseRVArg = nullptr;
+  };
+  auto optimizeDelayedAutoreleaseRV = [&]() {
+    if (!DelayedAutoreleaseRV)
+      return;
+    OptimizeIndividualCallImpl(F, BlockColors, DelayedAutoreleaseRV,
+                               ARCInstKind::AutoreleaseRV,
+                               DelayedAutoreleaseRVArg);
+    setDelayedAutoreleaseRV(nullptr);
+  };
+  auto shouldDelayAutoreleaseRV = [&](Instruction *NonARCInst) {
+    // Nothing to delay, but we may as well skip the logic below.
+    if (!DelayedAutoreleaseRV)
+      return true;
+
+    // If we hit the end of the basic block we're not going to find an RV-pair.
+    // Stop delaying.
+    if (NonARCInst->isTerminator())
+      return false;
+
+    // Given the frontend rules for emitting AutoreleaseRV, RetainRV, and
+    // ClaimRV, it's probably safe to skip over even opaque function calls
+    // here since OptimizeInlinedAutoreleaseRVCall will confirm that they
+    // have the same RCIdentityRoot.  However, what really matters is
+    // skipping instructions or intrinsics that the inliner could leave behind;
+    // be conservative for now and don't skip over opaque calls, which could
+    // potentially include other ARC calls.
+    auto *CB = dyn_cast<CallBase>(NonARCInst);
+    if (!CB)
+      return true;
+    return CB->getIntrinsicID() != Intrinsic::not_intrinsic;
+  };
+
   // Visit all objc_* calls in F.
   for (inst_iterator I = inst_begin(&F), E = inst_end(&F); I != E; ) {
     Instruction *Inst = &*I++;
 
     ARCInstKind Class = GetBasicARCInstKind(Inst);
 
-    LLVM_DEBUG(dbgs() << "Visiting: Class: " << Class << "; " << *Inst << "\n");
-
     // Skip this loop if this instruction isn't itself an ARC intrinsic.
+    const Value *Arg = nullptr;
     switch (Class) {
     default:
+      optimizeDelayedAutoreleaseRV();
       break;
     case ARCInstKind::CallOrUser:
     case ARCInstKind::User:
     case ARCInstKind::None:
+      // This is a non-ARC instruction.  If we're delaying an AutoreleaseRV,
+      // check if it's safe to skip over it; if not, optimize the AutoreleaseRV
+      // now.
+      if (!shouldDelayAutoreleaseRV(Inst))
+        optimizeDelayedAutoreleaseRV();
       continue;
+    case ARCInstKind::AutoreleaseRV:
+      optimizeDelayedAutoreleaseRV();
+      setDelayedAutoreleaseRV(Inst);
+      continue;
+    case ARCInstKind::RetainRV:
+    case ARCInstKind::ClaimRV:
+      if (DelayedAutoreleaseRV) {
+        // We have a potential RV pair.  Check if they cancel out.
+        if (OptimizeInlinedAutoreleaseRVCall(F, BlockColors, Inst, Arg, Class,
+                                             DelayedAutoreleaseRV,
+                                             DelayedAutoreleaseRVArg)) {
+          setDelayedAutoreleaseRV(nullptr);
+          continue;
+        }
+        optimizeDelayedAutoreleaseRV();
+      }
+      break;
     }
 
-    OptimizeIndividualCallImpl(F, BlockColors, Inst, Class);
+    OptimizeIndividualCallImpl(F, BlockColors, Inst, Class, Arg);
   }
+
+  // Catch the final delayed AutoreleaseRV.
+  optimizeDelayedAutoreleaseRV();
 }
 
 void ObjCARCOpt::OptimizeIndividualCallImpl(
     Function &F, DenseMap<BasicBlock *, ColorVector> &BlockColors,
-    Instruction *Inst, ARCInstKind Class) {
+    Instruction *Inst, ARCInstKind Class, const Value *Arg) {
+  LLVM_DEBUG(dbgs() << "Visiting: Class: " << Class << "; " << *Inst << "\n");
+
   // Some of the ARC calls can be deleted if their arguments are global
   // variables that are inert in ARC.
   if (IsNoopOnGlobal(Class)) {
@@ -958,7 +1030,9 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(
     return;
   }
 
-  const Value *Arg = GetArgRCIdentityRoot(Inst);
+  // If we haven't already looked up the root, look it up now.
+  if (!Arg)
+    Arg = GetArgRCIdentityRoot(Inst);
 
   // ARC calls with null are no-ops. Delete them.
   if (IsNullOrUndef(Arg)) {
