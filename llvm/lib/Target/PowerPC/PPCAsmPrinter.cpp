@@ -1749,7 +1749,8 @@ void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   SectionKind GVKind = getObjFileLowering().getKindForGlobal(GV, TM);
   if ((!GVKind.isCommon() && !GVKind.isBSS() && !GVKind.isData() &&
        !GVKind.isReadOnly()) ||
-      GVKind.isMergeableCString() || GVKind.isMergeableConst())
+      GVKind.isMergeable2ByteCString() || GVKind.isMergeable4ByteCString() ||
+      GVKind.isMergeableConst())
     report_fatal_error("Encountered a global variable kind that is "
                        "not supported yet.");
 
