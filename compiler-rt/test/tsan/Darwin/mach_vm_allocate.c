@@ -3,6 +3,8 @@
 // RUN: %clang_tsan %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s --implicit-check-not='ThreadSanitizer'
 
+// REQUIRES: rdar57365733
+
 #include <mach/mach.h>
 #include <mach/mach_vm.h>
 #include <pthread.h>
