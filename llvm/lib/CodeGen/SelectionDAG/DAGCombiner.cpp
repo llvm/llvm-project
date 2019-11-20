@@ -2802,6 +2802,96 @@ static SDValue combineADDCARRYDiamond(DAGCombiner &Combiner, SelectionDAG &DAG,
   return SDValue();
 }
 
+// If we are facing some sort of diamond carry/borrow in/out pattern try to
+// match patterns like:
+//
+//          (uaddo A, B)            CarryIn
+//            |  \                     |
+//            |   \                    |
+//    PartialSum   PartialCarryOutX   /
+//            |        |             /
+//            |    ____|____________/
+//            |   /    |
+//     (uaddo *, *)    \________
+//       |  \                   \
+//       |   \                   |
+//       |    PartialCarryOutY   |
+//       |        \              |
+//       |         \            /
+//   AddCarrySum    |    ______/
+//                  |   /
+//   CarryOut = (or *, *)
+//
+// And generate ADDCARRY (or SUBCARRY) with two result values:
+//
+//    {AddCarrySum, CarryOut} = (addcarry A, B, CarryIn)
+//
+// Our goal is to identify A, B, and CarryIn and produce ADDCARRY/SUBCARRY with
+// a single path for carry/borrow out propagation:
+static SDValue combineCarryDiamond(DAGCombiner &Combiner, SelectionDAG &DAG,
+                                   const TargetLowering &TLI, SDValue Carry0,
+                                   SDValue Carry1, SDNode *N) {
+  if (Carry0.getResNo() != 1 || Carry1.getResNo() != 1)
+    return SDValue();
+  unsigned Opcode = Carry0.getOpcode();
+  if (Opcode != Carry1.getOpcode())
+    return SDValue();
+  if (Opcode != ISD::UADDO && Opcode != ISD::USUBO)
+    return SDValue();
+
+  // Canonicalize the add/sub of A and B as Carry0 and the add/sub of the
+  // carry/borrow in as Carry1. (The top and middle uaddo nodes respectively in
+  // the above ASCII art.)
+  if (Carry1.getOperand(0) != Carry0.getValue(0) &&
+      Carry1.getOperand(1) != Carry0.getValue(0))
+    std::swap(Carry0, Carry1);
+  if (Carry1.getOperand(0) != Carry0.getValue(0) &&
+      Carry1.getOperand(1) != Carry0.getValue(0))
+    return SDValue();
+
+  // The carry in value must be on the righthand side for subtraction.
+  unsigned CarryInOperandNum =
+      Carry1.getOperand(0) == Carry0.getValue(0) ? 1 : 0;
+  if (Opcode == ISD::USUBO && CarryInOperandNum != 1)
+    return SDValue();
+  SDValue CarryIn = Carry1.getOperand(CarryInOperandNum);
+
+  unsigned NewOp = Opcode == ISD::UADDO ? ISD::ADDCARRY : ISD::SUBCARRY;
+  if (!TLI.isOperationLegalOrCustom(NewOp, Carry0.getValue(0).getValueType()))
+    return SDValue();
+
+  // Verify that the carry/borrow in is plausibly a carry/borrow bit.
+  // TODO: make getAsCarry() aware of how partial carries are merged.
+  if (CarryIn.getOpcode() != ISD::ZERO_EXTEND)
+    return SDValue();
+  CarryIn = CarryIn.getOperand(0);
+  if (CarryIn.getValueType() != MVT::i1)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue Merged =
+      DAG.getNode(NewOp, DL, Carry1->getVTList(), Carry0.getOperand(0),
+                  Carry0.getOperand(1), CarryIn);
+
+  // Please note that because we have proven that the result of the UADDO/USUBO
+  // of A and B feeds into the UADDO/USUBO that does the carry/borrow in, we can
+  // therefore prove that if the first UADDO/USUBO overflows, the second
+  // UADDO/USUBO cannot. For example consider 8-bit numbers where 0xFF is the
+  // maximum value.
+  //
+  //   0xFF + 0xFF == 0xFE with carry but 0xFE + 1 does not carry
+  //   0x00 - 0xFF == 1 with a carry/borrow but 1 - 1 == 0 (no carry/borrow)
+  //
+  // This is important because it means that OR and XOR can be used to merge
+  // carry flags; and that AND can return a constant zero.
+  //
+  // TODO: match other operations that can merge flags (ADD, etc)
+  DAG.ReplaceAllUsesOfValueWith(Carry1.getValue(0), Merged.getValue(0));
+  if (N->getOpcode() == ISD::AND)
+    return DAG.getConstant(0, DL, MVT::i1);
+  return Merged.getValue(1);
+}
+
 SDValue DAGCombiner::visitADDCARRYLike(SDValue N0, SDValue N1, SDValue CarryIn,
                                        SDNode *N) {
   // fold (addcarry (xor a, -1), b, c) -> (subcarry b, a, !c) and flip carry.
@@ -5093,6 +5183,9 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     if (SDValue Shuffle = XformToShuffleWithZero(N))
       return Shuffle;
 
+  if (SDValue Combined = combineCarryDiamond(*this, DAG, TLI, N0, N1, N))
+    return Combined;
+
   // fold (and (or x, C), D) -> D if (C & D) == D
   auto MatchSubset = [](ConstantSDNode *LHS, ConstantSDNode *RHS) {
     return RHS->getAPIntValue().isSubsetOf(LHS->getAPIntValue());
@@ -5785,6 +5878,9 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
     return N1;
 
   if (SDValue Combined = visitORLike(N0, N1, N))
+    return Combined;
+
+  if (SDValue Combined = combineCarryDiamond(*this, DAG, TLI, N0, N1, N))
     return Combined;
 
   // Recognize halfword bswaps as (bswap + rotl 16) or (bswap + shl 16)
@@ -7048,6 +7144,9 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   // Simplify the expression using non-local knowledge.
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
+
+  if (SDValue Combined = combineCarryDiamond(*this, DAG, TLI, N0, N1, N))
+    return Combined;
 
   return SDValue();
 }
