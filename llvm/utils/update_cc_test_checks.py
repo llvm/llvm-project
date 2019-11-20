@@ -103,6 +103,8 @@ def config():
   parser.add_argument(
       '--x86_extra_scrub', action='store_true',
       help='Use more regex for x86 matching to reduce diffs between various subtargets')
+  parser.add_argument('--function-signature', action='store_true',
+                      help='Keep function signature information around for the check line')
   parser.add_argument('tests', nargs='+')
   args = common.parse_commandline_args(parser)
   args.clang_args = shlex.split(args.clang_args or '')
@@ -162,7 +164,7 @@ def get_function_body(args, filename, clang_args, extra_commands, prefixes, trip
   if '-emit-llvm' in clang_args:
     common.build_function_body_dictionary(
             common.OPT_FUNCTION_RE, common.scrub_body, [],
-            raw_tool_output, prefixes, func_dict, args.verbose, False)
+            raw_tool_output, prefixes, func_dict, args.verbose, args.function_signature)
   else:
     print('The clang command line should include -emit-llvm as asm tests '
           'are discouraged in Clang testsuite.', file=sys.stderr)
@@ -288,7 +290,8 @@ def main():
             if added:
               output_lines.append('//')
             added.add(mangled)
-            common.add_ir_checks(output_lines, '//', run_list, func_dict, mangled, False, False)
+            common.add_ir_checks(output_lines, '//', run_list, func_dict, mangled,
+                                 False, args.function_signature)
       output_lines.append(line.rstrip('\n'))
 
     # Update the test file.
