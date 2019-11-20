@@ -16,6 +16,7 @@
 #define LLVM_C_DISASSEMBLER_H
 
 #include "llvm-c/DisassemblerTypes.h"
+#include "llvm-c/ExternC.h"
 
 /**
  * @defgroup LLVMCDisassembler Disassembler
@@ -24,9 +25,7 @@
  * @{
  */
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* !defined(__cplusplus) */
+LLVM_C_EXTERN_C_BEGIN
 
 /**
  * Create a disassembler for the TripleName.  Symbolic disassembly is supported
@@ -106,8 +105,6 @@ size_t LLVMDisasmInstruction(LLVMDisasmContextRef DC, uint8_t *Bytes,
  * @}
  */
 
-#ifdef __cplusplus
-}
-#endif /* !defined(__cplusplus) */
+LLVM_C_EXTERN_C_END
 
 #endif /* LLVM_C_DISASSEMBLER_H */
