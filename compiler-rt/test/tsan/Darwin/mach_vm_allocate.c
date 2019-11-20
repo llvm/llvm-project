@@ -24,9 +24,11 @@ static int *alloc() {
 
 static void alloc_fixed(int *ptr) {
   mach_vm_address_t addr = (mach_vm_address_t)ptr;
-  kern_return_t res =
-      mach_vm_allocate(mach_task_self(), &addr, alloc_size, VM_FLAGS_FIXED);
-  assert(res == KERN_SUCCESS);
+  kern_return_t res;
+  // Re-allocation via VM_FLAGS_FIXED sporadically fails.
+  do {
+    res = mach_vm_allocate(mach_task_self(), &addr, alloc_size, VM_FLAGS_FIXED);
+  } while (res != KERN_SUCCESS);
 }
 
 static void dealloc(int *ptr) {
@@ -39,8 +41,9 @@ static void *Thread(void *arg) {
   *global_ptr = 7;  // Assignment 1
 
   // We want to test that TSan does not report a race between the two
-  // assignments to global_ptr when memory is re-allocated here. The calls to
-  // the API itself are racy though, so ignore them.
+  // assignments to *global_ptr when the underlying memory is re-allocated
+  // between assignments. The calls to the API itself are racy though, so ignore
+  // them.
   AnnotateIgnoreWritesBegin(__FILE__, __LINE__);
   dealloc(global_ptr);
   alloc_fixed(global_ptr);
