@@ -447,7 +447,8 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 }
 
 bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
-                                        OpenMPClauseKind CKind) {
+                                        OpenMPClauseKind CKind,
+                                        unsigned OpenMPVersion) {
   assert(DKind <= OMPD_unknown);
   assert(CKind <= OMPC_unknown);
   switch (DKind) {
@@ -462,6 +463,8 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
     }
     break;
   case OMPD_simd:
+    if (OpenMPVersion < 50 && CKind == OMPC_if)
+      return false;
     switch (CKind) {
 #define OPENMP_SIMD_CLAUSE(Name)                                               \
   case OMPC_##Name:                                                            \
