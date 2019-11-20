@@ -24,7 +24,7 @@ Add the new STRICT version of the node type to the ISD::NodeType enum::
 
   include/llvm/CodeGen/ISDOpcodes.h
 
-Strict version name must be a concatenation of prefix "STRICT_" and the name
+Strict version name must be a concatenation of prefix ``STRICT_`` and the name
 of corresponding non-strict node name. For instance, strict version of the
 node FADD must be STRICT_FADD.
 
