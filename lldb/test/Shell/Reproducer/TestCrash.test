@@ -5,7 +5,6 @@
 # RUN: rm -rf %t.repro
 
 # RUN: %lldb -b --capture --capture-path %t.repro -o 'reproducer xcrash -s SIGSEGV' | FileCheck %s
-# RUN: %lldb -b --capture --capture-path %t.repro -o 'reproducer xcrash -s SIGBUS' | FileCheck %s
 # RUN: %lldb -b --capture --capture-path %t.repro -o 'reproducer xcrash -s SIGILL' | FileCheck %s
 
 # CHECK: ********************
