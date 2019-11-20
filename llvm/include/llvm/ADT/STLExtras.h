@@ -17,7 +17,6 @@
 #define LLVM_ADT_STLEXTRAS_H
 
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/abi-breaking.h"
@@ -50,10 +49,6 @@ namespace detail {
 
 template <typename RangeT>
 using IterOfRange = decltype(std::begin(std::declval<RangeT &>()));
-
-template <typename RangeT>
-using ValueOfRange = typename std::remove_reference<decltype(
-    *std::begin(std::declval<RangeT &>()))>::type;
 
 } // end namespace detail
 
@@ -1332,15 +1327,6 @@ bool is_splat(R &&Range) {
   size_t range_size = size(Range);
   return range_size != 0 && (range_size == 1 ||
          std::equal(adl_begin(Range) + 1, adl_end(Range), adl_begin(Range)));
-}
-
-/// Given a range of type R, iterate the entire range and return a
-/// SmallVector with elements of the vector.  This is useful, for example,
-/// when you want to iterate a range and then sort the results.
-template <unsigned Size, typename R>
-SmallVector<typename std::remove_const<detail::ValueOfRange<R>>::type, Size>
-to_vector(R &&Range) {
-  return {adl_begin(Range), adl_end(Range)};
 }
 
 /// Provide a container algorithm similar to C++ Library Fundamentals v2's
