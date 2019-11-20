@@ -894,8 +894,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                     attrs.accessibility, attrs.is_artificial, is_variadic);
             type_handled = objc_method_decl != NULL;
             if (type_handled) {
-              LinkDeclContextToDIE(
-                  ClangASTContext::GetAsDeclContext(objc_method_decl), die);
+              LinkDeclContextToDIE(objc_method_decl, die);
               m_ast.SetMetadataAsUserID(objc_method_decl, die.GetID());
             } else {
               dwarf->GetObjectFile()->GetModule()->ReportError(
@@ -1009,10 +1008,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                             if (method_decl->getType() ==
                                 ClangUtil::GetQualType(clang_type)) {
                               add_method = false;
-                              LinkDeclContextToDIE(
-                                  ClangASTContext::GetAsDeclContext(
-                                      method_decl),
-                                  die);
+                              LinkDeclContextToDIE(method_decl, die);
                               type_handled = true;
 
                               break;
@@ -1054,9 +1050,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                       type_handled |= attrs.is_artificial;
 
                       if (cxx_method_decl) {
-                        LinkDeclContextToDIE(
-                            ClangASTContext::GetAsDeclContext(cxx_method_decl),
-                            die);
+                        LinkDeclContextToDIE(cxx_method_decl, die);
 
                         ClangASTMetadata metadata;
                         metadata.SetUserID(die.GetID());
