@@ -58,22 +58,9 @@ struct MakeGuardsExplicitLegacyPass : public FunctionPass {
 static void turnToExplicitForm(CallInst *Guard, Function *DeoptIntrinsic) {
   // Replace the guard with an explicit branch (just like in GuardWidening).
   BasicBlock *BB = Guard->getParent();
-  makeGuardControlFlowExplicit(DeoptIntrinsic, Guard);
-  BranchInst *ExplicitGuard = cast<BranchInst>(BB->getTerminator());
-  assert(ExplicitGuard->isConditional() && "Must be!");
+  makeGuardControlFlowExplicit(DeoptIntrinsic, Guard, true);
+  assert(isWidenableBranch(BB->getTerminator()) && "should hold");
 
-  // We want the guard to be expressed as explicit control flow, but still be
-  // widenable. For that, we add Widenable Condition intrinsic call to the
-  // guard's condition.
-  IRBuilder<> B(ExplicitGuard);
-  auto *WidenableCondition =
-      B.CreateIntrinsic(Intrinsic::experimental_widenable_condition,
-                        {}, {}, nullptr, "widenable_cond");
-  WidenableCondition->setCallingConv(Guard->getCallingConv());
-  auto *NewCond =
-      B.CreateAnd(ExplicitGuard->getCondition(), WidenableCondition);
-  NewCond->setName("exiplicit_guard_cond");
-  ExplicitGuard->setCondition(NewCond);
   Guard->eraseFromParent();
 }
 
