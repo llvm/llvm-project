@@ -1846,8 +1846,6 @@ static void emitOMPSimdRegion(CodeGenFunction &CGF, const OMPLoopDirective &S,
     CGF.EmitIgnoredExpr(S.getCalcLastIteration());
   }
 
-  CGF.EmitOMPSimdInit(S);
-
   emitAlignedClause(CGF, S);
   (void)CGF.EmitOMPLinearClauseInit(S);
   {
@@ -1860,13 +1858,46 @@ static void emitOMPSimdRegion(CodeGenFunction &CGF, const OMPLoopDirective &S,
     (void)LoopScope.Privatize();
     if (isOpenMPTargetExecutionDirective(S.getDirectiveKind()))
       CGF.CGM.getOpenMPRuntime().adjustTargetSpecificDataForLambdas(CGF, S);
-    CGF.EmitOMPInnerLoop(S, LoopScope.requiresCleanups(), S.getCond(),
-                         S.getInc(),
-                         [&S](CodeGenFunction &CGF) {
-                           CGF.EmitOMPLoopBody(S, CodeGenFunction::JumpDest());
-                           CGF.EmitStopPoint(&S);
-                         },
-                         [](CodeGenFunction &) {});
+
+    auto &&ThenGen = [&S, &LoopScope](CodeGenFunction &CGF, PrePostActionTy &) {
+      CodeGenFunction::OMPLocalDeclMapRAII Scope(CGF);
+      CGF.EmitOMPSimdInit(S);
+
+      CGF.EmitOMPInnerLoop(
+          S, LoopScope.requiresCleanups(), S.getCond(), S.getInc(),
+          [&S](CodeGenFunction &CGF) {
+            CGF.EmitOMPLoopBody(S, CodeGenFunction::JumpDest());
+            CGF.EmitStopPoint(&S);
+          },
+          [](CodeGenFunction &) {});
+    };
+    auto &&ElseGen = [&S, &LoopScope](CodeGenFunction &CGF, PrePostActionTy &) {
+      CodeGenFunction::OMPLocalDeclMapRAII Scope(CGF);
+      CGF.LoopStack.setVectorizeEnable(/*Enable=*/false);
+
+      CGF.EmitOMPInnerLoop(
+          S, LoopScope.requiresCleanups(), S.getCond(), S.getInc(),
+          [&S](CodeGenFunction &CGF) {
+            CGF.EmitOMPLoopBody(S, CodeGenFunction::JumpDest());
+            CGF.EmitStopPoint(&S);
+          },
+          [](CodeGenFunction &) {});
+    };
+    const Expr *IfCond = nullptr;
+    for (const auto *C : S.getClausesOfKind<OMPIfClause>()) {
+      if (CGF.getLangOpts().OpenMP >= 50 &&
+          (C->getNameModifier() == OMPD_unknown ||
+           C->getNameModifier() == OMPD_simd)) {
+        IfCond = C->getCondition();
+        break;
+      }
+    }
+    if (IfCond) {
+      CGF.CGM.getOpenMPRuntime().emitIfClause(CGF, IfCond, ThenGen, ElseGen);
+    } else {
+      RegionCodeGenTy ThenRCG(ThenGen);
+      ThenRCG(CGF);
+    }
     CGF.EmitOMPSimdFinal(S, [](CodeGenFunction &) { return nullptr; });
     // Emit final copy of the lastprivate variables at the end of loops.
     if (HasLastprivateClause)

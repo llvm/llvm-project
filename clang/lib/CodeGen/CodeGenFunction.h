@@ -947,6 +947,19 @@ public:
     }
   };
 
+  /// Save/restore original map of previously emitted local vars in case when we
+  /// need to duplicate emission of the same code several times in the same
+  /// function for OpenMP code.
+  class OMPLocalDeclMapRAII {
+    CodeGenFunction &CGF;
+    DeclMapTy SavedMap;
+
+  public:
+    OMPLocalDeclMapRAII(CodeGenFunction &CGF)
+        : CGF(CGF), SavedMap(CGF.LocalDeclMap) {}
+    ~OMPLocalDeclMapRAII() { SavedMap.swap(CGF.LocalDeclMap); }
+  };
+
   /// Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added.
   void
