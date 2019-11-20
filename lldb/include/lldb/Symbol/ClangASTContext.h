@@ -153,11 +153,7 @@ public:
 
   CompilerType GetBasicType(lldb::BasicType type);
 
-  static CompilerType GetBasicType(clang::ASTContext *ast,
-                                   lldb::BasicType type);
-
-  static CompilerType GetBasicType(clang::ASTContext *ast,
-                                   ConstString name);
+  CompilerType GetBasicType(ConstString name);
 
   static lldb::BasicType GetBasicTypeEnumeration(ConstString name);
 
