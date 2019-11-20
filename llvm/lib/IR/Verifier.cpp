@@ -4320,38 +4320,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       "an array");
     break;
   }
-  case Intrinsic::experimental_constrained_fadd:
-  case Intrinsic::experimental_constrained_fsub:
-  case Intrinsic::experimental_constrained_fmul:
-  case Intrinsic::experimental_constrained_fdiv:
-  case Intrinsic::experimental_constrained_frem:
-  case Intrinsic::experimental_constrained_fma:
-  case Intrinsic::experimental_constrained_fptosi:
-  case Intrinsic::experimental_constrained_fptoui:
-  case Intrinsic::experimental_constrained_fptrunc:
-  case Intrinsic::experimental_constrained_fpext:
-  case Intrinsic::experimental_constrained_sqrt:
-  case Intrinsic::experimental_constrained_pow:
-  case Intrinsic::experimental_constrained_powi:
-  case Intrinsic::experimental_constrained_sin:
-  case Intrinsic::experimental_constrained_cos:
-  case Intrinsic::experimental_constrained_exp:
-  case Intrinsic::experimental_constrained_exp2:
-  case Intrinsic::experimental_constrained_log:
-  case Intrinsic::experimental_constrained_log10:
-  case Intrinsic::experimental_constrained_log2:
-  case Intrinsic::experimental_constrained_lrint:
-  case Intrinsic::experimental_constrained_llrint:
-  case Intrinsic::experimental_constrained_rint:
-  case Intrinsic::experimental_constrained_nearbyint:
-  case Intrinsic::experimental_constrained_maxnum:
-  case Intrinsic::experimental_constrained_minnum:
-  case Intrinsic::experimental_constrained_ceil:
-  case Intrinsic::experimental_constrained_floor:
-  case Intrinsic::experimental_constrained_lround:
-  case Intrinsic::experimental_constrained_llround:
-  case Intrinsic::experimental_constrained_round:
-  case Intrinsic::experimental_constrained_trunc:
+#define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC, DAGN)                  \
+  case Intrinsic::INTRINSIC:
+#include "llvm/IR/ConstrainedOps.def"
     visitConstrainedFPIntrinsic(cast<ConstrainedFPIntrinsic>(Call));
     break;
   case Intrinsic::dbg_declare: // llvm.dbg.declare
@@ -4778,83 +4749,43 @@ static DISubprogram *getSubprogram(Metadata *LocalScope) {
 }
 
 void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
-  unsigned NumOperands = FPI.getNumArgOperands();
-  bool HasExceptionMD = false;
-  bool HasRoundingMD = false;
+  unsigned NumOperands;
+  bool HasRoundingMD;
   switch (FPI.getIntrinsicID()) {
-  case Intrinsic::experimental_constrained_sqrt:
-  case Intrinsic::experimental_constrained_sin:
-  case Intrinsic::experimental_constrained_cos:
-  case Intrinsic::experimental_constrained_exp:
-  case Intrinsic::experimental_constrained_exp2:
-  case Intrinsic::experimental_constrained_log:
-  case Intrinsic::experimental_constrained_log10:
-  case Intrinsic::experimental_constrained_log2:
-  case Intrinsic::experimental_constrained_rint:
-  case Intrinsic::experimental_constrained_nearbyint:
-  case Intrinsic::experimental_constrained_ceil:
-  case Intrinsic::experimental_constrained_floor:
-  case Intrinsic::experimental_constrained_round:
-  case Intrinsic::experimental_constrained_trunc:
-    Assert((NumOperands == 3), "invalid arguments for constrained FP intrinsic",
-           &FPI);
-    HasExceptionMD = true;
-    HasRoundingMD = true;
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                   \
+  case Intrinsic::INTRINSIC:                                                   \
+    NumOperands = NARG;                                                        \
+    HasRoundingMD = ROUND_MODE;                                                \
     break;
+#include "llvm/IR/ConstrainedOps.def"
+  default:
+    llvm_unreachable("Invalid constrained FP intrinsic!");
+  }
+  NumOperands += (1 + HasRoundingMD);
+  Assert((FPI.getNumArgOperands() == NumOperands),
+         "invalid arguments for constrained FP intrinsic", &FPI);
 
+  switch (FPI.getIntrinsicID()) {
   case Intrinsic::experimental_constrained_lrint:
   case Intrinsic::experimental_constrained_llrint: {
-    Assert((NumOperands == 3), "invalid arguments for constrained FP intrinsic",
-           &FPI);
     Type *ValTy = FPI.getArgOperand(0)->getType();
     Type *ResultTy = FPI.getType();
     Assert(!ValTy->isVectorTy() && !ResultTy->isVectorTy(),
            "Intrinsic does not support vectors", &FPI);
-    HasExceptionMD = true;
-    HasRoundingMD = true;
   } 
     break;
 
   case Intrinsic::experimental_constrained_lround:
   case Intrinsic::experimental_constrained_llround: {
-    Assert((NumOperands == 2), "invalid arguments for constrained FP intrinsic",
-           &FPI);
     Type *ValTy = FPI.getArgOperand(0)->getType();
     Type *ResultTy = FPI.getType();
     Assert(!ValTy->isVectorTy() && !ResultTy->isVectorTy(),
            "Intrinsic does not support vectors", &FPI);
-    HasExceptionMD = true;
     break;
   } 
 
-  case Intrinsic::experimental_constrained_fma:
-    Assert((NumOperands == 5), "invalid arguments for constrained FP intrinsic",
-           &FPI);
-    HasExceptionMD = true;
-    HasRoundingMD = true;
-    break;
-
-  case Intrinsic::experimental_constrained_fadd:
-  case Intrinsic::experimental_constrained_fsub:
-  case Intrinsic::experimental_constrained_fmul:
-  case Intrinsic::experimental_constrained_fdiv:
-  case Intrinsic::experimental_constrained_frem:
-  case Intrinsic::experimental_constrained_pow:
-  case Intrinsic::experimental_constrained_powi:
-  case Intrinsic::experimental_constrained_maxnum:
-  case Intrinsic::experimental_constrained_minnum:
-    Assert((NumOperands == 4), "invalid arguments for constrained FP intrinsic",
-           &FPI);
-    HasExceptionMD = true;
-    HasRoundingMD = true;
-    break;
-
   case Intrinsic::experimental_constrained_fptosi:
   case Intrinsic::experimental_constrained_fptoui: { 
-    Assert((NumOperands == 2),
-           "invalid arguments for constrained FP intrinsic", &FPI);
-    HasExceptionMD = true;
-
     Value *Operand = FPI.getArgOperand(0);
     uint64_t NumSrcElem = 0;
     Assert(Operand->getType()->isFPOrFPVectorTy(),
@@ -4878,16 +4809,6 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
 
   case Intrinsic::experimental_constrained_fptrunc:
   case Intrinsic::experimental_constrained_fpext: {
-    if (FPI.getIntrinsicID() == Intrinsic::experimental_constrained_fptrunc) {
-      Assert((NumOperands == 3),
-             "invalid arguments for constrained FP intrinsic", &FPI);
-      HasRoundingMD = true;
-    } else {
-      Assert((NumOperands == 2),
-             "invalid arguments for constrained FP intrinsic", &FPI);
-    }
-    HasExceptionMD = true;
-
     Value *Operand = FPI.getArgOperand(0);
     Type *OperandTy = Operand->getType();
     Value *Result = &FPI;
@@ -4918,7 +4839,7 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
     break;
 
   default:
-    llvm_unreachable("Invalid constrained FP intrinsic!");
+    break;
   }
 
   // If a non-metadata argument is passed in a metadata slot then the
@@ -4926,10 +4847,8 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
   // match the specification in the intrinsic call table. Thus, no
   // argument type check is needed here.
 
-  if (HasExceptionMD) {
-    Assert(FPI.getExceptionBehavior().hasValue(),
-           "invalid exception behavior argument", &FPI);
-  }
+  Assert(FPI.getExceptionBehavior().hasValue(),
+         "invalid exception behavior argument", &FPI);
   if (HasRoundingMD) {
     Assert(FPI.getRoundingMode().hasValue(),
            "invalid rounding mode argument", &FPI);
