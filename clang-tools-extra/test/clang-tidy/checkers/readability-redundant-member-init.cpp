@@ -1,4 +1,8 @@
-// RUN: %check_clang_tidy %s readability-redundant-member-init %t
+// RUN: %check_clang_tidy %s readability-redundant-member-init %t \
+// RUN:   -config="{CheckOptions: \
+// RUN:             [{key: readability-redundant-member-init.IgnoreBaseInCopyConstructors, \
+// RUN:               value: 1}] \
+// RUN:             }"
 
 struct S {
   S() = default;
@@ -115,6 +119,35 @@ struct F9 {
     S s2;
   };
 };
+
+// struct whose inline copy constructor default-initializes its base class
+struct WithCopyConstructor1 : public T {
+  WithCopyConstructor1(const WithCopyConstructor1& other) : T(),
+    f(),
+    g()
+  {}
+  S f, g;
+};
+// No warning in copy constructor about T since IgnoreBaseInCopyConstructors=1
+// CHECK-MESSAGES: :[[@LINE-6]]:5: warning: initializer for member 'f' is redundant
+// CHECK-MESSAGES: :[[@LINE-6]]:5: warning: initializer for member 'g' is redundant
+// CHECK-FIXES: WithCopyConstructor1(const WithCopyConstructor1& other) : T()
+// CHECK-NEXT: 
+// CHECK-NEXT: 
+// CHECK-NEXT: {}
+
+// struct whose copy constructor default-initializes its base class
+struct WithCopyConstructor2 : public T {
+  WithCopyConstructor2(const WithCopyConstructor2& other);
+  S a;
+};
+WithCopyConstructor2::WithCopyConstructor2(const WithCopyConstructor2& other)
+  : T(), a()
+{}
+// No warning in copy constructor about T since IgnoreBaseInCopyConstructors=1
+// CHECK-MESSAGES: :[[@LINE-3]]:10: warning: initializer for member 'a' is redundant
+// CHECK-FIXES: {{^}}  : T() {{$}}
+// CHECK-NEXT: {}
 
 // Initializer not written
 struct NF1 {
