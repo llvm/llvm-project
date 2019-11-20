@@ -64,9 +64,11 @@ void MachOLayoutBuilder::updateDySymTab(MachO::macho_load_command &MLC) {
   assert(std::is_sorted(O.SymTable.Symbols.begin(), O.SymTable.Symbols.end(),
                         [](const std::unique_ptr<SymbolEntry> &A,
                            const std::unique_ptr<SymbolEntry> &B) {
-                          return (A->isLocalSymbol() && !B->isLocalSymbol()) ||
-                                 (!A->isUndefinedSymbol() &&
-                                  B->isUndefinedSymbol());
+                          bool AL = A->isLocalSymbol(), BL = B->isLocalSymbol();
+                          if (AL != BL)
+                            return AL;
+                          return !AL && !A->isUndefinedSymbol() &&
+                                         B->isUndefinedSymbol();
                         }) &&
          "Symbols are not sorted by their types.");
 
