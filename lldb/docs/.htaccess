@@ -1,4 +1,4 @@
-Redirect 301 /architecture/index.html https://lldb.llvm.org/use/architecture.html
+Redirect 301 /architecture/index.html https://lldb.llvm.org/resources/architecture.html
 Redirect 301 /cpp_reference/html/index.html https://lldb.llvm.org/cpp_reference/index.html
 Redirect 301 /features.html https://lldb.llvm.org/status/features.html
 Redirect 301 /formats.html https://lldb.llvm.org/use/formatting.html
@@ -13,3 +13,4 @@ Redirect 301 /varformats.html https://lldb.llvm.org/use/variable.html
 # Sphinx redirects
 Redirect 301 /resources/source.html https://lldb.llvm.org/resources/contributing.html
 Redirect 301 /resources/download.html https://lldb.llvm.org/status/releases.html
+Redirect 301 /use/architecture.html https://lldb.llvm.org/resources/architecture.html
