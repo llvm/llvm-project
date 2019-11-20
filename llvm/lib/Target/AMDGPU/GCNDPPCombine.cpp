@@ -104,6 +104,9 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
+
+private:
+  int getDPPOp(unsigned Op) const;
 };
 
 } // end anonymous namespace
@@ -118,13 +121,13 @@ FunctionPass *llvm::createGCNDPPCombinePass() {
   return new GCNDPPCombine();
 }
 
-static int getDPPOp(unsigned Op) {
+int GCNDPPCombine::getDPPOp(unsigned Op) const {
   auto DPP32 = AMDGPU::getDPPOp32(Op);
-  if (DPP32 != -1)
-    return DPP32;
-
-  auto E32 = AMDGPU::getVOPe32(Op);
-  return E32 != -1 ? AMDGPU::getDPPOp32(E32) : -1;
+  if (DPP32 == -1) {
+    auto E32 = AMDGPU::getVOPe32(Op);
+    DPP32 = (E32 == -1)? -1 : AMDGPU::getDPPOp32(E32);
+  }
+  return (DPP32 == -1 || TII->pseudoToMCOpcode(DPP32) == -1) ? -1 : DPP32;
 }
 
 // tracks the register operand definition and returns:
