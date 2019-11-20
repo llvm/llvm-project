@@ -29,10 +29,6 @@ void Object::removeSections(function_ref<bool(const Section &)> ToRemove) {
                       std::end(LC.Sections));
 }
 
-void Object::addLoadCommand(LoadCommand LC) {
-  LoadCommands.push_back(std::move(LC));
-}
-
 } // end namespace macho
 } // end namespace objcopy
 } // end namespace llvm

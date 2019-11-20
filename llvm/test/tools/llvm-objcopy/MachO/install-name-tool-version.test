@@ -1,2 +1,0 @@
-# RUN: llvm-install-name-tool --version | FileCheck %s
-# CHECK: {{ version }}
