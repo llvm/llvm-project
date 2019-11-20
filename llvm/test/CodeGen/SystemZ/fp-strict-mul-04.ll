@@ -1,9 +1,12 @@
 ; Test strict multiplication of two f64s, producing an f128 result.
-; FIXME: we do not have a strict version of fpext yet
+; FIXME: We should use llvm.experimental.constrained.fpext, but we currently
+;        cannot match a combination of two strict operations in ISel.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
 declare fp128 @llvm.experimental.constrained.fmul.f128(fp128, fp128, metadata, metadata)
+declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata)
+declare double @llvm.experimental.constrained.fptrunc.f64.f128(fp128, metadata, metadata)
 
 declare double @foo()
 
@@ -154,17 +157,50 @@ define double @f7(double *%ptr0) #0 {
   %val9 = load double, double *%ptr9
   %val10 = load double, double *%ptr10
 
-  %frob0 = fadd double %val0, %val0
-  %frob1 = fadd double %val1, %val1
-  %frob2 = fadd double %val2, %val2
-  %frob3 = fadd double %val3, %val3
-  %frob4 = fadd double %val4, %val4
-  %frob5 = fadd double %val5, %val5
-  %frob6 = fadd double %val6, %val6
-  %frob7 = fadd double %val7, %val7
-  %frob8 = fadd double %val8, %val8
-  %frob9 = fadd double %val9, %val9
-  %frob10 = fadd double %val9, %val10
+  %frob0 = call double @llvm.experimental.constrained.fadd.f64(
+                        double %val0, double %val0,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob1 = call double @llvm.experimental.constrained.fadd.f64(
+                        double %val1, double %val1,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob2 = call double @llvm.experimental.constrained.fadd.f64(
+                        double %val2, double %val2,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob3 = call double @llvm.experimental.constrained.fadd.f64(
+                        double %val3, double %val3,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob4 = call double @llvm.experimental.constrained.fadd.f64(
+                        double %val4, double %val4,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob5 = call double @llvm.experimental.constrained.fadd.f64(
+                        double %val5, double %val5,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob6 = call double @llvm.experimental.constrained.fadd.f64(
+                        double %val6, double %val6,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob7 = call double @llvm.experimental.constrained.fadd.f64(
+                        double %val7, double %val7,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob8 = call double @llvm.experimental.constrained.fadd.f64(
+                        double %val8, double %val8,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob9 = call double @llvm.experimental.constrained.fadd.f64(
+                        double %val9, double %val9,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  %frob10 = call double @llvm.experimental.constrained.fadd.f64(
+                        double %val10, double %val10,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   store double %frob0, double *%ptr0
   store double %frob1, double *%ptr1
@@ -186,12 +222,14 @@ define double @f7(double *%ptr0) #0 {
                         fp128 %accext0, fp128 %ext0,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %const0 = fpext double 1.01 to fp128
   %extra0 = call fp128 @llvm.experimental.constrained.fmul.f128(
-                        fp128 %mul0, fp128 %const0,
+                        fp128 %mul0, fp128 0xL00000000000000003fff000001000000,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc0 = fptrunc fp128 %extra0 to double
+  %trunc0 = call double @llvm.experimental.constrained.fptrunc.f64.f128(
+                        fp128 %extra0,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext1 = fpext double %trunc0 to fp128
   %ext1 = fpext double %frob1 to fp128
@@ -199,12 +237,14 @@ define double @f7(double *%ptr0) #0 {
                         fp128 %accext1, fp128 %ext1,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %const1 = fpext double 1.11 to fp128
   %extra1 = call fp128 @llvm.experimental.constrained.fmul.f128(
-                        fp128 %mul1, fp128 %const1,
+                        fp128 %mul1, fp128 0xL00000000000000003fff000002000000,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc1 = fptrunc fp128 %extra1 to double
+  %trunc1 = call double @llvm.experimental.constrained.fptrunc.f64.f128(
+                        fp128 %extra1,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext2 = fpext double %trunc1 to fp128
   %ext2 = fpext double %frob2 to fp128
@@ -212,12 +252,14 @@ define double @f7(double *%ptr0) #0 {
                         fp128 %accext2, fp128 %ext2,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %const2 = fpext double 1.21 to fp128
   %extra2 = call fp128 @llvm.experimental.constrained.fmul.f128(
-                        fp128 %mul2, fp128 %const2,
+                        fp128 %mul2, fp128 0xL00000000000000003fff000003000000,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc2 = fptrunc fp128 %extra2 to double
+  %trunc2 = call double @llvm.experimental.constrained.fptrunc.f64.f128(
+                        fp128 %extra2,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext3 = fpext double %trunc2 to fp128
   %ext3 = fpext double %frob3 to fp128
@@ -225,12 +267,14 @@ define double @f7(double *%ptr0) #0 {
                         fp128 %accext3, fp128 %ext3,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %const3 = fpext double 1.31 to fp128
   %extra3 = call fp128 @llvm.experimental.constrained.fmul.f128(
-                        fp128 %mul3, fp128 %const3,
+                        fp128 %mul3, fp128 0xL00000000000000003fff000004000000,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc3 = fptrunc fp128 %extra3 to double
+  %trunc3 = call double @llvm.experimental.constrained.fptrunc.f64.f128(
+                        fp128 %extra3,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext4 = fpext double %trunc3 to fp128
   %ext4 = fpext double %frob4 to fp128
@@ -238,12 +282,14 @@ define double @f7(double *%ptr0) #0 {
                         fp128 %accext4, fp128 %ext4,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %const4 = fpext double 1.41 to fp128
   %extra4 = call fp128 @llvm.experimental.constrained.fmul.f128(
-                        fp128 %mul4, fp128 %const4,
+                        fp128 %mul4, fp128 0xL00000000000000003fff000005000000,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc4 = fptrunc fp128 %extra4 to double
+  %trunc4 = call double @llvm.experimental.constrained.fptrunc.f64.f128(
+                        fp128 %extra4,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext5 = fpext double %trunc4 to fp128
   %ext5 = fpext double %frob5 to fp128
@@ -251,12 +297,14 @@ define double @f7(double *%ptr0) #0 {
                         fp128 %accext5, fp128 %ext5,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %const5 = fpext double 1.51 to fp128
   %extra5 = call fp128 @llvm.experimental.constrained.fmul.f128(
-                        fp128 %mul5, fp128 %const5,
+                        fp128 %mul5, fp128 0xL00000000000000003fff000006000000,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc5 = fptrunc fp128 %extra5 to double
+  %trunc5 = call double @llvm.experimental.constrained.fptrunc.f64.f128(
+                        fp128 %extra5,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext6 = fpext double %trunc5 to fp128
   %ext6 = fpext double %frob6 to fp128
@@ -264,12 +312,14 @@ define double @f7(double *%ptr0) #0 {
                         fp128 %accext6, fp128 %ext6,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %const6 = fpext double 1.61 to fp128
   %extra6 = call fp128 @llvm.experimental.constrained.fmul.f128(
-                        fp128 %mul6, fp128 %const6,
+                        fp128 %mul6, fp128 0xL00000000000000003fff000007000000,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc6 = fptrunc fp128 %extra6 to double
+  %trunc6 = call double @llvm.experimental.constrained.fptrunc.f64.f128(
+                        fp128 %extra6,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext7 = fpext double %trunc6 to fp128
   %ext7 = fpext double %frob7 to fp128
@@ -277,12 +327,14 @@ define double @f7(double *%ptr0) #0 {
                         fp128 %accext7, fp128 %ext7,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %const7 = fpext double 1.71 to fp128
   %extra7 = call fp128 @llvm.experimental.constrained.fmul.f128(
-                        fp128 %mul7, fp128 %const7,
+                        fp128 %mul7, fp128 0xL00000000000000003fff000008000000,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc7 = fptrunc fp128 %extra7 to double
+  %trunc7 = call double @llvm.experimental.constrained.fptrunc.f64.f128(
+                        fp128 %extra7,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext8 = fpext double %trunc7 to fp128
   %ext8 = fpext double %frob8 to fp128
@@ -290,12 +342,14 @@ define double @f7(double *%ptr0) #0 {
                         fp128 %accext8, fp128 %ext8,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %const8 = fpext double 1.81 to fp128
   %extra8 = call fp128 @llvm.experimental.constrained.fmul.f128(
-                        fp128 %mul8, fp128 %const8,
+                        fp128 %mul8, fp128 0xL00000000000000003fff000009000000,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc8 = fptrunc fp128 %extra8 to double
+  %trunc8 = call double @llvm.experimental.constrained.fptrunc.f64.f128(
+                        fp128 %extra8,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   %accext9 = fpext double %trunc8 to fp128
   %ext9 = fpext double %frob9 to fp128
@@ -303,12 +357,14 @@ define double @f7(double *%ptr0) #0 {
                         fp128 %accext9, fp128 %ext9,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %const9 = fpext double 1.91 to fp128
   %extra9 = call fp128 @llvm.experimental.constrained.fmul.f128(
-                        fp128 %mul9, fp128 %const9,
+                        fp128 %mul9, fp128 0xL00000000000000003fff00000a000000,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  %trunc9 = fptrunc fp128 %extra9 to double
+  %trunc9 = call double @llvm.experimental.constrained.fptrunc.f64.f128(
+                        fp128 %extra9,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
 
   ret double %trunc9
 }
