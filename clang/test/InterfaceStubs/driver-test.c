@@ -1,10 +1,11 @@
-// RUN: %clang -o %t1 -emit-interface-stubs -emit-merged-ifs %s %S/object.c %S/weak.cpp
-// RUN: cat %t1.ifs | FileCheck %s
+// REQUIRES: x86-registered-target
 
-// CHECK-DAG: data
-// CHECK-DAG: foo
-// CHECK-DAG: strongFunc
-// CHECK-DAG: weakFunc
+// RUN: %clang -target x86_64-unknown-linux-gnu -x c -o %t1.so -emit-interface-stubs %s %S/object.c %S/weak.cpp && \
+// RUN: llvm-nm %t1.so 2>&1 | FileCheck --check-prefix=CHECK-IFS %s
+
+// CHECK-IFS-DAG: data
+// CHECK-IFS-DAG: foo
+// CHECK-IFS-DAG: strongFunc
+// CHECK-IFS-DAG: weakFunc
 
 int foo(int bar) { return 42 + 1844; }
-int main() { return foo(23); }
