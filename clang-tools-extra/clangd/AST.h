@@ -116,6 +116,11 @@ NestedNameSpecifierLoc getQualifierLoc(const NamedDecl &ND);
 // (i.e. vector<T*> rather than vector<type-parameter-0-0 *>.
 QualType declaredType(const TypeDecl *D);
 
+/// Retrieves the deduced type at a given location (auto, decltype).
+/// Retuns None unless Loc starts an auto/decltype token.
+/// It will return the underlying type.
+llvm::Optional<QualType> getDeducedType(ASTContext &, SourceLocation Loc);
+
 } // namespace clangd
 } // namespace clang
 

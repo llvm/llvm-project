@@ -15,11 +15,13 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Index/USRGeneration.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -251,6 +253,115 @@ QualType declaredType(const TypeDecl *D) {
     if (const auto *TSI = CTSD->getTypeAsWritten())
       return TSI->getType();
   return D->getASTContext().getTypeDeclType(D);
+}
+
+namespace {
+/// Computes the deduced type at a given location by visiting the relevant
+/// nodes. We use this to display the actual type when hovering over an "auto"
+/// keyword or "decltype()" expression.
+/// FIXME: This could have been a lot simpler by visiting AutoTypeLocs but it
+/// seems that the AutoTypeLocs that can be visited along with their AutoType do
+/// not have the deduced type set. Instead, we have to go to the appropriate
+/// DeclaratorDecl/FunctionDecl and work our back to the AutoType that does have
+/// a deduced type set. The AST should be improved to simplify this scenario.
+class DeducedTypeVisitor : public RecursiveASTVisitor<DeducedTypeVisitor> {
+  SourceLocation SearchedLocation;
+
+public:
+  DeducedTypeVisitor(SourceLocation SearchedLocation)
+      : SearchedLocation(SearchedLocation) {}
+
+  // Handle auto initializers:
+  //- auto i = 1;
+  //- decltype(auto) i = 1;
+  //- auto& i = 1;
+  //- auto* i = &a;
+  bool VisitDeclaratorDecl(DeclaratorDecl *D) {
+    if (!D->getTypeSourceInfo() ||
+        D->getTypeSourceInfo()->getTypeLoc().getBeginLoc() != SearchedLocation)
+      return true;
+
+    if (auto *AT = D->getType()->getContainedAutoType()) {
+      if (!AT->getDeducedType().isNull())
+        DeducedType = AT->getDeducedType();
+    }
+    return true;
+  }
+
+  // Handle auto return types:
+  //- auto foo() {}
+  //- auto& foo() {}
+  //- auto foo() -> int {}
+  //- auto foo() -> decltype(1+1) {}
+  //- operator auto() const { return 10; }
+  bool VisitFunctionDecl(FunctionDecl *D) {
+    if (!D->getTypeSourceInfo())
+      return true;
+    // Loc of auto in return type (c++14).
+    auto CurLoc = D->getReturnTypeSourceRange().getBegin();
+    // Loc of "auto" in operator auto()
+    if (CurLoc.isInvalid() && dyn_cast<CXXConversionDecl>(D))
+      CurLoc = D->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
+    // Loc of "auto" in function with traling return type (c++11).
+    if (CurLoc.isInvalid())
+      CurLoc = D->getSourceRange().getBegin();
+    if (CurLoc != SearchedLocation)
+      return true;
+
+    const AutoType *AT = D->getReturnType()->getContainedAutoType();
+    if (AT && !AT->getDeducedType().isNull()) {
+      DeducedType = AT->getDeducedType();
+    } else if (auto DT = dyn_cast<DecltypeType>(D->getReturnType())) {
+      // auto in a trailing return type just points to a DecltypeType and
+      // getContainedAutoType does not unwrap it.
+      if (!DT->getUnderlyingType().isNull())
+        DeducedType = DT->getUnderlyingType();
+    } else if (!D->getReturnType().isNull()) {
+      DeducedType = D->getReturnType();
+    }
+    return true;
+  }
+
+  // Handle non-auto decltype, e.g.:
+  // - auto foo() -> decltype(expr) {}
+  // - decltype(expr);
+  bool VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
+    if (TL.getBeginLoc() != SearchedLocation)
+      return true;
+
+    // A DecltypeType's underlying type can be another DecltypeType! E.g.
+    //  int I = 0;
+    //  decltype(I) J = I;
+    //  decltype(J) K = J;
+    const DecltypeType *DT = dyn_cast<DecltypeType>(TL.getTypePtr());
+    while (DT && !DT->getUnderlyingType().isNull()) {
+      DeducedType = DT->getUnderlyingType();
+      DT = dyn_cast<DecltypeType>(DeducedType.getTypePtr());
+    }
+    return true;
+  }
+
+  QualType DeducedType;
+};
+} // namespace
+
+llvm::Optional<QualType> getDeducedType(ASTContext &ASTCtx,
+                                        SourceLocation Loc) {
+  Token Tok;
+  // Only try to find a deduced type if the token is auto or decltype.
+  if (!Loc.isValid() ||
+      Lexer::getRawToken(Loc, Tok, ASTCtx.getSourceManager(),
+                         ASTCtx.getLangOpts(), false) ||
+      !Tok.is(tok::raw_identifier) ||
+      !(Tok.getRawIdentifier() == "auto" ||
+        Tok.getRawIdentifier() == "decltype")) {
+    return {};
+  }
+  DeducedTypeVisitor V(Loc);
+  V.TraverseAST(ASTCtx);
+  if (V.DeducedType.isNull())
+    return llvm::None;
+  return V.DeducedType;
 }
 
 } // namespace clangd
