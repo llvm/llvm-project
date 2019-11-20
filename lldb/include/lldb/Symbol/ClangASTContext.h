@@ -319,9 +319,6 @@ public:
 
   bool FieldIsBitfield(clang::FieldDecl *field, uint32_t &bitfield_bit_size);
 
-  static bool FieldIsBitfield(clang::ASTContext *ast, clang::FieldDecl *field,
-                              uint32_t &bitfield_bit_size);
-
   static bool RecordHasFields(const clang::RecordDecl *record_decl);
 
   CompilerType CreateObjCClass(const char *name, clang::DeclContext *decl_ctx,

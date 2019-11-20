@@ -1703,11 +1703,7 @@ ClangASTContext::UnifyAccessSpecifiers(clang::AccessSpecifier lhs,
 
 bool ClangASTContext::FieldIsBitfield(FieldDecl *field,
                                       uint32_t &bitfield_bit_size) {
-  return FieldIsBitfield(getASTContext(), field, bitfield_bit_size);
-}
-
-bool ClangASTContext::FieldIsBitfield(ASTContext *ast, FieldDecl *field,
-                                      uint32_t &bitfield_bit_size) {
+  ASTContext *ast = getASTContext();
   if (ast == nullptr || field == nullptr)
     return false;
 
@@ -6696,8 +6692,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
           // Figure out the field offset within the current struct/union/class
           // type
           bit_offset = record_layout.getFieldOffset(field_idx);
-          if (ClangASTContext::FieldIsBitfield(getASTContext(), *field,
-                                               child_bitfield_bit_size)) {
+          if (FieldIsBitfield(*field, child_bitfield_bit_size)) {
             child_bitfield_bit_offset = bit_offset % child_bit_size;
             const uint32_t child_bit_offset =
                 bit_offset - child_bitfield_bit_offset;
@@ -6820,8 +6815,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
                 // offset from, we still need to get the bit offset for
                 // bitfields from the layout.
 
-                if (ClangASTContext::FieldIsBitfield(getASTContext(), ivar_decl,
-                                                     child_bitfield_bit_size)) {
+                if (FieldIsBitfield(ivar_decl, child_bitfield_bit_size)) {
                   if (bit_offset == INT32_MAX)
                     bit_offset = interface_layout.getFieldOffset(
                         child_idx - superclass_idx);
@@ -9119,8 +9113,7 @@ void ClangASTContext::DumpValue(
         field_byte_offset = field_bit_offset / 8;
         uint32_t field_bitfield_bit_size = 0;
         uint32_t field_bitfield_bit_offset = 0;
-        if (ClangASTContext::FieldIsBitfield(getASTContext(), *field,
-                                             field_bitfield_bit_size))
+        if (FieldIsBitfield(*field, field_bitfield_bit_size))
           field_bitfield_bit_offset = field_bit_offset % 8;
 
         if (show_types) {
