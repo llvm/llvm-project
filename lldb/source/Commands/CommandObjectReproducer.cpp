@@ -68,7 +68,7 @@ static constexpr OptionEnumValues ReproducerProviderType() {
   return OptionEnumValues(g_reproducer_provider_type);
 }
 
-#define LLDB_OPTIONS_reproducer
+#define LLDB_OPTIONS_reproducer_dump
 #include "CommandOptions.inc"
 
 class CommandObjectReproducerGenerate : public CommandObjectParsed {
@@ -208,7 +208,7 @@ public:
     }
 
     ArrayRef<OptionDefinition> GetDefinitions() override {
-      return makeArrayRef(g_reproducer_options);
+      return makeArrayRef(g_reproducer_dump_options);
     }
 
     FileSpec file;
