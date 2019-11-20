@@ -11,13 +11,18 @@
 # CHECK-NEXT:     Entries [
 # CHECK-NEXT:       Entry {
 # CHECK-NEXT:         Hash: 1937
-# CHECK-NEXT:         Flags: 0xA
+# CHECK-NEXT:         Flags [ (0xA)
+# CHECK-NEXT:           Weak (0x2)
+# CHECK-NEXT:         ]
 # CHECK-NEXT:         Index: 3
 # CHECK-NEXT:         Name: v1
 # CHECK-NEXT:       }
 # CHECK-NEXT:       Entry {
 # CHECK-NEXT:         Hash: 1938
-# CHECK-NEXT:         Flags: 0xB
+# CHECK-NEXT:         Flags [ (0xB)
+# CHECK-NEXT:           Base (0x1)
+# CHECK-NEXT:           Weak (0x2)
+# CHECK-NEXT:         ]
 # CHECK-NEXT:         Index: 4
 # CHECK-NEXT:         Name: v2
 # CHECK-NEXT:       }
@@ -30,7 +35,9 @@
 # CHECK-NEXT:     Entries [
 # CHECK-NEXT:       Entry {
 # CHECK-NEXT:         Hash: 1939
-# CHECK-NEXT:         Flags: 0xC
+# CHECK-NEXT:         Flags [ (0xC)
+# CHECK-NEXT:           Info (0x4)
+# CHECK-NEXT:         ]
 # CHECK-NEXT:         Index: 2
 # CHECK-NEXT:         Name: v3
 # CHECK-NEXT:       }

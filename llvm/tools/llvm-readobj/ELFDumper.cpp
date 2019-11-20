@@ -5730,7 +5730,7 @@ void LLVMStyle<ELFT>::printVersionDefinitionSection(const ELFFile<ELFT> *Obj,
     const Elf_Verdef *Verdef = reinterpret_cast<const Elf_Verdef *>(VerdefBuf);
     DictScope Def(W, "Definition");
     W.printNumber("Version", Verdef->vd_version);
-    W.printEnum("Flags", Verdef->vd_flags, makeArrayRef(SymVersionFlags));
+    W.printFlags("Flags", Verdef->vd_flags, makeArrayRef(SymVersionFlags));
     W.printNumber("Index", Verdef->vd_ndx);
     W.printNumber("Hash", Verdef->vd_hash);
     W.printString("Name", StringRef(reinterpret_cast<const char *>(
@@ -5790,7 +5790,7 @@ void LLVMStyle<ELFT>::printVersionDependencySection(const ELFFile<ELFT> *Obj,
           reinterpret_cast<const Elf_Vernaux *>(VernauxBuf);
       DictScope Entry(W, "Entry");
       W.printNumber("Hash", Vernaux->vna_hash);
-      W.printEnum("Flags", Vernaux->vna_flags, makeArrayRef(SymVersionFlags));
+      W.printFlags("Flags", Vernaux->vna_flags, makeArrayRef(SymVersionFlags));
       W.printNumber("Index", Vernaux->vna_other);
 
       StringRef Name = StringTable.size() > Vernaux->vna_name
