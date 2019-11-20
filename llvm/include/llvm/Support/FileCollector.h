@@ -46,7 +46,11 @@ public:
 private:
   void addFileImpl(StringRef SrcPath);
 
-  bool markAsSeen(StringRef Path) { return Seen.insert(Path).second; }
+  bool markAsSeen(StringRef Path) {
+    if (Path.empty())
+      return false;
+    return Seen.insert(Path).second;
+  }
 
   bool getRealPath(StringRef SrcPath, SmallVectorImpl<char> &Result);
 
