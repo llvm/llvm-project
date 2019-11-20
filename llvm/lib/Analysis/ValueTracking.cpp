@@ -3095,6 +3095,58 @@ bool llvm::SignBitMustBeZero(const Value *V, const TargetLibraryInfo *TLI) {
   return cannotBeOrderedLessThanZeroImpl(V, TLI, true, 0);
 }
 
+bool llvm::isKnownNeverInfinity(const Value *V, const TargetLibraryInfo *TLI,
+                                unsigned Depth) {
+  assert(V->getType()->isFPOrFPVectorTy() && "Querying for Inf on non-FP type");
+
+  // If we're told that infinities won't happen, assume they won't.
+  if (auto *FPMathOp = dyn_cast<FPMathOperator>(V))
+    if (FPMathOp->hasNoInfs())
+      return true;
+
+  // Handle scalar constants.
+  if (auto *CFP = dyn_cast<ConstantFP>(V))
+    return !CFP->isInfinity();
+
+  if (Depth == MaxDepth)
+    return false;
+
+  if (auto *Inst = dyn_cast<Instruction>(V)) {
+    switch (Inst->getOpcode()) {
+    case Instruction::Select: {
+      return isKnownNeverInfinity(Inst->getOperand(1), TLI, Depth + 1) &&
+             isKnownNeverInfinity(Inst->getOperand(2), TLI, Depth + 1);
+    }
+    case Instruction::UIToFP:
+      // If the input type fits into the floating type the result is finite.
+      return ilogb(APFloat::getLargest(
+                 Inst->getType()->getScalarType()->getFltSemantics())) >=
+             (int)Inst->getOperand(0)->getType()->getScalarSizeInBits();
+    default:
+      break;
+    }
+  }
+
+  // Bail out for constant expressions, but try to handle vector constants.
+  if (!V->getType()->isVectorTy() || !isa<Constant>(V))
+    return false;
+
+  // For vectors, verify that each element is not infinity.
+  unsigned NumElts = V->getType()->getVectorNumElements();
+  for (unsigned i = 0; i != NumElts; ++i) {
+    Constant *Elt = cast<Constant>(V)->getAggregateElement(i);
+    if (!Elt)
+      return false;
+    if (isa<UndefValue>(Elt))
+      continue;
+    auto *CElt = dyn_cast<ConstantFP>(Elt);
+    if (!CElt || CElt->isInfinity())
+      return false;
+  }
+  // All elements were confirmed non-infinity or undefined.
+  return true;
+}
+
 bool llvm::isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
                            unsigned Depth) {
   assert(V->getType()->isFPOrFPVectorTy() && "Querying for NaN on non-FP type");
@@ -3114,13 +3166,26 @@ bool llvm::isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
   if (auto *Inst = dyn_cast<Instruction>(V)) {
     switch (Inst->getOpcode()) {
     case Instruction::FAdd:
-    case Instruction::FMul:
     case Instruction::FSub:
+      // Adding positive and negative infinity produces NaN.
+      return isKnownNeverNaN(Inst->getOperand(0), TLI, Depth + 1) &&
+             isKnownNeverNaN(Inst->getOperand(1), TLI, Depth + 1) &&
+             (isKnownNeverInfinity(Inst->getOperand(0), TLI, Depth + 1) ||
+              isKnownNeverInfinity(Inst->getOperand(1), TLI, Depth + 1));
+
+    case Instruction::FMul:
+      // Zero multiplied with infinity produces NaN.
+      // FIXME: If neither side can be zero fmul never produces NaN.
+      return isKnownNeverNaN(Inst->getOperand(0), TLI, Depth + 1) &&
+             isKnownNeverInfinity(Inst->getOperand(0), TLI, Depth + 1) &&
+             isKnownNeverNaN(Inst->getOperand(1), TLI, Depth + 1) &&
+             isKnownNeverInfinity(Inst->getOperand(1), TLI, Depth + 1);
+
     case Instruction::FDiv:
-    case Instruction::FRem: {
-      // TODO: Need isKnownNeverInfinity
+    case Instruction::FRem:
+      // FIXME: Only 0/0, Inf/Inf, Inf REM x and x REM 0 produce NaN.
       return false;
-    }
+
     case Instruction::Select: {
       return isKnownNeverNaN(Inst->getOperand(1), TLI, Depth + 1) &&
              isKnownNeverNaN(Inst->getOperand(2), TLI, Depth + 1);
