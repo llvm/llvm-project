@@ -292,6 +292,10 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
              (PhaseArg = DAL.getLastArg(options::OPT_emit_ast))) {
     FinalPhase = phases::Compile;
 
+  // clang interface stubs
+  } else if ((PhaseArg = DAL.getLastArg(options::OPT_emit_interface_stubs))) {
+    FinalPhase = phases::IfsMerge;
+
   // -S only runs up to the backend.
   } else if ((PhaseArg = DAL.getLastArg(options::OPT_S))) {
     FinalPhase = phases::Backend;
@@ -3500,68 +3504,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     Actions.push_back(
         C.MakeAction<IfsMergeJobAction>(MergerInputs, types::TY_Image));
 
-  if (Arg *A = Args.getLastArg(options::OPT_emit_interface_stubs)) {
-    llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> PhaseList;
-    if (Args.hasArg(options::OPT_c)) {
-      llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> CompilePhaseList;
-      types::getCompilationPhases(types::TY_IFS_CPP, CompilePhaseList);
-      llvm::copy_if(CompilePhaseList, std::back_inserter(PhaseList),
-                    [&](phases::ID Phase) { return Phase <= phases::Compile; });
-    } else {
-      types::getCompilationPhases(types::TY_IFS_CPP, PhaseList);
-    }
-
-    ActionList MergerInputs;
-
-    for (auto &I : Inputs) {
-      types::ID InputType = I.first;
-      const Arg *InputArg = I.second;
-
-      // Currently clang and the llvm assembler do not support generating symbol
-      // stubs from assembly, so we skip the input on asm files. For ifs files
-      // we rely on the normal pipeline setup in the pipeline setup code above.
-      if (InputType == types::TY_IFS || InputType == types::TY_PP_Asm ||
-          InputType == types::TY_Asm)
-        continue;
-
-      Action *Current = C.MakeAction<InputAction>(*InputArg, InputType);
-
-      for (auto Phase : PhaseList) {
-        switch (Phase) {
-        default:
-          llvm_unreachable(
-              "IFS Pipeline can only consist of Compile followed by IfsMerge.");
-        case phases::Compile: {
-          // Only IfsMerge (llvm-ifs) can handle .o files by looking for ifs
-          // files where the .o file is located. The compile action can not
-          // handle this.
-          if (InputType == types::TY_Object)
-            break;
-
-          Current = C.MakeAction<CompileJobAction>(Current, types::TY_IFS_CPP);
-          break;
-        }
-        case phases::IfsMerge: {
-          assert(Phase == PhaseList.back() &&
-                 "merging must be final compilation step.");
-          MergerInputs.push_back(Current);
-          Current = nullptr;
-          break;
-        }
-        }
-      }
-
-      // If we ended with something, add to the output list.
-      if (Current)
-        Actions.push_back(Current);
-    }
-
-    // Add an interface stubs merge action if necessary.
-    if (!MergerInputs.empty())
-      Actions.push_back(
-          C.MakeAction<IfsMergeJobAction>(MergerInputs, types::TY_Image));
-  }
-
   // If --print-supported-cpus, -mcpu=? or -mtune=? is specified, build a custom
   // Compile phase that prints out supported cpu models and quits.
   if (Arg *A = Args.getLastArg(options::OPT_print_supported_cpus)) {
@@ -3663,6 +3605,8 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<CompileJobAction>(Input, types::TY_ModuleFile);
     if (Args.hasArg(options::OPT_verify_pch))
       return C.MakeAction<VerifyPCHJobAction>(Input, types::TY_Nothing);
+    if (Args.hasArg(options::OPT_emit_interface_stubs))
+      return C.MakeAction<CompileJobAction>(Input, types::TY_IFS_CPP);
     return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_BC);
   }
   case phases::Backend: {
@@ -3691,16 +3635,11 @@ void Driver::BuildJobs(Compilation &C) const {
   Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o);
 
   // It is an error to provide a -o option if we are making multiple output
-  // files. There is one exception, IfsMergeJob: when generating interface stubs
-  // enabled we want to be able to generate the stub file at the same time that
-  // we generate the real library/a.out. So when a .o, .so, etc are the output,
-  // with clang interface stubs there will also be a .ifs and .ifso at the same
-  // location.
+  // files.
   if (FinalOutput) {
     unsigned NumOutputs = 0;
     for (const Action *A : C.getActions())
-      if (A->getType() != types::TY_Nothing &&
-          A->getKind() != Action::IfsMergeJobClass)
+      if (A->getType() != types::TY_Nothing)
         ++NumOutputs;
 
     if (NumOutputs > 1) {
