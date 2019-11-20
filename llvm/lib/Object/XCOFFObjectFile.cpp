@@ -268,9 +268,11 @@ XCOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
   if (isSectionVirtual(Sec))
     return ArrayRef<uint8_t>();
 
-  const uint64_t OffsetToRaw = is64Bit()
-                                   ? toSection64(Sec)->FileOffsetToRawData
-                                   : toSection32(Sec)->FileOffsetToRawData;
+  uint64_t OffsetToRaw;
+  if (is64Bit())
+    OffsetToRaw = toSection64(Sec)->FileOffsetToRawData;
+  else
+    OffsetToRaw = toSection32(Sec)->FileOffsetToRawData;
 
   const uint8_t * ContentStart = base() + OffsetToRaw;
   uint64_t SectionSize = getSectionSize(Sec);
