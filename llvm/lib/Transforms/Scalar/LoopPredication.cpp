@@ -196,6 +196,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/GuardUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
@@ -1144,14 +1145,7 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // context.
     NewCond = B.CreateFreeze(NewCond);
 
-    Value *Cond, *WC;
-    BasicBlock *IfTrueBB, *IfFalseBB;
-    bool Success =
-        parseWidenableBranch(WidenableBR, Cond, WC, IfTrueBB, IfFalseBB);
-    assert(Success && "implied from above");
-    (void)Success;
-    Instruction *WCAnd = cast<Instruction>(WidenableBR->getCondition());
-    WCAnd->setOperand(0, B.CreateAnd(NewCond, Cond));
+    widenWidenableBranch(WidenableBR, NewCond);
 
     Value *OldCond = BI->getCondition();
     BI->setCondition(ConstantInt::get(OldCond->getType(), !ExitIfTrue));

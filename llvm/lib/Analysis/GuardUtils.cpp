@@ -19,6 +19,13 @@ bool llvm::isGuard(const User *U) {
   return match(U, m_Intrinsic<Intrinsic::experimental_guard>());
 }
 
+bool llvm::isWidenableBranch(const User *U) {
+  Value *Condition, *WidenableCondition;
+  BasicBlock *GuardedBB, *DeoptBB;
+  return parseWidenableBranch(U, Condition, WidenableCondition, GuardedBB,
+                              DeoptBB);
+}
+
 bool llvm::isGuardAsWidenableBranch(const User *U) {
   Value *Condition, *WidenableCondition;
   BasicBlock *GuardedBB, *DeoptBB;
