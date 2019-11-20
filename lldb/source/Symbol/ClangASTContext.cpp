@@ -987,13 +987,9 @@ ClangASTContext::GetBasicTypeEnumeration(ConstString name) {
   return eBasicTypeInvalid;
 }
 
-CompilerType ClangASTContext::GetBasicType(ASTContext *ast,
-                                           ConstString name) {
-  if (ast) {
-    lldb::BasicType basic_type = ClangASTContext::GetBasicTypeEnumeration(name);
-    return ClangASTContext::GetBasicType(ast, basic_type);
-  }
-  return CompilerType();
+CompilerType ClangASTContext::GetBasicType(ConstString name) {
+  lldb::BasicType basic_type = ClangASTContext::GetBasicTypeEnumeration(name);
+  return GetBasicType(basic_type);
 }
 
 uint32_t ClangASTContext::GetPointerByteSize() {
@@ -1006,13 +1002,8 @@ uint32_t ClangASTContext::GetPointerByteSize() {
 }
 
 CompilerType ClangASTContext::GetBasicType(lldb::BasicType basic_type) {
-  return GetBasicType(getASTContext(), basic_type);
-}
+  clang::ASTContext *ast = getASTContext();
 
-CompilerType ClangASTContext::GetBasicType(ASTContext *ast,
-                                           lldb::BasicType basic_type) {
-  if (!ast)
-    return CompilerType();
   lldb::opaque_compiler_type_t clang_type =
       GetOpaqueCompilerType(ast, basic_type);
 
@@ -4907,7 +4898,7 @@ ClangASTContext::GetTypedefedType(lldb::opaque_compiler_type_t type) {
 // Create related types using the current type's AST
 
 CompilerType ClangASTContext::GetBasicTypeFromAST(lldb::BasicType basic_type) {
-  return ClangASTContext::GetBasicType(getASTContext(), basic_type);
+  return ClangASTContext::GetBasicType(basic_type);
 }
 // Exploring the type
 
