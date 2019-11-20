@@ -6741,8 +6741,23 @@ public:
       DebugLoc Loc = cast<Instruction>(ReducedVals[i])->getDebugLoc();
       Value *VectorizedRoot = V.vectorizeTree(ExternallyUsedValues);
 
-      // Emit a reduction.
-      Builder.SetInsertPoint(cast<Instruction>(ReductionRoot));
+      auto getCmpForMinMaxReduction = [](Instruction *RdxRootInst) {
+        assert(isa<SelectInst>(RdxRootInst) &&
+               "Expected min/max reduction to have select root instruction");
+        Value *ScalarCond = cast<SelectInst>(RdxRootInst)->getCondition();
+        assert(isa<Instruction>(ScalarCond) &&
+               "Expected min/max reduction to have compare condition");
+        return cast<Instruction>(ScalarCond);
+      };
+
+      // Emit a reduction. For min/max, the root is a select, but the insertion
+      // point is the compare condition of that select.
+      Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
+      if (ReductionData.isMinMax())
+        Builder.SetInsertPoint(getCmpForMinMaxReduction(RdxRootInst));
+      else
+        Builder.SetInsertPoint(RdxRootInst);
+
       Value *ReducedSubTree =
           emitReduction(VectorizedRoot, Builder, ReduxWidth, TTI);
       if (VectorizedTree) {
