@@ -308,10 +308,7 @@ public:
                                             class_template_specialization_decl);
 
   static clang::DeclContext *
-  GetAsDeclContext(clang::CXXMethodDecl *cxx_method_decl);
-
-  static clang::DeclContext *
-  GetAsDeclContext(clang::ObjCMethodDecl *objc_method_decl);
+  GetAsDeclContext(clang::FunctionDecl *function_decl);
 
   static bool CheckOverloadedOperatorKindParameterCount(
       bool is_method, clang::OverloadedOperatorKind op_kind,

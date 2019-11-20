@@ -2487,16 +2487,6 @@ ClangASTMetadata *ClangASTContext::GetMetadata(clang::ASTContext *ast,
     return nullptr;
 }
 
-clang::DeclContext *
-ClangASTContext::GetAsDeclContext(clang::CXXMethodDecl *cxx_method_decl) {
-  return llvm::dyn_cast<clang::DeclContext>(cxx_method_decl);
-}
-
-clang::DeclContext *
-ClangASTContext::GetAsDeclContext(clang::ObjCMethodDecl *objc_method_decl) {
-  return llvm::dyn_cast<clang::DeclContext>(objc_method_decl);
-}
-
 bool ClangASTContext::SetTagTypeKind(clang::QualType tag_qual_type,
                                      int kind) const {
   const clang::Type *clang_type = tag_qual_type.getTypePtr();
