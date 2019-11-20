@@ -83,6 +83,17 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
 
   switch (type) {
   case R_MIPS_JALR:
+    // Older versions of clang would erroneously emit this relocation not only
+    // against functions (loaded from the GOT) but also against data symbols
+    // (e.g. a table of function pointers). When we encounter this, ignore the
+    // relocation and emit a warning instead.
+    if (!s.isFunc() && s.type != STT_NOTYPE) {
+      warn(getErrorLocation(loc) +
+           "found R_MIPS_JALR relocation against non-function symbol " +
+           toString(s) + ". This is invalid and most likely a compiler bug.");
+      return R_NONE;
+    }
+
     // If the target symbol is not preemptible and is not microMIPS,
     // it might be possible to replace jalr/jr instruction by bal/b.
     // It depends on the target symbol's offset.
