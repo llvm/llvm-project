@@ -22,8 +22,7 @@ define <4 x float> @f2(<4 x float> %dummy, <4 x float> %val1,
 ; CHECK-LABEL: f2:
 ; CHECK: vfmssb %v24, %v26, %v28, %v30
 ; CHECK: br %r14
-  %negval3 = fsub <4 x float> <float -0.0, float -0.0,
-                               float -0.0, float -0.0>, %val3
+  %negval3 = fneg <4 x float> %val3
   %ret = call <4 x float> @llvm.fma.v4f32 (<4 x float> %val1,
                                            <4 x float> %val2,
                                            <4 x float> %negval3)
