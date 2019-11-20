@@ -637,7 +637,7 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
 //===----------------------------------------------------------------------===//
 
 void AggExprEmitter::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E){
-  Visit(E->GetTemporaryExpr());
+  Visit(E->getSubExpr());
 }
 
 void AggExprEmitter::VisitOpaqueValueExpr(OpaqueValueExpr *e) {

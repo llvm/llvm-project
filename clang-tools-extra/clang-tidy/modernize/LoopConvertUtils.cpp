@@ -177,7 +177,7 @@ const Expr *digThroughConstructors(const Expr *E) {
       return nullptr;
     E = ConstructExpr->getArg(0);
     if (const auto *Temp = dyn_cast<MaterializeTemporaryExpr>(E))
-      E = Temp->GetTemporaryExpr();
+      E = Temp->getSubExpr();
     return digThroughConstructors(E);
   }
   return E;
