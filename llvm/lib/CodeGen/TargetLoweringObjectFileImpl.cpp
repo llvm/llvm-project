@@ -1849,6 +1849,24 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
         SC, Kind, /* BeginSymbolName */ nullptr);
   }
 
+  if (Kind.isMergeableCString()) {
+    if (!Kind.isMergeable1ByteCString())
+      report_fatal_error("Unhandled multi-byte mergeable string kind.");
+
+    unsigned Align = GO->getParent()->getDataLayout().getPreferredAlignment(
+        cast<GlobalVariable>(GO));
+
+    unsigned EntrySize = getEntrySizeForKind(Kind);
+    std::string SizeSpec = ".rodata.str" + utostr(EntrySize) + ".";
+    SmallString<128> Name;
+    Name = SizeSpec + utostr(Align);
+
+    return getContext().getXCOFFSection(
+        Name, XCOFF::XMC_RO, XCOFF::XTY_SD,
+        TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GO),
+        Kind, /* BeginSymbolName */ nullptr);
+  }
+
   if (Kind.isText())
     return TextSection;
 
@@ -1861,8 +1879,7 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
   if (Kind.isBSS())
     return DataSection;
 
-  if (Kind.isReadOnly() && !Kind.isMergeableConst() &&
-      !Kind.isMergeableCString())
+  if (Kind.isReadOnly() && !Kind.isMergeableConst())
     return ReadOnlySection;
 
   report_fatal_error("XCOFF other section types not yet implemented.");
@@ -1920,6 +1937,7 @@ XCOFF::StorageClass TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(
     const GlobalObject *GO) {
   switch (GO->getLinkage()) {
   case GlobalValue::InternalLinkage:
+  case GlobalValue::PrivateLinkage:
     return XCOFF::C_HIDEXT;
   case GlobalValue::ExternalLinkage:
   case GlobalValue::CommonLinkage:
