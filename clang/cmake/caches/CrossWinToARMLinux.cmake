@@ -14,7 +14,7 @@
 #       -DDEFAULT_SYSROOT=<path-to-develop-arm-linux-root-fs> ^
 #       -DLLVM_AR=<llvm_obj_root>/bin/llvm-ar[.exe] ^
 #       -DCMAKE_CXX_FLAGS="-D__OPTIMIZE__" ^
-#       -C<llvm_src_root>/llvm-project/clang/caches/CrossWinToARMLinux.cmake ^
+#       -C<llvm_src_root>/llvm-project/clang/cmake/caches/CrossWinToARMLinux.cmake ^
 #       <llvm_src_root>/llvm-project/llvm
 # Build:
 #  cmake --build . --target install
