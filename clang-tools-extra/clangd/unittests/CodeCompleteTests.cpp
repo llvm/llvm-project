@@ -1030,16 +1030,6 @@ TEST(CompletionTest, DefaultArgs) {
                         SnippetSuffix("(${1:int A})"))));
 }
 
-TEST(CompletionTest, NoCrashWithTemplateParamsAndPreferredTypes) {
-  auto Completions = completions(R"cpp(
-template <template <class> class TT> int foo() {
-  int a = ^
-}
-)cpp")
-                         .Completions;
-  EXPECT_THAT(Completions, Contains(Named("TT")));
-}
-
 SignatureHelp signatures(llvm::StringRef Text, Position Point,
                          std::vector<Symbol> IndexSymbols = {}) {
   std::unique_ptr<SymbolIndex> Index;
