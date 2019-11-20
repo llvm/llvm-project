@@ -1959,6 +1959,41 @@ def MVE_VQNEGs8  : MVE_VQABSNEG<"vqneg", "s8",  0b00, 0b1>;
 def MVE_VQNEGs16 : MVE_VQABSNEG<"vqneg", "s16", 0b01, 0b1>;
 def MVE_VQNEGs32 : MVE_VQABSNEG<"vqneg", "s32", 0b10, 0b1>;
 
+// int_min/int_max: vector containing INT_MIN/INT_MAX VTI.Size times
+// zero_vec: v4i32-initialized zero vector, potentially wrapped in a bitconvert
+multiclass vqabs_pattern<MVEVectorVTInfo VTI, dag int_min, dag int_max,
+                         dag zero_vec, MVE_VQABSNEG vqabs_instruction> {
+  // The below tree can be replaced by a vqabs instruction, as it represents
+  // the following vectorized expression (r being the value in $reg):
+  // r > 0 ? r : (r == INT_MIN ? INT_MAX : -r)
+  let Predicates = [HasMVEInt] in {
+    def : Pat<(VTI.Vec (vselect
+                      (VTI.Pred (ARMvcmpz (VTI.Vec MQPR:$reg), (i32 12))),
+                      (VTI.Vec MQPR:$reg),
+                      (VTI.Vec (vselect
+                                (VTI.Pred (ARMvcmp (VTI.Vec MQPR:$reg), int_min, (i32 0))),
+                                int_max,
+                                (sub (VTI.Vec zero_vec), (VTI.Vec MQPR:$reg)))))),
+            (VTI.Vec (vqabs_instruction (VTI.Vec MQPR:$reg)))>;
+  }
+}
+
+defm MVE_VQABS_Ps8  : vqabs_pattern<MVE_v16i8,
+                                    (v16i8 (ARMvmovImm (i32 3712))),
+                                    (v16i8 (ARMvmovImm (i32 3711))),
+                                    (bitconvert (v4i32 (ARMvmovImm (i32 0)))),
+                                    MVE_VQABSs8>;
+defm MVE_VQABS_Ps16 : vqabs_pattern<MVE_v8i16,
+                                    (v8i16 (ARMvmovImm (i32 2688))),
+                                    (v8i16 (ARMvmvnImm (i32 2688))),
+                                    (bitconvert (v4i32 (ARMvmovImm (i32 0)))),
+                                    MVE_VQABSs16>;
+defm MVE_VQABS_Ps32 : vqabs_pattern<MVE_v4i32,
+                                    (v4i32 (ARMvmovImm (i32 1664))),
+                                    (v4i32 (ARMvmvnImm (i32 1664))),
+                                    (ARMvmovImm (i32 0)),
+                                    MVE_VQABSs32>;
+
 class MVE_mod_imm<string iname, string suffix, bits<4> cmode, bit op,
                   dag iops, list<dag> pattern=[]>
   : MVE_p<(outs MQPR:$Qd), iops, NoItinerary, iname, suffix, "$Qd, $imm",
