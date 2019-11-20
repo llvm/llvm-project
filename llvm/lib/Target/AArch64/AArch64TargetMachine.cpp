@@ -249,7 +249,10 @@ getEffectiveAArch64CodeModel(const Triple &TT, Optional<CodeModel::Model> CM,
   // The default MCJIT memory managers make no guarantees about where they can
   // find an executable page; JITed code needs to be able to refer to globals
   // no matter how far away they are.
-  if (JIT)
+  // We should set the CodeModel::Small for Windows ARM64 in JIT mode,
+  // since with large code model LLVM generating 4 MOV instructions, and
+  // Windows doesn't support relocating these long branch (4 MOVs).
+  if (JIT && !TT.isOSWindows())
     return CodeModel::Large;
   return CodeModel::Small;
 }
