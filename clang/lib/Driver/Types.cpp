@@ -330,22 +330,6 @@ void types::getCompilationPhases(const clang::driver::Driver &Driver,
     llvm::copy_if(PhaseList, std::back_inserter(P),
                   [](phases::ID Phase) { return Phase <= phases::Precompile; });
 
-  // Treat Interface Stubs like its own compilation mode.
-  else if (DAL.getLastArg(options::OPT_emit_interface_stubs)) {
-    llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> IfsModePhaseList;
-    llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> &PL = PhaseList;
-    phases::ID LastPhase = phases::IfsMerge;
-    if (Id != types::TY_IFS) {
-      if (DAL.hasArg(options::OPT_c))
-        LastPhase = phases::Compile;
-      PL = IfsModePhaseList;
-      types::getCompilationPhases(types::TY_IFS_CPP, PL);
-    }
-    llvm::copy_if(PL, std::back_inserter(P), [&](phases::ID Phase) {
-      return Phase <= LastPhase;
-    });
-  }
-
   // -{fsyntax-only,-analyze,emit-ast} only run up to the compiler.
   else if (DAL.getLastArg(options::OPT_fsyntax_only) ||
            DAL.getLastArg(options::OPT_print_supported_cpus) ||
