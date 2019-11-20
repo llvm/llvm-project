@@ -75,14 +75,6 @@ void SymbolVendor::AddSymbolFileRepresentation(const ObjectFileSP &objfile_sp) {
   }
 }
 
-void SymbolVendor::GetLoadedModules(lldb::LanguageType language,
-                                    FileSpecList &modules) {
-  SymbolFile *sym_file = GetSymbolFile();
-
-  if (sym_file)
-    sym_file->GetLoadedModules(language, modules);
-}
-
 void SymbolVendor::SectionFileAddressesChanged() {
   if (m_sym_file_up)
     m_sym_file_up->SectionFileAddressesChanged();
