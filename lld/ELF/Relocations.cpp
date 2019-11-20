@@ -777,6 +777,14 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
       return s;
   }
 
+  // Case mismatch, e.g. Foo vs FOO.
+  for (auto &it : map)
+    if (name.equals_lower(it.first))
+      return it.second;
+  for (Symbol *sym : symtab->symbols())
+    if (!sym->isUndefined() && name.equals_lower(sym->getName()))
+      return sym;
+
   // The reference may be a mangled name while the definition is not. Suggest a
   // missing extern "C".
   if (name.startswith("_Z")) {
