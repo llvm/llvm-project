@@ -4024,9 +4024,14 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         PrevSpec = Tok.getIdentifierInfo()->getNameStart();
         isInvalid = true;
         break;
-      };
+      }
       LLVM_FALLTHROUGH;
     case tok::kw_private:
+      // It's fine (but redundant) to check this for __generic on the
+      // fallthrough path; we only form the __generic token in OpenCL mode.
+      if (!getLangOpts().OpenCL)
+        goto DoneWithDeclSpec;
+      LLVM_FALLTHROUGH;
     case tok::kw___private:
     case tok::kw___global:
     case tok::kw___local:
