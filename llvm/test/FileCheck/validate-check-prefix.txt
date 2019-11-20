@@ -1,8 +1,8 @@
-// RUN: not FileCheck -check-prefix=A! -input-file %s %s 2>&1 | FileCheck -check-prefix=BAD_PREFIX %s
+// RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=A! -input-file %s %s 2>&1 | FileCheck -check-prefix=BAD_PREFIX %s
 // RUN: FileCheck -check-prefix=A1a-B_c -input-file %s %s
-// RUN: not FileCheck -check-prefix=REPEAT -check-prefix=REPEAT -input-file %s %s 2>&1 | FileCheck -check-prefix=BAD_PREFIX %s
-// RUN: not FileCheck -check-prefix=VALID -check-prefix=A! -input-file %s %s 2>&1 | FileCheck -check-prefix=BAD_PREFIX %s
-// RUN: not FileCheck -check-prefix= -input-file %s %s 2>&1 | FileCheck -check-prefix=BAD_PREFIX %s
+// RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=REPEAT -check-prefix=REPEAT -input-file %s %s 2>&1 | FileCheck -check-prefix=BAD_PREFIX %s
+// RUN: %ProtectFileCheckOutput not FileCheck -check-prefix=VALID -check-prefix=A! -input-file %s %s 2>&1 | FileCheck -check-prefix=BAD_PREFIX %s
+// RUN: %ProtectFileCheckOutput not FileCheck -check-prefix= -input-file %s %s 2>&1 | FileCheck -check-prefix=BAD_PREFIX %s
 foobar
 ; A1a-B_c: foobar
 

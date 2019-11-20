@@ -4,19 +4,27 @@
 
 this is something else
 
-; RUN: not FileCheck %s --input-file %s --check-prefix=CHECK-ERR1 2>&1 | FileCheck %s --check-prefix=ERRCOUNT1
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck %s --input-file %s --check-prefix=CHECK-ERR1 2>&1 \
+; RUN: | FileCheck %s --check-prefix=ERRCOUNT1
 CHECK-ERR1-COUNT-xx: this
 ERRCOUNT1: [[@LINE-1]]:18: error: invalid count in -COUNT specification on prefix 'CHECK-ERR1'
 
-; RUN: not FileCheck %s --input-file %s --check-prefix=CHECK-ERR2 2>&1 | FileCheck %s --check-prefix=ERRCOUNT2
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck %s --input-file %s --check-prefix=CHECK-ERR2 2>&1 \
+; RUN: | FileCheck %s --check-prefix=ERRCOUNT2
 CHECK-ERR2-COUNT-0x1: something
 ERRCOUNT2: [[@LINE-1]]:19: error: invalid count in -COUNT specification on prefix 'CHECK-ERR2'
 
-; RUN: not FileCheck %s --input-file %s --check-prefix=CHECK-ERR3 2>&1 | FileCheck %s --check-prefix=ERRCOUNT3
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck %s --input-file %s --check-prefix=CHECK-ERR3 2>&1 \
+; RUN: | FileCheck %s --check-prefix=ERRCOUNT3
 CHECK-ERR3-COUNT-100x: else
 ERRCOUNT3: [[@LINE-1]]:21: error: invalid count in -COUNT specification on prefix 'CHECK-ERR3'
 
-; RUN: not FileCheck %s --input-file %s --check-prefix=CHECK-ERR4 2>&1 | FileCheck %s --check-prefix=ERRCOUNT4
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck %s --input-file %s --check-prefix=CHECK-ERR4 2>&1 \
+; RUN: | FileCheck %s --check-prefix=ERRCOUNT4
 CHECK-ERR4-COUNT-0: else
 ERRCOUNT4: [[@LINE-1]]:19: error: invalid count in -COUNT specification on prefix 'CHECK-ERR4'
 
@@ -80,17 +88,23 @@ CHECK-CNTMANY-EMPTY:
 ; Tests on mismatches:
 ;
 
-; RUN: not FileCheck %s --input-file %s --check-prefix=CHECK-MIS1 2>&1 | FileCheck %s --check-prefix=MISCOUNT1
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck %s --input-file %s --check-prefix=CHECK-MIS1 2>&1 \
+; RUN: | FileCheck %s --check-prefix=MISCOUNT1
 CHECK-MIS1-COUNT-3: this is duplicate
 CHECK-MIS1: {{^}}this is not duplicate
 MISCOUNT1: [[@LINE-1]]:13: error: CHECK-MIS1: expected string not found in input
 
-; RUN: not FileCheck %s --input-file %s --check-prefix=CHECK-MIS2 2>&1 | FileCheck %s --check-prefix=MISCOUNT2
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck %s --input-file %s --check-prefix=CHECK-MIS2 2>&1 \
+; RUN: | FileCheck %s --check-prefix=MISCOUNT2
 CHECK-MIS2-COUNT-10: {{^this is duplicate}}
 CHECK-MIS2: {{^}}this is not duplicate
 MISCOUNT2: [[@LINE-2]]:22: error: CHECK-MIS2-COUNT: expected string not found in input
 
-; RUN: not FileCheck %s --input-file %s --check-prefix=CHECK-MIS3 2>&1 | FileCheck %s --check-prefix=MISCOUNT3
+; RUN: %ProtectFileCheckOutput \
+; RUN: not FileCheck %s --input-file %s --check-prefix=CHECK-MIS3 2>&1 \
+; RUN: | FileCheck %s --check-prefix=MISCOUNT3
 CHECK-MIS3-COUNT-5: this is duplicate
 CHECK-MIS3-EMPTY:
 CHECK-MIS3-LABEL: Many-label:
