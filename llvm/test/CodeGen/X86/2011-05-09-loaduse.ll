@@ -5,15 +5,21 @@
 define float @test(<4 x float>* %A) nounwind {
 ; X86-LABEL: test:
 ; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    xorps %xmm0, %xmm0
-; X86-NEXT:    flds 12(%eax)
-; X86-NEXT:    movaps %xmm0, (%eax)
+; X86-NEXT:    movaps (%eax), %xmm0
+; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; X86-NEXT:    xorps %xmm1, %xmm1
+; X86-NEXT:    movaps %xmm1, (%eax)
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    flds (%esp)
+; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movaps (%rdi), %xmm0
+; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    movaps %xmm1, (%rdi)
 ; X64-NEXT:    retq
