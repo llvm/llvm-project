@@ -14,6 +14,7 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <random>
 #include <thread>
 
 template <class SecondaryT> static void testSecondaryBasic(void) {
@@ -42,7 +43,7 @@ template <class SecondaryT> static void testSecondaryBasic(void) {
   std::vector<void *> V;
   for (scudo::uptr I = 0; I < 32U; I++)
     V.push_back(L->allocate(Size));
-  std::random_shuffle(V.begin(), V.end());
+  std::shuffle(V.begin(), V.end(), std::mt19937(std::random_device()()));
   while (!V.empty()) {
     L->deallocate(V.back());
     V.pop_back();
