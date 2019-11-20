@@ -59,6 +59,9 @@ static const std::string DefaultIgnoredParameterTypeSuffixes =
                                    "Constreverseiterator",
                                    "constreverseiterator"});
 
+/// The default value for the QualifiersMix check option.
+static constexpr bool DefaultQualifiersMix = false;
+
 using namespace clang::ast_matchers;
 
 namespace clang {
@@ -84,8 +87,9 @@ enum class MixFlags : unsigned char {
   TypeAlias = 8,      //< The path from one type to the other involves
                       // desugaring type aliases.
   ReferenceBind = 16, //< The mix involves the binding power of "const &".
+  Qualifiers = 32,    //< The mix involves change in the qualifiers.
 
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue =*/ReferenceBind)
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue =*/Qualifiers)
 };
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
@@ -110,7 +114,7 @@ static inline std::string formatMixFlags(MixFlags F) {
   if (F == MixFlags::Invalid)
     return "#Inv!";
 
-  SmallString<8> Str{"-----"};
+  SmallString<8> Str{"------"};
 
   if (hasFlag(F, MixFlags::None))
     // Shows the None bit explicitly, as it can be applied in the recursion
@@ -124,6 +128,8 @@ static inline std::string formatMixFlags(MixFlags F) {
     Str[3] = 't';
   if (hasFlag(F, MixFlags::ReferenceBind))
     Str[4] = '&';
+  if (hasFlag(F, MixFlags::Qualifiers))
+    Str[5] = 'Q';
 
   return Str.str().str();
 }
@@ -169,12 +175,23 @@ struct MixData {
       Flags &= ~MixFlags::Trivial;
   }
 
+  /// Add the specified flag bits to the flags.
   MixData operator|(MixFlags EnableFlags) const {
     return {Flags | EnableFlags, CommonType};
   }
+
+  /// Add the specified flag bits to the flags.
   MixData &operator|=(MixFlags EnableFlags) {
     Flags |= EnableFlags;
     return *this;
+  }
+
+  /// Add the specified qualifiers to the common type in the Mix.
+  MixData qualify(Qualifiers Quals) const {
+    SplitQualType Split = CommonType.split();
+    Split.Quals.addQualifiers(Quals);
+
+    return {Flags, QualType(Split.Ty, Split.Quals.getAsOpaqueValue())};
   }
 };
 
@@ -266,18 +283,6 @@ static MixData calculateMixability(const TheCheck &Check, const QualType LType,
                                RType.getSingleStepDesugaredType(Ctx), Ctx);
   }
 
-  // Dissolve typedefs.
-  if (const auto *LTypedef = LType->getAs<TypedefType>()) {
-    LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. LHS is typedef.\n");
-    return calculateMixability(Check, LTypedef->desugar(), RType, Ctx) |
-           MixFlags::TypeAlias;
-  }
-  if (const auto *RTypedef = RType->getAs<TypedefType>()) {
-    LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. RHS is typedef.\n");
-    return calculateMixability(Check, LType, RTypedef->desugar(), Ctx) |
-           MixFlags::TypeAlias;
-  }
-
   // At a particular call site, what could be passed to a 'T' or 'const T' might
   // also be passed to a 'const T &' without the call site putting a direct
   // side effect on the passed expressions.
@@ -290,6 +295,59 @@ static MixData calculateMixability(const TheCheck &Check, const QualType LType,
     LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. RHS is &.\n");
     return isLRefEquallyBindingToType(Check, RRef, LType, Ctx, true) |
            MixFlags::ReferenceBind;
+  }
+
+  // Dissolve typedefs after the qualifiers outside the typedef are dealt with.
+  if (LType->getAs<TypedefType>()) {
+    LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. LHS is typedef.\n");
+    return calculateMixability(Check, LType.getSingleStepDesugaredType(Ctx),
+                               RType, Ctx) |
+           MixFlags::TypeAlias;
+  }
+  if (RType->getAs<TypedefType>()) {
+    LLVM_DEBUG(llvm::dbgs() << "--- calculateMixability. RHS is typedef.\n");
+    return calculateMixability(Check, LType,
+                               RType.getSingleStepDesugaredType(Ctx), Ctx) |
+           MixFlags::TypeAlias;
+  }
+
+  // A parameter of type 'cvr1 T' and another of potentially differently
+  // qualified 'cvr2 T' may bind with the same power, if the user so requested.
+  if (LType.getLocalCVRQualifiers() != RType.getLocalCVRQualifiers()) {
+    LLVM_DEBUG(if (LType.getLocalCVRQualifiers()) llvm::dbgs()
+               << "--- calculateMixability. LHS is CVR.\n");
+    LLVM_DEBUG(if (RType.getLocalCVRQualifiers()) llvm::dbgs()
+               << "--- calculateMixability. RHS is CVR.\n");
+
+    if (!Check.QualifiersMix) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "<<< calculateMixability. QualifiersMix turned off.\n");
+      return {MixFlags::None};
+    }
+
+    return calculateMixability(Check, LType.getLocalUnqualifiedType(),
+                               RType.getLocalUnqualifiedType(), Ctx) |
+           MixFlags::Qualifiers;
+  }
+  if (LType.getLocalCVRQualifiers() == RType.getLocalCVRQualifiers() &&
+      LType.getLocalCVRQualifiers() != 0) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "--- calculateMixability. LHS and RHS same CVR.\n");
+    // Apply the same qualifier back into the found common type if we found
+    // a common type between the unqualified versions.
+    return calculateMixability(Check, LType.getLocalUnqualifiedType(),
+                               RType.getLocalUnqualifiedType(), Ctx)
+        .qualify(LType.getLocalQualifiers());
+  }
+
+  if (LType->isPointerType() && RType->isPointerType()) {
+    // If both types are pointers, and pointed to the exact same type,
+    // LType == RType took care of that.
+    // Try to see if the pointee type has some other match.
+    LLVM_DEBUG(llvm::dbgs()
+               << "--- calculateMixability. LHS and RHS are Ptrs.\n");
+    return calculateMixability(Check, LType->getPointeeType(),
+                               RType->getPointeeType(), Ctx);
   }
 
   // If none of the previous logic found a match, try if Clang otherwise
@@ -315,19 +373,42 @@ static MixData isLRefEquallyBindingToType(const TheCheck &Check,
              Ty.dump(llvm::dbgs(), Ctx); llvm::dbgs() << '\n';);
 
   QualType ReferredType = LRef->getPointeeType();
-  if (!ReferredType.isLocalConstQualified()) {
+  if (!ReferredType.isLocalConstQualified() &&
+      ReferredType->getAs<TypedefType>()) {
+    LLVM_DEBUG(
+        llvm::dbgs()
+        << "--- isLRefEquallyBindingToType. Non-const LRef to Typedef.\n");
+    ReferredType = ReferredType.getDesugaredType(Ctx);
+    if (!ReferredType.isLocalConstQualified()) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "<<< isLRefEquallyBindingToType. Typedef is not const.\n");
+      return {MixFlags::None};
+    }
+
+    LLVM_DEBUG(llvm::dbgs() << "--- isLRefEquallyBindingToType. Typedef is "
+                               "const, considering as const LRef.\n");
+  } else if (!ReferredType.isLocalConstQualified()) {
     LLVM_DEBUG(llvm::dbgs()
-               << "<<< isLRefEquallyBindingToType. Not const ref.\n");
+               << "<<< isLRefEquallyBindingToType. Not const LRef.\n");
     return {MixFlags::None};
   };
 
-  QualType NonConstReferredType = ReferredType;
-  NonConstReferredType.removeLocalConst();
-  if (ReferredType == Ty || NonConstReferredType == Ty) {
+  assert(ReferredType.isLocalConstQualified() &&
+         "Reaching this point means we are sure LRef is effectively a const&.");
+
+  if (ReferredType == Ty) {
     LLVM_DEBUG(
         llvm::dbgs()
         << "<<< isLRefEquallyBindingToType. Type of referred matches.\n");
     return {MixFlags::Trivial, ReferredType};
+  }
+
+  QualType NonConstReferredType = ReferredType;
+  NonConstReferredType.removeLocalConst();
+  if (NonConstReferredType == Ty) {
+    LLVM_DEBUG(llvm::dbgs() << "<<< isLRefEquallyBindingToType. Type of "
+                               "referred matches to non-const qualified.\n");
+    return {MixFlags::Trivial, NonConstReferredType};
   }
 
   LLVM_DEBUG(
@@ -508,8 +589,10 @@ static SmallString<64> getNameOrUnnamed(const NamedDecl *ND) {
 /// Returns whether a particular Mix between two parameters should have the
 /// types involved diagnosed to the user. This is only a flag check.
 static inline bool needsToPrintTypeInDiagnostic(const model::Mix &M) {
-  return static_cast<bool>(M.flags() & (model::MixFlags::TypeAlias |
-                                        model::MixFlags::ReferenceBind));
+  using namespace model;
+  return static_cast<bool>(
+      M.flags() &
+      (MixFlags::TypeAlias | MixFlags::ReferenceBind | MixFlags::Qualifiers));
 }
 
 namespace {
@@ -593,7 +676,8 @@ EasilySwappableParametersCheck::EasilySwappableParametersCheck(
           Options.get("IgnoredParameterNames", DefaultIgnoredParameterNames))),
       IgnoredParameterTypeSuffixes(optutils::parseStringList(
           Options.get("IgnoredParameterTypeSuffixes",
-                      DefaultIgnoredParameterTypeSuffixes))) {}
+                      DefaultIgnoredParameterTypeSuffixes))),
+      QualifiersMix(Options.get("QualifiersMix", DefaultQualifiersMix)) {}
 
 void EasilySwappableParametersCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -602,6 +686,7 @@ void EasilySwappableParametersCheck::storeOptions(
                 optutils::serializeStringList(IgnoredParameterNames));
   Options.store(Opts, "IgnoredParameterTypeSuffixes",
                 optutils::serializeStringList(IgnoredParameterTypeSuffixes));
+  Options.store(Opts, "QualifiersMix", QualifiersMix);
 }
 
 void EasilySwappableParametersCheck::registerMatchers(MatchFinder *Finder) {
@@ -708,18 +793,21 @@ void EasilySwappableParametersCheck::check(
         QualType LType = LVar->getType();
         QualType RType = RVar->getType();
         QualType CommonType = M.commonUnderlyingType();
-        std::string LTypeAsWritten = LType.getAsString(PP);
-        std::string RTypeAsWritten = RType.getAsString(PP);
+        std::string LTypeStr = LType.getAsString(PP);
+        std::string RTypeStr = RType.getAsString(PP);
         std::string CommonTypeStr = CommonType.getAsString(PP);
 
         if (hasFlag(M.flags(), MixFlags::TypeAlias) &&
             UniqueTypeAlias(LType, RType, CommonType)) {
           StringRef DiagText;
           bool ExplicitlyPrintCommonType = false;
-          if (LTypeAsWritten == CommonTypeStr ||
-              RTypeAsWritten == CommonTypeStr)
-            DiagText =
-                "after resolving type aliases, '%0' and '%1' are the same";
+          if (LTypeStr == CommonTypeStr || RTypeStr == CommonTypeStr)
+            if (hasFlag(M.flags(), MixFlags::Qualifiers))
+              DiagText = "after resolving type aliases, '%0' and '%1' share a "
+                         "common type";
+            else
+              DiagText =
+                  "after resolving type aliases, '%0' and '%1' are the same";
           else {
             DiagText = "after resolving type aliases, the common type of '%0' "
                        "and '%1' is '%2'";
@@ -728,17 +816,18 @@ void EasilySwappableParametersCheck::check(
 
           auto Diag =
               diag(LVar->getOuterLocStart(), DiagText, DiagnosticIDs::Note)
-              << LTypeAsWritten << RTypeAsWritten;
+              << LTypeStr << RTypeStr;
           if (ExplicitlyPrintCommonType)
             Diag << CommonTypeStr;
         }
 
-        if (hasFlag(M.flags(), MixFlags::ReferenceBind) &&
+        if ((hasFlag(M.flags(), MixFlags::ReferenceBind) ||
+             hasFlag(M.flags(), MixFlags::Qualifiers)) &&
             UniqueBindPower({LType, RType})) {
           StringRef DiagText = "'%0' and '%1' parameters accept and bind the "
                                "same kind of values";
           diag(RVar->getOuterLocStart(), DiagText, DiagnosticIDs::Note)
-              << LTypeAsWritten << RTypeAsWritten;
+              << LTypeStr << RTypeStr;
         }
       }
     }
