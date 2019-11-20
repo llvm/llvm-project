@@ -211,37 +211,31 @@ define void @f_thunk(i8* %this, ...) {
 ; WINDOWS-NEXT:    .seh_pushreg %rsi
 ; WINDOWS-NEXT:    pushq %rdi
 ; WINDOWS-NEXT:    .seh_pushreg %rdi
-; WINDOWS-NEXT:    pushq %rbp
-; WINDOWS-NEXT:    .seh_pushreg %rbp
 ; WINDOWS-NEXT:    pushq %rbx
 ; WINDOWS-NEXT:    .seh_pushreg %rbx
-; WINDOWS-NEXT:    subq $64, %rsp
-; WINDOWS-NEXT:    .seh_stackalloc 64
+; WINDOWS-NEXT:    subq $72, %rsp
+; WINDOWS-NEXT:    .seh_stackalloc 72
 ; WINDOWS-NEXT:    .seh_endprologue
-; WINDOWS-NEXT:    movl %eax, %r14d
-; WINDOWS-NEXT:    movq %r9, %rsi
+; WINDOWS-NEXT:    movq %r9, %r14
 ; WINDOWS-NEXT:    movq %r8, %rdi
 ; WINDOWS-NEXT:    movq %rdx, %rbx
-; WINDOWS-NEXT:    movq %rcx, %rbp
+; WINDOWS-NEXT:    movq %rcx, %rsi
 ; WINDOWS-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
 ; WINDOWS-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
 ; WINDOWS-NEXT:    movq %r9, {{[0-9]+}}(%rsp)
 ; WINDOWS-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
 ; WINDOWS-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; WINDOWS-NEXT:    callq get_f
-; WINDOWS-NEXT:    movq %rax, %r10
-; WINDOWS-NEXT:    movq %rbp, %rcx
+; WINDOWS-NEXT:    movq %rsi, %rcx
 ; WINDOWS-NEXT:    movq %rbx, %rdx
 ; WINDOWS-NEXT:    movq %rdi, %r8
-; WINDOWS-NEXT:    movq %rsi, %r9
-; WINDOWS-NEXT:    movl %r14d, %eax
-; WINDOWS-NEXT:    addq $64, %rsp
+; WINDOWS-NEXT:    movq %r14, %r9
+; WINDOWS-NEXT:    addq $72, %rsp
 ; WINDOWS-NEXT:    popq %rbx
-; WINDOWS-NEXT:    popq %rbp
 ; WINDOWS-NEXT:    popq %rdi
 ; WINDOWS-NEXT:    popq %rsi
 ; WINDOWS-NEXT:    popq %r14
-; WINDOWS-NEXT:    rex64 jmpq *%r10 # TAILCALL
+; WINDOWS-NEXT:    rex64 jmpq *%rax # TAILCALL
 ; WINDOWS-NEXT:    .seh_handlerdata
 ; WINDOWS-NEXT:    .text
 ; WINDOWS-NEXT:    .seh_endproc
@@ -397,14 +391,14 @@ define void @h_thunk(%struct.Foo* %this, ...) {
 ; WINDOWS-NEXT:    cmpb $1, (%rcx)
 ; WINDOWS-NEXT:    jne .LBB2_2
 ; WINDOWS-NEXT:  # %bb.1: # %then
-; WINDOWS-NEXT:    movq 8(%rcx), %r10
+; WINDOWS-NEXT:    movq 8(%rcx), %rax
 ; WINDOWS-NEXT:    addq $40, %rsp
-; WINDOWS-NEXT:    rex64 jmpq *%r10 # TAILCALL
+; WINDOWS-NEXT:    rex64 jmpq *%rax # TAILCALL
 ; WINDOWS-NEXT:  .LBB2_2: # %else
-; WINDOWS-NEXT:    movq 16(%rcx), %r10
+; WINDOWS-NEXT:    movq 16(%rcx), %rax
 ; WINDOWS-NEXT:    movl $42, {{.*}}(%rip)
 ; WINDOWS-NEXT:    addq $40, %rsp
-; WINDOWS-NEXT:    rex64 jmpq *%r10 # TAILCALL
+; WINDOWS-NEXT:    rex64 jmpq *%rax # TAILCALL
 ; WINDOWS-NEXT:    .seh_handlerdata
 ; WINDOWS-NEXT:    .text
 ; WINDOWS-NEXT:    .seh_endproc
