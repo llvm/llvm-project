@@ -41,6 +41,14 @@ class Triple;
 
 namespace AMDGPU {
 
+struct GcnBufferFormatInfo {
+  unsigned Format;
+  unsigned BitsPerComp;
+  unsigned NumComponents;
+  unsigned NumFormat;
+  unsigned DataFormat;
+};
+
 #define GET_MIMGBaseOpcode_DECL
 #define GET_MIMGDim_DECL
 #define GET_MIMGEncoding_DECL
@@ -298,6 +306,15 @@ bool getMUBUFHasSrsrc(unsigned Opc);
 
 LLVM_READONLY
 bool getMUBUFHasSoffset(unsigned Opc);
+
+LLVM_READONLY
+const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
+                                                  uint8_t NumComponents,
+                                                  uint8_t NumFormat,
+                                                  const MCSubtargetInfo &STI);
+LLVM_READONLY
+const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
+                                                  const MCSubtargetInfo &STI);
 
 LLVM_READONLY
 int getMCOpcode(uint16_t Opcode, unsigned Gen);
@@ -645,7 +662,6 @@ bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
 
 /// \returns true if the intrinsic is divergent
 bool isIntrinsicSourceOfDivergence(unsigned IntrID);
-
 
 // Track defaults for fields in the MODE registser.
 struct SIModeRegisterDefaults {
