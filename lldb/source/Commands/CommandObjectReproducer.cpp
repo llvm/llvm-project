@@ -74,17 +74,11 @@ static constexpr OptionEnumValues ReproducerProviderType() {
 #include "CommandOptions.inc"
 
 enum ReproducerCrashSignal {
-  eReproducerCrashSigbus,
   eReproducerCrashSigill,
   eReproducerCrashSigsegv,
 };
 
 static constexpr OptionEnumValueElement g_reproducer_signaltype[] = {
-    {
-        eReproducerCrashSigbus,
-        "SIGBUS",
-        "Bus error",
-    },
     {
         eReproducerCrashSigill,
         "SIGILL",
@@ -218,9 +212,6 @@ protected:
     switch (m_options.signal) {
     case eReproducerCrashSigill:
       std::raise(SIGILL);
-      break;
-    case eReproducerCrashSigbus:
-      std::raise(SIGBUS);
       break;
     case eReproducerCrashSigsegv:
       std::raise(SIGSEGV);
