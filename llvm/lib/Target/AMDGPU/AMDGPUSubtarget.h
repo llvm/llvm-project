@@ -148,7 +148,12 @@ public:
     return HasMadMixInsts;
   }
 
-  bool hasFP32Denormals() const {
+  bool hasFP32Denormals(const Function &F) const {
+    // FIXME: This should not be a property of the subtarget. This should be a
+    // property with a default set by the calling convention which can be
+    // overridden by attributes. For now, use the subtarget feature as a
+    // placeholder attribute. The function arguments only purpose is to
+    // discourage use without a function context until this is removed.
     return FP32Denormals;
   }
 
@@ -612,11 +617,17 @@ public:
   unsigned getMaxLocalMemSizeWithWaveCount(unsigned WaveCount,
                                            const Function &) const;
 
-  bool hasFP16Denormals() const {
+  /// Alias for hasFP64FP16Denormals
+  bool hasFP16Denormals(const Function &F) const {
     return FP64FP16Denormals;
   }
 
-  bool hasFP64Denormals() const {
+  /// Alias for hasFP64FP16Denormals
+  bool hasFP64Denormals(const Function &F) const {
+    return FP64FP16Denormals;
+  }
+
+  bool hasFP64FP16Denormals(const Function &F) const {
     return FP64FP16Denormals;
   }
 

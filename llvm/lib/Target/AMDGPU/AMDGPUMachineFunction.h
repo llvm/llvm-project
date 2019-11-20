@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "Utils/AMDGPUBaseInfo.h"
 
 namespace llvm {
 
@@ -27,6 +28,9 @@ protected:
 
   /// Number of bytes in the LDS that are being used.
   unsigned LDSSize;
+
+  // State of MODE register, assumed FP mode.
+  AMDGPU::SIModeRegisterDefaults Mode;
 
   // Kernels + shaders. i.e. functions called by the driver and not called
   // by other functions.
@@ -51,6 +55,10 @@ public:
 
   unsigned getLDSSize() const {
     return LDSSize;
+  }
+
+  AMDGPU::SIModeRegisterDefaults getMode() const {
+    return Mode;
   }
 
   bool isEntryFunction() const {

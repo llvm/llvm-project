@@ -46,7 +46,7 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
 
   Triple TargetTriple;
 
-  const TargetSubtargetInfo *ST;
+  const GCNSubtarget *ST;
   const TargetLoweringBase *TLI;
 
   const TargetSubtargetInfo *getST() const { return ST; }
@@ -73,6 +73,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   const AMDGPUTargetLowering *TLI;
   AMDGPUTTIImpl CommonTTI;
   bool IsGraphicsShader;
+  bool HasFP32Denormals;
 
   const FeatureBitset InlineFeatureIgnoreList = {
     // Codegen control options which don't matter.
@@ -131,7 +132,8 @@ public:
       ST(static_cast<const GCNSubtarget*>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()),
       CommonTTI(TM, F),
-      IsGraphicsShader(AMDGPU::isShader(F.getCallingConv())) {}
+      IsGraphicsShader(AMDGPU::isShader(F.getCallingConv())),
+      HasFP32Denormals(ST->hasFP32Denormals(F)) { }
 
   bool hasBranchDivergence() { return true; }
 
