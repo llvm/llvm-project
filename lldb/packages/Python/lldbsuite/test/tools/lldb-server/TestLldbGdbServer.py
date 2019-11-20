@@ -467,7 +467,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.set_inferior_startup_launch()
         self.qThreadInfo_contains_thread()
 
-    @expectedFailureNetBSD
     @llgs_test
     def test_qThreadInfo_contains_thread_launch_llgs(self):
         self.init_llgs_test()
