@@ -1078,9 +1078,7 @@ std::string Intrinsic::getBuiltinTypeStr() {
     if (!RetT.isScalar() && RetT.isInteger() && !RetT.isSigned())
       RetT.makeSigned();
 
-    bool ForcedVectorFloatingType = isFloatingPointProtoModifier(Proto[0]);
-    if (LocalCK == ClassB && !RetT.isVoid() && !RetT.isScalar() &&
-        !ForcedVectorFloatingType)
+    if (LocalCK == ClassB && !RetT.isVoid() && !RetT.isScalar())
       // Cast to vector of 8-bit elements.
       RetT.makeInteger(8, true);
 
@@ -1092,8 +1090,7 @@ std::string Intrinsic::getBuiltinTypeStr() {
     if (T.isPoly())
       T.makeInteger(T.getElementSizeInBits(), false);
 
-    bool ForcedFloatingType = isFloatingPointProtoModifier(Proto[I + 1]);
-    if (LocalCK == ClassB && !T.isScalar() && !ForcedFloatingType)
+    if (LocalCK == ClassB && !T.isScalar())
       T.makeInteger(8, true);
     // Halves always get converted to 8-bit elements.
     if (T.isHalf() && T.isVector() && !T.isScalarForMangling())
