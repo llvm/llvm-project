@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_UTILS_LOCAL_H
 #define LLVM_ANALYSIS_UTILS_LOCAL_H
 
+#include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 
