@@ -48,8 +48,10 @@ jobs:
             # FIXME: Referencing the env context does not work here
             # ref: llvmorg-${{ env.release_major }}.0.0
             ref: llvmorg-9.0.0
+            repo: llvm/llvm-project
           - name: build-latest
             ref: ${{ github.sha }}
+            repo: ${{ github.repository }}
     steps:
     - name: Install Ninja
       uses: llvm/actions/install-ninja@master
@@ -59,6 +61,7 @@ jobs:
       uses: llvm/actions/get-llvm-project-src@master
       with:
         ref: ${{ matrix.ref }}
+        repo: ${{ matrix.repo }}
     - name: Configure
       run: |
         mkdir build
