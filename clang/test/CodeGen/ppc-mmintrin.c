@@ -2,13 +2,13 @@
 // REQUIRES: powerpc-registered-target
 
 // RUN: %clang -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr8 -DNO_WARN_X86_INTRINSICS %s \
-// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK-P8,CHECK,CHECK-BE
+// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P8,CHECK,CHECK-BE
 // RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -DNO_WARN_X86_INTRINSICS %s \
-// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK-P8,CHECK,CHECK-LE
+// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P8,CHECK,CHECK-LE
 // RUN: %clang -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr9 -DNO_WARN_X86_INTRINSICS %s \
-// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK-P9,CHECK,CHECK-BE
+// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P9,CHECK,CHECK-BE
 // RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr9 -DNO_WARN_X86_INTRINSICS %s \
-// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK-P9,CHECK,CHECK-LE
+// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n| FileCheck %s --check-prefixes=CHECK-P9,CHECK,CHECK-LE
 
 #include <mmintrin.h>
 
