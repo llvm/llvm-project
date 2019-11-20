@@ -43,7 +43,7 @@ define <2 x double> @f5(<2 x double> %dummy, <2 x double> %val) {
 ; CHECK-LABEL: f5:
 ; CHECK: vflcdb %v24, %v26
 ; CHECK: br %r14
-  %ret = fsub <2 x double> <double -0.0, double -0.0>, %val
+  %ret = fneg <2 x double> %val
   ret <2 x double> %ret
 }
 
@@ -53,6 +53,6 @@ define double @f6(<2 x double> %val) {
 ; CHECK: wflcdb %f0, %v24
 ; CHECK: br %r14
   %scalar = extractelement <2 x double> %val, i32 0
-  %ret = fsub double -0.0, %scalar
+  %ret = fneg double %scalar
   ret double %ret
 }
