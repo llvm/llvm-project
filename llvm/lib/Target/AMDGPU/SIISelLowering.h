@@ -349,7 +349,8 @@ public:
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override;
-  bool isFMAFasterThanFMulAndFAdd(EVT VT) const override;
+  bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                  EVT VT) const override;
   bool isFMADLegalForFAddFSub(const SelectionDAG &DAG,
                               const SDNode *N) const override;
 

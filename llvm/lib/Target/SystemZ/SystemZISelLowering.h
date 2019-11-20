@@ -404,7 +404,8 @@ public:
   bool isCheapToSpeculateCtlz() const override { return true; }
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &,
                          EVT) const override;
-  bool isFMAFasterThanFMulAndFAdd(EVT VT) const override;
+  bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                  EVT VT) const override;
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
   bool isLegalICmpImmediate(int64_t Imm) const override;

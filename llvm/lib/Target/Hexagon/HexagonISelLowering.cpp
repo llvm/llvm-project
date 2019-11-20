@@ -1909,7 +1909,8 @@ bool HexagonTargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
   return VT1.getSimpleVT() == MVT::i64 && VT2.getSimpleVT() == MVT::i32;
 }
 
-bool HexagonTargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
+bool HexagonTargetLowering::isFMAFasterThanFMulAndFAdd(
+    const MachineFunction &MF, EVT VT) const {
   return isOperationLegalOrCustom(ISD::FMA, VT);
 }
 
