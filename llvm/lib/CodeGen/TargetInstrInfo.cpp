@@ -1150,7 +1150,11 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI) const {
     if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, TRI))
       return None;
 
-    Expr = DIExpression::prepend(Expr, DIExpression::DerefAfter, Offset);
+    SmallVector<uint64_t, 8> Ops;
+    DIExpression::appendOffset(Ops, Offset);
+    Ops.push_back(dwarf::DW_OP_deref_size);
+    Ops.push_back(MMO->getSize());
+    Expr = DIExpression::prependOpcodes(Expr, Ops);
     return ParamLoadedValue(*BaseOp, Expr);
   }
 
