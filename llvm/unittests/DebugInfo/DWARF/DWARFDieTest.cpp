@@ -84,7 +84,8 @@ TEST(DWARFLocationTable, getLocations) {
       "debug_loclists",
       MemoryBuffer::getMemBuffer(toStringRef(Loclists), "debug_loclists",
                                  /*RequiresNullTerminator=*/false));
-  std::unique_ptr<DWARFContext> Ctx = DWARFContext::create(*Sections, 8);
+  std::unique_ptr<DWARFContext> Ctx =
+      DWARFContext::create(*Sections, 4, /*isLittleEndian=*/true);
   DWARFCompileUnit *CU = Ctx->getCompileUnitForOffset(0);
   ASSERT_NE(nullptr, CU);
   DWARFDie Die = CU->getUnitDIE();
