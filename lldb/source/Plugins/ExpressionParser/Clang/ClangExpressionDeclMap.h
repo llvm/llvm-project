@@ -400,6 +400,16 @@ private:
   ///     for logging purposes.
   void LookUpLldbClass(NameSearchContext &context, unsigned int current_id);
 
+  /// Handles looking up $__lldb_objc_class which requires special treatment.
+  ///
+  /// \param[in] context
+  ///     The NameSearchContext that can construct Decls for this name.
+  ///
+  /// \param[in] current_id
+  ///     The ID for the current FindExternalVisibleDecls invocation,
+  ///     for logging purposes.
+  void LookUpLldbObjCClass(NameSearchContext &context, unsigned int current_id);
+
   /// Given a target, find a variable that matches the given name and type.
   ///
   /// \param[in] target
