@@ -97,23 +97,49 @@ FunctionPass *llvm::createAArch64StackTaggingPreRAPass() {
 
 static bool isUncheckedLoadOrStoreOpcode(unsigned Opcode) {
   switch (Opcode) {
-  case AArch64::LDRWui:
-  case AArch64::LDRSHWui:
-  case AArch64::LDRXui:
-  case AArch64::LDRBui:
   case AArch64::LDRBBui:
+  case AArch64::LDRHHui:
+  case AArch64::LDRWui:
+  case AArch64::LDRXui:
+
+  case AArch64::LDRBui:
   case AArch64::LDRHui:
   case AArch64::LDRSui:
   case AArch64::LDRDui:
   case AArch64::LDRQui:
+
+  case AArch64::LDRSHWui:
+  case AArch64::LDRSHXui:
+
+  case AArch64::LDRSBWui:
+  case AArch64::LDRSBXui:
+
+  case AArch64::LDRSWui:
+
+  case AArch64::STRBBui:
+  case AArch64::STRHHui:
   case AArch64::STRWui:
   case AArch64::STRXui:
+
   case AArch64::STRBui:
-  case AArch64::STRBBui:
   case AArch64::STRHui:
   case AArch64::STRSui:
   case AArch64::STRDui:
   case AArch64::STRQui:
+
+  case AArch64::LDPWi:
+  case AArch64::LDPXi:
+  case AArch64::LDPSi:
+  case AArch64::LDPDi:
+  case AArch64::LDPQi:
+
+  case AArch64::LDPSWi:
+
+  case AArch64::STPWi:
+  case AArch64::STPXi:
+  case AArch64::STPSi:
+  case AArch64::STPDi:
+  case AArch64::STPQi:
     return true;
   default:
     return false;
