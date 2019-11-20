@@ -372,6 +372,24 @@ private:
   /// from persistent variables.
   uint64_t GetParserID() { return (uint64_t) this; }
 
+  /// Should be called on all copied functions.
+  void MaybeRegisterFunctionBody(clang::FunctionDecl *copied_function_decl);
+
+  /// Searches the persistent decls of the target for entities with the
+  /// given name.
+  ///
+  /// \param[in] context
+  ///     The NameSearchContext that can construct Decls for this name.
+  ///
+  /// \param[in] name
+  ///     The name of the entities that need to be found.
+  ///
+  /// \param[in] current_id
+  ///     The ID for the current FindExternalVisibleDecls invocation,
+  ///     for logging purposes.
+  void SearchPersistenDecls(NameSearchContext &context, const ConstString name,
+                            unsigned int current_id);
+
   /// Given a target, find a variable that matches the given name and type.
   ///
   /// \param[in] target
