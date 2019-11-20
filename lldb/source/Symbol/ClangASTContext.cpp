@@ -1861,16 +1861,6 @@ NamespaceDecl *ClangASTContext::GetUniqueNamespaceDeclaration(
   return namespace_decl;
 }
 
-NamespaceDecl *ClangASTContext::GetUniqueNamespaceDeclaration(
-    clang::ASTContext *ast, const char *name, clang::DeclContext *decl_ctx,
-    bool is_inline) {
-  ClangASTContext *ast_ctx = ClangASTContext::GetASTContext(ast);
-  if (ast_ctx == nullptr)
-    return nullptr;
-
-  return ast_ctx->GetUniqueNamespaceDeclaration(name, decl_ctx, is_inline);
-}
-
 clang::BlockDecl *
 ClangASTContext::CreateBlockDeclaration(clang::DeclContext *ctx) {
   if (ctx != nullptr) {
