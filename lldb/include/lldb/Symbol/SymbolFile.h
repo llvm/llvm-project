@@ -280,8 +280,6 @@ public:
   virtual bool SetLimitSourceFileRange(const FileSpec &file,
                                        uint32_t first_line, uint32_t last_line);
 
-  virtual bool SymbolContextShouldBeExcluded(const SymbolContext &sc,
-                                             uint32_t actual_line);
   struct RegisterInfoResolver {
     virtual ~RegisterInfoResolver(); // anchor
 
