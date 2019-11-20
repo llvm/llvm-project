@@ -3773,21 +3773,29 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
 void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
                                           QualType CalleeType,
                                           const FunctionDecl *CalleeDecl) {
-  auto &CGOpts = CGM.getCodeGenOpts();
-  if (!CGOpts.EnableDebugEntryValues || !CGM.getLangOpts().Optimize ||
-      !CallOrInvoke)
+  if (!CallOrInvoke)
     return;
-
   auto *Func = CallOrInvoke->getCalledFunction();
   if (!Func)
     return;
+  if (Func->getSubprogram())
+    return;
+
+  // Do not emit a declaration subprogram for a builtin or if call site info
+  // isn't required. Also, elide declarations for functions with reserved names,
+  // as call site-related features aren't interesting in this case (& also, the
+  // compiler may emit calls to these functions without debug locations, which
+  // makes the verifier complain).
+  if (CalleeDecl->getBuiltinID() != 0 ||
+      getCallSiteRelatedAttrs() == llvm::DINode::FlagZero)
+    return;
+  if (const auto *Id = CalleeDecl->getIdentifier())
+    if (Id->isReservedName())
+      return;
 
   // If there is no DISubprogram attached to the function being called,
   // create the one describing the function in order to have complete
   // call site debug info.
-  if (Func->getSubprogram())
-    return;
-
   if (!CalleeDecl->isStatic() && !CalleeDecl->isInlined())
     EmitFunctionDecl(CalleeDecl, CalleeDecl->getLocation(), CalleeType, Func);
 }
@@ -4849,10 +4857,10 @@ llvm::DINode::DIFlags CGDebugInfo::getCallSiteRelatedAttrs() const {
   bool SupportsDWARFv4Ext =
       CGM.getCodeGenOpts().DwarfVersion == 4 &&
       (CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::LLDB ||
-       (CGM.getCodeGenOpts().EnableDebugEntryValues &&
-       CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::GDB));
+       CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::GDB);
 
-  if (!SupportsDWARFv4Ext && CGM.getCodeGenOpts().DwarfVersion < 5)
+  if (!SupportsDWARFv4Ext && CGM.getCodeGenOpts().DwarfVersion < 5 &&
+      !CGM.getCodeGenOpts().EnableDebugEntryValues)
     return llvm::DINode::FlagZero;
 
   return llvm::DINode::FlagAllCallsDescribed;
