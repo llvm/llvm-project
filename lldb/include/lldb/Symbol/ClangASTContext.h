@@ -163,12 +163,6 @@ public:
 
   CompilerType GetCStringType(bool is_const);
 
-  static CompilerType GetUnknownAnyType(clang::ASTContext *ast);
-
-  CompilerType GetUnknownAnyType() {
-    return ClangASTContext::GetUnknownAnyType(getASTContext());
-  }
-
   static clang::DeclContext *GetDeclContextForType(clang::QualType type);
 
   static clang::DeclContext *GetDeclContextForType(const CompilerType &type);
