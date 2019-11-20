@@ -90,7 +90,6 @@ def config():
   parser = argparse.ArgumentParser(
       description=__doc__,
       formatter_class=argparse.RawTextHelpFormatter)
-  parser.add_argument('-v', '--verbose', action='store_true')
   parser.add_argument('--llvm-bin', help='llvm $prefix/bin path')
   parser.add_argument('--clang',
                       help='"clang" executable, defaults to $llvm_bin/clang')
@@ -104,10 +103,8 @@ def config():
   parser.add_argument(
       '--x86_extra_scrub', action='store_true',
       help='Use more regex for x86 matching to reduce diffs between various subtargets')
-  parser.add_argument('-u', '--update-only', action='store_true',
-                      help='Only update test if it was already autogened')
   parser.add_argument('tests', nargs='+')
-  args = parser.parse_args()
+  args = common.parse_commandline_args(parser)
   args.clang_args = shlex.split(args.clang_args or '')
 
   if args.clang is None:
