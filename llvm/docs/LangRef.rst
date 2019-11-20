@@ -4857,13 +4857,6 @@ DIFlags
 
 These flags encode various properties of DINodes.
 
-The `ArgumentNotModified` flag marks a function argument whose value
-is not modified throughout of a function. This flag is used to decide
-whether a DW_OP_LLVM_entry_value can be used in a location description
-after the function prologue. The language frontend is expected to compute
-this property for each DILocalVariable. The flag should be used
-only in optimized code.
-
 The `ExportSymbols` flag marks a class, struct or union whose members
 may be referenced as if they were defined in the containing class or
 union. This flag is used to decide whether the DW_AT_export_symbols can

@@ -2815,11 +2815,6 @@ public:
   bool isArtificial() const { return getFlags() & FlagArtificial; }
   bool isObjectPointer() const { return getFlags() & FlagObjectPointer; }
 
-  /// Check that an argument is unmodified.
-  bool isNotModified() const { return getFlags() & FlagArgumentNotModified; }
-  /// Set the flag if an argument is unmodified.
-  void setIsNotModified() { Flags |= FlagArgumentNotModified; }
-
   /// Check that a location is valid for this variable.
   ///
   /// Check that \c DL exists, is in the same subprogram, and has the same
