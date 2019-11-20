@@ -89,6 +89,9 @@ bool GDBRemoteRegisterContext::ReadRegister(const RegisterInfo *reg_info,
                                             RegisterValue &value) {
   // Read the register
   if (ReadRegisterBytes(reg_info, m_reg_data)) {
+    const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+    if (m_reg_valid[reg] == false)
+      return false;
     const bool partial_data_ok = false;
     Status error(value.SetValueFromData(
         reg_info, m_reg_data, reg_info->byte_offset, partial_data_ok));
@@ -204,6 +207,18 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info,
                std::min(buffer_sp->GetByteSize(), m_reg_data.GetByteSize()));
         if (buffer_sp->GetByteSize() >= m_reg_data.GetByteSize()) {
           SetAllRegisterValid(true);
+          return true;
+        } else if (buffer_sp->GetByteSize() > 0) {
+          const int regcount = m_reg_info.GetNumRegisters();
+          for (int i = 0; i < regcount; i++) {
+            struct RegisterInfo *reginfo = m_reg_info.GetRegisterInfoAtIndex(i);
+            if (reginfo->byte_offset + reginfo->byte_size 
+                   <= buffer_sp->GetByteSize()) {
+              m_reg_valid[i] = true;
+            } else {
+              m_reg_valid[i] = false;
+            }
+          }
           return true;
         } else {
           Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_THREAD |
