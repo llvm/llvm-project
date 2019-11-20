@@ -155,20 +155,18 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
     CurSubReg.set(Offset, Offset + Size);
 
     // If this sub-register has a DWARF number and we haven't covered
-    // its range, emit a DWARF piece for it.
-    if (CurSubReg.test(Coverage)) {
+    // its range, and its range covers the value, emit a DWARF piece for it.
+    if (Offset < MaxSize && CurSubReg.test(Coverage)) {
       // Emit a piece for any gap in the coverage.
       if (Offset > CurPos)
-        DwarfRegs.push_back({-1, Offset - CurPos, "no DWARF register encoding"});
+        DwarfRegs.push_back(
+            {-1, Offset - CurPos, "no DWARF register encoding"});
       DwarfRegs.push_back(
           {Reg, std::min<unsigned>(Size, MaxSize - Offset), "sub-register"});
-      if (Offset >= MaxSize)
-        break;
-
-      // Mark it as emitted.
-      Coverage.set(Offset, Offset + Size);
-      CurPos = Offset + Size;
     }
+    // Mark it as emitted.
+    Coverage.set(Offset, Offset + Size);
+    CurPos = Offset + Size;
   }
   // Failed to find any DWARF encoding.
   if (CurPos == 0)
@@ -391,6 +389,7 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       // empty DW_OP_piece / DW_OP_bit_piece before we emitted the base
       // location.
       assert(OffsetInBits >= FragmentOffset && "fragment offset not added?");
+      assert(SizeInBits >= OffsetInBits - FragmentOffset && "size underflow");
 
       // If addMachineReg already emitted DW_OP_piece operations to represent
       // a super-register by splicing together sub-registers, subtract the size

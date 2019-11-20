@@ -1,0 +1,36 @@
+# RUN: llc -start-before=livedebugvalues -filetype=obj -o - %s | \
+# RUN:     llvm-dwarfdump -debug-info - | FileCheck %s
+#
+# In this test the first DBG_VALUE is 32 bits large and sits in 128-bit register Q8,
+# which has to be decomposed into two 64-bit register D16, D17.
+# This test ensures that the unused D17 is suppressed in the output.
+#
+# CHECK: .debug_info contents:
+# CHECK: DW_TAG_formal_parameter
+# CHECK-NEXT: DW_AT_location
+# CHECK-NEXT: DW_OP_regx D16, DW_OP_piece 0x4, DW_OP_regx D15, DW_OP_bit_piece 0x20 0x20
+# CHECK-NEXT: DW_AT_name {{.*}}"boundingRect"
+--- |
+  target triple = "thumbv7k-apple-watchos"
+  define swiftcc void @f() !dbg !5 {
+       ret void
+  }
+  !llvm.module.flags = !{!0}
+  !llvm.dbg.cu = !{!2}
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !2 = distinct !DICompileUnit(language: DW_LANG_Swift, file: !3,
+  isOptimized: true, runtimeVersion: 5, emissionKind: FullDebug, enums: !4, globals: !4, imports: !4)
+  !3 = !DIFile(filename: "t.swift", directory: "/")
+  !4 = !{}
+  !5 = distinct !DISubprogram(name: "f", scope: !3, file: !3, line: 388, type: !9, scopeLine: 388, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !4)
+  !9 = !DISubroutineType(types: !4)
+  !10 = !DILocation(line: 0, scope: !5)
+  !12 = !DILocalVariable(name: "boundingRect", arg: 1, scope: !5, file: !3, line: 388, type: !13)
+  !13 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !14)
+  !14 = !DICompositeType(tag: DW_TAG_structure_type, name: "CGRect", scope: !5, file: !3, line: 46, size: 128, elements: !4, runtimeLang: DW_LANG_Swift, identifier: "$sSo6CGRectVD")
+name:            'f'
+body:             |
+  bb.0:
+    DBG_VALUE $s31, $noreg, !12, !DIExpression(DW_OP_LLVM_fragment, 32, 32), debug-location !10
+    DBG_VALUE $q8, $noreg, !12, !DIExpression(DW_OP_LLVM_fragment, 0, 32), debug-location !10
+    renamable $r0 = t2ADDri $r6, 144, 14, $noreg, $noreg, debug-location !10
