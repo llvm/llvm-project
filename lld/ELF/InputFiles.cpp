@@ -621,6 +621,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
     InputSectionBase *head;
     InputSectionBase *prev = nullptr;
     for (uint32_t secIndex : entries.slice(1)) {
+      if (secIndex >= this->sections.size())
+        continue;
       InputSectionBase *s = this->sections[secIndex];
       if (!s || s == &InputSection::discarded)
         continue;
