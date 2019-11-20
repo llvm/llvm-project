@@ -14,11 +14,10 @@
 #ifndef LLVM_C_IRREADER_H
 #define LLVM_C_IRREADER_H
 
+#include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+LLVM_C_EXTERN_C_BEGIN
 
 /**
  * Read LLVM IR from a memory buffer and convert it into an in-memory Module
@@ -33,8 +32,6 @@ LLVMBool LLVMParseIRInContext(LLVMContextRef ContextRef,
                               LLVMMemoryBufferRef MemBuf, LLVMModuleRef *OutM,
                               char **OutMessage);
 
-#ifdef __cplusplus
-}
-#endif
+LLVM_C_EXTERN_C_END
 
 #endif

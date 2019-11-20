@@ -16,6 +16,8 @@
 #ifndef LLVM_C_LTO_H
 #define LLVM_C_LTO_H
 
+#include "llvm-c/ExternC.h"
+
 #ifdef __cplusplus
 #include <cstddef>
 #else
@@ -98,9 +100,7 @@ typedef struct LLVMOpaqueLTOCodeGenerator *lto_code_gen_t;
 /** opaque reference to a thin code generator */
 typedef struct LLVMOpaqueThinLTOCodeGenerator *thinlto_code_gen_t;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+LLVM_C_EXTERN_C_BEGIN
 
 /**
  * Returns a printable string.
@@ -900,8 +900,6 @@ extern void thinlto_codegen_set_cache_size_files(thinlto_code_gen_t cg,
  * @} // endgroup LLVMCTLTO_CACHING
  */
 
-#ifdef __cplusplus
-}
-#endif
+LLVM_C_EXTERN_C_END
 
 #endif /* LLVM_C_LTO_H */

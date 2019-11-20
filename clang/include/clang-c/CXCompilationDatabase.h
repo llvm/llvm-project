@@ -15,12 +15,11 @@
 #ifndef LLVM_CLANG_C_CXCOMPILATIONDATABASE_H
 #define LLVM_CLANG_C_CXCOMPILATIONDATABASE_H
 
-#include "clang-c/Platform.h"
 #include "clang-c/CXString.h"
+#include "clang-c/ExternC.h"
+#include "clang-c/Platform.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+LLVM_CLANG_C_EXTERN_C_BEGIN
 
 /** \defgroup COMPILATIONDB CompilationDatabase functions
  * \ingroup CINDEX
@@ -169,8 +168,7 @@ clang_CompileCommand_getMappedSourceContent(CXCompileCommand, unsigned I);
  * @}
  */
 
-#ifdef __cplusplus
-}
-#endif
+LLVM_CLANG_C_EXTERN_C_END
+
 #endif
 

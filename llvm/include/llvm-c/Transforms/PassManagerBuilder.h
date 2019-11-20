@@ -14,13 +14,12 @@
 #ifndef LLVM_C_TRANSFORMS_PASSMANAGERBUILDER_H
 #define LLVM_C_TRANSFORMS_PASSMANAGERBUILDER_H
 
+#include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
 
 typedef struct LLVMOpaquePassManagerBuilder *LLVMPassManagerBuilderRef;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+LLVM_C_EXTERN_C_BEGIN
 
 /**
  * @defgroup LLVMCTransformsPassManagerBuilder Pass manager builder
@@ -83,8 +82,6 @@ void LLVMPassManagerBuilderPopulateLTOPassManager(LLVMPassManagerBuilderRef PMB,
  * @}
  */
 
-#ifdef __cplusplus
-}
-#endif
+LLVM_C_EXTERN_C_END
 
 #endif

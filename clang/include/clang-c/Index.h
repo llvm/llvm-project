@@ -18,10 +18,11 @@
 
 #include <time.h>
 
-#include "clang-c/Platform.h"
+#include "clang-c/BuildSystem.h"
 #include "clang-c/CXErrorCode.h"
 #include "clang-c/CXString.h"
-#include "clang-c/BuildSystem.h"
+#include "clang-c/ExternC.h"
+#include "clang-c/Platform.h"
 
 /**
  * The version constants for the libclang API.
@@ -51,9 +52,7 @@
     CINDEX_VERSION_MAJOR,                               \
     CINDEX_VERSION_MINOR)
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+LLVM_CLANG_C_EXTERN_C_BEGIN
 
 /** \defgroup CINDEX libclang: C Interface to Clang
  *
@@ -6774,7 +6773,6 @@ CINDEX_LINKAGE unsigned clang_Type_visitFields(CXType T,
  * @}
  */
 
-#ifdef __cplusplus
-}
-#endif
+LLVM_CLANG_C_EXTERN_C_END
+
 #endif

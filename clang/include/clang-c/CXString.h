@@ -14,11 +14,10 @@
 #ifndef LLVM_CLANG_C_CXSTRING_H
 #define LLVM_CLANG_C_CXSTRING_H
 
+#include "clang-c/ExternC.h"
 #include "clang-c/Platform.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+LLVM_CLANG_C_EXTERN_C_BEGIN
 
 /**
  * \defgroup CINDEX_STRING String manipulation routines
@@ -64,8 +63,7 @@ CINDEX_LINKAGE void clang_disposeStringSet(CXStringSet *set);
  * @}
  */
 
-#ifdef __cplusplus
-}
-#endif
+LLVM_CLANG_C_EXTERN_C_END
+
 #endif
 
