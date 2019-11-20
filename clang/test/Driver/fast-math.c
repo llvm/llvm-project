@@ -170,11 +170,11 @@
 // RUN: %clang -### -fno-fast-math -ffast-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FAST-MATH %s
 // RUN: %clang -### -funsafe-math-optimizations -ffinite-math-only \
-// RUN:     -fno-math-errno -ffp-contract=fast -fno-rounding-math -c %s 2>&1 \
+// RUN:     -fno-math-errno -ffp-contract=fast -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FAST-MATH %s
 // RUN: %clang -### -fno-honor-infinities -fno-honor-nans -fno-math-errno \
 // RUN:     -fassociative-math -freciprocal-math -fno-signed-zeros \
-// RUN:     -fno-trapping-math -ffp-contract=fast -fno-rounding-math -c %s 2>&1 \
+// RUN:     -fno-trapping-math -ffp-contract=fast -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FAST-MATH %s
 // CHECK-FAST-MATH: "-cc1"
 // CHECK-FAST-MATH: "-ffast-math"

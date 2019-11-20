@@ -158,6 +158,18 @@ define i1 @known_nan_select(i1 %cond, double %arg0, double %arg1) {
   ret i1 %tmp
 }
 
+define i1 @nnan_ninf_known_nan_select(i1 %cond, double %arg0, double %arg1) {
+; CHECK-LABEL: @nnan_ninf_known_nan_select(
+; CHECK-NEXT:    ret i1 true
+;
+  %lhs = fadd nnan ninf double %arg0, 1.0
+  %rhs = fadd nnan ninf double %arg1, 2.0
+  %op = select i1 %cond, double %lhs, double %rhs
+  %mul = fmul double %op, 2.0
+  %tmp = fcmp ord double %mul, %mul
+  ret i1 %tmp
+}
+
 define i1 @select_maybe_nan_lhs(i1 %cond, double %lhs, double %arg1) {
 ; CHECK-LABEL: @select_maybe_nan_lhs(
 ; CHECK-NEXT:    [[RHS:%.*]] = fadd nnan double [[ARG1:%.*]], 1.000000e+00
@@ -258,9 +270,7 @@ define i1 @nnan_fsub(double %arg0, double %arg1) {
 define i1 @nnan_binary_fneg() {
 ; CHECK-LABEL: @nnan_binary_fneg(
 ; CHECK-NEXT:    [[NNAN:%.*]] = call nnan double @func()
-; CHECK-NEXT:    [[OP:%.*]] = fsub double -0.000000e+00, [[NNAN]]
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], [[OP]]
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nnan = call nnan double @func()
   %op = fsub double -0.0, %nnan
@@ -296,6 +306,29 @@ define i1 @uitofp(i32 %arg0) {
 ;
   %op = uitofp i32 %arg0 to double
   %tmp = fcmp ord double %op, %op
+  ret i1 %tmp
+}
+
+define i1 @uitofp_add(i32 %arg0) {
+; CHECK-LABEL: @uitofp_add(
+; CHECK-NEXT:    ret i1 true
+;
+  %op = uitofp i32 %arg0 to double
+  %add = fadd double %op, %op
+  %tmp = fcmp ord double %add, %add
+  ret i1 %tmp
+}
+
+define i1 @uitofp_add_big(i1024 %arg0) {
+; CHECK-LABEL: @uitofp_add_big(
+; CHECK-NEXT:    [[OP:%.*]] = uitofp i1024 [[ARG0:%.*]] to double
+; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[OP]], [[OP]]
+; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[ADD]], [[ADD]]
+; CHECK-NEXT:    ret i1 [[TMP]]
+;
+  %op = uitofp i1024 %arg0 to double
+  %add = fadd double %op, %op
+  %tmp = fcmp ord double %add, %add
   ret i1 %tmp
 }
 

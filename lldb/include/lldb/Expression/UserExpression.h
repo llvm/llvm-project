@@ -33,7 +33,7 @@ namespace lldb_private {
 /// implementations of UserExpression - which will be vended through the
 /// appropriate TypeSystem.
 class UserExpression : public Expression {
-  // LLVM RTTI support
+  /// LLVM RTTI support.
   static char ID;
 
 public:

@@ -78,21 +78,25 @@
 # DSO-NEXT:  VersionDefinitions [
 # DSO-NEXT:    Definition {
 # DSO-NEXT:      Version: 1
-# DSO-NEXT:      Flags: Base
+# DSO-NEXT:      Flags [ (0x1)
+# DSO-NEXT:        Base (0x1)
+# DSO-NEXT:      ]
 # DSO-NEXT:      Index: 1
 # DSO-NEXT:      Hash: 127830196
 # DSO-NEXT:      Name: shared
 # DSO-NEXT:    }
 # DSO-NEXT:    Definition {
 # DSO-NEXT:      Version: 1
-# DSO-NEXT:      Flags: 0x0
+# DSO-NEXT:      Flags [ (0x0)
+# DSO-NEXT:      ]
 # DSO-NEXT:      Index: 2
 # DSO-NEXT:      Hash: 1425
 # DSO-NEXT:      Name: V1
 # DSO-NEXT:    }
 # DSO-NEXT:    Definition {
 # DSO-NEXT:      Version: 1
-# DSO-NEXT:      Flags: 0x0
+# DSO-NEXT:      Flags [ (0x0)
+# DSO-NEXT:      ]
 # DSO-NEXT:      Index: 3
 # DSO-NEXT:      Hash: 1426
 # DSO-NEXT:      Name: V2
@@ -170,13 +174,15 @@
 # EXE-NEXT:      Entries [
 # EXE-NEXT:        Entry {
 # EXE-NEXT:          Hash: 1425
-# EXE-NEXT:          Flags: 0x0
+# EXE-NEXT:          Flags [ (0x0)
+# EXE-NEXT:          ]
 # EXE-NEXT:          Index: 2
 # EXE-NEXT:          Name: V1
 # EXE-NEXT:        }
 # EXE-NEXT:        Entry {
 # EXE-NEXT:          Hash: 1426
-# EXE-NEXT:          Flags: 0x0
+# EXE-NEXT:          Flags [ (0x0)
+# EXE-NEXT:          ]
 # EXE-NEXT:          Index: 3
 # EXE-NEXT:          Name: V2
 # EXE-NEXT:        }

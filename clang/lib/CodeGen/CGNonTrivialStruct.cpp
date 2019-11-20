@@ -817,6 +817,7 @@ template <class G, size_t N>
 static void callSpecialFunction(G &&Gen, StringRef FuncName, QualType QT,
                                 bool IsVolatile, CodeGenFunction &CGF,
                                 std::array<Address, N> Addrs) {
+  auto SetArtificialLoc = ApplyDebugLocation::CreateArtificial(CGF);
   for (unsigned I = 0; I < N; ++I)
     Addrs[I] = CGF.Builder.CreateBitCast(Addrs[I], CGF.CGM.Int8PtrPtrTy);
   QT = IsVolatile ? QT.withVolatile() : QT;

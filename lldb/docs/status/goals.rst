@@ -31,3 +31,14 @@ Some more specific goals include:
 * Great support for C, Objective-C and C++
 * Retargetable to support multiple platforms
 * Provide a base for debugger research and other innovation
+
+Why a New Debugger?
+-------------------
+
+In order to achieve our goals we decided to start with a fresh architecture
+that would support modern multi-threaded programs, handle debugging symbols in
+an efficient manner, use compiler based code knowledge and have plug-in support
+for functionality and extensions. Additionally we want the debugger
+capabilities to be available to other analysis tools, be they scripts or
+compiled programs, without requiring them to be GPL.
+

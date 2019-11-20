@@ -676,7 +676,8 @@ struct SIModeRegisterDefaults {
     FP32Denormals(true),
     FP64FP16Denormals(true) {}
 
-  SIModeRegisterDefaults(const Function &F);
+  // FIXME: Should not depend on the subtarget
+  SIModeRegisterDefaults(const Function &F, const GCNSubtarget &ST);
 
   static SIModeRegisterDefaults getDefaultForCallingConv(CallingConv::ID CC) {
     const bool IsCompute = AMDGPU::isCompute(CC);
@@ -695,10 +696,23 @@ struct SIModeRegisterDefaults {
            FP64FP16Denormals == Other.FP64FP16Denormals;
   }
 
+  /// Returns true if a flag is compatible if it's enabled in the callee, but
+  /// disabled in the caller.
+  static bool oneWayCompatible(bool CallerMode, bool CalleeMode) {
+    return CallerMode == CalleeMode || (CallerMode && !CalleeMode);
+  }
+
   // FIXME: Inlining should be OK for dx10-clamp, since the caller's mode should
   // be able to override.
   bool isInlineCompatible(SIModeRegisterDefaults CalleeMode) const {
-    return *this == CalleeMode;
+    if (DX10Clamp != CalleeMode.DX10Clamp)
+      return false;
+    if (IEEE != CalleeMode.IEEE)
+      return false;
+
+    // Allow inlining denormals enabled into denormals flushed functions.
+    return oneWayCompatible(FP64FP16Denormals, CalleeMode.FP64FP16Denormals) &&
+           oneWayCompatible(FP32Denormals, CalleeMode.FP32Denormals);
   }
 };
 

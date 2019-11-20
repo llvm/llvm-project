@@ -178,13 +178,10 @@ TEST_F(WorkspaceSymbolsTest, Namespaces) {
 }
 
 TEST_F(WorkspaceSymbolsTest, AnonymousNamespace) {
-  addFile("foo.h", R"cpp(
+  addFile("foo.cpp", R"cpp(
       namespace {
       void test() {}
       }
-      )cpp");
-  addFile("foo.cpp", R"cpp(
-      #include "foo.h"
       )cpp");
   EXPECT_THAT(getSymbols("test"), ElementsAre(QName("test")));
 }
@@ -393,16 +390,16 @@ TEST_F(DocumentSymbolsTest, BasicSymbols) {
       ElementsAreArray(
           {AllOf(WithName("Foo"), WithKind(SymbolKind::Class), Children()),
            AllOf(WithName("Foo"), WithKind(SymbolKind::Class),
-                 Children(AllOf(WithName("Foo"), WithKind(SymbolKind::Method),
-                                Children()),
-                          AllOf(WithName("Foo"), WithKind(SymbolKind::Method),
-                                Children()),
+                 Children(AllOf(WithName("Foo"),
+                                WithKind(SymbolKind::Constructor), Children()),
+                          AllOf(WithName("Foo"),
+                                WithKind(SymbolKind::Constructor), Children()),
                           AllOf(WithName("f"), WithKind(SymbolKind::Method),
                                 Children()),
                           AllOf(WithName("operator="),
                                 WithKind(SymbolKind::Method), Children()),
-                          AllOf(WithName("~Foo"), WithKind(SymbolKind::Method),
-                                Children()),
+                          AllOf(WithName("~Foo"),
+                                WithKind(SymbolKind::Constructor), Children()),
                           AllOf(WithName("Nested"), WithKind(SymbolKind::Class),
                                 Children(AllOf(WithName("f"),
                                                WithKind(SymbolKind::Method),

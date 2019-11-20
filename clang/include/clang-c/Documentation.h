@@ -15,11 +15,10 @@
 #ifndef LLVM_CLANG_C_DOCUMENTATION_H
 #define LLVM_CLANG_C_DOCUMENTATION_H
 
+#include "clang-c/ExternC.h"
 #include "clang-c/Index.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+LLVM_CLANG_C_EXTERN_C_BEGIN
 
 /**
  * \defgroup CINDEX_COMMENT Comment introspection
@@ -545,10 +544,7 @@ CINDEX_LINKAGE CXString clang_FullComment_getAsXML(CXComment Comment);
  * @}
  */
 
-
-#ifdef __cplusplus
-}
-#endif
+LLVM_CLANG_C_EXTERN_C_END
 
 #endif /* CLANG_C_DOCUMENTATION_H */
 

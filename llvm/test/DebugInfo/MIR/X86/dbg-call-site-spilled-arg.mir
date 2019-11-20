@@ -22,7 +22,7 @@
 
 # CHECK-LABEL: DW_TAG_call_site_parameter
 # CHECK-NEXT:    DW_AT_location (DW_OP_reg5 RDI)
-# CHECK-NEXT:    DW_AT_call_value (DW_OP_fbreg -44, DW_OP_deref)
+# CHECK-NEXT:    DW_AT_call_value (DW_OP_fbreg -44, DW_OP_deref_size 0x4)
 
 --- |
   ; ModuleID = 'spill.cc'

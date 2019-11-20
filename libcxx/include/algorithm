@@ -1821,8 +1821,8 @@ template<class _InputIterator, class _Size, class _OutputIterator>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17_WITH_IS_CONSTANT_EVALUATED
 typename enable_if
 <
-    __is_input_iterator<_InputIterator>::value &&
-   !__is_random_access_iterator<_InputIterator>::value,
+    __is_cpp17_input_iterator<_InputIterator>::value &&
+   !__is_cpp17_random_access_iterator<_InputIterator>::value,
     _OutputIterator
 >::type
 copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result)
@@ -1847,7 +1847,7 @@ template<class _InputIterator, class _Size, class _OutputIterator>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17_WITH_IS_CONSTANT_EVALUATED
 typename enable_if
 <
-    __is_random_access_iterator<_InputIterator>::value,
+    __is_cpp17_random_access_iterator<_InputIterator>::value,
     _OutputIterator
 >::type
 copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result)
@@ -2520,7 +2520,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 _ForwardIterator
 min_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
-    static_assert(__is_forward_iterator<_ForwardIterator>::value,
+    static_assert(__is_cpp17_forward_iterator<_ForwardIterator>::value,
         "std::min_element requires a ForwardIterator");
     if (__first != __last)
     {
@@ -2592,7 +2592,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 _ForwardIterator
 max_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
-    static_assert(__is_forward_iterator<_ForwardIterator>::value,
+    static_assert(__is_cpp17_forward_iterator<_ForwardIterator>::value,
         "std::max_element requires a ForwardIterator");
     if (__first != __last)
     {
@@ -2687,7 +2687,7 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_AFTER_CXX11
 std::pair<_ForwardIterator, _ForwardIterator>
 minmax_element(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
-  static_assert(__is_forward_iterator<_ForwardIterator>::value,
+  static_assert(__is_cpp17_forward_iterator<_ForwardIterator>::value,
         "std::minmax_element requires a ForwardIterator");
   std::pair<_ForwardIterator, _ForwardIterator> __result(__first, __first);
   if (__first != __last)
@@ -3186,8 +3186,8 @@ _SampleIterator __sample(_PopulationIterator __first,
         _PopCategory;
   typedef typename iterator_traits<_PopulationIterator>::difference_type
         _Difference;
-  static_assert(__is_forward_iterator<_PopulationIterator>::value ||
-                __is_random_access_iterator<_SampleIterator>::value,
+  static_assert(__is_cpp17_forward_iterator<_PopulationIterator>::value ||
+                __is_cpp17_random_access_iterator<_SampleIterator>::value,
                 "SampleIterator must meet the requirements of RandomAccessIterator");
   typedef typename common_type<_Distance, _Difference>::type _CommonType;
   _LIBCPP_ASSERT(__n >= 0, "N must be a positive number.");

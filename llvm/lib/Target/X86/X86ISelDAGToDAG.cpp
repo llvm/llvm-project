@@ -4410,6 +4410,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         ReplaceNode(Node, CNode);
         return;
       }
+
+      break;
     }
     }
 

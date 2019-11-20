@@ -26,6 +26,9 @@ class InlinedFrameAPITestCase(TestBase):
             self.source, '// This should correspond to the second break stop.')
 
     @add_test_categories(['pyapi'])
+    @expectedFailureAll(archs=["aarch64"], oslist=["linux"],
+                        debug_info=["dwo"],
+                        bugnumber="llvm.org/pr44037")
     def test_stop_at_outer_inline(self):
         """Exercise SBFrame.IsInlined() and SBFrame.GetFunctionName()."""
         self.build()

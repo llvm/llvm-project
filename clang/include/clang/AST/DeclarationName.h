@@ -528,7 +528,7 @@ public:
 
   static int compare(DeclarationName LHS, DeclarationName RHS);
 
-  void print(raw_ostream &OS, const PrintingPolicy &Policy);
+  void print(raw_ostream &OS, const PrintingPolicy &Policy) const;
 
   void dump() const;
 };
@@ -792,7 +792,7 @@ public:
   std::string getAsString() const;
 
   /// printName - Print the human-readable name to a stream.
-  void printName(raw_ostream &OS) const;
+  void printName(raw_ostream &OS, PrintingPolicy Policy) const;
 
   /// getBeginLoc - Retrieve the location of the first token.
   SourceLocation getBeginLoc() const { return NameLoc; }
@@ -829,11 +829,7 @@ inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
   return PD;
 }
 
-inline raw_ostream &operator<<(raw_ostream &OS,
-                                     DeclarationNameInfo DNInfo) {
-  DNInfo.printName(OS);
-  return OS;
-}
+raw_ostream &operator<<(raw_ostream &OS, DeclarationNameInfo DNInfo);
 
 } // namespace clang
 

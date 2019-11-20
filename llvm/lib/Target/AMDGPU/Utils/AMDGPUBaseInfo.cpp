@@ -1303,7 +1303,8 @@ bool splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset, uint32_t &ImmOffset,
   return true;
 }
 
-SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F) {
+SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F,
+                                               const GCNSubtarget &ST) {
   *this = getDefaultForCallingConv(F.getCallingConv());
 
   StringRef IEEEAttr = F.getFnAttribute("amdgpu-ieee").getValueAsString();
@@ -1314,6 +1315,9 @@ SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F) {
     = F.getFnAttribute("amdgpu-dx10-clamp").getValueAsString();
   if (!DX10ClampAttr.empty())
     DX10Clamp = DX10ClampAttr == "true";
+
+  FP32Denormals = ST.hasFP32Denormals(F);
+  FP64FP16Denormals = ST.hasFP64FP16Denormals(F);
 }
 
 namespace {

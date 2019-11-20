@@ -10,9 +10,9 @@
 #ifndef LLVM_CLANG_C_FATAL_ERROR_HANDLER_H
 #define LLVM_CLANG_C_FATAL_ERROR_HANDLER_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "clang-c/ExternC.h"
+
+LLVM_CLANG_C_EXTERN_C_BEGIN
 
 /**
  * Installs error handler that prints error message to stderr and calls abort().
@@ -27,7 +27,6 @@ void clang_install_aborting_llvm_fatal_error_handler(void);
  */
 void clang_uninstall_llvm_fatal_error_handler(void);
 
-#ifdef __cplusplus
-}
-#endif
+LLVM_CLANG_C_EXTERN_C_END
+
 #endif

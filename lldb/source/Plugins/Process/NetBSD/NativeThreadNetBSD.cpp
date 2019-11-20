@@ -16,8 +16,14 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/State.h"
+#include "llvm/Support/Errno.h"
 
 #include <sstream>
+
+// clang-format off
+#include <sys/types.h>
+#include <sys/sysctl.h>
+// clang-format on
 
 using namespace lldb;
 using namespace lldb_private;
@@ -105,7 +111,38 @@ void NativeThreadNetBSD::SetStepping() {
   m_stop_info.reason = StopReason::eStopReasonNone;
 }
 
-std::string NativeThreadNetBSD::GetName() { return std::string(""); }
+std::string NativeThreadNetBSD::GetName() {
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
+
+  std::vector<struct kinfo_lwp> infos;
+  int mib[5] = {CTL_KERN, KERN_LWP, static_cast<int>(m_process.GetID()),
+                sizeof(struct kinfo_lwp), 0};
+  size_t size;
+
+  if (::sysctl(mib, 5, nullptr, &size, nullptr, 0) == -1 || size == 0) {
+    LLDB_LOG(log, "sysctl() for LWP info size failed: {0}",
+             llvm::sys::StrError());
+    return "";
+  }
+
+  mib[4] = size / sizeof(size_t);
+  infos.resize(size / sizeof(struct kinfo_lwp));
+
+  if (sysctl(mib, 5, infos.data(), &size, NULL, 0) == -1 || size == 0) {
+    LLDB_LOG(log, "sysctl() for LWP info failed: {0}", llvm::sys::StrError());
+    return "";
+  }
+
+  size_t nlwps = size / sizeof(struct kinfo_lwp);
+  for (size_t i = 0; i < nlwps; i++) {
+    if (static_cast<lldb::tid_t>(infos[i].l_lid) == m_tid) {
+      return infos[i].l_name;
+    }
+  }
+
+  LLDB_LOG(log, "unable to find lwp {0} in LWP infos", m_tid);
+  return "";
+}
 
 lldb::StateType NativeThreadNetBSD::GetState() { return m_state; }
 

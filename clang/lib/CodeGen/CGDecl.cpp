@@ -109,6 +109,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::OMPRequires:
   case Decl::Empty:
   case Decl::Concept:
+  case Decl::LifetimeExtendedTemporary:
     // None of these decls require codegen support.
     return;
 

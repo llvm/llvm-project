@@ -5,10 +5,10 @@ name: foo
 body:             |
   bb.0:
 
-    ;CHECK: bb
-    ;CHECK-NEXT: %namedVReg1353:_(p0) = COPY $d0
-    ;CHECK-NEXT: %namedVReg1352:_(<4 x s32>) = COPY $q0
-    ;CHECK-NEXT: G_STORE %namedVReg1352(<4 x s32>), %namedVReg1353
+    ;CHECK-LABEL: bb.0
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:_(p0) = COPY $d0
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:_(<4 x s32>) = COPY $q0
+    ;CHECK-NEXT: G_STORE %bb0_{{[0-9]+}}__1(<4 x s32>), %bb0_{{[0-9]+}}__1(p0) :: (store 16)
 
     liveins: $q0, $d0
     %1:fpr(p0) = COPY $d0
@@ -25,20 +25,20 @@ stack:
 body:             |
   bb.0:
 
-    ;CHECK: bb
-    ;CHECK-NEXT: %namedVReg1370:gpr32 = LDRWui
-    ;CHECK-NEXT: %namedVReg1371:gpr32 = MOVi32imm 1
-    ;CHECK-NEXT: %namedVReg1372:gpr32 = LDRWui
-    ;CHECK-NEXT: %namedVReg1373:gpr32 = MOVi32imm 2
-    ;CHECK-NEXT: %namedVReg1359:gpr32 = LDRWui
-    ;CHECK-NEXT: %namedVReg1360:gpr32 = MOVi32imm 3
-    ;CHECK-NEXT: %namedVReg1365:gpr32 = nsw ADDWrr
-    ;CHECK-NEXT: %namedVReg1361:gpr32 = LDRWui
-    ;CHECK-NEXT: %namedVReg1366:gpr32 = nsw ADDWrr
-    ;CHECK-NEXT: %namedVReg1362:gpr32 = MOVi32imm 4
-    ;CHECK-NEXT: %namedVReg1355:gpr32 = nsw ADDWrr
-    ;CHECK-NEXT: %namedVReg1363:gpr32 = LDRWui
-    ;CHECK-NEXT: %namedVReg1364:gpr32 = MOVi32imm 5
+    ;CHECK-LABEL: bb.0
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = LDRWui
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = MOVi32imm 1
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__2:gpr32 = LDRWui
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = MOVi32imm 2
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__3:gpr32 = LDRWui
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = MOVi32imm 3
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = nsw ADDWrr
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__4:gpr32 = LDRWui
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__2:gpr32 = nsw ADDWrr
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = MOVi32imm 4
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__3:gpr32 = nsw ADDWrr
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__5:gpr32 = LDRWui
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = MOVi32imm 5
 
     %0:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
     %1:gpr32 = MOVi32imm 1
@@ -73,12 +73,12 @@ body:             |
   bb.0:
     liveins: $x0, $x1, $d0, $d1
 
-    ;CHECK: bb
-    ;CHECK-NEXT: %namedVReg1355:gpr32 = LDRWui
-    ;CHECK-NEXT: %namedVReg1354:gpr32 = COPY %namedVReg1355
-    ;CHECK-NEXT: %namedVReg1353:gpr32 = COPY %namedVReg1354
-    ;CHECK-NEXT: %namedVReg1352:gpr32 = COPY %namedVReg1353
-    ;CHECK-NEXT: $w0 = COPY %namedVReg1352
+    ;CHECK-LABEL: bb.0:
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = LDRWui %stack.0, 0
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = COPY %bb0_{{[0-9]+}}__1
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = COPY %bb0_{{[0-9]+}}__1
+    ;CHECK-NEXT: %bb0_{{[0-9]+}}__2:gpr32 = COPY %bb0_{{[0-9]+}}__1
+    ;CHECK-NEXT: $w0 = COPY %bb0_{{[0-9]+}}__2
 
     %0:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
     %1:gpr32 = COPY %0

@@ -163,7 +163,9 @@ static SourceLocation getDeclLocForCommentSearch(const Decl *D,
   if (isa<ObjCMethodDecl>(D) || isa<ObjCContainerDecl>(D) ||
       isa<ObjCPropertyDecl>(D) ||
       isa<RedeclarableTemplateDecl>(D) ||
-      isa<ClassTemplateSpecializationDecl>(D))
+      isa<ClassTemplateSpecializationDecl>(D) ||
+      // Allow association with Y across {} in `typedef struct X {} Y`.
+      isa<TypedefDecl>(D))
     return D->getBeginLoc();
   else {
     const SourceLocation DeclLoc = D->getLocation();
@@ -874,10 +876,6 @@ ASTContext::~ASTContext() {
                                                     AEnd = DeclAttrs.end();
        A != AEnd; ++A)
     A->second->~AttrVec();
-
-  for (std::pair<const MaterializeTemporaryExpr *, APValue *> &MTVPair :
-       MaterializedTemporaryValues)
-    MTVPair.second->~APValue();
 
   for (const auto &Value : ModuleInitializers)
     Value.second->~PerModuleInitializers();
@@ -10322,21 +10320,6 @@ unsigned ASTContext::getParameterIndex(const ParmVarDecl *D) const {
   assert(I != ParamIndices.end() &&
          "ParmIndices lacks entry set by ParmVarDecl");
   return I->second;
-}
-
-APValue *
-ASTContext::getMaterializedTemporaryValue(const MaterializeTemporaryExpr *E,
-                                          bool MayCreate) {
-  assert(E && E->getStorageDuration() == SD_Static &&
-         "don't need to cache the computed value for this temporary");
-  if (MayCreate) {
-    APValue *&MTVI = MaterializedTemporaryValues[E];
-    if (!MTVI)
-      MTVI = new (*this) APValue;
-    return MTVI;
-  }
-
-  return MaterializedTemporaryValues.lookup(E);
 }
 
 QualType ASTContext::getStringLiteralArrayType(QualType EltTy,

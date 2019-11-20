@@ -92,24 +92,24 @@ bool validEndComment(const FormatToken *RBraceTok, StringRef NamespaceName,
 
   // Matches a valid namespace end comment.
   // Valid namespace end comments don't need to be edited.
-  static llvm::Regex *const NamespaceCommentPattern =
-      new llvm::Regex("^/[/*] *(end (of )?)? *(anonymous|unnamed)? *"
-                      "namespace( +([a-zA-Z0-9:_]+))?\\.? *(\\*/)?$",
-                      llvm::Regex::IgnoreCase);
-  static llvm::Regex *const NamespaceMacroCommentPattern =
-      new llvm::Regex("^/[/*] *(end (of )?)? *(anonymous|unnamed)? *"
-                      "([a-zA-Z0-9_]+)\\(([a-zA-Z0-9:_]*)\\)\\.? *(\\*/)?$",
-                      llvm::Regex::IgnoreCase);
+  static const llvm::Regex NamespaceCommentPattern =
+      llvm::Regex("^/[/*] *(end (of )?)? *(anonymous|unnamed)? *"
+                  "namespace( +([a-zA-Z0-9:_]+))?\\.? *(\\*/)?$",
+                  llvm::Regex::IgnoreCase);
+  static const llvm::Regex NamespaceMacroCommentPattern =
+      llvm::Regex("^/[/*] *(end (of )?)? *(anonymous|unnamed)? *"
+                  "([a-zA-Z0-9_]+)\\(([a-zA-Z0-9:_]*)\\)\\.? *(\\*/)?$",
+                  llvm::Regex::IgnoreCase);
 
   SmallVector<StringRef, 8> Groups;
   if (NamespaceTok->is(TT_NamespaceMacro) &&
-      NamespaceMacroCommentPattern->match(Comment->TokenText, &Groups)) {
+      NamespaceMacroCommentPattern.match(Comment->TokenText, &Groups)) {
     StringRef NamespaceTokenText = Groups.size() > 4 ? Groups[4] : "";
     // The name of the macro must be used.
     if (NamespaceTokenText != NamespaceTok->TokenText)
       return false;
   } else if (NamespaceTok->isNot(tok::kw_namespace) ||
-             !NamespaceCommentPattern->match(Comment->TokenText, &Groups)) {
+             !NamespaceCommentPattern.match(Comment->TokenText, &Groups)) {
     // Comment does not match regex.
     return false;
   }

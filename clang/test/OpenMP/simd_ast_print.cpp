@@ -1,10 +1,16 @@
-// RUN: %clang_cc1 -verify -fopenmp -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -ast-print %s | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -ast-print %s -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP5
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s --check-prefix=CHECK --check-prefix=OMP45
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -ast-print %s -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s -DOMP5
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print -DOMP5 | FileCheck %s --check-prefix=CHECK --check-prefix=OMP50
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -157,10 +163,15 @@ int main (int argc, char **argv) {
   for (int i=0; i < 2; ++i)*a=2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)
 // CHECK-NEXT: *a = 2;
+#ifdef OMP5
+#pragma omp simd private(argc, b),lastprivate(d,f) collapse(2) aligned(a : 4) if(simd:a)
+// OMP50-NEXT: #pragma omp simd private(argc,b) lastprivate(d,f) collapse(2) aligned(a: 4) if(simd: a)
+#else
 #pragma omp simd private(argc, b),lastprivate(d,f) collapse(2) aligned(a : 4)
+// OMP45-NEXT: #pragma omp simd private(argc,b) lastprivate(d,f) collapse(2) aligned(a: 4)
+#endif // OMP5
   for (int i = 0; i < 10; ++i)
   for (int j = 0; j < 10; ++j) {foo(); k1 += 8; k2 += 8;}
-// CHECK-NEXT: #pragma omp simd private(argc,b) lastprivate(d,f) collapse(2) aligned(a: 4)
 // CHECK-NEXT: for (int i = 0; i < 10; ++i)
 // CHECK-NEXT: for (int j = 0; j < 10; ++j) {
 // CHECK-NEXT: foo();
@@ -172,8 +183,13 @@ int main (int argc, char **argv) {
 // CHECK-NEXT: foo();
   const int CLEN = 4;
 // CHECK-NEXT: const int CLEN = 4;
+#ifdef OMP5
+  #pragma omp simd aligned(a:CLEN) linear(a:CLEN) safelen(CLEN) collapse( 1 ) simdlen(CLEN) linear(val(ref): CLEN) if(a)
+// OMP50-NEXT: #pragma omp simd aligned(a: CLEN) linear(a: CLEN) safelen(CLEN) collapse(1) simdlen(CLEN) linear(val(ref): CLEN) if(a)
+#else
   #pragma omp simd aligned(a:CLEN) linear(a:CLEN) safelen(CLEN) collapse( 1 ) simdlen(CLEN) linear(val(ref): CLEN)
-// CHECK-NEXT: #pragma omp simd aligned(a: CLEN) linear(a: CLEN) safelen(CLEN) collapse(1) simdlen(CLEN) linear(val(ref): CLEN)
+// OMP45-NEXT: #pragma omp simd aligned(a: CLEN) linear(a: CLEN) safelen(CLEN) collapse(1) simdlen(CLEN) linear(val(ref): CLEN)
+#endif // OMP5
   for (int i = 0; i < 10; ++i)foo();
 // CHECK-NEXT: for (int i = 0; i < 10; ++i)
 // CHECK-NEXT: foo();

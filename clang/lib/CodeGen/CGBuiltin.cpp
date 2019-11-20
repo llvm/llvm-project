@@ -6795,6 +6795,14 @@ static llvm::Value *SignOrZeroExtend(CGBuilderTy &Builder, llvm::Value *V,
   return Unsigned ? Builder.CreateZExt(V, T) : Builder.CreateSExt(V, T);
 }
 
+static llvm::Value *ARMMVEVectorSplat(CGBuilderTy &Builder, llvm::Value *V) {
+  // MVE-specific helper function for a vector splat, which infers the element
+  // count of the output vector by knowing that MVE vectors are all 128 bits
+  // wide.
+  unsigned Elements = 128 / V->getType()->getPrimitiveSizeInBits();
+  return Builder.CreateVectorSplat(Elements, V);
+}
+
 Value *CodeGenFunction::EmitARMMVEBuiltinExpr(unsigned BuiltinID,
                                               const CallExpr *E,
                                               ReturnValueSlot ReturnValue,

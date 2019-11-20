@@ -16,6 +16,7 @@
 #include "FormattedString.h"
 #include "Function.h"
 #include "GlobalCompilationDatabase.h"
+#include "Hover.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "TUScheduler.h"
@@ -225,7 +226,7 @@ public:
 
   /// Retrieve locations for symbol references.
   void findReferences(PathRef File, Position Pos, uint32_t Limit,
-                      Callback<std::vector<Location>> CB);
+                      Callback<ReferencesResult> CB);
 
   /// Run formatting for \p Rng inside \p File with content \p Code.
   llvm::Expected<tooling::Replacements> formatRange(StringRef Code,

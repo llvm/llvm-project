@@ -14,9 +14,9 @@
 #ifndef LLVM_CLANG_C_PLATFORM_H
 #define LLVM_CLANG_C_PLATFORM_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "clang-c/ExternC.h"
+
+LLVM_CLANG_C_EXTERN_C_BEGIN
 
 /* MSVC DLL import/export. */
 #ifdef _MSC_VER
@@ -39,7 +39,6 @@ extern "C" {
   #endif
 #endif
 
-#ifdef __cplusplus
-}
-#endif
+LLVM_CLANG_C_EXTERN_C_END
+
 #endif

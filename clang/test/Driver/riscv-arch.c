@@ -315,3 +315,15 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-X-S-SX-INVAL %s
 // RV32-X-S-SX-INVAL: error: invalid arch name 'rv32ixabc_sdef_sxghi',
 // RV32-X-S-SX-INVAL: unsupported non-standard user-level extension 'xabc'
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32i -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-TARGET %s
+// RUN: %clang -target riscv64-unknown-elf -march=rv32i -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-TARGET %s
+// RV32-TARGET: "-triple" "riscv32-unknown-unknown-elf"
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv64i -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV64-TARGET %s
+// RUN: %clang -target riscv64-unknown-elf -march=rv64i -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV64-TARGET %s
+// RV64-TARGET: "-triple" "riscv64-unknown-unknown-elf"

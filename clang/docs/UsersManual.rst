@@ -1231,10 +1231,10 @@ are listed below.
 
 **-f[no-]trapping-math**
 
-   Control floating point exception behavior. ``-fno-trapping-math`` allows optimizations that assume that floating point operations cannot generate traps such as divide-by-zero, overflow and underflow.
-
-- The option ``-ftrapping-math`` behaves identically to ``-ffp-exception-behavior=strict``.
-- The option ``-fno-trapping-math`` behaves identically to ``-ffp-exception-behavior=ignore``.   This is the default.
+   ``-fno-trapping-math`` allows optimizations that assume that
+   floating point operations cannot generate traps such as divide-by-zero,
+   overflow and underflow. Defaults to ``-ftrapping-math``.
+   Currently this option has no effect.
 
 .. option:: -ffp-contract=<value>
 
@@ -1318,52 +1318,6 @@ are listed below.
    * ``-fno-honor-nans``
 
    Defaults to ``-fno-finite-math``.
-
-.. _opt_frounding-math:
-
-**-f[no-]rounding-math**
-
-Force floating-point operations to honor the dynamically-set rounding mode by default.
-
-The result of a floating-point operation often cannot be exactly represented in the result type and therefore must be rounded.  IEEE 754 describes different rounding modes that control how to perform this rounding, not all of which are supported by all implementations.  C provides interfaces (``fesetround`` and ``fesetenv``) for dynamically controlling the rounding mode, and while it also recommends certain conventions for changing the rounding mode, these conventions are not typically enforced in the ABI.  Since the rounding mode changes the numerical result of operations, the compiler must understand something about it in order to optimize floating point operations.
-
-Note that floating-point operations performed as part of constant initialization are formally performed prior to the start of the program and are therefore not subject to the current rounding mode.  This includes the initialization of global variables and local ``static`` variables.  Floating-point operations in these contexts will be rounded using ``FE_TONEAREST``.
-
-- The option ``-fno-rounding-math`` allows the compiler to assume that the rounding mode is set to ``FE_TONEAREST``.  This is the default.
-- The option ``-frounding-math`` forces the compiler to honor the dynamically-set rounding mode.  This prevents optimizations which might affect results if the rounding mode changes or is different from the default; for example, it prevents floating-point operations from being reordered across most calls and prevents constant-folding when the result is not exactly representable.
-
-.. option:: -ffp-model=<value>
-
-   Specify floating point behavior. ``-ffp-model`` is an umbrella
-   option that encompasses functionality provided by other, single
-   purpose, floating point options.  Valid values are: ``precise``, ``strict``,
-   and ``fast``.
-   Details:
-
-   * ``precise`` Disables optimizations that are not value-safe on floating-point data, although FP contraction (FMA) is enabled (``-ffp-contract=fast``).  This is the default behavior.
-   * ``strict`` Enables ``-frounding-math`` and ``-ffp-exception-behavior=strict``, and disables contractions (FMA).  All of the ``-ffast-math`` enablements are disabled.
-   * ``fast`` Behaves identically to specifying both ``-ffast-math`` and ``ffp-contract=fast``
-
-   Note: If your command line specifies multiple instances
-   of the ``-ffp-model`` option, or if your command line option specifies
-   ``-ffp-model`` and later on the command line selects a floating point
-   option that has the effect of negating part of the  ``ffp-model`` that
-   has been selected, then the compiler will issue a diagnostic warning
-   that the override has occurred.
-
-.. option:: -ffp-exception-behavior=<value>
-
-   Specify the floating-point exception behavior.
-
-   Valid values are: ``ignore``, ``maytrap``, and ``strict``.
-   The default value is ``ignore``.  Details:
-
-   * ``ignore`` The compiler assumes that the exception status flags will not be read and that floating point exceptions will be masked.
-   * ``maytrap`` The compiler avoids transformations that may raise exceptions that would not have been raised by the original code. Constant folding performed by the compiler is exempt from this option.
-   * ``strict`` The compiler ensures that all transformations strictly preserve the floating point exception semantics of the original code.
-
-
-
 
 .. _controlling-code-generation:
 

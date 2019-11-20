@@ -2,6 +2,20 @@
 My First Language Frontend with LLVM Tutorial
 =============================================
 
+.. toctree::
+   :hidden:
+
+   LangImpl01
+   LangImpl02
+   LangImpl03
+   LangImpl04
+   LangImpl05
+   LangImpl06
+   LangImpl07
+   LangImpl08
+   LangImpl09
+   LangImpl10
+
 **Requirements:** This tutorial assumes you know C++, but no previous
 compiler experience is necessary.
 
@@ -46,7 +60,8 @@ allowing you to skip ahead as you wish:
    One great thing about LLVM is its support for JIT compilation, so
    we'll dive right into it and show you the 3 lines it takes to add JIT
    support. Later chapters show how to generate .o files.
--  `Chapter #5: Extending the Language: Control Flow <LangImpl05.html>`_ - With the basic language up and running, we show how to extend
+-  `Chapter #5: Extending the Language: Control Flow <LangImpl05.html>`_ - With
+   the basic language up and running, we show how to extend
    it with control flow operations ('if' statement and a 'for' loop). This
    gives us a chance to talk about SSA construction and control
    flow.

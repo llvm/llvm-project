@@ -697,7 +697,7 @@ void StmtPrinter::VisitOMPCriticalDirective(OMPCriticalDirective *Node) {
   Indent() << "#pragma omp critical";
   if (Node->getDirectiveName().getName()) {
     OS << " (";
-    Node->getDirectiveName().printName(OS);
+    Node->getDirectiveName().printName(OS, Policy);
     OS << ")";
   }
   PrintOMPExecutableDirective(Node);
@@ -2235,7 +2235,7 @@ void StmtPrinter::VisitFunctionParmPackExpr(FunctionParmPackExpr *E) {
 }
 
 void StmtPrinter::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *Node){
-  PrintExpr(Node->GetTemporaryExpr());
+  PrintExpr(Node->getSubExpr());
 }
 
 void StmtPrinter::VisitCXXFoldExpr(CXXFoldExpr *E) {

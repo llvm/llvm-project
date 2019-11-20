@@ -625,13 +625,13 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
   if (Policy.FullyQualifiedName) {
     Proto += D->getQualifiedNameAsString();
   } else {
+    llvm::raw_string_ostream OS(Proto);
     if (!Policy.SuppressScope) {
       if (const NestedNameSpecifier *NS = D->getQualifier()) {
-        llvm::raw_string_ostream OS(Proto);
         NS->print(OS, Policy);
       }
     }
-    Proto += D->getNameInfo().getAsString();
+    D->getNameInfo().printName(OS, Policy);
   }
 
   if (GuideDecl)
@@ -1458,6 +1458,11 @@ void DeclPrinter::VisitObjCPropertyDecl(ObjCPropertyDecl *PDecl) {
     Out << "(";
     if (PDecl->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_class) {
       Out << (first ? "" : ", ") << "class";
+      first = false;
+    }
+
+    if (PDecl->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_direct) {
+      Out << (first ? "" : ", ") << "direct";
       first = false;
     }
 

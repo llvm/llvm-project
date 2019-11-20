@@ -25,7 +25,6 @@
 
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
@@ -209,50 +208,50 @@ namespace llvm {
   /// This is the common base class for constrained floating point intrinsics.
   class ConstrainedFPIntrinsic : public IntrinsicInst {
   public:
+    /// Specifies the rounding mode to be assumed. This is only used when
+    /// when constrained floating point is enabled. See the LLVM Language
+    /// Reference Manual for details.
+    enum RoundingMode : uint8_t {
+      rmDynamic,         ///< This corresponds to "fpround.dynamic".
+      rmToNearest,       ///< This corresponds to "fpround.tonearest".
+      rmDownward,        ///< This corresponds to "fpround.downward".
+      rmUpward,          ///< This corresponds to "fpround.upward".
+      rmTowardZero       ///< This corresponds to "fpround.tozero".
+    };
+
+    /// Specifies the required exception behavior. This is only used when
+    /// when constrained floating point is used. See the LLVM Language
+    /// Reference Manual for details.
+    enum ExceptionBehavior : uint8_t {
+      ebIgnore,          ///< This corresponds to "fpexcept.ignore".
+      ebMayTrap,         ///< This corresponds to "fpexcept.maytrap".
+      ebStrict           ///< This corresponds to "fpexcept.strict".
+    };
+
     bool isUnaryOp() const;
     bool isTernaryOp() const;
-    Optional<fp::RoundingMode> getRoundingMode() const;
-    Optional<fp::ExceptionBehavior> getExceptionBehavior() const;
+    Optional<RoundingMode> getRoundingMode() const;
+    Optional<ExceptionBehavior> getExceptionBehavior() const;
+
+    /// Returns a valid RoundingMode enumerator when given a string
+    /// that is valid as input in constrained intrinsic rounding mode
+    /// metadata.
+    static Optional<RoundingMode> StrToRoundingMode(StringRef);
+
+    /// For any RoundingMode enumerator, returns a string valid as input in
+    /// constrained intrinsic rounding mode metadata.
+    static Optional<StringRef> RoundingModeToStr(RoundingMode);
+
+    /// Returns a valid ExceptionBehavior enumerator when given a string
+    /// valid as input in constrained intrinsic exception behavior metadata.
+    static Optional<ExceptionBehavior> StrToExceptionBehavior(StringRef);
+
+    /// For any ExceptionBehavior enumerator, returns a string valid as 
+    /// input in constrained intrinsic exception behavior metadata.
+    static Optional<StringRef> ExceptionBehaviorToStr(ExceptionBehavior);
 
     // Methods for support type inquiry through isa, cast, and dyn_cast:
-    static bool classof(const IntrinsicInst *I) {
-      switch (I->getIntrinsicID()) {
-      case Intrinsic::experimental_constrained_fadd:
-      case Intrinsic::experimental_constrained_fsub:
-      case Intrinsic::experimental_constrained_fmul:
-      case Intrinsic::experimental_constrained_fdiv:
-      case Intrinsic::experimental_constrained_frem:
-      case Intrinsic::experimental_constrained_fma:
-      case Intrinsic::experimental_constrained_fptosi:
-      case Intrinsic::experimental_constrained_fptoui:
-      case Intrinsic::experimental_constrained_fptrunc:
-      case Intrinsic::experimental_constrained_fpext:
-      case Intrinsic::experimental_constrained_sqrt:
-      case Intrinsic::experimental_constrained_pow:
-      case Intrinsic::experimental_constrained_powi:
-      case Intrinsic::experimental_constrained_sin:
-      case Intrinsic::experimental_constrained_cos:
-      case Intrinsic::experimental_constrained_exp:
-      case Intrinsic::experimental_constrained_exp2:
-      case Intrinsic::experimental_constrained_log:
-      case Intrinsic::experimental_constrained_log10:
-      case Intrinsic::experimental_constrained_log2:
-      case Intrinsic::experimental_constrained_lrint:
-      case Intrinsic::experimental_constrained_llrint:
-      case Intrinsic::experimental_constrained_rint:
-      case Intrinsic::experimental_constrained_nearbyint:
-      case Intrinsic::experimental_constrained_maxnum:
-      case Intrinsic::experimental_constrained_minnum:
-      case Intrinsic::experimental_constrained_ceil:
-      case Intrinsic::experimental_constrained_floor:
-      case Intrinsic::experimental_constrained_lround:
-      case Intrinsic::experimental_constrained_llround:
-      case Intrinsic::experimental_constrained_round:
-      case Intrinsic::experimental_constrained_trunc:
-        return true;
-      default: return false;
-      }
-    }
+    static bool classof(const IntrinsicInst *I);
     static bool classof(const Value *V) {
       return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
     }

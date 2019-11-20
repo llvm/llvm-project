@@ -328,9 +328,12 @@ private:
 };
 
 /// Sema - This implements semantic analysis and AST building for C.
-class Sema {
+class Sema final {
   Sema(const Sema &) = delete;
   void operator=(const Sema &) = delete;
+
+  /// A key method to reduce duplicate debug info from Sema.
+  virtual void anchor();
 
   ///Source of additional semantic information.
   ExternalSemaSource *ExternalSource;
@@ -8900,6 +8903,9 @@ public:
     RTC_Incompatible,
     RTC_Unknown
   };
+
+  void CheckObjCMethodDirectOverrides(ObjCMethodDecl *method,
+                                      ObjCMethodDecl *overridden);
 
   void CheckObjCMethodOverrides(ObjCMethodDecl *ObjCMethod,
                                 ObjCInterfaceDecl *CurrentClass,

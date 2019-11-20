@@ -211,9 +211,9 @@ bool GDBRemoteCommunicationReplayServer::StartAsyncThread() {
         "<lldb.gdb-replay.async>",
         GDBRemoteCommunicationReplayServer::AsyncThread, this);
     if (!async_thread) {
-      LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST),
-               "failed to launch host thread: {}",
-               llvm::toString(async_thread.takeError()));
+      LLDB_LOG_ERROR(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST),
+                     async_thread.takeError(),
+                     "failed to launch host thread: {}");
       return false;
     }
     m_async_thread = *async_thread;

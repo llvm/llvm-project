@@ -1435,6 +1435,10 @@ DEF_TRAVERSE_DECL(CapturedDecl, {
 
 DEF_TRAVERSE_DECL(EmptyDecl, {})
 
+DEF_TRAVERSE_DECL(LifetimeExtendedTemporaryDecl, {
+  TRY_TO(TraverseStmt(D->getTemporaryExpr()));
+})
+
 DEF_TRAVERSE_DECL(FileScopeAsmDecl,
                   { TRY_TO(TraverseStmt(D->getAsmString())); })
 
@@ -2632,10 +2636,16 @@ DEF_TRAVERSE_STMT(SizeOfPackExpr, {})
 DEF_TRAVERSE_STMT(SubstNonTypeTemplateParmPackExpr, {})
 DEF_TRAVERSE_STMT(SubstNonTypeTemplateParmExpr, {})
 DEF_TRAVERSE_STMT(FunctionParmPackExpr, {})
-DEF_TRAVERSE_STMT(MaterializeTemporaryExpr, {})
 DEF_TRAVERSE_STMT(CXXFoldExpr, {})
 DEF_TRAVERSE_STMT(AtomicExpr, {})
 
+DEF_TRAVERSE_STMT(MaterializeTemporaryExpr, {
+  if (S->getLifetimeExtendedTemporaryDecl()) {
+    TRY_TO(TraverseLifetimeExtendedTemporaryDecl(
+        S->getLifetimeExtendedTemporaryDecl()));
+    ShouldVisitChildren = false;
+  }
+})
 // For coroutines expressions, traverse either the operand
 // as written or the implied calls, depending on what the
 // derived class requests.

@@ -62,16 +62,10 @@ static void dumpRanges(const DWARFObject &Obj, raw_ostream &OS,
   if (!DumpOpts.ShowAddresses)
     return;
 
-  ArrayRef<SectionName> SectionNames;
-  if (DumpOpts.Verbose)
-    SectionNames = Obj.getSectionNames();
-
   for (const DWARFAddressRange &R : Ranges) {
     OS << '\n';
     OS.indent(Indent);
-    R.dump(OS, AddressSize);
-
-    DWARFFormValue::dumpAddressSection(Obj, OS, DumpOpts, R.SectionIndex);
+    R.dump(OS, AddressSize, DumpOpts, &Obj);
   }
 }
 
@@ -91,13 +85,17 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
   }
 
   if (FormValue.isFormClass(DWARFFormValue::FC_SectionOffset)) {
-    auto LLDumpOpts = DumpOpts;
-    LLDumpOpts.Verbose = false;
-
     uint64_t Offset = *FormValue.getAsSectionOffset();
 
+    if (FormValue.getForm() == DW_FORM_loclistx) {
+      FormValue.dump(OS, DumpOpts);
+      if (auto LoclistOffset = U->getLoclistOffset(Offset))
+        Offset = *LoclistOffset + U->getLocSectionBase();
+      else
+        return;
+    }
     U->getLocationTable().dumpLocationList(&Offset, OS, U->getBaseAddress(),
-                                           MRI, U, LLDumpOpts, Indent);
+                                           MRI, U, DumpOpts, Indent);
     return;
   }
 
@@ -407,6 +405,10 @@ DWARFDie::getAttributeValueAsReferencedDie(const DWARFFormValue &V) const {
 
 Optional<uint64_t> DWARFDie::getRangesBaseAttribute() const {
   return toSectionOffset(find({DW_AT_rnglists_base, DW_AT_GNU_ranges_base}));
+}
+
+Optional<uint64_t> DWARFDie::getLocBaseAttribute() const {
+  return toSectionOffset(find(DW_AT_loclists_base));
 }
 
 Optional<uint64_t> DWARFDie::getHighPC(uint64_t LowPC) const {

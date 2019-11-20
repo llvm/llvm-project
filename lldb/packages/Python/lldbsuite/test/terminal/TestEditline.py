@@ -24,26 +24,23 @@ class EditlineTest(PExpectTest):
         "help command" while exercising word-navigation, so type it as below,
         where [] indicates cursor position.
 
-        1. Send "el ommand" -> "el ommand[]"
-        2. Ctrl+left once   -> "el []ommand"
-        3. Send "c"         -> "el c[]ommand"
-        4. Ctrl+left twice  -> "[]el command"
-        5. Send "h"         -> "h[]el command"
-        6. Ctrl+right       -> "hel[] command"
-        7. Send "p"         -> "help command"
+        1. Send "el rint"  -> "el rint[]"
+        2. Ctrl+left once  -> "el []rint"
+        3. Send "p"        -> "el p[]rint"
+        4. Ctrl+left twice -> "[]el print"
+        5. Send "h"        -> "h[]el print"
+        6. Ctrl+right      -> "hel[] print"
+        7. Send "p"        -> "help print"
         """
         self.launch()
 
-        # Run help for different commands for escape variants to make sure each
-        # one matches uniquely (the buffer isn't cleared in between matches).
-        cases = [
-            ("print", "\x1b[1;5D", "\x1b[1;5C"),
-            ("step", "\x1b[5D", "\x1b[5C"),
-            ("exit", "\x1b\x1b[D", "\x1b\x1b[C"),
+        escape_pairs = [
+            ("\x1b[1;5D", "\x1b[1;5C"),
+            ("\x1b[5D", "\x1b[5C"),
+            ("\x1b\x1b[D", "\x1b\x1b[C"),
         ]
-        for (cmd, l_escape, r_escape) in cases:
-            self.expect("el {cmd_tail}{L}{cmd_head}{L}{L}h{R}p".format(
-                cmd_head=cmd[0], cmd_tail=cmd[1:], L=l_escape, R=r_escape),
-                substrs=["Syntax: %s" % cmd])
+        for (l_escape, r_escape) in escape_pairs:
+            self.expect("el rint{L}p{L}{L}h{R}p".format(
+                L=l_escape, R=r_escape), substrs=["Syntax: print"])
 
         self.quit()

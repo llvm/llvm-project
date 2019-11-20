@@ -102,3 +102,17 @@ class SBTypeMemberFunctionsTest(TestBase):
         self.assertEquals("int",
             Thingy.GetMemberFunctionAtIndex(1).GetArgumentTypeAtIndex(
             0).GetName(), "Thingy::foo takes an int")
+
+        self.assertEquals("Derived::dImpl()", Derived.GetMemberFunctionAtIndex(0).GetDemangledName())
+        self.assertEquals("Derived::baz(float)", Derived.GetMemberFunctionAtIndex(1).GetDemangledName())
+        self.assertEquals("Base::foo(int, int)", Base.GetMemberFunctionAtIndex(0).GetDemangledName())
+        self.assertEquals("Base::bar(int, char)", Base.GetMemberFunctionAtIndex(1).GetDemangledName())
+        self.assertEquals("Base::dat()", Base.GetMemberFunctionAtIndex(2).GetDemangledName())
+        self.assertEquals("Base::sfunc(char, int, float)", Base.GetMemberFunctionAtIndex(3).GetDemangledName())
+
+        self.assertEquals("_ZN7Derived5dImplEv", Derived.GetMemberFunctionAtIndex(0).GetMangledName())
+        self.assertEquals("_ZN7Derived3bazEf", Derived.GetMemberFunctionAtIndex(1).GetMangledName())
+        self.assertEquals("_ZN4Base3fooEii", Base.GetMemberFunctionAtIndex(0).GetMangledName())
+        self.assertEquals("_ZN4Base3barEic", Base.GetMemberFunctionAtIndex(1).GetMangledName())
+        self.assertEquals("_ZN4Base3datEv", Base.GetMemberFunctionAtIndex(2).GetMangledName())
+        self.assertEquals("_ZN4Base5sfuncEcif", Base.GetMemberFunctionAtIndex(3).GetMangledName())

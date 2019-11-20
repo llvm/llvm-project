@@ -146,10 +146,6 @@ class CGDebugInfo {
 
   llvm::DenseMap<const char *, llvm::TrackingMDRef> DIFileCache;
   llvm::DenseMap<const FunctionDecl *, llvm::TrackingMDRef> SPCache;
-  /// Cache function definitions relevant to use for parameters mutation
-  /// analysis.
-  llvm::DenseMap<const FunctionDecl *, llvm::TrackingMDRef> SPDefCache;
-  llvm::DenseMap<const ParmVarDecl *, llvm::TrackingMDRef> ParamCache;
   /// Cache declarations relevant to DW_TAG_imported_declarations (C++
   /// using declarations) that aren't covered by other more specific caches.
   llvm::DenseMap<const Decl *, llvm::TrackingMDRef> DeclCache;

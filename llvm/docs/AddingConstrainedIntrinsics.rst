@@ -13,52 +13,52 @@ Add the intrinsic
 
 Multiple files need to be updated when adding a new constrained intrinsic.
 
-Add the new intrinsic to the table of intrinsics.::
+Add the new intrinsic to the table of intrinsics::
 
   include/llvm/IR/Intrinsics.td
 
-Update class ConstrainedFPIntrinsic to know about the intrinsics.::
+Add SelectionDAG node types
+===========================
 
-  include/llvm/IR/IntrinsicInst.h
+Add the new STRICT version of the node type to the ISD::NodeType enum::
 
-Functions like ConstrainedFPIntrinsic::isUnaryOp() or
-ConstrainedFPIntrinsic::isTernaryOp() may need to know about the new
-intrinsic.::
+  include/llvm/CodeGen/ISDOpcodes.h
 
-  lib/IR/IntrinsicInst.cpp
+Strict version name must be a concatenation of prefix ``STRICT_`` and the name
+of corresponding non-strict node name. For instance, strict version of the
+node FADD must be STRICT_FADD.
+
+Update mappings
+===============
+
+Add new record to the mapping of instructions to constrained intrinsic and
+DAG nodes::
+
+  include/llvm/IR/ConstrainedOps.def
+
+Follow instructions provided in this file.
+
+Update IR components
+====================
 
 Update the IR verifier::
 
   lib/IR/Verifier.cpp
 
-Add SelectionDAG node types
-===========================
-
-Add the new STRICT version of the node type to the ISD::NodeType enum.::
-
-  include/llvm/CodeGen/ISDOpcodes.h
-
-In class SDNode update isStrictFPOpcode()::
-
-  include/llvm/CodeGen/SelectionDAGNodes.h
-
-A mapping from the STRICT SDnode type to the non-STRICT is done in
-TargetLoweringBase::getStrictFPOperationAction(). This allows STRICT
-nodes to be legalized similarly to the non-STRICT node type.::
-
-  include/llvm/CodeGen/TargetLowering.h
+Update Selector components
+==========================
 
 Building the SelectionDAG
 -------------------------
 
-The switch statement in SelectionDAGBuilder::visitIntrinsicCall() needs
-to be updated to call SelectionDAGBuilder::visitConstrainedFPIntrinsic().
-That function, in turn, needs to be updated to know how to create the
-SDNode for the intrinsic. The new STRICT node will eventually be converted
+The function SelectionDAGBuilder::visitConstrainedFPIntrinsic builds DAG nodes
+using mappings specified in ConstrainedOps.def. If however this default build is
+not sufficient, the build can be modified, see how it is implemented for
+STRICT_FP_ROUND. The new STRICT node will eventually be converted
 to the matching non-STRICT node. For this reason it should have the same
 operands and values as the non-STRICT version but should also use the chain.
 This makes subsequent sharing of code for STRICT and non-STRICT code paths
-easier.::
+easier::
 
   lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
 
@@ -74,18 +74,17 @@ Be careful of the chain since STRICT nodes use it but their counterparts
 often don't.
 
 The code to do the conversion or mutation of the STRICT node to a non-STRICT
-version of the node happens in SelectionDAG::mutateStrictFPToFP(). Be
+version of the node happens in SelectionDAG::mutateStrictFPToFP(). In most cases
+the function can do the conversion using information from ConstrainedOps.def. Be
 careful updating this function since some nodes have the same return type
 as their input operand, but some are different. Both of these cases must
-be properly handled.::
+be properly handled::
 
   lib/CodeGen/SelectionDAG/SelectionDAG.cpp
 
-However, the mutation may not happen if the new node has not been registered
-in TargetLoweringBase::initActions(). If the corresponding non-STRICT node
-is Legal but a target does not know about STRICT nodes then the STRICT
-node will default to Legal and mutation will be bypassed with a "Cannot
-select" error. Register the new STRICT node as Expand to avoid this bug.::
+Whether the mutation may happens or not, depends on how the new node has been
+registered in TargetLoweringBase::initActions(). By default all strict nodes are
+registered with Expand action::
 
   lib/CodeGen/TargetLoweringBase.cpp
 

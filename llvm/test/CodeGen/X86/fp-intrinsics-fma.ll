@@ -8,10 +8,15 @@
 define float @f17() #0 {
 ; NOFMA-LABEL: f17:
 ; NOFMA:       # %bb.0: # %entry
+; NOFMA-NEXT:    pushq %rax
+; NOFMA-NEXT:    .cfi_def_cfa_offset 16
 ; NOFMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; NOFMA-NEXT:    movaps %xmm0, %xmm1
 ; NOFMA-NEXT:    movaps %xmm0, %xmm2
-; NOFMA-NEXT:    jmp fmaf # TAILCALL
+; NOFMA-NEXT:    callq fmaf
+; NOFMA-NEXT:    popq %rax
+; NOFMA-NEXT:    .cfi_def_cfa_offset 8
+; NOFMA-NEXT:    retq
 ;
 ; FMA-LABEL: f17:
 ; FMA:       # %bb.0: # %entry
@@ -33,10 +38,15 @@ entry:
 define double @f18() #0 {
 ; NOFMA-LABEL: f18:
 ; NOFMA:       # %bb.0: # %entry
+; NOFMA-NEXT:    pushq %rax
+; NOFMA-NEXT:    .cfi_def_cfa_offset 16
 ; NOFMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; NOFMA-NEXT:    movaps %xmm0, %xmm1
 ; NOFMA-NEXT:    movaps %xmm0, %xmm2
-; NOFMA-NEXT:    jmp fma # TAILCALL
+; NOFMA-NEXT:    callq fma
+; NOFMA-NEXT:    popq %rax
+; NOFMA-NEXT:    .cfi_def_cfa_offset 8
+; NOFMA-NEXT:    retq
 ;
 ; FMA-LABEL: f18:
 ; FMA:       # %bb.0: # %entry

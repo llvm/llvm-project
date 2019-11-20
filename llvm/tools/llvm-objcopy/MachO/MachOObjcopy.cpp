@@ -56,7 +56,13 @@ static void markSymbols(const CopyConfig &Config, Object &Obj) {
       (*ISE.Symbol)->Referenced = true;
 }
 
-static void removeSymbols(const CopyConfig &Config, Object &Obj) {
+static void updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
+  for (SymbolEntry &Sym : Obj.SymTable) {
+    auto I = Config.SymbolsToRename.find(Sym.Name);
+    if (I != Config.SymbolsToRename.end())
+      Sym.Name = I->getValue();
+  }
+
   auto RemovePred = [Config](const std::unique_ptr<SymbolEntry> &N) {
     if (N->Referenced)
       return false;
@@ -64,6 +70,18 @@ static void removeSymbols(const CopyConfig &Config, Object &Obj) {
   };
 
   Obj.SymTable.removeSymbols(RemovePred);
+}
+
+static LoadCommand buildRPathLoadCommand(StringRef Path) {
+  LoadCommand LC;
+  MachO::rpath_command RPathLC;
+  RPathLC.cmd = MachO::LC_RPATH;
+  RPathLC.path = sizeof(MachO::rpath_command);
+  RPathLC.cmdsize = alignTo(sizeof(MachO::rpath_command) + Path.size(), 8);
+  LC.MachOLoadCommand.rpath_command_data = RPathLC;
+  LC.Payload.assign(RPathLC.cmdsize - sizeof(MachO::rpath_command), 0);
+  std::copy(Path.begin(), Path.end(), LC.Payload.begin());
+  return LC;
 }
 
 static Error handleArgs(const CopyConfig &Config, Object &Obj) {
@@ -75,7 +93,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       Config.NewSymbolVisibility || !Config.SymbolsToGlobalize.empty() ||
       !Config.SymbolsToKeep.empty() || !Config.SymbolsToLocalize.empty() ||
       !Config.SymbolsToWeaken.empty() || !Config.SymbolsToKeepGlobal.empty() ||
-      !Config.SectionsToRename.empty() || !Config.SymbolsToRename.empty() ||
+      !Config.SectionsToRename.empty() ||
       !Config.UnneededSymbolsToRemove.empty() ||
       !Config.SetSectionAlignment.empty() || !Config.SetSectionFlags.empty() ||
       Config.ExtractDWO || Config.KeepFileSymbols || Config.LocalizeHidden ||
@@ -88,20 +106,32 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
     return createStringError(llvm::errc::invalid_argument,
                              "option not supported by llvm-objcopy for MachO");
   }
-
   removeSections(Config, Obj);
 
   // Mark symbols to determine which symbols are still needed.
   if (Config.StripAll)
     markSymbols(Config, Obj);
 
-  removeSymbols(Config, Obj);
+  updateAndRemoveSymbols(Config, Obj);
 
   if (Config.StripAll)
     for (LoadCommand &LC : Obj.LoadCommands)
       for (Section &Sec : LC.Sections)
         Sec.Relocations.clear();
 
+  for (StringRef RPath : Config.RPathToAdd) {
+    for (LoadCommand &LC : Obj.LoadCommands) {
+      if (LC.MachOLoadCommand.load_command_data.cmd == MachO::LC_RPATH &&
+          RPath == StringRef(reinterpret_cast<char *>(LC.Payload.data()),
+                             LC.Payload.size())
+                       .trim(0)) {
+        return createStringError(errc::invalid_argument,
+                                 "rpath " + RPath +
+                                     " would create a duplicate load command");
+      }
+    }
+    Obj.addLoadCommand(buildRPathLoadCommand(RPath));
+  }
   return Error::success();
 }
 

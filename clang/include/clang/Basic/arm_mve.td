@@ -72,6 +72,51 @@ def vcvt#half#q_m_f16: Intrinsic<
 
 } // loop over half = "b", "t"
 
+multiclass compare_with_pred<string condname, dag arguments,
+                             dag cmp, string suffix> {
+  // Make the predicated and unpredicated versions of a single comparison.
+  def: Intrinsic<Predicate, arguments,
+                 (u16 (IRInt<"pred_v2i", [Predicate]> cmp))>,
+       NameOverride<"vcmp" # condname # "q" # suffix>;
+  def: Intrinsic<Predicate, !con(arguments, (args Predicate:$inpred)),
+                 (u16 (IRInt<"pred_v2i", [Predicate]> (and $inpred, cmp)))>,
+       NameOverride<"vcmp" # condname # "q_m" # suffix>;
+}
+
+multiclass compare<string condname, IRBuilder cmpop> {
+  // Make all four variants of a comparison: the vector/vector and
+  // vector/scalar forms, each using compare_with_pred to make a
+  // predicated and unpredicated version.
+  defm: compare_with_pred<condname, (args Vector:$va, Vector:$vb),
+                          (cmpop $va, $vb), "">;
+  let pnt = PNT_NType in {
+    defm: compare_with_pred<condname, (args Vector:$va, unpromoted<Scalar>:$sb),
+                            (cmpop $va, (splat $sb)), "_n">;
+  }
+}
+let params = T.Int in {
+  defm: compare<"eq", icmp_eq>;
+  defm: compare<"ne", icmp_ne>;
+}
+let params = T.Signed in {
+  defm: compare<"gt", icmp_sgt>;
+  defm: compare<"ge", icmp_sge>;
+  defm: compare<"lt", icmp_slt>;
+  defm: compare<"le", icmp_sle>;
+}
+let params = T.Unsigned in {
+  defm: compare<"hi", icmp_ugt>;
+  defm: compare<"cs", icmp_uge>;
+}
+let params = T.Float in {
+  defm: compare<"eq", fcmp_eq>;
+  defm: compare<"ne", fcmp_ne>;
+  defm: compare<"gt", fcmp_gt>;
+  defm: compare<"ge", fcmp_ge>;
+  defm: compare<"lt", fcmp_lt>;
+  defm: compare<"le", fcmp_le>;
+}
+
 multiclass contiguous_load<string mnemonic, PrimitiveType memtype,
                            list<Type> same_size, list<Type> wider> {
   // Intrinsics named with explicit memory and element sizes that match:
@@ -343,13 +388,56 @@ defm vstrhq: scatter_offset_both<!listconcat(T.All16, T.Int32), u16, 1>;
 defm vstrwq: scatter_offset_both<T.All32, u32, 2>;
 defm vstrdq: scatter_offset_both<T.Int64, u64, 3>;
 
-let params = [Void], pnt = PNT_None in
-def urshrl: Intrinsic<u64, (args u64:$value, imm_1to32:$shift),
-                      (seq (u32 (lshr $value, (u64 32))):$hi,
-                           (u32 $value):$lo,
-                           (IRInt<"urshrl"> $lo, $hi, $shift):$pair,
-                           (or (shl (u64 (xval $pair, 1)), (u64 32)),
-                               (u64 (xval $pair, 0))))>;
+// Base class for the scalar shift intrinsics.
+class ScalarShift<Type argtype, dag shiftCountArg, dag shiftCodeGen>:
+  Intrinsic<argtype, !con((args argtype:$value), shiftCountArg), shiftCodeGen> {
+  let params = [Void];
+  let pnt = PNT_None;
+}
+
+// Subclass that includes the machinery to take a 64-bit input apart
+// into halves, retrieve the two halves of a shifted output as a pair,
+// and glue the pieces of the pair back into an i64 for output.
+class LongScalarShift<Type argtype, dag shiftCountArg, dag shiftCodeGen>:
+   ScalarShift<argtype, shiftCountArg,
+               (seq (u32 (lshr $value, (argtype 32))):$hi,
+                    (u32 $value):$lo,
+                    shiftCodeGen:$pair,
+                    (or (shl (u64 (xval $pair, 1)), (u64 32)),
+                             (u64 (xval $pair, 0))))>;
+
+// The family of saturating/rounding scalar shifts that take an
+// immediate shift count. They come in matched 32- and 64-bit pairs.
+multiclass ScalarSaturatingShiftImm<Type arg32, Type arg64> {
+  def "": ScalarShift<arg32, (args imm_1to32:$sh),
+                      (IRInt<NAME> $value, $sh)>;
+  def l:  LongScalarShift<arg64, (args imm_1to32:$sh),
+                          (IRInt<NAME # "l"> $lo, $hi, $sh)>;
+}
+defm uqshl: ScalarSaturatingShiftImm<u32, u64>;
+defm urshr: ScalarSaturatingShiftImm<u32, u64>;
+defm sqshl: ScalarSaturatingShiftImm<s32, s64>;
+defm srshr: ScalarSaturatingShiftImm<s32, s64>;
+
+// The family of saturating/rounding scalar shifts that take a
+// register shift count. They also have 32- and 64-bit forms, but the
+// 64-bit form also has a version that saturates to 48 bits, so the IR
+// intrinsic takes an extra saturation-type operand.
+multiclass ScalarSaturatingShiftReg<Type arg32, Type arg64> {
+  def "":          ScalarShift<arg32, (args s32:$sh),
+                               (IRInt<NAME> $value, $sh)>;
+  def l:       LongScalarShift<arg64, (args s32:$sh),
+                               (IRInt<NAME # "l"> $lo, $hi, $sh, 64)>;
+  def l_sat48: LongScalarShift<arg64, (args s32:$sh),
+                               (IRInt<NAME # "l"> $lo, $hi, $sh, 48)>;
+}
+defm uqrshl: ScalarSaturatingShiftReg<u32, u64>;
+defm sqrshr: ScalarSaturatingShiftReg<s32, s64>;
+
+// The intrinsics for LSLL and ASRL come in 64-bit versions only, with
+// no saturation count.
+def lsll: LongScalarShift<u64, (args s32:$sh), (IRInt<"lsll"> $lo, $hi, $sh)>;
+def asrl: LongScalarShift<s64, (args s32:$sh), (IRInt<"asrl"> $lo, $hi, $sh)>;
 
 let params = T.Int32 in {
 def vadcq: Intrinsic<Vector, (args Vector:$a, Vector:$b, Ptr<uint>:$carry),

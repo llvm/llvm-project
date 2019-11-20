@@ -959,9 +959,9 @@ static void getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     break; // "btver2"
   case 23:
     *Type = X86::AMDFAM17H;
-    if (Model >= 0x30 && Model <= 0x3f) {
+    if ((Model >= 0x30 && Model <= 0x3f) || Model == 0x71) {
       *Subtype = X86::AMDFAM17H_ZNVER2;
-      break; // "znver2"; 30h-3fh: Zen2
+      break; // "znver2"; 30h-3fh, 71h: Zen2
     }
     if (Model <= 0x0f) {
       *Subtype = X86::AMDFAM17H_ZNVER1;

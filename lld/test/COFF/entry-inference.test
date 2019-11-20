@@ -4,6 +4,11 @@
 # RUN: not lld-link /nodefaultlib /out:%t.exe %t.obj > %t.log 2>&1
 # RUN: FileCheck -check-prefix=MAIN %s < %t.log
 
+# Entry inference should work through /wholearchive:, they are also inputs.
+# RUN: lld-link /lib %t.obj /out:%t.lib
+# RUN: not lld-link /nodefaultlib /out:%t.exe /wholearchive:%t.lib > %t.log 2>&1
+# RUN: FileCheck -check-prefix=MAIN %s < %t.log
+
 # RUN: sed s/ENTRYNAME/wmain/ %s | yaml2obj > %t.obj
 # RUN: not lld-link /out:%t.exe %t.obj > %t.log 2>&1
 # RUN: FileCheck -check-prefix=WMAIN %s < %t.log

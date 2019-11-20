@@ -198,7 +198,6 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   // to the file.
   char exe_path[PATH_MAX];
 #if __FreeBSD_version >= 1300057
-  char exe_path[PATH_MAX];
   if (elf_aux_info(AT_EXECPATH, exe_path, sizeof(exe_path)) == 0)
     return exe_path;
 #else

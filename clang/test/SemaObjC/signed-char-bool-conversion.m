@@ -47,3 +47,59 @@ void t2(BoolProp *bp) {
   bp.p = 1;
   bp.p = 2; // expected-warning {{implicit conversion from constant value 2 to 'BOOL'; the only well defined values for 'BOOL' are YES and NO}}
 }
+
+struct has_bf {
+  int signed_bf1 : 1;
+  int signed_bf2 : 2;
+  unsigned unsigned_bf1 : 1;
+  unsigned unsigned_bf2 : 2;
+
+  struct has_bf *nested;
+};
+
+void t3(struct has_bf *bf) {
+  b = bf->signed_bf1; // expected-warning{{implicit conversion from integral type 'int' to 'BOOL'}}
+  b = bf->signed_bf2; // expected-warning{{implicit conversion from integral type 'int' to 'BOOL'}}
+  b = bf->unsigned_bf1; // no warning
+  b = bf->unsigned_bf2; // expected-warning{{implicit conversion from integral type 'unsigned int' to 'BOOL'}}
+  struct has_bf local;
+  b = local.unsigned_bf1;
+  b = local.unsigned_bf2; // expected-warning{{implicit conversion from integral type 'unsigned int' to 'BOOL'}}
+  b = local.nested->unsigned_bf1;
+  b = local.nested->unsigned_bf2; // expected-warning{{implicit conversion from integral type 'unsigned int' to 'BOOL'}}
+}
+
+__attribute__((objc_root_class))
+@interface BFIvar {
+  struct has_bf bf;
+  unsigned unsigned_bf1 : 1;
+  unsigned unsigned_bf2 : 2;
+}
+@end
+
+@implementation BFIvar
+-(void)m {
+  b = bf.unsigned_bf1;
+  b = bf.unsigned_bf2; // expected-warning{{implicit conversion from integral type 'unsigned int' to 'BOOL'}}
+  b = unsigned_bf1;
+  b = unsigned_bf2; // expected-warning{{implicit conversion from integral type 'unsigned int' to 'BOOL'}}
+}
+@end
+
+#ifdef __cplusplus
+template <class T>
+struct S {
+  unsigned i : sizeof(T);
+};
+
+template <class T>
+void f() {
+  S<T> i;
+  BOOL b = i.i; // expected-warning{{implicit conversion from integral type 'unsigned int' to 'BOOL'}}
+}
+
+int main() {
+  f<char>();
+  f<short>(); // expected-note {{in instantiation of function template specialization 'f<short>' requested here}}
+}
+#endif

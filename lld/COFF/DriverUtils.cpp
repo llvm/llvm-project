@@ -907,7 +907,7 @@ std::vector<const char *> ArgParser::tokenize(StringRef s) {
 }
 
 void printHelp(const char *argv0) {
-  COFFOptTable().PrintHelp(outs(),
+  COFFOptTable().PrintHelp(lld::outs(),
                            (std::string(argv0) + " [options] file...").c_str(),
                            "LLVM Linker", false);
 }

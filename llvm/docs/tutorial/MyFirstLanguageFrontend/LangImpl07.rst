@@ -1,5 +1,3 @@
-:orphan:
-
 =======================================================
 Kaleidoscope: Extending the Language: Mutable Variables
 =======================================================
@@ -105,7 +103,7 @@ direct accesses to G and H: they are not renamed or versioned. This
 differs from some other compiler systems, which do try to version memory
 objects. In LLVM, instead of encoding dataflow analysis of memory into
 the LLVM IR, it is handled with `Analysis
-Passes <../WritingAnLLVMPass.html>`_ which are computed on demand.
+Passes <../../WritingAnLLVMPass.html>`_ which are computed on demand.
 
 With this in mind, the high-level idea is that we want to make a stack
 variable (which lives in memory, because it is on the stack) for each
@@ -120,7 +118,7 @@ that @G defines *space* for an i32 in the global data area, but its
 *name* actually refers to the address for that space. Stack variables
 work the same way, except that instead of being declared with global
 variable definitions, they are declared with the `LLVM alloca
-instruction <../LangRef.html#alloca-instruction>`_:
+instruction <../../LangRef.html#alloca-instruction>`_:
 
 .. code-block:: llvm
 
@@ -223,7 +221,7 @@ variables in certain circumstances:
    funny pointer arithmetic is involved, the alloca will not be
    promoted.
 #. mem2reg only works on allocas of `first
-   class <../LangRef.html#first-class-types>`_ values (such as pointers,
+   class <../../LangRef.html#first-class-types>`_ values (such as pointers,
    scalars and vectors), and only if the array size of the allocation is
    1 (or missing in the .ll file). mem2reg is not capable of promoting
    structs or arrays to registers. Note that the "sroa" pass is
@@ -249,7 +247,7 @@ is:
    variables that only have one assignment point, good heuristics to
    avoid insertion of unneeded phi nodes, etc.
 -  Needed for debug info generation: `Debug information in
-   LLVM <../SourceLevelDebugging.html>`_ relies on having the address of
+   LLVM <../../SourceLevelDebugging.html>`_ relies on having the address of
    the variable exposed so that debug info can be attached to it. This
    technique dovetails very naturally with this style of debug info.
 

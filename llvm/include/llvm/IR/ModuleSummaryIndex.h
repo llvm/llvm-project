@@ -173,7 +173,7 @@ struct ValueInfo {
     RefAndFlags.setInt(HaveGVs);
   }
 
-  operator bool() const { return getRef(); }
+  explicit operator bool() const { return getRef(); }
 
   GlobalValue::GUID getGUID() const { return getRef()->first; }
   const GlobalValue *getValue() const {
@@ -994,6 +994,13 @@ public:
   ModuleSummaryIndex(bool HaveGVs, bool EnableSplitLTOUnit = false)
       : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit), Saver(Alloc) {
   }
+
+  // Current version for the module summary in bitcode files.
+  // The BitcodeSummaryVersion should be bumped whenever we introduce changes
+  // in the way some record are interpreted, like flags for instance.
+  // Note that incrementing this may require changes in both BitcodeReader.cpp
+  // and BitcodeWriter.cpp.
+  static constexpr uint64_t BitcodeSummaryVersion = 8;
 
   bool haveGVs() const { return HaveGVs; }
 

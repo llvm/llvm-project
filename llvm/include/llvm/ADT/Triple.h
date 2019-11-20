@@ -477,7 +477,7 @@ public:
     return getSubArch() == Triple::ARMSubArch_v7k;
   }
 
-  /// isOSDarwin - Is this a "Darwin" OS (OS X, iOS, or watchOS).
+  /// isOSDarwin - Is this a "Darwin" OS (macOS, iOS, tvOS or watchOS).
   bool isOSDarwin() const {
     return isMacOSX() || isiOS() || isWatchOS();
   }

@@ -1656,7 +1656,7 @@ __tree<_Tp, _Compare, _Allocator>::__assign_unique(_ForwardIterator __first, _Fo
     typedef typename _ITraits::value_type _ItValueType;
     static_assert((is_same<_ItValueType, __container_value_type>::value),
                   "__assign_unique may only be called with the containers value type");
-    static_assert(__is_forward_iterator<_ForwardIterator>::value,
+    static_assert(__is_cpp17_forward_iterator<_ForwardIterator>::value,
                   "__assign_unique requires a forward iterator");
     if (size() != 0)
     {

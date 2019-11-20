@@ -332,7 +332,7 @@ __fill_n_false(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n)
     }
     // do middle whole words
     __storage_type __nw = __n / __bits_per_word;
-    _VSTD::memset(_VSTD::__to_raw_pointer(__first.__seg_), 0, __nw * sizeof(__storage_type));
+    _VSTD::memset(_VSTD::__to_address(__first.__seg_), 0, __nw * sizeof(__storage_type));
     __n -= __nw * __bits_per_word;
     // do last partial word
     if (__n > 0)
@@ -362,7 +362,7 @@ __fill_n_true(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n)
     }
     // do middle whole words
     __storage_type __nw = __n / __bits_per_word;
-    _VSTD::memset(_VSTD::__to_raw_pointer(__first.__seg_), -1, __nw * sizeof(__storage_type));
+    _VSTD::memset(_VSTD::__to_address(__first.__seg_), -1, __nw * sizeof(__storage_type));
     __n -= __nw * __bits_per_word;
     // do last partial word
     if (__n > 0)
@@ -429,8 +429,8 @@ __copy_aligned(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsCon
         // __first.__ctz_ == 0;
         // do middle words
         __storage_type __nw = __n / __bits_per_word;
-        _VSTD::memmove(_VSTD::__to_raw_pointer(__result.__seg_),
-                       _VSTD::__to_raw_pointer(__first.__seg_),
+        _VSTD::memmove(_VSTD::__to_address(__result.__seg_),
+                       _VSTD::__to_address(__first.__seg_),
                        __nw * sizeof(__storage_type));
         __n -= __nw * __bits_per_word;
         __result.__seg_ += __nw;
@@ -570,8 +570,8 @@ __copy_backward_aligned(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_C
         __storage_type __nw = __n / __bits_per_word;
         __result.__seg_ -= __nw;
         __last.__seg_ -= __nw;
-        _VSTD::memmove(_VSTD::__to_raw_pointer(__result.__seg_),
-                       _VSTD::__to_raw_pointer(__last.__seg_),
+        _VSTD::memmove(_VSTD::__to_address(__result.__seg_),
+                       _VSTD::__to_address(__last.__seg_),
                        __nw * sizeof(__storage_type));
         __n -= __nw * __bits_per_word;
         // do last word

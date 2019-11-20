@@ -189,6 +189,9 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
   SemaPPCallbackHandler->set(*this);
 }
 
+// Anchor Sema's type info to this TU.
+void Sema::anchor() {}
+
 void Sema::addImplicitTypedef(StringRef Name, QualType T) {
   DeclarationName DN = &Context.Idents.get(Name);
   if (IdResolver.begin(DN) == IdResolver.end())

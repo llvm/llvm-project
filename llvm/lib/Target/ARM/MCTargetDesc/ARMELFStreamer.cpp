@@ -659,11 +659,10 @@ private:
                          uint64_t Offset) {
     auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
         Name + "." + Twine(MappingSymbolCounter++)));
-    EmitLabel(Symbol, Loc, F);
+    EmitLabelAtPos(Symbol, Loc, F, Offset);
     Symbol->setType(ELF::STT_NOTYPE);
     Symbol->setBinding(ELF::STB_LOCAL);
     Symbol->setExternal(false);
-    Symbol->setOffset(Offset);
   }
 
   void EmitThumbFunc(MCSymbol *Func) override {

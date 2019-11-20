@@ -16,6 +16,7 @@
 #include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/XRayInstr.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
@@ -109,13 +110,13 @@ public:
     Embed_Marker    // Embed a marker as a placeholder for bitcode.
   };
 
-  enum SignReturnAddressScope {
+  enum class SignReturnAddressScope {
     None,    // No signing for any function
     NonLeaf, // Sign the return address of functions that spill LR
     All      // Sign the return address of all functions
   };
 
-  enum SignReturnAddressKeyValue { AKey, BKey };
+  enum class SignReturnAddressKeyValue { AKey, BKey };
 
   enum class FramePointerKind {
     None,        // Omit all frame pointers.
@@ -163,7 +164,7 @@ public:
   std::string FloatABI;
 
   /// The floating-point denormal mode to use.
-  std::string FPDenormalMode;
+  llvm::DenormalMode FPDenormalMode = llvm::DenormalMode::Invalid;
 
   /// The float precision limit to use, if non-empty.
   std::string LimitFloatPrecision;

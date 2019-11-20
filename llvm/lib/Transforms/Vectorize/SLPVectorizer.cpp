@@ -567,7 +567,7 @@ public:
 
   /// Construct a vectorizable tree that starts at \p Roots, ignoring users for
   /// the purpose of scheduling and extraction in the \p UserIgnoreLst taking
-  /// into account (anf updating it, if required) list of externally used
+  /// into account (and updating it, if required) list of externally used
   /// values stored in \p ExternallyUsedValues.
   void buildTree(ArrayRef<Value *> Roots,
                  ExtraValueToDebugLocsMap &ExternallyUsedValues,
@@ -6686,6 +6686,18 @@ public:
       assert(Pair.first && "DebugLoc must be set.");
       ExternallyUsedValues[Pair.second].push_back(Pair.first);
     }
+
+    // The compare instruction of a min/max is the insertion point for new
+    // instructions and may be replaced with a new compare instruction.
+    auto getCmpForMinMaxReduction = [](Instruction *RdxRootInst) {
+      assert(isa<SelectInst>(RdxRootInst) &&
+             "Expected min/max reduction to have select root instruction");
+      Value *ScalarCond = cast<SelectInst>(RdxRootInst)->getCondition();
+      assert(isa<Instruction>(ScalarCond) &&
+             "Expected min/max reduction to have compare condition");
+      return cast<Instruction>(ScalarCond);
+    };
+
     // The reduction root is used as the insertion point for new instructions,
     // so set it as externally used to prevent it from being deleted.
     ExternallyUsedValues[ReductionRoot];
@@ -6741,8 +6753,14 @@ public:
       DebugLoc Loc = cast<Instruction>(ReducedVals[i])->getDebugLoc();
       Value *VectorizedRoot = V.vectorizeTree(ExternallyUsedValues);
 
-      // Emit a reduction.
-      Builder.SetInsertPoint(cast<Instruction>(ReductionRoot));
+      // Emit a reduction. For min/max, the root is a select, but the insertion
+      // point is the compare condition of that select.
+      Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
+      if (ReductionData.isMinMax())
+        Builder.SetInsertPoint(getCmpForMinMaxReduction(RdxRootInst));
+      else
+        Builder.SetInsertPoint(RdxRootInst);
+
       Value *ReducedSubTree =
           emitReduction(VectorizedRoot, Builder, ReduxWidth, TTI);
       if (VectorizedTree) {
@@ -6783,13 +6801,12 @@ public:
       // select, we also have to RAUW for the compare instruction feeding the
       // reduction root. That's because the original compare may have extra uses
       // besides the final select of the reduction.
-      if (ReductionData.isMinMax() && isa<SelectInst>(VectorizedTree)) {
-        assert(isa<SelectInst>(ReductionRoot) &&
-               "Expected min/max reduction to have select root instruction");
-
-        Value *ScalarCond = cast<SelectInst>(ReductionRoot)->getCondition();
-        Value *VectorCond = cast<SelectInst>(VectorizedTree)->getCondition();
-        ScalarCond->replaceAllUsesWith(VectorCond);
+      if (ReductionData.isMinMax()) {
+        if (auto *VecSelect = dyn_cast<SelectInst>(VectorizedTree)) {
+          Instruction *ScalarCmp =
+              getCmpForMinMaxReduction(cast<Instruction>(ReductionRoot));
+          ScalarCmp->replaceAllUsesWith(VecSelect->getCondition());
+        }
       }
       ReductionRoot->replaceAllUsesWith(VectorizedTree);
 

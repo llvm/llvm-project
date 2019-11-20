@@ -3052,6 +3052,80 @@ public:
   static bool classofKind(Kind K) { return K == NamespaceAlias; }
 };
 
+/// Implicit declaration of a temporary that was materialized by
+/// a MaterializeTemporaryExpr and lifetime-extended by a declaration
+class LifetimeExtendedTemporaryDecl final : public Decl {
+  friend class MaterializeTemporaryExpr;
+  friend class ASTDeclReader;
+
+  Stmt *ExprWithTemporary = nullptr;
+
+  /// The declaration which lifetime-extended this reference, if any.
+  /// Either a VarDecl, or (for a ctor-initializer) a FieldDecl.
+  ValueDecl *ExtendingDecl = nullptr;
+  unsigned ManglingNumber;
+
+  mutable APValue *Value = nullptr;
+
+  virtual void anchor();
+
+  LifetimeExtendedTemporaryDecl(Expr *Temp, ValueDecl *EDecl, unsigned Mangling)
+      : Decl(Decl::LifetimeExtendedTemporary, EDecl->getDeclContext(),
+             EDecl->getLocation()),
+        ExprWithTemporary(Temp), ExtendingDecl(EDecl),
+        ManglingNumber(Mangling) {}
+
+  LifetimeExtendedTemporaryDecl(EmptyShell)
+      : Decl(Decl::LifetimeExtendedTemporary, EmptyShell{}) {}
+
+public:
+  static LifetimeExtendedTemporaryDecl *Create(Expr *Temp, ValueDecl *EDec,
+                                               unsigned Mangling) {
+    return new (EDec->getASTContext(), EDec->getDeclContext())
+        LifetimeExtendedTemporaryDecl(Temp, EDec, Mangling);
+  }
+  static LifetimeExtendedTemporaryDecl *CreateDeserialized(ASTContext &C,
+                                                           unsigned ID) {
+    return new (C, ID) LifetimeExtendedTemporaryDecl(EmptyShell{});
+  }
+
+  ValueDecl *getExtendingDecl() { return ExtendingDecl; }
+  const ValueDecl *getExtendingDecl() const { return ExtendingDecl; }
+
+  /// Retrieve the storage duration for the materialized temporary.
+  StorageDuration getStorageDuration() const;
+
+  /// Retrieve the expression to which the temporary materialization conversion
+  /// was applied. This isn't necessarily the initializer of the temporary due
+  /// to the C++98 delayed materialization rules, but
+  /// skipRValueSubobjectAdjustments can be used to find said initializer within
+  /// the subexpression.
+  Expr *getTemporaryExpr() { return cast<Expr>(ExprWithTemporary); }
+  const Expr *getTemporaryExpr() const { return cast<Expr>(ExprWithTemporary); }
+
+  unsigned getManglingNumber() const { return ManglingNumber; }
+
+  /// Get the storage for the constant value of a materialized temporary
+  /// of static storage duration.
+  APValue *getOrCreateValue(bool MayCreate) const;
+
+  APValue *getValue() const { return Value; }
+
+  // Iterators
+  Stmt::child_range childrenExpr() {
+    return Stmt::child_range(&ExprWithTemporary, &ExprWithTemporary + 1);
+  }
+
+  Stmt::const_child_range childrenExpr() const {
+    return Stmt::const_child_range(&ExprWithTemporary, &ExprWithTemporary + 1);
+  }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) {
+    return K == Decl::LifetimeExtendedTemporary;
+  }
+};
+
 /// Represents a shadow declaration introduced into a scope by a
 /// (resolved) using declaration.
 ///

@@ -1,11 +1,11 @@
 # RUN: llc -mtriple=arm64-apple-ios11.0.0 -o - -verify-machineinstrs -run-pass mir-canonicalizer %s | FileCheck %s
 # These Idempotent instructions are sorted alphabetically (based on after the '=')
-# CHECK: %namedVReg4352:gpr64 = MOVi64imm 4617315517961601024
-# CHECK-NEXT: %namedVReg4353:gpr32 = MOVi32imm 408
-# CHECK-NEXT: %namedVReg4354:gpr32 = MOVi32imm 408
-# CHECK-NEXT: %namedVReg4355:gpr64all = IMPLICIT_DEF
-# CHECK-NEXT: %namedVReg4356:fpr64 = FMOVDi 20
-# CHECK-NEXT: %namedVReg4357:fpr64 = FMOVDi 112
+# CHECK: %bb0_{{[0-9]+}}__1:gpr64 = MOVi64imm 4617315517961601024
+# CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr32 = MOVi32imm 408
+# CHECK-NEXT: %bb0_{{[0-9]+}}__2:gpr32 = MOVi32imm 408
+# CHECK-NEXT: %bb0_{{[0-9]+}}__1:gpr64all = IMPLICIT_DEF
+# CHECK-NEXT: %bb0_{{[0-9]+}}__1:fpr64 = FMOVDi 20
+# CHECK-NEXT: %bb0_{{[0-9]+}}__1:fpr64 = FMOVDi 112
 
 ...
 ---

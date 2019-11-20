@@ -1,4 +1,4 @@
-RUN: sed -n 's/^STDIN: //p' %s | llvm-cxxfilt | FileCheck %s
+RUN: sed -n 's/^STDIN: //p' %s | llvm-cxxfilt -n | FileCheck %s
 
 STDIN: _Znw
 STDIN: _Znwj

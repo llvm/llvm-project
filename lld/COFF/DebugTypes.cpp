@@ -10,6 +10,7 @@
 #include "Driver.h"
 #include "InputFiles.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
@@ -91,29 +92,25 @@ public:
 };
 } // namespace
 
-static std::vector<std::unique_ptr<TpiSource>> GC;
-
-TpiSource::TpiSource(TpiKind k, const ObjFile *f) : kind(k), file(f) {
-  GC.push_back(std::unique_ptr<TpiSource>(this));
-}
+TpiSource::TpiSource(TpiKind k, const ObjFile *f) : kind(k), file(f) {}
 
 TpiSource *makeTpiSource(const ObjFile *f) {
-  return new TpiSource(TpiSource::Regular, f);
+  return make<TpiSource>(TpiSource::Regular, f);
 }
 
 TpiSource *makeUseTypeServerSource(const ObjFile *f,
                                               const TypeServer2Record *ts) {
   TypeServerSource::enqueue(f, *ts);
-  return new UseTypeServerSource(f, ts);
+  return make<UseTypeServerSource>(f, ts);
 }
 
 TpiSource *makePrecompSource(const ObjFile *f) {
-  return new PrecompSource(f);
+  return make<PrecompSource>(f);
 }
 
 TpiSource *makeUsePrecompSource(const ObjFile *f,
                                            const PrecompRecord *precomp) {
-  return new UsePrecompSource(f, precomp);
+  return make<UsePrecompSource>(f, precomp);
 }
 
 template <>
@@ -260,7 +257,7 @@ Expected<TypeServerSource *> TypeServerSource::getInstance(MemoryBufferRef m) {
   // All PDB Files should have an Info stream.
   if (!info)
     return info.takeError();
-  return new TypeServerSource(m, session.release());
+  return make<TypeServerSource>(m, session.release());
 }
 
 } // namespace coff

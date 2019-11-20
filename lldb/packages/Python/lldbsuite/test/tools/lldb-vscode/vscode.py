@@ -348,6 +348,10 @@ class DebugCommunication(object):
         print('invalid response')
         return None
 
+    def get_completions(self, text):
+        response = self.request_completions(text)
+        return response['body']['targets']
+
     def get_scope_variables(self, scope_name, frameIndex=0, threadId=None):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex,
                                          threadId=threadId)
@@ -710,6 +714,18 @@ class DebugCommunication(object):
         args_dict = {'breakpoints': breakpoints}
         command_dict = {
             'command': 'setFunctionBreakpoints',
+            'type': 'request',
+            'arguments': args_dict
+        }
+        return self.send_recv(command_dict)
+
+    def request_completions(self, text):
+        args_dict = {
+            'text': text,
+            'column': len(text)
+        }
+        command_dict = {
+            'command': 'completions',
             'type': 'request',
             'arguments': args_dict
         }

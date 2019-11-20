@@ -3838,11 +3838,6 @@ bool AArch64FastISel::selectRet(const Instruction *I) {
   if (!FuncInfo.CanLowerReturn)
     return false;
 
-  // FIXME: in principle it could. Mostly just a case of zero extending outgoing
-  // pointers.
-  if (Subtarget->isTargetILP32())
-    return false;
-
   if (F.isVarArg())
     return false;
 
@@ -3921,6 +3916,11 @@ bool AArch64FastISel::selectRet(const Instruction *I) {
       if (SrcReg == 0)
         return false;
     }
+
+    // "Callee" (i.e. value producer) zero extends pointers at function
+    // boundary.
+    if (Subtarget->isTargetILP32() && RV->getType()->isPointerTy())
+      SrcReg = emitAnd_ri(MVT::i64, SrcReg, false, 0xffffffff);
 
     // Make the copy.
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
@@ -5011,6 +5011,9 @@ std::pair<unsigned, bool> AArch64FastISel::getRegForGEPIndex(const Value *Idx) {
 /// simple cases. This is because the standard fastEmit functions don't cover
 /// MUL at all and ADD is lowered very inefficientily.
 bool AArch64FastISel::selectGetElementPtr(const Instruction *I) {
+  if (Subtarget->isTargetILP32())
+    return false;
+
   unsigned N = getRegForValue(I->getOperand(0));
   if (!N)
     return false;

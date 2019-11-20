@@ -18,7 +18,6 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
-#include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
@@ -3686,15 +3685,6 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   if (HasDecl && isa<FunctionDecl>(D))
     DeclCache[D->getCanonicalDecl()].reset(SP);
 
-  // We use the SPDefCache only in the case when the debug entry values option
-  // is set, in order to speed up parameters modification analysis.
-  //
-  // FIXME: Use AbstractCallee here to support ObjCMethodDecl.
-  if (CGM.getCodeGenOpts().EnableDebugEntryValues && HasDecl)
-    if (auto *FD = dyn_cast<FunctionDecl>(D))
-      if (FD->hasBody() && !FD->param_empty())
-        SPDefCache[FD].reset(SP);
-
   // Push the function onto the lexical block stack.
   LexicalBlockStack.emplace_back(SP);
 
@@ -3765,21 +3755,29 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
 void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
                                           QualType CalleeType,
                                           const FunctionDecl *CalleeDecl) {
-  auto &CGOpts = CGM.getCodeGenOpts();
-  if (!CGOpts.EnableDebugEntryValues || !CGM.getLangOpts().Optimize ||
-      !CallOrInvoke)
+  if (!CallOrInvoke)
     return;
-
   auto *Func = CallOrInvoke->getCalledFunction();
   if (!Func)
     return;
+  if (Func->getSubprogram())
+    return;
+
+  // Do not emit a declaration subprogram for a builtin or if call site info
+  // isn't required. Also, elide declarations for functions with reserved names,
+  // as call site-related features aren't interesting in this case (& also, the
+  // compiler may emit calls to these functions without debug locations, which
+  // makes the verifier complain).
+  if (CalleeDecl->getBuiltinID() != 0 ||
+      getCallSiteRelatedAttrs() == llvm::DINode::FlagZero)
+    return;
+  if (const auto *Id = CalleeDecl->getIdentifier())
+    if (Id->isReservedName())
+      return;
 
   // If there is no DISubprogram attached to the function being called,
   // create the one describing the function in order to have complete
   // call site debug info.
-  if (Func->getSubprogram())
-    return;
-
   if (!CalleeDecl->isStatic() && !CalleeDecl->isInlined())
     EmitFunctionDecl(CalleeDecl, CalleeDecl->getLocation(), CalleeType, Func);
 }
@@ -4088,11 +4086,6 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   DBuilder.insertDeclare(Storage, D, DBuilder.createExpression(Expr),
                          llvm::DebugLoc::get(Line, Column, Scope, CurInlinedAt),
                          Builder.GetInsertBlock());
-
-  if (CGM.getCodeGenOpts().EnableDebugEntryValues && ArgNo) {
-    if (auto *PD = dyn_cast<ParmVarDecl>(VD))
-      ParamCache[PD].reset(D);
-  }
 
   return D;
 }
@@ -4709,29 +4702,6 @@ void CGDebugInfo::setDwoId(uint64_t Signature) {
   TheCU->setDWOId(Signature);
 }
 
-/// Analyzes each function parameter to determine whether it is constant
-/// throughout the function body.
-static void analyzeParametersModification(
-    ASTContext &Ctx,
-    llvm::DenseMap<const FunctionDecl *, llvm::TrackingMDRef> &SPDefCache,
-    llvm::DenseMap<const ParmVarDecl *, llvm::TrackingMDRef> &ParamCache) {
-  for (auto &SP : SPDefCache) {
-    auto *FD = SP.first;
-    assert(FD->hasBody() && "Functions must have body here");
-    const Stmt *FuncBody = (*FD).getBody();
-    for (auto Parm : FD->parameters()) {
-      ExprMutationAnalyzer FuncAnalyzer(*FuncBody, Ctx);
-      if (FuncAnalyzer.isMutated(Parm))
-        continue;
-
-      auto I = ParamCache.find(Parm);
-      assert(I != ParamCache.end() && "Parameters should be already cached");
-      auto *DIParm = cast<llvm::DILocalVariable>(I->second);
-      DIParm->setIsNotModified();
-    }
-  }
-}
-
 void CGDebugInfo::finalize() {
   // Creating types might create further types - invalidating the current
   // element and the size(), so don't cache/reference them.
@@ -4804,10 +4774,6 @@ void CGDebugInfo::finalize() {
     if (auto MD = TypeCache[RT])
       DBuilder.retainType(cast<llvm::DIType>(MD));
 
-  if (CGM.getCodeGenOpts().EnableDebugEntryValues)
-    // This will be used to emit debug entry values.
-    analyzeParametersModification(CGM.getContext(), SPDefCache, ParamCache);
-
   DBuilder.finalize();
 }
 
@@ -4841,10 +4807,10 @@ llvm::DINode::DIFlags CGDebugInfo::getCallSiteRelatedAttrs() const {
   bool SupportsDWARFv4Ext =
       CGM.getCodeGenOpts().DwarfVersion == 4 &&
       (CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::LLDB ||
-       (CGM.getCodeGenOpts().EnableDebugEntryValues &&
-       CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::GDB));
+       CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::GDB);
 
-  if (!SupportsDWARFv4Ext && CGM.getCodeGenOpts().DwarfVersion < 5)
+  if (!SupportsDWARFv4Ext && CGM.getCodeGenOpts().DwarfVersion < 5 &&
+      !CGM.getCodeGenOpts().EnableDebugEntryValues)
     return llvm::DINode::FlagZero;
 
   return llvm::DINode::FlagAllCallsDescribed;

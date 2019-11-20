@@ -21,9 +21,9 @@
 
 // local includes
 #include "target_impl.h"
-#include "debug.h"     // debug
+#include "common/debug.h"     // debug
 #include "interface.h" // interfaces with omp, compiler, and user
-#include "state-queue.h"
+#include "common/state-queue.h"
 #include "support.h"
 
 #define OMPTARGET_NVPTX_VERSION 1.1
@@ -52,17 +52,16 @@ public:
     // Free any memory allocated for outlined parallel function with a large
     // number of arguments.
     if (nArgs > MAX_SHARED_ARGS) {
-      SafeFree(args, (char *)"new extended args");
+      SafeFree(args, "new extended args");
       Init();
     }
   }
   INLINE void EnsureSize(size_t size) {
     if (size > nArgs) {
       if (nArgs > MAX_SHARED_ARGS) {
-        SafeFree(args, (char *)"new extended args");
+        SafeFree(args, "new extended args");
       }
-      args = (void **) SafeMalloc(size * sizeof(void *),
-                                  (char *)"new extended args");
+      args = (void **)SafeMalloc(size * sizeof(void *), "new extended args");
       nArgs = size;
     }
   }

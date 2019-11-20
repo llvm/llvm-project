@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RuntimeDyldCOFF.h"
+#include "Targets/RuntimeDyldCOFFAArch64.h"
 #include "Targets/RuntimeDyldCOFFI386.h"
 #include "Targets/RuntimeDyldCOFFThumb.h"
 #include "Targets/RuntimeDyldCOFFX86_64.h"
@@ -55,6 +56,8 @@ llvm::RuntimeDyldCOFF::create(Triple::ArchType Arch,
     return std::make_unique<RuntimeDyldCOFFThumb>(MemMgr, Resolver);
   case Triple::x86_64:
     return std::make_unique<RuntimeDyldCOFFX86_64>(MemMgr, Resolver);
+  case Triple::aarch64:
+    return std::make_unique<RuntimeDyldCOFFAArch64>(MemMgr, Resolver);
   }
 }
 

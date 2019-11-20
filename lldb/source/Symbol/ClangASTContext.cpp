@@ -987,13 +987,9 @@ ClangASTContext::GetBasicTypeEnumeration(ConstString name) {
   return eBasicTypeInvalid;
 }
 
-CompilerType ClangASTContext::GetBasicType(ASTContext *ast,
-                                           ConstString name) {
-  if (ast) {
-    lldb::BasicType basic_type = ClangASTContext::GetBasicTypeEnumeration(name);
-    return ClangASTContext::GetBasicType(ast, basic_type);
-  }
-  return CompilerType();
+CompilerType ClangASTContext::GetBasicType(ConstString name) {
+  lldb::BasicType basic_type = ClangASTContext::GetBasicTypeEnumeration(name);
+  return GetBasicType(basic_type);
 }
 
 uint32_t ClangASTContext::GetPointerByteSize() {
@@ -1006,13 +1002,8 @@ uint32_t ClangASTContext::GetPointerByteSize() {
 }
 
 CompilerType ClangASTContext::GetBasicType(lldb::BasicType basic_type) {
-  return GetBasicType(getASTContext(), basic_type);
-}
+  clang::ASTContext *ast = getASTContext();
 
-CompilerType ClangASTContext::GetBasicType(ASTContext *ast,
-                                           lldb::BasicType basic_type) {
-  if (!ast)
-    return CompilerType();
   lldb::opaque_compiler_type_t clang_type =
       GetOpaqueCompilerType(ast, basic_type);
 
@@ -1703,11 +1694,7 @@ ClangASTContext::UnifyAccessSpecifiers(clang::AccessSpecifier lhs,
 
 bool ClangASTContext::FieldIsBitfield(FieldDecl *field,
                                       uint32_t &bitfield_bit_size) {
-  return FieldIsBitfield(getASTContext(), field, bitfield_bit_size);
-}
-
-bool ClangASTContext::FieldIsBitfield(ASTContext *ast, FieldDecl *field,
-                                      uint32_t &bitfield_bit_size) {
+  ASTContext *ast = getASTContext();
   if (ast == nullptr || field == nullptr)
     return false;
 
@@ -1859,16 +1846,6 @@ NamespaceDecl *ClangASTContext::GetUniqueNamespaceDeclaration(
   VerifyDecl(namespace_decl);
 #endif
   return namespace_decl;
-}
-
-NamespaceDecl *ClangASTContext::GetUniqueNamespaceDeclaration(
-    clang::ASTContext *ast, const char *name, clang::DeclContext *decl_ctx,
-    bool is_inline) {
-  ClangASTContext *ast_ctx = ClangASTContext::GetASTContext(ast);
-  if (ast_ctx == nullptr)
-    return nullptr;
-
-  return ast_ctx->GetUniqueNamespaceDeclaration(name, decl_ctx, is_inline);
 }
 
 clang::BlockDecl *
@@ -2499,16 +2476,6 @@ ClangASTMetadata *ClangASTContext::GetMetadata(clang::ASTContext *ast,
     return external_source->GetMetadata(object);
   else
     return nullptr;
-}
-
-clang::DeclContext *
-ClangASTContext::GetAsDeclContext(clang::CXXMethodDecl *cxx_method_decl) {
-  return llvm::dyn_cast<clang::DeclContext>(cxx_method_decl);
-}
-
-clang::DeclContext *
-ClangASTContext::GetAsDeclContext(clang::ObjCMethodDecl *objc_method_decl) {
-  return llvm::dyn_cast<clang::DeclContext>(objc_method_decl);
 }
 
 bool ClangASTContext::SetTagTypeKind(clang::QualType tag_qual_type,
@@ -4931,7 +4898,7 @@ ClangASTContext::GetTypedefedType(lldb::opaque_compiler_type_t type) {
 // Create related types using the current type's AST
 
 CompilerType ClangASTContext::GetBasicTypeFromAST(lldb::BasicType basic_type) {
-  return ClangASTContext::GetBasicType(getASTContext(), basic_type);
+  return ClangASTContext::GetBasicType(basic_type);
 }
 // Exploring the type
 
@@ -6706,8 +6673,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
           // Figure out the field offset within the current struct/union/class
           // type
           bit_offset = record_layout.getFieldOffset(field_idx);
-          if (ClangASTContext::FieldIsBitfield(getASTContext(), *field,
-                                               child_bitfield_bit_size)) {
+          if (FieldIsBitfield(*field, child_bitfield_bit_size)) {
             child_bitfield_bit_offset = bit_offset % child_bit_size;
             const uint32_t child_bit_offset =
                 bit_offset - child_bitfield_bit_offset;
@@ -6830,8 +6796,7 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
                 // offset from, we still need to get the bit offset for
                 // bitfields from the layout.
 
-                if (ClangASTContext::FieldIsBitfield(getASTContext(), ivar_decl,
-                                                     child_bitfield_bit_size)) {
+                if (FieldIsBitfield(ivar_decl, child_bitfield_bit_size)) {
                   if (bit_offset == INT32_MAX)
                     bit_offset = interface_layout.getFieldOffset(
                         child_idx - superclass_idx);
@@ -9129,8 +9094,7 @@ void ClangASTContext::DumpValue(
         field_byte_offset = field_bit_offset / 8;
         uint32_t field_bitfield_bit_size = 0;
         uint32_t field_bitfield_bit_offset = 0;
-        if (ClangASTContext::FieldIsBitfield(getASTContext(), *field,
-                                             field_bitfield_bit_size))
+        if (FieldIsBitfield(*field, field_bitfield_bit_size))
           field_bitfield_bit_offset = field_bit_offset % 8;
 
         if (show_types) {

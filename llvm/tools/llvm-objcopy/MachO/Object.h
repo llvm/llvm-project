@@ -74,7 +74,7 @@ struct LoadCommand {
   // The raw content of the payload of the load command (located right after the
   // corresponding struct). In some cases it is either empty or can be
   // copied-over without digging into its structure.
-  ArrayRef<uint8_t> Payload;
+  std::vector<uint8_t> Payload; 
 
   // Some load commands can contain (inside the payload) an array of sections,
   // though the contents of the sections are stored separately. The struct
@@ -109,6 +109,12 @@ struct SymbolEntry {
 /// load command.
 struct SymbolTable {
   std::vector<std::unique_ptr<SymbolEntry>> Symbols;
+
+  using iterator = pointee_iterator<
+      std::vector<std::unique_ptr<SymbolEntry>>::const_iterator>;
+
+  iterator begin() const { return iterator(Symbols.begin()); }
+  iterator end() const { return iterator(Symbols.end()); }
 
   const SymbolEntry *getSymbolByIndex(uint32_t Index) const;
   SymbolEntry *getSymbolByIndex(uint32_t Index);
@@ -270,6 +276,7 @@ struct Object {
   Optional<size_t> FunctionStartsCommandIndex;
 
   void removeSections(function_ref<bool(const Section &)> ToRemove);
+  void addLoadCommand(LoadCommand LC);
 };
 
 } // end namespace macho

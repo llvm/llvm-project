@@ -421,7 +421,12 @@ void MetadataStreamerV2::emitHiddenKernelArgs(const Function &Func) {
   if (HiddenArgNumBytes >= 32) {
     if (Func.getParent()->getNamedMetadata("llvm.printf.fmts"))
       emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenPrintfBuffer);
-    else
+    else if (Func.getParent()->getFunction("__ockl_hostcall_internal")) {
+      // The printf runtime binding pass should have ensured that hostcall and
+      // printf are not used in the same module.
+      assert(!Func.getParent()->getNamedMetadata("llvm.printf.fmts"));
+      emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenHostcallBuffer);
+    } else
       emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
   }
 
@@ -854,7 +859,12 @@ void MetadataStreamerV3::emitHiddenKernelArgs(const Function &Func,
   if (HiddenArgNumBytes >= 32) {
     if (Func.getParent()->getNamedMetadata("llvm.printf.fmts"))
       emitKernelArg(DL, Int8PtrTy, "hidden_printf_buffer", Offset, Args);
-    else
+    else if (Func.getParent()->getFunction("__ockl_hostcall_internal")) {
+      // The printf runtime binding pass should have ensured that hostcall and
+      // printf are not used in the same module.
+      assert(!Func.getParent()->getNamedMetadata("llvm.printf.fmts"));
+      emitKernelArg(DL, Int8PtrTy, "hidden_hostcall_buffer", Offset, Args);
+    } else
       emitKernelArg(DL, Int8PtrTy, "hidden_none", Offset, Args);
   }
 

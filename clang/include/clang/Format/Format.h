@@ -1217,6 +1217,10 @@ struct FormatStyle {
   /// \endcode
   bool Cpp11BracedListStyle;
 
+  /// \brief Analyze the formatted file for the most used line ending (``\r\n``
+  /// or ``\n``). ``UseCRLF`` is only used as a fallback if none can be derived.
+  bool DeriveLineEnding;
+
   /// If ``true``, analyze the formatted file for the most common
   /// alignment of ``&`` and ``*``.
   /// Pointer and reference alignment styles are going to be updated according
@@ -1982,6 +1986,15 @@ struct FormatStyle {
   /// \endcode
   bool SpacesInSquareBrackets;
 
+  /// If ``true``, spaces will be before  ``[``.
+  /// Lambdas will not be affected. Only the first ``[`` will get a space added.
+  /// \code
+  ///    true:                                  false:
+  ///    int a [5];                    vs.      int a[5];
+  ///    int a [5][5];                 vs.      int a[5][5];
+  /// \endcode
+  bool SpaceBeforeSquareBrackets;
+
   /// Supported language standards for parsing and formatting C++ constructs.
   /// \code
   ///    Latest:                                vector<set<int>>
@@ -2032,6 +2045,10 @@ struct FormatStyle {
     UT_Always
   };
 
+  /// \brief Use ``\r\n`` instead of ``\n`` for line breaks.
+  /// Also used as fallback if ``DeriveLineEnding`` is true.
+  bool UseCRLF;
+
   /// The way to use tab characters in the resulting file.
   UseTabStyle UseTab;
 
@@ -2079,6 +2096,7 @@ struct FormatStyle {
                R.ConstructorInitializerIndentWidth &&
            ContinuationIndentWidth == R.ContinuationIndentWidth &&
            Cpp11BracedListStyle == R.Cpp11BracedListStyle &&
+           DeriveLineEnding == R.DeriveLineEnding &&
            DerivePointerAlignment == R.DerivePointerAlignment &&
            DisableFormat == R.DisableFormat &&
            ExperimentalAutoDetectBinPacking ==
@@ -2141,9 +2159,10 @@ struct FormatStyle {
            SpacesInCStyleCastParentheses == R.SpacesInCStyleCastParentheses &&
            SpacesInParentheses == R.SpacesInParentheses &&
            SpacesInSquareBrackets == R.SpacesInSquareBrackets &&
+           SpaceBeforeSquareBrackets == R.SpaceBeforeSquareBrackets &&
            Standard == R.Standard && TabWidth == R.TabWidth &&
            StatementMacros == R.StatementMacros && UseTab == R.UseTab &&
-           TypenameMacros == R.TypenameMacros;
+           UseCRLF == R.UseCRLF && TypenameMacros == R.TypenameMacros;
   }
 
   llvm::Optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;

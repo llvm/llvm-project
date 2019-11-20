@@ -413,7 +413,7 @@ EXTERN void __kmpc_end_serialized_parallel(kmp_Ident *loc,
   omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(
       threadId, currTaskDescr->GetPrevTaskDescr());
   // free
-  SafeFree(currTaskDescr, (char *)"new seq parallel task");
+  SafeFree(currTaskDescr, "new seq parallel task");
   currTaskDescr = getMyTopTaskDescriptor(threadId);
   currTaskDescr->RestoreLoopData();
 }
