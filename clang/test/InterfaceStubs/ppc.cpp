@@ -1,5 +1,3 @@
-// REQUIRES: powerpc-registered-target
-
 // RUN: %clang -x c++ -target powerpc64le-unknown-linux-gnu -o - %s \
 // RUN:   -emit-interface-stubs -emit-merged-ifs -S | \
 // RUN: FileCheck -check-prefix=CHECK-IFS %s
