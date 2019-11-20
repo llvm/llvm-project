@@ -1,5 +1,4 @@
 // REQUIRES: x86-registered-target
-// REQUIRES: !powerpc-registered-target
 // REQUIRES: !system-darwin && !system-windows
 
 // RUN: %clang -o %t1 -target x86_64-unknown-linux-gnu \
