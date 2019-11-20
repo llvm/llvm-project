@@ -192,51 +192,13 @@ define i64 @sub_from_carry(i64 %x, i64 %y, i64* %valout, i64 %z) {
 define i32 @sub_U320_without_i128_or(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) {
 ; CHECK-LABEL: sub_U320_without_i128_or:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    .cfi_offset %rbx, -24
-; CHECK-NEXT:    .cfi_offset %r14, -16
-; CHECK-NEXT:    movq 8(%rdi), %r14
-; CHECK-NEXT:    movq 16(%rdi), %r10
-; CHECK-NEXT:    movq 24(%rdi), %r11
-; CHECK-NEXT:    movq 32(%rdi), %rbx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    subq %rsi, (%rdi)
+; CHECK-NEXT:    sbbq %rdx, 8(%rdi)
+; CHECK-NEXT:    sbbq %rcx, 16(%rdi)
+; CHECK-NEXT:    sbbq %r8, 24(%rdi)
+; CHECK-NEXT:    sbbq %r9, 32(%rdi)
 ; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    subq %rdx, %r14
-; CHECK-NEXT:    setb %dl
-; CHECK-NEXT:    subq %rax, %r14
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    subq %rcx, %r10
-; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    orb %dl, %al
 ; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    subq %rax, %r10
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    subq %r8, %r11
-; CHECK-NEXT:    setb %dl
-; CHECK-NEXT:    orb %cl, %al
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    subq %rax, %r11
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    subq %r9, %rbx
-; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    orb %dl, %al
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    subq %rax, %rbx
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    movq %r14, 8(%rdi)
-; CHECK-NEXT:    movq %r10, 16(%rdi)
-; CHECK-NEXT:    movq %r11, 24(%rdi)
-; CHECK-NEXT:    movq %rbx, 32(%rdi)
-; CHECK-NEXT:    orb %cl, %al
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %7 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 0
   %8 = load i64, i64* %7, align 8
@@ -286,51 +248,13 @@ define i32 @sub_U320_without_i128_or(%struct.U320* nocapture dereferenceable(40)
 define i32 @sub_U320_usubo(%struct.U320* nocapture dereferenceable(40) %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5) {
 ; CHECK-LABEL: sub_U320_usubo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    .cfi_offset %rbx, -24
-; CHECK-NEXT:    .cfi_offset %r14, -16
-; CHECK-NEXT:    movq 8(%rdi), %r14
-; CHECK-NEXT:    movq 16(%rdi), %r10
-; CHECK-NEXT:    movq 24(%rdi), %r11
-; CHECK-NEXT:    movq 32(%rdi), %rbx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    subq %rsi, (%rdi)
+; CHECK-NEXT:    sbbq %rdx, 8(%rdi)
+; CHECK-NEXT:    sbbq %rcx, 16(%rdi)
+; CHECK-NEXT:    sbbq %r8, 24(%rdi)
+; CHECK-NEXT:    sbbq %r9, 32(%rdi)
 ; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    subq %rdx, %r14
-; CHECK-NEXT:    setb %dl
-; CHECK-NEXT:    subq %rax, %r14
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    orb %dl, %al
 ; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    subq %rcx, %r10
-; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    subq %rax, %r10
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    orb %cl, %al
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    subq %r8, %r11
-; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    subq %rax, %r11
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    orb %cl, %al
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    subq %r9, %rbx
-; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    subq %rax, %rbx
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    orb %cl, %al
-; CHECK-NEXT:    movq %r14, 8(%rdi)
-; CHECK-NEXT:    movq %r10, 16(%rdi)
-; CHECK-NEXT:    movq %r11, 24(%rdi)
-; CHECK-NEXT:    movq %rbx, 32(%rdi)
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %7 = getelementptr inbounds %struct.U320, %struct.U320* %0, i64 0, i32 0, i64 0
   %8 = load i64, i64* %7, align 8
@@ -393,22 +317,14 @@ define void @PR39464(%struct.U192* noalias nocapture sret %0, %struct.U192* noca
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    movq (%rsi), %rcx
-; CHECK-NEXT:    xorl %r9d, %r9d
 ; CHECK-NEXT:    subq (%rdx), %rcx
-; CHECK-NEXT:    setb %r9b
 ; CHECK-NEXT:    movq %rcx, (%rdi)
-; CHECK-NEXT:    movq 8(%rsi), %rdi
-; CHECK-NEXT:    subq 8(%rdx), %rdi
-; CHECK-NEXT:    setb %r8b
-; CHECK-NEXT:    subq %r9, %rdi
-; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    orb %r8b, %cl
-; CHECK-NEXT:    movzbl %cl, %ecx
-; CHECK-NEXT:    movq %rdi, 8(%rax)
-; CHECK-NEXT:    movq 16(%rsi), %rsi
-; CHECK-NEXT:    subq 16(%rdx), %rsi
-; CHECK-NEXT:    subq %rcx, %rsi
-; CHECK-NEXT:    movq %rsi, 16(%rax)
+; CHECK-NEXT:    movq 8(%rsi), %rcx
+; CHECK-NEXT:    sbbq 8(%rdx), %rcx
+; CHECK-NEXT:    movq %rcx, 8(%rdi)
+; CHECK-NEXT:    movq 16(%rsi), %rcx
+; CHECK-NEXT:    sbbq 16(%rdx), %rcx
+; CHECK-NEXT:    movq %rcx, 16(%rdi)
 ; CHECK-NEXT:    retq
   %4 = getelementptr inbounds %struct.U192, %struct.U192* %1, i64 0, i32 0, i64 0
   %5 = load i64, i64* %4, align 8
@@ -454,28 +370,23 @@ define void @sub_U256_without_i128_or_recursive(%uint256* sret %0, %uint256* %1,
 ; CHECK-LABEL: sub_U256_without_i128_or_recursive:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movq (%rsi), %r8
+; CHECK-NEXT:    movq (%rsi), %r9
 ; CHECK-NEXT:    movq 8(%rsi), %r10
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    subq (%rdx), %r8
-; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    subq 8(%rdx), %r10
-; CHECK-NEXT:    setb %r9b
-; CHECK-NEXT:    subq %rcx, %r10
-; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    orb %r9b, %cl
-; CHECK-NEXT:    movq 16(%rsi), %rdi
+; CHECK-NEXT:    subq (%rdx), %r9
+; CHECK-NEXT:    sbbq 8(%rdx), %r10
+; CHECK-NEXT:    setb %r8b
+; CHECK-NEXT:    movq 16(%rsi), %rcx
 ; CHECK-NEXT:    movq 24(%rsi), %rsi
-; CHECK-NEXT:    xorl %r9d, %r9d
-; CHECK-NEXT:    subq 16(%rdx), %rdi
-; CHECK-NEXT:    setb %r9b
+; CHECK-NEXT:    xorl %edi, %edi
+; CHECK-NEXT:    subq 16(%rdx), %rcx
+; CHECK-NEXT:    setb %dil
 ; CHECK-NEXT:    subq 24(%rdx), %rsi
-; CHECK-NEXT:    movzbl %cl, %ecx
-; CHECK-NEXT:    subq %rcx, %rdi
-; CHECK-NEXT:    sbbq %r9, %rsi
-; CHECK-NEXT:    movq %r8, (%rax)
+; CHECK-NEXT:    movzbl %r8b, %edx
+; CHECK-NEXT:    subq %rdx, %rcx
+; CHECK-NEXT:    sbbq %rdi, %rsi
+; CHECK-NEXT:    movq %r9, (%rax)
 ; CHECK-NEXT:    movq %r10, 8(%rax)
-; CHECK-NEXT:    movq %rdi, 16(%rax)
+; CHECK-NEXT:    movq %rcx, 16(%rax)
 ; CHECK-NEXT:    movq %rsi, 24(%rax)
 ; CHECK-NEXT:    retq
   %4 = getelementptr inbounds %uint256, %uint256* %1, i64 0, i32 0, i32 0
