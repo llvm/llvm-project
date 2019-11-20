@@ -117,8 +117,8 @@ bool adjustDiagFromHeader(Diag &D, const clang::Diagnostic &Info,
   if (D.Severity < DiagnosticsEngine::Level::Error)
     return false;
 
-  const SourceLocation &DiagLoc = Info.getLocation();
   const SourceManager &SM = Info.getSourceManager();
+  const SourceLocation &DiagLoc = SM.getExpansionLoc(Info.getLocation());
   SourceLocation IncludeInMainFile;
   auto GetIncludeLoc = [&SM](SourceLocation SLoc) {
     return SM.getIncludeLoc(SM.getFileID(SLoc));
