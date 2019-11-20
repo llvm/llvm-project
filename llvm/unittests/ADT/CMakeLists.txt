@@ -21,6 +21,7 @@ add_llvm_unittest(ADTTests
   EnumeratedArrayTest.cpp
   EquivalenceClassesTest.cpp
   FallibleIteratorTest.cpp
+  FloatingPointMode.cpp
   FoldingSet.cpp
   FunctionExtrasTest.cpp
   FunctionRefTest.cpp
