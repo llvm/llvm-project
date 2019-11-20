@@ -439,9 +439,6 @@ public:
   }
   Expected<DWARFAddressRangesVector> collectAddressRanges();
 
-  Expected<DWARFLocationExpressionsVector>
-  findLoclistFromOffset(uint64_t Offset);
-
   /// Returns subprogram DIE with address range encompassing the provided
   /// address. The pointer is alive as long as parsed compile unit DIEs are not
   /// cleared.

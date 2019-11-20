@@ -63,11 +63,6 @@ public:
                         const MCRegisterInfo *MRI, DWARFUnit *U,
                         DIDumpOptions DumpOpts, unsigned Indent) const;
 
-  Error visitAbsoluteLocationList(
-      uint64_t Offset, Optional<object::SectionedAddress> BaseAddr,
-      std::function<Optional<object::SectionedAddress>(uint32_t)> LookupAddr,
-      function_ref<bool(Expected<DWARFLocationExpression>)> Callback) const;
-
 protected:
   DWARFDataExtractor Data;
 
