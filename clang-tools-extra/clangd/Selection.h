@@ -76,7 +76,7 @@ public:
                 unsigned Start, unsigned End);
 
   // Describes to what extent an AST node is covered by the selection.
-  enum Selection {
+  enum Selection : unsigned char {
     // The AST node owns no characters covered by the selection.
     // Note that characters owned by children don't count:
     //   if (x == 0) scream();
