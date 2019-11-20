@@ -6,6 +6,8 @@ const char const *x10; // expected-error {{duplicate 'const' declaration specifi
 
 int x(*g); // expected-error {{use of undeclared identifier 'g'}}
 
+private int cplusplus_is_not_opencl; // expected-error {{expected unqualified-id}}
+
 struct Type {
   int Type;
 };
