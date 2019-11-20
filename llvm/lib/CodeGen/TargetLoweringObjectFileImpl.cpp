@@ -1905,8 +1905,7 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C,
     unsigned &Align) const {
   //TODO: Enable emiting constant pool to unique sections when we support it.
-  if (Kind.isReadOnly() && ReadOnlySection != nullptr)
-    return ReadOnlySection;
+  return ReadOnlySection;
 }
 
 void TargetLoweringObjectFileXCOFF::Initialize(MCContext &Ctx,
