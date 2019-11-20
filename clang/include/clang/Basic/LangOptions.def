@@ -122,6 +122,7 @@ LANGOPT(WritableStrings   , 1, 0, "writable string support")
 LANGOPT(ConstStrings      , 1, 0, "const-qualified string support")
 ENUM_LANGOPT(LaxVectorConversions, LaxVectorConversionKind, 2,
              LaxVectorConversionKind::All, "lax vector conversions")
+LANGOPT(ConvergentFunctions, 1, 1, "Assume convergent functions")
 LANGOPT(AltiVec           , 1, 0, "AltiVec-style vector initializers")
 LANGOPT(ZVector           , 1, 0, "System z vector extensions")
 LANGOPT(Exceptions        , 1, 0, "exception handling")
