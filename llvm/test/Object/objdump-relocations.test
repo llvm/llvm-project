@@ -125,11 +125,11 @@ Symbols:
 # WASM-NEXT: R_WASM_FUNCTION_INDEX_LEB SomeOtherFunction
 
 # ELF-complex-x86-64: .text
-# ELF-complex-x86-64-NEXT: R_X86_64_8 .data-4
-# ELF-complex-x86-64-NEXT: R_X86_64_16 .data-4
-# ELF-complex-x86-64-NEXT: R_X86_64_32 .data-4
-# ELF-complex-x86-64-NEXT: R_X86_64_32S .data-4
-# ELF-complex-x86-64-NEXT: R_X86_64_64 .data-4
-# ELF-complex-x86-64-NEXT: R_X86_64_PC32 .data-4
+# ELF-complex-x86-64-NEXT: R_X86_64_8 .data-0x4
+# ELF-complex-x86-64-NEXT: R_X86_64_16 .data-0x4
+# ELF-complex-x86-64-NEXT: R_X86_64_32 .data-0x4
+# ELF-complex-x86-64-NEXT: R_X86_64_32S .data-0x4
+# ELF-complex-x86-64-NEXT: R_X86_64_64 .data-0x4
+# ELF-complex-x86-64-NEXT: R_X86_64_PC32 .data-0x4
 # ELF-complex-x86-64-NEXT: R_X86_64_32 .data
-# ELF-complex-x86-64-NEXT: R_X86_64_32 .data+4
+# ELF-complex-x86-64-NEXT: R_X86_64_32 .data+0x4

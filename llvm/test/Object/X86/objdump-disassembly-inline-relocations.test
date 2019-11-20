@@ -178,10 +178,10 @@ Symbols:
 # ELF-x86-64:        c:   bf 00 00 00 00                                  movl    $0, %edi
 # ELF-x86-64:                            d: R_X86_64_32S  .rodata.str1.1
 # ELF-x86-64:       11:   e8 00 00 00 00                                  callq   0
-# ELF-x86-64:                           12: R_X86_64_PC32 puts-4
+# ELF-x86-64:                           12: R_X86_64_PC32 puts-0x4
 # ELF-x86-64:       16:   30 c0                                           xorb    %al, %al
 # ELF-x86-64:       18:   e8 00 00 00 00                                  callq   0
-# ELF-x86-64:                           19: R_X86_64_PC32 SomeOtherFunction-4
+# ELF-x86-64:                           19: R_X86_64_PC32 SomeOtherFunction-0x4
 # ELF-x86-64:       1d:   8b 44 24 04                                     movl    4(%rsp), %eax
 # ELF-x86-64:       21:   48 83 c4 08                                     addq    $8, %rsp
 # ELF-x86-64:       25:   c3                                              ret
