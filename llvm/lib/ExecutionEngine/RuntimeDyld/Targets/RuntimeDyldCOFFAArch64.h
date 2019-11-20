@@ -209,6 +209,7 @@ public:
     }
     case COFF::IMAGE_REL_ARM64_ADDR64: {
       Addend = read64le(Displacement);
+      break;
     }
     default:
       break;
