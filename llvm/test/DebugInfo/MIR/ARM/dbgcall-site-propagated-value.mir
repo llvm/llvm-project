@@ -85,8 +85,8 @@
   !30 = !DISubroutineType(types: !31)
   !31 = !{null, !7, !7}
   !32 = !{!33, !34}
-  !33 = !DILocalVariable(name: "p1", arg: 1, scope: !29, file: !1, line: 5, type: !7, flags: DIFlagArgumentNotModified)
-  !34 = !DILocalVariable(name: "p2", arg: 2, scope: !29, file: !1, line: 5, type: !7, flags: DIFlagArgumentNotModified)
+  !33 = !DILocalVariable(name: "p1", arg: 1, scope: !29, file: !1, line: 5, type: !7)
+  !34 = !DILocalVariable(name: "p2", arg: 2, scope: !29, file: !1, line: 5, type: !7)
   !35 = !DILocation(line: 0, scope: !29)
   !36 = !DILocation(line: 6, scope: !37)
   !37 = distinct !DILexicalBlock(scope: !29, file: !1, line: 6)

@@ -53,9 +53,9 @@
   !12 = !DISubroutineType(types: !13)
   !13 = !{!6, !6, !6, !6}
   !14 = !{!15, !16, !17}
-  !15 = !DILocalVariable(name: "p", arg: 1, scope: !11, file: !3, line: 9, type: !6, flags: DIFlagArgumentNotModified)
-  !16 = !DILocalVariable(name: "q", arg: 2, scope: !11, file: !3, line: 9, type: !6, flags: DIFlagArgumentNotModified)
-  !17 = !DILocalVariable(name: "r", arg: 3, scope: !11, file: !3, line: 9, type: !6, flags: DIFlagArgumentNotModified)
+  !15 = !DILocalVariable(name: "p", arg: 1, scope: !11, file: !3, line: 9, type: !6)
+  !16 = !DILocalVariable(name: "q", arg: 2, scope: !11, file: !3, line: 9, type: !6)
+  !17 = !DILocalVariable(name: "r", arg: 3, scope: !11, file: !3, line: 9, type: !6)
   !18 = !DILocation(line: 9, column: 13, scope: !11)
   !19 = !{i32 213}
 

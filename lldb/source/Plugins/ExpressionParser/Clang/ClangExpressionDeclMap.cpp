@@ -771,18 +771,63 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
   ClangASTSource::FindExternalVisibleDecls(context);
 }
 
+void ClangExpressionDeclMap::MaybeRegisterFunctionBody(
+    FunctionDecl *copied_function_decl) {
+  if (copied_function_decl->getBody() && m_parser_vars->m_code_gen) {
+    clang::DeclGroupRef decl_group_ref(copied_function_decl);
+    m_parser_vars->m_code_gen->HandleTopLevelDecl(decl_group_ref);
+  }
+}
+
+void ClangExpressionDeclMap::SearchPersistenDecls(NameSearchContext &context,
+                                                  const ConstString name,
+                                                  unsigned int current_id) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  Target *target = m_parser_vars->m_exe_ctx.GetTargetPtr();
+  if (!target)
+    return;
+
+  ClangASTContext *scratch_clang_ast_context =
+      target->GetScratchClangASTContext();
+
+  if (!scratch_clang_ast_context)
+    return;
+
+  ASTContext *scratch_ast_context = scratch_clang_ast_context->getASTContext();
+
+  if (!scratch_ast_context)
+    return;
+
+  NamedDecl *persistent_decl =
+      m_parser_vars->m_persistent_vars->GetPersistentDecl(name);
+
+  if (!persistent_decl)
+    return;
+
+  Decl *parser_persistent_decl = CopyDecl(persistent_decl);
+
+  if (!parser_persistent_decl)
+    return;
+
+  NamedDecl *parser_named_decl = dyn_cast<NamedDecl>(parser_persistent_decl);
+
+  if (!parser_named_decl)
+    return;
+
+  if (clang::FunctionDecl *parser_function_decl =
+          llvm::dyn_cast<clang::FunctionDecl>(parser_named_decl)) {
+    MaybeRegisterFunctionBody(parser_function_decl);
+  }
+
+  LLDB_LOGF(log, "  CEDM::FEVD[%u] Found persistent decl %s", current_id,
+            name.GetCString());
+
+  context.AddNamedDecl(parser_named_decl);
+}
 void ClangExpressionDeclMap::FindExternalVisibleDecls(
     NameSearchContext &context, lldb::ModuleSP module_sp,
     CompilerDeclContext &namespace_decl, unsigned int current_id) {
   assert(m_ast_context);
-
-  std::function<void(clang::FunctionDecl *)> MaybeRegisterFunctionBody =
-      [this](clang::FunctionDecl *copied_function_decl) {
-        if (copied_function_decl->getBody() && m_parser_vars->m_code_gen) {
-          DeclGroupRef decl_group_ref(copied_function_decl);
-          m_parser_vars->m_code_gen->HandleTopLevelDecl(decl_group_ref);
-        }
-      };
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
@@ -802,51 +847,8 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
                                       lldb::eSymbolContextBlock);
 
   // Try the persistent decls, which take precedence over all else.
-  if (!namespace_decl) {
-    do {
-      if (!target)
-        break;
-
-      ClangASTContext *scratch_clang_ast_context =
-          target->GetScratchClangASTContext();
-
-      if (!scratch_clang_ast_context)
-        break;
-
-      ASTContext *scratch_ast_context =
-          scratch_clang_ast_context->getASTContext();
-
-      if (!scratch_ast_context)
-        break;
-
-      NamedDecl *persistent_decl =
-          m_parser_vars->m_persistent_vars->GetPersistentDecl(name);
-
-      if (!persistent_decl)
-        break;
-
-      Decl *parser_persistent_decl = CopyDecl(persistent_decl);
-
-      if (!parser_persistent_decl)
-        break;
-
-      NamedDecl *parser_named_decl =
-          dyn_cast<NamedDecl>(parser_persistent_decl);
-
-      if (!parser_named_decl)
-        break;
-
-      if (clang::FunctionDecl *parser_function_decl =
-              llvm::dyn_cast<clang::FunctionDecl>(parser_named_decl)) {
-        MaybeRegisterFunctionBody(parser_function_decl);
-      }
-
-      LLDB_LOGF(log, "  CEDM::FEVD[%u] Found persistent decl %s", current_id,
-                name.GetCString());
-
-      context.AddNamedDecl(parser_named_decl);
-    } while (false);
-  }
+  if (!namespace_decl)
+    SearchPersistenDecls(context, name, current_id);
 
   if (name.GetCString()[0] == '$' && !namespace_decl) {
     static ConstString g_lldb_class_name("$__lldb_class");

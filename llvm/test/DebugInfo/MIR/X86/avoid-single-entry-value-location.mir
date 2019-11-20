@@ -45,7 +45,7 @@
   !13 = !DISubroutineType(types: !14)
   !14 = !{null, !7, !7}
   !15 = !{!16, !17}
-  !16 = !DILocalVariable(name: "x", arg: 1, scope: !12, file: !1, line: 5, type: !7, flags: DIFlagArgumentNotModified)
+  !16 = !DILocalVariable(name: "x", arg: 1, scope: !12, file: !1, line: 5, type: !7)
   !17 = !DILocalVariable(name: "y", scope: !12, file: !1, line: 5, type: !7)
   !18 = !DILocation(line: 0, scope: !12)
 

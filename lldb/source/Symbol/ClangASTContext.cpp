@@ -1236,13 +1236,6 @@ CompilerType ClangASTContext::GetBuiltinTypeForDWARFEncodingAndBitSize(
   return CompilerType();
 }
 
-CompilerType ClangASTContext::GetUnknownAnyType(clang::ASTContext *ast) {
-  if (ast)
-    return CompilerType(ClangASTContext::GetASTContext(ast),
-                        ast->UnknownAnyTy.getAsOpaquePtr());
-  return CompilerType();
-}
-
 CompilerType ClangASTContext::GetCStringType(bool is_const) {
   ASTContext *ast = getASTContext();
   QualType char_type(ast->CharTy);
