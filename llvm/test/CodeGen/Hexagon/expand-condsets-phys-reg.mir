@@ -16,7 +16,7 @@ body: |
 
     %0:intregs = A2_tfrsi 0           ;; Multiple defs to ensure IsSSA = false
     %0:intregs = L2_loadri_io $r0, 0
-    %1:predregs = C2_cmplt %0, 10
+    %1:predregs = C2_cmpgti %0, 10
     %2:intregs = C2_mux %1, $r31, %0
     %3:predregs = C2_cmpeqi %2, 0
     J2_jumpt %3, %bb.1, implicit-def $pc
