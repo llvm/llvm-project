@@ -582,6 +582,15 @@ bool AMDGPUPrintfRuntimeBinding::runOnModule(Module &M) {
   if (Printfs.empty())
     return false;
 
+  if (auto HostcallFunction = M.getFunction("__ockl_hostcall_internal")) {
+    for (auto &U : HostcallFunction->uses()) {
+      if (auto *CI = dyn_cast<CallInst>(U.getUser())) {
+        M.getContext().emitError(
+            CI, "Cannot use both printf and hostcall in the same module");
+      }
+    }
+  }
+
   TD = &M.getDataLayout();
   auto DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
   DT = DTWP ? &DTWP->getDomTree() : nullptr;

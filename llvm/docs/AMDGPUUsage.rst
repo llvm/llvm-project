@@ -1382,6 +1382,11 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                   to the runtime printf buffer
                                                   is passed in kernarg.
 
+                                                "HiddenHostcallBuffer"
+                                                  A global address space pointer
+                                                  to the runtime hostcall buffer
+                                                  is passed in kernarg.
+
                                                 "HiddenDefaultQueue"
                                                   A global address space pointer
                                                   to the OpenCL device enqueue
@@ -1874,6 +1879,11 @@ same *vendor-name*.
                                                      "hidden_printf_buffer"
                                                        A global address space pointer
                                                        to the runtime printf buffer
+                                                       is passed in kernarg.
+
+                                                     "hidden_hostcall_buffer"
+                                                       A global address space pointer
+                                                       to the runtime hostcall buffer
                                                        is passed in kernarg.
 
                                                      "hidden_default_queue"
