@@ -694,32 +694,44 @@ bool lldb_private::formatters::NSURLSummaryProvider(
   CompilerType type(valobj.GetCompilerType());
   ValueObjectSP text(valobj.GetSyntheticChildAtOffset(offset_text, type, true));
   ValueObjectSP base(valobj.GetSyntheticChildAtOffset(offset_base, type, true));
-  if (!text)
+  if (!text || text->GetValueAsUnsigned(0) == 0)
     return false;
-  if (text->GetValueAsUnsigned(0) == 0)
-    return false;
-  StreamString summary;
-  if (!NSStringSummaryProvider(*text, summary, options))
-    return false;
-  if (base && base->GetValueAsUnsigned(0)) {
-    std::string summary_str = summary.GetString();
 
-    if (!summary_str.empty())
-      summary_str.pop_back();
-    summary_str += " -- ";
-    StreamString base_summary;
-    if (NSURLSummaryProvider(*base, base_summary, options) &&
-        !base_summary.Empty()) {
-      llvm::StringRef base_str = base_summary.GetString();
-      if (base_str.size() > 2)
-        base_str = base_str.drop_front(2);
-      summary_str += base_str;
-    }
-    summary.Clear();
-    summary.PutCString(summary_str);
+  StreamString base_summary;
+  if (base && base->GetValueAsUnsigned(0)) {
+    if (!NSURLSummaryProvider(*base, base_summary, options))
+      base_summary.Clear();
   }
-  if (!summary.Empty()) {
-    stream.PutCString(summary.GetString());
+  if (base_summary.Empty())
+    return NSStringSummaryProvider(*text, stream, options);
+
+  StreamString summary;
+  if (!NSStringSummaryProvider(*text, summary, options) || summary.Empty())
+    return false;
+
+  const char quote_char = '"';
+  std::string prefix, suffix;
+  if (Language *language = Language::FindPlugin(options.GetLanguage())) {
+    if (!language->GetFormatterPrefixSuffix(*text, ConstString("NSString"),
+                                            prefix, suffix)) {
+      prefix.clear();
+      suffix.clear();
+    }
+  }
+  // @"A" -> @"A
+  llvm::StringRef summary_str = summary.GetString();
+  bool back_consumed = summary_str.consume_back(quote_char + suffix);
+  assert(back_consumed);
+  UNUSED_IF_ASSERT_DISABLED(back_consumed);
+  // @"B" -> B"
+  llvm::StringRef base_summary_str = base_summary.GetString();
+  bool front_consumed = base_summary_str.consume_front(prefix + quote_char);
+  assert(front_consumed);
+  UNUSED_IF_ASSERT_DISABLED(front_consumed);
+  // @"A -- B"
+  if (!summary_str.empty() && !base_summary_str.empty()) {
+    stream.Printf("%s -- %s", summary_str.str().c_str(),
+                  base_summary_str.str().c_str());
     return true;
   }
 
