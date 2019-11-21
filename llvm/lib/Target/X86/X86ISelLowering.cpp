@@ -18430,9 +18430,6 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   MVT VT = Op.getSimpleValueType();
   SDLoc dl(Op);
 
-  if (VT == MVT::f128)
-    return LowerF128Call(Op, DAG, RTLIB::getSINTTOFP(SrcVT, VT));
-
   if (SDValue Extract = vectorizeExtractedCast(Op, DAG, Subtarget))
     return Extract;
 
@@ -18448,25 +18445,29 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   assert(SrcVT <= MVT::i64 && SrcVT >= MVT::i16 &&
          "Unknown SINT_TO_FP to lower!");
 
+  bool UseSSEReg = isScalarFPTypeInSSEReg(VT);
+
   // These are really Legal; return the operand so the caller accepts it as
   // Legal.
-  if (SrcVT == MVT::i32 && isScalarFPTypeInSSEReg(VT))
+  if (SrcVT == MVT::i32 && UseSSEReg)
     return Op;
-  if (SrcVT == MVT::i64 && isScalarFPTypeInSSEReg(VT) && Subtarget.is64Bit())
+  if (SrcVT == MVT::i64 && UseSSEReg && Subtarget.is64Bit())
     return Op;
 
   if (SDValue V = LowerI64IntToFP_AVX512DQ(Op, DAG, Subtarget))
     return V;
 
   // SSE doesn't have an i16 conversion so we need to promote.
-  if (SrcVT == MVT::i16 && isScalarFPTypeInSSEReg(VT)) {
+  if (SrcVT == MVT::i16 && (UseSSEReg || VT == MVT::f128)) {
     SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::i32, Src);
     return DAG.getNode(ISD::SINT_TO_FP, dl, VT, Ext);
   }
 
+  if (VT == MVT::f128)
+    return LowerF128Call(Op, DAG, RTLIB::getSINTTOFP(SrcVT, VT));
+
   SDValue ValueToStore = Op.getOperand(0);
-  if (SrcVT == MVT::i64 && isScalarFPTypeInSSEReg(VT) &&
-      !Subtarget.is64Bit())
+  if (SrcVT == MVT::i64 && UseSSEReg && !Subtarget.is64Bit())
     // Bitcasting to f64 here allows us to do a single 64-bit store from
     // an SSE register, avoiding the store forwarding penalty that would come
     // with two 32-bit stores.
