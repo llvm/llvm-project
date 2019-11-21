@@ -9,11 +9,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-latest
-          - windows-latest
           - macOS-latest
-        cmake_args:
-          - ""
     steps:
     - name: Setup Windows
       if: startsWith(matrix.os, 'windows')
@@ -27,8 +23,14 @@ jobs:
       uses: tstellar/actions/install-ninja@master
       with:
         os: ${{ runner.os }}
-    - name: Test LLVM
+    - name: Test LLVM / dynamic
+      if: startsWith(matrix.os, 'windows') == false
       uses: tstellar/actions/build-test-llvm-project@master
       with:
-        cmake_args: -G Ninja -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }}
+          cmake_args: -G Ninja -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }} -DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra;compiler-rt;libcxx' -DLLVM_ENABLE_ASSERTIONS=ON '-DLLVM_BUILD_EXAMPLES=On' '-DCMAKE_MACOSX_RPATH=On' '-DLLVM_BUILD_EXTERNAL_COMPILER_RT=On' '-DLIBCXX_ENABLE_SHARED=OFF' '-DLIBCXX_ENABLE_STATIC=OFF' '-DLIBCXX_INCLUDE_TESTS=OFF' '-DLLVM_ENABLE_ASSERTIONS=On'
+        os: ${{ runner.os }}
+    - name: Test LLVM / static
+      uses: tstellar/actions/build-test-llvm-project@master
+      with:
+          cmake_args: -G Ninja -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }} -DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra;compiler-rt;libcxx'  -DLLVM_ENABLE_ASSERTIONS=ON '-DLLVM_BUILD_EXAMPLES=On' '-DCMAKE_MACOSX_RPATH=On' '-DLLVM_BUILD_EXTERNAL_COMPILER_RT=On' '-DLIBCXX_ENABLE_SHARED=OFF' '-DLIBCXX_ENABLE_STATIC=OFF' '-DLIBCXX_INCLUDE_TESTS=OFF' '-DLLVM_ENABLE_ASSERTIONS=On'
         os: ${{ runner.os }}
