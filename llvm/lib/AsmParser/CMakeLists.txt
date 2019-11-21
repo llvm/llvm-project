@@ -1,5 +1,5 @@
 # AsmParser
-add_llvm_library(LLVMAsmParser
+add_llvm_component_library(LLVMAsmParser
   LLLexer.cpp
   LLParser.cpp
   Parser.cpp

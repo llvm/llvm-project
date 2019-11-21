@@ -1,4 +1,4 @@
-add_llvm_library(LLVMMIRParser
+add_llvm_component_library(LLVMMIRParser
   MILexer.cpp
   MIParser.cpp
   MIRParser.cpp

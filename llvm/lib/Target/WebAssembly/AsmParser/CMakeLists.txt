@@ -1,3 +1,3 @@
-add_llvm_library(LLVMWebAssemblyAsmParser
+add_llvm_component_library(LLVMWebAssemblyAsmParser
   WebAssemblyAsmParser.cpp
   )

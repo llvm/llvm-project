@@ -1,3 +1,3 @@
-add_llvm_library(LLVMBPFInfo
+add_llvm_component_library(LLVMBPFInfo
   BPFTargetInfo.cpp
   )

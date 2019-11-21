@@ -1,4 +1,4 @@
-add_llvm_library(LLVMX86Disassembler
+add_llvm_component_library(LLVMX86Disassembler
   X86Disassembler.cpp
   X86DisassemblerDecoder.cpp
   )

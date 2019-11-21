@@ -1,4 +1,4 @@
-add_llvm_library(LLVMCFGuard
+add_llvm_component_library(LLVMCFGuard
   CFGuard.cpp
 
   ADDITIONAL_HEADER_DIRS

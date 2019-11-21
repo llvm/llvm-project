@@ -1,3 +1,3 @@
-add_llvm_library(LLVMHexagonInfo
+add_llvm_component_library(LLVMHexagonInfo
   HexagonTargetInfo.cpp
   )

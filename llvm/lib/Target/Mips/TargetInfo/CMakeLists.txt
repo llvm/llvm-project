@@ -1,3 +1,3 @@
-add_llvm_library(LLVMMipsInfo
+add_llvm_component_library(LLVMMipsInfo
   MipsTargetInfo.cpp
   )

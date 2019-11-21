@@ -1,4 +1,4 @@
-add_llvm_library(LLVMObject
+add_llvm_component_library(LLVMObject
   Archive.cpp
   ArchiveWriter.cpp
   Binary.cpp

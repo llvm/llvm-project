@@ -1,4 +1,4 @@
-add_llvm_library(LLVMAnalysis
+add_llvm_component_library(LLVMAnalysis
   AliasAnalysis.cpp
   AliasAnalysisEvaluator.cpp
   AliasAnalysisSummary.cpp

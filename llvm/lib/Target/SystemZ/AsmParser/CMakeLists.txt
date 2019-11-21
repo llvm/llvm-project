@@ -1,3 +1,3 @@
-add_llvm_library(LLVMSystemZAsmParser
+add_llvm_component_library(LLVMSystemZAsmParser
   SystemZAsmParser.cpp
   )
