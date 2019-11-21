@@ -155,10 +155,10 @@ private:
 /// they're moved-assigned or constructed from Success values that have already
 /// been checked. This enforces checking through all levels of the call stack.
 class LLVM_NODISCARD Error {
-  // Both ErrorList and FileError need to be able to yank ErrorInfoBase
-  // pointers out of this class to add to the error list.
+  // ErrorList needs to be able to yank ErrorInfoBase pointers out of Errors
+  // to add to the error list. It can't rely on handleErrors for this, since
+  // handleErrors does not support ErrorList handlers.
   friend class ErrorList;
-  friend class FileError;
 
   // handleErrors needs to be able to set the Checked flag.
   template <typename... HandlerTs>
@@ -1251,8 +1251,14 @@ private:
   }
 
   static Error build(const Twine &F, Optional<size_t> Line, Error E) {
+    std::unique_ptr<ErrorInfoBase> Payload;
+    handleAllErrors(std::move(E),
+                    [&](std::unique_ptr<ErrorInfoBase> EIB) -> Error {
+                      Payload = std::move(EIB);
+                      return Error::success();
+                    });
     return Error(
-        std::unique_ptr<FileError>(new FileError(F, Line, E.takePayload())));
+        std::unique_ptr<FileError>(new FileError(F, Line, std::move(Payload))));
   }
 
   std::string FileName;
