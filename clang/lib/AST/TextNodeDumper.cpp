@@ -1772,12 +1772,6 @@ void TextNodeDumper::VisitLinkageSpecDecl(const LinkageSpecDecl *D) {
   case LinkageSpecDecl::lang_cxx:
     OS << " C++";
     break;
-  case LinkageSpecDecl::lang_cxx_11:
-    OS << " C++11";
-    break;
-  case LinkageSpecDecl::lang_cxx_14:
-    OS << " C++14";
-    break;
   }
 }
 
