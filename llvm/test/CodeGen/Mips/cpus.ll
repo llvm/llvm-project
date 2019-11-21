@@ -1,5 +1,9 @@
 ; Check that the CPU names work.
 
+; RUN: llc -mtriple=mips -mcpu=generic -filetype=obj < %s \
+; RUN:   | llvm-readelf -A | FileCheck %s --check-prefix=GENERIC
+; GENERIC: ISA: MIPS32
+
 ; RUN: llc -mtriple=mips -mcpu=mips2 -filetype=obj < %s \
 ; RUN:   | llvm-readelf -A | FileCheck %s --check-prefix=MIPS2
 ; MIPS2: ISA: MIPS2
