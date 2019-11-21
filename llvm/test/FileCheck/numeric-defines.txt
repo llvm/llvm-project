@@ -2,12 +2,20 @@
 ; value and CHECK directives using them match as expected given the value set.
 
 RUN: FileCheck -D#NUMVAL1=8 -D#NUMVAL2='NUMVAL1 + 4' -check-prefixes CHECKNUM1,CHECKNUM2 -input-file %s %s
+
+RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck -D#NUMVAL1=7 -D#NUMVAL2=12 -check-prefix CHECKNUM1 -input-file %s %s 2>&1 \
 RUN:   | FileCheck %s --strict-whitespace -check-prefix NUMERRMSG1
+
+RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck -D#NUMVAL1=8 -D#NUMVAL2=8 -check-prefix CHECKNUM2 -input-file %s %s 2>&1 \
 RUN:   | FileCheck %s --strict-whitespace -check-prefix NUMERRMSG2
+
+RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck -D#NUMVAL1=8 -D#NUMVAL2=8 -check-prefix NUMNOT -input-file %s %s 2>&1 \
 RUN:   | FileCheck %s --strict-whitespace -check-prefixes NOT-NUMERRMSG1
+
+RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck -D#NUMVAL1=7 -D#NUMVAL2=12 -check-prefix NUMNOT -input-file %s %s 2>&1 \
 RUN:   | FileCheck %s --strict-whitespace -check-prefixes NOT-NUMERRMSG2
 RUN: FileCheck -D#NUMVAL1=7 -D#NUMVAL2=8 -check-prefixes NUMNOT -input-file %s %s

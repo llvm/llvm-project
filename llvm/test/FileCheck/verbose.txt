@@ -1,6 +1,9 @@
-; RUN: FileCheck -input-file %s %s 2>&1 | FileCheck -check-prefix QUIET --allow-empty %s
-; RUN: FileCheck -v -input-file %s %s 2>&1 | FileCheck --strict-whitespace -check-prefix V %s
-; RUN: FileCheck -vv -input-file %s %s 2>&1 | FileCheck --strict-whitespace -check-prefixes V,VV %s
+; RUN: %ProtectFileCheckOutput FileCheck -input-file %s %s 2>&1 \
+; RUN: | FileCheck -check-prefix QUIET --allow-empty %s
+; RUN: %ProtectFileCheckOutput FileCheck -v -input-file %s %s 2>&1 \
+; RUN: | FileCheck --strict-whitespace -check-prefix V %s
+; RUN: %ProtectFileCheckOutput FileCheck -vv -input-file %s %s 2>&1 \
+; RUN: | FileCheck --strict-whitespace -check-prefixes V,VV %s
 
 foo
 bar

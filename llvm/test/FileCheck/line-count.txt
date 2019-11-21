@@ -1,15 +1,15 @@
 ; RUN: FileCheck -input-file %s %s
-; RUN: not FileCheck -check-prefix BAD1 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR1 %s
-; RUN: not FileCheck -check-prefix BAD2 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR2 %s
-; RUN: not FileCheck -check-prefix BAD3 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR3 %s
-; RUN: not FileCheck -check-prefix BAD4 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR4 %s
-; RUN: not FileCheck -check-prefix BAD5 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR5 %s
-; RUN: not FileCheck -check-prefix BAD6 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR6 %s
-; RUN: not FileCheck -check-prefix BAD7 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR7 %s
-; RUN: not FileCheck -check-prefix BAD8 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR8 %s
-; RUN: not FileCheck -check-prefix BAD9 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR9 %s
-; RUN: not FileCheck -check-prefix BAD10 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR10 %s
-; RUN: not FileCheck -check-prefix BAD11 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR11 %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix BAD1 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR1 %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix BAD2 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR2 %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix BAD3 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR3 %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix BAD4 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR4 %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix BAD5 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR5 %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix BAD6 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR6 %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix BAD7 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR7 %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix BAD8 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR8 %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix BAD9 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR9 %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix BAD10 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR10 %s
+; RUN: %ProtectFileCheckOutput not FileCheck -check-prefix BAD11 -input-file %s %s 2>&1 | FileCheck -check-prefix ERR11 %s
 13
 14 aaa
 15 bbb
@@ -55,18 +55,19 @@
 55 BAD11: [[@LINE-1x]]
 56 ERR11: line-count.txt:[[#@LINE-1]]:20: error: unexpected characters at end of expression 'x'
 57
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -check-prefix BAD12 -input-file %s %s 2>&1 \
 ; RUN:   | FileCheck -check-prefix ERR12 %s
-60
-61 BAD12: [[#@LINE-1]] NOT HERE
-62 ERR12: note: with "@LINE-1" equal to "60"
-63
-64 CHECK: [[#@LINE]] CHECK
-65 CHECK: [[# @LINE]] CHECK
-66 CHECK: [[# @LINE ]] CHECK
-67
-68 CHECK: [[#@LINE-1]]
-69 CHECK: [[# @LINE-1]] CHECK
-70 CHECK: [[# @LINE -1]] CHECK
-71 CHECK: [[# @LINE - 1]] CHECK
-72 CHECK: [[# @LINE - 1 ]] CHECK
+61
+62 BAD12: [[#@LINE-1]] NOT HERE
+63 ERR12: note: with "@LINE-1" equal to "61"
+64
+65 CHECK: [[#@LINE]] CHECK
+66 CHECK: [[# @LINE]] CHECK
+67 CHECK: [[# @LINE ]] CHECK
+68
+69 CHECK: [[#@LINE-1]]
+70 CHECK: [[# @LINE-1]] CHECK
+71 CHECK: [[# @LINE -1]] CHECK
+72 CHECK: [[# @LINE - 1]] CHECK
+73 CHECK: [[# @LINE - 1 ]] CHECK

@@ -1,7 +1,18 @@
-// RUN: not FileCheck -check-prefix=FOO %s </dev/null 2>&1 | FileCheck -check-prefix=EMPTY-ERR %s
-// RUN: not FileCheck -check-prefix=NOFOO %s </dev/null 2>&1 | FileCheck -check-prefix=EMPTY-ERR %s
-// RUN: not FileCheck -check-prefix=FOO -allow-empty %s </dev/null 2>&1 | FileCheck -check-prefix=NO-EMPTY-ERR -check-prefix=NOT-FOUND %s
-// RUN: FileCheck -check-prefix=NOFOO -allow-empty %s </dev/null 2>&1 | FileCheck -allow-empty -check-prefix=NO-EMPTY-ERR %s
+// RUN: %ProtectFileCheckOutput \
+// RUN: not FileCheck -check-prefix=FOO %s </dev/null 2>&1 \
+// RUN: | FileCheck -check-prefix=EMPTY-ERR %s
+//
+// RUN: %ProtectFileCheckOutput \
+// RUN: not FileCheck -check-prefix=NOFOO %s </dev/null 2>&1 \
+// RUN: | FileCheck -check-prefix=EMPTY-ERR %s
+//
+// RUN: %ProtectFileCheckOutput \
+// RUN: not FileCheck -check-prefix=FOO -allow-empty %s </dev/null 2>&1 \
+// RUN: | FileCheck -check-prefix=NO-EMPTY-ERR -check-prefix=NOT-FOUND %s
+//
+// RUN: %ProtectFileCheckOutput \
+// RUN: FileCheck -check-prefix=NOFOO -allow-empty %s </dev/null 2>&1 \
+// RUN: | FileCheck -allow-empty -check-prefix=NO-EMPTY-ERR %s
 
 ; FOO: foo
 ; NOFOO-NOT: foo

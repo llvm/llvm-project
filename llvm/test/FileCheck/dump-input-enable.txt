@@ -18,12 +18,13 @@
 ; Check -dump-input=<bad value>.
 ;--------------------------------------------------
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -input-file %t.good %t.check -check-prefix=CHECK \
 ; RUN:               -match-full-lines -dump-input=foobar 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines -check-prefix=BADVAL
 
 ; No positional arg.
-; RUN: not FileCheck -dump-input=foobar 2>&1 \
+; RUN: %ProtectFileCheckOutput not FileCheck -dump-input=foobar 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines -check-prefix=BADVAL
 
 BADVAL: {{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find option named 'foobar'!
@@ -33,11 +34,13 @@ BADVAL: {{F|f}}ile{{C|c}}heck{{.*}}: for the --dump-input option: Cannot find op
 ;--------------------------------------------------
 
 ; Appended to normal command line.
+; RUN: %ProtectFileCheckOutput \
 ; RUN: FileCheck -input-file %t.err -color %t.check -dump-input=help \
 ; RUN: | FileCheck %s -check-prefix=HELP
 
 ; No positional arg.
-; RUN: FileCheck -dump-input=help | FileCheck %s -check-prefix=HELP
+; RUN: %ProtectFileCheckOutput FileCheck -dump-input=help \
+; RUN: | FileCheck %s -check-prefix=HELP
 
 HELP-NOT: {{.}}
 HELP: The following description was requested by -dump-input=help
@@ -50,19 +53,23 @@ HELP-NOT: {{.}}
 ; Include the case without -v, which isn't covered elsewhere.
 ;--------------------------------------------------
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: FileCheck -input-file %t.good %t.check -check-prefix=CHECK \
 ; RUN:           -match-full-lines -dump-input=never 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines -allow-empty \
 ; RUN:             -check-prefixes=NOTRACE,NODUMP
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
 ; RUN:               -match-full-lines -dump-input=never 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines -check-prefixes=NOTRACE,ERR,NODUMP
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: FileCheck -input-file %t.good %t.check -check-prefix=CHECK \
 ; RUN:           -match-full-lines -dump-input=never -v 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines -check-prefixes=TRACE,NODUMP
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
 ; RUN:               -match-full-lines -dump-input=never -v 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines -check-prefixes=TRACE,ERR,NODUMP
@@ -71,10 +78,12 @@ HELP-NOT: {{.}}
 ; Check no -dump-input, which defaults to never.
 ;--------------------------------------------------
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: FileCheck -input-file %t.good %t.check -check-prefix=CHECK \
 ; RUN:           -match-full-lines -v 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines -check-prefixes=TRACE,NODUMP
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
 ; RUN:               -match-full-lines -v 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines -check-prefixes=TRACE,ERR,NODUMP
@@ -85,20 +94,24 @@ HELP-NOT: {{.}}
 ; Include the case without -v, which isn't covered elsewhere.
 ;--------------------------------------------------
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: FileCheck -input-file %t.good %t.check -check-prefix=CHECK \
 ; RUN:           -match-full-lines -dump-input=fail 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines -allow-empty \
 ; RUN:             -check-prefixes=NOTRACE,NODUMP
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
 ; RUN:               -match-full-lines -dump-input=fail 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines -check-prefixes=NOTRACE,ERR,DUMP-ERR
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: FileCheck -input-file %t.good %t.check -check-prefix=CHECK \
 ; RUN:           -match-full-lines -dump-input=fail -v 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines -allow-empty \
 ; RUN:             -check-prefixes=NOTRACE,NODUMP
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
 ; RUN:               -match-full-lines -dump-input=fail -v 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines \
@@ -108,23 +121,25 @@ HELP-NOT: {{.}}
 ; Check -dump-input-on-failure.
 ;--------------------------------------------------
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: FileCheck -input-file %t.good %t.check -check-prefix=CHECK \
 ; RUN:           -match-full-lines -dump-input-on-failure -v 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines -allow-empty \
 ; RUN:             -check-prefixes=NOTRACE,NODUMP
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
 ; RUN:               -match-full-lines -dump-input-on-failure -v 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines \
 ; RUN:                -check-prefixes=NOTRACE,ERR,DUMP-ERR,DUMP-ERR-V
 
-; RUN: env FILECHECK_DUMP_INPUT_ON_FAILURE=1 \
+; RUN: %ProtectFileCheckOutput FILECHECK_DUMP_INPUT_ON_FAILURE=1 \
 ; RUN: FileCheck -input-file %t.good %t.check -check-prefix=CHECK \
 ; RUN:           -match-full-lines -v 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines -allow-empty \
-; RUN:             -check-prefixes=NOTRACE,NODUMP
+; RUN:                -check-prefixes=NOTRACE,NODUMP
 
-; RUN: env FILECHECK_DUMP_INPUT_ON_FAILURE=1 \
+; RUN: %ProtectFileCheckOutput FILECHECK_DUMP_INPUT_ON_FAILURE=1 \
 ; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
 ; RUN:               -match-full-lines -v 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines \
@@ -134,10 +149,12 @@ HELP-NOT: {{.}}
 ; Check -dump-input=always.
 ;--------------------------------------------------
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: FileCheck -input-file %t.good %t.check -check-prefix=CHECK \
 ; RUN:           -match-full-lines -dump-input=always -v 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines -check-prefixes=NOTRACE,DUMP-OK
 
+; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -input-file %t.err %t.check -check-prefix=CHECK \
 ; RUN:               -match-full-lines -dump-input=always -v 2>&1 \
 ; RUN: | FileCheck %s -match-full-lines \

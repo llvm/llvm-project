@@ -15,7 +15,10 @@
 
 ## Check that option --implicit-not works case insensitively.
 # RUN: sed '/^#/d' %s | FileCheck --implicit-check-not=sTrInG %s
-# RUN: sed '/^#/d' %s | not FileCheck --ignore-case --implicit-check-not=sTrInG %s 2>&1 | FileCheck --check-prefix=ERROR %s
+# RUN: sed '/^#/d' %s \
+# RUN: | %ProtectFileCheckOutput \
+# RUN:   not FileCheck --ignore-case --implicit-check-not=sTrInG %s 2>&1 \
+# RUN: | FileCheck --check-prefix=ERROR %s
 
 this is the STRING to be matched
 
