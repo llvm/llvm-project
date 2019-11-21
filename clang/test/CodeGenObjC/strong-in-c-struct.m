@@ -89,6 +89,13 @@ StrongOuter2 getStrongOuter2(void);
 void calleeStrongSmall(StrongSmall);
 void func(Strong *);
 
+@interface C
+- (StrongSmall)getStrongSmall;
++ (StrongSmall)getStrongSmallClass;
+@end
+
+id g0;
+
 // CHECK: %[[STRUCT_STRONGOUTER:.*]] = type { %[[STRUCT_STRONG:.*]], i8*, double }
 // CHECK: %[[STRUCT_STRONG]] = type { %[[STRUCT_TRIVIAL:.*]], i8* }
 // CHECK: %[[STRUCT_TRIVIAL]] = type { [4 x i32] }
@@ -476,6 +483,18 @@ void test_destructor_ignored_result(void) {
   getStrongSmall();
 }
 
+// CHECK: define void @test_destructor_ignored_result2(%{{.*}}* %[[C:.*]])
+// CHECK: %[[TMP:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: %[[CALL:.*]] = call [2 x i64]{{.*}}@objc_msgSend
+// CHECK: %[[V5:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[TMP]] to [2 x i64]*
+// CHECK: store [2 x i64] %[[CALL]], [2 x i64]* %[[V5]], align 8
+// CHECK: %[[V6:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[TMP]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V6]])
+
+void test_destructor_ignored_result2(C *c) {
+  [c getStrongSmall];
+}
+
 // CHECK: define void @test_copy_constructor_StrongBlock(
 // CHECK: call void @__copy_constructor_8_8_sb0(
 // CHECK: call void @__destructor_8_sb0(
@@ -520,7 +539,9 @@ void test_copy_assignment_StrongBlock(StrongBlock *d, StrongBlock *s) {
 
 // CHECK: define void @test_copy_constructor_StrongVolatile0(
 // CHECK: call void @__copy_constructor_8_8_t0w4_sv8(
+// CHECK-NOT: call
 // CHECK: call void @__destructor_8_sv8(
+// CHECK-NOT: call
 
 // CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_t0w4_sv8(
 // CHECK: %[[V8:.*]] = load volatile i8*, i8** %{{.*}}, align 8
@@ -805,6 +826,64 @@ void test_compound_literal1(int c) {
 
 void test_compound_literal2(int c, StrongSmall *p) {
   *p = c ? (StrongSmall){ 1, 0 } : (StrongSmall){ 2, 0 };
+  func(0);
+}
+
+// CHECK: define void @test_member_access(
+// CHECK: %[[TMP:.*]] = alloca %[[STRUCT_STRONGSMALL]],
+// CHECK: %[[V3:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[TMP]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V3]])
+// CHECK: call void @func(
+
+void test_member_access(void) {
+  g0 = getStrongSmall().f1;
+  func(0);
+}
+
+// CHECK: define void @test_member_access2(%{{.*}}* %[[C:.*]])
+// CHECK: %[[COERCE:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: %[[V8:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[COERCE]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V8]])
+// CHECK: call void @func(
+
+void test_member_access2(C *c) {
+  g0 = [c getStrongSmall].f1;
+  func(0);
+}
+
+// CHECK: define void @test_member_access3(
+// CHECK: %[[COERCE:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: %[[V8:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[COERCE]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V8]])
+// CHECK: call void @func(
+
+void test_member_access3(void) {
+  g0 = [C getStrongSmallClass].f1;
+  func(0);
+}
+
+// CHECK: define void @test_member_access4()
+// CHECK: %[[COERCE:.*]] = alloca %[[STRUCT_STRONGSMALL]], align 8
+// CHECK: %[[V5:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[COERCE]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V5]])
+// CHECK: call void @func(
+
+void test_member_access4(void) {
+  g0 = ^{ StrongSmall s; return s; }().f1;
+  func(0);
+}
+
+// CHECK: define void @test_volatile_variable_reference(
+// CHECK: %[[AGG_TMP_ENSURED:.*]] = alloca %[[STRUCT_STRONGSMALL]],
+// CHECK: %[[V1:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[AGG_TMP_ENSURED]] to i8**
+// CHECK: %[[V2:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %{{.*}} to i8**
+// CHECK: call void @__copy_constructor_8_8_tv0w32_sv8(i8** %[[V1]], i8** %[[V2]])
+// CHECK: %[[V3:.*]] = bitcast %[[STRUCT_STRONGSMALL]]* %[[AGG_TMP_ENSURED]] to i8**
+// CHECK: call void @__destructor_8_s8(i8** %[[V3]])
+// CHECK: call void @func(
+
+void test_volatile_variable_reference(volatile StrongSmall *a) {
+  (void)*a;
   func(0);
 }
 
