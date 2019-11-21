@@ -979,11 +979,6 @@ MemDepResult MemoryDependenceResults::GetNonLocalInfoForBlock(
     Instruction *QueryInst, const MemoryLocation &Loc, bool isLoad,
     BasicBlock *BB, NonLocalDepInfo *Cache, unsigned NumSortedEntries) {
 
-  bool isInvariantLoad = false;
-
-  if (LoadInst *LI = dyn_cast_or_null<LoadInst>(QueryInst))
-    isInvariantLoad = LI->getMetadata(LLVMContext::MD_invariant_load);
-
   // Do a binary search to see if we already have an entry for this block in
   // the cache set.  If so, find it.
   NonLocalDepInfo::iterator Entry = std::upper_bound(
@@ -994,13 +989,6 @@ MemDepResult MemoryDependenceResults::GetNonLocalInfoForBlock(
   NonLocalDepEntry *ExistingResult = nullptr;
   if (Entry != Cache->begin() + NumSortedEntries && Entry->getBB() == BB)
     ExistingResult = &*Entry;
-
-  // Use cached result for invariant load only if there is no dependency for non
-  // invariant load. In this case invariant load can not have any dependency as
-  // well.
-  if (ExistingResult && isInvariantLoad &&
-      !ExistingResult->getResult().isNonFuncLocal())
-    ExistingResult = nullptr;
 
   // If we have a cached entry, and it is non-dirty, use it as the value for
   // this dependency.
@@ -1029,10 +1017,6 @@ MemDepResult MemoryDependenceResults::GetNonLocalInfoForBlock(
   // Scan the block for the dependency.
   MemDepResult Dep =
       getPointerDependencyFrom(Loc, isLoad, ScanPos, BB, QueryInst);
-
-  // Don't cache results for invariant load.
-  if (isInvariantLoad)
-    return Dep;
 
   // If we had a dirty entry for the block, update it.  Otherwise, just add
   // a new entry.
@@ -1470,6 +1454,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
     if (SkipFirstBlock)
       return false;
 
+    bool foundBlock = false;
     for (NonLocalDepEntry &I : llvm::reverse(*Cache)) {
       if (I.getBB() != BB)
         continue;
@@ -1477,12 +1462,14 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
       assert((GotWorklistLimit || I.getResult().isNonLocal() ||
               !DT.isReachableFromEntry(BB)) &&
              "Should only be here with transparent block");
+      foundBlock = true;
       I.setResult(MemDepResult::getUnknown());
+      Result.push_back(
+          NonLocalDepResult(I.getBB(), I.getResult(), Pointer.getAddr()));
       break;
     }
-    // Go ahead and report unknown dependence.
-    Result.push_back(
-        NonLocalDepResult(BB, MemDepResult::getUnknown(), Pointer.getAddr()));
+    (void)foundBlock; (void)GotWorklistLimit;
+    assert((foundBlock || GotWorklistLimit) && "Current block not in cache?");
   }
 
   // Okay, we're done now.  If we added new values to the cache, re-sort it.
