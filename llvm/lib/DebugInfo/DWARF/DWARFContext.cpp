@@ -1043,6 +1043,52 @@ static Optional<uint64_t> getTypeSize(DWARFDie Type, uint64_t PointerSize) {
   return Optional<uint64_t>();
 }
 
+static Optional<int64_t>
+getExpressionFrameOffset(ArrayRef<uint8_t> Expr,
+                         Optional<unsigned> FrameBaseReg) {
+  if (!Expr.empty() &&
+      (Expr[0] == DW_OP_fbreg ||
+       (FrameBaseReg && Expr[0] == DW_OP_breg0 + *FrameBaseReg))) {
+    unsigned Count;
+    int64_t Offset = decodeSLEB128(Expr.data() + 1, &Count, Expr.end());
+    // A single DW_OP_fbreg or DW_OP_breg.
+    if (Expr.size() == Count + 1)
+      return Offset;
+    // Same + DW_OP_deref (Fortran arrays look like this).
+    if (Expr.size() == Count + 2 && Expr[Count + 1] == DW_OP_deref)
+      return Offset;
+    // Fallthrough. Do not accept ex. (DW_OP_breg W29, DW_OP_stack_value)
+  }
+  return None;
+}
+
+static Optional<int64_t>
+getLocationFrameOffset(DWARFCompileUnit *CU, DWARFFormValue &FormValue,
+                       Optional<unsigned> FrameBaseReg) {
+  if (Optional<ArrayRef<uint8_t>> Location = FormValue.getAsBlock()) {
+    return getExpressionFrameOffset(*Location, FrameBaseReg);
+  } else if (FormValue.isFormClass(DWARFFormValue::FC_SectionOffset)) {
+    uint64_t Offset = *FormValue.getAsSectionOffset();
+    const DWARFLocationTable &LocTable = CU->getLocationTable();
+    Optional<int64_t> FrameOffset;
+    Error E = LocTable.visitLocationList(
+        &Offset, [&](const DWARFLocationEntry &Entry) {
+          if (Entry.Kind == dwarf::DW_LLE_base_address ||
+              Entry.Kind == dwarf::DW_LLE_base_addressx ||
+              Entry.Kind == dwarf::DW_LLE_end_of_list) {
+            return true;
+          }
+          if ((FrameOffset = getExpressionFrameOffset(Entry.Loc, FrameBaseReg)))
+            return false;
+          return true;
+        });
+    if (E)
+      return None;
+    return FrameOffset;
+  }
+  return None;
+}
+
 void DWARFContext::addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram,
                                    DWARFDie Die, std::vector<DILocal> &Result) {
   if (Die.getTag() == DW_TAG_variable ||
@@ -1051,11 +1097,17 @@ void DWARFContext::addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram,
     if (auto NameAttr = Subprogram.find(DW_AT_name))
       if (Optional<const char *> Name = NameAttr->getAsCString())
         Local.FunctionName = *Name;
+
+    Optional<unsigned> FrameBaseReg;
+    if (auto FrameBase = Subprogram.find(DW_AT_frame_base))
+      if (Optional<ArrayRef<uint8_t>> Expr = FrameBase->getAsBlock())
+        if (!Expr->empty() && (*Expr)[0] >= DW_OP_reg0 &&
+            (*Expr)[0] <= DW_OP_reg31) {
+          FrameBaseReg = (*Expr)[0] - DW_OP_reg0;
+        }
     if (auto LocationAttr = Die.find(DW_AT_location))
-      if (Optional<ArrayRef<uint8_t>> Location = LocationAttr->getAsBlock())
-        if (!Location->empty() && (*Location)[0] == DW_OP_fbreg)
-          Local.FrameOffset =
-              decodeSLEB128(Location->data() + 1, nullptr, Location->end());
+      Local.FrameOffset = getLocationFrameOffset(CU, *LocationAttr, FrameBaseReg);
+
     if (auto TagOffsetAttr = Die.find(DW_AT_LLVM_tag_offset))
       Local.TagOffset = TagOffsetAttr->getAsUnsignedConstant();
 
