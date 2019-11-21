@@ -20,14 +20,14 @@ All of the code in the LLDB project is available under the
 Using LLDB
 ----------
 
-For an introduction into the LLDB command language, head over to the
-:ref:`LLDB Tutorial <use/tutorial>`. For users already familiar with
-GDB there is a cheat sheet listing common tasks and their LLDB
-equivalent in the :ref:`GDB to LLDB command map <use/map>`.
+For an introduction into the LLDB command language, head over to the `LLDB
+Tutorial <https://lldb.llvm.org/use/tutorial.html>`_. For users already familiar
+with GDB there is a cheat sheet listing common tasks and their LLDB equivalent
+in the `GDB to LLDB command map <https://lldb.llvm.org/use/map.html>`_.
 
-There are also multiple resources on how to script LLDB using Python
-:ref:`Python Reference <use/python-reference>` is a great starting
-point for that.
+There are also multiple resources on how to script LLDB using Python `Python
+Reference <https://lldb.llvm.org/use/python-reference.html>`_ is a great
+starting point for that.
 
 Compiler Integration Benefits
 -----------------------------

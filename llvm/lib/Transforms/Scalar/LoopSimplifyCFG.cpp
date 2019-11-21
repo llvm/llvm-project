@@ -662,6 +662,9 @@ static bool mergeBlocksIntoPredecessors(Loop &L, DominatorTree &DT,
     // Merge Succ into Pred and delete it.
     MergeBlockIntoPredecessor(Succ, &DTU, &LI, MSSAU);
 
+    if (MSSAU && VerifyMemorySSA)
+      MSSAU->getMemorySSA()->verifyMemorySSA();
+
     Changed = true;
   }
 

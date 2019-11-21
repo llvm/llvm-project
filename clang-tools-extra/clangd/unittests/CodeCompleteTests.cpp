@@ -141,6 +141,8 @@ CodeCompleteResult completions(llvm::StringRef Text,
                                PathRef FilePath = "foo.cpp") {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
+  // To make sure our tests for completiopns inside templates work on Windows.
+  CDB.ExtraClangFlags = {"-fno-delayed-template-parsing"};
   IgnoreDiagnostics DiagConsumer;
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
   return completions(Server, Text, std::move(IndexSymbols), std::move(Opts),

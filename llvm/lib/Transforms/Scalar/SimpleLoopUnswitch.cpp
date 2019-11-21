@@ -2428,7 +2428,7 @@ turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
 
   if (MSSAU) {
     MemoryDef *MD = cast<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(GI));
-    MSSAU->moveToPlace(MD, DeoptBlock, MemorySSA::End);
+    MSSAU->moveToPlace(MD, DeoptBlock, MemorySSA::BeforeTerminator);
     if (VerifyMemorySSA)
       MSSAU->getMemorySSA()->verifyMemorySSA();
   }

@@ -1328,12 +1328,30 @@ struct SourceOfDivergence {
 const SourceOfDivergence *lookupSourceOfDivergence(unsigned Intr);
 
 #define GET_SourcesOfDivergence_IMPL
+#define GET_Gfx9BufferFormat_IMPL
+#define GET_Gfx10PlusBufferFormat_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 } // end anonymous namespace
 
 bool isIntrinsicSourceOfDivergence(unsigned IntrID) {
   return lookupSourceOfDivergence(IntrID);
+}
+
+const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
+                                                  uint8_t NumComponents,
+                                                  uint8_t NumFormat,
+                                                  const MCSubtargetInfo &STI) {
+  return isGFX10(STI)
+             ? getGfx10PlusBufferFormatInfo(BitsPerComp, NumComponents,
+                                            NumFormat)
+             : getGfx9BufferFormatInfo(BitsPerComp, NumComponents, NumFormat);
+}
+
+const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
+                                                  const MCSubtargetInfo &STI) {
+  return isGFX10(STI) ? getGfx10PlusBufferFormatInfo(Format)
+                      : getGfx9BufferFormatInfo(Format);
 }
 
 } // namespace AMDGPU

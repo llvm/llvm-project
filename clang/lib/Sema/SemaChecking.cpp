@@ -11845,7 +11845,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
     return;
 
   if (isObjCSignedCharBool(S, T) && !Source->isCharType() &&
-      !E->isKnownToHaveBooleanValue()) {
+      !E->isKnownToHaveBooleanValue(/*Semantic=*/false)) {
     return adornObjCBoolConversionDiagWithTernaryFixit(
         S, E,
         S.Diag(CC, diag::warn_impcast_int_to_objc_signed_char_bool)

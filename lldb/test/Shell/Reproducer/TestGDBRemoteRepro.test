@@ -6,10 +6,17 @@
 # process. To ensure we're not actually running the original binary we check
 # that the string "testing" is not printed.
 
-# RUN: rm -rf %t.repro
 # RUN: %clang_host %S/Inputs/simple.c -g -o %t.out
+
+# Test reproducer generate command.
+# RUN: rm -rf %t.repro
 # RUN: %lldb -x -b -s %S/Inputs/GDBRemoteCapture.in --capture --capture-path %t.repro %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
 # RUN: env FOO=BAR %lldb --replay %t.repro | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
+
+# Test crash reproducer.
+# RUN: rm -rf %t.repro
+# RUN: %lldb -x -b -s %S/Inputs/GDBRemoteCrashCapture.in --capture --capture-path %t.repro %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
+# RUN: %lldb --replay %t.repro | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
 
 # CHECK: Breakpoint 1
 # CHECK: Process {{.*}} stopped

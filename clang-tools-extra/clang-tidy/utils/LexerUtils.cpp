@@ -68,6 +68,16 @@ SourceLocation findNextTerminator(SourceLocation Start, const SourceManager &SM,
   return findNextAnyTokenKind(Start, SM, LangOpts, tok::comma, tok::semi);
 }
 
+Optional<Token> findNextTokenSkippingComments(SourceLocation Start,
+                                              const SourceManager &SM,
+                                              const LangOptions &LangOpts) {
+  Optional<Token> CurrentToken;
+  do {
+    CurrentToken = Lexer::findNextToken(Start, SM, LangOpts);
+  } while (CurrentToken && CurrentToken->is(tok::comment));
+  return CurrentToken;
+}
+
 bool rangeContainsExpansionsOrDirectives(SourceRange Range,
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts) {

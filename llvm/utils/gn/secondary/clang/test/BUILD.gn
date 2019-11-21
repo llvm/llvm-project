@@ -142,6 +142,7 @@ group("test") {
     "//llvm/tools/llvm-bcanalyzer",
     "//llvm/tools/llvm-cat",
     "//llvm/tools/llvm-config",
+    "//llvm/tools/llvm-cxxfilt",
     "//llvm/tools/llvm-dis",
     "//llvm/tools/llvm-dwarfdump",
     "//llvm/tools/llvm-ifs",

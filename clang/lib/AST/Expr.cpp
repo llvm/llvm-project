@@ -127,11 +127,7 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
   return E;
 }
 
-/// isKnownToHaveBooleanValue - Return true if this is an integer expression
-/// that is known to return 0 or 1.  This happens for _Bool/bool expressions
-/// but also int expressions which are produced by things like comparisons in
-/// C.
-bool Expr::isKnownToHaveBooleanValue() const {
+bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
   const Expr *E = IgnoreParens();
 
   // If this value has _Bool type, it is obvious 0/1.
@@ -142,7 +138,7 @@ bool Expr::isKnownToHaveBooleanValue() const {
   if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
     switch (UO->getOpcode()) {
     case UO_Plus:
-      return UO->getSubExpr()->isKnownToHaveBooleanValue();
+      return UO->getSubExpr()->isKnownToHaveBooleanValue(Semantic);
     case UO_LNot:
       return true;
     default:
@@ -152,8 +148,9 @@ bool Expr::isKnownToHaveBooleanValue() const {
 
   // Only look through implicit casts.  If the user writes
   // '(int) (a && b)' treat it as an arbitrary int.
+  // FIXME: Should we look through any cast expression in !Semantic mode?
   if (const ImplicitCastExpr *CE = dyn_cast<ImplicitCastExpr>(E))
-    return CE->getSubExpr()->isKnownToHaveBooleanValue();
+    return CE->getSubExpr()->isKnownToHaveBooleanValue(Semantic);
 
   if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
     switch (BO->getOpcode()) {
@@ -172,27 +169,27 @@ bool Expr::isKnownToHaveBooleanValue() const {
     case BO_Xor:  // Bitwise XOR operator.
     case BO_Or:   // Bitwise OR operator.
       // Handle things like (x==2)|(y==12).
-      return BO->getLHS()->isKnownToHaveBooleanValue() &&
-             BO->getRHS()->isKnownToHaveBooleanValue();
+      return BO->getLHS()->isKnownToHaveBooleanValue(Semantic) &&
+             BO->getRHS()->isKnownToHaveBooleanValue(Semantic);
 
     case BO_Comma:
     case BO_Assign:
-      return BO->getRHS()->isKnownToHaveBooleanValue();
+      return BO->getRHS()->isKnownToHaveBooleanValue(Semantic);
     }
   }
 
   if (const ConditionalOperator *CO = dyn_cast<ConditionalOperator>(E))
-    return CO->getTrueExpr()->isKnownToHaveBooleanValue() &&
-           CO->getFalseExpr()->isKnownToHaveBooleanValue();
+    return CO->getTrueExpr()->isKnownToHaveBooleanValue(Semantic) &&
+           CO->getFalseExpr()->isKnownToHaveBooleanValue(Semantic);
 
   if (isa<ObjCBoolLiteralExpr>(E))
     return true;
 
   if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E))
-    return OVE->getSourceExpr()->isKnownToHaveBooleanValue();
+    return OVE->getSourceExpr()->isKnownToHaveBooleanValue(Semantic);
 
   if (const FieldDecl *FD = E->getSourceBitField())
-    if (FD->getType()->isUnsignedIntegerType() &&
+    if (!Semantic && FD->getType()->isUnsignedIntegerType() &&
         !FD->getBitWidth()->isValueDependent() &&
         FD->getBitWidthValue(FD->getASTContext()) == 1)
       return true;

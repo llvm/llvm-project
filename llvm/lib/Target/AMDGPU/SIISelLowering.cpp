@@ -1088,23 +1088,18 @@ bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM) const {
     return AM.BaseOffs == 0 && AM.Scale == 0;
   }
 
-  // GFX9 added a 13-bit signed offset. When using regular flat instructions,
-  // the sign bit is ignored and is treated as a 12-bit unsigned offset.
-
-  // GFX10 shrinked signed offset to 12 bits. When using regular flat
-  // instructions, the sign bit is also ignored and is treated as 11-bit
-  // unsigned offset.
-
-  if (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX10)
-    return isUInt<11>(AM.BaseOffs) && AM.Scale == 0;
-
-  // Just r + i
-  return isUInt<12>(AM.BaseOffs) && AM.Scale == 0;
+  return AM.Scale == 0 &&
+         (AM.BaseOffs == 0 || Subtarget->getInstrInfo()->isLegalFLATOffset(
+                                  AM.BaseOffs, AMDGPUAS::FLAT_ADDRESS,
+                                  /*Signed=*/false));
 }
 
 bool SITargetLowering::isLegalGlobalAddressingMode(const AddrMode &AM) const {
   if (Subtarget->hasFlatGlobalInsts())
-    return isInt<13>(AM.BaseOffs) && AM.Scale == 0;
+    return AM.Scale == 0 &&
+           (AM.BaseOffs == 0 || Subtarget->getInstrInfo()->isLegalFLATOffset(
+                                    AM.BaseOffs, AMDGPUAS::GLOBAL_ADDRESS,
+                                    /*Signed=*/true));
 
   if (!Subtarget->hasAddr64() || Subtarget->useFlatForGlobal()) {
       // Assume the we will use FLAT for all global memory accesses

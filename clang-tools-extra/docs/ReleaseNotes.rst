@@ -158,6 +158,10 @@ Improvements to clang-tidy
 - The 'objc-avoid-spinlock' check was renamed to :doc:`darwin-avoid-spinlock
   <clang-tidy/checks/darwin-avoid-spinlock>`
 
+- The :doc:`modernize-use-equals-default
+  <clang-tidy/checks/modernize-use-equals-default>` fix no longer adds
+  semicolons where they would be redundant.
+
 - New :doc:`readability-redundant-access-specifiers
   <clang-tidy/checks/readability-redundant-access-specifiers>` check.
 

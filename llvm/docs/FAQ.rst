@@ -34,7 +34,7 @@ the STL.
 How portable is the LLVM source code?
 -------------------------------------
 The LLVM source code should be portable to most modern Unix-like operating
-systems. LLVM has also excellent support on Windows systems.
+systems. LLVM also has excellent support on Windows systems.
 Most of the code is written in standard C++ with operating system
 services abstracted to a support library.  The tools required to build and
 test LLVM have been ported to a plethora of platforms.
