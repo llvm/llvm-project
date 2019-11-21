@@ -480,7 +480,7 @@ void REPL::IOHandlerComplete(IOHandler &io_handler,
   // Strip spaces from the line and see if we had only spaces
   if (request.GetRawLine().trim().empty()) {
     // Only spaces on this line, so just indent
-    request.AddCompletion(m_indent_str);
+    request.AddCompletion(m_indent_str, "", CompletionMode::Partial);
     return;
   }
 

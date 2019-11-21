@@ -75,14 +75,6 @@ void SymbolVendor::AddSymbolFileRepresentation(const ObjectFileSP &objfile_sp) {
   }
 }
 
-void SymbolVendor::GetLoadedModules(lldb::LanguageType language,
-                                    FileSpecList &modules) {
-  SymbolFile *sym_file = GetSymbolFile();
-
-  if (sym_file)
-    sym_file->GetLoadedModules(language, modules);
-}
-
 void SymbolVendor::SectionFileAddressesChanged() {
   if (m_sym_file_up)
     m_sym_file_up->SectionFileAddressesChanged();
@@ -95,16 +87,6 @@ lldb_private::ConstString SymbolVendor::GetPluginName() {
 }
 
 uint32_t SymbolVendor::GetPluginVersion() { return 1; }
-
-bool SymbolVendor::SymbolContextShouldBeExcluded(const SymbolContext &sc,
-                                                 uint32_t actual_line) {
-  SymbolFile *sym_file = GetSymbolFile();
-
-  if (sym_file)
-    return sym_file->SymbolContextShouldBeExcluded(sc, actual_line);
-
-  return false;
-}
 
 std::vector<DataBufferSP>
 SymbolVendor::GetASTData(lldb::LanguageType language) {

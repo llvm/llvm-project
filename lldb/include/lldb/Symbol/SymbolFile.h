@@ -285,9 +285,6 @@ public:
     return false;
   }
 
-  virtual void GetLoadedModules(lldb::LanguageType language,
-                                FileSpecList &modules) {}
-
   // Some symbol files might know if we should always check for inline
   // source file and line entries. This virtual function lets
   // SymbolFile subclasses control that, but a default implementation
@@ -321,8 +318,6 @@ public:
   virtual bool SetLimitSourceFileRange(const FileSpec &file,
                                        uint32_t first_line, uint32_t last_line);
 
-  virtual bool SymbolContextShouldBeExcluded(const SymbolContext &sc,
-                                             uint32_t actual_line);
   struct RegisterInfoResolver {
     virtual ~RegisterInfoResolver(); // anchor
 
