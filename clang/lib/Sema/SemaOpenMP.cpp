@@ -4766,12 +4766,16 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       case OMPC_num_threads:
       case OMPC_dist_schedule:
         // Do not analyse if no parent teams directive.
-        if (isOpenMPTeamsDirective(DSAStack->getCurrentDirective()))
+        if (isOpenMPTeamsDirective(Kind))
           break;
         continue;
       case OMPC_if:
-        if (isOpenMPTeamsDirective(DSAStack->getCurrentDirective()) &&
+        if (isOpenMPTeamsDirective(Kind) &&
             cast<OMPIfClause>(C)->getNameModifier() != OMPD_target)
+          break;
+        if (isOpenMPParallelDirective(Kind) &&
+            isOpenMPTaskLoopDirective(Kind) &&
+            cast<OMPIfClause>(C)->getNameModifier() != OMPD_parallel)
           break;
         continue;
       case OMPC_schedule:
@@ -4781,7 +4785,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       case OMPC_final:
       case OMPC_priority:
         // Do not analyze if no parent parallel directive.
-        if (isOpenMPParallelDirective(DSAStack->getCurrentDirective()))
+        if (isOpenMPParallelDirective(Kind))
           break;
         continue;
       case OMPC_ordered:

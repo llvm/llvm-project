@@ -227,7 +227,7 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
     // Constructor's "return type" is the class type.
     HI.ReturnType = declaredType(CCD->getParent()).getAsString(Policy);
     // Don't provide any type for the constructor itself.
-  } else if (const auto* CDD = llvm::dyn_cast<CXXDestructorDecl>(FD)){
+  } else if (llvm::isa<CXXDestructorDecl>(FD)){
     HI.ReturnType = "void";
   } else {
     HI.ReturnType = FD->getReturnType().getAsString(Policy);
