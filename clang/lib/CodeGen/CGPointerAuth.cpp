@@ -50,6 +50,9 @@ CodeGenModule::getPointerAuthOtherDiscriminator(const PointerAuthSchema &schema,
            "declaration not provided for decl-discriminated schema");
     return llvm::ConstantInt::get(IntPtrTy,
                                   getPointerAuthDeclDiscriminator(decl));
+
+  case PointerAuthSchema::Discrimination::Constant:
+    return llvm::ConstantInt::get(IntPtrTy, schema.getConstantDiscrimination());
   }
   llvm_unreachable("bad discrimination kind");
 }

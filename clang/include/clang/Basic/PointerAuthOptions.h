@@ -65,6 +65,9 @@ public:
 
     /// Include a hash of the entity's identity.
     Decl,
+
+    /// Discriminate using a constant value.
+    Constant,
   };
 
 private:
@@ -72,19 +75,34 @@ private:
   unsigned IsAddressDiscriminated : 1;
   Discrimination DiscriminationKind : 2;
   unsigned Key : 3;
+  unsigned ConstantDiscriminator : 16;
 
 public:
   PointerAuthSchema() : TheKind(Kind::None) {}
 
   PointerAuthSchema(SoftKey key, bool isAddressDiscriminated,
-                    Discrimination otherDiscrimination)
+                    Discrimination otherDiscrimination,
+                    Optional<uint16_t> constantDiscriminator = None)
       : TheKind(Kind::Soft), IsAddressDiscriminated(isAddressDiscriminated),
-        DiscriminationKind(otherDiscrimination), Key(unsigned(key)) {}
+        DiscriminationKind(otherDiscrimination), Key(unsigned(key)) {
+    assert((getOtherDiscrimination() != Discrimination::Constant ||
+            constantDiscriminator) &&
+           "constant discrimination requires a constant!");
+    if (constantDiscriminator)
+      ConstantDiscriminator = *constantDiscriminator;
+  }
 
   PointerAuthSchema(ARM8_3Key key, bool isAddressDiscriminated,
-                    Discrimination otherDiscrimination)
+                    Discrimination otherDiscrimination,
+                    Optional<uint16_t> constantDiscriminator = None)
       : TheKind(Kind::ARM8_3), IsAddressDiscriminated(isAddressDiscriminated),
-        DiscriminationKind(otherDiscrimination), Key(unsigned(key)) {}
+        DiscriminationKind(otherDiscrimination), Key(unsigned(key)) {
+    assert((getOtherDiscrimination() != Discrimination::Constant ||
+            constantDiscriminator) &&
+           "constant discrimination requires a constant!");
+    if (constantDiscriminator)
+      ConstantDiscriminator = *constantDiscriminator;
+  }
 
   Kind getKind() const { return TheKind; }
 
@@ -104,6 +122,11 @@ public:
   Discrimination getOtherDiscrimination() const {
     assert(getKind() != Kind::None);
     return DiscriminationKind;
+  }
+
+  uint16_t getConstantDiscrimination() const {
+    assert(getOtherDiscrimination() == Discrimination::Constant);
+    return (uint16_t)ConstantDiscriminator;
   }
 
   unsigned getKey() const {
