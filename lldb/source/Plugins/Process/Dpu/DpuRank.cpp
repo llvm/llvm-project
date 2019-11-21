@@ -48,7 +48,7 @@ const uint32_t dpuword_size_mask = ~dpuword_size_mod;
 // DPU rank handling
 // -----------------------------------------------------------------------------
 
-DpuRank::DpuRank() : nr_threads(0), nr_dpus(0), m_lock() { m_rank = NULL; }
+DpuRank::DpuRank() : nr_threads(0), m_lock() { m_rank = NULL; }
 
 bool DpuRank::Open(char *profile) {
   std::lock_guard<std::mutex> guard(m_lock);
@@ -59,20 +59,9 @@ bool DpuRank::Open(char *profile) {
   m_desc = dpu_get_description(m_rank);
 
   nr_threads = m_desc->dpu.nr_of_threads;
-  nr_dpus = m_desc->topology.nr_of_control_interfaces *
-            m_desc->topology.nr_of_dpus_per_control_interface;
 
-  m_dpus.reserve(nr_dpus);
-  for (int id = 0; id < nr_dpus; id++) {
-    dpu_slice_id_t slice_id = (dpu_slice_id_t)(
-        id / m_desc->topology.nr_of_dpus_per_control_interface);
-    dpu_id_t dpu_id =
-        (dpu_id_t)(id % m_desc->topology.nr_of_dpus_per_control_interface);
-    struct dpu_t *dpu = dpu_get(m_rank, slice_id, dpu_id);
-    if (dpu != NULL && dpu_is_enabled(dpu)) {
-      m_dpus.push_back(new Dpu(this, dpu));
-    }
-  }
+  struct dpu_t *dpu;
+  DPU_FOREACH(m_rank, dpu) { m_dpus.push_back(new Dpu(this, dpu)); }
 
   return true;
 }
