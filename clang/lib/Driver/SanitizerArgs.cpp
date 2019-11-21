@@ -141,7 +141,7 @@ static void addDefaultBlacklists(const Driver &D, SanitizerMask Kinds,
 
     clang::SmallString<64> Path(D.ResourceDir);
     llvm::sys::path::append(Path, "share", BL.File);
-    if (llvm::sys::fs::exists(Path))
+    if (D.getVFS().exists(Path))
       BlacklistFiles.push_back(Path.str());
     else if (BL.Mask == SanitizerKind::CFI)
       // If cfi_blacklist.txt cannot be found in the resource dir, driver
@@ -563,7 +563,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     if (Arg->getOption().matches(options::OPT_fsanitize_blacklist)) {
       Arg->claim();
       std::string BLPath = Arg->getValue();
-      if (llvm::sys::fs::exists(BLPath)) {
+      if (D.getVFS().exists(BLPath)) {
         UserBlacklistFiles.push_back(BLPath);
       } else {
         D.Diag(clang::diag::err_drv_no_such_file) << BLPath;
@@ -578,14 +578,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   {
     std::string BLError;
     std::unique_ptr<llvm::SpecialCaseList> SCL(
-        llvm::SpecialCaseList::create(UserBlacklistFiles, BLError));
+        llvm::SpecialCaseList::create(UserBlacklistFiles, D.getVFS(), BLError));
     if (!SCL.get())
       D.Diag(clang::diag::err_drv_malformed_sanitizer_blacklist) << BLError;
   }
   {
     std::string BLError;
-    std::unique_ptr<llvm::SpecialCaseList> SCL(
-        llvm::SpecialCaseList::create(SystemBlacklistFiles, BLError));
+    std::unique_ptr<llvm::SpecialCaseList> SCL(llvm::SpecialCaseList::create(
+        SystemBlacklistFiles, D.getVFS(), BLError));
     if (!SCL.get())
       D.Diag(clang::diag::err_drv_malformed_sanitizer_blacklist) << BLError;
   }
