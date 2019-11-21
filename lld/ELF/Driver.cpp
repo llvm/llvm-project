@@ -1012,6 +1012,14 @@ static void readConfigs(opt::InputArgList &args) {
   if (config->splitStackAdjustSize < 0)
     error("--split-stack-adjust-size: size must be >= 0");
 
+  // The text segment is traditionally the first segment, whose address equals
+  // the base address. However, lld places the R PT_LOAD first. -Ttext-segment
+  // is an old-fashioned option that does not play well with lld's layout.
+  // Suggest --image-base as a likely alternative.
+  if (args.hasArg(OPT_Ttext_segment))
+    error("-Ttext-segment is not supported. Use --image-base if you "
+          "intend to set the base address");
+
   // Parse ELF{32,64}{LE,BE} and CPU type.
   if (auto *arg = args.getLastArg(OPT_m)) {
     StringRef s = arg->getValue();
