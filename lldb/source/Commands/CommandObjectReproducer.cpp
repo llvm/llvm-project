@@ -122,7 +122,7 @@ protected:
     if (auto generator = r.GetGenerator()) {
       generator->Keep();
     } else if (r.IsReplaying()) {
-      // Make this operation a NOP in replay mode.
+      // Make this operation a NO-OP in replay mode.
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return result.Succeeded();
     } else {
@@ -202,7 +202,8 @@ protected:
     }
 
     auto &r = Reproducer::Instance();
-    if (!r.IsCapturing()) {
+
+    if (!r.IsCapturing() && !r.IsReplaying()) {
       result.SetError(
           "forcing a crash is only supported when capturing a reproducer.");
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
