@@ -3700,7 +3700,9 @@ void Driver::BuildJobs(Compilation &C) const {
     unsigned NumOutputs = 0;
     for (const Action *A : C.getActions())
       if (A->getType() != types::TY_Nothing &&
-          A->getKind() != Action::IfsMergeJobClass)
+          !(A->getKind() == Action::IfsMergeJobClass ||
+            (A->getKind() == Action::BindArchClass && A->getInputs().size() &&
+             A->getInputs().front()->getKind() == Action::IfsMergeJobClass)))
         ++NumOutputs;
 
     if (NumOutputs > 1) {
