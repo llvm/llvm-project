@@ -80,8 +80,8 @@ CHECK: "source variables":30
 # Ideally the value below would be 33 but currently it's not.
 CHECK: "variables with location":22
 CHECK: "call site entries":7
-CHECK: "scope bytes total":2817
-CHECK: "scope bytes covered":506
+CHECK: "scope bytes total":2702
+CHECK: "scope bytes covered":1160
 CHECK: "total function size":594
 CHECK: "total inlined function size":345
 CHECK: "total formal params":12
