@@ -957,7 +957,8 @@ private:
     if (MoveAccess && NewMemAcc) {
         // The definition of this ld/st will not change: ld/st hoisting is
         // legal when the ld/st is not moved past its current definition.
-        MSSAUpdater->moveToPlace(NewMemAcc, DestBB, MemorySSA::End);
+        MSSAUpdater->moveToPlace(NewMemAcc, DestBB,
+                                 MemorySSA::BeforeTerminator);
     }
 
     // Replace all other instructions with Repl with memory access NewMemAcc.
@@ -1067,6 +1068,9 @@ private:
       else // Scalar
         ++NI;
     }
+
+    if (MSSA && VerifyMemorySSA)
+      MSSA->verifyMemorySSA();
 
     NumHoisted += NL + NS + NC + NI;
     NumRemoved += NR;
