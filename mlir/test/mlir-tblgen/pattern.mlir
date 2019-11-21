@@ -222,46 +222,46 @@ func @rewrite_f64elementsattr() -> () {
 
 // CHECK-LABEL: @useMultiResultOpToReplaceWhole
 func @useMultiResultOpToReplaceWhole() -> (i32, f32, f32) {
-  // CHECK: %0:3 = "test.another_three_result"()
-  // CHECK: return %0#0, %0#1, %0#2
+  // CHECK: %[[A:.*]], %[[B:.*]], %[[C:.*]] = "test.another_three_result"()
+  // CHECK: return %[[A]], %[[B]], %[[C]]
   %0:3 = "test.three_result"() {kind = 1} : () -> (i32, f32, f32)
   return %0#0, %0#1, %0#2 : i32, f32, f32
 }
 
 // CHECK-LABEL: @useMultiResultOpToReplacePartial1
 func @useMultiResultOpToReplacePartial1() -> (i32, f32, f32) {
-  // CHECK: %0:2 = "test.two_result"()
-  // CHECK: %1 = "test.one_result1"()
-  // CHECK: return %0#0, %0#1, %1
+  // CHECK: %[[A:.*]], %[[B:.*]] = "test.two_result"()
+  // CHECK: %[[C:.*]] = "test.one_result1"()
+  // CHECK: return %[[A]], %[[B]], %[[C]]
   %0:3 = "test.three_result"() {kind = 2} : () -> (i32, f32, f32)
   return %0#0, %0#1, %0#2 : i32, f32, f32
 }
 
 // CHECK-LABEL: @useMultiResultOpToReplacePartial2
 func @useMultiResultOpToReplacePartial2() -> (i32, f32, f32) {
-  // CHECK: %0 = "test.one_result2"()
-  // CHECK: %1:2 = "test.another_two_result"()
-  // CHECK: return %0, %1#0, %1#1
+  // CHECK: %[[A:.*]] = "test.one_result2"()
+  // CHECK: %[[B:.*]], %[[C:.*]] = "test.another_two_result"()
+  // CHECK: return %[[A]], %[[B]], %[[C]]
   %0:3 = "test.three_result"() {kind = 3} : () -> (i32, f32, f32)
   return %0#0, %0#1, %0#2 : i32, f32, f32
 }
 
 // CHECK-LABEL: @useMultiResultOpResultsSeparately
 func @useMultiResultOpResultsSeparately() -> (i32, f32, f32) {
-  // CHECK: %0:2 = "test.two_result"()
-  // CHECK: %1 = "test.one_result1"()
-  // CHECK: %2:2 = "test.two_result"()
-  // CHECK: return %0#0, %1, %2#1
+  // CHECK: %[[A:.*]], %[[B:.*]] = "test.two_result"()
+  // CHECK: %[[C:.*]] = "test.one_result1"()
+  // CHECK: %[[D:.*]], %[[E:.*]] = "test.two_result"()
+  // CHECK: return %[[A]], %[[C]], %[[E]]
   %0:3 = "test.three_result"() {kind = 4} : () -> (i32, f32, f32)
   return %0#0, %0#1, %0#2 : i32, f32, f32
 }
 
 // CHECK-LABEL: @constraintOnSourceOpResult
 func @constraintOnSourceOpResult() -> (i32, f32, i32) {
-  // CHECK: %0:2 = "test.two_result"()
-  // CHECK: %1 = "test.one_result2"()
-  // CHECK: %2 = "test.one_result1"()
-  // CHECK: return %0#0, %0#1, %1
+  // CHECK: %[[A:.*]], %[[B:.*]] = "test.two_result"()
+  // CHECK: %[[C:.*]] = "test.one_result2"()
+  // CHECK: %[[D:.*]] = "test.one_result1"()
+  // CHECK: return %[[A]], %[[B]], %[[C]]
   %0:2 = "test.two_result"() {kind = 5} : () -> (i32, f32)
   %1:2 = "test.two_result"() {kind = 5} : () -> (i32, f32)
   return %0#0, %0#1, %1#0 : i32, f32, i32
@@ -271,11 +271,11 @@ func @constraintOnSourceOpResult() -> (i32, f32, i32) {
 func @useAuxiliaryOpToReplaceMultiResultOp() -> (i32, f32, f32) {
   // An auxiliary op is generated to help building the op for replacing the
   // matched op.
-  // CHECK: %0:2 = "test.two_result"()
+  // CHECK: %[[A:.*]], %[[B:.*]] = "test.two_result"()
 
-  // CHECK: %1 = "test.one_result3"(%0#1)
-  // CHECK: %2:2 = "test.another_two_result"()
-  // CHECK: return %1, %2#0, %2#1
+  // CHECK: %[[C:.*]] = "test.one_result3"(%[[B]])
+  // CHECK: %[[D:.*]], %[[E:.*]] = "test.another_two_result"()
+  // CHECK: return %[[C]], %[[D]], %[[E]]
   %0:3 = "test.three_result"() {kind = 6} : () -> (i32, f32, f32)
   return %0#0, %0#1, %0#2 : i32, f32, f32
 }
@@ -312,9 +312,9 @@ func @replaceMixedVariadicInputOp(%arg0: i32, %arg1: f32, %arg2: i32) -> () {
 // CHECK-LABEL: @replaceMixedVariadicOutputOp
 func @replaceMixedVariadicOutputOp() -> (f32, i32, f32, i32, i32, i32, f32, i32, i32) {
   // CHECK: %[[cnt1:.*]] = "test.mixed_variadic_out2"()
-  // CHECK: %[[cnt3:.*]]:3 = "test.mixed_variadic_out2"()
-  // CHECK: %[[cnt5:.*]]:5 = "test.mixed_variadic_out2"()
-  // CHECK: return %[[cnt1]], %[[cnt3]]#0, %[[cnt3]]#1, %[[cnt3]]#2, %[[cnt5]]#0, %[[cnt5]]#1, %[[cnt5]]#2, %[[cnt5]]#3, %[[cnt5]]#4
+  // CHECK: %[[cnt3_a:.*]], %[[cnt3_b:.*]], %[[cnt3_c:.*]] = "test.mixed_variadic_out2"()
+  // CHECK: %[[cnt5_a:.*]]:2, %[[cnt5_b:.*]], %[[cnt5_c:.*]]:2 = "test.mixed_variadic_out2"()
+  // CHECK: return %[[cnt1]], %[[cnt3_a]], %[[cnt3_b]], %[[cnt3_c]], %[[cnt5_a]]#0, %[[cnt5_a]]#1, %[[cnt5_b]], %[[cnt5_c]]#0, %[[cnt5_c]]#1
 
   %0   = "test.mixed_variadic_out1"() : () -> (f32)
   %1:3 = "test.mixed_variadic_out1"() : () -> (i32, f32, i32)
@@ -324,8 +324,8 @@ func @replaceMixedVariadicOutputOp() -> (f32, i32, f32, i32, i32, i32, f32, i32,
 
 // CHECK-LABEL: @generateVariadicOutputOpInNestedPattern
 func @generateVariadicOutputOpInNestedPattern() -> (i32) {
-  // CHECK: %[[cnt5:.*]]:5 = "test.mixed_variadic_out3"()
-  // CHECK: %[[res:.*]] = "test.mixed_variadic_in3"(%[[cnt5]]#0, %[[cnt5]]#1, %[[cnt5]]#2, %[[cnt5]]#3, %[[cnt5]]#4)
+  // CHECK: %[[cnt5_a:.*]], %[[cnt5_b:.*]]:2, %[[cnt5_c:.*]]:2 = "test.mixed_variadic_out3"()
+  // CHECK: %[[res:.*]] = "test.mixed_variadic_in3"(%[[cnt5_a]], %[[cnt5_b]]#0, %[[cnt5_b]]#1, %[[cnt5_c]]#0, %[[cnt5_c]]#1)
   // CHECK: return %[[res]]
 
   %0 = "test.one_i32_out"() : () -> (i32)
