@@ -262,11 +262,13 @@ LinkEditData:
       n_sect:          3
       n_desc:          0
       n_value:         4294971392
+    ## A local undefined SymDebugTable entry followed by
     - n_strx:          175
       n_type:          0x20
       n_sect:          0
       n_desc:          0
       n_value:         0
+    ## a defined SymDebugTable entry.
     - n_strx:          1
       n_type:          0x64
       n_sect:          1
