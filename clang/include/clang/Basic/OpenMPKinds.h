@@ -39,8 +39,7 @@ OpenMPContextSelectorKind getOpenMPContextSelector(llvm::StringRef Str);
 llvm::StringRef getOpenMPContextSelectorName(OpenMPContextSelectorKind Kind);
 
 /// Struct to store the context selectors info.
-template <typename T, typename VectorType, typename ScoreT>
-struct OpenMPCtxSelectorData {
+template <typename VectorType, typename ScoreT> struct OpenMPCtxSelectorData {
   OpenMPContextSelectorSetKind CtxSet = OMP_CTX_SET_unknown;
   OpenMPContextSelectorKind Ctx = OMP_CTX_unknown;
   ScoreT Score;
