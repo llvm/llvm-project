@@ -54,9 +54,7 @@ entry:
 ; X64:       movaps     (%rdi), %xmm0
 ; X64:       .loc
 ; X64:       movaps	%xmm0, %xmm1
-; X64:       callq	__addtf3
-; X64:       .loc
-; X64:       retq
+; X64:       jmp	__addtf3
 }
 
 ; Function Attrs: norecurse nounwind readonly uwtable
@@ -102,9 +100,7 @@ entry:
 ; X64:       movaps	(%rax), %xmm0
 ; X64:       .loc
 ; X64:       movaps	%xmm0, %xmm1
-; X64:       callq	__addtf3
-; X64:       .loc
-; X64:       retq
+; X64:       jmp	__addtf3
 }
 
 ; Function Attrs: nounwind readnone
