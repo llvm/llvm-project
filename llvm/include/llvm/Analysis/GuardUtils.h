@@ -15,6 +15,7 @@
 namespace llvm {
 
 class BasicBlock;
+class Use;
 class User;
 class Value;
 
@@ -43,6 +44,11 @@ bool parseWidenableBranch(const User *U, Value *&Condition,
                           Value *&WidenableCondition, BasicBlock *&IfTrueBB,
                           BasicBlock *&IfFalseBB);
 
+/// Analgous to the above, but return the Uses so that that they can be
+/// modified. Unlike previous version, Condition is optional and may be null.
+bool parseWidenableBranch(User *U, Use *&Cond, Use *&WC, BasicBlock *&IfTrueBB,
+                          BasicBlock *&IfFalseBB);
+  
 } // llvm
 
 #endif // LLVM_ANALYSIS_GUARDUTILS_H
