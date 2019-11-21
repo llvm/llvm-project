@@ -410,6 +410,75 @@ private:
   ///     for logging purposes.
   void LookUpLldbObjCClass(NameSearchContext &context, unsigned int current_id);
 
+  /// Handles looking up the synthetic namespace that contains our local
+  /// variables for the current frame.
+  ///
+  /// \param[in] sym_ctx
+  ///     The current SymbolContext of this frame.
+  ///
+  /// \param[in] context
+  ///     The NameSearchContext that can construct Decls for this name.
+  void LookupLocalVarNamespace(SymbolContext &sym_ctx,
+                               NameSearchContext &context);
+
+  /// Lookup entities in the ClangModulesDeclVendor.
+  /// \param[in] context
+  ///     The NameSearchContext that can construct Decls for this name.
+  ///
+  /// \param[in] name
+  ///     The name of the entities that need to be found.
+  ///
+  /// \param[in] current_id
+  ///     The ID for the current FindExternalVisibleDecls invocation,
+  ///     for logging purposes.
+  void LookupInModulesDeclVendor(NameSearchContext &context, ConstString name,
+                                 unsigned current_id);
+
+  /// Looks up a local variable.
+  ///
+  /// \param[in] context
+  ///     The NameSearchContext that can construct Decls for this name.
+  ///
+  /// \param[in] name
+  ///     The name of the entities that need to be found.
+  ///
+  /// \param[in] current_id
+  ///     The ID for the current FindExternalVisibleDecls invocation,
+  ///     for logging purposes.
+  ///
+  /// \param[in] sym_ctx
+  ///     The current SymbolContext of this frame.
+  ///
+  /// \param[in] namespace_decl
+  ///     The parent namespace if there is one.
+  ///
+  /// \return
+  ///    True iff a local variable was found.
+  bool LookupLocalVariable(NameSearchContext &context, ConstString name,
+                           unsigned current_id, SymbolContext &sym_ctx,
+                           CompilerDeclContext &namespace_decl);
+
+  /// Looks up a function.
+  ///
+  /// \param[in] context
+  ///     The NameSearchContext that can construct Decls for this name.
+  ///
+  /// \param[in] module_sp
+  ///     If non-NULL, the module to query.
+  ///
+  /// \param[in] name
+  ///     The name of the function that should be find.
+  ///
+  /// \param[in] namespace_decl
+  ///     If valid and module is non-NULL, the parent namespace.
+  ///
+  /// \param[in] current_id
+  ///     The ID for the current FindExternalVisibleDecls invocation,
+  ///     for logging purposes.
+  void LookupFunction(NameSearchContext &context, lldb::ModuleSP module_sp,
+                      ConstString name, CompilerDeclContext &namespace_decl,
+                      unsigned current_id);
+
   /// Given a target, find a variable that matches the given name and type.
   ///
   /// \param[in] target

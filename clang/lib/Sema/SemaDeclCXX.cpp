@@ -14205,10 +14205,6 @@ Decl *Sema::ActOnStartLinkageSpecification(Scope *S, SourceLocation ExternLoc,
     Language = LinkageSpecDecl::lang_c;
   else if (Lang == "C++")
     Language = LinkageSpecDecl::lang_cxx;
-  else if (Lang == "C++11")
-    Language = LinkageSpecDecl::lang_cxx_11;
-  else if (Lang == "C++14")
-    Language = LinkageSpecDecl::lang_cxx_14;
   else {
     Diag(LangStr->getExprLoc(), diag::err_language_linkage_spec_unknown)
       << LangStr->getSourceRange();

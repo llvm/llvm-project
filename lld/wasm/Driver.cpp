@@ -80,14 +80,14 @@ private:
 
 bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
           raw_ostream &stderrOS) {
+  lld::stdoutOS = &stdoutOS;
+  lld::stderrOS = &stderrOS;
+
   errorHandler().logName = args::getFilenameWithoutExe(args[0]);
   errorHandler().errorLimitExceededMsg =
       "too many errors emitted, stopping now (use "
       "-error-limit=0 to see all errors)";
-  enableColors(stderrOS.has_colors());
-
-  lld::stdoutOS = &stdoutOS;
-  lld::stderrOS = &stderrOS;
+  stderrOS.enable_colors(stderrOS.has_colors());
 
   config = make<Configuration>();
   symtab = make<SymbolTable>();
@@ -135,15 +135,15 @@ static void handleColorDiagnostics(opt::InputArgList &args) {
   if (!arg)
     return;
   if (arg->getOption().getID() == OPT_color_diagnostics) {
-    enableColors(true);
+    lld::errs().enable_colors(true);
   } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
-    enableColors(false);
+    lld::errs().enable_colors(false);
   } else {
     StringRef s = arg->getValue();
     if (s == "always")
-      enableColors(true);
+      lld::errs().enable_colors(true);
     else if (s == "never")
-      enableColors(false);
+      lld::errs().enable_colors(false);
     else if (s != "auto")
       error("unknown option: --color-diagnostics=" + s);
   }

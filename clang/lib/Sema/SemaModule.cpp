@@ -31,8 +31,6 @@ static void checkModuleImportContext(Sema &S, Module *M,
         ExternCLoc = LSD->getBeginLoc();
       break;
     case LinkageSpecDecl::lang_cxx:
-    case LinkageSpecDecl::lang_cxx_11:
-    case LinkageSpecDecl::lang_cxx_14:
       break;
     }
     DC = LSD->getParent();

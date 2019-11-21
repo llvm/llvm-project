@@ -90,7 +90,8 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
 
 void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                             TTI::UnrollingPreferences &UP) {
-  UP.Threshold = 300; // Twice the default.
+  const Function &F = *L->getHeader()->getParent();
+  UP.Threshold = AMDGPU::getIntegerAttribute(F, "amdgpu-unroll-threshold", 300);
   UP.MaxCount = std::numeric_limits<unsigned>::max();
   UP.Partial = true;
 

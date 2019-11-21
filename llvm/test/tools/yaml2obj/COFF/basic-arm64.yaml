@@ -3,7 +3,9 @@
 # RUN: obj2yaml %t | FileCheck %s --check-prefix=ROUNDTRIP
 
 # CHECK: OptionalHeaderSize: 240
+# CHECK: ImageBase: 0x140000000
 
+# ROUNDTRIP: ImageBase: 5368709120
 # ROUNDTRIP: VirtualAddress:  4096
 # ROUNDTRIP: VirtualAddress:  8192
 # ROUNDTRIP: VirtualAddress:  12288
@@ -11,7 +13,7 @@
 --- !COFF
 OptionalHeader:
   AddressOfEntryPoint: 4096
-  ImageBase:       1073741824
+  ImageBase:       5368709120
   SectionAlignment: 4096
   FileAlignment:   512
   MajorOperatingSystemVersion: 6

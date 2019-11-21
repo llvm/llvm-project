@@ -7430,10 +7430,8 @@ def err_atomic_op_needs_trivial_copy : Error<
 def err_atomic_op_needs_atomic_int_or_ptr : Error<
   "address argument to atomic operation must be a pointer to %select{|atomic }0"
   "integer or pointer (%1 invalid)">;
-def err_atomic_op_needs_int32_or_ptr : Error<
-  "address argument to atomic operation must be a pointer to signed or unsigned 32-bit integer">;
-def err_atomic_op_bitwise_needs_atomic_int : Error<
-  "address argument to bitwise atomic operation must be a pointer to "
+def err_atomic_op_needs_atomic_int : Error<
+  "address argument to atomic operation must be a pointer to "
   "%select{|atomic }0integer (%1 invalid)">;
 def warn_atomic_op_has_invalid_memory_order : Warning<
   "memory order argument to atomic operation is invalid">,

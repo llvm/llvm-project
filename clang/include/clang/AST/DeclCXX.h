@@ -42,7 +42,6 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
@@ -2758,15 +2757,8 @@ public:
   /// Represents the language in a linkage specification.
   ///
   /// The values are part of the serialization ABI for
-  /// ASTs and cannot be changed without altering that ABI.  To help
-  /// ensure a stable ABI for this, we choose the DW_LANG_ encodings
-  /// from the dwarf standard.
-  enum LanguageIDs {
-    lang_c = llvm::dwarf::DW_LANG_C,
-    lang_cxx = llvm::dwarf::DW_LANG_C_plus_plus,
-    lang_cxx_11 = llvm::dwarf::DW_LANG_C_plus_plus_11,
-    lang_cxx_14 = llvm::dwarf::DW_LANG_C_plus_plus_14
-  };
+  /// ASTs and cannot be changed without altering that ABI.
+  enum LanguageIDs { lang_c = 1, lang_cxx = 2 };
 
 private:
   /// The source location for the extern keyword.
