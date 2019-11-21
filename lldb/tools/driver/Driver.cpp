@@ -732,16 +732,24 @@ void sigcont_handler(int signo) {
   signal(signo, sigcont_handler);
 }
 
-void reproducer_handler(void *) {
+void reproducer_handler(void *argv0) {
   if (SBReproducer::Generate()) {
+    auto exe = static_cast<const char *>(argv0);
     llvm::outs() << "********************\n";
     llvm::outs() << "Crash reproducer for ";
     llvm::outs() << lldb::SBDebugger::GetVersionString() << '\n';
+    llvm::outs() << '\n';
     llvm::outs() << "Reproducer written to '" << SBReproducer::GetPath()
                  << "'\n";
+    llvm::outs() << '\n';
+    llvm::outs() << "Before attaching the reproducer to a bug report:\n";
+    llvm::outs() << " - Look at the directory to ensure you're willing to "
+                    "share its content.\n";
     llvm::outs()
-        << "Please have a look at the directory to assess if you're willing to "
-           "share the contained information.\n";
+        << " - Make sure the reproducer works by replaying the reproducer.\n";
+    llvm::outs() << '\n';
+    llvm::outs() << "Replay the reproducer with the following command:\n";
+    llvm::outs() << exe << " -replay " << SBReproducer::GetPath() << "\n";
     llvm::outs() << "********************\n";
   }
 }
@@ -847,7 +855,7 @@ int main(int argc, char const *argv[]) {
   }
 
   // Register the reproducer signal handler.
-  llvm::sys::AddSignalHandler(reproducer_handler, nullptr);
+  llvm::sys::AddSignalHandler(reproducer_handler, (void *)(argv[0]));
 
   SBError error = SBDebugger::InitializeWithErrorHandling();
   if (error.Fail()) {
