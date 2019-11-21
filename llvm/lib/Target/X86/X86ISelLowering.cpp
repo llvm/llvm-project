@@ -611,6 +611,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       addLegalFPImmediate(APFloat(+0.0)); // xorpd
   }
 
+  // FIXME: Mark these legal to prevent them from being expanded to a
+  // libcall in LegalizeDAG. They'll be mutated by X86ISelDAGToDAG::Select.
+  setOperationAction(ISD::STRICT_FADD, MVT::f32, Legal);
+  setOperationAction(ISD::STRICT_FADD, MVT::f64, Legal);
+  setOperationAction(ISD::STRICT_FSUB, MVT::f32, Legal);
+  setOperationAction(ISD::STRICT_FSUB, MVT::f64, Legal);
+
   // We don't support FMA.
   setOperationAction(ISD::FMA, MVT::f64, Expand);
   setOperationAction(ISD::FMA, MVT::f32, Expand);
@@ -659,11 +666,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     addLegalFPImmediate(APFloat::getZero(APFloat::IEEEquad())); // xorps
 
-    setOperationAction(ISD::FADD, MVT::f128, LibCall);
-    setOperationAction(ISD::FSUB, MVT::f128, LibCall);
-    setOperationAction(ISD::FDIV, MVT::f128, LibCall);
-    setOperationAction(ISD::FMUL, MVT::f128, LibCall);
-    setOperationAction(ISD::FMA,  MVT::f128, Expand);
+    setOperationAction(ISD::FADD,        MVT::f128, LibCall);
+    setOperationAction(ISD::STRICT_FADD, MVT::f128, LibCall);
+    setOperationAction(ISD::FSUB,        MVT::f128, LibCall);
+    setOperationAction(ISD::STRICT_FSUB, MVT::f128, LibCall);
+    setOperationAction(ISD::FDIV,        MVT::f128, LibCall);
+    setOperationAction(ISD::STRICT_FDIV, MVT::f128, LibCall);
+    setOperationAction(ISD::FMUL,        MVT::f128, LibCall);
+    setOperationAction(ISD::STRICT_FMUL, MVT::f128, LibCall);
+    setOperationAction(ISD::FMA,         MVT::f128, Expand);
 
     setOperationAction(ISD::FABS, MVT::f128, Custom);
     setOperationAction(ISD::FNEG, MVT::f128, Custom);
