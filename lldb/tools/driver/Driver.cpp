@@ -791,9 +791,8 @@ EXAMPLES:
     lldb -K /source/before/crash -k /source/after/crash
 
   Note: In REPL mode no file is loaded, so commands specified to run after
-  loading the file (via -o or -s) will be ignored.
-  )___";
-  llvm::outs() << examples;
+  loading the file (via -o or -s) will be ignored.)___";
+  llvm::outs() << examples << '\n';
 }
 
 llvm::Optional<int> InitializeReproducer(opt::InputArgList &input_args) {
