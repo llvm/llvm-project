@@ -12,8 +12,6 @@ jobs:
           - ubuntu-latest
           - windows-latest
           - macOS-latest
-        cmake_args:
-          - ""
     steps:
     - name: Setup Windows
       if: startsWith(matrix.os, 'windows')
@@ -27,8 +25,14 @@ jobs:
       uses: tstellar/actions/install-ninja@master
       with:
         os: ${{ runner.os }}
-    - name: Test LLVM
+    - name: Test LLVM / dynamic
+      if: startsWith(matrix.os, 'windows') == false
       uses: tstellar/actions/build-test-llvm-project@master
       with:
-        cmake_args: -G Ninja -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }}
+          cmake_args: -G Ninja -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }} -DLLVM_LINK_LLVM_DYLIB=ON -DLLVM_BUILD_LLVM_DYLIB=ON   -DCLANG_LINK_CLANG_DYLIB=ON  -DLLVM_ENABLE_PROJECTS='polly;clang' -DPOLLY_ENABLE_GPGPU_CODEGEN=OFF -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_POLLY_LINK_INTO_TOOLS=OFF
+        os: ${{ runner.os }}
+    - name: Test LLVM / static
+      uses: tstellar/actions/build-test-llvm-project@master
+      with:
+          cmake_args: -G Ninja -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }} -DLLVM_LINK_LLVM_DYLIB=ON -DLLVM_BUILD_LLVM_DYLIB=ON   -DCLANG_LINK_CLANG_DYLIB=ON  -DLLVM_ENABLE_PROJECTS='polly;clang' -DPOLLY_ENABLE_GPGPU_CODEGEN=ON  -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_POLLY_LINK_INTO_TOOLS=ON
         os: ${{ runner.os }}
