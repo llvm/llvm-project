@@ -169,12 +169,31 @@ module LLVM_ExecutionEngine {
 
   // FIXME: These exclude directives were added as a workaround for
   //        <rdar://problem/29247092> and should be removed once it is fixed.
-  exclude header "ExecutionEngine/Orc/RawByteChannel.h"
-  exclude header "ExecutionEngine/Orc/RPCUtils.h"
   exclude header "ExecutionEngine/Orc/OrcRemoteTargetRPCAPI.h"
   exclude header "ExecutionEngine/Orc/OrcRemoteTargetClient.h"
   exclude header "ExecutionEngine/Orc/OrcRemoteTargetServer.h"
   exclude header "ExecutionEngine/Orc/RemoteObjectLayer.h"
+
+  // Exclude headers from LLVM_OrcSupport.
+  exclude header "ExecutionEngine/Orc/OrcError.h"
+  exclude header "ExecutionEngine/Orc/RPC/RPCUtils.h"
+  exclude header "ExecutionEngine/Orc/RPC/RPCSerialization.h"
+  exclude header "ExecutionEngine/Orc/RPC/RawByteChannel.h"
+
+}
+
+// Orc utilities that don't depend only on Support (not ExecutionEngine or
+// IR). This is a workaround for ExecutionEngine's broken layering, and will
+// be removed in the future.
+module LLVM_OrcSupport {
+  requires cplusplus
+
+  header "ExecutionEngine/Orc/OrcError.h"
+  header "ExecutionEngine/Orc/RPC/RPCUtils.h"
+  header "ExecutionEngine/Orc/RPC/RPCSerialization.h"
+  header "ExecutionEngine/Orc/RPC/RawByteChannel.h"
+
+  export *
 }
 
 module LLVM_Pass {
