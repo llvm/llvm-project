@@ -2880,6 +2880,8 @@ ______________________________________
 
 .. option:: -glldb
 
+.. option:: -grocgdb
+
 .. option:: -gsce
 
 Debug information flags
