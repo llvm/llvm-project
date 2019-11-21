@@ -1159,7 +1159,13 @@ void MemorySSAUpdater::moveAfter(MemoryUseOrDef *What, MemoryUseOrDef *Where) {
 
 void MemorySSAUpdater::moveToPlace(MemoryUseOrDef *What, BasicBlock *BB,
                                    MemorySSA::InsertionPlace Where) {
-  return moveTo(What, BB, Where);
+  if (Where != MemorySSA::InsertionPlace::BeforeTerminator)
+    return moveTo(What, BB, Where);
+
+  if (auto *Where = MSSA->getMemoryAccess(BB->getTerminator()))
+    return moveBefore(What, Where);
+  else
+    return moveTo(What, BB, MemorySSA::InsertionPlace::End);
 }
 
 // All accesses in To used to be in From. Move to end and update access lists.

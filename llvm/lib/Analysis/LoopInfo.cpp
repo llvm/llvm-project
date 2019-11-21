@@ -106,7 +106,8 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   I->moveBefore(InsertPt);
   if (MSSAU)
     if (auto *MUD = MSSAU->getMemorySSA()->getMemoryAccess(I))
-      MSSAU->moveToPlace(MUD, InsertPt->getParent(), MemorySSA::End);
+      MSSAU->moveToPlace(MUD, InsertPt->getParent(),
+                         MemorySSA::BeforeTerminator);
 
   // There is possibility of hoisting this instruction above some arbitrary
   // condition. Any metadata defined on it can be control dependent on this
