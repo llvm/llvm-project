@@ -59,6 +59,8 @@ defm Tdata: Eq<"Tdata", "Same as --section-start with .data as the sectionname">
 
 defm Ttext: Eq<"Ttext", "Same as --section-start with .text as the sectionname">;
 
+def Ttext_segment: Separate<["-", "--"], "Ttext-segment">;
+
 defm allow_multiple_definition: B<"allow-multiple-definition",
     "Allow multiple definitions",
     "Do not allow multiple definitions (default)">;
@@ -462,9 +464,8 @@ def: Flag<["-"], "(">, Alias<start_group>, HelpText<"Alias for --start-group">;
 def: Flag<["-"], "s">, Alias<strip_all>, HelpText<"Alias for --strip-all">;
 def: Flag<["-"], "S">, Alias<strip_debug>, HelpText<"Alias for --strip-debug">;
 def: Flag<["-"], "t">, Alias<trace>, HelpText<"Alias for --trace">;
+def: Joined<["-", "--"], "Ttext-segment=">, Alias<Ttext_segment>;
 def: JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>, HelpText<"Alias for --trace-symbol">;
-def: Separate<["-", "--"], "Ttext-segment">, Alias<Ttext>, HelpText<"Alias for --Ttext">;
-def: Joined<["-", "--"], "Ttext-segment=">, Alias<Ttext>, HelpText<"Alias for --Ttext">;
 def: JoinedOrSeparate<["-"], "u">, Alias<undefined>, HelpText<"Alias for --undefined">;
 def: Flag<["-"], "V">, Alias<version>, HelpText<"Alias for --version">;
 
