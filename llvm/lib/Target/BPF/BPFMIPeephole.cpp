@@ -51,6 +51,9 @@ private:
   // Initialize class variables.
   void initialize(MachineFunction &MFParm);
 
+  bool isCopyFrom32Def(MachineInstr *CopyMI);
+  bool isInsnFrom32Def(MachineInstr *DefInsn);
+  bool isPhiFrom32Def(MachineInstr *MovMI);
   bool isMovFrom32Def(MachineInstr *MovMI);
   bool eliminateZExtSeq(void);
 
@@ -75,6 +78,67 @@ void BPFMIPeephole::initialize(MachineFunction &MFParm) {
   LLVM_DEBUG(dbgs() << "*** BPF MachineSSA ZEXT Elim peephole pass ***\n\n");
 }
 
+bool BPFMIPeephole::isCopyFrom32Def(MachineInstr *CopyMI)
+{
+  MachineOperand &opnd = CopyMI->getOperand(1);
+
+  if (!opnd.isReg())
+    return false;
+
+  // Return false if getting value from a 32bit physical register.
+  // Most likely, this physical register is aliased to
+  // function call return value or current function parameters.
+  Register Reg = opnd.getReg();
+  if (!Register::isVirtualRegister(Reg))
+    return false;
+
+  if (MRI->getRegClass(Reg) == &BPF::GPRRegClass)
+    return false;
+
+  MachineInstr *DefInsn = MRI->getVRegDef(Reg);
+  if (!isInsnFrom32Def(DefInsn))
+    return false;
+
+  return true;
+}
+
+bool BPFMIPeephole::isPhiFrom32Def(MachineInstr *PhiMI)
+{
+  for (unsigned i = 1, e = PhiMI->getNumOperands(); i < e; i += 2) {
+    MachineOperand &opnd = PhiMI->getOperand(i);
+
+    if (!opnd.isReg())
+      return false;
+
+    MachineInstr *PhiDef = MRI->getVRegDef(opnd.getReg());
+    if (!PhiDef)
+      return false;
+    if (PhiDef->isPHI() && !isPhiFrom32Def(PhiDef))
+      return false;
+    if (PhiDef->getOpcode() == BPF::COPY && !isCopyFrom32Def(PhiDef))
+      return false;
+  }
+
+  return true;
+}
+
+// The \p DefInsn instruction defines a virtual register.
+bool BPFMIPeephole::isInsnFrom32Def(MachineInstr *DefInsn)
+{
+  if (!DefInsn)
+    return false;
+
+  if (DefInsn->isPHI()) {
+    if (!isPhiFrom32Def(DefInsn))
+      return false;
+  } else if (DefInsn->getOpcode() == BPF::COPY) {
+    if (!isCopyFrom32Def(DefInsn))
+      return false;
+  }
+
+  return true;
+}
+
 bool BPFMIPeephole::isMovFrom32Def(MachineInstr *MovMI)
 {
   MachineInstr *DefInsn = MRI->getVRegDef(MovMI->getOperand(1).getReg());
@@ -82,34 +146,8 @@ bool BPFMIPeephole::isMovFrom32Def(MachineInstr *MovMI)
   LLVM_DEBUG(dbgs() << "  Def of Mov Src:");
   LLVM_DEBUG(DefInsn->dump());
 
-  if (!DefInsn)
+  if (!isInsnFrom32Def(DefInsn))
     return false;
-
-  if (DefInsn->isPHI()) {
-    for (unsigned i = 1, e = DefInsn->getNumOperands(); i < e; i += 2) {
-      MachineOperand &opnd = DefInsn->getOperand(i);
-
-      if (!opnd.isReg())
-        return false;
-
-      MachineInstr *PhiDef = MRI->getVRegDef(opnd.getReg());
-      // quick check on PHI incoming definitions.
-      if (!PhiDef || PhiDef->isPHI() || PhiDef->getOpcode() == BPF::COPY)
-        return false;
-    }
-  }
-
-  if (DefInsn->getOpcode() == BPF::COPY) {
-    MachineOperand &opnd = DefInsn->getOperand(1);
-
-    if (!opnd.isReg())
-      return false;
-
-    Register Reg = opnd.getReg();
-    if ((Register::isVirtualRegister(Reg) &&
-         MRI->getRegClass(Reg) == &BPF::GPRRegClass))
-      return false;
-  }
 
   LLVM_DEBUG(dbgs() << "  One ZExt elim sequence identified.\n");
 

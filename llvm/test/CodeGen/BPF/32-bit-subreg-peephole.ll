@@ -47,8 +47,8 @@ define dso_local i64 @select_u(i32 %a, i32 %b, i64 %c, i64 %d) local_unnamed_add
 entry:
   %cmp = icmp ugt i32 %a, %b
   %c.d = select i1 %cmp, i64 %c, i64 %d
-; CHECK-NOT: r{{[0-9]+}} <<= 32
-; CHECK-NOT: r{{[0-9]+}} >>= 32
+; CHECK: r{{[0-9]+}} <<= 32
+; CHECK-NEXT: r{{[0-9]+}} >>= 32
 ; CHECK: if r{{[0-9]+}} {{<|>}} r{{[0-9]+}} goto
   ret i64 %c.d
 }
@@ -58,8 +58,8 @@ define dso_local i64 @select_u_2(i32 %a, i64 %b, i64 %c, i64 %d) local_unnamed_a
 ; CHECK-LABEL: select_u_2:
 entry:
   %conv = zext i32 %a to i64
-; CHECK-NOT: r{{[0-9]+}} <<= 32
-; CHECK-NOT: r{{[0-9]+}} >>= 32
+; CHECK: r{{[0-9]+}} <<= 32
+; CHECK-NEXT: r{{[0-9]+}} >>= 32
   %cmp = icmp ugt i64 %conv, %b
   %c.d = select i1 %cmp, i64 %c, i64 %d
   ret i64 %c.d
@@ -100,8 +100,23 @@ define dso_local i32* @inc_p(i32* readnone %p, i32 %a) local_unnamed_addr #0 {
 ; CHECK-LABEL: inc_p:
 entry:
   %idx.ext = zext i32 %a to i64
-; CHECK-NOT: r{{[0-9]+}} <<= 32
-; CHECK-NOT: r{{[0-9]+}} >>= 32
+; CHECK: r{{[0-9]+}} <<= 32
+; CHECK-NEXT: r{{[0-9]+}} >>= 32
   %add.ptr = getelementptr inbounds i32, i32* %p, i64 %idx.ext
   ret i32* %add.ptr
 }
+
+define dso_local i32 @test() local_unnamed_addr {
+; CHECK-LABEL: test:
+entry:
+  %call = tail call i32 bitcast (i32 (...)* @helper to i32 ()*)()
+  %cmp = icmp sgt i32 %call, 6
+; The shifts can't be optimized out because %call comes from function call
+; return i32 so the high bits might be invalid.
+; CHECK: r{{[0-9]+}} <<= 32
+; CHECK-NEXT: r{{[0-9]+}} s>>= 32
+  %cond = zext i1 %cmp to i32
+; CHECK: if r{{[0-9]+}} s{{<|>}} {{[0-9]+}} goto
+  ret i32 %cond
+}
+declare dso_local i32 @helper(...) local_unnamed_addr
