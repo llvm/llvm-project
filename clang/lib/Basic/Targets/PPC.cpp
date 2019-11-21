@@ -159,6 +159,8 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
   if (ArchDefs & ArchDefineE500)
     Builder.defineMacro("__NO_LWSYNC__");
+  if (ArchDefs & ArchDefineFuture)
+    Builder.defineMacro("_ARCH_PWR_FUTURE");
 
   if (getTriple().getVendor() == llvm::Triple::BGQ) {
     Builder.defineMacro("__bg__");
@@ -319,6 +321,13 @@ bool PPCTargetInfo::initFeatureMap(
                         .Case("e500", true)
                         .Default(false);
 
+  // Future CPU should include all of the features of Power 9 as well as any
+  // additional features (yet to be determined) specific to it.
+  if (CPU == "future") {
+    initFeatureMap(Features, Diags, "pwr9", FeaturesVec);
+    addFutureSpecificFeatures(Features);
+  }
+
   if (!ppcUserFeaturesCheck(Diags, FeaturesVec))
     return false;
 
@@ -330,6 +339,12 @@ bool PPCTargetInfo::initFeatureMap(
   }
 
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
+}
+
+// Add features specific to the "Future" CPU.
+void PPCTargetInfo::addFutureSpecificFeatures(
+    llvm::StringMap<bool> &Features) const {
+  return;
 }
 
 bool PPCTargetInfo::hasFeature(StringRef Feature) const {
@@ -466,6 +481,7 @@ static constexpr llvm::StringLiteral ValidCPUNames[] = {
     {"pwr6"},      {"power6x"},   {"pwr6x"},       {"power7"},      {"pwr7"},
     {"power8"},    {"pwr8"},      {"power9"},      {"pwr9"},        {"powerpc"},
     {"ppc"},       {"powerpc64"}, {"ppc64"},       {"powerpc64le"}, {"ppc64le"},
+    {"future"}
 };
 
 bool PPCTargetInfo::isValidCPUName(StringRef Name) const {
