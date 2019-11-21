@@ -45,6 +45,7 @@
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -510,7 +511,8 @@ private:
     if (ClBlacklist.empty())
       return std::unique_ptr<SpecialCaseList>();
 
-    return SpecialCaseList::createOrDie({{ClBlacklist}});
+    return SpecialCaseList::createOrDie({{ClBlacklist}},
+                                        *vfs::getRealFileSystem());
   }
   std::unique_ptr<SpecialCaseList> DefaultBlacklist;
   std::unique_ptr<SpecialCaseList> UserBlacklist;
