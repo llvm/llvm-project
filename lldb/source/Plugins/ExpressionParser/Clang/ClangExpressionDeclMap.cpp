@@ -1073,6 +1073,32 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context,
   }
 }
 
+void ClangExpressionDeclMap::LookupLocalVarNamespace(
+    SymbolContext &sym_ctx, NameSearchContext &context) {
+  CompilerDeclContext frame_decl_context = sym_ctx.block != nullptr
+                                               ? sym_ctx.block->GetDeclContext()
+                                               : CompilerDeclContext();
+
+  if (frame_decl_context) {
+    ClangASTContext *frame_ast = llvm::dyn_cast_or_null<ClangASTContext>(
+        frame_decl_context.GetTypeSystem());
+
+    ClangASTContext *map_ast = ClangASTContext::GetASTContext(m_ast_context);
+    if (frame_ast && map_ast) {
+      clang::NamespaceDecl *namespace_decl =
+          map_ast->GetUniqueNamespaceDeclaration(
+              g_lldb_local_vars_namespace_cstr, nullptr);
+      if (namespace_decl) {
+        context.AddNamedDecl(namespace_decl);
+        clang::DeclContext *clang_decl_ctx =
+            clang::Decl::castToDeclContext(namespace_decl);
+        clang_decl_ctx->setHasExternalVisibleStorage(true);
+        context.m_found.local_vars_nsp = true;
+      }
+    }
+  }
+}
+
 void ClangExpressionDeclMap::FindExternalVisibleDecls(
     NameSearchContext &context, lldb::ModuleSP module_sp,
     CompilerDeclContext &namespace_decl, unsigned int current_id) {
@@ -1113,30 +1139,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
       return;
     }
     if (name == ConstString(g_lldb_local_vars_namespace_cstr)) {
-      CompilerDeclContext frame_decl_context =
-          sym_ctx.block != nullptr ? sym_ctx.block->GetDeclContext()
-                                   : CompilerDeclContext();
-
-      if (frame_decl_context) {
-        ClangASTContext *frame_ast = llvm::dyn_cast_or_null<ClangASTContext>(
-            frame_decl_context.GetTypeSystem());
-
-        ClangASTContext *map_ast =
-            ClangASTContext::GetASTContext(m_ast_context);
-        if (frame_ast && map_ast) {
-          clang::NamespaceDecl *namespace_decl =
-              map_ast->GetUniqueNamespaceDeclaration(name.GetCString(),
-                                                     nullptr);
-          if (namespace_decl) {
-            context.AddNamedDecl(namespace_decl);
-            clang::DeclContext *clang_decl_ctx =
-                clang::Decl::castToDeclContext(namespace_decl);
-            clang_decl_ctx->setHasExternalVisibleStorage(true);
-            context.m_found.local_vars_nsp = true;
-          }
-        }
-      }
-
+      LookupLocalVarNamespace(sym_ctx, context);
       return;
     }
 

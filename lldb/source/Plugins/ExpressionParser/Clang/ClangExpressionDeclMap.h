@@ -410,6 +410,17 @@ private:
   ///     for logging purposes.
   void LookUpLldbObjCClass(NameSearchContext &context, unsigned int current_id);
 
+  /// Handles looking up the synthetic namespace that contains our local
+  /// variables for the current frame.
+  ///
+  /// \param[in] sym_ctx
+  ///     The current SymbolContext of this frame.
+  ///
+  /// \param[in] context
+  ///     The NameSearchContext that can construct Decls for this name.
+  void LookupLocalVarNamespace(SymbolContext &sym_ctx,
+                               NameSearchContext &context);
+
   /// Given a target, find a variable that matches the given name and type.
   ///
   /// \param[in] target
