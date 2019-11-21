@@ -6,7 +6,7 @@
 # process. To ensure we're not actually running the original binary we check
 # that the string "testing" is not printed.
 
-# RUN: %clang_host %S/Inputs/simple.c -g -o %t.out
+# RUN: %clang %S/Inputs/simple.c -g -o %t.out
 
 # Test reproducer generate command.
 # RUN: rm -rf %t.repro
