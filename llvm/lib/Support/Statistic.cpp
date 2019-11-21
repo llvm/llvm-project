@@ -123,9 +123,9 @@ StatisticInfo::~StatisticInfo() {
     llvm::PrintStatistics();
 }
 
-void llvm::EnableStatistics(bool PrintOnExit) {
+void llvm::EnableStatistics(bool DoPrintOnExit) {
   Enabled = true;
-  ::PrintOnExit = PrintOnExit;
+  PrintOnExit = DoPrintOnExit;
 }
 
 bool llvm::AreStatisticsEnabled() {
