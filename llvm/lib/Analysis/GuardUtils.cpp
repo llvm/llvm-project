@@ -13,9 +13,9 @@
 #include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 bool llvm::isGuard(const User *U) {
-  using namespace llvm::PatternMatch;
   return match(U, m_Intrinsic<Intrinsic::experimental_guard>());
 }
 
@@ -32,7 +32,6 @@ bool llvm::isGuardAsWidenableBranch(const User *U) {
   if (!parseWidenableBranch(U, Condition, WidenableCondition, GuardedBB,
                             DeoptBB))
     return false;
-  using namespace llvm::PatternMatch;
   for (auto &Insn : *DeoptBB) {
     if (match(&Insn, m_Intrinsic<Intrinsic::experimental_deoptimize>()))
       return true;
@@ -45,17 +44,32 @@ bool llvm::isGuardAsWidenableBranch(const User *U) {
 bool llvm::parseWidenableBranch(const User *U, Value *&Condition,
                                 Value *&WidenableCondition,
                                 BasicBlock *&IfTrueBB, BasicBlock *&IfFalseBB) {
-  using namespace llvm::PatternMatch;
+  if (match(U, m_Br(m_Intrinsic<Intrinsic::experimental_widenable_condition>(),
+                    IfTrueBB, IfFalseBB)) &&
+      cast<BranchInst>(U)->getCondition()->hasOneUse()) {
+    WidenableCondition = cast<BranchInst>(U)->getCondition();
+    Condition = ConstantInt::getTrue(IfTrueBB->getContext());
+    return true;
+  }
+
+  // Check for two cases:
+  // 1) br (i1 (and A, WC())), label %IfTrue, label %IfFalse
+  // 2) br (i1 (and WC(), B)), label %IfTrue, label %IfFalse
+  // We do not check for more generalized and trees as we should canonicalize
+  // to the form above in instcombine. (TODO)
   if (!match(U, m_Br(m_And(m_Value(Condition), m_Value(WidenableCondition)),
                      IfTrueBB, IfFalseBB)))
     return false;
+  if (!match(WidenableCondition,
+             m_Intrinsic<Intrinsic::experimental_widenable_condition>())) {
+    if (!match(Condition,
+               m_Intrinsic<Intrinsic::experimental_widenable_condition>()))
+      return false;
+    std::swap(Condition, WidenableCondition);
+  }
+    
   // For the branch to be (easily) widenable, it must not correlate with other
   // branches.  Thus, the widenable condition must have a single use.
-  if (!WidenableCondition->hasOneUse() ||
-      !cast<BranchInst>(U)->getCondition()->hasOneUse())
-    return false;
-  // TODO: At the moment, we only recognize the branch if the WC call in this
-  // specific position.  We should generalize!
-  return match(WidenableCondition,
-               m_Intrinsic<Intrinsic::experimental_widenable_condition>());
+  return (WidenableCondition->hasOneUse() &&
+          cast<BranchInst>(U)->getCondition()->hasOneUse());
 }
