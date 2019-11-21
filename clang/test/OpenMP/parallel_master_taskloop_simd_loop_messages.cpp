@@ -728,8 +728,18 @@ void test_loop_eh() {
 
 void test_loop_firstprivate_lastprivate() {
   S s(4);
+  int c;
 #pragma omp parallel
 #pragma omp parallel master taskloop simd lastprivate(s) firstprivate(s)
+  for (int i = 0; i < 16; ++i)
+    ;
+#pragma omp parallel master taskloop simd if(c) default(none) // expected-error {{variable 'c' must have explicitly specified data sharing attributes}} expected-note {{explicit data sharing attribute requested here}}
+  for (int i = 0; i < 16; ++i)
+    ;
+#pragma omp parallel master taskloop simd if(taskloop:c) default(none) // expected-error {{variable 'c' must have explicitly specified data sharing attributes}} expected-note {{explicit data sharing attribute requested here}}
+  for (int i = 0; i < 16; ++i)
+    ;
+#pragma omp parallel master taskloop simd if(parallel:c) default(none)
   for (int i = 0; i < 16; ++i)
     ;
 }
