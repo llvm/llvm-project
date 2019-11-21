@@ -19550,19 +19550,6 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
   MVT SrcVT = Src.getSimpleValueType();
   SDLoc dl(Op);
 
-  if (SrcVT == MVT::f128) {
-    RTLIB::Libcall LC;
-    if (Op.getOpcode() == ISD::FP_TO_SINT)
-      LC = RTLIB::getFPTOSINT(SrcVT, VT);
-    else
-      LC = RTLIB::getFPTOUINT(SrcVT, VT);
-
-    // FIXME: Strict fp!
-    assert(!IsStrict && "Unhandled strict operation!");
-    MakeLibCallOptions CallOptions;
-    return makeLibCall(DAG, LC, VT, Src, CallOptions, SDLoc(Op)).first;
-  }
-
   if (VT.isVector()) {
     if (VT == MVT::v2i1 && SrcVT == MVT::v2f64) {
       MVT ResVT = MVT::v4i32;
@@ -19636,10 +19623,10 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
       return SDValue();
   }
 
-  // Promote i16 to i32 if we can use a SSE operation.
+  // Promote i16 to i32 if we can use a SSE operation or the type is f128.
   // FIXME: This does not generate an invalid exception if the input does not
   // fit in i16. PR44019
-  if (VT == MVT::i16 && UseSSEReg) {
+  if (VT == MVT::i16 && (UseSSEReg || SrcVT == MVT::f128)) {
     assert(IsSigned && "Expected i16 FP_TO_UINT to have been promoted!");
     SDValue Res, Chain;
     if (IsStrict) {
@@ -19658,6 +19645,20 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
   // If this is a FP_TO_SINT using SSEReg we're done.
   if (UseSSEReg && IsSigned)
     return Op;
+
+  // fp128 needs to use a libcall.
+  if (SrcVT == MVT::f128) {
+    RTLIB::Libcall LC;
+    if (Op.getOpcode() == ISD::FP_TO_SINT)
+      LC = RTLIB::getFPTOSINT(SrcVT, VT);
+    else
+      LC = RTLIB::getFPTOUINT(SrcVT, VT);
+
+    // FIXME: Strict fp!
+    assert(!IsStrict && "Unhandled strict operation!");
+    MakeLibCallOptions CallOptions;
+    return makeLibCall(DAG, LC, VT, Src, CallOptions, SDLoc(Op)).first;
+  }
 
   // Fall back to X87.
   SDValue Chain;
