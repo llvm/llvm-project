@@ -68,7 +68,10 @@ bool DpuRank::Open(char *profile) {
         id / m_desc->topology.nr_of_dpus_per_control_interface);
     dpu_id_t dpu_id =
         (dpu_id_t)(id % m_desc->topology.nr_of_dpus_per_control_interface);
-    m_dpus.push_back(new Dpu(this, dpu_get(m_rank, slice_id, dpu_id)));
+    struct dpu_t *dpu = dpu_get(m_rank, slice_id, dpu_id);
+    if (dpu != NULL && dpu_is_enabled(dpu)) {
+      m_dpus.push_back(new Dpu(this, dpu));
+    }
   }
 
   return true;
