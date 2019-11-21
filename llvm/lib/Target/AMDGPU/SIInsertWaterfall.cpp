@@ -287,12 +287,6 @@ private:
         return;
       }
 
-      auto Dst = TII->getNamedOperand(*Cand, AMDGPU::OpName::dst)->getReg();
-      if (Dst == AMDGPU::EXEC || Dst == AMDGPU::EXEC_LO) {
-        llvm_unreachable(
-            "EXEC manipulation within SI_WATERFALL_* group");
-      }
-
       // Iterate over the LastUseList to determine if this instruction has a
       // later use of a tagged last_use
       for (auto Use : LastUseList) {
