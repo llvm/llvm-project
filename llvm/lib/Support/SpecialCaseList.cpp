@@ -18,7 +18,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include <string>
 #include <system_error>
 #include <utility>
@@ -72,9 +71,9 @@ unsigned SpecialCaseList::Matcher::match(StringRef Query) const {
 
 std::unique_ptr<SpecialCaseList>
 SpecialCaseList::create(const std::vector<std::string> &Paths,
-                        llvm::vfs::FileSystem &FS, std::string &Error) {
+                        std::string &Error) {
   std::unique_ptr<SpecialCaseList> SCL(new SpecialCaseList());
-  if (SCL->createInternal(Paths, FS, Error))
+  if (SCL->createInternal(Paths, Error))
     return SCL;
   return nullptr;
 }
@@ -88,16 +87,15 @@ std::unique_ptr<SpecialCaseList> SpecialCaseList::create(const MemoryBuffer *MB,
 }
 
 std::unique_ptr<SpecialCaseList>
-SpecialCaseList::createOrDie(const std::vector<std::string> &Paths,
-                             llvm::vfs::FileSystem &FS) {
+SpecialCaseList::createOrDie(const std::vector<std::string> &Paths) {
   std::string Error;
-  if (auto SCL = create(Paths, FS, Error))
+  if (auto SCL = create(Paths, Error))
     return SCL;
   report_fatal_error(Error);
 }
 
 bool SpecialCaseList::createInternal(const std::vector<std::string> &Paths,
-                                     vfs::FileSystem &VFS, std::string &Error) {
+                                     std::string &Error, vfs::FileSystem &VFS) {
   StringMap<size_t> Sections;
   for (const auto &Path : Paths) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
