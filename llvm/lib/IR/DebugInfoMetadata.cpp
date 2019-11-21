@@ -1189,6 +1189,15 @@ bool DIExpression::isConstant() const {
   return true;
 }
 
+DIExpression *DIExpression::appendExt(const DIExpression *Expr,
+                                      unsigned FromSize, unsigned ToSize,
+                                      bool Signed) {
+  dwarf::TypeKind TK = Signed ? dwarf::DW_ATE_signed : dwarf::DW_ATE_unsigned;
+  uint64_t Ops[] = {dwarf::DW_OP_LLVM_convert, FromSize, TK,
+                    dwarf::DW_OP_LLVM_convert, ToSize,   TK};
+  return appendToStack(Expr, Ops);
+}
+
 DIGlobalVariableExpression *
 DIGlobalVariableExpression::getImpl(LLVMContext &Context, Metadata *Variable,
                                     Metadata *Expression, StorageType Storage,
