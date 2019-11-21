@@ -1453,20 +1453,17 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
   if (!namespace_decl)
     SearchPersistenDecls(context, name, current_id);
 
-  if (name.GetCString()[0] == '$' && !namespace_decl) {
-    static ConstString g_lldb_class_name("$__lldb_class");
-
-    if (name == g_lldb_class_name) {
+  if (name.GetStringRef().startswith("$") && !namespace_decl) {
+    if (name == "$__lldb_class") {
       LookUpLldbClass(context, current_id);
       return;
     }
 
-    static ConstString g_lldb_objc_class_name("$__lldb_objc_class");
-    if (name == g_lldb_objc_class_name) {
+    if (name == "$__lldb_objc_class") {
       LookUpLldbObjCClass(context, current_id);
       return;
     }
-    if (name == ConstString(g_lldb_local_vars_namespace_cstr)) {
+    if (name == g_lldb_local_vars_namespace_cstr) {
       LookupLocalVarNamespace(sym_ctx, context);
       return;
     }
@@ -1483,7 +1480,8 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
       return;
     }
 
-    const char *reg_name(&name.GetCString()[1]);
+    assert(name.GetStringRef().startswith("$"));
+    llvm::StringRef reg_name = name.GetStringRef().substr(1);
 
     if (m_parser_vars->m_exe_ctx.GetRegisterContext()) {
       const RegisterInfo *reg_info(
@@ -1500,9 +1498,8 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     return;
   }
 
-  bool local_var_lookup =
-      !namespace_decl || (namespace_decl.GetName() ==
-                          ConstString(g_lldb_local_vars_namespace_cstr));
+  bool local_var_lookup = !namespace_decl || (namespace_decl.GetName() ==
+                                              g_lldb_local_vars_namespace_cstr);
   if (frame && local_var_lookup)
     if (LookupLocalVariable(context, name, current_id, sym_ctx, namespace_decl))
       return;
