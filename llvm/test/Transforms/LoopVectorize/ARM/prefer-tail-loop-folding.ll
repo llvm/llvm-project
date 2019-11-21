@@ -30,6 +30,18 @@
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,PREFER-FOLDING
 
+; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
+; RUN:   -prefer-predicate-over-epilog=false \
+; RUN:   -disable-mve-tail-predication=false -loop-vectorize \
+; RUN:   -enable-arm-maskedldst=true -S < %s | \
+; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
+
+; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
+; RUN:   -prefer-predicate-over-epilog=true \
+; RUN:   -disable-mve-tail-predication=false -loop-vectorize \
+; RUN:   -enable-arm-maskedldst=true -S < %s | \
+; RUN:   FileCheck %s -check-prefixes=CHECK,FOLDING-OPT
+
 define void @prefer_folding(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL:    prefer_folding(
 ; PREFER-FOLDING: vector.body:
@@ -186,6 +198,12 @@ define void @narrowing_load_not_allowed(i8* noalias nocapture %A, i8* noalias no
 ; PREFER-FOLDING-NOT: llvm.masked.load
 ; PREFER-FOLDING-NOT: llvm.masked.store
 ; PREFER-FOLDING:     br i1 %{{.*}}, label %{{.*}}, label %vector.body
+
+; FOLDING-OPT:        vector.body:
+; FOLDING-OPT         call <8 x i16> @llvm.masked.load.v8i16.p0v8i16
+; FOLDING-OPT         call <8 x i8> @llvm.masked.load.v8i8.p0v8i8
+; FOLDING-OPT         call void @llvm.masked.store.v8i8.p0v8i8
+; FOLDING-OPT:        br i1 %{{.*}}, label %{{.*}}, label %vector.body
 entry:
   br label %for.body
 
