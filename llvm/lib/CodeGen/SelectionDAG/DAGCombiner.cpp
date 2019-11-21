@@ -6514,7 +6514,7 @@ static unsigned BigEndianByteAt(unsigned BW, unsigned i) {
 // Check if the bytes offsets we are looking at match with either big or
 // little endian value loaded. Return true for big endian, false for little
 // endian, and None if match failed.
-static Optional<bool> isBigEndian(const SmallVector<int64_t, 4> &ByteOffsets,
+static Optional<bool> isBigEndian(const ArrayRef<int64_t> ByteOffsets,
                                   int64_t FirstOffset) {
   // The endian can be decided only when it is 2 bytes at least.
   unsigned Width = ByteOffsets.size();
@@ -6594,7 +6594,7 @@ SDValue DAGCombiner::MatchStoreCombine(StoreSDNode *N) {
   // to the same base address. Collect bytes offsets from Base address into 
   // ByteOffsets. 
   SDValue CombinedValue;
-  SmallVector<int64_t, 4> ByteOffsets(Width, INT64_MAX);
+  SmallVector<int64_t, 8> ByteOffsets(Width, INT64_MAX);
   int64_t FirstOffset = INT64_MAX;
   StoreSDNode *FirstStore = nullptr;
   Optional<BaseIndexOffset> Base;
@@ -6777,7 +6777,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
 
   // Check if all the bytes of the OR we are looking at are loaded from the same
   // base address. Collect bytes offsets from Base address in ByteOffsets.
-  SmallVector<int64_t, 4> ByteOffsets(ByteWidth);
+  SmallVector<int64_t, 8> ByteOffsets(ByteWidth);
   for (unsigned i = 0; i < ByteWidth; i++) {
     auto P = calculateByteProvider(SDValue(N, 0), i, 0, /*Root=*/true);
     if (!P || !P->isMemory()) // All the bytes must be loaded from memory
