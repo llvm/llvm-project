@@ -1,3 +1,3 @@
-add_llvm_library(LLVMWebAssemblyDisassembler
+add_llvm_component_library(LLVMWebAssemblyDisassembler
   WebAssemblyDisassembler.cpp
   )

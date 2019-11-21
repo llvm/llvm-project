@@ -1,4 +1,4 @@
-add_llvm_library(LLVMOrcJIT
+add_llvm_component_library(LLVMOrcJIT
   CompileOnDemandLayer.cpp
   CompileUtils.cpp
   Core.cpp

@@ -1,3 +1,3 @@
-add_llvm_library(LLVMSystemZInfo
+add_llvm_component_library(LLVMSystemZInfo
   SystemZTargetInfo.cpp
   )

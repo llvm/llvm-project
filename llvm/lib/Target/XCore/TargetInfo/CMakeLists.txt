@@ -1,3 +1,3 @@
-add_llvm_library(LLVMXCoreInfo
+add_llvm_component_library(LLVMXCoreInfo
   XCoreTargetInfo.cpp
   )

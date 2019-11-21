@@ -1,3 +1,3 @@
-add_llvm_library(LLVMMSP430Disassembler
+add_llvm_component_library(LLVMMSP430Disassembler
   MSP430Disassembler.cpp
   )

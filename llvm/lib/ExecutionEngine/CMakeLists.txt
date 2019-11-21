@@ -1,6 +1,6 @@
 
 
-add_llvm_library(LLVMExecutionEngine
+add_llvm_component_library(LLVMExecutionEngine
   ExecutionEngine.cpp
   ExecutionEngineBindings.cpp
   GDBRegistrationListener.cpp

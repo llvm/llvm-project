@@ -1,4 +1,4 @@
-add_llvm_library(LLVMAArch64Desc
+add_llvm_component_library(LLVMAArch64Desc
   AArch64AsmBackend.cpp
   AArch64ELFObjectWriter.cpp
   AArch64ELFStreamer.cpp

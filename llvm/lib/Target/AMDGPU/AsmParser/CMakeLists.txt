@@ -1,4 +1,4 @@
-add_llvm_library(LLVMAMDGPUAsmParser
+add_llvm_component_library(LLVMAMDGPUAsmParser
   AMDGPUAsmParser.cpp
   )
 

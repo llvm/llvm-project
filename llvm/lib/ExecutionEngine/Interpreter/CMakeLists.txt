@@ -6,7 +6,7 @@ if( FFI_INCLUDE_PATH )
   include_directories( ${FFI_INCLUDE_PATH} )
 endif()
 
-add_llvm_library(LLVMInterpreter
+add_llvm_component_library(LLVMInterpreter
   Execution.cpp
   ExternalFunctions.cpp
   Interpreter.cpp

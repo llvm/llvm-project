@@ -1,3 +1,3 @@
-add_llvm_library(LLVMPowerPCAsmParser
+add_llvm_component_library(LLVMPowerPCAsmParser
   PPCAsmParser.cpp
   )

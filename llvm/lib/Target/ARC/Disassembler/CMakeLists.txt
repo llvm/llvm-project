@@ -1,3 +1,3 @@
-add_llvm_library(LLVMARCDisassembler
+add_llvm_component_library(LLVMARCDisassembler
   ARCDisassembler.cpp
   )

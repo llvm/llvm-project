@@ -1,4 +1,4 @@
-add_llvm_library(LLVMXRay
+add_llvm_component_library(LLVMXRay
   BlockIndexer.cpp
   BlockPrinter.cpp
   BlockVerifier.cpp
