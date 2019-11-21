@@ -10,6 +10,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/Signals.h"
 #include <system_error>
 
 using namespace llvm;
@@ -103,11 +104,13 @@ std::error_code errorToErrorCode(Error Err) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
 void Error::fatalUncheckedError() const {
   dbgs() << "Program aborted due to an unhandled Error:\n";
-  if (getPtr())
+  if (getPtr()) {
     getPtr()->log(dbgs());
-  else
+    dbgs() << "\n";
+  }else
     dbgs() << "Error value was Success. (Note: Success values must still be "
               "checked prior to being destroyed).\n";
+  PrintStackTrace();
   abort();
 }
 #endif

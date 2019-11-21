@@ -11,6 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/RPC/RPCUtils.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
+
+#include <system_error>
+#include <string>
 
 char llvm::orc::rpc::RPCFatalError::ID = 0;
 char llvm::orc::rpc::ConnectionClosed::ID = 0;
