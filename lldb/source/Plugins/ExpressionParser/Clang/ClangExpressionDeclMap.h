@@ -421,6 +421,19 @@ private:
   void LookupLocalVarNamespace(SymbolContext &sym_ctx,
                                NameSearchContext &context);
 
+  /// Lookup entities in the ClangModulesDeclVendor.
+  /// \param[in] context
+  ///     The NameSearchContext that can construct Decls for this name.
+  ///
+  /// \param[in] name
+  ///     The name of the entities that need to be found.
+  ///
+  /// \param[in] current_id
+  ///     The ID for the current FindExternalVisibleDecls invocation,
+  ///     for logging purposes.
+  void LookupInModulesDeclVendor(NameSearchContext &context, ConstString name,
+                                 unsigned current_id);
+
   /// Given a target, find a variable that matches the given name and type.
   ///
   /// \param[in] target
