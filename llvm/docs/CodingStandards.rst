@@ -8,9 +8,9 @@ LLVM Coding Standards
 Introduction
 ============
 
-This document attempts to describe a few coding standards that are being used in
-the LLVM source tree.  Although no coding standards should be regarded as
-absolute requirements to be followed in all instances, coding standards are
+This document describes coding standards that are used in the LLVM project.
+Although no coding standards should be regarded as absolute requirements to be
+followed in all instances, coding standards are
 particularly important for large-scale code bases that follow a library-based
 design (like LLVM).
 
@@ -24,11 +24,9 @@ Always follow the golden rule:
     use the style that is already being used so that the source is uniform and
     easy to follow.**
 
-Note that some code bases (e.g. ``libc++``) have really good reasons to deviate
-from the coding standards.  In the case of ``libc++``, this is because the
-naming and other conventions are dictated by the C++ standard.  If you think
-there is a specific good reason to deviate from the standards here, please bring
-it up on the LLVM-dev mailing list.
+Note that some code bases (e.g. ``libc++``) have special reasons to deviate
+from the coding standards.  For example, in the case of ``libc++``, this is
+because the naming and other conventions are dictated by the C++ standard.
 
 There are some conventions that are not uniformly followed in the code base
 (e.g. the naming convention).  This is because they are relatively new, and a
@@ -36,9 +34,9 @@ lot of code was written before they were put in place.  Our long term goal is
 for the entire codebase to follow the convention, but we explicitly *do not*
 want patches that do large-scale reformatting of existing code.  On the other
 hand, it is reasonable to rename the methods of a class if you're about to
-change it in some other way.  Just do the reformatting as a separate commit
-from the functionality change.
-  
+change it in some other way.  Please commit such changes separately to
+make code review easier.
+
 The ultimate goal of these guidelines is to increase the readability and
 maintainability of our common source base.
 
@@ -55,38 +53,12 @@ choice.
 C++ Standard Versions
 ---------------------
 
-LLVM, Clang, and LLD are currently written using C++14 conforming code,
-although we restrict ourselves to features which are available in the major
-toolchains supported as host compilers. The LLDB project is even more
-aggressive in the set of host compilers supported and thus uses still more
-features. Regardless of the supported features, code is expected to (when
-reasonable) be standard, portable, and modern C++14 code. We avoid unnecessary
-vendor-specific extensions, etc.
+Unless otherwise documented, LLVM subprojects are written using standard C++14
+code and avoid unnecessary vendor-specific extensions.
 
-C++ Standard Library
---------------------
-
-Use the C++ standard library facilities whenever they are available for
-a particular task. LLVM and related projects emphasize and rely on the standard
-library facilities for as much as possible. Common support libraries providing
-functionality missing from the standard library for which there are standard
-interfaces or active work on adding standard interfaces will often be
-implemented in the LLVM namespace following the expected standard interface.
-
-There are some exceptions such as the standard I/O streams library which are
-avoided. Also, there is much more detailed information on these subjects in the
-:doc:`ProgrammersManual`.
-
-Supported C++14 Language and Library Features
----------------------------------------------
-
-While LLVM, Clang, and LLD use C++14, not all features are available in all of
-the toolchains which we support. The set of features supported for use in LLVM
-is the intersection of those supported in the minimum requirements described
-in the :doc:`GettingStarted` page, section `Software`.
-The ultimate definition of this set is what build bots with those respective
-toolchains accept. Don't argue with the build bots. However, we have some
-guidance below to help you know what to expect.
+Nevertheless, we restrict ourselves to features which are available in the
+major toolchains supported as host compilers (see :doc:`GettingStarted` page,
+section `Software`).
 
 Each toolchain provides a good reference for what it accepts:
 
@@ -94,8 +66,26 @@ Each toolchain provides a good reference for what it accepts:
 * GCC: https://gcc.gnu.org/projects/cxx-status.html#cxx14
 * MSVC: https://msdn.microsoft.com/en-us/library/hh567368.aspx
 
-Other Languages
----------------
+
+C++ Standard Library
+--------------------
+
+Use the C++ standard library facilities whenever they are available for
+a particular task. LLVM and related projects emphasize and rely on the standard
+library facilities as much as possible.
+
+We avoid some standard facilities, like the I/O streams, and instead use LLVM's
+streams library (raw_ostream_). More detailed information on these subjects is
+available in the :doc:`ProgrammersManual`.
+
+LLVM support libraries (for example, `ADT
+<https://github.com/llvm/llvm-project/tree/master/llvm/include/llvm/ADT>`_)
+implement functionality missing in the standard library. Such libraries are
+usually implemented in the ``llvm`` namespace and follow the expected standard
+interface, when there is one.
+
+Guidelines for Go code
+----------------------
 
 Any code written in the Go programming language is not subject to the
 formatting rules below. Instead, we adopt the formatting rules enforced by
@@ -122,11 +112,10 @@ Source Code Formatting
 Commenting
 ^^^^^^^^^^
 
-Comments are one critical part of readability and maintainability.  Everyone
-knows they should comment their code, and so should you.  When writing comments,
-write them as English prose, which means they should use proper capitalization,
-punctuation, etc.  Aim to describe what the code is trying to do and why, not
-*how* it does it at a micro level. Here are a few critical things to document:
+Comments are important for readability and maintainability. When writing comments,
+write them as English prose, using proper capitalization, punctuation, etc.
+Aim to describe what the code is trying to do and why, not *how* it does it at
+a micro level. Here are a few important things to document:
 
 .. _header file comment:
 
@@ -134,8 +123,7 @@ File Headers
 """"""""""""
 
 Every source file should have a header on it that describes the basic purpose of
-the file.  If a file does not have a header, it should not be checked into the
-tree.  The standard header looks like this:
+the file. The standard header looks like this:
 
 .. code-block:: c++
 
@@ -161,25 +149,23 @@ a C file (Emacs assumes ``.h`` files are C files by default).
 
     This tag is not necessary in ``.cpp`` files.  The name of the file is also
     on the first line, along with a very short description of the purpose of the
-    file.  This is important when printing out code and flipping though lots of
-    pages.
+    file.
 
 The next section in the file is a concise note that defines the license that the
 file is released under.  This makes it perfectly clear what terms the source
 code can be distributed under and should not be modified in any way.
 
-The main body is a ``doxygen`` comment (identified by the ``///`` comment
-marker instead of the usual ``//``) describing the purpose of the file.  The
-first sentence (or a passage beginning with ``\brief``) is used as an abstract.
-Any additional information should be separated by a blank line.  If an
-algorithm is being implemented or something tricky is going on, a reference
-to the paper where it is published should be included, as well as any notes or
-*gotchas* in the code to watch out for.
+The main body is a `Doxygen <http://www.doxygen.nl/>`_ comment (identified by
+the ``///`` comment marker instead of the usual ``//``) describing the purpose
+of the file.  The first sentence (or a passage beginning with ``\brief``) is
+used as an abstract.  Any additional information should be separated by a blank
+line.  If an algorithm is based on a paper or is described in another source,
+provide a reference.
 
 Class overviews
 """""""""""""""
 
-Classes are one fundamental part of a good object oriented design.  As such, a
+Classes are a fundamental part of an object-oriented design.  As such, a
 class definition should have a comment block that explains what the class is
 used for and how it works.  Every non-trivial class is expected to have a
 ``doxygen`` comment block.
@@ -187,34 +173,31 @@ used for and how it works.  Every non-trivial class is expected to have a
 Method information
 """"""""""""""""""
 
-Methods defined in a class (as well as any global functions) should also be
-documented properly.  A quick note about what it does and a description of the
-borderline behaviour is all that is necessary here (unless something
-particularly tricky or insidious is going on).  The hope is that people can
-figure out how to use your interfaces without reading the code itself.
+Methods and global functions should also be documented.  A quick note about
+what it does and a description of the edge cases is all that is necessary here.
+The reader should be able to understand how to use interfaces without reading
+the code itself.
 
 Good things to talk about here are what happens when something unexpected
-happens: does the method return null?  Abort?  Format your hard disk?
+happens, for instance, does the method return null?
 
 Comment Formatting
 ^^^^^^^^^^^^^^^^^^
 
-In general, prefer C++ style comments (``//`` for normal comments, ``///`` for
-``doxygen`` documentation comments).  They take less space, require
-less typing, don't have nesting problems, etc.  There are a few cases when it is
-useful to use C style (``/* */``) comments however:
+In general, prefer C++-style comments (``//`` for normal comments, ``///`` for
+``doxygen`` documentation comments).  There are a few cases when it is
+useful to use C-style (``/* */``) comments however:
 
-#. When writing C code: Obviously if you are writing C code, use C style
-   comments.
+#. When writing C code to be compatible with C89.
 
 #. When writing a header file that may be ``#include``\d by a C source file.
 
-#. When writing a source file that is used by a tool that only accepts C style
+#. When writing a source file that is used by a tool that only accepts C-style
    comments.
 
 #. When documenting the significance of constants used as actual parameters in
    a call. This is most helpful for ``bool`` parameters, or passing ``0`` or
-   ``nullptr``. Typically you add the formal parameter name, which ought to be
+   ``nullptr``. The comment should contain the parameter name, which ought to be
    meaningful. For example, it's not clear what the parameter means in this call:
 
    .. code-block:: c++
@@ -239,7 +222,7 @@ Use the ``\file`` command to turn the standard file header into a file-level
 comment.
 
 Include descriptive paragraphs for all public interfaces (public classes,
-member and non-member functions).  Don't just restate the information that can
+member and non-member functions).  Avoid restating the information that can
 be inferred from the API name.  The first sentence (or a paragraph beginning
 with ``\brief``) is used as an abstract. Try to use a single sentence as the
 ``\brief`` adds visual clutter.  Put detailed discussion into separate
@@ -297,68 +280,33 @@ For humans it is obvious which function or class is being documented;
 automatic documentation processing tools are smart enough to bind the comment
 to the correct declaration.
 
-Wrong:
+Avoid:
 
 .. code-block:: c++
 
-  // In Something.h:
+  // Example.h:
 
-  /// Something - An abstraction for some complicated thing.
-  class Something {
-  public:
-    /// fooBar - Does foo and bar.
-    void fooBar();
-  };
+  // example - Does something important.
+  void example();
 
-  // In Something.cpp:
+  // Example.cpp:
 
-  /// fooBar - Does foo and bar.
-  void Something::fooBar() { ... }
+  // example - Does something important.
+  void example() { ... }
 
-Correct:
+Preferred:
 
 .. code-block:: c++
 
-  // In Something.h:
+  // Example.h:
 
-  /// An abstraction for some complicated thing.
-  class Something {
-  public:
-    /// Does foo and bar.
-    void fooBar();
-  };
+  /// Does something important.
+  void example();
 
-  // In Something.cpp:
+  // Example.cpp:
 
-  // Builds a B-tree in order to do foo.  See paper by...
-  void Something::fooBar() { ... }
-
-It is not required to use additional Doxygen features, but sometimes it might
-be a good idea to do so.
-
-Consider:
-
-* adding comments to any narrow namespace containing a collection of
-  related functions or types;
-
-* using top-level groups to organize a collection of related functions at
-  namespace scope where the grouping is smaller than the namespace;
-
-* using member groups and additional comments attached to member
-  groups to organize within a class.
-
-For example:
-
-.. code-block:: c++
-
-  class Something {
-    /// \name Functions that do Foo.
-    /// @{
-    void fooBar();
-    void fooBaz();
-    /// @}
-    ...
-  };
+  /// Builds a B-tree in order to do foo.  See paper by...
+  void example() { ... }
 
 ``#include`` Style
 ^^^^^^^^^^^^^^^^^^
@@ -400,21 +348,16 @@ applies to all LLVM subprojects.
 Source Code Width
 ^^^^^^^^^^^^^^^^^
 
-Write your code to fit within 80 columns of text.  This helps those of us who
-like to print out code and look at your code in an ``xterm`` without resizing
-it.
+Write your code to fit within 80 columns.
 
-The longer answer is that there must be some limit to the width of the code in
-order to reasonably allow developers to have multiple files side-by-side in
+There must be some limit to the width of the code in
+order to allow developers to have multiple files side-by-side in
 windows on a modest display.  If you are going to pick a width limit, it is
 somewhat arbitrary but you might as well pick something standard.  Going with 90
 columns (for example) instead of 80 columns wouldn't add any significant value
 and would be detrimental to printing out code.  Also many other projects have
 standardized on 80 columns, so some people have already configured their editors
 for it (vs something else, like 90 columns).
-
-This is one of many contentious issues in coding standards, but it is not up for
-debate.
 
 Whitespace
 ^^^^^^^^^^
@@ -425,35 +368,21 @@ like; this is fine.  What isn't fine is that different editors/viewers expand
 tabs out to different tab stops.  This can cause your code to look completely
 unreadable, and it is not worth dealing with.
 
-As always, follow the `Golden Rule`_ above: follow the style of
-existing code if you are modifying and extending it.  If you like four spaces of
-indentation, **DO NOT** do that in the middle of a chunk of code with two spaces
-of indentation.  Also, do not reindent a whole source file: it makes for
-incredible diffs that are absolutely worthless.
+As always, follow the `Golden Rule`_ above: follow the style of existing code
+if you are modifying and extending it.
 
-Do not commit changes that include trailing whitespace. If you find trailing
-whitespace in a file, do not remove it unless you're otherwise changing that
-line of code. Some common editors will automatically remove trailing whitespace
-when saving a file which causes unrelated changes to appear in diffs and
-commits.
-
-Indent Code Consistently
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-Okay, in your first year of programming you were told that indentation is
-important. If you didn't believe and internalize this then, now is the time.
-Just do it. With the introduction of C++11, there are some new formatting
-challenges that merit some suggestions to help have consistent, maintainable,
-and tool-friendly formatting and indentation.
+Do not add trailing whitespace.  Some common editors will automatically remove
+trailing whitespace when saving a file which causes unrelated changes to appear
+in diffs and commits.
 
 Format Lambdas Like Blocks Of Code
 """"""""""""""""""""""""""""""""""
 
-When formatting a multi-line lambda, format it like a block of code, that's
-what it is. If there is only one multi-line lambda in a statement, and there
-are no expressions lexically after it in the statement, drop the indent to the
-standard two space indent for a block of code, as if it were an if-block opened
-by the preceding part of the statement:
+When formatting a multi-line lambda, format it like a block of code. If there
+is only one multi-line lambda in a statement, and there are no expressions
+lexically after it in the statement, drop the indent to the standard two space
+indent for a block of code, as if it were an if-block opened by the preceding
+part of the statement:
 
 .. code-block:: c++
 
@@ -466,12 +395,12 @@ by the preceding part of the statement:
   });
 
 To take best advantage of this formatting, if you are designing an API which
-accepts a continuation or single callable argument (be it a functor, or
+accepts a continuation or single callable argument (be it a function object, or
 a ``std::function``), it should be the last argument if at all possible.
 
-If there are multiple multi-line lambdas in a statement, or there is anything
-interesting after the lambda in the statement, indent the block two spaces from
-the indent of the ``[]``:
+If there are multiple multi-line lambdas in a statement, or additional
+parameters after the lambda, indent the block two spaces from the indent of the
+``[]``:
 
 .. code-block:: c++
 
@@ -492,13 +421,11 @@ the indent of the ``[]``:
 Braced Initializer Lists
 """"""""""""""""""""""""
 
-With C++11, there are significantly more uses of braced lists to perform
-initialization. These allow you to easily construct aggregate temporaries in
-expressions among other niceness. They now have a natural way of ending up
-nested within each other and within function calls in order to build up
-aggregates (such as option structs) from local variables. To make matters
-worse, we also have many more uses of braces in an expression context that are
-*not* performing initialization.
+Starting from C++11, there are significantly more uses of braced lists to
+perform initialization. For example, they can be used to construct aggregate
+temporaries in expressions. They now have a natural way of ending up nested
+within each other and within function calls in order to build up aggregates
+(such as option structs) from local variables.
 
 The historically common formatting of braced initialization of aggregate
 variables does not mix cleanly with deep nesting, general expression contexts,
@@ -527,17 +454,9 @@ Language and Compiler Issues
 Treat Compiler Warnings Like Errors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If your code has compiler warnings in it, something is wrong --- you aren't
-casting values correctly, you have "questionable" constructs in your code, or
-you are doing something legitimately wrong.  Compiler warnings can cover up
-legitimate errors in output and make dealing with a translation unit difficult.
-
-It is not possible to prevent all warnings from all compilers, nor is it
-desirable.  Instead, pick a standard compiler (like ``gcc``) that provides a
-good thorough set of warnings, and stick to it.  At least in the case of
-``gcc``, it is possible to work around any spurious errors by changing the
-syntax of the code slightly.  For example, a warning that annoys me occurs when
-I write code like this:
+Compiler warnings are often useful and help improve the code.  Those that are
+not useful, can be often suppressed with a small code change. For example, an
+assignment in the ``if`` condition is often a typo:
 
 .. code-block:: c++
 
@@ -545,10 +464,8 @@ I write code like this:
     ...
   }
 
-``gcc`` will warn me that I probably want to use the ``==`` operator, and that I
-probably mistyped it.  In most cases, I haven't, and I really don't want the
-spurious errors.  To fix this particular problem, I rewrite the code like
-this:
+Several compilers will print a warning for the code above. It can be suppressed
+by adding parentheses:
 
 .. code-block:: c++
 
@@ -556,73 +473,43 @@ this:
     ...
   }
 
-which shuts ``gcc`` up.  Any ``gcc`` warning that annoys you can be fixed by
-massaging the code appropriately.
-
 Write Portable Code
 ^^^^^^^^^^^^^^^^^^^
 
-In almost all cases, it is possible and within reason to write completely
-portable code.  If there are cases where it isn't possible to write portable
-code, isolate it behind a well defined (and well documented) interface.
-
-In practice, this means that you shouldn't assume much about the host compiler
-(and Visual Studio tends to be the lowest common denominator).  If advanced
-features are used, they should only be an implementation detail of a library
-which has a simple exposed API, and preferably be buried in ``libSystem``.
+In almost all cases, it is possible to write completely portable code.  When
+you need to rely on non-portable code, put it behind a well-defined and
+well-documented interface.
 
 Do not use RTTI or Exceptions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In an effort to reduce code and executable size, LLVM does not use RTTI
-(e.g. ``dynamic_cast<>;``) or exceptions.  These two language features violate
-the general C++ principle of *"you only pay for what you use"*, causing
-executable bloat even if exceptions are never used in the code base, or if RTTI
-is never used for a class.  Because of this, we turn them off globally in the
-code.
+In an effort to reduce code and executable size, LLVM does not use exceptions
+or RTTI (`runtime type information
+<https://en.wikipedia.org/wiki/Run-time_type_information>`_, for example,
+``dynamic_cast<>``).
 
 That said, LLVM does make extensive use of a hand-rolled form of RTTI that use
 templates like :ref:`isa\<>, cast\<>, and dyn_cast\<> <isa>`.
 This form of RTTI is opt-in and can be
-:doc:`added to any class <HowToSetUpLLVMStyleRTTI>`. It is also
-substantially more efficient than ``dynamic_cast<>``.
+:doc:`added to any class <HowToSetUpLLVMStyleRTTI>`.
 
 .. _static constructor:
 
 Do not use Static Constructors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Static constructors and destructors (e.g. global variables whose types have a
+Static constructors and destructors (e.g., global variables whose types have a
 constructor or destructor) should not be added to the code base, and should be
-removed wherever possible.  Besides `well known problems
-<https://yosefk.com/c++fqa/ctors.html#fqa-10.12>`_ where the order of
-initialization is undefined between globals in different source files, the
-entire concept of static constructors is at odds with the common use case of
-LLVM as a library linked into a larger application.
-  
-Consider the use of LLVM as a JIT linked into another application (perhaps for
-`OpenGL, custom languages <https://llvm.org/Users.html>`_, `shaders in movies
-<https://llvm.org/devmtg/2010-11/Gritz-OpenShadingLang.pdf>`_, etc). Due to the
-design of static constructors, they must be executed at startup time of the
-entire application, regardless of whether or how LLVM is used in that larger
-application.  There are two problems with this:
+removed wherever possible.
 
-* The time to run the static constructors impacts startup time of applications
-  --- a critical time for GUI apps, among others.
-  
-* The static constructors cause the app to pull many extra pages of memory off
-  the disk: both the code for the constructor in each ``.o`` file and the small
-  amount of data that gets touched. In addition, touched/dirty pages put more
-  pressure on the VM system on low-memory machines.
+Globals in different source files are initialized in `arbitrary order
+<https://yosefk.com/c++fqa/ctors.html#fqa-10.12>`, making the code more
+difficult to reason about.
 
-We would really like for there to be zero cost for linking in an additional LLVM
-target or other library into an application, but static constructors violate
-this goal.
-  
-That said, LLVM unfortunately does contain static constructors.  It would be a
-`great project <https://llvm.org/PR11944>`_ for someone to purge all static
-constructors from LLVM, and then enable the ``-Wglobal-constructors`` warning
-flag (when building with Clang) to ensure we do not regress in the future.
+Static constructors have negative impact on launch time of programs that use
+LLVM as a library. We would really like for there to be zero cost for linking
+in an additional LLVM target or other library into an application, but static
+constructors undermine this goal.
 
 Use of ``class`` and ``struct`` Keywords
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -632,26 +519,24 @@ interchangeably. The only difference is when they are used to declare a class:
 ``class`` makes all members private by default while ``struct`` makes all
 members public by default.
 
-Unfortunately, not all compilers follow the rules and some will generate
-different symbols based on whether ``class`` or ``struct`` was used to declare
-the symbol (e.g., MSVC).  This can lead to problems at link time.
-
 * All declarations and definitions of a given ``class`` or ``struct`` must use
   the same keyword.  For example:
 
 .. code-block:: c++
 
-  class Foo;
+  // Avoid if `Example` is defined as a struct.
+  class Example;
 
-  // Breaks mangling in MSVC.
-  struct Foo { int Data; };
+  // OK.
+  struct Example;
 
-* As a rule of thumb, ``struct`` should be kept to structures where *all*
-  members are declared public.
+  struct Example { ... };
+
+* ``struct`` should be used when *all* members are declared public.
 
 .. code-block:: c++
 
-  // Foo feels like a class... this is strange.
+  // Avoid using `struct` here, use `class` instead.
   struct Foo {
   private:
     int Data;
@@ -661,7 +546,7 @@ the symbol (e.g., MSVC).  This can lead to problems at link time.
     void setData(int D) { Data = D; }
   };
 
-  // Bar isn't POD, but it does look like a struct.
+  // OK to use `struct`: all members are public.
   struct Bar {
     int Data;
     Bar() : Data(0) { }
@@ -670,9 +555,9 @@ the symbol (e.g., MSVC).  This can lead to problems at link time.
 Do not use Braced Initializer Lists to Call a Constructor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In C++11 there is a "generalized initialization syntax" which allows calling
-constructors using braced initializer lists. Do not use these to call
-constructors with any interesting logic or if you care that you're calling some
+Starting from C++11 there is a "generalized initialization syntax" which allows
+calling constructors using braced initializer lists. Do not use these to call
+constructors with non-trivial logic or if you care that you're calling some
 *particular* constructor. Those should look like function calls using
 parentheses rather than like aggregate initialization. Similarly, if you need
 to explicitly name the type and call its constructor to create a temporary,
@@ -693,10 +578,10 @@ something notionally equivalent. Examples:
     // ...
   };
 
-  // The Foo constructor call is very deliberate, no braces.
+  // The Foo constructor call is reading a file, don't use braces to call it.
   std::fill(foo.begin(), foo.end(), Foo("name"));
 
-  // The pair is just being constructed like an aggregate, use braces.
+  // The pair is being constructed like an aggregate, use braces.
   bar_map.insert({my_key, my_value});
 
 If you use a braced initializer list when initializing a variable, use an equals before the open curly brace:
@@ -726,8 +611,8 @@ The convenience of ``auto`` makes it easy to forget that its default behavior
 is a copy.  Particularly in range-based ``for`` loops, careless copies are
 expensive.
 
-As a rule of thumb, use ``auto &`` unless you need to copy the result, and use
-``auto *`` when copying pointers.
+Use ``auto &`` for values and ``auto *`` for pointers unless you need to make a
+copy.
 
 .. code-block:: c++
 
@@ -749,24 +634,24 @@ In general, there is no relative ordering among pointers. As a result,
 when unordered containers like sets and maps are used with pointer keys
 the iteration order is undefined. Hence, iterating such containers may
 result in non-deterministic code generation. While the generated code
-might not necessarily be "wrong code", this non-determinism might result
-in unexpected runtime crashes or simply hard to reproduce bugs on the
-customer side making it harder to debug and fix.
+might work correctly, non-determinism can make it harder to reproduce bugs and
+debug the compiler.
 
-As a rule of thumb, in case an ordered result is expected, remember to
+In case an ordered result is expected, remember to
 sort an unordered container before iteration. Or use ordered containers
-like vector/MapVector/SetVector if you want to iterate pointer keys.
+like ``vector``/``MapVector``/``SetVector`` if you want to iterate pointer
+keys.
 
 Beware of non-deterministic sorting order of equal elements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-std::sort uses a non-stable sorting algorithm in which the order of equal
-elements is not guaranteed to be preserved. Thus using std::sort for a
+``std::sort`` uses a non-stable sorting algorithm in which the order of equal
+elements is not guaranteed to be preserved. Thus using ``std::sort`` for a
 container having equal elements may result in non-determinstic behavior.
 To uncover such instances of non-determinism, LLVM has introduced a new
 llvm::sort wrapper function. For an EXPENSIVE_CHECKS build this will randomly
-shuffle the container before sorting. As a rule of thumb, always make sure to
-use llvm::sort instead of std::sort.
+shuffle the container before sorting. Default to using ``llvm::sort`` instead
+of ``std::sort``.
 
 Style Issues
 ============
@@ -777,9 +662,9 @@ The High-Level Issues
 Self-contained Headers
 ^^^^^^^^^^^^^^^^^^^^^^
 
-Header files should be self-contained (compile on their own) and end in .h.
-Non-header files that are meant for inclusion should end in .inc and be used
-sparingly.
+Header files should be self-contained (compile on their own) and end in ``.h``.
+Non-header files that are meant for inclusion should end in ``.inc`` and be
+used sparingly.
 
 All header files should be self-contained. Users and refactoring tools should
 not have to adhere to special conditions to include the header. Specifically, a
@@ -874,8 +759,8 @@ When reading code, keep in mind how much state and how many previous decisions
 have to be remembered by the reader to understand a block of code.  Aim to
 reduce indentation where possible when it doesn't make it more difficult to
 understand the code.  One great way to do this is by making use of early exits
-and the ``continue`` keyword in long loops.  As an example of using an early
-exit from a function, consider this "bad" code:
+and the ``continue`` keyword in long loops. Consider this code that does not
+use an early exit:
 
 .. code-block:: c++
 
@@ -965,10 +850,9 @@ big understandability win.
 Don't use ``else`` after a ``return``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For similar reasons above (reduction of indentation and easier reading), please
+For similar reasons as above (reduction of indentation and easier reading), please
 do not use ``'else'`` or ``'else if'`` after something that interrupts control
-flow --- like ``return``, ``break``, ``continue``, ``goto``, etc. For
-example, this is *bad*:
+flow --- like ``return``, ``break``, ``continue``, ``goto``, etc. For example:
 
 .. code-block:: c++
 
@@ -979,7 +863,7 @@ example, this is *bad*:
         Error = ASTContext::GE_Missing_sigjmp_buf;
         return QualType();
       } else {
-        break;
+        break; // Unnecessary.
       }
     } else {
       Type = Context.getjmp_bufType();
@@ -987,7 +871,7 @@ example, this is *bad*:
         Error = ASTContext::GE_Missing_jmp_buf;
         return QualType();
       } else {
-        break;
+        break; // Unnecessary.
       }
     }
   }
@@ -1052,10 +936,8 @@ sort of thing is:
     ...
   }
 
-This sort of code is awkward to write, and is almost always a bad sign.  Instead
-of this sort of loop, we strongly prefer to use a predicate function (which may
-be `static`_) that uses `early exits`_ to compute the predicate.  We prefer the
-code to be structured like this:
+Instead of this sort of loop, we prefer to use a predicate function (which may
+be `static`_) that uses `early exits`_:
 
 .. code-block:: c++
 
@@ -1137,22 +1019,22 @@ style of lower-case words separated by underscores (e.g. ``begin()``,
 iterators should add a singular prefix to ``begin()`` and ``end()``
 (e.g. ``global_begin()`` and ``use_begin()``).
 
-Here are some examples of good and bad names:
+Here are some examples:
 
 .. code-block:: c++
 
   class VehicleMaker {
     ...
-    Factory<Tire> F;            // Bad -- abbreviation and non-descriptive.
-    Factory<Tire> Factory;      // Better.
-    Factory<Tire> TireFactory;  // Even better -- if VehicleMaker has more than one
+    Factory<Tire> F;            // Avoid: a non-descriptive abbreviation.
+    Factory<Tire> Factory;      // Better: more descriptive.
+    Factory<Tire> TireFactory;  // Even better: if VehicleMaker has more than one
                                 // kind of factories.
   };
 
   Vehicle makeVehicle(VehicleType Type) {
-    VehicleMaker M;                         // Might be OK if having a short life-span.
-    Tire Tmp1 = M.makeTire();               // Bad -- 'Tmp1' provides no information.
-    Light Headlight = M.makeLight("head");  // Good -- descriptive.
+    VehicleMaker M;                         // Might be OK if scope is small.
+    Tire Tmp1 = M.makeTire();               // Avoid: 'Tmp1' provides no information.
+    Light Headlight = M.makeLight("head");  // Good: descriptive.
     ...
   }
 
@@ -1256,8 +1138,8 @@ namespace with an "``std::``" prefix, rather than rely on "``using namespace
 std;``".
 
 In header files, adding a ``'using namespace XXX'`` directive pollutes the
-namespace of any source file that ``#include``\s the header.  This is clearly a
-bad thing.
+namespace of any source file that ``#include``\s the header, creating
+maintenance issues.
 
 In implementation files (e.g. ``.cpp`` files), the rule is more of a stylistic
 rule, but is still important.  Basically, using explicit namespace prefixes
@@ -1454,9 +1336,8 @@ reasoning on why we prefer them.
 Spaces Before Parentheses
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We prefer to put a space before an open parenthesis only in control flow
-statements, but not in normal function call expressions and function-like
-macros.  For example, this is good:
+Put a space before an open parenthesis only in control flow statements, but not
+in normal function call expressions and function-like macros.  For example:
 
 .. code-block:: c++
 
@@ -1466,36 +1347,11 @@ macros.  For example, this is good:
 
   somefunc(42);
   assert(3 != 4 && "laws of math are failing me");
-  
+
   A = foo(42, 92) + bar(X);
 
-and this is bad:
-
-.. code-block:: c++
-
-  if(X) ...
-  for(I = 0; I != 100; ++I) ...
-  while(LLVMRocks) ...
-
-  somefunc (42);
-  assert (3 != 4 && "laws of math are failing me");
-  
-  A = foo (42, 92) + bar (X);
-
 The reason for doing this is not completely arbitrary.  This style makes control
-flow operators stand out more, and makes expressions flow better. The function
-call operator binds very tightly as a postfix operator.  Putting a space after a
-function name (as in the last example) makes it appear that the code might bind
-the arguments of the left-hand-side of a binary operator with the argument list
-of a function and the name of the right side.  More specifically, it is easy to
-misread the "``A``" example as:
-
-.. code-block:: c++
-
-  A = foo ((42, 92) + bar) (X);
-
-when skimming through the code.  By avoiding a space in a function, we avoid
-this misinterpretation.
+flow operators stand out more, and makes expressions flow better.
 
 Prefer Preincrement
 ^^^^^^^^^^^^^^^^^^^
@@ -1516,7 +1372,7 @@ Namespace Indentation
 ^^^^^^^^^^^^^^^^^^^^^
 
 In general, we strive to reduce indentation wherever possible.  This is useful
-because we want code to `fit into 80 columns`_ without wrapping horribly, but
+because we want code to `fit into 80 columns`_ without excessive wrapping, but
 also because it makes it easier to understand the code. To facilitate this and
 avoid some insanely deep nesting on occasion, don't indent namespaces. If it
 helps readability, feel free to add a comment indicating what namespace is
@@ -1570,8 +1426,7 @@ static, but seeing if it is in an anonymous namespace requires scanning a big
 chunk of the file.
 
 Because of this, we have a simple guideline: make anonymous namespaces as small
-as possible, and only use them for class declarations.  For example, this is
-good:
+as possible, and only use them for class declarations.  For example:
 
 .. code-block:: c++
 
@@ -1592,34 +1447,26 @@ good:
     ...
   }
 
-This is bad:
+Avoid putting declarations other than classes into anonymous namespaces:
 
 .. code-block:: c++
 
   namespace {
 
-  class StringSort {
-  ...
-  public:
-    StringSort(...)
-    bool operator<(const char *RHS) const;
-  };
+  // ... many declarations ...
 
-  void runHelper() { 
-    ... 
-  }
-
-  bool StringSort::operator<(const char *RHS) const {
+  void runHelper() {
     ...
   }
 
+  // ... many declarations ...
+
   } // end anonymous namespace
 
-This is bad specifically because if you're looking at "``runHelper``" in the middle
-of a large C++ file, that you have no immediate way to tell if it is local to
-the file.  When it is marked static explicitly, this is immediately obvious.
-Also, there is no reason to enclose the definition of "``operator<``" in the
-namespace just because it was declared there.
+When you are looking at "``runHelper``" in the middle of a large C++ file,
+you have no immediate way to tell if this function is local to the file.  In
+contrast, when the function is marked static, you don't need to cross-reference
+faraway places in the file to tell that the function is local.
 
 See Also
 ========
