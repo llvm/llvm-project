@@ -20,7 +20,7 @@ SanitizerSpecialCaseList::create(const std::vector<std::string> &Paths,
                                  std::string &Error) {
   std::unique_ptr<clang::SanitizerSpecialCaseList> SSCL(
       new SanitizerSpecialCaseList());
-  if (SSCL->createInternal(Paths, Error, VFS)) {
+  if (SSCL->createInternal(Paths, VFS, Error)) {
     SSCL->createSanitizerSections();
     return SSCL;
   }
