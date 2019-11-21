@@ -129,7 +129,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
     // are treated as actual dependencies.
     for (const auto &Filename :
          Args.getAllArgValues(options::OPT_fxray_always_instrument)) {
-      if (D.getVFS().exists(Filename)) {
+      if (llvm::sys::fs::exists(Filename)) {
         AlwaysInstrumentFiles.push_back(Filename);
         ExtraDeps.push_back(Filename);
       } else
@@ -138,7 +138,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
 
     for (const auto &Filename :
          Args.getAllArgValues(options::OPT_fxray_never_instrument)) {
-      if (D.getVFS().exists(Filename)) {
+      if (llvm::sys::fs::exists(Filename)) {
         NeverInstrumentFiles.push_back(Filename);
         ExtraDeps.push_back(Filename);
       } else
@@ -147,7 +147,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
 
     for (const auto &Filename :
          Args.getAllArgValues(options::OPT_fxray_attr_list)) {
-      if (D.getVFS().exists(Filename)) {
+      if (llvm::sys::fs::exists(Filename)) {
         AttrListFiles.push_back(Filename);
         ExtraDeps.push_back(Filename);
       } else

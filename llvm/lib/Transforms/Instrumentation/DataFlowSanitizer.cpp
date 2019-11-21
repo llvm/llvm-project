@@ -88,7 +88,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SpecialCaseList.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -481,9 +480,7 @@ DataFlowSanitizer::DataFlowSanitizer(
   std::vector<std::string> AllABIListFiles(std::move(ABIListFiles));
   AllABIListFiles.insert(AllABIListFiles.end(), ClABIListFiles.begin(),
                          ClABIListFiles.end());
-  // FIXME: should we propagate vfs::FileSystem to this constructor?
-  ABIList.set(
-      SpecialCaseList::createOrDie(AllABIListFiles, *vfs::getRealFileSystem()));
+  ABIList.set(SpecialCaseList::createOrDie(AllABIListFiles));
 }
 
 FunctionType *DataFlowSanitizer::getArgsFunctionType(FunctionType *T) {
