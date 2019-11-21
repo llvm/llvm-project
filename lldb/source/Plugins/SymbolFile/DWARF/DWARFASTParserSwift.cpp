@@ -233,7 +233,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
         is_clang_type ? dwarf_byte_size
                       : compiler_type.GetByteSize(nullptr),
         NULL, LLDB_INVALID_UID, Type::eEncodingIsUID, &decl, compiler_type,
-        is_clang_type ? Type::eResolveStateForward : Type::eResolveStateFull));
+        is_clang_type ? Type::ResolveState::Forward : Type::ResolveState::Full));
     // FIXME: This ought to work lazily, too.
     if (is_clang_type)
       type_sp->GetFullCompilerType();
