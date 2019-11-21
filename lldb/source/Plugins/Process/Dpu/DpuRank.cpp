@@ -304,8 +304,7 @@ bool Dpu::WriteWRAM(uint32_t offset, const void *buf, size_t size) {
 
   dpu_api_status_t ret;
   // fast path, everything is aligned
-  if (((offset & dpuword_size_mod) == 0) &&
-      ((size & dpuword_size_mod) == 0)) {
+  if (((offset & dpuword_size_mod) == 0) && ((size & dpuword_size_mod) == 0)) {
     const dpuword_t *words = static_cast<const dpuword_t *>(buf);
     ret = dpu_copy_to_wram_for_dpu(m_dpu, offset / sizeof(dpuword_t), words,
                                    size / sizeof(dpuword_t));
@@ -361,8 +360,7 @@ bool Dpu::ReadWRAM(uint32_t offset, void *buf, size_t size) {
   // if an aligned copy copy more than asked by the function, let's read more
   // and then copy only the wanted part into the output buffer.
   if (final_size != size) {
-    iram_size_t final_size_in_dpuword =
-        final_size / sizeof(dpuword_t);
+    iram_size_t final_size_in_dpuword = final_size / sizeof(dpuword_t);
     uint32_t final_offset = offset & dpuword_size_mask;
 
     words = new dpuword_t[final_size_in_dpuword];
