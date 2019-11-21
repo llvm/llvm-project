@@ -69,7 +69,8 @@ public:
   /// Parses the special case list entries from files. On failure, returns
   /// 0 and writes an error message to string.
   static std::unique_ptr<SpecialCaseList>
-  create(const std::vector<std::string> &Paths, std::string &Error);
+  create(const std::vector<std::string> &Paths, llvm::vfs::FileSystem &FS,
+         std::string &Error);
   /// Parses the special case list from a memory buffer. On failure, returns
   /// 0 and writes an error message to string.
   static std::unique_ptr<SpecialCaseList> create(const MemoryBuffer *MB,
@@ -77,7 +78,7 @@ public:
   /// Parses the special case list entries from files. On failure, reports a
   /// fatal error.
   static std::unique_ptr<SpecialCaseList>
-  createOrDie(const std::vector<std::string> &Paths);
+  createOrDie(const std::vector<std::string> &Paths, llvm::vfs::FileSystem &FS);
 
   ~SpecialCaseList();
 
@@ -103,8 +104,8 @@ public:
 protected:
   // Implementations of the create*() functions that can also be used by derived
   // classes.
-  bool createInternal(const std::vector<std::string> &Paths, std::string &Error,
-                      vfs::FileSystem &VFS = *vfs::getRealFileSystem());
+  bool createInternal(const std::vector<std::string> &Paths,
+                      vfs::FileSystem &VFS, std::string &Error);
   bool createInternal(const MemoryBuffer *MB, std::string &Error);
 
   SpecialCaseList() = default;
