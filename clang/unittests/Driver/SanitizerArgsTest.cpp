@@ -50,14 +50,14 @@ class SanitizerArgsTest : public ::testing::Test {
 protected:
   const Command &emulateSingleCompilation(std::vector<std::string> ExtraArgs,
                                           std::vector<std::string> ExtraFiles) {
-    assert(!Driver && "Running twice is not allowed");
+    assert(!DriverInstance && "Running twice is not allowed");
 
     llvm::IntrusiveRefCntPtr<DiagnosticOptions> Opts = new DiagnosticOptions;
     DiagnosticsEngine Diags(
         new DiagnosticIDs, Opts,
         new TextDiagnosticPrinter(llvm::errs(), Opts.get()));
-    Driver.emplace(ClangBinary, "x86_64-unknown-linux-gnu", Diags,
-                   prepareFS(ExtraFiles));
+    DriverInstance.emplace(ClangBinary, "x86_64-unknown-linux-gnu", Diags,
+                           prepareFS(ExtraFiles));
 
     std::vector<const char *> Args = {ClangBinary};
     for (const auto &A : ExtraArgs)
@@ -65,13 +65,13 @@ protected:
     Args.push_back("-c");
     Args.push_back(InputFile);
 
-    Compilation.reset(Driver->BuildCompilation(Args));
+    CompilationJob.reset(DriverInstance->BuildCompilation(Args));
 
     if (Diags.hasErrorOccurred())
       ADD_FAILURE() << "Error occurred while parsing compilation arguments. "
                        "See stderr for details.";
 
-    const auto &Commands = Compilation->getJobs().getJobs();
+    const auto &Commands = CompilationJob->getJobs().getJobs();
     assert(Commands.size() == 1);
     return *Commands.front();
   }
@@ -88,8 +88,8 @@ private:
     return FS;
   }
 
-  llvm::Optional<Driver> Driver;
-  std::unique_ptr<driver::Compilation> Compilation;
+  llvm::Optional<Driver> DriverInstance;
+  std::unique_ptr<driver::Compilation> CompilationJob;
 };
 
 TEST_F(SanitizerArgsTest, Blacklists) {
