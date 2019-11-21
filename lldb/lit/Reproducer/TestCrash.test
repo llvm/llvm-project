@@ -1,0 +1,13 @@
+# UNSUPPORTED: system-windows
+# This tests that a reproducer is generated when LLDB crashes.
+
+# Start clean.
+# RUN: rm -rf %t.repro
+
+# RUN: %lldb -b --capture --capture-path %t.repro -o 'reproducer xcrash -s SIGSEGV' | FileCheck %s
+# RUN: %lldb -b --capture --capture-path %t.repro -o 'reproducer xcrash -s SIGILL' | FileCheck %s
+
+# CHECK: ********************
+# CHECK: Crash reproducer for
+# CHECK: Reproducer written to
+# CHECK: ********************
