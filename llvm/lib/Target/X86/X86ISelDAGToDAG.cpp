@@ -5220,6 +5220,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SelectCode(Res.getNode());
     return;
   }
+  case ISD::STRICT_FADD:
+  case ISD::STRICT_FSUB:
   case ISD::STRICT_FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:
   case ISD::STRICT_FP_ROUND:
